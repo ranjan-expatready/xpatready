@@ -19,7 +19,8 @@
 //          edition_expired a form edition or a fee past IRCC's accepted-until date (P-151 (1); before it: "Adopt update")
 //          representative_review  the representative's review not done (P-155)
 // Warnings (passed with a reason, or fixed): missing_document · finding · edition_superseded · copy_stale ·
-// entered_out_of_date · release_update (C9.5 BR-8: a newer release of the combination touches this filing; only filings it
+// entered_out_of_date · hand_write (C7.7, BR-9: a box of a form filed as a PDF that its copy leaves "To write by hand", one
+// line per box) · release_update (C9.5 BR-8: a newer release of the combination touches this filing; only filings it
 // touches, SA-1B-253 rule 11). An Online section entered before a fact changed warns (P-168, r5c BR-9). Passes (review M3):
 // each warning line has a key; a pass records the keys it covered when it was written, so it never covers a line that
 // appears later; a CRITICAL line's key names what it is about (the missing facts, the edition, the fee amount), so a
@@ -35,10 +36,10 @@ export type Owes = "staff" | "representative" | "client" | "employer" | "ircc";
 export type BlockCode = "barcode_not_validated";
 /** P-315: the former blocks, now CRITICAL warnings passed with a recorded reason (P-237, P-238). */
 export type CriticalCode = "missing_facts" | "fact_problem" | "open_check" | "out_of_date" | "missing_signature" | "edition_expired" | "representative_review";
-export type WarnCode = CriticalCode | "missing_document" | "finding" | "edition_superseded" | "copy_stale" | "entered_out_of_date" | "release_update";
+export type WarnCode = CriticalCode | "missing_document" | "finding" | "edition_superseded" | "copy_stale" | "entered_out_of_date" | "hand_write" | "release_update";
 export const BLOCK_CODES: readonly BlockCode[] = ["barcode_not_validated"];
 export const CRITICAL_CODES: readonly CriticalCode[] = ["missing_facts", "fact_problem", "open_check", "out_of_date", "missing_signature", "edition_expired", "representative_review"];
-export const WARN_CODES: readonly WarnCode[] = [...CRITICAL_CODES, "missing_document", "finding", "edition_superseded", "copy_stale", "entered_out_of_date", "release_update"];
+export const WARN_CODES: readonly WarnCode[] = [...CRITICAL_CODES, "missing_document", "finding", "edition_superseded", "copy_stale", "entered_out_of_date", "hand_write", "release_update"];
 export const isCritical = (code: string): code is CriticalCode => (CRITICAL_CODES as readonly string[]).includes(code);
 
 /** One form item of the filing, for one person. `readiness` is the built per-form P-71 result (engine/runtime/forms.ts);
@@ -63,6 +64,11 @@ export type FormItem = {
   edition?: { label: string; superseded: boolean; acceptedUntil: string | null } | null;
   /** Online lines: the "Download PDF copy" is older than the facts (P-145); an entered section is out of date (C7.3). */
   copyStale?: boolean; enteredOutOfDate?: string[];
+  /** C7.7 (BR-9): the boxes its newest copy leaves "To write by hand" (the copy's own list: the copy, the box, its label,
+   *  why). The copy is part of each line's key (review M1), so a pass written for one copy never covers the next. */
+  byHand?: { copy: string; box: string; label: string; why: string;
+    /** Breaker M3: the box's own caption on the form ("Visitor", "Yes"), so two boxes of one question read apart. */
+    caption?: string | null }[];
 };
 export type DocumentItem = { item?: string; label: string; subject: string; person: string; required: boolean; received: boolean; owes?: Owes };
 export type OpenCheck = { fact: string; label: string; subject: string; person: string };
@@ -160,6 +166,12 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     else if (e?.superseded) warn({ code: "edition_superseded", ...at, part: e.label, owes: "staff", words: `${ofWho(f)}: edition ${e.label} has a newer edition${until ? `; IRCC accepts it until ${until}` : ""}. Adopt update.` });
     if (f.channel === "ONLINE" && f.copyStale) warn({ code: "copy_stale", ...at, owes: "staff", words: `${ofWho(f)}: the PDF copy is older than today's facts (a copy, not for filing). Download it again.` });
     // One line per entered section (review r2 m2): a pass for one section never covers another that goes out of date later.
+    // C7.7 (BR-9, C7.7-18; the tech lead's ruling on #1317): each box a form filed as a PDF leaves "To write by hand" is
+    // its own line, in the box's own words, so a pass for one box never covers another found later. An Online line's PDF
+    // copy is not for filing, so it raises none.
+    // Review M1: the key holds the copy and the box, so a new copy's box needs its own pass. Review m2: the words say the
+    // box is still to be written; the reason follows in brackets when there is one.
+    if (f.channel === "PDF_UPLOAD" || f.channel === "PAPER") for (const b of f.byHand ?? []) { const why = (b.why ?? "").trim().replace(/[.\s]+$/, ""); warn({ code: "hand_write", ...at, part: `${b.copy}|${b.box}`, owes: "staff", words: `${ofWho(f)}: "${b.label}"${b.caption && b.caption.trim() && b.caption.trim() !== b.label ? ` (the form's box "${b.caption.trim()}")` : ""} is still to be written by hand on the form before filing${why ? ` (${why})` : ""}.` }); }
     if (f.channel === "ONLINE") for (const sec of f.enteredOutOfDate ?? []) warn({ code: "entered_out_of_date", ...at, part: sec, owes: "staff", words: `${ofWho(f)}: "${sec}" was entered in the portal before a fact changed. Enter it again.` });
   }
   for (const c of x.openChecks ?? []) critical({ code: "open_check", subject: c.subject, part: c.fact, owes: "staff", words: `${c.person}: "${c.label}" differs between the answer and the document. Resolve the check.` });
@@ -239,7 +251,7 @@ export const CODE_WORDS: Record<BlockCode | WarnCode, string> = {
   missing_signature: "A missing signature", barcode_not_validated: "No validated copy read back", edition_expired: "Past IRCC's accepted-until date",
   representative_review: "The representative's review", missing_document: "A missing document", finding: "A review finding",
   edition_superseded: "A newer edition or fee", copy_stale: "A PDF copy out of date", entered_out_of_date: "A portal section entered before a change",
-  release_update: "A newer release",
+  hand_write: "A line to write by hand", release_update: "A newer release",
 };
 
 /** Why a code cannot be passed (null: it can): blocks are never passed, only fixed; an unknown code is named. */

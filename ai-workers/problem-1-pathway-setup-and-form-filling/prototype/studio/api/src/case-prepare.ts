@@ -37,7 +37,7 @@ import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
 import { currentValues, factWords } from "../../engine/runtime/submission-record.ts";
-import { CaseForms, copyNotForFiling, formPassed, inventoryOf } from "./fill-case.ts";
+import { CaseForms, copyNotForFiling, formPassed, inventoryOf, plainWhy } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
@@ -513,7 +513,31 @@ export class CasePrepare {
         if (note) Object.assign(i, { release_note: note, ...(entered.length && !old ? { release_out_of_date_entered: true } : {}) });
       }
     }
+    // C7.7 (BR-9, C7.7-18): the boxes the newest copy of each form on this release leaves "To write by hand", in the
+    // copy's own words (the question's label, else "A form field"; why, without engine words: fill-case.ts plainWhy).
+    // The newest copy, current or not, is the one that would be filed, so a stale copy never hides its by-hand boxes; a
+    // newest copy that is "Copy, not for filing" (made while the line was Online) raises none (review m4). Review m5: the
+    // newest copy per form and person is picked first, and only those copies' results are read.
+    const askedAs = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
+    const newestCopy = new Map<string, string>();
+    for (const x of await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED", configReleaseId: pin.configReleaseId }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { id: true, formNumber: true, subjectId: true } }))
+      if (!newestCopy.has(`${x.formNumber}|${x.subjectId}`)) newestCopy.set(`${x.formNumber}|${x.subjectId}`, x.id);
+    const handOf = new Map<string, { copy: string; box: string; label: string; why: string; caption?: string | null }[]>();
+    // Breaker M3: each box's own caption from the form's field list, read once a form. Devin on #1331: the field list of the
+    // PDF edition the copy was filled on: the copies here are this release's, and the fill takes pdfMapInUse (P-32), so
+    // the same map is read here, never simply the first edition listed.
+    const captionsOf = new Map<string, Map<string, string>>();
+    const captionOf = (form: string, box: string) => {
+      if (!captionsOf.has(form)) { const file = pdfMapInUse(s.field_maps as FieldMap[], form)?.inventory_file; captionsOf.set(form, new Map((file ? inventoryOf(file)?.fields ?? [] : []).flatMap((x) => (x.data_path && x.caption ? [[x.data_path, x.caption] as [string, string]] : [])))); }
+      return captionsOf.get(form)!.get(box) ?? null;
+    };
+    for (const x of newestCopy.size ? await this.db.formInstance.findMany({ where: { id: { in: [...newestCopy.values()] } }, select: { id: true, formNumber: true, subjectId: true, resultJson: true, snapshot: { select: { factsJson: true } } } }) : []) {
+      if (copyNotForFiling(s, x)) continue;
+      const boxes = ((x.resultJson as { boxes?: { box: string; fact: string | null; result: string; why: string | null }[] } | null)?.boxes ?? []);
+      handOf.set(`${x.formNumber}|${x.subjectId}`, boxes.filter((b) => b.result === "by hand").map((b) => ({ copy: x.id, box: b.box, label: (b.fact && askedAs.get(b.fact)) || "A form field", why: plainWhy(b.why), caption: captionOf(x.formNumber, b.box) })));
+    }
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems, reviewAfterMove, releaseUpdate,
+      byHand: (form, subject) => handOf.get(`${form}|${subject}`) ?? [],
       documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
       factsOf: (form, subject) => formReadiness(view, form, subject), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
       validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
