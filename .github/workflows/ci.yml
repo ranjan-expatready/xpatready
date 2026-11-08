@@ -124,7 +124,7 @@ jobs:
           kind=$(bash "$P/tools/change-kind.sh" "$RANGE") || { echo "change-kind.sh failed"; exit 1; }
           # A batch only when Mergify opened it (gate B break M2): a builder's branch named mergify/* stays a pull request.
           queue=false; [[ "$HEAD_REF" == mergify/* && "$PR_AUTHOR" == "mergify[bot]" ]] && queue=true
-          n="${SHARDS_VAR:-4}"; [[ "$n" =~ ^[1-9]$ ]] || n=4
+          n=1   # THROWAWAY: one part only
           case "$kind" in code) shards="[$(seq -s, 1 "$n")]";; records) shards="[1]";; *) shards="[]";; esac
           { echo "kind=$kind"; echo "shards=$shards"; echo "n=$n"; echo "queue=$queue"; } >> "$GITHUB_OUTPUT"
           case "$kind" in
@@ -220,6 +220,10 @@ jobs:
           if [ "$QUEUE" = true ]; then range=$(bash "$P/tools/pr-base.sh" queue)
           else pin=""; [ "$KATTEMPT" = "$GITHUB_RUN_ATTEMPT" ] && pin="$KBASE"; range=$(bash "$P/tools/pr-base.sh" merge "$HEAD_SHA" $pin); fi || exit 1
           echo "RANGE=$range" >> "$GITHUB_ENV"; echo "tested: $range"
+      - name: THROWAWAY D6 worked test (fails while the tested main is X; a re-run after main moves must pass)
+        run: |
+          echo "attempt $GITHUB_RUN_ATTEMPT tests main ${RANGE%..*} (X = a228f5e2599779ab58c76fcfe543c1958508e58e, event base ${{ github.event.pull_request.base.sha }})"
+          [ "${RANGE%..*}" != "a228f5e2599779ab58c76fcfe543c1958508e58e" ] || { echo "still on X: red on purpose"; exit 1; }
       - name: push guard (part 1 only; excluded paths, PDFs, secrets, personal names)
         if: matrix.shard == 1
         run: |
@@ -273,7 +277,7 @@ jobs:
         env: { PR_TITLE: "${{ github.event.pull_request.title }}", PR_BODY: "${{ github.event.pull_request.body }}", GITHUB_TOKEN: "${{ github.token }}" }
         run: node "$S/tools/gate-b.mjs"
       - name: studio suites, part ${{ matrix.shard }} of ${{ needs.kind.outputs.n }} (run-suites.sh --demo --retry --shard; US$0 model spend)
-        if: env.KIND == 'code'
+        if: false   # THROWAWAY: no suites
         env: { PR_SUITES: "${{ vars.PR_SUITES }}" }
         run: |
           if [ "$QUEUE" = true ]; then sel=(--skip-quarantined); else sel=(--changed "$RANGE"); [ "$PR_SUITES" = direct ] && sel+=(--direct)
