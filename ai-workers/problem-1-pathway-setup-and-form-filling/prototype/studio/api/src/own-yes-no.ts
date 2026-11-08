@@ -51,7 +51,23 @@ export function inFormText(officialFile: string | null | undefined, words: strin
 /** B116 (tech lead's ruling on #1123, option (a)): `checkpointOnly`, asked by the configured checkpoint's loader but not on
  *  the six by the packs' people's steps (acceptance/lib/pack2.ts), so the six's question list, and the saved AI pairs that
  *  read it, stay as they are. Data, never code (P-319). */
-export type OwnYesNo = { dataPath: string; label: string; meaning: string; question?: string; checkpointOnly?: boolean };
+/** QA-165: `followUps`, the questions the form asks only after a Yes to this box (the configured checkpoint's step 230 gives
+ *  each the condition "show only when <this question> is Yes"; followUpGround says why each is the form's own). */
+export type OwnYesNo = { dataPath: string; label: string; meaning: string; question?: string; checkpointOnly?: boolean; followUps?: string[] };
+
+/** QA-165 (AGENTS rule 4: nothing guessed): why `fact` follows the Yes/No box `gate` on the form, or null when the form does
+ *  not say so. Either the box's own "worked out" step names it ("derived:any(person.other_family_name, …) recorded"), or the
+ *  fact's form field sits inside the box's own block (the box's path without its last two parts: IMM 5257's
+ *  "…natID[0].q1[0].natIDIndicator[0]" → "…natID[0]", which holds natIDdocs[0]'s country, number and dates). */
+export function followUpGround(gate: { data_path: string; transform?: string | null }, entries: { data_path: string; fact?: string | null }[], fact: string): string | null {
+  const step = /^derived:(.*?)->/.exec(gate.transform ?? "")?.[1] ?? "";
+  if (step.split(/[^\w.]+/).includes(fact)) return `the Yes/No form field's own step names it ("${gate.transform}")`;
+  const block = gate.data_path.split(".").slice(0, -2).join(".");
+  const inside = entries.find((e) => e.fact === fact && block && e.data_path.startsWith(`${block}.`) && e.data_path !== gate.data_path);
+  return inside ? `its form field ${inside.data_path} is inside the Yes/No form field's block ${block}` : null;
+}
+/** QA-165: the question condition "show only when <gate> is Yes", as Questionnaires › the question's condition saves it. */
+export const yesGate = (gate: string) => ({ subjectKind: "PERSON", op: "eq", field: gate, value: true });
 type Table = { reason: string; near: string; combinations: Record<string, { application: string; boxes: OwnYesNo[] }> };
 const TABLE = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "own-yes-no.json"), "utf8")) as Table;
 export const OWN_YES_NO_REASON = TABLE.reason;

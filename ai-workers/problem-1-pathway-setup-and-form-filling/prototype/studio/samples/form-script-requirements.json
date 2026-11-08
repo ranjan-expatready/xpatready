@@ -1,0 +1,12 @@
+{
+ "basis": "QA-165 (#1318 review M1, 8 Nov 2026): a form field IRCC's field list marks required (the inventory's `required`) whose own form script makes it required only for some answers is mandatory only then, so readiness never waits on it otherwise (P-71). Read from the form's own script (P-170), never guessed: IMM 5257 (09-2023), page 2, Passport section, Question 2 (\"The country or territory that issued your passport\"), the script on CountryofIssue marked \"//April032018 - Added for CR 330212\": `if(this.rawValue == \"203\") { … color.markRequired(TaiwanPIN.No) … color.markUnRequired(IsraelPassportIndicator.No) … }`, the \"206\" branch the other way round, and `else{ … color.markUnRequired(TaiwanPIN.No) … color.markUnRequired(IsraelPassportIndicator.No) … }`. Source: prototype/expected/source-text/imm5257e.xfa-template.txt, the visible text and scripts of official-sources/ircc/forms/imm5257e.pdf (SHA-256 0dc03b24e7914a178ad29e2cfae811045835a1d36d7a3c35f040251d0aca562e, downloaded 19 Oct 2026), read 8 Nov 2026. The codes are the form's own (its country list's saved values); the condition compares the code a copy writes into that box. Sample, Unconfirmed: expert.",
+ "editions": [
+  {
+   "inventory": "imm5257e.inventory.json",
+   "fields": [
+    { "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]", "requiredWhen": { "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].CountryofIssue[0].CountryofIssue[0]", "equals": ["203"] }, "words": "the passport's country or territory of issue is the one the form's code 203 names (Taiwan PIN, Passport Question 5)" },
+    { "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]", "requiredWhen": { "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].CountryofIssue[0].CountryofIssue[0]", "equals": ["206"] }, "words": "the passport's country or territory of issue is the one the form's code 206 names (National Israeli passport, Passport Question 6)" }
+   ]
+  }
+ ]
+}
