@@ -1,15 +1,18 @@
 // C6.13 Filing changes by screens (B135; concept screens/B135/concept.md r2): a person's walk at 1440 px on a Visitor visa
 // family case: the People and filings table, the principal's refused Remove (in words, before any click), a child's
 // refused Make principal, Remove filing with the other filings named and a reason, Undo, then Make principal. Writes
-// screenshots to the folder given (product/screens/B135/screenshots). Needs a copy set up as acceptance/C6.13.test.ts
-// says (setup_visitor_visa.ts, setup_vv_m3.ts). No model call (US$0).
-//   node studio/tests/check_c613_filing_changes_browser.cjs 4441 xr_studio_<copy> [screenshot-dir]
+// screenshots to the folder given (product/screens/B135/screenshots). When the copy has no Visitor visa combination it
+// sets one up as acceptance/C6.13.test.ts says (setup_visitor_visa.ts, then acceptance/lib/setup_vv_m3.ts), so
+// run-suites can run it on a fresh copy (CI shard 3 on #1242, 8 Nov: run plain, it read a database that did not exist).
+// No model call (US$0).
+//   zsh studio/tools/isolated.sh screens_c613w 4443 start && node studio/tests/check_c613_filing_changes_browser.cjs 4443 xr_studio_screens_c613w [screenshot-dir]
 const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require("../node_modules/playwright");
 
-const { execFileSync } = require("node:child_process");
-const PORT = Number(process.argv[2] ?? 4441), DB = process.argv[3] ?? "xr_studio_accept", BASE = `http://localhost:${PORT}`, SHOTS = process.argv[4] ?? null;
+const { execFileSync, spawnSync } = require("node:child_process");
+const STUDIO = path.resolve(__dirname, "..");
+const PORT = Number(process.argv[2] ?? 4443), DB = process.argv[3] ?? "xr_studio_screens_c613w", BASE = `http://localhost:${PORT}`, SHOTS = process.argv[4] ?? null;
 const PSQL = process.env.PSQL || (fs.existsSync("/opt/homebrew/opt/postgresql@18/bin/psql") ? "/opt/homebrew/opt/postgresql@18/bin/psql" : "psql");
 const sql = (q) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 const T = { timeout: 15000 };
@@ -20,6 +23,12 @@ const yearsAgo = (y) => { const d = new Date(); d.setUTCFullYear(d.getUTCFullYea
 
 (async () => {
   // The released Visitor visa combination and a family case, through the same routes the screens call.
+  // A fresh copy (run-suites, CI): set up the Visitor visa release first, as the C6.13 pack's run line says.
+  if (sql("select count(*) from combination where combination_key='vv.single'") === "0") {
+    const tsx = (f) => { const r = spawnSync(path.join(STUDIO, "node_modules", ".bin", "tsx"), ["--tsconfig", path.join(STUDIO, "api", "tsconfig.json"), path.join(STUDIO, f), String(PORT), DB], { encoding: "utf8", timeout: 600000, maxBuffer: 1 << 26 }); return `${f}: exit ${r.status}, ${String(r.stdout ?? "").trim().split("\n").pop()}`; };
+    const done = [tsx("tests/runtime/setup_visitor_visa.ts"), tsx("acceptance/lib/setup_vv_m3.ts")];
+    ok("setup: a fresh copy gets the released Visitor visa combination", sql("select count(*) from combination where combination_key='vv.single'") !== "0", done);
+  }
   const combinationId = sql("select id from combination where combination_key='vv.single'");
   const firm = (await call("GET", "/runtime/firm")).body;
   const rep = (firm?.users ?? []).find((u) => (u.duties ?? []).includes("represent"))?.id ?? null;
