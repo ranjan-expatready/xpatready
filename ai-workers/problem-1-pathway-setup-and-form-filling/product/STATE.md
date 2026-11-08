@@ -2,7 +2,7 @@
 
 current_lead: local_24059eca-30b1-42f7-81bd-d294abc4a8e1 Lead 35 · 8 Nov 14:55 IST (took over from Lead 34 at ~415k context, P-314)
 
-updated: 2026-11-08 14:55 IST by **Lead 34, at the hand-over to Lead 35** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-414 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-08-1455-lead34.md` · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-08 14:55 IST by **Lead 34, at the hand-over to Lead 35** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); 4 Works (C1.3, C11.5, C6.9, C8.2, on qa's #1238 merging)** · rules: **`RULES.md`** + DECISIONS P-354 to P-421 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-08-1455-lead34.md` · this branch: `lead/2026-11-07-lead31`
 
 ## Hand-over to Lead 35 (8 Nov ~14:55 IST): do first
 Weekly 53% at 14:52 IST (~3%/h). Context: Lead 34 at ~415k. **Disk 6 GB** (under the 7 GB preflight: no Mac session start until freed).
@@ -18,6 +18,7 @@ Earlier blocks (hand-overs to Leads 32-34, the Lead 33 log): `history/STATE-2026
 
 ## Lead 35 (from 14:55 IST 8 Nov)
 * 14:55-15:05 IST: watchdog cron deleted; Lead 36 told "start the watchdog"; check cron 7990de27 (:13/:43). lead-watch from `$TMPDIR/lw-local`: exit 2 (disk; #1348's question was already answered by Lead 34). 25 stale test databases dropped (`prune-test-dbs.sh --yes`, exit 0, ~200 MB): disk stays 6 GB; only the founder-named removal of Lead 33's copies (~2.7 GB) frees enough.
+* **P-421 (founder ~15:15 IST, via Lead 34):** finish the Partials on this account (about 22 of 29 Works); switch accounts at about 85-90% weekly once every lane has pushed; the 7 Not built rows on the next account.
 * 15:10 IST: the founder said "Yes, remove all three" in Lead 34's chat; Lead 34 removed `lead33-hot` (the two wt- copies were already gone). Disk 8 GB at 15:46 IST: Mac starts allowed again (preflight 7 GB). **Top up to two standbys at the founder's next typed turn in Lead 35's chat.**
 * 15:37-15:50 IST: #1348 merged (main 78db1504e); nightly 42470095477 C6.9 on the checkpoint, success, 21/21; qa's #1357 (C6.9 hold removed, QA-312 closed) labelled. **Next: #1337 gets its label back after #1357 merges.** #1318 labelled 15:22 IST (green on Approve 0b14131a3).
 * **C7.7 (qa #1353, both product faults, no pack step covers either):** QA-153 siblings never asked (IMM 5645 Section C blank, sibling address boxes carry the parent-1 reason, 2nd child's Section B not written); QA-246 `GET …/forms` lists IMM 5409, IMM 5475, IRM 0002 with "N missing" before their rules are answered (adults 7, children 4; expected 4 and 1). QA-246 goes to the runtime lane after B162 (#1344) is labelled, in its prompt box. QA-153's warm lane is the parked cloud lane "/next forms B155 → B157" (IMM 5645 siblings, parent guard): restart it at the founder's typed turn (P-413: the C10.2 lane has ended, so one slot is free).
