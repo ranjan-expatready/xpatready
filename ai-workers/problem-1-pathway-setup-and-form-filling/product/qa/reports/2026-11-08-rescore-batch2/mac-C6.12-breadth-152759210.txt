@@ -1,0 +1,38 @@
+C6.12-breadth on 2cd3827eb (product code = main 152759210), copy qa_p612breadth :4470, start Sun Nov  8 08:40:57 IST 2026
+NOTICE:  database "xr_studio_qa_p612breadth" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_p612breadth on http://localhost:4470 (xr_studio_qa_p612breadth), stops itself in 30 min
+reset 201
+load 201
+loaded Sun Nov  8 08:42:17 IST 2026
+C6.12 breadth — Filings and fees: the parts C6.12 is Partial for
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+HELD  C6.12-22 pass (Partial: sponsorship): spouse or partner sponsorship is two filings, the sponsorship and the PR application, in one submission group — Spouse or common-law partner is released and its fee lines are set per filing — held: outside the Visitor visa journey under the founder's answer to Q1 (6 Nov, P-380); rows S1 and S2 after M3 — {"released":1,"feeTable":"no fs.spouse entry in samples/fee-table.json (only vv.single today)"}
+HELD  C6.12-23 pass (Partial: child study question): a release of a student or worker combination asks the case officer "will this child study 6 months or more?" (yes adds a study permit filing) — held: outside the Visitor visa journey under the founder's answer to Q1 (6 Nov, P-380); rows S1 and S2 after M3 — {"releasesWithTheQuestion":0}
+PASS  C6.12-24 pass (Partial: other combinations): the fee table prices study permits, work permits and extensions, none with a family maximum — {"lines":["visitor_visa","biometrics","spouse_sponsorship","spouse_dependent_child","pr_adult","pr_dependent_child","study_permit","work_permit","open_work_permit_holder","visitor_extension"],"combinations":["vv.single"]}
+FAIL  C6.12 breadth: the test ran to its end (crashed: browserType.launch: Failed to create a ProcessSingleton for your profile directory. This usually means that the profile is already in use by another instance of Chromium.
+Call log:
+[2m  - <launching> /Applications/Google Chrome.app/Contents/MacOS/Google Chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-edgeupdater --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,BlockOriginHeaderModificationOnRedirect,AvoidCorsURLLoaderRestartOnRedirect,Translate,AutoDeElevate,OptimizationHints,NetworkTimeServiceQuerying,AimEnabled,msForceBrowserSignIn,msEdgeUpdateLaunchServicesPreferredVersion --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-updater-scheduler --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/tmp/claude-501/playwright_chromiumdev_profile-R7P697 --remote-debugging-pipe --no-startup-window[22m
+[2m  - <launched> pid=33202[22m
+[2m  - [pid=33202][err] [1108/084219.061634:ERROR:third_party/crashpad/crashpad/util/mach/bootstrap.cc:65] bootstrap_check_in org.chromium.crashpad.child_port_handshake.33207.19827164.VRGZMHEOIAMQYOSQ: Permission denied (1100)[22m
+[2m  - [pid=33202][err] [1108/084219.063062:ERROR:third_party/crashpad/crashpad/util/file/file_io.cc:103] ReadExactly: expected 4, observed 0[22m
+[2m  - [pid=33202][err] [1108/084219.068380:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open <path> Support/Google/Chrome/Crashpad/settings.dat: Operation not permitted (1)[22m
+[2m  - [pid=33202][err] [1108/084219.068452:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open <path> Support/Google/Chrome/Crashpad/settings.dat: Operation not permitted (1)[22m
+[2m  - [pid=33202][err] [33202:19827152:1108/084219.187374:ERROR:chrome/browser/process_singleton_posix.cc:1046] Failed to create socket directory.[22m
+[2m  - [pid=33202][err] [33202:19827152:1108/084219.187630:ERROR:chrome/app/chrome_main_delegate.cc:624] Failed to create a ProcessSingleton for your profile directory. This means that running multiple instances would start multiple browser processes rather than opening a new window in the existing process. Aborting now to avoid profile corruption.[22m
+[2m  - [pid=33202] <gracefully close start>[22m
+[2m  - [pid=33202] <kill>[22m
+[2m  - [pid=33202] <will force kill>[22m
+[2m  - [pid=33202] exception while trying to kill process: Error: kill EPERM[22m
+[2m  - [pid=33202] <process did exit: exitCode=21, signal=null>[22m
+[2m  - [pid=33202] starting temporary directories cleanup[22m
+[2m  - [pid=33202] finished temporary directories cleanup[22m
+[2m  - [pid=33202] <gracefully close end>[22m
+)
+
+1/2 passed
+pack exit 1  end Sun Nov  8 08:42:19 IST 2026
+stopped qa_p612breadth (database and files removed; log in var/isolated-logs/qa_p612breadth-api.log)
