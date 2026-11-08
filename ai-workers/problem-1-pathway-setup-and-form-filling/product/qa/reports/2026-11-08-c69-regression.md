@@ -40,3 +40,9 @@ The tech lead, Lead 34, asked for this at about 14:11 IST, ahead of the re-score
 ## Not done
 * No verdict by a fresh reader on whether the row stays Works while held (P-360 (3)). It goes with the re-score.
 * The pack itself was not changed (qa never fixes app or pack code).
+
+## Hold removed, 8 Nov ~15:45 IST
+* #1348 fixed the pack only: step -18 has the client re-confirm the officer-recorded background answer (P-244). It merged at 15:37 IST, main 78db1504e.
+* **GitHub:** nightly **42470095477** (dispatched by the tech lead, Lead 35), job 128698635089: C6.9.test.ts on the checkpoint, exit 0, **21/21**.
+* **Mac:** **21/21** on a fresh checkpoint copy of main's code (`2026-11-08-c69-regression/mac-C6.9-after1348.txt`).
+* The `- C6.9` hold line is removed from `qa/REGRESSION-HELD.md`, and QA-312 is closed. C6.9 stays Works.
