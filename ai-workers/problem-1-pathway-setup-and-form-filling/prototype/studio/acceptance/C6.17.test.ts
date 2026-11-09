@@ -204,6 +204,23 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
   ok("C6.17 breaker M5 fail-first (race): an answer about the application typed while the next stage starts is saved before the start or refused (409), never on the ended application after it ended",
     raced[0].status === 201 && raced.slice(1).every((x) => x.status === 200 || x.status === 409) && lateAns === 0, { start: raced[0].status, answers: raced.slice(1).map((x) => x.status), lateAns });
 
+  // ---------------------------------------------------------------- Devin on #1262: the reason is checked under the lock
+  const outcomes: string[] = [];
+  for (let i = 0; i < 3; i++) {
+    const dMade = await open(first.combination_id);
+    const D = dMade.body?.id as string;
+    const d1 = (await stagesOf(D)).stages.find((x) => x.state === "CURRENT")!;
+    const [st, pr] = await Promise.all([call("POST", `/runtime/cases/${D}/stages/next`, { from_stage: d1.id, stage_version: d1.version }), call("GET", `/runtime/cases/${D}/prepare`)]);
+    const ended = sql(`select state from case_stage where id='${d1.id}'`) === "ENDED_NEXT_STARTED";
+    const unrecordedEnded = n(`select count(*) from filing f where f.stage_id='${d1.id}' and f.active and not exists (select 1 from filing_record r where r.filing_id=f.id)`);
+    const reasonSet = sql(`select coalesce(reason, '') from case_stage where id='${d1.id}'`) !== "";
+    outcomes.push(`${st.status}/${pr.status}/${ended ? "ended" : "current"}/${unrecordedEnded}`);
+    if (ended && unrecordedEnded > 0 && !reasonSet) outcomes.push("BAD");
+    if (!ended && !(st.status === 400 && (st.body?.errors ?? []).some((e: { field: string }) => e.field === "reason")) && st.status !== 409) outcomes.push("BAD");
+  }
+  ok("C6.17 Devin on #1262 (race): a start without a reason racing Prepare never ends a stage on an unrecorded filing without a reason: it ends a stage that has none, or is refused on the reason (400)",
+    !outcomes.includes("BAD") && outcomes.length === 3, outcomes);
+
   // ---------------------------------------------------------------- C6.17-13: the family case keeps one stage
   const fam = sql(`select k.id from runtime_case k join combination c on c.id=k.combination_id where c.combination_key='vv.single' order by k.created_at limit 1`) ?? "";
   const fv1 = (await prepare(fam)).p?.version, fst = await stagesOf(fam), fv2 = (await prepare(fam)).p?.version;

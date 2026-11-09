@@ -189,7 +189,8 @@ export class CaseStagesService {
       if (d.same_every_stage && shapeOf(snapNow, field)) { const probs = checkValue(snapNow, field, v, new Date()); if (probs.length) fieldError(`key_details.${field}`, `${d.label}: ${probs[0]}`); }
     }
     const reason = b.reason?.trim() ?? "";
-    if (p.unrecorded.length && reason.length < 3) fieldError("reason", `${p.unrecorded.map((u) => `${u.person}'s ${c.stage.clientName.toLowerCase()}`).join(" and ")} ${p.unrecorded.length === 1 ? "has" : "have"} no filing record. Say why you are starting the next stage anyway (at least 3 characters).`);
+    const reasonWords = (u: { person: string }[]) => `${u.map((x) => `${x.person}'s ${c.stage.clientName.toLowerCase()}`).join(" and ")} ${u.length === 1 ? "has" : "have"} no filing record. Say why you are starting the next stage anyway (at least 3 characters).`;
+    if (p.unrecorded.length && reason.length < 3) fieldError("reason", reasonWords(p.unrecorded));
     const values = (checked as { values: Record<string, string> }).values;
     let at = new Date();
     const rel = p._release!;
@@ -200,6 +201,10 @@ export class CaseStagesService {
       if (!cur || cur.id !== b.from_stage || cur.version !== b.stage_version) return "stale" as const;
       const nxt = await tx.caseStage.findFirst({ where: { caseId: c.id, ord: cur.ord + 1 } });
       if (!nxt || nxt.id !== p.to!.stage || nxt.state !== "NOT_STARTED") return "stale" as const;
+      // Devin on #1262: the ending stage's filings with no record are read again under the lock (a Prepare that won the
+      // lock first may have made one), so a stage never ends on an unrecorded filing without its reason (P-237).
+      const open = await tx.filing.findMany({ where: { caseId: c.id, stageId: cur.id, active: true, record: null }, select: { subjectId: true } });
+      if (open.length && reason.length < 3) return { reason: open.map((f) => ({ person: c.participants.find((x) => x.subjectId === f.subjectId)?.subject.label ?? "A person" })) };
       const combo = await tx.combination.findUnique({ where: { id: nxt.combinationId }, select: { retiredAt: true } });
       const newest = await tx.configRelease.findFirst({ where: { combinationId: nxt.combinationId }, orderBy: { version: "desc" }, select: { id: true } });
       if (combo?.retiredAt || newest?.id !== rel.id) return "stale" as const;
@@ -218,10 +223,12 @@ export class CaseStagesService {
       // the one-current-stage check runs at commit (deferred).
       await tx.case.update({ where: { id: c.id }, data: { combinationId: nxt.combinationId } });
       await tx.packWorkPin.create({ data: { workspaceId: c.workspaceId, caseId: c.id, combinationId: nxt.combinationId, partyId: pinNow!.partyId, packVersionId: rel.packVersionId, configReleaseId: rel.id, contentHash: rel.sha256, actorId: actor.id } });
-      return { next: nxt.id };
+      return { next: nxt.id, unrecorded: open.length };
     }, { timeout: 15_000, maxWait: 10_000 });
     if (outcome === "stale") stale();
-    await this.audit.log(c.workspaceId, actor.id, "started_stage", "case", c.id, `${actor.name} started the next stage on case ${short(c.id)}: "${p.to!.name}" on release ${rel.version} (${rel.sha256.slice(0, 12)}), ending "${c.stage.staffName}"${p.unrecorded.length ? `; ${p.unrecorded.length} filing(s) without a record, reason given` : ""}`);
+    const done = outcome as Exclude<typeof outcome, "stale">;
+    if (done.reason) fieldError("reason", reasonWords(done.reason));
+    await this.audit.log(c.workspaceId, actor.id, "started_stage", "case", c.id, `${actor.name} started the next stage on case ${short(c.id)}: "${p.to!.name}" on release ${rel.version} (${rel.sha256.slice(0, 12)}), ending "${c.stage.staffName}"${done.unrecorded ? `; ${done.unrecorded} filing(s) without a record, reason given` : ""}`);
     const after = await this.stages(actor, c.id);
     // The deadline as it stands now: the key details recorded with the start may have set it.
     const now = after.stages.find((x) => x.id === after.current)?.deadline ?? null;
