@@ -22,6 +22,7 @@ import { EarlierFactsCard } from "./earlier-facts";
 import { EligibilityCard, EligibilityPage } from "./eligibility";
 import { PeopleAndFilings } from "./filing-changes"; // C6.13
 import { ReleaseNotice } from "./release-update"; // C9.5
+import { RepresentativeReviewLatest, RepresentativeReviewPage } from "./representative-review"; // C8.3
 import { CaseReadinessPill } from "./readiness-figure"; // C7.10
 import type { OpenableRelease } from "../../../contracts/runtime";
 
@@ -77,6 +78,8 @@ export function RuntimeApp() {
           <Route path=":id/questionnaire" element={<ClientPage />} />
           <Route path=":id/eligibility" element={<EligibilityPage />} />
           <Route path=":id/review" element={<ReviewPage />} />
+          <Route path=":id/representative-review" element={<RepresentativeReviewLatest />} />
+          <Route path=":id/representative-review/:round" element={<RepresentativeReviewPage />} />
           <Route path=":id/sheet/:itemId" element={<AnswerSheetPage />} />
           <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/cases">Back to cases</Link></Notice>} />
         </Routes>
