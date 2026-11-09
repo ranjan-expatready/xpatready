@@ -28,6 +28,12 @@ const tokenIn = (m: Msg[]) => /#t=([A-Za-z0-9_-]{43})/.exec(m.find((x) => x.kind
 const codeIn = (m: Msg[]) => (/code is (\d{3}) (\d{3})/.exec(m.find((x) => x.kind === "code")?.body ?? "") ?? []).slice(1).join("");
 type Q = { subjectId: string; fact: string; value_type: string; collected_from: string; section: string; group: string | null; options: { key: string }[] | null; answer: { id: string; value: unknown; confirmed: boolean; channel: string; by: string; why: string; mark?: string } | null; hidden: boolean };
 const qs = (v: { sections?: { questions: Q[] }[] } | undefined) => (v?.sections ?? []).flatMap((s) => s.questions);
+/** A multipart upload as Client A, with form fields beside the file (C6.5's document with no checklist line). */
+const upload = async (path: string, fields: Record<string, string>): Promise<{ status: number; body: any }> => { // eslint-disable-line @typescript-eslint/no-explicit-any -- read loosely
+  const fd = new FormData(); for (const [k, v] of Object.entries(fields)) fd.append(k, v); fd.append("file", new Blob([new Uint8Array(Buffer.from("%PDF-1.4\n% Sample\n%%EOF\n", "latin1"))]), "sample.pdf");
+  const res = await fetch(`http://127.0.0.1:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": CLIENT }, body: fd }).catch(() => null);
+  return { status: res?.status ?? 0, body: await res?.json().catch(() => null) };
+};
 const sqr = async (caseId: string) => (await call("GET", `/runtime/cases/${caseId}/questionnaire`, undefined, CLIENT)).body;
 
 await main("C6.16", "Adult privacy and Send to …", async () => {
@@ -89,7 +95,11 @@ await main("C6.16", "Adult privacy and Send to …", async () => {
   await lcall("POST", "/link/consent", {}, sess);
   const lv = await lcall("GET", `/link/cases/${id}/people/${S}/questionnaire`, undefined, sess);
   const lsubs = new Set((lv.body?.sections ?? []).map((x: { subjectId: string }) => x.subjectId));
-  ok("C6.16-3 pass: the session reads only Partner's parts and the application's", lv.status === 200 && lsubs.has(S) && [...lsubs].every((x) => x === S || x === c.caseSubject) && !lsubs.has(P) && !lsubs.has(C19), [...lsubs]);
+  // B128: the parts about Partner's own parents (`<Partner>/parent_1`) are Partner's to answer too.
+  ok("C6.16-3 pass: the session reads only Partner's parts (with their parents') and the application's", lv.status === 200 && lsubs.has(S) && [...lsubs].every((x) => x === S || x.startsWith(`${S}/`) || x === c.caseSubject) && ![...lsubs].some((x) => x.startsWith(P) || x.startsWith(C19)), [...lsubs]);
+  const parentQ = qs(lv.body).find((q) => q.subjectId.startsWith(`${S}/`) && !q.answer && !q.group && !q.hidden && q.value_type === "text");
+  const parentPut = parentQ ? await lcall("PUT", `/link/cases/${id}/people/${parentQ.subjectId}/answers/${parentQ.fact}`, { value: `${SECRET}-parent`, expectedId: null }, sess) : { status: 0, body: null };
+  ok("C6.16-3 pass: Partner answers a question about their own parent on the link", !!parentQ && parentPut.status === 200, [parentQ?.subjectId, parentPut.status, parentPut.body?.detail]);
   const lq = qs(lv.body).find((q) => q.subjectId === S && q.fact !== pq?.fact && !q.answer && !q.group && !q.hidden && q.value_type === "text");
   const lput = lq ? await lcall("PUT", `/link/cases/${id}/people/${S}/answers/${lq.fact}`, { value: SECRET, expectedId: null }, sess) : { status: 0, body: null };
   const caseQ = qs(lv.body).find((q) => q.subjectId === c.caseSubject && !q.group);
@@ -115,6 +125,12 @@ await main("C6.16", "Adult privacy and Send to …", async () => {
   const lines = (await call("GET", `/runtime/cases/${id}/checklist`, undefined, officer)).body?.people?.find((p: { subject: string }) => p.subject === S)?.lines ?? [];
   const lineId: string | undefined = lines[0]?.id;
   const up = lineId ? await sendFile(`/runtime/checklist-lines/${lineId}/documents`, Buffer.from("%PDF-1.4\n% Sample\n%%EOF\n", "latin1"), "sample.pdf", CLIENT) : { status: 0, body: null };
+  const caseDoc = await upload(`/runtime/cases/${id}/documents`, { subjectId: S, documentType: "letter_of_invitation" });
+  ok("C6.16-4 fail: Client A's upload of a document with no checklist line for Partner is 403", caseDoc.status === 403 && /private to them and the firm/.test(caseDoc.body?.detail ?? ""), [caseDoc.status, caseDoc.body?.detail]);
+  const parentPutA = parentQ ? await call("PUT", `/runtime/cases/${id}/answers/${parentQ.subjectId}/${parentQ.fact}`, { value: "Changed by Client A", expectedId: null }, CLIENT) : { status: 0, body: null };
+  ok("C6.16-4 fail: Client A's PUT about Partner's parent is 403, and Client A's questionnaire has no part about Partner's parents", parentPutA.status === 403 && !JSON.stringify(parentPutA.body).includes(SECRET) && !(v4?.sections ?? []).some((x: { subjectId: string }) => x.subjectId.startsWith(`${S}/`)), [parentPutA.status]);
+  const reconf = curId ? await call("POST", `/runtime/cases/${id}/answers/${curId}/reconfirm`, {}, CLIENT) : { status: 0, body: null };
+  ok("C6.16-4 fail: Client A's re-confirm of a Partner answer is 403 before anything is read (never a 409 with its value)", reconf.status === 403 && !JSON.stringify(reconf.body).includes(SECRET), [reconf.status, reconf.body?.detail]);
   ok("C6.16-4 fail: Client A's upload to Partner's document line is 403 (nothing stored)", !!lineId && up.status === 403 && sql(`select count(*) from case_document where subject_id='${S}'`) === "0", [lineId, up.status, up.body?.detail]);
 
   // ---- 5: staff always see and edit.

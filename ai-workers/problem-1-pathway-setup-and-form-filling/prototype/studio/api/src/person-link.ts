@@ -314,7 +314,8 @@ export class PersonLinks {
     if (ownerOf(subjectId) !== sig.link.subjectId) fail("Your link is for your own questions only.", HttpStatus.FORBIDDEN); // their parents' parts too (B128)
     if (needConsent && !sig.link.consentedAt) problem(403, "Read this first", "Read who sees your answers first (Before you start), then continue to your questions.");
     const c = await this.r.reachByLink(caseId);
-    const w: Writer = { id: `person:${subjectId}`, name: `The ${roleWords(sig.person.role)} (own link)`, officer: false, channel: OWN_LINK, own: subjectId };
+    const own = sig.link.subjectId; // the person the link is for (a relative's part is theirs: `<own>/parent_1`)
+    const w: Writer = { id: `person:${own}`, name: `The ${roleWords(sig.person.role)} (own link)`, officer: false, channel: OWN_LINK, own };
     return { ...sig, c, w };
   }
 
@@ -338,12 +339,12 @@ export class PersonLinks {
     return { ended: true };
   }
   async questionnaire(auth: H, caseId: string, subjectId: string) {
-    const { c } = await this.scoped(auth, caseId, subjectId);
-    return this.r.linkView(c, subjectId);
+    const { c, link } = await this.scoped(auth, caseId, subjectId);
+    return this.r.linkView(c, link.subjectId);
   }
   async answer(auth: H, caseId: string, subjectId: string, field: string, body: unknown) {
     const { c, w } = await this.scoped(auth, caseId, subjectId);
-    return this.r.saveAnswer(c, w, subjectId, field, body, () => this.r.linkView(c, subjectId));
+    return this.r.saveAnswer(c, w, subjectId, field, body, () => this.r.linkView(c, w.own!));
   }
   async addRow(auth: H, caseId: string, subjectId: string, body: unknown) {
     const { c, w } = await this.scoped(auth, caseId, subjectId);
@@ -355,7 +356,7 @@ export class PersonLinks {
   }
   async noneApply(auth: H, caseId: string, subjectId: string, group: string, body: unknown) {
     const { c, w } = await this.scoped(auth, caseId, subjectId);
-    return this.r.saveNoneApply(c, w, subjectId, group, body, () => this.r.linkView(c, subjectId));
+    return this.r.saveNoneApply(c, w, subjectId, group, body, () => this.r.linkView(c, w.own!));
   }
 
   /** GET /api/demo/inbox?address=: the email stand-in (SI-20). Demo workspace only (404 elsewhere); messages not yet
@@ -408,6 +409,11 @@ export class LinkController {
   @Post("cases/:id/people/:subject/rows") addRow(@Headers("authorization") t: H, @Param("id") id: string, @Param("subject") s: string, @Body() b: unknown) { return this.x.addRow(t, id, s, b); }
   @Delete("cases/:id/people/:subject/rows/:row") removeRow(@Headers("authorization") t: H, @Param("id") id: string, @Param("subject") s: string, @Param("row") r: string) { return this.x.removeRow(t, id, s, r); }
   @Put("cases/:id/people/:subject/groups/:group/none-apply") noneApply(@Headers("authorization") t: H, @Param("id") id: string, @Param("subject") s: string, @Param("group") g: string, @Body() b: unknown) { return this.x.noneApply(t, id, s, g, b); }
+  // B128, B155: a relative of the person (`<subject>/parent_1`, `<subject>/sibling`), as the runtime routes name them.
+  @Put("cases/:id/people/:subject/:relation/answers/:field") relativeAnswer(@Headers("authorization") t: H, @Param("id") id: string, @Param("subject") s: string, @Param("relation") r: string, @Param("field") f: string, @Body() b: unknown) { return this.x.answer(t, id, `${s}/${r}`, f, b); }
+  @Post("cases/:id/people/:subject/:relation/rows") relativeAddRow(@Headers("authorization") t: H, @Param("id") id: string, @Param("subject") s: string, @Param("relation") r: string, @Body() b: unknown) { return this.x.addRow(t, id, `${s}/${r}`, b); }
+  @Delete("cases/:id/people/:subject/:relation/rows/:row") relativeRemoveRow(@Headers("authorization") t: H, @Param("id") id: string, @Param("subject") s: string, @Param("relation") r: string, @Param("row") x: string) { return this.x.removeRow(t, id, `${s}/${r}`, x); }
+  @Put("cases/:id/people/:subject/:relation/groups/:group/none-apply") relativeNoneApply(@Headers("authorization") t: H, @Param("id") id: string, @Param("subject") s: string, @Param("relation") r: string, @Param("group") g: string, @Body() b: unknown) { return this.x.noneApply(t, id, `${s}/${r}`, g, b); }
 }
 
 @OpenRead("the demo inbox by address (stand-in SI-20): demo workspace only, 404 elsewhere")
