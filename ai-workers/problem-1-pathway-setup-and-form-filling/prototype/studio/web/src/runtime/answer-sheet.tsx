@@ -198,7 +198,10 @@ function EnteredTick({ x, nameOf, item, caseId, readOnly }: { x: SheetSection; n
   const tickRef = React.useRef<HTMLButtonElement>(null), offRef = React.useRef<HTMLButtonElement>(null), reasonRef = React.useRef<HTMLTextAreaElement>(null);
   const focusNext = React.useRef<"tick" | "off" | null>(null);
   const current = !!x.entered && !x.out_of_date;
-  React.useEffect(() => { if (asking) reasonRef.current?.focus(); }, [asking]);
+  // The reason box takes the focus when the form opens; closing it (Escape, "Keep the tick") gives it back to the button.
+  const giveBack = React.useRef(false);
+  React.useEffect(() => { if (asking) reasonRef.current?.focus(); else if (giveBack.current) { giveBack.current = false; offRef.current?.focus(); } }, [asking]);
+  const keep = () => { giveBack.current = true; setAsking(false); setError(null); };
   // After a tick or an untick the focus stays on this section's control (keyboard users keep their place).
   React.useEffect(() => { const f = focusNext.current; if (!f) return; focusNext.current = null; (f === "off" ? offRef : tickRef).current?.focus(); }, [current]);
   const reload = async () => { setError(null); await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] }); };
@@ -206,7 +209,8 @@ function EnteredTick({ x, nameOf, item, caseId, readOnly }: { x: SheetSection; n
     setBusy(true); setError(null);
     try {
       await api(`/runtime/items/${item}/screens/${encodeURIComponent(x.key)}/${path}`, { method: "POST", json });
-      focusNext.current = next; setAsking(false); setReason("");
+      // Not busy before the refetch: the control that takes the focus next must not be disabled when it appears.
+      focusNext.current = next; setBusy(false); setAsking(false); setReason("");
       toast.push({ tone: "ok", text: ok });
       await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
     } catch (e) {
@@ -236,13 +240,13 @@ function EnteredTick({ x, nameOf, item, caseId, readOnly }: { x: SheetSection; n
         </Notice>
       ) : null}
       {asking ? (
-        <form className="space-y-2" aria-label={`Take the tick off ${x.title}`} onSubmit={(e) => { e.preventDefault(); takeOff(); }} onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); setAsking(false); setError(null); offRef.current?.focus(); } }}>
+        <form className="space-y-2" aria-label={`Take the tick off ${x.title}`} onSubmit={(e) => { e.preventDefault(); takeOff(); }} onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); keep(); } }}>
           <Field label="Why does the tick come off? (required)" hint="Kept in the case's activity with your name and the time." error={error?.field ?? null}>
             <Textarea ref={reasonRef} rows={2} maxLength={400} value={reason} onChange={(e) => { setReason(e.target.value); setError(null); }} />
           </Field>
           <div className="flex flex-wrap gap-2">
             <Button type="submit" size="sm" busy={busy}>Take the tick off</Button>
-            <Button type="button" size="sm" variant="secondary" onClick={() => { setAsking(false); setError(null); offRef.current?.focus(); }}>Keep the tick</Button>
+            <Button type="button" size="sm" variant="secondary" onClick={keep}>Keep the tick</Button>
           </div>
         </form>
       ) : current ? (
