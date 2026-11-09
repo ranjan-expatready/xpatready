@@ -12,7 +12,7 @@ import { Tip, TipProvider } from "@/components/status";
 import { dateWords, valueWords } from "./employer";
 
 type Source = { page: string; url: string; quote: string; recorded: string } | { sample: true; why: string };
-type Expiry = { status: "expired" | "soon"; rule: string; words: string; blocks: boolean; date: string; source: Source };
+type Expiry = { status: "expired" | "soon" | "unknown"; rule: string; words: string; blocks: boolean; date: string | null; source: Source };
 type Fact = { fact: string; label: string; value: unknown; from_answer: string; confirmed_at: string; confirmed_by: string; state: "new" | "different"; current: { answer_id: string; value: unknown } | null; expiry: Expiry | null; problems: string[]; usable: boolean };
 type Person = { subject_id: string; label: string; role: string; from_subject_id: string | null; from_label: string | null; facts: Fact[] };
 type Earlier = { case_id: string; reference: string; combination: string; opened_at: string; people: Person[]; unmatched: { label: string; role: string }[] };
@@ -84,7 +84,7 @@ export function EarlierFactsCard({ caseId }: { caseId: string }) {
                     <td className="py-2 [overflow-wrap:anywhere] text-text-muted">{f.current ? valueWords(f.current.value) : "Not answered yet"}</td>
                     <td className="space-y-1 py-2">
                       <div className="flex flex-wrap gap-1"><Tip tip={STATE[f.state].tip}><button type="button" className="rounded-sm focus-visible:outline focus-visible:outline-2"><Pill tone={STATE[f.state].tone}>{STATE[f.state].words}</Pill></button></Tip>
-                        {f.expiry ? <Tip tip={f.expiry.words}><button type="button" className="rounded-sm focus-visible:outline focus-visible:outline-2"><Pill tone={f.expiry.blocks ? "danger" : "warn"}>{f.expiry.blocks ? "Expired" : "Expires soon"}</Pill></button></Tip> : null}</div>
+                        {f.expiry ? <Tip tip={f.expiry.words}><button type="button" className="rounded-sm focus-visible:outline focus-visible:outline-2"><Pill tone={f.expiry.blocks ? "danger" : "warn"}>{f.expiry.blocks ? "Expired" : f.expiry.status === "soon" ? "Expires soon" : "Expiry not known"}</Pill></button></Tip> : null}</div>
                       {f.expiry ? <p id={`${id}-why`} className="text-xs">{f.expiry.words} <SourceLine s={f.expiry.source} /></p>
                         : f.problems.length ? <p id={`${id}-why`} className="text-xs text-danger">{f.problems[0]}</p> : null}
                     </td>
@@ -95,7 +95,7 @@ export function EarlierFactsCard({ caseId }: { caseId: string }) {
         ))}
         {chosen.unmatched.length ? <p className="text-xs text-text-muted">Also on {chosen.reference}: {chosen.unmatched.map((u) => `${u.label} (${roleWords(u.role)})`).join(", ")}. Add them to this case with the same role and name to bring their facts.</p> : null}
         {problem ? <Notice tone="danger" title={problem.title}><p>{problem.text}</p>{problem.reload ? <Button className="mt-2" size="sm" variant="secondary" onClick={() => void reload()}><RotateCw aria-hidden />Reload</Button> : null}</Notice> : null}
-        {offered.length ? <div className="flex items-center justify-end gap-3"><p className="text-xs text-text-muted">{take.length ? `${take.length} ticked: confirmed by you now, copied onto this case.` : "Tick each fact the client says is still true."}</p>
+        {offered.length ? <div className="flex items-center justify-end gap-3"><p className="text-xs text-text-muted">{take.length ? `${take.length} ticked: copied onto this case with the status each had there, re-confirmed by you now.` : "Tick each fact the client says is still true."}</p>
           <Button busy={busy} disabled={!take.length} onClick={() => void submit()} data-reconfirm>Re-confirm and use{take.length ? ` (${take.length})` : ""}</Button></div> : null}
       </div>
     </section>

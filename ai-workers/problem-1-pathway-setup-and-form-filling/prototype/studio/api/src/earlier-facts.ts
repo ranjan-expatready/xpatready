@@ -1,14 +1,15 @@
 // C6.19 (P-419; concept product/screens/C6.19/concept.md): facts from a returning client's earlier case, offered on
 // their next case, re-confirmed before use, never copied silently. Staff of the case's firm only (BR-7). The offer reads
 // the earlier case and writes nothing (BR-4); "Re-confirm and use" copies only the ticked facts onto this case's people
-// as new answers confirmed by that officer (VERIFIED, source "earlier_case", BR-3: copies, not links, P-65), checked
+// as new answers that keep the status they had there, with the officer's re-confirmation recorded beside it (challenge
+// B1; BR-3: copies, not links, C1.3 BR-3 and SA-1B-283 r4), the earlier answer still current (challenge M2), checked
 // fresh by the answer ids the officer saw under the case's row lock (BR-5), refusing an expired value (BR-6) and a case
 // recorded as submitted (BR-7). The earlier case is read only, never written. Answer values never go into audit text
 // (STANDARDS §5). No migration: copies are answer rows and the reuse is an audit event, as C1.3 does.
 import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { EARLIER_CASE, offerFrom, sameName, type EarlierAnswer, type OfferPerson } from "../../engine/runtime/earlier-facts.ts";
+import { offerFrom, sameName, type EarlierAnswer, type OfferPerson } from "../../engine/runtime/earlier-facts.ts";
 import { knownOf } from "../../engine/runtime/case.ts";
 import { FIRM_RECORD } from "../../engine/runtime/team.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
@@ -61,7 +62,8 @@ export class EarlierFacts {
     const earlierAnswers: EarlierAnswer[] = st.answers.filter((a) => !a.rowKey && UUID.test(a.subjectId) && UUID.test(a.id) && a.channel !== FIRM_RECORD)
       .map((a) => ({ id: a.id, subjectId: a.subjectId, field: a.field, value: a.value, confirmed: !!confirm.get(a.id)?.confirmed, confirmedAt: a.at, confirmedBy: a.actor }));
     const mine = here ?? await this.runtime.state(c);
-    const o = offerFrom({ snapshot: this.runtime.snapshotOf(c), here: this.runtime.peopleOf(c), current: this.current(mine.answers), earlier: ePeople, earlierAnswers, background: this.runtime.backgroundOf(c), today });
+    const combinationKey = (await this.db.combination.findUnique({ where: { id: c.combinationId }, select: { combinationKey: true } }))?.combinationKey;
+    const o = offerFrom({ combinationKey, snapshot: this.runtime.snapshotOf(c), here: this.runtime.peopleOf(c), current: this.current(mine.answers), earlier: ePeople, earlierAnswers, background: this.runtime.backgroundOf(c), today });
     return { case_id: e.id, reference: e.reference, combination: cand.case.combination.label, opened_at: cand.case.createdAt.toISOString(), ...o };
   }
 
@@ -109,6 +111,13 @@ export class EarlierFacts {
       if (moved.length) stale(moved.map((l) => `${l.label} (on the earlier case)`));
       const blocked = lines.filter((l) => !l.line!.usable);
       if (blocked.length) { const l = blocked[0].line!; notPossible(`${blocked[0].label} cannot be re-confirmed: ${l.expiry?.blocks ? l.expiry.words : l.problems[0]} Nothing was copied.`); }
+      // Challenge M2: the earlier answer shown must still be current there (append-only rows never change their value, so
+      // the value copied is exactly the one the officer saw), read under a share lock so it cannot move during the copy.
+      const froms = [...new Set(b.take.map((t) => t.from))];
+      await tx.$queryRaw`SELECT id FROM client_canonical_answer WHERE id = ANY(${froms}::uuid[]) FOR SHARE`;
+      const earlierRows = await tx.clientCanonicalAnswer.findMany({ where: { id: { in: froms }, supersededById: null } });
+      const gone = lines.filter((l) => !earlierRows.some((x) => x.id === l.t.from));
+      if (gone.length) stale(gone.map((l) => `${l.label} (on the earlier case)`));
       const out: { subject: string; fact: string }[] = [];
       for (const l of lines) {
         const ver = fields.find((f) => f.id === l.t.fact)?.item_version;
@@ -116,10 +125,14 @@ export class EarlierFacts {
         if (!def) fail(`The library has no version ${ver ?? "?"} of ${l.label}.`, HttpStatus.CONFLICT);
         const who = c.participants.find((p) => p.subjectId === l.t.subject_id)!;
         const cur = now.find((x) => x.subjectId === l.t.subject_id && x.canonicalFieldKey === l.t.fact);
+        const from = earlierRows.find((x) => x.id === l.t.from)!, src = from.sourceJson as { channel: string; actor: string; at: string };
         const id = randomUUID();
         if (cur) { const n = await tx.clientCanonicalAnswer.updateMany({ where: { id: cur.id, supersededById: null }, data: { supersededById: id } }); if (n.count !== 1) stale([l.label]); }
-        await tx.clientCanonicalAnswer.create({ data: { id, workspaceId: c.workspaceId, partyId: who.subject.partyId, subjectId: who.subjectId, canonicalFieldId: def!.id, canonicalFieldKey: l.t.fact, rowKey: null, valueJson: l.line!.value as object, status: "VERIFIED",
-          sourceJson: { channel: EARLIER_CASE, actor: actor.id, at, earlier_case: offer.case_id, earlier_reference: offer.reference, earlier_answer: l.line!.from_answer, earlier_confirmed_at: l.line!.confirmed_at }, verifiedBy: actor.id, verifiedAt: today } });
+        // Challenge B1 (SA-1B-266 rule 3, BR-39, P-411 (2)): the copy keeps the status, the giver and the verifier it had on
+        // the earlier case; the officer's press is recorded beside them (reconfirmed_by, reconfirmed_at), never as a new
+        // Verified. A client's own answer stays the client's (its channel), so Confirm section treats it as it did there.
+        await tx.clientCanonicalAnswer.create({ data: { id, workspaceId: c.workspaceId, partyId: who.subject.partyId, subjectId: who.subjectId, canonicalFieldId: def!.id, canonicalFieldKey: l.t.fact, rowKey: null, valueJson: from.valueJson as object, status: from.status,
+          sourceJson: { channel: src.channel, actor: src.actor, at: src.at, earlier_case: offer.case_id, earlier_reference: offer.reference, earlier_answer: from.id, reconfirmed_by: actor.id, reconfirmed_at: at }, verifiedBy: from.verifiedBy, verifiedAt: from.verifiedAt } });
         out.push({ subject: who.subjectId, fact: l.t.fact });
       }
       await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: REUSED_FACTS, entity: "case", entityKey: c.id, combinationId: c.combinationId, detail: { from_case: offer.case_id, facts: out } as object,

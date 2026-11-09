@@ -13,10 +13,10 @@ import RULES from "../../samples/fact-expiry-rules.json" with { type: "json" };
 /** The source written on a re-confirmed copy (BR-3), shown as "earlier case". */
 export const EARLIER_CASE = "earlier_case";
 
-export type RuleSource = { page: string; url: string; quote: string; recorded: string; file: string } | { sample: true; why: string };
+export type RuleSource = { page: string; url: string; quote: string; recorded: string; file: string; applies_to?: string[] } | { sample: true; why: string };
 export type ExpiryRule = { key: string; fact: string; kind: "expires_before_today" | "expires_within_months" | "issued_more_than_months_ago"; months?: number; blocks: boolean; covers: string[]; words: string; source: RuleSource };
 export const EXPIRY_RULES = RULES.rules as ExpiryRule[];
-export type ExpiryFlag = { status: "expired" | "soon"; rule: string; words: string; blocks: boolean; date: string; source: RuleSource };
+export type ExpiryFlag = { status: "expired" | "soon" | "unknown"; rule: string; words: string; blocks: boolean; date: string | null; source: RuleSource };
 
 /** BR-1: two names are the same person's when they read the same, trimmed, inner spaces collapsed, in any letter case. */
 export const sameName = (a: string, b: string) => norm(a) === norm(b) && norm(a) !== "";
@@ -33,21 +33,33 @@ const dayOf = (v: unknown): number | null => {
 const addMonths = (t: number, n: number) => { const d = new Date(t); d.setUTCMonth(d.getUTCMonth() + n); return d.getTime(); };
 const dateWords = (t: number) => new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
+/** Challenge M3: a cited rule speaks for the combinations its page covers (data); on any other combination the same
+ *  check runs, labelled Sample with the page it was cited from. With no combination named, the source stays as cited. */
+export function sourceOn(src: RuleSource, combinationKey?: string): RuleSource {
+  if ("sample" in src || !combinationKey || !src.applies_to || src.applies_to.includes(combinationKey)) return src;
+  return { sample: true, why: `Sample on this combination: canada.ca states it on "${src.page}" (recorded ${src.recorded}): "${src.quote}"` };
+}
+
 /** BR-6: the expiry flags on one person's earlier facts, by fact. Every fact a triggered rule covers takes its flag; a
- *  blocking flag wins over a warning. No valid today means no check can pass: refused (fail closed, never "not expired"). */
-export function expiryFlags(facts: Map<string, unknown>, today: Date, rules: ExpiryRule[] = EXPIRY_RULES): Map<string, ExpiryFlag> {
+ *  blocking flag wins over a warning. No valid today means no check can pass: refused (fail closed, never "not expired").
+ *  Challenge m1: a blocking expiry rule whose date is not known on the earlier case warns on the facts it covers. */
+export function expiryFlags(facts: Map<string, unknown>, today: Date, rules: ExpiryRule[] = EXPIRY_RULES, combinationKey?: string): Map<string, ExpiryFlag> {
   if (!(today instanceof Date) || Number.isNaN(today.getTime())) throw new Error("No date for today: expiry cannot be checked, so nothing is offered.");
   const now = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
   const out = new Map<string, ExpiryFlag>();
+  const put = (f: string, flag: ExpiryFlag) => { const had = out.get(f); const rank = (x: ExpiryFlag) => (x.blocks ? 2 : x.status === "soon" ? 1 : 0); if (!had || rank(flag) > rank(had)) out.set(f, flag); };
   for (const r of rules) {
     const t = dayOf(facts.get(r.fact));
-    if (t === null) continue;
+    if (t === null) {
+      if (r.kind === "expires_before_today" && r.blocks) for (const f of r.covers) if (f !== r.fact) put(f, { status: "unknown", rule: r.key, words: "The expiry date is not known on the earlier case: check the document before re-confirming.", blocks: false, date: null, source: sourceOn(r.source, combinationKey) });
+      continue;
+    }
     const hit = r.kind === "expires_before_today" ? t < now
       : r.kind === "expires_within_months" ? t >= now && t < addMonths(now, r.months ?? 0)
       : t < addMonths(now, -(r.months ?? 0));
     if (!hit) continue;
-    const flag: ExpiryFlag = { status: r.blocks ? "expired" : "soon", rule: r.key, words: r.words.replace("{date}", dateWords(t)), blocks: r.blocks, date: String(facts.get(r.fact)), source: r.source };
-    for (const f of r.covers) { const had = out.get(f); if (!had || (!had.blocks && flag.blocks)) out.set(f, flag); }
+    const flag: ExpiryFlag = { status: r.blocks ? "expired" : "soon", rule: r.key, words: r.words.replace("{date}", dateWords(t)), blocks: r.blocks, date: String(facts.get(r.fact)), source: sourceOn(r.source, combinationKey) };
+    for (const f of r.covers) put(f, flag);
   }
   return out;
 }
@@ -87,7 +99,7 @@ export type OfferPerson = { subject_id: string; label: string; role: string; fro
 /** BR-2, BR-5, BR-6: what one earlier case offers each person on this case. A fact this case already holds with the same
  *  value is not offered (Same); a different one is shown with both values (Different); an expired or unfit value is
  *  shown and not usable. Earlier people with no match are listed by name and role (nothing of theirs moves). */
-export function offerFrom(input: { snapshot: Snapshot; here: Participant[]; current: CurrentAnswer[]; earlier: Participant[]; earlierAnswers: EarlierAnswer[]; background?: Set<string>; today: Date; rules?: ExpiryRule[] }): { people: OfferPerson[]; unmatched: { label: string; role: string }[] } {
+export function offerFrom(input: { snapshot: Snapshot; here: Participant[]; current: CurrentAnswer[]; earlier: Participant[]; earlierAnswers: EarlierAnswer[]; background?: Set<string>; today: Date; rules?: ExpiryRule[]; combinationKey?: string }): { people: OfferPerson[]; unmatched: { label: string; role: string }[] } {
   const asked = personFactsAsked(input.snapshot, input.background);
   const match = matchPeople(input.here, input.earlier);
   const people: OfferPerson[] = [];
@@ -96,7 +108,7 @@ export function offerFrom(input: { snapshot: Snapshot; here: Participant[]; curr
     const from = match.get(p.subjectId) ?? null, fromP = input.earlier.find((e) => e.subjectId === from);
     const all = from ? input.earlierAnswers.filter((a) => a.subjectId === from) : [], theirs = all.filter((a) => a.confirmed);
     // An expiry date read even when it was not confirmed there: a confirmed passport number never escapes an expired date.
-    const flags = expiryFlags(new Map(all.map((a) => [a.field, a.value])), input.today, input.rules);
+    const flags = expiryFlags(new Map(all.map((a) => [a.field, a.value])), input.today, input.rules, input.combinationKey);
     const facts: OfferFact[] = [];
     for (const q of asked) {
       const a = theirs.find((x) => x.field === q.fact);
