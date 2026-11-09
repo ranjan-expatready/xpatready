@@ -91,3 +91,50 @@ G1, G2, G4, G5 and G6: none for C6.16; G3: see m5. Every element serves C6.16. T
 
 ## What I could not check
 A real screen reader · an intended user's walk (D17, D20) · real email · clock-dependent expiry beyond the pack's expired-code step · the 310 suites the builder left to the PR check · STAND-INS rows SI-20 and SI-21, which are not on main (the chips stay `ProposedStandIn`, as agreed).
+
+## Round 2 (55358fff5)
+Exact head: **55358fff5724b16173f7abddfe8236af77072bcc**. Diff reviewed: `e15959989..55358fff5`, i.e. 1f4cb2e68 (merge) and the fix commits after it. Last round (P-293 (3)).
+
+**Run** (fresh copies on :4443 only, each started and stopped in one command): pack **68/68** (exit 0) · unit **42/42** · browser **50/50** (exit 0) · `check_c69_page_browser.cjs` **55/55** (exit 0) · my round-1 probe again. The C6.9 screenshots that check rewrites were restored, not kept.
+
+**Merge 1f4cb2e68: both sides kept.** The only conflict was `questionnaire.tsx`. Main's exported `refusal` and `WHO` stay exported, and main's C6.5 `document_read` and `checked_against_document` channels are in `CHANNEL`. C6.16's `own_link` channel and its `person:` name are kept beside them (remerge diff). This head merges cleanly with current main 967388518.
+
+**Fixes verified:**
+- **M1 (= break M3), fixed.** `Runtime.clientSubjectOf` reads C6.13's client person. `adultCheck`, `privateFrom` (`&& !isClient`), `people()` (`is_client`), send, tick, `hiddenFromClient` (rows, uploads, `clientView`, re-confirm) and the screens (`privacy.tsx` keyed on `is_client`) all use it. My probe after Make principal:
+  - Client A's row: `can.send` and `can.tick` are false, with why_not "…they are the client on this case".
+  - Client A's self-send and the staff tick on Client A are each 409 in words.
+  - Client A keeps their 14 own sections.
+  - The new principal by role is an adult and can be sent a link (201).
+  - Pack C6.16-13 checks all of this, pass and fail.
+- **Break M1, fixed.** The client gets `by` and `why` as null; staff get both (C6.16-9). The client's `words` hold no reason.
+- **Break M2, fixed.** `stillAdult` runs on every written use: `liveLink` in code send and verify kills the link with `not_adult` and a history line, in one transaction. `open` and `signed()` only refuse, so they write nothing. The void check and the migration accept `not_adult`; the migration is not on main yet, so editing it is safe. Privacy stays off for the child of 12 (C6.16-13).
+- **Break M4, fixed** as far as the stand-in allows. At the right code the inbox loses every message of the link, and a client `x-actor` gets 403 in words. The rest (no header, or another persona) is the SI-20/SI-21 limit the tech lead is choosing on; it is not a finding here.
+- **Minors, fixed and tested:**
+  - one progress count (`ownerOf` in `people()`, C6.16-4 compares the two routes);
+  - the principal's own take-back words (`principalLinkWords`);
+  - NUL in the address gives 400 on the field (probe and C6.16-8);
+  - focus returns to the opener on Escape (browser);
+  - the usage line notes the rerun limit;
+  - a case-row lock plus the partial unique index on (case, address) (race C6.16-13);
+  - per-source try limits (`serverTries`, unit);
+  - Resend goes to the kept address (C6.16-8);
+  - long names wrap and the 320 px header fits (browser);
+  - the code step survives a reload (browser);
+  - BIC-13 top summary and BIC-14 visible reason (browser);
+  - "About your first parent";
+  - a client save re-reads the setting under `FOR SHARE` (`runtime.ts` saveAnswer).
+- **Panel move:** "Own links and privacy" now sits below the case panels. `check_c69_page_browser.cjs` is unchanged and passes.
+
+**Assertions:** none weakened. The unit `isClient` arguments keep each old check; `prin` is still refused, now as the client. Each browser line that was replaced is stronger: the summary is counted twice; focus is waited for, not sampled; the `ok(…, true)` placeholder became a real check.
+
+**Screenshots:** only `screens/B138/screenshots/*` are in the diff against main.
+
+**Still open, not blocking:**
+- Minor: the share-lock re-read covers the answer PUT only, not rows, none-apply or re-confirm. The race window is narrow and each is refused once the setting is visible.
+- Recorded and known: the M4 stand-in choice (tech lead); SI-20 and SI-21 rows (chips stay `ProposedStandIn`); dead-link dates in UTC; the "Declared: the person's own answer…" line under a part heading on the link.
+
+**Journey score: 9.5/10** (was 8.5). Plain words ½ (the "Declared…" line); every other criterion 1: correct data (M1 fixed, one count), accessibility (focus returns, summary on the dialog).
+
+**BIC changes:** BIC-13, BIC-14 and BIC-20 move to Met.
+
+**Verdict: Approve** for 55358fff5724b16173f7abddfe8236af77072bcc. No open Blocker or Major.
