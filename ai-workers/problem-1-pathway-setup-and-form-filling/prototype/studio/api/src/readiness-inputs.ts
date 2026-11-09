@@ -9,6 +9,7 @@ import type { Readiness } from "../../contracts/runtime.ts";
 import { createHash } from "node:crypto";
 import type { Db } from "./core.ts";
 import { changedGroups, type GroupFact } from "../../engine/runtime/forms.ts";
+import { stampCurrent } from "../../engine/runtime/review.ts";
 import { closedOnce, readinessFigure, type ClosedFinding, type Figure } from "../../engine/runtime/readiness-figure.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -19,7 +20,9 @@ const SIGNER: Record<string, string> = { person: "the person", parent: "a parent
 export type PreparedForm = { id: string; filing: string; subject: string; person: string; form: string; channel: Channel; signature: Signature; signed_by: string | null; signers?: string[]; state: string;
   reason?: string; steps?: { key: string; done: boolean | null }[];
   /** C9.2 (BR-12, P-136): a validated, signed or uploaded copy of it is out of date: the first fact changed and when. */
-  outOfDate?: { fact: string; since: string; key?: string; words?: string } | null };
+  outOfDate?: { fact: string; since: string; key?: string; words?: string } | null;
+  /** C7.8 (B141 BR-7): a blank official PDF the case officer added; completed once its copy is uploaded. */
+  blank?: { completed: boolean; key: string } };
 // Review B1 on #861: `signers` may be missing on a line (`signers?` in its type), so readiness never assumes it.
 export type ReadinessInputs = {
   workspaceId: string; caseId: string; filings: string[];
@@ -94,6 +97,10 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(Read
   // Review M1 on #1389: a rules finding is one check per rule and person, however many rows its edits left (closedOnce).
   const checkOf = (g: { source: string; ruleKey: string | null; subjectId: string }) => (g.source === "rules" && g.ruleKey ? `${g.ruleKey}|${g.subjectId}` : null);
   const rep = (await db.caseTeamMember.findFirst({ where: { caseId: x.caseId, role: "LEAD_REPRESENTATIVE", endedAt: null }, select: { userId: true } }))?.userId ?? null;
+  // C8.3 (break B1): each filing's newest review round row; a review counts only while that row is the approval that
+  // wrote it (a filing sent for review again, or sent back, is no longer approved). Filings never sent: none.
+  const newestRow = new Map<string, { filingReviewId: string | null }>();
+  for (const r of ids.length ? await db.reviewRoundFiling.findMany({ where: { filingId: { in: ids } }, orderBy: [{ filingId: "asc" }, { filingRound: "desc" }], select: { filingId: true, filingReviewId: true } }) : []) if (!newestRow.has(r.filingId)) newestRow.set(r.filingId, r);
   // C6.5 (BR-7; C7.6 P-238): an open typed-versus-document check on a person of the filing is a CRITICAL warning.
   const openChecks = await db.answerCheck.findMany({ where: { caseId: x.caseId, state: "open" }, orderBy: [{ openedAt: "asc" }, { id: "asc" }], select: { subjectId: true, fact: true } });
   // Break M4: a check on the application's own facts (a letter's visit contact) warns on every filing of the case.
@@ -131,7 +138,7 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(Read
         signerOwes: who.length && who.every((s) => s === "representative") ? "representative" : "client",
         // An accepted-until date is set only on an edition IRCC has replaced (P-151 (1)): it is superseded until then.
         edition: label ? { label, superseded: until !== null, acceptedUntil: until } : null,
-        enteredOutOfDate: x.enteredStale.get(f.id) ?? [], outOfDate: f.outOfDate ?? null, byHand: x.byHand?.(f.form, f.subject) ?? [], copy: x.copy(f.form, f.subject) } satisfies FormItem;
+        enteredOutOfDate: x.enteredStale.get(f.id) ?? [], outOfDate: f.outOfDate ?? null, byHand: x.byHand?.(f.form, f.subject) ?? [], copy: x.copy(f.form, f.subject), blank: f.blank ?? null } satisfies FormItem;
     });
     const documents: DocumentItem[] = x.documents.filter((d) => d.filing === filing).map((d) => {
       const st = lineState.get(`${d.subject}|${d.document_type}`);
@@ -140,7 +147,9 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(Read
     const found: Finding[] = findings.filter((g) => g.filingId === filing).map((g) => ({ id: g.id, subject: g.subjectId, form: g.form ?? undefined, severity: (["CRITICAL", "MAJOR", "MINOR", "INFO"].includes(g.severity.toUpperCase()) ? g.severity.toUpperCase() : "INFO") as Finding["severity"], words: g.source === "ai" ? `the AI review (${g.agreement === "low" ? "Low: the two rounds disagree" : "High"}) flags what the form says, “${g.quote}”` : g.quote }));
     // Break B2: a review counts only when it was made by the representative of record now, for the facts as they are now.
     const latest = reviews.find((r) => r.filingId === filing) ?? null;
-    const sameFacts = !!latest && latest.reviewedBy === rep && latest.factsHash === factsHash;
+    // C8.3 (P-412 F1, challenge M2): the same rule function as each form's stamp on the representative's review.
+    const row = newestRow.get(filing);
+    const sameFacts = stampCurrent(latest ? { hash: latest.factsHash, by: latest.reviewedBy, superseded: !!row && row.filingReviewId !== latest.id } : null, { hash: factsHash, representative: rep }).current;
     // C9.5: a review made before a move that changed this filing is withdrawn by the move, and says so, whether or not
     // the move also changed the facts' fingerprint (a channel or signing change leaves it equal; a new form does not).
     const withdrawn = latest && latest.reviewedBy === rep ? x.reviewAfterMove?.(filing, latest.reviewedAt) ?? null : null;

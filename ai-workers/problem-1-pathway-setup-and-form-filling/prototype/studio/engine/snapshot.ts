@@ -5,7 +5,7 @@
 // Every list is sorted by its key so the same content always gives the same fingerprint.
 import { fingerprintLine } from "./channels.ts";
 import { markOf } from "./field-scope.ts"; // C3.16: a placement carries its field's new scope (household, organisation) only
-import type { FormEdition, PrismaClient } from "@prisma/client";
+import type { CanonicalField, FormEdition, FormFieldMap, PrismaClient } from "@prisma/client";
 import { canonical, sha256 } from "../../contracts/rules.ts";
 import { compareEditions } from "./programs.ts";
 import { gateFacts, snapshotEligibility, type SnapshotEligibility } from "./eligibility-gates.ts";
@@ -135,6 +135,12 @@ export async function buildSnapshots(db: PrismaClient, workspaceId: string, comb
   return out;
 }
 
+/** One map row as a snapshot carries it (one shape for a release and for a form added to a case, C7.8 BR-4). */
+export const snapEntry = (m: FormFieldMap) => ({ data_path: m.dataPath, caption: m.caption, heading: m.heading, outcome: m.outcome, person: m.person, row: m.row, fact: m.canonicalFieldKey, transform: m.transform, condition: m.condition, confidence: m.confidence, evidence_quote: m.evidenceQuote, unresolved_reason: m.reason, item_version: m.version, status: m.status, origin: m.origin,
+  ...(m.screenKey ? { screen: m.screenKey, screen_order: m.screenOrder, input_order: m.inputOrder } : {}), ...(m.optionMap ? { option_map: m.optionMap } : {}), ...(m.listPurpose ? { list_purpose: m.listPurpose } : {}), ...(m.conditionRule ? { condition_rule: m.conditionRule } : {}) });
+/** One fact definition as a snapshot carries it (the same for a release and for a form added to a case, C7.8 BR-4). */
+export const snapField = (f: CanonicalField, lists: Map<string, { key: string; label: string }[]>) => ({ id: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, data_type: f.dataType, scope: f.scope, item_version: f.version, status: f.status, origin: f.origin, ...(f.mustVerifyBeforeFiling ? { must_verify: true } : {}), ...(f.answerListKey && lists.has(f.answerListKey) ? { answer_list: { key: f.answerListKey, values: lists.get(f.answerListKey) } } : {}) });
+
 /** W1-02 (break M2): kept as before the park, so a release made with a portal or an Online line keeps its fingerprint on
  *  an older database; a database made since holds no portal or online version, so these keys never appear there.
  *  F1 (CHECK fixes): what the channel rules need to know about a line's form beyond its field maps, only when it matters,
@@ -176,8 +182,7 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
     const entries = shared.entriesOf(e.id);
     const online = e.channel === "ONLINE" ? { channel: "ONLINE", portal: e.portalKey, captured_on: e.capturedOn?.toISOString().slice(0, 10) ?? null, recheck_by: e.recheckBy?.toISOString().slice(0, 10) ?? null, content_sha256: e.contentSha256 } : {};
     return { form_number: f.form.formKey, form_edition: e.editionLabel, official_file: e.officialFile, form_sha256: e.sha256, inventory_file: e.inventoryFile, ...online,
-      entries: entries.map((m) => ({ data_path: m.dataPath, caption: m.caption, heading: m.heading, outcome: m.outcome, person: m.person, row: m.row, fact: m.canonicalFieldKey, transform: m.transform, condition: m.condition, confidence: m.confidence, evidence_quote: m.evidenceQuote, unresolved_reason: m.reason, item_version: m.version, status: m.status, origin: m.origin,
-        ...(m.screenKey ? { screen: m.screenKey, screen_order: m.screenOrder, input_order: m.inputOrder } : {}), ...(m.optionMap ? { option_map: m.optionMap } : {}), ...(m.listPurpose ? { list_purpose: m.listPurpose } : {}), ...(m.conditionRule ? { condition_rule: m.conditionRule } : {}) })) };
+      entries: entries.map(snapEntry) };
   })).filter((m) => m.entries.length);
 
   // The library is shared; a combination's snapshot carries the fields, sections and placements its forms and
@@ -217,7 +222,7 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
     combination: { key: comp.combinationKey, label: comp.label, program: (chain.find((n) => n.nodeKind === "PROGRAM") ?? comp.program).label, pathway: chain.find((n) => n.nodeKind === "PATHWAY")?.label ?? null, participants: comp.participants as any[], source_basis: comp.sourceBasis, basis_note: comp.basisNote,
       path: chain.map((n) => n.label), client_type: chain.find((n) => n.nodeKind === "PATHWAY")?.clientType ?? null, allowed_locations: comp.program.allowedLocations ?? [], ...(comp.portalKey ? { portal: comp.portalKey } : {}) },
     mode,
-    canonical_fields: effFields.filter((f) => used.has(f.canonicalFieldKey)).sort((a, b) => a.canonicalFieldKey.localeCompare(b.canonicalFieldKey)).map((f) => { note("field", f.canonicalFieldKey, f); return { id: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, data_type: f.dataType, scope: f.scope, item_version: f.version, status: f.status, origin: f.origin, ...(f.mustVerifyBeforeFiling ? { must_verify: true } : {}), ...(f.answerListKey && shared.lists.has(f.answerListKey) ? { answer_list: { key: f.answerListKey, values: shared.lists.get(f.answerListKey) } } : {}) }; }),
+    canonical_fields: effFields.filter((f) => used.has(f.canonicalFieldKey)).sort((a, b) => a.canonicalFieldKey.localeCompare(b.canonicalFieldKey)).map((f) => { note("field", f.canonicalFieldKey, f); return snapField(f, shared.lists); }),
     sections: selections.map((s) => effSections.find((x) => x.sectionKey === s.sectionKey)).filter(Boolean).map((s) => { note("section", s!.sectionKey, s!); return { id: s!.sectionKey, title: s!.title, meaning: s!.meaning, item_version: s!.version, status: s!.status }; }),
     placements: placements.sort((a, b) => a.sectionKey.localeCompare(b.sectionKey) || a.displayOrder - b.displayOrder || a.lineageKey.localeCompare(b.lineageKey)).map((q) => { note("placement", q.lineageKey, q); return { lineage: q.lineageKey, fact: q.canonicalFieldKey, section_id: q.sectionKey, order: q.displayOrder, question_text: q.questionText, help_text: q.helpText, repeats: q.repeats, tier: q.tier, collected_from: q.collectedFrom, client_visible: q.clientVisible, condition: q.predicateJson, condition_effect: q.conditionEffect, condition_plain: q.conditionPlain, rule_only: q.ruleOnly, ...(clientOnly.has(q.sectionKey) ? { client_only: true } : {}), ...markOf(effFields.find((f) => f.canonicalFieldKey === q.canonicalFieldKey)?.scope), item_version: q.version, status: q.status }; }),
     // C11.9 (P-116): the combination's filing order when one is set (lineage keys); lines it does not name follow by key.
@@ -226,7 +231,7 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
       ...(f.minAge ? { min_age: f.minAge } : {}), ...(f.signedBy ? { signed_by: f.signedBy } : {}), ...(f.copies && f.copies > 1 ? { copies: f.copies } : {}) }; }),
     field_maps: fieldMaps,
     document_requirements: effReq.sort((a, b) => a.lineageKey.localeCompare(b.lineageKey)).map((r) => { note("requirement", r.lineageKey, r); return { lineage: r.lineageKey, document_type: effTypes.find((t) => t.documentTypeKey === r.documentTypeKey)?.name ?? r.documentTypeKey, document_type_key: r.documentTypeKey, who: r.appliesToRoles, provided_by: r.providedBy, base_or_conditional: r.attachMode === "COMBINATION_MANDATORY" ? "base" : "conditional", condition: r.predicateJson, condition_plain: r.conditionPlain, source_quote: r.sourceQuote, source_file: r.sourceFile, note: r.note, ...(r.position != null ? { position: r.position } : {}), ...(Array.isArray(r.alternatives) && r.alternatives.length ? { alternatives: r.alternatives } : {}), ...(r.setName ? { set_name: r.setName } : {}), item_version: r.version, status: r.status, origin: r.origin }; }),
-    document_types: effTypes.filter((t) => effReq.some((r) => r.documentTypeKey === t.documentTypeKey)).sort((a, b) => a.documentTypeKey.localeCompare(b.documentTypeKey)).map((t) => ({ key: t.documentTypeKey, name: t.name, category: t.category, supplies_facts: t.suppliesFacts, ...(t.suppliesAbout && Object.keys(t.suppliesAbout).length ? { supplies_about: t.suppliesAbout } : {}), reader_profile: t.readerProfile, ...docSets(t, effTypes, rows.doctypes) })),
+    document_types: effTypes.filter((t) => effReq.some((r) => r.documentTypeKey === t.documentTypeKey)).sort((a, b) => a.documentTypeKey.localeCompare(b.documentTypeKey)).map((t) => ({ key: t.documentTypeKey, name: t.name, category: t.category, supplies_facts: t.suppliesFacts, ...(t.suppliesAbout && Object.keys(t.suppliesAbout).length ? { supplies_about: t.suppliesAbout } : {}), reader_profile: t.readerProfile, ...docSets(t, effTypes, rows.doctypes), ...(t.defaultProviderRoles?.length ? { default_provider_roles: t.defaultProviderRoles } : {}) })),
     rules: effRules.sort((a, b) => a.predicateKey.localeCompare(b.predicateKey)).map((r) => { note("rule", r.predicateKey, r); return { id: r.predicateKey, when: r.predicateJson, when_plain: r.whenPlain, then: r.thenPlain, for_whom: r.forWhom, source_quote: r.sourceQuote, item_version: r.version, status: r.status, origin: r.origin }; }),
     derived_fields: [...derived].sort((a, b) => a.derivedKey.localeCompare(b.derivedKey)).map((d) => ({ id: d.derivedKey, calculation: d.calculation, inputs: d.inputs, reference: d.reference, plain: d.plain, executable: d.executable })),
     checks: effChecks.sort((a, b) => a.checkKey.localeCompare(b.checkKey)).map((c) => ({ id: c.checkKey, group: c.checkGroup, applies_to: c.appliesTo, condition: c.predicateJson, severity: c.severity, message: c.message, source_quote: c.sourceQuote, illustrative: c.illustrative, item_version: c.version })),

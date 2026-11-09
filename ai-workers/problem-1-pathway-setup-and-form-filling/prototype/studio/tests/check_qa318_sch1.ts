@@ -1,0 +1,84 @@
+// QA-318 (C7.2; P-46, P-171): IMM 5257 SCH1 (09-2023) kept 5 mandatory Yes/No form fields empty under "Facts confirmed" on a
+// fully answered family case. Causes and fixes:
+//   Questions 4 and 7 (military service, government positions): the release's map reads the person's own Yes/No answer
+//     through a drafted prose step, "derive: true if any … is recorded for the subject, else false", which the filler did not
+//     run ("not in the executable set"). The filler now runs it (p5/transforms.ts PROSE_RECORDED): a Yes/No answer is written
+//     as given; a confirmed "none apply" writes No; a recorded entry writes Yes, unless the form counts only some entries.
+//   Question 8 (previous travel): the same prose, with the form's own limits (trips since 18 or in the past five years, to
+//     other countries): "none apply" writes No; recorded trips are decided by a person, in those words (never a guess).
+//   Questions 5 and 6 (ill treatment; violent or criminal organizations): no question asked them. They are asked as their
+//     own Yes/No questions in the form's words (samples/own-yes-no.json, the configured checkpoint only, B116's door).
+//   And the forms card counts a mandatory form field that still needs an answer as a fact to answer, so "Facts confirmed"
+//     is never shown over it (engine/runtime/open-lines.ts cardFacts); locking is unchanged (#1318 M2).
+// Part A: the filler's step, a pass and a fail per rule (no server). Part B: the Sample family's Visitor visa case on the
+// configured checkpoint, through the API: the suite resets its copy and loads the checkpoint itself (as B154's does; CI's
+// run-suites.sh reads only "start && tsx" usage lines), or pass "loaded" as a third argument to keep a copy already loaded.
+// Sample people and values; Unconfirmed: expert. US$0, no AI.
+//   zsh studio/tools/isolated.sh rt_qa318 4436 start && tsx studio/tests/check_qa318_sch1.ts 4436 xr_studio_rt_qa318
+import * as T from "../../p5/transforms.ts"; // a namespace, so the suite also runs (and fails) on code before QA-318
+const { runTransform } = T;
+const proseRecorded = (t: string) => !!(T as { proseRecorded?: (x: string) => boolean }).proseRecorded?.(t);
+import { cardFacts } from "../engine/runtime/open-lines.ts";
+import { agent, AUTHOR, call, FAMILY, fillEverything, firms, generateCopy, main, ok, openCase, OFFICER, sql } from "../acceptance/lib/m3.ts";
+
+const SERVED = "derive: true if any military/militia/civil defence/security/police service period is recorded for the subject, else false -> yes_no_code:true/false";
+const TRAVEL = "derive: true if any recorded trip, starting after the later of the subject's 18th birthday or five years before the application date, went to a country other than the subject's countries of citizenship and current country of residence, else false -> yes_no_code:true/false";
+const box = { data_path: "Schedule1[0].MilitaryServiceInfo[0].ServedInMilitary[0]", options: [["*Yes", "true"], ["*No", "false"]] } as never;
+const val = (o: ReturnType<typeof runTransform>) => (o.ok ? o.value : "hand" in o && o.hand ? `hand: ${o.reason}` : `blank: ${o.reason}`);
+const BOXES = { served: "MilitaryServiceInfo[0].ServedInMilitary[0]", ill: "WarHumanityCrimesInfo[0].HaveWitnessedParticipated[0]", org: "MembershipAssociationInfo[0].BeenMemberAssociated[0]", gov: "GovernmentPositionsInfo[0].HeldGovernmentPositions[0]", travel: "PreviousTravelInfo[0].TraveledOtherCountry[0]" } as const;
+
+await main("QA-318", "IMM 5257 SCH1's five mandatory Yes/No form fields fill, or say honestly what they wait for", async () => {
+  // ---------------------------------------------------------------- Part A: the filler's prose Yes/No step
+  ok("QA-318 A1 pass: the drafted prose Yes/No is recognised (both shapes)", proseRecorded(SERVED) && proseRecorded(TRAVEL) && !proseRecorded("as_is") && !proseRecorded("derived:person.national_id_number recorded -> yes_no_code:Y/N"));
+  ok("QA-318 A2 pass: the person's own Yes writes the form's Yes code", val(runTransform(SERVED, true, box)) === "true", val(runTransform(SERVED, true, box)));
+  ok("QA-318 A3 pass: the person's own No writes the form's No code (never left empty)", val(runTransform(SERVED, false, box)) === "false", val(runTransform(SERVED, false, box)));
+  ok("QA-318 A4 fail: no answer writes nothing (blank, never a guessed No)", /^blank/.test(val(runTransform(SERVED, undefined, box))) && /^blank/.test(val(runTransform(TRAVEL, [], box))), [val(runTransform(SERVED, undefined, box)), val(runTransform(TRAVEL, [], box))]);
+  ok("QA-318 A5 pass: a confirmed \"none apply\" (the caller's nothingRecorded) writes No", val(runTransform(TRAVEL, null, box, { nothingRecorded: true })) === "false", val(runTransform(TRAVEL, null, box, { nothingRecorded: true })));
+  ok("QA-318 A6 pass: an entry recorded writes Yes when the form counts every entry", val(runTransform(SERVED, ["CAN"], box)) === "true", val(runTransform(SERVED, ["CAN"], box)));
+  ok("QA-318 A7 fail: recorded trips are never guessed Yes when the form counts only some of them: a person decides, in the form's words", /^hand: the form counts only some of them \(any recorded trip, starting after/.test(val(runTransform(TRAVEL, ["IND", "FRA"], box))), val(runTransform(TRAVEL, ["IND", "FRA"], box)));
+
+  // ---------------------------------------------------------------- Part B: the family case on the configured checkpoint
+  if (process.argv[4] !== "loaded") {
+    await call("POST", "/demo/reset", { confirm: "RESET" }, AUTHOR);
+    const l = await call("POST", "/demo/load", { sample: "configured" }, AUTHOR);
+    ok("QA-318 B0 setup: the configured checkpoint loads at US$0", l.status < 300 && l.body?.cost_usd === 0, { status: l.status, body: l.status < 300 ? l.body?.cost_usd : l.body });
+  }
+  const vv = sql("select id from combination where combination_key='vv.single'");
+  const sch1Asked = sql(`select count(distinct m.data_path) from section_question q join form_field_map m on m.canonical_field_key=q.canonical_field_key join form_edition e on e.id=m.form_edition_id join gov_form_def g on g.id=e.gov_form_def_id where g.form_key='IMM 5257 SCH1' and m.data_path ~ '(HaveWitnessedParticipated|BeenMemberAssociated)\\[0\\]$' and m.status='PUBLISHED' and q.status='PUBLISHED'`);
+  ok("QA-318 B0 setup: the configured checkpoint is loaded, and asks SCH1's Questions 5 and 6 as their own questions (released)", !!vv && sch1Asked === "2", { vv, sch1Asked });
+  if (!vv) return;
+  const words = sql(`select string_agg(m.evidence_quote, ' | ' order by m.data_path) from form_field_map m join form_edition e on e.id=m.form_edition_id join gov_form_def g on g.id=e.gov_form_def_id where g.form_key='IMM 5257 SCH1' and m.data_path ~ '(HaveWitnessedParticipated|BeenMemberAssociated)\\[0\\]$' and m.status='PUBLISHED'`) ?? "";
+  ok("QA-318 B1 pass: their questions are the form's own official words (P-170)", words.includes("Are you, or have you ever been a member or associated with any political party") && words.includes("Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings?"), words);
+  // Review M1 on #1272: IMM 5257 asks the same two questions in the same words, so SCH1's boxes read the same library fields.
+  const factOf = (form: string, re: string) => sql(`select m.canonical_field_key from form_field_map m join form_edition e on e.id=m.form_edition_id join gov_form_def g on g.id=e.gov_form_def_id where g.form_key='${form}' and m.data_path ~ '${re}' and m.status='PUBLISHED' order by m.version desc limit 1`);
+  const ill = [factOf("IMM 5257 SCH1", "HaveWitnessedParticipated\\[0\\]$"), factOf("IMM 5257", "GovPosition\\[0\\]\\.Choice\\[0\\]$")], org = [factOf("IMM 5257 SCH1", "BeenMemberAssociated\\[0\\]$"), sql("select canonical_field_key from canonical_field where canonical_field_key='person.violent_organization_association' limit 1")];
+  ok("QA-318 B8 pass (review M1): SCH1's Questions 5 and 6 read the library fields IMM 5257 already asks, never new ones", !!ill[0] && ill[0] === ill[1] && !!org[0] && org[0] === org[1], { ill, org });
+  const f = await firms(); const officer = f.officer ?? OFFICER;
+  const c = await openCase(vv, FAMILY, { representative: f.rep, caseOfficers: [officer] });
+  const filled = await fillEverything(c.id);
+  const forms = async () => ((await call("GET", `/runtime/cases/${c.id}/forms`, undefined, officer)).body?.forms ?? []) as { form: string; person: string; subject_id: string; applies: boolean; readiness: { ready: boolean; missing: { fact: string; reason: string; why?: string; label: string }[] } }[];
+  const sch1 = (await forms()).filter((x) => x.form === "IMM 5257 SCH1" && x.applies);
+  ok("QA-318 B2 pass: with every fact answered and confirmed, each adult's IMM 5257 SCH1 has nothing missing and no mandatory form field left empty", filled && sch1.length >= 2 && sch1.every((x) => x.readiness.ready && x.readiness.missing.length === 0), sch1.map((x) => [x.person, x.readiness.missing.map((m) => `${m.reason}: ${m.label.slice(0, 40)}`)]));
+  const p = sch1.find((x) => x.person === "Sample Client A")!;
+  const id = p ? await generateCopy(c.id, "IMM 5257 SCH1", p.subject_id) : null;
+  const res = id ? JSON.parse(sql(`select result_json::text from form_instance where id='${id}'`) ?? "{}") : {};
+  const of = (k: keyof typeof BOXES) => (res.boxes ?? []).find((b: { box: string }) => b.box.endsWith(BOXES[k]));
+  ok("QA-318 B3 pass: the copy writes all five Yes/No form fields, each read back equal (Questions 4 to 8)", (Object.keys(BOXES) as (keyof typeof BOXES)[]).every((k) => of(k)?.result === "written") && res.intact === true, (Object.keys(BOXES) as (keyof typeof BOXES)[]).map((k) => `${k}:${of(k)?.result ?? "none"}`));
+  const asked = ((await agent(c.id)).sections as { about_label: string; questions: { fact: string }[] }[]).filter((x) => x.about_label === "Sample Client A").flatMap((x) => x.questions.map((q) => q.fact));
+  ok("QA-318 B9 fail (review M1): each question is asked once of the person: no second field for ill treatment or a violent organization", asked.filter((k) => k === ill[0]).length === 1 && asked.filter((k) => k === org[0]).length === 1 && !asked.some((k) => /witnessed_or_took_part|member_of_a_violent/.test(k)), asked.filter((k) => /ill_treatment|witnessed|violent|member_of/.test(k)));
+  ok("QA-318 B10 pass (review M1): the one answer fills both forms: SCH1's Questions 5 and 6 are written from the facts IMM 5257 asks", of("ill")?.fact === ill[1] && of("org")?.fact === org[1], { ill: of("ill")?.fact, org: of("org")?.fact });
+  ok("QA-318 B4 pass: Question 8 is No because \"none apply\" was answered for Previous travel (said on the copy)", /nothing recorded: "none apply" answered in Previous travel/.test(of("travel")?.why ?? ""), of("travel")?.why);
+
+  // Honest state: Previous travel taken back: the box waits for an answer, as a fact, never under "Facts confirmed".
+  const v = await agent(c.id);
+  const s = v.sections.find((x: { about_label: string; title: string; group: unknown }) => x.about_label === "Sample Client A" && /previous travel/i.test(x.title) && x.group);
+  const back = await call("PUT", `/runtime/cases/${c.id}/groups/${s.subjectId}/${s.section}/none-apply`, { noneApply: false, expectedId: s.group.none_apply?.id ?? null }, officer);
+  const after = (await forms()).find((x) => x.form === "IMM 5257 SCH1" && x.person === "Sample Client A")!;
+  const travelLine = after.readiness.missing.find((m) => m.fact.endsWith(BOXES.travel));
+  ok("QA-318 B5 fail: with Previous travel unanswered, SCH1 is not ready: the group waits as a fact, and its Question 8 form field says it needs an answer", back.status < 300 && !after.readiness.ready && after.readiness.missing.some((m) => m.reason === "not answered" && /Previous travel/.test(m.label)) && /^needs an answer/.test(travelLine?.why ?? ""), after.readiness.missing.map((m) => `${m.reason}: ${m.label.slice(0, 50)}`));
+  const card = cardFacts(after.readiness.missing);
+  ok("QA-318 B6 fail: the forms card counts that form field among the facts to answer, so it never shows \"Facts confirmed\" over it (engine/runtime/open-lines.ts cardFacts, which the card uses)", !!travelLine && card.facts.includes(travelLine) && !card.emptyFields.includes(travelLine), { facts: card.facts.map((m) => m.label.slice(0, 40)), empty: card.emptyFields.length });
+  const byHand = { reason: "left empty on the form", why: "filled by hand: type it in Adobe" }, adobe = { reason: "left empty on the form", why: "fill it in Adobe: not a fact the case keeps" }, needs = { reason: "left empty on the form", why: "needs an answer: not answered yet (Sample)" };
+  const pure = cardFacts([byHand, adobe, needs, { reason: "not answered", why: "" }]);
+  ok("QA-318 B7 pass/fail: a field that needs an answer is a fact on the card; one filled by hand or in Adobe stays a form field left empty (no answer fills it)", pure.facts.length === 2 && pure.facts.includes(needs) && pure.emptyFields.length === 2 && pure.emptyFields.includes(byHand) && pure.emptyFields.includes(adobe), { facts: pure.facts.length, empty: pure.emptyFields.length });
+});

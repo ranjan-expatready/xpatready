@@ -5,7 +5,7 @@
 // (engine/form-steps.ts byAPerson, F2/F6). Pure (P-249 lift-ready): the caller passes the form's field list, its field
 // map's entries and what the value step would write (engine/form-values.ts formValues); no database, file or clock.
 import { byAPerson } from "../form-steps.ts";
-import { recordedDerivation } from "../../../p5/transforms.ts";
+import { proseRecorded, recordedDerivation } from "../../../p5/transforms.ts";
 import type { BoxResult, Inventory } from "../form-values.ts";
 
 /** Why a mandatory form field is still empty, in the officer's words:
@@ -67,7 +67,8 @@ export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxRes
     // Review M-1 on #592: a line a question fills is named by that question, as the case asks it; only a field no
     // question fills keeps the form's own words.
     const asked = e?.fact ? words.labelOf?.(e.fact) : undefined;
-    const label = asked && !/^derived:/.test(b?.transform ?? "") ? asked : wordsOf(e, f.caption, path);
+    // Review m2 on #1272 (QA-318): a drafted prose Yes/No (proseRecorded) is the form's own question too, not its detail's.
+    const label = asked && !/^derived:/.test(b?.transform ?? "") && !proseRecorded(b?.transform) ? asked : wordsOf(e, f.caption, path);
     // Review R2-m1 on #592: only the group's row fields; a question asked once outside its rows still needs its answer.
     const settled = b?.about && e?.fact && b.row !== null && b.row !== undefined ? words.noneApply?.get(`${b.about.split("/")[0]}|${e.fact}`) : undefined;
     if (b?.coverage === "not needed") out.push({ box: path, label, reason: "needs an answer", why: `the form requires it for the answer written here (its code ${values[when!.box]}), but its question is not asked for that answer as given: check that answer` });

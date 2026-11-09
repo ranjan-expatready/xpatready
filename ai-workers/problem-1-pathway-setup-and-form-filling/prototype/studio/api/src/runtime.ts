@@ -4,6 +4,7 @@
 // on the workspace's cases; a client reaches only the case they answer, and only its questionnaire; configuration
 // people reach no case. Answer values and typed names never go into audit text or logs (STANDARDS §5): audit lines name
 // a case by its id.
+import { additionsOf, withAdditions } from "../../engine/runtime/added-forms.ts";
 import { clientPersonOf, withClient, type StoredChange } from "../../engine/runtime/filing-changes.ts";
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
@@ -13,6 +14,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView, checkValue, isClientField, pqrView, shapeOf, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, need, RUNTIME_ACTORS, Workspace, type Actor } from "./core.ts";
+import { sameValue } from "./document-values.ts";
 import { refuseIfCaseRecorded } from "./submission-record.ts"; // C8.2: a recorded case keeps its people
 import { firmByKey, firmOfActor, STAND_IN } from "./firms.ts";
 import { aiLive } from "./sources.ts";
@@ -67,6 +69,24 @@ export const offeredRoles = (s: Snapshot) => addableRoles(s).filter((p) => p.rol
 
 export type Reached = Awaited<ReturnType<Runtime["reach"]>>;
 
+/** QA-322: the note for one open check: "changed" only when the answer now holds another value than the one the check
+ *  compared (review M1 on 673f0794d: the same value saved again, or changed back, is still the compared answer). */
+export function documentCheckNote(fact: string, documentName: string, compared: unknown, current: unknown): string {
+  return pleaseCheckWords(documentName, current !== undefined && !sameValue(fact, current, compared));
+}
+/** QA-322 (P-142 D6): the client's words on an answer while a typed-versus-document check is open on it. The document's
+ *  value is never shown; sentences under 20 words (BIC-20, review m2, m7); the document's own name, only its first letter
+ *  in lower case (review m3: "Letter of invitation (Sample)" keeps "Sample"); and once the answer holds another value,
+ *  words that say it has changed, without saying who changed it, instead of asking again (review m1, M1). */
+export function pleaseCheckWords(documentName: string, changedSince: boolean): string {
+  const doc = documentName.charAt(0).toLowerCase() + documentName.slice(1);
+  // Review M1 on 673f0794d: "changed" is decided by value and never says who changed it (staff may have); m7: short
+  // sentences, so even the release's longest document name stays under 20 words.
+  return changedSince
+    ? `Please check this answer. It has changed since it was compared with the ${doc} on file. Your case officer checks it again and settles any difference with you.`
+    : `Please check this answer. It did not match the ${doc} on file. If it is wrong, change it here. Your case officer settles any difference with you.`;
+}
+
 @Injectable()
 export class Runtime {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Programs) private readonly programs: Programs) {}
@@ -81,7 +101,9 @@ export class Runtime {
     if (want === "officer" && !officer) fail("Only the case officer can do this.", HttpStatus.FORBIDDEN);
     const c = await this.db.case.findFirst({ where: { id: caseId, workspaceId }, include: { pins: { orderBy: { revision: "desc" }, include: { release: { include: { packVersion: { select: { version: true } } } } } }, participants: { orderBy: { order: "asc" }, include: { subject: { include: { party: { include: { profile: true } } } } } },
       // C6.13 BR-3b: the case's first Make principal names the client when roles were swapped (clientPersonOf).
-      filingChanges: { where: { kind: "make_principal" }, orderBy: [{ changedAt: "asc" }, { id: "asc" }], take: 1, select: { kind: true, subjectId: true, otherSubjectId: true, changedAt: true } } } });
+      filingChanges: { where: { kind: "make_principal" }, orderBy: [{ changedAt: "asc" }, { id: "asc" }], take: 1, select: { kind: true, subjectId: true, otherSubjectId: true, changedAt: true } },
+      // C7.8 (B141 M1): the live forms the case officer added to one filing, joined into the case's snapshot (snapshotOf).
+      formAdditions: { where: { removedAt: null }, orderBy: [{ addedAt: "asc" }, { id: "asc" }] } } });
     // C6.11 (BR-20): staff reach only their own firm's cases; another firm's case is "not found", as for a client.
     if (!c || (!officer && c.clientActorId !== actor.id) || (officer && c.firmKey !== firmOfActor(actor)?.key)) fail("No such case.", HttpStatus.NOT_FOUND);
     // C9.5 (BR-1, challenge M1): a case reads its newest pin revision (`pins[0]`, ordered above); every revision, older
@@ -91,7 +113,18 @@ export class Runtime {
     return c!;
   }
 
-  snapshotOf(c: Reached) { return c.pins[0].release.snapshot as unknown as Snapshot; }
+  /** The case's snapshot: its pinned release with the forms the case officer added to one filing joined in (C7.8 M1,
+   *  engine/runtime/added-forms.ts withAdditions, the one join point). Read once per reached case. */
+  snapshotOf(c: Reached): Snapshot {
+    const got = this.joined.get(c);
+    if (got) return got;
+    const s = withAdditions(this.releaseSnapshotOf(c), additionsOf(c.formAdditions ?? []));
+    this.joined.set(c, s);
+    return s;
+  }
+  private readonly joined = new WeakMap<object, Snapshot>();
+  /** The release snapshot exactly as released (its fingerprint is checked against this, never the joined one). */
+  releaseSnapshotOf(c: Reached) { return c.pins[0].release.snapshot as unknown as Snapshot; }
 
   /** C6.18 (P-244): the facts of a case's release that are background answers (engine/runtime/background.ts), read once
    *  per release (a release never changes). */
@@ -99,7 +132,7 @@ export class Runtime {
   backgroundOf(c: Reached): Set<string> {
     const id = c.pins[0].release.id;
     let got = this.background.get(id);
-    if (!got) { got = backgroundFacts(this.snapshotOf(c), backgroundBlockOf); this.background.set(id, got); }
+    if (!got) { got = backgroundFacts(this.releaseSnapshotOf(c), backgroundBlockOf); this.background.set(id, got); }
     return got;
   }
   peopleOf(c: Reached): Participant[] {
@@ -358,7 +391,11 @@ export class Runtime {
     const fromIds = answers.map((x) => (x.sourceJson as { from?: string }).from).filter((x): x is string => !!x);
     const firsts = new Map((fromIds.length ? await this.db.clientCanonicalAnswer.findMany({ where: { id: { in: fromIds } }, select: { id: true, sourceJson: true } }) : []).map((x) => [x.id, x.sourceJson as { channel: string; actor: string; at: string; recorded?: { by: string; at: string } }]));
     const bg = this.backgroundOf(c);
-    const a: Answer[] = answers.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string; recorded?: { by: string; at: string } }; const first = src.from ? firsts.get(src.from) : undefined; const one: Answer = { id: x.id, subjectId: keyOf.get(x.subjectId) ?? x.subjectId, field: x.canonicalFieldKey, rowKey: x.rowKey, value: x.valueJson, status: x.status as Answer["status"], channel: src.channel, actor: src.actor, at: src.at, origin: first ? { channel: first.channel, actor: first.actor, at: first.at } : null };
+    const a: Answer[] = answers.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string; recorded?: { by: string; at: string }; earlier_case?: string; earlier_reference?: string; reconfirmed_by?: string; reconfirmed_at?: string }; const first = src.from ? firsts.get(src.from) : undefined;
+      // C6.19 (challenge B1, review M1): a copy from an earlier case keeps its status and its giver (channel, actor, and the
+      // earlier answer's own `from`, so the origin is still who first gave it); where it came from is said apart.
+      const copiedFrom = src.earlier_case && src.reconfirmed_by && src.reconfirmed_at ? { reference: src.earlier_reference ?? "", by: src.reconfirmed_by, at: src.reconfirmed_at } : null;
+      const one: Answer = { id: x.id, subjectId: keyOf.get(x.subjectId) ?? x.subjectId, field: x.canonicalFieldKey, rowKey: x.rowKey, value: x.valueJson, status: x.status as Answer["status"], channel: src.channel, actor: src.actor, at: src.at, origin: first ? { channel: first.channel, actor: first.actor, at: first.at } : null, ...(copiedFrom ? { copiedFrom } : {}) };
       // C6.18 (P-244): a background answer, and whether an officer recorded it and the client has not re-confirmed it.
       if (!bg.has(one.field)) return one;
       // Who on the staff recorded it: this version, the version it confirms, or (re-confirmed) the one the client's names.
@@ -383,7 +420,32 @@ export class Runtime {
     const c = await this.reach(actor, caseId, "read");
     if (mode === "agent" && !isOfficer(actor)) fail("The Agent view is for the case officer.", HttpStatus.FORBIDDEN);
     const { answers, rows, groups } = await this.state(c);
-    return { case: await this.get(actor, caseId), ...caseView(this.snapshotOf(c), this.peopleOf(c), answers, rows, mode, new Date(), groups, { background: this.backgroundOf(c) }) };
+    const view = caseView(this.snapshotOf(c), this.peopleOf(c), answers, rows, mode, new Date(), groups, { background: this.backgroundOf(c) });
+    // QA-322 (P-142 D6): the client sees "please check" on an answer while a typed-versus-document check is open on it.
+    // The client's view only: the officer resolves the check in the drawer, with a reason (unchanged), and only staff
+    // mark a value checked (P-142 D3). The document's value is not shown here; the client is asked to look again.
+    if (mode !== "agent") view.checks = [...view.checks, ...await this.documentChecks(c, view.sections)];
+    return { case: await this.get(actor, caseId), ...view };
+  }
+
+  /** QA-322: the open typed-versus-document checks (C6.5, BR-7) as "please check" notes on the client's own parts. A
+   *  check on a question the client is not asked (an answer staff enter from the document) is not shown to the client. */
+  private async documentChecks(c: Reached, sections: ReturnType<typeof caseView>["sections"]): Promise<ReturnType<typeof caseView>["checks"]> {
+    const open = await this.db.answerCheck.findMany({ where: { caseId: c.id, state: "open" }, select: { id: true, subjectId: true, fact: true, documentId: true, typedValueJson: true }, orderBy: [{ openedAt: "asc" }, { id: "asc" }] });
+    if (!open.length) return [];
+    const docs = await this.db.caseDocument.findMany({ where: { id: { in: [...new Set(open.map((k) => k.documentId))] } }, select: { id: true, documentType: true } });
+    const types = (this.snapshotOf(c).document_types ?? []) as { key: string; name: string }[];
+    const nameOf = (id: string) => { const key = docs.find((d) => d.id === id)?.documentType ?? "document"; return types.find((t) => t.key === key)?.name ?? key.replace(/_/g, " "); };
+    // Review m1, M1 on 673f0794d: whether the answer now holds another value than the one the check compared, by value
+    // (never by row: the same value saved again, or changed back, is still the compared answer), whoever changed it.
+    const current = await this.db.clientCanonicalAnswer.findMany({ where: { subjectId: { in: [...new Set(open.map((k) => k.subjectId))] }, rowKey: null, supersededById: null, canonicalFieldKey: { in: [...new Set(open.map((k) => k.fact))] } }, select: { subjectId: true, canonicalFieldKey: true, valueJson: true } });
+    const now = (k: (typeof open)[number]) => current.find((a) => a.subjectId === k.subjectId && a.canonicalFieldKey === k.fact)?.valueJson;
+    return open.flatMap((k) => {
+      const sec = sections.find((x) => x.subjectId === k.subjectId && x.questions.some((q) => q.fact === k.fact && !q.hidden && !q.group));
+      if (!sec) return [];
+      return [{ id: `document_check.${k.id}`, severity: "warn", group: "document", subjectId: k.subjectId, about_label: sec.about_label, fact: k.fact, section: sec.section, illustrative: false,
+        message: documentCheckNote(k.fact, nameOf(k.documentId), k.typedValueJson, now(k)) }];
+    });
   }
 
   /** P-47 mode 1, PQR (C4.4 part 2): the pre-qualification questions only, with a plain result line. The officer's PQR

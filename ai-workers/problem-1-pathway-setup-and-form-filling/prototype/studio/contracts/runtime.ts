@@ -128,6 +128,8 @@ export type AnswerMark = "confirmed" | "declared" | "by_principal" | "by_staff";
  *  reads, one shape for both (engine/runtime/case.ts caseView returns it). */
 /** answered: who first gave the answer, when this version is the officer's confirmation of it (review M4). */
 export type ViewAnswer = { id: string; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; by: string; at: string; answered: { channel: string; by: string; at: string } | null; problems: string[]; confirmed: boolean; why: string;
+  /** C6.19 (additive): a copy from the same client's earlier case: its reference, who re-confirmed it here and when. */
+  copied_from?: { reference: string; by: string; at: string };
   /** P-242, P-411: whether the answer is written to the forms now (every current answer is), and who gave it. */
   fills: boolean; mark: AnswerMark;
   /** C6.18 (P-244), background answers only: the staff member who recorded it and when ("Officer"), or null when the
@@ -200,8 +202,28 @@ export type FormCopy = {
 };
 /** One form for one person on the case: what a copy made now would write (the draft), whether it can be filed (P-71),
  *  and every copy made, newest first. */
+/** C7.8 (B141): a form the case officer added to one filing ("Added by the case officer": who, when, why). */
+export type AddedTag = { id: string; tag: string; kind: "fills" | "blank"; by: string; by_name?: string; at: string; reason: string | null; edition: string; words: string;
+  /** BR-4: a newer edition in the library, as information (the added form stays frozen). */
+  newer_edition?: string | null };
+/** C7.8 (B141 BR-5, BR-7): a blank official PDF added to one filing: its download, its item and its completed copy. */
+export type BlankForm = { addition: string; item: string | null; download: string; completed: { id: string; at: string } | null };
+/** C7.8: one library form for one person on a filing (GET …/addable-forms): its kind in words, or why it is not added. */
+export type AddableForm = { form: string; title: string; edition: string | null; kind: "fills" | "blank"; kind_words: string; blank_why: string | null; why_not: { code: string; words: string } | null };
+export type AddableList = { filing: string; subject: string; person: string; people: { subject: string; label: string }[]; forms: AddableForm[]; empty: string };
+/** C7.8: the form picked (GET …/addable-forms/:form): its coverage on this case (fills only), the channel and signature. */
+export type AddableFormDetail = AddableForm & { subject: string; person: string;
+  coverage: { fills: number; total: number; boxes: { box: string; caption: string; label: string; state: "fills" | "not_on_file" | "not_needed" }[] } | null;
+  same_as: { subject: string; at: string; words: string } | null; channels: string[]; channel: string | null; channel_why: string; signature: string; signers: string[]; signers_words: string };
+/** C7.8: an added form as stored (POST …/form-additions, POST …/remove). */
+export type FormAddition = { id: string; filing: string; subject: string; person: string; form: string; kind: string; kind_words: string; edition: string; channel: string; signature: string; signature_reason: string | null;
+  tag: string; added_by: string; added_at: string; reason: string | null; removed: { by: string | null; at: string; reason: string | null } | null };
 export type CaseForm = {
-  form: string; title: string; subject_id: string; person: string; /** draft: `written_now` the declared and confirmed answers a copy made now writes (P-242, P-411); `to_fix` the
+  form: string; title: string; subject_id: string; person: string;
+  /** C7.8: added by the case officer to this person's filing (null or absent: a release form). */
+  added?: AddedTag | null;
+  /** C7.8: a blank official PDF, filled by hand (no copy is made by the product). */
+  blank?: BlankForm | null; /** draft: `written_now` the declared and confirmed answers a copy made now writes (P-242, P-411); `to_fix` the
    *  answered form fields left blank because the answer needs a fix (QA-122, or a Yes/No contradicting a recorded detail). */
   draft: { written_now: number; mapped: number; to_fix: number };
   readiness: Readiness; copies: FormCopy[];
@@ -335,4 +357,37 @@ export type ReleaseUpdate = {
 export type ReleaseLastMove = { from: { version: number; label: string; revision: number }; to: { version: number; label: string; revision: number }; at: string; reason: string | null; effects: ReleaseUpdate["effects"] };
 /** POST …/release-update: the new pin and what the move did, for the toast. */
 export type ReleaseMoved = { case_id: string; revision: number; version: number; label: string; from: { version: number; label: string; revision: number };
+  /** C7.8: forms the case officer added that the new release holds itself (each replaced by the release's line). */
+  added_forms_replaced?: { form: string; person: string }[];
   counts: { fill_again: number; filed_another_way: number; no_longer_required: number; withdrawn: number; kept_out_of_date: number }; words: string };
+
+// ------------------------------------------------------------------ C8.3 Representative review (B144, additive)
+/** POST /runtime/cases/:id/reviews: the filings to send (BR-1); `now`: a solo firm's "Review now" (sent and opened). */
+export const SendForReview = z.object({ filings: z.array(z.string(), { message: "Send filings as a list of filing ids." }), now: z.boolean().optional() });
+/** POST /runtime/reviews/:id/open · …/checks · …/decision · …/reapprove (BR-3, BR-2, BR-4, BR-5, P-412). */
+export const ReviewOpen = z.object({ filing: z.string().uuid({ message: "Name the filing (its id in this review)." }) });
+export const ReviewTick = z.object({ filing: z.string().uuid({ message: "Name the filing (its id in this review)." }), item: z.string().min(1).max(200), ticked: z.boolean({ message: "Say ticked: true or false." }) });
+export const ReviewDecision = z.object({
+  filing: z.string().uuid({ message: "Name the filing (its id in this review)." }),
+  verdict: z.enum(["approve", "send_back"], { message: "Say approve or send_back." }),
+  form_hashes: z.record(z.string(), z.string().nullable()).optional(),
+  confirm_unticked: z.boolean().optional(), self: z.boolean().optional(),
+  reasons: z.array(z.object({ text: z.string(), item: z.string().nullable().optional(), check: z.string().nullable().optional() })).optional(),
+});
+export const ReviewReapprove = z.object({ filing: z.string().uuid({ message: "Name the filing (its id in this review)." }), form_hashes: z.record(z.string(), z.string().nullable()).optional(), self: z.boolean().optional() });
+export type ReviewRowStatus = "sent" | "under_review" | "approved" | "sent_back";
+/** One changed fact (BR-6): before → after, who typed the new value and when (m4). */
+export type ChangedSinceReview = { fact: string; label: string; person: string; was: unknown; now: unknown; was_words: string | null; now_words: string | null; typed_by: string | null; typed_by_name: string | null; typed_at: string | null };
+/** One form's frozen stamp and its state on the page (B2, BR-7). */
+export type FormStamp = { item: string; form: string; person: string; channel: string; waits: boolean;
+  state: "to_check" | "checked" | "changed_since_review" | "approved" | "approval_withdrawn" | "sent_back" | "not_stamped_waits"; state_words: string; tooltip: string | null; withdrawn_words: string | null;
+  file: { kind: string; sha256: string | null; words: string }; stamp: { at: string; by: string; file_kind: string; file_sha256: string | null } | null;
+  live_hash: string | null; changes: ChangedSinceReview[]; facts: { label: string; person: string; value: unknown; value_words: string | null; typed_by_name: string | null; confirmed_by_name: string | null }[] };
+export type ReviewCheckView = { key: string; source: "default" | "program" | "confirmations" | "form"; wording: string; live: Record<string, unknown> | null; live_now: Record<string, unknown> | null; ticked: { by: string; name: string; at: string } | null };
+/** One filing in one round (B1), with its own status and round number. */
+export type ReviewRoundFiling = { filing: string; label: string; filing_round: number; status: ReviewRowStatus; status_words: string;
+  opened: { by: string; name: string; at: string } | null; decided: { by: string; name: string; at: string; kind: string | null; reasons: { text: string; item?: string; check?: string }[] | null; confirmed_unticked: string[] | null } | null;
+  forms: FormStamp[]; checks: ReviewCheckView[]; unticked: number; changed: number; withdrawn: string[]; latest: boolean; reapprovable: boolean; open_critical: string[];
+  history: { round: number; filing_round: number; status: ReviewRowStatus; at: string; by: string | null; reasons: { text: string }[] | null }[] };
+export type ReviewRound = { id: string; case_id: string; number: number; kind: "send" | "review_now" | "one_step" | "reapprove"; sent: { by: string; name: string; at: string };
+  representative: { id: string | null; name: string | null }; can_decide: boolean; read_only_words: string | null; solo: boolean; filings: ReviewRoundFiling[]; rounds: { id: string; number: number; kind: string; at: string }[] };

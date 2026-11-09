@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rules.ts";
 import type { Snapshot } from "./snapshot.ts";
 import { askedChoiceProblems, channelProblems, fingerprintLine, type Accepts } from "./channels.ts";
-import { duplicateValidity, validityProblems } from "./runtime/case-checklist.ts";
+import { duplicateValidity, roleWords, validityProblems } from "./runtime/case-checklist.ts";
 import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
 import { factSourceProblems, factWords, who } from "./sources.ts";
 import { oathMappedProblems } from "./form-steps.ts";
@@ -259,6 +259,8 @@ export type Change = { kind: string; key: string; change: "added" | "changed" | 
 export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   const out: Change[] = [];
   const sme = (kind: string, x: any) => ["Rule", "Document requirement", "Check"].includes(kind) || x?.origin === "AI_PROPOSAL" || (kind === "Form" && !!x?.condition);
+  // B154 (P-97, P-244): a section's background mark changes each of its questions; it is named once per section, in words.
+  const marks = new Map<string, { on: boolean; n: number }>();
   for (const [k, id, label] of KINDS) {
     const a = new Map(((prev?.[k] as any[]) ?? []).map((x) => [id(x), x])), b = new Map(((next[k] as any[]) ?? []).map((x) => [id(x), x]));
     for (const [key, x] of b) if (!a.has(key)) out.push({ kind: label, key, change: "added", origin: x.origin, needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.question_text ?? x.fact ?? key });
@@ -270,6 +272,10 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
           out.push({ kind: "Who fills a question", key, change: "changed", origin: x.origin, needs_sme: true, label: `${factWords(next, x.fact)}: filled by ${fills(x.collected_from)}, was ${fills(was.collected_from)} (shared library, every combination)` });
           if (bare({ ...was, collected_from: null }) === bare({ ...x, collected_from: null })) continue;
         }
+        if (k === "placements" && !!was.client_only !== !!x.client_only && was.section_id === x.section_id) { // its own section's mark (a moved question is a placement change)
+          const m = marks.get(x.section_id) ?? { on: !!x.client_only, n: 0 }; m.n++; marks.set(x.section_id, m);
+          if (bare({ ...was, client_only: null }) === bare({ ...x, client_only: null })) continue;
+        }
         // P-319 (Lead 4 on #833): a form's role to IRCC's rules is named in words and needs the immigration expert's sign-off.
         if (k === "forms" && (was.form_role ?? null) !== (x.form_role ?? null)) {
           const fam = (r: unknown) => r === FAMILY_INFORMATION;
@@ -279,6 +285,12 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
         out.push({ kind: label, key, change: "changed", origin: x.origin, needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.fact ?? key });
       }
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: label, key, change: "removed", needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? key });
+  }
+  for (const [key, m] of marks) {
+    const title = [...((next.sections ?? []) as { id: string; title?: string }[]), ...(next.section_titles ?? [])].find((y) => y.id === key)?.title ?? key.replace(/_/g, " ");
+    out.push({ kind: "Background answers", key, change: "changed", needs_sme: true, label: m.on
+      ? `"${title}": its ${m.n} question${m.n === 1 ? " is a background answer" : "s are background answers"} now: the client's own; staff may record one, marked Officer, and the client re-confirms it before signing (shared library, every combination)`
+      : `"${title}": its ${m.n} question${m.n === 1 ? " is" : "s are"} no longer background answers (shared library, every combination)` });
   }
   // C4.1 (P-216): the combination's own section order is part of its release. A move changes no section, so the lines
   // above miss it; it is named once, in words, with each moved section's new place among the sections kept.
@@ -334,12 +346,14 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   if (ca && canonical(ca.participants ?? []) !== canonical(cb.participants ?? [])) out.push({ kind: "People on this row", key: cb.key, change: "changed", needs_sme: true, label: `who this row covers: ${(cb.participants ?? []).map((p: any) => `${p.label} (${p.min}–${p.max})`).join(", ")}` });
   if (ca) { const meta = (x: any) => canonical({ key: x.key, label: x.label, program: x.program, pathway: x.pathway, source_basis: x.source_basis, basis_note: x.basis_note, path: x.path ?? null, client_type: x.client_type ?? null, allowed_locations: x.allowed_locations ?? null, portal: x.portal ?? null }); // the portal decides how lines are filed (break round 2 M1)
     if (meta(ca) !== meta(cb)) out.push({ kind: "Row details", key: cb.key, change: "changed", needs_sme: canonical(ca.allowed_locations ?? null) !== canonical(cb.allowed_locations ?? null) || ca.source_basis !== cb.source_basis, label: "name, path, portal, source basis or allowed locations (no line changed)" }); }
+  // C6.14 (break M2): a type's default provider roles are named on the line the expert signs, in words, never keys.
+  const providerWords = (k: string) => roleWords(k).replace(/^the /, ""); // review R2-3: the one wording of roles (case-checklist.ts)
   // C4.5 (challenge m2): the facts a document type supplies by name on the release line the expert signs, never keys.
   const factName = (f: string) => { const d = ((next.canonical_fields ?? []) as { id: string; meaning?: string | null; label?: string | null }[]).find((x) => x.id === f); return String(d?.meaning ?? d?.label ?? f).trim().replace(/\.$/, ""); };
   for (const [k, id, label, behaviour] of [["document_types", (x: any) => x.key, "Document type", true], ["derived_fields", (x: any) => x.id, "Derived definition", true]] as const) {
     const a = new Map(((prev?.[k] as any[]) ?? []).map((x) => [id(x), x])), b = new Map(((next[k] as any[]) ?? []).map((x) => [id(x), x]));
     for (const [key, x] of b) if (!a.has(key)) out.push({ kind: label, key, change: "added", needs_sme: behaviour, label: x.name ?? x.plain ?? key });
-      else if (canonical(a.get(key)) !== canonical(x)) out.push({ kind: label, key, change: "changed", needs_sme: behaviour, label: `${x.name ?? x.plain ?? key}: ${label === "Document type" ? `supplies ${(x.supplies_facts ?? []).map(factName).join(", ") || "no facts"}${x.sets?.length ? `; substitute sets: ${(x.sets as SnapSet[]).map((s) => `${s.name} (${setWords({ mode: s.mode, members: s.members })})`).join("; ")}` : ""}` : `inputs ${(x.inputs ?? []).join(", ") || "none"}`}` });
+      else if (canonical(a.get(key)) !== canonical(x)) out.push({ kind: label, key, change: "changed", needs_sme: behaviour, label: `${x.name ?? x.plain ?? key}: ${label === "Document type" ? `supplies ${(x.supplies_facts ?? []).map(factName).join(", ") || "no facts"}${x.sets?.length ? `; substitute sets: ${(x.sets as SnapSet[]).map((s) => `${s.name} (${setWords({ mode: s.mode, members: s.members })})`).join("; ")}` : ""}${x.default_provider_roles?.length ? `; provided by (when shared): ${(x.default_provider_roles as string[]).map(providerWords).join(", then ")}` : (a.get(key) as { default_provider_roles?: string[] } | undefined)?.default_provider_roles?.length ? "; provided by (when shared): not set (the person the item is for)" : ""}` : `inputs ${(x.inputs ?? []).join(", ") || "none"}`}` });
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: label, key, change: "removed", needs_sme: behaviour, label: x.name ?? x.plain ?? key });
   }
   // W1-15 slice 1 (challenge M5): each choice over the rules' source and each Pre-qualification tick is named on Review,

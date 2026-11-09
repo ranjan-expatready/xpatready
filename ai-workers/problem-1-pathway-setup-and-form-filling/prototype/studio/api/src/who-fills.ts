@@ -31,6 +31,12 @@ export const ProposeFills = z.object({
   reason: z.string({ error: "Say why it changes for every combination." }).trim().min(REASON_MIN, `Write at least ${REASON_MIN} characters: why it changes for every combination.`).max(300, "Keep the reason under 300 characters."),
 }).strict();
 
+/** B154: an open change marking this section as background answers (waiting, returned or approved, not released). */
+async function db_openMark(db: Pick<Db, "libraryChange">, workspaceId: string, sectionKey: string) {
+  const open = await db.libraryChange.findMany({ where: { workspaceId, kind: "section_background", key: sectionKey, status: { in: OPEN } }, select: { matches: true } });
+  return open.some((c) => (c.matches as { after?: boolean } | null)?.after === true);
+}
+
 /** The newest placement of a fact that still counts (a draft, else the newest published). */
 async function placementOf(db: Pick<Db, "sectionQuestion">, workspaceId: string, key: string) {
   const rows = await db.sectionQuestion.findMany({ where: { workspaceId, lineageKey: key }, orderBy: { version: "desc" } });
@@ -59,6 +65,8 @@ export class WhoFills {
     const { current } = await placementOf(this.db, workspaceId, key);
     if (!current) throw problem(409, "Not placed", `No question asks "${name}" in the library yet, so nobody fills it. Place it in a section first.`);
     const section = await this.db.logicalSection.findFirst({ where: { workspaceId, sectionKey: current.sectionKey }, orderBy: { version: "desc" } });
+    // B154 (review M1, break M4): a section waiting to be marked as background answers takes no case officer meanwhile.
+    if (to === "CASE_OFFICER" && await db_openMark(this.db, workspaceId, current.sectionKey)) throw problem(409, "Background answers pending", `"${name}" is in ${section?.title ?? "a section"}, which waits to be marked as background answers (the client's own): decide or withdraw that change first.`);
     if (section?.clientOnly) throw problem(409, "Always the client", `"${name}" is in ${section.title ?? "a background and declarations section"}: only the client answers it, so who fills it does not change.`);
     const from = fillsOf(current.collectedFrom);
     if (!from) throw problem(409, "Not a question someone fills", `"${name}" is not filled by the client or the case officer in the library; where it comes from is chosen per combination on its Smart questionnaire (SQR) tab.`);
@@ -90,6 +98,11 @@ export async function applyFills(db: Db, audit: Audit, actor: Actor, c: LibraryC
   if (!current || !m.after) throw problem(409, "Not placed", "The question is no longer placed in the library, so nothing was changed. Return the change.");
   // C11.9 break round 2 (Major 3): a field retired meanwhile gets no new draft question.
   await refuseRetired(db, c.workspaceId, "field", [c.key]);
+  // B154 (review M1): checked again: a question in a section marked (or being marked) as background answers stays the client's.
+  if (m.after === "CASE_OFFICER") {
+    const section = await db.logicalSection.findFirst({ where: { workspaceId: c.workspaceId, sectionKey: current.sectionKey }, orderBy: { version: "desc" } });
+    if (section?.clientOnly || await db_openMark(db, c.workspaceId, current.sectionKey)) throw problem(409, "Background answers", `The question is in ${section?.title ?? "a section"}, which holds (or waits to hold) background answers, the client's own; nothing was changed. Return the change.`);
+  }
   if (fillsOf(current.collectedFrom) !== m.before) throw problem(409, "Changed since", "Who fills this question changed after it was proposed, so nothing was changed. Return it; the author proposes it again.");
   await revise(db.sectionQuestion, rows, { collectedFrom: FILLS[m.after], origin: "HUMAN" }, actor.id, strip);
   await audit.log(c.workspaceId, actor.id, "approved", "placement", c.key, `${actor.name} approved: ${c.label ?? c.key}. A draft of the placement goes out with the next release.`);
