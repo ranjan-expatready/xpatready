@@ -82,3 +82,26 @@ Copies used: my own `rv352` on :4433, configured checkpoint loaded fresh from th
 A real saved read (none exists until the tech lead's paid run; post-read steps were walked with stand-ins); the answer sheet (not re-walked); a real screen reader; D17 and D20 stay with the founder.
 
 **Verdict: Block** (commit 43a29fc4bc178931a5886c052f63c4a95489259e). To fix: **M1**. Should: m1–m4. m5 goes in a follow-up row.
+
+## Round 2 (diff only, P-293): `git diff 43a29fc4b..1f6774cef`, 9 Nov 2026
+Commit **1f6774cef3c93cc55f616ccc7afc1087cb69cfc2**. I restarted r352 (:4431) on this code in the true state (no saved read). My own `rv352b` (:4434, checkpoint loaded fresh, reviewer stand-ins) and `rvapi` (:4435, a fresh copy) are both stopped now. US$0; `ai_batch` 7 throughout.
+* **M1: fixed.** I re-ran my scenario on rv352b (case `d61dae35-…`): typed 15,000, used Client A's statement, then added Spouse A's statement with no saved read.
+  * The drawer now shows Spouse A's cost card ("Proof of financial support · Sample Spouse A: read by AI … No saved read yet") above Client A's block, and the check is in it: "the answer is CAD 15,000 (you entered it); the document reads CAD 14,200. Which is right?"
+  * I resolved the check in the drawer ("Keep the current answer" plus a reason, then "Check resolved · kept over the document"). Section confirm then answered 201.
+  * Both files unread, only one with a saved read: the drawer offers Replay, saying "No saved read yet for one file (Proof of financial support · Sample Spouse A)". After Replay, Client A's block shows and Spouse A's card stays.
+  * Server: in `fill()`, a refusal only for lack of a saved read (`no_saved_read`) or because it is an identity document (`identity_document`) now waits on its own; any other refusal, including live, still fails the request. The single-document 409 is kept (D10, 74/74).
+  * No page errors. axe clean in the drawer at 1024 and 400 px, no sideways scroll.
+* **m1: fixed.** A document read for someone else is named "· Sample Client A" or "· Sample Spouse A" in reviews, plan and `waiting_for_cost`. Its own holder's view is unchanged.
+* **m2: fixed.** The price covers unread files only: US$0.05/0.40 for two, US$0.03/0.20 once one is read. C6.5-21g checks it.
+* **m3: fixed.** C6.5-21e fails, rather than notes, on the checkpoint when either type lacks its reader kind or its facts.
+* **m4: fixed.** C6.5-21h fails if `shown()`'s subject filter is removed: the letter's review would then show under Client A. C6.5-21i gives 404 where the old code gave 422. C6.5-23c covers checked-against-document on the application.
+* **m5:** not changed. It is a follow-up row for the Preview owner, listed in the PR, as I asked.
+* Runs on 1f6774cef:
+  * `C6.5.test.ts`: **49/56** on r352 (true state), **56/56** on rv352b (stand-ins).
+  * `C6.5-screen.test.ts`: 33/33.
+  * `check_c65_documents_api.ts`: 74/74 (fresh copy).
+* **n1 Should (record only):** the true state has **seven** expected reds, not six. They are -21b, -22, -23, -23c, **-23d**, -24b and -25. C6.5-23d needs Client A's statement read, so it waits on the same saved read. M1 is still guarded in the true state by C6.5-21f and -21c (the letter's stored read stays shown beside an unread proof of funds, without a mode and on replay). Fix: name -23d among the reds in the PR body.
+* Still with the tech lead: the minor's birth certificate (P-134 against P-437).
+* Journey re-score: **9.5/10**, a pass. Task completed, next step, feedback and recovery are now 1. Plain words stays at ½ because of the earlier "funds available cad" refusal, which was already there before this PR.
+
+**Verdict: Approve** (commit 1f6774cef3c93cc55f616ccc7afc1087cb69cfc2). No Blocker or Major is open. Should: n1 (PR body). m5 is a follow-up row.
