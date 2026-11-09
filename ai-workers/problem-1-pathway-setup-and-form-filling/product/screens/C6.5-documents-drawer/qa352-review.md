@@ -105,3 +105,47 @@ Commit **1f6774cef3c93cc55f616ccc7afc1087cb69cfc2**. I restarted r352 (:4431) on
 * Journey re-score: **9.5/10**, a pass. Task completed, next step, feedback and recovery are now 1. Plain words stays at ½ because of the earlier "funds available cad" refusal, which was already there before this PR.
 
 **Verdict: Approve** (commit 1f6774cef3c93cc55f616ccc7afc1087cb69cfc2). No Blocker or Major is open. Should: n1 (PR body). m5 is a follow-up row.
+
+## Round 3 (diff only, 9d56a3538)
+Scope: `git diff 976442e0e..9d56a3538` only (P-277, P-303). It covers `api/src/case-documents.ts`, `tests/check_c65_document_rules.ts` and `acceptance/C6.5.test.ts`, and implements the tech lead's P-294 ruling: a reader's value is stored and used in its fact's own type. Commit **9d56a35385de1e324a6786b5dff9f4b7f27c0c12**. My own copy `rv352c` ran on :4465, configured checkpoint loaded fresh each time (`/api/demo/reset`, `/api/demo/load {sample:"configured"}`) and stopped in the same command. Live AI off. `ai_batch` 7 before and after, US$0. Scripts and screenshots are in my session scratchpad (`/tmp/claude-0/-home-user-xpatready/8ab19aa1-41e0-57d3-a215-c76b426a9a15/scratchpad/r3/`) and are not committed.
+
+**Runs (mine)**
+* Unit check `check_c65_document_rules.ts`: **41/41**, exit 0.
+* Each rule's test fails when its rule is removed. I took out, one at a time, the whole-number rule, the money rule (`shapeOf(...).money`) and the currency list. Each gave 40/41, failing R13 fail, R15 fail and R15 fail. I reverted each with `git checkout`, and the tree is clean.
+* `C6.5.test.ts` on a fresh copy: **57/57**, exit 0.
+  * C6.5-23e reads the real `p2/runs/studio-document-read-fca97932….json` by the uploaded file's sha256 and asserts `saved === "14200.00"`, so an edited or replaced read fails it.
+  * Underneath: `read_value` holds `14200|used|…The document reads "14200.00".` and the application's answer is `14200|VERIFIED`.
+  * C6.5-23e fails if the store step in `readOnce` is removed: `value_json::text` would be `"14200.00"`, quotes included. C6.5-23 fails if `typedOf` is removed from confirm: the value would be left, not used.
+* Browser walk, Playwright Chromium headless, case officer, with the real saved read.
+  * The drawer opens in 181 ms. Replay shows "Funds available for the stay, in Canadian dollars (Details of visit to Canada): **CAD 14,200** · page 1 · confidence 97% (Sample) · Stated as 'Funds available: CAD 14,200.00', … The document reads "14200.00"."
+  * Confirm & use stays disabled until the one tick ("1 left"). I ticked with Space and confirmed with Enter. Underneath: `14200|VERIFIED|document_read`.
+  * axe on the drawer: 0 violations. At 400 px: no sideways scroll. No page errors.
+* `inFactType` probe, 26 inputs against both real transforms: IMM 5257 `number_as_text (CAD, max 12 characters)`, where money is true, and IMM 1294 `number:whole_dollars`, where money is false. Nothing is rounded and nothing is converted:
+  * "14200.000", "C$ 14,200.00", "CAD14200" and "14200CAD" become 14200.
+  * "1,000,000,000,000" and "99999999999999999999" are refused by checkType: 12 characters at most, and n > 1e12. So JavaScript's loss of precision on very large numbers is never written.
+  * "14 200", "14.200,00", "14200.", "14200 cad", "-14,200" and "14,200.00$" stay proposals, each with its reason.
+* Old read stored as text, simulated on my throwaway copy. I turned off the `read_value` guard for one statement and set the value to `"14200.00"`.
+  * The drawer list gives value 14200, `left_why` null, `needs_look` true, and `differs` false against an equal answer.
+  * Confirm & use answers **agreed**, with no check. checked-against-document answers 200.
+
+**Paths checked against the diff:** `readOnce` (stored typed, with a note); confirm-and-use (`notWritable` on the raw value, then compared, written and put in the check's `documentValueJson` as typed); the drawer list (`value`, `differs`, `kept_over`, `left_why`, `needs_look`); and `checkedAgainst`. All use one rule: `notWritable` → `inFactType` → `checkValue`. A value the type cannot hold stays raw and is refused with its reason. No combination key and no form number appear in the code (P-319, P-425). Saved reads and earlier pack expectations are unchanged.
+
+**Issues (none Blocker or Major)**
+* **m1 Should, the counts miss old text reads.** `api/src/document-review-counts.ts:35`, with `document-review-rule.ts:30`, compares the raw `v.valueJson`.
+  * Scenario, reproduced on rv352c: a read stored as `"14200.00"` before this commit, then the officer types 14200 by hand. The counts go from `corrected 0` to **`corrected 1, rate 1`**, while the drawer says `differs: false` for the same pair. Before this commit that read counted as `left`.
+  * Real exposure is near nil: the funds' saved read arrived in 976442e0e on this unmerged PR, so no demo database holds it as text. But `typedOf`'s comment promises older reads are handled.
+  * Fix: export `typedOf` and pass `valueJson: typedOf(s, v.fact, v.valueJson)` into `countCorrections`.
+* **m2 Should, wrong reasons for common Canadian amounts.** In `case-documents.ts:229-233`, every case below stays a proposal, so nothing wrong is written, but the reason a person reads is wrong:
+  * "$14,200 CAD" is refused as "naming two currencies".
+  * "CAD$14,200" says "in CAD, not Canadian dollars".
+  * "CAD $14,200" is refused as "not a number this question can take".
+  * Fix: treat `$` beside CAD/C$/CA$ as Canadian dollars, or word these refusals truthfully.
+* **m3 Should, decimal numbers skip the whole-number rule.** `case-documents.ts:226` returns any non-text value as it is. So a reader's JSON number 14200.5, on a fact whose forms do not say CAD (money false, checkType allows decimals), is written as 14200.5, while the text "14200.5" is refused as "not a whole number". The ruling's whole-number rule is about values the type cannot hold. No saved read gives such a value today.
+  * Fix: apply the same whole-number test to numbers, or record why decimals are allowed there.
+* **n1 Nit, the note's wording.** The note "The document reads "14200.00"" (`:236`) is what the reader gave. In the drawer it sits right after the reader's own "Stated as 'Funds available: CAD 14,200.00'". "The reader gave "14200.00"" would be exact.
+* **n2 Nit, a leading-zero group.** "00,200" is accepted as 200 (`\d{1,3}` allows a leading-zero group).
+* Observation, not a finding: money is decided by `shapeOf(...).money`, as the ruling says. On a release where only IMM 1294 maps the funds (no "CAD" in its transform), "CAD 14,200.00" is left as "takes a plain number", while "14200.00" still becomes 14200.
+
+* Journey re-score: **10/10**, a pass. Plain words rises to 1: the earlier "funds available cad" refusal is gone for the real read, which now shows "CAD 14,200" and confirms in one step. m2 and n1 are minor wording, not a criterion's fail. The report is `journey-test-reviewer-2026-11-09-qa352.md`, Round 3.
+
+**Verdict: Approve** (commit 9d56a35385de1e324a6786b5dff9f4b7f27c0c12). No Blocker or Major is open. Should: m1, m2 and m3, here or in a follow-up row. Nits: n1 and n2.

@@ -81,3 +81,12 @@ Most valuable fixes:
 * The answer sheet.
 * A real screen reader.
 * An intended user's unaided walk: D17 and D20 stay with the founder.
+
+## Round 3 (diff only, 9d56a3538): the real saved read
+Journey 1 again, now with the **real** saved read (`p2/runs/studio-document-read-fca97932….json`), not a stand-in. My copy `rv352c` ran on :4465 with the checkpoint loaded fresh, and was stopped afterwards. Playwright Chromium headless, 1440 and 400 px. US$0, `ai_batch` 7 → 7.
+* **Held.** The drawer opens in 181 ms. Replay shows "Funds available for the stay, in Canadian dollars … **CAD 14,200** · page 1 · confidence 97% (Sample)". The reader's note ends with "The document reads "14200.00"."
+* Confirm & use is held until the one tick ("Tick or correct each value first: 1 left"). I ticked with Space and confirmed with Enter. The drawer moved on to the questions not on these documents. Underneath: `14200|VERIFIED|document_read`.
+* axe on the drawer: 0 violations. At 400 px: no sideways scroll. No page errors.
+* Earlier (round 1 and 2) the real read's text "14200.00" was refused as "funds available cad … digits only". That refusal is gone.
+* **Score: 10/10, a pass.** Plain words moves from ½ to 1. All other criteria stay as in round 2. Minor wording points (review m2, n1) stay in `qa352-review.md`.
+* Not tested: a real screen reader, and an intended user's unaided walk (D17 and D20 stay with the founder).

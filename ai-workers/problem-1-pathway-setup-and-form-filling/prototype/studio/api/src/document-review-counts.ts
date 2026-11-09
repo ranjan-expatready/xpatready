@@ -11,7 +11,7 @@
 // read or corrected (review M1 on c774e63b6: answering it is the expected path, not a reader error).
 // Read only; nothing is stored (computed from read_value, answer_check and the answers' own history). US$0.
 import { Controller, Get, Headers, HttpStatus, Inject, Injectable, Param } from "@nestjs/common";
-import { notWritable } from "./case-documents.ts";
+import { notWritable, typedOf } from "./case-documents.ts";
 import { CORRECTION_RULE, countCorrections, type ReviewCounts } from "./document-review-rule.ts";
 import { actorOf, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
@@ -31,7 +31,7 @@ export class DocumentReviewCounts {
     const subjects = [...new Set(values.map((v) => v.subjectId))], facts = [...new Set(values.map((v) => v.fact))];
     const answers = values.length ? await this.db.clientCanonicalAnswer.findMany({ where: { subjectId: { in: subjects }, canonicalFieldKey: { in: facts }, rowKey: null }, select: { subjectId: true, canonicalFieldKey: true, valueJson: true, sourceJson: true, effectiveAt: true } }) : [];
     const kept = values.length ? await this.db.answerCheck.findMany({ where: { caseId: c.id, state: "resolved", kept: "answer", resolvedBy: { not: null } }, select: { readValueId: true, resolvedBy: true, resolvedAt: true, reason: true } }) : [];
-    const out = countCorrections(values.map((v) => ({ id: v.id, subjectId: v.subjectId, fact: v.fact, review: v.review, valueJson: v.valueJson, documentId: v.documentId, readAt: v.read.readAt,
+    const out = countCorrections(values.map((v) => ({ id: v.id, subjectId: v.subjectId, fact: v.fact, review: v.review, valueJson: typedOf(s, v.fact, v.valueJson), documentId: v.documentId, readAt: v.read.readAt,
       left: notWritable(s, v.fact, v.valueJson) !== null, replacedAt: v.read.document.supersededAt })),
       answers.map((a) => { const src = a.sourceJson as { channel?: string; actor?: string }; return { subjectId: a.subjectId, fact: a.canonicalFieldKey, valueJson: a.valueJson, channel: src.channel ?? "", actor: src.actor ?? "", at: a.effectiveAt }; }),
       // A replaced file's check closed by a newer file (its reason says so) is the system's, not a person's judgement (countCorrections).

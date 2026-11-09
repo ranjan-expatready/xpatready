@@ -199,7 +199,7 @@ await main("C6.5", "Documents read into proposed facts (Visitor visa, replayed, 
     const saved = existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as { proposals: { fact: string; value: unknown }[] }).proposals.find((x) => x.fact === "case.funds_available_cad")?.value : undefined;
     const row = sql(`select value_json::text || '|' || status from client_canonical_answer where subject_id='${c.caseSubject}' and canonical_field_key='case.funds_available_cad' and superseded_by_id is null`);
     const read = sql(`select value_json::text || '|' || state || '|' || coalesce(note, '') from read_value where document_id='${funds}' and fact='case.funds_available_cad'`) ?? "";
-    ok("C6.5-23e pass (QA-352, P-294 ruling on #1444): the real saved read gives the funds as the text \"14200.00\"; it is used as the number 14200, VERIFIED, and the read keeps what the document printed", saved === "14200.00" && row === "14200|VERIFIED" && read.startsWith("14200|used|") && /reads "14200\.00"/.test(read), { saved, row, read });
+    ok("C6.5-23e pass (QA-352, P-294 ruling on #1444): the real saved read gives the funds as the text \"14200.00\"; it is used as the number 14200, VERIFIED, and the read keeps what the reader gave", saved === "14200.00" && row === "14200|VERIFIED" && read.startsWith("14200|used|") && /gave "14200\.00"/.test(read), { saved, row, read });
   }
   // Review M1 on 43a29fc4b, its own scenario: a second applicant's statement with no saved read never hides the first
   // one's read (each applicant's proof of funds is read for the application).

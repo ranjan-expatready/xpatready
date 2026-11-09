@@ -218,25 +218,33 @@ export function notWritable(s: Snapshot, fact: string, value: unknown): string |
 
 /** QA-352 (P-294 ruling on #1444): a reader gives a value as the document prints it ("14200.00", "14,200",
  *  "CAD 14,200.00"); it is stored and used in the fact's own type. A number fact takes a whole number, with
- *  thousands commas, cents of .00 and Canadian dollars named (CAD, C$, CA$) where the question asks dollars. Anything
- *  else is never rounded or guessed: it stays as read, with the reason in words (why), and is left for a person. A value
- *  that is not text, or text of another fact type, is returned as it is. note: what the document printed, when changed. */
+ *  thousands commas, cents of .00 and Canadian dollars named (CAD, C$, CA$, CAD $, $ … CAD) where the question asks
+ *  dollars. Anything else is never rounded or guessed: it stays as read, with the reason in words (why), and is left
+ *  for a person. A value of another fact type is returned as it is. note: what the reader gave, when it changed. */
 export function inFactType(s: Snapshot, fact: string, value: unknown): { value: unknown; why?: string; note?: string } {
   const type = (s.canonical_fields as { id: string; value_type?: string }[]).find((f) => f.id === fact)?.value_type;
-  if (type !== "number" || typeof value !== "string") return { value };
+  if (type !== "number") return { value };
+  // Review m3 on 9d56a3538: a number the reader gave as a number obeys the same whole-number rule as text.
+  if (typeof value === "number") return Number.isInteger(value) ? { value } : { value, why: `The reader gave ${value}, which is not a whole number; it is never rounded. Answer it by hand.` };
+  if (typeof value !== "string") return { value };
   const read = value.trim().replace(/\s+/g, " ");
   if (/^\d+$/.test(read)) return { value: Number(read) };
-  const m = /^(?:([A-Z]{1,3}\$?|\$) ?)?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d+))?(?: ?([A-Z]{3}))?$/.exec(read);
-  if (!m) return { value, why: `The document reads "${value}", which is not a number this question can take. Answer it by hand.` };
-  const [, before, digits, cents, after] = m, currency = before ?? after;
-  if (before && after) return { value, why: `The document reads "${value}", naming two currencies. Answer it by hand.` };
-  if (currency && !["CAD", "C$", "CA$"].includes(currency)) return { value, why: currency === "$" ? `The document reads "${value}" without saying which dollars. Answer it in Canadian dollars by hand.` : `The document reads "${value}", in ${currency.replace(/\$$/, "")}, not Canadian dollars. Convert it and answer it by hand.` };
-  if (currency && !shapeOf(s, fact).money) return { value, why: `The document reads "${value}", an amount of money, but this question takes a plain number. Answer it by hand.` };
-  if (cents && /[1-9]/.test(cents)) return { value, why: `The document reads "${value}", which is not a whole number; it is never rounded. Answer it by hand.` };
-  return { value: Number(digits.replace(/,/g, "")), note: `The document reads "${value}".` };
+  // Review n2: a thousands group never starts with 0 ("00,200" is no number).
+  const m = /^(?:([A-Z]{0,3} ?\$|[A-Z]{1,3}) ?)?([1-9]\d{0,2}(?:,\d{3})+|\d+)(?:\.(\d+))?(?: ?([A-Z]{3}))?$/.exec(read);
+  if (!m) return { value, why: `The reader gave "${value}", which is not a number this question can take. Answer it by hand.` };
+  const [, before, digits, cents, after] = m;
+  // Review m2: "$" beside CAD (CAD $, CAD$, $ … CAD) is Canadian dollars; C$ and CA$ name them too; a bare "$" does not.
+  const sign = !!before?.endsWith("$"), code = before?.replace(/ ?\$$/, "") ?? "";
+  const named = code ? (code === "CAD" || (sign && ["C", "CA"].includes(code)) ? "CAD" : before!.trim()) : null;
+  if (named && after && named !== after) return { value, why: `The reader gave "${value}", naming two currencies (${named} and ${after}). Answer it by hand.` };
+  const currency = named ?? after ?? (sign ? "$" : null);
+  if (currency && currency !== "CAD") return { value, why: currency === "$" ? `The reader gave "${value}" without saying which dollars. Answer it in Canadian dollars by hand.` : `The reader gave "${value}", in ${currency}, not Canadian dollars. Convert it and answer it by hand.` };
+  if (currency && !shapeOf(s, fact).money) return { value, why: `The reader gave "${value}", an amount of money, but this question takes a plain number. Answer it by hand.` };
+  if (cents && /[1-9]/.test(cents)) return { value, why: `The reader gave "${value}", which is not a whole number; it is never rounded. Answer it by hand.` };
+  return { value: Number(digits.replace(/,/g, "")), note: `The reader gave "${value}".` };
 }
 /** A stored read value in its fact's type, for comparing and writing (a read stored before QA-352's ruling included). */
-const typedOf = (s: Snapshot, fact: string, value: unknown) => { const t = inFactType(s, fact, value); return t.why ? value : t.value; };
+export const typedOf = (s: Snapshot, fact: string, value: unknown) => { const t = inFactType(s, fact, value); return t.why ? value : t.value; };
 
 @Injectable()
 export class CaseDocuments {

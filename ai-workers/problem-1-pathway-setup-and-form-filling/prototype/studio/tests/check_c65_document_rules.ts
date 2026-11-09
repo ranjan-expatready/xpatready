@@ -8,7 +8,9 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { documentCheckNote, pleaseCheckWords } from "../api/src/runtime.ts";
-import { CASE_KINDS, inFactType, inReleaseWords, letterReadUsd, notWritable, readerOf, readFor, sameValue, savedRead, type LibraryType } from "../api/src/case-documents.ts";
+import { CASE_KINDS, inFactType, inReleaseWords, letterReadUsd, notWritable, readerOf, readFor, sameValue, savedRead, typedOf, type LibraryType } from "../api/src/case-documents.ts";
+import { countCorrections } from "../api/src/document-review-rule.ts";
+import { OFFICER_ENTRY } from "../engine/runtime/background.ts";
 import { isIdentityName } from "../engine/identity-documents.ts";
 import { costUsd, LETTER_READ_CARD } from "../../p2/ledger.ts";
 import { MAX_ATTEMPTS } from "../../p2/policy.ts";
@@ -73,16 +75,25 @@ ok("C6.5 R5 (fail): a value its own question refuses (not a real date) is left f
     field_maps: [{ form_edition: "Sample", entries: [{ fact: "case.funds_available_cad", outcome: "mapped", caption: "Funds", data_path: "form.funds", transform: "CAD whole dollars" }, { fact: "person.children_count", outcome: "mapped", caption: "Children", data_path: "form.children", transform: "" }] }] } as unknown as Snapshot;
   const F = "case.funds_available_cad", typed = (v: unknown, fact = F) => inFactType(num, fact, v);
   const left = (v: unknown, words: RegExp, fact = F) => { const t = typed(v, fact); return t.value === v && words.test(t.why ?? "") && words.test(notWritable(num, fact, v) ?? ""); };
-  ok("C6.5 R13 pass (QA-352): \"14200.00\" (the saved read's own text) is the number 14200, noting what the document printed, and Confirm & use writes it", typed("14200.00").value === 14200 && typed("14200.00").why === undefined && /reads "14200.00"/.test(typed("14200.00").note ?? "") && notWritable(num, F, "14200.00") === null, typed("14200.00"));
+  ok("C6.5 R13 pass (QA-352): \"14200.00\" (the saved read's own text) is the number 14200, noting what the reader gave, and Confirm & use writes it", typed("14200.00").value === 14200 && typed("14200.00").why === undefined && /gave "14200.00"/.test(typed("14200.00").note ?? "") && notWritable(num, F, "14200.00") === null, typed("14200.00"));
   ok("C6.5 R13 fail (QA-352): \"14200.50\" is not a whole number: never rounded, left for a person with the reason in words", left("14200.50", /not a whole number; it is never rounded/) && left("14,200.5", /not a whole number/));
   ok("C6.5 R14 pass (QA-352): \"14,200\" (thousands commas) is 14200, and \"1,214,200\" is 1214200", typed("14,200").value === 14200 && typed("1,214,200").value === 1214200 && notWritable(num, F, "14,200") === null);
-  ok("C6.5 R14 fail (QA-352): commas out of their places (\"14,20,0\", \"1,4200\") are not a number: left for a person in words, never guessed", left("14,20,0", /not a number this question can take/) && left("1,4200", /not a number this question can take/));
-  ok("C6.5 R15 pass (QA-352): \"CAD 14,200.00\", \"14,200.00 CAD\" and \"C$14,200\" are 14200 where the question asks Canadian dollars", typed("CAD 14,200.00").value === 14200 && typed("14,200.00 CAD").value === 14200 && typed("C$14,200").value === 14200 && notWritable(num, F, "CAD 14,200.00") === null);
+  ok("C6.5 R14 fail (QA-352, review n2): commas out of their places (\"14,20,0\", \"1,4200\", \"00,200\") are not a number: left for a person in words, never guessed", left("14,20,0", /not a number this question can take/) && left("1,4200", /not a number this question can take/) && left("00,200", /not a number this question can take/));
+  ok("C6.5 R15 pass (QA-352, review m2): \"CAD 14,200.00\", \"14,200.00 CAD\", \"C$14,200\", \"CA$14,200\", \"$14,200 CAD\", \"CAD$14,200\" and \"CAD $14,200\" are 14200 where the question asks Canadian dollars",
+    ["CAD 14,200.00", "14,200.00 CAD", "C$14,200", "CA$14,200", "$14,200 CAD", "CAD$14,200", "CAD $14,200"].every((x) => typed(x).value === 14200 && notWritable(num, F, x) === null));
   ok("C6.5 R15 fail (QA-352): another currency (\"USD 14,200.00\"), dollars not named (\"$14,200\"), two currencies, or an amount of money for a plain number stay proposals with the reason in words (never converted)",
-    left("USD 14,200.00", /in USD, not Canadian dollars/) && left("$14,200", /without saying which dollars/) && left("CAD 14,200 USD", /two currencies/) && left("CAD 3", /takes a plain number/, "person.children_count"));
+    left("USD 14,200.00", /in USD, not Canadian dollars/) && left("US$14,200", /in US\$, not Canadian dollars/) && left("$14,200", /without saying which dollars/) && left("CAD 14,200 USD", /two currencies \(CAD and USD\)/) && left("$14,200 USD", /in USD, not Canadian dollars/) && left("CAD 3", /takes a plain number/, "person.children_count"));
   ok("C6.5 R16 pass (QA-352): a whole number that is too big for the form stays a proposal, with the question's own words; a number given as a number, and text of another type, are kept as they are",
     /too long|0 or more/.test(notWritable(num, F, "CAD 9,999,999,999,999") ?? "") && typed(14200).value === 14200 && typed("SAMPLEP12", "person.passport_number").value === "SAMPLEP12" && typed("3", "person.children_count").value === 3);
   ok("C6.5 R16 fail (QA-352): a negative amount or words (\"-14,200\", \"fourteen thousand\") are never turned into a number", left("-14,200", /not a number this question can take/) && left("fourteen thousand", /not a number this question can take/));
+  ok("C6.5 R17 pass (review m3 on 9d56a3538): a whole number the reader gave as a number is kept and written", typed(3, "person.children_count").value === 3 && typed(3, "person.children_count").why === undefined && notWritable(num, "person.children_count", 3) === null);
+  ok("C6.5 R17 fail (review m3): a number given as a number but not whole (14200.5) is never written or rounded, on a plain number fact too", left(14200.5, /not a whole number; it is never rounded/, "person.children_count") && left(14200.5, /not a whole number/));
+  // Review m1 on 9d56a3538: the correction counts compare a read in its fact's type (document-review-counts.ts passes typedOf).
+  const at = new Date("2026-11-09T10:00:00Z"), later = new Date("2026-11-09T11:00:00Z");
+  const counted = (read: unknown, typedAnswer: unknown) => countCorrections([{ id: "v1", subjectId: "case", fact: F, review: "expanded", valueJson: typedOf(num, F, read), documentId: "d1", readAt: at, left: notWritable(num, F, read) !== null }],
+    [{ subjectId: "case", fact: F, valueJson: typedAnswer, channel: OFFICER_ENTRY, actor: "staff", at: later }], []).by_mode.expanded;
+  ok("C6.5 R18 pass (review m1): a read stored as the text \"14200.00\" and staff typing 14200 is no correction", counted("14200.00", 14200).corrected === 0 && counted("14200.00", 14200).read === 1);
+  ok("C6.5 R18 fail (review m1): staff typing 14000 over that read is one correction", counted("14200.00", 14000).corrected === 1);
 }
 
 // ---- the cost card (P-110, P-295), priced by the spend ledger
