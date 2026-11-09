@@ -1,0 +1,52 @@
+load: 202
+--- ancestor 1: 46 chars
+--- ancestor 2: 128 chars
+--- ancestor 3: 2682 chars
+IMM 5257 for Child 18 or over (Sample)
+Not validated yet
+Read back the validated copy
+Validate before filing
+Generate a new copy
+
+Declared or confirmed answers for 107 of 166 form fields. A copy also lists the form fields to write by hand.
+
+Generated
+Copy of 9 Nov, 18:03 · 78 form fields written, 7 by hand · read back and checked
+Download
+Validated copy uploaded back
+Filed
+
+Not yet: Validate IMM 5257 in Adobe, save it and read the validated copy back before it is filed.
+
+To write by hand in Adobe: Fax number including country code (North American number parts are not in the executable set yet), Fax number including country code (North American number parts are not in the executable set yet), Fax number including country code (North American number parts are not in the executable set yet), Alternate telephone number including country code (North American number parts are not in the executable set yet), Alternate telephone number including country code (North American number parts are not in the executable set yet) and 2 more.
+
+Before filing, on the PDF: this telephone number: after the form's first Validate, tick "Canada/US" again. The number is already written and the switch is written ticked, but Validate clears the switch while the number form fields are hidden; the click shows them with the number in place. this telephone number: after the form's first Validate, tick "Canada/US" again. The number is already written and the switch is written ticked, but Validate clears the switch while the number form fields are hidden; the click shows them with the number in place.
+
+Who signs: Child 18 or over (Sample) · Signed in pen
+
+Print and sign in pen
+To do
+Every fact it reads is confirmed. Make the copy, press Validate in Adobe (this adds the barcode page), save it and read the validated copy back here: IRCC returns a barcode form unprocessed without it.
+
+On Paper, signed in pen. Printed and Signed in pen are recorded here with who and when.
+
+1. Validated in Adobe
+: not yet
+Make the copy, press Validate in Adobe (this adds IMM 5257's barcode page), save it and read the validated copy back here. It is read back in the copy block above.
+2. Printed
+: next
+
+Print the validated copy with its barcode page, the barcode page on top.
+
+Cannot start yet: Printed comes after the validated copy of IMM 5257 is read back: make the copy, press Validate in Adobe (this adds its barcode page), save it and read it back first.
+
+3. Signed in pen
+: not yet
+Cannot start yet: Signed in pen comes after "Printed": print IMM 5257 first.
+4. Mailed to IRCC
+: not yet
+Mailed to IRCC once the filing is Ready to file. It is not recorded in the product yet.
+Earlier copies (1)
+forms keys: [ 'forms', 'online' ]
+undefined
+page errors: []
