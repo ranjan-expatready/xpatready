@@ -12,6 +12,10 @@
 //      Citizen, Permanent resident, Protected Person or Refugee Claimant (01, 02, 07, 08), no "Other" details beside a
 //      status other than Other (06), in question 7 and in question 9 B;
 //   3. the release the case files on carries those gates, and the copy says why each such box is empty.
+//   4. (QA-361, 9 Nov: the tech lead's Acrobat Validate stopped at "Alternate Telephone no. must contain a value") on every
+//      IMM 5257 copy, no telephone block is written "Canada/US" without its North American number parts: the filler writes
+//      none yet (p5/transforms.ts phone_part:nanp_*), and the form's own Validate then requires them (IMM 5257 p. 2,
+//      validateAlternateTelephone, validateFaxNumber, the Canada/US box's click script).
 // Each has a fail case on a test-only copy with one value changed (the reader must catch it).
 //   zsh studio/tools/isolated.sh rt_c102v 4431 start && tsx studio/tests/check_c102_copy_values.ts 4431 xr_studio_rt_c102v
 import { execFileSync } from "node:child_process";
@@ -104,6 +108,17 @@ try {
   const boxes: { box: string; result: string; why: string | null }[] = JSON.parse(sql(`select coalesce(result_json->'boxes', '[]') from form_instance where path='${filed.path.replace(`${ROOT}/`, "")}' order by created_at desc limit 1`) || "[]");
   const said = gated.slice(0, 3).map((g) => boxes.find((b) => b.box === g)).filter(Boolean) as { result: string; why: string | null }[];
   ok("C10.2-v3 pass: on the Paper copy (a Citizen) the status row's Other, From and To are not written, each saying \"Not needed\"", said.length === 3 && said.every((b) => b.result !== "written" && /^Not needed/.test(b.why ?? "")), said);
+
+  // 4. QA-361: a telephone block written "Canada/US" needs its North American number parts, which the filler does not write.
+  const CI = "form1[0].Page2[0].ContactInformation[0].contact[0].";
+  const PHONES = [`${CI}PhoneNumbers[0].Phone[0].`, `${CI}PhoneNumbers[0].AltPhone[0].`, `${CI}FaxEmail[0].Phone[0].`];
+  const naStuck = (v: Record<string, string>) => PHONES.filter((b) => v[`${b}CanadaUS[0]`] === "1" && ["AreaCode", "FirstThree", "LastFive"].some((x) => !v[`${b}NANumber[0].${x}[0]`])).map((b) => b.split(".").slice(-3, -1).join("."));
+  const stuck = i5257.flatMap((c) => naStuck(c.read?.values ?? {}).map((b) => `${c.channel || "copy"}: ${b}`));
+  ok(`C10.2-v4 pass (QA-361; IMM 5257 validateAlternateTelephone, validateFaxNumber): no telephone block written "Canada/US" without its North American number parts, on every IMM 5257 copy (${i5257.length})`, i5257.length > 0 && stuck.length === 0, stuck);
+  const badPhone = join(tmp, "bad-phone.pdf");
+  execFileSync(PY, ["-I", READER, "--set", filed.path, badPhone, `${CI}PhoneNumbers[0].AltPhone[0].CanadaUS[0]=1`, `${CI}PhoneNumbers[0].AltPhone[0].Other[0]=0`, `${CI}PhoneNumbers[0].AltPhone[0].NumberCountry[0]=1`, `${CI}PhoneNumbers[0].AltPhone[0].IntlNumber[0].IntlNumber[0]=`], { stdio: ["ignore", "pipe", "pipe"] });
+  const bp = naStuck(readCopies([badPhone])[0].values);
+  ok("C10.2-v4 fail: the 9 Nov combination (the alternate telephone written \"Canada/US\", country code 1, no number parts) is caught", bp.some((b) => /AltPhone/.test(b)), bp); // asserts the box it sets only, whatever the base copy holds (the v2 fail case's lesson, 178b95d)
 } catch (e) {
   ok("the check ran to its end", false, (e as Error).message);
 } finally {
