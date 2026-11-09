@@ -44,3 +44,13 @@ PR #1440 at 7456e5347, on an isolated copy (rv_qa345, :4466, configured checkpoi
 **8/10: pass, no 0.** To raise it, fix in this order: M1 (compare the sha in `fileStampCurrent`), M2 (keep `was_sha256`), m1 (a conditional update), then m5 and m4 (words).
 
 Not tested: a real screen reader, a real Adobe Validate, and an intended user's own walk (D17 and D20 stay with the founder).
+
+## Round 2 at 7a5c38e5c (same journeys, fresh copy on :4466)
+* J1–J4 held again. J1 after approval: IMM 5257 reads "Stamped with its facts (…). The validated copy read back next for these facts is stamped to this approval (QA-345)", and IMM 5476 no longer carries the promise. After the read-back: "Stamped with the validated copy read back".
+* J3: the page reads "Approval withdrawn: the validated copy read back since is not the file this approval stamped. Re-approve…". Ready to file now gives its own reason ("A validated copy was read back after this filing was reviewed on …, and the review did not stamp it…").
+* The round-1 break-it findings are fixed:
+  * A further read-back after a validated-copy stamp now withdraws the approval, and C7.6 stops counting it.
+  * The audit keeps `was_sha256`.
+  * Concurrent moves are a no-op.
+* Axe found nothing in four states. No sideways scroll at 400, 1024 or 1440 px, and no console errors. The review loads in 496 ms and approve takes 306 ms.
+* Score: task 1 · next step 1 · plain words ½ (a tracker id "(QA-345)" in the words) · feedback 1 · data 1 · recovery 1 · accessibility 1 · speed 1 · visual 1 · trust 1 = **9.5/10, pass**.

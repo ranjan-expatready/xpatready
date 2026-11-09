@@ -51,7 +51,41 @@ BIC-12 Partly: the check before filing misses M1 · BIC-13 Partly: m1 gives a ra
 ## Could not check
 A main baseline for `check_c76_readiness_api`. A real Adobe Validate: the read-back is simulated by `validateRoundTrip`, as in the pack. A screen reader. An intended user's own walk.
 
-Verdict: Changes requested
+Round 1 verdict (7456e5347): Changes requested
 * Blockers: none.
 * Majors: M1 (a second validated copy of the same facts is filed under an approval stamped with another file), M2 (the move erases the stamped generated copy's sha; the audit keeps only its kind).
 * Minors: m1 (concurrent read-backs give a 500), m2 (approve/read-back race, fails safe), m3 (the guard allows a superseded row and any sha), m4 (the "none" words promise a stamp for forms that never get one), m5 (the C7.6 line gives the wrong reason), m6 (guard refusals untested).
+
+## Round 2: 7a5c38e5c3913af6a2ff1cffc91582609d12eda1 (`git diff 7456e5347..7a5c38e5c`)
+Re-run on a fresh isolated copy (rv_qa345 on :4466; stopped and dropped afterwards):
+* Pack `C8.3.test.ts` **25/25** (configured checkpoint), with the new C8.3-23 going through the routes. QA-345 check **2/2**.
+* `check_review_rounds` 52/52 · `check_c76_readiness` 91/91 · `check_c83_review_browser` 23/23 · `graph.mjs --check` exit 0 · `tsc -p api` shows no error in api/, engine/, contracts/, acceptance/ or the touched tests.
+* **`check_c76_readiness_api` 23/23** on a fresh copy started as its usage line says, with no checkpoint load. My round-1 22/23 came from loading the configured checkpoint first, not from this PR. That question is closed.
+* The journey walk (J1–J4) re-run, the guard probed again (R1–R6), and M1 probed again.
+
+**Each round-1 finding:**
+* **M1: fixed.**
+  * `fileStampCurrent({kind, sha256}, validatedSha)` compares fingerprints. `validatedSha` (case-prepare.ts) is the read-back that `paperValidated` counts, and only while current.
+  * `framesOf` stamps that same fingerprint at approve, so the approve-time stamp and the judgment cannot drift. The old query took the newest read-back per copy without `formPassed`; the new one uses the filtered one. Same result except for rows from before QA-165.
+  * The page, change-only list, re-approve `changed` and `carry`, and C7.6 all pass it.
+  * My probe: approval stamped `ddd…`, then a further copy `2b0e75…` read back. The page reads "Approval withdrawn: the validated copy read back since is not the file this approval stamped. Re-approve…", re-approve is offered, C7.6 does not count the review, and nothing was moved (0 audit lines).
+  * C8.3-23 covers it through the routes. The unit "file fail" case fails if the sha comparison is removed: it has `!fileStampCurrent({validated_copy, V1}, V2)`.
+* **M2: fixed.** The audit detail has `was_sha256` (null for a `none` stamp, as observed). The migration's rollback note now matches.
+* **m1: fixed.** The kind is now in the update's WHERE (`updateMany`, count 0 means skip). This is the exact change I tested in round 1 at SQL level.
+* **m3: fixed.** The guard needs the newest round of the filing and a kept `validated_copy` with that sha. Probed: a move on a superseded approved row is refused (R1), an unkept sha is refused (R2), a kept sha on the newest row passes once (R3, R4), generated → validated passes (R5), and the first stamp under review still works (R6).
+* **m4: fixed.** `FILE_WORDS.none` is restored. The promise shows only on a stamped barcode form not filed Online. Walked: IMM 5257 shows it, IMM 5476 does not, and the frozen row does not.
+* **m5: fixed.** Ready to file reads "A validated copy was read back after this filing was reviewed on 2026-11-09, and the review did not stamp it. The representative of record re-approves it (one click on the review)."
+* **m6: fixed.** C8.3-22 checks three more refusals.
+* **m2: left as is, accepted.** It fails safe.
+
+**Round 2 minors (none blocks):**
+* n1 (Should): the user-facing words end with a tracker id: "…is stamped to this approval (QA-345)" (`api/src/review-rounds.ts:261`). Drop "(QA-345)"; PRODUCT §4 words carry no internal ids.
+* n2 (Could): the guard's `validated_copy` check is not tied to the row's case, form and subject. Any kept file with that sha passes. A sha256 of uploaded bytes makes a cross-form match practically impossible; joining `form_instance` on `case_id`, `form_number` and `subject_id` would close it.
+* n3 (note): the migration was edited in place. That is fine because it is not on main. A copy that applied the earlier version needs a fresh start, which `isolated.sh start` does.
+* n4 (note): C8.3-23 no longer covers the case "validated copy current, stamp `none`, never moved" (data from before the fix) through the API. The unit `fileGone` case and the shared rule cover it.
+
+**Journey (round 2): 9.5/10, pass.** All J1–J4 held. Axe found nothing in four states, there is no sideways scroll at 400, 1024 or 1440 px, and no console errors. The review loads in 496 ms and approve takes 306 ms. Plain words is ½ for n1. Feedback, correct data and recovery go up to 1 (M1, M2, m1 fixed).
+
+Verdict: Approve (for 7a5c38e5c3913af6a2ff1cffc91582609d12eda1)
+* Blockers: none. Majors: none (M1, M2 fixed).
+* Minors: n1 (tracker id in the words), n2 (guard's sha check not scoped to case and form), n3 and n4 notes; m2 accepted.

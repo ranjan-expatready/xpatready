@@ -258,7 +258,7 @@ export class ReviewRounds {
         return { item: f.itemId, form: f.formNumber, person: now?.person ?? "", channel: now?.channel ?? "", waits, state: st.state, state_words: STATE_WORDS[st.state],
           tooltip: st.state === "approval_withdrawn" ? WITHDRAWN_TOOLTIP : st.state === "changed_since_review" ? CHANGED_TOOLTIP : null,
           withdrawn_words: st.state === "approval_withdrawn" ? withdrawnWords(st.why, first, day) : null,
-          file: { kind, sha256: f.stampFileSha256 ?? f.fileSha256, words: waits ? "Not stamped: waits for an answer" : `${f.stampedAt ? "Stamped" : "Frozen when sent"} with ${FILE_WORDS[kind]}${kind === "none" && f.stampedAt && isBarcodeForm(f.formNumber) && now?.channel !== "ONLINE" ? ". The validated copy read back next for these facts is stamped to this approval (QA-345)" : ""}` },
+          file: { kind, sha256: f.stampFileSha256 ?? f.fileSha256, words: waits ? "Not stamped: waits for an answer" : `${f.stampedAt ? "Stamped" : "Frozen when sent"} with ${FILE_WORDS[kind]}${kind === "none" && f.stampedAt && isBarcodeForm(f.formNumber) && now?.channel !== "ONLINE" ? ". The validated copy read back next for these facts is stamped to this approval" : ""}` },
           stamp: f.stampedAt ? { at: f.stampedAt.toISOString(), by: f.stampedBy!, file_kind: f.stampFileKind!, file_sha256: f.stampFileSha256 } : null,
           live_hash: liveHash, changes: changeView(changes), facts };
       });
