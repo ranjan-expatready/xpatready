@@ -70,3 +70,30 @@ Screenshots are in the reviewer's scratchpad (not committed); the builder's `wal
 A real screen reader. An intended user's unaided walk (D17, D20 stay with the founder). Recording a filing through C8.2's own path with an added form on it. A release move onto a release that also holds an added form (8a190af48 addresses it; not reviewed).
 
 **Verdict: Block** — fix M1 (Q1: an added form adds no client questions), M2 (no names or reason text in audit lines), M3 (actor name, not id, on the tag and the refusal). The Minors can follow in this PR or a follow-up row.
+
+## Re-review, 9 Nov 2026 (diff only: `git diff dcc7feb8c..ada91ada2`, includes 8a190af48)
+Fresh copy `rev_b141` on :4443 started at head ada91ada2, configured checkpoint loaded. `acceptance/C7.8.test.ts 4443 xr_studio_rev_b141`: **19/19**. The new fail tests C7.8-14…18 are green; C7.8-17 counts the client's questions before and after the add (519 = 519).
+
+**My findings**
+* **M1 fixed.** `engine/render.ts:143-148` lets an added line join only a question the case's own forms already ask. Added lines come after the release's in `withAdditions`, so the release's questions are read first. My original repro on SAMPLE-VV-FAMILY-1 (IMM 0008 added for Partner): client questionnaire 523 → 523, agent view 539 → 539, set diff empty. The facts it reads that are not on file stay on the existing readiness lines ("fields left empty", passable).
+* **M2 fixed.** Audit text is now "Case officer added IMM 0008 (Fills from the case) for the spouse or partner on a filing of case 2c2ab8e5 (reason given)". Remove reads the same way. No name, no reason text (`form-additions.ts` `roleWords`).
+* **M3 fixed.** The refusal reads "…by Case officer on 9 Nov 2026" and the tag tooltip reads "Added by Case officer on 9 Nov 2026…" (`personName`, `dayWords`). The tag's ⓘ is now a focusable button with an aria-label and a toast (breaker m3).
+* **m1 race fixed.** The first addition is re-read under the case's row lock; C7.8-14 gives 201/409 with one channel stored.
+* **m2 fixed.** Signature off on Paper is refused (422). Paper on an IRCC-account case needs a reason (400; the UI turns the field into "Why it is filed on Paper (required)"). C7.8-18 covers it.
+* **m3 partly fixed, stays Minor.** After Remove, focus goes to the "Prepare application" heading (1440 and 1024). After Add, a 300 ms timer (`add-form.tsx:88-90`) races the list refetch: focus landed on the filing's "Add a form" button at 1440 (fine) but on `<body>` at 1024. Make the focus wait for the row (an effect on the refreshed list), not a fixed timer.
+* **m4 fixed.** "Remove from this filing" and "Remove IMM 5532".
+* **m5 fixed.** Every filing is greyed once any filing on the case is recorded (`forms.tsx` `byFiling`). Checked by reading the code; the server rule is unchanged.
+* **m6, m7 fixed.** Copy reworded: the `always` line reads "(for this person: …)", "Q2" is gone, "its forms is" now reads "the list of forms". "A newer edition exists" pill when the library's newest PDF edition differs (`fill-case.ts`; code read only, the checkpoint has no newer edition for an added form).
+* **m8 fixed.** The signature-off and channel-default rules now have failing tests (C7.8-18). The set-up record's `filed_facts` is now `[]`. Graph G3 is left as is: not this PR's file (P-312). Accepted.
+
+**Breaker findings**, answered by the build-notes table and checked here:
+* **B1 fixed.** The release move marks a held addition removed in its own transaction ("Part of <release>…"), and `withAdditions` never joins a form the release holds. Every added-record read now goes through `addedOn`, and the tag renders nothing without a record. C7.8-16 green.
+* **M1 fixed** (as m1 above).
+* **M2 fixed.** `completedSince` counts only uploads made after this addition. C7.8-15: state to_do, the CRITICAL line back, and the removed form's blank PDF returns 410.
+* **Minors fixed.** The long-title wrap is in place (picked heading, row text). The blank form's only step is "Uploaded to IRCC", after the completed copy and Ready to file. A missing checksum now means no current edition. The edition-approval point is accepted on the builder's reading: editions come only from approved files; `form-library.ts` filters by approved checksums, a no-op here.
+
+**Re-checked** at 1440 and 1024 px: axe WCAG 2.2 A/AA 0 violations, no sideways scroll, no page errors. **New code read for regressions:** no form number, combination key or program branch (P-319, P-425). The blank form's `uploaded_to_ircc` step is refused before the completed copy, before Ready to file, twice, and after recording. The release move reads additions before its lock, but `withAdditions` filters held forms, so a concurrent add is never joined. No regression found.
+
+Open, Minor only: the m3 focus after Add at 1024 px.
+
+**Verdict: Approve** — head ada91ada2e9104afbbf544f45969cafa6b91441d (no open Blocker or Major).

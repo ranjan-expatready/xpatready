@@ -17,6 +17,15 @@ const CHANNEL: Record<string, string> = { PDF_UPLOAD: "PDF upload", PAPER: "Pape
 const day = (at: string) => new Date(at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 const refresh = (qc: ReturnType<typeof useQueryClient>, caseId: string) => qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
 
+/** Focus `selector` as soon as it is in the page (the list reloads after a change), else `fallback` after 5 s. */
+function focusWhenShown(selector: string, fallback: string) {
+  const found = () => document.querySelector<HTMLElement>(selector);
+  if (found()) { found()!.focus(); return; }
+  const obs = new MutationObserver(() => { const el = found(); if (el) { obs.disconnect(); clearTimeout(t); el.focus(); } });
+  obs.observe(document.body, { childList: true, subtree: true });
+  const t = setTimeout(() => { obs.disconnect(); (found() ?? document.querySelector<HTMLElement>(fallback))?.focus(); }, 5000);
+}
+
 /** "+ Add a form" after one filing's forms. */
 export function AddFormButton({ caseId, filing, owner, disabled }: { caseId: string; filing: string; owner: string; disabled?: string | null }) {
   const [open, setOpen] = React.useState(false);
@@ -85,8 +94,9 @@ function AddFormPanel({ caseId, filing, owner, close, returnFocus }: { caseId: s
             </ul>}
         {picked && who ? <Picked key={`${picked}|${who}`} caseId={caseId} filing={filing} form={picked} subject={who} onAdded={async (person) => {
           toast.push({ tone: "ok", text: `${picked} added to ${person}'s filing.` }); await refresh(qc, caseId); close();
-          // Review minor: after Add the focus goes to the new form's row (else back to this filing's "+ Add a form").
-          setTimeout(() => (document.querySelector<HTMLElement>(`[data-row-form="${picked}|${who}"] h3`) ?? document.querySelector<HTMLElement>(`[data-add-form="${filing}"] button`))?.focus(), 300);
+          // Review minor: after Add the focus goes to the new form's row once the list shows it (never a fixed timer that
+          // races the reload); after 5 s without it, to this filing's "+ Add a form".
+          focusWhenShown(`[data-row-form="${picked}|${who}"] h3`, `[data-add-form="${filing}"] button`);
         }} /> : null}
       </div>
     </Panel>
