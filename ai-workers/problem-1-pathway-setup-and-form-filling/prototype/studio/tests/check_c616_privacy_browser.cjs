@@ -163,7 +163,8 @@ const run = Date.now().toString(36), ADDRESS = `partner.${run}@example.com`;
     await panel.locator(`[data-person="${S}"]`).getByText(/Taken back .* · still private from Client A/).waitFor(T);
     ok("C6.16 officer: the row now reads Taken back · still private", true);
     await a.reload();
-    await about.locator("[data-private-progress]").waitFor(T);
+    // The progress card first draws from the questionnaire, then the privacy list adds the link's line: wait for that line.
+    await about.getByText(/^The link was taken back on /).first().waitFor(T);
     const after = await about.innerText();
     ok("C6.16 principal (review m2): after the take back Client A reads what happened in their own words, never \"ask whoever sent it\"", /The link was taken back on /.test(after) && !/whoever sent it/.test(after), after.slice(0, 300));
 
