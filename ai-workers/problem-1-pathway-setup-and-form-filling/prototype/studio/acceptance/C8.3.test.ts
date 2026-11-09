@@ -301,9 +301,10 @@ await main("C8.3", "Representative review: rounds, stamps, changed since review 
     const d = await call("POST", `/runtime/reviews/${id}/decision`, { filing: fQ, verdict, form_hashes: hashes(rowOf((await read(id)).r, fQ)), confirm_unticked: true, reasons: verdict === "send_back" ? [{ text: `${qbc?.form}: the city of birth does not match the passport (Sample).` }] : undefined }, rep);
     return { id, status: d.status };
   };
-  const bump = async (tag: string) => { const q = await onlyOn(Q, qbc?.form, qc.id); if (q) { await answer(qc.id, Q, q.fact, `${String(q.answer?.value)}${tag}`, officer); await confirmAll(qc.id, Q); } return !!q; };
+  // A prefix keeps the value valid (an e-mail stays an e-mail), so each bump changes what the form writes.
+  const bump = async (tag: string) => { const q = await onlyOn(Q, qbc?.form, qc.id); if (q) { await answer(qc.id, Q, q.fact, `${tag}${String(q.answer?.value)}`, officer); await confirmAll(qc.id, Q); } return !!q; };
   await qRound("send_back");
-  const bumped = await bump("VILLE");
+  const bumped = await bump("q");
   const q2 = await qRound("approve");
   const kindAt = sql(`select stamp_file_kind from review_round_form where round_id='${q2.id}' and item_id='${qItem}'`);
   if (qbc) await validateRoundTrip(qc.id, qbc.form, Q);
@@ -316,7 +317,7 @@ await main("C8.3", "Representative review: rounds, stamps, changed since review 
       && sql(`update review_round_form set stamp_file_sha256='${"0".repeat(64)}' where round_id='${q2.id}' and item_id='${qItem}' returning id`) === null,
     { bc: qbc?.form, bumped, q2: q2.status, kindAt, stamp: qf?.stamp, vShaQ, state: qf?.state, reviewed: readinessOf(p, fQ)?.reviewed ?? null });
   // 23: the facts change again; the re-approve finds no file (stamped "none"); then a validated copy is kept without the stamp.
-  await bump("X");
+  await bump("r");
   const q2Row = rowOf((await read(q2.id)).r, fQ);
   const rq = await call("POST", `/runtime/reviews/${q2.id}/reapprove`, { filing: fQ, form_hashes: hashes(q2Row) }, rep);
   const q3 = rq.body?.round?.id as string | undefined;
