@@ -34,6 +34,7 @@ await main("C7.10", "Readiness figure by screens (Ready to file and the case hea
     page.on("pageerror", (e) => w.errors.push(String(e).slice(0, 200)));
     if (SHOTS) mkdirSync(SHOTS, { recursive: true });
     const shot = async (name: string, el?: string) => { if (!SHOTS) return; if (el) await page.locator(el).first().screenshot({ path: `${SHOTS}/${name}.png` }); else await page.screenshot({ path: `${SHOTS}/${name}.png` }); };
+    const HEADER = "main h1 >> xpath=../.."; // the case header block (reference, pills, team, the readiness pill)
     const row = () => page.locator(`[data-figure="${fid}"]`);
     const open = async () => { await page.goto(`/cases/${c.id}`); await w.settle(page, "the case page"); await row().waitFor({ timeout: 20_000 }); };
     const shown = async () => ({ state: await row().getAttribute("data-figure-state"), score: Number(await row().getAttribute("data-figure-score")), text: (await row().innerText()).replace(/\s+/g, " ") });
@@ -43,7 +44,7 @@ await main("C7.10", "Readiness figure by screens (Ready to file and the case hea
     let s = await shown(), g = fig();
     ok("C7.10-s1 pass (BR-5): the case header shows the case's readiness in words and figure, as the server gives it",
       !!v?.case_figure && (await pill()).includes(`Readiness: ${WORDS[v.case_figure.state]}`) && (await pill()).includes(`${v.case_figure.score}%`), { pill: await pill(), server: v?.case_figure });
-    await shot("01-case-header", "main");
+    await shot("01-case-header", HEADER);
     ok("C7.10-s2 fail (BR-1, BR-4): Ready to file shows the filing Not ready under 100 with \"n of m done\", the same as the server",
       !!g && s.state === g.state && s.score === g.score && g.state === "not_ready" && g.score < 100 && s.text.includes(`${g.score}%`) && s.text.includes(`${g.done} of ${g.countable} done`) && s.text.includes("Not ready"), { shown: s, server: g });
     await row().locator("[data-figure-how] summary").click();
@@ -92,7 +93,7 @@ await main("C7.10", "Readiness figure by screens (Ready to file and the case hea
     ok("C7.10-s7 pass: the person presses Ready to file; the filing reads Ready to file and the next step, C8.2's \"Record the submission\", is open",
       (await page.locator(`[data-readiness-filing="${fid}"][data-status="ready_to_file"]`).count()) === 1 && (await record.count()) === 1 && await record.isEnabled());
     await record.scrollIntoViewIfNeeded(); await shot("05-ready-to-file-next-step");
-    await page.locator("h1").first().scrollIntoViewIfNeeded(); await shot("06-case-header-ready", "main");
+    await page.locator("h1").first().scrollIntoViewIfNeeded(); await shot("06-case-header-ready", HEADER);
     ok("C7.10-s8 pass: no page error during the walk", w.errors.length === 0, w.errors);
   } finally { await w.close(); }
 });
