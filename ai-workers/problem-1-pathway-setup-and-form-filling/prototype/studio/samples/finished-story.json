@@ -10,7 +10,7 @@
   }
  },
  "by_kind": {
-  "basis": "Any other fact release 2 asks that the Sample record does not hold: a Sample value by its kind of answer, said on the result (the acceptance helpers' rule, acceptance/lib/m3.ts). Dates are after every family member's birth (the youngest is born in 2016), so no rules check finds an issue date before a birth.",
+  "basis": "Any other fact release 2 asks that the Sample record does not hold: a Sample value by its kind of answer, said on the result (the acceptance helpers' rule, acceptance/lib/m3.ts). Dates are after every family member's birth (the youngest is born in 2016), so no rules check finds an issue date before a birth. The phone is not a North American (+1) number (QA-361, 9 Nov): the filler writes no North American number parts yet (p5/transforms.ts, phone_part:nanp_*), and IMM 5257 (09-2023) p. 2, its own Validate (validateAlternateTelephone, validateFaxNumber; the Canada/US box's click script), then requires the area code and number boxes, so the Paper copy could not pass; an international number goes in Other + IntlNumber, as the main phone does.",
   "text": "SAMPLE",
   "digits": "0000000001",
   "yes_no": false,
@@ -20,8 +20,8 @@
   "number": "5000",
   "email": "client.a@example.com",
   "phone": {
-   "country_code": "1",
-   "number": "5550100"
+   "country_code": "91",
+   "number": "9800000002"
   },
   "address": {
    "street_name": "Sample Road",

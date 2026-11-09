@@ -5,7 +5,8 @@
 // earlier case" → tick → "Re-confirm and use" → the Agent view shows the copies with their origin and status (C6.3) →
 // the next capability's first step: Prepare application (C7.1) — the principal's form counts the copied facts and a copy
 // is generated. Then the earlier passport expires (edited and confirmed on case A by screens) → case C shows it Expired,
-// the tick disabled. The API is read only underneath (data as entered, earlier case unchanged, roles 403/404).
+// the tick disabled; first (QA-338 re-test, the default left alone) case C chooses no earlier case, and case B picked by
+// the officer shows its stale copies Out of date / Expired, untickable, refused by the server. The API is read only underneath (data as entered, earlier case unchanged, roles 403/404).
 // Loads the configured checkpoint through Demo › Load the configured checkpoint when the copy has none. Sample data, US$0.
 //   zsh studio/tools/isolated.sh qa_c619 4473 start --ttl 60 && trap 'zsh studio/tools/isolated.sh qa_c619 4473 stop' EXIT && node studio/tests/qa/check_qa_c619_gate_a.cjs 4473 <shots dir>
 const fs = require("node:fs");
@@ -181,9 +182,33 @@ const api = async (method, url, body, actor = "user-O") => { const r = await fet
     const bExp = (await api("GET", `/runtime/cases/${caseB}/questionnaire?mode=agent`)).body.sections.flatMap((s) => s.questions).find((q) => q.fact === "person.passport_expiry_date");
     ok("C6.19 BR-3: the edit on case A did not reach case B (copies, not links)", bExp?.answer?.value === "2031-05-09", bExp?.answer?.value);
     const refC = `QA619-C-${run}`;
-    await openCase("With an LMIA", refC);
+    const caseC = await openCase("With an LMIA", refC);
     const card2 = p.locator("[data-earlier-facts]");
     await card2.getByRole("heading", { name: "Facts from an earlier case" }).waitFor(T);
+    await card2.scrollIntoViewIfNeeded();
+    // QA-338 re-test, by screens, the default left alone (BR-1): two earlier cases (A, B), nothing chosen, no fact rows.
+    const radios = card2.getByRole("radio");
+    await radios.first().waitFor(T).catch(() => {});
+    const nRadios = await radios.count(); let nChecked = 0; for (let i = 0; i < nRadios; i++) if (await radios.nth(i).isChecked()) nChecked++;
+    const hint = await card2.getByText("Pick the earlier case to see what it offers. Nothing is chosen for you.").count();
+    ok("QA-338 / C6.19 BR-1: on case C (two earlier cases) no earlier case is chosen, no fact row shows, and the card says so", nRadios === 2 && nChecked === 0 && (await card2.locator("tr[data-fact]").count()) === 0 && hint > 0, { nRadios, nChecked, hint });
+    await shot(p, "08-case-c-nothing-chosen");
+    // The officer picks case B (the newest, which holds a copy of the passport made before A's correction).
+    await card2.getByLabel(new RegExp(refB)).check(T);
+    const bNum = rowOf(card2, "person.passport_number"), bExp2 = rowOf(card2, "person.passport_expiry_date");
+    await bExp2.waitFor(T); await bExp2.scrollIntoViewIfNeeded();
+    const bExpText = await bExp2.innerText(), bNumText = await bNum.innerText();
+    ok("QA-338 / C6.19 BR-6: case B's stale copy of the expiry reads Out of date (naming case A) or Expired, and cannot be ticked", ((await bExp2.getAttribute("data-newer")) === refA || (await bExp2.getAttribute("data-expiry")) === "expired") && await bExp2.getByRole("checkbox").isDisabled(), { newer: await bExp2.getAttribute("data-newer"), expiry: await bExp2.getAttribute("data-expiry"), text: bExpText.slice(0, 400) });
+    ok("QA-338 / C6.19 BR-6: case B's copy of the passport number reads Expired and cannot be ticked", (await bNum.getAttribute("data-expiry")) === "expired" && await bNum.getByRole("checkbox").isDisabled(), bNumText.slice(0, 400));
+    ok("QA-338: with only stale copies chosen, \"Re-confirm and use\" stays disabled", await card2.getByRole("button", { name: /Re-confirm and use/ }).isDisabled());
+    await shot(p, "09-case-c-case-b-out-of-date");
+    { const r = await new AxeBuilder({ page: p }).include("[data-earlier-facts]").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze(); ok("axe: the card on case C with case B picked has no WCAG A/AA violation", r.violations.length === 0, r.violations.map((v) => `${v.id}: ${v.nodes[0]?.target?.join(" ")}`).join(" | ")); }
+    // Underneath: the server refuses the stale copy too (not only the disabled box); case C stays without a passport answer.
+    { const off = (await api("GET", `/runtime/cases/${caseC}/earlier-facts`)).body, eb = off?.earlier?.find((e) => e.reference === refB);
+      const take = (eb?.people ?? []).flatMap((pp) => pp.facts.filter((f) => f.fact === "person.passport_expiry_date").map((f) => ({ subject_id: pp.subject_id, fact: f.fact, from: f.from_answer })));
+      const r = await api("POST", `/runtime/cases/${caseC}/earlier-facts`, { earlierCase: eb?.case_id, take, seen: Object.fromEntries(take.map((t) => [`${t.subject_id}|${t.fact}`, null])) });
+      const cQs = (await api("GET", `/runtime/cases/${caseC}/questionnaire?mode=agent`)).body.sections.flatMap((s) => s.questions).filter((q) => /passport_(number|expiry_date)$/.test(q.fact));
+      ok("QA-338 underneath: a POST of case B's stale expiry is refused (4xx, Problem Details) and case C has no passport answer", take.length === 1 && r.status >= 400 && r.status < 500 && !!r.body?.detail && cQs.every((q) => !q.answer), { status: r.status, detail: r.body?.detail, take: take.length }); }
     const pick2 = card2.getByLabel(new RegExp(refA)); if (await pick2.count()) await pick2.check();
     const num = rowOf(card2, "person.passport_number"); await num.waitFor(T); await num.scrollIntoViewIfNeeded();
     const numText = await num.innerText();
