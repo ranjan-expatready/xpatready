@@ -13,7 +13,9 @@
 // Part A: the filler's step, a pass and a fail per rule (no server). Part B: the Sample family's Visitor visa case on the
 // configured checkpoint (load it first), through the API. Sample people and values; Unconfirmed: expert. US$0, no AI.
 //   zsh studio/tools/isolated.sh rt_qa318 4436 start && curl -s -X POST -H content-type:application/json -H x-actor:user-A -d '{"sample":"configured"}' localhost:4436/api/demo/load && tsx studio/tests/check_qa318_sch1.ts 4436 xr_studio_rt_qa318
-import { runTransform, proseRecorded } from "../../p5/transforms.ts";
+import * as T from "../../p5/transforms.ts"; // a namespace, so the suite also runs (and fails) on code before QA-318
+const { runTransform } = T;
+const proseRecorded = (t: string) => !!(T as { proseRecorded?: (x: string) => boolean }).proseRecorded?.(t);
 import { agent, call, FAMILY, fillEverything, firms, generateCopy, main, ok, openCase, OFFICER, sql } from "../acceptance/lib/m3.ts";
 
 const SERVED = "derive: true if any military/militia/civil defence/security/police service period is recorded for the subject, else false -> yes_no_code:true/false";
