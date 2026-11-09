@@ -255,4 +255,26 @@ await main("C6.5 documents API", "case upload, read once, Confirm & use once, le
   ok("C6.5 F2 pass (Lead 36): a value the read could not give in the question's terms (a country only as a code) stays the officer's judgement: marked checked (200)", r.status === 200 && kAnswer("person.citizenship")?.startsWith("VERIFIED|") === true, r.body);
   r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.place_of_birth_city/checked-against-document`, { document: kDoc }, OFFICER);
   ok("C6.5 F2 fail (Lead 36): place of birth is not on the passport's coded lines: still refused (422 not_evidence)", r.status === 422 && r.body?.code === "not_evidence", r.body);
+  // Review m1 on 107aefb7d: the answer kept is the one in force when the check was resolved, even when it changed after
+  // the check opened; an answer typed after that was never kept, so it opens a check of its own (m4: the pass side).
+  const gChecks = () => sql(`select count(*) from answer_check where subject_id='${K}' and fact='person.given_names'`);
+  await answer(c.id, K, "person.given_names", "CHILD AZ", OFFICER);
+  const g2 = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.given_names/checked-against-document`, { document: kDoc }, OFFICER);
+  await answer(c.id, K, "person.given_names", "CHILD AW", OFFICER); // changed while the check is open
+  const aw = sql(`select id from client_canonical_answer where subject_id='${K}' and canonical_field_key='person.given_names' and superseded_by_id is null`);
+  await call("POST", `/runtime/checks/${g2.body?.check}/resolve`, { keep: "answer", reason: "The renewed passport spells it so (Sample)", answerId: aw }, OFFICER);
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.given_names/checked-against-document`, { document: kDoc }, OFFICER);
+  ok("C6.5 F3 fail (review m1): the newer answer a check was resolved keeping is refused too (409 kept_over_document), with no further check", g2.body?.code === "differs_from_document" && r.status === 409 && r.body?.code === "kept_over_document" && gChecks() === "2" && kAnswer("person.given_names") === "DECLARED|CHILD AW", { g2: g2.body, r: r.body });
+  await answer(c.id, K, "person.given_names", "CHILD AV", OFFICER); // typed after the check was resolved: never kept
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.given_names/checked-against-document`, { document: kDoc }, OFFICER);
+  ok("C6.5 F3 pass (review m4): an answer typed after the resolved check was never kept over the document: it opens a check of its own (409 differs_from_document)", r.status === 409 && r.body?.code === "differs_from_document" && gChecks() === "3" && kAnswer("person.given_names") === "DECLARED|CHILD AV", r.body);
+  ok("C6.5 F3 (review m2): the refusal names the question and the document in words", /^"[A-Z][^"]*": the answer differs from what the document \([^)]+\) reads/.test(r.body?.detail ?? ""), r.body?.detail);
+  // Review M1 on 107aefb7d: a passport nobody has read yet never vouches for an answer it was never compared with.
+  const kDoc2 = (await upload(PORT, `/runtime/checklist-lines/${kLine}/documents`, passportPdf({ ...doc, surname: "SAMPLEK", given: "CHILD A", number: "SAMPLEK56", dob: FAMILY[3].dob! }), "child-renewed.pdf", OFFICER)).body?.document?.id as string;
+  const numBefore = kAnswer("person.passport_number");
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.passport_number/checked-against-document`, { document: kDoc2 }, OFFICER);
+  ok("C6.5 F4 fail (review M1): an answer is not checked against a document that was never read (409 not_read), and nothing changes", !!kDoc2 && r.status === 409 && r.body?.code === "not_read" && kAnswer("person.passport_number") === numBefore && sql(`select count(*) from document_review where document_id='${kDoc2}'`) === "0", r.body);
+  await fill(passSec, K);
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.passport_number/checked-against-document`, { document: kDoc2 }, OFFICER);
+  ok("C6.5 F4 pass (review M1): once that document is read and agrees, the answer is marked checked against it (200, VERIFIED)", r.status === 200 && kAnswer("person.passport_number") === "VERIFIED|SAMPLEK56", r.body);
 });

@@ -243,7 +243,7 @@ function DocumentBlock({ caseId, subjectId, section, review, fill, checks, quest
               <span className="text-text-muted">{p.label}:</span> {resolved && q?.answer ? value(p, q.answer.value) : value(p, p.value)} · <b className="font-medium">{resolved ? "Check resolved" : STATE_WORDS[p.state]}</b>
               {/* Lead 36 on #1369: an answer kept over this document's value differs from it, so it is never marked checked
                   against it (the server answers 409 kept_over_document); the row says what was kept instead. */}
-              {resolved && q?.answer && !sameShown(value(p, q.answer.value), value(p, p.value)) ? <span className="text-text-muted" data-kept-answer> · kept over the document, with a reason</span> : null}
+              {resolved && q?.answer && !sameShown(p.fact, value(p, q.answer.value), value(p, p.value)) ? <span className="text-text-muted" data-kept-answer> · kept over the document, with a reason</span> : null}
             </div>
           );
         }) : null}
@@ -262,7 +262,8 @@ function DocumentBlock({ caseId, subjectId, section, review, fill, checks, quest
   );
 }
 
-const sameShown = (a: string, b: string) => a.trim().toUpperCase().replace(/\s+/g, " ") === b.trim().toUpperCase().replace(/\s+/g, " ");
+/** As the server's sameValue (review m3 on 107aefb7d): names compare without case and repeated spaces; every other value as written. */
+const sameShown = (fact: string, a: string, b: string) => (/_names?$/.test(fact) ? a.trim().toUpperCase().replace(/\s+/g, " ") === b.trim().toUpperCase().replace(/\s+/g, " ") : a.trim() === b.trim());
 const answerBy = (q: ViewQuestion | undefined) => (q?.answer ? ` (${q.answer.channel === "questionnaire" ? `${who(q.answer.by)} typed it` : q.answer.by === getActor() ? "you entered it" : `${who(q.answer.by)} entered it`})` : "");
 
 /** One value: its label, the section it fills, the value, page and reader in words. */
