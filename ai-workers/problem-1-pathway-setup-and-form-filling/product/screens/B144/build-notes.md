@@ -79,6 +79,19 @@ Needs-you items and notifications · the case stage move to REVIEW · `waive-def
 * Unit and static: `check_review_rounds.ts` 0 (46/46) · `check_prisma_schema` 0 · `check_contract_seams` 0 · `count-any` 0 (418 = base) · `graph.mjs --check` 0 · `check_c92_out_of_date.ts` 0 · `check_b128_relatives.ts` 0.
 * Pack C8.3 0 (23/23) · walk 0 (24/24) · packs C7.6 0, C8.1 0, C8.2 0, C6.13 0 · `check_c76_readiness_api.ts` 0 · `check_c76_ready_browser.ts` 0 · `check_c81_sign_browser.ts` 0 · R1 in order: r1c 0, r1d 0, r1a `--reset` 0. setup_vv_m3: only S2w, S7a (known).
 
+## CI round (gate B on the configured checkpoint, #1247 at f457a8df7, run 42566736094)
+Reproduced gate B's way ( runPack, data ): a fresh copy, Demo › Reset then Demo › Load the configured checkpoint as the author, no setups, then : **16/23, exit 1**, the same steps as CI. FAIL lines (each cut at 900 characters):
+
+
+
+
+
+
+
+
+**Cause: the pack's set-up, not the code.** The pack picked "a text fact only the barcode form reads" among facts the staff collect (). On the checkpoint every fact is collected in the client questionnaire, so no fact was found and no fact was changed: -10, -11, -13, -13b and -18 then saw nothing change. -14c and -14 failed after -18, which left no re-approve round to read (a 404 on an undefined round). On the old set-up (setup_vv_m3) the release has staff-collected facts, so the pack passed there.
+**Fix (P-319, no fixed names; no step lowered or dropped):** the pack picks the fact from the data whoever collects it (a staff-collected one first), and the case officer (or the representative at -13, -13b) types the change, which staff may do for any fact (agent view, "Declared: entered by staff"); the typist checks are unchanged. The walk's set-up picks the same way. No code and no migration change.
+
 ## Left after round 1
 * Review m1: page and C7.6 can still disagree when the form set changes (a waiting form starts, a form is added, a Not-needed form, a C9.5 move): waits come from the frozen row and the re-approve covers stored rows only. Not reproducible on the sample.
 * Review m3: hashes and the representative are checked before the case lock (benign: a stamp that goes stale shows withdrawn at once). Noted, not changed.

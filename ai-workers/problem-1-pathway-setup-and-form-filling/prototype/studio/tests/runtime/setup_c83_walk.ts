@@ -29,7 +29,8 @@ await call("POST", `/runtime/reviews/${r1}/decision`, { filing: fS, verdict: "ap
 await call("POST", `/runtime/reviews/${r1}/open`, { filing: fP }, rep);
 await call("POST", `/runtime/reviews/${r1}/decision`, { filing: fP, verdict: "send_back", form_hashes: await hashes(r1, fP), reasons: [{ text: `${barcodeOf(P)?.form}: the city of birth does not match the passport (Sample).` }] }, rep);
 const onlyOn = async (subject: string, form: string | undefined) => (((await agent(c.id))?.sections ?? []) as { questions: Q[] }[]).flatMap((s) => s.questions)
-  .filter((q) => q.subjectId === subject && !q.hidden && !q.group && q.value_type === "text" && q.collected_from !== "client_questionnaire" && q.fills.length > 0 && q.fills.every((x) => x.form === form) && typeof q.answer?.value === "string");
+  .filter((q) => q.subjectId === subject && !q.hidden && !q.group && q.value_type === "text" && q.fills.length > 0 && q.fills.every((x) => x.form === form) && typeof q.answer?.value === "string")
+  .sort((a, b) => Number(a.collected_from === "client_questionnaire") - Number(b.collected_from === "client_questionnaire")); // staff-collected first; any on the checkpoint (P-319)
 const qP = await onlyOn(P, barcodeOf(P)?.form);
 if (qP[0]) { await answer(c.id, P, qP[0].fact, `${String(qP[0].answer?.value)}VILLE`, officer); await confirmAll(c.id, P); }
 const r2 = (await call("POST", `/runtime/cases/${c.id}/reviews`, { filings: [fP] }, officer)).body?.id;

@@ -114,8 +114,13 @@ await main("C8.3", "Representative review: rounds, stamps, changed since review 
   const st1 = sql(`select string_agg(filing_id || '=' || status, ',' order by status) from review_round_filing where round_id='${r1}'`);
   // The officer fixes a fact only the barcode form reads, then sends round 2.
   type Q = { subjectId: string; fact: string; value_type: string; collected_from: string; hidden: boolean; group: string | null; required: boolean; fills: { form: string }[]; answer: { value?: unknown } | null };
-  const onlyOn = async (subject: string, form: string | undefined) => (((await agent(c.id))?.sections ?? []) as { questions: Q[] }[]).flatMap((s) => s.questions)
-    .find((q) => q.subjectId === subject && !q.hidden && !q.group && q.value_type === "text" && q.collected_from !== "client_questionnaire" && q.fills.length > 0 && q.fills.every((x) => x.form === form) && typeof q.answer?.value === "string");
+  // CI gate B on the configured checkpoint (#1247, run 42566736094): there every fact is collected in the client
+  // questionnaire, so the fact is picked from the data whoever collects it (P-319): a text fact only the barcode form
+  // reads, answered as text; one the staff collect comes first. Staff may enter any fact (agent view), so the case
+  // officer (or, at -13, the representative) types the change, whose typist the steps then check.
+  const onlyOn = async (subject: string, form: string | undefined) => { const qs = (((await agent(c.id))?.sections ?? []) as { questions: Q[] }[]).flatMap((s) => s.questions)
+    .filter((q) => q.subjectId === subject && !q.hidden && !q.group && q.value_type === "text" && q.fills.length > 0 && q.fills.every((x) => x.form === form) && typeof q.answer?.value === "string");
+    return qs.find((q) => q.collected_from !== "client_questionnaire") ?? qs[0]; };
   const qP = await onlyOn(P, BC?.form);
   if (qP) { await answer(c.id, P, qP.fact, `${String(qP.answer?.value)} B`, officer); await confirmAll(c.id, P); }
   res = await call("POST", `/runtime/cases/${c.id}/reviews`, { filings: [fP] }, officer);
