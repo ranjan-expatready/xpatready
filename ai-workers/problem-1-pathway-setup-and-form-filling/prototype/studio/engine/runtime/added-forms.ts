@@ -57,9 +57,9 @@ export function refusalOf(x: {
 }): Refusal | null {
   if (x.formKind === "guide" || x.formKind === "document" || x.formKind === "checklist") return { status: 422, code: "not_a_form", words: `${x.form} is a guide or checklist, not a form: it is never added to a filing.` };
   if (!x.hasEdition) return { status: 422, code: "no_edition", words: `${x.form} has no current edition in the firm's library: add one in Library › Forms first.` };
-  if (x.heldByRelease) return { status: 409, code: "on_release", words: x.releaseLine?.condition
+  if (x.heldByRelease) return { status: 409, code: "on_release", words: x.releaseLine?.condition && x.releaseLine.condition !== "always"
     ? `${x.form} is part of this application's forms; it applies when ${x.releaseLine.condition.replace(/[.\s]+$/, "")}${x.releaseLine.now ? ` (now: ${x.releaseLine.now})` : ""}. The answer decides it, so it is not added by hand.`
-    : `${x.form} is part of this application's forms already, so it is not added by hand.` };
+    : `${x.form} is part of this application's forms already${x.releaseLine?.now ? ` (${x.releaseLine.now})` : ""}, so it is not added by hand.` };
   if (x.addedBy) return { status: 409, code: "already_added", words: `${x.form} is already added to this filing for this person by ${x.addedBy.by} on ${x.addedBy.at.slice(0, 10)}.` };
   if (x.kind === "blank" && x.barcode) return { status: 422, code: "barcode_blank", words: `${x.form} makes a barcode page: only a copy the product fills can be validated, and its filling is not proven yet, so it cannot be added as a blank form.` };
   return null;

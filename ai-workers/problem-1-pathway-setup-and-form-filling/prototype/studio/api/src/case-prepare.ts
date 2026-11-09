@@ -11,6 +11,7 @@
 // stops applying keeps its row with active = false, so its id (and an item's chosen channel) come back with it.
 // C7.6 (review m10 on #861): one write a read can make outside that: a filing marked Ready to file that is no longer
 // ready goes back to Not started, recorded with the reader as the actor (the reader is who saw it change).
+import { ADDED_TAG, addedFor } from "../../engine/runtime/added-forms.ts";
 import { createHash } from "node:crypto";
 import { Body, Controller, Get, Head, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Res } from "@nestjs/common";
 import type { Response } from "express";
@@ -107,6 +108,9 @@ export function notNeededForms(s: Parameters<typeof lineCondition>[0], people: P
       reason: `Not needed: ${said.join(" and ") || "its condition does not apply"}.`, decided_by: conditionFacts(line.condition) }];
   });
 }
+
+/** C7.8 (B141 §5): a blank added form's item, in words. */
+const BLANK_WORDS = { todo: "Blank official PDF: download it, fill it by hand, upload the completed copy.", done: "Filled by hand: the completed copy is uploaded" };
 
 @Injectable()
 export class CasePrepare {
@@ -347,6 +351,15 @@ export class CasePrepare {
         const sheet = ch.channel === "ONLINE" ? sheetOf(i, s, people, answers, rows, view, enteredBy.get(i.id) ?? [], parts, rd.missing, covOf(i.itemKey, i.subjectId)) : null;
         const stale = sheet?.sections.filter((x) => x.out_of_date) ?? [];
         const fb = { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null };
+        // C7.8 (B141 BR-5, BR-7): a blank official PDF the case officer added is filled by hand: To do until its completed
+        // copy is uploaded (the one upload; it is also the signed copy when it is signed, M5), then Ready.
+        const added = addedFor(lines.get(i.itemKey) as never, i.subjectId);
+        if (added?.kind === "blank") {
+          const scan = scans.find((x) => x.itemId === i.id) ?? null;
+          const signersB = signersOf(signPeople, i.subjectId, lines.get(i.itemKey)?.who ?? "each_applicant", lines.get(i.itemKey)?.signed_by, minor);
+          return { ...fb, signers: signersB, blank: { addition: added.id, download: `/api/runtime/form-additions/${added.id}/blank`, completed: scan ? { id: scan.id, at: scan.uploadedAt.toISOString() } : null },
+            state: scan ? "ready" : "to_do", reason: scan ? `${BLANK_WORDS.done} (${scan.uploadedAt.toISOString().slice(0, 10)}).` : BLANK_WORDS.todo };
+        }
         if (stale.length) staleOf.set(i.id, stale.map((x) => x.title));
         if (sheet && stale.length && !waits) {
           // C9.2: each stale section's answers as entered, against what it shows now (warns only, FQ-6, P-168).
@@ -480,7 +493,14 @@ export class CasePrepare {
       const since = cs.map((x) => x.at).filter((x): x is string => !!x).sort().at(-1) ?? today.toISOString();
       return { fact: cs.length ? `${cs[0].label}${cs.length > 1 ? ` and ${cs.length - 1} more` : ""}` : "a fact it reads", since, key };
     };
+    // C7.8 (B141 BR-7): each item of a form the case officer added says so ("Added by the case officer": who, when, why).
+    for (const i of items) {
+      if (i.kind !== "form" || !("form" in i) || !i.form) continue;
+      const a = addedFor(lines.get(i.form) as never, i.subject);
+      if (a) Object.assign(i, { added: { id: a.id, tag: ADDED_TAG, kind: a.kind, by: a.by, at: a.at, reason: a.reason, edition: a.edition, words: `${ADDED_TAG} on ${a.at.slice(0, 10)}. Not part of the combination.` } });
+    }
     const formItems: PreparedForm[] = items.flatMap((i) => i.kind === "form" && "form" in i && i.form && !("record" in i) ? [{ id: i.id, filing: i.filing, subject: i.subject, person: i.person, form: i.form,
+      ...("blank" in i && i.blank ? { blank: { completed: !!i.blank.completed, key: i.blank.addition } } : {}),
       channel: i.channel, signature: i.signature, signed_by: i.signed_by, signers: "signers" in i ? i.signers : [], state: i.state, reason: i.reason,
       steps: "steps" in i ? (i.steps as PreparedForm["steps"]) : undefined, outOfDate: markOf(i) ?? markOf(records.get(i.id)) }] : []);
     const docItems = items.filter((i) => i.kind === "document") as { id: string; filing: string; subject: string; person: string; document_type: string; label: string }[];

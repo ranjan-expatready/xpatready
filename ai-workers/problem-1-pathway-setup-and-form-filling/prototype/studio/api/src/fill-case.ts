@@ -30,7 +30,7 @@ import { formValues, notOnFormLines, type Inventory } from "../../engine/form-va
 import { mandatoryOpen, type CaseWords, type OpenField, type RequiredWhen } from "../../engine/runtime/mandatory.ts";
 import { solutionFile, writeForm } from "./fill.ts";
 import { trialFor, type EditionMap } from "./fill-trials.ts";
-import { additionsOf, withAdditions } from "../../engine/runtime/added-forms.ts";
+import { addedFor, additionsOf, withAdditions } from "../../engine/runtime/added-forms.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 
 type H = string | undefined;
@@ -255,6 +255,11 @@ export class CaseForms implements OnModuleInit {
     const b = parse(GenerateCopy, body);
     const who = c.participants.find((p) => p.subjectId === idOf(subjectId, "person") && p.role !== "case");
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
+    // C7.8 (B141 BR-5): a form the case officer added as the blank official PDF is filled by hand, never by the product.
+    const added = addedFor((s.forms as { form_number: string }[]).find((l) => l.form_number === form) as never, who!.subjectId);
+    if (added) {
+      if (added.kind === "blank") fail(`${form} was added as the blank official PDF: its filling is not proven, so the product does not fill it. Download the blank PDF, fill it by hand and upload the completed copy.`, HttpStatus.CONFLICT);
+    } else if ((s.forms as { form_number: string; who?: string }[]).some((l) => l.form_number === form && typeof l.who === "string" && l.who.startsWith("person:"))) fail(`${form} was added by the case officer for another person on this case, not for ${who!.subject.label}.`, HttpStatus.CONFLICT);
     if (b.idempotencyKey) { const again = await this.db.formInstance.findFirst({ where: { caseId, idempotencyKey: b.idempotencyKey } }); if (again) return this.answerFor(again, form, subjectId); }
     const people = this.runtime.peopleOf(c);
     const { answers, rows, groups } = await this.runtime.state(c);
