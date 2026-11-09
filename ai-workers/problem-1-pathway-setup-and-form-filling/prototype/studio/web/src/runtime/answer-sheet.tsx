@@ -5,18 +5,23 @@
 // answer shows with its person, its source and whether it is still to confirm (P-411); what a section waits for is the
 // form's own readiness (QA-309). Copy gives exactly the server's `copy_text` (dates YYYY-MM-DD, Yes or No, an address on
 // one line), and each part of an address or a phone on its own. The item's state and reason are the server's (Prepare
-// view). A client never reads this page (403 from the server, kept). "Entered in the portal" per section is row B4.
+// view). A client never reads this page (403 from the server, kept).
+// "Entered in the portal" per section (P-401, QA-323): the officer ticks what they typed (who and when, the audit line);
+// taking a tick off asks for a reason; an answer that changes after a tick clears it (the section reads out of date and
+// lists each answer then and now) until it is ticked again. Every rule is the server's (version checked, 409 → Reload).
 import * as React from "react";
 import { Link, useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, Copy, Lock } from "lucide-react";
-import { ApiError, useActorId, useApi } from "@/lib/api";
-import { Button, Notice, Pill } from "@/components/ui/controls";
+import { api, ApiError, useActorId, useApi, useToast } from "@/lib/api";
+import { Button, Field, Notice, Pill, Textarea } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { noRetryOnRefusal } from "./questionnaire";
 import { useFirm } from "./team";
 
 type SheetAnswer = { label: string; fact: string; subject: string; person: string; row: number | null; value: unknown; copy_text: string; source: string; mark: string | null; to_confirm: boolean; why: string | null };
-type SheetSection = { key: string; title: string; named?: false; version: string; entered: { at: string; by: string } | null; out_of_date: boolean; answers: SheetAnswer[]; waiting: { fact: string; subject: string; person: string; label: string }[] };
+type SheetSection = { key: string; title: string; named?: false; version: string; entered: { at: string; by: string } | null; out_of_date: boolean; answers: SheetAnswer[]; waiting: { fact: string; subject: string; person: string; label: string }[];
+  changes?: { label: string; person: string; was: string | null; now: string | null }[]; unticked?: { at: string; by: string; reason: string } | null };
 export type Sheet = { item: string; form: string; subject: string; order_basis: string; order_note: string; sections: SheetSection[] };
 type PrepItem = { id: string; kind: string; form?: string; channel?: string; subject: string; person: string; filing: string; state: string; reason?: string };
 type Prep = { reference?: string; portal_words?: string | null; derived: boolean; items: PrepItem[]; filings: { id: string; read_only?: boolean }[] };
@@ -70,7 +75,11 @@ export function AnswerSheetPage() {
   const refused = prep.isError && prep.error instanceof ApiError && prep.error.status < 500;
   if ((prep.data && !item) || refused) return <div className="mx-auto max-w-6xl" data-sheet-error="other-case"><Notice tone="warn" title="This answer sheet is not among this case’s forms">{refused ? `${(prep.error as Error).message} ` : null}Open a form’s answer sheet from its own case’s Prepare application. {back}</Notice></div>;
   const readOnly = !!item && !!prep.data?.filings.find((f) => f.id === item.filing)?.read_only;
-  const entered = s.sections.filter((x) => x.entered && !x.out_of_date && !x.waiting.length).length;
+  // QA-323: the count the item's own reason gives (engine/runtime/answer-sheet.ts sheetWords): a section not ticked, or
+  // ticked before an answer changed, is still to tick.
+  const toTick = s.sections.filter((x) => !x.entered || x.out_of_date).length, n = s.sections.length;
+  // Break m4: every section ticked is not Done while answers still wait; the line says so (the item's reason names them).
+  const waits = s.sections.reduce((k, x) => k + x.waiting.length, 0);
   const [stateWord, tone] = STATE_WORDS[item?.state ?? ""] ?? [item?.state ?? "", "neutral"];
   return (
     <div className="mx-auto max-w-6xl space-y-4" data-answer-sheet={s.item}>
@@ -85,21 +94,21 @@ export function AnswerSheetPage() {
         {prep.data?.portal_words ? <p className="flex items-center gap-1.5 text-[13px]" data-portal><Lock className="size-3.5 text-text-muted" aria-hidden />{prep.data.portal_words}</p> : null}
         {item ? <p className="flex flex-wrap items-center gap-2 text-[13px]" data-item-state={item.state}><Pill tone={tone}>{stateWord}</Pill><span className="text-text-muted [overflow-wrap:anywhere]">{item.reason}</span></p>
           : prep.isError ? <Notice tone="warn" title="The form’s state could not be read">{(prep.error as Error).message} The answers below are current; reload to see whether the filing is submitted.</Notice> : null}
-        <p className="text-[13px]" data-progress>{entered} of {s.sections.length} section{s.sections.length === 1 ? "" : "s"} complete</p>
+        <p className="text-[13px]" data-progress data-to-tick={toTick}>{toTick ? `${toTick} of ${n} section${n === 1 ? "" : "s"} still to tick “Entered in the portal”` : `Every section is ticked “Entered in the portal”${waits ? `; ${waits} answer${waits === 1 ? "" : "s"} still to answer or confirm` : ""}`}</p>
         <p className="text-[13px] text-text-muted" data-order-note>{s.order_note}</p>
         {readOnly ? <Notice title="Submitted to IRCC">This filing is recorded as submitted: its sheet is read only.</Notice> : null}
       </header>
       {!s.sections.length ? <Notice title="Nothing to enter yet">This form has no section for this person on the case’s release yet.</Notice> : null}
       <ol className="space-y-4">
-        {s.sections.map((x, i) => <SectionCard key={x.key} n={i + 1} x={x} nameOf={nameOf} />)}
+        {s.sections.map((x, i) => <SectionCard key={x.key} n={i + 1} x={x} nameOf={nameOf} item={s.item} caseId={id!} readOnly={readOnly} />)}
       </ol>
     </div>
   );
 }
 
-function SectionCard({ n, x, nameOf }: { n: number; x: SheetSection; nameOf: (u: string) => string }) {
+function SectionCard({ n, x, nameOf, item, caseId, readOnly }: { n: number; x: SheetSection; nameOf: (u: string) => string; item: string; caseId: string; readOnly: boolean }) {
   const hid = `sec-${x.key}`;
-  const state = x.out_of_date ? <Pill tone="warn">Out of date</Pill>
+  const state = x.out_of_date ? <Pill tone="warn">Tick cleared: answers changed</Pill>
     : x.entered ? <Pill tone={x.waiting.length ? "warn" : "ok"}>Entered by {nameOf(x.entered.by)}, {when(x.entered.at)}{x.waiting.length ? ` · ${x.waiting.length} still to answer or confirm` : ""}</Pill>
     : <Pill>Not entered</Pill>;
   return (
@@ -127,6 +136,7 @@ function SectionCard({ n, x, nameOf }: { n: number; x: SheetSection; nameOf: (u:
           <ul className="mt-1 list-disc space-y-0.5 pl-5 text-text-muted">{x.waiting.map((w) => <li key={`${w.subject}|${w.fact}`}>{w.label} <span className="whitespace-nowrap">· {w.person}</span></li>)}</ul>
         </details>
       ) : null}
+      <EnteredTick x={x} nameOf={nameOf} item={item} caseId={caseId} readOnly={readOnly} />
     </li>
   );
 }
@@ -177,5 +187,80 @@ function CopyButton({ text, label, small }: { text: string; label: string; small
       </Button>
       <span aria-live="polite" className="sr-only">{done === "copied" ? `Copied: ${label.replace(/^Copy /, "")}` : done === "selected" ? "Selected: press Ctrl+C (⌘C on a Mac) to copy" : ""}</span>
     </span>
+  );
+}
+
+/** C7.3 (P-401): the section's "Entered in the portal" tick. Ticking sends the section's version as read (the server
+ *  freezes those answers, who and when); taking it off sends the version, the tick read and a reason. A 409 from a sheet
+ *  or tick that changed since says so and offers Reload; nothing is changed. A submitted filing shows no control. */
+function EnteredTick({ x, nameOf, item, caseId, readOnly }: { x: SheetSection; nameOf: (u: string) => string; item: string; caseId: string; readOnly: boolean }) {
+  const qc = useQueryClient(), toast = useToast();
+  const [asking, setAsking] = React.useState(false), [reason, setReason] = React.useState(""), [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<{ text: string; stale: boolean; field?: string | null } | null>(null);
+  const tickRef = React.useRef<HTMLButtonElement>(null), offRef = React.useRef<HTMLButtonElement>(null), reasonRef = React.useRef<HTMLTextAreaElement>(null);
+  const focusNext = React.useRef<"tick" | "off" | null>(null);
+  const current = !!x.entered && !x.out_of_date;
+  // The reason box takes the focus when the form opens; closing it (Escape, "Keep the tick") gives it back to the button.
+  const giveBack = React.useRef(false);
+  React.useEffect(() => { if (asking) reasonRef.current?.focus(); else if (giveBack.current) { giveBack.current = false; offRef.current?.focus(); } }, [asking]);
+  const keep = () => { giveBack.current = true; setAsking(false); setError(null); };
+  // After a tick or an untick the focus stays on this section's control (keyboard users keep their place).
+  React.useEffect(() => { const f = focusNext.current; if (!f) return; focusNext.current = null; (f === "off" ? offRef : tickRef).current?.focus(); }, [current]);
+  const reload = async () => { setError(null); setAsking(false); setReason(""); await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] }); };
+  async function send(path: "entered" | "unentered", json: object, ok: string, next: "tick" | "off") {
+    setBusy(true); setError(null);
+    try {
+      await api(`/runtime/items/${item}/screens/${encodeURIComponent(x.key)}/${path}`, { method: "POST", json });
+      // Not busy before the refetch: the control that takes the focus next must not be disabled when it appears.
+      focusNext.current = next; setBusy(false); setAsking(false); setReason("");
+      toast.push({ tone: "ok", text: ok });
+      await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
+    } catch (e) {
+      const a = e instanceof ApiError ? e : null;
+      // Concept m4: a 409 branches on the problem's type: changed since (stale) or no tick any more → Reload.
+      const type = String((a?.problem as { type?: string } | undefined)?.type ?? "");
+      setError({ text: (e as Error).message, stale: a?.status === 409 && /\/(stale|not-ticked)$/.test(type), field: a?.field("reason") });
+    } finally { setBusy(false); }
+  }
+  if (readOnly) return null;
+  const tick = () => void send("entered", { version: x.version }, `“${x.title}” ticked as entered in the portal.`, "off");
+  const takeOff = () => {
+    if (!reason.trim()) { setError({ text: "Say why the tick comes off.", stale: false, field: "Say why the tick comes off." }); reasonRef.current?.focus(); return; }
+    void send("unentered", { version: x.version, entered_at: x.entered?.at, reason }, `The tick came off “${x.title}”: it counts as still to tick.`, "tick");
+  };
+  return (
+    <div className="space-y-2 border-t border-border px-4 py-3 text-[13px]" data-tick={current ? "entered" : x.out_of_date ? "cleared" : "not-entered"}>
+      {x.out_of_date && x.entered ? (
+        <div className="[overflow-wrap:anywhere]" data-changes role="note" aria-label={`Why the tick on ${x.title} was cleared`}>
+          <p>Ticked by {nameOf(x.entered.by)}, {when(x.entered.at)}; {x.changes?.length ? `${x.changes.length === 1 ? "this answer" : "these answers"} changed since, so the tick no longer counts:` : "an answer here changed since, so the tick no longer counts."}</p>
+          {x.changes?.length ? <ul className="mt-1 list-disc space-y-0.5 pl-5">{x.changes.map((c, i) => <li key={i} data-change>{c.label} · {c.person}: {c.now === null ? <>no longer on the sheet (was <span className="mono">{c.was}</span>)</> : c.was === null ? <>new: <span className="mono">{c.now}</span></> : <>was <span className="mono">{c.was}</span>, now <span className="mono">{c.now}</span></>}</li>)}</ul> : null}
+          <p className="mt-1">Enter the new answers in the portal, then tick again.</p>
+        </div>
+      ) : null}
+      {!x.entered && x.unticked ? <p className="text-text-muted [overflow-wrap:anywhere]" data-unticked>Tick taken off by {nameOf(x.unticked.by)}, {when(x.unticked.at)}. Reason: {x.unticked.reason}</p> : null}
+      {error && !(error.field && asking) ? (
+        <Notice tone={error.stale ? "warn" : "danger"} title={error.stale ? "Changed since you opened the sheet" : "Not saved"} action={error.stale ? <Button size="sm" variant="secondary" onClick={() => void reload()}>Reload</Button> : undefined}>
+          {error.text}
+        </Notice>
+      ) : null}
+      {asking ? (
+        <form className="space-y-2" aria-label={`Take the tick off ${x.title}`} onSubmit={(e) => { e.preventDefault(); takeOff(); }} onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); keep(); } }}>
+          <Field label="Why does the tick come off? (required)" hint="Kept in the case's activity with your name and the time." error={error?.field ?? null}>
+            <Textarea ref={reasonRef} rows={2} maxLength={400} value={reason} onChange={(e) => { setReason(e.target.value.replace(/[\r\n]+/g, " ")); setError(null); }} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); takeOff(); } }} />
+          </Field>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" size="sm" busy={busy}>Take the tick off</Button>
+            <Button type="button" size="sm" variant="secondary" onClick={keep}>Keep the tick</Button>
+          </div>
+        </form>
+      ) : current ? (
+        <Button ref={offRef} size="sm" variant="secondary" aria-label={`Take the tick off ${x.title}`} onClick={() => { setAsking(true); setError(null); }}>Take the tick off</Button>
+      ) : (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button ref={tickRef} size="sm" busy={busy} aria-label={`${x.out_of_date ? "Entered again in the portal" : "Entered in the portal"}: ${x.title}`} onClick={tick}><Check className="size-3.5" aria-hidden />{x.out_of_date ? "Entered again in the portal" : "Entered in the portal"}</Button>
+          {x.waiting.length ? <span className="text-text-muted" data-tick-hint>{x.waiting.length} answer{x.waiting.length === 1 ? "" : "s"} still to answer or confirm: tick what you typed; when they are confirmed this section reads out of date until you tick again.</span> : null}
+        </div>
+      )}
+    </div>
   );
 }
