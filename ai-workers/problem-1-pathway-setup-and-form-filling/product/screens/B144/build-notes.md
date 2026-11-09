@@ -96,7 +96,7 @@ FAIL  C8.3-14 fail (BR-9, F2, M7): the officer ticking, approving or sending bac
 
 **Fix 2, the code (BR-8; found by -13b on the checkpoint):** an answer staff type into a client-collected fact waits to be confirmed, so it is not among a form's confirmed facts, and BR-8's before → after of confirmed facts could not see the representative's typing between rounds (the form read "Changed since review" with no fact listed; -13b's detail now prints that). `typedSince` (engine/runtime/review.ts) also counts any current answer the representative typed after the base (the previous round's send, else this one's; after the approval for a re-approve) on a fact a form of the filing reads, confirmed or not (`reads` in the review basis, case-prepare.ts, additive). Unit pass/fail "CI" ×2. Migration unchanged.
 
-**Exit codes (CI round, fresh copies):** unit `check_review_rounds.ts` 0 (48/48) · pack C8.3 on the configured checkpoint, gate B's way: 0 (23/23) · pack C8.3 on the old set-up: 0 (23/23) · walk 0 · packs C7.6 0, C8.1 0 · `check_c76_readiness_api.ts` 0 · C8.2, C6.13, `check_c76_ready_browser.ts`, `check_c81_sign_browser.ts`: running at hand-back.
+**Exit codes (CI round, fresh copies):** unit `check_review_rounds.ts` 0 (48/48) · pack C8.3 on the configured checkpoint, gate B's way: 0 (23/23) · pack C8.3 on the old set-up: 0 (23/23) · walk 0 · packs C7.6 0, C8.1 0, C8.2 0, C6.13 0 · `check_c76_readiness_api.ts` 0 · `check_c76_ready_browser.ts` 0 · `check_c81_sign_browser.ts` 0.
 
 ## Left after round 1
 * Review m1: page and C7.6 can still disagree when the form set changes (a waiting form starts, a form is added, a Not-needed form, a C9.5 move): waits come from the frozen row and the re-approve covers stored rows only. Not reproducible on the sample.
