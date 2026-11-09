@@ -111,7 +111,7 @@ export function notNeededForms(s: Parameters<typeof lineCondition>[0], people: P
 /** C8.3 (B144): one form of the case as the review freezes it: its facts hash (null while it cannot start), the facts
  *  its copy would write, its validated copy read back and its newest copy for filing (B2's file order). */
 export type ReviewBasisForm = { item: string; filing: string; form: string; subject: string; person: string; channel: string; state: string; waits: boolean;
-  hash: string | null; inputHash: string; facts: FormFact[]; validated: PaperValidated; forFiling: { id: string; hash: string } | null };
+  hash: string | null; inputHash: string; facts: FormFact[]; validated: PaperValidated; forFiling: { id: string; hash: string } | null; reads: string[] };
 export type ReviewBasis = { forms: ReviewBasisForm[]; words: ChangeWords; caseSubject: string | null; valueWords: (fact: string, v: unknown) => string | null; answers: Awaited<ReturnType<Runtime["state"]>>["answers"] };
 
 @Injectable()
@@ -590,7 +590,10 @@ export class CasePrepare {
     // C8.3 (B144, B2): each form's facts for the review's freeze and stamp, from this very pass.
     sink?.({ answers, words, caseSubject, valueWords: (fact, v) => (v === null || v === undefined || v === "" ? "no answer" : typeof v === "object" ? null : answerWords(s, fact, v)), forms: formItems.map((f) => ({ item: f.id, filing: f.filing, form: f.form, subject: f.subject, person: f.person, channel: f.channel, state: f.state,
       waits: f.state === "cannot_start", hash: f.state === "cannot_start" ? null : formHash(f.form, f.subject), inputHash: inputHash(covOf(f.form, f.subject)?.facts ?? []), facts: covOf(f.form, f.subject)?.facts ?? [],
-      validated: paperValidated(f.form, f.subject), forFiling: forFiling.get(`${f.form}|${f.subject}`) ?? null })) });
+      validated: paperValidated(f.form, f.subject), forFiling: forFiling.get(`${f.form}|${f.subject}`) ?? null,
+      // C8.3 (CI on #1247, BR-8): every fact the form reads, confirmed (its facts) or not yet (what it waits for), as
+      // "<subject or relative key>|<fact>", so an answer typed but not confirmed still counts as typed by its typist.
+      reads: [...new Set([...(covOf(f.form, f.subject)?.facts ?? []).map((x) => `${x.about === "case" ? caseSubject ?? x.about : x.about}|${x.fact}`), ...(f.state === "cannot_start" ? [] : formReady(f.form, f.subject).missing).map((m) => `${m.subject === "case" ? caseSubject ?? m.subject : m.subject ?? f.subject}|${m.fact}`)])] })) });
     // C7.6: a filing marked Ready to file (or later) says so; before that, the derived status (Not started). Break B1 on
     // #861: a filing marked Ready to file that is no longer ready (a fact changed, the barcode copy is out of date, a new
     // warning) goes back to Not started, recorded, so nothing downstream trusts a stale "Ready to file".

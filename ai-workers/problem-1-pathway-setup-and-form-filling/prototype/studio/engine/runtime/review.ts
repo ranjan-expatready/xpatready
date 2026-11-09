@@ -211,6 +211,16 @@ export function changesOf(then: Pick<FormFact, "fact" | "about" | "row" | "value
 /** BR-8 (M3): whether the representative typed any of these changed facts (the changes since the round was sent). */
 export const changedBy = (changes: ChangeLine[], actor: string) => changes.some((c) => c.typed_by === actor);
 
+/** BR-8 (CI on #1247, gate B on the configured checkpoint): whether the representative typed, after `since`, an answer
+ *  a form of the filing reads, confirmed or not. An answer typed but not confirmed yet is not among a form's confirmed
+ *  facts, so a before → after of confirmed facts cannot see it (on the checkpoint every fact is collected in the client
+ *  questionnaire, and an answer staff type there waits to be confirmed); the answers themselves do. `reads`: the
+ *  forms' "<subject>|<fact>" keys; `answers`: each current answer's key, its typist and when it was typed. Facts of the
+ *  firm record (the representative's own details) are nobody's typing. */
+export function typedSince(answers: { key: string; by: string | null; at: string | null }[], reads: Set<string>, actor: string, since: string): boolean {
+  return answers.some((a) => a.by === actor && !!a.at && a.at > since && reads.has(a.key) && !a.key.startsWith("representative"));
+}
+
 /** P-412 F1: the forms whose approval a later change withdrew (the change-only view lists only these). */
 export function withdrawnForms<T extends { item: string; waits: boolean; stamp: { hash: string | null; by: string | null; superseded?: boolean } | null; liveHash: string | null }>(forms: T[], representative: string | null): T[] {
   return forms.filter((f) => !f.waits && !stampCurrent(f.stamp, { hash: f.liveHash, representative }).current);

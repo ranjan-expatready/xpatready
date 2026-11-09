@@ -12,7 +12,7 @@
 // Legal points: Unconfirmed: no counsel.
 import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { REPRESENTATIVE, userIn, type Firm } from "../../engine/runtime/team.ts";
-import { changedBy, changesOf, checklistOf, CHANGED_TOOLTIP, fileOf, formStateOf, hashesProblem, isOpen, mayDecide, nextStatus, reasonsOf, selfReviewOf, SELF_STATEMENT, sendProblem, stampCurrent, STATE_WORDS, untickedProblem, withdrawnForms, withdrawnWords, WITHDRAWN_TOOLTIP, type ChangeLine, type CheckItem, type FileStamp, type Problem, type RowStatus } from "../../engine/runtime/review.ts";
+import { changedBy, changesOf, checklistOf, CHANGED_TOOLTIP, fileOf, formStateOf, hashesProblem, isOpen, mayDecide, nextStatus, reasonsOf, selfReviewOf, SELF_STATEMENT, sendProblem, stampCurrent, STATE_WORDS, typedSince, untickedProblem, withdrawnForms, withdrawnWords, WITHDRAWN_TOOLTIP, type ChangeLine, type CheckItem, type FileStamp, type Problem, type RowStatus } from "../../engine/runtime/review.ts";
 import { dayWords, factPerson } from "../../engine/runtime/out-of-date.ts";
 import type { FormFact } from "../../engine/runtime/forms.ts";
 import { ReviewDecision, ReviewOpen, ReviewReapprove, ReviewTick, SendForReview, type ChangedSinceReview, type FormStamp, type ReviewRound, type ReviewRoundFiling } from "../../contracts/runtime.ts";
@@ -103,6 +103,13 @@ export class ReviewRounds {
       const a = m.get(`${about === "case" ? basis.caseSubject ?? about : about}|${fact}`);
       return a ? { by: a.origin?.actor ?? a.actor, at: a.origin?.at ?? a.at } : null;
     };
+  }
+
+  /** BR-8 (CI on #1247): whether `actor` typed, after `since`, an answer one of these forms reads (confirmed or not). */
+  private typedBy(basis: ReviewBasis, forms: ReviewBasisForm[], actor: string, since: Date) {
+    const reads = new Set(forms.filter((f) => !f.waits).flatMap((f) => f.reads));
+    const answers = basis.answers.map((a) => ({ key: `${a.subjectId}|${a.field}`, by: a.origin?.actor ?? a.actor, at: a.origin?.at ?? a.at }));
+    return typedSince(answers, reads, actor, since.toISOString());
   }
 
   // ---------------------------------------------------------------- writes shared by every route (the same code, M1)
@@ -359,13 +366,15 @@ export class ReviewRounds {
     if (un.problem) refuse(un.problem);
     // BR-8 (M3; review M2): a fact the representative typed since the filing's previous round was frozen (else since this
     // round was sent) makes them an author of the filing: the same base the page compares with (compose).
-    const prev = row.filingRound > 1 ? await this.db.reviewRoundFiling.findUnique({ where: { filingId_filingRound: { filingId: b.filing, filingRound: row.filingRound - 1 } }, select: { forms: { select: { itemId: true, snapshotId: true } } } }) : null;
+    const prev = row.filingRound > 1 ? await this.db.reviewRoundFiling.findUnique({ where: { filingId_filingRound: { filingId: b.filing, filingRound: row.filingRound - 1 } }, select: { forms: { select: { itemId: true, snapshotId: true } }, round: { select: { sentAt: true } } } }) : null;
     const baseOf = (s: { itemId: string; snapshotId: string | null }) => prev?.forms.find((x) => x.itemId === s.itemId)?.snapshotId ?? s.snapshotId;
     const snaps = new Map((await this.db.answerSnapshot.findMany({ where: { id: { in: stored.map(baseOf).filter((x): x is string => !!x) } }, select: { id: true, factsJson: true } })).map((s) => [s.id, ((s.factsJson ?? {}) as StoredFacts).facts ?? []]));
     const typist = this.typistOf(basis);
     const since = stored.flatMap((s) => { const f = forms.find((x) => x.item === s.itemId); return f && !f.waits ? changesOf(snaps.get(baseOf(s) ?? "") ?? [], f.facts, basis.words, typist) : []; });
     const frames = await this.framesOf(forms);
-    const decided = await this.approve(actor, c, { filing: b.filing, rep, self: b.self, changedByReviewer: changedBy(since, actor.id), view },
+    // CI on #1247: an answer the representative typed since then that is not confirmed yet counts too (typedSince).
+    const authored = changedBy(since, actor.id) || this.typedBy(basis, forms, actor.id, prev?.round.sentAt ?? round.sentAt);
+    const decided = await this.approve(actor, c, { filing: b.filing, rep, self: b.self, changedByReviewer: authored, view },
       async (tx, review, kind) => {
         const [r] = await tx.$queryRaw<{ status: RowStatus }[]>`SELECT status FROM review_round_filing WHERE id = ${row.id}::uuid FOR UPDATE`;
         if (nextStatus(r.status, "approve") === null) refuse({ status: 409, detail: "This filing was decided meanwhile. Reload." });
@@ -429,7 +438,8 @@ export class ReviewRounds {
     const carry = { stamps: new Map(stored.filter((s) => stampCurrent(s.stampedAt ? { hash: s.stampHash, by: row.representative } : null, { hash: forms.find((f) => f.item === s.itemId)?.hash ?? null, representative: rep }).current).map((s) => [s.itemId, s])), ticks: new Map(mine.map((k) => [k.itemKey, { by: k.tickedBy, at: k.tickedAt }])) };
     const unticked = checks.filter((k) => k.source !== "form" && k.tickedBy !== rep).map((k) => k.itemKey);
     let made: { id: string; number: number } | null = null;
-    const decided = await this.approve(actor, c, { filing: b.filing, rep, self: b.self, changedByReviewer: changedBy(since, actor.id), view, after: "approval" }, async (tx, review, kind) => {
+    const authored = changedBy(since, actor.id) || this.typedBy(basis, forms.filter((f) => changed.some((w) => w.item === f.item)), actor.id, row.decidedAt ?? round.sentAt);
+    const decided = await this.approve(actor, c, { filing: b.filing, rep, self: b.self, changedByReviewer: authored, view, after: "approval" }, async (tx, review, kind) => {
       if (await tx.reviewRoundFiling.findFirst({ where: { filingId: b.filing, OR: [{ filingRound: { gt: row.filingRound } }, { status: { in: ["sent", "under_review"] } }] }, select: { id: true } })) refuse({ status: 409, detail: "This filing was sent or re-approved meanwhile. Reload." });
       const { n, per } = await this.nextNumbers(tx, c.id, [b.filing]);
       const r2 = await tx.reviewRound.create({ data: { workspaceId: c.workspaceId, caseId: c.id, number: n, kind: "reapprove", sentBy: actor.id } });

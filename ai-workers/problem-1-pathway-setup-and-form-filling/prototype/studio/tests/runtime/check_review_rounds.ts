@@ -2,7 +2,7 @@
 // business rule has a passing and a failing case (BR-1 to BR-10 and P-412's one-click re-approve). No database, no
 // server, no model call (US$0). Sample values only.
 //   tsx studio/tests/runtime/check_review_rounds.ts
-import { changedBy, changesOf, checklistOf, fileOf, formStateOf, hashesProblem, isOpen, mayDecide, nextStatus, READ_ONLY_WORDS, reasonsOf, selfReviewOf, sendProblem, stampCurrent, tickedByDefault, untickedProblem, untickedWords, withdrawnForms, withdrawnWords, type SendFiling } from "../../engine/runtime/review.ts";
+import { changedBy, changesOf, checklistOf, fileOf, formStateOf, hashesProblem, isOpen, mayDecide, nextStatus, READ_ONLY_WORDS, reasonsOf, selfReviewOf, sendProblem, stampCurrent, tickedByDefault, untickedProblem, untickedWords, withdrawnForms, withdrawnWords, typedSince, type SendFiling } from "../../engine/runtime/review.ts";
 import { factPerson, type ChangeWords } from "../../engine/runtime/out-of-date.ts";
 import { recorder } from "./api.ts";
 
@@ -99,5 +99,10 @@ const typed = changesOf(then, now, words, () => ({ by: REP, at: "x" }));
 ok("C8.3 break m1 pass: after an approval, the 409 says what can be done (ask the case officer to send it again)", /Ask the case officer to send it for review again/.test(((selfReviewOf({ actor: REP, officers: new Set([OFF]), solo: false, changedByReviewer: changedBy(typed, REP), self: true, after: "approval" }) as { problem: { detail: string } }).problem.detail)));
 ok("C8.3 break M1 fail: a changed fact with no typist (the firm record's, after a change of representative) never makes the representative an author", !changedBy(changesOf(then, now, words, () => null), REP));
 ok("C8.3 review BIC-13 fail: no API field name shown to a person in the self-review words", !/self: true/.test(JSON.stringify(selfReviewOf({ actor: "user-S", officers: new Set(["user-S"]), solo: true, changedByReviewer: false, self: undefined }))));
+
+// CI on #1247 (gate B, configured checkpoint): an answer typed but not confirmed yet still counts for BR-8
+const reads = new Set(["s1|person.birth_city", "representative|person.email"]);
+ok("C8.3 CI pass: an answer the representative typed after the round before, on a fact a form reads, makes them an author (confirmed or not)", typedSince([{ key: "s1|person.birth_city", by: REP, at: "2026-11-09T10:00:00Z" }], reads, REP, "2026-11-09T09:00:00Z"));
+ok("C8.3 CI fail: typed before that round, typed by someone else, on a fact no form reads, or the firm record's: not an author", !typedSince([{ key: "s1|person.birth_city", by: REP, at: "2026-11-09T08:00:00Z" }, { key: "s1|person.birth_city", by: OFF, at: "2026-11-09T10:00:00Z" }, { key: "s1|person.hobby", by: REP, at: "2026-11-09T10:00:00Z" }, { key: "representative|person.email", by: REP, at: "2026-11-09T10:00:00Z" }], reads, REP, "2026-11-09T09:00:00Z"));
 
 process.exit(summary() ? 1 : 0);

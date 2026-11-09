@@ -189,7 +189,7 @@ await main("C8.3", "Representative review: rounds, stamps, changed since review 
   await call("POST", `/runtime/reviews/${r4}/open`, { filing: fP }, rep);
   const between = await call("POST", `/runtime/reviews/${r4}/decision`, { filing: fP, verdict: "approve", form_hashes: hashes(rowOf(g, fP)), confirm_unticked: true, self: true }, rep);
   ok("C8.3-13b fail (BR-8, review M2): a fact the representative typed between rounds (after the send back, before the next send) is still theirs: approve is refused as a second person's (409), never \"Reviewed\"",
-    !!qP && between.status === 409 && /second person/.test(between.body?.detail ?? "") && sql(`select count(*) from review_round_filing where round_id='${r4}' and status='approved'`) === "0", [between.status, between.body?.detail]);
+    !!qP && between.status === 409 && /second person/.test(between.body?.detail ?? "") && sql(`select count(*) from review_round_filing where round_id='${r4}' and status='approved'`) === "0", [between.status, between.body?.detail, qP?.fact, rowOf(g, fP)?.forms.map((x) => [x.form, x.state, x.changes.map((y) => [y.label, y.was, y.now, y.typed_by])])]);
   m.nowNotSolo = (await call("POST", `/runtime/cases/${c.id}/reviews`, { filings: [fS], now: true }, rep)).status; // review m2: 400
   m.officerApprove = (await call("POST", `/runtime/reviews/${r4}/decision`, { filing: fP, verdict: "approve", form_hashes: hashes(rowOf(g, fP)), confirm_unticked: true }, officer)).status;
   m.officerBack = (await call("POST", `/runtime/reviews/${r4}/decision`, { filing: fP, verdict: "send_back", form_hashes: hashes(rowOf(g, fP)), reasons: [{ text: "Not mine to send back (Sample)" }] }, officer)).status;
