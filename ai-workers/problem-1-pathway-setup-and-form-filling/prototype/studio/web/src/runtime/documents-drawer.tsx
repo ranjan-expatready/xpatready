@@ -241,8 +241,9 @@ function DocumentBlock({ caseId, subjectId, section, review, fill, checks, quest
           return (
             <div key={`s-${p.id}`} className="px-4 py-1.5 text-xs" data-row-state={resolved ? "resolved" : p.state}>
               <span className="text-text-muted">{p.label}:</span> {resolved && q?.answer ? value(p, q.answer.value) : value(p, p.value)} · <b className="font-medium">{resolved ? "Check resolved" : STATE_WORDS[p.state]}</b>
-              {/* BR-12: an answer kept by a resolved check can be marked checked against this document, where it gives the fact. */}
-              {resolved && evidence.has(p.fact) && q?.answer && q.answer.status !== "VERIFIED" ? <AnswerInPlace caseId={caseId} q={q} refresh={refresh} document={review.document} docName={review.document_name} markOnly /> : null}
+              {/* Lead 36 on #1369: an answer kept over this document's value differs from it, so it is never marked checked
+                  against it (the server answers 409 kept_over_document); the row says what was kept instead. */}
+              {resolved && q?.answer && !sameShown(value(p, q.answer.value), value(p, p.value)) ? <span className="text-text-muted" data-kept-answer> · kept over the document, with a reason</span> : null}
             </div>
           );
         }) : null}
@@ -261,6 +262,7 @@ function DocumentBlock({ caseId, subjectId, section, review, fill, checks, quest
   );
 }
 
+const sameShown = (a: string, b: string) => a.trim().toUpperCase().replace(/\s+/g, " ") === b.trim().toUpperCase().replace(/\s+/g, " ");
 const answerBy = (q: ViewQuestion | undefined) => (q?.answer ? ` (${q.answer.channel === "questionnaire" ? `${who(q.answer.by)} typed it` : q.answer.by === getActor() ? "you entered it" : `${who(q.answer.by)} entered it`})` : "");
 
 /** One value: its label, the section it fills, the value, page and reader in words. */
@@ -276,7 +278,7 @@ function Row({ p, value, section, children }: { p: Proposal; value: string; sect
 }
 
 /** BR-8, BR-11: answer or correct a value in place with the question's own field, saved as the Agent view saves it. */
-function AnswerInPlace({ caseId, q, refresh, label, document, docName, markOnly, onSaved }: { caseId: string; q: ViewQuestion | undefined; refresh: () => Promise<void>; label?: string; document?: string; docName?: string; markOnly?: boolean; onSaved?: (fact: string) => void }) {
+function AnswerInPlace({ caseId, q, refresh, label, document, docName, onSaved }: { caseId: string; q: ViewQuestion | undefined; refresh: () => Promise<void>; label?: string; document?: string; docName?: string; onSaved?: (fact: string) => void }) {
   const toast = useToast();
   const [editing, setEditing] = React.useState(false);
   const forms = React.useContext(OpenForms);
@@ -303,8 +305,8 @@ function AnswerInPlace({ caseId, q, refresh, label, document, docName, markOnly,
   }
   if (!editing) return (
     <span className="flex flex-wrap items-center gap-2">
-      {answered && !label && !markOnly ? <span className="text-xs [overflow-wrap:anywhere]">Answered: <b className="font-medium">{String(shown(q, q.answer!.value))}</b></span> : null}
-      {markOnly ? null : <Button size="sm" variant="ghost" onClick={() => { setDraft(toDraft(kindOf(q), q.answer?.value)); setError(null); setEditing(true); }} data-answer-in-place={q.fact}>{label ?? (answered ? "Change it" : "Answer it")}</Button>}
+      {answered && !label ? <span className="text-xs [overflow-wrap:anywhere]">Answered: <b className="font-medium">{String(shown(q, q.answer!.value))}</b></span> : null}
+      <Button size="sm" variant="ghost" onClick={() => { setDraft(toDraft(kindOf(q), q.answer?.value)); setError(null); setEditing(true); }} data-answer-in-place={q.fact}>{label ?? (answered ? "Change it" : "Answer it")}</Button>
       {/* BR-12: only where it adds evidence: a value the document could not give, once answered. */}
       {document && answered && q.answer!.status !== "VERIFIED" ? <Button size="sm" variant="ghost" busy={busy} onClick={() => void markChecked()} data-mark-checked={q.fact}>Mark checked against {/passport/i.test(docName ?? "") ? "the passport" : "the document"}</Button> : null}
     </span>

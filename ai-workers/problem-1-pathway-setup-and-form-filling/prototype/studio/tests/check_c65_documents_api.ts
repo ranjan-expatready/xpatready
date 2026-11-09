@@ -242,6 +242,14 @@ await main("C6.5 documents API", "case upload, read once, Confirm & use once, le
   r = await call("POST", `/runtime/checks/${opened}/resolve`, { keep: "document", reason: "The passport page reads the earlier date (Sample)" }, OFFICER);
   r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.passport_expiry_date/checked-against-document`, { document: kDoc }, OFFICER);
   ok("C6.5 F1 pass: once the answer matches what the passport read, it is marked checked against it (200, VERIFIED)", r.status === 200 && kAnswer("person.passport_expiry_date") === `VERIFIED|${FIXED.expiry}`, r.body);
+  // A difference the officer settled by keeping the answer, with a reason: never "checked against" that document, and
+  // no second check for it.
+  await answer(c.id, K, "person.given_names", "CHILD AX", OFFICER);
+  const g1 = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.given_names/checked-against-document`, { document: kDoc }, OFFICER);
+  await call("POST", `/runtime/checks/${g1.body?.check}/resolve`, { keep: "answer", reason: "The client's renewed passport spells it so (Sample)" }, OFFICER);
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.given_names/checked-against-document`, { document: kDoc }, OFFICER);
+  ok("C6.5 F3 fail (Lead 36): an answer kept over the document by a resolved check is refused (409 kept_over_document), opens no second check, and stays unverified", g1.body?.code === "differs_from_document" && r.status === 409 && r.body?.code === "kept_over_document"
+    && sql(`select count(*) from answer_check where subject_id='${K}' and fact='person.given_names'`) === "1" && kAnswer("person.given_names") === "DECLARED|CHILD AX", { g1: g1.body, r: r.body });
   await answer(c.id, K, "person.citizenship", "India", OFFICER); // the passport gives only the code IND: left for a person
   r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.citizenship/checked-against-document`, { document: kDoc }, OFFICER);
   ok("C6.5 F2 pass (Lead 36): a value the read could not give in the question's terms (a country only as a code) stays the officer's judgement: marked checked (200)", r.status === 200 && kAnswer("person.citizenship")?.startsWith("VERIFIED|") === true, r.body);

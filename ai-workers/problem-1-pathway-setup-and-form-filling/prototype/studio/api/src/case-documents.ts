@@ -541,6 +541,11 @@ export class CaseDocuments {
     });
     if (differs) {
       const d = differs as { read: { id: string; valueJson: unknown }; answer: { id: string; valueJson: unknown } };
+      // The officer already kept this very answer over this document's value, with a reason (a resolved check): it is
+      // their recorded judgement that the document is wrong here, so it is never "checked against" it, and no second
+      // check opens for a difference already settled.
+      const kept = await this.db.answerCheck.findFirst({ where: { subjectId: who.subjectId, fact, documentId: doc!.id, state: "resolved", kept: "answer", answerId: d.answer.id }, select: { id: true, resolvedBy: true } });
+      if (kept) problem(409, "kept_over_document", "Not possible now", `${labelOf(s, fact)}: you kept this answer over what ${this.typeName(c, doc!.documentType)} reads (a resolved check, with its reason), so it is not marked checked against it. Nothing changed.`, { check: kept.id });
       // The check this answer and the document need (one per person, fact and document); a second click finds it open.
       let check: string = randomUUID();
       try {

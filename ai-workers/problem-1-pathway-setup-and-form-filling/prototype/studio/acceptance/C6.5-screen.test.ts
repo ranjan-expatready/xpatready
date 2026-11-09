@@ -163,9 +163,14 @@ await main("C6.5", "The Fill this from documents drawer (screen, 1440 px; US$0)"
     ok("C6.5-38 fail (BR-12): while its check is open the value offers no \"Mark checked\" (the server would refuse it, 409 open_checks)", (await k1.locator(`[data-mark-checked="person.given_names"]`).count()) === 0);
     await kResolve.getByLabel("Reason (required)").fill("The client's renewed passport spells it so (Sample)");
     await kResolve.getByRole("button", { name: "Save" }).click(); await kResolve.waitFor({ state: "detached", timeout: 20_000 });
-    const kMark = k1.locator(`[data-mark-checked="person.given_names"]`);
-    await kMark.waitFor({ timeout: 20_000 }); await kMark.click(); await kMark.waitFor({ state: "detached", timeout: 20_000 });
-    ok("C6.5-39 pass (BR-12, review M1, pack step C6.5-17 by screens): an answer kept by a resolved check is marked checked against the passport from the drawer", sql(`select status || '|' || coalesce(source_json->'checked_against'->>'document','') || '|' || (value_json #>> '{}') from client_canonical_answer where subject_id='${K1}' and canonical_field_key='person.given_names' and superseded_by_id is null`) === `VERIFIED|${k1Doc}|CHILD BX` && /Check resolved/.test(await k1.innerText()));
+    // Lead 36 on #1369 (follow-up row): an answer kept over the document's value differs from it, so it is never marked
+    // checked against it; the row says it was kept, and the server refuses the mark without opening a second check.
+    await k1.locator(`[data-row-state="resolved"] [data-kept-answer]`).first().waitFor({ timeout: 20_000 });
+    const kMarkShown = await k1.locator(`[data-mark-checked="person.given_names"]`).count();
+    const kRefused = await call("POST", `/runtime/cases/${c.id}/answers/${K1}/person.given_names/checked-against-document`, { document: k1Doc }, OFFICER);
+    ok("C6.5-39 fail (BR-12 as ruled by Lead 36): an answer kept over the passport by a resolved check shows \"Check resolved\" and \"kept over the document\", offers no mark, and the server refuses one (409 kept_over_document) without a second check", kMarkShown === 0 && /Check resolved/.test(await k1.innerText())
+      && kRefused.status === 409 && kRefused.body?.code === "kept_over_document" && sql(`select count(*) from answer_check where subject_id='${K1}' and fact='person.given_names'`) === "1"
+      && sql(`select status || '|' || (value_json #>> '{}') from client_canonical_answer where subject_id='${K1}' and canonical_field_key='person.given_names' and superseded_by_id is null`) !== `VERIFIED|CHILD BX`, { kMarkShown, kRefused: kRefused.body });
     // A second tab confirmed first: the click shows who and when, in IST.
     await page.keyboard.press("Escape");
     const sDoc = (await upload(PORT, `/runtime/checklist-lines/${await lineOf(S)}/documents`, passportPdf({ ...pass, surname: "SAMPLES", given: "SPOUSE A", number: "SAMPLES35", dob: FAMILY[1].dob! }), "spouse-good.pdf", OFFICER)).body?.document?.id as string;
