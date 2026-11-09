@@ -1,4 +1,4 @@
-# qa: Opus re-read of earlier Sonnet verdicts: 5 rows move to Partial on gate A, 3 stay Works. QA-325 (Major), QA-326, QA-327 new. 9 Nov 2026, 15:16–15:23 IST
+# qa: Opus re-read of earlier Sonnet verdicts: 5 rows move to Partial on gate A, 3 stay Works. QA-325, QA-326, QA-327 (Minors) new. 9 Nov 2026, 15:16–15:23 IST
 
 **Asked for by the tech lead, Lead 40.** This round's Opus read differed from the Sonnet read on 1 of 5 rows, so earlier Sonnet verdicts could not stand unchecked (P-303). A fresh reader on Opus re-read each M3 row whose Works verdict came from a Sonnet reader, newest first, plus C6.5's score in #1401. **Facts only: no re-walk and no re-run.** A row changes only if the reader disagrees, with its reason. US$0.
 
@@ -32,13 +32,13 @@
 ## Findings
 | Finding | Status |
 |---|---|
-| QA-325, Gap · Major: gate A not walked on the five rows | New |
+| QA-325, Gap · Minor (tech lead's ruling; the reader said Major): gate A not walked on the five rows | New |
 | QA-326, Gap · Minor: `setup_vv_m3` 44/46, the two failures never identified | New |
 | QA-327, Gap · Minor: C7.6 probe gaps; the row's words do not name `no_copy` | New; the pack may already cover part of it, not checked |
 | Browser packs never re-run on the Mac | Withdrawn by the reader: RULES.md's P-290 asks for "an independent re-run", not the Mac |
 | `check_c76_readiness_api.ts` red on the checkpoint | Withdrawn by the reader: fixture-bound |
 
-**For the tech lead:** QA-325 is a Major naming five rows, so under gate B a product PR naming one of them would fail until a walk closes it. The row changes stand without it, if you would rather rule it a Minor or carry it on the rows alone.
+**Ruled by the tech lead (Lead 40, 9 Nov):** QA-325 is a Minor. It is an evidence gap with no product fault, the packs stand, the five rows carry it as Partial, and it must not refuse product PRs through gate B. The fresh reader had called it Major.
 
 ## Not re-read
 These M3 Works rows' reports do not name a Sonnet reader, so they were left: C6.15, C6.18, C9.5 (`2026-11-08-m3-rescore.md`), C6.4 (`2026-11-08-c64-page.md`), C6.9 (`2026-11-08-c69-regression.md`), C8.2 (`2026-11-07-c69-c82-gate-a.md`), C1.3, C11.5 (no report named in the row). Partial or other rows were not in scope.
