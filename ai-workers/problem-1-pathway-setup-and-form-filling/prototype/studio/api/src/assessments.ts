@@ -72,7 +72,7 @@ export class Assessments {
     // lock per person, so two clicks at once never write two first runs with no reason (the second needs a reason).
     const { row, envelope } = await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`assessment:${c.id}:${person}`}))`;
-      const earlier = await tx.assessment.count({ where: { caseId: c.id, subjectId: person } });
+      const earlier = await tx.assessment.count({ where: { caseId: c.id, subjectId: person, release: { combinationId: c.combinationId } } });
       if (earlier && !reason) fieldError("reason", "Give a reason for running again, such as 'Passport renewed'.");
       const at = new Date();
       const envelope: Envelope = {
@@ -93,7 +93,7 @@ export class Assessments {
   async list(actor: Actor, caseId: string, person?: string) {
     const c = await this.r.reach(actor, caseId, "officer");
     if (person !== undefined) { if (!c.participants.some((p) => p.subjectId === person && p.role !== "case")) fieldError("person", "That person is not on this case."); }
-    const rows = await this.db.assessment.findMany({ where: { caseId: c.id, ...(person ? { subjectId: person } : {}) }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], include: { overrides: { orderBy: { createdAt: "asc" } }, review: true } });
+    const rows = await this.db.assessment.findMany({ where: { caseId: c.id, release: { combinationId: c.combinationId }, ...(person ? { subjectId: person } : {}) }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], include: { overrides: { orderBy: { createdAt: "asc" } }, review: true } });
     const { known } = await this.knownNow(c);
     const gates = (this.r.snapshotOf(c).eligibility as SnapshotEligibility | undefined)?.gates?.length ?? 0;
     return { stand_in: STAND_IN.id, stand_in_words: STAND_IN.words, has_rules: gates > 0, assessments: rows.map((x) => this.view(x, x.overrides, x.review, this.fresh(x, known, c))) };
@@ -140,7 +140,7 @@ export class Assessments {
     // and an override goes only onto the person's latest check (a newer check since the drawer opened: 409).
     const done = await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`assessment-override:${x.id}`}))`;
-      const newer = await tx.assessment.findFirst({ where: { caseId: x.caseId, subjectId: x.subjectId, createdAt: { gt: x.createdAt } }, select: { id: true } });
+      const newer = await tx.assessment.findFirst({ where: { caseId: x.caseId, subjectId: x.subjectId, createdAt: { gt: x.createdAt }, release: { combinationId: c.combinationId } }, select: { id: true } });
       if (newer) refused("The result changed since you opened it: a newer check exists for this person. Reload to see it.");
       const same = await tx.assessmentOverride.findFirst({ where: { assessmentId: x.id, createdBy: actor.id, programKey: b.programKey, label: b.label, reason: b.reason } });
       if (same) return { o: same, repeated: true };

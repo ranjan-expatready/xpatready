@@ -1419,7 +1419,8 @@ model CaseStage {
   state                String
   startedFrom          String?   @map("started_from")
   keyDetails           Json      @default("{}") @map("key_details")
-  deadlineRule         Json?     @map("deadline_rule")
+  /// The stage as frozen from its route at opening: {key_details[], deadline?, same_documents[]} (Sample data).
+  spec                 Json      @default("{}")
   routeKey             String?   @map("route_key")
   /// The stage version a "Start next stage" request names (409 when it moved).
   version              Int       @default(1)

@@ -1,0 +1,40 @@
+{
+  "basis": "SAMPLE",
+  "note": "C6.17 (B139; scaffolding, STAND-INS row for the tech lead): a route is an ordered list of existing combinations kept as data, with no new tree level (P-412 F13 (a)). Sample, not a recommended route: real routes come from the immigration expert. The key details, the deadline rule and the same-document pairs are Sample, not cited from canada.ca (ASSUMPTIONS.md).",
+  "routes": [
+    {
+      "key": "study_then_work",
+      "label": "Study, then work (Sample route, not a recommended one)",
+      "basis": "SAMPLE",
+      "stages": [
+        {
+          "key": "study",
+          "staff_name": "Study permit (outside Canada)",
+          "client_name": "Study permit",
+          "combination_key": "sp.outside",
+          "key_details": [
+            { "field": "person.uci", "label": "UCI", "type": "STRING", "same_every_stage": true },
+            { "field": "stage.permit_valid_until", "label": "Study permit valid until", "type": "DATE" }
+          ],
+          "next": "work"
+        },
+        {
+          "key": "work",
+          "staff_name": "Work permit with an LMIA (inside Canada)",
+          "client_name": "Work permit",
+          "combination_key": "wp.lmia_inside",
+          "key_details": [
+            { "field": "person.uci", "label": "UCI", "type": "STRING", "same_every_stage": true },
+            { "field": "stage.permit_valid_until", "label": "Work permit valid until", "type": "DATE" }
+          ],
+          "next": null,
+          "deadline": { "label": "Apply for the work permit by", "from_stage": "study", "field": "stage.permit_valid_until", "add_days": 0 },
+          "same_documents": [
+            { "from": "passport_information_page_copy", "to": "passport_or_travel_document_information_page_photocopy" },
+            { "from": "fee_payment_receipt", "to": "proof_of_fee_payment_processing_fee_and_other_applicable" }
+          ]
+        }
+      ]
+    }
+  ]
+}

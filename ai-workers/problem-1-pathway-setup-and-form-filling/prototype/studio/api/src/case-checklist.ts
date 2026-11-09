@@ -17,6 +17,8 @@ import { HttpException } from "@nestjs/common";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { cleanName, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MEDIA, mediaOf, NOT_APPLICABLE_FROM, NotApplicable, REQUEST_FROM, SeenVersion, STATE_WORDS, UPLOAD_FROM, type LineState, type StoredDocument } from "../../contracts/documents.ts";
 import { caseChecklist, type PersonLine } from "../../engine/runtime/case-checklist.ts";
+import { fmtDate, onFileFrom } from "../../engine/runtime/stages.ts";
+import { readSpec } from "./routes-data.ts";
 import { lineKeys, pickMember, setMet, setStatus, type SetStatus } from "../../engine/document-sets.ts";
 import { checkValue, knownOf } from "../../engine/runtime/case.ts";
 import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
@@ -84,9 +86,9 @@ export class CaseChecklists {
   private async stored(c: Reached) {
     const d = await this.derive(c);
     if (!d.derived) return d;
-    const needed = d.people.flatMap((p) => p.lines.map((l) => ({ workspaceId: c.workspaceId, caseId: c.id, subjectId: p.subject, documentType: l.document.key, lineage: l.lineage })));
+    const needed = d.people.flatMap((p) => p.lines.map((l) => ({ workspaceId: c.workspaceId, caseId: c.id, stageId: c.stage.id, subjectId: p.subject, documentType: l.document.key, lineage: l.lineage })));
     if (needed.length) await this.db.checklistLine.createMany({ data: needed, skipDuplicates: true });
-    const rows = await this.db.checklistLine.findMany({ where: { caseId: c.id } });
+    const rows = await this.db.checklistLine.findMany({ where: { caseId: c.id, stageId: c.stage.id } });
     const subjects = d.people.map((p) => p.subject);
     const docs = await this.db.caseDocument.findMany({ where: { subjectId: { in: subjects } }, orderBy: [{ uploadedAt: "asc" }, { id: "asc" }] });
     const types = ((this.r.snapshotOf(c).document_types ?? []) as { key: string; name: string }[]);
@@ -100,6 +102,14 @@ export class CaseChecklists {
       // C6.15: on a line with a set, which member the file is.
       ...(Array.isArray(type) && type.length > 1 ? { member: { key: x.documentType, name: typeName(x.documentType) } } : {}) }));
     const filesOf = (subject: string, l: PersonLine) => (l.set ? docsOf(subject, lineKeys(l)) : docsOf(subject, l.document.key));
+    // C6.17 (BR-6): on a stage started from the one before, a file this person uploaded before it started, of the line's
+    // type or of a type the route pairs with it (Sample), is shown "On file from <stage>": check it for this application.
+    const pairs = readSpec(c.stage.spec).same_documents, before = c.stage.startedFrom === "NEXT_STAGE" ? c.stages.find((x) => x.ord === c.stage.ord - 1) : undefined;
+    const onFile = (subject: string, type: string) => {
+      if (!before) return null;
+      const hit = onFileFrom(type, pairs, docs.filter((x) => x.subjectId === subject && x.current), c.stage.startedAt);
+      return hit ? { from: before.staffName, file_name: (hit as (typeof docs)[number]).fileName, uploaded_at: hit.uploadedAt.toISOString(), words: `On file from ${before.clientName}, uploaded ${fmtDate(hit.uploadedAt.toISOString())}: check it for this application.` } : null;
+    };
     const currentKeys = (subject: string, l: PersonLine) => new Set(docs.filter((x) => x.subjectId === subject && x.current && lineKeys(l).includes(x.documentType)).map((x) => x.documentType));
     const people = d.people.map((p) => {
       const out = (l: PersonLine, kept: boolean): StoredLine => {
@@ -107,7 +117,7 @@ export class CaseChecklists {
         const state = (row?.state ?? "not_requested") as LineState;
         const reason = kept ? `${l.reason} Kept on the list: it is ${STATE_WORDS[state]}${documents.length ? " and has a file" : ""}, so it is not dropped when the answers change.` : l.reason;
         return { ...l, id: row?.id ?? l.id, derived_id: l.id, reason, required: kept || state === "not_applicable" ? false : l.required, state, state_words: STATE_WORDS[state], state_reason: row?.stateReason ?? null,
-          state_by: row?.stateBy ?? null, state_at: row?.stateAt?.toISOString() ?? null, version: row?.version ?? 0, documents, kept, set_status: setStatusOf(l, currentKeys(p.subject, l)) };
+          state_by: row?.stateBy ?? null, state_at: row?.stateAt?.toISOString() ?? null, version: row?.version ?? 0, documents, kept, set_status: setStatusOf(l, currentKeys(p.subject, l)), ...((): { on_file?: NonNullable<ReturnType<typeof onFile>> } => { const f = onFile(p.subject, l.document.key); return f ? { on_file: f } : {}; })() };
       };
       // A line no longer needed that was acted on (requested, a file, Not applicable) stays on the person's list.
       const acted = (l: PersonLine) => { const row = rowOf.get(`${p.subject}|${l.document.key}`); return !!row && (row.state !== "not_requested" || filesOf(p.subject, l).length > 0); };

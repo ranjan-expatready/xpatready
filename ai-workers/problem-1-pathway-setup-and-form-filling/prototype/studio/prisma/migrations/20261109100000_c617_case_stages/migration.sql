@@ -47,7 +47,7 @@ CREATE TABLE "case_stage" (
     "state" TEXT NOT NULL,
     "started_from" TEXT,
     "key_details" JSONB NOT NULL DEFAULT '{}',
-    "deadline_rule" JSONB,
+    "spec" JSONB NOT NULL DEFAULT '{}',
     "route_key" TEXT,
     "version" INTEGER NOT NULL DEFAULT 1,
     "started_by" TEXT,

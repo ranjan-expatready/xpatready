@@ -16,6 +16,7 @@ import { ageOn, defaultModeOf } from "../../engine/runtime/filings.ts";
 import { applyChange, basisOf, CHANGE_KINDS, diffFilings, type ChangeKind } from "../../engine/runtime/filing-changes.ts";
 import type { Participant } from "../../engine/runtime/case.ts";
 import { actorOf, Audit, CaseRead, Db, type Actor } from "./core.ts";
+import { liveParticipants } from "./stage-scope.ts"; // C6.17
 import { CaseFilings } from "./case-filings.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 
@@ -55,7 +56,7 @@ export class FilingChanges {
   }
 
   private async recorded(c: Reached, q: Pick<Db, "filingRecord"> = this.db) {
-    const r = await q.filingRecord.findFirst({ where: { caseId: c.id }, orderBy: { recordedAt: "asc" }, include: { filing: { select: { subjectId: true } } } });
+    const r = await q.filingRecord.findFirst({ where: { caseId: c.id, filing: { stageId: c.stage.id } }, orderBy: { recordedAt: "asc" }, include: { filing: { select: { subjectId: true } } } });
     if (!r) return null;
     return { name: c.participants.find((p) => p.subjectId === r.filing.subjectId)?.subject.label ?? "A person", on: r.submittedOn.toISOString().slice(0, 10), number: r.applicationNumber };
   }
@@ -83,7 +84,7 @@ export class FilingChanges {
   /** Words the derivation cannot give: items of a filing that stops, Ready to file marks taken back, a minor's signer. */
   private async extraWords(c: Reached, kind: ChangeKind, subject: string, other: string | null, people: Participant[], before: Derived, then: Derived) {
     const extra = new Map<string, string[]>(), add = (s: string, w: string) => extra.set(s, [...(extra.get(s) ?? []), w]);
-    const filings = await this.db.filing.findMany({ where: { caseId: c.id }, select: { id: true, subjectId: true, status: true, active: true } });
+    const filings = await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id }, select: { id: true, subjectId: true, status: true, active: true } });
     if (kind === "remove_filing") {
       const mine = filings.find((x) => x.subjectId === subject && x.active);
       if (mine) {
@@ -129,7 +130,7 @@ export class FilingChanges {
     await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       // BR-8: the people are still as the preview read them, and nothing was recorded meanwhile (BR-7).
-      const now = await tx.caseParticipant.findMany({ where: { caseId: c.id }, select: { subjectId: true, role: true, applies: true } });
+      const now = await tx.caseParticipant.findMany({ where: liveParticipants(c.id), select: { subjectId: true, role: true, applies: true } });
       if (JSON.stringify(roles(now)) !== JSON.stringify(roles(c.participants))) problem(409, "Changed since you looked", "This case changed since you opened this. Look again before changing it; nothing was changed.");
       // Review m: the same words as before the lock (BR-7: the name, the date, the number and where it is done instead).
       const rec = await this.recorded(c, tx);
@@ -138,7 +139,7 @@ export class FilingChanges {
       await tx.filingChange.create({ data: { id: randomUUID(), workspaceId: c.workspaceId, caseId: c.id, kind: b.kind, subjectId: b.subject, otherSubjectId: other, rolesBefore: roles(c.participants), rolesAfter: roles(after.map((x) => ({ ...x, subjectId: x.subjectId }))), reason, basis: view.basis, changedBy: actor.id } });
       // BR-6 (M2): a changed filing marked Ready to file is not ready for the new shape: back to Not started.
       const changedSubjects = view.changes.map((x) => x.person);
-      if (changedSubjects.length) await tx.filing.updateMany({ where: { caseId: c.id, subjectId: { in: changedSubjects }, status: "READY_TO_FILE" }, data: { status: "NOT_STARTED" } });
+      if (changedSubjects.length) await tx.filing.updateMany({ where: { caseId: c.id, stageId: c.stage.id, subjectId: { in: changedSubjects }, status: "READY_TO_FILE" }, data: { status: "NOT_STARTED" } });
     });
     const me = c.participants.find((x) => x.subjectId === b.subject)!;
     await this.audit.log(c.workspaceId, actor.id, "changed", "filing", c.id, `${actor.name}: a ${me.role.replace(/_/g, " ")} on case ${c.id.slice(0, 8)}: ${KIND_WORDS[b.kind]}`, { kind: b.kind, changes: view.changes.length });

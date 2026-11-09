@@ -81,10 +81,12 @@ export async function recordedOverlay(db: Db, a: { workspaceId: string; caseId: 
     }
   }
   if (changed.size || current.size) {
-    const open = await db.caseTask.findMany({ where: { caseId: a.caseId, kind: "after_filing_change", state: "open" } });
+    const open = await db.caseTask.findMany({ where: { caseId: a.caseId, stage: { state: "CURRENT" }, kind: "after_filing_change", state: "open" } });
     // One open task per form and kind (a partial unique index): a read that finds the change again adds nothing.
     const fresh = [...changed].filter(([item]) => !open.some((t) => t.itemId === item));
-    if (fresh.length) await db.caseTask.createMany({ data: fresh.map(([item, x]) => ({ workspaceId: a.workspaceId, caseId: a.caseId, filingId: x.filing, itemId: item, kind: "after_filing_change", words: x.words, createdBy: a.actor })), skipDuplicates: true });
+    // C6.17 (challenge M3): a task belongs to the stage current when it is made (a write on an ended stage is refused).
+    const stageId = fresh.length ? (await db.caseStage.findFirst({ where: { caseId: a.caseId, state: "CURRENT" }, select: { id: true } }))?.id : undefined;
+    if (fresh.length && stageId) await db.caseTask.createMany({ data: fresh.map(([item, x]) => ({ workspaceId: a.workspaceId, caseId: a.caseId, stageId, filingId: x.filing, itemId: item, kind: "after_filing_change", words: x.words, createdBy: a.actor })), skipDuplicates: true });
     // Break M4 on #924: an open task says the change as it stands now, and closes itself when the form is current again.
     for (const t of open) {
       const now = changed.get(t.itemId ?? "");
@@ -92,6 +94,6 @@ export async function recordedOverlay(db: Db, a: { workspaceId: string; caseId: 
       if (!now && t.itemId && current.has(t.itemId)) await db.caseTask.updateMany({ where: { id: t.id, state: "open" }, data: { state: "done", doneBy: "rules", doneAt: new Date() } });
     }
   }
-  const tasks = await db.caseTask.findMany({ where: { caseId: a.caseId }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+  const tasks = await db.caseTask.findMany({ where: { caseId: a.caseId, stage: { state: "CURRENT" } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
   return tasks.map((t) => ({ id: t.id, kind: t.kind as "after_filing_change", filing: t.filingId, item: t.itemId, words: t.words, state: t.state as "open" | "done", created_at: t.createdAt.toISOString(), done: t.doneAt ? { by: t.doneBy === "rules" ? "Closed by itself: the form's answers are as filed again" : nameOf(t.doneBy) ?? "", at: t.doneAt.toISOString() } : null }));
 }
