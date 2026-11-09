@@ -48,3 +48,30 @@ A real screen reader. An intended user's unaided walk (D17 and D20 stay with the
 Blockers: none. Majors: none. Minors: m1, m2, m3, m4, m5.
 
 Verdict: Approve
+
+## Round 2 (diff-only, P-293): 547ca5946 on top of 3708f4f83
+Read: `git diff 3708f4f83 547ca5946 -- ai-workers/problem-1-pathway-setup-and-form-filling`. Ran in a throw-away worktree at 547ca5946, since removed. I did not touch the :4463 copy.
+* **m1, m2 and m4 fixed and proven.** The unit suite at the head passes 86/86. I re-did each mutation myself:
+  * dropping `form` at forms.ts:62 fails the new m1 step (85/86);
+  * putting `isCodeRange` back in `shapeIn` fails the new m2 step (85/86);
+  * `key = form ?? ""` fails the m4 step (85/86);
+  * `judgingMaps` returning `s` fails 4 steps (82/86).
+
+  The m1 step goes through `formCoverage`, so the added copy's own-list judgement is now covered at copy level. The type check found no new errors.
+* **m3 fixed.** `namesNoValues` (options.ts:163-164) now reads three kinds of note as naming no values: a range, `inventory` or `options_resolved`, and codes said to be "as listed / as in / listed in|for". "Same as in passport=1, Other=2" and "Listed in this form=1, Not listed=2" stay lists (unit step). Both release-side effects (IMM 5257 SCH1's countries, IRM 0002's F/M/X) are recorded in build-notes.md, with the map fix named for the forms lane.
+* **m5 fixed.** `C7.8-pack-before-fix.txt` is now labelled as the step's first text. `C7.8-pack-final-step-on-main-engine.txt` shows the final step 19 red on main's engine files. C7.8-16 is also red there, which the file explains as an artefact of a reused copy; that matches what I saw in round 1 on a reused copy, and the step was green on my fresh copy.
+* **New, Minor (Should, not blocking): the narrower rule reads four notes as lists again, as main does.** I re-classified every checkpoint note. 21 read as no values; these 4 moved back to "list":
+  * "01, 02, 03, 04, 06, 05, 09, 07, 08 as listed" (IMM 0008 eye colour);
+  * "09, 03, 04, 01, 05, 02, 00, 06 as listed" (marital status);
+  * the two partial "… ; other codes 87, …, 85 as listed" lists (relationship to the principal applicant).
+
+  None of them shows today:
+  * On releases 5a93c493 and 93ed9bf4, the first real eye-colour list ("01 Black, …") wins `shapeIn`'s `find`.
+  * Marital status has an answer list.
+  * Relationship to the principal applicant is a text fact, so no choice check runs; `optionsOf` may offer its fragments as options, exactly as on main.
+
+  This is not a regression against main. But if one of these notes ever judged an answered fact, its last fragment ("08 as listed") would refuse a real code. Fix, when the forms lane touches these maps: write them as real lists. Or treat a note that ends "as listed" after bare codes as no list.
+
+Blockers: none. Majors: none. Minors: one, carried forward (the four notes above).
+
+Verdict: Approve
