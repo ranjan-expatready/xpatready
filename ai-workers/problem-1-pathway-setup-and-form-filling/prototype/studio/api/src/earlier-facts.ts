@@ -9,7 +9,7 @@
 import { Body, Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { offerFrom, sameName, type EarlierAnswer, type OfferPerson } from "../../engine/runtime/earlier-facts.ts";
+import { latestConfirmed, matchPeople, offerFrom, sameName, type EarlierAnswer, type OfferPerson } from "../../engine/runtime/earlier-facts.ts";
 import { knownOf } from "../../engine/runtime/case.ts";
 import { FIRM_RECORD } from "../../engine/runtime/team.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
@@ -60,25 +60,34 @@ export class EarlierFacts {
     return answers.filter((a) => !a.rowKey && UUID.test(a.subjectId) && UUID.test(a.id)).map((a) => ({ id: a.id, subjectId: a.subjectId, field: a.field, value: a.value }));
   }
 
-  /** One earlier case's offer to this case (BR-2, BR-5, BR-6), read as the same staff member; nothing is written. */
-  private async offerOf(actor: Actor, c: Reached, cand: Awaited<ReturnType<EarlierFacts["candidates"]>>[number], today: Date, here?: Awaited<ReturnType<Runtime["state"]>>): Promise<EarlierOffer> {
+  /** One earlier case read as the same staff member (BR-4: nothing is written): its people and current answers about them. */
+  private async readEarlier(actor: Actor, cand: Awaited<ReturnType<EarlierFacts["candidates"]>>[number], today: Date) {
     const e = await this.runtime.reach(actor, cand.case.id, "read");
     const es = this.runtime.snapshotOf(e), ePeople = this.runtime.peopleOf(e), st = await this.runtime.state(e);
     const { confirm } = knownOf(es, ePeople, st.answers, st.rows, today);
     const earlierAnswers: EarlierAnswer[] = st.answers.filter((a) => !a.rowKey && UUID.test(a.subjectId) && UUID.test(a.id) && a.channel !== FIRM_RECORD)
       .map((a) => ({ id: a.id, subjectId: a.subjectId, field: a.field, value: a.value, confirmed: !!confirm.get(a.id)?.confirmed, confirmedAt: a.at, confirmedBy: a.actor }));
-    const mine = here ?? await this.runtime.state(c);
+    return { cand, e, ePeople, earlierAnswers };
+  }
+
+  /** Each earlier case's offer to this case (BR-2, BR-5, BR-6). QA-338: every case is read first, so a fact one of them
+   *  holds is judged against the newest value confirmed for the same person on any of them (latestConfirmed). */
+  private async offersOf(actor: Actor, c: Reached, cands: Awaited<ReturnType<EarlierFacts["candidates"]>>, today: Date, here?: Awaited<ReturnType<Runtime["state"]>>): Promise<EarlierOffer[]> {
+    const reads = [];
+    for (const cand of cands) reads.push(await this.readEarlier(actor, cand, today));
+    const herePeople = this.runtime.peopleOf(c);
+    const latest = latestConfirmed(reads.map((r) => ({ case_id: r.e.id, reference: r.e.reference, match: matchPeople(herePeople, r.ePeople), answers: r.earlierAnswers })));
+    const mine = here ?? await this.runtime.state(c), current = this.current(mine.answers), snapshot = this.runtime.snapshotOf(c), background = this.runtime.backgroundOf(c);
     const combinationKey = (await this.db.combination.findUnique({ where: { id: c.combinationId }, select: { combinationKey: true } }))?.combinationKey;
-    const o = offerFrom({ combinationKey, snapshot: this.runtime.snapshotOf(c), here: this.runtime.peopleOf(c), current: this.current(mine.answers), earlier: ePeople, earlierAnswers, background: this.runtime.backgroundOf(c), today });
-    return { case_id: e.id, reference: e.reference, combination: cand.case.combination.label, opened_at: cand.case.createdAt.toISOString(), ...o };
+    return reads.map((r) => ({ case_id: r.e.id, reference: r.e.reference, combination: r.cand.case.combination.label, opened_at: r.cand.case.createdAt.toISOString(),
+      ...offerFrom({ combinationKey, snapshot, here: herePeople, current, earlier: r.ePeople, earlierAnswers: r.earlierAnswers, background, today, caseId: r.e.id, latest }) }));
   }
 
   /** GET: the earlier cases of this client and what each offers (BR-1, BR-2). An empty list shows no card. */
   async list(actor: Actor, caseId: string) {
     const c = await this.runtime.reach(actor, caseId, "officer");
     const today = firmToday(), here = await this.runtime.state(c);
-    const read: EarlierOffer[] = [];
-    for (const cand of (await this.candidates(c)).slice(0, EARLIER_READ)) read.push(await this.offerOf(actor, c, cand, today, here));
+    const read = await this.offersOf(actor, c, (await this.candidates(c)).slice(0, EARLIER_READ), today, here);
     // Breaker M1: the cases that offer something come first, so empty ones never crowd out the one holding the facts.
     const offers = (e: EarlierOffer) => e.people.some((p) => p.facts.length);
     const earlier = [...read.filter(offers), ...read.filter((e) => !offers(e))].slice(0, EARLIER_MAX);
@@ -97,7 +106,10 @@ export class EarlierFacts {
     const cand = (await this.candidates(c, b.earlierCase))[0];
     if (!cand) fail("No earlier case of this client with that id.", HttpStatus.NOT_FOUND); // BR-1: another firm's or another person's case is never named
     const today = firmToday(), at = new Date().toISOString();
-    const offer = await this.offerOf(actor, c, cand!, today);
+    // QA-338: the chosen case is judged against the others read for the card, so a value confirmed differently later
+    // elsewhere is refused here as it is shown there.
+    const read = (await this.candidates(c)).slice(0, EARLIER_READ).filter((x) => x.case.id !== cand!.case.id);
+    const offer = (await this.offersOf(actor, c, [cand!, ...read], today))[0];
     const s = this.runtime.snapshotOf(c);
     const fields = (s.canonical_fields ?? []) as { id: string; item_version: number }[];
     const lines = b.take.map((t) => {
@@ -122,7 +134,7 @@ export class EarlierFacts {
       const moved = lines.filter((l) => l.line!.from_answer !== l.t.from);
       if (moved.length) stale(moved.map((l) => `${l.label} (on the earlier case)`));
       const blocked = lines.filter((l) => !l.line!.usable);
-      if (blocked.length) { const l = blocked[0].line!; const why = l.expiry?.blocks ? `${l.expiry.words} (${"sample" in l.expiry.source ? "Sample rule" : `canada.ca, ${l.expiry.source.page}, recorded ${l.expiry.source.recorded}`})` : l.problems[0]; notPossible(`${blocked[0].label} cannot be re-confirmed: ${why} Nothing was copied.`); }
+      if (blocked.length) { const l = blocked[0].line!; const why = l.expiry?.blocks ? `${l.expiry.words} (${"sample" in l.expiry.source ? "Sample rule" : `canada.ca, ${l.expiry.source.page}, recorded ${l.expiry.source.recorded}`})` : l.newer ? l.newer.words : l.problems[0]; notPossible(`${blocked[0].label} cannot be re-confirmed: ${why} Nothing was copied.`); }
       // Challenge M2: the earlier answer shown must still be current there (append-only rows never change their value, so
       // the value copied is exactly the one the officer saw), read under a share lock so it cannot move during the copy.
       const froms = [...new Set(b.take.map((t) => t.from))];

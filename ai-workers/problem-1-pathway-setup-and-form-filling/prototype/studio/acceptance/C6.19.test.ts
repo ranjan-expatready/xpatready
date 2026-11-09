@@ -8,7 +8,7 @@
 //   zsh tools/isolated.sh acc_c619 4437 start && ./node_modules/.bin/tsx --tsconfig api/tsconfig.json acceptance/C6.19.test.ts 4437 xr_studio_acc_c619 ; zsh tools/isolated.sh acc_c619 4437 stop
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { EXPIRY_RULES, expiryFlags, matchPeople, offerFrom, personFactsAsked, sameName, type ExpiryRule } from "../engine/runtime/earlier-facts.ts";
+import { EXPIRY_RULES, expiryFlags, latestConfirmed, matchPeople, offerFrom, personFactsAsked, sameName, type ExpiryRule } from "../engine/runtime/earlier-facts.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { client, recorder } from "../tests/runtime/api.ts";
 
@@ -70,6 +70,25 @@ function pure() {
   ok("C6.19 BR-2 fail: an earlier answer not confirmed there is not offered", !pf.some((f) => f.fact === BIRTH) && !pf.some((f) => f.fact === EXPIRY));
   ok("C6.19 BR-6: an unconfirmed expired date still flags the confirmed passport number, which is not usable", pf.find((f) => f.fact === NUMBER)?.expiry?.blocks === true && pf.find((f) => f.fact === NUMBER)?.usable === false);
   ok("C6.19 BR-2: the earlier child with no match is listed by name, nothing of theirs offered", JSON.stringify(o.unmatched) === JSON.stringify([{ label: "Child C", role: "child" }]) && o.people.find((p) => p.subject_id === "k")!.facts.length === 0);
+
+  // QA-338: two earlier cases disagree. Case B kept a copy (BR-3) of the expiry 2031-05-09; case A was corrected to
+  // 2025-01-15 and confirmed later. The newest confirmation decides, on whichever case the officer picks.
+  const at = (t: string) => `2026-11-0${t}T10:00:00Z`;
+  const ansAt = (id: string, subjectId: string, field: string, value: unknown, when: string) => ({ ...ans(id, subjectId, field, value), confirmedAt: when });
+  const pB = [{ subjectId: "pB", role: "principal" as const, label: "Client A", applies: true }], pA = [{ subjectId: "pA", role: "principal" as const, label: "Client A", applies: true }];
+  const onB = [ansAt("b1", "pB", NUMBER, "Z7000001", at(3)), ansAt("b2", "pB", EXPIRY, "2031-05-09", at(3))], onA = [ansAt("x1", "pA", NUMBER, "Z7000001", at(2)), ansAt("x2", "pA", EXPIRY, "2025-01-15", at(5))];
+  const reads = [{ case_id: "B", reference: "CASE-B", match: matchPeople(here, pB), answers: onB }, { case_id: "A", reference: "CASE-A", match: matchPeople(here, pA), answers: onA }];
+  const latest = latestConfirmed(reads);
+  ok("C6.19 QA-338: the newest confirmed value per person is the one confirmed last, on whichever earlier case", latest.get(`p|${EXPIRY}`)?.case_id === "A" && latest.get(`p|${EXPIRY}`)?.value === "2025-01-15", [...latest]);
+  const bOffer = offerFrom({ snapshot: s, here, current: [], earlier: pB, earlierAnswers: onB, today, caseId: "B", latest }).people.find((p) => p.subject_id === "p")!.facts;
+  const bExp = bOffer.find((f) => f.fact === EXPIRY), bNum = bOffer.find((f) => f.fact === NUMBER);
+  ok("C6.19 QA-338 (newer value): case B's stale expiry is Out of date, naming case A and its later value, and cannot be ticked", bExp?.newer?.reference === "CASE-A" && bExp.newer.value === "2025-01-15" && /another earlier case, confirmed a different value later/.test(bExp.newer.words) && !bExp.usable, bExp);
+  ok("C6.19 QA-338 (expired document): case B's passport number reads Expired from the newest expiry date (case A's), not usable", bNum?.expiry?.status === "expired" && /expired on 15 Jan 2025/.test(bNum.expiry.words) && !bNum.newer && !bNum.usable, bNum);
+  const aOffer = offerFrom({ snapshot: s, here, current: [], earlier: pA, earlierAnswers: onA, today, caseId: "A", latest }).people.find((p) => p.subject_id === "p")!.facts;
+  ok("C6.19 QA-338 fail (newer value): the newest value itself, and a value the other case agrees with, are never Out of date", aOffer.every((f) => !f.newer) && !bNum?.newer, aOffer.map((f) => [f.fact, f.newer]));
+  const valid = latestConfirmed([{ ...reads[0] }, { ...reads[1], answers: [ansAt("x2", "pA", EXPIRY, "2033-01-01", at(1))] }]);
+  const bOld = offerFrom({ snapshot: s, here, current: [], earlier: pB, earlierAnswers: onB, today, caseId: "B", latest: valid }).people.find((p) => p.subject_id === "p")!.facts;
+  ok("C6.19 QA-338 fail (expired document): an older, different value on another case neither marks case B's newer copy Out of date nor changes its expiry; both stay usable", bOld.every((f) => !f.newer && !f.expiry && f.usable), bOld.map((f) => [f.fact, f.newer, f.expiry?.status, f.usable]));
 }
 
 async function checkpoint() {
@@ -210,6 +229,14 @@ async function api() {
   ok("C6.19 BR-6 fail: re-confirming an expired passport's number is refused with the rule's words and its source (review m4); nothing copied", refused.status === 409 && /cannot be re-confirmed: The passport expired on 15 Jan 2025.*\(Sample rule\)/.test(JSON.stringify(refused.body)) && copies(c.id) === 0, refused.body);
   ok("C6.19 BR-6: every passport fact offered on case C is flagged with the expired passport", fc.filter((f) => both.includes(f.fact)).length >= 3 && fc.filter((f) => both.includes(f.fact)).every((f) => f.expiry?.blocks), fc.map((f) => [f.fact, f.expiry?.status]));
   ok("C6.19 BR-6 fail: a fact no rule covers (the date of birth) is not flagged", !own || !fc.find((f) => f.fact === own)?.expiry, fc.find((f) => f.fact === own));
+  // QA-338: case B still holds its copies from before case A's correction; on case C, B's passport facts are not usable.
+  const fb = ((await offerOf(c.id)).body as Offer).earlier.find((x) => x.case_id === b.id)?.people.find((p) => p.subject_id === pc)?.facts ?? [];
+  const bPass = fb.filter((f) => both.includes(f.fact));
+  ok("C6.19 QA-338: on case C, case B's passport copies (older than case A's correction) are each Expired or Out of date, none usable", bPass.length > 0 && bPass.every((f) => !f.usable && (f.expiry?.blocks || /another earlier case/.test(JSON.stringify(f)))), fb.map((f) => [f.fact, f.value, f.expiry?.status, f.usable]));
+  const bNumber = bPass.find((f) => f.fact === NUMBER);
+  const viaB = bNumber ? await call("POST", `/runtime/cases/${c.id}/earlier-facts`, { earlierCase: b.id, take: [{ subject_id: pc, fact: NUMBER, from: bNumber.from_answer }], seen: { [`${pc}|${NUMBER}`]: null } }, OFFICER) : { status: 0, body: null };
+  ok("C6.19 QA-338 fail: re-confirming case B's copy of the expired passport's number is refused; nothing copied", viaB.status === 409 && /cannot be re-confirmed/.test(JSON.stringify(viaB.body)) && copies(c.id) === 0, viaB.body);
+  if (own) ok("C6.19 QA-338 fail: a copy on case B that no later confirmation contradicts (the date of birth) stays usable", fb.find((f) => f.fact === own)?.usable === true, fb.find((f) => f.fact === own));
 
   // Breaker M1: newer empty cases of the same client never crowd out the earlier case that holds the facts.
   for (let i = 0; i < 6; i++) await open(vv, `crowd${i}`, NAME);
