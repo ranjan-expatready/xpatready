@@ -14,6 +14,7 @@ import { applySupplies } from "./document-supplies.ts";
 import { applySets } from "./document-sets.ts";
 import { SETS_KIND } from "../../contracts/document-sets.ts";
 import { applyMustVerify } from "./must-verify.ts";
+import { applyProviders, PROVIDERS_KIND } from "./document-providers.ts"; // C6.14
 import { MUST_VERIFY_KIND } from "../../contracts/must-verify.ts";
 import { SUPPLIES_KIND } from "../../contracts/document-supplies.ts";
 import { applyCondition, COND_KIND } from "./question-condition.ts";
@@ -474,6 +475,7 @@ export class Lifecycle {
     if (c.kind === "placement_fills") return applyFills(this.db, this.audit, actor, c); // C4.9 (runtime lane): a draft placement
     if (c.kind === SUPPLIES_KIND) return applySupplies(this.db, this.audit, actor, c); // C4.5: a draft document type with its facts
     if (c.kind === SETS_KIND) return applySets(this.db, this.audit, actor, c); // C6.15: a draft document type with its substitute sets
+    if (c.kind === PROVIDERS_KIND) return applyProviders(this.db, this.audit, actor, c); // C6.14: a draft document type with its provider roles
     if (c.kind === MUST_VERIFY_KIND) return applyMustVerify(this.db, this.audit, actor, c); // C7.9: a draft field with its must-verify flag
     // QA-64, P-116 amended (28 Oct): a library retire or restore takes effect at approval (a structure name or a
     // combination waits for the release). The same check as at a release: a draft listing the form again hands it back.
