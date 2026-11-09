@@ -1,0 +1,1 @@
+    C7.9.test.ts on the checkpoint: exit 0, 23/23 passed (86 s: copy 4, Load the configured checkpoint 77, run 5)
