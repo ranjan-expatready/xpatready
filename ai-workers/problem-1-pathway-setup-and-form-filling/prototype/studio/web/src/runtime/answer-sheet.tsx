@@ -78,6 +78,8 @@ export function AnswerSheetPage() {
   // QA-323: the count the item's own reason gives (engine/runtime/answer-sheet.ts sheetWords): a section not ticked, or
   // ticked before an answer changed, is still to tick.
   const toTick = s.sections.filter((x) => !x.entered || x.out_of_date).length, n = s.sections.length;
+  // Break m4: every section ticked is not Done while answers still wait; the line says so (the item's reason names them).
+  const waits = s.sections.reduce((k, x) => k + x.waiting.length, 0);
   const [stateWord, tone] = STATE_WORDS[item?.state ?? ""] ?? [item?.state ?? "", "neutral"];
   return (
     <div className="mx-auto max-w-6xl space-y-4" data-answer-sheet={s.item}>
@@ -92,7 +94,7 @@ export function AnswerSheetPage() {
         {prep.data?.portal_words ? <p className="flex items-center gap-1.5 text-[13px]" data-portal><Lock className="size-3.5 text-text-muted" aria-hidden />{prep.data.portal_words}</p> : null}
         {item ? <p className="flex flex-wrap items-center gap-2 text-[13px]" data-item-state={item.state}><Pill tone={tone}>{stateWord}</Pill><span className="text-text-muted [overflow-wrap:anywhere]">{item.reason}</span></p>
           : prep.isError ? <Notice tone="warn" title="The form’s state could not be read">{(prep.error as Error).message} The answers below are current; reload to see whether the filing is submitted.</Notice> : null}
-        <p className="text-[13px]" data-progress data-to-tick={toTick}>{toTick ? `${toTick} of ${n} section${n === 1 ? "" : "s"} still to tick “Entered in the portal”` : `Every section is ticked “Entered in the portal”`}</p>
+        <p className="text-[13px]" data-progress data-to-tick={toTick}>{toTick ? `${toTick} of ${n} section${n === 1 ? "" : "s"} still to tick “Entered in the portal”` : `Every section is ticked “Entered in the portal”${waits ? `; ${waits} answer${waits === 1 ? "" : "s"} still to answer or confirm` : ""}`}</p>
         <p className="text-[13px] text-text-muted" data-order-note>{s.order_note}</p>
         {readOnly ? <Notice title="Submitted to IRCC">This filing is recorded as submitted: its sheet is read only.</Notice> : null}
       </header>
@@ -204,7 +206,7 @@ function EnteredTick({ x, nameOf, item, caseId, readOnly }: { x: SheetSection; n
   const keep = () => { giveBack.current = true; setAsking(false); setError(null); };
   // After a tick or an untick the focus stays on this section's control (keyboard users keep their place).
   React.useEffect(() => { const f = focusNext.current; if (!f) return; focusNext.current = null; (f === "off" ? offRef : tickRef).current?.focus(); }, [current]);
-  const reload = async () => { setError(null); await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] }); };
+  const reload = async () => { setError(null); setAsking(false); setReason(""); await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] }); };
   async function send(path: "entered" | "unentered", json: object, ok: string, next: "tick" | "off") {
     setBusy(true); setError(null);
     try {
@@ -215,7 +217,9 @@ function EnteredTick({ x, nameOf, item, caseId, readOnly }: { x: SheetSection; n
       await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
     } catch (e) {
       const a = e instanceof ApiError ? e : null;
-      setError({ text: (e as Error).message, stale: a?.status === 409 && /changed since|ticked again since|not ticked/.test((e as Error).message), field: a?.field("reason") });
+      // Concept m4: a 409 branches on the problem's type: changed since (stale) or no tick any more → Reload.
+      const type = String((a?.problem as { type?: string } | undefined)?.type ?? "");
+      setError({ text: (e as Error).message, stale: a?.status === 409 && /\/(stale|not-ticked)$/.test(type), field: a?.field("reason") });
     } finally { setBusy(false); }
   }
   if (readOnly) return null;
@@ -227,13 +231,13 @@ function EnteredTick({ x, nameOf, item, caseId, readOnly }: { x: SheetSection; n
   return (
     <div className="space-y-2 border-t border-border px-4 py-3 text-[13px]" data-tick={current ? "entered" : x.out_of_date ? "cleared" : "not-entered"}>
       {x.out_of_date && x.entered ? (
-        <div data-changes role="note" aria-label={`Why the tick on ${x.title} was cleared`}>
+        <div className="[overflow-wrap:anywhere]" data-changes role="note" aria-label={`Why the tick on ${x.title} was cleared`}>
           <p>Ticked by {nameOf(x.entered.by)}, {when(x.entered.at)}; {x.changes?.length ? `${x.changes.length === 1 ? "this answer" : "these answers"} changed since, so the tick no longer counts:` : "an answer here changed since, so the tick no longer counts."}</p>
           {x.changes?.length ? <ul className="mt-1 list-disc space-y-0.5 pl-5">{x.changes.map((c, i) => <li key={i} data-change>{c.label} · {c.person}: {c.now === null ? <>no longer on the sheet (was <span className="mono">{c.was}</span>)</> : c.was === null ? <>new: <span className="mono">{c.now}</span></> : <>was <span className="mono">{c.was}</span>, now <span className="mono">{c.now}</span></>}</li>)}</ul> : null}
           <p className="mt-1">Enter the new answers in the portal, then tick again.</p>
         </div>
       ) : null}
-      {!x.entered && x.unticked ? <p className="text-text-muted" data-unticked>Tick taken off by {nameOf(x.unticked.by)}, {when(x.unticked.at)}. Reason: {x.unticked.reason}</p> : null}
+      {!x.entered && x.unticked ? <p className="text-text-muted [overflow-wrap:anywhere]" data-unticked>Tick taken off by {nameOf(x.unticked.by)}, {when(x.unticked.at)}. Reason: {x.unticked.reason}</p> : null}
       {error && !(error.field && asking) ? (
         <Notice tone={error.stale ? "warn" : "danger"} title={error.stale ? "Changed since you opened the sheet" : "Not saved"} action={error.stale ? <Button size="sm" variant="secondary" onClick={() => void reload()}>Reload</Button> : undefined}>
           {error.text}
@@ -242,7 +246,7 @@ function EnteredTick({ x, nameOf, item, caseId, readOnly }: { x: SheetSection; n
       {asking ? (
         <form className="space-y-2" aria-label={`Take the tick off ${x.title}`} onSubmit={(e) => { e.preventDefault(); takeOff(); }} onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); keep(); } }}>
           <Field label="Why does the tick come off? (required)" hint="Kept in the case's activity with your name and the time." error={error?.field ?? null}>
-            <Textarea ref={reasonRef} rows={2} maxLength={400} value={reason} onChange={(e) => { setReason(e.target.value); setError(null); }} />
+            <Textarea ref={reasonRef} rows={2} maxLength={400} value={reason} onChange={(e) => { setReason(e.target.value.replace(/[\r\n]+/g, " ")); setError(null); }} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); takeOff(); } }} />
           </Field>
           <div className="flex flex-wrap gap-2">
             <Button type="submit" size="sm" busy={busy}>Take the tick off</Button>
@@ -253,7 +257,7 @@ function EnteredTick({ x, nameOf, item, caseId, readOnly }: { x: SheetSection; n
         <Button ref={offRef} size="sm" variant="secondary" aria-label={`Take the tick off ${x.title}`} onClick={() => { setAsking(true); setError(null); }}>Take the tick off</Button>
       ) : (
         <div className="flex flex-wrap items-center gap-3">
-          <Button ref={tickRef} size="sm" busy={busy} aria-label={`Entered in the portal: ${x.title}`} onClick={tick}><Check className="size-3.5" aria-hidden />{x.out_of_date ? "Entered again in the portal" : "Entered in the portal"}</Button>
+          <Button ref={tickRef} size="sm" busy={busy} aria-label={`${x.out_of_date ? "Entered again in the portal" : "Entered in the portal"}: ${x.title}`} onClick={tick}><Check className="size-3.5" aria-hidden />{x.out_of_date ? "Entered again in the portal" : "Entered in the portal"}</Button>
           {x.waiting.length ? <span className="text-text-muted" data-tick-hint>{x.waiting.length} answer{x.waiting.length === 1 ? "" : "s"} still to answer or confirm: tick what you typed; when they are confirmed this section reads out of date until you tick again.</span> : null}
         </div>
       )}

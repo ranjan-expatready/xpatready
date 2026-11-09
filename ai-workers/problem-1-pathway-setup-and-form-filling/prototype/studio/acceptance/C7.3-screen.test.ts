@@ -66,6 +66,8 @@ await main("C7.3", "\"Entered in the portal\" by screens: 1024 px, keyboard only
       /^Entered by .+, \d/.test(pill) && (await progress()).startsWith(`${N - 1} of ${N}`) && focusOnOff === `Take the tick off ${first.title}` && s.sections.find((x) => x.key === K)?.entered?.by === OFFICER,
       { pill, progress: await progress(), focus: focusOnOff, server: s.sections.find((x) => x.key === K)?.entered });
 
+    const old = await w.open(OFFICER, W); await open(old); // read while ticked: used after the tick comes off (a stale tab)
+
     // R2 by keyboard: no reason → refused on the field; Escape keeps the tick.
     await tabTo(page, card().getByRole("button", { name: `Take the tick off ${first.title}` }), "Take the tick off");
     await page.keyboard.press("Enter");
@@ -95,6 +97,20 @@ await main("C7.3", "\"Entered in the portal\" by screens: 1024 px, keyboard only
     ok("C7.3-44 pass (R2): with a reason the tick comes off: the section shows who took it off and the reason, the count is back to all, the focus is on its tick button, and the server says not ticked",
       shownOff.includes(REASON) && /^Tick taken off by /.test(shownOff) && (await progress()).startsWith(`${N} of ${N}`) && focusTick === `Entered in the portal: ${first.title}` && !s.sections.find((x) => x.key === K)?.entered,
       { shown: shownOff, progress: await progress(), focus: focusTick });
+
+    // R3 (break m2): a tab read while the section was ticked tries to take the tick off again: refused, there is no tick;
+    // Reload closes the reason form and offers the tick again.
+    await tabTo(old, card(old).getByRole("button", { name: `Take the tick off ${first.title}` }), "the old tab's Take the tick off");
+    await old.keyboard.press("Enter");
+    await card(old).getByLabel("Why does the tick come off? (required)").waitFor({ timeout: 5_000 });
+    await old.keyboard.type("Typed twice (Sample)"); await old.keyboard.press("Enter");
+    await card(old).getByRole("button", { name: "Reload" }).waitFor({ timeout: 15_000 });
+    const oldWords = await card(old).innerText();
+    await tabTo(old, card(old).getByRole("button", { name: "Reload" }), "the old tab's Reload");
+    await old.keyboard.press("Enter");
+    await card(old).getByRole("button", { name: `Entered in the portal: ${first.title}` }).waitFor({ timeout: 15_000 });
+    ok("C7.3-53 fail then pass (R3; break m2): from a tab read while it was ticked, taking the tick off again is refused (no tick to take off, Reload offered); Reload closes the reason form and shows the tick button and who took it off",
+      /is not ticked/.test(oldWords) && (await card(old).getByLabel("Why does the tick come off? (required)").count()) === 0 && (await card(old).locator("[data-unticked]").innerText()).includes(REASON), { refused: /is not ticked/.test(oldWords) });
 
     // R3: the second tab read the sheet before an answer changed; its tick is refused, Reload brings the new answer.
     await answer(caseId, P, "person.family_name", "SAMPLEKA"); await confirmAll(caseId, P);
@@ -130,12 +146,20 @@ await main("C7.3", "\"Entered in the portal\" by screens: 1024 px, keyboard only
     await open();
     it = await itemNow();
     ok(`C7.3-49 fail (R5): with only "${first.title}" still to tick, the page says "1 of ${N}" and the item is not Done`, (await progress()).startsWith(`1 of ${N}`) && it.state !== "done" && (await page.locator("[data-item-state]").getAttribute("data-item-state")) === it.state, { progress: await progress(), state: it.state });
-    await tabTo(page, card().getByRole("button", { name: `Entered in the portal: ${first.title}` }), "the re-tick");
+    await tabTo(page, card().getByRole("button", { name: `Entered again in the portal: ${first.title}` }), "the re-tick");
     await page.keyboard.press("Enter");
     await page.locator('[data-item-state="done"]').waitFor({ timeout: 15_000 });
     it = await itemNow();
     ok("C7.3-50 pass (R5): ticking the last section by keyboard brings the item to Done: the page reads \"Every section is ticked\" and Done, as the server does",
       (await progress()) === "Every section is ticked “Entered in the portal”" && it.state === "done" && /Done/.test(await page.locator("[data-item-state]").innerText()) && (await wide()), { progress: await progress(), state: it.state, reason: it.reason });
+
+    // Break m3: a long reason with no space wraps inside its section: no sideways scroll at 1024 px.
+    s = await sheet();
+    const LONG = `Sample${"x".repeat(380)}`;
+    const k = s.sections.find((x) => x.key === K)!;
+    const offLong = await call("POST", `/runtime/items/${itemId}/screens/${K}/unentered`, { version: k.version, entered_at: k.entered?.at, reason: LONG }, OFFICER);
+    await open();
+    ok("C7.3-54 pass (R2; break m3): a 386-character reason with no space shows in full on its section and the page does not scroll sideways at 1024 px", offLong.status === 200 && (await card().locator("[data-unticked]").innerText()).includes(LONG) && (await wide()), { status: offLong.status, noSideScroll: await wide() });
 
     // R1 fail by screens: a client opening the sheet's address gets no sheet and no tick. A configuration author never
     // reaches it as themself: the case side switches a configuration persona to the simulated case officer

@@ -59,17 +59,18 @@ const stale = (): never => { throw new HttpException({ type: "https://expatready
 const refuse = (status: number, field: string, detail: string): never => { throw new HttpException({ type: "https://expatready.local/problems/validation", title: status === 422 ? "Not accepted" : "Some details need fixing", status, detail, errors: [{ field, message: detail }] }, status); };
 const Version = z.union([z.string(), z.number()], { error: "Reload: the version you read is missing." });
 // Break m2: a reason is plain text: no control characters (C0, C1), no hidden direction marks, separators or zero-width spaces.
-const Reason = z.string().trim().max(400, "Keep the reason under 400 characters.").refine((x) => !/[\u0000-\u001f\u007f-\u009f\u061c\u200b\u200e\u200f\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff\u115f\u1160\u3164\uffa0]/.test(x) && !/[\ud800-\udfff]/u.test(x), "Write the reason as plain text: it holds a hidden or control character.")
+const ReasonText = z.string().trim().max(400, "Keep the reason under 400 characters.").refine((x) => !/[\u0000-\u001f\u007f-\u009f\u061c\u200b\u200e\u200f\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff\u115f\u1160\u3164\uffa0]/.test(x) && !/[\ud800-\udfff]/u.test(x), "Write the reason as plain text: it holds a hidden or control character.")
   // Break r3 m1, m2: joiners that scripts and emoji need (U+200C, U+200D) are allowed; a reason must say something.
-  .refine((x) => x === "" || /[\p{L}\p{N}]/u.test(x), "Write the reason in words: it holds no letter or digit.").optional();
+  .refine((x) => x === "" || /[\p{L}\p{N}]/u.test(x), "Write the reason in words: it holds no letter or digit.");
+const Reason = ReasonText.optional();
 const SplitBody = z.object({ filing: z.string({ error: "Choose the filing to split out." }), reason: Reason, version: Version });
 const ChannelBody = z.object({ channel: z.unknown(), reason: Reason, version: Version });
 const EnteredBody = z.object({ version: z.string({ error: "Send the section's version from the answer sheet you read (Reload)." }) });
-// C7.3 (P-401): unticking "Entered in the portal" needs the section's version and the tick it read, and a reason.
-const UnenteredBody = z.object({ version: z.string({ error: "Send the section's version from the answer sheet you read (Reload)." }), entered_at: z.string().optional(),
-  reason: z.string({ error: "Say why the tick comes off." }).trim().min(1, "Say why the tick comes off.").max(400, "Keep the reason under 400 characters.")
-    .refine((x) => !/[\u0000-\u001f\u007f-\u009f\u061c\u200b\u200e\u200f\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/.test(x), "Write the reason as plain text: it holds a hidden or control character.")
-    .refine((x) => /[\p{L}\p{N}]/u.test(x), "Write the reason in words: it holds no letter or digit.") });
+// C7.3 (P-401): unticking "Entered in the portal" needs the section's version and the tick it read (when it was ticked), and
+// a reason, checked as every other reason here (break M1: the shared rule, never a weaker copy).
+const UnenteredBody = z.object({ version: z.string({ error: "Send the section's version from the answer sheet you read (Reload)." }),
+  entered_at: z.string({ error: "Send when the tick you read was made (Reload)." }).refine((x) => !Number.isNaN(Date.parse(x)), "Send when the tick you read was made, as the sheet gives it (Reload)."),
+  reason: z.string({ error: "Say why the tick comes off." }).pipe(ReasonText).refine((x) => x !== "", "Say why the tick comes off.") });
 const DOB = "person.date_of_birth";
 
 type Item = Awaited<ReturnType<Db["filingItem"]["findMany"]>>[number];
@@ -710,7 +711,10 @@ export class CasePrepare {
     const sheet = sheetOf(item, s, people, answers, rows, view, entered, parts, missing, cov);
     // C7.3 (P-401): an out-of-date section says why its tick no longer counts (each answer then and now); a section not
     // ticked now shows its last untick and the reason given (the audit line, the record).
-    const unticks = await this.db.auditEvent.findMany({ where: { workspaceId: c.workspaceId, action: "unentered", entity: "item", entityKey: item.id }, orderBy: { at: "desc" }, select: { at: true, actor: true, detail: true } });
+    // Break m7: an untick ends a tick, so only an item with an ended tick is looked up, from that tick's time on (the
+    // audit table's workspace and time index), never the whole table.
+    const ended = await this.db.enteredSection.findFirst({ where: { itemId: item.id, supersededAt: { not: null } }, orderBy: { enteredAt: "asc" }, select: { enteredAt: true } });
+    const unticks = ended ? await this.db.auditEvent.findMany({ where: { workspaceId: c.workspaceId, at: { gte: ended.enteredAt }, action: "unentered", entity: "item", entityKey: item.id }, orderBy: { at: "desc" }, select: { at: true, actor: true, detail: true } }) : [];
     for (const x of sheet.sections) {
       const e = entered.find((y) => y.sectionKey === x.key);
       if (e && x.out_of_date) x.changes = changesOf(((e.snapshot.factsJson as { answers?: SheetAnswer[] } | null)?.answers ?? []), x.answers);
@@ -753,23 +757,28 @@ export class CasePrepare {
    *  The audit line holds who, when and the reason; a section not ticked is a 409 in words. */
   async unentered(actor: Actor, itemId: string, key: string, body: unknown) {
     const { c, item } = await this.onlineItem(actor, itemId);
-    await refuseIfRecorded(this.db, [item.filingId], `Unticking "Entered in the portal" for ${item.itemKey}`); // C8.2-9
+    await refuseIfRecorded(this.db, [item.filingId], `the tick "Entered in the portal" on ${item.itemKey}`); // C8.2-9
     const now = await this.sheet(actor, itemId);
     const sec = now.sections.find((x) => x.key === key);
     if (!sec) fail(`${item.itemKey}'s answer sheet has no such section.`, HttpStatus.NOT_FOUND);
     const b = parse(UnenteredBody, body);
     const changed = (detail: string): never => { throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed since you read it", status: 409, detail }, HttpStatus.CONFLICT); };
     if (b.version !== sec!.version) changed(`The answers in "${sec!.title}" changed since you read the sheet. Reload it, check them against the portal, then decide again.`);
-    const row = await this.db.$transaction(async (tx) => {
+    await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
-      await refuseIfRecorded(tx, [item.filingId], `Unticking "Entered in the portal" for ${item.itemKey}`); // under the lock
+      await refuseIfRecorded(tx, [item.filingId], `the tick "Entered in the portal" on ${item.itemKey}`); // under the lock
       const was = await tx.enteredSection.findFirst({ where: { itemId: item.id, sectionKey: key, supersededAt: null } });
-      if (!was) refuse(409, "section", `"${sec!.title}" is not ticked "Entered in the portal", so there is no tick to take off. Reload the sheet.`);
-      if (b.entered_at !== undefined && new Date(b.entered_at).getTime() !== was!.enteredAt.getTime()) changed(`"${sec!.title}" was ticked again since you read the sheet. Reload it, then decide again.`);
-      return tx.enteredSection.update({ where: { id: was!.id }, data: { supersededAt: new Date() } });
+      if (!was) throw new HttpException({ type: "https://expatready.local/problems/not-ticked", title: "Not ticked", status: 409, detail: `"${sec!.title}" is not ticked "Entered in the portal", so there is no tick to take off. Reload the sheet.` }, HttpStatus.CONFLICT);
+      if (new Date(b.entered_at).getTime() !== was!.enteredAt.getTime()) changed(`"${sec!.title}" was ticked again since you read the sheet. Reload it, then decide again.`);
+      const row = await tx.enteredSection.update({ where: { id: was!.id }, data: { supersededAt: new Date() } });
+      // Break M1: the audit line is written in the same transaction: a tick never comes off without its record (who,
+      // when, why). The same row Audit.log writes.
+      const who = c.participants.find((p) => p.subjectId === item.subjectId);
+      await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "unentered", entity: "item", entityKey: item.id, combinationId: null,
+        summary: [`${actor.name} took the tick "Entered in the portal" off "${sec!.title}" of ${item.itemKey} for the ${ROLE[who?.role ?? ""] ?? "person"} on case ${short(c.id)}; it counts as still to tick. Reason: ${b.reason}`].map((t) => Array.from(t).slice(0, 600).join(""))[0], // by character, never half an emoji
+        detail: { section: key, reason: b.reason, ticked_by: row.enteredBy, ticked_at: row.enteredAt.toISOString() } } });
+      return row;
     });
-    const who = c.participants.find((p) => p.subjectId === item.subjectId);
-    await this.audit.log(c.workspaceId, actor.id, "unentered", "item", item.id, `${actor.name} took the tick "Entered in the portal" off "${sec!.title}" of ${item.itemKey} for the ${ROLE[who?.role ?? ""] ?? "person"} on case ${short(c.id)}; it counts as still to tick. Reason: ${b.reason}`, { section: key, reason: b.reason, ticked_by: row.enteredBy, ticked_at: row.enteredAt.toISOString() });
     return { section: key, entered: null };
   }
 

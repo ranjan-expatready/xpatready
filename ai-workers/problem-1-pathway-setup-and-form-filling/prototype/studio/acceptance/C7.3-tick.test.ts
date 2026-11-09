@@ -57,14 +57,29 @@ await main("C7.3", "\"Entered in the portal\" per section: tick, untick with a r
   ok("C7.3-24 fail (R2): a configuration author and a client cannot take a tick off (403 each), the tick kept", authorOff.status === 403 && clientOff.status === 403 && current() === "1", { author: authorOff.status, client: clientOff.status });
   const staleOff = await untick(K, { version: sec().version, entered_at: "2000-01-01T00:00:00.000Z", reason: "Typed by mistake" });
   ok("C7.3-25 fail (R3): taking a tick off that changed since it was read (another tick) is refused (409) in plain words, the tick kept", staleOff.status === 409 && /ticked again since you read the sheet/.test(staleOff.body?.detail ?? "") && current() === "1", { status: staleOff.status, detail: staleOff.body?.detail });
+  // Break M1, m5: a reason holding a lone surrogate or only Hangul fillers, and a tick time missing or not a time, are
+  // refused on their field (400) before anything changes: the tick stays, no audit line is written.
+  const unticksBefore = () => sql(`select count(*) from audit_event where action='unentered' and entity_key='${itemId}'`);
+  const n0 = unticksBefore();
+  const bad = [
+    await untick(K, { version: sec().version, entered_at: sec().entered?.at, reason: "abc \ud800 def" }),
+    await untick(K, { version: sec().version, entered_at: sec().entered?.at, reason: "a\u3164\u3164" }),
+    await untick(K, { version: sec().version, reason: "Typed by mistake" }),
+    await untick(K, { version: sec().version, entered_at: "banana", reason: "Typed by mistake" }),
+  ];
+  ok("C7.3-25b fail (R2, R3; break M1, m5): a reason with a hidden character (a lone surrogate, Hangul fillers), or no or a malformed tick time, is refused (400 on its field), the tick kept and no audit line written",
+    bad.every((r) => r.status === 400) && JSON.stringify(bad[0].body).includes("hidden or control character") && JSON.stringify(bad[1].body).includes("hidden or control character") && JSON.stringify(bad[2].body).includes("entered_at") && JSON.stringify(bad[3].body).includes("entered_at") && current() === "1" && unticksBefore() === n0,
+    { statuses: bad.map((r) => r.status), errors: bad.map((r) => r.body?.errors), rows: current(), audit: [n0, unticksBefore()] });
+  const staleVer = await untick(K, { version: "not-the-version-read", entered_at: sec().entered?.at, reason: "Typed by mistake" });
+  ok("C7.3-25c fail (R3; review m4): taking a tick off with a version that is not the section's now is refused (409) in plain words, the tick kept", staleVer.status === 409 && /changed since you read the sheet/.test(staleVer.body?.detail ?? "") && String(staleVer.body?.type ?? "").endsWith("/stale") && current() === "1", { status: staleVer.status, detail: staleVer.body?.detail });
   const REASON = "Not typed in the portal yet: ticked by mistake (Sample)";
   const off = await untick(K, { version: sec().version, entered_at: sec().entered?.at, reason: REASON });
   ({ s } = await read());
   const offAudit = sql(`select summary || chr(9) || (detail->>'reason') from audit_event where action='unentered' and entity_key='${itemId}' order by at desc limit 1`) ?? "";
   const history = sql(`select count(*) from entered_section where item_id='${itemId}' and section_key='${K}' and superseded_at is not null`);
   ok("C7.3-26 pass (R2): the officer takes the tick off with a reason; the section is not ticked, shows who took it off and why, the old tick is kept as history and the audit line holds the reason", off.status === 200 && !sec().entered && sec().unticked?.by === OFFICER && sec().unticked?.reason === REASON && offAudit.includes(first.title) && offAudit.endsWith(`\t${REASON}`) && history === "1" && current() === "0", { status: off.status, unticked: sec().unticked, audit: offAudit, history });
-  const again = await untick(K, { version: sec().version, reason: REASON });
-  ok("C7.3-27 fail (R3): there is no tick to take off a section not ticked (409, in words)", again.status === 409 && /is not ticked/.test(again.body?.detail ?? ""), { status: again.status, detail: again.body?.detail });
+  const again = await untick(K, { version: sec().version, entered_at: new Date().toISOString(), reason: REASON });
+  ok("C7.3-27 fail (R3): there is no tick to take off a section not ticked (409, in words, its own problem type)", again.status === 409 && /is not ticked/.test(again.body?.detail ?? "") && String(again.body?.type ?? "").endsWith("/not-ticked"), { status: again.status, type: again.body?.type, detail: again.body?.detail });
 
   // R5: To do until every section is ticked; the words count what is left, as the sheet does.
   for (const x of s!.sections.filter((y) => y.key !== K)) await tick(x.key, { version: x.version });
@@ -85,4 +100,14 @@ await main("C7.3", "\"Entered in the portal\" per section: tick, untick with a r
   it = await itemNow();
   const ch = (sec().changes ?? []).find((x) => x.was === name?.copy_text && x.now === "SAMPLETK");
   ok("C7.3-31 pass (R4): a changed answer in a ticked section clears its tick: out of date, still to tick, the item no longer Done, and the sheet says which answer changed (was, now)", sec().out_of_date && !!ch && it?.state !== "done" && s!.sections.filter((x) => !x.entered || x.out_of_date).length === 1, { out_of_date: sec().out_of_date, changes: sec().changes, state: it?.state });
+
+  // Review m4: a filing recorded as submitted is read only: no tick comes off (C8.2-9). The record row is put in by SQL
+  // (recording a submission is C8.2's journey) and removed after, so this case is left as it was.
+  const filing = sql(`select filing_id from filing_item where id='${itemId}'`);
+  sql(`insert into filing_record (id, workspace_id, case_id, filing_id, submission_group_id, our_reference, submitted_on, application_number, prepared_by, recorded_by, filed_facts) select gen_random_uuid(), f.workspace_id, f.case_id, f.id, f.submission_group_id, 'ACC-C73-REC', current_date, 'V000000000', 'user-O', 'user-O', '{}'::jsonb from filing f where f.id='${filing}'`);
+  ({ s } = await read());
+  const recorded = await untick(K, { version: sec().version, entered_at: sec().entered?.at, reason: "Typed by mistake" });
+  const kept = current();
+  sql(`delete from filing_record where filing_id='${filing}' and our_reference='ACC-C73-REC'`);
+  ok("C7.3-32 fail (R2; review m4): on a filing recorded as submitted no tick comes off (409, read only, in words), the tick kept", recorded.status === 409 && String(recorded.body?.type ?? "").endsWith("/recorded") && /read-only: the tick "Entered in the portal" on .+ is not changed/.test(recorded.body?.detail ?? "") && kept === String(n), { status: recorded.status, detail: recorded.body?.detail, rows: kept });
 });
