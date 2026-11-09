@@ -138,3 +138,53 @@ Exact head: **55358fff5724b16173f7abddfe8236af77072bcc**. Diff reviewed: `e15959
 **BIC changes:** BIC-13, BIC-14 and BIC-20 move to Met.
 
 **Verdict: Approve** for 55358fff5724b16173f7abddfe8236af77072bcc. No open Blocker or Major.
+
+## Main merge check (1fe118b51)
+Exact head: **1fe118b51434baa43a4a3d12bbc2e1ba5bf69307**. It merges origin/main 3614e35b2 into 709499f02, the round-2 approved head plus the break-report notes. This is a diff-only check of the merge (P-318 (1)). Main's new work since the previous merge base 967388518 is #1375 (C6.5 counts), #1282 (C7.9 must-verify), #1389 (C7.10 readiness figure) and #1393 (QA-317 answer sheet).
+
+**Conflicts: resolved correctly.**
+- `api/src/case-documents.ts` keeps B138's `privateWords` import. It also has main's `import { sameValue } from "./document-values.ts"` and `export { sameValue }`, and main's removal of the local `sameValue`. There is one leftover blank line where that function was, and it is the same on main.
+- `web/src/runtime/cases.tsx` keeps B138's `OfficerPeoplePanel` import. It also has main's `CaseReadinessPill` import and pill, `AnswerSheetPage` import and the `:id/sheet/:itemId` route.
+
+**Files both sides changed:** case-documents.ts, main.ts, engine/runtime/answer-sheet.ts, schema.prisma and cases.tsx (the `--stat` asked for: 5 files, +18 −10).
+- In each of these files, the merge's change against 709499f02 is exactly main's change against 967388518, line for line.
+- Across all 46 B138 files, B138's diff against the new main (`3614e35b2..1fe118b51`) is line for line the same as its diff before the merge (`967388518..709499f02`).
+- So nothing was dropped or doubled, and the merge adds no change of its own.
+
+**Main's new client routes and client-visible reads.** No privacy gap was found.
+- `GET api/runtime/cases/:id/document-reviews/counts` (C6.5) uses `reach(…, "officer")`, so a client gets 403. It returns counts and fact keys only, with no values.
+- `GET/POST api/library/fields/:key/must-verify` (C7.9) works on library configuration. It holds no person's facts.
+- C7.9's `unverifiedOf` and C7.10's `figures` and `case_figure` are added only to `GET runtime/cases/:id/prepare`, which uses `reach(…, "officer")`. The other `CasePrepare` routes all use `reach(…, "officer")` too.
+- QA-317's `GET runtime/items/:id/answer-sheet` is also officer-only. Its screen does not fetch for a client (`officer ? … : null`).
+- On the case page, the C7.10 pill reads `/prepare`. For a client that read is refused, and the pill hides on refusal.
+- The document-value change in case-documents.ts only moves `sameValue` to `document-values.ts`. Upload and value routes are unchanged, and the B138 `hiddenFromClient` check at line 189 is still in place.
+- Main does not change `runtime.ts` or `case-checklist.ts`, so every `refusePrivate` and `hiddenFromClient` call site is unchanged.
+
+**Migrations.**
+- Main adds `20261109090000_c79_must_verify`. It adds the `canonical_field.must_verify_before_filing` column and rewrites the two `readiness_pass` check lists. It touches no B138 table or column.
+- B138's `20261109100000_c616_person_link` touches neither `canonical_field` nor `readiness_pass`. It sorts directly after main's newest migration and is still the last one.
+- Schema: main's single `CanonicalField` line merged cleanly beside B138's models.
+
+**Run:** fresh copies on :4443 only, each started and stopped in the same command. Live AI off, US$0.
+- `acceptance/C6.16.test.ts`: **68/68**, exit 0.
+- `tests/check_c616_privacy.ts`: **42/42**.
+- `tests/check_c616_privacy_browser.cjs`: **50/50**, exit 0.
+- Typecheck (`product/tools/typecheck.mjs`): **PASS**, with no new type errors (api has the 15 known errors, web has 0).
+- Afterwards the working tree is clean and no test copy is left running.
+
+**`acceptance/lib/setup_vv_m3.ts` 44/46: main's own failure.**
+- The file is unchanged since 1373aa563 on 967388518, 709499f02, origin/main and 1fe118b51.
+- I ran it on a clean `git archive` of origin/main 3614e35b2, on :4443. It fails the same two lines there:
+  - S2w: the IMM 5476 release check now says "Not decided yet (from an earlier release)…" and no longer names the missing signer.
+  - S7a: "Cannot PUT /api/library/fees". No `library/fees` route exists in any of these four trees.
+- It is not caused by B138 or by the merge. It is for qa or the m3 owner, not this PR.
+
+**Interplay note, not blocking (Minor, words, staff only):**
+- C7.9's `isVerified` counts only staff channels. So an adult's own-link answer (`own_link`) to a must-verify fact raises the CRITICAL `must_verify` line, which is correct: no one on staff checked it.
+- But its words say "the client gave it". For a private adult who answered on their own link, that names the wrong person.
+- I reasoned this from the code and did not run it: it needs an expert-approved flag in a release.
+- It is a follow-up for C7.9's words (`engine/runtime/readiness.ts`), not a B138 change.
+
+**Journey score: 9.5/10**, carried from round 2. The merge changes no C6.16 screen or route. Main adds no step to the C6.16 journey, and the browser journey above passes 50/50 on the merged code. Per the caller's brief, no new journey-test report file was written for this diff-only check.
+
+**Verdict: Approve** for 1fe118b51434baa43a4a3d12bbc2e1ba5bf69307. There is no open Blocker or Major.
