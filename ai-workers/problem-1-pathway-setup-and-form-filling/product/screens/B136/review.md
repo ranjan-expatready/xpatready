@@ -123,4 +123,26 @@ A real screen reader. An intended user's unaided walk (D17, D20 stay with the fo
 
 **Also rerun:** check_vv_checklist 76/76 · check_engine 44/44 · count-any 418 = 418 · `tsc -p web` shows no errors in the touched files. The pack was not rerun; the builder reports 35/35 at cf57401d1. The diff changes no API route or pack step. No new finding.
 
-**Verdict: Approve** (commit e3c6772b75ec9b93f468f57719da0d600378c597). No open Blocker or Major. The round-1 fallback point stays with the tech lead (SA-1B-151 r3).
+**Round 4 result: Approve** (commit e3c6772b7; carried to 6fd0de782, a review.md-only commit).
+
+## Round 5: merge of origin/main (C7.9 #1282) into the PR, `11536a9184b86da137272f20231bd83314306332` (parents 6fd0de782, e7ad3ae96; diff only)
+**Method:** I compared C6.14's own change (`fc49dc5a4..6fd0de782`, where fc49dc5a4 is the merge base) with what the merge adds on top of main (`e7ad3ae96..11536a918`).
+
+**The 32 files that did not conflict:** the +/- lines are identical, and no file outside the PR's own set differs.
+
+**The 5 conflicted files:** at the word level, the only differences are where C6.14's additions sit next to C7.9's:
+* `library-changes.ts`: the same tokens are added. `PROVIDERS_KIND` sits next to `MUST_VERIFY_KIND` in the noun list, `changeView`, the withdraw `renaming` list and `ACTION_WORD`. `releaseProviders` follows `releaseMustVerify` (`:399-400`). The approved-withdraw branches are separate (`:297`, `:307`).
+* `lifecycle.ts` `:478-479` and `review-queue.ts` `:280-283`: both kinds are wired.
+* `main.ts` `:222`: each controller and provider appears once.
+* `review-items.tsx`:
+  * The returned-change branch for providers is on its own line (`:144`), cast to `{ providers?: unknown }` (it was `ProvidersChange`). It sits before `x.supplies`, as it did before.
+  * The proposer's Withdraw on a waiting change is kept (`:160`), next to C7.9's (`:162`).
+  * No behaviour change.
+
+**Rerun on the merged tree:**
+* On a fresh isolated copy `rev614d` with the checkpoint loaded (stopped afterwards): pack C6.14 **35/35**, exit 0; walk **13/13**, including steps 10-11 (a returned change withdrawn by screen).
+* `check_c79_must_verify` 22/22 · `check_c614_providers` 27/27 · count-any 418 = 418 against main · `tsc -p web` clean · `tsc -p api` shows no errors outside older test files.
+
+No new finding.
+
+**Verdict: Approve** (commit 11536a9184b86da137272f20231bd83314306332). No open Blocker or Major. The round-1 fallback point stays with the tech lead (SA-1B-151 r3).
