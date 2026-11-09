@@ -26,7 +26,7 @@ Playwright with the image's Chrome, headless, deviceScaleFactor 2, one pass. Fre
 
 **C. Client A again (`walk/14`, `15`)**
 11. About Sample Partner now shows only "Sample Partner is answering on their own link · 0 of 26 parts done · last saved 9 Nov, 16:51 · Their answers are private to them and the firm." with buttons **Resend | Take back**. "Send to another address…" is gone after acceptance (F12 (b)). Neither of Partner's values is anywhere in the page's HTML (`14`).
-12. Wrong part by URL (`?part=43`, Partner's Contact information before): the numbering now has 74 parts, and part 43 is Sample Child 19's. Partner's parts cannot be reached (`15`). `[under]` Client A's questionnaire API carries neither value.
+12. One URL tried, `?part=43`. In qa's exploratory run on an earlier case, before any Send, 43 was Partner's Contact information; that run was not logged, and this case has no before-state. Here the numbering has 74 parts and 43 is Sample Child 19's (`15`). This screen alone does not prove that Partner's parts cannot be reached; the probe below and pack C6.16-4 do. `[under]` Client A's questionnaire API carries neither value.
 
 **D. Case officer, 1440 px (`walk/16`–`21`)**
 13. "Own links and privacy" (`16`):
@@ -43,18 +43,18 @@ Playwright with the image's Chrome, headless, deviceScaleFactor 2, one pass. Fre
 19. Client A's card for Child 19 shows progress only and no buttons. `[under]` The value is gone from Client A's API. **QA-357:** the card says "**Sample Child 19 is answering on their own link**", but no link was ever sent (`25`).
 
 ## Next capability's first step: C7.1, a copy of Partner's form made from Partner's own answers (`walk/26`, `27`)
-20. Case page › Prepare application › "IMM 5257 for Sample Partner": "Declared or confirmed answers for 4 of 166 form fields; 9 answered but needing a fix stay blank" (`26`). Generate a copy gives "Generated · Copy of 9 Nov, 16:53 · 4 form fields written · read back and checked · Download" (`27`).
-21. `[under]` (`api-partner-imm5257-copy.json`): status GENERATED, intact, written 4. The PDF's XFA data has `Email = by.client.a.…@example.com`: the answer Client A gave and Partner confirmed on their own link fills Partner's form. It also has Partner's date of birth. The incomplete private address is not written, as the rule for answers needing a fix says.
+20. The first try at this step (log E1 in `walk-log.txt`) was qa's script picking the wrong row, a Ready to file line. Its shot (22) was deleted, and the step was redone in part 2 (`scripts/walk_c616_next.mjs`). Case page › Prepare application › "IMM 5257 for Sample Partner": "Declared or confirmed answers for 4 of 166 form fields; 9 answered but needing a fix stay blank" (`26`). Generate a copy gives "Generated · Copy of 9 Nov, 16:53 · 4 form fields written · read back and checked · Download" (`27`).
+21. `[under]` The line labelled "E2 [under] Partner IMM 5257 copy" in `walk-log-part2.txt` prints **Client A's** IMM 5257 (subject 38cd…, written_now 3), because of a filter fault in qa's script. Partner's figures come from a separate read by qa (`GET /forms` and `GET /form-copies/:id`, `/file`), summarised in `api-partner-imm5257-copy.json`. That file is qa's summary, not a raw response: status GENERATED, intact, written 4. The PDF's XFA data has `Email = by.client.a.…@example.com`: the answer Client A gave and Partner confirmed on their own link fills Partner's form. It also has Partner's date of birth. The incomplete private address is not written, as the rule for answers needing a fix says.
 22. Page errors and 5xx answers during the walk: none.
 
 ## Underneath, after the walk (`probe-client-reads.txt`, `scripts/probe_c616_client_reads.mjs`)
-Every GET route under `/runtime/cases/:id` in the controllers (19 without a sub-id) was called as Client A and as the officer. The probe looked for Partner's e-mail, Partner's private city, Child 19's e-mail and the officer-given new address.
+Every GET route under `/runtime/cases/:id` in the controllers (19 without a sub-id) was called as Client A and as the officer. The probe looked for Partner's e-mail, Partner's private city and Child 19's e-mail. It also looked for the officer-given new address, but that test means nothing: the address is not an answer, so even the officer's reads never carry it. It called as Client A and as the officer only. The script's header said "and with no persona"; that was wrong and is now corrected.
 * Client A: 200 with none of them on `cases/:id`, `people/privacy`, `questionnaire` and `questionnaire?mode=pqr`. Every other route is 403, `?mode=agent` included.
 * The officer's questionnaire carries all three answers.
 
 ## Not covered
 * One headless pass. No headed walk, and the shared demo (:4400) was not walked (no demo runs in this cloud copy).
-* Client A at 390 px, and the officer at 1440 px only. 1024 px, keyboard-only, 200% zoom and axe are not qa's own walk; the builder's `check_c616_privacy_browser.cjs` covers them and was re-run on this copy: 50/50, exit 0 (`check_c616_privacy_browser-output.txt`).
+* Client A at 390 px, and the officer at 1440 px only. Keyboard-only, 200% zoom and axe are not qa's own walk. The builder's `check_c616_privacy_browser.cjs` covers them at 390, 1440, 320, 720 and 512 px, and qa re-ran it on this copy: "50/50 passed", exit code 0 seen by qa's shell (the output file has no exit line). **No 1024 px viewport anywhere**, neither qa's walk nor the builder's check.
 * Not walked:
   * the 5-wrong-codes lock and the 15-minute expiry (pack C6.16-2, -11);
   * Client A's own Take back;

@@ -1,6 +1,6 @@
 // qa checks for C6.16 (qa capability round, main 1d07807c8, 9 Nov; qa/reports/2026-11-09-c616/). Each fails today and
 // passes when fixed. Fresh Visitor visa case per run (Client A, Partner 38, a child of 19); needs Visitor visa released
-// on the copy (the configured checkpoint, or tests/runtime/setup_visitor_visa.ts). Sample data, no live AI, US$0.
+// on the copy from Demo › Load the configured checkpoint (its release asks "Contact information"). Sample data, no live AI, US$0.
 //   QA-357: after the case officer's "Keep private…" tick on an adult who was never sent a link, Client A's card must not
 //           say "<person> is answering on their own link".
 //   QA-358: on the adult's own link, a part holding Client A's answer must not show staff words ("the officer's
@@ -51,6 +51,14 @@ const T = { timeout: 20000 };
     const page = await b.locator("main").innerText();
     const staffWords = /Confirm section|the officer's|is confirmed before filing/.exec(page);
     ok("QA-358 C6.16: the adult's own part shows no staff words about Client A's answer (\"the officer's 'Confirm section'\")", !staffWords, staffWords ? page.slice(Math.max(0, staffWords.index - 160), staffWords.index + 60) : "");
+    // QA-357, second state (fresh reader): after the officer takes Partner's link back, Client A's card must not say
+    // Partner "is answering on their own link" above "The link was taken back".
+    const tb = await call("DELETE", `/runtime/cases/${id}/people/${S}/link`, { reason: "Asked by the person (Sample, qa)" });
+    await a.reload();
+    const pcard = a.locator("section", { has: a.getByRole("heading", { name: "About Sample Partner" }) }).locator("[data-private-progress]");
+    await pcard.getByText(/taken back/).first().waitFor(T);
+    const pwords = await pcard.innerText();
+    ok("QA-357 C6.16: after a take back, Client A's card does not say the person is answering on their own link", tb.status < 300 && !/answering on their own link/.test(pwords), `${tb.status} ${pwords}`);
   } finally { await browser.close(); }
   const passed = results.filter(Boolean).length;
   console.log(`\n${passed}/${results.length} passed`); process.exit(passed === results.length ? 0 : 1);

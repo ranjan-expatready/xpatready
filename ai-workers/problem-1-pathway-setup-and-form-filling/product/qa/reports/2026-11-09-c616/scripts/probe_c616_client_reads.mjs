@@ -1,5 +1,5 @@
 // qa probe (underneath): every GET route under /runtime/cases/:id (from the controllers, client-get-routes.txt), as Client A
-// (user-P) and with no persona, on the walk's case after Partner's privacy is on; prints any response carrying Partner's
+// (user-P), on the walk's case after Partner's privacy is on; prints any response carrying Partner's
 // or the child of 19's private values. Also the same reads as the case officer, to prove the values exist.
 //   node probe_c616_client_reads.mjs <port> <caseId> <routesFile> <value>...
 import { readFileSync } from "node:fs";
