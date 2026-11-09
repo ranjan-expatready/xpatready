@@ -446,7 +446,13 @@ export class Runtime {
   async view(actor: Actor, caseId: string, mode: Mode) {
     const c = await this.reach(actor, caseId, "read");
     if (mode === "agent" && !isOfficer(actor)) fail("The Agent view is for the case officer.", HttpStatus.FORBIDDEN);
-    if (!isOfficer(actor)) { const v = await this.clientView(c); return { case: await this.get(actor, caseId), ...v.view, private_people: v.private_people }; }
+    if (!isOfficer(actor)) {
+      // QA-322 for the client too (lost in the third main merge: this early return skipped main's line below). Read
+      // from clientView's sections, so a private person's parts carry no note either (C6.16 BR-7).
+      const v = await this.clientView(c);
+      const checks = [...v.view.checks, ...await this.documentChecks(c, v.view.sections)];
+      return { case: await this.get(actor, caseId), ...v.view, checks, private_people: v.private_people };
+    }
     const { answers, rows, groups } = await this.state(c);
     const view = caseView(this.snapshotOf(c), this.peopleOf(c), answers, rows, mode, new Date(), groups, { background: this.backgroundOf(c) });
     // QA-322 (P-142 D6): the client sees "please check" on an answer while a typed-versus-document check is open on it.
