@@ -21,7 +21,7 @@ Read-only study for the tech lead, written for an independent challenger to re-r
 
 ## Token efficiency (founder's addition)
 
-**What was measured.** Every Mac session transcript for this project was read: `~/.claude/projects/-Users-ranjansingh-Desktop-Xpatready*/**.jsonl`, 692 sessions and subagents, 13 Oct to 9 Nov 18:08 IST, about 60,800 model calls. Calls are de-duplicated by message id and request id.
+**What was measured.** Every Mac session transcript for this project was read: `~/.claude/projects/-Users-<user>-Desktop-Xpatready*/**.jsonl`, 692 sessions and subagents, 13 Oct to 9 Nov 18:08 IST, about 60,800 model calls. Calls are de-duplicated by message id and request id.
 
 **Cloud sessions are not on disk.** Since 1 Nov most builders have been cloud lanes, so builder cost after 1 Nov is under-counted. Every "per PR" figure below is a Mac-only floor.
 
@@ -94,7 +94,7 @@ STATE pages record the weekly plan burning at **4 to 5% an hour** "with 7 lanes,
 
 The token cost of failed CI runs could not be measured on the Mac: those reworks happen in cloud lanes. The CI side is in E5: 440 failed runs on builder branches.
 
-**Re-run:** `tok.py` and `tok2.py` in `/private/tmp/claude-501/-Users-ranjansingh-Desktop-Xpatready/8cf36380-4a93-4c1d-9bb3-80f15055b8a1/scratchpad/pp/`. They read each assistant line's `message.usage` (`input_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens`, `output_tokens`) and de-duplicate by (`message.id`, `requestId`). Role rules:
+**Re-run:** `tok.py` and `tok2.py` in `/private/tmp/claude-501/-Users-<user>-Desktop-Xpatready/8cf36380-4a93-4c1d-9bb3-80f15055b8a1/scratchpad/pp/`. They read each assistant line's `message.usage` (`input_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens`, `output_tokens`) and de-duplicate by (`message.id`, `requestId`). Role rules:
 * **Lead:** `/lead` or "resume as the tech lead" in the first user messages.
 * **qa:** `/qa`, or a `qa-*` worktree.
 * **Builder or standby builder:** `/next`, or a builder/forms/screens/runtime/evidence worktree; `standby` in the name means standby.
@@ -119,7 +119,7 @@ curl -sS -D h.txt -o page.json -H "Authorization: Bearer $T" "$R/pulls?state=all
 curl -sS -H "Authorization: Bearer $T" "$R/issues/<n>/timeline?per_page=100"                         # per PR: committed, labeled, unlabeled, commented, merged
 curl -sS -H "Authorization: Bearer $T" "$R/actions/workflows/ci.yml/runs?per_page=100&page=<k>"      # 4,346 runs
 ```
-The scripts used are in the scratchpad: `fetch.py`, `an.py`, `an2.py` (`/private/tmp/claude-501/-Users-ranjansingh-Desktop-Xpatready/8cf36380-4a93-4c1d-9bb3-80f15055b8a1/scratchpad/pp/`). Definitions:
+The scripts used are in the scratchpad: `fetch.py`, `an.py`, `an2.py` (`/private/tmp/claude-501/-Users-<user>-Desktop-Xpatready/8cf36380-4a93-4c1d-9bb3-80f15055b8a1/scratchpad/pp/`). Definitions:
 * **Builder PR:** head branch `claude/*` or `devin/*`. That gives 648 PRs: 614 merged, 21 closed without merge, the rest open.
 * **Batch:** head branch `mergify/merge-queue/*`. That gives 566 PRs. Mergify closes each batch PR; the merge lands on the original PRs.
 
