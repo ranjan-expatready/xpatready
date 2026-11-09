@@ -34,8 +34,10 @@ const run = Date.now().toString(36), ADDRESS = `partner.${run}@example.com`;
   const id = c.body?.id;
   const add = async (role, displayName) => (await call("POST", `/runtime/cases/${id}/people`, { role, displayName })).body?.subject_id;
   const S = await add("spouse_or_partner", "Sample Partner"), C19 = await add("child", "Sample Child 19"), C10 = await add("child", "Sample Child 10");
+  // Break m5: a long name (an adult) must wrap at 390 px, never push the page sideways.
+  const LONG = await add("child", "Sample Child With A Very Long Name Indeed Ñandú Østergård");
   const P = c.body?.people?.find((x) => x.role === "principal")?.subject_id;
-  for (const [subject, dob] of [[P, yearsAgo(40)], [S, yearsAgo(38)], [C19, yearsAgo(19)], [C10, yearsAgo(10)]]) await call("PUT", `/runtime/cases/${id}/answers/${subject}/person.date_of_birth`, { value: dob, expectedId: null });
+  for (const [subject, dob] of [[P, yearsAgo(40)], [S, yearsAgo(38)], [C19, yearsAgo(19)], [C10, yearsAgo(10)], [LONG, yearsAgo(30)]]) await call("PUT", `/runtime/cases/${id}/answers/${subject}/person.date_of_birth`, { value: dob, expectedId: null });
   const sqr = (await call("GET", `/runtime/cases/${id}/questionnaire`, undefined, "user-P")).body;
   const pq = (sqr?.sections ?? []).flatMap((s) => s.questions).find((q) => q.subjectId === S && !q.answer && !q.group && !q.hidden && q.value_type === "text");
   const byA = pq ? await call("PUT", `/runtime/cases/${id}/answers/${S}/${pq.fact}`, { value: "SAMPLE-BY-CLIENT-A", expectedId: null }, "user-P") : { status: 0 };
@@ -58,12 +60,19 @@ const run = Date.now().toString(36), ADDRESS = `partner.${run}@example.com`;
     await about.getByRole("button", { name: "Send to Sample Partner…" }).waitFor(T);
     ok("C6.16 principal: under \"About Sample Partner\" a Send to Sample Partner… button; none under the child of 10", await about.getByRole("button", { name: "Send to Sample Partner…" }).isVisible() && await a.getByRole("button", { name: /Send to Sample Child 10/ }).count() === 0 && await a.getByRole("button", { name: "Send to Sample Child 19…" }).count() === 1);
     await shot(a, "01-principal-send-390"); await axe(a, "the principal's questionnaire with Send to …"); await noSideways(a, "the principal's questionnaire at 390 px");
-    await about.getByRole("button", { name: "Send to Sample Partner…" }).click();
+    const opener = about.getByRole("button", { name: "Send to Sample Partner…" });
+    await opener.click();
+    await a.getByRole("dialog").waitFor(T);
+    await a.keyboard.press("Escape");
+    await a.getByRole("dialog").waitFor({ state: "detached", timeout: 20000 });
+    await a.waitForTimeout(100);
+    ok("C6.16 principal (review m4): Escape closes the dialog and the focus returns to Send to …", await opener.evaluate((el) => el === document.activeElement));
+    await opener.click();
     const dlg = a.getByRole("dialog");
     await dlg.getByText("Sample Partner gets a link and a code by email. Once they open it, you will see how far they have got, not their answers.").waitFor(T);
     await dlg.getByRole("button", { name: "Send to Sample Partner" }).click();
-    await dlg.getByText("Enter their email address.").waitFor(T);
-    ok("C6.16 principal: Send with no address says what to do on the field", true);
+    await dlg.getByText("Enter their email address.").first().waitFor(T);
+    ok("C6.16 principal (BIC-13): Send with no address says what to do on the field and in a summary at the top", await dlg.getByText("There is a problem").isVisible() && await dlg.getByText("Enter their email address.").count() === 2);
     await dlg.getByLabel("Sample Partner's email").fill(ADDRESS);
     await shot(a, "02-send-dialog-390"); await axe(a, "the Send to dialog");
     await dlg.getByRole("button", { name: "Send to Sample Partner" }).click();
@@ -85,6 +94,10 @@ const run = Date.now().toString(36), ADDRESS = `partner.${run}@example.com`;
     await shot(b, "05-link-check-390"); await axe(b, "the link's Check it's you page"); await noSideways(b, "the link page at 390 px");
     await b.getByRole("button", { name: "Send me a code" }).click();
     await b.getByLabel("Code (required)").waitFor(T);
+    const sends = () => call("GET", `/demo/inbox?address=${encodeURIComponent(ADDRESS)}`, undefined, null).then((r) => (r.body?.messages ?? []).filter((m) => m.kind === "code").length);
+    await b.reload();
+    await b.getByLabel("Code (required)").waitFor(T);
+    ok("C6.16 adult (break m6): a reload keeps the code step and sends no new code", await b.getByLabel("Code (required)").isVisible() && await sends() === 1);
     const code = /code is (\d{3}) (\d{3})/.exec(((await call("GET", `/demo/inbox?address=${encodeURIComponent(ADDRESS)}`, undefined, null)).body?.messages ?? []).find((m) => m.kind === "code")?.body ?? "")?.slice(1).join("") ?? "";
     await b.getByLabel("Code (required)").fill(code === "000000" ? "111111" : "000000");
     await b.getByRole("button", { name: "Continue" }).click();
@@ -135,6 +148,7 @@ const run = Date.now().toString(36), ADDRESS = `partner.${run}@example.com`;
     await panel.locator(`[data-person="${S}"]`).waitFor(T);
     const row = await panel.locator(`[data-person="${S}"]`).innerText();
     ok("C6.16 officer: Partner's row says private from Client A and what the code proves (address given by Client A)", /With Sample Partner since .* · private from Client A · answered on the link sent to p•••@example\.com \(address given by Client A\)/.test(row) && /parts? done/.test(row), row);
+    ok("C6.16 officer (BIC-14): Partner's privacy reason, since when and by whom are visible text, not only a tooltip", /Since .*: Switched on when the person first entered the right code/.test(await panel.locator(`[data-person="${S}"] [data-private-why]`).innerText().catch(() => "")));
     ok("C6.16 officer: the child of 10 has no Send and says why; the child of 19 has Send… and Keep private…", /under 18/.test(await panel.locator(`[data-person="${C10}"]`).innerText()) && await panel.locator(`[data-person="${C10}"]`).getByRole("button").count() === 0 && await panel.locator(`[data-person="${C19}"]`).getByRole("button", { name: "Keep private…" }).count() === 1);
     await panel.scrollIntoViewIfNeeded(); await shot(o, "11-officer-people-1440"); await axe(o, "the officer's case page with Own links and privacy"); await noSideways(o, "the officer's case page at 1440 px");
     await panel.locator(`[data-person="${S}"]`).getByRole("button", { name: "Take back…" }).click();
@@ -148,6 +162,10 @@ const run = Date.now().toString(36), ADDRESS = `partner.${run}@example.com`;
     await tdlg.getByRole("button", { name: "Take back" }).click();
     await panel.locator(`[data-person="${S}"]`).getByText(/Taken back .* · still private from Client A/).waitFor(T);
     ok("C6.16 officer: the row now reads Taken back · still private", true);
+    await a.reload();
+    await about.locator("[data-private-progress]").waitFor(T);
+    const after = await about.innerText();
+    ok("C6.16 principal (review m2): after the take back Client A reads what happened in their own words, never \"ask whoever sent it\"", /The link was taken back on /.test(after) && !/whoever sent it/.test(after), after.slice(0, 300));
 
     // ---- Partner's page after take back: says why, naming no person.
     await b.goto(`${BASE}/link`);
@@ -192,8 +210,10 @@ const run = Date.now().toString(36), ADDRESS = `partner.${run}@example.com`;
     await k.keyboard.press("Enter");
     await k.getByRole("button", { name: "Save and continue" }).waitFor(T);
     const visible = await k.evaluate(() => { const el = document.activeElement; if (!el || el === document.body) return false; const s = getComputedStyle(el); return s.outlineStyle !== "none" || s.boxShadow !== "none"; });
-    ok("C6.16 keyboard: the part opens with the focus on its heading", await k.evaluate(() => document.activeElement?.tagName === "H1"), visible);
+    ok("C6.16 keyboard: the part opens with the focus on its heading", await k.waitForFunction(() => document.activeElement?.tagName === "H1", null, { timeout: 3000 }).then(() => true, () => false), await k.evaluate(() => `${document.activeElement?.tagName} ${document.activeElement?.textContent?.slice(0, 60)} ${location.href}`));
 
+    await k.setViewportSize({ width: 320, height: 640 });
+    await noSideways(k, "the adult's page with its header at 320 px (break m5)");
     // ---- 200 % zoom (EXPERIENCE §2.12): half the CSS width, nothing sideways; the officer at 1440 px is 720 px wide.
     const z = await browser.newContext({ viewport: { width: 720, height: 450 }, deviceScaleFactor: 1 });
     await z.addInitScript(() => { localStorage.setItem("xr-actor", "user-O"); });
@@ -209,11 +229,18 @@ const run = Date.now().toString(36), ADDRESS = `partner.${run}@example.com`;
     await zq.locator("[data-private-progress]").first().waitFor(T);
     await noSideways(zq, "the principal's questionnaire at 200 % of 1024 px (512 px)");
     await shot(zq, "15-principal-200pct-512");
-    const zl = await zc.newPage(); await zl.goto(`${BASE}/inbox?address=${encodeURIComponent(C19_ADDRESS)}`);
+    // After the child of 19 accepted, their inbox holds nothing (break M4): the 512 px inbox is read for the long-named adult.
+    const LONG_ADDRESS = `long.${run}@example.com`;
+    await call("POST", `/runtime/cases/${id}/people/${LONG}/link`, { address: LONG_ADDRESS });
+    // The inbox never opens as a client (break M4): it is read in a browser that acts as no client, as the adult would.
+    const zi = await browser.newContext({ viewport: { width: 512, height: 400 }, deviceScaleFactor: 1 });
+    const zl = await zi.newPage(); await zl.goto(`${BASE}/inbox?address=${encodeURIComponent(LONG_ADDRESS)}`);
     await zl.getByRole("link", { name: "Open your link" }).first().waitFor(T);
     await noSideways(zl, "the demo inbox at 512 px");
+    const asClient = await zq.goto(`${BASE}/inbox?address=${encodeURIComponent(LONG_ADDRESS)}`).then(() => zq.getByText("A client's own pages cannot open a demo mailbox").first().waitFor(T).then(() => true, () => false));
+    ok("C6.16 principal (break M4): acting as Client A, the demo inbox says it does not open for a client, and shows no link", asClient && await zq.getByRole("link", { name: "Open your link" }).count() === 0);
     ok("C6.16: no page error", errors.length === 0, errors);
-  } catch (e) { ok(`C6.16 walk ran to its end (stopped: ${e.message.split("\n")[0]})`, false); }
+  } catch (e) { ok(`C6.16 walk ran to its end (stopped: ${e.message.split("\n").slice(0, 3).join(" ")})`, false); }
   await browser.close();
   const failed = results.filter((x) => !x).length;
   console.log(`\n${results.length - failed}/${results.length} passed`);
