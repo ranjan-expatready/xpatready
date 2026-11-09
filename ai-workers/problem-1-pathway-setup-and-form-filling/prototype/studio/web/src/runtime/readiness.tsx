@@ -9,9 +9,10 @@
 // `figures[]`, beside `readiness[]`); the lines themselves still carry no percentage.
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Check, Send } from "lucide-react";
 import { api, ApiError, useActorId, useApi, useToast } from "@/lib/api";
-import { Button, Field, Notice, Pill, Textarea } from "@/components/ui/controls";
+import { Button, Dialog, Field, Notice, Pill, Textarea } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { noRetryOnRefusal } from "./questionnaire";
 import { useFirm } from "./team";
@@ -54,6 +55,15 @@ const openKeyOf = (r: Readiness | undefined) => (r ? [...r.blocks, ...r.warns].m
 const focusLater = (el: () => HTMLElement | null | undefined) => requestAnimationFrame(() => el()?.focus());
 /** The view's query key: the same as the Submission to IRCC panel's, so the case page reads /prepare once for both. */
 const viewKey = (caseId: string) => ["runtime", "view", caseId, "prepare"];
+/** C8.3 (B144): the case's review rounds (GET …/reviews), newest first; each filing's newest row links its review. */
+type Rounds = { representative: string | null; rounds: { id: string; number: number; kind: string; filings: { filing: string; status: "sent" | "under_review" | "approved" | "sent_back"; filing_round: number }[] }[] };
+type ReviewRow = { round: string; status: Rounds["rounds"][number]["filings"][number]["status"]; filing_round: number };
+const REVIEW_WORDS: Record<ReviewRow["status"], { words: string; tone: string }> = { sent: { words: "Sent for review", tone: "neutral" }, under_review: { words: "Under review", tone: "info" }, approved: { words: "Approved", tone: "ok" }, sent_back: { words: "Sent back", tone: "danger" } };
+const reviewOf = (r: Rounds | undefined, filing: string): ReviewRow | null => {
+  let best: ReviewRow | null = null;
+  for (const x of r?.rounds ?? []) for (const f of x.filings) if (f.filing === filing && (!best || f.filing_round > best.filing_round)) best = { round: x.id, status: f.status, filing_round: f.filing_round };
+  return best;
+};
 
 /** Every filing's readiness on one case. Under the case view's query key, so any answer change re-reads it. */
 export function ReadinessPanel({ caseId }: { caseId: string }) {
@@ -61,6 +71,8 @@ export function ReadinessPanel({ caseId }: { caseId: string }) {
   const q = useApi<PrepareView>(viewKey(caseId), `/runtime/cases/${caseId}/prepare`, { retry: noRetryOnRefusal });
   const team = useApi<TeamView>(["runtime", "team", caseId], `/runtime/cases/${caseId}/team`, { retry: noRetryOnRefusal });
   const firm = useFirm();
+  const rounds = useApi<Rounds>(["runtime", "reviews", caseId], `/runtime/cases/${caseId}/reviews`, { retry: noRetryOnRefusal });
+  const [sending, setSending] = React.useState(false);
   const nameOf = (id: string) => (team.data?.representative?.id === id ? team.data.representative.name : null) ?? team.data?.officers.find((o) => o.id === id)?.name ?? firm.data?.users.find((u) => u.id === id)?.name ?? id;
   const v = q.data;
   return (
@@ -68,20 +80,22 @@ export function ReadinessPanel({ caseId }: { caseId: string }) {
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-4 py-3">
         <h2 id="readiness-h" tabIndex={-1} className="text-base font-semibold outline-none">Ready to file</h2>
         <p className="min-w-0 flex-1 text-[13px] text-text-muted">What stands before each filing is Ready to file, by who owes it. Only a barcode form without its validated copy read back blocks; every other line is fixed, or passed with a written reason.</p>
+        {v?.derived && v.filings.length ? <Button size="sm" variant="secondary" onClick={() => setSending(true)} data-send-for-review title="Send for review: the representative of record checks each form and approves it or sends it back."><Send aria-hidden />{firm.data?.solo && rounds.data?.representative === actor ? "Review now" : "Send for review"}</Button> : null}
       </header>
+      {sending && v ? <SendForReviewDialog caseId={caseId} filings={v.filings} readiness={v.readiness ?? []} rounds={rounds.data} now={!!firm.data?.solo && rounds.data?.representative === actor} close={() => setSending(false)} /> : null}
       {q.isLoading ? <div className="p-4"><Skeleton className="h-16 w-full" /><span className="sr-only" role="status">Loading what stands before Ready to file…</span></div>
         : q.isError ? <div className="p-4"><Notice tone="danger" title="Readiness could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void q.refetch()}>Retry</Button>}>{(q.error as Error).message}</Notice></div>
         : !v!.derived ? <p className="px-4 py-3 text-sm text-text-muted">{v!.why ?? "No filings are worked out for this case yet."}</p>
         : !v!.filings.length ? <p className="px-4 py-3 text-sm text-text-muted">No filings on this case yet.</p>
         : <div className="divide-y divide-border">{v!.filings.map((f) => {
             const r = v!.readiness?.find((x) => x.filing === f.id);
-            return <FilingReadiness key={f.id} caseId={caseId} f={f} r={r} g={v!.figures?.find((x) => x.filing === f.id)} actor={actor} nameOf={nameOf} officers={team.data?.officers.map((o) => o.name) ?? []} />;
+            return <FilingReadiness key={f.id} caseId={caseId} f={f} r={r} g={v!.figures?.find((x) => x.filing === f.id)} actor={actor} nameOf={nameOf} officers={team.data?.officers.map((o) => o.name) ?? []} review={reviewOf(rounds.data, f.id)} />;
           })}</div>}
     </section>
   );
 }
 
-function FilingReadiness({ caseId, f, r, g, actor, nameOf, officers }: { caseId: string; f: Filing; r: Readiness | undefined; g?: Figure; actor: string; nameOf: (id: string) => string; officers: string[] }) {
+function FilingReadiness({ caseId, f, r, g, actor, nameOf, officers, review }: { caseId: string; f: Filing; r: Readiness | undefined; g?: Figure; actor: string; nameOf: (id: string) => string; officers: string[]; review: ReviewRow | null }) {
   const qc = useQueryClient(), toast = useToast();
   const heading = React.useRef<HTMLHeadingElement>(null);
   const [refusal, setRefusal] = React.useState<Refusal | null>(null);
@@ -120,13 +134,20 @@ function FilingReadiness({ caseId, f, r, g, actor, nameOf, officers }: { caseId:
   const lines = [...r.blocks, ...r.warns];
   // P-155: the representative of record's own; shown while the filing has no current review (break F6: also when someone
   // passed the review warning with a reason, since the representative may still review it).
-  const canReview = open && !!r.representative && r.representative === actor && !r.reviewed;
+  // C8.3: a filing sent for review and not decided is decided on the Review page (the server refuses the one-step route).
+  const inRound = !!review && (review.status === "sent" || review.status === "under_review");
+  const canReview = open && !!r.representative && r.representative === actor && !r.reviewed && !inRound;
+  // P-412 F1: an approval a later change withdrew reads so here too (the same rule: C7.6's review line is open again).
+  const withdrawn = review?.status === "approved" && !r.reviewed;
   return (
     <article aria-labelledby={`rd-${f.id}`} className="space-y-3 px-4 py-3" data-readiness-filing={f.id} data-status={st} data-ready={r.ready ? "yes" : "no"}>
       <div className="flex flex-wrap items-center gap-2">
         <h3 ref={heading} id={`rd-${f.id}`} tabIndex={-1} className="min-w-0 text-sm font-semibold outline-none [overflow-wrap:anywhere]">{f.label}</h3>
         <Pill tone={s.tone} title={s.title}>{s.words}</Pill>
         <span className="flex-1" />
+        {review ? <span className="flex items-center gap-1.5" data-review-link={review.status}>{withdrawn
+          ? <Pill tone="warn" title="Approved earlier; a fact on it changed since, so the representative checks it again.">Approval withdrawn</Pill>
+          : <Pill tone={REVIEW_WORDS[review.status].tone} title={`Round ${review.filing_round} of this filing's review`}>{REVIEW_WORDS[review.status].words}</Pill>}<Link className="text-[13px] text-text-link hover:underline" to={`/cases/${caseId}/representative-review/${review.round}?filing=${f.id}`}>Open the review</Link></span> : null}
         {canReview ? <ReviewButton f={f} r={r} onRefused={refused} onDone={() => { setRefusal(null); void refresh().then(() => focusLater(() => heading.current)); }} /> : null}
         {open && st !== "ready_to_file" ? <Button size="sm" busy={marking} onClick={() => void ready()} data-mark-ready>Ready to file</Button> : null}
       </div>
@@ -260,5 +281,46 @@ function ReviewButton({ f, r, onRefused, onDone }: { f: Filing; r: Readiness; on
         <Button type="button" size="sm" variant="ghost" onClick={cancel}>Cancel</Button>
       </div>
     </form>
+  );
+}
+
+/** C8.3 (BR-1): "Send for review" at the head of the panel: the filings, ticked by default when nothing blocks them and
+ *  they are not in an open round, each with its open warnings counted; one button. On a solo firm the representative of
+ *  record's "Review now" sends and opens the review in one step (m3). */
+function SendForReviewDialog({ caseId, filings, readiness, rounds, now, close }: { caseId: string; filings: Filing[]; readiness: Readiness[]; rounds: Rounds | undefined; now: boolean; close: () => void }) {
+  const qc = useQueryClient(), toast = useToast(), nav = useNavigate();
+  const rowOf = (id: string) => reviewOf(rounds, id);
+  const closed = (f: Filing) => f.status.toLowerCase() === "submitted" || f.read_only || (() => { const x = rowOf(f.id); return !!x && (x.status === "sent" || x.status === "under_review"); })();
+  // Break B1: a filing whose approval still counts is not ticked by default (sending it again withdraws that approval).
+  const [ticked, setTicked] = React.useState<string[]>(() => filings.filter((f) => !closed(f) && !(readiness.find((r) => r.filing === f.id)?.blocks.length) && !readiness.find((r) => r.filing === f.id)?.reviewed).map((f) => f.id));
+  const [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null);
+  async function send() {
+    setBusy(true); setErr(null);
+    try {
+      const r = await api<{ id: string; number: number }>(`/runtime/cases/${caseId}/reviews`, { method: "POST", json: { filings: ticked, ...(now ? { now: true } : {}) } });
+      toast.push({ tone: "ok", text: now ? "Review opened." : `Sent for review (round ${r.number}): the representative of record checks each form.` });
+      await qc.invalidateQueries({ queryKey: ["runtime"] });
+      close();
+      if (now) nav(`/cases/${caseId}/representative-review/${r.id}`);
+    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+  }
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={now ? "Review now" : "Send for review"} description="Send for review: the representative of record checks each form and approves it or sends it back."
+      footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={busy} disabled={!ticked.length} onClick={() => void send()} data-confirm-send>{now ? `Review ${plural(ticked.length, "filing")} now` : `Send ${plural(ticked.length, "filing")} for review`}</Button></>}>
+      <ul className="space-y-1.5" data-send-dialog>
+        {filings.map((f) => {
+          const rd = readiness.find((r) => r.filing === f.id), x = rowOf(f.id), shut = closed(f), warns = rd?.warns.length ?? 0, blocks = rd?.blocks.length ?? 0;
+          return (
+            <li key={f.id} className="flex items-start gap-2 text-[13px]" data-send-filing={f.id}>
+              <input type="checkbox" id={`send-${f.id}`} className="mt-0.5 size-4" disabled={shut} checked={ticked.includes(f.id)} onChange={(e) => setTicked((t) => (e.target.checked ? [...t, f.id] : t.filter((y) => y !== f.id)))} />
+              <label htmlFor={`send-${f.id}`} className="min-w-0 flex-1 [overflow-wrap:anywhere]">{f.label}
+                <span className="block text-[12px] text-text-muted">{shut ? (x && (x.status === "sent" || x.status === "under_review") ? "Already sent for review: open that review." : "Recorded as submitted: its review is closed.")
+                  : `${rd?.reviewed ? "Approved: sending it again withdraws the approval · " : ""}${blocks ? `Blocked: ${plural(blocks, "block")} · ` : ""}${warns ? plural(warns, "open warning") : "No open warning"}`}</span></label>
+            </li>
+          );
+        })}
+      </ul>
+      {err ? <p role="alert" className="mt-2 text-[13px] text-text-danger">{err}</p> : null}
+    </Dialog>
   );
 }

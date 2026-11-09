@@ -40,10 +40,18 @@ export function factChanges(then: Pick<FormFact, "fact" | "about" | "row" | "val
     const pending = !y ? words.saved?.(f.about, f.fact) ?? null : null;
     // C8.2 break M4: the same value typed again (left unconfirmed) is no change.
     if (x && !y && pending !== null && same(pending, x.value)) continue;
-    const person = list ? listBoxWords(words.person(about), relation as Relation, f.row) : relation ? `${words.person(about)}'s ${relation.replace(/_/g, " ")}` : words.person(about);
+    const person = factPerson(f.about, f.row, words);
     out.set(id, { fact: f.fact, about, relation, label: words.label(f.fact), person, was: x?.value ?? null, now: y ? y.value : pending, confirmed: !!y || pending === null, at: words.at(f.about, f.fact) });
   }
   return [...out.values()].sort((p, q) => p.person.localeCompare(q.person) || p.label.localeCompare(q.label));
+}
+
+/** Whose fact it is, in words: the person, or a relative on their form ("Sample Client A's parent 1", a list entry by its
+ *  row). The same words factChanges gives each change (C8.3 review M3: the Review page names each fact's person so). */
+export function factPerson(aboutKey: string, row: number | null, words: Pick<ChangeWords, "person">): string {
+  const about = subjectOf(aboutKey), relation = aboutKey.includes("/") ? aboutKey.split("/").slice(1).join("/") : null;
+  if (!relation) return words.person(about);
+  return isListRelation(relation) ? listBoxWords(words.person(about), relation as Relation, row) : `${words.person(about)}'s ${relation.replace(/_/g, " ")}`;
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

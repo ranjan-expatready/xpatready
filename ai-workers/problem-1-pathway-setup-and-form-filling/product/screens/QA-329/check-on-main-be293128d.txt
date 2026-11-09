@@ -1,0 +1,9 @@
+PASS  setup: the copy has Visitor visa release 2 (the pack's setup) — 2
+PASS  setup: "Add child (travelling)" adds Sample Child A3 to the case (the C6.12 route) — {"status":201,"K3":"4171b0c9-b231-4da9-9a95-7bf0393dd117"}
+PASS  setup: the people read without an order come back in a different order than the case's own (the state qa's walk met) — {"unordered":["0f341c89-c449-45b0-a755-8ab6c13fa352","4171b0c9-b231-4da9-9a95-7bf0393dd117","6c0c1526-2d51-4ba2-a0e7-f1a021128cbe","f5b1aee2-3485-4e12-be90-193aa10a5a96","f7223edb-d9a0-4079-b5cd-e867b9c3f5d2"],"ordered":["f5b1aee2-3485-4e12-be90-193aa10a5a96",
+FAIL  QA-329 fail-first: on a case where "Add child (travelling)" was used, Remove filing (the added child) applies (200), nothing having changed since the preview — {"status":409,"body":"Changed since you looked"}
+FAIL  QA-329 fail-first: on the same case, Make principal (the spouse) applies (200) — {"status":409,"body":"Changed since you looked"}
+FAIL  QA-329 pass (BR-8 kept): a real change made after the preview (another filing removed) still refuses the apply with 409 "Changed since you looked", and nothing is written — {"meanwhile":409,"status":409,"title":"Changed since you looked"}
+FAIL  QA-329 pass: after looking again (a fresh preview), the same change applies (200) — {"status":409,"body":"Changed since you looked"}
+
+3/7 passed

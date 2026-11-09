@@ -374,3 +374,33 @@ export const StageKeyDetails = z.object({
   stage_version: z.number({ message: "Send the stage version you read (Read the case again)." }).int().positive(),
   key_details: z.record(z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/, "A key detail is named by its field."), z.union([z.string(), z.null()], { message: "Write a key detail as text." })),
 });
+// ------------------------------------------------------------------ C8.3 Representative review (B144, additive)
+/** POST /runtime/cases/:id/reviews: the filings to send (BR-1); `now`: a solo firm's "Review now" (sent and opened). */
+export const SendForReview = z.object({ filings: z.array(z.string(), { message: "Send filings as a list of filing ids." }), now: z.boolean().optional() });
+/** POST /runtime/reviews/:id/open · …/checks · …/decision · …/reapprove (BR-3, BR-2, BR-4, BR-5, P-412). */
+export const ReviewOpen = z.object({ filing: z.string().uuid({ message: "Name the filing (its id in this review)." }) });
+export const ReviewTick = z.object({ filing: z.string().uuid({ message: "Name the filing (its id in this review)." }), item: z.string().min(1).max(200), ticked: z.boolean({ message: "Say ticked: true or false." }) });
+export const ReviewDecision = z.object({
+  filing: z.string().uuid({ message: "Name the filing (its id in this review)." }),
+  verdict: z.enum(["approve", "send_back"], { message: "Say approve or send_back." }),
+  form_hashes: z.record(z.string(), z.string().nullable()).optional(),
+  confirm_unticked: z.boolean().optional(), self: z.boolean().optional(),
+  reasons: z.array(z.object({ text: z.string(), item: z.string().nullable().optional(), check: z.string().nullable().optional() })).optional(),
+});
+export const ReviewReapprove = z.object({ filing: z.string().uuid({ message: "Name the filing (its id in this review)." }), form_hashes: z.record(z.string(), z.string().nullable()).optional(), self: z.boolean().optional() });
+export type ReviewRowStatus = "sent" | "under_review" | "approved" | "sent_back";
+/** One changed fact (BR-6): before → after, who typed the new value and when (m4). */
+export type ChangedSinceReview = { fact: string; label: string; person: string; was: unknown; now: unknown; was_words: string | null; now_words: string | null; typed_by: string | null; typed_by_name: string | null; typed_at: string | null };
+/** One form's frozen stamp and its state on the page (B2, BR-7). */
+export type FormStamp = { item: string; form: string; person: string; channel: string; waits: boolean;
+  state: "to_check" | "checked" | "changed_since_review" | "approved" | "approval_withdrawn" | "sent_back" | "not_stamped_waits"; state_words: string; tooltip: string | null; withdrawn_words: string | null;
+  file: { kind: string; sha256: string | null; words: string }; stamp: { at: string; by: string; file_kind: string; file_sha256: string | null } | null;
+  live_hash: string | null; changes: ChangedSinceReview[]; facts: { label: string; person: string; value: unknown; value_words: string | null; typed_by_name: string | null; confirmed_by_name: string | null }[] };
+export type ReviewCheckView = { key: string; source: "default" | "program" | "confirmations" | "form"; wording: string; live: Record<string, unknown> | null; live_now: Record<string, unknown> | null; ticked: { by: string; name: string; at: string } | null };
+/** One filing in one round (B1), with its own status and round number. */
+export type ReviewRoundFiling = { filing: string; label: string; filing_round: number; status: ReviewRowStatus; status_words: string;
+  opened: { by: string; name: string; at: string } | null; decided: { by: string; name: string; at: string; kind: string | null; reasons: { text: string; item?: string; check?: string }[] | null; confirmed_unticked: string[] | null } | null;
+  forms: FormStamp[]; checks: ReviewCheckView[]; unticked: number; changed: number; withdrawn: string[]; latest: boolean; reapprovable: boolean; open_critical: string[];
+  history: { round: number; filing_round: number; status: ReviewRowStatus; at: string; by: string | null; reasons: { text: string }[] | null }[] };
+export type ReviewRound = { id: string; case_id: string; number: number; kind: "send" | "review_now" | "one_step" | "reapprove"; sent: { by: string; name: string; at: string };
+  representative: { id: string | null; name: string | null }; can_decide: boolean; read_only_words: string | null; solo: boolean; filings: ReviewRoundFiling[]; rounds: { id: string; number: number; kind: string; at: string }[] };
