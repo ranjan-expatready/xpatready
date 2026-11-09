@@ -47,3 +47,23 @@ No browser errors.
   * **C6.5-15b:** once the officer resolves the check, the client's note is gone.
 * `tests/runtime/check_runtime_r1a.ts` 98/98 and `check_runtime_r1c.cjs` 140/140 (the client questionnaire's checks and screens) on a fresh copy. One earlier r1c run stopped at 18/19; it did not repeat, with or without the change.
 * Type check: no new errors.
+
+## After the review (Approve on a5eb5a9da, journey 8.5/10; `review.md`)
+* **m1:** once the client changed the answer, the note says so instead of asking again: "Please check this answer: you changed it after it was compared with the {document} on file. Your case officer checks it again and settles any difference with you." The check stays open for the officer.
+* **m2:** every sentence is under 20 words (BIC-20).
+* **m3:** the document keeps its own name, with only its first letter in lower case ("letter of invitation (Sample)").
+* The words are one function, `pleaseCheckWords` in `api/src/runtime.ts`, tested in `tests/check_c65_document_rules.ts`: 4 new checks, 21/21.
+
+New shots:
+
+| Shot | What it shows |
+|---|---|
+| `screenshots/05-client-after-own-change-1440.png` | After the client changed the answer to the document's spelling, the note says it was changed after the comparison and that the officer checks it again |
+| `screenshots/06-client-part-please-check-390.png` | The note at 390 px, with no sideways scroll |
+
+Not changed, for the tech lead:
+* **m4:** the note is in `checks`, not in `sections[].problems`. No client screen reads `problems`.
+* **m5:** while a check is open, the part is never Done.
+* **m6:** answered by the 390 px shot.
+
+Re-run on the checkpoint: `C6.5.test.ts` 33/35 (19b and 20 only).

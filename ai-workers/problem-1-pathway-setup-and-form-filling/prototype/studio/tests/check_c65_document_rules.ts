@@ -6,6 +6,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pleaseCheckWords } from "../api/src/runtime.ts";
 import { CASE_KINDS, inReleaseWords, letterReadUsd, notWritable, readerOf, sameValue, savedRead } from "../api/src/case-documents.ts";
 import { costUsd, LETTER_READ_CARD } from "../../p2/ledger.ts";
 import { MAX_ATTEMPTS } from "../../p2/policy.ts";
@@ -56,4 +57,13 @@ try {
   ok("C6.5 R7 (fail): a file naming one checksum but holding another's read, a malformed fact, a bad checksum or no folder: nothing replays", savedRead(other, dir) === null && savedRead("c".repeat(64), dir) === null && savedRead("../x", dir) === null && savedRead(sha, join(dir, "none")) === null);
 } finally { rmSync(dir, { recursive: true, force: true }); }
 
+// QA-322 (P-142 D6), review m1-m3 on a5eb5a9da: the client's "please check" words.
+{
+  const before = pleaseCheckWords("Passport information page copy", false), after = pleaseCheckWords("Letter of invitation (Sample)", true);
+  const sentences = (t: string) => t.split(/(?<=\.)\s+/).map((x) => x.split(/\s+/).filter(Boolean).length);
+  ok("QA-322 m2: every sentence of either note is under 20 words (BIC-20)", [...sentences(before), ...sentences(after)].every((n) => n < 20), { before: sentences(before), after: sentences(after) });
+  ok("QA-322 m3: the document keeps its own name, only its first letter in lower case", /the passport information page copy on file/.test(before) && /the letter of invitation \(Sample\) on file/.test(after));
+  ok("QA-322 m1: once the client changed the answer, the note says so and no longer asks them to change it", /you changed it after it was compared/.test(after) && !/change it here/.test(after) && /change it here/.test(before));
+  ok("QA-322: both notes start \"Please check this answer\" and say the case officer settles it; neither carries a value", [before, after].every((t) => /^Please check this answer:/.test(t) && /case officer/.test(t)));
+}
 process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code)

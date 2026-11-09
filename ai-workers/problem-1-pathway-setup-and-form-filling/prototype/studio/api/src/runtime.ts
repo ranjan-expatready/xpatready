@@ -67,6 +67,17 @@ export const offeredRoles = (s: Snapshot) => addableRoles(s).filter((p) => p.rol
 
 export type Reached = Awaited<ReturnType<Runtime["reach"]>>;
 
+/** QA-322 (P-142 D6): the client's words on an answer while a typed-versus-document check is open on it. The document's
+ *  value is never shown; sentences under 20 words (BIC-20, review m2); the document's own name, only its first letter in
+ *  lower case (review m3: "Letter of invitation (Sample)" keeps "Sample"); and once the client changed the answer, words
+ *  that say so instead of asking again (review m1). */
+export function pleaseCheckWords(documentName: string, changedSince: boolean): string {
+  const doc = documentName.charAt(0).toLowerCase() + documentName.slice(1);
+  return changedSince
+    ? `Please check this answer: you changed it after it was compared with the ${doc} on file. Your case officer checks it again and settles any difference with you.`
+    : `Please check this answer: it did not match the ${doc} on file. If it is wrong, change it here. Your case officer settles any difference with you.`;
+}
+
 @Injectable()
 export class Runtime {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Programs) private readonly programs: Programs) {}
@@ -394,16 +405,19 @@ export class Runtime {
   /** QA-322: the open typed-versus-document checks (C6.5, BR-7) as "please check" notes on the client's own parts. A
    *  check on a question the client is not asked (an answer staff enter from the document) is not shown to the client. */
   private async documentChecks(c: Reached, sections: ReturnType<typeof caseView>["sections"]): Promise<ReturnType<typeof caseView>["checks"]> {
-    const open = await this.db.answerCheck.findMany({ where: { caseId: c.id, state: "open" }, select: { id: true, subjectId: true, fact: true, documentId: true }, orderBy: [{ openedAt: "asc" }, { id: "asc" }] });
+    const open = await this.db.answerCheck.findMany({ where: { caseId: c.id, state: "open" }, select: { id: true, subjectId: true, fact: true, documentId: true, answerId: true }, orderBy: [{ openedAt: "asc" }, { id: "asc" }] });
     if (!open.length) return [];
     const docs = await this.db.caseDocument.findMany({ where: { id: { in: [...new Set(open.map((k) => k.documentId))] } }, select: { id: true, documentType: true } });
     const types = (this.snapshotOf(c).document_types ?? []) as { key: string; name: string }[];
-    const nameOf = (id: string) => { const key = docs.find((d) => d.id === id)?.documentType ?? "document"; return (types.find((t) => t.key === key)?.name ?? key.replace(/_/g, " ")).toLowerCase(); };
+    const nameOf = (id: string) => { const key = docs.find((d) => d.id === id)?.documentType ?? "document"; return types.find((t) => t.key === key)?.name ?? key.replace(/_/g, " "); };
+    // Review m1: whether the client changed the answer since the check opened (it compared another answer then).
+    const current = await this.db.clientCanonicalAnswer.findMany({ where: { subjectId: { in: [...new Set(open.map((k) => k.subjectId))] }, rowKey: null, supersededById: null, canonicalFieldKey: { in: [...new Set(open.map((k) => k.fact))] } }, select: { id: true, subjectId: true, canonicalFieldKey: true } });
+    const changed = (k: (typeof open)[number]) => { const now = current.find((a) => a.subjectId === k.subjectId && a.canonicalFieldKey === k.fact); return !!now && now.id !== k.answerId; };
     return open.flatMap((k) => {
       const sec = sections.find((x) => x.subjectId === k.subjectId && x.questions.some((q) => q.fact === k.fact && !q.hidden && !q.group));
       if (!sec) return [];
       return [{ id: `document_check.${k.id}`, severity: "warn", group: "document", subjectId: k.subjectId, about_label: sec.about_label, fact: k.fact, section: sec.section, illustrative: false,
-        message: `Please check this answer: it did not match the ${nameOf(k.documentId)} on file when your case officer read it. If your answer is wrong, change it here; your case officer settles the difference with you.` }];
+        message: pleaseCheckWords(nameOf(k.documentId), changed(k)) }];
     });
   }
 
