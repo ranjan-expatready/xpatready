@@ -32,7 +32,8 @@ export function AddFormButton({ caseId, filing, owner, disabled }: { caseId: str
   const btn = React.useRef<HTMLButtonElement>(null);
   return (
     <li className="px-4 py-2" data-add-form={filing}>
-      <Button ref={btn} size="sm" variant="ghost" disabled={!!disabled} title={disabled ?? undefined} onClick={() => setOpen(true)}><Plus aria-hidden />Add a form to {owner}'s filing</Button>
+      {/* r1c on #1248 (390 px): a long name wraps inside the button; the page never scrolls sideways. */}
+      <Button ref={btn} size="sm" variant="ghost" className="h-auto min-h-8 max-w-full whitespace-normal py-1 text-left" disabled={!!disabled} title={disabled ?? undefined} onClick={() => setOpen(true)}><Plus aria-hidden /><span className="min-w-0 [overflow-wrap:anywhere]">Add a form to {owner}'s filing</span></Button>
       {disabled ? <span className="ml-2 text-[13px] text-text-muted">{disabled}</span> : null}
       {open ? <AddFormPanel caseId={caseId} filing={filing} owner={owner} close={() => setOpen(false)} returnFocus={() => btn.current} /> : null}
     </li>
