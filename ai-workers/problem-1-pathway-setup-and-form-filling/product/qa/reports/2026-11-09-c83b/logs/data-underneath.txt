@@ -1,0 +1,39 @@
+number|kind|filing|filing_round|status|decided_by|representative
+1|send|03ab5895|1|approved|user-R|user-R
+1|send|f794aaf3|1|sent_back|user-R|
+2|send|f794aaf3|2|approved|user-R|user-R
+3|reapprove|03ab5895|2|approved|user-R|user-R
+4|reapprove|f794aaf3|3|approved|user-R|user-R
+(5 rows)
+filing|kind|reviewed_by|licence_number|reviewed_at
+03ab5895|reviewed|user-R|R000000|2026-11-09 12:51:53.444-05
+f794aaf3|reviewed|user-R|R000000|2026-11-09 12:52:37.522-05
+03ab5895|reviewed|user-R|R000000|2026-11-09 12:54:13.222-05
+f794aaf3|reviewed|user-R|R000000|2026-11-09 12:55:16.087-05
+(4 rows)
+number|kind|form_number|subj|file_kind|fsha|stamp_file_kind|ssha|stamped_by
+1|send|IMM 5257|08d1bcbe|validated_copy|50cdeeae|validated_copy|50cdeeae|user-R
+1|send|IMM 5257 SCH1|08d1bcbe|none||none||user-R
+1|send|IMM 5476|08d1bcbe|none||none||user-R
+1|send|IMM 5645|08d1bcbe|none||none||user-R
+1|send|IMM 5257|2654fd57|validated_copy|5e940cde|||
+1|send|IMM 5257 SCH1|2654fd57|none||||
+1|send|IMM 5476|2654fd57|none||||
+1|send|IMM 5645|2654fd57|none||||
+2|send|IMM 5257|2654fd57|none||validated_copy|47c9adf3|user-R
+2|send|IMM 5257 SCH1|2654fd57|none||none||user-R
+2|send|IMM 5476|2654fd57|none||none||user-R
+2|send|IMM 5645|2654fd57|none||none||user-R
+3|reapprove|IMM 5257|08d1bcbe|none||validated_copy|fa55eab8|user-R
+3|reapprove|IMM 5257 SCH1|08d1bcbe|none||none||user-R
+3|reapprove|IMM 5476|08d1bcbe|generated_copy|e9d678fd|generated_copy|e9d678fd|user-R
+3|reapprove|IMM 5645|08d1bcbe|none||none||user-R
+4|reapprove|IMM 5257|2654fd57|validated_copy|e8187de8|validated_copy|e8187de8|user-R
+4|reapprove|IMM 5257 SCH1|2654fd57|none||none||user-R
+4|reapprove|IMM 5476|2654fd57|generated_copy|f6ac0e36|generated_copy|f6ac0e36|user-R
+4|reapprove|IMM 5645|2654fd57|none||none||user-R
+(20 rows)
+at|actor|action|summary
+2026-11-09 12:53:10.233-05|user-O|review_stamp_file|Case officer read back the validated copy of IMM 5257 on case 0c3f0d36: stamped to the approval of round 2, which stamped no file
+2026-11-09 12:54:30.344-05|user-O|review_stamp_file|Case officer read back the validated copy of IMM 5257 on case 0c3f0d36: stamped to the approval of round 3, which stamped no file
+(2 rows)

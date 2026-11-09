@@ -1,0 +1,5 @@
+PASS  QA-361 setup: round 1 with the spouse's one withdrawn form (setup_c83_walk.ts)
+PASS  QA-361 (C8.3, BIC-14): every Tab onto the "Approval withdrawn" chip opens its tooltip (40 tries)
+
+2/2 passed
+qa361 EXIT 0
