@@ -17,3 +17,22 @@ after the walk: 0 after setup; modes: REPLAY; started 2026-11-09 18:20:58.358+05
 
 ## The same, after the officer resolved the check (~18:29 IST)
 {"actor":"Client A · Client","value":"SAMPLED","describedby":null,"please":[]}
+
+## Reader coverage on the Visitor visa checklist (Lead 1's ruling on #1439), ~18:55 IST
+### Document types in the case's release (config_release v2 RELEASED, snapshot.document_types: key | name | supplies_facts | readerOf in api/src/case-documents.ts)
+adoption_or_guardianship_papers | Adoption or guardianship papers | [] | none (null: "a person reads it")
+copy_of_the_absent_parent_s_signed_passport_or_national_id | Copy of the absent parent's signed passport or national ID | [] | none (null: "a person reads it")
+copy_of_the_minor_s_birth_certificate | Copy of the minor's birth certificate | [] | none (null: "a person reads it")
+custody_documents | Custody documents | [] | none (null: "a person reads it")
+fee_payment_receipt | Fee payment receipt | [] | none (null: "a person reads it")
+letter_of_authorization_for_a_minor | Letter of authorization for a minor | [] | none (null: "a person reads it")
+marriage_certificate_copy | Marriage certificate copy | [] | none (null: "a person reads it")
+passport_information_page_copy | Passport information page copy | [] | mrz (coded lines, rules)
+proof_of_financial_support | Proof of financial support | [] | none (null: "a person reads it")
+### Client A's current documents (case_document)
+passport_information_page_copy|sample-passport.pdf|user-O
+proof_of_financial_support|sample-proof_of_financial_support.pdf|user-O
+### POST sections/details_of_visit_to_canada/fill-from-documents for the application (as the drawer does)
+{"section":"details_of_visit_to_canada","subject":"8d756600-5a08-48b9-86e0-769861b03db7","proposals":[],"reviews":[],"unreadable":[],"not_read":[],"cost_usd":0,"waiting_for_cost":[],"message":"No document of this person can give a fact of this section yet: upload it on the person's checklist line."}
+### The same section for Client A
+{"section":"details_of_visit_to_canada","subject":"307a2676-0626-40ba-b3ef-57846852b3f9","proposals":[],"reviews":[],"unreadable":[],"not_read":[],"cost_usd":0,"waiting_for_cost":[],"message":"No document of this person can give a fact of this section yet: upload it on the person's checklist line."}
