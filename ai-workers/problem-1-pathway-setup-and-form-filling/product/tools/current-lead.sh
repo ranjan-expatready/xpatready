@@ -22,7 +22,7 @@ fi
 if [ -n "$best" ]; then lines=$(git show "$best:$rel" | grep '^current_lead: '); src="$best"
 else lines=$(grep '^current_lead: ' STATE.md 2>/dev/null); src="STATE.md (this copy)"; fi
 n=$(printf '%s' "$lines" | grep -c '^current_lead: ')
-[ "$n" -eq 1 ] || { echo "current-lead: $src has $n current_lead lines, needs exactly one; ask with ListAgents (highest \"Lead N ·\", not ended or standby)" >&2; exit 1; }
+[ "$n" -eq 1 ] || { echo "current-lead: $src has $n current_lead lines, needs exactly one; ask with ListAgents (the \"Lead N ·\" row not ended or standby; numbers restart per series, P-433, so never the highest number)" >&2; exit 1; }
 v=${lines#current_lead: }
 if [ "$where" = 1 ]; then echo "$src"; exit 0; fi
 # A session id first (letters, "_", then at least 8 of [A-Za-z0-9_-]: local_<uuid>, session_<id>), then a title naming
