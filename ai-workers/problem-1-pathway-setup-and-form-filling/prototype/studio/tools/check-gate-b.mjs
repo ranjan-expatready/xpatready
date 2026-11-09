@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, touchedPacks, diffSet, packVerdict, part1, stepsPrinted, stepsUnprinted } from "./gate-b.mjs";
+import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, touchedPacks, diffSet, packVerdict, part1, stepsPrinted, stepsUnprinted, packSteps, unprintedReason } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ACC = resolve(HERE, "../acceptance"), P = resolve(HERE, "../../../product");
 /** A fixture pack whose run truly uses no server (only an engine run line), for the gate's no-server rules (B125, B131). */
@@ -148,6 +148,10 @@ ok("a named step with a HELD line is not green, though another check of that ste
   ok("several packs: a pack that prints none of the named steps is held to its whole run (32/32 passes; exit 1 or a FAIL line refuses)", pScreen.length === 0 && packVerdict("C99.5", null, 0, screen) === null && packVerdict("C99.5", null, 1, screen + "\nFAIL  C99.5-26 f") !== null);
   ok("several packs: a named step that FAILs in the pack printing it still refuses (C99.5-20)", packVerdict("C99.5", stepsPrinted("C99.5", ["10", "20"], main), 1, main) === "named steps not green: C99.5-20");
   ok("several packs: a named step no pack prints is refused (C99.5-99), and one any pack prints is not", stepsUnprinted(["10", "24", "99"], [stepsPrinted("C99.5", ["10", "24", "99"], main), stepsPrinted("C99.5", ["10", "24", "99"], screen)]).join() === "99" && stepsUnprinted(["10"], [[], ["10"]]).length === 0);
+  ok("several packs, wiring (review m6): a pack is judged on the named steps it printed, its whole run when it printed none, its whole run when no steps are named", packSteps("C99.5", steps, main).join() === "10,19" && packSteps("C99.5", steps, screen) === null && packSteps("C99.5", null, main) === null);
+  ok("several packs, wiring (review m2): an empty steps list stays refused (it names no step), never read as the whole run", JSON.stringify(packSteps("C99.5", [], main)) === "[]" && packVerdict("C99.5", packSteps("C99.5", [], main), 0, screen) === "the steps list names no step");
+  ok("several packs, wiring: a named step no pack printed refuses the capability; none is said when every step was printed or no steps are named", unprintedReason("C99.5", ["10", "99"], [{ printed: ["10"] }, { printed: [] }]) === "C99.5: named steps no pack printed: C99.5-99" && unprintedReason("C99.5", ["10", "24"], [{ printed: ["10"] }, { printed: ["24"] }]) === null && unprintedReason("C99.5", null, [{ printed: [] }]) === null);
+  ok("several packs, wiring (review m3): when a pack could not run (infra), its steps are not also called unprinted (the gate exits 2 for that)", unprintedReason("C99.5", ["10", "24"], [{ printed: ["10"] }, { printed: undefined, infra: true }]) === null);
   ok("several packs: a HELD line counts as printed, so the step is judged (and refused) in that pack", stepsPrinted("C11.3", ["AT-5"], "HELD  C11.3 AT-5 y\n").join() === "AT-5" && packVerdict("C11.3", ["AT-5"], 0, "HELD  C11.3 AT-5 y\n") !== null);
 }
 ok("tail() gives the last non-blank lines, trimmed and cut, so an exit-2 pack's reason reaches the report (P-214)", JSON.stringify(tail("PASS  a\n\nSTOP  setup missing: no combination wp.family on this copy   \n\n")) === JSON.stringify(["PASS  a", "STOP  setup missing: no combination wp.family on this copy"]) && tail("x\n".repeat(9)).length === 3 && tail("y".repeat(300))[0].length === 200 && tail("").length === 0);
