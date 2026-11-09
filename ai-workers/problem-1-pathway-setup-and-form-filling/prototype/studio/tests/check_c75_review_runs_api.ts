@@ -101,7 +101,6 @@ type F = { id: string; filing: string | null; subject: string; form: string | nu
   ok("C7.5 review n3: a Saved run reports both rounds read (the steps show what ran)", once1.body?.forms?.[0]?.rounds === 2, once1.body?.forms?.[0]);
   const l5257 = (plan.forms[0] as unknown as { lines: { value: string }[] }).lines;
   ok("C7.5 review n1: no IMM 5257 value keeps the form's required mark (\"* No\")", !l5257.some((x) => /^\*/.test(x.value)), l5257.filter((x) => /^\*/.test(x.value)));
-  ok("C7.5 break m: a plan or a Saved run leaves no copy of the answers on disk (the sheet file is written only for a live run)", !existsSync(join(SOLUTION, plan.forms[0].sheet)), plan.forms[0].sheet);
 
   // ── dismiss, again, at once ──
   await call("POST", `/runtime/findings/${fb!.id}/dismiss`, { reason: "Not relevant (Sample)" }, officer);
@@ -120,6 +119,9 @@ type F = { id: string; filing: string | null; subject: string; form: string | nu
   writeMadeUp("b", inputsOf(plan2), { form_edition: plan2.forms[0].edition, findings: [], unreadable: [] }, { form_edition: plan2.forms[0].edition, findings: [], unreadable: [] });
   r = await runAs({ mode: "replay" });
   fs = await findings();
+  // Break m: a plan and a successful Saved run (just above) never write the sheet (only a live run does). The pack's own sheet is committed (the
+  // saved paid review read it), so this is checked on these changed answers, whose sheet nothing may ever have written.
+  ok("C7.5 break m: a plan or a successful Saved run leaves no copy of the answers on disk (the sheet file is written only for a live run)", !existsSync(join(SOLUTION, plan2.forms[0].sheet)), plan2.forms[0].sheet);
   ok("C7.5 pass: the finding whose quoted words left the form is resolved by the rules (on read, before this run), the dismissed one stays dismissed, and a run of the new values adds nothing", r.status === 201 && r.body?.added === 0 && fs.find((x) => x.id === fa!.id)?.state === "resolved" && sql(`select resolved_by from review_finding where id='${fa!.id}'`) === "rules" && fs.find((x) => x.id === fb!.id)?.state === "dismissed", { body: r.body, fs: fs.map((x) => [x.field, x.state]) });
 
   // ── a stale AI finding resolves on read (challenge M6): the quoted value changes, no run needed ──
@@ -147,6 +149,8 @@ type F = { id: string; filing: string | null; subject: string; form: string | nu
   const CANARY = join(PROTOTYPE, "p2", "screening", "canary-digest.json"), STUBS = join(RUNS, "stub-pass"), JOBS = join(PROTOTYPE, "p2", "jobs");
   const canary = existsSync(CANARY) ? readFileSync(CANARY, "utf8") : null;
   const stubsBefore = new Map((existsSync(STUBS) ? readdirSync(STUBS) : []).map((x) => [x, readFileSync(join(STUBS, x))]));
+  // The pack's sheet is committed (the saved paid review read it): this check never removes a sheet it did not write.
+  const hadSheet = existsSync(join(SOLUTION, plan0.forms[0].sheet));
   try {
     // A live run writes the sheet the launcher reads (review-runs.ts writeSheet); here the check writes the same text.
     writeFileSync(join(SOLUTION, plan0.forms[0].sheet), sheetText({ contract: "review-sheet/v1", form_edition: plan0.forms[0].edition, fields: plan0.forms[0].lines }));
@@ -163,7 +167,7 @@ type F = { id: string; filing: string | null; subject: string; form: string | nu
       ok(`C7.5 P-227: the guarded launcher admits the ${isCheck ? "checker" : "first"} round's job (the inventory and the review sheet, the edition known) in a stub pass, US$0, run cap US$${job.settings.budget_usd}`, stub.status === 0 && rec.caller === "stub" && rec.contract_valid === true && rec.drafting_run?.status === "completed" && (rec.drafting_run?.usage?.cost_usd ?? 0) === 0 && job.settings.budget_usd * 2 <= 5, { exit: stub.status, out: stub.stdout?.slice(-300), status: rec.drafting_run?.status });
     }
   } finally {
-    rmSync(join(SOLUTION, plan0.forms[0].sheet), { force: true });
+    if (!hadSheet) rmSync(join(SOLUTION, plan0.forms[0].sheet), { force: true });
     if (canary !== null) writeFileSync(CANARY, canary);
     for (const x of existsSync(STUBS) ? readdirSync(STUBS) : []) { const was = stubsBefore.get(x); if (was === undefined) rmSync(join(STUBS, x), { force: true }); else writeFileSync(join(STUBS, x), was); }
   }
