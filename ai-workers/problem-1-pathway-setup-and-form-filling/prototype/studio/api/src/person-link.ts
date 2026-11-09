@@ -17,7 +17,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { MINOR } from "../../contracts/runtime.ts";
 import { KeepPrivate, LINK_RULES, LINK_WORDS, LinkCode, LinkToken, SendLink, TakeBack, type LinkOpened, type LinkSession, type PeoplePrivacy, type PersonLinkState, type PersonPrivacy } from "../../contracts/person-link.ts";
 import { caseView, OWN_LINK } from "../../engine/runtime/case.ts";
-import { adultCheck, codeCheck, deadWords, ownerOf, linkState, maskAddress, normalAddress, normalCode, officerWords, overLimit, principalLinkWords, progressOf, resendsSameLink, sendRefusal, serverTries, wrongWords, type LinkRow } from "../../engine/runtime/privacy.ts";
+import { adultCheck, codeCheck, deadWords, ownerOf, linkState, maskAddress, normalAddress, normalCode, officerWords, overLimit, principalLinkWords, progressOf, resendKind, sendRefusal, serverTries, wrongWords, type LinkRow } from "../../engine/runtime/privacy.ts";
 import { actorOf, CaseRead, Db, fail, isDemoWorkspace, OpenRead, RUNTIME_ACTORS, Workspace, type Actor } from "./core.ts";
 import { Runtime, type Reached, type Writer } from "./runtime.ts";
 
@@ -26,6 +26,8 @@ type Tx = Prisma.TransactionClient;
 const sha = (x: string) => createHash("sha256").update(x).digest("hex");
 const short = (id: string) => id.slice(0, 8);
 const DAY = 86_400_000;
+/** Break m3 (QA-359): the principal's Resend of the firm's link sends it again at most once a minute. */
+const RESEND_GAP_MS = 60_000;
 const isStaff = (a: Actor) => (a.duties as readonly string[]).includes("case");
 const nameOf = (id: string) => (id.startsWith("person:") ? "the person on their own link" : RUNTIME_ACTORS.find((a) => a.id === id)?.name ?? "someone at the firm");
 const roleWords = (role: string) => role.replace(/_/g, " ");
@@ -103,9 +105,9 @@ export class PersonLinks {
         // Break M1: who ticked it and why are staff's (the case history); the client reads that it is on, and since when.
         private: { on: p.keepPrivate, at: p.privateAt?.toISOString() ?? null, by: staff && p.privateBy ? nameOf(p.privateBy) : null, why: staff ? p.privateWhy : null },
         link, kept_masked: accepted?.addressMasked ?? null, progress,
-        resend: newest ? { to_masked: newest.addressMasked, same_link: resendsSameLink({ sender: staff ? "staff" : "client", kept: accepted?.address ?? null, open: newest.voidedAt ? null : newest, now }) } : null,
+        resend: newest ? { to_masked: newest.addressMasked, kind: resendKind({ sender: staff ? "staff" : "client", kept: accepted?.address ?? null, newest, now }) } : null,
         words: officerWords({ label: p.subject.label, principal, adult: adult.ok, keepPrivate: p.keepPrivate, privateAt: p.privateAt, link: newest ? { ...rowOf(newest), masked: newest.addressMasked, givenBy: nameOf(newest.addressGivenBy) } : null, acceptedOn: accepted ? { masked: accepted.addressMasked, givenBy: nameOf(accepted.addressGivenBy) } : null, now }),
-        can: { send: adult.ok && (staff || !accepted), resend_kept: adult.ok && !!accepted, send_new: staff && adult.ok && !!accepted, take_back: live, tick: staff && adult.ok && !p.keepPrivate },
+        can: { send: adult.ok && (staff || !accepted), resend_kept: adult.ok && !!accepted && resendKind({ sender: staff ? "staff" : "client", kept: accepted?.address ?? null, newest, now }) !== "firm", send_new: staff && adult.ok && !!accepted, take_back: live, tick: staff && adult.ok && !p.keepPrivate },
       };
     });
     return { case_id: c.id, principal, people };
@@ -143,28 +145,38 @@ export class PersonLinks {
         // One send at a time per case (break m1: two people are never given one address at the same moment), then per person.
         await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
         await tx.$queryRaw`SELECT id FROM case_participant WHERE subject_id = ${subjectId}::uuid FOR UPDATE`;
+        // Break m1, m2 (QA-359): the working link's own row too, so a right or fifth wrong code at that moment (which
+        // update this row) is either seen here or waits for this send; never a copy of a link that just changed.
+        await tx.$queryRaw`SELECT id FROM person_link WHERE subject_id = ${subjectId}::uuid AND voided_at IS NULL FOR UPDATE`;
         const mine = await tx.personLink.findMany({ where: { subjectId }, orderBy: [{ sentAt: "desc" }, { id: "desc" }] });
         const kept = mine.find((l) => l.acceptedAt)?.address ?? null, sender = isStaff(actor) ? "staff" : "client";
         const others = (await tx.personLink.findMany({ where: { caseId: c.id, subjectId: { not: subjectId }, OR: [{ voidedAt: null }, { acceptedAt: { not: null } }] }, select: { address: true } })).map((x) => x.address);
         const no = sendRefusal({ sender, label, address: address!, kept, current: mine[0]?.address ?? null, others });
         if (no) problem(no.status, no.status === 403 ? "Not allowed" : "Not possible now", no.why);
-        const open = mine.find((l) => !l.voidedAt);
-        if (open && resendsSameLink({ sender, kept, open, now })) {
+        const open = mine.find((l) => !l.voidedAt), kind = resendKind({ sender, kept, newest: mine[0] ?? null, now });
+        // Break M1 (QA-359): once the link staff sent to a new address no longer works, only the firm sends a new one.
+        if (kind === "firm") problem(409, "Not possible now", `The firm's link to ${mine[0]!.addressMasked} no longer works. Only the firm can send ${label} a new one.`);
+        if (open && kind === "same") {
           // QA-359 (P-441): staff sent this accepted adult's link to a new address; the client's Resend sends the same
-          // email again to that address and the link keeps working (no new token: the demo inbox holds the email as sent).
-          const email = await tx.demoMessage.findFirst({ where: { linkId: open.id, kind: "link" }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] });
+          // email again to that address and the link keeps working (no new token: the demo inbox holds the email as sent,
+          // stand-in SI-20). Pressed again within a minute (or the same idempotency key), nothing more is sent (break m3).
+          const sent = await tx.demoMessage.findMany({ where: { linkId: open.id, kind: "link" }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 2 }), email = sent[0];
           if (!email) problem(409, "Not possible now", `The firm's email to ${open.addressMasked} cannot be sent again. Ask the firm to send it.`);
+          again = true;
+          // The first email is the firm's own; only a copy sent again within the minute holds the next one back.
+          if (sent.length > 1 && now.getTime() - email!.createdAt.getTime() < RESEND_GAP_MS) return;
           await tx.demoMessage.create({ data: { workspaceId: c.workspaceId, linkId: open.id, address: open.address, kind: "link", subject: email!.subject, body: email!.body, expiresAt: open.expiresAt } });
           await audit(tx, c.workspaceId, actor.id, "resent", subjectId, `${actor.name} sent the same link again to the ${roleWords(p.role)} on case ${short(c.id)}, to ${open.addressMasked} (address given by ${nameOf(open.addressGivenBy)}); it still works`);
-          again = true;
           return;
         }
+        // Break M2 (QA-359): a Resend (no address typed) to the newest link's address keeps who gave that address.
+        const givenBy = !b.address && mine[0]?.address === address ? mine[0].addressGivenBy : actor.id;
         if (open) await this.kill(tx, open.id, "superseded", actor.id, null, now);
-        await tx.personLink.create({ data: { id, workspaceId: c.workspaceId, caseId: c.id, subjectId, address: address!, addressMasked: masked, addressGivenBy: actor.id, tokenHash: sha(token), sentBy: actor.id, sentAt: now, expiresAt: new Date(now.getTime() + LINK_RULES.linkDays * DAY), sendKey: b.idempotencyKey ?? null } });
+        await tx.personLink.create({ data: { id, workspaceId: c.workspaceId, caseId: c.id, subjectId, address: address!, addressMasked: masked, addressGivenBy: givenBy, tokenHash: sha(token), sentBy: actor.id, sentAt: now, expiresAt: new Date(now.getTime() + LINK_RULES.linkDays * DAY), sendKey: b.idempotencyKey ?? null } });
         if (open) await tx.personLink.update({ where: { id: open.id }, data: { supersededById: id } });
         await tx.demoMessage.create({ data: { workspaceId: c.workspaceId, linkId: id, address: address!, kind: "link", subject: "Answer your own questions for your application (Sample)",
           body: `You were asked to answer your own questions for an application a firm is handling.\nOpen your link: ${LINK_PATH}${token}\nOpening it sends nothing: press "Send me a code" there. It works for ${LINK_RULES.linkDays} days.`, expiresAt: new Date(now.getTime() + LINK_RULES.linkDays * DAY) } });
-        await audit(tx, c.workspaceId, actor.id, open ? "resent" : "sent", subjectId, `${actor.name} ${open ? "sent a new link (the earlier one no longer works)" : "sent a link"} to the ${roleWords(p.role)} on case ${short(c.id)}, to ${masked} (address given by ${actor.name})`);
+        await audit(tx, c.workspaceId, actor.id, open ? "resent" : "sent", subjectId, `${actor.name} ${open ? "sent a new link (the earlier one no longer works)" : "sent a link"} to the ${roleWords(p.role)} on case ${short(c.id)}, to ${masked} (address given by ${nameOf(givenBy)})`);
       });
     } catch (e) {
       if (e instanceof HttpException && e.getStatus() === 409 && b.idempotencyKey) { const same = await replay(); if (same) return same; }

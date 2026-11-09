@@ -63,11 +63,16 @@ export function sendRefusal(i: { sender: "client" | "staff"; label: string; addr
   if (i.sender === "client" && allowed && allowed !== i.address) return { status: 403, why: allowed === i.kept ? `${i.label} already uses ${maskAddress(allowed)}. Ask the firm to send to a new address.` : `The firm sent ${i.label}'s link to ${maskAddress(allowed)}. Only the firm can change the address.` };
   return null;
 }
-/** QA-359 (P-441, F12 (b)): the principal's Resend after staff sent an accepted adult's link to a new address sends that
- *  same link again, to the address staff set, and never ends it; true only then. Every other Resend sends a new link
- *  (the earlier one stops working). `open` is the person's working link (not voided), `kept` the accepted address. */
-export function resendsSameLink(i: { sender: "client" | "staff"; kept: string | null; open: { address: string; expiresAt: Date; acceptedAt: Date | null } | null; now: Date }): boolean {
-  return i.sender === "client" && !!i.kept && !!i.open && !i.open.acceptedAt && i.open.address !== i.kept && i.open.expiresAt.getTime() > i.now.getTime();
+/** QA-359 (P-441, F12 (b)): what a one-press Resend does. "new": a new link to the newest link's address (the earlier one
+ *  stops working); every Resend by staff, and the principal's before acceptance or at the kept address. Once staff sent
+ *  an accepted adult's link to a new address, the principal's Resend is "same" while that link works (the same link is
+ *  sent again to the address staff set and keeps working), and "firm" once it does not (taken back, locked, expired):
+ *  only the firm sends a new link there or elsewhere (break M1: the principal never revives an address staff withdrew).
+ *  `newest` is the person's newest link, `kept` the address they accepted on. */
+export type ResendKind = "new" | "same" | "firm";
+export function resendKind(i: { sender: "client" | "staff"; kept: string | null; newest: { address: string; expiresAt: Date; acceptedAt: Date | null; voidedAt: Date | null } | null; now: Date }): ResendKind {
+  if (i.sender === "staff" || !i.kept || !i.newest || i.newest.address === i.kept || i.newest.acceptedAt) return "new";
+  return !i.newest.voidedAt && i.newest.expiresAt.getTime() > i.now.getTime() ? "same" : "firm";
 }
 
 export type LinkRow = { sentAt: Date; expiresAt: Date; acceptedAt: Date | null; voidedAt: Date | null; voidWhy: string | null; newerSentAt?: Date | null };

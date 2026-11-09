@@ -100,10 +100,10 @@ function TickDialog({ caseId, person, principal, close }: { caseId: string; pers
 }
 
 /** The server's `resend` (where a one-press Resend goes and what it does) in words. */
-const resendOf = (person: PersonPrivacy) => resendWords(person.label, person.resend ?? { to_masked: person.link?.email_masked ?? "their address", same_link: false });
+const resendOf = (person: PersonPrivacy) => resendWords(person.label, person.resend ?? { to_masked: person.link?.email_masked ?? "their address", kind: "new" });
 /** One click Resend to the newest address (the kept one after acceptance, or the one staff set after it: QA-359). */
 function useResend(caseId: string, person: PersonPrivacy) {
-  return useAction(() => api(`/runtime/cases/${caseId}/people/${person.subject_id}/link`, { method: "POST", json: {} }), { success: resendOf(person).done, invalidate: REFRESH });
+  return useAction(() => api(`/runtime/cases/${caseId}/people/${person.subject_id}/link`, { method: "POST", json: {} }), { success: (r: PersonPrivacy & { created: boolean }) => resendWords(person.label, { to_masked: r.resend?.to_masked ?? r.link?.email_masked ?? "their address", kind: r.created ? "new" : "same" }).done!, invalidate: REFRESH });
 }
 
 /** The principal's line under "About <person>" (layout §4, 390 px): Send to …, sent, progress only, taken back. */
@@ -117,7 +117,7 @@ export function PrincipalPersonLine({ caseId, person }: { caseId: string; person
   // address only before acceptance (BR-3).
   const actions = (
     <div className="mt-3 flex flex-wrap gap-2">
-      {l ? <Button size="sm" variant="secondary" className="h-10" busy={resend.isPending} onClick={() => resend.mutate(undefined)}><RotateCcw aria-hidden />Resend</Button> : null}
+      {l && person.resend?.kind !== "firm" ? <Button size="sm" variant="secondary" className="h-10" busy={resend.isPending} onClick={() => resend.mutate(undefined)}><RotateCcw aria-hidden />Resend</Button> : null}
       {l && !person.kept_masked && person.can.send ? <Button size="sm" variant="ghost" className="h-10" onClick={() => setDialog("send")}>Send to another address…</Button> : null}
       {live ? <Button size="sm" variant="ghost" className="h-10" onClick={() => setDialog("take")}><Undo2 aria-hidden />Take back</Button> : null}
     </div>
@@ -125,7 +125,7 @@ export function PrincipalPersonLine({ caseId, person }: { caseId: string; person
   let body: React.ReactNode;
   if (person.private.on && person.progress) body = (
     <PrivateProgress label={person.label} progress={person.progress}>
-      {l?.principal_words ? <p className="mt-2 text-[13px] text-text-muted">{l.principal_words} You can resend it to {person.resend?.to_masked ?? l.email_masked}, or ask the firm.</p> : null}
+      {l?.principal_words ? <p className="mt-2 text-[13px] text-text-muted">{l.principal_words}{person.resend?.kind === "firm" ? "" : ` You can resend it to ${person.resend?.to_masked ?? l.email_masked}, or ask the firm.`}</p> : null}
       {resendOf(person).where ? <p className="mt-2 text-[13px] text-text-muted" data-resend-where>{resendOf(person).where}</p> : null}
       {actions}
     </PrivateProgress>
@@ -201,7 +201,7 @@ export function OfficerPeoplePanel({ caseId }: { caseId: string }) {
 
 function ResendButton({ caseId, person }: { caseId: string; person: PersonPrivacy }) {
   const resend = useResend(caseId, person);
-  return <TipProvider><Tip tip={resendOf(person).tip}><Button size="sm" variant="secondary" busy={resend.isPending} onClick={() => resend.mutate(undefined)}><RotateCcw aria-hidden />Resend</Button></Tip></TipProvider>;
+  return <TipProvider><Tip tip={resendOf(person).tip ?? ""}><Button size="sm" variant="secondary" busy={resend.isPending} onClick={() => resend.mutate(undefined)}><RotateCcw aria-hidden />Resend</Button></Tip></TipProvider>;
 }
 
 

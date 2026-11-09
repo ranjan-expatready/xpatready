@@ -50,10 +50,12 @@ export const LINK_WORDS = {
   xActor: "This page works only from the link in your email: it does not use the Studio's simulated people.",
   linkOnly: "A person's own link reaches only their own questions, never the firm's or the client's pages.",
 } as const;
-/** QA-359 (P-441): what a one-press Resend does, in words, from the server's `resend` (where it goes, same link or new). */
-export const resendWords = (label: string, r: { to_masked: string; same_link: boolean }) => r.same_link
+/** QA-359 (P-441): what a one-press Resend does, in words, from the server's `resend` (where it goes and its kind). */
+export const resendWords = (label: string, r: { to_masked: string; kind: "new" | "same" | "firm" }) => r.kind === "same"
   ? { tip: `Sends the firm's link to ${r.to_masked} again; it keeps working.`, done: `The firm's link was sent to ${label} at ${r.to_masked} again. It still works.`, where: `The firm sent ${label}'s link to ${r.to_masked}. Resend sends it there again; only the firm can change the address.` }
-  : { tip: `A new link to ${r.to_masked}; the earlier one stops working.`, done: `A new link was sent to ${label} at ${r.to_masked}. The earlier one no longer works.`, where: null };
+  : r.kind === "firm"
+    ? { tip: null, done: null, where: `The firm's link to ${r.to_masked} no longer works. Only the firm can send ${label} a new one.` }
+    : { tip: `A new link to ${r.to_masked}; the earlier one stops working.`, done: `A new link was sent to ${label} at ${r.to_masked}. The earlier one no longer works.`, where: null };
 
 /** One person's link as a screen shows it. state: none (never sent) · sent · accepted · expired · taken_back ·
  *  superseded · locked. The token and the code are never in it. */
@@ -81,10 +83,11 @@ export type PersonPrivacy = {
   private: PrivacySetting; link: PersonLinkState | null;
   /** The address the person accepted on, masked (BR-3). */
   kept_masked: string | null;
-  /** Where this viewer's one-press Resend goes (the newest link's address, masked) and whether it sends that same link
-   *  again, which keeps working (the principal after staff sent an accepted adult's link to a new address: QA-359,
-   *  P-441), rather than a new link that ends the earlier one; null while no link was ever sent. */
-  resend: { to_masked: string; same_link: boolean } | null;
+  /** Where this viewer's one-press Resend goes (the newest link's address, masked) and what it does (QA-359, P-441):
+   *  "new" a new link that ends the earlier one; "same" the firm's link sent again, which keeps working (the principal
+   *  after staff sent an accepted adult's link to a new address); "firm" none: that link no longer works and only the
+   *  firm sends a new one. Null while no link was ever sent. */
+  resend: { to_masked: string; kind: "new" | "same" | "firm" } | null;
   progress: ProgressOnly | null;
   /** The officer's line in words ("With Partner since 9 Nov · private from Client A"). */
   words: string;
