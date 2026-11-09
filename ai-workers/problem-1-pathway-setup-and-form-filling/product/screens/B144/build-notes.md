@@ -1,32 +1,51 @@
 # B144 · C8.3 Representative review: build notes
 
-Builder: screens lane, branch `claude/intelligent-noether-qkzc6a-b144` (draft PR #1247), from `origin/main` fc49dc5a4 (merged at 8dffee494), 9 Nov 2026. Spec: `concept.md` r2; decisions on #1247: Lead 31 (Q1 yes, scaffolding port; Q3 build after C4, which is on main) and founder P-412 (F1 withdraw, change-only view with one-click re-approve; F2 representative of record only). US$0, live AI off.
+Builder: screens lane, branch `claude/intelligent-noether-qkzc6a-b144` (draft PR #1247), from `origin/main` fc49dc5a4 (merged at 8dffee494), 9 Nov 2026. Spec: `concept.md` r2; decisions on #1247: Lead 31 (Q1 yes, scaffolding port; Q3 build after C4, on main) and founder P-412 (F1 withdraw, change-only view with one-click re-approve; F2 representative of record only). US$0, live AI off. **Migration** (four new tables) and **permissions**: for the tech lead's read and the breaker.
 
-## Plan: rule → where → test
-| Rule | Where | Test (pass · fail) |
+## Rule → where → test
+| Rule | Where | Unit (`check_review_rounds.ts`) · pack (`C8.3.test.ts`) · walk |
 |---|---|---|
-| BR-1 Send (one action, ticked by default, 400 none, 409 already open, freeze each form incl. Online with no copy, "Not stamped: waits", solo "Review now") | `engine/runtime/review.ts` `sendProblem`, `fileOf`; `api/src/review-rounds.ts` `send`; partial unique index (one open row per filing) | unit `check_review_rounds.ts` BR-1; pack C8.3-1 · -2, -3 |
-| BR-2 Checklist (default items with live state, program items through `reviewItemsOf(release, combinationKey)` from `samples/review-items.json`, "Values confirmed, with who") | `review.ts` `checklistOf`; `api/src/review-items.ts` (the one port) | unit BR-2; pack C8.3-5 |
-| BR-3 Open (POST by the representative of record moves Sent → Under review; GET safe; anyone else: nothing) | `review.ts` `canMove`; route `open` | unit BR-3; pack C8.3-4 |
-| BR-4 Approve (representative of record now, loaded hashes, row lock, only Under review → Approved, one confirmation for unticked, stamps + `filing_review`) | `review.ts` `canMove`, `hashesProblem`, `untickedProblem`; route `decision` under `SELECT … FOR UPDATE` | unit BR-4; pack C8.3-8, -9, -12 |
-| BR-5 Send back (reasons required, pinned to a form or item, round n+1) | `review.ts` `reasonsProblem`; route `decision` | unit BR-5; pack C8.3-6, -7 |
-| BR-6 Changed since review (round n-1 frozen vs round n / today, typist = answer origin, one batched history query) | `review.ts` `formChanges`; route `GET` | unit BR-6; pack C8.3-11 |
-| BR-7 / F1 A later fact change withdraws (stamp current only while hash and representative unchanged) | `review.ts` `stampCurrent` (the ONE rule function), used by the page and by `readiness-inputs.ts` | unit BR-7; pack C8.3-10 |
-| P-412 change-only view, one-click re-approve of only the changed forms | `review.ts` `withdrawnForms`; route `POST …/reapprove`; page "Re-approve N changed forms" | unit P-412; pack C8.3-17 · -18 |
-| BR-8 Approver ≠ author (a fact typed by the representative after send = prepared; readiness.ts:63-71 unchanged) | `review.ts` `selfReviewOf` (shared with the old route) | unit BR-8; pack C8.3-13 |
-| BR-9 / F2 Permissions (representative of record only decides; staff send; client, configuration, former representative, another firm) | `review.ts` `mayDecide` (the ONE permission check); routes | unit BR-9; pack C8.3-14 |
-| BR-10 Rounds append-only (triggers), history, compare n with n-1 | migration triggers; route `GET` | unit BR-10 (legal moves); pack C8.3-14 (trigger refuses UPDATE) |
-| M1 Old route = one-step round through the same code | `api/src/readiness.ts` `review` calls `ReviewRounds.oneStep` | pack C8.3-15; C7.6, C8.1, C8.2 packs unchanged |
+| BR-1 Send, freeze (B2), "Not stamped: waits", solo "Review now" | `engine/runtime/review.ts` `sendProblem`, `tickedByDefault`, `fileOf`; `api/src/review-rounds.ts` `send`; partial unique index | BR-1 ×8 · C8.3-1, -2, -3, -14 (removed 409), -14b · walk 2 |
+| BR-2 Checklist (defaults + live state, program items via the port, confirmations with who, a mark per form) | `checklistOf`; `api/src/review-items.ts` `reviewItemsOf(release, combinationKey)` ← `samples/review-items.json` (Sample, Unconfirmed: expert) | BR-2 ×2 · C8.3-5 · walk 5 |
+| BR-3 Open by POST only; GET safe | `nextStatus`; route `open` | BR-3 ×2 · C8.3-4 · walk 3b, 4 |
+| BR-4 Approve: representative now, loaded hashes, row lock, one move, one confirmation, stamps + `filing_review` | `nextStatus`, `hashesProblem`, `untickedProblem`; route `decision` + shared `approve` | BR-4 ×6 · C8.3-8, -9, -12 · walk 5, 7, 8 |
+| BR-5 Send back with reasons (pinned), round n+1 | `reasonsOf`; route `decision` | BR-5 ×3 · C8.3-6, -7 · walk 6 |
+| BR-6 Changed since review, typist = origin (m4), one batched snapshot read (m6) | `changesOf`, `formStateOf`; route `GET` `compose` | BR-6 ×2 · C8.3-11 · walk 4 |
+| BR-7 / F1 withdraw: **one rule function** `stampCurrent` (facts hash + representative) | `review.ts`; used by the page, re-approve **and** `readiness-inputs.ts` (C7.6's line) | BR-7 ×6 · C8.3-10, -14 (rep changed) · walk 1, 9, 10 |
+| P-412 change-only view + one-click re-approve | `withdrawnForms`; route `reapprove`; page footer | P-412 ×2 · C8.3-17 (fail), -18 (pass) · walk 9, 11 |
+| BR-8 approver ≠ author, C7.6's rule unchanged | `selfReviewOf` (prepared **or** typed a changed fact after send) | BR-8 ×3 · C8.3-13, -14b |
+| BR-9 / F2: **one permission check** `mayDecide` | every decide route (`mustDecide`) | BR-9 ×2 · C8.3-14, -14b, -17 · walk 3 |
+| BR-10 append-only, history, compare n with n-1 | triggers in the migration; `history` on each row | BR-10 ×2 · C8.3-14 (UPDATE refused) |
+| M1 C7.6 route = one-step round, same code | `readiness.ts review` → `ReviewRounds.oneStepBasis` / `oneStep` (`freeze`, `stamp`) | C8.3-15; C7.6, C8.1, C8.2 packs unchanged |
 
-## Files (expected)
-Migration `prisma/migrations/20261109010000_c83_review_rounds` (4 new tables, triggers, rollback in header) · `prisma/schema.prisma` (4 models, back-relations only) · `engine/runtime/review.ts` · `api/src/review-items.ts` · `samples/review-items.json` · `api/src/review-rounds.ts` · `api/src/features/review-rounds.ts` · `api/src/case-prepare.ts` (additive: the per-form basis) · `api/src/readiness.ts` (old route → one-step round) · `api/src/readiness-inputs.ts` (uses `stampCurrent`) · `contracts/runtime.ts` (additive shapes) · `web/src/runtime/readiness.tsx` (Send for review, Open the review) · `web/src/runtime/representative-review.tsx` · `web/src/runtime/cases.tsx` (route) · `tests/runtime/check_review_rounds.ts` · `acceptance/C8.3.test.ts` · `tests/check_c83_review_browser.cjs`.
+## Files
+Migration `prisma/migrations/20261109010000_c83_review_rounds/migration.sql` (`review_round`, `review_round_filing`, `review_round_form`, `review_check`; checks, triggers, rollback in the header) · `prisma/schema.prisma` (4 models + back-relations only) · `engine/runtime/review.ts` (new) · `api/src/review-rounds.ts`, `api/src/review-items.ts`, `api/src/features/review-rounds.ts` (new) · `samples/review-items.json` (new, Sample) · `api/src/case-prepare.ts` (additive: `reviewBasis`, the per-form hash pulled into one `formHash`, unchanged value) · `api/src/readiness.ts` (old route → one-step round; 409 while the filing is in an open round) · `api/src/readiness-inputs.ts` (`stampCurrent`, same result) · `contracts/runtime.ts` (additive: `SendForReview`, `ReviewOpen`, `ReviewTick`, `ReviewDecision`, `ReviewReapprove`, `ReviewRound`, `ReviewRoundFiling`, `FormStamp`, `ChangedSinceReview`) · `web/src/runtime/representative-review.tsx` (new), `web/src/runtime/readiness.tsx` (Send for review, per-filing review link, "Approval withdrawn"), `web/src/runtime/cases.tsx` (2 routes) · tests: `tests/runtime/check_review_rounds.ts`, `acceptance/C8.3.test.ts`, `tests/check_c83_review_browser.cjs`, `tests/runtime/setup_c83_walk.ts`.
+
+Routes: `GET|POST /runtime/cases/:id/reviews` · `GET /runtime/reviews/:id` · `POST /runtime/reviews/:id/open|checks|decision|reapprove` · `POST /runtime/filings/:id/review` (kept).
+
+## Differences from the concept (plainly)
+1. **Extra route** `GET /runtime/cases/:id/reviews` (the panel's per-filing link and the page's newest round) and `POST …/reapprove` (P-412). Not in §2's list.
+2. **The inline "Review the filing" form stays** in the readiness panel (it now makes a one-step round through the same code, M1), beside a new "Open the review" link; the concept said it "becomes Open the review". Kept because `check_c76_ready_browser.ts` and `check_c81_sign_browser.ts` drive it; hidden while the filing is in an open round (the route then answers 409).
+3. **BR-8 on a firm that is not solo:** a representative who typed a changed fact after the send gets C7.6's 409 ("would read as a second person's: send it back…"), not the statement; the statement applies on a solo firm (exactly `readiness.ts:63-71` with "typed a changed fact" counted as "prepared"). Question 1 below.
+4. **Approve and Send back need Under review** (opened by POST first); the page opens on view. The concept allows deciding from Sent (challenge M4). One allowed move, as BR-4.
+5. **Re-approve is a new round** (kind `reapprove`, approved at once): unchanged forms keep their stamped snapshot, only changed ones are stamped anew; checklist ticks and confirmations are carried.
+6. **What the page shows on the right** is each form's facts **as they read now** with before → after against the previous round's frozen snapshot (open rows) or the stamp (approved rows); the frozen values are the "before". The decision sends the hashes the page loaded.
+7. A form's **"Checked" mark** is a `review_check` row of source `form` (GitHub "Viewed"); it is not counted among the unticked checklist items.
+8. A **removed filing's send is 409** (as BR-9), an unknown id 404.
+9. "Changed since review" does not list a checklist document's change (concept §1 (c), as written; the default item shows its live state).
 
 ## Top 5 production improvements over the board
-1. Each filing has its own status inside one round (board frame 2), stored per filing (B1).
-2. The page keeps the hashes it loaded and sends them; a change meanwhile is a 409 with Reload, nothing stamped (M4).
-3. After an approval, a fact change shows only the changed forms, before → after with the typist, and one button re-approves them (P-412).
-4. Form "Checked" marks per form (GitHub "Viewed") beside the checklist, both by keyboard.
-5. The read-only state for anyone not the representative of record says why, with no buttons (F2).
+Per-filing status inside one round (B1) · loaded hashes and Reload, nothing stamped meanwhile (M4) · change-only view, one-click re-approve (P-412) · per-form Checked marks · read-only state in the concept's words for anyone but the representative of record (F2).
+
+## Checks run (exit codes) — see "Regression" below
+## Regression
+
+## Self-score (honest, D1-D20 summary)
+Strong: rules in one place, every BR pass+fail, M1/M2/M4 closed, axe clean on 3 states, keyboard path. Weaker: the page is dense on long checklists (left column scrolls with the page, not on its own); the "loading" and "empty" states are drawn but plain; no 1024 px walk for the dialogs; D17/D20 need an intended user (not self-scored).
+
+## Not built (as concept §6b)
+Needs-you items and notifications · the case stage move to REVIEW · `waive-deficiency` as its own key · a "checked against the document" record. **Follow-up row (Q1):** SA-1B-221's `REVIEW_ITEM` line kind replaces `samples/review-items.json` behind `reviewItemsOf` (only `api/src/review-items.ts` changes).
 
 ## Questions for the tech lead
-(none yet)
+1. **BR-8 on a firm that is not solo** (difference 3): I applied C7.6's rule unchanged (409; send back or hand over). The concept's words "needs the statement" would let a representative self-review a filing a case officer prepared, which P-155 (1) and BIC-17 say is never "Self-reviewed". **Recommend: keep the 409.**
+2. **Keep the inline review form** (difference 2) until C7.6's browser suites move to the Review page; **recommend** a follow-up row to retire it.
