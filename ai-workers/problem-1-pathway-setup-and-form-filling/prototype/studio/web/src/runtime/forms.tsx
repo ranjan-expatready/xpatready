@@ -16,6 +16,7 @@ import { OutOfDate } from "./out-of-date";
 import { MovedGroups } from "./release-update"; // C9.5: what a move to a newer release did, until each copy is made again
 import { ReadinessPanel } from "./readiness"; // C7.6 (B2): the filings' readiness from /prepare, right after the forms
 import { SignSteps } from "./sign-steps"; // C8.1 (B3): who signs, and the steps of a form signed by hand and scanned
+import { AddedTag, AddFormButton, BlankRow } from "./add-form"; // C7.8 (B141): add a library form to one filing
 import { Link } from "react-router-dom";
 import { sheetPath, STATE_WORDS } from "./answer-sheet"; // C7.3 (QA-317): the Online line opens its answer sheet
 
@@ -31,6 +32,8 @@ export function FormsPanel({ caseId }: { caseId: string }) {
   const q = useApi<{ forms: CaseForm[]; online?: CaseOnlineForm[] }>(["runtime", "view", caseId, "forms", actor], `/runtime/cases/${caseId}/forms`, {
     retry: noRetryOnRefusal, refetchInterval: (query) => ((query.state.data as { forms: CaseForm[] } | undefined)?.forms.some((f) => f.copies.some(busy)) ? 1000 : false),
   });
+  // C7.8 (B141): the filings, to put "+ Add a form" after each filing's forms (the same read as Ready to file below).
+  const prep = useApi<PrepareFilings>(["runtime", "view", caseId, "prepare"], `/runtime/cases/${caseId}/prepare`, { retry: noRetryOnRefusal });
   return (<>
     <section aria-labelledby="forms-h" className="rounded-xl border border-border bg-surface-raised">
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-4 py-3">
@@ -43,12 +46,29 @@ export function FormsPanel({ caseId }: { caseId: string }) {
         : q.isError ? <div className="p-4"><Notice tone="danger" title="The forms could not be loaded">{(q.error as Error).message}</Notice></div>
         : !q.data!.forms.length && !q.data!.online?.length ? <p className="px-4 py-3 text-sm text-text-muted">No form applies to anyone on this case yet.</p>
         : <ul className="divide-y divide-border">
-            {q.data!.forms.map((f) => <FormRow key={`${f.form}|${f.subject_id}`} caseId={caseId} f={f} />)}
+            {byFiling(q.data!.forms, prep.data).map((g) => <React.Fragment key={g.filing ?? "none"}>
+              {g.forms.map((f) => f.blank ? <BlankRow key={`${f.form}|${f.subject_id}`} caseId={caseId} f={f} recorded={g.recorded} /> : <FormRow key={`${f.form}|${f.subject_id}`} caseId={caseId} f={f} recorded={g.recorded} />)}
+              {g.filing ? <AddFormButton caseId={caseId} filing={g.filing} owner={g.owner} disabled={g.recorded ? "This application is recorded as submitted: read-only." : null} /> : null}
+            </React.Fragment>)}
             {(q.data!.online ?? []).map((f) => <OnlineRow key={f.form} caseId={caseId} f={f} />)}
           </ul>}
     </section>
     <ReadinessPanel caseId={caseId} />
   </>);
+}
+
+type PrepareFilings = { filings?: { id: string; status: string; applicants: { subject: string; label: string; mode: string }[]; owner?: { subject: string; label?: string } | null }[] };
+/** C7.8 (B141): the form rows in filing order (a filing's people together), each group followed by its "+ Add a form";
+ *  rows of a person on no current filing stay at the end, as before. */
+function byFiling(forms: CaseForm[], p: PrepareFilings | undefined) {
+  const filings = p?.filings ?? [];
+  const groups = filings.map((f) => ({ filing: f.id as string | null, recorded: f.status === "submitted", owner: f.applicants.find((a) => a.subject === f.owner?.subject)?.label ?? f.applicants[0]?.label ?? "this",
+    forms: forms.filter((x) => f.applicants.some((a) => a.subject === x.subject_id)) }));
+  // Breaker m5: once any filing of the case is recorded, nothing on it is added or removed (the server's rule, C8.2-9).
+  if (filings.some((f) => f.status === "submitted")) for (const g of groups) g.recorded = true;
+  const placed = new Set(groups.flatMap((g) => g.forms));
+  const rest = forms.filter((x) => !placed.has(x));
+  return [...groups, ...(rest.length ? [{ filing: null, recorded: false, owner: "", forms: rest }] : [])];
 }
 
 /** Review m3 (QA-317): each person's Online item says its state beside its link (the server's), so the case shows when the
@@ -114,7 +134,7 @@ function CopyState({ c }: { c: FormCopy }) {
   return <Pill tone="ok"><Check className="size-3" aria-hidden />Generated</Pill>;
 }
 
-function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
+function FormRow({ caseId, f, recorded }: { caseId: string; f: CaseForm; recorded?: boolean }) {
   const qc = useQueryClient(), toast = useToast();
   const [working, setWorking] = React.useState(false);
   const [locking, setLocking] = React.useState<keyof typeof LOCK_KINDS | null>(null);
@@ -150,10 +170,11 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
   const canLock = lockable && !why;
   const lockBlocked = lockable && why ? why : null;
   return (
-    <li className="space-y-2 px-4 py-3">
+    <li className="space-y-2 px-4 py-3" data-row-form={`${f.form}|${f.subject_id}`}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <FileText className="size-4 text-text-muted" aria-hidden />
         <h3 ref={heading} tabIndex={-1} className="text-sm font-semibold outline-none">{f.form} <span className="font-normal text-text-muted">for</span> <span className="[overflow-wrap:anywhere]">{f.person}</span></h3>
+        {f.added ? <AddedTag caseId={caseId} f={f} recorded={recorded} /> : null}
         {!f.for_filing ? <Pill tone="info" title="Filed Online: IRCC's PDF filled from the same declared and confirmed answers, for reading and checking only">Copy, not for filing</Pill>
           : !f.trial_passed ? <Pill tone="warn" title="This form's filling is not proven yet, so the copy is for checking only">Checked copy, not for filing</Pill> : null}
         {f.for_filing && f.needs_validate && latest?.status === "GENERATED" ? <ValidatedState caseId={caseId} c={latest} form={f.form} /> : null}
