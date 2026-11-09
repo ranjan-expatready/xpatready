@@ -731,7 +731,7 @@ function OfficerPill({ a }: { a: Answer }) {
   const title = `Recorded by ${WHO[a.officer.by] ?? "a member of staff"} on ${when(a.officer.at)}, as the client told them. ${a.awaits_client ? "Background answers are the client's: it is on the draft forms now, and nothing is printed or signed until the client re-confirms it." : again ? `The client re-confirmed it on ${when(again)}.` : "The client re-confirmed it."}`;
   return <Pill tone="info" title={title}>Officer</Pill>;
 }
-const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", client_reconfirm: "re-confirmed by the client", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case" };
+const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", client_reconfirm: "re-confirmed by the client", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case", earlier_case: "earlier case, re-confirmed" };
 /** C1.3: when the value was copied from the employer case (itself, or the answer a confirmation confirmed). */
 const linkedAt = (a: Answer) => a.channel === LINKED_FILE ? a.at : a.answered?.channel === LINKED_FILE ? a.answered.at : null;
 const WHO: Record<string, string> = { "user-O": "Case officer", "user-R": "Representative", "user-T": "Second representative", "user-S": "Solo representative", "user-P": "Client A", "user-Q": "Client B" };

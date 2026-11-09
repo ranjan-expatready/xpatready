@@ -1,0 +1,49 @@
+{
+  "note": "C6.19 BR-6 (P-419, P-170): expiry rules for facts brought from an earlier case, as data (P-425: no combination key or program branch in engine code). Each rule names the fact holding the date, what it checks, the facts it covers (all flagged with it) and its source: canada.ca page, quote and the date our copy was recorded, or Sample with the reason (ASSUMPTIONS.md). kind: expires_before_today (the date is before today), expires_within_months (the date is before today plus months), issued_more_than_months_ago (the date is before today minus months). blocks: true means a flagged value cannot be re-confirmed (the person enters the new document); false is a warning only.",
+  "rules": [
+    {
+      "key": "passport_expired",
+      "fact": "person.passport_expiry_date",
+      "kind": "expires_before_today",
+      "blocks": true,
+      "covers": ["person.passport_number", "person.passport_country_of_issue", "person.passport_issue_date", "person.passport_expiry_date"],
+      "words": "The passport expired on {date}: its details cannot be reused. Enter the new passport on this case.",
+      "source": {
+        "page": "Apply for a visitor visa (canada.ca), Gather your required documents",
+        "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/apply-visitor-visa.html",
+        "quote": "All applicants need to include a digital copy of your valid (not expired) passport or travel document",
+        "recorded": "2026-10-27",
+        "file": "official-sources/ircc/canada/pages/visit-canada-apply-visitor-visa.html"
+      }
+    },
+    {
+      "key": "passport_expires_soon",
+      "fact": "person.passport_expiry_date",
+      "kind": "expires_within_months",
+      "months": 6,
+      "blocks": false,
+      "covers": ["person.passport_expiry_date"],
+      "words": "The passport expires on {date}, within 6 months of today: canada.ca says it should be valid for at least 6 months from the date the person plans to travel.",
+      "source": {
+        "page": "Apply for a visitor visa (canada.ca), Gather your required documents",
+        "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/apply-visitor-visa.html",
+        "quote": "Your passport or travel document should be valid for at least 6 months from the date you plan to travel.",
+        "recorded": "2026-10-27",
+        "file": "official-sources/ircc/canada/pages/visit-canada-apply-visitor-visa.html"
+      }
+    },
+    {
+      "key": "police_certificate_old",
+      "fact": "person.police_certificate_issue_date",
+      "kind": "issued_more_than_months_ago",
+      "months": 6,
+      "blocks": true,
+      "covers": ["person.police_certificate_issue_date"],
+      "words": "The police certificate was issued on {date}, more than 6 months ago (Sample rule): get a new certificate.",
+      "source": {
+        "sample": true,
+        "why": "Sample: no canada.ca page stating a police certificate's age limit is committed in official-sources; the Express Entry police certificates page is cited only from a search summary (product/research_notes/Document first intake and OCR choice/ircc_document_fact_map.md, line 179). This fact is not in the shared library yet, so the rule shows on no demo case. ASSUMPTIONS.md A-C6.19-1."
+      }
+    }
+  ]
+}
