@@ -12,6 +12,7 @@ import { checkValue } from "../../engine/runtime/case.ts";
 import { EFFECT_KEYS, effectsOf, moveRefusal, touchedFilings, typeWords, whatChanges, type Effects, type ReleaseDiff, type Work } from "../../engine/runtime/release-update.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, type Actor } from "./core.ts";
+import { newestPin } from "./stage-scope.ts"; // C6.17
 import { busyWords, CasePrepare } from "./case-prepare.ts";
 import { caseInputs, diffCache, pinReleases, targetRelease, type CaseState } from "./release-context.ts";
 import { Runtime, type Reached } from "./runtime.ts";
@@ -47,7 +48,7 @@ export class ReleaseUpdates {
     const v = await this.prepare.peek(actor, c) as { filings: { id: string; owner?: { label: string }; applicants: { subject: string; label: string }[] }[]; readiness: { filing: string; reviewed: unknown }[] } | null;
     if (v) return { filings: v.filings.map((f) => ({ id: f.id, label: `${f.owner?.label ?? f.applicants[0]?.label ?? "The"}'s filing`, people: f.applicants.map((a) => a.subject) })),
       reviewed: new Set(v.readiness.filter((x) => x.reviewed).map((x) => x.filing)) };
-    const rows = await this.db.filing.findMany({ where: { caseId: c.id, active: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], include: { applicants: true, reviews: { orderBy: [{ reviewedAt: "desc" }, { id: "asc" }], take: 1 } } });
+    const rows = await this.db.filing.findMany({ where: { caseId: c.id, stage: { state: "CURRENT" }, active: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], include: { applicants: true, reviews: { orderBy: [{ reviewedAt: "desc" }, { id: "asc" }], take: 1 } } });
     const rep = (await this.db.caseTeamMember.findFirst({ where: { caseId: c.id, role: "LEAD_REPRESENTATIVE", endedAt: null }, select: { userId: true } }))?.userId ?? null;
     const label = new Map(c.participants.map((p) => [p.subjectId, p.subject.label]));
     return { filings: rows.map((f) => ({ id: f.id, label: `${label.get(f.subjectId) ?? "The"}'s filing`, people: f.applicants.map((a) => a.subjectId) })),
@@ -59,7 +60,7 @@ export class ReleaseUpdates {
    *  only work made before that moment (the last move). */
   private async work(c: Reached, people: Map<string, string>, before?: Date, onRelease?: (releaseId: string) => boolean): Promise<Work[]> {
     const at = before ? { lt: before } : undefined;
-    const copies = await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED" }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { id: true, formNumber: true, subjectId: true, lockedAt: true, configReleaseId: true, createdAt: true } });
+    const copies = await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED", configReleaseId: { in: c.pins.map((p) => p.configReleaseId) } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { id: true, formNumber: true, subjectId: true, lockedAt: true, configReleaseId: true, createdAt: true } });
     const validated = new Set((await this.db.validatedCopy.findMany({ where: { copy: { caseId: c.id } }, select: { formInstanceId: true } })).map((v) => v.formInstanceId));
     const seen = new Set<string>(), out: Work[] = [];
     for (const x of copies) {
@@ -69,7 +70,7 @@ export class ReleaseUpdates {
       const finished = !!x.lockedAt || validated.has(x.id);
       out.push({ id: x.id, kind: "copy", form: x.formNumber, subject: x.subjectId, finished, release: x.configReleaseId, label: `${x.formNumber} ${x.lockedAt ? "filed copy" : validated.has(x.id) ? "validated copy" : "draft copy"}` });
     }
-    const items = new Map((await this.db.filingItem.findMany({ where: { caseId: c.id, kind: "form" }, select: { id: true, itemKey: true, subjectId: true } })).map((i) => [i.id, i]));
+    const items = new Map((await this.db.filingItem.findMany({ where: { caseId: c.id, kind: "form", filing: { stage: { state: "CURRENT" } } }, select: { id: true, itemKey: true, subjectId: true } })).map((i) => [i.id, i]));
     const scans = await this.db.signedScan.findMany({ where: { caseId: c.id, ...(at ? { uploadedAt: at } : {}) }, orderBy: [{ uploadedAt: "desc" }, { id: "asc" }], select: { id: true, itemId: true } });
     const scanned = new Set<string>();
     for (const s of scans) { const i = items.get(s.itemId); if (!i || scanned.has(i.id)) continue; scanned.add(i.id); out.push({ id: s.id, kind: "signed_scan", form: i.itemKey, subject: i.subjectId, finished: true, label: `${i.itemKey} signed scan` }); }
@@ -122,7 +123,7 @@ export class ReleaseUpdates {
 
   /** BR-7: why the move is refused now (null: it may go ahead), read from the database as it is. */
   private async refusal(c: Reached | { id: string }, st: CaseState, diff: ReleaseDiff, to: Snapshot, currentLabel: string, names: Map<string, string>, asked: Set<string>, tx: Pick<Db, "filingRecord" | "formInstance" | "filing"> = this.db) {
-    const recorded = await tx.filingRecord.findMany({ where: { caseId: c.id }, select: { filingId: true } });
+    const recorded = await tx.filingRecord.findMany({ where: { caseId: c.id, filing: { stage: { state: "CURRENT" } } }, select: { filingId: true } }); // C6.17 (challenge B1): a record of an ended stage never freezes the current one
     const owners = recorded.length ? await tx.filing.findMany({ where: { id: { in: recorded.map((x) => x.filingId) } }, select: { subjectId: true } }) : [];
     const running = await tx.formInstance.findMany({ where: { caseId: c.id, status: { in: ["QUEUED", "RUNNING"] } }, select: { formNumber: true, subjectId: true } });
     const today = new Date();
@@ -156,7 +157,7 @@ export class ReleaseUpdates {
     let takenOver: { form: string; person: string }[] = [];
     const made = await busyWords(() => this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
-      const newest = await tx.packWorkPin.findFirst({ where: { caseId: c.id }, orderBy: { revision: "desc" }, select: { revision: true } });
+      const newest = await newestPin(tx, c.id, c.combinationId); // C6.17 (BR-9): the current stage's chain
       const latest = await tx.configRelease.findFirst({ where: { combinationId: c.combinationId }, orderBy: { version: "desc" }, select: { id: true, version: true } });
       if (newest?.revision !== b.from_revision || latest?.id !== target.id) return "stale" as const;
       // The answers read again under the lock (a change made since the list was read is judged as it is now).
@@ -168,8 +169,9 @@ export class ReleaseUpdates {
       // release holds itself is replaced by the release's line. Its addition is marked removed in this same transaction,
       // with the reason naming the release, so the record is kept and nothing reads two lines for one form.
       const held = releaseForms(target.snapshot as never);
+      // C6.17 (review of #1262 M4): the current stage's added forms only (Runtime.reach reads no other); an ended stage's are history.
       const over = (c.formAdditions ?? []).filter((a) => !a.removedAt && held.has(a.formKey));
-      if (over.length) await tx.filingFormAddition.updateMany({ where: { id: { in: over.map((a) => a.id) }, removedAt: null }, data: { removedAt: new Date(), removedBy: actor.id, removedReason: `Part of ${target.label}: the release's own line replaces the form added by the case officer.` } });
+      if (over.length) await tx.filingFormAddition.updateMany({ where: { id: { in: over.map((a) => a.id) }, removedAt: null, filing: { stageId: c.stage.id } }, data: { removedAt: new Date(), removedBy: actor.id, removedReason: `Part of ${target.label}: the release's own line replaces the form added by the case officer.` } });
       takenOver = over.map((a) => ({ form: a.formKey, person: names.get(a.subjectId) ?? "" }));
       // Break m8 (round 1): the audit line is written in the move's own transaction: no move without its line.
       await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "moved_release", entity: "case", entityKey: c.id, combinationId: c.combinationId,
