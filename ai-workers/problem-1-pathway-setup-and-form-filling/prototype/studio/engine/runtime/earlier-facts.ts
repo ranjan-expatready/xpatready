@@ -118,6 +118,7 @@ export function latestConfirmed(reads: { case_id: string; reference: string; mat
   }
   return out;
 }
+const strength = (f?: ExpiryFlag) => (!f ? -1 : f.blocks ? 2 : f.status === "soon" ? 1 : 0);
 /** The newer value from another earlier case that differs from this one, or null. */
 const newerThan = (latest: Latest | undefined, caseId: string | undefined, value: unknown, at: string): Latest | null =>
   latest && caseId && latest.case_id !== caseId && latest.at > at && factState(latest.value, { value }) === "different" ? latest : null;
@@ -140,12 +141,15 @@ export function offerFrom(input: { snapshot: Snapshot; here: Participant[]; curr
     const from = match.get(p.subjectId) ?? null, fromP = input.earlier.find((e) => e.subjectId === from);
     const all = from ? input.earlierAnswers.filter((a) => a.subjectId === from) : [], theirs = all.filter((a) => a.confirmed);
     // An expiry date read even when it was not confirmed there: a confirmed passport number never escapes an expired date.
-    const dated = new Map(all.map((a) => [a.field, a.value]));
-    for (const a of all) {
-      const l = newerThan(input.latestAny?.get(`${p.subjectId}|${a.field}`), input.caseId, a.value, seenOf(a));
-      if (l) dated.set(a.field, l.value);
-    }
-    const flags = expiryFlags(dated, input.today, input.rules, input.combinationKey);
+    // QA-338: a newer confirmed date elsewhere replaces this case's own; a newer one only typed elsewhere can add a
+    // stricter flag, never lift one (review round 2, R1: a draft renewal must not release an expired passport).
+    const datedBy = (l?: Map<string, Latest>) => {
+      const d = new Map(all.map((a) => [a.field, a.value]));
+      for (const a of all) { const n = newerThan(l?.get(`${p.subjectId}|${a.field}`), input.caseId, a.value, seenOf(a)); if (n) d.set(a.field, n.value); }
+      return d;
+    };
+    const flags = expiryFlags(datedBy(input.latest), input.today, input.rules, input.combinationKey);
+    for (const [f, flag] of expiryFlags(datedBy(input.latestAny), input.today, input.rules, input.combinationKey)) if (strength(flag) > strength(flags.get(f))) flags.set(f, flag);
     const facts: OfferFact[] = [];
     for (const q of asked) {
       const a = theirs.find((x) => x.field === q.fact);

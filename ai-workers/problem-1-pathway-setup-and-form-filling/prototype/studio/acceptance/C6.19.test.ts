@@ -93,6 +93,17 @@ function pure() {
   const typedReads = [{ ...reads[0] }, { ...reads[1], answers: [onA[0], { ...onA[1], confirmed: false }] }];
   const bTyped = offerFrom({ snapshot: s, here, current: [], earlier: pB, earlierAnswers: onB, today, caseId: "B", latest: latestConfirmed(typedReads), latestAny: latestConfirmed(typedReads, false) }).people.find((p) => p.subject_id === "p")!.facts;
   ok("C6.19 QA-338 fail (review M1): a correction typed on case A and not confirmed still makes case B's passport number and expiry Expired, not usable (not Out of date: it is not confirmed)", bTyped.every((f) => f.expiry?.status === "expired" && !f.usable && !f.newer), bTyped.map((f) => [f.fact, f.expiry?.status, f.newer, f.usable]));
+  // Review round 2, R1: case B confirmed the old passport (expired); a renewal only typed on case A never lifts the block,
+  // while a renewal confirmed on case A does (and B's old date reads Out of date).
+  const oldB = [ansAt("b1", "pB", NUMBER, "Q1110001", at(3)), ansAt("b2", "pB", EXPIRY, "2025-01-15", at(3))];
+  const renewal = (confirmed: boolean) => { const rs = [{ ...reads[0], answers: oldB }, { ...reads[1], answers: [{ ...ansAt("x2", "pA", EXPIRY, "2034-01-01", at(5)), confirmed }] }]; return offerFrom({ snapshot: s, here, current: [], earlier: pB, earlierAnswers: oldB, today, caseId: "B", latest: latestConfirmed(rs), latestAny: latestConfirmed(rs, false) }).people.find((p) => p.subject_id === "p")!.facts; };
+  const draft = renewal(false), done = renewal(true);
+  ok("C6.19 QA-338 fail (review R1): a later expiry only typed on case A never lifts case B's expired passport: B's number and date stay Expired, not usable", draft.every((f) => f.expiry?.blocks && !f.usable), draft.map((f) => [f.fact, f.expiry?.status, f.usable]));
+  ok("C6.19 QA-338 (review R1): a renewal confirmed on case A replaces the date: B's number is no longer Expired, B's old date reads Out of date", !done.find((f) => f.fact === NUMBER)?.expiry && done.find((f) => f.fact === EXPIRY)?.newer?.reference === "CASE-A" && !done.find((f) => f.fact === EXPIRY)!.usable, done.map((f) => [f.fact, f.expiry?.status, f.newer?.reference, f.usable]));
+  // Review m3: a copy counts from its re-confirmation: B re-confirmed 2031-05-09 after A confirmed 2025-01-15, so B is newest.
+  const reB = [{ ...onB[0], seenAt: at(7) }, { ...onB[1], seenAt: at(7) }], rsM3 = [{ ...reads[0], answers: reB }, reads[1]];
+  const m3 = (answers: typeof onB, caseId: string, earlier: typeof pB) => offerFrom({ snapshot: s, here, current: [], earlier, earlierAnswers: answers, today, caseId, latest: latestConfirmed(rsM3), latestAny: latestConfirmed(rsM3, false) }).people.find((p) => p.subject_id === "p")!.facts.find((f) => f.fact === EXPIRY);
+  ok("C6.19 QA-338 (review m3): a copy re-confirmed after another case's different value is not Out of date; the other case's value is", !m3(reB, "B", pB)?.newer && m3(onA, "A", pA)?.newer?.reference === "CASE-B", [m3(reB, "B", pB)?.newer, m3(onA, "A", pA)?.newer]);
   // Review m1: a date case B lacks is not borrowed from case A (it may be another passport's): B's number warns "not known".
   const bNoDate = offerFrom({ snapshot: s, here, current: [], earlier: pB, earlierAnswers: [onB[0]], today, caseId: "B", latest, latestAny }).people.find((p) => p.subject_id === "p")!.facts.find((f) => f.fact === NUMBER);
   ok("C6.19 QA-338 fail (review m1): case B with no expiry date of its own borrows none: its number keeps the 'not known' warning", bNoDate?.expiry?.status === "unknown" && bNoDate.usable, bNoDate);
@@ -262,6 +273,16 @@ async function api() {
   await confirmAll(a2.id, pa2);
   const x2 = (await b2On()).find((f) => f.fact === EXPIRY)!;
   const outOfDate = await call("POST", `/runtime/cases/${c2.id}/earlier-facts`, { earlierCase: b2.id, take: [{ subject_id: pc2, fact: EXPIRY, from: x2.from_answer }], seen: { [`${pc2}|${EXPIRY}`]: null } }, OFFICER);
+  // Review round 2, R1 on real cases: B3 confirmed an old, expired passport; a renewal only typed on A3 does not release it.
+  const N3 = `Client S ${run}`, b3 = await open(wp, "B3", N3), pb3 = principalOf(b3);
+  await answer(b3.id, pb3, NUMBER, "Q1110001"); await answer(b3.id, pb3, EXPIRY, "2025-01-15");
+  await confirmAll(b3.id, pb3);
+  const a3 = await open(vv, "A3", N3);
+  await answer(a3.id, principalOf(a3), EXPIRY, "2034-01-01"); // typed, not confirmed
+  const c3 = await open(wp, "C3", N3), pc3 = principalOf(c3);
+  const n3 = ((await offerOf(c3.id)).body as Offer).earlier.find((x) => x.case_id === b3.id)?.people.find((p) => p.subject_id === pc3)?.facts.find((f) => f.fact === NUMBER);
+  const viaB3 = n3 ? await call("POST", `/runtime/cases/${c3.id}/earlier-facts`, { earlierCase: b3.id, take: [{ subject_id: pc3, fact: NUMBER, from: n3.from_answer }], seen: { [`${pc3}|${NUMBER}`]: null } }, OFFICER) : { status: 0, body: null };
+  ok("C6.19 QA-338 fail (review R1): a renewal only typed on case A3 leaves case B3's expired passport number Expired; re-confirming it is refused, nothing copied", n3?.expiry?.blocks === true && !n3.usable && viaB3.status === 409 && copies(c3.id) === 0, { n3, viaB3: viaB3.body });
   ok("C6.19 QA-338: once case A2 confirms it, case B2's expiry reads Out of date naming A2, and re-confirming it is refused with that reason (review m4)", /Out of date: C619-A2-/.test(JSON.stringify(x2)) && !x2.usable && outOfDate.status === 409 && /cannot be re-confirmed: Out of date: C619-A2-/.test(JSON.stringify(outOfDate.body)) && copies(c2.id) === 0, { x2, outOfDate: outOfDate.body });
 
   // Breaker M1: newer empty cases of the same client never crowd out the earlier case that holds the facts.
