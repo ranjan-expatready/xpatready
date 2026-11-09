@@ -18,6 +18,8 @@ export type LibraryChangeView = {
   /** B86: a question's condition (only what the page reads: what approving it holds on other combinations). */
   condition?: { spread: string | null };
   /** B86: a form field's condition: the form field, its own words, what is proposed, what approving it holds elsewhere. */
+  /** B154 (P-97, P-244): whether a library section holds background answers, before → after, what it means, its reach. */
+  background?: { section: string; before: string; after: string; on: boolean; questions: number; uses: number; sourced: string[]; documents: string[]; means: string; reason: string };
   form_field?: { form: string; edition: string; caption: string; words: string; sentence: string; clear: boolean; spread: string | null; reason: string; ask?: { printed: string; deciding: string; writes: string } | null;
     /** B107: a gate (written only when …) or "filled by hand", from the form's own words; `cite` is the source (P-170). */
     decided?: { kind: "gate" | "by_hand"; cite: string } | null };

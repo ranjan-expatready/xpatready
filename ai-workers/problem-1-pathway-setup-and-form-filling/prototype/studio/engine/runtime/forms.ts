@@ -9,7 +9,7 @@ import { boxGate, notNeededWords, rulesInForce, showCondition } from "../form-fi
 import type { Snapshot } from "../snapshot.ts";
 import { groupLabel, type QuestionnaireView, type Readiness } from "../../contracts/runtime.ts";
 import { checkValue, knownOf, type Answer, type Participant, type Row } from "./case.ts";
-import { recordedDerivation } from "../../../p5/transforms.ts";
+import { proseRecorded, recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
 import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
 import { openLines } from "./open-lines.ts";
@@ -87,7 +87,8 @@ export function markNothingRecorded(boxes: BoxRow[], view: QuestionnaireView, pl
     // or no such entry; else (no entries and no "none apply" yet) the entry it waits for, as render words it.
     const list = b.about && b.coverage !== "confirmed fact" && isListRelative(b.about) ? listRowWhy(b, view) : null;
     if (list) return { ...b, detail: list };
-    const d = b.coverage === "confirmed fact" || !b.fact || !b.about || b.about === "case" ? null : recordedDerivation(b.transform);
+    // QA-318: the prose spelling of the same Yes/No (proseRecorded) names no other fact: the box's own fact is the one asked.
+    const d = b.coverage === "confirmed fact" || !b.fact || !b.about || b.about === "case" ? null : recordedDerivation(b.transform) ?? (proseRecorded(b.transform) ? { facts: [] } : null);
     if (!d) return b;
     const subject = b.about!.split("/")[0], facts = new Set([b.fact!, ...d.facts]);
     const asked = view.sections.flatMap((s) => s.questions.filter((q) => q.subjectId === subject && facts.has(q.fact)).map((q) => ({ s, q })));

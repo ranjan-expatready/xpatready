@@ -54,3 +54,12 @@ export function openLines(open: OpenFieldIn[]): OpenLine[] {
   const said = (l: OpenLine) => (/^(YYYY|MM|DD|Year|Month|Day)$/i.test(l.label.trim()) ? `${words(bare(segs(l.box).at(-1) ?? "").replace(DATE_PART, "")) || "Date"} (${l.label.trim()})` : l.label);
   return lines.map((l) => (out.has(l.key) ? { ...l, label: out.get(l.key)! } : { ...l, label: said(l) }));
 }
+
+/** QA-318 (P-46, P-171): what the forms card counts as facts to answer. Every readiness line that is not a mandatory form
+ *  field left empty, and also a mandatory form field left empty that "needs an answer" (a question fills it and its
+ *  answer is missing), so "Facts confirmed" is never shown over a missing fact. Locking is unchanged: a field left empty
+ *  never holds a copy's lock back (QA-165, #1318 M2); Ready to file names it. */
+export function cardFacts<T extends { reason: string; why?: string }>(missing: T[]): { facts: T[]; emptyFields: T[] } {
+  const waits = (m: T) => m.reason !== "left empty on the form" || /^needs an answer\b/.test(m.why ?? "");
+  return { facts: missing.filter(waits), emptyFields: missing.filter((m) => !waits(m)) };
+}
