@@ -37,7 +37,7 @@ import type { Snapshot } from "../../engine/snapshot.ts";
 import { CaseActorGuard, utf8Name } from "./case-checklist.ts";
 import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
 import { aiLive } from "./sources.ts";
-import { Runtime, type Reached } from "./runtime.ts";
+import { privateWords, Runtime, type Reached } from "./runtime.ts";
 import { sameValue } from "./document-values.ts";
 export { sameValue };
 
@@ -201,6 +201,8 @@ export class CaseDocuments {
     const c = await this.r.reach(actor, caseId, "answer");
     const b = parse(CaseUpload, body);
     const who = this.person(c, b.subjectId);
+    // C6.16 BR-7: a client never stores a file for a person kept private from them.
+    if (!(actor.duties as readonly string[]).includes("case") && this.r.hiddenFromClient(c, who.subjectId)) fail(privateWords(who.subject.label), HttpStatus.FORBIDDEN);
     // Break M5: a document the release lists goes on its checklist line (its own rules: Not applicable, requested, sets);
     // only a kind with no line (a letter of invitation, Sample) is uploaded here.
     if (!CASE_KINDS[b.documentType]) fail(this.typesOf(c).some((t) => t.key === b.documentType) ? `${this.typeName(c, b.documentType)} has its own line on the person's checklist: upload it there. Nothing was stored.` : `"${b.documentType}" is not a document that can be added without a checklist line. Nothing was stored.`, HttpStatus.UNPROCESSABLE_ENTITY);

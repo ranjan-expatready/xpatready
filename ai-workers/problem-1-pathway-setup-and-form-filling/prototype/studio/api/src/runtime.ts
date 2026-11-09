@@ -11,7 +11,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { ConfirmSection, fillsText, Reconfirm, notReadyForCases, releaseLabel, NewCase, type OpenableRelease, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { caseView, checkValue, isClientField, pqrView, shapeOf, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
+import { caseView, checkValue, isClientField, OWN_LINK, pqrView, shapeOf, type Answer, type CaseView, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
+import { ownerOf, privateFrom, progressOf } from "../../engine/runtime/privacy.ts"; // C6.16
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, need, RUNTIME_ACTORS, Workspace, type Actor } from "./core.ts";
 import { sameValue } from "./document-values.ts";
@@ -67,7 +68,34 @@ export const REPRESENTATIVE_NOT_TYPED = "The representative's details come only 
  *  offers to add one as a person; every other role comes from the release (P-319). */
 export const offeredRoles = (s: Snapshot) => addableRoles(s).filter((p) => p.role !== REPRESENTATIVE);
 
+/** What a reached case carries: every pin revision, newest first (C9.5), its release; the people with their party and
+ *  profile; and the case's first Make principal (C6.13 BR-3b: it names the client when roles were swapped). */
+const REACHED = { pins: { orderBy: { revision: "desc" as const }, include: { release: { include: { packVersion: { select: { version: true } } } } } }, participants: { orderBy: { order: "asc" as const }, include: { subject: { include: { party: { include: { profile: true } } } } } },
+  filingChanges: { where: { kind: "make_principal" }, orderBy: [{ changedAt: "asc" as const }, { id: "asc" as const }], take: 1, select: { kind: true, subjectId: true, otherSubjectId: true, changedAt: true } },
+  // C7.8 (B141 M1): the live forms the case officer added to one filing, joined into the case's snapshot (snapshotOf).
+  formAdditions: { where: { removedAt: null }, orderBy: [{ addedAt: "asc" as const }, { id: "asc" as const }] } };
+/** C9.5 (BR-1, challenge M1): a case reads its newest pin revision (`pins[0]`); every revision, older ones too, must still
+ *  match its release and the case's combination, and the chain must hold (1…n, forward only). Otherwise refused, never read. */
+function pinned<C extends { combinationId: string; pins: { revision: number; contentHash: string; release: { version: number; sha256: string; combinationId: string } }[] }>(c: C): C {
+  const pin = c.pins[0];
+  if (!pin || !pinChain(c.pins.map((p) => ({ revision: p.revision, version: p.release.version }))).ok || c.pins.some((p) => p.contentHash !== p.release.sha256 || p.release.combinationId !== c.combinationId)) fail("This case's pin to its release does not match the release; nothing was read or changed. Ask the Lead.", HttpStatus.CONFLICT);
+  return c;
+}
 export type Reached = Awaited<ReturnType<Runtime["reach"]>>;
+/** C6.16 (challenge M2): who saves an answer, row or group answer: case staff and the case's client (simulated by
+ *  x-actor), or an adult on their own link (/api/link/*, actor "person:<subject id>", channel own_link, only their own
+ *  subject). One write path for all three, so the rules are checked once. */
+export type Writer = { id: string; name: string; officer: boolean; channel: "agent_view" | "questionnaire" | typeof OWN_LINK; own: string | null };
+export const writerOf = (a: Actor): Writer => ({ id: a.id, name: a.name, officer: isOfficer(a), channel: isOfficer(a) ? "agent_view" : "questionnaire", own: null });
+/** C6.16 BR-7: the words a client reads on a person whose answers are kept private from them. */
+export const privateWords = (label: string) => `${label}'s answers are private to them and the firm: ${label} answers on their own link. You see how far they have got, not their answers.`;
+/** C6.16 BR-7 (challenge M3): the client's view without the parts of people kept private from them, its summary counted
+ *  again from what is left. */
+function withoutHidden<V extends CaseView>(v: V, hidden: Set<string>, hiddenLabels: Set<string>, shownLabels: Set<string>): V {
+  const sections = v.sections.filter((x) => !hidden.has(ownerOf(x.subjectId))); // a relative goes with their person (B128)
+  return { ...v, sections, checks: v.checks.filter((x) => !hidden.has(ownerOf(x.subjectId))), forms: v.forms.filter((f) => !hiddenLabels.has(f.person) || shownLabels.has(f.person)),
+    summary: { ...v.summary, questions: sections.reduce((n, x) => n + x.questions.length, 0), answered: sections.reduce((n, x) => n + x.answered, 0), confirmed: sections.reduce((n, x) => n + x.confirmed, 0), missing: sections.reduce((n, x) => n + x.missing.length, 0) } };
+}
 
 /** QA-322: the note for one open check: "changed" only when the answer now holds another value than the one the check
  *  compared (review M1 on 673f0794d: the same value saved again, or changed back, is still the compared answer). */
@@ -99,18 +127,18 @@ export class Runtime {
     const officer = isOfficer(actor), client = (actor.duties as readonly string[]).includes("answer");
     if (!officer && !client) fail(`${actor.name} (simulated) works on configuration, not on cases.`, HttpStatus.FORBIDDEN);
     if (want === "officer" && !officer) fail("Only the case officer can do this.", HttpStatus.FORBIDDEN);
-    const c = await this.db.case.findFirst({ where: { id: caseId, workspaceId }, include: { pins: { orderBy: { revision: "desc" }, include: { release: { include: { packVersion: { select: { version: true } } } } } }, participants: { orderBy: { order: "asc" }, include: { subject: { include: { party: { include: { profile: true } } } } } },
-      // C6.13 BR-3b: the case's first Make principal names the client when roles were swapped (clientPersonOf).
-      filingChanges: { where: { kind: "make_principal" }, orderBy: [{ changedAt: "asc" }, { id: "asc" }], take: 1, select: { kind: true, subjectId: true, otherSubjectId: true, changedAt: true } },
-      // C7.8 (B141 M1): the live forms the case officer added to one filing, joined into the case's snapshot (snapshotOf).
-      formAdditions: { where: { removedAt: null }, orderBy: [{ addedAt: "asc" }, { id: "asc" }] } } });
+    const c = await this.db.case.findFirst({ where: { id: caseId, workspaceId }, include: REACHED });
     // C6.11 (BR-20): staff reach only their own firm's cases; another firm's case is "not found", as for a client.
     if (!c || (!officer && c.clientActorId !== actor.id) || (officer && c.firmKey !== firmOfActor(actor)?.key)) fail("No such case.", HttpStatus.NOT_FOUND);
-    // C9.5 (BR-1, challenge M1): a case reads its newest pin revision (`pins[0]`, ordered above); every revision, older
-    // ones too, must still match its release and the case's combination, and the chain must hold (1…n, forward only).
-    const pin = c!.pins[0];
-    if (!pin || !pinChain(c!.pins.map((p) => ({ revision: p.revision, version: p.release.version }))).ok || c!.pins.some((p) => p.contentHash !== p.release.sha256 || p.release.combinationId !== c!.combinationId)) fail("This case's pin to its release does not match the release; nothing was read or changed. Ask the Lead.", HttpStatus.CONFLICT);
-    return c!;
+    return pinned(c!);
+  }
+
+  /** C6.16 (BR-5): the case of a link session, which /api/link/*'s guard already checked (live session, live link, the
+   *  person still on the case). The same pin check as reach. */
+  async reachByLink(caseId: string) {
+    const c = await this.db.case.findFirst({ where: { id: caseId, workspaceId: await this.ws.id() }, include: REACHED });
+    if (!c) fail("No such case.", HttpStatus.NOT_FOUND);
+    return pinned(c!);
   }
 
   /** The case's snapshot: its pinned release with the forms the case officer added to one filing joined in (C7.8 M1,
@@ -140,6 +168,19 @@ export class Runtime {
     // C6.13 BR-3b: the client stays the same person after Make principal; only a case whose roles were swapped says so.
     if (!c.filingChanges.length) return people;
     return withClient(people, clientPersonOf(people, c.filingChanges.map((x) => ({ kind: x.kind as StoredChange["kind"], subject: x.subjectId, other: x.otherSubjectId, at: x.changedAt.toISOString() }))));
+  }
+
+  /** C6.16 (review M1, C6.13): the case's client person: the principal, unless Make principal swapped roles (the client
+   *  stays the same person, `peopleOf(c)[].client`). "The principal" of BR-1 and BR-7 is this person. */
+  clientSubjectOf(c: Reached): string | null {
+    const people = this.peopleOf(c);
+    return people.find((x) => x.client === true)?.subjectId ?? people.find((x) => x.role === "principal")?.subjectId ?? null;
+  }
+  /** C6.16 BR-7: the participant (owner of a relative's key) whose stored setting hides them from the client, else null. */
+  hiddenFromClient(c: Reached, subjectId: string) {
+    const owner = ownerOf(subjectId), client = this.clientSubjectOf(c);
+    const p = c.participants.find((x) => x.subjectId === owner);
+    return p && privateFrom({ kind: "client" }, { subjectId: owner, role: p.role, keepPrivate: p.keepPrivate, isClient: owner === client }) ? p : null;
   }
 
   /** B128 (QA-153): the relatives' answer subjects of this case (a parent a form describes, never a person on it), each
@@ -419,6 +460,13 @@ export class Runtime {
   async view(actor: Actor, caseId: string, mode: Mode) {
     const c = await this.reach(actor, caseId, "read");
     if (mode === "agent" && !isOfficer(actor)) fail("The Agent view is for the case officer.", HttpStatus.FORBIDDEN);
+    if (!isOfficer(actor)) {
+      // QA-322 for the client too (lost in the third main merge: this early return skipped main's line below). Read
+      // from clientView's sections, so a private person's parts carry no note either (C6.16 BR-7).
+      const v = await this.clientView(c);
+      const checks = [...v.view.checks, ...await this.documentChecks(c, v.view.sections)];
+      return { case: await this.get(actor, caseId), ...v.view, checks, private_people: v.private_people };
+    }
     const { answers, rows, groups } = await this.state(c);
     const view = caseView(this.snapshotOf(c), this.peopleOf(c), answers, rows, mode, new Date(), groups, { background: this.backgroundOf(c) });
     // QA-322 (P-142 D6): the client sees "please check" on an answer while a typed-versus-document check is open on it.
@@ -448,13 +496,45 @@ export class Runtime {
     });
   }
 
+  /** C6.16 BR-7 (challenge M3, M4): the client's questionnaire. The values, rows and group answers of a person whose
+   *  stored setting is on are left out before anything is worked out, so no follow-up question, check or form reveals
+   *  them; that person's parts are dropped and their progress (counted from all answers, on the server) takes their place. */
+  async clientView(c: Reached) {
+    const s = this.snapshotOf(c), people = this.peopleOf(c), now = new Date();
+    const st = await this.state(c);
+    const hidden = new Set(c.participants.filter((p) => this.hiddenFromClient(c, p.subjectId)).map((p) => p.subjectId));
+    const opts = { background: this.backgroundOf(c) };
+    if (!hidden.size) return { view: caseView(s, people, st.answers, st.rows, "sqr", now, st.groups, opts), private_people: [] };
+    const full = caseView(s, people, st.answers, st.rows, "sqr", now, st.groups, opts);
+    const private_people = c.participants.filter((p) => hidden.has(p.subjectId)).map((p) => ({ subject_id: p.subjectId, label: p.subject.label, progress: progressOf(full.sections.filter((x) => ownerOf(x.subjectId) === p.subjectId)) }));
+    // B128: a private person's relatives' answers (`<person>/parent_1`) are theirs too, and are left out with them.
+    const shown = (id: string) => !hidden.has(ownerOf(id));
+    const seen = caseView(s, people, st.answers.filter((a) => shown(a.subjectId)), st.rows.filter((r) => shown(r.subjectId)), "sqr", now, st.groups.filter((g) => shown(g.subjectId)), opts);
+    const labels = (keep: boolean) => new Set(c.participants.filter((p) => hidden.has(p.subjectId) === keep).map((p) => p.subject.label));
+    return { view: withoutHidden(seen, hidden, labels(true), labels(false)), private_people };
+  }
+
+  /** C6.16 BR-5 (SA-1B-269 rule 2): what an adult reads on their own link: their own parts (to answer) and the
+   *  application's (shared, read-only); nobody else's part, check or form. */
+  async linkView(c: Reached, own: string) {
+    const s = this.snapshotOf(c), st = await this.state(c);
+    const caseSubject = c.participants.find((p) => p.role === "case")?.subjectId;
+    const keep = (id: string) => ownerOf(id) === own || id === caseSubject; // their relatives' parts are theirs too (B128)
+    const v = caseView(s, this.peopleOf(c), st.answers, st.rows, "sqr", new Date(), st.groups, { background: this.backgroundOf(c) });
+    const others = new Set(c.participants.filter((p) => !keep(p.subjectId)).map((p) => p.subjectId));
+    const labels = (k: boolean) => new Set(c.participants.filter((p) => keep(p.subjectId) === k).map((p) => p.subject.label));
+    return { case: { id: c.id, reference: c.reference, people: c.participants.filter((p) => keep(p.subjectId)).map((p) => ({ subject_id: p.subjectId, role: p.role, label: p.subject.label, applies: p.applies })) }, own,
+      ...withoutHidden(v, others, labels(false), labels(true)) };
+  }
+
   /** P-47 mode 1, PQR (C4.4 part 2): the pre-qualification questions only, with a plain result line. The officer's PQR
    *  reads the agent view; a client's reads their own questionnaire (PQR ⊂ SQR). */
   async pqr(actor: Actor, caseId: string) {
     const c = await this.reach(actor, caseId, "read");
-    const { answers, rows, groups } = await this.state(c);
     const s = this.snapshotOf(c), people = this.peopleOf(c);
-    return { case: await this.get(actor, caseId), ...pqrView(s, people, caseView(s, people, answers, rows, isOfficer(actor) ? "agent" : "sqr", new Date(), groups)) };
+    if (!isOfficer(actor)) return { case: await this.get(actor, caseId), ...pqrView(s, people, (await this.clientView(c)).view) }; // C6.16 BR-7
+    const { answers, rows, groups } = await this.state(c);
+    return { case: await this.get(actor, caseId), ...pqrView(s, people, caseView(s, people, answers, rows, "agent", new Date(), groups)) };
   }
 
   /** P-47 tier 3 (C4.4 part 2): the independent review the officer runs on demand. It reads answers and never changes
@@ -472,11 +552,31 @@ export class Runtime {
   async putAnswer(actor: Actor, caseId: string, subjectId: string, fieldKey: string, body: unknown) {
     if (!FIELD_KEY.test(fieldKey)) fail("No such question.", HttpStatus.NOT_FOUND);
     const c = await this.reach(actor, caseId, "answer");
+    return this.saveAnswer(c, writerOf(actor), subjectId, fieldKey, body, () => this.view(actor, caseId, isOfficer(actor) ? "agent" : "sqr"));
+  }
+
+  /** C6.16 (challenge M3): before any value of the person is read, the writer must be allowed to write them: a client
+   *  never writes a person whose stored setting is on (403, also after take back: challenge M4); a link writes only its
+   *  own person. */
+  private refusePrivate(w: Writer, c: Reached, subjectId: string) {
+    if (w.officer) return;
+    // B128, B155: a relative (`<person>/parent_1`, `<person>/sibling`) is that person's: the person's setting decides.
+    const owner = ownerOf(subjectId);
+    if (w.own !== null) { if (owner !== w.own) fail("Your link is for your own questions only.", HttpStatus.FORBIDDEN); return; }
+    const p = this.hiddenFromClient(c, owner);
+    if (p) fail(privateWords(p.subject.label), HttpStatus.FORBIDDEN);
+  }
+
+  /** One answer saved by case staff, the client or an adult on their own link (Writer). */
+  async saveAnswer(c: Reached, w: Writer, subjectId: string, fieldKey: string, body: unknown, after: () => Promise<{ sections: CaseView["sections"] }>) {
+    if (!FIELD_KEY.test(fieldKey)) fail("No such question.", HttpStatus.NOT_FOUND);
+    const caseId = c.id;
     const b = parse(PutAnswer, body);
-    const s = this.snapshotOf(c), officer = isOfficer(actor);
+    const s = this.snapshotOf(c), officer = w.officer;
     // QA-293: the representative is no person on the case; their details come only from the firm record of the
     // representative of record (C7.7, C6.11), so a save about them is refused in words (never "not on this case").
     if (subjectId === REPRESENTATIVE) fail(REPRESENTATIVE_NOT_TYPED, HttpStatus.UNPROCESSABLE_ENTITY);
+    this.refusePrivate(w, c, subjectId); // C6.16 BR-7: before the current answer (and the 409 body) is read
     // B128: a relative's answer (`<person>/parent_1`) is kept on the relative's own subject, never on the person's.
     const { who } = await this.subjectFor(c, subjectId, false, fieldKey);
     // C6.11: "Uses a representative" comes from the case team (the representative of record), never typed; a client is
@@ -511,7 +611,7 @@ export class Runtime {
     const def = await this.db.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: fieldKey, version: field!.item_version } });
     if (!def) fail(`The library has no version ${field!.item_version} of ${fieldKey}.`, HttpStatus.CONFLICT);
     const rowKey = b.row ?? null;
-    const source = { channel: officer ? OFFICER_ENTRY : "questionnaire", actor: actor.id, at: new Date().toISOString() };
+    const source = { channel: officer ? OFFICER_ENTRY : w.channel, actor: w.id, at: new Date().toISOString() }; // C6.16: own_link on a person's own link
     // C6.18 (P-244): staff may record a background answer (by phone or in person): it is marked "Officer" (its channel,
     // who and when) and waits for the client to re-confirm it before signing. A blank is never saved (PutAnswer).
     const recordedForClient = officer && this.backgroundOf(c).has(fieldKey);
@@ -522,6 +622,12 @@ export class Runtime {
     const stored = subjectId === who!.subjectId ? subjectId : (await this.subjectFor(c, subjectId, true, fieldKey)).stored!;
     try {
       await this.db.$transaction(async (tx) => {
+        // C6.16 (break m8): the setting is read again under a share lock, so a client's save that races the adult's first
+        // right code (which updates this row) is refused once privacy is on, never saved just after.
+        if (!officer && w.own === null) {
+          const owner = ownerOf(subjectId), [row] = await tx.$queryRaw<{ keep_private: boolean; label: string }[]>`SELECT p.keep_private, s.label FROM case_participant p JOIN answer_subject s ON s.id = p.subject_id WHERE p.subject_id = ${owner}::uuid FOR SHARE OF p`;
+          if (row?.keep_private && owner !== this.clientSubjectOf(c)) fail(privateWords(row.label), HttpStatus.FORBIDDEN);
+        }
         // The row stays live until this answer is saved: a removal at the same moment waits, or wins and this one is refused.
         if (rowKey) { const live = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM client_fact_record WHERE row_key = ${rowKey}::uuid AND subject_id = ${stored}::uuid AND group_key = ${groupKey} AND superseded_by_id IS NULL AND NOT tombstone FOR SHARE`; if (!live.length) fail("No such row for this person.", HttpStatus.NOT_FOUND); }
         const current = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: stored, canonicalFieldKey: fieldKey, rowKey, supersededById: null } });
@@ -533,9 +639,8 @@ export class Runtime {
       if (unique(e)) { const now = await this.db.clientCanonicalAnswer.findFirst({ where: { subjectId: stored, canonicalFieldKey: fieldKey, rowKey, supersededById: null } }); conflict("Someone answered this at the same moment; their answer is shown. Check it and save again.", { current: now ? { id: now.id, value: now.valueJson } : null }); }
       throw e;
     }
-    await this.audit.log(c.workspaceId, actor.id, "answered", "case fact", fieldKey, `${actor.name} ${b.expectedId ? "changed" : "answered"} ${fieldKey} on case ${short(caseId)} (${officer ? "Agent view" : "Client questionnaire"}${recordedForClient ? "; a background answer recorded by staff, marked Officer: the client re-confirms it before signing" : ""})`);
-    const after = await this.view(actor, caseId, officer ? "agent" : "sqr");
-    const q = after.sections.flatMap((x) => x.questions).find((x) => x.subjectId === subjectId && x.fact === fieldKey);
+    await this.audit.log(c.workspaceId, w.id, "answered", "case fact", fieldKey, `${w.name} ${b.expectedId ? "changed" : "answered"} ${fieldKey} on case ${short(caseId)} (${officer ? "Agent view" : w.own ? "their own link" : "Client questionnaire"}${recordedForClient ? "; a background answer recorded by staff, marked Officer: the client re-confirms it before signing" : ""})`);
+    const q = (await after()).sections.flatMap((x) => x.questions).find((x) => x.subjectId === subjectId && x.fact === fieldKey);
     const ans = rowKey ? q?.rows.find((x) => x.row === rowKey)?.answer : q?.answer;
     const fills = q?.fills ?? [];
     // B155 (break m3 on #1367): an entry of a list with no row on the form fills no form field: it goes on an extra sheet.
@@ -555,6 +660,7 @@ export class Runtime {
     const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const row = UUID.test(answerId) ? await this.db.clientCanonicalAnswer.findUnique({ where: { id: answerId } }) : null;
     if (!row || !c.participants.some((p) => p.subjectId === row.subjectId)) fail("No such answer on this case.", HttpStatus.NOT_FOUND);
+    this.refusePrivate(writerOf(actor), c, row!.subjectId); // C6.16 BR-7: before the newer answer (and its value) is read
     const newer = () => this.db.clientCanonicalAnswer.findFirst({ where: { subjectId: row!.subjectId, canonicalFieldKey: row!.canonicalFieldKey, rowKey: row!.rowKey, supersededById: null } });
     if (row!.supersededById) { const now = await newer(); conflict("This answer changed after you opened it; nothing was re-confirmed. Check the newer answer shown, then re-confirm that one.", { current: now ? { id: now.id, value: now.valueJson } : null }); }
     const a: Answer | undefined = (await this.state(c)).answers.find((x) => x.id === answerId);
@@ -583,8 +689,9 @@ export class Runtime {
    *  numbered one at a time (a transaction lock), and the database refuses two live rows in one place. */
   /** Who may write a repeating group of a person on this case: the group exists, belongs to that kind of subject, and
    *  the client writes it only when it holds a client field. */
-  private async groupFor(actor: Actor, c: Reached, subjectId: string, groupKey: string, create = false): Promise<{ who: Reached["participants"][number]; stored: string | null }> {
+  private async groupFor(w: Writer, c: Reached, subjectId: string, groupKey: string, create = false): Promise<{ who: Reached["participants"][number]; stored: string | null }> {
     if (subjectId === REPRESENTATIVE) fail(REPRESENTATIVE_NOT_TYPED, HttpStatus.UNPROCESSABLE_ENTITY); // QA-293 review m3
+    this.refusePrivate(w, c, subjectId); // C6.16 BR-7
     const s = this.snapshotOf(c);
     // B155: a list relative's group (`<person>/sibling`, group "sibling"): the release's forms read that relation, the
     // client writes it when one of its facts is a client field, and it is kept on the relative's own subject (made on the
@@ -594,7 +701,7 @@ export class Runtime {
       if (!isListRelation(rel.relation) || groupKey !== rel.relation) fail("That section has no repeating group.", HttpStatus.NOT_FOUND);
       const { who, stored } = await this.subjectFor(c, subjectId, create);
       const facts = new Set((s.field_maps as { entries: { person?: string | null; outcome?: string; fact?: string | null }[] }[]).flatMap((m) => m.entries.filter((e) => e.outcome === "mapped" && e.person === `subject_${rel.relation}` && e.fact).map((e) => e.fact!)));
-      if (!isOfficer(actor) && ![...facts].some((f) => isClientField(s, f))) fail("The officer fills this group.", HttpStatus.FORBIDDEN);
+      if (!w.officer && ![...facts].some((f) => isClientField(s, f))) fail("The officer fills this group.", HttpStatus.FORBIDDEN);
       return { who, stored };
     }
     const who = c.participants.find((p) => p.subjectId === subjectId);
@@ -603,14 +710,17 @@ export class Runtime {
     if (!group.length) fail("That section has no repeating group.", HttpStatus.NOT_FOUND);
     const caseLevel = group.every((p) => p.fact.startsWith("case."));
     if (caseLevel !== (who!.role === "case")) fail(caseLevel ? "This group is asked once for the application, not for a person." : "This group is asked for a person, not for the application.", HttpStatus.UNPROCESSABLE_ENTITY);
-    if (!isOfficer(actor) && !group.some((p) => isClientField(s, p.fact))) fail("The officer fills this group.", HttpStatus.FORBIDDEN);
+    if (!w.officer && !group.some((p) => isClientField(s, p.fact))) fail("The officer fills this group.", HttpStatus.FORBIDDEN);
     return { who: who!, stored: subjectId };
   }
 
   async addRow(actor: Actor, caseId: string, subjectId: string, body: unknown) {
-    const c = await this.reach(actor, caseId, "answer");
+    return this.saveRow(await this.reach(actor, caseId, "answer"), writerOf(actor), subjectId, body);
+  }
+  async saveRow(c: Reached, w: Writer, subjectId: string, body: unknown) {
+    const caseId = c.id;
     const b = parse(NewRow, body);
-    const subject = (await this.groupFor(actor, c, subjectId, b.group, true)).stored!;
+    const subject = (await this.groupFor(w, c, subjectId, b.group, true)).stored!;
     const id = randomUUID();
     await this.db.$transaction(async (tx) => {
       const subjectId = subject; // B155: a list relative's entries are kept on its own subject
@@ -618,9 +728,9 @@ export class Runtime {
       // "None apply" stands until someone says entries apply: an entry is never added beside it (never contradict silently).
       if ((await tx.clientGroupAnswer.findFirst({ where: { subjectId, groupKey: b.group, supersededById: null } }))?.noneApply) refused("\"None apply\" is recorded for this group; change it to \"entries apply\" first, then add the entries.");
       const live = await tx.clientFactRecord.findMany({ where: { subjectId, groupKey: b.group, supersededById: null } });
-      await tx.clientFactRecord.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey: b.group, rowKey: id, order: live.length ? Math.max(...live.map((x) => x.order)) + 1 : 0, sourceJson: { channel: isOfficer(actor) ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() } } });
+      await tx.clientFactRecord.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey: b.group, rowKey: id, order: live.length ? Math.max(...live.map((x) => x.order)) + 1 : 0, sourceJson: { channel: w.channel, actor: w.id, at: new Date().toISOString() } } });
     });
-    await this.audit.log(c.workspaceId, actor.id, "added", "row", b.group, `${actor.name} added a row to ${b.group} on case ${short(caseId)}`);
+    await this.audit.log(c.workspaceId, w.id, "added", "row", b.group, `${w.name} added a row to ${b.group} on case ${short(caseId)}`);
     return { row: id, group: b.group };
   }
 
@@ -628,9 +738,12 @@ export class Runtime {
    *  each time (append-only), checked against the version the person saw, never beside live entries. It waits for
    *  confirmation by the same rule as an answer to the group (the client's own answer counts for the principal). */
   async noneApply(actor: Actor, caseId: string, subjectId: string, groupKey: string, body: unknown) {
-    const c = await this.reach(actor, caseId, "answer");
+    return this.saveNoneApply(await this.reach(actor, caseId, "answer"), writerOf(actor), subjectId, groupKey, body, () => this.view(actor, caseId, isOfficer(actor) ? "agent" : "sqr"));
+  }
+  async saveNoneApply(c: Reached, w: Writer, subjectId: string, groupKey: string, body: unknown, after: () => Promise<{ sections: CaseView["sections"] }>) {
+    const caseId = c.id;
     const b = parse(NoneApply, body);
-    const { who, stored } = await this.groupFor(actor, c, subjectId, groupKey, b.noneApply);
+    const { who, stored } = await this.groupFor(w, c, subjectId, groupKey, b.noneApply);
     const id = randomUUID();
     const changed = !stored ? false : await this.db.$transaction(async (tx) => {
       const subjectId = stored; // B155: a list relative's "none apply" is kept on its own subject
@@ -643,17 +756,21 @@ export class Runtime {
       const entries = await tx.clientFactRecord.count({ where: { subjectId, groupKey, supersededById: null, tombstone: false } });
       if (b.noneApply && entries) refused(`This group has ${entries} entr${entries === 1 ? "y" : "ies"}; remove ${entries === 1 ? "it" : "them"} first, then say none apply.`);
       if (cur) { const n = await tx.clientGroupAnswer.updateMany({ where: { id: cur.id, supersededById: null }, data: { supersededById: id } }); if (n.count !== 1) conflict("Someone answered this at the same moment; nothing was saved. Look at their answer and try again."); }
-      await tx.clientGroupAnswer.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey, noneApply: b.noneApply, status: "DECLARED", sourceJson: { channel: isOfficer(actor) ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() } } });
+      await tx.clientGroupAnswer.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey, noneApply: b.noneApply, status: "DECLARED", sourceJson: { channel: w.channel, actor: w.id, at: new Date().toISOString() } } });
       return true;
     });
-    if (changed) await this.audit.log(c.workspaceId, actor.id, "answered", "group", groupKey, `${actor.name} recorded that ${b.noneApply ? "no entries apply" : "entries apply"} in ${groupKey} for the ${who.role.replace(/_/g, " ")}${subjectId === who.subjectId ? "" : `'s ${groupKey.replace(/_/g, " ")}`} on case ${short(caseId)}`);
-    const v = await this.view(actor, caseId, isOfficer(actor) ? "agent" : "sqr");
+    if (changed) await this.audit.log(c.workspaceId, w.id, "answered", "group", groupKey, `${w.name} recorded that ${b.noneApply ? "no entries apply" : "entries apply"} in ${groupKey} for the ${who.role.replace(/_/g, " ")}${subjectId === who.subjectId ? "" : `'s ${groupKey.replace(/_/g, " ")}`} on case ${short(caseId)}`);
+    const v = await after();
     return { saved: changed, group: v.sections.find((x) => x.subjectId === subjectId && x.section === groupKey)?.group ?? null };
   }
 
   /** Removing a row inserts a tombstone version of it; its answers stay stored and are no longer read (team rule). */
   async removeRow(actor: Actor, caseId: string, subjectId: string, rowKey: string) {
-    const c = await this.reach(actor, caseId, "answer");
+    return this.dropRow(await this.reach(actor, caseId, "answer"), writerOf(actor), subjectId, rowKey);
+  }
+  async dropRow(c: Reached, w: Writer, subjectId: string, rowKey: string) {
+    const caseId = c.id;
+    this.refusePrivate(w, c, subjectId); // C6.16 BR-7: before the row is read
     // B155: a list relative's entry is removed from its own subject (none stored yet: no such row).
     const rel = relativeOf(subjectId);
     const stored = rel ? (isListRelation(rel.relation) ? (await this.subjectFor(c, subjectId, false)).stored : null) : c.participants.some((p) => p.subjectId === subjectId) ? subjectId : null;
@@ -663,9 +780,9 @@ export class Runtime {
     await this.db.$transaction(async (tx) => {
       const n = await tx.clientFactRecord.updateMany({ where: { id: cur!.id, supersededById: null }, data: { supersededById: id } });
       if (n.count !== 1) conflict("Someone changed this row at the same moment; refresh and try again.");
-      await tx.clientFactRecord.create({ data: { id, workspaceId: c.workspaceId, subjectId: cur!.subjectId, groupKey: cur!.groupKey, rowKey, order: cur!.order, tombstone: true, sourceJson: { channel: isOfficer(actor) ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() } } });
+      await tx.clientFactRecord.create({ data: { id, workspaceId: c.workspaceId, subjectId: cur!.subjectId, groupKey: cur!.groupKey, rowKey, order: cur!.order, tombstone: true, sourceJson: { channel: w.channel, actor: w.id, at: new Date().toISOString() } } });
     });
-    await this.audit.log(c.workspaceId, actor.id, "removed", "row", cur!.groupKey, `${actor.name} removed a row from ${cur!.groupKey} on case ${short(caseId)}`);
+    await this.audit.log(c.workspaceId, w.id, "removed", "row", cur!.groupKey, `${w.name} removed a row from ${cur!.groupKey} on case ${short(caseId)}`);
     return { row: rowKey, removed: true };
   }
 
