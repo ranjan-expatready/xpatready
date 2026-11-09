@@ -37,11 +37,15 @@ await main("QA-318", "IMM 5257 SCH1's five mandatory Yes/No form fields fill, or
 
   // ---------------------------------------------------------------- Part B: the family case on the configured checkpoint
   const vv = sql("select id from combination where combination_key='vv.single'");
-  const sch1Asked = sql(`select count(*) from section_question q join form_field_map m on m.canonical_field_key=q.canonical_field_key join form_edition e on e.id=m.form_edition_id join gov_form_def g on g.id=e.gov_form_def_id where g.form_key='IMM 5257 SCH1' and m.data_path ~ '(HaveWitnessedParticipated|BeenMemberAssociated)\\[0\\]$' and m.status='PUBLISHED' and q.status='PUBLISHED'`);
+  const sch1Asked = sql(`select count(distinct m.data_path) from section_question q join form_field_map m on m.canonical_field_key=q.canonical_field_key join form_edition e on e.id=m.form_edition_id join gov_form_def g on g.id=e.gov_form_def_id where g.form_key='IMM 5257 SCH1' and m.data_path ~ '(HaveWitnessedParticipated|BeenMemberAssociated)\\[0\\]$' and m.status='PUBLISHED' and q.status='PUBLISHED'`);
   ok("QA-318 B0 setup: the configured checkpoint is loaded, and asks SCH1's Questions 5 and 6 as their own questions (released)", !!vv && sch1Asked === "2", { vv, sch1Asked });
   if (!vv) return;
   const words = sql(`select string_agg(m.evidence_quote, ' | ' order by m.data_path) from form_field_map m join form_edition e on e.id=m.form_edition_id join gov_form_def g on g.id=e.gov_form_def_id where g.form_key='IMM 5257 SCH1' and m.data_path ~ '(HaveWitnessedParticipated|BeenMemberAssociated)\\[0\\]$' and m.status='PUBLISHED'`) ?? "";
   ok("QA-318 B1 pass: their questions are the form's own official words (P-170)", words.includes("Are you, or have you ever been a member or associated with any political party") && words.includes("Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings?"), words);
+  // Review M1 on #1272: IMM 5257 asks the same two questions in the same words, so SCH1's boxes read the same library fields.
+  const factOf = (form: string, re: string) => sql(`select m.canonical_field_key from form_field_map m join form_edition e on e.id=m.form_edition_id join gov_form_def g on g.id=e.gov_form_def_id where g.form_key='${form}' and m.data_path ~ '${re}' and m.status='PUBLISHED' order by m.version desc limit 1`);
+  const ill = [factOf("IMM 5257 SCH1", "HaveWitnessedParticipated\\[0\\]$"), factOf("IMM 5257", "GovPosition\\[0\\]\\.Choice\\[0\\]$")], org = [factOf("IMM 5257 SCH1", "BeenMemberAssociated\\[0\\]$"), sql("select canonical_field_key from canonical_field where canonical_field_key='person.violent_organization_association' limit 1")];
+  ok("QA-318 B8 pass (review M1): SCH1's Questions 5 and 6 read the library fields IMM 5257 already asks, never new ones", !!ill[0] && ill[0] === ill[1] && !!org[0] && org[0] === org[1], { ill, org });
   const f = await firms(); const officer = f.officer ?? OFFICER;
   const c = await openCase(vv, FAMILY, { representative: f.rep, caseOfficers: [officer] });
   const filled = await fillEverything(c.id);
@@ -53,6 +57,9 @@ await main("QA-318", "IMM 5257 SCH1's five mandatory Yes/No form fields fill, or
   const res = id ? JSON.parse(sql(`select result_json::text from form_instance where id='${id}'`) ?? "{}") : {};
   const of = (k: keyof typeof BOXES) => (res.boxes ?? []).find((b: { box: string }) => b.box.endsWith(BOXES[k]));
   ok("QA-318 B3 pass: the copy writes all five Yes/No form fields, each read back equal (Questions 4 to 8)", (Object.keys(BOXES) as (keyof typeof BOXES)[]).every((k) => of(k)?.result === "written") && res.intact === true, (Object.keys(BOXES) as (keyof typeof BOXES)[]).map((k) => `${k}:${of(k)?.result ?? "none"}`));
+  const asked = ((await agent(c.id)).sections as { about_label: string; questions: { fact: string }[] }[]).filter((x) => x.about_label === "Sample Client A").flatMap((x) => x.questions.map((q) => q.fact));
+  ok("QA-318 B9 fail (review M1): each question is asked once of the person: no second field for ill treatment or a violent organization", asked.filter((k) => k === ill[0]).length === 1 && asked.filter((k) => k === org[0]).length === 1 && !asked.some((k) => /witnessed_or_took_part|member_of_a_violent/.test(k)), asked.filter((k) => /ill_treatment|witnessed|violent|member_of/.test(k)));
+  ok("QA-318 B10 pass (review M1): the one answer fills both forms: SCH1's Questions 5 and 6 are written from the facts IMM 5257 asks", of("ill")?.fact === ill[1] && of("org")?.fact === org[1], { ill: of("ill")?.fact, org: of("org")?.fact });
   ok("QA-318 B4 pass: Question 8 is No because \"none apply\" was answered for Previous travel (said on the copy)", /nothing recorded: "none apply" answered in Previous travel/.test(of("travel")?.why ?? ""), of("travel")?.why);
 
   // Honest state: Previous travel taken back: the box waits for an answer, as a fact, never under "Facts confirmed".
