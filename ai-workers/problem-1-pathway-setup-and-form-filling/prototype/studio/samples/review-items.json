@@ -1,0 +1,12 @@
+{
+  "_about": "C8.3 (B144; tech lead's Q1 on #1247, Lead 31; SA-01B SA-1B-221): the program's own review items, shown under each filing's name on the representative's review and never blocking. Scaffolding (P-33): read only through one port, api/src/review-items.ts reviewItemsOf(release, combinationKey); the follow-up row replaces this file with the configured line kind (SA-1B-221's REVIEW_ITEM, read from the filing's row in its pinned release) without touching engine/runtime/review.ts. Keyed by combination key (data, not code: P-319). Every item is Sample, Unconfirmed: expert (AGENTS rule 4): no official source states these review points.",
+  "status": "Sample",
+  "unconfirmed": "Unconfirmed: expert",
+  "combinations": {
+    "vv.single": [
+      { "key": "purpose_matches", "wording": "Purpose of travel matches the invitation and itinerary" },
+      { "key": "funds_cover_stay", "wording": "Funds shown cover the length of the stay" },
+      { "key": "ties_home", "wording": "Ties to the home country are shown by the documents" }
+    ]
+  }
+}
