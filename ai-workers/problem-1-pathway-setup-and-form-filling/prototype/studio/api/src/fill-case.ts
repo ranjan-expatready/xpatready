@@ -24,6 +24,7 @@ import { answerSheetOnly, CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Cha
 import { lineOf } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
 import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, PY, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
+import { newestPin } from "./stage-scope.ts"; // C6.17
 import { keptOnMacWords } from "./sample-validated.ts";
 import { busyWords } from "./busy.ts";
 import { formValues, notOnFormLines, type Inventory } from "../../engine/form-values.ts";
@@ -168,7 +169,7 @@ export class CaseForms implements OnModuleInit {
   private officerCase(actor: Actor, caseId: string) { return this.runtime.reach(actor, idOf(caseId, "case"), "officer"); }
 
   private async itemChannels(caseId: string): Promise<ItemChannels> {
-    const rows = await this.db.filingItem.findMany({ where: { caseId, kind: "form", active: true, channel: { not: null } }, select: { subjectId: true, itemKey: true, channel: true } });
+    const rows = await this.db.filingItem.findMany({ where: { caseId, kind: "form", active: true, channel: { not: null }, filing: { stage: { state: "CURRENT" } } }, select: { subjectId: true, itemKey: true, channel: true } });
     return new Map(rows.map((r) => [`${r.subjectId}|${r.itemKey}`, r.channel as Channel]));
   }
 
@@ -184,7 +185,7 @@ export class CaseForms implements OnModuleInit {
     const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
     const pdf = new Set([...pdfForms(s), ...copyOnlyForms(s)]); // P-145: an Online form with IRCC's PDF gets a copy not for filing
     const titles = new Map((s.forms as { form_number: string; title?: string }[]).map((f) => [f.form_number, f.title ?? f.form_number]));
-    const copies = await this.db.formInstance.findMany({ where: { caseId }, orderBy: { createdAt: "desc" }, include: { snapshot: true, validated: { orderBy: { readAt: "desc" }, take: 1 } } });
+    const copies = await this.db.formInstance.findMany({ where: { caseId, configReleaseId: { in: c.pins.map((p) => p.configReleaseId) } }, orderBy: { createdAt: "desc" }, include: { snapshot: true, validated: { orderBy: { readAt: "desc" }, take: 1 } } });
     const labels = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
     const caseWords = caseWordsOf(s, view);
     const items = await this.itemChannels(c.id), nameOf = { caseReference: c.reference, of: nameOfPeople(people) };
@@ -273,12 +274,12 @@ export class CaseForms implements OnModuleInit {
         await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${caseId}::uuid FOR UPDATE`;
         // C9.5 (BR-7, challenge M2): the pin was read before this lock; a move to another release made meanwhile (it takes
         // the same lock) is seen here, so no copy is ever made on the release the case just left.
-        const newest = await tx.packWorkPin.findFirst({ where: { caseId }, orderBy: { revision: "desc" }, select: { revision: true } });
+        const newest = await newestPin(tx, caseId, c.combinationId); // C6.17 (BR-9): the current stage's chain, and the stage itself
         if (newest?.revision !== c.pins[0].revision) throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Changed by someone else", status: 409, detail: "This case moved to another release while you pressed Fill: nothing was made. Press Fill again to make the copy on the case's release now." }, HttpStatus.CONFLICT);
         const active = await tx.formInstance.count({ where: { caseId, status: { in: ["QUEUED", "RUNNING"] } } });
         if (active >= ACTIVE_PER_CASE) throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Busy", status: 429, detail: `${active} copies of this case are being generated; wait for them, then ask again.` }, HttpStatus.TOO_MANY_REQUESTS);
         // C11.6: the person's channel read under the same lock the channel change takes, and frozen with the facts.
-        const it = await tx.filingItem.findFirst({ where: { caseId, subjectId, itemKey: form, kind: "form", active: true }, select: { channel: true } });
+        const it = await tx.filingItem.findFirst({ where: { caseId, subjectId, itemKey: form, kind: "form", active: true, filing: { stage: { state: "CURRENT" } } }, select: { channel: true } });
         const frozen = (it?.channel as Channel | null | undefined) ?? channelIn(s, form);
         if (frozen === "NOT_NEEDED") throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Not needed", status: 422, detail: `${form} is Not needed for this person: the IRCC account asks it itself, so nothing is filled.` }, HttpStatus.UNPROCESSABLE_ENTITY);
         const snap = await tx.answerSnapshot.create({ data: { workspaceId: c.workspaceId, caseId, subjectId, formNumber: form, inputHash: inputHash(cov!.facts), factsJson: { ...stored, channel: frozen } as object } });
@@ -337,10 +338,12 @@ export class CaseForms implements OnModuleInit {
     }
   }
 
-  private async copyFor(actor: Actor, id: string) {
+  private async copyFor(actor: Actor, id: string, write = false) {
     const x = await this.db.formInstance.findUnique({ where: { id: idOf(id, "copy") }, include: { snapshot: true, validated: { orderBy: { readAt: "desc" }, take: 1 } } });
     if (!x) fail("No such copy.", HttpStatus.NOT_FOUND);
     const c: Reached = await this.officerCase(actor, x!.caseId); // the officer of the copy's workspace only; others are refused there
+    // C6.17 (BR-7, review m5): a copy made for an ended stage (a release of another combination) is history: read, never changed.
+    if (write && !c.pins.some((p) => p.configReleaseId === x!.configReleaseId)) throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Changed since you read it", status: 409, detail: "This copy belongs to an earlier stage of the case, which has ended: it is kept as it was and can no longer be changed.", code: "stage_ended" }, HttpStatus.CONFLICT);
     return { x: x!, c };
   }
 
@@ -357,7 +360,7 @@ export class CaseForms implements OnModuleInit {
   /** RT-16: lock a generated, up-to-date copy once ("validated copy uploaded back" or "filed"). The officer only; an out
    *  of date copy is refused (make a new copy first). After this the database refuses any change to it. */
   async lock(actor: Actor, id: string, body: unknown) {
-    const { x, c } = await this.copyFor(actor, id); // who may lock is checked before what was sent (break m4)
+    const { x, c } = await this.copyFor(actor, id, true); // who may lock is checked before what was sent (break m4)
     const b = parse(LockCopy, body);
     if (x.status !== "GENERATED") conflict("Only a generated copy can be locked.");
     if (x.lockedAt) conflict(`This copy is already locked (${LOCK_KINDS[x.lockedKind as keyof typeof LOCK_KINDS]}); a locked copy never changes.`);
@@ -394,7 +397,7 @@ export class CaseForms implements OnModuleInit {
     // made while this lock was being checked is never locked over.
     const n = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${x.caseId}::uuid FOR NO KEY UPDATE`;
-      const it = await tx.filingItem.findFirst({ where: { caseId: x.caseId, subjectId: x.subjectId, itemKey: x.formNumber, kind: "form", active: true }, select: { channel: true } });
+      const it = await tx.filingItem.findFirst({ where: { caseId: x.caseId, subjectId: x.subjectId, itemKey: x.formNumber, kind: "form", active: true, filing: { stage: { state: "CURRENT" } } }, select: { channel: true } });
       if (((it?.channel as Channel | null | undefined) ?? channelIn(s, x.formNumber)) !== channel) return -1;
       return (await tx.formInstance.updateMany({ where: { id, status: "GENERATED", lockedAt: null }, data: { lockedKind: b.kind, lockedAt: new Date(), lockedBy: actor.id } })).count;
     });
@@ -408,7 +411,7 @@ export class CaseForms implements OnModuleInit {
    *  the proven E5 reader (studio/tools/read_validated.py): every value the product wrote must read back equal. Kept
    *  with its checksum and the fingerprint of the form's facts at that moment (C-10), insert-only. */
   async validated(actor: Actor, id: string, files: { originalname?: string; buffer?: Buffer; size?: number }[] | undefined) {
-    const { x, c } = await this.copyFor(actor, id);
+    const { x, c } = await this.copyFor(actor, id, true);
     const f = (files ?? [])[0];
     if (!f?.buffer?.length || (files ?? []).length !== 1) fail("Send the one validated PDF you saved from Adobe.", HttpStatus.BAD_REQUEST);
     if (f!.buffer!.length > MAX_VALIDATED_BYTES) fail(`The file is larger than ${MAX_VALIDATED_MB} MB: send the validated PDF of this form. Nothing was recorded.`, HttpStatus.PAYLOAD_TOO_LARGE);
