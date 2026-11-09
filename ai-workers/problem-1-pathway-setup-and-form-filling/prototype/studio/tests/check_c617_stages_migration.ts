@@ -63,6 +63,11 @@ try {
   ok("C6.17 fail: a stage never moves backward (CURRENT to NOT_STARTED refused)", refused(`update case_stage set state='NOT_STARTED' where id='${S1}'`, /case_stage_forward/));
   ok("C6.17 fail: a done-before stage has no application subject and no start (rule 4)", refused(`insert into case_stage (id, workspace_id, case_id, firm_key, ord, stage_key, staff_name, client_name, combination_id, started_from, state) values (gen_random_uuid(), '${W}', '${K2}', 'sample-firm', 0, 'x', 'X', 'X', '${CMB2}', 'BEGIN', 'DONE_BEFORE')`, /case_stage_worked_has_subject/));
 
+  // C6.17 × C7.8 (review of #1262 M2): a form added to the first stage's filing while that stage is current.
+  const ADD = u(90), addRow = (id: string, filing: string, form: string) => `insert into filing_form_addition (id, workspace_id, case_id, filing_id, subject_id, form_key, edition_id, edition_label, kind, frozen, frozen_sha256, channel, signature, added_by)
+    values ('${id}', '${W}', '${K1}', '${filing}', '${PRIN1}', '${form}', '${u(91)}', 'Sample edition', 'blank', '{}', '${"0".repeat(64)}', 'PDF_UPLOAD', 'HAND_SCANNED', 't') returning form_key`;
+  ok("C6.17 × C7.8 pass: a form is added to a filing of the current stage", sql(addRow(ADD, FIL, "IMM 5257")) === "IMM 5257");
+
   // Start next stage on case 1, as the API does it in one transaction: the current stage ends, the next one starts, the
   // case's combination follows; then the ended stage's rows are history.
   const NEXTAPP = u(50);
@@ -82,11 +87,17 @@ try {
     refused(`update filing_item set active=false where id='${u(80)}'`, /case_stage_ended/) && refused(`insert into filing_person_record (id, filing_id, subject_id, uci) values (gen_random_uuid(), '${FIL}', '${PRIN1}', '12345678')`, /case_stage_ended|null value|violates/));
   ok("C6.17 Lead 38 (1) fail: a row of the ended stage, or one hanging off its filing, is never deleted (finding, task, form item)",
     refused(`delete from review_finding where id='${FIND}'`, /case_stage_ended/) && refused(`delete from case_task where id='${TASK}'`, /case_stage_ended/) && refused(`delete from filing_item where id='${u(80)}'`, /case_stage_ended/));
+  ok("C6.17 × C7.8 M2 fail (BR-10): on the ended stage's filing a form is not added, its addition not marked removed, nor deleted",
+    refused(addRow(u(92), FIL, "IMM 5645"), /case_stage_ended/)
+    && refused(`update filing_form_addition set removed_at=now(), removed_by='t', removed_reason='Sample' where id='${ADD}'`, /case_stage_ended/)
+    && refused(`delete from filing_form_addition where id='${ADD}'`, /case_stage_ended/) && sql(`select removed_at is null from filing_form_addition where id='${ADD}'`) === "t");
   ok("C6.17 fail: a row cannot be moved to another stage", refused(`update case_task set stage_id='${u(60)}' where id='${TASK}'`, /case_stage_ended|keeps its stage/));
   ok("C6.17 B2 pass: the new stage takes its own FAMILY group, filing for the same person and checklist line of the same type",
     sql(`insert into submission_group (id, workspace_id, case_id, kind, stage_id) values ('${u(70)}', '${W}', '${K1}', 'FAMILY', '${u(60)}') returning kind`) === "FAMILY"
-    && sql(`insert into filing (id, workspace_id, case_id, submission_group_id, subject_id, combination_key, mode, stage_id) values (gen_random_uuid(), '${W}', '${K1}', '${u(70)}', '${PRIN1}', 'wp.lmia_inside', 'files_own', '${u(60)}') returning mode`) === "files_own"
+    && sql(`insert into filing (id, workspace_id, case_id, submission_group_id, subject_id, combination_key, mode, stage_id) values ('${u(93)}', '${W}', '${K1}', '${u(70)}', '${PRIN1}', 'wp.lmia_inside', 'files_own', '${u(60)}') returning mode`) === "files_own"
     && sql(`insert into checklist_line (id, workspace_id, case_id, subject_id, document_type, lineage, stage_id) values (gen_random_uuid(), '${W}', '${K1}', '${PRIN1}', 'passport_information_page_copy', 'x', '${u(60)}') returning state`) === "not_requested");
+  ok("C6.17 × C7.8 pass: the new stage's filing takes the same form, added and then marked removed",
+    sql(addRow(u(94), u(93), "IMM 5257")) === "IMM 5257" && sql(`update filing_form_addition set removed_at=now(), removed_by='t', removed_reason='Sample' where id='${u(94)}' returning id`) === u(94));
   ok("C6.17 Lead 38 (1) pass: a row of the current stage is deleted as before (a family group's filing removed, then the group)",
     sql(`insert into submission_group (id, workspace_id, case_id, kind, reason, stage_id) values ('${u(71)}', '${W}', '${K1}', 'SEPARATE', 'Sample: sent on its own', '${u(60)}') returning kind`) === "SEPARATE" && sql(`delete from submission_group where id='${u(71)}' returning kind`) === "SEPARATE");
   ok("C6.17 fail: a row naming another case's stage is refused", refused(`insert into case_task (id, workspace_id, case_id, kind, words, created_by, stage_id) values (gen_random_uuid(), '${W}', '${K2}', 'k', 'w', 't', '${u(60)}')`, /not this case/));

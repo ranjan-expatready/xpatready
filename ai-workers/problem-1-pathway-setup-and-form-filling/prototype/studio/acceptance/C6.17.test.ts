@@ -245,6 +245,57 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
       && vResend.status === 404 && !!vF2 && vF2 !== vF1 && vNext.status === 201 && n(`select count(*) from review_round where case_id='${V}'`) === 2,
     { sent: vSent.status, start: vStart.status, rep: vRep, open: [vOpen.status, vOpen.body?.detail], resend: [vResend.status, vResend.body?.detail], next: [vNext.status, vNext.body?.detail] });
 
+  // ---------------------------------------------------------------- C6.17 × C7.8 (review of #1262 M1–M4): added forms by stage
+  // A form the case officer adds to the first stage's filing stays with that stage: it is not on the next stage's forms,
+  // it is frozen once the stage ends (API and database), and neither it nor the first stage's record refuses, blocks or
+  // binds the same form on the next stage. The form is picked at run time (P-319): one the first stage's filing may add
+  // that the next release does not hold.
+  const xMade = await open(first.combination_id);
+  const X = xMade.body?.id as string;
+  const xP = ((xMade.body?.people ?? []) as { subject_id: string; role: string }[]).find((x) => x.role === "principal")?.subject_id ?? "";
+  const xF1 = (await prepare(X)).p?.filings.find((x) => x.applicants.some((a) => a.subject === xP))?.id ?? "";
+  type AddableRow = { form: string; kind: string; why_not: { code: string; words: string } | null };
+  const addableOn = async (filing: string) => ((await call("GET", `/runtime/filings/${filing}/addable-forms?q=`)).body?.forms ?? []) as AddableRow[];
+  const pick = (await addableOn(xF1)).find((x) => !x.why_not && !relForms.includes(x.form))?.form ?? "";
+  const xAdd1 = pick ? await call("POST", `/runtime/filings/${xF1}/form-additions`, { form: pick, reason: "Sample: asked for on the study permit (C6.17 pack)" }) : null;
+  const xA1 = xAdd1?.body?.id as string | undefined;
+  const xS1 = (await stagesOf(X)).stages.find((x) => x.state === "CURRENT")!;
+  const xStart = await call("POST", `/runtime/cases/${X}/stages/next`, { from_stage: xS1.id, stage_version: xS1.version, reason: "Sample: the study permit is filed; the work permit comes next" });
+  const xGroup = sql(`select submission_group_id from filing where id='${xF1}'`);
+  const xRec1 = xGroup ? sql(`insert into filing_record (id, workspace_id, case_id, filing_id, submission_group_id, our_reference, submitted_on, application_number, prepared_by, recorded_by, filed_facts)
+    select gen_random_uuid(), workspace_id, case_id, id, '${xGroup}', 'C617-C78', current_date, 'S000000002', '${OFFICER}', '${OFFICER}', '[]' from filing where id='${xF1}' returning id`) : null;
+  ok("setup (C6.17 × C7.8): a form added to the first stage's filing (201), the next stage started (201), the first stage recorded as submitted (Sample record)",
+    !!pick && xAdd1?.status === 201 && !!xA1 && xStart.status === 201 && !!xRec1, { pick, add: [xAdd1?.status, xAdd1 ? words(xAdd1) : null], start: [xStart.status, words(xStart)], rec: xRec1 });
+  const xp2 = (await prepare(X)).p;
+  const xF2 = xp2?.filings.find((x) => x.applicants.some((a) => a.subject === xP))?.id ?? "";
+  ok("C6.17 × C7.8 M3 fail-first: the form added on the first stage is not on the next stage's forms (Prepare, the forms list)",
+    !!xp2 && !!xF2 && xF2 !== xF1 && !(xp2.items ?? []).some((i) => i.kind === "form" && i.form === pick)
+      && !(((await call("GET", `/runtime/cases/${X}/forms`)).body?.forms ?? []) as { form: string }[]).some((x) => x.form === pick), { f2: xF2, items: (xp2?.items ?? []).filter((i) => i.kind === "form").map((i) => i.form) });
+  const xRemoveOld = xA1 ? await call("POST", `/runtime/form-additions/${xA1}/remove`, { reason: "Sample: trying to change the ended stage" }) : null;
+  const xAddOld = pick ? await call("POST", `/runtime/filings/${xF1}/form-additions`, { form: pick, reason: "Sample: trying to add to the ended stage" }) : null;
+  const xDbOld = xA1 ? sql(`update filing_form_addition set removed_at=now(), removed_by='${OFFICER}', removed_reason='Sample' where id='${xA1}' returning id`) : "none";
+  ok("C6.17 × C7.8 M2 fail-first (BR-10): on the ended stage a form is neither removed nor added (409 stage_ended, plain words) and the database refuses the removed mark; the addition stays live",
+    xRemoveOld?.status === 409 && xRemoveOld.body?.code === "stage_ended" && /earlier stage of the case, which has ended/.test(words(xRemoveOld)) && xAddOld?.status === 409 && xAddOld.body?.code === "stage_ended"
+      && xDbOld === null && sql(`select removed_at is null from filing_form_addition where id='${xA1}'`) === "t" && n(`select count(*) from filing_form_addition where filing_id='${xF1}'`) === 1,
+    { remove: [xRemoveOld?.status, xRemoveOld ? words(xRemoveOld) : null], add: [xAddOld?.status, xAddOld ? words(xAddOld) : null], db: xDbOld });
+  const xRow2 = (await addableOn(xF2)).find((x) => x.form === pick);
+  const xDet2 = pick ? (await call("GET", `/runtime/filings/${xF2}/addable-forms/${encodeURIComponent(pick)}`)).body : null;
+  ok("C6.17 × C7.8 M4 fail-first: on the next stage the first stage's addition is neither \"already added\" nor the way the form must be filed (no same_as)",
+    !!xRow2 && xRow2.why_not === null && !!xDet2 && xDet2.same_as === null, { row: xRow2, same_as: xDet2?.same_as });
+  const xAdd2 = pick ? await call("POST", `/runtime/filings/${xF2}/form-additions`, { form: pick, reason: "Sample: asked for on the work permit too (C6.17 pack)" }) : null;
+  const xp3 = (await prepare(X)).p;
+  ok("C6.17 × C7.8 M1 pass: with the first stage recorded, the same form is added on the next stage's filing (201, no false refusal) and listed on its forms for that filing only",
+    xAdd2?.status === 201 && (xp3?.items ?? []).filter((i) => i.kind === "form" && i.form === pick).every((i) => i.filing === xF2) && (xp3?.items ?? []).some((i) => i.kind === "form" && i.form === pick && i.filing === xF2),
+    { status: xAdd2?.status, words: xAdd2 ? words(xAdd2) : null });
+  const xRemove2 = xAdd2?.body?.id ? await call("POST", `/runtime/form-additions/${xAdd2.body.id}/remove`, { reason: "Sample: not needed after all" }) : null;
+  ok("C6.17 × C7.8 M1 pass: the next stage's added form is removed (200) though the first stage is recorded", xRemove2?.status === 200 && !!xRemove2.body?.removed, { status: xRemove2?.status, words: xRemove2 ? words(xRemove2) : null });
+  const xGroup2 = sql(`select submission_group_id from filing where id='${xF2}'`);
+  const xRec2 = xGroup2 ? sql(`insert into filing_record (id, workspace_id, case_id, filing_id, submission_group_id, our_reference, submitted_on, application_number, prepared_by, recorded_by, filed_facts)
+    select gen_random_uuid(), workspace_id, case_id, id, '${xGroup2}', 'C617-C78-2', current_date, 'W000000002', '${OFFICER}', '${OFFICER}', '[]' from filing where id='${xF2}' returning id`) : null;
+  const xAdd3 = pick ? await call("POST", `/runtime/filings/${xF2}/form-additions`, { form: pick, reason: "Sample: after the work permit is recorded" }) : null;
+  ok("C6.17 × C7.8 M1 fail: once the next stage itself is recorded, adding a form to it is refused (409, recorded as submitted)",
+    !!xRec2 && xAdd3?.status === 409 && /recorded as submitted/.test(words(xAdd3)), { status: xAdd3?.status, words: xAdd3 ? words(xAdd3) : null });
+
   // ---------------------------------------------------------------- C6.17-13: the family case keeps one stage
   const fam = sql(`select k.id from runtime_case k join combination c on c.id=k.combination_id where c.combination_key='vv.single' order by k.created_at limit 1`) ?? "";
   const fv1 = (await prepare(fam)).p?.version, fst = await stagesOf(fam), fv2 = (await prepare(fam)).p?.version;
