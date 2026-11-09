@@ -1,0 +1,12 @@
+PASS  setup: the finished story starts (202) — 202
+PASS  setup: the finished story is loaded
+PASS  setup: the story filled copies, each read back: the Paper IMM 5257 and, on the same release, the PDF uploads filed with the Online filings — {"copies":31,"paper":2,"onRelease":["IMM 5257 SCH1 PDF_UPLOAD","IMM 5645 PDF_UPLOAD","IMM 5257 SCH1 PDF_UPLOAD","IMM 5257 SCH1 PDF_UPLOAD","IMM 5645 PDF_UPLOAD","IMM 5645 PDF_UPLOAD","IMM 5476 PDF_UPLOAD","IMM 5476 PDF_UPLOAD","IMM 5476 PDF_UPLOAD"]}
+PASS  C10.2-v1 pass: every choice field with a fixed place on every copy (97 values, 31 copies: Paper and PDF upload, both releases) holds one of its export values (a repeating row's fields have no fixed data path in the reader and are not read) — []
+PASS  C10.2-v1 fail: a status stored as its display word ("Citizen", not "01") is caught as not an export value — {"path":"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]","caption":"*","wrote":"Citizen","is_export":false,"is_display":true,"exports":10}
+PASS  C10.2-v2 pass (IMM 5257 validateCOR, validateCWA): no date beside 01/02/07/08 and no "Other" details beside a status but 06, on every IMM 5257 copy (5) — []
+PASS  C10.2-v2 fail: Citizen with "Other" details and a From date, no To date (each box set, whatever the copy held) is caught twice — ["question 7: FromDate \"2024-01-15\" beside status 01","question 7: Other \"SAMPLE\" beside status 01"]
+PASS  C10.2-v3 pass (B107 data, samples/form-field-gates.json): the Paper copy's release carries IMM 5257's four gates — 4
+PASS  C10.2-v3 pass: on the Paper copy (a Citizen) the status row's Other, From and To are not written, each saying "Not needed" — [{"box":"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Other[0]","why":"Not needed: written only when the immigration status in the current country of residence is Other","fact":"person.current_residence_status_other","result":"not written"},{"box":"form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].FromDate[0]","why":"Not needed: written only when the immigration status in th
+
+9 passed, 0 failed
+exit 0
