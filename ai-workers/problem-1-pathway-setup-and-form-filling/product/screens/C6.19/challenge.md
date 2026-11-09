@@ -75,5 +75,6 @@ Challenger: a fresh context that did not draft the concept, 9 Nov. Read: `concep
 * **Minors:** m1 built (an unknown expiry date warns; the date is read whether confirmed or not); m4 fixed (citation); m5: the walk's screenshots go in `screens/C6.19/screenshots/`. m2 (role changed between cases) and m3 (date of birth on the pick line) not built: listed in the PR as follow-ups.
 
 ## Agreement
+Lead 37, 9 Nov (message to this lane, relayed here word for word in substance): concept r2 **approved for building**. Q1 yes: parents' facts are part 2; DEMO.md row 18 reads "partly shown: the facts of the people on the case" until then. Q2 yes: P-419 amends SA-1B-266 rules 3-4 and non-goal 13 for the proof; the Lead records it. Q3 yes: the police-certificate age rule stays Sample.
 
 ## Build discoveries
