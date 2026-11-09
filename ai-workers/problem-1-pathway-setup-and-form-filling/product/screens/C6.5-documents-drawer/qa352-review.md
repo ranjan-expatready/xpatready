@@ -149,3 +149,31 @@ Scope: `git diff 976442e0e..9d56a3538` only (P-277, P-303). It covers `api/src/c
 * Journey re-score: **10/10**, a pass. Plain words rises to 1: the earlier "funds available cad" refusal is gone for the real read, which now shows "CAD 14,200" and confirms in one step. m2 and n1 are minor wording, not a criterion's fail. The report is `journey-test-reviewer-2026-11-09-qa352.md`, Round 3.
 
 **Verdict: Approve** (commit 9d56a35385de1e324a6786b5dff9f4b7f27c0c12). No Blocker or Major is open. Should: m1, m2 and m3, here or in a follow-up row. Nits: n1 and n2.
+
+## Round 4 (diff only, 9ebc6470f)
+Scope: `git diff 9d56a3538..9ebc6470f -- …/prototype`, four files: `case-documents.ts`, `document-review-counts.ts`, `check_c65_document_rules.ts` and `C6.5.test.ts`. Commit **9ebc6470f5a42449d91bd30e9e7a67bd773c7469**. My copy `rv352c` ran on :4465 with the configured checkpoint loaded fresh, and was stopped in the same command (port free, database dropped). Live AI off; `ai_batch` 7 → 7, US$0.
+
+**Runs (mine)**
+* Unit check `check_c65_document_rules.ts`: **45/45**, exit 0.
+* Each new rule's test fails when its rule is removed. I took out four rules one at a time; each gave 44/45 and I reverted each, so the tree is clean:
+  * the whole-number rule for numbers (m3): R17 fail fails;
+  * the leading-digit rule for thousands groups (n2): R14 fail fails;
+  * "CAD" with "$" (m2): R15 pass fails;
+  * the two-currency rule: R15 fail fails.
+* `C6.5.test.ts` on a fresh copy: **57/57**, exit 0. C6.5-23e still reads the real saved read: `14200|used|… The reader gave "14200.00".`, and the answer is `14200|VERIFIED`.
+* Round 3's m1 scenario, re-run on the same copy. A read stored as the text `"14200.00"` (set with the guard off on my throwaway copy), then the officer types 14200 by hand. The counts now stay at **corrected 0** (round 3: corrected 1). Confirm & use answers agreed, and checked-against-document answers 200.
+* I probed 33 inputs against the real IMM 5257 rule:
+  * "$14,200 CAD", "CAD $14,200", "CAD$14,200", "CA $14,200", "C$14,200 CAD" and "CAD 14200 CAD" become 14200.
+  * "US$14,200 CAD" is refused as "naming two currencies (US$ and CAD)". "$14,200 USD" is refused as "in USD", and "A$14,200" as "in A$". A bare "$14,200" or "$ 14,200" gives "without saying which dollars".
+  * "0,200", "00,200" and "014,200" are refused. "0014200" and "00200.00" still become 14200 and 200, the same as plain digits.
+  * The number 14200.5 is refused with its reason. The numbers -5 and 1e20 are refused by the question's own check. The text "1e5" is refused.
+  * Nothing is rounded or converted.
+* Every caller of `notWritable`, `inFactType` and `typedOf` handles a read value: the drawer list, needsLook, Confirm & use, checked-against-document and the counts. So m3's new refusal of non-whole numbers never touches an answer a person types.
+
+**Round 3 items:** m1 fixed (shown live above). m2 fixed. m3 fixed. n1 fixed (the note says "The reader gave …"). n2 fixed.
+
+**Left (Nits, no change needed for Approve)**
+* **o1:** R18 tests `countCorrections` with an input already converted, so removing `typedOf` from `document-review-counts.ts:34` fails no check. My live re-run above covers that line this time. A later counts pack step with a text read would guard it.
+* **o2:** "C 14200" and "CA 14200" (no "$") are refused with "in C" and "in CA, not Canadian dollars". Nothing is written, so the only problem is how they read.
+
+**Verdict: Approve** (commit 9ebc6470f5a42449d91bd30e9e7a67bd773c7469). No Blocker or Major is open.
