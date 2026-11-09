@@ -1,0 +1,4 @@
+    C6.5-counts.test.ts on the checkpoint: exit 0, 13/13 passed (88 s: copy 4, Load the configured checkpoint 82, run 2)
+    C6.5-screen.test.ts on the checkpoint: exit 0, 32/32 passed (98 s: copy 4, Load the configured checkpoint 76, run 18)
+    C6.5.test.ts on the checkpoint: exit 1, 30/32 passed (82 s: copy 3, Load the configured checkpoint 77, run 2)
+  * C6.5.test.ts on the checkpoint: exit 1; first FAIL lines: FAIL  C6.5-19b precondition (FQ-10): a saved AI read of this synthetic letter is recorded (one live read with the founder's Go; until then this and C6.5-20 stay | FAIL  C6.5-20 pass: the replayed read of the synthetic letter of invitation proposes the contact's name, marked Replayed, cost US$0 — {"type":"https://expatread
