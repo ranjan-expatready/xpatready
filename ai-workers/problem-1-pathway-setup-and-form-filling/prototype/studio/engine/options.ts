@@ -154,6 +154,13 @@ export function notOnFormValue(value: unknown, m: OptionMap, values: ListValue[]
  *  form's list, not the list. */
 export const isCodeRange = (note: string) => /^\s*\d+\s*\.\.\s*\d+\s*$/.test(note);
 
+/** QA-355 (tech lead's ruling on #1446 (b)): a map note that names no values is a note about the form's list, not the
+ *  list, read as no list (the answer stays open), the same rule as QA-272's ranges: a range ("01..09", "01-09") or words
+ *  pointing at a list held elsewhere ("codes as listed in the inventory", "3-digit codes as listed in this box", "codes as
+ *  in inventory, e.g. CAN (Canada)"). Otherwise an added form's note became the only answer its shared facts accepted. */
+export const namesNoValues = (note: string) => isCodeRange(note) || /^\s*\d+\s*-\s*\d+\b/.test(note)
+  || /\b(as listed|as in|listed (in|for)|inventory|this box|this form)\b/i.test(note);
+
 /** QA-272: the same mapping with the range written as the form's own list, "(Citizen=01, Permanent resident=02, …)", the
  *  shape every other short list has, so a person is offered the form's words. Unchanged when the transform has no range,
  *  the form lists no choice in it, or a label could not be read back from that shape (a comma, "=", ";" or bracket). */

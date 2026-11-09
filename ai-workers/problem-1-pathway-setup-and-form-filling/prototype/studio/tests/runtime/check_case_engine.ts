@@ -9,7 +9,8 @@ import { changedFacts, changedGroups, factsOf, formCoverage, groupFacts, inputHa
 import { render } from "../../engine/render.ts";
 import { inSentence } from "../../contracts/runtime.ts";
 import { recorder } from "./api.ts";
-import { isCodeRange, spellOutCodeRange } from "../../engine/options.ts";
+import { isCodeRange, namesNoValues, spellOutCodeRange } from "../../engine/options.ts";
+import { withAdditions, type Addition } from "../../engine/runtime/added-forms.ts";
 import { codeFor } from "../../../p5/transforms.ts";
 
 const { ok, summary } = recorder();
@@ -299,6 +300,25 @@ ok("QA-76 fail-guard: with a representative on the case, it names that person, a
     const hit = options.some((o) => codeFor(o.key, statusBox) === wanted);
     return code >= 1 && code <= 9 ? hit && options.length === 9 : !hit;
   }), 100);
+}
+
+// ── QA-355 (tech lead's ruling on #1446 (b)): a map note that names no values ("codes as listed in the inventory") is read
+// as no list, like QA-272's ranges, so a form added to one filing never closes a fact the release's forms accept.
+{
+  const notes = ["codes as listed in the inventory", "3-digit codes as listed in this box", "codes as in this box's list", "codes as in inventory, e.g. CAN (Canada", "01-09", "00-08 as listed", "codes 01-19 as in inventory", "01..09"];
+  const lists = ["VisitorVisa, Transit", "Female, Male, Unknown, Unspecified", "English|French|Both|Neither", "01 Residence, 02 Cellular, 03 Business", "Common-law=1, Single=2", "09,03,04,05,01,02,00,06"];
+  ok("QA-355 pass: notes that point at a list held elsewhere, or a range, name no values", notes.every(namesNoValues), notes.filter((n) => !namesNoValues(n)));
+  ok("QA-355 fail: a list that names its values stays a list", lists.every((l) => !namesNoValues(l)), lists.filter(namesNoValues));
+  const releaseOnly = noList;   // the release's own map reads the fact with no list (as the release's country facts do)
+  const frozen = (transform: string) => ({ title: "Sample added form", edition: "Sample", official_file: null, form_sha256: null, inventory_file: null, fields: [],
+    entries: [{ data_path: "form1.Sample.Country", outcome: "mapped", fact: "case.visa_type", transform }] });
+  const addition = (transform: string): Addition => ({ id: "a1", filing: "f1", subject: "s1", form: "SAMPLE-ADDED", kind: "fills", frozen: frozen(transform), channel: "PDF_UPLOAD", signature: "HAND_SCANNED", signed_by: null, added_by: "user-O", added_at: "2026-11-09T00:00:00.000Z", reason: null });
+  const joined = withAdditions(releaseOnly as never, [addition("code_list:sample.country (codes as listed in the inventory)")]) as unknown as Snapshot;
+  const value = "VisitorVisa";
+  ok("QA-355 pass: an added form whose map says \"codes as listed in the inventory\" leaves the shared fact's choices and checks as the release has them", (joined.field_maps as unknown[]).length === (S.field_maps as unknown[]).length + 1
+    && JSON.stringify(shapeOf(joined, "case.visa_type").choices) === JSON.stringify(shapeOf(releaseOnly, "case.visa_type").choices) && checkValue(joined, "case.visa_type", value).join() === checkValue(releaseOnly, "case.visa_type", value).join(),
+    { joined: shapeOf(joined, "case.visa_type").choices, release: shapeOf(releaseOnly, "case.visa_type").choices, check: checkValue(joined, "case.visa_type", value) });
+  ok("QA-355 fail: the same join with a note that names values still offers them (a real list is kept)", JSON.stringify(shapeOf(withAdditions(releaseOnly as never, [addition("code_list:sample.visa (VisitorVisa, Transit)")]) as unknown as Snapshot, "case.visa_type").choices) === JSON.stringify(shapeOf(releaseOnly, "case.visa_type").choices ?? ["VisitorVisa", "Transit"]));
 }
 
 process.exitCode = summary() ? 1 : 0;

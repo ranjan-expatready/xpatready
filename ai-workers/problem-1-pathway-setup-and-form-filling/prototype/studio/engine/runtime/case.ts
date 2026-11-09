@@ -5,7 +5,7 @@
 import { evalCondition, kkey, render, type Known, type Person, type Role } from "../render.ts";
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
 import { checkFormat, snapshotFieldFormat, writesParts } from "../field-format.ts";
-import { isCodeRange } from "../options.ts";
+import { namesNoValues } from "../options.ts";
 import { z } from "zod";
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
@@ -119,7 +119,8 @@ export function shapeOf(s: Snapshot, field: string) {
   // A short code list written in the map itself, "code_list:imm5257.visa_type (VisitorVisa, Transit)": the values a
   // choice field without an answer list may take (labels before any "=code").
   // QA-272: "(01..09)" names no values: on a release that kept it the answer stays open, never one choice called "01..09".
-  const listed = ts.map((t) => /^code_list:\S+ \(([^)]*)\)/.exec(t)?.[1]).find((x) => x && !isCodeRange(x));
+  // QA-355: nor does "(codes as listed in the inventory)" (namesNoValues): an added form's note never closes a shared fact.
+  const listed = ts.map((t) => /^code_list:\S+ \(([^)]*)\)/.exec(t)?.[1]).find((x) => x && !namesNoValues(x));
   const choices = listed ? listed.split(",").map((x) => x.split("=")[0].trim()).filter(Boolean) : null;
   // C3.1 AT-10 (IRCC-F07, P-162): the form's own box limit for the whole answer (read from the PDF) counts too.
   const boxMax = snapshotFieldFormat(s as never, field).rules.filter((r) => r.check === "max_length" && !r.part).map((r) => Number(r.params.n)).filter((n) => n > 0);
