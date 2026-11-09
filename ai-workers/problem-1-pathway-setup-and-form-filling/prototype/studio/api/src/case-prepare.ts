@@ -30,7 +30,7 @@ const bioAges = feeRule("vv.single", "biometrics")?.exempt;
 import { blocksLock, changedGroups, formCoverage, groupFacts, inputHash, readiness as formReadiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
 import { factChanges, markKey, outOfDateReason, representativeWords, restoredFromOf, undoTarget, type ChangeWords, type FactChange } from "../../engine/runtime/out-of-date.ts";
 import { REPRESENTATIVE } from "../../engine/runtime/team.ts";
-import { partsInFormOrder, sectionHash, sheetOf as layOut, sheetWords, waitsOf, type FormPart, type Layout, type Sheet } from "../../engine/runtime/answer-sheet.ts";
+import { changesOf, partsInFormOrder, sectionHash, sheetOf as layOut, sheetWords, waitsOf, type FormPart, type Layout, type Sheet, type SheetAnswer } from "../../engine/runtime/answer-sheet.ts";
 import { formPartsOf } from "./form-parts.ts";
 import { BIOMETRICS_STEP, channelChange, channelOf, paperLine, prepareVersion, readBackOf, wantedItems, type FormLine, type PaperValidated } from "../../engine/runtime/prepare.ts";
 import { lineCondition, render, type Role } from "../../engine/render.ts";
@@ -60,12 +60,18 @@ const stale = (): never => { throw new HttpException({ type: "https://expatready
 const refuse = (status: number, field: string, detail: string): never => { throw new HttpException({ type: "https://expatready.local/problems/validation", title: status === 422 ? "Not accepted" : "Some details need fixing", status, detail, errors: [{ field, message: detail }] }, status); };
 const Version = z.union([z.string(), z.number()], { error: "Reload: the version you read is missing." });
 // Break m2: a reason is plain text: no control characters (C0, C1), no hidden direction marks, separators or zero-width spaces.
-const Reason = z.string().trim().max(400, "Keep the reason under 400 characters.").refine((x) => !/[\u0000-\u001f\u007f-\u009f\u061c\u200b\u200e\u200f\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff\u115f\u1160\u3164\uffa0]/.test(x) && !/[\ud800-\udfff]/u.test(x), "Write the reason as plain text: it holds a hidden or control character.")
+const ReasonText = z.string().trim().max(400, "Keep the reason under 400 characters.").refine((x) => !/[\u0000-\u001f\u007f-\u009f\u061c\u200b\u200e\u200f\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff\u115f\u1160\u3164\uffa0]/.test(x) && !/[\ud800-\udfff]/u.test(x), "Write the reason as plain text: it holds a hidden or control character.")
   // Break r3 m1, m2: joiners that scripts and emoji need (U+200C, U+200D) are allowed; a reason must say something.
-  .refine((x) => x === "" || /[\p{L}\p{N}]/u.test(x), "Write the reason in words: it holds no letter or digit.").optional();
+  .refine((x) => x === "" || /[\p{L}\p{N}]/u.test(x), "Write the reason in words: it holds no letter or digit.");
+const Reason = ReasonText.optional();
 const SplitBody = z.object({ filing: z.string({ error: "Choose the filing to split out." }), reason: Reason, version: Version });
 const ChannelBody = z.object({ channel: z.unknown(), reason: Reason, version: Version });
 const EnteredBody = z.object({ version: z.string({ error: "Send the section's version from the answer sheet you read (Reload)." }) });
+// C7.3 (P-401): unticking "Entered in the portal" needs the section's version and the tick it read (when it was ticked), and
+// a reason, checked as every other reason here (break M1: the shared rule, never a weaker copy).
+const UnenteredBody = z.object({ version: z.string({ error: "Send the section's version from the answer sheet you read (Reload)." }),
+  entered_at: z.string({ error: "Send when the tick you read was made (Reload)." }).refine((x) => !Number.isNaN(Date.parse(x)), "Send when the tick you read was made, as the sheet gives it (Reload)."),
+  reason: z.string({ error: "Say why the tick comes off." }).pipe(ReasonText).refine((x) => x !== "", "Say why the tick comes off.") });
 const DOB = "person.date_of_birth";
 
 type Item = Awaited<ReturnType<Db["filingItem"]["findMany"]>>[number];
@@ -117,7 +123,7 @@ const BLANK_WORDS = { todo: "Blank official PDF: download it, fill it by hand, u
 /** C8.3 (B144): one form of the case as the review freezes it: its facts hash (null while it cannot start), the facts
  *  its copy would write, its validated copy read back and its newest copy for filing (B2's file order). */
 export type ReviewBasisForm = { item: string; filing: string; form: string; subject: string; person: string; channel: string; state: string; waits: boolean;
-  hash: string | null; inputHash: string; facts: FormFact[]; validated: PaperValidated; forFiling: { id: string; hash: string } | null; reads: string[] };
+  hash: string | null; inputHash: string; facts: FormFact[]; validated: PaperValidated; validatedSha: string | null; forFiling: { id: string; hash: string } | null; reads: string[] };
 export type ReviewBasis = { forms: ReviewBasisForm[]; words: ChangeWords; caseSubject: string | null; valueWords: (fact: string, v: unknown) => string | null; answers: Awaited<ReturnType<Runtime["state"]>>["answers"] };
 
 @Injectable()
@@ -293,7 +299,7 @@ export class CasePrepare {
     const minor = minorFromAnswers(answers, today); // Devin on #617: an adult dependent child signs their own form
     // C7.7 part 2: per form × person, the validated copy read back that counts (readBackOf: each copy judged on its newest
     // read-back, as the copy view and `lock` do; QA-165), current while the form's facts are what they were when it was read back.
-    const reads = await this.db.validatedCopy.findMany({ where: { copy: { caseId: c.id } }, orderBy: [{ readAt: "desc" }, { id: "asc" }], select: { factsHash: true, readAt: true, readBack: true, copy: { select: { id: true, formNumber: true, subjectId: true, resultJson: true, configReleaseId: true, snapshot: { select: { factsJson: true } } } } } });
+    const reads = await this.db.validatedCopy.findMany({ where: { copy: { caseId: c.id } }, orderBy: [{ readAt: "desc" }, { id: "asc" }], select: { factsHash: true, sha256: true, readAt: true, readBack: true, copy: { select: { id: true, formNumber: true, subjectId: true, resultJson: true, configReleaseId: true, snapshot: { select: { factsJson: true } } } } } });
     // C9.5 (BR-6, challenge M4): a copy made on an earlier release of the case (before a move) whose form the move
     // changed is out of date because of the release: words that name both releases and what changed, never fact lines
     // (so never an Undo), and it never counts as current. Only after a move (more than one pin revision).
@@ -306,14 +312,16 @@ export class CasePrepare {
       const rel = copy ? releaseOfCopy.get(copy) : undefined, old = rel && rel !== pin.configReleaseId ? pins.find((p) => p.id === rel) : undefined;
       return old ? releaseOutOfDate(diffOf(old.id, old.snapshot, pin.configReleaseId, relSnap).forms.get(form), { from: old.label, to: curLabel }, what) : null;
     };
-    const readsOf = new Map<string, { copy: string; at: Date; factsHash: string; readBack: unknown }[]>();
+    const readsOf = new Map<string, { copy: string; at: Date; factsHash: string; sha256: string; readBack: unknown }[]>();
     // Row C3 (review m1): a read-back of a copy stamped "Copy, not for filing" (made while the form was filed Online) never
     // counts, by the same rule as Validate and `lock` (copyNotForFiling): such rows were kept before Validate refused them.
-    for (const v of reads) { if (copyNotForFiling(s, v.copy)) continue; const k = `${v.copy.formNumber}|${v.copy.subjectId}`; readsOf.set(k, [...(readsOf.get(k) ?? []), { copy: v.copy.id, at: v.readAt, factsHash: v.factsHash, readBack: v.readBack }]); }
+    for (const v of reads) { if (copyNotForFiling(s, v.copy)) continue; const k = `${v.copy.formNumber}|${v.copy.subjectId}`; readsOf.set(k, [...(readsOf.get(k) ?? []), { copy: v.copy.id, at: v.readAt, factsHash: v.factsHash, sha256: v.sha256, readBack: v.readBack }]); }
     const paperValidated = (form: string, subject: string): PaperValidated => {
       const v = readBackOf(readsOf.get(`${form}|${subject}`) ?? [], formPassed);
       return v ? { copy: v.copy, at: v.at.toISOString(), current: v.factsHash === inputHash(covOf(form, subject)?.facts ?? []) && !releaseWords(v.copy, form, "validated copy") } : null;
     };
+    // C8.3 QA-345: the fingerprint of the validated copy that counts for filing (the read-back paperValidated counts), else null.
+    const validatedSha = (form: string, subject: string): string | null => paperValidated(form, subject)?.current ? readBackOf(readsOf.get(`${form}|${subject}`) ?? [], formPassed)?.sha256 ?? null : null;
     // C9.2 (BR-12): what each finished item read when it was finished (its copy's stored facts, or its entered section's
     // answers), to name each fact that changed since, with its old and new value and the date of the change.
     const printedCopy = (id: string) => stepsOf.get(id)?.print?.copy ?? null;
@@ -617,12 +625,12 @@ export class CasePrepare {
       factsOf: (form, subject) => formReady(form, subject),
       // C7.9 (P-242): the must-verify facts this form writes from an unchecked client-given value.
       unverifiedOf: (form, subject) => unverifiedOf(s, answers, formCoverage(s, people, answers, rows, form, subject)?.facts ?? [], reading), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
-      validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
+      validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, validatedSha, scanned: (item) => !!stepsOf.get(item)?.scan_received,
       editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: formHash, today });
     // C8.3 (B144, B2): each form's facts for the review's freeze and stamp, from this very pass.
     sink?.({ answers, words, caseSubject, valueWords: (fact, v) => (v === null || v === undefined || v === "" ? "no answer" : typeof v === "object" ? null : answerWords(s, fact, v)), forms: formItems.map((f) => ({ item: f.id, filing: f.filing, form: f.form, subject: f.subject, person: f.person, channel: f.channel, state: f.state,
       waits: f.state === "cannot_start", hash: f.state === "cannot_start" ? null : formHash(f.form, f.subject), inputHash: inputHash(covOf(f.form, f.subject)?.facts ?? []), facts: covOf(f.form, f.subject)?.facts ?? [],
-      validated: paperValidated(f.form, f.subject), forFiling: forFiling.get(`${f.form}|${f.subject}`) ?? null,
+      validated: paperValidated(f.form, f.subject), validatedSha: validatedSha(f.form, f.subject), forFiling: forFiling.get(`${f.form}|${f.subject}`) ?? null,
       // C8.3 (CI on #1247, BR-8): every fact the form reads, confirmed (its facts) or not yet (what it waits for), as
       // "<subject or relative key>|<fact>", so an answer typed but not confirmed still counts as typed by its typist.
       reads: [...new Set([...(covOf(f.form, f.subject)?.facts ?? []).map((x) => `${x.about === "case" ? caseSubject ?? x.about : x.about}|${x.fact}`), ...(f.state === "cannot_start" ? [] : formReady(f.form, f.subject).missing).map((m) => `${m.subject === "case" ? caseSubject ?? m.subject : m.subject ?? f.subject}|${m.fact}`)])] })) });
@@ -723,11 +731,23 @@ export class CasePrepare {
     const s = this.r.snapshotOf(c), people = this.r.peopleOf(c);
     const { answers, rows, groups } = await this.r.state(c);
     const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
-    const entered = await this.db.enteredSection.findMany({ where: { itemId: item.id, supersededAt: null }, include: { snapshot: { select: { inputHash: true } } } });
+    const entered = await this.db.enteredSection.findMany({ where: { itemId: item.id, supersededAt: null }, include: { snapshot: { select: { inputHash: true, factsJson: true } } } });
     // QA-309: what the sheet waits for is what the form's readiness names, as on the item (the same coverage for both).
     const cov = formCoverage(s, people, answers, rows, item.itemKey, item.subjectId);
     const missing = formReadinessOf(s, people, answers, rows, view, item.itemKey, item.subjectId, cov).missing.filter(blocksLock);
-    return { item: item.id, form: item.itemKey, subject: item.subjectId, ...sheetOf(item, s, people, answers, rows, view, entered, parts, missing, cov) };
+    const sheet = sheetOf(item, s, people, answers, rows, view, entered, parts, missing, cov);
+    // C7.3 (P-401): an out-of-date section says why its tick no longer counts (each answer then and now); a section not
+    // ticked now shows its last untick and the reason given (the audit line, the record).
+    // Break m7: an untick ends a tick, so only an item with an ended tick is looked up, from that tick's time on (the
+    // audit table's workspace and time index), never the whole table.
+    const ended = await this.db.enteredSection.findFirst({ where: { itemId: item.id, supersededAt: { not: null } }, orderBy: { enteredAt: "asc" }, select: { enteredAt: true } });
+    const unticks = ended ? await this.db.auditEvent.findMany({ where: { workspaceId: c.workspaceId, at: { gte: ended.enteredAt }, action: "unentered", entity: "item", entityKey: item.id }, orderBy: { at: "desc" }, select: { at: true, actor: true, detail: true } }) : [];
+    for (const x of sheet.sections) {
+      const e = entered.find((y) => y.sectionKey === x.key);
+      if (e && x.out_of_date) x.changes = changesOf(((e.snapshot.factsJson as { answers?: SheetAnswer[] } | null)?.answers ?? []), x.answers);
+      if (!e) { const u = unticks.find((y) => (y.detail as { section?: string } | null)?.section === x.key); x.unticked = u ? { at: u.at.toISOString(), by: u.actor, reason: String((u.detail as { reason?: string }).reason ?? "") } : null; }
+    }
+    return { item: item.id, form: item.itemKey, subject: item.subjectId, ...sheet };
   }
 
   /** C7.3: "Entered in the portal" for one section: freezes the answers the officer read (the section's `version`, review
@@ -756,6 +776,37 @@ export class CasePrepare {
       await this.audit.log(c.workspaceId, actor.id, "entered", "item", item.id, `${actor.name} ticked "${sec!.title}" of ${item.itemKey} as entered in the portal${"again" in made && made.again ? " again, after a change" : ""} for the ${ROLE[who?.role ?? ""] ?? "person"} on case ${short(c.id)} (${n} answer${n === 1 ? "" : "s"} frozen)`);
     }
     return { created: made.created, section: key, entered: { at: made.row.enteredAt.toISOString(), by: made.row.enteredBy } };
+  }
+
+  /** C7.3 (P-401): take "Entered in the portal" off one section, with a reason: the tick ends (kept as history, its
+   *  frozen answers too) and the section counts as still to tick again, so the item is no longer Done. The officer sends
+   *  the section's `version` and the tick's `entered_at` as read: a sheet or tick that changed since is a 409 (Reload).
+   *  The audit line holds who, when and the reason; a section not ticked is a 409 in words. */
+  async unentered(actor: Actor, itemId: string, key: string, body: unknown) {
+    const { c, item } = await this.onlineItem(actor, itemId);
+    await refuseIfRecorded(this.db, [item.filingId], `the tick "Entered in the portal" on ${item.itemKey}`); // C8.2-9
+    const now = await this.sheet(actor, itemId);
+    const sec = now.sections.find((x) => x.key === key);
+    if (!sec) fail(`${item.itemKey}'s answer sheet has no such section.`, HttpStatus.NOT_FOUND);
+    const b = parse(UnenteredBody, body);
+    const changed = (detail: string): never => { throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed since you read it", status: 409, detail }, HttpStatus.CONFLICT); };
+    if (b.version !== sec!.version) changed(`The answers in "${sec!.title}" changed since you read the sheet. Reload it, check them against the portal, then decide again.`);
+    await this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
+      await refuseIfRecorded(tx, [item.filingId], `the tick "Entered in the portal" on ${item.itemKey}`); // under the lock
+      const was = await tx.enteredSection.findFirst({ where: { itemId: item.id, sectionKey: key, supersededAt: null } });
+      if (!was) throw new HttpException({ type: "https://expatready.local/problems/not-ticked", title: "Not ticked", status: 409, detail: `"${sec!.title}" is not ticked "Entered in the portal", so there is no tick to take off. Reload the sheet.` }, HttpStatus.CONFLICT);
+      if (new Date(b.entered_at).getTime() !== was!.enteredAt.getTime()) changed(`"${sec!.title}" was ticked again since you read the sheet. Reload it, then decide again.`);
+      const row = await tx.enteredSection.update({ where: { id: was!.id }, data: { supersededAt: new Date() } });
+      // Break M1: the audit line is written in the same transaction: a tick never comes off without its record (who,
+      // when, why). The same row Audit.log writes.
+      const who = c.participants.find((p) => p.subjectId === item.subjectId);
+      await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "unentered", entity: "item", entityKey: item.id, combinationId: null,
+        summary: [`${actor.name} took the tick "Entered in the portal" off "${sec!.title}" of ${item.itemKey} for the ${ROLE[who?.role ?? ""] ?? "person"} on case ${short(c.id)}; it counts as still to tick. Reason: ${b.reason}`].map((t) => Array.from(t).slice(0, 600).join(""))[0], // by character, never half an emoji
+        detail: { section: key, reason: b.reason, ticked_by: row.enteredBy, ticked_at: row.enteredAt.toISOString() } } });
+      return row;
+    });
+    return { section: key, entered: null };
   }
 
   /** An item of this case that is a form filed Online now (its own channel, else its line's), reached by the officer. */
@@ -886,6 +937,7 @@ export class CasePrepareController {
   @Post("items/:id/pdf-copy") @HttpCode(HttpStatus.ACCEPTED) pdfCopy(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.p.pdfCopy(actorOf(a), id, b); }
   @Get("items/:id/answer-sheet") sheet(@Headers("x-actor") a: H, @Param("id") id: string) { return this.p.sheet(actorOf(a), id); }
   @Post("items/:id/screens/:key/entered") async entered(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") key: string, @Body() b: unknown, @Res({ passthrough: true }) res: Response) { const r = await this.p.entered(actorOf(a), id, key, b); res.status(r.created ? HttpStatus.CREATED : HttpStatus.OK); return r; }
+  @Post("items/:id/screens/:key/unentered") @HttpCode(HttpStatus.OK) unentered(@Headers("x-actor") a: H, @Param("id") id: string, @Param("key") key: string, @Body() b: unknown) { return this.p.unentered(actorOf(a), id, key, b); }
   @Patch("items/:id/channel") channel(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.p.channel(actorOf(a), id, b); }
 }
 

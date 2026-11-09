@@ -118,7 +118,7 @@ await main("C8.3", "Representative review: rounds, stamps, changed since review 
   // questionnaire, so the fact is picked from the data whoever collects it (P-319): a text fact only the barcode form
   // reads, answered as text; one the staff collect comes first. Staff may enter any fact (agent view), so the case
   // officer (or, at -13, the representative) types the change, whose typist the steps then check.
-  const onlyOn = async (subject: string, form: string | undefined) => { const qs = (((await agent(c.id))?.sections ?? []) as { questions: Q[] }[]).flatMap((s) => s.questions)
+  const onlyOn = async (subject: string, form: string | undefined, caseId = c.id) => { const qs = (((await agent(caseId))?.sections ?? []) as { questions: Q[] }[]).flatMap((s) => s.questions)
     .filter((q) => q.subjectId === subject && !q.hidden && !q.group && q.value_type === "text" && q.fills.length > 0 && q.fills.every((x) => x.form === form) && typeof q.answer?.value === "string");
     return qs.find((q) => q.collected_from !== "client_questionnaire") ?? qs[0]; };
   const qP = await onlyOn(P, BC?.form);
@@ -283,6 +283,55 @@ await main("C8.3", "Representative review: rounds, stamps, changed since review 
     done.length === 1 && sql(`select count(*) from review_round r join review_round_filing f on f.round_id=r.id where r.case_id='${oc.id}' and r.kind='one_step' and f.status='approved' and f.filing_review_id is not null`) === "1"
       && sql(`select count(*) from review_round_form where filing_id='${of}' and file_kind<>'waits' and stamped_at is null`) === "0" && Number(sql(`select count(*) from review_round_form where filing_id='${of}'`) ?? 0) > 0,
     { done, rounds: sql(`select string_agg(kind, ',') from review_round where case_id='${oc.id}'`) });
+
+  // 22, 23 QA-345 (the tech lead's ruling (a), 9 Nov 18:35 IST): an approval stamps the file it approved. A send back
+  // changes a fact only the barcode form reads, so round 2's approval finds no file for its facts (stamped "none"); the
+  // validated copy read back next is stamped to it, with an audit line. A validated copy that counts for filing but was
+  // never stamped (kept before this fix, inserted here as that code left it) withdraws the approval until re-approved.
+  const qc = await openCase(vv, [{ role: "principal", name: "Sample Client Q", dob: yearsAgo(41) }], { representative: rep, caseOfficers: [officer] });
+  const Q = qc.subjects["Sample Client Q"];
+  await fillEverything(qc.id);
+  const qbc = [...((await expectedFor(qc.id))?.["Sample Client Q"]?.forms ?? []), ...((await expectedFor(qc.id))?.["Sample Client Q"]?.waiting ?? [])].find((l) => l.barcode);
+  if (qbc?.channel === "ONLINE") { const q = (await prepare(qc.id, officer)).p; await call("PATCH", `/runtime/items/${itemsOf(q, Q, qbc.form)[0]?.id}/channel`, { channel: "PAPER", reason: "Cannot apply online: accommodation (Sample)", version: q?.version }, officer); }
+  if (qbc) await validateRoundTrip(qc.id, qbc.form, Q);
+  const fQ = (await prepare(qc.id, officer)).p?.filings[0]?.id, qItem = itemsOf((await prepare(qc.id, officer)).p, Q, qbc?.form).find((i) => i.kind === "form")?.id;
+  const qRound = async (verdict: "approve" | "send_back") => {
+    const id = (await call("POST", `/runtime/cases/${qc.id}/reviews`, { filings: [fQ] }, officer)).body?.id as string;
+    await call("POST", `/runtime/reviews/${id}/open`, { filing: fQ }, rep);
+    const d = await call("POST", `/runtime/reviews/${id}/decision`, { filing: fQ, verdict, form_hashes: hashes(rowOf((await read(id)).r, fQ)), confirm_unticked: true, reasons: verdict === "send_back" ? [{ text: `${qbc?.form}: the city of birth does not match the passport (Sample).` }] : undefined }, rep);
+    return { id, status: d.status };
+  };
+  // A prefix keeps the value valid (an e-mail stays an e-mail), so each bump changes what the form writes.
+  const bump = async (tag: string) => { const q = await onlyOn(Q, qbc?.form, qc.id); if (q) { await answer(qc.id, Q, q.fact, `${tag}${String(q.answer?.value)}`, officer); await confirmAll(qc.id, Q); } return !!q; };
+  await qRound("send_back");
+  const bumped = await bump("q");
+  const q2 = await qRound("approve");
+  const kindAt = sql(`select stamp_file_kind from review_round_form where round_id='${q2.id}' and item_id='${qItem}'`);
+  if (qbc) await validateRoundTrip(qc.id, qbc.form, Q);
+  const vShaQ = sql(`select v.sha256 from validated_copy v join form_instance fi on fi.id=v.form_instance_id where fi.case_id='${qc.id}' and fi.subject_id='${Q}' and fi.form_number='${qbc?.form}' order by v.read_at desc limit 1`);
+  const qf = rowOf((await read(q2.id)).r, fQ)?.forms.find((x) => x.item === qItem);
+  p = (await prepare(qc.id, officer)).p;
+  ok("C8.3-22 pass (QA-345, ruling (a)): after a send back that changed a barcode form's fact, round 2's approval stamped no file; the validated copy read back next is stamped to it (once, with an audit line), the form stays \"Approved, still current\" with that file, and C7.6 counts the review",
+    !!qbc && bumped && q2.status === 200 && kindAt === "none" && sql(`select stamp_file_kind || '|' || stamp_file_sha256 from review_round_form where round_id='${q2.id}' and item_id='${qItem}'`) === `validated_copy|${vShaQ}`
+      && qf?.state === "approved" && qf.stamp?.file_sha256 === vShaQ && sql(`select count(*) from audit_event where action='review_stamp_file' and entity_key='${q2.id}'`) === "1" && !!readinessOf(p, fQ)?.reviewed
+      // Review m6: the database refuses every other move of a written stamp (to another file, back to none, with another column).
+      && [`stamp_file_sha256='${"0".repeat(64)}'`, `stamp_file_kind='none', stamp_file_sha256=null`, `stamped_by='user-O'`].every((set) => sql(`update review_round_form set ${set} where round_id='${q2.id}' and item_id='${qItem}' returning id`) === null),
+    { bc: qbc?.form, bumped, q2: q2.status, kindAt, stamp: qf?.stamp, vShaQ, state: qf?.state, reviewed: readinessOf(p, fQ)?.reviewed ?? null });
+  // 23 (review M1): a second validated copy of the same facts read back after that is filed instead; the approval did not
+  // stamp it, so it is withdrawn and asked again, on the Review page and on C7.6's line, until the one-click re-approve.
+  if (qbc) await validateRoundTrip(qc.id, qbc.form, Q);
+  const v2 = sql(`select v.sha256 from validated_copy v join form_instance fi on fi.id=v.form_instance_id where fi.case_id='${qc.id}' and fi.subject_id='${Q}' and fi.form_number='${qbc?.form}' order by v.read_at desc limit 1`);
+  const w = rowOf((await read(q2.id)).r, fQ);
+  const wf = w?.forms.find((x) => x.item === qItem);
+  p = (await prepare(qc.id, officer)).p;
+  const line = (readinessOf(p, fQ)?.warns ?? []).find((x) => x.code === "representative_review")?.words ?? "";
+  const rq = await call("POST", `/runtime/reviews/${q2.id}/reapprove`, { filing: fQ, form_hashes: hashes(w) }, rep);
+  p = (await prepare(qc.id, officer)).p;
+  ok("C8.3-23 fail (QA-345, ruling (a); review M1): a second validated copy of the same facts read back after the stamp is filed without it → \"Approval withdrawn\" in words, C7.6's line in its own words; the one-click re-approve stamps that file",
+    !!v2 && v2 !== vShaQ && wf?.state === "approval_withdrawn" && wf.withdrawn_words === "Approval withdrawn: the validated copy read back since is not the file this approval stamped. Re-approve to stamp the file that is filed."
+      && w?.reapprovable === true && /A validated copy was read back after this filing was reviewed on .+, and the review did not stamp it\./.test(line)
+      && rq.status === 200 && sql(`select stamp_file_kind || '|' || stamp_file_sha256 from review_round_form where round_id='${rq.body?.round?.id}' and item_id='${qItem}'`) === `validated_copy|${v2}` && !!readinessOf(p, fQ)?.reviewed,
+    { rq: rq.status, detail: rq.body?.detail, reviewed: !!readinessOf(p, fQ)?.reviewed, line, reapprovable: w?.reapprovable, state: wf?.state, v2 });
 
   console.log("NOTE  C8.3-16 (screen walk at 1440 px): tests/check_c83_review_browser.cjs <port> <db> <shots dir>");
 });
