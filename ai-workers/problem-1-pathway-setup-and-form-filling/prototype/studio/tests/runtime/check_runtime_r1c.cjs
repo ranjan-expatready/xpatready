@@ -393,9 +393,12 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
     : q.value_type === "address" ? { street_name: "Sample Road", city: "Sample City", country: "Canada" } : /email/.test(q.fact) ? "client.a@example.com" : "SAMPLE";
   for (let pass = 0; pass < 3; pass++) {
     const av = (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body;
-    const todo = av.sections.flatMap((x) => x.questions).filter((q) => q.required && !q.hidden && !q.group && q.fills.some((f) => f.form === "IMM 5257" && f.person === "Sample Applicant C") && !q.answer?.confirmed);
     // The other empty required groups IMM 5257 reads: "none apply" (the visit's entries are kept: it has rows).
     const fl = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, "user-O")).body.forms.find((f) => f.form === "IMM 5257" && f.person === "Sample Applicant C");
+    // QA-318: "every fact confirmed" includes a mandatory form field's own Yes/No question (other names, national ID, US card),
+    // which readiness names as the field's "needs an answer: answer "<question>"" (the card counts it as a fact to answer).
+    const asks = new Set(fl.readiness.missing.filter((m) => m.reason === "left empty on the form").map((m) => /^needs an answer: answer "(.+?)" and confirm/.exec(m.why ?? "")?.[1]).filter(Boolean));
+    const todo = av.sections.flatMap((x) => x.questions).filter((q) => (q.required || asks.has(q.label)) && !q.hidden && !q.group && q.fills.some((f) => f.form === "IMM 5257" && f.person === "Sample Applicant C") && !q.answer?.confirmed);
     const groups = fl.readiness.missing.filter((m) => m.fact.startsWith("group:")).map((m) => av.sections.find((x) => x.section === m.fact.slice(6) && x.group && (x.about_label === m.about))).filter(Boolean);
     if (!todo.length && !groups.length) break;
     for (const q of todo) await call("PUT", `/runtime/cases/${caseId}/answers/${q.subjectId}/${q.fact}`, { value: sample(q), expectedId: q.answer?.id ?? null }, "user-O");

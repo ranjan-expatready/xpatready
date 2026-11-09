@@ -18,6 +18,7 @@ export const CASE_ENTITIES: ReadonlySet<string> = new Set([
   "case", "person", "case fact", "row", "group", "section", "form copy", "item", "submission group", "application number" /* C8.2 */, "fee receipt" /* C8.2 B149 */,
   "sign step", "signed scan" /* C8.1 */, "case document" /* C6.4 */, "answer check" /* C6.5: a typed-versus-document check */, "checklist line", "assessment", "assessment_override",
   "filing" /* C7.6 readiness and review, readiness.ts and case-prepare.ts (#861) */,
+  "filing form" /* C7.8 a library form added to one filing, or removed: form-additions.ts */,
   "review round" /* C8.3 representative review, review-rounds.ts: each line names its case */,
 ]);
 /** The audit entities written by configuration work. "section" is a case entity too (a case's sections), so it is never
