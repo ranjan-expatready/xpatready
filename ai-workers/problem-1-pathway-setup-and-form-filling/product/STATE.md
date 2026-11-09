@@ -2,7 +2,7 @@
 
 current_lead: local_f135f805-00be-49fc-ac67-df94b57dbc86 Lead 1 · 9 Nov 17:48 IST (series 2; new account, P-432; took over from Lead 40, series 1)
 
-updated: 2026-11-09 18:10 IST by **Lead 1 (series 2, local_f135f805-…)** (from 17:48 IST, new account, weekly 0% at 17:48 IST, resets 15 Nov 22:30 IST) · milestone: **M2 60/60 holds; M3 17 of 29 Works on main cfaa199f4 (C7.10 via #1427); target 26 (P-434)** · rules: **`RULES.md`** + DECISIONS P-354 to P-434 · earlier page, word for word: `history/STATE-2026-11-09-1748-lead40-final.md` · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-09 19:05 IST by **Lead 1 (series 2, local_f135f805-…)** (from 17:48 IST, new account, weekly 0% at 17:48 IST, resets 15 Nov 22:30 IST) · milestone: **M2 60/60 holds; M3 17 of 29 Works on main cfaa199f4 (C7.10 via #1427); target 26 (P-434)** · rules: **`RULES.md`** + DECISIONS P-354 to P-434 · earlier page, word for word: `history/STATE-2026-11-09-1748-lead40-final.md` · this branch: `lead/2026-11-07-lead31`
 
 ## Lead 1 (series 2), from 17:48 IST: the 26-of-29 push (P-434), read this first
 **Founder asks (17:48 IST, P-434, P-433):** [x] get_usage: 0% · [x] four merge-main cloud sessions · [~] Fable study + Opus challenge, aligned, plain words (+ token efficiency, ~18:00) · [~] table of the 12 · [x] qa Mac + four cloud lanes · [x] P-433 numbering, tools fixed · [ ] hourly reports · [ ] standbys Lead 2, Lead 3 · stop at 95%.
