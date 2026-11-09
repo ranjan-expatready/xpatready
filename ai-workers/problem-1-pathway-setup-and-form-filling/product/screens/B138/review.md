@@ -188,3 +188,61 @@ Exact head: **1fe118b51434baa43a4a3d12bbc2e1ba5bf69307**. It merges origin/main 
 **Journey score: 9.5/10**, carried from round 2. The merge changes no C6.16 screen or route. Main adds no step to the C6.16 journey, and the browser journey above passes 50/50 on the merged code. Per the caller's brief, no new journey-test report file was written for this diff-only check.
 
 **Verdict: Approve** for 1fe118b51434baa43a4a3d12bbc2e1ba5bf69307. There is no open Blocker or Major.
+
+## Guard-test fix check (d269f8ce7)
+
+**Scope:** only `git diff 992c6ba1d..d269f8ce7`. It touches two files: `tests/check_forms_qa53.ts` (+70/−6) and `api/src/case-feed.ts` (+1). It changes no screen, route or guard in the app.
+
+**1. No existing assertion is weakened, and the exemption is narrow, exact and tested.**
+- **Reads.** The `marked` filter drops a route only when its path is a key of `OWN_GUARD` and it is marked `open`. A new assertion then requires the routes on those three paths, as found in the code, to equal `OWN_GUARD`, each marked `open`. A duplicate, a missing route or a `case` mark all fail it.
+- **Unchanged reads.** `REVIEWED`, the configuration-read loop (94 reads, 401/401/403/403) and every other QA-53 and QA-65 line are unchanged. The configuration-read count also stays 94, as on the old scanner.
+- **Writes, per-controller prefix.** I compared the old and new scanners on the code (scratch script, all 244 writes):
+  - 17 paths change. They are the 13 link writes, main.ts's 3 `api/demo/*` writes and readiness.ts's `api/editions/:id/accepted-until`. The new paths are the correct ones.
+  - `configPosts` is identical on both scanners.
+  - The pre-exemption `unnamed` set is exactly the 13 link writes on both. So the only thing exempted is `OWN_GUARD_WRITES`, matched on the exact path.
+  - A further assertion pins `ownWrites` to that list exactly. Each listed write is then asked live: `x-actor` gives 400, and nobody gives 401 (session routes) or 404 (token routes). All 13 were as listed.
+- **Mutation run.** I ran the new scanner's logic, copied verbatim, on a scratch copy of `api/src`. Each mutation trips its own assertion:
+
+  | Mutation | Assertion that fails |
+  |---|---|
+  | Unlisted `@Get` in LinkController | reviewed list |
+  | `@OpenRead` removed from the inbox | `OWN_GUARD` exact (and the inbox becomes a configuration read) |
+  | Link controller remarked `@CaseRead` | both of the above |
+  | Unlisted link `@Post` | `unnamed` |
+  | Listed write deleted | `ownWrites` exact |
+  | Second `api/link` controller duplicating `me` and `end` | `OWN_GUARD` and `ownWrites` exact |
+  | Link write moved under `api/runtime` with no `x-actor` | `unnamed` |
+
+- **Scanner side effect.** A method-level `@OpenRead(...)` with its `@Get` on the next line would now be taken as a class mark. The route-count assertion ("none left unseen") would then fail, so this fails loudly, never silently.
+
+**2. The planted fail cases fail without the fix.** I ran 992c6ba1d's `routes()` and `writes()` on the same planted file:
+- `/api/link/sneaky` comes out with mark `null`, not `open`.
+- The write comes out as `/api/runtime/sneaky-write`, not `/api/link/sneaky-write`.
+
+So both planted assertions fail on the old scanner. On the real code, the old scanner also leaves the two link reads and the inbox unmarked. That is the original red.
+
+**3. The second copy is always stopped.**
+- Start and stop sit in `try/finally`, and the copy has a `--ttl 10` self-stop as backstop.
+- A failed start (for example the copy cap) gives `firm.error`, and the 404 assertion fails red.
+- After my run, nothing listened on :4444, and no `xr_studio_b138rv*` database remained, including `_firm`.
+
+**4. The feed entity cannot widen who sees a line.**
+- `firmMayRead` decides by the case a line names first. The entity list is consulted only for a line that names no case, and only to admit configuration entities.
+- "person link" was on neither list before. It is on the case list now, so `isConfigEntity` is false in both cases and the visibility rule gives the same answer for every line. The change only satisfies the sweep.
+- All 11 `person link` audit summaries in `person-link.ts` put `case <first 8>` before any typed reason. So the first-marker rule binds each line to its own case's firm.
+- Clients get 403 on `/api/activity`, and that is still asserted. The lines carry masked addresses only: no code, no token, no answer value.
+- Same-firm staff see all of their firm's case lines. That is the existing firm-scoped feed rule for every case entity, not something this diff adds.
+
+**Run:** an isolated copy on :4443, with its firm copy on :4444, both started and stopped. Live AI off, US$0.
+- `check_forms_qa53.ts`: **29/29**, including `C6.16 … firm workspace answers 404` → `{"inbox":404}`.
+- `check_case_feed.ts`: **29/29**.
+- I did not re-run the pack, unit, browser or typecheck suites. This diff changes no app code except a set literal that does not change behaviour (point 4).
+
+**Nits, not blocking:**
+- (a) The "sneaky" planted case asserts the scanner's output plus "not in `OWN_GUARD`", not the reviewed-list equality itself. My mutation run shows the real assertion does fail.
+- (b) The firm copy's start uses `stdio: "ignore"`, so a failed start reports only the first line of the error.
+- (c) The inbox's pass case is not asked here: in the demo workspace, a valid address returns 200. The C6.16 pack covers it.
+
+**Journey score: 9.5/10**, carried from the earlier check. This diff changes no screen or journey step. Per the caller's brief, no new journey-test report was written.
+
+**Verdict: Approve** for d269f8ce7e9961c34ebc75d2a57d89cbac498f71. There is no open Blocker or Major.
