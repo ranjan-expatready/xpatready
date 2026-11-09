@@ -21,7 +21,9 @@ await main("C10.2", "Finished demo story: Visitor visa family case at applicatio
   // tests/check_c102_finished_story_refusals.ts); on an empty copy RESET changes nothing.
   r = await call("POST", "/demo/checkpoints/finished-story", { confirm: "RESET" }, AUTHOR);
   ok("C10.2-2 pass: loading the finished story is a job (202)", r.status === 202, r.status);
-  const done = r.status === 202 && await until(async () => (await call("GET", "/demo/status", undefined, AUTHOR)).body?.checkpoint === "finished_story", 600_000);
+  // #C10.2 (Lead 37, 9 Nov): the job's own end, not only the label: a copy that already holds a story reads
+  // "finished_story" before this load ends (the Mac's demo, a re-run), and the checks below must read this load's case.
+  const done = r.status === 202 && await until(async () => { const b = (await call("GET", "/demo/status", undefined, AUTHOR)).body; return b?.story?.state === "done" && b?.checkpoint === "finished_story"; }, 600_000);
   ok("C10.2-3 pass: the demo status says Finished story", done);
   const stagesOf = async () => ((await call("GET", "/demo/status", undefined, AUTHOR)).body?.story?.stages ?? []).map((x: { key: string; status: string }) => `${x.key}:${x.status}`).join(" ");
   const firstStages = await stagesOf();
