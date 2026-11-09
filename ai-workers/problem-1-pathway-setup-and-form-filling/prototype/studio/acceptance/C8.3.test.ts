@@ -9,7 +9,7 @@
 //   tsx studio/acceptance/C8.3.test.ts 4441 xr_studio_b144
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AUTHOR, CLIENT, OFFICER, agent, answer, call, confirmAll, expectedFor, fillEverything, firms, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, readyToFile, sql, validateRoundTrip, yearsAgo } from "./lib/m3.ts";
+import { AUTHOR, CLIENT, OFFICER, agent, answer, call, confirmAll, expectedFor, fillEverything, firms, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, readyToFile, sql, validateRoundTrip, yearsAgo } from "./lib/m3.ts";
 
 type Form = { item: string; form: string; person: string; channel: string; waits: boolean; state: string; state_words: string; withdrawn_words: string | null; file: { kind: string; sha256: string | null }; stamp: { file_kind: string; file_sha256: string | null } | null; live_hash: string | null; changes: { label: string; was: unknown; now: unknown; typed_by: string | null; typed_by_name: string | null }[] };
 type Row = { filing: string; filing_round: number; status: string; opened: { by: string } | null; decided: { kind: string | null; confirmed_unticked: string[] | null } | null; forms: Form[]; checks: { key: string; source: string; wording: string; live: Record<string, unknown> | null }[]; unticked: number; changed: number; withdrawn: string[]; reapprovable: boolean };
@@ -314,25 +314,24 @@ await main("C8.3", "Representative review: rounds, stamps, changed since review 
   ok("C8.3-22 pass (QA-345, ruling (a)): after a send back that changed a barcode form's fact, round 2's approval stamped no file; the validated copy read back next is stamped to it (once, with an audit line), the form stays \"Approved, still current\" with that file, and C7.6 counts the review",
     !!qbc && bumped && q2.status === 200 && kindAt === "none" && sql(`select stamp_file_kind || '|' || stamp_file_sha256 from review_round_form where round_id='${q2.id}' and item_id='${qItem}'`) === `validated_copy|${vShaQ}`
       && qf?.state === "approved" && qf.stamp?.file_sha256 === vShaQ && sql(`select count(*) from audit_event where action='review_stamp_file' and entity_key='${q2.id}'`) === "1" && !!readinessOf(p, fQ)?.reviewed
-      && sql(`update review_round_form set stamp_file_sha256='${"0".repeat(64)}' where round_id='${q2.id}' and item_id='${qItem}' returning id`) === null,
+      // Review m6: the database refuses every other move of a written stamp (to another file, back to none, with another column).
+      && [`stamp_file_sha256='${"0".repeat(64)}'`, `stamp_file_kind='none', stamp_file_sha256=null`, `stamped_by='user-O'`].every((set) => sql(`update review_round_form set ${set} where round_id='${q2.id}' and item_id='${qItem}' returning id`) === null),
     { bc: qbc?.form, bumped, q2: q2.status, kindAt, stamp: qf?.stamp, vShaQ, state: qf?.state, reviewed: readinessOf(p, fQ)?.reviewed ?? null });
-  // 23: the facts change again; the re-approve finds no file (stamped "none"); then a validated copy is kept without the stamp.
-  await bump("r");
-  const q2Row = rowOf((await read(q2.id)).r, fQ);
-  const rq = await call("POST", `/runtime/reviews/${q2.id}/reapprove`, { filing: fQ, form_hashes: hashes(q2Row) }, rep);
-  const q3 = rq.body?.round?.id as string | undefined;
-  const legacyCopy = qbc ? await generateCopy(qc.id, qbc.form, Q) : null;
-  const legacySha = "c".repeat(64);
-  sql(`insert into validated_copy (id, workspace_id, form_instance_id, path, sha256, facts_hash, read_back, read_by) select gen_random_uuid(), s.workspace_id, '${legacyCopy}', 'var/legacy-qa345.pdf', '${legacySha}', s.input_hash, '{"ok":true,"validation":{"passed":true}}'::jsonb, '${officer}' from review_round_form f join answer_snapshot s on s.id=f.stamp_snapshot_id where f.round_id='${q3}' and f.item_id='${qItem}' returning id`);
-  const w = rowOf((await read(q3)).r, fQ);
+  // 23 (review M1): a second validated copy of the same facts read back after that is filed instead; the approval did not
+  // stamp it, so it is withdrawn and asked again, on the Review page and on C7.6's line, until the one-click re-approve.
+  if (qbc) await validateRoundTrip(qc.id, qbc.form, Q);
+  const v2 = sql(`select v.sha256 from validated_copy v join form_instance fi on fi.id=v.form_instance_id where fi.case_id='${qc.id}' and fi.subject_id='${Q}' and fi.form_number='${qbc?.form}' order by v.read_at desc limit 1`);
+  const w = rowOf((await read(q2.id)).r, fQ);
   const wf = w?.forms.find((x) => x.item === qItem);
   p = (await prepare(qc.id, officer)).p;
-  const reviewedLegacy = readinessOf(p, fQ)?.reviewed ?? null;
-  const rq2 = await call("POST", `/runtime/reviews/${q3}/reapprove`, { filing: fQ, form_hashes: hashes(w) }, rep);
-  ok("C8.3-23 fail (QA-345, ruling (a)): a validated copy that counts for filing but the approval never stamped → \"Approval withdrawn\" in words, C7.6's review not counted; the one-click re-approve stamps that file",
-    rq.status === 200 && sql(`select stamp_file_kind from review_round_form where round_id='${q3}' and item_id='${qItem}'`) === "none" && wf?.state === "approval_withdrawn" && /validated copy was read back without this approval's stamp/.test(wf.withdrawn_words ?? "")
-      && w?.reapprovable === true && reviewedLegacy === null && rq2.status === 200 && sql(`select stamp_file_kind || '|' || stamp_file_sha256 from review_round_form where round_id='${rq2.body?.round?.id}' and item_id='${qItem}'`) === `validated_copy|${legacySha}`,
-    { rq: rq.status, state: wf?.state, words: wf?.withdrawn_words, reapprovable: w?.reapprovable, reviewedLegacy, rq2: rq2.status, rq2body: rq2.body?.detail });
+  const line = (readinessOf(p, fQ)?.warns ?? []).find((x) => x.code === "representative_review")?.words ?? "";
+  const rq = await call("POST", `/runtime/reviews/${q2.id}/reapprove`, { filing: fQ, form_hashes: hashes(w) }, rep);
+  p = (await prepare(qc.id, officer)).p;
+  ok("C8.3-23 fail (QA-345, ruling (a); review M1): a second validated copy of the same facts read back after the stamp is filed without it → \"Approval withdrawn\" in words, C7.6's line in its own words; the one-click re-approve stamps that file",
+    !!v2 && v2 !== vShaQ && wf?.state === "approval_withdrawn" && wf.withdrawn_words === "Approval withdrawn: the validated copy read back since is not the file this approval stamped. Re-approve to stamp the file that is filed."
+      && w?.reapprovable === true && /A validated copy was read back after this filing was reviewed on .+, and the review did not stamp it\./.test(line)
+      && rq.status === 200 && sql(`select stamp_file_kind || '|' || stamp_file_sha256 from review_round_form where round_id='${rq.body?.round?.id}' and item_id='${qItem}'`) === `validated_copy|${v2}` && !!readinessOf(p, fQ)?.reviewed,
+    { rq: rq.status, detail: rq.body?.detail, reviewed: !!readinessOf(p, fQ)?.reviewed, line, reapprovable: w?.reapprovable, state: wf?.state, v2 });
 
   console.log("NOTE  C8.3-16 (screen walk at 1440 px): tests/check_c83_review_browser.cjs <port> <db> <shots dir>");
 });

@@ -14,6 +14,7 @@ import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, In
 import { REPRESENTATIVE, userIn, type Firm } from "../../engine/runtime/team.ts";
 import { changedBy, changesOf, checklistOf, CHANGED_TOOLTIP, fileOf, formStateOf, hashesProblem, isOpen, mayDecide, nextStatus, reasonsOf, selfReviewOf, SELF_STATEMENT, sendProblem, stampCurrent, STATE_WORDS, typedSince, untickedProblem, withdrawnForms, withdrawnWords, WITHDRAWN_TOOLTIP, type ChangeLine, type CheckItem, type FileStamp, type Problem, type RowStatus } from "../../engine/runtime/review.ts";
 import { dayWords, factPerson } from "../../engine/runtime/out-of-date.ts";
+import { isBarcodeForm } from "../../contracts/forms.ts";
 import type { FormFact } from "../../engine/runtime/forms.ts";
 import { ReviewDecision, ReviewOpen, ReviewReapprove, ReviewTick, SendForReview, type ChangedSinceReview, type FormStamp, type ReviewRound, type ReviewRoundFiling } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
@@ -39,7 +40,7 @@ const parsed = <T>(schema: { safeParse: (x: unknown) => { success: true; data: T
   return r.data;
 };
 const STATUS_WORDS: Record<RowStatus, string> = { sent: "Sent for review", under_review: "Under review", approved: "Approved", sent_back: "Sent back" };
-const FILE_WORDS: Record<FileStamp["kind"], string> = { validated_copy: "the validated copy read back", generated_copy: "the copy made from these facts", none: "its facts (no file for filing matches them yet; an online form has none). A validated copy read back later for these facts is stamped to this approval", waits: "not stamped: waits for an answer" };
+const FILE_WORDS: Record<FileStamp["kind"], string> = { validated_copy: "the validated copy read back", generated_copy: "the copy made from these facts", none: "its facts (no file for filing matches them yet; an online form has none)", waits: "not stamped: waits for an answer" };
 type StoredFacts = { review?: boolean; facts?: FormFact[] };
 type FormRow = { id: string; itemId: string; formNumber: string; subjectId: string; snapshotId: string | null; factsHash: string | null; fileKind: string; fileId: string | null; fileSha256: string | null;
   stampSnapshotId: string | null; stampHash: string | null; stampFileKind: string | null; stampFileSha256: string | null; stampedBy: string | null; stampedAt: Date | null };
@@ -70,12 +71,12 @@ export class ReviewRounds {
   }
   /** B2: the files of the forms that have one (one query each kind), as fileOf orders them. */
   private async framesOf(forms: ReviewBasisForm[]): Promise<Frozen[]> {
-    const vIds = forms.map((f) => f.validated?.copy).filter((x): x is string => !!x), gIds = forms.map((f) => f.forFiling?.id).filter((x): x is string => !!x);
-    const vSha = new Map<string, string>();
-    for (const v of vIds.length ? await this.db.validatedCopy.findMany({ where: { formInstanceId: { in: vIds } }, orderBy: [{ readAt: "desc" }, { id: "asc" }], select: { formInstanceId: true, sha256: true } }) : []) if (!vSha.has(v.formInstanceId)) vSha.set(v.formInstanceId, v.sha256);
+    // QA-345 (review M1): a validated copy's fingerprint is the read-back that counts for filing (validatedSha), the one
+    // fileStampCurrent compares with.
+    const gIds = forms.map((f) => f.forFiling?.id).filter((x): x is string => !!x);
     const gSha = new Map((gIds.length ? await this.db.formInstance.findMany({ where: { id: { in: gIds } }, select: { id: true, sha256: true } }) : []).map((g) => [g.id, g.sha256]));
     return forms.map((f) => ({ item: f.item, form: f.form, subject: f.subject, waits: f.waits, hash: f.hash, inputHash: f.inputHash, facts: f.facts, channel: f.channel,
-      file: fileOf({ waits: f.waits, inputHash: f.inputHash, validated: f.validated ? { id: f.validated.copy, sha256: vSha.get(f.validated.copy) ?? null, current: f.validated.current } : null, generated: f.forFiling ? { id: f.forFiling.id, sha256: gSha.get(f.forFiling.id) ?? null, hash: f.forFiling.hash } : null }) }));
+      file: fileOf({ waits: f.waits, inputHash: f.inputHash, validated: f.validated ? { id: f.validated.copy, sha256: f.validatedSha, current: f.validated.current } : null, generated: f.forFiling ? { id: f.forFiling.id, sha256: gSha.get(f.forFiling.id) ?? null, hash: f.forFiling.hash } : null }) }));
   }
   /** The forms of one filing a review covers: every form item of it except those the IRCC account asks itself. */
   private formsOf(basis: ReviewBasis, filing: string) { return basis.forms.filter((f) => f.filing === filing && f.channel !== "NOT_NEEDED"); }
@@ -244,8 +245,8 @@ export class ReviewRounds {
         const prevForm = prev?.forms.find((x) => x.itemId === f.itemId);
         // Break B1: an approval with a newer round of its filing no longer counts (stampCurrent's `superseded`).
         // QA-345: and only while the validated copy that counts for filing now is the file it stamped (fileStampCurrent).
-        const stamp = f.stampedAt ? { hash: f.stampHash, by: row.representative, superseded: !latest, file: f.stampFileKind } : null;
-        const st = formStateOf({ status: row.status as RowStatus, waits, checked: ticked.has(`form:${f.itemId}`), frozenHash: f.factsHash, previousHash: prev ? prevForm?.factsHash ?? null : undefined, liveHash, stamp, representative: rep, validated: !!now?.validated?.current });
+        const stamp = f.stampedAt ? { hash: f.stampHash, by: row.representative, superseded: !latest, file: { kind: f.stampFileKind, sha256: f.stampFileSha256 } } : null;
+        const st = formStateOf({ status: row.status as RowStatus, waits, checked: ticked.has(`form:${f.itemId}`), frozenHash: f.factsHash, previousHash: prev ? prevForm?.factsHash ?? null : undefined, liveHash, stamp, representative: rep, validatedSha: now?.validatedSha ?? null });
         // BR-6: an approved row compares its stamp with today; an open row compares the round before (else what it froze) with today.
         const base = row.status === "approved" ? snaps.get(f.stampSnapshotId ?? "") ?? [] : prevForm?.snapshotId ? snaps.get(prevForm.snapshotId) ?? [] : snaps.get(f.snapshotId ?? "") ?? [];
         const changes = waits || !now ? [] : changesOf(base, now.facts, basis.words, typist);
@@ -257,11 +258,11 @@ export class ReviewRounds {
         return { item: f.itemId, form: f.formNumber, person: now?.person ?? "", channel: now?.channel ?? "", waits, state: st.state, state_words: STATE_WORDS[st.state],
           tooltip: st.state === "approval_withdrawn" ? WITHDRAWN_TOOLTIP : st.state === "changed_since_review" ? CHANGED_TOOLTIP : null,
           withdrawn_words: st.state === "approval_withdrawn" ? withdrawnWords(st.why, first, day) : null,
-          file: { kind, sha256: f.stampFileSha256 ?? f.fileSha256, words: waits ? "Not stamped: waits for an answer" : `${f.stampedAt ? "Stamped" : "Frozen when sent"} with ${FILE_WORDS[kind]}` },
+          file: { kind, sha256: f.stampFileSha256 ?? f.fileSha256, words: waits ? "Not stamped: waits for an answer" : `${f.stampedAt ? "Stamped" : "Frozen when sent"} with ${FILE_WORDS[kind]}${kind === "none" && f.stampedAt && isBarcodeForm(f.formNumber) && now?.channel !== "ONLINE" ? ". The validated copy read back next for these facts is stamped to this approval (QA-345)" : ""}` },
           stamp: f.stampedAt ? { at: f.stampedAt.toISOString(), by: f.stampedBy!, file_kind: f.stampFileKind!, file_sha256: f.stampFileSha256 } : null,
           live_hash: liveHash, changes: changeView(changes), facts };
       });
-      const withdrawn = row.status === "approved" && latest ? withdrawnForms(row.forms.map((f) => ({ item: f.itemId, waits: f.fileKind === "waits", stamp: f.stampedAt ? { hash: f.stampHash, by: row.representative, file: f.stampFileKind } : null, liveHash: live.get(f.itemId)?.hash ?? null, validated: !!live.get(f.itemId)?.validated?.current })), rep).map((f) => f.item) : [];
+      const withdrawn = row.status === "approved" && latest ? withdrawnForms(row.forms.map((f) => ({ item: f.itemId, waits: f.fileKind === "waits", stamp: f.stampedAt ? { hash: f.stampHash, by: row.representative, file: { kind: f.stampFileKind, sha256: f.stampFileSha256 } } : null, liveHash: live.get(f.itemId)?.hash ?? null, validatedSha: live.get(f.itemId)?.validatedSha ?? null })), rep).map((f) => f.item) : [];
       const reasons = (row.reasons ?? null) as { text: string; item?: string; check?: string }[] | null;
       return { filing: row.filingId, label: label.get(row.filingId) ?? "A filing no longer on the application", filing_round: row.filingRound, status: row.status as RowStatus, status_words: STATUS_WORDS[row.status as RowStatus],
         opened: row.openedBy ? { by: row.openedBy, name: this.nameOf(c, row.openedBy)!, at: row.openedAt!.toISOString() } : null,
@@ -426,7 +427,7 @@ export class ReviewRounds {
     const forms = this.formsOf(basis, b.filing), stored = await this.db.reviewRoundForm.findMany({ where: { roundFilingId: row.id } });
     const hp = hashesProblem(b.form_hashes, forms.map((f) => ({ item: f.item, hash: f.hash })));
     if (hp) refuse(hp);
-    const changed = withdrawnForms(forms.map((f) => { const s = stored.find((x) => x.itemId === f.item); return { item: f.item, waits: f.waits, liveHash: f.hash, validated: !!f.validated?.current, stamp: s?.stampedAt ? { hash: s.stampHash, by: row.representative, file: s.stampFileKind } : null }; }), rep);
+    const changed = withdrawnForms(forms.map((f) => { const s = stored.find((x) => x.itemId === f.item); return { item: f.item, waits: f.waits, liveHash: f.hash, validatedSha: f.validatedSha, stamp: s?.stampedAt ? { hash: s.stampHash, by: row.representative, file: { kind: s.stampFileKind, sha256: s.stampFileSha256 } } : null }; }), rep);
     if (!changed.length) refuse({ status: 409, detail: "Nothing changed since this filing was approved: its approval stands. Reload." });
     // BR-8: a changed fact the representative typed themself makes them an author.
     const snaps = new Map((await this.db.answerSnapshot.findMany({ where: { id: { in: stored.map((s) => s.stampSnapshotId).filter((x): x is string => !!x) } }, select: { id: true, factsJson: true } })).map((s) => [s.id, ((s.factsJson ?? {}) as StoredFacts).facts ?? []]));
@@ -436,7 +437,7 @@ export class ReviewRounds {
     // Review m5, break m2: ticks carry only when the representative of record made them (a new representative's round
     // starts with their own); the items not ticked by them are recorded as confirmed unticked by this one click.
     const mine = checks.filter((k) => k.tickedBy === rep);
-    const carry = { stamps: new Map(stored.filter((s) => stampCurrent(s.stampedAt ? { hash: s.stampHash, by: row.representative, file: s.stampFileKind } : null, { hash: forms.find((f) => f.item === s.itemId)?.hash ?? null, representative: rep, validated: !!forms.find((f) => f.item === s.itemId)?.validated?.current }).current).map((s) => [s.itemId, s])), ticks: new Map(mine.map((k) => [k.itemKey, { by: k.tickedBy, at: k.tickedAt }])) };
+    const carry = { stamps: new Map(stored.filter((s) => stampCurrent(s.stampedAt ? { hash: s.stampHash, by: row.representative, file: { kind: s.stampFileKind, sha256: s.stampFileSha256 } } : null, { hash: forms.find((f) => f.item === s.itemId)?.hash ?? null, representative: rep, validatedSha: forms.find((f) => f.item === s.itemId)?.validatedSha ?? null }).current).map((s) => [s.itemId, s])), ticks: new Map(mine.map((k) => [k.itemKey, { by: k.tickedBy, at: k.tickedAt }])) };
     const unticked = checks.filter((k) => k.source !== "form" && k.tickedBy !== rep).map((k) => k.itemKey);
     let made: { id: string; number: number } | null = null;
     const authored = changedBy(since, actor.id) || this.typedBy(basis, forms.filter((f) => changed.some((w) => w.item === f.item)), actor.id, row.decidedAt ?? round.sentAt);

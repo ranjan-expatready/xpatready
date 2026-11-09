@@ -103,6 +103,8 @@ export type FilingInput = {
   factsKey?: string;
   /** C9.5 (BR-6): the review was made before the case moved to a release that changes this filing: the words name it. */
   reviewWithdrawn?: string | null;
+  /** C8.3 QA-345: the review counts no more because the validated copy filed is not the file its approval stamped. */
+  reviewFileUnstamped?: boolean;
   /** C9.5 (BR-8): a newer release of the combination touches this filing: what it touches, and its key (one per release). */
   releaseUpdate?: { words: string; key: string } | null;
   passes?: Pass[];
@@ -226,7 +228,8 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
   }
   const before = x.reviewed ? null : dayOf(x.reviewedBefore, "the earlier review");
   if (!x.reviewed) critical({ code: "representative_review", part: `${before ?? "none"}|${x.factsKey ?? ""}`, owes: "representative", words: x.reviewWithdrawn && before
-    ? `${x.reviewWithdrawn}; this filing was reviewed on ${before}, before the move. The representative of record reviews it again.` : before
+    ? `${x.reviewWithdrawn}; this filing was reviewed on ${before}, before the move. The representative of record reviews it again.` : x.reviewFileUnstamped && before
+    ? `A validated copy was read back after this filing was reviewed on ${before}, and the review did not stamp it. The representative of record re-approves it (one click on the review).` : before
     ? `The filing changed after it was reviewed on ${before} (or the representative of record changed). The representative of record reviews it again.`
     // B149 (P-342, P-408): any firm staff may pass this with a reason (P-330 (3)), so the words say what happens.
     : "The representative of record has not reviewed this filing. Passing it needs a reason, which is kept in the history." });

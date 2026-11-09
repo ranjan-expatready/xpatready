@@ -34,6 +34,8 @@ export type ReadinessInputs = {
   unverifiedOf?: (form: string, subject: string) => { fact: string; label: string; key: string }[];
   /** Whether a validated copy is read back and still matches today's facts (C-9, C-10). */
   validatedCurrent: (form: string, subject: string) => boolean;
+  /** C8.3 QA-345: the fingerprint of the validated copy that counts for filing, else null. Left out: none counts. */
+  validatedSha?: (form: string, subject: string) => string | null;
   /** Each form item's signing steps done (C8.1): a scan received means signed. */
   scanned: (item: string) => boolean;
   /** The edition each form is filed on (the release's), by form number and channel. */
@@ -98,8 +100,8 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(Read
   // C8.3 (break B1): each filing's newest review round row; a review counts only while that row is the approval that
   // wrote it (a filing sent for review again, or sent back, is no longer approved). Filings never sent: none.
   // QA-345: with each form's stamped file kind, so an approval counts only while it stamped the validated copy filed.
-  const newestRow = new Map<string, { filingReviewId: string | null; forms: { formNumber: string; subjectId: string; stampFileKind: string | null; stampedAt: Date | null }[] }>();
-  for (const r of ids.length ? await db.reviewRoundFiling.findMany({ where: { filingId: { in: ids } }, orderBy: [{ filingId: "asc" }, { filingRound: "desc" }], select: { filingId: true, filingReviewId: true, forms: { select: { formNumber: true, subjectId: true, stampFileKind: true, stampedAt: true } } } }) : []) if (!newestRow.has(r.filingId)) newestRow.set(r.filingId, r);
+  const newestRow = new Map<string, { filingReviewId: string | null; forms: { formNumber: string; subjectId: string; stampFileKind: string | null; stampFileSha256: string | null; stampedAt: Date | null }[] }>();
+  for (const r of ids.length ? await db.reviewRoundFiling.findMany({ where: { filingId: { in: ids } }, orderBy: [{ filingId: "asc" }, { filingRound: "desc" }], select: { filingId: true, filingReviewId: true, forms: { select: { formNumber: true, subjectId: true, stampFileKind: true, stampFileSha256: true, stampedAt: true } } } }) : []) if (!newestRow.has(r.filingId)) newestRow.set(r.filingId, r);
   // C6.5 (BR-7; C7.6 P-238): an open typed-versus-document check on a person of the filing is a CRITICAL warning.
   const openChecks = await db.answerCheck.findMany({ where: { caseId: x.caseId, state: "open" }, orderBy: [{ openedAt: "asc" }, { id: "asc" }], select: { subjectId: true, fact: true } });
   // Break M4: a check on the application's own facts (a letter's visit contact) warns on every filing of the case.
@@ -154,13 +156,13 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(Read
     const withdrawn = latest && latest.reviewedBy === rep ? x.reviewAfterMove?.(filing, latest.reviewedAt) ?? null : null;
     // QA-345 (ruling (a)): and only while every validated copy that counts for filing is the file its form's stamp holds
     // (the same rule as each form's stamp on the representative's review, fileStampCurrent).
-    const fileStamped = !row || row.forms.every((f) => !f.stampedAt || fileStampCurrent(f.stampFileKind, x.validatedCurrent(f.formNumber, f.subjectId)));
+    const fileStamped = !row || row.forms.every((f) => !f.stampedAt || fileStampCurrent({ kind: f.stampFileKind, sha256: f.stampFileSha256 }, x.validatedSha?.(f.formNumber, f.subjectId) ?? null));
     const review = sameFacts && !withdrawn && fileStamped ? latest : null;
     const mine: Pass[] = passes.filter((p) => p.filingId === filing && (WARN_CODES as readonly string[]).includes(p.code)).map((p) => ({ code: p.code as WarnCode, keys: p.keys, reason: p.reason, by: p.passedBy, at: p.passedAt.toISOString() }));
     const personOf = new Map(mineForms.map((f) => [f.subject, f.person]));
     if (caseSubject) personOf.set(caseSubject, "The application");
     const checks: OpenCheck[] = openChecks.filter((k) => personOf.has(k.subjectId)).map((k) => ({ fact: k.fact, label: k.fact.split(".").pop()!.replace(/_/g, " "), subject: k.subjectId, person: personOf.get(k.subjectId)! }));
-    const input = { filing, forms, documents, openChecks: checks, findings: found, reviewed: !!review, reviewedBefore: !review && latest ? latest.reviewedAt.toISOString() : null, factsKey: factsHash.slice(0, 16), reviewWithdrawn: withdrawn, releaseUpdate: x.releaseUpdate?.(filing) ?? null, passes: mine, today };
+    const input = { filing, forms, documents, openChecks: checks, findings: found, reviewed: !!review, reviewedBefore: !review && latest ? latest.reviewedAt.toISOString() : null, factsKey: factsHash.slice(0, 16), reviewWithdrawn: withdrawn, reviewFileUnstamped: sameFacts && !withdrawn && !fileStamped, releaseUpdate: x.releaseUpdate?.(filing) ?? null, passes: mine, today };
     const r = filingReadiness(input);
     // C7.10 (B143, BR-30): the filing's readiness figure from the same input and lines; the prepare view puts it beside
     // `readiness[]`, never inside an entry (C7.6's finish line stays: its entries carry no percentage).

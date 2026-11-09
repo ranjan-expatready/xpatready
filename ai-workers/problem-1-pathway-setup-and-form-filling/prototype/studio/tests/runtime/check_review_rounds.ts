@@ -112,15 +112,16 @@ ok("C8.3 QA-345 read-back pass: an approval that stamped no file (or the generat
 ok("C8.3 QA-345 read-back fail: not when it already holds a validated copy, holds other facts, is not the newest approved row, or is another representative's",
   !readBackStamps({ ...RB, stampKind: "validated_copy" }) && !readBackStamps({ ...RB, readFacts: H2 }) && !readBackStamps({ ...RB, stampedFacts: null }) && !readBackStamps({ ...RB, latest: false })
   && !readBackStamps({ ...RB, approved: false }) && !readBackStamps({ ...RB, representative: REP2 }) && !readBackStamps({ ...RB, by: null }));
-ok("C8.3 QA-345 file pass: a stamp counts with the validated copy it stamped, and a stamp of no file counts while no validated copy counts for filing (an Online form, not read back yet)",
-  fileStampCurrent("validated_copy", true) && fileStampCurrent("none", false) && fileStampCurrent("generated_copy", false)
-  && stampCurrent({ hash: H1, by: REP, file: "none" }, { hash: H1, representative: REP, validated: false }).current
-  && formStateOf({ status: "approved", waits: false, checked: true, frozenHash: H1, previousHash: undefined, liveHash: H1, stamp: { hash: H1, by: REP, file: "validated_copy" }, representative: REP, validated: true }).state === "approved");
-const fileGone = stampCurrent({ hash: H1, by: REP, file: "none" }, { hash: H1, representative: REP, validated: true });
-ok("C8.3 QA-345 file fail: a validated copy counts for filing that the approval did not stamp → \"Approval withdrawn\" in words, listed for the one-click re-approve",
-  !fileStampCurrent("none", true) && !fileStampCurrent("generated_copy", true) && fileGone.why === "file"
-  && withdrawnWords("file", null, () => null) === "Approval withdrawn: its validated copy was read back without this approval's stamp. Re-approve to stamp the file that is filed."
-  && withdrawnForms([{ item: "i1", waits: false, liveHash: H1, validated: true, stamp: { hash: H1, by: REP, file: "none" } }, { item: "i2", waits: false, liveHash: H1, validated: true, stamp: { hash: H1, by: REP, file: "validated_copy" } }], REP).map((f) => f.item).join() === "i1",
+const V1 = "1".repeat(64), V2 = "2".repeat(64);
+ok("C8.3 QA-345 file pass: a stamp counts with the validated copy it stamped (the one filed), and a stamp of no file counts while no validated copy counts for filing (an Online form, not read back yet)",
+  fileStampCurrent({ kind: "validated_copy", sha256: V1 }, V1) && fileStampCurrent({ kind: "none", sha256: null }, null) && fileStampCurrent({ kind: "generated_copy", sha256: H2 }, null)
+  && stampCurrent({ hash: H1, by: REP, file: { kind: "none", sha256: null } }, { hash: H1, representative: REP, validatedSha: null }).current
+  && formStateOf({ status: "approved", waits: false, checked: true, frozenHash: H1, previousHash: undefined, liveHash: H1, stamp: { hash: H1, by: REP, file: { kind: "validated_copy", sha256: V1 } }, representative: REP, validatedSha: V1 }).state === "approved");
+const fileGone = stampCurrent({ hash: H1, by: REP, file: { kind: "none", sha256: null } }, { hash: H1, representative: REP, validatedSha: V1 });
+ok("C8.3 QA-345 file fail: a validated copy filed that the approval did not stamp (no file, the generated copy, or another validated copy of the same facts, review M1) → \"Approval withdrawn\" in words, listed for the one-click re-approve",
+  !fileStampCurrent({ kind: "none", sha256: null }, V1) && !fileStampCurrent({ kind: "generated_copy", sha256: H2 }, V1) && !fileStampCurrent({ kind: "validated_copy", sha256: V1 }, V2) && fileGone.why === "file"
+  && withdrawnWords("file", null, () => null) === "Approval withdrawn: the validated copy read back since is not the file this approval stamped. Re-approve to stamp the file that is filed."
+  && withdrawnForms([{ item: "i1", waits: false, liveHash: H1, validatedSha: V2, stamp: { hash: H1, by: REP, file: { kind: "validated_copy", sha256: V1 } } }, { item: "i2", waits: false, liveHash: H1, validatedSha: V1, stamp: { hash: H1, by: REP, file: { kind: "validated_copy", sha256: V1 } } }], REP).map((f) => f.item).join() === "i1",
   fileGone);
 
 process.exit(summary() ? 1 : 0);
