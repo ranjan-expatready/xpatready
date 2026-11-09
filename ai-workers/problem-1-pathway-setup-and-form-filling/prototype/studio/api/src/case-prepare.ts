@@ -110,6 +110,12 @@ export function notNeededForms(s: Parameters<typeof lineCondition>[0], people: P
   });
 }
 
+/** C8.3 (B144): one form of the case as the review freezes it: its facts hash (null while it cannot start), the facts
+ *  its copy would write, its validated copy read back and its newest copy for filing (B2's file order). */
+export type ReviewBasisForm = { item: string; filing: string; form: string; subject: string; person: string; channel: string; state: string; waits: boolean;
+  hash: string | null; inputHash: string; facts: FormFact[]; validated: PaperValidated; forFiling: { id: string; hash: string } | null; reads: string[] };
+export type ReviewBasis = { forms: ReviewBasisForm[]; words: ChangeWords; caseSubject: string | null; valueWords: (fact: string, v: unknown) => string | null; answers: Awaited<ReturnType<Runtime["state"]>>["answers"] };
+
 @Injectable()
 export class CasePrepare {
   constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit, @Inject(CaseForms) private readonly forms: CaseForms) {}
@@ -126,7 +132,15 @@ export class CasePrepare {
 
   private async build(actor: Actor, c: Reached) { return (await this.compose(actor, c, false))!; }
 
-  private async compose(actor: Actor, c: Reached, noWrite: boolean) {
+  /** C8.3 (B144, concept B2): the view, and each form's own facts as the review freezes and stamps them, worked out in
+   *  the same pass as the view's readiness (so a form's hash here is the one its filing's facts hash is made of). */
+  async reviewBasis(actor: Actor, c: Reached) {
+    let basis: ReviewBasis | null = null;
+    const view = (await this.compose(actor, c, false, (b) => { basis = b; }))!;
+    return { view, basis: basis as ReviewBasis | null };
+  }
+
+  private async compose(actor: Actor, c: Reached, noWrite: boolean, sink?: (b: ReviewBasis) => void) {
     const s = this.r.snapshotOf(c), pin = c.pins[0];
     // The release must describe the case's own combination (as case-filings.ts): never another combination's filings.
     const own = await this.db.combination.findUnique({ where: { id: c.combinationId }, select: { combinationKey: true, portalKey: true } });
@@ -563,6 +577,11 @@ export class CasePrepare {
     }
     // Devin on #1344: current only when the facts and the repeating groups it reads are both unchanged (copyStateOf).
     const copyOf = (form: string, subject: string) => copyStateOf(forFiling.get(`${form}|${subject}`), { hash: inputHash(covOf(form, subject)?.facts ?? []), groups: groupFacts(view, form, subject) }, pin.configReleaseId);
+    // Breaker N1 (#861 round 2): the confirmed values the form writes, and every fact it still waits for with its
+    // answer as given now (an unconfirmed change is a change the representative did not review).
+    // C9.5 build discovery: the answers are read with no order (runtime.ts `state`), so two reads could list the same
+    // answers in another order and give another fingerprint, withdrawing a review nobody's facts changed: sorted.
+    const formHash = (form: string, subject: string) => createHash("sha256").update(`${inputHash(covOf(form, subject)?.facts ?? [])}|${waitingFactsKey(formReady(form, subject).missing, answers)}`).digest("hex");
     // C7.9 (review M1 on #1282): answers read as knownOf reads them: the application's subject as "case", relatives under
     // their own key (state() keys them), removed rows never.
     const reading = { aboutOf: (id: string) => (people.find((p) => p.subjectId === id)?.role === "case" ? "case" : id), liveRows: new Set(rows.map((x) => x.rowKey)) };
@@ -574,13 +593,14 @@ export class CasePrepare {
       // C7.9 (P-242): the must-verify facts this form writes from an unchecked client-given value.
       unverifiedOf: (form, subject) => unverifiedOf(s, answers, formCoverage(s, people, answers, rows, form, subject)?.facts ?? [], reading), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
       validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
-      editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: (form, subject) => {
-        // Breaker N1 (#861 round 2): the confirmed values the form writes, and every fact it still waits for with its
-        // answer as given now (an unconfirmed change is a change the representative did not review).
-        // C9.5 build discovery: the answers are read with no order (runtime.ts `state`), so two reads could list the same
-        // answers in another order and give another fingerprint, withdrawing a review nobody's facts changed: sorted.
-        return createHash("sha256").update(`${inputHash(covOf(form, subject)?.facts ?? [])}|${waitingFactsKey(formReady(form, subject).missing, answers)}`).digest("hex");
-      }, today });
+      editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: formHash, today });
+    // C8.3 (B144, B2): each form's facts for the review's freeze and stamp, from this very pass.
+    sink?.({ answers, words, caseSubject, valueWords: (fact, v) => (v === null || v === undefined || v === "" ? "no answer" : typeof v === "object" ? null : answerWords(s, fact, v)), forms: formItems.map((f) => ({ item: f.id, filing: f.filing, form: f.form, subject: f.subject, person: f.person, channel: f.channel, state: f.state,
+      waits: f.state === "cannot_start", hash: f.state === "cannot_start" ? null : formHash(f.form, f.subject), inputHash: inputHash(covOf(f.form, f.subject)?.facts ?? []), facts: covOf(f.form, f.subject)?.facts ?? [],
+      validated: paperValidated(f.form, f.subject), forFiling: forFiling.get(`${f.form}|${f.subject}`) ?? null,
+      // C8.3 (CI on #1247, BR-8): every fact the form reads, confirmed (its facts) or not yet (what it waits for), as
+      // "<subject or relative key>|<fact>", so an answer typed but not confirmed still counts as typed by its typist.
+      reads: [...new Set([...(covOf(f.form, f.subject)?.facts ?? []).map((x) => `${x.about === "case" ? caseSubject ?? x.about : x.about}|${x.fact}`), ...(f.state === "cannot_start" ? [] : formReady(f.form, f.subject).missing).map((m) => `${m.subject === "case" ? caseSubject ?? m.subject : m.subject ?? f.subject}|${m.fact}`)])] })) });
     // C7.6: a filing marked Ready to file (or later) says so; before that, the derived status (Not started). Break B1 on
     // #861: a filing marked Ready to file that is no longer ready (a fact changed, the barcode copy is out of date, a new
     // warning) goes back to Not started, recorded, so nothing downstream trusts a stale "Ready to file".
