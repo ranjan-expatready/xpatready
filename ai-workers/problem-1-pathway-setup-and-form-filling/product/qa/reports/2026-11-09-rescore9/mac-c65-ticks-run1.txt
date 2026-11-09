@@ -1,0 +1,41 @@
+qa probe c65_ticks.mts on 018ed94d1 (= main 967388518 + qa records), copy qa_c65t :4474, start Mon Nov  9 11:43:47 IST 2026
+NOTICE:  database "xr_studio_qa_c65t" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_c65t on http://localhost:4474 (xr_studio_qa_c65t), stops itself in 40 min
+reset 201
+load 201
+loaded Mon Nov  9 11:45:20 IST 2026
+C6.5 ticks (qa) — Confirm & use refuses until each value needing a look is ticked
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+A [["person.family_name","expanded","SAMPLED"],["person.given_names","expanded","CLIENT A"],["person.sex","expanded","Unspecified"],["person.date_of_birth","collapsed","1986-11-09"],["person.citizenship","expanded","IND"],["person.passport_country_of_issue","expanded","IND"],["person.passport_number","collapsed","SAMPLEP12"],["person.passport_expiry_date","collapsed","2035-06-30"]]
+PASS  a good passport: number, date of birth and expiry are collapsed, every other value expanded — [["person.family_name","expanded"],["person.given_names","expanded"],["person.sex","expanded"],["person.date_of_birth","collapsed"],["person.citizenship","expanded"],["person.passport_country_of_issue","expanded"],["person.passport_number","collapsed"],["perso
+no ticks 422 {"type":"https://expatready.local/problems/not-checked","title":"Look at each value first","status":422,"detail":"Tick or correct each value first: family name, given names, sex are not ticked. Nothing was written.","message":"Tick or correct each value first: family name, given names, sex are not ticked. Nothing was written.","code":"not_checked","missing":[{"id":"6d027ecd-e811-4322-b66b-b5ebf833b6bc","fact":"person.family_name","label":"family name"},{"id":"69191106-a62d-468f-b920-9a781671ebf8","fact":"person.given_names","label":"given names"},{"id":"dfb26972-79f2-48b2-87cf-ce0ed9aa060a","fact":"person.sex","label":"sex"}]}
+FAIL  no ticks at all: refused 422 not_checked, naming each expanded value — {"status":422,"missing":["person.family_name","person.given_names","person.sex"]}
+PASS  no ticks at all: nothing written and the document stays open for review — {"answers":"0","locked":"0"}
+PASS  no ticks at all: the message is in plain words and says nothing was written — "Tick or correct each value first: family name, given names, sex are not ticked. Nothing was written."
+one tick 422 [{"id":"69191106-a62d-468f-b920-9a781671ebf8","fact":"person.given_names","label":"given names"},{"id":"dfb26972-79f2-48b2-87cf-ce0ed9aa060a","fact":"person.sex","label":"sex"}]
+FAIL  one tick of several: still refused, and the ticked value is not named — {"status":422,"missing":["person.given_names","person.sex"]}
+PASS  one tick of several: nothing written
+collapsed only 422 [{"id":"6d027ecd-e811-4322-b66b-b5ebf833b6bc","fact":"person.family_name","label":"family name"},{"id":"69191106-a62d-468f-b920-9a781671ebf8","fact":"person.given_names","label":"given names"},{"id":"dfb26972-79f2-48b2-87cf-ce0ed9aa060a","fact":"person.sex","label":"sex"}]
+FAIL  ticking only the collapsed values does not stand in for the expanded ones — {"status":422,"missing":["person.family_name","person.given_names","person.sex"]}
+unknown id 422 {"type":"https://expatready.local/problems/not-this-document","title":"Not possible now","status":422,"detail":"A ticked value is not one of this document's. Read the document again, then Confirm & use. Nothing was written.","message":"A ticked value is not one of this document's. Read the document again, then Confirm & use. Nothing was written.","code":"not_this_document"}
+PASS  a tick naming an unknown value: refused, nothing written — {"status":422}
+not a list 400
+PASS  a tick list that is not a list: refused as bad input (400), nothing written — 400
+S [["person.family_name","expanded","SAMPLES"],["person.given_names","expanded","SPOUSE A"],["person.sex","expanded","Unspecified"],["person.date_of_birth","expanded","1988-11-09"],["person.citizenship","expanded","IND"],["person.passport_country_of_issue","expanded","IND"],["person.passport_expiry_date","expanded","2035-06-30"]]
+PASS  a failed check digit: no value is collapsed — [["person.family_name","expanded"],["person.given_names","expanded"],["person.sex","expanded"],["person.date_of_birth","expanded"],["person.citizenship","expanded"],["person.passport_country_of_issue","expanded"],["person.passport_expiry_date","expanded"]]
+PASS  a tick naming another person's value: refused, nothing written — {"status":422,"body":{"type":"https://expatready.local/problems/not-this-document","title":"Not possible now","status":422,"detail":"A ticked value is not one of this document's. Read the document again, then Confirm & use. Nothing was written.","message":"A t
+spouse no dates 422 [{"id":"9cebed57-bf8f-410e-a6ae-a33ab25d21bf","fact":"person.date_of_birth","label":"date of birth"},{"id":"973d6d75-ad57-435d-baf7-89ec4afffb91","fact":"person.passport_expiry_date","label":"passport expiry date"}]
+PASS  a failed check digit: date of birth and expiry must be ticked as well — {"status":422,"missing":["person.date_of_birth","person.passport_expiry_date"]}
+every expanded 200 {"document":"5a997ecf-a940-4339-aad4-37ddb16e1519","confirmed":{"by":"user-O","at":"2026-11-09T06:15:23.597Z"},"used":["person.family_name","person.given_names","person.passport_expiry_date","person.passport_number","person.sex"],"agreed":["person.date_of_birth"],"checks":[],"not_asked":[],"left":[{"fact":"person.citizenship","why":"The coded line gives only the country code \"IND\": choose the country by hand."},{"fact":"person.passport_country_of_issue","why":"The coded line gives only the country code \"IND\": choose the country by hand."}],"closed":[],"message":"Confirmed and used: 6 values now fill the forms. 2 values are left for you to answer by hand (citizenship, passport country of issue)."}
+FAIL  every expanded value ticked: accepted, collapsed values need no tick — {"status":200,"used":["person.family_name","person.given_names","person.passport_expiry_date","person.passport_number","person.sex"]}
+PASS  the value is written Verified, by the officer, from the document — "VERIFIED|user-O"
+PASS  a second Confirm & use on the same document: refused 409 already_confirmed — 409
+PASS  no model was called
+
+12/16 passed
+fill exit 1
+read exit 1  end Mon Nov  9 11:45:23 IST 2026

@@ -19,7 +19,7 @@
 --   DROP TRIGGER "case_participant_private_stays" ON "case_participant"; DROP FUNCTION "c616_private_stays"();
 --   ALTER TABLE "case_participant" DROP CONSTRAINT "case_participant_private_check", DROP COLUMN "keep_private",
 --     DROP COLUMN "private_at", DROP COLUMN "private_by", DROP COLUMN "private_why";
---   DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20261109100000_c616_person_link';
+--   DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20261109103000_c616_person_link';
 -- A rollback loses every link, session and privacy setting (the answers stay; the principal sees them again).
 
 ALTER TABLE "case_participant" ADD COLUMN "keep_private" BOOLEAN NOT NULL DEFAULT false,

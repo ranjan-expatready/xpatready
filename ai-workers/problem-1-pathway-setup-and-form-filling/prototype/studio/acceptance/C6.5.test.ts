@@ -95,6 +95,13 @@ await main("C6.5", "Documents read into proposed facts (Visitor visa, replayed, 
   // BR-7: typed versus document: never settled silently (P-242).
   const checks = (await call("GET", `/runtime/cases/${c.id}/checks?subject=${P}`, undefined, OFFICER)).body?.checks ?? [];
   ok("C6.5-12 pass (BR-7, P-242): the client typed SAMPLEDE, the passport reads SAMPLED: one open check for this person and fact, and the client's answer is not overwritten", checks.filter((x: { fact: string; state: string }) => x.fact === "person.family_name" && x.state === "open").length === 1 && sql(`select value_json #>> '{}' from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.family_name' and superseded_by_id is null`) === "SAMPLEDE", checks);
+  // QA-322 (P-142 D6): the client sees "please check" on that answer while its check is open, where the client is asked
+  // the question (the configured checkpoint); where staff enter it from the document (the fixture), the client is not
+  // asked it, so nothing is shown there. The officer's half (C6.5-13 to -15) is unchanged.
+  const clientNotes = async () => ((await call("GET", `/runtime/cases/${c.id}/questionnaire`, undefined, CLIENT)).body?.checks ?? []).filter((x: { subjectId: string; fact: string; message: string }) => x.subjectId === P && x.fact === "person.family_name" && /^Please check this answer/.test(x.message));
+  const noteNow = await clientNotes();
+  ok(`C6.5-12b pass (P-142 D6, QA-322): ${typist === CLIENT ? "the client sees \"please check\" on the family name while its check is open, naming the document, never its value" : "the client is not asked the family name here (staff enter it from the passport), so no \"please check\" is shown"}`, typist === CLIENT ? noteNow.length === 1 && !/SAMPLED\b/.test(noteNow[0].message) : noteNow.length === 0, noteNow);
+  ok("C6.5-12c pass (QA-322, Lead 39): the officer's Agent view is unchanged: no \"please check\" entry there (the officer works the check in the drawer)", !((await agent(c.id))?.checks ?? []).some((x: { id: string }) => x.id.startsWith("document_check.")));
   const seen = (await agent(c.id))?.sections?.find((s: { section: string; subjectId: string }) => s.section === section && s.subjectId === P)?.questions?.map((q: { answer: { id: string } | null }) => q.answer?.id).filter(Boolean) ?? [];
   r = await call("POST", `/runtime/cases/${c.id}/sections/${section}/confirm`, { subjectId: P, seen }, OFFICER);
   ok("C6.5-13 fail (BR-6): Confirm section is refused while a check is open (409 open_checks)", r.status === 409 && /open_checks|check/i.test(JSON.stringify(r.body)), r.status);
@@ -103,6 +110,7 @@ await main("C6.5", "Documents read into proposed facts (Visitor visa, replayed, 
   ok("C6.5-14 fail: resolving a check without a reason is refused (400)", r.status === 400, r.status);
   r = await call("POST", `/runtime/checks/${chk?.id}/resolve`, { keep: "document", reason: "Matches the passport page (Sample)" }, OFFICER);
   ok("C6.5-15 pass: the officer keeps the document's value with a reason; the client's value stays on record", r.status === 200 && Number(sql(`select count(*) from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.family_name'`) ?? 0) >= 2 && sql(`select value_json #>> '{}' from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.family_name' and superseded_by_id is null`) === "SAMPLED");
+  ok("C6.5-15b fail (P-142 D6, QA-322): once the officer resolves the check, the client's \"please check\" is gone", (await clientNotes()).length === 0);
   r = await call("POST", `/runtime/cases/${c.id}/answers/${P}/person.passport_number/checked-against-document`, { document: docId }, CLIENT);
   ok("C6.5-16 fail (P-142 D3): a client cannot mark a value checked against the document (403)", r.status === 403, r.status);
   r = await call("POST", `/runtime/cases/${c.id}/answers/${P}/person.passport_number/checked-against-document`, { document: docId }, OFFICER);

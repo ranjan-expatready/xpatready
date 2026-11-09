@@ -41,7 +41,8 @@ export function FinishedStoryDialog({ open, onOpenChange }: { open: boolean; onO
     <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }} wide={finished} title={finished ? (story?.state === "done" ? "Finished story loaded" : "The finished story stopped") : "Load the finished story?"}
       description={finished ? "Each step of the family case, done through the same screens' rules by the people who act. No live AI call was made (US$0)." : "The configured checkpoint, then the Visitor visa family case taken to a recorded submission by the people who act. US$0: no live AI call."}
       footer={finished ? <><Button variant="ghost" onClick={() => setAgain(true)} data-finished-story-again>Load again…</Button><Button onClick={close}>Continue</Button></> : <><Button variant="ghost" disabled={load.isPending} onClick={close}>{running ? "Close (it keeps loading)" : "Cancel"}</Button><Button busy={running || load.isPending} disabled={status.isPending || (needsReset && confirm !== "RESET")} onClick={() => load.mutate(undefined)} data-finished-story-load>Load the finished story</Button></>}>
-      {finished ? <StoryResult story={story!} onOpen={close} /> : (
+      {/* Walk on #1394 (9 Nov): until the demo's state is read, say so, never the intro that the last result then replaces. */}
+      {status.isPending ? <p className="inline-flex items-center gap-2 text-sm text-text-muted" data-finished-story-reading><Spinner /> Reading the demo's state…</p> : finished ? <StoryResult story={story!} onOpen={close} /> : (
         <div className="space-y-3 text-sm" data-finished-story-brings>
           <ul className="list-disc space-y-1 pl-5">
             <li>Everything the configured checkpoint brings: the six combinations, Visitor visa released twice <Pill tone="warn">Sample</Pill></li>

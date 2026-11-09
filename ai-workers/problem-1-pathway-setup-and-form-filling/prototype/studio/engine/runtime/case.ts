@@ -26,7 +26,9 @@ export type Answer = { id: string; subjectId: string; field: string; rowKey: str
   background?: boolean; awaitsClient?: boolean;
   /** C6.18: the staff member who recorded this background answer and when ("Officer"), through any later re-confirmation
    *  or confirmation of it; absent when the client gave it. */
-  officerRecorded?: { by: string; at: string } | null };
+  officerRecorded?: { by: string; at: string } | null;
+  /** C6.19: a copy from an earlier case of the same client: that case's reference, who re-confirmed it here and when. */
+  copiedFrom?: { reference: string; by: string; at: string } | null };
 export type Row = { rowKey: string; subjectId: string; group: string; order: number };
 /** A repeating group's own answer (client_group_answer): none apply (true) or entries apply (false). */
 export type GroupAnswer = { id: string; subjectId: string; group: string; noneApply: boolean; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null };
@@ -396,7 +398,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     const fitsRow = (i: number) => (list ? q.rows.includes(i) : q.rows.length ? i < q.rows.length : true);
     const current = answers.filter((a) => a.subjectId === subjectId && a.field === q.fact);
     const live = group ? rows.filter((x) => x.subjectId === subjectId && x.group === group).sort(byOrder) : [];
-    const one = (a: Answer | undefined) => a ? { id: a.id, value: a.value, status: a.status, channel: a.channel, by: a.actor, at: a.at, answered: a.origin ? { channel: a.origin.channel, by: a.origin.actor, at: a.origin.at } : null, problems: checkValue(s, q.fact, a.value, today), ...confirm.get(a.id)!, ...officerMark(a),
+    const one = (a: Answer | undefined) => a ? { id: a.id, value: a.value, status: a.status, channel: a.channel, by: a.actor, at: a.at, answered: a.origin ? { channel: a.origin.channel, by: a.origin.actor, at: a.origin.at } : null, ...(a.copiedFrom ? { copied_from: a.copiedFrom } : {}), problems: checkValue(s, q.fact, a.value, today), ...confirm.get(a.id)!, ...officerMark(a),
       // Review m6 (#1256): a parent has no link of their own, so their answer waits for the officer, in those words.
       // B150 (P-411): it is on the forms at once, so the words say so; an answer waiting for the client keeps its own words.
       ...(isAskedRelative(q.about) && !confirm.get(a.id)!.confirmed && !a.awaitsClient ? { why: `Declared: it fills the forms now and waits for the officer's "Confirm section" (${list ? `${listWords(list).one} has` : "a parent has"} no link of their own)` } : {}) } : null;
