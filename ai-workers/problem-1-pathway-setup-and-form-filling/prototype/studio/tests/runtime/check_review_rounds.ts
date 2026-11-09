@@ -2,7 +2,7 @@
 // business rule has a passing and a failing case (BR-1 to BR-10 and P-412's one-click re-approve). No database, no
 // server, no model call (US$0). Sample values only.
 //   tsx studio/tests/runtime/check_review_rounds.ts
-import { changedBy, changesOf, checklistOf, fileOf, formStateOf, hashesProblem, isOpen, mayDecide, nextStatus, READ_ONLY_WORDS, reasonsOf, selfReviewOf, sendProblem, stampCurrent, tickedByDefault, untickedProblem, untickedWords, withdrawnForms, withdrawnWords, typedSince, type SendFiling } from "../../engine/runtime/review.ts";
+import { changedBy, changesOf, checklistOf, fileOf, fileStampCurrent, formStateOf, hashesProblem, isOpen, mayDecide, nextStatus, READ_ONLY_WORDS, readBackStamps, reasonsOf, selfReviewOf, sendProblem, stampCurrent, tickedByDefault, untickedProblem, untickedWords, withdrawnForms, withdrawnWords, typedSince, type SendFiling } from "../../engine/runtime/review.ts";
 import { factPerson, type ChangeWords } from "../../engine/runtime/out-of-date.ts";
 import { recorder } from "./api.ts";
 
@@ -104,5 +104,23 @@ ok("C8.3 review BIC-13 fail: no API field name shown to a person in the self-rev
 const reads = new Set(["s1|person.birth_city", "representative|person.email"]);
 ok("C8.3 CI pass: an answer the representative typed after the round before, on a fact a form reads, makes them an author (confirmed or not)", typedSince([{ key: "s1|person.birth_city", by: REP, at: "2026-11-09T10:00:00Z" }], reads, REP, "2026-11-09T09:00:00Z"));
 ok("C8.3 CI fail: typed before that round, typed by someone else, on a fact no form reads, or the firm record's: not an author", !typedSince([{ key: "s1|person.birth_city", by: REP, at: "2026-11-09T08:00:00Z" }, { key: "s1|person.birth_city", by: OFF, at: "2026-11-09T10:00:00Z" }, { key: "s1|person.hobby", by: REP, at: "2026-11-09T10:00:00Z" }, { key: "representative|person.email", by: REP, at: "2026-11-09T10:00:00Z" }], reads, REP, "2026-11-09T09:00:00Z"));
+
+// QA-345 (the tech lead's ruling (a), 9 Nov): an approval stamps the file it approved
+const RB = { stampKind: "none", approved: true, latest: true, by: REP, representative: REP, stampedFacts: H1, readFacts: H1 };
+ok("C8.3 QA-345 read-back pass: an approval that stamped no file (or the generated copy) is stamped with the first validated copy read back for the facts it approved",
+  readBackStamps(RB) && readBackStamps({ ...RB, stampKind: "generated_copy" }));
+ok("C8.3 QA-345 read-back fail: not when it already holds a validated copy, holds other facts, is not the newest approved row, or is another representative's",
+  !readBackStamps({ ...RB, stampKind: "validated_copy" }) && !readBackStamps({ ...RB, readFacts: H2 }) && !readBackStamps({ ...RB, stampedFacts: null }) && !readBackStamps({ ...RB, latest: false })
+  && !readBackStamps({ ...RB, approved: false }) && !readBackStamps({ ...RB, representative: REP2 }) && !readBackStamps({ ...RB, by: null }));
+ok("C8.3 QA-345 file pass: a stamp counts with the validated copy it stamped, and a stamp of no file counts while no validated copy counts for filing (an Online form, not read back yet)",
+  fileStampCurrent("validated_copy", true) && fileStampCurrent("none", false) && fileStampCurrent("generated_copy", false)
+  && stampCurrent({ hash: H1, by: REP, file: "none" }, { hash: H1, representative: REP, validated: false }).current
+  && formStateOf({ status: "approved", waits: false, checked: true, frozenHash: H1, previousHash: undefined, liveHash: H1, stamp: { hash: H1, by: REP, file: "validated_copy" }, representative: REP, validated: true }).state === "approved");
+const fileGone = stampCurrent({ hash: H1, by: REP, file: "none" }, { hash: H1, representative: REP, validated: true });
+ok("C8.3 QA-345 file fail: a validated copy counts for filing that the approval did not stamp → \"Approval withdrawn\" in words, listed for the one-click re-approve",
+  !fileStampCurrent("none", true) && !fileStampCurrent("generated_copy", true) && fileGone.why === "file"
+  && withdrawnWords("file", null, () => null) === "Approval withdrawn: its validated copy was read back without this approval's stamp. Re-approve to stamp the file that is filed."
+  && withdrawnForms([{ item: "i1", waits: false, liveHash: H1, validated: true, stamp: { hash: H1, by: REP, file: "none" } }, { item: "i2", waits: false, liveHash: H1, validated: true, stamp: { hash: H1, by: REP, file: "validated_copy" } }], REP).map((f) => f.item).join() === "i1",
+  fileGone);
 
 process.exit(summary() ? 1 : 0);

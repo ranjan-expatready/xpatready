@@ -9,7 +9,7 @@ import type { Readiness } from "../../contracts/runtime.ts";
 import { createHash } from "node:crypto";
 import type { Db } from "./core.ts";
 import { changedGroups, type GroupFact } from "../../engine/runtime/forms.ts";
-import { stampCurrent } from "../../engine/runtime/review.ts";
+import { fileStampCurrent, stampCurrent } from "../../engine/runtime/review.ts";
 import { closedOnce, readinessFigure, type ClosedFinding, type Figure } from "../../engine/runtime/readiness-figure.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -97,8 +97,9 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(Read
   const rep = (await db.caseTeamMember.findFirst({ where: { caseId: x.caseId, role: "LEAD_REPRESENTATIVE", endedAt: null }, select: { userId: true } }))?.userId ?? null;
   // C8.3 (break B1): each filing's newest review round row; a review counts only while that row is the approval that
   // wrote it (a filing sent for review again, or sent back, is no longer approved). Filings never sent: none.
-  const newestRow = new Map<string, { filingReviewId: string | null }>();
-  for (const r of ids.length ? await db.reviewRoundFiling.findMany({ where: { filingId: { in: ids } }, orderBy: [{ filingId: "asc" }, { filingRound: "desc" }], select: { filingId: true, filingReviewId: true } }) : []) if (!newestRow.has(r.filingId)) newestRow.set(r.filingId, r);
+  // QA-345: with each form's stamped file kind, so an approval counts only while it stamped the validated copy filed.
+  const newestRow = new Map<string, { filingReviewId: string | null; forms: { formNumber: string; subjectId: string; stampFileKind: string | null; stampedAt: Date | null }[] }>();
+  for (const r of ids.length ? await db.reviewRoundFiling.findMany({ where: { filingId: { in: ids } }, orderBy: [{ filingId: "asc" }, { filingRound: "desc" }], select: { filingId: true, filingReviewId: true, forms: { select: { formNumber: true, subjectId: true, stampFileKind: true, stampedAt: true } } } }) : []) if (!newestRow.has(r.filingId)) newestRow.set(r.filingId, r);
   // C6.5 (BR-7; C7.6 P-238): an open typed-versus-document check on a person of the filing is a CRITICAL warning.
   const openChecks = await db.answerCheck.findMany({ where: { caseId: x.caseId, state: "open" }, orderBy: [{ openedAt: "asc" }, { id: "asc" }], select: { subjectId: true, fact: true } });
   // Break M4: a check on the application's own facts (a letter's visit contact) warns on every filing of the case.
@@ -151,7 +152,10 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(Read
     // C9.5: a review made before a move that changed this filing is withdrawn by the move, and says so, whether or not
     // the move also changed the facts' fingerprint (a channel or signing change leaves it equal; a new form does not).
     const withdrawn = latest && latest.reviewedBy === rep ? x.reviewAfterMove?.(filing, latest.reviewedAt) ?? null : null;
-    const review = sameFacts && !withdrawn ? latest : null;
+    // QA-345 (ruling (a)): and only while every validated copy that counts for filing is the file its form's stamp holds
+    // (the same rule as each form's stamp on the representative's review, fileStampCurrent).
+    const fileStamped = !row || row.forms.every((f) => !f.stampedAt || fileStampCurrent(f.stampFileKind, x.validatedCurrent(f.formNumber, f.subjectId)));
+    const review = sameFacts && !withdrawn && fileStamped ? latest : null;
     const mine: Pass[] = passes.filter((p) => p.filingId === filing && (WARN_CODES as readonly string[]).includes(p.code)).map((p) => ({ code: p.code as WarnCode, keys: p.keys, reason: p.reason, by: p.passedBy, at: p.passedAt.toISOString() }));
     const personOf = new Map(mineForms.map((f) => [f.subject, f.person]));
     if (caseSubject) personOf.set(caseSubject, "The application");

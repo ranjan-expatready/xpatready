@@ -38,18 +38,34 @@ export function mayDecide(actor: string, representativeNow: string | null): stri
 
 /** A stamp (an approved form's facts hash and the representative of record who approved it) and the form today. */
 export type StampNow = { hash: string | null; representative: string | null };
-export type Withdrawn = "none" | "representative" | "facts" | "superseded";
+export type Withdrawn = "none" | "representative" | "facts" | "superseded" | "file";
 /** Whether an approval still counts: only while the form's facts hash and the representative of record are both
  *  unchanged (P-412 F1: a fact change withdraws it; M2: the same rule as C7.6, readiness-inputs.ts), and while no newer
  *  round of the filing exists (`superseded`, break B1: a filing sent for review again, or sent back, is no longer
  *  approved). `why` says what withdrew it. Used by the Review page, the re-approve route, C7.6's filing review line and
  *  so C8.2's "Reviewed by". */
-export function stampCurrent(stamp: { hash: string | null; by: string | null; superseded?: boolean } | null, now: StampNow): { current: boolean; why: Withdrawn | null } {
+export function stampCurrent(stamp: { hash: string | null; by: string | null; superseded?: boolean; file?: string | null } | null, now: StampNow & { validated?: boolean }): { current: boolean; why: Withdrawn | null } {
   if (!stamp?.hash || !stamp.by) return { current: false, why: "none" };
   if (stamp.superseded) return { current: false, why: "superseded" };
   if (stamp.by !== now.representative) return { current: false, why: "representative" };
   if (stamp.hash !== now.hash) return { current: false, why: "facts" };
+  if (stamp.file !== undefined && !fileStampCurrent(stamp.file, !!now.validated)) return { current: false, why: "file" };
   return { current: true, why: null };
+}
+
+/** QA-345 (the tech lead's ruling (a), 9 Nov): an approval stamps the file it approved. A form whose validated copy
+ *  counts for filing now (`validatedNow`, the barcode form's file that goes to IRCC) is covered only by a stamp of a
+ *  validated copy; a stamp of no file, or of the generated copy, then asks for re-approval. A form with no validated copy
+ *  for filing (an Online form, a form not read back yet) is covered by its stamp as it is. */
+export const fileStampCurrent = (stampKind: string | null | undefined, validatedNow: boolean) => !validatedNow || stampKind === "validated_copy";
+
+/** QA-345 (ruling (a)): whether a validated copy read back now is stamped, once, to an earlier approval of its form: the
+ *  approval stamped no validated copy (none, or the generated copy it was made from), it is the newest row of its filing
+ *  and still approved, by the representative of record now, and the copy holds the facts the approval stamped (its
+ *  input fingerprint equals the stamped snapshot's). Else the approval stays as it was, and fileStampCurrent asks for
+ *  re-approval when that copy counts for filing. */
+export function readBackStamps(x: { stampKind: string | null; approved: boolean; latest: boolean; by: string | null; representative: string | null; stampedFacts: string | null; readFacts: string }): boolean {
+  return (x.stampKind === "none" || x.stampKind === "generated_copy") && x.approved && x.latest && !!x.by && x.by === x.representative && !!x.stampedFacts && x.stampedFacts === x.readFacts;
 }
 
 // ------------------------------------------------------------------ BR-1 Send
@@ -185,9 +201,9 @@ export type FormState = "to_check" | "checked" | "changed_since_review" | "appro
  *  from the filing's previous round, or changed after this round was sent (a check mark clears on change, as GitHub's
  *  "Viewed"); else Checked when its mark is ticked; else To check. An approved row: Approved while its stamp is current
  *  (stampCurrent), else "Approval withdrawn". A form that waits is never stamped. */
-export function formStateOf(x: { status: RowStatus; waits: boolean; checked: boolean; frozenHash: string | null; previousHash: string | null | undefined; liveHash: string | null; stamp: { hash: string | null; by: string | null; superseded?: boolean } | null; representative: string | null }): { state: FormState; why: Withdrawn | null } {
+export function formStateOf(x: { status: RowStatus; waits: boolean; checked: boolean; frozenHash: string | null; previousHash: string | null | undefined; liveHash: string | null; stamp: { hash: string | null; by: string | null; superseded?: boolean; file?: string | null } | null; representative: string | null; validated?: boolean }): { state: FormState; why: Withdrawn | null } {
   if (x.waits) return { state: "not_stamped_waits", why: null };
-  if (x.status === "approved") { const c = stampCurrent(x.stamp, { hash: x.liveHash, representative: x.representative }); return c.current ? { state: "approved", why: null } : { state: "approval_withdrawn", why: c.why }; }
+  if (x.status === "approved") { const c = stampCurrent(x.stamp, { hash: x.liveHash, representative: x.representative, validated: x.validated }); return c.current ? { state: "approved", why: null } : { state: "approval_withdrawn", why: c.why }; }
   if (x.status === "sent_back") return { state: "sent_back", why: null };
   if (x.liveHash !== x.frozenHash) return { state: "changed_since_review", why: "facts" };
   if (x.checked) return { state: "checked", why: null };
@@ -222,8 +238,8 @@ export function typedSince(answers: { key: string; by: string | null; at: string
 }
 
 /** P-412 F1: the forms whose approval a later change withdrew (the change-only view lists only these). */
-export function withdrawnForms<T extends { item: string; waits: boolean; stamp: { hash: string | null; by: string | null; superseded?: boolean } | null; liveHash: string | null }>(forms: T[], representative: string | null): T[] {
-  return forms.filter((f) => !f.waits && !stampCurrent(f.stamp, { hash: f.liveHash, representative }).current);
+export function withdrawnForms<T extends { item: string; waits: boolean; stamp: { hash: string | null; by: string | null; superseded?: boolean; file?: string | null } | null; liveHash: string | null; validated?: boolean }>(forms: T[], representative: string | null): T[] {
+  return forms.filter((f) => !f.waits && !stampCurrent(f.stamp, { hash: f.liveHash, representative, validated: f.validated }).current);
 }
 
 /** "Approval withdrawn: Date of birth changed by the case officer, 8 Nov." (§5); the representative's change (M2) and
@@ -231,6 +247,7 @@ export function withdrawnForms<T extends { item: string; waits: boolean; stamp: 
 export function withdrawnWords(why: Withdrawn | null, first: { label: string; by: string | null; at: string | null } | null, day: (at: string | null) => string | null): string {
   if (why === "representative") return "Approval withdrawn: the representative of record changed.";
   if (why === "superseded") return "Approval withdrawn: the filing was sent for review again.";
+  if (why === "file") return "Approval withdrawn: its validated copy was read back without this approval's stamp. Re-approve to stamp the file that is filed.";
   if (!first) return "Approval withdrawn: a fact it reads changed.";
   const when = day(first.at);
   return `Approval withdrawn: ${first.label} changed${first.by ? ` by ${first.by}` : ""}${when ? `, ${when}` : ""}.`;

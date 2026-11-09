@@ -26,6 +26,7 @@ import type { BoxRow } from "../../engine/render.ts";
 import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, PY, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
 import { keptOnMacWords } from "./sample-validated.ts";
 import { busyWords } from "./busy.ts";
+import { stampReadBack } from "./review-stamp.ts";
 import { formValues, notOnFormLines, type Inventory } from "../../engine/form-values.ts";
 import { mandatoryOpen, type CaseWords, type OpenField, type RequiredWhen } from "../../engine/runtime/mandatory.ts";
 import { solutionFile, writeForm } from "./fill.ts";
@@ -459,6 +460,9 @@ export class CaseForms implements OnModuleInit {
       if (kept) { rmSync(pending, { force: true }); throw new HttpException({ type: "https://expatready.local/problems/validated-copy", title: "Already read back", status: 409, detail: `This validated file is already read back and kept for this copy of ${x.formNumber}; nothing was added.`, existingId: kept.id }, HttpStatus.CONFLICT); }
       // Review m-4 on #572: the row first, then the file takes its name; a failed rename rolls the row back.
       const row = await tx.validatedCopy.create({ data: { workspaceId: c.workspaceId, formInstanceId: x.id, path: path.replace(`${ROOT}/`, ""), sha256: sha, factsHash: inputHash(cov?.facts ?? []), readBack: rb as object, readBy: actor.id } });
+      // QA-345 (C8.3, ruling (a)): an approval of this form that stamped no validated copy is stamped with this one, in
+      // the same transaction (a failed rename below rolls the stamp back with the row).
+      await stampReadBack(tx, { workspaceId: c.workspaceId, caseId: x.caseId, subjectId: x.subjectId, formNumber: x.formNumber, readFacts: row.factsHash, sha256: sha, actor });
       renameSync(pending, path);
       return row;
     }).finally(() => rmSync(pending, { force: true })); // a pending file left by any failure is removed (renamed when kept)
