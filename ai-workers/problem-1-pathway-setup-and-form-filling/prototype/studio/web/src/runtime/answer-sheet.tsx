@@ -22,7 +22,8 @@ type PrepItem = { id: string; kind: string; form?: string; channel?: string; sub
 type Prep = { reference?: string; portal_words?: string | null; derived: boolean; items: PrepItem[]; filings: { id: string; read_only?: boolean }[] };
 
 const STAFF = new Set(["user-O", "user-R", "user-T", "user-S"]);
-const STATE_WORDS: Record<string, [string, string]> = { done: ["Done", "ok"], to_do: ["To do", "neutral"], out_of_date: ["Out of date", "warn"], cannot_start: ["Cannot start yet", "neutral"] };
+/** An item's state in words and its pill's tone (the case page's Online line uses the words too). */
+export const STATE_WORDS: Record<string, [string, string]> = { done: ["Done", "ok"], to_do: ["To do", "neutral"], out_of_date: ["Out of date", "warn"], cannot_start: ["Cannot start yet", "neutral"] };
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 /** An answer part in words, as engine/field-format.ts PART_WORD says them (P-63: never "box"); that module reads files on
  *  the server, so the browser keeps its words here. */
@@ -56,13 +57,15 @@ export function AnswerSheetPage() {
     return (
       <div className="mx-auto max-w-6xl" data-sheet-error={status}>
         <Notice tone={status === 409 || status === 422 ? "warn" : "danger"} title={status === 404 ? "No such answer sheet" : status === 409 ? "This form has no answer sheet" : "The answer sheet could not be opened"}>
-          {e.message} {status === 409 ? <>Change how it is filed under “How each form is filed” on the case. </> : null}{back}
+          {e.message} {status === 409 && / is filed as /.test(e.message) ? <>To type it into the IRCC account, change how it is filed under “How each form is filed” on the case. </> : null}{back}
         </Notice>
       </div>
     );
   }
   const s = sheet.data!;
   const item = prep.data?.items.find((i) => i.id === s.item);
+  // Review m2: the sheet is read by item; its case is the one in the path, else nothing of it is shown under this case.
+  if (prep.data && !item) return <div className="mx-auto max-w-6xl" data-sheet-error="other-case"><Notice tone="warn" title="This answer sheet is not on this case">Open it from its own case’s Prepare application. {back}</Notice></div>;
   const readOnly = !!item && !!prep.data?.filings.find((f) => f.id === item.filing)?.read_only;
   const entered = s.sections.filter((x) => x.entered && !x.out_of_date && !x.waiting.length).length;
   const [stateWord, tone] = STATE_WORDS[item?.state ?? ""] ?? [item?.state ?? "", "neutral"];
@@ -75,9 +78,10 @@ export function AnswerSheetPage() {
       </nav>
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold [overflow-wrap:anywhere]">{s.form} answer sheet · {item?.person ?? ""}</h1>
-        <p className="text-sm text-text-muted">Type these answers into the IRCC account, section by section. Copy gives each answer as the portal takes it.</p>
+        <p className="text-sm text-text-muted">Type these answers into the IRCC account, section by section. Copy gives each answer as the IRCC account takes it.</p>
         {prep.data?.portal_words ? <p className="flex items-center gap-1.5 text-[13px]" data-portal><Lock className="size-3.5 text-text-muted" aria-hidden />{prep.data.portal_words}</p> : null}
-        {item ? <p className="flex flex-wrap items-center gap-2 text-[13px]" data-item-state={item.state}><Pill tone={tone}>{stateWord}</Pill><span className="text-text-muted [overflow-wrap:anywhere]">{item.reason}</span></p> : null}
+        {item ? <p className="flex flex-wrap items-center gap-2 text-[13px]" data-item-state={item.state}><Pill tone={tone}>{stateWord}</Pill><span className="text-text-muted [overflow-wrap:anywhere]">{item.reason}</span></p>
+          : prep.isError ? <Notice tone="warn" title="The form’s state could not be read">{(prep.error as Error).message} The answers below are current; reload to see whether the filing is submitted.</Notice> : null}
         <p className="text-[13px]" data-progress>{entered} of {s.sections.length} section{s.sections.length === 1 ? "" : "s"} complete</p>
         <p className="text-[13px] text-text-muted" data-order-note>{s.order_note}</p>
         {readOnly ? <Notice title="Submitted to IRCC">This filing is recorded as submitted: its sheet is read only.</Notice> : null}
@@ -133,10 +137,11 @@ function AnswerRow({ a }: { a: SheetAnswer }) {
       <td className="whitespace-nowrap text-text-muted" data-label="Person:">{who}</td>
       <td className="min-w-40 [overflow-wrap:anywhere] max-sm:min-w-0" data-label="Answer:">
         <span className="mono" data-copy-text>{a.copy_text}</span>
-        {a.to_confirm ? <span className="ml-2"><Pill tone="warn" title={a.why ?? undefined}>To confirm</Pill></span> : null}
+        {a.to_confirm ? <span className="ml-2"><Pill tone="warn">To confirm</Pill></span> : null}
+        {a.to_confirm && a.why ? <span className="mt-0.5 block text-[12px] text-text-muted" data-why>{a.why}</span> : null}
         {parts.length > 1 ? (
           <ul className="mt-1 space-y-1" aria-label={`Parts of ${a.label}`}>
-            {parts.map((p) => <li key={p.part} className="flex items-center gap-2 text-[13px]"><span className="text-text-muted">{partWords(p.part)}:</span><span className="mono">{p.text}</span><CopyButton text={p.text} label={`Copy ${partWords(p.part)} of ${a.label} for ${a.person}`} small /></li>)}
+            {parts.map((p) => <li key={p.part} className="flex items-center gap-2 text-[13px]" data-copy-scope><span className="text-text-muted">{partWords(p.part)}:</span><span className="mono" data-copy-part>{p.text}</span><CopyButton text={p.text} label={`Copy ${partWords(p.part)} of ${a.label} for ${a.person}`} small /></li>)}
           </ul>
         ) : null}
       </td>
@@ -155,7 +160,9 @@ function CopyButton({ text, label, small }: { text: string; label: string; small
   async function copy() {
     try { await navigator.clipboard.writeText(text); setDone("copied"); }
     catch {
-      const cell = ref.current?.closest("tr")?.querySelector("[data-copy-text]") ?? null;
+      // Review M2: a part's button selects that part alone (its own scope), a row's the one-line answer.
+      const part = ref.current?.closest("[data-copy-scope]")?.querySelector("[data-copy-part]");
+      const cell = part ?? ref.current?.closest("tr")?.querySelector("[data-copy-text]") ?? null;
       if (cell) { const r = document.createRange(); r.selectNodeContents(cell); const sel = window.getSelection(); sel?.removeAllRanges(); sel?.addRange(r); }
       setDone("selected");
     }
@@ -165,7 +172,7 @@ function CopyButton({ text, label, small }: { text: string; label: string; small
       <Button ref={ref} size="sm" variant="secondary" className={small ? "h-6 px-1.5" : undefined} aria-label={done === "copied" ? label.replace(/^Copy /, "Copied: ") : label} onClick={() => void copy()} disabled={!text}>
         {done === "copied" ? <Check className="size-3.5" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}{small ? null : done === "copied" ? "Copied" : "Copy"}
       </Button>
-      <span aria-live="polite" className="sr-only">{done === "copied" ? `Copied: ${label.replace(/^Copy /, "")}` : done === "selected" ? "Selected: press Ctrl+C to copy" : ""}</span>
+      <span aria-live="polite" className="sr-only">{done === "copied" ? `Copied: ${label.replace(/^Copy /, "")}` : done === "selected" ? "Selected: press Ctrl+C (⌘C on a Mac) to copy" : ""}</span>
     </span>
   );
 }

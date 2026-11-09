@@ -27,12 +27,14 @@ type Sheet = { item: string; form: string; order_note: string; sections: { key: 
 if (PORT === 4400) { console.log("STOP  never the demo (:4400): this check resets its copy"); process.exit(2); }
 const reset = await call("POST", "/demo/reset", { confirm: "RESET" }, AUTHOR), load = await call("POST", "/demo/load", { sample: "configured" }, AUTHOR);
 if (reset.status >= 300 || load.status >= 300) { console.log(`STOP  the configured checkpoint did not load: reset ${reset.status}, load ${load.status}`); process.exit(2); }
-const c = await openCase(needVisitorVisa(), [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }]);
-const P = c.subjects["Sample Client A"];
+// A principal and a spouse: on release 2 each adult files their own IMM 5257 Online.
+const c = await openCase(needVisitorVisa(), [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }, { role: "spouse_or_partner", name: "Sample Spouse A", dob: yearsAgo(38) }]);
+const P = c.subjects["Sample Client A"], S = c.subjects["Sample Spouse A"];
 const p0 = (await prepare(c.id)).p;
 const online = itemsOf(p0, P).filter((i) => i.kind === "form" && i.channel === "ONLINE"), pdf = itemsOf(p0, P).find((i) => i.kind === "form" && i.channel !== "ONLINE");
 if (online.length !== 1 || online[0].form !== "IMM 5257" || !pdf) { console.log(`STOP  setup: the checkpoint's release 2 should file the principal's IMM 5257 Online beside a PDF form (${online.map((i) => i.form)}, ${pdf?.form})`); process.exit(2); }
-const ITEM = online[0].id;
+const ITEM = online[0].id, SPOUSE_ITEM = itemsOf(p0, S, "IMM 5257").find((i) => i.channel === "ONLINE")?.id;
+if (!SPOUSE_ITEM) { console.log("STOP  setup: the spouse's IMM 5257 should be Online too on release 2"); process.exit(2); }
 const api = async () => (await call("GET", `/runtime/items/${ITEM}/answer-sheet`, undefined, OFFICER)).body as Sheet;
 
 const b = await chromium.launch({ headless: true, ...(process.platform === "darwin" ? { channel: "chrome" } : existsSync("/opt/pw-browsers/chromium") ? { executablePath: "/opt/pw-browsers/chromium" } : {}) });
@@ -68,7 +70,9 @@ try {
   const line = p.locator(`[data-online-form="IMM 5257"]`);
   await line.locator("[data-sheet-link]").first().waitFor({ timeout: 45_000 });
   const links = line.locator("[data-sheet-link]");
-  ok("QA-317 pass: the Online line has one \"Open answer sheet\" per person's Online item, named by form and person", await links.count() === online.length && (await links.first().innerText()).includes("Open answer sheet: IMM 5257 for Sample Client A"), await links.allInnerTexts());
+  const texts = await links.allInnerTexts();
+  ok("QA-317 pass: the Online line has one \"Open answer sheet\" per person's Online item, named by form and person, in the line's own order (review m1: principal first)", await links.count() === 2 && texts[0].includes("Open answer sheet: IMM 5257 for Sample Client A") && texts[1].includes("Open answer sheet: IMM 5257 for Sample Spouse A"), texts);
+  ok("QA-317 (review m3): each link says its item's state, the server's (To do)", await line.locator(`[data-sheet-link="${ITEM}"] [data-sheet-state="to_do"]`).count() === 1 && texts[0].includes("To do"), texts);
   ok("QA-317 (fail): no PDF form row offers an answer sheet (only the Online line does)", await p.locator("[data-sheet-link]").count() === await p.locator("[data-online-form] [data-sheet-link]").count());
   const words = await line.innerText();
   ok("QA-317 (fail): the line's words match the page: its PDF copy is listed with the forms above it, never \"below\"", !/below/.test(words) && (/forms above/.test(words) || !/PDF copy/.test(words)), words);
@@ -107,9 +111,40 @@ try {
     await row.getByRole("button", { name: new RegExp(`^Copy ${addr.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} for `) }).click(); await p.waitForTimeout(200);
     ok("C7.3 (challenge M4) pass: an address copies part by part (street name alone) and whole on one line", part === String((addr.value as Record<string, unknown>).street_name) && (await clip()) === addr.copy_text, { part, whole: await clip() });
   } else ok("C7.3 (challenge M4) setup: an address answer on the sheet after the fill", false, s.sections.map((x) => x.title));
+  // Review M1: a choice is copied as its option's label (as the portal lists it), never the release's key.
+  const choice = s.sections.flatMap((x) => x.answers).find((a) => a.fact === "person.marital_status" && a.subject === P);
+  ok("QA-317 M1 (fail): a choice (marital status) shows and copies its label, never its key", !!choice && typeof choice.value === "string" && choice.copy_text !== choice.value && !/_/.test(choice.copy_text)
+    && (await p.locator(`[data-answer="person.marital_status"][data-subject="${P}"] [data-copy-text]`).first().innerText()) === choice.copy_text, choice);
   ok("QA-309 pass: once every fact is answered and confirmed, no section lists anything still to answer or confirm", await p.locator("[data-waiting]").count() === 0 && s.sections.every((x) => !x.waiting.length));
   ok("P-411 (fail): once confirmed, no answer is marked To confirm", await p.getByText("To confirm", { exact: true }).count() === 0);
   await shot("sheet-every-answer-confirmed", "[data-answer-sheet]");
+
+  // Review M2: with the clipboard refused, Copy selects the value instead: a part's button that part alone, a row's the
+  // whole one-line answer; and says so.
+  if (addr) {
+    const refused = await ctx.newPage();
+    await refused.addInitScript(() => { Clipboard.prototype.writeText = () => Promise.reject(new Error("refused")); });
+    await refused.goto(`${BASE}/cases/${c.id}/sheet/${ITEM}`); await refused.locator("[data-answer-sheet]").waitFor({ timeout: 30_000 });
+    const row = refused.locator(`[data-answer="${addr.fact}"][data-subject="${addr.subject}"]`).first();
+    await row.getByRole("button", { name: /^Copy city or town of |^Copy city of / }).click(); await refused.waitForTimeout(200);
+    const partSel = await refused.evaluate(() => window.getSelection()?.toString() ?? "");
+    await row.getByRole("button", { name: new RegExp(`^Copy ${addr.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} for `) }).click(); await refused.waitForTimeout(200);
+    const rowSel = await refused.evaluate(() => window.getSelection()?.toString() ?? "");
+    ok("QA-317 M2 (fail): no clipboard: a part's Copy selects that part alone (the city), a row's the whole answer, and the page says to press Ctrl+C", partSel === String((addr.value as Record<string, unknown>).city) && rowSel === addr.copy_text && await refused.getByText(/Selected: press Ctrl\+C/).count() > 0, { partSel, rowSel });
+    await refused.close();
+  }
+
+  // Review m2: another case's item under this case's path shows nothing of it.
+  const other = await openCase(needVisitorVisa(), [{ role: "principal", name: "Sample Client B", dob: yearsAgo(30) }]);
+  const otherItem = itemsOf((await prepare(other.id)).p, other.subjects["Sample Client B"], "IMM 5257")[0];
+  await p.goto(`${BASE}/cases/${c.id}/sheet/${otherItem.id}`); await p.locator("[data-sheet-error]").waitFor({ timeout: 30_000 });
+  ok("QA-317 m2 (fail): another case's item under this case's path: \"not on this case\", no answer of it shown", (await p.locator("[data-sheet-error]").getAttribute("data-sheet-error")) === "other-case" && await p.locator("[data-answer]").count() === 0);
+
+  // The ONLINE filter: a form moved to PDF upload loses its link on the Online line (the other person's stays).
+  const pv = (await prepare(c.id)).p;
+  const moved = await call("PATCH", `/runtime/items/${SPOUSE_ITEM}/channel`, { channel: "PDF_UPLOAD", version: pv?.version }, OFFICER);
+  await p.goto(`${BASE}/cases/${c.id}`); await p.locator(`[data-online-form="IMM 5257"] [data-sheet-link]`).first().waitFor({ timeout: 45_000 }); await settle();
+  ok("QA-317 (fail): the spouse's IMM 5257 moved to PDF upload has no sheet link; the principal's stays", moved.status === 200 && await p.locator("[data-sheet-link]").count() === 1 && await p.locator(`[data-sheet-link="${SPOUSE_ITEM}"]`).count() === 0 && await p.locator(`[data-sheet-link="${ITEM}"]`).count() === 1, moved.status);
 
   // 4. Refusals, in the server's words.
   await as(CLIENT);

@@ -769,7 +769,9 @@ function sheetOf(item: { itemKey: string; subjectId: string }, s: ReturnType<Run
     return a ? { mark: a.mark, confirmed: a.confirmed, why: a.why } : undefined;
   };
   // QA-309: a box waits only for what the form's readiness names (`missing`: the item's own rule).
-  return layOut(layout, cov?.boxes ?? [], origin, labels, new Map(entered.map((e) => [e.sectionKey, { at: e.enteredAt.toISOString(), by: e.enteredBy, hash: e.snapshot.inputHash }])), markOf, waitsOf(view, missing, item.subjectId, filing));
+  return layOut(layout, cov?.boxes ?? [], origin, labels, new Map(entered.map((e) => [e.sectionKey, { at: e.enteredAt.toISOString(), by: e.enteredBy, hash: e.snapshot.inputHash }])), markOf, waitsOf(view, missing, item.subjectId, filing),
+    // QA-317 (review M1): a choice is copied in the release's own words, never its key.
+    (fact, v) => (typeof v === "string" ? optionsOf(s, fact)?.find((o) => o.key === v)?.label : undefined));
 }
 
 /** C7.3: the release's field map for a form (its edition and its form fields in the form's order). */
