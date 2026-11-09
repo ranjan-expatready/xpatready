@@ -38,6 +38,8 @@ import { CaseActorGuard, utf8Name } from "./case-checklist.ts";
 import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
 import { aiLive } from "./sources.ts";
 import { Runtime, type Reached } from "./runtime.ts";
+import { sameValue } from "./document-values.ts";
+export { sameValue };
 
 type H = string | undefined;
 type Upload = { fieldname?: string; originalname?: string; buffer?: Buffer; size?: number };
@@ -122,12 +124,6 @@ const problem = (status: number, code: string, title: string, detail: string, ex
   throw new HttpException({ type: `https://expatready.local/problems/${code.replace(/_/g, "-")}`, title, status, code, detail, ...extra }, status);
 };
 
-/** Names compare without case and repeated spaces (the coded line is upper case); every other value as written. */
-export function sameValue(fact: string, a: unknown, b: unknown): boolean {
-  const s = (v: unknown) => (typeof v === "string" ? v : JSON.stringify(v ?? null)).trim();
-  const name = /_names?$/.test(fact);
-  return name ? s(a).toUpperCase().replace(/\s+/g, " ") === s(b).toUpperCase().replace(/\s+/g, " ") : s(a) === s(b);
-}
 
 type Placement = { fact: string; section_id: string; repeats: string; scope?: string; question_text?: string };
 /** P-243 ("no blanket one-click confirm"; Lead 35 on #1369, L-SA9): a value Confirm & use would write as it was read,
