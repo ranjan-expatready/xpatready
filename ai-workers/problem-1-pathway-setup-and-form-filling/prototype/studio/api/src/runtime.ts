@@ -383,7 +383,28 @@ export class Runtime {
     const c = await this.reach(actor, caseId, "read");
     if (mode === "agent" && !isOfficer(actor)) fail("The Agent view is for the case officer.", HttpStatus.FORBIDDEN);
     const { answers, rows, groups } = await this.state(c);
-    return { case: await this.get(actor, caseId), ...caseView(this.snapshotOf(c), this.peopleOf(c), answers, rows, mode, new Date(), groups, { background: this.backgroundOf(c) }) };
+    const view = caseView(this.snapshotOf(c), this.peopleOf(c), answers, rows, mode, new Date(), groups, { background: this.backgroundOf(c) });
+    // QA-322 (P-142 D6): the client sees "please check" on an answer while a typed-versus-document check is open on it.
+    // The client's view only: the officer resolves the check in the drawer, with a reason (unchanged), and only staff
+    // mark a value checked (P-142 D3). The document's value is not shown here; the client is asked to look again.
+    if (mode !== "agent") view.checks = [...view.checks, ...await this.documentChecks(c, view.sections)];
+    return { case: await this.get(actor, caseId), ...view };
+  }
+
+  /** QA-322: the open typed-versus-document checks (C6.5, BR-7) as "please check" notes on the client's own parts. A
+   *  check on a question the client is not asked (an answer staff enter from the document) is not shown to the client. */
+  private async documentChecks(c: Reached, sections: ReturnType<typeof caseView>["sections"]): Promise<ReturnType<typeof caseView>["checks"]> {
+    const open = await this.db.answerCheck.findMany({ where: { caseId: c.id, state: "open" }, select: { id: true, subjectId: true, fact: true, documentId: true }, orderBy: [{ openedAt: "asc" }, { id: "asc" }] });
+    if (!open.length) return [];
+    const docs = await this.db.caseDocument.findMany({ where: { id: { in: [...new Set(open.map((k) => k.documentId))] } }, select: { id: true, documentType: true } });
+    const types = (this.snapshotOf(c).document_types ?? []) as { key: string; name: string }[];
+    const nameOf = (id: string) => { const key = docs.find((d) => d.id === id)?.documentType ?? "document"; return (types.find((t) => t.key === key)?.name ?? key.replace(/_/g, " ")).toLowerCase(); };
+    return open.flatMap((k) => {
+      const sec = sections.find((x) => x.subjectId === k.subjectId && x.questions.some((q) => q.fact === k.fact && !q.hidden && !q.group));
+      if (!sec) return [];
+      return [{ id: `document_check.${k.id}`, severity: "warn", group: "document", subjectId: k.subjectId, about_label: sec.about_label, fact: k.fact, section: sec.section, illustrative: false,
+        message: `Please check this answer: it did not match the ${nameOf(k.documentId)} on file when your case officer read it. If your answer is wrong, change it here; your case officer settles the difference with you.` }];
+    });
   }
 
   /** P-47 mode 1, PQR (C4.4 part 2): the pre-qualification questions only, with a plain result line. The officer's PQR
