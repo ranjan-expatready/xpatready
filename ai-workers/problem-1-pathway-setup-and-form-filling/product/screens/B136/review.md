@@ -108,4 +108,19 @@ A real screen reader. An intended user's unaided walk (D17, D20 stay with the fo
 
 **Rerun here:** check_c614_providers 23/23 (break M2 ×3), check_engine 44/44, check_c615 34/34. The diff touches nothing the pack or walk read beyond those words; the builder's pack 35/35 and walk 11/11 at dcd861aec were not rerun here. No new finding.
 
-**Verdict: Approve** (commit 9be06cd0d643c053084a9ba0f9aa2419fbcf056b). No open Blocker or Major. The round-1 fallback point stays with the tech lead (SA-1B-151 r3).
+**Round 3 result: Approve** (commit 9be06cd0d; carried to 2e3cf9764, a review.md-only commit).
+
+## Round 4: re-review of `2e3cf9764..e3c6772b75ec9b93f468f57719da0d600378c597` (diff only; two Devin findings)
+**(1) Withdrawing a returned or waiting provider change is now possible on its page: closed.**
+* `review-items.tsx`: the RETURNED branch for `providers` has the "Propose it again" note and Withdraw. A WAITING change shows Withdraw to its proposer.
+* `providers-panel.tsx`: "Open the change" links to `/review/change/<id>`, and a returned change says "Withdraw it on its page, then propose again".
+* Checked on a fresh copy `rev614c`: walk **13/13**, including steps 10-11, where a returned change is withdrawn by screen and the library is unchanged. Separately I followed the drawer link to a waiting change: Withdraw was offered, the change became WITHDRAWN, and the roles were unchanged. Axe found no violations on that page.
+
+**(2) The merge no longer makes a needed per-person line shared through a requirement that does not apply: closed.**
+* `engine/runtime/case-checklist.ts:232`: the shared fields are copied only when `ORDER[drop.need] <= ORDER[keep.need]`.
+* `check_c614_providers` 27/27, with 4 new checks covering both orders.
+* With the guard removed, the 2 "Devin fail" checks fail (25/27), so the test catches the rule. File restored.
+
+**Also rerun:** check_vv_checklist 76/76 · check_engine 44/44 · count-any 418 = 418 · `tsc -p web` shows no errors in the touched files. The pack was not rerun; the builder reports 35/35 at cf57401d1. The diff changes no API route or pack step. No new finding.
+
+**Verdict: Approve** (commit e3c6772b75ec9b93f468f57719da0d600378c597). No open Blocker or Major. The round-1 fallback point stays with the tech lead (SA-1B-151 r3).
