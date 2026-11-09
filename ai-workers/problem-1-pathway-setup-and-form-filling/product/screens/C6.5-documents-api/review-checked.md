@@ -216,3 +216,52 @@ Verdict: Approve 708b18717
     * **n6:** after a later check kept the document, a value an older check kept shows `kept_over: false`, and marking it opens a check.
 * **Checks:** `check_c65_documents_api` 74/74 and `C6.5-screen.test.ts` 33/33, on fresh fixture copies. Type check: no new errors.
 * n2 (two clocks) is unchanged: the rule still compares `effective_at` (database time) with `resolved_at` (app time). It stays with the tech lead.
+
+## Re-review of 88194485a
+
+Reviewer: fresh context; I did not build it. Diff-only re-review (P-318 (1)) of `88194485a` against my re-review of `708b18717` (n5, n6).
+* Files: `api/src/case-documents.ts`: `keptOver` (`:136–142`), the proposals' `resolved` and `history` (`:338–339`, `:354`), and `checkedAgainst` (`:569`).
+* Tests: `tests/check_c65_documents_api.ts`, F3 rewritten.
+* The drawer and the screen pack are unchanged since `708b18717`.
+
+### Runs (own copy `rv_c65h`, :4438, fixture; US$0, no `*_LIVE` switch; copy stopped and dropped at the end)
+* `check_c65_documents_api.ts`: **74/74**.
+* `web-fresh.sh build`, then `C6.5-screen.test.ts`: **33/33**, with C6.5-39 and C6.5-39b.
+* **Probes** (my scratch scripts from the last re-review, each on a fresh case, now on this head):
+  * **H1.** The check opened on CHILD AZ, AW was kept, then AZ was typed again. Result: **409 `differs_from_document`**, `kept_over: false`, and a check opens. Before: `kept_over_document`.
+  * **H1-drawer, the Undo case.** Confirm & use opened the check on AZ, AW was kept, then Undo brought AZ back. Result: the row is `conflict` with **`kept_over: false`**, so the drawer offers the mark and not the words. Marking gives **409 `differs_from_document`**, and a check opens.
+  * **H2.** AX was kept, then a later check kept the document, then AX was typed again. Result: **409 `differs_from_document`**, `kept_over: false`, and a check opens.
+  * **H3** (new). AX was kept, then later **AW2** was kept.
+    * AW2 itself gives 409 `kept_over_document`, `kept_over: true` (m1, n1).
+    * AW2 saved again as "child  aw2", with lower case and two spaces, is still kept (`sameValue`).
+    * AX, kept only by the older check, now gives **409 `differs_from_document`** and a check. That follows from "the latest judgement only", and it is right: the officer's last word kept AW2, not AX.
+* **The tests fail without the fix.** I ran mutants of `keptOver` on a scratch copy of the studio, served on :4438 against the same database. No repository file was edited, and the scratch copy is deleted.
+  * **n5 mutant:** any value the person had before the resolve counts, as the opened-on value did. API check **70/74**: F3 m4/n5 gets `kept_over_document`, and the three later F3 lines follow.
+  * **n6 mutant:** the latest check that **kept the answer**, skipping a later keep-document. API check **73/74**: F3 n6/n4 fails alone.
+  * **n1 mutant:** the same value saved again no longer counts. API check **72/74**: F3 n1 fails, and F3 n6 follows on the check count.
+  * **m1 mutant:** the oldest answer row before the resolve, instead of the newest. API check **68/74**: Lead 36 F3, m1, n1 and the rest fail.
+
+### Answers to the questions asked
+* **n5: closed.** The kept answer is now the newest answer row with `effective_at <= resolved_at` (`:140`). The value the check opened on is never used. Resolve refuses unless it is sent the current answer (`:512`), so that row is the answer the officer kept. The H1 and Undo cases now open a check (H1, H1-drawer), and F3 m4/n5 pins it (n5 mutant).
+* **n6: closed.** Only the latest resolved check of that person, document and fact counts, and only if it kept the answer (`:138–139`). H2 opens a check, and F3 n6/n4 pins it (n6 mutant).
+* **Nothing found right before is broken:**
+  * **m1:** a newer answer kept at the resolve is still kept (F3 m1, H3, m1 mutant).
+  * **n1:** the kept value saved again as a new row is still kept (F3 n1, H3, n1 mutant). The test now uses the plain case: AZ kept, AU typed, then AZ saved again. The older-resolve variant I noted is gone.
+  * **n4:** the proposals and the mark call the same `keptOver` with the same inputs. The proposals' `history` (`:339`) holds every row of the person for the facts that have resolved checks; the mark's (`:569`) holds that fact only. They agreed in every probe: `kept_over: true` went with 409 `kept_over_document`, and `false` with a check opening.
+  * **The drawer row:** unchanged code, still green on C6.5-39 and C6.5-39b. It still cannot mark an answer VERIFIED that the document contradicts, since `checkedAgainst`'s differs path is untouched.
+* **Lead 36's base case** (a check kept on the very answer it opened on) still holds. That answer was in force at the resolve. F3 "Lead 36" pins it (m1 mutant).
+
+### Issues, ranked (none Blocker or Major)
+1. **n2, Minor, carried:** the rule now rests wholly on `effective_at <= resolved_at`, because the `answerId` clause is gone.
+   * `resolved_at` is the app's `new Date()`, taken before the resolve transaction (`:506`). Most answer rows take `effective_at` from the database's `now()`.
+   * If the app clock runs behind the database's by more than the gap between a save and the resolve, the kept answer falls just after `resolved_at`. The row before it is then taken as kept: the m1 loop and the n5 failure, by the clock.
+   * On the reference build both clocks are one host's, so this was not seen. It stays with the tech lead, as the builder says, and its fix (a resolve-time database clock, or the kept answer recorded at the resolve) closes this too.
+2. **Note, outside this diff:** once a check kept the document, the read value is `used` (`:524` on the resolve path). The drawer then shows that row only as "Used", and the "Check resolved" row with its words or mark never comes back for that document's value. Later keeps of that fact are judged correctly by the server (H3), but the drawer row no longer reflects them. It predates this PR and is not raised as a finding here.
+
+### Journey score
+No user-visible code changed. The drawer row now gets correct `kept_over` values for the Undo and keep-document cases. I did no new walk. The reviewer's journey score for this PR stays **9/10, Pass** (`journey-test-reviewer-checked-2026-11-09.md`). n5, the gap noted in the last re-review, is closed.
+
+### Could not check
+A browser walk by hand, a real screen reader, CI on this head, and the configured checkpoint (fixture only).
+
+Verdict: Approve 88194485a
