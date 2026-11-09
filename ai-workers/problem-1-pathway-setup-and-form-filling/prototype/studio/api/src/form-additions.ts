@@ -124,7 +124,7 @@ export class FormAdditions {
   }
 
   /** What is frozen for this form (BR-4): copied once; a second addition of a form already on the case copies the first's. */
-  private freeze(x: LibForm, kind: AddedKind, lists: Map<string, { key: string; label: string }[]>, fields: { canonicalFieldKey: string }[]): Frozen {
+  private freeze(x: LibForm, kind: AddedKind, lists: Map<string, { key: string; label: string }[]>, fields: Parameters<typeof snapField>[0][]): Frozen {
     const facts = new Set(kind === "fills" ? x.entries.map((e) => e.fact).filter((v): v is string => !!v) : []);
     return { title: x.title, edition: x.edition ?? "", official_file: x.officialFile, form_sha256: x.sha256, inventory_file: x.inventoryFile,
       entries: kind === "fills" ? x.entries as Frozen["entries"] : [], fields: fields.filter((f) => facts.has(f.canonicalFieldKey)).sort((a, b) => a.canonicalFieldKey.localeCompare(b.canonicalFieldKey)).map((f) => snapField(f, lists)) };

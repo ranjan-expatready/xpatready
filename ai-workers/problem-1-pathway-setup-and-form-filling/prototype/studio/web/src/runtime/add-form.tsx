@@ -6,7 +6,7 @@
 // "Added by the case officer" (who, when, why) and Remove (a reason is required). A blank one offers its download and the
 // upload of its completed copy (the one upload; it is also the signed copy when it is signed, M5). US$0, no AI.
 import * as React from "react";
-import { Download, Info, Plus, Trash2, Upload } from "lucide-react";
+import { Download, FileText, Info, Plus, Trash2, Upload } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, getActor, useApi, useToast } from "@/lib/api";
 import { Button, Field, Input, Notice, Panel, Pill, Select, Textarea } from "@/components/ui/controls";
@@ -190,6 +190,7 @@ export function BlankRow({ caseId, f, recorded }: { caseId: string; f: CaseForm;
   return (
     <li className="space-y-2 px-4 py-3" data-blank-form={f.form}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <FileText className="size-4 text-text-muted" aria-hidden />
         <h3 tabIndex={-1} className="text-sm font-semibold">{f.form} <span className="font-normal text-text-muted">for</span> <span className="[overflow-wrap:anywhere]">{f.person}</span></h3>
         <Pill tone="info">Blank official PDF</Pill>
         {b.completed ? <Pill tone="ok">Completed copy uploaded {day(b.completed.at)}</Pill> : <Pill tone="warn">Completed copy to upload</Pill>}

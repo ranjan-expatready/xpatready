@@ -5,7 +5,7 @@
 // Every list is sorted by its key so the same content always gives the same fingerprint.
 import { fingerprintLine } from "./channels.ts";
 import { markOf } from "./field-scope.ts"; // C3.16: a placement carries its field's new scope (household, organisation) only
-import type { FormEdition, PrismaClient } from "@prisma/client";
+import type { CanonicalField, FormEdition, FormFieldMap, PrismaClient } from "@prisma/client";
 import { canonical, sha256 } from "../../contracts/rules.ts";
 import { compareEditions } from "./programs.ts";
 import { gateFacts, snapshotEligibility, type SnapshotEligibility } from "./eligibility-gates.ts";
@@ -136,10 +136,10 @@ export async function buildSnapshots(db: PrismaClient, workspaceId: string, comb
 }
 
 /** One map row as a snapshot carries it (one shape for a release and for a form added to a case, C7.8 BR-4). */
-export const snapEntry = (m: any) => ({ data_path: m.dataPath, caption: m.caption, heading: m.heading, outcome: m.outcome, person: m.person, row: m.row, fact: m.canonicalFieldKey, transform: m.transform, condition: m.condition, confidence: m.confidence, evidence_quote: m.evidenceQuote, unresolved_reason: m.reason, item_version: m.version, status: m.status, origin: m.origin,
+export const snapEntry = (m: FormFieldMap) => ({ data_path: m.dataPath, caption: m.caption, heading: m.heading, outcome: m.outcome, person: m.person, row: m.row, fact: m.canonicalFieldKey, transform: m.transform, condition: m.condition, confidence: m.confidence, evidence_quote: m.evidenceQuote, unresolved_reason: m.reason, item_version: m.version, status: m.status, origin: m.origin,
   ...(m.screenKey ? { screen: m.screenKey, screen_order: m.screenOrder, input_order: m.inputOrder } : {}), ...(m.optionMap ? { option_map: m.optionMap } : {}), ...(m.listPurpose ? { list_purpose: m.listPurpose } : {}), ...(m.conditionRule ? { condition_rule: m.conditionRule } : {}) });
 /** One fact definition as a snapshot carries it (the same for a release and for a form added to a case, C7.8 BR-4). */
-export const snapField = (f: any, lists: Map<string, { key: string; label: string }[]>) => ({ id: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, data_type: f.dataType, scope: f.scope, item_version: f.version, status: f.status, origin: f.origin, ...(f.answerListKey && lists.has(f.answerListKey) ? { answer_list: { key: f.answerListKey, values: lists.get(f.answerListKey) } } : {}) });
+export const snapField = (f: CanonicalField, lists: Map<string, { key: string; label: string }[]>) => ({ id: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, data_type: f.dataType, scope: f.scope, item_version: f.version, status: f.status, origin: f.origin, ...(f.answerListKey && lists.has(f.answerListKey) ? { answer_list: { key: f.answerListKey, values: lists.get(f.answerListKey) } } : {}) });
 
 /** W1-02 (break M2): kept as before the park, so a release made with a portal or an Online line keeps its fingerprint on
  *  an older database; a database made since holds no portal or online version, so these keys never appear there.
