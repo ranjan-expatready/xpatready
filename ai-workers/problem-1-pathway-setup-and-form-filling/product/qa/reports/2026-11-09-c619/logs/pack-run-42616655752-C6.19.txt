@@ -1,0 +1,8 @@
+2026-11-09T12:25:19.9534533Z   KIND: code
+2026-11-09T12:25:19.9534656Z   GATE_B_DATA: checkpoint
+2026-11-09T12:25:19.9534976Z ##[endgroup]
+2026-11-09T12:25:19.9972536Z Gate B: the PR names C6.19; claims Works for none (no bug check).
+2026-11-09T12:25:19.9973830Z   packs: C6.19.test.ts
+2026-11-09T12:26:31.0958400Z     C6.19.test.ts on the checkpoint: exit 0, 67/67 passed (70 s: copy 3, Load the configured checkpoint 65, run 2)
+2026-11-09T12:26:31.0960622Z   packs took 71 s in all
+2026-11-09T12:26:31.0961228Z Gate B: passed.
