@@ -15,8 +15,8 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { HttpException } from "@nestjs/common";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { cleanName, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MEDIA, mediaOf, NOT_APPLICABLE_FROM, NotApplicable, REQUEST_FROM, SeenVersion, STATE_WORDS, UPLOAD_FROM, type LineState, type StoredDocument } from "../../contracts/documents.ts";
-import { caseChecklist, type PersonLine } from "../../engine/runtime/case-checklist.ts";
+import { ChangeProviders, cleanName, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MEDIA, mediaOf, NOT_APPLICABLE_FROM, NotApplicable, REQUEST_FROM, SeenVersion, STATE_WORDS, UPLOAD_FROM, type LineState, type StoredDocument } from "../../contracts/documents.ts";
+import { candidatesOf, caseChecklist, chosenProviders, mayProvide, roleWords, type PersonLine } from "../../engine/runtime/case-checklist.ts";
 import { lineKeys, pickMember, setMet, setStatus, type SetStatus } from "../../engine/document-sets.ts";
 import { checkValue, knownOf } from "../../engine/runtime/case.ts";
 import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
@@ -31,7 +31,9 @@ const short = (id: string) => id.slice(0, 8);
 export type StoredLine = Omit<PersonLine, "state" | "documents"> & { state: LineState; state_words: string; state_reason: string | null; state_by: string | null; state_at: string | null;
   version: number; documents: StoredDocument[]; kept: boolean; derived_id: string;
   /** C6.15: on a line with a substitute set, whether the person's current files meet it, by member, in words. */
-  set_status: SetStatus | null };
+  set_status: SetStatus | null;
+  /** C6.14 BR-6: the officer's last change of providers on a shared line (also a return to the defaults), else null. */
+  providers_change: { reason: string; by: string | null; at: string | null; defaults: boolean } | null };
 const setStatusOf = setStatus;
 
 /** Multipart file names arrive read as latin1 (busboy's default): a UTF-8 name is read back as UTF-8 when its bytes are
@@ -66,7 +68,7 @@ export class CaseChecklists {
     return this.stored(await this.r.reach(actor, caseId, "officer"));
   }
 
-  /** The derived checklist (nothing stored), as #325. */
+  /** The derived checklist (nothing stored), as #325, and everyone on the case with their age (C6.14's provider rules). */
   private async derive(c: Reached) {
     const s = this.r.snapshotOf(c), pin = c.pins[0];
     // The release must describe the case's own combination (as case-filings.ts): never another combination's lines.
@@ -77,12 +79,13 @@ export class CaseChecklists {
     // B-M2: an answer its own checks reject (a date that is not real, 1900 or 2200 as the application date) never decides
     // a line: only answers without problems are read, so the line asks for the answer again instead.
     const { known } = knownOf(s, people, answers.filter((x) => checkValue(s, x.field, x.value, today).length === 0), rows, today);
-    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, release_label: releaseLabel(pin.release), today: today.toISOString().slice(0, 10), ...caseChecklist(s, own!.combinationKey, people, known, today) };
+    const d = { case_id: c.id, reference: c.reference, release_version: pin.release.version, release_label: releaseLabel(pin.release), today: today.toISOString().slice(0, 10), ...caseChecklist(s, own!.combinationKey, people, known, today) };
+    return { d, everyone: d.derived ? candidatesOf(people, known, d.today) : [] }; // C6.14 BR-4: ages on the day it is read
   }
 
   /** The derived checklist with its stored lines: every needed line gets its row (created once, then kept). */
   private async stored(c: Reached) {
-    const d = await this.derive(c);
+    const { d, everyone } = await this.derive(c);
     if (!d.derived) return d;
     const needed = d.people.flatMap((p) => p.lines.map((l) => ({ workspaceId: c.workspaceId, caseId: c.id, subjectId: p.subject, documentType: l.document.key, lineage: l.lineage })));
     if (needed.length) await this.db.checklistLine.createMany({ data: needed, skipDuplicates: true });
@@ -101,12 +104,23 @@ export class CaseChecklists {
       ...(Array.isArray(type) && type.length > 1 ? { member: { key: x.documentType, name: typeName(x.documentType) } } : {}) }));
     const filesOf = (subject: string, l: PersonLine) => (l.set ? docsOf(subject, lineKeys(l)) : docsOf(subject, l.document.key));
     const currentKeys = (subject: string, l: PersonLine) => new Set(docs.filter((x) => x.subjectId === subject && x.current && lineKeys(l).includes(x.documentType)).map((x) => x.documentType));
+    /** C6.14 BR-6: a shared line's providers with the officer's stored choice, read against the case as it is now: a chosen
+     *  person no longer on the case or now under 18 is dropped and named; none left, the defaults apply and the line says so. */
+    const providersNow = (l: PersonLine, row: (typeof rows)[number] | undefined): Pick<StoredLine, "providers" | "providers_rule" | "providers_words" | "providers_change"> => {
+      const change = row?.providersReason ? { reason: row.providersReason, by: row.providersBy, at: row.providersAt?.toISOString() ?? null, defaults: row.providers.length === 0 } : null;
+      if (!l.shared || !row || !row.providers.length) return { providers: l.providers, providers_rule: l.providers_rule, providers_words: l.shared && change?.defaults ? `${l.providers_words} The case officer went back to the defaults: ${change.reason}` : l.providers_words, providers_change: l.shared ? change : null };
+      const chosen = chosenProviders(row.providers, everyone, d.today);
+      const left = chosen.dropped.filter((x) => !(l.providers_words ?? "").includes(x)); // a reason the defaults already give is said once
+      const dropped = left.length ? ` Left out now: ${left.map((x) => x.replace(/\.?$/, ".")).join(" ")}` : ""; // break m6: each reason ends with a full stop
+      if (!chosen.providers.length) return { providers: l.providers, providers_rule: l.providers_rule, providers_words: `The case officer's choice no longer applies.${dropped} ${l.providers_words}`, providers_change: change };
+      return { providers: chosen.providers, providers_rule: "changed", providers_words: `Provided by ${chosen.providers.map((x) => x.label).join(" and ")}: chosen by the case officer (${change!.reason}).${dropped}`, providers_change: change };
+    };
     const people = d.people.map((p) => {
       const out = (l: PersonLine, kept: boolean): StoredLine => {
         const row = rowOf.get(`${p.subject}|${l.document.key}`), documents = filesOf(p.subject, l);
         const state = (row?.state ?? "not_requested") as LineState;
         const reason = kept ? `${l.reason} Kept on the list: it is ${STATE_WORDS[state]}${documents.length ? " and has a file" : ""}, so it is not dropped when the answers change.` : l.reason;
-        return { ...l, id: row?.id ?? l.id, derived_id: l.id, reason, required: kept || state === "not_applicable" ? false : l.required, state, state_words: STATE_WORDS[state], state_reason: row?.stateReason ?? null,
+        return { ...l, ...providersNow(l, row), id: row?.id ?? l.id, derived_id: l.id, reason, required: kept || state === "not_applicable" ? false : l.required, state, state_words: STATE_WORDS[state], state_reason: row?.stateReason ?? null,
           state_by: row?.stateBy ?? null, state_at: row?.stateAt?.toISOString() ?? null, version: row?.version ?? 0, documents, kept, set_status: setStatusOf(l, currentKeys(p.subject, l)) };
       };
       // A line no longer needed that was acted on (requested, a file, Not applicable) stays on the person's list.
@@ -117,7 +131,7 @@ export class CaseChecklists {
       const orphans = rows.filter((x) => x.subjectId === p.subject && !listed.has(x.documentType) && (x.state !== "not_requested" || docsOf(p.subject, x.documentType).length > 0))
         .map((x): PersonLine => ({ id: `${p.subject}:${x.lineage}`, document_type: x.documentType, label: typeName(x.documentType), state: "not_requested", required: false, documents: [],
           reason: p.applies ? `No longer required: ${d.release_label ?? "the case's release"} no longer asks this person for it; its uploads are kept and listed.` : `${p.label} is not travelling with the application now, so the release asks nothing of them.`,
-          need: "not_needed", lineage: x.lineage, also_from: [], document: { key: x.documentType, name: typeName(x.documentType) }, missing: [], base: false, provided_by: "client", alternatives: [], quote: null, rule: null, set: null, who: "", who_words: "" }));
+          need: "not_needed", lineage: x.lineage, also_from: [], document: { key: x.documentType, name: typeName(x.documentType) }, missing: [], base: false, provided_by: "client", alternatives: [], quote: null, rule: null, set: null, who: "", who_words: "", shared: null, providers: [], providers_rule: null, providers_words: null }));
       const lines = [...p.lines.map((l) => out(l, false)), ...keptWaiting.map((l) => out(l, true)), ...keptNot.map((l) => out(l, true)), ...orphans.map((l) => out(l, true))];
       return { ...p, lines, waiting: p.waiting.filter((l) => !acted(l)).map((l) => out(l, false)), not_needed: p.not_needed.filter((l) => !acted(l)).map((l) => out(l, false)) };
     });
@@ -168,6 +182,36 @@ export class CaseChecklists {
   notApplicable(actor: Actor, id: string, body: unknown) {
     const b = parse(NotApplicable, body);
     return this.setState(actor, id, NOT_APPLICABLE_FROM, "not_applicable", b.reason, "marked not applicable", b.version);
+  }
+
+  /** C6.14 BR-6 (SA-1B-214 rule 2): the case officer changes who provides a shared line, or goes back to the type's
+   *  defaults (providers null), always with a reason. Each provider is a person on the case, 18 or older (BR-4), once. */
+  async providers(actor: Actor, lineId: string, body: unknown) {
+    const b = parse(ChangeProviders, body);
+    const { c, row, shown, person, id } = await this.line(actor, lineId, "officer");
+    if (b.version !== undefined && b.version !== row.version) fail(`${shown.label} for ${person.label} changed after you opened it: read the checklist again, then try again. Nothing was changed.`, HttpStatus.CONFLICT);
+    if (!shown.shared) fail(`${shown.label} is asked of each person, not once for the application: it has no providers to change. Nothing was changed.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    const { everyone, d } = await this.derive(c);
+    const on = d.today;
+    const chosen = b.providers;
+    if (chosen) {
+      if (new Set(chosen.map((x) => x.toLowerCase())).size !== chosen.length) fail("Each person once. Nothing was changed.");
+      for (const raw of chosen) {
+        const p = everyone.find((x) => x.id === raw.toLowerCase());
+        if (!p) fail("A provider must be a person on this case. Nothing was changed.");
+        const m = mayProvide(p!, on);
+        if (!m.ok) fail(`${m.why} Nothing was changed.`);
+      }
+    }
+    const ids = (chosen ?? []).map((x) => x.toLowerCase());
+    if (!chosen && !row.providers.length) fail(`${shown.label} already uses the document type's defaults. Nothing was changed.`, HttpStatus.CONFLICT);
+    // Break m5: the same people again is no change (nothing saved, nothing audited).
+    if (chosen && row.providers.length === ids.length && ids.every((x, i) => x === row.providers[i])) fail(`${shown.label} is already provided by exactly these people. Nothing was changed.`, HttpStatus.CONFLICT);
+    const n = await this.db.checklistLine.updateMany({ where: { id, version: row.version }, data: { providers: ids, providersReason: b.reason, providersBy: actor.id, providersAt: new Date(), version: { increment: 1 } } });
+    if (n.count !== 1) fail("Someone changed this line after you opened it: read the checklist again to see it now, then try again. Nothing was changed.", HttpStatus.CONFLICT);
+    const names = ids.map((x) => everyone.find((p) => p.id === x)).map((p) => roleWords(p!.role)).join(" and "); // break m6: words, never keys
+    await this.audit.log(c.workspaceId, actor.id, "providers changed", "checklist line", id, `${actor.name} ${chosen ? `set the providers of ${shown.label} to ${names}` : `went back to the default providers of ${shown.label}`} on case ${short(c.id)}`, { from: row.providers, to: ids, reason: b.reason });
+    return this.moved(c, id);
   }
 
   /** One file on the line: stored as the person's, the person's earlier file of this type kept as history. */
@@ -257,6 +301,7 @@ export class CaseChecklistsController {
   @Get("cases/:id/checklist") list(@Headers("x-actor") a: H, @Param("id") id: string) { return this.x.list(actorOf(a), id); }
   @Post("checklist-lines/:id/request") @HttpCode(200) request(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.request(actorOf(a), id, b); }
   @Post("checklist-lines/:id/not-applicable") @HttpCode(200) notApplicable(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.notApplicable(actorOf(a), id, b); }
+  @Post("checklist-lines/:id/providers") @HttpCode(200) providers(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.providers(actorOf(a), id, b); }
   // The limit is one byte over 20 MB so a file of exactly 20 MB is taken (break m5); the route's own check refuses more.
   @Post("checklist-lines/:id/documents") @UseGuards(CaseActorGuard) @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_DOCUMENT_BYTES + 1, files: 1 } }))
   upload(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: Upload[], @Body() b: unknown) { return this.x.upload(actorOf(a), id, files, b); }

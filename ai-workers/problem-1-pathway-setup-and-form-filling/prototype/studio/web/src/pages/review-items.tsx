@@ -110,6 +110,7 @@ export function LibraryChangePage() {
         </div>
       ) : null}
       {(x as unknown as { sets?: SetsChange }).sets ? <SetsCompare v={(x as unknown as { sets: SetsChange }).sets} /> : null}
+      {(x as unknown as { providers?: ProvidersChange }).providers ? <ProvidersCompare v={(x as unknown as { providers: ProvidersChange }).providers} /> : null}
       {(x as unknown as { must_verify?: MustVerifyChange }).must_verify ? (() => { const m = (x as unknown as { must_verify: MustVerifyChange }).must_verify; return (
         // C7.9 (SA-1B-1 r9): what the immigration expert decides: the field's flag before → after.
         <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-must-verify>
@@ -140,6 +141,7 @@ export function LibraryChangePage() {
       {x.status === "RETURNED" && !mine ? <p className="text-sm text-text-muted" data-withdraw-not-mine>Only {x.proposed_by ?? "the person who proposed it"} can {LIFECYCLE_KINDS.includes(x.kind) ? "send it again" : "correct it"} or withdraw it.</p>
         : x.status === "RETURNED" ? (x.form_field ? <><Notice title={x.form_field.ask ? "Ask it again" : "Confirm it again"}>{x.form_field.ask ? "A returned change of a form field is not sent again from here: withdraw it, then ask the Yes/No as its deciding question again on Review and release." : "A returned change of a form field is not sent again from here: withdraw it, then confirm the form field again on Review and release."}</Notice><Withdraw id={x.id} label="Withdraw it" /></> : (x as unknown as { must_verify?: unknown }).must_verify ? <><Notice title="Propose it again">A returned change of "must verify before filing" is not sent again from here: withdraw it, then propose it again on its field (Shared library › Fields › the field).</Notice><Withdraw id={x.id} label="Withdraw it" /></> /* C7.9, review M2 on #1282 */
           : (x as unknown as { sets?: unknown }).sets ? <><Notice title="Propose it again">A returned change of a document's substitute sets is not sent again from here: withdraw it, then propose the sets again in the line's drawer (Documents tab).</Notice><Withdraw id={x.id} label="Withdraw it" /></> /* C6.15: the same dead end */
+          : (x as unknown as { providers?: unknown }).providers ? <><Notice title="Propose it again">A returned change of who provides a shared document is not sent again from here: withdraw it, then propose the roles again with "Change who provides it…" in the document line's drawer (Documents tab).</Notice><Withdraw id={x.id} label="Withdraw it" /></> /* C6.14 (Devin on #1392) */
           : x.supplies ? <><Notice title="Propose it again">A returned change of the facts a document supplies is not sent again from here: withdraw it, then propose the facts again with "Change the facts it supplies…" on its document type (Documents tab or Shared library › Document types).</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.action === "RENAME" ? <><Notice title="Rename it again">A returned rename is not sent again from here: rename it again on its page, where the check runs again; or withdraw it.</Notice><Withdraw id={x.id} /></> : LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has((x as unknown as { must_verify?: unknown }).must_verify ? "sme" : "review") /* C7.9 (break F6): only the expert decides */
         ? ((x as unknown as { must_verify?: unknown }).must_verify ? <Notice title={mine ? "You proposed this" : "The immigration expert decides"}>{mine ? "The immigration expert approves it or returns it with a reason (SA-1B-1 rule 9)." : "Only the immigration expert approves or returns \"must verify before filing\": switch to the Content reviewer (simulated), who holds that duty."}</Notice>
           : <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>)
@@ -155,7 +157,7 @@ export function LibraryChangePage() {
             : <div data-recheck="refused"><Notice tone="danger" title="Can't approve">{x.recheck.text} Return it with that reason.</Notice></div>) : null}
           <Decide yes="Approve" no="Return" busy={act.isPending} onYes={() => act.mutate({ d: "approve" })} onNo={(note) => act.mutate({ d: "return", note })} onlyNo={x.recheck && !x.recheck.ok ? x.recheck.text : undefined} />
         </>}
-      {x.status === "WAITING" && mine && me.has("author") && (x.action === "ADD" || x.action === "RENAME" || x.form_field) ? <Withdraw id={x.id} label={x.form_field ? "Withdraw it" : undefined} /> : null}
+      {x.status === "WAITING" && mine && me.has("author") && (x.action === "ADD" || x.action === "RENAME" || x.form_field || (x as unknown as { providers?: ProvidersChange }).providers) ? <Withdraw id={x.id} label={x.form_field ? "Withdraw it" : undefined} /> : null}
       {/* C7.9 (review S3 on #1282): the proposer withdraws a waiting, or an approved and not yet released, must-verify change. */}
       {(x.status === "WAITING" || x.status === "APPROVED") && mine && me.has("author") && (x as unknown as { must_verify?: unknown }).must_verify ? <Withdraw id={x.id} label="Withdraw it" /> : null}
     </div>
@@ -420,6 +422,19 @@ export function FormFieldsPage() {
       {!q.data ? <Head title="Form fields" /> : undecided ? <Head title="Form fields with no decision" chip={me.has("review") ? "Needs you" : "A content publisher decides"} sub="Release of every combination that uses this form waits until each new form field has a decision." /> : <Head title="Form fields" chip="Decided" tone="ok" sub="Every form field of this edition has a decision." />}
       {me.has("review") || !undecided ? null : <Notice title="A content publisher decides">Switch to a person with the review duty to decide these.</Notice>}
       <FormFieldDecisions editionId={id!} readOnly={!me.has("review")} />
+    </div>
+  );
+}
+
+/** C6.14 (B136): who provides a shared document, before → after, in the type's order (api/src/document-providers.ts providersView). */
+type ProvidersChange = { document: string; uses: number; reason: string; before: string[]; after: string[] };
+function ProvidersCompare({ v }: { v: ProvidersChange }) {
+  const list = (xs: string[]) => (xs.length ? xs.join(", then ") : "Not set: the person the item is for provides it");
+  return (
+    <div className="space-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-providers>
+      <p className="font-medium">Who provides {v.document} when it is asked once for the application or the couple</p>
+      <dl className="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-1"><dt className="text-text-muted">Before</dt><dd data-providers-before>{list(v.before)}</dd><dt className="text-text-muted">After</dt><dd data-providers-after>{list(v.after)}</dd><dt className="text-text-muted">Reason</dt><dd>{v.reason}</dd></dl>
+      <p className="text-xs text-text-muted">For every combination that names it (used by {v.uses}): at approval it changes each one's draft and goes out with each one's next release. Nobody under 18 provides. Sample until the immigration expert confirms.</p>
     </div>
   );
 }
