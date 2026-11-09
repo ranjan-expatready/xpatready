@@ -10,13 +10,14 @@ import { noRetryOnRefusal } from "./questionnaire";
 
 export type FigureState = "not_ready" | "attention" | "ready";
 export type FigureItem = { kind: "form" | "document" | "facts" | "review" | "check"; key: string; label: string; done: boolean; passed: boolean };
-export type Figure = { filing: string; state: FigureState; score: number; done: number; countable: number; passed: number; items: FigureItem[]; rule: string };
+export type Figure = { filing: string; state: FigureState; score: number; done: number; countable: number; passed: number; items: FigureItem[]; rule: string; submitted?: boolean };
 export type CaseFigure = { state: FigureState; state_filing: string; score: number; score_filing: string };
 
 /** The state words and tones (BR-30's NOT_READY, ATTENTION, READY), each with a title that says what it means. */
 export const FIGURE_STATE: Record<FigureState, { words: string; tone: string; title: string }> = {
-  not_ready: { words: "Not ready", tone: "danger", title: "A block or a CRITICAL warning is open" },
-  attention: { words: "Attention", tone: "warn", title: "Only warnings are open: fix them or pass them with a reason" },
+  // Challenge m8: Not ready is the normal state of a case in progress, so amber, never the error red (BIC-19).
+  not_ready: { words: "Not ready", tone: "warn", title: "A block, a CRITICAL warning or a CRITICAL finding is open" },
+  attention: { words: "Attention", tone: "info", title: "Only other warnings are open: fix them or pass them with a reason" },
   ready: { words: "Ready", tone: "ok", title: "Nothing stands before Ready to file" },
 };
 const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
@@ -29,7 +30,7 @@ export function FigureRow({ g }: { g: Figure }) {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <Pill tone={s.tone} title={s.title}>{s.words}</Pill>
         <span className="text-lg font-semibold tabular-nums" aria-label={`Readiness ${g.score} per cent`} title="The share of counted items done, rounded down">{g.score}%</span>
-        <span className="text-[13px] text-text-muted" data-figure-count>{g.done} of {g.countable} done{g.passed ? ` · ${plural(g.passed, "line")} passed with a reason` : ""}</span>
+        <span className="text-[13px] text-text-muted" data-figure-count>{g.done} of {g.countable} done{g.passed ? ` · ${g.passed} passed with a reason` : ""}</span>
       </div>
       <details className="mt-1 text-[13px]" data-figure-how>
         <summary className="flex min-h-6 cursor-pointer items-center text-text-link">How this is worked out</summary>
@@ -57,7 +58,8 @@ export function CaseReadinessPill({ caseId }: { caseId: string }) {
   if (!v?.derived || !c) return null;
   const label = (id: string) => v.filings.find((f) => f.id === id)?.label ?? "a filing";
   const s = FIGURE_STATE[c.state], same = c.state_filing === c.score_filing;
-  const title = same ? `Lowest of ${plural(v.filings.length, "filing")}: ${label(c.state_filing)}. ${s.title}.`
+  const open = (v.figures ?? []).filter((g) => !g.submitted).length;
+  const title = same ? `Lowest of ${plural(open, "filing")} not yet submitted: ${label(c.state_filing)}. ${s.title}.`
     : `Lowest state: ${s.words}, ${label(c.state_filing)}. Lowest figure: ${c.score}%, ${label(c.score_filing)}.`;
   return (
     <Pill tone={s.tone} title={title} className="whitespace-normal text-[12px] [overflow-wrap:anywhere]">

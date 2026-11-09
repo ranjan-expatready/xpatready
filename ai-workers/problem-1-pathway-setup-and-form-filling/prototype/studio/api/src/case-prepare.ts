@@ -605,7 +605,8 @@ export class CasePrepare {
       // C7.10 (B143; AG-7-27, BR-30): each filing's readiness figure with its counted items and the rule, and the case's
       // lowest state and lowest figure (each naming its filing), for the Ready to file panel, the case header and the
       // team's header. Beside `readiness[]`, never inside it (C7.6's entries carry no percentage).
-      figures: readiness.map((x) => x.figure), case_figure: lowestOf(readiness.map((x) => x.figure)), pin_revision: pin.revision, currency: done.currency, fees_worked_out: done.fees_worked_out, fees_why: done.fees_why, basis: done.basis, version, tasks };
+      // Challenge M2: a filing recorded as submitted is marked so and never holds the case's lowest.
+      figures: readiness.map((x) => ({ ...x.figure, submitted: recordedFiling.has(x.filing) })), case_figure: lowestOf(readiness.map((x) => ({ ...x.figure, submitted: recordedFiling.has(x.filing) }))), pin_revision: pin.revision, currency: done.currency, fees_worked_out: done.fees_worked_out, fees_why: done.fees_why, basis: done.basis, version, tasks };
   }
 
   /** C6.12 (BR-16): split one filing out of a group, with a reason (the family maximum it loses is said first). The

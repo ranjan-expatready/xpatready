@@ -9,7 +9,7 @@ import type { Readiness } from "../../contracts/runtime.ts";
 import { createHash } from "node:crypto";
 import type { Db } from "./core.ts";
 import { changedGroups, type GroupFact } from "../../engine/runtime/forms.ts";
-import { readinessFigure, type Figure } from "../../engine/runtime/readiness-figure.ts";
+import { readinessFigure, type ClosedFinding, type Figure } from "../../engine/runtime/readiness-figure.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RECEIVED = new Set(["received", "being_checked", "approved"]);
@@ -86,6 +86,9 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(Read
     reviews: { orderBy: [{ reviewedAt: "desc" }, { id: "asc" }], take: 1 }, passes: { orderBy: [{ passedAt: "asc" }, { id: "asc" }] } } }) : [];
   const reviews = rows.flatMap((f) => f.reviews), passes = rows.flatMap((f) => f.passes);
   const findings = ids.length ? await db.reviewFinding.findMany({ where: { caseId: x.caseId, filingId: { in: ids }, state: "open" }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }) : [];
+  // C7.10 (challenge M3): the filings' findings no longer open (closed in Review findings with a reason, or resolved by the
+  // rules) stay counted in the readiness figure; handed to the figure only, never to C7.6's readiness.
+  const closedFindings = ids.length ? await db.reviewFinding.findMany({ where: { caseId: x.caseId, filingId: { in: ids }, state: { in: ["acknowledged", "waived", "dismissed", "resolved"] } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: { id: true, filingId: true, form: true, severity: true, state: true, quote: true, source: true } }) : [];
   const rep = (await db.caseTeamMember.findFirst({ where: { caseId: x.caseId, role: "LEAD_REPRESENTATIVE", endedAt: null }, select: { userId: true } }))?.userId ?? null;
   // C6.5 (BR-7; C7.6 P-238): an open typed-versus-document check on a person of the filing is a CRITICAL warning.
   const openChecks = await db.answerCheck.findMany({ where: { caseId: x.caseId, state: "open" }, orderBy: [{ openedAt: "asc" }, { id: "asc" }], select: { subjectId: true, fact: true } });
@@ -146,7 +149,9 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(Read
     const r = filingReadiness(input);
     // C7.10 (B143, BR-30): the filing's readiness figure from the same input and lines; the prepare view puts it beside
     // `readiness[]`, never inside an entry (C7.6's finish line stays: its entries carry no percentage).
-    return { ...r, figure: readinessFigure(input, r), status_rule: "P-315: only a barcode form without its validated copy blocks; every other line is passed with a reason or fixed.",
+    const closed: ClosedFinding[] = closedFindings.filter((g) => g.filingId === filing).map((g) => ({ id: g.id, state: g.state as ClosedFinding["state"],
+      words: `${g.severity.toUpperCase()} finding${g.form ? ` on ${g.form}` : ""} (${g.state === "resolved" ? "resolved: the facts now agree" : `${g.state} with a reason in Review findings`}): ${g.source === "ai" ? "flagged by the AI review" : g.quote}` }));
+    return { ...r, figure: readinessFigure(input, r, closed), status_rule: "P-315: only a barcode form without its validated copy blocks; every other line is passed with a reason or fixed.",
       reviewed: review ? { by: review.reviewedBy, kind: review.kind, licence_number: review.licenceNumber, at: review.reviewedAt.toISOString() } : null, facts_hash: factsHash, representative: rep };
   });
 }

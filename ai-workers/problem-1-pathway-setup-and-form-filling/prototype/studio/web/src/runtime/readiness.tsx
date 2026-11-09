@@ -130,7 +130,7 @@ function FilingReadiness({ caseId, f, r, g, actor, nameOf, officers }: { caseId:
         {canReview ? <ReviewButton f={f} r={r} onRefused={refused} onDone={() => { setRefusal(null); void refresh().then(() => focusLater(() => heading.current)); }} /> : null}
         {open && st !== "ready_to_file" ? <Button size="sm" busy={marking} onClick={() => void ready()} data-mark-ready>Ready to file</Button> : null}
       </div>
-      {g ? <FigureRow g={g} /> : null}
+      {g && st !== "submitted" && !g.submitted ? <FigureRow g={g} /> : null}
       <p className="text-[13px] text-text-muted" data-standing>
         {st === "submitted" ? "Recorded as submitted: its review and warnings are closed (correct the record in Submission to IRCC)."
           : st === "ready_to_file" ? "Ready to file. Record the submission below once IRCC acknowledges it."
