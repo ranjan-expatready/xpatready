@@ -1,0 +1,9 @@
+nightly run 42619403776 (workflow_dispatch on main d8fddc328 by the qa lane, capabilities=C6.5, data=checkpoint), job 129167404912 'packs (C6.5)': completed success. Lines from the job log:
+  CAP: C6.5
+  GATE_B_DATA: checkpoint
+  packs: C6.5-counts.test.ts, C6.5-screen.test.ts, C6.5.test.ts
+    C6.5-counts.test.ts on the checkpoint: exit 0, 13/13 passed (99 s: copy 5, Load the configured checkpoint 92, run 2)
+    C6.5-screen.test.ts on the checkpoint: exit 0, 33/33 passed (126 s: copy 4, Load the configured checkpoint 90, run 32)
+    C6.5.test.ts on the checkpoint: exit 0, 36/36 passed (96 s: copy 4, Load the configured checkpoint 90, run 3)
+  packs took 323 s in all
+Gate B: passed.
