@@ -28,7 +28,9 @@ export type ChecklistLine = { id: string; label: string; lineage: string; reason
   providers_change?: { reason: string; by: string | null; at: string | null; defaults: boolean } | null };
 /** B102 (A6, BR-8): the person's age as the lines read it (engine/runtime/case-checklist.ts PersonAge). */
 type Age = { years: number | null; on: string | null; why: string; worked_out: boolean };
-type Person = { subject: string; label: string; role: string; applies: boolean; lines: ChecklistLine[]; waiting: ChecklistLine[]; not_needed: ChecklistLine[]; age?: Age };
+type Person = { subject: string; label: string; role: string; applies: boolean; lines: ChecklistLine[]; waiting: ChecklistLine[]; not_needed: ChecklistLine[]; age?: Age;
+  /** C6.14 BR-4: whether the person may provide a shared document today (the server's rule), and why not. */
+  may_provide?: { ok: boolean; why: string } };
 export type ChecklistView =
   | { derived: true; stand_in: "SI-14"; people: Person[]; basis: string; empty_release: boolean; ages_on_why: string }
   | { derived: false; why: string };
@@ -230,8 +232,8 @@ function ProvidersDialog({ l, label, people, close, done }: { l: ChecklistLine; 
       if (e instanceof ApiError && e.status === 409) await done();
     } finally { sending.current = false; setBusy(false); }
   };
-  const blocked = (p: Person) => (p.age?.years == null ? "age not known yet" : p.age.years < 18 ? `${p.age.years}: under 18` : null);
-  const candidates = people.filter((p) => p.role !== "representative");
+  const blocked = (p: Person) => (p.may_provide && !p.may_provide.ok ? p.may_provide.why : null);
+  const candidates = people;
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={`Who provides: ${label}`} description="One item for the whole application: whoever is ticked may upload it. Nobody under 18 provides a document."
       footer={<>{l.providers_rule === "changed" ? <Button variant="secondary" busy={busy} onClick={() => void send(null)} data-providers-defaults>Use the defaults</Button> : null}
@@ -242,7 +244,8 @@ function ProvidersDialog({ l, label, people, close, done }: { l: ChecklistLine; 
             <li key={p.subject}><label className={`flex items-center gap-2 text-sm ${no ? "text-text-muted" : ""}`}>
               <input type="checkbox" checked={chosen.includes(p.subject)} disabled={!!no && !chosen.includes(p.subject)} data-provider-option={p.subject}
                 onChange={(e) => setChosen((c) => (e.target.checked ? [...c, p.subject] : c.filter((x) => x !== p.subject)))} />
-              <span className="[overflow-wrap:anywhere]">{p.label}</span> <span className="text-xs text-text-muted">{ROLE[p.role] ?? p.role}{no ? ` · ${no}` : ""}</span></label></li>); })}</ul>
+              <span className="[overflow-wrap:anywhere]">{p.label}</span> <span className="text-xs text-text-muted">{ROLE[p.role] ?? p.role}</span></label>
+              {no ? <p className="ml-6 text-xs text-text-muted [overflow-wrap:anywhere]" data-provider-blocked={p.subject}>{no}</p> : null}</li>); })}</ul>
         </fieldset>
         <Field label="Reason" error={err.field}><Input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} data-providers-reason /></Field>
       </form>

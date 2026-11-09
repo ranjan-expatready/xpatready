@@ -110,6 +110,7 @@ export function LibraryChangePage() {
         </div>
       ) : null}
       {(x as unknown as { sets?: SetsChange }).sets ? <SetsCompare v={(x as unknown as { sets: SetsChange }).sets} /> : null}
+      {(x as unknown as { providers?: ProvidersChange }).providers ? <ProvidersCompare v={(x as unknown as { providers: ProvidersChange }).providers} /> : null}
       {x.field ? (
         <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-field>
           <dt className="text-text-muted">Name</dt><dd className="font-semibold">{x.field.label}</dd>
@@ -413,6 +414,18 @@ export function FormFieldsPage() {
 
 /** C6.15 (row B137): what the second person compares before approving a document type's substitute sets: before → after,
  *  each set with its members in order, the standard first and each alternative's "when acceptable" words. */
+/** C6.14 (B136): who provides a shared document, before → after, in the type's order (api/src/document-providers.ts providersView). */
+type ProvidersChange = { document: string; uses: number; reason: string; before: string[]; after: string[] };
+function ProvidersCompare({ v }: { v: ProvidersChange }) {
+  const list = (xs: string[]) => (xs.length ? xs.join(", then ") : "Not set: the person the item is for provides it");
+  return (
+    <div className="space-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-providers>
+      <p className="font-medium">Who provides {v.document} when it is asked once for the application or the couple</p>
+      <dl className="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-1"><dt className="text-text-muted">Before</dt><dd data-providers-before>{list(v.before)}</dd><dt className="text-text-muted">After</dt><dd data-providers-after>{list(v.after)}</dd><dt className="text-text-muted">Reason</dt><dd>{v.reason}</dd></dl>
+      <p className="text-xs text-text-muted">For every combination that names it (used by {v.uses}): at approval it changes each one's draft and goes out with each one's next release. Nobody under 18 provides. Sample until the immigration expert confirms.</p>
+    </div>
+  );
+}
 type SetsChange = { document: string; uses: number; reason: string; before: SetRow[]; after: SetRow[] };
 type SetRow = { name: string; mode_words: string; members: { key: string; name: string; standard: boolean; when_client: string | null; when_staff: string | null }[] };
 function SetsCompare({ v }: { v: SetsChange }) {

@@ -52,7 +52,13 @@ Read: `concept.md` r1 (no `design/` folder), SA-1B-151 (SA-01B v2.1 :1485), SA-1
 2. **On a case where each person files their own application, is a "once for the application" line one item per case or one per filing?** **Recommended: record it as open now and decide when a release first uses it**, because no release uses `case` today. The alternative is one item per filing with "Already on file" later (SA-1B-215 r2).
 
 ## Lead response
+*(The builder's answers, runtime lane, 9 Nov; the tech lead's approval comes on the PR.)*
+* **M1 accepted.** The library side is now a library change like C6.15's sets: the author proposes the ordered roles with a reason (`POST /library/document-types/:key/providers`), a second person approves on To review (never the proposer, P-253), the type gets a draft version, and it goes out with the next release (`api/src/document-providers.ts`; wired into approve, withdraw, release and To review). Q1 dropped.
+* **M2 accepted.** Age is measured on the day the checklist is read (UTC), not the application date; an unknown age is "can't check", never a provider; a stored choice is checked again on every read (dropped and named when now under 18 or off the case). Pack steps C6.14-17, -18, -28; engine checks BR-4.
+* **M3 accepted.** The pack takes the product's path: propose → approve → release → a new case; the case pinned to the earlier release keeps the fallback (C6.14-12). Marital status is answered so the conditional line is Needed. No SQL write.
+* m1: recorded as a limit (concept BR-2): a `case` line is once per case on the principal's list; no release uses it yet. m2: the fallback is the filing's first applicant (SA-1B-151 r1, SA-1B-214 r1), the person the item is for on this slice; named in the concept. m3: the representative exclusion is kept (source kind client, SA-1B-151 r1) and the case side uses the same set (`NEVER_PROVIDES`); the limit of 4 roles is removed (no source). m4: a line still waiting for an answer has no providers to change yet (409, said in the concept). m5: mapping line added to the concept. m6: P-425 is on the Lead's branch (`lead/2026-11-07-lead31`), cited as such.
 
 ## Agreement
 
 ## Build discoveries
+* The officer's dialog first read the release's age (on the application date), so with no application date everyone read "age not known". Fixed: the checklist now says per person whether they may provide today (`may_provide`, the server's rule) and the dialog shows its words. Found on the 1440 px walk's screenshot 07.

@@ -70,7 +70,9 @@ export type ProvidersRule = "type_roles" | "first_applicant" | "changed";
  *  measured on (the application date), or, when the release works out no age, on the date the 18-or-older lines use.
  *  `years` is null when it cannot be worked out yet, and `why` then names what to answer or check first. */
 export type PersonAge = { years: number | null; on: string | null; why: string; worked_out: boolean };
-export type PersonChecklist = { subject: string; label: string; role: string; applies: boolean; lines: PersonLine[]; waiting: PersonLine[]; not_needed: PersonLine[]; needed: number; answer_first: number; age: PersonAge };
+export type PersonChecklist = { subject: string; label: string; role: string; applies: boolean; lines: PersonLine[]; waiting: PersonLine[]; not_needed: PersonLine[]; needed: number; answer_first: number; age: PersonAge;
+  /** C6.14 BR-4: whether this person may provide a shared document today, and why not (the officer's dialog reads it). */
+  may_provide: { ok: boolean; why: string } };
 export type CaseChecklist =
   | { derived: true; stand_in: "SI-14"; combination: string; people: PersonChecklist[]; basis: string; empty_release: boolean; ages_on: string; ages_on_why: string }
   | { derived: false; combination: string; why: string };
@@ -235,7 +237,9 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
     people: persons.map((p) => {
       const all = byPerson.get(p.id)!.sort((a, b) => a.document.name.localeCompare(b.document.name) || a.lineage.localeCompare(b.lineage));
       const of = (n: Need) => all.filter((l) => l.need === n);
-      return { subject: p.id, label: p.label, role: p.role, applies: p.applies, lines: of("needed"), waiting: of("answer_first"), not_needed: of("not_needed"), needed: of("needed").length, answer_first: of("answer_first").length, age: ageOf(p.id) };
+      const cand = everyone.find((x) => x.id === p.id);
+      const may = cand ? mayProvide(cand, providersOn) : { ok: false, why: `A ${roleWords(p.role).replace(/^the /, "")} does not provide documents.` };
+      return { subject: p.id, label: p.label, role: p.role, applies: p.applies, lines: of("needed"), waiting: of("answer_first"), not_needed: of("not_needed"), needed: of("needed").length, answer_first: of("answer_first").length, age: ageOf(p.id), may_provide: may };
     }) };
 }
 const ORDER: Record<Need, number> = { needed: 0, answer_first: 1, not_needed: 2 };
