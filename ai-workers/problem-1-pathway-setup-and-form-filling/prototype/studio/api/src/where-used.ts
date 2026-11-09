@@ -243,8 +243,12 @@ export async function openCasesByRelease(db: Client, combinationIds: string[]): 
   const [cases, pins] = await Promise.all([
     db.case.findMany({ where: { combinationId: { in: combinationIds }, status: "OPEN" }, select: { id: true, combinationId: true } }),
     // C9.5 (challenge M1): a moved case has several pin revisions; ascending, so the newest one is the one kept per case.
-    db.packWorkPin.findMany({ where: { combinationId: { in: combinationIds } }, select: { caseId: true, configReleaseId: true }, orderBy: [{ caseId: "asc" }, { revision: "asc" }] }),
+    db.packWorkPin.findMany({ where: { combinationId: { in: combinationIds } }, select: { caseId: true, configReleaseId: true, combinationId: true }, orderBy: [{ caseId: "asc" }, { revision: "asc" }] }),
   ]);
+  // C6.17 (BR-9, challenge B1): a case with several stages has pins on several combinations; only the pins of the case's
+  // current combination say which release it is on (a case counts under its current combination only, as above).
+  const current = new Map(cases.map((c) => [c.id, c.combinationId]));
+  pins.splice(0, pins.length, ...pins.filter((p) => current.get(p.caseId) === p.combinationId));
   const versions = new Map((await db.configRelease.findMany({ where: { id: { in: [...new Set(pins.map((p) => p.configReleaseId))] } }, select: { id: true, version: true } })).map((r) => [r.id, r.version]));
   const releaseOf = new Map(pins.map((p) => [p.caseId, versions.get(p.configReleaseId) ?? null]));
   const counts = new Map<string, { combinationId: string; release: number | null; cases: number }>();

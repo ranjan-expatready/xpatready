@@ -57,6 +57,7 @@ const short = (id: string) => id.slice(0, 8);
 const ROLE: Record<string, string> = { principal: "principal applicant", spouse_or_partner: "spouse or partner", child: "child" };
 const parse = <S extends z.ZodType>(schema: S, input: unknown): z.infer<S> => { const r = schema.safeParse(input ?? {}); if (!r.success) throw new HttpException(problemFromZod(r.error), HttpStatus.BAD_REQUEST); return r.data; };
 const stale = (): never => { throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed since you read it", status: 409, detail: "This application's filings or items changed since you read them. Reload, then make your change again." }, HttpStatus.CONFLICT); };
+const stageMoved = (): never => { throw new HttpException({ type: "https://expatready.local/problems/stale", title: "Changed since you read it", status: 409, detail: "This case moved to its next stage while you read it: read the case again. Nothing was changed for the ended stage.", code: "stage_moved" }, HttpStatus.CONFLICT); }; // C6.17 BR-10
 const refuse = (status: number, field: string, detail: string): never => { throw new HttpException({ type: "https://expatready.local/problems/validation", title: status === 422 ? "Not accepted" : "Some details need fixing", status, detail, errors: [{ field, message: detail }] }, status); };
 const Version = z.union([z.string(), z.number()], { error: "Reload: the version you read is missing." });
 // Break m2: a reason is plain text: no control characters (C0, C1), no hidden direction marks, separators or zero-width spaces.
@@ -193,9 +194,9 @@ export class CasePrepare {
     // are one snapshot (one repeatable-read batch on one connection, no lock), so groups, filings, items and the version
     // made from them always agree.
     const read = (q: Tx | Db) => [
-      q.submissionGroup.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
-      q.filing.findMany({ where: { caseId: c.id }, include: { applicants: true } }),
-      q.filingItem.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
+      q.submissionGroup.findMany({ where: { caseId: c.id, stageId: c.stage.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
+      q.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id }, include: { applicants: true } }),
+      q.filingItem.findMany({ where: { caseId: c.id, filing: { stageId: c.stage.id } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
     ] as const;
     const sync = async (tx: Tx | Db, write: boolean) => {
       const [g0, filings0, items0] = write ? await Promise.all(read(tx)) : await this.db.$transaction([...read(this.db)], { isolationLevel: "RepeatableRead", maxWait: 10_000 }); // C7.6: as the write path (C6.12 B1, 120 reads at once)
@@ -215,15 +216,15 @@ export class CasePrepare {
       if (!changes) return { groups, filings: filings0.filter((f) => f.active).sort((x, y) => x.createdAt.getTime() - y.createdAt.getTime() || x.id.localeCompare(y.id)), items: items0.filter((i) => i.active) };
       if (!write) return null;
       let family = groups.find((g) => g.kind === "FAMILY");
-      if (!family) { family = await tx.submissionGroup.create({ data: { workspaceId: c.workspaceId, caseId: c.id, kind: "FAMILY", createdBy: actor.id } }); groups = [family, ...groups]; }
-      let filings = await tx.filing.findMany({ where: { caseId: c.id } });
+      if (!family) { family = await tx.submissionGroup.create({ data: { workspaceId: c.workspaceId, caseId: c.id, stageId: c.stage.id, kind: "FAMILY", createdBy: actor.id } }); groups = [family, ...groups]; }
+      let filings = await tx.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id } });
       for (const f of first.filings) {
         const subject = f.owner!.subject, row = filings.find((x) => x.subjectId === subject);
         // A co-filed sponsorship always goes in the principal's group (it cannot be sent alone).
         const principalRow = filings.find((x) => x.subjectId === first.filings.find((y) => y.owner!.role === "principal")?.owner!.subject);
         const group = f.mode === "co_filed" && principalRow ? principalRow.submissionGroupId : family.id;
         const applicants = f.applicants.map((a) => ({ subjectId: a.subject, role: a.role, mode: a.mode }));
-        if (!row) await tx.filing.create({ data: { workspaceId: c.workspaceId, caseId: c.id, subjectId: subject, combinationKey: own!.combinationKey, mode: f.mode, submissionGroupId: group, applicants: { create: applicants } } });
+        if (!row) await tx.filing.create({ data: { workspaceId: c.workspaceId, caseId: c.id, stageId: c.stage.id, subjectId: subject, combinationKey: own!.combinationKey, mode: f.mode, submissionGroupId: group, applicants: { create: applicants } } });
         else {
           if (!row.active || row.mode !== f.mode) await tx.filing.update({ where: { id: row.id }, data: { active: true, mode: f.mode } });
           // C11.12 (challenge M1): applicant rows follow the people on it, each with their own mode (applying or declared only).
@@ -232,23 +233,26 @@ export class CasePrepare {
         }
       }
       for (const row of filings.filter((x) => x.active && !owners.includes(x.subjectId))) await tx.filing.update({ where: { id: row.id }, data: { active: false } });
-      filings = await tx.filing.findMany({ where: { caseId: c.id, active: true }, include: { applicants: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+      filings = await tx.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id, active: true }, include: { applicants: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
       const byOwner = new Map(filings.map((f) => [f.subjectId, f.id]));
       const filingOf = new Map([...onFiling].filter(([, o]) => byOwner.has(o)).map(([subject, o]) => [subject, byOwner.get(o)!]));
       await tx.filingItem.createMany({ data: wanted.filter((w) => filingOf.has(w.subject)).map((w) => ({ workspaceId: c.workspaceId, caseId: c.id, filingId: filingOf.get(w.subject)!, subjectId: w.subject, kind: w.kind, itemKey: w.key })), skipDuplicates: true });
-      let items = await tx.filingItem.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+      let items = await tx.filingItem.findMany({ where: { caseId: c.id, filing: { stageId: c.stage.id } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
       const want = new Set(wanted.map((w) => `${filingOf.get(w.subject)}|${w.kind}|${w.key}|${w.subject}`));
       const gone = items.filter((i) => i.active && !want.has(`${i.filingId}|${i.kind}|${i.itemKey}|${i.subjectId}`)).map((i) => i.id);
       const back = items.filter((i) => !i.active && want.has(`${i.filingId}|${i.kind}|${i.itemKey}|${i.subjectId}`)).map((i) => i.id);
       if (gone.length) await tx.filingItem.updateMany({ where: { id: { in: gone } }, data: { active: false } });
       if (back.length) await tx.filingItem.updateMany({ where: { id: { in: back } }, data: { active: true } });
-      if (gone.length || back.length) items = await tx.filingItem.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+      if (gone.length || back.length) items = await tx.filingItem.findMany({ where: { caseId: c.id, filing: { stageId: c.stage.id } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
       return { groups, filings, items: items.filter((i) => i.active) };
     };
     const ready = await sync(this.db, false);
     if (!ready && noWrite) return null;
     const stored = ready ?? await busyWords(() => this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
+      // C6.17 (BR-10, challenge M4): the stage read again under the lock; a case that moved to its next stage meanwhile
+      // writes nothing for the ended one.
+      if ((await tx.case.findUnique({ where: { id: c.id }, select: { combinationId: true } }))?.combinationId !== c.combinationId) stageMoved();
       return (await sync(tx, true))!;
     }, { timeout: 15_000, maxWait: 10_000 }));
 
@@ -560,7 +564,7 @@ export class CasePrepare {
     // says so on its item (to fill again, or filed another way now), until the officer makes a copy on this release.
     if (prev) {
       const newest = new Map<string, { id: string; configReleaseId: string }>();
-      for (const x of await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED" }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { id: true, formNumber: true, subjectId: true, configReleaseId: true } }))
+      for (const x of await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED", configReleaseId: { in: c.pins.map((p) => p.configReleaseId) } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { id: true, formNumber: true, subjectId: true, configReleaseId: true } }))
         if (!newest.has(`${x.formNumber}|${x.subjectId}`)) newest.set(`${x.formNumber}|${x.subjectId}`, x);
       for (const i of items) {
         if (i.kind !== "form" || !("form" in i) || !i.form || i.state === "out_of_date") continue;
@@ -601,7 +605,7 @@ export class CasePrepare {
     // an older one for filing. It counts only while it holds today's facts (its fingerprint equals the form's facts now,
     // as the copy view reads it): a copy made before the answers, or before a fact changed, is "older than today's facts".
     // One read of each copy's flag, channel and fingerprint; never the copies' whole results.
-    const copyRows = await this.db.$queryRaw<{ id: string; form_number: string; subject_id: string; not_for_filing: boolean | null; channel: string | null; input_hash: string; groups: GroupFact[] | null }[]>`SELECT f.id, f.form_number, f.subject_id, (f.result_json->>'not_for_filing')::boolean AS not_for_filing, s.facts_json->>'channel' AS channel, s.input_hash, s.facts_json->'groups' AS groups FROM form_instance f JOIN answer_snapshot s ON s.id = f.snapshot_id WHERE f.case_id = ${c.id}::uuid AND f.status = 'GENERATED' ORDER BY f.created_at DESC, f.id ASC`;
+    const copyRows = await this.db.$queryRaw<{ id: string; form_number: string; subject_id: string; not_for_filing: boolean | null; channel: string | null; input_hash: string; groups: GroupFact[] | null }[]>`SELECT f.id, f.form_number, f.subject_id, (f.result_json->>'not_for_filing')::boolean AS not_for_filing, s.facts_json->>'channel' AS channel, s.input_hash, s.facts_json->'groups' AS groups FROM form_instance f JOIN answer_snapshot s ON s.id = f.snapshot_id WHERE f.case_id = ${c.id}::uuid AND f.status = 'GENERATED' AND f.config_release_id = ANY(${c.pins.map((p) => p.configReleaseId)}::uuid[]) ORDER BY f.created_at DESC, f.id ASC`; // C6.17 (BR-7, breaker M2): the current stage's releases only
     const forFiling = new Map<string, { id: string; hash: string; groups: GroupFact[] | null }>();
     for (const x of copyRows) {
       const k = `${x.form_number}|${x.subject_id}`;
@@ -697,7 +701,7 @@ export class CasePrepare {
       const principalSubject = c.participants.find((p) => p.role === "principal")?.subjectId;
       if (members.some((x) => x.mode === "co_filed") && (f.mode === "co_filed" || f.subjectId === principalSubject)) return "co_filed" as const;
       if (members.length < 2) return "alone" as const;
-      const own = await tx.submissionGroup.create({ data: { workspaceId: c.workspaceId, caseId: c.id, kind: "SEPARATE", reason: b.reason!, createdBy: actor.id } });
+      const own = await tx.submissionGroup.create({ data: { workspaceId: c.workspaceId, caseId: c.id, stageId: c.stage.id, kind: "SEPARATE", reason: b.reason!, createdBy: actor.id } });
       await tx.filing.update({ where: { id: f.id }, data: { submissionGroupId: own.id } });
       return f;
     });
@@ -909,10 +913,12 @@ type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
 /** The view's version from the stored rows (the groups holding a current filing, and the current items), so a write
  *  checks it under the case's row lock exactly as the view computed it. */
 export async function storedVersion(tx: Tx | Db, caseId: string) {
+  // C6.17 (BR-9): the pin of the case's current stage (its combination); filings and items of the current stage.
+  const combinationId = (await tx.case.findUnique({ where: { id: caseId }, select: { combinationId: true } }))?.combinationId;
   const [filings, items, pin] = await Promise.all([
-    tx.filing.findMany({ where: { caseId, active: true }, select: { id: true, submissionGroupId: true } }),
-    tx.filingItem.findMany({ where: { caseId, active: true }, select: { id: true, channel: true, version: true } }),
-    tx.packWorkPin.findFirst({ where: { caseId }, orderBy: { revision: "desc" }, select: { revision: true } }),
+    tx.filing.findMany({ where: { caseId, active: true, stage: { state: "CURRENT" } }, select: { id: true, submissionGroupId: true } }),
+    tx.filingItem.findMany({ where: { caseId, active: true, filing: { stage: { state: "CURRENT" } } }, select: { id: true, channel: true, version: true } }),
+    tx.packWorkPin.findFirst({ where: { caseId, combinationId }, orderBy: { revision: "desc" }, select: { revision: true } }),
   ]);
   return withRevision(versionOf(filings, items), pin?.revision ?? 1);
 }

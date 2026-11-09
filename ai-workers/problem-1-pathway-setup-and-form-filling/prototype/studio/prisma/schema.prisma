@@ -201,6 +201,7 @@ model Combination {
   releases     ConfigRelease[]
   jobs         DraftingJob[]
   cases        Case[] // runtime lane (R1)
+  caseStages   CaseStage[] // C6.17
   answerKeys   AnswerKey[] // G4 (C5.7)
 
   @@unique([workspaceId, combinationKey])
@@ -1300,6 +1301,7 @@ model Case {
   documentReviews DocumentReview[] // C6.5
   readValues      ReadValue[]      // C6.5
   answerChecks    AnswerCheck[]    // C6.5
+  stages          CaseStage[] // C6.17
   formAdditions   FilingFormAddition[] // C7.8
   reviewRounds      ReviewRound[]       // C8.3
   reviewRoundRows   ReviewRoundFiling[] // C8.3
@@ -1391,6 +1393,75 @@ model PackWorkPin {
   @@map("pack_work_pin")
 }
 
+/// C6.17 (B139; concept BR-2; founder P-412 F13 (a)): a route, an ordered list of existing combinations kept as data, with
+/// no new tree level. stages: [{key, staff_name, client_name, combination_key, key_details[{field, label, type,
+/// same_every_stage?}], next, deadline?{label, from, add_days, ...}, same_documents?}]; loaded only with 2+ stages, every
+/// combination present and used once (engine/runtime/stages.ts routeProblems). Sample until the immigration expert
+/// gives real routes (scaffolding: samples/routes.json).
+model Route {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  key         String
+  label       String
+  /// SAMPLE · CITED
+  basis       String   @default("SAMPLE")
+  stages      Json
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([workspaceId, key])
+  @@map("route")
+}
+
+/// C6.17 (B139; concept §2, BR-1..BR-10): one stage of a case, frozen from its route at opening (a case on no route has
+/// one stage). state DONE_BEFORE (made before the firm took the case; key details only) · NOT_RECORDED (an earlier stage
+/// left unticked) · CURRENT (one per case, partial unique case_stage_one_current; its combination is the case's, a
+/// deferred trigger) · ENDED_NEXT_STARTED · NOT_STARTED; forward only (trigger). A worked stage has its own application
+/// subject (challenge B3). key_details: {field: {value, by, at}} on the stage record (SA-1B-212 §7; P-412 F13 (c)).
+model CaseStage {
+  id                   String    @id @default(uuid()) @db.Uuid
+  workspaceId          String    @map("workspace_id") @db.Uuid
+  caseId               String    @map("case_id") @db.Uuid
+  firmKey              String    @map("firm_key")
+  ord                  Int
+  stageKey             String    @map("stage_key")
+  staffName            String    @map("staff_name")
+  clientName           String    @map("client_name")
+  combinationId        String    @map("combination_id") @db.Uuid
+  applicationSubjectId String?   @unique @map("application_subject_id") @db.Uuid
+  state                String
+  startedFrom          String?   @map("started_from")
+  keyDetails           Json      @default("{}") @map("key_details")
+  /// The stage as frozen from its route at opening: {key_details[], deadline?, same_documents[]} (Sample data).
+  spec                 Json      @default("{}")
+  routeKey             String?   @map("route_key")
+  /// The stage version a "Start next stage" request names (409 when it moved).
+  version              Int       @default(1)
+  startedBy            String?   @map("started_by")
+  startedAt            DateTime? @map("started_at") @db.Timestamptz
+  endedBy              String?   @map("ended_by")
+  endedAt              DateTime? @map("ended_at") @db.Timestamptz
+  recordedBy           String?   @map("recorded_by")
+  recordedAt           DateTime? @map("recorded_at") @db.Timestamptz
+  /// Why the next stage was started while a filing had no record (P-237); never in an audit line.
+  reason               String?
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  case        Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  combination Combination       @relation(fields: [combinationId], references: [id], onDelete: Restrict)
+  application AnswerSubject?    @relation(fields: [applicationSubjectId], references: [id], onDelete: NoAction)
+  filings     Filing[]
+  groups      SubmissionGroup[]
+  lines       ChecklistLine[]
+  findings    ReviewFinding[]
+  tasks       CaseTask[]
+
+  @@unique([caseId, ord])
+  @@unique([caseId, combinationId])
+  @@index([workspaceId, caseId])
+  @@map("case_stage")
+}
+
 /// A person (team Party; per workspace here, per firm there).
 model Party {
   id          String   @id @default(uuid()) @db.Uuid
@@ -1453,6 +1524,8 @@ model AnswerSubject {
   groupAnswers ClientGroupAnswer[]
   checklistLines ChecklistLine[]
   documents    CaseDocument[]
+  /// C6.17 (B3): the stage whose application this subject is (one application subject per worked stage).
+  stage          CaseStage?
   personLinks  PersonLink[] // C6.16
 
   @@map("answer_subject")
@@ -1640,7 +1713,6 @@ model ValidatedCopy {
   @@map("validated_copy")
 }
 
-
 // ─── F2 browser extension (forms lane, P-90; plan §4) ────────────────────────────────────────────────────────────
 
 /// A one-time pairing code shown in the signed-in Studio (Lead decision Q1). Only its sha256 is kept; one use, 5 min (Sample).
@@ -1772,11 +1844,16 @@ model SubmissionGroup {
   /// of birth or a fee-table change later never changes what was filed. Null until recorded.
   recordedFees Json?   @map("recorded_fees")
 
+  /// C6.17: the stage the group belongs to (one FAMILY group per case and stage: submission_group_one_family, in SQL).
+  stageId String @map("stage_id") @db.Uuid
+
   case    Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  stage   CaseStage      @relation(fields: [stageId], references: [id], onDelete: NoAction)
   filings Filing[]
   records FilingRecord[] // C8.2
 
   @@index([caseId])
+  @@index([stageId])
   @@map("submission_group")
 }
 
@@ -1801,7 +1878,10 @@ model Filing {
   corrections       FilingRecordCorrection[]
   tasks             CaseTask[]
 
+  /// C6.17: the stage (one combination's application) this filing belongs to.
+  stageId    String            @map("stage_id") @db.Uuid
   case       Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  stage      CaseStage         @relation(fields: [stageId], references: [id], onDelete: NoAction)
   group      SubmissionGroup   @relation(fields: [submissionGroupId], references: [id], onDelete: Restrict)
   applicants FilingApplicant[]
   items      FilingItem[]
@@ -1812,7 +1892,8 @@ model Filing {
   reviewRounds ReviewRoundFiling[] // C8.3
   reviewForms  ReviewRoundForm[]   // C8.3
 
-  @@unique([caseId, subjectId])
+  @@unique([caseId, stageId, subjectId])
+  @@index([stageId])
   @@map("filing")
 }
 
@@ -1906,11 +1987,15 @@ model ChecklistLine {
   version      Int       @default(1)
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
+  /// C6.17: the stage whose checklist this line is (a new stage's lines start fresh, BR-6).
+  stageId   String         @map("stage_id") @db.Uuid
   case      Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  stage     CaseStage      @relation(fields: [stageId], references: [id], onDelete: NoAction)
   subject   AnswerSubject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   documents CaseDocument[]
 
-  @@unique([caseId, subjectId, documentType])
+  @@unique([caseId, stageId, subjectId, documentType])
+  @@index([stageId])
   @@map("checklist_line")
 }
 
@@ -2142,7 +2227,6 @@ model SourceEntry {
   @@map("source_entry")
 }
 
-
 /// C8.1 (M3-F; M3-CONTRACT C8.1): one step done on a form item signed by hand and scanned (print · signed · scan_received
 /// · uploaded_to_ircc), with who and when; "print" names the generated copy printed. One current row per item and step
 /// (partial unique index in the migration); superseded_at is for C9.2 (steps re-opened after a fact changes).
@@ -2292,11 +2376,16 @@ model CaseTask {
   doneBy      String?   @map("done_by")
   doneAt      DateTime? @map("done_at") @db.Timestamptz
 
+  /// C6.17 (challenge M3): the stage current when the task was made.
+  stageId String @map("stage_id") @db.Uuid
+
   case   Case        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  stage  CaseStage   @relation(fields: [stageId], references: [id], onDelete: NoAction)
   filing Filing?     @relation(fields: [filingId], references: [id], onDelete: Cascade)
   item   FilingItem? @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@index([caseId])
+  @@index([stageId])
   @@map("case_task")
 }
 
@@ -2333,11 +2422,16 @@ model ReviewFinding {
   createdBy   String    @map("created_by")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
+  /// C6.17 (challenge M3): the stage current when the finding was made.
+  stageId String @map("stage_id") @db.Uuid
+
   case   Case    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  stage  CaseStage @relation(fields: [stageId], references: [id], onDelete: NoAction)
   filing Filing? @relation(fields: [filingId], references: [id], onDelete: SetNull)
 
   @@unique([caseId, idempotencyKey])
   @@index([caseId])
+  @@index([stageId])
   @@map("review_finding")
 }
 
