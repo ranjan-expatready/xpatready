@@ -57,7 +57,7 @@ const ok = (n: string, c: boolean, d?: unknown) => { c ? pass++ : fail++; consol
   const cmp = page.locator("[data-change-providers]");
   await cmp.waitFor({ timeout: 30_000 });
   await page.screenshot({ path: join(OUT, "04-second-person-compares.png") });
-  ok("C6.14 walk 3: the second person reads before (not set) → after (Principal applicant, then Spouse or partner)", /Not set/.test(await cmp.locator("[data-providers-before]").innerText()) && (await cmp.locator("[data-providers-after]").innerText()) === "Principal applicant, then Spouse or partner");
+  ok("C6.14 walk 3: the second person reads before (not set) → after (Principal applicant, then Spouse or partner), under a heading in words (no raw action key)", !/SET_PROVIDERS/.test(await page.locator("h1").first().innerText()) && /Not set/.test(await cmp.locator("[data-providers-before]").innerText()) && (await cmp.locator("[data-providers-after]").innerText()) === "Principal applicant, then Spouse or partner");
   await page.getByRole("button", { name: /^Approve/ }).first().click();
   await page.waitForURL(/\/review$/, { timeout: 30_000 });
   await page.screenshot({ path: join(OUT, "05-second-person-approved.png") });

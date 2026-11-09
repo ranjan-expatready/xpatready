@@ -67,7 +67,7 @@ await main("C6.14", "One document for the whole application: one item, default p
   ok("C6.14-6 pass (BR-1): the author proposes \"Principal applicant, then Spouse or partner\" for the marriage certificate; it waits for a second person",
     r.status < 300 && sql(`select status from library_change where id = '${id}'`) === "WAITING" && sql(`select array_to_string(default_provider_roles, ',') from document_type where document_type_key = '${MARRIAGE}' order by version desc limit 1`) === "", r.status >= 300 ? words(r) : r.body?.label);
   const seen = (await call("GET", `/library/changes/${id}`, undefined, APPROVER)).body;
-  ok("C6.14-7 pass: the second person reads before → after in words, under a heading in words", seen?.providers?.after?.join("|") === "Principal applicant|Spouse or partner" && (seen?.providers?.before ?? []).length === 0 && seen?.kind_word === "who provides a shared document", { providers: seen?.providers, kind: seen?.kind_word });
+  ok("C6.14-7 pass: the second person reads before → after in words, under a heading in words", seen?.providers?.after?.join("|") === "Principal applicant|Spouse or partner" && (seen?.providers?.before ?? []).length === 0 && seen?.kind_word === "who provides a shared document" && seen?.action_word === "Change", { providers: seen?.providers, kind: seen?.kind_word, action: seen?.action_word });
   r = await call("POST", `/library/changes/${id}/approve`, { note: "C6.14 pack: the proposer approves." }, AUTHOR);
   ok("C6.14-8 fail (P-253): the proposer cannot approve their own change", r.status === 403, r.status);
   r = await call("POST", `/library/changes/${id}/approve`, { note: "C6.14 pack: second person." }, APPROVER);
@@ -125,6 +125,11 @@ await main("C6.14", "One document for the whole application: one item, default p
   ok("C6.14-23 fail (BR-6): the client cannot change providers (403 or 404)", [403, 404].includes(r.status), r.status);
   r = await change({ providers: [P], reason: "Stale.", version: (item?.version ?? 0) + 5 });
   ok("C6.14-24 fail (BR-6): a stale version is refused (409)", r.status === 409, r.status);
+  // A line still waiting for an answer (marital status not answered yet) has no stored row: nothing to change (404).
+  const W = await openCase(vv, FAMILY.slice(0, 2));
+  const waitingLine = ((await list(W.id, W.officer))?.people ?? []).flatMap((p) => p.waiting).find((x) => x.document.key === MARRIAGE);
+  const wr = waitingLine ? await call("POST", `/runtime/checklist-lines/${waitingLine.id}/providers`, { providers: [W.subjects["Sample Client A"]], reason: "Before the answer." }, W.officer) : { status: 0, body: "no waiting marriage line" };
+  ok("C6.14-24b fail (BR-6, review minor 2): a line still waiting for an answer has no providers to change (404 in words)", wr.status === 404 && /No such checklist line/.test(words(wr)), [wr.status, words(wr)]);
   const passLine = linesOf(await list(B.id, B.officer), PASSPORT)[0];
   r = passLine ? await change({ providers: [P], reason: "Per person." }, B.officer, passLine.id) : { status: 0, body: "no passport line" };
   ok("C6.14-25 fail (BR-2, BR-6): a per-person line has no providers to change (422)", r.status === 422 && /asked of each person/.test(words(r)), words(r));

@@ -25,10 +25,16 @@ export function ProvidersSection({ typeKey, typeName, who, canAuthor }: { typeKe
   const [msg, setMsg] = React.useState<{ tone: "ok" | "danger"; text: string } | null>(null);
   const [busy, setBusy] = React.useState(false);
   const said = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => { if (msg) said.current?.scrollIntoView({ block: "nearest" }); if (msg?.tone === "danger") said.current?.focus(); }, [msg]);
+  const editor = React.useRef<HTMLDivElement>(null);
+  const [moved, setMoved] = React.useState<string | null>(null);
+  // Review minors: the answer is seen and focused (the Change button it came from is disabled now); after Up or Down,
+  // focus stays on the moved role's buttons, never on one that just became disabled.
+  React.useEffect(() => { if (msg) { said.current?.scrollIntoView({ block: "nearest" }); said.current?.focus(); } }, [msg]);
+  React.useEffect(() => { if (moved) editor.current?.querySelector<HTMLButtonElement>(`[data-providers-editor-role="${moved}"] button:not([disabled])`)?.focus(); }, [moved, edit]);
+  const reasonError = msg?.tone === "danger" && /reason|Say why/i.test(msg.text) ? msg.text : null;
   const v = q.data;
   const label = (k: string) => v?.choices.find((c) => c.key === k)?.label ?? k;
-  const move = (i: number, d: -1 | 1) => setEdit((e) => { const x = [...e!]; [x[i], x[i + d]] = [x[i + d], x[i]]; return x; });
+  const move = (i: number, d: -1 | 1) => { setMoved(edit![i]); setEdit((e) => { const x = [...e!]; [x[i], x[i + d]] = [x[i + d], x[i]]; return x; }); };
   const send = async () => {
     setBusy(true); setMsg(null);
     try {
@@ -48,7 +54,7 @@ export function ProvidersSection({ typeKey, typeName, who, canAuthor }: { typeKe
         <p className="text-xs text-text-muted">{v.help} For every combination that names {typeName} (used by {v.uses}). Sample until the immigration expert confirms.</p>
         {canAuthor && !edit ? <Button size="sm" variant="secondary" disabled={!!v.open} onClick={() => { setEdit(v.roles.map((r) => r.key)); setReason(""); setMsg(null); }} data-providers-edit>{v.roles.length ? "Change who provides it…" : "Set who provides it…"}</Button> : null}
         {canAuthor && edit ? (
-          <div className="space-y-2 rounded border border-border p-3" data-providers-editor>
+          <div ref={editor} className="space-y-2 rounded border border-border p-3" data-providers-editor>
             {edit.length ? <ol className="space-y-1">{edit.map((k, i) => (
               <li key={k} className="flex flex-wrap items-center gap-2" data-providers-editor-role={k}><span className="w-5 text-right text-xs text-text-muted">{i + 1}.</span><span className="min-w-40">{label(k)}</span>
                 <Button size="sm" variant="ghost" disabled={i === 0} aria-label={`Move ${label(k)} up`} onClick={() => move(i, -1)}>Up</Button>
@@ -61,8 +67,10 @@ export function ProvidersSection({ typeKey, typeName, who, canAuthor }: { typeKe
               </label>
               <Button size="sm" variant="secondary" disabled={!add} onClick={() => { setEdit((e) => [...e!, add]); setAdd(""); }} data-providers-add>Add</Button></div> : null}
             <label className="block text-xs">Why it changes, for every combination
-              <Textarea aria-label="Why who provides it changes" value={reason} onChange={(e) => setReason(e.target.value)} rows={2} className="mt-1" data-providers-why />
+              <Textarea aria-label="Why who provides it changes" value={reason} onChange={(e) => setReason(e.target.value)} rows={2} className="mt-1" data-providers-why
+                aria-invalid={reasonError ? true : undefined} aria-describedby={reasonError ? "providers-why-error" : undefined} />
             </label>
+            {reasonError ? <p id="providers-why-error" className="text-xs text-text-danger" data-providers-why-error>{reasonError}</p> : null}
             <div className="flex gap-2">
               <Button size="sm" disabled={busy} onClick={() => void send()} data-providers-send>Send for a second person</Button>
               <Button size="sm" variant="ghost" onClick={() => { setEdit(null); setMsg(null); }}>Cancel</Button>

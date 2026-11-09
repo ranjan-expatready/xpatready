@@ -412,8 +412,6 @@ export function FormFieldsPage() {
   );
 }
 
-/** C6.15 (row B137): what the second person compares before approving a document type's substitute sets: before → after,
- *  each set with its members in order, the standard first and each alternative's "when acceptable" words. */
 /** C6.14 (B136): who provides a shared document, before → after, in the type's order (api/src/document-providers.ts providersView). */
 type ProvidersChange = { document: string; uses: number; reason: string; before: string[]; after: string[] };
 function ProvidersCompare({ v }: { v: ProvidersChange }) {
@@ -426,6 +424,8 @@ function ProvidersCompare({ v }: { v: ProvidersChange }) {
     </div>
   );
 }
+/** C6.15 (row B137): what the second person compares before approving a document type's substitute sets: before → after,
+ *  each set with its members in order, the standard first and each alternative's "when acceptable" words. */
 type SetsChange = { document: string; uses: number; reason: string; before: SetRow[]; after: SetRow[] };
 type SetRow = { name: string; mode_words: string; members: { key: string; name: string; standard: boolean; when_client: string | null; when_staff: string | null }[] };
 function SetsCompare({ v }: { v: SetsChange }) {
