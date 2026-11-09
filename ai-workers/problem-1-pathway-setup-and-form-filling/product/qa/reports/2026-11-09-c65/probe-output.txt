@@ -1,0 +1,19 @@
+# Underneath, copy qa_c65 :4475, Client A 307a2676-…, after the walk (~18:30 IST). psql output verbatim; the browser outputs below are verbatim too, with the lines that introduce them added by qa.
+
+## client_canonical_answer person.family_name, by effective_at (status|value|source_json|effective_at)
+DECLARED|SAMPLEDE|{"at": "2026-11-09T12:53:51.282Z", "actor": "user-P", "channel": "questionnaire"}|2026-11-09 18:23:51.32+05:30
+VERIFIED|SAMPLED|{"at": "2026-11-09T12:58:22.294Z", "from": "c82ca092-9d21-4aa8-ab57-5ffaec8c2e0a", "page": 1, "actor": "user-O", "check": "cba41016-ff2b-45ca-9b08-7f9a95b33ac0", "reader": "mrz", "channel": "document_read", "document": "8560f02f-c6ab-4744-88c4-a53aac734892", "read_value": "b967baa4-fcc2-4747-b04d-bd41d263692e"}|2026-11-09 18:28:22.314+05:30
+
+## answer_check (state|kept|reason|resolved_by)
+resolved|document|Client confirmed a typing slip; the passport spelling is right (Sample, qa walk)|user-O
+
+## ai_batch rows (no model call)
+7
+after the walk: 0 after setup; modes: REPLAY; started 2026-11-09 18:20:58.358+05:30 to 2026-11-09 18:21:04.678+05:30 (the setup finished 18:22:03 IST; rows are the configured checkpoint's own)
+
+## Browser pane, as Client A, part 18, while the check was open (~18:27 IST): a script run in the page read the family-name input
+{"url":"?part=18","value":"SAMPLEDE","describedby":"f-307a2676062640bab3ef57846852b3f9personfamilyname-note","note":"Please check this answer. It did not match the passport information page copy on file. If it is wrong, change it here. Your case officer settles any difference with you.","docValueShown":false}
+(docValueShown: whether the page's whole text, with every "SAMPLEDE" removed first, still contains "SAMPLED".)
+
+## The same, after the officer resolved the check (~18:29 IST)
+{"actor":"Client A · Client","value":"SAMPLED","describedby":null,"please":[]}
