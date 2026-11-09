@@ -2,7 +2,7 @@
 // withAdditions gives one line per added form, for that person only (never a role), with its frozen map; the release's
 // fingerprint is untouched; kindOf (F1), refusalOf (BR-2, F3) and the hand_filled_copy line (F2) say what the concept says.
 //   tsx studio/tests/runtime/check_c78_added_forms.ts
-import { additionsOf, frozenHash, kindOf, refusalOf, stableJson, withAdditions, type Addition, type Frozen } from "../../engine/runtime/added-forms.ts";
+import { additionsOf, additionsOfStage, frozenHash, kindOf, refusalOf, stableJson, withAdditions, type Addition, type Frozen } from "../../engine/runtime/added-forms.ts";
 import { subjectsFor } from "../../engine/resolver.ts";
 import { filingReadiness, type FormItem } from "../../engine/runtime/readiness.ts";
 import { snapshotHash, type Snapshot } from "../../engine/snapshot.ts";
@@ -42,6 +42,18 @@ ok("C7.8 unit fail (BR-2, M5): already added 409; a guide 422; a blank barcode f
 const row = (x: Record<string, unknown>) => ({ id: "a1", filingId: "F1", subjectId: "P1", formKey: "IMM 9999", kind: "fills", frozen: JSON.parse(stableJson(frozen)), frozenSha256: frozenHash(frozen), channel: "PDF_UPLOAD", signature: "HAND_SCANNED", signedBy: null, addedBy: "user-O", addedAt: new Date(), reason: null, removedAt: null, ...x });
 ok("C7.8 unit pass: a stored row is read whatever order its keys come back in (jsonb sorts them)", additionsOf([row({})]).length === 1);
 ok("C7.8 unit fail: a removed row, or one whose frozen form no longer matches its fingerprint, is never joined", additionsOf([row({ removedAt: new Date() }), row({ frozen: { ...frozen, title: "changed" } })]).length === 0);
+// C6.17 × C7.8 (review of #1262 m1): a copy joins only the additions of its own stage (the stage of its release's combination).
+{
+  const f2 = { ...frozen, edition: "Sample edition 2" };
+  const s1 = { ...row({ id: "s1", filingId: "F1", addedAt: new Date("2026-11-01T00:00:00Z") }), filing: { stage: { combinationId: "C1" } } };
+  const s2 = { ...row({ id: "s2", filingId: "F2", frozen: JSON.parse(stableJson(f2)), frozenSha256: frozenHash(f2), addedAt: new Date("2026-11-02T00:00:00Z") }), filing: { stage: { combinationId: "C2" } } };
+  const lineOf = (rows: typeof s1[], comb: string) => (withAdditions(base as unknown as Snapshot, additionsOf(additionsOfStage(rows, comb))).forms as { form_number: string; added?: { id: string; edition: string }[] }[]).find((l) => l.form_number === "IMM 9999");
+  const two = lineOf([s1, s2], "C2"), one = lineOf([s1, s2], "C1");
+  ok("C6.17 × C7.8 unit pass: a copy of the next stage's release joins that stage's addition only (its own frozen edition)", two?.added?.length === 1 && two.added[0].id === "s2" && two.added[0].edition === "Sample edition 2", two?.added);
+  ok("C6.17 × C7.8 unit fail: a copy of the ended stage's release (queued before Start next stage) never joins the next stage's addition", one?.added?.length === 1 && one.added[0].id === "s1", one?.added);
+  const all = (withAdditions(base as unknown as Snapshot, additionsOf([s1, s2])).forms as { form_number: string; added?: { id: string }[] }[]).find((l) => l.form_number === "IMM 9999");
+  ok("C6.17 × C7.8 unit fail: with no filter the next stage's line would be stage 1's addition (the oldest), so the filter is needed", all?.added?.[0].id === "s1", all?.added?.map((x) => x.id));
+}
 
 const blankItem: FormItem = { item: "i1", form: "IMM 9999", subject: "P1", person: "Client A", channel: "PDF_UPLOAD", readiness: { ready: false, missing: [{ fact: "x", label: "X", about: "Client A", reason: "not answered" }] } as never, needsValidate: false, validatedCurrent: false, signature: "HAND_SCANNED", signed: false, copy: { state: "none", key: "r" }, blank: { completed: false, key: "a1" } };
 const r1 = filingReadiness({ filing: "F1", forms: [blankItem], reviewed: true, today: "2026-11-09" });

@@ -546,6 +546,7 @@ export class Demo implements OnModuleInit {
     await this.db.$transaction(async (tx) => {
       // Children first; every table is scoped to the demo workspace id.
       await tx.case.deleteMany({ where: ws }); await tx.party.deleteMany({ where: ws }); // runtime lane (R1): cases (with their pins and participants), then people with their answers and rows
+      await tx.route.deleteMany({ where: ws }); // C6.17: the Sample routes (no foreign key to the workspace); a case's stages went with its case
       await tx.proposalItem.deleteMany({ where: ws }); await tx.draftingJob.deleteMany({ where: ws }); await tx.aiBatch.deleteMany({ where: ws });
       await tx.testFamily.deleteMany({ where: ws }); // G4 (forms lane): test families; their keys and runs go with them
       await tx.reviewSignoff.deleteMany({ where: ws }); await tx.reviewSubmission.deleteMany({ where: ws }); await tx.configRelease.deleteMany({ where: ws }); await tx.packVersion.deleteMany({ where: ws });

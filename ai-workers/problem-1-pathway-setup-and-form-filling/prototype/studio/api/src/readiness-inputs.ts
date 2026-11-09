@@ -107,8 +107,8 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(Read
   // C6.5 (BR-7; C7.6 P-238): an open typed-versus-document check on a person of the filing is a CRITICAL warning.
   const openChecks = await db.answerCheck.findMany({ where: { caseId: x.caseId, state: "open" }, orderBy: [{ openedAt: "asc" }, { id: "asc" }], select: { subjectId: true, fact: true } });
   // Break M4: a check on the application's own facts (a letter's visit contact) warns on every filing of the case.
-  const caseSubject = openChecks.length ? (await db.caseParticipant.findFirst({ where: { caseId: x.caseId, role: "case" }, select: { subjectId: true } }))?.subjectId ?? null : null;
-  const lines = x.documents.length ? await db.checklistLine.findMany({ where: { caseId: x.caseId }, select: { subjectId: true, documentType: true, state: true } }) : [];
+  const caseSubject = openChecks.length ? (await db.caseParticipant.findFirst({ where: { caseId: x.caseId, role: "case", subject: { stage: { state: "CURRENT" } } }, select: { subjectId: true } }))?.subjectId ?? null : null;
+  const lines = x.documents.length ? await db.checklistLine.findMany({ where: { caseId: x.caseId, stage: { state: "CURRENT" } }, select: { subjectId: true, documentType: true, state: true } }) : [];
   // P-151 (1): the newest accepted-until row of each edition the case's forms are filed on.
   const labels = [...new Set(x.forms.map((f) => x.editionOf(f.form, f.channel)).filter((l): l is string => !!l))];
   const editions = labels.length ? await db.formEdition.findMany({ where: { workspaceId: x.workspaceId, editionLabel: { in: labels } }, select: { id: true, editionLabel: true, acceptedUntil: { orderBy: [{ setAt: "desc" }, { id: "desc" }], take: 1 } } }) : [];
