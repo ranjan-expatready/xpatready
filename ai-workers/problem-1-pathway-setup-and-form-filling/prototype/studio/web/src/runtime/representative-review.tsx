@@ -7,7 +7,7 @@
 // keeps the facts hashes it loaded and sends them; a change meanwhile is a 409 with Reload, nothing stamped (M4). The
 // server works everything out (api/src/review-rounds.ts); nothing is decided here. Legal points: Unconfirmed: no counsel.
 import * as React from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, RotateCcw } from "lucide-react";
 import { api, ApiError, useActorId, useApi, useToast } from "@/lib/api";
@@ -63,16 +63,21 @@ export function RepresentativeReviewPage() {
   const key = ["runtime", "review", round];
   const q = useApi<ReviewRound>(key, `/runtime/reviews/${round}`, { retry: noRetryOnRefusal });
   const v = q.data;
-  const [filing, setFiling] = React.useState<string | null>(null), [item, setItem] = React.useState<string | null>(null);
+  // Review m7: "Open the review" on a filing names it (?filing=), so its own row is selected.
+  const [search] = useSearchParams();
+  const [filing, setFiling] = React.useState<string | null>(search.get("filing")), [item, setItem] = React.useState<string | null>(null);
   // M4: the facts hashes the page loaded, kept until the person presses Reload (never the live values of a refetch).
   const [loaded, setLoaded] = React.useState<Record<string, Record<string, string>> | null>(null);
   const [conflict, setConflict] = React.useState<string | null>(null);
   const [onlyChanged, setOnlyChanged] = React.useState(true);
-  const [dialog, setDialog] = React.useState<"approve" | "back" | null>(null);
+  const [dialog, setDialog] = React.useState<"approve" | "back" | "reapprove" | null>(null);
   const heading = React.useRef<HTMLHeadingElement>(null);
+  // Break m5: closing a dialog (Escape, Cancel, Go back) gives the focus back to the button that opened it.
+  const approveBtn = React.useRef<HTMLButtonElement>(null), backBtn = React.useRef<HTMLButtonElement>(null), reBtn = React.useRef<HTMLButtonElement>(null);
+  const closeDialog = () => { const was = dialog; setDialog(null); setTimeout(() => focusLater(() => (was === "back" ? backBtn : was === "reapprove" ? reBtn : approveBtn).current), 0); };
   const capture = (r: ReviewRound) => setLoaded(Object.fromEntries(r.filings.map((f) => [f.filing, Object.fromEntries(f.forms.map((x) => [x.item, x.live_hash ?? "waits"]))])));
   React.useEffect(() => { if (v && !loaded) capture(v); }, [v, loaded]);
-  React.useEffect(() => { setLoaded(null); setFiling(null); setItem(null); setConflict(null); }, [round, actor]);
+  React.useEffect(() => { setLoaded(null); setFiling(search.get("filing")); setItem(null); setConflict(null); }, [round, actor]); // eslint-disable-line react-hooks/exhaustive-deps
   const row = v?.filings.find((f) => f.filing === filing) ?? v?.filings[0] ?? null;
   const form = row?.forms.find((x) => x.item === item) ?? row?.forms.find((x) => x.state === "changed_since_review" || x.state === "approval_withdrawn") ?? row?.forms[0] ?? null;
   const refresh = () => qc.invalidateQueries({ queryKey: key });
@@ -86,19 +91,28 @@ export function RepresentativeReviewPage() {
     void api(`/runtime/reviews/${v.id}/open`, { method: "POST", json: { filing: row.filing } }).then(() => refresh()).catch(() => undefined);
   }, [v?.id, v?.can_decide, row?.filing, row?.status]); // eslint-disable-line react-hooks/exhaustive-deps
   const refused = (e: unknown) => { const a = e instanceof ApiError ? e : null; if (a?.status === 409 || a?.status === 403) { setConflict(a.message); setDialog(null); focusLater(() => heading.current); return true; } return false; };
-  async function tick(k: string, ticked: boolean) {
-    if (!v || !row) return;
-    try { await api(`/runtime/reviews/${v.id}/checks`, { method: "POST", json: { filing: row.filing, item: k, ticked } }); await refresh(); }
+  // Break M2: a box ticks the item of the filing it sits under, never the selected one.
+  async function tick(filingId: string, k: string, ticked: boolean) {
+    if (!v) return;
+    try { await api(`/runtime/reviews/${v.id}/checks`, { method: "POST", json: { filing: filingId, item: k, ticked } }); await refresh(); }
     catch (e) { if (!refused(e)) toast.push({ tone: "danger", text: (e as Error).message }); }
   }
-  async function reapprove(self?: boolean) {
-    if (!v || !row) return;
+  /** P-412 one click; review M1: on a solo firm (or when the server asks for it) the self-review statement first. */
+  async function reapprove(self?: boolean): Promise<string | null> {
+    if (!v || !row) return null;
     try {
       const r = await api<{ words: string; round: { id: string } }>(`/runtime/reviews/${v.id}/reapprove`, { method: "POST", json: { filing: row.filing, form_hashes: loaded?.[row.filing] ?? {}, ...(self ? { self: true } : {}) } });
       toast.push({ tone: "ok", text: `Re-approved: ${r.words}` });
+      setDialog(null);
       await qc.invalidateQueries({ queryKey: ["runtime"] });
-      nav(`/cases/${id}/representative-review/${r.round.id}`);
-    } catch (e) { if (!refused(e)) toast.push({ tone: "danger", text: (e as Error).message }); }
+      nav(`/cases/${id}/representative-review/${r.round.id}?filing=${row.filing}`);
+      return null;
+    } catch (e) {
+      const a = e instanceof ApiError ? e : null;
+      if (a?.field("self")) { setDialog("reapprove"); return a.field("self"); }
+      if (!refused(e)) toast.push({ tone: "danger", text: (e as Error).message });
+      return null;
+    }
   }
 
   if (q.isLoading) return <div className="mx-auto max-w-6xl space-y-3" data-review-loading><Skeleton className="h-8 w-80" /><div className="grid gap-4 lg:grid-cols-[340px_1fr]"><Skeleton className="h-96" /><Skeleton className="h-96" /></div><span className="sr-only" role="status">Loading the review…</span></div>;
@@ -141,8 +155,8 @@ export function RepresentativeReviewPage() {
                           {x.form} <span className="text-text-muted">· {x.person}</span>
                         </button>
                         <Chip tone={TONE[x.state]} words={x.state === "approved" ? "Approved" : x.state_words} tip={x.tooltip ?? STATE_TIPS[x.state]} data={x.state} />
-                        {mark && v.can_decide && (f.status === "sent" || f.status === "under_review") ? (
-                          <input type="checkbox" className="size-4" checked={!!mark.ticked} onChange={(e) => void tick(mark.key, e.target.checked)} aria-label={`${x.form} for ${x.person} checked`} data-form-mark={x.form} />
+                        {mark && v.can_decide && f.status === "under_review" ? (
+                          <input type="checkbox" className="size-4" checked={!!mark.ticked} onChange={(e) => void tick(f.filing, mark.key, e.target.checked)} aria-label={`${x.form} for ${x.person} checked`} data-form-mark={x.form} />
                         ) : null}
                       </li>
                     );
@@ -153,7 +167,7 @@ export function RepresentativeReviewPage() {
                   <ul>
                     {f.checks.filter((k) => k.source !== "form").map((k) => (
                       <li key={k.key} className="flex min-h-7 items-start gap-2 py-1 text-[13px]" data-check={k.key}>
-                        <input type="checkbox" id={`ck-${f.filing}-${k.key}`} className="mt-0.5 size-4" checked={!!k.ticked} disabled={!v.can_decide || !(f.status === "sent" || f.status === "under_review")} onChange={(e) => void tick(k.key, e.target.checked)} />
+                        <input type="checkbox" id={`ck-${f.filing}-${k.key}`} className="mt-0.5 size-4" checked={!!k.ticked} disabled={!v.can_decide || f.status !== "under_review"} onChange={(e) => void tick(f.filing, k.key, e.target.checked)} />
                         <label htmlFor={`ck-${f.filing}-${k.key}`} className="min-w-0 flex-1 [overflow-wrap:anywhere]">
                           {k.wording}
                           {k.key === "default:no_critical" && k.live_now ? <span className="text-text-muted"> (live: {String((k.live_now as { open: number }).open)})</span> : null}
@@ -186,7 +200,7 @@ export function RepresentativeReviewPage() {
                     <table className="mt-1 w-full text-[13px]"><thead><tr className="text-left text-[12px] text-text-muted"><th className="py-1 pr-2 font-medium">Fact</th><th className="py-1 pr-2 font-medium">Before → after</th><th className="py-1 font-medium">Typed by</th></tr></thead>
                       <tbody>{form.changes.map((x, i) => (
                         <tr key={i} className="border-t border-border align-top"><td className="py-1.5 pr-2 [overflow-wrap:anywhere]">{x.label} <span className="text-text-muted">· {x.person}</span></td>
-                          <td className="py-1.5 pr-2 [overflow-wrap:anywhere]"><del className="text-text-danger">{value(x.was)}</del> → <ins className="font-semibold text-text-ok no-underline">{value(x.now)}</ins></td>
+                          <td className="py-1.5 pr-2 [overflow-wrap:anywhere]"><del className="text-text-danger">{x.was_words ?? value(x.was)}</del> → <ins className="font-semibold text-text-ok no-underline">{x.now_words ?? value(x.now)}</ins></td>
                           <td className="py-1.5 [overflow-wrap:anywhere]">{x.typed_by_name ?? "the firm record"}{x.typed_at ? `, ${new Date(x.typed_at).toLocaleDateString("en-CA", { day: "numeric", month: "short", timeZone: "America/Toronto" })}` : ""}</td></tr>
                       ))}</tbody></table>
                   </div>
@@ -198,7 +212,7 @@ export function RepresentativeReviewPage() {
                     : (form.changes.length && onlyChanged) ? <p className="text-[13px] text-text-muted">Showing only what changed (above). Untick "Only changed facts" to see every fact.</p>
                     : <table className="mt-1 w-full text-[13px]"><thead><tr className="text-left text-[12px] text-text-muted"><th className="py-1 pr-2 font-medium">Fact</th><th className="py-1 pr-2 font-medium">Value</th><th className="py-1 font-medium">Source</th></tr></thead>
                       <tbody>{form.facts.map((x, i) => (
-                        <tr key={i} className="border-t border-border align-top"><td className="py-1.5 pr-2 [overflow-wrap:anywhere]">{x.label} <span className="text-text-muted">· {x.person}</span></td><td className="py-1.5 pr-2 [overflow-wrap:anywhere]">{value(x.value)}</td>
+                        <tr key={i} className="border-t border-border align-top"><td className="py-1.5 pr-2 [overflow-wrap:anywhere]">{x.label} <span className="text-text-muted">· {x.person}</span></td><td className="py-1.5 pr-2 [overflow-wrap:anywhere]">{x.value_words ?? value(x.value)}</td>
                           <td className="py-1.5 text-text-muted [overflow-wrap:anywhere]">{x.typed_by_name ? `Typed by ${x.typed_by_name}` : ""}{x.confirmed_by_name ? ` · confirmed by ${x.confirmed_by_name}` : ""}</td></tr>
                       ))}</tbody></table>}
                 </div>
@@ -210,20 +224,21 @@ export function RepresentativeReviewPage() {
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5" data-review-footer>
             {reapprovable ? (
               <>
-                <p className="min-w-0 flex-1 text-[13px]" data-change-only>{row.label}: {plural(changedForms.length, "form")} changed since it was approved ({changedForms.map((x) => x.form).join(", ")}). Only {changedForms.length === 1 ? "that form is" : "those forms are"} checked again; the other forms keep their approval.</p>
-                <Button onClick={() => void reapprove()} data-reapprove><Check aria-hidden />Re-approve {plural(changedForms.length, "changed form")}</Button>
+                <p className="min-w-0 flex-1 text-[13px]" data-change-only>{row.label}: {plural(changedForms.length, "form")} changed since it was approved ({changedForms.map((x) => x.form).join(", ")}). Only {changedForms.length === 1 ? "that form is" : "those forms are"} checked again{changedForms.length < row.forms.filter((x) => !x.waits).length ? "; the other forms keep their approval" : ""}.</p>
+                <Button ref={reBtn} onClick={() => (v.solo ? setDialog("reapprove") : void reapprove())} data-reapprove><Check aria-hidden />Re-approve {plural(changedForms.length, "changed form")}</Button>
               </>
             ) : (
               <>
                 <p className="min-w-0 flex-1 text-[13px] text-text-muted" data-counts>{row.label}: {plural(row.unticked, "checklist item")} not ticked · {plural(row.changed, "form")} changed since review{row.open_critical.length ? ` · ${plural(row.open_critical.length, "open critical warning")} (passed with a reason on Ready to file)` : ""}</p>
-                <Button variant="secondary" onClick={() => setDialog("back")} data-send-back>Send back…</Button>
-                <Button onClick={() => setDialog("approve")} data-approve><Check aria-hidden />Approve</Button>
+                <Button ref={backBtn} variant="secondary" onClick={() => setDialog("back")} data-send-back>Send back…</Button>
+                <Button ref={approveBtn} onClick={() => setDialog("approve")} data-approve><Check aria-hidden />Approve</Button>
               </>
             )}
           </div>
         ) : null}
-        {row && dialog === "approve" ? <ApproveDialog v={v} row={row} hashes={loaded?.[row.filing] ?? {}} close={() => setDialog(null)} onRefused={refused} onDone={async (words) => { toast.push({ tone: "ok", text: words }); setDialog(null); await qc.invalidateQueries({ queryKey: ["runtime"] }); focusLater(() => heading.current); }} /> : null}
-        {row && dialog === "back" ? <SendBackDialog v={v} row={row} hashes={loaded?.[row.filing] ?? {}} close={() => setDialog(null)} onRefused={refused} onDone={async () => { toast.push({ tone: "ok", text: `${row.label}: sent back to the case officer.` }); setDialog(null); await qc.invalidateQueries({ queryKey: ["runtime"] }); focusLater(() => heading.current); }} /> : null}
+        {row && dialog === "approve" ? <ApproveDialog v={v} row={row} hashes={loaded?.[row.filing] ?? {}} close={closeDialog} onRefused={refused} onDone={async (words) => { toast.push({ tone: "ok", text: words }); setDialog(null); await qc.invalidateQueries({ queryKey: ["runtime"] }); focusLater(() => heading.current); }} /> : null}
+        {row && dialog === "back" ? <SendBackDialog v={v} row={row} hashes={loaded?.[row.filing] ?? {}} close={closeDialog} onRefused={refused} onDone={async () => { toast.push({ tone: "ok", text: `${row.label}: sent back to the case officer.` }); setDialog(null); await qc.invalidateQueries({ queryKey: ["runtime"] }); focusLater(() => heading.current); }} /> : null}
+        {row && dialog === "reapprove" ? <ReapproveDialog row={row} count={changedForms.length} close={closeDialog} send={reapprove} /> : null}
       </div>
     </TooltipProvider>
   );
@@ -280,6 +295,22 @@ function SendBackDialog({ v, row, hashes, close, onRefused, onDone }: { v: Revie
           <Field label="Pin to a form (optional)"><Select value={item} onChange={(e) => setItem(e.target.value)}><option value="">No form</option>{row.forms.map((x) => <option key={x.item} value={x.item}>{x.form} · {x.person}</option>)}</Select></Field>
           <Field label="Pin to a checklist item (optional)"><Select value={check} onChange={(e) => setCheck(e.target.value)}><option value="">No item</option>{row.checks.filter((k) => k.source !== "form").map((k) => <option key={k.key} value={k.key}>{k.wording}</option>)}</Select></Field>
         </div>
+      </div>
+    </Dialog>
+  );
+}
+
+/** Review M1 (P-155 (1)): a solo firm's re-approve, and any the server says needs it, asks the self-review statement. */
+function ReapproveDialog({ row, count, close, send }: { row: ReviewRoundFiling; count: number; close: () => void; send: (self?: boolean) => Promise<string | null> }) {
+  const [self, setSelf] = React.useState(false), [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null);
+  async function go() { setBusy(true); setErr(null); const e = await send(self); if (e) setErr(e); setBusy(false); }
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={`Re-approve ${plural(count, "changed form")}?`}
+      footer={<><Button variant="ghost" onClick={close}>Go back</Button><Button busy={busy} onClick={() => void go()} data-confirm-reapprove><Check aria-hidden />Re-approve</Button></>}>
+      <div className="space-y-2 text-[13px]" data-reapprove-dialog>
+        <p>{row.label}: only the {count === 1 ? "form" : "forms"} a change touched {count === 1 ? "is" : "are"} stamped again with today's facts.</p>
+        <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 size-4" checked={self} onChange={(e) => setSelf(e.target.checked)} aria-invalid={err ? true : undefined} data-self /><span>I prepared and reviewed this filing myself (logged as Self-reviewed).</span></label>
+        {err ? <p role="alert" className="text-text-danger">{err}</p> : null}
       </div>
     </Dialog>
   );

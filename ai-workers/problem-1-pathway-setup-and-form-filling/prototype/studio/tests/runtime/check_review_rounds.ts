@@ -3,7 +3,7 @@
 // server, no model call (US$0). Sample values only.
 //   tsx studio/tests/runtime/check_review_rounds.ts
 import { changedBy, changesOf, checklistOf, fileOf, formStateOf, hashesProblem, isOpen, mayDecide, nextStatus, READ_ONLY_WORDS, reasonsOf, selfReviewOf, sendProblem, stampCurrent, tickedByDefault, untickedProblem, untickedWords, withdrawnForms, withdrawnWords, type SendFiling } from "../../engine/runtime/review.ts";
-import type { ChangeWords } from "../../engine/runtime/out-of-date.ts";
+import { factPerson, type ChangeWords } from "../../engine/runtime/out-of-date.ts";
 import { recorder } from "./api.ts";
 
 const { ok, summary } = recorder();
@@ -87,5 +87,17 @@ ok("C8.3 BR-10 fail: a decided row never moves again", (["open", "approve", "sen
 const fm = [{ item: "i1", waits: false, stamp: { hash: H1, by: REP }, liveHash: H2 }, { item: "i2", waits: false, stamp: { hash: H1, by: REP }, liveHash: H1 }, { item: "i3", waits: true, stamp: null, liveHash: null }];
 ok("C8.3 P-412 pass: only the form whose facts changed is listed for re-approval", withdrawnForms(fm, REP).map((f) => f.item).join() === "i1");
 ok("C8.3 P-412 fail: with nothing changed there is nothing to re-approve", withdrawnForms(fm.filter((f) => f.item !== "i1"), REP).length === 0);
+
+// Round 1 (review and break of 09e660220)
+ok("C8.3 B1 pass (break B1): the newest round's own approval still counts", stampCurrent({ hash: H1, by: REP, superseded: false }, { hash: H1, representative: REP }).current);
+ok("C8.3 B1 fail (break B1): a newer round of the filing (sent again, or sent back) withdraws the earlier approval, in words", stampCurrent({ hash: H1, by: REP, superseded: true }, { hash: H1, representative: REP }).why === "superseded" && withdrawnWords("superseded", null, () => null) === "Approval withdrawn: the filing was sent for review again.");
+ok("C8.3 B1 fail (break B1): an approved, current filing is not ticked by default in the Send dialog", tickedByDefault([{ id: "a", active: true, openBlocks: 0, recorded: false, inOpenRound: false, approved: true }, { id: "b", active: true, openBlocks: 0, recorded: false, inOpenRound: false }]).join() === "b");
+const pw = { person: (s: string) => (s === "s1" ? "Sample Client A" : s) };
+ok("C8.3 review M3 pass: a person's own fact is named as theirs", factPerson("s1", null, pw) === "Sample Client A");
+ok("C8.3 review M3 fail: a parent's fact on the client's form is named as the parent's, never as the client's", factPerson("s1/parent_1", null, pw) === "Sample Client A's parent 1");
+const typed = changesOf(then, now, words, () => ({ by: REP, at: "x" }));
+ok("C8.3 break m1 pass: after an approval, the 409 says what can be done (ask the case officer to send it again)", /Ask the case officer to send it for review again/.test(((selfReviewOf({ actor: REP, officers: new Set([OFF]), solo: false, changedByReviewer: changedBy(typed, REP), self: true, after: "approval" }) as { problem: { detail: string } }).problem.detail)));
+ok("C8.3 break M1 fail: a changed fact with no typist (the firm record's, after a change of representative) never makes the representative an author", !changedBy(changesOf(then, now, words, () => null), REP));
+ok("C8.3 review BIC-13 fail: no API field name shown to a person in the self-review words", !/self: true/.test(JSON.stringify(selfReviewOf({ actor: "user-S", officers: new Set(["user-S"]), solo: true, changedByReviewer: false, self: undefined }))));
 
 process.exit(summary() ? 1 : 0);

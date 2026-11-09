@@ -21,7 +21,8 @@
 -- Rollback (STANDARDS §5): stop the app, then in one transaction:
 --   DROP TABLE "review_check"; DROP TABLE "review_round_form"; DROP TABLE "review_round_filing"; DROP TABLE "review_round";
 --   DROP FUNCTION "c83_no_update"(); DROP FUNCTION "c83_no_delete"(); DROP FUNCTION "c83_filing_guard"();
---   DROP FUNCTION "c83_form_guard"(); DROP FUNCTION "c83_check_guard"();
+--   DROP FUNCTION "c83_form_guard"(); DROP FUNCTION "c83_check_guard"(); DROP FUNCTION "c83_filing_insert_guard"();
+--   DROP FUNCTION "c83_child_insert_guard"();
 --   DELETE FROM "_prisma_migrations" WHERE "migration_name" = '20261109010000_c83_review_rounds';
 -- A rollback loses the rounds, the reasons and the per-form stamps; every approval also wrote its filing_review row
 -- (C7.6), so Ready to file and the record's "Reviewed by" read the same as before. The answer snapshots the rounds froze
@@ -70,6 +71,9 @@ CREATE INDEX "review_round_filing_case_id_idx" ON "review_round_filing"("case_id
 ALTER TABLE "review_round_filing" ADD CONSTRAINT "review_round_filing_case_id_fkey" FOREIGN KEY ("case_id") REFERENCES "runtime_case"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "review_round_filing" ADD CONSTRAINT "review_round_filing_round_id_fkey" FOREIGN KEY ("round_id") REFERENCES "review_round"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "review_round_filing" ADD CONSTRAINT "review_round_filing_filing_id_fkey" FOREIGN KEY ("filing_id") REFERENCES "filing"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- Break m6: the filing_review an approval wrote stays while the approval does (checked at the end of the statement, so
+-- a case deleted with both still goes).
+ALTER TABLE "review_round_filing" ADD CONSTRAINT "review_round_filing_filing_review_id_fkey" FOREIGN KEY ("filing_review_id") REFERENCES "filing_review"("id") ON DELETE NO ACTION ON UPDATE CASCADE;
 ALTER TABLE "review_round_filing" ADD CONSTRAINT "review_round_filing_status_check" CHECK ("status" IN ('sent', 'under_review', 'approved', 'sent_back'));
 ALTER TABLE "review_round_filing" ADD CONSTRAINT "review_round_filing_round_check" CHECK ("filing_round" >= 1);
 ALTER TABLE "review_round_filing" ADD CONSTRAINT "review_round_filing_kind_check" CHECK ("review_kind" IS NULL OR "review_kind" IN ('reviewed', 'self_reviewed'));
@@ -107,6 +111,8 @@ CREATE UNIQUE INDEX "review_round_form_round_filing_id_item_id_key" ON "review_r
 CREATE INDEX "review_round_form_item_id_idx" ON "review_round_form"("item_id");
 ALTER TABLE "review_round_form" ADD CONSTRAINT "review_round_form_case_id_fkey" FOREIGN KEY ("case_id") REFERENCES "runtime_case"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "review_round_form" ADD CONSTRAINT "review_round_form_round_filing_id_fkey" FOREIGN KEY ("round_filing_id") REFERENCES "review_round_filing"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "review_round_form" ADD CONSTRAINT "review_round_form_round_id_fkey" FOREIGN KEY ("round_id") REFERENCES "review_round"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "review_round_form" ADD CONSTRAINT "review_round_form_filing_id_fkey" FOREIGN KEY ("filing_id") REFERENCES "filing"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "review_round_form" ADD CONSTRAINT "review_round_form_item_id_fkey" FOREIGN KEY ("item_id") REFERENCES "filing_item"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "review_round_form" ADD CONSTRAINT "review_round_form_snapshot_id_fkey" FOREIGN KEY ("snapshot_id") REFERENCES "answer_snapshot"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "review_round_form" ADD CONSTRAINT "review_round_form_stamp_snapshot_id_fkey" FOREIGN KEY ("stamp_snapshot_id") REFERENCES "answer_snapshot"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -174,9 +180,13 @@ BEGIN
   RAISE EXCEPTION 'review_round_filing: % → % is not an allowed move (only sent → under_review → approved or sent_back, once)', OLD."status", NEW."status";
 END $$;
 CREATE TRIGGER "review_round_filing_guard" BEFORE UPDATE ON "review_round_filing" FOR EACH ROW EXECUTE FUNCTION "c83_filing_guard"();
--- B2: a form row's frozen part never changes; its stamp is written once.
+-- B2: a form row's frozen part never changes; its stamp is written once, and only while its filing is under review or
+-- in the transaction that approved it (break m6: never on a sent-back row).
 CREATE FUNCTION "c83_form_guard"() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM "review_round_filing" WHERE "id" = OLD."round_filing_id" AND ("status" = 'under_review' OR "xmin" = pg_current_xact_id()::xid)) THEN
+    RAISE EXCEPTION 'review_round_form: a stamp is written only while its filing is under review';
+  END IF;
   IF (NEW."id", NEW."workspace_id", NEW."case_id", NEW."round_id", NEW."round_filing_id", NEW."filing_id", NEW."item_id", NEW."form_number", NEW."subject_id")
      IS DISTINCT FROM (OLD."id", OLD."workspace_id", OLD."case_id", OLD."round_id", OLD."round_filing_id", OLD."filing_id", OLD."item_id", OLD."form_number", OLD."subject_id")
      OR (NEW."snapshot_id", NEW."facts_hash", NEW."file_kind", NEW."file_id", NEW."file_sha256") IS DISTINCT FROM (OLD."snapshot_id", OLD."facts_hash", OLD."file_kind", OLD."file_id", OLD."file_sha256") THEN
@@ -201,3 +211,26 @@ BEGIN
   RETURN NEW;
 END $$;
 CREATE TRIGGER "review_check_guard" BEFORE UPDATE ON "review_check" FOR EACH ROW EXECUTE FUNCTION "c83_check_guard"();
+-- Break m6: a filing row starts as its round's kind says: sent (send), under review and opened (review_now), approved
+-- (one_step, reapprove: sent, opened and decided in one step). Never decided by an insert otherwise.
+CREATE FUNCTION "c83_filing_insert_guard"() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE k TEXT;
+BEGIN
+  SELECT "kind" INTO k FROM "review_round" WHERE "id" = NEW."round_id";
+  IF (NEW."status" = 'sent' AND k = 'send') OR (NEW."status" = 'under_review' AND k = 'review_now' AND NEW."opened_by" IS NOT NULL)
+     OR (NEW."status" = 'approved' AND k IN ('one_step', 'reapprove')) THEN
+    RETURN NEW;
+  END IF;
+  RAISE EXCEPTION 'review_round_filing: a % round cannot start a filing as %', k, NEW."status";
+END $$;
+CREATE TRIGGER "review_round_filing_insert_guard" BEFORE INSERT ON "review_round_filing" FOR EACH ROW EXECUTE FUNCTION "c83_filing_insert_guard"();
+-- Break m6: forms and checklist items are added to a filing only while it is open, or in the transaction that made it.
+CREATE FUNCTION "c83_child_insert_guard"() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM "review_round_filing" WHERE "id" = NEW."round_filing_id" AND ("status" IN ('sent', 'under_review') OR "xmin" = pg_current_xact_id()::xid)) THEN
+    RAISE EXCEPTION '%: the filing is decided; nothing is added to it', TG_TABLE_NAME;
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER "review_round_form_insert_guard" BEFORE INSERT ON "review_round_form" FOR EACH ROW EXECUTE FUNCTION "c83_child_insert_guard"();
+CREATE TRIGGER "review_check_insert_guard" BEFORE INSERT ON "review_check" FOR EACH ROW EXECUTE FUNCTION "c83_child_insert_guard"();

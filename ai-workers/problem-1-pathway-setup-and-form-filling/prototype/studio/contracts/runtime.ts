@@ -353,12 +353,12 @@ export const ReviewDecision = z.object({
 export const ReviewReapprove = z.object({ filing: z.string().uuid({ message: "Name the filing (its id in this review)." }), form_hashes: z.record(z.string(), z.string().nullable()).optional(), self: z.boolean().optional() });
 export type ReviewRowStatus = "sent" | "under_review" | "approved" | "sent_back";
 /** One changed fact (BR-6): before → after, who typed the new value and when (m4). */
-export type ChangedSinceReview = { fact: string; label: string; person: string; was: unknown; now: unknown; typed_by: string | null; typed_by_name: string | null; typed_at: string | null };
+export type ChangedSinceReview = { fact: string; label: string; person: string; was: unknown; now: unknown; was_words: string | null; now_words: string | null; typed_by: string | null; typed_by_name: string | null; typed_at: string | null };
 /** One form's frozen stamp and its state on the page (B2, BR-7). */
 export type FormStamp = { item: string; form: string; person: string; channel: string; waits: boolean;
   state: "to_check" | "checked" | "changed_since_review" | "approved" | "approval_withdrawn" | "sent_back" | "not_stamped_waits"; state_words: string; tooltip: string | null; withdrawn_words: string | null;
   file: { kind: string; sha256: string | null; words: string }; stamp: { at: string; by: string; file_kind: string; file_sha256: string | null } | null;
-  live_hash: string | null; changes: ChangedSinceReview[]; facts: { label: string; person: string; value: unknown; typed_by_name: string | null; confirmed_by_name: string | null }[] };
+  live_hash: string | null; changes: ChangedSinceReview[]; facts: { label: string; person: string; value: unknown; value_words: string | null; typed_by_name: string | null; confirmed_by_name: string | null }[] };
 export type ReviewCheckView = { key: string; source: "default" | "program" | "confirmations" | "form"; wording: string; live: Record<string, unknown> | null; live_now: Record<string, unknown> | null; ticked: { by: string; name: string; at: string } | null };
 /** One filing in one round (B1), with its own status and round number. */
 export type ReviewRoundFiling = { filing: string; label: string; filing_round: number; status: ReviewRowStatus; status_words: string;

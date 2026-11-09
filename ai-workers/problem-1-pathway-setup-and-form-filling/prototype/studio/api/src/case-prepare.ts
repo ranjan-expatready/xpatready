@@ -112,7 +112,7 @@ export function notNeededForms(s: Parameters<typeof lineCondition>[0], people: P
  *  its copy would write, its validated copy read back and its newest copy for filing (B2's file order). */
 export type ReviewBasisForm = { item: string; filing: string; form: string; subject: string; person: string; channel: string; state: string; waits: boolean;
   hash: string | null; inputHash: string; facts: FormFact[]; validated: PaperValidated; forFiling: { id: string; hash: string } | null };
-export type ReviewBasis = { forms: ReviewBasisForm[]; words: ChangeWords; caseSubject: string | null; answers: Awaited<ReturnType<Runtime["state"]>>["answers"] };
+export type ReviewBasis = { forms: ReviewBasisForm[]; words: ChangeWords; caseSubject: string | null; valueWords: (fact: string, v: unknown) => string | null; answers: Awaited<ReturnType<Runtime["state"]>>["answers"] };
 
 @Injectable()
 export class CasePrepare {
@@ -588,7 +588,7 @@ export class CasePrepare {
       validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
       editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: formHash, today });
     // C8.3 (B144, B2): each form's facts for the review's freeze and stamp, from this very pass.
-    sink?.({ answers, words, caseSubject, forms: formItems.map((f) => ({ item: f.id, filing: f.filing, form: f.form, subject: f.subject, person: f.person, channel: f.channel, state: f.state,
+    sink?.({ answers, words, caseSubject, valueWords: (fact, v) => (v === null || v === undefined || v === "" ? "no answer" : typeof v === "object" ? null : answerWords(s, fact, v)), forms: formItems.map((f) => ({ item: f.id, filing: f.filing, form: f.form, subject: f.subject, person: f.person, channel: f.channel, state: f.state,
       waits: f.state === "cannot_start", hash: f.state === "cannot_start" ? null : formHash(f.form, f.subject), inputHash: inputHash(covOf(f.form, f.subject)?.facts ?? []), facts: covOf(f.form, f.subject)?.facts ?? [],
       validated: paperValidated(f.form, f.subject), forFiling: forFiling.get(`${f.form}|${f.subject}`) ?? null })) });
     // C7.6: a filing marked Ready to file (or later) says so; before that, the derived status (Not started). Break B1 on

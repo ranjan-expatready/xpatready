@@ -1793,6 +1793,7 @@ model Filing {
   reviews    FilingReview[]  // C7.6
   passes     ReadinessPass[] // C7.6
   reviewRounds ReviewRoundFiling[] // C8.3
+  reviewForms  ReviewRoundForm[]   // C8.3
 
   @@unique([caseId, subjectId])
   @@map("filing")
@@ -2333,6 +2334,7 @@ model FilingReview {
   reviewedAt    DateTime @default(now()) @map("reviewed_at") @db.Timestamptz
 
   filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  rounds ReviewRoundFiling[] // C8.3: the approval that wrote it
 
   @@index([filingId])
   @@map("filing_review")
@@ -2504,6 +2506,7 @@ model ReviewRound {
 
   case    Case                @relation(fields: [caseId], references: [id], onDelete: Cascade)
   filings ReviewRoundFiling[]
+  forms   ReviewRoundForm[]
 
   @@unique([caseId, number])
   @@map("review_round")
@@ -2538,6 +2541,7 @@ model ReviewRoundFiling {
   case   Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
   round  ReviewRound       @relation(fields: [roundId], references: [id], onDelete: Cascade)
   filing Filing            @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  review FilingReview?     @relation(fields: [filingReviewId], references: [id], onDelete: NoAction)
   forms  ReviewRoundForm[]
   checks ReviewCheck[]
 
@@ -2573,6 +2577,8 @@ model ReviewRoundForm {
   stampedAt       DateTime? @map("stamped_at") @db.Timestamptz
 
   case          Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  round         ReviewRound       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  filing        Filing            @relation(fields: [filingId], references: [id], onDelete: Cascade)
   row           ReviewRoundFiling @relation(fields: [roundFilingId], references: [id], onDelete: Cascade)
   item          FilingItem        @relation(fields: [itemId], references: [id], onDelete: Cascade)
   snapshot      AnswerSnapshot?   @relation("ReviewFrozen", fields: [snapshotId], references: [id], onDelete: Cascade)

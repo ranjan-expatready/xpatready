@@ -38,11 +38,15 @@ export function mayDecide(actor: string, representativeNow: string | null): stri
 
 /** A stamp (an approved form's facts hash and the representative of record who approved it) and the form today. */
 export type StampNow = { hash: string | null; representative: string | null };
+export type Withdrawn = "none" | "representative" | "facts" | "superseded";
 /** Whether an approval still counts: only while the form's facts hash and the representative of record are both
- *  unchanged (P-412 F1: a fact change withdraws it; M2: the same rule as C7.6, readiness-inputs.ts). `why` says what
- *  withdrew it. Used by the Review page, the re-approve route and C7.6's filing review line. */
-export function stampCurrent(stamp: { hash: string | null; by: string | null } | null, now: StampNow): { current: boolean; why: "none" | "representative" | "facts" | null } {
+ *  unchanged (P-412 F1: a fact change withdraws it; M2: the same rule as C7.6, readiness-inputs.ts), and while no newer
+ *  round of the filing exists (`superseded`, break B1: a filing sent for review again, or sent back, is no longer
+ *  approved). `why` says what withdrew it. Used by the Review page, the re-approve route, C7.6's filing review line and
+ *  so C8.2's "Reviewed by". */
+export function stampCurrent(stamp: { hash: string | null; by: string | null; superseded?: boolean } | null, now: StampNow): { current: boolean; why: Withdrawn | null } {
   if (!stamp?.hash || !stamp.by) return { current: false, why: "none" };
+  if (stamp.superseded) return { current: false, why: "superseded" };
   if (stamp.by !== now.representative) return { current: false, why: "representative" };
   if (stamp.hash !== now.hash) return { current: false, why: "facts" };
   return { current: true, why: null };
@@ -51,8 +55,9 @@ export function stampCurrent(stamp: { hash: string | null; by: string | null } |
 // ------------------------------------------------------------------ BR-1 Send
 
 export type SendFiling = { id: string; label: string; active: boolean; recorded: boolean; inOpenRound: boolean; openBlocks: number };
-/** BR-1: filings with no open block are ticked by default in the dialog. */
-export const tickedByDefault = (filings: Pick<SendFiling, "id" | "active" | "openBlocks" | "recorded" | "inOpenRound">[]) => filings.filter((f) => f.active && !f.openBlocks && !f.recorded && !f.inOpenRound).map((f) => f.id);
+/** BR-1: filings with no open block are ticked by default in the dialog; one whose approval still counts is not (break
+ *  B1: sending it again withdraws that approval, so it is a person's choice). */
+export const tickedByDefault = (filings: (Pick<SendFiling, "id" | "active" | "openBlocks" | "recorded" | "inOpenRound"> & { approved?: boolean })[]) => filings.filter((f) => f.active && !f.openBlocks && !f.recorded && !f.inOpenRound && !f.approved).map((f) => f.id);
 /** BR-1, BR-9: why a send is refused (null: it may go). None ticked: 400; not on this case: 404; removed (C6.13) or
  *  recorded as submitted: 409; already in an open round: 409 naming it. */
 export function sendProblem(asked: unknown, filings: SendFiling[]): Problem | null {
@@ -157,15 +162,18 @@ export function reasonsOf(reasons: unknown, forms: Set<string>, checks: Set<stri
  *  reads after it was sent for review (`changedByReviewer`, M3). An author on a firm that is not solo, with another
  *  officer on the case, cannot review it as a second person (409); an author confirms "I prepared and reviewed this
  *  filing myself" (400 without it), logged as Self-reviewed, never as a second person. */
-export function selfReviewOf(x: { actor: string; officers: Set<string>; solo: boolean; changedByReviewer: boolean; self: unknown }): { kind: "reviewed" | "self_reviewed" } | { problem: Problem } {
+export function selfReviewOf(x: { actor: string; officers: Set<string>; solo: boolean; changedByReviewer: boolean; self: unknown; after?: "send" | "approval" }): { kind: "reviewed" | "self_reviewed" } | { problem: Problem } {
   const prepared = x.officers.has(x.actor), author = prepared || x.changedByReviewer;
   const authors = new Set([...x.officers, ...(x.changedByReviewer ? [x.actor] : [])]);
   if (author && !x.solo && authors.size > 1) return { problem: { status: 409, detail: prepared
     ? "You prepared this filing with another case officer: a review by you would read as a second person's. Hand the review to another representative (change the representative of record), or pass the review warning with a reason."
-    : "You changed a fact on this filing after it was sent for review, so an approval by you would read as a second person's. Send it back to the case officer, hand the review to another representative, or pass the review warning with a reason." } };
+    : x.after === "approval"
+      ? "You changed a fact on this filing after it was approved, so a re-approval by you would read as a second person's. Ask the case officer to send it for review again, hand the review to another representative, or pass the review warning with a reason."
+      : "You changed a fact on this filing after it was sent for review, so an approval by you would read as a second person's. Send it back to the case officer, hand the review to another representative, or pass the review warning with a reason." } };
   if (author && x.self !== true) return { problem: { status: 400, field: "self", detail: prepared
-    ? "You prepared this filing yourself: confirm \"I prepared and reviewed this filing myself\" (self: true). It is logged as Self-reviewed, never as a second person."
-    : "You changed a fact on this filing after it was sent: confirm \"I prepared and reviewed this filing myself\" (self: true), or send it back. It is logged as Self-reviewed." } };
+    ? "You prepared this filing yourself: confirm \"I prepared and reviewed this filing myself\". It is logged as Self-reviewed, never as a second person."
+    : x.after === "approval" ? "You changed a fact on this filing after it was approved: confirm \"I prepared and reviewed this filing myself\". It is logged as Self-reviewed."
+    : "You changed a fact on this filing after it was sent: confirm \"I prepared and reviewed this filing myself\", or send it back. It is logged as Self-reviewed." } };
   return { kind: author ? "self_reviewed" : "reviewed" };
 }
 export const SELF_STATEMENT = "I prepared and reviewed this filing myself.";
@@ -177,7 +185,7 @@ export type FormState = "to_check" | "checked" | "changed_since_review" | "appro
  *  from the filing's previous round, or changed after this round was sent (a check mark clears on change, as GitHub's
  *  "Viewed"); else Checked when its mark is ticked; else To check. An approved row: Approved while its stamp is current
  *  (stampCurrent), else "Approval withdrawn". A form that waits is never stamped. */
-export function formStateOf(x: { status: RowStatus; waits: boolean; checked: boolean; frozenHash: string | null; previousHash: string | null | undefined; liveHash: string | null; stamp: { hash: string | null; by: string | null } | null; representative: string | null }): { state: FormState; why: "facts" | "representative" | "none" | null } {
+export function formStateOf(x: { status: RowStatus; waits: boolean; checked: boolean; frozenHash: string | null; previousHash: string | null | undefined; liveHash: string | null; stamp: { hash: string | null; by: string | null; superseded?: boolean } | null; representative: string | null }): { state: FormState; why: Withdrawn | null } {
   if (x.waits) return { state: "not_stamped_waits", why: null };
   if (x.status === "approved") { const c = stampCurrent(x.stamp, { hash: x.liveHash, representative: x.representative }); return c.current ? { state: "approved", why: null } : { state: "approval_withdrawn", why: c.why }; }
   if (x.status === "sent_back") return { state: "sent_back", why: null };
@@ -204,14 +212,15 @@ export function changesOf(then: Pick<FormFact, "fact" | "about" | "row" | "value
 export const changedBy = (changes: ChangeLine[], actor: string) => changes.some((c) => c.typed_by === actor);
 
 /** P-412 F1: the forms whose approval a later change withdrew (the change-only view lists only these). */
-export function withdrawnForms<T extends { item: string; waits: boolean; stamp: { hash: string | null; by: string | null } | null; liveHash: string | null }>(forms: T[], representative: string | null): T[] {
+export function withdrawnForms<T extends { item: string; waits: boolean; stamp: { hash: string | null; by: string | null; superseded?: boolean } | null; liveHash: string | null }>(forms: T[], representative: string | null): T[] {
   return forms.filter((f) => !f.waits && !stampCurrent(f.stamp, { hash: f.liveHash, representative }).current);
 }
 
 /** "Approval withdrawn: Date of birth changed by the case officer, 8 Nov." (§5); the representative's change (M2) and
  *  a change with no fact to name have their own words. */
-export function withdrawnWords(why: "facts" | "representative" | "none" | null, first: { label: string; by: string | null; at: string | null } | null, day: (at: string | null) => string | null): string {
+export function withdrawnWords(why: Withdrawn | null, first: { label: string; by: string | null; at: string | null } | null, day: (at: string | null) => string | null): string {
   if (why === "representative") return "Approval withdrawn: the representative of record changed.";
+  if (why === "superseded") return "Approval withdrawn: the filing was sent for review again.";
   if (!first) return "Approval withdrawn: a fact it reads changed.";
   const when = day(first.at);
   return `Approval withdrawn: ${first.label} changed${first.by ? ` by ${first.by}` : ""}${when ? `, ${when}` : ""}.`;

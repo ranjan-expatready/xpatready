@@ -144,7 +144,7 @@ function FilingReadiness({ caseId, f, r, actor, nameOf, officers, review }: { ca
         <span className="flex-1" />
         {review ? <span className="flex items-center gap-1.5" data-review-link={review.status}>{withdrawn
           ? <Pill tone="warn" title="Approved earlier; a fact on it changed since, so the representative checks it again.">Approval withdrawn</Pill>
-          : <Pill tone={REVIEW_WORDS[review.status].tone} title={`Round ${review.filing_round} of this filing's review`}>{REVIEW_WORDS[review.status].words}</Pill>}<Link className="text-[13px] text-text-link hover:underline" to={`/cases/${caseId}/representative-review/${review.round}`}>Open the review</Link></span> : null}
+          : <Pill tone={REVIEW_WORDS[review.status].tone} title={`Round ${review.filing_round} of this filing's review`}>{REVIEW_WORDS[review.status].words}</Pill>}<Link className="text-[13px] text-text-link hover:underline" to={`/cases/${caseId}/representative-review/${review.round}?filing=${f.id}`}>Open the review</Link></span> : null}
         {canReview ? <ReviewButton f={f} r={r} onRefused={refused} onDone={() => { setRefusal(null); void refresh().then(() => focusLater(() => heading.current)); }} /> : null}
         {open && st !== "ready_to_file" ? <Button size="sm" busy={marking} onClick={() => void ready()} data-mark-ready>Ready to file</Button> : null}
       </div>
@@ -287,7 +287,8 @@ function SendForReviewDialog({ caseId, filings, readiness, rounds, now, close }:
   const qc = useQueryClient(), toast = useToast(), nav = useNavigate();
   const rowOf = (id: string) => reviewOf(rounds, id);
   const closed = (f: Filing) => f.status.toLowerCase() === "submitted" || f.read_only || (() => { const x = rowOf(f.id); return !!x && (x.status === "sent" || x.status === "under_review"); })();
-  const [ticked, setTicked] = React.useState<string[]>(() => filings.filter((f) => !closed(f) && !(readiness.find((r) => r.filing === f.id)?.blocks.length)).map((f) => f.id));
+  // Break B1: a filing whose approval still counts is not ticked by default (sending it again withdraws that approval).
+  const [ticked, setTicked] = React.useState<string[]>(() => filings.filter((f) => !closed(f) && !(readiness.find((r) => r.filing === f.id)?.blocks.length) && !readiness.find((r) => r.filing === f.id)?.reviewed).map((f) => f.id));
   const [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null);
   async function send() {
     setBusy(true); setErr(null);
@@ -310,7 +311,7 @@ function SendForReviewDialog({ caseId, filings, readiness, rounds, now, close }:
               <input type="checkbox" id={`send-${f.id}`} className="mt-0.5 size-4" disabled={shut} checked={ticked.includes(f.id)} onChange={(e) => setTicked((t) => (e.target.checked ? [...t, f.id] : t.filter((y) => y !== f.id)))} />
               <label htmlFor={`send-${f.id}`} className="min-w-0 flex-1 [overflow-wrap:anywhere]">{f.label}
                 <span className="block text-[12px] text-text-muted">{shut ? (x && (x.status === "sent" || x.status === "under_review") ? "Already sent for review: open that review." : "Recorded as submitted: its review is closed.")
-                  : `${blocks ? `Blocked: ${plural(blocks, "block")} · ` : ""}${warns ? plural(warns, "open warning") : "No open warning"}`}</span></label>
+                  : `${rd?.reviewed ? "Approved: sending it again withdraws the approval · " : ""}${blocks ? `Blocked: ${plural(blocks, "block")} · ` : ""}${warns ? plural(warns, "open warning") : "No open warning"}`}</span></label>
             </li>
           );
         })}

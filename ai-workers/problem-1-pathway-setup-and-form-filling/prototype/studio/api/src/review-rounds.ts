@@ -13,7 +13,7 @@
 import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { REPRESENTATIVE, userIn, type Firm } from "../../engine/runtime/team.ts";
 import { changedBy, changesOf, checklistOf, CHANGED_TOOLTIP, fileOf, formStateOf, hashesProblem, isOpen, mayDecide, nextStatus, reasonsOf, selfReviewOf, SELF_STATEMENT, sendProblem, stampCurrent, STATE_WORDS, untickedProblem, withdrawnForms, withdrawnWords, WITHDRAWN_TOOLTIP, type ChangeLine, type CheckItem, type FileStamp, type Problem, type RowStatus } from "../../engine/runtime/review.ts";
-import { dayWords } from "../../engine/runtime/out-of-date.ts";
+import { dayWords, factPerson } from "../../engine/runtime/out-of-date.ts";
 import type { FormFact } from "../../engine/runtime/forms.ts";
 import { ReviewDecision, ReviewOpen, ReviewReapprove, ReviewTick, SendForReview, type ChangedSinceReview, type FormStamp, type ReviewRound, type ReviewRoundFiling } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
@@ -97,6 +97,9 @@ export class ReviewRounds {
   private typistOf(basis: ReviewBasis) {
     const m = new Map(basis.answers.filter((a) => !a.rowKey).map((a) => [`${a.subjectId}|${a.field}`, a]));
     return (about: string, fact: string) => {
+      // Break M1: a fact about the representative comes from the firm record, never typed by a person on the case (a
+      // change of representative of record is not a fact the new representative wrote).
+      if (about === REPRESENTATIVE || about.startsWith(`${REPRESENTATIVE}/`)) return null;
       const a = m.get(`${about === "case" ? basis.caseSubject ?? about : about}|${fact}`);
       return a ? { by: a.origin?.actor ?? a.actor, at: a.origin?.at ?? a.at } : null;
     };
@@ -162,7 +165,11 @@ export class ReviewRounds {
     const c = await this.r.reach(actor, UUID.test(caseId) ? caseId : "00000000-0000-0000-0000-000000000000", "officer");
     const b = parsed(SendForReview, body);
     const rep = await this.representativeNow(c.id);
-    if (b.now) { const no = mayDecide(actor.id, rep); if (no) refuse({ status: 403, detail: `"Review now" sends and opens the review in one step: ${no}` }); }
+    if (b.now) {
+      // Concept m3: "Review now" is the solo firm's one step; a firm with a case officer sends for review instead.
+      if (!this.firmOf(c)?.solo) refuse({ status: 400, field: "now", detail: "\"Review now\" is for a solo firm. Send the filings for review instead." });
+      const no = mayDecide(actor.id, rep); if (no) refuse({ status: 403, detail: `"Review now" sends and opens the review in one step: ${no}` });
+    }
     const { view, basis } = await this.basisOf(actor, c);
     const stored = await this.db.filing.findMany({ where: { caseId: c.id }, select: { id: true, status: true, active: true } });
     const open = new Set((await this.db.reviewRoundFiling.findMany({ where: { caseId: c.id, status: { in: ["sent", "under_review"] } }, select: { filingId: true } })).map((x) => x.filingId));
@@ -217,39 +224,42 @@ export class ReviewRounds {
     const typist = this.typistOf(basis), live = new Map(basis.forms.map((f) => [f.item, f]));
     const day = (at: string | null) => dayWords(at);
     const label = new Map(view.filings.map((f) => [f.id, f.label]));
-    const changeView = (cs: ChangeLine[]): ChangedSinceReview[] => cs.map((x) => ({ fact: x.fact, label: x.label, person: x.person, was: x.was, now: x.now, typed_by: x.typed_by, typed_by_name: this.nameOf(c, x.typed_by), typed_at: x.typed_at }));
+    const changeView = (cs: ChangeLine[]): ChangedSinceReview[] => cs.map((x) => ({ fact: x.fact, label: x.label, person: x.person, was: x.was, now: x.now, was_words: basis.valueWords(x.fact, x.was), now_words: basis.valueWords(x.fact, x.now), typed_by: x.typed_by, typed_by_name: x.typed_by ? this.nameOf(c, x.typed_by) : null, typed_at: x.typed_at }));
     const filings: ReviewRoundFiling[] = rows.map((row) => {
       const mine = all.filter((x) => x.filingId === row.filingId), prev = mine.find((x) => x.filingRound === row.filingRound - 1) ?? null;
       const latest = !mine.some((x) => x.filingRound > row.filingRound);
       const rd = view.readiness.find((x) => x.filing === row.filingId);
       const checksNow = new Map<string, Record<string, unknown> | null>([["default:no_critical", { open: (rd?.warns ?? []).filter((w) => w.severity === "critical").length }]]);
-      const ticked = new Set(row.checks.filter((k) => k.tickedBy).map((k) => k.itemKey));
+      // Break m2: only the representative of record's own ticks count (a former representative's do not).
+      const ticked = new Set(row.checks.filter((k) => k.tickedBy && k.tickedBy === rep).map((k) => k.itemKey));
       const forms: FormStamp[] = row.forms.map((f) => {
         const now = live.get(f.itemId), liveHash = now ? now.hash : null, waits = f.fileKind === "waits";
         const prevForm = prev?.forms.find((x) => x.itemId === f.itemId);
-        const stamp = f.stampedAt ? { hash: f.stampHash, by: row.representative } : null;
+        // Break B1: an approval with a newer round of its filing no longer counts (stampCurrent's `superseded`).
+        const stamp = f.stampedAt ? { hash: f.stampHash, by: row.representative, superseded: !latest } : null;
         const st = formStateOf({ status: row.status as RowStatus, waits, checked: ticked.has(`form:${f.itemId}`), frozenHash: f.factsHash, previousHash: prev ? prevForm?.factsHash ?? null : undefined, liveHash, stamp, representative: rep });
         // BR-6: an approved row compares its stamp with today; an open row compares the round before (else what it froze) with today.
         const base = row.status === "approved" ? snaps.get(f.stampSnapshotId ?? "") ?? [] : prevForm?.snapshotId ? snaps.get(prevForm.snapshotId) ?? [] : snaps.get(f.snapshotId ?? "") ?? [];
         const changes = waits || !now ? [] : changesOf(base, now.facts, basis.words, typist);
         const first = changes[0] ? { label: changes[0].label, by: this.nameOf(c, changes[0].typed_by), at: changes[0].typed_at ?? changes[0].at } : null;
         const facts = (now?.facts ?? []).map((x) => { const t = typist(x.about, x.fact); const a = basis.answers.find((y) => !y.rowKey && y.field === x.fact && y.subjectId === (x.about === "case" ? basis.caseSubject : x.about));
-          return { label: basis.words.label(x.fact), person: basis.words.person(x.about.split("/")[0]), value: x.value, typed_by_name: x.about === REPRESENTATIVE ? "the firm record" : this.nameOf(c, t?.by), confirmed_by_name: a?.origin ? this.nameOf(c, a.actor) : null }; });
+          // Review M3: a relative's fact is named as the relative's (factPerson, the words factChanges gives each change).
+          return { label: basis.words.label(x.fact), person: factPerson(x.about, x.row, basis.words), value: x.value, value_words: basis.valueWords(x.fact, x.value), typed_by_name: x.about === REPRESENTATIVE ? "the firm record" : this.nameOf(c, t?.by), confirmed_by_name: a?.origin ? this.nameOf(c, a.actor) : null }; });
         const kind = (f.stampFileKind ?? f.fileKind) as FileStamp["kind"];
         return { item: f.itemId, form: f.formNumber, person: now?.person ?? "", channel: now?.channel ?? "", waits, state: st.state, state_words: STATE_WORDS[st.state],
           tooltip: st.state === "approval_withdrawn" ? WITHDRAWN_TOOLTIP : st.state === "changed_since_review" ? CHANGED_TOOLTIP : null,
           withdrawn_words: st.state === "approval_withdrawn" ? withdrawnWords(st.why, first, day) : null,
-          file: { kind, sha256: f.stampFileSha256 ?? f.fileSha256, words: `Stamped with ${FILE_WORDS[kind]}` },
+          file: { kind, sha256: f.stampFileSha256 ?? f.fileSha256, words: waits ? "Not stamped: waits for an answer" : `${f.stampedAt ? "Stamped" : "Frozen when sent"} with ${FILE_WORDS[kind]}` },
           stamp: f.stampedAt ? { at: f.stampedAt.toISOString(), by: f.stampedBy!, file_kind: f.stampFileKind!, file_sha256: f.stampFileSha256 } : null,
           live_hash: liveHash, changes: changeView(changes), facts };
       });
-      const withdrawn = row.status === "approved" ? withdrawnForms(row.forms.map((f) => ({ item: f.itemId, waits: f.fileKind === "waits", stamp: f.stampedAt ? { hash: f.stampHash, by: row.representative } : null, liveHash: live.get(f.itemId)?.hash ?? null })), rep).map((f) => f.item) : [];
+      const withdrawn = row.status === "approved" && latest ? withdrawnForms(row.forms.map((f) => ({ item: f.itemId, waits: f.fileKind === "waits", stamp: f.stampedAt ? { hash: f.stampHash, by: row.representative } : null, liveHash: live.get(f.itemId)?.hash ?? null })), rep).map((f) => f.item) : [];
       const reasons = (row.reasons ?? null) as { text: string; item?: string; check?: string }[] | null;
       return { filing: row.filingId, label: label.get(row.filingId) ?? "A filing no longer on the application", filing_round: row.filingRound, status: row.status as RowStatus, status_words: STATUS_WORDS[row.status as RowStatus],
         opened: row.openedBy ? { by: row.openedBy, name: this.nameOf(c, row.openedBy)!, at: row.openedAt!.toISOString() } : null,
         decided: row.decidedBy ? { by: row.decidedBy, name: this.nameOf(c, row.decidedBy)!, at: row.decidedAt!.toISOString(), kind: row.reviewKind, reasons, confirmed_unticked: (row.confirmedUnticked ?? null) as string[] | null } : null,
         forms, checks: row.checks.map((k) => ({ key: k.itemKey, source: k.source as "default", wording: k.wording, live: (k.live ?? null) as Record<string, unknown> | null, live_now: checksNow.get(k.itemKey) ?? null, ticked: k.tickedBy ? { by: k.tickedBy, name: this.nameOf(c, k.tickedBy)!, at: k.tickedAt!.toISOString() } : null })),
-        unticked: row.checks.filter((k) => k.source !== "form" && !k.tickedBy).length, changed: forms.filter((f) => f.state === "changed_since_review").length, withdrawn,
+        unticked: row.checks.filter((k) => k.source !== "form" && !ticked.has(k.itemKey)).length, changed: forms.filter((f) => f.state === "changed_since_review").length, withdrawn,
         latest, reapprovable: row.status === "approved" && latest && withdrawn.length > 0, open_critical: (rd?.warns ?? []).filter((w) => w.severity === "critical").map((w) => w.words),
         history: mine.map((x) => ({ round: x.round.number, filing_round: x.filingRound, status: x.status as RowStatus, at: (x.decidedAt ?? x.openedAt)?.toISOString() ?? "", by: x.decidedBy, reasons: (x.reasons ?? null) as { text: string }[] | null })) };
     });
@@ -275,6 +285,8 @@ export class ReviewRounds {
     const b = parsed(ReviewOpen, body);
     await this.mustDecide(actor, c);
     await this.rowOf(round, b.filing);
+    // Break m4: a filing removed from the application is not opened (it can still be sent back).
+    if (!(await this.db.filing.findUnique({ where: { id: b.filing }, select: { active: true } }))?.active) refuse({ status: 409, detail: "This filing was removed from the application: send it back, or add it back first." });
     const moved = await this.db.$transaction(async (tx) => {
       const [row] = await tx.$queryRaw<{ id: string; status: RowStatus }[]>`SELECT id, status FROM review_round_filing WHERE round_id = ${round.id}::uuid AND filing_id = ${b.filing}::uuid FOR UPDATE`;
       if (nextStatus(row.status, "open") === null) return null;
@@ -297,11 +309,12 @@ export class ReviewRounds {
     if (!item) refuse({ status: 404, detail: "That checklist item is not on this filing's review." });
     const done = await this.db.$transaction(async (tx) => {
       const [r] = await tx.$queryRaw<{ status: RowStatus }[]>`SELECT status FROM review_round_filing WHERE id = ${row.id}::uuid FOR UPDATE`;
-      if (!isOpen(r.status)) return false;
+      // Break m3: ticks only after the representative opened the filing (BR-3), never on a Sent or decided row.
+      if (r.status !== "under_review") return false;
       await tx.reviewCheck.update({ where: { id: item!.id }, data: b.ticked ? { tickedBy: actor.id, tickedAt: new Date() } : { tickedBy: null, tickedAt: null } });
       return true;
     }, TX);
-    if (!done) refuse({ status: 409, detail: "This filing's review is decided: its checklist is closed. Reload." });
+    if (!done) refuse({ status: 409, detail: "This filing's checklist is not open: open the filing first, or it is decided. Reload." });
     return { filing: b.filing, item: b.item, ticked: b.ticked };
   }
 
@@ -314,7 +327,8 @@ export class ReviewRounds {
     const rep = await this.mustDecide(actor, c);
     const row = await this.rowOf(round, b.filing);
     const filing = await this.db.filing.findUnique({ where: { id: b.filing }, select: { status: true, active: true } });
-    if (!filing?.active) refuse({ status: 409, detail: "This filing is no longer on the application (it was removed): nothing was recorded." });
+    // Break m4: a removed filing can still be sent back (closing its round); it is never approved.
+    if (!filing?.active && b.verdict === "approve") refuse({ status: 409, detail: "This filing is no longer on the application (it was removed): send it back instead. Nothing was recorded." });
     if (filing!.status === "SUBMITTED") refuse({ status: 409, detail: "This filing is recorded as submitted: its review is closed. Correct the record instead." });
     if (!isOpen(row.status as RowStatus)) refuse({ status: 409, detail: "This filing was decided meanwhile. Reload." });
     if (row.status === "sent") refuse({ status: 409, detail: "Open this filing's review first (it is not under review yet). Reload." });
@@ -323,10 +337,11 @@ export class ReviewRounds {
     // BR-4 (M4): every form the page loaded, with the hash it loaded; a form added or gone since is a change too.
     const hp = hashesProblem(b.form_hashes, forms.map((f) => ({ item: f.item, hash: f.hash })));
     if (hp) refuse(hp);
-    if (stored.length !== forms.length || stored.some((s) => !forms.some((f) => f.item === s.itemId))) refuse({ status: 409, detail: "The forms of this filing changed since it was sent (a form was added or no longer applies): send it back, then send it for review again." });
+    // Break m7: only an approval needs the forms as sent; a send back is always possible.
+    if (b.verdict === "approve" && (stored.length !== forms.length || stored.some((s) => !forms.some((f) => f.item === s.itemId)))) refuse({ status: 409, detail: "The forms of this filing changed since it was sent (a form was added or no longer applies): send it back, then send it for review again." });
     if (b.verdict === "send_back") {
       const checks = await this.db.reviewCheck.findMany({ where: { roundFilingId: row.id }, select: { itemKey: true } });
-      const rs = reasonsOf(b.reasons, new Set(forms.map((f) => f.item)), new Set(checks.map((k) => k.itemKey)));
+      const rs = reasonsOf(b.reasons, new Set([...forms.map((f) => f.item), ...stored.map((x) => x.itemId)]), new Set(checks.map((k) => k.itemKey)));
       if ("problem" in rs) refuse(rs.problem);
       const reasons = (rs as { reasons: unknown[] }).reasons;
       await busyWords(() => this.db.$transaction(async (tx) => {
@@ -339,12 +354,16 @@ export class ReviewRounds {
       return { filing: b.filing, status: "sent_back" as const, reasons };
     }
     const checks = await this.db.reviewCheck.findMany({ where: { roundFilingId: row.id } });
-    const un = untickedProblem(checks.map((k) => ({ key: k.itemKey, source: k.source, ticked: !!k.tickedBy })), b.confirm_unticked);
+    // Break m2: only the deciding representative's own ticks count.
+    const un = untickedProblem(checks.map((k) => ({ key: k.itemKey, source: k.source, ticked: k.tickedBy === actor.id })), b.confirm_unticked);
     if (un.problem) refuse(un.problem);
-    // BR-8 (M3): a fact the representative typed after the round was sent makes them an author of the filing.
-    const snaps = new Map((await this.db.answerSnapshot.findMany({ where: { id: { in: stored.map((s) => s.snapshotId).filter((x): x is string => !!x) } }, select: { id: true, factsJson: true } })).map((s) => [s.id, ((s.factsJson ?? {}) as StoredFacts).facts ?? []]));
+    // BR-8 (M3; review M2): a fact the representative typed since the filing's previous round was frozen (else since this
+    // round was sent) makes them an author of the filing: the same base the page compares with (compose).
+    const prev = row.filingRound > 1 ? await this.db.reviewRoundFiling.findUnique({ where: { filingId_filingRound: { filingId: b.filing, filingRound: row.filingRound - 1 } }, select: { forms: { select: { itemId: true, snapshotId: true } } } }) : null;
+    const baseOf = (s: { itemId: string; snapshotId: string | null }) => prev?.forms.find((x) => x.itemId === s.itemId)?.snapshotId ?? s.snapshotId;
+    const snaps = new Map((await this.db.answerSnapshot.findMany({ where: { id: { in: stored.map(baseOf).filter((x): x is string => !!x) } }, select: { id: true, factsJson: true } })).map((s) => [s.id, ((s.factsJson ?? {}) as StoredFacts).facts ?? []]));
     const typist = this.typistOf(basis);
-    const since = stored.flatMap((s) => { const f = forms.find((x) => x.item === s.itemId); return f && !f.waits ? changesOf(snaps.get(s.snapshotId ?? "") ?? [], f.facts, basis.words, typist) : []; });
+    const since = stored.flatMap((s) => { const f = forms.find((x) => x.item === s.itemId); return f && !f.waits ? changesOf(snaps.get(baseOf(s) ?? "") ?? [], f.facts, basis.words, typist) : []; });
     const frames = await this.framesOf(forms);
     const decided = await this.approve(actor, c, { filing: b.filing, rep, self: b.self, changedByReviewer: changedBy(since, actor.id), view },
       async (tx, review, kind) => {
@@ -359,10 +378,10 @@ export class ReviewRounds {
 
   /** BR-4 with C7.6: the licence, the self-review rule (BR-8) and the filing_review row C7.6 and C8.2 read, written
    *  under the case's row lock with the round's own writes (`write`). Shared by decision, reapprove and oneStep (M1). */
-  private async approve(actor: Actor, c: Reached, x: { filing: string; rep: string; self: unknown; changedByReviewer: boolean; view: { readiness: ReadinessView[] } }, write: (tx: Tx, reviewId: string, kind: "reviewed" | "self_reviewed") => Promise<string>) {
+  private async approve(actor: Actor, c: Reached, x: { filing: string; rep: string; self: unknown; changedByReviewer: boolean; view: { readiness: ReadinessView[] }; after?: "send" | "approval" }, write: (tx: Tx, reviewId: string, kind: "reviewed" | "self_reviewed") => Promise<string>) {
     const everyone = await this.db.caseTeamMember.findMany({ where: { caseId: c.id } }); // break N4: ended officer rows too
     const firm = this.firmOf(c), licence = firm ? userIn(firm, actor.id)?.licence ?? null : null;
-    const sr = selfReviewOf({ actor: actor.id, officers: new Set(everyone.filter((m) => m.role === "OFFICER").map((m) => m.userId)), solo: !!firm?.solo, changedByReviewer: x.changedByReviewer, self: x.self });
+    const sr = selfReviewOf({ actor: actor.id, officers: new Set(everyone.filter((m) => m.role === "OFFICER").map((m) => m.userId)), solo: !!firm?.solo, changedByReviewer: x.changedByReviewer, self: x.self, after: x.after });
     if ("problem" in sr) refuse(sr.problem);
     const kind = (sr as { kind: "reviewed" | "self_reviewed" }).kind;
     if (!licence) refuse({ status: 409, detail: "An approval needs the representative's licence number on the firm record; none is set." });
@@ -404,15 +423,19 @@ export class ReviewRounds {
     const typist = this.typistOf(basis);
     const since = changed.flatMap((w) => { const s = stored.find((x) => x.itemId === w.item), f = forms.find((x) => x.item === w.item)!; return changesOf(snaps.get(s?.stampSnapshotId ?? "") ?? [], f.facts, basis.words, typist); });
     const frames = await this.framesOf(forms), checks = await this.db.reviewCheck.findMany({ where: { roundFilingId: row.id } });
-    const carry = { stamps: new Map(stored.filter((s) => stampCurrent(s.stampedAt ? { hash: s.stampHash, by: row.representative } : null, { hash: forms.find((f) => f.item === s.itemId)?.hash ?? null, representative: rep }).current).map((s) => [s.itemId, s])), ticks: new Map(checks.map((k) => [k.itemKey, { by: k.tickedBy, at: k.tickedAt }])) };
+    // Review m5, break m2: ticks carry only when the representative of record made them (a new representative's round
+    // starts with their own); the items not ticked by them are recorded as confirmed unticked by this one click.
+    const mine = checks.filter((k) => k.tickedBy === rep);
+    const carry = { stamps: new Map(stored.filter((s) => stampCurrent(s.stampedAt ? { hash: s.stampHash, by: row.representative } : null, { hash: forms.find((f) => f.item === s.itemId)?.hash ?? null, representative: rep }).current).map((s) => [s.itemId, s])), ticks: new Map(mine.map((k) => [k.itemKey, { by: k.tickedBy, at: k.tickedAt }])) };
+    const unticked = checks.filter((k) => k.source !== "form" && k.tickedBy !== rep).map((k) => k.itemKey);
     let made: { id: string; number: number } | null = null;
-    const decided = await this.approve(actor, c, { filing: b.filing, rep, self: b.self, changedByReviewer: changedBy(since, actor.id), view }, async (tx, review, kind) => {
+    const decided = await this.approve(actor, c, { filing: b.filing, rep, self: b.self, changedByReviewer: changedBy(since, actor.id), view, after: "approval" }, async (tx, review, kind) => {
       if (await tx.reviewRoundFiling.findFirst({ where: { filingId: b.filing, OR: [{ filingRound: { gt: row.filingRound } }, { status: { in: ["sent", "under_review"] } }] }, select: { id: true } })) refuse({ status: 409, detail: "This filing was sent or re-approved meanwhile. Reload." });
       const { n, per } = await this.nextNumbers(tx, c.id, [b.filing]);
       const r2 = await tx.reviewRound.create({ data: { workspaceId: c.workspaceId, caseId: c.id, number: n, kind: "reapprove", sentBy: actor.id } });
       const now = new Date();
       const nr = await tx.reviewRoundFiling.create({ data: { workspaceId: c.workspaceId, caseId: c.id, roundId: r2.id, filingId: b.filing, filingRound: per.get(b.filing)!, status: "approved", openedBy: actor.id, openedAt: now, decidedBy: actor.id, decidedAt: now,
-        representative: rep, reviewKind: kind, selfStatement: kind === "self_reviewed" ? SELF_STATEMENT : null, confirmedUnticked: (row.confirmedUnticked ?? []) as object, filingReviewId: review } });
+        representative: rep, reviewKind: kind, selfStatement: kind === "self_reviewed" ? SELF_STATEMENT : null, confirmedUnticked: unticked as object, filingReviewId: review } });
       const out = await this.freeze(tx, c, { id: nr.id, roundId: r2.id, filingId: b.filing }, frames, checks.map((k) => ({ key: k.itemKey, source: k.source as CheckItem["source"], wording: k.wording, live: (k.live ?? null) as Record<string, unknown> | null })), carry);
       await this.stamp(tx, c, actor, [...out].map(([item, x]) => ({ id: x.id, snapshotId: x.snapshotId, factsHash: frames.find((f) => f.item === item)?.hash ?? null })), frames, (x) => [...out].find(([, y]) => y.id === x.id)![0]);
       made = { id: r2.id, number: n };
@@ -434,6 +457,10 @@ export class ReviewRounds {
   /** Inside the C7.6 route's transaction, after its filing_review row: one round, sent, opened and approved by the
    *  representative of record in one step, every form frozen and stamped by the same code as a send and an approval. */
   async oneStep(tx: Tx, c: Reached, actor: Actor, x: { filing: string; reviewId: string; kind: "reviewed" | "self_reviewed"; frames: Frozen[]; checks: CheckItem[] }) {
+    // Break M3: under the case's row lock (the caller took it), a send that committed meanwhile is seen: refused, and the
+    // caller's transaction (its filing_review row too) is rolled back.
+    if (await tx.reviewRoundFiling.findFirst({ where: { filingId: x.filing, status: { in: ["sent", "under_review"] } }, select: { id: true } }))
+      refuse({ status: 409, detail: "This filing was sent for review meanwhile: approve it or send it back on the Review page (Open the review). Nothing was recorded." });
     const { n, per } = await this.nextNumbers(tx, c.id, [x.filing]);
     const r = await tx.reviewRound.create({ data: { workspaceId: c.workspaceId, caseId: c.id, number: n, kind: "one_step", sentBy: actor.id } });
     const now = new Date();
