@@ -15,7 +15,9 @@ const PORT = Number(process.argv[2] ?? 4431), DB = process.argv[3] ?? "xr_studio
 const DIR = "/tmp/xr_c102p", PAPER = join(DIR, "paper.json"), STUDIO = join(import.meta.dirname, "..");
 let pass = 0, fail = 0;
 const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
-const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+// Review m2: never the demo (its port and database), and psql from PSQL where the Mac's path is not.
+if (PORT === 4400 || DB === "xr_studio_demo") { console.log("refused: this check loads the finished story and writes a test-only validated file; run it on an isolated copy, never the demo (:4400, xr_studio_demo)"); process.exit(2); }
+const sql = (q: string) => execFileSync(process.env.PSQL ?? "/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
 const call = async (method: string, path: string, body?: unknown, actor = "user-A") => {
   const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   return { status: r.status, body: await r.json().catch(() => null) as Record<string, any> | null }; // eslint-disable-line @typescript-eslint/no-explicit-any -- route answers read loosely, as the other API checks do

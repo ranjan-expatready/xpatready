@@ -187,11 +187,10 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
     // door, as the case officer would upload it; then it is printed and signed in pen (B132), in that order.
     const v: StoryValidated = await (opts.validatedFile?.(pl.person) ?? Promise.resolve({ kind: "none" as const, words: "No validated copy is looked for on this load." }));
     if (v.kind === "found" && v.copyId === copy) must(await r.upload(officer, `/runtime/form-copies/${copy}/validated`, v.bytes, v.name), `Read back the validated copy of ${pl.form} for ${pl.person}`);
-    let after = (await prepare()).items.find((i) => i.id === item.id);
+    const after = (await prepare()).items.find((i) => i.id === item.id);
     if (after?.validated?.current) {
       must(await r.call(officer, "POST", `/runtime/items/${item.id}/sign-steps/print`, { copy: after.validated.copy }), `Print the validated copy of ${pl.form}`);
       must(await r.call(officer, "POST", `/runtime/items/${item.id}/sign-steps/sign_in_pen`, {}), `Sign ${pl.form} in pen`);
-      after = (await prepare()).items.find((i) => i.id === item.id);
       return { status: "done", shows: `${pl.form} for ${pl.person} filed on Paper by the case officer with a written reason; its copy validated in Adobe on the Mac and read back through the upload door, printed with its barcode page and signed in pen`, why: null };
     }
     // QA-316: the copy's own open mandatory form fields, read now (the product's list), never a fixed number.
@@ -218,8 +217,9 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
     // A barcode copy still waiting for its Validate (never one already read back: its own words name Validate too).
     const toValidate = p.items.filter((i) => i.kind === "form" && i.channel !== "ONLINE" && !i.validated?.current && /press Validate|Validate it in Adobe/.test(i.reason ?? ""));
     const forms = [...new Set(p.items.filter((i) => i.kind === "form" && i.channel !== "ONLINE" && i.signature !== "HAND_SCANNED").map((i) => i.form ?? ""))].sort();
-    const why = [notDone.length ? `${notDone.length} of ${online.length} Online IMM 5257 items stay To do: ${[...new Set(notDone.map((i) => i.reason ?? ""))].join(" ")}` : "" /* QA-309: each item names what it waits on */, toValidate.length ? `${toValidate.length} barcode PDF${toValidate.length === 1 ? "" : "s"} not read back: ${HELD.validate}.` : "", forms.includes("IMM 5645") ? `${HELD.family}.` : ""].filter(Boolean).join(" ");
-    return { status: notDone.length || toValidate.length ? "partial" : "done", shows: `${online.length} Online IMM 5257 answer sheet${online.length === 1 ? "" : "s"}, ${ticked} section${ticked === 1 ? "" : "s"} ticked "Entered in the portal" by the case officer; ${copies} PDF cop${copies === 1 ? "y" : "ies"} filled from the confirmed facts (${forms.join(", ")})`, why: why || null };
+    const why = [notDone.length ? `${notDone.length} of ${online.length} Online IMM 5257 items stay To do: ${[...new Set(notDone.map((i) => i.reason ?? ""))].join(" ")}` : "" /* QA-309: each item names what it waits on */, toValidate.length ? `${toValidate.length} barcode PDF${toValidate.length === 1 ? "" : "s"} not read back: ${HELD.validate}.` : ""].filter(Boolean).join(" ");
+    // Review m6 (9 Nov): QA-153 is said with what the stage shows, never as something it still waits on (it waits on nothing for it).
+    return { status: notDone.length || toValidate.length ? "partial" : "done", shows: `${online.length} Online IMM 5257 answer sheet${online.length === 1 ? "" : "s"}, ${ticked} section${ticked === 1 ? "" : "s"} ticked "Entered in the portal" by the case officer; ${copies} PDF cop${copies === 1 ? "y" : "ies"} filled from the confirmed facts (${forms.join(", ")})${forms.includes("IMM 5645") ? `; ${HELD.family}` : ""}`, why: why || null };
   });
 
   // C8.1: IMM 5476 printed, signed by hand, its scan uploaded, in that order.

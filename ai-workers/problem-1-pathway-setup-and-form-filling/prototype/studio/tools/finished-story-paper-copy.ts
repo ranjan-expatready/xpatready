@@ -26,6 +26,7 @@ Next, on the Mac (Adobe Acrobat or Reader; never a simulated Validate):
  4. Read it back through the product's upload door, as the case officer: on the case page, IMM 5257 for ${person},
     "Read back the validated copy" (choose the saved file), or
       curl -s -X POST -H 'x-actor: user-O' -F file=@<that file> http://localhost:4400/api/runtime/form-copies/${copy.id}/validated
- 5. Record it: node --import tsx tools/record-validated-samples.ts --paper "the tech lead, Adobe on the Mac"
+ 5. Record it (in prototype/studio, with the same DATABASE_URL):
+      TSX_TSCONFIG_PATH=api/tsconfig.json node --import tsx tools/record-validated-samples.ts --paper "the tech lead, Adobe on the Mac"
     (writes ${paperFile()}; commit that file; the PDF stays on the Mac, QA-285).
  6. Load the finished story again: its Paper, forms, ready and record stages read done, and acceptance/C10.2 5b and 6d pass on the Mac.`);

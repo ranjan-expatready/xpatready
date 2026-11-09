@@ -29,6 +29,9 @@ export const VALIDATED_FILE = "samples/validated-imm5257.json";
 /** C10.2 (Lead 37, 9 Nov; P-349 row 12b's method): the read-back of the finished story's Paper IMM 5257 copy, validated in
  *  Adobe on the Mac (one person's copy on release 2). The validated PDF stays on the Mac, in the same local folder. */
 export const VALIDATED_PAPER_FILE = "samples/validated-imm5257-paper.json";
+/** The one Sample case the saved read-backs belong to (api/src/sample-case.ts SAMPLE_CASE.reference; written here so
+ *  this file loads without core.ts, as above). */
+const SAMPLE_REFERENCE = "SAMPLE-VV-FAMILY-1";
 /** Where that saved read-back is read and written: VALIDATED_PAPER_FILE, or STUDIO_VALIDATED_PAPER (an absolute path; a
  *  test copy's own file, so a check never writes under samples/). */
 export const paperFile = (env: NodeJS.ProcessEnv = process.env) => env.STUDIO_VALIDATED_PAPER?.trim() || VALIDATED_PAPER_FILE;
@@ -42,7 +45,7 @@ type Fact = { box: string; fact: string; about: string; row: number | null; valu
 export type SavedReadBack = { person: string; family_facts_hash: string; values_sha256: string; copy_sha256: string; validated_sha256: string; file?: string; read_back: { ok: boolean; validation?: { passed?: boolean; flag?: string | null; date_last_validated?: string | null } } & Record<string, unknown>; read_at: string; source: string };
 /** case_reference and form: the one Sample case and the form the read-backs belong to (QA-285: the kept-on-the-Mac words
  *  are said only on that case's copies of that form, never on a real case with the same answers). */
-type SavedFile = { label: string; basis: string; case_reference?: string; form?: string; copies: SavedReadBack[] };
+export type SavedFile = { label: string; basis: string; case_reference?: string; form?: string; copies: SavedReadBack[] };
 
 /** The facts hash of a copy with each person named by their name on the case (engine/runtime/forms.ts inputHash, the
  *  same order and fields), so the same family's same answers give the same hash on every load. */
@@ -149,15 +152,22 @@ export async function replaySavedReadBacks(db: Db, caseId: string, upload: Uploa
  *  this copy reads the same family facts and writes the same values as the copy that was validated (as B99). */
 export type StoryValidated = { kind: "found"; copyId: string; name: string; bytes: Buffer } | { kind: "kept_on_mac" | "none" | "differs" | "refused"; words: string };
 export async function storyValidatedFile(db: Db, caseId: string, person: string, dir = validatedDir(), saved = savedReadBacks(paperFile())): Promise<StoryValidated> {
-  const copy = (await copiesWithHash(db, caseId)).find((c) => c.person === person);
-  if (!copy) return { kind: "none", words: `${person} has no copy of IMM 5257 yet.` };
-  const s = saved?.copies.find((x) => x.person === person);
-  if (!s) return { kind: "none", words: `No validated copy of ${person}'s Paper IMM 5257 is saved yet (${VALIDATED_PAPER_FILE}): a person validates it in Adobe on the Mac and reads it back (P-349 row 12b).` };
+  return matchStoryValidated((await copiesWithHash(db, caseId)).find((c) => c.person === person) ?? null, person, saved, dir);
+}
+/** The match itself, pure but for reading the folder (tests/check_c102_story_validated_match.ts holds every outcome): the
+ *  saved file must be the Sample case's and this form's (as keptOnMacWords), its read-back must have passed the form's own
+ *  Validate, and the copy must read the same family facts and write the same values as the copy validated; then the
+ *  file is used only when its checksum is the saved one. */
+export function matchStoryValidated(copy: { id: string; familyHash: string; valuesHash: string | null } | null, person: string, saved: SavedFile | null, dir: string, caseReference = SAMPLE_REFERENCE, form = "IMM 5257"): StoryValidated {
+  if (!copy) return { kind: "none", words: `${person} has no copy of ${form} yet.` };
+  if (!saved || saved.case_reference !== caseReference || saved.form !== form) return { kind: "none", words: `No validated copy of ${person}'s Paper ${form} is saved yet (${VALIDATED_PAPER_FILE}): a person validates it in Adobe on the Mac and reads it back (P-349 row 12b).` };
+  const s = saved.copies.find((x) => x.person === person);
+  if (!s) return { kind: "none", words: `No validated copy of ${person}'s Paper ${form} is saved yet (${VALIDATED_PAPER_FILE}): a person validates it in Adobe on the Mac and reads it back (P-349 row 12b).` };
   if (s.read_back?.ok !== true || s.read_back?.validation?.passed !== true) return { kind: "differs", words: `${person}: the saved read-back did not pass the form's own Validate.` };
   if (s.family_facts_hash !== copy.familyHash) return { kind: "differs", words: `${person}: this copy reads different answers from the copy that was validated, so its Validate does not count: validate this copy again.` };
   if (!copy.valuesHash || s.values_sha256 !== copy.valuesHash) return { kind: "differs", words: `${person}: this copy writes different values from the copy that was validated, so its Validate does not count: validate this copy again.` };
   const f = localValidatedFile(dir, s);
   if (f.kind === "refused") return { kind: "refused", words: f.words };
-  if (f.kind === "absent") return { kind: "kept_on_mac", words: `${person}'s Paper IMM 5257 was validated in Adobe on the Mac and read back equal (Sample); the validated file is kept on the Mac, not in these working files (QA-285).` };
+  if (f.kind === "absent") return { kind: "kept_on_mac", words: `${person}'s Paper ${form} was validated in Adobe on the Mac and read back equal (Sample); the validated file is kept on the Mac, not in these working files (QA-285).` };
   return { kind: "found", copyId: copy.id, name: f.name, bytes: f.bytes };
 }
