@@ -32,7 +32,7 @@ async function release(vv: string, note: string): Promise<{ version: number | nu
 await main("C6.14", "One document for the whole application: one item, default providers, nobody under 18, the officer changes them with a reason", async () => {
   const vv = needVisitorVisa();
   const MARRIAGE = sql(`select document_type_key from document_requirement where combination_id = '${vv}' and applies_to_roles = 'couple_once' and status <> 'RETIRED' order by version desc limit 1`);
-  const PASSPORT = sql(`select document_type_key from document_requirement where combination_id = '${vv}' and applies_to_roles = 'each_applicant' and document_type_key ~* 'passport' and status <> 'RETIRED' order by version desc limit 1`);
+  const PASSPORT = sql(`select document_type_key from document_requirement where combination_id = '${vv}' and applies_to_roles = 'each_applicant' and attach_mode = 'COMBINATION_MANDATORY' and document_type_key ~* 'passport' and status <> 'RETIRED' order by document_type_key, version desc limit 1`); // the always-needed passport line (never the conditional absent parent's one)
   if (!MARRIAGE || !PASSPORT) { console.log("Setup missing: Visitor visa has no line asked once for the couple, or no passport line (load the configured checkpoint)."); process.exit(2); }
 
   /** A case of these people, each married (the marriage line's condition), and its checklist reader. */
@@ -110,7 +110,7 @@ await main("C6.14", "One document for the whole application: one item, default p
   // ------------------------------------------------------------------ BR-6: the officer changes the providers with a reason
   const item = m.length ? linesOf(await list(B.id, B.officer), MARRIAGE)[0] : undefined;
   const P = B.subjects["Sample Client A"], S = B.subjects["Sample Spouse A"], K = B.subjects["Sample Child A1"];
-  const change = (body: Record<string, unknown>, actor = B.officer, line = item?.id) => call("POST", `/runtime/checklist-lines/${line}/providers`, body, actor);
+  const change = (body: Record<string, unknown>, actor = B.officer, line: string | undefined = item?.id) => call("POST", `/runtime/checklist-lines/${line}/providers`, body, actor);
   r = await change({ providers: [P], reason: "" });
   ok("C6.14-19 fail (BR-6): no reason is refused (400)", r.status === 400 && /reason/i.test(words(r)), words(r));
   r = await change({ providers: [K], reason: "The child has the certificate." });
@@ -124,7 +124,7 @@ await main("C6.14", "One document for the whole application: one item, default p
   r = await change({ providers: [P], reason: "Stale.", version: (item?.version ?? 0) + 5 });
   ok("C6.14-24 fail (BR-6): a stale version is refused (409)", r.status === 409, r.status);
   const passLine = linesOf(await list(B.id, B.officer), PASSPORT)[0];
-  r = await change({ providers: [P], reason: "Per person." }, B.officer, passLine?.id);
+  r = passLine ? await change({ providers: [P], reason: "Per person." }, B.officer, passLine.id) : { status: 0, body: "no passport line" };
   ok("C6.14-25 fail (BR-2, BR-6): a per-person line has no providers to change (422)", r.status === 422 && /asked of each person/.test(words(r)), words(r));
   r = await change({ providers: [P], reason: "Only the principal holds the original (Sample).", version: item?.version });
   ok("C6.14-26 pass (BR-6; SA-1B-214 r2): the case officer makes Sample Client A the only provider, with a reason", r.status === 200 && names(r.body?.providers) === "Sample Client A" && r.body?.providers_rule === "changed" && r.body?.providers_change?.reason === "Only the principal holds the original (Sample).", r.status === 200 ? r.body?.providers_words : words(r));
