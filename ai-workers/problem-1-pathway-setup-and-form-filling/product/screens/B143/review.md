@@ -93,3 +93,35 @@ Journey score (reviewer, the one score for this check): **8.5 / 10, pass, no 0.*
 2. Add the pack checks for the waived CRITICAL finding and the submitted filing, so removing the API wiring fails (Major 2).
 
 The Minors are fixed or listed in the PR.
+
+## Round 2 (diff-only)
+Reviewed `git diff c504e200271afb6d2d73f25fe62bc194a92bf51d 69cfe1aceca51f78d71f961d70eef2e087a97b7a` (cf58f6d3e, 69cfe1ace) plus d6fd11563 (the one-line qa/built entry, no Works claim). 9 Nov. My copy `rev143b` ran on :4437 only, loaded with the configured checkpoint (97 s), and was stopped and dropped after.
+
+**What I ran on 69cfe1ace**
+* `check_c710_figure.ts`: 37/37.
+* `C7.10.test.ts` on the fresh checkpoint copy: 18/18. C7.10-15 gave countable 11, 11, 11, 11 against base 10, over 3 resolved rows. Round 1's probe of the same steps grew 1 → 2 → 3.
+* The web build (`web/dist`, 04:35) carries the sr-only "Readiness " and the muted circle. Screenshot `02` shows it, and the rule words no longer carry ids.
+
+**Major 1: closed.**
+* `closedOnce` (`engine/runtime/readiness-figure.ts`) keys a rules finding by `ruleKey|subjectId`. It keeps the newest closed row (rows are read `createdAt desc` in `api/src/readiness-inputs.ts`). It drops all closed rows while that check has an open row on the filing (`openRuleChecks`, read from the open `findings`, which carry `source`, `ruleKey` and `subjectId`).
+* Rows added by hand or by the AI review each still count, as the concept says.
+* Engine: one pass and two fails (row-by-row would give 10 against 8). Pack: C7.10-15.
+
+**Major 2: closed.**
+* Removing the `submitted` flag fails C7.10-16 (`allSubmitted`).
+* Removing the closed-findings read fails C7.10-14 (same countable, item Done and passed, passed +1).
+* Removing `closedOnce` fails C7.10-15 (counts would reach base+3) and the engine "review M1" checks.
+
+I checked these by reading the code against round 1's probe numbers. I did not mutate the source, because the builder's suites run from this clone.
+
+**Minors**
+* 3 (red circles), 4 (aria-label), 5 (ids in the rule words) and 6 (tie test, now both ways) are fixed.
+* 7 (title-only tooltips) is left as the house Pill pattern and listed in the PR. Accepted.
+
+**Remaining Minors (none blocks; list them in the PR)**
+* (a) C7.10-13 asserts Not ready on a filing that is already Not ready for other reasons, so it does not prove the CRITICAL-finding state through the API. The engine M1 checks and the property cover the rule itself.
+* (b) C7.10-17 says the figure "may lower" but asserts only that `case_figure` stays null. Adding `some(g => g.score < 100)` would pin the "fell to 66" claim.
+* (c) The rule paragraph's first sentence is still about 35 words.
+
+**Verdict: Approve** 69cfe1aceca51f78d71f961d70eef2e087a97b7a (no open Blocker or Major).
+Reviewer: Approve 69cfe1aceca51f78d71f961d70eef2e087a97b7a
