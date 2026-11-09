@@ -37,8 +37,11 @@ export type Addition = {
   added_by: string; added_at: string; reason: string | null;
 };
 
+/** The same JSON text whatever order an object's keys come back in (PostgreSQL's jsonb stores them sorted). */
+export const stableJson = (v: unknown): string => Array.isArray(v) ? `[${v.map(stableJson).join(",")}]`
+  : v && typeof v === "object" ? `{${Object.keys(v as object).filter((k) => (v as Record<string, unknown>)[k] !== undefined).sort().map((k) => `${JSON.stringify(k)}:${stableJson((v as Record<string, unknown>)[k])}`).join(",")}}` : JSON.stringify(v ?? null);
 /** The fingerprint of what is frozen (stored with it; a changed row is never read as the frozen form). */
-export const frozenHash = (f: Frozen) => createHash("sha256").update(JSON.stringify(f)).digest("hex");
+export const frozenHash = (f: Frozen) => createHash("sha256").update(stableJson(f)).digest("hex");
 
 /** F1 (one place): the kind of a library form for this edition. */
 export function kindOf(x: { publishedRows: number; trialPassed: boolean; trialWhy: string | null }): { kind: AddedKind; why: string | null } {
@@ -59,7 +62,9 @@ export function refusalOf(x: {
   if (!x.hasEdition) return { status: 422, code: "no_edition", words: `${x.form} has no current edition in the firm's library: add one in Library › Forms first.` };
   if (x.heldByRelease) return { status: 409, code: "on_release", words: x.releaseLine?.condition && x.releaseLine.condition !== "always"
     ? `${x.form} is part of this application's forms; it applies when ${x.releaseLine.condition.replace(/[.\s]+$/, "")}${x.releaseLine.now ? ` (now: ${x.releaseLine.now})` : ""}. The answer decides it, so it is not added by hand.`
-    : `${x.form} is part of this application's forms already${x.releaseLine?.now ? ` (${x.releaseLine.now})` : ""}, so it is not added by hand.` };
+    : x.releaseLine && x.releaseLine.condition !== "always"
+      ? `${x.form} is part of this application's forms; an answer decides whether it applies${x.releaseLine.now ? ` (now: ${x.releaseLine.now})` : ""}. The answer decides it, so it is not added by hand.`
+      : `${x.form} is part of this application's forms already${x.releaseLine?.now ? ` (${x.releaseLine.now})` : ""}, so it is not added by hand.` };
   if (x.addedBy) return { status: 409, code: "already_added", words: `${x.form} is already added to this filing for this person by ${x.addedBy.by} on ${x.addedBy.at.slice(0, 10)}.` };
   if (x.kind === "blank" && x.barcode) return { status: 422, code: "barcode_blank", words: `${x.form} makes a barcode page: only a copy the product fills can be validated, and its filling is not proven yet, so it cannot be added as a blank form.` };
   return null;

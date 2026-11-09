@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, 
 import { join } from "node:path";
 import { scriptRulesOf } from "./own-yes-no.ts";
 import type { z } from "zod";
-import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
+import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type AddedTag, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
 import { caseView } from "../../engine/runtime/case.ts";
@@ -30,7 +30,7 @@ import { formValues, notOnFormLines, type Inventory } from "../../engine/form-va
 import { mandatoryOpen, type CaseWords, type OpenField, type RequiredWhen } from "../../engine/runtime/mandatory.ts";
 import { solutionFile, writeForm } from "./fill.ts";
 import { trialFor, type EditionMap } from "./fill-trials.ts";
-import { addedFor, additionsOf, withAdditions } from "../../engine/runtime/added-forms.ts";
+import { ADDED_TAG, addedFor, additionsOf, withAdditions, type AddedRecord } from "../../engine/runtime/added-forms.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 
 type H = string | undefined;
@@ -150,6 +150,11 @@ const VALIDATED_FILE = { name: "This copy's validated file", made: "read back", 
 /** P-65 (a), review M1, S2 (SA-1B-174): a form's fill trial counts for one form edition and one field map version
  *  (api/src/fill-trials.ts, the register samples/fill-trials.json, the verdict in evidence-lane/E1/<form>/STATUS.md).
  *  Not proven for this edition and map: copies are "Checked copy, not for filing" and cannot be locked. */
+/** C7.8 (B141 BR-7): the "Added by the case officer" tag of a form for one person, or null for a release form. */
+const addedTag = (s: Snap, form: string, subject: string): AddedTag | null => {
+  const a = addedFor((s.forms as { form_number: string }[]).find((l) => l.form_number === form) as never, subject);
+  return a ? { id: a.id, tag: ADDED_TAG, kind: a.kind, by: a.by, at: a.at, reason: a.reason, edition: a.edition, words: `${ADDED_TAG} on ${a.at.slice(0, 10)}. Not part of the combination.` } : null;
+};
 export const trialOf = (s: Snap, form: string) => trialFor(pdfMapInUse(s.field_maps as EditionMap[], form)); // P-32: the trial of the edition in use
 
 @Injectable()
@@ -207,7 +212,23 @@ export class CaseForms implements OnModuleInit {
         const onForm = onFormOf(s, form, cov, view, caseWords); // QA-165: readiness and the open fields read the same copy
         forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialOf(s, form).passed, trial_why: trialOf(s, form).why, channel, for_filing: channel !== "ONLINE" && channel !== "NOT_NEEDED", needs_validate: needsValidate(form, channel),
           draft: { written_now: cov?.facts.filter((x) => !isGateFact(x)).length ?? 0, mapped: cov?.mapped ?? 0, to_fix: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
-          readiness: readiness(view, form, p.subjectId, onForm), fields_open: onForm?.open ?? [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), copyNotForFiling(s, x), nameOf)) });
+          readiness: readiness(view, form, p.subjectId, onForm), fields_open: onForm?.open ?? [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), copyNotForFiling(s, x), nameOf)),
+          added: addedTag(s, form, p.subjectId) });
+      }
+    }
+    // C7.8 (B141 BR-5, BR-7): a blank official PDF the case officer added is listed like any form, with its download and
+    // its completed copy (the one upload, on its item), never a copy the product makes.
+    const blanks = (s.forms as { form_number: string; title?: string; added?: AddedRecord[] }[]).flatMap((l) => (l.added ?? []).filter((a) => a.kind === "blank").map((a) => ({ l, a })));
+    if (blanks.length) {
+      const its = await this.db.filingItem.findMany({ where: { caseId: c.id, kind: "form", active: true, itemKey: { in: blanks.map((b) => b.l.form_number) } }, select: { id: true, itemKey: true, subjectId: true, signedScans: { orderBy: [{ uploadedAt: "desc" }, { id: "asc" }], take: 1, select: { id: true, uploadedAt: true } } } });
+      for (const { l, a } of blanks) {
+        const who = people.find((p) => p.subjectId === a.subject);
+        if (!who) continue;
+        const item = its.find((i) => i.itemKey === l.form_number && i.subjectId === a.subject), scan = item?.signedScans[0];
+        const channel = chosen(s, items, l.form_number, a.subject);
+        forms.push({ form: l.form_number, title: l.title ?? l.form_number, subject_id: a.subject, person: who.label, applies: true, trial_passed: false, trial_why: null, channel, for_filing: true, needs_validate: false,
+          draft: { written_now: 0, mapped: 0, to_fix: 0 }, readiness: { ready: true, missing: [] }, fields_open: [], copies: [], added: addedTag(s, l.form_number, a.subject),
+          blank: { addition: a.id, item: item?.id ?? null, download: `/api/runtime/form-additions/${a.id}/blank`, completed: scan ? { id: scan.id, at: scan.uploadedAt.toISOString() } : null } });
       }
     }
     // QA-40: a form filed Online is listed too (no PDF copy is made), with the people it applies to (P-113: the case

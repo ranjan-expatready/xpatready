@@ -87,7 +87,7 @@ export class FormAdditions {
     const { answers, rows } = await this.r.state(c);
     const { known } = knownOf(rel, people, answers, rows, today);
     const r = render(rel, people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies })), known, { today });
-    const label = new Map((rel.placements as { fact: string; question_text?: string | null }[]).map((p) => [p.fact, p.question_text ?? p.fact]));
+    const label = new Map([...(rel.canonical_fields as { id: string; meaning?: string | null }[]).map((f) => [f.id, f.meaning || f.id] as const), ...(rel.placements as { fact: string; question_text?: string | null }[]).filter((p) => p.question_text?.trim()).map((p) => [p.fact, p.question_text!.trim()] as const)]);
     return (form: string, subject: string) => {
       const f = (r.forms as { form: string; person: string; applies: boolean | "cannot_tell"; missing: string[] }[]).find((x) => x.form === form && x.person === subject);
       if (!f) return "it is not for this person on this application";
@@ -106,7 +106,7 @@ export class FormAdditions {
     const line = held ? (rel.forms as { form_number: string; condition_plain?: string | null; status?: string }[]).find((l) => l.form_number === x.form) : undefined;
     const added = (c.formAdditions ?? []).find((a) => a.formKey === x.form && a.subjectId === subject && !a.removedAt);
     const why = refusalOf({ form: x.form, formKind: x.formKind, hasEdition: !!x.editionId, kind: k.kind, barcode: isBarcodeForm(x.form), heldByRelease: held,
-      releaseLine: line ? { condition: line.status === "always" ? "always" : line.condition_plain ?? "its condition holds", now: now(x.form, subject) } : null, addedBy: added ? { by: added.addedBy, at: added.addedAt.toISOString() } : null });
+      releaseLine: line ? { condition: line.status === "always" ? "always" : line.condition_plain ?? null, now: now(x.form, subject) } : null, addedBy: added ? { by: added.addedBy, at: added.addedAt.toISOString() } : null });
     return { form: x.form, title: x.title, edition: x.edition, kind: k.kind, kind_words: KIND_WORDS[k.kind], blank_why: k.why, why_not: why ? { code: why.code, words: why.words } : null };
   }
 
