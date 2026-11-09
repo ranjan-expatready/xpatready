@@ -146,7 +146,7 @@ export class ReviewRuns {
   /** Challenge M6: an open or acknowledged AI finding whose quoted words are no longer in its fact's value is resolved by the
    *  rules when the findings are read (US$0, no model call), as a rules finding is; no new run is needed for that. */
   async resolveMoved(c: Reached) {
-    const live = await this.db.reviewFinding.findMany({ where: { caseId: c.id, source: "ai", state: { in: ["open", "acknowledged", "waived"] } } });
+    const live = await this.db.reviewFinding.findMany({ where: { caseId: c.id, stageId: c.stage.id, source: "ai", state: { in: ["open", "acknowledged", "waived"] } } });
     if (!live.length) return 0;
     const gone: string[] = [];
     for (const k of [...new Set(live.map((x) => `${x.subjectId}|${x.form}`))]) {
@@ -279,12 +279,12 @@ export class ReviewRuns {
    *  longer in its fact's value is resolved by the rules. */
   private async store(actor: Actor, c: Reached, subject: string, p: Prepared, findings: ReviewedFinding[], replayed: boolean, runId: string) {
     const people = this.r.peopleOf(c), principal = people.find((x) => x.role === "principal")?.subjectId;
-    const filings = await this.db.filing.findMany({ where: { caseId: c.id, active: true }, include: { applicants: true } });
+    const filings = await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id, active: true }, include: { applicants: true } });
     const filingId = filings.find((f) => f.applicants.some((a) => a.subjectId === subject))?.id ?? filings.find((f) => f.applicants.some((a) => a.subjectId === principal))?.id ?? null;
     let added = 0, kept = 0, resolved = 0;
     await this.db.$transaction(async (tx) => {
       await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, `review_run:${c.id}`);
-      const mine = await tx.reviewFinding.findMany({ where: { caseId: c.id, source: "ai", subjectId: subject, form: p.form } });
+      const mine = await tx.reviewFinding.findMany({ where: { caseId: c.id, stageId: c.stage.id, source: "ai", subjectId: subject, form: p.form } });
       const gone = mine.filter((x) => ["open", "acknowledged", "waived"].includes(x.state) && !stillQuoted(p.sheet, x.field, x.quote));
       if (gone.length) resolved = (await tx.reviewFinding.updateMany({ where: { id: { in: gone.map((x) => x.id) }, state: { in: ["open", "acknowledged", "waived"] } }, data: { state: "resolved", resolvedBy: "rules", resolvedAt: new Date() } })).count;
       const live = new Set(mine.filter((x) => x.state !== "resolved" && !gone.some((g) => g.id === x.id)).map((x) => x.fingerprint));
@@ -292,7 +292,7 @@ export class ReviewRuns {
         const fingerprint = aiFingerprint(subject, p.form, f.field, f.quote);
         if (live.has(fingerprint)) { kept++; continue; }
         live.add(fingerprint);
-        await tx.reviewFinding.create({ data: { workspaceId: c.workspaceId, caseId: c.id, filingId, subjectId: subject, form: p.form, field: f.field, severity: f.severity, source: "ai", fingerprint, quote: f.quote, agreement: f.agreement, reasons: f.reasons, replayed, runId, createdBy: actor.id } });
+        await tx.reviewFinding.create({ data: { workspaceId: c.workspaceId, caseId: c.id, stageId: c.stage.id, filingId, subjectId: subject, form: p.form, field: f.field, severity: f.severity, source: "ai", fingerprint, quote: f.quote, agreement: f.agreement, reasons: f.reasons, replayed, runId, createdBy: actor.id } });
         added++;
       }
     });

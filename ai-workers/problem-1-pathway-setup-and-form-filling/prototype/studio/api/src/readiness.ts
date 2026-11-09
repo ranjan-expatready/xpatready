@@ -12,6 +12,7 @@ import { cannotPass, CODE_WORDS, dayOf, isCritical, passKeys, passProblem, WARN_
 import type { ReadinessView } from "./readiness-inputs.ts";
 import { userIn } from "../../engine/runtime/team.ts";
 import { actorOf, Audit, Db, fail, Workspace, type Actor } from "./core.ts";
+import { newestPin } from "./stage-scope.ts"; // C6.17
 import { firmOfActor } from "./firms.ts";
 import { Runtime } from "./runtime.ts";
 import { CasePrepare } from "./case-prepare.ts";
@@ -84,7 +85,7 @@ export class FilingReadinessRoutes {
     // answer writes do not take it; a later fact change reopens the review as before, break B2.)
     const row = await busyWords(() => this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
-      const newest = await tx.packWorkPin.findFirst({ where: { caseId: c.id }, orderBy: { revision: "desc" }, select: { revision: true } });
+      const newest = await newestPin(tx, c.id, c.combinationId); // C6.17 (BR-9)
       if (newest?.revision !== c.pins[0].revision) fail("This case moved to another release while you reviewed the filing: nothing was recorded. Reload and review it again.", HttpStatus.CONFLICT);
       const made = await tx.filingReview.create({ data: { workspaceId: f.workspaceId, filingId: f.id, reviewedBy: actor.id, kind, licenceNumber: licence!.number, note, factsHash: rd.facts_hash } });
       await tx.auditEvent.create({ data: { workspaceId: f.workspaceId, actor: actor.id, action: kind, entity: "filing", entityKey: f.id, summary: `${actor.name} ${kind === "self_reviewed" ? "self-reviewed" : "reviewed"} a filing on case ${c.id.slice(0, 8)} (licence ${licence!.number})`.slice(0, 600), detail: { case: c.id, note } } });

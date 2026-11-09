@@ -38,6 +38,13 @@ export const NewCase = z.object({
    *  not representatives (in a solo firm, its one person). */
   caseOfficers: z.array(z.string().trim().regex(/^user-[A-Za-z0-9]{1,8}$/, "Choose case officers from your firm."), { message: "Choose case officers from your firm." }).min(1, "Choose at least one case officer.").max(5, "A case has at most 5 case officers.").optional(),
   idempotencyKey: idemKey.optional(),
+  /** C6.17 (BR-3, SA-1B-212): opening at a later stage of a route, each earlier stage ticked "Done before we started"
+   *  (or not recorded), with its key details (optional; typed by their field, a wrong type is a 400 on the field). */
+  earlier: z.array(z.object({
+    stage: z.string({ message: "Name the earlier stage." }).regex(/^[a-z][a-z0-9_]{0,40}$/, "Name the earlier stage."),
+    done_before: z.boolean({ message: "Say whether this stage was done before we started." }),
+    key_details: z.record(z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/, "A key detail is named by its field."), z.union([z.string(), z.null()], { message: "Write a key detail as text." })).optional(),
+  }, { message: "Each earlier stage is an object." }), { message: "Earlier stages are a list." }).max(10, "A route has at most 10 earlier stages.").optional(),
 });
 
 /** C6.11 (BR-20, SI-9): the firm admin changes the representative of record, with a reason kept in the history; a new
@@ -234,7 +241,10 @@ export const ONLINE_LATER_WAVE = "Online (later wave)";
  *  read with the same startable check that opening a case runs (api/src/runtime.ts), so the dialog never offers a release
  *  the server then refuses. `why` is the case officer's plain sentence (no field keys, no author's steps); the items
  *  themselves are the authors' to fix in Immigration programs. */
-export type OpenableRelease = { combination_id: string; combination: string; version: number; startable: boolean; items: number; why: string | null };
+export type OpenableRelease = { combination_id: string; combination: string; version: number; startable: boolean; items: number; why: string | null;
+  /** C6.17 (BR-3): this combination is a later stage of a route: the route and its earlier stages, each with the key
+   *  details it may record (Sample). Absent for a combination on no route or the first stage of one. */
+  stage?: { route: string; route_label: string; key: string; name: string; earlier: { key: string; name: string; key_details: { field: string; label: string; type: "STRING" | "DATE"; same_every_stage: boolean }[] }[] } };
 /** The one sentence a case officer reads when a release is not ready for cases (the dialog and the 409 say the same). */
 export const notReadyForCases = (label: string, items: number) => `"${label}" is not ready for new cases: ${items === 1 ? "1 item" : `${items} items`} to fix in Immigration programs, by the people who set it up. Cases already open are not affected.`;
 /** QA-38 (P-67): a new case opens on its combination's newest release (api/src/runtime.ts takes the highest version),
@@ -338,3 +348,29 @@ export type ReleaseLastMove = { from: { version: number; label: string; revision
 /** POST …/release-update: the new pin and what the move did, for the toast. */
 export type ReleaseMoved = { case_id: string; revision: number; version: number; label: string; from: { version: number; label: string; revision: number };
   counts: { fill_again: number; filed_another_way: number; no_longer_required: number; withdrawn: number; kept_out_of_date: number }; words: string };
+
+/** C6.17 A multi-stage case (B139; concept §6): one stage of a case as the strip, the stage panel and the dialog read it.
+ *  `cannot_start_why`: a not-started stage whose combination is retired or whose newest release is not startable. Every
+ *  deadline and key detail is Sample (P-412 F13). */
+export type CaseStageView = { id: string; key: string; name: string; client_name: string; combination_id: string; combination: string; ord: number;
+  state: "DONE_BEFORE" | "NOT_RECORDED" | "CURRENT" | "ENDED_NEXT_STARTED" | "NOT_STARTED"; words: string; cannot_start_why: string | null; started_from: "BEGIN" | "NEXT_STAGE" | null;
+  started_at: string | null; ended_at: string | null; version: number;
+  key_details: { field: string; label: string; type: "STRING" | "DATE"; value: string | null; by: string | null; same_every_stage: boolean }[];
+  deadline: { label: string; due: string | null; why: string; sample: true } | null };
+export type CaseStages = { case_id: string; route: { key: string; label: string; basis: string } | null; stages: CaseStageView[]; current: string; next: string | null };
+/** BR-4: what "Start next stage" will do, shown before the click. */
+export type StartNextPreview = { from: { stage: string; name: string; client_name: string; version: number }; to: { stage: string; name: string; release_version: number; release: string } | null;
+  refused: string | null; people: { subject: string; label: string; role: string; comes: boolean; words: string | null }[];
+  counts: { person_answers_used: number; asked_again: number; new_questions: number; forms: number; documents: number };
+  forms: string[]; documents: string[]; documents_basis: "checklist" | "release"; deadline: CaseStageView["deadline"]; key_details: CaseStageView["key_details"];
+  unrecorded: { filing: string; person: string }[]; words: string };
+export const StartNext = z.object({
+  from_stage: z.string({ message: "Send the stage you read (Read the case again)." }).uuid("Send the stage you read (Read the case again)."),
+  stage_version: z.number({ message: "Send the stage version you read (Read the case again)." }).int().positive(),
+  key_details: z.record(z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/, "A key detail is named by its field."), z.union([z.string(), z.null()], { message: "Write a key detail as text." })).optional(),
+  reason: z.string({ message: "Write the reason as text." }).trim().max(500, "Keep the reason to 500 characters.").refine((x) => !INVISIBLE.test(x) && !LONE.test(x), "Remove the control or invisible characters.").optional(),
+});
+export const StageKeyDetails = z.object({
+  stage_version: z.number({ message: "Send the stage version you read (Read the case again)." }).int().positive(),
+  key_details: z.record(z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/, "A key detail is named by its field."), z.union([z.string(), z.null()], { message: "Write a key detail as text." })),
+});

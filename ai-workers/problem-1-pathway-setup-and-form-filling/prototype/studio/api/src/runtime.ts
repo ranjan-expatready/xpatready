@@ -25,6 +25,10 @@ import { awaitsClient, backgroundFacts, CLIENT_RECONFIRM, OFFICER_ENTRY } from "
 import { backgroundBlockOf } from "./background-questions.ts";
 import { Programs } from "./programs.ts";
 import { pinChain } from "../../engine/runtime/release-update.ts";
+import { openingStages } from "../../engine/runtime/stages.ts";
+import { routeOf, routesOf, writeOpeningStages } from "./routes-data.ts";
+/** C6.17 (P-78): the channel of an answer written from a stage record (the officer entered it on "Done before we started"). */
+export const STAGE_RECORD = "stage_record";
 import { ASKED_RELATIONS, cellAsked, isListRelation, listWords, relativeKey, relativeOf, SUBJECT_OR_RELATIVE, type Relation } from "../../engine/runtime/relatives.ts";
 
 type H = string | undefined;
@@ -80,15 +84,22 @@ export class Runtime {
     if (!officer && !client) fail(`${actor.name} (simulated) works on configuration, not on cases.`, HttpStatus.FORBIDDEN);
     if (want === "officer" && !officer) fail("Only the case officer can do this.", HttpStatus.FORBIDDEN);
     const c = await this.db.case.findFirst({ where: { id: caseId, workspaceId }, include: { pins: { orderBy: { revision: "desc" }, include: { release: { include: { packVersion: { select: { version: true } } } } } }, participants: { orderBy: { order: "asc" }, include: { subject: { include: { party: { include: { profile: true } } } } } },
+      // C6.17 (BR-9): the case's stages; the current one names the pins and the application subject the case reads.
+      stages: { orderBy: { ord: "asc" } },
       // C6.13 BR-3b: the case's first Make principal names the client when roles were swapped (clientPersonOf).
       filingChanges: { where: { kind: "make_principal" }, orderBy: [{ changedAt: "asc" }, { id: "asc" }], take: 1, select: { kind: true, subjectId: true, otherSubjectId: true, changedAt: true } } } });
     // C6.11 (BR-20): staff reach only their own firm's cases; another firm's case is "not found", as for a client.
     if (!c || (!officer && c.clientActorId !== actor.id) || (officer && c.firmKey !== firmOfActor(actor)?.key)) fail("No such case.", HttpStatus.NOT_FOUND);
     // C9.5 (BR-1, challenge M1): a case reads its newest pin revision (`pins[0]`, ordered above); every revision, older
     // ones too, must still match its release and the case's combination, and the chain must hold (1…n, forward only).
-    const pin = c!.pins[0];
-    if (!pin || !pinChain(c!.pins.map((p) => ({ revision: p.revision, version: p.release.version }))).ok || c!.pins.some((p) => p.contentHash !== p.release.sha256 || p.release.combinationId !== c!.combinationId)) fail("This case's pin to its release does not match the release; nothing was read or changed. Ask the Lead.", HttpStatus.CONFLICT);
-    return c!;
+    // C6.17 (BR-9, challenge B1): a case with several stages has pins on several combinations: the chain and `pins` are
+    // the current stage's (the case's combination); every other pin's hash and combination are still checked.
+    const stage = c!.stages.find((s) => s.state === "CURRENT");
+    const pins = c!.pins.filter((p) => p.combinationId === c!.combinationId), pin = pins[0];
+    if (!stage || stage.combinationId !== c!.combinationId || !pin || !pinChain(pins.map((p) => ({ revision: p.revision, version: p.release.version }))).ok || c!.pins.some((p) => p.contentHash !== p.release.sha256 || p.release.combinationId !== p.combinationId)) fail("This case's pin to its release does not match the release; nothing was read or changed. Ask the Lead.", HttpStatus.CONFLICT);
+    // C6.17 (challenge B3): only the current stage's application subject is on the case now; an ended stage's stays with it.
+    const participants = c!.participants.filter((p) => p.role !== "case" || p.subjectId === stage!.applicationSubjectId);
+    return { ...c!, pins, participants, stage: stage!, allPins: c!.pins };
   }
 
   snapshotOf(c: Reached) { return c.pins[0].release.snapshot as unknown as Snapshot; }
@@ -131,6 +142,9 @@ export class Runtime {
   private async subjectFor(c: Reached, subjectId: string, create: boolean, fact?: string): Promise<{ who: Reached["participants"][number]; stored: string | null }> {
     const rel = relativeOf(subjectId);
     const who = c.participants.find((p) => p.subjectId === (rel ? rel.owner : subjectId) && (!rel || p.role !== "case"));
+    // C6.17 (review round 2): the application of a stage that has ended (the case moved to its next stage while this was
+    // open) is said so: 409, never "not on this case".
+    if (!who && !rel && c.stages.some((s) => s.applicationSubjectId === subjectId && s.state !== "CURRENT")) conflict("This case moved to its next stage while you answered: this application's questions are asked again there. Read the case again; nothing was saved.");
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
     if (!rel) return { who: who!, stored: subjectId };
     const read = (this.snapshotOf(c).field_maps as { entries: { person?: string | null; outcome?: string; fact?: string | null }[] }[]).some((m) => m.entries.some((e) => e.outcome === "mapped" && e.person === `subject_${rel.relation}` && (!fact || e.fact === fact)));
@@ -181,7 +195,20 @@ export class Runtime {
     const team = openingTeam(firm!, { representative: b.representative, caseOfficers: b.caseOfficers });
     if ("field" in team) fieldError(team.field, team.message);
     const { representative, officers } = team as { representative: string; officers: string[] };
+    // C6.17 (BR-3, SA-1B-212): a combination that is a later stage of a route may open with its earlier stages ticked
+    // "Done before we started"; their key details are typed by their field before anything is written (400 on the field).
+    const onRoute = routeOf(await routesOf(this.db, workspaceId), combination!.combinationKey);
+    if (b.earlier?.length && !onRoute) fieldError("earlier", "This combination is on no route, so it has no earlier stages.");
+    const opening = openingStages(onRoute?.route ?? null, combination!.combinationKey, b.earlier ?? [], actor.id, new Date().toISOString());
+    if ("field" in opening) fieldError(opening.field, opening.message);
+    // A key detail that is also the person's answer (P-412 F13 (c): the UCI) passes the release's own check of that field.
+    const releaseSnapshot = release!.snapshot as unknown as Snapshot;
+    for (const [i, e] of (b.earlier ?? []).entries()) for (const [field, v] of Object.entries(e.key_details ?? {})) {
+      const def = onRoute?.route.stages.find((x) => x.key === e.stage)?.key_details.find((d) => d.field === field);
+      if (def?.same_every_stage && typeof v === "string" && v.trim() && shapeOf(releaseSnapshot, field)) { const p = checkValue(releaseSnapshot, field, v.trim(), new Date()); if (p.length) fieldError(`earlier.${i}.key_details.${field}`, `${def.label}: ${p[0]}`); }
+    }
     let id: string;
+    let stagesWritten: { stages: number; doneBefore: number } = { stages: 1, doneBefore: 0 };
     try {
       id = await this.db.$transaction(async (tx) => {
         const party = await tx.party.create({ data: { workspaceId, profile: { create: { workspaceId, displayName: b.principal.displayName } } } });
@@ -191,6 +218,18 @@ export class Runtime {
         await tx.caseParticipant.createMany({ data: [{ workspaceId, caseId: c.id, subjectId: caseSubject.id, role: "case", order: 0 }, { workspaceId, caseId: c.id, subjectId: principal.id, role: "principal", order: 1 }] });
         await tx.caseTeamMember.createMany({ data: [{ workspaceId, caseId: c.id, userId: representative, role: "LEAD_REPRESENTATIVE", assignedBy: actor.id }, ...officers.map((u) => ({ workspaceId, caseId: c.id, userId: u, role: "OFFICER", assignedBy: actor.id }))] });
         await tx.packWorkPin.create({ data: { workspaceId, caseId: c.id, combinationId: b.combinationId, partyId: party.id, packVersionId: release!.packVersionId, configReleaseId: release!.id, contentHash: release!.sha256, actorId: actor.id } });
+        // C6.17 (M5): every case writes its stage rows; a done-before stage's same-at-every-stage detail (the UCI) is also
+        // the principal's answer, entered by the officer through the stage record (P-78 channel "stage_record").
+        const at = new Date();
+        const st = await writeOpeningStages(tx, { workspaceId, caseId: c.id, firmKey: firm!.key, combination: combination!, applicationSubjectId: caseSubject.id, route: onRoute?.route ?? null, earlier: b.earlier ?? [], actor: actor.id, at });
+        if ("field" in st) fieldError(st.field, st.message);
+        const written = st as Exclude<typeof st, { field: string }>;
+        stagesWritten = written;
+        for (const x of written.answers) {
+          const item = (releaseSnapshot.canonical_fields as { id: string; item_version: number }[]).find((f) => f.id === x.field);
+          const def = item ? await tx.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: x.field, version: item.item_version } }) : null;
+          if (def) await tx.clientCanonicalAnswer.create({ data: { workspaceId, partyId: party.id, subjectId: principal.id, canonicalFieldId: def.id, canonicalFieldKey: x.field, valueJson: x.value, status: "DECLARED", sourceJson: { channel: STAGE_RECORD, actor: actor.id, at: at.toISOString() } } });
+        }
         return c.id;
       }, { timeout: 15_000, maxWait: 10_000 }); // With the connections busy Prisma's default 2 s and 5 s answered a 500 (P2028)
     } catch (e) {
@@ -199,7 +238,7 @@ export class Runtime {
       if (same) return same;
       fail("A case with this reference already exists; give the new case its own reference.", HttpStatus.CONFLICT);
     }
-    await this.audit.log(workspaceId, actor.id, "opened", "case", id!, `${actor.name} opened case ${short(id!)} on "${combination!.label}" released version ${release!.version} (${release!.sha256.slice(0, 12)}); representative of record ${nameIn(firm!, representative)}, case officers ${officers.map((o) => nameIn(firm!, o)).join(", ")}`, undefined, b.combinationId);
+    await this.audit.log(workspaceId, actor.id, "opened", "case", id!, `${actor.name} opened case ${short(id!)} on "${combination!.label}" released version ${release!.version} (${release!.sha256.slice(0, 12)}); representative of record ${nameIn(firm!, representative)}, case officers ${officers.map((o) => nameIn(firm!, o)).join(", ")}${stagesWritten.stages > 1 ? `; a stage of a route (${stagesWritten.stages} stages, ${stagesWritten.doneBefore} done before we started)` : ""}`, undefined, b.combinationId);
     return { ...(await this.get(actor, id!)), created: true };
   }
 
@@ -234,10 +273,15 @@ export class Runtime {
     // The same people as opening a case (review minor): firm staff only.
     if (!firmOfActor(actor)) fail(`${actor.name} (simulated) is not staff of a firm, so cannot open a case.`, HttpStatus.FORBIDDEN);
     const workspaceId = await this.ws.id();
-    const rows = await this.db.configRelease.findMany({ where: { workspaceId, combination: { retiredAt: null } }, orderBy: { version: "desc" }, distinct: ["combinationId"], include: { combination: { select: { label: true } } } });
+    const rows = await this.db.configRelease.findMany({ where: { workspaceId, combination: { retiredAt: null } }, orderBy: { version: "desc" }, distinct: ["combinationId"], include: { combination: { select: { label: true, combinationKey: true } } } });
+    const routes = await routesOf(this.db, workspaceId);
     const out = await Promise.all(rows.map(async (r) => {
       const missing = await this.programs.startableMissing(r.combinationId, r);
-      return { combination_id: r.combinationId, combination: r.combination.label, version: r.version, startable: !missing.length, items: missing.length, why: missing.length ? notReadyForCases(r.combination.label, missing.length) : null };
+      // C6.17 (BR-3): a later stage of a route says which stages come before it, so the dialog can record them.
+      const on = routeOf(routes, r.combination.combinationKey);
+      const stage = on && on.at > 0 ? { route: on.route.key, route_label: on.route.label, key: on.route.stages[on.at].key, name: on.route.stages[on.at].staff_name,
+        earlier: on.route.stages.slice(0, on.at).map((x) => ({ key: x.key, name: x.staff_name, key_details: (x.key_details ?? []).map((d) => ({ field: d.field, label: d.label, type: d.type, same_every_stage: !!d.same_every_stage })) })) } : undefined;
+      return { combination_id: r.combinationId, combination: r.combination.label, version: r.version, startable: !missing.length, items: missing.length, why: missing.length ? notReadyForCases(r.combination.label, missing.length) : null, ...(stage ? { stage } : {}) };
     }));
     return out.sort((a, b) => Number(b.startable) - Number(a.startable) || a.combination.localeCompare(b.combination));
   }
@@ -338,7 +382,7 @@ export class Runtime {
         await tx.filingChange.create({ data: { workspaceId: c.workspaceId, caseId, kind: "travelling_flag", subjectId, rolesBefore: roles, rolesAfter: { ...roles, [subjectId]: { role: p!.role, applies: b.applies } }, changedBy: actor.id } });
         // C6.13 BR-6 (break M2): a filing starting or stopping changes the others' fees, so no filing of the case stays
         // marked Ready to file on the old shape (this door has no preview to name them; the case page uses the preview).
-        await tx.filing.updateMany({ where: { caseId, status: "READY_TO_FILE" }, data: { status: "NOT_STARTED" } });
+        await tx.filing.updateMany({ where: { caseId, stageId: c.stage.id, status: "READY_TO_FILE" }, data: { status: "NOT_STARTED" } });
       }
     });
     await this.audit.log(c.workspaceId, actor.id, "changed", "person", caseId, `${actor.name} marked a ${p!.role.replace(/_/g, " ")} on case ${short(caseId)} as ${b.applies ? "travelling" : "not travelling"}`);
@@ -464,6 +508,13 @@ export class Runtime {
     const stored = subjectId === who!.subjectId ? subjectId : (await this.subjectFor(c, subjectId, true, fieldKey)).stored!;
     try {
       await this.db.$transaction(async (tx) => {
+        // C6.17 (breaker M5): an answer about the application is the current stage's: read the stage again under the case
+        // row (a start holds it FOR UPDATE), so an answer racing "Start next stage" never lands on the ended application.
+        if (who!.role === "case") {
+          await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR KEY SHARE`;
+          const now = await tx.caseStage.findFirst({ where: { caseId: c.id, state: "CURRENT" }, select: { applicationSubjectId: true } });
+          if (now?.applicationSubjectId !== stored) conflict("This case moved to its next stage while you answered: this application's questions are asked again there. Read the case again; nothing was saved.");
+        }
         // The row stays live until this answer is saved: a removal at the same moment waits, or wins and this one is refused.
         if (rowKey) { const live = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM client_fact_record WHERE row_key = ${rowKey}::uuid AND subject_id = ${stored}::uuid AND group_key = ${groupKey} AND superseded_by_id IS NULL AND NOT tombstone FOR SHARE`; if (!live.length) fail("No such row for this person.", HttpStatus.NOT_FOUND); }
         const current = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: stored, canonicalFieldKey: fieldKey, rowKey, supersededById: null } });
