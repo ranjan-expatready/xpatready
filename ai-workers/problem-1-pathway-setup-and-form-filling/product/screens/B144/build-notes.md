@@ -37,8 +37,15 @@ Routes: `GET|POST /runtime/cases/:id/reviews` · `GET /runtime/reviews/:id` · `
 ## Top 5 production improvements over the board
 Per-filing status inside one round (B1) · loaded hashes and Reload, nothing stamped meanwhile (M4) · change-only view, one-click re-approve (P-412) · per-form Checked marks · read-only state in the concept's words for anyone but the representative of record (F2).
 
-## Checks run (exit codes) — see "Regression" below
+## Checks run (exit codes, 9 Nov, fresh isolated copies on 4441-4445)
+* Unit `tests/runtime/check_review_rounds.ts` 0 (38/38) · `tests/check_prisma_schema.ts` 0 · `tests/check_contract_seams.ts` 0 · `count-any --against origin/main` 0 (418 = base) · `graph.mjs --check` 0 · web `tsc` clean · api `tsc`: no new error (15 old ones, all in tests/).
+* Pack `acceptance/C8.3.test.ts` 0 (18/18) on a fresh copy (setup_vv_m3 reports only the 2 known failures S2w, S7a).
+* Walk `tests/check_c83_review_browser.cjs` 0 (20/20) on a fresh copy, 1440 px + one 1024 px state, axe clean on 3 states, screenshots in `screenshots/`.
 ## Regression
+* Packs: C7.6 0 · C8.1 0 · C8.2 0 · C9.5 0 (fresh copy) · C6.13 and C7.6-screen: running at hand-back (no FAIL line so far).
+* R1 group in order on one copy: r1c 0 · r1d 0 · r1a --reset 0.
+* Suites that call `/filings/:id/review`: `check_c76_readiness_api.ts` 0 · C7.6, C9.5 packs above · `check_c76_ready_browser.ts`, `check_c81_sign_browser.ts`: running at hand-back.
+* Not run locally: the full set. `select-suites.mjs` says ALL (a migration, and a new features file), so CI runs every suite when the PR is marked ready.
 
 ## Self-score (honest, D1-D20 summary)
 Strong: rules in one place, every BR pass+fail, M1/M2/M4 closed, axe clean on 3 states, keyboard path. Weaker: the page is dense on long checklists (left column scrolls with the page, not on its own); the "loading" and "empty" states are drawn but plain; no 1024 px walk for the dialogs; D17/D20 need an intended user (not self-scored).
