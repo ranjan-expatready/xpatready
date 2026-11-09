@@ -72,16 +72,17 @@ export function EarlierFactsCard({ caseId }: { caseId: string }) {
             <h3 className="text-sm font-medium">{p.label} <span className="font-normal text-text-muted">({roleWords(p.role)}){p.from_label ? ` · matched to ${p.from_label} on ${chosen.reference}` : ""}</span></h3>
             {!p.from_subject_id ? <p className="mt-1 text-xs text-text-muted">No one with this role and name on {chosen.reference}, so nothing is offered for {p.label}.</p>
               : !p.facts.length ? <p className="mt-1 text-xs text-text-muted">Nothing to offer: this case already has the same values, or the earlier case has no confirmed fact this case asks.</p>
-              : <table className="mt-2 w-full text-sm">
+              : <div className="mt-2 overflow-x-auto"><table className="w-full min-w-[46rem] table-fixed text-sm">
+                <colgroup><col className="w-8" /><col className="w-52" /><col className="w-36" /><col className="w-28" /><col className="w-36" /><col /></colgroup>
                 <thead><tr className="border-b border-border text-left text-xs text-text-muted"><th className="w-8 py-1.5 font-medium"><span className="sr-only">Use</span></th><th className="py-1.5 font-medium">Fact</th><th className="py-1.5 font-medium">Earlier value</th><th className="py-1.5 font-medium">Confirmed there</th><th className="py-1.5 font-medium">This case</th><th className="py-1.5 font-medium">Status</th></tr></thead>
                 <tbody className="divide-y divide-border">{p.facts.map((f) => {
                   const id = `ef-${p.subject_id}-${f.fact}`;
                   return <tr key={f.fact} data-fact={f.fact} data-state={f.state} data-expiry={f.expiry?.status ?? ""} className="align-top">
                     <td className="py-2"><input id={id} type="checkbox" disabled={!f.usable} aria-describedby={f.usable ? undefined : `${id}-why`} checked={f.usable && ticked.includes(key(p, f))} onChange={(e) => setTicked((t) => e.target.checked ? [...t, key(p, f)] : t.filter((x) => x !== key(p, f)))} /></td>
-                    <td className="py-2"><label htmlFor={id} className="text-text-muted">{f.label}</label></td>
-                    <td className="py-2 [overflow-wrap:anywhere]">{valueWords(f.value)}</td>
-                    <td className="py-2 text-xs text-text-muted">{dateWords(f.confirmed_at)}</td>
-                    <td className="py-2 [overflow-wrap:anywhere] text-text-muted">{f.current ? valueWords(f.current.value) : "Not answered yet"}</td>
+                    <td className="py-2 pr-3"><label htmlFor={id} className="text-text-muted">{f.label}</label></td>
+                    <td className="py-2 pr-3 [overflow-wrap:anywhere]">{valueWords(f.value)}</td>
+                    <td className="whitespace-nowrap py-2 pr-2 text-xs text-text-muted">{dateWords(f.confirmed_at)}</td>
+                    <td className="py-2 pr-3 text-text-muted [overflow-wrap:anywhere]">{f.current ? valueWords(f.current.value) : "Not answered yet"}</td>
                     <td className="space-y-1 py-2">
                       <div className="flex flex-wrap gap-1"><Tip tip={STATE[f.state].tip}><button type="button" className="rounded-sm focus-visible:outline focus-visible:outline-2"><Pill tone={STATE[f.state].tone}>{STATE[f.state].words}</Pill></button></Tip>
                         {f.expiry ? <Tip tip={f.expiry.words}><button type="button" className="rounded-sm focus-visible:outline focus-visible:outline-2"><Pill tone={f.expiry.blocks ? "danger" : "warn"}>{f.expiry.blocks ? "Expired" : f.expiry.status === "soon" ? "Expires soon" : "Expiry not known"}</Pill></button></Tip> : null}</div>
@@ -90,7 +91,7 @@ export function EarlierFactsCard({ caseId }: { caseId: string }) {
                     </td>
                   </tr>;
                 })}</tbody>
-              </table>}
+              </table></div>}
           </div>
         ))}
         {chosen.unmatched.length ? <p className="text-xs text-text-muted">Also on {chosen.reference}: {chosen.unmatched.map((u) => `${u.label} (${roleWords(u.role)})`).join(", ")}. Add them to this case with the same role and name to bring their facts.</p> : null}
