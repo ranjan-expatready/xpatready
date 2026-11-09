@@ -6,8 +6,10 @@
 //   zsh studio/tools/isolated.sh accept 4445 start --ttl 60
 //   tsx studio/tests/runtime/setup_visitor_visa.ts 4445 xr_studio_accept && tsx studio/acceptance/lib/setup_vv_m3.ts 4445 xr_studio_accept
 //   tsx studio/acceptance/C6.16.test.ts 4445 xr_studio_accept
+// Run it on a fresh copy, or wait a minute between runs: a run makes about 20 code tries and the limit is 30 a minute
+// per network address, so a second run within the minute is refused with 429 (by design, BR-4).
 import { request } from "node:http";
-import { AUTHOR, CLIENT, OFFICER, PORT, agent, call, main, needVisitorVisa, ok, openCase, run, sendFile, sql, yearsAgo, type Person } from "./lib/m3.ts";
+import { AUTHOR, CLIENT, OFFICER, PORT, agent, answer, call, main, needVisitorVisa, ok, openCase, run, sendFile, sql, yearsAgo, type Person } from "./lib/m3.ts";
 
 type R = { status: number; body: any; headers: Record<string, string | string[] | undefined> }; // eslint-disable-line @typescript-eslint/no-explicit-any -- responses read loosely, as in the other packs
 /** A call to /api/link/* (or anywhere) with a Bearer session and no x-actor, unless one is given (to prove it is refused). */
@@ -89,6 +91,9 @@ await main("C6.16", "Adult privacy and Send to …", async () => {
   ok("C6.16-3 fail (race): the same right code sent twice at the same moment gives one session; the other is refused in words", wins.length === 1 && lost.length === 1 && lost[0].status === 409 && /just used/.test(lost[0].body?.detail ?? "") && sql(`select count(*) from person_link_session s join person_link l on l.id=s.link_id where l.subject_id='${S}'`) === "1", [v1.status, v2.status, lost[0]?.body?.detail]);
   const sess = wins[0]?.body?.session as string;
   ok("C6.16-3 pass: the right code (typed with a space or a dash) gives a session for this case and this person; privacy is now stored on", !!sess && wins[0].body?.case_id === id && wins[0].body?.subject_id === S && wins[0].body?.consent_needed === true && sql(`select keep_private::text || '|' || private_by from case_participant where subject_id='${S}'`) === `true|person:${S}`, wins[0]?.body);
+  ok("C6.16-3 fail (break M4): after the first right code the demo inbox holds no link or code for Partner (nothing to mint a new code from)", (await inbox(pA)).length === 0, (await inbox(pA)).map((m) => m.kind));
+  const asClient = await lcall("GET", `/demo/inbox?address=${encodeURIComponent(pA)}`, undefined, null, CLIENT);
+  ok("C6.16-3 fail (break M4): Client A's own persona cannot open anyone's demo inbox (403)", asClient.status === 403 && /mailbox/.test(asClient.body?.detail ?? ""), [asClient.status, asClient.body?.detail]);
   const pre = await lcall("GET", `/link/cases/${id}/people/${S}/questionnaire`, undefined, sess);
   const me = await lcall("GET", "/link/me", undefined, sess);
   ok("C6.16-3 fail: no questions before the consent card; the card's words are marked Unconfirmed: no counsel", pre.status === 403 && /Read who sees your answers first/.test(pre.body?.detail ?? "") && /will see how far you have got, not your answers/.test(me.body?.consent ?? "") && me.body?.consent_note === "Unconfirmed: no counsel", { pre: pre.status, me: me.body });
@@ -111,6 +116,8 @@ await main("C6.16", "Adult privacy and Send to …", async () => {
   const v4 = await sqr(id);
   const pp = (v4?.private_people ?? []).find((x: { subject_id: string }) => x.subject_id === S);
   ok("C6.16-4 pass: Client A's questionnaire shows Partner's progress only (parts done of parts asked, counted on the server)", !(v4?.sections ?? []).some((x: { subjectId: string }) => x.subjectId === S) && !!pp && pp.progress.asked > 0 && pp.progress.done >= 0 && !!pp.progress.saved_at, pp);
+  const lineP = await line(S);
+  ok("C6.16-4 pass (review m1): the progress Client A's questionnaire shows and the privacy list's are the same count", !!lineP?.progress && !!pp && lineP.progress.done === pp.progress.done && lineP.progress.asked === pp.progress.asked, [lineP?.progress, pp?.progress]);
   ok("C6.16-4 fail: nothing Client A reads carries Partner's private answer (questionnaire, Prospect questionnaire, privacy list)", !JSON.stringify(v4).includes(SECRET) && !JSON.stringify((await call("GET", `/runtime/cases/${id}/questionnaire?mode=pqr`, undefined, CLIENT)).body).includes(SECRET) && !JSON.stringify((await privacy()).body).includes(SECRET) && !(v4?.checks ?? []).some((x: { subjectId: string }) => x.subjectId === S));
   const ag = await agent(id);
   const curId = qs(ag).find((q) => q.subjectId === S && q.fact === lq?.fact)?.answer?.id ?? null;
@@ -173,6 +180,11 @@ await main("C6.16", "Adult privacy and Send to …", async () => {
   ok("C6.16-8 fail (B1): Client A may not send Partner's link to a new address (403, in words); the live link is untouched", r8c.status === 403 && r8c.body?.detail === "Sample Partner already uses p•••@example.com. Ask the firm to send to a new address." && (await lcall("POST", "/link/open", { token: t4 })).body?.state === "live", r8c.body?.detail);
   const r8d = await call("POST", `/runtime/cases/${id}/people/${S}/link`, { address: pB }, officer);
   ok("C6.16-8 pass: case staff send Partner's link to a new address", [200, 201].includes(r8d.status) && r8d.body?.link?.email_masked === "p•••@example.com" && !!tokenIn(await inbox(pB)) && (await lcall("POST", "/link/open", { token: t4 })).body?.state === "dead", r8d.body?.link);
+  const r8e = await call("POST", `/runtime/cases/${id}/people/${S}/link`, {}, CLIENT);
+  ok("C6.16-8 pass (break m3): after staff sent to a new address, Client A's Resend (no address) goes to the kept address", [200, 201].includes(r8e.status) && sql(`select address from person_link where subject_id='${S}' and voided_at is null`) === pA, [r8e.status, r8e.body?.detail]);
+  await call("POST", `/runtime/cases/${id}/people/${S}/link`, { address: pB }, officer); // back to the staff's new address for step 10
+  const nul = await call("POST", `/runtime/cases/${id}/people/${S}/link`, { address: "p\u0000@example.com" }, officer);
+  ok("C6.16-8 fail (review m3): a control character in the address is refused on the field (400), never a 404", nul.status === 400 && nul.body?.errors?.[0]?.field === "address", [nul.status, nul.body?.detail]);
   const key = `c616-${run}-key`;
   const [k1, k2] = await Promise.all([call("POST", `/runtime/cases/${id}/people/${C19}/link`, { address: c19, idempotencyKey: key }, officer), call("POST", `/runtime/cases/${id}/people/${C19}/link`, { address: c19, idempotencyKey: key }, officer)]);
   ok("C6.16-8 fail (race): the same Send pressed twice at once sends one link", [k1, k2].every((x) => [200, 201].includes(x.status)) && sql(`select count(*) from person_link where subject_id='${C19}'`) === "1", [k1.status, k2.status, k1.body?.detail, k2.body?.detail]);
@@ -195,6 +207,8 @@ await main("C6.16", "Adult privacy and Send to …", async () => {
   const tickOk = await call("PUT", `/runtime/cases/${id}/people/${C19}/private`, { reason: "Asked by the child (Sample)" }, officer);
   ok("C6.16-9 fail: the tick is staff's (Client A 403), needs a reason (400), and there is none for a minor (409)", tickA.status === 403 && tickNo.status === 400 && tickMin.status === 409, [tickA.status, tickNo.status, tickMin.status]);
   ok("C6.16-9 pass: staff tick \"Keep private from the principal\" for the child of 19, with a reason; Client A then sees progress only", tickOk.status === 200 && tickOk.body?.private?.on === true && !((await sqr(id))?.sections ?? []).some((x: { subjectId: string }) => x.subjectId === C19), tickOk.body?.private);
+  const c19A = await line(C19), c19O = await line(C19, officer);
+  ok("C6.16-9 fail (break M1): Client A reads that the child of 19 is private, never the staff's reason or who ticked it; staff read both", c19A?.private?.on === true && c19A?.private?.why === null && c19A?.private?.by === null && !JSON.stringify((await privacy()).body).includes("Asked by the child") && c19O?.private?.why === "Asked by the child (Sample)", [c19A?.private, c19O?.private?.why]);
   ok("C6.16-9 fail (data): the stored setting never switches off (the database refuses it)", sql(`update case_participant set keep_private=false where subject_id='${S}' returning 1`) === null && sql(`select keep_private from case_participant where subject_id='${S}'`) === "t");
   const cfg = await privacy(AUTHOR), other = await privacy("user-S");
   ok("C6.16-9 fail: a configuration person (403) and another firm (404) reach no one's privacy", cfg.status === 403 && other.status === 404, [cfg.status, other.status]);
@@ -233,6 +247,31 @@ await main("C6.16", "Adult privacy and Send to …", async () => {
   ok("C6.16-11 fail: codes sent to one address are limited (429 in words after the limit)", lim.includes(200) && lim.at(-1) === 429, lim);
   const burst = await Promise.all([1, 2, 3, 4, 5].map((i) => lcall("POST", "/link/code", { token: t6, code: String(100000 + i) })));
   ok("C6.16-11 fail (race): five wrong codes at the same moment are all counted and lock the link", burst.some((x) => x.status === 410) && sql(`select wrong_tries::text || '|' || coalesce(void_why, '') from person_link where token_hash = encode(sha256('${t6}'::bytea), 'hex')`) === "5|locked", burst.map((x) => x.status));
+
+  // ---- 13: after Make principal (C6.13) the client stays "the principal" for privacy; a person who is no longer an adult
+  // cannot accept; two people never share an address. A second fresh case: Client A, Partner, a child of 22.
+  const c3 = await openCase(vv, [FAMILY[0], FAMILY[1], { role: "child", name: "Sample Child 22", dob: yearsAgo(22) }]);
+  const A3 = c3.subjects["Sample Client A"], S3 = c3.subjects["Sample Partner"], K3 = c3.subjects["Sample Child 22"];
+  const same = `same.${run}@example.com`;
+  const [sa, sb] = await Promise.all([call("POST", `/runtime/cases/${c3.id}/people/${S3}/link`, { address: same }, officer), call("POST", `/runtime/cases/${c3.id}/people/${K3}/link`, { address: same }, officer)]);
+  ok("C6.16-13 fail (race, break m1): one address sent to two people at the same moment: one is sent, the other refused in words", [sa, sb].filter((x) => [200, 201].includes(x.status)).length === 1 && [sa, sb].some((x) => x.status === 409 && /someone else on this case/.test(x.body?.detail ?? "")), [sa.status, sb.status]);
+  const k22 = `child22.${run}@example.com`;
+  await call("POST", `/runtime/cases/${c3.id}/people/${K3}/link`, { address: k22 }, CLIENT);
+  const tk = tokenIn(await inbox(k22));
+  await answer(c3.id, K3, "person.date_of_birth", yearsAgo(12)); // the officer corrects the date of birth: now 12
+  const ck = await lcall("POST", "/link/code/send", { token: tk });
+  const ok22 = await lcall("POST", "/link/open", { token: tk });
+  ok("C6.16-13 fail (break M2): a link sent to someone who is now under 18 sends no code and dies, saying why without naming anyone; privacy stays off", ck.status === 410 && /cannot have their own link/.test(ck.body?.detail ?? "") && ok22.body?.state === "dead" && sql(`select void_why from person_link where subject_id='${K3}' order by sent_at desc limit 1`) === "not_adult" && sql(`select keep_private from case_participant where subject_id='${K3}'`) === "f", [ck.status, ck.body?.detail, ok22.body]);
+  const pv = await call("POST", `/runtime/cases/${c3.id}/filing-changes`, { kind: "make_principal", subject: S3, preview: true }, c3.officer);
+  const mp = await call("POST", `/runtime/cases/${c3.id}/filing-changes`, { kind: "make_principal", subject: S3, basis: pv.body?.basis, reason: "The spouse holds the job offer (Sample)" }, c3.officer);
+  ok("C6.16-13 pass (setup): Make principal on Partner (C6.13): Partner is the principal by role, Client A the spouse", mp.status === 200 && sql(`select role from case_participant where subject_id='${S3}'`) === "principal" && sql(`select role from case_participant where subject_id='${A3}'`) === "spouse_or_partner", [pv.status, mp.status, mp.body?.detail]);
+  const priv3 = (await call("GET", `/runtime/cases/${c3.id}/people/privacy`, undefined, CLIENT)).body?.people ?? [];
+  const lA = priv3.find((x: { subject_id: string }) => x.subject_id === A3), lS = priv3.find((x: { subject_id: string }) => x.subject_id === S3);
+  const selfSend = await call("POST", `/runtime/cases/${c3.id}/people/${A3}/link`, { address: own }, CLIENT);
+  const selfTick = await call("PUT", `/runtime/cases/${c3.id}/people/${A3}/private`, { reason: "Sample reason" }, c3.officer);
+  ok("C6.16-13 fail (review M1, break M3): after Make principal the case's client gets no Send and no tick (409 in words), and is never private", lA?.can?.send === false && lA?.can?.tick === false && /answers on their own family link/.test(lA?.why_not ?? "") && selfSend.status === 409 && selfTick.status === 409 && sql(`select keep_private from case_participant where subject_id='${A3}'`) === "f", [lA?.can, lA?.why_not, selfSend.status, selfTick.status]);
+  const toS3 = await call("POST", `/runtime/cases/${c3.id}/people/${S3}/link`, { address: `partner3.${run}@example.com` }, CLIENT);
+  ok("C6.16-13 pass (review M1): the new principal by role is an adult the client answers for, so Send to them is offered and works", lS?.adult === true && lS?.can?.send === true && [200, 201].includes(toS3.status), [lS?.adult, lS?.why_not, toS3.status, toS3.body?.detail]);
 
   // A GET writes nothing (B145 lesson): the privacy list, the link's questionnaire and the inbox leave every table as it was.
   const counts = () => sql(`select (select count(*) from audit_event) || '|' || (select count(*) from person_link_try) || '|' || (select count(*) from demo_message) || '|' || (select count(*) from person_link_session)`);
