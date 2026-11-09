@@ -1,0 +1,12 @@
+PASS  setup: case B re-confirms the passport number and expiry from case A — 201
+PASS  setup: case A's row on case C reads Expired (its latest confirmed value is 2025-01-15) — {"fact":"person.passport_expiry_date","label":"Passport expiry date","value":"2025-01-15","from_answer":"a79e89df-cc91-447c-a151-b821af76e357","confirmed_at":"2026-11-09T12:44:26.284Z","confirmed_by":"user-O","state":"new","current":null,"expiry":{"status":"expired","rule":"passport_expired","words":"The passport expired on 15 Jan 2025: its details cannot be reused. Enter the new passport on this case.","blocks":true,"date":"2025-01-15","source":{"sample":true,"why":"Sample on this combination: can
+PASS  setup: the card's default earlier case (the first listed) is case B, the newest — ["QA331-B-mw996m17","QA331-A-mw996m17"]
+FAIL  QA-338: case B's stale copy of the expiry (2031-05-09) is flagged or not offered, since case A confirmed 2025-01-15 later for the same person — {"fact":"person.passport_expiry_date","label":"Passport expiry date","value":"2031-05-09","from_answer":"90c0ae45-5a80-4b42-bf1b-ca6d2c795153","confirmed_at":"2026-11-09T12:44:25.923Z","confirmed_by":"user-O","state":"new","current":null,"expiry":null,"problems":[],"usable":true}
+
+3/4 passed
+PASS  setup: case B re-confirms the passport number and expiry from case A — 201
+PASS  setup: case A's row on case C reads Expired (its latest confirmed value is 2025-01-15) — {"fact":"person.passport_expiry_date","label":"Passport expiry date","value":"2025-01-15","from_answer":"124f3af1-ed14-4c0e-b46b-6e12f06dbb3e","confirmed_at":"2026-11-09T12:44:27.174Z","confirmed_by":"user-O","state":"new","current":null,"expiry":{"status":"expired","rule":"passport_expired","words":"The passport expired on 15 Jan 2025: its details cannot be reused. Enter the new passport on this case.","blocks":true,"date":"2025-01-15","source":{"sample":true,"why":"Sample on this combination: can
+PASS  setup: the card's default earlier case (the first listed) is case B, the newest — ["QA331-B-mw996msk","QA331-A-mw996msk"]
+FAIL  QA-338: case B's stale copy of the expiry (2031-05-09) is flagged or not offered, since case A confirmed 2025-01-15 later for the same person — {"fact":"person.passport_expiry_date","label":"Passport expiry date","value":"2031-05-09","from_answer":"cf9b3947-bd83-47b2-bb64-39277660864b","confirmed_at":"2026-11-09T12:44:26.850Z","confirmed_by":"user-O","state":"new","current":null,"expiry":null,"problems":[],"usable":true}
+
+3/4 passed

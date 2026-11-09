@@ -1,0 +1,24 @@
+# Underneath, copy qa_c613 :4474, case 738b360f-9d35-4d26-92f6-76c807a61080, after the walk (~18:12–18:13 IST). Verbatim.
+
+## GET /api/runtime/cases/<case>/filing-changes (x-actor user-O)
+{"changes": [{"kind": "remove_filing", "subject": "a091a90b-c0c5-43e0-95f5-ef46b1800173", "other": null, "reason": "Staying with grandparents (Sample, qa retest)", "by": "user-O", "at": "2026-11-09T12:38:38.697Z"}, {"kind": "make_principal", "subject": "ff8ba09c-63b7-483b-8321-e0d3570ed27d", "other": "456258b3-836e-4bf2-94ea-e8386b9c6522", "reason": "The spouse holds the travel invitation (Sample, qa retest)", "by": "user-O", "at": "2026-11-09T12:37:53.623Z"}, {"kind": "remove_filing", "subject": "284a223b-a692-4d09-8f3e-88433c281e92", "other": null, "reason": "Not travelling after all (Sample, qa retest)", "by": "user-O", "at": "2026-11-09T12:36:50.925Z"}]}
+(subjects: a091a90b… Child A2, ff8ba09c… Spouse A, 456258b3… Client A, 284a223b… Child A3, 10896634… Child A1)
+
+## case_participant, order by "order" (subject_id|role|applies)
+9203a669-1511-44ac-ad19-7270e1a116a7|case|t
+456258b3-836e-4bf2-94ea-e8386b9c6522|spouse_or_partner|t
+ff8ba09c-63b7-483b-8321-e0d3570ed27d|principal|t
+10896634-c89a-4b12-aeea-6a98eaf971a9|child|t
+a091a90b-c0c5-43e0-95f5-ef46b1800173|child|f
+284a223b-a692-4d09-8f3e-88433c281e92|child|f
+
+## scripts/probe_stale.zsh
+tab1 preview basis f90ec270dca6
+tab2 apply remove A1: 200
+{"type":"https://expatready.local/problems/filing-change","title":"Changed since you looked","status":409,"detail":"This case changed since you opened this. Look again before changing it; nothing was changed.","message":"This case changed since you opened this. Look again before changing it; nothing
+tab1 apply with old basis: 409
+double apply same basis (tab2 again): 422
+
+## Ready to file after "Generate a copy" (page text read in the browser pane, 18:10 IST; no screenshot of this state)
+Rows: "Sample Spouse A · Not started · Not ready · 11% · 1 of 9 done", "Sample Client A · Not started · Not ready · 11% · 1 of 9 done", "Sample Child A1 · Not started · Not ready · 33% · 2 of 6 done"
+"13 open warnings stand before Ready to file." (10 before the copy, screenshot 10). The IMM 5645 lines for Spouse A now read, e.g.: IMM 5645 for Sample Spouse A: "The type of temporary residence application the case is for (visitor, worker, student or other)" (the form's box "Visitor") is still to be written by hand on the form before filing (The product cannot work this form field out from the case's answers yet: write it by hand).
