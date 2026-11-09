@@ -76,3 +76,28 @@ Breaker (did not build), 9 Nov 2026, commit **e15959989a58953eb8817898716d506691
   * No sideways scroll on the officer page at 1440 and 720 px or on the principal's progress card at 320 px.
   * The dead-link page names no person and no reason.
   * Reload keeps the consent and question steps.
+
+## Round 2 (55358fff5)
+Breaker again, on `git diff e15959989..55358fff5`. Five fresh copies `break_c616` on :4444, each stopped by a trap. Probes: API scripts, a psql transaction that holds the setting while Client A saves, and Playwright. US$0. **The four Majors are fixed. Nothing new at Blocker or Major. 4 Minors remain**, one of them carried over from round 1 (m8).
+* **M1, fixed.** As `user-P` and as the `client` persona, the reason and "Case officer" appear in none of: people/privacy (`by` and `why` are null), sqr, pqr, `GET /cases/:id`, the send and take-back answers, the 403. Staff still read both.
+* **M2, fixed.**
+  * Corrected to 12 before the code: `open` is read-only (the link stays open in the database) and says dead. Send me a code → 410 `not_adult` with words that name no one, and the inbox is emptied.
+  * Corrected between the code being sent and typed → 410, and privacy stays off.
+  * A date of birth cannot be blanked (400).
+  * Corrected to 15 after privacy is on: the session gets 401 `not_adult`, the next Send me a code kills the link (`not_adult`), privacy stays on (BR-2), and staff Resend and tick → 409. This leaves a child private from the parent with no way back in M3. BR-2 and Q1 choose this; it is not a finding.
+* **M3, fixed.** Make principal, run four times: Partner, Client A, Partner, then a child (422).
+  * After every swap: the client's Send (by the client or staff) → 409, the tick → 409, and Client A's own PUT → 200 with 14 own parts. Partner (private) stays hidden, and Client A always shows `is_client:true`.
+  * Partner, the principal by role, can be sent a link by staff → 201. Once Client A is principal again, Client A's own line refuses with "… they are the client on this case".
+  * A case with no client person: `clientSubjectOf` falls back to the principal role. No API path makes a case without a principal (`createCase` needs one).
+* **M4, fixed as far as the stand-in allows.** At the first right code the inbox is empty. `x-actor: user-P` and `user-Q` → 403; the page shows the words.
+  * **What remains, exactly (with the tech lead, build-notes "Round 1"):** Client A presses Resend, which P-412 allows to the kept address → 201, and a new link email lands. `GET /api/demo/inbox?address=<kept>` with no person header → 200, 1 message. Then code/send → 200 and code → 200, consent, and Partner's private answers can be read. Two calls with any persona, then four with none.
+* **New Minors:**
+  * **r2-m1. The persona name gets past the inbox's 403.** `x-actor: client` → 200 with the messages. `PL` `inbox` compares only `a.id`, while `actorOf` also accepts persona names.
+  * **r2-m2. Spreading tries across sources still locks every adult out.** One source's 125 junk tries no longer block others (held). But 5 sources × 30 tries (127.0.0.2, .4, .5, .6, .8) fill the server's cap of 120 (`serverTries`), so a real right code from 127.0.0.7 → 429 "Too many codes are being tried right now". 60 tries at once from one source are all written (all refused); `serverTries` counts that source as 30.
+  * **r2-m3. The link's state goes stale.** After a correction to a minor, session requests only refuse (401) and kill nothing. Until someone presses Send me a code, the client's and the officer's lines still say `accepted` / "With Sample Partner since …", with Take back offered.
+  * **m8 (round 1) is half fixed.** A psql transaction set `keep_private=true` and held it for 2 s while Client A wrote. The answer PUT waited, then got 403 (fixed). The row POST (201) and none-apply (200) went through without waiting and are stored (1 row and 1 none-apply by `user-P`). Rows, none-apply, row removal, re-confirm and both uploads still check only the setting `reach()` read (`RT` `refusePrivate`), so a write that races the switch-on is not locked out as the answer PUT now is. Not shown landing after the commit.
+* **Held, new code:**
+  * The `runtime_case` lock: verify and resend at once, 5 rounds → 409 or (200 then the session gets 401), always 1 open link, no 500, at most 81 ms.
+  * The lock ran 4 times against send, send, a client save, a person edit, a client send, a take back, IMM 5257 generate, prepare, an item channel change and release-update: no 5xx, every response under 380 ms, no deadlock.
+  * Index (case, address): two adults sent the same address at once (6 trials, client and staff, any case or spaces) → one 201 and one 409. A direct SQL insert of a second working link with that address is refused. Resend after expiry → 201.
+  * The panel move: officer page at 1440 and 720 px with no sideways scroll, panel after "Submission to IRCC", first action reached by Tab in 61. The client's page after Make principal offers no Send to themselves and shows no reason.
