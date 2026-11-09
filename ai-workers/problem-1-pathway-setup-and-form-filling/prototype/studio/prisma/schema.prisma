@@ -1423,7 +1423,9 @@ model PartyRelationship {
   @@map("party_relationship")
 }
 
-/// Whom an answer is about: a person on the case, or the case itself (subjectKind "case", party = the principal).
+/// Whom an answer is about: a person on the case, or the case itself (subjectKind "case", party = the principal), or a
+/// relative a form describes (subjectKind "parent_1", "parent_2", "sibling"; B128, B155), at most one per party and
+/// relation: a partial unique index in SQL (migration 20261108050000_b157_one_relative_subject; B157).
 model AnswerSubject {
   id          String @id @default(uuid()) @db.Uuid
   workspaceId String @map("workspace_id") @db.Uuid
