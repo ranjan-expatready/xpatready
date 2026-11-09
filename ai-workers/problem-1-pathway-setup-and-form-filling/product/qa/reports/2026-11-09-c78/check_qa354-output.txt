@@ -1,0 +1,4 @@
+
+FAIL  QA-354 fail: IMM 0008: the panel says 42 of 249 fill from the case; its copy writes 18 (by hand 22); the two agree — {"coverage":{"fills":42,"total":249,"boxes":[{"box":"form1[0].Page1[0].PersonalDetails[0].q10[0].CurrentCOR[0].Row2[0].Country[0]","caption":"*","label":"Country or territory where the person currently resides","state":"not_on_file"},{"box":"form1[0].Page1[0].
+
+0/1 passed

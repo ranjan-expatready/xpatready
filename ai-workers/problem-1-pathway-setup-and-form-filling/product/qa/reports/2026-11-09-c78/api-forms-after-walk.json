@@ -1,0 +1,134 @@
+[
+ {
+  "form": "IMM 0008",
+  "trial_passed": true,
+  "channel": "PDF_UPLOAD",
+  "for_filing": true,
+  "needs_validate": true,
+  "added": {
+   "id": "5d863a30-6dd7-4aec-a626-7e5a4d51cf4d",
+   "tag": "Added by the case officer",
+   "kind": "fills",
+   "by": "user-O",
+   "by_name": "Case officer",
+   "at": "2026-11-09T14:53:13.132Z",
+   "reason": null,
+   "edition": "IMM 0008 (05-2026)",
+   "words": "Added by the case officer on 9 Nov 2026. Not part of the combination."
+  },
+  "draft": {
+   "written_now": 42,
+   "mapped": 249,
+   "to_fix": 4
+  },
+  "copies": [
+   {
+    "status": "GENERATED",
+    "counts": {
+     "blank": 2,
+     "by_hand": 22,
+     "written": 18,
+     "by_a_person": 0,
+     "not_on_form": 0,
+     "not_written": 207
+    },
+    "intact": true,
+    "out_of_date": false
+   }
+  ]
+ },
+ {
+  "form": "IMM 5257",
+  "trial_passed": true,
+  "channel": "ONLINE",
+  "for_filing": false,
+  "needs_validate": false,
+  "added": null,
+  "draft": {
+   "written_now": 107,
+   "mapped": 166,
+   "to_fix": 4
+  },
+  "copies": []
+ },
+ {
+  "form": "IMM 5257 SCH1",
+  "trial_passed": false,
+  "channel": "PDF_UPLOAD",
+  "for_filing": true,
+  "needs_validate": false,
+  "added": null,
+  "draft": {
+   "written_now": 11,
+   "mapped": 42,
+   "to_fix": 0
+  },
+  "copies": []
+ },
+ {
+  "form": "IMM 5476",
+  "trial_passed": false,
+  "channel": "PDF_UPLOAD",
+  "for_filing": true,
+  "needs_validate": false,
+  "added": null,
+  "draft": {
+   "written_now": 23,
+   "mapped": 34,
+   "to_fix": 0
+  },
+  "copies": [
+   {
+    "status": "GENERATED",
+    "counts": {
+     "blank": 0,
+     "by_hand": 3,
+     "written": 20,
+     "by_a_person": 0,
+     "not_on_form": 0,
+     "not_written": 11
+    },
+    "intact": true,
+    "out_of_date": false
+   }
+  ]
+ },
+ {
+  "form": "IMM 5645",
+  "trial_passed": false,
+  "channel": "PDF_UPLOAD",
+  "for_filing": true,
+  "needs_validate": false,
+  "added": null,
+  "draft": {
+   "written_now": 22,
+   "mapped": 119,
+   "to_fix": 3
+  },
+  "copies": []
+ },
+ {
+  "form": "IMM 0008 DEP",
+  "trial_passed": false,
+  "channel": "PDF_UPLOAD",
+  "for_filing": true,
+  "needs_validate": false,
+  "added": {
+   "id": "9ce757ca-5e6c-49e7-b6a1-78b71d0cf035",
+   "tag": "Added by the case officer",
+   "kind": "blank",
+   "by": "user-O",
+   "by_name": "Case officer",
+   "at": "2026-11-09T14:53:18.264Z",
+   "reason": null,
+   "edition": "IMM 0008 DEP (10-2024)",
+   "words": "Added by the case officer on 9 Nov 2026. Not part of the combination."
+  },
+  "draft": {
+   "written_now": 0,
+   "mapped": 0,
+   "to_fix": 0
+  },
+  "copies": []
+ }
+]

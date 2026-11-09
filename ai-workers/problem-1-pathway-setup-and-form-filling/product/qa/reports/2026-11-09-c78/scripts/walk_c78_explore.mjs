@@ -1,0 +1,10 @@
+import { chromium } from "playwright";
+const [port, caseId] = [process.argv[2], process.argv[3]];
+const b = await chromium.launch({ channel: "chrome" });
+const ctx = await b.newContext({ viewport: { width: 1024, height: 900 }, baseURL: `http://127.0.0.1:${port}` });
+await ctx.addInitScript(() => localStorage.setItem("xr-actor", "user-O"));
+const p = await ctx.newPage();
+await p.goto(`/cases/${caseId}`); await p.waitForLoadState("networkidle"); await p.waitForTimeout(1500);
+const t = await p.locator("main").innerText();
+console.log(t.slice(0, 6000));
+await b.close();
