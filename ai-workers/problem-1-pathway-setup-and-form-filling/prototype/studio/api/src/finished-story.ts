@@ -197,7 +197,7 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
     // QA-316: the copy's own open mandatory form fields, read now (the product's list), never a fixed number.
     const open = ((await get<{ forms: { form: string; subject_id: string; fields_open?: unknown[] }[] }>(`/runtime/cases/${caseId}/forms`)).forms.find((f) => f.form === pl.form && f.subject_id === who.subject)?.fields_open ?? []).length;
     const held = v.kind === "found" ? `The validated file is for another copy of ${pl.form}, so it is not read back.` : v.words;
-    return { status: "partial", shows: `${pl.form} for ${pl.person} filed on Paper by the case officer with a written reason; its copy made (${copy ? "generated" : "not made"}, ${open ? `${open} mandatory form field${open === 1 ? "" : "s"} left open on it` : "no mandatory form field left open on it"}); it waits for its validated copy`, why: `${held} ${HELD.paper}. Until then this person's filing cannot be Ready to file (P-315).` };
+    return { status: "partial", shows: `${pl.form} for ${pl.person} filed on Paper by the case officer with a written reason; its copy made (${copy ? "generated" : "not made"}, ${open ? `${open} mandatory form field${open === 1 ? "" : "s"} left open on it` : "no mandatory form field left open on it"}); it waits for its validated copy`, why: `${held} Validate is never simulated (P-46, P-171). Until then this person's filing cannot be Ready to file (P-315).` };
   });
 
   // C7.3, C7.1, C7.7: the Online form's answer sheet, section by section "Entered in the portal"; a copy of each PDF form.
