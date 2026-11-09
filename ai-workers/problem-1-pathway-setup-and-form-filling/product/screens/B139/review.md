@@ -89,3 +89,36 @@ A real screen reader. True browser zoom (I used a 720 px viewport as a stand-in)
 Another session's suite (`check_qa144_ee_release.ts` on :15451) ran in this working tree during the review. It left C6.12 screenshots and `studio/evidence/` JSON files modified; this review did not touch them.
 
 **Verdict: Block.** To fix: #1, #2, #3, #4 (Majors, each with a failing test first). Fix the Minors #5–#9 or list them in the PR.
+
+## Round 2 (diff-only, b2091b750 → 4334368001001f93c58be6874bf62aba6b43a52e, 9 Nov 2026)
+`git diff b2091b750 65e1f21d2` was read in full. 65e1f21d2 → 4334368 adds only 14 PNGs under `screens/B139/screenshots/` (checked with `git diff --name-only`). Checked on a fresh `rev139` (:4444), now stopped:
+* the pack twice;
+* the browser suite once, with its screenshots sent to the scratchpad (the repo is untouched);
+* my round-1 reproductions, plus one new one.
+
+**Fixed and verified:**
+* **#1:** a recorded ended stage no longer freezes the next one. Same reproduction as round 1: add a spouse now gives **201** (`submission-record.ts`, `employer-link.ts:86` scoped to the CURRENT stage).
+* **#2:** the UCI given with Start next stage is the principal's one current answer (`writeSameEveryStage`, superseding first).
+* **#3:**
+  * the browser suite gives axe 0 on every state;
+  * there is no nested button;
+  * the ⓘ is 24 px;
+  * focus goes to `#stages-h` after a start and back to the chip or button after Close, Cancel or Escape.
+* **#4:** the dialog and toast say "2 documents its release asks for (the per-person checklist is not worked out yet for this combination)", with `documents_basis` in the contract.
+* **#5:** locking a stage-1 IMM 5476 copy after the start gives **409** "belongs to an earlier stage … can no longer be changed"; reading it still gives 200.
+* **#6:** `/filing-record` is now read in C6.17-9.
+* **#9:** an error summary in the dialog; dates such as "3 Feb 2027".
+* **The breaker's fixes:**
+  * The guard `runtime_stage_row_via_filing` covers eight tables; I checked that each has the `item_id` or `filing_id` column it reads. No unscoped bulk write hits them; the remaining `updateMany` calls are by item or id.
+  * Prepare's B162 copy query reads the current pins only. `ended_at` is taken under the lock. Dates are limited to 1950–2100.
+* Browser suite **33/33**; pack 29/30 (below).
+
+**Still open:**
+1. **Must (Major): the pack is red at this head.** `acceptance/C6.17.test.ts` failed **twice in two runs** on my copy (exit 1), at step "breaker M5 fail-first (race)": `{"start":201,"answers":[200,200,409,404]}`, then `[200,200,404,404]`, lateAns 0 both times.
+   * The product is safe: nothing lands on the ended application.
+   * But an answer arriving after the start commits gets **404 "That person is not on this case."** (`runtime.ts:145`, because `reach()` drops the ended application subject). The step accepts only 200 or 409 (`acceptance/C6.17.test.ts:199`), so it passes or fails on timing. The builder's 30/30 was a lucky interleaving.
+   * The officer also sees a misleading message, where the fix's own 409 says "This case moved to its next stage…".
+   * Fix: answer 409 with those words when the subject is an ended stage's application subject (in `putAnswer`, before the 404), and keep the assertion at 200|409.
+2. **Should (Minor):** m5's refusal on lock or validated upload (`fill-case.ts` `copyFor(…, true)`) has no test; I verified it by hand only. Add one pack or C11 step. m7 (deadline on Open a case) and m8 (`carryCounts` unused) are still not done; list them in the PR.
+
+**Verdict: Block** at head **4334368001001f93c58be6874bf62aba6b43a52e**: fix round-2 #1 (the pack must exit 0 deterministically). Everything else from round 1 and the breaker's report is verified fixed.

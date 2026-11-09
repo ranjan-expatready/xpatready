@@ -142,6 +142,9 @@ export class Runtime {
   private async subjectFor(c: Reached, subjectId: string, create: boolean, fact?: string): Promise<{ who: Reached["participants"][number]; stored: string | null }> {
     const rel = relativeOf(subjectId);
     const who = c.participants.find((p) => p.subjectId === (rel ? rel.owner : subjectId) && (!rel || p.role !== "case"));
+    // C6.17 (review round 2): the application of a stage that has ended (the case moved to its next stage while this was
+    // open) is said so: 409, never "not on this case".
+    if (!who && !rel && c.stages.some((s) => s.applicationSubjectId === subjectId && s.state !== "CURRENT")) conflict("This case moved to its next stage while you answered: this application's questions are asked again there. Read the case again; nothing was saved.");
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
     if (!rel) return { who: who!, stored: subjectId };
     const read = (this.snapshotOf(c).field_maps as { entries: { person?: string | null; outcome?: string; fact?: string | null }[] }[]).some((m) => m.entries.some((e) => e.outcome === "mapped" && e.person === `subject_${rel.relation}` && (!fact || e.fact === fact)));

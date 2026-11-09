@@ -131,6 +131,12 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
   const panel = (await call("GET", `/runtime/cases/${S}/stages/${S1}`)).body;
   ok("C6.17 breaker M2 fail-first: the next stage's Prepare never reads the first stage's copy of a form both releases file (IMM 5476)",
     !!copy1 && !JSON.stringify((await call("GET", `/runtime/cases/${S}/prepare`)).body ?? {}).includes(copy1), { copy1 });
+  const lockOld = copy1 ? await call("POST", `/runtime/form-copies/${copy1}/lock`, { kind: "filed" }) : null;
+  const readOld = copy1 ? await call("GET", `/runtime/form-copies/${copy1}`) : null;
+  ok("C6.17 review m5 fail: the first stage's form copy is read (200) but never locked after the start (409, the stage has ended)", lockOld?.status === 409 && lockOld.body?.code === "stage_ended" && readOld?.status === 200, { lock: lockOld?.status, words: lockOld ? words(lockOld) : null });
+  const lateAnswer = await call("PUT", `/runtime/cases/${S}/answers/${APP1}/case.submission_office_name`, { value: "Sample office (too late)", expectedId: null });
+  ok("C6.17 review round 2 fail: an answer about the ended application after the start is 409 \"moved to its next stage\" (never 404), nothing saved",
+    lateAnswer.status === 409 && /moved to its next stage/.test(words(lateAnswer)) && n(`select count(*) from client_canonical_answer where subject_id='${APP1}' and value_json #>> '{}' = 'Sample office (too late)'`) === 0, { status: lateAnswer.status, words: words(lateAnswer) });
   const endedItem = sql(`select id || '|' || coalesce(channel::text, '') || '|' || version from filing_item where filing_id in (select id from filing where stage_id='${S1}') and kind='form' order by item_key limit 1`) ?? "";
   const [itemId, itemChannel, itemVersion] = endedItem.split("|");
   const pv = (await call("GET", `/runtime/cases/${S}/prepare`)).body?.version;
