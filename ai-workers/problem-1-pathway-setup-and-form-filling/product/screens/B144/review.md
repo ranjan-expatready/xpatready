@@ -97,3 +97,59 @@ D1 4 every BR present; BR-8 gap (Major 2) · D2 4 races held, triggers; but Majo
 A real screen reader. An intended user's unaided walk (D17, D20 stay with the founder). Full CI suite set (`select-suites` ALL). A waiting form on real data (m1).
 
 **Verdict: Block** — fix Majors 1–4, then re-review.
+
+## Re-review (diff 09e660220..e2c98f994)
+This is P-293's second and last round, diff only, by the same reviewer on 9 Nov. Head `ae65c4b6a` follows `e2c98f994`. It only adds 4 lines to `build-notes.md` (final regression exit codes), so the extra diff is records only.
+
+**How I checked.** I ran a fresh copy on :4446 using the builder's `copy.sh`. The web stamp and the Prisma client were already current, so nothing was rebuilt. Results:
+* unit checks 46/46;
+* pack C8.3 23/23;
+* walk 23/23 (its setup step was skipped on a loaded copy);
+* my probe and walks, re-run;
+* regression summaries in `logs-b144/reg2`: every pack and browser suite exits 0; only `setupA2` exits 1 (the known S2w/S7a).
+
+The copy is stopped and the worktree is clean.
+
+| Finding | Status | Evidence |
+|---|---|---|
+| Review M1, solo re-approve | **Fixed** | `ReapproveDialog`; my walk at 1024 px: keyboard Enter opens it, axe is clean, and Escape returns focus to Re-approve. Without the statement the server's words show, with no field names; with it the round is `reapprove` / `self_reviewed`; walk 11d |
+| Review M2, BR-8 between rounds | **Fixed** | Base is now the previous round's frozen snapshot (`review-rounds.ts` `baseOf`). Probe A6 now returns 409, not "reviewed"; pack C8.3-13b |
+| Review M3, relatives' names | **Fixed** | `factPerson` (`out-of-date.ts`). The API reads "Probe Spouse A's parent 1 · Date of birth 1956-11-09", and values read in words ("Annulled Marriage"); C8.3-20 |
+| Review M4, other screens' PNGs | **Fixed** | `git diff origin/main...ae65c4b6a` touches no `.png` outside B144 |
+| Break B1, send back leaves approval | **Fixed** | `stampCurrent.superseded`. `readiness-inputs.ts` reads the newest row per filing in one query, so C7.6 reopens and `reviewed` is empty for C8.2; C8.3-19. The Send dialog no longer ticks an approved filing |
+| Break M1, representative change breaks re-approve | **Fixed** | Firm-record facts have no typist; C8.3-14c: the new representative gets 200 "reviewed", and the former representative's ticks are not carried |
+| Break M2, tick on wrong filing | **Fixed** | `tick(f.filing, …)`; boxes are enabled only under review; walk 11c |
+| Break M3, send vs old route race | **Fixed** | `oneStep` re-checks for an open round under the case lock, so the route's transaction (and its `filing_review`) rolls back; C8.3-21. A route that wins and is followed by a send is superseded by B1 |
+
+**Minors listed as fixed:** checked in code and by test.
+* "Review now" on a firm that is not solo now returns 400 (probe A8).
+* Dates and "Frozen when sent" vs "Stamped" fixed; the "other forms" sentence shows only when there are other forms.
+* `?filing=` preselects the filing.
+* Only the deciding representative's ticks count.
+* Ticks only while under review.
+* Focus returns on close.
+* A removed filing can be sent back.
+* The form-set check applies to Approve only.
+
+**Migration.** I probed it in rolled-back transactions:
+* a stamp on a sent-back row is refused;
+* an `approved` insert into a `send` round is refused;
+* deleting the `filing_review` behind an approval is refused (FK NO ACTION);
+* a case delete still cascades;
+* the updated rollback is clean, and `filing_review` rows are kept.
+
+The `xmin = pg_current_xact_id()::xid` exemption works for decisions, `one_step` and `reapprove` (pack green). It assumes Prisma's interactive transactions use no savepoints, which they do not here. The migration was edited in place, which is acceptable because it is not on `main` yet.
+
+**"Left after round 1" is acceptable as Should items, with a follow-up row:**
+* m1: form-set changes; not reproducible on the sample.
+* m3: hash check before the lock; benign.
+* m4: no pack line for decision races; my probe holds: 200 + 409 + 409, one `filing_review`.
+* m9: graph tool false positives.
+* The C7.6 line's words after a send back.
+* `check_b128_parents` not run.
+
+**New minor (Should, no block).** BR-8 looks back one round only. A fact the representative typed before round n-1 was sent stays unseen at round n if n-1 was sent back. This matches concept BR-8's "after the round was sent", so it goes to a follow-up row with m1.
+
+**Journey score after fixes: 9.5/10.** "Plain words" is ½ for the C7.6 line wording after a send back; every other criterion is 1.
+
+Verdict: Approve ae65c4b6a9ca2a3eb8ac1401ec1fd89d5b587849
