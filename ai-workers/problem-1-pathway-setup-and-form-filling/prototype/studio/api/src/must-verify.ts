@@ -29,6 +29,11 @@ async function fieldOf(db: Pick<Db, "canonicalField">, workspaceId: string, key:
 export async function openMustVerifyChange(db: Pick<Db, "libraryChange">, workspaceId: string, key: string) {
   return db.libraryChange.findFirst({ where: { workspaceId, kind: MUST_VERIFY_KIND, key, status: { in: OPEN } }, orderBy: { proposedAt: "desc" } });
 }
+/** Break F1, F3 on #1282: a field merged into another (its newest version carries "merged into") is no longer a field of
+ *  its own: the flag is set on the field it was merged into, never written over the merge. */
+function mergedInto(rows: { mergedIntoKey: string | null }[]): string | null { return rows[0]?.mergedIntoKey ?? null; }
+const MERGED = (name: string, to: string) => `"${name}" was merged into ${to}: set "must verify before filing" on that field instead. Nothing was changed.`;
+
 /** SA-1B-1 r9: only the immigration expert approves a must-verify change (the content team proposes it). */
 export function refuseNotExpert(actor: Actor, c: Pick<LibraryChange, "kind">) {
   if (c.kind === MUST_VERIFY_KIND && !(actor.duties as readonly string[]).includes("sme"))
@@ -57,7 +62,8 @@ export class MustVerify {
     const { current } = await fieldOf(this.db, workspaceId, key);
     if (!current) throw problem(404, "Not in the library", "That field is not in the shared library.");
     await refuseRetired(this.db, workspaceId, "field", [key]);
-    if (current.mergedIntoKey) throw problem(409, "Merged", `"${nameOf(current)}" was merged into ${current.mergedIntoKey}: set the flag there.`);
+    const into = mergedInto((await fieldOf(this.db, workspaceId, key)).rows); // break F3: the newest version says it, not the draft or published one
+    if (into) throw problem(409, "Merged", MERGED(nameOf(current), into));
     const on = parsed.data.on, name = nameOf(current);
     if (current.mustVerifyBeforeFiling === on) throw problem(409, "Nothing changes", `"${name}" is already ${on ? "marked" : "not marked"} "must verify before filing".`);
     const c = await this.db.$transaction(async (tx) => {
@@ -93,6 +99,8 @@ export async function applyMustVerify(db: Db, audit: Audit, actor: Actor, seen: 
     const m = c.matches as { before?: boolean; after?: boolean };
     const { rows, current } = await fieldOf(tx, c.workspaceId, c.key);
     if (!current) throw problem(409, "Not in the library", "The field is no longer in the library, so nothing was changed. Return the change.");
+    const into = mergedInto(rows); // break F1: a merge since the proposal: never written over the merged field
+    if (into) throw problem(409, "Merged", `${MERGED(nameOf(current), into)} Return the change; the author proposes it on ${into}.`);
     if (current.mustVerifyBeforeFiling !== (m.before === true)) throw problem(409, "Changed since", "The field's flag changed after this was proposed, so nothing was changed. Return it; the author proposes it again.");
     await revise(tx.canonicalField, rows, { mustVerifyBeforeFiling: m.after === true }, actor.id, copyField);
     return c;
@@ -107,6 +115,9 @@ export async function withdrawApprovedMustVerify(tx: Prisma.TransactionClient, a
   const now = await tx.libraryChange.findUnique({ where: { id: c.id } });
   if (now?.status !== "APPROVED") throw problem(409, "Already decided", `This change is already ${String(now?.status ?? "gone").toLowerCase()}. Refresh to see it.`);
   const m = c.matches as { before?: boolean; after?: boolean };
+  // Break F2: merged since approval: the draft that carried the flag went with the merge; the change just ends.
+  const into = mergedInto(await tx.canonicalField.findMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key }, orderBy: { version: "desc" }, take: 1, select: { mergedIntoKey: true } }));
+  if (into) { await endMerged(tx, actor.id, actor.name, c, into, why); return; }
   const draft = (await tx.canonicalField.findMany({ where: { workspaceId: c.workspaceId, canonicalFieldKey: c.key, status: "DRAFT" }, orderBy: { version: "desc" }, take: 1 }))[0];
   if (!draft || draft.mustVerifyBeforeFiling !== (m.after === true)) throw problem(409, "Changed since", "The field's flag changed after this was approved, so nothing was withdrawn. Refresh to see it.");
   await tx.canonicalField.update({ where: { id: draft.id }, data: { mustVerifyBeforeFiling: m.before === true, updatedBy: actor.id } });
@@ -120,6 +131,9 @@ export async function withdrawApprovedMustVerify(tx: Prisma.TransactionClient, a
 export async function releaseMustVerify(tx: Prisma.TransactionClient, workspaceId: string, pack: number) {
   const out: { kind: string; key: string; label: string; action: string }[] = [];
   for (const c of await tx.libraryChange.findMany({ where: { workspaceId, kind: MUST_VERIFY_KIND, status: "APPROVED" } })) {
+    // Break F2: a field merged since approval never carries the flag out: the change ends, said, so it is never stuck.
+    const into = mergedInto(await tx.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: c.key }, orderBy: { version: "desc" }, take: 1, select: { mergedIntoKey: true } }));
+    if (into) { await endMerged(tx, "system", "The release", c, into, "the field was merged"); continue; }
     if (await tx.canonicalField.count({ where: { workspaceId, canonicalFieldKey: c.key, status: "DRAFT" } })) continue;
     const pub = (await tx.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: c.key, status: "PUBLISHED" }, orderBy: { version: "desc" }, take: 1 }))[0];
     if (!pub || pub.mustVerifyBeforeFiling !== ((c.matches as { after?: boolean }).after === true)) continue;
@@ -127,6 +141,15 @@ export async function releaseMustVerify(tx: Prisma.TransactionClient, workspaceI
     out.push({ kind: c.kind, key: c.key, label: c.label ?? c.key, action: c.action });
   }
   return out;
+}
+
+/** Break F2: an approved change whose field was merged ends (WITHDRAWN), the approver's note kept and the merge said; the
+ *  flag did not carry over to the field it was merged into, so the author proposes it there if it should. */
+async function endMerged(tx: Prisma.TransactionClient, actorId: string, actorName: string, c: LibraryChange, into: string, why: string) {
+  const note = `${c.decisionNote ? `Approved: ${c.decisionNote.replace(/\.$/, "")}. ` : ""}Ended: the field was merged into ${into}; the flag did not carry over (propose it there). ${why}`.slice(0, 300);
+  const done = await tx.libraryChange.updateMany({ where: { id: c.id, status: "APPROVED" }, data: { status: "WITHDRAWN", decisionNote: note } });
+  if (!done.count) throw problem(409, "Already decided", "Someone released or withdrew this at the same moment. Refresh to see it.");
+  await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actorId, action: "withdrawn", entity: "field", entityKey: c.key, summary: `${actorName}: the approved change "${c.label ?? c.key}" ended because the field was merged into ${into}; the flag did not carry over.`.slice(0, 600), detail: { change: c.id } } });
 }
 
 @Controller("api")

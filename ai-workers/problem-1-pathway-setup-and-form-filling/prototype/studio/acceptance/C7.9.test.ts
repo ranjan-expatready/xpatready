@@ -92,6 +92,23 @@ await main("C7.9", "Must verify before filing: the expert's flag, a CRITICAL war
   const parents = await Promise.all([c3.subjects["Sample Client C"], c3.subjects["Sample Spouse C"]].map((who) => call("PUT", `/runtime/cases/${c3.id}/answers/${who}/parent_1/${DOB}`, { value: "1950-05-05", expectedId: null }, CLIENT)));
   const par = (await mv(c3.id)).filter((w) => /their parent 1/.test(w.words));
   ok("C7.9-16 fail (review M1): a parent's date of birth the client typed (IMM 5645 writes it) raises the line, naming the relative", parents.some((x) => x.status < 300) && par.length >= 1 && par.every((w) => w.severity === "critical"), { put: parents.map((x) => x.status), lines: (await mv(c3.id)).map((w) => w.words.slice(0, 160)) });
+  // Break F1, F2, F3 on #1282: a merge never brings a merged field back, and never leaves a change stuck.
+  const merge = async (keep: string, gone: string) => { const m = await call("POST", "/library/merges", { keep, merge: gone, reason: "C7.9 pack: the same meaning (Sample)." }, AUTHOR); return m.body?.id ? call("POST", `/library/merges/${m.body.id}/approve`, {}, APPROVER) : m; };
+  const [MA, MB, MC, MD] = ["person.family_name_at_permanent_residence", "person.other_family_name", "person.given_name_at_permanent_residence", "person.full_name"];
+  const live = (k: string) => !!sql(`select 1 from canonical_field where canonical_field_key = '${k}' limit 1`);
+  if (live(MA) && live(MB) && live(MC) && live(MD)) {
+    r = await call("POST", `/library/fields/${MA}/must-verify`, { on: true, reason: "C7.9 pack: before a merge (Sample)." }, AUTHOR);
+    const f1 = r.body?.id, mergedA = await merge(MB, MA);
+    r = f1 ? await call("POST", `/library/changes/${f1}/approve`, { note: "C7.9 pack: the expert (Sample)." }, REVIEWER) : r;
+    ok("C7.9-17 fail (break F1): approving the flag after its field was merged is refused in words, and nothing is written over the merge", mergedA.status < 300 && r.status === 409 && /was merged into/.test(words(r)) && sql(`select coalesce(merged_into_key, '') || '|' || status from canonical_field where canonical_field_key = '${MA}' order by version desc limit 1`).startsWith(`${MB}|`), { merge: mergedA.status, approve: r.status, why: words(r), newest: sql(`select version || '|' || status || '|' || coalesce(merged_into_key, '') from canonical_field where canonical_field_key = '${MA}' order by version desc limit 1`) });
+    r = await call("POST", `/library/fields/${MA}/must-verify`, { on: true, reason: "C7.9 pack: on a merged field (Sample)." }, AUTHOR);
+    ok("C7.9-18 fail (break F3): proposing the flag on a field already merged is refused, naming the field it was merged into", r.status === 409 && words(r).includes(MB), words(r));
+    r = await call("POST", `/library/fields/${MC}/must-verify`, { on: true, reason: "C7.9 pack: approved, then merged (Sample)." }, AUTHOR);
+    const f2 = r.body?.id; if (f2) await call("POST", `/library/changes/${f2}/approve`, { note: "C7.9 pack: the expert (Sample)." }, REVIEWER);
+    const mergedC = await merge(MD, MC);
+    r = f2 ? await call("POST", `/library/changes/${f2}/withdraw`, { note: "C7.9 pack: merged after approval." }, AUTHOR) : r;
+    ok("C7.9-19 pass (break F2): an approved change whose field was merged since is never stuck: its proposer withdraws it, and it says the flag did not carry over", mergedC.status < 300 && r.status < 300 && sql(`select status from library_change where id = '${f2}'`) === "WITHDRAWN" && /did not carry over/.test(sql(`select decision_note from library_change where id = '${f2}'`) ?? ""), { merge: mergedC.status, withdraw: r.status, why: words(r) });
+  } else ok("C7.9-17 setup: the four fields the merge steps use are in the library", false, [MA, MB, MC, MD].filter((k) => !live(k)));
   // A staff entry counts as verified; a field without the flag never raises it.
   const c2 = await openCase(vv, [{ role: "principal", name: "Sample Client B", dob: yearsAgo(35) }]);
   const P2 = c2.subjects["Sample Client B"];
