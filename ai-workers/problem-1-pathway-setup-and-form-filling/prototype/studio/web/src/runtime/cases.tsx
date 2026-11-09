@@ -18,6 +18,7 @@ import { SubmissionPanel } from "./submission"; // C8.2
 import { DocumentsPanel } from "./checklist"; // C6.4 (a)
 import { CaseTeamChip, OpeningTeam, useFirm } from "./team";
 import { EmployerLinkFor, EmployerLinkLine } from "./employer";
+import { EarlierFactsCard } from "./earlier-facts";
 import { EligibilityCard, EligibilityPage } from "./eligibility";
 import { PeopleAndFilings } from "./filing-changes"; // C6.13
 import { ReleaseNotice } from "./release-update"; // C9.5
@@ -211,6 +212,8 @@ function CasePage() {
       <ReleaseNotice caseId={c.id} />
       {/* C6.13 (B135): people with their filings, Make principal, Remove filing and Add filing back. */}
       <PeopleAndFilings caseId={c.id} people={c.people} canAdd={c.can_add ?? []} onAdd={setAdding} roleOf={roleOf} nameOf={nameOf} />
+      {/* C6.19: a returning client's confirmed facts from an earlier case, re-confirmed before use. */}
+      <EarlierFactsCard caseId={c.id} />
       <DocumentsPanel caseId={c.id} caseSubject={c.people.find((p) => p.role === "case")?.subject_id ?? ""} nameOf={nameOf} />
       <EligibilityCard caseId={c.id} people={c.people} />
       <ItemChannels caseId={c.id} />

@@ -734,7 +734,7 @@ function OfficerPill({ a }: { a: Answer }) {
 }
 const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", client_reconfirm: "re-confirmed by the client", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case",
   // C6.5 (BIC-05): a value used from a document, and an answer checked against one.
-  document_read: "read from a document", checked_against_document: "checked against a document" };
+  document_read: "read from a document", checked_against_document: "checked against a document", earlier_case: "earlier case, re-confirmed" };
 /** C1.3: when the value was copied from the employer case (itself, or the answer a confirmation confirmed). */
 const linkedAt = (a: Answer) => a.channel === LINKED_FILE ? a.at : a.answered?.channel === LINKED_FILE ? a.answered.at : null;
 export const WHO: Record<string, string> = { "user-O": "Case officer", "user-R": "Representative", "user-T": "Second representative", "user-S": "Solo representative", "user-P": "Client A", "user-Q": "Client B" };
@@ -841,7 +841,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           {a ? (
             <>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} about={q.about_label} value={String(shown(q, a.value))} /><OfficerPill a={a} />{linkedAt(a) ? <EmployerCaseSource at={linkedAt(a)!} label={view.case.employer_link?.linked?.label} /> : null}</div>
-              <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{q.fills.length ? <> · <span title={q.fills.map((f) => `${f.form} for ${f.person}`).join("\n")}>fills {fillsText(q.fills)}</span></> : null}</p>
+              <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{a.copied_from ? ` · copied from ${a.copied_from.reference}, re-confirmed by ${WHO[a.copied_from.by] ?? "someone"} ${when(a.copied_from.at)}` : null}{q.fills.length ? <> · <span title={q.fills.map((f) => `${f.form} for ${f.person}`).join("\n")}>fills {fillsText(q.fills)}</span></> : null}</p>
               {a.problems.map((p, i) => <p key={i} className="flex items-start gap-1 text-xs font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{p}</p>)}
               {row ? null : checks.filter((c) => c.fact === q.fact).map((c) => <p key={c.id} className="flex items-start gap-1 text-xs font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{c.message}</p>)}
             </>
