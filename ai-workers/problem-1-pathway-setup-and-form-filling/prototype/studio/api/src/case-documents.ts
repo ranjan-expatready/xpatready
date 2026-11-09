@@ -228,6 +228,12 @@ export class CaseDocuments {
   private typeName(c: Reached, key: string) { return CASE_KINDS[key]?.name ?? this.typesOf(c).find((t) => t.key === key)?.name ?? key.replace(/_/g, " "); }
   /** A document type as this case's release carries it (QA-352: its reader and facts are the library's), else its name. */
   private typeOf(c: Reached, key: string): LibraryType { return this.typesOf(c).find((t) => t.key === key) ?? { key, name: this.typeName(c, key) }; }
+  /** QA-352 review m1: a document read for someone other than its holder (each applicant's proof of funds, read for the
+   *  application) names whose it is, so two of the same kind are told apart. */
+  private docName(c: Reached, d: { documentType: string; subjectId: string }, forSubject: string) {
+    const holder = d.subjectId === forSubject ? null : c.participants.find((p) => p.subjectId === d.subjectId)?.subject.label;
+    return holder ? `${this.typeName(c, d.documentType)} · ${holder}` : this.typeName(c, d.documentType);
+  }
   /** QA-352: whom a document is read for (readFor): the application for a document whose facts are all the application's. */
   private aboutOf(c: Reached, d: { documentType: string; subjectId: string }) {
     return readFor(this.r.snapshotOf(c), readerOf(this.typeOf(c, d.documentType))?.supplies ?? [], d.subjectId, this.caseSubjectOf(c));
@@ -292,12 +298,15 @@ export class CaseDocuments {
     const b = parse(SubjectBody, body);
     const { docs } = await this.scope(c, section, b.subjectId);
     const ai = docs.filter((d) => d.reader === "ai_vision");
-    const replay = ai.map((d) => ({ document: d.id, document_name: this.typeName(c, d.documentType), replay_available: !!savedRead(d.sha256) }));
-    const live = letterReadUsd(ai.length);
+    const replay = ai.map((d) => ({ document: d.id, document_name: this.docName(c, d, b.subjectId), replay_available: !!savedRead(d.sha256) }));
+    // QA-352 review m2: a stored read costs nothing again, so only the AI documents not read yet are priced.
+    const readIds = new Set((ai.length ? await this.db.documentReview.findMany({ where: { documentId: { in: ai.map((d) => d.id) } }, select: { documentId: true } }) : []).map((x) => x.documentId));
+    const toRead = ai.filter((d) => !readIds.has(d.id)).length;
+    const live = letterReadUsd(toRead);
     return { section, subject: b.subjectId,
-      documents: docs.map((d) => ({ document: d.id, document_name: this.typeName(c, d.documentType), reader: d.reader, cost_usd: 0 })),
-      estimate: ai.length ? { live_usd: live.worst_usd, usual_usd: live.usual_usd, worst_usd: live.worst_usd, replay_usd: 0, model: live.model, attempts: live.attempts, basis: live.basis }
-        : { live_usd: 0, usual_usd: 0, worst_usd: 0, replay_usd: 0, model: null, attempts: 0, basis: "No document here is read by AI: the rules read it at no cost." },
+      documents: docs.map((d) => ({ document: d.id, document_name: this.docName(c, d, b.subjectId), reader: d.reader, cost_usd: 0 })),
+      estimate: toRead ? { live_usd: live.worst_usd, usual_usd: live.usual_usd, worst_usd: live.worst_usd, replay_usd: 0, model: live.model, attempts: live.attempts, basis: live.basis }
+        : { live_usd: 0, usual_usd: 0, worst_usd: 0, replay_usd: 0, model: null, attempts: 0, basis: ai.length ? "Every document here read by AI is read already: its stored read costs nothing again." : "No document here is read by AI: the rules read it at no cost." },
       // A live read needs live AI on and the founder's Go for this run (P-295); this copy never makes one (P-175).
       live_allowed: false,
       live_why: aiLive() ? "A live read needs the founder's go-ahead for this run, with its cost shown first, and is not built yet. A saved read replays at no cost." : "Live AI is off on this copy. Nothing is sent; a saved read replays at no cost.",
@@ -372,7 +381,7 @@ export class CaseDocuments {
   private async shown(c: Reached, subjectId: string, documents?: string[]) {
     const s = this.r.snapshotOf(c);
     // QA-352: the reviews read for this person (a member's proof of funds is the application's), of current files only.
-    const current = await this.db.caseDocument.findMany({ where: { subjectId: { in: c.participants.map((p) => p.subjectId) }, current: true, ...(documents ? { id: { in: documents } } : {}) }, select: { id: true, documentType: true, fileName: true } });
+    const current = await this.db.caseDocument.findMany({ where: { subjectId: { in: c.participants.map((p) => p.subjectId) }, current: true, ...(documents ? { id: { in: documents } } : {}) }, select: { id: true, documentType: true, fileName: true, subjectId: true } });
     const reviews = current.length ? await this.db.documentReview.findMany({ where: { documentId: { in: current.map((d) => d.id) }, subjectId }, include: { values: { orderBy: [{ fact: "asc" }] } }, orderBy: [{ readAt: "asc" }, { id: "asc" }] }) : [];
     const ids = reviews.map((r) => r.documentId);
     const facts = [...new Set(reviews.flatMap((r) => r.values.map((v) => v.fact)))];
@@ -400,7 +409,7 @@ export class CaseDocuments {
     return {
       proposals,
       reviews: reviews.map((r) => { const d = current.find((x) => x.id === r.documentId)!; return {
-        id: r.id, document: r.documentId, document_name: this.typeName(c, d.documentType), file_name: d.fileName, reader: r.reader as Reader, replayed: r.replayed,
+        id: r.id, document: r.documentId, document_name: this.docName(c, d, subjectId), file_name: d.fileName, reader: r.reader as Reader, replayed: r.replayed,
         confirm: "one_per_document" as const, collapsed: r.values.filter((v) => v.review === "collapsed").map((v) => v.fact), expanded: r.values.filter((v) => v.review === "expanded").map((v) => v.fact),
         read: { by: r.readBy, at: r.readAt.toISOString() }, confirmed: r.confirmedBy ? { by: r.confirmedBy, at: r.confirmedAt!.toISOString() } : null,
         // The coded lines' check digits in one word (passed: values are collapsed; failed: a value's own check digit did not
@@ -418,7 +427,10 @@ export class CaseDocuments {
     const b = parse(SubjectBody, body);
     const { docs, byPerson, who } = await this.scope(c, section, b.subjectId);
     // Documents read by rules first (US$0), so a letter refused below never undoes or hides a passport's read. Without a
-    // mode, a letter beside them is not read: it waits for its cost card (a letter alone answers 409 cost_first).
+    // mode, an unread AI document is not read: it waits for its cost card; with nothing else to show, the request answers
+    // 409 cost_first (a letter alone). QA-352 review M1 on 43a29fc4b: several AI documents can be read for one person
+    // (each applicant's proof of funds for the application), so one document that cannot be read (no saved read, an
+    // identity document) never hides the reads, values and open checks of the others: it is listed on its own.
     const rules = docs.filter((d) => d.reader !== "ai_vision"), ai = docs.filter((d) => d.reader === "ai_vision");
     const readAll = async (list: typeof docs) => {
       let fresh = 0;
@@ -427,11 +439,29 @@ export class CaseDocuments {
     };
     await readAll(rules);
     const readBefore = new Set((ai.length ? await this.db.documentReview.findMany({ where: { documentId: { in: ai.map((d) => d.id) } }, select: { documentId: true } }) : []).map((x) => x.documentId));
-    const waiting = !b.mode && rules.length ? ai.filter((d) => !readBefore.has(d.id)) : [];
-    await readAll(ai.filter((d) => !waiting.includes(d)));
-    const out = await this.shown(c, who.subjectId, docs.filter((d) => !waiting.includes(d)).map((d) => d.id));
+    const unread = ai.filter((d) => !readBefore.has(d.id));
+    const waiting: { d: (typeof docs)[number]; code: string; why: string }[] = [];
+    if (!b.mode) {
+      if (unread.length && !rules.length && !readBefore.size) await readAll(unread); // nothing else to show: 409 cost_first, as before
+      for (const d of unread) waiting.push({ d, code: "cost_first", why: "Read by AI: see its cost first, then replay a saved read at no cost." });
+    } else {
+      const refused: { d: (typeof docs)[number]; e: HttpException }[] = [], read: typeof docs = [];
+      for (const d of unread) {
+        try { await this.readOnce(actor, c, d, b.mode); read.push(d); }
+        catch (e) {
+          const code = e instanceof HttpException ? (e.getResponse() as { code?: string }).code : undefined;
+          if (code !== "no_saved_read" && code !== "identity_document") throw e; // live refused, a changed file: the whole request
+          refused.push({ d, e: e as HttpException });
+        }
+      }
+      if (read.length) await this.audit.log(c.workspaceId, actor.id, "read", "case document", section, `${actor.name} read ${read.length} document${read.length === 1 ? "" : "s"} for the ${who.role.replace(/_/g, " ")} in ${section} on case ${short(c.id)} (ai_vision; US$0)`);
+      // Nothing else to show: the one refusal answers as before (409 no_saved_read or identity_document).
+      if (refused.length && !rules.length && !readBefore.size && !read.length) throw refused[0].e;
+      for (const x of refused) waiting.push({ d: x.d, code: (x.e.getResponse() as { code: string }).code, why: (x.e.getResponse() as { detail: string }).detail });
+    }
+    const out = await this.shown(c, who.subjectId, docs.filter((d) => !waiting.some((w) => w.d.id === d.id)).map((d) => d.id));
     return { section, subject: who.subjectId, ...out, not_read: byPerson, cost_usd: 0,
-      waiting_for_cost: waiting.map((d) => ({ document: d.id, document_name: this.typeName(c, d.documentType), why: "Read by AI: see its cost first, then replay a saved read at no cost." })),
+      waiting_for_cost: waiting.map((w) => ({ document: w.d.id, document_name: this.docName(c, w.d, who.subjectId), code: w.code, why: w.why })),
       message: docs.length ? `${out.proposals.length} value${out.proposals.length === 1 ? "" : "s"} proposed from ${docs.length} document${docs.length === 1 ? "" : "s"}: nothing is an answer until you Confirm & use each document.` : "No document of this person can give a fact of this section yet: upload it on the person's checklist line." };
   }
 

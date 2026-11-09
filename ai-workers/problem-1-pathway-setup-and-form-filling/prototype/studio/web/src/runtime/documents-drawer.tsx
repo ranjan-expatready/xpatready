@@ -128,14 +128,16 @@ function DocumentsDrawer({ view, s, close, returnFocus }: { view: View; s: ViewS
 
 /** BR-2 (P-110, P-175, P-295): a letter's or record's cost before any read (QA-352: proof of funds too); live is never offered here; replay is US$0. */
 function CostCard({ plan, docs, replaying, replay }: { plan: Plan; docs: { document: string; document_name: string }[]; replaying: boolean; replay: () => void }) {
-  const can = docs.every((x) => plan.replay.find((r) => r.document === x.document)?.replay_available);
+  // QA-352 review M1: a file with a saved read replays even when another beside it has none (each is read on its own).
+  const saved = (x: { document: string }) => !!plan.replay.find((r) => r.document === x.document)?.replay_available;
+  const can = docs.some(saved), missing = docs.filter((x) => !saved(x));
   return (
     <section aria-label="Cost before reading" className="rounded-lg border border-border px-4 py-3 text-[13px]" data-cost-card>
       <p className="font-medium">{docs.map((x) => x.document_name).join(", ")}: read by AI</p>
       <p className="mt-1">A live read would cost about {usd(plan.estimate.usual_usd)}, at most {usd(plan.estimate.worst_usd)}. It is not offered here: it needs approval first.</p>
       <details className="mt-1 text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">{plan.estimate.basis}</p><p className="mt-1">{plan.live_why}</p></details>
-      {can ? <Button size="sm" className="mt-2" busy={replaying} onClick={replay}>Replay the saved read · US$0</Button>
-        : <p className="mt-2 text-text-muted" data-no-saved-read>No saved read yet. The first read of this document is a paid run that needs approval first. Nothing was sent. Type the values for now.</p>}
+      {can ? <Button size="sm" className="mt-2" busy={replaying} onClick={replay}>Replay the saved read · US$0</Button> : null}
+      {missing.length ? <p className="mt-2 text-text-muted" data-no-saved-read>{can ? `No saved read yet for ${missing.length === 1 ? "one file" : `${missing.length} files`} (${missing.map((x) => x.document_name).join(", ")}): its first read is a paid run that needs approval first.` : "No saved read yet. The first read of this document is a paid run that needs approval first."} Nothing was sent. Type the values for now.</p> : null}
     </section>
   );
 }
