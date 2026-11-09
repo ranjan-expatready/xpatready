@@ -9,6 +9,7 @@ import type { Readiness } from "../../contracts/runtime.ts";
 import { createHash } from "node:crypto";
 import type { Db } from "./core.ts";
 import { changedGroups, type GroupFact } from "../../engine/runtime/forms.ts";
+import { stampCurrent } from "../../engine/runtime/review.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RECEIVED = new Set(["received", "being_checked", "approved"]);
@@ -132,7 +133,8 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
     const found: Finding[] = findings.filter((g) => g.filingId === filing).map((g) => ({ id: g.id, subject: g.subjectId, form: g.form ?? undefined, severity: (["CRITICAL", "MAJOR", "MINOR", "INFO"].includes(g.severity.toUpperCase()) ? g.severity.toUpperCase() : "INFO") as Finding["severity"], words: g.source === "ai" ? `the AI review (${g.agreement === "low" ? "Low: the two rounds disagree" : "High"}) flags what the form says, “${g.quote}”` : g.quote }));
     // Break B2: a review counts only when it was made by the representative of record now, for the facts as they are now.
     const latest = reviews.find((r) => r.filingId === filing) ?? null;
-    const sameFacts = !!latest && latest.reviewedBy === rep && latest.factsHash === factsHash;
+    // C8.3 (P-412 F1, challenge M2): the same rule function as each form's stamp on the representative's review.
+    const sameFacts = stampCurrent(latest ? { hash: latest.factsHash, by: latest.reviewedBy } : null, { hash: factsHash, representative: rep }).current;
     // C9.5: a review made before a move that changed this filing is withdrawn by the move, and says so, whether or not
     // the move also changed the facts' fingerprint (a channel or signing change leaves it equal; a new form does not).
     const withdrawn = latest && latest.reviewedBy === rep ? x.reviewAfterMove?.(filing, latest.reviewedAt) ?? null : null;

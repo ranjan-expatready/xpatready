@@ -53,7 +53,7 @@ export function stampCurrent(stamp: { hash: string | null; by: string | null } |
 export type SendFiling = { id: string; label: string; active: boolean; recorded: boolean; inOpenRound: boolean; openBlocks: number };
 /** BR-1: filings with no open block are ticked by default in the dialog. */
 export const tickedByDefault = (filings: Pick<SendFiling, "id" | "active" | "openBlocks" | "recorded" | "inOpenRound">[]) => filings.filter((f) => f.active && !f.openBlocks && !f.recorded && !f.inOpenRound).map((f) => f.id);
-/** BR-1, BR-9: why a send is refused (null: it may go). None ticked: 400; not on this case or removed (C6.13): 404;
+/** BR-1, BR-9: why a send is refused (null: it may go). None ticked: 400; not on this case: 404; removed (C6.13) or
  *  recorded as submitted: 409; already in an open round: 409 naming it. */
 export function sendProblem(asked: unknown, filings: SendFiling[]): Problem | null {
   if (!Array.isArray(asked) || !asked.length) return { status: 400, field: "filings", detail: "Tick at least one filing to send for review." };
@@ -61,7 +61,8 @@ export function sendProblem(asked: unknown, filings: SendFiling[]): Problem | nu
   if (new Set(asked).size !== asked.length) return { status: 400, field: "filings", detail: "A filing is listed twice: list each once." };
   for (const id of asked as string[]) {
     const f = filings.find((x) => x.id === id);
-    if (!f || !f.active) return { status: 404, detail: "That filing is not on this case now (it may have been removed). Reload." };
+    if (!f) return { status: 404, detail: "That filing is not on this case. Reload." };
+    if (!f.active) return { status: 409, detail: `${f.label} was removed from the application (Remove filing): add it back before it is reviewed.` };
     if (f.recorded) return { status: 409, detail: `${f.label} is recorded as submitted: its review is closed. Correct the record instead.` };
     if (f.inOpenRound) return { status: 409, detail: `${f.label} is already sent for review and not decided yet: open that review instead.` };
   }
@@ -196,7 +197,7 @@ export type ChangeLine = FactChange & { typed_by: string | null; typed_at: strin
 /** BR-6 (r10): a form's facts then (a frozen snapshot) against now, each change with its typist. One call per form over
  *  answers already read in one batch (m6). */
 export function changesOf(then: Pick<FormFact, "fact" | "about" | "row" | "value">[], now: Pick<FormFact, "fact" | "about" | "row" | "value">[], words: ChangeWords, typist: (about: string, fact: string) => { by: string; at: string } | null): ChangeLine[] {
-  return factChanges(then, now, words).map((c) => { const t = typist(c.about, c.fact); return { ...c, typed_by: t?.by ?? null, typed_at: t?.at ?? null }; });
+  return factChanges(then, now, words).map((c) => { const t = typist(c.relation ? `${c.about}/${c.relation}` : c.about, c.fact); return { ...c, typed_by: t?.by ?? null, typed_at: t?.at ?? null }; });
 }
 
 /** BR-8 (M3): whether the representative typed any of these changed facts (the changes since the round was sent). */
