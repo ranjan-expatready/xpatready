@@ -492,16 +492,35 @@ export class CaseDocuments {
     // Break M6 (P-142 D3): only the person's current file of a kind that gives this fact is evidence for it.
     if (!doc!.current) problem(409, "not_current", "Not possible now", "A newer file of this document was uploaded: check the answer against that one. Nothing changed.");
     if (!(readerOf({ key: doc!.documentType, name: this.typeName(c, doc!.documentType) })?.supplies ?? []).includes(fact)) problem(422, "not_evidence", "Not possible now", `${this.typeName(c, doc!.documentType)} does not give this fact: check it against a document that does. Nothing changed.`);
-    const at = new Date(), id = randomUUID();
+    const at = new Date(), id = randomUUID(), s = this.r.snapshotOf(c);
+    // Lead 36 on #1369 (follow-up row): where this document's read gives a value comparable with the answer (not one left
+    // for a person, P-243), an answer that differs is never marked checked against it: a check opens instead (BR-7), and
+    // the officer resolves it with a reason. A value the read could not give, or left for a person, stays their judgement.
+    let differs: { read: { id: string; valueJson: unknown }; answer: { id: string; valueJson: unknown } } | null = null;
     await this.db.$transaction(async (tx) => {
       if (await tx.answerCheck.count({ where: { subjectId: who.subjectId, fact, state: "open" } })) problem(409, "open_checks", "Not possible now", "This answer and a document differ (an open check): resolve the check first. Nothing changed.");
       const current = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: who.subjectId, canonicalFieldKey: fact, rowKey: null, supersededById: null } });
       if (!current) problem(409, "no_answer", "Not possible now", "There is no answer to check against the document yet. Nothing changed.");
+      const read = await tx.readValue.findFirst({ where: { documentId: doc!.id, fact }, select: { id: true, valueJson: true } });
+      if (read && notWritable(s, fact, read.valueJson) === null && !sameValue(fact, current!.valueJson, read.valueJson)) { differs = { read, answer: { id: current!.id, valueJson: current!.valueJson } }; return; }
       const n = await tx.clientCanonicalAnswer.updateMany({ where: { id: current!.id, supersededById: null }, data: { supersededById: id } });
       if (n.count !== 1) problem(409, "changed", "Changed by someone else", "The answer changed at the same moment; read it again. Nothing changed.");
       await tx.clientCanonicalAnswer.create({ data: { id, workspaceId: current!.workspaceId, partyId: current!.partyId, subjectId: current!.subjectId, canonicalFieldId: current!.canonicalFieldId, canonicalFieldKey: fact, rowKey: null, valueJson: current!.valueJson as object, status: "VERIFIED",
         sourceJson: { channel: "checked_against_document", actor: actor.id, at: at.toISOString(), from: current!.id, checked_against: { document: doc!.id, by: actor.id, at: at.toISOString() } }, verifiedBy: actor.id, verifiedAt: at } });
     });
+    if (differs) {
+      const d = differs as { read: { id: string; valueJson: unknown }; answer: { id: string; valueJson: unknown } };
+      // The check this answer and the document need (one per person, fact and document); a second click finds it open.
+      let check: string = randomUUID();
+      try {
+        await this.db.answerCheck.create({ data: { id: check, workspaceId: c.workspaceId, caseId: c.id, subjectId: who.subjectId, fact, readValueId: d.read.id, documentId: doc!.id, answerId: d.answer.id, typedValueJson: d.answer.valueJson as object, documentValueJson: d.read.valueJson as object, openedBy: actor.id, openedAt: at } });
+        await this.audit.log(c.workspaceId, actor.id, "opened", "answer check", check, `${actor.name} asked to mark ${fact} for the ${who.role.replace(/_/g, " ")} checked against ${this.typeName(c, doc!.documentType)} on case ${short(c.id)}; the answer differs from the document, so a check was opened instead`);
+      } catch (e) {
+        if ((e as { code?: string }).code !== "P2002") throw e;
+        check = (await this.db.answerCheck.findFirst({ where: { subjectId: who.subjectId, fact, documentId: doc!.id, state: "open" }, select: { id: true } }))?.id ?? check;
+      }
+      problem(409, "differs_from_document", "Not possible now", `${labelOf(s, fact)}: the answer differs from what ${this.typeName(c, doc!.documentType)} reads, so it is not marked checked against it. A check is open: resolve it in "Fill this from documents", with a reason.`, { check, answer: d.answer.valueJson, document_value: d.read.valueJson });
+    }
     await this.audit.log(c.workspaceId, actor.id, "checked against a document", "case fact", fact, `${actor.name} checked ${fact} for the ${who.role.replace(/_/g, " ")} against ${this.typeName(c, doc!.documentType)} on case ${short(c.id)}`);
     return { answer: { id, fact, subject: who.subjectId, status: "VERIFIED", verified_by: actor.id, verified_at: at.toISOString(), checked_against: { document: doc!.id, by: actor.id, at: at.toISOString() } } };
   }

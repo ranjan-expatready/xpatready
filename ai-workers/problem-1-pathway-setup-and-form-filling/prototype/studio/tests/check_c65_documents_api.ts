@@ -212,4 +212,29 @@ await main("C6.5 documents API", "case upload, read once, Confirm & use once, le
   await upload(PORT, `/runtime/cases/${c.id}/documents`, passportPdf(doc), "not-a-letter.pdf", OFFICER, { subjectId: c.caseSubject, documentType: "letter_of_invitation" });
   r = await fill(visit, c.caseSubject, OFFICER, { mode: "replay" });
   ok("C6.5 B-m7 fail (P-134): a file holding passport coded lines, uploaded as a letter, is never sent to AI (409 identity_document)", r.status === 409 && r.body?.code === "identity_document", r.body);
+
+  // ---- Follow-up row (Lead 36 on #1369): "checked against the document" never vouches for an answer that differs from
+  // a comparable value the document read; it opens a check instead. A value left for a person stays the officer's call.
+  const K = c.subjects["Sample Child A2"];
+  const kLine = (((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, OFFICER)).body?.people ?? []).find((x: { subject: string }) => x.subject === K)?.lines ?? []).find((x: { label: string }) => /passport/i.test(x.label) && !/absent|parent/i.test(x.label))?.id;
+  const kDoc = (await upload(PORT, `/runtime/checklist-lines/${kLine}/documents`, passportPdf({ ...doc, surname: "SAMPLEK", given: "CHILD A", number: "SAMPLEK56", dob: FAMILY[3].dob! }), "child.pdf", OFFICER)).body?.document?.id as string;
+  await fill(passSec, K);
+  const kProps = ((await call("GET", `/runtime/cases/${c.id}/proposals?subject=${K}`, undefined, OFFICER)).body?.proposals ?? []) as (Prop & { needs_look?: boolean })[];
+  await call("POST", `/runtime/cases/${c.id}/documents/${kDoc}/confirm-and-use`, { subjectId: K, checked: kProps.filter((x) => x.source.document === kDoc && x.needs_look).map((x) => x.id) }, OFFICER);
+  const kAnswer = (fact: string) => sql(`select status || '|' || (value_json #>> '{}') from client_canonical_answer where subject_id='${K}' and canonical_field_key='${fact}' and superseded_by_id is null`);
+  await answer(c.id, K, "person.passport_expiry_date", "2036-01-01", OFFICER); // the officer types another expiry
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.passport_expiry_date/checked-against-document`, { document: kDoc }, OFFICER);
+  ok("C6.5 F1 fail (Lead 36): an answer that differs from the value the passport read is not marked checked: 409 differs_from_document, a check opened, the answer unchanged", r.status === 409 && r.body?.code === "differs_from_document" && !!r.body?.check
+    && sql(`select count(*) from answer_check where id='${r.body?.check}' and state='open' and document_id='${kDoc}'`) === "1" && kAnswer("person.passport_expiry_date") === "DECLARED|2036-01-01", r.body);
+  const opened = r.body?.check as string;
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.passport_expiry_date/checked-against-document`, { document: kDoc }, OFFICER);
+  ok("C6.5 F1 fail: asking again while that check is open is refused (409 open_checks) and opens no second check", r.status === 409 && r.body?.code === "open_checks" && sql(`select count(*) from answer_check where subject_id='${K}' and fact='person.passport_expiry_date' and state='open'`) === "1", r.body);
+  r = await call("POST", `/runtime/checks/${opened}/resolve`, { keep: "document", reason: "The passport page reads the earlier date (Sample)" }, OFFICER);
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.passport_expiry_date/checked-against-document`, { document: kDoc }, OFFICER);
+  ok("C6.5 F1 pass: once the answer matches what the passport read, it is marked checked against it (200, VERIFIED)", r.status === 200 && kAnswer("person.passport_expiry_date") === `VERIFIED|${FIXED.expiry}`, r.body);
+  await answer(c.id, K, "person.citizenship", "India", OFFICER); // the passport gives only the code IND: left for a person
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.citizenship/checked-against-document`, { document: kDoc }, OFFICER);
+  ok("C6.5 F2 pass (Lead 36): a value the read could not give in the question's terms (a country only as a code) stays the officer's judgement: marked checked (200)", r.status === 200 && kAnswer("person.citizenship")?.startsWith("VERIFIED|") === true, r.body);
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.place_of_birth_city/checked-against-document`, { document: kDoc }, OFFICER);
+  ok("C6.5 F2 fail (Lead 36): place of birth is not on the passport's coded lines: still refused (422 not_evidence)", r.status === 422 && r.body?.code === "not_evidence", r.body);
 });
