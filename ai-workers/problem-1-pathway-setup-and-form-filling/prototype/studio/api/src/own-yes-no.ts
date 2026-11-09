@@ -57,7 +57,8 @@ export function inFormText(officialFile: string | null | undefined, words: strin
  *  ask this question at all (its own script requires the form field only then); step 230 gives it the condition "show only
  *  when <fact> is <equals>" when askedWhenGround finds that rule in the form's own script. */
 export type AskedWhen = { fact: string; equals: string };
-export type OwnYesNo = { dataPath: string; label: string; meaning: string; question?: string; checkpointOnly?: boolean; followUps?: string[]; askedWhen?: AskedWhen };
+/** `form`: another form the combination files (QA-318: IMM 5257 SCH1), when the box is not on its application form. */
+export type OwnYesNo = { form?: string; dataPath: string; label: string; meaning: string; question?: string; checkpointOnly?: boolean; followUps?: string[]; askedWhen?: AskedWhen };
 
 /** QA-165 (AGENTS rule 4, P-170: nothing guessed): why the form asks the Yes/No form field `dataPath` only when `when.fact`
  *  is `when.equals`, or null when its own script does not say so. The script's rule (samples/form-script-requirements.json)
