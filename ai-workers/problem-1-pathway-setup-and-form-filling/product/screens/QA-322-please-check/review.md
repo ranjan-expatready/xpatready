@@ -174,3 +174,16 @@ Verdict: Block 673f0794d
 There is no Blocker and no Major. m4 to m6 stay with the tech lead.
 
 Verdict: Approve 01d12b6b7
+
+## Diff-only check of 3403e5cea (same reviewer, 9 Nov 2026; no copy run)
+**Scope:** `git diff 01d12b6b7 3403e5cea`.
+
+**runtime.ts: comments only.** A whitespace-insensitive word diff of the `.ts` files shows no changed line outside a `/** … */` comment. The two doc blocks are reordered so each sits on its own function, and the `pleaseCheckWords` comment is reworded. The new wording says "once the answer holds another value" and "without saying who changed it", which matches the code. m9 is fixed.
+
+**review.md:** my re-review section on 01d12b6b7 is committed exactly as written; the working tree matched the commit before this append.
+
+**walk.md:** m8 is listed for the tech lead, and the stated reason is correct. When `resolve` (case-documents.ts) is sent no `answerId`, it compares the current answer with the check's `answerId` and refuses with 409 `changed` if they differ. C6.5-15 sends only `{keep, reason}`, so an earlier pack step that changes the answer would turn C6.5-15 red unless that step is changed under P-400. Listing m8 in the PR is acceptable for a Minor.
+
+**Nothing else moved:** there are no other code, test or screenshot changes.
+
+Verdict: Approve 3403e5cea
