@@ -117,7 +117,7 @@ const BLANK_WORDS = { todo: "Blank official PDF: download it, fill it by hand, u
 /** C8.3 (B144): one form of the case as the review freezes it: its facts hash (null while it cannot start), the facts
  *  its copy would write, its validated copy read back and its newest copy for filing (B2's file order). */
 export type ReviewBasisForm = { item: string; filing: string; form: string; subject: string; person: string; channel: string; state: string; waits: boolean;
-  hash: string | null; inputHash: string; facts: FormFact[]; validated: PaperValidated; forFiling: { id: string; hash: string } | null; reads: string[] };
+  hash: string | null; inputHash: string; facts: FormFact[]; validated: PaperValidated; validatedSha: string | null; forFiling: { id: string; hash: string } | null; reads: string[] };
 export type ReviewBasis = { forms: ReviewBasisForm[]; words: ChangeWords; caseSubject: string | null; valueWords: (fact: string, v: unknown) => string | null; answers: Awaited<ReturnType<Runtime["state"]>>["answers"] };
 
 @Injectable()
@@ -293,7 +293,7 @@ export class CasePrepare {
     const minor = minorFromAnswers(answers, today); // Devin on #617: an adult dependent child signs their own form
     // C7.7 part 2: per form × person, the validated copy read back that counts (readBackOf: each copy judged on its newest
     // read-back, as the copy view and `lock` do; QA-165), current while the form's facts are what they were when it was read back.
-    const reads = await this.db.validatedCopy.findMany({ where: { copy: { caseId: c.id } }, orderBy: [{ readAt: "desc" }, { id: "asc" }], select: { factsHash: true, readAt: true, readBack: true, copy: { select: { id: true, formNumber: true, subjectId: true, resultJson: true, configReleaseId: true, snapshot: { select: { factsJson: true } } } } } });
+    const reads = await this.db.validatedCopy.findMany({ where: { copy: { caseId: c.id } }, orderBy: [{ readAt: "desc" }, { id: "asc" }], select: { factsHash: true, sha256: true, readAt: true, readBack: true, copy: { select: { id: true, formNumber: true, subjectId: true, resultJson: true, configReleaseId: true, snapshot: { select: { factsJson: true } } } } } });
     // C9.5 (BR-6, challenge M4): a copy made on an earlier release of the case (before a move) whose form the move
     // changed is out of date because of the release: words that name both releases and what changed, never fact lines
     // (so never an Undo), and it never counts as current. Only after a move (more than one pin revision).
@@ -306,14 +306,16 @@ export class CasePrepare {
       const rel = copy ? releaseOfCopy.get(copy) : undefined, old = rel && rel !== pin.configReleaseId ? pins.find((p) => p.id === rel) : undefined;
       return old ? releaseOutOfDate(diffOf(old.id, old.snapshot, pin.configReleaseId, relSnap).forms.get(form), { from: old.label, to: curLabel }, what) : null;
     };
-    const readsOf = new Map<string, { copy: string; at: Date; factsHash: string; readBack: unknown }[]>();
+    const readsOf = new Map<string, { copy: string; at: Date; factsHash: string; sha256: string; readBack: unknown }[]>();
     // Row C3 (review m1): a read-back of a copy stamped "Copy, not for filing" (made while the form was filed Online) never
     // counts, by the same rule as Validate and `lock` (copyNotForFiling): such rows were kept before Validate refused them.
-    for (const v of reads) { if (copyNotForFiling(s, v.copy)) continue; const k = `${v.copy.formNumber}|${v.copy.subjectId}`; readsOf.set(k, [...(readsOf.get(k) ?? []), { copy: v.copy.id, at: v.readAt, factsHash: v.factsHash, readBack: v.readBack }]); }
+    for (const v of reads) { if (copyNotForFiling(s, v.copy)) continue; const k = `${v.copy.formNumber}|${v.copy.subjectId}`; readsOf.set(k, [...(readsOf.get(k) ?? []), { copy: v.copy.id, at: v.readAt, factsHash: v.factsHash, sha256: v.sha256, readBack: v.readBack }]); }
     const paperValidated = (form: string, subject: string): PaperValidated => {
       const v = readBackOf(readsOf.get(`${form}|${subject}`) ?? [], formPassed);
       return v ? { copy: v.copy, at: v.at.toISOString(), current: v.factsHash === inputHash(covOf(form, subject)?.facts ?? []) && !releaseWords(v.copy, form, "validated copy") } : null;
     };
+    // C8.3 QA-345: the fingerprint of the validated copy that counts for filing (the read-back paperValidated counts), else null.
+    const validatedSha = (form: string, subject: string): string | null => paperValidated(form, subject)?.current ? readBackOf(readsOf.get(`${form}|${subject}`) ?? [], formPassed)?.sha256 ?? null : null;
     // C9.2 (BR-12): what each finished item read when it was finished (its copy's stored facts, or its entered section's
     // answers), to name each fact that changed since, with its old and new value and the date of the change.
     const printedCopy = (id: string) => stepsOf.get(id)?.print?.copy ?? null;
@@ -617,12 +619,12 @@ export class CasePrepare {
       factsOf: (form, subject) => formReady(form, subject),
       // C7.9 (P-242): the must-verify facts this form writes from an unchecked client-given value.
       unverifiedOf: (form, subject) => unverifiedOf(s, answers, formCoverage(s, people, answers, rows, form, subject)?.facts ?? [], reading), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
-      validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
+      validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, validatedSha, scanned: (item) => !!stepsOf.get(item)?.scan_received,
       editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: formHash, today });
     // C8.3 (B144, B2): each form's facts for the review's freeze and stamp, from this very pass.
     sink?.({ answers, words, caseSubject, valueWords: (fact, v) => (v === null || v === undefined || v === "" ? "no answer" : typeof v === "object" ? null : answerWords(s, fact, v)), forms: formItems.map((f) => ({ item: f.id, filing: f.filing, form: f.form, subject: f.subject, person: f.person, channel: f.channel, state: f.state,
       waits: f.state === "cannot_start", hash: f.state === "cannot_start" ? null : formHash(f.form, f.subject), inputHash: inputHash(covOf(f.form, f.subject)?.facts ?? []), facts: covOf(f.form, f.subject)?.facts ?? [],
-      validated: paperValidated(f.form, f.subject), forFiling: forFiling.get(`${f.form}|${f.subject}`) ?? null,
+      validated: paperValidated(f.form, f.subject), validatedSha: validatedSha(f.form, f.subject), forFiling: forFiling.get(`${f.form}|${f.subject}`) ?? null,
       // C8.3 (CI on #1247, BR-8): every fact the form reads, confirmed (its facts) or not yet (what it waits for), as
       // "<subject or relative key>|<fact>", so an answer typed but not confirmed still counts as typed by its typist.
       reads: [...new Set([...(covOf(f.form, f.subject)?.facts ?? []).map((x) => `${x.about === "case" ? caseSubject ?? x.about : x.about}|${x.fact}`), ...(f.state === "cannot_start" ? [] : formReady(f.form, f.subject).missing).map((m) => `${m.subject === "case" ? caseSubject ?? m.subject : m.subject ?? f.subject}|${m.fact}`)])] })) });
