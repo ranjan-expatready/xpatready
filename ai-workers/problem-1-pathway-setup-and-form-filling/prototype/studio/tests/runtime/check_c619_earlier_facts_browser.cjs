@@ -4,8 +4,9 @@
 // "Re-confirm and use" → the Agent view shows them with their origin (the next capability's first step: Confirm section,
 // C6.3) → the earlier passport expires → a further case shows it Expired, with its rule, the tick disabled. axe-core
 // (WCAG 2.2 A/AA) on the card; 1024 and 390 px without sideways scroll; every wait fails loudly. Screenshots for the PR
-// at deviceScaleFactor 2 into product/screens/C6.19/screenshots/. Sample data, US$0. Needs the configured checkpoint.
-//   zsh studio/tools/isolated.sh runtime_c619 4437 start && (load the configured checkpoint, e.g. acceptance/C6.19.test.ts) && node studio/tests/runtime/check_c619_earlier_facts_browser.cjs 4437
+// at deviceScaleFactor 2 into product/screens/C6.19/screenshots/. Sample data, US$0. Loads the configured checkpoint (Demo
+// menu's own route) when the copy has none.
+//   zsh studio/tools/isolated.sh runtime_c619w 4437 start && node studio/tests/runtime/check_c619_earlier_facts_browser.cjs 4437
 const fs = require("node:fs");
 const path = require("node:path");
 const { chromium } = require("../../node_modules/playwright");
@@ -26,7 +27,13 @@ const api = async (method, url, body, actor = "user-O") => { const r = await fet
   const shot = async (p, name) => p.screenshot({ path: path.join(SHOTS, name), fullPage: false });
   try {
     // Set-up: the earlier case (C6.1 + C6.3 by the API): Visitor visa, passport facts entered and confirmed.
-    const open = (await api("GET", "/runtime/openable", undefined, "user-R")).body ?? [];
+    let open = (await api("GET", "/runtime/openable", undefined, "user-R")).body ?? [];
+    if (!open.some((o) => /With an LMIA/.test(o.combination))) {
+      await api("POST", "/demo/reset", { confirm: "RESET" }, "user-A");
+      const l = await api("POST", "/demo/load", { sample: "configured" }, "user-A");
+      ok("setup: Demo › Load the configured checkpoint", l.status === 201 || l.status === 200, l.status);
+      open = (await api("GET", "/runtime/openable", undefined, "user-R")).body ?? [];
+    }
     const vv = open.find((o) => o.combination === "Visitor visa")?.combination_id, wp = open.find((o) => /With an LMIA/.test(o.combination));
     ok("setup: the configured checkpoint has the Visitor visa and With an LMIA open for cases", !!vv && !!wp?.combination_id, open.map((o) => o.combination));
     const a = (await api("POST", "/runtime/cases", { combinationId: vv, reference: `C619W-A-${run}`, clientActor: "user-P", principal: { displayName: NAME } }, "user-R")).body;

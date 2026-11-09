@@ -26,7 +26,7 @@ const key = (p: Person, f: Fact) => `${p.subject_id}|${f.fact}`;
 const roleWords = (r: string) => r.replace(/_/g, " ");
 
 function SourceLine({ s }: { s: Source }) {
-  if ("sample" in s) return <span className="text-text-muted">Sample rule: {s.why}</span>;
+  if ("sample" in s) return <span className="text-text-muted">{/^Sample\b/.test(s.why) ? s.why : `Sample rule: ${s.why}`}</span>;
   return <span className="text-text-muted">{s.page}, recorded {dateWords(s.recorded)}: <q>{s.quote}</q> <a className="text-text-link underline" href={s.url} target="_blank" rel="noreferrer">canada.ca</a></span>;
 }
 
