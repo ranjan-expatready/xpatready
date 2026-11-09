@@ -29,7 +29,8 @@ const known = (pairs: Record<string, unknown>): Known => new Map(Object.entries(
 type D = Extract<CaseChecklist, { derived: true }>;
 const lines = (r: D, doc: string) => r.people.flatMap((p) => p.lines.filter((l) => l.document.key === doc).map((l) => ({ ...l, on: p.subject })));
 const ids = (xs: { subject: string }[] | undefined) => (xs ?? []).map((x) => x.subject).join(",");
-const adults = known({ "A|person.date_of_birth": "1985-01-01", "B|person.date_of_birth": "1987-01-01", "C|person.date_of_birth": "2016-01-01", "D|person.date_of_birth": "1960-05-05" });
+const ADULT_DOBS = { "A|person.date_of_birth": "1985-01-01", "B|person.date_of_birth": "1987-01-01", "C|person.date_of_birth": "2016-01-01", "D|person.date_of_birth": "1960-05-05" };
+const adults = known(ADULT_DOBS);
 const family = [P("case", "case"), P("A", "principal"), P("B", "spouse_or_partner"), P("C", "child"), P("D", "sponsor", false)];
 const run = (roles: Record<string, string[]>, ps = family, k = adults) => caseChecklist(snap(roles), COMBO, ps, k, TODAY) as D;
 
@@ -64,6 +65,20 @@ ok("BR-5 pass: no roles on the type: the person the item is for provides it, and
 ok("BR-5 fail: a shared item is never left without a provider", providersFor(["sponsor"], "A", candidatesOf(family.filter((p) => p.role !== "sponsor"), adults, ON), ON).providers.length === 1);
 // BR-1 (the representative never provides) at the case's side too.
 ok("BR-1: the representative is never a candidate on the case", NEVER_PROVIDES.has("representative") && !candidatesOf([...family, P("R", "representative")], adults, ON).some((c) => c.id === "R"));
+// Devin on #1392: a needed per-person line merged with a shared requirement that does not apply stays per person, in
+// either order of the requirements; when both apply, the one line is shared (a shared item is never lost).
+const mergeSnap = (sharedFirst: boolean, sharedApplies: boolean) => {
+  const own = req("funds:own", "funds", "principal_applicant");
+  const shared = { ...req("funds:case", "funds", "case"), base_or_conditional: "conditional", condition: { subjectKind: "CASE", op: "eq", field: "case.has_sponsor", value: true }, condition_plain: "there is a sponsor" };
+  return { ...snap({ funds: ["principal"] }), canonical_fields: [{ id: "person.date_of_birth", value_type: "date" }, { id: "case.has_sponsor", value_type: "yes_no" }], document_requirements: sharedFirst ? [shared, own] : [own, shared] } as unknown as Snapshot;
+};
+for (const first of [true, false]) {
+  const no = (caseChecklist(mergeSnap(first, false), COMBO, family, known({ ...ADULT_DOBS, "case|case.has_sponsor": false }), TODAY) as D);
+  const yes = (caseChecklist(mergeSnap(first, true), COMBO, family, known({ ...ADULT_DOBS, "case|case.has_sponsor": true }), TODAY) as D);
+  const n = lines(no, "funds"), y = lines(yes, "funds");
+  ok(`Devin fail (${first ? "shared first" : "own first"}): the shared requirement does not apply, so the needed line stays per person (no providers)`, n.length === 1 && n[0].shared === null && n[0].providers.length === 0, n.map((x) => [x.shared, x.need]));
+  ok(`Devin pass (${first ? "shared first" : "own first"}): both apply, so the one line is shared with its providers`, y.length === 1 && y[0].shared === "application" && ids(y[0].providers) === "A" && y[0].providers_rule === "type_roles", y.map((x) => [x.shared, ids(x.providers)]));
+}
 // BR-6: the officer's choice, checked again on every read.
 const cands = candidatesOf(family, adults, ON);
 let ch = chosenProviders(["A"], cands, ON);

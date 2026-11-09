@@ -226,8 +226,10 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
       if (same < 0) list.push(line);
       else {
         const keep = ORDER[line.need] < ORDER[list[same].need] ? line : list[same], drop = keep === line ? list[same] : line; keep.also_from = [...new Set([...keep.also_from, drop.lineage, ...drop.also_from])].sort(); keep.base ||= drop.base;
-        // C6.14: merged with a shared requirement, the one line keeps its providers (a shared item is never lost).
-        if (!keep.shared && drop.shared) Object.assign(keep, { shared: drop.shared, providers: drop.providers, providers_rule: drop.providers_rule, providers_words: drop.providers_words });
+        // C6.14: merged with a shared requirement, the one line keeps its providers (a shared item is never lost), but only
+        // when that requirement applies as strongly as the line it joins: a shared requirement not needed (or waiting)
+        // never makes a needed per-person line shared (Devin on #1392).
+        if (!keep.shared && drop.shared && ORDER[drop.need] <= ORDER[keep.need]) Object.assign(keep, { shared: drop.shared, providers: drop.providers, providers_rule: drop.providers_rule, providers_words: drop.providers_words });
         list[same] = keep;
       }
     }

@@ -104,6 +104,20 @@ const ok = (n: string, c: boolean, d?: unknown) => { c ? pass++ : fail++; consol
   const after = await shared.first().innerText();
   ok("C6.14 walk 9: the line now says Sample Client A alone, chosen by the case officer, with the reason", /Provided by Sample Client A\n/.test(`${after}\n`) || (/Provided by Sample Client A/.test(after) && !/and Sample Spouse A/.test(after) && /Chosen by the case officer/.test(after) && /holds the original/.test(after)), after);
   ok("C6.14 walk: no sideways scroll at 1440 px (case)", !(await sideways()));
+
+  // 5. Devin on #1392: a returned change is withdrawn on its page by its proposer, then the author can propose again.
+  const prop = await API(`/library/document-types/${MARRIAGE}/providers`, "POST", { roles: ["principal"], reason: "C6.14 walk: the principal alone (Sample)." }, "user-A");
+  const back = prop.body?.id ? await API(`/library/changes/${prop.body.id}/return`, "POST", { note: "Keep the spouse as a provider too." }, "user-B") : prop;
+  await as("user-A");
+  await page.goto(`http://localhost:${PORT}/review/change/${prop.body?.id}`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Withdraw it instead…" }).click();
+  await page.getByLabel("Why withdraw it").fill("The reviewer is right: both keep providing it.");
+  await page.screenshot({ path: join(OUT, "10-author-withdraws-returned-change.png") });
+  await page.getByRole("button", { name: "Withdraw it", exact: true }).click();
+  await page.waitForURL(/\/review$/, { timeout: 30_000 });
+  ok("C6.14 walk 10 (Devin on #1392): the proposer withdraws a returned change on its page; it is withdrawn and nothing in the library changed", back.status < 300 && sql(`select status from library_change where id = '${prop.body?.id}'`) === "WITHDRAWN" && sql(`select array_to_string(default_provider_roles, ',') from document_type where document_type_key = '${MARRIAGE}' order by version desc limit 1`) === "principal,spouse_or_partner", [back.status, sql(`select status from library_change where id = '${prop.body?.id}'`)]);
+  const again = await API(`/library/document-types/${MARRIAGE}/providers`, "POST", { roles: ["spouse_or_partner", "principal"], reason: "C6.14 walk: proposed again after the withdrawal (Sample)." }, "user-A");
+  ok("C6.14 walk 11: after withdrawing, the author can propose again", again.status < 300, again.body);
   await browser.close();
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);
