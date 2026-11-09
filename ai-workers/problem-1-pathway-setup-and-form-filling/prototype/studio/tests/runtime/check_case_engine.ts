@@ -3,7 +3,7 @@
 // generated households, answers and values.
 //   tsx studio/tests/runtime/check_case_engine.ts
 import fc from "fast-check";
-import { ageOn, caseView, HAS_CHILDREN, hasChildrenOf, checkValue, confirmation, optionsOf, knownOf, shapeOf, type Answer, type GroupAnswer, type Participant, type Row } from "../../engine/runtime/case.ts";
+import { ageOn, caseView, HAS_CHILDREN, hasChildrenOf, checkValue, confirmation, judgingMaps, optionsOf, knownOf, shapeOf, type Answer, type GroupAnswer, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { changedFacts, changedGroups, factsOf, formCoverage, groupFacts, inputHash, readiness, type FormFact } from "../../engine/runtime/forms.ts";
 import { render } from "../../engine/render.ts";
@@ -318,7 +318,17 @@ ok("QA-76 fail-guard: with a representative on the case, it names that person, a
   ok("QA-355 pass: an added form whose map says \"codes as listed in the inventory\" leaves the shared fact's choices and checks as the release has them", (joined.field_maps as unknown[]).length === (S.field_maps as unknown[]).length + 1
     && JSON.stringify(shapeOf(joined, "case.visa_type").choices) === JSON.stringify(shapeOf(releaseOnly, "case.visa_type").choices) && checkValue(joined, "case.visa_type", value).join() === checkValue(releaseOnly, "case.visa_type", value).join(),
     { joined: shapeOf(joined, "case.visa_type").choices, release: shapeOf(releaseOnly, "case.visa_type").choices, check: checkValue(joined, "case.visa_type", value) });
-  ok("QA-355 fail: the same join with a note that names values still offers them (a real list is kept)", JSON.stringify(shapeOf(withAdditions(releaseOnly as never, [addition("code_list:sample.visa (VisitorVisa, Transit)")]) as unknown as Snapshot, "case.visa_type").choices) === JSON.stringify(shapeOf(releaseOnly, "case.visa_type").choices ?? ["VisitorVisa", "Transit"]));
+  // (a), the guard: an added form's real list and limits judge only its own copy; the release's lines stay as they were.
+  const own = withAdditions(releaseOnly as never, [addition("code_list:sample.visa (VisitorVisa, Transit); max 7 char")]) as unknown as Snapshot;
+  ok("QA-355 (a) pass: an added form's own list and limit never change what the release's forms accept (choices, length, the check)", shapeOf(own, "case.visa_type").choices === null
+    && shapeOf(own, "case.visa_type").maxLength === shapeOf(releaseOnly, "case.visa_type").maxLength && checkValue(own, "case.visa_type", "Business").length === 0 && optionsOf(own, "case.visa_type") === optionsOf(releaseOnly, "case.visa_type"),
+    { choices: shapeOf(own, "case.visa_type").choices, max: shapeOf(own, "case.visa_type").maxLength, check: checkValue(own, "case.visa_type", "Business") });
+  ok("QA-355 (a) fail: the same value is judged on the added form's own copy by its list and limit", JSON.stringify(shapeOf(own, "case.visa_type", "SAMPLE-ADDED").choices) === JSON.stringify(["VisitorVisa", "Transit"])
+    && shapeOf(own, "case.visa_type", "SAMPLE-ADDED").maxLength === 7 && /Choose one of: VisitorVisa, Transit/.test(checkValue(own, "case.visa_type", "Business", new Date(), "SAMPLE-ADDED").join(" ")) && checkValue(own, "case.visa_type", "Transit", new Date(), "SAMPLE-ADDED").length === 0,
+    checkValue(own, "case.visa_type", "Business", new Date(), "SAMPLE-ADDED"));
+  ok("QA-355 (a) pass: with no added form the snapshot judges itself; with one, the same object per form (format cache kept)", judgingMaps(releaseOnly) === releaseOnly && judgingMaps(own) === judgingMaps(own) && judgingMaps(own, "SAMPLE-ADDED") === judgingMaps(own, "SAMPLE-ADDED")
+    && (judgingMaps(own).field_maps as unknown[]).length === (releaseOnly.field_maps as unknown[]).length && (judgingMaps(own, "SAMPLE-ADDED").field_maps as unknown[]).length === (releaseOnly.field_maps as unknown[]).length + 1);
+
 }
 
 process.exitCode = summary() ? 1 : 0;
