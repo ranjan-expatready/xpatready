@@ -2,7 +2,7 @@
 
 current_lead: local_a07b26f2-302e-4c73-bd1c-ca20dd9e8a79 Lead 2 · 9 Nov 20:32 IST (series 2; took over from Lead 1 (series 2, local_f135f805) at ~400k context, P-314)
 
-updated: 2026-11-09 22:10 IST by **Lead 2 (series 2, local_a07b26f2-…)** (from 20:30 IST; hand-over block below written by Lead 1 (series 2) at 20:32 IST) · weekly 7% at 21:28 IST (flat since 20:28) · milestone: **M2 60/60 holds; M3 20 of 29 Works on main (C7.10, C6.13, C6.14, C3.16 merged since 17:48); target 26 (P-434)** · rules: **`RULES.md`** + DECISIONS P-354 to P-438 · Lead 1's full page: `history/STATE-2026-11-09-2030-lead1s2.md` · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-09 22:01 IST by **Lead 2 (series 2, local_a07b26f2-…)** (from 20:30 IST; hand-over block below written by Lead 1 (series 2) at 20:32 IST) · weekly 7% at 21:28 IST (flat since 20:28) · milestone: **M2 60/60 holds; M3 20 of 29 Works on main (C7.10, C6.13, C6.14, C3.16 merged since 17:48); target 26 (P-434)** · rules: **`RULES.md`** + DECISIONS P-354 to P-438 · Lead 1's full page: `history/STATE-2026-11-09-2030-lead1s2.md` · this branch: `lead/2026-11-07-lead31`
 
 ## Hand-over: Lead 1 (series 2) → Lead 2 (series 2), 20:32 IST — read this first
 **Founder's goal (P-434):** M3 to 26 of 29 Works, every gate kept; no new rows until then; hourly report in IST (Works, merged, blocked, next three); stop clean at 95% weekly. Standing approvals: requeue, retarget, draft/ready toggle, re-run failed CI parts, label on Approve + green; paid runs up to US$50 today, ledger first (US$0.88 spent before the switch, none since); pipeline changes on measured numbers (tell him first if quality could drop). P-433: Lead numbering series 2; P-435 to P-438 today.
