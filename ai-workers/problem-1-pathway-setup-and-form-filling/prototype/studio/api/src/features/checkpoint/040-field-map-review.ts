@@ -8,18 +8,29 @@ import { irm0002 } from "./030-irm0002.ts";
 export const fieldMapReview = stateOf(() => ({ applied: 0 }));
 /** How many proposals a field-map step reported (its detail counts). */
 const counted = (detail: unknown) => (detail as { counts?: { proposed_fields?: number } } | null)?.counts?.proposed_fields ?? 0;
-type Job = { id: string; attachmentId: string | null; startedAt: Date; runFile?: string | null; detail: unknown };
-/** The saved answer a draft replays (its run file), the one thing that tells two drafts of one form apart from load to load. */
+type Job = { id: string; attachmentId: string | null; batchId?: string | null; startedAt: Date; runFile?: string | null; detail: unknown };
+/** A batch of drafts as its plan lists them: when the load started it, and its targets in the plan's order. */
+export type BatchPlan = { id: string; startedAt: Date; targets: { attachmentId?: string | null }[] };
+/** The saved answer a draft replays (its run file): a tie-break only (a merged run's name carries its load's time). */
 const runOf = (j: Job) => String(j.runFile ?? (j.detail as { run_file?: unknown } | null)?.run_file ?? "").replace(/^.*\//, "");
 const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 /** The order the drafts are decided and applied in, and the one draft that shows an edit and a return (DEMO.md row 4).
- *  Lead 39 on #1396 (9 Nov): the same drafts give the same order whatever order their jobs started in, because the first
- *  draft that lands a shared field sets its meaning, and a form field with no printed caption is named by that meaning on
- *  the review sheet a saved paid review is keyed on. So: by the form's file name, then the saved answer it replays, then
- *  the job's id (never by when it started); the showcase is the draft with the most proposals, a tie going to the first. */
-export function reviewOrder<J extends Job>(jobs: J[], fileOf: Map<string, string>): { order: J[]; showcase: string | undefined } {
+ *  The order decides more than wording: the first draft that lands a shared field sets its key's meaning, and each later
+ *  draft is compared with the library the earlier ones filled (sources.ts, the decided key), so it decides keys too
+ *  (review B1 on #1411: IMM 5257's other given names and US green card keys). Lead 39 on #1396 (9 Nov): the same drafts
+ *  must give the same order on every load. So the order is the load's own plan, never the moment a job started: the
+ *  batches in the order the load started them, then each draft's place among its batch's planned targets; the form's file
+ *  name, the saved answer and the job id only break ties. Before, two drafts planned 1 and 2 (IMM 5257, IMM 5257 SCH1)
+ *  could start in the same millisecond and land in either order, so person.date_of_birth's meaning, and with it IMM
+ *  5257's review sheet, changed from load to load. The showcase is the draft with the most proposals, a tie going to the
+ *  first in this order. */
+export function reviewOrder<J extends Job>(jobs: J[], fileOf: Map<string, string>, batches: BatchPlan[] = []): { order: J[]; showcase: string | undefined } {
+  const rank = new Map([...batches].sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime() || byText(a.id, b.id)).map((b, i) => [b.id, i]));
+  const place = new Map(batches.map((b) => [b.id, new Map(b.targets.map((t, i) => [t.attachmentId ?? "", i] as [string, number]).reverse())]));
+  const batchOf = (j: J) => rank.get(j.batchId ?? "") ?? Number.MAX_SAFE_INTEGER;
+  const placeOf = (j: J) => place.get(j.batchId ?? "")?.get(j.attachmentId ?? "") ?? Number.MAX_SAFE_INTEGER;
   const file = (j: J) => fileOf.get(j.attachmentId ?? "") ?? "";
-  const order = [...jobs].sort((a, b) => byText(file(a), file(b)) || byText(runOf(a), runOf(b)) || byText(a.id, b.id));
+  const order = [...jobs].sort((a, b) => batchOf(a) - batchOf(b) || placeOf(a) - placeOf(b) || byText(file(a), file(b)) || byText(runOf(a), runOf(b)) || byText(a.id, b.id));
   const most = Math.max(0, ...order.map((j) => counted(j.detail)));
   return { order, showcase: order.find((j) => counted(j.detail) === most)?.id };
 }
@@ -30,7 +41,11 @@ export default {
     const sources = ctx.get(Sources);
     const irmWhy = irm0002(ctx).why;
     const fileOf = new Map((await db.sourceAttachment.findMany({ where: { workspaceId }, select: { id: true, fileName: true } })).map((x) => [x.id, x.fileName]));
-    const { order: jobs, showcase } = reviewOrder(await db.draftingJob.findMany({ where: { workspaceId, kind: "field_map", status: "COMPLETED" } }), fileOf);
+    const found = await db.draftingJob.findMany({ where: { workspaceId, kind: "field_map", status: "COMPLETED" } });
+    const batchIds = [...new Set(found.map((j) => j.batchId).filter((x): x is string => !!x))];
+    const batches: BatchPlan[] = (batchIds.length ? await db.aiBatch.findMany({ where: { id: { in: batchIds } }, select: { id: true, startedAt: true, plan: true } }) : [])
+      .map((b) => ({ id: b.id, startedAt: b.startedAt, targets: ((b.plan as { targets?: { attachmentId?: string | null }[] } | null)?.targets ?? []) }));
+    const { order: jobs, showcase } = reviewOrder(found, fileOf, batches);
     let accepted = 0, edited = 0, returned = 0, applied = 0;
     const refused: string[] = [];
     // One edit and one return stay visible (DEMO.md row 4), on the form with the most proposals (reviewOrder).
