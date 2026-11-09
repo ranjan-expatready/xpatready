@@ -4,8 +4,10 @@ Bug: qa's #1446, `product/qa/BUGS.md` QA-355, `product/qa/reports/2026-11-09-c78
 
 ## What changed
 * **(b), the cause.** `engine/options.ts` `namesNoValues`: a map note that names no values is read as no list, the same
-  rule as QA-272's ranges. A range (`01..09`, `01-09`) or words pointing at a list held elsewhere (`as listed`, `as in`,
-  `listed in/for`, `inventory`, `this box`, `this form`). `shapeOf` (`engine/runtime/case.ts`) uses it in place of
+  rule as QA-272's ranges: a range (`01..09`, `01-09 as listed`), a note naming the inventory or the PDF's own options
+  (`inventory`, `options_resolved`), or **codes** said to be as listed elsewhere (`codes … as listed / as in / listed
+  in|for`). Review m3: only codes are read that way, so a label such as "Same as in passport" stays a label (the first
+  version also matched a bare `as in` or `this form`). `shapeOf` (`engine/runtime/case.ts`) uses it in place of
   `isCodeRange`. IMM 0008's `code_list:imm0008.country_of_birth (codes as listed in the inventory)` no longer becomes the
   only answer the shared country and language facts accept.
 * **(a), the guard.** After (b), the reach check below still showed real value lists on other library forms that would
@@ -30,15 +32,32 @@ and no answer list that an addable form's real list could close:
 On today's checkpoint only IMM 0008 and IMM 5707 can be added as "fills" to the Visitor visa filing, so these are not
 reachable there today; they become reachable as soon as one of those forms passes a fill trial. Unit tests cover them.
 
+## (b) also opens two release-form notes (review m3, recorded)
+The rule is not only for added forms: it reads every map note. On the configured checkpoint it changes two release lines,
+both for the better:
+* IMM 5257 SCH1's four country facts had the note "codes exactly as in options_resolved…": before, the fact was judged
+  against fragments of that sentence (no real answer could match); now it is open, as the form's own list is what the
+  filler uses.
+* IRM 0002's sex identifier note "F Female / M Male / X Another gender; inventory does not separate code from label…"
+  does name values, but not as a list: before, the only accepted answers were two fragments of that sentence (split at its
+  comma); now the answer is
+  open (up to its box length). Making it a real list ("Female=F, Male=M, Another gender=X") is a map fix for the forms
+  lane, not this PR.
+
 ## Tests
 * `tests/runtime/check_case_engine.ts`, QA-355 block: notes that name no values / real lists stay lists; the join with
   "codes as listed in the inventory" leaves the release's choices and check; (a) an added form's own list and limit never
   change the release's shape, check or options, and do judge its own copy; the same object per form. Each rule fails
-  without its fix (shown in the PR: 80/81 without (b), 81/83 without (a)).
+  without its fix (shown in the PR: 80/81 without (b), 81/83 without (a)). After review: m1 (a copy's coverage judges the
+  added form by its own list and the release form by the release's: fails when `forms.ts` stops passing the form), m2
+  (on the added form's own copy "codes as listed in the inventory" is no list: fails without (b) in `shapeIn`), m4 (a
+  release form's copy shares the case's view); each mutation measured 85/86.
 * `acceptance/C7.8.test.ts` step **C7.8-19 "release forms unchanged by an add"**: every form that fills (picked from the
   panel's list by kind) is added and removed on an answered case; every release form's lines (written, to fix, ready /
   needs, open fields) are the same before, after the add and after removing; each added copy has `to_fix` 0.
-  Before the fix: `C7.8-pack-before-fix.txt` (19/20, only C7.8-19 red); `check_qa355-before-fix.txt` (1/2).
+  Before the fix: `C7.8-pack-before-fix.txt` (19/20, only C7.8-19 red, the step's first text, IMM 0008 only);
+  `check_qa355-before-fix.txt` (1/2). The final step on main's engine files: `C7.8-pack-final-step-on-main-engine.txt`
+  (C7.8-19 red; C7.8-16 red only from the reused copy, review m5).
 
 ## Walk (P-352), 1440 px, by screens
 `walk_qa355.mjs` on a filing at Ready · 100% (qa's `walk_c78_setup.mts`): IMM 5257 and IMM 5645 read "111 of 166" and

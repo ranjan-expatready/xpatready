@@ -116,13 +116,15 @@ const judging = new WeakMap<object, Map<string, unknown>>();
  *  (a map marked `added`, engine/runtime/added-forms.ts withAdditions) judges only its own copy: `form` names the copy
  *  being judged; without it (the question, the case's own checks) only the release's maps judge. So adding a form never
  *  changes another form's lines: its lists, limits and box formats apply to its copy alone. The same object per snapshot
- *  and form, so snapshotFieldFormat's cache still holds; with no added form, the snapshot itself. */
+ *  and added form (one for everything else), so snapshotFieldFormat's cache still holds; with no added form, the
+ *  snapshot itself. */
 export function judgingMaps<S extends { field_maps: unknown[] }>(s: S, form?: string | null): S {
   const maps = s.field_maps as { form_number?: string; added?: boolean }[];
   if (!maps.some((m) => m.added)) return s;
   let per = judging.get(s);
   if (!per) { per = new Map(); judging.set(s, per); }
-  const key = form ?? "";
+  // Review m4: a release form's copy is judged as the case is (one shared key); only an added form gets its own view.
+  const key = form && maps.some((m) => m.added && m.form_number === form) ? form : "";
   if (!per.has(key)) per.set(key, { ...s, field_maps: maps.filter((m) => !m.added || (!!form && m.form_number === form)) });
   return per.get(key) as S;
 }

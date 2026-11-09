@@ -305,8 +305,9 @@ ok("QA-76 fail-guard: with a representative on the case, it names that person, a
 // ── QA-355 (tech lead's ruling on #1446 (b)): a map note that names no values ("codes as listed in the inventory") is read
 // as no list, like QA-272's ranges, so a form added to one filing never closes a fact the release's forms accept.
 {
-  const notes = ["codes as listed in the inventory", "3-digit codes as listed in this box", "codes as in this box's list", "codes as in inventory, e.g. CAN (Canada", "01-09", "00-08 as listed", "codes 01-19 as in inventory", "01..09"];
-  const lists = ["VisitorVisa, Transit", "Female, Male, Unknown, Unspecified", "English|French|Both|Neither", "01 Residence, 02 Cellular, 03 Business", "Common-law=1, Single=2", "09,03,04,05,01,02,00,06"];
+  const notes = ["codes as listed in the inventory", "3-digit codes as listed in this box", "codes as in this box's list", "codes as in inventory, e.g. CAN (Canada", "01-09", "00-08 as listed", "codes 01-19 as in inventory", "01..09",
+    "3-digit codes exactly as listed in this form", "three-digit codes as listed, e.g. Canada 511", "codes as listed for this box", "Canadian codes as in inventory", "codes exactly as in options_resolved"];
+  const lists = ["VisitorVisa, Transit", "Female, Male, Unknown, Unspecified", "English|French|Both|Neither", "01 Residence, 02 Cellular, 03 Business", "Common-law=1, Single=2", "09,03,04,05,01,02,00,06", "Same as in passport=1, Other=2", "Listed in this form=1, Not listed=2"];
   ok("QA-355 pass: notes that point at a list held elsewhere, or a range, name no values", notes.every(namesNoValues), notes.filter((n) => !namesNoValues(n)));
   ok("QA-355 fail: a list that names its values stays a list", lists.every((l) => !namesNoValues(l)), lists.filter(namesNoValues));
   const releaseOnly = noList;   // the release's own map reads the fact with no list (as the release's country facts do)
@@ -328,6 +329,17 @@ ok("QA-76 fail-guard: with a representative on the case, it names that person, a
     checkValue(own, "case.visa_type", "Business", new Date(), "SAMPLE-ADDED"));
   ok("QA-355 (a) pass: with no added form the snapshot judges itself; with one, the same object per form (format cache kept)", judgingMaps(releaseOnly) === releaseOnly && judgingMaps(own) === judgingMaps(own) && judgingMaps(own, "SAMPLE-ADDED") === judgingMaps(own, "SAMPLE-ADDED")
     && (judgingMaps(own).field_maps as unknown[]).length === (releaseOnly.field_maps as unknown[]).length && (judgingMaps(own, "SAMPLE-ADDED").field_maps as unknown[]).length === (releaseOnly.field_maps as unknown[]).length + 1);
+  ok("QA-355 (b) fail (review m2): judged on the added form's own copy, its \"codes as listed in the inventory\" is no list either (the value is open, not refused)",
+    shapeOf(joined, "case.visa_type", "SAMPLE-ADDED").choices === null && checkValue(joined, "case.visa_type", "Business", new Date(), "SAMPLE-ADDED").length === 0, shapeOf(joined, "case.visa_type", "SAMPLE-ADDED"));
+  // Review m1: a copy's coverage (engine/runtime/forms.ts) judges the added form by its own list, and a release form by the release's.
+  const mine = { ...addition("code_list:sample.visa (VisitorVisa, Transit)"), subject: "p" };
+  const ownCopy = withAdditions(releaseOnly as never, [mine]) as unknown as Snapshot, onePpl = household(false, 0);
+  const business = [ans("case", "case.visa_type", "Business", { status: "VERIFIED", channel: "confirm_section" })];
+  const boxOf = (form: string) => formCoverage(ownCopy, onePpl, business, [], form, "p", TODAY)?.boxes.find((b) => b.fact === "case.visa_type");
+  ok("QA-355 (a) fail (review m1): on the added form's copy a value outside its own list is a fix; on the release form's copy the same value is written",
+    boxOf("SAMPLE-ADDED")?.coverage === "answered on screen" && /Choose one of: VisitorVisa, Transit/.test(String((boxOf("SAMPLE-ADDED") as { fix?: string } | undefined)?.fix)) && boxOf("F 1")?.coverage === "confirmed fact",
+    { added: boxOf("SAMPLE-ADDED"), release: boxOf("F 1") });
+  ok("QA-355 (a) pass (review m4): a release form's copy shares the case's view (one object), an added form has its own", judgingMaps(own, "F 1") === judgingMaps(own) && judgingMaps(own, "SAMPLE-ADDED") !== judgingMaps(own));
 
 }
 

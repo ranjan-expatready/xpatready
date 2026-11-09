@@ -1,3 +1,4 @@
+# Earlier step 19 text (IMM 0008 only), on main 1d07807c8, configured checkpoint, copy screens_q355 before any fix. The final step: C7.8-pack-final-step-on-main-engine.txt (review m5).
 C7.8 — Add a library form to one filing
 (acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
 
