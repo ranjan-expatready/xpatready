@@ -7,7 +7,7 @@
 //   zsh studio/tools/isolated.sh c65s 4440 start && tsx studio/acceptance/C6.5-screen.test.ts 4440 xr_studio_c65s
 import type { Page } from "playwright";
 import { CLIENT, FAMILY, FIXED, OFFICER, PORT, agent, answer, call, main, needVisitorVisa, ok, openCase, sql } from "./lib/m3.ts";
-import { letterPdf, passportPdf, upload } from "./lib/fixtures.ts";
+import { letterPdf, passportPdf, textPdf, upload } from "./lib/fixtures.ts";
 import { walker } from "./lib/browser.ts";
 
 type Prop = { id: string; fact: string; label: string; value: unknown; review: string; state: string; differs: boolean; left_why: string | null; needs_look: boolean; source: { document: string } };
@@ -117,7 +117,7 @@ await main("C6.5", "The Fill this from documents drawer (screen, 1440 px; US$0)"
     ok("C6.5-32 fail (BR-4, P-243): on a passport whose check digit failed nothing is collapsed and the number is \"could not read\"", (await drawer.locator("[data-collapsed]").count()) === 0 && (await drawer.locator("[data-could-not-read]").count()) > 0 && /one failed/.test(spouseText));
     // ---- BR-2 letters: the cost first, never a live read
     await page.keyboard.press("Escape");
-    await upload(PORT, `/runtime/cases/${c.id}/documents`, letterPdf(), "sample-letter-of-invitation.pdf", OFFICER, { subjectId: c.caseSubject, documentType: "letter_of_invitation" });
+    await upload(PORT, `/runtime/cases/${c.id}/documents`, textPdf(["SYNTHETIC SPECIMEN - MADE-UP TEST DOCUMENT - NOT VALID", "Letter of invitation (Sample), a copy with no saved read"]), "sample-letter-of-invitation.pdf", OFFICER, { subjectId: c.caseSubject, documentType: "letter_of_invitation" });
     await openDrawer(c.caseSubject, visit, "case.visit_purpose");
     const card = drawer.locator("[data-cost-card]");
     ok("C6.5-33 pass (BR-2, P-110): a letter shows its cost card (usual and at most) before any read", (await card.count()) === 1 && /about US\$\d+\.\d\d, at most US\$\d+\.\d\d/.test(await card.innerText()));
