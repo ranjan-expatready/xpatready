@@ -1,0 +1,9 @@
+NOTICE:  database "xr_studio_qa_c614p" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_c614p on http://localhost:4475 (xr_studio_qa_c614p), stops itself in 30 min
+CHOOSER  mouse click on menu item
+CHOOSER  keyboard: arrow to item, Enter
+CHOOSER  direct click on the hidden input (control)
+stopped qa_c614p (database and files removed; log in var/isolated-logs/qa_c614p-api.log)

@@ -202,8 +202,28 @@ export type FormCopy = {
 };
 /** One form for one person on the case: what a copy made now would write (the draft), whether it can be filed (P-71),
  *  and every copy made, newest first. */
+/** C7.8 (B141): a form the case officer added to one filing ("Added by the case officer": who, when, why). */
+export type AddedTag = { id: string; tag: string; kind: "fills" | "blank"; by: string; by_name?: string; at: string; reason: string | null; edition: string; words: string;
+  /** BR-4: a newer edition in the library, as information (the added form stays frozen). */
+  newer_edition?: string | null };
+/** C7.8 (B141 BR-5, BR-7): a blank official PDF added to one filing: its download, its item and its completed copy. */
+export type BlankForm = { addition: string; item: string | null; download: string; completed: { id: string; at: string } | null };
+/** C7.8: one library form for one person on a filing (GET …/addable-forms): its kind in words, or why it is not added. */
+export type AddableForm = { form: string; title: string; edition: string | null; kind: "fills" | "blank"; kind_words: string; blank_why: string | null; why_not: { code: string; words: string } | null };
+export type AddableList = { filing: string; subject: string; person: string; people: { subject: string; label: string }[]; forms: AddableForm[]; empty: string };
+/** C7.8: the form picked (GET …/addable-forms/:form): its coverage on this case (fills only), the channel and signature. */
+export type AddableFormDetail = AddableForm & { subject: string; person: string;
+  coverage: { fills: number; total: number; boxes: { box: string; caption: string; label: string; state: "fills" | "not_on_file" | "not_needed" }[] } | null;
+  same_as: { subject: string; at: string; words: string } | null; channels: string[]; channel: string | null; channel_why: string; signature: string; signers: string[]; signers_words: string };
+/** C7.8: an added form as stored (POST …/form-additions, POST …/remove). */
+export type FormAddition = { id: string; filing: string; subject: string; person: string; form: string; kind: string; kind_words: string; edition: string; channel: string; signature: string; signature_reason: string | null;
+  tag: string; added_by: string; added_at: string; reason: string | null; removed: { by: string | null; at: string; reason: string | null } | null };
 export type CaseForm = {
-  form: string; title: string; subject_id: string; person: string; /** draft: `written_now` the declared and confirmed answers a copy made now writes (P-242, P-411); `to_fix` the
+  form: string; title: string; subject_id: string; person: string;
+  /** C7.8: added by the case officer to this person's filing (null or absent: a release form). */
+  added?: AddedTag | null;
+  /** C7.8: a blank official PDF, filled by hand (no copy is made by the product). */
+  blank?: BlankForm | null; /** draft: `written_now` the declared and confirmed answers a copy made now writes (P-242, P-411); `to_fix` the
    *  answered form fields left blank because the answer needs a fix (QA-122, or a Yes/No contradicting a recorded detail). */
   draft: { written_now: number; mapped: number; to_fix: number };
   readiness: Readiness; copies: FormCopy[];
@@ -337,6 +357,8 @@ export type ReleaseUpdate = {
 export type ReleaseLastMove = { from: { version: number; label: string; revision: number }; to: { version: number; label: string; revision: number }; at: string; reason: string | null; effects: ReleaseUpdate["effects"] };
 /** POST …/release-update: the new pin and what the move did, for the toast. */
 export type ReleaseMoved = { case_id: string; revision: number; version: number; label: string; from: { version: number; label: string; revision: number };
+  /** C7.8: forms the case officer added that the new release holds itself (each replaced by the release's line). */
+  added_forms_replaced?: { form: string; person: string }[];
   counts: { fill_again: number; filed_another_way: number; no_longer_required: number; withdrawn: number; kept_out_of_date: number }; words: string };
 
 // ------------------------------------------------------------------ C8.3 Representative review (B144, additive)

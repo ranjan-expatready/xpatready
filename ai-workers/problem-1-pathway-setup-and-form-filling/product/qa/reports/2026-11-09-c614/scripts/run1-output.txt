@@ -1,0 +1,34 @@
+NOTICE:  database "xr_studio_qa_c614" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_c614 on http://localhost:4474 (xr_studio_qa_c614), stops itself in 60 min
+PASS  0 Demo › Load the configured checkpoint (by screens) — 109 s
+NOTE  Visitor visa f82eed7b-6375-40f3-866b-eee9563012e5; the line asked once for the couple: marriage_certificate_copy
+PASS  1 (F18, BR-5) before any roles: one marriage-certificate item, Shared, provided by Sample Spouse A (the person it is for), and it says why — Marriage certificate copy /  / Once for the couple /  / Shared · Provided by Sample Spouse A /  / The person the item is for /  / Not requested /  / Needed: the applicant is married. /  / Source /  / No file yet
+PASS  2a the drawer shows "Who provides it when shared": Not set — Who provides it when shared · from the library document type /  / Not set: the person the item is for provides it. /  / This line is asked once, so a case names these providers on it. /  / Used only on a line asked once for the application or once for the couple. Nobody under 18 provides; if no one on the case matches, the person the item is for provides it. For every combination that names Marriage certificate copy (used by 1). Sample until the immigration expert confirms. /  / Set who provides it…
+NOTE  2b pressing Send with nothing filled: Who provides it when shared · from the library document type /  / Not set: the person the item is for provides it. /  / This line is asked once, so a case names these providers on it. /  / Used only on a line asked once for the application or once for the couple. Nobody under 18 provides; if no one on the case matches, the person the item is for provides it. For every combination that names Marria
+PASS  2c sent; the drawer says it waits for a second person — Who provides it when shared · from the library document type /  / Not set: the person the item is for provides it. /  / This line is asked once, so a case names these providers on it. /  / A change to Principal applicant, then Spouse or partner by Configuration author waits for a second person on To
+PASS  2d no sideways scroll at 1024 px (drawer)
+NOTE  3 no link named Marriage certificate on To review; opened the change by its id
+PASS  3a before (Not set) → after (Principal applicant, then Spouse or partner) — Who provides Marriage certificate copy when it is asked once for the application or the couple /  / Before / Not set: the person the item is for provides it / After / Principal applicant, then Spouse or partner / Reason / qa gate A: the principal or the spouse gives the marriage certificate (Sample). /  / For every combination that names it (used by 1): at approval it changes each one's draft and goes out with each one's next release. Nobody under 18 provides. Sample until the immigration expert confirms.
+PASS  3b approved: the type's draft carries the roles (read underneath)
+PASS  4a the release line the expert signs names the roles in words — Marriage certificate copy: supplies no facts; provided by (when shared): principal applicant, then spouse or partner
+PASS  4b a new release went out (by screens) — 2 → 3
+PASS  5a one marriage-certificate item for the whole couple (not one per person) — 1 rows
+PASS  5b Shared · Provided by Sample Client A and Sample Spouse A, from the document type's default — Marriage certificate copy /  / Once for the couple /  / Shared · Provided by Sample Client A and Sample Spouse A /  / Default from the document type /  / Not requested /  / Needed: the applicant is married. /  / Source /  / No file yet
+PASS  5c no other line is marked Shared (the passport stays per person) — 1 shared lines
+PASS  5d no sideways scroll at 1024 px (case)
+PASS  6a the children cannot be ticked, with the reason in words — Who provides: Marriage certificate copy /  / One item for the whole application: whoever is ticked may upload it. Nobody under 18 provides a document. /  / Providers / Sample Client A / Principal applicant / Sample Spouse A / Spouse or partner / Sample Child A1 / Child /  / Sample Child A1 is 10 on 2026-11-09: nobody under 18 provides a document. /  / Sample Child A2 / Child /  / Sample Child A2 is 15 on 2026-11-09: nobody under 18 provides a document. /  / Reason /  / Now: Provided by Sample Cl
+PASS  6b Save with no reason is refused in words on the reason field — Who provides: Marriage certificate copy /  / One item for the whole application: whoever is ticked may upload it. Nobody under 18 provides a document. /  / Providers / Sample Client A / Principal applicant / Sample Spouse A / Spouse or partner / Sample Child A1 / Child /  / Sample Child A1 is 10 on 2026-11-09: nobody under 18 provides a document. /  / Sample Child A2 / Child /  / Sample Child A2 i
+PASS  6c the line now reads Provided by Sample Client A alone, chosen by the case officer, with the reason — Marriage certificate copy /  / Once for the couple /  / Shared · Provided by Sample Client A /  / Chosen by the case officer on 9 Nov, 12:34 (Case officer (Sample)): Only the principal holds the original certificate (Sample, qa). /  / Not requested /  / Needed: the applicant is married. /  / Source /  / No file yet
+PASS  6d stored and audited underneath
+PASS  6e Use the defaults with a reason: both providers again — Marriage certificate copy /  / Once for the couple /  / Shared · Provided by Sample Client A and Sample Spouse A /  / Default from the document type /  / Not requested /  / Needed: the applicant is married. /  / Source /  / No file yet
+PASS  7a (F18) nobody matches → Provided by Sample Spouse C, the filing's first applicant (the person the item is for), with the reasons in words — Marriage certificate copy /  / Once for the couple /  / Shared · Provided by Sample Spouse C /  / The person the item is for /  / Not requested /  / Needed: the applicant is married. /  / Source /  / No file yet
+NOTE  7b F18 words on the line: Marriage certificate copy /  / Once for the couple /  / Shared · Provided by Sample Spouse C /  / The person the item is for /  / Not requested /  / Needed: the applicant is married. /  / Source /  / No file yet
+NOTE  8 actions on the shared item: Request | Upload a file… | Not applicable… | Change providers… | History
+PASS  8a C6.4 first step: the shared item can be requested (once, for the couple) — Requested
+FAIL  8 next step (threw) — page.waitForEvent: Timeout 10000ms exceeded while waiting for event "filechooser"
+
+20/21 passed
+stopped qa_c614 (database and files removed; log in var/isolated-logs/qa_c614-api.log)

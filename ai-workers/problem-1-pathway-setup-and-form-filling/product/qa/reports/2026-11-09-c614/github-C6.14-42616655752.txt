@@ -1,0 +1,24 @@
+nightly.yml run 42616655752 (workflow_dispatch on main cfaa199f4, 9 Nov 12:23:47 UTC = 17:53 IST), job 129158118360 'packs (C6.14)', conclusion success. Excerpt of the job log:
+2026-11-09T12:25:26.2223430Z ##[group]Run [ -f "$S/tools/gate-b.mjs" ] || { echo "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)"; exit 2; }
+2026-11-09T12:25:26.2224089Z [ -f "$S/tools/gate-b.mjs" ] || { echo "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)"; exit 2; }
+2026-11-09T12:25:26.2224603Z echo "### $CAP on $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"
+2026-11-09T12:25:26.2224979Z node "$S/tools/gate-b.mjs" --title "$CAP" --kind code
+2026-11-09T12:25:26.2243344Z shell: /usr/bin/bash -e {0}
+2026-11-09T12:25:26.2243555Z env:
+2026-11-09T12:25:26.2243807Z   P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+2026-11-09T12:25:26.2244201Z   S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+2026-11-09T12:25:26.2244683Z   CAP: C6.14
+2026-11-09T12:25:26.2244856Z   GATE_B_JOBS: 1
+2026-11-09T12:25:26.2245021Z   KIND: code
+2026-11-09T12:25:26.2245184Z   GATE_B_DATA: checkpoint
+2026-11-09T12:25:26.2245429Z ##[endgroup]
+2026-11-09T12:25:26.2764345Z Gate B: the PR names C6.14; claims Works for none (no bug check).
+2026-11-09T12:25:26.2766525Z   packs: C6.14.test.ts
+2026-11-09T12:26:54.6393496Z     C6.14.test.ts on the checkpoint: exit 0, 35/35 passed (87 s: copy 4, Load the configured checkpoint 80, run 3)
+2026-11-09T12:26:54.6394677Z   packs took 88 s in all
+2026-11-09T12:26:54.6395268Z Gate B: passed.
+2026-11-09T12:26:54.6532579Z Post job cleanup.
+2026-11-09T12:26:54.7551433Z (node:5920) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-09T12:26:54.7552121Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-09T12:26:54.7554214Z Cache hit occurred on the primary key node-cache-Linux-x64-npm-fe77cc82debb853105a7bea456c089ba62dadb5f6c99530f11e151c4249dff1e, not saving cache.
+2026-11-09T12:26:54.7703147Z Post job cleanup.
