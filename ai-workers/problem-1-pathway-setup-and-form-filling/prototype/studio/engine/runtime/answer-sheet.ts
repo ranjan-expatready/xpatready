@@ -71,13 +71,16 @@ export function answerSheet(sections: Record<string, string>, boxes: BoxRow[], o
 /** QA-309: whether a box with no answer to show still waits, by its whole "about" and fact: the form's readiness names it
  *  (a required question not answered or confirmed, a "none apply" not answered, a fix, a fired check). */
 export type Waits = (about: string, fact: string) => boolean;
+/** QA-317 (review M1): a choice's words in the release (its option's label, as the portal lists it), or undefined. */
+export type ChoiceWords = (fact: string, value: unknown) => string | undefined;
 
 /** The sheet for one form and person, from the form's boxes for that person (formCoverage), its layout (the form's own
  *  parts, else the twin's sections) and the entered ticks (each with the fingerprint of the answers it froze). With
  *  `waits` (QA-309), a box with no answer to show waits only when readiness still names its fact: a fact held as "none
  *  apply", a row fact answered on its rows (the form's spare rows stay empty) or one the release never asks does not;
- *  its section stays on the sheet to tick all the same. Without it, every such box waits. */
-export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels: Map<string, string>, entered: Map<string, { at: string; by: string; hash: string }>, markOf: MarkOf = () => undefined, waits?: Waits): Sheet {
+ *  its section stays on the sheet to tick all the same. Without it, every such box waits. With `wordsOf` (QA-317), a
+ *  choice is copied as its option's label (the portal lists labels), its value and the fingerprint staying the key. */
+export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels: Map<string, string>, entered: Map<string, { at: string; by: string; hash: string }>, markOf: MarkOf = () => undefined, waits?: Waits, wordsOf?: ChoiceWords): Sheet {
   const parts = layout.basis === "form_parts" ? layout.parts : [];
   const out: SheetSection[] = layout.basis === "form_parts"
     ? parts.map((p) => ({ key: p.key, title: p.title, ...(p.named ? {} : { named: false as const }), version: "", entered: null, out_of_date: false, answers: [], waiting: [] }))
@@ -108,7 +111,7 @@ export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels:
     if (b.coverage === "confirmed fact") {
       if (sec.answers.some((a) => a.subject === subject && a.fact === b.fact && a.row === b.row)) continue;
       const m = markOf(subject, b.fact, b.row);
-      sec.answers.push({ label, fact: b.fact, subject, person: b.about_label, row: b.row, value: b.value, copy_text: copyText(b.value), source: sourceOf(origin(subject.split("/")[0], b.fact)), mark: m?.mark ?? null, to_confirm: !!m && !m.confirmed, why: m?.why ?? null });
+      sec.answers.push({ label, fact: b.fact, subject, person: b.about_label, row: b.row, value: b.value, copy_text: wordsOf?.(b.fact, b.value) ?? copyText(b.value), source: sourceOf(origin(subject.split("/")[0], b.fact)), mark: m?.mark ?? null, to_confirm: !!m && !m.confirmed, why: m?.why ?? null });
     } else if ((!waits || waits(subject, b.fact)) && !sec.waiting.some((w) => w.subject === subject && w.fact === b.fact)) sec.waiting.push({ fact: b.fact, subject, person: b.about_label, label });
   }
   // A part of the form with nothing to type for this person (a signature block, the spouse's part on a case with no

@@ -680,6 +680,10 @@ model CanonicalField {
   labelChecked      Boolean          @default(false) @map("label_checked")
   /// F1 (challenge point 3): the answer list a choice field takes its values from (the team's CanonicalField.enumSetId).
   answerListKey     String?          @map("answer_list_key")
+  /// C7.9 (row B142, L-SA8; P-242; SA-1B-1 rule 9): the immigration expert's "must verify before filing" flag. Set only
+  /// through a library change the expert approves (api/src/must-verify.ts); a client-given value no one on staff checked
+  /// raises a CRITICAL warning on Ready to file, passable with a reason (P-237), never a block.
+  mustVerifyBeforeFiling Boolean   @default(false) @map("must_verify_before_filing")
   updatedBy         String           @map("updated_by")
   updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
