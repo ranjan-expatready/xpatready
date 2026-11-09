@@ -101,8 +101,21 @@ const api = async (method, url, body, actor = "user-O") => { const r = await fet
     const caseC = p.url();
     const card2 = p.locator("[data-earlier-facts]");
     await card2.getByRole("heading", { name: "Facts from an earlier case" }).waitFor(T);
-    const pick = card2.getByLabel(new RegExp(`C619W-A-${run}`));
-    if (await pick.count()) await pick.check();
+    // BR-1 (QA-338): case C has two earlier cases (A, and B with its copies); nothing is chosen until the officer picks.
+    const radios = card2.getByRole("radio");
+    await radios.first().waitFor(T);
+    ok("C6.19 BR-1 fail (QA-338): with two earlier cases none is chosen for the officer: no case checked, no fact offered", (await radios.count()) === 2 && (await card2.locator("input[type=radio]:checked").count()) === 0 && (await card2.locator("tr[data-fact]").count()) === 0 && await card2.locator("[data-pick-hint]").isVisible());
+    await shot(p, "08-nothing-chosen-1440.png");
+    // QA-338: case B's copy of the expiry predates case A's correction: Out of date, naming case A, and the number Expired.
+    await card2.getByLabel(new RegExp(`C619W-B-${run}`)).check(T);
+    const bExp = card2.locator('tr[data-fact="person.passport_expiry_date"]');
+    await bExp.waitFor(T);
+    ok("C6.19 BR-1 (QA-338): the officer picks case B and sees its facts", (await card2.locator("input[type=radio]:checked").count()) === 1);
+    ok("C6.19 QA-338: case B's stale expiry reads Out of date, naming case A and its later value, the tick disabled", (await bExp.getAttribute("data-newer")) === `C619W-A-${run}` && await bExp.getByRole("checkbox").isDisabled() && /Out of date/.test(await bExp.innerText()) && /15 Jan 2025/.test(await bExp.innerText()));
+    ok("C6.19 QA-338: case B's passport number reads Expired from case A's newer date, the tick disabled", (await card2.locator('tr[data-fact="person.passport_number"]').getAttribute("data-expiry")) === "expired" && await card2.locator('tr[data-fact="person.passport_number"]').getByRole("checkbox").isDisabled());
+    await bExp.scrollIntoViewIfNeeded(); await shot(p, "09-case-b-out-of-date-1440.png");
+    await axeCard("the card with an out-of-date copy");
+    await card2.getByLabel(new RegExp(`C619W-A-${run}`)).check(T);
     const num = card2.locator('tr[data-fact="person.passport_number"]');
     await num.waitFor(T);
     ok("C6.19 BR-6: the passport number reads Expired, the tick disabled, with the rule's words", (await num.getAttribute("data-expiry")) === "expired" && await num.getByRole("checkbox").isDisabled() && /expired on 15 Jan 2025/.test(await num.innerText()));
@@ -115,7 +128,7 @@ const api = async (method, url, body, actor = "user-O") => { const r = await fet
     await openVv(`C619W-D-${run}`);
     const card3 = p.locator("[data-earlier-facts]");
     await card3.getByRole("heading", { name: "Facts from an earlier case" }).waitFor(T);
-    await card3.getByLabel(new RegExp(`C619W-A-${run}`)).check(T);
+    await card3.getByLabel(new RegExp(`C619W-A-${run}`)).check(T); // cases A, B and C are earlier here: the officer picks A
     const vnum = card3.locator('tr[data-fact="person.passport_number"]');
     await vnum.waitFor(T);
     const vtext = await vnum.innerText();
