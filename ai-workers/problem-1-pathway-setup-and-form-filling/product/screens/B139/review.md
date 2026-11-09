@@ -122,3 +122,20 @@ Another session's suite (`check_qa144_ee_release.ts` on :15451) ran in this work
 2. **Should (Minor):** m5's refusal on lock or validated upload (`fill-case.ts` `copyFor(…, true)`) has no test; I verified it by hand only. Add one pack or C11 step. m7 (deadline on Open a case) and m8 (`carryCounts` unused) are still not done; list them in the PR.
 
 **Verdict: Block** at head **4334368001001f93c58be6874bf62aba6b43a52e**: fix round-2 #1 (the pack must exit 0 deterministically). Everything else from round 1 and the breaker's report is verified fixed.
+
+## Round 3 (diff-only, 4334368001 → af24040bd0c37cea9b9506e8f604517c1085044d, 9 Nov 2026)
+`git diff 4334368001 af24040bd` was read in full: `runtime.ts` `subjectFor`, two pack steps, the migration's two guard functions and their 13 triggers, and two migration-test steps. Checked on a fresh `rev139` (:4444; PostgreSQL up after the container restart), now stopped. No temporary file under `tests/`.
+
+**Round-2 #1 fixed.**
+* `subjectFor` answers 409 "This case moved to its next stage…" for an ended stage's application subject, before the 404 (`runtime.ts:145-147`).
+* Pack **32/32, exit 0, twice in a row**. The race step gave `[200,200,409,409]`, lateAns 0, both times; the late-answer step gave 409 with nothing saved.
+* Round-1 m5 now has a test: the stage-1 copy reads 200 and its lock gives 409 `stage_ended`.
+
+**Lead 38 (1): the DELETE guard.**
+* Both functions guard `OLD` on DELETE; cascades pass at `pg_trigger_depth() > 1`. Migration test **20/20**: deleting an ended stage's finding, task or form item is refused; deleting a current-stage group passes; a case delete still cascades.
+* No code deletes any of the 13 guarded tables directly (grep of `api/src`); the reset reaches them only by cascade.
+* Reset with 3 ended stages and their filings present gives **201**, leaving 0 cases, stages and filings.
+
+**Still listed, not blocking (Minors from earlier rounds):** m7 (no deadline on the Open a case step) and m8 (`carryCounts` unused). The builder lists them in the PR.
+
+**Verdict: Approve** at head **af24040bd0c37cea9b9506e8f604517c1085044d**. No open Blocker or Major.
