@@ -11,13 +11,15 @@
 //   And the forms card counts a mandatory form field that still needs an answer as a fact to answer, so "Facts confirmed"
 //     is never shown over it (engine/runtime/open-lines.ts cardFacts); locking is unchanged (#1318 M2).
 // Part A: the filler's step, a pass and a fail per rule (no server). Part B: the Sample family's Visitor visa case on the
-// configured checkpoint (load it first), through the API. Sample people and values; Unconfirmed: expert. US$0, no AI.
-//   zsh studio/tools/isolated.sh rt_qa318 4436 start && curl -s -X POST -H content-type:application/json -H x-actor:user-A -d '{"sample":"configured"}' localhost:4436/api/demo/load && tsx studio/tests/check_qa318_sch1.ts 4436 xr_studio_rt_qa318
+// configured checkpoint, through the API: the suite resets its copy and loads the checkpoint itself (as B154's does; CI's
+// run-suites.sh reads only "start && tsx" usage lines), or pass "loaded" as a third argument to keep a copy already loaded.
+// Sample people and values; Unconfirmed: expert. US$0, no AI.
+//   zsh studio/tools/isolated.sh rt_qa318 4436 start && tsx studio/tests/check_qa318_sch1.ts 4436 xr_studio_rt_qa318
 import * as T from "../../p5/transforms.ts"; // a namespace, so the suite also runs (and fails) on code before QA-318
 const { runTransform } = T;
 const proseRecorded = (t: string) => !!(T as { proseRecorded?: (x: string) => boolean }).proseRecorded?.(t);
 import { cardFacts } from "../engine/runtime/open-lines.ts";
-import { agent, call, FAMILY, fillEverything, firms, generateCopy, main, ok, openCase, OFFICER, sql } from "../acceptance/lib/m3.ts";
+import { agent, AUTHOR, call, FAMILY, fillEverything, firms, generateCopy, main, ok, openCase, OFFICER, sql } from "../acceptance/lib/m3.ts";
 
 const SERVED = "derive: true if any military/militia/civil defence/security/police service period is recorded for the subject, else false -> yes_no_code:true/false";
 const TRAVEL = "derive: true if any recorded trip, starting after the later of the subject's 18th birthday or five years before the application date, went to a country other than the subject's countries of citizenship and current country of residence, else false -> yes_no_code:true/false";
@@ -36,6 +38,11 @@ await main("QA-318", "IMM 5257 SCH1's five mandatory Yes/No form fields fill, or
   ok("QA-318 A7 fail: recorded trips are never guessed Yes when the form counts only some of them: a person decides, in the form's words", /^hand: the form counts only some of them \(any recorded trip, starting after/.test(val(runTransform(TRAVEL, ["IND", "FRA"], box))), val(runTransform(TRAVEL, ["IND", "FRA"], box)));
 
   // ---------------------------------------------------------------- Part B: the family case on the configured checkpoint
+  if (process.argv[4] !== "loaded") {
+    await call("POST", "/demo/reset", { confirm: "RESET" }, AUTHOR);
+    const l = await call("POST", "/demo/load", { sample: "configured" }, AUTHOR);
+    ok("QA-318 B0 setup: the configured checkpoint loads at US$0", l.status < 300 && l.body?.cost_usd === 0, { status: l.status, body: l.status < 300 ? l.body?.cost_usd : l.body });
+  }
   const vv = sql("select id from combination where combination_key='vv.single'");
   const sch1Asked = sql(`select count(distinct m.data_path) from section_question q join form_field_map m on m.canonical_field_key=q.canonical_field_key join form_edition e on e.id=m.form_edition_id join gov_form_def g on g.id=e.gov_form_def_id where g.form_key='IMM 5257 SCH1' and m.data_path ~ '(HaveWitnessedParticipated|BeenMemberAssociated)\\[0\\]$' and m.status='PUBLISHED' and q.status='PUBLISHED'`);
   ok("QA-318 B0 setup: the configured checkpoint is loaded, and asks SCH1's Questions 5 and 6 as their own questions (released)", !!vv && sch1Asked === "2", { vv, sch1Asked });
