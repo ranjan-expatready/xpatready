@@ -9,6 +9,7 @@ import type { Readiness } from "../../contracts/runtime.ts";
 import { createHash } from "node:crypto";
 import type { Db } from "./core.ts";
 import { changedGroups, type GroupFact } from "../../engine/runtime/forms.ts";
+import { readinessFigure, type Figure } from "../../engine/runtime/readiness-figure.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RECEIVED = new Set(["received", "being_checked", "approved"]);
@@ -77,7 +78,7 @@ export function waitingFactsKey(missing: { fact: string; about: string; reason: 
 
 /** Every filing's readiness on one case, from the prepare view's own items and the stored reviews, passes, findings,
  *  checklist lines and accepted-until dates. */
-export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<ReadinessView[]> {
+export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(ReadinessView & { figure: Figure })[]> {
   const ids = x.filings.filter((f) => UUID.test(f));
   // One query at a time (C6.12 break B1: 120 reads at once on one case must not starve the connection pool; parallel
   // reads here made the view's own read transaction wait past its start limit and answer 500).
@@ -141,8 +142,11 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
     const personOf = new Map(mineForms.map((f) => [f.subject, f.person]));
     if (caseSubject) personOf.set(caseSubject, "The application");
     const checks: OpenCheck[] = openChecks.filter((k) => personOf.has(k.subjectId)).map((k) => ({ fact: k.fact, label: k.fact.split(".").pop()!.replace(/_/g, " "), subject: k.subjectId, person: personOf.get(k.subjectId)! }));
-    const r = filingReadiness({ filing, forms, documents, openChecks: checks, findings: found, reviewed: !!review, reviewedBefore: !review && latest ? latest.reviewedAt.toISOString() : null, factsKey: factsHash.slice(0, 16), reviewWithdrawn: withdrawn, releaseUpdate: x.releaseUpdate?.(filing) ?? null, passes: mine, today });
-    return { ...r, status_rule: "P-315: only a barcode form without its validated copy blocks; every other line is passed with a reason or fixed.",
+    const input = { filing, forms, documents, openChecks: checks, findings: found, reviewed: !!review, reviewedBefore: !review && latest ? latest.reviewedAt.toISOString() : null, factsKey: factsHash.slice(0, 16), reviewWithdrawn: withdrawn, releaseUpdate: x.releaseUpdate?.(filing) ?? null, passes: mine, today };
+    const r = filingReadiness(input);
+    // C7.10 (B143, BR-30): the filing's readiness figure from the same input and lines; the prepare view puts it beside
+    // `readiness[]`, never inside an entry (C7.6's finish line stays: its entries carry no percentage).
+    return { ...r, figure: readinessFigure(input, r), status_rule: "P-315: only a barcode form without its validated copy blocks; every other line is passed with a reason or fixed.",
       reviewed: review ? { by: review.reviewedBy, kind: review.kind, licence_number: review.licenceNumber, at: review.reviewedAt.toISOString() } : null, facts_hash: factsHash, representative: rep };
   });
 }
