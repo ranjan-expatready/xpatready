@@ -39,7 +39,7 @@ const parsed = <T>(schema: { safeParse: (x: unknown) => { success: true; data: T
   return r.data;
 };
 const STATUS_WORDS: Record<RowStatus, string> = { sent: "Sent for review", under_review: "Under review", approved: "Approved", sent_back: "Sent back" };
-const FILE_WORDS: Record<FileStamp["kind"], string> = { validated_copy: "the validated copy read back", generated_copy: "the copy made from these facts", none: "its facts (no file yet: filed online)", waits: "not stamped: waits for an answer" };
+const FILE_WORDS: Record<FileStamp["kind"], string> = { validated_copy: "the validated copy read back", generated_copy: "the copy made from these facts", none: "its facts (no file for filing matches them yet; an online form has none)", waits: "not stamped: waits for an answer" };
 type StoredFacts = { review?: boolean; facts?: FormFact[] };
 type FormRow = { id: string; itemId: string; formNumber: string; subjectId: string; snapshotId: string | null; factsHash: string | null; fileKind: string; fileId: string | null; fileSha256: string | null;
   stampSnapshotId: string | null; stampHash: string | null; stampFileKind: string | null; stampFileSha256: string | null; stampedBy: string | null; stampedAt: Date | null };
