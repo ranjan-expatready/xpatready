@@ -13,6 +13,7 @@ import { FormsPanel } from "./forms";
 import { ItemChannels } from "./item-channels"; // C11.6
 import { FindingsPanel } from "./findings";
 import { ReviewPage } from "./review";
+import { AnswerSheetPage } from "./answer-sheet"; // C7.3 (QA-317)
 import { SubmissionPanel } from "./submission"; // C8.2
 import { DocumentsPanel } from "./checklist"; // C6.4 (a)
 import { CaseTeamChip, OpeningTeam, useFirm } from "./team";
@@ -75,6 +76,7 @@ export function RuntimeApp() {
           <Route path=":id/questionnaire" element={<ClientPage />} />
           <Route path=":id/eligibility" element={<EligibilityPage />} />
           <Route path=":id/review" element={<ReviewPage />} />
+          <Route path=":id/sheet/:itemId" element={<AnswerSheetPage />} />
           <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/cases">Back to cases</Link></Notice>} />
         </Routes>
       </main>
