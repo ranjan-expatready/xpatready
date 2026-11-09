@@ -24,6 +24,7 @@ import { irccWords } from "../../../../contracts/workspace";
 import { cn } from "@/lib/utils";
 import { SuppliesPanel } from "@/pages/supplies-panel";
 import { SetsSection } from "@/pages/sets-panel";
+import { ProvidersSection } from "@/pages/providers-panel"; // C6.14
 
 const SAY = {
   retire: "A checklist line is removed, not retired. Retire the document type in the library.",
@@ -202,6 +203,7 @@ function DocumentDrawer({ combinationId, revision, line, roles, roleLabel, canAu
           </> : <p className="text-text-muted" data-drawer-alternatives>None yet: set one in Edit.</p>}
         </section>
         <SetsSection typeKey={line.document.key} typeName={line.document.name} combinationId={combinationId} lineage={line.lineage} revision={revision} setName={line.setName ?? null} canAuthor={canAuthor} />
+        <ProvidersSection typeKey={line.document.key} typeName={line.document.name} who={line.who} canAuthor={canAuthor} />
         <section aria-labelledby="dd-facts" className="space-y-1"><h3 id="dd-facts" className="font-semibold">Facts it supplies · {line.supplies.length} · from the library document type</h3>
           {line.supplies.length ? (
             <Table dense head={["Fact", "About whom", "Taken out of the questionnaire"]} label="Facts it supplies">
