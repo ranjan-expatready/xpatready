@@ -1,0 +1,17 @@
+{
+  "document_sha256": "fca979324936220bc72b80415e2cf6a5f333b477851a476643d15176e07ad8c4",
+  "reader": "ai_vision",
+  "model": "claude-opus-5-5",
+  "cost_usd": 0.0131,
+  "read_at": "2026-11-09T15:04:51.000Z",
+  "proposals": [
+    {
+      "fact": "case.funds_available_cad",
+      "value": "14200.00",
+      "page": 1,
+      "confidence": 0.97,
+      "note": "Stated as 'Funds available: CAD 14,200.00', which matches the closing balance on 2026-10-31. Synthetic specimen."
+    }
+  ],
+  "unreadable": []
+}
