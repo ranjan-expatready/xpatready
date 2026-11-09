@@ -1,0 +1,4 @@
+Gate B: the PR names C7.3; claims Works for none (no bug check).
+    C7.3.test.ts on the checkpoint: exit 1, 13/14 passed (119 s: copy 5, Load the configured checkpoint 85, run 29)
+Gate B refuses:
+  * C7.3.test.ts on the checkpoint: exit 1; first FAIL lines: FAIL  C7.3-4 pass (P-411 (2), B150): before confirmation the sheet already shows the officer-typed dates of birth, each marked "entered by staff" and to confirm

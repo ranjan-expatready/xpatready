@@ -4,6 +4,9 @@
 import { FILING } from "../../contracts/resolver.ts";
 import { formSigners, type Person } from "../resolver.ts";
 import { ageOn } from "./case.ts";
+// The steps, their words and the order rule live in sign-order.ts (no import), so the browser reads the same words (B3, M3).
+import { PEN_STEPS, PEN_STEP_WORDS, SIGN_STEPS, SIGN_STEP_WORDS, isPenStep, isSignStep, penRefusal, stepRefusal, type PenStepKey, type SignStepKey, type StepsDone } from "./sign-order.ts";
+export { PEN_STEPS, PEN_STEP_WORDS, SIGN_STEPS, SIGN_STEP_WORDS, isPenStep, isSignStep, penRefusal, stepRefusal, type PenStepKey, type SignStepKey, type StepsDone };
 
 /** Devin on #617: whether a person is a minor (under 18) on `today`, from their own answered date of birth; undefined when
  *  it is not answered (R7 then keeps a child a minor, as before). VV-R09: a child under 18 is signed for by a parent. */
@@ -14,12 +17,6 @@ export function minorFromAnswers(answers: { subjectId: string; field: string; ro
   for (const a of answers) if (a.field === "person.date_of_birth" && a.rowKey === null) age.set(a.subjectId, ageOn(a.value, today));
   return (id) => { const n = age.get(id); return n === null || n === undefined ? undefined : n < 18; };
 }
-
-/** The steps of a form signed by hand and scanned, in order (C8.1-3). */
-export const SIGN_STEPS = ["print", "signed", "scan_received", "uploaded_to_ircc"] as const;
-export type SignStepKey = (typeof SIGN_STEPS)[number];
-export const SIGN_STEP_WORDS: Record<SignStepKey, string> = { print: "Printed", signed: "Signed by hand", scan_received: "Signed scan received", uploaded_to_ircc: "Uploaded to IRCC" };
-export const isSignStep = (k: string): k is SignStepKey => (SIGN_STEPS as readonly string[]).includes(k);
 
 /** Who signs one form item, in words (C8.1-1, C8.1-2): "person" (the person the form is about), "parent" (the principal
  *  signing for a child, by role as R7 decides it), "principal" (the principal signing for the family) and "representative".
@@ -33,19 +30,6 @@ export function signersOf(people: Person[], subject: string, who: string, signed
   if (signedBy === "person_and_representative" && words.length) words.push("representative");
   const order = ["person", "parent", "principal", "representative"];
   return [...new Set(words)].sort((a, b) => order.indexOf(a) - order.indexOf(b));
-}
-
-export type StepsDone = Partial<Record<SignStepKey, { at: string; by: string; copy?: string | null }>>;
-
-/** The refusal, in words, for doing `key` now (null when it may be done). "scan_received" is done only by uploading the
- *  signed scan; "uploaded_to_ircc" only once the scan is in and the filing is Ready to file (BR-21). */
-export function stepRefusal(key: SignStepKey, done: StepsDone, form: string, opts: { viaUpload?: boolean; filingReady?: boolean } = {}): string | null {
-  if (done[key]) return `${SIGN_STEP_WORDS[key]} is already done for ${form}.`;
-  const i = SIGN_STEPS.indexOf(key), before = SIGN_STEPS[i - 1];
-  if (before && !done[before]) return `${SIGN_STEP_WORDS[key]} comes after "${SIGN_STEP_WORDS[before]}": ${before === "print" ? `print ${form} first` : before === "signed" ? `mark ${form} signed by hand first` : `upload the signed scan of ${form} first`}.`;
-  if (key === "scan_received" && !opts.viaUpload) return `Upload the signed scan of ${form}: that marks it received.`;
-  if (key === "uploaded_to_ircc" && !opts.filingReady) return `${form} is uploaded to IRCC only once its filing is Ready to file.`;
-  return null;
 }
 
 /** An item's state once signing has started: Ready when the signed scan is in, Done when it is uploaded to IRCC; else

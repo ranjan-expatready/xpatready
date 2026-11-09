@@ -1,0 +1,49 @@
+C6.9 + re-confirm probe on 1fc089151 (product code = main f18fb0e66), copy qa_c69m2 :4470, start Sun Nov  8 14:22:26 IST 2026
+NOTICE:  database "xr_studio_qa_c69m2" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_c69m2 on http://localhost:4470 (xr_studio_qa_c69m2), stops itself in 20 min
+reset 201
+load 201
+C6.9 — Case check from confirmed facts (Visitor visa gates, stand-in SI-1)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C6.9-1 fail: a client cannot run or read an assessment (403); the client never sees a verdict
+PASS  C6.9-2 pass: a run returns AG-03's shape: pack id and version (our release pin), rules as at, disclaimer, who and when, source stand-in — {"id":"ea5bc27a-d304-4967-987d-6c86bd30bbd3","caseId":"65db1430-ac59-443a-81fb-31849cd54da6","releaseId":"13b4a669-2254-44ac-b00a-84d9112d1e8f","packId":"63e4daf4-a594-4035-9f8b-5d5a008c36eb","packVersion":2,"rulesAsOfByProgram":{"vv.single":"2026-11-08"},"dis
+PASS  C6.9-3 pass: with passport and convictions unanswered: Can't tell yet, needs those facts (missing inputs named) — {"programKey":"vv.single","programLabel":"Visitor visa","outcome":"POSSIBLY_ELIGIBLE","failedGates":[],"missingInputs":["person.passport_number","person.passport_expiry_date","person.criminal_history"],"reviewGates":[],"score":null,"maxScore":null,"passMark":n
+PASS  C6.9-4 pass: each gate shows Met, Not met or Not answered with the facts it reads — [{"key":"vv.travel_document","label":"Passport number and expiry date answered (Sample)","state":"not_answered","facts":["person.passport_number","person.passport_expiry_date"],"values":{"person.passport_number":null,"person.passport_expiry_date":null},"missin
+PASS  C6.9-5 pass: the officer's judgement items (money for the stay, good health, ties, leaving at the end) are listed, never gates (FQ-5) — ["Has enough money for the stay","Is in good health","Ties that will take the person back home","Will leave Canada at the end of the visit"]
+PASS  C6.9-6 pass (SI-1 adapter): never below the cut-off, no score, no breakdown, no recommendations
+PASS  C6.9-7 fail: a conviction answered yes is not met and goes to the representative's review: Can't tell yet, never Does not qualify (P-230 (1)) — {"programKey":"vv.single","programLabel":"Visitor visa","outcome":"POSSIBLY_ELIGIBLE","failedGates":[],"missingInputs":[],"reviewGates":["vv.no_convictions"],"score":null,"maxScore":null,"passMark":null,"selectionModel":null,"competitivenessBand":null,"gapToPa
+PASS  C6.9-8 pass: every gate met gives Qualifies — {"programKey":"vv.single","programLabel":"Visitor visa","outcome":"LIKELY_ELIGIBLE","failedGates":[],"missingInputs":[],"reviewGates":[],"score":null,"maxScore":null,"passMark":null,"selectionModel":null,"competitivenessBand":null,"gapToPass":null,"breakdown":
+PASS  C6.9-8b pass (B148, P-236): the run's history line names the case check and says Qualifies (not "likely eligible") — "Case officer ran the case check on case 65db1430 for person 158447d3 (run again): Qualifies"
+PASS  C6.9-9 pass (AG-3-1): an earlier run is a frozen snapshot; it is unchanged and marked out of date after the facts changed
+PASS  C6.9-10 fail (AG-3-28): running again after a change without a reason is refused (400) — 400
+PASS  C6.9-11 fail: an override without a reason is refused on the field (400) — 400
+PASS  C6.9-12 pass: an override with a reason is kept beside the result (AssessmentOverride), the result itself unchanged
+PASS  C6.9-13 pass: Mark reviewed records reviewer, time and note — {"reviewedBy":"user-O","reviewedAt":"2026-11-08T08:53:49.777Z","reviewNote":"Seen (Sample)","name":"Case officer (Sample)","duty":"Case officer","licence":null,"stamp":"Seen","outOfDate":true}
+PASS  C6.9-14 pass: the page is rules only: no model call in any run
+PASS  C6.9-15 pass: the list says which stand-in fills it (SI-1, a row in STAND-INS.md)
+PASS  C6.9-16 pass (B124, none confirmed): Qualifies rests on all three deciding answers, each named — {"outcome":"LIKELY_ELIGIBLE","resting":["person.passport_number","person.passport_expiry_date","person.criminal_history"]}
+PASS  C6.9-17 pass (B124, some confirmed): after Confirm section, only the deciding answers still unconfirmed are named, and the outcome is unchanged — {"confirm":201,"resting":["person.criminal_history"],"section":["person.family_name","person.given_names","person.marital_status","person.other_family_name","person.other_given_names","person.has_used_other_name","person.citizenship","person.applying_from_coun
+FAIL  C6.9-18 pass (B124, all confirmed): nothing rests on an unconfirmed answer, so the line goes — ["person.criminal_history"]
+PASS  C6.9-19 pass (B124): Does not qualify names only its failed gates' unconfirmed answers; a review gate and a met gate do not decide it
+PASS  C6.9-19 fail (B124): Can't tell yet rests on nothing here, even with unconfirmed answers
+
+20/21 passed
+pack exit 1
+C6.9-18 re-confirm probe — officer answers + Confirm section, then the client re-confirms
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+BEFORE {"outcome":"LIKELY_ELIGIBLE","resting":["person.passport_number","person.passport_expiry_date","person.criminal_history"]}
+AFTER-CONFIRM-ALL {"outcome":"LIKELY_ELIGIBLE","resting":["person.criminal_history"]}
+PASS  as the pack: after Confirm section on every section, criminal_history still rests (it waits for the client, P-244) — ["person.criminal_history"]
+RECONFIRM {"awaits_client":true,"status":201,"body":{"answer":{"id":"e4681ebf-9ac1-4851-8c3e-ee3d289513c6","value":false,"status":"DECLARED","channel":"client_reconfirm","by":"user-P","at":"2026-11-08T08:53:51.158Z","answered":{"channel":"agent_view","by":"user-O","at":"2026-11-08T08:53:50.896Z"},"problems":[],"confirmed":true,"why":"Declared: the client's own answer; it fills the forms now","fills":true,"mark":"declared","officer":{"by":"user-O","at":"2026-11-08T08:53:50.896Z"},"awaits_client":false},"message":"Re-confirmed: it is your own answer now."}}
+AFTER-RECONFIRM {"outcome":"LIKELY_ELIGIBLE","resting":[]}
+PASS  after the client re-confirms it, nothing rests on an unconfirmed answer (-18's own pass, reached the P-244 way) — {"status":201,"outcome":"LIKELY_ELIGIBLE","resting":[]}
+
+2/2 passed
+probe exit 0
+end Sun Nov  8 14:23:51 IST 2026
+stopped qa_c69m2 (database and files removed; log in var/isolated-logs/qa_c69m2-api.log)

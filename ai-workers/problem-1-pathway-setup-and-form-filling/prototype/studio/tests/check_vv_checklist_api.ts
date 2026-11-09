@@ -111,7 +111,7 @@ const ALL = (p: Person) => [...p.lines, ...p.waiting, ...p.not_needed];
   ok("C6.4 B-M2 pass: a good application date is used again: the adults' police lines are needed", police(of(r.body, principal))?.need === "needed", police(of(r.body, principal)));
 
   // 409: a release that no longer names the case's combination is refused; it reads again once it is as released.
-  const rel = sql(`select r.id from config_release r join pack_work_pin p on p.config_release_id = r.id where p.case_id = '${caseId}'`);
+  const rel = sql(`select r.id from config_release r join pack_work_pin p on p.config_release_id = r.id where p.case_id = '${caseId}' and p.revision = (select max(z.revision) from pack_work_pin z where z.case_id = p.case_id)`);
   sql(`update config_release set snapshot = jsonb_set(snapshot, '{combination,key}', '"wp.family"') where id = '${rel}'`);
   try {
     r = await list();

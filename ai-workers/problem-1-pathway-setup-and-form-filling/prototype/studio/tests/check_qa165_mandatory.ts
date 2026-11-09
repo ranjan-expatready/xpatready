@@ -49,7 +49,7 @@ ok("fail (review M-1 on #592): a question's number (\"Education Section Question
 const q4 = mandatoryOpen(inv, [{ data_path: d, fact: "person.employment_activity", outcome: "mapped" }], [box(d, { row: 0 })], { ...all, [d]: "" }, { noneApply: new Map([["principal|person.employment_activity", "\"Employment and activity history\""]]) });
 const q5 = mandatoryOpen(inv, [{ data_path: d, fact: "person.employment_activity", outcome: "mapped" }], [box(d, { row: null })], { ...all, [d]: "" }, { noneApply: new Map([["principal|person.employment_activity", "\"Employment and activity history\""]]) });
 ok("fail (review R2-m1 on #592): \"none apply\" covers only the group's row fields; a field asked outside the rows (\"Your present occupation\") still needs its answer", q5[0]?.reason === "needs an answer", q5);
-ok("fail (review M-2 on #592): after a confirmed \"none apply\", a required row field says so and the way out, never \"not answered yet\"", q4[0]?.reason === "fill it in Adobe" && /"none apply" is confirmed for "Employment and activity history"/.test(q4[0]?.why ?? "") && /take back "none apply"/.test(q4[0]?.why ?? ""), q4);
+ok("fail (review M-2 on #592): after a confirmed \"none apply\", a required row field says so and the way out, never \"not answered yet\"", q4[0]?.reason === "fill it in Adobe" && /"none apply" is answered for "Employment and activity history"/.test(q4[0]?.why ?? "") && /take back "none apply"/.test(q4[0]?.why ?? ""), q4);
 const o5 = mandatoryOpen(inv, [{ data_path: a, fact: "person.x", outcome: "mapped" }], [box(a, { result: "by hand", why: "\"Z\" has no code" })], one);
 ok("pass: a value with no code in the form → \"filled by hand\", with why", o5.length === 1 && o5[0].reason === "filled by hand" && /no code/.test(o5[0].why), o5);
 const o6 = mandatoryOpen(inv, [{ data_path: a, fact: "person.x", outcome: "mapped" }], [box(a, { coverage: "answered on screen" })], one);
@@ -135,4 +135,4 @@ fc.assert(fc.property(fc.uniqueArray(field, { selector: (f) => f.name, maxLength
     && out.every((o) => { const f = fs.find((x) => o.box.endsWith(`.${x.name}[0]`))!; return o.reason === ({ none: "no question asks it yet", unresolved: "needs an answer", not_a_fact: "fill it in Adobe", mapped: "needs an answer" } as const)[f.mapped]; });
 }), { numRuns: 500 });
 ok("property (500 runs): exactly the mandatory fields left empty are listed, in the form's order, each with the reason its field's decision gives", true);
-summary();
+process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code; before, it always exited 0)

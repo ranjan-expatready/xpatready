@@ -47,12 +47,17 @@ await main("QA-296", "IMM 5475's designated individual is never the representati
   const c = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }], { representative: f.rep, caseOfficers: [f.officer!] });
   const P = c.subjects["Sample Client A"], officer = f.officer!;
   const p = (await prepare(c.id, officer)).p;
-  ok("QA-296 setup: on the checkpoint the principal has IMM 5475 and IMM 5476", itemsOf(p, P, "IMM 5475").length === 1 && itemsOf(p, P, "IMM 5476").length === 1, itemsOf(p, P).map((i) => i.form));
+  // C9 (QA-246, on main since the merge of 7 Nov): a form that cannot start yet (IMM 5475 waits for its release answer) is
+  // listed in Prepare's `waiting`, not its `items`.
+  const waitingOf = (form?: string) => ((p as { waiting?: { form?: string; subject: string }[] } | null)?.waiting ?? []).filter((i) => i.subject === P && (!form || i.form === form));
+  ok("QA-296 setup: on the checkpoint the principal has IMM 5475 and IMM 5476", [...itemsOf(p, P, "IMM 5475"), ...waitingOf("IMM 5475")].length === 1 && itemsOf(p, P, "IMM 5476").length === 1, [...itemsOf(p, P), ...waitingOf()].map((i) => i.form));
 
   // The fault as qa read it, now in a filled copy: IMM 5475 for the principal.
   const c5475 = await generateCopy(c.id, "IMM 5475", P);
   const b5475 = boxesOf(c5475), v5475 = pdfValues(await copyBytes(c5475 ?? "", officer));
-  ok("QA-296 setup: the copy of IMM 5475 is made, and its map reads the names twice (the applicant's and the designated individual's)", !!c5475 && NAMES.every((n) => b5475.filter((b) => b.fact === n).length >= 2) && Object.keys(v5475).length > 0, b5475.filter((b) => NAMES.includes(b.fact ?? "")).map((b) => `${b.box.split(".").slice(-2).join(".")}=${b.result}`));
+  // B107: the designated individual's part 5 is filled by hand (samples/form-field-gates.json), so the map reads the names
+  // once, in the applicant's part; this check still holds on a release whose map reads them twice.
+  ok("QA-296 setup: the copy of IMM 5475 is made, and its map reads the applicant's names", !!c5475 && NAMES.every((n) => b5475.filter((b) => b.fact === n).length >= 1) && Object.keys(v5475).length > 0, b5475.filter((b) => NAMES.includes(b.fact ?? "")).map((b) => `${b.box.split(".").slice(-2).join(".")}=${b.result}`));
   const repIn = Object.entries(v5475).filter(([, v]) => v === rec?.family_name || v === rec?.given_names);
   ok("QA-296 fail (the bug): the filled IMM 5475 holds neither the representative of record's family name nor their given names", !!c5475 && repIn.length === 0, repIn);
   ok("QA-296 fail: no name box of IMM 5475 is written from the case (the applicant's are not confirmed yet; the designated individual's is no fact of the case)", !!c5475 && b5475.filter((b) => NAMES.includes(b.fact ?? "")).every((b) => b.result !== "written"), b5475.filter((b) => NAMES.includes(b.fact ?? "") && b.result === "written").map((b) => b.box));
@@ -80,6 +85,7 @@ await main("QA-296", "IMM 5475's designated individual is never the representati
   ok("QA-296 pass: the representative's family name and given names are from the firm record and fill IMM 5476", named.length === 2 && named.every((q) => q.answer?.channel === team.FIRM_RECORD && q.fills.some((x) => x.form === "IMM 5476")), named.map((q) => `${q.fact}: ${q.answer?.channel} → ${q.fills.map((x) => x.form).join(", ")}`));
   ok("QA-296 fail (the tab's words): neither says it fills IMM 5475", named.length === 2 && named.every((q) => !q.fills.some((x) => x.form === "IMM 5475")), named.map((q) => `${q.fact} → ${q.fills.map((x) => x.form).join(", ")}`));
   // The ruling on #1072 still holds: IMM 5475's address, e-mail and phone about the representative are no firm-record fact.
-  const contact = rep.filter((q) => /^person\.(address_|phone_|email$)/.test(q.fact) && q.fills.some((x) => x.form === "IMM 5475"));
-  ok("QA-296 pass (ruling on #1072, unchanged): IMM 5475's designated individual's address, e-mail and phone are still asked, never from the firm record", contact.length > 0 && contact.every((q) => q.answer?.channel !== team.FIRM_RECORD), contact.map((q) => `${q.fact}=${q.answer?.channel ?? "—"}`));
+  // B107: its part 5 and 6 are filled by hand, so no question about the representative fills IMM 5475 at all.
+  const contact = rep.filter((q) => q.fills.some((x) => x.form === "IMM 5475"));
+  ok("QA-296 pass (ruling on #1072, B107): no question about the representative fills IMM 5475 (its designated individual is written by hand)", contact.length === 0, contact.map((q) => `${q.fact}=${q.answer?.channel ?? "—"}`));
 });

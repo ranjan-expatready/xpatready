@@ -38,6 +38,11 @@ const six = family(2, 4);
 ok("R2 P-247: the case total applies the family maximum: six people pay CAD 500 (not 600) + CAD 170", total(deriveFilings("vv.single", six), "visitor_visa") === 500_00 && total(deriveFilings("vv.single", six), "biometrics") === 170_00, [total(deriveFilings("vv.single", six), "visitor_visa"), total(deriveFilings("vv.single", six), "biometrics")]);
 const noCap: FeeTable = { ...FEE_TABLE, lines: FEE_TABLE.lines.map((l) => (l.key === "visitor_visa" ? { ...l, basis: "per_person_by_role" as const, roles: ["principal", "spouse_or_partner", "child"] } : l)) };
 ok("R2 P-247 fail: the same line on the per-person basis is never capped: six people pay CAD 600", total(viaData("vv.single", six, noCap), "visitor_visa") === 600_00, total(viaData("vv.single", six, noCap), "visitor_visa"));
+// B133 (P-247: "Every fee line carries a basis"): each submission total carries its table line's basis, so a reader names
+// it from the field, never from the words or the maximum.
+const basisOf = (d: ReturnType<typeof deriveFilings>, line: string) => (d as Derived).groups.flatMap((g) => g.totals).filter((t) => t.line === line).map((t) => (t as unknown as { basis?: string }).basis);
+ok("B133 pass: every Visitor visa total carries its table line's basis (family maximum for both lines)", ["visitor_visa", "biometrics"].every((k) => { const b = basisOf(deriveFilings("vv.single", six), k); return b.length > 0 && b.every((x) => x === FEE_TABLE.lines.find((l) => l.key === k)!.basis); }), ["visitor_visa", "biometrics"].map((k) => basisOf(deriveFilings("vv.single", six), k)));
+ok("B133 fail: the same line on the per-person basis says per_person_by_role, never family_maximum (the field follows the table, not the line's name)", basisOf(viaData("vv.single", six, noCap), "visitor_visa").every((x) => x === "per_person_by_role") && basisOf(viaData("vv.single", six, noCap), "visitor_visa").length > 0 && basisOf(viaData("vv.single", six, noCap), "biometrics").every((x) => x === "family_maximum"));
 const broken = (edit: Partial<FeeTable["lines"][number]>): FeeTable => ({ ...FEE_TABLE, lines: FEE_TABLE.lines.map((l) => (l.key === "visitor_visa" ? { ...l, ...edit } : l)) });
 ok("R2 P-247 fail: a line on a basis not worked out (per position), a family maximum without its cap, or a per-role line naming no role is not derived, never guessed",
   rulesFrom(broken({ basis: "per_position" }), "vv.single") === undefined && rulesFrom(broken({ family_max: null }), "vv.single") === undefined && rulesFrom(broken({ basis: "per_person_by_role", roles: [] }), "vv.single") === undefined);
@@ -78,6 +83,7 @@ const perApp: FeeTable = { ...FEE_TABLE, as_of: "2027-01-01", read: "2027-01-02"
   combinations: { "t.app": { label: "Test", lines: ["app_fee"], modes: { principal: "files_own", child: "on_principal" } } } };
 const app = viaData("t.app", family(1, 1), perApp) as Derived;
 ok("R2 (outside check #455 r1) fail: a child on the principal's application is not charged the per-application fee again: CAD 100 once", total(app, "app_fee") === 100_00 && app.fees.filter((f) => f.line === "app_fee" && f.amount_cents > 0).length === 1, app.fees.map((f) => `${f.payer}:${f.amount_cents}`));
+ok("B133 pass: a per-application line's total says per_application", basisOf(app, "app_fee").length === 1 && basisOf(app, "app_fee")[0] === "per_application", basisOf(app, "app_fee"));
 // C11.12 (BR-6): a child on the principal's application has no filing of their own, so it cannot leave the group; a
 // child who files their own application and is split out pays its own per-application fee (r4), and two own filings
 // split out together are two applications (r5, restated in the C11.12 model on the merge of #478).

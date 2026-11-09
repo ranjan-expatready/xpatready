@@ -1,0 +1,38 @@
+GitHub run 42480587588 (nightly, data=checkpoint, main bc8e33d53), the gate-B step of the C7.2 job
+##[group]Run [ -f "$S/tools/gate-b.mjs" ] || { echo "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)"; exit 2; }
+[36;1m[ -f "$S/tools/gate-b.mjs" ] || { echo "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)"; exit 2; }[0m
+[36;1mecho "### $CAP on $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"[0m
+[36;1mnode "$S/tools/gate-b.mjs" --title "$CAP" --kind code[0m
+shell: /usr/bin/bash -e {0}
+env:
+  P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+  S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+  CAP: C7.2
+  GATE_B_JOBS: 1
+  KIND: code
+  GATE_B_DATA: checkpoint
+##[endgroup]
+Gate B: the PR names C7.2; claims Works for none (no bug check).
+  packs: C7.2.test.ts
+    C7.2.test.ts on the checkpoint: exit 1, 2/10 passed (67 s: copy 3, Load the configured checkpoint 63, run 1)
+  packs took 68 s in all
+Gate B refuses:
+  * C7.2.test.ts on the checkpoint: exit 1; first FAIL lines: FAIL  C7.2 P-46: the upload reports the barcode check: barcodes expected for IMM 5257 (5, as the evidence lane decoded on 23 Oct), decoded, matched — {"status": | FAIL  C7.2 fail: a copy whose barcodes cannot be read (Validate not pressed, or a page missing) is never ready for filing; the words say to press Validate in Ad | FAIL  C7.2 evidence: a result of the Mac's Adobe run is recorded at studio/evidence/c7-2-adobe-validate/result.json | FAIL  C7.2 evidence: it is a Studio-generated IMM 5257 of a Visitor visa case (not E1's values file), named by its checksum — null | FAIL  C7.2 evidence (P-171): Adobe Reader's Validate succeeded on the first press, with the reader's version (10 or higher, IRCC Help Centre 660) and the messag
+##[error]Process completed with exit code 1.
+Post job cleanup.
+[command]/usr/bin/git version
+git version 2.56.0
+Temporarily overriding HOME='/home/runner/work/_temp/2c1b7fb2-fe05-47b7-a211-25fa7e0bc9ac' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+[command]/usr/bin/git config --global --add safe.directory /home/runner/work/xpatready/xpatready
+[command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+http.https://github.com/.extraheader
+[command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+[command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Cleaning up orphan processes
+Terminate orphan process: pid (5305) (postgres)
+##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

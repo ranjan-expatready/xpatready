@@ -4,7 +4,7 @@
 // the Pre-qualification tick are the snapshot's `fact_sources` (only when set). Pure: no database, no AI (US$0).
 // SH3 (P-258): whose fact and who signs come from the one resolver (contracts/resolver.ts).
 import { documentRole, documentSubjects, formSigners, lineHolders, roleOf, signsForOthers, type Person } from "./resolver.ts";
-import { DOCUMENT_ABOUTS, sourceKey, type DocumentAbout } from "../contracts/resolver.ts";
+import { DOCUMENT_ABOUTS, FILING, ROLE, sourceKey, type DocumentAbout } from "../contracts/resolver.ts";
 import { anyMapped, previewRender } from "./coverage.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
@@ -28,6 +28,15 @@ export function suppliesOf(t: DocType): { fact: string; about: About }[] {
   return (t.supplies_facts ?? []).map((fact) => ({ fact, about: (t.supplies_about?.[fact] as About) ?? "holder" }));
 }
 
+/** C3.16: whose own documents supply a fact the release marks Household or Organisation, asked once on the case: any
+ *  member for a household fact, the principal for an employer fact; nobody for an unmarked fact (engine/field-scope.ts).
+ *  documentFacts credits their suppliers to the case and Preview reads their checklist lines (break round 3, M1). */
+export function caseSuppliers(s: Snapshot, people: Person[], fact: string): string[] {
+  const p = ((s.placements ?? []) as { fact: string; scope?: string }[]).find((x) => x.fact === fact && (x.scope === "household" || x.scope === "organisation"));
+  if (!p) return [];
+  return (p.scope === "household" ? people : people.filter((x) => x.role === ROLE.principal)).map((x) => x.id);
+}
+
 /** Challenge M3: which checklist documents supply which fact about whom (per person, never combination-wide): a
  *  passport asked only of the principal supplies only the principal's facts. */
 export function documentFacts(s: Snapshot, people: Person[]): Map<string, Map<string, Supplier[]>> {
@@ -47,6 +56,9 @@ export function documentFacts(s: Snapshot, people: Person[]): Map<string, Map<st
     const sup = { key: t.key, name: t.name, base: r.base_or_conditional === "base" };
     for (const h of holders) for (const { fact, about } of suppliesOf(t)) for (const a of documentSubjects(people, h, about)) add(a, fact, sup);
   }
+  // C3.16 (challenge M4): a marked Household or Organisation fact is asked once on the case, so its suppliers are the
+  // case's too: any member's documents for a household fact, the principal's for an employer fact (engine/field-scope.ts).
+  for (const p of (s.placements ?? []) as { fact: string; scope?: string }[]) for (const id of caseSuppliers(s, people, p.fact)) for (const sup of out.get(id)?.get(p.fact) ?? []) add(FILING, p.fact, sup);
   // m1: a base requirement before a conditional one, then a stable order.
   for (const m of out.values()) for (const [f, list] of m) m.set(f, [...list].sort((a, b) => Number(b.base) - Number(a.base) || a.key.localeCompare(b.key)));
   return out;
@@ -210,6 +222,8 @@ export type ChecklistLine = {
   lineage: string; role: string; document: { key: string; name: string }; who: string; base: boolean; when: string;
   providedBy: string; alternatives: { key: string; name: string }[]; supplies: ChecklistFact[]; aboutOthers: number;
   quote: string | null; status: string; origin: string; position: number | null;
+  /** C6.15 (SA-1B-20): the substitute set the line picks (null: "Standard"). */
+  setName?: string | null;
   /** Its place on this checklist: the set position, else its place in the default order (always first, then by name). */
   rank: number;
   /** C3.11: a line worked out from a form line (never stored), with why it is there; changed only on that form line. */
@@ -269,7 +283,7 @@ export function checklist(s: Snapshot): { role: string; label: string; lines: Ch
         lineage: r.lineage, role, document: { key: t?.key ?? r.document_type_key, name: t?.name ?? r.document_type }, who: r.who,
         base: r.base_or_conditional === "base", when: r.base_or_conditional === "base" ? "Always" : (r.condition_plain ?? "Only if its condition holds"),
         providedBy: r.provided_by, alternatives: ((r.alternatives ?? []) as string[]).map((k) => ({ key: k, name: types.find((x) => x.key === k)?.name ?? k })),
-        supplies, aboutOthers: supplies.filter((x) => x.about !== "holder").length, quote: r.source_quote ?? null, status: r.status, origin: r.origin, position: r.position ?? null, rank: 0,
+        supplies, aboutOthers: supplies.filter((x) => x.about !== "holder").length, setName: r.set_name ?? null, quote: r.source_quote ?? null, status: r.status, origin: r.origin, position: r.position ?? null, rank: 0,
       };
       byRole.set(role, [...(byRole.get(role) ?? []), line]);
     }

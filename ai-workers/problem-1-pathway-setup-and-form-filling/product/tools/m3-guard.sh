@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# UNUSED since 8 Nov (D1, P-416, founder "Approve all stands" ~09:05 IST): CI no longer runs this guard; the file stays for a later milestone.
 # M3 guard (founder 4 Nov ~11:30 IST, "Yes, start M3" and the no-waste rule): an M3-only pull request may not change a file
 # M2 is still changing (tools/m2-hot-files.txt), so M3 work running in parallel never collides with M2 and is never thrown
 # away. M3-only: the PR names at least one capability (C<n.n> in its title or body) and every one it names is M3 in

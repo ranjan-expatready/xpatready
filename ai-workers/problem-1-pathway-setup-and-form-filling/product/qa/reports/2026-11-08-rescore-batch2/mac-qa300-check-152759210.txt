@@ -1,0 +1,22 @@
+QA-300 re-test on 2cd3827eb (code = main 152759210 except acceptance/C7.3.test.ts and a qa check), copy qa_q300 :4470, start Sun Nov  8 08:32:40 IST 2026
+NOTICE:  database "xr_studio_qa_q300" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_q300 on http://localhost:4470 (xr_studio_qa_q300), stops itself in 30 min
+reset 201
+load 201
+loaded Sun Nov  8 08:33:50 IST 2026
+QA-296, QA-299, QA-300 — The representative on IMM 5476 and IMM 5475
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  QA-296-1 fail: IMM 5475's designated individual (box 5) is not filled from the firm record's representative — []
+PASS  QA-299-0 pass: IMM 5476's CICC box holds the CICC representative's number (setup) — ["IMM_5476[0].Page1[0].SectionA[0].DOB[0]","IMM_5476[0].Page1[0].SectionB[0].familyName[0]","IMM_5476[0].Page1[0].SectionB[0].givenName[0]","IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].compensated[0]","IMM_5476[0].Page1[0].SectionB[0].question6
+PASS  QA-299-2 fail: nothing in the law society's box for a CICC representative
+PASS  QA-299-3 fail: nothing in the Chambre des notaires' box for a CICC representative
+PASS  QA-299-4 fail: nothing in the unpaid licensed member's box for a paid CICC representative
+PASS  QA-300-5 fail: IMM 5476 lists no fact about the representative that nobody on the case can answer — []
+PASS  QA-300-6 fail: the client is not told it owes the representative's office details — []
+
+7/7 passed
+check exit 0  end Sun Nov  8 08:34:02 IST 2026

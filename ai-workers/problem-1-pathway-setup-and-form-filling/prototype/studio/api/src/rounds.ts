@@ -106,10 +106,12 @@ export function roundJob(step: AiStep, isCheck: boolean, ctx: Pick<RoundContext,
     known: edition ? { form_edition: `${edition.code} (${edition.edition})` } : { combination_trail: ctx.trail } };
 }
 
-const readRun = (f: string): SavedRun | null => { try { return { ...JSON.parse(readFileSync(join(RUNS, f), "utf8")), file: f }; } catch { return null; } };
+const readRun = (f: string, dir = RUNS): SavedRun | null => { try { return { ...JSON.parse(readFileSync(join(dir, f), "utf8")), file: f }; } catch { return null; } };
 
 export class StepRunner {
-  constructor(private readonly launcher: Pick<Sources, "launchOnce">) {}
+  /** `runs` (C7.5 part 2): the folder saved runs are read from; p2/runs unless a producer names another (a test copy's
+   *  own folder of made-up runs, never one the product counts). */
+  constructor(private readonly launcher: Pick<Sources, "launchOnce">, private readonly runs: string = RUNS) {}
 
   /** The job running now for each run (its exact launcher job id), so Stop ends that call and no other. */
   private liveJobs = new Map<string, string>();
@@ -117,13 +119,13 @@ export class StepRunner {
 
   /** Saved live runs of exactly this job prefix ("<prefix>-live-…"), newest first by name. */
   savedRuns(prefix: string): SavedRun[] {
-    if (!existsSync(RUNS)) return [];
-    return readdirSync(RUNS).filter((f) => f.startsWith(`${prefix}-live-`) && f.endsWith(".json")).sort().reverse().map(readRun).filter((r): r is SavedRun => !!r);
+    if (!existsSync(this.runs)) return [];
+    return readdirSync(this.runs).filter((f) => f.startsWith(`${prefix}-live-`) && f.endsWith(".json")).sort().reverse().map((f) => readRun(f, this.runs)).filter((r): r is SavedRun => !!r);
   }
   /** Saved live runs whose job id starts with this prefix and has the trail fingerprint after it, newest first by time. */
   savedRunsLike(prefix: string): SavedRun[] {
-    if (!existsSync(RUNS)) return [];
-    return readdirSync(RUNS).filter((f) => f.startsWith(`${prefix}-`) && LIVE_RUN.test(f)).sort(newestFirst).map(readRun).filter((r): r is SavedRun => !!r);
+    if (!existsSync(this.runs)) return [];
+    return readdirSync(this.runs).filter((f) => f.startsWith(`${prefix}-`) && LIVE_RUN.test(f)).sort(newestFirst).map((f) => readRun(f, this.runs)).filter((r): r is SavedRun => !!r);
   }
 
   /** One AI round: replay the newest saved real run of exactly this job (same files, same prompt), or a guarded live call. */
@@ -136,8 +138,8 @@ export class StepRunner {
       const mine = replayPattern(step.jobBase, isCheck);
       // The current prompt's answer first; else one of an earlier version the step still replays (plan §4), labelled.
       const prompts = [{ sha256: want.templateSha256, label: "", inputs: undefined as number | undefined }, ...(step.replays ?? []).map((v) => ({ sha256: sha(readFileSync(join(PROMPTS, isCheck ? v.check : v.template))), label: v.label, inputs: v.inputs }))];
-      const runs = (existsSync(RUNS) ? readdirSync(RUNS).filter((f) => mine.test(f) && (ctx.replayPair === undefined || pairOf(step, isCheck, f) === ctx.replayPair)
-        && (!ctx.replayWindow || (runTime(f) > ctx.replayWindow.after && runTime(f) < ctx.replayWindow.before))).sort(newestFirst) : []).map(readRun);
+      const runs = (existsSync(this.runs) ? readdirSync(this.runs).filter((f) => mine.test(f) && (ctx.replayPair === undefined || pairOf(step, isCheck, f) === ctx.replayPair)
+        && (!ctx.replayWindow || (runTime(f) > ctx.replayWindow.after && runTime(f) < ctx.replayWindow.before))).sort(newestFirst) : []).map((f) => readRun(f, this.runs));
       const usable = (x: SavedRun | null, p: { sha256: string; inputs?: number }): x is SavedRun => !!x && isSameSavedRun(x, { ...want, templateSha256: p.sha256, inputs: p.inputs === undefined ? want.inputs : want.inputs.slice(0, p.inputs) }) && (() => { try { return step.shapeOk(JSON.parse(String(x.raw_output))); } catch { return false; } })();
       let r: SavedRun | undefined, label = "";
       for (const p of prompts.filter((x) => ctx.replayPrompt === undefined || x.label === ctx.replayPrompt)) { r = runs.find((x): x is SavedRun => usable(x, p)); if (r) { label = promptOfRun(r, prompts) ?? ""; break; } }

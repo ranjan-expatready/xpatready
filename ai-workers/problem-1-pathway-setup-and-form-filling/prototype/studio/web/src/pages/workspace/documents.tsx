@@ -23,6 +23,7 @@ import { RowMenu } from "@/pages/workspace/sources";
 import { irccWords } from "../../../../contracts/workspace";
 import { cn } from "@/lib/utils";
 import { SuppliesPanel } from "@/pages/supplies-panel";
+import { SetsSection } from "@/pages/sets-panel";
 
 const SAY = {
   retire: "A checklist line is removed, not retired. Retire the document type in the library.",
@@ -162,7 +163,7 @@ export function DocumentsTab({ id }: { id: string }) {
         ) : null}
         <p className="text-xs text-text-muted">{v.data.basis}.</p>
         {!canAuthor ? <p className="text-xs text-text-muted" data-approver-copies>{APPROVER_WORDS}</p> : null}
-        {open ? <DocumentDrawer line={open} roles={roles} roleLabel={role.label} canAuthor={canAuthor} onClose={() => setShown(null)} onEdit={() => { const r = reqOf(open.lineage); if (r) { setShown(null); setEdit(r); } }} onRemove={() => { setShown(null); void remove(open); }} onSupplies={() => { setShown(null); setSupplies(open.document.key); }} /> : null}
+        {open ? <DocumentDrawer combinationId={id} revision={cfg.data?.revisions?.[`requirement:${open.lineage}`]} line={open} roles={roles} roleLabel={role.label} canAuthor={canAuthor} onClose={() => setShown(null)} onEdit={() => { const r = reqOf(open.lineage); if (r) { setShown(null); setEdit(r); } }} onRemove={() => { setShown(null); void remove(open); }} onSupplies={() => { setShown(null); setSupplies(open.document.key); }} /> : null}
         {supplies ? <SuppliesPanel typeKey={supplies} combinationId={id} open onClose={() => setSupplies(null)} onSaved={refresh} /> : null}
         {edit ? <RequirementDialog id={id} r={edit} fields={fields} onClose={() => setEdit(null)} onSaved={refresh} /> : null}
         {undoToast.node}{bulk.node}
@@ -173,7 +174,7 @@ export function DocumentsTab({ id }: { id: string }) {
 
 /** Every parameter of one checklist line (board v2 frame 3): who and when, alternatives, the facts it supplies about whom
  *  and whether each is taken out of the questionnaire; Copies, Translation, Validity window read-only (P-147 Q3). */
-function DocumentDrawer({ line, roles, roleLabel, canAuthor, onClose, onEdit, onRemove, onSupplies }: { line: ChecklistLineRow; roles: ChecklistView["roles"]; roleLabel: string; canAuthor: boolean; onClose: () => void; onEdit: () => void; onRemove: () => void; onSupplies: () => void }) {
+function DocumentDrawer({ combinationId, revision, line, roles, roleLabel, canAuthor, onClose, onEdit, onRemove, onSupplies }: { combinationId: string; revision?: string; line: ChecklistLineRow; roles: ChecklistView["roles"]; roleLabel: string; canAuthor: boolean; onClose: () => void; onEdit: () => void; onRemove: () => void; onSupplies: () => void }) {
   const index = (roles.find((r) => r.role === line.role)?.lines ?? []).findIndex((l) => l.lineage === line.lineage);
   const total = roles.find((r) => r.role === line.role)?.lines.length ?? 0;
   if (line.automatic) return (
@@ -200,6 +201,7 @@ function DocumentDrawer({ line, roles, roleLabel, canAuthor, onClose, onEdit, on
             <p className="text-xs text-text-muted">The facts read are this line's document's; when an alternative is given, the client is asked what it does not supply.</p>
           </> : <p className="text-text-muted" data-drawer-alternatives>None yet: set one in Edit.</p>}
         </section>
+        <SetsSection typeKey={line.document.key} typeName={line.document.name} combinationId={combinationId} lineage={line.lineage} revision={revision} setName={line.setName ?? null} canAuthor={canAuthor} />
         <section aria-labelledby="dd-facts" className="space-y-1"><h3 id="dd-facts" className="font-semibold">Facts it supplies · {line.supplies.length} · from the library document type</h3>
           {line.supplies.length ? (
             <Table dense head={["Fact", "About whom", "Taken out of the questionnaire"]} label="Facts it supplies">

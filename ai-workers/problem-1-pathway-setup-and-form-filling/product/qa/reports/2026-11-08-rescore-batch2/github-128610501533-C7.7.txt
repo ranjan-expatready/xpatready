@@ -1,0 +1,4 @@
+Gate B: the PR names C7.7; claims Works for none (no bug check).
+    C7.7.test.ts on the checkpoint: exit 1, 21/33 passed (221 s: copy 5, Load the configured checkpoint 84, run 132)
+Gate B refuses:
+  * C7.7.test.ts on the checkpoint: exit 1; first FAIL lines: FAIL  C7.7-1 pass: adults get IMM 5257, IMM 5476 and IMM 5707 (VV-R07, VV-R09, VV-R10) — [["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],["IMM 5257","IMM 52 | FAIL  C7.7-10 pass: "Download PDF copy" on the Online IMM 5707 is a job (202) — 404 | FAIL  C7.7-11 pass: the copy is IRCC's own IMM 5707 PDF filled from the same confirmed facts, marked "Copy, not for filing" — {"type":"https://expatready.local/ | FAIL  C7.7-12 pass: the copy is never counted: no new item, readiness unchanged | FAIL  C7.7-13 fail: a "Copy, not for filing" cannot be locked as filed or uploaded (409, in words) — "No such copy."

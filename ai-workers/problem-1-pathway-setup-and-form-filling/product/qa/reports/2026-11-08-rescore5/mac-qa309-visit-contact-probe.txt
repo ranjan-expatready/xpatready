@@ -1,0 +1,21 @@
+qa probe c102_contact.mts on 1cf6e1d1f (= main 0b4ede86b + qa records), copy qa_r309d :4470, start Sun Nov  8 23:10:31 IST 2026
+NOTICE:  database "xr_studio_qa_r309d" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_r309d on http://localhost:4470 (xr_studio_qa_r309d), stops itself in 40 min
+reset 201
+load 201
+loaded Sun Nov  8 23:11:45 IST 2026
+QA-309 cause (d) probe — the visit contact on release 2's questionnaire and answer sheet
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+ASKED-BEFORE [{"section":"Details of visit to Canada","fact":"case.visit_contact_address_in_canada"},{"section":"Details of visit to Canada","fact":"case.visit_contact_name"},{"section":"Details of visit to Canada","fact":"case.visit_contact_relationship"}]
+ANSWERED [{"fact":"case.visit_contact_address_in_canada","answered":true},{"fact":"case.visit_contact_name","answered":true},{"fact":"case.visit_contact_relationship","answered":true}]
+SHEET-DETAILS-OF-VISIT {"waiting":[],"answers":[{"fact":"case.visit_contact_address_in_canada","label":"Address in Canada of the person or institution to be visited","value":{"city":"Sample City","country":"Canada","street_name":"Sample Road"}},{"fact":"case.visit_contact_name","label":"Name of a person or institution to be visited in Canada","value":"SAMPLE"},{"fact":"case.visit_contact_relationship","label":"Relationship of the person or institution to be visited to the traveller","value":"SAMPLE"},{"fact":"case.funds_available_cad","label":"Funds available for the stay, in Canadian dollars","value":5000},{"fact":"case.intended_stay_from","label":"Planned first day of the stay in Canada","value":"2015-01-01"},{"fact":"case.intended_stay_to","label":"Planned last day of the stay in Canada","value":"2015-01-01"},{"fact":"case.visit_purpose_other","label":"Description of the visit purpose when it is 'other'","value":"SAMPLE"},{"fact":"case.visit_purpose","label":"Purpose of the visit to Canada","value":"Business"}]}
+COPY-BOXES [{"path":null,"fact":"case.visit_contact_address_in_canada","result":"not written","why":"Details of visit to Canada"},{"path":null,"fact":"case.visit_contact_name","result":"not written","why":"Details of visit to Canada"},{"path":null,"fact":"case.visit_contact_relationship","result":"not written","why":"Details of visit to Canada"},{"path":null,"fact":"case.visit_contact_address_in_canada","result":"written","why":null},{"path":null,"fact":"case.visit_contact_name","result":"written","why":null},{"path":null,"fact":"case.visit_contact_relationship","result":"written","why":null}]
+PASS  the visit contact's facts appear on the Online sheet
+
+1/1 passed
+fill exit 0
+read exit 1  end Sun Nov  8 23:11:59 IST 2026

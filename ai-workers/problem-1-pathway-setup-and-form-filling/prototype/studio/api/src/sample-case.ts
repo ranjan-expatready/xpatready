@@ -34,6 +34,8 @@ export type SampleCase = { caseId: string | null; release: number | null; people
   applicants: number; imm5257: number;
   /** B99: the Sample file's answers saved, the rows added, the groups said none apply, the sections confirmed, and what was refused. */
   sampleAnswers: number; rows: number; noneApply: number; confirmed: number; answerRefused: string[];
+  /** C6.18: the background answers the client re-confirmed (the officer entered them from the record). */
+  reconfirmed: number;
   /** B99 (row 12b): the IMM 5257 copies whose saved validated read-back counts (same facts as the copy validated), and why not. */
   validated: number; validatedWhy: string[];
   /** QA-285: the copies whose saved read-back counts but whose validated file is not in the local folder (kept on the Mac). */
@@ -47,7 +49,7 @@ const COPY_WAIT_MS = 60_000;
  *  so the next is asked for only when the last has finished. Each refusal is kept in words; nothing is forced. */
 export async function openSampleFamilyCase(db: Db, runtime: Runtime, forms: CaseForms, combinationId: string): Promise<SampleCase> {
   const officer = RUNTIME_ACTORS.find((a) => a.id === "user-O")!;
-  const out: SampleCase = { caseId: null, release: null, people: 0, copies: [], refused: [], copiesRefused: [], fromRecord: 0, madeUp: 0, notTaken: 0, births: 0, applicants: 0, imm5257: 0, sampleAnswers: 0, rows: 0, noneApply: 0, confirmed: 0, answerRefused: [], validated: 0, validatedWhy: [], validatedKeptOnMac: 0 };
+  const out: SampleCase = { caseId: null, release: null, people: 0, copies: [], refused: [], copiesRefused: [], fromRecord: 0, madeUp: 0, notTaken: 0, births: 0, applicants: 0, imm5257: 0, sampleAnswers: 0, rows: 0, noneApply: 0, confirmed: 0, answerRefused: [], reconfirmed: 0, validated: 0, validatedWhy: [], validatedKeptOnMac: 0 };
   const said = (e: unknown) => String((e as { response?: { detail?: string; message?: string } }).response?.detail ?? (e as { response?: { message?: string } }).response?.message ?? (e as Error).message).slice(0, 200);
   let opened: { id: string; pin?: { release_version?: number }; people?: unknown[] };
   try { opened = await runtime.createCase(officer, { combinationId, reference: SAMPLE_CASE.reference, clientActor: "user-P", principal: { displayName: SAMPLE_CASE.principal }, idempotencyKey: "sample-vv-family-1" }) as typeof opened; }
@@ -70,7 +72,9 @@ export async function openSampleFamilyCase(db: Db, runtime: Runtime, forms: Case
   for (const [pid, facts] of Object.entries({ ...MADE_UP, "child-2": [["person.family_name", family], ...MADE_UP["child-2"]] as [string, unknown][] }))
     for (const [k, v] of facts) if (await put(subjects[pid], k, v)) { out.madeUp++; if (k === "person.date_of_birth") out.births++; }
   await answerFromFile(runtime, officer, opened.id, subjects, file, out, said);
-  for (const f of (await forms.list(officer, opened.id)).forms.filter((x) => x.applies && x.for_filing)) {
+  // QA-246: every form the release files, those whose rule still waits for an answer included, as before (the checkpoint's
+  // copies are unchanged; C9.5's later Sample release refits one of them, IMM 5475).
+  for (const f of (await forms.list(officer, opened.id, { includeWaiting: true })).forms.filter((x) => x.applies && x.for_filing)) {
     let copy: { id: string };
     try { copy = await forms.generate(officer, opened.id, f.form, f.subject_id, { idempotencyKey: `sample-vv-family-1-${f.form}-${f.subject_id}`.replace(/[^A-Za-z0-9-]/g, "-").slice(0, 80) }); }
     catch (e) { out.copiesRefused.push(`${f.form} for ${f.person}: ${said(e)}`); continue; }
@@ -89,7 +93,7 @@ export async function openSampleFamilyCase(db: Db, runtime: Runtime, forms: Case
 }
 
 type View = { sections: { subjectId: string; section: string; group?: { rows: number; none_apply: { id: string } | null } | null;
-  questions: { fact: string; answer?: { id?: string; value?: unknown; channel?: string } | null; rows?: { answer?: { id?: string } | null }[] }[] }[] };
+  questions: { fact: string; answer?: { id?: string; value?: unknown; channel?: string; awaits_client?: boolean } | null; rows?: { answer?: { id?: string; awaits_client?: boolean } | null }[] }[] }[] };
 const sameValue = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 /** B99 (C10.1 row 12b; #1123 part 1: the copies were blank, 46 of 46 mandatory fields empty, because nothing was confirmed):
@@ -131,6 +135,15 @@ async function answerFromFile(runtime: Runtime, officer: (typeof RUNTIME_ACTORS)
     if (s.subjectId === subjects.case || !s.group || s.group.rows || s.group.none_apply || !noneGroups.has(s.section)) continue;
     try { await runtime.noneApply(officer, caseId, s.subjectId, s.section, { noneApply: true, expectedId: null }); out.noneApply++; }
     catch (e) { out.answerRefused.push(`${s.section} none apply: ${said(e)}`); }
+  }
+  // C6.18 (P-244): the record's background answers, entered here by the officer, are the client's: the client re-confirms
+  // each on their questionnaire (Client A, the case's client), as a person does, before the officer confirms the sections.
+  const client = RUNTIME_ACTORS.find((a) => a.id === "user-P");
+  v = await view();
+  for (const a of v.sections.flatMap((s) => s.questions.flatMap((q) => [q.answer, ...(q.rows ?? []).map((r) => r.answer)]))) {
+    if (!a?.awaits_client || !a.id || !client) continue;
+    try { await runtime.reconfirm(client, caseId, a.id); out.reconfirmed++; }
+    catch (e) { out.answerRefused.push(`re-confirm ${a.id}: ${said(e)}`); }
   }
   // Each section confirmed with the answers the officer's view shows (QA-164: the confirm covers exactly those). As the
   // screen does (questionnaire.tsx, `seen`), never an answer the firm record gives (C6.11: "Uses a representative" from the
