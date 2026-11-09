@@ -26,7 +26,7 @@
 ## How the reader reached this
 * A first pass had the earlier verdicts stripped, and with them each row's history, so it read all nine rows as Partial. qa then gave it each row's own record of status changes and gate A, and the rows' reports. Its answers above are the final ones.
 * **C7.6:** the 8 Nov record says the walk did not reach Record the submission. Today's walk did (`2026-11-09-rescore10/walk-screens.md`), by mouse, so the reader agrees it is Works. **Caveat, qa's own:** the reader wrote that this rests on the code being unchanged since `e7ad3ae96`. It is not: #1393 merged after that run and changed `case-prepare.ts`. C7.6 was last run on `e7ad3ae96` (42579687276, 27/27, screens 8/8; Mac 27/27). Tonight's nightly covers it.
-* **C6.11:** Unsure, on whether a walk set up by the pack helper counts, and because the walk is split across rounds. The reader later accepted helper setup for steps not under test (on C8.1 and in C7.10's walk), so qa leaves it Works. One check would settle it: the walk's end in `walk-case-page-c6.12-c6.11.md`.
+* **C6.11:** Unsure, on whether a walk set up by the pack helper counts, and because the walk is split across rounds. The reader later accepted helper setup for steps not under test (on C8.1 and in C7.10's walk), so qa leaves it Works. **Settled by qa, as the tech lead asked:** the end of `2026-11-08-rescore-batch2/walk-case-page-c6.12-c6.11.md` shows the walk, by screens, pressing "Generate a copy" for IMM 5476 and reaching the Sign and scan block, "1. Printed: next", which is C8.1's first step. It stays Works and does not join the walks.
 * **C6.5:** Partial, the same. The score in #1401 is unchanged. Its next score follows #1404 and #1405.
 
 ## Findings
