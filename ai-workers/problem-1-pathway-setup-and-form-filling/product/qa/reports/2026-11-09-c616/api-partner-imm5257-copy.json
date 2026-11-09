@@ -1,0 +1,14 @@
+{
+  "note": "Read underneath after walk_c616_next.mjs, as the case officer (user-O), main 1d07807c8, copy qa_c616a on :4472, case QA-C616-mw9i0e5c (14b00b91-2f89-427c-bf35-62f7378bcfc1), 9 Nov 2026 ~16:54 UTC.",
+  "GET /api/runtime/cases/:id/forms → IMM 5257, subject Sample Partner (d821f0e9-…)": {
+    "draft": { "written_now": 4, "mapped": 166, "to_fix": 9 },
+    "copies[0]": { "id": "ee59fd14-54ca-401f-8621-d32125c5a4f5", "status": "GENERATED", "created_by": "user-O", "counts": { "blank": 0, "by_hand": 0, "written": 4, "by_a_person": 0, "not_on_form": 0, "not_written": 162 }, "intact": true, "copy_not_for_filing": true, "source": "ircc_pdf", "file_ok": true }
+  },
+  "GET /api/runtime/form-copies/ee59fd14-…/file → 200, 1,452,731 bytes; XFA datasets: every non-empty value": {
+    "AdultFlag": "false",
+    "FormVersion": ".ENU-09-2023",
+    "DOBYear": "1988", "DOBMonth": "11", "DOBDay": "09",
+    "Email": "by.client.a.mw9i0e5c@example.com"
+  },
+  "read": "Email is the answer Client A typed for Partner and Partner confirmed on their own link (channel own_link, confirmed true). Partner's private mailing-address city (Privatetownmw9i0e5c) is not written: the address lacks street and country (problems: 'Enter the street.', 'Enter the country.'), and answers needing a fix stay blank. The 4 written fields are DOBYear, DOBMonth, DOBDay and Email; AdultFlag and FormVersion carry values in the official blank too, by qa's reading (not checked against the blank this round; not C6.16)."
+}
