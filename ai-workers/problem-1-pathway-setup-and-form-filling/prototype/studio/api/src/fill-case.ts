@@ -174,7 +174,10 @@ export class CaseForms implements OnModuleInit {
 
   /** Every PDF form that applies to someone on the case: the draft (what a copy made now would write), readiness and
    *  the copies made, each with out of date / stale and the facts that changed. One read of the case. */
-  async list(actor: Actor, caseId: string): Promise<{ forms: CaseForm[]; online: CaseOnlineForm[] }> {
+  /** `includeWaiting` (QA-246, CI on #1382): also list a form whose rule still waits for an answer. Only the checkpoint's
+   *  Sample family case asks it (api/src/sample-case.ts: a copy of every form the release files for each person), so the
+   *  loaded checkpoint holds the same copies as before; GET …/forms never does. */
+  async list(actor: Actor, caseId: string, opts: { includeWaiting?: boolean } = {}): Promise<{ forms: CaseForm[]; online: CaseOnlineForm[] }> {
     const c = await this.officerCase(actor, caseId);
     const s = this.runtime.snapshotOf(c), people = this.runtime.peopleOf(c);
     const { answers, rows, groups } = await this.runtime.state(c);
@@ -192,6 +195,12 @@ export class CaseForms implements OnModuleInit {
         const applies = !!cov && cov.applies !== false;
         const mine = copies.filter((x) => x.formNumber === form && x.subjectId === p.subjectId);
         if (!applies && !mine.length) continue; // a form that stops applying keeps its copies in view (break M4)
+        // QA-246: a form whose rule waits for an answer (it "cannot tell" yet: a marital status, a case answer not given)
+        // is not a form to fill yet, as /prepare lists it: it is listed once its rule says it applies, or while it has copies.
+        // Review B1: `cov` is null for a person marked not travelling, who reaches here only with copies (break M4).
+        // Review m2, m3: the generate route still makes a copy of a waiting form (check_qa296_imm5475.ts relies on it), and
+        // such a form with copies stays listed as before (its copies in view); /prepare says "Cannot start yet" for it.
+        if (!opts.includeWaiting && cov?.applies === "cannot_tell" && !mine.length) continue;
         if (chosen(s, items, form, p.subjectId) === "NOT_NEEDED" && !mine.length) continue; // C11.6 (Devin on #1056): nothing to fill or file
         const channel = chosen(s, items, form, p.subjectId);
         const onForm = onFormOf(s, form, cov, view, caseWords); // QA-165: readiness and the open fields read the same copy
@@ -208,7 +217,7 @@ export class CaseForms implements OnModuleInit {
     const hasPdf = (form: string) => copyOnlyForms(s).has(form) || pdfForms(s).has(form);
     const online = (s.forms as { form_number: string; title?: string; channel?: string }[]).filter((f) => f.channel === "ONLINE" || movedOnline.has(f.form_number)).map((f) => ({
       form: f.form_number, title: f.title ?? f.form_number,
-      people: people.filter((p) => p.role !== "case" && chosen(s, items, f.form_number, p.subjectId) === "ONLINE" && view.forms.some((x) => x.form === f.form_number && x.person === p.label && x.applies !== false)).map((p) => p.label),
+      people: people.filter((p) => p.role !== "case" && chosen(s, items, f.form_number, p.subjectId) === "ONLINE" && view.forms.some((x) => x.form === f.form_number && x.person === p.label && x.applies === true)).map((p) => p.label), // review m1 (QA-246): never a form still waiting for an answer
       pdf_copy: hasPdf(f.form_number),
       why_no_copy: hasPdf(f.form_number) ? null : answerSheetOnly(f.form_number, s.combination.portal) ? "Express Entry: the answer sheet only, no PDF copy." : "IRCC's PDF of this form is not in this case's release.",
     })).filter((f) => f.people.length);
