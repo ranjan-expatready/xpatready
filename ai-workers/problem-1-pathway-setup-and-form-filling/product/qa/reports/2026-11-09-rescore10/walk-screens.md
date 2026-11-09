@@ -23,3 +23,12 @@ Browser pane, 1024 px, one pass. Fresh checkpoint copy qa_walk93 on :4472. Setup
 
 ## Not covered
 1024 px and one pass only. No keyboard-only, 400 px, 1440 px or axe pass by qa. The walk copy refused its stop from a later call (port still listening); it stops itself at its 70-minute limit, about 14:30 IST.
+
+## Second pass for C7.10, by mouse, 14:49–14:50 IST
+The Opus reader held C7.10 because the last Pass and opening "Record the submission…" above were by script. Asked for by the tech lead (Lead 40). Fresh checkpoint copy qa_walk710 on :4472, main `04ade2b70` (code unchanged since `3614e35b2`), case officer, 1024 px, one pass. Setup by the same script, `walk_ready.mts`: everything but one warning passed.
+* Before: "Not ready · 88%", "8 of 9 done · 5 passed with a reason".
+* By mouse, "Pass with a reason…", reason typed, Pass. One first click on Pass missed, because the page was still scrolling; the next landed. The line reads "“Copy to be made after the walk (Sample, qa mouse pass).” — passed by Case officer (Sample), Nov 9, 2026, 02:49 p.m."
+* After: header "Ready · 100%", filing "Ready", "100%", "9 of 9 done · 6 passed with a reason", "Nothing stands before Ready to file."
+* By mouse, "Ready to file": the filing's status is `ready_to_file`.
+* **By mouse, "Record the submission…" (C8.2's first step):** the form opens, "One record for the whole submission, as IRCC acknowledged it through APR Portal…". Closed with Escape. **Nothing recorded:** the filing is still `ready_to_file`.
+* The walk copy refused its stop from a later call. It stops itself at its 20-minute limit, about 15:09 IST.
