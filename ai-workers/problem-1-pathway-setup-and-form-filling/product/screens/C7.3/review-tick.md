@@ -95,3 +95,50 @@ A real screen reader. An intended user's unaided walk (D17, D20 stay with the fo
 `api/src/case-prepare.ts:71` + `answer-sheet.tsx:245` · m3 `case-prepare.ts:69-72` · m4 `case-prepare.ts:762`, `:756` ·
 m5 `answer-sheet.tsx:218` · m6 concept BR-8 and §5 records, the pill tooltip, the button words, GRAPH G3, and axe in
 the pack.
+
+## Round 2: diff-only re-review of 1c9918f6e (`git diff 58050bf91 1c9918f6e`, 9 Nov 2026)
+The edits seen at 13:02 UTC were the builder's own, and they are now committed. I checked that :4441 runs this head:
+the server restarted at 13:05:26, after the last code edit at 13:03:55, and the web build `index-B5Zl90_7.js` carries
+`not-ticked`. **I re-ran all three packs: C7.3-tick 15/15, C7.3-screen 15/15, C7.3 14/14.**
+* **m1 fixed.** `reload` now closes the form and clears the reason (`answer-sheet.tsx:210`). Step C7.3-53 covers it by
+  keyboard: a stale tab is refused "not ticked", and after Reload the "Entered in the portal" button and the untick
+  line are back.
+* **m2 fixed.**
+  - Line breaks become spaces as the officer types or pastes, and Enter submits (`:249`).
+  - Probe: filling "Line one\nLine two" and pressing Enter saved the reason "Line one Line two" (sheet and audit
+    `detail.reason`). The focus returned to the tick, and axe found 0 violations.
+* **m3 fixed.** The untick reason is now `z.string().pipe(ReasonText)` plus a non-empty check, the same rule as
+  `Reason` (`case-prepare.ts:62-73`). Step C7.3-25b refuses a lone surrogate, Hangul fillers, and a missing or
+  malformed `entered_at`, with no audit line written.
+* **m4 fixed.**
+  - C7.3-25c: a wrong version on untick is a 409 of type `/stale`. Deleting the check at `:769` would now fail it.
+  - C7.3-32: on a recorded filing the untick is a 409 of type `/recorded`, in words, and the tick is kept. The step
+    puts in a `filing_record` by SQL and deletes it after; this is test scaffolding only, no demo step depends on it.
+* **m5 fixed.** The page now branches on the problem type, `/\/(stale|not-ticked)$/` (`answer-sheet.tsx:222`). "Not
+  ticked" has its own type, `…/not-ticked`, asserted in C7.3-27.
+* **Break M1 (audit inside the transaction): correct.**
+  - `tx.auditEvent.create` (`case-prepare.ts:777`) writes the same fields as `Audit.log` (`core.ts:136`): summary cut
+    to 600, detail, `combinationId: null`. It cuts by character, so it never splits an emoji.
+  - A failed audit write now rolls back the untick.
+* **The untick lookup (`:716`) is sound.** It is bounded by the item's first ended tick and uses
+  `@@index([workspaceId, at])`. Every untick ends a tick, so no untick is missed.
+* **The re-tick's accessible name** now matches what the button shows ("Entered again in the portal: <section>").
+  C7.3-49/50 use it.
+
+**Still open (Minors; m6 b–e as the builder listed them):**
+- **m7 (new)** `answer-sheet.tsx:249`: Enter submits even while an input method is composing, because there is no
+  `e.nativeEvent.isComposing` check.
+  - Scenario: an officer types a reason in Japanese or Chinese; the Enter that confirms the conversion submits a half-
+    composed reason.
+  - The same gap exists in other Enter handlers (no `isComposing` anywhere in `web/src`).
+- **m8 (claim narrower than stated)** The new progress suffix (`:82`) counts only `waiting`.
+  - When every section is ticked but an answer is typed and not yet confirmed (a to-confirm answer, which is not
+    "waiting"), the line still reads "Every section is ticked …" next to "To do · Waiting for 1 fact to answer or
+    confirm…" (probe: waiting total 0).
+  - Both statements are true and they do not contradict, so this is not a defect. It is recorded because the round-2
+    summary says this case is covered.
+- **m5 remainder:** a `…/recorded` 409 still shows as a red "Not saved" with the server's words. Concept §4 says read
+  only. The words are clear ("read-only: the tick … is not changed").
+
+**Verdict: Approve** for 1c9918f6e. No open Blocker or Major. Open Minors: m6 b–e, m7 (`answer-sheet.tsx:249`), m8
+(`answer-sheet.tsx:82`), and the m5 remainder (`answer-sheet.tsx:222`).
