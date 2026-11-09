@@ -210,6 +210,9 @@ class ProblemErrors implements ExceptionFilter {
     // A malformed id (not a UUID, or with a NUL byte) is simply not found (review #4, break m5); so is a stored file that
     // is gone or whose folder is not a folder (a download: QA-4, break m5).
     if (e?.code === "P2025" || (/^(ENOENT|ENOTDIR)$/.test(String(e?.code)) && e?.status === 404) || e?.code === "P2023" || e?.name === "NotFoundError" || /Error creating UUID|invalid input syntax for type uuid|invalid byte sequence for encoding/i.test(String(e?.message))) return send(404, "Not found", "Not found (it may have been removed by a reset).");
+    // C6.17 (BR-5, BR-10): a write on a stage that has ended (its rows are kept as they were), or a case whose current
+    // stage moved under it, is refused by the database: a 409 with plain words, nothing changed.
+    if (/case_stage_ended|case_stage_current|case_stage_one_current|case_stage_forward/.test(String(e?.message ?? ""))) return send(409, "Changed since you read it", "This case moved to its next stage: the earlier stage's filings, documents and findings are kept as they were and can no longer be changed. Read the case again. Nothing was changed.", { code: "stage_ended" });
     const db = String(e?.message ?? "").match(/combination_level: ([^\n"]+)/);
     if (db) return send(409, "Not allowed at this level", `${db[1].trim()} (refused by the database).`);
     // The detail goes to the server log only: never a database call, a stack or a server path in the browser (review #4).

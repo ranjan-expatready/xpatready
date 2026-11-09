@@ -83,7 +83,8 @@ export class EmployerLinks {
     const written = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${r.c.id}::uuid FOR UPDATE`; // BR-6: one link at a time
       // Break m7: in this capability's own words (the C8.2 refusal speaks of people).
-      if (await tx.filingRecord.count({ where: { caseId: r.c.id } })) notPossible("This application is recorded as submitted to IRCC, so it is read-only: no employer case is linked and no employer facts are copied.");
+      if (await tx.filingRecord.count({ where: { caseId: r.c.id, filing: { stage: { state: "CURRENT" } } } })) // C6.17 (review M1): the current stage's record only
+        notPossible("This application is recorded as submitted to IRCC, so it is read-only: no employer case is linked and no employer facts are copied.");
       const before = await linkedOf(tx, r.c.workspaceId, r.c.id);
       if (before) notPossible(`This case already relies on ${before.label} (linked ${dateWords(before.created_at)}). Its facts were copied then; edit a copied value on this case.`);
       // outside review on #1051: an answer save takes no case lock, so the current answers of the carried facts are locked
