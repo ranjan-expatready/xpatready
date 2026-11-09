@@ -1,25 +1,25 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: local_81ca34d8-6a97-4c29-9fd1-471e42cf7f6f Lead 3 · 9 Nov 22:35 IST (series 2; took over from Lead 2 (series 2, local_a07b26f2) at ~370k context, P-440)
+current_lead: local_48335a53-6041-4416-9442-c8814319aa84 Lead 4 · 9 Nov 23:45 IST (series 2; took over from Lead 3 (series 2, local_81ca34d8) at ~255k context, P-440)
 
-updated: 2026-11-09 22:35 IST by **Lead 2 (series 2, local_a07b26f2-…)** at hand-over to Lead 3 (series 2, local_81ca34d8-…) · weekly 8% at 22:30 IST · milestone: **M2 60/60 holds; M3 20 of 29 Works on main (C7.10, C6.13, C6.14, C3.16 merged since 17:48); target 26 (P-434)** · rules: **`RULES.md`** + DECISIONS P-354 to P-438 · Lead 1's full page: `history/STATE-2026-11-09-2030-lead1s2.md` · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-09 23:45 IST by **Lead 3 (series 2, local_81ca34d8-…)** at hand-over to Lead 4 (series 2, local_48335a53-…) · weekly 11% at 23:42 IST (~2%/h) · milestone: **M2 60/60 holds; M3 20 of 29 Works on main 7e32ee210 (C6.19, C8.3, C10.2, C7.3 merged 23:13 IST, waiting for qa); target 26 (P-434)** · rules: **`RULES.md`** (as of P-440) + DECISIONS P-441 · Lead 2's hand-over block: `history/STATE-2026-11-09-2235-lead2s2-handover-block.md` · this branch: `lead/2026-11-07-lead31`
 
-## Hand-over: Lead 2 (series 2) → Lead 3 (series 2), 22:35 IST — read this first
-**Founder's goal (P-434, P-439):** 26 of 29 Works first, then all 29, as fast as the gates allow; hourly report in IST (Works, merged, blocked, next three); stop clean at 95% weekly. Standing approvals (P-434): requeue, retarget, draft/ready, re-run failed CI parts, label on Approve + green; paid runs to US$50 today, ledger first (spent ~US$2: C6.5 reads US$0.026 + a US$0.196 unbilled reservation, C7.5 checkpoint US$0.89). **New today: P-440 token hard rules** (RULES.md "Tokens"; hand over at ~250k; refresh RULES at each hand-over).
-**Works on main 20.** Last founder message ~22:30 IST. Lead 2's full page: `history/STATE-2026-11-09-2235-lead2s2-final.md`.
-| Row | Where it stands (22:35 IST) | Next step | ETA IST |
+## Hand-over: Lead 3 (series 2) → Lead 4 (series 2), 23:45 IST — read this first
+**Founder's goal (P-434, P-439):** 26 of 29 Works first, then all 29; hourly report in IST (Works, merged, blocked, next three; last sent 23:31 IST, next 00:30); stop clean at 95% weekly. Paid runs to US$50 today, ledger first (spent ~US$2). Founder asleep from ~23:50 IST: night rules below.
+| Row | Where it stands (23:45 IST) | Next step | ETA IST |
 |---|---|---|---|
-| C6.16 | #1257 merged | cloud qa-c616 round; Lead dispatches its nightly when asked | ~23:45 |
-| C6.17 | #1262 labelled, in queue | qa-c617 waits for the merge, then its round | ~00:30 |
-| C8.3 | #1440 labelled (migration read: guard function only) | qa-c83b after merge (QA-345) | ~01:00 |
-| C6.19 | #1441 labelled | qa-c619 after merge (QA-338) | ~01:00 |
-| C7.3 | #1430 labelled | qa-c73-c102 after merge; **Lead's Adobe Validate (Acrobat granted to Lead 2 only: re-ask `request_access` "Acrobat" in a founder-typed turn)** | ~02:00 |
-| C10.2 | #1435 labelled | same lane; Lead's Adobe Validate of the Paper IMM 5257 | ~02:30 |
-| C7.5 | #1396: checkpoint run committed b0727d19b (run 242bb5a6) | qa-c75 labels #1396 on green (P-275), then its round | ~01:30 |
-| C6.5 | #1444 54/56: "14200.00" is text; ruling on #1444 | cloud fix-c65-number, then diff-only Opus, then qa labels | ~02:30 |
-| C7.8 | QA-355 (qa #1446, labelled) | cloud fix-qa355 (#1450 draft); then qa gate A + nightly | ~03:00 |
-**Also:** #1446 qa records labelled (records queue). The Lead's records PR from `lead/2026-11-07-lead31` (P-440 RULES, check-docs guard, skills) opens when the queue is empty (P-436 (3)). C7.5 run kit: `side-session-notes/local_f135f805-…/c75-checkpoint-run.sh`, scratch `$TMPDIR/c75` (`.tools` linked). Sandbox lessons: the drafting child gets no proxy (live launcher runs from a Terminal tab); simple reads go by curl with `allowed_domains`; `pg_ctl status` cannot see Postgres from the sandbox (it runs).
-**Sessions (series 2):** Lead 4 standby `local_48335a53-…`; one more standby at the founder's next typed turn (asked at 22:35). Cloud lanes (count after a push): fix-c65-number, fix-qa355, qa-c616, qa-c617, qa-c75, qa-c83b, qa-c619, qa-c73-c102.
+| C6.19 | #1441 merged; qa round PASS 85/85, gate A 29/29; records #1455 queued | nightly C6.19 checkpoint **dispatched 23:4x**: put run id on #1455 if qa does not; Works on green | ~00:45 |
+| C8.3 | #1440 merged | cloud qa-c83 running its round; dispatch its nightly when asked | ~01:00 |
+| C6.17 | #1262 queued at bc7d26488 (Lead 3 merged main, Opus diff-only Approve) | qa-c617 polls until 21:30 UTC, then its round | ~01:30 |
+| C7.5 | #1396 queued (batch draft #1454) | qa-c75 lane: C7.5 round after merge; also labels #1444 (below) | ~01:30 |
+| C6.5 | #1444 Approve a5be1ac5f, CI running, unlabelled | qa-c75 lane told (23:4x, prompt box) to do the paid-result check and label on green (P-275) | ~01:30 |
+| C7.8 | #1450 (QA-355 fix) labelled, CI running | queue, then qa gate A + nightly | ~02:30 |
+| C7.3, C10.2 | #1430, #1435 merged; cloud qa-c73-c102 running | **Lead's Adobe Validate**: the demo's family case predates #1435 (Q7 still holds Other/From/To), so the Paper IMM 5257 must come from a fresh finished story on an isolated copy; Lead 3's agent was making `$TMPDIR/validate/imm5257-paper-c102-fresh.pdf` (TMPDIR /tmp/claude-501/…). Acrobat needs `request_access` "Acrobat" in your own session (the founder approves the dialog) | ~02:30 |
+| C6.16 | qa #1452 Partial, QA-359 (Major) ruled P-441; nightly C6.16 green on 1d07807c8 (42663208911) | cloud fix-qa359 (#1453 draft); #1452's shard 1 is red only on graph G2 (cites P-412): re-run after the records PR merges, then label | ~03:30 |
+**Records PR** from `lead/2026-11-07-lead31` (P-412 to P-441, P-440 RULES, check-docs guard, skills) opens when the queue is empty (P-436 (3)); #1452 waits on it.
+**Risk:** since 21:59 IST every `pull_request_target` run of label-guard and records-label ends in startup_failure (workflow files unchanged since 7 Nov, no GitHub incident, Actions permissions unchanged); merges still go through and the workflow_run sweep on main succeeds. Cause not found; look when the queue is quiet (a cheap read-only agent).
+**Night rules (lessons from 6-7 Nov and 9 Nov stalls, `memory/no-prompting-calls-unattended`):** no call that can wait on a permission prompt while the founder sleeps: no `run_in_terminal`, no writes into `.claude/`, no settings, no new `request_access`. GitHub by curl only. Read claude.ai/code every check in the built-in browser (Chrome's extension was not connected at 23:40); type into idle lanes by the textbox ref "Prompt", then confirm the bubble. Lanes that poll (qa-c617, qa-c75) still need a check of their pushes.
+**Sessions (series 2):** Lead 5 standby `local_6e87a775-…`; one more standby at the founder's next typed turn. Cloud lanes: qa-c83, qa-c73-c102, qa-c75 (+#1444), qa-c617 (polling), fix-qa359 (#1453); done and idle: qa-c619, qa-c616, fix-c65 (#1444), fix-qa355 (#1450), #1262 fix lane, merged lanes (archive later).
 
 ## Lead 40's last block (series 1): word for word in `history/STATE-2026-11-09-1748-lead40-final.md`; still live: old qa copy `.claude/worktrees/qa-2026-11-06-m2-walk-c8dd7e` (keep), follow-ups #1409 m10/m11, C7.9 wording (#1257 note), QA-326 to QA-328.
 
@@ -51,5 +51,5 @@ F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026
 6. **Records:** on `lead/2026-11-07-lead31` from the scratch worktree `$TMPDIR/lead31-merge`; records PR not opened yet (once a day, P-336).
 
 ## Leads, in order
-**Series 2 (P-433, from 9 Nov 17:48 IST; numbers restart; the current Lead is the one `current_lead:` names):** **Lead 3 (series 2, local_81ca34d8-6a97-4c29-9fd1-471e42cf7f6f)** (from 22:35 IST 9 Nov) · Lead 2 (series 2, local_a07b26f2-302e-4c73-bd1c-ca20dd9e8a79) (20:30-22:35 IST 9 Nov, ended at ~370k, P-440) · Lead 1 (series 2, local_f135f805-00be-49fc-ac67-df94b57dbc86) (17:48-20:32 IST 9 Nov, ended at ~400k). Standby: Lead 4 (series 2, local_48335a53-6041-4416-9442-c8814319aa84).
+**Series 2 (P-433, from 9 Nov 17:48 IST; numbers restart; the current Lead is the one `current_lead:` names):** **Lead 4 (series 2, local_48335a53-6041-4416-9442-c8814319aa84)** (from 23:45 IST 9 Nov) · Lead 3 (series 2, local_81ca34d8-6a97-4c29-9fd1-471e42cf7f6f) (22:35-23:45 IST 9 Nov, ended at ~255k, P-440) · Lead 2 (series 2, local_a07b26f2-302e-4c73-bd1c-ca20dd9e8a79) (20:30-22:35 IST 9 Nov, ended at ~370k, P-440) · Lead 1 (series 2, local_f135f805-00be-49fc-ac67-df94b57dbc86) (17:48-20:32 IST 9 Nov, ended at ~400k). Standby: Lead 5 (series 2, local_6e87a775-b6a8-4a50-8fa7-ad3b03548af6).
 **Series 1: Leads 1 to 41, before 9 Nov 17:48 IST**, never renamed or renumbered: the full list, word for word, is in `history/STATE-2026-11-09-2130-lead2s2.md` ("Leads, in order").
