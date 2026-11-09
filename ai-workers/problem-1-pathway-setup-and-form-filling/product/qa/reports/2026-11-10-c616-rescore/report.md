@@ -47,7 +47,16 @@ The checkpoint was loaded through Demo › Load the configured checkpoint. The c
   * Nothing is disclosed, but it cuts the channel the firm chose.
   * Neither the walk nor the pack covers it.
 
-## What moves C6.16 to Works
+## Update, 10 Nov after 03:28 IST: Works (fresh Opus reader, `verdict-works.md`)
+* **P-339 met.** The tech lead (Lead 5) dispatched `nightly.yml` run **42707165919** on GitHub's runners: main 751310cdb (after #1453), capabilities=C6.16, data=checkpoint. Job 129466930672 "packs (C6.16)": "C6.16.test.ts on the checkpoint: exit 0, 74/74 passed", Gate B passed. qa read this through the API (`nightly-42707165919-C6.16.txt`).
+* Main has since moved to 2cfdad961 (#1459). The only changes outside `product/` are four `tests/qa/` checks, which neither the pack nor the app reads, so the run stands for main's head.
+* No open Blocker, Critical or Major names C6.16, so the row is **Works**.
+* **QA-369 is ruled P-443** (the tech lead, reversible under P-390; the founder confirms as STATE F19): kept as built. It is now a Gap · Minor, with a pack step owed after the 26 (P-434).
+* Open Minors: QA-357, QA-358, QA-360, QA-368, QA-369.
+* **Records:** P-412 to P-443 are on `lead/2026-11-07-lead31` and reach main at the hand-over (P-436 (3)). They do not hold Works.
+* The gate A limits above still stand. The screens were walked on df52c9fc6.
+
+## What moved C6.16 to Works (before the update above)
 1. A green `nightly.yml` run (capabilities=C6.16, data=checkpoint) on main's head, with its run id in the row (P-339). No open Major or worse names C6.16, so gate B no longer holds C6.16 product PRs.
 2. **Records:** P-412 (F12) and P-441 go in DECISIONS.md (main stops at P-411), and STATE row F12 is closed.
 
