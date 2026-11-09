@@ -1,0 +1,131 @@
+NOTICE:  database "xr_studio_qa_c316" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_c316 on http://localhost:4471 (xr_studio_qa_c316), stops itself in 60 min
+== main head: cfaa199f4
+== 0 setup: Reset to the six, people and questions from the forms
+reset-to-six 201 
+vv people 200 
+SETUP questions through the people's steps: {"accepted":191,"applied":8,"ownYesNo":3,"byHand":58,"sections":28,"reused":0,"held":12,"approved":185,"placed":154,"refused":[],"retried":[]}
+SETUP questions through the people's steps: {"accepted":95,"applied":1,"ownYesNo":0,"byHand":14,"sections":5,"reused":0,"held":10,"approved":41,"placed":39,"refused":[],"retried":[]}
+VV 3f7cc42c-0b95-48e4-9eb9-0321ec84c9fd WP 4e4fba35-9153-46b2-8fa9-94090479d9ba UNION relationship.union_start_date CLIENT_LEVEL/DRAFT EMPLOYER CLIENT_LEVEL/DRAFT releases 0 spent 0
+== 1 screens: the author's Asked about
+SHOT 01a-library-fields-search-union
+ROWS ["Common law declared for canadian income tax","Had previous union","Joint financial accounts","Union start date"]
+URL http://localhost:4471/library/fields/relationship.union_start_date
+PANEL BEFORE Asked about | Whom this fact is about. A case asks it once at that level, and every form that reads it gets the one value. | Asked about | Person (about each person) | For example: passport number (Sample). | Filing (once for the application) | Not built: a person's fact asked once for the application. Ask it as an application fact instead. | Household (once for the household) | For example: date of marriage (Sample). | Organisation (once for the employer) | For example: employer's legal name (Sample). | Save as draft
+SHOT 01b-asked-about-before
+WARNING Saved AI results
+
+Changing this moves the saved AI results of 1 combination (6 saved runs); they replay only after a new run.
+Save as draft
+SHOT 01c-asked-about-picked
+TOAST Draft · 688 changes across 3 combinations · 226 in the shared library
+Review and release (914)
+PANEL AFTER Asked about | Whom this fact is about. A case asks it once at that level, and every form that reads it gets the one value. | Asked about | Person (about each person) | For example: passport number (Sample). | Filing (once for the application) | Not built: a person's fact asked once for the application. Ask it as an application fact instead. | Household (once for the household) | For example: date of marriage (Sample). | Organisation (once for the employer) | For example: employer's legal name (Sample). | Save as draft
+PILL [
+  'once for the household',
+  'about each person',
+  'once for the household',
+  'once for the employer'
+]
+SHOT 01d-asked-about-saved
+SHOT 03a-library-fields-search-employer
+ROWS ["Application number","Application type","Applied for","Authorizes release of information to a designated individual","Caq expiry date","Caq number","Funds available cad","Intended employment end date","Intended employment start date","Intended job duties","Intended job title","Intended stay from"]
+URL http://localhost:4471/library/fields/organisation.employer_name
+PANEL BEFORE Asked about | Whom this fact is about. A case asks it once at that level, and every form that reads it gets the one value. | Asked about | Person (about each person) | For example: passport number (Sample). | Filing (once for the application) | Not built: a person's fact asked once for the application. Ask it as an application fact instead. | Household (once for the household) | This is the employer's fact: choose Organisation, not Household. | Organisation (once for the employer) | For example: employer's legal name (Sample). | Save as draft
+SHOT 03b-asked-about-before
+WARNING none
+SHOT 03c-asked-about-picked
+TOAST Draft · 688 changes across 3 combinations · 226 in the shared library
+Review and release (914)
+PANEL AFTER Asked about | Whom this fact is about. A case asks it once at that level, and every form that reads it gets the one value. | Asked about | Person (about each person) | For example: passport number (Sample). | Filing (once for the application) | Not built: a person's fact asked once for the application. Ask it as an application fact instead. | Household (once for the household) | This is the employer's fact: choose Organisation, not Household. | Organisation (once for the employer) | For example: employer's legal name (Sample). | Save as draft
+PILL [
+  'once for the employer',
+  'about each person',
+  'once for the household',
+  'once for the employer'
+]
+SHOT 03d-asked-about-saved
+== 1 underneath
+organisation.employer_name v1 ORGANISATION DRAFT
+relationship.union_start_date v1 HOUSEHOLD DRAFT
+user-A · Configuration author set "Employer Name" to be asked once for the employer (was about each person; draft v1; goes out with the next release)
+user-A · Configuration author set "Union Start Date" to be asked once for the household (was about each person; draft v1; goes out with the next release)
+== 2 setup: release Visitor visa through its own steps (its checklist also adds the library's document types)
+Visitor visa docs refused [] submit 201  signoff 201 approve 201  release 0 -> 1 who user-A user-B marks relationship.union_start_date:household
+spent 0
+== 2 screens (setup): one document line by hand on the work permit (its checklist has no saved reading; live AI off)
+TYPES ["(a new type)","Fee payment receipt","Marriage certificate copy","Minor custody or parental authorization","Passport information page copy","Proof of financial support","Proof of legal status in country of residence","Purpose of travel evidence","US nonimmigrant visa copy","Visa application photos"]
+WHOSE ["Each applicant","Principal applicant","Spouse or partner","Once per couple","Each child","Each person","The application (once)","The representative","The sponsor"]
+== 2 setup: release the work permit through its own steps
+LMIA work permit docs refused ["draft the checklist: 409 No saved AI reading of IMM 5556 (03-2024) yet, so there is nothing to replay. A live reading waits for the founder's OK on its cost (Sample estimate under US$0."] submit 201  signoff 201 approve 201  release 0 -> 1 who user-A user-B marks organisation.employer_name:organisation,relationship.union_start_date:household
+spent 0
+== 3 screens: the worker's case
+COMBOS ["Visitor visa · release 1","With an LMIA – inside Canada · release 1"]
+DIALOG Open a case | The case works from the combination's latest release, frozen now: a later release never changes it. | Combination (released) | Visitor visa · release 1 | With an LMIA – inside Canada · release 1 | Case reference | Your firm's reference, at least 3 characters | Principal applicant's name | Shown to the client as written; Sample names only in the prototype | Client login that answers | Client A (simulated) | Client B (simulated) | Case team | Stand-in | Representative of record | Representative (Sample) · CICC R000000 | Second representative (Sample) · CICC R000002 | Licensed, named on IMM 5476; IRCC deals with them. | Case officer | Representative (Sample) | Case officer (Sample) | Second representative (Sample) | Prepares the case. | IMM 5476's representative part fills from the representative of record. | Relies on an employer case | Offered: the With an LMIA – inside Cana
+SHOT 06a-open-worker-case
+CASE URL http://localhost:4471/cases/4f7fd71d-23df-4061-9a25-1b28ef8fa19a
+CASE PAGE Cases | › | QA-C316-W2 | QA-C316-W2 | Open | Release 2 | Readiness: Not ready · 0% (lowest: With an LMIA – inside Canada: Client A) | Representative (Sample) · CICC R000000 · Case officer (Sample) | Stand-in | Case team | Relies on an employer case | Stand-in | Offered: the With an LMIA – inside Canada forms read 2 employer facts; you can copy them from an employer case. | Choose employer case… | 126 questions for this household · 7 answered · 0 to confirm · 104 required not answered · 9 questions of the release not asked here (no form of this case reads them) | Client questionnaire | Client A answers on their phone, for everyone travelling. | Open it as Client A (simulated) | People and filings | 1 filing | Add spouse or partner | Person	Role | 	Filing	Status	 | Actions | Client A	Principal applicant	Own application	Not started	 | Documents | Stand-in | What each person must provide, from the case's release. Each line says why it is there. | Not worked out for this combination | The document checklist per person is not derived yet for this combination (it is worked out once its requirements are checked). Nothing is guessed. | Case check from confirmed facts (staff only) | Stand-in | Open case check | Client A | Not run | How each form is filed | Each form starts on its combination’s channel. Change one person’s form only to a way IRCC accepts; the combination stays as released. | Client A · Principal applicant | IMM 5710 | Channel: | PDF upload | Signature: | No signature | 
+EMPLOYER Q not on first view
+SHOT 06b-worker-case-before-link
+== 4 screens: C1.3's first step
+APPLICATION TAB: 'About the employer' questions: 1 | Quebec Acceptance Certificate (CAQ) expiry date | Not answered | Add | Quebec Acceptance Certificate (CAQ) number | Not answered | Add | Start date of expected employment | Not answered | Add | LMIA number or LMIA-exempt offer of employment number | Not answered | Add | End date of expected employme
+SHOT 07a-application-asks-employer-name-once
+CLIENT A TAB: asks the employer's name itself: 1 | the unmarked address on Client A: Complete address of the prospective employer | Not answered | Add | Whether the person has been issued a Provincial Nominee Program certificate | Not answered |
+SHOT 07b-client-a-tab
+PANEL Rely on an employer case | Stand-in | The employer's facts this worker's forms read are copied once, now. Later changes on the employer case are not copied; edit a copied value on this case. | Employer case | Sample employer case: Sample Employer Ltd (Sample) | Copied to Client A's case once, now (the forms read these 3) | LMIA number or LMIA-exempt offer of employment number | SAMPLE-0000000 | New | Complete address of the prospective employer | 1 Example Street, Hamilton, ON L8P 0A1, Canada | New | Name of the prospective employer | Sample Employer Ltd (Sample) | New | Cancel | Copy 3 facts
+SHOT 08a-rely-on-employer-case-panel
+HEADER AFTER Relies on an employer case | Stand-in | Sample employer case: Sample Employer Ltd (Sample) · facts copied 9 Nov 2026; later changes there are not copied | 126 questions for this household · 10 answered · 3 to confirm · 101 required not answered · 9 questions of the release not asked here (no form of this case reads them) | Client questionnaire | Client A answers on their phone, for everyone travel
+SHOT 08b-linked-header
+APPLICATION TAB AFTER: Quebec Acceptance Certificate (CAQ) expiry date | Not answered | Add | Quebec Acceptance Certificate (CAQ) number | Not answered | Add | Start date of expected employment | Not answered | Add | LMIA number or LMIA-exempt offer of employment number | SAMPLE-0000000 | Entered by staff · to confirm | Employer case | employer case · Case officer · 9 Nov, 12:54 · fills IMM 5710 for Client A | Edit | En
+SHOT 08c-application-employer-name-copied
+CLIENT A AFTER: employer reads: Answered once for everyone it concerns | Date the person married or began the common-law relationship with the current spouse or partner: not answered yet | Change it in For the household | Name of the prospective employer: Sample Employer Ltd (Sample) | Answered for the employer by Case officer · 9 Nov, 12:54 · Change it in About the employer | address: Complete address of the prospective employer | 1 Example Street, Hamilton, ON, L8P 0A1, canada | Entered by staff · to confirm | Employer case | employer case · Case officer · 9 Nov, 12:54 · fills IMM
+SHOT 08d-client-a-reads-employer-name
+== 4 underneath: where each copied fact landed
+case.lmia_or_offer_number on case · DECLARED
+organisation.employer_address on principal · DECLARED
+organisation.employer_name on case · DECLARED
+== 5 screens: a copy of IMM 5710
+ROW BEFORE IMM 5710 for Client A | Checked copy, not for filing | 79 facts to answer or confirm before filing | 10 mandatory form fields left empty | Generate a copy | Declared or confirmed answers for 3 of 169 form fields. A copy also lists the form fields to write by hand. | Facts to answer or confirm (79) | Marked mandatory on IRCC's form, still empty (39): Adobe's Validate asks for each, and may ask for more that its own checks make mandatory | Who signs: Client A · how it is signed is not set on the release's line yet
+ROW AFTER IMM 5710 for Client A | Checked copy, not for filing | 79 facts to answer or confirm before filing | 10 mandatory form fields left empty | Generate a new copy | Declared or confirmed answers for 3 of 169 form fields. A copy also lists the form fields to write by hand. | Facts to answer or confirm (79) | Marked mandatory on IRCC's form, still empty (39): Adobe's Validate asks for each, and may ask for more that its own checks make mandatory | Generated | Copy of 9 Nov, 12:54 · 3 form fields written · read back and checked | Download | Validated copy uploaded back | Filed | Not yet: IMM 5710: no fill trial is recorded for edition IMM 5710 (09-2023), so this copy is for checking only, not for filing. | Who signs: Client A · how it is signed is not set on the release's line yet
+== 5 underneath: the copy's boxes and its XFA data
+<Employer><Name>Sample Employer Ltd (Sample)</Name><Addr>1 Example Street, Hamilton, ON L8P 0A1, canada</Addr></Employer> <Employer /> <Employer /> <Employer />
+<LMO>SAMPLE-0000000</LMO>
+form1[0].Page3[0].DetailsOfWork[0].Employer[0].Addr[0] = written
+form1[0].Page3[0].DetailsOfWork[0].Employer[0].Name[0] = written
+== 6 screens: the Visitor visa family case
+CASE URL http://localhost:4471/cases/7719aa15-bd10-4d71-b123-4b1d8cff76a8
+ADD DIALOG Add a spouse or partner | Within the limits of this case's release. Their questions are added to the Client questionnaire at once. | Name | Sample names only in the prototype | Cancel | Add
+ADD DIALOG Add a child | Within the limits of this case's release. Their questions are added to the Client questionnaire at once. | Name | Sample names only in the prototype | Cancel | Add
+PEOPLE People and filings | 3 filings | Add spouse or partner | Add child | Person	Role | 	Filing	Status	 | Actions | Client A	Principal applicant	Own application	Not started	 | Client B	Spouse or partner	Own application	Not started	 | Child C	Child	Own application	Not started	 | Facts from an earlier case | Client A has an earlier case with this firm. Nothing is copied until you tick a fact and re-confirm it; the earlier case never changes. | QA-C316-W2 · With an LMIA – inside Canada · opened 9 Nov 20
+TABS ["The representative\n6 missing","The application\n21 missing","Client A\n88 missing","Client B\n88 missing","Child C\n89 missing"]
+SHOT 10a-vv-family-case
+== 6 underneath: how the case asks the union date
+1 question(s): [('The application', 'For the household', ['Client A', 'Client B'])]
+== 7 screens: answered once, read by both adults, then IMM 5257 for each
+SHOT 11a-application-asks-union-date-once
+EDITOR Add: Date the person married or began the common-law relationship with the current spouse or partner | The application · fills IMM 5257 for 2 people (2 form fields) | Date the person married or began the common-law relationship with the current spouse or partner | For the household | Read for: Client A, Client B | For example, 14 6 2019 | Day | Month | Year | Cancel | Save | controls: ["BUTTON:button:Close","INPUT:text:","INPUT:text:","INPUT:text:","BUTTON:submit:","BUTTON:submit:Cancel","BUTTON:submit:Save"]
+SHOT 11b-union-date-typed
+AFTER SAVE Date the person married or began the common-law relationship with the current spouse or partner | For the household | Read for: Client A, Client B | 30 Jun 2012 | Entered by staff · to confirm | Agent view · Case officer · 9 Nov, 12:54 · fills IMM 5257 for 2 people | Edit | Official language in which the person wants to receive service for this application | Not answered | Add | Kind of temporary 
+SHOT 11c-union-date-saved-once
+Client A household reads: Answered once for everyone it concerns | Date the person married or began the common-law relationship with the current spouse or partner: 30 Jun 2012 | Answered for the household by Case officer · 9 Nov, 12:54 · Change it in For the household
+Client A has its own Add/Edit for the union date: 0
+SHOT 12-client-a-reads-household-answer
+Client B household reads: Answered once for everyone it concerns | Date the person married or began the common-law relationship with the current spouse or partner: 30 Jun 2012 | Answered for the household by Case officer · 9 Nov, 12:54 · Change it in For the household
+Client B has its own Add/Edit for the union date: 0
+SHOT 12-client-b-reads-household-answer
+Child C household reads: none
+Child C has its own Add/Edit for the union date: 0
+IMM 5257 Client A Copy of 9 Nov, 12:54 · 1 form fields written · read back and checked | Download 
+IMM 5257 Client B Copy of 9 Nov, 12:54 · 1 form fields written · read back and checked | Download 
+SHOT 13-imm5257-copy-client-b
+IMM 5257 Child C Copy of 9 Nov, 12:54 · 0 form fields written · read back and checked | Download 
+== 7 underneath
+1 current answer(s), on case
+child: <DateOfMarriage />
+principal: <DateOfMarriage>2012-06-30</DateOfMarriage>
+spouse_or_partner: <DateOfMarriage>2012-06-30</DateOfMarriage>
+== spent (US$): 0
+copy stopped

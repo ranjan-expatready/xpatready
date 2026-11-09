@@ -36,6 +36,8 @@ export type GroupAnswer = { id: string; subjectId: string; group: string; noneAp
  *  declared answer fills at once, whoever typed it; a document's read value is a proposal, never an answer, until
  *  "Confirm & use"). `mark`: who gave it, shown beside it. */
 export type Confirmation = { confirmed: boolean; why: string; fills: boolean; mark: AnswerMark };
+/** C6.16: the channel of an answer a person saves on their own link (source actor "person:<subject id>"). */
+export const OWN_LINK = "own_link";
 
 /** Fields the client answers (P-72 "the client's fields"): placed in the questionnaire or the client's profile, and
  *  about a person, a relationship or the application (never the representative's own facts). */
@@ -82,6 +84,8 @@ export function confirmation(s: Snapshot, a: Answer, who: Participant | undefine
   // "Confirm section": readiness, Ready to file and signing wait for the client.
   if (a.awaitsClient) return { confirmed: false, why: CONFIRM_WORDS.awaits_client, fills, mark: "by_staff" };
   if (a.status === "VERIFIED") return { confirmed: true, why: CONFIRM_WORDS.officer, fills, mark: "confirmed" };
+  // C6.16 (P-78, challenge M2): saved by the person on their own link: their own answer (client fields only reach it).
+  if (a.channel === OWN_LINK) return isClientField(s, a.field) ? { confirmed: true, why: CONFIRM_WORDS.person_own, fills, mark: "declared" } : { confirmed: false, why: CONFIRM_WORDS.staff, fills, mark: "by_staff" };
   // The client's re-confirmation of an officer's answer counts as the client's own answer (C6.18).
   if (a.channel !== "questionnaire" && a.channel !== CLIENT_RECONFIRM) return { confirmed: false, why: CONFIRM_WORDS.staff, fills, mark: "by_staff" };
   if (!isClientField(s, a.field)) return { confirmed: false, why: `Declared: it fills the forms now and waits for the officer's "Confirm section" (a fact the officer confirms from a document or record)`, fills, mark: "declared" };
