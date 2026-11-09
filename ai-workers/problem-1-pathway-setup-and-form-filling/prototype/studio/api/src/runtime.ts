@@ -112,8 +112,8 @@ export class Runtime {
   /** B128 (QA-153): the relatives' answer subjects of this case (a parent a form describes, never a person on it), each
    *  with the key the engine reads it under (`<person>/parent_1`). A relative's subject hangs on the party of the person
    *  whose relative it is, as the application's own subject hangs on the principal's (AnswerSubject: no migration); one
-   *  per party and relation, made under a lock (subjectFor). Should two ever exist, every read takes the same one (the
-   *  lowest id), so answers are never split between them; a database check needs a migration (the PR's question). */
+   *  per party and relation, made under a lock (subjectFor) and held by the database (B157: a partial unique index,
+   *  migration 20261108050000_b157_one_relative_subject). Reads still take the lowest id, as before. */
   async relativesOf(c: Reached): Promise<{ id: string; key: string }[]> {
     const owner = new Map(c.participants.filter((p) => p.role !== "case").map((p) => [p.subject.partyId, p.subjectId]));
     if (!owner.size) return [];
@@ -126,7 +126,8 @@ export class Runtime {
   /** B128: who an answer about `subjectId` belongs to on this case, and the stored subject it is kept on. A relative's
    *  key names a person on the case (never the application) and a relation the release's forms read (with `fact`, that
    *  fact about that relation: review m2, a fact no form reads about a parent is never stored); its subject is made on
-   *  its first answer (`create`), under a lock, so two first answers never make two. */
+   *  its first answer (`create`), under a lock, so two first answers never make two; B157: should the database refuse a
+   *  second all the same (its unique index), the one it holds is read and used. */
   private async subjectFor(c: Reached, subjectId: string, create: boolean, fact?: string): Promise<{ who: Reached["participants"][number]; stored: string | null }> {
     const rel = relativeOf(subjectId);
     const who = c.participants.find((p) => p.subjectId === (rel ? rel.owner : subjectId) && (!rel || p.role !== "case"));
@@ -136,11 +137,12 @@ export class Runtime {
     if (!read) fail(fact ? `No form of this case's release asks this about ${isListRelation(rel.relation) ? listWords(rel.relation).one : "that parent"}.` : "No form of this case's release describes that relative.", HttpStatus.NOT_FOUND);
     const found = (await this.relativesOf(c)).find((x) => x.key === subjectId);
     if (found || !create) return { who: who!, stored: found?.id ?? null };
+    const held = () => this.db.answerSubject.findFirst({ where: { partyId: who!.subject.partyId, subjectKind: rel.relation }, orderBy: [{ id: "asc" }] });
     const stored = await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`relative|${who!.subject.partyId}|${rel.relation}`}))`;
       const again = await tx.answerSubject.findFirst({ where: { partyId: who!.subject.partyId, subjectKind: rel.relation }, orderBy: [{ id: "asc" }] });
       return again?.id ?? (await tx.answerSubject.create({ data: { workspaceId: c.workspaceId, partyId: who!.subject.partyId, subjectKind: rel.relation, label: `${who!.subject.label}: ${rel.relation.replace(/_/g, " ")}` } })).id;
-    });
+    }).catch(async (e) => { const one = unique(e) ? await held() : null; if (!one) throw e; return one.id; });
     return { who: who!, stored };
   }
 
