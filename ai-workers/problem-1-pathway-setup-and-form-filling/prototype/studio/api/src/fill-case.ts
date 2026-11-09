@@ -33,7 +33,7 @@ import { formValues, notOnFormLines, type Inventory } from "../../engine/form-va
 import { mandatoryOpen, type CaseWords, type OpenField, type RequiredWhen } from "../../engine/runtime/mandatory.ts";
 import { solutionFile, writeForm } from "./fill.ts";
 import { trialFor, type EditionMap } from "./fill-trials.ts";
-import { ADDED_TAG, addedOn, dayWords, additionsOf, completedSince, withAdditions, type AddedRecord } from "../../engine/runtime/added-forms.ts";
+import { ADDED_TAG, addedOn, dayWords, additionsOf, additionsOfStage, completedSince, withAdditions, type AddedRecord } from "../../engine/runtime/added-forms.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 
 type H = string | undefined;
@@ -356,7 +356,7 @@ export class CaseForms implements OnModuleInit {
       // C7.8 (M1): the release with the case's added forms joined, so an added form that fills is written from its frozen map.
       // C6.17 (review of #1262 M3): only the forms added on the copy's own stage (the stage of its release's combination).
       const pin = x.case.pins.find((p) => p.configReleaseId === x.configReleaseId)!;
-      const snapshot = withAdditions(pin.release.snapshot as unknown as Snap, additionsOf(x.case.formAdditions.filter((a) => a.filing.stage.combinationId === pin.combinationId))) as unknown as Parameters<typeof writeForm>[0];
+      const snapshot = withAdditions(pin.release.snapshot as unknown as Snap, additionsOf(additionsOfStage(x.case.formAdditions, pin.combinationId))) as unknown as Parameters<typeof writeForm>[0];
       const dir = join(VAR("demo"), "cases", x.caseId); mkdirSync(dir, { recursive: true });
       const base = `${x.formNumber.replace(/\s+/g, "")}-${short(x.subjectId)}-${id}`;
       // P-145, C11.6: stamped "Copy, not for filing" when this person's form is filed Online now; recorded with the copy,

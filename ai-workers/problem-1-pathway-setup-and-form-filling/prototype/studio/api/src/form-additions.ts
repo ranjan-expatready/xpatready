@@ -249,7 +249,7 @@ export class FormAdditions {
     return { a: a!, c };
   }
 
-  /** POST …/form-additions/:id/remove (BR-8): a reason is required; refused once anything on the case is recorded; the row
+  /** POST …/form-additions/:id/remove (BR-8): a reason is required; refused once anything on the case's current stage is recorded; the row
    *  is kept, marked removed. */
   async remove(actor: Actor, id: string, body: unknown) {
     const { a, c } = await this.addition(actor, id, true);
