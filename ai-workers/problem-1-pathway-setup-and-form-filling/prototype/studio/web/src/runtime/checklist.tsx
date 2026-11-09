@@ -21,7 +21,9 @@ export type ChecklistLine = { id: string; label: string; lineage: string; reason
   state: LineState; state_words: string; state_reason: string | null; state_by: string | null; state_at: string | null; version: number; documents: StoredDocument[]; kept: boolean;
   /** C6.15: the substitute set the line uses (any one of / all of), and whether the person's files meet it. */
   set?: { name: string; mode: "any_one" | "all_together"; words: string; members: { key: string; name: string; standard: boolean; when_staff: string | null }[] } | null;
-  set_status?: { met: boolean; words: string } | null };
+  set_status?: { met: boolean; words: string } | null;
+  /** C6.17 (BR-6): a file from the stage before, to check for this application. */
+  on_file?: { from: string; file_name: string; uploaded_at: string; words: string } };
 /** B102 (A6, BR-8): the person's age as the lines read it (engine/runtime/case-checklist.ts PersonAge). */
 type Age = { years: number | null; on: string | null; why: string; worked_out: boolean };
 type Person = { subject: string; label: string; role: string; applies: boolean; lines: ChecklistLine[]; waiting: ChecklistLine[]; not_needed: ChecklistLine[]; age?: Age };
@@ -143,6 +145,7 @@ function LineRow({ caseId, p, l, nameOf }: { caseId: string; p: Person; l: Check
           {l.set.members.filter((m) => m.when_staff).map((m) => <p key={m.key} className="text-text-muted">{m.name} is acceptable when: {m.when_staff}</p>)}
           {l.set_status ? <p className={l.set_status.met ? "text-text-muted" : "font-medium"} data-set-status={l.set_status.met ? "met" : "open"}>{l.set_status.words}</p> : null}</div> : null}
         <p className="mt-0.5 text-xs text-text-muted">{current ? <>{currents.length > 1 || current.member ? "Files" : "File"}: <span className="[overflow-wrap:anywhere]">{currents.map((d) => `${d.file_name}${d.member ? ` (${d.member.name})` : ""}`).join(", ")}</span>{earlier ? ` · ${earlier} earlier` : ""}</> : "No file yet"}{l.state_at ? ` · Last change ${when(l.state_at)}${l.state_by ? ` by ${nameOf(l.state_by)}` : ""}` : ""}</p>
+        {l.on_file ? <p className="mt-0.5 text-xs font-medium text-text-warn" data-on-file>{l.on_file.words}</p> : null}
         {error ? <p role="alert" className="mt-1 text-xs text-text-danger" data-line-error>{error}</p> : null}</div>
       <div className="flex items-start justify-end">
         <input ref={file} type="file" className="sr-only" tabIndex={-1} aria-hidden accept="application/pdf,image/jpeg,image/png" data-upload-input

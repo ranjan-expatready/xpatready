@@ -20,6 +20,7 @@ import { EmployerLinkFor, EmployerLinkLine } from "./employer";
 import { EligibilityCard, EligibilityPage } from "./eligibility";
 import { PeopleAndFilings } from "./filing-changes"; // C6.13
 import { ReleaseNotice } from "./release-update"; // C9.5
+import { EarlierStages, earlierOf, StageStrip } from "./stages"; // C6.17
 import type { OpenableRelease } from "../../../contracts/runtime";
 
 /** Simulated case people (api/src/core.ts RUNTIME_ACTORS); the switch is demo chrome. */
@@ -135,9 +136,13 @@ function NewCaseDialog({ close }: { close: () => void }) {
   // Review M1 (d7b9b80f): the choice is read against the list now offered, so what the select shows is what is sent
   // (after a reload drops the chosen release, the first offered one is both shown and sent).
   const chosen = combos.some((c) => c.combination_id === f.combinationId) ? f.combinationId : combos[0]?.combination_id;
-  const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: chosen, reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, ...(team.representative ? { representative: team.representative } : {}), ...(team.officer ? { caseOfficers: [team.officer] } : {}), idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => nav(`/cases/${c.id}`) });
+  // C6.17 (BR-3): a later stage of a route records its earlier stages ("Done before we started").
+  const chosenRelease = combos.find((c) => c.combination_id === chosen);
+  const [earlier, setEarlier] = React.useState<Parameters<typeof EarlierStages>[0]["value"]>({});
+  const earlierBody = earlierOf(chosenRelease, earlier);
+  const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: chosen, ...(earlierBody ? { earlier: earlierBody } : {}), reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, ...(team.representative ? { representative: team.representative } : {}), ...(team.officer ? { caseOfficers: [team.officer] } : {}), idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => nav(`/cases/${c.id}`) });
   // Break m1: a 409 (the release stopped being ready while the dialog was open) reloads the list, so it is not offered again.
-  const submit = () => create.mutate(undefined, { onError: (e) => { if (e instanceof ApiError && e.status === 409) void releases.refetch(); const p = e instanceof ApiError ? e.problem.errors ?? [] : []; setErrors(Object.fromEntries(p.map((x) => [x.field.split(".")[0], x.message]))); } });
+  const submit = () => create.mutate(undefined, { onError: (e) => { if (e instanceof ApiError && e.status === 409) void releases.refetch(); const p = e instanceof ApiError ? e.problem.errors ?? [] : []; setErrors(Object.fromEntries(p.flatMap((x) => [[x.field.split(".")[0], x.message], [x.field, x.message]]))); } });
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title="Open a case" description="The case works from the combination's latest release, frozen now: a later release never changes it." guard
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={create.isPending} disabled={!combos.length} title={!combos.length && !releases.isLoading && !loadFailed ? (notReady.length ? "No released combination is ready for new cases yet" : "Nothing is released yet") : undefined} onClick={submit}>Open case</Button></>}>
@@ -147,6 +152,7 @@ function NewCaseDialog({ close }: { close: () => void }) {
             <Select value={chosen} onChange={(e) => setF({ ...f, combinationId: e.target.value })}>{combos.map((c) => <option key={c.combination_id} value={c.combination_id}>{c.combination} · release {c.version}</option>)}</Select>
           </Field>
         )}
+        <EarlierStages release={chosenRelease} value={earlier} onChange={setEarlier} errors={errors} />
         {notReady.length ? (
           <Notice tone="warn" title={combos.length ? "Released, not ready for new cases" : "No released combination is ready for new cases yet"}>
             <ul className="space-y-1 [overflow-wrap:anywhere]" data-testid="not-ready-for-cases">{notReady.map((r) => <li key={r.combination_id}><span className="font-medium">{r.combination} · release {r.version}</span>: {r.why}</li>)}</ul>
@@ -197,6 +203,7 @@ function CasePage() {
           <Link to={`/cases/${c.id}/questionnaire`} onClick={() => setActor(c.client)} className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-medium text-text-link hover:underline">Open it as {client?.name ?? "the client"} (simulated)<ExternalLink className="size-3.5" aria-hidden /></Link>
         </div>
       </div>
+      <StageStrip caseId={c.id} />
       <ReleaseNotice caseId={c.id} />
       {/* C6.13 (B135): people with their filings, Make principal, Remove filing and Add filing back. */}
       <PeopleAndFilings caseId={c.id} people={c.people} canAdd={c.can_add ?? []} onAdd={setAdding} roleOf={roleOf} nameOf={nameOf} />

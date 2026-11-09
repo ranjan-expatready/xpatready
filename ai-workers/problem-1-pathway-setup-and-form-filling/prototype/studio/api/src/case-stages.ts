@@ -96,7 +96,7 @@ export class CaseStagesService {
     const rows = c.stages.map((s) => ({ ...s, stage_key: s.stageKey, state: s.state as StageState }));
     const { current, next } = nextOf(rows);
     const views = await this.views(c), curView = views.find((v) => v.id === c.stage.id)!;
-    const base = { from: { stage: c.stage.id, name: c.stage.staffName, version: c.stage.version }, key_details: curView.key_details };
+    const base = { from: { stage: c.stage.id, name: c.stage.staffName, client_name: c.stage.clientName, version: c.stage.version }, key_details: curView.key_details };
     const unrecorded = await this.unrecorded(c);
     if (!current || !next) return { ...base, to: null, refused: "This is the last stage of the case's route: there is no next stage.", people: [], counts: { person_answers_used: 0, asked_again: 0, new_questions: 0, forms: 0, documents: 0 }, forms: [], documents: [], deadline: null, unrecorded, words: "" };
     const st = await this.startability(next.combinationId);
