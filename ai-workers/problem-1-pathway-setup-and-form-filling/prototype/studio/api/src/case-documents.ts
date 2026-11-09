@@ -99,6 +99,9 @@ export function savedRead(sha256: string, dir = SAVED_READS()): SavedRead | null
 
 // ── Requests ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 const SubjectBody = z.object({ subjectId: z.string({ message: "Name the person (subjectId)." }).regex(UUID, "Name the person (subjectId)."), mode: z.enum(["replay", "live"], { message: "mode is replay or live." }).optional() });
+/** Confirm & use (P-242) with the values the officer looked at (P-243, L-SA9; Lead 35 on #1369): the ids of the read
+ *  values ticked "Matches the document". */
+const ConfirmBody = SubjectBody.extend({ checked: z.array(z.string().regex(UUID, "checked lists read value ids."), { message: "checked lists read value ids." }).max(200).optional() });
 const CaseUpload = z.object({ subjectId: z.string({ message: "Name the person the document belongs to (subjectId)." }).regex(UUID, "Name the person the document belongs to (subjectId)."),
   documentType: z.string({ message: "Name the document type (documentType)." }).regex(/^[a-z0-9_]{1,120}$/, "Name the document type (documentType).") });
 const Resolve = z.object({
@@ -127,6 +130,18 @@ export function sameValue(fact: string, a: unknown, b: unknown): boolean {
 }
 
 type Placement = { fact: string; section_id: string; repeats: string; scope?: string; question_text?: string };
+/** P-243 ("no blanket one-click confirm"; Lead 35 on #1369, L-SA9): a value Confirm & use would write as it was read,
+ *  without a passed check digit to back it, is looked at one by one: an expanded value of a fact this person is asked,
+ *  that its question takes, and that agrees with the current answer or has none. A collapsed value (check digits
+ *  passed), one that differs (it opens a check), one left for a person and one not asked need no tick. */
+export function needsLook(s: Snapshot, caseRole: boolean, v: { fact: string; review: string; valueJson: unknown; state: string }, current: unknown): boolean {
+  if (v.state !== "proposed" || v.review !== "expanded") return false;
+  const place = placementsOf(s).find((p) => p.fact === v.fact), field = (s.canonical_fields as { id: string; value_type?: string }[]).find((f) => f.id === v.fact);
+  if (!place || !field || place.repeats === "per_row" || field.value_type === "declaration" || isFilingFact(v.fact, place) !== caseRole) return false;
+  if (notWritable(s, v.fact, v.valueJson)) return false;
+  return current === undefined || current === null || sameValue(v.fact, current, v.valueJson);
+}
+
 /** Whether a file's text holds a passport's coded zone (break m7), by the rules reader (no AI). */
 export const holdsPassportZone = (bytes: Buffer) => readPassport("check", bytes).zones > 0;
 const placementsOf = (s: Snapshot) => s.placements as Placement[];
@@ -165,6 +180,7 @@ export class CaseDocuments {
     if (!p) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
     return p!;
   }
+  private caseSubjectOf(c: Reached) { return c.participants.find((p) => p.role === "case")?.subjectId ?? null; }
   private typesOf(c: Reached) { return (this.r.snapshotOf(c).document_types ?? []) as { key: string; name: string }[]; }
   private typeName(c: Reached, key: string) { return CASE_KINDS[key]?.name ?? this.typesOf(c).find((t) => t.key === key)?.name ?? key.replace(/_/g, " "); }
 
@@ -316,14 +332,22 @@ export class CaseDocuments {
       // What the person has now, whether this value differs from it (Confirm & use would open a check), and why Confirm &
       // use would leave it for a person: the server's own rules, so a screen never repeats them.
       current: answerOf.has(v.fact) ? { answer_id: answerOf.get(v.fact)!.id, value: answerOf.get(v.fact)!.valueJson } : null,
-      differs: answerOf.has(v.fact) && !sameValue(v.fact, answerOf.get(v.fact)!.valueJson, v.valueJson),
-      left_why: v.state === "proposed" ? notWritable(s, v.fact, v.valueJson) : null })));
+      // A value left for a person is never written and never opens a check, so it never "differs" (drawer walk, 8 Nov).
+      differs: !(v.state === "proposed" && notWritable(s, v.fact, v.valueJson)) && answerOf.has(v.fact) && !sameValue(v.fact, answerOf.get(v.fact)!.valueJson, v.valueJson),
+      left_why: v.state === "proposed" ? notWritable(s, v.fact, v.valueJson) : null,
+      // L-SA9: whether Confirm & use waits for a tick on this value (the server's own rule, so the drawer never repeats it).
+      needs_look: needsLook(s, subjectId === this.caseSubjectOf(c), v, answerOf.get(v.fact)?.valueJson) })));
     return {
       proposals,
       reviews: reviews.map((r) => { const d = current.find((x) => x.id === r.documentId)!; return {
         id: r.id, document: r.documentId, document_name: this.typeName(c, d.documentType), file_name: d.fileName, reader: r.reader as Reader, replayed: r.replayed,
         confirm: "one_per_document" as const, collapsed: r.values.filter((v) => v.review === "collapsed").map((v) => v.fact), expanded: r.values.filter((v) => v.review === "expanded").map((v) => v.fact),
-        read: { by: r.readBy, at: r.readAt.toISOString() }, confirmed: r.confirmedBy ? { by: r.confirmedBy, at: r.confirmedAt!.toISOString() } : null }; }),
+        read: { by: r.readBy, at: r.readAt.toISOString() }, confirmed: r.confirmedBy ? { by: r.confirmedBy, at: r.confirmedAt!.toISOString() } : null,
+        // The coded lines' check digits in one word (passed: values are collapsed; failed: a value's own check digit did not
+        // match; null: not a coded-line read), and the facts this document can be evidence for (checked-against-document
+        // accepts only these): the server's own rules, so a screen never works them out (STANDARDS §7).
+        check_digits: r.reader !== "mrz" ? null : r.values.some((v) => v.review === "collapsed") ? "passed" : (r.unreadable as { reason: string }[]).some((u) => /check digit/i.test(u.reason)) ? "failed" : "incomplete",
+        evidence: [...(readerOf({ key: d.documentType, name: this.typeName(c, d.documentType) })?.supplies ?? [])] }; }),
       unreadable: reviews.flatMap((r) => (r.unreadable as { fact: string; reason: string }[]).map((u) => ({ ...u, label: labelOf(s, u.fact), document: r.documentId }))),
     };
   }
@@ -363,7 +387,7 @@ export class CaseDocuments {
   /** POST …/documents/:doc/confirm-and-use (P-242): one review per document, staff only. */
   async confirmAndUse(actor: Actor, caseId: string, documentId: string, body: unknown) {
     const c = await this.r.reach(actor, caseId, "officer");
-    const b = parse(SubjectBody, body);
+    const b = parse(ConfirmBody, body);
     if (!UUID.test(documentId)) fail("No such document.", HttpStatus.NOT_FOUND);
     const who = this.person(c, b.subjectId);
     const doc = await this.db.caseDocument.findFirst({ where: { id: documentId.toLowerCase(), subjectId: { in: c.participants.map((p) => p.subjectId) } } });
@@ -372,7 +396,7 @@ export class CaseDocuments {
     if (!doc!.current) problem(409, "not_current", "Not possible now", "A newer file of this document was uploaded: read and confirm that one. Nothing was written.");
     const review = await this.db.documentReview.findUnique({ where: { documentId: doc!.id }, include: { values: true } });
     if (!review) problem(409, "not_read", "Not possible now", "This document has not been read yet: run \"Fill this from documents\" first. Nothing was written.");
-    if (review!.confirmedBy) problem(409, "already_confirmed", "Already confirmed", `This document was already confirmed and used by ${nameOf(review!.confirmedBy)} on ${review!.confirmedAt!.toISOString()}: one Confirm & use per document (P-242). Nothing was written.`, { confirmed: { by: review!.confirmedBy, at: review!.confirmedAt!.toISOString() } });
+    if (review!.confirmedBy) problem(409, "already_confirmed", "Already confirmed", `This document was already confirmed and used by ${nameOf(review!.confirmedBy)} on ${review!.confirmedAt!.toISOString()}: one Confirm & use per document. Nothing was written.`, { confirmed: { by: review!.confirmedBy, at: review!.confirmedAt!.toISOString() } });
     const s = this.r.snapshotOf(c), caseRole = who.role === "case";
     const fields = s.canonical_fields as { id: string; item_version: number; value_type?: string }[];
     const at = new Date();
@@ -380,7 +404,14 @@ export class CaseDocuments {
     await this.db.$transaction(async (tx) => {
       // One Confirm & use per document: the review row is the lock (a second one at the same moment writes nothing).
       const n = await tx.documentReview.updateMany({ where: { id: review!.id, confirmedBy: null }, data: { confirmedBy: actor.id, confirmedAt: at } });
-      if (n.count !== 1) problem(409, "already_confirmed", "Already confirmed", "This document was confirmed by someone else at the same moment: one Confirm & use per document (P-242). Nothing was written.");
+      if (n.count !== 1) problem(409, "already_confirmed", "Already confirmed", "This document was confirmed by someone else at the same moment: one Confirm & use per document. Nothing was written.");
+      // L-SA9 (P-243): every value that needs a look was ticked; a tick names a value of this document only.
+      const ticked = new Set((b.checked ?? []).map((x) => x.toLowerCase()));
+      const foreign = [...ticked].filter((id) => !review!.values.some((v) => v.id === id));
+      if (foreign.length) problem(422, "not_this_document", "Not possible now", "A ticked value is not one of this document's. Read the document again, then Confirm & use. Nothing was written.");
+      const now = new Map((await tx.clientCanonicalAnswer.findMany({ where: { subjectId: who.subjectId, rowKey: null, supersededById: null, canonicalFieldKey: { in: review!.values.map((v) => v.fact) } }, select: { canonicalFieldKey: true, valueJson: true } })).map((a) => [a.canonicalFieldKey, a.valueJson]));
+      const unlooked = review!.values.filter((v) => needsLook(s, caseRole, v, now.get(v.fact)) && !ticked.has(v.id));
+      if (unlooked.length) problem(422, "not_checked", "Look at each value first", `Tick or correct each value first: ${unlooked.map((v) => labelOf(s, v.fact)).join(", ")} ${unlooked.length === 1 ? "is" : "are"} not ticked. Nothing was written.`, { missing: unlooked.map((v) => ({ id: v.id, fact: v.fact, label: labelOf(s, v.fact) })) });
       // Break B1: a check from a file this person has since replaced is closed by this Confirm & use, keeping the answer,
       // with the reason in words (never left open to overwrite what the newer file agrees with).
       const replaced = await tx.answerCheck.findMany({ where: { subjectId: who.subjectId, state: "open", fact: { in: review!.values.map((v) => v.fact) }, documentId: { not: doc!.id } }, select: { id: true, documentId: true } });

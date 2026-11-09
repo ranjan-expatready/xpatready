@@ -17,7 +17,7 @@ if (!vvOf()) for (const f of ["tests/runtime/setup_visitor_visa.ts", "acceptance
   try { execFileSync(join(studio, "node_modules", ".bin", "tsx"), ["--tsconfig", join(studio, "api", "tsconfig.json"), join(studio, f), String(PORT), DB], { stdio: ["ignore", "ignore", "inherit"], timeout: 900_000 }); }
   catch { /* the setups exit 1 on their own known gaps; what this check needs is asked below */ }
 
-type Prop = { id: string; fact: string; value: unknown; state: string; review: string; source: { document: string } };
+type Prop = { id: string; fact: string; value: unknown; state: string; review: string; source: { document: string }; differs?: boolean };
 type Q = { subjectId: string; fact: string; collected_from: string; answer: { id: string; value?: unknown } | null };
 type Sec = { section: string; subjectId: string; questions: Q[] };
 
@@ -36,6 +36,8 @@ await main("C6.5 documents API", "case upload, read once, Confirm & use once, le
   const lineOf = async (who: string) => (((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, OFFICER)).body?.people ?? []).find((x: { subject: string }) => x.subject === who)?.lines ?? []).find((x: { label: string }) => /passport/i.test(x.label) && !/absent|parent/i.test(x.label))?.id as string;
   const doc = { surname: "SAMPLED", given: "CLIENT A", number: "SAMPLEP12", nationality: "IND", dob: FAMILY[0].dob!, sex: "X" as const, expiry: FIXED.expiry };
   const fill = (section: string, subjectId: string, actor = OFFICER, extra: Record<string, unknown> = {}) => call("POST", `/runtime/cases/${c.id}/sections/${section}/fill-from-documents`, { subjectId, ...extra }, actor);
+  // L-SA9 (P-243): the values Confirm & use waits on a tick for, as the server marks them (needs_look); the drawer ticks these.
+  const look = async (doc: string, who: string) => (((await call("GET", `/runtime/cases/${c.id}/proposals?subject=${who}`, undefined, OFFICER)).body?.proposals ?? []) as (Prop & { needs_look: boolean })[]).filter((x) => x.source.document === doc && x.needs_look).map((x) => x.id);
 
   // ---- D1 case-level upload (no checklist line)
   let r = await upload(PORT, `/runtime/cases/${c.id}/documents`, letterPdf(), "letter.pdf", AUTHOR, { subjectId: c.caseSubject, documentType: "letter_of_invitation" });
@@ -84,7 +86,14 @@ await main("C6.5 documents API", "case upload, read once, Confirm & use once, le
   const pn = before.find((x) => x.fact === "person.passport_number"), exp = before.find((x) => x.fact === "person.passport_expiry_date"), cit = before.find((x) => x.fact === "person.citizenship");
   ok("C6.5 D12 pass: before Confirm & use, a proposal says it differs from the typed answer and shows that answer", pn?.differs === true && pn?.current?.value === "SAMPLEP99", pn);
   ok("C6.5 D12 fail: a proposal with no answer yet does not differ, and a country code says before the click why it will be left for a person", exp?.differs === false && exp?.current === null && /country code/.test(cit?.left_why ?? "") && pn?.left_why === null, { exp, cit });
-  r = await call("POST", `/runtime/cases/${c.id}/documents/${docId}/confirm-and-use`, { subjectId: P }, OFFICER);
+  const need = await look(docId, P);
+  r = await call("POST", `/runtime/cases/${c.id}/documents/${docId}/confirm-and-use`, { subjectId: P, checked: need.slice(1) }, OFFICER);
+  ok("C6.5 L-SA9 fail (P-243): Confirm & use with a value that needs a look left unticked is refused (422 not_checked, naming it), nothing written", need.length > 0 && r.status === 422 && r.body?.code === "not_checked" && (r.body?.missing ?? []).some((x: { id: string }) => x.id === need[0]) && sql(`select confirmed_by from document_review where document_id='${docId}'`) === "", { need, body: r.body });
+  r = await call("POST", `/runtime/cases/${c.id}/documents/${docId}/confirm-and-use`, { subjectId: P, checked: [...need, "00000000-0000-4000-8000-000000000000"] }, OFFICER);
+  ok("C6.5 L-SA9 fail: a ticked id that is not this document's value is refused (422 not_this_document)", r.status === 422 && r.body?.code === "not_this_document", r.body);
+  const collapsedIds = ((await call("GET", `/runtime/cases/${c.id}/proposals?subject=${P}`, undefined, OFFICER)).body?.proposals ?? []).filter((x: Prop & { needs_look: boolean }) => x.source.document === docId && (x.review === "collapsed" || x.differs)).every((x: Prop & { needs_look: boolean }) => !x.needs_look);
+  ok("C6.5 L-SA9 pass: values backed by passed check digits, and a value that differs, need no tick", collapsedIds);
+  r = await call("POST", `/runtime/cases/${c.id}/documents/${docId}/confirm-and-use`, { subjectId: P, checked: need }, OFFICER);
   const conf = r.body;
   ok("C6.5 D4 pass: Confirm & use writes, opens a check for the typed difference and leaves a bare country code for a person", r.status === 200 && conf?.checks?.some((x: { fact: string }) => x.fact === "person.passport_number") && conf?.left?.some((x: { fact: string }) => x.fact === "person.citizenship") && !conf?.used?.includes("person.citizenship"), conf);
   ok("C6.5 D5 fail: the country left for a person is not an answer and opens no check", sql(`select count(*) from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.citizenship' and superseded_by_id is null`) === "0" && sql(`select count(*) from answer_check where subject_id='${P}' and fact='person.citizenship'`) === "0");
@@ -136,7 +145,7 @@ await main("C6.5 documents API", "case upload, read once, Confirm & use once, le
   const openOf = (who: string, fact: string) => (sql(`select string_agg(document_id::text, ',') from answer_check where subject_id='${who}' and fact='${fact}' and state='open'`) ?? "").split(",").filter(Boolean);
   await answer(c.id, S, "person.family_name", "SAMPLEDX", OFFICER);
   const sp1 = await sDoc("SAMPLES", "spouse-1.pdf");
-  const c1 = await call("POST", `/runtime/cases/${c.id}/documents/${sp1}/confirm-and-use`, { subjectId: S }, OFFICER);
+  const c1 = await call("POST", `/runtime/cases/${c.id}/documents/${sp1}/confirm-and-use`, { subjectId: S, checked: await look(sp1, S) }, OFFICER);
   const k1 = (c1.body?.checks ?? []).find((x: { fact: string }) => x.fact === "person.family_name")?.id as string;
   const sexOptions = (((await agent(c.id))?.sections ?? []) as (Sec & { questions: (Q & { options?: { key: string; label: string }[] | null })[] })[]).flatMap((x) => x.questions).find((q) => q.subjectId === S && q.fact === "person.sex")?.options ?? [];
   const female = sexOptions.find((o) => ["female", "f female"].includes(o.label.trim().toLowerCase()))?.key;
@@ -149,7 +158,7 @@ await main("C6.5 documents API", "case upload, read once, Confirm & use once, le
   const sp2 = await sDoc("SAMPLEDZ", "spouse-2.pdf");
   r = await call("POST", `/runtime/checks/${k1}/resolve`, { keep: "document", reason: "The passport is right (Sample)", answerId: sql(`select id from client_canonical_answer where subject_id='${S}' and canonical_field_key='person.family_name' and superseded_by_id is null`) }, OFFICER);
   ok("C6.5 B1 fail: a replaced file's value cannot be kept (409 not_current), and the answer is unchanged", r.status === 409 && r.body?.code === "not_current" && sName().startsWith("DECLARED|SAMPLEDY|"), r.body);
-  const c2 = await call("POST", `/runtime/cases/${c.id}/documents/${sp2}/confirm-and-use`, { subjectId: S }, OFFICER);
+  const c2 = await call("POST", `/runtime/cases/${c.id}/documents/${sp2}/confirm-and-use`, { subjectId: S, checked: await look(sp2, S) }, OFFICER);
   ok("C6.5 B1/B-M2 pass: the newer file closes the replaced file's check (kept the answer, a reason in words) and opens its own check for its own difference", c2.status === 200 && (c2.body?.closed ?? []).includes(k1) && /replaced by a newer/.test(sql(`select reason from answer_check where id='${k1}'`) ?? "") && JSON.stringify(openOf(S, "person.family_name")) === JSON.stringify([sp2]), { closed: c2.body?.closed, open: openOf(S, "person.family_name") });
   ok("C6.5 D13 fail: once the officer answered it in place, it is no longer listed left for a person (and opens no check)", !(c2.body?.left ?? []).some((x: { fact: string }) => x.fact === "person.citizenship") && !(c2.body?.checks ?? []).some((x: { fact: string }) => x.fact === "person.citizenship"), { left: c2.body?.left, checks: c2.body?.checks });
   ok("C6.5 R-n2 pass: the officer's message says the replaced file's check was closed", /replaced was closed/.test(c2.body?.message ?? ""), c2.body?.message);
@@ -172,7 +181,8 @@ await main("C6.5 documents API", "case upload, read once, Confirm & use once, le
   const many = await Promise.all(Array.from({ length: 5 }, () => call("POST", `/runtime/checks/${k2}/resolve`, { keep: "answer", reason: "पासपोर्ट नवीनीकरण से पहले का नाम (Sample)", answerId: typedNow }, OFFICER)));
   ok("C6.5 B-M3 pass and R-m2: a reason in any script is kept; five resolves at once resolve it once (one 200, the rest 409)", many.filter((x) => x.status === 200).length === 1 && many.filter((x) => x.status === 409).length === 4 && /पासपोर्ट/.test(sql(`select reason from answer_check where id='${k2}'`) ?? ""), many.map((x) => x.status));
   const sp3 = await sDoc("SAMPLEDY", "spouse-3.pdf");
-  const all = await Promise.all(Array.from({ length: 5 }, () => call("POST", `/runtime/cases/${c.id}/documents/${sp3}/confirm-and-use`, { subjectId: S }, OFFICER)));
+  const sp3look = await look(sp3, S);
+  const all = await Promise.all(Array.from({ length: 5 }, () => call("POST", `/runtime/cases/${c.id}/documents/${sp3}/confirm-and-use`, { subjectId: S, checked: sp3look }, OFFICER)));
   ok("C6.5 B1 pass and R-m2: a newer file that agrees confirms the typed name from itself (never overwritten by a replaced file); five clicks at once confirm once", all.filter((x) => x.status === 200).length === 1 && all.filter((x) => x.status === 409).length === 4 && sName() === `VERIFIED|SAMPLEDY|${sp3}` && openOf(S, "person.family_name").length === 0, { statuses: all.map((x) => x.status), name: sName() });
   r = await call("POST", `/runtime/cases/${c.id}/answers/${S}/person.date_of_birth/checked-against-document`, { document: sp1 }, OFFICER);
   ok("C6.5 B-M6 fail: an answer is not checked against a replaced file (409 not_current)", r.status === 409 && r.body?.code === "not_current", r.body);
