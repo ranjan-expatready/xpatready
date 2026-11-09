@@ -75,6 +75,10 @@ Needs-you items and notifications · the case stage move to REVIEW · `waive-def
 | Break m6, review m8 | triggers: a filing row starts only as its round's kind says; forms and checks are added only to an open row or in the transaction that made it; a stamp only while under review (or that transaction); FKs `review_round_form.round_id`, `.filing_id`, `review_round_filing.filing_review_id` (NO ACTION) | pack C8.3-14 `insertApproved`, `insertCheck` |
 | Break m7 | the "forms changed since sent" check applies to Approve only | (code; not reproducible on the sample) |
 
+## Round 1 regression (9 Nov, head e2c98f994 + this note; fresh copies via the scratchpad `copy.sh`, since `isolated.sh`'s `pg_ctl` check cannot traverse `/tmp/claude-0`)
+* Unit and static: `check_review_rounds.ts` 0 (46/46) · `check_prisma_schema` 0 · `check_contract_seams` 0 · `count-any` 0 (418 = base) · `graph.mjs --check` 0 · `check_c92_out_of_date.ts` 0 · `check_b128_relatives.ts` 0.
+* Pack C8.3 0 (23/23) · walk 0 (24/24) · packs C7.6 0, C8.1 0, C8.2 0, C6.13 0 · `check_c76_readiness_api.ts` 0 · `check_c76_ready_browser.ts` 0 · `check_c81_sign_browser.ts` 0 · R1 in order: r1c 0, r1d 0, r1a `--reset` 0. setup_vv_m3: only S2w, S7a (known).
+
 ## Left after round 1
 * Review m1: page and C7.6 can still disagree when the form set changes (a waiting form starts, a form is added, a Not-needed form, a C9.5 move): waits come from the frozen row and the re-approve covers stored rows only. Not reproducible on the sample.
 * Review m3: hashes and the representative are checked before the case lock (benign: a stamp that goes stale shows withdrawn at once). Noted, not changed.
