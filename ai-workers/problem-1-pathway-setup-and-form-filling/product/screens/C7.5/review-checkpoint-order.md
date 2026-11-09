@@ -118,3 +118,48 @@ What I saw:
 
 ## Hand-back
 **Verdict: Block.** To fix: B1, then m1 and m2.
+
+## Re-review (diff only, P-293): `6a5c80c..cfa115b`, 9 Nov
+**Reviewed:** exact head `cfa115b1060f201632d720344ceda302289d732b`, in the same isolated worktree. The diff has two parts:
+* `7430dd3`, the fix: `040-field-map-review.ts` and both checks;
+* `cfa115b`, which adds only this report.
+
+I ran fresh copies on :4438 and :4439, and both are stopped. Live AI was off and nothing was spent (US$0).
+
+| Check | Result |
+|---|---|
+| `check_checkpoint_review_order.ts` at head | 6/6 |
+| The same check against `6a5c80c` (file-name order), copied out of the worktree | 3/6 |
+| The same check against `4eabbaa` (start-time order), copied out of the worktree | 3/6 |
+| `check_checkpoint_sheet_stable.ts` on two fresh copies at once (:4438 and :4439, 4 loads) | 7/7 and 7/7 |
+| Gate B on the checkpoint, `C7.6.test.ts` (:4438, fresh) | 27/27 (baseline on main 27/27) |
+| `C10.1.test.ts` on a fresh checkpoint (:4439) | 28/28 (baseline on main 28/28) |
+
+What the stability runs showed:
+* every load gave sheet `123a97599291` and the date-of-birth wording "Date of birth";
+* the published library had md5 `2687b1af…` on all 4 loads;
+* both IMM 5257 keys, `person.other_given_names` and `person.us_green_card_expiry_date`, are present;
+* on both copies the `draft_field_maps` plan lists its targets in the same order (md5 `dcc7044a…`), with IMM 5257 first, then SCH1, then 5707 and so on. IRM 0002's batch comes last.
+* all 19 drafts were APPLIED.
+
+**B1: closed.** `reviewOrder` sorts in this order:
+1. the batch, by its own start (the load creates its batches one after another);
+2. the draft's place in that batch's `plan.targets`;
+3. file name, run file and job id, as tie-breaks only.
+
+A job's start time is never read. The plan order is built from the six's combination order and each combination's attachments by `createdAt` (`ai.ts:89, 109`). It was the same on both copies, it keeps main's keys, and the two red packs are green again. The showcase is still IMM 1294, because the plan lists it before IMM 5710.
+
+**m1: closed.** The comment on `runOf` now says it is only a tie-break, and the doc comment says the order decides keys.
+
+**m2: closed.** The stability check now also compares the whole published library (key=meaning, md5) and asserts both B1 keys. Either way B1 can return, the check now fails.
+
+**Note (no finding).** Two batches that start in the same millisecond would fall back to ordering by batch id, which is random. The load creates its batches seconds apart (5 s on these copies), so this cannot happen there today. The PR body now says that the order decides keys as well as wording, and that the expected sheet is `123a97599291`.
+
+No new finding. The journey criterion "correct data" rises to 1, because IMM 5257's keys are as on main and rows 7 and 12 pass in C10.1. The journey is **9/10, a pass**.
+
+Not checked:
+* the other 15 checkpoint-scored packs (this round I ran C10.1 and C7.6; the builder reports 10 green);
+* C7.6-screen, which writes committed screenshots;
+* a real screen reader.
+
+**Verdict: Approve cfa115b1060f201632d720344ceda302289d732b**
