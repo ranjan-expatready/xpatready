@@ -94,3 +94,38 @@ To fix: Major 1 (option labels in `copy_text`, server, with a fail test); Major 
 with fail tests); Minors fixed or listed in the PR.
 
 Verdict: Block
+
+## Round 2 (diff-only, P-293): `32b96f6ae..13929449801cd0600fe8c48f0df2f5f007b46f94`, with the break report (F1–F6)
+Copy `rv_q317` on :4438, web rebuilt from this tree (the product files equal 139294498; the later head a8f2f095c only
+adds `QA-317/walk.md`). `check_qa317_sheet_browser.ts` 34/34, exit 0; `check_vv_answer_sheet.ts` 47/47. My own probes
+in the browser, with the clipboard refused where it matters:
+* **M1 closed.** `sheetOf` takes `wordsOf` and `case-prepare.ts` passes the release option's label. The value and the
+  fingerprint stay the key (unit test). On two filled cases, 11 choice answers per sheet: none shows a key, none is an
+  array ("Annulled Marriage", "Citizen", "English"). The browser and unit fail tests are real.
+* **M2 and F2 closed.** With `writeText` rejected, the city part selects "Sample City" and the row selects the one-line
+  address. The page says "press Ctrl+C (⌘C on a Mac)". There is a browser fail test for each.
+* **m1 and F3 closed:** the links follow the line's order (principal first), and each link shows its item's state
+  ("· To do"). **m2 and F1 closed:** another case's item, an unknown case id and a non-UUID case all get "This answer
+  sheet is not among this case's forms", with no answer shown (tested). Other Prepare failures are named in a notice.
+  **m4 and F5 closed:** the channel advice shows only on the "is filed as" 409. **m5 closed. m6 and F6 closed:** `why`
+  is shown as text. **F4 closed:** I moved the form to PDF upload by API while the sheet was open; past the 2 s stale
+  time, a window focus showed the 409 notice. **m8 closed** for the page's own words.
+* **Left, listed by the builder (agreed):** m7 (progress counted in the browser, for B4); m8's server words ("(W6)",
+  the out-of-date date); m9's remainders (the second 409, the read-only notice, states other than To do).
+
+**New Minors (fix or list in the PR; neither blocks):**
+* r2-m1 The sheet draws before the Prepare read answers. Opening another case's item, up to 69 rows were drawn
+  briefly, then replaced by the notice (`answer-sheet.tsx:64-71`). The usual path also shows "IMM 5257 answer sheet · "
+  for a moment. Fix: keep the skeleton until both reads answer. The m2 test checks only the end state.
+* r2-m2 A Prepare view puts an Online form that cannot start yet in `waiting`, not `items` (`case-prepare.ts:449-451`).
+  The server still serves its sheet (`onlineItem` does not check state). The page now says "not among this case's
+  forms" for it, and `STATE_WORDS.cannot_start` can never show. Either read `waiting` too, or say "cannot start yet"
+  with the server's reason. No such form is on the checkpoint, so I did not reproduce this.
+* r2-m3 The link's accessible name is "… for Sample Client A, · To do". The sr-only comma plus the visible "·" are read
+  together, so drop one of them.
+
+**Scores after round 2:** journey 9/10 (correct data and error recovery go to 1; plain words stays ½ on the server's
+"(W6)"). D1 5, D10 4, D16 4, BIC-19 Met for this page's own values ("(W6)" is pre-existing server text), BIC-14 Met
+(why shown as text; state pills read with their reason), BIC-18 Partly (r2-m1). Every Blocker and Major is closed.
+
+Verdict: Approve 13929449801cd0600fe8c48f0df2f5f007b46f94
