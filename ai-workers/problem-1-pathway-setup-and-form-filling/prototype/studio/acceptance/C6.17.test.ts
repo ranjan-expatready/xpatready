@@ -174,6 +174,9 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
   const recorded = s1Filing && s1Group ? sql(`insert into filing_record (id, workspace_id, case_id, filing_id, submission_group_id, our_reference, submitted_on, application_number, prepared_by, recorded_by, filed_facts)
     select gen_random_uuid(), workspace_id, case_id, id, '${s1Group}', 'C617-STUDY', current_date, 'S000000001', '${OFFICER}', '${OFFICER}', '[]' from filing where id='${s1Filing}' returning id`) : null;
   const spouse = await call("POST", `/runtime/cases/${S}/people`, { role: "spouse_or_partner", displayName: "Sample Spouse A", idempotencyKey: `c617-spouse-${run}` });
+  const ef = await call("GET", `/runtime/cases/${S}/earlier-facts`);
+  ok("C6.17 review (merge check 2) fail-first: with the study permit recorded, the work permit stage's earlier-facts card (C6.19) is not read-only (recorded: false)",
+    !!recorded && ef.status === 200 && ef.body?.recorded === false, { status: ef.status, recorded: ef.body?.recorded, words: words(ef) });
   ok("C6.17 review M1 fail-first: the study permit recorded as submitted (Sample record on the ended stage) never freezes the work permit stage: a spouse is added (201)", !!recorded && spouse.status === 201, { recorded, status: spouse.status, words: words(spouse) });
 
   // ---------------------------------------------------------------- C6.17-12: a release update after the start

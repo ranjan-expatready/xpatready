@@ -84,7 +84,8 @@ export class EarlierFacts {
     const earlier = [...read.filter(offers), ...read.filter((e) => !offers(e))].slice(0, EARLIER_MAX);
     const principal = c.participants.find((p) => p.role === "principal");
     // Review m5: a case recorded as submitted is read-only; the card says so before anyone ticks.
-    const recorded = (await this.db.filingRecord.count({ where: { caseId: c.id } })) > 0;
+    // C6.17 (review, merge check 2): only a record on the case's current stage makes it read-only, as submission-record.ts.
+    const recorded = (await this.db.filingRecord.count({ where: { caseId: c.id, filing: { stage: { state: "CURRENT" } } } })) > 0;
     return { case_id: c.id, principal: principal?.subject.label ?? null, today: day(today), recorded, earlier };
   }
 
@@ -111,7 +112,7 @@ export class EarlierFacts {
     if (missing.length) notPossible(`Not offered from this earlier case now: ${missing.map((l) => l.label).join(", ")}. Reload to see what it offers; nothing was copied.`);
     const written = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`; // BR-5: one re-confirm at a time
-      if (await tx.filingRecord.count({ where: { caseId: c.id } })) notPossible("This application is recorded as submitted to IRCC, so it is read-only: no facts are copied from an earlier case.");
+      if (await tx.filingRecord.count({ where: { caseId: c.id, filing: { stage: { state: "CURRENT" } } } })) notPossible("This application is recorded as submitted to IRCC, so it is read-only: no facts are copied from an earlier case.");
       const subjects = [...new Set(b.take.map((t) => t.subject_id))], keys = [...new Set(b.take.map((t) => t.fact))];
       // An answer save takes no case lock: the current answers of the ticked facts are locked here before they are compared
       // with what the officer saw (as C1.3). A fact with no answer yet is guarded by the unique current-answer index.
