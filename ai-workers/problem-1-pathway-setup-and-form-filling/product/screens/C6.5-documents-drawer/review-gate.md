@@ -58,3 +58,22 @@ Verdict: Approve 155e03cb8
 * m4: the header says step labels are unique across a capability's packs. Today they are, per your survey.
 * m5: each pack's report line says whether it was judged on its named steps (which ones) or on its whole run.
 * m6: the per-pack choice (`packSteps`) and the per-capability check (`unprintedReason`) are exported and tested. There are 4 new wiring checks, and check-gate-b passes 196/196.
+
+## Re-review of 6e3ecee3d
+
+Diff only (P-318 (1)), fresh context: `git show 6e3ecee3d` (`tools/gate-b.mjs`, `tools/check-gate-b.mjs`, this file), read against `runPack`, `runPackRecorded`, `packVerdict` and `main`'s pack loop at that commit. No copy or server started.
+
+* **Run:** `node tools/check-gate-b.mjs` from the studio folder (Node 24.21.0): **196 passed, 0 failed**, exit 0. The builder's figure is confirmed.
+* **m1, fixed (the documentation option).** The GATE_B_RESULTS paragraph in the header (gate-b.mjs:44-46) now says a step no pack printed refuses the capability in the gate's reasons and exit code, never in the pack lines. That is one of the two fixes I offered. `works-set.mjs` still passes no steps, so no caller reads it wrongly today.
+* **m2, fixed.** `packSteps` (gate-b.mjs:268-272) returns `wanted` as it is when it is empty, so `runPack` (:451-453) passes `[]` to `packVerdict` and gets "the steps list names no step", as before 155e03cb8. `unprintedReason` skips an empty list, so there is no second reason. Check: "wiring (review m2)".
+* **m3, fixed.** `unprintedReason` (:275-279) returns null when any pack of the capability is infra. Every infra return in `runPack` (port 4400, copy did not start, Demo refused) carries a `why`, so `reasons` is non-empty and `main` still returns 2. The exit code is unchanged in every case; only the misleading second reason is gone. When every pack is infra the result is the same as before (skipped, exit 2). Check: "wiring (review m3)".
+* **m4, fixed (the documentation option).** The header (:21-22) states that step labels are unique across a capability's packs. Nothing enforces it; my survey on 155e03cb8 found no shared label.
+* **m5, fixed.** `runPack` logs `judged on its named steps C…-x, …` or `judged on its whole run (it prints none of the named steps)` under each pack's line whenever steps are named (:452). With no steps, or an empty list, there is no line, which is right: the verdict line says why.
+* **m6, fixed.** The per-pack choice (`packSteps`) and the per-capability check (`unprintedReason`) are exported and are what `runPack` and `main` now call. The 4 new checks cover: printed steps, none printed, no steps named, an empty list, an unprinted step, every step printed, and an infra pack. The remaining glue in `runPack` is one line (`packVerdict(id, packSteps(...))`) and stays untested because `runPack` always starts a copy. That is acceptable.
+* **Nothing else changed in gate B's judgement.** The old `continue` conditions (`!st || !st.length`, no results) are the same guard clauses in `unprintedReason`. `.filter(Boolean)` in place of `filter((r) => r && !r.infra)` only matters for infra, which m3 covers. `printed` in the `runPack` result is computed as before. One-pack, Works-claim (steps null) and HELD cases judge as in my table above.
+
+Nit (no action needed): the `unprintedReason` comment says the gate "already stops with exit 2". It does not stop: it finishes the other packs and then returns 2.
+
+No Blocker, Major or Minor open.
+
+Verdict: Approve 6e3ecee3d
