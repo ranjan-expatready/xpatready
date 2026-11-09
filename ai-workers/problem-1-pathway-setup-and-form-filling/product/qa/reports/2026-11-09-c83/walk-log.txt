@@ -1,0 +1,1110 @@
+
+===== stage 1 2026-11-09T12:33:08.700Z
+--- Ready to file, before sending
+Ready to file
+
+What stands before each filing is Ready to file, by who owes it. Only a barcode form without its validated copy read back blocks; every other line is fixed, or passed with a written reason.
+
+Send for review
+Visitor visa: Sample Client A
+Not started
+Ready to file
+Not ready
+Readiness
+11%
+1 of 9 done
+How this is worked out
+
+20 open warnings stand before Ready to file.
+
+The case team · 14 lines
+CRITICAL: IMM 5476 for Sample Client A has no copy made for filing yet (a PDF upload). Generate a copy under Prepare application before Ready to file.
+Pass with a reason…
+CRITICAL: IMM 5257 SCH1 for Sample Client A: 5 form fields IRCC's form marks mandatory would be left empty (Whether the person has ever served in any military, militia, civil defence unit, security organization or police force, including non-obligatory national service, reserve or volunteer units: filled by hand: step "derive: true if any military/militia/civil defence/security/police service period is recorded for the subject, else false" is not in the executable set, Question 5. Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buil…: no question asks it yet: nothing in this release fills it, Question 6 Membership or Association with Organizations.: no question asks it yet: nothing in this release fills it and 2 more).
+Pass with a reason…
+CRITICAL: IMM 5257 SCH1 for Sample Client A has no copy made for filing yet (a PDF upload). Generate a copy under Prepare application before Ready to file.
+Pass with a reason…
+CRITICAL: IMM 5645 for Sample Client A has no copy made for filing yet (a PDF upload). Generate a copy under Prepare application before Ready to file.
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Fax number including country code" (the form's box "No.") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Fax number including country code" (the form's box "Question 5 3 digit Exchange Number") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Fax number including country code" (the form's box "Question 5 3 digit Subscriber Number") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Alternate telephone number including country code" (the form's box "No.") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Alternate telephone number including country code" (the form's box "Question 4 3 digit Exchange Number") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Alternate telephone number including country code" (the form's box "Question 4 3 digit Subscriber Number") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Main telephone number including country code" (the form's box "No.") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Main telephone number including country code" (the form's box "Question 3 3 digit Exchange Number") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Main telephone number including country code" (the form's box "Quest
+--- Send for review dialog, as it opens
+Send for review
+
+Send for review: the representative of record checks each form and approves it or sends it back.
+
+Visitor visa: Sample Client A
+20 open warnings
+Visitor visa: Sample Spouse A
+20 open warnings
+Cancel
+Send 2 filings for review
+--- Send for review dialog, both ticked
+Send for review
+
+Send for review: the representative of record checks each form and approves it or sends it back.
+
+Visitor visa: Sample Client A
+20 open warnings
+Visitor visa: Sample Spouse A
+20 open warnings
+Cancel
+Send 2 filings for review
+--- Ready to file, after sending
+Ready to file
+
+What stands before each filing is Ready to file, by who owes it. Only a barcode form without its validated copy read back blocks; every other line is fixed, or passed with a written reason.
+
+Send for review
+Visitor visa: Sample Client A
+Not started
+Sent for review
+Open the review
+Ready to file
+Not ready
+Readiness
+11%
+1 of 9 done
+How this is worked out
+
+20 open warnings stand before Ready to file.
+
+The case team · 14 lines
+CRITICAL: IMM 5476 for Sample Client A has no copy made for filing yet (a PDF upload). Generate a copy under Prepare application before Ready to file.
+Pass with a reason…
+CRITICAL: IMM 5257 SCH1 for Sample Client A: 5 form fields IRCC's form marks mandatory would be left empty (Whether the person has ever served in any military, militia, civil defence unit, security organization or police force, including non-obligatory national service, reserve or volunteer units: filled by hand: step "derive: true if any military/militia/civil defence/security/police service period is recorded for the subject, else false" is not in the executable set, Question 5. Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buil…: no question asks it yet: nothing in this release fills it, Question 6 Membership or Association with Organizations.: no question asks it yet: nothing in this release fills it and 2 more).
+Pass with a reason…
+CRITICAL: IMM 5257 SCH1 for Sample Client A has no copy made for filing yet (a PDF upload). Generate a copy under Prepare application before Ready to file.
+Pass with a reason…
+CRITICAL: IMM 5645 for Sample Client A has no copy made for filing yet (a PDF upload). Generate a copy under Prepare application before Ready to file.
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Fax number including country code" (the form's box "No.") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Fax number including country code" (the form's box "Question 5 3 digit Exchange Number") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Fax number including country code" (the form's box "Question 5 3 digit Subscriber Number") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Alternate telephone number including country code" (the form's box "No.") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Alternate telephone number including country code" (the form's box "Question 4 3 digit Exchange Number") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Alternate telephone number including country code" (the form's box "Question 4 3 digit Subscriber Number") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Main telephone number including country code" (the form's box "No.") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Main telephone number including country code" (the form's box "Question 3 3 digit Exchange Number") is still to be written by hand on the form before filing (North American number parts are not in the executable set yet).
+Pass with a reason…
+Warning
+IMM 5257 for Sample Client A: "Main telephone number including coun
+page errors: []
+
+===== stage 2 2026-11-09T12:33:33.310Z
+url: http://localhost:4473/cases/cdd06564-98d0-497b-9bb0-3b3217b75d5d/representative-review/0416b7c0-b361-4d79-a416-2adf28b800a2?filing=8cbf9d0e-166c-442c-8da6-92be80950751
+--- Review page, round 1, as the representative opens it
+Back to the case
+Representative's review · Round 1
+
+The representative of record checks each form and approves it or sends it back. Sent by Case officer (Sample), Nov 9, 2026, 07:33 a.m. · Representative of record: Representative (Sample).
+
+Round
+Round 1 · Nov 9
+Visitor visa: Sample Client A · Round 1
+Under review
+IMM 5476 · Sample Client A
+To check
+IMM 5257 · Sample Client A
+To check
+IMM 5257 SCH1 · Sample Client A
+To check
+IMM 5645 · Sample Client A
+To check
+Checklist · Visitor visa: Sample Client A
+Values confirmed: 69 facts, by Case officer (Sample)
+All required documents verified (when sent: 0 of 3)
+No open critical warnings (live: 7)
+Funds shown cover the length of the stay · Sample
+Purpose of travel matches the invitation and itinerary · Sample
+Ties to the home country are shown by the documents · Sample
+Visitor visa: Sample Spouse A · Round 1
+Sent for review
+IMM 5645 · Sample Spouse A
+To check
+IMM 5476 · Sample Spouse A
+To check
+IMM 5257 SCH1 · Sample Spouse A
+To check
+IMM 5257 · Sample Spouse A
+To check
+Checklist · Visitor visa: Sample Spouse A
+Values confirmed: 69 facts, by Case officer (Sample)
+All required documents verified (when sent: 0 of 3)
+No open critical warnings (live: 7)
+Funds shown cover the length of the stay · Sample
+Purpose of travel matches the invitation and itinerary · Sample
+Ties to the home country are shown by the documents · Sample
+IMM 5476 · Sample Client A
+To check
+
+Frozen when sent with its facts (no file for filing matches them yet; an online form has none).
+
+Facts on this form · 23 facts
+Fact	Value	Source
+What this use-of-representative filing does: appoint a representative or cancel a representative's appointment (values: appoint, cancel) · The application	SAMPLE	Typed by Client A · confirmed by Case officer (Sample)
+What this use-of-representative filing does: appoint a representative or cancel a representative's appointment (values: appoint, cancel) · The application	SAMPLE	Typed by Client A · confirmed by Case officer (Sample)
+The type of temporary residence application the case is for (visitor, worker, student or other) · The application	SAMPLE	Typed by Client A · confirmed by Case officer (Sample)
+Date of birth · Sample Client A	1986-11-09	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+Family name as shown on passport or travel document · Sample Client A	SAMPLE	Typed by Client A · confirmed by Case officer (Sample)
+Given name(s) as shown on passport or travel document · Sample Client A	SAMPLE	
+--- Round 1, the spouse's filing selected
+Back to the case
+Representative's review · Round 1
+
+The representative of record checks each form and approves it or sends it back. Sent by Case officer (Sample), Nov 9, 2026, 07:33 a.m. · Representative of record: Representative (Sample).
+
+Round
+Round 1 · Nov 9
+Visitor visa: Sample Client A · Round 1
+Under review
+IMM 5476 · Sample Client A
+To check
+IMM 5257 · Sample Client A
+To check
+IMM 5257 SCH1 · Sample Client A
+To check
+IMM 5645 · Sample Client A
+To check
+Checklist · Visitor visa: Sample Client A
+Values confirmed: 69 facts, by Case officer (Sample)
+All required documents verified (when sent: 0 of 3)
+No open critical warnings (live: 7)
+Funds shown cover the length of the stay · Sample
+Purpose of travel matches the invitation and itinerary · Sample
+Ties to the home country are shown by the documents · Sample
+Visitor visa: Sample Spouse A · Round 1
+Under review
+IMM 5645 · Sample Spouse A
+To check
+IMM 5476 · Sample Spouse A
+To check
+IMM 5257 SCH1 · Sample Spouse A
+To check
+IMM 5257 · Sample Spouse A
+To check
+Checklist · Visitor visa: Sample Spouse A
+Values confirmed: 69 facts, by Case officer (Sample)
+All required documents verified (when sent: 0 of 3)
+No open critical warnings (live: 7)
+Funds shown cover the length of the stay · Sample
+Purpose of travel matches the invitation and itinerary · Sample
+Ties to the home country are shown by the documents · Sample
+IMM 5645 · Sample Spouse A
+To check
+
+Frozen when sent with its facts (no file for filing matches them yet; an online form has none).
+
+Facts on this form · 32 facts
+Fact	Value	Source
+The address where the person currently lives. · Sample Spouse A	Sample City Canada Sample Road	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+Country or territory of birth · Sample Spouse A	India	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+Date of birth · Sample Spouse A	1988-11-09	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+The person's full name · Sample Spouse A	SAMPLE	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+The person's current occupation. · Sample Spouse A	SAMPLE	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+Current marital status · Sample Spouse A's parent 2	Annulled Marriage	Typed by Client A · confirmed by Case officer (Sample)
+The address where the person currently lives. · Sample Spouse A's parent 2	Sample City Canada Sample Road	Typed by Client A · confirmed by Case officer (Sample)
+Country or 
+checklist boxes enabled: 12
+STOPPED: locator.check: Clicking the checkbox did not change its state
+page errors: []
+
+===== stage 2 2026-11-09T12:33:52.745Z
+url: http://localhost:4473/cases/cdd06564-98d0-497b-9bb0-3b3217b75d5d/representative-review/0416b7c0-b361-4d79-a416-2adf28b800a2?filing=8cbf9d0e-166c-442c-8da6-92be80950751
+--- Review page, round 1, as the representative opens it
+Back to the case
+Representative's review · Round 1
+
+The representative of record checks each form and approves it or sends it back. Sent by Case officer (Sample), Nov 9, 2026, 07:33 a.m. · Representative of record: Representative (Sample).
+
+Round
+Round 1 · Nov 9
+Visitor visa: Sample Client A · Round 1
+Under review
+IMM 5476 · Sample Client A
+To check
+IMM 5257 · Sample Client A
+To check
+IMM 5257 SCH1 · Sample Client A
+To check
+IMM 5645 · Sample Client A
+To check
+Checklist · Visitor visa: Sample Client A
+Values confirmed: 69 facts, by Case officer (Sample)
+Ticked by Representative (Sample), Nov 9, 2026, 07:33 a.m.
+All required documents verified (when sent: 0 of 3)
+No open critical warnings (live: 7)
+Funds shown cover the length of the stay · Sample
+Purpose of travel matches the invitation and itinerary · Sample
+Ties to the home country are shown by the documents · Sample
+Visitor visa: Sample Spouse A · Round 1
+Under review
+IMM 5645 · Sample Spouse A
+To check
+IMM 5476 · Sample Spouse A
+To check
+IMM 5257 SCH1 · Sample Spouse A
+To check
+IMM 5257 · Sample Spouse A
+To check
+Checklist · Visitor visa: Sample Spouse A
+Values confirmed: 69 facts, by Case officer (Sample)
+All required documents verified (when sent: 0 of 3)
+No open critical warnings (live: 7)
+Funds shown cover the length of the stay · Sample
+Purpose of travel matches the invitation and itinerary · Sample
+Ties to the home country are shown by the documents · Sample
+IMM 5476 · Sample Client A
+To check
+
+Frozen when sent with its facts (no file for filing matches them yet; an online form has none).
+
+Facts on this form · 23 facts
+Fact	Value	Source
+What this use-of-representative filing does: appoint a representative or cancel a representative's appointment (values: appoint, cancel) · The application	SAMPLE	Typed by Client A · confirmed by Case officer (Sample)
+What this use-of-representative filing does: appoint a representative or cancel a representative's appointment (values: appoint, cancel) · The application	SAMPLE	Typed by Client A · confirmed by Case officer (Sample)
+The type of temporary residence application the case is for (visitor, worker, student or other) · The application	SAMPLE	Typed by Client A · confirmed by Case officer (Sample)
+Date of birth · Sample Client A	1986-11-09	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+Family name as shown on passport or travel document · Sample Client A	SAMPLE	Typed by Client A · confirmed by Case officer (Sample)
+Given name(s) as shown 
+--- Round 1, the spouse's filing selected
+Back to the case
+Representative's review · Round 1
+
+The representative of record checks each form and approves it or sends it back. Sent by Case officer (Sample), Nov 9, 2026, 07:33 a.m. · Representative of record: Representative (Sample).
+
+Round
+Round 1 · Nov 9
+Visitor visa: Sample Client A · Round 1
+Under review
+IMM 5476 · Sample Client A
+To check
+IMM 5257 · Sample Client A
+To check
+IMM 5257 SCH1 · Sample Client A
+To check
+IMM 5645 · Sample Client A
+To check
+Checklist · Visitor visa: Sample Client A
+Values confirmed: 69 facts, by Case officer (Sample)
+Ticked by Representative (Sample), Nov 9, 2026, 07:33 a.m.
+All required documents verified (when sent: 0 of 3)
+No open critical warnings (live: 7)
+Funds shown cover the length of the stay · Sample
+Purpose of travel matches the invitation and itinerary · Sample
+Ties to the home country are shown by the documents · Sample
+Visitor visa: Sample Spouse A · Round 1
+Under review
+IMM 5645 · Sample Spouse A
+To check
+IMM 5476 · Sample Spouse A
+To check
+IMM 5257 SCH1 · Sample Spouse A
+To check
+IMM 5257 · Sample Spouse A
+To check
+Checklist · Visitor visa: Sample Spouse A
+Values confirmed: 69 facts, by Case officer (Sample)
+All required documents verified (when sent: 0 of 3)
+No open critical warnings (live: 7)
+Funds shown cover the length of the stay · Sample
+Purpose of travel matches the invitation and itinerary · Sample
+Ties to the home country are shown by the documents · Sample
+IMM 5645 · Sample Spouse A
+To check
+
+Frozen when sent with its facts (no file for filing matches them yet; an online form has none).
+
+Facts on this form · 32 facts
+Fact	Value	Source
+The address where the person currently lives. · Sample Spouse A	Sample City Canada Sample Road	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+Country or territory of birth · Sample Spouse A	India	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+Date of birth · Sample Spouse A	1988-11-09	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+The person's full name · Sample Spouse A	SAMPLE	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+The person's current occupation. · Sample Spouse A	SAMPLE	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+Current marital status · Sample Spouse A's parent 2	Annulled Marriage	Typed by Client A · confirmed by Case officer (Sample)
+The address where the person currently lives. · Sample Spouse A's parent 2	Sample City Canada Sample Road	Typed b
+spouse checklist items: 6
+  Values confirmed: 69 facts, by Case officer (Sample) | enabled true | false -> true
+  All required documents verified (when sent: 0 of 3) | enabled true | false -> true
+  No open critical warnings (live: 7) | enabled true | false -> true
+  Funds shown cover the length of the stay · Sample | enabled true | false -> true
+  Purpose of travel matches the invitation and itinerary · Sample | enabled true | false -> true
+  Ties to the home country are shown by the documents · Sample | enabled true | false -> true
+--- Approve dialog (spouse)
+Approve Visitor visa: Sample Spouse A?
+
+Approve Visitor visa: Sample Spouse A?
+
+Each form is stamped with its file and the facts it read. A later change to a fact withdraws only the forms that read it.
+
+7 open critical warnings
+
+They stay on Ready to file, passed there with a reason or fixed.
+Go back
+Approve
+--- Round 1 after approving the spouse's filing
+Back to the case
+Representative's review · Round 1
+
+The representative of record checks each form and approves it or sends it back. Sent by Case officer (Sample), Nov 9, 2026, 07:33 a.m. · Representative of record: Representative (Sample).
+
+Round
+Round 1 · Nov 9
+Visitor visa: Sample Client A · Round 1
+Under review
+IMM 5476 · Sample Client A
+To check
+IMM 5257 · Sample Client A
+To check
+IMM 5257 SCH1 · Sample Client A
+To check
+IMM 5645 · Sample Client A
+To check
+Checklist · Visitor visa: Sample Client A
+Values confirmed: 69 facts, by Case officer (Sample)
+Ticked by Representative (Sample), Nov 9, 2026, 07:33 a.m.
+All required documents verified (when sent: 0 of 3)
+No open critical warnings (live: 7)
+Funds shown cover the length of the stay · Sample
+Purpose of travel matches the invitation and itinerary · Sample
+Ties to the home country are shown by the documents · Sample
+Visitor visa: Sample Spouse A · Round 1
+Approved
+IMM 5645 · Sample Spouse A
+Approved
+IMM 5476 · Sample Spouse A
+Approved
+IMM 5257 SCH1 · Sample Spouse A
+Approved
+IMM 5257 · Sample Spouse A
+Approved
+Checklist · Visitor visa: Sample Spouse A
+Values confirmed: 69 facts, by Case officer (Sample)
+Ticked by Representative (Sample), Nov 9, 2026, 07:33 a.m.
+All required documents verified (when sent: 0 of 3)
+Ticked by Representative (Sample), Nov 9, 2026, 07:33 a.m.
+No open critical warnings (live: 6)
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+Funds shown cover the length of the stay · Sample
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+Purpose of travel matches the invitation and itinerary · Sample
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+Ties to the home country are shown by the documents · Sample
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+IMM 5645 · Sample Spouse A
+Approved, still current
+
+Stamped with its facts (no file for filing matches them yet; an online form has none).
+
+Facts on this form · 32 facts
+Fact	Value	Source
+The address where the person currently lives. · Sample Spouse A	Sample City Canada Sample Road	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+Country or territory of birth · Sample Spouse A	India	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+Date of birth · Sample Spouse A	1988-11-09	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+The person's full name · Sample Spouse A	SAMPLE	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+The pers
+--- Send back with no reason
+Send back Visitor visa: Sample Client A
+
+Send back Visitor visa: Sample Client A
+
+What should change, and on which form?
+
+Say what should change, and on which form (at least 5 characters, with words).
+
+Pin to a form (optional)
+No form
+IMM 5476 · Sample Client A
+IMM 5257 · Sample Client A
+IMM 5257 SCH1 · Sample Client A
+IMM 5645 · Sample Client A
+Pin to a checklist item (optional)
+No item
+Values confirmed: 69 facts, by Case officer (Sample)
+All required documents verified
+No open critical warnings
+Funds shown cover the length of the stay
+Purpose of travel matches the invitation and itinerary
+Ties to the home country are shown by the documents
+Cancel
+Send back
+--- Round 1 after sending the principal's filing back
+Back to the case
+Representative's review · Round 1
+
+The representative of record checks each form and approves it or sends it back. Sent by Case officer (Sample), Nov 9, 2026, 07:33 a.m. · Representative of record: Representative (Sample).
+
+Round
+Round 1 · Nov 9
+Visitor visa: Sample Client A · Round 1
+Sent back
+IMM 5476 · Sample Client A
+Sent back
+IMM 5257 · Sample Client A
+Sent back
+IMM 5257 SCH1 · Sample Client A
+Sent back
+IMM 5645 · Sample Client A
+Sent back
+Checklist · Visitor visa: Sample Client A
+Values confirmed: 69 facts, by Case officer (Sample)
+Ticked by Representative (Sample), Nov 9, 2026, 07:33 a.m.
+All required documents verified (when sent: 0 of 3)
+No open critical warnings (live: 7)
+Funds shown cover the length of the stay · Sample
+Purpose of travel matches the invitation and itinerary · Sample
+Ties to the home country are shown by the documents · Sample
+Sent back:
+“IMM 5257: the city of birth does not match the passport. Please check it with the client (Sample).”
+Visitor visa: Sample Spouse A · Round 1
+Approved
+IMM 5645 · Sample Spouse A
+Approved
+IMM 5476 · Sample Spouse A
+Approved
+IMM 5257 SCH1 · Sample Spouse A
+Approved
+IMM 5257 · Sample Spouse A
+Approved
+Checklist · Visitor visa: Sample Spouse A
+Values confirmed: 69 facts, by Case officer (Sample)
+Ticked by Representative (Sample), Nov 9, 2026, 07:33 a.m.
+All required documents verified (when sent: 0 of 3)
+Ticked by Representative (Sample), Nov 9, 2026, 07:33 a.m.
+No open critical warnings (live: 6)
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+Funds shown cover the length of the stay · Sample
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+Purpose of travel matches the invitation and itinerary · Sample
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+Ties to the home country are shown by the documents · Sample
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+IMM 5476 · Sample Client A
+Sent back
+
+Frozen when sent with its facts (no file for filing matches them yet; an online form has none).
+
+Facts on this form · 23 facts
+Fact	Value	Source
+What this use-of-representative filing does: appoint a representative or cancel a representative's appointment (values: appoint, cancel) · The application	SAMPLE	Typed by Client A · confirmed by Case officer (Sample)
+What this use-of-representative filing does: appoint a representative or cancel a representative's appointment (values: appoint, cancel) · The application	SAMPLE	Typed by Client A · confirmed by 
+page errors: []
+
+===== stage 3a 2026-11-09T12:34:40.757Z
+--- filing 8cbf9d0e-166c-442c-8da6-92be80950751 head
+Visitor visa: Sample Client A
+Not started
+Sent back
+Open the review
+Ready to file
+--- filing dfda555d-e9ff-4ad5-8143-b7d81a399e31 head
+Visitor visa: Sample Spouse A
+Not started
+Approved
+Open the review
+Ready to file
+tabs: ["The representative","The application","Sample Client A","Sample Client A's mother","Sample Client A's father","Sample Client A's brothers and sisters","Sample Spouse A","Sample Spouse A's mother","Sample Spouse A's father","Sample Spouse A's brothers and sisters"]
+links: ["","Product Studio","Cases","Open it as Client A (simulated)","Open case check","Open the review","Open the review","Open Review","IRCC fee list","Section B: appointment of representative","Contact information","Personal details"]
+page errors: []
+
+===== stage 3b 2026-11-09T12:34:53.609Z
+reason on the case page: no
+tooltip on the Sent back chip: []
+person tab, around "birth":
+he status in the current country of residence
+1 Jan 2015
+Confirmed
+
+questionnaire · Client A · 9 Nov, 12:32 · confirmed by Case officer 9 Nov, 12:32 · fills IMM 5257 for Sample Client A
+
+Edit
+Date of birth
+9 Nov 1986
+Confirmed
+
+Agent view · Case officer · 9 Nov, 12:31 · confirmed by Case officer 9 Nov, 12:32 · fills IMM 5257 for Sample Client A, IMM 5257 SCH1 for Sample Client A, IMM 5476 for Sample Client A, IMM 5645 for 2 people
+
+Edit
+City or town of birth
+SAMPLE
+Confirmed
+
+questionnaire · Client A · 9 Nov, 12:32 · confirmed by Case officer 9 Nov, 12:32 · fills IMM 5257 for Sample Client A
+
+Edit
+Country or territory of birth
+India
+Confirmed
+
+questionnaire · Client A · 9 Nov, 12:32 · confirmed by Case officer 9 Nov, 12:32 · fills IMM 5257 for Sample Client A, IMM 5645 for 2 people
+
+No fixed list for this answer yet: check it before confirming the section.
+
+Edit
+Sex or gender marker of the person
+Female
+Confirmed
+
+questionnaire · Client A · 9 Nov, 12:32 · confirmed by Case officer 9 No
+page errors: []
+
+===== stage 3c 2026-11-09T12:35:19.751Z
+officer on the review: read-only words: ["Only the representative of record approves or sends back. You can read this review."]; reason shown: true; Approve/Send back buttons: 0
+--- Edit City or town of birth
+Change: City or town of birth
+
+Sample Client A · fills IMM 5257 for Sample Client A (1 form field)
+
+City or town of birth
+
+Now: SAMPLE (Confirmed by the officer).
+
+Cancel
+Save
+after save: City or town of birth | SAMPLEVILLE | Entered by staff · to confirm |  | Agent view · Case officer · 9 Nov, 12:35 · fills IMM 5257 for Sample Client A |  | Edit | Country or territory of birth | India | Confirmed |  | questionnaire · Client A · 9 Nov, 12:32 · confirmed by Case offi
+confirm buttons on the tab: ["Confirm section","Confirm section","Confirm section","Confirm section","Confirm section","Confirm section","Confirm section","Confirm section","Confirm section","Confirm section","Confirm section","Confirm section","Confirm section","Confirm section","Confirm section"]
+page errors: []
+
+===== stage 3d 2026-11-09T12:35:40.550Z
+section: Personal details | for Sample Client A | 34 answered · 1 to confirm
+after confirm: City or town of birth | SAMPLEVILLE | Confirmed |  | Agent view · Case officer · 9 Nov, 12:35 · confirmed by Case officer 9 Nov, 12:35 · fills IMM 5257 for Sample Client A |  | Edit | Country or territory of birth | 
+--- Send dialog for round 2
+Send for review
+
+Send for review: the representative of record checks each form and approves it or sends it back.
+
+Visitor visa: Sample Client A
+Blocked: 1 block · 21 open warnings
+Visitor visa: Sample Spouse A
+Approved: sending it again withdraws the approval · 19 open warnings
+Cancel
+Send 0 filings for review
+STOPPED: locator.click: Timeout 30000ms exceeded.
+page errors: []
+
+===== stage 3e 2026-11-09T12:36:30.272Z
+the principal's block: adiness | 11% | 1 of 9 done | How this is worked out |  | 1 block and 21 open warnings stand before Ready to file. |  | The case team · 16 lines | Blocks: fix it | IMM 5257 for Sample Client A: no validated copy read back for today's facts. Validate it in Adobe and upload the validated copy; IRCC returns it unprocessed otherwise. | CRITICAL: IMM 5476 for Sample Client A has no copy made for filing yet (a PDF upload). Generate a copy under Prepare application before 
+principal box enabled true, checked false
+--- Send dialog, principal ticked by hand
+Send for review
+
+Send for review: the representative of record checks each form and approves it or sends it back.
+
+Visitor visa: Sample Client A
+Blocked: 1 block · 21 open warnings
+Visitor visa: Sample Spouse A
+Approved: sending it again withdraws the approval · 19 open warnings
+Cancel
+Send 1 filing for review
+--- principal's filing after round 2 sent
+Visitor visa: Sample Client A
+Not started
+Sent for review
+Open the review
+Ready to file
+page errors: []
+
+===== stage 4 2026-11-09T12:36:51.094Z
+url: http://localhost:4473/cases/cdd06564-98d0-497b-9bb0-3b3217b75d5d/representative-review/184a1dfa-f2b6-4a19-9bc1-4b677c001de2?filing=8cbf9d0e-166c-442c-8da6-92be80950751
+--- Round 2 as the representative opens it
+Back to the case
+Representative's review · Round 2
+
+The representative of record checks each form and approves it or sends it back. Sent by Case officer (Sample), Nov 9, 2026, 07:36 a.m. · Representative of record: Representative (Sample).
+
+Round
+Round 2 · Nov 9
+Round 1 · Nov 9
+Visitor visa: Sample Client A · Round 2
+Under review
+IMM 5476 · Sample Client A
+To check
+IMM 5257 · Sample Client A
+Changed since review
+IMM 5257 SCH1 · Sample Client A
+To check
+IMM 5645 · Sample Client A
+To check
+Checklist · Visitor visa: Sample Client A
+Values confirmed: 69 facts, by Case officer (Sample)
+All required documents verified (when sent: 0 of 3)
+No open critical warnings (live: 8)
+Funds shown cover the length of the stay · Sample
+Purpose of travel matches the invitation and itinerary · Sample
+Ties to the home country are shown by the documents · Sample
+
+Rounds of this filing: 1 sent back · 2 under review
+
+IMM 5257 · Sample Client A
+Changed since review
+
+Frozen when sent with its facts (no file for filing matches them yet; an online form has none).
+
+Changed since the round before · 1 fact
+Fact	Before → after	Typed by
+City or town of birth · Sample Client A	SAMPLE → SAMPLEVILLE	Case officer (Sample), Nov 9
+Facts on this form · 114 facts
+Only changed facts
+
+Showing only what changed (above). Untick "Only changed facts" to see every fact.
+
+Visitor visa: Sample Client A: 6 checklist items not ticked · 1 form changed since review · 8 open critical warnings (passed with a reason on Ready to file)
+
+Send back…
+Approve
+changes panel: ["Changed since the round before · 1 fact\nFact\tBefore → after\tTyped by\nCity or town of birth · Sample Client A\tSAMPLE → SAMPLEVILLE\tCase officer (Sample), Nov 9"]
+--- Approve dialog, round 2, nothing ticked
+Approve with 6 items not ticked?
+
+Approve with 6 items not ticked?
+
+6 checklist items are not ticked. Approve anyway? This is recorded.
+
+Values confirmed: 69 facts, by Case officer (Sample)
+All required documents verified
+No open critical warnings
+Funds shown cover the length of the stay
+Purpose of travel matches the invitation and itinerary
+Ties to the home country are shown by the documents
+
+Each form is stamped with its file and the facts it read. A later change to a fact withdraws only the forms that read it.
+
+8 open critical warnings
+
+They stay on Ready to file, passed there with a reason or fixed.
+Go back
+Approve
+--- Round 2 after approve
+Back to the case
+Representative's review · Round 2
+
+The representative of record checks each form and approves it or sends it back. Sent by Case officer (Sample), Nov 9, 2026, 07:36 a.m. · Representative of record: Representative (Sample).
+
+Round
+Round 2 · Nov 9
+Round 1 · Nov 9
+Visitor visa: Sample Client A · Round 2
+Approved
+IMM 5476 · Sample Client A
+Approved
+IMM 5257 · Sample Client A
+Approved
+IMM 5257 SCH1 · Sample Client A
+Approved
+IMM 5645 · Sample Client A
+Approved
+Checklist · Visitor visa: Sample Client A
+Values confirmed: 69 facts, by Case officer (Sample)
+All required documents verified (when sent: 0 of 3)
+No open critical warnings (live: 7)
+Funds shown cover the length of the stay · Sample
+Purpose of travel matches the invitation and itinerary · Sample
+Ties to the home country are shown by the documents · Sample
+
+Rounds of this filing: 1 sent back · 2 approved
+
+IMM 5476 · Sample Client A
+Approved, still current
+
+Stamped with its facts (no file for filing matches them yet; an online form has none).
+
+Facts on this form · 23 facts
+Fact	Value	Source
+What this use-of-representative filing does: appoint a representative or cancel a representative's appointment (values: appoint, cancel) · The application	SAMPLE	Typed by Client A · confirmed by Case officer (Sample)
+What this use-of-representative filing does: appoint a representative or cancel a representative's appointment (values: appoint, cancel) · The application	SAMPLE	Typed by Client A · confirmed by Case officer (Sample)
+The type of temporary residence application the case is for (visitor, worker, student or other) · The application	SAMPLE	Typed by Client A · confirmed by Case officer (Sample)
+Date of birth · Sample Client A	1986-11-09	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+Family name as shown on passport or travel document · Sample Client A	SAMPLE	Typed by Client A · confirmed by Case officer (Sample)
+Given name(s) as shown on passport or travel document · Sample Client A	SAMPLE	Typed by Client A · confirmed by Case officer (Sample)
+Name of the IRCC office where the application was submitted · The application	SAMPLE	Typed by Client A · confirmed by Case officer (Sample)
+Unique Client Identifier assigned by IRCC · Sample Client A	0000000001	Typed by Client A · confirmed by Case officer (Sample)
+Family name as shown on passport or travel document · the representative	Representative	Typed by the firm record
+Given name(s) as shown on passport or travel document · the r
+page errors: []
+
+===== stage 5 2026-11-09T12:37:22.608Z
+--- Edit the spouse's city of birth
+Change: City or town of birth
+
+Sample Spouse A · fills IMM 5257 for Sample Spouse A (1 form field)
+
+City or town of birth
+
+Now: SAMPLE (Confirmed by the officer).
+
+Cancel
+Save
+--- spouse's filing on Ready to file after the change (officer)
+Visitor visa: Sample Spouse A
+Not started
+Approval withdrawn
+Open the review
+Ready to file
+spouse row around "review": Visitor visa: Sample Spouse A | Not started | Approval withdrawn | Open the review | Ready to file | Not ready | Readiness | 11% | 1 of 9 done | How this is worked out |  | 1 block and 21 open warnings stand before Ready to file. |  | The case team · 16 lines | Blocks: fix it | IMM 5257 for Sample Spouse A: no validated copy read back for today's facts. Validate it in Adobe and upload the validated copy; IRCC returns it unprocessed otherwise. | CRITICAL: IMM 5645 for Sample Spouse A has no copy ma
+url: http://localhost:4473/cases/cdd06564-98d0-497b-9bb0-3b3217b75d5d/representative-review/0416b7c0-b361-4d79-a416-2adf28b800a2?filing=dfda555d-e9ff-4ad5-8143-b7d81a399e31
+--- Round 1 with the spouse's withdrawn form (representative)
+Back to the case
+Representative's review · Round 1
+
+The representative of record checks each form and approves it or sends it back. Sent by Case officer (Sample), Nov 9, 2026, 07:33 a.m. · Representative of record: Representative (Sample).
+
+Round
+Round 2 · Nov 9
+Round 1 · Nov 9
+Visitor visa: Sample Client A · Round 1
+Sent back
+IMM 5476 · Sample Client A
+Sent back
+IMM 5257 · Sample Client A
+Sent back
+IMM 5257 SCH1 · Sample Client A
+Sent back
+IMM 5645 · Sample Client A
+Sent back
+Checklist · Visitor visa: Sample Client A
+Values confirmed: 69 facts, by Case officer (Sample)
+Ticked by Representative (Sample), Nov 9, 2026, 07:33 a.m.
+All required documents verified (when sent: 0 of 3)
+No open critical warnings (live: 7)
+Funds shown cover the length of the stay · Sample
+Purpose of travel matches the invitation and itinerary · Sample
+Ties to the home country are shown by the documents · Sample
+Sent back:
+“IMM 5257: the city of birth does not match the passport. Please check it with the client (Sample).”
+
+Rounds of this filing: 1 sent back · 2 approved
+
+Visitor visa: Sample Spouse A · Round 1
+Approved
+IMM 5645 · Sample Spouse A
+Approved
+IMM 5476 · Sample Spouse A
+Approved
+IMM 5257 SCH1 · Sample Spouse A
+Approved
+IMM 5257 · Sample Spouse A
+Approval withdrawn
+Checklist · Visitor visa: Sample Spouse A
+Values confirmed: 69 facts, by Case officer (Sample)
+Ticked by Representative (Sample), Nov 9, 2026, 07:33 a.m.
+All required documents verified (when sent: 0 of 3)
+Ticked by Representative (Sample), Nov 9, 2026, 07:33 a.m.
+No open critical warnings (live: 8)
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+Funds shown cover the length of the stay · Sample
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+Purpose of travel matches the invitation and itinerary · Sample
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+Ties to the home country are shown by the documents · Sample
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+IMM 5257 · Sample Spouse A
+Approval withdrawn
+
+Approval withdrawn: City or town of birth changed by Case officer (Sample), 9 Nov 2026.
+
+Stamped with the validated copy read back.Details
+
+Changed since it was approved · 1 fact
+Fact	Before → after	Typed by
+City or town of birth · Sample Spouse A	SAMPLE → SAMPLETOWN	Case officer (Sample), Nov 9
+Facts on this form · 114 facts
+Only changed facts
+
+Showing only what changed (above). Untick "Only changed facts" to see every fact.
+
+Visitor visa: Sample Spouse A: 1 form cha
+re-approve buttons: ["Re-approve 1 changed form"]
+url after: http://localhost:4473/cases/cdd06564-98d0-497b-9bb0-3b3217b75d5d/representative-review/cf84ef3d-080e-43de-886a-eaf748d73282?filing=dfda555d-e9ff-4ad5-8143-b7d81a399e31
+--- After re-approve
+Back to the case
+Representative's review · Round 3
+
+The representative of record checks each form and approves it or sends it back. Re-approved after a change, Nov 9, 2026, 07:37 a.m. · Representative of record: Representative (Sample).
+
+Round
+Round 3 · Nov 9
+Round 2 · Nov 9
+Round 1 · Nov 9
+Visitor visa: Sample Spouse A · Round 2
+Approved
+IMM 5645 · Sample Spouse A
+Approved
+IMM 5476 · Sample Spouse A
+Approved
+IMM 5257 SCH1 · Sample Spouse A
+Approved
+IMM 5257 · Sample Spouse A
+Approved
+Checklist · Visitor visa: Sample Spouse A
+Values confirmed: 69 facts, by Case officer (Sample)
+Ticked by Representative (Sample), Nov 9, 2026, 07:33 a.m.
+All required documents verified (when sent: 0 of 3)
+Ticked by Representative (Sample), Nov 9, 2026, 07:33 a.m.
+No open critical warnings (live: 7)
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+Funds shown cover the length of the stay · Sample
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+Purpose of travel matches the invitation and itinerary · Sample
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+Ties to the home country are shown by the documents · Sample
+Ticked by Representative (Sample), Nov 9, 2026, 07:34 a.m.
+
+Rounds of this filing: 1 approved · 2 approved
+
+IMM 5645 · Sample Spouse A
+Approved, still current
+
+Stamped with its facts (no file for filing matches them yet; an online form has none).
+
+Facts on this form · 32 facts
+Fact	Value	Source
+The address where the person currently lives. · Sample Spouse A	Sample City Canada Sample Road	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+Country or territory of birth · Sample Spouse A	India	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+Date of birth · Sample Spouse A	1988-11-09	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+The person's full name · Sample Spouse A	SAMPLE	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+The person's current occupation. · Sample Spouse A	SAMPLE	Typed by Case officer (Sample) · confirmed by Case officer (Sample)
+Current marital status · Sample Spouse A's parent 2	Annulled Marriage	Typed by Client A · confirmed by Case officer (Sample)
+The address where the person currently lives. · Sample Spouse A's parent 2	Sample City Canada Sample Road	Typed by Client A · confirmed by Case officer (Sample)
+Country or territory of birth · Sample Spouse A's parent 2	India	Typed by Client A · confirmed by Case officer (Sample)
+Date of birth · S
+page errors: []
+
+===== stage 6 2026-11-09T12:38:45.384Z
+--- filing 8cbf9d0e after the files were made
+Visitor visa: Sample Client A
+Not started
+Approved
+Open the review
+Ready to file
+--- filing dfda555d after the files were made
+Visitor visa: Sample Spouse A
+Not started
+Approved
+Open the review
+Ready to file
+representative_review lines open: []
+warnings passed by screen: 0
+filing 8cbf9d0e lines left: ["critical:fields_left_empty","critical:no_copy","critical:no_copy","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","critical:missing_signature","warning:missing_document","warning:missing_document","warning:missing_document"]
+--- filing 8cbf9d0e after Ready to file
+Visitor visa: Sample Client A
+Not started
+Approved
+Open the review
+Ready to file
+filing dfda555d lines left: ["critical:no_copy","critical:fields_left_empty","critical:no_copy","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","warning:hand_write","critical:missing_signature","warning:missing_document","warning:missing_document","warning:missing_document"]
+--- filing dfda555d after Ready to file
+Visitor visa: Sample Spouse A
+Not started
+Approved
+Open the review
+Ready to file
+Record the submission… enabled: false
+why closed: ["Opens once every filing is Ready to file: Sample Client A (Not started), Sample Spouse A (Not started)."]
+page errors: []
+
+===== stage 6 2026-11-09T12:39:02.850Z
+--- filing 8cbf9d0e after the files were made
+Visitor visa: Sample Client A
+Not started
+Approved
+Open the review
+Ready to file
+--- filing dfda555d after the files were made
+Visitor visa: Sample Spouse A
+Not started
+Approved
+Open the review
+Ready to file
+representative_review lines open: []
+STOPPED: locator.getAttribute: Timeout 30000ms exceeded.
+page errors: []
+
+===== stage 6 2026-11-09T12:39:49.827Z
+--- filing 8cbf9d0e after the files were made
+Visitor visa: Sample Client A
+Not started
+Approved
+Open the review
+Ready to file
+--- filing dfda555d after the files were made
+Visitor visa: Sample Spouse A
+Not started
+Approved
+Open the review
+Ready to file
+representative_review lines open: []
+warnings passed by screen: 40
+filing 8cbf9d0e lines left: ["null:hand_write","null:hand_write","null:hand_write","null:missing_signature","null:hand_write","null:hand_write","null:hand_write","null:hand_write","null:hand_write","null:hand_write","null:hand_write","null:hand_write","null:hand_write","null:hand_write","null:fields_left_empty","null:no_copy","null:no_copy","null:missing_document","null:missing_document","null:missing_document"]
+--- filing 8cbf9d0e after Ready to file
+Visitor visa: Sample Client A
+Ready to file
+Approved
+Open the review
+filing dfda555d lines left: ["null:no_copy","null:hand_write","null:hand_write","null:hand_write","null:fields_left_empty","null:no_copy","null:missing_signature","null:hand_write","null:hand_write","null:hand_write","null:hand_write","null:hand_write","null:hand_write","null:hand_write","null:hand_write","null:hand_write","null:hand_write","null:missing_document","null:missing_document","null:missing_document"]
+--- filing dfda555d after Ready to file
+Visitor visa: Sample Spouse A
+Ready to file
+Approved
+Open the review
+Record the submission… enabled: true
+why closed: []
+--- C8.2 Record the submission dialog (its first step)
+Record the submission
+
+One record for the whole submission, as IRCC acknowledged it through APR Portal. It cannot be undone: afterwards the filings are read-only and a wrong number is fixed with “Correct a number”.
+
+Sample Client A’s filing
+Application number
+
+As on IRCC’s acknowledgement, like W123456789 (Sample pattern)
+
+Submitted on
+
+Not after today
+
+Our reference
+IRCC’s “Transaction Approved” page (optional)
+
+The fee receipt: the page IRCC shows once the fees are paid, as a PDF, JPEG or PNG up to 20 MB
+
+Fee receipt number (optional)
+
+The receipt number printed on that page
+
+Sample Spouse A’s filing
+Application number
+
+As on IRCC’s acknowledgement, like W123456789 (Sample pattern)
+
+Submitted on
+
+Not after today
+
+Our reference
+IRCC’s “Transaction Approved” page (optional)
+
+The fee receipt: the page IRCC shows once the fees are paid, as a PDF, JPEG or PNG up to 20 MB
+
+Fee receipt number (optional)
+
+The receipt number printed on that page
+
+UCI per person (optional)
+Sample Client A’s UCI
+
+The client identifier IRCC gave this person
+
+Sample Spouse A’s UCI
+
+The client identifier IRCC gave this person
+
+Cancel
+Record the submission
+page errors: []
+
+===== stage 7 2026-11-09T12:41:28.511Z
+application number boxes: 2
+--- C8.2 submission after recording
+One submission for 2 people applying
+Recorded · read-only
+Visitor visa: Sample Client A
+Submitted
+Application number
+W123456789
+Correct a number…
+Submitted on
+November 9, 2026 · through APR Portal
+Our reference
+ACC-mw98qif2-nmvo-1
+Fee receipt
+
+No Transaction Approved page uploaded
+
+No receipt number typed
+
+Upload the Transaction Approved page…
+UCI
+Sample Client A: none given
+Add…
+Prepared by · Reviewed by
+Case officer · Representative
+Visitor visa: Sample Spouse A
+Submitted
+Application number
+W123456790
+Correct a number…
+Submitted on
+November 9, 2026 · through APR Portal
+Our reference
+ACC-mw98qif2-nmvo-2
+Fee receipt
+
+No Transaction Approved page uploaded
+
+No receipt number typed
+
+Upload the Transaction Approved page…
+UCI
+Sample Spouse A: none given
+Add…
+Prepared by · Reviewed by
+Case officer · Representative
+Fees
+
+Fees as recorded on November 9, 2026
+
+Fees for One submission for 2 people applying: Visitor visa: Sample Client A, Visitor visa: Sample Spouse A
+Fee	Amount	Why
+Visitor visa: Sample Client A
+Visitor visa fee	CAD 100	CAD 100 for Sample Client A.
+Biometrics fee	CAD 85	CAD 85 for Sample Client A.
+Visitor visa: Sample Spouse A
+Visitor visa fee	CAD 100	CAD 100 for Sample Spouse A.
+Biometrics fee	CAD 85	CAD 85 for Sample Spouse A.
+Visitor visa fee: CAD 200 · Per person, with a family maximum of CAD 500 from 5 people applying together · 2 × CAD 100 = CAD 200; the family maximum CAD 500 starts at 5 people applying together.
+Biometrics fee: CAD 170 · Per person, with a family maximum of CAD 170 from 2 people applying together · 2 × CAD 85 = CAD 170, not above the family maximum CAD 170.
+
+Total for this submission: CAD 370
+
+Sources: IRCC fee list (read 2026-11-02)
+page errors: []
