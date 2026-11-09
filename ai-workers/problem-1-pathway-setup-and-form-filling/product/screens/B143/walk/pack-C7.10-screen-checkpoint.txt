@@ -1,0 +1,13 @@
+C7.10 — Readiness figure by screens (Ready to file and the case header, 1440 px)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C7.10-s1 pass (BR-5): the case header shows the case's readiness in words and figure, as the server gives it — {"pill":"Readiness: Not ready · 22% (lowest: Visitor visa: Sample Client W)","server":{"state":"not_ready","state_filing":"4af25f72-e2a0-40a4-95b2-8e31075fd5db","score":22,"score_filing":"4af25f72-e2a0-40a4-95b2-8e31075fd5db"}}
+PASS  C7.10-s2 fail (BR-1, BR-4): Ready to file shows the filing Not ready under 100 with "n of m done", the same as the server — {"shown":{"state":"not_ready","score":22,"text":"Not ready Readiness 22% 2 of 9 done How this is worked out"},"server":{"filing":"4af25f72-e2a0-40a4-95b2-8e31075fd5db","state":"not_ready","score":22,"done":2,"countable":9,"passed":0,"items":[{"kind":"form","ke
+PASS  C7.10-s3 pass (BR-7): "How this is worked out" opens by its summary and lists every counted item with Done or Not done, then the rule in words — {"items":9,"countable":9}
+PASS  C7.10-s4 pass (BR-3): a warning (missing_document) passed with a reason by screens counts as done: the figure rises, "1 passed with a reason" shows, screen and server agree — {"before":22,"after":33,"shown":"Not ready Readiness 33% 3 of 9 done · 1 passed with a reason How this is worked out ○ IMM 5476 for Sample Client W Not done ○ IMM 5645 for Sample Client W Not done ✓ IMM 5257 for Sample Client W Done ○ IMM 5257 SCH1 for Sample 
+PASS  C7.10-s5 fail (BR-6): under 100 the person presses Ready to file and is refused with the lines; the figure stays under 100 (it never gates, it agrees) — {"state":"not_ready","score":33,"text":"Not ready Readiness 33% 3 of 9 done · 1 passed with a reason How this is worked out ○ IMM 5476 for Sample Client W Not done ○ IMM 5645 for Sample Client W Not done ✓ IMM 5257 for Sample Client W Done ○ IMM 5257 SCH1 for 
+PASS  C7.10-s6 pass (BR-1, BR-4): with nothing left open, Ready to file shows Ready at 100 and the header reads Ready · 100%, as the server — {"shown":{"state":"ready","score":100,"text":"Ready Readiness 100% 9 of 9 done · 6 passed with a reason How this is worked out"},"pill":"Readiness: Ready · 100% (lowest: Visitor visa: Sample Client W)"}
+PASS  C7.10-s7 pass: the person presses Ready to file; the filing reads Ready to file and the next step, C8.2's "Record the submission", is open
+PASS  C7.10-s8 pass: no page error during the walk — []
+
+8/8 passed
