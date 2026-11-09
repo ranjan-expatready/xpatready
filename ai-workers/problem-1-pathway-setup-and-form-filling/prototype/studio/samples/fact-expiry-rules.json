@@ -57,7 +57,7 @@
       "words": "The police certificate was issued on {date}, more than 6 months ago (Sample rule): get a new certificate.",
       "source": {
         "sample": true,
-        "why": "Sample: no canada.ca page stating a police certificate's age limit is committed in official-sources; the Express Entry police certificates page is cited only from a search summary (product/research_notes/Document first intake and OCR choice/ircc_document_fact_map.md, line 179). This fact is not in the shared library yet, so the rule shows on no demo case. ASSUMPTIONS.md C11."
+        "why": "Sample: no canada.ca page stating a police certificate's age limit is committed in official-sources; the Express Entry police certificates page is cited only from a search summary (product/research_notes/Document first intake and OCR choice/ircc_document_fact_map.md, line 179). This fact is not in the shared library yet, so the rule shows on no demo case. ASSUMPTIONS row proposed in product/screens/C6.19/assumption-proposed.md (for the tech lead)."
       }
     }
   ]
