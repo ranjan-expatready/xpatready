@@ -4,6 +4,7 @@
 // with the rule's words, and the open bug that holds a stage is named, never faked.
 import { finishFamilyCase, routesAt, type StoryStage } from "../../finished-story.ts";
 import { SAMPLE_CASE } from "../../sample-case.ts";
+import { storyValidatedFile } from "../../sample-validated.ts";
 import type { CheckpointStep } from "./_context.ts";
 import { familyCase } from "./120-family-case.ts";
 import { thinCase } from "./125-thin-case.ts";
@@ -12,7 +13,7 @@ export default {
   async run(ctx) {
     if (ctx.story !== "finished") return;
     const fam = familyCase(ctx).fam, thin = thinCase(ctx);
-    const out = fam?.caseId ? await ctx.timed("finished story (family case to a recorded submission)", () => finishFamilyCase(routesAt(), fam.caseId!)) : null;
+    const out = fam?.caseId ? await ctx.timed("finished story (family case to a recorded submission)", () => finishFamilyCase(routesAt(), fam.caseId!, undefined, { validatedFile: (person) => storyValidatedFile(ctx.db, fam.caseId!, person) })) : null;
     const stages: StoryStage[] = out?.stages ?? [];
     ctx.result.story = stages;
     ctx.result.story_cases = { family: fam?.caseId ?? null, thin: thin.caseId };

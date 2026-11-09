@@ -11,6 +11,7 @@ import { readFileSync } from "node:fs";
 import { request } from "node:http";
 import { join } from "node:path";
 import { STUDIO } from "./core.ts";
+import type { StoryValidated } from "./sample-validated.ts";
 
 export type StorySample = {
   move_reason: string; answers: { facts: Record<string, unknown> };
@@ -29,7 +30,7 @@ type Reply = { status: number; body: unknown };
 type CaseView = { team?: { officers?: { id: string }[]; representative?: { id: string } | null }; client?: string; pin?: { revision: number; release_version: number } };
 type ReleaseView = { combination: string; current: { version: number; label: string; revision: number }; target: { version: number } | null };
 type Moved = { version: number; label: string; words: string; from: { label: string } };
-type Item = { id: string; kind: string; form?: string; subject: string; channel?: string; signature?: string; state: string; reason?: string; document_type?: string; validated?: { current: boolean } | null };
+type Item = { id: string; kind: string; form?: string; subject: string; channel?: string; signature?: string; state: string; reason?: string; document_type?: string; validated?: { copy: string; current: boolean } | null };
 type Prep = { people: Person[]; items: Item[]; version: string | number; portal?: string | null; portal_words?: string;
   filings: { id: string; label: string; status: string; applicants: { subject: string }[] }[];
   readiness: { filing: string; facts_hash?: string; blocks: { words: string }[]; warns: { code: string }[] }[];
@@ -76,7 +77,8 @@ const specimen = (text: string) => Buffer.from(`%PDF-1.4\n% ${text}\n%%EOF\n`, "
 export const HELD = {
   family: "QA-153: IMM 5645's parents and brothers and sisters are not asked, so their form fields stay empty on the copy",
   followUps: "QA-165 (1): the follow-up questions of a No (national identity document, US PR card) stay required, so they carry Sample values by kind of answer",
-  paper: "IMM 5257's copy leaves 16 of its 46 mandatory form fields empty today, so Adobe's Validate would refuse it (QA-165, #1318); and Validate is a person's step, never simulated (P-46, P-171)",
+  // QA-316 (Lead 37, 9 Nov): no fixed count; the copy's own open form fields are read on each load (paperOpen below).
+  paper: "Validate is a person's step in Adobe on the Mac: the Lead validates this copy and reads it back (P-349 row 12b's method, samples/validated-imm5257-paper.json); it is never simulated (P-46, P-171)",
   validate: "Validate is a person's step in Adobe Reader (P-46, P-171): never simulated, so a barcode PDF waits for a person",
 } as const;
 
@@ -85,7 +87,12 @@ type Section = { subjectId: string; section: string; questions: Q[]; group: { re
 type Person = { subject: string; label: string; role: string; age: number | null; applies: boolean };
 
 /** Takes the family case (opened on release 1 by the configured checkpoint) to a recorded submission on release 2. */
-export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample = storySample()): Promise<{ stages: StoryStage[]; release: number | null; recorded: number }> {
+export type StoryOptions = {
+  /** Lead 37 (9 Nov): the Paper copy's validated file when a person validated it in Adobe on the Mac (api/src/sample-validated.ts
+   *  storyValidatedFile, read-only); the story sends it through the product's upload door itself. */
+  validatedFile?: (person: string) => Promise<StoryValidated>;
+};
+export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample = storySample(), opts: StoryOptions = {}): Promise<{ stages: StoryStage[]; release: number | null; recorded: number }> {
   const stages: StoryStage[] = [];
   const kase = must<CaseView>(await r.call("user-O", "GET", `/runtime/cases/${caseId}`), "Read the case");
   const officer: string = kase.team?.officers?.[0]?.id ?? "user-O", rep: string | null = kase.team?.representative?.id ?? null, client: string = kase.client ?? "user-P";
@@ -176,10 +183,21 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
     if (!who || !item) throw new Stop(`${pl.form} for ${pl.person} is not on this case's release 2`);
     if (item.channel !== "PAPER") must(await r.call(officer, "PATCH", `/runtime/items/${item.id}/channel`, { channel: "PAPER", reason: pl.reason, version: p.version }), `File ${pl.form} for ${pl.person} on Paper`);
     const copy = await copyOf(r, officer, caseId, { form: pl.form, subject: who.subject });
-    const after = (await prepare()).items.find((i) => i.id === item.id);
-    // Review R2-m2: Done once a person's validated copy is read back for today's facts (the item says so itself).
-    if (after?.validated?.current) return { status: "done", shows: `${pl.form} for ${pl.person} filed on Paper by the case officer with a written reason; its copy validated in Adobe and read back`, why: null };
-    return { status: "partial", shows: `${pl.form} for ${pl.person} filed on Paper by the case officer with a written reason; its copy made (${copy ? "generated" : "not made"}); ${after?.state === "to_do" ? "it waits for its validated copy" : `it reads ${after?.state}`}`, why: `The validated copy is not read back: ${HELD.paper}. Until then this person's filing cannot be Ready to file (P-315).` };
+    // P-349 row 12b's method: the copy a person validated in Adobe on the Mac is read back through the product's upload
+    // door, as the case officer would upload it; then it is printed and signed in pen (B132), in that order.
+    const v: StoryValidated = await (opts.validatedFile?.(pl.person) ?? Promise.resolve({ kind: "none" as const, words: "No validated copy is looked for on this load." }));
+    if (v.kind === "found" && v.copyId === copy) must(await r.upload(officer, `/runtime/form-copies/${copy}/validated`, v.bytes, v.name), `Read back the validated copy of ${pl.form} for ${pl.person}`);
+    let after = (await prepare()).items.find((i) => i.id === item.id);
+    if (after?.validated?.current) {
+      must(await r.call(officer, "POST", `/runtime/items/${item.id}/sign-steps/print`, { copy: after.validated.copy }), `Print the validated copy of ${pl.form}`);
+      must(await r.call(officer, "POST", `/runtime/items/${item.id}/sign-steps/sign_in_pen`, {}), `Sign ${pl.form} in pen`);
+      after = (await prepare()).items.find((i) => i.id === item.id);
+      return { status: "done", shows: `${pl.form} for ${pl.person} filed on Paper by the case officer with a written reason; its copy validated in Adobe on the Mac and read back through the upload door, printed with its barcode page and signed in pen`, why: null };
+    }
+    // QA-316: the copy's own open mandatory form fields, read now (the product's list), never a fixed number.
+    const open = ((await get<{ forms: { form: string; subject_id: string; fields_open?: unknown[] }[] }>(`/runtime/cases/${caseId}/forms`)).forms.find((f) => f.form === pl.form && f.subject_id === who.subject)?.fields_open ?? []).length;
+    const held = v.kind === "found" ? `The validated file is for another copy of ${pl.form}, so it is not read back.` : v.words;
+    return { status: "partial", shows: `${pl.form} for ${pl.person} filed on Paper by the case officer with a written reason; its copy made (${copy ? "generated" : "not made"}, ${open ? `${open} mandatory form field${open === 1 ? "" : "s"} left open on it` : "no mandatory form field left open on it"}); it waits for its validated copy`, why: `${held} ${HELD.paper}. Until then this person's filing cannot be Ready to file (P-315).` };
   });
 
   // C7.3, C7.1, C7.7: the Online form's answer sheet, section by section "Entered in the portal"; a copy of each PDF form.
@@ -197,7 +215,8 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
     for (const i of p.items.filter((x) => x.kind === "form" && x.channel !== "ONLINE" && x.signature !== "HAND_SCANNED")) if (await copyOf(r, officer, caseId, i)) copies++;
     p = await prepare();
     const notDone = p.items.filter((i) => i.kind === "form" && i.channel === "ONLINE" && i.state !== "done");
-    const toValidate = p.items.filter((i) => i.kind === "form" && /Validate/.test(i.reason ?? ""));
+    // A barcode copy still waiting for its Validate (never one already read back: its own words name Validate too).
+    const toValidate = p.items.filter((i) => i.kind === "form" && i.channel !== "ONLINE" && !i.validated?.current && /press Validate|Validate it in Adobe/.test(i.reason ?? ""));
     const forms = [...new Set(p.items.filter((i) => i.kind === "form" && i.channel !== "ONLINE" && i.signature !== "HAND_SCANNED").map((i) => i.form ?? ""))].sort();
     const why = [notDone.length ? `${notDone.length} of ${online.length} Online IMM 5257 items stay To do: ${[...new Set(notDone.map((i) => i.reason ?? ""))].join(" ")}` : "" /* QA-309: each item names what it waits on */, toValidate.length ? `${toValidate.length} barcode PDF${toValidate.length === 1 ? "" : "s"} not read back: ${HELD.validate}.` : "", forms.includes("IMM 5645") ? `${HELD.family}.` : ""].filter(Boolean).join(" ");
     return { status: notDone.length || toValidate.length ? "partial" : "done", shows: `${online.length} Online IMM 5257 answer sheet${online.length === 1 ? "" : "s"}, ${ticked} section${ticked === 1 ? "" : "s"} ticked "Entered in the portal" by the case officer; ${copies} PDF cop${copies === 1 ? "y" : "ies"} filled from the confirmed facts (${forms.join(", ")})`, why: why || null };

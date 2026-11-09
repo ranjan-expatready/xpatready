@@ -26,6 +26,9 @@ import type { Db } from "./core.ts";
 const STUDIO = join(import.meta.dirname, "..", ".."), ROOT = join(STUDIO, "..", "..", "..", "..");
 
 export const VALIDATED_FILE = "samples/validated-imm5257.json";
+/** C10.2 (Lead 37, 9 Nov; P-349 row 12b's method): the read-back of the finished story's Paper IMM 5257 copy, validated in
+ *  Adobe on the Mac (one person's copy on release 2). The validated PDF stays on the Mac, in the same local folder. */
+export const VALIDATED_PAPER_FILE = "samples/validated-imm5257-paper.json";
 /** QA-285: the env var naming the local folder that holds the validated PDFs (an absolute path: a relative one is read
  *  from each process's own working folder, so the server and a test could read different folders), and its default
  *  (outside git). */
@@ -55,14 +58,15 @@ export function valuesHash(copyPath: string | null | undefined): string | null {
   } catch { return null; }
 }
 
-let cached: { at: number; file: SavedFile } | null = null;
-/** The saved read-backs (read again when the file changes; a copy's view reads them). */
-export const savedReadBacks = (): SavedFile | null => {
-  const p = join(STUDIO, VALIDATED_FILE);
+const cached = new Map<string, { at: number; file: SavedFile }>();
+/** The saved read-backs (read again when the file changes; a copy's view reads them). `file`: release 1's (the checkpoint,
+ *  B99) unless named, e.g. VALIDATED_PAPER_FILE for the finished story's Paper copy. */
+export const savedReadBacks = (file: string = VALIDATED_FILE): SavedFile | null => {
+  const p = join(STUDIO, file);
   if (!existsSync(p)) return null;
   const at = statSync(p).mtimeMs;
-  if (cached?.at !== at) cached = { at, file: JSON.parse(readFileSync(p, "utf8")) as SavedFile };
-  return cached.file;
+  if (cached.get(file)?.at !== at) cached.set(file, { at, file: JSON.parse(readFileSync(p, "utf8")) as SavedFile });
+  return cached.get(file)!.file;
 };
 
 /** The case's IMM 5257 copies with their family facts hash, for the person who records the read-backs and for the loader. */
@@ -133,4 +137,24 @@ export async function replaySavedReadBacks(db: Db, caseId: string, upload: Uploa
     catch (e) { why.push(`${c.person}: the upload door refused ${f.name}: ${wordsOf(e)}`); }
   }
   return { written, keptOnMac, why };
+}
+
+/** C10.2 (Lead 37, 9 Nov): the validated file for one person's newest IMM 5257 copy on the Sample case, from the saved
+ *  read-backs of the finished story's Paper copy (VALIDATED_PAPER_FILE) and the local validated folder. Reads only; the
+ *  story sends a found file through the product's upload door itself, as the case officer (POST
+ *  /api/runtime/form-copies/:id/validated). It counts only when the saved read-back passed the form's own Validate and
+ *  this copy reads the same family facts and writes the same values as the copy that was validated (as B99). */
+export type StoryValidated = { kind: "found"; copyId: string; name: string; bytes: Buffer } | { kind: "kept_on_mac" | "none" | "differs" | "refused"; words: string };
+export async function storyValidatedFile(db: Db, caseId: string, person: string, dir = validatedDir(), saved = savedReadBacks(VALIDATED_PAPER_FILE)): Promise<StoryValidated> {
+  const copy = (await copiesWithHash(db, caseId)).find((c) => c.person === person);
+  if (!copy) return { kind: "none", words: `${person} has no copy of IMM 5257 yet.` };
+  const s = saved?.copies.find((x) => x.person === person);
+  if (!s) return { kind: "none", words: `No validated copy of ${person}'s Paper IMM 5257 is saved yet (${VALIDATED_PAPER_FILE}): a person validates it in Adobe on the Mac and reads it back (P-349 row 12b).` };
+  if (s.read_back?.ok !== true || s.read_back?.validation?.passed !== true) return { kind: "differs", words: `${person}: the saved read-back did not pass the form's own Validate.` };
+  if (s.family_facts_hash !== copy.familyHash) return { kind: "differs", words: `${person}: this copy reads different answers from the copy that was validated, so its Validate does not count: validate this copy again.` };
+  if (!copy.valuesHash || s.values_sha256 !== copy.valuesHash) return { kind: "differs", words: `${person}: this copy writes different values from the copy that was validated, so its Validate does not count: validate this copy again.` };
+  const f = localValidatedFile(dir, s);
+  if (f.kind === "refused") return { kind: "refused", words: f.words };
+  if (f.kind === "absent") return { kind: "kept_on_mac", words: `${person}'s Paper IMM 5257 was validated in Adobe on the Mac and read back equal (Sample); the validated file is kept on the Mac, not in these working files (QA-285).` };
+  return { kind: "found", copyId: copy.id, name: f.name, bytes: f.bytes };
 }
