@@ -16,6 +16,7 @@ import { firmOfActor } from "./firms.ts";
 import { Runtime } from "./runtime.ts";
 import { CasePrepare } from "./case-prepare.ts";
 import { busyWords } from "./busy.ts";
+import { ReviewRounds } from "./review-rounds.ts"; // C8.3 (M1): the review is a one-step round
 
 type H = string | undefined;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -24,7 +25,7 @@ const problem = (status: number, title: string, detail: string, extra: Record<st
 @Injectable()
 export class FilingReadinessRoutes {
   constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit,
-    @Inject(CasePrepare) private readonly prepare: CasePrepare, @Inject(Workspace) private readonly ws: Workspace) {}
+    @Inject(CasePrepare) private readonly prepare: CasePrepare, @Inject(Workspace) private readonly ws: Workspace, @Inject(ReviewRounds) private readonly rounds: ReviewRounds) {}
 
   /** The filing, reached as staff of its case's firm (a client, configuration people and another firm: 403 or 404).
    *  Break B8 on #861: a filing recorded as submitted is read-only here (C8.2 keeps its record). */
@@ -76,8 +77,12 @@ export class FilingReadinessRoutes {
     if (!licence) fail("A review needs the representative's licence number on the firm record; none is set.", HttpStatus.CONFLICT);
     const kind = prepared ? "self_reviewed" : "reviewed";
     // Break B2: the review is of the filing's facts as they are now; a later change reopens it.
-    const rd = await this.now(actor, c.id, f.id);
-    if (rd.facts_hash !== b.facts_hash) fail("This filing changed after you read it. Reload and review it again.", HttpStatus.CONFLICT);
+    // C8.3 (challenge M1): the review is a one-step round of the representative's review, through the same code: every
+    // form frozen and stamped (api/src/review-rounds.ts oneStep). A filing already sent for review is decided there (409).
+    const one = await this.rounds.oneStepBasis(actor, c, f.id);
+    const rd = one.rd;
+    if (!rd) fail("This filing's readiness could not be worked out (it is not on the application now).", HttpStatus.CONFLICT);
+    if (rd!.facts_hash !== b.facts_hash) fail("This filing changed after you read it. Reload and review it again.", HttpStatus.CONFLICT);
     // Devin on #1252 (C9.5): the review and its audit line are written under the case's row lock that a move takes, with
     // the pin revision read again under it: a move that committed after this review was read refuses it (409), so no
     // review of the release the case left is ever stamped after the new pin. (The facts are not re-read under the lock:
@@ -86,10 +91,11 @@ export class FilingReadinessRoutes {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
       const newest = await tx.packWorkPin.findFirst({ where: { caseId: c.id }, orderBy: { revision: "desc" }, select: { revision: true } });
       if (newest?.revision !== c.pins[0].revision) fail("This case moved to another release while you reviewed the filing: nothing was recorded. Reload and review it again.", HttpStatus.CONFLICT);
-      const made = await tx.filingReview.create({ data: { workspaceId: f.workspaceId, filingId: f.id, reviewedBy: actor.id, kind, licenceNumber: licence!.number, note, factsHash: rd.facts_hash } });
+      const made = await tx.filingReview.create({ data: { workspaceId: f.workspaceId, filingId: f.id, reviewedBy: actor.id, kind, licenceNumber: licence!.number, note, factsHash: rd!.facts_hash } });
+      await this.rounds.oneStep(tx, c, actor, { filing: f.id, reviewId: made.id, kind, frames: one.frames, checks: one.checks });
       await tx.auditEvent.create({ data: { workspaceId: f.workspaceId, actor: actor.id, action: kind, entity: "filing", entityKey: f.id, summary: `${actor.name} ${kind === "self_reviewed" ? "self-reviewed" : "reviewed"} a filing on case ${c.id.slice(0, 8)} (licence ${licence!.number})`.slice(0, 600), detail: { case: c.id, note } } });
       return made;
-    }, { timeout: 15_000, maxWait: 10_000 }));
+    }, { timeout: 20_000, maxWait: 10_000 }));
     const name = firm ? userIn(firm, actor.id)?.name ?? actor.name : actor.name;
     return { id: row.id, filing: f.id, reviewed_by: actor.id, name, kind, licence_number: licence!.number, at: row.reviewedAt.toISOString(),
       words: kind === "self_reviewed" ? `Self-reviewed by ${name} (licence ${licence!.number})` : `Reviewed by ${name} (licence ${licence!.number})` };
