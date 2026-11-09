@@ -271,6 +271,10 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
   ok("C6.17 × C7.8 M3 fail-first: the form added on the first stage is not on the next stage's forms (Prepare, the forms list)",
     !!xp2 && !!xF2 && xF2 !== xF1 && !(xp2.items ?? []).some((i) => i.kind === "form" && i.form === pick)
       && !(((await call("GET", `/runtime/cases/${X}/forms`)).body?.forms ?? []) as { form: string }[]).some((x) => x.form === pick), { f2: xF2, items: (xp2?.items ?? []).filter((i) => i.kind === "form").map((i) => i.form) });
+  const xRow2 = (await addableOn(xF2)).find((x) => x.form === pick);
+  const xDet2 = pick ? (await call("GET", `/runtime/filings/${xF2}/addable-forms/${encodeURIComponent(pick)}`)).body : null;
+  ok("C6.17 × C7.8 M4 fail-first: on the next stage the first stage's addition is neither \"already added\" nor the way the form must be filed (no same_as)",
+    !!xRow2 && xRow2.why_not === null && !!xDet2 && xDet2.same_as === null, { row: xRow2, same_as: xDet2?.same_as });
   const xRemoveOld = xA1 ? await call("POST", `/runtime/form-additions/${xA1}/remove`, { reason: "Sample: trying to change the ended stage" }) : null;
   const xAddOld = pick ? await call("POST", `/runtime/filings/${xF1}/form-additions`, { form: pick, reason: "Sample: trying to add to the ended stage" }) : null;
   const xDbOld = xA1 ? sql(`update filing_form_addition set removed_at=now(), removed_by='${OFFICER}', removed_reason='Sample' where id='${xA1}' returning id`) : "none";
@@ -278,10 +282,6 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
     xRemoveOld?.status === 409 && xRemoveOld.body?.code === "stage_ended" && /earlier stage of the case, which has ended/.test(words(xRemoveOld)) && xAddOld?.status === 409 && xAddOld.body?.code === "stage_ended"
       && xDbOld === null && sql(`select removed_at is null from filing_form_addition where id='${xA1}'`) === "t" && n(`select count(*) from filing_form_addition where filing_id='${xF1}'`) === 1,
     { remove: [xRemoveOld?.status, xRemoveOld ? words(xRemoveOld) : null], add: [xAddOld?.status, xAddOld ? words(xAddOld) : null], db: xDbOld });
-  const xRow2 = (await addableOn(xF2)).find((x) => x.form === pick);
-  const xDet2 = pick ? (await call("GET", `/runtime/filings/${xF2}/addable-forms/${encodeURIComponent(pick)}`)).body : null;
-  ok("C6.17 × C7.8 M4 fail-first: on the next stage the first stage's addition is neither \"already added\" nor the way the form must be filed (no same_as)",
-    !!xRow2 && xRow2.why_not === null && !!xDet2 && xDet2.same_as === null, { row: xRow2, same_as: xDet2?.same_as });
   const xAdd2 = pick ? await call("POST", `/runtime/filings/${xF2}/form-additions`, { form: pick, reason: "Sample: asked for on the work permit too (C6.17 pack)" }) : null;
   const xp3 = (await prepare(X)).p;
   ok("C6.17 × C7.8 M1 pass: with the first stage recorded, the same form is added on the next stage's filing (201, no false refusal) and listed on its forms for that filing only",
