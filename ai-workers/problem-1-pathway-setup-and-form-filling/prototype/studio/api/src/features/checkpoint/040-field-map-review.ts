@@ -8,18 +8,25 @@ import { irm0002 } from "./030-irm0002.ts";
 export const fieldMapReview = stateOf(() => ({ applied: 0 }));
 /** How many proposals a field-map step reported (its detail counts). */
 const counted = (detail: unknown) => (detail as { counts?: { proposed_fields?: number } } | null)?.counts?.proposed_fields ?? 0;
+type Job = { id: string; attachmentId: string | null; startedAt: Date; runFile?: string | null; detail: unknown };
+/** The order the drafts are decided and applied in, and the one draft that shows an edit and a return (DEMO.md row 4):
+ *  the drafts as their jobs started, and the draft with the most proposals. */
+export function reviewOrder<J extends Job>(jobs: J[], fileOf: Map<string, string>): { order: J[]; showcase: string | undefined } {
+  void fileOf;
+  const order = [...jobs].sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
+  return { order, showcase: [...order].sort((a, b) => counted(b.detail) - counted(a.detail))[0]?.id };
+}
 
 export default {
   async run(ctx) {
     const { db, workspaceId, author, timed, said, row } = ctx;
     const sources = ctx.get(Sources);
     const irmWhy = irm0002(ctx).why;
-    const jobs = await db.draftingJob.findMany({ where: { workspaceId, kind: "field_map", status: "COMPLETED" }, orderBy: { startedAt: "asc" } });
     const fileOf = new Map((await db.sourceAttachment.findMany({ where: { workspaceId }, select: { id: true, fileName: true } })).map((x) => [x.id, x.fileName]));
+    const { order: jobs, showcase } = reviewOrder(await db.draftingJob.findMany({ where: { workspaceId, kind: "field_map", status: "COMPLETED" } }), fileOf);
     let accepted = 0, edited = 0, returned = 0, applied = 0;
     const refused: string[] = [];
-    // One edit and one return stay visible (DEMO.md row 4), on the form with the most proposals.
-    const showcase = [...jobs].sort((a, b) => counted(b.detail) - counted(a.detail))[0]?.id;
+    // One edit and one return stay visible (DEMO.md row 4), on the form with the most proposals (reviewOrder).
     for (const j of jobs) {
       const form = fileOf.get(j.attachmentId ?? "") ?? "a form";
       try {
