@@ -172,4 +172,18 @@ ok("C7.3: the source says Document for a document read, Client for the questionn
   ok("QA-309 m2: readiness's group line and fired-check line each carry their person's id", g.missing.find((m) => m.fact === "group:education")?.subject === "p" && g.missing.find((m) => m.fact === "check:dates")?.subject === "p", g.missing);
 }
 
+// QA-317 review M1: a choice is copied in the release's own words (its option's label, as the portal lists it), never its
+// key; the value it stores, and so the section's fingerprint, stay the key.
+{
+  const choice = [{ box: "IMM_5707[0].page1[0].SectionA[0].Applicant[0].Marital[0]", caption: "Marital status", fact: "person.marital_status", meaning: null, about: "p", about_label: "Client A", row: null, coverage: "confirmed fact" as const, detail: "", value: "annulled_marriage" },
+    { box: "IMM_5707[0].page1[0].SectionA[0].Applicant[0].FamilyName[0]", caption: "Family name", fact: "person.family_name", meaning: null, about: "p", about_label: "Client A", row: null, coverage: "confirmed fact" as const, detail: "", value: "SAMPLE" }];
+  const words = (fact: string, v: unknown) => (fact === "person.marital_status" && v === "annulled_marriage" ? "Annulled Marriage" : undefined);
+  const plain = answerSheet(SECTIONS, choice, origin, labels, new Map());
+  const named = sheetOf({ basis: "pdf_twin", sections: SECTIONS }, choice, origin, labels, new Map(), undefined, undefined, words);
+  const at = (sh: typeof named, fact: string) => sh.sections[0].answers.find((a) => a.fact === fact);
+  ok("QA-317 M1 (fail, without the release's words): a choice would copy its key", at(plain, "person.marital_status")?.copy_text === "annulled_marriage");
+  ok("QA-317 M1 pass: a choice copies its option's label; free text copies as typed", at(named, "person.marital_status")?.copy_text === "Annulled Marriage" && at(named, "person.family_name")?.copy_text === "SAMPLE");
+  ok("QA-317 M1: the stored value and the section's fingerprint stay the key", at(named, "person.marital_status")?.value === "annulled_marriage" && named.sections[0].version === plain.sections[0].version);
+}
+
 process.exitCode = summary() ? 1 : 0;
