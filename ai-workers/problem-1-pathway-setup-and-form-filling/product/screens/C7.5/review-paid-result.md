@@ -66,3 +66,14 @@ Persona: case officer. J1 main path: case page › Open Review › Saved by keyb
 Not checked: a real screen reader; an intended user's unaided walk (D17/D20 stay with the founder); P-422's wording; the 69-field count on the checkpoint (I saw a different sheet, 666775af9fcc, but did not count its lines).
 
 **Verdict: Block**: fix 1 (stand-in guard in `check_c75_live_fake.ts`, with its fail case) and 2 (PR body and the checkpoint question on the PR). Then a diff-only re-review on the new head. Minors 3–5 are fixed or listed in the PR.
+
+## Re-review on a3b496d (diff-only, 9 Nov)
+Head `a3b496d836cffc1adfbdb1a16e64097bfe3b81a8`; diff `9313ec8..a3b496d`: 3 test files plus this review. Own copies on :4436/:4437, all stopped. US$0. Live was on only through the live check's usage line, and that copy reported `{"live":true,"launcher":"stand-in"}` before the run. p2/runs, jobs, screening, review-sheets and tests/ were byte-identical before and after. git status was clean.
+* **Major 1: closed.** `check_c75_live_fake.ts:50-52` reads `GET /session` before anything else and exits 1 unless the copy reports live on with the stand-in launcher. I ran the failing case on a plain copy: "FAIL P-192 guard … {"live":false,"launcher":"guarded"}; stopped before any start", exit 1, no setup, no fake-launch files. On its usage-line copy: 18/18, exit 0.
+* **Major 2: closed.** The PR body is rewritten: every number with its data (16/16 fixture, 11/16 checkpoint, tripwire 9/11 there), the cause (69 vs 49 fields, other first choices), Gate B fixture-only, nothing widened and no second run, and the question for the tech lead. The stale lines are gone.
+* **Minor 3: closed.** On the checkpoint (reloaded), the tripwire prints the run, the new sheet and the moved lines in full, e.g. "Citizenship: Afghanistan → India", "SameAsCORIndicator: No → Yes", "nativeLang: Ada → Hindi". Two leftovers, not blocking: the body says "every line" but the code prints the first 12 (and the log says so); a box whose caption changed but value did not shows as "No → No".
+* **Minor 4: closed.** The break m assertion now follows the successful made-up Saved run of plan2 (the next step asserts 201). API check 44/44.
+* **Minor 5:** listed in the PR body, not changed (as asked).
+* No new finding in the diff.
+
+**Verdict: Approve a3b496d836cffc1adfbdb1a16e64097bfe3b81a8**
