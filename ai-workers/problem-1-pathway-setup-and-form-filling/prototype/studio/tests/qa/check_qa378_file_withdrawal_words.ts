@@ -1,4 +1,4 @@
-// QA-363 (UX · Minor, C8.3, row B144; #1440, ruling (a): a different validated copy read back withdraws the approval):
+// QA-378 (UX · Minor, C8.3, row B144; #1440, ruling (a): a different validated copy read back withdraws the approval):
 // a withdrawal for a different file is worded as a fact change. Through the product's routes, as QA-345's check: a
 // send back that changes a barcode form's fact, round 2 approved (stamp none), the validated copy read back (the stamp
 // moves to it, QA-345's fix), then a SECOND validated copy of the same facts read back, which withdraws the approval
@@ -7,12 +7,12 @@
 // copy read back") and its tooltip must not say a fact changed. Fails today; passes when the words name the earlier
 // copy and the file. (The footer button "Re-approve 1 changed form" is web words; read by screen in the qa report.)
 // Run on a configured-checkpoint copy. No model call (US$0).
-//   tsx --tsconfig api/tsconfig.json tests/qa/check_qa363_file_withdrawal_words.ts <port> <db>
+//   tsx --tsconfig api/tsconfig.json tests/qa/check_qa378_file_withdrawal_words.ts <port> <db>
 import { agent, answer, call, confirmAll, expectedFor, fillEverything, firms, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql, validateRoundTrip, yearsAgo } from "../../acceptance/lib/m3.ts";
 
 type Q = { subjectId: string; fact: string; value_type: string; hidden: boolean; group: string | null; fills: { form: string }[]; answer: { value?: unknown } | null };
 type Form = { item: string; form: string; state: string; stamp: { file_kind: string; file_sha256: string | null } | null; live_hash: string | null; withdrawn_words: string | null; tooltip: string | null; file: { kind: string; words: string } };
-await main("QA-363", "C8.3: a withdrawal for a different validated copy is worded as a file change, not a fact change", async () => {
+await main("QA-378", "C8.3: a withdrawal for a different validated copy is worded as a file change, not a fact change", async () => {
   const vv = needVisitorVisa();
   const f = await firms();
   const officer = f.officer ?? "user-O", rep = f.rep ?? "user-R";
@@ -42,10 +42,10 @@ await main("QA-363", "C8.3: a withdrawal for a different validated copy is worde
   const kindMoved = sql(`select stamp_file_kind from review_round_form where round_id='${r2}' and form_number='${bc?.form}'`);
   if (bc) await validateRoundTrip(c.id, bc.form, P);
   const w = (await read(r2)).find((x) => x.form === bc?.form);
-  ok("QA-363 setup: round 2 approved with no file, stamped on the first read-back, withdrawn by a second validated copy of the same facts (#1440's C8.3-23 path)",
+  ok("QA-378 setup: round 2 approved with no file, stamped on the first read-back, withdrawn by a second validated copy of the same facts (#1440's C8.3-23 path)",
     !!bc && !!q && dec.status === 200 && kindBefore === "none" && kindMoved === "validated_copy" && w?.state === "approval_withdrawn" && /not the file this approval stamped/.test(w?.withdrawn_words ?? ""),
     { bc: bc?.form, fact: q?.fact, dec: dec.status, kindBefore, kindMoved, state: w?.state, withdrawn: w?.withdrawn_words });
-  ok("QA-363 (C8.3): on a file withdrawal, the stamp line does not read as the current file (\"Stamped with the validated copy read back\" with nothing saying it is an earlier copy) and the tooltip does not say a fact changed",
+  ok("QA-378 (C8.3): on a file withdrawal, the stamp line does not read as the current file (\"Stamped with the validated copy read back\" with nothing saying it is an earlier copy) and the tooltip does not say a fact changed",
     !!w && !/^Stamped with the validated copy read back\.?$/.test(w.file?.words ?? "") && !/a fact on it changed/i.test(w.tooltip ?? ""),
     { file_words: w?.file?.words, tooltip: w?.tooltip });
 });

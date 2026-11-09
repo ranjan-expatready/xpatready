@@ -30,6 +30,6 @@ Reader: a fresh Opus subagent that ran nothing (P-303). It read this folder (wal
 "9 Nov, main 7e32ee210 after #1440 (`qa/reports/2026-11-09-c83b/walk.md`; fresh reader on Opus; US$0): Partial. QA-345 fixed and closed … Gate A PASS by screens at 1024 px on the configured checkpoint, through C8.2's Record the submission … The pack ran locally through gate-b, 25/25 on the checkpoint; that is not a GitHub run, so the row stays Partial until a nightly with `data=checkpoint` on main's head is green and its run id is here. New Minors … Open for the Lead: whether ruling (a) covers PDF-upload and hand-signed forms." (Used, with the bug numbers, in `qa/CAPABILITIES.md`.)
 
 ## qa's response
-* All three Minors logged as rows: QA-361 (a), QA-362 (b, with the IMM 5476 repeats), QA-363 (c, with the tooltip words).
+* All three Minors logged as rows: QA-376 (a), QA-377 (b, with the IMM 5476 repeats), QA-378 (c, with the tooltip words).
 * (d) and (e) go to the Lead as questions, not rows: both turn on how far ruling (a) reaches. (e) was not reproduced by qa this round; if the Lead rules that (a) covers every file, qa writes its replayable check and logs it.
 * The IMM 5476 "(values: appoint, cancel)" holding "SAMPLE" is outside C8.3 and comes from the helper's API fill; noted in the report, not logged.
