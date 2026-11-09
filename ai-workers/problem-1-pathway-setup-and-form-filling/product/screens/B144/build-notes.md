@@ -80,17 +80,19 @@ Needs-you items and notifications · the case stage move to REVIEW · `waive-def
 * Pack C8.3 0 (23/23) · walk 0 (24/24) · packs C7.6 0, C8.1 0, C8.2 0, C6.13 0 · `check_c76_readiness_api.ts` 0 · `check_c76_ready_browser.ts` 0 · `check_c81_sign_browser.ts` 0 · R1 in order: r1c 0, r1d 0, r1a `--reset` 0. setup_vv_m3: only S2w, S7a (known).
 
 ## CI round (gate B on the configured checkpoint, #1247 at f457a8df7, run 42566736094)
-Reproduced gate B's way ( runPack, data ): a fresh copy, Demo › Reset then Demo › Load the configured checkpoint as the author, no setups, then : **16/23, exit 1**, the same steps as CI. FAIL lines (each cut at 900 characters):
+Reproduced gate B's way (`tools/gate-b.mjs` runPack, data `checkpoint`): a fresh copy, Demo › Reset then Demo › Load the configured checkpoint as the author, no setups, then `C8.3.test.ts`: **16/23, exit 1**, the same failing steps as CI. FAIL lines (each cut at 900 characters):
+```
+FAIL  C8.3-11 pass (BR-6, m4): round 2 marks only the changed form "Changed since review", with before → after and the person who typed the new value — [["IMM 5257","to_check",[]],["IMM 5257 SCH1","to_check",[]],["IMM 5476","to_check",[]],["IMM 5645","to_check",[]]]
+FAIL  C8.3-13 fail (BR-8, M3): after the representative typed a fact on the filing, approve is refused as a second person's (409, on a firm with another officer); a send back is taken — {"approve":[200,null],"back":[409,"This filing was decided meanwhile. Reload."]}
+FAIL  C8.3-10 pass (BR-7, P-412 F1): a fact change → that form shows "Approval withdrawn" naming the fact and who typed it; the other forms keep their stamp; C7.6's review line reopens — {"forms":[["IMM 5645","approved",null],["IMM 5257 SCH1","approved",null],["IMM 5257","approved",null],["IMM 5476","approved",null]],"warns":["no_copy","fields_left_empty","no_copy","no_copy","hand_write","hand_write","hand_write","hand_write","hand_write","han
+FAIL  C8.3-18 pass (P-412 F1): the representative sees only the changed form and re-approves it in one click: a new round, approved at once; the unchanged forms keep their stamp, only the changed one is stamped anew; C7.6's line closes; a second click finds nothing changed (409) — {"status":409,"body":"Nothing changed since this filing was approved: its approval stands. Reload.","keep":["525f1bd6-4942-4f01-9913-2cecc49ec78c=2fe5b7cc-8116-495d-a060-a5b215c80cc0","601f0110-575c-4c45-bc1b-3139156b6b4a=2b376ad8-d1c6-4b38-9c33-2f4aa650c587",
+FAIL  C8.3-13b fail (BR-8, review M2): a fact the representative typed between rounds (after the send back, before the next send) is still theirs: approve is refused as a second person's (409), never "Reviewed" — [200,null]
+FAIL  C8.3-14c pass (break M1): after a change of representative the new representative of record re-approves in one click (200, Reviewed); the former representative's ticks are not carried (break m2) — [404,"No such case."]
+FAIL  C8.3-14 fail (BR-9, F2, M7): the officer ticking, approving or sending back 403; configuration 403; a client 403; another firm 404 on every route; a former representative 403 (the stamps read "the representative of record changed"); a removed filing 409; the database refuses changing a round — {"m":{"officerTick":403,"repTickBeforeOpen":409,"nowNotSolo":400,"officerApprove":403,"officerBack":403,"configRead":403,"configSend":403,"clientRead":403,"clientSend":403,"otherFirmRead":404,"otherFirmOpen":404,"otherFirmCheck":404,"otherFirmDecide":404,"othe
+```
+**Cause: the pack's set-up, not the code.** The pack picked "a text fact only the barcode form reads" among facts the staff collect (`collected_from !== "client_questionnaire"`). On the checkpoint every fact is collected in the client questionnaire, so no fact was found and none was changed: -10, -11, -13, -13b and -18 then saw nothing change. -14c and -14 failed after -18, which left no re-approve round to read (a 404 on an undefined round). The old set-up (setup_vv_m3) has staff-collected facts, so the pack passed there.
 
-
-
-
-
-
-
-
-**Cause: the pack's set-up, not the code.** The pack picked "a text fact only the barcode form reads" among facts the staff collect (). On the checkpoint every fact is collected in the client questionnaire, so no fact was found and no fact was changed: -10, -11, -13, -13b and -18 then saw nothing change. -14c and -14 failed after -18, which left no re-approve round to read (a 404 on an undefined round). On the old set-up (setup_vv_m3) the release has staff-collected facts, so the pack passed there.
-**Fix (P-319, no fixed names; no step lowered or dropped):** the pack picks the fact from the data whoever collects it (a staff-collected one first), and the case officer (or the representative at -13, -13b) types the change, which staff may do for any fact (agent view, "Declared: entered by staff"); the typist checks are unchanged. The walk's set-up picks the same way. No code and no migration change.
+**Fix (P-319, no fixed names; no step lowered or dropped):** the pack picks the fact from the data whoever collects it (a staff-collected one first). The case officer (or the representative at -13, -13b) types the change, which staff may do for any fact (agent view, "Declared: entered by staff"); the typist checks are unchanged. The walk's set-up picks the same way. No code and no migration change.
 
 ## Left after round 1
 * Review m1: page and C7.6 can still disagree when the form set changes (a waiting form starts, a form is added, a Not-needed form, a C9.5 move): waits come from the frozen row and the re-approve covers stored rows only. Not reproducible on the sample.
