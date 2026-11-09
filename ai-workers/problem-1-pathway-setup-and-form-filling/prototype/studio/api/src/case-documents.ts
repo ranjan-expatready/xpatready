@@ -125,6 +125,22 @@ const problem = (status: number, code: string, title: string, detail: string, ex
 };
 
 
+/** Whether an answer is one the officer kept over this document's value with a reason: then it is never "checked
+ *  against" that document, and no second check opens for it (Lead 36 on #1369). Only the latest resolved check of this
+ *  person, document and fact counts (review n6 on 708b18717: a later check that kept the document ends an older keep),
+ *  and only when it kept the answer. The answer kept is the one in force when it was resolved (review m1: resolve refuses
+ *  unless it is sent the current answer, which may be newer than the one the check opened on; review n5: never the value
+ *  the check opened on). The current answer is kept when it is that answer, or the same value saved again as a new row
+ *  (review n1: Confirm section or a client's re-confirm). resolved: the resolved checks; history: every answer row of
+ *  the person for these facts, superseded ones included. */
+export function keptOver<K extends { fact: string; documentId: string; kept: string | null; resolvedAt: Date | null }>(
+  resolved: K[], history: { id: string; canonicalFieldKey: string; valueJson: unknown; effectiveAt: Date }[], fact: string, documentId: string, answer: { id: string; valueJson: unknown }): K | undefined {
+  const latest = resolved.filter((k) => k.fact === fact && k.documentId === documentId && k.resolvedAt).sort((a, b) => b.resolvedAt!.getTime() - a.resolvedAt!.getTime())[0];
+  if (!latest || latest.kept !== "answer") return undefined;
+  const inForce = history.filter((a) => a.canonicalFieldKey === fact && a.effectiveAt <= latest.resolvedAt!).sort((a, b) => b.effectiveAt.getTime() - a.effectiveAt.getTime())[0];
+  return inForce && (inForce.id === answer.id || sameValue(fact, inForce.valueJson, answer.valueJson)) ? latest : undefined;
+}
+
 type Placement = { fact: string; section_id: string; repeats: string; scope?: string; question_text?: string };
 /** P-243 ("no blanket one-click confirm"; Lead 35 on #1369, L-SA9): a value Confirm & use would write as it was read,
  *  without a passed check digit to back it, is looked at one by one: an expanded value of a fact this person is asked,
@@ -141,7 +157,7 @@ export function needsLook(s: Snapshot, caseRole: boolean, v: { fact: string; rev
 /** Whether a file's text holds a passport's coded zone (break m7), by the rules reader (no AI). */
 export const holdsPassportZone = (bytes: Buffer) => readPassport("check", bytes).zones > 0;
 const placementsOf = (s: Snapshot) => s.placements as Placement[];
-const labelOf = (s: Snapshot, fact: string) => placementsOf(s).find((p) => p.fact === fact)?.question_text || fact.split(".").pop()!.replace(/_/g, " ");
+const labelOf = (s: Snapshot, fact: string) => placementsOf(s).find((p) => p.fact === fact)?.question_text || (fact.split(".").pop()!.replace(/_/g, " ").replace(/^./, (x) => x.toUpperCase()));
 
 /** The coded line's sex (ICAO Doc 9303 Part 4: F female, M male, X or < unspecified) in the words the release's question
  *  offers, when it offers them; otherwise the code stays as read and is left for a person (below). */
@@ -319,8 +335,10 @@ export class CaseDocuments {
     const ids = current.map((d) => d.id);
     const reviews = ids.length ? await this.db.documentReview.findMany({ where: { documentId: { in: ids } }, include: { values: { orderBy: [{ fact: "asc" }] } }, orderBy: [{ readAt: "asc" }, { id: "asc" }] }) : [];
     const facts = [...new Set(reviews.flatMap((r) => r.values.map((v) => v.fact)))];
-    const answers = facts.length ? await this.db.clientCanonicalAnswer.findMany({ where: { subjectId, rowKey: null, supersededById: null, canonicalFieldKey: { in: facts } }, select: { id: true, canonicalFieldKey: true, valueJson: true } }) : [];
+    const answers = facts.length ? await this.db.clientCanonicalAnswer.findMany({ where: { subjectId, rowKey: null, supersededById: null, canonicalFieldKey: { in: facts } }, select: { id: true, canonicalFieldKey: true, valueJson: true, effectiveAt: true } }) : [];
     const answerOf = new Map(answers.map((a) => [a.canonicalFieldKey, a]));
+    const resolved = ids.length ? await this.db.answerCheck.findMany({ where: { subjectId, documentId: { in: ids }, state: "resolved" }, select: { fact: true, documentId: true, kept: true, resolvedAt: true } }) : [];
+    const history = resolved.some((k) => k.kept === "answer") ? await this.db.clientCanonicalAnswer.findMany({ where: { subjectId, rowKey: null, canonicalFieldKey: { in: [...new Set(resolved.map((k) => k.fact))] } }, select: { id: true, canonicalFieldKey: true, valueJson: true, effectiveAt: true } }) : [];
     const order = (f: string) => { const i = (MRZ_FACTS as readonly string[]).indexOf(f); return i < 0 ? 100 : i; };
     const proposals = reviews.flatMap((r) => [...r.values].sort((a, b) => order(a.fact) - order(b.fact) || a.fact.localeCompare(b.fact)).map((v) => ({
       id: v.id, fact: v.fact, label: labelOf(s, v.fact), value: v.valueJson, subject: v.subjectId,
@@ -333,6 +351,9 @@ export class CaseDocuments {
       // A value left for a person is never written and never opens a check, so it never "differs" (drawer walk, 8 Nov).
       differs: !(v.state === "proposed" && notWritable(s, v.fact, v.valueJson)) && answerOf.has(v.fact) && !sameValue(v.fact, answerOf.get(v.fact)!.valueJson, v.valueJson),
       left_why: v.state === "proposed" ? notWritable(s, v.fact, v.valueJson) : null,
+      // Review n4 on f9bea4a3b: whether the answer the person has now is one the officer kept over this document (so the
+      // drawer says so and offers no mark); an answer typed after that resolve is not, and differs like any other.
+      kept_over: answerOf.has(v.fact) && !sameValue(v.fact, answerOf.get(v.fact)!.valueJson, v.valueJson) && !!keptOver(resolved, history, v.fact, v.documentId, answerOf.get(v.fact)!),
       // L-SA9: whether Confirm & use waits for a tick on this value (the server's own rule, so the drawer never repeats it).
       needs_look: needsLook(s, subjectId === this.caseSubjectOf(c), v, answerOf.get(v.fact)?.valueJson) })));
     return {
@@ -521,16 +542,46 @@ export class CaseDocuments {
     // Break M6 (P-142 D3): only the person's current file of a kind that gives this fact is evidence for it.
     if (!doc!.current) problem(409, "not_current", "Not possible now", "A newer file of this document was uploaded: check the answer against that one. Nothing changed.");
     if (!(readerOf({ key: doc!.documentType, name: this.typeName(c, doc!.documentType) })?.supplies ?? []).includes(fact)) problem(422, "not_evidence", "Not possible now", `${this.typeName(c, doc!.documentType)} does not give this fact: check it against a document that does. Nothing changed.`);
-    const at = new Date(), id = randomUUID();
+    // Review M1 on 107aefb7d: a document a reader can read is evidence only once it was read, so the answer is compared with
+    // what it reads; an unread passport never vouches for an answer it was never compared with.
+    if (!(await this.db.documentReview.findUnique({ where: { documentId: doc!.id }, select: { id: true } })))
+      problem(409, "not_read", "Not possible now", `This document (${this.typeName(c, doc!.documentType)}) has not been read yet: read it in "Fill this from documents" first, so the answer is compared with what it reads. Nothing changed.`);
+    const at = new Date(), id = randomUUID(), s = this.r.snapshotOf(c);
+    // Lead 36 on #1369 (follow-up row): where this document's read gives a value comparable with the answer (not one left
+    // for a person, P-243), an answer that differs is never marked checked against it: a check opens instead (BR-7), and
+    // the officer resolves it with a reason. A value the read could not give, or left for a person, stays their judgement.
+    let differs: { read: { id: string; valueJson: unknown }; answer: { id: string; valueJson: unknown; effectiveAt: Date } } | null = null;
     await this.db.$transaction(async (tx) => {
       if (await tx.answerCheck.count({ where: { subjectId: who.subjectId, fact, state: "open" } })) problem(409, "open_checks", "Not possible now", "This answer and a document differ (an open check): resolve the check first. Nothing changed.");
       const current = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: who.subjectId, canonicalFieldKey: fact, rowKey: null, supersededById: null } });
       if (!current) problem(409, "no_answer", "Not possible now", "There is no answer to check against the document yet. Nothing changed.");
+      const read = await tx.readValue.findFirst({ where: { documentId: doc!.id, fact }, select: { id: true, valueJson: true } });
+      if (read && notWritable(s, fact, read.valueJson) === null && !sameValue(fact, current!.valueJson, read.valueJson)) { differs = { read, answer: { id: current!.id, valueJson: current!.valueJson, effectiveAt: current!.effectiveAt } }; return; }
       const n = await tx.clientCanonicalAnswer.updateMany({ where: { id: current!.id, supersededById: null }, data: { supersededById: id } });
       if (n.count !== 1) problem(409, "changed", "Changed by someone else", "The answer changed at the same moment; read it again. Nothing changed.");
       await tx.clientCanonicalAnswer.create({ data: { id, workspaceId: current!.workspaceId, partyId: current!.partyId, subjectId: current!.subjectId, canonicalFieldId: current!.canonicalFieldId, canonicalFieldKey: fact, rowKey: null, valueJson: current!.valueJson as object, status: "VERIFIED",
         sourceJson: { channel: "checked_against_document", actor: actor.id, at: at.toISOString(), from: current!.id, checked_against: { document: doc!.id, by: actor.id, at: at.toISOString() } }, verifiedBy: actor.id, verifiedAt: at } });
     });
+    if (differs) {
+      const d = differs as { read: { id: string; valueJson: unknown }; answer: { id: string; valueJson: unknown; effectiveAt: Date } };
+      // The officer already kept this very answer over this document's value, with a reason (a resolved check): it is
+      // their recorded judgement that the document is wrong here, so it is never "checked against" it, and no second
+      // check opens for a difference already settled.
+      // The rule the drawer shows too (keptOver): a later answer of another value was never kept, so it opens a check.
+      const kept = keptOver(await this.db.answerCheck.findMany({ where: { subjectId: who.subjectId, fact, documentId: doc!.id, state: "resolved" }, select: { id: true, fact: true, documentId: true, kept: true, resolvedAt: true } }),
+        await this.db.clientCanonicalAnswer.findMany({ where: { subjectId: who.subjectId, rowKey: null, canonicalFieldKey: fact }, select: { id: true, canonicalFieldKey: true, valueJson: true, effectiveAt: true } }), fact, doc!.id, d.answer);
+      if (kept) problem(409, "kept_over_document", "Not possible now", `"${labelOf(s, fact)}": you kept this answer over what the document (${this.typeName(c, doc!.documentType)}) reads (a resolved check, with its reason), so it is not marked checked against it. Nothing changed.`, { check: kept.id });
+      // The check this answer and the document need (one per person, fact and document); a second click finds it open.
+      let check: string = randomUUID();
+      try {
+        await this.db.answerCheck.create({ data: { id: check, workspaceId: c.workspaceId, caseId: c.id, subjectId: who.subjectId, fact, readValueId: d.read.id, documentId: doc!.id, answerId: d.answer.id, typedValueJson: d.answer.valueJson as object, documentValueJson: d.read.valueJson as object, openedBy: actor.id, openedAt: at } });
+        await this.audit.log(c.workspaceId, actor.id, "opened", "answer check", check, `${actor.name} asked to mark ${fact} for the ${who.role.replace(/_/g, " ")} checked against ${this.typeName(c, doc!.documentType)} on case ${short(c.id)}; the answer differs from the document, so a check was opened instead`);
+      } catch (e) {
+        if ((e as { code?: string }).code !== "P2002") throw e;
+        check = (await this.db.answerCheck.findFirst({ where: { subjectId: who.subjectId, fact, documentId: doc!.id, state: "open" }, select: { id: true } }))?.id ?? check;
+      }
+      problem(409, "differs_from_document", "Not possible now", `"${labelOf(s, fact)}": the answer differs from what the document (${this.typeName(c, doc!.documentType)}) reads, so it is not marked checked against it. A check is open: resolve it in "Fill this from documents", with a reason.`, { check, answer: d.answer.valueJson, document_value: d.read.valueJson });
+    }
     await this.audit.log(c.workspaceId, actor.id, "checked against a document", "case fact", fact, `${actor.name} checked ${fact} for the ${who.role.replace(/_/g, " ")} against ${this.typeName(c, doc!.documentType)} on case ${short(c.id)}`);
     return { answer: { id, fact, subject: who.subjectId, status: "VERIFIED", verified_by: actor.id, verified_at: at.toISOString(), checked_against: { document: doc!.id, by: actor.id, at: at.toISOString() } } };
   }

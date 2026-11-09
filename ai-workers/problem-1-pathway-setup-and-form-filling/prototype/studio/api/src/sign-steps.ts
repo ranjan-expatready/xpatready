@@ -19,6 +19,7 @@ import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } fr
 import { Runtime } from "./runtime.ts";
 import { CasePrepare } from "./case-prepare.ts"; // C7.6: Ready to file is read now (case-prepare.ts imports signStepsOf: forwardRef below)
 import { refuseIfRecorded } from "./submission-record.ts"; // C8.2-9: a recorded application is read-only
+import { addedOn, completedSince } from "../../engine/runtime/added-forms.ts"; // C7.8: a blank added form's completed copy
 import { isBarcodeForm } from "../../contracts/forms.ts"; // B132: a barcode form is printed from its validated copy
 
 type H = string | undefined;
@@ -60,19 +61,23 @@ export class SignSteps {
     // the officer's choice, else the line's), as the prepare view decides it; any other form has none to do.
     // B132: a form signed in pen on Paper (P-380 Q3) has its own steps, Printed then Signed in pen.
     const signature = channelOf(line, undefined, null, item!.channel).signature;
-    return { c, item: item!, line, handScanned: signature === "HAND_SCANNED", pen: signature === "PEN" };
+    // C7.8 (B141 BR-7, M5): a blank official PDF the case officer added takes one upload, its completed copy (the signed
+    // one when it is signed), with no printing step: nothing on it is made by the product.
+    const blank = addedOn(this.r.snapshotOf(c), item!.itemKey, item!.subjectId)?.kind === "blank";
+    return { c, item: item!, line, handScanned: signature === "HAND_SCANNED", pen: signature === "PEN", blank };
   }
 
   /** GET /runtime/items/:id: the item with who signs and its steps (each done with who and when, or not yet). */
   async read(actor: Actor, itemId: string) {
-    const { c, item, line, pen } = await this.item(actor, itemId);
+    const { c, item, line, pen, blank } = await this.item(actor, itemId);
     const people = this.r.peopleOf(c).filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role, label: p.label, applies: p.applies }));
     const done = (await signStepsOf(this.db, c.id)).get(item.id) ?? {};
     const scans = await this.db.signedScan.findMany({ where: { itemId: item.id }, orderBy: { uploadedAt: "asc" }, select: { id: true, fileName: true, mediaType: true, sizeBytes: true, sha256: true, uploadedBy: true, uploadedAt: true } });
     return {
       id: item.id, kind: item.kind, form: item.itemKey, filing: item.filingId, subject: item.subjectId, version: item.version,
       signers: signersOf(people, item.subjectId, line?.who ?? "each_applicant", line?.signed_by, minorFromAnswers((await this.r.state(c)).answers, new Date())),
-      sign_steps: (pen ? PEN_STEPS : SIGN_STEPS).map((key: SignStepKey | PenStepKey) => ({ key, words: stepWords(key), done: done[key] ? { at: done[key]!.at, by: done[key]!.by, ...(key === "print" ? { copy: done[key]!.copy ?? null } : {}) } : null })),
+      // C7.8 (breaker m7): a blank added form has only "Uploaded to IRCC" after its completed copy.
+      sign_steps: (blank ? (["uploaded_to_ircc"] as SignStepKey[]) : pen ? PEN_STEPS : SIGN_STEPS).map((key: SignStepKey | PenStepKey) => ({ key, words: stepWords(key), done: done[key] ? { at: done[key]!.at, by: done[key]!.by, ...(key === "print" ? { copy: done[key]!.copy ?? null } : {}) } : null })),
       signed_scans: scans.map((x) => ({ id: x.id, file_name: x.fileName, media_type: x.mediaType, size_bytes: x.sizeBytes, sha256: x.sha256, uploaded_by: x.uploadedBy, uploaded_at: x.uploadedAt.toISOString() })),
     };
   }
@@ -80,7 +85,21 @@ export class SignSteps {
   /** POST /runtime/items/:id/sign-steps/:key: one step, in order; "print" names the generated copy printed. */
   async step(actor: Actor, itemId: string, keyIn: string, body: unknown) {
     if (!isSignStep(keyIn) && !isPenStep(keyIn)) fail(`No such step: a form signed by hand and scanned takes ${SIGN_STEPS.map((k) => SIGN_STEP_WORDS[k]).join(", ")}; a form signed in pen on Paper takes ${PEN_STEPS.map((k) => PEN_STEP_WORDS[k]).join(", ")}.`, HttpStatus.NOT_FOUND);
-    const { c, item, handScanned, pen } = await this.item(actor, itemId);
+    const { c, item, handScanned, pen, blank } = await this.item(actor, itemId);
+    // C7.8 (B141 M5): a blank added form has no printing steps: its one upload is the completed (signed) copy. Its one step
+    // after that (breaker m7) is "Uploaded to IRCC", once the completed copy is in and the filing is Ready to file.
+    if (blank) {
+      if (keyIn !== "uploaded_to_ircc") fail(`${item.itemKey} is the blank official PDF the case officer added: it has no printing steps. Fill it by hand, have it signed if it is signed, and upload the completed copy. Nothing was recorded.`, HttpStatus.CONFLICT);
+      await refuseIfRecorded(this.db, [item.filingId], `the signing of ${item.itemKey}`);
+      const a = addedOn(this.r.snapshotOf(c), item.itemKey, item.subjectId)!;
+      const scans = await this.db.signedScan.findMany({ where: { itemId: item.id }, select: { uploadedAt: true } });
+      if (!completedSince(scans, a)) fail(`Upload the completed copy of ${item.itemKey} first. Nothing was recorded.`, HttpStatus.CONFLICT);
+      const ready = ((await this.prepare.view(actor, c.id)) as { filings: { id: string; status: string }[] }).filings.find((x) => x.id === item.filingId)?.status === "ready_to_file";
+      if (!ready) fail(`Uploaded to IRCC waits for the filing to be Ready to file. Nothing was recorded.`, HttpStatus.CONFLICT);
+      if ((await signStepsOf(this.db, c.id)).get(item.id)?.uploaded_to_ircc) fail(`${item.itemKey} is already marked uploaded to IRCC.`, HttpStatus.CONFLICT);
+      await this.save(c, item, "uploaded_to_ircc", actor);
+      return this.read(actor, itemId);
+    }
     // B129 (B3 challenge M2, break M3 on #1221): once the submission is recorded nothing on it is signed again, not even a
     // new print after a fact changed (the restart below); the read-only words come first, as for the channel and "entered".
     await refuseIfRecorded(this.db, [item.filingId], `the signing of ${item.itemKey}`);
@@ -195,9 +214,9 @@ export class SignSteps {
   /** POST /runtime/items/:id/signed-scan: the signed scan (one PDF, JPEG or PNG, judged by its bytes), stored with its
    *  checksum, never changed in place; it marks "Signed scan received". */
   async scan(actor: Actor, itemId: string, files: Upload[] | undefined, body?: unknown) {
-    const { c, item, handScanned } = await this.item(actor, itemId);
+    const { c, item, handScanned, blank } = await this.item(actor, itemId);
     await refuseIfRecorded(this.db, [item.filingId], `the signing of ${item.itemKey}`); // B129: before the file is stored
-    if (!handScanned) fail(`${item.itemKey} is not signed by hand and scanned on this application, so it takes no signed scan. Nothing was stored.`, HttpStatus.CONFLICT);
+    if (!handScanned && !blank) fail(`${item.itemKey} is not signed by hand and scanned on this application, so it takes no signed scan. Nothing was stored.`, HttpStatus.CONFLICT);
     const f = (files ?? []).filter((x) => x.buffer);
     if (f.length !== 1 || f[0].fieldname !== "file") fail(`Send one file, in the field "file". Nothing was stored.`);
     const bytes = f[0].buffer!;
@@ -206,7 +225,7 @@ export class SignSteps {
     const media = mediaOf(bytes);
     if (!media) fail("Send the signed scan as a PDF, JPEG or PNG (judged by the file itself, not its name). Nothing was stored.", HttpStatus.UNPROCESSABLE_ENTITY);
     const done = (await signStepsOf(this.db, c.id)).get(item.id) ?? {};
-    const refusal = stepRefusal("scan_received", done, item.itemKey, { viaUpload: true });
+    const refusal = blank ? null : stepRefusal("scan_received", done, item.itemKey, { viaUpload: true });
     if (refusal) fail(`${refusal} Nothing was stored.`, HttpStatus.CONFLICT);
     const id = randomUUID(), sha256 = createHash("sha256").update(bytes).digest("hex");
     const rel = join("cases", c.id, "signed-scans", `${id}.${MEDIA[media!]}`), abs = join(SCANS(), rel);
@@ -215,10 +234,10 @@ export class SignSteps {
       await this.db.$transaction(async (tx) => {
         await lockCase(tx as unknown as Db, c.id); // review M2: before the insert (whose share lock on the case row deadlocked a second upload)
         await tx.signedScan.create({ data: { id, workspaceId: c.workspaceId, caseId: c.id, itemId: item.id, fileName: cleanName(utf8Name(f[0].originalname)), mediaType: media!, sizeBytes: bytes.length, sha256, path: rel, uploadedBy: actor.id } });
-        await this.save(c, item, "scan_received", actor, null, tx as unknown as Db, namedCopy(body)); // B130: the printed copy it scans
+        if (!blank) await this.save(c, item, "scan_received", actor, null, tx as unknown as Db, namedCopy(body)); // B130: the printed copy it scans
       });
     } catch (e) { rmSync(abs, { force: true }); throw e; } // a refused upload leaves no file behind
-    await this.audit.log(c.workspaceId, actor.id, "uploaded", "signed scan", id, `${actor.name} uploaded the signed scan of ${item.itemKey} on case ${short(c.id)} (${MEDIA[media!].toUpperCase()}, ${bytes.length} bytes)`);
+    await this.audit.log(c.workspaceId, actor.id, "uploaded", "signed scan", id, `${actor.name} uploaded the ${blank ? "completed copy" : "signed scan"} of ${item.itemKey} on case ${short(c.id)} (${MEDIA[media!].toUpperCase()}, ${bytes.length} bytes)`);
     return this.read(actor, itemId);
   }
 }

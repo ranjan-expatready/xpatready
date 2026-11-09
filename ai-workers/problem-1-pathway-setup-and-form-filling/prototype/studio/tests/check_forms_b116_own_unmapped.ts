@@ -32,8 +32,11 @@ const BOXES = {
   "form1[0].Page3[0].Signature[0].Consent0[0].Choice[0]": { fact: "person.consents_to_research_contact", words: "Do you consent to be contacted by CIC, or an organization at CIC’s request, in the future?" },
 } as const;
 // QA-165's last two (#1363): the configured checkpoint now asks IMM 5257's Taiwan PIN and Israel passport boxes itself, so
-// this door's own pass and undo use IMM 5257 SCH1's Question 5, a released Yes/No box nothing fills yet (its form's text is
-// saved too, expected/source-text/imm5257_1e.xfa-template.txt), written in its own codes true and false.
+// this door's own pass and undo use IMM 5257 SCH1's Question 5 (its form's text is saved too,
+// expected/source-text/imm5257_1e.xfa-template.txt), written in its own codes true and false. QA-318 (#1272): the
+// checkpoint now asks SCH1's Question 5 itself too, and no released Yes/No box on a form whose text is saved is left that
+// nothing fills. So, as review M1's write below, one SQL write puts that box's released row back to "filled by hand" (as
+// the release's AI map left it) for these checks, and puts the checkpoint's row back after them.
 const SCH1_Q5 = "Schedule1[0].WarHumanityCrimesInfo[0].HaveWitnessedParticipated[0]";
 const RELATIONSHIP = "form1[0].Page2[0].MaritalStatus[0].SectionA[0].TypeOfRelationship[0]";
 const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]";
@@ -59,6 +62,11 @@ for (const b of Object.values(BOXES)) ok(`B116 pass: all four applicants are ask
 const dir = join(VARDIR, "workspaces", "demo", "cases", caseId);
 const copies = readdirSync(dir).filter((f) => /^IMM5257-.*\.request\.json$/.test(f)).map((f) => JSON.parse(readFileSync(join(dir, f), "utf8")).values as Record<string, string>);
 ok("B116 pass: four IMM 5257 copies, each writing N in the three boxes", copies.length === 4 && copies.every((v) => Object.keys(BOXES).every((p) => v[p] === "N")), copies.map((v) => Object.keys(BOXES).map((p) => v[p])));
+
+// Setup (QA-318): SCH1's Question 5 as a released box nothing fills yet; the checkpoint's row is put back at the end.
+const releasedQ5 = sql(`select id || '|' || outcome || '|' || coalesce(canonical_field_key, '') || '|' || coalesce(transform, '') from form_field_map where form_edition_id = '${ed1}' and data_path = '${SCH1_Q5}' and status = 'PUBLISHED' order by version desc limit 1`).split("|");
+const lit = (v: string) => (v ? `'${v.replace(/'/g, "''")}'` : "null");
+sql(`update form_field_map set outcome = 'by_hand', canonical_field_key = null, transform = null where id = '${releasedQ5[0]}'`);
 
 // Fail: words the form does not print are never taken as its question.
 const ownOn = (edition: string, body: Record<string, unknown>) => call("POST", `/editions/${edition}/form-fields/own-question`, { reason: "B116 check: asked as its own question", ...body });
@@ -90,6 +98,7 @@ const u = await call("POST", `/editions/${ed1}/form-fields/own-question/undo`, {
 ok("B116 pass: undo takes it back to \"filled by hand\": its draft goes, the release sees no change", u.status < 300 && u.body?.field === null && draft() === "", { u, draft: draft() });
 const again = await call("POST", `/editions/${ed1}/form-fields/own-question/undo`, { dataPath: SCH1_Q5 });
 ok("B116 fail: a second undo is refused (409): nothing is asked any more", again.status === 409, again);
+sql(`update form_field_map set outcome = ${lit(releasedQ5[1])}, canonical_field_key = ${lit(releasedQ5[2])}, transform = ${lit(releasedQ5[3])} where id = '${releasedQ5[0]}'`);
 
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

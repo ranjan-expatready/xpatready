@@ -66,6 +66,13 @@ const MONTH = /^(\d{4})-(\d{2})$/;
  *  such a box (engine/runtime/forms.ts markNothingRecorded) and passes Context.nothingRecorded (api/src/fill.ts); with
  *  an empty value and no such flag the box stays blank. */
 const RECORDED = /^derived:(?:any\(([\w.,\s]+)\) recorded|([\w.]+) recorded|valid ([\w.]+) recorded \(not expired\)|any post-secondary education record exists|any previous residence in past 5 years\b.*)$/;
+/** QA-318 (C7.2): a drafted map's prose spelling of the same kind of Yes/No, "derive: true if any <what> is recorded for the
+ *  subject, else false" (IMM 5257 SCH1 (09-2023) Questions 4 and 7), or with the form's own limits on what counts ("true if
+ *  any recorded trip, starting after …, went to …, else false", Question 8). Group 1 is what is recorded; group 2 is set
+ *  when the form counts only some of them. */
+const PROSE_RECORDED = /^derive: true if any (?:(.+?) (?:is|are) recorded(?: for the subject)?|recorded (.+?))(?:, else false)$/i;
+/** Whether a transformation's first step is that prose Yes/No (engine/runtime/forms.ts markNothingRecorded reads it). */
+export const proseRecorded = (transform: string | null | undefined) => PROSE_RECORDED.test(stepsOf(transform)[0] ?? "");
 /** A transformation's steps: separated by ";" (P1/P2 maps) or "->" (the 21 Oct live IMM 5257 draft). Two spelling aliases
  *  from that draft name existing executable steps: date_part:X = date:X, address_part:province_state = address_part:province. */
 const stepsOf = (transform: string | null | undefined) => String(transform ?? "as_is").split(/;|->/).map((s) => s.trim().replace(/^date_part:/, "date:").replace(/^address_part:province_state\b/, "address_part:province")).filter(Boolean);
@@ -93,7 +100,7 @@ export function runTransform(transform: string | undefined, value: unknown, box:
   const hand = (reason: string): Outcome => ({ ok: false, hand: true, reason, steps });
   const blank = (reason: string): Outcome => ({ ok: false, blank: true, reason, steps });
   let v: any = value;
-  if ((v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length)) && !(ctx.nothingRecorded && steps[0] && RECORDED.test(steps[0]))) {
+  if ((v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length)) && !(ctx.nothingRecorded && steps[0] && (RECORDED.test(steps[0]) || PROSE_RECORDED.test(steps[0])))) {
     // A derive-to-N/0 on a missing fact is still a value ("no other name recorded"); everything else stays blank.
     const d = steps.find((s) => s.startsWith("derive:"));
     if (d && /^derive:Y if any .+ (is|are) recorded, else N$/.test(d)) return { ok: true, value: "N", steps };
@@ -113,6 +120,16 @@ export function runTransform(transform: string | undefined, value: unknown, box:
       const any = present(v) || named.some((f) => present(ctx.fact?.(f)));
       if (m[3] && any) return hand(`${m[3]} is recorded; whether it is still valid (not expired) is checked by a person`);
       v = any; continue;
+    }
+    // QA-318: the prose Yes/No. A box whose own fact is that Yes/No question (SCH1's "Did you serve in any military…?")
+    // writes the person's answer; a confirmed "none apply" (the caller's nothingRecorded) writes No; an entry recorded makes
+    // it Yes, unless the form counts only some entries (Question 8: trips since 18 or in the past five years, to other
+    // countries): then a person decides, in the form's own words. Never a guess.
+    if ((m = PROSE_RECORDED.exec(s))) {
+      if (typeof v === "boolean") continue;
+      if (!present(v)) { v = false; continue; }
+      if (m[2]) return hand(`the form counts only some of them (any recorded ${m[2].replace(/\s+/g, " ")}): a person checks the entries and decides Yes or No`);
+      v = true; continue;
     }
     // C7.2 cause 1: "A equals B" (applying from the country of residence; residential address same as mailing).
     if ((m = /^derived:([\w.]+) equals ([\w.]+)$/.exec(s))) { const other = ctx.fact?.(m[2]); if (!present(other)) return hand(`${m[2]} is not confirmed, so it cannot be compared`); v = same(v, other); continue; }

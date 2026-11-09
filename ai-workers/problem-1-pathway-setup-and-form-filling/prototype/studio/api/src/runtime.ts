@@ -4,6 +4,7 @@
 // on the workspace's cases; a client reaches only the case they answer, and only its questionnaire; configuration
 // people reach no case. Answer values and typed names never go into audit text or logs (STANDARDS §5): audit lines name
 // a case by its id.
+import { additionsOf, withAdditions } from "../../engine/runtime/added-forms.ts";
 import { clientPersonOf, withClient, type StoredChange } from "../../engine/runtime/filing-changes.ts";
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
@@ -70,7 +71,9 @@ export const offeredRoles = (s: Snapshot) => addableRoles(s).filter((p) => p.rol
 /** What a reached case carries: every pin revision, newest first (C9.5), its release; the people with their party and
  *  profile; and the case's first Make principal (C6.13 BR-3b: it names the client when roles were swapped). */
 const REACHED = { pins: { orderBy: { revision: "desc" as const }, include: { release: { include: { packVersion: { select: { version: true } } } } } }, participants: { orderBy: { order: "asc" as const }, include: { subject: { include: { party: { include: { profile: true } } } } } },
-  filingChanges: { where: { kind: "make_principal" }, orderBy: [{ changedAt: "asc" as const }, { id: "asc" as const }], take: 1, select: { kind: true, subjectId: true, otherSubjectId: true, changedAt: true } } };
+  filingChanges: { where: { kind: "make_principal" }, orderBy: [{ changedAt: "asc" as const }, { id: "asc" as const }], take: 1, select: { kind: true, subjectId: true, otherSubjectId: true, changedAt: true } },
+  // C7.8 (B141 M1): the live forms the case officer added to one filing, joined into the case's snapshot (snapshotOf).
+  formAdditions: { where: { removedAt: null }, orderBy: [{ addedAt: "asc" as const }, { id: "asc" as const }] } };
 /** C9.5 (BR-1, challenge M1): a case reads its newest pin revision (`pins[0]`); every revision, older ones too, must still
  *  match its release and the case's combination, and the chain must hold (1…n, forward only). Otherwise refused, never read. */
 function pinned<C extends { combinationId: string; pins: { revision: number; contentHash: string; release: { version: number; sha256: string; combinationId: string } }[] }>(c: C): C {
@@ -138,7 +141,18 @@ export class Runtime {
     return pinned(c!);
   }
 
-  snapshotOf(c: Reached) { return c.pins[0].release.snapshot as unknown as Snapshot; }
+  /** The case's snapshot: its pinned release with the forms the case officer added to one filing joined in (C7.8 M1,
+   *  engine/runtime/added-forms.ts withAdditions, the one join point). Read once per reached case. */
+  snapshotOf(c: Reached): Snapshot {
+    const got = this.joined.get(c);
+    if (got) return got;
+    const s = withAdditions(this.releaseSnapshotOf(c), additionsOf(c.formAdditions ?? []));
+    this.joined.set(c, s);
+    return s;
+  }
+  private readonly joined = new WeakMap<object, Snapshot>();
+  /** The release snapshot exactly as released (its fingerprint is checked against this, never the joined one). */
+  releaseSnapshotOf(c: Reached) { return c.pins[0].release.snapshot as unknown as Snapshot; }
 
   /** C6.18 (P-244): the facts of a case's release that are background answers (engine/runtime/background.ts), read once
    *  per release (a release never changes). */
@@ -146,7 +160,7 @@ export class Runtime {
   backgroundOf(c: Reached): Set<string> {
     const id = c.pins[0].release.id;
     let got = this.background.get(id);
-    if (!got) { got = backgroundFacts(this.snapshotOf(c), backgroundBlockOf); this.background.set(id, got); }
+    if (!got) { got = backgroundFacts(this.releaseSnapshotOf(c), backgroundBlockOf); this.background.set(id, got); }
     return got;
   }
   peopleOf(c: Reached): Participant[] {
