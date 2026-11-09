@@ -9,7 +9,7 @@ import { captureSchemaErrors, fingerprint, noAnswers, type CaptureRecord } from 
 import { canonical } from "../contracts/rules.ts";
 import {
   approvedSourcesDirOk, BASE_URL, FORBIDDEN, INVENTORY, KEY_FILE, LABEL, MAX_ATTEMPTS, MODELS, OFFICIAL, PARTS_DIR, PRICE_PER_MTOK, PROMPTS_DIR, PROTOTYPE,
-  QUESTION_LISTS, ROUTE_ID, RUN_CAP_USD, RUNS_DIR, SCREEN_INVENTORIES, SOLUTION,
+  QUESTION_LISTS, REVIEW_SHEETS, ROUTE_ID, RUN_CAP_USD, RUNS_DIR, SCREEN_INVENTORIES, SOLUTION,
 } from "./policy.ts";
 
 export class PolicyRefusal extends Error {}
@@ -21,7 +21,9 @@ const manifestItems = (): ManifestItem[] => JSON.parse(readFileSync(join(OFFICIA
 
 /** P-80: set on an inventory (or a part of one) of a form approved in the product, from its checked approval record. */
 export type ApprovedInProduct = { sha256: string; edition: string; uploaded_by: string; approved_by: string };
-export type AdmittedInput = { file: string; sha256: string; kind: "official" | "inventory" | "draft" | "inventory_part" | "screen_inventory" | "question_list"; bytes: Buffer; parent_sources?: { file: string; sha256: string }[]; approved?: ApprovedInProduct };
+export type AdmittedInput = { file: string; sha256: string; kind: "official" | "inventory" | "draft" | "inventory_part" | "screen_inventory" | "question_list" | "review_sheet"; bytes: Buffer; parent_sources?: { file: string; sha256: string }[]; approved?: ApprovedInProduct;
+  /** C7.5 part 2: the printed edition a review sheet is of (the launcher checks the job names the same one). */
+  edition?: string };
 /** approvedDir (P-80): the one copy's approved-sources folder, named by the launcher; without it nothing approved in the
  *  product is admitted. */
 export type AdmitOptions = { allowStubDrafts?: boolean; depth?: number; approvedDir?: string };
@@ -57,7 +59,8 @@ export function admitInput(file: string, expectedSha?: string, opts: AdmitOption
   if (dirname(abs) === SCREEN_INVENTORIES && /^[a-z0-9][a-z0-9._-]*\.screens\.json$/.test(basename(abs))) return admitScreens(rel, bytes, h);
   if (dirname(abs) === PARTS_DIR && /^[a-z0-9][a-z0-9._-]*\.part\.json$/.test(basename(abs))) return admitPart(rel, bytes, h, expectedSha, opts);
   if (dirname(abs) === QUESTION_LISTS && /^[a-z0-9][a-z0-9._-]*\.questions\.json$/.test(basename(abs))) return admitQuestionList(rel, bytes, h);
-  return refuse(`not on the drafting allowlist (official files, their P1 inventories, inventories of forms approved in the product, parts of them, approved screen inventories, combinations' question lists, and guarded drafts under AIW-D263): ${file}`);
+  if (dirname(abs) === REVIEW_SHEETS && /^[a-z0-9][a-z0-9._-]*\.sheet\.json$/.test(basename(abs))) return admitReviewSheet(rel, bytes, h);
+  return refuse(`not on the drafting allowlist (official files, their P1 inventories, inventories of forms approved in the product, parts of them, approved screen inventories, combinations' question lists, filled forms' review sheets, and guarded drafts under AIW-D263): ${file}`);
 }
 
 /** P-80: the inventory of a form a second person approved in the product. The guard cannot see the database, so the
@@ -146,6 +149,41 @@ function admitQuestionList(rel: string, bytes: Buffer, h: string): AdmittedInput
     seen.add(k);
   }
   return { file: rel, sha256: h, kind: "question_list", bytes };
+}
+
+/** C7.5 part 2: a filled form's review sheet, written by the studio (engine/runtime/form-review.ts reviewSheet): its printed
+ *  edition and, box by box, the caption, the library fact and the value the form would read. Admitted only as a closed
+ *  review-sheet/v1 record of at most 2,000 boxes and 400 KB, each box named once, every text one plain line (LABEL_BAD:
+ *  nothing can forge a line or close the input it is sent in), never a representative's (the firm's) fact. The values are
+ *  the case's answers: sent as delimited data, never as instructions (AG11-D13), and only on a run a person started. */
+function admitReviewSheet(rel: string, bytes: Buffer, h: string): AdmittedInput {
+  const no = (m: string): never => refuse(`review sheet ${rel} not admitted: ${m}`);
+  if (bytes.length > 400_000) no("it is larger than 400 KB");
+  const env = json(bytes, no);
+  closed(env, ["contract", "form_edition", "fields"], [], "review sheet", no);
+  if (env.contract !== "review-sheet/v1") no("not a review-sheet/v1 record");
+  if (typeof env.form_edition !== "string" || !/^(IMM|IRM) [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(env.form_edition)) no("its form edition is not a printed edition such as IMM 0000 (MM-YYYY)");
+  if (!Array.isArray(env.fields) || !env.fields.length || env.fields.length > 2000) no("it holds no box, or more than 2,000");
+  // "|" is the column mark of a sheet line in the prompt (p2/prompt.ts), so no text carries it (C7.5 challenge m1).
+  // Break m (8 Nov): look-alike brackets and column bars a model may read as "<", ">" or "|" are refused too.
+  const LOOKALIKE = /[|\uFF5C\u2502\u2223\u01C0\u05C0\u2016\u23D0\u2758\uFFE8\uFE64\uFE65\u02C2\u02C3\u1438\u1433\u276E\u276F\u29FC\u29FD]/;
+  const line = (v: unknown, max: number) => typeof v === "string" && !!v.trim() && Array.from(v).length <= max && !LABEL_BAD.test(v) && !LOOKALIKE.test(v);
+  const seen = new Set<string>();
+  for (const f of env.fields as unknown[]) {
+    closed(f, ["box", "caption", "fact", "value"], [], "box", no);
+    const { box, caption, fact, value } = f as Record<string, unknown>;
+    if (!line(box, 200)) no(`"${String(box).slice(0, 40)}" is not a box name of one plain line of at most 200 characters`);
+    if (!line(caption, 300)) no(`the caption of ${String(box)} is not one plain line of at most 300 characters`);
+    if (fact !== null && (typeof fact !== "string" || fact.length > 120 || !/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/.test(fact))) no(`the fact of ${String(box)} is not a library key`);
+    if (typeof fact === "string" && fact.startsWith("representative.")) no(`${String(box)} holds the representative's (the firm's) fact, which a review sheet never carries`);
+    // C7.5 challenge m1: no contact detail (email, telephone, fax) is sent, as the studio's sheet already leaves them out.
+    if (typeof fact === "string" && /(^|[._])(e_?mail|phone|telephone|fax|mobile)([._]|$)/.test(fact)) no(`${String(box)} holds a contact detail (${fact}), which a review sheet never carries`);
+    if (!line(value, 500)) no(`the value of ${String(box)} is not one plain line of at most 500 characters`);
+    if (/[^\s@]+@[^\s@]+\.[a-z]{2,}/i.test(String(value))) no(`the value of ${String(box)} is an email address, a contact detail a review sheet never carries`);
+    if (seen.has(box as string)) no(`${String(box)} appears twice`);
+    seen.add(box as string);
+  }
+  return { file: rel, sha256: h, kind: "review_sheet", bytes, edition: env.form_edition };
 }
 
 /** F1 slice 2: an approved portal screen inventory (P-66). Admitted only when it meets the capture contract, holds no

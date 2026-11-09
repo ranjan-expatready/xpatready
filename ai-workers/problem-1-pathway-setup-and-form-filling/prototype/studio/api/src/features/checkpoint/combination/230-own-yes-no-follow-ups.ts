@@ -9,8 +9,13 @@
 // through B86's door (api/src/form-field-condition.ts, To review › Form fields: the author proposes, a second person
 // approves; the field's own words, "Only when … = Y", are what is confirmed), or asked as its deciding question (B88) when
 // it is a worked-out Yes/No. Done for this combination, and for any set up before the combination that conditions them.
+// QA-165's last two (tech lead on #1363): a Yes/No question the form asks only for one answer to another ("askedWhen": IMM
+// 5257's Taiwan PIN and National Israeli passport, by the passport's country or territory of issue) gets the condition
+// "show only when <that fact> is <that answer>" when the form's own script says so (askedWhenGround), and its readers are
+// confirmed the same way.
 import { FormFieldConditions } from "../../../form-field-condition.ts";
-import { OWN_YES_NO, followUpGround, yesGate } from "../../../own-yes-no.ts";
+import { readingOf } from "../../../own-question.ts";
+import { OWN_YES_NO, askedWhenGround, equalsGate, followUpGround, scriptRulesOf, yesGate } from "../../../own-yes-no.ts";
 import { Screen02 } from "../../../screen02.ts";
 import { Studio } from "../../../studio.ts";
 import { sections } from "../060-sections-from-forms.ts";
@@ -28,11 +33,21 @@ const SIBLINGS = new Map(Object.values(OWN_YES_NO).flatMap((c) => c.boxes.flatMa
 /** The door's words for a fact (engine/sources.ts factWords: its meaning, capitalised, no full stop). */
 const wordsOf = (meaning: string | null | undefined, fact: string) => { const m = (meaning ?? fact).trim().replace(/\.$/, ""); return m.charAt(0).toUpperCase() + m.slice(1); };
 
+/** Every data's askedWhen form field, with its own application form (review m1: IMM 1294 and 1295 use the same paths). */
+const ASKED_WHEN = Object.values(OWN_YES_NO).flatMap((c) => c.boxes.filter((b) => b.askedWhen).map((b) => ({ dataPath: b.dataPath, formKey: c.application })));
+/** The facts the askedWhen form fields ask (the library field step 140 pointed each at), on their own forms, in this workspace. */
+const askedFacts = async ({ db, workspaceId }: Ctx) => {
+  if (!ASKED_WHEN.length) return [];
+  const eds = await db.formEdition.findMany({ where: { workspaceId, form: { formKey: { in: [...new Set(ASKED_WHEN.map((a) => a.formKey))] } } }, select: { id: true, form: { select: { formKey: true } } } });
+  const OR = ASKED_WHEN.map((a) => ({ dataPath: a.dataPath, formEditionId: { in: eds.filter((e) => e.form.formKey === a.formKey).map((e) => e.id) } }));
+  return [...new Set((await db.formFieldMap.findMany({ where: { workspaceId, status: { in: ["DRAFT", "PUBLISHED"] }, canonicalFieldKey: { not: null }, OR }, select: { canonicalFieldKey: true } })).map((r) => r.canonicalFieldKey!))];
+};
+
 /** Each form field of one combination that reads a conditioned detail holds the same condition (B86) or asks its deciding
  *  question (B88), proposed by the author and approved by the approver. A field already doing so is left as it is. */
 async function confirmReaders(ctx: Ctx, combinationId: string) {
   const { db, workspaceId, author, approver, said } = ctx, out = formSetup(ctx), door = ctx.get(FormFieldConditions), library = ctx.get(Screen02);
-  for (const fact of ALL_FOLLOW_UPS) {
+  for (const fact of [...ALL_FOLLOW_UPS, ...await askedFacts(ctx)]) {
     // Review round 2 on #1318: a field whose words name a sibling detail ("Only when "National identity document number" …",
     // IMM 1294's and IMM 5710's national ID country) is filled only when that detail is recorded, which is asked only after the
     // same Yes: the same condition. Words naming anything else stay a person's call.
@@ -60,10 +75,10 @@ async function confirmReaders(ctx: Ctx, combinationId: string) {
 export default {
   async run(ctx, cc) {
     const { setup } = cc;
-    const boxes = (setup?.ownYesNo ?? []).filter((y) => y.followUps?.length);
+    const boxes = (setup?.ownYesNo ?? []).filter((y) => y.followUps?.length), asked = (setup?.ownYesNo ?? []).filter((y) => y.askedWhen);
     const { db, workspaceId, author, said } = ctx, out = formSetup(ctx), studio = ctx.get(Studio);
-    if (setup && boxes.length) {
-      const ed = await db.formEdition.findFirst({ where: { workspaceId, channel: "PDF", form: { formKey: setup.application } }, orderBy: { editionLabel: "desc" }, select: { id: true } });
+    if (setup && (boxes.length || asked.length)) {
+      const ed = await db.formEdition.findFirst({ where: { workspaceId, channel: "PDF", form: { formKey: setup.application } }, orderBy: { editionLabel: "desc" }, select: { id: true, inventoryFile: true } });
       const rows = ed ? await db.formFieldMap.findMany({ where: { workspaceId, formEditionId: ed.id, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" }, select: { dataPath: true, canonicalFieldKey: true, transform: true, evidenceQuote: true } }) : [];
       if (!ed) out.refused.push(`${setup.application}: no PDF edition, so no Yes/No question's details are conditioned`);
       const entries = [...new Map(rows.map((r) => [r.dataPath, { data_path: r.dataPath, fact: r.canonicalFieldKey, transform: r.transform, quote: r.evidenceQuote }])).values()];
@@ -83,6 +98,26 @@ export default {
               condition, conditionEffect: "SHOW", conditionPlain: `Asked only when "${words}" is Yes` });
           } catch (e) { out.refused.push(`${fact}: ${said(e)}`); }
         }
+      }
+      // QA-165's last two: asked only for the answer the form's own script names (IMM 5257 CR 330212: Taiwan 203, Israel 206).
+      const reading = ed ? readingOf(ed.inventoryFile) : null, rules = scriptRulesOf(ed?.inventoryFile);
+      for (const y of ed ? asked : []) {
+        const fact = entries.find((e) => e.data_path === y.dataPath)?.fact, when = y.askedWhen!;
+        if (!fact) { out.refused.push(`${y.label}: its form field asks no question yet, so it is not conditioned`); continue; }
+        const choices = (reading?.get(rules.find((r) => r.box === y.dataPath)?.requiredWhen.box ?? "") as { options_resolved?: [string, string][] } | undefined)?.options_resolved;
+        const ground = askedWhenGround(y.dataPath, when, rules, entries, choices);
+        if (!ground) { out.refused.push(`${y.label}: ${setup.application}'s own script does not ask it only when ${when.fact} is ${when.equals}, so it takes no condition`); continue; }
+        const p = await placementOf(db, workspaceId, fact);
+        if (!p) { out.refused.push(`${y.label}: not asked in the library, so it takes no condition`); continue; }
+        const condition = equalsGate(when);
+        if (JSON.stringify(p.predicateJson) === JSON.stringify(condition) && p.conditionEffect === "SHOW") continue; // already so
+        // Review M2: plain words on the author's screen (the form's choice, never its paths or fact keys); the ground is the
+        // checkpoint's own, kept in askedWhenGround and its test.
+        const label = (choices ?? []).find(([l]) => l.trim().split(/\s+/)[0] === when.equals)?.[0] ?? when.equals;
+        try {
+          await studio.placeField(author, fact, { sectionKey: p.sectionKey, collectedFrom: p.collectedFrom, repeats: p.repeats, tier: p.tier, questionText: p.questionText ?? undefined, helpText: p.helpText ?? undefined, ruleOnly: p.ruleOnly,
+            condition, conditionEffect: "SHOW", conditionPlain: `Asked only when the passport's country or territory of issue is ${label.replace(/^\w+\s+\((.*)\)$/, "$1")}, as ${setup.application} asks it only then` });
+        } catch (e) { out.refused.push(`${y.label}: ${said(e)}`); }
       }
       // The combinations set up before this one already ran this step, before any detail was conditioned.
       const all = sections(ctx).fromForms, at = all.findIndex((c) => c.id === cc.c.id);

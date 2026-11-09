@@ -71,6 +71,8 @@ export function launch(jobId: string, mode: "stub" | "live", opts: { approvedDir
   // P-80: a form approved in the product is drafted with the edition its approval names, never another one the job claims.
   const approved = admitted.find((a) => a.approved)?.approved;
   if (approved && job.known?.form_edition !== approved.edition) throw new PolicyRefusal(`the job's printed edition (${job.known?.form_edition ?? "none"}) is not the edition approved in the product (${approved.edition})`);
+  // C7.5 part 2: a review sheet is read only by a job that names the same printed edition (it goes into the prompt as given).
+  for (const r of admitted.filter((a) => a.kind === "review_sheet")) if (job.known?.form_edition !== r.edition) throw new PolicyRefusal(`the job's printed edition (${job.known?.form_edition ?? "none"}) is not the edition of its review sheet (${r.edition})`);
   assertNoLinksUnder(join(PROTOTYPE, "p2")); // nothing the drafting process may read can lead elsewhere
   const template = readFileSync(join(PROMPTS_DIR, job.template));
   const schema = readFileSync(join(PROMPTS_DIR, job.output_schema));

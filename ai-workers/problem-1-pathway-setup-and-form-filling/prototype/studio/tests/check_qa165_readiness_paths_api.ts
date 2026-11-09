@@ -1,7 +1,8 @@
 // QA-165 (#1318 review M1, M2, M3) through the API on the configured checkpoint, US$0, live AI off, no SQL write:
 //   R4 (M1) a field IRCC's field list marks required but whose own form script requires it only for some answers (IMM 5257's
 //      Taiwan PIN and Israel passport boxes, by the passport's country of issue; samples/form-script-requirements.json) holds
-//      readiness back only when that answer is given: an Indian passport lists neither, a Taiwanese passport the Taiwan PIN.
+//      readiness back only when that answer is given: an Indian passport lists neither; a Taiwanese passport waits on the
+//      Taiwan PIN's own question (asked for that passport only, QA-165's last two on #1363).
 //   R5 (M3) GET …/forms and the case's prepare view (Ready to file) read the same readiness (formReadinessOf, which locking a
 //      copy also calls): the same form fields, on both; a form filed Online keeps its PDF's empty boxes on its card only (Devin).
 //   R6 (M2) a mandatory box left empty never makes locking a dead end: the lock is refused for its own reasons (the form's
@@ -19,7 +20,7 @@ const post = (path: string, body: unknown, ms: number) => new Promise<number>((d
   rq.on("timeout", () => rq.destroy()); rq.on("error", () => done(0)); rq.end(data);
 });
 type Missing = { fact: string; label: string; reason: string; why?: string };
-type FormRow = { form: string; subject_id: string; readiness: { ready: boolean; missing: Missing[] }; fields_open: { box: string }[] };
+type FormRow = { form: string; subject_id: string; readiness: { ready: boolean; missing: Missing[] }; fields_open: { box: string; reason?: string }[] };
 
 (async () => {
   if (await post("/demo/reset", { confirm: "RESET" }, 300_000) >= 300 || await post("/demo/load", { sample: "configured" }, 1_200_000) >= 300) { console.error("STOP  the configured checkpoint did not load"); process.exit(2); }
@@ -35,20 +36,21 @@ type FormRow = { form: string; subject_id: string; readiness: { ready: boolean; 
   const card = { facts: f.readiness.missing.filter((m) => m.reason !== "left empty on the form").length };
   ok("C7.2 R4 pass: so no fact is waited for either", card.facts === 0, card);
 
-  // A Taiwanese passport (ISO "TWN", as the family's "IND"): the form's code 203, so its script requires the Taiwan PIN box,
-  // which nothing fills yet.
+  // A Taiwanese passport (ISO "TWN", as the family's "IND"): the form's code 203, so its script requires the Taiwan PIN box.
+  // QA-165's last two (#1363): the checkpoint asks that box as its own question for a Taiwanese passport only, so readiness
+  // waits on that question's answer (its form field "needs an answer"), not on an empty form field nothing fills.
   const r = await answer(c.id, P, "person.passport_country_of_issue", "TWN", CLIENT);
   await confirmAll(c.id, P);
   f = await forms();
-  ok("C7.2 R4 fail (#1318 M1): a Taiwanese passport: the Taiwan PIN box is required and empty, so readiness lists it (not the Israel box), with why", r.status < 300 && !f.readiness.ready && boxes(f).includes(TAIWAN) && !boxes(f).includes(ISRAEL) && f.readiness.missing.some((m) => m.fact === `box:${TAIWAN}` && /^no question asks it yet: /.test(m.why ?? "")), { status: r.status, missing: f.readiness.missing });
-  const taiwanLabel = f.readiness.missing.find((m) => m.fact === `box:${TAIWAN}`)?.label ?? "";
+  const twOpen = f.fields_open.find((o) => o.box === TAIWAN);
+  ok("C7.2 R4 fail (#1318 M1): a Taiwanese passport: the Taiwan PIN box is required, so readiness waits on its question (not on the Israel box), and neither is left empty", r.status < 300 && !f.readiness.ready && !boxes(f).includes(TAIWAN) && !boxes(f).includes(ISRAEL) && twOpen?.reason === "needs an answer" && f.readiness.missing.some((m) => m.reason === "not answered"), { status: r.status, missing: f.readiness.missing, open: twOpen });
 
   // R5: GET …/forms and the prepare view's Ready to file read the same readiness (formReadinessOf).
   // Devin on #1318: IMM 5257 is filed Online on the checkpoint, so its PDF's empty box is named on its card (above) and never
   // stands before Ready to file.
   const { p } = await prepare(c.id);
   const warns = (p?.readiness ?? []).flatMap((x) => x.warns);
-  ok("C7.6 R5 pass (Devin on #1318): IMM 5257 is filed Online here, so Ready to file has no line for its PDF's empty Taiwan PIN box", !!taiwanLabel && !warns.some((w) => /IMM 5257 for Sample Client P: .*would be left empty/.test(w.words)), warns.map((w) => w.words));
+  ok("C7.6 R5 pass (Devin on #1318): IMM 5257 is filed Online here, so Ready to file has no \"left empty\" line for its PDF", !warns.some((w) => /IMM 5257 for Sample Client P: .*would be left empty/.test(w.words)), warns.map((w) => w.words));
 
   // R6: the lock is never a dead end over a box left empty. Review m5 on #1318: IMM 5257 is filed Online on the checkpoint, so
   // its lock is refused as Online before readiness is read; IMM 5257 SCH1 is a PDF form whose by-hand boxes a copy leaves empty.

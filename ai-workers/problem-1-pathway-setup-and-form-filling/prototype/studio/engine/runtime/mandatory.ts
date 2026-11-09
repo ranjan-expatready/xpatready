@@ -60,14 +60,18 @@ export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxRes
     const when = requiredWhen.get(path);
     if (when && !when.equals.includes(values[when.box] ?? "")) continue; // the form's own script does not require it for this answer
     const e = entryOf.get(path), b = boxOf.get(path);
-    if (b?.coverage === "not needed") continue; // B86 BR-5: its own condition is not true, so the form leaves it empty
+    // B86 BR-5: its own condition is not true, so the form leaves it empty; unless the form's own script requires it for
+    // the code the copy writes (QA-165's last two, review M1 on the Taiwan/Israel PR: "isr" writes 206 while the question,
+    // asked only for "ISR", stays hidden), when it is open and says to check that answer.
+    if (b?.coverage === "not needed" && !when) continue;
     // Review M-1 on #592: a line a question fills is named by that question, as the case asks it; only a field no
     // question fills keeps the form's own words.
     const asked = e?.fact ? words.labelOf?.(e.fact) : undefined;
     const label = asked && !/^derived:/.test(b?.transform ?? "") ? asked : wordsOf(e, f.caption, path);
     // Review R2-m1 on #592: only the group's row fields; a question asked once outside its rows still needs its answer.
     const settled = b?.about && e?.fact && b.row !== null && b.row !== undefined ? words.noneApply?.get(`${b.about.split("/")[0]}|${e.fact}`) : undefined;
-    if (e?.outcome === "not_a_fact") out.push({ box: path, label, reason: "fill it in Adobe", why: "not a fact the case keeps: complete it in Adobe if the form asks for it" });
+    if (b?.coverage === "not needed") out.push({ box: path, label, reason: "needs an answer", why: `the form requires it for the answer written here (its code ${values[when!.box]}), but its question is not asked for that answer as given: check that answer` });
+    else if (e?.outcome === "not_a_fact") out.push({ box: path, label, reason: "fill it in Adobe", why: "not a fact the case keeps: complete it in Adobe if the form asks for it" });
     else if (b?.result === "by hand") out.push({ box: path, label, reason: "filled by hand", why: b.why ?? "type it in Adobe" });
     else if (b?.result === "not on this form") out.push({ box: path, label, reason: "not on this form", why: b.why ?? "the form has no such choice" });
     // A derived "is anything recorded?" Yes/No (C7.2 cause 3): an answer can only make it Yes; its No needs a question

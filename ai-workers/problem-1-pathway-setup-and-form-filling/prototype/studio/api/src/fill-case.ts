@@ -13,6 +13,7 @@ import type { Response } from "express";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { scriptRulesOf } from "./own-yes-no.ts";
 import type { z } from "zod";
 import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
@@ -109,8 +110,7 @@ export const inventoryOf = (file: string): Inventory | null => {
 /** QA-165 part 2 (P-237, P-238): the mandatory form fields a copy made now would leave empty, with why (engine/runtime/
  *  mandatory.ts), from the same value step a copy runs. Empty when the form has no PDF map or field list. */
 /** QA-165 (#1318 review M1): the form-script requirements by field, for the field list a map names (by its file name). */
-const SCRIPT_REQUIREMENTS = (JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "form-script-requirements.json"), "utf8")) as { editions: { inventory: string; fields: { box: string; requiredWhen: { box: string; equals: string[] } }[] }[] }).editions;
-const requiredWhenOf = (inventoryFile: string): RequiredWhen => new Map((SCRIPT_REQUIREMENTS.find((e) => inventoryFile.split("/").pop() === e.inventory)?.fields ?? []).map((f) => [f.box, f.requiredWhen]));
+const requiredWhenOf = (inventoryFile: string): RequiredWhen => new Map(scriptRulesOf(inventoryFile).map((f) => [f.box, f.requiredWhen]));
 export function fieldsOpen(s: Snap, form: string, boxes: BoxRow[], words: CaseWords = {}): OpenField[] {
   const map = pdfMapInUse(s.field_maps as { form_number: string; form_edition?: string; channel?: string; inventory_file?: string; entries: { data_path: string; fact?: string | null; outcome?: string | null }[] }[], form); // P-32: the edition in use
   const inv = map?.inventory_file ? inventoryOf(map.inventory_file) : null;
