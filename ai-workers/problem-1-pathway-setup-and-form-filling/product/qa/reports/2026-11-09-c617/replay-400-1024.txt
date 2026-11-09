@@ -1,0 +1,19 @@
+{"width":400,"pass":1,"state":"open-later-stage","axe":[],"sideways":false}
+{"width":400,"pass":1,"state":"start-next-dialog","axe":["color-contrast(1): button[data-start-confirm=\"true\"]"],"sideways":false}
+{"width":400,"pass":1,"state":"ended-stage-panel","axe":[],"sideways":false}
+{"width":400,"pass":1,"state":"cancel leaves stage 1 current (Start next stage still offered)","ok":true,"errors":[]}
+{"width":400,"pass":2,"state":"open-later-stage","axe":[],"sideways":false}
+{"width":400,"pass":2,"state":"start-next-dialog","axe":["color-contrast(1): button[data-start-confirm=\"true\"]"],"sideways":false}
+{"width":400,"pass":2,"state":"ended-stage-panel","axe":[],"sideways":false}
+{"width":400,"pass":2,"state":"cancel leaves stage 1 current (Start next stage still offered)","ok":true,"errors":[]}
+{"width":1024,"pass":1,"state":"open-later-stage","axe":[],"sideways":false}
+{"width":1024,"pass":1,"state":"start-next-dialog","axe":[],"sideways":false}
+{"width":1024,"pass":1,"state":"ended-stage-panel","axe":[],"sideways":false}
+{"width":1024,"pass":1,"state":"cancel leaves stage 1 current (Start next stage still offered)","ok":true,"errors":[]}
+{"width":1024,"pass":2,"state":"open-later-stage","axe":[],"sideways":false}
+{"width":1024,"pass":2,"state":"start-next-dialog","axe":[],"sideways":false}
+{"width":1024,"pass":2,"state":"ended-stage-panel","axe":[],"sideways":false}
+{"width":1024,"pass":2,"state":"cancel leaves stage 1 current (Start next stage still offered)","ok":true,"errors":[]}
+{"run":1,"at0ms":[],"after1s":[]}
+{"run":2,"at0ms":[],"after1s":[]}
+{"hovered":[],"focused":[],"colors":["rgb(255, 255, 255)","rgb(8, 98, 197)"]}

@@ -1,0 +1,21 @@
+## F13 (a) / P-425: route keys and the route combination keys in product code (api/src, engine, web/src), main df52c9fc6
+api/src/form-setup.ts:150:  "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES, ruleFacts: [REP_FACT, RELEASE_FACT], documentsFromReviewedRelease: true,
+api/src/form-setup.ts:153:  "sp.outside": { application: "IMM 1294", rules: SP_FORM_RULES, ruleFacts: [MINOR_FACT, REP_FACT, RELEASE_FACT], documentsCited: SP_DOCUMENT_LINES,
+api/src/demo.ts:41:export const SIX_LMIA = "wp.lmia_inside";
+api/src/proposals.ts:307:export function needsNearReason(r: Pick<Row, "id" | "identity" | "origin" | "landsOn" | "step" | "reuse" | "work" | "kind" | "payload">, libraryPool?: NearPool, twinReuses?: Set<string>): boolean {
+api/src/proposals.ts:348:export function nearIn(pool: NearPool, r: Pick<Row, "work">, payload: unknown): string[] {
+(end of matches)
+
+## the route as data
+samples/routes.json
+## prisma: Route and CaseStage models; the tree models unchanged
+161:model Combination {
+1401:model Route {
+1421:model CaseStage {
+
+## Were those lines added by #1262? (git diff df52c9fc6^1..df52c9fc6, i.e. what the merge of #1262 brought)
+none: the matches above are earlier setup and demo code (form-setup.ts, demo.ts), not C6.17's
+## files #1262 brought to api/src, engine, web/src
+ .../prototype/studio/web/src/runtime/checklist.tsx |   3 +
+ .../prototype/studio/web/src/runtime/stages.tsx    | 230 +++++++++++++++++
+ 34 files changed, 992 insertions(+), 98 deletions(-)
