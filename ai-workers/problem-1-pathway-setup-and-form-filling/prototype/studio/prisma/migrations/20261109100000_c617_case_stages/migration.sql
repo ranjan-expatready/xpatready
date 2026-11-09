@@ -150,53 +150,56 @@ CREATE CONSTRAINT TRIGGER trg_case_stage_current AFTER INSERT OR UPDATE ON "case
 CREATE CONSTRAINT TRIGGER trg_runtime_case_stage AFTER INSERT OR UPDATE OF "combination_id" ON "runtime_case" DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION runtime_case_stage_current();
 
 -- An ended stage's rows are history (BR-5, BR-10): a new row goes on the case's CURRENT stage only, and a row of a stage
--- that is not CURRENT is never changed. The case row is taken FOR KEY SHARE first: "Start next stage" holds it FOR
+-- that is not CURRENT is never changed or deleted (Lead 38's schema read (1)). The case row is taken FOR KEY SHARE first: "Start next stage" holds it FOR
 -- UPDATE, so a write racing the start waits, then reads the stage as it is after the start. Cascades from a deleted case
 -- or filing (foreign key actions, a nested trigger) are not refused.
 CREATE FUNCTION runtime_stage_row_current() RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE st text; sc uuid;
+DECLARE st text; sc uuid; r record;
 BEGIN
-  IF pg_trigger_depth() > 1 THEN RETURN NEW; END IF;
+  -- Lead 38's schema read (1): a delete is guarded too; a cascade (from a deleted case: a reset) is a nested trigger.
+  IF TG_OP = 'DELETE' THEN r := OLD; ELSE r := NEW; END IF;
+  IF pg_trigger_depth() > 1 THEN RETURN r; END IF;
   IF TG_OP = 'UPDATE' AND NEW.stage_id <> OLD.stage_id THEN
     RAISE EXCEPTION 'case_stage_ended: a row keeps its stage'; END IF;
-  PERFORM 1 FROM runtime_case WHERE id = NEW.case_id FOR KEY SHARE;
-  SELECT state, case_id INTO st, sc FROM case_stage WHERE id = NEW.stage_id;
-  IF sc IS DISTINCT FROM NEW.case_id THEN RAISE EXCEPTION 'case_stage_ended: the stage is not this case''s'; END IF;
+  PERFORM 1 FROM runtime_case WHERE id = r.case_id FOR KEY SHARE;
+  SELECT state, case_id INTO st, sc FROM case_stage WHERE id = r.stage_id;
+  IF sc IS DISTINCT FROM r.case_id THEN RAISE EXCEPTION 'case_stage_ended: the stage is not this case''s'; END IF;
   IF st <> 'CURRENT' THEN RAISE EXCEPTION 'case_stage_ended: this stage has ended; its rows are kept as they were'; END IF;
-  RETURN NEW;
+  RETURN r;
 END $$;
-CREATE TRIGGER trg_filing_stage_current BEFORE INSERT OR UPDATE ON "filing" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_current();
-CREATE TRIGGER trg_submission_group_stage_current BEFORE INSERT OR UPDATE ON "submission_group" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_current();
-CREATE TRIGGER trg_checklist_line_stage_current BEFORE INSERT OR UPDATE ON "checklist_line" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_current();
-CREATE TRIGGER trg_review_finding_stage_current BEFORE INSERT OR UPDATE ON "review_finding" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_current();
-CREATE TRIGGER trg_case_task_stage_current BEFORE INSERT OR UPDATE ON "case_task" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_current();
+CREATE TRIGGER trg_filing_stage_current BEFORE INSERT OR UPDATE OR DELETE ON "filing" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_current();
+CREATE TRIGGER trg_submission_group_stage_current BEFORE INSERT OR UPDATE OR DELETE ON "submission_group" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_current();
+CREATE TRIGGER trg_checklist_line_stage_current BEFORE INSERT OR UPDATE OR DELETE ON "checklist_line" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_current();
+CREATE TRIGGER trg_review_finding_stage_current BEFORE INSERT OR UPDATE OR DELETE ON "review_finding" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_current();
+CREATE TRIGGER trg_case_task_stage_current BEFORE INSERT OR UPDATE OR DELETE ON "case_task" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_current();
 
 -- Breaker M1 (round 1): rows that hang off a filing (its items, signing steps, entered sections, signed scans, each person's
 -- UCI record, readiness passes, reviews, number corrections) are the ended stage's history too: a new or changed row whose
 -- filing is on a stage that is not CURRENT is refused, after the same FOR KEY SHARE on the case row. Rows with no filing
 -- (a case-level row) are not this rule's.
 CREATE FUNCTION runtime_stage_row_via_filing() RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE fid uuid; k uuid; st text;
+DECLARE fid uuid; k uuid; st text; r record;
 BEGIN
-  IF pg_trigger_depth() > 1 THEN RETURN NEW; END IF;
+  IF TG_OP = 'DELETE' THEN r := OLD; ELSE r := NEW; END IF;
+  IF pg_trigger_depth() > 1 THEN RETURN r; END IF;
   IF TG_TABLE_NAME IN ('sign_step', 'entered_section', 'signed_scan') THEN
-    IF NEW.item_id IS NULL THEN RETURN NEW; END IF;
-    SELECT i.filing_id INTO fid FROM filing_item i WHERE i.id = NEW.item_id;
+    IF r.item_id IS NULL THEN RETURN r; END IF;
+    SELECT i.filing_id INTO fid FROM filing_item i WHERE i.id = r.item_id;
   ELSE
-    fid := NEW.filing_id;
+    fid := r.filing_id;
   END IF;
-  IF fid IS NULL THEN RETURN NEW; END IF;
+  IF fid IS NULL THEN RETURN r; END IF;
   SELECT f.case_id INTO k FROM filing f WHERE f.id = fid;
   PERFORM 1 FROM runtime_case WHERE id = k FOR KEY SHARE;
   SELECT s.state INTO st FROM filing f JOIN case_stage s ON s.id = f.stage_id WHERE f.id = fid;
   IF st IS DISTINCT FROM 'CURRENT' THEN RAISE EXCEPTION 'case_stage_ended: this filing''s stage has ended; its items and records are kept as they were'; END IF;
-  RETURN NEW;
+  RETURN r;
 END $$;
-CREATE TRIGGER trg_filing_item_stage_filing_current BEFORE INSERT OR UPDATE ON "filing_item" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
-CREATE TRIGGER trg_sign_step_stage_filing_current BEFORE INSERT OR UPDATE ON "sign_step" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
-CREATE TRIGGER trg_entered_section_stage_filing_current BEFORE INSERT OR UPDATE ON "entered_section" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
-CREATE TRIGGER trg_signed_scan_stage_filing_current BEFORE INSERT OR UPDATE ON "signed_scan" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
-CREATE TRIGGER trg_filing_person_record_stage_filing_current BEFORE INSERT OR UPDATE ON "filing_person_record" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
-CREATE TRIGGER trg_readiness_pass_stage_filing_current BEFORE INSERT OR UPDATE ON "readiness_pass" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
-CREATE TRIGGER trg_filing_review_stage_filing_current BEFORE INSERT OR UPDATE ON "filing_review" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
-CREATE TRIGGER trg_filing_record_correction_stage_filing_current BEFORE INSERT OR UPDATE ON "filing_record_correction" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_filing_item_stage_filing_current BEFORE INSERT OR UPDATE OR DELETE ON "filing_item" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_sign_step_stage_filing_current BEFORE INSERT OR UPDATE OR DELETE ON "sign_step" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_entered_section_stage_filing_current BEFORE INSERT OR UPDATE OR DELETE ON "entered_section" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_signed_scan_stage_filing_current BEFORE INSERT OR UPDATE OR DELETE ON "signed_scan" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_filing_person_record_stage_filing_current BEFORE INSERT OR UPDATE OR DELETE ON "filing_person_record" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_readiness_pass_stage_filing_current BEFORE INSERT OR UPDATE OR DELETE ON "readiness_pass" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_filing_review_stage_filing_current BEFORE INSERT OR UPDATE OR DELETE ON "filing_review" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_filing_record_correction_stage_filing_current BEFORE INSERT OR UPDATE OR DELETE ON "filing_record_correction" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();

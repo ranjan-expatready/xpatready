@@ -80,11 +80,15 @@ try {
   ok("C6.17 BR-5 fail: a row of the ended stage is never changed (filing status, line state)", refused(`update filing set status='READY_TO_FILE' where id='${FIL}'`, /case_stage_ended/) && refused(`update checklist_line set state='received' where id='${LINE}'`, /case_stage_ended/));
   ok("C6.17 breaker M1 fail: a row hanging off the ended stage's filing (its form item; a person's UCI record) is never changed or added",
     refused(`update filing_item set active=false where id='${u(80)}'`, /case_stage_ended/) && refused(`insert into filing_person_record (id, filing_id, subject_id, uci) values (gen_random_uuid(), '${FIL}', '${PRIN1}', '12345678')`, /case_stage_ended|null value|violates/));
+  ok("C6.17 Lead 38 (1) fail: a row of the ended stage, or one hanging off its filing, is never deleted (finding, task, form item)",
+    refused(`delete from review_finding where id='${FIND}'`, /case_stage_ended/) && refused(`delete from case_task where id='${TASK}'`, /case_stage_ended/) && refused(`delete from filing_item where id='${u(80)}'`, /case_stage_ended/));
   ok("C6.17 fail: a row cannot be moved to another stage", refused(`update case_task set stage_id='${u(60)}' where id='${TASK}'`, /case_stage_ended|keeps its stage/));
   ok("C6.17 B2 pass: the new stage takes its own FAMILY group, filing for the same person and checklist line of the same type",
     sql(`insert into submission_group (id, workspace_id, case_id, kind, stage_id) values ('${u(70)}', '${W}', '${K1}', 'FAMILY', '${u(60)}') returning kind`) === "FAMILY"
     && sql(`insert into filing (id, workspace_id, case_id, submission_group_id, subject_id, combination_key, mode, stage_id) values (gen_random_uuid(), '${W}', '${K1}', '${u(70)}', '${PRIN1}', 'wp.lmia_inside', 'files_own', '${u(60)}') returning mode`) === "files_own"
     && sql(`insert into checklist_line (id, workspace_id, case_id, subject_id, document_type, lineage, stage_id) values (gen_random_uuid(), '${W}', '${K1}', '${PRIN1}', 'passport_information_page_copy', 'x', '${u(60)}') returning state`) === "not_requested");
+  ok("C6.17 Lead 38 (1) pass: a row of the current stage is deleted as before (a family group's filing removed, then the group)",
+    sql(`insert into submission_group (id, workspace_id, case_id, kind, reason, stage_id) values ('${u(71)}', '${W}', '${K1}', 'SEPARATE', 'Sample: sent on its own', '${u(60)}') returning kind`) === "SEPARATE" && sql(`delete from submission_group where id='${u(71)}' returning kind`) === "SEPARATE");
   ok("C6.17 fail: a row naming another case's stage is refused", refused(`insert into case_task (id, workspace_id, case_id, kind, words, created_by, stage_id) values (gen_random_uuid(), '${W}', '${K2}', 'k', 'w', 't', '${u(60)}')`, /not this case/));
   ok("C6.17 pass: deleting a case removes its stages and rows (a reset), with the ended stage's rows", (() => { sql(`delete from runtime_case where id='${K1}'`); return sql(`select count(*) from case_stage where case_id='${K1}'`) === "0" && sql(`select count(*) from filing where case_id='${K1}'`) === "0"; })());
 } catch (e) {
