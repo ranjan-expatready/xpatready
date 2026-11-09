@@ -74,7 +74,11 @@ export function refusalOf(x: {
 
 /** M1: the one join point. The release snapshot plus each live addition's form line (for that person only) and, for a
  *  form that fills, its frozen field map and fact definitions. With no additions the release snapshot itself. */
-export function withAdditions<S extends Pick<Snapshot, "forms" | "field_maps" | "canonical_fields">>(s: S, additions: Addition[]): S {
+export function withAdditions<S extends Pick<Snapshot, "forms" | "field_maps" | "canonical_fields">>(s: S, additionsIn: Addition[]): S {
+  // F3 (the release's rule stays the one truth): once the case's release holds the form itself (after a move to a release
+  // that adds it), the release's line is the form and the addition is not joined (it stays stored, BR-8).
+  const held = new Set([...(s.forms as { form_number: string }[]), ...(s.field_maps as { form_number: string }[])].map((f) => f.form_number));
+  const additions = additionsIn.filter((a) => !held.has(a.form));
   if (!additions.length) return s;
   // One line per form on the case: a form added for several people is one line whose "who" names each of them (the
   // second addition copies the first's frozen form, channel and signature, form-additions.ts), so a lookup by form number

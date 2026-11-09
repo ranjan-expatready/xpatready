@@ -281,11 +281,14 @@ export class CasePrepare {
     // C9.5 (BR-6, challenge M4): a copy made on an earlier release of the case (before a move) whose form the move
     // changed is out of date because of the release: words that name both releases and what changed, never fact lines
     // (so never an Undo), and it never counts as current. Only after a move (more than one pin revision).
+    // C7.8 (M1): release-to-release comparisons read the releases themselves, never the case's added forms (an added form
+    // is the case's, so a newer release never "removes" it).
+    const relSnap = this.r.releaseSnapshotOf(c);
     const pins = pinReleases(c), diffOf = diffCache(), curLabel = releaseLabel(pin.release);
     const releaseOfCopy = new Map<string, string>(reads.map((v) => [v.copy.id, v.copy.configReleaseId]));
     const releaseWords = (copy: string | null | undefined, form: string, what: string): string | null => {
       const rel = copy ? releaseOfCopy.get(copy) : undefined, old = rel && rel !== pin.configReleaseId ? pins.find((p) => p.id === rel) : undefined;
-      return old ? releaseOutOfDate(diffOf(old.id, old.snapshot, pin.configReleaseId, s).forms.get(form), { from: old.label, to: curLabel }, what) : null;
+      return old ? releaseOutOfDate(diffOf(old.id, old.snapshot, pin.configReleaseId, relSnap).forms.get(form), { from: old.label, to: curLabel }, what) : null;
     };
     const readsOf = new Map<string, { copy: string; at: Date; factsHash: string; readBack: unknown }[]>();
     // Row C3 (review m1): a read-back of a copy stamped "Copy, not for filing" (made while the form was filed Online) never
@@ -522,7 +525,7 @@ export class CasePrepare {
       return null;
     } : undefined;
     const target = await targetRelease(this.db, c);
-    const pending = target ? touchedFilings(diffOf(pin.configReleaseId, s, target.id, target.snapshot), caseInputs(s, target.snapshot, own!.combinationKey, st, today, true), forTouch, { to: target.label }) : null;
+    const pending = target ? touchedFilings(diffOf(pin.configReleaseId, relSnap, target.id, target.snapshot), caseInputs(relSnap, target.snapshot, own!.combinationKey, st, today, true), forTouch, { to: target.label }) : null;
     const recordedFiling = new Set(stored.filings.filter((f) => f.status === "SUBMITTED").map((f) => f.id));
     const releaseUpdate = pending ? (filing: string) => {
       const w = recordedFiling.has(filing) ? [] : pending.get(filing) ?? []; // break m2: a recorded filing stays on its release
@@ -537,11 +540,11 @@ export class CasePrepare {
       for (const i of items) {
         if (i.kind !== "form" || !("form" in i) || !i.form || i.state === "out_of_date") continue;
         const x = newest.get(`${i.form}|${i.subject}`), old = x && x.configReleaseId !== pin.configReleaseId ? pins.find((p) => p.id === x.configReleaseId) : undefined;
-        let note = old ? draftNote(diffOf(old.id, old.snapshot, pin.configReleaseId, s).forms.get(i.form), { from: old.label, to: curLabel }) : null;
+        let note = old ? draftNote(diffOf(old.id, old.snapshot, pin.configReleaseId, relSnap).forms.get(i.form), { from: old.label, to: curLabel }) : null;
         // Review m3 (round 1): sections entered in the portal before the move, on a form the move changed, are marked by
         // the release too (no fact lines, no Undo; the entries themselves are never changed).
         const entered = "channel" in i && i.channel === "ONLINE" ? (enteredBy.get(i.id) ?? []).filter((e) => e.enteredAt.getTime() < pin.pinnedAt.getTime()) : [];
-        if (!note && entered.length) note = releaseOutOfDate(diffOf(prev.id, prev.snapshot, pin.configReleaseId, s).forms.get(i.form), { from: prev.label, to: curLabel }, "entry in the IRCC account");
+        if (!note && entered.length) note = releaseOutOfDate(diffOf(prev.id, prev.snapshot, pin.configReleaseId, relSnap).forms.get(i.form), { from: prev.label, to: curLabel }, "entry in the IRCC account");
         if (note) Object.assign(i, { release_note: note, ...(entered.length && !old ? { release_out_of_date_entered: true } : {}) });
       }
     }

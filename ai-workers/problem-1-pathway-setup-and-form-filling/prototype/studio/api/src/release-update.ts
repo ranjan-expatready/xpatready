@@ -149,8 +149,8 @@ export class ReleaseUpdates {
     const target = (await targetRelease(this.db, c))!;
     const st = await this.state(c), names = new Map(st.people.filter((p) => p.role !== "case").map((p) => [p.subjectId, p.label]));
     const pin = c.pins[0];
-    const diff = diffCache()(pin.configReleaseId, this.r.snapshotOf(c), target.id, target.snapshot);
-    const combo = await this.combination(c), asked = askedOf(caseInputs(this.r.snapshotOf(c), target.snapshot, combo.combinationKey, st, new Date(), true));
+    const diff = diffCache()(pin.configReleaseId, this.r.releaseSnapshotOf(c), target.id, target.snapshot);
+    const combo = await this.combination(c), asked = askedOf(caseInputs(this.r.releaseSnapshotOf(c), target.snapshot, combo.combinationKey, st, new Date(), true));
     const counts = Object.fromEntries(EFFECT_KEYS.map((k) => [k, before.effects[k].length])) as ReleaseMoved["counts"];
     const made = await busyWords(() => this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
