@@ -34,15 +34,31 @@ export type CaseFigure = { state: FigureState; state_filing: string; score: numb
 
 /** The rule in words, shown under the figure (BR-7). It names what is not counted here (the team's retainer and library). */
 export const FIGURE_RULE = "Counted: each form on this filing, each required document, the facts the forms read (answered and confirmed), "
-  + "the representative's review, and each other check, review finding (open or closed), release notice or fee line on the filing. "
-  + "Each counts the same. A line passed with a reason, or a finding closed with a reason, counts as done. The figure is the share done, "
-  + "rounded down, so it is 100 only when nothing stands before Ready to file. Not ready: a block, a CRITICAL warning or a CRITICAL "
-  + "finding is open. Attention: only other warnings are open. Ready: nothing is open. Not counted here: the retainer and the firm's "
-  + "own deficiency library, which this tool does not keep (AG-7-27, BR-30).";
+  + "the representative's review, and each other check, review finding, release notice or fee line. Each counts the same. "
+  + "A line passed with a reason, or a finding closed with a reason, counts as done. The figure is the share done, rounded down, "
+  + "so it is 100 only when nothing stands before Ready to file. Not ready: a block, a CRITICAL warning or a CRITICAL finding is open. "
+  + "Attention: only other warnings are open. Ready: nothing is open. Not counted here: the retainer and the firm's own deficiency "
+  + "library, which this tool does not keep.";
 
 const STATE_ORDER: FigureState[] = ["not_ready", "attention", "ready"];
 /** Lines about the facts a form reads: they hold the facts item as well as their form (BR-30 counts the questionnaire apart). */
 const FACT_CODES = new Set<string>(["missing_facts", "fact_problem", "open_check"]);
+
+/** A closed finding row as stored: `check` names a rules finding's rule and person (null for one added by hand or by the
+ *  AI review), so the rows one check leaves behind can be told apart from different checks. */
+export type ClosedRow = ClosedFinding & { check?: string | null };
+/** Review M1 on #1389: the rules store a finding again each time the values it compares change (api/src/findings.ts), so
+ *  one check leaves a resolved row per edit. BR-30 counts each check once: a check that is open again counts through
+ *  its open line (its closed rows are dropped), and a closed check counts once, by its newest row. Rows come newest
+ *  first; a row with no `check` (by hand, AI) is its own item. `openChecks`: the checks with an open row now. */
+export function closedOnce(rows: ClosedRow[], openChecks: Iterable<string>): ClosedFinding[] {
+  const seen = new Set(openChecks), out: ClosedFinding[] = [];
+  for (const { check, ...g } of rows) {
+    if (check) { if (seen.has(check)) continue; seen.add(check); }
+    out.push(g);
+  }
+  return out;
+}
 
 /** The state, figure and counted items of one filing, from C7.6's input and result. */
 export function readinessFigure(x: FilingInput, r: FilingReadiness, closed: ClosedFinding[] = []): Figure {

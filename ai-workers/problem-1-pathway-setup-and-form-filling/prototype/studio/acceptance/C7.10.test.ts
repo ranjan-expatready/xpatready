@@ -6,7 +6,7 @@
 // data the run is given (the demo's six or the configured checkpoint); synthetic people only; no model call (US$0).
 //   zsh studio/tools/isolated.sh accept 4440 start
 //   tsx studio/acceptance/C7.10.test.ts 4440 xr_studio_accept
-import { CLIENT, call, fillEverything, firms, main, needVisitorVisa, ok, openCase, prepare, readinessOf, readyToFile, filingOf, yearsAgo, FAMILY, type Prepare } from "./lib/m3.ts";
+import { CLIENT, answer, call, fillEverything, firms, inDays, main, needVisitorVisa, ok, openCase, prepare, readinessOf, readyToFile, filingOf, yearsAgo, FAMILY, type Prepare } from "./lib/m3.ts";
 
 type FigureItem = { kind: string; key: string; label: string; done: boolean; passed: boolean };
 type Figure = { filing: string; state: "not_ready" | "attention" | "ready"; score: number; done: number; countable: number; passed: number; items: FigureItem[]; rule: string };
@@ -89,6 +89,55 @@ await main("C7.10", "Readiness figure per filing; the case shows its lowest (Vis
   sv = await view(solo.id, officer);
   ok("C7.10-11 pass (BR-4, BR-5): once Ready to file is allowed and marked, the filing and the case read Ready at 100",
     soloDone.includes(sf ?? "") && figOf(sv, sf)?.score === 100 && figOf(sv, sf)?.state === "ready" && sv?.case_figure?.state === "ready" && sv?.case_figure?.score === 100, { done: soloDone, fig: brief(figOf(sv, sf)), case: sv?.case_figure });
+
+  // Review M2 on #1389 (the API wiring of the challenge's M1 and M3): a CRITICAL finding added by hand reads Not ready;
+  // waived by the representative in Review findings, it stays counted, Done and passed with a reason.
+  const fc = await openCase(vv, [{ role: "principal", name: "Sample Client F", dob: yearsAgo(42) }], { representative: f.rep, caseOfficers: [officer] });
+  await fillEverything(fc.id);
+  let fv = await view(fc.id, officer);
+  const ff = fv?.filings[0]?.id ?? "", PF = fc.subjects["Sample Client F"], g0 = figOf(fv, ff);
+  const added = await call("POST", `/runtime/cases/${fc.id}/findings`, { subject: PF, filing: ff, severity: "CRITICAL", note: "Name order differs from the passport (Sample)" }, officer);
+  fv = await view(fc.id, officer);
+  const g1 = figOf(fv, ff), fitem = (g: Figure | null) => g?.items.find((i) => i.key === `check|finding|${added.body?.id}`);
+  ok("C7.10-13 fail (challenge M1): a CRITICAL finding added by hand makes the filing Not ready and is one more item, not done (C7.6 lists it as a plain warning)",
+    [200, 201].includes(added.status) && !!g0 && !!g1 && g1.state === "not_ready" && g1.countable === g0.countable + 1 && fitem(g1)?.done === false && (readinessOf(fv, ff)?.warns ?? []).some((w) => w.code === "finding" && w.severity === "warning"), { status: added.status, before: brief(g0), after: brief(g1) });
+  const waived = await call("POST", `/runtime/findings/${added.body?.id}/waive`, { reason: "Name order confirmed with the client by phone (Sample)" }, f.rep ?? "");
+  fv = await view(fc.id, officer);
+  const g2 = figOf(fv, ff);
+  ok("C7.10-14 pass (challenge M3): waived in Review findings, the finding stays counted (the read of closed findings), Done and passed with a reason; it is gone from C7.6's lines",
+    waived.status === 200 && !!g2 && g2.countable === g1!.countable && fitem(g2)?.done === true && fitem(g2)?.passed === true && g2.passed === g1!.passed + 1 && !(readinessOf(fv, ff)?.warns ?? []).some((w) => w.code === "finding") && agrees(fv, g2), { status: waived.status, after: brief(g2) });
+  // Review M1 on #1389: a rules check is stored again each time the values it compares change; edits never add items.
+  const PE = fc.subjects["Sample Client F"], CS = fc.caseSubject;
+  const counts: number[] = [];
+  await answer(fc.id, PE, "person.passport_expiry_date", "2031-01-10", officer);
+  for (const to of ["2031-02-01", "2031-02-02", "2031-02-03", "2030-12-01"]) {
+    await answer(fc.id, CS, "case.intended_stay_from", "2030-11-20", officer);
+    await answer(fc.id, CS, "case.intended_stay_to", to, officer);
+    // The rules cross-checks run when Review findings is read (api/src/findings.ts runRules), as a person opening it does.
+    await call("GET", `/runtime/cases/${fc.id}/findings`, undefined, officer);
+    counts.push(figOf(await view(fc.id, officer), ff)?.countable ?? -1);
+  }
+  const list = await call("GET", `/runtime/cases/${fc.id}/findings`, undefined, officer);
+  const rows = ((list.body?.findings ?? []) as { source?: string; state: string }[]).filter((x) => x.source === "rules");
+  ok(`C7.10-15 fail (review M1): one rules check opened and resolved over ${rows.length} stored rows (${rows.filter((x) => x.state === "resolved").length} resolved) adds at most one item, never one per edit`,
+    rows.filter((x) => x.state === "resolved").length >= 2 && Math.max(...counts) - g2!.countable <= 1 && counts[counts.length - 1] - g2!.countable <= 1, { base: g2?.countable, counts, rows: rows.map((x) => x.state) });
+
+  // Review M2 on #1389 (the API wiring of the challenge's M2): a recorded group's filings are marked submitted and never
+  // hold the case; a fact changed after filing leaves the case figure empty.
+  const rc = await openCase(vv, [{ role: "principal", name: "Sample Client G", dob: yearsAgo(40) }, { role: "spouse_or_partner", name: "Sample Spouse G", dob: yearsAgo(38) }], { representative: f.rep, caseOfficers: [officer] });
+  const [PG, SG] = [rc.subjects["Sample Client G"], rc.subjects["Sample Spouse G"]];
+  const readyG = await readyToFile(rc.id, f.rep);
+  let rv = await view(rc.id, officer);
+  const grp = rv?.groups[0];
+  const recorded = await call("PATCH", `/runtime/groups/${grp?.id}/record`, { filings: (grp?.filings ?? []).map((id, i) => ({ filing: id, our_reference: `SAMPLE-REF-${i}`, submitted_on: inDays(0), application_number: `V30000020${i}`, fee_receipt: "SAMPLE-RECEIPT" })), ucis: [{ subject: PG, uci: "1111-1112" }, { subject: SG, uci: "2222-2223" }], version: rv?.version }, officer);
+  rv = await view(rc.id, officer);
+  const allSubmitted = (rv?.figures ?? []).length > 0 && (rv?.figures ?? []).every((g) => (g as Figure & { submitted?: boolean }).submitted === true);
+  ok(`C7.10-16 pass (challenge M2): once the group is recorded (${readyG.length} filings ready, record ${recorded.status}), every figure is marked submitted and the case shows no readiness`,
+    readyG.length === (rv?.filings ?? []).length && recorded.status === 200 && allSubmitted && rv?.case_figure === null, { status: recorded.status, detail: recorded.status !== 200 ? recorded.body?.detail : undefined, case: rv?.case_figure, figs: (rv?.figures ?? []).map((g) => [(g as Figure & { submitted?: boolean }).submitted, g.state, g.score]) });
+  await answer(rc.id, PG, "person.passport_number", "ZX1234567", officer);
+  rv = await view(rc.id, officer);
+  ok("C7.10-17 fail (challenge M2): a fact changed after filing may lower a submitted filing's own figure, but the case still shows none: a submitted filing never holds the case back",
+    rv?.case_figure === null && (rv?.figures ?? []).every((g) => (g as Figure & { submitted?: boolean }).submitted === true), { case: rv?.case_figure, figs: (rv?.figures ?? []).map((g) => [g.state, g.score]) });
 
   // The figure goes where the prepare view goes: a client never reads the case team's view.
   const asClient = await call("GET", `/runtime/cases/${solo.id}/prepare`, undefined, CLIENT);

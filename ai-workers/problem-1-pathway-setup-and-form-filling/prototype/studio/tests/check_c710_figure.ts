@@ -5,7 +5,7 @@
 //   tsx studio/tests/check_c710_figure.ts
 import fc from "fast-check";
 import { filingReadiness, passKeys, type Channel, type FilingInput, type FormItem, type Signature, type WarnCode } from "../engine/runtime/readiness.ts";
-import { FIGURE_RULE, lowestOf, readinessFigure, type ClosedFinding, type Figure } from "../engine/runtime/readiness-figure.ts";
+import { closedOnce, FIGURE_RULE, lowestOf, readinessFigure, type ClosedFinding, type Figure } from "../engine/runtime/readiness-figure.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -69,6 +69,14 @@ ok("C7.10 BR-3 fail: a document line with no item id still lands on its document
   ok("C7.10 BR-3 (M3) pass: a waived finding and a resolved one stay two done items (7 of 7 = 100); only the waived one counts as passed with a reason", g.countable === 7 && g.score === 100 && g.passed === 1 && g.state === "ready" && g.items.filter((i) => i.kind === "check").map((i) => i.passed).join() === "true,false", g);
   const g0 = fig(x);
   ok("C7.10 BR-3 (M3) fail: without them the same filing counts 5 items and 0 passed (they would vanish)", g0.countable === 5 && g0.passed === 0, g0); }
+// Review M1 on #1389: a rules check leaves a resolved row per edit; it counts once, and not at all while it is open again.
+{ const rows = [{ id: "r3", state: "resolved" as const, words: "MAJOR finding (resolved): stay vs passport (Sample)", check: "stay_vs_passport|s-P" }, { id: "r2", state: "resolved" as const, words: "older row", check: "stay_vs_passport|s-P" }, { id: "r1", state: "resolved" as const, words: "oldest row", check: "stay_vs_passport|s-P" }, { id: "h1", state: "waived" as const, words: "CRITICAL finding (waived): by hand (Sample)", check: null }, { id: "h2", state: "acknowledged" as const, words: "MINOR finding (acknowledged): by hand (Sample)" }];
+  const once = closedOnce(rows, []);
+  ok("C7.10 BR-3 (review M1) pass: three resolved rows of one rules check count once (its newest row); each finding added by hand is its own item", once.map((g) => g.id).join() === "r3,h1,h2" && !once.some((g) => "check" in g), once);
+  const reopened = closedOnce(rows, ["stay_vs_passport|s-P"]);
+  ok("C7.10 BR-3 (review M1) fail: while the same check is open again, its resolved rows are not counted (it counts through its open line)", reopened.map((g) => g.id).join() === "h1,h2", reopened);
+  const x = done(), g3 = readinessFigure(x, filingReadiness(x), closedOnce(rows, [])), gAll = readinessFigure(x, filingReadiness(x), rows);
+  ok("C7.10 BR-3 (review M1) fail: counted row by row, edits alone would add items (8 against 10); once per check it is 8", g3.countable === 8 && gAll.countable === 10, { once: g3.countable, rowByRow: gAll.countable }); }
 // Challenge m5: "passed" counts items done by a pass, not lines: one pass over two owners' missing facts on one form.
 { const x = done({ forms: [formA({ readiness: { ready: false, missing: [{ fact: "a", label: "A", about: "x", reason: "not answered" }, { fact: "b", label: "B", about: "x", reason: "not answered" }] }, owesFact: { a: "client", b: "staff" } }), formB()] });
   const y = { ...x, passes: [pass(x, "missing_facts")] }, g = fig(y);
@@ -88,7 +96,7 @@ ok("C7.10 BR-4 pass: 3 of 5 = 60 exactly", f.score === 60, f);
 { const a: Figure = { ...fig(done()), filing: "f-a" }, b = { ...fig(done({ reviewed: false })), filing: "f-b" }, c = { ...fig(done({ documents: [passport(false)], findings: [{ id: "g", severity: "MAJOR", words: "x (Sample)" }] })), filing: "f-c" };
   const low = lowestOf([a, b, c]);
   ok("C7.10 BR-5 pass: Ready 100, Not ready 80, Attention 66 → the case shows Not ready (f-b) and 66 (f-c)", low?.state === "not_ready" && low.state_filing === "f-b" && low.score === 66 && low.score_filing === "f-c" && c.score === 66 && c.state === "attention", { low, b: [b.state, b.score], c: [c.state, c.score] });
-  ok("C7.10 BR-5 pass: one filing → its own; ties → the first", JSON.stringify(lowestOf([a])) === JSON.stringify({ state: "ready", state_filing: "f-a", score: 100, score_filing: "f-a" }) && lowestOf([b, { ...b, filing: "f-b2" }])?.state_filing === "f-b");
+  ok("C7.10 BR-5 pass: one filing → its own; ties → the first", JSON.stringify(lowestOf([a])) === JSON.stringify({ state: "ready", state_filing: "f-a", score: 100, score_filing: "f-a" }) && lowestOf([b, { ...b, filing: "f-b2" }])?.state_filing === "f-b" && lowestOf([b, { ...b, filing: "f-b2" }])?.score_filing === "f-b" && lowestOf([{ ...b, filing: "f-b2" }, b])?.score_filing === "f-b2");
   ok("C7.10 BR-5 fail: no filings → no case figure", lowestOf([]) === null);
   // Challenge M2: a filing recorded as submitted never holds the case's lowest; all submitted → no case figure.
   const low2 = lowestOf([a, { ...b, submitted: true }]);

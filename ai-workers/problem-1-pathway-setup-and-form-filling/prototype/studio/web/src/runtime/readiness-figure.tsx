@@ -29,14 +29,14 @@ export function FigureRow({ g }: { g: Figure }) {
     <div className="rounded-lg border border-border bg-surface px-3 py-2" data-figure={g.filing} data-figure-state={g.state} data-figure-score={g.score}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <Pill tone={s.tone} title={s.title}>{s.words}</Pill>
-        <span className="text-lg font-semibold tabular-nums" aria-label={`Readiness ${g.score} per cent`} title="The share of counted items done, rounded down">{g.score}%</span>
+        <span className="text-lg font-semibold tabular-nums" title="The share of counted items done, rounded down"><span className="sr-only">Readiness </span>{g.score}%</span>
         <span className="text-[13px] text-text-muted" data-figure-count>{g.done} of {g.countable} done{g.passed ? ` · ${g.passed} passed with a reason` : ""}</span>
       </div>
       <details className="mt-1 text-[13px]" data-figure-how>
         <summary className="flex min-h-6 cursor-pointer items-center text-text-link">How this is worked out</summary>
         <ul className="mt-1 space-y-0.5 pl-1">{g.items.map((i) => (
           <li key={i.key} className="flex items-start gap-2 [overflow-wrap:anywhere]" data-figure-item={i.kind} data-done={i.done ? "yes" : "no"}>
-            <span className={i.done ? "text-text-ok" : "text-text-danger"} aria-hidden>{i.done ? "✓" : "○"}</span>
+            <span className={i.done ? "text-text-ok" : "text-text-muted"} aria-hidden>{i.done ? "✓" : "○"}</span>
             <span className="min-w-0 flex-1">{i.label}</span>
             <span className="shrink-0 text-text-muted">{i.done ? (i.passed ? "Passed with a reason" : "Done") : "Not done"}</span>
           </li>
