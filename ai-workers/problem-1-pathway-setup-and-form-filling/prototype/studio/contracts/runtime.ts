@@ -10,7 +10,9 @@ export type CaseRole = string;
 /** P-72 and P-78 (founder, 23 Oct: confirmed by who answered): a person's own answers and the principal's answers for a
  *  minor child count as confirmed; the principal's answers for an adult show "answered by the principal" and become
  *  confirmed when that adult confirms on their own link (not built in R1a) or the officer presses "Confirm section".
- *  The age and the fact it is read from are Sample until the immigration expert confirms them. Unconfirmed: no counsel. */
+ *  The age and the fact it is read from are Sample until the immigration expert confirms them. Unconfirmed: no counsel.
+ *  C6.16 (challenge m5): the same age decides who may get their own link and the privacy tick; Sample, Unconfirmed: no
+ *  counsel (the age of majority is 19 in some provinces and territories). */
 export const MINOR = { birthDateField: "person.date_of_birth", underAge: 18 } as const;
 
 /** Text a person types: no NUL or other control characters (PostgreSQL refuses NUL; a refusal must be a 400, not a 500). */
@@ -114,6 +116,8 @@ export const CONFIRM_WORDS = {
   // C6.18 (P-244) with P-411: a background answer staff recorded (by phone or in person) fills the forms at once and
   // waits for the client, never for the officer.
   awaits_client: "Recorded by the case officer: it fills the forms now and waits for the client to re-confirm it before signing",
+  /** C6.16 (P-78): an answer saved on the person's own link (channel own_link) is theirs. */
+  person_own: "Declared: the person's own answer on their own link; it fills the forms now",
 } as const;
 /** P-411 (1): the principal's answer for an adult spouse or adult child, marked with that person's name. */
 /** P-411 (1) also says the adult sees and confirms it before signing; that person's own confirmation is not built yet

@@ -4,7 +4,9 @@
 // case people, and still answers the configuration author. The few reads that are not configuration reads are a
 // reviewed list here: the runtime (case people's own routes, untouched), the releases Open a case lists and the activity
 // feed (case reads), who-am-I and the three file links the browser opens without the person header (open). A route
-// marked in the code but not on this list, or the other way round, fails the check. US$0, no model call.
+// marked in the code but not on this list, or the other way round, fails the check. C6.16: the routes with a guard of
+// their own (an adult's own link, /api/link/*, and the demo inbox) are a second reviewed list, OWN_GUARD; for each, its
+// own guard is asked here (never data to nobody or to a simulated person). US$0, no model call.
 //   zsh studio/tools/isolated.sh forms_qa53 4459 start && tsx studio/tests/check_forms_qa53.ts 4459 xr_studio_forms_qa53
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -27,6 +29,7 @@ function routes(dir = API) {
     let prefix = "", classMark: "case" | "open" | null = null, pending: "case" | "open" | null = null;
     for (const l of lines) {
       if (l.trim() === "@CaseRead()") { pending = "case"; continue; } // a controller-level mark, on its own line
+      if (/^@OpenRead\(.*\)$/.test(l.trim())) { pending = "open"; continue; } // C6.16: a controller-level open mark
       const c = /^@Controller\("([^"]*)"\)/.exec(l.trim());
       if (c) { prefix = c[1]; classMark = pending; pending = null; continue; }
       for (const g of l.matchAll(/(@CaseRead\(\)\s*|@OpenRead\([^)]*\)\s*)?@Get\("([^"]*)"\)/g)) {
@@ -41,6 +44,18 @@ const REVIEWED: Record<string, "case" | "open"> = {
   "/api/session": "open", "/api/attachments/:id/file": "open", "/api/intake/held/:id/file": "open", // QA-270: /api/artifacts/:id/file is a configuration read now
   "/api/releases": "case", "/api/activity": "case",
 };
+/** C6.16 (B138): reads open to the shared guard because they have a guard of their own, each asked below.
+ *  /api/link/*: an adult's own link (stand-in SI-21): a Bearer session from the link's code, x-actor refused (400),
+ *  no session 401 (person-link.ts LinkOnlyGuard and PersonLinks.signed). /api/demo/inbox: the email stand-in SI-20,
+ *  the demo workspace only (404 elsewhere) and never for a client persona (403). */
+const OWN_GUARD: Record<string, "link" | "inbox"> = {
+  "/api/link/me": "link", "/api/link/cases/:id/people/:subject/questionnaire": "link", "/api/demo/inbox": "inbox",
+};
+/** C6.16: the writes of the adult's own link, named by their Bearer session (never x-actor), each asked below. */
+const OWN_GUARD_WRITES = ["/api/link/open", "/api/link/code/send", "/api/link/code", "/api/link/consent", "/api/link/end",
+  "/api/link/cases/:id/people/:subject/answers/:field", "/api/link/cases/:id/people/:subject/rows", "/api/link/cases/:id/people/:subject/rows/:row",
+  "/api/link/cases/:id/people/:subject/groups/:group/none-apply", "/api/link/cases/:id/people/:subject/:relation/answers/:field", "/api/link/cases/:id/people/:subject/:relation/rows",
+  "/api/link/cases/:id/people/:subject/:relation/rows/:row", "/api/link/cases/:id/people/:subject/:relation/groups/:group/none-apply"];
 
 (async () => {
   const r = await fetch(`http://localhost:${PORT}/api/demo/load`, { method: "POST", headers: { "x-actor": "user-A" } });
@@ -51,13 +66,39 @@ const REVIEWED: Record<string, "case" | "open"> = {
   const all = routes();
   const declared = tsFiles(API).reduce((n, f) => n + (readFileSync(join(API, f), "utf8").match(/@Get\("/g) ?? []).length, 0);
   ok("QA-53: the check reads every GET route the code declares (none left unseen)", all.length === declared && declared > 40, { found: all.length, declared });
-  const marked = all.filter((x) => x.mark && !x.path.startsWith("/api/runtime/")).map((x) => `${x.path} ${x.mark}`).sort();
+  const marked = all.filter((x) => x.mark && !x.path.startsWith("/api/runtime/") && !(x.path in OWN_GUARD && x.mark === "open")).map((x) => `${x.path} ${x.mark}`).sort();
   const reviewed = Object.entries(REVIEWED).map(([p, m]) => `${p} ${m}`).sort();
+  ok("C6.16: the reads with a guard of their own are exactly OWN_GUARD, each marked open in the code (a new one fails here until reviewed)", JSON.stringify(all.filter((x) => x.path in OWN_GUARD).map((x) => `${x.path} ${x.mark}`).sort()) === JSON.stringify(Object.keys(OWN_GUARD).map((p) => `${p} open`).sort()), all.filter((x) => x.path.startsWith("/api/link/") || x.path === "/api/demo/inbox"));
   ok("QA-53: the reads that are not configuration reads are exactly the reviewed list (runtime aside): a new exception fails here until reviewed", JSON.stringify(marked) === JSON.stringify(reviewed), { marked, reviewed });
   ok("QA-53: every runtime route is a case read (the guard leaves case people's own routes untouched)", all.filter((x) => x.path.startsWith("/api/runtime/")).every((x) => x.mark === "case") && all.some((x) => x.path.startsWith("/api/runtime/")));
 
   // Pass and fail per configuration read: nobody 401, an unknown name 401, officer 403, client 403; the author is answered.
   const guarded = all.filter((x) => !x.mark);
+
+  // C6.16: each OWN_GUARD read's own guard. The link's reads: nobody 401 (no session); a simulated person, known or not,
+  // 400 (x-actor refused); a made-up session 401; never data. The inbox: a client persona 403; an address that is not
+  // one 400; outside the demo workspace 404 (a second copy started here with STUDIO_WORKSPACE_KEY=firm).
+  const linkStatus = async (path: string, actor: string | null, bearer: string | null) => (await fetch(`http://localhost:${PORT}${path}`, { headers: { ...(actor ? { "x-actor": actor } : {}), ...(bearer ? { authorization: `Bearer ${bearer}` } : {}) } })).status;
+  const wrongOwn: string[] = [];
+  for (const [p, kind] of Object.entries(OWN_GUARD)) {
+    const path = fill(p).replace(/:subject\b/g, "00000000-0000-4000-8000-000000000000");
+    if (kind === "link") {
+      const s = { none: await linkStatus(path, null, null), madeUp: await linkStatus(path, null, "A".repeat(43)), officer: await linkStatus(path, "user-O", null), client: await linkStatus(path, "user-P", "A".repeat(43)), author: await linkStatus(path, "user-A", null) };
+      if (s.none !== 401 || s.madeUp !== 401 || s.officer !== 400 || s.client !== 400 || s.author !== 400) wrongOwn.push(`${p} ${JSON.stringify(s)}`);
+    } else {
+      const s = { client: await linkStatus(`${path}?address=x%40example.com`, "user-P", null), notAnAddress: await linkStatus(`${path}?address=nobody`, null, null), bearer: await linkStatus(`${path}?address=x%40example.com`, null, "A".repeat(43)) };
+      if (s.client !== 403 || s.notAnAddress !== 400 || s.bearer !== 403) wrongOwn.push(`${p} ${JSON.stringify(s)}`);
+    }
+  }
+  ok(`C6.16 fail: each read with a guard of its own (${Object.keys(OWN_GUARD).length}) refuses by that guard: the link's nobody or a made-up session 401, any simulated person 400; the inbox a client 403, a Bearer 403`, wrongOwn.length === 0, wrongOwn);
+  const firm = await (async () => {
+    const name = `${DB.replace(/^xr_studio_/, "")}_firm`.slice(0, 40), port = PORT + 1;
+    try {
+      execFileSync("zsh", [join(import.meta.dirname, "..", "tools", "isolated.sh"), name, String(port), "start", "--ttl", "10", "STUDIO_WORKSPACE_KEY=firm"], { stdio: "ignore", timeout: 180_000 });
+      return { inbox: (await fetch(`http://localhost:${port}/api/demo/inbox?address=x%40example.com`)).status };
+    } catch (e) { return { error: (e as Error).message.split("\n")[0] }; } finally { try { execFileSync("zsh", [join(import.meta.dirname, "..", "tools", "isolated.sh"), name, String(port), "stop"], { stdio: "ignore", timeout: 120_000 }); } catch { /* reported above */ } }
+  })();
+  ok("C6.16 fail: the demo inbox is not found outside the demo workspace (a firm workspace answers 404)", firm.inbox === 404, firm);
   const wrong: string[] = [];
   for (const g of guarded) {
     const path = fill(g.path) + (g.path === "/api/catalogue" || g.path === "/api/path-options" ? "?pathway=INDIVIDUAL" : g.path === "/api/structure" ? "?pathwayType=INDIVIDUAL" : "");
@@ -87,23 +128,46 @@ const REVIEWED: Record<string, "case" | "open"> = {
   const post = async (path: string, actor: string | null, body: unknown) => (await fetch(`http://localhost:${PORT}${path}`, { method: "POST", headers: { "content-type": "application/json", ...(actor ? { "x-actor": actor } : {}) }, body: JSON.stringify(body) })).status;
   // B120: api/src's subfolders too.
   const writes = (dir: string) => {
-    const configPosts: string[] = [], unnamed: string[] = [];
+    const configPosts: string[] = [], unnamed: string[] = [], ownWrites: string[] = [];
     for (const f of tsFiles(dir)) {
-      const text = readFileSync(join(dir, f), "utf8"), lines = text.split("\n"), prefix = /@Controller\("([^"]*)"\)/.exec(text)?.[1] ?? "";
+      const text = readFileSync(join(dir, f), "utf8"), lines = text.split("\n");
+      // The controller each line belongs to (C6.16: person-link.ts holds three, so the file's first is not every route's).
+      let prefix = "";
       lines.forEach((l, i) => {
+        prefix = /^@Controller\("([^"]*)"\)/.exec(l.trim())?.[1] ?? prefix;
         for (const m of l.matchAll(/(@ConfigRead\(\)\s*)?@(Post|Put|Patch|Delete)\("([^"]*)"\)/g)) {
           const path = `/${prefix}/${m[3]}`.replace(/\/+/g, "/");
           if (m[1]) configPosts.push(path);
+          else if (OWN_GUARD_WRITES.includes(path.replace(/\/$/, ""))) ownWrites.push(path.replace(/\/$/, ""));
           else if (!/x-actor|actorOf|readerOf/.test(lines.slice(i, i + 3).join(" "))) unnamed.push(`${f}: ${path}`);
         }
       });
     }
-    return { configPosts, unnamed };
+    return { configPosts, unnamed, ownWrites };
   };
-  const { configPosts, unnamed } = writes(API);
+  const { configPosts, unnamed, ownWrites } = writes(API);
   const plantedDir = planted({ "features/checkpoint/999-planted.ts": '@Controller("api")\nexport class P {\n  @Get("planted/read") read() {}\n  @Post("planted/write")\n  write() {}\n}\n' });
   ok("QA-53 fail (B120): a GET route planted in a subfolder is found", routes(plantedDir).map((x) => x.path).join() === "/api/planted/read");
   ok("QA-65 fail (B120): a write planted in a subfolder that names nobody is caught", writes(plantedDir).unnamed.join() === "features/checkpoint/999-planted.ts: /api/planted/write");
+  // C6.16: a /api/link/* route with no guard of its own is never let through: unmarked, it is a configuration read asked
+  // like every other; marked open but not on OWN_GUARD, the reviewed-list check fails; a write not on OWN_GUARD_WRITES
+  // that names nobody is caught; and a second controller's routes keep their own prefix.
+  const plantedLink = planted({ "planted-link.ts": '@Controller("api/runtime")\nexport class A {\n  @Post("named")\n  named(@Headers("x-actor") a: H) {}\n}\n@OpenRead("planted")\n@Controller("api/link")\nexport class B {\n  @Get("sneaky") sneaky() {}\n  @Post("sneaky-write")\n  w() {}\n}\n@Controller("api/link")\nexport class C {\n  @Get("bare") bare() {}\n}\n' });
+  const pl = routes(plantedLink), pw = writes(plantedLink);
+  ok("C6.16 fail: a planted /api/link/* GET with no mark is a configuration read (asked 401/403 like any other), and one marked open but not on OWN_GUARD is caught by the reviewed list", pl.find((x) => x.path === "/api/link/bare")?.mark === null && pl.find((x) => x.path === "/api/link/sneaky")?.mark === "open" && !("/api/link/sneaky" in OWN_GUARD), pl);
+  ok("C6.16 fail: a planted /api/link/* write not on OWN_GUARD_WRITES that names nobody is caught, under its own controller's prefix", pw.unnamed.join() === "planted-link.ts: /api/link/sneaky-write" && pw.ownWrites.length === 0, pw);
+  ok("C6.16: the link's own writes in the code are exactly OWN_GUARD_WRITES", JSON.stringify([...ownWrites].sort()) === JSON.stringify([...OWN_GUARD_WRITES].sort()), { ownWrites });
+  const postStatus = async (path: string, actor: string | null, bearer: string | null, method = "POST") => (await fetch(`http://localhost:${PORT}${path}`, { method, headers: { "content-type": "application/json", ...(actor ? { "x-actor": actor } : {}), ...(bearer ? { authorization: `Bearer ${bearer}` } : {}) }, body: method === "DELETE" ? undefined : JSON.stringify({ token: "B".repeat(43), code: "123456", value: "x", expectedId: null, group: "g", noneApply: true }) })).status;
+  const wrongWrite: string[] = [];
+  for (const w of OWN_GUARD_WRITES) {
+    const method = /rows\/:row$/.test(w) ? "DELETE" : /answers|none-apply/.test(w) ? "PUT" : "POST";
+    const path = fill(w).replace(/:subject\b/g, "00000000-0000-4000-8000-000000000000").replace(/:relation\b/g, "parent_1").replace(/:field\b/g, "person.family_name").replace(/:row\b/g, "00000000-0000-4000-8000-000000000000").replace(/:group\b/g, "g");
+    const session = !/\/link\/(open|code\/send|code)$/.test(w);
+    const s = { actor: await postStatus(path, "user-P", null, method), none: await postStatus(path, null, null, method) };
+    // With x-actor: always 400. With nobody: a session route 401; the token routes refuse the made-up token (404 in words).
+    if (s.actor !== 400 || s.none !== (session ? 401 : 404)) wrongWrite.push(`${w} ${JSON.stringify(s)}`);
+  }
+  ok(`C6.16 fail: each write of the adult's own link (${OWN_GUARD_WRITES.length}) refuses a simulated person (400) and, with no session or a made-up token, answers 401 or 404, never a change`, wrongWrite.length === 0, wrongWrite);
   ok("QA-65: the configuration reads made by POST are exactly the reviewed three (finder plan, AI plan, condition check)", JSON.stringify(configPosts.sort()) === JSON.stringify(["/api/ai/plan", "/api/combinations/:id/forms/find/plan", "/api/conditions/check"]), configPosts);
   ok("QA-65: every other write names its person (none answers nobody by default)", unnamed.length === 0, unnamed);
   const bodies: Record<string, unknown> = { "/api/ai/plan": { scope: vv, mode: "stub" }, "/api/combinations/:id/forms/find/plan": { mode: "rules" }, "/api/conditions/check": { condition: "", answers: {} } };

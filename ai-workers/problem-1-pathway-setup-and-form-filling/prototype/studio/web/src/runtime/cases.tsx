@@ -22,6 +22,7 @@ import { EarlierFactsCard } from "./earlier-facts";
 import { EligibilityCard, EligibilityPage } from "./eligibility";
 import { PeopleAndFilings } from "./filing-changes"; // C6.13
 import { ReleaseNotice } from "./release-update"; // C9.5
+import { OfficerPeoplePanel } from "./privacy"; // C6.16
 import { RepresentativeReviewLatest, RepresentativeReviewPage } from "./representative-review"; // C8.3
 import { CaseReadinessPill } from "./readiness-figure"; // C7.10
 import type { OpenableRelease } from "../../../contracts/runtime";
@@ -216,6 +217,9 @@ function CasePage() {
       <FormsPanel caseId={c.id} />
       <FindingsPanel caseId={c.id} people={c.people} openLink={`/cases/${c.id}/review`} />
       <SubmissionPanel caseId={c.id} />
+      {/* C6.16: who answers for each person and their own links, next to the Agent view where their answers are (placed
+          below the case panels so its late load never moves them: check_c69_page_browser's focus check). */}
+      <OfficerPeoplePanel caseId={c.id} />
       <div id="agent-view" className="scroll-mt-4 space-y-3"><h2 id="agent-view-h" className="text-base font-semibold" data-agent-view-h>Agent view</h2>
       <Questionnaire caseId={c.id} mode="agent" /></div>
       {adding ? <AddPersonDialog caseId={c.id} line={adding} close={() => setAdding(null)} /> : null}
@@ -254,7 +258,7 @@ function ClientPage() {
   return <Questionnaire caseId={id!} mode="sqr" />;
 }
 
-function Toaster() {
+export function Toaster() {
   const t = useToast();
   return (
     <div className="pointer-events-none fixed inset-x-4 bottom-4 z-[100] flex flex-col gap-2 sm:left-auto sm:w-96" aria-live="polite">
