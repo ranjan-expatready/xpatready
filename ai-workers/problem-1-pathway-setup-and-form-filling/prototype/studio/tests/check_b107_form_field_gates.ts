@@ -69,5 +69,30 @@ ok("B107-24 pass: \"digits_only\" writes the digits (\"+1\" → \"1\")", run("di
 ok("B107-25 fail: a value with no digits is written by hand", run("digits_only", "abc").hand === true);
 ok("B107-26 pass: a step that ran before still runs the same (as_is with its own max, a date)", run("as_is (max 5 chars)", "abcdef").hand === true && run("date:YYYY-MM-DD", "1990-04-12").value === "1990-04-12");
 
+// ---- C10.2 (Adobe Validate on the finished story's Paper copy, 9 Nov): IMM 5257 (09-2023)'s own scripts, as gates, for
+// every status the form lists. validateCOR empties the status for a date beside Citizen, Permanent resident, Protected
+// Person or Refugee Claimant, and (with validateCWA) for "Other" details beside any status but Other. The statuses are the
+// form's own list of values, read from its committed inventory (p1/inventory/imm5257e.inventory.json), never typed here.
+const i5257 = data.editions.find((e) => e.form === "IMM 5257")!;
+const PD = "form1[0].Page1[0].PersonalDetails[0].";
+const inv5257 = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "p1", "inventory", "imm5257e.inventory.json"), "utf8")) as { fields: { data_path: string | null; options_resolved: [string, string][] | null }[] };
+const statusList = (path: string) => (inv5257.fields.find((f) => f.data_path === path)?.options_resolved ?? []).filter(([label]) => label);
+const current = statusList(`${PD}CurrentCOR[0].Row2[0].Status[0]`), applying = statusList(`${PD}CountryWhereApplying[0].Row2[0].Status[0]`);
+const gate5257 = (box: string) => i5257.gates!.find((x) => x.box === PD + box)!.gate;
+const at = (box: string, fact: string, label: string) => evaluate(gate5257(box), { [fact]: label }, []).result;
+const NO_DATES = ["01", "02", "07", "08"]; // validateCOR's "negative case" statuses, by the form's own codes
+const CUR = "person.current_residence_status", APP = "person.applying_from_status";
+ok("B107-27 setup: the form lists 9 statuses for questions 7 and 9 B, and the data gates 4 IMM 5257 form fields", current.length === 9 && applying.length === 9 && i5257.gates!.length === 4, { current: current.length, applying: applying.length });
+const dates = current.map(([label, code]) => ({ label, code, from: at("CurrentCOR[0].Row2[0].FromDate[0]", CUR, label), to: at("CurrentCOR[0].Row2[0].ToDate[0]", CUR, label) }));
+ok("B107-28 pass: question 7's From and To are written for Visitor, Worker, Student, Other and Foreign National (03, 04, 05, 06, 09)", dates.filter((x) => !NO_DATES.includes(x.code)).every((x) => x.from === true && x.to === true), dates);
+ok("B107-29 fail: and never beside Citizen, Permanent resident, Protected Person or Refugee Claimant (01, 02, 07, 08)", dates.filter((x) => NO_DATES.includes(x.code)).length === 4 && dates.filter((x) => NO_DATES.includes(x.code)).every((x) => x.from === false && x.to === false), dates);
+const other = [...current.map(([label, code]) => ({ q: "7", label, code, holds: at("CurrentCOR[0].Row2[0].Other[0]", CUR, label) })), ...applying.map(([label, code]) => ({ q: "9 B", label, code, holds: at("CountryWhereApplying[0].Row2[0].Other[0]", APP, label) }))];
+ok("B107-30 pass: the \"Other\" details of questions 7 and 9 B are written when the status is Other (06)", other.filter((x) => x.code === "06").length === 2 && other.filter((x) => x.code === "06").every((x) => x.holds === true), other.filter((x) => x.code === "06"));
+ok("B107-31 fail: and beside no other status (8 each)", other.filter((x) => x.code !== "06").length === 16 && other.filter((x) => x.code !== "06").every((x) => x.holds === false), other.filter((x) => x.holds !== false && x.code !== "06"));
+ok("B107-32 pass: before the status is answered a gate cannot tell, so the question stays asked and nothing is written", ["CurrentCOR[0].Row2[0].FromDate[0]", "CurrentCOR[0].Row2[0].Other[0]"].every((b) => evaluate(gate5257(b), {}, []).result === "cannot_tell"));
+const named = JSON.stringify(i5257.gates!.map((x) => x.gate)).match(/"value":(\[[^\]]*\]|"[^"]*")/g)!.flatMap((m) => [JSON.parse(m.slice(8))].flat() as string[]);
+ok("B107-33 fail: every status a gate names is a label of the form's own list, letter for letter (a gate compares exactly)", new Set(named).size === 5 && named.every((v) => current.some(([label]) => label === v)), named);
+ok("B107-34 fail (review B1): no IMM 5257 source shows an escaped quote, and each quotes the form's own script", i5257.gates!.every((x) => !x.cite.includes("\\") && /IMM 5257 \(09-2023\) p\. 1/.test(x.cite) && /oStatus\.rawValue = null/.test(x.cite)));
+
 console.log(failed ? `\n${failed} failed` : "\nall passed");
 process.exit(failed ? 1 : 0);

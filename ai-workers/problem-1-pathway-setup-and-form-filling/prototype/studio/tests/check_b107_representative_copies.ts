@@ -121,15 +121,21 @@ await main("B107", "The representative on the filled IMM 5476 and IMM 5475 — c
   ok("B107-C16 fail (QA-299): and in no other box", Object.values(v2).filter((x) => x === rep2.licence!.number).length === 1 && !v2[`${Q6}questionII[0].membership[0]`] && !v2[`${Q6}questionI[0].membership[0]`] && !v2[`${Q6}questionII[0].quebecLaw[0]`]);
 
   // ---- The library: each decision went through a second person, and a release carries it.
-  const changes = sql(`select action || ':' || status || ':' || count(*) from library_change where kind = 'form_field_condition' and action in ('SET_FORM_FIELD_GATE', 'SET_FORM_FIELD_BY_HAND') group by action, status order by 1`) ?? "";
+  // C10.2 (#1435): the counts are this suite's two forms' own decisions (their editions in samples/form-field-gates.json).
+  // IMM 5257's gates (#1435) go out with the Visitor visa's release, so the workspace-wide gate count moved from 13 to 17;
+  // the words checks below still read every released change, IMM 5257's included.
+  const OWN_EDITIONS = ["IMM 5476 (11-2021)", "IMM 5475 (05-2021)"];
+  const OWN = `(matches->>'edition' in (${OWN_EDITIONS.map((e) => `'${e}'`).join(", ")}))`;
+  const changes = sql(`select action || ':' || status || ':' || count(*) from library_change where kind = 'form_field_condition' and action in ('SET_FORM_FIELD_GATE', 'SET_FORM_FIELD_BY_HAND') and ${OWN} group by action, status order by 1`) ?? "";
   ok("B107-C17 pass: the gates and filled by hand were each approved by a second person and released (To review › form fields)", /SET_FORM_FIELD_BY_HAND:RELEASED:\d+/.test(changes) && /SET_FORM_FIELD_GATE:RELEASED:13/.test(changes) && !/WAITING|RETURNED/.test(changes), changes);
   const proposer = sql(`select string_agg(distinct proposed_by || '>' || coalesce(decided_by, '?'), ',') from library_change where kind = 'form_field_condition' and action in ('SET_FORM_FIELD_GATE', 'SET_FORM_FIELD_BY_HAND')`);
   ok("B107-C18 fail: nobody approved their own proposal", !!proposer && proposer.split(",").every((x) => { const [a, b] = x.split(">"); return a !== b && b !== "?"; }), proposer);
 
   // ---- What the second person reads (review M1): plain words, never the action's code, and the decision as it is.
-  const listed = ((await call("GET", "/library/changes?status=RELEASED", undefined, AUTHOR)).body ?? []) as { action: string; action_word: string; form_field?: { sentence: string; words: string; decided?: { kind: string; cite: string } | null } }[];
+  const listed = ((await call("GET", "/library/changes?status=RELEASED", undefined, AUTHOR)).body ?? []) as { action: string; action_word: string; form_field?: { edition?: string; sentence: string; words: string; decided?: { kind: string; cite: string } | null } }[];
   const ours = listed.filter((x) => x.action === "SET_FORM_FIELD_GATE" || x.action === "SET_FORM_FIELD_BY_HAND");
-  ok("B107-C19 fail (review M1): no change names its action by a code, and each says gate or by hand with its source", ours.length === 26 && ours.every((x) => !/^[A-Z_]+$/.test(x.action_word) && !!x.form_field?.decided?.cite && x.form_field.decided.kind === (x.action === "SET_FORM_FIELD_GATE" ? "gate" : "by_hand")), ours.slice(0, 2).map((x) => [x.action_word, x.form_field?.decided]));
+  const ownForms = ours.filter((x) => OWN_EDITIONS.includes(x.form_field?.edition ?? ""));
+  ok("B107-C19 fail (review M1): no change names its action by a code, and each says gate or by hand with its source", ownForms.length === 26 && ours.every((x) => !/^[A-Z_]+$/.test(x.action_word) && !!x.form_field?.decided?.cite && x.form_field.decided.kind === (x.action === "SET_FORM_FIELD_GATE" ? "gate" : "by_hand")), ours.slice(0, 2).map((x) => [x.action_word, x.form_field?.decided]));
   ok("B107-C20 fail (review M1): a gate's sentence is the rest of \"Filled only when …\", never \"filled only when filled …\"", ours.every((x) => !/^filled\b/i.test(x.form_field?.sentence ?? "")), ours.map((x) => x.form_field?.sentence).filter((t) => /^filled\b/i.test(t ?? "")).slice(0, 2));
   ok("B107-C21 fail (review m7): no source shows an escaped quote", ours.every((x) => !(x.form_field?.decided?.cite ?? "").includes("\\")));
 

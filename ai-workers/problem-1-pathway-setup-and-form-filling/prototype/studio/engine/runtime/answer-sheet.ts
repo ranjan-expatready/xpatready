@@ -20,7 +20,13 @@ export type SheetAnswer = { label: string; fact: string; subject: string; person
 /** The mark of the current answer behind a box (the case view's), by its whole "about", fact and row. */
 export type MarkOf = (about: string, fact: string, row: number | null) => { mark: AnswerMark; confirmed: boolean; why: string } | undefined;
 /** `version`: the section's fingerprint now; a tick sends the one it read, so it freezes what the officer saw. */
-export type SheetSection = { key: string; title: string; /** false: a part not named yet (To review, B78) */ named?: false; version: string; entered: { at: string; by: string } | null; out_of_date: boolean; answers: SheetAnswer[]; waiting: { fact: string; subject: string; person: string; label: string }[] };
+export type SheetSection = { key: string; title: string; /** false: a part not named yet (To review, B78) */ named?: false; version: string; entered: { at: string; by: string } | null; out_of_date: boolean; answers: SheetAnswer[]; waiting: { fact: string; subject: string; person: string; label: string }[];
+  /** C7.3 (P-401): on an out-of-date section, each answer that differs from what its tick froze (null: none then, or none now). */
+  changes?: SheetChange[];
+  /** C7.3 (P-401): on a section not ticked now, its last untick: who, when and the reason they gave. */
+  unticked?: { at: string; by: string; reason: string } | null };
+/** One answer of a ticked section that changed since the tick: its label, its person, the text then and now. */
+export type SheetChange = { label: string; person: string; was: string | null; now: string | null };
 export type Sheet = { order_basis: "form_parts" | "pdf_twin"; order_note: string; sections: SheetSection[] };
 /** A part of a form as the configuration holds it: its key, its title and the form fields (data paths) it groups.
  *  `named: false`: a part with no printed heading still waiting on To review for a person to name it (B78). */
@@ -157,4 +163,18 @@ export function sheetWords(sheet: Sheet, missing: Readiness["missing"]): string 
   const left = sheet.sections.filter((x) => !x.entered || x.out_of_date), n = sheet.sections.length;
   if (!n) return "Its answer sheet has no section to enter yet.";
   return `Every answer is ready to enter in the portal; ${left.length} of ${n} section${n === 1 ? "" : "s"} still to tick "Entered in the portal": ${left.map((x) => x.title).join(", ")}.`;
+}
+
+/** C7.3 (P-401): what changed in a ticked section since its tick froze its answers: each answer, by person, fact and row,
+ *  whose copy text differs, was added or is gone, in the order the section shows them now, then the gone ones. */
+export function changesOf(frozen: Pick<SheetAnswer, "label" | "person" | "subject" | "fact" | "row" | "copy_text">[], now: Pick<SheetAnswer, "label" | "person" | "subject" | "fact" | "row" | "copy_text">[]): SheetChange[] {
+  const k = (a: { subject: string; fact: string; row: number | null }) => `${a.subject}|${a.fact}|${a.row ?? ""}`;
+  const then = new Map(frozen.map((a) => [k(a), a] as const)), seen = new Set<string>(), out: SheetChange[] = [];
+  for (const a of now) {
+    seen.add(k(a));
+    const b = then.get(k(a));
+    if (!b || b.copy_text !== a.copy_text) out.push({ label: a.label, person: a.person, was: b?.copy_text ?? null, now: a.copy_text });
+  }
+  for (const b of frozen) if (!seen.has(k(b))) out.push({ label: b.label, person: b.person, was: b.copy_text, now: null });
+  return out;
 }

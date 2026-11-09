@@ -14,6 +14,7 @@ import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, In
 import { REPRESENTATIVE, userIn, type Firm } from "../../engine/runtime/team.ts";
 import { changedBy, changesOf, checklistOf, CHANGED_TOOLTIP, fileOf, formStateOf, hashesProblem, isOpen, mayDecide, nextStatus, reasonsOf, selfReviewOf, SELF_STATEMENT, sendProblem, stampCurrent, STATE_WORDS, typedSince, untickedProblem, withdrawnForms, withdrawnWords, WITHDRAWN_TOOLTIP, type ChangeLine, type CheckItem, type FileStamp, type Problem, type RowStatus } from "../../engine/runtime/review.ts";
 import { dayWords, factPerson } from "../../engine/runtime/out-of-date.ts";
+import { isBarcodeForm } from "../../contracts/forms.ts";
 import type { FormFact } from "../../engine/runtime/forms.ts";
 import { ReviewDecision, ReviewOpen, ReviewReapprove, ReviewTick, SendForReview, type ChangedSinceReview, type FormStamp, type ReviewRound, type ReviewRoundFiling } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
@@ -24,6 +25,7 @@ import { CasePrepare, type ReviewBasis, type ReviewBasisForm } from "./case-prep
 import type { ReadinessView } from "./readiness-inputs.ts";
 import { reviewItemsOf } from "./review-items.ts";
 import { busyWords } from "./busy.ts";
+import { newestPin } from "./stage-scope.ts"; // C6.17 (BR-9)
 
 type H = string | undefined;
 type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
@@ -70,12 +72,12 @@ export class ReviewRounds {
   }
   /** B2: the files of the forms that have one (one query each kind), as fileOf orders them. */
   private async framesOf(forms: ReviewBasisForm[]): Promise<Frozen[]> {
-    const vIds = forms.map((f) => f.validated?.copy).filter((x): x is string => !!x), gIds = forms.map((f) => f.forFiling?.id).filter((x): x is string => !!x);
-    const vSha = new Map<string, string>();
-    for (const v of vIds.length ? await this.db.validatedCopy.findMany({ where: { formInstanceId: { in: vIds } }, orderBy: [{ readAt: "desc" }, { id: "asc" }], select: { formInstanceId: true, sha256: true } }) : []) if (!vSha.has(v.formInstanceId)) vSha.set(v.formInstanceId, v.sha256);
+    // QA-345 (review M1): a validated copy's fingerprint is the read-back that counts for filing (validatedSha), the one
+    // fileStampCurrent compares with.
+    const gIds = forms.map((f) => f.forFiling?.id).filter((x): x is string => !!x);
     const gSha = new Map((gIds.length ? await this.db.formInstance.findMany({ where: { id: { in: gIds } }, select: { id: true, sha256: true } }) : []).map((g) => [g.id, g.sha256]));
     return forms.map((f) => ({ item: f.item, form: f.form, subject: f.subject, waits: f.waits, hash: f.hash, inputHash: f.inputHash, facts: f.facts, channel: f.channel,
-      file: fileOf({ waits: f.waits, inputHash: f.inputHash, validated: f.validated ? { id: f.validated.copy, sha256: vSha.get(f.validated.copy) ?? null, current: f.validated.current } : null, generated: f.forFiling ? { id: f.forFiling.id, sha256: gSha.get(f.forFiling.id) ?? null, hash: f.forFiling.hash } : null }) }));
+      file: fileOf({ waits: f.waits, inputHash: f.inputHash, validated: f.validated ? { id: f.validated.copy, sha256: f.validatedSha, current: f.validated.current } : null, generated: f.forFiling ? { id: f.forFiling.id, sha256: gSha.get(f.forFiling.id) ?? null, hash: f.forFiling.hash } : null }) }));
   }
   /** The forms of one filing a review covers: every form item of it except those the IRCC account asks itself. */
   private formsOf(basis: ReviewBasis, filing: string) { return basis.forms.filter((f) => f.filing === filing && f.channel !== "NOT_NEEDED"); }
@@ -83,7 +85,7 @@ export class ReviewRounds {
   private async checklistFor(c: Reached, view: Awaited<ReturnType<ReviewRounds["basisOf"]>>["view"], basis: ReviewBasis, filing: string): Promise<CheckItem[]> {
     const rd = view.readiness.find((x) => x.filing === filing);
     const docs = view.items.filter((i) => i.kind === "document" && i.filing === filing);
-    const verified = docs.length ? await this.db.checklistLine.count({ where: { caseId: c.id, state: "approved", OR: docs.map((d) => ({ subjectId: d.subject, documentType: d.document_type ?? "" })) } }) : 0;
+    const verified = docs.length ? await this.db.checklistLine.count({ where: { caseId: c.id, stageId: c.stage.id, state: "approved", OR: docs.map((d) => ({ subjectId: d.subject, documentType: d.document_type ?? "" })) } }) : 0;
     const subjects = new Set(this.formsOf(basis, filing).map((f) => f.subject));
     const by = new Map<string, number>();
     for (const a of basis.answers) if (a.status === "VERIFIED" && subjects.has(a.subjectId)) by.set(a.actor, (by.get(a.actor) ?? 0) + 1);
@@ -145,7 +147,8 @@ export class ReviewRounds {
   /** Under the case's row lock: the case must still be on the release the page read (C9.5's rule for the review). */
   private async lockCase(tx: Tx, c: Reached) {
     await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
-    const newest = await tx.packWorkPin.findFirst({ where: { caseId: c.id }, orderBy: { revision: "desc" }, select: { revision: true } });
+    // C6.17 (BR-9): the current stage's chain; null when "Start next stage" moved the case meanwhile (refused).
+    const newest = await newestPin(tx, c.id, c.combinationId);
     if (newest?.revision !== c.pins[0].revision) refuse({ status: 409, detail: "This case moved to another release meanwhile: nothing was recorded. Reload." });
   }
   private async nextNumbers(tx: Tx, caseId: string, filings: string[]) {
@@ -178,7 +181,7 @@ export class ReviewRounds {
       const no = mayDecide(actor.id, rep); if (no) refuse({ status: 403, detail: `"Review now" sends and opens the review in one step: ${no}` });
     }
     const { view, basis } = await this.basisOf(actor, c);
-    const stored = await this.db.filing.findMany({ where: { caseId: c.id }, select: { id: true, status: true, active: true } });
+    const stored = await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id }, select: { id: true, status: true, active: true } }) // C6.17: the current stage's filings only;
     const open = new Set((await this.db.reviewRoundFiling.findMany({ where: { caseId: c.id, status: { in: ["sent", "under_review"] } }, select: { filingId: true } })).map((x) => x.filingId));
     // Every filing the case has stored, a removed one too (C6.13: refused in words, 409), labelled as the view labels it.
     const filings = stored.map((s) => ({ id: s.id, label: view.filings.find((f) => f.id === s.id)?.label ?? "That filing", active: s.active && view.filings.some((f) => f.id === s.id), recorded: s.status === "SUBMITTED", inOpenRound: open.has(s.id), openBlocks: view.readiness.find((r) => r.filing === s.id)?.blocks.length ?? 0 }));
@@ -243,8 +246,9 @@ export class ReviewRounds {
         const now = live.get(f.itemId), liveHash = now ? now.hash : null, waits = f.fileKind === "waits";
         const prevForm = prev?.forms.find((x) => x.itemId === f.itemId);
         // Break B1: an approval with a newer round of its filing no longer counts (stampCurrent's `superseded`).
-        const stamp = f.stampedAt ? { hash: f.stampHash, by: row.representative, superseded: !latest } : null;
-        const st = formStateOf({ status: row.status as RowStatus, waits, checked: ticked.has(`form:${f.itemId}`), frozenHash: f.factsHash, previousHash: prev ? prevForm?.factsHash ?? null : undefined, liveHash, stamp, representative: rep });
+        // QA-345: and only while the validated copy that counts for filing now is the file it stamped (fileStampCurrent).
+        const stamp = f.stampedAt ? { hash: f.stampHash, by: row.representative, superseded: !latest, file: { kind: f.stampFileKind, sha256: f.stampFileSha256 } } : null;
+        const st = formStateOf({ status: row.status as RowStatus, waits, checked: ticked.has(`form:${f.itemId}`), frozenHash: f.factsHash, previousHash: prev ? prevForm?.factsHash ?? null : undefined, liveHash, stamp, representative: rep, validatedSha: now?.validatedSha ?? null });
         // BR-6: an approved row compares its stamp with today; an open row compares the round before (else what it froze) with today.
         const base = row.status === "approved" ? snaps.get(f.stampSnapshotId ?? "") ?? [] : prevForm?.snapshotId ? snaps.get(prevForm.snapshotId) ?? [] : snaps.get(f.snapshotId ?? "") ?? [];
         const changes = waits || !now ? [] : changesOf(base, now.facts, basis.words, typist);
@@ -256,11 +260,11 @@ export class ReviewRounds {
         return { item: f.itemId, form: f.formNumber, person: now?.person ?? "", channel: now?.channel ?? "", waits, state: st.state, state_words: STATE_WORDS[st.state],
           tooltip: st.state === "approval_withdrawn" ? WITHDRAWN_TOOLTIP : st.state === "changed_since_review" ? CHANGED_TOOLTIP : null,
           withdrawn_words: st.state === "approval_withdrawn" ? withdrawnWords(st.why, first, day) : null,
-          file: { kind, sha256: f.stampFileSha256 ?? f.fileSha256, words: waits ? "Not stamped: waits for an answer" : `${f.stampedAt ? "Stamped" : "Frozen when sent"} with ${FILE_WORDS[kind]}` },
+          file: { kind, sha256: f.stampFileSha256 ?? f.fileSha256, words: waits ? "Not stamped: waits for an answer" : `${f.stampedAt ? "Stamped" : "Frozen when sent"} with ${FILE_WORDS[kind]}${kind === "none" && f.stampedAt && isBarcodeForm(f.formNumber) && now?.channel !== "ONLINE" ? ". The validated copy read back next for these facts is stamped to this approval" : ""}` },
           stamp: f.stampedAt ? { at: f.stampedAt.toISOString(), by: f.stampedBy!, file_kind: f.stampFileKind!, file_sha256: f.stampFileSha256 } : null,
           live_hash: liveHash, changes: changeView(changes), facts };
       });
-      const withdrawn = row.status === "approved" && latest ? withdrawnForms(row.forms.map((f) => ({ item: f.itemId, waits: f.fileKind === "waits", stamp: f.stampedAt ? { hash: f.stampHash, by: row.representative } : null, liveHash: live.get(f.itemId)?.hash ?? null })), rep).map((f) => f.item) : [];
+      const withdrawn = row.status === "approved" && latest ? withdrawnForms(row.forms.map((f) => ({ item: f.itemId, waits: f.fileKind === "waits", stamp: f.stampedAt ? { hash: f.stampHash, by: row.representative, file: { kind: f.stampFileKind, sha256: f.stampFileSha256 } } : null, liveHash: live.get(f.itemId)?.hash ?? null, validatedSha: live.get(f.itemId)?.validatedSha ?? null })), rep).map((f) => f.item) : [];
       const reasons = (row.reasons ?? null) as { text: string; item?: string; check?: string }[] | null;
       return { filing: row.filingId, label: label.get(row.filingId) ?? "A filing no longer on the application", filing_round: row.filingRound, status: row.status as RowStatus, status_words: STATUS_WORDS[row.status as RowStatus],
         opened: row.openedBy ? { by: row.openedBy, name: this.nameOf(c, row.openedBy)!, at: row.openedAt!.toISOString() } : null,
@@ -277,9 +281,11 @@ export class ReviewRounds {
 
   // ---------------------------------------------------------------- BR-3 open, BR-2 checks
 
-  private async rowOf(round: { id: string }, filing: string) {
+  private async rowOf(c: Reached, round: { id: string }, filing: string) {
     const row = await this.db.reviewRoundFiling.findUnique({ where: { roundId_filingId: { roundId: round.id, filingId: filing } } });
     if (!row) refuse({ status: 404, detail: "That filing is not in this review." });
+    // C6.17 (BR-5, BR-10): an ended stage's filings are history; their review is read, never opened, ticked or decided.
+    if ((await this.db.filing.findUnique({ where: { id: filing }, select: { stageId: true } }))?.stageId !== c.stage.id) refuse({ status: 409, detail: "This filing is on an ended stage of the case: its review is history and cannot be changed." });
     return row!;
   }
   /** F2: the one permission check, refused in the page's own words (403). */
@@ -291,7 +297,7 @@ export class ReviewRounds {
     const { round, c } = await this.roundOf(actor, id);
     const b = parsed(ReviewOpen, body);
     await this.mustDecide(actor, c);
-    await this.rowOf(round, b.filing);
+    await this.rowOf(c, round, b.filing);
     // Break m4: a filing removed from the application is not opened (it can still be sent back).
     if (!(await this.db.filing.findUnique({ where: { id: b.filing }, select: { active: true } }))?.active) refuse({ status: 409, detail: "This filing was removed from the application: send it back, or add it back first." });
     const moved = await this.db.$transaction(async (tx) => {
@@ -301,7 +307,7 @@ export class ReviewRounds {
       await this.audit(tx, c, actor, "review_opened", round.id, `${actor.name} opened a filing's review on case ${c.id.slice(0, 8)} (round ${round.number})`, { case: c.id, filing: b.filing });
       return row.id;
     }, TX);
-    const row = await this.rowOf(round, b.filing);
+    const row = await this.rowOf(c, round, b.filing);
     return { filing: b.filing, status: row.status, opened: !!moved, opened_by: row.openedBy, opened_at: row.openedAt?.toISOString() ?? null };
   }
 
@@ -311,7 +317,7 @@ export class ReviewRounds {
     const { round, c } = await this.roundOf(actor, id);
     const b = parsed(ReviewTick, body);
     await this.mustDecide(actor, c);
-    const row = await this.rowOf(round, b.filing);
+    const row = await this.rowOf(c, round, b.filing);
     const item = await this.db.reviewCheck.findUnique({ where: { roundFilingId_itemKey: { roundFilingId: row.id, itemKey: b.item } } });
     if (!item) refuse({ status: 404, detail: "That checklist item is not on this filing's review." });
     const done = await this.db.$transaction(async (tx) => {
@@ -332,7 +338,7 @@ export class ReviewRounds {
     const { round, c } = await this.roundOf(actor, id);
     const b = parsed(ReviewDecision, body);
     const rep = await this.mustDecide(actor, c);
-    const row = await this.rowOf(round, b.filing);
+    const row = await this.rowOf(c, round, b.filing);
     const filing = await this.db.filing.findUnique({ where: { id: b.filing }, select: { status: true, active: true } });
     // Break m4: a removed filing can still be sent back (closing its round); it is never approved.
     if (!filing?.active && b.verdict === "approve") refuse({ status: 409, detail: "This filing is no longer on the application (it was removed): send it back instead. Nothing was recorded." });
@@ -416,7 +422,7 @@ export class ReviewRounds {
     const { round, c } = await this.roundOf(actor, id);
     const b = parsed(ReviewReapprove, body);
     const rep = await this.mustDecide(actor, c);
-    const row = await this.rowOf(round, b.filing);
+    const row = await this.rowOf(c, round, b.filing);
     const filing = await this.db.filing.findUnique({ where: { id: b.filing }, select: { status: true, active: true } });
     if (!filing?.active || filing.status === "SUBMITTED") refuse({ status: 409, detail: "This filing is recorded as submitted or no longer on the application: its review is closed." });
     if (row.status !== "approved") refuse({ status: 409, detail: "Only an approved filing is re-approved; this one is not approved. Reload." });
@@ -425,7 +431,7 @@ export class ReviewRounds {
     const forms = this.formsOf(basis, b.filing), stored = await this.db.reviewRoundForm.findMany({ where: { roundFilingId: row.id } });
     const hp = hashesProblem(b.form_hashes, forms.map((f) => ({ item: f.item, hash: f.hash })));
     if (hp) refuse(hp);
-    const changed = withdrawnForms(forms.map((f) => { const s = stored.find((x) => x.itemId === f.item); return { item: f.item, waits: f.waits, liveHash: f.hash, stamp: s?.stampedAt ? { hash: s.stampHash, by: row.representative } : null }; }), rep);
+    const changed = withdrawnForms(forms.map((f) => { const s = stored.find((x) => x.itemId === f.item); return { item: f.item, waits: f.waits, liveHash: f.hash, validatedSha: f.validatedSha, stamp: s?.stampedAt ? { hash: s.stampHash, by: row.representative, file: { kind: s.stampFileKind, sha256: s.stampFileSha256 } } : null }; }), rep);
     if (!changed.length) refuse({ status: 409, detail: "Nothing changed since this filing was approved: its approval stands. Reload." });
     // BR-8: a changed fact the representative typed themself makes them an author.
     const snaps = new Map((await this.db.answerSnapshot.findMany({ where: { id: { in: stored.map((s) => s.stampSnapshotId).filter((x): x is string => !!x) } }, select: { id: true, factsJson: true } })).map((s) => [s.id, ((s.factsJson ?? {}) as StoredFacts).facts ?? []]));
@@ -435,7 +441,7 @@ export class ReviewRounds {
     // Review m5, break m2: ticks carry only when the representative of record made them (a new representative's round
     // starts with their own); the items not ticked by them are recorded as confirmed unticked by this one click.
     const mine = checks.filter((k) => k.tickedBy === rep);
-    const carry = { stamps: new Map(stored.filter((s) => stampCurrent(s.stampedAt ? { hash: s.stampHash, by: row.representative } : null, { hash: forms.find((f) => f.item === s.itemId)?.hash ?? null, representative: rep }).current).map((s) => [s.itemId, s])), ticks: new Map(mine.map((k) => [k.itemKey, { by: k.tickedBy, at: k.tickedAt }])) };
+    const carry = { stamps: new Map(stored.filter((s) => stampCurrent(s.stampedAt ? { hash: s.stampHash, by: row.representative, file: { kind: s.stampFileKind, sha256: s.stampFileSha256 } } : null, { hash: forms.find((f) => f.item === s.itemId)?.hash ?? null, representative: rep, validatedSha: forms.find((f) => f.item === s.itemId)?.validatedSha ?? null }).current).map((s) => [s.itemId, s])), ticks: new Map(mine.map((k) => [k.itemKey, { by: k.tickedBy, at: k.tickedAt }])) };
     const unticked = checks.filter((k) => k.source !== "form" && k.tickedBy !== rep).map((k) => k.itemKey);
     let made: { id: string; number: number } | null = null;
     const authored = changedBy(since, actor.id) || this.typedBy(basis, forms.filter((f) => changed.some((w) => w.item === f.item)), actor.id, row.decidedAt ?? round.sentAt);

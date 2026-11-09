@@ -266,7 +266,7 @@ function ApproveDialog({ v, row, hashes, close, onRefused, onDone }: { v: Review
       <div className="space-y-2 text-[13px]" data-approve-dialog>
         {unticked.length ? <><p>{unticked.length === 1 ? `"${unticked[0].wording}" is not ticked.` : `${unticked.length} checklist items are not ticked. Approve anyway? This is recorded.`}</p>
           {unticked.length > 1 ? <ul className="list-disc pl-5">{unticked.map((k) => <li key={k.key}>{k.wording}</li>)}</ul> : <p>This is recorded.</p>}</> : null}
-        <p>Each form is stamped with its file and the facts it read. A later change to a fact withdraws only the forms that read it.</p>
+        <p>Each form is stamped with the facts it read and its file. A form with no file for these facts yet (a barcode form not read back) is stamped with the validated copy read back next. A later change to a fact withdraws only the forms that read it.</p>
         {row.open_critical.length ? <Notice tone="warn" title={`${plural(row.open_critical.length, "open critical warning")}`}>They stay on Ready to file, passed there with a reason or fixed.</Notice> : null}
         {self !== null ? <label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 size-4" checked={self} onChange={(e) => setSelf(e.target.checked)} aria-invalid={err && self === false ? true : undefined} /><span>I prepared and reviewed this filing myself (logged as Self-reviewed).</span></label> : null}
         {err ? <p role="alert" className="text-text-danger">{err}</p> : null}

@@ -1,0 +1,26 @@
+{
+ "job_id": "studio-form-review-check-imm-5257-09-2023-d5c57403",
+ "path_code_sha256": "aeaec8a4c5243b955faf5815344920ff44086c60e99e282a2edfed8978221129",
+ "screening_sources": [
+  {
+   "file": "prototype/expected/slice-1-field-map.json",
+   "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+  },
+  {
+   "file": "prototype/expected/slice-1-field-map.v2.json",
+   "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+  },
+  {
+   "file": "prototype/p1/e5-family-values.json",
+   "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+  },
+  {
+   "file": "prototype/p1/adobe-complete-1295-values.json",
+   "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+  }
+ ],
+ "digest_sha256": "749a1efa52b15d2450b03aad580749d0d855434f6f1091cf1a7c88ea2f94798e",
+ "run_id": "studio-form-review-check-imm-5257-09-2023-d5c57403-stub-20261109t053621615z-35481f",
+ "at": "2026-11-09T05:36:21.966Z",
+ "stub_calls": 1
+}
