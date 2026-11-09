@@ -1,3 +1,4 @@
+# main 0e0ccbb64, fresh isolated copy qa_c75p (:4474), fixture setup (setup_visitor_visa 15/15, setup_vv_m3 44/46: S2w and S7a red as on main, unrelated), scripts/probe_c75_api.ts, live AI off, US$0
 [plan] {"status":200,"replay":true,"live_allowed":false,"sha":"81cbec529a61"}
 [client plan] 403
 [client replay] 403

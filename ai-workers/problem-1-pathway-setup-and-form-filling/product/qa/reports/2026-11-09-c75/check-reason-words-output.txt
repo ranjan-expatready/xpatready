@@ -1,3 +1,4 @@
+# main 0e0ccbb64, the same copy as api-probes-main.txt, tests/qa/check_qa365_finding_reason_words.ts
 QA-365 — a finding's reason needs words
 (acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
 

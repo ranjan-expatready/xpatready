@@ -1,3 +1,4 @@
+# main 0e0ccbb64, studio/tools/gate-b.mjs, GATE_B_DATA=checkpoint GATE_B_NO_DIFF=1 GATE_B_JOBS=1, fresh isolated copy, this cloud container
 Gate B: the PR names C7.5; claims Works for none (no bug check).
   packs: C7.5.test.ts
     C7.5.test.ts on the checkpoint: exit 1, 11/16 passed (129 s: copy 10, Load the configured checkpoint 98, run 21)
