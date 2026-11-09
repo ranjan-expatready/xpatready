@@ -28,6 +28,8 @@ export type ReadinessInputs = {
   /** The per-form fact result (engine/runtime/forms.ts readiness) and who owes each fact. */
   factsOf: (form: string, subject: string) => Readiness;
   owesFact: (fact: string, subject: string) => Owes;
+  /** C7.9: the must-verify facts this form writes for this person that rest on an unchecked client-given value. */
+  unverifiedOf?: (form: string, subject: string) => { fact: string; label: string; key: string }[];
   /** Whether a validated copy is read back and still matches today's facts (C-9, C-10). */
   validatedCurrent: (form: string, subject: string) => boolean;
   /** Each form item's signing steps done (C8.1): a scan received means signed. */
@@ -118,7 +120,7 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
       const signed = f.signature === "HAND_SCANNED" ? x.scanned(f.id) : f.signature === "PEN" ? !!f.steps?.some((s) => s.key === "sign_in_pen" && s.done) : false;
       const who = f.signers ?? []; // never trusted to be there: a line without it reads as "each person who signs it"
       const signers = who.map((s) => SIGNER[s] ?? s);
-      return { item: f.id, form: f.form, subject: f.subject, person: f.person, channel: f.channel, readiness: facts, owesFact,
+      return { item: f.id, form: f.form, subject: f.subject, person: f.person, channel: f.channel, readiness: facts, owesFact, unverified: x.unverifiedOf?.(f.form, f.subject) ?? [],
         needsValidate: x.barcode(f.form), validatedCurrent: x.validatedCurrent(f.form, f.subject), signature: f.signature, signed, signers, signedBy: f.signed_by,
         signerOwes: who.length && who.every((s) => s === "representative") ? "representative" : "client",
         // An accepted-until date is set only on an edition IRCC has replaced (P-151 (1)): it is superseded until then.
