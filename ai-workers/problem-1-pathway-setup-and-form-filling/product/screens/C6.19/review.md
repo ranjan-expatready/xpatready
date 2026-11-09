@@ -135,3 +135,57 @@ Verdict: Approve dcfe4188e21dff27a5978889bf95fffda74c8cd1
 * Review m3 / break m6: the Status column is cramped at 200 % zoom.
 * Break m5: focus falls to `<body>` after a refused press.
 * Review m7: the graph does not see the routes' tests.
+
+## Round 3 (merge of main, diff-only, e117d76a3)
+
+Same independent reviewer, 9 Nov 2026. Scope is the merge only (P-318 (1)): `git show e117d76a3 --cc` and `git diff 0f271240f e117d76a3`. Main is 967388518 and the merge base is fc49dc5a4. I ran my copy on :4435 only (`isolated.sh rev3_c619`). It was started and stopped in one command, and dropped afterwards. All values are Sample. US$0. Unconfirmed: no counsel.
+
+Verdict: Approve e117d76a38fe55349f733fb47a8d341f30a5ea9c
+
+0 Blockers and 0 Majors. The merge changes no C6.19 file. The one conflict is resolved correctly. Nothing that main brought changes what C6.19 offers or copies, or who the giver is. Journey score: the round-1 **8/10** (`journey-test-reviewer-2026-11-09.md`) stands. No C6.19 file changed, so this round re-ran the scripted walk only, not a new unaided journey.
+
+### 1. Conflict resolution (`questionnaire.tsx` CHANNEL)
+* The merged map is the union of both sides. Main added `document_read: "read from a document"` and `checked_against_document: "checked against a document"`, and the branch's `earlier_case: "earlier case, re-confirmed"` is kept. Nothing was dropped or renamed.
+* The other `questionnaire.tsx` hunks are main's alone, and none of them conflicted:
+  * `WHO`, `toValue`, `toDraft`, `putAnswer` and `refusal` are now exported.
+  * `DocumentsButton` is imported and placed in the `AgentSection` header.
+  * The C6.19 line at `:844` ("· copied from <ref>, re-confirmed by …") is unchanged.
+* `earlier_case` is still an unused key, as round 2 n5 noted, because a copy keeps its original channel. Keeping it in the resolution is harmless.
+
+### 2. What main brought, against C6.19's code
+* **The C6.19 files are untouched.** `git diff 0f271240f e117d76a3 --stat` shows no change to any of these:
+  * `api/src/earlier-facts.ts`
+  * `engine/runtime/earlier-facts.ts`
+  * `api/src/runtime.ts` (`state()` / `copiedFrom`)
+  * `engine/runtime/case.ts`
+  * `contracts/runtime.ts`
+  * `web/src/runtime/earlier-facts.tsx`
+  
+  In product code, main changed only `api/src/case-documents.ts` (+37/-6), the new `web/src/runtime/documents-drawer.tsx`, and `questionnaire.tsx`. The rest of main's change is tests and tools (`acceptance/C6.5*.test.ts`, `tests/check_c65_documents_api.ts`, `tools/gate-b.mjs`, `tools/check-gate-b.mjs`), which C6.19 neither imports nor runs.
+* **The document channels are not new to this branch.** `document_read` and `checked_against_document` were already written by `case-documents.ts` at the approved head 0f271240f (lines 403, 475 and 503 there). The merge adds three things to Confirm & use:
+  * the L-SA9 tick gate (`ConfirmBody.checked`, `needsLook`, 422 `not_checked` / `not_this_document`);
+  * `needs_look`, `check_digits` and `evidence` on the GET;
+  * a narrower `differs` for values left for a person.
+  
+  None of these touches how answers are read by `state()` or by `offerFrom`.
+* **The offer.** `offerOf` filters earlier answers only on `rowKey`, UUID and `channel !== FIRM_RECORD` (`earlier-facts.ts:68`). An answer written by C6.5 is therefore offered like any other current single answer, both before and after the merge.
+* **The copy.** The copy keeps `channel`, `actor`, `at` and `from`, plus the `earlier_*` / `reconfirmed_*` markers (`:147`). It also keeps `status`, `verifiedBy` and `verifiedAt`. The giver of a document-read answer is still the officer who confirmed the document, and `copied_from` is still said apart. The only visible change is that such a copy's Agent view line now reads "read from a document · …" through main's new label, where before it fell back to "answered · …". The copy drops `document`, `page` and `reader` from the source. The merge does not change that, and no code at e117d76a3 reads them back from a current answer: the drawer and `case-documents.ts` only write them.
+* **The other direction (a C6.19 copy is the current answer when a document is read).** `needsLook` and `differs` compare values only, so a copy is treated like any current answer. If the copy agrees with the document, Confirm & use writes a VERIFIED version with `from: <copy id>`. `state()` then shows the copy's kept channel and giver as `answered`, so the first giver stays visible. This path existed before the merge, at 0f271240f line 403.
+
+### 3. P-425
+* The merge diff touches nothing under `engine/`.
+* Its added lines in `api/`, `web/`, `contracts/` and `tools/` contain no combination key, no `combinationKey` and no program name or branch. I grepped them for combination, express, cec, fsw, pnp, visitor, work_permit, study and program, and found no hits.
+
+### What I ran (merged head, my own copy)
+* **Pack** `acceptance/C6.19.test.ts 4435 xr_studio_rev3_c619`: **68/68, exit 0**.
+* **Walk** `check_c619_earlier_facts_browser.cjs 4435 <scratchpad>`: **16/16, exit 0**, with no page errors. The shots went to my scratchpad, not to the screens folder.
+* **Type-check:**
+  * `web` `tsc --noEmit`: exit 0.
+  * `api` `tsc --noEmit`: exit 2. All 15 errors are in old test files that neither the merge nor C6.19 touch (`tests/check_c18_age_case.ts`, `check_c69_runs.ts`, `check_cost_check.ts`, `check_vv_checklist.ts`, `check_x2b_bulk_apply.ts`). `api/src` and the C6.5 / C6.19 tests are clean.
+* The copy was stopped, and its database and files were dropped.
+
+### Minor (Should, follow-up for the C6.5 drawer's owner; not this PR's to fix)
+* **d1.** `documents-drawer.tsx:264` (`answerBy`) describes a current answer only by its channel and giver: "Client A typed it", "you entered it". For a C6.19 copy, that is the giver on the earlier case, which is true, but the drawer does not say that the value was copied from <ref>. The Agent view line does say so. Showing `copied_from` there too would keep the two in line.
+
+### Note
+* The working tree holds uncommitted changes to `screens/C6.19/screenshots/01…07` (the builder's re-walk). They are not part of e117d76a3, and I did not touch them.
