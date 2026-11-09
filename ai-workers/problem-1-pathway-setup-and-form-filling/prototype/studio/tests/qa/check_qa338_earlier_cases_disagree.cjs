@@ -1,5 +1,5 @@
 // QA-338 (C6.19 BR-6, BR-1; qa lane 9 Nov): when two earlier cases of the same client disagree on a fact, the card's
-// default earlier case (the newest) offers its own copy with no sign that a later confirmation elsewhere says otherwise.
+// default earlier case (the newest, pre-selected until #1441) offered its own copy with no sign that a later confirmation elsewhere says otherwise.
 // Case A (Visitor visa): passport number and expiry 2031-05-09 confirmed → case B (With an LMIA) re-confirms both from A
 // → A's expiry is corrected to 2025-01-15 and confirmed → case C (With an LMIA): the card's first (default) earlier case
 // is B, whose expiry row reads 2031-05-09, New, no flag; A's row reads Expired. Fails today; passes once the stale copy is
