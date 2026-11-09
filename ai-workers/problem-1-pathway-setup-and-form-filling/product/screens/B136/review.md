@@ -93,4 +93,19 @@ A real screen reader. An intended user's unaided walk (D17, D20 stay with the fo
 **Minor R2-3: role words copied into `validate.ts:338`.** `providerWords` hard-codes the labels of four role keys. That repeats `roleWords`/`WHO_WORDS`, and custom role labels are not used. Fix: reuse one source.
 **Minor R2-4: double full stop.** The drawer's returned note reads "…: Return: check the order.." when the note already ends in a full stop.
 
-**Verdict: Block** (commit 81f399cc963730019de748a174f66987b9945e58). Fix Major R2-1 (the explicit `any` at `engine/validate.ts:344`). The Minors can be fixed or listed as a follow-up row.
+**Round 2 result: Block** (commit 81f399cc9): Major R2-1.
+## Round 3: re-review of `81f399cc9..9be06cd0d643c053084a9ba0f9aa2419fbcf056b` (diff only)
+**R2-1 closed:**
+* `engine/validate.ts:344` now casts to `{ default_provider_roles?: string[] } | undefined`.
+* `count-any.mjs --against origin/main` and `--against 0b51fe3b9` both give 418 = 418.
+* No tsc error in the touched files.
+
+**R2-3 closed:** `providerWords` now uses `roleWords` (gives "principal applicant", "spouse or partner", "child", "sponsor"; a custom role key reads with spaces).
+
+**R2-2 closed:** Add clears `moved`.
+
+**R2-4 closed:** the note's trailing full stops are stripped.
+
+**Rerun here:** check_c614_providers 23/23 (break M2 ×3), check_engine 44/44, check_c615 34/34. The diff touches nothing the pack or walk read beyond those words; the builder's pack 35/35 and walk 11/11 at dcd861aec were not rerun here. No new finding.
+
+**Verdict: Approve** (commit 9be06cd0d643c053084a9ba0f9aa2419fbcf056b). No open Blocker or Major. The round-1 fallback point stays with the tech lead (SA-1B-151 r3).
