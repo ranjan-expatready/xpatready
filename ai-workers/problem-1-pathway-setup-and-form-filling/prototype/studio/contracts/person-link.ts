@@ -12,7 +12,7 @@ const idemKey = z.string().trim().min(8, "An idempotency key has at least 8 char
 const reason = (missing: string) => z.string({ message: missing }).trim().min(5, missing).max(300, "Keep it to 300 characters.").refine(clean, "Remove the control or invisible characters from this text.").refine((x) => /[\p{L}\p{N}]/u.test(x), missing);
 
 /** Send or resend to an adult on the case (the principal or case staff). Without an address: Resend, to the address of
- *  the person's newest link (for the principal after acceptance, the kept address). */
+ *  the person's newest link (for the principal after acceptance, the kept address or the one staff set after it). */
 export const SendLink = z.object({
   address: z.string({ message: "Enter their email address." }).trim().min(1, "Enter their email address.").max(254, "An email address has at most 254 characters.").refine(clean, "Remove the control or invisible characters from the address.").optional(),
   idempotencyKey: idemKey.optional(),
@@ -50,6 +50,12 @@ export const LINK_WORDS = {
   xActor: "This page works only from the link in your email: it does not use the Studio's simulated people.",
   linkOnly: "A person's own link reaches only their own questions, never the firm's or the client's pages.",
 } as const;
+/** QA-359 (P-441): what a one-press Resend does, in words, from the server's `resend` (where it goes and its kind). */
+export const resendWords = (label: string, r: { to_masked: string; kind: "new" | "same" | "firm" }) => r.kind === "same"
+  ? { tip: `Sends the firm's link to ${r.to_masked} again; it keeps working.`, done: `The firm's link was sent to ${label} at ${r.to_masked} again. It still works.`, where: `The firm sent ${label}'s link to ${r.to_masked}. Resend sends it there again; only the firm can change the address.` }
+  : r.kind === "firm"
+    ? { tip: null, done: null, where: `The firm's link to ${r.to_masked} no longer works. Only the firm can send ${label} a new one.` }
+    : { tip: `A new link to ${r.to_masked}; the earlier one stops working.`, done: `A new link was sent to ${label} at ${r.to_masked}. The earlier one no longer works.`, where: null };
 
 /** One person's link as a screen shows it. state: none (never sent) · sent · accepted · expired · taken_back ·
  *  superseded · locked. The token and the code are never in it. */
@@ -75,8 +81,13 @@ export type PersonPrivacy = {
   /** BR-1: an adult may get their own link; otherwise why not (no date of birth, under 18, the principal). */
   adult: boolean; why_not: string | null;
   private: PrivacySetting; link: PersonLinkState | null;
-  /** The address the person accepted on, masked: the only one the principal may resend to (BR-3). */
+  /** The address the person accepted on, masked (BR-3). */
   kept_masked: string | null;
+  /** Where this viewer's one-press Resend goes (the newest link's address, masked) and what it does (QA-359, P-441):
+   *  "new" a new link that ends the earlier one; "same" the firm's link sent again, which keeps working (the principal
+   *  after staff sent an accepted adult's link to a new address); "firm" none: that link no longer works and only the
+   *  firm sends a new one. Null while no link was ever sent. */
+  resend: { to_masked: string; kind: "new" | "same" | "firm" } | null;
   progress: ProgressOnly | null;
   /** The officer's line in words ("With Partner since 9 Nov · private from Client A"). */
   words: string;
