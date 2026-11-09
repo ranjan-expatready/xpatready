@@ -1,0 +1,40 @@
+C7.9 on 4a5b49bea (= main e7ad3ae96 + qa records), copy qa_p79 :4473, start Mon Nov  9 12:59:39 IST 2026
+NOTICE:  database "xr_studio_qa_p79" does not exist, skipping
+web bundle does not match web/, contracts/, engine/ (missing, unstamped or built from other code; QA-181): rebuilding
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_p79 on http://localhost:4473 (xr_studio_qa_p79), stops itself in 30 min
+reset 201
+load 201
+loaded Mon Nov  9 13:01:09 IST 2026
+C7.9 — Must verify before filing: the expert's flag, a CRITICAL warning on Ready to file passable with a reason
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C7.9-1 fail: someone without the author duty cannot propose the flag — 403
+PASS  C7.9-2 fail: a proposal needs a reason — "Write at least 5 letters or digits: why, for every combination."
+PASS  C7.9-3 pass: the author proposes "must verify before filing" on the passport number; it waits — "Passport Number · must verify before filing, for every combination"
+PASS  C7.9-4 fail (SA-1B-1 r9): a second person without the immigration expert's duty cannot approve it, in words — "Approver (simulated) does not hold the immigration expert's duty: only the immigration expert approves or returns \"must verify before filing\"."
+PASS  C7.9-5 pass and fail: To review puts it before the immigration expert as theirs to decide, and not before a second person without that duty — {"expert":"needs"}
+PASS  C7.9-6 pass: the immigration expert approves; the library shows the flag (the field's draft) — {"status":201,"lib":true}
+PASS  C7.9-6b fail (review M2): a returned change: proposing again is refused in words that say it was returned and to withdraw it first — {"returned":201,"again":409,"why":"A change of \"must verify before filing\" for \"Date Of Birth\" was returned (\"C7.9 pack: say which forms first (Sample).\"). Its proposer withdraws it first (To review › the change › Withdraw it), then proposes it again."}
+PASS  C7.9-6c pass (review M2): withdrawn by its proposer, it is proposed again and the immigration expert approves it — {"withdraw":201,"propose":201,"approve":201,"why":["{\"id\":\"daa6e169-2a84-4025-8ba7-4182e349b8d3\",\"kind\":\"field_must_verify\",\"kind_word\":\"must verify before filing\",\"key\":\"person.date_of_birth\",\"label\":\"Date Of Birth · must verify before fili
+PASS  C7.9-7 pass: the next release carries the flag, and the change is released — {"version":3,"why":""}
+PASS  C7.9-8 fail: with no passport number answered, there is no must-verify line (a missing fact is its own line) — []
+PASS  C7.9-9 pass (SA-1B-261 r7): the client's own typed passport number, checked by no one on staff: a CRITICAL warning on Ready to file naming it — {"status":200,"lines":["CRITICAL: IMM 5257 for Sample Client A: \"Number of the passport or travel document\" not verified: the client gave it and no one on staff has checked it. Check against the document and confirm, or pass with a reason."]}
+PASS  C7.9-10 fail (P-237): passing it needs a reason — "Say why this warning is passed (at least 5 characters, with words)."
+PASS  C7.9-11 pass (P-237): with a reason it is passed and recorded, never a block — {"status":200}
+PASS  C7.9-12 fail: a new client-typed value is not covered by the earlier pass: the warning is back — ["CRITICAL: IMM 5257 for Sample Client A: \"Number of the passport or travel document\" not verified: the client gave it and no one on staff has checked it. Check against the document and confirm, or pass with a reason."]
+PASS  C7.9-13 pass (SA-1B-260 r3): once staff confirm the section, the value is verified: no must-verify line — []
+PASS  C7.9-16 fail (review M1): a parent's date of birth the client typed (IMM 5645 writes it) raises the line, naming the relative — {"put":[200,200],"lines":["CRITICAL: IMM 5645 for Sample Client C: \"Date of birth (their parent 1)\" not verified: the client gave it and no one on staff has checked it. Check against the ","CRITICAL: IMM 5645 for Sample Spouse C: \"Date of birth (their paren
+PASS  C7.9-17 fail (break F1): approving the flag after its field was merged is refused in words, and nothing is written over the merge — {"merge":201,"approve":409,"why":"\"Family Name At Permanent Residence\" was merged into person.other_family_name: set \"must verify before filing\" on that field instead. Nothing was changed. Return the change; the author proposes it on person.other_family_",
+PASS  C7.9-18 fail (break F3): proposing the flag on a field already merged is refused, naming the field it was merged into — "\"Family Name At Permanent Residence\" was merged into person.other_family_name: set \"must verify before filing\" on that field instead. Nothing was changed."
+PASS  C7.9-19 pass (break F2): an approved change whose field was merged since is never stuck: its proposer withdraws it, and it says the flag did not carry over — {"merge":201,"withdraw":201,"why":"{\"id\":\"1c7fa443-d0b7-4019-a738-73f3b3282208\",\"kind\":\"field_must_verify\",\"kind_word\":\"must verify before filing\",\"key\":\"person.given_name_at_permanent_residence\",\"label\":\"Given Name At Permanent Residence · 
+PASS  C7.9-20 pass (F5 ruling, P-244): the client re-confirms the background answer an officer recorded: it keeps the staff check, no line — {"release":{"version":4,"why":""},"typed":200,"reconfirm":201,"lines":[]}
+PASS  C7.9-21 fail (F5 ruling): the client changes it (their own answer now): the CRITICAL line — {"changed":200,"lines":["CRITICAL: IMM 5257 for Sample Client F: \"Whether, within the past two years, the person or a family member has had tuber"]}
+PASS  C7.9-14 pass (SA-1B-261 r7): a passport number entered by staff counts as verified: no must-verify line — {"status":200,"lines":[]}
+PASS  C7.9-15 fail: a client-typed answer of a field without the flag (family name) raises no must-verify line — {"status":200,"lines":[]}
+
+23/23 passed
+pack exit 0  end Mon Nov  9 13:01:15 IST 2026
+stopped qa_p79 (database and files removed; log in var/isolated-logs/qa_p79-api.log)
