@@ -11,6 +11,7 @@
 // stops applying keeps its row with active = false, so its id (and an item's chosen channel) come back with it.
 // C7.6 (review m10 on #861): one write a read can make outside that: a filing marked Ready to file that is no longer
 // ready goes back to Not started, recorded with the reader as the actor (the reader is who saw it change).
+import { unverifiedOf } from "../../engine/runtime/must-verify.ts";
 import { createHash } from "node:crypto";
 import { Body, Controller, Get, Head, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Res } from "@nestjs/common";
 import type { Response } from "express";
@@ -42,6 +43,7 @@ import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
 import { copyStateOf, readinessOfCase, waitingFactsKey, type PreparedForm } from "./readiness-inputs.ts";
+import { lowestOf } from "../../engine/runtime/readiness-figure.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
 import { draftNote, releaseOutOfDate, reviewCounts, touchedFilings } from "../../engine/runtime/release-update.ts";
 import { releaseLabel, type Readiness } from "../../contracts/runtime.ts";
@@ -140,7 +142,7 @@ export class CasePrepare {
     // uses the default. One reading of the release's modes for this view and GET …/filings (releaseModes).
     const modes = releaseModes(s.combination.participants ?? []);
     const first = deriveFilings(own!.combinationKey, people, undefined, { ages, modes, label: s.combination.label });
-    if (!first.derived) return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: false, why: first.why, portal: own!.portalKey ?? null, filings: [], groups: [], items: [], waiting: [], not_needed: [], fees: [], readiness: [], stage1: [], version: "0" };
+    if (!first.derived) return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: false, why: first.why, portal: own!.portalKey ?? null, filings: [], groups: [], items: [], waiting: [], not_needed: [], fees: [], readiness: [], figures: [], case_figure: null, stage1: [], version: "0" };
 
     // Items the release and the case give each filer (forms by who and minimum age, the checklist's documents, biometrics).
     const { known } = knownOf(s, people, clean, rows, today);
@@ -561,11 +563,16 @@ export class CasePrepare {
     }
     // Devin on #1344: current only when the facts and the repeating groups it reads are both unchanged (copyStateOf).
     const copyOf = (form: string, subject: string) => copyStateOf(forFiling.get(`${form}|${subject}`), { hash: inputHash(covOf(form, subject)?.facts ?? []), groups: groupFacts(view, form, subject) }, pin.configReleaseId);
+    // C7.9 (review M1 on #1282): answers read as knownOf reads them: the application's subject as "case", relatives under
+    // their own key (state() keys them), removed rows never.
+    const reading = { aboutOf: (id: string) => (people.find((p) => p.subjectId === id)?.role === "case" ? "case" : id), liveRows: new Set(rows.map((x) => x.rowKey)) };
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems, reviewAfterMove, releaseUpdate,
       byHand: (form, subject) => handOf.get(`${form}|${subject}`) ?? [],
       copy: copyOf,
       documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
-      factsOf: (form, subject) => formReady(form, subject), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
+      factsOf: (form, subject) => formReady(form, subject),
+      // C7.9 (P-242): the must-verify facts this form writes from an unchecked client-given value.
+      unverifiedOf: (form, subject) => unverifiedOf(s, answers, formCoverage(s, people, answers, rows, form, subject)?.facts ?? [], reading), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
       validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
       editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: (form, subject) => {
         // Breaker N1 (#861 round 2): the confirmed values the form writes, and every fact it still waits for with its
@@ -600,7 +607,12 @@ export class CasePrepare {
     return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: true, combination: own!.combinationKey, portal: own!.portalKey ?? null, portal_words: own!.portalKey ? `Filed through ${own!.portalKey === "APR_PORTAL" ? "APR Portal" : own!.portalKey}: set by the combination, not on the case` : null,
       // #325's list of people with no filing, each with the reason (kept for its readers and tests).
       not_filing: done.not_filing,
-      people: peopleView, filings, groups, items: toFill, waiting, not_needed: notNeeded, fees, stage1, readiness: readiness.map((x) => ({ ...x, pin_revision: pin.revision })), pin_revision: pin.revision, currency: done.currency, fees_worked_out: done.fees_worked_out, fees_why: done.fees_why, basis: done.basis, version, tasks };
+      people: peopleView, filings, groups, items: toFill, waiting, not_needed: notNeeded, fees, stage1, readiness: readiness.map(({ figure: _f, ...x }) => ({ ...x, pin_revision: pin.revision })),
+      // C7.10 (B143; AG-7-27, BR-30): each filing's readiness figure with its counted items and the rule, and the case's
+      // lowest state and lowest figure (each naming its filing), for the Ready to file panel, the case header and the
+      // team's header. Beside `readiness[]`, never inside it (C7.6's entries carry no percentage).
+      // Challenge M2: a filing recorded as submitted is marked so and never holds the case's lowest.
+      figures: readiness.map((x) => ({ ...x.figure, submitted: recordedFiling.has(x.filing) })), case_figure: lowestOf(readiness.map((x) => ({ ...x.figure, submitted: recordedFiling.has(x.filing) }))), pin_revision: pin.revision, currency: done.currency, fees_worked_out: done.fees_worked_out, fees_why: done.fees_why, basis: done.basis, version, tasks };
   }
 
   /** C6.12 (BR-16): split one filing out of a group, with a reason (the family maximum it loses is said first). The
