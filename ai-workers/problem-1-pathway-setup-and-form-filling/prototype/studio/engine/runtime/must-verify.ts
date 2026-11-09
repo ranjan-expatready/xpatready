@@ -8,9 +8,13 @@ import type { Snapshot } from "../snapshot.ts";
 import type { Answer } from "./case.ts";
 import type { FormFact } from "./forms.ts";
 
-/** The answer channel staff write on (api/src/runtime.ts: the Agent view). */
-export const STAFF_CHANNEL = "agent_view";
-export const isVerified = (a: Pick<Answer, "status" | "channel">) => a.status === "VERIFIED" || a.channel === STAFF_CHANNEL;
+/** The answer channel staff write on (api/src/runtime.ts: the Agent view), and the client's P-244 re-confirmation of an
+ *  answer staff recorded (engine/runtime/background.ts; the route refuses a changed value, so it is the same value). */
+export const STAFF_CHANNEL = "agent_view", CLIENT_RECONFIRM = "client_reconfirm";
+/** Verified (SA-1B-260 r3): confirmed by staff, entered or corrected by staff, or (tech lead's ruling on #1282, breaker F5,
+ *  option B; P-244, SA-1B-261 r7) the client's re-confirmation of the same value a staff member entered: it keeps the
+ *  staff check. A value the client changed is their own answer and is unverified. */
+export const isVerified = (a: Pick<Answer, "status" | "channel" | "origin">) => a.status === "VERIFIED" || a.channel === STAFF_CHANNEL || (a.channel === CLIENT_RECONFIRM && a.origin?.channel === STAFF_CHANNEL);
 
 /** The release's must-verify facts. */
 export const mustVerifyFacts = (s: Snapshot) => new Set(((s.canonical_fields ?? []) as { id: string; must_verify?: boolean }[]).filter((f) => f.must_verify === true).map((f) => f.id));

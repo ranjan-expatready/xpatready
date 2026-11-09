@@ -109,6 +109,31 @@ await main("C7.9", "Must verify before filing: the expert's flag, a CRITICAL war
     r = f2 ? await call("POST", `/library/changes/${f2}/withdraw`, { note: "C7.9 pack: merged after approval." }, AUTHOR) : r;
     ok("C7.9-19 pass (break F2): an approved change whose field was merged since is never stuck: its proposer withdraws it, and it says the flag did not carry over", mergedC.status < 300 && r.status < 300 && sql(`select status from library_change where id = '${f2}'`) === "WITHDRAWN" && /did not carry over/.test(sql(`select decision_note from library_change where id = '${f2}'`) ?? ""), { merge: mergedC.status, withdraw: r.status, why: words(r) });
   } else ok("C7.9-17 setup: the four fields the merge steps use are in the library", false, [MA, MB, MC, MD].filter((k) => !live(k)));
+  // Tech lead's ruling on #1282 (breaker F5, option B; P-244): the client's re-confirmation of the same background answer
+  // an officer recorded keeps the staff check; a value the client changes raises the line.
+  const c5 = await openCase(vv, [{ role: "principal", name: "Sample Client E", dob: yearsAgo(41) }]);
+  const P5 = c5.subjects["Sample Client E"];
+  const qs5 = async (actor: string, mode: string) => ((await call("GET", `/runtime/cases/${c5.id}/questionnaire?mode=${mode}`, undefined, actor)).body?.sections ?? []).flatMap((x: { questions: (Q & { background?: boolean; value_type?: string; group?: string | null; hidden?: boolean })[] }) => x.questions);
+  const bgQ = (await qs5(c5.officer, "agent")).find((x) => x.subjectId === P5 && x.background && x.value_type === "yes_no" && !x.group && !x.hidden);
+  if (bgQ) {
+    const BG = bgQ.fact;
+    r = await call("POST", `/library/fields/${BG}/must-verify`, { on: true, reason: "C7.9 pack: a background answer (Sample)." }, AUTHOR);
+    if (r.body?.id) await call("POST", `/library/changes/${r.body.id}/approve`, { note: "C7.9 pack: the expert (Sample)." }, REVIEWER);
+    const bgRel = await release(vv, "C7.9 pack: a background answer flagged");
+    const c6 = await openCase(vv, [{ role: "principal", name: "Sample Client F", dob: yearsAgo(39) }]);
+    const P6 = c6.subjects["Sample Client F"];
+    const bgOf = async (actor: string, mode: string) => ((await call("GET", `/runtime/cases/${c6.id}/questionnaire?mode=${mode}`, undefined, actor)).body?.sections ?? []).flatMap((x: { questions: Q[] }) => x.questions).find((x: Q) => x.subjectId === P6 && x.fact === BG) as Q | undefined;
+    const typed = await call("PUT", `/runtime/cases/${c6.id}/answers/${P6}/${BG}`, { value: "no", expectedId: null }, c6.officer);
+    const officerId = (await bgOf(CLIENT, "sqr"))?.answer?.id;
+    const re = officerId ? await call("POST", `/runtime/cases/${c6.id}/answers/${officerId}/reconfirm`, {}, CLIENT) : { status: 0, body: null };
+    const label = new RegExp(bgQ.label ? bgQ.label.slice(0, 25).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "^$", "i");
+    let bgLines = (await mv(c6.id)).filter((w) => label.test(w.words));
+    ok("C7.9-20 pass (F5 ruling, P-244): the client re-confirms the background answer an officer recorded: it keeps the staff check, no line", !!bgRel.version && typed.status < 300 && re.status < 300 && bgLines.length === 0, { release: bgRel, typed: typed.status, reconfirm: re.status, why: re.status >= 300 ? words(re) : undefined, lines: bgLines.map((w) => w.words.slice(0, 120)) });
+    const cur = (await bgOf(CLIENT, "sqr"))?.answer?.id ?? null;
+    const changed = await call("PUT", `/runtime/cases/${c6.id}/answers/${P6}/${BG}`, { value: "yes", expectedId: cur }, CLIENT);
+    bgLines = (await mv(c6.id)).filter((w) => label.test(w.words));
+    ok("C7.9-21 fail (F5 ruling): the client changes it (their own answer now): the CRITICAL line", changed.status < 300 && bgLines.length >= 1, { changed: changed.status, why: changed.status >= 300 ? words(changed) : undefined, lines: (await mv(c6.id)).map((w) => w.words.slice(0, 120)) });
+  } else ok("C7.9-20 setup: a background Yes/No question on the case (IMM 5257's Background information block)", false, "none found");
   // A staff entry counts as verified; a field without the flag never raises it.
   const c2 = await openCase(vv, [{ role: "principal", name: "Sample Client B", dob: yearsAgo(35) }]);
   const P2 = c2.subjects["Sample Client B"];

@@ -34,6 +34,13 @@ ok("fail: the principal's answer for another person (the questionnaire) is clien
 const k2 = unverifiedOf(snap(true), [{ ...ans(P, F, "ZZ999", "DECLARED", "questionnaire"), id: "a-new-answer" }], [fact(P)])[0]?.key; // a new value is a new answer
 ok("pass: a new value gives a new key (a pass covers only the value it was given for)", !!k2 && k2 !== u[0].key);
 ok("review S2 pass: the key names the answer, never the value itself", !u[0].key.includes("AB123") && u[0].key.endsWith(client[0].id));
+// Tech lead's ruling on #1282 (breaker F5, option B; P-244): the client's re-confirmation of the same value staff entered
+// keeps the staff check; a value the client changed is unverified.
+const reconfirmed: Answer = { ...ans(P, F, "AB123", "DECLARED", "client_reconfirm"), origin: { channel: "agent_view", actor: "user-O", at: "2026-11-09T00:00:00Z" } };
+ok("F5 ruling pass: the client re-confirms the value an officer entered: verified, no line", isVerified(reconfirmed) && unverifiedOf(snap(true), [reconfirmed], [fact(P)]).length === 0);
+const changed: Answer = { ...ans(P, F, "AB999", "DECLARED", "questionnaire"), origin: null };
+ok("F5 ruling fail: the client changes the officer's value (their own answer): unverified, the line", !isVerified(changed) && unverifiedOf(snap(true), [changed], [fact(P)]).length === 1);
+ok("F5 ruling fail: a re-confirmation whose first source was not staff never counts as verified", !isVerified({ ...reconfirmed, origin: { channel: "questionnaire", actor: "user-P", at: "x" } }));
 // Review M1 on #1282: the whole "about" is matched: a parent's value and the application's value are judged on their own.
 const PAR = `${S}/parent_1`;
 let m1 = unverifiedOf(snap(true), [ans(PAR, F, "X1", "DECLARED", "questionnaire")], [fact(PAR)], R);
