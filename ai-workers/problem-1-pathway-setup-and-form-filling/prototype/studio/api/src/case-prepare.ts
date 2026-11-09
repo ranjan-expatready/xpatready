@@ -562,13 +562,16 @@ export class CasePrepare {
     }
     // Devin on #1344: current only when the facts and the repeating groups it reads are both unchanged (copyStateOf).
     const copyOf = (form: string, subject: string) => copyStateOf(forFiling.get(`${form}|${subject}`), { hash: inputHash(covOf(form, subject)?.facts ?? []), groups: groupFacts(view, form, subject) }, pin.configReleaseId);
+    // C7.9 (review M1 on #1282): answers read as knownOf reads them: the application's subject as "case", relatives under
+    // their own key (state() keys them), removed rows never.
+    const reading = { aboutOf: (id: string) => (people.find((p) => p.subjectId === id)?.role === "case" ? "case" : id), liveRows: new Set(rows.map((x) => x.rowKey)) };
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems, reviewAfterMove, releaseUpdate,
       byHand: (form, subject) => handOf.get(`${form}|${subject}`) ?? [],
       copy: copyOf,
       documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
       factsOf: (form, subject) => formReady(form, subject),
       // C7.9 (P-242): the must-verify facts this form writes from an unchecked client-given value.
-      unverifiedOf: (form, subject) => unverifiedOf(s, answers, formCoverage(s, people, answers, rows, form, subject)?.facts ?? []), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
+      unverifiedOf: (form, subject) => unverifiedOf(s, answers, formCoverage(s, people, answers, rows, form, subject)?.facts ?? [], reading), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
       validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
       editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: (form, subject) => {
         // Breaker N1 (#861 round 2): the confirmed values the form writes, and every fact it still waits for with its
