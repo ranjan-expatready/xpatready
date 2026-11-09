@@ -23,3 +23,6 @@ Row B142 = L-SA8 (P-242, P-237; SA-1B-1 rule 9, SA-1B-260 rule 3, SA-1B-261 rule
 
 ## Migration
 `20261109090000_c79_must_verify`: one column on `canonical_field`, and `readiness_pass`'s two code checks rewritten from the newest (`20261108041500_b162_no_copy`) plus `must_verify`. Re-stamped after main's newest when main was merged in (9 Nov), so no code is dropped and it runs after every check it rewrites; rollback recorded.
+
+## Walk at 1440 px (P-352), on a fresh copy loaded with the configured checkpoint (exit 0)
+`walk/01` the field page, Not marked · `02` the author's reason · `03` sent, waits for the immigration expert · `04` the approver reads the change · `05` the approver is refused: "does not hold the immigration expert's duty" · `06` the expert reads before → after · `07` approved · `08` the field page: Must verify before filing · (release, C5's steps; the client types the passport number, C6.6's step, both by API) · `09` the officer's Ready to file: "CRITICAL: IMM 5257 for Sample Client A: "Number of the passport or travel document" not verified …" with Pass with a reason · `10` the reason typed · `11` passed and recorded · `12` a new client value: the line is back · `13` the officer opens Sample Client A's tab and presses Confirm section on Personal details · `14` no must-verify line left.
