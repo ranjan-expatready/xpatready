@@ -1,6 +1,6 @@
 {
   "basis": "SAMPLE",
-  "note": "C6.17 (B139; scaffolding, STAND-INS row for the tech lead): a route is an ordered list of existing combinations kept as data, with no new tree level (P-412 F13 (a)). Sample, not a recommended route: real routes come from the immigration expert. The key details, the deadline rule and the same-document pairs are Sample, not cited from canada.ca (ASSUMPTIONS.md).",
+  "note": "C6.17 (B139; scaffolding, STAND-INS row for the tech lead): a route is an ordered list of existing combinations kept as data, with no new tree level (P-412 F13 (a)). Sample, not a recommended route: real routes come from the immigration expert. The key details, the deadline rule and the same-document pairs are Sample, not cited from canada.ca (a row for ASSUMPTIONS.md is proposed to the tech lead on the PR).",
   "routes": [
     {
       "key": "study_then_work",
