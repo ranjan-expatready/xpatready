@@ -1,0 +1,15 @@
+# C6.14 build notes (runtime lane, 9 Nov, PR #1392)
+
+* **What:** one migration (`20261109093000_c614_shared_document_providers`: `document_type.default_provider_roles`, `checklist_line.providers` + reason/by/at, a check that a choice carries a reason); the engine's provider rules (`engine/runtime/case-checklist.ts` `providersFor`, `mayProvide`, `chosenProviders`, `candidatesOf`, `SHARED_WHO`, `NEVER_PROVIDES`); the library change of provider roles (`api/src/document-providers.ts`, wired into approve, withdraw, release and To review like C6.15's sets); the officer's change (`POST /api/runtime/checklist-lines/:id/providers`, `contracts/documents.ts` `ChangeProviders`); web: the drawer's "Who provides it when shared", To review's before → after, the case line's "Shared · Provided by …" and the "Change providers…" dialog.
+* **No combination key** in engine code (P-425): the rule reads the line's "whose document" and the type's roles.
+* **Snapshot:** `default_provider_roles` only when set, so releases without roles are byte-identical (pack C6.14-11).
+* **Tests:** `tests/check_c614_providers.ts` (engine, 18 checks, pass and fail per rule); `acceptance/C6.14.test.ts` (31 steps, checkpoint, product routes only); `tests/walk_c614_1440.ts` (11 checks, screenshots in `walk/`).
+* **Not built here (named):** "Received from <person>" per provider and "Already on file" (SA-1B-214 r3, r6; AG-09's); the line's own override of the type's roles (SA-1B-151 r2, open Q3-7); a `case` line once per filing (SA-1B-215 r2).
+* **Walk** `walk/01`–`09`: drawer not set · editor filled · sent, waits · second person compares · approved · the case's one shared item with two providers · the dialog (child refused in the server's words) · no reason refused · the principal alone, chosen by the officer, with the reason.
+
+## The breaker's findings (break-report.md, at 0b51fe3b9) and what was done (cb5a6ee69)
+* **M1 fixed:** a reason with half an emoji or a control character is refused (400, in words) before anything is written, on both routes (`contracts/documents.ts` `UNSTORABLE`); fail tests: engine "break M1", pack C6.14-25b (nothing stored).
+* **M2 fixed:** the release line the expert signs names the roles in words ("provided by (when shared): principal applicant, then spouse or partner"; clearing them reads "not set"), `engine/validate.ts`; tests: engine "break M2" (3), pack C6.14-10b.
+* m1 (fallback person under 18 or of unknown age): kept as SA-1B-151 r3 says ("If no one is left, the filing's first applicant provides"); the dialog now pre-ticks only people who may provide, so Save is not refused for the fallback.
+* m2 retired type → 409 "Retired"; m3 the editor stays closed while any change is open; m4 invisible characters do not count towards a reason; m5 the same people again → 409, nothing audited (pack C6.14-26b); m6 audit in words, reasons end with a full stop; m7 "Use the defaults" shows whenever an officer's choice is stored; m8 "Provided by" wraps.
+* m9 (database check accepts odd values written by hand): not changed: only direct database writes reach it; every route refuses them.

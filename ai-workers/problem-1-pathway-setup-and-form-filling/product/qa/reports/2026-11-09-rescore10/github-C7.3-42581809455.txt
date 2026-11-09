@@ -1,0 +1,1 @@
+    C7.3.test.ts on the checkpoint: exit 0, 14/14 passed (108 s: copy 4, Load the configured checkpoint 75, run 29)
