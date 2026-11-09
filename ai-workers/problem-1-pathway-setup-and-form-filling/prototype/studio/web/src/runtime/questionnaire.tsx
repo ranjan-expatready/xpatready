@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { historyGaps, type Period } from "../../../../contracts/history";
 import { EmployerCaseSource, LINKED_FILE, type EmployerLink } from "./employer";
 import { HouseholdReads, ScopeTag } from "./scope-tag"; // C3.16
+import { DocumentsButton } from "./documents-drawer"; // C6.5 part 2b
 import { fillsText, groupLabel, inSentence, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 
 /** role: any role the case's release lists (B115: the sponsor too); role_label is that role in the release's own words. */
@@ -102,7 +103,7 @@ export function shown(q: Question, value: unknown): string {
 }
 
 /** The value to send: a date from its parts, an address or phone without empty parts; undefined when nothing is given. */
-function toValue(k: Kind, draft: unknown): unknown {
+export function toValue(k: Kind, draft: unknown): unknown {
   if (k === "date" || k === "month") {
     const p = draft as Parts;
     if (!p.y && !p.m && !p.d) return undefined;
@@ -122,7 +123,7 @@ function toValue(k: Kind, draft: unknown): unknown {
   if (typeof draft === "string") return draft.trim() ? draft.trim() : undefined;
   return draft ?? undefined;
 }
-function toDraft(k: Kind, value: unknown): unknown {
+export function toDraft(k: Kind, value: unknown): unknown {
   if (k === "date" || k === "month") return datePartsOf(value);
   if (k === "address" || k === "phone") return asParts(value);
   if (k === "yes_no" || k === "declaration") return typeof value === "boolean" ? value : undefined;
@@ -324,11 +325,11 @@ export function QuestionField({ q, draft, onChange, errors, warnings = [], idBas
 // ------------------------------------------------------------------ saving
 
 /** Saves one answer with the id the person saw (409 when someone changed it first). Returns the server's result. */
-function putAnswer(caseId: string, q: Question, value: unknown, row?: string) {
+export function putAnswer(caseId: string, q: Question, value: unknown, row?: string) {
   const seen = cellAnswer(q, row);
   return api<SaveResult>(`/runtime/cases/${caseId}/answers/${q.subjectId}/${q.fact}`, { method: "PUT", json: { value, expectedId: seen?.id ?? null, ...(row ? { row } : {}) } });
 }
-const refusal = (e: unknown) => (e instanceof ApiError ? (e.status === 409 ? `${e.message}` : e.problem.errors?.[0]?.message ?? e.message) : (e as Error).message);
+export const refusal = (e: unknown) => (e instanceof ApiError ? (e.status === 409 ? `${e.message}` : e.problem.errors?.[0]?.message ?? e.message) : (e as Error).message);
 
 /** Drafts for a set of questions (and row cells): what the person typed, compared with what is saved. */
 type Cell = { q: Question; row?: string };
@@ -731,10 +732,12 @@ function OfficerPill({ a }: { a: Answer }) {
   const title = `Recorded by ${WHO[a.officer.by] ?? "a member of staff"} on ${when(a.officer.at)}, as the client told them. ${a.awaits_client ? "Background answers are the client's: it is on the draft forms now, and nothing is printed or signed until the client re-confirms it." : again ? `The client re-confirmed it on ${when(again)}.` : "The client re-confirmed it."}`;
   return <Pill tone="info" title={title}>Officer</Pill>;
 }
-const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", client_reconfirm: "re-confirmed by the client", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case" };
+const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "Agent view", client_reconfirm: "re-confirmed by the client", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case",
+  // C6.5 (BIC-05): a value used from a document, and an answer checked against one.
+  document_read: "read from a document", checked_against_document: "checked against a document", earlier_case: "earlier case, re-confirmed" };
 /** C1.3: when the value was copied from the employer case (itself, or the answer a confirmation confirmed). */
 const linkedAt = (a: Answer) => a.channel === LINKED_FILE ? a.at : a.answered?.channel === LINKED_FILE ? a.answered.at : null;
-const WHO: Record<string, string> = { "user-O": "Case officer", "user-R": "Representative", "user-T": "Second representative", "user-S": "Solo representative", "user-P": "Client A", "user-Q": "Client B" };
+export const WHO: Record<string, string> = { "user-O": "Case officer", "user-R": "Representative", "user-T": "Second representative", "user-S": "Solo representative", "user-P": "Client A", "user-Q": "Client B" };
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 function AgentView({ view }: { view: View }) {
@@ -838,7 +841,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           {a ? (
             <>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} about={q.about_label} value={String(shown(q, a.value))} /><OfficerPill a={a} />{linkedAt(a) ? <EmployerCaseSource at={linkedAt(a)!} label={view.case.employer_link?.linked?.label} /> : null}</div>
-              <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{q.fills.length ? <> · <span title={q.fills.map((f) => `${f.form} for ${f.person}`).join("\n")}>fills {fillsText(q.fills)}</span></> : null}</p>
+              <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{a.copied_from ? ` · copied from ${a.copied_from.reference}, re-confirmed by ${WHO[a.copied_from.by] ?? "someone"} ${when(a.copied_from.at)}` : null}{q.fills.length ? <> · <span title={q.fills.map((f) => `${f.form} for ${f.person}`).join("\n")}>fills {fillsText(q.fills)}</span></> : null}</p>
               {a.problems.map((p, i) => <p key={i} className="flex items-start gap-1 text-xs font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{p}</p>)}
               {row ? null : checks.filter((c) => c.fact === q.fact).map((c) => <p key={c.id} className="flex items-start gap-1 text-xs font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{c.message}</p>)}
             </>
@@ -863,6 +866,8 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           {checks.length ? <Pill tone="warn" title={checks.map((c) => c.message).join(" ")}>{checks.length} to check</Pill> : null}
         </span>
         <span className="flex-1" />
+        {/* C6.5 part 2b: "Fill this from documents" (documents-drawer.tsx), staff only (the Agent view). */}
+        <DocumentsButton view={view} s={s} />
         <Button size="sm" variant={open > 0 ? "default" : "secondary"} disabled={!seen.length} busy={busy} onClick={() => void confirm()} title={seen.length ? "Confirm the answers shown in this section; an answer that changed since you looked is refused, never confirmed unseen" : "Nothing answered yet in this section"}>
           <Check aria-hidden />Confirm section
         </Button>

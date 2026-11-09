@@ -9,6 +9,7 @@ import type { Readiness } from "../../contracts/runtime.ts";
 import { createHash } from "node:crypto";
 import type { Db } from "./core.ts";
 import { changedGroups, type GroupFact } from "../../engine/runtime/forms.ts";
+import { closedOnce, readinessFigure, type ClosedFinding, type Figure } from "../../engine/runtime/readiness-figure.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RECEIVED = new Set(["received", "being_checked", "approved"]);
@@ -28,6 +29,8 @@ export type ReadinessInputs = {
   /** The per-form fact result (engine/runtime/forms.ts readiness) and who owes each fact. */
   factsOf: (form: string, subject: string) => Readiness;
   owesFact: (fact: string, subject: string) => Owes;
+  /** C7.9: the must-verify facts this form writes for this person that rest on an unchecked client-given value. */
+  unverifiedOf?: (form: string, subject: string) => { fact: string; label: string; key: string }[];
   /** Whether a validated copy is read back and still matches today's facts (C-9, C-10). */
   validatedCurrent: (form: string, subject: string) => boolean;
   /** Each form item's signing steps done (C8.1): a scan received means signed. */
@@ -77,7 +80,7 @@ export function waitingFactsKey(missing: { fact: string; about: string; reason: 
 
 /** Every filing's readiness on one case, from the prepare view's own items and the stored reviews, passes, findings,
  *  checklist lines and accepted-until dates. */
-export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<ReadinessView[]> {
+export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(ReadinessView & { figure: Figure })[]> {
   const ids = x.filings.filter((f) => UUID.test(f));
   // One query at a time (C6.12 break B1: 120 reads at once on one case must not starve the connection pool; parallel
   // reads here made the view's own read transaction wait past its start limit and answer 500).
@@ -85,6 +88,11 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
     reviews: { orderBy: [{ reviewedAt: "desc" }, { id: "asc" }], take: 1 }, passes: { orderBy: [{ passedAt: "asc" }, { id: "asc" }] } } }) : [];
   const reviews = rows.flatMap((f) => f.reviews), passes = rows.flatMap((f) => f.passes);
   const findings = ids.length ? await db.reviewFinding.findMany({ where: { caseId: x.caseId, filingId: { in: ids }, state: "open" }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }) : [];
+  // C7.10 (challenge M3): the filings' findings no longer open (closed in Review findings with a reason, or resolved by the
+  // rules) stay counted in the readiness figure; handed to the figure only, never to C7.6's readiness.
+  const closedFindings = ids.length ? await db.reviewFinding.findMany({ where: { caseId: x.caseId, filingId: { in: ids }, state: { in: ["acknowledged", "waived", "dismissed", "resolved"] } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], select: { id: true, filingId: true, subjectId: true, form: true, severity: true, state: true, quote: true, source: true, ruleKey: true } }) : [];
+  // Review M1 on #1389: a rules finding is one check per rule and person, however many rows its edits left (closedOnce).
+  const checkOf = (g: { source: string; ruleKey: string | null; subjectId: string }) => (g.source === "rules" && g.ruleKey ? `${g.ruleKey}|${g.subjectId}` : null);
   const rep = (await db.caseTeamMember.findFirst({ where: { caseId: x.caseId, role: "LEAD_REPRESENTATIVE", endedAt: null }, select: { userId: true } }))?.userId ?? null;
   // C6.5 (BR-7; C7.6 P-238): an open typed-versus-document check on a person of the filing is a CRITICAL warning.
   const openChecks = await db.answerCheck.findMany({ where: { caseId: x.caseId, state: "open" }, orderBy: [{ openedAt: "asc" }, { id: "asc" }], select: { subjectId: true, fact: true } });
@@ -118,7 +126,7 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
       const signed = f.signature === "HAND_SCANNED" ? x.scanned(f.id) : f.signature === "PEN" ? !!f.steps?.some((s) => s.key === "sign_in_pen" && s.done) : false;
       const who = f.signers ?? []; // never trusted to be there: a line without it reads as "each person who signs it"
       const signers = who.map((s) => SIGNER[s] ?? s);
-      return { item: f.id, form: f.form, subject: f.subject, person: f.person, channel: f.channel, readiness: facts, owesFact,
+      return { item: f.id, form: f.form, subject: f.subject, person: f.person, channel: f.channel, readiness: facts, owesFact, unverified: x.unverifiedOf?.(f.form, f.subject) ?? [],
         needsValidate: x.barcode(f.form), validatedCurrent: x.validatedCurrent(f.form, f.subject), signature: f.signature, signed, signers, signedBy: f.signed_by,
         signerOwes: who.length && who.every((s) => s === "representative") ? "representative" : "client",
         // An accepted-until date is set only on an edition IRCC has replaced (P-151 (1)): it is superseded until then.
@@ -141,8 +149,14 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<Readi
     const personOf = new Map(mineForms.map((f) => [f.subject, f.person]));
     if (caseSubject) personOf.set(caseSubject, "The application");
     const checks: OpenCheck[] = openChecks.filter((k) => personOf.has(k.subjectId)).map((k) => ({ fact: k.fact, label: k.fact.split(".").pop()!.replace(/_/g, " "), subject: k.subjectId, person: personOf.get(k.subjectId)! }));
-    const r = filingReadiness({ filing, forms, documents, openChecks: checks, findings: found, reviewed: !!review, reviewedBefore: !review && latest ? latest.reviewedAt.toISOString() : null, factsKey: factsHash.slice(0, 16), reviewWithdrawn: withdrawn, releaseUpdate: x.releaseUpdate?.(filing) ?? null, passes: mine, today });
-    return { ...r, status_rule: "P-315: only a barcode form without its validated copy blocks; every other line is passed with a reason or fixed.",
+    const input = { filing, forms, documents, openChecks: checks, findings: found, reviewed: !!review, reviewedBefore: !review && latest ? latest.reviewedAt.toISOString() : null, factsKey: factsHash.slice(0, 16), reviewWithdrawn: withdrawn, releaseUpdate: x.releaseUpdate?.(filing) ?? null, passes: mine, today };
+    const r = filingReadiness(input);
+    // C7.10 (B143, BR-30): the filing's readiness figure from the same input and lines; the prepare view puts it beside
+    // `readiness[]`, never inside an entry (C7.6's finish line stays: its entries carry no percentage).
+    const openRuleChecks = findings.filter((g) => g.filingId === filing).map(checkOf).filter((k): k is string => !!k);
+    const closed = closedOnce(closedFindings.filter((g) => g.filingId === filing).map((g) => ({ id: g.id, state: g.state as ClosedFinding["state"], check: checkOf(g),
+      words: `${g.severity.toUpperCase()} finding${g.form ? ` on ${g.form}` : ""} (${g.state === "resolved" ? "resolved: the facts now agree" : `${g.state} with a reason in Review findings`}): ${g.source === "ai" ? "flagged by the AI review" : g.quote}` })), openRuleChecks);
+    return { ...r, figure: readinessFigure(input, r, closed), status_rule: "P-315: only a barcode form without its validated copy blocks; every other line is passed with a reason or fixed.",
       reviewed: review ? { by: review.reviewedBy, kind: review.kind, licence_number: review.licenceNumber, at: review.reviewedAt.toISOString() } : null, facts_hash: factsHash, representative: rep };
   });
 }

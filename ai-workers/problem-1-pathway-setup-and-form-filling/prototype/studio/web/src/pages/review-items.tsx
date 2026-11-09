@@ -121,6 +121,14 @@ export function LibraryChangePage() {
         </div>
       ) : null}
       {(x as unknown as { sets?: SetsChange }).sets ? <SetsCompare v={(x as unknown as { sets: SetsChange }).sets} /> : null}
+      {(x as unknown as { must_verify?: MustVerifyChange }).must_verify ? (() => { const m = (x as unknown as { must_verify: MustVerifyChange }).must_verify; return (
+        // C7.9 (SA-1B-1 r9): what the immigration expert decides: the field's flag before → after.
+        <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-must-verify>
+          <dt className="text-text-muted">Field</dt><dd className="font-semibold">{m.field}</dd>
+          <dt className="text-text-muted">Now</dt><dd>{m.before ? "Must verify before filing" : "Not marked"}</dd>
+          <dt className="text-text-muted">Proposed</dt><dd className="font-semibold">{m.after ? "Must verify before filing" : "Not marked"}</dd>
+          <dt className="text-text-muted">What it does</dt><dd>A value the client gave that no one on staff has checked raises a CRITICAL warning on Ready to file, passable with a reason; it never blocks, and the form still fills. Only the immigration expert approves. Sample until the expert confirms.</dd>
+        </dl>); })() : null}
       {x.field ? (
         <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-change-field>
           <dt className="text-text-muted">Name</dt><dd className="font-semibold">{x.field.label}</dd>
@@ -141,8 +149,11 @@ export function LibraryChangePage() {
       </div>
       {x.form_field ? null : <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span>{x.kind === "field" ? " (generated from the group and the name)" : ""}</p></details>}
       {x.status === "RETURNED" && !mine ? <p className="text-sm text-text-muted" data-withdraw-not-mine>Only {x.proposed_by ?? "the person who proposed it"} can {LIFECYCLE_KINDS.includes(x.kind) ? "send it again" : "correct it"} or withdraw it.</p>
-        : x.status === "RETURNED" ? (x.form_field ? <><Notice title={x.form_field.ask ? "Ask it again" : "Confirm it again"}>{x.form_field.ask ? "A returned change of a form field is not sent again from here: withdraw it, then ask the Yes/No as its deciding question again on Review and release." : "A returned change of a form field is not sent again from here: withdraw it, then confirm the form field again on Review and release."}</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.supplies ? <><Notice title="Propose it again">A returned change of the facts a document supplies is not sent again from here: withdraw it, then propose the facts again with "Change the facts it supplies…" on its document type (Documents tab or Shared library › Document types).</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.background ? <><Notice title="Propose it again">A returned change of whether a section holds background answers is not sent again from here: withdraw it, then propose it again on Shared library › Sections.</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.action === "RENAME" ? <><Notice title="Rename it again">A returned rename is not sent again from here: rename it again on its page, where the check runs again; or withdraw it.</Notice><Withdraw id={x.id} /></> : LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has("review")
-        ? <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
+        : x.status === "RETURNED" ? (x.form_field ? <><Notice title={x.form_field.ask ? "Ask it again" : "Confirm it again"}>{x.form_field.ask ? "A returned change of a form field is not sent again from here: withdraw it, then ask the Yes/No as its deciding question again on Review and release." : "A returned change of a form field is not sent again from here: withdraw it, then confirm the form field again on Review and release."}</Notice><Withdraw id={x.id} label="Withdraw it" /></> : (x as unknown as { must_verify?: unknown }).must_verify ? <><Notice title="Propose it again">A returned change of "must verify before filing" is not sent again from here: withdraw it, then propose it again on its field (Shared library › Fields › the field).</Notice><Withdraw id={x.id} label="Withdraw it" /></> /* C7.9, review M2 on #1282 */
+          : (x as unknown as { sets?: unknown }).sets ? <><Notice title="Propose it again">A returned change of a document's substitute sets is not sent again from here: withdraw it, then propose the sets again in the line's drawer (Documents tab).</Notice><Withdraw id={x.id} label="Withdraw it" /></> /* C6.15: the same dead end */
+          : x.supplies ? <><Notice title="Propose it again">A returned change of the facts a document supplies is not sent again from here: withdraw it, then propose the facts again with "Change the facts it supplies…" on its document type (Documents tab or Shared library › Document types).</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.background ? <><Notice title="Propose it again">A returned change of whether a section holds background answers is not sent again from here: withdraw it, then propose it again on Shared library › Sections.</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.action === "RENAME" ? <><Notice title="Rename it again">A returned rename is not sent again from here: rename it again on its page, where the check runs again; or withdraw it.</Notice><Withdraw id={x.id} /></> : LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has((x as unknown as { must_verify?: unknown }).must_verify ? "sme" : "review") /* C7.9 (break F6): only the expert decides */
+        ? ((x as unknown as { must_verify?: unknown }).must_verify ? <Notice title={mine ? "You proposed this" : "The immigration expert decides"}>{mine ? "The immigration expert approves it or returns it with a reason (SA-1B-1 rule 9)." : "Only the immigration expert approves or returns \"must verify before filing\": switch to the Content reviewer (simulated), who holds that duty."}</Notice>
+          : <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>)
         : <>
           {/* ReviewCard (P-116 amended): the approval re-check, run now and said before the click. */}
           {/* Break M5: approving what IRCC accepts names every combination it leaves with a line filed in a refused way. */}
@@ -157,6 +168,8 @@ export function LibraryChangePage() {
         </>}
       {x.status === "APPROVED" && mine && me.has("author") && x.background ? <Withdraw id={x.id} label="Withdraw it before the release" /> : null}
       {x.status === "WAITING" && mine && me.has("author") && (x.action === "ADD" || x.action === "RENAME" || x.form_field || x.background) ? <Withdraw id={x.id} label={x.form_field || x.background ? "Withdraw it" : undefined} /> : null}
+      {/* C7.9 (review S3 on #1282): the proposer withdraws a waiting, or an approved and not yet released, must-verify change. */}
+      {(x.status === "WAITING" || x.status === "APPROVED") && mine && me.has("author") && (x as unknown as { must_verify?: unknown }).must_verify ? <Withdraw id={x.id} label="Withdraw it" /> : null}
     </div>
   );
 }
@@ -443,3 +456,6 @@ function SetsCompare({ v }: { v: SetsChange }) {
     </div>
   );
 }
+
+/** C7.9: the must-verify change the immigration expert reads (api/src/must-verify.ts mustVerifyView). */
+type MustVerifyChange = { field: string; before: boolean; after: boolean; reason: string };
