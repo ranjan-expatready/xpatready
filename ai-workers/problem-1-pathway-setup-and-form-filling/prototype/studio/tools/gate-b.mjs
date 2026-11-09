@@ -16,7 +16,9 @@
 //      when its run line has setup steps (they build a combination from an empty workspace, which the six already
 //      holds), labelled "fixture only": a PR claiming Works on such a pack still needs the qa lane's demo-data PASS
 //      (gate A, tech lead 4 Nov). A pack passes on exit 0 with no FAIL line; with named steps, on exit 0 or 1 when every
-//      named step has a PASS line and no FAIL line. Up to GATE_B_JOBS packs (default 3) run side by side, one copy and
+//      named step has a PASS line and no FAIL line. A capability with several packs (C6.5, C6.5-screen, C6.5-counts)
+//      holds each pack to the named steps it prints a line for, and a pack that prints none of them to its whole run;
+//      each named step must be green in one of them (a step no pack prints is refused). Up to GATE_B_JOBS packs (default 3) run side by side, one copy and
 //      port per slot; each copy's database and folder are removed after its run.
 //   3. Skipped: notes and records PRs (KIND from change-kind.sh, as CI already sorts them) and a PR that names no
 //      capability. A merge-queue batch (QUEUE) re-runs part 1 for each PR it names (#nnn in its title), with that PR's
@@ -253,6 +255,15 @@ export function stepsVerdict(id, steps, out) {
   }
   return missing;
 }
+/** Which named steps one pack's run prints a line for (PASS, FAIL or HELD): a capability with several packs holds each
+ *  pack to its own steps, and a pack that prints none of the named steps to its whole run. */
+export function stepsPrinted(id, steps, out) {
+  return steps.filter((s) => new RegExp(`^(?:PASS|FAIL|HELD)\\s+${esc(id)}[- ]${esc(s)}(?![0-9A-Za-z])`, "m").test(out));
+}
+/** The named steps no pack of the capability printed (each pack's printed list), so a named step is never unseen. */
+export function stepsUnprinted(steps, printedByPack) {
+  return steps.filter((s) => !printedByPack.some((p) => p.includes(s)));
+}
 /** The verdict on one pack's run: null when it passed, else why. Exit 0 with no FAIL line passes the whole pack; with
  *  named steps (never empty) exit 0 or 1 passes when each named step is green; a crash, a timeout or exit 2 never does. */
 export function packVerdict(id, steps, status, out) {
@@ -418,11 +429,13 @@ async function runPack(id, file, wanted, slot) {
     log.push(`    ${file} ${where}: exit ${last}, ${summary(out)} (${sec(t0, Date.now())} s: copy ${sec(t0, tUp)}${onSix ? `, ${demo} ${sec(tUp, tSix)}` : ""}, run ${sec(tSix, Date.now())})`);
     // A held part's steps (P-284) print HELD and fail nothing; the report names them, so a held step is never unseen.
     for (const l of out.split("\n").filter((x) => /^HELD\s/.test(x)).slice(0, 5)) log.push(`      ${l.slice(0, 500)}`);
-    const why = packVerdict(id, wanted, last, out);
+    // Several packs (C6.5-screen beside C6.5): this pack answers for the named steps it prints; none printed, its whole run.
+    const printed = wanted ? stepsPrinted(id, wanted, out) : null;
+    const why = packVerdict(id, wanted && (printed.length ? printed : null), last, out);
     // Exit 2, a crash, a timeout or no summary line: the pack's own last lines say why (never "exit 2" alone).
     const quiet = (last !== 0 && last !== 1) || summary(out) === "no summary line";
     if (quiet) for (const l of tail(out)) log.push(`      ${l}`);
-    return { log, why: why ? `${file} ${where}: ${why}${fails(out)}${quiet ? lastLines(out) : ""}` : null };
+    return { log, why: why ? `${file} ${where}: ${why}${fails(out)}${quiet ? lastLines(out) : ""}` : null, printed };
   } finally {
     await iso("stop");
     spawnSync("dropdb", ["-h", "127.0.0.1", "-p", "54329", "-U", "xr_studio", "--if-exists", db], { env, encoding: "utf8" });
@@ -592,6 +605,14 @@ async function main(argv) {
       for (let k = next++; k < runs.length; k = next++) results[k] = await runPackRecorded(runs[k].id, runs[k].f, runs[k].st, slot);
     }));
     for (const r of results) { for (const l of r.log) say(l); if (r.why) reasons.push(r.why); infra ||= Boolean(r.infra); }
+    // Every named step is green in one of its capability's packs: a step none of them prints is refused.
+    for (const [id, st] of cl.caps) {
+      if (!st || !st.length) continue;
+      const mine = runs.map((r, k) => (r.id === id ? results[k] : null)).filter((r) => r && !r.infra);
+      if (!mine.length) continue;
+      const unseen = stepsUnprinted(st, mine.map((r) => r.printed ?? []));
+      if (unseen.length) reasons.push(`${id}: named steps no pack printed: ${unseen.map((s) => `${id}-${s}`).join(", ")}`);
+    }
     say(`  packs took ${Math.round((Date.now() - t0) / 1000)} s in all`);
   }
   if (reasons.length) { say(infra ? "Gate B could not run every pack, and refuses:" : "Gate B refuses:"); for (const r of reasons) say(`  * ${r}`); return infra ? 2 : 1; }
