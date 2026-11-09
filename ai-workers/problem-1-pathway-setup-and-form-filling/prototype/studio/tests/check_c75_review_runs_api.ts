@@ -116,12 +116,12 @@ type F = { id: string; filing: string | null; subject: string; form: string | nu
   const plan2 = (await planOf({ forms: ["IMM 5257"], subject: P })).body as Plan;
   r = await runAs({ mode: "replay" });
   ok("C7.5 fail: changed values have no saved run: Saved is refused (409) in words (No saved review of this form edition with these values yet.), US$0, nothing changed", plan2.replay_available === false && plan2.forms[0].sheet_sha256 !== plan.forms[0].sheet_sha256 && r.status === 409 && /No saved review/.test(JSON.stringify(r.body)) && Number(sql(`select count(*) from review_finding where case_id='${c.id}' and source='ai'`)) === 2, r.body);
-  // Break m: a plan and a Saved run never write the sheet (only a live run does). The pack's own sheet is committed (the
-  // saved paid review read it), so this is checked on these changed answers, whose sheet nothing may ever have written.
-  ok("C7.5 break m: a plan or a Saved run leaves no copy of the answers on disk (the sheet file is written only for a live run)", !existsSync(join(SOLUTION, plan2.forms[0].sheet)), plan2.forms[0].sheet);
   writeMadeUp("b", inputsOf(plan2), { form_edition: plan2.forms[0].edition, findings: [], unreadable: [] }, { form_edition: plan2.forms[0].edition, findings: [], unreadable: [] });
   r = await runAs({ mode: "replay" });
   fs = await findings();
+  // Break m: a plan and a successful Saved run (just above) never write the sheet (only a live run does). The pack's own sheet is committed (the
+  // saved paid review read it), so this is checked on these changed answers, whose sheet nothing may ever have written.
+  ok("C7.5 break m: a plan or a successful Saved run leaves no copy of the answers on disk (the sheet file is written only for a live run)", !existsSync(join(SOLUTION, plan2.forms[0].sheet)), plan2.forms[0].sheet);
   ok("C7.5 pass: the finding whose quoted words left the form is resolved by the rules (on read, before this run), the dismissed one stays dismissed, and a run of the new values adds nothing", r.status === 201 && r.body?.added === 0 && fs.find((x) => x.id === fa!.id)?.state === "resolved" && sql(`select resolved_by from review_finding where id='${fa!.id}'`) === "rules" && fs.find((x) => x.id === fb!.id)?.state === "dismissed", { body: r.body, fs: fs.map((x) => [x.field, x.state]) });
 
   // ── a stale AI finding resolves on read (challenge M6): the quoted value changes, no run needed ──

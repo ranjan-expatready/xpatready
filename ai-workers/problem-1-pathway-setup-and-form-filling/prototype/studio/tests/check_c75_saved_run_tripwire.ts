@@ -82,8 +82,10 @@ const read = (rel: string) => { try { return readFileSync(join(SOLUTION, rel)); 
   const { c, P } = await packLikeCase();
   const plan = (await call("POST", `/runtime/cases/${c.id}/review-runs/plan`, { forms: ["IMM 5257"], subject: P })).body as Plan & { forms: (Plan["forms"][number] & { lines: ReviewSheet["fields"] })[] };
   const f0 = plan?.forms?.[0];
+  const movedLines = committed && f0?.lines ? moved(committed.fields, f0.lines) : [];
+  if (f0?.sheet_sha256 !== inputs[1]?.sha256) console.log(`      ${RUN} is retired for this data: the pack's case gives ${f0?.sheet ?? "no sheet"}. Lines that moved (first 12):\n${movedLines.map((x) => `        ${x}`).join("\n")}`);
   ok(`C7.5 tripwire pass (pack's case): the pack's fixed answers give exactly the sheet ${RUN} read; if this fails the filler, the captions or the pack's answers moved and the run is retired`,
-    f0?.sheet === inputs[1]?.file && f0?.sheet_sha256 === inputs[1]?.sha256, { plan_sheet: f0?.sheet, recorded: inputs[1]?.file, moved: committed && f0?.lines ? moved(committed.fields, f0.lines) : null });
+    f0?.sheet === inputs[1]?.file && f0?.sheet_sha256 === inputs[1]?.sha256, { plan_sheet: f0?.sheet, recorded: inputs[1]?.file, moved: movedLines.length });
   ok("C7.5 tripwire pass: Saved is offered with exactly the committed pair, not made up", plan?.replay_available === true && plan.made_up === false && JSON.stringify([...(f0?.saved.files ?? [])].sort()) === JSON.stringify([`prototype/p2/runs/${draftF[0]}`, `prototype/p2/runs/${checkF[0]}`].sort()), f0?.saved);
   // Tampered: one of the pack's answers changed → another sheet, no Saved, a replay refused, nothing added.
   const before = Number(sql(`select count(*) from review_finding where case_id='${c.id}' and source='ai'`));

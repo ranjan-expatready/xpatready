@@ -11,6 +11,9 @@
 //   two Live runs of one case at once: one runs, the other is refused (409 "Already running");
 //   Stop during the first round: that round ends, the checker round is never launched, nothing is added, the stop audited;
 //   Stop of a run that is not going: 404.
+// P-192 guard (review Major 1 on 9313ec8): before any review run is posted, the copy itself must report live on with the
+// stand-in launcher (GET /session); anything else (the fake launcher not honoured, the guarded launcher, a copy started
+// without the usage line's settings) stops here, before a launch can happen.
 //   zsh studio/tools/isolated.sh runtime_c75lv 4438 start STUDIO_AI_LIVE=approved STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_c75_live_fake.ts 4438 xr_studio_runtime_c75lv
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -44,6 +47,9 @@ const findings = async (caseId: string) => ((await call("GET", `/runtime/cases/$
 const until = async (fn: () => boolean, ms: number) => { const t = Date.now(); while (Date.now() - t < ms) { if (fn()) return true; await new Promise((r) => setTimeout(r, 100)); } return false; };
 
 (async () => {
+  const ai = (await call("GET", "/session")).body?.ai;
+  if (!(ai?.live === true && ai?.launcher === "stand-in")) { console.log(`FAIL  P-192 guard: this copy does not report live on with the stand-in launcher (GET /session → ai: ${JSON.stringify(ai)}); stopped before any start`); process.exit(1); }
+  ok("P-192 guard: this check's own copy reports live on with the stand-in launcher, so nothing it launches can reach a model", true);
   if (releases() === 0) ok("setup: release 1 of the Visitor visa", tsx("tests/runtime/setup_visitor_visa.ts").status === 0 && releases() === 1);
   if (releases() === 1) { tsx("acceptance/lib/setup_vv_m3.ts"); ok("setup: release 2 (pack 4 setup)", releases() === 2); }
   const spend0 = sql("select count(*) from ai_batch");
