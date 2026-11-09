@@ -90,3 +90,43 @@ Others: no change. D7: N/A (no AI).
 - PR CI: the draft head shows only the guard (success). The full check runs when the PR is marked ready.
 
 **Verdict: Approve** (commit b31ea790149835799df02ff6cafcda7007c53c3b). No open Blocker or Major. Should-fix follow-ups: m1 (attribution), m2 (idempotency key on the same-link path), m3 (record the SI-20 dependence).
+
+## Re-review 7998304dd (diff only, P-277)
+**Scope:** `git diff b31ea7901..7998304dd`, new head **7998304dd5b507cab88e0d134330caeaa8dc1122**. It covers the breaker's M1, M2 and m1-m4 (`break-report-qa359.md`) and my earlier m1 and m2. App: 6 files, +38 lines against b31ea7901; against main +122/−31, still no schema file. The rest of the diff is notes and screenshots.
+
+**Run** (fresh isolated copy :4443 started from a throwaway worktree at 7998304dd; configured checkpoint loaded in 102 s; copy stopped and worktree removed after):
+- pack `acceptance/C6.16.test.ts`: **74/74**, exit 0
+- `tests/check_c616_privacy.ts`: **48/48**
+- `tests/check_c616_privacy_browser.cjs`: **50/50**
+- my walk `walk2.cjs`: ui 10/10, api 6/6, races 2/2
+- unit mutation: `resendKind` returning "new" for a dead staff link fails the M1 unit check (47/48).
+
+**Fixes, each checked:**
+- **M1 (firm only once the staff link is dead): fixed.**
+  - Expired, locked (5 wrong codes), staff Take back, and Client A's own Take back each give 409 "The firm's link to n•••@example.com no longer works. Only the firm can send Sample Partner a new one." Nothing is sent to either address, and the list returns `kind: "firm"` with `resend_kept: false`.
+  - On the screen, Resend is gone and "You can resend it" is dropped. The firm-only line shows instead. axe is clean, with no sideways scroll at 390, 512 (200 %) and 1024 px (my b2, b3).
+  - Typing the first address is still 403.
+  - The officer's one-press Resend then makes a new link at the staff address, and Client A's kind goes back to "same".
+  - This 409 goes past P-441's literal words. It is the stricter reading of F12 (b) ("only staff send"), and I accept it. The tech lead should know that Client A's own Take back of the firm's link now leaves only the firm able to send.
+- **M2, my earlier m1 (who gave the address): fixed.**
+  - The officer's Resend of a link at a staff address records "address given by Case officer" (U4).
+  - The officer's Resend of Client A's address keeps "Client A" (pack C6.16-8 M2).
+  - The path I flagged (Client A Take back → Resend) is now refused (M1), so no false attribution can arise.
+- **Races, breaker m1 and m2: fixed.**
+  - Right code at the new address together with Client A's Resend, 8 trials: never a link email left on the accepted link, never a 500. 6 ran as "same" first, 2 as "new" after acceptance (the existing BR-3 path).
+  - 5th wrong code together with Resend, 4 trials: locked, nothing left in the inbox.
+  - The new `person_link … FOR UPDATE` takes locks in the opposite order to the right-code transaction (participant → link versus link → participant). A deadlock would come back as 409 "Busy" in words (`inTx`). None happened in 12 trials. Not a finding.
+- **Breaker m3, my earlier m2 (repeat presses and the idempotency key): fixed.** The same key twice gives one copy. Ten presses at once give one copy and one "resent" history line. The firm's own email does not count.
+- **Breaker m4 (toast follows the server's answer): fixed.**
+- **My earlier m3 (depends on the demo inbox):** it goes to the tech lead as a PR question, as agreed. No code change was expected.
+
+**New finding**
+- **n1 (Minor, Should):** a second press of Resend within the minute sends nothing, but the toast still says "The firm's link was sent to Sample Partner at n•••@example.com again. It still works." (U2, my b1). The server answers `created: false` both when it sent a copy and when it held one back, so the screen cannot tell them apart. `api/src/person-link.ts` returns early on the held-back path; `web/src/runtime/privacy.tsx` `useResend` maps `created:false` to the "sent again" words. Fix: return a flag such as `sent: false` on the held-back path and say "It was sent less than a minute ago; nothing more was sent." This is harmless in effect, because an identical email went out seconds earlier.
+
+**Journey re-score: 9.5/10.**
+- Correct data: ½ → 1 (attribution right; dead staff link refused).
+- Trust: ½ → 1 (the SI-20 point is handed to the tech lead).
+- Feedback: 1 → ½ (n1).
+- Everything else as before.
+
+**Verdict: Approve** (commit 7998304dd5b507cab88e0d134330caeaa8dc1122). No open Blocker or Major. Should-fix follow-up: n1. My earlier m3 (SI-20) stays with the tech lead as the PR question.
