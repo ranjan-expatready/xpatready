@@ -105,9 +105,10 @@ function SectionCard({ n, x, nameOf }: { n: number; x: SheetSection; nameOf: (u:
       </header>
       {x.answers.length ? (
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-sm" aria-labelledby={hid}>
-            <thead className="bg-surface text-xs text-text-muted"><tr>{["Question", "Person", "Answer", "Source", ""].map((h, i) => <th key={i} scope="col" className="border-b border-border px-3 py-2 font-medium">{h || <span className="sr-only">Copy</span>}</th>)}</tr></thead>
-            <tbody className="[&_td]:border-b [&_td]:border-border [&_tr:last-child_td]:border-b-0 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top">
+          {/* At phone width each answer is a stacked block, each cell under its column's name (concept §4). */}
+          <table className="w-full border-collapse text-left text-sm max-sm:block" aria-labelledby={hid}>
+            <thead className="bg-surface text-xs text-text-muted max-sm:sr-only"><tr>{["Question", "Person", "Answer", "Source", ""].map((h, i) => <th key={i} scope="col" className="border-b border-border px-3 py-2 font-medium">{h || <span className="sr-only">Copy</span>}</th>)}</tr></thead>
+            <tbody className="[&_td]:border-b [&_td]:border-border [&_tr:last-child_td]:border-b-0 [&_td]:px-3 [&_td]:py-2 [&_td]:align-top max-sm:block max-sm:[&_tr]:block max-sm:[&_tr]:border-b max-sm:[&_tr]:border-border max-sm:[&_tr]:py-1 max-sm:[&_td]:block max-sm:[&_td]:border-b-0 max-sm:[&_td]:py-0.5 max-sm:[&_td[data-label]]:before:mr-1 max-sm:[&_td[data-label]]:before:text-text-muted max-sm:[&_td[data-label]]:before:content-[attr(data-label)]">
               {x.answers.map((a) => <AnswerRow key={`${a.subject}|${a.fact}|${a.row ?? ""}`} a={a} />)}
             </tbody>
           </table>
@@ -128,9 +129,9 @@ function AnswerRow({ a }: { a: SheetAnswer }) {
   const who = a.person + (a.row !== null && a.row > 0 ? ` · entry ${a.row + 1}` : "");
   return (
     <tr data-answer={a.fact} data-subject={a.subject}>
-      <td className="min-w-48 [overflow-wrap:anywhere]">{a.label}</td>
-      <td className="whitespace-nowrap text-text-muted">{who}</td>
-      <td className="min-w-40 [overflow-wrap:anywhere]">
+      <td className="min-w-48 font-medium sm:font-normal [overflow-wrap:anywhere] max-sm:min-w-0">{a.label}</td>
+      <td className="whitespace-nowrap text-text-muted" data-label="Person:">{who}</td>
+      <td className="min-w-40 [overflow-wrap:anywhere] max-sm:min-w-0" data-label="Answer:">
         <span className="mono" data-copy-text>{a.copy_text}</span>
         {a.to_confirm ? <span className="ml-2"><Pill tone="warn" title={a.why ?? undefined}>To confirm</Pill></span> : null}
         {parts.length > 1 ? (
@@ -139,7 +140,7 @@ function AnswerRow({ a }: { a: SheetAnswer }) {
           </ul>
         ) : null}
       </td>
-      <td className="whitespace-nowrap text-text-muted">{a.source}</td>
+      <td className="whitespace-nowrap text-text-muted" data-label="Source:">{a.source}</td>
       <td className="w-px whitespace-nowrap"><CopyButton text={a.copy_text} label={`Copy ${a.label} for ${a.person}`} /></td>
     </tr>
   );
@@ -161,10 +162,10 @@ function CopyButton({ text, label, small }: { text: string; label: string; small
   }
   return (
     <span className="inline-flex items-center gap-1">
-      <Button ref={ref} size="sm" variant="secondary" className={small ? "h-6 px-1.5" : undefined} aria-label={label} onClick={() => void copy()} disabled={!text}>
+      <Button ref={ref} size="sm" variant="secondary" className={small ? "h-6 px-1.5" : undefined} aria-label={done === "copied" ? label.replace(/^Copy /, "Copied: ") : label} onClick={() => void copy()} disabled={!text}>
         {done === "copied" ? <Check className="size-3.5" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}{small ? null : done === "copied" ? "Copied" : "Copy"}
       </Button>
-      <span aria-live="polite" className="sr-only">{done === "copied" ? `${label.replace(/^Copy /, "")}: copied` : done === "selected" ? "Selected: press Ctrl+C to copy" : ""}</span>
+      <span aria-live="polite" className="sr-only">{done === "copied" ? `Copied: ${label.replace(/^Copy /, "")}` : done === "selected" ? "Selected: press Ctrl+C to copy" : ""}</span>
     </span>
   );
 }
