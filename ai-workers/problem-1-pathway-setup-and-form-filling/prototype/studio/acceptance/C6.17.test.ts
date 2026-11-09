@@ -224,6 +224,27 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
   ok("C6.17 Devin on #1262 (race): a start without a reason racing Prepare never ends a stage on an unrecorded filing without a reason: it ends a stage that has none, or is refused on the reason (400)",
     !outcomes.includes("BAD") && outcomes.length === 3, outcomes);
 
+  // ---------------------------------------------------------------- C6.17 × C8.3 (merge with main): review rounds by stage
+  // A filing sent for review on the first stage stays there when the next stage starts: its review is history (BR-5,
+  // BR-10), the send lists the current stage's filings only (BR-9), and a review works on the next stage.
+  const vMade = await open(first.combination_id, { representative: f.rep, caseOfficers: [f.officer ?? OFFICER] });
+  const V = vMade.body?.id as string;
+  const vApp = ((vMade.body?.people ?? []) as { subject_id: string; role: string }[]).find((x) => x.role === "case")?.subject_id ?? "";
+  await call("PUT", `/runtime/cases/${V}/answers/${vApp}/case.submission_office_name`, { value: "Sample office (review)", expectedId: null });
+  const vF1 = (await prepare(V)).p?.filings[0]?.id;
+  const vSent = await call("POST", `/runtime/cases/${V}/reviews`, { filings: [vF1] });
+  const vS1 = (await stagesOf(V)).stages.find((x) => x.state === "CURRENT")!;
+  const vStart = await call("POST", `/runtime/cases/${V}/stages/next`, { from_stage: vS1.id, stage_version: vS1.version, reason: "Sample: the study permit is decided" });
+  const vRep = sql(`select user_id from case_team_member where case_id='${V}' and role='LEAD_REPRESENTATIVE' and ended_at is null limit 1`) ?? "";
+  const vOpen = await call("POST", `/runtime/reviews/${vSent.body?.id}/open`, { filing: vF1 }, vRep);
+  const vResend = await call("POST", `/runtime/cases/${V}/reviews`, { filings: [vF1] });
+  const vF2 = (await prepare(V)).p?.filings[0]?.id;
+  const vNext = await call("POST", `/runtime/cases/${V}/reviews`, { filings: [vF2] });
+  ok("C6.17 × C8.3 fail-first (BR-5, BR-9, BR-10): after Start next stage, the ended stage's review is not opened (409, still Sent) and its filing is not on the case to send (404); the next stage's filing is sent (201)",
+    vSent.status === 201 && vStart.status === 201 && !!vRep && vOpen.status === 409 && sql(`select status from review_round_filing where round_id='${vSent.body?.id}'`) === "sent"
+      && vResend.status === 404 && !!vF2 && vF2 !== vF1 && vNext.status === 201 && n(`select count(*) from review_round where case_id='${V}'`) === 2,
+    { sent: vSent.status, start: vStart.status, rep: vRep, open: [vOpen.status, vOpen.body?.detail], resend: [vResend.status, vResend.body?.detail], next: [vNext.status, vNext.body?.detail] });
+
   // ---------------------------------------------------------------- C6.17-13: the family case keeps one stage
   const fam = sql(`select k.id from runtime_case k join combination c on c.id=k.combination_id where c.combination_key='vv.single' order by k.created_at limit 1`) ?? "";
   const fv1 = (await prepare(fam)).p?.version, fst = await stagesOf(fam), fv2 = (await prepare(fam)).p?.version;
