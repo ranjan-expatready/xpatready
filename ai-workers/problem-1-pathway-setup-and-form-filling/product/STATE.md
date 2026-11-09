@@ -22,7 +22,7 @@ updated: 2026-11-10 03:00 IST by **Lead 5 (series 2, local_6e87a775-…)** (chec
 **Night rules (lessons from 6-7 Nov and 9 Nov stalls, `memory/no-prompting-calls-unattended`):** no call that can wait on a permission prompt while the founder sleeps: no `run_in_terminal`, no writes into `.claude/`, no settings, no new `request_access`. GitHub by curl only. Read claude.ai/code every check in the built-in browser (Chrome's extension was not connected at 23:40); type into idle lanes by the textbox ref "Prompt", then confirm the bubble. Lanes that poll (qa-c617, qa-c75) still need a check of their pushes.
 **Sessions (series 2):** no standby left: two at the founder's next typed turn (P-286). Cloud lanes: qa-c83, qa-c73-c102, qa-c75 (+#1444), qa-c617 (polling), fix-qa359 (#1453); done and idle: qa-c619, qa-c616, fix-c65 (#1444), fix-qa355 (#1450), #1262 fix lane, merged lanes (archive later).
 
-## Lead 40's last block (series 1): word for word in `history/STATE-2026-11-09-1748-lead40-final.md`; still live: old qa copy `.claude/worktrees/qa-2026-11-06-m2-walk-c8dd7e` (keep), follow-ups #1409 m10/m11, C7.9 wording (#1257 note), QA-326 to QA-328.
+## Lead 40's last block (series 1): `history/STATE-2026-11-09-1748-lead40-final.md` (live items listed there; this page's 02:55 copy keeps the line).
 
 ## For the founder (P-390: asked at his next typed turn, oldest first, one at a time)
 F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026-11-07-1545-lead30.md`); F7 answered (P-406; row in `history/STATE-2026-11-07-1555-lead31.md`). F9-F13 answered 18:25-18:36 IST, all as recommended (P-412; rows in `history/STATE-2026-11-07-1837-lead31.md`).
