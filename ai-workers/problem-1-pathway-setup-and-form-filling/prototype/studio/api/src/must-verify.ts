@@ -63,7 +63,8 @@ export class MustVerify {
     const c = await this.db.$transaction(async (tx) => {
       await tx.$executeRawUnsafe(`select pg_advisory_xact_lock(hashtext($1))`, lockKey(workspaceId, key));
       const open = await openMustVerifyChange(tx, workspaceId, key);
-      if (open) throw problem(409, "Already waiting", `A change of "must verify before filing" for "${name}" already ${open.status === "APPROVED" ? "is approved and waits for the next release" : "waits on To review"}.`);
+      // Review M2 on #1282: the words say what the open change is and what to do (a returned one is withdrawn first).
+      if (open) throw problem(409, open.status === "RETURNED" ? "Returned" : "Already waiting", open.status === "RETURNED" ? `A change of "must verify before filing" for "${name}" was returned${open.decisionNote ? ` ("${open.decisionNote}")` : ""}. Its proposer withdraws it first (To review › the change › Withdraw it), then proposes it again.` : `A change of "must verify before filing" for "${name}" already ${open.status === "APPROVED" ? "is approved and waits for the next release; to change it before then, its proposer withdraws it" : "waits for the immigration expert on To review"}.`);
       return tx.libraryChange.create({ data: { workspaceId, kind: MUST_VERIFY_KIND, key, label: `${name} · ${on ? "must verify before filing" : "no longer must verify before filing"}, for every combination`.slice(0, 300), action: MUST_VERIFY_ACTION, reason: parsed.data.reason, status: "WAITING", proposedBy: actor.id,
         matches: { field: name, before: current.mustVerifyBeforeFiling, after: on } as unknown as Prisma.InputJsonValue } });
     });

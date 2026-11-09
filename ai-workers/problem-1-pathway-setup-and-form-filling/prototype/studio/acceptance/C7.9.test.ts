@@ -44,6 +44,17 @@ await main("C7.9", "Must verify before filing: the expert's flag, a CRITICAL war
   r = await call("POST", `/library/changes/${id}/approve`, { note: "C7.9 pack: the immigration expert approves (Sample)." }, REVIEWER);
   const lib = (await call("GET", `/library/fields/${FACT}/must-verify`, undefined, AUTHOR)).body;
   ok("C7.9-6 pass: the immigration expert approves; the library shows the flag (the field's draft)", r.status < 300 && lib?.on === true && sql(`select must_verify_before_filing::text || '|' || status from canonical_field where canonical_field_key = '${FACT}' order by version desc limit 1`) === "true|DRAFT", { status: r.status, lib: lib?.on, why: r.status >= 300 ? words(r) : undefined });
+  // Review M2 on #1282: a returned change is withdrawn by its proposer, then proposed again (never a dead end).
+  const DOB = "person.date_of_birth";
+  r = await call("POST", `/library/fields/${DOB}/must-verify`, { on: true, reason: "C7.9 pack: dates of birth, for the parent step (Sample)." }, AUTHOR);
+  const dobId = r.body?.id;
+  r = await call("POST", `/library/changes/${dobId}/return`, { note: "C7.9 pack: say which forms first (Sample)." }, REVIEWER);
+  const again = await call("POST", `/library/fields/${DOB}/must-verify`, { on: true, reason: "C7.9 pack: dates of birth, again (Sample)." }, AUTHOR);
+  ok("C7.9-6b fail (review M2): a returned change: proposing again is refused in words that say it was returned and to withdraw it first", r.status < 300 && again.status === 409 && /was returned/.test(words(again)) && /withdraws it first/.test(words(again)), { returned: r.status, again: again.status, why: words(again) });
+  r = await call("POST", `/library/changes/${dobId}/withdraw`, { note: "C7.9 pack: withdrawn to propose again." }, AUTHOR);
+  const dob2 = await call("POST", `/library/fields/${DOB}/must-verify`, { on: true, reason: "C7.9 pack: dates of birth, for the parent step (Sample)." }, AUTHOR);
+  const ok2 = dob2.body?.id ? await call("POST", `/library/changes/${dob2.body.id}/approve`, { note: "C7.9 pack: the immigration expert approves (Sample)." }, REVIEWER) : dob2;
+  ok("C7.9-6c pass (review M2): withdrawn by its proposer, it is proposed again and the immigration expert approves it", r.status < 300 && dob2.status < 300 && ok2.status < 300, { withdraw: r.status, propose: dob2.status, approve: ok2.status, why: [words(r), words(dob2), words(ok2)].filter((x) => x && x !== "{}") });
   const one = await release(vv, "C7.9 pack: must verify before filing");
   const rel = JSON.parse(sql(`select snapshot::text from config_release where combination_id = '${vv}' and version = ${one.version ?? 0}`) || "{}");
   ok("C7.9-7 pass: the next release carries the flag, and the change is released", !!one.version && (rel.canonical_fields ?? []).some((f: { id: string; must_verify?: boolean }) => f.id === FACT && f.must_verify === true) && sql(`select status from library_change where id = '${id}'`) === "RELEASED", one);
@@ -76,6 +87,11 @@ await main("C7.9", "Must verify before filing: the expert's flag, a CRITICAL war
   lines = await mv();
   ok("C7.9-13 pass (SA-1B-260 r3): once staff confirm the section, the value is verified: no must-verify line", lines.length === 0, lines.map((w) => w.words));
 
+  // Review M1 on #1282: a parent's value is judged on the parent, not on the person whose form it is.
+  const c3 = await openCase(vv, [{ role: "principal", name: "Sample Client C", dob: yearsAgo(42) }, { role: "spouse_or_partner", name: "Sample Spouse C", dob: yearsAgo(40) }]);
+  const parents = await Promise.all([c3.subjects["Sample Client C"], c3.subjects["Sample Spouse C"]].map((who) => call("PUT", `/runtime/cases/${c3.id}/answers/${who}/parent_1/${DOB}`, { value: "1950-05-05", expectedId: null }, CLIENT)));
+  const par = (await mv(c3.id)).filter((w) => /their parent 1/.test(w.words));
+  ok("C7.9-16 fail (review M1): a parent's date of birth the client typed (IMM 5645 writes it) raises the line, naming the relative", parents.some((x) => x.status < 300) && par.length >= 1 && par.every((w) => w.severity === "critical"), { put: parents.map((x) => x.status), lines: (await mv(c3.id)).map((w) => w.words.slice(0, 160)) });
   // A staff entry counts as verified; a field without the flag never raises it.
   const c2 = await openCase(vv, [{ role: "principal", name: "Sample Client B", dob: yearsAgo(35) }]);
   const P2 = c2.subjects["Sample Client B"];

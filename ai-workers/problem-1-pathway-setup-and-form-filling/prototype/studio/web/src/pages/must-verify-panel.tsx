@@ -36,7 +36,8 @@ export function MustVerifySection({ fieldKey, canAuthor }: { fieldKey: string; c
         <p data-must-verify-state>{v.on ? <Pill tone="warn">Must verify before filing</Pill> : <Pill tone="neutral">Not marked</Pill>}</p>
         <p className="text-xs text-text-muted">{v.rule} Sample until the immigration expert confirms which fields.</p>
         {v.open ? <p className="text-xs" data-must-verify-open>A change to {v.open.on ? "mark it" : "unmark it"} by {v.open.by} {OPEN_WORDS[v.open.status]}{v.open.note ? `: ${v.open.note}` : ""}. <Link className="text-text-link underline" to={`/review/change/${v.open.id}`}>Open it</Link></p> : null}
-        {canAuthor && !asking ? <Button size="sm" variant="secondary" disabled={!!v.open && v.open.status !== "RETURNED"} onClick={() => { setAsking(true); setMsg(null); }} data-must-verify-ask>{v.on ? "Propose: no longer must verify…" : "Propose: must verify before filing…"}</Button> : null}
+        {canAuthor && !asking && !v.open ? <Button size="sm" variant="secondary" onClick={() => { setAsking(true); setMsg(null); }} data-must-verify-ask>{v.on ? "Propose: no longer must verify…" : "Propose: must verify before filing…"}</Button> : null}
+        {canAuthor && v.open ? <p className="text-xs text-text-muted" data-must-verify-first>{v.open.status === "RETURNED" ? "To propose it again, its proposer first withdraws the returned change (Open it, then Withdraw it)." : v.open.status === "APPROVED" ? "It goes out with the next release; to change it before then, its proposer withdraws it (Open it)." : "One change at a time: it is decided first, or its proposer withdraws it (Open it)."}</p> : null}
         {canAuthor && asking ? (
           <div className="space-y-2" data-must-verify-form>
             <label className="block text-xs">Why, for every combination that asks it
