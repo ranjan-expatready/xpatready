@@ -77,3 +77,22 @@ Head `a3b496d836cffc1adfbdb1a16e64097bfe3b81a8`; diff `9313ec8..a3b496d`: 3 test
 * No new finding in the diff.
 
 **Verdict: Approve a3b496d836cffc1adfbdb1a16e64097bfe3b81a8**
+
+## Re-review on fefebef (diff-only, 9 Nov)
+Head `fefebef3c7e2fed4fe4469d5a22783a840eaee6a`; diff `5560afc..fefebef`: the tripwire and the live check take one saved pair per data set, plus the new `studio/tools/c75-pack-case.ts`. The tech lead ruled (Lead 39) that a second paid run will be made on the configured checkpoint; nothing is spent here. Measured on a detached worktree fixed at fefebef with its own node_modules and web build, on own copies at :4436/:4437, all stopped. US$0. Live was on only through the live check's usage line, and the copy reported `{"live":true,"launcher":"stand-in"}` first. p2/runs, jobs, screening, review-sheets and tests/ were byte-identical before and after. My first attempt was void: the shared checkout was switched to another branch partway through, so its last steps ran without the saved files. Everything below comes from the worktree.
+* **Tripwire, fixture data: 14/14, exit 0.**
+  * Each committed pair is checked on its own: real, made by one job, and reads its committed sheet and the unchanged inventory.
+  * "No two pairs read the same sheet" holds.
+  * The pack's case matches exactly the b4936d0b pair, and Saved offers exactly that pair.
+  * The tamper checks still run on b4936d0b.
+  * A later paid run gets its own pair name, because each live run's job id contains its run id. The fake launcher's runs got 63072dd3 and 6516ee5b.
+* **`c75-pack-case.ts`:**
+  * With `--expect 3a2acc10d135`: exit 0. It printed 49 form fields, sheet 3a2acc10d135…, `saved_available: true`, `live_allowed: false`, live about US$1.06 and at most US$4.80, and the live request.
+  * With `--expect 666775af9fcc`: exit 1, "the sheet is 3a2acc10d135, not the expected 666775af9fcc: stop, nothing was run".
+  * It only plans (reads files). The copy's single `ai_batch` row is the Visitor visa setup's US$0 REPLAY.
+* **`check_c75_live_fake.ts` through its usage line: 19/19, exit 0.** The P-192 guard passes first. The new step finds the pair whose recorded sheet matches this data's sheet (3a2acc10d135…), and the fake answers with that pair. p2/runs was unchanged.
+* **Configured checkpoint:** not re-run. With no checkpoint pair committed it is red by design. #1411 (one checkpoint sheet, effce263ca43) is separate. My two checkpoint loads earlier today gave 666775af9fcc and then 123a97599291, which confirms the load-order question. `--expect` stops a paid run on the wrong sheet.
+* **Minor (Should), new:** two of the new rules have no failing case: "no two pairs read the same sheet" and "every first round has its checker". `c75-pack-case.ts` has no check of its own. This does not block: the tool is for the tech lead, and tests may not write runs into p2/runs. A pure-function test over made-up pair lists would cover the two rules.
+* No Blocker or Major.
+
+**Verdict: Approve fefebef3c7e2fed4fe4469d5a22783a840eaee6a**
