@@ -4,8 +4,8 @@
 // never a person on the case), and release 2 already places a question for every fact those boxes read. Before B128 the
 // case dropped every relative's question (engine/runtime/case.ts), so IMM 5645 read "Every fact it reads is confirmed"
 // with both parents empty. Now a case asks each parent's facts on the parent's own key, stores them on the parent's own
-// answer subject, waits for them, and writes them. Siblings (a list) are not asked yet: the PR's question for the tech
-// lead. Each rule with a passing and a failing case; read in a filled copy: the PDF's own values. Nothing names a form
+// answer subject, waits for them, and writes them. Siblings (a list) are asked since B155 (check_b155_siblings.ts).
+// Each rule with a passing and a failing case; read in a filled copy: the PDF's own values. Nothing names a form
 // number in a rule (P-319): the form is chosen here only as the test's subject. Sample data, US$0, no model call.
 //   zsh studio/tools/isolated.sh b128 4450 start, then Demo › Reset and Demo › Load the configured checkpoint as the author
 //   tsx studio/tests/runtime/check_b128_parents.ts 4450 xr_studio_b128
@@ -13,7 +13,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { parentWord, relativeLabel, relativeOf } from "../../engine/runtime/relatives.ts";
+import { isListRelative, parentWord, relativeLabel, relativeOf } from "../../engine/runtime/relatives.ts";
 import { runTransform } from "../../../p5/transforms.ts";
 import { agent, answer, call, CLIENT, copyBytes, fillEverything, firms, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql, yearsAgo } from "../../acceptance/lib/m3.ts";
 
@@ -39,7 +39,8 @@ const FORM = "IMM 5645";
 await main("B128", "IMM 5645's parents are asked, stored on their own, waited for and written", async () => {
   // ---- The rule, pure: which relatives a case asks one by one. ----
   ok("B128-1 pass: a parent's key names the person and the relation (`<person>/parent_1`, `/parent_2`)", JSON.stringify([relativeOf("p1/parent_1"), relativeOf("p1/parent_2")]) === JSON.stringify([{ owner: "p1", relation: "parent_1" }, { owner: "p1", relation: "parent_2" }]));
-  ok("B128-2 fail: a person, the application, the representative, a sibling (a list), a third part or an empty person are not a relative asked one by one", ["p1", "case", "representative", "p1/sibling", "p1/parent_1/x", "/parent_1", "p1/parent_3"].every((k) => relativeOf(k) === null));
+  // B155: a sibling is now asked too, as a list (check_b155_siblings.ts); a parent is never a list.
+  ok("B128-2 fail: a person, the application, the representative, a third part or an empty person are not a relative; a sibling is one as a list, a parent never", ["p1", "case", "representative", "p1/parent_1/x", "/parent_1", "p1/parent_3"].every((k) => relativeOf(k) === null) && isListRelative("p1/sibling") && !isListRelative("p1/parent_1") && !isListRelative("p1/parent_2"));
   // Review Major 1 (#1256), pure: a parent is named by the boxes their forms write them into, never by a constant.
   ok("B128-2c pass: boxes named Mother, or a mother's field, name the mother; Father, or a father's field, the father", parentWord(["F[0].page1[0].SectionA[0].Mother[0].MotherName[0]", "F[0].page1[0].SectionA[0].Mother[0].ChildMStatus[0]"]) === "mother" && parentWord(["G[0].#subform[0].page1[0].fathersGivenName[0]"]) === "father" && relativeLabel("Sample Client F", "parent_1", ["x.Mother[0].MotherDOB[0]"]) === "Sample Client F's mother");
   ok("B128-2d fail: boxes that say only Parent1, or name both, or a grandmother, name no parent: first or second parent then", parentWord(["F[0].SectionA[0].Parent1[0].FamilyName[0]"]) === null && parentWord(["a.Mother[0].X[0]", "b.fathersGivenName[0]"]) === null && parentWord(["a.Grandmother[0]"]) === null && parentWord([]) === null && relativeLabel("Sample Client F", "parent_2", []) === "Sample Client F's second parent");
@@ -63,7 +64,7 @@ await main("B128", "IMM 5645's parents are asked, stored on their own, waited fo
   ok("B128-4 pass: every fact IMM 5645's map reads about each parent is a question on that parent's own key, filling the principal's IMM 5645", want.length >= 7 && JSON.stringify(asked(M)) === JSON.stringify(want) && JSON.stringify(asked(D)) === JSON.stringify(mapped("parent_2")), { want, parent_1: asked(M), parent_2: asked(D) });
   const labelOf = (key: string) => [...new Set(secs.filter((x) => x.subjectId === key).map((x) => (x as S & { about_label?: string }).about_label))];
   ok("B128-4a pass (review Major 1): the first parent is named the mother and the second the father, as IMM 5645's boxes name them (Mother, Father)", JSON.stringify(labelOf(M)) === JSON.stringify(["Sample Client F's mother"]) && JSON.stringify(labelOf(D)) === JSON.stringify(["Sample Client F's father"]), [labelOf(M), labelOf(D)]);
-  ok("B128-5 fail: no sibling question (a list, not asked yet) and no relative's question on the application", !secs.some((s) => s.subjectId.endsWith("/sibling") || s.subjectId.startsWith(`${c.caseSubject}/`)), [...new Set(secs.map((s) => s.subjectId))]);
+  ok("B128-5 fail: no relative's question on the application; the siblings (B155) are one list section, never asked one by one like a parent", !secs.some((s) => s.subjectId.startsWith(`${c.caseSubject}/`)) && secs.filter((s) => s.subjectId.endsWith("/sibling")).every((s) => s.section === "sibling" && s.questions.every((q) => (q as Q & { group?: string | null }).group === "sibling")), [...new Set(secs.map((s) => s.subjectId))]);
 
   const forms = async () => ((await call("GET", `/runtime/cases/${c.id}/forms`, undefined, officer)).body?.forms ?? []) as { form: string; subject?: string; readiness: { ready: boolean; missing: { fact: string; about: string }[] } }[];
   await fillEverything(c.id); // the pack's helper: answers and confirms everything else, parents included (never a date of birth)
@@ -85,14 +86,14 @@ await main("B128", "IMM 5645's parents are asked, stored on their own, waited fo
   ok("B128-6 pass: a parent's answers save (as two path parts and as one encoded key) and each parent is kept on a subject of its own", [r1, r2, r3, r4].every((r) => r.status === 200) && kept === "2", { status: [r1, r2, r3, r4].map((r) => r.status), kept, detail: [r1, r2].map((r) => r.body?.detail) });
   ok("B128-7 fail: a parent's date of birth never changes the principal's own", sql(`select value_json::text from client_canonical_answer where subject_id = '${P}' and canonical_field_key = 'person.date_of_birth' and superseded_by_id is null`) === before, before);
 
-  // ---- Refused in words: a relative of the application, a sibling (no form describes one asked singly), another case's
-  // person, and a confirm for a relation that is not asked. ----
+  // ---- Refused in words: a relative of the application, a sibling answered as if one person (B155: always in an entry),
+  // another case's person, and a confirm of another section on a sibling's key. ----
   const no1 = await answer(c.id, `${c.caseSubject}/parent_1`, "person.full_name", "X", officer);
   const no2 = await call("PUT", `/runtime/cases/${c.id}/answers/${P}/sibling/person.full_name`, { value: "X", expectedId: null }, officer);
   const no3 = await call("PUT", `/runtime/cases/${c.id}/answers/00000000-0000-4000-8000-000000000000/parent_1/person.full_name`, { value: "X", expectedId: null }, officer);
   const no5 = await call("PUT", `/runtime/cases/${c.id}/answers/${P}/parent_1/person.passport_number`, { value: "X", expectedId: null }, officer);
   const no4 = await call("POST", `/runtime/cases/${c.id}/sections/personal_details/confirm`, { subjectId: `${P}/sibling`, seen: [] }, officer);
-  ok("B128-8 fail: the application's parent, a sibling and a person not on the case are refused (404, in words); a confirm for a sibling is a field error (400)", no1.status === 404 && no2.status === 404 && no3.status === 404 && no4.status === 400 && [no1, no2, no3].every((r) => /not on this case|No such/.test(r.body?.detail ?? "")), [no1, no2, no3, no4].map((r) => [r.status, r.body?.detail]));
+  ok("B128-8 fail: the application's parent and a person not on the case are refused (404, in words); a sibling answered with no entry (422) and a confirm of another section on a sibling's key (404) too", no1.status === 404 && no2.status === 422 && no3.status === 404 && no4.status === 404 && [no1, no3, no4].every((r) => /not on this case|No such/.test(r.body?.detail ?? "")) && /row/.test(no2.body?.detail ?? ""), [no1, no2, no3, no4].map((r) => [r.status, r.body?.detail]));
   ok("B128-8a fail (review m2): a fact no form of the release asks about a parent (a passport number) is refused (404, in words), nothing stored", no5.status === 404 && /asks this about that parent/.test(no5.body?.detail ?? "") && sql(`select count(*) from client_canonical_answer a join answer_subject s on s.id = a.subject_id where s.subject_kind = 'parent_1' and a.canonical_field_key = 'person.passport_number'`) === "0", [no5.status, no5.body?.detail]);
 
   // ---- Waited for: while a parent fact is new and not confirmed, IMM 5645 is not ready and never says every fact is confirmed. ----

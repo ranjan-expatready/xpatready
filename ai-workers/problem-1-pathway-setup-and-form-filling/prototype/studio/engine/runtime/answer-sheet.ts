@@ -12,7 +12,7 @@
 import { createHash } from "node:crypto";
 import type { BoxRow } from "../render.ts";
 import { sectionGroupOf } from "../twin.ts";
-import type { AnswerMark } from "../../contracts/runtime.ts";
+import type { AnswerMark, QuestionnaireView, Readiness } from "../../contracts/runtime.ts";
 
 /** `mark`, `to_confirm`, `why` (P-411): who gave the answer ("answered by the principal for <name>", "entered by staff"),
  *  and whether it still waits for the officer's Confirm section; null and false where the case view has no such answer. */
@@ -68,9 +68,16 @@ export function answerSheet(sections: Record<string, string>, boxes: BoxRow[], o
   return sheetOf({ basis: "pdf_twin", sections }, boxes, origin, labels, entered, markOf);
 }
 
+/** QA-309: whether a box with no answer to show still waits, by its whole "about" and fact: the form's readiness names it
+ *  (a required question not answered or confirmed, a "none apply" not answered, a fix, a fired check). */
+export type Waits = (about: string, fact: string) => boolean;
+
 /** The sheet for one form and person, from the form's boxes for that person (formCoverage), its layout (the form's own
- *  parts, else the twin's sections) and the entered ticks (each with the fingerprint of the answers it froze). */
-export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels: Map<string, string>, entered: Map<string, { at: string; by: string; hash: string }>, markOf: MarkOf = () => undefined): Sheet {
+ *  parts, else the twin's sections) and the entered ticks (each with the fingerprint of the answers it froze). With
+ *  `waits` (QA-309), a box with no answer to show waits only when readiness still names its fact: a fact held as "none
+ *  apply", a row fact answered on its rows (the form's spare rows stay empty) or one the release never asks does not;
+ *  its section stays on the sheet to tick all the same. Without it, every such box waits. */
+export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels: Map<string, string>, entered: Map<string, { at: string; by: string; hash: string }>, markOf: MarkOf = () => undefined, waits?: Waits): Sheet {
   const parts = layout.basis === "form_parts" ? layout.parts : [];
   const out: SheetSection[] = layout.basis === "form_parts"
     ? parts.map((p) => ({ key: p.key, title: p.title, ...(p.named ? {} : { named: false as const }), version: "", entered: null, out_of_date: false, answers: [], waiting: [] }))
@@ -78,6 +85,7 @@ export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels:
   const byKey = new Map(out.map((x) => [x.key, x]));
   const partOf = new Map(parts.flatMap((p) => p.fieldKeys.map((k) => [k, p.key] as const)).reverse()); // the first part wins
   let other: SheetSection | null = null;
+  const asked = new Set<string>(); // QA-309: the sections with a box for this person, whether it waits or not
   // Review m3 on #1075: "Other questions" never takes a part's key.
   let otherKey = OTHER_PART; while (byKey.has(otherKey)) otherKey = `${otherKey}_`;
   const sectionOf = (box: string): SheetSection | undefined => {
@@ -96,15 +104,16 @@ export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels:
     // answers are never folded into the applicant's.
     const subject = b.about ?? "", label = labels.get(b.fact) ?? b.meaning ?? b.caption ?? b.fact;
     if (!subject.split("/")[0]) continue; // a box about nobody on this case (for example the spouse's, with no spouse) is not asked for
+    asked.add(sec.key);
     if (b.coverage === "confirmed fact") {
       if (sec.answers.some((a) => a.subject === subject && a.fact === b.fact && a.row === b.row)) continue;
       const m = markOf(subject, b.fact, b.row);
       sec.answers.push({ label, fact: b.fact, subject, person: b.about_label, row: b.row, value: b.value, copy_text: copyText(b.value), source: sourceOf(origin(subject.split("/")[0], b.fact)), mark: m?.mark ?? null, to_confirm: !!m && !m.confirmed, why: m?.why ?? null });
-    } else if (!sec.waiting.some((w) => w.subject === subject && w.fact === b.fact)) sec.waiting.push({ fact: b.fact, subject, person: b.about_label, label });
+    } else if ((!waits || waits(subject, b.fact)) && !sec.waiting.some((w) => w.subject === subject && w.fact === b.fact)) sec.waiting.push({ fact: b.fact, subject, person: b.about_label, label });
   }
   // A part of the form with nothing to type for this person (a signature block, the spouse's part on a case with no
   // spouse) is not a portal step for them: it is left out, unless it was ticked (its tick stays visible).
-  const shown = layout.basis === "form_parts" ? out.filter((x) => x.answers.length || x.waiting.length || entered.has(x.key)) : out;
+  const shown = layout.basis === "form_parts" ? out.filter((x) => asked.has(x.key) || entered.has(x.key)) : out;
   for (const sec of shown) {
     sec.version = sectionHash(sec.answers);
     const e = entered.get(sec.key);
@@ -113,4 +122,36 @@ export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels:
   return layout.basis === "form_parts"
     ? { order_basis: "form_parts", order_note: "In the order the form prints its parts, as this release's configuration names them, until the portal's own screens are recorded (W6).", sections: shown }
     : { order_basis: "pdf_twin", order_note: "In the PDF form's section order until the portal's own screens are recorded (W6).", sections: shown };
+}
+
+/** QA-309 (C7.3, P-401): the facts an Online form's sheet still waits on, by subject: each fact the form's readiness names
+ *  (a required answer missing or not confirmed, one that needs a fix, the fact a fired section check reads) and, for a
+ *  repeating group whose "none apply" is not answered or confirmed, every fact of that group. A fact held as "none apply",
+ *  a row fact answered on its rows, or a fact the release never asks is never among them. A group or check line is matched
+ *  to its person by id (review m2: never by the name shown, which two people can share). */
+export function waitsOf(view: Pick<QuestionnaireView, "sections" | "checks">, missing: Readiness["missing"], subjectId: string, caseSubject?: string | null): Waits {
+  const keys = new Set<string>();
+  for (const m of missing) {
+    if (m.fact.startsWith("group:")) {
+      for (const sec of view.sections.filter((x) => x.section === m.fact.slice(6) && (m.subject ? x.subjectId === m.subject : x.about_label === m.about))) for (const q of sec.questions) keys.add(`${q.subjectId}|${q.fact}`);
+    } else if (m.fact.startsWith("check:")) {
+      const c = view.checks.find((x) => x.id === m.fact.slice(6) && (m.subject ? x.subjectId === m.subject : x.about_label === m.about));
+      if (c?.fact) keys.add(`${c.subjectId}|${c.fact}`);
+    } else keys.add(`${m.subject ?? subjectId}|${m.fact}`);
+  }
+  // A box about the application is "case" on the form; readiness names it by the case's own subject.
+  return (about, fact) => keys.has(`${about === "case" && caseSubject ? caseSubject : about}|${fact}`);
+}
+
+/** QA-309: an Online form item's reason while it is not Done: the facts its readiness still names (the first three by
+ *  label and person), else the sections not yet ticked "Entered in the portal". Never "Every fact it reads is confirmed"
+ *  over a sheet that is not finished. */
+export function sheetWords(sheet: Sheet, missing: Readiness["missing"]): string {
+  if (missing.length) {
+    const named = missing.slice(0, 3).map((m) => `${m.label} (${m.about})`), more = missing.length - named.length;
+    return `Waiting for ${missing.length} fact${missing.length === 1 ? "" : "s"} to answer or confirm: ${named.join("; ")}${more ? `; and ${more} more` : ""}.`;
+  }
+  const left = sheet.sections.filter((x) => !x.entered || x.out_of_date), n = sheet.sections.length;
+  if (!n) return "Its answer sheet has no section to enter yet.";
+  return `Every answer is ready to enter in the portal; ${left.length} of ${n} section${n === 1 ? "" : "s"} still to tick "Entered in the portal": ${left.map((x) => x.title).join(", ")}.`;
 }

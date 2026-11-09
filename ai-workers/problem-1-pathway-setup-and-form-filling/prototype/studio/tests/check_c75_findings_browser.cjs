@@ -76,7 +76,8 @@ const ago = (y) => { const d = new Date(); d.setUTCFullYear(d.getUTCFullYear() -
     let t = await panel();
     step("C7.5 the Review panel lists the two passport findings in words, with person, form and fact", /Sample Spouse A's passport expires on Apr 1, 2030, before the visit ends on Apr 15, 2030\./.test(t) && /Sample Child A2's passport expires on Mar 20, 2030/.test(t) && /IMM 5257 · Expiry date of the passport/.test(t), t.slice(0, 300));
     step("C7.5 reviewer M3: findings grouped per person, in the case's order, each group headed by the person", JSON.stringify(await p.locator("[data-findings-person]").evaluateAll((els) => els.map((e) => e.getAttribute("data-findings-person")))) === JSON.stringify(["Sample Spouse A", "Sample Child A2"]) && (await p.locator('[data-findings-person="Sample Spouse A"] h3').innerText()).startsWith("Sample Spouse A"));
-    step("C7.5 the panel carries the SI-6 Stand-in chip and says findings never stop Ready to file", (await p.locator('[data-findings] [data-stand-in="SI-6"]').count()) === 1 && /never stop Ready to file/.test(t));
+    // C7.5 part 2 (challenge m5): a finding is a warning, decided here or passed with a reason on Ready to file (never a hard stop).
+    step("C7.5 the panel carries the SI-6 Stand-in chip and says a finding is a warning, decided here or passed with a reason on Ready to file", (await p.locator('[data-findings] [data-stand-in="SI-6"]').count()) === 1 && /decide it here, or pass it with a reason on Ready to file/.test(t));
     step("C7.5 rows in a stable order: same severity, the case's order of people (the spouse before the older child)", /Sample Spouse A/.test(await p.locator("[data-finding]").first().innerText()) && /Sample Child A2/.test(await p.locator("[data-finding]").nth(1).innerText()));
     step("C7.5 counts: 2 open", /^2 open · 0 acknowledged · 0 resolved/.test(await counts()), await counts());
     await state("two-open");

@@ -14,6 +14,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { crossChecks, ruleWords, type Fact, type Hit } from "../../engine/runtime/cross-checks.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime, type Reached } from "./runtime.ts";
+import { ReviewRuns } from "./review-runs.ts";
 
 type H = string | undefined;
 type Row = Awaited<ReturnType<Db["reviewFinding"]["findMany"]>>[number];
@@ -33,19 +34,21 @@ const refused = (detail: string, status = HttpStatus.CONFLICT): never => { throw
 
 @Injectable()
 export class FindingsService {
-  constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit, @Inject(ReviewRuns) private readonly reviews: ReviewRuns) {}
 
   /** GET /runtime/cases/:id/findings[?source=&state=]: the rules run first, then every finding of the case. */
   async list(actor: Actor, caseId: string, query: unknown): Promise<Findings> {
     const q = parse(FindingsQuery, query);
     const c = await this.r.reach(actor, caseId, "officer");
     await this.runRules(actor, c);
+    // C7.5 part 2 (challenge M6): an AI finding whose quoted words left the form is resolved now, as a rules finding is.
+    await this.reviews.resolveMoved(c);
     const rows = await this.db.reviewFinding.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
     const { labels } = await this.factsOf(actor, c);
     const all = rows.map((x) => this.shape(c, x, labels));
     const counts = Object.fromEntries(STATE.map((s) => [s, all.filter((f) => f.state === s).length])) as Findings["counts"];
     return { case_id: c.id, findings: all.filter((f) => (!q.source || f.source === q.source) && (!q.state || f.state === q.state)), counts,
-      ai: { available: false, words: "Today: rules checks on every form. The AI review of the Visitor visa forms comes next (a saved run, replayed at US$0)." },
+      ai: { available: false, words: "Rules checks run on every form at every read (US$0). The independent AI review of a filled form runs from the Review page: Saved replays its checked run at US$0." },
       may_waive: (await this.representative(c.id)) === actor.id };
   }
 

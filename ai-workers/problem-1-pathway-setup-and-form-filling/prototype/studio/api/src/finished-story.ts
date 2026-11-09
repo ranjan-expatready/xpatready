@@ -74,7 +74,6 @@ const specimen = (text: string) => Buffer.from(`%PDF-1.4\n% ${text}\n%%EOF\n`, "
 
 /** The open bugs and rules a stage of this story waits on, named in its words (never faked around). */
 export const HELD = {
-  sheet: "QA-165 (1): the answer sheet keeps waiting on IMM 5257's Yes/No gates (other names, national identity document, US PR card) and on facts the case holds as rows or as \"none apply\", and on the contact in Canada (name, relationship, address), which release 2 never asks (qa logs that part as its own row), so the Online item cannot read Done",
   family: "QA-153: IMM 5645's parents and brothers and sisters are not asked, so their form fields stay empty on the copy",
   followUps: "QA-165 (1): the follow-up questions of a No (national identity document, US PR card) stay required, so they carry Sample values by kind of answer",
   paper: "IMM 5257's copy leaves 16 of its 46 mandatory form fields empty today, so Adobe's Validate would refuse it (QA-165, #1318); and Validate is a person's step, never simulated (P-46, P-171)",
@@ -82,7 +81,7 @@ export const HELD = {
 } as const;
 
 type Q = { subjectId: string; fact: string; label?: string; group: string | null; value_type: string; collected_from: string; required: boolean; hidden: boolean; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; answer: { id: string; confirmed: boolean; awaits_client?: boolean } | null; rows: { row: string; answer: { id: string; confirmed?: boolean; awaits_client?: boolean } | null }[] };
-type Section = { subjectId: string; section: string; questions: Q[]; group: { required: boolean; rows: number; none_apply: { id: string } | null } | null };
+type Section = { subjectId: string; section: string; questions: Q[]; group: { required: boolean; rows: number; none_apply: { id: string; confirmed?: boolean } | null } | null };
 type Person = { subject: string; label: string; role: string; age: number | null; applies: boolean };
 
 /** Takes the family case (opened on release 1 by the configured checkpoint) to a recorded submission on release 2. */
@@ -153,7 +152,8 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
       // Each person's sections confirmed from a fresh read (the re-confirmations above change what the officer reviews).
       for (const subject of [...new Set(after.sections.map((x) => x.subjectId))]) for (const sec of (await get<{ sections: Section[] }>(`/runtime/cases/${caseId}/questionnaire?mode=agent`)).sections.filter((x) => x.subjectId === subject)) {
         const seen = [...sec.questions.flatMap((q) => [q.answer?.id, ...q.rows.map((x) => x.answer?.id)]), sec.group?.none_apply?.id].filter(Boolean);
-        if (!seen.length || sec.questions.every((q) => (!q.answer || q.answer.confirmed) && q.rows.every((x) => !x.answer || x.answer.confirmed))) continue;
+        // B155: a section whose only answer is its group's "none apply" (a person's brothers and sisters) is confirmed too.
+        if (!seen.length || (sec.questions.every((q) => (!q.answer || q.answer.confirmed) && q.rows.every((x) => !x.answer || x.answer.confirmed)) && (!sec.group?.none_apply || sec.group.none_apply.confirmed))) continue;
         must(await r.call(officer, "POST", `/runtime/cases/${caseId}/sections/${sec.section}/confirm`, { subjectId: sec.subjectId, seen }), `Confirm the section ${sec.section}`); confirmed++;
       }
     }
@@ -199,7 +199,7 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
     const notDone = p.items.filter((i) => i.kind === "form" && i.channel === "ONLINE" && i.state !== "done");
     const toValidate = p.items.filter((i) => i.kind === "form" && /Validate/.test(i.reason ?? ""));
     const forms = [...new Set(p.items.filter((i) => i.kind === "form" && i.channel !== "ONLINE" && i.signature !== "HAND_SCANNED").map((i) => i.form ?? ""))].sort();
-    const why = [notDone.length ? `${notDone.length} of ${online.length} Online IMM 5257 items stay To do: ${HELD.sheet}.` : "", toValidate.length ? `${toValidate.length} barcode PDF${toValidate.length === 1 ? "" : "s"} not read back: ${HELD.validate}.` : "", forms.includes("IMM 5645") ? `${HELD.family}.` : ""].filter(Boolean).join(" ");
+    const why = [notDone.length ? `${notDone.length} of ${online.length} Online IMM 5257 items stay To do: ${[...new Set(notDone.map((i) => i.reason ?? ""))].join(" ")}` : "" /* QA-309: each item names what it waits on */, toValidate.length ? `${toValidate.length} barcode PDF${toValidate.length === 1 ? "" : "s"} not read back: ${HELD.validate}.` : "", forms.includes("IMM 5645") ? `${HELD.family}.` : ""].filter(Boolean).join(" ");
     return { status: notDone.length || toValidate.length ? "partial" : "done", shows: `${online.length} Online IMM 5257 answer sheet${online.length === 1 ? "" : "s"}, ${ticked} section${ticked === 1 ? "" : "s"} ticked "Entered in the portal" by the case officer; ${copies} PDF cop${copies === 1 ? "y" : "ies"} filled from the confirmed facts (${forms.join(", ")})`, why: why || null };
   });
 
