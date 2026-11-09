@@ -6,7 +6,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pleaseCheckWords } from "../api/src/runtime.ts";
+import { documentCheckNote, pleaseCheckWords } from "../api/src/runtime.ts";
 import { CASE_KINDS, inReleaseWords, letterReadUsd, notWritable, readerOf, sameValue, savedRead } from "../api/src/case-documents.ts";
 import { costUsd, LETTER_READ_CARD } from "../../p2/ledger.ts";
 import { MAX_ATTEMPTS } from "../../p2/policy.ts";
@@ -57,13 +57,19 @@ try {
   ok("C6.5 R7 (fail): a file naming one checksum but holding another's read, a malformed fact, a bad checksum or no folder: nothing replays", savedRead(other, dir) === null && savedRead("c".repeat(64), dir) === null && savedRead("../x", dir) === null && savedRead(sha, join(dir, "none")) === null);
 } finally { rmSync(dir, { recursive: true, force: true }); }
 
-// QA-322 (P-142 D6), review m1-m3 on a5eb5a9da: the client's "please check" words.
+// QA-322 (P-142 D6), review m1-m3 on a5eb5a9da, M1 and m7 on 673f0794d: the client's "please check" words.
 {
-  const before = pleaseCheckWords("Passport information page copy", false), after = pleaseCheckWords("Letter of invitation (Sample)", true);
+  const LONG = "Passport or travel document information page photocopy"; // the release's longest name the coded-line reader reads
+  const notes = [pleaseCheckWords(LONG, false), pleaseCheckWords(LONG, true), pleaseCheckWords("Letter of invitation (Sample)", false), pleaseCheckWords("Letter of invitation (Sample)", true)];
   const sentences = (t: string) => t.split(/(?<=\.)\s+/).map((x) => x.split(/\s+/).filter(Boolean).length);
-  ok("QA-322 m2: every sentence of either note is under 20 words (BIC-20)", [...sentences(before), ...sentences(after)].every((n) => n < 20), { before: sentences(before), after: sentences(after) });
-  ok("QA-322 m3: the document keeps its own name, only its first letter in lower case", /the passport information page copy on file/.test(before) && /the letter of invitation \(Sample\) on file/.test(after));
-  ok("QA-322 m1: once the client changed the answer, the note says so and no longer asks them to change it", /you changed it after it was compared/.test(after) && !/change it here/.test(after) && /change it here/.test(before));
-  ok("QA-322: both notes start \"Please check this answer\" and say the case officer settles it; neither carries a value", [before, after].every((t) => /^Please check this answer:/.test(t) && /case officer/.test(t)));
+  ok("QA-322 m2, m7: every sentence of either note is under 20 words, even with the release's longest document name (BIC-20)", notes.every((t) => sentences(t).every((n) => n < 20)), notes.map(sentences));
+  ok("QA-322 m3: the document keeps its own name, only its first letter in lower case", notes[0].includes("the passport or travel document information page photocopy on file") && notes[2].includes("the letter of invitation (Sample) on file"));
+  ok("QA-322 m1: once the answer holds another value, the note says it changed and no longer asks for a change", /It has changed since it was compared/.test(notes[1]) && !/change it here/.test(notes[1]) && /change it here/.test(notes[0]));
+  ok("QA-322 M1 (673f0794d): the words never say who changed it (staff may have)", notes.every((t) => !/\byou changed\b/i.test(t)));
+  const P = "Passport information page copy", fam = "person.family_name", changedWords = /It has changed since/;
+  ok("QA-322 M1 (673f0794d): the compared answer saved again, or changed back to it, keeps the \"did not match\" words", !changedWords.test(documentCheckNote(fam, P, "SAMPLEDE", "SAMPLEDE")) && !changedWords.test(documentCheckNote(fam, P, "SAMPLEDE", "SAMPLEDE ")) && !changedWords.test(documentCheckNote(fam, P, "SAMPLEDE", undefined)) && /change it here/.test(documentCheckNote(fam, P, "SAMPLEDE", "SAMPLEDE")));
+  ok("QA-322 M1 (673f0794d): another value, whoever saved it (the client or staff), gets the neutral \"has changed\" words", changedWords.test(documentCheckNote(fam, P, "SAMPLEDE", "SAMPLED")) && changedWords.test(documentCheckNote("person.passport_number", P, "SAMPLEP12", "SAMPLEP13")));
+  ok("QA-322: a name compares as the server does (case and repeated spaces), a number exactly", !changedWords.test(documentCheckNote(fam, P, "SAMPLEDE", " sampledE ")) && changedWords.test(documentCheckNote("person.passport_number", P, "SAMPLEP12", "sampleP12")));
+  ok("QA-322: every note starts \"Please check this answer\" and says the case officer settles it; none carries a value", notes.every((t) => /^Please check this answer\./.test(t) && /case officer/.test(t)));
 }
 process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code)

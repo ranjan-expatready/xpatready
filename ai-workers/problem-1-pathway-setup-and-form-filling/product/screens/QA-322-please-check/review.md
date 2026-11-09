@@ -91,3 +91,49 @@ Screenshots are in the scratchpad (`rv-shots/`), not in the repo. The journey re
 * An intended client's unaided walk (D17 and D20 stay with the founder).
 
 Verdict: Approve a5eb5a9da
+
+## Re-review of 673f0794d (diff only, P-318 (1); same reviewer, 9 Nov 2026)
+**Scope:** `git diff a5eb5a9da 673f0794d`. The code is in `api/src/runtime.ts` (`pleaseCheckWords`, a second query, the changed-since test) and `tests/check_c65_document_rules.ts`. The rest is records: walk.md, shots 02-06, and this review and the journey file, committed as written.
+
+**Run:** the same isolated copy `rv_q322` on :4438, started fresh with the configured checkpoint, at US$0. It is now stopped, and no tracked file was rewritten. My scenario script is `scratchpad/rv-q322-rr.mts`.
+
+**Results:**
+* `check_c65_document_rules.ts`: 21/21.
+* C6.5 pack: 33/35, with only 19b and 20 red (FQ-10); 12b passes.
+
+**What held:**
+* m3 is fixed: only the first letter is lower-cased.
+* The fresh-check words are right: "it did not match the passport information page copy on file." It is 3 sentences of 15, 7 and 8 words.
+* The extra query is limited to the subjects and facts of the case's own open checks: those checks are filtered by `caseId`, the rows by `rowKey: null` and the current version. It runs only when a check is open, once per view, never per row.
+* Nothing else moved: the only code files changed are runtime.ts and the test. The officer's half and the Agent view are untouched.
+* Confirm section with the same value cannot reach this case: it is still refused with 409 `open_checks` while the check is open (scenario 6).
+
+**Scenarios: the words each case gets**
+Each case is a client view of one open check. "Changed" means the words "you changed it after it was compared…".
+
+| # | Case | Stored answer | Words shown | Right? |
+|---|---|---|---|---|
+| 0 | Fresh check | client, SAMPLEDE | "did not match" | yes |
+| 1 | The client re-saves the same value (API only; the client page saves only values that differ, questionnaire.tsx:341) | client, SAMPLEDE, new row | "changed" | **no**: nothing changed |
+| 2 | The client changes it to the document's spelling | client, SAMPLED | "changed" | yes |
+| 3 | The client changes it, then changes it back | client, SAMPLEDE, the value compared | "changed" | **no**: it still differs from the document, and the client is no longer asked to check it |
+| 5 | The officer changes the spouse's answer in the Agent view | `agent_view`, SPOUSED | "**you** changed it" | **no**: the client did not change it |
+| 6 | Confirm section | n/a | refused with 409 | n/a |
+
+**Findings**
+* **M1 (Major, runtime.ts:415).** `changed(k)` compares row ids, `now.id !== k.answerId`, so any new version counts as "you changed it".
+  * In case 5, an officer's correction made in the Agent view is credited to the client in client-facing copy. The statement is false.
+  * In case 3, a value that still differs from the document loses D6's "it did not match … If it is wrong, change it here". That is the very prompt this row adds, so the fix regresses D6 in a case reachable from the client's own screen, through two saves. The a5eb5a9da words were true in every one of these cases.
+  * The same id test also fires when another document agrees with the typed answer. Confirm & use then writes a VERIFIED copy with a new id and the same value (case-documents.ts:445). I could not reach that here: the checkpoint has one passport line per person. So it is shown from the code only.
+  * **Fix:** decide by value and by who.
+    * Read `valueJson` and `sourceJson` in the query at runtime.ts:414, and `typedValueJson` on the check.
+    * "Changed" applies only when the current value is not `sameValue(fact, current, typed)`.
+    * When the current version's channel is not the client's own (`questionnaire` or `client_reconfirm`), use neutral words without "you". For example: "This answer changed after it was compared with the {document} on file. Your case officer checks it again and settles any difference with you."
+    * Add a fail test for cases 3 and 5: a C6.5 pack step, or a unit check over the decision moved into a pure function.
+* **m7 (Minor, runtime.ts:74).** The under-20-words test (`tests/check_c65_document_rules.ts`) uses only "Letter of invitation (Sample)" for the changed words, which gives 19 words. The release also holds "Passport or travel document information page photocopy", which the coded-line reader reads. With that name the changed first sentence is 22 words (BIC-20). Shorten it, e.g. "you changed it after the {document} was compared", or test the longest readable name.
+
+m4 to m6 are left with the tech lead, as walk.md says. That is fine for this re-review.
+
+**To fix before Approve:** M1, with a test that fails on cases 3 and 5; m7, or list it in the PR.
+
+Verdict: Block 673f0794d

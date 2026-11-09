@@ -49,16 +49,24 @@ No browser errors.
 * Type check: no new errors.
 
 ## After the review (Approve on a5eb5a9da, journey 8.5/10; `review.md`)
-* **m1:** once the client changed the answer, the note says so instead of asking again: "Please check this answer: you changed it after it was compared with the {document} on file. Your case officer checks it again and settles any difference with you." The check stays open for the officer.
-* **m2:** every sentence is under 20 words (BIC-20).
+* **m1:** once the answer holds another value than the one the check compared, the note says so instead of asking again: "Please check this answer. It has changed since it was compared with the {document} on file. Your case officer checks it again and settles any difference with you." The check stays open for the officer.
+  * Re-review M1 on 673f0794d: "changed" is decided by value, never by answer row. The same value saved again, or changed back, keeps the "did not match" words.
+  * The words never say who changed it, because staff may have.
+* **m2, m7:** every sentence is under 20 words (BIC-20), even with the release's longest document name, "Passport or travel document information page photocopy".
 * **m3:** the document keeps its own name, with only its first letter in lower case ("letter of invitation (Sample)").
-* The words are one function, `pleaseCheckWords` in `api/src/runtime.ts`, tested in `tests/check_c65_document_rules.ts`: 4 new checks, 21/21.
+* The words are one function, `pleaseCheckWords` in `api/src/runtime.ts`, tested in `tests/check_c65_document_rules.ts`, along with `documentCheckNote`, which decides "changed" by value: 8 new checks, 25/25.
+* The re-reviewer's five cases, run against the fix on a fresh checkpoint copy:
+  * a fresh check gives "did not match";
+  * the same value saved again gives "did not match";
+  * a change to the document's spelling gives "has changed";
+  * a change back gives "did not match";
+  * the officer's change to the spouse's answer gives "has changed", which is neutral.
 
 New shots:
 
 | Shot | What it shows |
 |---|---|
-| `screenshots/05-client-after-own-change-1440.png` | After the client changed the answer to the document's spelling, the note says it was changed after the comparison and that the officer checks it again |
+| `screenshots/05-client-after-own-change-1440.png` | After the client changed the answer to the document's spelling, the note says it has changed since the comparison and that the officer checks it again |
 | `screenshots/06-client-part-please-check-390.png` | The note at 390 px, with no sideways scroll |
 
 Not changed, for the tech lead:
