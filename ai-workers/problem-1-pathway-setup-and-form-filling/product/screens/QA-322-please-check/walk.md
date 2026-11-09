@@ -75,3 +75,7 @@ Not changed, for the tech lead:
 * **m6:** answered by the 390 px shot.
 
 Re-run on the checkpoint: `C6.5.test.ts` 33/35 (19b and 20 only).
+
+## After the re-review on 01d12b6b7 (Approve)
+* **m9:** the two doc comments are in order, and the `pleaseCheckWords` comment no longer says "once the client changed the answer". Comment only.
+* **m8, not changed, for the tech lead:** no pack step shows that the view calls the value rule; the unit tests cover the rule itself. A step where the client saves another value, then the compared one, before C6.5-15 would make C6.5-15's resolve refuse with 409 `changed`, because it names no answer. Adding that step means changing C6.5-15 to send the current answer: a pack line under P-400, asked on the PR. The re-reviewer's script `rv-q322-rr.mts` shows the view's words right in all five cases on a fresh checkpoint copy.

@@ -137,3 +137,40 @@ m4 to m6 are left with the tech lead, as walk.md says. That is fine for this re-
 **To fix before Approve:** M1, with a test that fails on cases 3 and 5; m7, or list it in the PR.
 
 Verdict: Block 673f0794d
+
+## Re-review of 01d12b6b7 (diff only; same reviewer, 9 Nov 2026)
+**Scope:** `git diff 673f0794d 01d12b6b7`.
+* **Code:** `api/src/runtime.ts` (`documentCheckNote`, new words, the query now reads `valueJson` and `typedValueJson`) and `tests/check_c65_document_rules.ts`.
+* **Records:** walk.md, shots 02-06 redone, and my earlier re-review committed as written.
+
+**Run:** the same isolated copy `rv_q322` on :4438, started fresh with the configured checkpoint, at US$0. It is now stopped, and no tracked file was rewritten.
+
+**Results:**
+* `check_c65_document_rules.ts`: 25/25.
+* C6.5 pack: 33/35, with only 19b and 20 red (FQ-10).
+
+**M1 is fixed.** I re-ran my scenario script (`scratchpad/rv-q322-rr.mts`) for the words each case now gets:
+
+| Case | Words shown | Right? |
+|---|---|---|
+| Fresh check | "It did not match" | yes |
+| Same value saved again | "did not match" | yes |
+| Client changes to the document's spelling | "It has changed since it was compared" | yes |
+| Changed back | "did not match" | yes |
+| Officer edits in the Agent view | "has changed" | yes: neutral, no "you" |
+| Confirm section while open | 409 `open_checks` | unchanged |
+
+**Other points:**
+* "Changed" now uses `sameValue` from document-values.ts, the same comparison Confirm & use uses to open a check (case-documents.ts:41-42 re-exports it). A same-value copy written by an agreeing document therefore no longer reads as changed.
+* **m7 is fixed.** The longest readable name, "Passport or travel document information page photocopy", is tested, and every sentence is under 20 words.
+* **Do the tests fail on the old rule?** Mutation A drops the value comparison, so any current answer counts as changed: 23/25, with two M1 checks red. The rule's test fails when the rule is removed.
+* **The query** is still limited to the subjects and facts of this case's open checks, current version, no row key. It now selects values instead of ids and still runs once per view.
+* **Nothing else moved.** The only code files changed are runtime.ts and the test, and runtime.ts changes only inside `pleaseCheckWords`, `documentCheckNote` and `documentChecks`. The officer's half (drawer, resolve, Confirm section, `checkedAgainst`) and the Agent view are untouched.
+
+**Minor (Should; fix or list in the PR)**
+* **m8. The wiring of the value rule has no test** (runtime.ts:429). Mutation B makes the call skip `documentCheckNote` (`pleaseCheckWords(name, now(k) !== undefined)`), and everything stays green: the unit test is 25/25, and C6.5-12b checks only the "Please check this answer" prefix. My scenario run is the only evidence for the wiring. Add one pack step after C6.5-12b: the client saves a new value, then the old one, and the note reads "did not match" again.
+* **m9. A stale doc comment** (runtime.ts:71-74). The old `pleaseCheckWords` comment now sits above `documentCheckNote`, as a second doc block, and still says "once the client changed the answer". Move it to `pleaseCheckWords` and drop "the client".
+
+There is no Blocker and no Major. m4 to m6 stay with the tech lead.
+
+Verdict: Approve 01d12b6b7

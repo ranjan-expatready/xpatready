@@ -68,15 +68,15 @@ export const offeredRoles = (s: Snapshot) => addableRoles(s).filter((p) => p.rol
 
 export type Reached = Awaited<ReturnType<Runtime["reach"]>>;
 
-/** QA-322 (P-142 D6): the client's words on an answer while a typed-versus-document check is open on it. The document's
- *  value is never shown; sentences under 20 words (BIC-20, review m2); the document's own name, only its first letter in
- *  lower case (review m3: "Letter of invitation (Sample)" keeps "Sample"); and once the client changed the answer, words
- *  that say so instead of asking again (review m1). */
 /** QA-322: the note for one open check: "changed" only when the answer now holds another value than the one the check
  *  compared (review M1 on 673f0794d: the same value saved again, or changed back, is still the compared answer). */
 export function documentCheckNote(fact: string, documentName: string, compared: unknown, current: unknown): string {
   return pleaseCheckWords(documentName, current !== undefined && !sameValue(fact, current, compared));
 }
+/** QA-322 (P-142 D6): the client's words on an answer while a typed-versus-document check is open on it. The document's
+ *  value is never shown; sentences under 20 words (BIC-20, review m2, m7); the document's own name, only its first letter
+ *  in lower case (review m3: "Letter of invitation (Sample)" keeps "Sample"); and once the answer holds another value,
+ *  words that say it has changed, without saying who changed it, instead of asking again (review m1, M1). */
 export function pleaseCheckWords(documentName: string, changedSince: boolean): string {
   const doc = documentName.charAt(0).toLowerCase() + documentName.slice(1);
   // Review M1 on 673f0794d: "changed" is decided by value and never says who changed it (staff may have); m7: short
