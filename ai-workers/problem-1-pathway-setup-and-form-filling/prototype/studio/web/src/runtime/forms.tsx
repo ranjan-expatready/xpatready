@@ -17,6 +17,8 @@ import { MovedGroups } from "./release-update"; // C9.5: what a move to a newer 
 import { ReadinessPanel } from "./readiness"; // C7.6 (B2): the filings' readiness from /prepare, right after the forms
 import { SignSteps } from "./sign-steps"; // C8.1 (B3): who signs, and the steps of a form signed by hand and scanned
 import { AddedTag, AddFormButton, BlankRow } from "./add-form"; // C7.8 (B141): add a library form to one filing
+import { Link } from "react-router-dom";
+import { sheetPath, STATE_WORDS } from "./answer-sheet"; // C7.3 (QA-317): the Online line opens its answer sheet
 
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const busy = (c: FormCopy) => c.status === "QUEUED" || c.status === "RUNNING";
@@ -48,7 +50,7 @@ export function FormsPanel({ caseId }: { caseId: string }) {
               {g.forms.map((f) => f.blank ? <BlankRow key={`${f.form}|${f.subject_id}`} caseId={caseId} f={f} recorded={g.recorded} /> : <FormRow key={`${f.form}|${f.subject_id}`} caseId={caseId} f={f} recorded={g.recorded} />)}
               {g.filing ? <AddFormButton caseId={caseId} filing={g.filing} owner={g.owner} disabled={g.recorded ? "This application is recorded as submitted: read-only." : null} /> : null}
             </React.Fragment>)}
-            {(q.data!.online ?? []).map((f) => <OnlineRow key={f.form} f={f} />)}
+            {(q.data!.online ?? []).map((f) => <OnlineRow key={f.form} caseId={caseId} f={f} />)}
           </ul>}
     </section>
     <ReadinessPanel caseId={caseId} />
@@ -69,12 +71,26 @@ function byFiling(forms: CaseForm[], p: PrepareFilings | undefined) {
   return [...groups, ...(rest.length ? [{ filing: null, recorded: false, owner: "", forms: rest }] : [])];
 }
 
-/** QA-40: a form filed Online has no PDF copy; it is named with its people, so it is never silently missing. */
-function OnlineRow({ f }: { f: CaseOnlineForm }) {
+/** Review m3 (QA-317): each person's Online item says its state beside its link (the server's), so the case shows when the
+ *  sheet is Done (B4's last step) where the officer opens it. */
+/** QA-40: a form filed Online has no PDF copy; it is named with its people, so it is never silently missing. QA-317: each
+ *  person's Online item opens its answer sheet (the item ids come from the case's Prepare view, as "How each form is filed"
+ *  reads them); its PDF copy, if any, is among the forms listed above this line. */
+function OnlineRow({ caseId, f }: { caseId: string; f: CaseOnlineForm }) {
+  const actor = useActorId();
+  const prep = useApi<{ derived: boolean; items: { id: string; kind: string; form?: string; channel?: string; person: string; state: string }[] }>(["runtime", "view", caseId, "prepare", actor], `/runtime/cases/${caseId}/prepare`, { retry: noRetryOnRefusal });
+  // Review m1: in the order the line names the people.
+  const at = (person: string) => { const n = f.people.indexOf(person); return n < 0 ? f.people.length : n; };
+  const items = (prep.data?.items ?? []).filter((i) => i.kind === "form" && i.form === f.form && i.channel === "ONLINE").sort((a, b) => at(a.person) - at(b.person));
   return (
     <li className="px-4 py-3" data-online-form={f.form}>
       <h3 className="text-sm font-semibold"><span className="mono">{f.form}</span> · filed {ONLINE_LATER_WAVE} <Pill tone="info">{f.pdf_copy ? "PDF copy, not for filing" : "Answer sheet only"}</Pill></h3>
-      <p className="text-[13px] text-text-muted">{f.title}, for {f.people.join(", ")}. It is filed online: the case officer types it into the IRCC account from the answer sheet{f.pdf_copy ? "; a PDF copy, not for filing, is listed with the forms below." : `. ${f.why_no_copy ?? ""}`}</p>
+      <p className="text-[13px] text-text-muted">{f.title}, for {f.people.join(", ")}. It is filed online: the case officer types it into the IRCC account from its answer sheet{f.pdf_copy ? "; a PDF copy, not for filing, is listed with the forms above." : `. ${f.why_no_copy ?? ""}`}</p>
+      {items.length ? (
+        <p className="mt-1.5 flex flex-wrap gap-2" data-sheet-links>
+          {items.map((i) => <Link key={i.id} to={sheetPath(caseId, i.id)} className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1 text-[13px] font-medium text-text-link hover:bg-surface-raised" data-sheet-link={i.id}><FileText className="size-3.5" aria-hidden />Open answer sheet: {f.form} for {i.person}<span className="sr-only">, </span><span className="font-normal text-text-muted" data-sheet-state={i.state}>· {STATE_WORDS[i.state]?.[0] ?? i.state}</span></Link>)}
+        </p>
+      ) : prep.isError ? <p className="mt-1 text-[13px] text-text-danger">Its answer sheet could not be found: {(prep.error as Error).message}</p> : null}
     </li>
   );
 }

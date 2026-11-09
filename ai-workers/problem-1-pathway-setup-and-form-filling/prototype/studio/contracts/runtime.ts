@@ -128,6 +128,8 @@ export type AnswerMark = "confirmed" | "declared" | "by_principal" | "by_staff";
  *  reads, one shape for both (engine/runtime/case.ts caseView returns it). */
 /** answered: who first gave the answer, when this version is the officer's confirmation of it (review M4). */
 export type ViewAnswer = { id: string; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; by: string; at: string; answered: { channel: string; by: string; at: string } | null; problems: string[]; confirmed: boolean; why: string;
+  /** C6.19 (additive): a copy from the same client's earlier case: its reference, who re-confirmed it here and when. */
+  copied_from?: { reference: string; by: string; at: string };
   /** P-242, P-411: whether the answer is written to the forms now (every current answer is), and who gave it. */
   fills: boolean; mark: AnswerMark;
   /** C6.18 (P-244), background answers only: the staff member who recorded it and when ("Officer"), or null when the

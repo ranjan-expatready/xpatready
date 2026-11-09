@@ -1,0 +1,29 @@
+C6.5-counts on fe0703044 (= main 60235a001 + qa records), copy qa_p65counts :4473, start Mon Nov  9 12:01:32 IST 2026
+NOTICE:  database "xr_studio_qa_p65counts" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_p65counts on http://localhost:4473 (xr_studio_qa_p65counts), stops itself in 30 min
+reset 201
+load 201
+loaded Mon Nov  9 12:02:57 IST 2026
+C6.5 — Staff corrections of document values, counted per review mode (P-243; US$0)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C6.5-21e pass: a staff answer after the read that differs is one expanded correction; values read are counted per mode — {"by_mode":{"collapsed":{"read":1,"corrected":0,"rate":0,"left":0},"expanded":{"read":2,"corrected":1,"rate":0.5,"left":0}},"corrections":[{"fact":"person.given_names","review":"expanded","document":"D","how":"staff_answer","by":"user-O","at":"2026-11-08T11:00
+PASS  C6.5-21e fail: a client's change, an answer equal to the document, and a staff answer typed before the read are not corrections — {"by_mode":{"collapsed":{"read":1,"corrected":0,"rate":0,"left":0},"expanded":{"read":2,"corrected":0,"rate":0,"left":0}},"corrections":[]}
+PASS  C6.5-22e pass: a check resolved by keeping the answer counts the document's value as corrected, once — {"by_mode":{"collapsed":{"read":1,"corrected":0,"rate":0,"left":0},"expanded":{"read":2,"corrected":1,"rate":0.5,"left":0}},"corrections":[{"fact":"person.family_name","review":"expanded","document":"D","how":"kept_answer","by":"user-O","at":"2026-11-08T11:00:
+PASS  C6.5-21e fail (review M1): answering a value left for a person is no correction, and the value is counted apart, not as read — {"by_mode":{"collapsed":{"read":1,"corrected":0,"rate":0,"left":0},"expanded":{"read":2,"corrected":0,"rate":0,"left":1}},"corrections":[]}
+PASS  C6.5-22e fail (review m1): a staff answer saved after a newer file replaced the document is not a correction of the old read — {"by_mode":{"collapsed":{"read":1,"corrected":0,"rate":0,"left":0},"expanded":{"read":0,"corrected":0,"rate":null,"left":0}},"corrections":[]}
+PASS  C6.5-22e pass (review m1): a staff answer saved before the document was replaced still counts — {"by_mode":{"collapsed":{"read":1,"corrected":1,"rate":1,"left":0},"expanded":{"read":0,"corrected":0,"rate":null,"left":0}},"corrections":[{"fact":"person.passport_number","review":"collapsed","document":"D","how":"staff_answer","by":"user-O","at":"2026-11-08
+PASS  C6.5-22e fail (review m2): a check closed because a newer file replaced the document is not a correction — {"by_mode":{"collapsed":{"read":1,"corrected":0,"rate":0,"left":0},"expanded":{"read":2,"corrected":0,"rate":0,"left":0}},"corrections":[]}
+PASS  C6.5-21 pass (P-243): before any correction the counts name the values read per mode (3 collapsed on passed check digits) and no correction — {"case_id":"a5239e98-ea00-4b9f-9174-216a6202f629","by_mode":{"collapsed":{"read":3,"corrected":0,"rate":0,"left":0},"expanded":{"read":3,"corrected":0,"rate":0,"left":2}},"corrections":[],"rule":"A correction is a staff answer saved after the document was read
+PASS  C6.5-22 pass (P-243): a correction before Confirm & use counts as expanded, a later staff change to a collapsed value as collapsed, each once, with who and how — {"case_id":"a5239e98-ea00-4b9f-9174-216a6202f629","by_mode":{"collapsed":{"read":3,"corrected":1,"rate":0.333,"left":0},"expanded":{"read":3,"corrected":1,"rate":0.333,"left":2}},"corrections":[{"fact":"person.given_names","review":"expanded","document":"33b16
+PASS  C6.5-22 fail: an answer saved equal to what the document reads is not a correction — [{"fact":"person.given_names","review":"expanded","document":"33b16ec6-52df-4b8c-b33c-9a013bdba48c","how":"staff_answer","by":"user-O","at":"2026-11-09T06:32:58.129Z"},{"fact":"person.passport_number","review":"collapsed","document":"33b16ec6-52df-4b8c-b33c-9a
+PASS  C6.5-22 fail (review M1): answering a value left for a person (the country, given only as a code) is not counted as a correction — {"case_id":"a5239e98-ea00-4b9f-9174-216a6202f629","by_mode":{"collapsed":{"read":3,"corrected":1,"rate":0.333,"left":0},"expanded":{"read":3,"corrected":1,"rate":0.333,"left":2}},"corrections":[{"fact":"person.given_names","review":"expanded","document":"33b16
+PASS  C6.5-22 fail (review m2): a check resolved by keeping the document's value is not a correction — {"kept":200,"corrections":[{"fact":"person.given_names","review":"expanded","document":"33b16ec6-52df-4b8c-b33c-9a013bdba48c","how":"staff_answer","by":"user-O","at":"2026-11-09T06:32:58.129Z"},{"fact":"person.passport_number","review":"collapsed","document":"
+PASS  C6.5-23 fail: the counts are staff only: the client is refused (403) and another firm finds no such case (404) — [403,404]
+
+13/13 passed
+pack exit 0  end Mon Nov  9 12:02:58 IST 2026
+stopped qa_p65counts (database and files removed; log in var/isolated-logs/qa_p65counts-api.log)

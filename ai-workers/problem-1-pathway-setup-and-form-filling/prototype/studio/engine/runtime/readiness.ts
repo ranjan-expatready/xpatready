@@ -39,10 +39,10 @@ export type Owes = "staff" | "representative" | "client" | "employer" | "ircc";
 
 export type BlockCode = "barcode_not_validated";
 /** P-315: the former blocks, now CRITICAL warnings passed with a recorded reason (P-237, P-238). */
-export type CriticalCode = "missing_facts" | "fact_problem" | "open_check" | "out_of_date" | "missing_signature" | "edition_expired" | "representative_review" | "fields_left_empty" | "no_copy" | "hand_filled_copy";
+export type CriticalCode = "missing_facts" | "fact_problem" | "open_check" | "out_of_date" | "missing_signature" | "edition_expired" | "representative_review" | "fields_left_empty" | "no_copy" | "must_verify" | "hand_filled_copy";
 export type WarnCode = CriticalCode | "missing_document" | "finding" | "edition_superseded" | "copy_stale" | "entered_out_of_date" | "hand_write" | "release_update";
 export const BLOCK_CODES: readonly BlockCode[] = ["barcode_not_validated"];
-export const CRITICAL_CODES: readonly CriticalCode[] = ["missing_facts", "fact_problem", "open_check", "out_of_date", "missing_signature", "edition_expired", "representative_review", "fields_left_empty", "no_copy", "hand_filled_copy"];
+export const CRITICAL_CODES: readonly CriticalCode[] = ["missing_facts", "fact_problem", "open_check", "out_of_date", "missing_signature", "edition_expired", "representative_review", "fields_left_empty", "no_copy", "must_verify", "hand_filled_copy"];
 export const WARN_CODES: readonly WarnCode[] = [...CRITICAL_CODES, "missing_document", "finding", "edition_superseded", "copy_stale", "entered_out_of_date", "hand_write", "release_update"];
 export const isCritical = (code: string): code is CriticalCode => (CRITICAL_CODES as readonly string[]).includes(code);
 
@@ -51,6 +51,10 @@ export const isCritical = (code: string): code is CriticalCode => (CRITICAL_CODE
 export type FormItem = {
   item?: string; form: string; subject: string; person: string; channel: Channel;
   readiness: Readiness; owesFact?: Record<string, Owes>;
+  /** C7.9 (P-242, SA-1B-261 r7): the facts this form writes that the immigration expert marked "must verify before
+   *  filing" whose value was given by the client and no one on staff has checked (engine/runtime/must-verify.ts). `key`
+   *  holds each value, so a pass covers only the value it was given for. */
+  unverified?: { fact: string; label: string; key: string }[];
   /** A barcode form (IRCC's Validate adds the barcode): IMM 5257, 0008, 1344 … (from the edition). */
   needsValidate: boolean;
   /** A validated copy is read back and still matches today's facts (C-9, C-10). */
@@ -183,6 +187,10 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     // Tech lead on #1318 (option 1): its own CRITICAL code, so "missing facts" means facts only; passed with a reason like any
     // readiness line (P-237, P-238), e.g. "written by hand in Adobe before filing".
     if (empty.length) critical({ code: "fields_left_empty", ...at, part: `empty|${empty.map((m) => m.fact).sort().join(",")}`, owes: "staff", words: `${ofWho(f)}: ${empty.length} form field${empty.length === 1 ? "" : "s"} IRCC's form marks mandatory would be left empty (${list(empty.map((m) => m.why ? `${m.label}: ${m.why}` : m.label))}).` });
+    // C7.9 (P-242, P-237): a must-verify fact given by the client and checked by no one on staff: CRITICAL, passable with a
+    // reason, never a block. The form still fills from the declared value meanwhile (SA-1B-261 r1).
+    if (f.unverified?.length) critical({ code: "must_verify", ...at, part: f.unverified.map((u) => u.key).sort().join(","), owes: "staff",
+      words: `${ofWho(f)}: ${list(f.unverified.map((u) => `"${u.label}"`))} not verified: the client gave ${f.unverified.length === 1 ? "it" : "them"} and no one on staff has checked ${f.unverified.length === 1 ? "it" : "them"}. Check against the document and confirm, or pass with a reason.` });
     // BR-9 1: out of date, or a required signature missing.
     if (f.outOfDate) critical({ code: "out_of_date", ...at, part: `${f.outOfDate.key ?? f.outOfDate.fact}|${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)}`, owes: "staff", words: f.outOfDate.words ? `${ofWho(f)}: ${f.outOfDate.words}` : `${ofWho(f)} is out of date: "${f.outOfDate.fact}" changed on ${dayOf(f.outOfDate.since, `${f.form}'s out-of-date mark`)} after it was signed or uploaded. Make a new copy.` });
     if (signatureNeeded(f) && !f.signed) {
@@ -296,7 +304,7 @@ export function signatureNeeded(f: Pick<FormItem, "channel" | "signature" | "sig
 export const CODE_WORDS: Record<BlockCode | WarnCode, string> = {
   missing_facts: "Missing facts", fields_left_empty: "Mandatory form fields left empty", fact_problem: "A fact with a problem", open_check: "An open check", out_of_date: "Out of date",
   missing_signature: "A missing signature", barcode_not_validated: "No validated copy read back", edition_expired: "Past IRCC's accepted-until date",
-  representative_review: "The representative's review", missing_document: "A missing document", finding: "A review finding",
+  representative_review: "The representative's review", must_verify: "A value to verify before filing", missing_document: "A missing document", finding: "A review finding",
   edition_superseded: "A newer edition or fee", copy_stale: "A PDF copy out of date", entered_out_of_date: "A portal section entered before a change",
   hand_write: "A line to write by hand", no_copy: "No current copy made for filing", hand_filled_copy: "Filled by hand: upload the completed copy", release_update: "A newer release",
 };
