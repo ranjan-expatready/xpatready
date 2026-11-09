@@ -25,7 +25,7 @@ export class FilingRecord {
   async read(actor: Actor, caseId: string) {
     const c = await this.r.reach(actor, caseId, "officer");
     const label = new Map(this.r.peopleOf(c).map((p) => [p.subjectId, p.label]));
-    const filings = await this.db.filing.findMany({ where: { caseId: c.id, active: true }, include: { applicants: true }, orderBy: { createdAt: "asc" } });
+    const filings = await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id, active: true }, include: { applicants: true }, orderBy: { createdAt: "asc" } });
     const subjects = [...new Set(filings.flatMap((f) => f.applicants.map((a) => a.subjectId)))];
     const ucis = subjects.length ? await this.db.clientCanonicalAnswer.findMany({ where: { subjectId: { in: subjects }, canonicalFieldKey: UCI, supersededById: null, rowKey: null } }) : [];
     const uciOf = new Map(ucis.map((u) => [u.subjectId, typeof u.valueJson === "string" ? u.valueJson : null]));

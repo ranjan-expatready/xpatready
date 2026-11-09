@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C6.17 Multi-stage case: draft board</title>
+<style>
+:root{--primary:#0862c5;--surface:#f7f7f7;--raised:#fff;--text:#2d2d2d;--muted:#595959;--border:#d9d9d9;--line:#ececec;--warn-t:#663200;--warn-tint:#fff1e0;--ok-t:#0f5c2e;--ok-tint:#e3f4e9;--info-tint:#e8f1fb;--info-t:#054e9c;--crit-t:#8a1c1c;--crit-tint:#fdeaea;--bg:#e9ecef}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,sans-serif}h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 16px 60px}.frame{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin:22px 0;padding:16px}
+.frame>h2{font-size:15px}.note,.muted{color:var(--muted);font-size:12.5px}.note{margin:2px 0 12px}
+.pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:0 8px;font-size:12px;color:var(--muted);white-space:nowrap}
+.ok{background:var(--ok-tint);color:var(--ok-t);border-color:transparent}.warn{background:var(--warn-tint);color:var(--warn-t);border-color:transparent}.info{background:var(--info-tint);color:var(--info-t);border-color:transparent}.crit{background:var(--crit-tint);color:var(--crit-t);border-color:transparent}
+.btn{display:inline-flex;gap:4px;border:1px solid var(--border);background:#fff;border-radius:6px;padding:5px 12px;font:inherit;font-size:13px}.primary{background:var(--primary);color:#fff;border-color:var(--primary)}.off{opacity:.45}
+.card{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.head{padding:12px 16px;border-bottom:1px solid var(--border)}
+.strip{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border)}
+.stage{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;padding:6px 10px;min-width:200px}.stage b{font-weight:600}.stage .s{font-size:12px}
+.stage.cur{border-color:var(--primary);box-shadow:inset 3px 0 0 var(--primary)}.stage.grey{color:var(--muted)}.arrow{color:var(--muted)}.grow{flex:1}
+.list .row{display:flex;gap:10px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line)}.list .row span:first-child{flex:1}
+.lay{display:grid;grid-template-columns:1fr 520px;gap:0}@media(max-width:1100px){.lay{grid-template-columns:1fr}}
+.panel{border-left:1px solid var(--border);padding:14px 18px;background:#fff}.panel h3{font-size:14px;margin:14px 0 6px}
+.dialog{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px 18px;max-width:640px;box-shadow:0 6px 24px rgba(0,0,0,.08)}.dialog h3{font-size:14px;margin:12px 0 6px}
+.g{border:1px solid var(--line);border-radius:8px;margin:6px 0}.g .r{display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 10px;border-top:1px solid var(--line)}.g .r:first-child{border-top:0}.g b{font-weight:600}
+label.f{display:block;font-size:12.5px;color:var(--muted);margin:8px 0 2px}input.t,textarea{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit}
+.steps{display:flex;gap:6px;margin:4px 0 10px}.steps span{font-size:12px;border-radius:999px;padding:1px 9px;background:var(--line)}.steps .on{background:var(--primary);color:#fff}
+.notice{margin:8px 0;padding:9px 12px;border-radius:8px;display:flex;gap:10px;align-items:center}.notice span{flex:1}
+.toast{background:#1f2933;color:#fff;border-radius:8px;padding:10px 14px;display:inline-block}.toast a{color:#9cc8ff;margin-left:8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:900px){.two{grid-template-columns:1fr}}
+</style></head><body><div class="wrap">
+<h1>C6.17 · A multi-stage case (draft board, B139)</h1>
+<p class="muted">Intent, not pixels (P-44). Sample names (Client A principal; Client C, a child, in the states). <b>Sample route "Study, then work"</b>: Study permit (outside Canada) → Employer-specific work permit with an LMIA (inside Canada). It shows the mechanism; <b>not a recommended route</b> (TAXONOMY case 3 has the post-graduation work permit after the study permit); the immigration expert names real routes. Revised after the fresh challenge (challenge.md). Dates, key details and the deadline rule are Sample (canada.ca not read from this session). Form and document counts are read from the releases at run time, never fixed (P-319).</p>
+
+<div class="frame"><h2>1 · Open a case at a later stage (SA-1B-212)</h2>
+<p class="note">Dialog pattern, ≤3 steps. Step 2 appears only when the chosen combination is a later stage of a route. Key details are optional and are kept on the stage record (the team's StageRecord). Only a fact the same at every stage (UCI) is also written as Client A's answer, by the case officer.</p>
+<div class="dialog">
+ <div class="steps"><span>1 Application and client</span><span class="on">2 Earlier stages</span><span>3 Case team</span></div>
+ <h2 style="font-size:16px">Work permit with an LMIA is stage 2 of "Study, then work" <span class="pill">Sample</span></h2>
+ <p class="muted">Record what was done before your firm took the case. Nothing is filed for these stages.</p>
+ <div class="g">
+  <div class="r"><span><label><input type="checkbox" checked> <b>Study permit</b> · Done before we started</label></span><span class="pill">Stage 1</span></div>
+  <div class="r" style="grid-template-columns:1fr 1fr"><span><label class="f">UCI (optional)</label><input class="t" value="Sample 0000-0000"></span><span><label class="f">Study permit valid until (optional) ⓘ</label><input class="t" value="3 Feb 2027"></span></div>
+ </div>
+ <p class="muted">Will be created as: case on <b>Work permit with an LMIA, release 1</b> · Study permit recorded as done before we started · deadline "Apply before the study permit expires · due 3 Feb 2027" <span class="pill">Sample</span>, shown on the stage strip (not a task).</p>
+ <p><button class="btn">Back</button> <button class="btn primary">Next: case team</button></p>
+ <div class="notice crit"><span>"Study permit valid until" must be a date, for example 3 Feb 2027. Nothing was created.</span></div>
+</div></div>
+
+<div class="frame"><h2>2 · Case page: the stage strip and Start next stage (SA-1B-67, SA-1B-68 rule 1)</h2>
+<p class="note">Workspace pattern. GOV.UK task-list statuses in sentence case; "Cannot start yet" is grey and not linked. The button shows only when the case has a next stage. Person answers are read where they are; answers about the application are asked again for the new one. Nothing is copied.</p>
+<div class="card">
+ <div class="head"><b>Case SP-0031 · Client A</b> <span class="pill">Study permit</span> <span class="pill">Release 1</span> <span class="muted">· Preparing</span></div>
+ <div class="strip">
+  <div class="stage cur"><b>Study permit</b><span class="s pill info">Current</span></div><span class="arrow">→</span>
+  <div class="stage grey"><b>Work permit with an LMIA</b><span class="s">Not started</span></div>
+  <span class="grow"></span><button class="btn primary">Start next stage: Work permit with an LMIA</button> <span class="muted">ⓘ</span>
+ </div>
+ <div class="lay">
+  <div class="list">
+   <div class="row"><span><b>Prepare application</b> (this stage)</span><span class="muted">3 forms · 4 documents</span></div>
+   <div class="row"><span>Study permit · Client A</span><span class="pill warn">No filing record yet</span></div>
+   <div class="row"><span>Passport · Client A</span><span class="pill ok">Approved</span></div>
+  </div>
+  <div class="panel">
+   <h2 style="font-size:16px">Start the work permit?</h2>
+   <p class="muted">Starting it ends the study permit stage: its filings stay as they are and can no longer be changed. The work permit uses release 1 of Work permit with an LMIA (the newest, ready for cases).</p>
+   <h3>Who comes along</h3>
+   <div class="g"><div class="r"><span>Client A · principal applicant</span><span class="pill ok">Files</span></div>
+    <div class="r"><span class="muted">Everyone on the case has a role in the work permit.</span><span></span></div></div>
+   <h3>What comes along, what is new</h3>
+   <div class="g"><div class="r"><span><b>14 answers about Client A</b> are used as they are</span><span class="pill ok">Carried</span></div>
+    <div class="r"><span><b>5 questions about this application</b> (number, date, office, country where applying, type) are asked again: they were the study permit's</span><span class="pill">Asked again</span></div>
+    <div class="r"><span><b>9 new questions</b> for Client A</span><span class="pill">New</span></div>
+    <div class="r"><span><b>6 forms</b> of this application</span><span class="pill">Added</span></div>
+    <div class="r"><span><b>4 documents</b>; Passport is on file (uploaded 9 Nov): you check it again for this application</span><span class="pill">Added</span></div>
+    <div class="r"><span><b>Deadline</b>: Apply before the study permit expires · due 3 Feb 2027 <span class="pill">Sample</span></span><span class="pill info">Step</span></div></div>
+   <h3>Study permit details (kept on this stage; empty: none recorded on it)</h3>
+   <div class="g"><div class="r" style="grid-template-columns:1fr 1fr"><span><label class="f">UCI</label><input class="t" value="Sample 0000-0000"></span><span><label class="f">Study permit valid until</label><input class="t" value="3 Feb 2027"></span></div></div>
+   <div class="notice warn"><span>Client A's study permit has no filing record. Say why you are starting the next stage anyway.</span></div>
+   <textarea rows="2" placeholder="Reason (required)">Study permit approved; the client recorded the submission in the IRCC account</textarea>
+   <p class="muted"><b>This cannot be undone.</b> The study permit's filings become read only.</p>
+   <p style="margin-top:12px"><button class="btn primary">Start the work permit</button> <button class="btn">Cancel</button></p>
+  </div>
+ </div>
+</div></div>
+
+<div class="frame"><h2>3 · After the start, and an ended stage (read only)</h2>
+<p class="note">The ended chip opens a side panel: key details, filings, numbers and records. Nothing there can be changed; key details are changed as answers.</p>
+<div class="two">
+ <div class="card">
+  <div class="head"><b>Case SP-0031 · Client A</b> <span class="pill">Work permit with an LMIA</span> <span class="pill">Release 1</span></div>
+  <div class="strip">
+   <div class="stage"><b>Study permit</b><span class="s">Ended — next stage started</span></div><span class="arrow">→</span>
+   <div class="stage cur"><b>Work permit with an LMIA</b><span class="s pill info">Current</span><span class="s">Apply before the study permit expires · due 3 Feb 2027 <span class="pill">Sample</span></span></div>
+  </div>
+  <div class="list">
+   <div class="row"><span>5 questions about this application · Client A</span><span class="pill">Asked again</span></div>
+   <div class="row"><span>Passport · Client A · on file from Study permit</span><span class="pill">Received: check it</span></div>
+   <div class="row"><span>9 new questions for Client A</span><span class="pill">Open</span></div>
+  </div>
+ </div>
+ <div class="panel" style="border:1px solid var(--border);border-radius:12px">
+  <h2 style="font-size:16px">Study permit · Ended — next stage started</h2>
+  <p class="muted">Ended 12 Nov by the case officer: "Study permit approved; the client recorded the submission in the IRCC account". ⓘ The firm moved to the next application; IRCC's decision is recorded on the filing.</p>
+  <h3>Filings</h3>
+  <div class="g"><div class="r"><span>Study permit · Client A · no filing record</span><span class="pill">Read only</span></div></div>
+  <h3>Details</h3>
+  <div class="g"><div class="r"><span>UCI · Sample 0000-0000</span><span class="muted">entered by the case officer · also Client A's answer</span></div><div class="r"><span>Study permit valid until · 3 Feb 2027</span><span class="muted">entered by the case officer · on this stage only</span></div></div>
+  <h3>Documents</h3>
+  <div class="g"><div class="r"><span>Passport · Client A · uploaded 9 Nov (this stage's file; later uploads are not shown here)</span><span class="pill">Kept</span></div></div>
+  <p class="muted">Forms, copies and documents of this stage are kept as they were and never shown as the work permit's.</p>
+ </div>
+</div></div>
+
+<div class="frame"><h2>4 · States</h2>
+<p class="note">One stage: no strip. Refused and conflict change nothing. A client never sees the strip's actions; staff without the duty see the strip only.</p>
+<div class="strip" style="background:#fff;border:1px solid var(--border);border-radius:8px">
+ <div class="stage"><b>Study permit</b><span class="s">Done before we started</span></div><span class="arrow">→</span>
+ <div class="stage cur"><b>Work permit with an LMIA</b><span class="s pill info">Current</span></div><span class="arrow">→</span>
+ <div class="stage grey"><b>Next application</b><span class="s">Cannot start yet</span></div>
+</div>
+<div class="notice warn"><span>Apply before the study permit expires: can't set the date, "Study permit valid until" is missing. Answer it and the date is worked out.</span><button class="btn">Answer it</button></div>
+<div class="notice crit"><span>Can't start the work permit: its release is not ready for cases (2 items), or it was retired. Nothing was changed.</span><button class="btn off">Start the work permit</button></div>
+<div class="notice info"><span>(Another case) Client C, child: Work permit with an LMIA has no child role. Client C stays on the case and files nothing in this stage.</span></div>
+<div class="notice warn"><span>This case changed while you read it.</span><button class="btn">Read it again</button></div>
+<p><span class="toast">Work permit with an LMIA started. 14 answers about Client A used; 5 questions about this application asked again; 9 new questions; 6 forms and 4 documents added; deadline 3 Feb 2027 (Sample). <a>See them</a></span></p>
+</div>
+</div></body></html>

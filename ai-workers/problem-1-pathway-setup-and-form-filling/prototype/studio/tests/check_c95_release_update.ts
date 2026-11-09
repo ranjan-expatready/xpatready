@@ -94,7 +94,8 @@ ok("C9.5 BR-1 pass: revisions read in either order give the newest (revision 2),
 ok("C9.5 BR-1 fail: a gap in the revisions or a move backwards breaks the chain (refused, never read)", !pinChain([{ revision: 3, version: 6 }, { revision: 1, version: 1 }]).ok && !pinChain([{ revision: 2, version: 1 }, { revision: 1, version: 6 }]).ok && !pinChain([]).ok);
 // Challenge M1: where-used keeps one row per case, its newest revision. A stand-in for the database answers the query as
 // asked (its orderBy honoured), with the pins stored in reverse order of revision.
-const pinsStored = [{ caseId: "k1", configReleaseId: "rel6", revision: 2 }, { caseId: "k1", configReleaseId: "rel1", revision: 1 }, { caseId: "k2", configReleaseId: "rel1", revision: 1 }];
+// C6.17 (BR-9): a pin names its combination (every stored pin does); where-used counts only the case's current one's.
+const pinsStored = [{ caseId: "k1", configReleaseId: "rel6", revision: 2, combinationId: "vv" }, { caseId: "k1", configReleaseId: "rel1", revision: 1, combinationId: "vv" }, { caseId: "k2", configReleaseId: "rel1", revision: 1, combinationId: "vv" }];
 const fakeDb = {
   case: { findMany: async () => [{ id: "k1", combinationId: "vv" }, { id: "k2", combinationId: "vv" }] },
   packWorkPin: { findMany: async (q: { orderBy?: { caseId?: string; revision?: string }[] }) => [...pinsStored].sort((a, b) => (q.orderBy?.length ? a.caseId.localeCompare(b.caseId) || a.revision - b.revision : 0)) },

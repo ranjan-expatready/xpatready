@@ -124,6 +124,11 @@ export const completedSince = <T extends { uploadedAt: Date }>(scans: T[], added
  *  does not match its fingerprint is never joined (it was changed underneath; the trigger refuses that, this is the
  *  second guard), nor is a removed one. */
 export type AdditionRow = { id: string; filingId: string; subjectId: string; formKey: string; kind: string; frozen: unknown; frozenSha256: string; channel: string; signature: string; signedBy: string | null; addedBy: string; addedAt: Date; reason: string | null; removedAt: Date | null };
+/** C6.17 (review of #1262 M3, m1): the additions a copy of one stage's release joins: those on filings of the stage whose
+ *  combination the release is of (a case reads one stage per combination; a copy has no stage column of its own). A copy
+ *  queued on a stage that ended before it ran still joins that stage's additions, never the next stage's. */
+export const additionsOfStage = <R extends { filing: { stage: { combinationId: string } } }>(rows: R[], combinationId: string): R[] =>
+  rows.filter((r) => r.filing.stage.combinationId === combinationId);
 export function additionsOf(rows: AdditionRow[]): Addition[] {
   return rows.filter((r) => !r.removedAt && (r.kind === "fills" || r.kind === "blank") && frozenHash(r.frozen as Frozen) === r.frozenSha256).map((r) => ({
     id: r.id, filing: r.filingId, subject: r.subjectId, form: r.formKey, kind: r.kind as AddedKind, frozen: r.frozen as Frozen,
