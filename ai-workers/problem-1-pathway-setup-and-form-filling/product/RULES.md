@@ -1,88 +1,57 @@
-# Rules in force — one page (the tech lead keeps it; as of **P-353**, 5 Nov 13:05 IST; the sections "Added 5 Nov", then "Added 4 Nov", win over older lines here)
+# Rules in force — one page (the tech lead keeps it; as of **P-440**, 9 Nov 22:45 IST)
 
-Each rule once, with the decision that set it. A decision newer than "as of" above wins over this page: read those rows in `DECISIONS.md` word for word. Older rows are history; read one only when a rule here cites it and you need its detail.
+Each rule once, with the decision that set it. **This page is the start read**: a new Lead reads it, then only the `DECISIONS.md` rows newer than "as of" above, word for word (P-314, P-440). `tools/check-docs.sh` fails when this page falls more than 3 rows behind DECISIONS (P-440). The previous page, as of P-353, is word for word in `history/RULES-2026-11-09-as-of-P-353.md`. Product rulings (what a screen or rule does) live in their DECISIONS rows: read a row when its capability is touched.
 
 ## Goal and order
-* **M2 end to end first; its AI capabilities are the critical path** (P-301, P-309). Target 58–59/60 confirmed, 60 after the SA-01B ruling (P-309). M3 runs alongside only on files the M2 lanes do not touch (P-301, P-313).
-* **Quality first, never cut** (P-303, P-309): no lower bar to reach a number.
-* **Order (P-317):** QA-144 first, then the other M2 partials; no new M3 rows until M2 reaches 55 confirmed; approved M3 PRs still merge. A qa lane runs every day.
+* **M3: 26 of 29 Works first, then all 29, as fast as the gates allow** (P-434, P-439). No new rows until the 26; new work in small PRs. Quality first, never cut (P-303, P-309).
+* **Pick order each check** (P-418 (3)): red on `main` first; merged work waiting for qa (cheapest Works); a blocker freeing several rows; Partials in a person's journey order (P-348 (1)); Not built rows with drafts; new work last. Warm rows go to the lane that holds the context (P-413 (2)).
+* **After the 26** (rows already agreed): split the five busiest files into per-capability modules, one small PR each, kept only if conflicts fall (P-438 (3)); B164 and M3-S1 to M3-S5, which remove today's three slice guards (P-425); QA-332's fix (P-435); tests on Playwright's own browser instead of the real Chrome (Lead 1 (series 2), disk); 8 CI shards and a refreshed `tools/suite-times.tsv` (P-436 (7)).
 
 ## When a capability counts as Works
-* Its acceptance pack is green on `main` **and** an independent re-run confirms it (P-290), on the demo data (Reset to the six), not only the test fixture (P-304 (2)).
-* An open Major or Critical in `qa/BUGS.md` on it keeps it Partial (P-305 (3)).
-* A run with no pack for it, or a pack run with no server or on the fixture, is **Not tested**: never green, never Works evidence (P-405).
-* qa re-scores after every merged batch (P-277, P-311 (1)); qa's verdict decides.
-* Held parts (P-251, P-265, P-284) are listed in STATE; nobody builds them. L-SA3 is no longer held (P-315); the founder acts as the SA-01B product owner and lifted every hold decided in P-235–P-248, including G5, L-SA6–L-SA11 and C11 (P-316); Express Entry's police and medical block is the one hard stop besides Validate (P-172, P-315).
+* Its pack is green on `main`'s head on GitHub's runners, on the data its verdict counts on (the six or the configured checkpoint, P-322), with the run id in qa's row (P-339); an independent re-run confirms it (P-290); qa's verdict decides, given by a fresh Opus reader that ran nothing (P-303, P-432).
+* Gate A: qa walks it by screens to the next capability's first step (P-348 (3)). Gate B: CI fails a PR that names a capability with an open Major or Critical unless it fixes that bug (P-317); never drop a capability id to pass it (P-330 (7)).
+* An open Major or Critical keeps it Partial (P-305 (3)). A run with no pack, no server or only the fixture is **Not tested**, never green (P-405). A WAIT or HELD line is never green (P-334 (6)).
+* Cloud lanes cannot dispatch Actions (403): they ask, and the Lead dispatches `nightly.yml` for their row (P-439). Live AI tokens or write tokens are never widened for lanes (P-312, P-387).
 
-## Builders
-* One row per session and per PR, on a fresh branch from `origin/main` (P-278, P-312, P-314). A standby Mac builder gets its next row by message.
-* **Before the label:** the row's acceptance pack passes on a fresh isolated copy built from the branch, plus a walk like a person at 1440 px; exit codes and screenshots in the PR; no open Major on that capability (P-312).
-* **Two gates (P-317):** CI fails a product PR that names a capability with an open Major or Critical, unless it names that bug as the one it fixes, and runs that capability's pack on the demo data (gate B). A PR that claims to make a capability Works is labelled only after the qa lane's PASS on its isolated copy (gate A).
-* A PR whose CI ran before a fix to the checks merges `origin/main` once; no new review if the merge touches none of its files, else a diff-only Opus check of the merge (P-318 (1)).
-* Reviewer agent, breaker, qa scoring and every judgment on **Opus**; Sonnet only for mechanical work (P-303). Breaker only for money, schema, permissions or a new screen (P-278).
-* Diff-only re-review; at most two review rounds, then the tech lead decides (P-293 (3)). After the label, push only a real fix (P-293 (1)).
-* Merge `main` in only on a conflict (P-270). Label `review: approved` after the reviewer's Approve of the current head; Mergify merges (P-189).
-* Questions: a PR comment headed "Question for the tech lead" (P-293 (2)).
-* **Builders never edit the shared notes files** `STATE.md`, `RULES.md`, `DECISIONS.md`, `BACKLOG.md`, `tools/decision-impact.sh`; qa alone edits `qa/CAPABILITIES.md` and `qa/BUGS.md`. Build notes go in the row's own folder under `screens/` (P-314).
-* Live AI off and US$0 unless the brief carries the tech lead's paid Go with costs (P-175, P-295). Never click a priced button in a check.
-
-## How many sessions
-* Five cloud builders on M2, the qa lane, one infra lane, the Mac paid runner, up to three Mac builders for M3 and AI work, two standby Leads (P-286, P-312, P-313).
-* Add a builder only while batch failures stay under 10% and approval-to-merge under 1 hour (P-291 (2)); remove one when either breaks.
-
-## Merging and records
-* CI and merge-flow fixes may merge ahead of the queue on green (P-214).
-* Notes PRs go through the queue with the label, never merged by hand while a batch is checking (P-306 (3)).
-* The tech lead writes records at most twice a day (about 08:00 and 20:00 IST) and at a hand-over, in one PR (P-314).
-
-## Money (paid AI)
-* Cap **US$150 in total for the night of 3–4 Nov** (P-313; was US$100, P-300). The tech lead approves each run without asking (P-309).
-* Rules for every run (P-295): usual and worst cost in the ledger (`prototype/p2/ledger.ts`) and the PR first; cheapest and most certain first; start only if spend so far plus its worst stays inside the cap; one attempt, retries only for temporary errors; every AI draft gets an independent checker round; one PR per result with qa's verdict; qa labels paid-result PRs (P-275).
-* Job cap US$5 per two attempts (P-232), except a worst case the records state in advance (P-295). Runs only on the Mac paid runner's own copy with the live switch on for that run only.
+## Builders and qa
+* One row per session and per PR, fresh branch from `origin/main`; **one session per branch** (P-278, P-436 (2)). A lane ends when its PR is labelled (P-337); a warm lane may take one more row that builds on what it knows (P-341).
+* PRs under ~800 lines, split by layer when big: schema → API → screen (P-436 (4), P-438 (1)). **One builder at a time** on `prisma/schema.prisma` and `api/src/case-prepare.ts`; the Lead names the holder in STATE (P-438 (2)). Two PRs carrying a migration take different stamps (P-348 (8)).
+* Merge `main` in only on a conflict (P-270); a PR that has merged `main` three times lands next (P-436 (1)).
+* Reviews on **Opus** (P-303): reviewer always; breaker only for money, schema, permissions or a new screen (P-278). Re-review reads only the diff since the last Approve (P-277, P-436 (5)); a pure merge of `main` that touches none of the PR's files needs no review, and the Lead records that check (P-318 (1)). At most two review rounds, then the Lead decides (P-293 (3)).
+* Label `review: approved` only with a PR comment `Reviewer: Approve <exact head sha>` (label guard, P-385) and green CI. Builders label after Approve (P-277); **qa labels paid-result PRs** (P-275).
+* New screens: a walk by screens before the first review (P-352) and a best-in-class section in the concept (P-392). No combination key, form number or program-specific branch in engine code (P-319, P-425).
+* A mutating route that a pack's set-up calls needs a caller in `web/src` or an allow-list line (P-348 (4)). Each form's own official words decide who fills it and what it asks (QA-221 ruling, 4 Nov). No multi-tenant work in the reference app; tenants, environments and real users are the team's (P-335, P-357): POC code, rules, forms and tools are held to production grade.
+* Held parts are listed in STATE and nobody builds them (P-251, P-265, P-284); the founder lifted the P-235 to P-248 holds (P-316); Express Entry's police and medical block is the one hard stop besides Validate (P-172, P-315).
+* Questions as a PR comment headed "Question for the tech lead"; every brief says "report to the current Lead (`tools/current-lead.sh`)" (P-293 (2), P-373, P-409). Builders never edit `STATE.md`, `RULES.md`, `DECISIONS.md`, `BACKLOG.md`; qa alone edits `qa/CAPABILITIES.md` and `qa/BUGS.md` (P-314).
+* qa: one row per lane, in parallel; packs on GitHub's machines; gate A by screens (P-434). Live AI off and US$0 in every lane; never press a priced button (P-175).
 
 ## The tech lead
-* Checks every 30 minutes (P-276). Hands over once a day, at about 400k tokens, or sooner if it loses track (P-314); two idle standby Leads, named in sequence (P-286, P-313).
-* Sessions start only in a turn the founder typed. All times to the founder in IST (P-302). Talk in capabilities and plain words (P-291).
-* Product questions that decisions, canada.ca or best practice settle are ruled by the tech lead and recorded (P-294); real preference questions go to the founder one at a time with a recommendation.
-* Immigration values only from official sources with page, quote and date (AGENTS.md rule 4, P-170).
+* **The founder gives product direction only; the Lead owns the pipeline** (P-384, 7 Nov), paid runs included. Standing approvals (P-402, P-410, P-434): label on Approve + green, its own records PRs, requeue, retarget a base, toggle draft and ready, re-run failed CI parts, dispatch `nightly.yml` on `main`. The Lead reads the diff itself before labelling anything touching money, permissions, the schema, a migration, `.github/` or `.mergify.yml` (P-423).
+* **Product questions** that decisions, canada.ca or best practice settle are ruled by the Lead and recorded (P-294). Real preference questions go to the founder one at a time (AskUserQuestion) with a recommendation, listed in STATE "For the founder"; while he is away the Lead proceeds on its recommendation when reversible (P-390). Impact on time, cost and quality is stated before recording a choice (P-254). Immigration values only from official sources with page, quote and date (AGENTS rule 4, P-170).
+* **Checks every 30 minutes**, prompt exactly `run lead-watch; read STATE Start here`; row details live in STATE, never in the prompt (founder, 6 Nov). Each check reads the app view and every lane, and acts at once on a stalled or blocked lane (P-339, P-381, P-420); a lane counts only after a push (P-326). Every report: Works, merged, blocked, next three with IST times, on time or late and why (P-338, P-434); hourly to the founder (P-434).
+* **Sessions start only in a turn the founder typed**, cloud first (P-348 (5)); the Mac runs the Lead, the demo, qa and at most two builders with test copies, after `tools/lane-preflight.sh`. **Two idle standby Leads** (P-286); numbering in series 2 (P-433).
+* No prompt-waiting call while the founder is away (P-388); no hand-over with an in-process subagent running (P-409). Never run guard or test suites in the main copy: use a scratch clone (7 Nov). GitHub through curl with `gh auth token` (P-363). `.claude/settings.json` stays as on `main`; only the founder widens permissions, and a refused write is never routed through a lane or split to retry (P-387, 7 Nov). Times only from `TZ=Asia/Kolkata date` (P-302).
+* **Records:** by the Lead alone; STATE one page, at most 12 KB, earlier pages in `history/`; DECISIONS appended, newest first, never rewritten; records once a day and at each hand-over (P-336); records PRs merge only when the queue is empty (P-436 (3)). This page is refreshed at every hand-over (P-440).
+* **Merging:** never cancel a CI run; re-run the failed part alone (P-371, P-384); product code only through the queue, never by hand; fixes to the checks or merge flow may land ahead of the queue on green (P-214).
 
-## Added 4 Nov (P-319–P-337): these win over older lines above
-* **Order now (P-336, P-337):** finish M2 to 60, lean, before anything else; then the scale changes before M3 restarts (scorecard split, generated records, a GitHub App for agent approvals, packs for the 18 pack-less Works rows). **Trip-wire:** at 6 Nov 23:00 IST, if M2 is under 57 confirmed or the burn is over 2.5% of the weekly plan an hour, switch to scale-first.
-* **No new M3 work until M2 = 60** (P-332); M3 PRs in flight finish. M3 stays on main against the M3 contract on M3-only files when it restarts (P-323, P-325).
-* **Works is frozen at P-322 until M2 = 60** (P-337): setup capabilities count on the six; later steps on the configured checkpoint only if product steps built it. qa re-scores only the rows a merged PR names or a closed blocker frees; no whole-table re-proofs.
-* **Lean crew** (P-337): about 7–8 working sessions; a lane ends when its PR is labelled; no side-builds (#945, #951, #858 paused to 6 Nov). Files many PRs touch (demo.ts, form-part-placements.ts) merge one PR at a time.
-* **Budget (P-331, replaces P-327):** no extra usage. Measure the burn per hour at every check. At 85% weekly, no new rows (P-308); at 90%, every lane stops at a clean pushed point and the tech lead writes "Resume on the new account".
-* **Paid AI today:** cap US$30 a day (founder, 4 Nov); the tech lead approves each run inside it with the worst case first (P-295, P-309). A paid run happens where Works is counted (the six or the checkpoint), never fixture-only.
-* **No hard-coding (P-319):** no combination or form number in code; the chain is the guard, family forms, IRCC checklist coverage, then M3 tables.
-* **Cloud lanes (P-326):** each check reads claude.ai/code as text; a lane counts as running only after its first push or draft PR; type into an idle lane only after confirming its URL; a platform decision needs one live canary; run the connection checklist after any account, plan or visibility change.
-* **Reports (P-324):** separate blocks M2, M3, M2 workflow and sessions, M3 workflow and sessions, interdependencies, pre-mortem; only qa's numbers; times from the clock in IST. No wasted work or tokens: a hard rule.
-* **Labels (P-324):** the tech lead labels on the founder's behalf; auto mode refuses the Lead's own records PRs unless the founder names them in that Lead's chat.
-* **Gate B:** never drop a capability id to pass it; name its steps or hold (P-330 (7)). A WAIT or HELD line is never green (P-334 (6)).
-* **Immigration wording:** each form's own official words decide who fills it and what it asks (AGENTS.md rule 4; QA-221 ruling, 4 Nov).
-* **No multi-tenant work in the reference app** (P-335): the team's platform owns tenant isolation (P-249); our two-firm checks stay as the spec.
-* **Records once a day, plus each hand-over** (P-336, amends P-314); rulings live as PR comments and are summed up in that day's row.
-* **ETA board (P-338):** every report names the next 3–6 capabilities to reach Works with an IST time, the step each waits on, and on time or late by N minutes and why.
-* **Warm lanes (P-341):** a lane whose PR is labelled may take one more M2 row that builds on what it knows, while working sessions stay about 8 and the burn under 2.5%/h; otherwise it ends. Questions to the founder one at a time, with a recommendation.
-* **App view and prompt answers (P-339):** each check reads the claude.ai Code list and the archived list; the Lead answers a lane's prompt only inside its brief and the rules; blocks go to the founder at once ("go" resets the Lead's 10-message cap). qa marks Works only after the pack is green on main's head on GitHub's runners on the data its verdict counts on (six or checkpoint, P-322); the protected set runs each row on that data (B77), and until then a checkpoint row is held from the six run, not demoted.
+## Tokens: hard rules (P-440; measured in `reports/pipeline-pain-points-2026-11-09*.md`)
+* **Cost is context size.** About 75% of spend is long sessions re-reading 300k+ contexts on every call; output is ~11% (P-436). So:
+* **Hand over at about 250k tokens of context** (P-440; was ~400k, P-314), or sooner if the Lead loses track. A qa or builder session ends with its row (one row per session).
+* **The start read is one page:** this page plus the DECISIONS rows newer than "as of" (P-440). Never re-read big files on a check; read only what changed, by line range (P-372 (3)).
+* **No raw dumps into a Lead's context:** filter every tool output (`head`, `grep`, JSON fields); a PR body or log is read only in the section needed (P-440).
+* **Burn watch every check:** weekly % and the rate per hour from `get_usage`. Over 3%/h at two checks in a row: read each working session's context share, end idle ones, hand over any over 250k, and tell the founder the cause in one line (P-440).
+* **Models:** Opus for builders, reviewers, breakers, fresh readers and qa verdicts; Sonnet or Haiku for read-only side work (searches, inventories, measurements) (P-436 (6)). Standbys stay idle: no checks, no reads (P-286).
 
-## Added 5 Nov (P-344, P-347, P-348): these win over everything above
-* **Budget (P-344, replaces P-331's stop):** use the plan to its limit; lanes push after each step; `RESUME-ON-NEW-ACCOUNT.md` is the page for a switch. M3 runs alongside M2's last rows.
-* **M3 by a person's journey (P-348 (1)):** C6.11, C11.6 → C6.4, C6.12 → C7.7, C7.3, C7.6 → C8.1, C8.2, C9.2 → C7.5, C6.5 → C3.16, C1.3/C11.5 → C10.2.
-* **M2's finish line is one list (P-348 (2)):** qa's one walk of Visitor visa by screens, Reset to release. Report "58, of which N reach a dead end".
-* **Gate A's walk ends at the next capability's first step, by screens only (P-348 (3)).** A mutating route a pack's set-up calls needs a caller in `web/src` or an allow-list line (P-348 (4)).
-* **Cloud first (P-348 (5)):** the Mac runs the Lead, the demo, qa and at most two builders with test copies; one copy at a time, at a 1-minute load of 16 or under. No standby builders on the Mac; two standby Leads stay. Hand over at about 400k (P-314).
-* **Stacked `demo.ts` PRs may land in one batch (P-348 (8)).** Two PRs carrying a migration take different stamps.
+## Money (paid AI)
+* Day cap **US$30** (P-295, P-309), **US$50 on 9 Nov** (P-429, P-434). The Lead approves each run inside it; above it, the founder.
+* Every run (P-295): usual and worst cost first; worst case reserved in the shared ledger (`.tools/p2-ledger`, `p2/ledger.ts`) before the call; cheapest and most certain first; one attempt, retries only for temporary errors; an independent check; one PR per result; qa labels it (P-275). Job cap US$5 per two attempts unless a worst case is stated first (P-232).
+* Live runs need network the sandbox does not give child processes: the product's launcher runs from a Terminal tab (P-377 (7)); a single scratch read can go by curl from Bash with `allowed_domains` (9 Nov, #1444). A paid run happens on the data Works counts on, never fixture-only.
 
-* **Added after P-348 (P-349 to P-353):** row 12b is a real Adobe Validate, saved, after C4.11 (P-349). M3 runs by its shared cause in the cloud, 3-4 lanes, cloud qa for its gate A, M2 first on `demo.ts` and the Mac qa (P-351, replacing P-350's pause in part). New rows walk a person's journey by screens before the first Opus review; checked 10 Nov (P-352). Scale work: design now, build after M2, before M3 grows (P-353). Questions to the founder in AskUserQuestion, one at a time; every report carries the factory view; read the app view, not only PRs (founder, 5 Nov).
-
-* **Added 5 Nov, P-360, wins over the above until checked 09:30 IST on 6 Nov:** PRs naming only steps merge after CI and Approve, qa counts Works on `main`; M2 has a fixed exit list (QA-255, QA-262, QA-270, QA-271, row 12b), a new find joins only if it stops a person by screens on one of the six, other Majors go to the hardening pass and are named in every report; one builder and qa pair on the Visitor visa walk, a fresh qa gives the verdict.
-
-* **Added 5 Nov, P-361:** on Ollama Cloud, "Opus" in these rules means `kimi-k3.1-pro`, a different maker from the builder's `glm-5.3`, once the canary passes; a Claude qa re-checks the canary row. Hand over when compaction loses track, not at 400k: Claude Code treats an unknown model as 200K. Sessions, standbys and `get_usage` are desktop-app tools: see the resume page.
-
-* **Added 6 Nov, P-369, P-370:** back on Claude: P-361's and P-366's Ollama lines are void, "Opus" is Claude Opus (P-303), hand-over at about 400k (P-314). Only B104 runs for M3 until M2 = 60, then the sprint (P-359); M2 first in the queue and with qa.
+## Account and budget
+* Use the plan to its limit (P-344). From 93% weekly every lane reaches a clean pushed point; by 95% everything is pushed and STATE and `RESUME-ON-NEW-ACCOUNT.md` are ready (P-431). On a switch: `get_usage` first, then the resume page; these rules carry over because they live in the repository.
 
 ## Process freeze (P-312)
-No change to the workflow, tools or these rules until **10 Nov 22:30 IST**, except one that a measured number justifies, with the number it should move, checked after a fixed period, kept or undone.
+No change to the workflow, tools or these rules until **10 Nov 22:30 IST**, except on a measured number and the founder's word (P-420, P-436, P-440), each with the number it should move, checked after a fixed period, kept or undone.
 
 ## The compass (P-312): judged daily from tools, never from prose
 | Number | Healthy |
@@ -94,3 +63,4 @@ No change to the workflow, tools or these rules until **10 Nov 22:30 IST**, exce
 | Capabilities in progress | no more than builders |
 | Notes PRs as a share of merges | 20% or less |
 | Merge batches thrown away | 15% or less (conflicts at most 5 a day) |
+| Weekly plan burn per hour (P-440) | 3% or less |

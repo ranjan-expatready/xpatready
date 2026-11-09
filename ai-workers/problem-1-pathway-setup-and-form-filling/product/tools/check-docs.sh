@@ -31,6 +31,14 @@ check() { local max=$1 kb=$2; shift 2; for f in "$@"; do [ -f "$f" ] || continue
     # One page (6 Nov: it reached 34 KB and every Lead re-read it; test: check-state-page.sh).
     b=$(wc -c < "$S"); [ "$b" -gt 12288 ] && echo "STATE TOO BIG ($((b / 1024)) KB > 12 KB): move the earlier page to product/history/STATE-<date>-<time>-<lead>.md and keep one page"
   fi
+  # P-440 (9 Nov, founder): RULES.md is a new Lead's start read; it may lag DECISIONS by at most 3 rows, so a new Lead
+  # never again reads ~85 rows (~75k tokens) at start. Test: check-rules-lag.sh.
+  R="$PH/RULES.md"; D="$PH/DECISIONS.md"
+  if [ -f "$R" ] && [ -f "$D" ]; then
+    a=$(sed -nE '1s/.*as of \*\*P-([0-9]+)\*\*.*/\1/p' "$R"); t=$(grep -oE '^\| P-[0-9]+ ' "$D" | grep -oE '[0-9]+' | sort -n | tail -1)
+    if [ -z "$a" ]; then echo "RULES LAG: RULES.md's first line needs 'as of **P-NNN**'"
+    elif [ -n "$t" ] && [ $((t - a)) -gt 3 ]; then echo "RULES LAG: RULES.md is as of P-$a but DECISIONS reaches P-$t ($((t - a)) rows behind, at most 3): fold the newer rows into RULES.md, keep the old page in product/history/ (P-440)"; fi
+  fi
   for f in "$PH"/*.md "$PH"/domain/*.md "$ROOT"/.claude/skills/*/SKILL.md "$ROOT"/.claude/agents/*.md; do
     grep -o '`[A-Za-z0-9_./-]*\.md`' "$f" | tr -d '`' | sort -u | while read -r ref; do
       # Retired files (P-188, P-189) live in git history; old decision rows and records may still name them.
