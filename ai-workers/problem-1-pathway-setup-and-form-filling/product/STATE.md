@@ -4,6 +4,9 @@ current_lead: local_1dcba2a1-0107-436c-97df-458b9df76a66 Lead 37 · 9 Nov 08:52 
 
 updated: 2026-11-09 08:52 IST by **Lead 36, at the hand-over to Lead 37** · milestone: **M2 60/60 holds; M3 clock from 23:17 IST 6 Nov: M3 is now 28 capabilities (P-406: the 17 plus 11 from the coverage audit); **qa's table on main at 18:40 IST: 16 Works, 4 Partial (C6.5, C7.5, C7.7, C7.3), 9 Not built = 29**** · rules: **`RULES.md`** + DECISIONS P-354 to P-423 · **this block's plan: `design/next-12-hours-2026-11-07.md`; the 11 new rows: M3 plan's 7 Nov section** · earlier page: `history/STATE-2026-11-09-0852-lead36.md` · this branch: `lead/2026-11-07-lead31`
 
+## Founder's ask, 9 Nov ~09:05 IST (P-424; open: "10 and 5" hours heard as 10-15, confirm at his next typed turn)
+Ten more M3 capabilities, no shortcuts; paid runs approved; the Lead monitors itself through the browser and backend, not PRs alone; account change only at a natural milestone. **Order:** Partials C7.7 (qa scoring), C7.5 (Lead 36's one paid run), C6.5 (#1374 labelled, #1375, #1386, then gate A), C10.2, C7.3; then C6.16 (#1257, built), C7.9 (#1282, built), C8.3 (#1247, concept approved), C7.8 (#1248), C7.10 (no draft). Next account: C6.14, C6.17, C6.19. Full estimate and limits: P-424.
+
 ## Hand-over to Lead 37 (9 Nov ~08:52 IST): do first
 Weekly 68%. Context: Lead 36 at ~390k. Disk 7 GB (floor 7). M3 16 of 29 by qa's table (M2 60; 112 in all). Earlier blocks: `history/STATE-2026-11-09-0852-lead36.md`.
 1. **Watchdog:** delete your own watchdog cron first, create the check (:13/:43, prompt exactly `run lead-watch; read STATE Start here`), then send Lead 38 (`local_35e6362c-4ed3-48f1-974c-2241657c8ea5`) "start the watchdog". One more standby at the founder's next typed turn.
