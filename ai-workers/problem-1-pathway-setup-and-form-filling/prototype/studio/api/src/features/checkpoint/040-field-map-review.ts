@@ -9,12 +9,19 @@ export const fieldMapReview = stateOf(() => ({ applied: 0 }));
 /** How many proposals a field-map step reported (its detail counts). */
 const counted = (detail: unknown) => (detail as { counts?: { proposed_fields?: number } } | null)?.counts?.proposed_fields ?? 0;
 type Job = { id: string; attachmentId: string | null; startedAt: Date; runFile?: string | null; detail: unknown };
-/** The order the drafts are decided and applied in, and the one draft that shows an edit and a return (DEMO.md row 4):
- *  the drafts as their jobs started, and the draft with the most proposals. */
+/** The saved answer a draft replays (its run file), the one thing that tells two drafts of one form apart from load to load. */
+const runOf = (j: Job) => String(j.runFile ?? (j.detail as { run_file?: unknown } | null)?.run_file ?? "").replace(/^.*\//, "");
+const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+/** The order the drafts are decided and applied in, and the one draft that shows an edit and a return (DEMO.md row 4).
+ *  Lead 39 on #1396 (9 Nov): the same drafts give the same order whatever order their jobs started in, because the first
+ *  draft that lands a shared field sets its meaning, and a form field with no printed caption is named by that meaning on
+ *  the review sheet a saved paid review is keyed on. So: by the form's file name, then the saved answer it replays, then
+ *  the job's id (never by when it started); the showcase is the draft with the most proposals, a tie going to the first. */
 export function reviewOrder<J extends Job>(jobs: J[], fileOf: Map<string, string>): { order: J[]; showcase: string | undefined } {
-  void fileOf;
-  const order = [...jobs].sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
-  return { order, showcase: [...order].sort((a, b) => counted(b.detail) - counted(a.detail))[0]?.id };
+  const file = (j: J) => fileOf.get(j.attachmentId ?? "") ?? "";
+  const order = [...jobs].sort((a, b) => byText(file(a), file(b)) || byText(runOf(a), runOf(b)) || byText(a.id, b.id));
+  const most = Math.max(0, ...order.map((j) => counted(j.detail)));
+  return { order, showcase: order.find((j) => counted(j.detail) === most)?.id };
 }
 
 export default {
