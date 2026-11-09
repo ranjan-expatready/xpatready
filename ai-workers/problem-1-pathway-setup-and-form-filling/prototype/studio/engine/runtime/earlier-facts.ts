@@ -129,8 +129,8 @@ export type OfferPerson = { subject_id: string; label: string; role: string; fro
  *  shown and not usable. Earlier people with no match are listed by name and role (nothing of theirs moves). */
 /** QA-338: with `latest` (latestConfirmed over every earlier case read), `latestAny` (the same with unconfirmed answers)
  *  and this earlier case's id, a fact confirmed differently later on another earlier case is shown with that value and
- *  reason and is not usable, and a date this case holds is read as the newest one typed for the person elsewhere, so a
- *  stale copy of a corrected, expired passport is caught. A date this case lacks is not borrowed (review m1: it may be
+ *  reason and is not usable, and a date this case holds is also checked as the newest one held for the person elsewhere
+ *  (the stricter flag wins), so a stale copy of a corrected, expired passport is caught. A date this case lacks is not borrowed (review m1: it may be
  *  another passport's; BR-6's "not known" warning stays). */
 export function offerFrom(input: { snapshot: Snapshot; here: Participant[]; current: CurrentAnswer[]; earlier: Participant[]; earlierAnswers: EarlierAnswer[]; background?: Set<string>; today: Date; rules?: ExpiryRule[]; combinationKey?: string; caseId?: string; latest?: Map<string, Latest>; latestAny?: Map<string, Latest> }): { people: OfferPerson[]; unmatched: { label: string; role: string }[] } {
   const asked = personFactsAsked(input.snapshot, input.background);
@@ -141,15 +141,16 @@ export function offerFrom(input: { snapshot: Snapshot; here: Participant[]; curr
     const from = match.get(p.subjectId) ?? null, fromP = input.earlier.find((e) => e.subjectId === from);
     const all = from ? input.earlierAnswers.filter((a) => a.subjectId === from) : [], theirs = all.filter((a) => a.confirmed);
     // An expiry date read even when it was not confirmed there: a confirmed passport number never escapes an expired date.
-    // QA-338: a newer confirmed date elsewhere replaces this case's own; a newer one only typed elsewhere can add a
-    // stricter flag, never lift one (review round 2, R1: a draft renewal must not release an expired passport).
+    // QA-338: a newer date on another earlier case, confirmed or only typed, can add a stricter flag and never lift one
+    // (review R1, R4: a renewal elsewhere, drafted or with no number, must not release this case's expired passport; the
+    // officer re-confirms the valid passport from the case that holds it). The strongest flag per fact wins.
     const datedBy = (l?: Map<string, Latest>) => {
       const d = new Map(all.map((a) => [a.field, a.value]));
       for (const a of all) { const n = newerThan(l?.get(`${p.subjectId}|${a.field}`), input.caseId, a.value, seenOf(a)); if (n) d.set(a.field, n.value); }
       return d;
     };
-    const flags = expiryFlags(datedBy(input.latest), input.today, input.rules, input.combinationKey);
-    for (const [f, flag] of expiryFlags(datedBy(input.latestAny), input.today, input.rules, input.combinationKey)) if (strength(flag) > strength(flags.get(f))) flags.set(f, flag);
+    const flags = expiryFlags(datedBy(), input.today, input.rules, input.combinationKey);
+    for (const l of [input.latest, input.latestAny]) for (const [f, flag] of expiryFlags(datedBy(l), input.today, input.rules, input.combinationKey)) if (strength(flag) > strength(flags.get(f))) flags.set(f, flag);
     const facts: OfferFact[] = [];
     for (const q of asked) {
       const a = theirs.find((x) => x.field === q.fact);
