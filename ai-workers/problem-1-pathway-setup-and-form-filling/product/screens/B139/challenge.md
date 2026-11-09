@@ -76,3 +76,12 @@ No new tree level (P-13, P-24). The route as data, frozen on the case at opening
 ## Agreement
 
 ## Build discoveries
+
+*Builder (screens lane, 9 Nov, on #1262; for the tech lead to confirm, not silent):*
+* **D1 · No per-person checklist for the two Sample stages.** On the checkpoint only the Visitor visa has a derived checklist (`samples/fee-table.json` "checklist": true; `engine/runtime/case-checklist.ts:23`). The study and work permits answer "not derived yet", so there are no checklist lines to upload on or to show "On file from" on. Built: the Start next stage dialog and toast list the documents the next release asks for (its base document requirements for the people coming along); "On file from" is built on checklist lines and proved by the engine test (`tests/check_c617_stages.ts` BR-6); pack step 5 makes no upload. Turning the checklist on for `sp.outside` and `wp.lmia_inside` is another capability's data edit once their requirements are checked (P-230 (7)): asked as a question on the PR, not done here.
+* **D2 · The two releases share no document type key** (precondition m1 fails: `passport_information_page_copy` vs `passport_or_travel_document_information_page_photocopy`, the two fee receipts). The route's data names Sample "same document" pairs (`same_documents`), so a match is data, never code.
+* **D3 · An earlier stage left unticked** is a fifth state `NOT_RECORDED` ("Not recorded" on the strip): the concept says "untick = not recorded" and its four states had no word for it.
+* **D4 · B145's pin rule** (`20261107220000_c95_pin_guards`: a pin only for the case's own combination) is kept unchanged: the start moves the case's combination first, then writes pin revision 1; the one-current-stage check runs at commit (deferred).
+* **D5 · `deadline_rule` became `spec`** on `case_stage`: the stage as frozen from its route (key details, deadline rule, same-document pairs), so a later route change never changes an open case.
+* **D6 · Ended-stage rows are refused by the database** (a trigger on the five stage tables, after `FOR KEY SHARE` on the case row, which waits for a start holding `FOR UPDATE`), mapped to a plain 409; so every by-id route (a line, a filing, a finding) is covered without a check in each.
+* **D7 · "Study permit valid until" has no library field;** it is typed by the route (DATE, Sample). The UCI is the library field `person.uci` and passes its release's own check (a 400 on the field otherwise).
