@@ -8,14 +8,15 @@
 //     other countries): "none apply" writes No; recorded trips are decided by a person, in those words (never a guess).
 //   Questions 5 and 6 (ill treatment; violent or criminal organizations): no question asked them. They are asked as their
 //     own Yes/No questions in the form's words (samples/own-yes-no.json, the configured checkpoint only, B116's door).
-//   And a mandatory form field that still needs an answer is a fact to answer ("not answered"), never "left empty" under
-//     "Facts confirmed" (engine/runtime/forms.ts formHoldsBack).
+//   And the forms card counts a mandatory form field that still needs an answer as a fact to answer, so "Facts confirmed"
+//     is never shown over it (engine/runtime/open-lines.ts cardFacts); locking is unchanged (#1318 M2).
 // Part A: the filler's step, a pass and a fail per rule (no server). Part B: the Sample family's Visitor visa case on the
 // configured checkpoint (load it first), through the API. Sample people and values; Unconfirmed: expert. US$0, no AI.
 //   zsh studio/tools/isolated.sh rt_qa318 4436 start && curl -s -X POST -H content-type:application/json -H x-actor:user-A -d '{"sample":"configured"}' localhost:4436/api/demo/load && tsx studio/tests/check_qa318_sch1.ts 4436 xr_studio_rt_qa318
 import * as T from "../../p5/transforms.ts"; // a namespace, so the suite also runs (and fails) on code before QA-318
 const { runTransform } = T;
 const proseRecorded = (t: string) => !!(T as { proseRecorded?: (x: string) => boolean }).proseRecorded?.(t);
+import { cardFacts } from "../engine/runtime/open-lines.ts";
 import { agent, call, FAMILY, fillEverything, firms, generateCopy, main, ok, openCase, OFFICER, sql } from "../acceptance/lib/m3.ts";
 
 const SERVED = "derive: true if any military/militia/civil defence/security/police service period is recorded for the subject, else false -> yes_no_code:true/false";
@@ -60,6 +61,10 @@ await main("QA-318", "IMM 5257 SCH1's five mandatory Yes/No form fields fill, or
   const back = await call("PUT", `/runtime/cases/${c.id}/groups/${s.subjectId}/${s.section}/none-apply`, { noneApply: false, expectedId: s.group.none_apply?.id ?? null }, officer);
   const after = (await forms()).find((x) => x.form === "IMM 5257 SCH1" && x.person === "Sample Client A")!;
   const travelLine = after.readiness.missing.find((m) => m.fact.endsWith(BOXES.travel));
-  ok("QA-318 B5 fail: with Previous travel unanswered, SCH1 is not ready and its travel form field waits as a fact to answer (\"not answered\"), never \"left empty\"", back.status < 300 && !after.readiness.ready && travelLine?.reason === "not answered" && /needs an answer/.test(travelLine?.why ?? ""), after.readiness.missing.map((m) => `${m.reason}: ${m.label.slice(0, 50)}`));
-  ok("QA-318 B6 fail: so no line under it is a mandatory form field \"left empty\" that an answer would fill", !after.readiness.missing.some((m) => m.reason === "left empty on the form" && /^needs an answer/.test(m.why ?? "")), after.readiness.missing.map((m) => `${m.reason}: ${m.why?.slice(0, 40)}`));
+  ok("QA-318 B5 fail: with Previous travel unanswered, SCH1 is not ready: the group waits as a fact, and its Question 8 form field says it needs an answer", back.status < 300 && !after.readiness.ready && after.readiness.missing.some((m) => m.reason === "not answered" && /Previous travel/.test(m.label)) && /^needs an answer/.test(travelLine?.why ?? ""), after.readiness.missing.map((m) => `${m.reason}: ${m.label.slice(0, 50)}`));
+  const card = cardFacts(after.readiness.missing);
+  ok("QA-318 B6 fail: the forms card counts that form field among the facts to answer, so it never shows \"Facts confirmed\" over it (engine/runtime/open-lines.ts cardFacts, which the card uses)", !!travelLine && card.facts.includes(travelLine) && !card.emptyFields.includes(travelLine), { facts: card.facts.map((m) => m.label.slice(0, 40)), empty: card.emptyFields.length });
+  const byHand = { reason: "left empty on the form", why: "filled by hand: type it in Adobe" }, adobe = { reason: "left empty on the form", why: "fill it in Adobe: not a fact the case keeps" }, needs = { reason: "left empty on the form", why: "needs an answer: not answered yet (Sample)" };
+  const pure = cardFacts([byHand, adobe, needs, { reason: "not answered", why: "" }]);
+  ok("QA-318 B7 pass/fail: a field that needs an answer is a fact on the card; one filled by hand or in Adobe stays a form field left empty (no answer fills it)", pure.facts.length === 2 && pure.facts.includes(needs) && pure.emptyFields.length === 2 && pure.emptyFields.includes(byHand) && pure.emptyFields.includes(adobe), { facts: pure.facts.length, empty: pure.emptyFields.length });
 });

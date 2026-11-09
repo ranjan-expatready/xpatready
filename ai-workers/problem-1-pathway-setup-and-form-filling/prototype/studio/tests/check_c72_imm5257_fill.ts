@@ -173,12 +173,7 @@ type Box = { box: string; fact: string | null; result: string; why: string | nul
   const f = forms.find((x) => x.form === "IMM 5257" && x.subject_id === P);
   // QA-165 (#1318, P-71): readiness also waits on the mandatory boxes a copy would leave empty (the 6 checked below), so every
   // question answered and confirmed leaves only those: no question is missing.
-  // QA-318 (P-46, P-171): a mandatory box whose own Yes/No question is not answered yet (the 3 NOT_ASKED boxes; this test
-  // leaves their questions unanswered on purpose) is a fact to answer, "not answered", never "left empty" under "Facts confirmed".
-  const miss = (f?.readiness?.missing ?? []) as { fact: string; reason: string; why?: string }[];
-  const asFact = miss.filter((m) => m.reason === "not answered" && NOT_ASKED.includes(m.fact.replace(/^box:/, "")) && /^needs an answer: answer "/.test(m.why ?? ""));
-  ok("setup: the Sample family's IMM 5257 has every other question it reads answered and confirmed; readiness waits only on mandatory boxes a copy leaves empty and, as facts to answer, on the 3 Yes/No questions not answered yet (QA-318)",
-    miss.length > 0 && asFact.length === NOT_ASKED.length && miss.every((m) => m.reason === "left empty on the form" || asFact.includes(m)), miss.map((m) => `${m.reason}: ${m.fact.split(".").slice(-2).join(".")}`));
+  ok("setup: the Sample family's IMM 5257 has every question it reads answered and confirmed; readiness waits only on mandatory boxes a copy leaves empty", (f?.readiness?.missing ?? []).length > 0 && (f?.readiness?.missing ?? []).every((m) => m.reason === "left empty on the form"), f?.readiness?.missing);
   const after = await generate(2);
   ok("C7.2: the copy is generated and passes the filler's own checks (read back, signatures, unchanged parts)", after.status === "GENERATED" && after.intact === true, { status: after.status, intact: after.intact });
 
