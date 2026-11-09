@@ -33,3 +33,33 @@ BIC-03 Met: the pass is keyed by value (C7.9-12). · BIC-04 Met: never blocks, t
 A real screen reader; an intended user's unaided walk (D17/D20 stay with the founder); employer `linked_file` values, which are DECLARED, against SA-1B-260 r3's "keeps the status it had at its source" (outside this row's walk); the walk's release and client typing were done by API (C5's and C6.6's own screens exist, so this is not P-33 scaffolding).
 
 **Verdict: Block.** Fix before `review: approved`: **Major 1** (relative and application subjects, plus a pack step) and **Major 2** (the returned-change path). Minors 3–5 are Should.
+
+## Round 2 (P-293 (3), last): diff 177378a54..5637e50c1, 9 Nov
+
+Fresh isolated copy `rev142` on :4436 with Demo › Load the configured checkpoint. Results:
+* `acceptance/C7.9.test.ts`: **exit 0, 23/23**. That includes 6b and 6c (return, then refused in words, then withdraw, then propose again), 16 (parent), 17–19 (merges) and 20–21 (F5).
+* `tests/check_c79_must_verify.ts`: 22/22.
+* Typecheck: api shows only the same 15 old errors in untouched `tests/check_*`; web shows 0.
+* `engine/runtime/case.ts` and `prisma/` are untouched since round 1.
+
+* **M1, closed.** `unverifiedOf` matches on the whole `about`, through case-prepare's `aboutOf`: the application is read as "case" (FILING), and relatives under `<person>/parent_1`, as knownOf does. Walked at 1440 px: "CRITICAL: IMM 5645 for Sample Client C: "Date of birth (their parent 1)" not verified …", with axe 0 and no sideways scroll. The pure check has a fail and a pass for the parent, the application and a removed row.
+* **Minor 3, closed.** Removed rows are skipped (`liveRows`).
+* **Minor 4, closed.** The key names the answer ids, never the value.
+* **M2, closed.** Walked at 1440 px:
+  * After a return, the field page shows no Propose and says "its proposer first withdraws the returned change (Open it, then Withdraw it)"; axe 0.
+  * The change page shows "Propose it again" and has no Name/Meaning editor; axe 0.
+  * Withdraw goes back to To review, and Propose is back on the field.
+  * The server's 409 says it was returned and to withdraw it first.
+  * The approver (no expert duty) sees no Approve button, and the page says "The immigration expert decides" (F6).
+  * The reason box takes focus; Escape returns focus to Propose (F7).
+* **Minor 5, closed.** The proposer can withdraw a WAITING or APPROVED change on the change page.
+* **Breaker F1–F3 (merges).** The newest version decides; nothing is written over a merged field. An approved change on a merged field ends WITHDRAWN, saying the flag did not carry over, on withdraw or at release (`endMerged`, guarded by `updateMany … APPROVED`). Pack 17–19 pass.
+* **F5, the tech lead's option B.** `isVerified` also counts `client_reconfirm` whose origin is `agent_view`. I checked that this is the same value: the reconfirm route refuses a changed value (runtime.ts:502, "You changed this answer, so it was not re-confirmed"), and `origin` reads the officer's own answer even after a Confirm section version. A changed value is the client's own and raises the line (pack 21).
+* **Open nits, not blocking:**
+  * The returned page's button reads "Withdraw it instead…" (the shared `Withdraw` opener, review-items.tsx:259), although withdrawing is the only way forward.
+  * `case-prepare.ts:571` still calls `formCoverage` uncached; prepare was 0.35–0.55 s in round 1.
+  * Employer `linked_file` values are still unchecked here (outside this row).
+
+Journey score, re-scored: **9.5/10**. Correction: round 1's table sums to 7.5, not the 6.5 I wrote; it was still below 8, so the round-1 Block stands. Changes from round 1's table: next step ½ → 1; correct data ½ → 1; error recovery ½ → 1; trust and sources ½ → 1 (the line names the relative). Plain words stays ½ for the "Withdraw it instead…" nit. Task, feedback, accessibility, speed and visual stay at 1. No criterion at 0, so it passes.
+
+**Verdict: Approve** for commit 5637e50c1 (no open Blocker or Major).
