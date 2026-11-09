@@ -257,7 +257,9 @@ function formHoldsBack(view: QuestionnaireView, subjectId: string, onForm: OnFor
   const left = onForm.open.filter((o) => { const b = boxOf.get(o.box); return !b?.fix && !(b?.fact && said.has(`${b.about ?? subjectId}|${b.fact}`)); });
   for (const o of openLines(left)) {
     const b = boxOf.get(o.box);
-    out.push({ fact: `box:${o.box}`, label: o.label, about: aboutOf(b?.about ?? null), reason: "left empty on the form", why: `${o.reason}: ${o.why}`, subject: b?.about ?? subjectId, boxes: o.boxes });
+    // QA-318 (P-46, P-171): a mandatory form field that waits for an answer is a fact to answer, never "left empty" under
+    // "Facts confirmed": it holds the lock back and the form's pill counts it.
+    out.push({ fact: `box:${o.box}`, label: o.label, about: aboutOf(b?.about ?? null), reason: o.reason === "needs an answer" ? "not answered" : "left empty on the form", why: `${o.reason}: ${o.why}`, subject: b?.about ?? subjectId, boxes: o.boxes });
   }
   return out;
 }
