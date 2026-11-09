@@ -1,0 +1,7 @@
+Gate B: the PR names C7.5; claims Works for none (no bug check).
+  packs: C7.5.test.ts
+    C7.5.test.ts on the checkpoint: exit 1, 11/16 passed (129 s: copy 10, Load the configured checkpoint 98, run 21)
+  packs took 130 s in all
+Gate B refuses:
+  * C7.5.test.ts on the checkpoint: exit 1; first FAIL lines: FAIL  C7.5-6b precondition (FQ-10): a saved AI review of IMM 5257 for these fixed values is recorded (the one live trial, about US$1, SI-6, with the founder's G | FAIL  C7.5-7 pass: the replayed review returns its saved findings, each marked Replayed, quoting its source and field, with High or Low agreement (P-121) — [] | FAIL  C7.5-8 pass: the saved run has a Low finding, and every Low finding carries both rounds' reasons | FAIL  C7.5-9 pass (P-71, P-168): an open AI finding warns and never blocks Ready to file | FAIL  C7.5-15 pass: the whole review stayed at US$0 (replay only)
+exit 1

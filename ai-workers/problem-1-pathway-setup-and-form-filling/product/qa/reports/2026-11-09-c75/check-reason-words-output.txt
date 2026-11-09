@@ -1,0 +1,9 @@
+QA-365 — a finding's reason needs words
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  QA-365 setup: the saved review replays at US$0 with findings to decide — {"run":201,"n":4}
+FAIL  QA-365 fail: acknowledging with the reason "..." (no words) is refused on the reason field, the finding stays open — {"status":200,"body":{"id":"6ed61e2a-9a3c-4501-b7de-ab557b802902","filing":"6f798354-d8af-4dcb-9a05-aab56c6be87f","subject":"d20fe7d2-d439-4dc8-b523-97822b9747fe","person":"Sample Client A","form":"IMM 5257","field":"person.applying_from_country","fact_label":
+FAIL  QA-365 fail: dismissing with the reason "---" (no words) is refused — {"status":200,"body":{"id":"dd28331d-2af7-42af-b8c5-c4ec4bcd3d81","filing":"6f798354-d8af-4dcb-9a05-aab56c6be87f","subject":"d20fe7d2-d439-4dc8-b523-97822b9747fe","person":"Sample Client A","form":"IMM 5257","field":"person.previously_applied_to_canada","fact_
+PASS  QA-365 pass: a reason in words is accepted — {"status":200}
+
+2/4 passed

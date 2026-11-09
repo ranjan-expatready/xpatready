@@ -1,0 +1,22 @@
+[header] Readiness: Not ready · 22% (lowest: Visitor visa: Sample Client A)
+[ready-to-file lines before] 8: findings 0
+[case review panel] Review Stand-in Checks across the facts and forms. Each finding is a warning: decide it here, or pass it with a reason on Ready to file. Open Review Add finding 0 open · 0 acknowledged · 0 resolved Rules checks run on every form at every read (US$0). The independent AI review of a filled form runs from the Review page: Saved replays its checked run at US$0. No findings: the facts and forms agree so far.
+[shot] 01-case-review-panel-1024.png
+[h1] ACC-mw9mn4u8-awjo Open Release 6
+[person / form] Sample Client A / IMM 5257 (forms: IMM 5257, IMM 5257 SCH1, IMM 5476, IMM 5645)
+[Saved row] disabled=true · Saved US$0.00 IMM 5257: No saved review of this form edition with these values yet.
+[Live row] disabled=true · Live about US$1.06, at most US$4.80 Live is off on this copy. A live review needs approval first, with its cost stated. Use Saved (US$0).
+[Live radio disabled] true
+[button] Run review (Saved, US$0.00)
+[shot] 02-run-card-1024.png
+[axe review page before run] 0 violations
+[sideways scroll review page] none
+[button disabled] true
+[card says] AI review of a filled form Stand-in Two AI rounds read what the form prints; the rules keep only findings that quote it. Person Sample Client A Form IMM 5257 IMM 5257 SCH1 IMM 5476 IMM 5645 Live reviews one form at a time. How to run it · cost first Saved US$0.00 IMM 5257: No saved review of this form edition with these values yet. Live about US$1.06, at most US$4.80 Live is off on this copy. A live review needs approval first, with its cost stated. Use Saved (US$0). Read what each form field would print (rules, US$0) (waiting) AI reads the filled form and lists what disagrees, each with its quote · AI (waiting) A second AI round reads it without seeing the first answer · AI (waiting) Rules keep findings that quote the form; High when both rounds agree, Low with both reasons (waiting) Run review (Saved, US$0.00) Nothing can run for these answers now: see the reasons above.
+[finding lines on Ready to file] 0
+[case review panel after] Review Stand-in Checks across the facts and forms. Each finding is a warning: decide it here, or pass it with a reason on Ready to file. Open Review Add finding 0 open · 0 acknowledged · 0 resolved Rules checks run on every form at every read (US$0). The independent AI review of a filled form runs from the Review page: Saved replays its checked run at US$0. No findings: the facts and forms agree so far.
+[shot] 03-ready-to-file-no-ai-review-1024.png
+[non-GET requests the page sent] 1
+    POST /api/runtime/cases/35bc61ef-ef59-48c6-a3af-db25478462cc/review-runs/plan {"forms":["IMM 5257"],"subject":"acc24ddb-e0a1-4683-847a-353c744f1d2d"}
+[live requests sent] 0
+[page errors / 5xx] none
