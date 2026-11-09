@@ -91,25 +91,28 @@ export function matchPeople(here: Participant[], earlier: Participant[]): Map<st
 }
 
 /** One earlier answer as the offer reads it: confirmed on the earlier case (confirmation().confirmed) or not. */
-export type EarlierAnswer = { id: string; subjectId: string; field: string; value: unknown; confirmed: boolean; confirmedAt: string; confirmedBy: string };
+export type EarlierAnswer = { id: string; subjectId: string; field: string; value: unknown; confirmed: boolean; confirmedAt: string; confirmedBy: string; seenAt?: string };
+/** QA-338 (review m3): when the firm last vouched for an answer: a copy's re-confirmation, else the answer's own time. */
+const seenOf = (a: EarlierAnswer) => a.seenAt ?? a.confirmedAt;
 export type CurrentAnswer = { id: string; subjectId: string; field: string; value: unknown };
 /** QA-338: a value confirmed later on another earlier case of the same person, which makes this case's copy out of date. */
 export type NewerValue = { case_id: string; reference: string; value: unknown; confirmed_at: string; words: string };
 export type OfferFact = { fact: string; label: string; value: unknown; from_answer: string; confirmed_at: string; confirmed_by: string; state: "new" | "different"; current: { answer_id: string; value: unknown } | null; expiry: ExpiryFlag | null; newer: NewerValue | null; problems: string[]; usable: boolean };
 
-/** QA-338 (BR-6; concept §1, "an expired passport is caught before it reaches a form"): the newest value confirmed for
- *  each person on this case across every earlier case read, keyed "<this case's subject>|<fact>". Two earlier cases can
- *  disagree (a copy kept on case B, BR-3, while case A was corrected later); the newest confirmation is what the firm last
- *  knew. Pure: the reads are the earlier cases' answers with each case's person match (matchPeople). */
+/** QA-338 (BR-6; concept §1, "an expired passport is caught before it reaches a form"): the newest value for each person
+ *  on this case across every earlier case read, keyed "<this case's subject>|<fact>". Two earlier cases can disagree (a
+ *  copy kept on case B, BR-3, while case A was corrected later). Confirmed answers only by default (the Out of date flag);
+ *  with confirmedOnly false, also answers typed and not yet confirmed (the expiry check, as on one case: review M1).
+ *  Pure: the reads are the earlier cases' answers with each case's person match (matchPeople). */
 export type Latest = { case_id: string; reference: string; value: unknown; at: string };
-export function latestConfirmed(reads: { case_id: string; reference: string; match: Map<string, string>; answers: EarlierAnswer[] }[]): Map<string, Latest> {
+export function latestConfirmed(reads: { case_id: string; reference: string; match: Map<string, string>; answers: EarlierAnswer[] }[], confirmedOnly = true): Map<string, Latest> {
   const out = new Map<string, Latest>();
   for (const r of reads) {
     for (const [here, from] of r.match) {
       for (const a of r.answers) {
-        if (a.subjectId !== from || !a.confirmed) continue;
+        if (a.subjectId !== from || (confirmedOnly && !a.confirmed)) continue;
         const k = `${here}|${a.field}`, had = out.get(k);
-        if (!had || a.confirmedAt > had.at) out.set(k, { case_id: r.case_id, reference: r.reference, value: a.value, at: a.confirmedAt });
+        if (!had || seenOf(a) > had.at) out.set(k, { case_id: r.case_id, reference: r.reference, value: a.value, at: seenOf(a) });
       }
     }
   }
@@ -123,10 +126,12 @@ export type OfferPerson = { subject_id: string; label: string; role: string; fro
 /** BR-2, BR-5, BR-6: what one earlier case offers each person on this case. A fact this case already holds with the same
  *  value is not offered (Same); a different one is shown with both values (Different); an expired or unfit value is
  *  shown and not usable. Earlier people with no match are listed by name and role (nothing of theirs moves). */
-/** QA-338: with `latest` (latestConfirmed over every earlier case read) and this earlier case's id, a fact confirmed
- *  differently later on another earlier case is shown with that value and reason and is not usable, and the expiry rules
- *  read the newest date the firm holds for the person, so a stale copy of a corrected, expired passport is caught. */
-export function offerFrom(input: { snapshot: Snapshot; here: Participant[]; current: CurrentAnswer[]; earlier: Participant[]; earlierAnswers: EarlierAnswer[]; background?: Set<string>; today: Date; rules?: ExpiryRule[]; combinationKey?: string; caseId?: string; latest?: Map<string, Latest> }): { people: OfferPerson[]; unmatched: { label: string; role: string }[] } {
+/** QA-338: with `latest` (latestConfirmed over every earlier case read), `latestAny` (the same with unconfirmed answers)
+ *  and this earlier case's id, a fact confirmed differently later on another earlier case is shown with that value and
+ *  reason and is not usable, and a date this case holds is read as the newest one typed for the person elsewhere, so a
+ *  stale copy of a corrected, expired passport is caught. A date this case lacks is not borrowed (review m1: it may be
+ *  another passport's; BR-6's "not known" warning stays). */
+export function offerFrom(input: { snapshot: Snapshot; here: Participant[]; current: CurrentAnswer[]; earlier: Participant[]; earlierAnswers: EarlierAnswer[]; background?: Set<string>; today: Date; rules?: ExpiryRule[]; combinationKey?: string; caseId?: string; latest?: Map<string, Latest>; latestAny?: Map<string, Latest> }): { people: OfferPerson[]; unmatched: { label: string; role: string }[] } {
   const asked = personFactsAsked(input.snapshot, input.background);
   const match = matchPeople(input.here, input.earlier);
   const people: OfferPerson[] = [];
@@ -136,11 +141,9 @@ export function offerFrom(input: { snapshot: Snapshot; here: Participant[]; curr
     const all = from ? input.earlierAnswers.filter((a) => a.subjectId === from) : [], theirs = all.filter((a) => a.confirmed);
     // An expiry date read even when it was not confirmed there: a confirmed passport number never escapes an expired date.
     const dated = new Map(all.map((a) => [a.field, a.value]));
-    for (const [k, l] of input.latest ?? []) {
-      const [who, field] = [k.slice(0, k.indexOf("|")), k.slice(k.indexOf("|") + 1)];
-      if (who !== p.subjectId) continue;
-      const own = all.find((a) => a.field === field); // none here: the newest date known elsewhere is read
-      if (input.caseId && l.case_id !== input.caseId && (!own || newerThan(l, input.caseId, own.value, own.confirmedAt))) dated.set(field, l.value);
+    for (const a of all) {
+      const l = newerThan(input.latestAny?.get(`${p.subjectId}|${a.field}`), input.caseId, a.value, seenOf(a));
+      if (l) dated.set(a.field, l.value);
     }
     const flags = expiryFlags(dated, input.today, input.rules, input.combinationKey);
     const facts: OfferFact[] = [];
@@ -151,8 +154,8 @@ export function offerFrom(input: { snapshot: Snapshot; here: Participant[]; curr
       const state = factState(a.value, cur);
       if (state === "same") continue;
       const problems = checkValue(input.snapshot, q.fact, a.value, input.today), expiry = flags.get(q.fact) ?? null;
-      const n = newerThan(input.latest?.get(`${p.subjectId}|${q.fact}`), input.caseId, a.value, a.confirmedAt);
-      const newer: NewerValue | null = n ? { case_id: n.case_id, reference: n.reference, value: inStoredOrder(n.value), confirmed_at: n.at, words: `Out of date: ${n.reference}, another earlier case, confirmed a different value later. Check it with the client; re-confirm it from ${n.reference} if that value is still true.` } : null;
+      const n = newerThan(input.latest?.get(`${p.subjectId}|${q.fact}`), input.caseId, a.value, seenOf(a));
+      const newer: NewerValue | null = n ? { case_id: n.case_id, reference: n.reference, value: inStoredOrder(n.value), confirmed_at: n.at, words: `Out of date: ${n.reference}, another earlier case, confirmed a different value later. Check with the client which is true before using either.` } : null;
       facts.push({ fact: q.fact, label: q.label, value: inStoredOrder(a.value), from_answer: a.id, confirmed_at: a.confirmedAt, confirmed_by: a.confirmedBy, state, current: cur ? { answer_id: cur.id, value: inStoredOrder(cur.value) } : null, expiry, newer, problems, usable: !problems.length && !expiry?.blocks && !newer });
     }
     people.push({ subject_id: p.subjectId, label: p.label, role: p.role, from_subject_id: from, from_label: fromP?.label ?? null, facts });

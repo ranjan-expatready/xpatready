@@ -38,6 +38,8 @@ const ReconfirmBody = z.object({
 const stale = (labels: string[]): never => { throw new HttpException({ type: "https://expatready.local/problems/stale-answer", title: "Changed since you looked", status: 409, detail: `Changed since you looked: ${labels.join(", ")}. Reload to see the facts now; nothing was copied.`, errors: labels.map((l) => ({ field: l, message: "Changed since you looked." })) }, HttpStatus.CONFLICT); };
 const notPossible = (detail: string): never => { throw new HttpException({ type: "https://expatready.local/problems/not-possible", title: "Not possible now", status: 409, detail }, HttpStatus.CONFLICT); };
 const day = (d: Date) => d.toISOString().slice(0, 10);
+/** QA-338 (review m3): a copy counts from its re-confirmation on the case that holds it, not its first giving. */
+const seenAt = (a: { at: string; copiedFrom?: { at: string } | null }) => a.copiedFrom?.at && a.copiedFrom.at > a.at ? a.copiedFrom.at : a.at;
 
 export type EarlierOffer = { case_id: string; reference: string; combination: string; opened_at: string; people: OfferPerson[]; unmatched: { label: string; role: string }[] };
 
@@ -66,7 +68,7 @@ export class EarlierFacts {
     const es = this.runtime.snapshotOf(e), ePeople = this.runtime.peopleOf(e), st = await this.runtime.state(e);
     const { confirm } = knownOf(es, ePeople, st.answers, st.rows, today);
     const earlierAnswers: EarlierAnswer[] = st.answers.filter((a) => !a.rowKey && UUID.test(a.subjectId) && UUID.test(a.id) && a.channel !== FIRM_RECORD)
-      .map((a) => ({ id: a.id, subjectId: a.subjectId, field: a.field, value: a.value, confirmed: !!confirm.get(a.id)?.confirmed, confirmedAt: a.at, confirmedBy: a.actor }));
+      .map((a) => ({ id: a.id, subjectId: a.subjectId, field: a.field, value: a.value, confirmed: !!confirm.get(a.id)?.confirmed, confirmedAt: a.at, confirmedBy: a.actor, seenAt: seenAt(a) }));
     return { cand, e, ePeople, earlierAnswers };
   }
 
@@ -76,11 +78,12 @@ export class EarlierFacts {
     const reads = [];
     for (const cand of cands) reads.push(await this.readEarlier(actor, cand, today));
     const herePeople = this.runtime.peopleOf(c);
-    const latest = latestConfirmed(reads.map((r) => ({ case_id: r.e.id, reference: r.e.reference, match: matchPeople(herePeople, r.ePeople), answers: r.earlierAnswers })));
+    const all = reads.map((r) => ({ case_id: r.e.id, reference: r.e.reference, match: matchPeople(herePeople, r.ePeople), answers: r.earlierAnswers }));
+    const latest = latestConfirmed(all), latestAny = latestConfirmed(all, false);
     const mine = here ?? await this.runtime.state(c), current = this.current(mine.answers), snapshot = this.runtime.snapshotOf(c), background = this.runtime.backgroundOf(c);
     const combinationKey = (await this.db.combination.findUnique({ where: { id: c.combinationId }, select: { combinationKey: true } }))?.combinationKey;
     return reads.map((r) => ({ case_id: r.e.id, reference: r.e.reference, combination: r.cand.case.combination.label, opened_at: r.cand.case.createdAt.toISOString(),
-      ...offerFrom({ combinationKey, snapshot, here: herePeople, current, earlier: r.ePeople, earlierAnswers: r.earlierAnswers, background, today, caseId: r.e.id, latest }) }));
+      ...offerFrom({ combinationKey, snapshot, here: herePeople, current, earlier: r.ePeople, earlierAnswers: r.earlierAnswers, background, today, caseId: r.e.id, latest, latestAny }) }));
   }
 
   /** GET: the earlier cases of this client and what each offers (BR-1, BR-2). An empty list shows no card. */
@@ -103,13 +106,14 @@ export class EarlierFacts {
     const parsed = ReconfirmBody.safeParse(body ?? {});
     if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
     const b = parsed.data;
-    const cand = (await this.candidates(c, b.earlierCase))[0];
+    const cands = await this.candidates(c), cand = cands.find((x) => x.case.id === b.earlierCase);
     if (!cand) fail("No earlier case of this client with that id.", HttpStatus.NOT_FOUND); // BR-1: another firm's or another person's case is never named
     const today = firmToday(), at = new Date().toISOString();
     // QA-338: the chosen case is judged against the others read for the card, so a value confirmed differently later
     // elsewhere is refused here as it is shown there.
-    const read = (await this.candidates(c)).slice(0, EARLIER_READ).filter((x) => x.case.id !== cand!.case.id);
-    const offer = (await this.offersOf(actor, c, [cand!, ...read], today))[0];
+    // Review m4: the same cases the card reads (the chosen one added when it is beyond them).
+    const shown = cands.slice(0, EARLIER_READ), read = shown.includes(cand!) ? shown : [...shown.slice(0, EARLIER_READ - 1), cand!];
+    const offer = (await this.offersOf(actor, c, read, today)).find((o) => o.case_id === cand!.case.id)!;
     const s = this.runtime.snapshotOf(c);
     const fields = (s.canonical_fields ?? []) as { id: string; item_version: number }[];
     const lines = b.take.map((t) => {
@@ -134,7 +138,7 @@ export class EarlierFacts {
       const moved = lines.filter((l) => l.line!.from_answer !== l.t.from);
       if (moved.length) stale(moved.map((l) => `${l.label} (on the earlier case)`));
       const blocked = lines.filter((l) => !l.line!.usable);
-      if (blocked.length) { const l = blocked[0].line!; const why = l.expiry?.blocks ? `${l.expiry.words} (${"sample" in l.expiry.source ? "Sample rule" : `canada.ca, ${l.expiry.source.page}, recorded ${l.expiry.source.recorded}`})` : l.newer ? l.newer.words : l.problems[0]; notPossible(`${blocked[0].label} cannot be re-confirmed: ${why} Nothing was copied.`); }
+      if (blocked.length) { const l = blocked[0].line!; const why = l.newer ? l.newer.words : l.expiry?.blocks ? `${l.expiry.words} (${"sample" in l.expiry.source ? "Sample rule" : `canada.ca, ${l.expiry.source.page}, recorded ${l.expiry.source.recorded}`})` : l.problems[0]; notPossible(`${blocked[0].label} cannot be re-confirmed: ${why} Nothing was copied.`); }
       // Challenge M2: the earlier answer shown must still be current there (append-only rows never change their value, so
       // the value copied is exactly the one the officer saw), read under a share lock so it cannot move during the copy.
       const froms = [...new Set(b.take.map((t) => t.from))];
