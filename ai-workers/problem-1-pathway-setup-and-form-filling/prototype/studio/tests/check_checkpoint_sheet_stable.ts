@@ -33,15 +33,15 @@ async function sheet() {
 (async () => {
   const s1 = await load();
   const a = await sheet();
-  ok("checkpoint load 1: loaded, and the pack's case has an IMM 5257 run card", s1 < 300 && a.status === 200 && /^[0-9a-f]{64}$/.test(a.sha), { load: s1, plan: a.status, sha: a.sha.slice(0, 12) });
+  ok("C7.5 / C10.1: checkpoint load 1: loaded, and the pack's case has an IMM 5257 run card", s1 < 300 && a.status === 200 && /^[0-9a-f]{64}$/.test(a.sha), { load: s1, plan: a.status, sha: a.sha.slice(0, 12) });
   const b2 = await sheet();
-  ok("checkpoint load 1: a second case on the same load gives the same sheet", b2.sha === a.sha, [a.sha.slice(0, 12), b2.sha.slice(0, 12)]);
+  ok("C7.5 / C10.1: checkpoint load 1: a second case on the same load gives the same sheet", b2.sha === a.sha, [a.sha.slice(0, 12), b2.sha.slice(0, 12)]);
   const s2 = await load();
   const b = await sheet();
-  ok("checkpoint load 2 (fresh): loaded, and the pack's case has an IMM 5257 run card", s2 < 300 && b.status === 200 && /^[0-9a-f]{64}$/.test(b.sha), { load: s2, plan: b.status, sha: b.sha.slice(0, 12) });
-  ok(`checkpoint pass: two fresh loads give the same IMM 5257 sheet (${a.sha.slice(0, 12)}), the key a saved paid review of the checkpoint is found by`, a.sha === b.sha, [a.sha.slice(0, 12), b.sha.slice(0, 12)]);
-  ok(`checkpoint pass: and the same wording of the date of birth ("${a.meaning}")`, !!a.meaning && a.meaning === b.meaning, [a.meaning, b.meaning]);
-  ok("checkpoint pass: and the same published library on both loads, every key with its meaning (the order decides keys too)", !!a.library && a.library === b.library, [a.library, b.library]);
-  ok("checkpoint pass (review B1): IMM 5257's own keys for other given names and the US green card expiry are in the library, as on main", a.keys === "person.other_given_names,person.us_green_card_expiry_date" && b.keys === a.keys, [a.keys, b.keys]);
+  ok("C7.5 / C10.1: checkpoint load 2 (fresh): loaded, and the pack's case has an IMM 5257 run card", s2 < 300 && b.status === 200 && /^[0-9a-f]{64}$/.test(b.sha), { load: s2, plan: b.status, sha: b.sha.slice(0, 12) });
+  ok(`C7.5 / C10.1: checkpoint pass: two fresh loads give the same IMM 5257 sheet (${a.sha.slice(0, 12)}), the key a saved paid review of the checkpoint is found by`, a.sha === b.sha, [a.sha.slice(0, 12), b.sha.slice(0, 12)]);
+  ok(`C7.5 / C10.1: checkpoint pass: and the same wording of the date of birth ("${a.meaning}")`, !!a.meaning && a.meaning === b.meaning, [a.meaning, b.meaning]);
+  ok("C7.5 / C10.1: checkpoint pass: and the same published library on both loads, every key with its meaning (the order decides keys too)", !!a.library && a.library === b.library, [a.library, b.library]);
+  ok("C7.5 / C10.1: checkpoint pass (review B1): IMM 5257's own keys for other given names and the US green card expiry are in the library, as on main", a.keys === "person.other_given_names,person.us_green_card_expiry_date" && b.keys === a.keys, [a.keys, b.keys]);
   process.exitCode = summary() ? 1 : 0;
 })();

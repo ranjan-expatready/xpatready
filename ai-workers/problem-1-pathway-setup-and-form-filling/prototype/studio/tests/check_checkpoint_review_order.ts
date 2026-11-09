@@ -28,13 +28,13 @@ const drafts = (sch1First: boolean, jitter: number[]) => {
 const ids = (x: { id: string }[]) => x.map((j) => j.id).join(",");
 const one = reviewOrder(drafts(false, [0, 0, 0, 0]), fileOf, batches), two = reviewOrder(drafts(true, [90, -40, -60, -80]), fileOf, batches), three = reviewOrder(drafts(true, [0, 0, 0, 0]).reverse(), fileOf, [...batches].reverse());
 
-ok("checkpoint order pass: the same drafts, IMM 5257 and SCH1 started in the same millisecond and listed either way, other starts jittered, are reviewed in one order", ids(one.order) === ids(two.order) && ids(one.order) === ids(three.order), [ids(one.order), ids(two.order), ids(three.order)]);
-ok("checkpoint order pass: that order is the load's plan (IMM 5257 before its SCH1, IMM 5257 before IMM 0008), batches in the order the load started them (IRM 0002's last)", ids(one.order) === "j-5257,j-sch1,j-5707,j-1294,j-5710,j-0008,j-irm", ids(one.order));
-ok("checkpoint order pass: the showcase is the same whatever the start order: most proposals, a tie (IMM 1294 and IMM 5710 at 95) going to the first planned", one.showcase === "j-1294" && two.showcase === "j-1294" && three.showcase === "j-1294", [one.showcase, two.showcase, three.showcase]);
+ok("C7.5 / C10.1: checkpoint order pass: the same drafts, IMM 5257 and SCH1 started in the same millisecond and listed either way, other starts jittered, are reviewed in one order", ids(one.order) === ids(two.order) && ids(one.order) === ids(three.order), [ids(one.order), ids(two.order), ids(three.order)]);
+ok("C7.5 / C10.1: checkpoint order pass: that order is the load's plan (IMM 5257 before its SCH1, IMM 5257 before IMM 0008), batches in the order the load started them (IRM 0002's last)", ids(one.order) === "j-5257,j-sch1,j-5707,j-1294,j-5710,j-0008,j-irm", ids(one.order));
+ok("C7.5 / C10.1: checkpoint order pass: the showcase is the same whatever the start order: most proposals, a tie (IMM 1294 and IMM 5710 at 95) going to the first planned", one.showcase === "j-1294" && two.showcase === "j-1294" && three.showcase === "j-1294", [one.showcase, two.showcase, three.showcase]);
 const replanned = reviewOrder(drafts(false, [0, 0, 0, 0]), fileOf, [{ ...batches[0], targets: [...batches[0].targets].reverse() }, batches[1]]);
-ok("checkpoint order fail: another plan (its targets reversed) gives another order (the order is the plan's, not a constant or the file names')", ids(replanned.order) === "j-0008,j-5710,j-1294,j-5707,j-sch1,j-5257,j-irm", ids(replanned.order));
+ok("C7.5 / C10.1: checkpoint order fail: another plan (its targets reversed) gives another order (the order is the plan's, not a constant or the file names')", ids(replanned.order) === "j-0008,j-5710,j-1294,j-5707,j-sch1,j-5257,j-irm", ids(replanned.order));
 const loose = reviewOrder([...drafts(false, [0, 0, 0, 0]), job("j-x", "a5707", null, 1, 1)], fileOf, batches);
-ok("checkpoint order: a draft in no batch's plan comes after every planned one, by its form's file name, never by when it started", ids(loose.order).endsWith("j-irm,j-x"), ids(loose.order));
+ok("C7.5 / C10.1: checkpoint order: a draft in no batch's plan comes after every planned one, by its form's file name, never by when it started", ids(loose.order).endsWith("j-irm,j-x"), ids(loose.order));
 const noPlan = reviewOrder([job("j-y", "a5707", null, 2, 1), job("j-z", "a0008", null, 1, 1)], fileOf);
-ok("checkpoint order: with no plan at all the order is by the form's file name, not start time", ids(noPlan.order) === "j-z,j-y", ids(noPlan.order));
+ok("C7.5 / C10.1: checkpoint order: with no plan at all the order is by the form's file name, not start time", ids(noPlan.order) === "j-z,j-y", ids(noPlan.order));
 process.exitCode = summary() ? 1 : 0;

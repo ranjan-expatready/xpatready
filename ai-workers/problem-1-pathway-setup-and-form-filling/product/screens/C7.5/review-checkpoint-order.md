@@ -38,7 +38,7 @@ This PR's own CI jobs (`packs`, `regression`, `ci`) were **skipped** at this hea
 
 `040-field-map-review.ts:20-24` with `sources.ts:772` (`decidedKey = rec?.key ?? matchedKey ?? proposedKey`). A draft applied later is compared again with the library that the earlier drafts already filled. Its near-duplicate key is then recommended onto the existing field.
 
-Under start order, IMM 5257 started first on every load I saw (03:20:07.329 on copy B; tied first with IMM 5257 SCH1 on copy A), so its own keys landed. Under file-name order, `imm0008depe.pdf`, `imm0008e.pdf` and `imm1294e.pdf` come before it. On the loaded copy:
+Under start order, IMM 5257 started first on every load I saw (03:20:07.329 UTC, 08:50:07.329 IST, on copy B; tied first with IMM 5257 SCH1 on copy A), so its own keys landed. Under file-name order, `imm0008depe.pdf`, `imm0008e.pdf` and `imm1294e.pdf` come before it. On the loaded copy:
 
 | What IMM 5257 proposes | What it now maps to | Why |
 |---|---|---|
