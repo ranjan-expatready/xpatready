@@ -84,7 +84,7 @@ export class ReviewRounds {
   private async checklistFor(c: Reached, view: Awaited<ReturnType<ReviewRounds["basisOf"]>>["view"], basis: ReviewBasis, filing: string): Promise<CheckItem[]> {
     const rd = view.readiness.find((x) => x.filing === filing);
     const docs = view.items.filter((i) => i.kind === "document" && i.filing === filing);
-    const verified = docs.length ? await this.db.checklistLine.count({ where: { caseId: c.id, stageId: c.stage.id /* C6.17 (BR-9) */, state: "approved", OR: docs.map((d) => ({ subjectId: d.subject, documentType: d.document_type ?? "" })) } }) : 0;
+    const verified = docs.length ? await this.db.checklistLine.count({ where: { caseId: c.id, stageId: c.stage.id, state: "approved", OR: docs.map((d) => ({ subjectId: d.subject, documentType: d.document_type ?? "" })) } }) : 0;
     const subjects = new Set(this.formsOf(basis, filing).map((f) => f.subject));
     const by = new Map<string, number>();
     for (const a of basis.answers) if (a.status === "VERIFIED" && subjects.has(a.subjectId)) by.set(a.actor, (by.get(a.actor) ?? 0) + 1);
@@ -180,8 +180,7 @@ export class ReviewRounds {
       const no = mayDecide(actor.id, rep); if (no) refuse({ status: 403, detail: `"Review now" sends and opens the review in one step: ${no}` });
     }
     const { view, basis } = await this.basisOf(actor, c);
-    // C6.17 (BR-9): the current stage's filings; an ended stage's are history and are never sent.
-    const stored = await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id }, select: { id: true, status: true, active: true } });
+    const stored = await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id }, select: { id: true, status: true, active: true } }) // C6.17: the current stage's filings only;
     const open = new Set((await this.db.reviewRoundFiling.findMany({ where: { caseId: c.id, status: { in: ["sent", "under_review"] } }, select: { filingId: true } })).map((x) => x.filingId));
     // Every filing the case has stored, a removed one too (C6.13: refused in words, 409), labelled as the view labels it.
     const filings = stored.map((s) => ({ id: s.id, label: view.filings.find((f) => f.id === s.id)?.label ?? "That filing", active: s.active && view.filings.some((f) => f.id === s.id), recorded: s.status === "SUBMITTED", inOpenRound: open.has(s.id), openBlocks: view.readiness.find((r) => r.filing === s.id)?.blocks.length ?? 0 }));
