@@ -93,9 +93,9 @@ try {
   const hits = i5257.flatMap((c) => cleared(c.read?.values ?? {}).map((w) => `${c.channel || "copy"}: ${w}`));
   ok(`C10.2-v2 pass (IMM 5257 validateCOR, validateCWA): no date beside 01/02/07/08 and no "Other" details beside a status but 06, on every IMM 5257 copy (${i5257.length})`, i5257.length > 0 && i5257.every((c) => !!c.read?.values[statusPath]) && hits.length === 0, hits);
   const badRule = join(tmp, "bad-rule.pdf");
-  execFileSync(PY, ["-I", READER, "--set", filed.path, badRule, `${statusPath}=01`, `${PD}CurrentCOR[0].Row2[0].Other[0]=SAMPLE`, `${PD}CurrentCOR[0].Row2[0].FromDate[0]=2024-01-15`], { stdio: ["ignore", "pipe", "pipe"] });
+  execFileSync(PY, ["-I", READER, "--set", filed.path, badRule, `${statusPath}=01`, `${PD}CurrentCOR[0].Row2[0].Other[0]=SAMPLE`, `${PD}CurrentCOR[0].Row2[0].FromDate[0]=2024-01-15`, `${PD}CurrentCOR[0].Row2[0].ToDate[0]=`], { stdio: ["ignore", "pipe", "pipe"] });
   const br = cleared(readCopies([badRule])[0].values);
-  ok("C10.2-v2 fail: Citizen with \"Other\" details and a From date (the 9 Nov Paper copy) is caught twice", br.length === 2, br);
+  ok("C10.2-v2 fail: Citizen with \"Other\" details and a From date, no To date (each box set, whatever the copy held) is caught twice", br.length === 2 && br.some((w) => /Other/.test(w)) && br.some((w) => /FromDate/.test(w)), br);
 
   // 3. The gates the fix adds are in the release the Paper copy was made on, and the copy says why each box is empty.
   const gated = ["CurrentCOR[0].Row2[0].Other[0]", "CurrentCOR[0].Row2[0].FromDate[0]", "CurrentCOR[0].Row2[0].ToDate[0]", "CountryWhereApplying[0].Row2[0].Other[0]"].map((x) => PD + x);
