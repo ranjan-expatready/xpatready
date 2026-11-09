@@ -1,4 +1,4 @@
-# qa: Opus re-read of earlier Sonnet verdicts: 5 rows move to Partial on gate A, 3 stay Works. QA-325 (Major), QA-326, QA-327 new. 9 Nov 2026, 15:16–15:30 IST
+# qa: Opus re-read of earlier Sonnet verdicts: 5 rows move to Partial on gate A, 3 stay Works. QA-325 (Major), QA-326, QA-327 new. 9 Nov 2026, 15:16–15:23 IST
 
 **Asked for by the tech lead, Lead 40.** This round's Opus read differed from the Sonnet read on 1 of 5 rows, so earlier Sonnet verdicts could not stand unchecked (P-303). A fresh reader on Opus re-read each M3 row whose Works verdict came from a Sonnet reader, newest first, plus C6.5's score in #1401. **Facts only: no re-walk and no re-run.** A row changes only if the reader disagrees, with its reason. US$0.
 
