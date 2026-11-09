@@ -201,13 +201,15 @@ function CasePage() {
       <ReleaseNotice caseId={c.id} />
       {/* C6.13 (B135): people with their filings, Make principal, Remove filing and Add filing back. */}
       <PeopleAndFilings caseId={c.id} people={c.people} canAdd={c.can_add ?? []} onAdd={setAdding} roleOf={roleOf} nameOf={nameOf} />
-      <OfficerPeoplePanel caseId={c.id} />
       <DocumentsPanel caseId={c.id} caseSubject={c.people.find((p) => p.role === "case")?.subject_id ?? ""} nameOf={nameOf} />
       <EligibilityCard caseId={c.id} people={c.people} />
       <ItemChannels caseId={c.id} />
       <FormsPanel caseId={c.id} />
       <FindingsPanel caseId={c.id} people={c.people} openLink={`/cases/${c.id}/review`} />
       <SubmissionPanel caseId={c.id} />
+      {/* C6.16: who answers for each person and their own links, next to the Agent view where their answers are (placed
+          below the case panels so its late load never moves them: check_c69_page_browser's focus check). */}
+      <OfficerPeoplePanel caseId={c.id} />
       <div id="agent-view" className="scroll-mt-4 space-y-3"><h2 id="agent-view-h" className="text-base font-semibold" data-agent-view-h>Agent view</h2>
       <Questionnaire caseId={c.id} mode="agent" /></div>
       {adding ? <AddPersonDialog caseId={c.id} line={adding} close={() => setAdding(null)} /> : null}
