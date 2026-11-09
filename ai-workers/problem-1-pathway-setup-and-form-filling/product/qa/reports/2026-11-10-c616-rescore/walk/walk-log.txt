@@ -1,0 +1,53 @@
+[1 sent] About Sample Partner Sent to p•••@example.com on 9 Nov. Sample Partner has not opened it yet; you can still answer for them. Resend Send to another address… Take back National identity document Not started Signature Not started Government positions Not started Membership or Association with Organizations Not started Employment Not started Education Not started Statutory declaration of common-law union Not started Military service Not started Previous travel Not started Contact information 7 to answer Personal details 33 to answer Applicant Not started Other documentary evidence Not started US PR card Not started Background information Not started Your parent 1 (mother or father) Not started Request for a change of sex or gender identifier Not started
+[shot] 01-clientA-sent-to-A.png
+[partner-A inbox] Demo inbox Stand-in Demo chrome, not for porting: it stands in for a person's email. Email address Open Answer your own questions for your application (Sample) 09/11/2026, 21:34:21 You were asked to answer your own questions for an application a firm is handling. Open your link: (link below) Opening it sends nothing: press "Send me a code" there. It works for 14 days. Open your link
+[shot] 02-partner-A-inbox.png
+[partner-A check] Check it's you We will send a 6-digit code to p•••@example.com. Opening this page sent nothing. Send me a code
+[partner-A consent] Before you start Your answers go to the firm handling this application. The person who started it will see how far you have got, not your answers. The firm can change this. Unconfirmed: no counsel Continue to my questions
+[shot] 03-partner-A-consent.png
+[partner-A questions] Your questions Case QA-C616-mw9s40ui. You answer your own questions. Each answer is saved when you press Save; to come back later, open your link again and ask for a new code. 0 of 26 parts done Start About you National identity document Not started Signature Not started Government positions Not started Membership or Association with Organizations Not started Employment Not started Education Not started Statutory declaration of common-law union Not started Military service Not started Previou
+[shot] 04-partner-A-own-questions.png
+[3 officer row before] Sample Partner spouse or partner Private from Client A Since 9 Nov · the person on their own link: Switched on when the person first entered the right code on their own link. With Sample Partner since 9 Nov · private from Client A · answered on the link sent to p•••@example.com (address given by Client A) 0 of 26 parts done · last saved 9 Nov, 21:34 Resend Send to a new address… Take back…
+[shot] 05-officer-1024-panel-before.png
+[shot] 06-officer-1024-send-new-address.png
+[3 officer row after] Sample Partner spouse or partner Private from Client A Since 9 Nov · the person on their own link: Switched on when the person first entered the right code on their own link. Link sent 9 Nov to n•••@example.com (address given by Case officer) · private from Client A 0 of 26 parts done · last saved 9 Nov, 21:34 Resend Send to a new address… Take back…
+[shot] 07-officer-1024-row-after-new-address.png
+[3 [under] link emails at A / at B] 0 / 1
+[4 Client A card before Resend] About Sample Partner Sample Partner is answering on their own link 0 of 26 parts done · last saved 9 Nov, 21:34 Their answers are private to them and the firm. The firm sent Sample Partner's link to n•••@example.com. Resend sends it there again; only the firm can change the address. Resend Take back
+[4 buttons] Resend | Take back
+[shot] 08-clientA-card-says-where-resend-goes.png
+[4 after Resend (toasts)] 
+[4 Client A card after Resend] About Sample Partner Sample Partner is answering on their own link 0 of 26 parts done · last saved 9 Nov, 21:34 Their answers are private to them and the firm. The firm sent Sample Partner's link to n•••@example.com. Resend sends it there again; only the firm can change the address. Resend Take back
+[shot] 09-clientA-after-resend.png
+[4 [under] link emails at A before/after] 0 → 0
+[4 [under] link emails at B before/after] 1 → 2; same link: true
+[4 [under] officer list Partner link] {"state":"sent","given_by":"Case officer","masked":"n•••@example.com","resend":{"to_masked":"n•••@example.com","kind":"new"}}
+[partner-B inbox] Demo inbox Stand-in Demo chrome, not for porting: it stands in for a person's email. Email address Open Answer your own questions for your application (Sample) 09/11/2026, 21:34:36 You were asked to answer your own questions for an application a firm is handling. Open your link: (link below) Opening it sends nothing: press "Send me a code" there. It works for 14 days. Open your link Answer your own questions for your application (Sample) 09/11/2026, 21:34:34 You were asked to answer your own questions for an application a firm is handling. Open your link: (link below) Opening it sends nothing: press "Send me a code" there. It works for 14 days. Open your link
+[shot] 10-partner-B-inbox.png
+[partner-B check] Check it's you We will send a 6-digit code to n•••@example.com. Opening this page sent nothing. Send me a code
+[partner-B consent] Before you start Your answers go to the firm handling this application. The person who started it will see how far you have got, not your answers. The firm can change this. Unconfirmed: no counsel Continue to my questions
+[shot] 11-partner-B-consent.png
+[partner-B questions] Your questions Case QA-C616-mw9s40ui. You answer your own questions. Each answer is saved when you press Save; to come back later, open your link again and ask for a new code. 0 of 26 parts done Start About you National identity document Not started Signature Not started Government positions Not started Membership or Association with Organizations Not started Employment Not started Education Not started Statutory declaration of common-law union Not started Military service Not started Previou
+[shot] 12-partner-B-own-questions.png
+[5 re-entry sees own parts, no one else] true
+[5 own private answer still there] true
+[shot] 13-partner-B-own-answer-kept.png
+[5 first browser /link] This link no longer works This link was replaced by a newer one sent on 9 Nov. Use the newest email.
+[shot] 14-partner-A-first-browser-after-readdress.png
+[6 Client A card] About Sample Partner Sample Partner is answering on their own link 0 of 26 parts done · last saved 9 Nov, 21:34 Their answers are private to them and the firm. Resend Take back
+[6 page carries BY_A or SECRET] false
+[6 buttons] Resend | Take back
+[6 Client A take back dialog] Take back Sample Partner's link? Sample Partner's link stops working now. Their answers stay private. Nothing else changes. Keep the link Take back
+[shot] 15-clientA-take-back-dialog.png
+[6 Client A card after own take back] About Sample Partner Sample Partner is answering on their own link 0 of 26 parts done · last saved 9 Nov, 21:34 Their answers are private to them and the firm. The link was taken back on 9 Nov. You can resend it to n•••@example.com, or ask the firm. Resend
+[shot] 16-clientA-after-own-take-back.png
+[6 Partner after Client A's take back] This link no longer works This link was taken back on 9 Nov. Ask whoever sent it for a new one.
+[shot] 17-partner-after-clientA-take-back.png
+[6 [under] Client A API carries BY_A/SECRET] false
+[6 officer row now] Sample Partner spouse or partner Private from Client A Since 9 Nov · the person on their own link: Switched on when the person first entered the right code on their own link. Taken back 9 Nov · still private from Client A · answered on the link sent to n•••@example.com (address given by Case officer) This link was taken back on 9 Nov. Ask whoever sent it for a new one. 0 of 26 parts done · last saved 9 Nov, 21:34 Resend Send to a new address…
+[shot] 18-officer-1024-row-end.png
+[7 row before] IMM 5257 for Sample Partner Copy, not for filing 83 facts to answer or confirm before filing Generate a copy Declared or confirmed answers for 4 of 166 form fields; 9 answered but needing a fix stay blank. A copy also lists the form fields to write by hand. Facts to answer or confirm (83) Marked mandatory on IRCC's form, still empty (40): Adobe's Validate asks for each, and may ask for more that its own checks make mandatory Who signs: Sample Partner · how it is signed is not set on the release's line yet
+[7 row after] IMM 5257 for Sample Partner Copy, not for filing 83 facts to answer or confirm before filing Generate a new copy Declared or confirmed answers for 4 of 166 form fields; 9 answered but needing a fix stay blank. A copy also lists the form fields to write by hand. Facts to answer or confirm (83) Marked mandatory on IRCC's form, still empty (40): Adobe's Validate asks for each, and may ask for more that its own checks make mandatory Generated Copy of 9 Nov, 21:34 · 4 form fields written · read back and checked Download Validated copy uploaded back Filed Not yet: IMM 5257 is filed Online: this PDF is a copy, not for filing. Who signs: Sample Partner · how it is signed is not set on the release's line yet
+[shot] 19-officer-1024-c71-partner-imm5257-copy.png
+[7 [under] Partner IMM 5257] {"person":"Sample Partner","draft":{"written_now":4,"mapped":166,"to_fix":9},"copy":{"id":"90d3d3cd-b4fe-4a93-b007-b1513f4817e8","status":"GENERATED","counts":{"blank":0,"by_hand":0,"written":4,"by_a_person":0,"not_on_form":0,"not_written":162},"intact":true}}
+[errors] none
