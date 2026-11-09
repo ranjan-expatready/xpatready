@@ -171,13 +171,21 @@ await main("C8.3", "Representative review: rounds, stamps, changed since review 
       && keep.every((x) => now3.includes(x)) && !now3.includes((stampsBefore ?? "").split(",").find((x) => x.startsWith(`${bcItem}=`)) ?? "-") && !(readinessOf(p, fS)?.warns ?? []).some((w) => w.code === "representative_review") && again.status === 409,
     { status: res.status, body: res.body?.detail ?? res.body?.reapproved, keep, now3, again: again.status });
 
+  // 13b (review M2): a fact the representative types BETWEEN rounds (after the send back, before the next send) still
+  // makes them an author of the next round: its base is the previous round's frozen snapshot, not its own send.
+  if (qP) { await answer(c.id, P, qP.fact, `${String(qP.answer?.value)} E`, rep); await confirmAll(c.id, P); }
   // 14 The permission matrix (BR-9)
   await call("POST", `/runtime/cases/${c.id}/reviews`, { filings: [fP] }, officer);
   const r4 = sql(`select r.id from review_round r join review_round_filing f on f.round_id=r.id where f.filing_id='${fP}' and f.status='sent'`) ?? "";
   g = (await read(r4)).r;
   const m: Record<string, number> = {};
   m.officerTick = (await call("POST", `/runtime/reviews/${r4}/checks`, { filing: fP, item: "default:no_critical", ticked: true }, officer)).status;
+  m.repTickBeforeOpen = (await call("POST", `/runtime/reviews/${r4}/checks`, { filing: fP, item: "default:no_critical", ticked: true }, rep)).status; // break m3: 409
   await call("POST", `/runtime/reviews/${r4}/open`, { filing: fP }, rep);
+  const between = await call("POST", `/runtime/reviews/${r4}/decision`, { filing: fP, verdict: "approve", form_hashes: hashes(rowOf(g, fP)), confirm_unticked: true, self: true }, rep);
+  ok("C8.3-13b fail (BR-8, review M2): a fact the representative typed between rounds (after the send back, before the next send) is still theirs: approve is refused as a second person's (409), never \"Reviewed\"",
+    !!qP && between.status === 409 && /second person/.test(between.body?.detail ?? "") && sql(`select count(*) from review_round_filing where round_id='${r4}' and status='approved'`) === "0", [between.status, between.body?.detail]);
+  m.nowNotSolo = (await call("POST", `/runtime/cases/${c.id}/reviews`, { filings: [fS], now: true }, rep)).status; // review m2: 400
   m.officerApprove = (await call("POST", `/runtime/reviews/${r4}/decision`, { filing: fP, verdict: "approve", form_hashes: hashes(rowOf(g, fP)), confirm_unticked: true }, officer)).status;
   m.officerBack = (await call("POST", `/runtime/reviews/${r4}/decision`, { filing: fP, verdict: "send_back", form_hashes: hashes(rowOf(g, fP)), reasons: [{ text: "Not mine to send back (Sample)" }] }, officer)).status;
   m.configRead = (await call("GET", `/runtime/reviews/${r4}`, undefined, AUTHOR)).status;
@@ -194,13 +202,22 @@ await main("C8.3", "Representative review: rounds, stamps, changed since review 
   m.formerDecide = (await call("POST", `/runtime/reviews/${r4}/decision`, { filing: fP, verdict: "send_back", form_hashes: hashes(rowOf(g, fP)), reasons: [{ text: "Former representative (Sample)" }] }, rep)).status;
   const gs = (await read(r3, f.rep2 ?? rep)).r;
   const repWords = rowOf(gs, fS)?.forms.filter((x) => !x.waits).every((x) => x.state === "approval_withdrawn" && x.withdrawn_words === "Approval withdrawn: the representative of record changed.");
+  // Break M1: the new representative of record re-approves in one click (F2's holiday cover): the firm record's facts
+  // that changed with the representative are nobody's typing, so not "You changed a fact".
+  const newRep = await call("POST", `/runtime/reviews/${r3}/reapprove`, { filing: fS, form_hashes: hashes(rowOf(gs, fS)) }, f.rep2 ?? rep);
+  ok("C8.3-14c pass (break M1): after a change of representative the new representative of record re-approves in one click (200, Reviewed); the former representative's ticks are not carried (break m2)",
+    newRep.status === 200 && newRep.body?.kind === "reviewed" && sql(`select count(*) from review_check where round_filing_id=(select id from review_round_filing where round_id='${newRep.body?.round?.id}') and ticked_by is not null`) === "0", [newRep.status, newRep.body?.detail]);
+  // Break m6: the triggers refuse an approved row inserted into a send round, and a check added under a decided row.
+  const anyRound = sql(`select id from review_round where case_id='${c.id}' and kind='send' limit 1`), decidedRow = sql(`select id from review_round_filing where round_id='${r1}' and status='sent_back' limit 1`);
+  m.insertApproved = sql(`insert into review_round_filing (id, workspace_id, case_id, round_id, filing_id, filing_round, status, opened_by, opened_at, decided_by, decided_at, representative, review_kind, filing_review_id) select gen_random_uuid(), workspace_id, case_id, '${anyRound}', '${fP}', 99, 'approved', 'x', now(), 'x', now(), 'x', 'reviewed', (select id from filing_review limit 1) from review_round where id='${anyRound}' returning id`) === null ? 1 : 0;
+  m.insertCheck = sql(`insert into review_check (id, workspace_id, case_id, round_filing_id, item_key, source, wording) select gen_random_uuid(), workspace_id, case_id, id, 'forged', 'default', 'Forged item' from review_round_filing where id='${decidedRow}' returning id`) === null ? 1 : 0;
   // A removed filing (C6.13): its send is refused (409).
   const pv = await call("POST", `/runtime/cases/${c.id}/filing-changes`, { kind: "remove_filing", subject: S, preview: true }, officer);
   await call("POST", `/runtime/cases/${c.id}/filing-changes`, { kind: "remove_filing", subject: S, basis: pv.body?.basis, reason: "Not travelling now (Sample)" }, officer);
   m.removedSend = (await call("POST", `/runtime/cases/${c.id}/reviews`, { filings: [fS] }, officer)).status;
   ok("C8.3-14 fail (BR-9, F2, M7): the officer ticking, approving or sending back 403; configuration 403; a client 403; another firm 404 on every route; a former representative 403 (the stamps read \"the representative of record changed\"); a removed filing 409; the database refuses changing a round",
     m.officerTick === 403 && m.officerApprove === 403 && m.officerBack === 403 && m.configRead === 403 && m.configSend === 403 && m.clientRead === 403 && m.clientSend === 403
-      && ["otherFirmRead", "otherFirmOpen", "otherFirmCheck", "otherFirmDecide", "otherFirmReapprove", "otherFirmSend", "otherFirmList"].every((k) => m[k] === 404) && moved.status === 200 && m.formerDecide === 403 && !!repWords && m.removedSend === 409 && m.tryUpdate === 1, { m, moved: moved.status, repWords });
+      && ["otherFirmRead", "otherFirmOpen", "otherFirmCheck", "otherFirmDecide", "otherFirmReapprove", "otherFirmSend", "otherFirmList"].every((k) => m[k] === 404) && moved.status === 200 && m.formerDecide === 403 && !!repWords && m.removedSend === 409 && m.tryUpdate === 1 && m.repTickBeforeOpen === 409 && m.nowNotSolo === 400 && m.insertApproved === 1 && m.insertCheck === 1, { m, moved: moved.status, repWords });
 
   // 14 (cont.) Self-review on a solo firm: "Review now" sends and opens in one step; without the statement 400, with it 200
   const sc = await openCase(vv, [{ role: "principal", name: "Sample Client S", dob: yearsAgo(41) }], { representative: solo, caseOfficers: [solo] });
@@ -218,6 +235,40 @@ await main("C8.3", "Representative review: rounds, stamps, changed since review 
   ok("C8.3-14b fail (BR-8, BR-9): on a solo firm \"Review now\" opens at once; self-review without the statement 400, with it 200 (Self-reviewed); prepared with another officer on a firm that is not solo 409",
     res.status === 201 && gsolo?.kind === "review_now" && rowOf(gsolo, sf)?.status === "under_review" && noSelf.status === 400 && withSelf.status === 200 && withSelf.body?.kind === "self_reviewed" && prep.status === 409,
     { send: res.status, kind: gsolo?.kind, noSelf: [noSelf.status, noSelf.body?.detail], withSelf: [withSelf.status, withSelf.body?.detail], prep: [prep.status, prep.body?.detail] });
+
+  // 19 Break B1: a send back withdraws the earlier approval (C7.6's line reopens; C8.2's "Reviewed by" reads nothing)
+  const before19 = readinessOf((await prepare(sc.id, solo)).p, sf);
+  const r19 = (await call("POST", `/runtime/cases/${sc.id}/reviews`, { filings: [sf] }, solo)).body?.id as string | undefined;
+  const mid19 = readinessOf((await prepare(sc.id, solo)).p, sf);
+  await call("POST", `/runtime/reviews/${r19}/open`, { filing: sf }, solo);
+  const back19 = await call("POST", `/runtime/reviews/${r19}/decision`, { filing: sf, verdict: "send_back", form_hashes: hashes(rowOf((await read(r19, solo)).r, sf)), reasons: [{ text: "Not right yet: check the passport page (Sample)." }] }, solo);
+  const after19 = readinessOf((await prepare(sc.id, solo)).p, sf) as { reviewed?: unknown; warns: { code: string }[] } | null;
+  ok("C8.3-19 fail (break B1): approved, then sent again and sent back: the earlier approval no longer counts (C7.6's review line open, \"reviewed\" empty, so C8.2 records no \"Reviewed by\")",
+    !!(before19 as { reviewed?: unknown } | null)?.reviewed && !(mid19 as { reviewed?: unknown } | null)?.reviewed && back19.status === 200 && !after19?.reviewed && (after19?.warns ?? []).some((w) => w.code === "representative_review"),
+    { before: !!(before19 as { reviewed?: unknown } | null)?.reviewed, back: back19.status, after: after19?.reviewed, warns: (after19?.warns ?? []).map((w) => w.code) });
+
+  // 20 Review M3 and m6: a relative's fact is named as the relative's, and an answer shows its words, never its key
+  const famRead = (await read(r1)).r;
+  const facts = (famRead?.filings ?? []).flatMap((x) => x.forms.flatMap((y) => (y as unknown as { facts: { person: string; value: unknown; value_words: string | null }[] }).facts));
+  ok("C8.3-20 pass (review M3, m6): on the forms, relatives' facts carry the relative's own words (\"…'s parent 1\"), and no answer is shown as a raw key",
+    facts.some((x) => /'s /.test(x.person)) && !facts.some((x) => typeof x.value === "string" && /^[a-z]+(_[a-z]+)+$/.test(x.value) && (x.value_words ?? x.value) === x.value),
+    { relatives: facts.filter((x) => /'s /.test(x.person)).slice(0, 3), raw: facts.filter((x) => typeof x.value === "string" && /^[a-z]+(_[a-z]+)+$/.test(x.value)).slice(0, 3) });
+
+  // 21 Break M3: a send and the C7.6 route at the same moment never leave a filing reviewed while it is in an open round
+  const rc = await openCase(vv, [{ role: "principal", name: "Sample Client R", dob: yearsAgo(37) }], { representative: rep, caseOfficers: [officer] });
+  const rf = (await prepare(rc.id, officer)).p?.filings[0]?.id;
+  const outcomes: string[] = [];
+  for (let i = 0; i < 4; i++) {
+    const fh = readinessOf((await prepare(rc.id, officer)).p, rf)?.facts_hash;
+    const [a, b2] = await Promise.all([call("POST", `/runtime/filings/${rf}/review`, { facts_hash: fh }, rep), call("POST", `/runtime/cases/${rc.id}/reviews`, { filings: [rf] }, officer)]);
+    outcomes.push(`${a.status}/${b2.status}`);
+    const open = sql(`select round_id from review_round_filing where filing_id='${rf}' and status in ('sent','under_review')`);
+    if (open) { await call("POST", `/runtime/reviews/${open}/open`, { filing: rf }, rep); await call("POST", `/runtime/reviews/${open}/decision`, { filing: rf, verdict: "send_back", form_hashes: hashes(rowOf((await read(open)).r, rf)), reasons: [{ text: "Closing the race round (Sample)." }] }, rep); }
+  }
+  // Invariant: no one-step approval was written while an older round of the filing was open (sent before it, decided after).
+  const bad = sql(`select count(*) from review_round_filing a join review_round ra on ra.id=a.round_id join review_round_filing b on b.filing_id=a.filing_id join review_round rb on rb.id=b.round_id where a.filing_id='${rf}' and ra.kind='one_step' and b.filing_round < a.filing_round and rb.sent_at <= a.decided_at and (b.decided_at is null or b.decided_at > a.decided_at)`);
+  ok("C8.3-21 fail (break M3): the C7.6 route racing a send: when the send wins, the route answers 409 and writes nothing (never reviewed while sent)",
+    bad === "0" && outcomes.every((o) => /^(200|409)\/(201|409)$/.test(o)), { outcomes, bad });
 
   // 15 The C7.6 route is a one-step round; readyToFile still works
   const oc = await openCase(vv, [{ role: "principal", name: "Sample Client U", dob: yearsAgo(39) }], { representative: rep, caseOfficers: [officer] });
