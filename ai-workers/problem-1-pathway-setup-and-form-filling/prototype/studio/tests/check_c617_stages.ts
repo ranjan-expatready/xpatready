@@ -55,6 +55,7 @@ ok("C6.17 BR-1 fail: a combination on no route has no earlier stages (a one-stag
 ok("C6.17 BR-3 pass: a real date and text pass; blank means not given", (() => { const r = checkKeyDetails(route().stages[0].key_details, { "stage.permit_valid_until": "2027-02-03", "person.uci": "" }, "k"); return "values" in r && r.values["stage.permit_valid_until"] === "2027-02-03" && !("person.uci" in r.values); })());
 const badDate = checkKeyDetails(route().stages[0].key_details, { "stage.permit_valid_until": "3 Feb 2027" }, "earlier.0.key_details");
 ok("C6.17 BR-3 fail: text in a date is refused on that field", "field" in badDate && badDate.field === "earlier.0.key_details.stage.permit_valid_until" && /YYYY-MM-DD/.test(badDate.message));
+ok("C6.17 breaker m5 fail: a date outside 1950-2100 (0001-01-01, 9999-12-31) is refused on its field", ["0001-01-01", "9999-12-31"].every((v) => "field" in checkKeyDetails(route().stages[0].key_details, { "stage.permit_valid_until": v }, "k")));
 ok("C6.17 BR-3 fail: 31 February is not a date; a field the stage does not record is refused", !isDate("2027-02-31") && "field" in checkKeyDetails(route().stages[0].key_details, { "person.family_name": "X" }, "k"));
 
 // ---------------------------------------------------------------- BR-8 the deadline, worked out on read, Sample

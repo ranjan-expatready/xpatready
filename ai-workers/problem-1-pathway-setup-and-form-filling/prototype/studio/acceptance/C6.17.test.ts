@@ -7,7 +7,7 @@
 // no upload and step 9 reads the next release's documents from the dialog; "On file from" is proved by the engine test.
 // Runs on a FRESH isolated copy (the checkpoint loads its own configuration):
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C6.17.test.ts 4440 xr_studio_accept
-import { AUTHOR, CLIENT, OFFICER, call, firms, main, ok, prepare, run, sql } from "./lib/m3.ts";
+import { AUTHOR, CLIENT, OFFICER, call, firms, generateCopy, main, ok, prepare, run, sql } from "./lib/m3.ts";
 import { sampleRelease } from "./lib/sample-release.ts";
 
 type Stage = { id: string; key: string; name: string; state: string; words: string; version: number; combination_id: string; key_details: { field: string; value: string | null }[]; deadline: { due: string | null; why: string; sample: boolean } | null; cannot_start_why: string | null };
@@ -72,6 +72,8 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
   const a1 = await call("PUT", `/runtime/cases/${S}/answers/${P}/person.family_name`, { value: "SAMPLE-FAMILY", expectedId: null });
   const a2 = await call("PUT", `/runtime/cases/${S}/answers/${APP1}/case.submission_office_name`, { value: "Sample office (stage 1)", expectedId: null });
   const p1 = (await prepare(S!)).p;
+  // Breaker M2: a copy of a form both releases file (IMM 5476), made on the first stage, must never count on the next.
+  const copy1 = await generateCopy(S!, "IMM 5476", P);
   const st1 = S ? await stagesOf(S) : null;
   const S1 = st1?.current ?? "", S2 = st1?.next ?? "";
   ok("C6.17-5 pass: a case on the first stage: a person's answer and an application answer given, Prepare makes its filing and family group on that stage; the next stage is offered",
@@ -127,6 +129,14 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
   ok("C6.17-9 pass (BR-9): every case reader answers after the start and none shows a row of the ended stage (prepare, filings, findings, checklist, filing record, release update)",
     s1Filings.length > 0 && reads.every(([, r]) => r.status === 200) && leaked.length === 0, { statuses: reads.map(([x, r]) => `${x}:${r.status}`), leaked });
   const panel = (await call("GET", `/runtime/cases/${S}/stages/${S1}`)).body;
+  ok("C6.17 breaker M2 fail-first: the next stage's Prepare never reads the first stage's copy of a form both releases file (IMM 5476)",
+    !!copy1 && !JSON.stringify((await call("GET", `/runtime/cases/${S}/prepare`)).body ?? {}).includes(copy1), { copy1 });
+  const endedItem = sql(`select id || '|' || coalesce(channel::text, '') || '|' || version from filing_item where filing_id in (select id from filing where stage_id='${S1}') and kind='form' order by item_key limit 1`) ?? "";
+  const [itemId, itemChannel, itemVersion] = endedItem.split("|");
+  const pv = (await call("GET", `/runtime/cases/${S}/prepare`)).body?.version;
+  const chan = itemId ? await call("PATCH", `/runtime/items/${itemId}/channel`, { channel: "PAPER", reason: "Sample: trying to change the ended stage", version: pv }) : null;
+  ok("C6.17 breaker M1 fail-first: a form item of the ended stage cannot change its channel by its own route (409); it stays as it was",
+    !!itemId && chan?.status === 409 && sql(`select coalesce(channel::text, '') || '|' || version from filing_item where id='${itemId}'`) === `${itemChannel}|${itemVersion}`, { status: chan?.status, words: chan ? words(chan) : null });
   ok("C6.17-9 pass (m2): the ended stage's own record is read only: its filings, its key details", panel?.read_only === true && (panel?.filings ?? []).some((x: { id: string }) => s1Filings.includes(x.id)) && panel.key_details.some((d: { field: string; value: string }) => d.field === dateField && d.value === VALID));
 
   // ---------------------------------------------------------------- C6.17-10: stale, last stage
@@ -167,6 +177,26 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
   ok("C6.17-12 pass (challenge B1): after the start (and with the ended stage recorded), a later release of the next combination moves the case on the current stage's chain: revision 2 on that combination, the ended stage's pin untouched, every route still reads",
     (rel.version ?? 0) >= 2 && moved?.status === 200 && sql(`select max(revision) from pack_work_pin where case_id='${S}' and combination_id='${nextCombo}'`) === "2" && n(`select count(*) from pack_work_pin where case_id='${S}' and combination_id <> '${nextCombo}'`) === 1
     && (await call("GET", `/runtime/cases/${S}`)).body?.pin?.revision === 2 && (await call("GET", `/runtime/cases/${S}/prepare`)).status === 200, { release: rel.version, steps: rel.steps.filter((x) => x.status >= 300), moved: moved?.status, words: moved ? words(moved) : ru });
+
+  // ---------------------------------------------------------------- breaker M4: the UCI on a done-before stage is corrected
+  const doneNow = (await stagesOf(W!)).stages.find((x) => x.state === "DONE_BEFORE")!;
+  const fix = await call("PUT", `/runtime/cases/${W}/stages/${doneNow.id}/key-details`, { stage_version: doneNow.version, key_details: { [sameField]: "11223344" } });
+  ok("C6.17 breaker M4 fail-first: the UCI on a done-before stage is corrected (200): the stage record and Client A's one current answer both read the new UCI",
+    fix.status === 200 && (fix.body?.key_details ?? []).some((d: { field: string; value: string }) => d.field === sameField && d.value === "11223344")
+    && sql(`select string_agg(value_json #>> '{}', ',') from client_canonical_answer where subject_id='${principal}' and canonical_field_key='${sameField}' and superseded_by_id is null`) === "11223344", { status: fix.status, words: words(fix) });
+
+  // ---------------------------------------------------------------- breaker M5: an answer racing the start
+  const aMade = await open(first.combination_id);
+  const A = aMade.body?.id as string;
+  await prepare(A);
+  const aApp = ((aMade.body?.people ?? []) as { subject_id: string; role: string }[]).find((x) => x.role === "case")?.subject_id ?? "";
+  const a1s = (await stagesOf(A)).stages.find((x) => x.state === "CURRENT")!;
+  const raced = await Promise.all([call("POST", `/runtime/cases/${A}/stages/next`, { from_stage: a1s.id, stage_version: a1s.version, reason: "Sample: an answer typed while the next stage starts" }),
+    ...[0, 40, 80, 120].map(async (ms, i) => { await new Promise((r) => setTimeout(r, ms)); return call("PUT", `/runtime/cases/${A}/answers/${aApp}/case.submission_office_name`, { value: `Sample office ${i}`, expectedId: sql(`select id from client_canonical_answer where subject_id='${aApp}' and canonical_field_key='case.submission_office_name' and superseded_by_id is null`) || null }); })]);
+  const aEnded = sql(`select ended_at from case_stage where id='${a1s.id}'`);
+  const lateAns = aEnded ? n(`select count(*) from client_canonical_answer where subject_id='${aApp}' and effective_at > '${aEnded}'`) : -1;
+  ok("C6.17 breaker M5 fail-first (race): an answer about the application typed while the next stage starts is saved before the start or refused (409), never on the ended application after it ended",
+    raced[0].status === 201 && raced.slice(1).every((x) => x.status === 200 || x.status === 409) && lateAns === 0, { start: raced[0].status, answers: raced.slice(1).map((x) => x.status), lateAns });
 
   // ---------------------------------------------------------------- C6.17-13: the family case keeps one stage
   const fam = sql(`select k.id from runtime_case k join combination c on c.id=k.combination_id where c.combination_key='vv.single' order by k.created_at limit 1`) ?? "";

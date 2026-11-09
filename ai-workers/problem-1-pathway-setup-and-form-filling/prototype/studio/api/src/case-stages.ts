@@ -5,6 +5,7 @@
 // Case staff of the case's firm only: a client and configuration people 403, another firm 404 (Runtime.reach). Rules
 // only, identical with AI off; no model call (US$0). Every route, key detail and deadline is Sample (P-412 F13).
 import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Put } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { releaseLabel, StageKeyDetails, StartNext, type CaseStages, type CaseStageView, type StartNextPreview } from "../../contracts/runtime.ts";
@@ -43,8 +44,10 @@ async function writeSameEveryStage(tx: Tx, c: Reached, snap: Snapshot, defs: { f
     if (!def) continue;
     const cur = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: principal.subjectId, canonicalFieldKey: d.field, rowKey: null, supersededById: null } });
     if (cur && cur.valueJson === values[d.field]) continue;
-    const made = await tx.clientCanonicalAnswer.create({ data: { workspaceId: c.workspaceId, partyId: principal.subject.partyId, subjectId: principal.subjectId, canonicalFieldId: def.id, canonicalFieldKey: d.field, valueJson: values[d.field], status: "DECLARED", sourceJson: { channel: STAGE_RECORD, actor, at: at.toISOString() } } });
-    if (cur) await tx.clientCanonicalAnswer.update({ where: { id: cur.id }, data: { supersededById: made.id } });
+    // Breaker M4: the answer now is superseded first (as putAnswer does), then the new one is written: one current answer.
+    const id = randomUUID();
+    if (cur) await tx.clientCanonicalAnswer.update({ where: { id: cur.id }, data: { supersededById: id } });
+    await tx.clientCanonicalAnswer.create({ data: { id, workspaceId: c.workspaceId, partyId: principal.subject.partyId, subjectId: principal.subjectId, canonicalFieldId: def.id, canonicalFieldKey: d.field, valueJson: values[d.field], status: "DECLARED", sourceJson: { channel: STAGE_RECORD, actor, at: at.toISOString() } } });
   }
 }
 
@@ -187,10 +190,12 @@ export class CaseStagesService {
     }
     const reason = b.reason?.trim() ?? "";
     if (p.unrecorded.length && reason.length < 3) fieldError("reason", `${p.unrecorded.map((u) => `${u.person}'s ${c.stage.clientName.toLowerCase()}`).join(" and ")} ${p.unrecorded.length === 1 ? "has" : "have"} no filing record. Say why you are starting the next stage anyway (at least 3 characters).`);
-    const values = (checked as { values: Record<string, string> }).values, at = new Date();
+    const values = (checked as { values: Record<string, string> }).values;
+    let at = new Date();
     const rel = p._release!;
     const outcome = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
+      at = new Date(); // breaker m6: the stage ends when the start holds the lock, so nothing uploaded before is left out of it
       const cur = await tx.caseStage.findFirst({ where: { caseId: c.id, state: "CURRENT" } });
       if (!cur || cur.id !== b.from_stage || cur.version !== b.stage_version) return "stale" as const;
       const nxt = await tx.caseStage.findFirst({ where: { caseId: c.id, ord: cur.ord + 1 } });
@@ -229,7 +234,7 @@ export class CaseStagesService {
     const c = await this.reach(actor, caseId);
     const s = c.stages.find((x) => x.id === stageId);
     if (!s) fail("No such stage on this case.", HttpStatus.NOT_FOUND);
-    if (s!.state !== "DONE_BEFORE") problem(409, "Not possible now", s!.state === "CURRENT" ? "The current stage's key details are recorded when the next stage starts." : "Only a stage done before we started has its details edited here; an ended stage is kept as it was.", { code: "not_done_before" });
+    if (s!.state !== "DONE_BEFORE") problem(409, "Not possible now", s!.state === "CURRENT" ? "The current stage's key details are recorded when the next stage starts." : s!.state === "NOT_RECORDED" ? "This stage was not recorded when the case opened; recording it later is not built yet (it stays Not recorded)." : "Only a stage done before we started has its details edited here; an ended stage is kept as it was.", { code: "not_done_before" });
     const b = parse(StageKeyDetails, body);
     if (b.stage_version !== s!.version) stale();
     const spec = readSpec(s!.spec), checked = checkKeyDetails(spec.key_details, b.key_details, "key_details");

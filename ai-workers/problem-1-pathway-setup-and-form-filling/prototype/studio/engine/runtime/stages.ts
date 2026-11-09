@@ -89,6 +89,8 @@ const stamp = (values: Record<string, string>, by: string, at: string): Record<s
 
 /** A real calendar date written YYYY-MM-DD (no 31 February). */
 export const isDate = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v;
+/** Breaker m5: a stage's date is between 1950 and 2100 (a year like 0001 or 9999 is a typing slip, never a permit's date). */
+export const inRange = (v: string) => v >= "1950-01-01" && v <= "2100-12-31";
 
 /** BR-3: key details typed by their field: a date is a real date; text is 1-80 characters; a field the stage does not
  *  record is refused; blank means not given (optional). Values trimmed. */
@@ -101,6 +103,7 @@ export function checkKeyDetails(defs: KeyDetailDef[], given: Record<string, stri
     if (typeof raw !== "string") return { field: `${at}.${k}`, message: `${d.label}: write it as text.` };
     const v = raw.trim();
     if (d.type === "DATE" && !isDate(v)) return { field: `${at}.${k}`, message: `${d.label}: write a date as YYYY-MM-DD, for example 2027-02-03.` };
+    if (d.type === "DATE" && !inRange(v)) return { field: `${at}.${k}`, message: `${d.label}: give a date between 1950 and 2100.` };
     if (d.type === "STRING" && (v.length > 80 || /[\u0000-\u001f]/.test(v))) return { field: `${at}.${k}`, message: `${d.label}: at most 80 characters, on one line.` };
     values[k] = v;
   }

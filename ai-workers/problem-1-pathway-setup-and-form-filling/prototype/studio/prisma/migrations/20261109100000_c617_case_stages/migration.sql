@@ -12,7 +12,7 @@
 --     ("case_stage_ended"), with the case row taken FOR KEY SHARE so a write racing "Start next stage" (which holds the
 --     case FOR UPDATE) waits for it and then sees the stage ended (BR-10, challenge M4).
 -- Rollback (only while every case has one stage): drop the five triggers trg_*_stage_current and function
--- runtime_stage_row_current(); drop trigger trg_case_stage_forward, trg_case_stage_current, trg_runtime_case_stage and
+-- runtime_stage_row_current(); drop the eight triggers trg_*_stage_filing_current and function runtime_stage_row_via_filing(); drop trigger trg_case_stage_forward, trg_case_stage_current, trg_runtime_case_stage and
 -- their functions; recreate the four uniques without stage_id; drop column stage_id on the five tables; drop table
 -- case_stage, route.
 
@@ -170,3 +170,33 @@ CREATE TRIGGER trg_submission_group_stage_current BEFORE INSERT OR UPDATE ON "su
 CREATE TRIGGER trg_checklist_line_stage_current BEFORE INSERT OR UPDATE ON "checklist_line" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_current();
 CREATE TRIGGER trg_review_finding_stage_current BEFORE INSERT OR UPDATE ON "review_finding" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_current();
 CREATE TRIGGER trg_case_task_stage_current BEFORE INSERT OR UPDATE ON "case_task" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_current();
+
+-- Breaker M1 (round 1): rows that hang off a filing (its items, signing steps, entered sections, signed scans, each person's
+-- UCI record, readiness passes, reviews, number corrections) are the ended stage's history too: a new or changed row whose
+-- filing is on a stage that is not CURRENT is refused, after the same FOR KEY SHARE on the case row. Rows with no filing
+-- (a case-level row) are not this rule's.
+CREATE FUNCTION runtime_stage_row_via_filing() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE fid uuid; k uuid; st text;
+BEGIN
+  IF pg_trigger_depth() > 1 THEN RETURN NEW; END IF;
+  IF TG_TABLE_NAME IN ('sign_step', 'entered_section', 'signed_scan') THEN
+    IF NEW.item_id IS NULL THEN RETURN NEW; END IF;
+    SELECT i.filing_id INTO fid FROM filing_item i WHERE i.id = NEW.item_id;
+  ELSE
+    fid := NEW.filing_id;
+  END IF;
+  IF fid IS NULL THEN RETURN NEW; END IF;
+  SELECT f.case_id INTO k FROM filing f WHERE f.id = fid;
+  PERFORM 1 FROM runtime_case WHERE id = k FOR KEY SHARE;
+  SELECT s.state INTO st FROM filing f JOIN case_stage s ON s.id = f.stage_id WHERE f.id = fid;
+  IF st IS DISTINCT FROM 'CURRENT' THEN RAISE EXCEPTION 'case_stage_ended: this filing''s stage has ended; its items and records are kept as they were'; END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_filing_item_stage_filing_current BEFORE INSERT OR UPDATE ON "filing_item" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_sign_step_stage_filing_current BEFORE INSERT OR UPDATE ON "sign_step" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_entered_section_stage_filing_current BEFORE INSERT OR UPDATE ON "entered_section" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_signed_scan_stage_filing_current BEFORE INSERT OR UPDATE ON "signed_scan" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_filing_person_record_stage_filing_current BEFORE INSERT OR UPDATE ON "filing_person_record" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_readiness_pass_stage_filing_current BEFORE INSERT OR UPDATE ON "readiness_pass" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_filing_review_stage_filing_current BEFORE INSERT OR UPDATE ON "filing_review" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_filing_record_correction_stage_filing_current BEFORE INSERT OR UPDATE ON "filing_record_correction" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();

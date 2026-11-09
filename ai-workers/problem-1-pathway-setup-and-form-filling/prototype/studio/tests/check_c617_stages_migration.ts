@@ -38,7 +38,8 @@ try {
     insert into filing (id, workspace_id, case_id, submission_group_id, subject_id, combination_key, mode) values ('${FIL}', '${W}', '${K1}', '${GRP}', '${PRIN1}', 'sp.outside', 'files_own');
     insert into checklist_line (id, workspace_id, case_id, subject_id, document_type, lineage) values ('${LINE}', '${W}', '${K1}', '${PRIN1}', 'passport_information_page_copy', 'x');
     insert into review_finding (id, workspace_id, case_id, subject_id, severity, source, quote, created_by, fingerprint, rule_key) values ('${FIND}', '${W}', '${K1}', '${PRIN1}', 'MINOR', 'rules', 'q', 't', 'fp1', 'r1');
-    insert into case_task (id, workspace_id, case_id, kind, words, created_by, filing_id) values ('${TASK}', '${W}', '${K1}', 'after_filing_change', 'w', 't', '${FIL}');`);
+    insert into case_task (id, workspace_id, case_id, kind, words, created_by, filing_id) values ('${TASK}', '${W}', '${K1}', 'after_filing_change', 'w', 't', '${FIL}');
+    insert into filing_item (id, workspace_id, case_id, filing_id, kind, item_key, subject_id) values ('${u(80)}', '${W}', '${K1}', '${FIL}', 'form', 'IMM 5476', '${PRIN1}');`);
   const before = sql(`select (select count(*) from filing) || ',' || (select count(*) from submission_group) || ',' || (select count(*) from checklist_line) || ',' || (select count(*) from review_finding) || ',' || (select count(*) from case_task)`);
   for (const d of all.filter((x) => x >= NEW)) file(join(MIG, d, "migration.sql"));
 
@@ -77,6 +78,8 @@ try {
     refused(`insert into checklist_line (id, workspace_id, case_id, subject_id, document_type, lineage, stage_id) values (gen_random_uuid(), '${W}', '${K1}', '${PRIN1}', 'other', 'x', '${S1}')`, /case_stage_ended/)
     && refused(`insert into review_finding (id, workspace_id, case_id, subject_id, severity, source, quote, created_by, stage_id) values (gen_random_uuid(), '${W}', '${K1}', '${PRIN1}', 'MINOR', 'manual', 'q', 't', '${S1}')`, /case_stage_ended/));
   ok("C6.17 BR-5 fail: a row of the ended stage is never changed (filing status, line state)", refused(`update filing set status='READY_TO_FILE' where id='${FIL}'`, /case_stage_ended/) && refused(`update checklist_line set state='received' where id='${LINE}'`, /case_stage_ended/));
+  ok("C6.17 breaker M1 fail: a row hanging off the ended stage's filing (its form item; a person's UCI record) is never changed or added",
+    refused(`update filing_item set active=false where id='${u(80)}'`, /case_stage_ended/) && refused(`insert into filing_person_record (id, filing_id, subject_id, uci) values (gen_random_uuid(), '${FIL}', '${PRIN1}', '12345678')`, /case_stage_ended|null value|violates/));
   ok("C6.17 fail: a row cannot be moved to another stage", refused(`update case_task set stage_id='${u(60)}' where id='${TASK}'`, /case_stage_ended|keeps its stage/));
   ok("C6.17 B2 pass: the new stage takes its own FAMILY group, filing for the same person and checklist line of the same type",
     sql(`insert into submission_group (id, workspace_id, case_id, kind, stage_id) values ('${u(70)}', '${W}', '${K1}', 'FAMILY', '${u(60)}') returning kind`) === "FAMILY"

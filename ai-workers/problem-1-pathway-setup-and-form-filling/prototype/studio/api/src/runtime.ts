@@ -501,6 +501,13 @@ export class Runtime {
     const stored = subjectId === who!.subjectId ? subjectId : (await this.subjectFor(c, subjectId, true, fieldKey)).stored!;
     try {
       await this.db.$transaction(async (tx) => {
+        // C6.17 (breaker M5): an answer about the application is the current stage's: read the stage again under the case
+        // row (a start holds it FOR UPDATE), so an answer racing "Start next stage" never lands on the ended application.
+        if (who!.role === "case") {
+          await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR KEY SHARE`;
+          const now = await tx.caseStage.findFirst({ where: { caseId: c.id, state: "CURRENT" }, select: { applicationSubjectId: true } });
+          if (now?.applicationSubjectId !== stored) conflict("This case moved to its next stage while you answered: this application's questions are asked again there. Read the case again; nothing was saved.");
+        }
         // The row stays live until this answer is saved: a removal at the same moment waits, or wins and this one is refused.
         if (rowKey) { const live = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM client_fact_record WHERE row_key = ${rowKey}::uuid AND subject_id = ${stored}::uuid AND group_key = ${groupKey} AND superseded_by_id IS NULL AND NOT tombstone FOR SHARE`; if (!live.length) fail("No such row for this person.", HttpStatus.NOT_FOUND); }
         const current = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: stored, canonicalFieldKey: fieldKey, rowKey, supersededById: null } });

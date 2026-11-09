@@ -42,6 +42,7 @@ export function StageStrip({ caseId }: { caseId: string }) {
   const [panel, setPanel] = React.useState<string | null>(null);
   const [starting, setStarting] = React.useState(false);
   const opener = React.useRef<HTMLButtonElement>(null);
+  const chip = React.useRef<HTMLButtonElement | null>(null); // breaker m3: the chip that opened the panel takes focus back
   const v = q.data;
   if (q.isLoading) return <Skeleton className="h-[64px] w-full rounded-lg" aria-hidden />;
   if (!v || v.stages.length < 2) return null;
@@ -66,7 +67,7 @@ export function StageStrip({ caseId }: { caseId: string }) {
                 </div>
               ) : (
                 <div className={`flex min-w-[200px] items-start gap-1 rounded-lg border ${s.state === "CURRENT" ? "border-primary shadow-[inset_3px_0_0_var(--color-primary,#0862c5)]" : "border-border"}`}>
-                  <button type="button" onClick={() => setPanel(s.id)} data-stage={s.key} data-state={s.state} aria-current={s.state === "CURRENT" ? "step" : undefined}
+                  <button type="button" onClick={(e) => { chip.current = e.currentTarget; setPanel(s.id); }} data-stage={s.key} data-state={s.state} aria-current={s.state === "CURRENT" ? "step" : undefined}
                     className="flex flex-1 flex-col items-start rounded-lg px-3 py-1.5 text-left outline-none hover:bg-text/5 focus-visible:ring-2 focus-visible:ring-primary">
                     <span className="text-sm font-medium">{s.name}</span>
                     <span className="text-xs"><Pill tone={TONE[s.state]}>{s.words}</Pill></span>
@@ -80,7 +81,7 @@ export function StageStrip({ caseId }: { caseId: string }) {
         </ol>
         {next?.cannot_start_why ? <p className="px-4 pb-3 text-xs text-text-muted">{next.name}: {next.cannot_start_why}</p> : null}
       </section>
-      {panel ? <StagePanel caseId={caseId} stageId={panel} close={() => setPanel(null)} /> : null}
+      {panel ? <StagePanel caseId={caseId} stageId={panel} close={() => setPanel(null)} returnFocus={() => chip.current} /> : null}
       {starting ? <StartNextDialog caseId={caseId} close={() => setStarting(false)} returnFocus={() => opener.current ?? document.getElementById("stages-h")} /> : null}
     </TipProvider>
   );
@@ -90,7 +91,7 @@ type StageRecord = CaseStageView & { read_only: boolean; filings: { id: string; 
   documents: { id: string; person: string; document_type: string; file_name: string; uploaded_at: string }[]; lines: { person: string; document_type: string; state: string }[] };
 
 /** A stage's own record (BR-6, m2): read only; a done-before stage's key details can be corrected. */
-function StagePanel({ caseId, stageId, close }: { caseId: string; stageId: string; close: () => void }) {
+function StagePanel({ caseId, stageId, close, returnFocus }: { caseId: string; stageId: string; close: () => void; returnFocus: () => HTMLElement | null }) {
   const actor = useActorId();
   const q = useApi<StageRecord>(["runtime", "view", caseId, "stage", stageId, actor], `/runtime/cases/${caseId}/stages/${stageId}`, { retry: noRetryOnRefusal });
   const s = q.data;
@@ -107,9 +108,9 @@ function StagePanel({ caseId, stageId, close }: { caseId: string; stageId: strin
     } catch (e) { const p = e instanceof ApiError ? e.problem.errors ?? [] : []; setErrors(Object.fromEntries(p.map((x) => [x.field.replace(/^key_details\./, ""), x.message]))); if (!p.length) toast.push({ tone: "danger", text: (e as Error).message }); } finally { setBusy(false); }
   }
   return (
-    <Panel open onOpenChange={(o) => { if (!o) close(); }} title={s?.name ?? "Stage"} badge={s ? <Pill tone={TONE[s.state]}>{s.words}</Pill> : null}
+    <Panel open onOpenChange={(o) => { if (!o) close(); }} returnFocus={returnFocus} title={s?.name ?? "Stage"} badge={s ? <Pill tone={TONE[s.state]}>{s.words}</Pill> : null}
       description={s ? (s.state === "CURRENT" ? "The stage the case works on now." : s.state === "DONE_BEFORE" ? "Made before the firm took the case: nothing is filed here." : s.state === "ENDED_NEXT_STARTED" ? "Kept as it was when the next stage started: read only." : "Not started yet.") : undefined}
-      footer={<><Button variant="ghost" onClick={close}>Close</Button>{edit ? <Button busy={busy} onClick={() => void save()}>Save key details</Button> : s?.state === "DONE_BEFORE" ? <Button variant="secondary" onClick={() => setEdit(Object.fromEntries(s.key_details.map((d) => [d.field, d.value ?? ""])))}>Edit key details</Button> : null}</>}>
+      footer={<><Button variant="ghost" onClick={() => { close(); setTimeout(() => returnFocus()?.focus(), 0); }}>Close</Button>{edit ? <Button busy={busy} onClick={() => void save()}>Save key details</Button> : s?.state === "DONE_BEFORE" ? <Button variant="secondary" onClick={() => setEdit(Object.fromEntries(s.key_details.map((d) => [d.field, d.value ?? ""])))}>Edit key details</Button> : null}</>}>
       {q.isLoading ? <Skeleton className="h-40 w-full" /> : q.isError ? <Notice tone="danger" title="This stage could not be read">{(q.error as Error).message}</Notice> : s ? (
         <div className="space-y-5 text-sm" data-stage-panel={s.key}>
           <section><h3 className="mb-1 font-semibold">Key details</h3>
@@ -159,8 +160,8 @@ function StartNextDialog({ caseId, close, returnFocus }: { caseId: string; close
   }
   const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) close(); }} wide title={p?.to ? `Start ${p.to.name}` : "Start next stage"} description={p?.to ? `Starting it ends the ${p.from.name} stage: its filings stay as they are and can no longer be changed.` : undefined}
-      footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={busy} disabled={!p?.to || !!p.refused} onClick={() => void start()} data-start-confirm>{p?.to ? `Start ${p.to.name}` : "Start next stage"}</Button></>}>
+    <Dialog open onOpenChange={(o) => { if (!o) { close(); setTimeout(() => returnFocus()?.focus(), 0); } }} wide title={p?.to ? `Start ${p.to.name}` : "Start next stage"} description={p?.to ? `Starting it ends the ${p.from.name} stage: its filings stay as they are and can no longer be changed.` : undefined}
+      footer={<><Button variant="ghost" onClick={() => { close(); setTimeout(() => returnFocus()?.focus(), 0); }}>Cancel</Button><Button busy={busy} disabled={!p?.to || !!p.refused} onClick={() => void start()} data-start-confirm>{p?.to ? `Start ${p.to.name}` : "Start next stage"}</Button></>}>
       {q.isLoading ? <Skeleton className="h-48 w-full" /> : q.isError ? <Notice tone="danger" title="Could not work out the next stage">{(q.error as Error).message}</Notice> : p ? (
         <div className="space-y-4 text-sm" data-start-dialog>
           {Object.keys(errors).length ? <Notice tone="danger" title="Some details need fixing"><ul className="list-disc pl-5" data-error-summary>{Object.values(errors).map((m) => <li key={m}>{m}</li>)}</ul></Notice> : null}
