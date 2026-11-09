@@ -72,7 +72,9 @@ export async function openSampleFamilyCase(db: Db, runtime: Runtime, forms: Case
   for (const [pid, facts] of Object.entries({ ...MADE_UP, "child-2": [["person.family_name", family], ...MADE_UP["child-2"]] as [string, unknown][] }))
     for (const [k, v] of facts) if (await put(subjects[pid], k, v)) { out.madeUp++; if (k === "person.date_of_birth") out.births++; }
   await answerFromFile(runtime, officer, opened.id, subjects, file, out, said);
-  for (const f of (await forms.list(officer, opened.id)).forms.filter((x) => x.applies && x.for_filing)) {
+  // QA-246: every form the release files, those whose rule still waits for an answer included, as before (the checkpoint's
+  // copies are unchanged; C9.5's later Sample release refits one of them, IMM 5475).
+  for (const f of (await forms.list(officer, opened.id, { includeWaiting: true })).forms.filter((x) => x.applies && x.for_filing)) {
     let copy: { id: string };
     try { copy = await forms.generate(officer, opened.id, f.form, f.subject_id, { idempotencyKey: `sample-vv-family-1-${f.form}-${f.subject_id}`.replace(/[^A-Za-z0-9-]/g, "-").slice(0, 80) }); }
     catch (e) { out.copiesRefused.push(`${f.form} for ${f.person}: ${said(e)}`); continue; }
