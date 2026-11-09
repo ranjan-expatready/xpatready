@@ -1301,6 +1301,10 @@ model Case {
   readValues      ReadValue[]      // C6.5
   answerChecks    AnswerCheck[]    // C6.5
   stages          CaseStage[] // C6.17
+  reviewRounds      ReviewRound[]       // C8.3
+  reviewRoundRows   ReviewRoundFiling[] // C8.3
+  reviewRoundForms  ReviewRoundForm[]   // C8.3
+  reviewChecks      ReviewCheck[]       // C8.3
 
   /// C6.11 break M2, M3: a reference and an idempotency key are unique within a firm, so one firm neither collides with
   /// nor learns of another firm's cases.
@@ -1638,6 +1642,8 @@ model AnswerSnapshot {
   case    Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
   form    FormInstance?
   entered EnteredSection?
+  reviewFrozen ReviewRoundForm[] @relation("ReviewFrozen") // C8.3
+  reviewStamps ReviewRoundForm[] @relation("ReviewStamp")  // C8.3
 
   @@map("answer_snapshot")
 }
@@ -1873,6 +1879,8 @@ model Filing {
   findings   ReviewFinding[] // C7.5
   reviews    FilingReview[]  // C7.6
   passes     ReadinessPass[] // C7.6
+  reviewRounds ReviewRoundFiling[] // C8.3
+  reviewForms  ReviewRoundForm[]   // C8.3
 
   @@unique([caseId, stageId, subjectId])
   @@index([stageId])
@@ -1923,6 +1931,7 @@ model FilingItem {
   signSteps   SignStep[]   // C8.1
   signedScans SignedScan[] // C8.1
   tasks       CaseTask[]   // C8.2
+  reviewForms ReviewRoundForm[] // C8.3
 
   @@unique([filingId, kind, itemKey, subjectId])
   @@index([caseId])
@@ -2432,6 +2441,7 @@ model FilingReview {
   reviewedAt    DateTime @default(now()) @map("reviewed_at") @db.Timestamptz
 
   filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  rounds ReviewRoundFiling[] // C8.3: the approval that wrote it
 
   @@index([filingId])
   @@map("filing_review")
@@ -2586,4 +2596,123 @@ model AnswerCheck {
 
   @@index([caseId, subjectId])
   @@map("answer_check")
+}
+
+/// C8.3 (B144; P-406, P-412; concept screens/B144/concept.md r2, B1): one send for review on a case. kind: send ·
+/// review_now (a solo firm: sent and opened in one step) · one_step (the C7.6 route, challenge M1) · reapprove (P-412:
+/// one-click re-approve of the forms a fact change withdrew). Append-only (trigger).
+model ReviewRound {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  /// Counts per case (1, 2, …).
+  number      Int
+  kind        String
+  sentBy      String   @map("sent_by")
+  sentAt      DateTime @default(now()) @map("sent_at") @db.Timestamptz
+
+  case    Case                @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  filings ReviewRoundFiling[]
+  forms   ReviewRoundForm[]
+
+  @@unique([caseId, number])
+  @@map("review_round")
+}
+
+/// C8.3 (B1, AG-7-29 r9): one filing in one round, with its own status (sent → under_review → approved | sent_back) and
+/// its own round number. At most one open row per filing (partial unique index). Moves guarded by a trigger.
+model ReviewRoundFiling {
+  id                String    @id @default(uuid()) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  caseId            String    @map("case_id") @db.Uuid
+  roundId           String    @map("round_id") @db.Uuid
+  filingId          String    @map("filing_id") @db.Uuid
+  filingRound       Int       @map("filing_round")
+  /// sent · under_review · approved · sent_back
+  status            String    @default("sent")
+  openedBy          String?   @map("opened_by")
+  openedAt          DateTime? @map("opened_at") @db.Timestamptz
+  decidedBy         String?   @map("decided_by")
+  decidedAt         DateTime? @map("decided_at") @db.Timestamptz
+  /// Sent back: [{ text, item?, check? }] (BR-5)
+  reasons           Json?
+  /// Approved: the checklist item keys confirmed unticked (BR-4, AG17-D78)
+  confirmedUnticked Json?     @map("confirmed_unticked")
+  /// The representative of record at the decision (M2)
+  representative    String?
+  /// reviewed · self_reviewed
+  reviewKind        String?   @map("review_kind")
+  selfStatement     String?   @map("self_statement")
+  filingReviewId    String?   @map("filing_review_id") @db.Uuid
+
+  case   Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  round  ReviewRound       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  filing Filing            @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  review FilingReview?     @relation(fields: [filingReviewId], references: [id], onDelete: NoAction)
+  forms  ReviewRoundForm[]
+  checks ReviewCheck[]
+
+  @@unique([roundId, filingId])
+  @@unique([filingId, filingRound])
+  @@index([caseId])
+  @@map("review_round_filing")
+}
+
+/// C8.3 (B2): one form of a filing in a round, by filing item, frozen at send (own answer snapshot, facts hash, file:
+/// validated copy · generated copy matching the facts · none · waits) and stamped once on approval.
+model ReviewRoundForm {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @map("workspace_id") @db.Uuid
+  caseId          String    @map("case_id") @db.Uuid
+  roundId         String    @map("round_id") @db.Uuid
+  roundFilingId   String    @map("round_filing_id") @db.Uuid
+  filingId        String    @map("filing_id") @db.Uuid
+  itemId          String    @map("item_id") @db.Uuid
+  formNumber      String    @map("form_number")
+  subjectId       String    @map("subject_id") @db.Uuid
+  snapshotId      String?   @map("snapshot_id") @db.Uuid
+  factsHash       String?   @map("facts_hash") @db.VarChar(64)
+  /// validated_copy · generated_copy · none · waits
+  fileKind        String    @map("file_kind")
+  fileId          String?   @map("file_id") @db.Uuid
+  fileSha256      String?   @map("file_sha256") @db.VarChar(64)
+  stampSnapshotId String?   @map("stamp_snapshot_id") @db.Uuid
+  stampHash       String?   @map("stamp_hash") @db.VarChar(64)
+  stampFileKind   String?   @map("stamp_file_kind")
+  stampFileSha256 String?   @map("stamp_file_sha256") @db.VarChar(64)
+  stampedBy       String?   @map("stamped_by")
+  stampedAt       DateTime? @map("stamped_at") @db.Timestamptz
+
+  case          Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  round         ReviewRound       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  filing        Filing            @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  row           ReviewRoundFiling @relation(fields: [roundFilingId], references: [id], onDelete: Cascade)
+  item          FilingItem        @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  snapshot      AnswerSnapshot?   @relation("ReviewFrozen", fields: [snapshotId], references: [id], onDelete: Cascade)
+  stampSnapshot AnswerSnapshot?   @relation("ReviewStamp", fields: [stampSnapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([roundFilingId, itemId])
+  @@index([itemId])
+  @@map("review_round_form")
+}
+
+/// C8.3 (BR-2): one checklist item of a filing in a round (default · program · confirmations · form), copied when sent.
+model ReviewCheck {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  caseId        String    @map("case_id") @db.Uuid
+  roundFilingId String    @map("round_filing_id") @db.Uuid
+  itemKey       String    @map("item_key")
+  source        String
+  wording       String
+  /// The item's live state when sent (default items), e.g. { open: 0 } or { verified: 5, required: 5 }
+  live          Json?
+  tickedBy      String?   @map("ticked_by")
+  tickedAt      DateTime? @map("ticked_at") @db.Timestamptz
+
+  case Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  row  ReviewRoundFiling @relation(fields: [roundFilingId], references: [id], onDelete: Cascade)
+
+  @@unique([roundFilingId, itemKey])
+  @@map("review_check")
 }

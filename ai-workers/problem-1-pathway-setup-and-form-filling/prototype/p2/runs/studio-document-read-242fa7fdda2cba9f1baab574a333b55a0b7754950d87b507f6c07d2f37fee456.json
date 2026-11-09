@@ -1,0 +1,38 @@
+{
+  "document_sha256": "242fa7fdda2cba9f1baab574a333b55a0b7754950d87b507f6c07d2f37fee456",
+  "reader": "ai_vision",
+  "model": "claude-opus-5-5",
+  "cost_usd": 0.0159,
+  "read_at": "2026-11-09T07:13:58.204Z",
+  "proposals": [
+    {
+      "fact": "case.visit_contact_name",
+      "value": "SAMPLE HOST B",
+      "page": 1,
+      "confidence": 0.97
+    },
+    {
+      "fact": "case.visit_contact_relationship",
+      "value": "sibling",
+      "page": 1,
+      "confidence": 0.95
+    },
+    {
+      "fact": "case.visit_contact_address_in_canada",
+      "value": "1 Sample Road, Sample City, Ontario",
+      "page": 1,
+      "confidence": 0.9,
+      "note": "No postal code is printed."
+    }
+  ],
+  "unreadable": [
+    {
+      "fact": "case.intended_stay_from",
+      "reason": "The letter gives the start date as 1 March without a year."
+    },
+    {
+      "fact": "case.intended_stay_to",
+      "reason": "The letter gives the end date as 15 April without a year."
+    }
+  ]
+}

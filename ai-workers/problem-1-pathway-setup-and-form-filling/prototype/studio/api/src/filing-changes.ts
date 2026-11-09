@@ -125,12 +125,15 @@ export class FilingChanges {
     if (!reason || CONTROL.test(reason) || !SAYS.test(reason)) problem(400, "Some details need fixing", "Write a reason: it is kept with the change.", [{ field: "reason", message: "Write a reason: it is kept with the change." }]);
     if (!b.basis) problem(400, "Some details need fixing", "Send the basis from the preview you read.", [{ field: "basis", message: "Look at what changes first (preview), then apply." }]);
     if (b.basis !== view.basis) problem(409, "Changed since you looked", "This case changed since you opened this. Look again before changing it; nothing was changed.");
-    const roles = (list: { subjectId: string; role: string; applies: boolean }[]) => Object.fromEntries(list.filter((x) => x.role !== "case").map((x) => [x.subjectId, { role: x.role, applies: x.applies }]));
+    // QA-329: the people in one fixed order (by subject), so two reads of the same people give the same JSON, however the
+    // database returns their rows (an object keeps its keys in insertion order; a case with an added person read
+    // unordered came back in another order and every change was refused).
+    const roles = (list: { subjectId: string; role: string; applies: boolean }[]) => Object.fromEntries(list.filter((x) => x.role !== "case").map((x) => [x.subjectId, { role: x.role, applies: x.applies }] as const).sort(([a], [z]) => (a < z ? -1 : a > z ? 1 : 0)));
     const changedPeople = after.filter((a) => { const was = c.participants.find((x) => x.subjectId === a.subjectId); return !!was && (was.role !== a.role || was.applies !== a.applies); });
     await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       // BR-8: the people are still as the preview read them, and nothing was recorded meanwhile (BR-7).
-      const now = await tx.caseParticipant.findMany({ where: liveParticipants(c.id), select: { subjectId: true, role: true, applies: true } });
+      const now = await tx.caseParticipant.findMany({ where: liveParticipants(c.id), orderBy: { order: "asc" }, select: { subjectId: true, role: true, applies: true } });
       if (JSON.stringify(roles(now)) !== JSON.stringify(roles(c.participants))) problem(409, "Changed since you looked", "This case changed since you opened this. Look again before changing it; nothing was changed.");
       // Review m: the same words as before the lock (BR-7: the name, the date, the number and where it is done instead).
       const rec = await this.recorded(c, tx);
