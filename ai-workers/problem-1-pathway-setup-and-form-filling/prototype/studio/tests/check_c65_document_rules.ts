@@ -1,13 +1,15 @@
 // C6.5 part 2 (M3 plan row C7): the document rules of api/src/case-documents.ts that need no database, each with a
 // passing and a failing check: which reader reads a document type (P-134: an identity document never goes to AI), how a
 // typed answer and a read value compare, the release's words for a coded value, what Confirm & use leaves for a person,
-// the cost card's price (p2/ledger.ts costUsd) and the saved-read lookup by checksum (FQ-10). No AI, US$0.
+// the cost card's price (p2/ledger.ts costUsd) and the saved-read lookup by checksum (FQ-10); QA-352: the reader and the
+// facts each document proposes from the library's own data, and whom it is read for. No AI, US$0.
 //   tsx --tsconfig studio/api/tsconfig.json studio/tests/check_c65_document_rules.ts
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { documentCheckNote, pleaseCheckWords } from "../api/src/runtime.ts";
-import { CASE_KINDS, inReleaseWords, letterReadUsd, notWritable, readerOf, sameValue, savedRead } from "../api/src/case-documents.ts";
+import { CASE_KINDS, inReleaseWords, letterReadUsd, notWritable, readerOf, readFor, sameValue, savedRead, type LibraryType } from "../api/src/case-documents.ts";
+import { isIdentityName } from "../engine/identity-documents.ts";
 import { costUsd, LETTER_READ_CARD } from "../../p2/ledger.ts";
 import { MAX_ATTEMPTS } from "../../p2/policy.ts";
 import { MRZ_FACTS } from "../engine/runtime/mrz.ts";
@@ -22,7 +24,29 @@ ok("C6.5 R1 (fail): the absent parent's passport copy is not read as the line's 
 ok("C6.5 R1 (fail): a passport-size photo is not the passport: not read", readerOf({ key: "visa_application_photos", name: "Passport size photos" }) === null);
 ok("C6.5 R2 (P-134 fail): another identity document (a national ID, a birth certificate) is never sent to AI: a person reads it", readerOf({ key: "national_id", name: "National identity card" }) === null && readerOf({ key: "birth_certificate", name: "Birth certificate" }) === null);
 ok("C6.5 R2: a letter of invitation with no checklist line is read by AI vision (replay only), giving the visit's facts (Sample)", readerOf({ key: "letter_of_invitation", name: "Letter of invitation (Sample)" })?.reader === "ai_vision" && CASE_KINDS.letter_of_invitation.supplies.includes("case.visit_contact_name"));
-ok("C6.5 R2 (fail): a document with no reader (proof of funds) is not read", readerOf({ key: "proof_of_financial_support", name: "Proof of financial support" }) === null);
+ok("C6.5 R2 (fail): a document the library says nothing about (no reader kind, no facts) is not read", readerOf({ key: "proof_of_financial_support", name: "Proof of financial support" }) === null);
+
+// ---- QA-352 (P-437): the reader and its facts come from the library's own data (P-319, P-425/P-426)
+const lib = (key: string, name: string, readerKind: string, supplies_facts: string[], extra: Partial<LibraryType> = {}): LibraryType => ({ key, name, supplies_facts, reader_profile: { readerKind, identityDocument: false }, ...extra });
+const funds = lib("proof_of_financial_support", "Proof of financial support", "letter_or_record", ["case.funds_available_cad"]);
+const marriage = lib("marriage_certificate_copy", "Marriage certificate copy", "letter_or_record", ["relationship.union_start_date"]);
+ok("C6.5 R8 pass (QA-352): proof of funds, read by the library as a letter or record, is read by AI vision and proposes exactly the facts the library says it supplies", readerOf(funds)?.reader === "ai_vision" && JSON.stringify(readerOf(funds)?.supplies) === JSON.stringify(["case.funds_available_cad"]));
+ok("C6.5 R8 fail (QA-352): proof of funds the library reads by a person, by its printed layout (Textract, not built) or with no facts is not read by AI", readerOf({ ...funds, reader_profile: { readerKind: "person_only" } }) === null && readerOf({ ...funds, reader_profile: { readerKind: "printed_layout" } }) === null && readerOf({ ...funds, supplies_facts: [] }) === null);
+ok("C6.5 R9 pass (QA-352): a marriage certificate, read by the library as a letter or record, is read by AI vision and proposes the union start date", readerOf(marriage)?.reader === "ai_vision" && JSON.stringify(readerOf(marriage)?.supplies) === JSON.stringify(["relationship.union_start_date"]));
+ok("C6.5 R9 fail (QA-352, R11): a fact the library says is about the holder's spouse is never proposed by AI vision (never attributed by guess); a type flagged identity, or of an identity category, never goes to AI (P-134)",
+  JSON.stringify(readerOf({ ...marriage, supplies_facts: ["relationship.union_start_date", "person.family_name_at_birth"], supplies_about: { "person.family_name_at_birth": "holder.spouse" } })?.supplies) === JSON.stringify(["relationship.union_start_date"])
+  && readerOf({ ...marriage, reader_profile: { readerKind: "letter_or_record", identityDocument: true } }) === null && readerOf({ ...marriage, category: "identity" }) === null);
+ok("C6.5 R10 fail (QA-352, P-134): a minor's birth certificate is an identity document: never AI, even where the library reads it as a record and lists the date of birth (a person reads it)",
+  readerOf(lib("copy_of_the_minor_s_birth_certificate", "Copy of the minor's birth certificate", "letter_or_record", ["person.date_of_birth"])) === null);
+const placed = { placements: [{ fact: "case.funds_available_cad", section_id: "visit", repeats: "once_per_case" }, { fact: "relationship.union_start_date", section_id: "personal", repeats: "per_person" }, { fact: "case.visit_contact_name", section_id: "visit", repeats: "once_per_case" }] } as unknown as Snapshot;
+ok("C6.5 R11 pass (QA-352, R5): a document whose every asked fact is the application's (proof of funds) is read for the application, wherever its line is", readFor(placed, ["case.funds_available_cad"], "client-a", "case-subject") === "case-subject");
+ok("C6.5 R11 fail (QA-352): a document of a person's facts (marriage certificate), one that mixes a person's and the application's facts, or a fact the release does not ask stays its holder's", readFor(placed, ["relationship.union_start_date"], "client-a", "case-subject") === "client-a"
+  && readFor(placed, ["relationship.union_start_date", "case.funds_available_cad"], "client-a", "case-subject") === "client-a" && readFor(placed, ["case.not_asked_here"], "client-a", "case-subject") === "client-a" && readFor(placed, ["case.funds_available_cad"], "client-a", null) === "client-a");
+{
+  // The library data the sample loader proposes (samples/document-supplies-read.json), as the readers read it.
+  const data = JSON.parse(readFileSync(join(import.meta.dirname, "..", "samples", "document-supplies-read.json"), "utf8")) as { supplies: Record<string, { facts: { fact: string; about: string; source: string; quote: string; readOn: string }[] }> };
+  ok("C6.5 R12 (QA-352, P-170): every set the loader proposes is cited (page, quote, date) and about the holder, and no identity document is in it (P-134)", Object.entries(data.supplies).every(([k, v]) => v.facts.length > 0 && v.facts.every((f) => /page \d/.test(f.source) && f.quote.length > 3 && /^\d{4}-\d{2}-\d{2}$/.test(f.readOn) && f.about === "holder") && !isIdentityName(k.replace(/_/g, " "))));
+}
 
 // ---- typed versus document (BR-7)
 ok("C6.5 R3: a name compares without case and repeated spaces (the coded line is upper case)", sameValue("person.family_name", "Sampled ", "SAMPLED") && sameValue("person.given_names", "client  a", "CLIENT A"));

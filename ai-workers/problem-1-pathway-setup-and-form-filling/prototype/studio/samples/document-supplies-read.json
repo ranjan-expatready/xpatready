@@ -1,0 +1,18 @@
+{
+  "about": "QA-352 (the tech lead's ruling P-437: every Visitor visa checklist document that offers \"Fill this from documents\" is read by some reader). The facts a library document type supplies, for the types the library reads as a letter or record (AI vision on Sample files, P-133). Library data keyed by the library's document type, never by a form or program (P-319): the sample loader proposes each set through the library's own route (api/src/document-supplies.ts) as the author and a second person approves it (features/checkpoint/combination/335-document-supplies.ts; acceptance/lib/setup_vv_m3.ts S6c).",
+  "basis": "Sample (AGENTS rule 4; ASSUMPTIONS A-QA352). The quotes are IMM 5484 (05-2026)'s own words asking for the document (prototype/p1/inventory/imm5484e.text.inventory.json, visible text in document order, page 1); that the document shows each fact is our reading, not IRCC's words. Unconfirmed: immigration expert. A minor's birth certificate is an identity document (P-134, engine/identity-documents.ts): a person reads it, never AI, so it is not listed.",
+  "supplies": {
+    "proof_of_financial_support": {
+      "reason": "Sample (QA-352): proof of financial support shows the money available for the stay, so the funds question can be filled from it.",
+      "facts": [
+        { "fact": "case.funds_available_cad", "about": "holder", "source": "IMM 5484 (05-2026), page 1", "quote": "Proof of Financial Support. You must include proof that you can support yourself and any family members accompanying you while you are in Canada.", "readOn": "2026-11-09" }
+      ]
+    },
+    "marriage_certificate_copy": {
+      "reason": "Sample (QA-352): a marriage certificate shows the date of the marriage, so the union start date can be filled from it.",
+      "facts": [
+        { "fact": "relationship.union_start_date", "about": "holder", "source": "IMM 5484 (05-2026), page 1", "quote": "Photocopy of your Marriage License/Certificate", "readOn": "2026-11-09" }
+      ]
+    }
+  }
+}
