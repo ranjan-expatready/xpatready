@@ -132,8 +132,8 @@ export class CaseStagesService {
     const documents = [...new Set(cl.derived ? cl.people.flatMap((p) => [...p.lines, ...p.waiting].map((l) => l.document.name)) : releaseDocs)].sort();
     const deadline = nextView.deadline;
     const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
-    const principal = people.find((p) => p.role === "principal")?.label ?? "the client";
-    const head = `${next.staffName} started. ${n(used, `answer about ${principal} used`, `answers about ${principal} and the family used`)}; ${n(again, "question about this application asked again", "questions about this application asked again")}; ${n(fresh, "new question", "new questions")}; ${n(forms.length, "form", "forms")} and ${n(documents.length, "document", "documents")} added`, words = `${head}${deadlineWords(deadline)}.`;
+    const principal = people.find((p) => p.role === "principal")?.label ?? "the client", who = people.filter((x) => x.comes).length > 1 ? `${principal} and the family` : principal;
+    const head = `${next.staffName} started. ${n(used, `answer about ${who} used`, `answers about ${who} used`)}; ${n(again, "question about this application asked again", "questions about this application asked again")}; ${n(fresh, "new question", "new questions")}; ${n(forms.length, "form", "forms")} and ${n(documents.length, "document", "documents")} added`, words = `${head}${deadlineWords(deadline)}.`;
     return { ...base, to: { stage: next.id, name: next.staffName, release_version: st.release.version, release: releaseLabel(st.release) }, refused: null, people,
       counts: { person_answers_used: used, asked_again: again, new_questions: fresh, forms: forms.length, documents: documents.length }, forms, documents, deadline, unrecorded, words, _head: head,
       _release: { id: st.release.id, packVersionId: st.release.packVersionId, sha256: st.release.sha256, version: st.release.version } };
