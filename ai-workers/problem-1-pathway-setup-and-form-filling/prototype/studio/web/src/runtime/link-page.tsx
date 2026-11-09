@@ -62,8 +62,8 @@ export function LinkApp() {
         <img src="/brand/expat-ready-notagline-dark.svg" alt="Expat Ready" className="h-6 dark:hidden" />
         <img src="/brand/expat-ready-notagline.svg" alt="Expat Ready" className="hidden h-6 dark:block" />
         <span className="h-6 w-px bg-border" />
-        <p className="text-sm font-semibold">Your own questions</p>
-        <span className="ml-auto flex items-center gap-2">
+        <p className="min-w-0 truncate text-sm font-semibold">Your questions</p>
+        <span className="ml-auto flex shrink-0 items-center gap-2">
           <ProposedStandIn today="you prove the email is yours with a link and a 6-digit code; staff and the principal are simulated people" later="the team's sign-in for adult family members (Release 2)" />
           {stored ? <Button size="sm" variant="ghost" onClick={async () => { await linkApi("/end", { method: "POST" }, stored.session).catch(() => null); end("You signed out. To come back, open the link from your email again and ask for a new code."); }}><LogOut aria-hidden />Sign out</Button> : null}
         </span>
@@ -154,8 +154,10 @@ function LinkQuestionnaire({ stored, onEnded }: { stored: Stored; onEnded: (word
   if (view.isLoading) return <Shell><Skeleton className="h-8 w-1/2" /><Skeleton className="mt-3 h-32 w-full" /></Shell>;
   if (view.isError) return <Shell><Notice tone="danger" title="Your questions could not be loaded">{(view.error as Error).message}</Notice></Shell>;
   const v = view.data!;
-  const own = { ...v, sections: v.sections.filter((s) => s.subjectId === v.own), case: { ...v.case, status: "", combination_id: "", client: "", pin: { release_version: 0, sha256: "", pinned_at: "", revision: 0 } } } as View;
-  const shared = v.sections.filter((s) => s.subjectId !== v.own);
+  // Their own parts, with the parts about their own parents and brothers and sisters (`<own>/parent_1`, B128, B155).
+  const mine = (id: string) => id === v.own || id.startsWith(`${v.own}/`);
+  const own = { ...v, sections: v.sections.filter((s) => mine(s.subjectId)), case: { ...v.case, status: "", combination_id: "", client: "", pin: { release_version: 0, sha256: "", pinned_at: "", revision: 0 } } } as View;
+  const shared = v.sections.filter((s) => !mine(s.subjectId));
   return (
     <QuestionnaireIoContext.Provider value={io}>
       <Sqr view={byPerson(own)} />

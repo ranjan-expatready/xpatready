@@ -183,7 +183,7 @@ function ResendButton({ caseId, person }: { caseId: string; person: PersonPrivac
 export function ProposedStandIn({ today, later }: { today: string; later: string }) {
   return (
     <TipProvider><Tip focusable tip={<>Today: {today}<br />Later: {later}<br /><span className="text-text-muted">Proposed for the stand-ins register</span></>}>
-      <span className="inline-flex h-5 items-center rounded-full border border-dashed border-border-strong px-2 text-[11px] font-medium text-text-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">Stand-in</span>
+      <span className="inline-flex h-5 items-center whitespace-nowrap rounded-full border border-dashed border-border-strong px-2 text-[11px] font-medium text-text-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">Stand-in</span>
     </Tip></TipProvider>
   );
 }

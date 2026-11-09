@@ -101,6 +101,13 @@ const run = Date.now().toString(36), ADDRESS = `partner.${run}@example.com`;
     const own = await b.locator("main").innerText();
     ok("C6.16 adult: their own parts only (About you), and the application's answers read-only; nobody else's", /About you/.test(own) && /About the application/.test(own) && !/Sample Client A|Sample Child/.test(own), own.slice(0, 300));
     await shot(b, "08-adult-overview-390"); await axe(b, "the adult's own questions"); await noSideways(b, "the adult's questions at 390 px");
+    // B128: the parts about their own parents are theirs to answer (in their parts list), never in the read-only list.
+    const stored = JSON.parse(await b.evaluate(() => sessionStorage.getItem("xr-link-session")) ?? "{}");
+    const lv = await (await fetch(`${BASE}/api/link/cases/${id}/people/${S}/questionnaire`, { headers: { authorization: `Bearer ${stored.session}` } })).json();
+    const mineParts = (lv.sections ?? []).filter((x) => x.subjectId === S || x.subjectId.startsWith(`${S}/`)).length;
+    const listed = await b.locator("main section ul li button").count();
+    const readOnly = await b.locator("section[aria-labelledby=shared] dt").allInnerTexts();
+    ok("C6.16 adult: every part of theirs, their parents' included, is in their parts list; the read-only list holds only the application's answers", mineParts > 0 && listed === mineParts && (lv.sections ?? []).some((x) => x.subjectId.startsWith(`${S}/`)) && new Set(readOnly).size === readOnly.length, { mineParts, listed, readOnly: readOnly.length });
     const part = (sqr?.sections ?? []).find((s) => s.subjectId === S && s.questions.some((q) => q.fact === pq?.fact));
     await b.getByRole("button", { name: new RegExp(`^${part?.title}`) }).first().click();
     const confirmBtn = b.getByRole("button", { name: `Confirm: ${pq?.label}` });
