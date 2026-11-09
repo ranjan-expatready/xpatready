@@ -30,6 +30,7 @@ import { formValues, notOnFormLines, type Inventory } from "../../engine/form-va
 import { mandatoryOpen, type CaseWords, type OpenField, type RequiredWhen } from "../../engine/runtime/mandatory.ts";
 import { solutionFile, writeForm } from "./fill.ts";
 import { trialFor, type EditionMap } from "./fill-trials.ts";
+import { additionsOf, withAdditions } from "../../engine/runtime/added-forms.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 
 type H = string | undefined;
@@ -309,13 +310,14 @@ export class CaseForms implements OnModuleInit {
 
   /** The job: writes exactly the facts frozen with the copy (not today's), so a copy is what was asked for. */
   private async run(id: string) {
-    const x = await this.db.formInstance.findUnique({ where: { id }, include: { snapshot: true, case: { include: { pins: { include: { release: true } } } } } });
+    const x = await this.db.formInstance.findUnique({ where: { id }, include: { snapshot: true, case: { include: { pins: { include: { release: true } }, formAdditions: { where: { removedAt: null }, orderBy: [{ addedAt: "asc" }, { id: "asc" }] } } } } });
     if (!x || x.status !== "QUEUED") return;
     const started = await this.db.formInstance.updateMany({ where: { id, status: "QUEUED" }, data: { status: "RUNNING" } });
     if (started.count !== 1) return;
     try {
       const stored = x.snapshot.factsJson as Stored;
-      const snapshot = x.case.pins.find((p) => p.configReleaseId === x.configReleaseId)!.release.snapshot as Parameters<typeof writeForm>[0];
+      // C7.8 (M1): the release with the case's added forms joined, so an added form that fills is written from its frozen map.
+      const snapshot = withAdditions(x.case.pins.find((p) => p.configReleaseId === x.configReleaseId)!.release.snapshot as unknown as Snap, additionsOf(x.case.formAdditions)) as unknown as Parameters<typeof writeForm>[0];
       const dir = join(VAR("demo"), "cases", x.caseId); mkdirSync(dir, { recursive: true });
       const base = `${x.formNumber.replace(/\s+/g, "")}-${short(x.subjectId)}-${id}`;
       // P-145, C11.6: stamped "Copy, not for filing" when this person's form is filed Online now; recorded with the copy,

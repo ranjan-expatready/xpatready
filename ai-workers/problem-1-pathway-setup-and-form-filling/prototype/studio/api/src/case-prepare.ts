@@ -130,7 +130,8 @@ export class CasePrepare {
     const own = await this.db.combination.findUnique({ where: { id: c.combinationId }, select: { combinationKey: true, portalKey: true } });
     if (!own || s?.combination?.key !== own.combinationKey) fail("This case's release does not describe the case's own combination; nothing was worked out. Ask the Lead.", HttpStatus.CONFLICT);
     // #325 break B2: a release row edited underneath its fingerprint is never stored from.
-    if (snapshotHash(s) !== pin.release.sha256) fail("This case's release no longer matches its fingerprint (it was changed after release); nothing was prepared. Ask the Lead.", HttpStatus.CONFLICT);
+    // C7.8 (M1): the fingerprint is the release's own, never the snapshot with the added forms joined.
+    if (snapshotHash(this.r.releaseSnapshotOf(c)) !== pin.release.sha256) fail("This case's release no longer matches its fingerprint (it was changed after release); nothing was prepared. Ask the Lead.", HttpStatus.CONFLICT);
     const people = this.r.peopleOf(c), today = new Date();
     const { answers, rows, groups: groupAnswers } = await this.r.state(c);
     // An answer its own checks reject never decides an age or a line (as the checklist, C6.4 B-M2).

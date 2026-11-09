@@ -39,10 +39,10 @@ export type Owes = "staff" | "representative" | "client" | "employer" | "ircc";
 
 export type BlockCode = "barcode_not_validated";
 /** P-315: the former blocks, now CRITICAL warnings passed with a recorded reason (P-237, P-238). */
-export type CriticalCode = "missing_facts" | "fact_problem" | "open_check" | "out_of_date" | "missing_signature" | "edition_expired" | "representative_review" | "fields_left_empty" | "no_copy";
+export type CriticalCode = "missing_facts" | "fact_problem" | "open_check" | "out_of_date" | "missing_signature" | "edition_expired" | "representative_review" | "fields_left_empty" | "no_copy" | "hand_filled_copy";
 export type WarnCode = CriticalCode | "missing_document" | "finding" | "edition_superseded" | "copy_stale" | "entered_out_of_date" | "hand_write" | "release_update";
 export const BLOCK_CODES: readonly BlockCode[] = ["barcode_not_validated"];
-export const CRITICAL_CODES: readonly CriticalCode[] = ["missing_facts", "fact_problem", "open_check", "out_of_date", "missing_signature", "edition_expired", "representative_review", "fields_left_empty", "no_copy"];
+export const CRITICAL_CODES: readonly CriticalCode[] = ["missing_facts", "fact_problem", "open_check", "out_of_date", "missing_signature", "edition_expired", "representative_review", "fields_left_empty", "no_copy", "hand_filled_copy"];
 export const WARN_CODES: readonly WarnCode[] = [...CRITICAL_CODES, "missing_document", "finding", "edition_superseded", "copy_stale", "entered_out_of_date", "hand_write", "release_update"];
 export const isCritical = (code: string): code is CriticalCode => (CRITICAL_CODES as readonly string[]).includes(code);
 
@@ -74,6 +74,9 @@ export type FormItem = {
    *  part of the line's key (the release for none, the copy for stale), so a pass never outlives what it was given for
    *  (breaker M2 on #1344). Left out: no line. */
   copy?: { state: "none" | "stale" | "current"; key: string } | null;
+  /** C7.8 (B141 BR-7, F2): a blank official PDF added by the case officer: filled by hand, so it reads no facts and has no
+   *  copy made by the product; its completed copy is the one upload (C8.1's signed scan when signed by hand). */
+  blank?: { completed: boolean; key: string } | null;
   byHand?: { copy: string; box: string; label: string; why: string;
     /** Breaker M3: the box's own caption on the form ("Visitor", "Yes"), so two boxes of one question read apart. */
     caption?: string | null }[];
@@ -149,6 +152,14 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
   for (const f of x.forms) {
     if (f.channel === "NOT_NEEDED") continue;   // the portal asks it itself: shown greyed, never a block
     const at = { item: f.item, subject: f.subject, form: f.form };
+    // C7.8 (B141 BR-7, F2: one new line, for added blank forms only): a blank official PDF is filled by hand, so no fact,
+    // empty box or product copy is asked of it; until its completed copy is uploaded it is a CRITICAL line, passed only
+    // with a reason. The upload is also its signed copy when it is signed (one upload, never two: M5), so no second
+    // signature line is raised for it.
+    if (f.blank) {
+      if (!f.blank.completed) critical({ code: "hand_filled_copy", ...at, part: f.blank.key, owes: "staff", words: `${ofWho(f)}: filled by hand: upload the completed copy. It is the blank official PDF the case officer added, so nothing on it is filled from the case.` });
+      continue;
+    }
     // P-71: missing or unconfirmed facts, by who owes them; a fact with a problem on its own line. An unconfirmed answer
     // already fills the form (P-411, B150 review M1), so the words never say it is blank.
     // QA-165: a mandatory form field a copy would leave empty is its own line (no answer is missing; the form is).
@@ -287,7 +298,7 @@ export const CODE_WORDS: Record<BlockCode | WarnCode, string> = {
   missing_signature: "A missing signature", barcode_not_validated: "No validated copy read back", edition_expired: "Past IRCC's accepted-until date",
   representative_review: "The representative's review", missing_document: "A missing document", finding: "A review finding",
   edition_superseded: "A newer edition or fee", copy_stale: "A PDF copy out of date", entered_out_of_date: "A portal section entered before a change",
-  hand_write: "A line to write by hand", no_copy: "No current copy made for filing", release_update: "A newer release",
+  hand_write: "A line to write by hand", no_copy: "No current copy made for filing", hand_filled_copy: "Filled by hand: upload the completed copy", release_update: "A newer release",
 };
 
 /** Why a code cannot be passed (null: it can): blocks are never passed, only fixed; an unknown code is named. */
