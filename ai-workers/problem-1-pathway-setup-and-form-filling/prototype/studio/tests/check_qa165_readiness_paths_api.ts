@@ -45,6 +45,15 @@ type FormRow = { form: string; subject_id: string; readiness: { ready: boolean; 
   const twOpen = f.fields_open.find((o) => o.box === TAIWAN);
   ok("C7.2 R4 fail (#1318 M1): a Taiwanese passport: the Taiwan PIN box is required, so readiness waits on its question (not on the Israel box), and neither is left empty", r.status < 300 && !f.readiness.ready && !boxes(f).includes(TAIWAN) && !boxes(f).includes(ISRAEL) && twOpen?.reason === "needs an answer" && f.readiness.missing.some((m) => m.reason === "not answered"), { status: r.status, missing: f.readiness.missing, open: twOpen });
 
+  // QA-318: a filled IMM 5257 SCH1 leaves no mandatory box empty any more (its five Yes/No boxes fill). One recorded trip makes
+  // its Question 8 one a person decides (the form counts only trips since 18 or in the past five years, to other countries):
+  // a mandatory box a copy leaves empty, filled by hand, with no fact waiting: the PDF form R5 and R6 need.
+  const travel = (await agent(c.id)).sections.find((s: { subjectId: string; title: string; group: unknown }) => s.subjectId === P && /previous travel/i.test(s.title) && s.group);
+  if (travel?.group?.none_apply?.value) await call("PUT", `/runtime/cases/${c.id}/groups/${P}/${travel.section}/none-apply`, { noneApply: false, expectedId: travel.group.none_apply.id }, OFFICER);
+  const trip = travel ? await call("POST", `/runtime/cases/${c.id}/groups/${P}/rows`, { group: travel.section }, OFFICER) : { status: 0 };
+  await fillEverything(c.id); // the trip's own facts, answered and confirmed like the rest
+  ok("QA-318 R6 setup: one previous trip recorded for the principal", trip.status < 300, trip.status);
+
   // R5: GET …/forms and the prepare view's Ready to file read the same readiness (formReadinessOf).
   // Devin on #1318: IMM 5257 is filed Online on the checkpoint, so its PDF's empty box is named on its card (above) and never
   // stands before Ready to file.

@@ -4,6 +4,7 @@
 // revision, insert only, under the case's row lock that Fill also takes). Case staff of the case's firm only: a client
 // and configuration people 403, another firm 404 (Runtime.reach). Rules only, identical with AI off; no model call (US$0).
 // The rules are engine/runtime/release-update.ts; the case side is api/src/release-context.ts.
+import { releaseForms } from "../../engine/runtime/forms.ts"; // C7.8: a form the new release holds replaces an added one
 import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { RELEASE_MOVE_REASON, ReleaseMove, type ReleaseLastMove, type ReleaseMoved, type ReleaseUpdate } from "../../contracts/runtime.ts";
@@ -150,9 +151,10 @@ export class ReleaseUpdates {
     const target = (await targetRelease(this.db, c))!;
     const st = await this.state(c), names = new Map(st.people.filter((p) => p.role !== "case").map((p) => [p.subjectId, p.label]));
     const pin = c.pins[0];
-    const diff = diffCache()(pin.configReleaseId, this.r.snapshotOf(c), target.id, target.snapshot);
-    const combo = await this.combination(c), asked = askedOf(caseInputs(this.r.snapshotOf(c), target.snapshot, combo.combinationKey, st, new Date(), true));
+    const diff = diffCache()(pin.configReleaseId, this.r.releaseSnapshotOf(c), target.id, target.snapshot);
+    const combo = await this.combination(c), asked = askedOf(caseInputs(this.r.releaseSnapshotOf(c), target.snapshot, combo.combinationKey, st, new Date(), true));
     const counts = Object.fromEntries(EFFECT_KEYS.map((k) => [k, before.effects[k].length])) as ReleaseMoved["counts"];
+    let takenOver: { form: string; person: string }[] = [];
     const made = await busyWords(() => this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
       const newest = await newestPin(tx, c.id, c.combinationId); // C6.17 (BR-9): the current stage's chain
@@ -163,6 +165,13 @@ export class ReleaseUpdates {
       const why = await this.refusal(c, now, diff, target.snapshot, before.current.label, names, asked, tx);
       if (why) return why;
       const row = await tx.packWorkPin.create({ data: { workspaceId: c.workspaceId, caseId: c.id, combinationId: c.combinationId, partyId: pin.partyId, packVersionId: target.packVersionId ?? null, configReleaseId: target.id, contentHash: target.sha256, revision: b.from_revision + 1, actorId: actor.id, reason: b.reason } });
+      // C7.8 (breaker B1 on #1248, F3: the release's rule stays the one truth): a form the case officer added that the new
+      // release holds itself is replaced by the release's line. Its addition is marked removed in this same transaction,
+      // with the reason naming the release, so the record is kept and nothing reads two lines for one form.
+      const held = releaseForms(target.snapshot as never);
+      const over = (c.formAdditions ?? []).filter((a) => !a.removedAt && held.has(a.formKey));
+      if (over.length) await tx.filingFormAddition.updateMany({ where: { id: { in: over.map((a) => a.id) }, removedAt: null }, data: { removedAt: new Date(), removedBy: actor.id, removedReason: `Part of ${target.label}: the release's own line replaces the form added by the case officer.` } });
+      takenOver = over.map((a) => ({ form: a.formKey, person: names.get(a.subjectId) ?? "" }));
       // Break m8 (round 1): the audit line is written in the move's own transaction: no move without its line.
       await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "moved_release", entity: "case", entityKey: c.id, combinationId: c.combinationId,
         summary: `${actor.name} moved case ${short(c.id)} from ${before.current.label} (pin revision ${before.current.revision}) to ${target.label} (pin revision ${row.revision}) of ${before.combination}; reason given`.slice(0, 600),
@@ -172,7 +181,8 @@ export class ReleaseUpdates {
     if (made === "stale") return stale();
     if ("code" in made) return problem(409, "Not possible now", made.reason, { code: made.code, item: made.item ?? null });
     const pinRow = made;
-    return { case_id: c.id, revision: pinRow.revision, version: target.version, label: target.label, from: { version: before.current.version, label: before.current.label, revision: before.current.revision }, counts, words: movedWords(target.label, counts) };
+    return { case_id: c.id, revision: pinRow.revision, version: target.version, label: target.label, from: { version: before.current.version, label: before.current.label, revision: before.current.revision }, counts, words: `${movedWords(target.label, counts)}${takenOver.length ? ` ${takenOver.map((x) => `${x.form}, added for ${x.person}, is now ${target.label}'s own form.`).join(" ")}` : ""}`,
+      added_forms_replaced: takenOver };
   }
 }
 

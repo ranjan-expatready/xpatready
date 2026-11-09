@@ -1301,6 +1301,7 @@ model Case {
   readValues      ReadValue[]      // C6.5
   answerChecks    AnswerCheck[]    // C6.5
   stages          CaseStage[] // C6.17
+  formAdditions   FilingFormAddition[] // C7.8
   reviewRounds      ReviewRound[]       // C8.3
   reviewRoundRows   ReviewRoundFiling[] // C8.3
   reviewRoundForms  ReviewRoundForm[]   // C8.3
@@ -1877,6 +1878,7 @@ model Filing {
   applicants FilingApplicant[]
   items      FilingItem[]
   findings   ReviewFinding[] // C7.5
+  additions  FilingFormAddition[] // C7.8
   reviews    FilingReview[]  // C7.6
   passes     ReadinessPass[] // C7.6
   reviewRounds ReviewRoundFiling[] // C8.3
@@ -2596,6 +2598,47 @@ model AnswerCheck {
 
   @@index([caseId, subjectId])
   @@map("answer_check")
+}
+
+/// C7.8 (B141, SA-1B-177 FilingFormAddition): a library form the case officer added to one filing, for one person on it,
+/// never to the combination. Frozen when added (BR-4): the edition, its published map rows and the fill trial are copied
+/// into `frozen` with their fingerprint, so a later library change never changes this case's form. Insert, then a
+/// removed mark only (a trigger refuses any other change); the row is kept when removed (BR-8).
+model FilingFormAddition {
+  id            String        @id @default(uuid()) @db.Uuid
+  workspaceId   String        @map("workspace_id") @db.Uuid
+  caseId        String        @map("case_id") @db.Uuid
+  filingId      String        @map("filing_id") @db.Uuid
+  /// The person on the filing it is for (BR-1): never a role.
+  subjectId     String        @map("subject_id") @db.Uuid
+  formKey       String        @map("form_key")
+  /// The library edition it was frozen from (no foreign key: the frozen copy stands even if the library row goes).
+  editionId     String        @map("edition_id") @db.Uuid
+  editionLabel  String        @map("edition_label")
+  /// fills (published map rows and a passed fill trial) · blank (the official PDF, filled by hand)
+  kind          String
+  /// The frozen form: title, official file and checksum, the published map rows, the facts' definitions they read.
+  frozen        Json
+  frozenSha256  String        @map("frozen_sha256") @db.VarChar(64)
+  /// The fill trial it was proven by (fills only): the register's record.
+  trial         Json?
+  channel       FilingChannel
+  /// HAND_SCANNED (default) or NONE (switched off by staff with a reason, SA-1B-102 r5).
+  signature     String
+  signedBy      String?       @map("signed_by")
+  signatureReason String?     @map("signature_reason")
+  addedBy       String        @map("added_by")
+  addedAt       DateTime      @default(now()) @map("added_at") @db.Timestamptz
+  reason        String?
+  removedBy     String?       @map("removed_by")
+  removedAt     DateTime?     @map("removed_at") @db.Timestamptz
+  removedReason String?       @map("removed_reason")
+
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@map("filing_form_addition")
 }
 
 /// C8.3 (B144; P-406, P-412; concept screens/B144/concept.md r2, B1): one send for review on a case. kind: send ·

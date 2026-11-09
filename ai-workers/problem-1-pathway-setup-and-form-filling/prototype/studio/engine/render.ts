@@ -115,7 +115,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
       const c = both(rule, age);
       formWaits.set(`${f.form_number}|${person}`, { rule, age });
       const why = wordsOnly(f) ? `Cannot tell yet: no rule ("${f.condition_plain ?? "only if"}" is in words only)` : f.condition_plain ?? (f.status === "always" ? "always required for this combination" : "conditional");
-      return { form: f.form_number, title: f.title, form_kind: f.form_kind ?? "data_form", person, person_label: label(person), status: f.status, applies: c.applies, missing: c.missing, why: f.min_age ? (f.who === ADULT_CHILDREN ? (people.find((p) => p.id === person)?.role === ROLE.child ? `${why}; for a dependent child, from age ${f.min_age}` : `${why}; at any age for the principal applicant and a spouse or partner`) : `${why}; from age ${f.min_age}`) : why, origin: f.origin, no_rule: wordsOnly(f) };
+      return { form: f.form_number, title: f.title, form_kind: f.form_kind ?? "data_form", person, person_label: label(person), status: f.status, applies: c.applies, missing: c.missing, why: f.min_age ? (f.who === ADULT_CHILDREN ? (people.find((p) => p.id === person)?.role === ROLE.child ? `${why}; for a dependent child, from age ${f.min_age}` : `${why}; at any age for the principal applicant and a spouse or partner`) : `${why}; from age ${f.min_age}`) : why, origin: f.origin, no_rule: wordsOnly(f), ...((f as { added?: unknown }).added ? { added: true as const } : {}) };
     });
   });
 
@@ -140,8 +140,12 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
       // Review m2 on #1367: only for a fact the child answers once; a repeating one keeps the map's row (IMM 5562's trips).
       const factRow = e.person === "subject_child" && p?.repeats !== "per_row" ? null : e.row;
       const k = kkey(about, e.fact, factRow), n = needs.get(`${about}|${e.fact}`) ?? { fact: e.fact, about, rows: new Set<number>(), forms: new Set<string>(), boxes: 0, maybe: false };
-      if (factRow !== null && factRow !== undefined) n.rows.add(factRow);
-      n.forms.add(f.form); n.boxes++; if (f.applies === "cannot_tell") n.maybe = true; needs.set(`${about}|${e.fact}`, n);
+      // C7.8 (Q1; review M1 on #1248): a form the case officer added asks nothing new: it joins only a question the case's
+      // own forms already ask (added lines come after the release's, withAdditions), and its other boxes stay "Not on file".
+      if (!("added" in f && f.added) || needs.has(`${about}|${e.fact}`)) {
+        if (factRow !== null && factRow !== undefined) n.rows.add(factRow);
+        n.forms.add(f.form); n.boxes++; if (f.applies === "cannot_tell") n.maybe = true; needs.set(`${about}|${e.fact}`, n);
+      }
       const kv = known.get(k) ?? (factRow === 0 ? known.get(kkey(about, e.fact)) : undefined);
       if (kv) { boxes.push({ ...base, coverage: kv.status === "confirmed" ? "confirmed fact" : "answered on screen", detail: kv.source, value: kv.value }); continue; }
       if (!field.has(e.fact)) { boxes.push({ ...base, coverage: "unresolved", detail: "the form field reads a field that is not in the library" }); continue; }

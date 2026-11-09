@@ -1,0 +1,8 @@
+nightly run 42616655752 (workflow_dispatch on main cfaa199f4, capabilities=C6.14 C6.19 C8.3 C6.13 C10.2 C7.3, data=checkpoint), job 129158118183 'packs (C6.13)': completed success. Lines from the job log:
+  CAP: C6.13
+  GATE_B_DATA: checkpoint
+  packs: C6.13.test.ts
+    C6.13.test.ts on the checkpoint: exit 0, 32/32 passed (151 s: copy 4, Load the configured checkpoint 62, run 85)
+  packs took 151 s in all
+Gate B: passed.
+run head_sha cfaa199f4e4ea5b30718d1d113b5104216406781 branch main event workflow_dispatch created 2026-11-09T12:23:47Z
