@@ -102,13 +102,21 @@ await main("C6.5", "Documents read into proposed facts (Visitor visa, replayed, 
   const noteNow = await clientNotes();
   ok(`C6.5-12b pass (P-142 D6, QA-322): ${typist === CLIENT ? "the client sees \"please check\" on the family name while its check is open, naming the document, never its value" : "the client is not asked the family name here (staff enter it from the passport), so no \"please check\" is shown"}`, typist === CLIENT ? noteNow.length === 1 && !/SAMPLED\b/.test(noteNow[0].message) : noteNow.length === 0, noteNow);
   ok("C6.5-12c pass (QA-322, Lead 39): the officer's Agent view is unchanged: no \"please check\" entry there (the officer works the check in the drawer)", !((await agent(c.id))?.checks ?? []).some((x: { id: string }) => x.id.startsWith("document_check.")));
+  // Review m8 on 01d12b6b7 (Lead 39, P-400): the view decides "changed" by value: the typist saves another value, then
+  // the compared one, and the note reads "did not match" again (never "has changed" for the compared value).
+  const nameNow = () => sql(`select id from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.family_name' and superseded_by_id is null`);
+  await answer(c.id, P, "person.family_name", "SAMPLEDX", typist);
+  const noteChanged = await clientNotes();
+  await answer(c.id, P, "person.family_name", "SAMPLEDE", typist);
+  const noteBack = await clientNotes();
+  ok("C6.5-12d pass (QA-322, review m8): the client saves another value, then the compared one: the note reads 'did not match' again", typist === CLIENT ? /It has changed since it was compared/.test(noteChanged[0]?.message ?? "") && noteBack.length === 1 && /It did not match/.test(noteBack[0].message) : noteChanged.length === 0 && noteBack.length === 0, { noteChanged, noteBack });
   const seen = (await agent(c.id))?.sections?.find((s: { section: string; subjectId: string }) => s.section === section && s.subjectId === P)?.questions?.map((q: { answer: { id: string } | null }) => q.answer?.id).filter(Boolean) ?? [];
   r = await call("POST", `/runtime/cases/${c.id}/sections/${section}/confirm`, { subjectId: P, seen }, OFFICER);
   ok("C6.5-13 fail (BR-6): Confirm section is refused while a check is open (409 open_checks)", r.status === 409 && /open_checks|check/i.test(JSON.stringify(r.body)), r.status);
   const chk = checks.find((x: { fact: string }) => x.fact === "person.family_name");
   r = await call("POST", `/runtime/checks/${chk?.id}/resolve`, { keep: "document" }, OFFICER);
   ok("C6.5-14 fail: resolving a check without a reason is refused (400)", r.status === 400, r.status);
-  r = await call("POST", `/runtime/checks/${chk?.id}/resolve`, { keep: "document", reason: "Matches the passport page (Sample)" }, OFFICER);
+  r = await call("POST", `/runtime/checks/${chk?.id}/resolve`, { keep: "document", reason: "Matches the passport page (Sample)", answerId: nameNow() }, OFFICER);
   ok("C6.5-15 pass: the officer keeps the document's value with a reason; the client's value stays on record", r.status === 200 && Number(sql(`select count(*) from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.family_name'`) ?? 0) >= 2 && sql(`select value_json #>> '{}' from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.family_name' and superseded_by_id is null`) === "SAMPLED");
   ok("C6.5-15b fail (P-142 D6, QA-322): once the officer resolves the check, the client's \"please check\" is gone", (await clientNotes()).length === 0);
   r = await call("POST", `/runtime/cases/${c.id}/answers/${P}/person.passport_number/checked-against-document`, { document: docId }, CLIENT);
