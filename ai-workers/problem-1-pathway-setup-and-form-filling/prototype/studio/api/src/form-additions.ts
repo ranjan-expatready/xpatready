@@ -187,7 +187,7 @@ export class FormAdditions {
     if (typeof b.form !== "string" || !b.form.trim()) throw problem(400, "Name the form to add, by its number.");
     const { f, c } = await this.filing(actor, filingId);
     const who = this.personOn(c, f, b.subject);
-    await refuseIfRecorded(this.db, (await this.db.filing.findMany({ where: { caseId: c.id }, select: { id: true } })).map((x) => x.id), "its forms");
+    await refuseIfRecorded(this.db, (await this.db.filing.findMany({ where: { caseId: c.id }, select: { id: true } })).map((x) => x.id), "the list of forms");
     const x = (await this.library(c.workspaceId, b.form.trim())).find(Boolean);
     if (!x) throw problem(404, "No such form in the firm's library.");
     const j = this.judge(c, who.subject, x!, await this.releaseNow(c));
@@ -246,7 +246,7 @@ export class FormAdditions {
     const { a, c } = await this.addition(actor, id);
     const reason = typeof (body as { reason?: unknown })?.reason === "string" ? ((body as { reason: string }).reason).trim().slice(0, 500) : "";
     if (!reason) throw problem(400, "Say why the form is removed: a removal is recorded with a reason.", "reason");
-    await refuseIfRecorded(this.db, (await this.db.filing.findMany({ where: { caseId: c.id }, select: { id: true } })).map((x) => x.id), "its forms");
+    await refuseIfRecorded(this.db, (await this.db.filing.findMany({ where: { caseId: c.id }, select: { id: true } })).map((x) => x.id), "the list of forms");
     if (a.removedAt) throw problem(409, `${a.formKey} was already removed by ${personName(a.removedBy ?? "")} on ${dayWords(a.removedAt.toISOString())}.`);
     const n = await this.db.filingFormAddition.updateMany({ where: { id: a.id, removedAt: null }, data: { removedAt: new Date(), removedBy: actor.id, removedReason: reason } });
     if (n.count !== 1) throw problem(409, `${a.formKey} was already removed.`);

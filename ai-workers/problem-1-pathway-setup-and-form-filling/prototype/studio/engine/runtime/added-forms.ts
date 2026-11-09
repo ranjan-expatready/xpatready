@@ -68,7 +68,7 @@ export function refusalOf(x: {
     ? `${x.form} is part of this application's forms: it applies when ${x.releaseLine.condition.replace(/[.\s]+$/, "")}${x.releaseLine.now ? ` (now: ${x.releaseLine.now})` : ""}, so it is not added by hand.`
     : x.releaseLine && x.releaseLine.condition !== "always"
       ? `${x.form} is part of this application's forms: an answer decides whether it applies${x.releaseLine.now ? ` (now: ${x.releaseLine.now})` : ""}, so it is not added by hand.`
-      : `${x.form} is part of this application's forms already${x.releaseLine?.now ? ` (${x.releaseLine.now})` : ""}, so it is not added by hand.` };
+      : `${x.form} is part of this application's forms${x.releaseLine?.now ? ` (for this person: ${x.releaseLine.now})` : ""}, so it is not added by hand.` };
   if (x.addedBy) return { status: 409, code: "already_added", words: `${x.form} is already added to this filing for this person by ${x.addedBy.by} on ${dayWords(x.addedBy.at)}.` };
   if (x.kind === "blank" && x.barcode) return { status: 422, code: "barcode_blank", words: `${x.form} makes a barcode page: only a copy the product fills can be validated, and its filling is not proven yet, so it cannot be added as a blank form.` };
   return null;

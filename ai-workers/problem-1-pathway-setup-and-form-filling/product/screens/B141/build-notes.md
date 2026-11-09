@@ -32,3 +32,26 @@ Built from `concept.md` revision 2 (Lead 37 approved it for building on #1248). 
 * Suites of the touched files (each on a fresh isolated copy where it needs a server): check_readiness_pass_codes 4/4, check_c76_readiness 91/91, check_sh3_resolver 85/85, check_c76_readiness_api 23/23, check_c81_signing_api 48/48, check_vv_prepare_api 42/42, check_c3_11_signed_scan 32/32, check_c82_filing_record_api 24/24, check_s5_slice1 61/61. `--changed` selects all 385 (shared files): the PR's GitHub check runs the rest.
 * `graph.mjs --check` exit 0; `count-any.mjs` 418 = base.
 * Walk at 1440 px: `walk/01…11` (Prepare application → panel → fills with coverage → tagged row → blank → release form refused → blank row → Ready to file's CRITICAL line → completed copy uploaded → Remove asks a reason); no page error.
+
+## Review (Block, 3 Majors) and break (1 Blocker, 2 Majors) on dcc7feb8c: how each was answered
+| Finding | Fix | Fail test |
+|---|---|---|
+| Break **B1** a move to a release holding an added form: page white, wrong refusal | the move marks such additions removed in its own transaction ("Part of <release>: the release's own line replaces…"), its answer names them; `withAdditions` never joins a form the release holds; every added-record read goes over every line (`addedOn`); the tag renders nothing without a record | pack C7.8-16; unit "release holds the form" |
+| Break **M1** / review m1 parallel adds for two people store two ways | the first addition of the form on the case is read again under the case's row lock; a later different one is refused 409 | pack C7.8-14 |
+| Break **M2** remove and re-add reuses the old completed copy | a completed copy counts only if uploaded after the addition (`completedSince`), in Prepare and the forms list | pack C7.8-15 |
+| Review **M1** an added form adds client questions | `engine/render.ts`: an added line joins only a question the case's own forms already ask; its other boxes stay "Not on file" | pack C7.8-17 |
+| Review **M2** names and reason text in audit lines | "for the <role>", "(reason given)" | read in the diff |
+| Review **M3** / break m2 raw actor id, ISO date | names from the simulated people list (`personName`), dates "9 Nov 2026" (`dayWords`) | pack C7.8-5 words |
+| m: signature off on Paper ignored; Paper on an account case without a reason | refused 422 on Paper (signed in pen, the UI shows "Signed in pen"); Paper where the default is not Paper needs a reason (C11.6's rule) | pack C7.8-18 |
+| m: signature off without reason, channel default untested | tested | pack C7.8-18 |
+| m: focus to the page after Add / Remove | the new row's heading / the forms heading | walk |
+| m: "Remove" alone | "Remove from this filing", "Remove IMM xxxx" | walk |
+| m: read-only per filing, rule per case | every filing's Add and Remove are greyed once any filing is recorded | walk |
+| m: "Q2" in user words; contradicting refusal words; "its forms is" | reworded | pack C7.8-4 words |
+| m: BR-4 "A newer edition exists" not built | the added row says it when the library's newest PDF edition differs (information only) | read in the diff |
+| m: blank PDF after removal | 410 | pack C7.8-15 |
+| m: blank's sign steps all pending | its only step is "Uploaded to IRCC", after the completed copy and Ready to file; then Done | read in the diff |
+| m9 (break) blank download with no checksum | an edition with no checksum is "no current edition" (not addable); the download refuses without one | read in the diff |
+| m9 (break) newest edition not approved | holds: editions have no approval state; a held file stays an intake row and never becomes an edition | — |
+| m (review) the pack's record row left `/prepare` 500 | `filed_facts` is a list (`[]`) | pack C7.8-11 |
+| m (review) graph G3 lists C7.8's routes as reached by no test | `graph.mjs` does not scan `acceptance/`; not changed here (process files frozen to 10 Nov, P-312) | — |
