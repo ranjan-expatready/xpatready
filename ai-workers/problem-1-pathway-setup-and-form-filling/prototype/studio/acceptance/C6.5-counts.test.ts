@@ -1,14 +1,14 @@
 // C6.5 part 2c (P-243, row L-SA9): staff corrections of document values counted per review mode, readable by staff
 // (rows.md C6.5: "new C6.5-21 to -23 … corrections counted per mode; the count readable through the new
 // GET /runtime/cases/:id/document-reviews/counts; a client refused"). Kept in a file of its own, beside the screen pack,
-// so 2b and 2c never edit one file. The rule (api/src/document-review-counts.ts): a staff answer saved after the read that
+// so 2b and 2c never edit one file. The rule (api/src/document-review-rule.ts): a staff answer saved after the read that
 // differs from it, or a check resolved by keeping the answer. Engine steps (C6.5-21e…): the rule on plain rows, no server.
 // Synthetic Sample documents only (P-133). US$0.
 //   tsx studio/acceptance/C6.5-counts.test.ts --engine
 //   zsh studio/tools/isolated.sh c65c 4440 start && tsx studio/acceptance/C6.5-counts.test.ts 4440 xr_studio_c65c
 import { CLIENT, FAMILY, FIXED, OFFICER, PORT, agent, answer, call, main, needVisitorVisa, ok, openCase } from "./lib/m3.ts";
 import { passportPdf, upload } from "./lib/fixtures.ts";
-import { countCorrections } from "../api/src/document-review-counts.ts";
+import { countCorrections } from "../api/src/document-review-rule.ts";
 
 type Prop = { id: string; fact: string; value: unknown; review: string; needs_look: boolean; left_why: string | null; source: { document: string } };
 type Counts = { by_mode: Record<"collapsed" | "expanded", { read: number; corrected: number; rate: number | null; left: number }>; corrections: { fact: string; review: string; how: string; by: string }[] };
