@@ -142,7 +142,7 @@ function LineRow({ caseId, p, people, l, nameOf }: { caseId: string; p: Person; 
       <div className="min-w-0"><p className="font-medium [overflow-wrap:anywhere]" data-line-label>{l.label}</p>
         <p className="text-xs text-text-muted" data-who>{l.who_words}</p>
         {l.shared ? <div className="mt-1 text-xs" data-shared={l.shared}>
-          <p><span className="font-medium">Shared</span> · Provided by <span data-providers>{(l.providers ?? []).map((x) => x.label).join(" and ")}</span></p>
+          <p className="[overflow-wrap:anywhere]"><span className="font-medium">Shared</span> · Provided by <span data-providers>{(l.providers ?? []).map((x) => x.label).join(" and ")}</span></p>
           <p className="text-text-muted [overflow-wrap:anywhere]" data-providers-rule={l.providers_rule ?? ""}>{l.providers_rule === "changed" ? `Chosen by the case officer${l.providers_change?.at ? ` on ${when(l.providers_change.at)}` : ""}${l.providers_change?.by ? ` (${nameOf(l.providers_change.by)})` : ""}: ${l.providers_change?.reason ?? ""}` : l.providers_rule === "type_roles" ? "Default from the document type" : "The person the item is for"}</p></div> : null}</div>
       {/* Break m3: a kept line says so once, in its reason (the API's words); no second "Kept" label. */}
       <div className="min-w-0"><Pill tone={TONE[l.state] ?? "neutral"}><span data-state-words>{l.state_words}</span></Pill>
@@ -216,8 +216,9 @@ function NotApplicableDialog({ l, label, close, done }: { l: ChecklistLine; labe
  *  type's defaults, always with a reason. People under 18, or whose age cannot be checked yet, cannot be ticked (the server
  *  says the same and decides; its words show here). */
 function ProvidersDialog({ l, label, people, close, done }: { l: ChecklistLine; label: string; people: Person[]; close: () => void; done: () => Promise<unknown> }) {
-  const chosenNow = l.providers_rule === "changed" ? (l.providers ?? []).map((x) => x.subject) : [];
-  const [chosen, setChosen] = React.useState<string[]>(chosenNow.length ? chosenNow : (l.providers ?? []).map((x) => x.subject));
+  // Break minor 1: only people who may provide are ticked at the start (the fallback can be a person under 18).
+  const may = (id: string) => people.find((p) => p.subject === id)?.may_provide?.ok !== false;
+  const [chosen, setChosen] = React.useState<string[]>((l.providers ?? []).map((x) => x.subject).filter(may));
   const [reason, setReason] = React.useState("");
   const [err, setErr] = React.useState<{ field: string | null; other: string | null }>({ field: null, other: null });
   const [busy, setBusy] = React.useState(false);
@@ -236,7 +237,7 @@ function ProvidersDialog({ l, label, people, close, done }: { l: ChecklistLine; 
   const candidates = people;
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={`Who provides: ${label}`} description="One item for the whole application: whoever is ticked may upload it. Nobody under 18 provides a document."
-      footer={<>{l.providers_rule === "changed" ? <Button variant="secondary" busy={busy} onClick={() => void send(null)} data-providers-defaults>Use the defaults</Button> : null}
+      footer={<>{l.providers_change && !l.providers_change.defaults ? <Button variant="secondary" busy={busy} onClick={() => void send(null)} data-providers-defaults>Use the defaults</Button> : null}
         <Button variant="secondary" onClick={close}>Cancel</Button><Button busy={busy} disabled={!chosen.length} onClick={() => void send(chosen)} data-providers-save>Save providers</Button></>}>
       <form onSubmit={(e) => { e.preventDefault(); void send(chosen); }} className="space-y-3">
         <fieldset><legend className="text-sm font-medium">Providers</legend>

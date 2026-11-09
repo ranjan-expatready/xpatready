@@ -16,7 +16,7 @@ import { dirname, join } from "node:path";
 import { HttpException } from "@nestjs/common";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { ChangeProviders, cleanName, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MEDIA, mediaOf, NOT_APPLICABLE_FROM, NotApplicable, REQUEST_FROM, SeenVersion, STATE_WORDS, UPLOAD_FROM, type LineState, type StoredDocument } from "../../contracts/documents.ts";
-import { candidatesOf, caseChecklist, chosenProviders, mayProvide, type PersonLine } from "../../engine/runtime/case-checklist.ts";
+import { candidatesOf, caseChecklist, chosenProviders, mayProvide, roleWords, type PersonLine } from "../../engine/runtime/case-checklist.ts";
 import { lineKeys, pickMember, setMet, setStatus, type SetStatus } from "../../engine/document-sets.ts";
 import { checkValue, knownOf } from "../../engine/runtime/case.ts";
 import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
@@ -111,7 +111,7 @@ export class CaseChecklists {
       if (!l.shared || !row || !row.providers.length) return { providers: l.providers, providers_rule: l.providers_rule, providers_words: l.shared && change?.defaults ? `${l.providers_words} The case officer went back to the defaults: ${change.reason}` : l.providers_words, providers_change: l.shared ? change : null };
       const chosen = chosenProviders(row.providers, everyone, d.today);
       const left = chosen.dropped.filter((x) => !(l.providers_words ?? "").includes(x)); // a reason the defaults already give is said once
-      const dropped = left.length ? ` Left out now: ${left.join(" ")}` : "";
+      const dropped = left.length ? ` Left out now: ${left.map((x) => x.replace(/\.?$/, ".")).join(" ")}` : ""; // break m6: each reason ends with a full stop
       if (!chosen.providers.length) return { providers: l.providers, providers_rule: l.providers_rule, providers_words: `The case officer's choice no longer applies.${dropped} ${l.providers_words}`, providers_change: change };
       return { providers: chosen.providers, providers_rule: "changed", providers_words: `Provided by ${chosen.providers.map((x) => x.label).join(" and ")}: chosen by the case officer (${change!.reason}).${dropped}`, providers_change: change };
     };
@@ -205,9 +205,11 @@ export class CaseChecklists {
     }
     const ids = (chosen ?? []).map((x) => x.toLowerCase());
     if (!chosen && !row.providers.length) fail(`${shown.label} already uses the document type's defaults. Nothing was changed.`, HttpStatus.CONFLICT);
+    // Break m5: the same people again is no change (nothing saved, nothing audited).
+    if (chosen && row.providers.length === ids.length && ids.every((x, i) => x === row.providers[i])) fail(`${shown.label} is already provided by exactly these people. Nothing was changed.`, HttpStatus.CONFLICT);
     const n = await this.db.checklistLine.updateMany({ where: { id, version: row.version }, data: { providers: ids, providersReason: b.reason, providersBy: actor.id, providersAt: new Date(), version: { increment: 1 } } });
     if (n.count !== 1) fail("Someone changed this line after you opened it: read the checklist again to see it now, then try again. Nothing was changed.", HttpStatus.CONFLICT);
-    const names = ids.map((x) => everyone.find((p) => p.id === x)).map((p) => `the ${p!.role}`).join(" and ");
+    const names = ids.map((x) => everyone.find((p) => p.id === x)).map((p) => roleWords(p!.role)).join(" and "); // break m6: words, never keys
     await this.audit.log(c.workspaceId, actor.id, "providers changed", "checklist line", id, `${actor.name} ${chosen ? `set the providers of ${shown.label} to ${names}` : `went back to the default providers of ${shown.label}`} on case ${short(c.id)}`, { from: row.providers, to: ids, reason: b.reason });
     return this.moved(c, id);
   }

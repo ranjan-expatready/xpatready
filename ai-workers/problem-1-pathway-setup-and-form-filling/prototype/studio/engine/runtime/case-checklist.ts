@@ -263,7 +263,7 @@ export function mayProvide(p: Candidate, on: string): { ok: boolean; why: string
   if (p.age === null) return { ok: false, why: `${p.label}'s age cannot be checked yet (no date of birth): named once it shows 18 or older.` };
   return p.age >= MINOR.underAge ? { ok: true, why: `${p.age} on ${on}` } : { ok: false, why: `${p.label} is ${p.age} on ${on}: nobody under ${MINOR.underAge} provides a document.` };
 }
-const roleWords = (role: string) => WHO_WORDS[role === ROLE.principal ? "principal_applicant" : role] ?? role.replace(/_/g, " ");
+export const roleWords = (role: string) => WHO_WORDS[role === ROLE.principal ? "principal_applicant" : role] ?? role.replace(/_/g, " ");
 /** BR-3 to BR-5: the providers of a shared item on `holder`'s list: the type's roles in order, each matched among everyone
  *  on the case (applying or not, on any filing), nobody under 18; none set or none left: the holder (the person the item
  *  is for, the filing's first applicant on this slice). Pure; no combination key (P-425). */
@@ -295,7 +295,7 @@ export function chosenProviders(chosen: string[], everyone: Candidate[], on: str
   const providers: Provider[] = [], dropped: string[] = [];
   for (const id of [...new Set(chosen)]) {
     const p = everyone.find((x) => x.id === id);
-    if (!p) { dropped.push("a person no longer on the case"); continue; }
+    if (!p) { dropped.push("A person chosen is no longer on the case."); continue; }
     const m = mayProvide(p, on);
     if (!m.ok) { dropped.push(m.why); continue; }
     providers.push({ subject: p.id, label: p.label, role: p.role, why: "Chosen by the case officer." });

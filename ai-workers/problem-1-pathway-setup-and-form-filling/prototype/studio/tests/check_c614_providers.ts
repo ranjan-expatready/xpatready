@@ -11,6 +11,8 @@ import type { Snapshot } from "../engine/snapshot.ts";
 import type { Participant } from "../engine/runtime/case.ts";
 import { FEE_TABLE } from "../engine/runtime/filings.ts";
 import { recorder } from "./runtime/api.ts";
+import { diff } from "../engine/validate.ts";
+import { ChangeProviders } from "../contracts/documents.ts";
 
 const { ok, summary } = recorder();
 const TODAY = new Date("2026-11-09T12:00:00Z"), ON = "2026-11-09";
@@ -67,5 +69,14 @@ const cands = candidatesOf(family, adults, ON);
 let ch = chosenProviders(["A"], cands, ON);
 ok("BR-6 pass: a chosen adult on the case is kept", ids(ch.providers) === "A" && ch.dropped.length === 0 && ch.providers[0].why === "Chosen by the case officer.");
 ch = chosenProviders(["C", "Z", "A", "A"], cands, ON);
-ok("BR-6 fail: a chosen child and a person no longer on the case are dropped (named), the same person counts once", ids(ch.providers) === "A" && ch.dropped.length === 2 && ch.dropped.some((x) => /is 10/.test(x)) && ch.dropped.includes("a person no longer on the case"), ch);
+ok("BR-6 fail: a chosen child and a person no longer on the case are dropped (named), the same person counts once", ids(ch.providers) === "A" && ch.dropped.length === 2 && ch.dropped.some((x) => /is 10/.test(x)) && ch.dropped.includes("A person chosen is no longer on the case."), ch);
+// Break M2: a release that adds or changes the roles names them, in words, on the line the expert signs.
+const withRoles = snap({ marriage: ["principal", "spouse_or_partner"] }), without = snap({});
+const lineOf = (prev: Snapshot, next: Snapshot) => diff(prev, next).find((c) => c.kind === "Document type" && c.key === "marriage");
+ok("break M2 pass: the expert's line names \"provided by (when shared): principal applicant, then spouse or partner\" and needs sign-off", /provided by \(when shared\): principal applicant, then spouse or partner/.test(lineOf(without, withRoles)?.label ?? "") && lineOf(without, withRoles)?.needs_sme === true, lineOf(without, withRoles));
+ok("break M2 fail: clearing the roles is named too (\"not set\"), never a silent change", /provided by \(when shared\): not set/.test(lineOf(withRoles, without)?.label ?? ""), lineOf(withRoles, without));
+ok("break M2: a type with no roles before or after has no such words (unchanged releases read as before)", !diff(without, without).some((c) => /provided by/.test(c.label ?? "")));
+// Break M1: a reason that cannot be stored is refused before anything is written.
+ok("break M1 fail: a reason with half an emoji or a NUL is refused (400 in the route)", !ChangeProviders.safeParse({ providers: null, reason: "Spouse \ud83d only" }).success && !ChangeProviders.safeParse({ providers: null, reason: "Spouse \u0000 only" }).success);
+ok("break M1 pass: a whole emoji and ordinary words are kept", ChangeProviders.safeParse({ providers: null, reason: "Spouse \ud83d\ude00 only" }).success);
 process.exitCode = summary() ? 1 : 0;

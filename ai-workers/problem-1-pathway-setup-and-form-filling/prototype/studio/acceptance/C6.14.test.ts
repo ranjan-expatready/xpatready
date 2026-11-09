@@ -20,13 +20,14 @@ type Checklist = { people: { subject: string; label: string; lines: Line[]; wait
 const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? JSON.stringify(r.body ?? "")).slice(0, 240); // eslint-disable-line @typescript-eslint/no-explicit-any -- responses read loosely
 
 /** Submit, the expert's sign-off and approval: the combination's next release (as C6.15's pack). */
-async function release(vv: string, note: string): Promise<{ version: number | null; why: string }> {
+async function release(vv: string, note: string): Promise<{ version: number | null; why: string; signed?: string }> {
   const s = await call("POST", `/combinations/${vv}/submit`, { note }, AUTHOR);
   if (s.status >= 300) return { version: null, why: ((s.body?.errors ?? []) as { message?: string }[]).map((e) => e.message).join(" | ").slice(0, 400) || words(s) };
   const sub = (await call("GET", `/combinations/${vv}/review`, undefined, REVIEWER)).body?.submission;
+  const signed = JSON.stringify(sub?.changeSummary ?? sub?.change_summary ?? []); // what the expert reads and signs
   await call("POST", `/combinations/${vv}/signoff`, { items: (sub?.changeSummary ?? sub?.change_summary ?? []).filter((x: { needs_sme?: boolean }) => x.needs_sme !== false).map((x: { kind: string; key: string }) => `${x.kind}|${x.key}`), action: "signed" }, REVIEWER);
   const a = await call("POST", `/combinations/${vv}/approve`, undefined, APPROVER);
-  return a.status < 300 ? { version: Number(a.body?.version ?? 0) || null, why: "" } : { version: null, why: words(a) };
+  return a.status < 300 ? { version: Number(a.body?.version ?? 0) || null, why: "", signed } : { version: null, why: words(a), signed };
 }
 
 await main("C6.14", "One document for the whole application: one item, default providers, nobody under 18, the officer changes them with a reason", async () => {
@@ -78,6 +79,7 @@ await main("C6.14", "One document for the whole application: one item, default p
   ok("setup: the passport type also gets a role (to show BR-2: a per-person line ignores it)", p2.status < 300, words(p2));
   const one = await release(vv, "C6.14 pack: provider roles");
   ok("C6.14-10 pass: the next release goes out with the roles, and both changes are released", !!one.version && sql(`select string_agg(status, ',') from library_change where id in ('${id}', '${pid}')`) === "RELEASED,RELEASED", one);
+  ok("C6.14-10b pass (break M2): the release line the expert signed names the roles in words: \"provided by (when shared): principal applicant, then spouse or partner\"", /provided by \(when shared\): principal applicant, then spouse or partner/.test(one.signed ?? ""), (one.signed ?? "").slice(0, 400));
   if (!one.version) return;
   const rel = JSON.parse(sql(`select snapshot::text from config_release where combination_id = '${vv}' and version = ${one.version}`) || "{}");
   ok("C6.14-11 data: the release's marriage certificate type carries default_provider_roles; a type without roles carries no key (an unmarked snapshot is unchanged)",
@@ -126,8 +128,12 @@ await main("C6.14", "One document for the whole application: one item, default p
   const passLine = linesOf(await list(B.id, B.officer), PASSPORT)[0];
   r = passLine ? await change({ providers: [P], reason: "Per person." }, B.officer, passLine.id) : { status: 0, body: "no passport line" };
   ok("C6.14-25 fail (BR-2, BR-6): a per-person line has no providers to change (422)", r.status === 422 && /asked of each person/.test(words(r)), words(r));
+  r = await change({ providers: [P], reason: "Spouse \ud83d only", version: item?.version });
+  ok("C6.14-25b fail (break M1): a reason with half an emoji is refused in words (400) and nothing is stored", r.status === 400 && /cannot be stored/.test(words(r)) && sql(`select array_length(providers, 1) is null from checklist_line where id = '${item?.id}'`) === "t", words(r));
   r = await change({ providers: [P], reason: "Only the principal holds the original (Sample).", version: item?.version });
   ok("C6.14-26 pass (BR-6; SA-1B-214 r2): the case officer makes Sample Client A the only provider, with a reason", r.status === 200 && names(r.body?.providers) === "Sample Client A" && r.body?.providers_rule === "changed" && r.body?.providers_change?.reason === "Only the principal holds the original (Sample).", r.status === 200 ? r.body?.providers_words : words(r));
+  const again = await change({ providers: [P], reason: "Same again.", version: r.body?.version });
+  ok("C6.14-26b fail (break m5): the same people again is refused (409), nothing audited twice", again.status === 409 && /already provided by exactly these people/.test(words(again)), words(again));
   ok("C6.14-27 data (BR-6): stored on the item's row with the reason, and audited", sql(`select array_length(providers, 1) || '|' || providers_reason from checklist_line where id = '${item?.id}'`) === "1|Only the principal holds the original (Sample)." && Number(sql(`select count(*) from audit_event where entity = 'checklist line' and entity_key = '${item?.id}' and action = 'providers changed'`)) === 1);
 
   // A chosen person later shown to be under 18 is dropped on read, and the line says so (challenge M2).

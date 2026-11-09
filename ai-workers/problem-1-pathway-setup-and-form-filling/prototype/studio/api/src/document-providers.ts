@@ -14,6 +14,7 @@ import { Body, Controller, Get, Headers, HttpException, Inject, Injectable, Para
 import { Prisma, type LibraryChange } from "@prisma/client";
 import { z } from "zod";
 import { NEVER_PROVIDES } from "../../engine/runtime/case-checklist.ts";
+import { INVISIBLE, UNSTORABLE } from "../../contracts/documents.ts";
 import { ACTORS, actorOf, Audit, Db, need, readerOf, revise, strip, Workspace, type Actor } from "./core.ts";
 import { lockItem, refuseRetired } from "./library-items.ts";
 
@@ -28,7 +29,9 @@ const KEY = /^[a-z0-9][a-z0-9_.:-]{0,119}$/i;
 const REASON = "Say why (3 to 300 characters): for example the guide's words on who gives this document.";
 const Body_ = z.strictObject({
   roles: z.array(z.string().min(1).max(64), { message: "Send \"roles\": the roles in order (an empty list clears them)." }).max(20),
-  reason: z.string({ message: REASON }).transform((x) => x.trim()).pipe(z.string().min(3, REASON).max(300, REASON)),
+  // Break M1, m4: a character that cannot be stored is refused; invisible ones do not count towards the 3.
+  reason: z.string({ message: REASON }).refine((x) => !UNSTORABLE.test(x), "The reason has a character that cannot be stored (a control character or half of an emoji). Retype it.")
+    .transform((x) => x.replace(INVISIBLE, "").trim()).pipe(z.string().min(3, REASON).max(300, REASON)),
 });
 const same = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 /** A new version copies the row; a Json column that is null is written as the database's null. */
@@ -80,9 +83,9 @@ export class DocumentProviders {
     const b = Body_.safeParse(body);
     if (!b.success) throw problem(400, "Choose the roles", b.error.issues[0]?.message ?? REASON);
     const workspaceId = await this.ws.id();
-    const { current } = await typeOf(this.db, workspaceId, key);
+    const { rows, current } = await typeOf(this.db, workspaceId, key);
+    if (rows.length) await refuseRetired(this.db, workspaceId, "document_type", [key]); // break m2: a retired type says so (409), not "deleted"
     if (!current) throw problem(404, "Not in the library", "That document type is not in the shared library (it may have been deleted or reset).");
-    await refuseRetired(this.db, workspaceId, "document_type", [key]);
     const choices = await choicesOf(this.db, workspaceId);
     const bad = problemOf(b.data.roles, choices);
     if (bad) throw problem(400, "Not a provider role", bad);

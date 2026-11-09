@@ -46,7 +46,7 @@ export function ProvidersSection({ typeKey, typeName, who, canAuthor }: { typeKe
         <p className="text-xs" data-providers-applies={SHARED.has(who) ? "yes" : "no"}>{SHARED.has(who) ? "This line is asked once, so a case names these providers on it." : "This line is asked of each person, so these roles do not apply to it (they apply where a line asks it once)."}</p>
         {v.open ? <p className="text-xs" data-providers-open>A change to {v.open.change.after.length ? v.open.change.after.join(", then ") : "no roles"} by {v.open.by} {OPEN_WORDS[v.open.status]}{v.open.note ? `: ${v.open.note}` : ""}. <Link className="text-text-link underline" to="/review">To review</Link></p> : null}
         <p className="text-xs text-text-muted">{v.help} For every combination that names {typeName} (used by {v.uses}). Sample until the immigration expert confirms.</p>
-        {canAuthor && !edit ? <Button size="sm" variant="secondary" disabled={!!v.open && v.open.status !== "RETURNED"} onClick={() => { setEdit(v.roles.map((r) => r.key)); setReason(""); setMsg(null); }} data-providers-edit>{v.roles.length ? "Change who provides it…" : "Set who provides it…"}</Button> : null}
+        {canAuthor && !edit ? <Button size="sm" variant="secondary" disabled={!!v.open} onClick={() => { setEdit(v.roles.map((r) => r.key)); setReason(""); setMsg(null); }} data-providers-edit>{v.roles.length ? "Change who provides it…" : "Set who provides it…"}</Button> : null}
         {canAuthor && edit ? (
           <div className="space-y-2 rounded border border-border p-3" data-providers-editor>
             {edit.length ? <ol className="space-y-1">{edit.map((k, i) => (
