@@ -1,0 +1,8 @@
+Gate B: the PR names C10.2; claims Works for none (no bug check).
+  packs: C10.2.test.ts
+    C10.2.test.ts on the checkpoint: exit 0, 14/14 passed (475 s: copy 5, Load the configured checkpoint 90, run 380)
+  packs took 476 s in all
+Gate B: passed.
+Post job cleanup.
+(node:6625) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)

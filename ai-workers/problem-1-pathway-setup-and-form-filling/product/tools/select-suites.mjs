@@ -36,6 +36,14 @@
 // suite"; a file that would choose everything chooses the suites that import it (through test helpers) or name it.
 // --why: each chosen suite's reason names the chain of files by which it uses the change; SELECT_DEBUG=1 prints every
 // use the graph follows (on stderr).
+// --packs (D2, P-416, founder 8 Nov; gate B's set by diff): prints "<file>\t<chain>" for each file under studio/acceptance/
+// or studio/tests/ that IS a changed file or reads one, through the same graph (imports, file names, folders), walked
+// from each changed file (under prototype/ or official-sources/) to the files that use it. It walks through test helpers,
+// acceptance/lib, engine/, contracts/, samples/ and fixtures; through an API module or a web file only by import edges
+// (packs that import API code, e.g. C11.13's proposals.ts, read it; a pack that calls a route over HTTP does not), and
+// never through main.ts, a suite or a script that runs every suite. A deleted file is seeded by the files whose text
+// still names it (its graph edges are gone with it). gate-b.mjs reads the packs, and the set-up scripts their run lines
+// name, from this list.
 // Reads files only: no server, no database, no model call (US$0). Checks: product/tools/check-select-suites.sh.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, normalize, relative } from "node:path";
@@ -400,6 +408,50 @@ function pick(f) {
 }
 
 const changed = readFileSync(0, "utf8").split("\n").map((l) => l.trim()).filter(Boolean);
+if (process.argv.includes("--packs")) {   // D2: the acceptance and test files that are, or read, a changed file
+  if (graph().failed) { console.error("select-suites --packs: the file list (git ls-files) could not be read"); process.exit(2); }
+  const via = new Map(), todo = [];
+  // Files under prototype/ (pick()'s own scope) and official-sources/ (acceptance/lib/pack2.ts reads the IRCC manifest);
+  // records, product/tools/ and workflows are read by no pack.
+  // Data files count too (Devin on #1337: C4.5 reads prototype/expected/source-text/*.txt); images and PDFs under
+  // prototype/ are seeded as well, and simply reach nothing when no file reads them.
+  const seedable = (f) => f.startsWith(`${PR}/`) || (f.startsWith(`${P}/official-sources/`) && !DOCS.test(f));
+  const testFile = (x) => x.startsWith(`${S}/acceptance/`) || x.startsWith(`${S}/tests/`) || x.startsWith(`${PR}/tests/`);
+  // A data file's folder is read by a pack or test whose code (comments stripped) names its last two folders, each as a
+  // quoted string of its own (join(…, "expected", "source-text", …)). Folder names inside longer paths, in run lines or
+  // import paths ("studio/tools/isolated.sh", "./lib/m3.ts", "tests/fixtures/x.json"), are no read (review round 4).
+  // Markdown never takes this rule: a note is read only by its file name, as before.
+  const folderReaders = (f) => { if (/\.md$/i.test(f)) return [];
+    const c = basename(dirname(f)), b = basename(dirname(dirname(f))), q = (w) => new RegExp(`["'\`]${esc(w)}["'\`]`);
+    let files = []; try { files = execSync(`git ls-files -c -- "${S}/acceptance" "${S}/tests" "${PR}/tests"`, { cwd: ROOT, encoding: "utf8", maxBuffer: 64 << 20 }).split("\n").filter((x) => x && CODE.test(x)); } catch { return []; }
+    return files.filter((x) => { const t = stripComments(read(x)); return q(c).test(t) && q(b).test(t); }); };
+  for (const f of changed) if (seedable(f) && !via.has(f)) { via.set(f, null); todo.push(f); }
+  const chain = (x) => { const c = []; for (let y = x; y; y = via.get(y)) c.push(basename(y)); return c.reverse().join(" ← "); };
+  const stop = (x) => RUNNERS.has(x) || x === MAIN || suites.get(basename(x)) === x;
+  const appCode = (x) => (x.startsWith(`${S}/api/src/`) && CODE.test(x)) || x.startsWith(`${S}/web/`);
+  // A deleted file: the files that still name it (by file name, or by its stem in an import path) use it.
+  // An import path that ends in its stem is an import edge (so a deleted API or web module is still followed; review m1).
+  const named = (f) => { const b = basename(f), stem = b.replace(/\.[^.]+$/, ""), imp = new RegExp(`/${esc(stem)}(?:\\.(?:js|ts|tsx|cjs|mjs))?["']`), nm = new RegExp(`(?<![A-Za-z0-9_.-])${esc(b)}(?![A-Za-z0-9_-])`);
+    let files = []; try { files = execSync(`git ls-files -c -- "${PR}"`, { cwd: ROOT, encoding: "utf8", maxBuffer: 256 << 20 }).split("\n").filter((x) => x && CODE.test(x)); } catch { return new Map(); }
+    return new Map(files.map((x) => [x, imp.test(read(x)) ? "import" : nm.test(read(x)) ? "name" : null]).filter(([, how]) => how)); };
+  while (todo.length) {
+    const y = todo.shift();
+    // --assume-deleted (its own check only): the seeds read as deleted, without touching the tree.
+    const gone = !existsSync(join(ROOT, y)) || (process.argv.includes("--assume-deleted") && via.get(y) === null);
+    const users = gone ? named(y) : usersOf(y);
+    if (via.get(y) === null && !CODE.test(y)) for (const x of folderReaders(y)) if (!users.has(x)) users.set(x, "folder");
+    for (const [x, how] of users) {
+      if (via.has(x) || (RUNNERS.has(x) && how === "folder")) continue;
+      // Through API and web code only by imports: a file that names an endpoint's module or lists its folder is no read.
+      // ... except a pack or test that reads the app file as text (Devin on #1337: C2.12 and C11.1 read App.tsx's routes).
+      if (appCode(y) && how !== "import" && !testFile(x)) continue;
+      via.set(x, y);
+      if (!stop(x)) todo.push(x);
+    }
+  }
+  for (const x of via.keys()) if (x.startsWith(`${S}/acceptance/`) || x.startsWith(`${S}/tests/`)) console.log(`${x}\t${chain(x)}`);
+  process.exit(0);
+}
 const why = new Map(), alls = [], browserWhy = [];
 const add = (n, r) => { if (!why.has(n)) why.set(n, []); if (!why.get(n).includes(r)) why.get(n).push(r); };
 for (const f of changed) {

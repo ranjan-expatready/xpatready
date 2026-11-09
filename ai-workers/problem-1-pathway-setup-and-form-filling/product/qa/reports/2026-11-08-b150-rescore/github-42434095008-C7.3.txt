@@ -1,0 +1,4 @@
+nightly run 42434095008 (workflow_dispatch by the tech lead, head 152759210 = merge of #1314, data=checkpoint), job 128589116871 packs (C7.3), conclusion success. Lines from the job log:
+Gate B: the PR names C7.3; claims Works for none (no bug check).
+    C7.3.test.ts on the checkpoint: exit 0, 14/14 passed (80 s: copy 3, Load the configured checkpoint 58, run 19)
+Gate B: passed.

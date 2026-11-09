@@ -1,0 +1,41 @@
+qa probe c102_family.mts on 1cf6e1d1f (= main 0b4ede86b + qa records), copy qa_r309f :4470, start Sun Nov  8 23:02:47 IST 2026
+NOTICE:  database "xr_studio_qa_r309f" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_r309f on http://localhost:4470 (xr_studio_qa_r309f), stops itself in 40 min
+reset 201
+load 201
+loaded Sun Nov  8 23:04:00 IST 2026
+QA-309 family probe — every person's Online IMM 5257: every section ticked, is the item done?
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+FILLED true
+BEFORE {"name":"Sample Client A","channel":"ONLINE","state":"to_do","reason":"Every answer is ready to enter in the portal; 9 of 9 sections still to tick \"Entered in the portal\": Personal details, National identity document, US PR card, Contact information, Details of visit to Canada, Education, Employment, Background information, Signature."}
+SECTIONS {"name":"Sample Client A","n":9,"waiting":[],"answers":["Personal details:34","National identity document:1","US PR card:1","Contact information:8","Details of visit to Canada:8","Education:0","Employment:7","Background information:12","Signature:1"]}
+PASS  Sample Client A: nothing waits once every fact is answered and confirmed
+PASS  Sample Client A: every section ticked (201) — [201,201,201,201,201,201,201,201,201]
+AFTER {"name":"Sample Client A","state":"done","reason":"Every section is entered in the portal, with every answer confirmed and current."}
+PASS  Sample Client A: the item reads Done — {"id":"6281ba94-3193-48cd-b0c0-b64bf0f334b2","kind":"form","filing":"ed224b98-8ce7-49e5-b6c7-0b5dfeb85d42","subject":"cfb0eaab-c9d4-4c20-a431-2d4522f606da","person":"Sample Client A","version":1,"form":"IMM 5257","channel":"ONLINE","line_channel":"ONLINE","acc
+BEFORE {"name":"Sample Spouse A","channel":"ONLINE","state":"to_do","reason":"Every answer is ready to enter in the portal; 9 of 9 sections still to tick \"Entered in the portal\": Personal details, National identity document, US PR card, Contact information, Details of visit to Canada, Education, Employment, Background information, Signature."}
+SECTIONS {"name":"Sample Spouse A","n":9,"waiting":[],"answers":["Personal details:34","National identity document:1","US PR card:1","Contact information:8","Details of visit to Canada:8","Education:0","Employment:7","Background information:12","Signature:1"]}
+PASS  Sample Spouse A: nothing waits once every fact is answered and confirmed
+PASS  Sample Spouse A: every section ticked (201) — [201,201,201,201,201,201,201,201,201]
+AFTER {"name":"Sample Spouse A","state":"done","reason":"Every section is entered in the portal, with every answer confirmed and current."}
+PASS  Sample Spouse A: the item reads Done — {"id":"fe858a2f-2008-45ee-a668-2d463b618de2","kind":"form","filing":"e8cf47fa-b10c-479c-8da4-631c6d9ebb52","subject":"778d02e6-1f88-400d-8e83-33b685277168","person":"Sample Spouse A","version":1,"form":"IMM 5257","channel":"ONLINE","line_channel":"ONLINE","acc
+BEFORE {"name":"Sample Child A1","channel":"ONLINE","state":"to_do","reason":"Every answer is ready to enter in the portal; 9 of 9 sections still to tick \"Entered in the portal\": Personal details, National identity document, US PR card, Contact information, Details of visit to Canada, Education, Employment, Background information, Signature."}
+SECTIONS {"name":"Sample Child A1","n":9,"waiting":[],"answers":["Personal details:31","National identity document:1","US PR card:1","Contact information:8","Details of visit to Canada:8","Education:0","Employment:7","Background information:12","Signature:1"]}
+PASS  Sample Child A1: nothing waits once every fact is answered and confirmed
+PASS  Sample Child A1: every section ticked (201) — [201,201,201,201,201,201,201,201,201]
+AFTER {"name":"Sample Child A1","state":"done","reason":"Every section is entered in the portal, with every answer confirmed and current."}
+PASS  Sample Child A1: the item reads Done — {"id":"94284250-7494-4e5f-9da5-e237738a7295","kind":"form","filing":"d735d898-7e5e-4ad8-bee1-61b9fe634ed1","subject":"9fba8bd8-75dc-4ce8-8903-70e69a3befb0","person":"Sample Child A1","version":1,"form":"IMM 5257","channel":"ONLINE","line_channel":"ONLINE","acc
+BEFORE {"name":"Sample Child A2","channel":"ONLINE","state":"to_do","reason":"Every answer is ready to enter in the portal; 9 of 9 sections still to tick \"Entered in the portal\": Personal details, National identity document, US PR card, Contact information, Details of visit to Canada, Education, Employment, Background information, Signature."}
+SECTIONS {"name":"Sample Child A2","n":9,"waiting":[],"answers":["Personal details:31","National identity document:1","US PR card:1","Contact information:8","Details of visit to Canada:8","Education:0","Employment:7","Background information:12","Signature:1"]}
+PASS  Sample Child A2: nothing waits once every fact is answered and confirmed
+PASS  Sample Child A2: every section ticked (201) — [201,201,201,201,201,201,201,201,201]
+AFTER {"name":"Sample Child A2","state":"done","reason":"Every section is entered in the portal, with every answer confirmed and current."}
+PASS  Sample Child A2: the item reads Done — {"id":"565ef086-ccaf-4191-89aa-64c52ac2dc58","kind":"form","filing":"e7b9e353-5bf6-4f4e-9100-ae7c5ff0ef2c","subject":"e3f142f3-3552-4f80-a1d9-f0ff67e9a0d5","person":"Sample Child A2","version":1,"form":"IMM 5257","channel":"ONLINE","line_channel":"ONLINE","acc
+
+12/12 passed
+fill exit 0
+read exit 1  end Sun Nov  8 23:05:08 IST 2026

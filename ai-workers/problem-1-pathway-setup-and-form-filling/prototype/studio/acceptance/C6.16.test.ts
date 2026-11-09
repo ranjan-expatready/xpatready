@@ -26,7 +26,7 @@ type Msg = { kind: string; body: string; link: string | null };
 const inbox = async (address: string): Promise<Msg[]> => (await lcall("GET", `/demo/inbox?address=${encodeURIComponent(address)}`)).body?.messages ?? [];
 const tokenIn = (m: Msg[]) => /#t=([A-Za-z0-9_-]{43})/.exec(m.find((x) => x.kind === "link")?.link ?? "")?.[1] ?? "";
 const codeIn = (m: Msg[]) => (/code is (\d{3}) (\d{3})/.exec(m.find((x) => x.kind === "code")?.body ?? "") ?? []).slice(1).join("");
-type Q = { subjectId: string; fact: string; value_type: string; collected_from: string; section: string; group: string | null; options: { key: string }[] | null; answer: { id: string; value: unknown; confirmed: boolean; channel: string; by: string; why: string } | null; hidden: boolean };
+type Q = { subjectId: string; fact: string; value_type: string; collected_from: string; section: string; group: string | null; options: { key: string }[] | null; answer: { id: string; value: unknown; confirmed: boolean; channel: string; by: string; why: string; mark?: string } | null; hidden: boolean };
 const qs = (v: { sections?: { questions: Q[] }[] } | undefined) => (v?.sections ?? []).flatMap((s) => s.questions);
 const sqr = async (caseId: string) => (await call("GET", `/runtime/cases/${caseId}/questionnaire`, undefined, CLIENT)).body;
 
@@ -126,7 +126,7 @@ await main("C6.16", "Adult privacy and Send to …", async () => {
   // ---- 6: Partner confirms Client A's earlier answer: the same value saved again on the link becomes their own.
   const lv6 = (await lcall("GET", `/link/cases/${id}/people/${S}/questionnaire`, undefined, sess)).body;
   const byA = qs(lv6).find((q) => q.subjectId === S && q.fact === pq?.fact)?.answer;
-  ok("C6.16-6 pass: on the link, Client A's earlier answer shows \"answered by\" Client A and is not yet confirmed", !!byA && byA.by === CLIENT && byA.channel === "questionnaire" && !byA.confirmed && /confirms on their own link/.test(byA.why), byA);
+  ok("C6.16-6 pass: on the link, Client A's earlier answer shows \"answered by\" Client A and is not yet confirmed", !!byA && byA.by === CLIENT && byA.channel === "questionnaire" && !byA.confirmed && byA.mark === "by_principal" && /^Answered by the principal for Sample Partner/.test(byA.why), byA);
   const conf = await lcall("PUT", `/link/cases/${id}/people/${S}/answers/${pq?.fact}`, { value: byA?.value, expectedId: byA?.id ?? null }, sess);
   const after6 = qs((await lcall("GET", `/link/cases/${id}/people/${S}/questionnaire`, undefined, sess)).body).find((q) => q.subjectId === S && q.fact === pq?.fact)?.answer;
   ok("C6.16-6 pass: Confirm saves the same value on the link: a new answer of Partner's own, confirmed", conf.status === 200 && after6?.channel === "own_link" && after6?.confirmed === true && JSON.stringify(after6?.value) === JSON.stringify(byA?.value) && after6?.id !== byA?.id, after6);

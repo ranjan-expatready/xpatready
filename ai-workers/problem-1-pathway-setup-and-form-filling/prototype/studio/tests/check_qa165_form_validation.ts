@@ -65,4 +65,4 @@ const oui = read(asValidated(blank("imm5257e")), { "ApplicationValidatedFlag[0]"
 ok("IMM 5257 pass: the French flag (Oui) counts as passed", oui.passed && oui.flag === "Oui", oui);
 const none = read(blank("imm5707e"));
 ok("IMM 5707 fail: a form that keeps no Validate result never counts as validated from its file", !none.kept_by_form && !none.passed, none);
-summary();
+process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code; before, it always exited 0)

@@ -117,3 +117,6 @@ export function officerWords(i: { label: string; principal: string; adult: boole
   const what = st === "taken_back" ? `Taken back ${dayOf(i.link.voidedAt!)}` : st === "locked" ? `Locked after ${LINK_RULES.wrongTries} wrong codes` : st === "expired" ? `Link expired ${dayOf(i.link.expiresAt)}` : "Link replaced";
   return `${what}${i.keepPrivate ? ` · still private from ${i.principal}` : ` · answers by ${i.principal}`}${proven}`;
 }
+
+/** B128, B155: the person a part belongs to: a relative's key (`<person>/parent_1`, `<person>/sibling`) is that person's. */
+export const ownerOf = (about: string) => about.split("/")[0];

@@ -26,7 +26,7 @@ const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++
 
 // The view as /prepare sends it (api/src/case-prepare.ts), read loosely.
 type Src = { page: string; url: string; read: string };
-type Total = { line: string; label: string; family_max_cents: number; total_cents: number; why: string; source: Src };
+type Total = { line: string; label: string; basis?: string; family_max_cents: number; total_cents: number; why: string; source: Src };
 type Group = { id: string; kind: string; label: string; filings: string[]; totals: Total[]; total_cents: number | null };
 type Line = { filing: string; subject: string; key: string; line: string; amount_words: string; exempt: boolean; reason: string; waiting?: string; source_detail?: Src | null };
 type Filing = { id: string; label: string; owner?: { subject: string; label: string }; applicants: { subject: string; label: string; mode: string }[] };
@@ -98,6 +98,7 @@ ok("C6.12-25 BR-1 fail: no fee line shows under another person's filing (the chi
 const fh = await block(g0.id).locator("[data-fee-filing] th[scope=rowgroup]").allInnerTexts();
 ok("C6.12-25 BR-1 pass: each filing is named once, in the submission's own order", fh.join("|") === g0.filings.map((id) => v.filings.find((f) => f.id === id)?.label).join("|"), fh);
 const b0 = await bases(g0.id);
+ok("C6.12-25 BR-2 pass (B133): /prepare sends each total's basis, the fee table line's own", g0.totals.every((t) => t.basis === FEE_TABLE.lines.find((l) => l.key === t.line)?.basis), g0.totals.map((t) => [t.line, t.basis]));
 ok("C6.12-25 BR-2 pass (P-247): each fee names its basis once, on its totals line, the same as samples/fee-table.json (visitor visa: family maximum CAD 500 from 5; biometrics: CAD 170 from 2)", b0.length === 2 && b0.every((x) => !!x.basis && x.basis === tableBasis(x.line)) && b0.some((x) => /CAD 500 from 5 people/.test(x.basis ?? "")) && b0.some((x) => /CAD 170 from 2 people/.test(x.basis ?? "")), b0);
 ok("C6.12-25 BR-2 fail (challenge M1): no person's row carries a basis, so the CAD 100 rows (no maximum reached) and the under-14 child's CAD 0 row never read \"family maximum\"", shown.every((x) => x.basis === null) && (await block(g0.id).locator("[data-fee-line] th").allInnerTexts()).every((t) => !/maximum/i.test(t)), shown.map((x) => x.basis));
 const tl = await block(g0.id).locator("[data-fee-total-line]").allInnerTexts();
@@ -204,9 +205,15 @@ const bx = await bases(real.groups[0].id);
 ok("C6.12-25 BR-2 pass (P-247): a per-person-by-role fee reads \"Per person by role\" and a per-application fee \"Per application\" (the engine's words for each basis)",
   bx.length === 2 && bx[0].basis === "Per person by role" && bx[1].basis === "Per application" && bb.length > 0 && bb.every((r) => r.basis === null), bx);
 await p.unroute(`**/api/runtime/cases/${c2.id}/prepare*`);
-// BR-2 fail: a basis the page cannot read is never guessed (only the why shows).
-real = await serve(c2.id, (x) => ({ ...x, groups: x.groups.map((g) => ({ ...g, totals: g.totals.map((t) => ({ ...t, family_max_cents: 0, why: "A line priced some other way (test words)." })) })) }));
-ok("C6.12-25 BR-2 fail: a line whose basis cannot be read names none (no guessed basis)", (await block(real.groups[0].id).locator("[data-fee-basis]").count()) === 0 && (await block(real.groups[0].id).locator("[data-fee-line]").count()) > 0);
+// BR-2 fail: a basis the page does not know (or none) is never guessed (only the why shows), even with a maximum and words
+// that name one (B133: the field decides, not the old stopgap's family_max_cents and words).
+real = await serve(c2.id, (x) => ({ ...x, groups: x.groups.map((g) => ({ ...g, totals: g.totals.map((t, i) => ({ ...t, basis: i === 0 ? "per_position" : undefined, why: `${t.why} (per application; test words)` })) })) }));
+ok("C6.12-25 BR-2 fail (B133): a total whose basis the page does not know, or that carries none, names none, although its maximum and words would have named one", (await block(real.groups[0].id).locator("[data-fee-basis]").count()) === 0 && (await block(real.groups[0].id).locator("[data-fee-line]").count()) > 0 && real.groups[0].totals.some((t) => t.family_max_cents > 0));
+await p.unroute(`**/api/runtime/cases/${c2.id}/prepare*`);
+// B133 pass: the field decides over the words: words saying "(per application; …)" on a per-person-by-role total read "Per person by role".
+real = await serve(c2.id, (x) => ({ ...x, groups: x.groups.map((g) => ({ ...g, totals: g.totals.map((t) => ({ ...t, basis: "per_person_by_role", family_max_cents: 0, why: "2 × CAD 100 = CAD 200 (per application; no family maximum)." })) })) }));
+const fb = await bases(real.groups[0].id);
+ok("C6.12-25 BR-2 pass (B133): the page names the basis from the total's own basis field, never from its words", fb.length > 0 && fb.every((x) => x.basis === "Per person by role"), fb);
 await p.unroute(`**/api/runtime/cases/${c2.id}/prepare*`);
 // BR-6: a declared-only applicant (On the principal's application, not travelling) reads "Declared only: no fee".
 real = await serve(c2.id, (x) => ({ ...x, filings: x.filings.map((f, i) => i === 0 ? { ...f, applicants: [...f.applicants, { subject: "s-declared", label: "Sample Parent A (declared only)", mode: "declared_only" }] } : f) }));

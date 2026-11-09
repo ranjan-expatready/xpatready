@@ -12,11 +12,14 @@ import { noRetryOnRefusal, Questionnaire, useCaseView, type CanAdd, type CaseInf
 import { FormsPanel } from "./forms";
 import { ItemChannels } from "./item-channels"; // C11.6
 import { FindingsPanel } from "./findings";
+import { ReviewPage } from "./review";
 import { SubmissionPanel } from "./submission"; // C8.2
 import { DocumentsPanel } from "./checklist"; // C6.4 (a)
 import { CaseTeamChip, OpeningTeam, useFirm } from "./team";
 import { EmployerLinkFor, EmployerLinkLine } from "./employer";
 import { EligibilityCard, EligibilityPage } from "./eligibility";
+import { PeopleAndFilings } from "./filing-changes"; // C6.13
+import { ReleaseNotice } from "./release-update"; // C9.5
 import { OfficerPeoplePanel } from "./privacy"; // C6.16
 import type { OpenableRelease } from "../../../contracts/runtime";
 
@@ -71,6 +74,7 @@ export function RuntimeApp() {
           <Route path=":id" element={<CasePage />} />
           <Route path=":id/questionnaire" element={<ClientPage />} />
           <Route path=":id/eligibility" element={<EligibilityPage />} />
+          <Route path=":id/review" element={<ReviewPage />} />
           <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/cases">Back to cases</Link></Notice>} />
         </Routes>
       </main>
@@ -183,10 +187,10 @@ function CasePage() {
       <nav aria-label="Path" className="flex items-center gap-1 text-[13px] text-text-muted"><Link to="/cases" className="inline-flex items-center gap-1 hover:underline"><ArrowLeft className="size-3.5" aria-hidden />Cases</Link><span aria-hidden>›</span><span className="text-text">{c.reference}</span></nav>
       <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
         <div className="min-w-0 flex-1">
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><Pill tone="info" title={`Frozen when the case opened (${new Date(c.pin.pinned_at).toLocaleString("en-CA")}); a later release never changes this case`}>Release {c.pin.release_version}</Pill></h1>
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><Pill tone="info" title={c.pin.revision > 1 ? `Moved to this release on ${new Date(c.pin.pinned_at).toLocaleString("en-CA")}; a later release never changes this case until someone moves it` : `Frozen when the case opened (${new Date(c.pin.pinned_at).toLocaleString("en-CA")}); a later release never changes this case until someone moves it`}>{c.release?.label ?? `Release ${c.pin.release_version}`}</Pill></h1>
           {c.team ? <CaseTeamChip caseId={c.id} line={c.team} /> : null}
           {c.employer_link ? <div className="mt-1"><EmployerLinkLine link={c.employer_link} caseId={c.id} /></div> : null}
-          <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · {v.summary.confirmed} confirmed · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>
+          <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · {v.summary.answered - v.summary.confirmed} to confirm · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>
         </div>
         <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">
           <p className="font-medium">Client questionnaire</p>
@@ -194,23 +198,15 @@ function CasePage() {
           <Link to={`/cases/${c.id}/questionnaire`} onClick={() => setActor(c.client)} className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-medium text-text-link hover:underline">Open it as {client?.name ?? "the client"} (simulated)<ExternalLink className="size-3.5" aria-hidden /></Link>
         </div>
       </div>
-      <section aria-labelledby="people" className="rounded-xl border border-border bg-surface-raised">
-        <header className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
-          <h2 id="people" className="text-base font-semibold">People on this case</h2>
-          <span className="flex-1" />
-          {/* B115 (P-319): one Add button per role this case's release lets a person add, never a fixed list. */}
-          {(c.can_add ?? []).map((r) => <Button key={r.role} size="sm" variant="secondary" data-add-role={r.role} onClick={() => setAdding(r)}><UserPlus aria-hidden />Add {lower(r.label)}</Button>)}
-        </header>
-        <ul className="flex flex-wrap gap-2 px-4 py-3">
-          {people.map((p) => <li key={p.subject_id} className="flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><span className="text-xs text-text-muted">{roleOf(p)}</span>{p.co_files ? <Pill title="Their forms are sent with the principal applicant's application, never on their own">Sent with the principal's application</Pill> : p.applies ? null : <Pill title="Not travelling: asked only what the principal's forms need about them">Not travelling</Pill>}</li>)}
-        </ul>
-      </section>
+      <ReleaseNotice caseId={c.id} />
+      {/* C6.13 (B135): people with their filings, Make principal, Remove filing and Add filing back. */}
+      <PeopleAndFilings caseId={c.id} people={c.people} canAdd={c.can_add ?? []} onAdd={setAdding} roleOf={roleOf} nameOf={nameOf} />
       <OfficerPeoplePanel caseId={c.id} />
       <DocumentsPanel caseId={c.id} caseSubject={c.people.find((p) => p.role === "case")?.subject_id ?? ""} nameOf={nameOf} />
       <EligibilityCard caseId={c.id} people={c.people} />
       <ItemChannels caseId={c.id} />
       <FormsPanel caseId={c.id} />
-      <FindingsPanel caseId={c.id} people={c.people} />
+      <FindingsPanel caseId={c.id} people={c.people} openLink={`/cases/${c.id}/review`} />
       <SubmissionPanel caseId={c.id} />
       <div id="agent-view" className="scroll-mt-4 space-y-3"><h2 id="agent-view-h" className="text-base font-semibold" data-agent-view-h>Agent view</h2>
       <Questionnaire caseId={c.id} mode="agent" /></div>

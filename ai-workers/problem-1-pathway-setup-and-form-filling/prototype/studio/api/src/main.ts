@@ -5,6 +5,7 @@ import { LinesBulk, LinesBulkController } from "./lines-bulk.ts";
 import { PersonChecklists, PersonChecklistsController } from "./person-checklist.ts";
 import { WhoFills, WhoFillsController } from "./who-fills.ts";
 import { DocumentSupplies, DocumentSuppliesController } from "./document-supplies.ts"; // C4.5
+import { DocumentSets, DocumentSetsController } from "./document-sets.ts"; // C6.15
 import { OfficialPagesController, OfficialPagesService } from "./official-pages.ts";
 import "reflect-metadata";
 import { oneAtATime } from "./form-uses.ts";
@@ -50,6 +51,7 @@ import { MAX_DOCUMENT_MB } from "../../contracts/documents.ts";
 import { StartSetup, StartSetupController } from "./start-setup.ts";
 import { LibrarySources, LibrarySourcesController, noFreeAdd } from "./library-sources.ts";
 import { registerFeatures } from "./features.ts";
+import { FieldScopeController, FieldScopes } from "./field-scope.ts"; // C3.16: the library's "Asked about" choice
 
 type H = string | undefined;
 
@@ -188,6 +190,9 @@ class ProblemErrors implements ExceptionFilter {
         // C6.4 (break m5): a checklist line takes one PDF, JPEG or PNG of up to 20 MB, worded with its own limits.
         if (/\/checklist-lines\/[^/]+\/documents\/?$/.test(String(host.switchToHttp().getRequest()?.path ?? "")))
           return send(413, "Too large", many ? "Send one file at a time. Nothing was stored." : `The file is larger than ${MAX_DOCUMENT_MB} MB. Nothing was stored.`);
+        // B149 (review M2, break m1): IRCC's Transaction Approved page, one PDF, JPEG or PNG of up to 20 MB (any letter case, as Express routes).
+        if (/\/filings\/[^/]+\/record\/fee-receipt\/?$/i.test(String(host.switchToHttp().getRequest()?.path ?? "")))
+          return send(413, "Too large", many ? "Send one file: the Transaction Approved page. Nothing was stored." : `The file is larger than ${MAX_DOCUMENT_MB} MB: save the Transaction Approved page as a smaller PDF, JPEG or PNG. Nothing was stored.`);
         if (/\/form-copies\/[^/]+\/validated\/?$/.test(String(host.switchToHttp().getRequest()?.path ?? "")))
           return send(413, "Too large", many ? "Send only the one validated PDF you saved from Adobe. Nothing was recorded." : `The file is larger than ${MAX_VALIDATED_MB} MB: send the validated PDF of this form. Nothing was recorded.`);
         const files = MAX_FILES, mb = MAX_BYTES / 1024 / 1024;
@@ -212,7 +217,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, FormMastersController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, DocumentSuppliesController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController, DraftQdController, RuleFactsController], providers: [LinesBulk, PqrDrafts, DraftQd, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, FormMasters, WhoFills, DocumentSupplies, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs, RuleFacts] })
+@Module({ controllers: [FieldScopeController, TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, FormMastersController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, DocumentSuppliesController, DocumentSetsController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController, DraftQdController, RuleFactsController], providers: [FieldScopes, LinesBulk, PqrDrafts, DraftQd, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, FormMasters, WhoFills, DocumentSupplies, DocumentSets, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs, RuleFacts] })
 class AppModule {}
 
 async function main() {

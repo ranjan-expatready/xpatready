@@ -4,7 +4,7 @@
 //   tsx studio/tests/check_c616_privacy.ts
 import { adultCheck, codeCheck, deadWords, linkState, maskAddress, normalAddress, normalCode, officerWords, overLimit, privateFrom, progressOf, progressWords, sendRefusal, wrongWords } from "../engine/runtime/privacy.ts";
 import { confirmation, OWN_LINK, type Answer } from "../engine/runtime/case.ts";
-import { CONFIRM_WORDS } from "../contracts/runtime.ts";
+import { byPrincipalFor, CONFIRM_WORDS } from "../contracts/runtime.ts";
 import { LINK_RULES, LINK_WORDS, LinkCode, LinkToken, SendLink, TakeBack, KeepPrivate } from "../contracts/person-link.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { recorder } from "./runtime/api.ts";
@@ -68,9 +68,10 @@ const s = { placements: [{ fact: "person.date_of_birth", section_id: "personal",
 const ans = (o: Partial<Answer>): Answer => ({ id: "a1", subjectId: "s-S", field: "person.date_of_birth", rowKey: null, value: "1987-02-11", status: "DECLARED", channel: "questionnaire", actor: "user-P", at: today.toISOString(), ...o });
 const who = { subjectId: "s-S", role: "spouse_or_partner" as const, label: "Partner", applies: true };
 const own = confirmation(s, ans({ channel: OWN_LINK, actor: "person:s-S" }), who, "1987-02-11", today);
-ok("C6.16 BR-6 pass: an answer saved on the person's own link counts as their own (confirmed)", own.confirmed && own.why === CONFIRM_WORDS.person_own, own);
+ok("C6.16 BR-6 pass: an answer saved on the person's own link counts as their own (confirmed)", own.confirmed && own.why === CONFIRM_WORDS.person_own && own.mark === "declared", own);
 const byP = confirmation(s, ans({}), who, "1987-02-11", today);
-ok("C6.16 BR-6 fail: the principal's answer for an adult is not confirmed until that adult confirms", !byP.confirmed && byP.why === CONFIRM_WORDS.by_principal, byP);
+// Main's P-411 words: the principal's answer is declared and fills the forms, marked "by the principal", not confirmed.
+ok("C6.16 BR-6 fail: the principal's answer for an adult is not confirmed until that adult confirms", !byP.confirmed && byP.mark === "by_principal" && byP.why === byPrincipalFor("Partner"), byP);
 ok("C6.16 BR-6 fail: an own-link channel never confirms a fact the officer confirms from a document", !confirmation(s, ans({ field: "person.uci", channel: OWN_LINK }), who, "1987-02-11", today).confirmed);
 
 // BR-7 (challenge m3): progress counted on the server.

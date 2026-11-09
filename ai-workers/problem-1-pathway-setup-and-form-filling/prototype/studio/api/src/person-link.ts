@@ -17,7 +17,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { MINOR } from "../../contracts/runtime.ts";
 import { KeepPrivate, LINK_RULES, LINK_WORDS, LinkCode, LinkToken, SendLink, TakeBack, type LinkOpened, type LinkSession, type PeoplePrivacy, type PersonLinkState, type PersonPrivacy } from "../../contracts/person-link.ts";
 import { caseView, OWN_LINK } from "../../engine/runtime/case.ts";
-import { adultCheck, codeCheck, deadWords, linkState, maskAddress, normalAddress, normalCode, officerWords, overLimit, progressOf, sendRefusal, wrongWords, type LinkRow } from "../../engine/runtime/privacy.ts";
+import { adultCheck, codeCheck, deadWords, ownerOf, linkState, maskAddress, normalAddress, normalCode, officerWords, overLimit, progressOf, sendRefusal, wrongWords, type LinkRow } from "../../engine/runtime/privacy.ts";
 import { actorOf, CaseRead, Db, fail, isDemoWorkspace, OpenRead, RUNTIME_ACTORS, Workspace, type Actor } from "./core.ts";
 import { Runtime, type Reached, type Writer } from "./runtime.ts";
 
@@ -311,7 +311,7 @@ export class PersonLinks {
   private async scoped(auth: H, caseId: string, subjectId: string, needConsent = true) {
     const sig = await this.signed(auth);
     if (caseId !== sig.link.caseId) fail("No such case.", HttpStatus.NOT_FOUND);
-    if (subjectId !== sig.link.subjectId) fail("Your link is for your own questions only.", HttpStatus.FORBIDDEN);
+    if (ownerOf(subjectId) !== sig.link.subjectId) fail("Your link is for your own questions only.", HttpStatus.FORBIDDEN); // their parents' parts too (B128)
     if (needConsent && !sig.link.consentedAt) problem(403, "Read this first", "Read who sees your answers first (Before you start), then continue to your questions.");
     const c = await this.r.reachByLink(caseId);
     const w: Writer = { id: `person:${subjectId}`, name: `The ${roleWords(sig.person.role)} (own link)`, officer: false, channel: OWN_LINK, own: subjectId };

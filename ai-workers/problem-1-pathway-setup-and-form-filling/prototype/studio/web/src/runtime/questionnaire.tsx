@@ -14,17 +14,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { historyGaps, type Period } from "../../../../contracts/history";
 import { EmployerCaseSource, LINKED_FILE, type EmployerLink } from "./employer";
+import { HouseholdReads, ScopeTag } from "./scope-tag"; // C3.16
 import { fillsText, groupLabel, inSentence, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 import type { ProgressOnly } from "../../../contracts/person-link";
 import { PrincipalPersonLine, PrivateProgress, usePeoplePrivacy } from "./privacy"; // C6.16
 
 /** role: any role the case's release lists (B115: the sponsor too); role_label is that role in the release's own words. */
-export type CasePerson = { subject_id: string; role: string; role_label?: string | null; label: string; applies: boolean; co_files?: boolean };
+export type CasePerson = { subject_id: string; role: string; role_label?: string | null; label: string; applies: boolean; co_files?: boolean;
+  /** C6.13 BR-3b: the client who answers, once roles were swapped (absent before any swap: the principal). */
+  client?: boolean };
 /** B115 (P-319): a role a person may add to this case, from its pinned release; has = how many the case has now. */
 export type CanAdd = { role: string; label: string; max: number; has: number };
 /** C6.11: the case team in the header (staff only; Sample firm, stand-in SI-9). */
 export type CaseTeamLine = { firm: { key: string; name: string; solo: boolean } | null; representative: { id: string; name: string; licence: { body: string; number: string } | null } | null; officers: { id: string; name: string }[] };
-export type CaseInfo = { id: string; reference: string; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; people: CasePerson[]; can_add?: CanAdd[]; team?: CaseTeamLine; employer_link?: EmployerLink };
+export type CaseInfo = { id: string; reference: string; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; release?: { label: string }; people: CasePerson[]; can_add?: CanAdd[]; team?: CaseTeamLine; employer_link?: EmployerLink };
 /** private_people (C6.16, client view only): people kept private from the client, with their progress only. */
 export type View = QuestionnaireView & { case: CaseInfo; private_people?: { subject_id: string; label: string; progress: ProgressOnly }[] };
 type Section = ViewSection;
@@ -141,7 +144,7 @@ export function QuestionField({ q, draft, onChange, errors, warnings = [], idBas
   const note = officer ? q.note : null; // a configuration note ("no answer list yet") is for the officer, not the client
   const hint = [q.required ? null : "Optional", note].filter(Boolean).join(" · ");
   const control = { id: idBase, "aria-invalid": invalid || undefined, "aria-describedby": invalid || warnings.length || hint ? noteId : undefined };
-  const label = <>{q.label}{q.required || /\(optional\)\s*$/i.test(q.label) ? null : <span className="font-normal text-text-muted"> (optional)</span>}</>;
+  const label = <>{q.label}{q.required || /\(optional\)\s*$/i.test(q.label) ? null : <span className="font-normal text-text-muted"> (optional)</span>}<ScopeTag q={q} /></>;
   const listId = q.countries ? `${idBase}-countries` : undefined;
   const countryList = q.countries ? <datalist id={listId}>{q.countries.map((c) => <option key={c} value={c} />)}</datalist> : null;
   const notes = (
@@ -374,10 +377,18 @@ export function Questionnaire({ caseId, mode }: { caseId: string; mode: Mode }) 
   return mode === "sqr" ? <Sqr view={byPerson(view.data!)} /> : <AgentView view={byPerson(view.data!)} />;
 }
 
+/** B128, B155: whom else the client answers for: the parents, and the brothers and sisters, the forms ask about. */
+function relativesWords(view: View) {
+  const rel = view.sections.filter((x) => x.subjectId.includes("/"));
+  const parents = rel.some((x) => !x.group), lists = rel.some((x) => x.group);
+  return parents || lists ? `, and for the ${[parents ? "parents" : null, lists ? "brothers and sisters" : null].filter(Boolean).join(", ")} its forms ask about` : "";
+}
+
 /** Parts person by person, in the case's order (the application, the principal, then the family), each person's
  *  sections in the release's order: the client finishes one person before "answering for" the next. */
 export function byPerson(v: View): View {
-  const at = (id: string) => v.case.people.findIndex((p) => p.subject_id === id);
+  // B128 (QA-153): a parent a form describes (`<person>/parent_1`) comes right after the person whose parent they are.
+  const at = (id: string) => { const [own, relative] = id.split("/"); return v.case.people.findIndex((p) => p.subject_id === own) + (relative ? 0.5 : 0); };
   return { ...v, sections: [...v.sections].sort((a, b) => at(a.subjectId) - at(b.subjectId)) };
 }
 
@@ -416,15 +427,16 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
   // C6.16: a person kept private from the client has no parts here, only their progress; Send to … sits under each adult.
   const privacy = usePeoplePrivacy(link ? null : view.case.id);
   const priv = view.private_people ?? [];
-  const at = (id: string) => view.case.people.findIndex((p) => p.subject_id === id);
+  const at = (id: string) => { const [own, relative] = id.split("/"); return view.case.people.findIndex((p) => p.subject_id === own) + (relative ? 0.5 : 0); }; // B128: a relative after their person
   const people = [...new Map<string, string>([...parts.map((s) => [s.subjectId, s.about_label] as const), ...priv.map((p) => [p.subject_id, p.label] as const)]).entries()].sort((a, b) => at(a[0]) - at(b[0]));
   const lineOf = (id: string) => privacy.data?.people.find((p) => p.subject_id === id);
   return (
     <div className="mx-auto max-w-xl space-y-5">
       <div>
         <h1 className="text-2xl font-semibold">{link ? "Your questions" : "Client questionnaire"}</h1>
-        <p className="mt-1 text-sm text-text-muted">{link ? `Case ${view.case.reference}. You answer your own questions. Each answer is saved when you press Save; to come back later, open your link again and ask for a new code.` : `Case ${view.case.reference}. You answer for everyone travelling on this application. Each answer is saved when you press Save; you can stop and come back at any time.`}</p>
+        <p className="mt-1 text-sm text-text-muted">{link ? `Case ${view.case.reference}. You answer your own questions. Each answer is saved when you press Save; to come back later, open your link again and ask for a new code.` : <>Case {view.case.reference}. You answer for everyone travelling on this application{relativesWords(view)}. Each answer is saved when you press Save; you can stop and come back at any time.</>}</p>
       </div>
+      <RecordedForYou view={view} open={open} />
       <div className="rounded-xl border border-border bg-surface-raised p-4">
         <p className="text-sm font-medium">{done} of {parts.length} parts done</p>
         <div className="mt-2 h-2 rounded-full bg-text/10" role="progressbar" aria-valuemin={0} aria-valuemax={parts.length} aria-valuenow={done} aria-label="Parts done"><div className="h-2 rounded-full bg-primary" style={{ width: `${(100 * done) / Math.max(parts.length, 1)}%` }} /></div>
@@ -433,6 +445,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
       {people.map(([id, label]) => (
         <section key={id} aria-labelledby={`p-${id}`}>
           <h2 id={`p-${id}`} className="mb-2 text-base font-semibold [overflow-wrap:anywhere]">{link ? "About you" : `About ${inSentence(label)}`}</h2>
+          {link ? null : <div className="mb-2"><HouseholdReads view={view} subjectId={id} words={{ who: WHO, when, shown }} /></div>}
           {!link && lineOf(id) ? <PrincipalPersonLine caseId={view.case.id} person={lineOf(id)!} /> : null}
           {priv.some((p) => p.subject_id === id) ? (lineOf(id) ? null : <PrivateProgress label={label} progress={priv.find((p) => p.subject_id === id)!.progress} />) : (
           <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface-raised">
@@ -463,7 +476,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   const asked = part.questions.filter((q) => !q.hidden);
   const single = asked.filter((q) => !q.group), grouped = asked.filter((q) => q.group);
   const rows = grouped[0]?.rows ?? [];
-  const cells = React.useMemo(() => part.questions.filter((q) => !q.hidden).flatMap((q): Cell[] => (q.group ? q.rows.map((r) => ({ q, row: r.row })) : [{ q }])), [part]);
+  const cells = React.useMemo(() => { const group = part.questions.filter((q) => !q.hidden && q.group); return part.questions.filter((q) => !q.hidden).flatMap((q): Cell[] => (q.group ? q.rows.filter((r) => inEntry(q, r.row, group)).map((r) => ({ q, row: r.row })) : [{ q }])); }, [part]);
   const [adding, setAdding] = React.useState(false);
   const d = useDrafts(cells);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -533,7 +546,12 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   async function removeRow(row: string) {
     try { await io.removeRow(caseId, part.subjectId, row); setRemoving(null); await refresh(); toast.push({ tone: "ok", text: "Entry removed. Its answers are kept in the case history." }); } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
   }
-  const field = (q: Question, row?: string) => (
+  const field = (q: Question, row?: string) => cellAnswer(q, row)?.awaits_client ? (
+    <div key={keyOf(q, row)} className="space-y-2">
+      <ReconfirmLine caseId={caseId} q={q} a={cellAnswer(q, row)!} changed={d.dirty.some((x) => x.q === q && x.row === row)} />
+      <QuestionField q={q} idBase={`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setStatus("idle"); }} errors={problemsOf(q, row)} warnings={warningsOf(q, row)} />
+    </div>
+  ) : (
     <React.Fragment key={keyOf(q, row)}>
       <QuestionField q={q} idBase={`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setStatus("idle"); }} errors={problemsOf(q, row)} warnings={warningsOf(q, row)} />
       {/* C6.16 (BR-6, P-78): on the person's own link, an answer the principal gave waits for them: Confirm keeps it as theirs. */}
@@ -566,9 +584,11 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
 
       <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold outline-none [overflow-wrap:anywhere]">{part.title}</h1>
       <p className="mt-1 text-sm [overflow-wrap:anywhere]">
-        {io.mode === "link" ? "These are your own questions. The person who started the application sees how far you have got, not your answers." : person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{person && person.role !== "principal" ? ` (${ROLE_WORDS[person.role] ?? (person.role_label ?? person.role.replace(/_/g, " ")).toLowerCase()})` : " (you)"}.</>}
+        {io.mode === "link" ? "These are your own questions. The person who started the application sees how far you have got, not your answers." : person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{inSentence(part.about_label)}</b>{part.subjectId.includes("/") ? (part.group ? " (not on this application)" : " (a parent, not on this application)") : person && !(person.client ?? person.role === "principal") ? ` (${ROLE_WORDS[person.role] ?? (person.role_label ?? person.role.replace(/_/g, " ")).toLowerCase()})` : " (you)"}.</>}
       </p>
-      {confirmWords.length === 1 ? <p className="mt-1 text-xs text-text-muted">{confirmWords[0]}.</p> : null}
+      {/* B150 (P-411): who gave this part's answers, each kind once (the principal's for an adult, staff's), so a mixed part still says it. */}
+      {confirmWords.length === 1 ? <p className="mt-1 text-xs text-text-muted" data-answer-words>{confirmWords[0]}.</p>
+        : confirmWords.length > 1 ? <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-text-muted" data-answer-words>{confirmWords.map((w) => <li key={w}>{w}.</li>)}</ul> : null}
 
       <form className="mt-4 space-y-5" onSubmit={(e) => { e.preventDefault(); void saveAndContinue(); }} noValidate>
         {single.map((q) => field(q))}
@@ -585,7 +605,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
                   ) : <Button type="button" size="sm" variant="ghost" onClick={() => setRemoving(r.row)}><Trash2 aria-hidden />Remove</Button>}
                 </div>
                 {!r.fits ? <Notice tone="warn" title="This entry does not fit on the form">The form has room for {grouped[0].capacity} entries. Keep it here: your officer adds it on an extra sheet.</Notice> : null}
-                {grouped.map((q) => field(q, r.row))}
+                {grouped.filter((q) => inEntry(q, r.row, grouped)).map((q) => field(q, r.row))}
               </section>
             ))}
             {rows.length ? <Button type="button" variant="secondary" className="h-11" busy={adding} onClick={() => void addRow()}><Plus aria-hidden />Add another</Button> : null}
@@ -598,6 +618,75 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
       </form>
     </div>
   );
+}
+
+/** C6.18 (P-244): re-confirm one background answer the case officer recorded (the version shown), as the client. */
+function useReconfirm(caseId: string) {
+  const qc = useQueryClient(), toast = useToast();
+  const [busy, setBusy] = React.useState<string | null>(null);
+  async function reconfirm(a: Answer) {
+    setBusy(a.id);
+    // Break M1 on #1246: the value the client sees goes with it; a changed answer is refused (it is saved instead).
+    try { const r = await api<{ message: string }>(`/runtime/cases/${caseId}/answers/${a.id}/reconfirm`, { method: "POST", json: { value: a.value } }); toast.push({ tone: "ok", text: r.message }); }
+    catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
+    await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
+    setBusy(null);
+  }
+  return { busy, reconfirm };
+}
+
+/** C6.18: above a question the case officer answered for the client: who, when, and "This is right" (or change it below). */
+function ReconfirmLine({ caseId, q, a, changed }: { caseId: string; q: Question; a: Answer; changed: boolean }) {
+  const { busy, reconfirm } = useReconfirm(caseId);
+  // Break M1 on #1246: once the client changed it on screen, only Save keeps it (theirs); break M2: a problem is fixed first.
+  if (changed || a.problems.length) return (
+    <p className="rounded-lg border border-warn/50 bg-warn/5 px-3 py-2 text-sm" data-reconfirm={q.fact}>{changed ? "You changed what your case officer recorded. Press Save and continue to keep your answer." : `Your case officer recorded an answer that needs a fix: ${a.problems[0]} Answer it below and save.`}</p>
+  );
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warn/50 bg-warn/5 px-3 py-2 text-sm" data-reconfirm={q.fact}>
+      <span className="min-w-0 flex-1">Your case officer recorded <b>{shown(q, a.value)}</b> on {a.officer ? when(a.officer.at) : "your behalf"}. Is it right? If not, change it below and save.</span>
+      <Button type="button" size="sm" variant="secondary" busy={busy === a.id} onClick={() => void reconfirm(a)} aria-label={`This is right: ${q.label}`}><Check aria-hidden />This is right</Button>
+    </div>
+  );
+}
+
+/** C6.18: the client's list of every background answer their case officer recorded and they have not re-confirmed yet,
+ *  first on their questionnaire: each is checked one by one (This is right, or Change in its part), before signing. */
+function RecordedForYou({ view, open }: { view: View; open: (i: number) => void }) {
+  const { busy, reconfirm } = useReconfirm(view.case.id);
+  const items = view.sections.flatMap((s, i) => s.questions.flatMap((q) => (q.group ? q.rows.map((r) => ({ q, a: r.answer, i, s })) : [{ q, a: q.answer, i, s }])))
+    .filter((x): x is { q: Question; a: Answer; i: number; s: Section } => !!x.a?.awaits_client);
+  if (!items.length) return null;
+  return (
+    <section aria-labelledby="recorded-for-you" className="rounded-xl border-2 border-warn bg-surface-raised p-4" data-recorded-for-you>
+      <h2 id="recorded-for-you" className="text-base font-semibold">Check what your case officer recorded ({items.length})</h2>
+      <p className="mt-1 text-sm text-text-muted">{items.length === 1 ? "Your case officer wrote down this answer for you. It is on your draft forms now; check it: nothing is printed or signed until you say it is right." : "Your case officer wrote down these answers for you. They are on your draft forms now; check each one: nothing is printed or signed until you say each is right."}</p>
+      <ul className="mt-3 divide-y divide-border">
+        {items.map(({ q, a, i, s }) => (
+          <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm [overflow-wrap:anywhere]">{q.label}</p>
+              <p className="text-sm font-semibold">{shown(q, a.value)}</p>
+              <p className="text-xs text-text-muted">{s.about_label === "The application" ? "For the application" : `About ${inSentence(s.about_label)}`} · recorded by your case officer{a.officer ? ` on ${when(a.officer.at)}` : ""}</p>
+            </div>
+            <span className="flex gap-2">
+              {a.problems.length ? <span className="max-w-56 text-xs text-text-warn">Needs a fix: {a.problems[0]}</span> : <Button size="sm" variant="secondary" busy={busy === a.id} onClick={() => void reconfirm(a)} aria-label={`This is right: ${q.label}${s.about_label === "The application" ? "" : `, ${s.about_label}`}`}><Check aria-hidden />This is right</Button>}
+              <Button size="sm" variant="ghost" onClick={() => open(i)} aria-label={`Change: ${q.label}${s.about_label === "The application" ? "" : `, ${s.about_label}`}`}><Pencil aria-hidden />Change</Button>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** B155: whether an entry asks this question: always, unless the form has no box for it in that entry's row while the
+ *  entry itself fits (a brother or sister's "accompanies you" Yes/No is on one row of IMM 5645's Section C only). An entry
+ *  that does not fit at all keeps every question (it goes on an extra sheet). Groups whose questions share their rows
+ *  (every other group) are unchanged. */
+function inEntry(q: Question, row: string, group: Question[]) {
+  const own = q.rows.find((x) => x.row === row)?.fits, entry = group.some((x) => x.rows.find((r) => r.row === row)?.fits);
+  return own !== false || !entry;
 }
 
 /** A repeating group with no entries (Lead, break M3, P-71/P-72): add an entry, or say none apply; "none apply" is an
@@ -622,7 +711,7 @@ function NoneApply({ caseId, s, compact, onAdd, adding }: { caseId: string; s: S
   }
   if (na?.value) return (
     <div className={cn("flex flex-wrap items-center gap-2", compact ? "text-[13px]" : "rounded-lg border border-border bg-surface-raised p-3 text-sm")}>
-      <Check className="size-4 text-text-ok" aria-hidden /><span className="font-medium">None apply</span><ConfirmPill a={na} />
+      <Check className="size-4 text-text-ok" aria-hidden /><span className="font-medium">None apply</span><ConfirmPill a={na} about={s.about_label} />
       {compact ? <span className="text-xs text-text-muted">{na.answered ? `${CHANNEL[na.answered.channel] ?? "answered"} · ${WHO[na.answered.by] ?? "someone"} · ${when(na.answered.at)} · confirmed by ${WHO[na.by] ?? "someone"} ${when(na.at)}` : `${CHANNEL[na.channel] ?? "answered"} · ${WHO[na.by] ?? "someone"} · ${when(na.at)}`}</span> : null}
       <span className="flex-1" />
       <Button ref={change} type="button" size="sm" variant="secondary" className={compact ? "" : "h-11"} busy={busy} onClick={() => void say(false)} aria-label={`Entries apply after all: ${whose}`}>Entries apply after all</Button>
@@ -672,13 +761,27 @@ const fromFirm = (a: Answer | null | undefined) => a?.channel === FIRM_RECORD;
 /** QA-293: the representative's tab (the view's "representative" subject): their details come only from the firm record,
  *  so one it does not fill (on this release's keys, or not at all) says so and offers no Add (the route refuses it, 422). */
 const aboutRepresentative = (q: Question) => q.subjectId === "representative";
-function ConfirmPill({ a }: { a: Answer }) {
+/** `about`: whose answer it is (the person's name), for "Answered by the principal for <name>" (P-411 (1)). `value`: the
+ *  answer as shown; a declaration made reads "Declared" itself, so its pill never repeats the word (B150, check_c44). */
+function ConfirmPill({ a, about, value }: { a: Answer; about: string; value?: string }) {
   if (fromFirm(a)) return <Pill tone="ok" title="Filled from the representative of record's firm record (Sample). It changes in the firm record, not on the case."><Check className="size-3" aria-hidden />From the firm record</Pill>;
+  // P-242, P-411: every answer fills the forms at once; the pill says who gave it and whether it is still to confirm.
+  // C6.18 (P-244): a background answer staff recorded waits for the client, whatever the officer did with it.
+  if (a.awaits_client) return <Pill tone="warn" title={a.why}>Waits for the client</Pill>;
   const tone = a.status === "VERIFIED" ? "ok" : a.confirmed ? "info" : "warn";
-  const text = a.status === "VERIFIED" ? "Confirmed" : a.confirmed ? "Counts as confirmed" : /principal/.test(a.why) ? "Answered by the principal" : "To confirm";
+  // C6.13 (break M1): after Make principal the client answered for this adult, so the words name the client.
+  const text = a.status === "VERIFIED" ? "Confirmed" : a.mark === "by_principal" ? `Answered by the ${/^Answered by the client/.test(a.why) ? "client" : "principal"} for ${about}` : a.mark === "by_staff" ? "Entered by staff · to confirm" : a.confirmed ? "Declared" : "Declared · to confirm";
+  if (text === "Declared" && value === "Declared") return null;
   return <Pill tone={tone} title={a.why}>{tone === "warn" ? null : <Check className="size-3" aria-hidden />}{text}</Pill>;
 }
-const CHANNEL: Record<string, string> = { own_link: "their own link", questionnaire: "questionnaire", agent_view: "Agent view", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case" };
+/** C6.18 (P-244): "Officer" on a background answer staff recorded (by phone or in person): who, when, and what follows. */
+function OfficerPill({ a }: { a: Answer }) {
+  if (!a.officer) return null;
+  const again = a.channel === "client_reconfirm" ? a.at : a.answered?.channel === "client_reconfirm" ? a.answered.at : null;
+  const title = `Recorded by ${WHO[a.officer.by] ?? "a member of staff"} on ${when(a.officer.at)}, as the client told them. ${a.awaits_client ? "Background answers are the client's: it is on the draft forms now, and nothing is printed or signed until the client re-confirms it." : again ? `The client re-confirmed it on ${when(again)}.` : "The client re-confirmed it."}`;
+  return <Pill tone="info" title={title}>Officer</Pill>;
+}
+const CHANNEL: Record<string, string> = { own_link: "their own link", questionnaire: "questionnaire", agent_view: "Agent view", client_reconfirm: "re-confirmed by the client", confirm_section: "confirmed section", firm_record: "firm record", [LINKED_FILE]: "employer case" };
 /** C1.3: when the value was copied from the employer case (itself, or the answer a confirmation confirmed). */
 const linkedAt = (a: Answer) => a.channel === LINKED_FILE ? a.at : a.answered?.channel === LINKED_FILE ? a.answered.at : null;
 /** C6.16: an answer saved on a person's own link names them by their role in the case ("person:<subject id>"). */
@@ -732,6 +835,7 @@ function AgentView({ view }: { view: View }) {
       <div className="min-w-0 space-y-4">
         <p className="text-[13px] text-text-muted">Click Edit on any answer to change it. A change updates every form that uses it, with a message, and needs the section confirmed again.</p>
         {view.checks.filter((c) => c.subjectId === who && !c.section).map((c) => <Notice key={c.id} tone="warn" title="Check">{c.message}</Notice>)}
+        <HouseholdReads view={view} subjectId={who} words={{ who: WHO, when, shown }} onChange={(to, fact) => { setWho(to); requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById(lineId(to, fact))?.focus())); }} />
         {mine.map((s) => <AgentSection key={`${s.subjectId}|${s.section}`} view={view} s={s} edit={openEdit} />)}
       </div>
     </TabsContent>
@@ -753,15 +857,18 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
   // With entries, the group's earlier answer is not shown, so it is not sent as seen (review m6).
   const shownGroup = s.group && s.group.rows === 0 ? s.group.none_apply : null;
   // C7.7: firm-record answers are never sent as seen (they are not the case's to confirm).
-  const seen = [...s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer) : [q.answer])).filter((a) => !fromFirm(a)).map((a) => a?.id), shownGroup?.id].filter((x): x is string => !!x);
-  const open = [...s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer) : [q.answer])), shownGroup].filter((a) => a && a.status !== "VERIFIED").length;
+  // B155 (break m2 on #1367): only the cells an entry shows (inEntry) are sent as seen: a hidden answer is never confirmed unseen.
+  const shownAnswers = (q: Question) => (q.group ? q.rows.filter((r) => inEntry(q, r.row, grouped)).map((r) => r.answer) : [q.answer]);
+  const seen = [...s.questions.flatMap(shownAnswers).filter((a) => !fromFirm(a)).map((a) => a?.id), shownGroup?.id].filter((x): x is string => !!x);
+  // Review m2 on #1246: an answer waiting for the client is not the officer's to confirm, so it never makes this the main action.
+  const open = [...s.questions.flatMap(shownAnswers), shownGroup].filter((a) => a && a.status !== "VERIFIED" && !a.awaits_client).length;
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", view.case.id] });
   const checks = view.checks.filter((c) => c.subjectId === s.subjectId && c.section === s.section);
   async function confirm() {
     setBusy(true);
     try {
-      const r = await api<{ confirmed: number; missing: string[] }>(`/runtime/cases/${view.case.id}/sections/${s.section}/confirm`, { method: "POST", json: { subjectId: s.subjectId, seen } });
-      toast.push({ tone: checks.length ? "info" : "ok", text: `${s.title} for ${inSentence(s.about_label)}: ${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}${checks.length ? ` ${checks.length} check${checks.length === 1 ? "" : "s"} still open: ${checks.map((c) => c.message).join(" ")}` : ""}` });
+      const r = await api<{ confirmed: number; missing: string[]; awaiting_client?: number }>(`/runtime/cases/${view.case.id}/sections/${s.section}/confirm`, { method: "POST", json: { subjectId: s.subjectId, seen } });
+      toast.push({ tone: checks.length ? "info" : "ok", text: `${s.title} for ${inSentence(s.about_label)}: ${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.${r.awaiting_client ? ` ${r.awaiting_client} recorded by staff wait${r.awaiting_client === 1 ? "s" : ""} for the client to re-confirm.` : ""}${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}${checks.length ? ` ${checks.length} check${checks.length === 1 ? "" : "s"} still open: ${checks.map((c) => c.message).join(" ")}` : ""}` });
     } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
     await refresh();
     setBusy(false);
@@ -778,11 +885,11 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
     );
     return (
       <div key={keyOf(q, row)} id={lineId(s.subjectId, q.fact, row)} tabIndex={-1} className="grid scroll-mt-4 gap-x-4 gap-y-1 border-t border-border px-4 py-2.5 outline-none first:border-t-0 focus-visible:ring-2 focus-visible:ring-ring md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_auto]">
-        <div className="text-[13px] text-text-muted">{q.label}{q.required || /\(optional\)\s*$/i.test(q.label) ? null : <span> (optional)</span>}</div>
+        <div className="text-[13px] text-text-muted">{q.label}{q.required || /\(optional\)\s*$/i.test(q.label) ? null : <span> (optional)</span>}<ScopeTag q={q} /></div>
         <div className="min-w-0 text-sm">
           {a ? (
             <>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} />{linkedAt(a) ? <EmployerCaseSource at={linkedAt(a)!} label={view.case.employer_link?.linked?.label} /> : null}</div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} about={q.about_label} value={String(shown(q, a.value))} /><OfficerPill a={a} />{linkedAt(a) ? <EmployerCaseSource at={linkedAt(a)!} label={view.case.employer_link?.linked?.label} /> : null}</div>
               <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{q.fills.length ? <> · <span title={q.fills.map((f) => `${f.form} for ${f.person}`).join("\n")}>fills {fillsText(q.fills)}</span></> : null}</p>
               {a.problems.map((p, i) => <p key={i} className="flex items-start gap-1 text-xs font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{p}</p>)}
               {row ? null : checks.filter((c) => c.fact === q.fact).map((c) => <p key={c.id} className="flex items-start gap-1 text-xs font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{c.message}</p>)}
@@ -798,9 +905,11 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
     <section id={`s-${s.subjectId}-${s.section}`} aria-labelledby={`h-${s.subjectId}-${s.section}`} className="scroll-mt-4 overflow-hidden rounded-xl border border-border bg-surface-raised">
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3">
         <h2 id={`h-${s.subjectId}-${s.section}`} className="text-base font-semibold">{s.title}</h2>
-        <span className="text-[13px] text-text-muted">{s.about_label === "The application" ? "once for the application" : `for ${inSentence(s.about_label)}`}</span>
+        {/* B155: a list's section ("Brothers and sisters") is already named by its tab ("…'s brothers and sisters"): no "for" twice. */}
+        {s.about_label.toLowerCase().endsWith(s.title.toLowerCase()) ? null : <span className="text-[13px] text-text-muted">{s.about_label === "The application" ? "once for the application" : `for ${inSentence(s.about_label)}`}</span>}
         <span className="flex flex-wrap gap-1.5">
-          <Pill title="Answers given, and how many of them the officer has confirmed">{s.answered} answered · {s.confirmed} confirmed</Pill>
+          {/* QA-301 (B150): a declared answer is never counted as "confirmed"; the pill says what is still on the Confirm list. */}
+          <Pill title="Answers given (each fills the forms at once), and how many still wait for the officer's Confirm section">{s.answered} answered · {s.answered - s.confirmed} to confirm</Pill>
           {s.missing.length ? <Pill tone="warn" title={`Required and not answered: ${s.missing.join("; ")}`}>{s.missing.length} missing</Pill> : null}
           {s.invalid ? <Pill tone="danger" title="Answers that do not pass their checks">{s.invalid} to fix</Pill> : null}
           {checks.length ? <Pill tone="warn" title={checks.map((c) => c.message).join(" ")}>{checks.length} to check</Pill> : null}
@@ -810,6 +919,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           <Check aria-hidden />Confirm section
         </Button>
       </header>
+      {s.questions.some((q) => q.background) ? <p className="border-b border-border px-4 py-2 text-[13px] text-text-muted" data-background-note>Background answers are the client's. One you record (by phone or in person) is marked <b className="font-medium text-text">Officer</b> and waits for the client to re-confirm it before signing; Confirm section does not confirm it.</p> : null}
       {/* P-47 tier 2 (C4.4 part 2): the section's error summary, GOV.UK pattern: each answer to fix and each fired check, linked to its line. */}
       {(s.problems ?? []).length ? (
         <div className="border-b border-border px-4 py-2" data-section-summary>
@@ -828,7 +938,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           {rows.map((r) => (
             <div key={r.row} className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
               <p className="flex items-center gap-2 border-b border-border px-4 py-1.5 text-xs font-medium">Entry {r.index + 1}{!r.fits ? <Pill tone="warn" title={`The form has room for ${grouped[0].capacity} entries`}>Does not fit on the form</Pill> : null}</p>
-              {grouped.map((q) => line(q, r.row))}
+              {grouped.filter((q) => inEntry(q, r.row, grouped)).map((q) => line(q, r.row))}
             </div>
           ))}
           {rows.length ? <Button size="sm" variant="secondary" busy={adding} onClick={() => void addRow()}><Plus aria-hidden />Add another</Button> : null}
@@ -866,6 +976,7 @@ function EditDialog({ caseId, q, row, close }: { caseId: string; q: Question; ro
       <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
         <QuestionField q={q} idBase="edit-field" draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setError(null); }} errors={error ? [error] : a?.problems ?? []} compact officer />
         {a ? <p className="mt-3 text-xs text-text-muted">Now: {shown(q, a.value)} ({a.why}).</p> : null}
+        {q.background ? <Notice tone="info" className="mt-3" title="The client's background answer">Record only what the client told you (by phone or in person). It is marked Officer with your name and the time. It is on the draft forms at once, and nothing is printed or signed until the client re-confirms it.</Notice> : null}
         <button type="submit" hidden />
       </form>
     </Dialog>

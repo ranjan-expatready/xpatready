@@ -17,10 +17,16 @@
 # P-371 (3): pull requests may skip suites they already passed on the same base (tools/ci-memory.mjs), so this run is the
 # net under them: every suite, every night, on main. A red night shows in this run's summary and in daily-numbers.sh, and
 # qa writes the row (Lead 21, 6 Nov: no GitHub issue).
+# D5 (P-416, founder "Approve all stands" 8 Nov ~09:05 IST; the review of 8 Nov: the scheduled run started 3-4 h late and
+# ran no pack): (1) the cron is 20:23 UTC (01:53 IST), off the top of the hour, where GitHub delays scheduled runs most;
+# (2) the full nightly (schedule, or "Run workflow" with no capabilities) also runs every capability qa marks Works in
+# qa/CAPABILITIES.md, all milestones, each on its scoring data (qa/REGRESSION-DATA.md, else the data the row's evidence
+# names, else the six; studio/tools/works-set.mjs), held packs skipped (qa/REGRESSION-HELD.md), pooled onto at most 5
+# machines that each run gate B's 3 job slots (works-set.mjs --groups 5, then --pool), a red row retried once.
 name: nightly
 on:
   schedule:
-    - cron: "0 21 * * *"
+    - cron: "23 20 * * *"
   workflow_dispatch:
     inputs:
       capabilities:
@@ -49,7 +55,7 @@ jobs:
           for c in $caps; do [[ "$c" =~ ^C[0-9]{1,2}\.[0-9]{1,2}$ ]] || { echo "not a capability id: \"$c\" (want e.g. C11.10)"; exit 1; }; done
           json="[]"; [ -n "$caps" ] && json="[$(for c in $caps; do printf '"%s",' "$c"; done | sed 's/,$//')]"
           echo "caps=$json" >> "$GITHUB_OUTPUT"
-          [ "$json" = "[]" ] && echo "**Full nightly set** on 6 parts" >> "$GITHUB_STEP_SUMMARY" || echo "**Re-test** of $caps (one machine each)" >> "$GITHUB_STEP_SUMMARY"
+          [ "$json" = "[]" ] && echo "**Full nightly set** on 6 parts, and every Works row's pack pooled on up to 5 machines (D5)" >> "$GITHUB_STEP_SUMMARY" || echo "**Re-test** of $caps (one machine each)" >> "$GITHUB_STEP_SUMMARY"
   packs:
     needs: plan
     if: ${{ needs.plan.outputs.caps != '[]' }}
@@ -122,3 +128,54 @@ jobs:
           name: nightly-suite-logs-part-${{ matrix.shard }}
           path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/
           retention-days: 14
+  works-plan:
+    # D5: the Works rows with a pack, all milestones, as at most 5 groups balanced by packs (a checkpoint pack weighs double).
+    needs: plan
+    if: ${{ needs.plan.outputs.caps == '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: { contents: read }
+    outputs:
+      groups: ${{ steps.g.outputs.groups }}
+    env:
+      S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc }
+      - id: g
+        name: every Works row's pack, each on its scoring data, in at most 5 groups (works-set.mjs --groups 5)
+        run: |
+          g=$(node "$S/tools/works-set.mjs" --list --milestone all --groups 5) || exit 1
+          echo "groups=$g" >> "$GITHUB_OUTPUT"
+  works:
+    # D5: one machine per group; gate B runs its packs on 3 job slots (one fresh copy and port each), each row on its data.
+    needs: works-plan
+    if: ${{ needs.works-plan.outputs.groups != '' && needs.works-plan.outputs.groups != '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions: { contents: read }
+    strategy:
+      fail-fast: false   # every group reports; one red never hides another
+      matrix:
+        group: ${{ fromJSON(needs.works-plan.outputs.groups) }}
+    env:
+      P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+      S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
+      - name: set up like a cloud session (cloud-setup.sh; it also builds the web app the browser packs need)
+        run: bash "$P/tools/cloud-setup.sh"
+      - name: Playwright's own Chromium
+        run: cd "$S" && ./node_modules/.bin/playwright install chromium
+      - name: Works packs ${{ matrix.group.caps }} (${{ matrix.group.packs }} packs, pooled on gate B's 3 slots; live AI off, US$0)
+        env: { CAPS: "${{ matrix.group.caps }}", GATE_B_JOBS: "3" }
+        run: |
+          echo "### Works packs on $(git rev-parse --short HEAD): $CAPS" >> "$GITHUB_STEP_SUMMARY"
+          node "$S/tools/works-set.mjs" --pool "$CAPS"

@@ -35,6 +35,7 @@ import { gateOf as keyGateOf, keysUnchanged, runKeys, type Gate as KeyGate } fro
 import type { Problem } from "../../engine/validate.ts";
 import { isIdentityName } from "../../engine/identity-documents.ts";
 import { firmMayRead } from "./case-feed.ts";
+import { placementRefusal } from "../../engine/field-scope.ts"; // C3.16: a field asked once for the household or employer stays single and unconditioned
 /** G2 (C5.5, BR-8; shared with G1 BR-8): a refusal carries every blocking problem in `errors[]`, each in words; `detail`
  *  (and `message`, read by older callers) keeps the sentence the screens and checks already show. */
 /** G2 BR-9: the keys a release rests on, frozen in its summary (only when the gate judged it). */
@@ -675,6 +676,7 @@ export class Studio {
     const row = await this.db.$transaction(async (tx) => {
       await lockItem(tx, workspaceId, "field", [key]); await refuseRetired(tx, workspaceId, "field", [key]);
       await lockItem(tx, workspaceId, "section", [b.sectionKey]); await refuseRetired(tx, workspaceId, "section", [b.sectionKey]); // round 3 Major 1
+      { const no = placementRefusal((await tx.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" } }))?.scope, { repeats: b.repeats, condition: b.condition }); if (no) fail(no, HttpStatus.UNPROCESSABLE_ENTITY); } // C3.16 (#1054 M3, M1; review m1: under the field's lock)
       if (!rows.length) {
         const order = await tx.sectionQuestion.count({ where: { workspaceId, sectionKey: b.sectionKey } });
         return tx.sectionQuestion.create({ data: { workspaceId, lineageKey: key, canonicalFieldKey: key, displayOrder: order + 1, ...data, version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
@@ -1200,7 +1202,8 @@ export class Studio {
       fields: await publish(tx.canonicalField, { workspaceId: ws, canonicalFieldKey: { in: snapshot.canonical_fields.map((f) => f.id) } }),
       placements: await publish(tx.sectionQuestion, { workspaceId: ws, lineageKey: { in: snapshot.placements.map((p) => p.lineage) } }),
       sections: await publish(tx.logicalSection, { workspaceId: ws, sectionKey: { in: [...snapshot.sections, ...(snapshot.section_titles ?? [])].map((x) => x.id) } }), // C4.2: pulled sections' titles too
-      documentTypes: await publish(tx.documentType, { workspaceId: ws, documentTypeKey: { in: snapshot.document_requirements.map((d) => d.document_type_key) } }),
+      // C6.15: a type's substitute-set members are published with it (the release names them).
+      documentTypes: await publish(tx.documentType, { workspaceId: ws, documentTypeKey: { in: [...snapshot.document_requirements.map((d) => d.document_type_key), ...(snapshot.document_types ?? []).flatMap((t: { sets?: { members: { key: string }[] }[] }) => (t.sets ?? []).flatMap((x) => x.members.map((m) => m.key)))] } }),
       requirements: await publish(tx.documentRequirement, { combinationId: id }), rules: await publish(tx.predicate, { combinationId: id }), forms: await publish(tx.combinationForm, { combinationId: id }), checks: await publish(tx.check, { combinationId: id }),
       factSources: await publish(tx.factSource, { combinationId: id }), // W1-15 slice 1
       boxes: await publish(tx.formFieldMap, { workspaceId: ws, edition: { form: { usedBy: { some: { combinationId: id } } } } }),

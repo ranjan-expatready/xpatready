@@ -128,12 +128,14 @@ ok("fail: the representative's facts are never the client's own", !confirmation(
   ok("R1c checks pass: a triggered check is placed on its question and the application's section, in the client's view too", hit.length === 1 && hit[0].fact === "case.funds" && hit[0].section === "visit" && hit[0].subjectId === caseSubject, hit);
   ok("R1c checks fail-guard: a passing value or a missing answer triggers nothing", at(5000).length === 0 && at(undefined).length === 0, [at(5000), at(undefined)]);
 }
-// ── R1d (RT-13…RT-15): a copy reads confirmed facts only; its hash and what changed since
+// ── R1d (RT-13…RT-15): a copy reads every declared or confirmed answer (P-242, P-411; was confirmed only, P-72); its hash and what changed since
 {
   const ppl = household(false, 0);
   const declared = ans("p", "person.family_name", "SAMPLE"), verified = ans("p", "person.family_name", "SAMPLE", { status: "VERIFIED", channel: "confirm_section" });
-  const unconfirmed = formCoverage(S, ppl, [declared], [], "F 1", "p", TODAY)!, confirmed = formCoverage(S, ppl, [verified], [], "F 1", "p", TODAY)!;
-  ok("RT-13 fail: an answer not confirmed is not among the facts a copy writes (P-72)", unconfirmed.facts.length === 0 && unconfirmed.boxes.some((b) => b.fact === "person.family_name" && b.coverage === "answered on screen"), unconfirmed.facts);
+  const declaredCov = formCoverage(S, ppl, [declared], [], "F 1", "p", TODAY)!, confirmed = formCoverage(S, ppl, [verified], [], "F 1", "p", TODAY)!;
+  const officerTyped = formCoverage(S, ppl, [{ ...declared, channel: "agent_view", actor: "user-O" }], [], "F 1", "p", TODAY)!, unanswered = formCoverage(S, ppl, [], [], "F 1", "p", TODAY)!;
+  ok("RT-13 pass (P-242, P-411, row B150; was P-72's fail case): a declared answer not confirmed yet, the client's or the officer's, is among the facts a copy writes", [declaredCov, officerTyped].every((c) => c.facts.some((f) => f.fact === "person.family_name" && f.value === "SAMPLE" && f.about === "p") && !c.boxes.some((b) => b.fact === "person.family_name" && b.coverage === "answered on screen")), [declaredCov.facts, officerTyped.facts]);
+  ok("RT-13 fail: with no answer, nothing is among the facts a copy writes", unanswered.facts.length === 0, unanswered.facts);
   ok("RT-13 pass: a confirmed answer is, with its form field and value", confirmed.facts.some((f) => f.fact === "person.family_name" && f.value === "SAMPLE" && f.about === "p"), confirmed.facts);
   const fact = fc.record({ box: fc.stringMatching(/^[a-z]{1,6}$/), fact: fc.constantFrom("person.a", "person.b", "case.c"), about: fc.constantFrom("p", "case"), row: fc.constantFrom(null, 0, 1), value: fc.oneof(fc.string(), fc.integer(), fc.boolean()) });
   const facts = fc.uniqueArray(fact, { selector: (f) => f.box, maxLength: 12 });
@@ -212,7 +214,7 @@ ok("fail: the representative's facts are never the client's own", !confirmation(
   ok("C7.6 QA-122 pass: an optional fact left empty, answered validly and not confirmed, or confirmed and valid does not block", done.ready && optDeclared.ready && optGood.ready, [optDeclared.missing, optGood.missing]);
   const covBad = formCoverage(S, ppl, [...all, badPhone], [], "F 1", "p", TODAY)!, covGood = formCoverage(S, ppl, [...all, goodPhone], [], "F 1", "p", TODAY)!;
   const gBox = covBad.boxes.find((b) => b.box === "g") as { coverage: string; fix?: string } | undefined;
-  ok("C7.6 QA-122 fail: Generate never writes a confirmed value that fails its check: not among the facts, its form field says why", !covBad.facts.some((f) => f.fact === "person.phone") && gBox?.coverage === "answered on screen" && /confirmed with a problem, not written: Enter the country code/.test(gBox?.fix ?? ""), gBox);
+  ok("C7.6 QA-122 fail: Generate never writes a confirmed value that fails its check: not among the facts, its form field says why", !covBad.facts.some((f) => f.fact === "person.phone") && gBox?.coverage === "answered on screen" && /answered with a problem, not written: Enter the country code/.test(gBox?.fix ?? ""), gBox);
   ok("C7.6 QA-122 pass: a confirmed valid value is written as before", covGood.facts.some((f) => f.box === "g" && f.fact === "person.phone"), covGood.facts.map((f) => f.box));
 }
 // ── PR 7 review D2: ageOn gives no age for a date that is not real or is in the future

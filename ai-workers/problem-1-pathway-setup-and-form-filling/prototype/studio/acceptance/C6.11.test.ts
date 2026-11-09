@@ -70,7 +70,7 @@ await main("C6.11", "Firm, users and case team", async () => {
   // IMM 5476 from the representative of record (VV-R10); a change asks for a new one (BR-20).
   const P = c.subjects["Sample Client A"], spouse = c.subjects["Sample Spouse A"], child10 = c.subjects["Sample Child A1"];
   // Pending only while the case's pinned release has no IMM 5476 (review M1): then no item, no question can exist.
-  const has5476 = Number(sql(`select count(*) from pack_work_pin w join config_release r on r.id = w.config_release_id, jsonb_array_elements(r.snapshot->'forms') f where w.case_id='${c.id}' and f->>'form_number'='IMM 5476'`) ?? 0) > 0;
+  const has5476 = Number(sql(`select count(*) from pack_work_pin w join config_release r on r.id = w.config_release_id, jsonb_array_elements(r.snapshot->'forms') f where w.case_id='${c.id}' and w.revision = (select max(z.revision) from pack_work_pin z where z.case_id = w.case_id) and f->>'form_number'='IMM 5476'`) ?? 0) > 0;
   let pr = await prepare(c.id), p = pr.p;
   if (!has5476) pend("C6.11-15 pass: IMM 5476 is a deliverable for the principal and the spouse (each 18 or older), none for a child of 10 (VV-R10)", "the case's release has no IMM 5476 yet (GET …/prepare is C6.12's, M3-B)");
   else ok("C6.11-15 pass: IMM 5476 is a deliverable for the principal and the spouse (each 18 or older), none for a child of 10 (VV-R10)", pr.res.status === 200 && itemsOf(p, P, "IMM 5476").length === 1 && itemsOf(p, spouse, "IMM 5476").length === 1 && itemsOf(p, child10, "IMM 5476").length === 0, p?.items.filter((i) => i.form === "IMM 5476").map((i) => i.subject));

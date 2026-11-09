@@ -1,6 +1,7 @@
 // B52: the application form's Yes/No form fields worked out from other answers, each asked as its own question in the
 // form's words (To review › Form fields), with the library's field of the same name when it has one. The form-field
-// step is the one a person takes there, as the same service (no extra provider).
+// step is the one a person takes there, as the same service (no extra provider). QA-165: each box's "followUps" (the details
+// the form asks only after a Yes) get their condition in 230-own-yes-no-follow-ups.ts, once the placement step (200) asked them.
 import { normalizeLabel } from "../../../../../contracts/programs.ts";
 import { OwnQuestions } from "../../../own-question.ts";
 import { OWN_YES_NO_NEAR, OWN_YES_NO_REASON } from "../../../own-yes-no.ts";

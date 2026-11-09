@@ -1,5 +1,5 @@
 // Case forms (runtime lane, R1d, plan §8 RT-13…RT-17): IMM 5257 and the case's other PDF forms filled from the case's
-// confirmed facts only (P-72), through the shared filler (fill.ts writeForm: each value in the form field's own format,
+// declared and confirmed answers (P-242, P-411; P-72 had "confirmed facts only"), through the shared filler (fill.ts writeForm: each value in the form field's own format,
 // signatures never typed, append-only writer, read back, signatures checked). Never overwrite (P-65 d): each copy is a
 // new row with the facts it read frozen beside it; a later answer makes a copy "out of date" (a locked one "stale") and
 // never changes it; a new copy is made only when the officer asks. Generation runs as a queued job (STANDARDS §3:
@@ -13,19 +13,21 @@ import type { Response } from "express";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { scriptRulesOf } from "./own-yes-no.ts";
 import type { z } from "zod";
 import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
 import { caseView } from "../../engine/runtime/case.ts";
-import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, gateOf, inputHash, isGateFact, markNothingRecorded, pdfForms, readiness, releaseForms, type FormFact, type GatePlacement, type GroupFact } from "../../engine/runtime/forms.ts";
+import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, gateOf, inputHash, isGateFact, markNothingRecorded, pdfForms, readiness, releaseForms, blocksLock, type FormFact, type GatePlacement, type GroupFact, type OnForm } from "../../engine/runtime/forms.ts";
 import { answerSheetOnly, CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Channel } from "../../contracts/forms.ts";
 import { lineOf } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
 import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, PY, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
 import { keptOnMacWords } from "./sample-validated.ts";
+import { busyWords } from "./busy.ts";
 import { formValues, notOnFormLines, type Inventory } from "../../engine/form-values.ts";
-import { mandatoryOpen, type CaseWords, type OpenField } from "../../engine/runtime/mandatory.ts";
+import { mandatoryOpen, type CaseWords, type OpenField, type RequiredWhen } from "../../engine/runtime/mandatory.ts";
 import { solutionFile, writeForm } from "./fill.ts";
 import { trialFor, type EditionMap } from "./fill-trials.ts";
 import { Runtime, type Reached } from "./runtime.ts";
@@ -107,12 +109,34 @@ export const inventoryOf = (file: string): Inventory | null => {
 };
 /** QA-165 part 2 (P-237, P-238): the mandatory form fields a copy made now would leave empty, with why (engine/runtime/
  *  mandatory.ts), from the same value step a copy runs. Empty when the form has no PDF map or field list. */
+/** QA-165 (#1318 review M1): the form-script requirements by field, for the field list a map names (by its file name). */
+const requiredWhenOf = (inventoryFile: string): RequiredWhen => new Map(scriptRulesOf(inventoryFile).map((f) => [f.box, f.requiredWhen]));
 export function fieldsOpen(s: Snap, form: string, boxes: BoxRow[], words: CaseWords = {}): OpenField[] {
   const map = pdfMapInUse(s.field_maps as { form_number: string; form_edition?: string; channel?: string; inventory_file?: string; entries: { data_path: string; fact?: string | null; outcome?: string | null }[] }[], form); // P-32: the edition in use
   const inv = map?.inventory_file ? inventoryOf(map.inventory_file) : null;
   if (!map || !inv) return [];
   const { boxes: results, values } = formValues(s as unknown as Parameters<typeof formValues>[0], map, inv, boxes);
-  return mandatoryOpen(inv, map.entries, results, values, words);
+  return mandatoryOpen(inv, map.entries, results, values, words, requiredWhenOf(map.inventory_file!));
+}
+/** QA-165 part 2 (review M-1, M-2 on #592): the case's own question words, and the groups settled as "none apply". */
+export function caseWordsOf(s: Snap, view: ReturnType<typeof caseView>): CaseWords {
+  const labels = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
+  const noneApply = new Map(view.sections.filter((x) => !!x.group && x.group.rows === 0 && !!x.group.none_apply?.value && x.group.none_apply.fills)
+    .flatMap((x) => x.questions.map((q) => [`${x.subjectId}|${q.fact}`, `"${x.title}"`] as [string, string])));
+  return { labelOf: (fact) => labels.get(fact), noneApply, gateOf: (fact) => { const g = gateOf(s.placements as GatePlacement[], fact); return g ? labels.get(g) ?? g : undefined; } };
+}
+/** QA-165 (P-71; #1256 cause 2): what a copy made now would write for one form and person, for readiness: its form fields
+ *  (each one refused with its fix) and the mandatory ones it would leave empty (fieldsOpen). */
+export function onFormOf(s: Snap, form: string, cov: ReturnType<typeof formCoverage>, view: ReturnType<typeof caseView>, words?: CaseWords): OnForm | undefined {
+  if (!cov) return undefined;
+  const boxes = markNothingRecorded(cov.boxes, view, s.placements as GatePlacement[]);
+  return { boxes, open: fieldsOpen(s, form, boxes, words ?? caseWordsOf(s, view)) };
+}
+/** P-71 readiness of one form for one person, with what the form itself would write (QA-165): the one rule GET …/forms,
+ *  locking a copy and the case's prepare view (Ready to file) share. */
+/** `cov`: the coverage already worked out for this form and person (the prepare view shares one with its fingerprint). */
+export function formReadinessOf(s: Snap, people: Parameters<typeof formCoverage>[1], answers: Parameters<typeof formCoverage>[2], rows: Parameters<typeof formCoverage>[3], view: ReturnType<typeof caseView>, form: string, subjectId: string, cov?: ReturnType<typeof formCoverage>) {
+  return readiness(view, form, subjectId, onFormOf(s, form, cov === undefined ? formCoverage(s, people, answers, rows, form, subjectId) : cov, view));
 }
 const needsValidate = (form: string, channel: Channel) => isBarcodeForm(form) && ["PDF_UPLOAD", "PAPER"].includes(channel);
 const OUT_OF_DATE = "Out of date: validate again";
@@ -150,7 +174,10 @@ export class CaseForms implements OnModuleInit {
 
   /** Every PDF form that applies to someone on the case: the draft (what a copy made now would write), readiness and
    *  the copies made, each with out of date / stale and the facts that changed. One read of the case. */
-  async list(actor: Actor, caseId: string): Promise<{ forms: CaseForm[]; online: CaseOnlineForm[] }> {
+  /** `includeWaiting` (QA-246, CI on #1382): also list a form whose rule still waits for an answer. Only the checkpoint's
+   *  Sample family case asks it (api/src/sample-case.ts: a copy of every form the release files for each person), so the
+   *  loaded checkpoint holds the same copies as before; GET …/forms never does. */
+  async list(actor: Actor, caseId: string, opts: { includeWaiting?: boolean } = {}): Promise<{ forms: CaseForm[]; online: CaseOnlineForm[] }> {
     const c = await this.officerCase(actor, caseId);
     const s = this.runtime.snapshotOf(c), people = this.runtime.peopleOf(c);
     const { answers, rows, groups } = await this.runtime.state(c);
@@ -159,10 +186,7 @@ export class CaseForms implements OnModuleInit {
     const titles = new Map((s.forms as { form_number: string; title?: string }[]).map((f) => [f.form_number, f.title ?? f.form_number]));
     const copies = await this.db.formInstance.findMany({ where: { caseId }, orderBy: { createdAt: "desc" }, include: { snapshot: true, validated: { orderBy: { readAt: "desc" }, take: 1 } } });
     const labels = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
-    // QA-165 part 2 (review M-1, M-2 on #592): the case's own question words, and the groups settled as "none apply".
-    const noneApply = new Map(view.sections.filter((x) => !!x.group && x.group.rows === 0 && !!x.group.none_apply?.value && x.group.none_apply.confirmed)
-      .flatMap((x) => x.questions.map((q) => [`${x.subjectId}|${q.fact}`, `"${x.title}"`] as [string, string])));
-    const caseWords: CaseWords = { labelOf: (fact) => labels.get(fact), noneApply, gateOf: (fact) => { const g = gateOf(s.placements as GatePlacement[], fact); return g ? labels.get(g) ?? g : undefined; } };
+    const caseWords = caseWordsOf(s, view);
     const items = await this.itemChannels(c.id), nameOf = { caseReference: c.reference, of: nameOfPeople(people) };
     const forms: CaseForm[] = [];
     for (const p of people.filter((x) => x.role !== "case")) {
@@ -171,11 +195,18 @@ export class CaseForms implements OnModuleInit {
         const applies = !!cov && cov.applies !== false;
         const mine = copies.filter((x) => x.formNumber === form && x.subjectId === p.subjectId);
         if (!applies && !mine.length) continue; // a form that stops applying keeps its copies in view (break M4)
+        // QA-246: a form whose rule waits for an answer (it "cannot tell" yet: a marital status, a case answer not given)
+        // is not a form to fill yet, as /prepare lists it: it is listed once its rule says it applies, or while it has copies.
+        // Review B1: `cov` is null for a person marked not travelling, who reaches here only with copies (break M4).
+        // Review m2, m3: the generate route still makes a copy of a waiting form (check_qa296_imm5475.ts relies on it), and
+        // such a form with copies stays listed as before (its copies in view); /prepare says "Cannot start yet" for it.
+        if (!opts.includeWaiting && cov?.applies === "cannot_tell" && !mine.length) continue;
         if (chosen(s, items, form, p.subjectId) === "NOT_NEEDED" && !mine.length) continue; // C11.6 (Devin on #1056): nothing to fill or file
         const channel = chosen(s, items, form, p.subjectId);
+        const onForm = onFormOf(s, form, cov, view, caseWords); // QA-165: readiness and the open fields read the same copy
         forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialOf(s, form).passed, trial_why: trialOf(s, form).why, channel, for_filing: channel !== "ONLINE" && channel !== "NOT_NEEDED", needs_validate: needsValidate(form, channel),
-          draft: { written_now: cov?.facts.filter((x) => !isGateFact(x)).length ?? 0, mapped: cov?.mapped ?? 0, unconfirmed: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
-          readiness: readiness(view, form, p.subjectId), fields_open: cov ? fieldsOpen(s, form, markNothingRecorded(cov.boxes, view, s.placements as GatePlacement[]), caseWords) : [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), copyNotForFiling(s, x), nameOf)) });
+          draft: { written_now: cov?.facts.filter((x) => !isGateFact(x)).length ?? 0, mapped: cov?.mapped ?? 0, to_fix: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
+          readiness: readiness(view, form, p.subjectId, onForm), fields_open: onForm?.open ?? [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), copyNotForFiling(s, x), nameOf)) });
       }
     }
     // QA-40: a form filed Online is listed too (no PDF copy is made), with the people it applies to (P-113: the case
@@ -186,7 +217,7 @@ export class CaseForms implements OnModuleInit {
     const hasPdf = (form: string) => copyOnlyForms(s).has(form) || pdfForms(s).has(form);
     const online = (s.forms as { form_number: string; title?: string; channel?: string }[]).filter((f) => f.channel === "ONLINE" || movedOnline.has(f.form_number)).map((f) => ({
       form: f.form_number, title: f.title ?? f.form_number,
-      people: people.filter((p) => p.role !== "case" && chosen(s, items, f.form_number, p.subjectId) === "ONLINE" && view.forms.some((x) => x.form === f.form_number && x.person === p.label && x.applies !== false)).map((p) => p.label),
+      people: people.filter((p) => p.role !== "case" && chosen(s, items, f.form_number, p.subjectId) === "ONLINE" && view.forms.some((x) => x.form === f.form_number && x.person === p.label && x.applies === true)).map((p) => p.label), // review m1 (QA-246): never a form still waiting for an answer
       pdf_copy: hasPdf(f.form_number),
       why_no_copy: hasPdf(f.form_number) ? null : answerSheetOnly(f.form_number, s.combination.portal) ? "Express Entry: the answer sheet only, no PDF copy." : "IRCC's PDF of this form is not in this case's release.",
     })).filter((f) => f.people.length);
@@ -236,9 +267,14 @@ export class CaseForms implements OnModuleInit {
     const stored: Stored = { facts: cov!.facts, boxes: markNothingRecorded(cov!.boxes, view, s.placements as GatePlacement[]), groups: groupFacts(view, form, subjectId) };
     let copy;
     try {
-      copy = await this.db.$transaction(async (tx) => {
+      // C9.5 (breaker R2-m1): a long wait for the case's row lock (a move holding it) answers a worded 503, never a 500.
+      copy = await busyWords(() => this.db.$transaction(async (tx) => {
         // The cap is counted under a lock on the case row, so simultaneous requests are counted one after another (PR #12 review 3).
         await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${caseId}::uuid FOR UPDATE`;
+        // C9.5 (BR-7, challenge M2): the pin was read before this lock; a move to another release made meanwhile (it takes
+        // the same lock) is seen here, so no copy is ever made on the release the case just left.
+        const newest = await tx.packWorkPin.findFirst({ where: { caseId }, orderBy: { revision: "desc" }, select: { revision: true } });
+        if (newest?.revision !== c.pins[0].revision) throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Changed by someone else", status: 409, detail: "This case moved to another release while you pressed Fill: nothing was made. Press Fill again to make the copy on the case's release now." }, HttpStatus.CONFLICT);
         const active = await tx.formInstance.count({ where: { caseId, status: { in: ["QUEUED", "RUNNING"] } } });
         if (active >= ACTIVE_PER_CASE) throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Busy", status: 429, detail: `${active} copies of this case are being generated; wait for them, then ask again.` }, HttpStatus.TOO_MANY_REQUESTS);
         // C11.6: the person's channel read under the same lock the channel change takes, and frozen with the facts.
@@ -247,7 +283,7 @@ export class CaseForms implements OnModuleInit {
         if (frozen === "NOT_NEEDED") throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Not needed", status: 422, detail: `${form} is Not needed for this person: the IRCC account asks it itself, so nothing is filled.` }, HttpStatus.UNPROCESSABLE_ENTITY);
         const snap = await tx.answerSnapshot.create({ data: { workspaceId: c.workspaceId, caseId, subjectId, formNumber: form, inputHash: inputHash(cov!.facts), factsJson: { ...stored, channel: frozen } as object } });
         return tx.formInstance.create({ data: { workspaceId: c.workspaceId, caseId, subjectId, formNumber: form, configReleaseId: c.pins[0].configReleaseId, snapshotId: snap.id, idempotencyKey: b.idempotencyKey ?? null, createdBy: actor.id } });
-      });
+      }));
     } catch (e) {
       if (!unique(e) || !b.idempotencyKey) throw e;
       const again = await this.db.formInstance.findFirst({ where: { caseId, idempotencyKey: b.idempotencyKey } }); // a simultaneous press won
@@ -337,8 +373,10 @@ export class CaseForms implements OnModuleInit {
     const changed = [...changedFacts((x.snapshot.factsJson as Stored).facts, cov?.facts ?? []), ...changedGroups((x.snapshot.factsJson as Stored).groups, groupFacts(lockView, x.formNumber, x.subjectId))];
     if (changed.length) conflict(`This copy is out of date (${changed.length} change${changed.length === 1 ? "" : "s"} since it was made); generate a new copy and lock that one.`);
     // P-71 (Lead, R1d early look): a copy is filed or uploaded back only when its form is ready to file.
-    const ready = readiness(lockView, x.formNumber, x.subjectId);
-    if (!ready.ready) conflict(notReady(ready.missing.length));
+    // QA-165: the one readiness GET …/forms and Ready to file use (a box refused with a fix holds the lock back); a mandatory
+    // box left empty does not (blocksLock, review M2 on #1318): it is said on the card and on Ready to file.
+    const ready = formReadinessOf(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, lockView, x.formNumber, x.subjectId).missing.filter(blocksLock);
+    if (ready.length) conflict(notReady(ready.length));
     const trial = trialOf(this.runtime.snapshotOf(c), x.formNumber);
     if (!trial.passed) conflict(trial.why!);
     // Only the file that was made is ever locked: it must still be there with the bytes recorded (PR #12 review 2), since

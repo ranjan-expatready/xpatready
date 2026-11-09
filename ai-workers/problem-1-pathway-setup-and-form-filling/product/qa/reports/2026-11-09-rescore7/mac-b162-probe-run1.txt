@@ -1,0 +1,40 @@
+qa probe b162_probe.mts on 48959730c (= main 0e26bfbe8 + qa records), copy qa_rb162 :4470, start Mon Nov  9 00:52:40 IST 2026
+NOTICE:  database "xr_studio_qa_rb162" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_rb162 on http://localhost:4470 (xr_studio_qa_rb162), stops itself in 40 min
+reset 201
+load 201
+loaded Mon Nov  9 00:53:52 IST 2026
+B162 probe — no current copy made for filing
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  setup: everything answered and confirmed
+ITEMS ["IMM 5257:ONLINE","IMM 5645:PDF_UPLOAD","IMM 5476:PDF_UPLOAD","IMM 5257 SCH1:PDF_UPLOAD"]
+NO-COPY [["IMM 5645","PDF_UPLOAD","CRITICAL: IMM 5645 for Sample Client A has no copy made for filing yet (a PDF upload). Generate a copy under Prepare application before Ready to file."],["IMM 5476","PDF_UPLOAD","CRITICAL: IMM 5476 for Sample Client A has no copy made for filing yet (a PDF upload). Generate a copy under Prepare application before Ready to file."],["IMM 5257 SCH1","PDF_UPLOAD","CRITICAL: IMM 5257 SCH1 for Sample Client A has no copy made for filing yet (a PDF upload). Generate a copy under Prepare application before Ready to file."]]
+PASS  every no_copy line is on a PDF upload or Paper line; no Online line has one — [["IMM 5645","PDF_UPLOAD"],["IMM 5476","PDF_UPLOAD"],["IMM 5257 SCH1","PDF_UPLOAD"]]
+PASS  every PDF-upload or Paper line with no copy and no barcode Validate has a no_copy line — ["IMM 5257","IMM 5645","IMM 5476","IMM 5257 SCH1"]
+READY {"s":409,"warns":["no_copy","no_copy","fields_left_empty","no_copy","representative_review","missing_signature","missing_document","missing_document","missing_document"]}
+PASS  Ready to file is refused (409) and names the no_copy lines — 409
+PASS  setup: two no_copy forms to tell apart — ["IMM 5645","IMM 5476"]
+PASS  one copy made clears that line only — ["IMM 5476","IMM 5257 SCH1"]
+AFTER-CHANGE {"ch":200,"line":"CRITICAL: IMM 5645 for Sample Client A: its copy for filing is older than today's facts (a PDF upload), so it would be filed with old or missing answers. Generate a new copy under Prepare application before Ready to file."}
+PASS  a fact the copy reads changed: the line comes back, saying the copy is older than today's facts — {"code":"no_copy","item":"4c4cfd98-c395-43ed-b535-a15cc2ac744b","subject":"4f7753cc-3e9b-4ae1-9eed-e96f731f9326","owes":"staff","words":"CRITICAL: IMM 5645 for Sample Client A: its copy for filing is older than today's facts (a PDF upload), so it would be file
+PASS  a new copy clears it again — ["IMM 5476","IMM 5257 SCH1"]
+FLIP {"form":"IMM 5476","channel":"ONLINE","s":422,"d":"IMM 5476 is filed as Online, but the Form library records that IRCC accepts it only as a PDF upload. Choose a way IRCC accepts. IRCC's line: \"Upload this form along with your online application\" (https://www.canada.ca/en/immigration-refugees-citiz
+FAIL  the same form moved to Online has no no_copy line — ["IMM 5476","IMM 5257 SCH1"]
+FLIP {"form":"IMM 5476","channel":"PDF_UPLOAD","s":200}
+NOT-FOR-FILING {"nf":"132d601c-d3f6-43fd-bd95-1d0c5f9c0024","f2":200}
+FAIL  a copy made while the line was Online (not for filing) does not count: back on PDF upload, the line stands
+FLIP {"form":"IMM 5257","channel":"PDF_UPLOAD","s":200}
+BARCODE {"blocks":["barcode_not_validated"],"nc":["IMM 5257 SCH1"]}
+PASS  a barcode form on PDF upload keeps its own Validate block, no second no_copy line — ["barcode_not_validated"]
+FLIP {"form":"IMM 5257","channel":"ONLINE","s":200}
+PASS  a pass with no reason is refused (400); a client cannot pass it (403) — [400,403]
+PASS-ROW {"s":200,"row":"no_copy|critical","body":"{\"id\":\"e2066ebd-cfa4-4961-85c0-6601746936b8\",\"filing\":\"328474ed-3c27-4943-be2e-42b3e2f82554\",\"code\":\"no_copy\",\"severity\":\"critical\",\"keys\":[\"84af81ac-0780-4052-a5ff-ddff1caaa221|none|4fc94a14-39c7-4b8a-b94b-7046f181e5b4\"],\"reason\":\"PDF made outside the product (Sample)\",\"by\":\"user-O\",\"at\":\"2026-11-0"}
+PASS  a staff pass with a reason is accepted and stored as critical — "no_copy|critical"
+
+11/13 passed
+fill exit 1
+read exit 1  end Mon Nov  9 00:54:10 IST 2026

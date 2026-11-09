@@ -80,7 +80,11 @@ const run = Date.now().toString(36).slice(-5);
   await dlg.getByRole("button", { name: "Open case" }).click(); await o.waitForURL(/\/cases\/[0-9a-f-]{36}$/);
   const caseId = o.url().split("/").pop();
   await o.getByRole("heading", { name: /IMM 5707 for Sample Applicant N/ }).waitFor();
-  step(`C6.1: the case opens on the latest release (Release ${latest})`, (await text(o)).includes(`Release ${latest}`));
+  // B145 (#1252, C9.5; ruled D5): the case header names the release by its pack label ("Release <pack version>", as its
+  // notice and panel do), so the expected words come from the latest release's pack version, not the combination's version.
+  const pinned = (await call("GET", `/runtime/cases/${caseId}`, undefined, OFFICER)).body;
+  const packLabel = `Release ${sql(`select coalesce(pv.version, cr.version) from config_release cr left join pack_version pv on pv.id = cr.pack_version_id where cr.combination_id='${vv}' and cr.version=${latest}`)}`;
+  step(`C6.1: the case opens on the latest release (release ${latest} of the combination, labelled ${packLabel})`, pinned?.pin?.release_version === latest && (await text(o)).includes(packLabel), { pin: pinned?.pin?.release_version, label: pinned?.release?.label, packLabel });
 
   // ───────────────────────── QA-40: the forms panel of a case whose release files IMM 5257 Online
   const panel = await o.locator("section", { has: o.getByRole("heading", { name: "Forms", exact: true }) }).first().innerText().catch(async () => text(o));

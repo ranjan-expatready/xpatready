@@ -1,0 +1,21 @@
+C7.2 on 48dc02fd5 (= main bc8e33d53 + qa records), copy qa_p72 :4470, start Sun Nov  8 18:01:40 IST 2026
+web bundle does not match web/, contracts/, engine/ (missing, unstamped or built from other code; QA-181): rebuilding
+
+isolated qa_p72 on http://localhost:4470 (xr_studio_qa_p72), stops itself in 30 min
+reset 201
+load 201
+loaded Sun Nov  8 18:03:00 IST 2026
+PASS  C7.2 setup (C7.1, on main): the case's IMM 5257 copy is generated from the release and downloads — {"status":202,"words":""}
+FAIL  C7.2 P-46: the upload reports the barcode check: barcodes expected for IMM 5257 (5, as the evidence lane decoded on 23 Oct), decoded, matched — {"status":409,"words":"IMM 5257 is filed Online: its PDF is a copy, not for filing, so there is nothing to validate."}
+FAIL  C7.2 fail: a copy whose barcodes cannot be read (Validate not pressed, or a page missing) is never ready for filing; the words say to press Validate in Adobe Reader — {"status":409}
+PASS  C7.2 P-171 (1): changing a fact on the form after the upload marks the validated copy out of date and asks for Validate again — {"put":200,"out_of_date":true}
+FAIL  C7.2 evidence: a result of the Mac's Adobe run is recorded at studio/evidence/c7-2-adobe-validate/result.json
+FAIL  C7.2 evidence: it is a Studio-generated IMM 5257 of a Visitor visa case (not E1's values file), named by its checksum — null
+FAIL  C7.2 evidence (P-171): Adobe Reader's Validate succeeded on the first press, with the reader's version (10 or higher, IRCC Help Centre 660) and the message as shown — null
+FAIL  C7.2 evidence (P-46): every barcode decoded and every slot agrees with the facts written (0 unexplained) — null
+FAIL  C7.2 evidence: the saved file kept IRCC's certification (no "changed" warning) and the written values read back unchanged
+FAIL  C7.2 evidence: the result names the validated file's checksum and the screenshots of the Validate message and the barcode page — null
+
+2/10 passed
+pack exit 1  end Sun Nov  8 18:03:01 IST 2026
+stopped qa_p72 (database and files removed; log in var/isolated-logs/qa_p72-api.log)

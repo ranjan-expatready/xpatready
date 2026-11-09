@@ -1,0 +1,46 @@
+qa probe qa153_246_probe2.mts on a934f2583 (= main d4897ce1b + qa records), copy qa_r153b :4470, start Sun Nov  8 23:29:45 IST 2026
+NOTICE:  database "xr_studio_qa_r153b" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_r153b on http://localhost:4470 (xr_studio_qa_r153b), stops itself in 40 min
+reset 201
+load 201
+loaded Sun Nov  8 23:30:59 IST 2026
+QA-153 / QA-246 probe 2 — raw shapes
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+UNNAMED-A {"id":"3bbb5641-c1ab-43e4-a14c-bdb2df0cdd8f","kind":"document","filing":"fcaa4015-b7ed-4d25-bd4a-f03481f6df87","subject":"2ddeaaea-df7b-406f-b3e3-ca9185871b8b","person":"Sample Client A","version":1,"document_type":"fee_payment_receipt","label":"Fee payment receipt","state":"to_do","reason":"Not requested yet (the checklist, C6.4)."}
+UNNAMED-A {"id":"4a802251-0ccb-4ddc-a2b2-9aa5f466214b","kind":"document","filing":"fcaa4015-b7ed-4d25-bd4a-f03481f6df87","subject":"2ddeaaea-df7b-406f-b3e3-ca9185871b8b","person":"Sample Client A","version":1,"document_type":"proof_of_financial_support","label":"Proof of financial support","state":"to_do","reason":"Not requested yet (the checklist, C6.4)."}
+UNNAMED-A {"id":"92599b0a-bafb-4554-9e61-502cb7346c53","kind":"step","filing":"fcaa4015-b7ed-4d25-bd4a-f03481f6df87","subject":"2ddeaaea-df7b-406f-b3e3-ca9185871b8b","person":"Sample Client A","version":1,"step":"Give biometrics","neededBefore":"after_filing","state":"cannot_start","reason":"IRCC's biometrics instruction letter comes after you apply (VV-R17): book and give them then."}
+UNNAMED-A {"id":"f95a224a-2d78-407d-b460-077fba2e3985","kind":"document","filing":"fcaa4015-b7ed-4d25-bd4a-f03481f6df87","subject":"2ddeaaea-df7b-406f-b3e3-ca9185871b8b","person":"Sample Client A","version":1,"document_type":"passport_information_page_copy","label":"Passport information page copy","state":"to_do","reason":"Not requested yet (the checklist, C6.4)."}
+UNNAMED-child {"id":"36507ad7-6f08-4df3-bafa-6f155d408364","kind":"document","filing":"fc4be276-a769-456a-8327-0da197351a54","subject":"48a77fe2-506f-4040-98d0-a01fc19786e0","person":"Sample Child A1","version":1,"document_type":"fee_payment_receipt","label":"Fee payment receipt","state":"to_do","reason":"Not requested yet (the checklist, C6.4)."}
+UNNAMED-child {"id":"3e12a3a3-dd1f-4f86-a734-438d808ad346","kind":"document","filing":"fc4be276-a769-456a-8327-0da197351a54","subject":"48a77fe2-506f-4040-98d0-a01fc19786e0","person":"Sample Child A1","version":1,"document_type":"passport_information_page_copy","label":"Passport information page copy","state":"to_do","reason":"Not requested yet (the checklist, C6.4)."}
+UNNAMED-child {"id":"cec7b61f-46b5-4592-b916-c32d20bdd004","kind":"document","filing":"fc4be276-a769-456a-8327-0da197351a54","subject":"48a77fe2-506f-4040-98d0-a01fc19786e0","person":"Sample Child A1","version":1,"document_type":"proof_of_financial_support","label":"Proof of financial support","state":"to_do","reason":"Not requested yet (the checklist, C6.4)."}
+FORMS-BY-PERSON [["Sample Client A",["IMM 5257:84 missing","IMM 5257 SCH1:16 missing","IMM 5409:14 missing","IMM 5475:7 missing","IMM 5476:8 missing","IMM 5645:47 missing","IRM 0002:8 missing"]],["Sample Spouse A",["IMM 5257:84 missing","IMM 5257 SCH1:16 missing","IMM 5409:14 missing","IMM 5475:7 missing","IMM 5476:8 missing","IMM 5645:47 missing","IRM 0002:8 missing"]],["Sample Child A1",["IMM 5257:80 missing","IMM 5409:12 missing","IMM 5475:7 missing","IRM 0002:8 missing"]],["Sample Child A2",["IMM 5257:80 missing","IMM 5409:12 missing","IMM 5475:7 missing","IRM 0002:8 missing"]]]
+CASE-KEYS ["id","team","reference","status","combination_id","client","pin","release","people","can_add","employer_link"]
+RESULT-KEYS ["boxes","counts","intact","written","signatures","report_file","person_steps","not_for_filing","read_back_equal"] BOX0 {"box":"IMM_5645[0].page1[0].SectionA[0].Applicant[0].AppAddress[0]","why":null,"fact":"person.present_address","result":"written"}
+FAMILY-BOXES {"n":67,"tally":{"written":16,"not written":51}}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildAddress[0]","why":"nothing to write: \"none apply\" answered for Sample Client A's brothers and sisters","fact":"person.present_address","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildCOB[0]","why":"nothing to write: \"none apply\" answered for Sample Client A's brothers and sisters","fact":"person.birth_country","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildDOB[0]","why":"nothing to write: \"none apply\" answered for Sample Client A's brothers and sisters","fact":"person.date_of_birth","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildMStatus[0]","why":"nothing to write: \"none apply\" answered for Sample Client A's brothers and sisters","fact":"person.marital_status","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildName[0]","why":"nothing to write: \"none apply\" answered for Sample Client A's brothers and sisters","fact":"person.full_name","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildOccupation[0]","why":"nothing to write: \"none apply\" answered for Sample Client A's brothers and sisters","fact":"person.present_occupation","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[0].ChildRelationship[0]","why":"nothing to write: \"none apply\" answered for Sample Client A's brothers and sisters","fact":"relationship.relationship_to_subject","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildAddress[0]","why":"nothing to write: \"none apply\" answered for Sample Client A's brothers and sisters","fact":"person.present_address","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildCOB[0]","why":"nothing to write: \"none apply\" answered for Sample Client A's brothers and sisters","fact":"person.birth_country","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildDOB[0]","why":"nothing to write: \"none apply\" answered for Sample Client A's brothers and sisters","fact":"person.date_of_birth","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildMStatus[0]","why":"nothing to write: \"none apply\" answered for Sample Client A's brothers and sisters","fact":"person.marital_status","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildName[0]","why":"nothing to write: \"none apply\" answered for Sample Client A's brothers and sisters","fact":"person.full_name","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildOccupation[0]","why":"nothing to write: \"none apply\" answered for Sample Client A's brothers and sisters","fact":"person.present_occupation","result":"not written"}
+FAM-NOT-WRITTEN {"box":"IMM_5645[0].page1[0].SectionC[0].Child[1].ChildRelationship[0]","why":"nothing to write: \"none apply\" answered for Sample Client A's brothers and sisters","fact":"relationship.relationship_to_subject","result":"not written"}
+FAM-WRITTEN {"box":"IMM_5645[0].page1[0].SectionA[0].Father[0].ChildMStatus[0]","why":null,"fact":"person.marital_status","result":"written"}
+FAM-WRITTEN {"box":"IMM_5645[0].page1[0].SectionA[0].Father[0].FatherAddress[0]","why":null,"fact":"person.present_address","result":"written"}
+FAM-WRITTEN {"box":"IMM_5645[0].page1[0].SectionA[0].Father[0].FatherCOB[0]","why":null,"fact":"person.birth_country","result":"written"}
+FAM-WRITTEN {"box":"IMM_5645[0].page1[0].SectionA[0].Father[0].FatherDOB[0]","why":null,"fact":"person.date_of_birth","result":"written"}
+PASS  probe 2 ran
+
+1/1 passed
+fill exit 0
+read exit 1  end Sun Nov  8 23:32:05 IST 2026
