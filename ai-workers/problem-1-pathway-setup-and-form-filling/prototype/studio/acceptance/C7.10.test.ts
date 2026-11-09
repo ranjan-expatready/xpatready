@@ -64,8 +64,10 @@ await main("C7.10", "Readiness figure per filing; the case shows its lowest (Vis
   ok(`C7.10-7 pass (BR-3, BR-30 rule 5): a warning passed with a reason (${warn?.code ?? "none open"}) counts as done: the pass is in C7.6's passed lines, "passed" never falls, the figure never falls, and it still agrees with C7.6`,
     passRes?.status === 200 && !!gP && (readinessOf(v, fP)?.passed ?? []).some((x) => x.key === warn?.key) && gP.passed >= passedBefore && gP.score >= scoreBefore && agrees(v, gP), { status: passRes?.status, before: scoreBefore, after: brief(gP) });
 
-  // Only the principal's filing is made ready: the case still shows the lowest, another filing.
-  const others = (v?.filings ?? []).filter((x) => x.id !== fP).map((x) => x.id);
+  // The principal's filing is now ahead of the others (facts confirmed and a pass): the case names a filing behind it.
+  const behind = v?.case_figure, others = (v?.filings ?? []).filter((x) => x.id !== fP).map((x) => x.id);
+  ok("C7.10-9 fail (BR-5): a filing further behind holds the case back: the case's figure is the lowest, names that filing, never the principal's further-on filing",
+    !!behind && !!gP && behind.score < gP.score && behind.score_filing !== fP && others.includes(behind.score_filing) && behind.score === Math.min(...(v?.figures ?? []).map((g) => g.score)), { behind, principal: gP?.score, others: (v?.figures ?? []).filter((g) => g.filing !== fP).map((g) => g.score) });
   const reachedAll = await readyToFile(fam.id, f.rep);
   v = await view(fam.id, officer);
   const ready = (v?.figures ?? []).filter((g) => g.state === "ready");
@@ -73,8 +75,8 @@ await main("C7.10", "Readiness figure per filing; the case shows its lowest (Vis
     reachedAll.length > 0 && reachedAll.every((id) => figOf(v, id)?.score === 100 && figOf(v, id)?.state === "ready") && (v?.figures ?? []).every((g) => agrees(v, g)) && ready.length >= reachedAll.length,
     { reached: reachedAll.length, figures: (v?.figures ?? []).map(brief) });
   const lowNow = v?.case_figure, notReady = (v?.figures ?? []).filter((g) => g.score < 100);
-  ok(`C7.10-9 ${notReady.length ? "fail" : "pass"} (BR-5): ${notReady.length ? "a filing still under 100 holds the case back: the case names it, never a ready filing" : "every filing is ready: the case reads Ready at 100"}`,
-    !!lowNow && (notReady.length ? lowNow.score < 100 && notReady.some((g) => g.filing === lowNow.score_filing) && lowNow.score_filing !== reachedAll[0] : lowNow.state === "ready" && lowNow.score === 100), { lowNow, others: others.length, notReady: notReady.map(brief) });
+  ok(`C7.10-9b pass (BR-5): the case follows its lowest filing: ${notReady.length ? "a filing still under 100 is the one named" : "every filing is ready, so the case reads Ready at 100"}`,
+    !!lowNow && (notReady.length ? lowNow.score < 100 && notReady.some((g) => g.filing === lowNow.score_filing) : lowNow.state === "ready" && lowNow.score === 100), { lowNow, notReady: notReady.map(brief) });
 
   // One person, one filing: the case's figure is the filing's own, and 100 only once Ready to file is allowed.
   const solo = await openCase(vv, [{ role: "principal", name: "Sample Client T", dob: yearsAgo(33) }], { representative: f.rep, caseOfficers: [officer] });
