@@ -37,5 +37,14 @@ const qS = await onlyOn(S, barcodeOf(S)?.form);
 if (qS[0]) { await answer(c.id, S, qS[0].fact, `${String(qS[0].answer?.value)}TOWN`, officer); await confirmAll(c.id, S); }
 // A second fact on the principal's barcode form, for the walk's "changed while you were reading" step.
 const spare = qP[1] ? { subject: P, fact: qP[1].fact, value: `${String(qP[1].answer?.value)} X` } : null;
-console.log(JSON.stringify({ caseId: c.id, r1, r2, fP, fS, officer, rep, spare }));
+// Review M1: a solo firm's filing approved (self-reviewed), then a fact the solo representative types withdraws it, so the
+// walk re-approves it from the page with the self-review statement.
+const solo = f.soloRep ?? "user-S";
+const sc = await openCase(vv, [{ role: "principal", name: "Sample Solo Client", dob: yearsAgo(45) }], { representative: solo, caseOfficers: [solo] });
+const sf = (await prepare(sc.id, solo)).p?.filings[0]?.id;
+const sr = (await call("POST", `/runtime/cases/${sc.id}/reviews`, { filings: [sf], now: true }, solo)).body?.id;
+const sh = Object.fromEntries((((await call("GET", `/runtime/reviews/${sr}`, undefined, solo)).body?.filings ?? []) as { forms: { item: string; live_hash: string | null }[] }[])[0]?.forms.map((x) => [x.item, x.live_hash ?? "waits"]) ?? []);
+await call("POST", `/runtime/reviews/${sr}/decision`, { filing: sf, verdict: "approve", form_hashes: sh, confirm_unticked: true, self: true }, solo);
+await answer(sc.id, sc.subjects["Sample Solo Client"], "person.family_name", "SOLOSAMPLE", solo);
+console.log(JSON.stringify({ caseId: c.id, r1, r2, fP, fS, officer, rep, spare, solo: { caseId: sc.id, round: sr, filing: sf, actor: solo } }));
 process.exit(0);

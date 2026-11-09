@@ -95,6 +95,8 @@ const tsx = (f) => spawnSync(path.join(STUDIO, "node_modules", ".bin", "tsx"), [
     await shot("05-approve-confirmation");
     await axe("the approve dialog");
     await p.keyboard.press("Escape");
+    await p.waitForFunction(() => document.activeElement?.hasAttribute("data-approve"), null, T).catch(() => undefined);
+    ok("C8.3 walk 5b pass (break m5, WCAG 2.4.3): Escape closes the dialog and gives the focus back to Approve", await p.evaluate(() => document.activeElement?.hasAttribute("data-approve")));
 
     // 5 Send back without a reason: the field says so
     await p.locator("[data-send-back]").click();
@@ -146,6 +148,43 @@ const tsx = (f) => spawnSync(path.join(STUDIO, "node_modules", ".bin", "tsx"), [
       sql(`select kind from review_round where case_id='${d.caseId}' order by number desc limit 1`) === "reapprove" && !((await call("GET", `/runtime/cases/${d.caseId}/prepare`)).body?.readiness ?? []).find((x) => x.filing === d.fS)?.warns.some((w) => w.code === "representative_review"));
     await shot("11-reapproved");
     await axe("the re-approved round");
+
+    // 7b Break M2 and review m7: two open filings; "Open the review" selects its own filing; a box ticks the filing it sits under
+    await call("POST", `/runtime/cases/${d.caseId}/reviews`, { filings: [d.fP, d.fS] }, d.officer);
+    await p.goto(`${BASE}/cases/${d.caseId}`);
+    await p.locator(`[data-readiness-filing="${d.fS}"] a`, { hasText: "Open the review" }).click();
+    await p.locator(`[data-review-filing="${d.fS}"][data-status=under_review]`).waitFor(T);
+    const rN = new URL(p.url()).pathname.split("/").pop();
+    ok("C8.3 walk 11b pass (review m7): \"Open the review\" on a filing opens the review with that filing selected (and opened by the representative)",
+      (await p.locator(`#rf-${d.fS}`).getAttribute("aria-current")) === "true" && sql(`select status from review_round_filing where round_id='${rN}' and filing_id='${d.fS}'`) === "under_review");
+    await p.locator(`#rf-${d.fP}`).click();
+    await p.locator(`[data-review-filing="${d.fP}"][data-status=under_review]`).waitFor(T);
+    await p.locator(`#rf-${d.fS}`).click();
+    const pBox = p.locator(`[data-review-filing="${d.fP}"] [data-check="default:no_critical"] input`);
+    await pBox.focus();
+    await p.keyboard.press("Space");
+    await p.waitForFunction((sel) => document.querySelector(sel)?.checked === true, `[data-review-filing="${d.fP}"] [data-check="default:no_critical"] input`, T);
+    const tickOf = (fid) => sql(`select coalesce(c.ticked_by,'') from review_check c join review_round_filing f on f.id=c.round_filing_id where f.round_id='${rN}' and f.filing_id='${fid}' and c.item_key='default:no_critical'`);
+    ok("C8.3 walk 11c fail (break M2): with another filing selected, a box under the first filing ticks that filing's item, never the selected one's", tickOf(d.fP) === d.rep && tickOf(d.fS) === "", { p: tickOf(d.fP), s: tickOf(d.fS) });
+    await shot("11c-two-open-filings");
+
+    // 7c Review M1: a solo firm re-approves from the page, with the self-review statement
+    await as(d.solo.actor);
+    await p.goto(`${BASE}/cases/${d.solo.caseId}/representative-review/${d.solo.round}`);
+    await p.locator("[data-reapprove]").click();
+    const rd = p.locator("[data-reapprove-dialog]");
+    await rd.waitFor(T);
+    await p.locator("[data-confirm-reapprove]").click();
+    await rd.getByRole("alert").waitFor(T);
+    const noStatement = await rd.getByRole("alert").innerText();
+    await shot("11d-solo-reapprove-statement");
+    await rd.locator("[data-self]").check();
+    await p.locator("[data-confirm-reapprove]").click();
+    await p.waitForURL((u) => !u.pathname.endsWith(d.solo.round), T);
+    await p.locator("[data-review-filing][data-status=approved]").waitFor(T);
+    ok("C8.3 walk 11d pass (review M1): a solo firm re-approves from the page: the dialog asks the self-review statement (without it the server's words, no field names), with it the filing is re-approved as Self-reviewed",
+      /I prepared and reviewed this filing myself/.test(noStatement) && !/self: true/.test(noStatement) && sql(`select f.review_kind from review_round_filing f join review_round r on r.id=f.round_id where r.case_id='${d.solo.caseId}' and r.kind='reapprove'`) === "self_reviewed", noStatement);
+    await as(d.rep);
 
     // 8 Empty and loading states
     const e = await call("POST", "/runtime/cases", { combinationId: sql("select id from combination where combination_key='vv.single'"), reference: `WALK-C83-${Date.now().toString(36)}`, clientActor: "user-P", principal: { displayName: "Sample Client E" }, representative: d.rep, caseOfficers: [d.officer] }, d.officer);
