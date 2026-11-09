@@ -55,3 +55,21 @@ Diff only: `git diff c774e63b6..3448cdeec` (`document-review-counts.ts`, `C6.5-c
 No open Blocker or Major. Open Minor: the `kept: "answer"` filter has no step (Should).
 
 Verdict: Approve 3448cdeec6eb312a00f572d3e18d7fc49bb7b5c7
+
+## Re-review of c7d0d3eb8
+
+Diff only (P-318 (1)), fresh context: `git show c7d0d3eb8`. The branch head is the merge ea4df48fc; `git diff c7d0d3eb8 HEAD` is empty for `api/src` and the counts pack, so what I ran is the commit's code. No copy or server started; type check not run (the builder reports `typecheck.mjs`: no new errors).
+
+* **Nothing lost in the move.** The block from `type Mode` to the end of `countCorrections` in the parent's `document-review-counts.ts` and the same block in `api/src/document-review-rule.ts` are byte-identical (`diff`, no output). That covers `Mode`, `ModeCount`, `ReviewCounts`, `CORRECTION_RULE`, `REPLACED` and `countCorrections`. `sameValue` in the parent's `case-documents.ts` and in `api/src/document-values.ts` are byte-identical too. The only imports the rule needs, `OFFICER_ENTRY` and `sameValue`, moved with it.
+* **The old modules still give the same names.** `document-review-counts.ts:20` re-exports all six names. `:15` imports locally only what the route body uses (`CORRECTION_RULE`, `countCorrections`, `ReviewCounts`). `OFFICER_ENTRY`, `REPLACED` and `sameValue` are no longer used in that file outside the line 5 comment, so dropping their imports is right. `case-documents.ts:41-42` imports and re-exports `sameValue`. Its four internal uses (:138, :332, :432, :496) and the outside importer `tests/check_c65_document_rules.ts` resolve through that. With the API's tsconfig, that check passes **17/17**, including the R3 `sameValue` steps. There are no other importers in `prototype/`; `sample-case.ts` and `form-field-condition.ts` have their own unrelated `sameValue` and `REPLACED`.
+* **No decorators, even transitively.** I walked every relative import from `document-review-rule.ts` and `document-values.ts` (49 files across `engine/`, `contracts/`, `p5/transforms.ts` and the samples JSON). No file has a decorator. The outside packages are `@prisma/client`, `zod`, `ajv` and `node:*`; there is no `@nestjs`. The rule's only dependency chain (`engine/runtime/background.ts`) is the one the pack already loaded before.
+* **Run:** `node_modules/.bin/tsx acceptance/C6.5-counts.test.ts --engine` with no `--tsconfig` gave **7/7 passed**, exit 0. The parent's version of the pack, run the same way, fails with "Parameter decorators only work when experimental decorators are enabled" at `document-review-counts.ts:24`. That confirms both the cause and the fix. I ran it as a temporary copy in `acceptance/` and removed it straight after.
+* **Behaviour unchanged.** The route's code path is the same function body. The re-exports keep every existing import path working. The `features/document-review-counts.ts` registration is untouched.
+
+Nits (no action needed): two blank lines are left where `sameValue` was (`case-documents.ts:126-127`), and `document-review-rule.ts` ends with an extra empty line.
+
+Could not check: the pack's server steps (C6.5-21 to -23) without a tsconfig, because no copy was started as briefed. Their imports are the same as the engine steps', so the transform failure the commit fixes cannot recur there.
+
+No Blocker, Major or Minor from this commit. The open Minor from 3448cdeec (the `kept: "answer"` filter has no step, Should) is unchanged.
+
+Verdict: Approve c7d0d3eb8
