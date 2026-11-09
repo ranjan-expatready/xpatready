@@ -265,3 +265,48 @@ No user-visible code changed. The drawer row now gets correct `kept_over` values
 A browser walk by hand, a real screen reader, CI on this head, and the configured checkpoint (fixture only).
 
 Verdict: Approve 88194485a
+
+## Diff-only check of the merge 9f176ed8c
+P-318 (1), fresh context. Head 9f176ed8c merges origin/main 60235a001 (#1375 merged) into ffc5dd843. ffc5dd843 is 88194485a plus the review record only, so it holds the code approved above.
+
+### The merge itself
+* **Clean merge:** the tree of 9f176ed8c (`9487a6d00`) is the same as `git merge-tree --write-tree ffc5dd843 60235a001`. No conflict was settled by hand and no line was edited during the merge.
+* **This PR's six files:** `git diff ffc5dd843 9f176ed8c` touches none of them. Main changed none of them since the merge base (`47a1a9e70`).
+* **What main brought:** `git diff ffc5dd843 9f176ed8c` is byte for byte `git diff 47a1a9e70 60235a001` (36 files: B157, QA-246, qa records).
+* **Against main:** `git diff 60235a001 9f176ed8c --stat` shows exactly the six files (472+, 10−):
+  * `api/src/case-documents.ts`
+  * `web/src/runtime/documents-drawer.tsx`
+  * `tests/check_c65_documents_api.ts`
+  * `acceptance/C6.5-screen.test.ts`
+  * `review-checked.md`
+  * `journey-test-reviewer-checked-2026-11-09.md`
+
+### Does what main brought change the meaning of this PR?
+None of it does.
+* **`runtime.ts` (B157):** only the relatives' subjects changed (`subjectFor` adds a fallback on a unique-index refusal; comments in `relativesOf`). `case-documents.ts` works on a person's own subject (`who.subjectId`, a participant) and never on a relative's. None of the six files names `parent_1`, `parent_2`, `sibling`, `relativesOf` or `subjectFor`.
+* **Migration `20261108050000_b157_one_relative_subject`:** it only adds a partial unique index on `answer_subject (party_id, subject_kind)` for the three relative kinds, and changes no rows.
+  * It does not touch `client_canonical_answer`, `answer_check` or `read_value`, the tables `keptOver` and `checkedAgainst` read and write.
+  * On my copy it applied (finished), the index exists, and the C6.5 run made no relative subject.
+* **`fill-case.ts`, `sample-case.ts`, `acceptance/lib/m3.ts` (QA-246):**
+  * GET …/forms now leaves out a form whose rule still waits for an answer, and the Online list keeps only `applies === true`.
+  * `list()` has a new optional argument. The six files do not call GET …/forms, `forms.list`, `fillEverything` or `includeWaiting`.
+* **The answers' channels:** main changed no answer channel. The only `channel` change is the Online forms list. The PR's `checked_against_document` rows are written and read as before: my run left 3 such rows.
+* **The C6.5 packs and `case-documents.ts`:** main changed neither. #1375 (`runtime-c65-counts`) was already in this branch (`33ab98d88`), so its merge into main brings nothing new to C6.5.
+* **Tests main changed** (`check_b52_own_yes_no`, `check_s5_slice1`, `check_qa246_forms_waiting`, `check_b157_relative_subject_unique`): they are about forms and relatives, not documents or checks.
+
+### Re-run on my own copy (`rv_c65m`, :4438, fixture; US$0, no `*_LIVE` switch)
+* `tests/check_c65_documents_api.ts`: **74/74 passed** on 9f176ed8c.
+* `tsc --noEmit` on `api/` and `web/`: no error in the six files or in the files main changed.
+* The copy was stopped afterwards (database and files removed).
+* I did not re-run `C6.5-screen.test.ts`: I take the builder's 33/33. It runs against the same code, untouched by the merge.
+
+### Issues
+None new. n2 (Minor, the clock) and the drawer note stay as recorded on 88194485a.
+
+### Journey score
+No user-visible change from the merge. The reviewer's journey score stays **9/10, Pass** (`journey-test-reviewer-checked-2026-11-09.md`).
+
+### Could not check
+CI on this head, the browser pack by hand, and the configured checkpoint (fixture only).
+
+Verdict: Approve 9f176ed8c
