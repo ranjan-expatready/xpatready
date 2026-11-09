@@ -19,13 +19,18 @@ import { Runtime, type Reached } from "./runtime.ts";
 type H = string | undefined;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** How many earlier cases of one client are read (newest first): enough for any returning family, bounded per request. */
-const EARLIER_MAX = 5;
+const EARLIER_MAX = 5, EARLIER_READ = 20;
+/** Breaker m8: "today" is the firm's calendar day (the Sample firms work in Toronto time, as the database does), so an
+ *  expiry date is compared with the day the officer sees, never the UTC day. */
+const FIRM_ZONE = "America/Toronto";
+export const firmToday = (now = new Date()) => new Date(`${new Intl.DateTimeFormat("en-CA", { timeZone: FIRM_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(now)}T00:00:00Z`);
 export const REUSED_FACTS = "reused_facts";
 
 const ReconfirmBody = z.object({
   earlierCase: z.string().uuid(),
   /** The facts the officer ticked: whose, which, and the earlier answer id shown. */
-  take: z.array(z.object({ subject_id: z.string().uuid(), fact: z.string().min(1).max(200), from: z.string().uuid() }).strict()).min(1, "Tick at least one fact to re-confirm.").max(200),
+  take: z.array(z.object({ subject_id: z.string().uuid(), fact: z.string().min(1).max(200), from: z.string().uuid() }).strict()).min(1, "Tick at least one fact to re-confirm.").max(200)
+    .refine((t) => new Set(t.map((x) => `${x.subject_id}|${x.fact}`)).size === t.length, "Each fact once: the same fact of the same person is ticked twice (breaker m1)."),
   /** "<subject_id>|<fact>" → this case's current answer id the officer saw (null: none yet). */
   seen: z.record(z.string().max(300), z.string().uuid().nullable()).default({}).refine((v) => Object.keys(v).length <= 200, "Send at most 200 seen answers."),
 }).strict();
@@ -40,13 +45,14 @@ export type EarlierOffer = { case_id: string; reference: string; combination: st
 export class EarlierFacts {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Runtime) private readonly runtime: Runtime) {}
 
-  /** BR-1: this firm's other cases whose principal has this case's principal's name, newest first. */
-  private async candidates(c: Reached) {
+  /** BR-1: this firm's cases opened before this one, for the same client login (breaker M2: another client's answers
+   *  never reach this case) and a principal of the same name, newest first; with `only`, that one case if it qualifies. */
+  private async candidates(c: Reached, only?: string) {
     const principal = c.participants.find((p) => p.role === "principal");
     if (!principal) return [];
-    const rows = await this.db.caseParticipant.findMany({ where: { workspaceId: c.workspaceId, role: "principal", caseId: { not: c.id }, case: { firmKey: c.firmKey } },
-      include: { subject: { select: { label: true } }, case: { select: { id: true, reference: true, createdAt: true, combination: { select: { label: true } } } } }, orderBy: { case: { createdAt: "desc" } }, take: 500 });
-    return rows.filter((r) => sameName(r.subject.label, principal.subject.label)).slice(0, EARLIER_MAX);
+    const rows = await this.db.caseParticipant.findMany({ where: { workspaceId: c.workspaceId, role: "principal", caseId: only ?? { not: c.id }, case: { firmKey: c.firmKey, clientActorId: c.clientActorId, createdAt: { lt: c.createdAt } } },
+      include: { subject: { select: { label: true } }, case: { select: { id: true, reference: true, createdAt: true, combination: { select: { label: true } } } } }, orderBy: { case: { createdAt: "desc" } }, take: 1000 });
+    return rows.filter((r) => r.caseId !== c.id && sameName(r.subject.label, principal.subject.label));
   }
 
   /** This case's current single answers about its people (never a relative's, a row's or the firm record's). */
@@ -70,11 +76,16 @@ export class EarlierFacts {
   /** GET: the earlier cases of this client and what each offers (BR-1, BR-2). An empty list shows no card. */
   async list(actor: Actor, caseId: string) {
     const c = await this.runtime.reach(actor, caseId, "officer");
-    const today = new Date(), here = await this.runtime.state(c);
-    const earlier: EarlierOffer[] = [];
-    for (const cand of await this.candidates(c)) earlier.push(await this.offerOf(actor, c, cand, today, here));
+    const today = firmToday(), here = await this.runtime.state(c);
+    const read: EarlierOffer[] = [];
+    for (const cand of (await this.candidates(c)).slice(0, EARLIER_READ)) read.push(await this.offerOf(actor, c, cand, today, here));
+    // Breaker M1: the cases that offer something come first, so empty ones never crowd out the one holding the facts.
+    const offers = (e: EarlierOffer) => e.people.some((p) => p.facts.length);
+    const earlier = [...read.filter(offers), ...read.filter((e) => !offers(e))].slice(0, EARLIER_MAX);
     const principal = c.participants.find((p) => p.role === "principal");
-    return { case_id: c.id, principal: principal?.subject.label ?? null, today: day(today), earlier };
+    // Review m5: a case recorded as submitted is read-only; the card says so before anyone ticks.
+    const recorded = (await this.db.filingRecord.count({ where: { caseId: c.id } })) > 0;
+    return { case_id: c.id, principal: principal?.subject.label ?? null, today: day(today), recorded, earlier };
   }
 
   /** POST: re-confirm the ticked facts and copy them onto this case (BR-3 to BR-7). */
@@ -83,18 +94,21 @@ export class EarlierFacts {
     const parsed = ReconfirmBody.safeParse(body ?? {});
     if (!parsed.success) throw new HttpException(problemFromZod(parsed.error), HttpStatus.BAD_REQUEST);
     const b = parsed.data;
-    const cand = (await this.candidates(c)).find((x) => x.case.id === b.earlierCase);
+    const cand = (await this.candidates(c, b.earlierCase))[0];
     if (!cand) fail("No earlier case of this client with that id.", HttpStatus.NOT_FOUND); // BR-1: another firm's or another person's case is never named
-    const today = new Date();
+    const today = firmToday(), at = new Date().toISOString();
     const offer = await this.offerOf(actor, c, cand!, today);
     const s = this.runtime.snapshotOf(c);
     const fields = (s.canonical_fields ?? []) as { id: string; item_version: number }[];
-    const at = today.toISOString();
     const lines = b.take.map((t) => {
       const person = offer.people.find((p) => p.subject_id === t.subject_id);
       const line = person?.facts.find((f) => f.fact === t.fact);
       return { t, person, line, label: line?.label ?? t.fact };
     });
+    // Breaker m2: a take is checked against the offer before anything is read or locked (a subject not on this case, or a
+    // fact not offered, never touches another case's rows).
+    const missing = lines.filter((l) => !l.line);
+    if (missing.length) notPossible(`Not offered from this earlier case now: ${missing.map((l) => l.label).join(", ")}. Reload to see what it offers; nothing was copied.`);
     const written = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`; // BR-5: one re-confirm at a time
       if (await tx.filingRecord.count({ where: { caseId: c.id } })) notPossible("This application is recorded as submitted to IRCC, so it is read-only: no facts are copied from an earlier case.");
@@ -105,12 +119,10 @@ export class EarlierFacts {
       const now = await tx.clientCanonicalAnswer.findMany({ where: { subjectId: { in: subjects }, canonicalFieldKey: { in: keys }, rowKey: null, supersededById: null } });
       const changed = lines.filter((l) => (now.find((x) => x.subjectId === l.t.subject_id && x.canonicalFieldKey === l.t.fact)?.id ?? null) !== (b.seen[`${l.t.subject_id}|${l.t.fact}`] ?? null));
       if (changed.length) stale(changed.map((l) => l.label));
-      const missing = lines.filter((l) => !l.line);
-      if (missing.length) notPossible(`Not offered from this earlier case now: ${missing.map((l) => l.label).join(", ")}. Reload to see what it offers; nothing was copied.`);
       const moved = lines.filter((l) => l.line!.from_answer !== l.t.from);
       if (moved.length) stale(moved.map((l) => `${l.label} (on the earlier case)`));
       const blocked = lines.filter((l) => !l.line!.usable);
-      if (blocked.length) { const l = blocked[0].line!; notPossible(`${blocked[0].label} cannot be re-confirmed: ${l.expiry?.blocks ? l.expiry.words : l.problems[0]} Nothing was copied.`); }
+      if (blocked.length) { const l = blocked[0].line!; const why = l.expiry?.blocks ? `${l.expiry.words} (${"sample" in l.expiry.source ? "Sample rule" : `canada.ca, ${l.expiry.source.page}, recorded ${l.expiry.source.recorded}`})` : l.problems[0]; notPossible(`${blocked[0].label} cannot be re-confirmed: ${why} Nothing was copied.`); }
       // Challenge M2: the earlier answer shown must still be current there (append-only rows never change their value, so
       // the value copied is exactly the one the officer saw), read under a share lock so it cannot move during the copy.
       const froms = [...new Set(b.take.map((t) => t.from))];
@@ -125,14 +137,14 @@ export class EarlierFacts {
         if (!def) fail(`The library has no version ${ver ?? "?"} of ${l.label}.`, HttpStatus.CONFLICT);
         const who = c.participants.find((p) => p.subjectId === l.t.subject_id)!;
         const cur = now.find((x) => x.subjectId === l.t.subject_id && x.canonicalFieldKey === l.t.fact);
-        const from = earlierRows.find((x) => x.id === l.t.from)!, src = from.sourceJson as { channel: string; actor: string; at: string };
+        const from = earlierRows.find((x) => x.id === l.t.from)!, src = from.sourceJson as { channel: string; actor: string; at: string; from?: string };
         const id = randomUUID();
         if (cur) { const n = await tx.clientCanonicalAnswer.updateMany({ where: { id: cur.id, supersededById: null }, data: { supersededById: id } }); if (n.count !== 1) stale([l.label]); }
         // Challenge B1 (SA-1B-266 rule 3, BR-39, P-411 (2)): the copy keeps the status, the giver and the verifier it had on
         // the earlier case; the officer's press is recorded beside them (reconfirmed_by, reconfirmed_at), never as a new
         // Verified. A client's own answer stays the client's (its channel), so Confirm section treats it as it did there.
         await tx.clientCanonicalAnswer.create({ data: { id, workspaceId: c.workspaceId, partyId: who.subject.partyId, subjectId: who.subjectId, canonicalFieldId: def!.id, canonicalFieldKey: l.t.fact, rowKey: null, valueJson: from.valueJson as object, status: from.status,
-          sourceJson: { channel: src.channel, actor: src.actor, at: src.at, earlier_case: offer.case_id, earlier_reference: offer.reference, earlier_answer: from.id, reconfirmed_by: actor.id, reconfirmed_at: at }, verifiedBy: from.verifiedBy, verifiedAt: from.verifiedAt } });
+          sourceJson: { channel: src.channel, actor: src.actor, at: src.at, ...(src.from ? { from: src.from } : {}), earlier_case: offer.case_id, earlier_reference: offer.reference, earlier_answer: from.id, reconfirmed_by: actor.id, reconfirmed_at: at }, verifiedBy: from.verifiedBy, verifiedAt: from.verifiedAt } });
         out.push({ subject: who.subjectId, fact: l.t.fact });
       }
       await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: REUSED_FACTS, entity: "case", entityKey: c.id, combinationId: c.combinationId, detail: { from_case: offer.case_id, facts: out } as object,

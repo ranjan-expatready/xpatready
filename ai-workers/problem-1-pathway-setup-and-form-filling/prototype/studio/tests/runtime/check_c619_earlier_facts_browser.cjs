@@ -46,7 +46,7 @@ const api = async (method, url, body, actor = "user-O") => { const r = await fet
     };
     await confirmAll(a.id, pa);
 
-    const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 2 });
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 2, timezoneId: "America/Toronto" }); // the firm's zone: review M2 showed a date one day early there
     await ctx.addInitScript(() => { localStorage.setItem("xr-actor", "user-R"); });
     const p = await ctx.newPage();
     p.on("pageerror", (e) => errors.push(e.message));
@@ -91,13 +91,14 @@ const api = async (method, url, body, actor = "user-O") => { const r = await fet
     await agent.getByText("Z7000001").first().waitFor(T);
     ok("C6.19 BR-3: the Agent view shows the copied passport number", true);
     await agent.getByText("Z7000001").first().scrollIntoViewIfNeeded(T);
-    ok("C6.19 BR-4: the copied answer names its origin, the earlier case's re-confirmation", (await agent.getByText(/earlier case, re-confirmed/).count()) > 0);
+    ok("C6.19 BR-4 (review M1): the copied answer keeps its giver (Agent view, Case officer) and says where it came from", (await agent.getByText(new RegExp(`^Agent view · Case officer .*copied from C619W-A-${run}, re-confirmed by Representative`)).count()) > 0);
     await shot(p, "04-agent-view-origin-1440.png");
     // Step 4: the earlier passport expires (changed and confirmed on case A); a further case shows it Expired.
     const qa = ((await api("GET", `/runtime/cases/${a.id}/questionnaire?mode=agent`)).body.sections).flatMap((s) => s.questions).find((q) => q.subjectId === pa && q.fact === "person.passport_expiry_date");
     await api("PUT", `/runtime/cases/${a.id}/answers/${pa}/person.passport_expiry_date`, { value: "2025-01-15", expectedId: qa.answer.id });
     await confirmAll(a.id, pa);
     await openCase(`C619W-C-${run}`);
+    const caseC = p.url();
     const card2 = p.locator("[data-earlier-facts]");
     await card2.getByRole("heading", { name: "Facts from an earlier case" }).waitFor(T);
     const pick = card2.getByLabel(new RegExp(`C619W-A-${run}`));
@@ -109,6 +110,18 @@ const api = async (method, url, body, actor = "user-O") => { const r = await fet
     await num.scrollIntoViewIfNeeded();
     await shot(p, "05-expired-1440.png");
     await axeCard("the card with an expired passport");
+    // Review M2: on a Visitor visa case the rule quotes canada.ca with the date our copy was recorded, as a calendar date.
+    const openVv = async (ref) => { await p.goto(`${BASE}/cases`); await p.getByRole("button", { name: "Open a case" }).click(T); const dlg = p.getByRole("dialog"); await dlg.getByLabel("Combination (released)").selectOption(vv, T); await dlg.getByLabel("Case reference").fill(ref); await dlg.getByLabel("Principal applicant's name").fill(NAME); await dlg.getByRole("button", { name: "Open case" }).click(); await p.waitForURL(/\/cases\/[0-9a-f-]{36}$/, T); };
+    await openVv(`C619W-D-${run}`);
+    const card3 = p.locator("[data-earlier-facts]");
+    await card3.getByRole("heading", { name: "Facts from an earlier case" }).waitFor(T);
+    await card3.getByLabel(new RegExp(`C619W-A-${run}`)).check(T);
+    const vnum = card3.locator('tr[data-fact="person.passport_number"]');
+    await vnum.waitFor(T);
+    const vtext = await vnum.innerText();
+    ok("C6.19 BR-6 (review M2): on the Visitor visa the flag quotes canada.ca, recorded 27 Oct 2026 in Toronto time, not a day early", vtext.includes("recorded 27 Oct 2026:") && vtext.includes("All applicants need to include a digital copy of your valid (not expired) passport"), vtext.slice(0, 500));
+    await vnum.scrollIntoViewIfNeeded(); await shot(p, "07-expired-visitor-visa-1440.png");
+    await p.goto(caseC); await card2.getByRole("heading", { name: "Facts from an earlier case" }).waitFor(T);
     for (const w of [1024, 390]) { await p.setViewportSize({ width: w, height: 900 }); ok(`C6.19: the case page has no sideways scroll at ${w} px`, !(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1))); }
     await p.setViewportSize({ width: 390, height: 900 }); await card2.scrollIntoViewIfNeeded(); await shot(p, "06-expired-390.png");
     ok("C6.19: no page errors", errors.length === 0, errors);

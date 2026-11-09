@@ -5,7 +5,6 @@
 // people reach no case. Answer values and typed names never go into audit text or logs (STANDARDS §5): audit lines name
 // a case by its id.
 import { clientPersonOf, withClient, type StoredChange } from "../../engine/runtime/filing-changes.ts";
-import { EARLIER_CASE } from "../../engine/runtime/earlier-facts.ts";
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -359,11 +358,11 @@ export class Runtime {
     const fromIds = answers.map((x) => (x.sourceJson as { from?: string }).from).filter((x): x is string => !!x);
     const firsts = new Map((fromIds.length ? await this.db.clientCanonicalAnswer.findMany({ where: { id: { in: fromIds } }, select: { id: true, sourceJson: true } }) : []).map((x) => [x.id, x.sourceJson as { channel: string; actor: string; at: string; recorded?: { by: string; at: string } }]));
     const bg = this.backgroundOf(c);
-    const a: Answer[] = answers.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string; recorded?: { by: string; at: string }; earlier_case?: string; reconfirmed_by?: string; reconfirmed_at?: string }; const first = src.from ? firsts.get(src.from) : undefined;
-      // C6.19 (challenge B1): a copy from an earlier case keeps its status and giver; its origin names the earlier case's
-      // re-confirmation (who pressed "Re-confirm and use", when), so the screen can say where it came from.
-      const origin = first ? { channel: first.channel, actor: first.actor, at: first.at } : src.earlier_case && src.reconfirmed_by && src.reconfirmed_at ? { channel: EARLIER_CASE, actor: src.reconfirmed_by, at: src.reconfirmed_at } : null;
-      const one: Answer = { id: x.id, subjectId: keyOf.get(x.subjectId) ?? x.subjectId, field: x.canonicalFieldKey, rowKey: x.rowKey, value: x.valueJson, status: x.status as Answer["status"], channel: src.channel, actor: src.actor, at: src.at, origin };
+    const a: Answer[] = answers.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string; recorded?: { by: string; at: string }; earlier_case?: string; earlier_reference?: string; reconfirmed_by?: string; reconfirmed_at?: string }; const first = src.from ? firsts.get(src.from) : undefined;
+      // C6.19 (challenge B1, review M1): a copy from an earlier case keeps its status and its giver (channel, actor, and the
+      // earlier answer's own `from`, so the origin is still who first gave it); where it came from is said apart.
+      const copiedFrom = src.earlier_case && src.reconfirmed_by && src.reconfirmed_at ? { reference: src.earlier_reference ?? "", by: src.reconfirmed_by, at: src.reconfirmed_at } : null;
+      const one: Answer = { id: x.id, subjectId: keyOf.get(x.subjectId) ?? x.subjectId, field: x.canonicalFieldKey, rowKey: x.rowKey, value: x.valueJson, status: x.status as Answer["status"], channel: src.channel, actor: src.actor, at: src.at, origin: first ? { channel: first.channel, actor: first.actor, at: first.at } : null, ...(copiedFrom ? { copiedFrom } : {}) };
       // C6.18 (P-244): a background answer, and whether an officer recorded it and the client has not re-confirmed it.
       if (!bg.has(one.field)) return one;
       // Who on the staff recorded it: this version, the version it confirms, or (re-confirmed) the one the client's names.

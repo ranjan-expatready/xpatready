@@ -20,7 +20,7 @@ export type ExpiryFlag = { status: "expired" | "soon" | "unknown"; rule: string;
 
 /** BR-1: two names are the same person's when they read the same, trimmed, inner spaces collapsed, in any letter case. */
 export const sameName = (a: string, b: string) => norm(a) === norm(b) && norm(a) !== "";
-const norm = (s: string) => String(s ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+const norm = (s: string) => String(s ?? "").normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase(); // breaker m7: one Unicode form
 
 const ISO = /^(\d{4})-(\d{2})-(\d{2})$/;
 const dayOf = (v: unknown): number | null => {

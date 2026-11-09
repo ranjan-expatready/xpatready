@@ -84,11 +84,11 @@ async function checkpoint() {
   return { wp: id("wp.lmia_inside"), vv: id("vv.single") };
 }
 
-type Q = { subjectId: string; fact: string; answer: { id: string; value: unknown; status: string; channel: string } | null; section: string };
+type Q = { subjectId: string; fact: string; answer: { id: string; value: unknown; status: string; channel: string; by: string; answered: { channel: string; by: string } | null; copied_from?: { reference: string; by: string } } | null; section: string };
 const questions = async (caseId: string): Promise<Q[]> => ((await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, OFFICER)).body?.sections ?? []).flatMap((s: { questions: Q[] }) => s.questions);
 type Case = { id: string; people: { subject_id: string; role: string }[] };
-const open = async (combinationId: string, tag: string, name: string, actor = REP): Promise<Case> => {
-  const r = await call("POST", "/runtime/cases", { combinationId, reference: `C619-${tag}-${run}`, clientActor: CLIENT, principal: { displayName: name } }, actor);
+const open = async (combinationId: string, tag: string, name: string, actor = REP, clientActor = CLIENT): Promise<Case> => {
+  const r = await call("POST", "/runtime/cases", { combinationId, reference: `C619-${tag}-${run}`, clientActor, principal: { displayName: name } }, actor);
   if (!(r.status === 201 || r.status === 200)) { ok(`setup: case ${tag} opens`, false, r.body); process.exit(2); }
   return r.body;
 };
@@ -135,6 +135,10 @@ async function api() {
   const solo = await open(wp, "solo", NAME, SOLO);
   ok("C6.19 BR-1 fail: the solo firm's case for the same name is offered nothing from the Sample firm's case", ((await offerOf(solo.id, SOLO)).body as Offer).earlier.length === 0);
 
+  const otherClient = await open(wp, "Q", NAME, REP, "user-Q");
+  ok("C6.19 BR-1 fail (breaker M2): a case with the same name for another client login is offered nothing (another client's answers never reach it)", ((await offerOf(otherClient.id)).body as Offer).earlier.length === 0);
+  ok("C6.19 BR-1 fail (breaker m3): a case opened later is never offered as earlier (case A is not offered case B)", !((await offerOf(a.id)).body as Offer).earlier.some((x) => x.case_id === b.id));
+
   // BR-2: what is offered
   const facts = e.people.find((p) => p.subject_id === pb)!.facts, fact = (k: string) => facts.find((f) => f.fact === k);
   const usable = passport.filter((k) => k !== COUNTRY);
@@ -156,6 +160,7 @@ async function api() {
   const f2 = (r.body as Offer).earlier.find((x) => x.case_id === a.id)!.people.find((p) => p.subject_id === pb)!.facts;
   ok("C6.19 BR-5: the typed number now reads Different, with case B's own value", f2.find((f) => f.fact === NUMBER)?.state === "different", f2.map((f) => [f.fact, f.state]));
   const seen = Object.fromEntries(f2.map((f) => [`${pb}|${f.fact}`, f.current?.answer_id ?? null]));
+  ok("C6.19 fail (breaker m1): the same fact ticked twice is refused (400), nothing copied", (await call("POST", `/runtime/cases/${b.id}/earlier-facts`, { earlierCase: a.id, take: [...take([EXPIRY], f2), ...take([EXPIRY], f2)], seen }, OFFICER)).status === 400 && copies(b.id) === 0);
   ok("C6.19 fail: a request with an unknown field, or nothing ticked, is refused (400)", (await call("POST", `/runtime/cases/${b.id}/earlier-facts`, { earlierCase: a.id, take: take([EXPIRY], f2), seen, extra: 1 }, OFFICER)).status === 400 && (await call("POST", `/runtime/cases/${b.id}/earlier-facts`, { earlierCase: a.id, take: [], seen }, OFFICER)).status === 400);
   ok("C6.19 BR-7 fail: the client cannot re-confirm (403), even with a malformed body", (await call("POST", `/runtime/cases/${b.id}/earlier-facts`, { earlierCase: a.id, take: take([EXPIRY], f2), seen }, CLIENT)).status === 403 && (await call("POST", `/runtime/cases/${b.id}/earlier-facts`, { nonsense: 1 }, CLIENT)).status === 403);
   ok("C6.19 BR-1 fail: another firm's or another person's case id is not found, and nothing is copied", (await call("POST", `/runtime/cases/${b.id}/earlier-facts`, { earlierCase: b0.id, take: take([EXPIRY], f2), seen }, OFFICER)).status === 404 && copies(b.id) === 0);
@@ -172,7 +177,11 @@ async function api() {
   ok("C6.19 BR-4: only the ticked facts are written, each naming the earlier case and answer and who re-confirmed it", (done.status === 201 || done.status === 200) && JSON.stringify(done.body?.copied?.map((x: { fact: string }) => x.fact)) === JSON.stringify(ticks) && copies(b.id) === ticks.length, done.body);
   ok("C6.19 BR-4 (challenge B1): a fact Verified on case A arrives Verified by case A's verifier, never by the re-confirming press", kept("VERIFIED", OFFICER, rest));
   if (own) ok("C6.19 BR-4 fail (challenge B1): the client's own answer arrives Declared and the client's, not Verified by the tick", kept("DECLARED", "-", [own]) && (await questions(b.id)).find((q) => q.subjectId === pb && q.fact === own)?.answer?.channel === "questionnaire");
-  const qb = await questions(b.id);
+  const qb = await questions(b.id), qA = await questions(a.id);
+  const giver = (q: Q | undefined) => q?.answer ? `${q.answer.answered?.channel ?? q.answer.channel}|${q.answer.answered?.by ?? q.answer.by}` : null;
+  const onA = (k: string) => qA.find((q) => q.subjectId === pa && q.fact === k), onB = (k: string) => qb.find((q) => q.subjectId === pb && q.fact === k);
+  ok("C6.19 BR-4 (review M1): each copy keeps who first gave it on case A (the answer sheet's source), and says apart where it came from", ticks.every((k) => giver(onB(k)) === giver(onA(k)) && onB(k)?.answer?.copied_from?.reference === `C619-A-${run}` && onB(k)?.answer?.copied_from?.by === REP), ticks.map((k) => [k, giver(onA(k)), giver(onB(k)), onB(k)?.answer?.copied_from]));
+  if (own) ok("C6.19 BR-4 fail (review M1): the client's own copied answer reads as the client's, never as staff's or the re-confirming officer's", giver(onB(own)) === `questionnaire|${CLIENT}`, giver(onB(own)));
   ok("C6.19 BR-4 fail: an unticked fact stays off case B; the officer's Different number is kept", !qb.some((q) => q.subjectId === pb && q.fact === UNTICKED && q.answer) && qb.find((q) => q.subjectId === pb && q.fact === NUMBER)?.answer?.value === "X1234567", qb.filter((q) => q.subjectId === pb && both.includes(q.fact)).map((q) => [q.fact, q.answer?.value]));
   ok("C6.19 BR-3: case A did not change with the copy", answersOf(a.id) === beforeA);
   const copied = qb.find((q) => q.subjectId === pb && q.fact === EXPIRY)!.answer!;
@@ -198,9 +207,14 @@ async function api() {
   const fv = ((await offerOf(v.id)).body as Offer).earlier.find((x) => x.case_id === a.id)?.people.find((p) => p.subject_id === pv)?.facts.find((f) => f.fact === NUMBER);
   ok("C6.19 BR-6: on a Visitor visa case the same flag quotes canada.ca word for word", fv?.expiry?.status === "expired" && /valid \(not expired\) passport/.test(fv.expiry.source.quote ?? ""), fv?.expiry);
   const refused = await call("POST", `/runtime/cases/${c.id}/earlier-facts`, { earlierCase: a.id, take: [{ subject_id: pc, fact: NUMBER, from: flagged!.from_answer }], seen: { [`${pc}|${NUMBER}`]: null } }, OFFICER);
-  ok("C6.19 BR-6 fail: re-confirming an expired passport's number is refused with the rule's words; nothing copied", refused.status === 409 && /cannot be re-confirmed: The passport expired on 15 Jan 2025/.test(JSON.stringify(refused.body)) && copies(c.id) === 0, refused.body);
+  ok("C6.19 BR-6 fail: re-confirming an expired passport's number is refused with the rule's words and its source (review m4); nothing copied", refused.status === 409 && /cannot be re-confirmed: The passport expired on 15 Jan 2025.*\(Sample rule\)/.test(JSON.stringify(refused.body)) && copies(c.id) === 0, refused.body);
   ok("C6.19 BR-6: every passport fact offered on case C is flagged with the expired passport", fc.filter((f) => both.includes(f.fact)).length >= 3 && fc.filter((f) => both.includes(f.fact)).every((f) => f.expiry?.blocks), fc.map((f) => [f.fact, f.expiry?.status]));
   ok("C6.19 BR-6 fail: a fact no rule covers (the date of birth) is not flagged", !own || !fc.find((f) => f.fact === own)?.expiry, fc.find((f) => f.fact === own));
+
+  // Breaker M1: newer empty cases of the same client never crowd out the earlier case that holds the facts.
+  for (let i = 0; i < 6; i++) await open(vv, `crowd${i}`, NAME);
+  const e2 = await open(wp, "E", NAME), listed = ((await offerOf(e2.id)).body as Offer).earlier;
+  ok("C6.19 BR-1 (breaker M1): with six empty earlier cases of the same client, case A (the one with facts) is still offered, first", listed.length === 5 && listed.some((x) => x.case_id === a.id) && listed[0].people.some((p) => p.facts.length > 0), listed.map((x) => x.reference));
 
   // BR-7: a case recorded as submitted copies nothing. Set-up: case D's filings from /prepare, then its record row written
   // directly (as C8.2's "Record submission" leaves it; the full Ready to file walk is C8.2's own pack).
@@ -209,6 +223,7 @@ async function api() {
   const prep = (await call("GET", `/runtime/cases/${d.id}/prepare`, undefined, OFFICER)).body as { groups?: { id: string }[]; filings?: { id: string }[] };
   const g = prep?.groups?.[0]?.id, fl = prep?.filings?.[0]?.id;
   if (g && fl) sql(`insert into filing_record (id, workspace_id, case_id, filing_id, submission_group_id, our_reference, submitted_on, application_number, prepared_by, recorded_by, filed_facts) select gen_random_uuid(), workspace_id, id, '${fl}', '${g}', 'SAMPLE-C619', current_date, 'V3000619', '${REP}', '${REP}', '[]'::jsonb from runtime_case where id='${d.id}'`);
+  ok("C6.19 BR-7 (review m5): the offer says a recorded case is read-only before anyone ticks", ((await offerOf(d.id)).body as { recorded?: boolean }).recorded === true && ((await offerOf(b.id)).body as { recorded?: boolean }).recorded === false);
   ok("setup: case D is recorded as submitted", sql(`select count(*) from filing_record where case_id='${d.id}'`) === "1" && !!fd, { g, fl, fd: !!fd });
   const ro = fd ? await call("POST", `/runtime/cases/${d.id}/earlier-facts`, { earlierCase: a.id, take: [{ subject_id: pd, fact: fd.fact, from: fd.from_answer }], seen: { [`${pd}|${fd.fact}`]: null } }, OFFICER) : { status: 0, body: null };
   ok("C6.19 BR-7 fail: a case recorded as submitted copies nothing, in this capability's words", ro.status === 409 && /recorded as submitted to IRCC, so it is read-only: no facts are copied/.test(JSON.stringify(ro.body)) && copies(d.id) === 0, ro.body);

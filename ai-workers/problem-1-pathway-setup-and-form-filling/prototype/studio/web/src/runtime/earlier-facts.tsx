@@ -16,7 +16,7 @@ type Expiry = { status: "expired" | "soon" | "unknown"; rule: string; words: str
 type Fact = { fact: string; label: string; value: unknown; from_answer: string; confirmed_at: string; confirmed_by: string; state: "new" | "different"; current: { answer_id: string; value: unknown } | null; expiry: Expiry | null; problems: string[]; usable: boolean };
 type Person = { subject_id: string; label: string; role: string; from_subject_id: string | null; from_label: string | null; facts: Fact[] };
 type Earlier = { case_id: string; reference: string; combination: string; opened_at: string; people: Person[]; unmatched: { label: string; role: string }[] };
-type View = { case_id: string; principal: string | null; today: string; earlier: Earlier[] };
+type View = { case_id: string; principal: string | null; today: string; recorded?: boolean; earlier: Earlier[] };
 
 const STATE: Record<Fact["state"], { tone: string; words: string; tip: string }> = {
   new: { tone: "info", words: "New", tip: "New: this case has no value yet." },
@@ -27,7 +27,8 @@ const roleWords = (r: string) => r.replace(/_/g, " ");
 
 function SourceLine({ s }: { s: Source }) {
   if ("sample" in s) return <span className="text-text-muted">{/^Sample\b/.test(s.why) ? s.why : `Sample rule: ${s.why}`}</span>;
-  return <span className="text-text-muted">{s.page}, recorded {dateWords(s.recorded)}: <q>{s.quote}</q> <a className="text-text-link underline" href={s.url} target="_blank" rel="noreferrer">canada.ca</a></span>;
+  // Review M2: a recorded date is a calendar date, not a moment: read at noon UTC so no time zone moves it a day.
+  return <span className="text-text-muted">{s.page}, recorded {dateWords(`${s.recorded}T12:00:00Z`)}: <q>{s.quote}</q> <a className="text-text-link underline" href={s.url} target="_blank" rel="noreferrer">canada.ca</a></span>;
 }
 
 export function EarlierFactsCard({ caseId }: { caseId: string }) {
@@ -78,7 +79,7 @@ export function EarlierFactsCard({ caseId }: { caseId: string }) {
                 <tbody className="divide-y divide-border">{p.facts.map((f) => {
                   const id = `ef-${p.subject_id}-${f.fact}`;
                   return <tr key={f.fact} data-fact={f.fact} data-state={f.state} data-expiry={f.expiry?.status ?? ""} className="align-top">
-                    <td className="py-2"><input id={id} type="checkbox" disabled={!f.usable} aria-describedby={f.usable ? undefined : `${id}-why`} checked={f.usable && ticked.includes(key(p, f))} onChange={(e) => setTicked((t) => e.target.checked ? [...t, key(p, f)] : t.filter((x) => x !== key(p, f)))} /></td>
+                    <td className="py-2"><input id={id} type="checkbox" disabled={!f.usable || !!q.data!.recorded} aria-describedby={f.usable ? undefined : `${id}-why`} checked={f.usable && ticked.includes(key(p, f))} onChange={(e) => setTicked((t) => e.target.checked ? [...t, key(p, f)] : t.filter((x) => x !== key(p, f)))} /></td>
                     <td className="py-2 pr-3"><label htmlFor={id} className="text-text-muted">{f.label}</label></td>
                     <td className="py-2 pr-3 [overflow-wrap:anywhere]">{valueWords(f.value)}</td>
                     <td className="whitespace-nowrap py-2 pr-2 text-xs text-text-muted">{dateWords(f.confirmed_at)}</td>
@@ -96,7 +97,8 @@ export function EarlierFactsCard({ caseId }: { caseId: string }) {
         ))}
         {chosen.unmatched.length ? <p className="text-xs text-text-muted">Also on {chosen.reference}: {chosen.unmatched.map((u) => `${u.label} (${roleWords(u.role)})`).join(", ")}. Add them to this case with the same role and name to bring their facts.</p> : null}
         {problem ? <Notice tone="danger" title={problem.title}><p>{problem.text}</p>{problem.reload ? <Button className="mt-2" size="sm" variant="secondary" onClick={() => void reload()}><RotateCw aria-hidden />Reload</Button> : null}</Notice> : null}
-        {offered.length ? <div className="flex items-center justify-end gap-3"><p className="text-xs text-text-muted">{take.length ? `${take.length} ticked: copied onto this case with the status each had there, re-confirmed by you now.` : "Tick each fact the client says is still true."}</p>
+        {q.data!.recorded ? <Notice tone="info" title="Read-only">This application is recorded as submitted to IRCC, so no facts are copied onto it.</Notice> : null}
+        {offered.length && !q.data!.recorded ? <div className="flex items-center justify-end gap-3"><p className="text-xs text-text-muted">{take.length ? `${take.length} ticked: copied onto this case with the status each had there, re-confirmed by you now.` : "Tick each fact the client says is still true."}</p>
           <Button busy={busy} disabled={!take.length} onClick={() => void submit()} data-reconfirm>Re-confirm and use{take.length ? ` (${take.length})` : ""}</Button></div> : null}
       </div>
     </section>
