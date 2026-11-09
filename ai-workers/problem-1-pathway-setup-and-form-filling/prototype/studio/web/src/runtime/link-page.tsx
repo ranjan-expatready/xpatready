@@ -62,7 +62,7 @@ export function LinkApp() {
         <img src="/brand/expat-ready-notagline-dark.svg" alt="Expat Ready" className="h-6 dark:hidden" />
         <img src="/brand/expat-ready-notagline.svg" alt="Expat Ready" className="hidden h-6 dark:block" />
         <span className="h-6 w-px bg-border" />
-        <p className="min-w-0 truncate text-sm font-semibold">Your questions</p>
+        <p className="hidden min-w-0 truncate text-sm font-semibold sm:block">Your questions</p>
         <span className="ml-auto flex shrink-0 items-center gap-2">
           <ProposedStandIn today="you prove the email is yours with a link and a 6-digit code; staff and the principal are simulated people" later="the team's sign-in for adult family members (Release 2)" />
           {stored ? <Button size="sm" variant="ghost" onClick={async () => { await linkApi("/end", { method: "POST" }, stored.session).catch(() => null); end("You signed out. To come back, open the link from your email again and ask for a new code."); }}><LogOut aria-hidden />Sign out</Button> : null}
