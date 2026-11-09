@@ -93,7 +93,7 @@ await main("C7.9", "Must verify before filing: the expert's flag, a CRITICAL war
   const par = (await mv(c3.id)).filter((w) => /their parent 1/.test(w.words));
   ok("C7.9-16 fail (review M1): a parent's date of birth the client typed (IMM 5645 writes it) raises the line, naming the relative", parents.some((x) => x.status < 300) && par.length >= 1 && par.every((w) => w.severity === "critical"), { put: parents.map((x) => x.status), lines: (await mv(c3.id)).map((w) => w.words.slice(0, 160)) });
   // Break F1, F2, F3 on #1282: a merge never brings a merged field back, and never leaves a change stuck.
-  const merge = async (keep: string, gone: string) => { const m = await call("POST", "/library/merges", { keep, merge: gone, reason: "C7.9 pack: the same meaning (Sample)." }, AUTHOR); return m.body?.id ? call("POST", `/library/merges/${m.body.id}/approve`, {}, APPROVER) : m; };
+  const merge = async (keep: string, gone: string) => { const m = await call("POST", "/library/merges", { keep, merge: gone, reason: "C7.9 pack: the same meaning (Sample)." }, AUTHOR); return m.body?.id ? call("POST", `/library/merges/${m.body.id}/approve`, {}, REVIEWER) : m; }; // a second person, never the releaser (BR-14)
   const [MA, MB, MC, MD] = ["person.family_name_at_permanent_residence", "person.other_family_name", "person.given_name_at_permanent_residence", "person.full_name"];
   const live = (k: string) => !!sql(`select 1 from canonical_field where canonical_field_key = '${k}' limit 1`);
   if (live(MA) && live(MB) && live(MC) && live(MD)) {
@@ -123,14 +123,14 @@ await main("C7.9", "Must verify before filing: the expert's flag, a CRITICAL war
     const c6 = await openCase(vv, [{ role: "principal", name: "Sample Client F", dob: yearsAgo(39) }]);
     const P6 = c6.subjects["Sample Client F"];
     const bgOf = async (actor: string, mode: string) => ((await call("GET", `/runtime/cases/${c6.id}/questionnaire?mode=${mode}`, undefined, actor)).body?.sections ?? []).flatMap((x: { questions: Q[] }) => x.questions).find((x: Q) => x.subjectId === P6 && x.fact === BG) as Q | undefined;
-    const typed = await call("PUT", `/runtime/cases/${c6.id}/answers/${P6}/${BG}`, { value: "no", expectedId: null }, c6.officer);
+    const typed = await call("PUT", `/runtime/cases/${c6.id}/answers/${P6}/${BG}`, { value: false, expectedId: null }, c6.officer);
     const officerId = (await bgOf(CLIENT, "sqr"))?.answer?.id;
     const re = officerId ? await call("POST", `/runtime/cases/${c6.id}/answers/${officerId}/reconfirm`, {}, CLIENT) : { status: 0, body: null };
     const label = new RegExp(bgQ.label ? bgQ.label.slice(0, 25).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : "^$", "i");
     let bgLines = (await mv(c6.id)).filter((w) => label.test(w.words));
     ok("C7.9-20 pass (F5 ruling, P-244): the client re-confirms the background answer an officer recorded: it keeps the staff check, no line", !!bgRel.version && typed.status < 300 && re.status < 300 && bgLines.length === 0, { release: bgRel, typed: typed.status, reconfirm: re.status, why: re.status >= 300 ? words(re) : undefined, lines: bgLines.map((w) => w.words.slice(0, 120)) });
     const cur = (await bgOf(CLIENT, "sqr"))?.answer?.id ?? null;
-    const changed = await call("PUT", `/runtime/cases/${c6.id}/answers/${P6}/${BG}`, { value: "yes", expectedId: cur }, CLIENT);
+    const changed = await call("PUT", `/runtime/cases/${c6.id}/answers/${P6}/${BG}`, { value: true, expectedId: cur }, CLIENT);
     bgLines = (await mv(c6.id)).filter((w) => label.test(w.words));
     ok("C7.9-21 fail (F5 ruling): the client changes it (their own answer now): the CRITICAL line", changed.status < 300 && bgLines.length >= 1, { changed: changed.status, why: changed.status >= 300 ? words(changed) : undefined, lines: (await mv(c6.id)).map((w) => w.words.slice(0, 120)) });
   } else ok("C7.9-20 setup: a background Yes/No question on the case (IMM 5257's Background information block)", false, "none found");
