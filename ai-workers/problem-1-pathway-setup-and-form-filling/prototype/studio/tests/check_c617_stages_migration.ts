@@ -1,5 +1,5 @@
 // C6.17 (B139; concept §2, §6 "Migration test"; challenge M5): the case-stages migration on a copy holding cases made
-// before it. A scratch database gets every migration before 20261109110000_c617_case_stages, then two cases in the old
+// before it. A scratch database gets every migration before 20261109130000_c617_case_stages, then two cases in the old
 // shape (one with a family group, filings, checklist lines, a finding and a task; one with nothing yet), then the
 // migration and every later one. Each row is read back, and each database rule the migration adds is refused and allowed.
 // No server, no browser, no model call (US$0).
@@ -8,7 +8,7 @@ import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const STUDIO = join(import.meta.dirname, ".."), MIG = join(STUDIO, "prisma", "migrations"), NEW = "20261109110000_c617_case_stages";
+const STUDIO = join(import.meta.dirname, ".."), MIG = join(STUDIO, "prisma", "migrations"), NEW = "20261109130000_c617_case_stages";
 const BIN = "/opt/homebrew/opt/postgresql@18/bin", DB = `xr_studio_c617_mig_${process.pid}`, URL = `postgresql://xr_studio@127.0.0.1:54329/${DB}`;
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 220)}` : ""}`); };
