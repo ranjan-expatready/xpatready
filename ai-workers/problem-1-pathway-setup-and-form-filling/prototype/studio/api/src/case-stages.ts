@@ -31,6 +31,23 @@ const NEXT_APPLICATION = "00000000-0000-4000-8000-00000000c617";
 const deadlineWords = (d: CaseStageView["deadline"]) => (d?.due ? `; deadline ${fmtDate(d.due)} (Sample)` : d ? `; deadline not set (${d.why.replace(/\.$/, "")})` : "");
 type StageRowDb = Reached["stages"][number];
 
+type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
+/** P-412 F13 (c): a key detail the route marks the same at every stage (the UCI) is also the principal's answer, entered
+ *  by the officer through the stage record (P-78 channel "stage_record"); written only when it differs from the answer now. */
+async function writeSameEveryStage(tx: Tx, c: Reached, snap: Snapshot, defs: { field: string; same_every_stage?: boolean }[], values: Record<string, string>, actor: string, at: Date) {
+  const principal = c.participants.find((p) => p.role === "principal");
+  if (!principal) return;
+  for (const d of defs.filter((x) => x.same_every_stage && values[x.field] !== undefined)) {
+    const item = (snap.canonical_fields as { id: string; item_version: number }[]).find((f) => f.id === d.field);
+    const def = item ? await tx.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: d.field, version: item.item_version } }) : null;
+    if (!def) continue;
+    const cur = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: principal.subjectId, canonicalFieldKey: d.field, rowKey: null, supersededById: null } });
+    if (cur && cur.valueJson === values[d.field]) continue;
+    const made = await tx.clientCanonicalAnswer.create({ data: { workspaceId: c.workspaceId, partyId: principal.subject.partyId, subjectId: principal.subjectId, canonicalFieldId: def.id, canonicalFieldKey: d.field, valueJson: values[d.field], status: "DECLARED", sourceJson: { channel: STAGE_RECORD, actor, at: at.toISOString() } } });
+    if (cur) await tx.clientCanonicalAnswer.update({ where: { id: cur.id }, data: { supersededById: made.id } });
+  }
+}
+
 @Injectable()
 export class CaseStagesService {
   constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit, @Inject(Programs) private readonly programs: Programs) {}
@@ -98,10 +115,10 @@ export class CaseStagesService {
     const views = await this.views(c), curView = views.find((v) => v.id === c.stage.id)!;
     const base = { from: { stage: c.stage.id, name: c.stage.staffName, client_name: c.stage.clientName, version: c.stage.version }, key_details: curView.key_details };
     const unrecorded = await this.unrecorded(c);
-    if (!current || !next) return { ...base, to: null, refused: "This is the last stage of the case's route: there is no next stage.", people: [], counts: { person_answers_used: 0, asked_again: 0, new_questions: 0, forms: 0, documents: 0 }, forms: [], documents: [], deadline: null, unrecorded, words: "" };
+    if (!current || !next) return { ...base, to: null, refused: "This is the last stage of the case's route: there is no next stage.", people: [], counts: { person_answers_used: 0, asked_again: 0, new_questions: 0, forms: 0, documents: 0 }, forms: [], documents: [], documents_basis: "release" as const, deadline: null, unrecorded, words: "" };
     const st = await this.startability(next.combinationId);
     const nextView = views.find((v) => v.id === next.id)!;
-    if (st.why || !st.release) return { ...base, to: { stage: next.id, name: next.staffName, release_version: st.release?.version ?? 0, release: st.release ? releaseLabel(st.release) : "" }, refused: `Can't start ${next.staffName}: ${st.why!.replace(/^Cannot start yet: /, "")} Nothing was changed.`, people: [], counts: { person_answers_used: 0, asked_again: 0, new_questions: 0, forms: 0, documents: 0 }, forms: [], documents: [], deadline: nextView.deadline, unrecorded, words: "" };
+    if (st.why || !st.release) return { ...base, to: { stage: next.id, name: next.staffName, release_version: st.release?.version ?? 0, release: st.release ? releaseLabel(st.release) : "" }, refused: `Can't start ${next.staffName}: ${st.why!.replace(/^Cannot start yet: /, "")} Nothing was changed.`, people: [], counts: { person_answers_used: 0, asked_again: 0, new_questions: 0, forms: 0, documents: 0 }, forms: [], documents: [], documents_basis: "release" as const, deadline: nextView.deadline, unrecorded, words: "" };
     const snap = st.release.snapshot as unknown as Snapshot;
     // Who comes along: everyone on the case; a person whose role the next release lacks stays and files nothing in it.
     const roles = new Set(((snap.combination.participants ?? []) as { role: string; max?: number }[]).filter((p) => (p.max ?? 1) > 0).map((p) => p.role));
@@ -130,12 +147,15 @@ export class CaseStagesService {
     const comingWho = new Set(nextPeople.filter((x) => x.role !== "case").map((x) => ROLE_WHO[x.role] ?? x.role));
     const releaseDocs = ((snap.document_requirements ?? []) as { who: string; document_type: string; base_or_conditional: string }[]).filter((d) => d.base_or_conditional === "base" && (comingWho.has(d.who) || d.who === "each_applicant" || d.who === "case")).map((d) => d.document_type);
     const documents = [...new Set(cl.derived ? cl.people.flatMap((p) => [...p.lines, ...p.waiting].map((l) => l.document.name)) : releaseDocs)].sort();
+    // Review M4 (D1): where the per-person checklist is not worked out for the next combination, the documents are the
+    // ones its release asks for, said so; no checklist line is made.
+    const documentsBasis: "checklist" | "release" = cl.derived ? "checklist" : "release";
     const deadline = nextView.deadline;
     const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
     const principal = people.find((p) => p.role === "principal")?.label ?? "the client", who = people.filter((x) => x.comes).length > 1 ? `${principal} and the family` : principal;
-    const head = `${next.staffName} started. ${n(used, `answer about ${who} used`, `answers about ${who} used`)}; ${n(again, "question about this application asked again", "questions about this application asked again")}; ${n(fresh, "new question", "new questions")}; ${n(forms.length, "form", "forms")} and ${n(documents.length, "document", "documents")} added`, words = `${head}${deadlineWords(deadline)}.`;
+    const head = `${next.staffName} started. ${n(used, `answer about ${who} used`, `answers about ${who} used`)}; ${n(again, "question about this application asked again", "questions about this application asked again")}; ${n(fresh, "new question", "new questions")}; ${n(forms.length, "form", "forms")} added; ${documentsBasis === "checklist" ? `${n(documents.length, "document", "documents")} on the checklist` : `${n(documents.length, "document", "documents")} its release asks for (the per-person checklist is not worked out yet for this combination)`}`, words = `${head}${deadlineWords(deadline)}.`;
     return { ...base, to: { stage: next.id, name: next.staffName, release_version: st.release.version, release: releaseLabel(st.release) }, refused: null, people,
-      counts: { person_answers_used: used, asked_again: again, new_questions: fresh, forms: forms.length, documents: documents.length }, forms, documents, deadline, unrecorded, words, _head: head,
+      counts: { person_answers_used: used, asked_again: again, new_questions: fresh, forms: forms.length, documents: documents.length }, forms, documents, documents_basis: documentsBasis, deadline, unrecorded, words, _head: head,
       _release: { id: st.release.id, packVersionId: st.release.packVersionId, sha256: st.release.sha256, version: st.release.version } };
   }
 
@@ -185,6 +205,8 @@ export class CaseStagesService {
       await tx.caseParticipant.create({ data: { workspaceId: c.workspaceId, caseId: c.id, subjectId: app.id, role: "case", order } });
       const stored = { ...(cur.keyDetails as Record<string, StoredDetail>) };
       for (const d of spec.key_details) { const v = values[d.field]; if (v !== undefined && stored[d.field]?.value !== v) stored[d.field] = { value: v, by: actor.id, at: at.toISOString() }; else if (v === undefined && b.key_details && d.field in b.key_details) delete stored[d.field]; }
+      // Review M2 (P-412 F13 (c)): the UCI recorded with the start is also the principal's answer, as at opening.
+      await writeSameEveryStage(tx, c, snapNow, spec.key_details, values, actor.id, at);
       await tx.caseStage.update({ where: { id: cur.id }, data: { state: "ENDED_NEXT_STARTED", endedBy: actor.id, endedAt: at, keyDetails: stored as object, reason: reason || null, version: { increment: 1 } } });
       await tx.caseStage.update({ where: { id: nxt.id }, data: { state: "CURRENT", startedFrom: "NEXT_STAGE", applicationSubjectId: app.id, startedBy: actor.id, startedAt: at, version: { increment: 1 } } });
       // The case's combination first: B145's pin rule (runtime_pin_chain) takes a pin only for the case's own combination;
@@ -214,7 +236,6 @@ export class CaseStagesService {
     if ("field" in checked) fieldError(checked.field, checked.message);
     const values = (checked as { values: Record<string, string> }).values, snap = this.r.snapshotOf(c), at = new Date();
     for (const [field, v] of Object.entries(values)) { const d = spec.key_details.find((x) => x.field === field)!; if (d.same_every_stage && shapeOf(snap, field)) { const probs = checkValue(snap, field, v, at); if (probs.length) fieldError(`key_details.${field}`, `${d.label}: ${probs[0]}`); } }
-    const principal = c.participants.find((p) => p.role === "principal");
     await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       const now = await tx.caseStage.findUnique({ where: { id: s!.id } });
@@ -222,17 +243,9 @@ export class CaseStagesService {
       const stored = { ...(now!.keyDetails as Record<string, StoredDetail>) };
       for (const d of spec.key_details) { if (!(d.field in b.key_details)) continue; const v = values[d.field]; if (v === undefined) delete stored[d.field]; else if (stored[d.field]?.value !== v) stored[d.field] = { value: v, by: actor.id, at: at.toISOString() }; }
       await tx.caseStage.update({ where: { id: s!.id }, data: { keyDetails: stored as object, recordedBy: actor.id, recordedAt: at, version: { increment: 1 } } });
-      for (const d of spec.key_details.filter((x) => x.same_every_stage && values[x.field] !== undefined)) {
-        const item = (snap.canonical_fields as { id: string; item_version: number }[]).find((f) => f.id === d.field);
-        const def = item && principal ? await tx.canonicalField.findFirst({ where: { workspaceId: c.workspaceId, canonicalFieldKey: d.field, version: item.item_version } }) : null;
-        if (!def || !principal) continue;
-        const cur = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: principal.subjectId, canonicalFieldKey: d.field, rowKey: null, supersededById: null } });
-        if (cur && cur.valueJson === values[d.field]) continue;
-        const made = await tx.clientCanonicalAnswer.create({ data: { workspaceId: c.workspaceId, partyId: principal.subject.partyId, subjectId: principal.subjectId, canonicalFieldId: def.id, canonicalFieldKey: d.field, valueJson: values[d.field], status: "DECLARED", sourceJson: { channel: STAGE_RECORD, actor: actor.id, at: at.toISOString() } } });
-        if (cur) await tx.clientCanonicalAnswer.update({ where: { id: cur.id }, data: { supersededById: made.id } });
-      }
+      await writeSameEveryStage(tx, c, snap, spec.key_details, values, actor.id, at);
     });
-    await this.audit.log(c.workspaceId, actor.id, "changed", "case stage", c.id, `${actor.name} changed the key details of "${s!.staffName}" (done before we started) on case ${short(c.id)}`);
+    await this.audit.log(c.workspaceId, actor.id, "changed", "case", c.id, `${actor.name} changed the key details of "${s!.staffName}" (done before we started) on case ${short(c.id)}`);
     return this.stage(actor, c.id, s!.id);
   }
 }

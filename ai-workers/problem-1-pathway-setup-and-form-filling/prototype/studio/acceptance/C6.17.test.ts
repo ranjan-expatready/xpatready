@@ -81,7 +81,7 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
   // ---------------------------------------------------------------- C6.17-6: who may
   const f = await firms();
   const v1 = st1?.stages.find((x) => x.id === S1)?.version ?? 0;
-  const startBody = { from_stage: S1, stage_version: v1, key_details: { [dateField]: VALID }, reason: "The client filed the study permit themselves before the firm took the next step" };
+  const startBody = { from_stage: S1, stage_version: v1, key_details: { [dateField]: VALID, [sameField]: "87654321" }, reason: "The client filed the study permit themselves before the firm took the next step" };
   const deny = [await call("GET", `/runtime/cases/${S}/stages`, undefined, CLIENT), await call("POST", `/runtime/cases/${S}/stages/next`, startBody, CLIENT), await call("GET", `/runtime/cases/${S}/stages`, undefined, AUTHOR), await call("POST", `/runtime/cases/${S}/stages/next`, startBody, AUTHOR)].map((x) => x.status);
   const other = [await call("GET", `/runtime/cases/${S}/stages`, undefined, f.soloRep ?? "user-S"), await call("POST", `/runtime/cases/${S}/stages/next`, startBody, f.soloRep ?? "user-S")].map((x) => x.status);
   ok("C6.17-6 fail: the client and configuration people get 403 (stages and start); another firm's staff 404; nothing changed", deny.every((x) => x === 403) && other.every((x) => x === 404) && sql(`select state from case_stage where id='${S1}'`) === "CURRENT", { deny, other });
@@ -96,7 +96,7 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
     { to: preview?.to, counts: preview?.counts });
 
   // ---------------------------------------------------------------- C6.17-8: the start
-  const ansBefore = sql(`select string_agg(canonical_field_key || '=' || (value_json #>> '{}'), ',' order by canonical_field_key) from client_canonical_answer where subject_id='${P}' and superseded_by_id is null`);
+  const ansBefore = sql(`select string_agg(canonical_field_key || '=' || (value_json #>> '{}'), ',' order by canonical_field_key) from client_canonical_answer where subject_id='${P}' and superseded_by_id is null and canonical_field_key <> '${sameField}'`);
   const started = await call("POST", `/runtime/cases/${S}/stages/next`, startBody);
   const st2 = S ? await stagesOf(S) : null;
   const APP2 = sql(`select application_subject_id from case_stage where id='${S2}'`) ?? "";
@@ -106,7 +106,9 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
     && sql(`select combination_id from runtime_case where id='${S}'`) === nextCombo && sql(`select revision from pack_work_pin where case_id='${S}' and combination_id='${nextCombo}'`) === "1"
     && st2?.stages.find((x) => x.id === S1)?.key_details.find((d) => d.field === dateField)?.value === VALID && /started/.test(started.body?.words ?? "") && /\(Sample\)/.test(started.body?.words ?? ""), { status: started.status, words: started.body?.words ?? words(started) });
   ok("C6.17-8 pass (challenge B3): a new application subject with no answers; Client A's person answers are unchanged and read where they are",
-    !!APP2 && APP2 !== APP1 && n(`select count(*) from client_canonical_answer where subject_id='${APP2}'`) === 0 && sql(`select string_agg(canonical_field_key || '=' || (value_json #>> '{}'), ',' order by canonical_field_key) from client_canonical_answer where subject_id='${P}' and superseded_by_id is null`) === ansBefore);
+    !!APP2 && APP2 !== APP1 && n(`select count(*) from client_canonical_answer where subject_id='${APP2}'`) === 0 && sql(`select string_agg(canonical_field_key || '=' || (value_json #>> '{}'), ',' order by canonical_field_key) from client_canonical_answer where subject_id='${P}' and superseded_by_id is null and canonical_field_key <> '${sameField}'`) === ansBefore);
+  ok("C6.17-8 pass (review M2, P-412 F13 (c)): the UCI recorded with the start is also Client A's answer, entered by the officer through the stage record (as at opening)",
+    sql(`select value_json #>> '{}' || '|' || (source_json->>'channel') from client_canonical_answer where subject_id='${P}' and canonical_field_key='${sameField}' and superseded_by_id is null`) === "87654321|stage_record");
   const q2 = (await call("GET", `/runtime/cases/${S}/questionnaire?mode=agent`)).body;
   const qOf = (fact: string, subject: string) => (q2?.sections ?? []).flatMap((x: { questions: { fact: string; subjectId: string; answer: { value: unknown } | null }[] }) => x.questions).find((x: { fact: string; subjectId: string }) => x.fact === fact && x.subjectId === subject);
   ok("C6.17-8 pass (BR-5): the next stage's questionnaire reads Client A's answer where it is and asks the application's own question again (empty)",
@@ -120,10 +122,10 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
     (p2?.filings.length ?? 0) > 0 && n(`select count(*) from filing where case_id='${S}' and stage_id='${S2}'`) > 0 && n(`select count(*) from submission_group where case_id='${S}' and kind='FAMILY'`) === 2
     && n(`select count(*) from submission_group where case_id='${S}' and stage_id='${S2}' and kind='FAMILY'`) === 1 && itemForms.length > 0 && itemForms.every((x) => relForms.includes(x as string)), { itemForms, relForms });
   const s1Filings = (sql(`select string_agg(id::text, ',') from filing where stage_id='${S1}'`) ?? "").split(",").filter(Boolean);
-  const reads = await Promise.all(["/prepare", "/filings", "/findings", "/checklist", "/record", "/release-update"].map(async (x) => [x, await call("GET", `/runtime/cases/${S}${x}`)] as const));
+  const reads = await Promise.all(["/prepare", "/filings", "/findings", "/checklist", "/filing-record", "/release-update"].map(async (x) => [x, await call("GET", `/runtime/cases/${S}${x}`)] as const));
   const leaked = reads.filter(([, r]) => s1Filings.some((id) => JSON.stringify(r.body ?? {}).includes(id))).map(([x]) => x);
-  ok("C6.17-9 pass (BR-9): every case reader answers after the start and none shows a row of the ended stage (prepare, filings, findings, checklist, release update)",
-    s1Filings.length > 0 && reads.filter(([x]) => x !== "/record").every(([, r]) => r.status === 200) && leaked.length === 0, { statuses: reads.map(([x, r]) => `${x}:${r.status}`), leaked });
+  ok("C6.17-9 pass (BR-9): every case reader answers after the start and none shows a row of the ended stage (prepare, filings, findings, checklist, filing record, release update)",
+    s1Filings.length > 0 && reads.every(([, r]) => r.status === 200) && leaked.length === 0, { statuses: reads.map(([x, r]) => `${x}:${r.status}`), leaked });
   const panel = (await call("GET", `/runtime/cases/${S}/stages/${S1}`)).body;
   ok("C6.17-9 pass (m2): the ended stage's own record is read only: its filings, its key details", panel?.read_only === true && (panel?.filings ?? []).some((x: { id: string }) => s1Filings.includes(x.id)) && panel.key_details.some((d: { field: string; value: string }) => d.field === dateField && d.value === VALID));
 
@@ -151,11 +153,18 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
   const write = ended ? sql(`update filing set status='READY_TO_FILE' where id='${ended}' returning id`) : "none";
   ok("C6.17-11 fail (BR-10): the database refuses a change to the ended stage's filing", !!ended && write === null);
 
+  // ---------------------------------------------------------------- review M1: an ended stage's record never freezes the next
+  const s1Filing = s1Filings[0], s1Group = sql(`select submission_group_id from filing where id='${s1Filing}'`);
+  const recorded = s1Filing && s1Group ? sql(`insert into filing_record (id, workspace_id, case_id, filing_id, submission_group_id, our_reference, submitted_on, application_number, prepared_by, recorded_by, filed_facts)
+    select gen_random_uuid(), workspace_id, case_id, id, '${s1Group}', 'C617-STUDY', current_date, 'S000000001', '${OFFICER}', '${OFFICER}', '[]' from filing where id='${s1Filing}' returning id`) : null;
+  const spouse = await call("POST", `/runtime/cases/${S}/people`, { role: "spouse_or_partner", displayName: "Sample Spouse A", idempotencyKey: `c617-spouse-${run}` });
+  ok("C6.17 review M1 fail-first: the study permit recorded as submitted (Sample record on the ended stage) never freezes the work permit stage: a spouse is added (201)", !!recorded && spouse.status === 201, { recorded, status: spouse.status, words: words(spouse) });
+
   // ---------------------------------------------------------------- C6.17-12: a release update after the start
   const rel = await sampleRelease(nextCombo!, { map: (relForms.find((x) => /^IMM 5710/.test(x)) ?? relForms[0]) });
   const ru = (await call("GET", `/runtime/cases/${S}/release-update`)).body;
   const moved = ru?.target ? await call("POST", `/runtime/cases/${S}/release-update`, { target_version: ru.target.version, from_revision: ru.current.revision, reason: "Adopting the current release (C6.17 pack)" }) : null;
-  ok("C6.17-12 pass (challenge B1): after the start, a later release of the next combination moves the case on the current stage's chain: revision 2 on that combination, the ended stage's pin untouched, every route still reads",
+  ok("C6.17-12 pass (challenge B1): after the start (and with the ended stage recorded), a later release of the next combination moves the case on the current stage's chain: revision 2 on that combination, the ended stage's pin untouched, every route still reads",
     (rel.version ?? 0) >= 2 && moved?.status === 200 && sql(`select max(revision) from pack_work_pin where case_id='${S}' and combination_id='${nextCombo}'`) === "2" && n(`select count(*) from pack_work_pin where case_id='${S}' and combination_id <> '${nextCombo}'`) === 1
     && (await call("GET", `/runtime/cases/${S}`)).body?.pin?.revision === 2 && (await call("GET", `/runtime/cases/${S}/prepare`)).status === 200, { release: rel.version, steps: rel.steps.filter((x) => x.status >= 300), moved: moved?.status, words: moved ? words(moved) : ru });
 

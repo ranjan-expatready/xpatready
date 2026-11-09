@@ -338,10 +338,12 @@ export class CaseForms implements OnModuleInit {
     }
   }
 
-  private async copyFor(actor: Actor, id: string) {
+  private async copyFor(actor: Actor, id: string, write = false) {
     const x = await this.db.formInstance.findUnique({ where: { id: idOf(id, "copy") }, include: { snapshot: true, validated: { orderBy: { readAt: "desc" }, take: 1 } } });
     if (!x) fail("No such copy.", HttpStatus.NOT_FOUND);
     const c: Reached = await this.officerCase(actor, x!.caseId); // the officer of the copy's workspace only; others are refused there
+    // C6.17 (BR-7, review m5): a copy made for an ended stage (a release of another combination) is history: read, never changed.
+    if (write && !c.pins.some((p) => p.configReleaseId === x!.configReleaseId)) throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Changed since you read it", status: 409, detail: "This copy belongs to an earlier stage of the case, which has ended: it is kept as it was and can no longer be changed.", code: "stage_ended" }, HttpStatus.CONFLICT);
     return { x: x!, c };
   }
 
@@ -358,7 +360,7 @@ export class CaseForms implements OnModuleInit {
   /** RT-16: lock a generated, up-to-date copy once ("validated copy uploaded back" or "filed"). The officer only; an out
    *  of date copy is refused (make a new copy first). After this the database refuses any change to it. */
   async lock(actor: Actor, id: string, body: unknown) {
-    const { x, c } = await this.copyFor(actor, id); // who may lock is checked before what was sent (break m4)
+    const { x, c } = await this.copyFor(actor, id, true); // who may lock is checked before what was sent (break m4)
     const b = parse(LockCopy, body);
     if (x.status !== "GENERATED") conflict("Only a generated copy can be locked.");
     if (x.lockedAt) conflict(`This copy is already locked (${LOCK_KINDS[x.lockedKind as keyof typeof LOCK_KINDS]}); a locked copy never changes.`);
@@ -409,7 +411,7 @@ export class CaseForms implements OnModuleInit {
    *  the proven E5 reader (studio/tools/read_validated.py): every value the product wrote must read back equal. Kept
    *  with its checksum and the fingerprint of the form's facts at that moment (C-10), insert-only. */
   async validated(actor: Actor, id: string, files: { originalname?: string; buffer?: Buffer; size?: number }[] | undefined) {
-    const { x, c } = await this.copyFor(actor, id);
+    const { x, c } = await this.copyFor(actor, id, true);
     const f = (files ?? [])[0];
     if (!f?.buffer?.length || (files ?? []).length !== 1) fail("Send the one validated PDF you saved from Adobe.", HttpStatus.BAD_REQUEST);
     if (f!.buffer!.length > MAX_VALIDATED_BYTES) fail(`The file is larger than ${MAX_VALIDATED_MB} MB: send the validated PDF of this form. Nothing was recorded.`, HttpStatus.PAYLOAD_TOO_LARGE);

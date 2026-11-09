@@ -31,7 +31,8 @@ export async function refuseIfRecorded(q: Db | Tx, filingIds: string[], what: st
 /** C8.2-9 (review M1): once any filing of a case is recorded, its people are not changed (added, or marked travelling or
  *  not): either would add a filing to a recorded submission or drop a recorded one from the view. */
 export async function refuseIfCaseRecorded(q: Db | Tx, caseId: string, what: string) {
-  if (await q.filingRecord.count({ where: { caseId } })) throw new HttpException({ type: "https://expatready.local/problems/recorded", title: "Recorded as submitted", status: 409,
+  // C6.17 (review M1): only a record on the case's current stage: an ended stage's record never freezes the next application.
+  if (await q.filingRecord.count({ where: { caseId, filing: { stage: { state: "CURRENT" } } } })) throw new HttpException({ type: "https://expatready.local/problems/recorded", title: "Recorded as submitted", status: 409,
     detail: `This application is recorded as submitted to IRCC, so its people are not changed: ${what}. A new applicant goes on a new case.`, errors: [{ field: "case", message: "Recorded as submitted: read-only." }] }, HttpStatus.CONFLICT);
 }
 

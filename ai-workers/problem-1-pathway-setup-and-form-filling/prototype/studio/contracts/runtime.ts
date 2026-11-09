@@ -360,7 +360,7 @@ export type CaseStages = { case_id: string; route: { key: string; label: string;
 export type StartNextPreview = { from: { stage: string; name: string; client_name: string; version: number }; to: { stage: string; name: string; release_version: number; release: string } | null;
   refused: string | null; people: { subject: string; label: string; role: string; comes: boolean; words: string | null }[];
   counts: { person_answers_used: number; asked_again: number; new_questions: number; forms: number; documents: number };
-  forms: string[]; documents: string[]; deadline: CaseStageView["deadline"]; key_details: CaseStageView["key_details"];
+  forms: string[]; documents: string[]; documents_basis: "checklist" | "release"; deadline: CaseStageView["deadline"]; key_details: CaseStageView["key_details"];
   unrecorded: { filing: string; person: string }[]; words: string };
 export const StartNext = z.object({
   from_stage: z.string({ message: "Send the stage you read (Read the case again)." }).uuid("Send the stage you read (Read the case again)."),

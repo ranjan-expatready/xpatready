@@ -151,4 +151,4 @@ export function onFileFrom(lineType: string, pairs: SameDocument[], uploads: { d
 
 /** The words the strip shows for a state (GOV.UK task-list statuses; "Not recorded" for an earlier stage left unticked). */
 export const STAGE_WORDS: Record<StageState, string> = { DONE_BEFORE: "Done before we started", NOT_RECORDED: "Not recorded", CURRENT: "Current", ENDED_NEXT_STARTED: "Ended — next stage started", NOT_STARTED: "Not started" };
-export const fmtDate = (iso: string) => new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+export const fmtDate = (iso: string) => new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });

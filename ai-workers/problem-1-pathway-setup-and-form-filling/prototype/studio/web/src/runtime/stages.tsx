@@ -18,11 +18,12 @@ import { noRetryOnRefusal } from "./questionnaire";
 const STRIP_TIP = "A stage is one application on this client's route. Earlier stages stay here as history.";
 const ENDED_TIP = "The firm moved to the next application; IRCC's decision is recorded on the filing.";
 const DONE_TIP = "Done before we started: made before the firm took the case. Its details are kept on this stage.";
-const day = (iso: string) => new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const day = (iso: string) => new Date(`${iso.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 const TONE: Record<CaseStageView["state"], string> = { DONE_BEFORE: "ok", NOT_RECORDED: "neutral", CURRENT: "info", ENDED_NEXT_STARTED: "neutral", NOT_STARTED: "neutral" };
 
 function InfoTip({ tip, label }: { tip: string; label: string }) {
-  return <Tip tip={tip}><button type="button" className="inline-flex translate-y-0.5 rounded-sm text-text-muted outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={label}><Info className="size-3.5" aria-hidden /></button></Tip>;
+  // Review M3 (WCAG 2.5.8): a 24 px target, never inside another button.
+  return <Tip tip={tip}><button type="button" className="inline-flex size-6 shrink-0 items-center justify-center rounded-sm text-text-muted outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={label}><Info className="size-3.5" aria-hidden /></button></Tip>;
 }
 
 export function useStages(caseId: string) {
@@ -49,7 +50,7 @@ export function StageStrip({ caseId }: { caseId: string }) {
     <TipProvider>
       <section aria-labelledby="stages-h" className="rounded-lg border border-border bg-surface-raised" data-stage-strip>
         <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2">
-          <h2 id="stages-h" className="text-sm font-semibold">Stages</h2>
+          <h2 id="stages-h" tabIndex={-1} className="text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-primary">Stages</h2>
           {v.route ? <span className="text-xs text-text-muted">{v.route.label}</span> : null}
           {v.route?.basis === "SAMPLE" ? <Pill tone="warn" title="A Sample route: not a recommended one; real routes come from the immigration expert">Sample route</Pill> : null}
           <InfoTip tip={STRIP_TIP} label="What a stage is" />
@@ -64,12 +65,15 @@ export function StageStrip({ caseId }: { caseId: string }) {
                   <span className="text-sm font-medium">{s.name}</span><span className="text-xs">Cannot start yet</span><span className="text-xs">{s.cannot_start_why.replace(/^Cannot start yet: /, "")}</span>
                 </div>
               ) : (
-                <button type="button" onClick={() => setPanel(s.id)} data-stage={s.key} data-state={s.state} aria-current={s.state === "CURRENT" ? "step" : undefined}
-                  className={`flex min-w-[200px] flex-col items-start rounded-lg border px-3 py-1.5 text-left outline-none hover:bg-text/5 focus-visible:ring-2 focus-visible:ring-primary ${s.state === "CURRENT" ? "border-primary shadow-[inset_3px_0_0_var(--color-primary,#0862c5)]" : "border-border"}`}>
-                  <span className="text-sm font-medium">{s.name}</span>
-                  <span className="flex items-center gap-1 text-xs"><Pill tone={TONE[s.state]}>{s.words}</Pill>{s.state === "ENDED_NEXT_STARTED" ? <InfoTip tip={ENDED_TIP} label="What ended means" /> : s.state === "DONE_BEFORE" ? <InfoTip tip={DONE_TIP} label="What done before we started means" /> : null}</span>
-                  {s.state === "CURRENT" && s.deadline ? <Deadline d={s.deadline} /> : null}
-                </button>
+                <div className={`flex min-w-[200px] items-start gap-1 rounded-lg border ${s.state === "CURRENT" ? "border-primary shadow-[inset_3px_0_0_var(--color-primary,#0862c5)]" : "border-border"}`}>
+                  <button type="button" onClick={() => setPanel(s.id)} data-stage={s.key} data-state={s.state} aria-current={s.state === "CURRENT" ? "step" : undefined}
+                    className="flex flex-1 flex-col items-start rounded-lg px-3 py-1.5 text-left outline-none hover:bg-text/5 focus-visible:ring-2 focus-visible:ring-primary">
+                    <span className="text-sm font-medium">{s.name}</span>
+                    <span className="text-xs"><Pill tone={TONE[s.state]}>{s.words}</Pill></span>
+                    {s.state === "CURRENT" && s.deadline ? <Deadline d={s.deadline} /> : null}
+                  </button>
+                  {s.state === "ENDED_NEXT_STARTED" ? <span className="pt-1 pr-1"><InfoTip tip={ENDED_TIP} label="What ended means" /></span> : s.state === "DONE_BEFORE" ? <span className="pt-1 pr-1"><InfoTip tip={DONE_TIP} label="What done before we started means" /></span> : null}
+                </div>
               )}
             </li>
           ))}
@@ -77,7 +81,7 @@ export function StageStrip({ caseId }: { caseId: string }) {
         {next?.cannot_start_why ? <p className="px-4 pb-3 text-xs text-text-muted">{next.name}: {next.cannot_start_why}</p> : null}
       </section>
       {panel ? <StagePanel caseId={caseId} stageId={panel} close={() => setPanel(null)} /> : null}
-      {starting ? <StartNextDialog caseId={caseId} close={() => setStarting(false)} returnFocus={() => opener.current} /> : null}
+      {starting ? <StartNextDialog caseId={caseId} close={() => setStarting(false)} returnFocus={() => opener.current ?? document.getElementById("stages-h")} /> : null}
     </TipProvider>
   );
 }
@@ -145,7 +149,8 @@ function StartNextDialog({ caseId, close, returnFocus }: { caseId: string; close
     setBusy(true); setErrors({}); setRefused(null);
     try {
       const r = await api<{ words: string }>(`/runtime/cases/${caseId}/stages/next`, { method: "POST", json: { from_stage: p.from.stage, stage_version: p.from.version, key_details: Object.fromEntries(Object.entries(details ?? {}).map(([k, v]) => [k, v.trim() ? v : null])), ...(reason.trim() ? { reason } : {}) } });
-      toast.push({ tone: "ok", text: r.words }); void qc.invalidateQueries({ queryKey: ["runtime"] }); close(); returnFocus()?.focus();
+      // Review M3: after a start the button is gone (the next stage is current), so focus goes to the strip's heading.
+      toast.push({ tone: "ok", text: r.words }); void qc.invalidateQueries({ queryKey: ["runtime"] }); close(); setTimeout(() => (document.getElementById("stages-h") ?? returnFocus())?.focus(), 0);
     } catch (e) {
       const errs = e instanceof ApiError ? e.problem.errors ?? [] : [];
       if (errs.length) setErrors(Object.fromEntries(errs.map((x) => [x.field.replace(/^key_details\./, ""), x.message])));
@@ -158,6 +163,7 @@ function StartNextDialog({ caseId, close, returnFocus }: { caseId: string; close
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={busy} disabled={!p?.to || !!p.refused} onClick={() => void start()} data-start-confirm>{p?.to ? `Start ${p.to.name}` : "Start next stage"}</Button></>}>
       {q.isLoading ? <Skeleton className="h-48 w-full" /> : q.isError ? <Notice tone="danger" title="Could not work out the next stage">{(q.error as Error).message}</Notice> : p ? (
         <div className="space-y-4 text-sm" data-start-dialog>
+          {Object.keys(errors).length ? <Notice tone="danger" title="Some details need fixing"><ul className="list-disc pl-5" data-error-summary>{Object.values(errors).map((m) => <li key={m}>{m}</li>)}</ul></Notice> : null}
           {refused ? <Notice tone="danger" title="Not started">{refused}</Notice> : null}
           {p.refused ? <Notice tone="warn" title="Cannot start yet">{p.refused}</Notice> : null}
           {p.to && !p.refused ? <>
@@ -170,7 +176,7 @@ function StartNextDialog({ caseId, close, returnFocus }: { caseId: string; close
                 <li>{n(p.counts.asked_again, "question about this application asked again", "questions about this application asked again")}</li>
                 <li>{n(p.counts.new_questions, "new question", "new questions")}</li>
                 <li>{n(p.counts.forms, "form", "forms")}: {p.forms.join(", ") || "none"}</li>
-                <li className="sm:col-span-2">{n(p.counts.documents, "document", "documents")}: {p.documents.join("; ") || "none"}</li>
+                <li className="sm:col-span-2" data-start-documents>{p.documents_basis === "checklist" ? `${n(p.counts.documents, "document", "documents")} on the checklist` : `${n(p.counts.documents, "document", "documents")} its release asks for (the per-person checklist is not worked out yet for this combination, so no checklist line is made)`}: {p.documents.join("; ") || "none"}</li>
               </ul>
               <p className="mt-1 text-xs text-text-muted">The people's answers are read where they are; this application's own answers (its number, date, office, country where applying) belong to the new application and are asked again.</p></section>
             {p.deadline ? <section><h3 className="mb-1 font-semibold">Deadline</h3><Deadline d={p.deadline} /></section> : null}
