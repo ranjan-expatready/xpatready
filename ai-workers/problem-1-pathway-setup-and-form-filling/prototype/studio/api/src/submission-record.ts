@@ -8,7 +8,8 @@
 //   * refuseIfRecorded: the read-only lock (C8.2-9): a recorded filing is never changed (channel, split, entered, number).
 import { HttpException, HttpStatus } from "@nestjs/common";
 import { RUNTIME_ACTORS, type Db } from "./core.ts";
-import type { CaseTaskView, FilingRecordView } from "../../contracts/submission-record.ts";
+import type { CaseTaskView } from "../../contracts/submission-record.ts";
+import type { RecordWithReceipts } from "../../contracts/fee-receipt.ts";
 import type { FormFact } from "../../engine/runtime/forms.ts";
 import { changedSince, filedEarlierWords } from "../../engine/runtime/submission-record.ts";
 
@@ -46,7 +47,9 @@ export async function recordedOverlay(db: Db, a: { workspaceId: string; caseId: 
   const ids = a.filings.map((f) => f.id);
   // One read, no transaction (C6.12 break B1: 120 reads of one case at once must all answer; a second transaction per
   // read ran the pool out): each filing with its status, record, UCIs and corrections.
-  const stored = ids.length ? await db.filing.findMany({ where: { id: { in: ids } }, select: { id: true, status: true, record: true,
+  const stored = ids.length ? await db.filing.findMany({ where: { id: { in: ids } }, select: { id: true, status: true,
+    // B149: each record with its fee receipt uploads, oldest first (the newest is the receipt).
+    record: { include: { feeReceipts: { orderBy: [{ uploadedAt: "asc" }, { id: "asc" }], select: { id: true, fileName: true, mediaType: true, sizeBytes: true, uploadedBy: true, uploadedAt: true } } } },
     personRecords: { orderBy: [{ recordedAt: "asc" }, { id: "asc" }] }, corrections: { orderBy: [{ correctedAt: "asc" }, { id: "asc" }] } } }) : [];
   const changed = new Map<string, { filing: string; words: string }>(), current = new Set<string>();
   for (const f of a.filings) {
@@ -54,8 +57,9 @@ export async function recordedOverlay(db: Db, a: { workspaceId: string; caseId: 
     if (!rec) { if (row?.status === "READY_TO_FILE") f.status = "ready_to_file"; continue; }
     const person = (s: string | null) => (s ? a.label.get(s) ?? "a person" : null);
     const applying = f.applicants.filter((x) => (x.mode ?? "applying") === "applying").map((x) => x.subject);
-    const view: FilingRecordView = {
+    const view: RecordWithReceipts = {
       portal: rec.portal, our_reference: rec.ourReference, submitted_on: day(rec.submittedOn), application_number: rec.applicationNumber, fee_receipt: rec.feeReceipt,
+      fee_receipt_files: rec.feeReceipts.map((x) => ({ id: x.id, file_name: x.fileName, media_type: x.mediaType, size_bytes: x.sizeBytes, uploaded_by: nameOf(x.uploadedBy)!, uploaded_at: x.uploadedAt.toISOString() })),
       prepared_by: { id: rec.preparedBy, name: nameOf(rec.preparedBy)! },
       // P-155: the solo firm's one person reviews their own filing: "Self-reviewed".
       reviewed_by: rec.reviewedBy ? { id: rec.reviewedBy, name: nameOf(rec.reviewedBy)!, self: rec.reviewedBy === rec.preparedBy } : null,

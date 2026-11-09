@@ -1,0 +1,139 @@
+// Row C9 of the M3 sprint plan (QA-246; C7.7 Prepare application list; VV-R07, VV-R09, VV-R10): on the configured
+// checkpoint's family case, GET /runtime/cases/:id/prepare gives each person's forms to fill (`items`, kind "form") and,
+// apart, the forms not yet known (`waiting`), each naming the question it waits on; nothing that applies is hidden.
+// Answering one waiting question Yes moves that form into that person's forms to fill only; answering No takes it out,
+// listed in `not_needed` with its reason.
+// What is expected comes from row C1's expectedLines (acceptance/lib/m3.ts: the case's pinned release as configured and
+// the cited rules), never from /prepare. One rule is applied to it by hand, the same rule this row adds: a waiting line
+// whose question is already answered on the case moves. On the checkpoint the only such answer at case open is "Uses a
+// representative", Yes from the firm record (engine/runtime/team.ts representativeAnswers, row A2; VV-R10), read here from
+// the questionnaire, so the adults' IMM 5476 is expected among the forms to fill (the children are 10 and 15: under its 18).
+// Review round 1 (#1223): the item routes act on a waiting form too (C9-11), a case-level No (C9-12), and the minimum
+// age of a "not needed" line, called directly on the case's release (C9-13).
+// On main before row C9 it fails at C9-1: adults are listed 7 forms (3 of them "Cannot start yet"), children 4.
+// Sample data, live AI off, no model call (US$0).
+//   zsh studio/tools/isolated.sh rt_c9 4491 start && tsx studio/tests/runtime/check_c9_prepare_waiting.ts 4491 xr_studio_rt_c9
+import { request } from "node:http";
+import * as m3 from "../../acceptance/lib/m3.ts";
+import { recorder } from "./api.ts";
+import { notNeededForms } from "../../api/src/case-prepare.ts";
+import { knownOf, type Participant } from "../../engine/runtime/case.ts";
+import { render, type Role } from "../../engine/render.ts";
+import { ageOn } from "../../engine/runtime/filings.ts";
+import type { FormLine } from "../../engine/runtime/prepare.ts";
+
+const { ok, summary } = recorder();
+const { AUTHOR, FAMILY, PORT, answer, call, expectedFor, needVisitorVisa, openCase, readinessOf, filingOf } = m3;
+type Item = { id: string; kind: string; form?: string; subject: string; state: string; reason?: string; filing: string; waits_on?: { fact: string; question: string }[] };
+type View = { items: Item[]; waiting?: Item[]; not_needed?: (Item & { decided_by?: string[] })[]; stage1: { filing: string; to_confirm: number }[] } & m3.Prepare;
+const post = (path: string, body: unknown) => new Promise<number>((done) => {
+  const data = JSON.stringify(body);
+  const rq = request({ host: "127.0.0.1", port: PORT, path: `/api${path}`, method: "POST", timeout: 1_200_000, headers: { "content-type": "application/json", "x-actor": AUTHOR, "content-length": Buffer.byteLength(data) } }, (r) => { r.resume(); r.on("end", () => done(r.statusCode ?? 0)); });
+  rq.on("timeout", () => rq.destroy(new Error("timeout"))); rq.on("error", () => done(0)); rq.end(data);
+});
+const sorted = (x: string[]) => [...x].sort();
+const view = async (caseId: string) => (await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, m3.officerOf(caseId))).body as View | undefined;
+type Lists = Record<string, { fill: string[]; waiting: string[]; notNeeded: string[] }>;
+const listsOf = (v: View | undefined, subjects: Record<string, string>): Lists => Object.fromEntries(Object.entries(subjects).map(([n, s]) => [n, {
+  fill: sorted((v?.items ?? []).filter((i) => i.subject === s && i.kind === "form").map((i) => i.form ?? "?")),
+  waiting: sorted((v?.waiting ?? []).filter((i) => i.subject === s).map((i) => i.form ?? "?")),
+  notNeeded: sorted((v?.not_needed ?? []).filter((i) => i.subject === s).map((i) => i.form ?? "?")),
+}]));
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+// ---- Setup: a fresh checkpoint (Demo › Reset, then Load the configured checkpoint), and the pack's family case. ----
+const reset = await post("/demo/reset", { confirm: "RESET" }), load = reset < 300 ? await post("/demo/load", { sample: "configured" }) : 0;
+ok("C9-0a setup: Demo › Reset, then Load the configured checkpoint", reset < 300 && load < 300, [reset, load]);
+const c = await openCase(needVisitorVisa(), FAMILY);
+const exp = await expectedFor(c.id);
+type Q = { subjectId: string; fact: string; label: string; options: { key: string; label: string }[] | null; answer: { value: unknown; channel?: string } | null };
+const questions = async () => ((await m3.agent(c.id))?.sections ?? []).flatMap((s: { questions: Q[] }) => s.questions) as Q[];
+const qs = await questions();
+const labelOf = (fact: string) => qs.find((q) => q.fact === fact)?.label ?? null;
+const repYes = qs.some((q) => q.fact === "case.uses_representative" && q.subjectId === c.caseSubject && q.answer?.value === true && q.answer?.channel === "firm_record");
+ok("C9-0b setup: expectedLines reads the case's release 2, and the questionnaire shows \"Uses a representative\" answered Yes from the firm record (row A2)", !!exp && repYes, { exp: !!exp, repYes });
+
+// The expected lists: expectedLines, with the one answered question moved (by hand, see the header).
+const want: Lists = Object.fromEntries(FAMILY.map((p) => {
+  const e = exp?.[p.name], moves = (l: m3.ExpectedLine) => repYes && same(l.waitsOn, ["case.uses_representative"]);
+  return [p.name, { fill: sorted([...(e?.forms ?? []), ...(e?.waiting ?? []).filter(moves)].map((l) => l.form)), waiting: sorted((e?.waiting ?? []).filter((l) => !moves(l)).map((l) => l.form)), notNeeded: [] }];
+}));
+let v = await view(c.id);
+let got = listsOf(v, c.subjects);
+const diff = (g: Lists, w: Lists, part: "fill" | "waiting" | "notNeeded") => Object.keys(w).filter((n) => !same(g[n]?.[part], w[n][part])).map((n) => `${n}: got ${g[n]?.[part].join(", ")}; want ${w[n][part].join(", ")}`);
+ok("C9-1 pass (QA-246): each person's forms to fill equal expectedLines exactly, by form and by count (adults IMM 5257, Schedule 1, IMM 5645 and IMM 5476; each child IMM 5257 only)",
+  !!exp && !diff(got, want, "fill").length && want["Sample Client A"].fill.length === 4 && want["Sample Child A1"].fill.length === 1, diff(got, want, "fill"));
+ok("C9-2 pass (QA-246): each person's forms not yet known are listed apart and equal expectedLines' waiting lines exactly (IMM 5409, IMM 5475, IRM 0002 for everyone)",
+  !!exp && !diff(got, want, "waiting").length && Object.values(want).every((x) => x.waiting.length === 3), diff(got, want, "waiting"));
+// Each waiting form names the question it waits on: the fact its line reads (expectedLines' waitsOn), in the questionnaire's own words.
+const named = (v?.waiting ?? []).filter((i) => {
+  const name = Object.entries(c.subjects).find(([, s]) => s === i.subject)?.[0] ?? "", line = exp?.[name]?.waiting.find((l) => l.form === i.form);
+  return !line || !same((i.waits_on ?? []).map((x) => x.fact), line.waitsOn) || !(i.waits_on ?? []).every((x) => !!x.question && x.question === labelOf(x.fact) && (i.reason ?? "").includes(`"${x.question}"`)) || i.state !== "cannot_start" || i.kind !== "form";
+});
+ok("C9-3 pass: each form not yet known names the question it waits on (its line's fact, in the questionnaire's words, in its reason) and says Cannot start yet", (v?.waiting ?? []).length === 12 && !named.length, named.map((i) => [i.form, i.waits_on, i.reason]));
+// Break B3 kept: a waiting form still stands as a CRITICAL "missing facts" line on its filing, naming it.
+const unnamed = (v?.waiting ?? []).filter((i) => !(readinessOf(v ?? null, i.filing)?.warns ?? []).some((w) => w.code === "missing_facts" && w.item === i.id && w.words.includes(i.form ?? "?")));
+ok("C9-4 pass (break B3 kept): readiness still names each form not yet known as a line on its filing, so none is dropped", (v?.waiting ?? []).length > 0 && !unnamed.length, unnamed.map((i) => i.form));
+const stage1 = (v?.stage1 ?? []).length === 4 && (v?.stage1 ?? []).every((x) => x.to_confirm > 0);
+ok("C9-5 pass: stage 1 still counts facts to confirm on every filing (its forms to fill)", stage1, v?.stage1);
+
+// ---- Answer one waiting question Yes for one adult: IRM 0002 for the spouse. ----
+const before = got, S = c.subjects["Sample Spouse A"], P = c.subjects["Sample Client A"];
+let r = await answer(c.id, S, "person.gender_identifier_differs_from_documents", true, m3.officerOf(c.id), { onBehalfOf: S, reason: "Entered from the person's signed form (Sample)" });
+v = await view(c.id); got = listsOf(v, c.subjects);
+const yes = { ...before, "Sample Spouse A": { fill: sorted([...before["Sample Spouse A"].fill, "IRM 0002"]), waiting: before["Sample Spouse A"].waiting.filter((f) => f !== "IRM 0002"), notNeeded: [] } };
+ok("C9-6 pass: answered Yes for the spouse, IRM 0002 moves into the spouse's forms to fill; nobody else's lists change", r.status === 200 && same(got, yes), { status: r.status, got: got["Sample Spouse A"], others: Object.keys(got).filter((n) => n !== "Sample Spouse A" && !same(got[n], before[n])) });
+const item = (v?.items ?? []).find((i) => i.subject === S && i.form === "IRM 0002");
+ok("C9-7 pass: the spouse's IRM 0002 is now a form to fill (To do, its facts to answer), no longer \"Cannot start yet\"", item?.state === "to_do" && !/Cannot start/.test(item?.reason ?? "") && item?.waits_on === undefined, item);
+
+// ---- Answer another No for the principal: marital status other than common-law, so IMM 5409 is not needed. ----
+const marital = (await questions()).find((q) => q.subjectId === P && q.fact === "person.marital_status");
+const notCommonLaw = marital?.options?.map((o) => o.key).find((k) => k !== "common_law"), notCommonLawWords = marital?.options?.find((o) => o.key === notCommonLaw)?.label;
+r = await answer(c.id, P, "person.marital_status", notCommonLaw, m3.CLIENT);
+const v2 = await view(c.id), got2 = listsOf(v2, c.subjects);
+const no = { ...got, "Sample Client A": { fill: got["Sample Client A"].fill, waiting: got["Sample Client A"].waiting.filter((f) => f !== "IMM 5409"), notNeeded: ["IMM 5409"] } };
+ok("C9-8 pass: answered No for the principal (not common-law), IMM 5409 leaves the principal's forms not yet known and is not a form to fill; nobody else's lists change",
+  !!notCommonLaw && r.status === 200 && same(got2, no), { status: r.status, answer: notCommonLaw, got: got2["Sample Client A"], others: Object.keys(got2).filter((n) => n !== "Sample Client A" && !same(got2[n], got[n])) });
+const nn = (v2?.not_needed ?? []).find((i) => i.subject === P && i.form === "IMM 5409");
+ok("C9-9 pass: the principal's IMM 5409 is listed as not needed with its reason: the question in the questionnaire's words and the answer given, in the choice's own words (never its key)",
+  nn?.state === "not_needed" && (nn?.reason ?? "").startsWith("Not needed:") && !!notCommonLawWords && (nn?.reason ?? "").includes(`"${labelOf("person.marital_status")}" is answered ${notCommonLawWords}`) && same(nn?.decided_by, ["person.marital_status"]), nn);
+ok("C9-10 fail: a form answered No is no longer a line on the principal's filing (nothing waits on it)", !(readinessOf(v2 ?? null, filingOf(v2 ?? null, P)?.id)?.warns ?? []).some((w) => w.words.includes("IMM 5409 for Sample Client A")));
+
+// ---- Review M1: the item routes act on a form not yet known too (it is in `waiting`, not `items`). The principal's
+// IRM 0002 still waits; IRCC accepts it Online, as a PDF upload or on Paper. Moved to Online, then back. ----
+const wIrm = (v2?.waiting ?? []).find((i) => i.subject === P && i.form === "IRM 0002") as (Item & { channel?: string; accepts?: string[] }) | undefined;
+const lastAudit = () => m3.sql(`select summary from audit_event where entity='item' and entity_key='${wIrm?.id}' order by at desc limit 1`) ?? "";
+const move = async (to: string) => call("PATCH", `/runtime/items/${wIrm?.id}/channel`, { channel: to, version: (await view(c.id))?.version }, m3.officerOf(c.id));
+const toOnline = await move("ONLINE"), a1 = lastAudit(), back = await move("PDF_UPLOAD"), a2 = lastAudit();
+ok("C9-11 fail (review M1): changing how a form not yet known is filed is saved and answers with that item; moved back, the audit line names the channel it really had (from Online to PDF upload)",
+  wIrm?.channel === "PDF_UPLOAD" && (wIrm?.accepts ?? []).includes("ONLINE") && toOnline.status === 200 && toOnline.body?.changed === true && toOnline.body?.item?.id === wIrm?.id && toOnline.body?.item?.channel === "ONLINE"
+  && /from PDF upload to Online/.test(a1) && back.status === 200 && back.body?.changed === true && back.body?.item?.channel === "PDF_UPLOAD" && /from Online to PDF upload/.test(a2),
+  { online: [toOnline.status, toOnline.body?.changed, toOnline.body?.item?.channel], back: [back.status, back.body?.changed, back.body?.item?.channel], a1, a2 });
+
+// ---- A case-level answer No: "IMM 5475" (release information to someone else) is decided on the case, so it is not
+// needed for every person, each with the same reason. ----
+const before3 = listsOf(await view(c.id), c.subjects);
+r = await answer(c.id, c.caseSubject, "case.authorizes_release_to_designated_individual", false, m3.CLIENT);
+const v3 = await view(c.id), got3 = listsOf(v3, c.subjects), relQ = labelOf("case.authorizes_release_to_designated_individual");
+const nn3 = (v3?.not_needed ?? []).filter((i) => i.form === "IMM 5475");
+ok("C9-12 pass: a case-level question answered No (release information to someone else): IMM 5475 leaves every person's forms not yet known and is listed not needed for each, with the question and No; nothing else moves",
+  r.status === 200 && nn3.length === 4 && nn3.every((i) => i.reason === `Not needed: "${relQ}" is answered No.`)
+  && Object.keys(got3).every((n) => same(got3[n].fill, before3[n].fill) && same(got3[n].waiting, before3[n].waiting.filter((f) => f !== "IMM 5475")) && got3[n].notNeeded.includes("IMM 5475")), { status: r.status, lists: got3, reasons: nn3.map((i) => i.reason) });
+
+// ---- Review m4, no server: the minimum age in "not needed" (notNeededForms on this case's own release 2). Every case
+// opens with a representative of record, so "Uses a representative" No cannot be reached by route (row A2); the rule is
+// called directly with that answer. IMM 5476 is "principal, partner and adult children", from 18: a principal of 16 and a
+// child of 19 are listed not needed, a child of 10 is not listed (it was never one of their forms). ----
+const snap = JSON.parse(m3.sql(`select r.snapshot::text from config_release r join pack_work_pin w on w.config_release_id = r.id where w.case_id='${c.id}' and w.revision = (select max(z.revision) from pack_work_pin z where z.case_id = w.case_id)`) ?? "null");
+const today = new Date(), dob = (y: number) => m3.yearsAgo(y);
+const kin = [{ subjectId: "s-principal", role: "principal", label: "Teen T", applies: true }, { subjectId: "s-child19", role: "child", label: "Child 19", applies: true }, { subjectId: "s-child10", role: "child", label: "Child 10", applies: true }, { subjectId: "s-case", role: "case", label: "The application", applies: true }] as Participant[];
+const ans = (subjectId: string, field: string, value: unknown) => ({ id: `${subjectId}:${field}`, subjectId, field, rowKey: null, value, status: "VERIFIED" as const, channel: "agent_view", actor: m3.OFFICER, at: today.toISOString() });
+const given = [ans("s-principal", "person.date_of_birth", dob(16)), ans("s-child19", "person.date_of_birth", dob(19)), ans("s-child10", "person.date_of_birth", dob(10)), ans("s-case", "case.uses_representative", false)];
+const { known } = knownOf(snap, kin, given, [], today);
+const rp = kin.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
+const ages = new Map(kin.filter((p) => p.role !== "case").map((p) => [p.subjectId, ageOn(given.find((a) => a.subjectId === p.subjectId && a.field === "person.date_of_birth")?.value as string, today)]));
+const unit = snap ? notNeededForms(snap, rp, known, render(snap, rp, known, { today }).forms as never, new Map((snap.forms as FormLine[]).map((l) => [l.form_number, l])), new Set(rp.map((p) => p.id)), ages, "s-case", given, (f) => f, new Map(kin.map((p) => [p.subjectId, p.label]))) : [];
+const who5476 = sorted(unit.filter((x) => x.form === "IMM 5476").map((x) => x.person));
+ok("C9-13 fail (review m4, minimum age): \"Uses a representative\" No: IMM 5476 is not needed for the principal of 16 and the child of 19, and never listed for the child of 10 (the age gates dependent children only)",
+  same(who5476, ["Child 19", "Teen T"]) && unit.filter((x) => x.form === "IMM 5476").every((x) => x.reason === `Not needed: "case.uses_representative" is answered No.`), unit.map((x) => `${x.form}/${x.person}: ${x.reason}`));
+process.exitCode = summary() ? 1 : 0;

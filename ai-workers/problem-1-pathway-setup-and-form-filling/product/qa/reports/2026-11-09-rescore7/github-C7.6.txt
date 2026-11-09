@@ -1,0 +1,8 @@
+Gate B: the PR names C7.6; claims Works for none (no bug check).
+  packs: C7.6-screen.test.ts, C7.6.test.ts
+    C7.6-screen.test.ts on the checkpoint: exit 0, 8/8 passed (125 s: copy 5, Load the configured checkpoint 90, run 30)
+    C7.6.test.ts on the checkpoint: exit 0, 27/27 passed (118 s: copy 4, Load the configured checkpoint 92, run 22)
+  packs took 244 s in all
+Gate B: passed.
+Post job cleanup.
+(node:6774) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.

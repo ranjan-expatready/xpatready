@@ -1,0 +1,6 @@
+Gate B: the PR names C6.12; claims Works for none (no bug check).
+    C6.12-breadth.test.ts on the checkpoint: exit 0, 2/2 passed (87 s: copy 4, Load the configured checkpoint 71, run 12)
+      HELD  C6.12-22 pass (Partial: sponsorship): spouse or partner sponsorship is two filings, the sponsorship and the PR application, in one submission group — Spouse or common-law partner is released and its fee lines are set per filing — held: outside the Visitor visa journey under the founder's answer to Q1 (6 Nov, P-380); rows S1 and S2 after M3 — {"released":1,"feeTable":"no fs.spouse entry in samples/fee-table.json (only vv.single today)"}
+      HELD  C6.12-23 pass (Partial: child study question): a release of a student or worker combination asks the case officer "will this child study 6 months or more?" (yes adds a study permit filing) — held: outside the Visitor visa journey under the founder's answer to Q1 (6 Nov, P-380); rows S1 and S2 after M3 — {"releasesWithTheQuestion":0}
+    C6.12.test.ts on the checkpoint: exit 0, 24/24 passed (75 s: copy 3, Load the configured checkpoint 67, run 6)
+Gate B: passed.

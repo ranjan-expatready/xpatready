@@ -4,16 +4,21 @@
 // receipt; a UCI per person. Once recorded the group is read-only: the record reads Prepared by · Reviewed by, a wrong
 // number is fixed with "Correct a number" (kept with its reason), and a fact changed after filing opens a task to
 // re-sign or tell IRCC (Unconfirmed: no counsel). The C7.7 Prepare application tab will host this panel when it lands.
+// B149 (P-408; board agent-view frame 7): the fee receipt's evidence is IRCC's "Transaction Approved" page, uploaded in
+// the record or later on the recorded filing (each upload kept; the newest is the receipt); the typed number is optional.
 import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { CaseTaskView, FilingRecordView } from "../../../contracts/submission-record";
+import type { CaseTaskView } from "../../../contracts/submission-record";
+import type { RecordWithReceipts } from "../../../contracts/fee-receipt";
+import { MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, mediaOf } from "../../../contracts/documents";
 import { noRetryOnRefusal } from "./questionnaire";
+import { CaseFees, FeeBlock } from "./fees"; // C6.12 (B5): each submission's fees, from this same read
 
 type Applicant = { subject: string; label: string; role: string; mode: string };
-type Filing = { id: string; label: string; status: string; number: string | null; applicants: Applicant[]; group: string; record?: FilingRecordView; read_only?: boolean };
+type Filing = { id: string; label: string; status: string; number: string | null; applicants: Applicant[]; group: string; record?: RecordWithReceipts; read_only?: boolean };
 type Group = { id: string; kind: string; label?: string; filings: string[] };
 type PrepareView = { derived: boolean; reference: string; version: string | number; portal: string | null; filings: Filing[]; groups: Group[]; tasks?: CaseTaskView[]; why?: string };
 
@@ -30,11 +35,11 @@ const PORTAL: Record<string, string> = { APR_PORTAL: "APR Portal" };
 type Problem = Record<string, string>;
 /** A save from a dialog: its refusals show on the dialog's own fields, never also as a toast over its buttons (break m on
  *  #924); a 409 re-reads the case, so the next try carries the version now (it failed again until a reload). */
-function useSave<R>(caseId: string, fn: () => Promise<R>, opts: { success: (r: R) => string; onDone: () => void; onProblem: (p: Problem) => void }) {
+function useSave<R>(caseId: string, fn: () => Promise<R>, opts: { success: (r: R) => string; tone?: (r: R) => "ok" | "danger"; onDone: () => void; onProblem: (p: Problem) => void }) {
   const qc = useQueryClient(), toast = useToast();
   return useMutation<R, Error>({
     mutationFn: fn,
-    onSuccess: (r) => { void qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] }); toast.push({ tone: "ok", text: opts.success(r) }); opts.onDone(); },
+    onSuccess: (r) => { void qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] }); toast.push({ tone: opts.tone?.(r) ?? "ok", text: opts.success(r) }); opts.onDone(); },
     onError: (e) => {
       if (e instanceof ApiError && e.status === 409) void qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
       const list = e instanceof ApiError ? e.problem.errors ?? [] : [];
@@ -45,11 +50,27 @@ function useSave<R>(caseId: string, fn: () => Promise<R>, opts: { success: (r: R
 /** After a refusal, focus moves to the first field in error (break m on #924). */
 const focusFirstError = (root: HTMLElement | null) => requestAnimationFrame(() => (root?.querySelector<HTMLElement>('[aria-invalid="true"]') ?? root?.querySelector<HTMLElement>('[role="alert"]'))?.focus());
 
+/** B149: one fee receipt file (IRCC's "Transaction Approved" page) sent to a recorded filing. */
+const sendReceipt = (filing: string, file: File) => { const fd = new FormData(); fd.append("file", file, file.name); return api(`/runtime/filings/${filing}/record/fee-receipt`, { method: "POST", body: fd }); };
+const RECEIPT_ACCEPT = "application/pdf,image/jpeg,image/png";
+/** B149 review M2: a chosen page is checked before anything is sent, by the server's own rule (its first bytes, never
+ *  its name, contracts/documents.ts mediaOf) and limit; null when it is fine, else the refusal in words. */
+async function receiptProblem(file: File): Promise<string | null> {
+  if (!file.size) return "The file is empty: choose the saved Transaction Approved page.";
+  if (file.size > MAX_DOCUMENT_BYTES) return `The file is larger than ${MAX_DOCUMENT_MB} MB: save the page again as a smaller PDF, JPEG or PNG.`;
+  const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  return mediaOf(head) ? null : "This file is not a PDF, JPEG or PNG (judged by the file itself, not its name): save the Transaction Approved page as one of those.";
+}
+const size = (n: number) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+const KIND: Record<string, string> = { "application/pdf": "PDF", "image/jpeg": "JPEG", "image/png": "PNG" };
+
 /** The case's submission groups and what was filed. Under the case view's query key, so an answer change re-reads it. */
 export function SubmissionPanel({ caseId }: { caseId: string }) {
   const q = useApi<PrepareView>(["runtime", "view", caseId, "prepare"], `/runtime/cases/${caseId}/prepare`, { retry: noRetryOnRefusal });
   const [recording, setRecording] = React.useState<Group | null>(null);
   const [correcting, setCorrecting] = React.useState<{ f: Filing; uci?: { subject: string; person: string; uci: string | null } } | null>(null);
+  // B149 review M2: a page refused after the record was saved stays on screen (never only a toast) until dismissed.
+  const [missed, setMissed] = React.useState<string[]>([]);
   const back = React.useRef<HTMLElement | null>(null);
   // A closed dialog gives focus back to the button that opened it; after recording that button is gone (the group is
   // read-only), so focus goes to the panel's heading.
@@ -66,10 +87,14 @@ export function SubmissionPanel({ caseId }: { caseId: string }) {
         : q.isError ? <div className="p-4"><Notice tone="danger" title="The submission could not be loaded">{(q.error as Error).message}</Notice></div>
         : !v!.derived ? <p className="px-4 py-3 text-sm text-text-muted">{v!.why ?? "No filings are worked out for this case yet."}</p>
         : <>
+            {missed.length ? <div className="px-4 pt-3" data-receipt-missed><Notice tone="danger" title="Recorded, but a fee receipt page was not stored">
+                <ul className="list-disc space-y-1 pl-5">{missed.map((m) => <li key={m} className="[overflow-wrap:anywhere]">{m}</li>)}</ul>
+                <Button size="sm" variant="ghost" className="mt-1" onClick={() => { setMissed([]); requestAnimationFrame(() => document.getElementById("submission-h")?.focus()); }}>Dismiss</Button>
+              </Notice></div> : null}
             {open.length ? <div className="px-4 pt-3" data-after-filing-tasks><Notice tone="warn" title={`${open.length} task${open.length === 1 ? "" : "s"} after filing`}>
                 <ul className="list-disc space-y-1 pl-5">{open.map((t) => <li key={t.id} className="[overflow-wrap:anywhere]" data-task={t.kind}>{t.words}</li>)}</ul>
               </Notice></div> : null}
-            {v!.groups.map((g) => {
+            {v!.groups.map((g, gi) => {
               const fs = g.filings.map((id) => v!.filings.find((f) => f.id === id)).filter((f): f is Filing => !!f);
               const recorded = fs.some((f) => f.record);
               const notReady = fs.filter((f) => f.status !== "ready_to_file");
@@ -83,11 +108,13 @@ export function SubmissionPanel({ caseId }: { caseId: string }) {
                   </div>
                   {!recorded && notReady.length ? <p id={`sub-why-${g.id}`} className="mt-1 text-[13px] text-text-muted">Opens once every filing is Ready to file: {notReady.map((f) => `${whoOf(f)} (${statusOf(f.status).words})`).join(", ")}.</p> : null}
                   <ul className="mt-2 space-y-3">{fs.map((f) => <FilingLine key={f.id} f={f} onCorrect={(from, uci) => { back.current = from; setCorrecting({ f, uci }); }} />)}</ul>
+                  <FeeBlock view={v!} group={g} first={gi === 0} />
                 </section>
               );
             })}
+            <CaseFees view={v!} />
           </>}
-      {recording && v ? <RecordDialog caseId={caseId} view={v} group={recording} close={() => done()} recorded={() => done(true)} /> : null}
+      {recording && v ? <RecordDialog caseId={caseId} view={v} group={recording} close={() => done()} recorded={(m) => { setMissed(m); done(true); }} /> : null}
       {correcting ? <CorrectDialog caseId={caseId} filing={correcting.f} uci={correcting.uci} close={() => done()} /> : null}
     </section>
   );
@@ -108,7 +135,7 @@ function FilingLine({ f, onCorrect }: { f: Filing; onCorrect: (from: HTMLElement
           <dd className="flex flex-wrap items-center gap-2"><span className="font-mono" data-number>{r.application_number}</span><Button size="sm" variant="ghost" onClick={(e) => onCorrect(e.currentTarget)}>Correct a number…</Button></dd>
           <dt className="text-text-muted">Submitted on</dt><dd>{day(r.submitted_on)}{r.portal ? ` · through ${PORTAL[r.portal] ?? r.portal}` : ""}</dd>
           <dt className="text-text-muted">Our reference</dt><dd className="[overflow-wrap:anywhere]">{r.our_reference}</dd>
-          <dt className="text-text-muted">Fee receipt</dt><dd className="[overflow-wrap:anywhere]">{r.fee_receipt ?? "None given"}</dd>
+          <dt className="text-text-muted">Fee receipt</dt><dd><FeeReceipt f={f} r={r} /></dd>
           <dt className="text-text-muted">UCI</dt>
           <dd><ul className="space-y-0.5" data-ucis>{r.ucis.map((u) => <li key={u.subject} className="flex flex-wrap items-center gap-2 [overflow-wrap:anywhere]" data-uci={u.subject}>
             <span>{u.person}: {u.uci ? <span className="font-mono">{u.uci}</span> : <span className="text-text-muted">none given</span>}</span>
@@ -124,24 +151,80 @@ function FilingLine({ f, onCorrect }: { f: Filing; onCorrect: (from: HTMLElement
   );
 }
 
+/** B149: the fee receipt on a recorded filing: the "Transaction Approved" page uploaded (the newest; earlier uploads
+ *  are counted, never removed) and the typed number, both optional; "Upload the page" adds one. */
+function FeeReceipt({ f, r }: { f: Filing; r: RecordWithReceipts }) {
+  const qc = useQueryClient(), toast = useToast();
+  const input = React.useRef<HTMLInputElement>(null), button = React.useRef<HTMLButtonElement>(null);
+  const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
+  const files = r.fee_receipt_files ?? [], last = files[files.length - 1], id = `receipt-${f.id}`;
+  // Review M1 (WCAG 2.4.3): the button stays focusable while it sends (aria-busy, never disabled), and focus is put back
+  // on it after a stored page (the list re-reads under it); a refused page puts focus on its own message.
+  const back = () => requestAnimationFrame(() => setTimeout(() => button.current?.focus(), 0));
+  async function send(file: File) {
+    if (busy) return;
+    setBusy(true); setError(null);
+    try {
+      const bad = await receiptProblem(file);
+      if (bad) throw new Error(`${bad} Nothing was stored.`);
+      await sendReceipt(f.id, file); toast.push({ tone: "ok", text: `${whoOf(f)}’s fee receipt stored: the Transaction Approved page is kept with the record.` });
+      await qc.invalidateQueries({ queryKey: ["runtime", "view"] }); back();
+    }
+    catch (e) { setError((e as Error).message); requestAnimationFrame(() => document.getElementById(`${id}-error`)?.focus()); }
+    finally { setBusy(false); if (input.current) input.current.value = ""; }
+  }
+  return (
+    <div className="space-y-1" data-fee-receipt>
+      {last ? <p className="[overflow-wrap:anywhere]" data-receipt-file={last.id}>Transaction Approved page: {last.file_name} <span className="text-text-muted">({KIND[last.media_type] ?? last.media_type}, {size(last.size_bytes)}; uploaded by {last.uploaded_by}, {when(last.uploaded_at)}{files.length > 1 ? `; ${files.length - 1} earlier upload${files.length === 2 ? "" : "s"} kept` : ""})</span></p>
+        : <p className="text-text-muted" data-receipt-none>No Transaction Approved page uploaded</p>}
+      <p className="[overflow-wrap:anywhere]">{r.fee_receipt ? <>Receipt number: <span className="font-mono">{r.fee_receipt}</span></> : <span className="text-text-muted">No receipt number typed</span>}</p>
+      <input ref={input} id={id} type="file" accept={RECEIPT_ACCEPT} className="sr-only" tabIndex={-1} aria-hidden onChange={(e) => { const x = e.target.files?.[0]; if (x) void send(x); }} />
+      <Button ref={button} size="sm" variant="ghost" aria-busy={busy || undefined} data-receipt-upload // WCAG 2.5.3: the name starts with the words on the button, then says whose filing.
+      aria-label={`${last ? "Upload a new page…" : "Upload the Transaction Approved page…"} for ${whoOf(f)}’s filing`} onClick={() => { if (!busy) input.current?.click(); }}>{busy ? <span className="size-3.5 animate-spin motion-reduce:animate-none rounded-full border-2 border-current border-t-transparent" aria-hidden /> : null}{last ? "Upload a new page…" : "Upload the Transaction Approved page…"}</Button>
+      {error ? <p id={`${id}-error`} role="alert" tabIndex={-1} className="text-text-danger">Not stored: {error}</p> : null}
+    </div>
+  );
+}
+
 type Line = { our_reference: string; submitted_on: string; application_number: string; fee_receipt: string };
-function RecordDialog({ caseId, view, group, close, recorded }: { caseId: string; view: PrepareView; group: Group; close: () => void; recorded: () => void }) {
+function RecordDialog({ caseId, view, group, close, recorded }: { caseId: string; view: PrepareView; group: Group; close: () => void; recorded: (missed: string[]) => void }) {
   const fs = group.filings.map((id) => view.filings.find((f) => f.id === id)).filter((f): f is Filing => !!f);
   const people = fs.flatMap((f) => f.applicants.filter((a) => a.mode === "applying"));
   const [lines, setLines] = React.useState<Record<string, Line>>(() => Object.fromEntries(fs.map((f, i) => [f.id, { our_reference: fs.length > 1 ? `${view.reference}-${i + 1}` : view.reference, submitted_on: todayHere(), application_number: "", fee_receipt: "" }])));
   const [ucis, setUcis] = React.useState<Record<string, string>>({});
+  // B149: IRCC's "Transaction Approved" page per filing (optional), sent once the record is saved.
+  const [receipts, setReceipts] = React.useState<Record<string, File | null>>({});
+  // Review M2: a chosen page is checked at once, its refusal shown on its own field; nothing is sent while one is refused.
+  const [receiptErrors, setReceiptErrors] = React.useState<Record<string, string>>({});
+  const pick = React.useRef<Record<string, HTMLInputElement | null>>({});
+  const choose = async (id: string, file: File | null) => {
+    setReceipts((x) => ({ ...x, [id]: file }));
+    const bad = file ? await receiptProblem(file) : null;
+    setReceiptErrors((x) => { const { [id]: _, ...rest } = x; return bad ? { ...rest, [id]: bad } : rest; });
+  };
+  const missedRef = React.useRef<string[]>([]);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const set = (id: string, k: keyof Line, value: string) => { setLines({ ...lines, [id]: { ...lines[id], [k]: value } }); setErrors({}); };
   const sent = people.filter((p) => (ucis[p.subject] ?? "").trim());
   const formRef = React.useRef<HTMLFormElement>(null);
-  const act = useSave(caseId, () => api<{ warning: string | null }>(`/runtime/groups/${group.id}/record`, { method: "PATCH", json: {
-    filings: fs.map((f) => ({ filing: f.id, ...lines[f.id], fee_receipt: lines[f.id].fee_receipt.trim() || null })),
-    ucis: sent.map((p) => ({ subject: p.subject, uci: ucis[p.subject].trim() })), version: view.version } }),
-    { success: (r) => `Submission recorded: these filings are now read-only.${r.warning ? ` ${r.warning}` : ""}`, onDone: recorded,
+  const act = useSave(caseId, async () => {
+    const r = await api<{ warning: string | null }>(`/runtime/groups/${group.id}/record`, { method: "PATCH", json: {
+      filings: fs.map((f) => ({ filing: f.id, ...lines[f.id], fee_receipt: lines[f.id].fee_receipt.trim() || null })),
+      ucis: sent.map((p) => ({ subject: p.subject, uci: ucis[p.subject].trim() })), version: view.version } });
+    // The record is saved and cannot be undone; a receipt refused now is named in the message and uploaded on the filing.
+    const missed: string[] = [];
+    for (const f of fs) { const x = receipts[f.id]; if (x) await sendReceipt(f.id, x).catch((e: Error) => { missed.push(`${whoOf(f)}’s Transaction Approved page: ${e.message} Upload it again with “Upload the Transaction Approved page…” on ${whoOf(f)}’s filing.`); }); }
+    missedRef.current = missed;
+    return { ...r, missed };
+  },
+    { success: (r) => `Submission recorded: these filings are now read-only.${r.warning ? ` ${r.warning}` : ""}${r.missed.length ? " A fee receipt page was not stored: see the notice." : ""}`, tone: (r) => (r.missed.length ? "danger" : "ok"), onDone: () => recorded(missedRef.current),
       // filings.<i>.<field> → the filing's own field; ucis.<i>.* → that person's UCI.
       onProblem: (p) => { setErrors(Object.fromEntries(Object.entries(p).map(([k, v]) => { const m = /^(filings|ucis)\.(\d+)\.(\w+)$/.exec(k); if (!m) return [k, v];
         return m[1] === "filings" ? [`${fs[Number(m[2])]?.id}.${m[3]}`, v] : [`uci.${sent[Number(m[2])]?.subject}`, v]; }))); focusFirstError(formRef.current); } });
-  const submit = () => act.mutate();
+  const submit = () => {
+    if (Object.keys(receiptErrors).length) { const first = fs.find((f) => receiptErrors[f.id]); pick.current[first!.id]?.focus(); return; }
+    act.mutate();
+  };
   const err = (id: string, k: string) => errors[`${id}.${k}`] ?? null;
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title="Record the submission" description={<>One record for the whole submission, as IRCC acknowledged it{view.portal ? ` through ${PORTAL[view.portal] ?? view.portal}` : ""}. It cannot be undone: afterwards the filings are read-only and a wrong number is fixed with “Correct a number”.</>}
@@ -158,7 +241,10 @@ function RecordDialog({ caseId, view, group, close, recorded }: { caseId: string
               <Field label="Submitted on" hint="Not after today" error={err(f.id, "submitted_on")}><Input type="date" value={lines[f.id].submitted_on} max={todayHere()} onChange={(e) => set(f.id, "submitted_on", e.target.value)} /></Field>
               <Field label="Our reference" error={err(f.id, "our_reference")}><Input value={lines[f.id].our_reference} maxLength={100} onChange={(e) => set(f.id, "our_reference", e.target.value)} /></Field>
             </div>
-            <Field label="Fee receipt (optional)" hint="The receipt number of the fees paid" error={err(f.id, "fee_receipt")}><Input value={lines[f.id].fee_receipt} maxLength={100} onChange={(e) => set(f.id, "fee_receipt", e.target.value)} /></Field>
+            <Field label="IRCC’s “Transaction Approved” page (optional)" hint={`The fee receipt: the page IRCC shows once the fees are paid, as a PDF, JPEG or PNG up to ${MAX_DOCUMENT_MB} MB`} error={receiptErrors[f.id] ?? null}>
+              <Input ref={(el) => { pick.current[f.id] = el; }} type="file" accept={RECEIPT_ACCEPT} data-receipt-input onChange={(e) => void choose(f.id, e.target.files?.[0] ?? null)} />
+            </Field>
+            <Field label="Fee receipt number (optional)" hint="The receipt number printed on that page" error={err(f.id, "fee_receipt")}><Input value={lines[f.id].fee_receipt} maxLength={100} onChange={(e) => set(f.id, "fee_receipt", e.target.value)} /></Field>
           </fieldset>
         ))}
         <fieldset className="space-y-3 rounded-lg border border-border p-3">

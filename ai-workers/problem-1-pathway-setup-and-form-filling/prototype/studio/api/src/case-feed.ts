@@ -15,15 +15,15 @@
 /** The audit entities written by case work (runtime.ts, fill-case.ts, team.ts, sign-steps.ts, case-checklist.ts,
  *  case-prepare.ts, readiness.ts, assessments.ts, filing-record.ts, findings.ts). */
 export const CASE_ENTITIES: ReadonlySet<string> = new Set([
-  "case", "person", "case fact", "row", "group", "section", "form copy", "item", "submission group", "application number" /* C8.2 */,
-  "sign step", "signed scan" /* C8.1 */, "case document" /* C6.4 */, "checklist line", "assessment", "assessment_override",
+  "case", "person", "case fact", "row", "group", "section", "form copy", "item", "submission group", "application number" /* C8.2 */, "fee receipt" /* C8.2 B149 */,
+  "sign step", "signed scan" /* C8.1 */, "case document" /* C6.4 */, "answer check" /* C6.5: a typed-versus-document check */, "checklist line", "assessment", "assessment_override",
   "filing" /* C7.6 readiness and review, readiness.ts and case-prepare.ts (#861) */,
 ]);
 /** The audit entities written by configuration work. "section" is a case entity too (a case's sections), so it is never
  *  read here without a case: the configuration "section" lines stay with the configuration people. */
 export const CONFIG_ENTITIES: ReadonlySet<string> = new Set([
   "AI draft", "AI proposal", "AI work", "PDF", "alias", "answer key", "answer list", "answer-key family", "answer-key tests", "check",
-  "checklist draft", "combination", "configuration row", "configuration", "configured checkpoint", "demo story", "demo workspace",
+  "checklist draft", "combination", "configuration row", "configuration", "configured checkpoint", "finished story", "demo story", "demo workspace",
   "document requirement", "document type", "shared field", "edition impact AI", "eligibility", "fact source", "field draft", "field merge", "field",
   "form field", "form finder", "form library", "form line", "form", "held file", "library batch", "line batch", "list purpose",
   "masters draft", "new edition", "official page", "option map", "option maps", "pack", "people", "placement", "pre-qualification",
@@ -31,6 +31,7 @@ export const CONFIG_ENTITIES: ReadonlySet<string> = new Set([
   "source entry", "source", "structure", "upload",
   "form edition" /* C7.6 accepted-until date of an edition, readiness.ts (#861) */,
   "placement step" /* placing a form's parts into sections, form-part-placements.ts (#936) */,
+  "worked-out value" /* B102 (A6): a fact worked out from library dates instead of asked, worked-out.ts */,
   "pathway", "program", "category", "sub-category" /* structure levels, structure.ts and studio.ts */,
 ]);
 /** A configuration entity: listed, or a library change's ("library field", "library document_type", "library section" …;

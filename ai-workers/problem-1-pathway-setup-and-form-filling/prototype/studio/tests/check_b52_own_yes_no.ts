@@ -187,13 +187,18 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
       const r = await call("PUT", `/runtime/cases/${id}/answers/${subject}/case.uses_representative`, { value: answer, expectedId: null }, OFFICER);
       typedRep ??= { status: r.status, detail: r.body?.detail };
     }
-    return new Set(((await call("GET", `/runtime/cases/${id}/forms`, undefined, OFFICER)).body.forms as { form: string; applies: boolean }[]).filter((f) => f.applies).map((f) => f.form));
+    const listed = new Set(((await call("GET", `/runtime/cases/${id}/forms`, undefined, OFFICER)).body.forms as { form: string; applies: boolean }[]).filter((f) => f.applies).map((f) => f.form));
+    // QA-246: a form whose rule is not answered yet is not on GET …/forms; /prepare holds it among the items that wait for an answer.
+    const waiting = ((await call("GET", `/runtime/cases/${id}/prepare`, undefined, OFFICER)).body?.waiting ?? []) as { kind?: string; form?: string; key?: string }[];
+    return Object.assign(listed, { waiting: new Set(waiting.filter((w) => w.kind === "form").map((w) => w.form ?? w.key ?? "")) });
   };
   const represented = await caseFor("represented", true), unrepresented = await caseFor("unrepresented", false), unanswered = await caseFor("unanswered", null);
   ok("QA-227 pass: a represented case (the case team's representative; authorizes a release: Yes) lists IMM 5476 and IMM 5475", represented.has("IMM 5476") && represented.has("IMM 5475"), [...represented]);
   ok("C6.11 fail: \"Uses a representative\" is not typed on a firm case (422, the case team sets it)", typedRep?.status === 422 && /case team/.test(typedRep?.detail ?? ""), typedRep);
   ok("QA-227 fail: a case answering No to the release lists no IMM 5475; IMM 5476 stays (the case has a representative of record)", unrepresented.has("IMM 5476") && !unrepresented.has("IMM 5475"), [...unrepresented]);
-  ok("QA-227 pass: a case nobody answered yet lists IMM 5476 (from the case team) and IMM 5475 as not decided yet (asked, never silently missing)", unanswered.has("IMM 5476") && unanswered.has("IMM 5475"), [...unanswered]);
+  // QA-246 (#1382, line change for the tech lead's approval, P-400): "not decided yet" is now /prepare's waiting item, no
+  // longer a form to fill on GET …/forms; it is still asked, never silently missing.
+  ok("QA-227 pass: a case nobody answered yet lists IMM 5476 (from the case team) to fill, and IMM 5475 as not decided yet: waiting for its answer on Prepare application, not a form to fill (asked, never silently missing; QA-246)", unanswered.has("IMM 5476") && !unanswered.has("IMM 5475") && unanswered.waiting.has("IMM 5475"), { forms: [...unanswered], waiting: [...unanswered.waiting] });
   // Review m4: the same on With an LMIA – inside Canada and Study permit – outside Canada (their releases).
   for (const key of ["wp.lmia_inside", "sp.outside"]) {
     const c = sql(`select id from combination where combination_key = '${key}'`);
@@ -213,8 +218,13 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
     const put = async (fact: string, value: unknown) => { const q = (await view()).flatMap((x) => x.questions.map((y) => ({ ...y, subjectId: x.subjectId }))).find((x) => x.subjectId === P && x.fact === fact); return call("PUT", `/runtime/cases/${id}/answers/${P}/${fact}`, { value, expectedId: q?.answer?.id ?? null }, OFFICER); };
     const confirmAll = async () => { for (const x of await view()) { const seen = [...x.questions.flatMap((y) => [y.answer?.id, ...y.rows.map((r) => r.answer?.id)]), x.group?.none_apply?.id].filter(Boolean); if (seen.length) await call("POST", `/runtime/cases/${id}/sections/${x.section}/confirm`, { subjectId: x.subjectId, seen }, OFFICER); } };
     const w1 = await put("person.has_national_id", false), w2 = await put("person.national_id_number", "SAMPLEID1"); await confirmAll();
+    // QA-165 (#1318): on the checkpoint the number is asked only after a Yes (230-own-yes-no-follow-ups.ts), so after a No it is
+    // kept and not used: the box writes N, nothing clashes, and readiness says nothing about it. A No beside a detail that is
+    // still asked (no condition) is never written and holds readiness back: tests/check_qa165_gate_follow_ups.ts R2.
     const clash = (await open5257()).find((o) => o.box === NATID);
-    ok("B52 fail (QA-165 kept): a confirmed No to \"Has national ID\" while a number is recorded is never written; the list says to correct one", w1.status === 200 && w2.status === 200 && clash?.reason === "needs an answer" && /answered No, but .* is recorded: correct one/.test(clash?.why ?? ""), { w1: w1.status, w2: w2.status, clash });
+    const f5257 = ((await call("GET", `/runtime/cases/${id}/forms`, undefined, OFFICER)).body.forms as { form: string; subject_id: string; readiness: { missing: { fact: string; reason: string }[] } }[]).find((f) => f.form === "IMM 5257" && f.subject_id === P);
+    const hidden = (await view()).flatMap((x) => x.questions.map((y) => ({ ...y, subjectId: x.subjectId }))).find((x) => x.subjectId === P && x.fact === "person.national_id_number") as { hidden?: boolean } | undefined;
+    ok("B52 pass (QA-165, #1318): a confirmed No to \"Has national ID\" hides the number asked before it, so it is kept and not used: the box is written N, not listed as open, and readiness has no fix for it", w1.status === 200 && w2.status === 200 && hidden?.hidden === true && !clash && !f5257?.readiness.missing.some((m) => m.fact === "person.has_national_id"), { w1: w1.status, w2: w2.status, hidden: hidden?.hidden, clash, missing: f5257?.readiness.missing });
   }
 
   ok("B52/QA-227: no paid call (the spend ledger is unchanged)", ledger() === before);

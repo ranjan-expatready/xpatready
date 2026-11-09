@@ -1,4 +1,4 @@
-// R1d checks (runtime lane, plan §8 RT-13…RT-17): a case's IMM 5257 filled from confirmed facts only, through the
+// R1d checks (runtime lane, plan §8 RT-13…RT-17): a case's IMM 5257 filled from declared and confirmed answers (P-411; was confirmed facts only, P-72), through the
 // shared filler (read back, signatures checked); a new copy only when the officer asks; out of date and stale after a
 // fact changes; a locked copy never changes (service and database); audit without values. Every rule with a passing and
 // a failing case, on an isolated copy where setup_visitor_visa.ts released the visitor visa. No model call (US$0).
@@ -28,7 +28,7 @@ const bytes = (path: string, actor: string) => new Promise<{ status: number; bod
 });
 type Copy = { id: string; status: string; locked: { kind: string } | null; validated?: { current: boolean; words: string } | null; out_of_date: boolean; stale: boolean; changed: string[]; counts: { written: number; not_written: number } | null; intact: boolean | null; file_ok: boolean };
 type Q = { subjectId: string; fact: string; value_type: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; required: boolean; hidden: boolean; group: string | null; fills: { form: string; person: string }[]; answer: { confirmed: boolean } | null };
-type Form = { form: string; subject_id: string; applies: boolean; person: string; draft: { written_now: number; mapped: number; unconfirmed: number }; readiness: { ready: boolean; missing: { fact: string; reason: string }[] }; copies: Copy[] };
+type Form = { form: string; subject_id: string; applies: boolean; person: string; draft: { written_now: number; mapped: number; to_fix: number }; readiness: { ready: boolean; missing: { fact: string; reason: string }[] }; copies: Copy[] };
 
 async function main() {
   const vv = sql("select id from combination where combination_key='vv.single'");
@@ -43,11 +43,14 @@ async function main() {
     const v = await agent(); const q = v.sections.flatMap((s: { questions: { subjectId: string; fact: string; answer: { id: string } | null }[] }) => s.questions).find((x: { subjectId: string; fact: string }) => x.subjectId === subject && x.fact === fact);
     return call("PUT", `/runtime/cases/${caseId}/answers/${subject}/${fact}`, { value, expectedId: q?.answer?.id ?? null }, actor);
   };
-  const confirmAll = async (subject: string) => { const v = await agent(); for (const s of v.sections.filter((x: { subjectId: string }) => x.subjectId === subject)) { const seen = [...s.questions.flatMap((q: { answer: { id: string } | null; rows: { answer: { id: string } | null }[] }) => [q.answer?.id, ...q.rows.map((r) => r.answer?.id)]), s.group?.none_apply?.id].filter(Boolean); if (seen.length) await call("POST", `/runtime/cases/${caseId}/sections/${s.section}/confirm`, { subjectId: subject, seen }, OFFICER); } };
+  // P-244 (B140): a background answer the officer recorded waits for the client; the client re-confirms it (as on their questionnaire, "This is right") before the officer confirms the section.
+  type Ans = { id: string; awaits_client?: boolean } | null;
+  const reconfirm = async (subject: string) => { for (const s of (await agent()).sections.filter((x: { subjectId: string }) => x.subjectId === subject)) for (const q of s.questions as { answer: Ans; rows: { answer: Ans }[] }[]) for (const a of [q.answer, ...q.rows.map((r) => r.answer)]) if (a?.awaits_client) await call("POST", `/runtime/cases/${caseId}/answers/${a.id}/reconfirm`, {}, CLIENT); };
+  const confirmAll = async (subject: string) => { await reconfirm(subject); const v = await agent(); for (const s of v.sections.filter((x: { subjectId: string }) => x.subjectId === subject)) { const seen = [...s.questions.flatMap((q: { answer: { id: string } | null; rows: { answer: { id: string } | null }[] }) => [q.answer?.id, ...q.rows.map((r) => r.answer?.id)]), s.group?.none_apply?.id].filter(Boolean); if (seen.length) await call("POST", `/runtime/cases/${caseId}/sections/${s.section}/confirm`, { subjectId: subject, seen }, OFFICER); } };
   for (const [s, f, v] of [[P, "person.family_name", "SAMPLED"], [P, "person.given_names", "APPLICANT"], [P, "person.date_of_birth", "1990-04-13"], [P, "person.passport_number", "SAMPLEP123"], [spouse, "person.family_name", "SAMPLES"], [spouse, "person.date_of_birth", "1991-05-14"]] as const) await answer(s, f, v);
   await confirmAll(P); await confirmAll(spouse);
   await answer(P, "person.other_family_name", "SAMPLE-UNCONFIRMED", CLIENT); // a client field the client answered: counts as confirmed (principal)
-  await answer(spouse, "person.marital_status", "married", CLIENT);          // the principal for an adult spouse: not confirmed (P-78)
+  await answer(spouse, "person.marital_status", "married", CLIENT);          // the principal for an adult spouse: not confirmed (P-78), fills at once (P-411)
   const forms = async (actor = OFFICER) => call("GET", `/runtime/cases/${caseId}/forms`, undefined, actor);
   const formOf = async (form: string, subject: string): Promise<Form> => (await forms()).body.forms.find((f: Form) => f.form === form && f.subject_id === subject);
 
@@ -74,7 +77,11 @@ async function main() {
   const req = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "..", "..", "..", "..", row.path.replace(/\.pdf$/, ".request.json")), "utf8")).values as Record<string, string>;
   const fromNone = noneBoxes.every((b) => req[b.box] === "N" && !readFacts.has(b.box)) ? noneBoxes.length : -1;
   ok("RT-13 pass: exactly the confirmed facts were written (principal's names, birth date, passport; the application's facts), plus any Yes/No from a confirmed \"none apply\"", ["person.family_name", "person.given_names", "person.date_of_birth", "person.passport_number"].every((x) => written.includes(x)) && row.facts.facts.length === row.result.counts.written - fromNone + row.result.counts.by_hand + row.result.counts.blank, { written: written.length, fromNone, facts: row.facts.facts.length });
-  ok("RT-13 fail (P-72): the spouse's marital status answered by the principal is not confirmed, so the spouse's copy would not write it", (await formOf("IMM 5257", spouse)).draft.unconfirmed >= 1);
+  { // P-411 (1), row B150 (before: P-72 kept it out of the copy until confirmed).
+    const sf = await formOf("IMM 5257", spouse);
+    ok("RT-13 pass (P-411 (1)): the spouse's marital status answered by the principal fills the spouse's copy at once (nothing answered is left blank to confirm)", sf.draft.to_fix === 0 && sf.draft.written_now > 0, sf.draft);
+    ok("RT-13 fail (P-411 (1)): it is still not confirmed: the spouse's IMM 5257 lists it \"not confirmed\" before filing", sf.readiness.missing.some((m: { fact: string; reason: string }) => m.fact === "person.marital_status" && m.reason === "not confirmed"), sf.readiness.missing);
+  }
   ok("RT-13 pass: the file on disk is the one recorded (sha256), and only the officer downloads it", await (async () => { const d = await bytes(`/runtime/form-copies/${first}/file`, OFFICER); return d.status === 200 && sha(d.body) === row.sha && sha(readFileSync(join(ROOT, row.path))) === row.sha && d.body.subarray(0, 5).toString() === "%PDF-"; })() && (await bytes(`/runtime/form-copies/${first}/file`, CLIENT)).status === 403);
   r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-1` }, OFFICER);
   ok("RT-13 pass: the same key again answers with the same copy (nothing new)", r.body.id === first && r.body.created === false && sql(`select count(*) from form_instance where case_id='${caseId}'`) === "1");
@@ -100,7 +107,7 @@ async function main() {
   const gc = (await sqrGroups()).find((x) => groupsP.includes(x.section) && x.group!.client)!.section;
   const put = (g: string, noneApply: boolean, expectedId: string | null, actor = CLIENT, subject = P) => call("PUT", `/runtime/cases/${caseId}/groups/${subject}/${g}/none-apply`, { noneApply, expectedId }, actor);
   r = await put(gc, true, null);
-  ok("M3 pass (P-72): the principal says none apply on their own questionnaire; it counts as confirmed", r.status === 200 && r.body.saved === true && r.body.group?.none_apply?.value === true && r.body.group.none_apply.confirmed === true, r.body);
+  ok("M3 pass (P-72, P-242): the principal says none apply on their own questionnaire; it is Declared and needs no officer confirmation", r.status === 200 && r.body.saved === true && r.body.group?.none_apply?.value === true && r.body.group.none_apply.confirmed === true, r.body);
   const naId: string = r.body.group?.none_apply?.id;
   r = await put(gc, true, naId);
   ok("M3 pass: the same answer again saves nothing new", r.status === 200 && r.body.saved === false && sql(`select count(*) from client_group_answer where subject_id='${P}' and group_key='${gc}'`) === "1", r.body);
@@ -161,9 +168,12 @@ async function main() {
   const sample = (q: { value_type: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; fact: string }) => q.options?.length ? q.options[0].key : q.shape.phone ? { country_code: "1", number: "5550100" }
     : q.value_type === "yes_no" ? false : q.value_type === "date" ? (q.shape.datePrecision === "month" ? "1990-01" : "1990-01-01") : q.value_type === "number" ? "1000"
     : q.value_type === "address" ? { street_name: "Sample Road", city: "Sample City", country: "Canada" } : /email/.test(q.fact) ? "client.d@example.com" : "SAMPLE";
+  // QA-165 (#1318): readiness also lists the mandatory boxes a copy would leave empty ("left empty on the form"); this fixture's
+  // Sample answers ("SAMPLE" where a box wants a code) leave some, and they hold no lock back (blocksLock). Facts done = none else.
+  const factsDone = (f: { readiness: { missing: { reason: string }[] } }) => f.readiness.missing.every((m) => m.reason === "left empty on the form");
   const makeReady = async (subject: string, form: string) => {
     for (let pass = 0; pass < 3; pass++) {
-      const f0 = await formOf(form, subject); if (f0.readiness.ready) return true;
+      const f0 = await formOf(form, subject); if (factsDone(f0)) return true;
       const v = await agent();
       const todo = v.sections.flatMap((x: { questions: Q[] }) => x.questions).filter((q: Q) => q.required && !q.hidden && !q.group && q.fills.some((x) => x.form === form && x.person === f0.person) && !q.answer?.confirmed);
       for (const q of todo) await answer(q.subjectId, q.fact, sample(q));
@@ -174,9 +184,9 @@ async function main() {
       for (const sec of secs) if (sec) await call("PUT", `/runtime/cases/${caseId}/groups/${sec.subjectId}/${sec.section}/none-apply`, { noneApply: true, expectedId: sec.group?.none_apply?.id ?? null }, OFFICER);
       for (const subj of [...new Set([...todo.map((q: Q) => q.subjectId), ...secs.filter(Boolean).map((x: { subjectId: string }) => x.subjectId)])] as string[]) await confirmAll(subj);
     }
-    return (await formOf(form, subject)).readiness.ready;
+    return factsDone(await formOf(form, subject));
   };
-  ok("P-71 pass: with every required fact confirmed, IMM 5257 for the principal is ready to file", await makeReady(P, "IMM 5257"));
+  ok("P-71 pass: with every required fact confirmed, IMM 5257 for the principal waits on no fact (QA-165, #1318: only on mandatory boxes this fixture's Sample answers leave empty, which hold no lock back)", await makeReady(P, "IMM 5257"));
   r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-ready` }, OFFICER);
   const locked1: string = r.body.id; await done(locked1);
   const row1 = JSON.parse(sql(`select json_build_object('path', path, 'sha', sha256) from form_instance where id='${locked1}'`));
@@ -421,7 +431,7 @@ async function main() {
   for (const q of ((await agent()).sections.flatMap((x: { questions: RQ[] }) => x.questions) as RQ[]).filter((q) => q.subjectId === P && q.section === prev && q.group && q.required && !q.hidden))
     await call("PUT", `/runtime/cases/${caseId}/answers/${P}/${q.fact}`, { value: sample(q), expectedId: null, row: firstRow }, OFFICER);
   await confirmAll(P);
-  const readyWithEntry = (await formOf("IMM 5257", P)).readiness.ready;
+  const readyWithEntry = factsDone(await formOf("IMM 5257", P)); // QA-165 (#1318): no fact waiting (boxes left empty aside)
   r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-pr13` }, OFFICER);
   const pr13: string = r.body.id; await done(pr13);
   await sendValidated(pr13, asValidated(readFileSync(join(ROOT, sql(`select path from form_instance where id='${pr13}'`)))), "validated.pdf");

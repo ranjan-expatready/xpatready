@@ -1,0 +1,3 @@
+Gate B: the PR names C3.16; claims Works for none (no bug check).
+    C3.16.test.ts on the six: exit 0, 37/37 passed (51 s: copy 4, Reset to the six 15, run 32)
+Gate B: passed.

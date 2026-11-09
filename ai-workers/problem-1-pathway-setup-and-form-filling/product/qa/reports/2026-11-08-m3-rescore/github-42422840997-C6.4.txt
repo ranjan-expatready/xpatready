@@ -1,0 +1,4 @@
+Gate B: the PR names C6.4; claims Works for none (no bug check).
+    C6.4-screen.test.ts on the checkpoint: exit 0, 17/17 passed (95 s: copy 3, Load the configured checkpoint 57, run 35)
+    C6.4.test.ts on the checkpoint: exit 0, 30/30 passed (59 s: copy 3, Load the configured checkpoint 53, run 3)
+Gate B: passed.
