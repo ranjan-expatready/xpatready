@@ -1,0 +1,219 @@
+// C8.3 Representative review (screens lane, B144; P-406, P-412, P-155 (1); concept screens/B144/concept.md r2, challenge
+// B1, B2, M1-M7, m1-m8; AG-07 AG-7-29 r1-r10, SA-01B SA-1B-221): pure rules, no database, no route, no clock. The case
+// officer sends one or more filings for review; the representative of record opens each, ticks its checklist, and
+// approves it (each form stamped with the facts it read and its file) or sends it back with reasons. A later fact change
+// withdraws a form's approval (P-412 F1): the representative then sees only the changed forms and re-approves them in
+// one click. Only the representative of record decides (P-412 F2). The routes are api/src/review-rounds.ts.
+// Three ways this differs from AG-7-29 (concept §1, decided by the founder in P-412): a fact change withdraws the
+// approval (r10 keeps it); only the representative of record decides (not any holder of review-approve); "Changed since
+// review" counts form facts. Legal points: Unconfirmed: no counsel. Checks: tests/runtime/check_review_rounds.ts.
+import { factChanges, type ChangeWords, type FactChange } from "./out-of-date.ts";
+import type { FormFact } from "./forms.ts";
+
+export type RowStatus = "sent" | "under_review" | "approved" | "sent_back";
+export type Move = "open" | "approve" | "send_back";
+export type Problem = { status: 400 | 403 | 404 | 409; detail: string; field?: string };
+
+// ------------------------------------------------------------------ BR-3, BR-4, BR-5, M4: the allowed moves
+
+/** The one allowed move per decision (M4): Sent → Under review on open; Under review → Approved or Sent back. Anything
+ *  else is null (the route answers 409 "decided meanwhile"). The database trigger allows the same moves only. */
+export function nextStatus(from: RowStatus, move: Move): RowStatus | null {
+  if (move === "open") return from === "sent" ? "under_review" : null;
+  if (from !== "under_review") return null;
+  return move === "approve" ? "approved" : "sent_back";
+}
+export const isOpen = (s: RowStatus) => s === "sent" || s === "under_review";
+
+// ------------------------------------------------------------------ F2 (P-412, P-155 (1)): the one permission check
+
+export const READ_ONLY_WORDS = "Only the representative of record approves or sends back. You can read this review.";
+/** Who opens, ticks, approves, sends back and re-approves: the representative of record of the case now, nobody else
+ *  (P-412 F2; reassigning the representative, C6.11, covers absences). Null: allowed. */
+export function mayDecide(actor: string, representativeNow: string | null): string | null {
+  return representativeNow && actor === representativeNow ? null : READ_ONLY_WORDS;
+}
+
+// ------------------------------------------------------------------ F1 (P-412), BR-7, M2: the one rule function
+
+/** A stamp (an approved form's facts hash and the representative of record who approved it) and the form today. */
+export type StampNow = { hash: string | null; representative: string | null };
+/** Whether an approval still counts: only while the form's facts hash and the representative of record are both
+ *  unchanged (P-412 F1: a fact change withdraws it; M2: the same rule as C7.6, readiness-inputs.ts). `why` says what
+ *  withdrew it. Used by the Review page, the re-approve route and C7.6's filing review line. */
+export function stampCurrent(stamp: { hash: string | null; by: string | null } | null, now: StampNow): { current: boolean; why: "none" | "representative" | "facts" | null } {
+  if (!stamp?.hash || !stamp.by) return { current: false, why: "none" };
+  if (stamp.by !== now.representative) return { current: false, why: "representative" };
+  if (stamp.hash !== now.hash) return { current: false, why: "facts" };
+  return { current: true, why: null };
+}
+
+// ------------------------------------------------------------------ BR-1 Send
+
+export type SendFiling = { id: string; label: string; active: boolean; recorded: boolean; inOpenRound: boolean; openBlocks: number };
+/** BR-1: filings with no open block are ticked by default in the dialog. */
+export const tickedByDefault = (filings: Pick<SendFiling, "id" | "active" | "openBlocks" | "recorded" | "inOpenRound">[]) => filings.filter((f) => f.active && !f.openBlocks && !f.recorded && !f.inOpenRound).map((f) => f.id);
+/** BR-1, BR-9: why a send is refused (null: it may go). None ticked: 400; not on this case or removed (C6.13): 404;
+ *  recorded as submitted: 409; already in an open round: 409 naming it. */
+export function sendProblem(asked: unknown, filings: SendFiling[]): Problem | null {
+  if (!Array.isArray(asked) || !asked.length) return { status: 400, field: "filings", detail: "Tick at least one filing to send for review." };
+  if (asked.some((x) => typeof x !== "string")) return { status: 400, field: "filings", detail: "Send filings as a list of filing ids." };
+  if (new Set(asked).size !== asked.length) return { status: 400, field: "filings", detail: "A filing is listed twice: list each once." };
+  for (const id of asked as string[]) {
+    const f = filings.find((x) => x.id === id);
+    if (!f || !f.active) return { status: 404, detail: "That filing is not on this case now (it may have been removed). Reload." };
+    if (f.recorded) return { status: 409, detail: `${f.label} is recorded as submitted: its review is closed. Correct the record instead.` };
+    if (f.inOpenRound) return { status: 409, detail: `${f.label} is already sent for review and not decided yet: open that review instead.` };
+  }
+  return null;
+}
+
+/** B2: the file a form is stamped with: its validated copy read back for today's facts (the barcode form's file that
+ *  goes to IRCC), else the newest generated copy whose facts equal the form's facts now, else none (an Online form);
+ *  "waits" for a form that cannot start yet (m8: "Not stamped: waits for an answer"). */
+export type FileStamp = { kind: "validated_copy" | "generated_copy" | "none" | "waits"; id: string | null; sha256: string | null };
+export function fileOf(x: { waits: boolean; inputHash: string; validated: { id: string; sha256: string | null; current: boolean } | null; generated: { id: string; sha256: string | null; hash: string } | null }): FileStamp {
+  if (x.waits) return { kind: "waits", id: null, sha256: null };
+  if (x.validated?.current && x.validated.sha256) return { kind: "validated_copy", id: x.validated.id, sha256: x.validated.sha256 };
+  if (x.generated && x.generated.hash === x.inputHash && x.generated.sha256) return { kind: "generated_copy", id: x.generated.id, sha256: x.generated.sha256 };
+  return { kind: "none", id: null, sha256: null };
+}
+
+// ------------------------------------------------------------------ BR-2 Checklist
+
+export type CheckItem = { key: string; source: "default" | "program" | "confirmations" | "form"; wording: string; live: Record<string, unknown> | null };
+export type ProgramItem = { key: string; wording: string };
+/** BR-2: the checklist copied into the round for one filing: the two default items with their live state from C7.6,
+ *  the program's items for the filing's combination (the scaffolding port), "Values confirmed, with who" (M6: the
+ *  confirmations that exist; a "checked against the document" record does not exist yet), and one "checked" mark per
+ *  form (GitHub's "Viewed"). */
+export function checklistOf(x: { critical: number; documents: { verified: number; required: number }; program: ProgramItem[]; confirmed: { by: string; facts: number }[]; forms: { item: string; label: string }[] }): CheckItem[] {
+  const who = x.confirmed.filter((c) => c.facts > 0);
+  const total = who.reduce((n, c) => n + c.facts, 0);
+  return [
+    { key: "default:no_critical", source: "default", wording: "No open critical warnings", live: { open: x.critical } },
+    { key: "default:documents", source: "default", wording: "All required documents verified", live: { verified: x.documents.verified, required: x.documents.required } },
+    ...x.program.map((p) => ({ key: `program:${p.key}`, source: "program" as const, wording: p.wording, live: null })),
+    { key: "confirmations", source: "confirmations", wording: total ? `Values confirmed: ${total} fact${total === 1 ? "" : "s"}, by ${who.map((c) => c.by).join(", ")}` : "Values confirmed: none yet", live: { facts: total, by: who } },
+    ...x.forms.map((f) => ({ key: `form:${f.item}`, source: "form" as const, wording: `${f.label} checked`, live: null })),
+  ];
+}
+
+// ------------------------------------------------------------------ BR-4 Approve
+
+export const untickedWords = (n: number) => `${n} checklist item${n === 1 ? " is" : "s are"} not ticked. Approve anyway? This is recorded.`;
+/** BR-4 (r6, AG17-D78): the checklist items not ticked (form marks are not checklist items) need ONE confirmation,
+ *  recorded, with no reason asked. */
+export function untickedProblem(checks: { key: string; source: string; ticked: boolean }[], confirm: unknown): { unticked: string[]; problem: Problem | null } {
+  const unticked = checks.filter((c) => c.source !== "form" && !c.ticked).map((c) => c.key);
+  return { unticked, problem: unticked.length && confirm !== true ? { status: 400, field: "confirm_unticked", detail: untickedWords(unticked.length) } : null };
+}
+
+/** BR-4, M4: the decision carries, per form, the facts hash the page loaded; any form that reads otherwise now is a 409
+ *  and nothing is stamped. A missing or malformed hash is a 400. */
+export function hashesProblem(sent: unknown, live: { item: string; hash: string | null }[]): Problem | null {
+  if (!sent || typeof sent !== "object" || Array.isArray(sent)) return { status: 400, field: "form_hashes", detail: "Send form_hashes: each form's facts hash as the page loaded it (Reload)." };
+  const s = sent as Record<string, unknown>;
+  for (const f of live) {
+    const v = s[f.item];
+    if (f.hash === null) { if (v !== null && v !== undefined && v !== "waits") return { status: 409, detail: "Changed while you were reading: reload. Nothing was stamped." }; continue; }
+    if (typeof v !== "string") return { status: 400, field: "form_hashes", detail: "Send form_hashes for every form of the filing, as the page loaded them (Reload)." };
+    if (v !== f.hash) return { status: 409, detail: "Changed while you were reading: reload. Nothing was stamped." };
+  }
+  return null;
+}
+
+// ------------------------------------------------------------------ BR-5 Send back
+
+export type Reason = { text: string; item?: string; check?: string };
+const hex = (a: number, b?: number) => (b === undefined ? `\\u${a.toString(16).padStart(4, "0")}` : `\\u${a.toString(16).padStart(4, "0")}-\\u${b.toString(16).padStart(4, "0")}`);
+/** Control and invisible characters (the same set as readiness.ts passProblem), never accepted in a reason. */
+const BAD_TEXT = new RegExp(`[${[hex(0, 8), hex(0xb), hex(0xc), hex(0xe, 0x1f), hex(0x7f, 0x9f), hex(0x200b), hex(0x200e), hex(0x200f), hex(0x2028, 0x202e), hex(0x2066, 0x2069), hex(0xfeff)].join("")}]`);
+/** BR-5 (r7): at least one reason, each 5 to 500 characters with words, optionally pinned to one form of the filing
+ *  (its item) or one checklist item of the round. */
+export function reasonsOf(reasons: unknown, forms: Set<string>, checks: Set<string>): { reasons: Reason[] } | { problem: Problem } {
+  const no = (detail: string): { problem: Problem } => ({ problem: { status: 400, field: "reasons", detail } });
+  if (!Array.isArray(reasons) || !reasons.length) return no("Say what should change, and on which form: at least one reason.");
+  if (reasons.length > 20) return no("Keep it to 20 reasons.");
+  const out: Reason[] = [];
+  for (const r of reasons) {
+    const x = (r ?? {}) as { text?: unknown; item?: unknown; check?: unknown };
+    const t = typeof x.text === "string" ? x.text.trim() : "";
+    if ([...t.replace(/\s/g, "")].length < 5 || !/[\p{L}\p{N}]/u.test(t)) return no("Say what should change, and on which form (at least 5 characters, with words).");
+    if (t.length > 500) return no("Keep each reason to 500 characters.");
+    if (BAD_TEXT.test(t)) return no("Remove the control or invisible characters from the reason.");
+    if (x.item !== undefined && x.item !== null && (typeof x.item !== "string" || !forms.has(x.item))) return no("Pin the reason to a form of this filing, or to none.");
+    if (x.check !== undefined && x.check !== null && (typeof x.check !== "string" || !checks.has(x.check))) return no("Pin the reason to a checklist item of this filing, or to none.");
+    out.push({ text: t, ...(typeof x.item === "string" ? { item: x.item } : {}), ...(typeof x.check === "string" ? { check: x.check } : {}) });
+  }
+  return { reasons: out };
+}
+
+// ------------------------------------------------------------------ BR-8, M3: approver ≠ author (C7.6's rule unchanged)
+
+/** BR-8 with C7.6's self-review rule exactly (api/src/readiness.ts: P-155 (1), breaks B9 and N4): the representative is
+ *  an author of the filing when they are a case officer on it (they prepared it), or when they typed a fact a form of it
+ *  reads after it was sent for review (`changedByReviewer`, M3). An author on a firm that is not solo, with another
+ *  officer on the case, cannot review it as a second person (409); an author confirms "I prepared and reviewed this
+ *  filing myself" (400 without it), logged as Self-reviewed, never as a second person. */
+export function selfReviewOf(x: { actor: string; officers: Set<string>; solo: boolean; changedByReviewer: boolean; self: unknown }): { kind: "reviewed" | "self_reviewed" } | { problem: Problem } {
+  const prepared = x.officers.has(x.actor), author = prepared || x.changedByReviewer;
+  const authors = new Set([...x.officers, ...(x.changedByReviewer ? [x.actor] : [])]);
+  if (author && !x.solo && authors.size > 1) return { problem: { status: 409, detail: prepared
+    ? "You prepared this filing with another case officer: a review by you would read as a second person's. Hand the review to another representative (change the representative of record), or pass the review warning with a reason."
+    : "You changed a fact on this filing after it was sent for review, so an approval by you would read as a second person's. Send it back to the case officer, hand the review to another representative, or pass the review warning with a reason." } };
+  if (author && x.self !== true) return { problem: { status: 400, field: "self", detail: prepared
+    ? "You prepared this filing yourself: confirm \"I prepared and reviewed this filing myself\" (self: true). It is logged as Self-reviewed, never as a second person."
+    : "You changed a fact on this filing after it was sent: confirm \"I prepared and reviewed this filing myself\" (self: true), or send it back. It is logged as Self-reviewed." } };
+  return { kind: author ? "self_reviewed" : "reviewed" };
+}
+export const SELF_STATEMENT = "I prepared and reviewed this filing myself.";
+
+// ------------------------------------------------------------------ BR-6, BR-7: what each form shows
+
+export type FormState = "to_check" | "checked" | "changed_since_review" | "approved" | "approval_withdrawn" | "sent_back" | "not_stamped_waits";
+/** BR-6, BR-7, m5, m8: one form's state on the Review page. An open row: "Changed since review" when its facts differ
+ *  from the filing's previous round, or changed after this round was sent (a check mark clears on change, as GitHub's
+ *  "Viewed"); else Checked when its mark is ticked; else To check. An approved row: Approved while its stamp is current
+ *  (stampCurrent), else "Approval withdrawn". A form that waits is never stamped. */
+export function formStateOf(x: { status: RowStatus; waits: boolean; checked: boolean; frozenHash: string | null; previousHash: string | null | undefined; liveHash: string | null; stamp: { hash: string | null; by: string | null } | null; representative: string | null }): { state: FormState; why: "facts" | "representative" | "none" | null } {
+  if (x.waits) return { state: "not_stamped_waits", why: null };
+  if (x.status === "approved") { const c = stampCurrent(x.stamp, { hash: x.liveHash, representative: x.representative }); return c.current ? { state: "approved", why: null } : { state: "approval_withdrawn", why: c.why }; }
+  if (x.status === "sent_back") return { state: "sent_back", why: null };
+  if (x.liveHash !== x.frozenHash) return { state: "changed_since_review", why: "facts" };
+  if (x.checked) return { state: "checked", why: null };
+  if (x.previousHash !== undefined && x.previousHash !== x.frozenHash) return { state: "changed_since_review", why: "facts" };
+  return { state: "to_check", why: null };
+}
+export const STATE_WORDS: Record<FormState, string> = {
+  to_check: "To check", checked: "Checked", changed_since_review: "Changed since review", approved: "Approved, still current",
+  approval_withdrawn: "Approval withdrawn", sent_back: "Sent back", not_stamped_waits: "Not stamped: waits for an answer",
+};
+
+/** One changed fact for the page: before → after, and the person who typed the new value (its answer's origin, not its
+ *  confirmer, m4) and when. */
+export type ChangeLine = FactChange & { typed_by: string | null; typed_at: string | null };
+/** BR-6 (r10): a form's facts then (a frozen snapshot) against now, each change with its typist. One call per form over
+ *  answers already read in one batch (m6). */
+export function changesOf(then: Pick<FormFact, "fact" | "about" | "row" | "value">[], now: Pick<FormFact, "fact" | "about" | "row" | "value">[], words: ChangeWords, typist: (about: string, fact: string) => { by: string; at: string } | null): ChangeLine[] {
+  return factChanges(then, now, words).map((c) => { const t = typist(c.about, c.fact); return { ...c, typed_by: t?.by ?? null, typed_at: t?.at ?? null }; });
+}
+
+/** BR-8 (M3): whether the representative typed any of these changed facts (the changes since the round was sent). */
+export const changedBy = (changes: ChangeLine[], actor: string) => changes.some((c) => c.typed_by === actor);
+
+/** P-412 F1: the forms whose approval a later change withdrew (the change-only view lists only these). */
+export function withdrawnForms<T extends { item: string; waits: boolean; stamp: { hash: string | null; by: string | null } | null; liveHash: string | null }>(forms: T[], representative: string | null): T[] {
+  return forms.filter((f) => !f.waits && !stampCurrent(f.stamp, { hash: f.liveHash, representative }).current);
+}
+
+/** "Approval withdrawn: Date of birth changed by the case officer, 8 Nov." (§5); the representative's change (M2) and
+ *  a change with no fact to name have their own words. */
+export function withdrawnWords(why: "facts" | "representative" | "none" | null, first: { label: string; by: string | null; at: string | null } | null, day: (at: string | null) => string | null): string {
+  if (why === "representative") return "Approval withdrawn: the representative of record changed.";
+  if (!first) return "Approval withdrawn: a fact it reads changed.";
+  const when = day(first.at);
+  return `Approval withdrawn: ${first.label} changed${first.by ? ` by ${first.by}` : ""}${when ? `, ${when}` : ""}.`;
+}
+export const WITHDRAWN_TOOLTIP = "Approved earlier; a fact on it changed since, so the representative checks it again.";
+export const CHANGED_TOOLTIP = "Its facts differ from the round before (or changed after this round was sent): check it again.";
