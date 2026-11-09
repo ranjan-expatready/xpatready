@@ -21,6 +21,8 @@ import { readPassport } from "../engine/runtime/mrz.ts";
 import { LETTER_READ_CARD, runCardUsd } from "../../p2/ledger.ts";
 import { documentFacts } from "../engine/sources.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 type Proposal = { id: string; fact: string; value: unknown; source: { document: string; page: number; reader: string }; confidence: number; state: string; review?: "collapsed" | "expanded"; replayed?: boolean };
 type Review = { document: string; confirm: string; collapsed: string[]; expanded: string[] };
@@ -190,6 +192,15 @@ await main("C6.5", "Documents read into proposed facts (Visitor visa, replayed, 
   ok("C6.5-23b fail (QA-352): the proof of funds is not confirmed on Client A (it is read for the application): 422, nothing written", r.status === 422, r.status);
   r = await call("POST", `/runtime/cases/${c.id}/answers/${c.caseSubject}/case.funds_available_cad/checked-against-document`, { document: funds }, OFFICER);
   ok("C6.5-23c pass (QA-352 review m4): staff mark the application's funds checked against Client A's proof of funds (read for the application): VERIFIED with that document", r.status === 200 && r.body?.answer?.checked_against?.document === funds, r.body);
+  {
+    // P-294 ruling on #1444: the real saved read (p2/runs, never edited) gives the funds as the text "14200.00"; it is
+    // stored and used in the fact's own type, so the application's answer is the number 14200, VERIFIED.
+    const sha = sql(`select sha256 from case_document where id='${funds}'`) ?? "", file = join(import.meta.dirname, "..", "..", "p2", "runs", `studio-document-read-${sha}.json`);
+    const saved = existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as { proposals: { fact: string; value: unknown }[] }).proposals.find((x) => x.fact === "case.funds_available_cad")?.value : undefined;
+    const row = sql(`select value_json::text || '|' || status from client_canonical_answer where subject_id='${c.caseSubject}' and canonical_field_key='case.funds_available_cad' and superseded_by_id is null`);
+    const read = sql(`select value_json::text || '|' || state || '|' || coalesce(note, '') from read_value where document_id='${funds}' and fact='case.funds_available_cad'`) ?? "";
+    ok("C6.5-23e pass (QA-352, P-294 ruling on #1444): the real saved read gives the funds as the text \"14200.00\"; it is used as the number 14200, VERIFIED, and the read keeps what the document printed", saved === "14200.00" && row === "14200|VERIFIED" && read.startsWith("14200|used|") && /reads "14200\.00"/.test(read), { saved, row, read });
+  }
   // Review M1 on 43a29fc4b, its own scenario: a second applicant's statement with no saved read never hides the first
   // one's read (each applicant's proof of funds is read for the application).
   const sFundsLine = ((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, OFFICER)).body?.people?.find((x: { subject: string }) => x.subject === S)?.lines ?? []).find((x: { label: string }) => /financial support/i.test(x.label))?.id;

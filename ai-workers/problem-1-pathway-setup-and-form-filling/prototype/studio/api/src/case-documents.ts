@@ -182,7 +182,7 @@ export function needsLook(s: Snapshot, caseRole: boolean, v: { fact: string; rev
   const place = placementsOf(s).find((p) => p.fact === v.fact), field = (s.canonical_fields as { id: string; value_type?: string }[]).find((f) => f.id === v.fact);
   if (!place || !field || place.repeats === "per_row" || field.value_type === "declaration" || isFilingFact(v.fact, place) !== caseRole) return false;
   if (notWritable(s, v.fact, v.valueJson)) return false;
-  return current === undefined || current === null || sameValue(v.fact, current, v.valueJson);
+  return current === undefined || current === null || sameValue(v.fact, current, typedOf(s, v.fact, v.valueJson));
 }
 
 /** Whether a file's text holds a passport's coded zone (break m7), by the rules reader (no AI). */
@@ -210,9 +210,33 @@ export function inReleaseWords(s: Snapshot, fact: string, value: unknown): { val
 export function notWritable(s: Snapshot, fact: string, value: unknown): string | null {
   const type = (s.canonical_fields as { id: string; value_type?: string }[]).find((f) => f.id === fact)?.value_type;
   if (type === "country" && typeof value === "string" && /^[A-Z<]{3}$/.test(value)) return `The coded line gives only the country code "${value}": choose the country by hand.`;
-  const problems = checkValue(s, fact, value);
+  const t = inFactType(s, fact, value);
+  if (t.why) return t.why;
+  const problems = checkValue(s, fact, t.value);
   return problems.length ? `${problems.join(" ")} Answer it by hand.` : null;
 }
+
+/** QA-352 (P-294 ruling on #1444): a reader gives a value as the document prints it ("14200.00", "14,200",
+ *  "CAD 14,200.00"); it is stored and used in the fact's own type. A number fact takes a whole number, with
+ *  thousands commas, cents of .00 and Canadian dollars named (CAD, C$, CA$) where the question asks dollars. Anything
+ *  else is never rounded or guessed: it stays as read, with the reason in words (why), and is left for a person. A value
+ *  that is not text, or text of another fact type, is returned as it is. note: what the document printed, when changed. */
+export function inFactType(s: Snapshot, fact: string, value: unknown): { value: unknown; why?: string; note?: string } {
+  const type = (s.canonical_fields as { id: string; value_type?: string }[]).find((f) => f.id === fact)?.value_type;
+  if (type !== "number" || typeof value !== "string") return { value };
+  const read = value.trim().replace(/\s+/g, " ");
+  if (/^\d+$/.test(read)) return { value: Number(read) };
+  const m = /^(?:([A-Z]{1,3}\$?|\$) ?)?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d+))?(?: ?([A-Z]{3}))?$/.exec(read);
+  if (!m) return { value, why: `The document reads "${value}", which is not a number this question can take. Answer it by hand.` };
+  const [, before, digits, cents, after] = m, currency = before ?? after;
+  if (before && after) return { value, why: `The document reads "${value}", naming two currencies. Answer it by hand.` };
+  if (currency && !["CAD", "C$", "CA$"].includes(currency)) return { value, why: currency === "$" ? `The document reads "${value}" without saying which dollars. Answer it in Canadian dollars by hand.` : `The document reads "${value}", in ${currency.replace(/\$$/, "")}, not Canadian dollars. Convert it and answer it by hand.` };
+  if (currency && !shapeOf(s, fact).money) return { value, why: `The document reads "${value}", an amount of money, but this question takes a plain number. Answer it by hand.` };
+  if (cents && /[1-9]/.test(cents)) return { value, why: `The document reads "${value}", which is not a whole number; it is never rounded. Answer it by hand.` };
+  return { value: Number(digits.replace(/,/g, "")), note: `The document reads "${value}".` };
+}
+/** A stored read value in its fact's type, for comparing and writing (a read stored before QA-352's ruling included). */
+const typedOf = (s: Snapshot, fact: string, value: unknown) => { const t = inFactType(s, fact, value); return t.why ? value : t.value; };
 
 @Injectable()
 export class CaseDocuments {
@@ -339,6 +363,11 @@ export class CaseDocuments {
       unreadable = (saved!.unreadable ?? []).filter((u) => supplies.has(u.fact)).map((u) => ({ fact: u.fact, reason: String(u.reason).slice(0, 300) }));
       replayed = true;
     }
+    // QA-352 (P-294 ruling on #1444): each value is stored in its fact's own type, noting what the document printed; a
+    // value the type cannot hold is stored as read and stays a proposal with its reason (notWritable).
+    const snapshot = this.r.snapshotOf(c);
+    proposals = proposals.map((p) => { const t = inFactType(snapshot, p.fact, p.value);
+      return t.why || !t.note ? (t.why ? p : { ...p, value: t.value }) : { ...p, value: t.value, note: [p.note, t.note].filter(Boolean).join(" ").slice(0, 300) }; });
     try {
       return await this.db.$transaction(async (tx) => {
         // QA-352: the read is the person's it is read for (the application's for proof of funds), so its values, checks
@@ -391,7 +420,7 @@ export class CaseDocuments {
     const history = resolved.some((k) => k.kept === "answer") ? await this.db.clientCanonicalAnswer.findMany({ where: { subjectId, rowKey: null, canonicalFieldKey: { in: [...new Set(resolved.map((k) => k.fact))] } }, select: { id: true, canonicalFieldKey: true, valueJson: true, effectiveAt: true } }) : [];
     const order = (f: string) => { const i = (MRZ_FACTS as readonly string[]).indexOf(f); return i < 0 ? 100 : i; };
     const proposals = reviews.flatMap((r) => [...r.values].sort((a, b) => order(a.fact) - order(b.fact) || a.fact.localeCompare(b.fact)).map((v) => ({
-      id: v.id, fact: v.fact, label: labelOf(s, v.fact), value: v.valueJson, subject: v.subjectId,
+      id: v.id, fact: v.fact, label: labelOf(s, v.fact), value: typedOf(s, v.fact, v.valueJson), subject: v.subjectId,
       source: { document: v.documentId, page: v.page, reader: v.reader as Reader }, confidence: v.confidence, state: v.state as ReadState,
       review: v.review as "collapsed" | "expanded", checked: v.checked, replayed: r.replayed, ...(v.note ? { note: v.note } : {}),
       asked: placementsOf(s).some((p) => p.fact === v.fact), answer_id: v.answerId,
@@ -399,11 +428,11 @@ export class CaseDocuments {
       // use would leave it for a person: the server's own rules, so a screen never repeats them.
       current: answerOf.has(v.fact) ? { answer_id: answerOf.get(v.fact)!.id, value: answerOf.get(v.fact)!.valueJson } : null,
       // A value left for a person is never written and never opens a check, so it never "differs" (drawer walk, 8 Nov).
-      differs: !(v.state === "proposed" && notWritable(s, v.fact, v.valueJson)) && answerOf.has(v.fact) && !sameValue(v.fact, answerOf.get(v.fact)!.valueJson, v.valueJson),
+      differs: !(v.state === "proposed" && notWritable(s, v.fact, v.valueJson)) && answerOf.has(v.fact) && !sameValue(v.fact, answerOf.get(v.fact)!.valueJson, typedOf(s, v.fact, v.valueJson)),
       left_why: v.state === "proposed" ? notWritable(s, v.fact, v.valueJson) : null,
       // Review n4 on f9bea4a3b: whether the answer the person has now is one the officer kept over this document (so the
       // drawer says so and offers no mark); an answer typed after that resolve is not, and differs like any other.
-      kept_over: answerOf.has(v.fact) && !sameValue(v.fact, answerOf.get(v.fact)!.valueJson, v.valueJson) && !!keptOver(resolved, history, v.fact, v.documentId, answerOf.get(v.fact)!),
+      kept_over: answerOf.has(v.fact) && !sameValue(v.fact, answerOf.get(v.fact)!.valueJson, typedOf(s, v.fact, v.valueJson)) && !!keptOver(resolved, history, v.fact, v.documentId, answerOf.get(v.fact)!),
       // L-SA9: whether Confirm & use waits for a tick on this value (the server's own rule, so the drawer never repeats it).
       needs_look: needsLook(s, subjectId === this.caseSubjectOf(c), v, answerOf.get(v.fact)?.valueJson) })));
     return {
@@ -524,12 +553,13 @@ export class CaseDocuments {
         }
         const source = { channel: "document_read", actor: actor.id, at: at.toISOString(), document: doc!.id, page: v.page, reader: v.reader, read_value: v.id };
         const current = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: who.subjectId, canonicalFieldKey: v.fact, rowKey: null, supersededById: null } });
-        if (current && !sameValue(v.fact, current.valueJson, v.valueJson)) {
+        const value = typedOf(s, v.fact, v.valueJson);
+        if (current && !sameValue(v.fact, current.valueJson, value)) {
           // BR-7 (P-242): never settled silently: one open check, the typed answer kept.
           // Break M2: one open check per person, fact and document: a second document that also differs has its own.
           const open = await tx.answerCheck.findFirst({ where: { subjectId: who.subjectId, fact: v.fact, documentId: doc!.id, state: "open" } });
           const id = open?.id ?? randomUUID();
-          if (!open) await tx.answerCheck.create({ data: { id, workspaceId: c.workspaceId, caseId: c.id, subjectId: who.subjectId, fact: v.fact, readValueId: v.id, documentId: doc!.id, answerId: current.id, typedValueJson: current.valueJson as object, documentValueJson: v.valueJson as object, openedBy: actor.id, openedAt: at } });
+          if (!open) await tx.answerCheck.create({ data: { id, workspaceId: c.workspaceId, caseId: c.id, subjectId: who.subjectId, fact: v.fact, readValueId: v.id, documentId: doc!.id, answerId: current.id, typedValueJson: current.valueJson as object, documentValueJson: value as object, openedBy: actor.id, openedAt: at } });
           await tx.readValue.update({ where: { id: v.id }, data: { state: "conflict", answerId: current.id } });
           out.checks.push({ id, fact: v.fact });
           continue;
@@ -540,7 +570,7 @@ export class CaseDocuments {
         const id = randomUUID();
         if (current) { const m = await tx.clientCanonicalAnswer.updateMany({ where: { id: current.id, supersededById: null }, data: { supersededById: id } }); if (m.count !== 1) problem(409, "changed", "Changed by someone else", "An answer changed while confirming; nothing was written. Read the proposals again and confirm."); }
         await tx.clientCanonicalAnswer.create({ data: { id, workspaceId: c.workspaceId, partyId: who.subject.partyId, subjectId: who.subjectId, canonicalFieldId: def.id, canonicalFieldKey: v.fact, rowKey: null,
-          valueJson: (current ? current.valueJson : v.valueJson) as object, status: "VERIFIED", sourceJson: current ? { ...source, from: current.id } : source, verifiedBy: actor.id, verifiedAt: at } });
+          valueJson: (current ? current.valueJson : value) as object, status: "VERIFIED", sourceJson: current ? { ...source, from: current.id } : source, verifiedBy: actor.id, verifiedAt: at } });
         await tx.readValue.update({ where: { id: v.id }, data: { state: current ? "agreed" : "used", answerId: id } });
         (current ? out.agreed : out.used).push(v.fact);
       }
@@ -629,7 +659,8 @@ export class CaseDocuments {
       if (await tx.answerCheck.count({ where: { subjectId: who.subjectId, fact, state: "open" } })) problem(409, "open_checks", "Not possible now", "This answer and a document differ (an open check): resolve the check first. Nothing changed.");
       const current = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: who.subjectId, canonicalFieldKey: fact, rowKey: null, supersededById: null } });
       if (!current) problem(409, "no_answer", "Not possible now", "There is no answer to check against the document yet. Nothing changed.");
-      const read = await tx.readValue.findFirst({ where: { documentId: doc!.id, fact }, select: { id: true, valueJson: true } });
+      const stored = await tx.readValue.findFirst({ where: { documentId: doc!.id, fact }, select: { id: true, valueJson: true } });
+      const read = stored && { id: stored.id, valueJson: typedOf(s, fact, stored.valueJson) };
       if (read && notWritable(s, fact, read.valueJson) === null && !sameValue(fact, current!.valueJson, read.valueJson)) { differs = { read, answer: { id: current!.id, valueJson: current!.valueJson, effectiveAt: current!.effectiveAt } }; return; }
       const n = await tx.clientCanonicalAnswer.updateMany({ where: { id: current!.id, supersededById: null }, data: { supersededById: id } });
       if (n.count !== 1) problem(409, "changed", "Changed by someone else", "The answer changed at the same moment; read it again. Nothing changed.");

@@ -8,7 +8,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { documentCheckNote, pleaseCheckWords } from "../api/src/runtime.ts";
-import { CASE_KINDS, inReleaseWords, letterReadUsd, notWritable, readerOf, readFor, sameValue, savedRead, type LibraryType } from "../api/src/case-documents.ts";
+import { CASE_KINDS, inFactType, inReleaseWords, letterReadUsd, notWritable, readerOf, readFor, sameValue, savedRead, type LibraryType } from "../api/src/case-documents.ts";
 import { isIdentityName } from "../engine/identity-documents.ts";
 import { costUsd, LETTER_READ_CARD } from "../../p2/ledger.ts";
 import { MAX_ATTEMPTS } from "../../p2/policy.ts";
@@ -64,6 +64,26 @@ ok("C6.5 R4 (fail): with no such word offered, the code stays as read (never a g
 ok("C6.5 R5: a passport number or a real date is written by Confirm & use", notWritable(snap(null), "person.passport_number", "SAMPLEP12") === null && notWritable(snap(null), "person.date_of_birth", "1986-04-13") === null);
 ok("C6.5 R5 (fail): a country given only as a coded-line code is left for a person (no code table is sourced)", /country code "IND"/.test(notWritable(snap(null), "person.citizenship", "IND") ?? ""));
 ok("C6.5 R5 (fail): a value its own question refuses (not a real date) is left for a person, with the question's words", /real date/.test(notWritable(snap(null), "person.date_of_birth", "1986-02-30") ?? ""));
+
+// ---- QA-352 (P-294 ruling on #1444): a read value in its fact's own type. The funds for the stay as a release asks it
+// (a CAD amount, whole dollars) and a plain number fact; the saved AI read of the proof of funds gave "14200.00".
+{
+  const num = { canonical_fields: [{ id: "case.funds_available_cad", value_type: "number", item_version: 1 }, { id: "person.children_count", value_type: "number", item_version: 1 }, { id: "person.passport_number", value_type: "text", item_version: 1 }],
+    placements: [], forms: [], sections: [], document_types: [],
+    field_maps: [{ form_edition: "Sample", entries: [{ fact: "case.funds_available_cad", outcome: "mapped", caption: "Funds", data_path: "form.funds", transform: "CAD whole dollars" }, { fact: "person.children_count", outcome: "mapped", caption: "Children", data_path: "form.children", transform: "" }] }] } as unknown as Snapshot;
+  const F = "case.funds_available_cad", typed = (v: unknown, fact = F) => inFactType(num, fact, v);
+  const left = (v: unknown, words: RegExp, fact = F) => { const t = typed(v, fact); return t.value === v && words.test(t.why ?? "") && words.test(notWritable(num, fact, v) ?? ""); };
+  ok("C6.5 R13 pass (QA-352): \"14200.00\" (the saved read's own text) is the number 14200, noting what the document printed, and Confirm & use writes it", typed("14200.00").value === 14200 && typed("14200.00").why === undefined && /reads "14200.00"/.test(typed("14200.00").note ?? "") && notWritable(num, F, "14200.00") === null, typed("14200.00"));
+  ok("C6.5 R13 fail (QA-352): \"14200.50\" is not a whole number: never rounded, left for a person with the reason in words", left("14200.50", /not a whole number; it is never rounded/) && left("14,200.5", /not a whole number/));
+  ok("C6.5 R14 pass (QA-352): \"14,200\" (thousands commas) is 14200, and \"1,214,200\" is 1214200", typed("14,200").value === 14200 && typed("1,214,200").value === 1214200 && notWritable(num, F, "14,200") === null);
+  ok("C6.5 R14 fail (QA-352): commas out of their places (\"14,20,0\", \"1,4200\") are not a number: left for a person in words, never guessed", left("14,20,0", /not a number this question can take/) && left("1,4200", /not a number this question can take/));
+  ok("C6.5 R15 pass (QA-352): \"CAD 14,200.00\", \"14,200.00 CAD\" and \"C$14,200\" are 14200 where the question asks Canadian dollars", typed("CAD 14,200.00").value === 14200 && typed("14,200.00 CAD").value === 14200 && typed("C$14,200").value === 14200 && notWritable(num, F, "CAD 14,200.00") === null);
+  ok("C6.5 R15 fail (QA-352): another currency (\"USD 14,200.00\"), dollars not named (\"$14,200\"), two currencies, or an amount of money for a plain number stay proposals with the reason in words (never converted)",
+    left("USD 14,200.00", /in USD, not Canadian dollars/) && left("$14,200", /without saying which dollars/) && left("CAD 14,200 USD", /two currencies/) && left("CAD 3", /takes a plain number/, "person.children_count"));
+  ok("C6.5 R16 pass (QA-352): a whole number that is too big for the form stays a proposal, with the question's own words; a number given as a number, and text of another type, are kept as they are",
+    /too long|0 or more/.test(notWritable(num, F, "CAD 9,999,999,999,999") ?? "") && typed(14200).value === 14200 && typed("SAMPLEP12", "person.passport_number").value === "SAMPLEP12" && typed("3", "person.children_count").value === 3);
+  ok("C6.5 R16 fail (QA-352): a negative amount or words (\"-14,200\", \"fourteen thousand\") are never turned into a number", left("-14,200", /not a number this question can take/) && left("fourteen thousand", /not a number this question can take/));
+}
 
 // ---- the cost card (P-110, P-295), priced by the spend ledger
 const one = letterReadUsd(1), two = letterReadUsd(2), m = LETTER_READ_CARD.model;
