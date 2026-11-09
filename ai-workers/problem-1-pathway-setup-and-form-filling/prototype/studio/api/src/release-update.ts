@@ -169,8 +169,9 @@ export class ReleaseUpdates {
       // release holds itself is replaced by the release's line. Its addition is marked removed in this same transaction,
       // with the reason naming the release, so the record is kept and nothing reads two lines for one form.
       const held = releaseForms(target.snapshot as never);
+      // C6.17 (review of #1262 M4): the current stage's added forms only (Runtime.reach reads no other); an ended stage's are history.
       const over = (c.formAdditions ?? []).filter((a) => !a.removedAt && held.has(a.formKey));
-      if (over.length) await tx.filingFormAddition.updateMany({ where: { id: { in: over.map((a) => a.id) }, removedAt: null }, data: { removedAt: new Date(), removedBy: actor.id, removedReason: `Part of ${target.label}: the release's own line replaces the form added by the case officer.` } });
+      if (over.length) await tx.filingFormAddition.updateMany({ where: { id: { in: over.map((a) => a.id) }, removedAt: null, filing: { stageId: c.stage.id } }, data: { removedAt: new Date(), removedBy: actor.id, removedReason: `Part of ${target.label}: the release's own line replaces the form added by the case officer.` } });
       takenOver = over.map((a) => ({ form: a.formKey, person: names.get(a.subjectId) ?? "" }));
       // Break m8 (round 1): the audit line is written in the move's own transaction: no move without its line.
       await tx.auditEvent.create({ data: { workspaceId: c.workspaceId, actor: actor.id, action: "moved_release", entity: "case", entityKey: c.id, combinationId: c.combinationId,

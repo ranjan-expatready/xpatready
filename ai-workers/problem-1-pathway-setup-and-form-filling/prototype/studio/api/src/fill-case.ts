@@ -347,14 +347,16 @@ export class CaseForms implements OnModuleInit {
 
   /** The job: writes exactly the facts frozen with the copy (not today's), so a copy is what was asked for. */
   private async run(id: string) {
-    const x = await this.db.formInstance.findUnique({ where: { id }, include: { snapshot: true, case: { include: { pins: { include: { release: true } }, formAdditions: { where: { removedAt: null }, orderBy: [{ addedAt: "asc" }, { id: "asc" }] } } } } });
+    const x = await this.db.formInstance.findUnique({ where: { id }, include: { snapshot: true, case: { include: { pins: { include: { release: true } }, formAdditions: { where: { removedAt: null }, orderBy: [{ addedAt: "asc" }, { id: "asc" }], include: { filing: { select: { stage: { select: { combinationId: true } } } } } } } } } });
     if (!x || x.status !== "QUEUED") return;
     const started = await this.db.formInstance.updateMany({ where: { id, status: "QUEUED" }, data: { status: "RUNNING" } });
     if (started.count !== 1) return;
     try {
       const stored = x.snapshot.factsJson as Stored;
       // C7.8 (M1): the release with the case's added forms joined, so an added form that fills is written from its frozen map.
-      const snapshot = withAdditions(x.case.pins.find((p) => p.configReleaseId === x.configReleaseId)!.release.snapshot as unknown as Snap, additionsOf(x.case.formAdditions)) as unknown as Parameters<typeof writeForm>[0];
+      // C6.17 (review of #1262 M3): only the forms added on the copy's own stage (the stage of its release's combination).
+      const pin = x.case.pins.find((p) => p.configReleaseId === x.configReleaseId)!;
+      const snapshot = withAdditions(pin.release.snapshot as unknown as Snap, additionsOf(x.case.formAdditions.filter((a) => a.filing.stage.combinationId === pin.combinationId))) as unknown as Parameters<typeof writeForm>[0];
       const dir = join(VAR("demo"), "cases", x.caseId); mkdirSync(dir, { recursive: true });
       const base = `${x.formNumber.replace(/\s+/g, "")}-${short(x.subjectId)}-${id}`;
       // P-145, C11.6: stamped "Copy, not for filing" when this person's form is filed Online now; recorded with the copy,

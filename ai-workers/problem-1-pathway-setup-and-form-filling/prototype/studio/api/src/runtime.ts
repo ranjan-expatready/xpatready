@@ -109,7 +109,8 @@ export class Runtime {
       // C6.13 BR-3b: the case's first Make principal names the client when roles were swapped (clientPersonOf).
       filingChanges: { where: { kind: "make_principal" }, orderBy: [{ changedAt: "asc" }, { id: "asc" }], take: 1, select: { kind: true, subjectId: true, otherSubjectId: true, changedAt: true } },
       // C7.8 (B141 M1): the live forms the case officer added to one filing, joined into the case's snapshot (snapshotOf).
-      formAdditions: { where: { removedAt: null }, orderBy: [{ addedAt: "asc" }, { id: "asc" }] } } });
+      // C6.17 (review of #1262 M3): the current stage's filings only: a form added on an ended stage stays with that stage.
+      formAdditions: { where: { removedAt: null, filing: { stage: { state: "CURRENT" } } }, orderBy: [{ addedAt: "asc" }, { id: "asc" }] } } });
     // C6.11 (BR-20): staff reach only their own firm's cases; another firm's case is "not found", as for a client.
     if (!c || (!officer && c.clientActorId !== actor.id) || (officer && c.firmKey !== firmOfActor(actor)?.key)) fail("No such case.", HttpStatus.NOT_FOUND);
     // C9.5 (BR-1, challenge M1): a case reads its newest pin revision (`pins[0]`, ordered above); every revision, older

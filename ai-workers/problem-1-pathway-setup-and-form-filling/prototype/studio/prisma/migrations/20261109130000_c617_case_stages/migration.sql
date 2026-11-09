@@ -12,7 +12,7 @@
 --     ("case_stage_ended"), with the case row taken FOR KEY SHARE so a write racing "Start next stage" (which holds the
 --     case FOR UPDATE) waits for it and then sees the stage ended (BR-10, challenge M4).
 -- Rollback (only while every case has one stage): drop the five triggers trg_*_stage_current and function
--- runtime_stage_row_current(); drop the eight triggers trg_*_stage_filing_current and function runtime_stage_row_via_filing(); drop trigger trg_case_stage_forward, trg_case_stage_current, trg_runtime_case_stage and
+-- runtime_stage_row_current(); drop the nine triggers trg_*_stage_filing_current and function runtime_stage_row_via_filing(); drop trigger trg_case_stage_forward, trg_case_stage_current, trg_runtime_case_stage and
 -- their functions; recreate the four uniques without stage_id; drop column stage_id on the five tables; drop table
 -- case_stage, route.
 
@@ -174,7 +174,7 @@ CREATE TRIGGER trg_review_finding_stage_current BEFORE INSERT OR UPDATE OR DELET
 CREATE TRIGGER trg_case_task_stage_current BEFORE INSERT OR UPDATE OR DELETE ON "case_task" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_current();
 
 -- Breaker M1 (round 1): rows that hang off a filing (its items, signing steps, entered sections, signed scans, each person's
--- UCI record, readiness passes, reviews, number corrections) are the ended stage's history too: a new or changed row whose
+-- UCI record, readiness passes, reviews, number corrections, the forms added to it: C7.8, review of #1262 M2) are the ended stage's history too: a new or changed row whose
 -- filing is on a stage that is not CURRENT is refused, after the same FOR KEY SHARE on the case row. Rows with no filing
 -- (a case-level row) are not this rule's.
 CREATE FUNCTION runtime_stage_row_via_filing() RETURNS trigger LANGUAGE plpgsql AS $$
@@ -203,3 +203,4 @@ CREATE TRIGGER trg_filing_person_record_stage_filing_current BEFORE INSERT OR UP
 CREATE TRIGGER trg_readiness_pass_stage_filing_current BEFORE INSERT OR UPDATE OR DELETE ON "readiness_pass" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
 CREATE TRIGGER trg_filing_review_stage_filing_current BEFORE INSERT OR UPDATE OR DELETE ON "filing_review" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
 CREATE TRIGGER trg_filing_record_correction_stage_filing_current BEFORE INSERT OR UPDATE OR DELETE ON "filing_record_correction" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
+CREATE TRIGGER trg_filing_form_addition_stage_filing_current BEFORE INSERT OR UPDATE OR DELETE ON "filing_form_addition" FOR EACH ROW EXECUTE FUNCTION runtime_stage_row_via_filing();
