@@ -1,0 +1,23 @@
+{
+ "person": "Child 18 or over (Sample)",
+ "case": "SAMPLE-VV-FAMILY-1",
+ "case_id": "c092118f-a152-488b-80ff-c378500102bb",
+ "copy_id": "7c2142b4-1ca3-4275-b1fe-b675afe90088",
+ "file": "/home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/isolated-qa_c102a/workspaces/demo/cases/c092118f-a152-488b-80ff-c378500102bb/IMM5257-3b691c8a-7c2142b4-1ca3-4275-b1fe-b675afe90088.pdf",
+ "exists": true,
+ "validated_folder": "/home/user/xpatready/.tools/solution-1-prototype/validated-imm5257",
+ "saved_read_back": "samples/validated-imm5257-paper.json"
+}
+
+Next, on the Mac (Adobe Acrobat or Reader; never a simulated Validate):
+ 1. Open /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/isolated-qa_c102a/workspaces/demo/cases/c092118f-a152-488b-80ff-c378500102bb/IMM5257-3b691c8a-7c2142b4-1ca3-4275-b1fe-b675afe90088.pdf
+ 2. Press the form's own Validate button. Follow the copy's person steps first (the case page lists them: after the first
+    Validate, tick "Canada/US" again for a North American telephone number), then Validate until it passes.
+ 3. Save it as a new file in /home/user/xpatready/.tools/solution-1-prototype/validated-imm5257 (for example paper-7c2142b4-validated.pdf).
+ 4. Read it back through the product's upload door, as the case officer: on the case page, IMM 5257 for Child 18 or over (Sample),
+    "Read back the validated copy" (choose the saved file), or
+      curl -s -X POST -H 'x-actor: user-O' -F file=@<that file> http://localhost:4400/api/runtime/form-copies/7c2142b4-1ca3-4275-b1fe-b675afe90088/validated
+ 5. Record it (in prototype/studio, with the same DATABASE_URL):
+      TSX_TSCONFIG_PATH=api/tsconfig.json node --import tsx tools/record-validated-samples.ts --paper "the tech lead, Adobe on the Mac"
+    (writes samples/validated-imm5257-paper.json; commit that file; the PDF stays on the Mac, QA-285).
+ 6. Load the finished story again: its Paper, forms, ready and record stages read done, and acceptance/C10.2 5b and 6d pass on the Mac.

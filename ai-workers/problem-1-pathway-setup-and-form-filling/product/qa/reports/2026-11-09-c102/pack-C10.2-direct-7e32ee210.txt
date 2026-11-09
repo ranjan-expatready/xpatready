@@ -1,0 +1,23 @@
+C10.2 — Finished demo story: Visitor visa family case at application ready
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C10.2-1 fail: only the founder's configuration people load a checkpoint (403 for a case officer) — 403
+PASS  C10.2-2 pass: loading the finished story is a job (202) — 202
+PASS  C10.2-3 pass: the demo status says Finished story
+NOTE  the story's stages: move:done facts:done paper:partial forms:partial signed:done documents:done ready:partial record:partial
+PASS  C10.2-4 pass: one Visitor visa family case of four people, and one thin case beside it — [{"id":"0fac67ba-d5e0-4691-b02a-70094dfbb02a","people":4},{"id":"ce5c6b2c-ebc1-4c66-9b55-a4b23449751e","people":1}]
+PASS  C10.2-6c pass (C11.6, P-380 Q3): the Paper IMM 5257 carries its written reason and its copy is made on release 2 — "f80f9cab-d0b1-4d2b-bc0e-12ddb6f8e16d"
+PASS  C10.2-5 pass (row 14): one filing per person; all but the Paper one each Ready to file, then recorded together in one group; the Paper one split out, waiting for its validated copy — {"paper":"NOT_STARTED","readyFirst":"3"}
+PENDING  C10.2-5b pass: Child 18 or over (Sample)'s filing (IMM 5257 on Paper) Ready to file and recorded — waits for its copy validated in Adobe on the Mac and read back (P-349 row 12b's method; the file stays on the Mac, QA-285); never simulated (P-46, P-171)
+PASS  C10.2-6 pass (row 14): the principal's filing mixes Online (every answer-sheet section entered) and PDF upload (the hand-signed form printed, signed and its scan uploaded; the other PDFs filled) — {"online":["IMM 5257"],"hand":["IMM 5476"],"pdfs":["IMM 5645","IMM 5257 SCH1"],"filled":["IMM 5645","IMM 5257 SCH1"]}
+PASS  C10.2-6b pass (QA-309): the Online IMM 5257 reads Done, its sheet waiting for nothing — {"state":"done","reason":"Every section is entered in the portal, with every answer confirmed and current.","waiting":0}
+PENDING  C10.2-6d pass: the Paper IMM 5257's copy validated in Adobe and read back — waits for its copy validated in Adobe on the Mac and read back (P-349 row 12b's method; the file stays on the Mac, QA-285); never simulated (P-46, P-171)
+PASS  C10.2-7 pass (row 15): the document checklist lists every person's lines, some received
+PASS  C10.2-8 pass (rows 14, 16): the family case is on release 2; the thin case stays on release 1 while release 2 is out
+PASS  C10.2-9 pass: no model call (US$0); every AI result in the story is a replay
+PASS  C10.2-10a pass: loading again is a job too (202, the demo emptied first) — 202
+PASS  C10.2-10 pass: loading again keeps one story (still the two Visitor visa cases, the same stages) — "move:done facts:done paper:partial forms:partial signed:done documents:done ready:partial record:partial"
+PASS  C10.2-11 pass: Reset removes the story (no cases left) — 201
+
+14/14 passed
+exit 0
