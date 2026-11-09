@@ -53,12 +53,21 @@ export function normalCode(x: string): string | null {
 
 export type SendRefusal = { status: 403 | 409; why: string };
 /** BR-3 (challenge B1, P-412): the principal sends or resends only while the person has not accepted any link, or after
- *  that only to the kept address (the one they accepted on); a new address after acceptance is staff only. An address
- *  another person on the case already uses is refused for everyone. */
-export function sendRefusal(i: { sender: "client" | "staff"; label: string; address: string; kept: string | null; others: string[] }): SendRefusal | null {
+ *  that only to the link's current address: the kept one (the one they accepted on) or, once staff sent the link to a
+ *  new address, the one staff set (QA-359, P-441: never back to the first address). A new address after acceptance is
+ *  staff only. An address another person on the case already uses is refused for everyone. `current` is the address
+ *  of the person's newest link (after acceptance only the kept one or one staff set). */
+export function sendRefusal(i: { sender: "client" | "staff"; label: string; address: string; kept: string | null; current?: string | null; others: string[] }): SendRefusal | null {
   if (i.others.includes(i.address)) return { status: 409, why: `This address is already used for someone else on this case. Use ${i.label}'s own address.` };
-  if (i.sender === "client" && i.kept && i.kept !== i.address) return { status: 403, why: `${i.label} already uses ${maskAddress(i.kept)}. Ask the firm to send to a new address.` };
+  const allowed = i.kept ? (i.current ?? i.kept) : null;
+  if (i.sender === "client" && allowed && allowed !== i.address) return { status: 403, why: allowed === i.kept ? `${i.label} already uses ${maskAddress(allowed)}. Ask the firm to send to a new address.` : `The firm sent ${i.label}'s link to ${maskAddress(allowed)}. Only the firm can change the address.` };
   return null;
+}
+/** QA-359 (P-441, F12 (b)): the principal's Resend after staff sent an accepted adult's link to a new address sends that
+ *  same link again, to the address staff set, and never ends it; true only then. Every other Resend sends a new link
+ *  (the earlier one stops working). `open` is the person's working link (not voided), `kept` the accepted address. */
+export function resendsSameLink(i: { sender: "client" | "staff"; kept: string | null; open: { address: string; expiresAt: Date; acceptedAt: Date | null } | null; now: Date }): boolean {
+  return i.sender === "client" && !!i.kept && !!i.open && !i.open.acceptedAt && i.open.address !== i.kept && i.open.expiresAt.getTime() > i.now.getTime();
 }
 
 export type LinkRow = { sentAt: Date; expiresAt: Date; acceptedAt: Date | null; voidedAt: Date | null; voidWhy: string | null; newerSentAt?: Date | null };

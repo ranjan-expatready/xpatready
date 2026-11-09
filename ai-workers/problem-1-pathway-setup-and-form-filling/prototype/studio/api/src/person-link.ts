@@ -17,7 +17,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { MINOR } from "../../contracts/runtime.ts";
 import { KeepPrivate, LINK_RULES, LINK_WORDS, LinkCode, LinkToken, SendLink, TakeBack, type LinkOpened, type LinkSession, type PeoplePrivacy, type PersonLinkState, type PersonPrivacy } from "../../contracts/person-link.ts";
 import { caseView, OWN_LINK } from "../../engine/runtime/case.ts";
-import { adultCheck, codeCheck, deadWords, ownerOf, linkState, maskAddress, normalAddress, normalCode, officerWords, overLimit, principalLinkWords, progressOf, sendRefusal, serverTries, wrongWords, type LinkRow } from "../../engine/runtime/privacy.ts";
+import { adultCheck, codeCheck, deadWords, ownerOf, linkState, maskAddress, normalAddress, normalCode, officerWords, overLimit, principalLinkWords, progressOf, resendsSameLink, sendRefusal, serverTries, wrongWords, type LinkRow } from "../../engine/runtime/privacy.ts";
 import { actorOf, CaseRead, Db, fail, isDemoWorkspace, OpenRead, RUNTIME_ACTORS, Workspace, type Actor } from "./core.ts";
 import { Runtime, type Reached, type Writer } from "./runtime.ts";
 
@@ -103,6 +103,7 @@ export class PersonLinks {
         // Break M1: who ticked it and why are staff's (the case history); the client reads that it is on, and since when.
         private: { on: p.keepPrivate, at: p.privateAt?.toISOString() ?? null, by: staff && p.privateBy ? nameOf(p.privateBy) : null, why: staff ? p.privateWhy : null },
         link, kept_masked: accepted?.addressMasked ?? null, progress,
+        resend: newest ? { to_masked: newest.addressMasked, same_link: resendsSameLink({ sender: staff ? "staff" : "client", kept: accepted?.address ?? null, open: newest.voidedAt ? null : newest, now }) } : null,
         words: officerWords({ label: p.subject.label, principal, adult: adult.ok, keepPrivate: p.keepPrivate, privateAt: p.privateAt, link: newest ? { ...rowOf(newest), masked: newest.addressMasked, givenBy: nameOf(newest.addressGivenBy) } : null, acceptedOn: accepted ? { masked: accepted.addressMasked, givenBy: nameOf(accepted.addressGivenBy) } : null, now }),
         can: { send: adult.ok && (staff || !accepted), resend_kept: adult.ok && !!accepted, send_new: staff && adult.ok && !!accepted, take_back: live, tick: staff && adult.ok && !p.keepPrivate },
       };
@@ -111,17 +112,17 @@ export class PersonLinks {
   }
 
   /** POST …/people/:subject/link: Send or Resend (BR-1, BR-3, BR-4). The principal or case staff. Returns the person's
-   *  line, never the token or the code. A resend supersedes the person's open link and ends its sessions. */
+   *  line, never the token or the code. A resend supersedes the person's open link and ends its sessions, except the
+   *  client's Resend of a link staff sent to a new address, which sends that same link again (QA-359, P-441). */
   async send(actor: Actor, caseId: string, subjectId: string, body: unknown) {
     const c = await this.r.reach(actor, caseId, "answer");
     const b = parse(SendLink, body);
     const p = this.personOf(c, subjectId), label = p.subject.label, now = new Date();
     const adult = this.adultOf(c, p, await this.birthOf(subjectId), now);
     if (!adult.ok) problem(409, "Not possible now", adult.why);
-    // Resend without an address: for the client once accepted, the kept address (BR-3; break m3: never a newer address
-    // staff sent to); otherwise the newest link's address.
-    const kept = isStaff(actor) ? null : (await this.db.personLink.findFirst({ where: { subjectId, acceptedAt: { not: null } }, orderBy: [{ sentAt: "desc" }, { id: "desc" }], select: { address: true } }))?.address;
-    const typed = b.address ?? kept ?? (await this.db.personLink.findFirst({ where: { subjectId }, orderBy: [{ sentAt: "desc" }, { id: "desc" }], select: { address: true } }))?.address;
+    // Resend without an address: the newest link's address, for everyone. For the client once accepted that is the kept
+    // address, or the one staff set after it (QA-359, P-441, F12 (b): never back to the address the client first gave).
+    const typed = b.address ?? (await this.db.personLink.findFirst({ where: { subjectId }, orderBy: [{ sentAt: "desc" }, { id: "desc" }], select: { address: true } }))?.address;
     if (!typed) fieldError("address", "Enter their email address.");
     const address = normalAddress(typed!);
     if (!address) fieldError("address", "Enter an email address like name@example.com.");
@@ -135,17 +136,29 @@ export class PersonLinks {
     const earlier = await replay();
     if (earlier) return earlier;
     const token = randomBytes(32).toString("base64url"), id = randomUUID(), masked = maskAddress(address!);
+    let again = false;
     try {
       await inTx(this.db, async (tx) => {
+        again = false;
         // One send at a time per case (break m1: two people are never given one address at the same moment), then per person.
         await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
         await tx.$queryRaw`SELECT id FROM case_participant WHERE subject_id = ${subjectId}::uuid FOR UPDATE`;
         const mine = await tx.personLink.findMany({ where: { subjectId }, orderBy: [{ sentAt: "desc" }, { id: "desc" }] });
-        const kept = mine.find((l) => l.acceptedAt)?.address ?? null;
+        const kept = mine.find((l) => l.acceptedAt)?.address ?? null, sender = isStaff(actor) ? "staff" : "client";
         const others = (await tx.personLink.findMany({ where: { caseId: c.id, subjectId: { not: subjectId }, OR: [{ voidedAt: null }, { acceptedAt: { not: null } }] }, select: { address: true } })).map((x) => x.address);
-        const no = sendRefusal({ sender: isStaff(actor) ? "staff" : "client", label, address: address!, kept, others });
+        const no = sendRefusal({ sender, label, address: address!, kept, current: mine[0]?.address ?? null, others });
         if (no) problem(no.status, no.status === 403 ? "Not allowed" : "Not possible now", no.why);
         const open = mine.find((l) => !l.voidedAt);
+        if (open && resendsSameLink({ sender, kept, open, now })) {
+          // QA-359 (P-441): staff sent this accepted adult's link to a new address; the client's Resend sends the same
+          // email again to that address and the link keeps working (no new token: the demo inbox holds the email as sent).
+          const email = await tx.demoMessage.findFirst({ where: { linkId: open.id, kind: "link" }, orderBy: [{ createdAt: "desc" }, { id: "desc" }] });
+          if (!email) problem(409, "Not possible now", `The firm's email to ${open.addressMasked} cannot be sent again. Ask the firm to send it.`);
+          await tx.demoMessage.create({ data: { workspaceId: c.workspaceId, linkId: open.id, address: open.address, kind: "link", subject: email!.subject, body: email!.body, expiresAt: open.expiresAt } });
+          await audit(tx, c.workspaceId, actor.id, "resent", subjectId, `${actor.name} sent the same link again to the ${roleWords(p.role)} on case ${short(c.id)}, to ${open.addressMasked} (address given by ${nameOf(open.addressGivenBy)}); it still works`);
+          again = true;
+          return;
+        }
         if (open) await this.kill(tx, open.id, "superseded", actor.id, null, now);
         await tx.personLink.create({ data: { id, workspaceId: c.workspaceId, caseId: c.id, subjectId, address: address!, addressMasked: masked, addressGivenBy: actor.id, tokenHash: sha(token), sentBy: actor.id, sentAt: now, expiresAt: new Date(now.getTime() + LINK_RULES.linkDays * DAY), sendKey: b.idempotencyKey ?? null } });
         if (open) await tx.personLink.update({ where: { id: open.id }, data: { supersededById: id } });
@@ -157,7 +170,7 @@ export class PersonLinks {
       if (e instanceof HttpException && e.getStatus() === 409 && b.idempotencyKey) { const same = await replay(); if (same) return same; }
       throw e;
     }
-    return { ...(await this.lineOf(actor, caseId, subjectId)), created: true };
+    return { ...(await this.lineOf(actor, caseId, subjectId)), created: !again };
   }
 
   /** A link dies (taken back, superseded, locked): its sessions end and its demo messages go, in the caller's transaction. */

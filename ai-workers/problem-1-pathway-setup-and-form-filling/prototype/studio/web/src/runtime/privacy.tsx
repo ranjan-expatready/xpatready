@@ -7,7 +7,7 @@ import { Info, Lock, Mail, RotateCcw, Send, Undo2 } from "lucide-react";
 import { api, ApiError, useAction, useApi } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Table, Textarea } from "@/components/ui/controls";
 import { Tip, TipProvider } from "@/components/status";
-import { LINK_WORDS, type PeoplePrivacy, type PersonPrivacy, type ProgressOnly } from "../../../contracts/person-link";
+import { LINK_WORDS, resendWords, type PeoplePrivacy, type PersonPrivacy, type ProgressOnly } from "../../../contracts/person-link";
 
 export const usePeoplePrivacy = (caseId: string | null) => useApi<PeoplePrivacy>(["runtime", "privacy", caseId], caseId ? `/runtime/cases/${caseId}/people/privacy` : null);
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -99,9 +99,11 @@ function TickDialog({ caseId, person, principal, close }: { caseId: string; pers
   );
 }
 
-/** One click Resend to the newest address (the kept one after acceptance). */
+/** The server's `resend` (where a one-press Resend goes and what it does) in words. */
+const resendOf = (person: PersonPrivacy) => resendWords(person.label, person.resend ?? { to_masked: person.link?.email_masked ?? "their address", same_link: false });
+/** One click Resend to the newest address (the kept one after acceptance, or the one staff set after it: QA-359). */
 function useResend(caseId: string, person: PersonPrivacy) {
-  return useAction(() => api(`/runtime/cases/${caseId}/people/${person.subject_id}/link`, { method: "POST", json: {} }), { success: `A new link was sent to ${person.label} at ${person.kept_masked ?? person.link?.email_masked ?? "their address"}. The earlier one no longer works.`, invalidate: REFRESH });
+  return useAction(() => api(`/runtime/cases/${caseId}/people/${person.subject_id}/link`, { method: "POST", json: {} }), { success: resendOf(person).done, invalidate: REFRESH });
 }
 
 /** The principal's line under "About <person>" (layout §4, 390 px): Send to …, sent, progress only, taken back. */
@@ -111,7 +113,8 @@ export function PrincipalPersonLine({ caseId, person }: { caseId: string; person
   const l = person.link, live = person.can.take_back;
   if (person.is_client) return null; // review M1: the case's client, whatever their role after Make principal
   if (!person.adult) return person.why_not && /date of birth/.test(person.why_not) ? <p className="mb-2 text-[13px] text-text-muted">{person.why_not}</p> : null;
-  // Resend goes to the newest address (the kept one once accepted); another address only before acceptance (BR-3).
+  // Resend goes to the newest address (the kept one once accepted, or the one staff set after it, QA-359); another
+  // address only before acceptance (BR-3).
   const actions = (
     <div className="mt-3 flex flex-wrap gap-2">
       {l ? <Button size="sm" variant="secondary" className="h-10" busy={resend.isPending} onClick={() => resend.mutate(undefined)}><RotateCcw aria-hidden />Resend</Button> : null}
@@ -122,7 +125,8 @@ export function PrincipalPersonLine({ caseId, person }: { caseId: string; person
   let body: React.ReactNode;
   if (person.private.on && person.progress) body = (
     <PrivateProgress label={person.label} progress={person.progress}>
-      {l?.principal_words ? <p className="mt-2 text-[13px] text-text-muted">{l.principal_words} You can resend it to {person.kept_masked ?? l.email_masked}, or ask the firm.</p> : null}
+      {l?.principal_words ? <p className="mt-2 text-[13px] text-text-muted">{l.principal_words} You can resend it to {person.resend?.to_masked ?? l.email_masked}, or ask the firm.</p> : null}
+      {resendOf(person).where ? <p className="mt-2 text-[13px] text-text-muted" data-resend-where>{resendOf(person).where}</p> : null}
       {actions}
     </PrivateProgress>
   );
@@ -130,6 +134,7 @@ export function PrincipalPersonLine({ caseId, person }: { caseId: string; person
     <div className="rounded-xl border border-border bg-surface-raised p-4" data-link-sent>
       <p className="flex items-center gap-2 text-sm"><Mail className="size-4 text-text-muted" aria-hidden />Sent to {l.email_masked} on {day(l.sent_at)}.</p>
       <p className="mt-1 text-[13px] text-text-muted">{person.label} has not opened it yet; you can still answer for them.</p>
+      {resendOf(person).where ? <p className="mt-1 text-[13px] text-text-muted" data-resend-where>{resendOf(person).where}</p> : null}
       {actions}
     </div>
   );
@@ -196,7 +201,7 @@ export function OfficerPeoplePanel({ caseId }: { caseId: string }) {
 
 function ResendButton({ caseId, person }: { caseId: string; person: PersonPrivacy }) {
   const resend = useResend(caseId, person);
-  return <TipProvider><Tip tip={`A new link to ${person.kept_masked ?? person.link?.email_masked}; the earlier one stops working.`}><Button size="sm" variant="secondary" busy={resend.isPending} onClick={() => resend.mutate(undefined)}><RotateCcw aria-hidden />Resend</Button></Tip></TipProvider>;
+  return <TipProvider><Tip tip={resendOf(person).tip}><Button size="sm" variant="secondary" busy={resend.isPending} onClick={() => resend.mutate(undefined)}><RotateCcw aria-hidden />Resend</Button></Tip></TipProvider>;
 }
 
 

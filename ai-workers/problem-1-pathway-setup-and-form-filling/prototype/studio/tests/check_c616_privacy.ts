@@ -2,10 +2,10 @@
 // engine/runtime/privacy.ts and the confirmation of an own-link answer (engine/runtime/case.ts), each with a passing
 // and a failing case. No database, no server, no model call (US$0).
 //   tsx studio/tests/check_c616_privacy.ts
-import { adultCheck, codeCheck, deadWords, linkState, maskAddress, normalAddress, normalCode, officerWords, overLimit, principalLinkWords, privateFrom, progressOf, progressWords, sendRefusal, serverTries, wrongWords } from "../engine/runtime/privacy.ts";
+import { adultCheck, codeCheck, deadWords, linkState, maskAddress, normalAddress, normalCode, officerWords, overLimit, principalLinkWords, privateFrom, progressOf, progressWords, resendsSameLink, sendRefusal, serverTries, wrongWords } from "../engine/runtime/privacy.ts";
 import { confirmation, OWN_LINK, type Answer } from "../engine/runtime/case.ts";
 import { byPrincipalFor, CONFIRM_WORDS } from "../contracts/runtime.ts";
-import { LINK_RULES, LINK_WORDS, LinkCode, LinkToken, SendLink, TakeBack, KeepPrivate } from "../contracts/person-link.ts";
+import { LINK_RULES, LINK_WORDS, LinkCode, resendWords, LinkToken, SendLink, TakeBack, KeepPrivate } from "../contracts/person-link.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { recorder } from "./runtime/api.ts";
 
@@ -38,6 +38,19 @@ ok("C6.16 BR-3 pass: the principal sends before acceptance to any address, and r
 const b1 = sendRefusal({ sender: "client", label: "Partner", address: "me@example.com", kept: "p@example.com", others: [] });
 ok("C6.16 BR-3 fail (B1): the principal may not send an accepted adult's link to a new address (403 in words)", b1?.status === 403 && b1.why === "Partner already uses p•••@example.com. Ask the firm to send to a new address.", b1);
 ok("C6.16 BR-3 pass: staff send an accepted adult's link to a new address", sendRefusal({ sender: "staff", label: "Partner", address: "new@example.com", kept: "p@example.com", others: [] }) === null);
+// QA-359 (P-441, F12 (b)): after staff send an accepted adult's link to a new address, the principal's Resend goes there.
+ok("C6.16 QA-359 pass: after staff sent to a new address, the principal may resend to the address staff set", sendRefusal({ sender: "client", label: "Partner", address: "new@example.com", kept: "p@example.com", current: "new@example.com", others: [] }) === null);
+const back = sendRefusal({ sender: "client", label: "Partner", address: "p@example.com", kept: "p@example.com", current: "new@example.com", others: [] });
+ok("C6.16 QA-359 fail: after staff sent to a new address, the principal may not send back to the first address (403 in words)", back?.status === 403 && back.why === "The firm sent Partner's link to n•••@example.com. Only the firm can change the address.", back);
+const later = new Date(today.getTime() + 86_400_000), earlier = new Date(today.getTime() - 1000);
+const staffLink = { address: "new@example.com", expiresAt: later, acceptedAt: null };
+ok("C6.16 QA-359 pass: the principal's Resend of a working link staff sent to a new address sends that same link again", resendsSameLink({ sender: "client", kept: "p@example.com", open: staffLink, now: today }));
+ok("C6.16 QA-359 fail: every other Resend sends a new link (staff; before acceptance; at the kept address; expired; accepted; none working)",
+  !resendsSameLink({ sender: "staff", kept: "p@example.com", open: staffLink, now: today }) && !resendsSameLink({ sender: "client", kept: null, open: staffLink, now: today })
+  && !resendsSameLink({ sender: "client", kept: "p@example.com", open: { ...staffLink, address: "p@example.com" }, now: today }) && !resendsSameLink({ sender: "client", kept: "p@example.com", open: { ...staffLink, expiresAt: earlier }, now: today })
+  && !resendsSameLink({ sender: "client", kept: "new@example.com", open: { ...staffLink, acceptedAt: earlier }, now: today }) && !resendsSameLink({ sender: "client", kept: "p@example.com", open: null, now: today }));
+const same = resendWords("Partner", { to_masked: "n•••@example.com", same_link: true }), fresh = resendWords("Partner", { to_masked: "p•••@example.com", same_link: false });
+ok("C6.16 QA-359 pass: the words say where Resend goes and whether the link keeps working", /n•••@example\.com again\. It still works\./.test(same.done) && /only the firm can change the address/.test(same.where ?? "") && /A new link was sent to Partner at p•••@example\.com\. The earlier one no longer works\./.test(fresh.done) && fresh.where === null, [same, fresh]);
 const dup = sendRefusal({ sender: "staff", label: "Partner", address: "c@example.com", kept: null, others: ["c@example.com"] });
 ok("C6.16 BR-3 fail: an address another person on the case uses is refused (409), staff too", dup?.status === 409 && /someone else on this case/.test(dup.why), dup);
 
