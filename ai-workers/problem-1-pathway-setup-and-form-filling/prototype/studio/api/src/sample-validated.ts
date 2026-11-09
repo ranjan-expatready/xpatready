@@ -17,7 +17,7 @@
 // (Sample), read from the saved read-back and the copy's own facts and values each time (keptOnMacWords).
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import type { Db } from "./core.ts";
 
 // core.ts's STUDIO and ROOT, worked out here so this file loads without core.ts's NestJS decorators: the acceptance
@@ -29,6 +29,9 @@ export const VALIDATED_FILE = "samples/validated-imm5257.json";
 /** C10.2 (Lead 37, 9 Nov; P-349 row 12b's method): the read-back of the finished story's Paper IMM 5257 copy, validated in
  *  Adobe on the Mac (one person's copy on release 2). The validated PDF stays on the Mac, in the same local folder. */
 export const VALIDATED_PAPER_FILE = "samples/validated-imm5257-paper.json";
+/** Where that saved read-back is read and written: VALIDATED_PAPER_FILE, or STUDIO_VALIDATED_PAPER (an absolute path; a
+ *  test copy's own file, so a check never writes under samples/). */
+export const paperFile = (env: NodeJS.ProcessEnv = process.env) => env.STUDIO_VALIDATED_PAPER?.trim() || VALIDATED_PAPER_FILE;
 /** QA-285: the env var naming the local folder that holds the validated PDFs (an absolute path: a relative one is read
  *  from each process's own working folder, so the server and a test could read different folders), and its default
  *  (outside git). */
@@ -62,7 +65,7 @@ const cached = new Map<string, { at: number; file: SavedFile }>();
 /** The saved read-backs (read again when the file changes; a copy's view reads them). `file`: release 1's (the checkpoint,
  *  B99) unless named, e.g. VALIDATED_PAPER_FILE for the finished story's Paper copy. */
 export const savedReadBacks = (file: string = VALIDATED_FILE): SavedFile | null => {
-  const p = join(STUDIO, file);
+  const p = isAbsolute(file) ? file : join(STUDIO, file);
   if (!existsSync(p)) return null;
   const at = statSync(p).mtimeMs;
   if (cached.get(file)?.at !== at) cached.set(file, { at, file: JSON.parse(readFileSync(p, "utf8")) as SavedFile });
@@ -145,7 +148,7 @@ export async function replaySavedReadBacks(db: Db, caseId: string, upload: Uploa
  *  /api/runtime/form-copies/:id/validated). It counts only when the saved read-back passed the form's own Validate and
  *  this copy reads the same family facts and writes the same values as the copy that was validated (as B99). */
 export type StoryValidated = { kind: "found"; copyId: string; name: string; bytes: Buffer } | { kind: "kept_on_mac" | "none" | "differs" | "refused"; words: string };
-export async function storyValidatedFile(db: Db, caseId: string, person: string, dir = validatedDir(), saved = savedReadBacks(VALIDATED_PAPER_FILE)): Promise<StoryValidated> {
+export async function storyValidatedFile(db: Db, caseId: string, person: string, dir = validatedDir(), saved = savedReadBacks(paperFile())): Promise<StoryValidated> {
   const copy = (await copiesWithHash(db, caseId)).find((c) => c.person === person);
   if (!copy) return { kind: "none", words: `${person} has no copy of IMM 5257 yet.` };
   const s = saved?.copies.find((x) => x.person === person);
