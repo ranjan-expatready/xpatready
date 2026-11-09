@@ -229,4 +229,4 @@ ok("SH3 tidy-up (r4-m3): eligibility reads \"is answered\" from the resolver (R6
 ok("SH3 tidy-up: coverage.ts names a gap's person by the resolver's roleOf (the filing in words, \"the application\")", /resolvedRole\(people, about\)/.test(src("engine/coverage.ts")) && /about === FILING \? "the application"/.test(src("engine/coverage.ts")));
 ok("SH3 (P-249): the resolver satisfies the contract's interface (one object)", R.resolver.boxOwner === R.aboutOf && R.resolver.holders === R.subjectsFor && R.resolver.factsFor === R.factsOf && R.resolver.canonicalFact === R.canonicalFact && R.resolver.documentSubjects === R.documentSubjects && R.resolver.documentRole === R.documentRole);
 
-summary();
+process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code; before, it always exited 0)

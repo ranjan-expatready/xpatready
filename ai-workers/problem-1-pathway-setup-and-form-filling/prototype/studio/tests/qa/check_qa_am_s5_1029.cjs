@@ -143,7 +143,7 @@ const enc = encodeURIComponent;
   const oc = await call("POST", "/runtime/cases", { combinationId: wp, reference: `QA-S5-${Date.now().toString(36).slice(-4)}`, clientActor: "user-P", principal: { displayName: "Sample Applicant S" }, idempotencyKey: crypto.randomUUID() }, "user-O");
   const cf = oc.body?.id ? await call("GET", `/runtime/cases/${oc.body.id}/forms`, undefined, "user-O") : { status: 0, body: null };
   const cfText = JSON.stringify(cf.body ?? "");
-  step("QA-38 C6.1: the case opens on the newest release", oc.status === 201 && Number(sql(`select r.version from pack_work_pin k join config_release r on r.id=k.config_release_id where k.case_id='${oc.body?.id}' order by k.pinned_at limit 1`).split("\n")[0] || 0) === newest, `${oc.status} ${words(oc)}`);
+  step("QA-38 C6.1: the case opens on the newest release", oc.status === 201 && Number(sql(`select r.version from pack_work_pin k join config_release r on r.id=k.config_release_id where k.case_id='${oc.body?.id}' order by k.revision desc limit 1`).split("\n")[0] || 0) === newest, `${oc.status} ${words(oc)}`);
   step("QA-40 C7.6: the case's forms still name IMM 5707 and say it is filed Online (later wave)", (cf.body?.online ?? []).some((x) => x.form === "IMM 5707"), cfText.match(/.{0,80}IMM 5707.{0,160}/)?.[0] ?? `IMM 5707 not listed (${cf.status})`);
 
   // ------------------------------------------------------------ Browser

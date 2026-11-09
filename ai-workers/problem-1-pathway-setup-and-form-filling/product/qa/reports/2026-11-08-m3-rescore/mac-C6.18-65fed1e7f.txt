@@ -1,0 +1,31 @@
+pack C6.18.test.ts on b9ee39760, copy qa_r618 :4471, start Sun Nov  8 04:26:09 IST 2026
+NOTICE:  database "xr_studio_qa_r618" does not exist, skipping
+isolated qa_r618 on http://localhost:4471 (xr_studio_qa_r618), stops itself in 50 min
+reset 201
+load 201
+loaded Sun Nov  8 04:27:30 IST 2026
+C6.18 — Officer entry for background answers; the client re-confirms before signing
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+PASS  C6.18-1 pass: the case's view marks the Background information questions (IMM 5257's own block, by its reading): the criminal-history question and at least five more yes/no questions — ["Whether, within the past two years, the person or ","Whether the person has a physical or mental disord","Whether the person previously applied to enter or ","Whether the person ever remained beyond status, or","Whether the person was ever refused a visa or 
+PASS  C6.18-1b fail: a question outside the Background block (family name) is not marked background
+PASS  C6.18-2 pass: the case officer records a background answer taken by phone (No); the reply says it is marked Officer and the client re-confirms it — "Saved. It fills IMM 5257 for Sample Client A (1 form field). Marked Officer: the client re-confirms it before signing."
+PASS  C6.18-3 pass (data): it is stored as an Agent view answer by that officer, never as the client's — "agent_view|user-O"
+PASS  C6.18-4 pass: the Agent view shows it marked Officer with who and when, waiting for the client, not confirmed — {"id":"7290f8c2-5a2f-402d-bdd2-8a480cca027a","value":false,"status":"DECLARED","channel":"agent_view","by":"user-O","at":"2026-11-07T22:57:30.678Z","answered":null,"problems":[],"confirmed":false,"why":"Recorded by the case officer: waits for the client to re-
+PASS  C6.18-5 fail: the officer's Confirm section leaves it waiting for the client (counted, not confirmed) — {"status":201,"awaiting":1,"a":{"id":"7290f8c2-5a2f-402d-bdd2-8a480cca027a","value":false,"status":"DECLARED","channel":"agent_view","by":"user-O","at":"2026-11-07T22:57:30.678Z","answered":null,"problems":[],"confirmed":false,"why":"Recorded by the case offic
+PENDING  C6.18-6 fail: a declaration refuses staff entry — this release asks no declaration as a question; proved in tests/check_c618_officer_background.ts
+PASS  C6.18-7 fail: an empty, missing or blank-in-any-shape background answer (spaces, [], {}) is refused (400) and nothing is stored — [400,400,400,400,400]
+PASS  C6.18-8 fail: a background question nobody answered stays unanswered after the officer's Confirm section (no answer is made up)
+PASS  C6.18-9 fail: IMM 5257 is not ready to sign or file while the officer's background answer waits for the client, and says so — {"ready":false,"missing":[{"fact":"person.national_id_country_of_issue","label":"Country that issued the national identity document","about":"Sample Client A","reason":"not answered","subject":"0d87f5e1-c232-457a-b293-fb5fa41f959d"},{"fact":"person.national_id
+PASS  C6.18-10 pass: the client's questionnaire shows the answer with who on the staff recorded it and when, waiting for them — {"id":"7290f8c2-5a2f-402d-bdd2-8a480cca027a","value":false,"status":"DECLARED","channel":"agent_view","by":"user-O","at":"2026-11-07T22:57:30.678Z","answered":null,"problems":[],"confirmed":false,"why":"Recorded by the case officer: waits for the client to re-
+PASS  C6.18-11 fail: staff cannot re-confirm for the client (403, in words) — "Only the client re-confirms an answer their case officer recorded; staff cannot do it for them."
+PASS  C6.18-12 fail: another client cannot reach it (404) — 404
+PASS  C6.18-13 fail: re-confirming the version the client saw after the officer changed it is refused (409) and names the newer answer — "This answer changed after you opened it; nothing was re-confirmed. Check the newer answer shown, then re-confirm that one."
+PASS  C6.18-14 pass: the client re-confirms it: it counts as their own answer, still shows who on the staff recorded it — {"id":"06d5373c-6b89-4537-b12b-a6dba1abf19a","value":false,"status":"DECLARED","channel":"client_reconfirm","by":"user-P","at":"2026-11-07T22:57:31.488Z","answered":{"channel":"agent_view","by":"user-O","at":"2026-11-07T22:57:31.411Z"},"problems":[],"confirmed
+PASS  C6.18-15 pass (data): a new version by the client, naming the officer's answer (history kept) — "client_reconfirm|user-P|agent_view"
+PASS  C6.18-16 fail: nothing is re-confirmed twice (409, in words) — "Nothing to re-confirm: your case officer did not record this answer for you, or you have already re-confirmed it."
+PASS  C6.18-17 pass: once re-confirmed, IMM 5257 no longer waits on the client for it — {"ready":false,"missing":[{"fact":"person.national_id_country_of_issue","label":"Country that issued the national identity document","about":"Sample Client A","reason":"not answered","subject":"0d87f5e1-c232-457a-b293-fb5fa41f959d"},{"fact":"person.national_id
+PASS  C6.18-18 pass: the client changes an officer-recorded answer by answering it: their own answer, no longer marked Officer — {"id":"da025493-f676-4ec3-b28b-289a41257e2c","value":true,"status":"DECLARED","channel":"questionnaire","by":"user-P","at":"2026-11-07T22:57:31.793Z","answered":null,"problems":[],"confirmed":true,"why":"Counts as confirmed: the client's own answer","officer":
+PASS  C6.18-19 pass: the client re-confirms the spouse's officer-recorded answer; it waits only for the usual confirmation of an adult's answer — {"id":"b0f5ed02-66e6-4657-bcb2-44783deb2e11","value":false,"status":"DECLARED","channel":"client_reconfirm","by":"user-P","at":"2026-11-07T22:57:31.982Z","answered":{"channel":"agent_view","by":"user-O","at":"2026-11-07T22:57:31.906Z"},"problems":[],"confirmed
+PASS  C6.18-20 pass: then the officer's Confirm section confirms it (the officer mark stays) — {"id":"236294fe-499f-4be1-80f3-feba8e710983","value":false,"status":"VERIFIED","channel":"confirm_section","by":"user-O","at":"2026-11-07T22:57:32.085Z","answered":{"channel":"client_reconfirm","by":"user-P","at":"2026-11-07T22:57:31.982Z"},"problems":[],"conf
+20/20 passed
+pack exit 0  end Sun Nov  8 04:27:32 IST 2026

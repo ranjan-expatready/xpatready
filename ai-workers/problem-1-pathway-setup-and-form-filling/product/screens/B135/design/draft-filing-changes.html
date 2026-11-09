@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C6.13 Filing changes: draft board</title>
+<style>
+:root{--primary:#0862c5;--link:#054e9c;--surface:#f7f7f7;--raised:#fff;--text:#2d2d2d;--muted:#595959;--border:#d9d9d9;--line:#ececec;--danger:#dc2626;--danger-t:#991b1b;--danger-tint:#fbe5e5;--warn-t:#663200;--warn-tint:#fff1e0;--ok-t:#0f5c2e;--ok-tint:#e3f4e9;--bg:#e9ecef;--r:8px}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,sans-serif}
+h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+.frame{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin:22px 0;padding:16px}
+.frame>h2{font-size:15px;margin-bottom:4px}.note{color:var(--muted);font-size:12.5px;margin:2px 0 12px}
+.card{background:var(--raised);border:1px solid var(--border);border-radius:12px}
+.card header{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.card header h3{font-size:16px;flex:1}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:500}
+.pill{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:0 8px;font-size:12px;color:var(--muted);white-space:nowrap}
+.pill.ok{background:var(--ok-tint);color:var(--ok-t);border-color:transparent}.pill.warn{background:var(--warn-tint);color:var(--warn-t);border-color:transparent}
+.btn{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border);background:#fff;border-radius:6px;padding:4px 10px;font:inherit;font-size:13px;cursor:pointer}
+.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}.btn.danger{background:var(--danger);color:#fff;border-color:var(--danger)}.btn.ghost{border-color:transparent;background:none}
+.muted{color:var(--muted);font-size:12.5px}.tip{border-bottom:1px dotted var(--muted);cursor:help}
+.menu{display:inline-block;position:relative}.menu ul{list-style:none;margin:4px 0 0;padding:4px;border:1px solid var(--border);border-radius:8px;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.08);width:300px}
+.menu li{padding:6px 8px;border-radius:6px}.menu li:hover{background:var(--surface)}.menu li small{display:block;color:var(--muted)}
+.dialog{background:#fff;border:1px solid var(--border);border-radius:12px;max-width:620px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.dialog .h{padding:16px 20px 6px}.dialog .h h3{font-size:18px}.dialog .b{padding:6px 20px 12px}.dialog .f{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid var(--line)}
+.chg{border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:8px 0}.chg b{display:block;margin-bottom:2px}
+.chg ul{margin:4px 0 0 18px;padding:0}.warnbox{background:var(--warn-tint);color:var(--warn-t);border-radius:8px;padding:8px 12px;margin:8px 0}
+.dangerbox{background:var(--danger-tint);color:var(--danger-t);border-radius:8px;padding:8px 12px}
+label{display:block;font-weight:500;margin-top:10px}textarea{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:inherit;min-height:56px}
+.err{color:var(--danger-t);font-size:12.5px;margin-top:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.toast{display:inline-flex;gap:12px;align-items:center;background:#2d2d2d;color:#fff;border-radius:8px;padding:10px 14px}.toast a{color:#9cc8ff}
+</style></head><body><div class="wrap">
+<h1>C6.13 · Filing changes while preparing (draft board, B135)</h1>
+<p class="muted">Intent, not pixels (P-44). Extends the case page's "People on this case" (board P-164 frame 1 "Filings in this case"; P-122 Prepare the filing). Sample names and values; the fee amounts come from the cited fee table (VV-R13, VV-R14), Sample until the immigration expert confirms. Unconfirmed: no counsel.</p>
+
+<div class="frame"><h2>1 · People and filings: one row per person, the filing beside them, one menu per row</h2>
+<p class="note">Replaces the people chips. Status words are the Prepare view's. The principal's row has no Remove: it says why. A recorded (submitted) filing has no menu: it says why, and where withdrawal lives.</p>
+<div class="card"><header><h3>People and filings</h3><span class="muted">Visitor visa · 3 filings · 1 submission</span><button class="btn">+ Add child</button></header>
+<table><thead><tr><th>Person</th><th>Role <span class="tip" title="The principal applicant carries the family's capped fees and answers the household questions. Change it with Make principal.">ⓘ</span></th><th>Filing</th><th>Status</th><th></th></tr></thead><tbody>
+<tr><td><b>Sample Client A</b></td><td>Principal applicant</td><td>Own application</td><td><span class="pill">In progress</span></td><td><div class="menu"><button class="btn ghost" aria-label="Actions for Sample Client A">⋯</button><ul><li>Remove filing<small>Refused: make someone else principal first.</small></li></ul></div></td></tr>
+<tr><td><b>Sample Spouse A</b></td><td>Spouse or partner</td><td>Own application</td><td><span class="pill">In progress</span></td><td><div class="menu"><button class="btn ghost" aria-expanded="true" aria-label="Actions for Sample Spouse A">⋯</button>
+<ul><li>Make principal<small>Swaps roles with Sample Client A. Answers stay with each person.</small></li><li>Remove filing…<small>Sample Spouse A stays on the case, not travelling.</small></li></ul></div></td></tr>
+<tr><td><b>Sample Child A2</b> <span class="muted">15</span></td><td>Child</td><td>Own application</td><td><span class="pill">Not started</span></td><td><button class="btn ghost" aria-label="Actions for Sample Child A2">⋯</button></td></tr>
+<tr><td><b>Sample Child A1</b> <span class="muted">10</span></td><td>Child</td><td><span class="muted">No filing: not travelling</span><br><span class="muted">Removed 7 Nov by the case officer: "Added by mistake"</span></td><td>—</td><td><button class="btn">Add filing back</button></td></tr>
+</tbody></table></div></div>
+
+<div class="frame"><h2>2 · Remove filing: what changes is named before anything happens</h2>
+<p class="note">Same derivation as Prepare application, run on the case as it would be. Every other filing that changes is named with the change. Reason required (as the C6.12 split). The button says the action.</p>
+<div class="grid2"><div class="dialog" role="dialog" aria-labelledby="d1"><div class="h"><h3 id="d1">Remove Sample Spouse A's filing?</h3></div><div class="b">
+<p>Sample Spouse A stays on the case, not travelling: asked only what the others' forms need about them. Their answers and uploads are kept.</p>
+<div class="warnbox"><b>2 other filings depend on this one and change:</b></div>
+<div class="chg"><b>Sample Client A's filing (principal)</b><ul><li>Biometrics: family maximum CAD 170 for 3 people → CAD 85 for one person</li><li>Marked Ready to file → back to Not started</li><li>Signs for Sample Child A2: unchanged</li></ul></div>
+<div class="chg"><b>Sample Child A2's filing</b><ul><li>Biometrics: covered by the family maximum → CAD 85</li></ul></div>
+<div class="chg"><b>Sample Spouse A's own filing</b><ul><li>4 items stop applying (IMM 5257 filled 6 Nov, passport, photo, biometrics). Kept: they come back if the filing is added back.</li></ul></div>
+<p class="muted">Total for the submission: CAD 470 → CAD 370.</p>
+<label for="r1">Why are you removing it?</label><textarea id="r1" placeholder="For example: added by mistake, not travelling after all"></textarea><div class="err">Write a reason: it is kept with the change.</div>
+</div><div class="f"><button class="btn ghost">Cancel</button><button class="btn danger">Remove filing</button></div></div>
+<div><p class="muted">After: a toast with Undo (adds the filing back, same filing, same items and channels).</p><div class="toast">Sample Spouse A's filing removed. Fees worked out again. <a href="#">Undo</a></div>
+<p class="muted" style="margin-top:14px">Conflict: someone changed the case after the dialog opened → "This case changed since you opened this (Sample Child A1 was added). Look again before removing." with "Look again"; nothing is changed.</p></div></div></div>
+
+<div class="frame"><h2>3 · Make principal: a swap, previewed</h2>
+<div class="grid2"><div class="dialog" role="dialog" aria-labelledby="d2"><div class="h"><h3 id="d2">Make Sample Spouse A the principal applicant?</h3></div><div class="b">
+<p>Sample Spouse A becomes principal applicant; Sample Client A becomes spouse or partner. Each person keeps their own answers and uploads. Sample Client A stays the client who answers the questionnaire: no answer becomes confirmed or unconfirmed.</p>
+<div class="chg"><b>Sample Spouse A's filing</b><ul><li>Now carries the family's capped fees: biometrics CAD 170 for 3 people</li><li>Household questions now asked of Sample Spouse A: 3 not answered yet</li><li>Signs for Sample Child A2 (a minor) instead of Sample Client A; IMM 5257 signed by hand by Sample Client A: to be signed again</li></ul></div>
+<div class="chg"><b>Sample Client A's filing</b><ul><li>Biometrics: covered by the family maximum</li><li>Reviewed by the representative 7 Nov → needs review again</li></ul></div>
+<label for="r2">Why? <span class="muted">(kept with the change)</span></label><textarea id="r2">The spouse holds the job offer; the firm files with her as principal.</textarea>
+</div><div class="f"><button class="btn ghost">Cancel</button><button class="btn primary">Make principal</button></div></div>
+<div><h3 style="font-size:14px">Refused in words (never a silent grey button)</h3>
+<div class="menu"><ul style="width:340px"><li>Make principal<small>Sample Child A2 is a child of the principal: a child cannot swap with a parent. To make a child the principal applicant, open a case for them.</small></li></ul></div>
+<p class="muted" style="margin-top:10px">A person not travelling: "Add Sample Child A1's filing back first: the principal always files their own application."</p></div></div></div>
+
+<div class="frame"><h2>4 · Recorded as submitted: refused, and where it goes instead</h2>
+<p class="note">Taking back a submitted application is the team's case lifecycle (C8.4, stand-in SI-18). Submissions are recorded per group, so once anything is recorded no person or filing of the case changes. Our filing record shows the state; the row says it in words. The server refuses the same change with the same words (409).</p>
+<div class="card"><table><tbody><tr><td><b>Sample Client A</b></td><td>Principal applicant</td><td>Own application · V312345678</td><td><span class="pill ok">Submitted 3 Nov</span></td><td><span class="muted">Submitted to IRCC on 3 Nov: it is no longer changed here. Nothing on this case changes now; taking back a submitted application is done in the case's lifecycle (not built here).</span></td></tr></tbody></table></div>
+<div class="dangerbox" style="margin-top:10px">Server, for a forged request: 409 "Sample Client A's application was recorded as submitted to IRCC on 3 Nov 2026 (V312345678), so the people and filings of this case are not changed here. Taking back a submitted application is done in the case's lifecycle (not built here)."</div></div>
+</div></body></html>

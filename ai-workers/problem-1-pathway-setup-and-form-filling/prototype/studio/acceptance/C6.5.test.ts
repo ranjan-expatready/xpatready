@@ -13,7 +13,8 @@
 //   tsx studio/acceptance/C6.5.test.ts --engine
 // Letters (letter of invitation) are read by AI vision on synthetic documents, here only replayed at US$0; a live read is refused without the founder's Go.
 // Breadth, after Visitor visa: printed-text and table reading (Textract, STANDARDS §1 gate), foreign civil records.
-//   tsx studio/acceptance/C6.5.test.ts 4440 xr_studio_accept
+//   zsh studio/tools/isolated.sh c65 4440 start && tsx studio/acceptance/C6.5.test.ts 4440 xr_studio_c65
+//   (the full pack, server steps included, on its copy; gate B reads this line: P-400 question on PR C6.5 part 2)
 import { CLIENT, FAMILY, FIXED, OFFICER, PORT, agent, answer, call, main, needVisitorVisa, ok, openCase, sql } from "./lib/m3.ts";
 import { letterPdf, mrz, passportPdf, textPdf, upload } from "./lib/fixtures.ts";
 import { readPassport } from "../engine/runtime/mrz.ts";
@@ -75,9 +76,13 @@ await main("C6.5", "Documents read into proposed facts (Visitor visa, replayed, 
   const listed = (await call("GET", `/runtime/cases/${c.id}/proposals?subject=${P}`, undefined, OFFICER)).body;
   const review = (listed?.reviews as Review[] | undefined)?.find((x) => x.document === docId);
   ok("C6.5-9 pass (P-242, P-243): the passport is one review with one \"Confirm & use\"; number, date of birth and expiry are collapsed (check digits passed), names expanded", review?.confirm === "one_per_document" && JSON.stringify([...(review?.collapsed ?? [])].sort()) === JSON.stringify([...IDENTITY].sort()) && NAMES.every((f) => review?.expanded.includes(f)) && (listed?.proposals as Proposal[] | undefined)?.find((x) => x.fact === "person.family_name")?.review === "expanded", review);
-  // BR-7 set-up: the client's own answer, typed before the review.
-  await answer(c.id, P, "person.family_name", "SAMPLEDE", CLIENT);
-  ok("C6.5-9b pass (P-242): the client's own typed answer is Declared and is the current answer at once", sql(`select status || '|' || (value_json #>> '{}') from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.family_name' and superseded_by_id is null`) === "DECLARED|SAMPLEDE");
+  // BR-7 set-up: a typed answer before the review: the client's own where the release lets the client type the name
+  // (the configured checkpoint: client_questionnaire); else the officer's (the fixture's releases enter it from the
+  // passport, verified_document, #924), so the typed-versus-document rule is tested on both (P-400 question).
+  const nameQ = v?.sections?.flatMap((s: { questions: { subjectId: string; fact: string; collected_from: string }[] }) => s.questions).find((q: { subjectId: string; fact: string }) => q.subjectId === P && q.fact === "person.family_name");
+  const typist = ["client_questionnaire", "profile_record"].includes(nameQ?.collected_from ?? "") ? CLIENT : OFFICER;
+  await answer(c.id, P, "person.family_name", "SAMPLEDE", typist);
+  ok(`C6.5-9b pass (P-242): the ${typist === CLIENT ? "client's own" : "officer's (the release enters the name from the passport)"} typed answer is Declared and is the current answer at once`, sql(`select status || '|' || (value_json #>> '{}') from client_canonical_answer where subject_id='${P}' and canonical_field_key='person.family_name' and superseded_by_id is null`) === "DECLARED|SAMPLEDE");
   r = await call("POST", `/runtime/cases/${c.id}/documents/${docId}/confirm-and-use`, { subjectId: P }, CLIENT);
   ok("C6.5-9c fail (P-242): a client cannot Confirm & use a document's values (403; staff only)", r.status === 403, r.status);
   r = await call("POST", `/runtime/cases/${c.id}/documents/${docId}/confirm-and-use`, { subjectId: P }, OFFICER);

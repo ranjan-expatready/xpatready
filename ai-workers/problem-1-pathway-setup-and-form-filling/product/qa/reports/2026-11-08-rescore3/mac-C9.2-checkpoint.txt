@@ -1,0 +1,36 @@
+C9.2 on 37c269eea (product code = main 7e94da44f), checkpoint, copy qa_r92 :4470, start Sun Nov  8 14:29:59 IST 2026
+NOTICE:  database "xr_studio_qa_r92" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_r92 on http://localhost:4470 (xr_studio_qa_r92), stops itself in 25 min
+reset 201
+load 201
+C9.2 — Changed facts mark finished items out of date (Visitor visa; BR-3 breadth on With an LMIA)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+NOTE  IMM 5257 is ONLINE on the release: the principal's filed on Paper with an accommodation reason (founder Q3) (200)
+NOTE  IMM 5645 is PDF_UPLOAD on the release: the principal's filed Online (200)
+PASS  C9.2-1 pass: before anything is generated, a fact change only recomputes drafts: nothing out of date — 200
+PASS  C9.2-2 pass: IMM 5257 validated and read back, IMM 5476 signed scan in (setup)
+PASS  C9.2-3 pass: the uploaded IMM 5257 is Out of date, naming the fact, the old and new value and the date — "The validated copy of IMM 5257 read back 8 Nov 2026 is out of date: family name as shown on passport or travel document of Sample Client A changed from \"SAMPLE\" to \"SAMPLEDZ\" on 8 Nov 2026. Make a new copy, press Validate again (a new barcode page) and re
+PASS  C9.2-4 pass: the validated copy itself is never changed (same bytes); the signed scan keeps its checksum — {"validatedSha":"4847fdb1371eac73fa4e6fa326299c7b9e3985f588dec470a93462988dfab00d","before":"4847fdb1371eac73fa4e6fa326299c7b9e3985f588dec470a93462988dfab00d"}
+PASS  C9.2-5 fail (P-136, P-168, P-237): an out-of-date uploaded or signed item is a CRITICAL warning that stops Ready to file — ["CRITICAL: IMM 5476 for Sample Client A is out of date: \"Family name as shown on passport or travel document\" changed on 2026-11-08 after it was signed or uploaded. Make a new copy.","CRITICAL: IMM 5257 for Sample Client A is out of date: \"Family name as s
+PASS  C9.2-6 pass: the signed IMM 5476 that prints the family name is Out of date too
+PASS  C9.2-7 pass (scope): the spouse's own IMM 5257 does not use the principal's family name and stays as it was — [["IMM 5257","to_do"],["IMM 5645","to_do"],["IMM 5257 SCH1","to_do"],["IMM 5476","ready"]]
+PASS  C9.2-8 pass: Undo of the change restores the earlier value; the items are no longer out of date — 200
+PASS  C9.2-9 pass: changing the spouse's date of birth marks the principal's entered IMM 5645 section out of date
+PASS  C9.2-10 pass: a new representative of record marks the signed IMM 5476 out of date and asks for a new one — ["out_of_date","to_do"]
+PASS  C9.2-11 pass (data): an answer is never changed in place: the old value stays on record
+PASS  C9.2-12 setup: With an LMIA – inside Canada is released (the configured checkpoint) — {"wp":"aa15e10a-a144-40be-806f-ba16d11b91f8","hasLmia":true,"data":null}
+PASS  C9.2-13 setup (C1.3): the worker's case relies on the Sample employer case; the employer name is copied in and printed by IMM 5710; other forms (IMM 5707, IMM 5476) do not print it — {"link":201,"copied":["case.lmia_or_offer_number","organisation.employer_address","organisation.employer_name"],"value":"Sample Employer Ltd (Sample)","readers":["IMM 5710"],"others":[{"form":"IMM 5707","state":"to_do"},{"form":"IMM 5476","state":"to_do"}]}
+PASS  C9.2-14 setup: the worker's IMM 5710 is validated and read back — "010efc09-bb23-4221-a632-5e494d76d918"
+PASS  C9.2-15 pass (BR-3): the officer corrects the copied employer name on the worker's case; the validated IMM 5710 is Out of date, naming the fact, the old and new value and the date — {"fix":200,"state":"out_of_date","reason":"The validated copy of IMM 5710 read back 8 Nov 2026 is out of date: name of the prospective employer of Sample Worker W changed from \"Sample Employer Ltd (Sample)\" to \"Sample Employer Limited (Sample)\" on 8 Nov 20
+PASS  C9.2-16 pass (BR-3: never changes them): IMM 5710's validated copy keeps its checksum (one append-only row) — {"before":"0fa0bf43e3d4","now":"0fa0bf43e3d4"}
+PASS  C9.2-17 fail (P-136, P-237): the out-of-date IMM 5710 is a CRITICAL warning that holds Ready to file — ["critical: CRITICAL: IMM 5710 for Sample Worker W is out of date: \"Name of the prospective employer\" changed on 2026-11-08 after it was signed or uploaded. Make a new copy."]
+PASS  C9.2-18 pass (scope): the worker's IMM 5707 and IMM 5476, which do not print the employer name, are untouched — {"before":[{"form":"IMM 5707","state":"to_do"},{"form":"IMM 5476","state":"to_do"}],"after":[{"form":"IMM 5707","state":"to_do"},{"form":"IMM 5476","state":"to_do"}]}
+PASS  C9.2-19 pass: Undo restores the copied employer name; IMM 5710 is no longer out of date — {"undo":200,"back":"Sample Employer Ltd (Sample)","state":"to_do"}
+
+19/19 passed
+pack exit 0  end Sun Nov  8 14:32:04 IST 2026
+stopped qa_r92 (database and files removed; log in var/isolated-logs/qa_r92-api.log)

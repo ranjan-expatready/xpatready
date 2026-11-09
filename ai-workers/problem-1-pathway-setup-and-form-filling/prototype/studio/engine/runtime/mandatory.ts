@@ -9,7 +9,8 @@ import { recordedDerivation } from "../../../p5/transforms.ts";
 import type { BoxResult, Inventory } from "../form-values.ts";
 
 /** Why a mandatory form field is still empty, in the officer's words:
- *  - "needs an answer": a question fills it, and its answer is missing, not confirmed or has a problem;
+ *  - "needs an answer": a question fills it, and its answer is missing or has a problem (a case copy writes an
+ *    unconfirmed answer at once since P-411, so "answered, not confirmed yet" comes only from boxes read without it);
  *  - "no question asks it yet": nothing in the configuration fills it (the forms lane maps it), or it is a derived Yes/No
  *    whose No no answer can write;
  *  - "fill it in Adobe": the configuration decided it is not a fact the case keeps (IRCC's form may ask it only for some
@@ -43,7 +44,12 @@ export type CaseWords = { labelOf?: (fact: string) => string | undefined; noneAp
   /** QA-165: the Yes/No question a fact is asked under (engine/runtime/forms.ts gateOf), in the case's words. */
   gateOf?: (fact: string) => string | undefined };
 
-export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxResult[], values: Record<string, string>, words: CaseWords = {}): OpenField[] {
+/** QA-165 (#1318 review M1): a field the field list marks required whose own form script makes it required only when another
+ *  field holds one of some codes (IMM 5257's Taiwan PIN and Israel passport boxes, by the passport's country of issue):
+ *  data, studio/samples/form-script-requirements.json, cited from the form's script. */
+export type RequiredWhen = Map<string, { box: string; equals: string[] }>;
+
+export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxResult[], values: Record<string, string>, words: CaseWords = {}, requiredWhen: RequiredWhen = new Map()): OpenField[] {
   const entryOf = new Map(entries.map((e) => [e.data_path, e]));
   const boxOf = new Map(boxes.map((b) => [b.box, b]));
   const out: OpenField[] = [];
@@ -51,15 +57,21 @@ export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxRes
     const path = f.data_path;
     if (!f.required || !path || f.ui === "button" || byAPerson(inv.fields, f)) continue;
     if ((values[path] ?? "") !== "") continue; // written from a fact
+    const when = requiredWhen.get(path);
+    if (when && !when.equals.includes(values[when.box] ?? "")) continue; // the form's own script does not require it for this answer
     const e = entryOf.get(path), b = boxOf.get(path);
-    if (b?.coverage === "not needed") continue; // B86 BR-5: its own condition is not true, so the form leaves it empty
+    // B86 BR-5: its own condition is not true, so the form leaves it empty; unless the form's own script requires it for
+    // the code the copy writes (QA-165's last two, review M1 on the Taiwan/Israel PR: "isr" writes 206 while the question,
+    // asked only for "ISR", stays hidden), when it is open and says to check that answer.
+    if (b?.coverage === "not needed" && !when) continue;
     // Review M-1 on #592: a line a question fills is named by that question, as the case asks it; only a field no
     // question fills keeps the form's own words.
     const asked = e?.fact ? words.labelOf?.(e.fact) : undefined;
     const label = asked && !/^derived:/.test(b?.transform ?? "") ? asked : wordsOf(e, f.caption, path);
     // Review R2-m1 on #592: only the group's row fields; a question asked once outside its rows still needs its answer.
     const settled = b?.about && e?.fact && b.row !== null && b.row !== undefined ? words.noneApply?.get(`${b.about.split("/")[0]}|${e.fact}`) : undefined;
-    if (e?.outcome === "not_a_fact") out.push({ box: path, label, reason: "fill it in Adobe", why: "not a fact the case keeps: complete it in Adobe if the form asks for it" });
+    if (b?.coverage === "not needed") out.push({ box: path, label, reason: "needs an answer", why: `the form requires it for the answer written here (its code ${values[when!.box]}), but its question is not asked for that answer as given: check that answer` });
+    else if (e?.outcome === "not_a_fact") out.push({ box: path, label, reason: "fill it in Adobe", why: "not a fact the case keeps: complete it in Adobe if the form asks for it" });
     else if (b?.result === "by hand") out.push({ box: path, label, reason: "filled by hand", why: b.why ?? "type it in Adobe" });
     else if (b?.result === "not on this form") out.push({ box: path, label, reason: "not on this form", why: b.why ?? "the form has no such choice" });
     // A derived "is anything recorded?" Yes/No (C7.2 cause 3): an answer can only make it Yes; its No needs a question
@@ -75,7 +87,7 @@ export function mandatoryOpen(inv: Inventory, entries: MapEntry[], boxes: BoxRes
     else if (b && /^derived:.*\brecorded\b/.test(b.transform ?? "") && !b.nothing_recorded) out.push({ box: path, label, reason: "no question asks it yet", why: "the form's Yes/No: Yes is written when the answer is recorded, and no question records a No yet" });
     // Review M-2 on #592: a row field of a group whose "none apply" is confirmed has no answer to give: IRCC's form still
     // requires it, so the person completes it in Adobe, or the officer takes back "none apply" and adds the entry.
-    else if (settled) out.push({ box: path, label, reason: "fill it in Adobe", why: `"none apply" is confirmed for ${settled}, but IRCC's form requires this field: complete it in Adobe, or take back "none apply" and add the entry` });
+    else if (settled) out.push({ box: path, label, reason: "fill it in Adobe", why: `"none apply" is answered for ${settled}, but IRCC's form requires this field: complete it in Adobe, or take back "none apply" and add the entry` });
     // Break M-2 on #592: a confirmed answer with a problem (QA-122) says that problem, as the copy does.
     // A mapped fact can be answered, whichever source the release names for it (a document reading the case has not
     // got is typed by the officer: r1c's walk), so it "needs an answer"; only an unmapped field has no question.

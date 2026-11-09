@@ -136,10 +136,10 @@ async function main() {
   // ── RT-10 confirmation (P-72, founder question 1 as recommended)
   const conf = async (subject: string, field: string) => qs(await agent()).find((q) => q.subjectId === subject && q.fact === field)!.answer;
   let a = await conf(principal, "person.marital_status");
-  ok("RT-10 pass: the client's own answer on a client field counts as confirmed", a?.confirmed === true && /client's own/.test(a.why), a?.why);
+  ok("RT-10 pass (P-242, QA-301): the client's own answer on a client field is Declared and needs no officer confirmation", a?.confirmed === true && /^Declared: the client's own answer/.test(a.why) && a.mark === "declared", a?.why);
   await check(spouse, "person.marital_status", "married");
   a = await conf(spouse, "person.marital_status");
-  ok("RT-10 fail (P-78): the principal's answer for the adult spouse shows \"answered by the principal\" and is not confirmed", a?.confirmed === false && /^Answered by the principal for an adult/.test(a.why), a?.why);
+  ok("RT-10 fail (P-78, P-411 (1)): the principal's answer for the adult spouse shows \"answered by the principal for\" the spouse's name and is not confirmed", a?.confirmed === false && /^Answered by the principal for Sample Spouse/.test(a.why) && a.mark === "by_principal", a?.why);
   await check(child, "person.marital_status", "single");
   const before = (await conf(child, "person.marital_status"))?.confirmed;
   await check(child, "person.date_of_birth", "2015-05-01", OFFICER);
@@ -309,7 +309,7 @@ async function main() {
   const msg = (await call("PUT", `/runtime/cases/${fresh}/answers/${caseSubj}/case.funds_available_cad`, { value: "4000", expectedId: (await call("GET", `/runtime/cases/${fresh}/questionnaire`, undefined, CLIENT)).body.sections.flatMap((x: { questions: Q[] }) => x.questions).find((q: Q) => q.fact === "case.funds_available_cad").answer.id }, CLIENT)).body?.message ?? "";
   ok("QA-37 pass (P-63): the save message names form fields, never boxes", /form fields?\)/.test(msg) && !/\bbox(es)?\b/.test(msg), msg);
   const dbRefuses = (q: string) => { try { sql(q); return false; } catch { return true; } };
-  const pinId = sql(`select id from pack_work_pin where case_id='${caseId}'`), relId = sql(`select config_release_id from pack_work_pin where case_id='${caseId}'`);
+  const pinId = sql(`select id from pack_work_pin where case_id='${caseId}' order by revision desc limit 1`), relId = sql(`select config_release_id from pack_work_pin where case_id='${caseId}' order by revision desc limit 1`);
   ok("FIX B4 fail (database): a case's pin cannot be changed, and its release or combination cannot be deleted", dbRefuses(`update pack_work_pin set content_hash='x' where id='${pinId}'`) && dbRefuses(`delete from config_release where id='${relId}'`) && dbRefuses(`delete from combination where id='${vv}'`));
   ok("FIX B4 fail (database): a second pin for the same case and combination is refused", dbRefuses(`insert into pack_work_pin (id, workspace_id, case_id, combination_id, party_id, config_release_id, content_hash, revision, actor_id) select gen_random_uuid(), workspace_id, case_id, combination_id, party_id, config_release_id, content_hash, 2, actor_id from pack_work_pin where id='${pinId}'`));
   const ansId = sql(`select id from client_canonical_answer where subject_id='${principal}' and superseded_by_id is null limit 1`);

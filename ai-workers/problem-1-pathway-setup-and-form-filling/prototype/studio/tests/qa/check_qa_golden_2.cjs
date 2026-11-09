@@ -327,12 +327,12 @@ print(json.dumps({"written":len(boxes),"read_back_equal":eq,"fact_match":match,"
     const out = spawnSync(PY, ["-I", "-c", pyCode], { encoding: "utf8", timeout: 120000 });
     try { py = JSON.parse(out.stdout.trim().split("\n").pop()); } catch { py = null; info("python reader failed", (out.stderr || out.stdout).slice(-400)); }
     fs.rmSync(tmp, { recursive: true, force: true });
-    const written = copy?.counts?.written, conf = /Confirmed answers for (\d+) of (\d+)/.exec(flat(await row().innerText()));
-    info("step 5 copy", { status: copy?.status, counts: copy?.counts, page_says: conf ? `Confirmed answers for ${conf[1]} of ${conf[2]} form fields` : null, sideways_400: sw });
+    const written = copy?.counts?.written, conf = /Declared or confirmed answers for (\d+) of (\d+)/.exec(flat(await row().innerText()));
+    info("step 5 copy", { status: copy?.status, counts: copy?.counts, page_says: conf ? `Declared or confirmed answers for ${conf[1]} of ${conf[2]} form fields` : null, sideways_400: sw });
     info("step 5 compare with the facts (XFA read with the form's own lists)", py ? { written: py.written, read_back_equal: py.read_back_equal, matches_the_facts: py.fact_match, mismatches: py.mismatch_n, mismatch_examples: py.mismatch, unverifiable: py.unverifiable_n, unverifiable_examples: py.unverifiable } : "no reading");
     const neverWritten = (py?.required_empty ?? []).length;
     verdict(5, "IMM 5257 fills for the principal and the written values match the facts", !!py && py.mismatch_n === 0 && py.written > 0 && py.read_back_equal === py.written, [
-      conf && written != null ? `the page says "Confirmed answers for ${conf[1]} of ${conf[2]} form fields" beside ${written} form fields written: two numbers that do not agree` : null,
+      conf && written != null ? `the page says "Declared or confirmed answers for ${conf[1]} of ${conf[2]} form fields" beside ${written} form fields written: two numbers that do not agree` : null,
       py ? `${neverWritten} of the form's ${py.required_total} mandatory boxes were never written (see step 6, QA-165)` : null].filter(Boolean));
   }
 

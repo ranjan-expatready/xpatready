@@ -10,6 +10,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { request } from "node:http";
 import { randomUUID } from "node:crypto";
 import { withoutWithdrawnKeys } from "../engine/validate.ts";
+import { OWN_YES_NO } from "../api/src/own-yes-no.ts";
 
 const PORT = Number(process.argv[2] ?? 4441), DB = process.argv[3] ?? "xr_studio_b83api", LOADED = process.argv[4] === "loaded";
 const PSQL = "/opt/homebrew/opt/postgresql@18/bin/psql", URL_DB = `postgresql://xr_studio@127.0.0.1:54329/${DB}`;
@@ -77,6 +78,13 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   const release = async () => { const s = await submit(); if (s.status >= 300) return s; return call("POST", `/combinations/${vv}/approve`, {}, APPROVER); };
 
   // ------------------------------------------------------------ the row's first state: a released row under a draft
+  // QA-165 (#1318): the checkpoint now asks each of IMM 5257's three Yes/No questions' details only after a Yes
+  // (230-own-yes-no-follow-ups.ts), so a worked-out row reading a detail (this check undoes the US card's and the national ID's
+  // own questions) would rightly be refused at release ("Hiding a value a form reads"). This check needs such rows released to
+  // attack undo and withdraw over them, so on its own copy the details' question conditions are taken off first, as they held
+  // the questions before #1318 (the attack itself still goes through the routes).
+  const DETAILS = Object.values(OWN_YES_NO).flatMap((c) => c.boxes.flatMap((b) => b.followUps ?? []));
+  sql(`update section_question set predicate_json = null, condition_effect = null, condition_plain = null where canonical_field_key in (${DETAILS.map(lit).join(", ")})`);
   let u = await undo(USCARD);
   ok("setup: undo over a released row makes a new draft, the released row untouched", u.status < 300 && newest(USCARD).includes(":DRAFT:person.us_green_card_number") && rowsOf(USCARD)[0].startsWith("1:PUBLISHED:"), rowsOf(USCARD));
   u = await release();
@@ -357,7 +365,10 @@ const WHY = "The form asks this Yes/No itself (B83 check)", MEANS = (n: string) 
   u = await askNew(USCARD, "B83 supplied held");
   sk = keyOf("B83 supplied held");
   const heldOuter = sql(`select id from combination where combination_key = 'vv.single'`);
-  const vvDoc = sql(`select document_type_key from document_requirement where id = '${docLine}'`);
+  // The document is one the release always lists (B102, #1222: the checkpoint now also has conditional minor lines; a
+  // fact supplied only by a document asked in some cases stops Submit before release, which is another rule, so the line
+  // M7 attacks is an always-needed one, as it was when M7 was written).
+  const vvDoc = sql(`select document_type_key from document_requirement where combination_id = '${heldOuter}' and attach_mode = 'COMBINATION_MANDATORY' and status in ('DRAFT','PUBLISHED') order by lineage_key limit 1`) || sql(`select document_type_key from document_requirement where id = '${docLine}'`);
   const vvFacts = sql(`select array_to_string(supplies_facts, ',') from document_type where document_type_key = ${lit(vvDoc)} and status in ('DRAFT','PUBLISHED') order by version desc limit 1`).split(",").filter(Boolean);
   sup = await call("POST", `/library/document-types/${vvDoc}/supplies`, { facts: [...vvFacts.map((f) => citeOf(f)), citeOf(sk)], reason: "A B83 check of a held release." });
   ap = await approve(sup.body?.id);

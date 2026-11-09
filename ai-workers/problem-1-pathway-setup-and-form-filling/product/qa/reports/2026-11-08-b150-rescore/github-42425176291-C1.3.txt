@@ -1,0 +1,3 @@
+Gate B: the PR names C1.3; claims Works for none (no bug check).
+    C1.3.test.ts on the checkpoint: exit 0, 55/55 passed (92 s: copy 5, Load the configured checkpoint 83, run 4)
+Gate B: passed.

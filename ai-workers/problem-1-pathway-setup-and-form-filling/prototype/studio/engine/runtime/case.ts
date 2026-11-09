@@ -1,6 +1,6 @@
 // The case engine (runtime lane, R1): pure functions from a pinned release snapshot, the people on a case and their
 // current answers, to what each person is asked, how each answer checks, whether it is confirmed (P-72) and which form
-// boxes it fills. The questionnaire itself comes from the common renderer (engine/render.ts), so a case asks exactly
+// boxes it fills (every current answer, marked by who gave it: P-242, P-411). The questionnaire itself comes from the common renderer (engine/render.ts), so a case asks exactly
 // what the release preview shows. No I/O; every output says why.
 import { evalCondition, kkey, render, type Known, type Person, type Role } from "../render.ts";
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
@@ -9,17 +9,31 @@ import { isCodeRange } from "../options.ts";
 import { z } from "zod";
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
+import { gatesInForce } from "../form-field-condition.ts";
 import { SCOPE_TAG } from "../field-scope.ts";
 import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
+import { CLIENT_RECONFIRM } from "./background.ts";
+import { cellAsked, isAskedRelative, isListRelative, listWords, relativeLabel, relativeOf } from "./relatives.ts";
 import type { Period } from "../../../contracts/history.ts";
-import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
+import { Address, byClientFor, byPrincipalFor, CONFIRM_WORDS, groupLabel, type AnswerMark, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
-export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean };
-export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null };
+export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean;
+  /** C6.13 BR-3b: whether this person is the client who answers the questionnaire (set by the runtime; absent in pure
+   *  checks, where the principal is the client). After Make principal the client stays the same person. */
+  client?: boolean };
+export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null /** C6.18 (P-244): a background answer (engine/runtime/background.ts), and one an officer recorded that the client has
+ *  not re-confirmed yet; set by the case's reader (api/src/runtime.ts state). */
+  background?: boolean; awaitsClient?: boolean;
+  /** C6.18: the staff member who recorded this background answer and when ("Officer"), through any later re-confirmation
+   *  or confirmation of it; absent when the client gave it. */
+  officerRecorded?: { by: string; at: string } | null };
 export type Row = { rowKey: string; subjectId: string; group: string; order: number };
 /** A repeating group's own answer (client_group_answer): none apply (true) or entries apply (false). */
 export type GroupAnswer = { id: string; subjectId: string; group: string; noneApply: boolean; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null };
-export type Confirmation = { confirmed: boolean; why: string };
+/** `confirmed`: off the officer's Confirm list (P-72, P-78). `fills`: written to the forms now (P-242, P-411: every
+ *  declared answer fills at once, whoever typed it; a document's read value is a proposal, never an answer, until
+ *  "Confirm & use"). `mark`: who gave it, shown beside it. */
+export type Confirmation = { confirmed: boolean; why: string; fills: boolean; mark: AnswerMark };
 
 /** Fields the client answers (P-72 "the client's fields"): placed in the questionnaire or the client's profile, and
  *  about a person, a relationship or the application (never the representative's own facts). */
@@ -53,20 +67,42 @@ export function ageOn(birth: unknown, today: Date): number | null {
   return age;
 }
 
-/** P-72 and P-78: VERIFIED is confirmed; the client's (principal's) typed answer on a client field counts as confirmed
- *  for the principal, the application and a minor child; for an adult it is "answered by the principal" until that
- *  adult or the officer confirms; everything else waits for "Confirm section". */
+/** P-72 and P-78 as P-242 and P-411 amend them. Every current answer fills the forms at once (`fills`), marked by who
+ *  gave it; `confirmed` says whether it is off the officer's Confirm list. VERIFIED is confirmed. The client's
+ *  (principal's) own typed answer on a client field is Declared and needs no officer confirmation for the principal, the
+ *  application and a minor child; for an adult it is "answered by the principal for <name>" until that adult or the
+ *  officer confirms (P-411 (1)); an answer staff typed or corrected is "entered by staff" and stays on the Confirm list
+ *  (P-411 (2)), so a correction never empties a filled form field. */
 export function confirmation(s: Snapshot, a: Answer, who: Participant | undefined, birthDate: unknown, today: Date): Confirmation {
-  if (a.status === "VERIFIED") return { confirmed: true, why: CONFIRM_WORDS.officer };
-  if (a.channel !== "questionnaire") return { confirmed: false, why: `${CONFIRM_WORDS.waits} (entered by the case officer)` };
-  if (!isClientField(s, a.field)) return { confirmed: false, why: `${CONFIRM_WORDS.waits} (a fact the officer confirms from a document or record)` };
-  if (who?.role === "principal" || who?.role === "case") return { confirmed: true, why: CONFIRM_WORDS.client_own };
+  const fills = true;
+  // C6.18 (P-244) with P-411 (Lead 31, 16:18 IST on #1246): a background answer the officer recorded fills the forms at
+  // once, marked as staff's, but never counts as confirmed until the client re-confirms it, even after the officer's
+  // "Confirm section": readiness, Ready to file and signing wait for the client.
+  if (a.awaitsClient) return { confirmed: false, why: CONFIRM_WORDS.awaits_client, fills, mark: "by_staff" };
+  if (a.status === "VERIFIED") return { confirmed: true, why: CONFIRM_WORDS.officer, fills, mark: "confirmed" };
+  // The client's re-confirmation of an officer's answer counts as the client's own answer (C6.18).
+  if (a.channel !== "questionnaire" && a.channel !== CLIENT_RECONFIRM) return { confirmed: false, why: CONFIRM_WORDS.staff, fills, mark: "by_staff" };
+  if (!isClientField(s, a.field)) return { confirmed: false, why: `Declared: it fills the forms now and waits for the officer's "Confirm section" (a fact the officer confirms from a document or record)`, fills, mark: "declared" };
+  // C6.13 BR-3b: the client's own answers, whatever role the client has now (the principal unless roles were swapped).
+  const own = who?.client ?? who?.role === "principal";
+  if (own || who?.role === "case") return { confirmed: true, why: CONFIRM_WORDS.client_own, fills, mark: "declared" };
+  // C6.13 (review, break M1): after a swap (`client` is set) the client answered for this adult, whoever the principal
+  // is; the mark stays "by_principal" (answered for the adult by the person who fills the questionnaire), the words say who.
+  const byClient = who?.client === false;
+  const forAdult = (note?: string): Confirmation => ({ confirmed: false, why: `${who?.label ? (byClient ? byClientFor : byPrincipalFor)(who.label) : byClient ? CONFIRM_WORDS.by_client : CONFIRM_WORDS.by_principal}${note ? ` (${note})` : ""}`, fills, mark: "by_principal" });
   if (who?.role === "child") {
     const age = ageOn(birthDate, today);
-    if (age !== null && age < MINOR.underAge) return { confirmed: true, why: `${CONFIRM_WORDS.client_own} (for a child under ${MINOR.underAge})` };
-    return { confirmed: false, why: age === null ? `${CONFIRM_WORDS.waits} (the child's date of birth is not answered yet, or is not a real past date)` : `${CONFIRM_WORDS.by_principal} (the child is ${age})` };
+    if (age !== null && age < MINOR.underAge) return { confirmed: true, why: `${CONFIRM_WORDS.client_own} (for a child under ${MINOR.underAge})`, fills, mark: "declared" };
+    return forAdult(age === null ? "the child's date of birth is not answered yet, or is not a real past date" : `the child is ${age}`);
   }
-  return { confirmed: false, why: CONFIRM_WORDS.by_principal };
+  return forAdult();
+}
+
+/** C6.18 (P-244): on a background answer, who on the staff recorded it and when ("Officer"), whether they recorded this
+ *  version or the one the client re-confirmed or the officer confirmed, and whether it still waits for the client. */
+function officerMark(a: Answer): { officer?: { by: string; at: string } | null; awaits_client?: boolean } {
+  if (!a.background) return {};
+  return { officer: a.officerRecorded ?? null, awaits_client: !!a.awaitsClient };
 }
 
 /** How the forms that read a field write it (from the release's field maps): the precision and limits a value needs. */
@@ -223,8 +259,11 @@ function checkType(s: Snapshot, field: string, value: unknown, today: Date): str
 }
 
 /** The renderer's known facts from current answers: confirmed ones as "confirmed", the rest as "answered". Row answers
- *  take the row's place among the subject's live rows of that group; a box with no row reads the first row. */
-export function knownOf(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], today: Date): { known: Known; confirm: Map<string, Confirmation> } {
+ *  take the row's place among the subject's live rows of that group; a box with no row reads the first row.
+ *  `forForms` (P-242, P-411): what a form writes, so every answer that fills (every declared answer, whoever typed it)
+ *  is "confirmed" to the renderer, whose "confirmed fact" is the form field it writes. Without it (the case check C6.9,
+ *  the checklist, the questionnaire's counts) "confirmed" stays the officer's Confirm list (P-72, P-78). */
+export function knownOf(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], today: Date, opts: { forForms?: boolean } = {}): { known: Known; confirm: Map<string, Confirmation> } {
   const known: Known = new Map(), confirm = new Map<string, Confirmation>();
   const about = (subjectId: string) => (people.find((p) => p.subjectId === subjectId)?.role === "case" ? "case" : subjectId);
   const index = new Map<string, number>();
@@ -238,7 +277,7 @@ export function knownOf(s: Snapshot, people: Participant[], answers: Answer[], r
     confirm.set(a.id, c);
     // A number answered as digits ("000", "0.0") is read as the number it is, so rules compare numbers (break report m9).
     const value = fieldOf(s, a.field)?.value_type === "number" && typeof a.value === "string" && /^\d+(\.\d+)?$/.test(a.value.trim()) ? Number(a.value) : a.value;
-    const v = { value, status: c.confirmed ? "confirmed" as const : "answered" as const, source: `${a.channel} by ${a.actor}` };
+    const v = { value, status: (opts.forForms ? c.fills : c.confirmed) ? "confirmed" as const : "answered" as const, source: `${a.channel} by ${a.actor}` };
     const row = a.rowKey ? index.get(a.rowKey)! : undefined;
     known.set(kkey(about(a.subjectId), a.field, row), v);
     if (row === 0 && !known.has(kkey(about(a.subjectId), a.field))) known.set(kkey(about(a.subjectId), a.field), v);
@@ -277,17 +316,35 @@ export type Mode = "sqr" | "agent";
  *  `skipDocumentFacts` (Preview only for now, Lead Q2 29 Oct; the case default with M3's documents-first intake, C6.5):
  *  a fact a document on that person's checklist supplies is not asked (P-130); it names the document, or null to ask.
  *  What it skips is listed per person and document in `from_documents`. */
-export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date(), groupAnswers: GroupAnswer[] = [], opts: { skipDocumentFacts?: (subjectId: string, fact: string) => string | null } = {}): QuestionnaireView {
+export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date(), groupAnswers: GroupAnswer[] = [], opts: { skipDocumentFacts?: (subjectId: string, fact: string) => string | null; background?: ReadonlySet<string> } = {}): QuestionnaireView {
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
   const caseSubject = people.find((p) => p.role === "case")!;
   const { known, confirm } = knownOf(s, people, answers, rows, today);
   const r = render(s, renderPeople, known, { today });
-  const subjectOf = (about: string) => (about === "case" ? caseSubject.subjectId : about.split("/")[0]);
+  // B128 (QA-153): a parent a form describes is asked on their own key (`<person>/parent_1`), so their answers never land
+  // on the person whose parent they are, and only for a form that applies to that person (not while it may be needed:
+  // a child's form waiting for a date of birth asks no parents). B155: a list relative (`<person>/sibling`) the same way,
+  // as one repeating group with a row per brother or sister (engine/runtime/relatives.ts).
+  const subjectOf = (about: string) => (about === "case" ? caseSubject.subjectId : isAskedRelative(about) ? about : about.split("/")[0]);
+  const applies = new Set<string>(), boxesOf = new Map<string, string[]>();
+  // B155: a list relative's questions follow its boxes in the form's order (name, then status, …), and its group holds as
+  // many rows as the form's boxes do (row n of the map is entry n + 1).
+  const boxAt = new Map<string, number>(), listRows = new Map<string, number>();
+  const asked = (q: { about: string; fact: string }) => !q.about.includes("/") || (isAskedRelative(q.about) && applies.has(`${q.about}|${q.fact}`));
   const fills = new Map<string, Map<string, { form: string; person: string; subject: string; boxes: number }>>();
   // QA-296: a form that does not name the representative of record is never said to be filled by the firm record's facts.
   const namingRep = formsNamingRepresentative(s.field_maps);
-  for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about && (namingRep.has(c.form) || !firmRecordFact(kkey(b.about, b.fact), known.get(kkey(b.about, b.fact))?.source))) {
-    const k = `${b.about}|${b.fact}`, m = fills.get(k) ?? new Map(); const e = m.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, subject: c.person, boxes: 0 }; e.boxes++; m.set(`${c.form}|${c.person}`, e); fills.set(k, m);
+  // B107 (QA-299, QA-300): a form field whose gate does not hold writes nothing (engine/runtime/forms.ts formCoverage), so
+  // its question is not asked for that form either: IMM 5476's membership boxes of the other bodies, its uncompensated part
+  // for a compensated representative, its student-at-law and fax boxes. A gate that cannot tell yet keeps it asked.
+  const gates = new Map<string, Map<string, unknown>>();
+  const gatedOff = (c: { form: string; edition: string | null }, b: { box: string; about: string | null }) => {
+    const k = `${c.form}|${c.edition}`, g = (gates.get(k) ?? gates.set(k, gatesInForce(s, c.form, c.edition)).get(k)!).get(b.box);
+    return !!g && evalCondition(s, known, g, b.about === "case" ? "case" : b.about!.split("/")[0]).applies === false;
+  };
+  for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about && !gatedOff(c, b) && (namingRep.has(c.form) || !firmRecordFact(kkey(b.about, b.fact), known.get(kkey(b.about, b.fact))?.source))) {
+    const k = `${b.about}|${b.fact}`, m = fills.get(k) ?? new Map(); if (c.applies === true) { applies.add(k); if (isAskedRelative(b.about)) boxesOf.set(b.about, [...(boxesOf.get(b.about) ?? []), b.box]); }
+    if (isListRelative(b.about)) { if (!boxAt.has(k)) boxAt.set(k, boxAt.size); if (typeof b.row === "number") listRows.set(b.about, Math.max(listRows.get(b.about) ?? 0, b.row + 1)); } const e = m.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, subject: c.person, boxes: 0 }; e.boxes++; m.set(`${c.form}|${c.person}`, e); fills.set(k, m);
     // QA-165: a "recorded" Yes/No box is written by its facts' own Yes/No question (a confirmed No writes "N"), so that
     // question fills the box too (P-62: every question asked fills a box or decides something).
     const d = recordedDerivation(b.transform);
@@ -300,11 +357,19 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const first = new Map<string, number>();
   r.questions.forEach((q, i) => { if (!first.has(`${q.section}|${q.about}`)) first.set(`${q.section}|${q.about}`, i); });
   const placed = (fact: string) => placementOf(s, fact)?.order ?? Number.MAX_SAFE_INTEGER;
+  // B155: a list relative is one section, placed where its first question would be, its questions in the form's order.
+  const firstList = new Map<string, number>();
+  r.questions.forEach((q, i) => { if (isListRelative(q.about) && !firstList.has(q.about)) firstList.set(q.about, i); });
+  const firstOf = (q: { about: string; section: string }) => (isListRelative(q.about) ? firstList.get(q.about)! : first.get(`${q.section}|${q.about}`)!);
+  const orderIn = (q: { about: string; fact: string }) => (isListRelative(q.about) ? boxAt.get(`${q.about}|${q.fact}`) ?? Number.MAX_SAFE_INTEGER : placed(q.fact));
   const countries = (s.canonical_fields as FieldDef[]).find((f) => f.answer_list?.key === "country")?.answer_list?.values.map((v) => v.label) ?? null;
   const derivedYes = hasChildrenOf(people);
-  const needed = r.questions.filter((q) => !q.about.includes("/") && !(q.fact === HAS_CHILDREN && derivedYes.has(q.about)) && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
-    .sort((a, b) => first.get(`${a.section}|${a.about}`)! - first.get(`${b.section}|${b.about}`)! || placed(a.fact) - placed(b.fact));
-  const notAsked = r.questions.filter((q) => !q.about.includes("/")).length - needed.length;
+  const needed = r.questions.filter((q) => asked(q) && !(q.fact === HAS_CHILDREN && derivedYes.has(q.about)) && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
+    .sort((a, b) => firstOf(a) - firstOf(b) || orderIn(a) - orderIn(b));
+  const notAsked = r.questions.filter((q) => asked(q)).length - needed.length;
+  // Review Major 1 (#1256): a parent is named by the boxes the person's forms write them into ("Sample Client W's
+  // mother"), so nobody types the father where the form wants the mother; "first parent" when the boxes do not say.
+  const labelOf = (q: { about: string; about_label: string }) => { const rel = relativeOf(q.about); return rel ? relativeLabel(people.find((p) => p.subjectId === rel.owner)?.label ?? rel.owner, rel.relation, boxesOf.get(q.about) ?? []) : q.about_label; };
   const fromDocuments = new Map<string, { subjectId: string; document: string; facts: string[] }>();
   const skipped = (q: (typeof needed)[number]) => {
     const doc = opts.skipDocumentFacts?.(subjectOf(q.about), q.fact);
@@ -318,21 +383,30 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const questions = needed.filter((q) => (mode === "agent" || (isClientField(s, q.fact) && q.about !== "representative")) && !skipped(q)).map((q) => {
     const subjectId = subjectOf(q.about), p = placementOf(s, q.fact);
     let required = q.required, hidden = q.status === "hidden by a condition";
-    if (p?.condition && p.condition_effect === "REQUIRE") { const c = evalCondition(s, known, p.condition, q.about === "case" ? "case" : subjectId); required = c.applies === true; }
+    if (p?.condition && p.condition_effect === "REQUIRE") { const c = evalCondition(s, known, p.condition, q.about === "case" ? "case" : subjectId.split("/")[0]); required = c.applies === true; }
     if (!p?.condition && p?.condition_effect === "OPTIONAL") required = false; // optional for everyone (no condition)
-    const group = p?.repeats === "per_row" ? q.section : null;
+    // B155: a list relative's facts are one repeating group on its key, named by the relation (its section too), whatever
+    // section each fact's placement sits in for a person; each question's own rows are the rows the form has boxes for.
+    const list = isListRelative(q.about) ? relativeOf(q.about)!.relation : null;
+    const group = list ?? (p?.repeats === "per_row" ? q.section : null);
+    const fitsRow = (i: number) => (list ? q.rows.includes(i) : q.rows.length ? i < q.rows.length : true);
     const current = answers.filter((a) => a.subjectId === subjectId && a.field === q.fact);
     const live = group ? rows.filter((x) => x.subjectId === subjectId && x.group === group).sort(byOrder) : [];
-    const one = (a: Answer | undefined) => a ? { id: a.id, value: a.value, status: a.status, channel: a.channel, by: a.actor, at: a.at, answered: a.origin ? { channel: a.origin.channel, by: a.origin.actor, at: a.origin.at } : null, problems: checkValue(s, q.fact, a.value, today), ...confirm.get(a.id)! } : null;
+    const one = (a: Answer | undefined) => a ? { id: a.id, value: a.value, status: a.status, channel: a.channel, by: a.actor, at: a.at, answered: a.origin ? { channel: a.origin.channel, by: a.origin.actor, at: a.origin.at } : null, problems: checkValue(s, q.fact, a.value, today), ...confirm.get(a.id)!, ...officerMark(a),
+      // Review m6 (#1256): a parent has no link of their own, so their answer waits for the officer, in those words.
+      // B150 (P-411): it is on the forms at once, so the words say so; an answer waiting for the client keeps its own words.
+      ...(isAskedRelative(q.about) && !confirm.get(a.id)!.confirmed && !a.awaitsClient ? { why: `Declared: it fills the forms now and waits for the officer's "Confirm section" (${list ? `${listWords(list).one} has` : "a parent has"} no link of their own)` } : {}) } : null;
     const options = optionsOf(s, q.fact);
     return {
-      subjectId, about_label: q.about_label, fact: q.fact, label: q.label, meaning: q.meaning, value_type: q.value_type, shape: shapeOf(s, q.fact), section: q.section, section_title: q.section_title,
-      collected_from: q.collected_from, required, hidden, why: q.why, group, capacity: q.rows.length || null,
+      subjectId, about_label: labelOf(q), fact: q.fact, label: q.label, meaning: q.meaning, value_type: q.value_type, shape: shapeOf(s, q.fact), section: list ?? q.section, section_title: list ? listWords(list).title : q.section_title,
+      collected_from: q.collected_from, required, hidden, why: q.why, group, capacity: (list ? listRows.get(q.about) : q.rows.length) || null,
       answer: group ? null : one(current.find((a) => !a.rowKey)),
-      rows: group ? live.map((x, i) => ({ row: x.rowKey, index: i, fits: q.rows.length ? i < q.rows.length : true, answer: one(current.find((a) => a.rowKey === x.rowKey)) })) : [],
+      rows: group ? live.map((x, i) => ({ row: x.rowKey, index: i, fits: fitsRow(i), answer: one(current.find((a) => a.rowKey === x.rowKey)) })) : [],
       options,
       note: !options && (q.value_type === "code" || q.value_type === "country" || q.value_type === "multi_choice") ? "No fixed list for this answer yet: check it before confirming the section." : null,
       fills: [...(fills.get(`${q.about}|${q.fact}`)?.values() ?? [])],
+      // C6.18 (P-244): a background question (the client's; staff may record it, marked Officer, the client re-confirms).
+      ...(opts.background?.has(q.fact) ? { background: true } : {}),
       // C3.16 BR-4: a household or employer fact asked once on the case says so, and names whom it is read for (each
       // member's part shows it read-only from these, challenge M6).
       ...scopeTagOf(q.about, p, fills.get(`${q.about}|${q.fact}`)),
@@ -356,7 +430,10 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     const qs = questions.filter((q) => q.subjectId === sec.subjectId && q.section === sec.section);
     const answered = qs.flatMap((q) => (q.group ? q.rows.map((x) => x.answer) : [q.answer])).filter((a): a is NonNullable<typeof a> => !!a);
     // A repeating group may have no rows (no previous country, no job); a started row needs all its required answers.
-    const missing = qs.filter((q) => q.required && !q.hidden && (q.group ? q.rows.some((x) => !x.answer) : !q.answer)).map((q) => q.label);
+    // B155: an entry of a list relative asks only what the form has a box for in its row; an entry with no row on the form
+    // asks everything (it goes on an extra sheet; break M1 on #1367).
+    const listed = isListRelative(sec.subjectId), grouped = qs.filter((q) => q.group);
+    const missing = qs.filter((q) => q.required && !q.hidden && (q.group ? q.rows.some((x, i) => (!listed || cellAsked(grouped, q, i)) && !x.answer) : !q.answer)).map((q) => q.label);
     // A required group with no entries is answered by "none apply" (Lead, break M3): until then the part is not done
     // (review r1d-none-apply M1); "none apply" counts as an answer of the part.
     const group = groupOf(qs), na = group && group.rows === 0 ? group.none_apply : null;
