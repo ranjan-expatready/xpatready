@@ -138,7 +138,9 @@ try {
   const other = await openCase(needVisitorVisa(), [{ role: "principal", name: "Sample Client B", dob: yearsAgo(30) }]);
   const otherItem = itemsOf((await prepare(other.id)).p, other.subjects["Sample Client B"], "IMM 5257")[0];
   await p.goto(`${BASE}/cases/${c.id}/sheet/${otherItem.id}`); await p.locator("[data-sheet-error]").waitFor({ timeout: 30_000 });
-  ok("QA-317 m2 (fail): another case's item under this case's path: \"not on this case\", no answer of it shown", (await p.locator("[data-sheet-error]").getAttribute("data-sheet-error")) === "other-case" && await p.locator("[data-answer]").count() === 0);
+  ok("QA-317 m2 (fail): another case's item under this case's path: \"not among this case's forms\", no answer of it shown", (await p.locator("[data-sheet-error]").getAttribute("data-sheet-error")) === "other-case" && await p.locator("[data-answer]").count() === 0);
+  await p.goto(`${BASE}/cases/00000000-0000-4000-8000-000000000000/sheet/${ITEM}`); await p.locator("[data-sheet-error]").waitFor({ timeout: 30_000 });
+  ok("QA-317 (break F1, fail): a case that cannot be read shows nothing of the item's sheet", (await p.locator("[data-sheet-error]").getAttribute("data-sheet-error")) === "other-case" && await p.locator("[data-answer]").count() === 0);
 
   // The ONLINE filter: a form moved to PDF upload loses its link on the Online line (the other person's stays).
   const pv = (await prepare(c.id)).p;

@@ -45,8 +45,9 @@ export function AnswerSheetPage() {
   const { id, itemId } = useParams();
   const actor = useActorId();
   const officer = STAFF.has(actor);
-  const sheet = useApi<Sheet>(["runtime", "view", id!, "sheet", itemId!, actor], officer ? `/runtime/items/${itemId}/answer-sheet` : null, { retry: noRetryOnRefusal });
-  const prep = useApi<Prep>(["runtime", "view", id!, "prepare", actor], officer ? `/runtime/cases/${id}/prepare` : null, { retry: noRetryOnRefusal });
+  // Break F4: the officer comes back from the portal's tab to this one; a form moved off Online meanwhile shows at once.
+  const sheet = useApi<Sheet>(["runtime", "view", id!, "sheet", itemId!, actor], officer ? `/runtime/items/${itemId}/answer-sheet` : null, { retry: noRetryOnRefusal, refetchOnWindowFocus: true });
+  const prep = useApi<Prep>(["runtime", "view", id!, "prepare", actor], officer ? `/runtime/cases/${id}/prepare` : null, { retry: noRetryOnRefusal, refetchOnWindowFocus: true });
   const firm = useFirm();
   const nameOf = (u: string) => firm.data?.users.find((x) => x.id === u)?.name ?? "the case team";
   const back = <Link to={`/cases/${id}`} className="text-text-link underline">Back to the case</Link>;
@@ -64,8 +65,10 @@ export function AnswerSheetPage() {
   }
   const s = sheet.data!;
   const item = prep.data?.items.find((i) => i.id === s.item);
-  // Review m2: the sheet is read by item; its case is the one in the path, else nothing of it is shown under this case.
-  if (prep.data && !item) return <div className="mx-auto max-w-6xl" data-sheet-error="other-case"><Notice tone="warn" title="This answer sheet is not on this case">Open it from its own case’s Prepare application. {back}</Notice></div>;
+  // Review m2, break F1: the sheet is read by item; it shows only among the forms of the case in the path (another case's,
+  // a case that cannot be read, a form that no longer applies: nothing of it is shown).
+  const refused = prep.isError && prep.error instanceof ApiError && prep.error.status < 500;
+  if ((prep.data && !item) || refused) return <div className="mx-auto max-w-6xl" data-sheet-error="other-case"><Notice tone="warn" title="This answer sheet is not among this case’s forms">{refused ? `${(prep.error as Error).message} ` : null}Open a form’s answer sheet from its own case’s Prepare application. {back}</Notice></div>;
   const readOnly = !!item && !!prep.data?.filings.find((f) => f.id === item.filing)?.read_only;
   const entered = s.sections.filter((x) => x.entered && !x.out_of_date && !x.waiting.length).length;
   const [stateWord, tone] = STATE_WORDS[item?.state ?? ""] ?? [item?.state ?? "", "neutral"];
