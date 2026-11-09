@@ -24,6 +24,12 @@ for (const entity of ["case document", "answer check", "checklist line", "assess
   ok(`fail (sweep): another firm's "${entity}" line is never read`, !firmMayRead(line(entity, `x on case ${THEIRS}`), own));
   ok(`pass (sweep): "${entity}" is a case entity`, CASE_ENTITIES.has(entity) && !isConfigEntity(entity));
 }
+// C7.8 (B141, #1248): a form the case officer added to one filing, or removed from it, is a case line: another firm's
+// is never read; the firm's own is.
+for (const words of [`Case officer added IMM 5532 (Blank official PDF) for the principal on a filing of case ${THEIRS} (reason given)`, `Case officer removed IMM 5532 for the principal from a filing of case ${THEIRS} (reason given)`]) {
+  ok("fail (C7.8): another firm's \"filing form\" line is never read by this firm's staff", !firmMayRead(line("filing form", words), own));
+  ok("pass (C7.8): the firm's own \"filing form\" line is read, and \"filing form\" is a case entity", firmMayRead(line("filing form", words.replace(THEIRS, OURS)), own) && CASE_ENTITIES.has("filing form") && !isConfigEntity("filing form"));
+}
 // #861 (C7.6) on main since: the filing's readiness and review lines, entity "filing".
 ok("fail (#861, C7.6): another firm's \"filing\" line (reviewed, Ready to file reopened) is never read by user-S's firm", !firmMayRead(line("filing", `Representative A reviewed a filing on case ${THEIRS} (licence R000000)`), own) && !firmMayRead(line("filing", "A filing is no longer Ready to file"), own));
 ok("pass (#861): the firm's own \"filing\" line is read, and \"filing\" is a case entity", firmMayRead(line("filing", `A filing on case ${OURS} is no longer Ready to file`), own) && CASE_ENTITIES.has("filing") && !isConfigEntity("filing"));
