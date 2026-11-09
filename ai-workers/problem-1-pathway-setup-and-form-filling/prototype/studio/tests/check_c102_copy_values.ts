@@ -81,7 +81,7 @@ try {
   // 1. Choice values (the first suspect on 9 Nov): every stored value is one of its field's export values.
   const notExport = copies.flatMap((c) => (c.read?.choices ?? []).filter((x) => !x.is_export).map((x) => ({ form: c.form, channel: c.channel, field: x.path.split(".").slice(-3).join("."), wrote: x.wrote, display: x.is_display })));
   const choices = copies.reduce((n, c) => n + (c.read?.choices.length ?? 0), 0);
-  ok(`C10.2-v1 pass: every choice field on every copy (${choices} values, ${copies.length} copies: Paper and PDF upload, both releases) holds one of its export values`, choices > 0 && notExport.length === 0, notExport);
+  ok(`C10.2-v1 pass: every choice field with a fixed place on every copy (${choices} values, ${copies.length} copies: Paper and PDF upload, both releases) holds one of its export values (a repeating row's fields have no fixed data path in the reader and are not read)`, choices > 0 && notExport.length === 0, notExport);
   const statusPath = `${PD}CurrentCOR[0].Row2[0].Status[0]`;
   const badChoice = join(tmp, "bad-choice.pdf");
   execFileSync(PY, ["-I", READER, "--set", filed.path, badChoice, `${statusPath}=Citizen`], { stdio: ["ignore", "pipe", "pipe"] });

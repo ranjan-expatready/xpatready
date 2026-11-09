@@ -25,7 +25,8 @@ def parts_of(b):
 
 
 def choice_fields(pdf):
-    """The copy's choice-list fields, by data path: (display values, export values), read by xfa_inventory's own walk.
+    """The copy's choice-list fields with a fixed data path (a repeating row's fields have none in the walk, so they are
+    not read): (display values, export values), read by xfa_inventory's own walk.
     The walk looks a file up by its library name; here it reads this copy, so its lookup is pointed at the copy."""
     X.official = lambda _name: pdf
     X.SOL = Path(pdf.anchor)  # the summary names the file relative to this; any absolute path is under its root
@@ -36,7 +37,9 @@ def choice_fields(pdf):
             continue
         if f["options_resolved"]:  # <bindItems>: [label, saved value] per item of the form's list of values
             disp, exp = [o[0] for o in f["options_resolved"]], [o[1] for o in f["options_resolved"]]
-        elif f["options"]:  # <items>: one list is both; with two, the second is the saved one (IRCC's <items save="1">)
+        elif f["options"]:  # <items>: one list is both; with two, the second is taken as the saved one. Assumed, not read:
+            # xfa_inventory keeps the lists in template order without their save attribute; IRCC's forms put
+            # <items save="1"> second (all 30 such fields on IMM 5257, checked 9 Nov).
             disp, exp = f["options"][0], f["options"][-1]
         else:
             disp, exp = [], []
