@@ -1,0 +1,10 @@
+01-open-case-earlier-stages: Open a case on the work permit: "Earlier stages" asks about the study permit, done before we started, with its key details
+02-case-at-later-stage-strip: The case opens on the work permit: the strip shows the study permit "Done before we started" and the deadline worked out from its end date (Sample)
+03-done-before-stage-panel: The study permit's own record: its key details, entered by the case officer, the UCI also the client's answer
+04-study-case-strip-start-next: A case on the study permit: the strip offers "Start next stage: Work permit"
+05-start-next-dialog: Before the click: the release it starts on, who comes along, answers used, questions asked again, the forms and documents, the deadline, key details, the missing filing record and "This cannot be undone"
+06-reason-required: Pressed without a reason while the filing has no record: the reason is asked for on its field, nothing changed
+07-started-toast-and-strip: Started: Work permit with an LMIA (inside Canada) started. 0 answers about Sample Client A and the family used; 18 questions about this application asked again; 88 new questions; 5 forms and 2 documents added; deadline Feb 3, 2027 (Sample).
+08-ended-stage-read-only: The ended study permit stage, read only: its key details, its filing (no filing record), its own documents
+09-new-stage-forms: The work permit stage: its own forms, from its release
+10-new-stage-agent-view: The work permit's questions: the client's answers read where they are, this application's own questions asked again

@@ -26,6 +26,7 @@ import { checkValue } from "../../engine/runtime/case.ts";
 import { formCoverage } from "../../engine/runtime/forms.ts";
 import { currentValues } from "../../engine/runtime/submission-record.ts";
 import { actorOf, Audit, CaseRead, Db, fail, STUDIO, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
+import { liveParticipants } from "./stage-scope.ts"; // C6.17
 import { CaseActorGuard, utf8Name } from "./case-checklist.ts";
 import { Runtime } from "./runtime.ts";
 import { CasePrepare, storedVersion } from "./case-prepare.ts";
@@ -150,7 +151,7 @@ export class Submission {
     await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       if (String(b.version) !== await storedVersion(tx, c.id)) stale();
-      if (peopleKey(await tx.caseParticipant.findMany({ where: { caseId: c.id }, select: { subjectId: true, role: true, applies: true } })) !== peopleRead) stale();
+      if (peopleKey(await tx.caseParticipant.findMany({ where: liveParticipants(c.id), select: { subjectId: true, role: true, applies: true } })) !== peopleRead) stale();
       if (await answersKey(tx as unknown as AnswerTables, subjects) !== answersRead) stale(); // B152 (break M3)
       if (await tx.filingRecord.count({ where: { filingId: { in: want } } })) refuse("filings", "This submission is already recorded: it is read-only.", HttpStatus.CONFLICT);
       // Only while still Ready to file: a filing changed meanwhile leaves nothing recorded.
