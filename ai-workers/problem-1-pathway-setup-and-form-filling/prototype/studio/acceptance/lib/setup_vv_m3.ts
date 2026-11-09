@@ -7,8 +7,6 @@
 //   zsh studio/tools/isolated.sh accept 4440 start
 //   tsx studio/tests/runtime/setup_visitor_visa.ts 4440 xr_studio_accept
 //   tsx studio/acceptance/lib/setup_vv_m3.ts 4440 xr_studio_accept
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { AUTHOR, APPROVER, REVIEWER, call, main, needVisitorVisa, ok, sql } from "./m3.ts";
 
 await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", async () => {
@@ -140,20 +138,6 @@ await main("Setup", "Visitor visa release 2 for the M3 path (Super Admin, M2)", 
     }
     r = await call("POST", `/library/fields/${f.fact}/placement`, { sectionKey: "your_visit", collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case", questionText: f.question }, AUTHOR);
     ok(`S6a (R3) "${f.question}" is asked per person in Your visit`, r.status < 300, r.body?.detail ?? r.status);
-  }
-
-  // S6c (QA-352, P-437): the facts each document type the library reads as a letter or record supplies (library data,
-  // samples/document-supplies-read.json, Sample, cited), proposed through "Facts this document supplies" by the author and
-  // approved by a second person, as the configured checkpoint does (features/checkpoint/combination/335). Only the types
-  // this release uses (proof of financial support here; no marriage certificate line).
-  const { supplies } = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "document-supplies-read.json"), "utf8")) as { supplies: Record<string, { facts: { fact: string }[] }> };
-  for (const [key, set] of Object.entries(supplies)) {
-    if (sql(`select count(*) from document_requirement where combination_id='${vv}' and document_type_key='${key}' and status <> 'RETIRED'`) === "0") continue;
-    if (sql(`select count(*) from document_type where document_type_key='${key}' and supplies_facts @> array[${set.facts.map((f) => `'${f.fact}'`).join(",")}]::text[] and status in ('DRAFT','PUBLISHED')`) !== "0") continue;
-    r = await call("POST", `/library/document-types/${key}/supplies`, set, AUTHOR);
-    const id = r.body?.id;
-    const ap = id ? await call("POST", `/library/changes/${id}/approve`, {}, APPROVER) : { status: 0, body: null } as typeof r;
-    ok(`S6c (QA-352) ${key} supplies ${set.facts.map((f) => f.fact).join(", ")}: proposed by the author, approved by a second person`, r.status < 300 && ap.status < 300, [r.status, r.body?.detail, ap.status, ap.body?.detail]);
   }
 
   // M3-8 (not built): eligibility gates as data on the release (VV-R01, Sample conditions). Only what a fact can settle

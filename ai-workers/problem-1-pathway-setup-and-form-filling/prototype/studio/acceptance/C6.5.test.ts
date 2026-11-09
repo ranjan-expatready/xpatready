@@ -16,7 +16,7 @@
 //   zsh studio/tools/isolated.sh c65 4440 start && tsx studio/acceptance/C6.5.test.ts 4440 xr_studio_c65
 //   (the full pack, server steps included, on its copy; gate B reads this line: P-400 question on PR C6.5 part 2)
 import { CLIENT, FAMILY, FIXED, OFFICER, PORT, agent, answer, call, main, needVisitorVisa, ok, openCase, sql } from "./lib/m3.ts";
-import { fundsPdf, letterPdf, mrz, passportPdf, textPdf, upload } from "./lib/fixtures.ts";
+import { fundsPdf, letterPdf, marriagePdf, mrz, passportPdf, textPdf, upload } from "./lib/fixtures.ts";
 import { readPassport } from "../engine/runtime/mrz.ts";
 import { documentFacts } from "../engine/sources.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
@@ -148,7 +148,12 @@ await main("C6.5", "Documents read into proposed facts (Visitor visa, replayed, 
   // QA-352 (the tech lead's ruling P-437): every checklist document that offers "Fill this from documents" is read by
   // some reader. qa's replay: a proof of financial support on Client A's own line is read by AI vision for the
   // application (the funds for the stay are the application's, resolver R5), with the facts the library says it supplies
-  // (S6c / checkpoint 335), replayed from its saved read at US$0. Live AI off: never a live read here (P-175).
+  // (configured checkpoint step 335), replayed from its saved read at US$0. Live AI off: never a live read here (P-175).
+  // These steps run where the release's library reads proof of funds as a letter or record (the configured checkpoint,
+  // C6.5's scoring data: its type comes from IMM 5484's own reading); the fixture's type is the author's own add, which
+  // the library records as read by a person, so there nothing reads it, as the library says.
+  const readAsRecord = (key: string) => sql(`select count(*) from config_release r, jsonb_array_elements(r.snapshot->'document_types') t where r.combination_id='${vv}' and r.version=(select max(version) from config_release where combination_id='${vv}') and t->>'key'='${key}' and t->'reader_profile'->>'readerKind'='letter_or_record'`) === "1";
+  if (!readAsRecord("proof_of_financial_support")) { console.log("NOTE  C6.5-21 to -25: this release's library reads proof of funds by a person (the configured checkpoint reads it as a record); not run here"); return; }
   const fundsLine = ((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, OFFICER)).body?.people?.find((x: { subject: string }) => x.subject === P)?.lines ?? []).find((x: { label: string }) => /financial support/i.test(x.label))?.id;
   u = await upload(PORT, `/runtime/checklist-lines/${fundsLine}/documents`, fundsPdf(", a copy with no saved read"), "sample-funds-unsaved.pdf", OFFICER);
   ok("C6.5-21a pass (QA-352): a synthetic proof of financial support is uploaded to Client A's own checklist line", u.status === 201, [fundsLine, u.status]);
@@ -170,4 +175,26 @@ await main("C6.5", "Documents read into proposed facts (Visitor visa, replayed, 
   ok("C6.5-23 pass (QA-352, P-242): one Confirm & use on the application, with the value ticked, writes the funds as the application's answer with the document's provenance", r.status === 200 && /"document_read"/.test(sql(`select source_json::text from client_canonical_answer where subject_id='${c.caseSubject}' and canonical_field_key='case.funds_available_cad' and superseded_by_id is null`) ?? "") && r.body?.used?.includes("case.funds_available_cad"), r.body);
   r = await call("POST", `/runtime/cases/${c.id}/documents/${funds}/confirm-and-use`, { subjectId: P }, OFFICER);
   ok("C6.5-23b fail (QA-352): the proof of funds is not confirmed on Client A (it is read for the application): 422, nothing written", r.status === 422, r.status);
+
+  // QA-352: a marriage certificate copy (the configured checkpoint's release asks it of a married applicant, IMM 5484;
+  // the fixture's release has no such line, so these steps run on the checkpoint: nightly data=checkpoint, P-400).
+  if (!readAsRecord("marriage_certificate_copy")) {
+    console.log("NOTE  C6.5-24 to -25b: this release has no marriage certificate line (the configured checkpoint has one); not run here");
+    return;
+  }
+  // The line is "once for the couple", on the spouse's list (resolver R2: couple_once → the partner).
+  for (const who of [P, S]) await answer(c.id, who, "person.marital_status", "married", typist);
+  const marriageLine = ((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, OFFICER)).body?.people?.find((x: { subject: string }) => x.subject === S)?.lines ?? []).find((x: { label: string }) => /marriage/i.test(x.label))?.id;
+  u = await upload(PORT, `/runtime/checklist-lines/${marriageLine}/documents`, marriagePdf(", a copy with no saved read"), "sample-marriage-unsaved.pdf", OFFICER);
+  ok("C6.5-24a pass (QA-352): the couple answers married; a synthetic marriage certificate copy is uploaded to the line that brings, on Spouse A's list", u.status === 201, [marriageLine, u.status]);
+  r = await call("POST", `/runtime/cases/${c.id}/sections/${section}/fill-from-documents`, { subjectId: S, mode: "replay" }, OFFICER);
+  ok("C6.5-24c fail (QA-352): a marriage certificate with no saved read is never read live: 409 no_saved_read, nothing stored, no cost", r.status === 409 && r.body?.code === "no_saved_read" && sql(`select count(*) from document_review where document_id='${u.body?.document?.id}'`) === "0", r.body);
+  u = await upload(PORT, `/runtime/checklist-lines/${marriageLine}/documents`, marriagePdf(), "sample-marriage.pdf", OFFICER);
+  const marriage = u.body?.document?.id;
+  r = await call("POST", `/runtime/cases/${c.id}/sections/${section}/fill-from-documents/plan`, { subjectId: S }, OFFICER);
+  ok("C6.5-24 pass (QA-352, P-110): Spouse A's personal details offer the marriage certificate, read by AI vision, its cost first", r.status === 200 && (r.body?.documents ?? []).some((x: { document: string; reader: string }) => x.document === marriage && x.reader === "ai_vision") && r.body?.live_allowed === false, r.body);
+  ok("C6.5-24b precondition (QA-352): a saved AI read of this synthetic marriage certificate is recorded (one live read on the Mac by the tech lead; until then this and C6.5-25 stay red)", r.body?.replay?.find((x: { document: string }) => x.document === marriage)?.replay_available === true, r.body?.replay);
+  r = await call("POST", `/runtime/cases/${c.id}/sections/${section}/fill-from-documents`, { subjectId: S, mode: "replay" }, OFFICER);
+  const union = ((r.body?.proposals ?? []) as (Proposal & { subject: string })[]).find((x) => x.source?.document === marriage && x.fact === "relationship.union_start_date");
+  ok("C6.5-25 pass (QA-352): the replayed read of the marriage certificate proposes the date of the marriage, about Spouse A, expanded for a look (P-243: dates always reviewed), only the library's facts, US$0", r.status === 200 && union?.value === "2019-06-14" && union?.subject === S && union?.review === "expanded" && ((r.body?.proposals ?? []) as Proposal[]).filter((x) => x.source?.document === marriage).every((x) => x.fact === "relationship.union_start_date") && r.body?.cost_usd === 0, r.body);
 });
