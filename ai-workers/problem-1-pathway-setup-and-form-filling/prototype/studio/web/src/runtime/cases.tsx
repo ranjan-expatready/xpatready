@@ -13,6 +13,7 @@ import { FormsPanel } from "./forms";
 import { ItemChannels } from "./item-channels"; // C11.6
 import { FindingsPanel } from "./findings";
 import { ReviewPage } from "./review";
+import { AnswerSheetPage } from "./answer-sheet"; // C7.3 (QA-317)
 import { SubmissionPanel } from "./submission"; // C8.2
 import { DocumentsPanel } from "./checklist"; // C6.4 (a)
 import { CaseTeamChip, OpeningTeam, useFirm } from "./team";
@@ -21,6 +22,7 @@ import { EligibilityCard, EligibilityPage } from "./eligibility";
 import { PeopleAndFilings } from "./filing-changes"; // C6.13
 import { ReleaseNotice } from "./release-update"; // C9.5
 import { RepresentativeReviewLatest, RepresentativeReviewPage } from "./representative-review"; // C8.3
+import { CaseReadinessPill } from "./readiness-figure"; // C7.10
 import type { OpenableRelease } from "../../../contracts/runtime";
 
 /** Simulated case people (api/src/core.ts RUNTIME_ACTORS); the switch is demo chrome. */
@@ -77,6 +79,7 @@ export function RuntimeApp() {
           <Route path=":id/review" element={<ReviewPage />} />
           <Route path=":id/representative-review" element={<RepresentativeReviewLatest />} />
           <Route path=":id/representative-review/:round" element={<RepresentativeReviewPage />} />
+          <Route path=":id/sheet/:itemId" element={<AnswerSheetPage />} />
           <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/cases">Back to cases</Link></Notice>} />
         </Routes>
       </main>
@@ -190,6 +193,7 @@ function CasePage() {
       <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><Pill tone="info" title={c.pin.revision > 1 ? `Moved to this release on ${new Date(c.pin.pinned_at).toLocaleString("en-CA")}; a later release never changes this case until someone moves it` : `Frozen when the case opened (${new Date(c.pin.pinned_at).toLocaleString("en-CA")}); a later release never changes this case until someone moves it`}>{c.release?.label ?? `Release ${c.pin.release_version}`}</Pill></h1>
+          <div className="mt-1 empty:hidden"><CaseReadinessPill caseId={c.id} /></div>
           {c.team ? <CaseTeamChip caseId={c.id} line={c.team} /> : null}
           {c.employer_link ? <div className="mt-1"><EmployerLinkLine link={c.employer_link} caseId={c.id} /></div> : null}
           <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · {v.summary.answered - v.summary.confirmed} to confirm · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>

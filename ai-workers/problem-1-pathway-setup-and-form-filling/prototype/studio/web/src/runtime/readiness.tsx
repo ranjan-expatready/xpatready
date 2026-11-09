@@ -5,6 +5,8 @@
 // shown); a block cannot be passed, only fixed. "Review the filing" is the representative of record's own (P-155): a
 // case officer does not see it. "Ready to file" asks the server, which refuses (409) while anything stands and names
 // the same lines. Types live here only (concept §2: never in studio/contracts/). Legal points: Unconfirmed: no counsel.
+// C7.10 (B143, P-406 (2)): each filing's readiness figure sits above its lines (readiness-figure.tsx, from /prepare's
+// `figures[]`, beside `readiness[]`); the lines themselves still carry no percentage.
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
@@ -14,6 +16,7 @@ import { Button, Dialog, Field, Notice, Pill, Textarea } from "@/components/ui/c
 import { Skeleton } from "@/components/ui/skeleton";
 import { noRetryOnRefusal } from "./questionnaire";
 import { useFirm } from "./team";
+import { FigureRow, type Figure } from "./readiness-figure";
 
 type Owes = "staff" | "representative" | "client" | "employer" | "ircc";
 type Line = { code: string; key: string; item?: string; subject?: string; owes: Owes; words: string; unblocks: string; severity: "block" | "critical" | "warning" };
@@ -21,7 +24,7 @@ type Passed = Line & { reason: string; by: string; at: string };
 type Readiness = { filing: string; ready: boolean; blocks: Line[]; warns: Line[]; passed: Passed[]; owes: Partial<Record<Owes, number>>;
   reviewed: { by: string; kind: string; licence_number: string | null; at: string } | null; facts_hash: string; representative: string | null };
 type Filing = { id: string; label: string; status: string; read_only?: boolean };
-type PrepareView = { derived: boolean; why?: string; filings: Filing[]; readiness?: Readiness[] };
+type PrepareView = { derived: boolean; why?: string; filings: Filing[]; readiness?: Readiness[]; figures?: Figure[] };
 type TeamView = { representative: { id: string; name: string } | null; officers: { id: string; name: string }[] };
 /** A refusal from the server, shown under the filing until its lines change again (`key`: the open lines it was shown on). */
 type Refusal = { title: string; detail: string; lines: string[]; key: string };
@@ -86,13 +89,13 @@ export function ReadinessPanel({ caseId }: { caseId: string }) {
         : !v!.filings.length ? <p className="px-4 py-3 text-sm text-text-muted">No filings on this case yet.</p>
         : <div className="divide-y divide-border">{v!.filings.map((f) => {
             const r = v!.readiness?.find((x) => x.filing === f.id);
-            return <FilingReadiness key={f.id} caseId={caseId} f={f} r={r} actor={actor} nameOf={nameOf} officers={team.data?.officers.map((o) => o.name) ?? []} review={reviewOf(rounds.data, f.id)} />;
+            return <FilingReadiness key={f.id} caseId={caseId} f={f} r={r} g={v!.figures?.find((x) => x.filing === f.id)} actor={actor} nameOf={nameOf} officers={team.data?.officers.map((o) => o.name) ?? []} review={reviewOf(rounds.data, f.id)} />;
           })}</div>}
     </section>
   );
 }
 
-function FilingReadiness({ caseId, f, r, actor, nameOf, officers, review }: { caseId: string; f: Filing; r: Readiness | undefined; actor: string; nameOf: (id: string) => string; officers: string[]; review: ReviewRow | null }) {
+function FilingReadiness({ caseId, f, r, g, actor, nameOf, officers, review }: { caseId: string; f: Filing; r: Readiness | undefined; g?: Figure; actor: string; nameOf: (id: string) => string; officers: string[]; review: ReviewRow | null }) {
   const qc = useQueryClient(), toast = useToast();
   const heading = React.useRef<HTMLHeadingElement>(null);
   const [refusal, setRefusal] = React.useState<Refusal | null>(null);
@@ -148,6 +151,7 @@ function FilingReadiness({ caseId, f, r, actor, nameOf, officers, review }: { ca
         {canReview ? <ReviewButton f={f} r={r} onRefused={refused} onDone={() => { setRefusal(null); void refresh().then(() => focusLater(() => heading.current)); }} /> : null}
         {open && st !== "ready_to_file" ? <Button size="sm" busy={marking} onClick={() => void ready()} data-mark-ready>Ready to file</Button> : null}
       </div>
+      {g && st !== "submitted" && !g.submitted ? <FigureRow g={g} /> : null}
       <p className="text-[13px] text-text-muted" data-standing>
         {st === "submitted" ? "Recorded as submitted: its review and warnings are closed (correct the record in Submission to IRCC)."
           : st === "ready_to_file" ? "Ready to file. Record the submission below once IRCC acknowledges it."
