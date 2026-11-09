@@ -153,7 +153,9 @@ const SAMPLE_DIGITS = "0000000001";
  *  repeating groups (a first row where the form requires one, QA-165). BR-6, P-97, P-155 (3): a client's own facts are answered by the client (`user-P`) for the principal
  *  and minors (P-78: they count as confirmed); for another adult the officer enters them on the person's behalf with a
  *  reason (FQ-12). Returns true when GET …/forms says no form waits on a fact (the built P-71 readiness, less the mandatory
- *  boxes a copy leaves empty that no answer fills: QA-165, #1318). */
+ *  boxes a copy leaves empty that no answer fills: QA-165, #1318). Since QA-246 that list leaves out a form whose rule
+ *  still waits for an answer; the questions those rules ask are answered by the loop below like any required question,
+ *  so a true here does not by itself say every rule is answered (/prepare's `waiting` does). */
 export async function fillEverything(caseId: string): Promise<boolean> {
   const who = PEOPLE.get(caseId) ?? new Map<string, Person>(), officer = officerOf(caseId);
   for (let pass = 0; pass < 4; pass++) {

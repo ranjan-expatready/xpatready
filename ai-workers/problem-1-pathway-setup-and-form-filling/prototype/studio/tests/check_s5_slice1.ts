@@ -178,6 +178,11 @@ const P = (extra: any[] = [], child = false) => [{ role: "principal", min: 1, ma
   ok("C7.7 B117 pass: both refusals list what this release really lets a person add (spouse or partner, child, sponsor) and never the representative", lists.every((l) => ["spouse or partner", "child", "sponsor"].every((x) => l.includes(x)) && !l.some((x) => /representative/.test(x))), lists);
   const teamAfter = (await call("GET", `/runtime/cases/${K}/team`, undefined, "user-O")).body?.representative?.id;
   ok("C7.7 B117 pass: the case keeps its representative of record from the case team, unchanged by the refused request", !!teamBefore && teamAfter === teamBefore, { teamBefore, teamAfter });
+  // QA-246: release 2 files IMM 1295 from age 18 (C4.3 above), so its rule waits for Client A's date of birth and the forms
+  // list leaves it off until then (as /prepare does); Client A's date of birth is answered first (38, as in C4.3).
+  const principalA = (kNow.body.people as { role: string; subject_id: string }[]).find((p) => p.role === "principal")!.subject_id;
+  r = await call("PUT", `/runtime/cases/${K}/answers/${principalA}/person.date_of_birth`, { value: "1988-03-14", expectedId: null }, "user-O");
+  ok("setup: Client A's date of birth (38) is answered, so IMM 1295's from-age-18 rule applies", r.status < 300, r.body?.detail ?? r.status);
   r = await call("GET", `/runtime/cases/${K}/forms`, undefined, "user-O");
   // P-145 (forms slice 1, plan-slice1-channels.md §10): an Online form whose IRCC PDF is in the release keeps a PDF row,
   // but only as a "Copy, not for filing" (for_filing false); it is never offered as a copy to file.

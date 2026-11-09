@@ -1,0 +1,35 @@
+check_c76_readiness_api on 48959730c (= main 0e26bfbe8 + qa records), copy qa_c76a :4470, start Mon Nov  9 00:54:11 IST 2026
+NOTICE:  database "xr_studio_qa_c76a" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_c76a on http://localhost:4470 (xr_studio_qa_c76a), stops itself in 30 min
+reset 201
+load 201
+PASS  setup: the copy has Visitor visa release 2 (the pack's setup) — 2
+PASS  B1 setup: the filing reaches Ready to file — ["25d15b42-9926-471e-81d8-0b48f345d51d"]
+PASS  B8 pass: Ready to file again changes nothing and records nothing new (200, already) — {"filing":"25d15b42-9926-471e-81d8-0b48f345d51d","status":"ready_to_file","already":true,"passed":[{"code":"no_copy","item":"3288b79c-e04b-48f2-a1e9-c825a6a30212","subject":"68fb14ec-513e-455d-a35d-b1de93fd2316","owes":"staff","words":"CRITICAL: IMM 5645 for S
+FAIL  B1 fail: a changed fact takes the filing back to Not started (stored), with the barcode block named — {"status":"NOT_STARTED","blocks":[]}
+PASS  B1 fail: "Uploaded to IRCC" is then refused (409), the hard stop is not skipped — 409
+PASS  B2 fail: the review made before the change no longer counts; the CRITICAL warning says it was reviewed before — ["representative_review","missing_facts"]
+PASS  N1 fail: a review sending the facts it read, after they changed, is refused (409), nothing stored — 409
+PASS  N1 fail: a review that does not say which facts it read is refused (400) — 400
+PASS  B2 pass: a fresh review by the representative of record clears it again — {"status":200,"warns":["missing_facts"]}
+PASS  B2 fail: after the representative of record changes, the earlier representative's review no longer counts — {"status":200,"warns":["out_of_date","representative_review","missing_facts"]}
+PASS  B2 fail (data): a review row written by anyone else (a client, in SQL) never counts — ["out_of_date","representative_review","missing_facts"]
+PASS  B4 fail: a pass with a key that is not text is refused (400), nothing recorded — 400
+PASS  B6 fail: a review note with a hidden direction mark, or over 400 characters, is refused (400), never cut — [400,400]
+PASS  B8 fail: three passes of one line at once record it once (one 200, the others 409) — [200,409,409]
+PASS  N2 fail: after a passed review warning, a further fact change opens the review warning again — ["out_of_date","representative_review","missing_facts"]
+PASS  B8 fail: a filing recorded as submitted takes no review and no pass (409) — [409,409]
+PASS  B10 pass (data): the same insert with a known code, a key and its own severity is stored (the refusals above are the checks)
+PASS  B10 fail (data): an unknown code, no keys, or a severity that does not go with the code is refused by the database
+PASS  N6 fail: a stored pass the rule refuses (hidden characters) never blocks a real pass of its line (200) — 200
+PASS  B3 fail: a form that cannot start yet stands as a CRITICAL "missing facts" line naming the form — {"waiting":["IRM 0002","IMM 5409","IMM 5645","IMM 5475"],"warns":["CRITICAL: IRM 0002 for Sample Spouse F: 1 fact missing or no","CRITICAL: IMM 5409 for Sample Spouse F: 1 fact missing or no","CRITICAL: IMM 5645 for Sample Spouse F: 1 fact missing or no","CRIT
+PASS  B9 pass (BR-21): the representative who did it all self-reviews, logged Self-reviewed — {"id":"d1201578-a5c2-4a47-b7dd-c982b93da7f9","filing":"f467dfea-67fb-4806-ac54-eb6c5b965852","reviewed_by":"user-R","name":"Representative (Sample)","kind":"self_reviewed","licence_number":"R000000","at":"2026-11-08T19:25:45.613Z","words":"Self-reviewed by Rep
+PASS  N4 fail: a representative who prepared it with another officer (then left the officer list) cannot review it, as a second person or as Self-reviewed (409) — [201,201,409,409]
+PASS  B7 fail: a timestamp, year 0000 or 1999, or a number is refused (400), never a 500 — [400,400,400,400,400]
+
+22/23 passed
+check exit 1  end Mon Nov  9 00:55:46 IST 2026
+stopped qa_c76a (database and files removed; log in var/isolated-logs/qa_c76a-api.log)

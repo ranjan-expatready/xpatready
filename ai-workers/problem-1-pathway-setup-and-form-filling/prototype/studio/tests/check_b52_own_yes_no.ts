@@ -187,13 +187,18 @@ const NATID = "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]", USCARD = "fo
       const r = await call("PUT", `/runtime/cases/${id}/answers/${subject}/case.uses_representative`, { value: answer, expectedId: null }, OFFICER);
       typedRep ??= { status: r.status, detail: r.body?.detail };
     }
-    return new Set(((await call("GET", `/runtime/cases/${id}/forms`, undefined, OFFICER)).body.forms as { form: string; applies: boolean }[]).filter((f) => f.applies).map((f) => f.form));
+    const listed = new Set(((await call("GET", `/runtime/cases/${id}/forms`, undefined, OFFICER)).body.forms as { form: string; applies: boolean }[]).filter((f) => f.applies).map((f) => f.form));
+    // QA-246: a form whose rule is not answered yet is not on GET …/forms; /prepare holds it among the items that wait for an answer.
+    const waiting = ((await call("GET", `/runtime/cases/${id}/prepare`, undefined, OFFICER)).body?.waiting ?? []) as { kind?: string; form?: string; key?: string }[];
+    return Object.assign(listed, { waiting: new Set(waiting.filter((w) => w.kind === "form").map((w) => w.form ?? w.key ?? "")) });
   };
   const represented = await caseFor("represented", true), unrepresented = await caseFor("unrepresented", false), unanswered = await caseFor("unanswered", null);
   ok("QA-227 pass: a represented case (the case team's representative; authorizes a release: Yes) lists IMM 5476 and IMM 5475", represented.has("IMM 5476") && represented.has("IMM 5475"), [...represented]);
   ok("C6.11 fail: \"Uses a representative\" is not typed on a firm case (422, the case team sets it)", typedRep?.status === 422 && /case team/.test(typedRep?.detail ?? ""), typedRep);
   ok("QA-227 fail: a case answering No to the release lists no IMM 5475; IMM 5476 stays (the case has a representative of record)", unrepresented.has("IMM 5476") && !unrepresented.has("IMM 5475"), [...unrepresented]);
-  ok("QA-227 pass: a case nobody answered yet lists IMM 5476 (from the case team) and IMM 5475 as not decided yet (asked, never silently missing)", unanswered.has("IMM 5476") && unanswered.has("IMM 5475"), [...unanswered]);
+  // QA-246 (#1382, line change for the tech lead's approval, P-400): "not decided yet" is now /prepare's waiting item, no
+  // longer a form to fill on GET …/forms; it is still asked, never silently missing.
+  ok("QA-227 pass: a case nobody answered yet lists IMM 5476 (from the case team) to fill, and IMM 5475 as not decided yet: waiting for its answer on Prepare application, not a form to fill (asked, never silently missing; QA-246)", unanswered.has("IMM 5476") && !unanswered.has("IMM 5475") && unanswered.waiting.has("IMM 5475"), { forms: [...unanswered], waiting: [...unanswered.waiting] });
   // Review m4: the same on With an LMIA – inside Canada and Study permit – outside Canada (their releases).
   for (const key of ["wp.lmia_inside", "sp.outside"]) {
     const c = sql(`select id from combination where combination_key = '${key}'`);

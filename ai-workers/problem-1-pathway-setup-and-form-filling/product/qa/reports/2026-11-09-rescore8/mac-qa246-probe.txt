@@ -1,0 +1,37 @@
+qa probe qa246_after.mts on 4047e3a58 (= main fc49dc5a4 + qa records), copy qa_r246 :4470, start Mon Nov  9 09:11:38 IST 2026
+NOTICE:  database "xr_studio_qa_r246" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_r246 on http://localhost:4470 (xr_studio_qa_r246), stops itself in 40 min
+reset 201
+load 201
+loaded Mon Nov  9 09:13:03 IST 2026
+QA-246 retest (qa) — forms list against Prepare application
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+CONDITIONS [{"form":"IMM 5257","cond":null},{"form":"IMM 5257 SCH1","cond":null},{"form":"IMM 5409","cond":{"op":"eq","field":"person.marital_status","value":"common_law","subjectKind":"EACH_APPLICANT"}},{"form":"IMM 5475","cond":{"op":"eq","field":"case.authorizes_release_to_designated_individual","value":true,"subjectKind":"CASE"}},{"form":"IMM 5476","cond":{"op":"eq","field":"case.uses_representative","value":true,"subjectKind":"CASE"}},{"form":"IMM 5645","cond":null},{"form":"IRM 0002","cond":{"op":"eq","field":"person.gender_identifier_differs_from_documents","value":true,"subjectKind":"EACH_APPLICANT"}}]
+SNAP before-any-answer {"status":200,"keys":["forms","online"],"row":{"Sample Client A":{"forms":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"prepare":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"missing":["IMM 5257:84","IMM 5257 SCH1:16","IMM 5476:8","IMM 5645:47"]},"Sample Spouse A":{"forms":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"prepare":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"missing":["IMM 5257:84","IMM 5257 SCH1:16","IMM 5476:8","IMM 5645:47"]},"Sample Child A1":{"forms":["IMM 5257"],"prepare":["IMM 5257"],"missing":["IMM 5257:80"]},"Sample Child A2":{"forms":["IMM 5257"],"prepare":["IMM 5257"],"missing":["IMM 5257:80"]}}}
+PASS  before any answer no one is listed IMM 5409, IMM 5475 or IRM 0002 — {"Sample Client A":{"forms":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"prepare":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"missing":["IMM 5257:84","IMM 5257 SCH1:16","IMM 5476:8","IMM 5645:47"]},"Sample Spouse A":{"forms":["IMM 5257","IMM 525
+PASS  before any answer each adult is listed 4 forms and each child 1 (the bug's expected numbers) — {"Sample Client A":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"Sample Spouse A":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"Sample Child A1":["IMM 5257"],"Sample Child A2":["IMM 5257"]}
+PASS  before any answer the forms list and Prepare application name the same forms for each person — {"Sample Client A":{"forms":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"prepare":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"missing":["IMM 5257:84","IMM 5257 SCH1:16","IMM 5476:8","IMM 5645:47"]},"Sample Spouse A":{"forms":["IMM 5257","IMM 525
+RULE IMM 5409 person.marital_status="common_law": answer 200, listed for ["Sample Client A"]; prepare for Sample Client A: ["IMM 5257","IMM 5257 SCH1","IMM 5409","IMM 5476","IMM 5645"]
+PASS  IMM 5409: once its rule says it applies it is listed, and Prepare application agrees — {"put":200,"listedYes":["Sample Client A"]}
+PASS  IMM 5409: a per-person rule lists it for that person only — ["Sample Client A"]
+RULE IMM 5409 person.marital_status="single": answer 200, listed for []
+PASS  IMM 5409: when the answer changes so it does not apply it leaves the list again — {"other":"single","otherStatus":200,"listedNo":[]}
+RULE IMM 5475 case.authorizes_release_to_designated_individual=true: answer 200, listed for ["Sample Client A","Sample Spouse A","Sample Child A1","Sample Child A2"]; prepare for Sample Client A: ["IMM 5257","IMM 5257 SCH1","IMM 5475","IMM 5476","IMM 5645"]
+PASS  IMM 5475: once its rule says it applies it is listed, and Prepare application agrees — {"put":200,"listedYes":["Sample Client A","Sample Spouse A","Sample Child A1","Sample Child A2"]}
+RULE IMM 5475 case.authorizes_release_to_designated_individual=false: answer 200, listed for []
+PASS  IMM 5475: when the answer changes so it does not apply it leaves the list again — {"other":false,"otherStatus":200,"listedNo":[]}
+RULE IRM 0002 person.gender_identifier_differs_from_documents=true: answer 200, listed for ["Sample Client A"]; prepare for Sample Client A: ["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645","IRM 0002"]
+PASS  IRM 0002: once its rule says it applies it is listed, and Prepare application agrees — {"put":200,"listedYes":["Sample Client A"]}
+PASS  IRM 0002: a per-person rule lists it for that person only — ["Sample Client A"]
+RULE IRM 0002 person.gender_identifier_differs_from_documents=false: answer 200, listed for []
+PASS  IRM 0002: when the answer changes so it does not apply it leaves the list again — {"other":false,"otherStatus":200,"listedNo":[]}
+SNAP after-everything {"status":200,"keys":["forms","online"],"row":{"Sample Client A":{"forms":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"prepare":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"missing":["IMM 5257:0","IMM 5257 SCH1:5","IMM 5476:0","IMM 5645:0"]},"Sample Spouse A":{"forms":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"prepare":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"missing":["IMM 5257:0","IMM 5257 SCH1:5","IMM 5476:0","IMM 5645:0"]},"Sample Child A1":{"forms":["IMM 5257"],"prepare":["IMM 5257"],"missing":["IMM 5257:0"]},"Sample Child A2":{"forms":["IMM 5257"],"prepare":["IMM 5257"],"missing":["IMM 5257:0"]}}}
+PASS  after everything is answered the forms list and Prepare application still name the same forms for each person — {"Sample Client A":{"forms":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"prepare":["IMM 5257","IMM 5257 SCH1","IMM 5476","IMM 5645"],"missing":["IMM 5257:0","IMM 5257 SCH1:5","IMM 5476:0","IMM 5645:0"]},"Sample Spouse A":{"forms":["IMM 5257","IMM 5257 S
+
+12/12 passed
+fill exit 0
+read exit 1  end Mon Nov  9 09:14:10 IST 2026

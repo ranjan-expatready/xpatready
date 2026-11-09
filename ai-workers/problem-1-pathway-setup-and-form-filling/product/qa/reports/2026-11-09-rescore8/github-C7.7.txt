@@ -1,0 +1,48 @@
+2026-11-09T03:42:39.5156214Z |■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 120 MiB
+2026-11-09T03:42:39.6103568Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 120 MiB
+2026-11-09T03:42:39.6907830Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 120 MiB
+2026-11-09T03:42:39.7572533Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 120 MiB
+2026-11-09T03:42:39.8151843Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 120 MiB
+2026-11-09T03:42:39.9314148Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 120 MiB
+2026-11-09T03:42:40.0056849Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 120 MiB
+2026-11-09T03:42:40.0906399Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 120 MiB
+2026-11-09T03:42:41.7422763Z Chrome Headless Shell 156.0.8078.4 (playwright chromium-headless-shell v1248) downloaded to /home/runner/.cache/ms-playwright/chromium_headless_shell-1248
+2026-11-09T03:42:41.7649400Z ##[group]Run [ -f "$S/tools/gate-b.mjs" ] || { echo "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)"; exit 2; }
+2026-11-09T03:42:41.7649904Z [36;1m[ -f "$S/tools/gate-b.mjs" ] || { echo "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)"; exit 2; }[0m
+2026-11-09T03:42:41.7650282Z [36;1mecho "### $CAP on $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"[0m
+2026-11-09T03:42:41.7650551Z [36;1mnode "$S/tools/gate-b.mjs" --title "$CAP" --kind code[0m
+2026-11-09T03:42:41.7668064Z shell: /usr/bin/bash -e {0}
+2026-11-09T03:42:41.7668225Z env:
+2026-11-09T03:42:41.7668416Z   P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+2026-11-09T03:42:41.7668707Z   S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+2026-11-09T03:42:41.7668936Z   CAP: C7.7
+2026-11-09T03:42:41.7669056Z   GATE_B_JOBS: 1
+2026-11-09T03:42:41.7669178Z   KIND: code
+2026-11-09T03:42:41.7669300Z   GATE_B_DATA: checkpoint
+2026-11-09T03:42:41.7669483Z ##[endgroup]
+2026-11-09T03:42:41.8162425Z Gate B: the PR names C7.7; claims Works for none (no bug check).
+2026-11-09T03:42:41.8163996Z   packs: C7.7.test.ts
+2026-11-09T03:44:45.4513545Z     C7.7.test.ts on the checkpoint: exit 0, 33/33 passed (123 s: copy 3, Load the configured checkpoint 65, run 54)
+2026-11-09T03:44:45.4514172Z   packs took 124 s in all
+2026-11-09T03:44:45.4514697Z Gate B: passed.
+2026-11-09T03:44:45.4635698Z Post job cleanup.
+2026-11-09T03:44:45.5516183Z (node:5978) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-09T03:44:45.5516669Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-09T03:44:45.5518075Z Cache hit occurred on the primary key node-cache-Linux-x64-npm-fe77cc82debb853105a7bea456c089ba62dadb5f6c99530f11e151c4249dff1e, not saving cache.
+2026-11-09T03:44:45.5653101Z Post job cleanup.
+2026-11-09T03:44:45.6221228Z [command]/usr/bin/git version
+2026-11-09T03:44:45.6260606Z git version 2.56.0
+2026-11-09T03:44:45.6284868Z Temporarily overriding HOME='/home/runner/work/_temp/a6fc0623-f82e-49b1-aff9-19430816b222' before making global git config changes
+2026-11-09T03:44:45.6285658Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-09T03:44:45.6288654Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/xpatready/xpatready
+2026-11-09T03:44:45.6331140Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-09T03:44:45.6389923Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-09T03:44:45.6625208Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-09T03:44:45.6656281Z http.https://github.com/.extraheader
+2026-11-09T03:44:45.6675286Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-09T03:44:45.6709284Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-09T03:44:45.6937959Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-09T03:44:45.6996631Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-09T03:44:45.7348442Z Cleaning up orphan processes
+2026-11-09T03:44:45.7588563Z Terminate orphan process: pid (5305) (postgres)
+2026-11-09T03:44:45.7667610Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
