@@ -38,7 +38,10 @@ function AddFormPanel({ caseId, filing, owner, close, returnFocus }: { caseId: s
   const [active, setActive] = React.useState(0);
   React.useEffect(() => { const t = setTimeout(() => setTerm(q), 200); return () => clearTimeout(t); }, [q]);
   const list = useApi<AddableList>(["runtime", "addable", filing, term, subject ?? ""], `/runtime/filings/${filing}/addable-forms?q=${encodeURIComponent(term)}${subject ? `&subject=${subject}` : ""}`);
-  const forms = list.data?.forms ?? [];
+  // The list shown always matches what is typed now (the server's answer may be for the text of 200 ms ago), so Enter
+  // never picks a form the person no longer sees.
+  const words = q.trim().toLowerCase().replace(/\s+/g, " ");
+  const forms = (list.data?.forms ?? []).filter((f) => !words || f.form.toLowerCase().includes(words) || f.form.toLowerCase().replace(/\s+/g, "").includes(words.replace(/\s+/g, "")) || f.title.toLowerCase().includes(words));
   const who = subject ?? list.data?.subject ?? null;
   const optionId = (f: AddableForm) => `addable-${f.form.replace(/\s+/g, "-")}`;
   function keys(e: React.KeyboardEvent) {
@@ -119,8 +122,9 @@ function Picked({ caseId, filing, form, subject, onAdded }: { caseId: string; fi
       <fieldset className="space-y-1">
         <legend className="text-xs font-medium">Filed as</legend>
         {x.channels.length ? x.channels.map((c) => (
-          <label key={c} className="flex items-center gap-2 text-sm"><input type="radio" name={`ch-${form}`} value={c} checked={ch === c} disabled={fixed} onChange={() => setChannel(c)} />{CHANNEL[c] ?? c}{c === x.channel ? <span className="text-[12px] text-text-muted">(default: {x.channel_why})</span> : null}</label>
-        )) : <p className="text-[13px] text-text-warn">{x.channel_why}</p>}
+          <label key={c} className="flex items-center gap-2 text-sm"><input type="radio" name={`ch-${form}`} value={c} checked={ch === c} disabled={fixed} onChange={() => setChannel(c)} />{CHANNEL[c] ?? c}{c === x.channel ? <span className="text-[12px] text-text-muted">(the default)</span> : null}</label>
+        )) : null}
+        <p className={`text-[12px] ${x.channels.length ? "text-text-muted" : "text-text-warn"}`}>{x.channel_why}</p>
       </fieldset>
       <fieldset className="space-y-1">
         <legend className="text-xs font-medium">Signature</legend>

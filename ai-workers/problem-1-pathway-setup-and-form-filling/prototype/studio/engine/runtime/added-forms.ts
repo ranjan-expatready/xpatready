@@ -47,7 +47,9 @@ export const frozenHash = (f: Frozen) => createHash("sha256").update(stableJson(
 export function kindOf(x: { publishedRows: number; trialPassed: boolean; trialWhy: string | null }): { kind: AddedKind; why: string | null } {
   if (x.publishedRows > 0 && x.trialPassed) return { kind: "fills", why: null };
   if (x.publishedRows === 0) return { kind: "blank", why: "It has no published field map, so nothing on it can be filled from the case." };
-  return { kind: "blank", why: `Its filling is not proven yet for this edition${x.trialWhy ? ` (${x.trialWhy.replace(/[.\s]+$/, "")})` : ""}.` };
+  // The trial register's own words speak of a copy "for checking only"; a blank form has no copy, so only the reason is said.
+  void x.trialWhy;
+  return { kind: "blank", why: "Its filling is not proven yet for this edition: no fill trial has passed for it." };
 }
 
 export type Refusal = { status: 409 | 422; code: "on_release" | "already_added" | "barcode_blank" | "not_a_form" | "no_edition"; words: string };
