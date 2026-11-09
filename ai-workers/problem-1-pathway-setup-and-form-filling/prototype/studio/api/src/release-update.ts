@@ -59,7 +59,7 @@ export class ReleaseUpdates {
    *  only work made before that moment (the last move). */
   private async work(c: Reached, people: Map<string, string>, before?: Date, onRelease?: (releaseId: string) => boolean): Promise<Work[]> {
     const at = before ? { lt: before } : undefined;
-    const copies = await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED", release: { combinationId: c.combinationId } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { id: true, formNumber: true, subjectId: true, lockedAt: true, configReleaseId: true, createdAt: true } });
+    const copies = await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED", configReleaseId: { in: c.pins.map((p) => p.configReleaseId) } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { id: true, formNumber: true, subjectId: true, lockedAt: true, configReleaseId: true, createdAt: true } });
     const validated = new Set((await this.db.validatedCopy.findMany({ where: { copy: { caseId: c.id } }, select: { formInstanceId: true } })).map((v) => v.formInstanceId));
     const seen = new Set<string>(), out: Work[] = [];
     for (const x of copies) {

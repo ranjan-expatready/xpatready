@@ -27,6 +27,8 @@ const problem = (status: number, title: string, detail: string, extra: Record<st
 const stale = (): never => problem(409, "Changed by someone else", "This case's stages changed since you read them: read the case again. Nothing was changed.", { code: "stale" });
 /** A placeholder id for the next stage's application subject while it does not exist yet (the preview only). */
 const NEXT_APPLICATION = "00000000-0000-4000-8000-00000000c617";
+/** The toast's deadline part (Sample everywhere, BR-8). */
+const deadlineWords = (d: CaseStageView["deadline"]) => (d?.due ? `; deadline ${fmtDate(d.due)} (Sample)` : d ? `; deadline not set (${d.why.replace(/\.$/, "")})` : "");
 type StageRowDb = Reached["stages"][number];
 
 @Injectable()
@@ -90,7 +92,7 @@ export class CaseStagesService {
   /** BR-4: what "Start next stage" will do, worked out before the click (writes nothing). */
   async preview(actor: Actor, caseId: string): Promise<StartNextPreview> { const c = await this.reach(actor, caseId); return this.compute(c); }
 
-  private async compute(c: Reached): Promise<StartNextPreview & { _release?: { id: string; packVersionId: string | null; sha256: string; version: number } }> {
+  private async compute(c: Reached): Promise<StartNextPreview & { _head?: string; _release?: { id: string; packVersionId: string | null; sha256: string; version: number } }> {
     const rows = c.stages.map((s) => ({ ...s, stage_key: s.stageKey, state: s.state as StageState }));
     const { current, next } = nextOf(rows);
     const views = await this.views(c), curView = views.find((v) => v.id === c.stage.id)!;
@@ -111,21 +113,29 @@ export class CaseStagesService {
     const personAnswers = answers.filter((a) => a.subjectId !== c.stage.applicationSubjectId);
     const today = new Date();
     const qv = caseView(snap, nextPeople, personAnswers, groupRows, "agent", today);
+    // "Used" counts only answers a person gave and the case stores (not facts the firm record fills).
+    const stored = new Set((await this.db.clientCanonicalAnswer.findMany({ where: { subjectId: { in: nextPeople.filter((x) => x.role !== "case").map((x) => x.subjectId) }, supersededById: null }, select: { subjectId: true, canonicalFieldKey: true } })).map((x) => `${x.subjectId}|${x.canonicalFieldKey}`));
     let used = 0, again = 0, fresh = 0;
     for (const sec of qv.sections) for (const q of sec.questions) {
       if (q.hidden) continue;
-      if (q.subjectId === NEXT_APPLICATION) again++; else if (q.answer) used++; else fresh++;
+      if (q.subjectId === NEXT_APPLICATION) again++; else if (q.answer && stored.has(`${q.subjectId}|${q.fact}`)) used++; else if (!q.answer) fresh++;
     }
-    const forms = [...new Set(qv.forms.filter((f) => f.applies === true).map((f) => f.form))].sort();
+    // Forms and documents of the next release for these people: those that apply and those that may (waiting on answers).
+    const forms = [...new Set(qv.forms.filter((f) => f.applies !== false).map((f) => f.form))].sort();
     const { known } = knownOf(snap, nextPeople, personAnswers.filter((x) => checkValue(snap, x.field, x.value, today).length === 0), groupRows, today);
     const cl = caseChecklist(snap, (await this.db.combination.findUnique({ where: { id: next.combinationId }, select: { combinationKey: true } }))!.combinationKey, nextPeople, known, today);
-    const documents = cl.derived ? [...new Set(cl.people.flatMap((p) => p.lines.map((l) => l.document.name)))].sort() : [];
+    // A combination whose per-person checklist is not derived yet (samples/fee-table.json "checklist") still names the
+    // documents its release asks for: the base requirements for the roles coming along (Sample lines of the release).
+    const ROLE_WHO: Record<string, string> = { principal: "principal_applicant", spouse_or_partner: "spouse_or_partner", child: "dependent_child" };
+    const comingWho = new Set(nextPeople.filter((x) => x.role !== "case").map((x) => ROLE_WHO[x.role] ?? x.role));
+    const releaseDocs = ((snap.document_requirements ?? []) as { who: string; document_type: string; base_or_conditional: string }[]).filter((d) => d.base_or_conditional === "base" && (comingWho.has(d.who) || d.who === "each_applicant" || d.who === "case")).map((d) => d.document_type);
+    const documents = [...new Set(cl.derived ? cl.people.flatMap((p) => [...p.lines, ...p.waiting].map((l) => l.document.name)) : releaseDocs)].sort();
     const deadline = nextView.deadline;
     const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
     const principal = people.find((p) => p.role === "principal")?.label ?? "the client";
-    const words = `${next.staffName} started. ${n(used, `answer about ${principal} used`, `answers about ${principal} and the family used`)}; ${n(again, "question about this application asked again", "questions about this application asked again")}; ${n(fresh, "new question", "new questions")}; ${n(forms.length, "form", "forms")} and ${n(documents.length, "document", "documents")} added${deadline?.due ? `; deadline ${fmtDate(deadline.due)} (Sample)` : deadline ? `; deadline: ${deadline.why}` : ""}.`;
+    const head = `${next.staffName} started. ${n(used, `answer about ${principal} used`, `answers about ${principal} and the family used`)}; ${n(again, "question about this application asked again", "questions about this application asked again")}; ${n(fresh, "new question", "new questions")}; ${n(forms.length, "form", "forms")} and ${n(documents.length, "document", "documents")} added`, words = `${head}${deadlineWords(deadline)}.`;
     return { ...base, to: { stage: next.id, name: next.staffName, release_version: st.release.version, release: releaseLabel(st.release) }, refused: null, people,
-      counts: { person_answers_used: used, asked_again: again, new_questions: fresh, forms: forms.length, documents: documents.length }, forms, documents, deadline, unrecorded, words,
+      counts: { person_answers_used: used, asked_again: again, new_questions: fresh, forms: forms.length, documents: documents.length }, forms, documents, deadline, unrecorded, words, _head: head,
       _release: { id: st.release.id, packVersionId: st.release.packVersionId, sha256: st.release.sha256, version: st.release.version } };
   }
 
@@ -177,14 +187,18 @@ export class CaseStagesService {
       for (const d of spec.key_details) { const v = values[d.field]; if (v !== undefined && stored[d.field]?.value !== v) stored[d.field] = { value: v, by: actor.id, at: at.toISOString() }; else if (v === undefined && b.key_details && d.field in b.key_details) delete stored[d.field]; }
       await tx.caseStage.update({ where: { id: cur.id }, data: { state: "ENDED_NEXT_STARTED", endedBy: actor.id, endedAt: at, keyDetails: stored as object, reason: reason || null, version: { increment: 1 } } });
       await tx.caseStage.update({ where: { id: nxt.id }, data: { state: "CURRENT", startedFrom: "NEXT_STAGE", applicationSubjectId: app.id, startedBy: actor.id, startedAt: at, version: { increment: 1 } } });
-      await tx.packWorkPin.create({ data: { workspaceId: c.workspaceId, caseId: c.id, combinationId: nxt.combinationId, partyId: pinNow!.partyId, packVersionId: rel.packVersionId, configReleaseId: rel.id, contentHash: rel.sha256, actorId: actor.id } });
+      // The case's combination first: B145's pin rule (runtime_pin_chain) takes a pin only for the case's own combination;
+      // the one-current-stage check runs at commit (deferred).
       await tx.case.update({ where: { id: c.id }, data: { combinationId: nxt.combinationId } });
+      await tx.packWorkPin.create({ data: { workspaceId: c.workspaceId, caseId: c.id, combinationId: nxt.combinationId, partyId: pinNow!.partyId, packVersionId: rel.packVersionId, configReleaseId: rel.id, contentHash: rel.sha256, actorId: actor.id } });
       return { next: nxt.id };
     }, { timeout: 15_000, maxWait: 10_000 });
     if (outcome === "stale") stale();
     await this.audit.log(c.workspaceId, actor.id, "started_stage", "case", c.id, `${actor.name} started the next stage on case ${short(c.id)}: "${p.to!.name}" on release ${rel.version} (${rel.sha256.slice(0, 12)}), ending "${c.stage.staffName}"${p.unrecorded.length ? `; ${p.unrecorded.length} filing(s) without a record, reason given` : ""}`);
     const after = await this.stages(actor, c.id);
-    return { ...after, words: p.words, counts: p.counts };
+    // The deadline as it stands now: the key details recorded with the start may have set it.
+    const now = after.stages.find((x) => x.id === after.current)?.deadline ?? null;
+    return { ...after, words: `${p._head}${deadlineWords(now)}.`, counts: p.counts, deadline: now };
   }
 
   /** BR-3: a done-before stage's key details, edited later on its panel (typed by their field; the same-at-every-stage
@@ -228,7 +242,7 @@ export class CaseStagesService {
 export class CaseStagesController {
   constructor(@Inject(CaseStagesService) private readonly s: CaseStagesService) {}
   @Get("cases/:id/stages") list(@Headers("x-actor") a: H, @Param("id") id: string) { return this.s.stages(actorOf(a), id); }
-  @Get("cases/:id/stages/next") preview(@Headers("x-actor") a: H, @Param("id") id: string) { return this.s.preview(actorOf(a), id).then(({ _release, ...p }: StartNextPreview & { _release?: unknown }) => p); }
+  @Get("cases/:id/stages/next") preview(@Headers("x-actor") a: H, @Param("id") id: string) { return this.s.preview(actorOf(a), id).then(({ _release, _head, ...p }: StartNextPreview & { _release?: unknown; _head?: string }) => p); }
   @Post("cases/:id/stages/next") @HttpCode(HttpStatus.CREATED) start(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.start(actorOf(a), id, b); }
   @Get("cases/:id/stages/:stage") one(@Headers("x-actor") a: H, @Param("id") id: string, @Param("stage") st: string) { return this.s.stage(actorOf(a), id, st); }
   @Put("cases/:id/stages/:stage/key-details") keys(@Headers("x-actor") a: H, @Param("id") id: string, @Param("stage") st: string, @Body() b: unknown) { return this.s.keyDetails(actorOf(a), id, st, b); }

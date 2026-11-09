@@ -515,7 +515,7 @@ export class CasePrepare {
     // says so on its item (to fill again, or filed another way now), until the officer makes a copy on this release.
     if (prev) {
       const newest = new Map<string, { id: string; configReleaseId: string }>();
-      for (const x of await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED", release: { combinationId: c.combinationId } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { id: true, formNumber: true, subjectId: true, configReleaseId: true } }))
+      for (const x of await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED", configReleaseId: { in: c.pins.map((p) => p.configReleaseId) } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { id: true, formNumber: true, subjectId: true, configReleaseId: true } }))
         if (!newest.has(`${x.formNumber}|${x.subjectId}`)) newest.set(`${x.formNumber}|${x.subjectId}`, x);
       for (const i of items) {
         if (i.kind !== "form" || !("form" in i) || !i.form || i.state === "out_of_date") continue;
