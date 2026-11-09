@@ -20,6 +20,8 @@ import { onePerson } from "../resolver.ts";
 export type AddedKind = "fills" | "blank";
 export const KIND_WORDS: Record<AddedKind, string> = { fills: "Fills from the case", blank: "Blank official PDF" };
 export const ADDED_TAG = "Added by the case officer";
+/** A date as people read it ("9 Nov 2026"), never ISO (review M3 on #1248). */
+export const dayWords = (at: string) => new Date(at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
 /** One map row as the snapshot carries it (engine/snapshot.ts field_maps[].entries). */
 export type FrozenEntry = { data_path: string; outcome: string; fact?: string | null; person?: string | null; row?: number | null; [k: string]: unknown };
@@ -63,11 +65,11 @@ export function refusalOf(x: {
   if (x.formKind === "guide" || x.formKind === "document" || x.formKind === "checklist") return { status: 422, code: "not_a_form", words: `${x.form} is a guide or checklist, not a form: it is never added to a filing.` };
   if (!x.hasEdition) return { status: 422, code: "no_edition", words: `${x.form} has no current edition in the firm's library: add one in Library › Forms first.` };
   if (x.heldByRelease) return { status: 409, code: "on_release", words: x.releaseLine?.condition && x.releaseLine.condition !== "always"
-    ? `${x.form} is part of this application's forms; it applies when ${x.releaseLine.condition.replace(/[.\s]+$/, "")}${x.releaseLine.now ? ` (now: ${x.releaseLine.now})` : ""}. The answer decides it, so it is not added by hand.`
+    ? `${x.form} is part of this application's forms: it applies when ${x.releaseLine.condition.replace(/[.\s]+$/, "")}${x.releaseLine.now ? ` (now: ${x.releaseLine.now})` : ""}, so it is not added by hand.`
     : x.releaseLine && x.releaseLine.condition !== "always"
-      ? `${x.form} is part of this application's forms; an answer decides whether it applies${x.releaseLine.now ? ` (now: ${x.releaseLine.now})` : ""}. The answer decides it, so it is not added by hand.`
+      ? `${x.form} is part of this application's forms: an answer decides whether it applies${x.releaseLine.now ? ` (now: ${x.releaseLine.now})` : ""}, so it is not added by hand.`
       : `${x.form} is part of this application's forms already${x.releaseLine?.now ? ` (${x.releaseLine.now})` : ""}, so it is not added by hand.` };
-  if (x.addedBy) return { status: 409, code: "already_added", words: `${x.form} is already added to this filing for this person by ${x.addedBy.by} on ${x.addedBy.at.slice(0, 10)}.` };
+  if (x.addedBy) return { status: 409, code: "already_added", words: `${x.form} is already added to this filing for this person by ${x.addedBy.by} on ${dayWords(x.addedBy.at)}.` };
   if (x.kind === "blank" && x.barcode) return { status: 422, code: "barcode_blank", words: `${x.form} makes a barcode page: only a copy the product fills can be validated, and its filling is not proven yet, so it cannot be added as a blank form.` };
   return null;
 }
@@ -107,6 +109,16 @@ export function withAdditions<S extends Pick<Snapshot, "forms" | "field_maps" | 
 /** The added-form record of a line for one person (null: a release line, or not added for that person). */
 export type AddedRecord = { id: string; subject: string; filing: string; kind: AddedKind; by: string; at: string; reason: string | null; edition: string; official_file: string | null; form_sha256: string | null };
 export const addedFor = (line: { added?: AddedRecord[] } | undefined, subject: string): AddedRecord | null => line?.added?.find((x) => x.subject === subject) ?? null;
+/** The added-form record of a form for one person, read from every line of the snapshot (never only the first line with
+ *  that number: breaker B1 on #1248). Null: a release form for this person. */
+export const addedOn = (s: { forms: unknown[] }, form: string, subject: string): AddedRecord | null => {
+  for (const l of s.forms as { form_number: string; added?: AddedRecord[] }[]) if (l.form_number === form) { const a = addedFor(l, subject); if (a) return a; }
+  return null;
+};
+/** Breaker M2: a completed copy counts for an addition only if it was uploaded after that addition was made (a form
+ *  removed and added again starts with no completed copy, whatever its item held before). */
+export const completedSince = <T extends { uploadedAt: Date }>(scans: T[], added: { at: string }): T | null =>
+  scans.filter((x) => x.uploadedAt.getTime() >= Date.parse(added.at)).sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime())[0] ?? null;
 
 /** A stored filing_form_addition row (schema.prisma FilingFormAddition) as the case reads it; a row whose frozen form
  *  does not match its fingerprint is never joined (it was changed underneath; the trigger refuses that, this is the

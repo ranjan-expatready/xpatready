@@ -83,7 +83,11 @@ function AddFormPanel({ caseId, filing, owner, close, returnFocus }: { caseId: s
                 </li>
               ))}
             </ul>}
-        {picked && who ? <Picked key={`${picked}|${who}`} caseId={caseId} filing={filing} form={picked} subject={who} onAdded={async (person) => { toast.push({ tone: "ok", text: `${picked} added to ${person}'s filing.` }); await refresh(qc, caseId); close(); }} /> : null}
+        {picked && who ? <Picked key={`${picked}|${who}`} caseId={caseId} filing={filing} form={picked} subject={who} onAdded={async (person) => {
+          toast.push({ tone: "ok", text: `${picked} added to ${person}'s filing.` }); await refresh(qc, caseId); close();
+          // Review minor: after Add the focus goes to the new form's row (else back to this filing's "+ Add a form").
+          setTimeout(() => (document.querySelector<HTMLElement>(`[data-row-form="${picked}|${who}"] h3`) ?? document.querySelector<HTMLElement>(`[data-add-form="${filing}"] button`))?.focus(), 300);
+        }} /> : null}
       </div>
     </Panel>
   );
@@ -100,16 +104,19 @@ function Picked({ caseId, filing, form, subject, onAdded }: { caseId: string; fi
   if (d.isLoading) return <Skeleton className="h-32 w-full" />;
   if (d.isError) return <Notice tone="danger" title={`${form} could not be read`}>{(d.error as Error).message}</Notice>;
   const x = d.data!, ch = channel ?? x.channel, fixed = !!x.same_as;
+  // C11.6's rule: Paper where the application is filed through an IRCC account is chosen with a reason; on Paper a form
+  // is signed in pen (no switch).
+  const paperWhy = ch === "PAPER" && x.channel !== "PAPER" && !fixed, pen = ch === "PAPER";
   async function add() {
     setBusy(true); setErr(null);
     try {
-      const r = await api<{ person: string }>(`/runtime/filings/${filing}/form-additions`, { method: "POST", json: { form, subject, channel: ch, ...(signed ? {} : { signature: "NONE", signature_reason: signWhy }), ...(reason.trim() ? { reason } : {}) } });
+      const r = await api<{ person: string }>(`/runtime/filings/${filing}/form-additions`, { method: "POST", json: { form, subject, channel: ch, ...(signed || pen ? {} : { signature: "NONE", signature_reason: signWhy }), ...(reason.trim() ? { reason } : {}) } });
       await onAdded(r.person);
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   }
   return (
     <section aria-label={`${form}, picked`} className="space-y-3 rounded-lg border border-border bg-surface px-3 py-3" data-picked={form}>
-      <div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-semibold"><span className="mono">{x.form}</span> · {x.title}</h3><Pill tone={x.kind === "fills" ? "ok" : "info"}>{x.kind_words}</Pill></div>
+      <div className="flex flex-wrap items-center gap-2"><h3 className="min-w-0 text-sm font-semibold [overflow-wrap:anywhere]"><span className="mono">{x.form}</span> · {x.title}</h3><Pill tone={x.kind === "fills" ? "ok" : "info"}>{x.kind_words}</Pill></div>
       {x.why_not ? <Notice tone="warn" title="Not added">{x.why_not.words}</Notice> : null}
       {x.kind === "fills" && x.coverage ? (
         <div className="text-[13px]" data-coverage={`${x.coverage.fills}/${x.coverage.total}`}>
@@ -128,12 +135,12 @@ function Picked({ caseId, filing, form, subject, onAdded }: { caseId: string; fi
       </fieldset>
       <fieldset className="space-y-1">
         <legend className="text-xs font-medium">Signature</legend>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={signed} disabled={fixed} onChange={(e) => setSigned(e.target.checked)} />Needs a signature{signed && x.signers_words ? <span className="text-[12px] text-text-muted">({x.signers_words})</span> : null}</label>
-        {!signed ? <Field label="Why it needs no signature" hint="Recorded with the form (required)."><Textarea value={signWhy} onChange={(e) => setSignWhy(e.target.value)} /></Field> : null}
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={signed || pen} disabled={fixed || pen} onChange={(e) => setSigned(e.target.checked)} />{pen ? "Signed in pen" : "Needs a signature"}{(signed || pen) && x.signers_words ? <span className="text-[12px] text-text-muted">({x.signers_words})</span> : null}</label>
+        {!signed && !pen ? <Field label="Why it needs no signature" hint="Recorded with the form (required)."><Textarea value={signWhy} onChange={(e) => setSignWhy(e.target.value)} /></Field> : null}
       </fieldset>
-      <Field label="Reason (optional)" hint="Shown on the form's tag."><Input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} /></Field>
+      <Field label={paperWhy ? "Why it is filed on Paper (required)" : "Reason (optional)"} hint="Shown on the form's tag."><Input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} /></Field>
       {err ? <p role="alert" className="text-[13px] text-text-danger">{err}</p> : null}
-      <Button busy={busy} disabled={!!x.why_not || !ch || (!signed && !signWhy.trim())} onClick={() => void add()}>Add to {x.person}'s filing</Button>
+      <Button busy={busy} disabled={!!x.why_not || !ch || (!signed && !pen && !signWhy.trim()) || (paperWhy && !reason.trim())} onClick={() => void add()}>Add to {x.person}'s filing</Button>
     </section>
   );
 }
@@ -142,21 +149,28 @@ function Picked({ caseId, filing, form, subject, onAdded }: { caseId: string; fi
 export function AddedTag({ caseId, f, recorded }: { caseId: string; f: CaseForm; recorded?: boolean }) {
   const qc = useQueryClient(), toast = useToast();
   const [removing, setRemoving] = React.useState(false), [why, setWhy] = React.useState(""), [busy, setBusy] = React.useState(false);
-  const a = f.added!;
-  const tip = `Added by ${a.by} on ${day(a.at)}${a.reason ? `: ${a.reason}` : ""}. ${a.edition}. Not part of the combination.`;
+  const a = f.added;
+  if (!a) return null; // breaker B1: a row whose form the release now holds is the release's, with no tag
+  const tip = `Added by ${a.by_name ?? "a member of the firm"} on ${day(a.at)}${a.reason ? `: ${a.reason}` : ""}. ${a.edition}. Not part of the combination.`;
   async function remove() {
     setBusy(true);
-    try { await api(`/runtime/form-additions/${a.id}/remove`, { method: "POST", json: { reason: why } }); toast.push({ tone: "ok", text: `${f.form} removed from ${f.person}'s filing (kept in the record).` }); await refresh(qc, caseId); }
+    try {
+      await api(`/runtime/form-additions/${a!.id}/remove`, { method: "POST", json: { reason: why } }); toast.push({ tone: "ok", text: `${f.form} removed from ${f.person}'s filing (kept in the record).` });
+      await refresh(qc, caseId);
+      // Breaker m4: the row is gone, so the focus goes to the forms' heading, never the page.
+      document.getElementById("forms-h")?.focus();
+    }
     catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); } finally { setBusy(false); }
   }
   return (
     <span className="inline-flex flex-wrap items-center gap-2" data-added={a.kind}>
-      <Pill tone="neutral" title={tip}>{a.tag}<Info className="size-3" aria-label={tip} /></Pill>
-      {!recorded && !removing ? <Button size="sm" variant="ghost" onClick={() => setRemoving(true)}><Trash2 aria-hidden />Remove</Button> : null}
+      <Pill tone="neutral">{a.tag}<button type="button" className="inline-flex rounded outline-none focus-visible:ring-2 focus-visible:ring-ring" title={tip} aria-label={`About this form: ${tip}`} onClick={() => toast.push({ tone: "info", text: tip })}><Info className="size-3" aria-hidden /></button></Pill>
+      {a.newer_edition ? <Pill tone="info" title={a.newer_edition}>A newer edition exists</Pill> : null}
+      {!recorded && !removing ? <Button size="sm" variant="ghost" onClick={() => setRemoving(true)}><Trash2 aria-hidden />Remove from this filing</Button> : null}
       {removing ? (
         <span role="group" aria-label={`Remove ${f.form}`} className="inline-flex flex-wrap items-center gap-2 text-[13px]">
           <Input aria-label="Why it is removed (required)" placeholder="Why it is removed (required)" value={why} onChange={(e) => setWhy(e.target.value)} className="h-8 w-64" autoFocus />
-          <Button size="sm" variant="destructive" busy={busy} disabled={!why.trim()} onClick={() => void remove()}>Remove</Button>
+          <Button size="sm" variant="destructive" busy={busy} disabled={!why.trim()} onClick={() => void remove()}>Remove {f.form}</Button>
           <Button size="sm" variant="ghost" onClick={() => { setRemoving(false); setWhy(""); }}>Cancel</Button>
         </span>
       ) : null}
@@ -188,10 +202,10 @@ export function BlankRow({ caseId, f, recorded }: { caseId: string; f: CaseForm;
     catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); } finally { setBusy(false); if (input.current) input.current.value = ""; }
   }
   return (
-    <li className="space-y-2 px-4 py-3" data-blank-form={f.form}>
+    <li className="space-y-2 px-4 py-3" data-blank-form={f.form} data-row-form={`${f.form}|${f.subject_id}`}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <FileText className="size-4 text-text-muted" aria-hidden />
-        <h3 tabIndex={-1} className="text-sm font-semibold">{f.form} <span className="font-normal text-text-muted">for</span> <span className="[overflow-wrap:anywhere]">{f.person}</span></h3>
+        <h3 tabIndex={-1} className="min-w-0 text-sm font-semibold">{f.form} <span className="font-normal text-text-muted">for</span> <span className="[overflow-wrap:anywhere]">{f.person}</span></h3>
         <Pill tone="info">Blank official PDF</Pill>
         {b.completed ? <Pill tone="ok">Completed copy uploaded {day(b.completed.at)}</Pill> : <Pill tone="warn">Completed copy to upload</Pill>}
         <AddedTag caseId={caseId} f={f} recorded={recorded} />
@@ -202,7 +216,7 @@ export function BlankRow({ caseId, f, recorded }: { caseId: string; f: CaseForm;
           <Button size="sm" variant={b.completed ? "secondary" : "default"} busy={busy} onClick={() => input.current?.click()}><Upload aria-hidden />{b.completed ? "Upload a new completed copy" : "Upload the completed copy"}</Button>
         </> : null}
       </div>
-      <p className="text-[13px] text-text-muted">{f.title}. Fill it by hand{f.channel === "PAPER" ? ", sign it in pen" : ", have it signed"} and upload the completed copy: that one upload is the copy filed. Nothing on it is filled from the case.</p>
+      <p className="text-[13px] text-text-muted [overflow-wrap:anywhere]">{f.title}. Fill it by hand{f.channel === "PAPER" ? ", sign it in pen" : ", have it signed"} and upload the completed copy: that one upload is the copy filed. Nothing on it is filled from the case.</p>
     </li>
   );
 }

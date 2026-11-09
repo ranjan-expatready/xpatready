@@ -46,7 +46,7 @@ export function FormsPanel({ caseId }: { caseId: string }) {
         : <ul className="divide-y divide-border">
             {byFiling(q.data!.forms, prep.data).map((g) => <React.Fragment key={g.filing ?? "none"}>
               {g.forms.map((f) => f.blank ? <BlankRow key={`${f.form}|${f.subject_id}`} caseId={caseId} f={f} recorded={g.recorded} /> : <FormRow key={`${f.form}|${f.subject_id}`} caseId={caseId} f={f} recorded={g.recorded} />)}
-              {g.filing ? <AddFormButton caseId={caseId} filing={g.filing} owner={g.owner} disabled={g.recorded ? "Recorded as submitted: read-only." : null} /> : null}
+              {g.filing ? <AddFormButton caseId={caseId} filing={g.filing} owner={g.owner} disabled={g.recorded ? "This application is recorded as submitted: read-only." : null} /> : null}
             </React.Fragment>)}
             {(q.data!.online ?? []).map((f) => <OnlineRow key={f.form} f={f} />)}
           </ul>}
@@ -62,6 +62,8 @@ function byFiling(forms: CaseForm[], p: PrepareFilings | undefined) {
   const filings = p?.filings ?? [];
   const groups = filings.map((f) => ({ filing: f.id as string | null, recorded: f.status === "submitted", owner: f.applicants.find((a) => a.subject === f.owner?.subject)?.label ?? f.applicants[0]?.label ?? "this",
     forms: forms.filter((x) => f.applicants.some((a) => a.subject === x.subject_id)) }));
+  // Breaker m5: once any filing of the case is recorded, nothing on it is added or removed (the server's rule, C8.2-9).
+  if (filings.some((f) => f.status === "submitted")) for (const g of groups) g.recorded = true;
   const placed = new Set(groups.flatMap((g) => g.forms));
   const rest = forms.filter((x) => !placed.has(x));
   return [...groups, ...(rest.length ? [{ filing: null, recorded: false, owner: "", forms: rest }] : [])];
@@ -152,7 +154,7 @@ function FormRow({ caseId, f, recorded }: { caseId: string; f: CaseForm; recorde
   const canLock = lockable && !why;
   const lockBlocked = lockable && why ? why : null;
   return (
-    <li className="space-y-2 px-4 py-3">
+    <li className="space-y-2 px-4 py-3" data-row-form={`${f.form}|${f.subject_id}`}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <FileText className="size-4 text-text-muted" aria-hidden />
         <h3 ref={heading} tabIndex={-1} className="text-sm font-semibold outline-none">{f.form} <span className="font-normal text-text-muted">for</span> <span className="[overflow-wrap:anywhere]">{f.person}</span></h3>

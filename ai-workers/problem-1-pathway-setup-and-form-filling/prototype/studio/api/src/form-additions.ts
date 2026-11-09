@@ -15,7 +15,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import type { Response } from "express";
 import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Query, Res } from "@nestjs/common";
-import { actorOf, Audit, CaseRead, Db, fail, OFFICIAL, ROOT, type Actor } from "./core.ts";
+import { ACTORS, actorOf, Audit, CaseRead, Db, fail, OFFICIAL, ROOT, RUNTIME_ACTORS, type Actor } from "./core.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { refuseIfRecorded } from "./submission-record.ts";
 import { trialFor, type EditionMap } from "./fill-trials.ts";
@@ -26,7 +26,7 @@ import { formCoverage, releaseForms } from "../../engine/runtime/forms.ts";
 import { knownOf } from "../../engine/runtime/case.ts";
 import { render } from "../../engine/render.ts";
 import type { Role } from "../../engine/resolver.ts";
-import { ADDED_TAG, frozenHash, KIND_WORDS, kindOf, refusalOf, withAdditions, type AddedKind, type Addition, type Frozen } from "../../engine/runtime/added-forms.ts";
+import { ADDED_TAG, dayWords, frozenHash, KIND_WORDS, kindOf, refusalOf, withAdditions, type AddedKind, type Addition, type Frozen } from "../../engine/runtime/added-forms.ts";
 import { isBarcodeForm, CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
 import { minorFromAnswers, signersOf } from "../../engine/runtime/signing.ts";
 
@@ -36,6 +36,10 @@ const short = (id: string) => id.slice(0, 8);
 const problem = (status: number, detail: string, field = "form") => new HttpException({ type: "https://expatready.local/problems/form-addition", title: "Not added", status, detail, errors: [{ field, message: detail }] }, status);
 /** BR-6 (Q2): added forms are a PDF upload or on Paper in M3; Online is not offered. */
 const ADD_CHANNELS: Channel[] = ["PDF_UPLOAD", "PAPER"];
+/** Breaker m2: a person's name, never their id, on a screen ("Added by Case officer"). */
+export const personName = (id: string) => ([...ACTORS, ...RUNTIME_ACTORS] as readonly { id: string; name: string }[]).find((x) => x.id === id)?.name ?? "a member of the firm";
+/** Review M2: an audit line names a person by their role on the case, never their name. */
+const roleWords = (c: Reached, subject: string) => (c.participants.find((p) => p.subjectId === subject)?.role ?? "person").replace(/_/g, " ");
 const SIGNER_WORDS: Record<string, string> = { person: "the person", parent: "a parent", principal: "the principal applicant", representative: "the representative" };
 
 /** One library form as this screen reads it: the form, its current PDF edition, its published map rows and trial. */
@@ -105,8 +109,9 @@ export class FormAdditions {
     const held = releaseForms(rel).has(x.form);
     const line = held ? (rel.forms as { form_number: string; condition_plain?: string | null; status?: string }[]).find((l) => l.form_number === x.form) : undefined;
     const added = (c.formAdditions ?? []).find((a) => a.formKey === x.form && a.subjectId === subject && !a.removedAt);
-    const why = refusalOf({ form: x.form, formKind: x.formKind, hasEdition: !!x.editionId, kind: k.kind, barcode: isBarcodeForm(x.form), heldByRelease: held,
-      releaseLine: line ? { condition: line.status === "always" ? "always" : line.condition_plain ?? null, now: now(x.form, subject) } : null, addedBy: added ? { by: added.addedBy, at: added.addedAt.toISOString() } : null });
+    // Breaker m9: an edition with no official file checksum could never be checked on download, so it has no current edition.
+    const why = refusalOf({ form: x.form, formKind: x.formKind, hasEdition: !!x.editionId && !!x.sha256, kind: k.kind, barcode: isBarcodeForm(x.form), heldByRelease: held,
+      releaseLine: line ? { condition: line.status === "always" ? "always" : line.condition_plain ?? null, now: now(x.form, subject) } : null, addedBy: added ? { by: personName(added.addedBy), at: added.addedAt.toISOString() } : null });
     return { form: x.form, title: x.title, edition: x.edition, kind: k.kind, kind_words: KIND_WORDS[k.kind], blank_why: k.why, why_not: why ? { code: why.code, words: why.words } : null };
   }
 
@@ -141,7 +146,7 @@ export class FormAdditions {
     const portal = (this.r.releaseSnapshotOf(c).combination as { portal?: string }).portal ?? null;
     const allowed = allowedChannels(accepts.get(form), portal).channels.filter((ch) => ADD_CHANNELS.includes(ch));
     const def: Channel | null = portal === "PAPER" ? (allowed.includes("PAPER") ? "PAPER" : null) : allowed.includes("PDF_UPLOAD") ? "PDF_UPLOAD" : allowed[0] ?? null;
-    const why = portal === "PAPER" ? "This application is filed on paper, so its forms are too." : def === "PDF_UPLOAD" ? "This application's forms are uploaded as PDFs to the IRCC account." : def ? `IRCC accepts ${form} only ${CHANNEL_WORDS[def]}.` : `IRCC accepts ${form} neither as a PDF upload nor on paper here, so it is not added (an Online form is not offered, Q2).`;
+    const why = portal === "PAPER" ? "This application is filed on paper, so its forms are too." : def === "PDF_UPLOAD" ? "This application's forms are uploaded as PDFs to the IRCC account." : def ? `IRCC accepts ${form} only ${CHANNEL_WORDS[def]}.` : `IRCC accepts ${form} neither as a PDF upload nor on paper here, so it is not added (an added form is not filed Online).`;
     return { allowed, def, why };
   }
 
@@ -171,10 +176,9 @@ export class FormAdditions {
     const people = this.r.peopleOf(c).filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role, label: p.label, applies: p.applies }));
     const signers = signersOf(people, who.subject, `person:${who.subject}`, "parent_for_minor", minorFromAnswers((await this.r.state(c)).answers, new Date())).map((s) => SIGNER_WORDS[s] ?? s);
     return { ...j, kind, kind_words: KIND_WORDS[kind], subject: who.subject, person: who.label, coverage,
-      same_as: same ? { subject: same.subjectId, at: same.addedAt.toISOString(), words: `Added the same way as for ${c.participants.find((p) => p.subjectId === same.subjectId)?.subject.label ?? "another person"} on ${same.addedAt.toISOString().slice(0, 10)}: one form is filed one way on a case.` } : null,
+      same_as: same ? { subject: same.subjectId, at: same.addedAt.toISOString(), words: `Added the same way as for ${c.participants.find((p) => p.subjectId === same.subjectId)?.subject.label ?? "another person"} on ${dayWords(same.addedAt.toISOString())}: one form is filed one way on a case.` } : null,
       channels: same ? [same.channel] : ch.allowed, channel: same ? same.channel : ch.def, channel_why: same ? "As for the first person it was added for." : ch.why,
-      signature: same ? same.signature : "HAND_SCANNED", signers, signers_words: signers.length ? `Signed by ${signers.join(" and ")}` : "No signature",
-      newer_edition: null as string | null };
+      signature: same ? same.signature : "HAND_SCANNED", signers, signers_words: signers.length ? `Signed by ${signers.join(" and ")}` : "No signature" };
   }
 
   /** POST …/form-additions: add the form for one person on this filing (BR-1 to BR-6, BR-9). */
@@ -192,10 +196,13 @@ export class FormAdditions {
     const ch = await this.channels(c, x!.form);
     const allowed = same ? [same.channel as Channel] : ch.allowed;
     const channel = b.channel === undefined || b.channel === null || b.channel === "" ? (same ? same.channel as Channel : ch.def) : String(b.channel) as Channel;
-    if (!channel || !allowed.includes(channel)) throw problem(422, same ? `${x!.form} is already added on this case filed ${CHANNEL_WORDS[same.channel as Channel]}: one form is filed one way on a case.` : allowed.length ? `File ${x!.form} ${allowed.map((a) => CHANNEL_WORDS[a]).join(" or ")}: that is what IRCC accepts here (an Online form is not added, Q2).` : ch.why, "channel");
+    if (!channel || !allowed.includes(channel)) throw problem(422, same ? `${x!.form} is already added on this case filed ${CHANNEL_WORDS[same.channel as Channel]}: one form is filed one way on a case.` : allowed.length ? `File ${x!.form} ${allowed.map((a) => CHANNEL_WORDS[a]).join(" or ")}: that is what IRCC accepts here, and an added form is not filed Online.` : ch.why, "channel");
     const reasonOf = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 500) : null);
     const off = b.signature === "NONE" || b.signature === false;
     if (same && (off ? "NONE" : "on") !== (same.signature === "NONE" ? "NONE" : "on")) throw problem(422, `${x!.form} is already added on this case ${same.signature === "NONE" ? "with no signature" : "needing a signature"}: one form is signed one way on a case.`, "signature");
+    if (off && channel === "PAPER") throw problem(422, `A form filed on Paper is signed in pen: its signature cannot be switched off. File it as a PDF upload to switch the signature off.`, "signature");
+    // C11.6's rule, as for any form moved to Paper: where an IRCC account files online, Paper is chosen with a reason.
+    if (channel === "PAPER" && ch.def !== "PAPER" && !same && !reasonOf(b.reason)) throw problem(400, `Say why ${x!.form} is filed on Paper when this application is filed through an IRCC account: the reason is recorded with it.`, "reason");
     if (off && !reasonOf(b.signature_reason)) throw problem(400, "Say why this form needs no signature: switching the signature off is recorded with a reason.", "signature_reason");
     const signature = off ? "NONE" : channel === "PAPER" ? "PEN" : "HAND_SCANNED";
     const kind: AddedKind = same ? (same.kind as AddedKind) : j.kind;
@@ -206,18 +213,23 @@ export class FormAdditions {
     const made = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
       const twice = await tx.filingFormAddition.findFirst({ where: { filingId: f.id, subjectId: who.subject, formKey: x!.form, removedAt: null } });
-      if (twice) throw problem(409, `${x!.form} is already added to this filing for this person by ${twice.addedBy} on ${twice.addedAt.toISOString().slice(0, 10)}.`);
+      if (twice) throw problem(409, `${x!.form} is already added to this filing for this person by ${personName(twice.addedBy)} on ${dayWords(twice.addedAt.toISOString())}.`);
+      // Breaker M1: one form is filed one way on a case. The case's row lock above serialises adds on this case, so the
+      // first addition of this form read here is the truth: if another person's addition landed after this request read
+      // the case, this one is refused rather than stored with another channel, signature or frozen form.
+      const first = await tx.filingFormAddition.findFirst({ where: { caseId: c.id, formKey: x!.form, removedAt: null }, orderBy: [{ addedAt: "asc" }, { id: "asc" }] });
+      if (first && first.id !== same?.id) throw problem(409, `${x!.form} was just added on this case for another person by ${personName(first.addedBy)}: read the form again, it is then added the same way (one form is filed one way on a case).`);
       return tx.filingFormAddition.create({ data: { workspaceId: c.workspaceId, caseId: c.id, filingId: f.id, subjectId: who.subject, formKey: x!.form, editionId: same?.editionId ?? x!.editionId!, editionLabel: same?.editionLabel ?? x!.edition!, kind,
         frozen: frozen as object, frozenSha256: frozenHash(frozen), trial: (trial ?? undefined) as object | undefined, channel, signature, signedBy: off ? "none" : "parent_for_minor", signatureReason: off ? reasonOf(b.signature_reason) : null,
         addedBy: actor.id, reason: reasonOf(b.reason) } });
     }).catch((e) => { if ((e as { code?: string }).code === "P2002") throw problem(409, `${x!.form} is already added to this filing for this person.`); throw e; });
-    await this.audit.log(c.workspaceId, actor.id, "added", "filing form", made.id, `${actor.name} added ${x!.form} (${KIND_WORDS[kind]}) to ${who.label}'s filing on case ${short(c.id)}${made.reason ? `: ${made.reason}` : ""}`);
+    await this.audit.log(c.workspaceId, actor.id, "added", "filing form", made.id, `${actor.name} added ${x!.form} (${KIND_WORDS[kind]}) for the ${roleWords(c, who.subject)} on a filing of case ${short(c.id)}${made.reason ? " (reason given)" : ""}`);
     return this.view(made, who.label);
   }
 
   private view(a: { id: string; filingId: string; subjectId: string; formKey: string; kind: string; editionLabel: string; channel: string; signature: string; signatureReason: string | null; addedBy: string; addedAt: Date; reason: string | null; removedAt: Date | null; removedBy: string | null; removedReason: string | null }, person: string) {
     return { id: a.id, filing: a.filingId, subject: a.subjectId, person, form: a.formKey, kind: a.kind, kind_words: KIND_WORDS[a.kind as AddedKind] ?? a.kind, edition: a.editionLabel, channel: a.channel, signature: a.signature, signature_reason: a.signatureReason,
-      tag: ADDED_TAG, added_by: a.addedBy, added_at: a.addedAt.toISOString(), reason: a.reason, removed: a.removedAt ? { by: a.removedBy, at: a.removedAt.toISOString(), reason: a.removedReason } : null };
+      tag: ADDED_TAG, added_by: a.addedBy, added_by_name: personName(a.addedBy), added_at: a.addedAt.toISOString(), reason: a.reason, removed: a.removedAt ? { by: a.removedBy, at: a.removedAt.toISOString(), reason: a.removedReason } : null };
   }
 
   /** The addition (of a case this person may work on as case staff), and its case. */
@@ -235,23 +247,25 @@ export class FormAdditions {
     const reason = typeof (body as { reason?: unknown })?.reason === "string" ? ((body as { reason: string }).reason).trim().slice(0, 500) : "";
     if (!reason) throw problem(400, "Say why the form is removed: a removal is recorded with a reason.", "reason");
     await refuseIfRecorded(this.db, (await this.db.filing.findMany({ where: { caseId: c.id }, select: { id: true } })).map((x) => x.id), "its forms");
-    if (a.removedAt) throw problem(409, `${a.formKey} was already removed by ${a.removedBy} on ${a.removedAt.toISOString().slice(0, 10)}.`);
+    if (a.removedAt) throw problem(409, `${a.formKey} was already removed by ${personName(a.removedBy ?? "")} on ${dayWords(a.removedAt.toISOString())}.`);
     const n = await this.db.filingFormAddition.updateMany({ where: { id: a.id, removedAt: null }, data: { removedAt: new Date(), removedBy: actor.id, removedReason: reason } });
     if (n.count !== 1) throw problem(409, `${a.formKey} was already removed.`);
     const label = c.participants.find((p) => p.subjectId === a.subjectId)?.subject.label ?? "";
-    await this.audit.log(c.workspaceId, actor.id, "removed", "filing form", a.id, `${actor.name} removed ${a.formKey} from ${label}'s filing on case ${short(c.id)}: ${reason}`);
+    await this.audit.log(c.workspaceId, actor.id, "removed", "filing form", a.id, `${actor.name} removed ${a.formKey} for the ${roleWords(c, a.subjectId)} from a filing of case ${short(c.id)} (reason given)`);
     return this.view((await this.db.filingFormAddition.findUnique({ where: { id: a.id } }))!, label);
   }
 
   /** GET …/form-additions/:id/blank (BR-5): the edition's official file, its checksum checked against the frozen one. */
   async blank(actor: Actor, id: string, res: Response) {
     const { a } = await this.addition(actor, id);
+    // Breaker m8: a removed form is no longer on the filing, so its blank PDF is not handed out from it.
+    if (a.removedAt) fail(`${a.formKey} was removed from this filing on ${dayWords(a.removedAt.toISOString())}, so its blank PDF is not offered here.`, HttpStatus.GONE);
     const fr = a.frozen as Frozen;
     const file = officialPath(fr.official_file) ?? (await this.storedPath(a.editionId));
     const bytes = file && existsSync(file) ? readFileSync(file) : null;
     if (!bytes) fail(`The official file of ${a.formKey} (${fr.edition}) is not in the product's files; download it from canada.ca.`, HttpStatus.CONFLICT);
     const sha = createHash("sha256").update(bytes!).digest("hex");
-    if (fr.form_sha256 && sha !== fr.form_sha256) fail(`The official file of ${a.formKey} on file is not the edition frozen when it was added (its checksum differs), so it is not handed over.`, HttpStatus.CONFLICT);
+    if (!fr.form_sha256 || sha !== fr.form_sha256) fail(`The official file of ${a.formKey} on file is not the edition frozen when it was added (its checksum differs), so it is not handed over.`, HttpStatus.CONFLICT);
     res.setHeader("content-type", "application/pdf");
     res.setHeader("content-disposition", `attachment; filename="${a.formKey.replace(/[^A-Za-z0-9]+/g, "")}-blank.pdf"`);
     res.setHeader("x-sha256", sha);

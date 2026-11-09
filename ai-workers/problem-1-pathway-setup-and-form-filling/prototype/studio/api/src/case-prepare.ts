@@ -11,7 +11,7 @@
 // stops applying keeps its row with active = false, so its id (and an item's chosen channel) come back with it.
 // C7.6 (review m10 on #861): one write a read can make outside that: a filing marked Ready to file that is no longer
 // ready goes back to Not started, recorded with the reader as the actor (the reader is who saw it change).
-import { ADDED_TAG, addedFor } from "../../engine/runtime/added-forms.ts";
+import { ADDED_TAG, addedOn, completedSince, dayWords } from "../../engine/runtime/added-forms.ts";
 import { createHash } from "node:crypto";
 import { Body, Controller, Get, Head, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Res } from "@nestjs/common";
 import type { Response } from "express";
@@ -356,12 +356,13 @@ export class CasePrepare {
         const fb = { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null };
         // C7.8 (B141 BR-5, BR-7): a blank official PDF the case officer added is filled by hand: To do until its completed
         // copy is uploaded (the one upload; it is also the signed copy when it is signed, M5), then Ready.
-        const added = addedFor(lines.get(i.itemKey) as never, i.subjectId);
+        const added = addedOn(s, i.itemKey, i.subjectId);
         if (added?.kind === "blank") {
-          const scan = scans.find((x) => x.itemId === i.id) ?? null;
+          const scan = completedSince(scans.filter((x) => x.itemId === i.id), added);
           const signersB = signersOf(signPeople, i.subjectId, lines.get(i.itemKey)?.who ?? "each_applicant", lines.get(i.itemKey)?.signed_by, minor);
           return { ...fb, signers: signersB, blank: { addition: added.id, download: `/api/runtime/form-additions/${added.id}/blank`, completed: scan ? { id: scan.id, at: scan.uploadedAt.toISOString() } : null },
-            state: scan ? "ready" : "to_do", reason: scan ? `${BLANK_WORDS.done} (${scan.uploadedAt.toISOString().slice(0, 10)}).` : BLANK_WORDS.todo };
+            state: scan && stepsOf.get(i.id)?.uploaded_to_ircc ? "done" : scan ? "ready" : "to_do",
+            reason: scan && stepsOf.get(i.id)?.uploaded_to_ircc ? `${BLANK_WORDS.done}, and uploaded to IRCC.` : scan ? `${BLANK_WORDS.done} (${dayWords(scan.uploadedAt.toISOString())}). Upload it to IRCC once the filing is Ready to file.` : BLANK_WORDS.todo };
         }
         if (stale.length) staleOf.set(i.id, stale.map((x) => x.title));
         if (sheet && stale.length && !waits) {
@@ -499,8 +500,8 @@ export class CasePrepare {
     // C7.8 (B141 BR-7): each item of a form the case officer added says so ("Added by the case officer": who, when, why).
     for (const i of items) {
       if (i.kind !== "form" || !("form" in i) || !i.form) continue;
-      const a = addedFor(lines.get(i.form) as never, i.subject);
-      if (a) Object.assign(i, { added: { id: a.id, tag: ADDED_TAG, kind: a.kind, by: a.by, at: a.at, reason: a.reason, edition: a.edition, words: `${ADDED_TAG} on ${a.at.slice(0, 10)}. Not part of the combination.` } });
+      const a = addedOn(s, i.form, i.subject);
+      if (a) Object.assign(i, { added: { id: a.id, tag: ADDED_TAG, kind: a.kind, by: a.by, at: a.at, reason: a.reason, edition: a.edition, words: `${ADDED_TAG} on ${dayWords(a.at)}. Not part of the combination.` } });
     }
     const formItems: PreparedForm[] = items.flatMap((i) => i.kind === "form" && "form" in i && i.form && !("record" in i) ? [{ id: i.id, filing: i.filing, subject: i.subject, person: i.person, form: i.form,
       ...("blank" in i && i.blank ? { blank: { completed: !!i.blank.completed, key: i.blank.addition } } : {}),

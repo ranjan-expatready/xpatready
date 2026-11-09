@@ -30,9 +30,12 @@ await main("C7.8", "Add a library form to one filing", async () => {
     { refused: forms.filter((f) => f.why_not).map((f) => `${f.form}:${f.why_not!.code}`) });
 
   // 2: a form that fills, for the principal only.
+  const qCount = async () => ((await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=client`, undefined, CLIENT)).body?.sections ?? []).reduce((n: number, x: { questions?: unknown[] }) => n + (x.questions?.length ?? 0), 0) as number;
+  const qBefore = await qCount();
   const det = (await call("GET", `/runtime/filings/${fP}/addable-forms/${encodeURIComponent(fills?.form ?? "-")}`)).body as { coverage?: { fills: number; total: number } | null } | null;
   let r = await add(fP, { form: fills?.form, reason: "Asked for by the case officer (Sample)" });
   const addFills = r.body?.id as string | undefined;
+  const qAfter = await qCount();
   await fillEverything(c.id);
   p = (await prepare(c.id)).p;
   const onP = itemsOf(p, P, fills?.form), onS = itemsOf(p, S, fills?.form);
@@ -44,6 +47,7 @@ await main("C7.8", "Add a library form to one filing", async () => {
     r.status === 201 && onP.length === 1 && onP[0].filing === fP && onS.length === 0 && (det?.coverage?.fills ?? 0) > 0 && !!row?.added && row.trial_passed === true
       && (row.copies[0]?.status === "GENERATED" && (row.copies[0]?.counts?.written ?? 0) > 0) && (lock.status === 200 || (lock.status === 409 && !/fill trial|filling is not proven/i.test(lock.body?.detail ?? ""))),
     { status: r.status, onP: onP.length, onS: onS.length, trial: row?.trial_passed, copy: row?.copies[0], lock: [lock.status, lock.body?.detail] });
+  ok(`C7.8-17 fail: adding ${fills?.form ?? "a form"} asks the client nothing new (Q1; review M1): ${qBefore} questions before, ${qAfter} after`, qBefore > 0 && qAfter === qBefore, { qBefore, qAfter });
   const sGen = await call("POST", `/runtime/cases/${c.id}/forms/${encodeURIComponent(fills?.form ?? "-")}/${S}/generate`, { idempotencyKey: `c78-${Date.now()}` });
   ok("C7.8-2b fail: no copy of it is made for another person on the case (409)", sGen.status === 409, [sGen.status, sGen.body?.detail]);
 
@@ -99,10 +103,57 @@ await main("C7.8", "Add a library form to one filing", async () => {
   ok("C7.8-9 pass: the signature is set when adding (signed by hand and scanned, by the person): no \"not set on the form line\" line for it", sig.length === 0 && itemsOf(p, P, fills?.form)[0]?.signature === "HAND_SCANNED" && (itemsOf(p, P, fills?.form)[0]?.signers ?? []).includes("person"),
     itemsOf(p, P, fills?.form)[0]);
 
+  // Review minors on #1248: the signature and channel rules set when adding, each with a failing case.
+  const third = forms.find((f) => f.kind === "blank" && !f.why_not && ![blank?.form, forms.find((g) => g.kind === "blank" && !g.why_not && g.form !== blank?.form)?.form].includes(f.form));
+  const dThird = (await call("GET", `/runtime/filings/${fP}/addable-forms/${encodeURIComponent(third?.form ?? "-")}`)).body as { channel?: string; channel_why?: string } | null;
+  const offNoWhy = await add(fP, { form: third?.form, signature: "NONE" });
+  const offPaper = await add(fP, { form: third?.form, channel: "PAPER", signature: "NONE", signature_reason: "x", reason: "Sample" });
+  const paperNoWhy = await add(fP, { form: third?.form, channel: "PAPER" });
+  const offOk = await add(fP, { form: third?.form, signature: "NONE", signature_reason: "The form has no signature box (Sample)" });
+  p = (await prepare(c.id)).p;
+  ok(`C7.8-18 fail: ${third?.form ?? "(no third blank pick)"}: the channel defaults to the filing's (PDF upload, with why); switching the signature off needs a reason (400), is refused on Paper (422), and Paper on an IRCC-account case needs a reason (400); with a reason it is stored and no signature is waited for`,
+    !!third && dThird?.channel === "PDF_UPLOAD" && /IRCC account/.test(dThird?.channel_why ?? "") && offNoWhy.status === 400 && offPaper.status === 422 && paperNoWhy.status === 400 && offOk.status === 201 && offOk.body?.signature === "NONE" && (itemsOf(p, P, third?.form)[0]?.signers ?? []).length === 0,
+    { channel: dThird?.channel, statuses: [offNoWhy.status, offPaper.status, paperNoWhy.status, offOk.status], signers: itemsOf(p, P, third?.form)[0]?.signers });
+
   // 10: a fact the filled form reads changes after its copy: the copy is out of date (C9.2).
   await answer(c.id, P, "person.family_name", "Changed-After-Copy"); await confirmAll(c.id, P);
   const fl3 = (await call("GET", `/runtime/cases/${c.id}/forms`)).body as typeof fl;
   ok("C7.8-10 pass: C9.2: a fact change makes the filled added form's copy out of date", fl3?.forms.find((f) => f.form === fills?.form && f.subject_id === P)?.copies.find((x) => x.id === copy)?.out_of_date === true);
+
+  // Breaker M1 on #1248: one form is filed one way on a case, even when two people's adds arrive together.
+  const two = forms.find((f) => f.kind === "blank" && !f.why_not && f.form !== blank?.form);
+  const [r1, r2] = await Promise.all([add(fP, { form: two?.form, channel: "PAPER", reason: "The client asked for paper (Sample)" }), add(fS, { form: two?.form, channel: "PDF_UPLOAD" })]);
+  const chans = (sql(`select string_agg(distinct channel::text, ',') from filing_form_addition where case_id = '${c.id}' and form_key = '${two?.form}' and removed_at is null`) ?? "").split(",").filter(Boolean);
+  ok(`C7.8-14 fail: ${two?.form ?? "(no second blank pick)"} added at once for two people with two channels: one is refused, so it is filed one way (breaker M1)`, !!two && [r1.status, r2.status].sort().join() === "201,409" && chans.length === 1, { statuses: [r1.status, r2.status], chans });
+
+  // Breaker M2: a blank form removed and added again starts with no completed copy (step 8 uploaded one).
+  const rmB = await call("POST", `/runtime/form-additions/${addBlank}/remove`, { reason: "The completed copy was for another person (Sample)" });
+  const gone = await fetch(`http://127.0.0.1:${PORT}/api/runtime/form-additions/${addBlank}/blank`, { headers: { "x-actor": c.officer } }).catch(() => null);
+  const again = await add(fP, { form: blank?.form });
+  p = (await prepare(c.id)).p;
+  ok("C7.8-15 fail: removed and added again, the blank form waits for a new completed copy (To do, its CRITICAL line back); the removed one's blank PDF is no longer handed out (410) (breaker M2, m8)",
+    rmB.status === 200 && again.status === 201 && itemsOf(p, P, blank?.form)[0]?.state === "to_do" && !!(readinessOf(p, fP)?.warns ?? []).find((w) => w.code === "hand_filled_copy") && gone?.status === 410,
+    { rm: rmB.status, again: again.status, state: itemsOf(p, P, blank?.form)[0]?.state, gone: gone?.status });
+
+  // Breaker B1: a move to a release that holds an added form: the release's line replaces it (the addition is marked
+  // removed with the release named), the page's lists read one line, and the person's own copy is made as usual.
+  const sample = sql(`select c.id from runtime_case c where exists (select 1 from pack_work_pin p join config_release r on r.id = p.config_release_id where p.case_id = c.id and r.version < (select max(version) from config_release where combination_id = c.combination_id)) order by c.created_at limit 1`) ?? "";
+  const ru = sample ? (await call("GET", `/runtime/cases/${sample}/release-update`)).body as { target?: { version: number } | null; current?: { revision: number } } | null : null;
+  const heldNow = sample ? new Set(((await call("GET", `/runtime/cases/${sample}/prepare`)).body?.items ?? []).filter((i: { kind: string }) => i.kind === "form").map((i: { form: string }) => i.form)) : new Set<string>();
+  const targetForms = ru?.target ? (sql(`select string_agg(distinct f->>'form_number', '|') from config_release r, jsonb_array_elements(r.snapshot->'forms') f where r.combination_id = (select combination_id from runtime_case where id = '${sample}') and r.version = ${ru.target.version}`) ?? "").split("|") : [];
+  const sp = sample ? (await prepare(sample, c.officer)).p : null;
+  const sFiling = sp?.filings.find((f) => f.applicants.some((a) => a.role === "principal"));
+  const sSubject = sFiling?.applicants.find((a) => a.role === "principal")?.subject ?? "";
+  const sl = sFiling ? await list(sFiling.id) : null;
+  const clash = (sl?.forms ?? []).find((f) => !f.why_not && targetForms.includes(f.form) && !heldNow.has(f.form));
+  const addClash = clash && sFiling ? await add(sFiling.id, { form: clash.form }) : null;
+  const mv = ru?.target && addClash?.status === 201 ? await call("POST", `/runtime/cases/${sample}/release-update`, { target_version: ru.target.version, from_revision: ru.current?.revision ?? 1, reason: "Move to the newer release (Sample)" }) : null;
+  const after = sample ? (await call("GET", `/runtime/cases/${sample}/forms`)).body as { forms: { form: string; subject_id: string; added?: unknown; blank?: unknown }[] } | null : null;
+  const why = addClash?.body?.id ? sql(`select removed_reason from filing_form_addition where id = '${addClash.body.id}'`) : null;
+  const gen = clash ? await call("POST", `/runtime/cases/${sample}/forms/${encodeURIComponent(clash.form)}/${sSubject}/generate`, { idempotencyKey: `c78-b1-${Date.now()}` }) : null;
+  ok(`C7.8-16 pass: ${clash?.form ?? "(no form the next release adds)"} added, then the case moves to a release that holds it: the release's line replaces the addition (kept, marked removed naming the release), no row reads as added, and the person's copy is made as for any release form (breaker B1)`,
+    !!clash && mv?.status === 200 && /^Part of /.test(why ?? "") && !(after?.forms ?? []).some((f) => f.form === clash.form && (f.added || f.blank)) && !!gen && gen.status !== 409,
+    { sample, clash: clash?.form, move: [mv?.status, mv?.body?.added_forms_replaced], why, gen: [gen?.status, gen?.body?.detail] });
 
   // 11: remove with a reason; the record is kept; after recording, refused.
   const noWhy = await call("POST", `/runtime/form-additions/${addFills}/remove`, {});
@@ -110,8 +161,8 @@ await main("C7.8", "Add a library form to one filing", async () => {
   p = (await prepare(c.id)).p;
   const kept = sql(`select removed_reason from filing_form_addition where id = '${addFills}'`);
   // The recording itself is C8.2's pack: a record row stands in for it here (set-up only).
-  sql(`insert into filing_record (id, workspace_id, case_id, filing_id, submission_group_id, our_reference, submitted_on, application_number, prepared_by, recorded_by, filed_facts) select gen_random_uuid(), workspace_id, case_id, id, submission_group_id, 'C78', current_date, 'V000000000', 'user-O', 'user-O', '{}'::jsonb from filing where id = '${fS}'`);
-  const late = await call("POST", `/runtime/form-additions/${addBlank}/remove`, { reason: "After recording (Sample)" });
+  sql(`insert into filing_record (id, workspace_id, case_id, filing_id, submission_group_id, our_reference, submitted_on, application_number, prepared_by, recorded_by, filed_facts) select gen_random_uuid(), workspace_id, case_id, id, submission_group_id, 'C78', current_date, 'V000000000', 'user-O', 'user-O', '[]'::jsonb from filing where id = '${fS}'`);
+  const late = await call("POST", `/runtime/form-additions/${again.body?.id}/remove`, { reason: "After recording (Sample)" });
   const lateAdd = await add(fS, { form: blank?.form });
   ok("C7.8-11 pass: remove needs a reason (400), then the form leaves the filing with its record kept; once anything is recorded, remove and add are refused (409)",
     noWhy.status === 400 && rm.status === 200 && itemsOf(p, P, fills?.form).length === 0 && kept === "Not needed after all (Sample)" && late.status === 409 && lateAdd.status === 409, [noWhy.status, rm.status, kept, late.status, lateAdd.status]);

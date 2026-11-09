@@ -201,7 +201,9 @@ export type FormCopy = {
 /** One form for one person on the case: what a copy made now would write (the draft), whether it can be filed (P-71),
  *  and every copy made, newest first. */
 /** C7.8 (B141): a form the case officer added to one filing ("Added by the case officer": who, when, why). */
-export type AddedTag = { id: string; tag: string; kind: "fills" | "blank"; by: string; at: string; reason: string | null; edition: string; words: string };
+export type AddedTag = { id: string; tag: string; kind: "fills" | "blank"; by: string; by_name?: string; at: string; reason: string | null; edition: string; words: string;
+  /** BR-4: a newer edition in the library, as information (the added form stays frozen). */
+  newer_edition?: string | null };
 /** C7.8 (B141 BR-5, BR-7): a blank official PDF added to one filing: its download, its item and its completed copy. */
 export type BlankForm = { addition: string; item: string | null; download: string; completed: { id: string; at: string } | null };
 /** C7.8: one library form for one person on a filing (GET …/addable-forms): its kind in words, or why it is not added. */
@@ -353,4 +355,6 @@ export type ReleaseUpdate = {
 export type ReleaseLastMove = { from: { version: number; label: string; revision: number }; to: { version: number; label: string; revision: number }; at: string; reason: string | null; effects: ReleaseUpdate["effects"] };
 /** POST …/release-update: the new pin and what the move did, for the toast. */
 export type ReleaseMoved = { case_id: string; revision: number; version: number; label: string; from: { version: number; label: string; revision: number };
+  /** C7.8: forms the case officer added that the new release holds itself (each replaced by the release's line). */
+  added_forms_replaced?: { form: string; person: string }[];
   counts: { fill_again: number; filed_another_way: number; no_longer_required: number; withdrawn: number; kept_out_of_date: number }; words: string };
