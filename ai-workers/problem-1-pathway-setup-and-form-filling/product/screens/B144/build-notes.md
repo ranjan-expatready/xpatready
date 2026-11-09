@@ -53,6 +53,36 @@ Strong: rules in one place, every BR pass+fail, M1/M2/M4 closed, axe clean on 3 
 ## Not built (as concept §6b)
 Needs-you items and notifications · the case stage move to REVIEW · `waive-deficiency` as its own key · a "checked against the document" record. **Follow-up row (Q1):** SA-1B-221's `REVIEW_ITEM` line kind replaces `samples/review-items.json` behind `reviewItemsOf` (only `api/src/review-items.ts` changes).
 
+## Round 1 fixes (review and break of 09e660220, at 4de4f6f88)
+| Finding | Fix | Fail test |
+|---|---|---|
+| Break B1 (Blocker): a send back left the earlier approval in force | `stampCurrent` gains `superseded` (one rule): a `filing_review` counts only while its filing's newest round row is the approval that wrote it (`readiness-inputs.ts`, one query), so C7.6's line reopens and C8.2's "Reviewed by" reads nothing; the page shows such stamps withdrawn ("the filing was sent for review again"); the Send dialog no longer ticks an approved, current filing ("Approved: sending it again withdraws the approval") | pack C8.3-19; unit "B1" ×3 |
+| Review M1: a solo firm could not re-approve from the page | "Re-approve" opens a dialog with the self-review statement on a solo firm, or when the server asks for it (400 on `self`); the words name no field | walk 11d; unit BIC-13 |
+| Review M2: a fact typed between rounds was approved as "Reviewed" | BR-8's base is the previous round's frozen snapshot when there is one (the page's own base), else this round's | pack C8.3-13b |
+| Review M3: relatives' facts named as the client | `factPerson` (exported from `out-of-date.ts`, the words `factChanges` already used) names each fact's person, relatives included | pack C8.3-20; unit "review M3" ×2; `check_c92_out_of_date.ts` 29/29, `check_b128_relatives.ts` 20/20 unchanged |
+| Review M4: other screens' screenshots in the PR | restored from origin/main (25 files); `git diff --stat origin/main...HEAD` has no .png outside B144 | (records) |
+| Break M1: a change of representative broke re-approve | facts about `REPRESENTATIVE` (the firm record) have no typist, so never count in `changedBy` | pack C8.3-14c; unit "break M1" |
+| Break M2: a tick under another filing ticked the selected one | `tick(f.filing, …)`; boxes enabled only on a filing under review | walk 11c |
+| Break M3: a send could race the C7.6 route | `oneStep` re-checks for an open round under the case lock and refuses 409 (the route's transaction, `filing_review` too, rolls back) | pack C8.3-21 (4 races, invariant holds) |
+| Review m2 | "Review now" only on a solo firm (400 otherwise) | pack C8.3-14 `nowNotSolo` |
+| Review m6 / D10 | answers shown in their words (`value_words`, `was_words`, `now_words`), never their keys; "Frozen when sent" vs "Stamped"; "the other forms keep their approval" only when there are others; dates in Toronto's day | pack C8.3-20 |
+| Review m7 | "Open the review" passes `?filing=`; the page selects (and opens) it | walk 11b |
+| Break m1 | BR-8's 409 after an approval says "Ask the case officer to send it for review again" | unit "break m1" |
+| Break m2, review m5 | only the deciding representative's ticks count; re-approve carries only their ticks and records the rest as confirmed unticked | pack C8.3-14c |
+| Break m3 | ticks only on a filing under review (409 on Sent) | pack C8.3-14 `repTickBeforeOpen` |
+| Break m4 | a removed filing is not opened; it can still be sent back (never approved) | (code; no sample route keeps a removed filing in an open round) |
+| Break m5 | closing a dialog gives the focus back to its button | walk 5b |
+| Break m6, review m8 | triggers: a filing row starts only as its round's kind says; forms and checks are added only to an open row or in the transaction that made it; a stamp only while under review (or that transaction); FKs `review_round_form.round_id`, `.filing_id`, `review_round_filing.filing_review_id` (NO ACTION) | pack C8.3-14 `insertApproved`, `insertCheck` |
+| Break m7 | the "forms changed since sent" check applies to Approve only | (code; not reproducible on the sample) |
+
+## Left after round 1
+* Review m1: page and C7.6 can still disagree when the form set changes (a waiting form starts, a form is added, a Not-needed form, a C9.5 move): waits come from the frozen row and the re-approve covers stored rows only. Not reproducible on the sample.
+* Review m3: hashes and the representative are checked before the case lock (benign: a stamp that goes stale shows withdrawn at once). Noted, not changed.
+* Review m4: the decision races (double approve, approve against send back) have no pack line; the breaker's probe showed them holding. The send-against-C7.6-route race has one (C8.3-21).
+* Review m9: graph G3/G6 false positives (the graph tool's, not this PR).
+* The representative-review line's words after a send back still read "The filing changed after it was reviewed … (or the representative of record changed)"; a sentence for "sent for review again" would need C7.6's engine words.
+* `check_b128_parents.ts` (needs its own checkpoint copy) not run.
+
 ## Questions for the tech lead
 1. **BR-8 on a firm that is not solo** (difference 3): I applied C7.6's rule unchanged (409; send back or hand over). The concept's words "needs the statement" would let a representative self-review a filing a case officer prepared, which P-155 (1) and BIC-17 say is never "Self-reviewed". **Recommend: keep the 409.**
 2. **Keep the inline review form** (difference 2) until C7.6's browser suites move to the Review page; **recommend** a follow-up row to retire it.
