@@ -28,7 +28,7 @@ import { PROVIDERS_KIND, providersView, releaseProviders, withdrawApprovedProvid
 
 export const LIBRARY_KINDS = ["field", "section", "document_type", "check"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
-export const KIND_NOUN: Record<string, string> = { library_form: "library form", answer_list: "answer list", form_accepts: "what IRCC accepts", form_role: "form", placement_fills: "a question", placement_condition: "when a question is asked", form_field_condition: "when a form field is filled", document_supplies: "the facts a document supplies", document_sets: "a document's substitute sets", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
+export const KIND_NOUN: Record<string, string> = { library_form: "library form", answer_list: "answer list", form_accepts: "what IRCC accepts", form_role: "form", placement_fills: "a question", placement_condition: "when a question is asked", form_field_condition: "when a form field is filled", document_supplies: "the facts a document supplies", document_sets: "a document's substitute sets", document_providers: "who provides a shared document", field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
 // The lifecycle words come from the one word set (contracts/lifecycle.ts, P-116 amended 28 Oct): Delete, Retire, Restore.
 // "Remove" is kept for a form line taken off a combination (it stays in the library, P-123).
 // QA-113: the action word already says "who fills", so its noun is "a question" ("Change who fills a question: …").

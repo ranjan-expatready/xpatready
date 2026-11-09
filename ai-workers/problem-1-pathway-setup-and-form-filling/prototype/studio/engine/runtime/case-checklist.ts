@@ -275,7 +275,7 @@ export function providersFor(roles: string[], holder: string, everyone: Candidat
   if (out.length) return { providers: out, rule: "type_roles", words: `Provided by ${names(out)}: the document type's default ${roles.length > 1 ? "roles" : "role"}.${skipped.length ? ` ${skipped.join(" ")}` : ""}`, skipped };
   const h = everyone.find((x) => x.id === holder);
   const first: Provider[] = h ? [{ subject: h.id, label: h.label, role: h.role, why: "The person the item is for provides it." }] : [];
-  const lead = roles.length ? `No one on the case matches the document type's ${roles.map(roleWords).join(", ")}` : "The document type names no provider";
+  const lead = roles.length ? `No one on the case can provide it by the document type's roles (${roles.map(roleWords).join(", then ")})` : "The document type names no provider";
   return { providers: first, rule: "first_applicant", words: `${lead}: ${h ? `${h.label}, the person the item is for, provides it` : "the person the item is for provides it"}.${skipped.length ? ` ${skipped.join(" ")}` : ""}`, skipped };
 }
 /** C6.14: the shared fields of a line ({ shared: null, providers: [] } for a per-person line, BR-2). */

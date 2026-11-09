@@ -110,7 +110,8 @@ export class CaseChecklists {
       const change = row?.providersReason ? { reason: row.providersReason, by: row.providersBy, at: row.providersAt?.toISOString() ?? null, defaults: row.providers.length === 0 } : null;
       if (!l.shared || !row || !row.providers.length) return { providers: l.providers, providers_rule: l.providers_rule, providers_words: l.shared && change?.defaults ? `${l.providers_words} The case officer went back to the defaults: ${change.reason}` : l.providers_words, providers_change: l.shared ? change : null };
       const chosen = chosenProviders(row.providers, everyone, d.today);
-      const dropped = chosen.dropped.length ? ` Left out now: ${chosen.dropped.join(" ")}` : "";
+      const left = chosen.dropped.filter((x) => !(l.providers_words ?? "").includes(x)); // a reason the defaults already give is said once
+      const dropped = left.length ? ` Left out now: ${left.join(" ")}` : "";
       if (!chosen.providers.length) return { providers: l.providers, providers_rule: l.providers_rule, providers_words: `The case officer's choice no longer applies.${dropped} ${l.providers_words}`, providers_change: change };
       return { providers: chosen.providers, providers_rule: "changed", providers_words: `Provided by ${chosen.providers.map((x) => x.label).join(" and ")}: chosen by the case officer (${change!.reason}).${dropped}`, providers_change: change };
     };
