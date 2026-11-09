@@ -21,8 +21,15 @@ export function peopleFor(participants: ParticipantLine[]): PersonOnFiling[] {
   return out;
 }
 
+/** C7.8 (B141 BR-1): a form line for named people on the case (a form the case officer added to one filing), never a
+ *  role: "person:<subject id>", comma-separated for several. Only added forms carry it; release lines keep their words. */
+export const ONE_PERSON = "person:";
+export const onePerson = (subject: string) => `${ONE_PERSON}${subject}`;
 /** R2 */
 export function subjectsFor(people: PersonOnFiling[], who: string, subjectKind?: string): string[] {
+  // C7.8: a line for one named person reaches that person only while they are on the case (and never anyone else).
+  // A form added for several people is one line naming each ("person:<a>,person:<b>").
+  if (typeof who === "string" && who.startsWith(ONE_PERSON)) { const ids = who.split(",").map((x) => x.trim().slice(ONE_PERSON.length)); return people.filter((p) => ids.includes(p.id) && p.role !== ROLE.representative).map((p) => p.id); }
   const principal = find(people, ROLE.principal).map((p) => p.id), partner = find(people, ROLE.partner).map((p) => p.id), children = find(people, ROLE.child).map((p) => p.id);
   const applicants = people.filter((p) => p.applies && p.role !== ROLE.representative).map((p) => p.id);
   if (subjectKind === "CASE") return [FILING];
