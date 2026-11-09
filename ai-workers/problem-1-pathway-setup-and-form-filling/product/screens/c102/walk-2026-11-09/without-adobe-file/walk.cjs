@@ -10,7 +10,8 @@ const OUT = __dirname, PORT = process.argv[2] || 4433, BASE = `http://localhost:
   await page.goto(BASE + "/"); await page.evaluate(() => localStorage.setItem("xr-actor", "user-A")); await page.goto(BASE + "/");
   await page.getByRole("button", { name: /^Demo/ }).click();
   const item = page.locator("[data-demo-finished-story]"); await item.hover(); await page.waitForTimeout(700); await shot("01-menu-tooltip");
-  await item.click(); await page.locator("[data-finished-story-brings]").waitFor(); await shot("02-dialog");
+  await item.click();
+  await page.locator("[data-finished-story-reading]").waitFor({ state: "detached", timeout: 15000 }).catch(() => undefined); await page.waitForTimeout(300); await page.locator("[data-finished-story-brings]").waitFor(); await shot("02-dialog");
   const confirm = page.locator("[data-finished-story-confirm]"); if (await confirm.count()) await confirm.fill("RESET");
   await page.locator("[data-finished-story-load]").click();
   await page.locator("[data-finished-story-running]").waitFor({ timeout: 30000 }); await shot("03-running");
