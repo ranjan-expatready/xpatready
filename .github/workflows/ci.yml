@@ -210,7 +210,7 @@ jobs:
     needs: kind
     if: ${{ needs.kind.outputs.shards != '[]' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60 # 9 Nov (P-214): parts reach 41-45 min; four were stopped at a limit of 45 with no code cause, one costing a merge batch.
     permissions: { contents: read, pull-requests: read }
     strategy:
       # P-371 (2): every part runs to its end, so a red part is re-run alone (Re-run failed jobs) and the green parts'
