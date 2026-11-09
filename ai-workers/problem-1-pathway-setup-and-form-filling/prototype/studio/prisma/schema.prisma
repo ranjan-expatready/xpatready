@@ -873,6 +873,9 @@ model DocumentType {
   /// C6.15 (SA-1B-19): named substitute sets, [{ name, mode: "any_one" | "all_together", members: [{ key, when? }] }];
   /// null = the type is its own only member. Set only through a second person's approval (api/src/document-sets.ts).
   sets            Json?
+  /// C6.14 (SA-1B-151 §7): ordered person-role keys who provide this document when a line asks it once for the
+  /// application or once for the couple; empty = not set (the person the item is for provides it).
+  defaultProviderRoles String[]    @default([]) @map("default_provider_roles")
   version         Int
   status          DefinitionStatus
   supersedesId    String?          @map("supersedes_id") @db.Uuid
@@ -1871,6 +1874,12 @@ model ChecklistLine {
   stateReason  String?   @map("state_reason")
   stateBy      String?   @map("state_by")
   stateAt      DateTime? @map("state_at") @db.Timestamptz
+  /// C6.14 (SA-1B-214 rule 2): the officer's choice of providers (answer_subject ids) on a shared line; empty = the
+  /// document type's defaults. A choice carries a reason (a check in SQL).
+  providers       String[]  @default([]) @db.Uuid
+  providersReason String?   @map("providers_reason")
+  providersBy     String?   @map("providers_by")
+  providersAt     DateTime? @map("providers_at") @db.Timestamptz
   version      Int       @default(1)
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
 

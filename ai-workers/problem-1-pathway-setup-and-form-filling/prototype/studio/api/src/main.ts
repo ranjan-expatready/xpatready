@@ -52,6 +52,7 @@ import { StartSetup, StartSetupController } from "./start-setup.ts";
 import { LibrarySources, LibrarySourcesController, noFreeAdd } from "./library-sources.ts";
 import { registerFeatures } from "./features.ts";
 import { FieldScopeController, FieldScopes } from "./field-scope.ts"; // C3.16: the library's "Asked about" choice
+import { DocumentProviders, DocumentProvidersController } from "./document-providers.ts"; // C6.14: who provides a shared document
 
 type H = string | undefined;
 
@@ -217,7 +218,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [FieldScopeController, TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, FormMastersController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, DocumentSuppliesController, DocumentSetsController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController, DraftQdController, RuleFactsController], providers: [FieldScopes, LinesBulk, PqrDrafts, DraftQd, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, FormMasters, WhoFills, DocumentSupplies, DocumentSets, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs, RuleFacts] })
+@Module({ controllers: [FieldScopeController, DocumentProvidersController, TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, FormMastersController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, DocumentSuppliesController, DocumentSetsController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController, DraftQdController, RuleFactsController], providers: [FieldScopes, DocumentProviders, LinesBulk, PqrDrafts, DraftQd, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, FormMasters, WhoFills, DocumentSupplies, DocumentSets, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs, RuleFacts] })
 class AppModule {}
 
 async function main() {
