@@ -88,3 +88,50 @@ Note on the tree: the builder shares this clone, and HEAD moved to b988cc493 (re
 * An intended user's unaided walk (D17 and D20 stay with the founder).
 * canada.ca live (quotes were checked against the committed page only).
 * Concurrency between two browsers in the UI (checked by API only).
+
+## Round 2 (diff-only, dcfe4188e)
+
+Same independent reviewer, 9 Nov 2026. Scope: `git diff 2f20d282b dcfe4188e` only. Between those commits, the records-only commits are: the qa/built line, the ASSUMPTIONS row moved to `assumption-proposed.md` (ASSUMPTIONS.md is back to main), and the Lead's approval in challenge.md. I ran my copy on :4435 only (`isolated.sh rev2_c619`, from the tree at dcfe4188e). It was stopped and dropped afterwards. All values are Sample. US$0. Unconfirmed: no counsel.
+
+Verdict: Approve dcfe4188e21dff27a5978889bf95fffda74c8cd1
+
+0 Blockers and 0 Majors are open. All four round-1 Majors are fixed, and each has a fail test that would fail on 2f20d282b. The fixes add no Blocker or Major. Journey score: the round-1 **8/10** (`journey-test-reviewer-2026-11-09.md`) stands. Its two journey-visible defects (the giver, and the cited date) are now fixed in the walk's shots 04 and 07. This round re-walked the scripted path only, not a new unaided journey.
+
+### What I ran
+* **Pack** `acceptance/C6.19.test.ts 4435 xr_studio_rev2_c619`: **68/68, exit 0**.
+* **Walk** `check_c619_earlier_facts_browser.cjs 4435 <scratchpad>`, with the browser context in America/Toronto: **16/16, exit 0**. axe found 0 violations in both card states. No sideways scroll at 1024 or 390 px. No page errors.
+* **My own probes:**
+  * **Answer-sheet probe.** I opened a new Visitor visa case for the pack's client and copied the client's own date of birth from pack case A. `GET /runtime/items/<IMM 5257>/answer-sheet` reads `"value":"1985-03-14","source":"Client"`, the same as on A. In round 1 it read "Case officer".
+  * **Timing.** The offer GET read 19 earlier same-client cases in 130-230 ms.
+  * **Client login is fixed.** `clientActorId` is non-null and written only at `case.create` (`runtime.ts:188`). A case's client login never changes, so the new login filter cannot be bypassed.
+
+### The four Majors
+| Major | Fixed? | How | Fail test |
+|---|---|---|---|
+| Review M1: a copy loses its giver | **Fixed** | `earlier-facts.ts:147` now copies the earlier answer's own `from`, so `state()` (`runtime.ts:361-365`) rebuilds `origin` as the first giver. Where the copy came from moves to a separate, additive `copiedFrom` / `copied_from` (`engine/runtime/case.ts:31`, `:397`; `contracts/runtime.ts:132`). `case-prepare.ts:763` (`origin?.channel ?? channel`) therefore reads the same source on A and B. The Agent view adds "· copied from <ref>, re-confirmed by <role> <when>" (`questionnaire.tsx:841`). | Pack "BR-4 (review M1)": the giver on B equals the giver on A for every tick, and `copied_from` names A and the representative. Pack "BR-4 fail (review M1)": the client's own copy reads `questionnaire\|user-P`. Walk: the Agent view line keeps "Agent view · Case officer" and adds "copied from …". My answer-sheet probe: "Client". |
+| Review M2: the canada.ca recorded date shows a day early | **Fixed** | `earlier-facts.tsx:31` formats `${recorded}T12:00:00Z`, and noon UTC is the same calendar day in Toronto. Both rule sources hold a date-only `recorded` ("2026-10-27"). | Walk "BR-6 (review M2)": on a Visitor visa case with the browser zone set to America/Toronto, the row reads "recorded 27 Oct 2026" (shot 07). |
+| Breaker M1: empty, newer same-name cases crowd out the real earlier case; 500-row scan | **Fixed** | `candidates()` (`earlier-facts.ts:48-54`) keeps only cases opened before this one (`createdAt lt`) for the same firm and client login. `list()` reads the newest 20 and puts the cases that offer facts first, then caps the list at 5. POST looks up the named case directly (`only`), with no cap, so a case that passes the filter is never 404. The query is bounded by the client login, and at most 1000 rows are read before the name filter. | Pack "BR-1 (breaker M1)": six empty cases are opened after A; case E still lists A, and the first listed case has facts. Pack "BR-1 fail (breaker m3)": A is not offered B. |
+| Breaker M2: matching ignores the client login | **Fixed** | `candidates()` filters on `clientActorId: c.clientActorId`. A client answer on an earlier case can therefore only be this case's own client's. | Pack "BR-1 fail (breaker M2)": the same name under client login user-Q is offered nothing. |
+
+### Other changes checked (no new Blocker or Major)
+* **`firmToday()`** returns the America/Toronto calendar day as UTC midnight. `expiryFlags` compares UTC day numbers (`engine/runtime/earlier-facts.ts:48`), so the two agree. This closes breaker m8's fail-open window for the Sample firms.
+* **zod duplicate refine:** `take:[x,x]` returns 400 and nothing is written (pack "breaker m1").
+* **Pre-transaction offer check:**
+  * A take whose subject or fact is not offered is refused with 409 "Not offered" before any `FOR UPDATE` or `FOR SHARE`. This closes breaker m2's oracle and its foreign-row locks.
+  * Concurrent duplicates still meet the lock and the `seen` check inside the transaction. A second press after a successful copy now gets "Not offered … Reload" instead of "Changed since you looked". It is still a 409, still offers Reload in the card, and still writes nothing.
+* **`recorded` on the GET** (review m5): the card disables the ticks, hides the button and shows a "Read-only" notice. The POST still refuses inside the transaction.
+* **NFC name normalisation** (breaker m7) and **the rule's source in the refusal** (review m4) are both covered in the pack.
+
+### New Minors (Should, follow-ups; none block)
+* **n1.** The refusal text prints the cited date as ISO: "(canada.ca, …, recorded 2026-10-27)" (`earlier-facts.ts:125`). The card shows "27 Oct 2026". This belongs with the open review m2 (dates in words).
+* **n2.** On a recorded case the disabled ticks carry no `aria-describedby` pointing to the "Read-only" notice, and the notice sits below the table. A screen-reader user meets disabled boxes before the reason.
+* **n3.** The firm's "today" is fixed to America/Toronto for every firm (`FIRM_ZONE`). It is right for the Sample firms, but it is not recorded as a Sample assumption. Add it to `assumption-proposed.md`, or give it a firm setting later.
+* **n4.** The records are stale against the fix. `qa/built/C6.19.md` still says the Agent view shows "earlier case, re-confirmed" and gives the pack as 61/61. The pack is now 68/68, and the line reads "copied from <ref>, re-confirmed by …".
+* **n5 (nit).** The `earlier_case` entry in `CHANNEL` (`questionnaire.tsx:734`) and the export `EARLIER_CASE` (`engine/runtime/earlier-facts.ts:14`) are no longer used.
+
+### Follow-ups still open from round 1 and the break (as the builder listed them)
+* Review m1 / break m4: who confirmed the fact on the earlier case is not shown.
+* Review m2: dates disagree across the page, ISO dates in the card, and the ISO Sample text.
+* Review m3 / break m6: the Status column is cramped at 200 % zoom.
+* Break m5: focus falls to `<body>` after a refused press.
+* Review m7: the graph does not see the routes' tests.
