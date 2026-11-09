@@ -6,13 +6,13 @@ import { start } from "./lib.mjs";
 const { default: AxeBuilder } = createRequire(import.meta.url)("@axe-core/playwright");
 const [port, carry, out] = process.argv.slice(2);
 const results = [];
-for (const width of [400, 1024]) for (const pass of [1, 2]) {
+for (const width of (process.env.WIDTHS ?? "400,1024").split(",").map(Number)) for (const pass of [1, 2]) {
   const o = await start(port, out, "user-O", width);
   const check = async (state) => {
     const v = (await new AxeBuilder({ page: o.p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze()).violations;
     const sideways = await o.p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     results.push({ width, pass, state, axe: v.map((x) => `${x.id}(${x.nodes.length}): ${x.nodes[0]?.target}`), sideways });
-    if (pass === 1) await o.shot(`R-${width}-${state}`, null);
+    if (pass === 1) await o.shot(`R${process.env.REDUCED ? "rm" : ""}-${width}-${state}`, null);
   };
   try {
     await o.p.goto("/cases"); await o.p.waitForLoadState("networkidle");
@@ -21,7 +21,7 @@ for (const width of [400, 1024]) for (const pass of [1, 2]) {
     await d.getByLabel("Combination (released)").selectOption({ label: "With an LMIA – inside Canada · release 1" });
     await d.getByText("Earlier stages").waitFor(); await check("open-later-stage");
     await d.getByLabel("Combination (released)").selectOption({ label: "Outside Canada · release 1" });
-    await d.getByLabel("Case reference").fill(`QA-C617-R${width}-${pass}`); await d.getByLabel("Principal applicant's name").fill("Sample Client R");
+    await d.getByLabel("Case reference").fill(`QA-C617-R${process.env.REDUCED ? "M" : ""}${width}-${pass}`); await d.getByLabel("Principal applicant's name").fill("Sample Client R");
     await d.getByRole("button", { name: "Open case" }).click();
     await o.p.waitForURL(/\/cases\/[0-9a-f-]{36}/); await o.p.waitForLoadState("networkidle"); await o.p.waitForTimeout(600);
     await o.p.getByRole("button", { name: /Start next stage/ }).click();

@@ -69,8 +69,10 @@ States replayed: Open a case with Earlier stages, the Start next stage dialog (o
 * No sideways page scroll in any state.
 * **Cancel leaves stage 1 current** ("Start next stage" still offered), all 4 times.
 * axe (WCAG 2.2 A/AA) is clean at 1024 px. At 400 px both passes flagged `color-contrast` on `button[data-start-confirm="true"]`.
-  * It did not reproduce on four re-checks: at 0 ms and after 1 s on two fresh cases, and with the button hovered and focused. Its colours are white on rgb(8, 98, 197), above 4.5:1.
-  * qa reads it as axe sampling the dialog mid-fade: the builder's browser suite sets `reducedMotion: "reduce"`; this replay did not. Not logged.
+  * It did not reproduce on four targeted re-checks: at 0 ms and after 1 s on two fresh cases, and with the button hovered and focused.
+  * After the fresh reader doubted the "mid-fade" reading, a run with `reducedMotion: "reduce"` flagged it again in 1 of 2 passes, so it is not the fade. It then did not reproduce in 3 more runs of the replay's own flow (`scripts/axe400d.mjs`).
+  * Its colours pass: white on rgb(8, 98, 197), about 5.9:1. Cause not found; no row.
+* **The same runs measured QA-373** (found by the reader): Cancel's box starts at x = -24.9 px at 400 px (`R-400-start-next-dialog`: "ancel").
 
 ## Noted, not logged as rows
 * **QA-310 (open, already names C6.17) seen again:** the Open a case list says "With an LMIA – inside Canada · release 1", while the case header and the start dialog say "Release 3" for the same release.

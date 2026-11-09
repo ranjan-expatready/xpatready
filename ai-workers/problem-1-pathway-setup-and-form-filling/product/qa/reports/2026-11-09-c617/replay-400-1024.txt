@@ -17,3 +17,16 @@
 {"run":1,"at0ms":[],"after1s":[]}
 {"run":2,"at0ms":[],"after1s":[]}
 {"hovered":[],"focused":[],"colors":["rgb(255, 255, 255)","rgb(8, 98, 197)"]}
+## Re-run at 400 px with reducedMotion: reduce: first attempt refused at Open case (the replay reused the references QA-C617-R400-1/-2, already taken); re-run with new references below
+## Re-run at 400 px with reducedMotion: reduce (the fresh reader's ask), 21:58 UTC
+{"width":400,"pass":1,"state":"open-later-stage","axe":[],"sideways":false}
+{"width":400,"pass":1,"state":"start-next-dialog","axe":["color-contrast(1): button[data-start-confirm=\"true\"]"],"sideways":false}
+{"width":400,"pass":1,"state":"ended-stage-panel","axe":[],"sideways":false}
+{"width":400,"pass":1,"state":"cancel leaves stage 1 current (Start next stage still offered)","ok":true,"errors":[]}
+{"width":400,"pass":2,"state":"open-later-stage","axe":[],"sideways":false}
+{"width":400,"pass":2,"state":"start-next-dialog","axe":[],"sideways":false}
+{"width":400,"pass":2,"state":"ended-stage-panel","axe":[],"sideways":false}
+{"width":400,"pass":2,"state":"cancel leaves stage 1 current (Start next stage still offered)","ok":true,"errors":[]}
+{"run":1,"contrast":[],"confirm":{"x":54.96875,"y":797,"width":304.03125,"height":36},"toast":{"x":36,"y":851,"width":303,"height":20},"cancel":{"x":-24.875,"y":797,"width":71.84375,"height":36}}
+{"run":2,"contrast":[],"confirm":{"x":54.96875,"y":797,"width":304.03125,"height":36},"toast":{"x":36,"y":851,"width":303,"height":20},"cancel":{"x":-24.875,"y":797,"width":71.84375,"height":36}}
+{"run":3,"contrast":[],"confirm":{"x":54.96875,"y":797,"width":304.03125,"height":36},"toast":{"x":36,"y":851,"width":303,"height":20},"cancel":{"x":-24.875,"y":797,"width":71.84375,"height":36}}
