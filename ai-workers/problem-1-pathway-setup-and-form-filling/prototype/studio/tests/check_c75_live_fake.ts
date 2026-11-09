@@ -33,7 +33,10 @@ type F = { id: string; field: string | null; severity: string; source: string; a
 const tsx = (file: string) => spawnSync(join(STUDIO, "node_modules", ".bin", "tsx"), ["--tsconfig", join(STUDIO, "api", "tsconfig.json"), join(STUDIO, file), String(m3.PORT), m3.DB], { encoding: "utf8", timeout: 900_000 });
 const releases = () => Number(sql("select count(*) from config_release r join combination k on k.id = r.combination_id where k.combination_key='vv.single'") ?? 0);
 const launches = () => existsSync(LOG) ? readFileSync(LOG, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l) as { job: string; mode: string }) : [];
-const saved = (check: boolean) => JSON.parse(readFileSync(join(RUNS, readdirSync(RUNS).find((f) => /^studio-form-review-.+-live-\d{8}t\d{9}z-[a-z0-9]+\.json$/.test(f) && f.startsWith("studio-form-review-check-") === check)!), "utf8"));
+/** The saved round (first or checker) whose recorded sheet is this data's (two saved pairs may be committed, one per data set). */
+let sheetSha = "";
+const saved = (check: boolean) => readdirSync(RUNS).filter((f) => /^studio-form-review-.+-live-\d{8}t\d{9}z-[a-z0-9]+\.json$/.test(f) && f.startsWith("studio-form-review-check-") === check)
+  .map((f) => JSON.parse(readFileSync(join(RUNS, f), "utf8"))).find((r) => r.drafting_run?.inputs?.official_files?.[1]?.sha256 === sheetSha);
 /** The fake launcher's answers: per round (the longest job-id prefix wins), a stub pass, then the saved round's own record. */
 const scenario = (draftLive: Record<string, unknown> = {}, checkLive: Record<string, unknown> = {}) => {
   writeFileSync(join(VAR, "fake-launch.json"), JSON.stringify({ jobs: {
@@ -54,11 +57,13 @@ const until = async (fn: () => boolean, ms: number) => { const t = Date.now(); w
   if (releases() === 1) { tsx("acceptance/lib/setup_vv_m3.ts"); ok("setup: release 2 (pack 4 setup)", releases() === 2); }
   const spend0 = sql("select count(*) from ai_batch");
   const runsBefore = readdirSync(RUNS).sort().join();
-  scenario();
 
   // ── refused before anything is launched ──
   const { c, P } = await packLikeCase();
   const plan = await planOf(c.id, P);
+  sheetSha = plan.forms[0].sheet_sha256;
+  ok("C7.5 live: a saved pair of this data's sheet is committed, so the fake answers with that pair's own records", !!saved(false) && !!saved(true), sheetSha);
+  scenario();
   ok("C7.5 live: on this copy the run card allows Live (the switch is on) and states its cost first: worst US$4.80 within the US$5 job cap", (plan as unknown as { live_allowed: boolean }).live_allowed === true && plan.estimate.live_worst_usd === 4.8 && plan.estimate.job_cap_usd === 5, plan.estimate);
   let r = await call("POST", `/runtime/cases/${c.id}/review-runs`, { forms: ["IMM 5257"], subject: P, mode: "live", planSha256: "0".repeat(64) });
   ok("C7.5 live fail: a run card that is not the one read (wrong checksum) is refused (409); nothing is launched", r.status === 409 && /Look at the run card again/.test(JSON.stringify(r.body)) && launches().length === 0, r.body);
