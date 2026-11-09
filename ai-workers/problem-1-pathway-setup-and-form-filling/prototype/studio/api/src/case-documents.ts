@@ -125,6 +125,17 @@ const problem = (status: number, code: string, title: string, detail: string, ex
 };
 
 
+/** Whether an answer is one the officer kept over this document's value with a reason (a check resolved keeping the
+ *  answer): then it is never "checked against" that document, and no second check opens for it (Lead 36 on #1369).
+ *  The kept answer is the check's own answer, an answer of the same value saved again later (review n1 on f9bea4a3b:
+ *  Confirm section or a client's re-confirm writes a new row), or one in force when the check was resolved (review m1:
+ *  resolve refuses unless it is sent the current answer, which may be newer than the one the check opened on). */
+export function keptOver<K extends { fact: string; documentId: string; answerId: string; typedValueJson: unknown; resolvedAt: Date | null }>(
+  kept: K[], fact: string, documentId: string, answer: { id: string; valueJson: unknown; effectiveAt: Date }): K | undefined {
+  return kept.find((k) => k.fact === fact && k.documentId === documentId
+    && (k.answerId === answer.id || sameValue(fact, k.typedValueJson, answer.valueJson) || (!!k.resolvedAt && answer.effectiveAt <= k.resolvedAt)));
+}
+
 type Placement = { fact: string; section_id: string; repeats: string; scope?: string; question_text?: string };
 /** P-243 ("no blanket one-click confirm"; Lead 35 on #1369, L-SA9): a value Confirm & use would write as it was read,
  *  without a passed check digit to back it, is looked at one by one: an expanded value of a fact this person is asked,
@@ -317,8 +328,9 @@ export class CaseDocuments {
     const ids = current.map((d) => d.id);
     const reviews = ids.length ? await this.db.documentReview.findMany({ where: { documentId: { in: ids } }, include: { values: { orderBy: [{ fact: "asc" }] } }, orderBy: [{ readAt: "asc" }, { id: "asc" }] }) : [];
     const facts = [...new Set(reviews.flatMap((r) => r.values.map((v) => v.fact)))];
-    const answers = facts.length ? await this.db.clientCanonicalAnswer.findMany({ where: { subjectId, rowKey: null, supersededById: null, canonicalFieldKey: { in: facts } }, select: { id: true, canonicalFieldKey: true, valueJson: true } }) : [];
+    const answers = facts.length ? await this.db.clientCanonicalAnswer.findMany({ where: { subjectId, rowKey: null, supersededById: null, canonicalFieldKey: { in: facts } }, select: { id: true, canonicalFieldKey: true, valueJson: true, effectiveAt: true } }) : [];
     const answerOf = new Map(answers.map((a) => [a.canonicalFieldKey, a]));
+    const kept = ids.length ? await this.db.answerCheck.findMany({ where: { subjectId, documentId: { in: ids }, state: "resolved", kept: "answer" }, select: { fact: true, documentId: true, answerId: true, typedValueJson: true, resolvedAt: true } }) : [];
     const order = (f: string) => { const i = (MRZ_FACTS as readonly string[]).indexOf(f); return i < 0 ? 100 : i; };
     const proposals = reviews.flatMap((r) => [...r.values].sort((a, b) => order(a.fact) - order(b.fact) || a.fact.localeCompare(b.fact)).map((v) => ({
       id: v.id, fact: v.fact, label: labelOf(s, v.fact), value: v.valueJson, subject: v.subjectId,
@@ -331,6 +343,9 @@ export class CaseDocuments {
       // A value left for a person is never written and never opens a check, so it never "differs" (drawer walk, 8 Nov).
       differs: !(v.state === "proposed" && notWritable(s, v.fact, v.valueJson)) && answerOf.has(v.fact) && !sameValue(v.fact, answerOf.get(v.fact)!.valueJson, v.valueJson),
       left_why: v.state === "proposed" ? notWritable(s, v.fact, v.valueJson) : null,
+      // Review n4 on f9bea4a3b: whether the answer the person has now is one the officer kept over this document (so the
+      // drawer says so and offers no mark); an answer typed after that resolve is not, and differs like any other.
+      kept_over: answerOf.has(v.fact) && !sameValue(v.fact, answerOf.get(v.fact)!.valueJson, v.valueJson) && !!keptOver(kept, v.fact, v.documentId, answerOf.get(v.fact)!),
       // L-SA9: whether Confirm & use waits for a tick on this value (the server's own rule, so the drawer never repeats it).
       needs_look: needsLook(s, subjectId === this.caseSubjectOf(c), v, answerOf.get(v.fact)?.valueJson) })));
     return {
@@ -544,10 +559,8 @@ export class CaseDocuments {
       // The officer already kept this very answer over this document's value, with a reason (a resolved check): it is
       // their recorded judgement that the document is wrong here, so it is never "checked against" it, and no second
       // check opens for a difference already settled.
-      // Review m1: the answer kept is the one in force when the check was resolved (resolve refuses unless it sends that
-      // answer), which may be newer than the one the check opened on; a later answer was never kept, so it opens a check.
-      const kept = (await this.db.answerCheck.findMany({ where: { subjectId: who.subjectId, fact, documentId: doc!.id, state: "resolved", kept: "answer" }, select: { id: true, answerId: true, resolvedAt: true } }))
-        .find((k) => k.answerId === d.answer.id || (!!k.resolvedAt && d.answer.effectiveAt <= k.resolvedAt));
+      // The rule the drawer shows too (keptOver): a later answer of another value was never kept, so it opens a check.
+      const kept = keptOver(await this.db.answerCheck.findMany({ where: { subjectId: who.subjectId, fact, documentId: doc!.id, state: "resolved", kept: "answer" }, select: { id: true, fact: true, documentId: true, answerId: true, typedValueJson: true, resolvedAt: true } }), fact, doc!.id, d.answer);
       if (kept) problem(409, "kept_over_document", "Not possible now", `"${labelOf(s, fact)}": you kept this answer over what the document (${this.typeName(c, doc!.documentType)}) reads (a resolved check, with its reason), so it is not marked checked against it. Nothing changed.`, { check: kept.id });
       // The check this answer and the document need (one per person, fact and document); a second click finds it open.
       let check: string = randomUUID();

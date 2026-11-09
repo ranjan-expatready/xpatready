@@ -18,7 +18,7 @@ import { kindOf, putAnswer, QuestionField, refusal, shown, toDraft, toValue, WHO
 type Reader = "mrz" | "ai_vision";
 export type Proposal = { id: string; fact: string; label: string; value: unknown; subject: string; source: { document: string; page: number; reader: Reader };
   confidence: number; state: "proposed" | "used" | "agreed" | "conflict" | "not_asked"; review: "collapsed" | "expanded"; checked: boolean; replayed: boolean; note?: string;
-  asked: boolean; current: { answer_id: string; value: unknown } | null; differs: boolean; left_why: string | null; needs_look: boolean };
+  asked: boolean; current: { answer_id: string; value: unknown } | null; differs: boolean; left_why: string | null; needs_look: boolean; kept_over?: boolean };
 type Review = { id: string; document: string; document_name: string; file_name: string; reader: Reader; replayed: boolean; collapsed: string[]; expanded: string[];
   confirmed: { by: string; at: string } | null; check_digits: "passed" | "failed" | "incomplete" | null; evidence: string[] };
 type Unreadable = { fact: string; reason: string; label: string; document: string };
@@ -241,9 +241,12 @@ function DocumentBlock({ caseId, subjectId, section, review, fill, checks, quest
           return (
             <div key={`s-${p.id}`} className="px-4 py-1.5 text-xs" data-row-state={resolved ? "resolved" : p.state}>
               <span className="text-text-muted">{p.label}:</span> {resolved && q?.answer ? value(p, q.answer.value) : value(p, p.value)} · <b className="font-medium">{resolved ? "Check resolved" : STATE_WORDS[p.state]}</b>
-              {/* Lead 36 on #1369: an answer kept over this document's value differs from it, so it is never marked checked
-                  against it (the server answers 409 kept_over_document); the row says what was kept instead. */}
-              {resolved && q?.answer && !sameShown(p.fact, value(p, q.answer.value), value(p, p.value)) ? <span className="text-text-muted" data-kept-answer> · kept over the document, with a reason</span> : null}
+              {/* Lead 36 on #1369: an answer kept over this document's value is never marked checked against it (the server
+                  answers 409 kept_over_document); the row says what was kept instead. Any other answer (the document's own
+                  value, or one typed after the resolve: review n4) can be marked where the document gives the fact, and
+                  the server opens a check if it differs. The server decides which (kept_over), so the drawer never repeats it. */}
+              {resolved && p.kept_over ? <span className="text-text-muted" data-kept-answer> · kept over the document, with a reason</span>
+                : resolved && evidence.has(p.fact) && q?.answer && q.answer.status !== "VERIFIED" ? <AnswerInPlace caseId={caseId} q={q} refresh={refresh} document={review.document} docName={review.document_name} markOnly /> : null}
             </div>
           );
         }) : null}
@@ -262,8 +265,6 @@ function DocumentBlock({ caseId, subjectId, section, review, fill, checks, quest
   );
 }
 
-/** As the server's sameValue (review m3 on 107aefb7d): names compare without case and repeated spaces; every other value as written. */
-const sameShown = (fact: string, a: string, b: string) => (/_names?$/.test(fact) ? a.trim().toUpperCase().replace(/\s+/g, " ") === b.trim().toUpperCase().replace(/\s+/g, " ") : a.trim() === b.trim());
 const answerBy = (q: ViewQuestion | undefined) => (q?.answer ? ` (${q.answer.channel === "questionnaire" ? `${who(q.answer.by)} typed it` : q.answer.by === getActor() ? "you entered it" : `${who(q.answer.by)} entered it`})` : "");
 
 /** One value: its label, the section it fills, the value, page and reader in words. */
@@ -279,7 +280,7 @@ function Row({ p, value, section, children }: { p: Proposal; value: string; sect
 }
 
 /** BR-8, BR-11: answer or correct a value in place with the question's own field, saved as the Agent view saves it. */
-function AnswerInPlace({ caseId, q, refresh, label, document, docName, onSaved }: { caseId: string; q: ViewQuestion | undefined; refresh: () => Promise<void>; label?: string; document?: string; docName?: string; onSaved?: (fact: string) => void }) {
+function AnswerInPlace({ caseId, q, refresh, label, document, docName, markOnly, onSaved }: { caseId: string; q: ViewQuestion | undefined; refresh: () => Promise<void>; label?: string; document?: string; docName?: string; markOnly?: boolean; onSaved?: (fact: string) => void }) {
   const toast = useToast();
   const [editing, setEditing] = React.useState(false);
   const forms = React.useContext(OpenForms);
@@ -301,13 +302,14 @@ function AnswerInPlace({ caseId, q, refresh, label, document, docName, onSaved }
   async function markChecked() {
     setBusy(true);
     try { await api(`/runtime/cases/${caseId}/answers/${q!.subjectId}/${q!.fact}/checked-against-document`, { method: "POST", json: { document } }); toast.push({ tone: "ok", text: `${q!.label}: checked against the document.` }); await refresh(); }
-    catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
+    // A refusal can still change what the panel shows (409 differs_from_document opened a check: review n4), so read again.
+    catch (e) { toast.push({ tone: "danger", text: refusal(e) }); await refresh().catch(() => undefined); }
     setBusy(false);
   }
   if (!editing) return (
     <span className="flex flex-wrap items-center gap-2">
-      {answered && !label ? <span className="text-xs [overflow-wrap:anywhere]">Answered: <b className="font-medium">{String(shown(q, q.answer!.value))}</b></span> : null}
-      <Button size="sm" variant="ghost" onClick={() => { setDraft(toDraft(kindOf(q), q.answer?.value)); setError(null); setEditing(true); }} data-answer-in-place={q.fact}>{label ?? (answered ? "Change it" : "Answer it")}</Button>
+      {answered && !label && !markOnly ? <span className="text-xs [overflow-wrap:anywhere]">Answered: <b className="font-medium">{String(shown(q, q.answer!.value))}</b></span> : null}
+      {markOnly ? null : <Button size="sm" variant="ghost" onClick={() => { setDraft(toDraft(kindOf(q), q.answer?.value)); setError(null); setEditing(true); }} data-answer-in-place={q.fact}>{label ?? (answered ? "Change it" : "Answer it")}</Button>}
       {/* BR-12: only where it adds evidence: a value the document could not give, once answered. */}
       {document && answered && q.answer!.status !== "VERIFIED" ? <Button size="sm" variant="ghost" busy={busy} onClick={() => void markChecked()} data-mark-checked={q.fact}>Mark checked against {/passport/i.test(docName ?? "") ? "the passport" : "the document"}</Button> : null}
     </span>

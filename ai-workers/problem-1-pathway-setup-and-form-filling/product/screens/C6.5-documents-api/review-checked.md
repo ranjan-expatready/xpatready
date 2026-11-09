@@ -51,3 +51,77 @@ Verdict: Block 107aefb7d70d10711f181b06aa69322d49de6064. To fix: **M1** (Major) 
 * **m3:** the drawer's `sameShown` ignores case only for names, as the server's `sameValue` does. It has no screen step of its own. The screen pack passes 32/32 on a fresh fixture copy; the rule it mirrors is tested in `check_c65_document_rules` (R3).
 * **Checks:** `check_c65_documents_api` 72/72 and `C6.5-screen.test.ts` 32/32, on fresh fixture copies. Type check: no new errors.
 * **Not changed (for the tech lead):** the country-code note and BR-12's wording wait for your answer on the PR.
+
+## Re-review of f9bea4a3b
+
+Reviewer: fresh context; I did not build it. Diff-only re-review (P-318 (1)) of `f9bea4a3b` against the Block above: `api/src/case-documents.ts` (`checkedAgainst`, `labelOf`), `web/src/runtime/documents-drawer.tsx` (`sameShown`), `tests/check_c65_documents_api.ts` (F3 m1, F3 m4, F3 m2, F4 fail, F4 pass). The branch head `33ab98d88` is a merge of review records only: no prototype file differs from `f9bea4a3b`.
+
+### Runs (own copy `rv_c65g`, :4438, fixture; US$0, no `*_LIVE` switch)
+* `check_c65_documents_api.ts` on the head: **72/72**.
+* **Tests fail when the fix is removed.** I ran mutants on a scratch copy of the studio, with the same tests: no repository file was edited.
+  * M1 guard off, plus the kept lookup back to `answerId` only: **68/72**. F4 fail gets 200 `VERIFIED`. F3 m1 gets `differs_from_document` and a second check. F3 m4 and F3 m2 fail as a knock-on.
+  * Kept lookup made over-broad (`find(() => true)`): **69/72**. F3 m4 gets `kept_over_document` instead of a fresh check.
+  * So both directions of the m1 rule are pinned, and so is M1.
+* **Probes** (scratch script, deleted after the run):
+  * P1: keep "CHILD AX", then Confirm section, then mark. Result: **409 `differs_from_document`, a 2nd check** (finding n1).
+  * P2: the answer was typed before the check, changed, the newer one kept, then Undo restored the earlier one. Result: 409 `differs_from_document`, a fresh check, which is right.
+  * P3: an unread letter gives 409 `not_read`. A replay read is then refused, `no_saved_read` (note n3).
+  * P4: a passport read, then replaced. The old file gives `not_current` and the new one gives `not_read`, which is right.
+* I did not run the screen pack: the caller scoped this run to the API check. The builder reports `C6.5-screen` 32/32.
+
+### Answers to the questions asked
+* **Can an answer typed before the check opened, then restored, count as kept?** No. Undo writes a new row with `effective_at` = the undo time (`case-changes.ts:69`), which is later than `resolved_at`, and with a new id. So it opens its own check (P2). An answer typed before the check that stays current through the resolve was the one in force at the resolve, so it was kept, and that is right. Resolve refuses unless the answer sent is the current one (`case-documents.ts:491`).
+* **Changed by a client.**
+  * Before the resolve: the officer can only resolve on the current id, so what they kept is what they saw. Right.
+  * After the resolve: a new row with a later `effective_at` opens a check. Right.
+* **Changed by Confirm & use.**
+  * Of this document: it runs once, before any of these checks.
+  * Of another current document of the same fact: it writes a new row only when it **agrees** with the current answer (same value, new id, new time). So does Confirm section (`runtime.ts:678–682`), and so does a client's re-confirm (`runtime.ts:508–510`). Each of these breaks the kept chain (n1).
+* **M1, "no `document_review` ⇒ 409 `not_read`".**
+  * A **letter** is refused the same way (P3). That is consistent with M1's fix, but it is a dead end on a copy with no saved read (n3).
+  * A **replaced file** is refused `not_current` first (`:520`).
+  * A **file read, then replaced**: the old file is `not_current`, and the new file needs its own read, because the review row is unique per document (P4).
+  * The review row and its values are written in one transaction (`:278–281`), so there is no "reviewed but no values yet" window in which `read` is null.
+  * A passport that was read but gave no coded zone has a review row, so marking it stays the officer's judgement, as Lead 36 ruled.
+  * The guard sits outside the transaction, but a review row is never deleted, so a read landing in between is still compared inside the transaction.
+
+### Each finding of the Block
+* **M1: closed.** `case-documents.ts:524–525`. F4 fail and pass. The mutant shows it bites.
+* **m1: closed as written** (the newer answer kept at the resolve). `:548–550` and F3 m1. The rule leaves the same loop open by another path (n1), so the closure is partial in spirit. Minor.
+* **m2: closed.** It reads `"Given names": the answer differs from what the document (Passport or travel document) reads …`. The `not_read` and `kept_over_document` words follow the same pattern.
+* **m3: closed as a mismatch.** `documents-drawer.tsx:266` now ignores case only for `_name(s)` facts, as `sameValue` (`document-values.ts:4–8`). The logic is still duplicated between web and API (STANDARDS §2), and the fix the review preferred (the API marks the row as kept) was not taken. That was a Should; it is noted, not re-raised.
+* **m4: closed.** F3 m4. The over-broad mutant shows it bites.
+
+### New or remaining issues, ranked (none Blocker or Major)
+1. **n1, Minor, Should: a value-carrying rewrite after a keep reopens the settled difference.** `case-documents.ts:549–550` treats an answer as kept only by row identity or time. Confirm section (`runtime.ts:678–682`), a client's re-confirm (`runtime.ts:508–510`), and a mark against another agreeing document (`case-documents.ts:537–539`) all write the **same value** as a new row, later than the resolve.
+   * Scenario (P1): the officer keeps "CHILD AX" over the passport with a reason, then presses Confirm section. Marking then gives 409 `differs_from_document` and opens a **second check** for the difference already settled. That is the loop the knock-on and m1 meant to prevent.
+   * It is API only (the drawer hides the mark on a resolved row), and the gap was already there on `107aefb7d`.
+   * Fix: treat as kept when the current value `sameValue`s the answer in force at `resolved_at`. That answer is the row with `effective_at <= resolved_at` whose successor, if any, is later. Or record the kept answer and value at the resolve.
+2. **n2, Minor, Should: the m1 rule compares two clocks.**
+   * `effective_at` is the database's `now()`, the transaction start (`schema.prisma:1527`, used by `runtime.ts:466` and `case-documents.ts:447/501/539`).
+   * `resolved_at` is Node's `new Date()`, taken before the resolve transaction even starts (`case-documents.ts:485`). Resolve also reads the current answer without a lock (`:488–491`).
+   * Failure scenario 1: the app clock runs ahead of the database's. An answer typed shortly after the resolve then has `effective_at <= resolved_at` and is counted as kept. The reply is a false "you kept this answer" (409 `kept_over_document`), and no check opens.
+   * Failure scenario 2: the app clock runs behind. An answer kept moments after it was typed is not recognised, and that is the original m1 loop.
+   * Failure scenario 3: an answer save whose transaction starts before the resolve's `at` and commits after the resolve's read gives the same false "kept".
+   * On the reference build the app and the database share one host, so this has not been observed.
+   * Fix: match by row identity recorded at the resolve, or take both times from one clock (for example `resolved_at` from the database inside the resolve transaction).
+3. **n3, Note: `not_read` on a letter can be a dead end.** On a copy with no saved read of the letter, "read it in Fill this from documents first" leads to 409 `no_saved_read` (P3). A live read is refused here. It is API only, since the drawer lists read documents only. The words could say that a saved read is needed.
+4. **n4, Minor, carried from `107aefb7d`, not introduced here: the drawer contradicts m4.** `documents-drawer.tsx:240` and `:246` show "Check resolved · kept over the document, with a reason" for **any** current answer that differs once the Confirm-opened check is resolved, including one typed after the resolve. The server now says plainly (m4) that such an answer was never kept. The drawer offers no mark on that row, so in the drawer no check ever opens for the new difference (BIC-07, D18). This is from reading the code, not walked. It belongs to the tech lead's next item, not to this PR.
+
+### Journey score
+This diff changes one user-visible line, the drawer's resolved row (`sameShown`). The API changes are not reachable from the drawer. I did no new walk. The journey score for this PR stays the reviewer's **9/10, Pass** (`journey-test-reviewer-checked-2026-11-09.md`). n4 is the only journey-level gap seen, and it predates this commit.
+
+### Could not check
+The screen pack, a browser walk, a real screen reader, CI on this head, and the configured checkpoint (fixture only).
+
+Verdict: Approve f9bea4a3b
+
+## Builder's fixes (after the Approve on f9bea4a3b)
+* **n1:** the kept answer also covers its own value saved again as a new row, for example by Confirm section or a client's re-confirm. The rule now lives in one function, `keptOver` in `case-documents.ts`, used by the mark and by the proposals. Test: the first kept value saved again gives 409 `kept_over_document`, with no further check.
+* **n4:** the proposals carry `kept_over`, computed by the same rule. The drawer says "kept over the document, with a reason" only then. Any other answer on a resolved row offers the mark again, where the document gives the fact. After a refusal the drawer reads again, so the check the server opened shows at once.
+  * API test: `kept_over` is true for the kept value and false for a later answer of another value.
+  * Screen step C6.5-39b: a later answer shows no "kept over" words, offers the mark, and clicking it opens a check, shown in the drawer and never VERIFIED.
+* **m3 (duplication):** the drawer's `sameShown` is gone. The drawer reads `kept_over` from the server.
+* **n2 (two clocks):** not changed. Making it exact needs the resolve to record the answer it kept, and the migration's guard forbids changing `answer_id`, so it would take a new migration. The app and database share one host on the reference build. Raised for the tech lead.
+* **n3 (a letter with no saved read):** not changed. Reading it replays only (FQ-10), so `not_read` is the honest answer until part 3.
+* **Checks:** `check_c65_documents_api` 74/74 and `C6.5-screen.test.ts` 33/33, on fresh fixture copies. Type check: no new errors.

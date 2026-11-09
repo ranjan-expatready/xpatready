@@ -171,6 +171,22 @@ await main("C6.5", "The Fill this from documents drawer (screen, 1440 px; US$0)"
     ok("C6.5-39 fail (BR-12 as ruled by Lead 36): an answer kept over the passport by a resolved check shows \"Check resolved\" and \"kept over the document\", offers no mark, and the server refuses one (409 kept_over_document) without a second check", kMarkShown === 0 && /Check resolved/.test(await k1.innerText())
       && kRefused.status === 409 && kRefused.body?.code === "kept_over_document" && sql(`select count(*) from answer_check where subject_id='${K1}' and fact='person.given_names'`) === "1"
       && sql(`select status || '|' || (value_json #>> '{}') from client_canonical_answer where subject_id='${K1}' and canonical_field_key='person.given_names' and superseded_by_id is null`) !== `VERIFIED|CHILD BX`, { kMarkShown, kRefused: kRefused.body });
+    // Review n4 on f9bea4a3b: an answer typed after that resolve was never kept over the passport: its row offers the mark
+    // again, and the server opens a check for the new difference, which the drawer then shows.
+    await answer(c.id, K1, "person.given_names", "CHILD BV", OFFICER);
+    await page.keyboard.press("Escape"); await drawer.waitFor({ state: "detached", timeout: 15_000 });
+    await page.reload(); await w.settle(page, "the case page"); // the answer was saved elsewhere: the officer comes back to the page
+    await openDrawer(K1, passSec, "person.passport_number");
+    const kNewMark = k1.locator(`[data-mark-checked="person.given_names"]`);
+    await kNewMark.waitFor({ timeout: 20_000 });
+    const keptWordsAfter = await k1.locator(`[data-row-state="resolved"] [data-kept-answer]`).count();
+    await kNewMark.click();
+    await drawer.locator(`[data-resolve-check="person.given_names"]`).waitFor({ timeout: 20_000 });
+    ok("C6.5-39b pass (review n4): an answer typed after the resolve is not \"kept over the document\": the row offers the mark, and clicking it opens a check for the new difference (shown in the drawer), never VERIFIED", keptWordsAfter === 0
+      && sql(`select count(*) from answer_check where subject_id='${K1}' and fact='person.given_names' and state='open'`) === "1"
+      && sql(`select status || '|' || (value_json #>> '{}') from client_canonical_answer where subject_id='${K1}' and canonical_field_key='person.given_names' and superseded_by_id is null`) === "DECLARED|CHILD BV", { keptWordsAfter });
+    const kOpen = sql(`select id from answer_check where subject_id='${K1}' and fact='person.given_names' and state='open'`);
+    await call("POST", `/runtime/checks/${kOpen}/resolve`, { keep: "document", reason: "The passport reads it so (Sample)" }, OFFICER); // leaves the case as the next steps expect
     // A second tab confirmed first: the click shows who and when, in IST.
     await page.keyboard.press("Escape");
     const sDoc = (await upload(PORT, `/runtime/checklist-lines/${await lineOf(S)}/documents`, passportPdf({ ...pass, surname: "SAMPLES", given: "SPOUSE A", number: "SAMPLES35", dob: FAMILY[1].dob! }), "spouse-good.pdf", OFFICER)).body?.document?.id as string;
