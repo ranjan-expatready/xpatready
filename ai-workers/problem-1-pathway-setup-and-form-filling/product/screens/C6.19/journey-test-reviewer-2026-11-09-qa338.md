@@ -1,4 +1,16 @@
-# Journey test, reviewer: C6.19 QA-338 fix, round 3, commit a6c11289c (9 Nov 2026)
+# Journey test, reviewer: C6.19 QA-338 fix, round 4, commit 234b81af9 (9 Nov 2026)
+
+**Round 4 (234b81af9), copy `rev4_qa338` on :4436, stopped afterwards.**
+* J6 now holds. When A confirms only a later date, B's old passport number reads Expired and cannot be ticked, and the POST returns 409 (`probe2/shots4/r4-card-1024-z1.png`).
+* A renewal confirmed on A is used from A: the POST returns 201, and C holds the new number and date.
+* J1–J5 and J7 still hold:
+  * Pack: 86/86.
+  * qa's check: 4/4, twice.
+  * Builder's walk: 21/21, twice.
+  * The card at three widths: axe found 0 violations.
+* "Correct data" goes from ½ to 1. **Score 10/10, pass.** The round 3 walk below stands for everything else.
+
+---
 
 This is the reviewer role and the one journey score for this check. I ran it on my own copy, `rev3_qa338` on :4436, and stopped it afterwards. I used headless Playwright, because this container has no headed pane, at 1440 px, 1024 px and 512 px (1024 at 200 %). All data is Sample.
 
@@ -42,6 +54,6 @@ Earlier scores:
 | Visual quality | 1 | Team chips and tones |
 | Trust and sources | 1 | Names the other case, its value, the date and the rule's source |
 
-**9.5/10, pass, no criterion at 0.** Fixing R4 would raise "correct data".
+**Round 3: 9.5/10, pass, no criterion at 0.** Round 4 fixes R4, which brings the score to 10/10.
 
 Could not test: a real screen reader, a headed walk by a person, or an intended user's unaided walk (D17/D20 stay with the founder).
