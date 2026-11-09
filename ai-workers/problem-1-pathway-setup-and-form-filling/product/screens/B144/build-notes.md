@@ -98,6 +98,10 @@ FAIL  C8.3-14 fail (BR-9, F2, M7): the officer ticking, approving or sending bac
 
 **Exit codes (CI round, fresh copies):** unit `check_review_rounds.ts` 0 (48/48) · pack C8.3 on the configured checkpoint, gate B's way: 0 (23/23) · pack C8.3 on the old set-up: 0 (23/23) · walk 0 · packs C7.6 0, C8.1 0, C8.2 0, C6.13 0 · `check_c76_readiness_api.ts` 0 · `check_c76_ready_browser.ts` 0 · `check_c81_sign_browser.ts` 0.
 
+## Merge of origin/main (3614e35b2), 9 Nov (Lead 40, P-270)
+Conflicts, both sides kept: `case-prepare.ts` (our `formHash` + main's C7.9 `reading`), `readiness-inputs.ts` (our `stampCurrent` + main's `readiness-figure` imports), `cases.tsx` (our review pages and routes + main's `CaseReadinessPill` and `:id/sheet/:itemId`), `readiness.tsx` (`FilingReadiness` takes main's `g` and our `review`). Migration renamed `20261109010000_c83_review_rounds` → `20261109100000_c83_review_rounds` (after main's `20261109090000_c79_must_verify`); `git diff f457a8df7:<old> :<new>` empty; `check_readiness_pass_codes.ts` 4/4 (the newest code-list migration is still C7.9's).
+Exit codes (fresh copies): `prisma generate` 0 · api tsc no new errors · web tsc clean · `check_review_rounds.ts` 0 (48/48) · `check_readiness_pass_codes.ts` 0 · `check_prisma_schema.ts` 0 · `check_case_feed.ts` 0 · old set-up: C7.6 0, C8.3 0 (23/23), C7.9 1 (14/21: this data has the facts officer-entered and lacks -17's library fields; C7.9 is an M3 row, run on the checkpoint) · **C7.9 on the configured checkpoint, gate B's way: 0** · **C8.3 on the configured checkpoint, gate B's way: 0 (23/23)** · walk 0.
+
 ## Left after round 1
 * Review m1: page and C7.6 can still disagree when the form set changes (a waiting form starts, a form is added, a Not-needed form, a C9.5 move): waits come from the frozen row and the re-approve covers stored rows only. Not reproducible on the sample.
 * Review m3: hashes and the representative are checked before the case lock (benign: a stamp that goes stale shows withdrawn at once). Noted, not changed.
