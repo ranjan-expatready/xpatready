@@ -491,7 +491,7 @@ export class FormLibrary {
 async function keptBy(db: Db, workspaceId: string, edition: string): Promise<string> {
   const releases = await db.$queryRaw<{ id: string; version: number; label: string }[]>`SELECT cr.id, cr.version, c.label FROM config_release cr JOIN combination c ON c.id = cr.combination_id WHERE cr.workspace_id = ${workspaceId}::uuid AND jsonb_path_exists(cr.snapshot, '$.**.form_edition ? (@ == $e)', jsonb_build_object('e', ${edition}::text)) ORDER BY c.label, cr.version`;
   if (!releases.length) return "Kept for the record: no release or open case files it now. Never deleted.";
-  const open = await db.$queryRaw<{ n: bigint }[]>`SELECT count(DISTINCT p.case_id) AS n FROM pack_work_pin p JOIN runtime_case k ON k.id = p.case_id WHERE p.revision = (SELECT max(z.revision) FROM pack_work_pin z WHERE z.case_id = p.case_id) AND p.config_release_id = ANY(${releases.map((r) => r.id)}::uuid[]) AND k.status = 'OPEN'`;
+  const open = await db.$queryRaw<{ n: bigint }[]>`SELECT count(DISTINCT p.case_id) AS n FROM pack_work_pin p JOIN runtime_case k ON k.id = p.case_id WHERE p.combination_id = k.combination_id AND p.revision = (SELECT max(z.revision) FROM pack_work_pin z WHERE z.case_id = p.case_id AND z.combination_id = k.combination_id) AND p.config_release_id = ANY(${releases.map((r) => r.id)}::uuid[]) AND k.status = 'OPEN'`;
   const named = [...new Map(releases.map((r) => [r.label, r])).values()].map((r) => `Release ${releases.filter((x) => x.label === r.label).map((x) => x.version).join(", ")} of ${r.label}`);
   const cases = Number(open[0]?.n ?? 0);
   return `Kept by ${named.join(", ")}${cases ? ` and ${cases} open case${cases === 1 ? "" : "s"}` : ""}. Never deleted.`;
