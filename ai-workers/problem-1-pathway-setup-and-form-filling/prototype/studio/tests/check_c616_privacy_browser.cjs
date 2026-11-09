@@ -4,7 +4,8 @@
 // inbox (stand-in SI-20): the token leaves the address bar, "Send me a code", a wrong code (error summary), the right
 // code, the consent card (Unconfirmed: no counsel), their own parts, and Confirm on Client A's answer. Client A then
 // sees progress only, never Partner's answer. The case officer (1440 px) reads "Own links and privacy" and takes the link
-// back with a reason; Partner's page then says why. axe-core (WCAG 2.2 A/AA) on each screen; no sideways scroll; every
+// back with a reason; Partner's page then says why. Keyboard only: Send to the child of 19, then their link to their first
+// part. 200 % zoom: the officer's page at 720 px and the principal's at 512 px. axe-core (WCAG 2.2 A/AA) on each screen; no sideways scroll; every
 // wait fails loudly. Sets up Visitor visa itself on an empty copy. Screenshots only with a third argument (a folder),
 // so a suite run never rewrites them. Sample data, no live AI, US$0.
 //   zsh studio/tools/isolated.sh sc_c616 4447 start && node studio/tests/check_c616_privacy_browser.cjs 4447 xr_studio_sc_c616
@@ -147,6 +148,63 @@ const run = Date.now().toString(36), ADDRESS = `partner.${run}@example.com`;
     const deadText = await b.locator("main").innerText();
     ok("C6.16 adult: after take back the page says why, naming no person", /This link was taken back on .*Ask whoever sent it for a new one\./.test(deadText) && !/Client A|Partner|officer/i.test(deadText.replace(/no longer works/, "")), deadText);
     await shot(b, "13-link-taken-back-390"); await axe(b, "the dead-link page");
+
+    // ---- Keyboard only (BIC-20): a second adult (the child of 19), Send by Client A and the link, without the mouse.
+    const tabTo = async (p, target, max = 80) => { for (let i = 0; i < max; i++) { if (await target.evaluate((el) => el === document.activeElement).catch(() => false)) return true; await p.keyboard.press("Tab"); } return false; };
+    const C19_ADDRESS = `child19.${run}@example.com`;
+    await a.goto(`${BASE}/cases/${id}/questionnaire`);
+    const send19 = a.getByRole("button", { name: "Send to Sample Child 19…" });
+    await send19.waitFor(T);
+    const reached = await tabTo(a, send19);
+    await a.keyboard.press("Enter");
+    const kd = a.getByRole("dialog");
+    await kd.getByLabel("Sample Child 19's email").waitFor(T);
+    ok("C6.16 keyboard: Tab reaches Send to …; Enter opens the dialog with the focus on its email field", reached && await kd.getByLabel("Sample Child 19's email").evaluate((el) => el === document.activeElement));
+    await a.keyboard.type(C19_ADDRESS); await a.keyboard.press("Enter");
+    await a.locator("section", { has: a.getByRole("heading", { name: "About Sample Child 19" }) }).locator("[data-link-sent]").waitFor(T);
+    ok("C6.16 keyboard: Enter in the email field sends", true);
+    const k = await adult.newPage(); k.on("pageerror", (e) => errors.push(e.message));
+    const link19 = ((await call("GET", `/demo/inbox?address=${encodeURIComponent(C19_ADDRESS)}`, undefined, null)).body?.messages ?? []).find((m) => m.kind === "link")?.link;
+    await k.goto(`${BASE}${link19}`);
+    const sendMe = k.getByRole("button", { name: "Send me a code" });
+    await sendMe.waitFor(T);
+    ok("C6.16 keyboard: Tab reaches Send me a code", await tabTo(k, sendMe));
+    await k.keyboard.press("Enter");
+    const codeBox = k.getByLabel("Code (required)");
+    await codeBox.waitFor(T);
+    const code19 = /code is (\d{3}) (\d{3})/.exec(((await call("GET", `/demo/inbox?address=${encodeURIComponent(C19_ADDRESS)}`, undefined, null)).body?.messages ?? []).find((m) => m.kind === "code")?.body ?? "")?.slice(1).join("-") ?? "";
+    ok("C6.16 keyboard: Tab reaches the code field", await tabTo(k, codeBox));
+    await k.keyboard.type(code19); await k.keyboard.press("Enter");
+    const cont = k.getByRole("button", { name: "Continue to my questions" });
+    await cont.waitFor(T);
+    ok("C6.16 keyboard: Tab reaches Continue to my questions on the consent card", await tabTo(k, cont));
+    await k.keyboard.press("Enter");
+    await k.getByRole("heading", { name: "Your questions" }).waitFor(T);
+    const firstPart = k.locator("main ul button").first();
+    ok("C6.16 keyboard: Tab reaches the first part of their questions; Enter opens it", await tabTo(k, firstPart));
+    await k.keyboard.press("Enter");
+    await k.getByRole("button", { name: "Save and continue" }).waitFor(T);
+    const visible = await k.evaluate(() => { const el = document.activeElement; if (!el || el === document.body) return false; const s = getComputedStyle(el); return s.outlineStyle !== "none" || s.boxShadow !== "none"; });
+    ok("C6.16 keyboard: the part opens with the focus on its heading", await k.evaluate(() => document.activeElement?.tagName === "H1"), visible);
+
+    // ---- 200 % zoom (EXPERIENCE §2.12): half the CSS width, nothing sideways; the officer at 1440 px is 720 px wide.
+    const z = await browser.newContext({ viewport: { width: 720, height: 450 }, deviceScaleFactor: 1 });
+    await z.addInitScript(() => { localStorage.setItem("xr-actor", "user-O"); });
+    const zp = await z.newPage(); zp.on("pageerror", (e) => errors.push(e.message));
+    await zp.goto(`${BASE}/cases/${id}`);
+    await zp.locator("section", { has: zp.getByRole("heading", { name: "Own links and privacy" }) }).locator(`[data-person="${S}"]`).waitFor(T);
+    await noSideways(zp, "the officer's page at 200 % (720 px)");
+    await zp.locator("section", { has: zp.getByRole("heading", { name: "Own links and privacy" }) }).scrollIntoViewIfNeeded(); await shot(zp, "14-officer-200pct-720");
+    const zc = await browser.newContext({ viewport: { width: 512, height: 400 }, deviceScaleFactor: 1 });
+    await zc.addInitScript(() => { localStorage.setItem("xr-actor", "user-P"); });
+    const zq = await zc.newPage(); zq.on("pageerror", (e) => errors.push(e.message));
+    await zq.goto(`${BASE}/cases/${id}/questionnaire`);
+    await zq.locator("[data-private-progress]").first().waitFor(T);
+    await noSideways(zq, "the principal's questionnaire at 200 % of 1024 px (512 px)");
+    await shot(zq, "15-principal-200pct-512");
+    const zl = await zc.newPage(); await zl.goto(`${BASE}/inbox?address=${encodeURIComponent(C19_ADDRESS)}`);
+    await zl.getByRole("link", { name: "Open your link" }).first().waitFor(T);
+    await noSideways(zl, "the demo inbox at 512 px");
     ok("C6.16: no page error", errors.length === 0, errors);
   } catch (e) { ok(`C6.16 walk ran to its end (stopped: ${e.message.split("\n")[0]})`, false); }
   await browser.close();
