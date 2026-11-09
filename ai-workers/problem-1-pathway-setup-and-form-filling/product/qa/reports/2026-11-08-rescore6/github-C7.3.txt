@@ -1,0 +1,8 @@
+Gate B: the PR names C7.3; claims Works for none (no bug check).
+  packs: C7.3.test.ts
+    C7.3.test.ts on the checkpoint: exit 0, 14/14 passed (141 s: copy 5, Load the configured checkpoint 96, run 40)
+  packs took 142 s in all
+Gate B: passed.
+Post job cleanup.
+(node:6128) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)

@@ -90,6 +90,9 @@ export const NoneApply = z.object({
 export const NewRow = z.object({ group: z.string({ message: "Name the repeating group (its section)." }).trim().min(1, "Name the repeating group (its section).").max(80) });
 /** "Confirm section" vouches for what the officer saw: the ids of the answers shown. Any answer that changed or arrived
  *  since is refused with 409 and listed, never confirmed unseen (STANDARDS §4). */
+/** C6.18 (P-244): the client re-confirms an answer their case officer recorded; `value` is what the client has on screen
+ *  (break M1 on #1246: a changed answer is saved, never re-confirmed as the officer's). */
+export const Reconfirm = z.object({ value: z.unknown().optional() }).strict();
 export const ConfirmSection = z.object({
   subjectId: z.string({ message: "Choose whose section to confirm." }).uuid("Choose whose section to confirm."),
   seen: z.array(z.string().uuid("Each reviewed answer is named by its id, as the questionnaire view gives it."), { message: "Send the ids of the answers you reviewed." }).max(500, "Send at most 500 reviewed answer ids; confirm a long section in parts."),
@@ -98,18 +101,38 @@ export const ConfirmSection = z.object({
 export const Address = z.object({ po_box: z.string().optional(), apt_unit: z.string().optional(), street_number: z.string().optional(), street_name: z.string().optional(), city: z.string().optional(), district: z.string().optional(), province: z.string().optional(), postal_code: z.string().optional(), country: z.string().optional() });
 export const Phone = z.object({ type: z.string().optional(), country_code: z.string().optional(), number: z.string().optional(), extension: z.string().optional() });
 
-/** Words shown for an answer's confirmation (P-72). */
+/** Words shown for an answer's confirmation (P-72, P-78, as P-242 and P-411 amend them: every declared answer fills the
+ *  forms at once, marked by who gave it; "confirmed" says only whether it is still on the officer's Confirm list). */
 export const CONFIRM_WORDS = {
   officer: "Confirmed by the officer",
-  client_own: "Counts as confirmed: the client's own answer",
+  client_own: "Declared: the client's own answer; it fills the forms now",
   waits: "Waits for the officer's \"Confirm section\"",
-  by_principal: "Answered by the principal for an adult: confirmed once that person confirms on their own link or the officer presses \"Confirm section\"",
+  staff: "Declared: entered by staff; it fills the forms now and waits for the officer's \"Confirm section\"",
+  by_principal: "Answered by the principal for an adult: declared, it fills the forms now and is confirmed before filing (the officer's \"Confirm section\")",
+  /** C6.13: the principal is not the client (after Make principal): the client answered for them. */
+  by_client: "Answered by the client for an adult: declared, it fills the forms now and is confirmed before filing (the officer's \"Confirm section\")",
+  // C6.18 (P-244) with P-411: a background answer staff recorded (by phone or in person) fills the forms at once and
+  // waits for the client, never for the officer.
+  awaits_client: "Recorded by the case officer: it fills the forms now and waits for the client to re-confirm it before signing",
 } as const;
+/** P-411 (1): the principal's answer for an adult spouse or adult child, marked with that person's name. */
+/** P-411 (1) also says the adult sees and confirms it before signing; that person's own confirmation is not built yet
+ *  (B150 review m4), so the words name only what happens today: the officer's Confirm section before filing. */
+export const byPrincipalFor = (name: string) => `Answered by the principal for ${name}: declared, it fills ${name}'s forms now and is confirmed before filing (the officer's "Confirm section")`;
+/** C6.13 (BR-3b, break M1): after Make principal the client is not the principal; the client answered for this adult. */
+export const byClientFor = (name: string) => `Answered by the client for ${name}: declared, it fills ${name}'s forms now and is confirmed before filing (the officer's "Confirm section")`;
+/** Who gave the current answer (P-242, P-411): the mark shown beside it. Every mark fills the forms at once. */
+export type AnswerMark = "confirmed" | "declared" | "by_principal" | "by_staff";
 
 /** The questionnaire view (GET /api/runtime/cases/:id/questionnaire): what the engine computes and the web renderer
  *  reads, one shape for both (engine/runtime/case.ts caseView returns it). */
 /** answered: who first gave the answer, when this version is the officer's confirmation of it (review M4). */
-export type ViewAnswer = { id: string; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; by: string; at: string; answered: { channel: string; by: string; at: string } | null; problems: string[]; confirmed: boolean; why: string };
+export type ViewAnswer = { id: string; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; by: string; at: string; answered: { channel: string; by: string; at: string } | null; problems: string[]; confirmed: boolean; why: string;
+  /** P-242, P-411: whether the answer is written to the forms now (every current answer is), and who gave it. */
+  fills: boolean; mark: AnswerMark;
+  /** C6.18 (P-244), background answers only: the staff member who recorded it and when ("Officer"), or null when the
+   *  client gave it; awaits_client while the client has not re-confirmed it. */
+  officer?: { by: string; at: string } | null; awaits_client?: boolean };
 export type ViewQuestion = {
   subjectId: string; about_label: string; fact: string; label: string; meaning: string; value_type: string;
   shape: { maxLength: number; datePrecision: "day" | "month"; phone: boolean; money: boolean; choices: string[] | null };
@@ -123,6 +146,8 @@ export type ViewQuestion = {
   countries: string[] | null;
   /** Each form this fact fills, for whom (subject: the person's id, so two people with one name never mix) and how many form fields. */
   fills: { form: string; person: string; subject: string; boxes: number }[];
+  /** C6.18 (P-244): a background question (engine/runtime/background.ts); only on the case's own views. */
+  background?: boolean;
 };
 /** A repeating group's own answer: "none apply" (value true) or "entries apply" (false), confirmed like an answer. */
 export type ViewGroup = { required: boolean; client: boolean; rows: number; none_apply: (ViewAnswer & { value: boolean }) | null };
@@ -176,7 +201,9 @@ export type FormCopy = {
 /** One form for one person on the case: what a copy made now would write (the draft), whether it can be filed (P-71),
  *  and every copy made, newest first. */
 export type CaseForm = {
-  form: string; title: string; subject_id: string; person: string; draft: { written_now: number; mapped: number; unconfirmed: number };
+  form: string; title: string; subject_id: string; person: string; /** draft: `written_now` the declared and confirmed answers a copy made now writes (P-242, P-411); `to_fix` the
+   *  answered form fields left blank because the answer needs a fix (QA-122, or a Yes/No contradicting a recorded detail). */
+  draft: { written_now: number; mapped: number; to_fix: number };
   readiness: Readiness; copies: FormCopy[];
   /** The evidence lane's fill trial for this form passed (P-65 (a)); until it does a copy is "Checked copy, not for filing". */
   trial_passed: boolean;
@@ -219,7 +246,14 @@ export function newestReleases<T extends { combination_id: string; version: numb
  *  or a section check that fired on a fact it reads (fact "check:<id>", label the check's words, P-47 tier 2);
  *  or confirmed with a problem (it would be written wrong); and a required repeating group with no entries unless
  *  "none apply" is confirmed for it (Lead, break M3), named by its section (fact "group:<section>"). */
-export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "needs a fix" | "a check fired" }[] };
+export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "waits for the client to re-confirm" | "needs a fix" | "a check fired" | "left empty on the form";
+  /** B107: whose fact it is (the question's subject: a person's id, the case's, or "representative"), so who owes it is told by its own subject. */
+  subject?: string;
+  /** QA-165 (P-71): why, in the form's own words, when a form field holds it back: the fix a box refused with ("…is answered
+   *  No, but … is recorded"), or why a field IRCC's form marks mandatory would be left empty ("filled by hand: …"). */
+  why?: string;
+  /** QA-165 (#1318): for "left empty on the form", every form field the line covers (a date's parts are one line). */
+  boxes?: string[] }[] };
 /** QA-76: the role labels a part can carry when no person stands behind it ("The application", "The representative"),
  *  written in the middle of a sentence ("About the representative", "for the representative"); a person's own name,
  *  even one starting with "The", is kept as it is. */
@@ -267,3 +301,38 @@ export type CaseFilings =
 /** G13 (QA-140): a release in the same words in the studio and on a case: "Release N", N being the content pack release
  *  the studio shows (else the combination's released version). */
 export const releaseLabel = (r: { version: number; packVersion?: { version: number } | null }) => `Release ${r.packVersion?.version ?? r.version}`;
+
+// ------------------------------------------------------------------ C9.5 adopt a newer release (B145)
+
+/** C9.5 (BR-5): move a case to the newest release of its combination: the release and pin revision the person read, and
+ *  one reason (pre-filled "Adopting the current release", 3 to 500 characters). */
+export const RELEASE_MOVE_REASON = "Adopting the current release";
+export const ReleaseMove = z.object({
+  target_version: z.number({ message: "Send the release you read (Read the list again)." }).int().positive(),
+  from_revision: z.number({ message: "Send the pin revision you read (Read the list again)." }).int().positive(),
+  reason: text("Say why this case moves to the new release (at least 3 characters).", 3, 500).refine((x) => /[\p{L}\p{N}]/u.test(x), "Say why this case moves to the new release, in words."),
+});
+export type ReleaseChangeLine = { what: string; kind: string; who: string[]; before: string; after: string };
+/** `fillable`: Fill (a new copy on the new release) is the next step for this line. */
+export type ReleaseEffectLine = { id: string; what: string; who: string; why: string; form?: string; subject?: string; fillable?: boolean };
+/** GET /runtime/cases/:id/release-update (computed, writes nothing). `target` null: the case is on the newest release. */
+export type ReleaseUpdate = {
+  case_id: string;
+  current: { version: number; label: string; revision: number; pinned_at: string };
+  target: { version: number; label: string; released_at: string; demo: boolean } | null;
+  combination: string;
+  changes: { forms: ReleaseChangeLine[]; documents: ReleaseChangeLine[]; questions: ReleaseChangeLine[]; eligibility: ReleaseChangeLine[] };
+  fees: string;
+  effects: { fill_again: ReleaseEffectLine[]; filed_another_way: ReleaseEffectLine[]; no_longer_required: ReleaseEffectLine[]; withdrawn: ReleaseEffectLine[]; kept_out_of_date: ReleaseEffectLine[]; unchanged: { count: number; words: string } };
+  /** Filings the difference touches, with what it touches (the Ready to file warning reads the same). */
+  touched: { filing: string; label: string; words: string[] }[];
+  refused: { code: string; reason: string; item?: string } | null;
+  /** Whether this person may move the case (case staff of its firm); the list is shown either way. */
+  can_move: boolean;
+  reason_default: string;
+};
+/** After a move (pin revision 2 on): what it did to the work made before it that still waits (Prepare's groups). */
+export type ReleaseLastMove = { from: { version: number; label: string; revision: number }; to: { version: number; label: string; revision: number }; at: string; reason: string | null; effects: ReleaseUpdate["effects"] };
+/** POST …/release-update: the new pin and what the move did, for the toast. */
+export type ReleaseMoved = { case_id: string; revision: number; version: number; label: string; from: { version: number; label: string; revision: number };
+  counts: { fill_again: number; filed_another_way: number; no_longer_required: number; withdrawn: number; kept_out_of_date: number }; words: string };

@@ -1,6 +1,6 @@
 // C7.3 Portal sheet: answers in the portal's order with copy buttons (M3-E; r5c BR-8; P-62 §6, P-152 (3)). Visitor
 // visa part: IMM 5707 is an Online line (Sample, FQ-2). Until the W6 extension the answer sheet follows the sections of
-// the PDF twin (contracts/pdf-sections.json: Section A, B, C), from confirmed facts only, each answer with its source and
+// the PDF twin (contracts/pdf-sections.json: Section A, B, C), from every declared or confirmed answer (P-411, B150), each answer with its source, its mark and
 // the text to copy; "Entered in the portal" per section freezes that section's answers. A changed fact after "Entered"
 // marks the section out of date (C9.2-5).
 // Breadth, after Visitor visa: the live portal screen order (W6, parked), online-only forms ordered by the drafted form.
@@ -43,7 +43,9 @@ function ownParts(caseId: string, form: string): { title: string; facts: boolean
 
 await main("C7.3", "Answer sheet for an Online line", async () => {
   const vv = needVisitorVisa();
-  const c = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: yearsAgo(40) }, { role: "spouse_or_partner", name: "Sample Spouse A", dob: yearsAgo(38) }]);
+  // QA-305 review m2: each date once, so a run across midnight never compares against another day's date.
+  const DOB_P = yearsAgo(40), DOB_S = yearsAgo(38);
+  const c = await openCase(vv, [{ role: "principal", name: "Sample Client A", dob: DOB_P }, { role: "spouse_or_partner", name: "Sample Spouse A", dob: DOB_S }]);
   const P = c.subjects["Sample Client A"];
   let p = (await prepare(c.id)).p;
   // Row C2: the principal's expected lines from the case's own release (row C1). An unreadable release stops the pack:
@@ -75,13 +77,28 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   const own = ownParts(c.id, FORM), shown = s?.sections.map((x) => x.title) ?? [];
   const want = own.length ? own.filter((x) => x.facts).map((x) => x.title) : Object.values(TWINS[FORM] ?? {});
   ok("C7.3-3 pass: the sheet follows the form's own sections in order (the release's parts, else the PDF twin's) until W6", shown.length > 0 && (own.length ? s?.order_basis === "form_parts" : s?.order_basis === "pdf_twin") && JSON.stringify(shown.filter((t) => t !== "Other questions")) === JSON.stringify(want), { basis: s?.order_basis, shown, want });
-  ok("C7.3-4 pass: before confirmation the sheet shows no values, only what it waits for (only confirmed facts fill, P-72)", (s?.sections ?? []).every((x) => x.answers.length === 0) && (s?.sections ?? []).some((x) => (x.waiting ?? []).length > 0));
+  // P-411 (B150 review M2; QA-305): the officer typed each person's date of birth (openCase), not confirmed yet. Each
+  // person's own sheet shows that person's own date of birth at once, marked entered by staff and to confirm (on the
+  // checkpoint each adult has their own IMM 5257 sheet; on the fixture each their own IMM 5707 sheet). Where only the
+  // principal's item of the form is Online, the spouse's date is read on the principal's sheet, if that form carries it.
+  // And every date of birth a sheet read shows, whoever's, is marked entered by staff and to confirm (review m1).
+  type SA = { fact: string; subject?: string; value?: unknown; mark?: string | null; to_confirm?: boolean };
+  const S = c.subjects["Sample Spouse A"];
+  const dobs = (sh: Sheet | null) => (sh?.sections ?? []).flatMap((x) => x.answers as SA[]).filter((x) => x.fact === "person.date_of_birth");
+  const dobOn = (sh: Sheet | null, subject: string) => dobs(sh).find((x) => x.subject === subject);
+  const spouseItem = itemsOf(p, S, FORM).find((x) => x.channel === "ONLINE");
+  const spouseRead = spouseItem ? await call("GET", `/runtime/items/${spouseItem.id}/answer-sheet`, undefined, OFFICER) : null;
+  const spouseSheet = spouseRead ? (spouseRead.status === 200 ? spouseRead.body as Sheet : null) : s;
+  const typed = [{ who: "Sample Client A", a: dobOn(s, P), dob: DOB_P }, { who: "Sample Spouse A", a: dobOn(spouseSheet, S), dob: DOB_S }];
+  const every = [...dobs(s), ...(spouseRead ? dobs(spouseSheet) : [])];
+  ok("C7.3-4 pass (P-411 (2), B150, QA-305): before confirmation each person's sheet already shows that person's own officer-typed date of birth, marked \"entered by staff\" and to confirm; every date of birth shown is so marked", typed.every((t) => t.a?.value === t.dob && t.a.mark === "by_staff" && t.a.to_confirm === true) && every.length >= 2 && every.every((x) => x.mark === "by_staff" && x.to_confirm === true), { spouse_sheet: spouseItem ? `own (${spouseRead?.status})` : "the principal's", typed, every: every.length });
+  ok("C7.3-4b fail: an unanswered fact is never shown as a value, only waited for", (s?.sections ?? []).some((x) => (x.waiting ?? []).length > 0) && !(s?.sections ?? []).some((x) => x.answers.some((y) => y.fact === "person.family_name")));
 
   await fillEverything(c.id);
   ({ s } = await sheet());
   const a = s?.sections[0]?.answers ?? [];
   const name = a.find((x) => x.fact === "person.family_name" && x.subject === P);
-  ok("C7.3-5 pass: the first section (Section A on the twin) lists the applicant's confirmed answers with their source and the text to copy", !!name && name.copy_text === String(name.value) && ["Document", "Client", "Case officer"].includes(name.source), name);
+  ok("C7.3-5 pass: the first section (Section A on the twin) lists the applicant's confirmed answers with their source and the text to copy, no longer to confirm", !!name && name.copy_text === String(name.value) && ["Document", "Client", "Case officer"].includes(name.source) && (name as { to_confirm?: boolean }).to_confirm === false, name);
   ok("C7.3-6 pass: the first section also carries the spouse's answers (the form includes the spouse, VV-R07), labelled by person", a.some((x) => x.subject === c.subjects["Sample Spouse A"]));
   ok("C7.3-7 pass: a date is offered to copy as the portal takes it (YYYY-MM-DD)", a.filter((x) => /date/.test(x.fact)).length > 0 && a.filter((x) => /date/.test(x.fact)).every((x) => /^\d{4}-\d{2}-\d{2}$/.test(x.copy_text)));
 

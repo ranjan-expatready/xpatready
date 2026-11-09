@@ -1,0 +1,41 @@
+fixture run on 48959730c (= main 0e26bfbe8 + qa records), copy qa_c76d :4470, start Mon Nov  9 00:58:51 IST 2026
+NOTICE:  database "xr_studio_qa_c76d" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_c76d on http://localhost:4470 (xr_studio_qa_c76d), stops itself in 40 min
+
+15/15 passed
+setup1 exit 0
+PASS  S8 signed off by the content reviewer — 38
+PASS  S8 release 2 approved by a different person — 201
+
+44/46 passed
+setup2 exit 1
+PASS  setup: the copy has Visitor visa release 2 (the pack's setup) — 2
+PASS  B1 setup: the filing reaches Ready to file — ["5c091d68-b430-4076-a893-39f0c2c159c6"]
+PASS  B8 pass: Ready to file again changes nothing and records nothing new (200, already) — {"filing":"5c091d68-b430-4076-a893-39f0c2c159c6","status":"ready_to_file","already":true,"passed":[{"code":"hand_write","item":"b6a5fcc8-f4e9-4673-b9d0-0db05687c853","subject":"69a10be6-5275-4512-b926-99cd2f40f3e7","owes":"staff","words":"IMM 5476 for Sample C
+PASS  B1 fail: a changed fact takes the filing back to Not started (stored), with the barcode block named — {"status":"NOT_STARTED","blocks":["barcode_not_validated"]}
+PASS  B1 fail: "Uploaded to IRCC" is then refused (409), the hard stop is not skipped — 409
+PASS  B2 fail: the review made before the change no longer counts; the CRITICAL warning says it was reviewed before — ["missing_facts","out_of_date","representative_review"]
+PASS  N1 fail: a review sending the facts it read, after they changed, is refused (409), nothing stored — 409
+PASS  N1 fail: a review that does not say which facts it read is refused (400) — 400
+PASS  B2 pass: a fresh review by the representative of record clears it again — {"status":200,"warns":["missing_facts","hand_write","hand_write","hand_write"]}
+PASS  B2 fail: after the representative of record changes, the earlier representative's review no longer counts — {"status":200,"warns":["out_of_date","missing_facts","hand_write","hand_write","hand_write","representative_review"]}
+PASS  B2 fail (data): a review row written by anyone else (a client, in SQL) never counts — ["out_of_date","missing_facts","hand_write","hand_write","hand_write","representative_review"]
+PASS  B4 fail: a pass with a key that is not text is refused (400), nothing recorded — 400
+PASS  B6 fail: a review note with a hidden direction mark, or over 400 characters, is refused (400), never cut — [400,400]
+PASS  B8 fail: three passes of one line at once record it once (one 200, the others 409) — [409,200,409]
+PASS  N2 fail: after a passed review warning, a further fact change opens the review warning again — ["out_of_date","missing_facts","out_of_date","hand_write","hand_write","hand_write","representative_review"]
+PASS  B8 fail: a filing recorded as submitted takes no review and no pass (409) — [409,409]
+PASS  B10 pass (data): the same insert with a known code, a key and its own severity is stored (the refusals above are the checks)
+PASS  B10 fail (data): an unknown code, no keys, or a severity that does not go with the code is refused by the database
+PASS  N6 fail: a stored pass the rule refuses (hidden characters) never blocks a real pass of its line (200) — 200
+PASS  B3 fail: a form that cannot start yet stands as a CRITICAL "missing facts" line naming the form — {"waiting":["IMM 5476","IMM 5707"],"warns":["CRITICAL: IMM 5476 for Sample Spouse F: 1 fact missing or no","CRITICAL: IMM 5257 for Sample Spouse F: 17 facts missing or ","CRITICAL: IMM 5257 for Sample Spouse F: 19 form fields IRCC'","CRITICAL: IMM 5707 for Sam
+PASS  B9 pass (BR-21): the representative who did it all self-reviews, logged Self-reviewed — {"id":"badbdb47-6362-4f38-aa11-79f3326d57cf","filing":"fa33a190-dfa9-40c3-9e90-a397b0b9f3e8","reviewed_by":"user-R","name":"Representative (Sample)","kind":"self_reviewed","licence_number":"R000000","at":"2026-11-08T19:29:29.951Z","words":"Self-reviewed by Rep
+PASS  N4 fail: a representative who prepared it with another officer (then left the officer list) cannot review it, as a second person or as Self-reviewed (409) — [201,201,409,409]
+PASS  B7 fail: a timestamp, year 0000 or 1999, or a number is refused (400), never a 500 — [400,400,400,400,400]
+
+23/23 passed
+check exit 0  end Mon Nov  9 00:59:30 IST 2026
+stopped qa_c76d (database and files removed; log in var/isolated-logs/qa_c76d-api.log)

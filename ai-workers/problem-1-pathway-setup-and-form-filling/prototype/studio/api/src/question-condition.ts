@@ -9,7 +9,9 @@ import { HttpException, HttpStatus } from "@nestjs/common";
 import type { LibraryChange, Prisma } from "@prisma/client";
 import { Audit, Db, revise, strip, type Actor } from "./core.ts";
 import { checkCondition } from "../../engine/validate.ts";
+import { placementRefusal } from "../../engine/field-scope.ts";
 import { spreadOf } from "./form-field-condition.ts";
+import { lockItem } from "./library-items.ts";
 
 export const COND_KIND = "placement_condition", COND_ACTION = "SET_CONDITION";
 const OPEN = ["WAITING", "RETURNED", "APPROVED"];
@@ -25,6 +27,12 @@ const nameOf = async (db: Pick<Tx, "canonicalField">, workspaceId: string, key: 
   const f = await db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" } });
   return (f?.meaning ?? f?.label ?? key).trim().replace(/\.$/, "").replace(/^./, (x) => x.toUpperCase());
 };
+/** C3.16 (#1054 M1): a question asked once for the household or employer cannot depend on one person's answer yet. */
+async function refuseScoped(db: Pick<Tx, "canonicalField">, workspaceId: string, key: string) {
+  const f = await db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" }, select: { scope: true } });
+  const no = placementRefusal(f?.scope, { repeats: "per_person", condition: true });
+  if (no) throw problem(422, "Asked once", no); // the same status as placeField (review m2)
+}
 const sameTree = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
 /** The queue's lander (proposals.ts LANDERS.condition): a waiting library change, never a direct edit. Returns its id. */
@@ -34,6 +42,7 @@ export async function proposeConditionChange(tx: Tx, l: { ws: string; actor: Act
   const key = p.target.key, name = await nameOf(tx, l.ws, key);
   const { current } = await placementOf(tx, l.ws, key);
   if (!current) throw problem(409, "Not placed", `No question asks "${name}" in the library, so its condition has nowhere to go. Remove this item.`);
+  await refuseScoped(tx, l.ws, current.canonicalFieldKey); // C3.16 (#1054 M1): a household or employer question takes no condition yet (by its field key, break 2)
   const types = new Map((await tx.canonicalField.findMany({ where: { workspaceId: l.ws }, select: { canonicalFieldKey: true, valueType: true } })).map((f) => [f.canonicalFieldKey, f.valueType]));
   const errs = checkCondition(p.condition.tree, types, new Set());
   if (errs.length) throw problem(409, "Condition not valid", `The condition on "${name}" is not valid any more (it ${errs[0]}), so it is not proposed. Remove this item.`);
@@ -62,7 +71,13 @@ export async function applyCondition(db: Db, audit: Audit, actor: Actor, c: Libr
   const { rows, current } = await placementOf(db, c.workspaceId, c.key);
   if (!current || !m.after) throw problem(409, "Not placed", "The question is no longer placed in the library, so nothing was changed. Return the change.");
   if (!sameTree(current.predicateJson, m.before)) throw problem(HttpStatus.CONFLICT, "Changed since", "When this question is asked changed after it was proposed, so nothing was changed. Return it; it can be drafted again.");
-  await revise(db.sectionQuestion, rows, { predicateJson: m.after as Prisma.InputJsonValue, conditionEffect: "SHOW", conditionPlain: m.sentence ?? null, origin: "AI_PROPOSAL" }, c.proposedBy, strip); // B86 (break M1): approving is not authoring, or the second person could never release it (BR-14)
+  // C3.16: checked again at approval (the scope may have been set since), under the field's lock with the write, as the
+  // scope route takes it (break round 2, M1 on #1054: an approval racing "Household" left a waiting household question).
+  await db.$transaction(async (tx) => {
+    await lockItem(tx, c.workspaceId, "field", [current.canonicalFieldKey]);
+    await refuseScoped(tx, c.workspaceId, current.canonicalFieldKey);
+    await revise(tx.sectionQuestion, rows, { predicateJson: m.after as Prisma.InputJsonValue, conditionEffect: "SHOW", conditionPlain: m.sentence ?? null, origin: "AI_PROPOSAL" }, c.proposedBy, strip); // B86 (break M1): approving is not authoring, or the second person could never release it (BR-14)
+  });
   await audit.log(c.workspaceId, actor.id, "approved", "placement", c.key, `${actor.name} approved: ${c.label ?? c.key}. A draft of the question goes out with the next release.`);
 }
 
