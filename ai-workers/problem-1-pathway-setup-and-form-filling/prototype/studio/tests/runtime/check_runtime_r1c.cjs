@@ -88,7 +88,12 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await o.getByRole("button", { name: "Add spouse or partner" }).click(); await o.getByLabel("Name", { exact: true }).fill("Sample Spouse D"); await o.getByRole("button", { name: "Add", exact: true }).click(); await idle(o);
   step("officer fail: a second spouse is refused with the release's limit, in the dialog", await shows(o.getByText(/at most 1 spouse/i).first()));
   await o.getByRole("button", { name: "Cancel" }).click();
-  step("officer pass: spouse and child are on the case and get their own tabs of sections", await shows(o.getByRole("tab").nth(3)) && await o.getByRole("tab").count() === 4 && await shows(o.locator("section", { hasText: "People on this case" }).getByText("Sample Child C")));
+  // B128 (QA-153): this release's family form (IMM 5707, for every applicant) reads each person's two parents, so each
+  // person also has a tab for each parent (a relative the form describes, never a person on the case). Its boxes say
+  // "Parent1" and "Parent2", not mother or father, so the tabs say first and second parent (review Major 1 on #1256).
+  const tabNames = (await o.getByRole("tab").allInnerTexts()).map((t) => t.split("\n")[0].trim()).sort();
+  const wantTabs = ["The application", ...["Sample Applicant C", "Sample Spouse C", "Sample Child C"].flatMap((n) => [n, `${n}'s first parent`, `${n}'s second parent`])].sort();
+  step("officer pass: spouse and child are on the case and get their own tabs of sections (and a tab for each person's parents)", await shows(o.getByRole("tab").nth(3)) && JSON.stringify(tabNames) === JSON.stringify(wantTabs) && await shows(o.locator("section", { hasText: "People and filings" }).getByText("Sample Child C")), tabNames);
   await state(o, "officer-case-new", [1440, 1024]);
 
   // ── 2. The client answers on a phone
@@ -135,10 +140,11 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("checks: the answers behind the warnings are stored (warn, never block, P-71)", qOf(v, "The application", "case.intended_stay_to")?.answer?.value === "2027-02-28" && v.checks.length === 2, v.checks.map((x) => x.id));
   await end.getByLabel("Day").fill("31"); await end.getByLabel("Month").fill("7"); await c.getByLabel(/How much money/).fill("5000");
   step("groups (review M2): a repeating group says what an entry asks", await shows(c.getByRole("heading", { name: "Entries" })) && await shows(c.getByText(/Each entry asks: Name of a person or organisation you will visit; Their relationship to you; Their address in Canada/)));
-  // Lead, break M3: an empty group offers an entry or "none apply"; the principal's own answer counts as confirmed (P-72).
+  // Lead, break M3: an empty group offers an entry or "none apply"; the principal's own answer is Declared and needs no
+  // officer confirmation (P-72, as P-242 words it: QA-301).
   step("M3 client: an empty group offers \"Add an entry\" or \"None apply\", and says the forms need one or the other", await shows(c.getByRole("button", { name: "None apply" })) && await shows(c.getByText(/Add an entry, or say that none apply\. The forms need one or the other before filing\./)));
   await c.getByRole("button", { name: "None apply" }).click();
-  step("M3 client pass: \"None apply\" is saved, counts as the client's own answer, and can be changed back", await shows(c.getByText("None apply", { exact: true })) && await shows(c.getByText("Counts as confirmed")) && await shows(c.getByRole("button", { name: "Entries apply after all" })) && await gone(c.getByRole("button", { name: "Add an entry" })));
+  step("M3 client pass (QA-301): \"None apply\" is saved, reads \"Declared\" as the client's own answer, and can be changed back", await shows(c.getByText("None apply", { exact: true })) && await shows(c.getByText("Declared: the client's own answer")) && await shows(c.getByRole("button", { name: "Entries apply after all" })) && await gone(c.getByRole("button", { name: "Add an entry" })));
   const isFocused = (l) => l.evaluate((el) => el === document.activeElement).catch(() => false);
   step("review M2 pass: after \"None apply\" the focus is on \"Entries apply after all\", not lost to the page", await eventually(() => isFocused(c.getByRole("button", { name: /^Entries apply after all/ }))));
   await state(c, "client-group-none-apply", [390]);
@@ -191,16 +197,16 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("data: the repeating group holds one live entry with its address in parts; the fixed values are stored clean", host?.rows.length === 1 && host.rows[0].answer?.value?.city === "Toronto" && qOf(v, "The application", "case.funds_available_cad")?.answer?.value === "5000" && qOf(v, "The application", "case.intended_stay_to")?.answer?.value === "2027-07-31" && v.checks.length === 0, v.checks);
   // Answering for the spouse (P-78 words come from the server after saving)
   await c.getByRole("button", { name: "Back", exact: true }).click(); await c.getByRole("button", { name: "Back", exact: true }).click(); await c.getByRole("button", { name: "Back", exact: true }).click(); await idle(c);
-  await c.getByRole("region", { name: "About Sample Spouse C" }).getByRole("button", { name: /Personal details/ }).click(); await idle(c);
+  await c.getByRole("region", { name: "About Sample Spouse C", exact: true }).getByRole("button", { name: /Personal details/ }).click(); await idle(c);
   step("client: a family member's part says whom the client is answering for", await c.getByText("Answering for").locator("..").textContent().then((t) => /Answering for Sample Spouse C \(spouse or partner\)/.test(t ?? "")));
   await c.getByLabel("Current marital status").selectOption({ label: "Married" });
   await saveAndContinue(c);
   await c.getByRole("button", { name: "Back", exact: true }).click(); await idle(c);
-  step("client: after saving, the part says the adult's answers wait for that adult or the officer (P-78)", await shows(c.getByText(/Answered by the principal for an adult/)));
+  step("client: after saving, the part says the adult's answers wait for that adult or the officer, by name (P-78, P-411 (1))", await shows(c.getByText(/Answered by the principal for Sample Spouse C: declared/)));
   await state(c, "client-answering-for-spouse", [390, 1440]);
   // Rules after saving (review M1): "yes" to criminal history makes its details required; the part names what is missing
   await c.goto(`${BASE}/cases/${caseId}/questionnaire`); await idle(c);
-  await c.getByRole("region", { name: "About Sample Applicant C" }).getByRole("button", { name: /Background declarations/ }).click(); await idle(c);
+  await c.getByRole("region", { name: "About Sample Applicant C", exact: true }).getByRole("button", { name: /Background declarations/ }).click(); await idle(c);
   await c.getByRole("group", { name: /ever committed, was arrested/ }).getByLabel("Yes").check();
   await saveAndContinue(c);
   const missingBox = c.getByRole("alert").filter({ hasText: "Check these answers" });
@@ -209,7 +215,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await missingBox.getByRole("button", { name: "leave them for now and continue" }).click(); await idle(c);
   step("rules pass: the client may still leave them for now (warn, never block)", await until(c, () => { const h = document.querySelector("h1"); return !!h && h.textContent !== "Background declarations"; }));
   await c.goto(`${BASE}/cases/${caseId}/questionnaire`); await idle(c);
-  await c.getByRole("region", { name: "About Sample Applicant C" }).getByRole("button", { name: /Residence and immigration status/ }).click(); await idle(c);
+  await c.getByRole("region", { name: "About Sample Applicant C", exact: true }).getByRole("button", { name: /Residence and immigration status/ }).click(); await idle(c);
   step("residence (review M2): the country where the client lives now is asked once for the person, with the release's countries offered", await shows(c.getByLabel("Country or territory where you live now")) && await c.getByLabel("Country or territory where you live now").evaluate((e) => e.tagName === "SELECT" || !!e.getAttribute("list")) && await gone(c.getByRole("heading", { name: "Entries" })));
   step("countries (review M5): a country with no answer list yet offers the release's countries while typing", !!(await c.getByLabel("Country or territory you are applying from").getAttribute("list")));
   step("copy (review M5): the client never sees the configuration note about answer lists", await gone(c.getByText(/No fixed list for this answer yet|forms slice 2/)));
@@ -228,7 +234,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   // ── 3. The officer reviews in the Agent view (a household of four children, the release's limit: review M6)
   for (const n of [2, 3, 4]) await call("POST", `/runtime/cases/${caseId}/people`, { role: "child", displayName: `Sample Child C${n} with a rather long name` }, "user-O");
   await o.reload(); await idle(o);
-  await o.getByRole("tab", { name: /^Sample Spouse C/ }).click(); 
+  await o.getByRole("tab", { name: /^Sample Spouse C(?!'s )/ }).click(); 
   const spouseMarital = o.locator("section", { has: o.getByRole("heading", { name: "Personal details" }) }).filter({ hasText: "for Sample Spouse C" });
   step("agent: the client's answer shows with its source and the P-78 state", await shows(spouseMarital.getByText("Married", { exact: true })) && await shows(spouseMarital.getByText("Answered by the principal")) && await shows(spouseMarital.getByText(/questionnaire · Client A/)));
   await o.getByRole("tab", { name: /^The application/ }).click(); 
@@ -267,7 +273,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await o.getByRole("dialog").getByRole("button", { name: "Save" }).click(); await idle(o);
   step("agent conflict pass (review M3): saving again from the newer answer works", await gone(o.getByRole("dialog")) && (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body.sections.flatMap((s) => s.questions).find((q) => q.fact === "case.funds_available_cad").answer.value === "7000");
   // Officer-only fact: the passport number, typed from the document
-  await o.getByRole("tab", { name: /^Sample Applicant C/ }).click(); 
+  await o.getByRole("tab", { name: /^Sample Applicant C(?!'s )/ }).click(); 
   const travel = o.locator("section").filter({ has: o.getByRole("heading", { name: "Travel and identity documents" }) }).filter({ hasText: "for Sample Applicant C" });
   await travel.getByRole("button", { name: /^Add Number of the passport/ }).first().click();
   await o.getByRole("dialog").getByRole("textbox").fill("SAMPLE-C-123");
@@ -276,11 +282,63 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   v = (await call("GET", `/runtime/cases/${caseId}/questionnaire`, undefined, "user-P")).body;
   step("roles fail: the client's questionnaire never shows the officer-only passport number", !v.sections.flatMap((s) => s.questions).some((q) => q.fact === "person.passport_number"));
 
-  // ── 4. R1d: forms filled from confirmed facts; never overwritten (RT-13…RT-16)
+  // ── B150 (P-242, P-411; QA-301, QA-302, QA-303): every declared answer fills IMM 5257 at once, marked by who gave it,
+  // measured by what a copy made now writes (the draft's count of written form fields) against the form fields the answer
+  // fills. Release 1 asks the names from a document (the officer's), so each case takes an unanswered question of its kind.
+  {
+    const agentView = async () => (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body;
+    const agentQ = async (label, fact) => qOf(await agentView(), label, fact);
+    const writes = async (label) => (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, "user-O")).body.forms.find((f) => f.form === "IMM 5257" && f.person === label);
+    const boxesOf = (q) => q.fills.filter((f) => f.form === "IMM 5257" && f.subject === q.subjectId).reduce((n, f) => n + f.boxes, 0);
+    /** An unanswered single question about this person that fills their IMM 5257, asked of the client or of the officer; the
+     *  passport number, else text, first. */
+    const pick = async (label, client) => {
+      const qs = (await agentView()).sections.filter((x) => x.about_label === label && !x.group).flatMap((x) => x.questions)
+        .filter((q) => !q.answer && !q.hidden && !q.group && boxesOf(q) > 0 && (q.collected_from === "client_questionnaire") === client && (q.value_type === "text" || (q.options ?? []).length > 1));
+      return qs.find((q) => q.fact === "person.passport_number") ?? qs.find((q) => q.value_type === "text") ?? qs[0];
+    };
+    const valueOf = (q, i = 0) => (q.options?.length ? q.options[i].key : `SAMPLE${["OWN", "FIXED", "S12", "SPOUSE"][i]}`);
+    const put = (q, value, actor) => call("PUT", `/runtime/cases/${caseId}/answers/${q.subjectId}/${q.fact}`, { value, expectedId: q.answer?.id ?? null }, actor);
+    // (1) The principal's own typed answer (P-242).
+    let q = await pick("Sample Applicant C", true);
+    const own = q?.fact, n = q ? boxesOf(q) : 0;
+    let w0 = (await writes("Sample Applicant C")).draft.written_now;
+    const r1 = q ? await put(q, valueOf(q), "user-P") : null;
+    q = own ? await agentQ("Sample Applicant C", own) : null;
+    step(`B150 pass (P-242, QA-301): the principal's own answer (${own}) reads Declared, never "Counts as confirmed"`, r1?.status === 200 && q?.answer?.mark === "declared" && /^Declared: the client's own answer/.test(q.answer.why), { status: r1?.status, answer: q?.answer });
+    step("B150 pass (P-242, QA-302): it fills the principal's IMM 5257 at once: a copy made now writes its form fields", n > 0 && (await writes("Sample Applicant C")).draft.written_now === w0 + n, { before: w0, boxes: n, now: (await writes("Sample Applicant C")).draft });
+    // (2) The principal's answer for an adult spouse (P-411 (1)).
+    q = await pick("Sample Spouse C", true);
+    const forSpouse = q?.fact, ns = q ? boxesOf(q) : 0;
+    w0 = (await writes("Sample Spouse C")).draft.written_now;
+    if (q) await put(q, valueOf(q, q.options?.length ? 1 : 3), "user-P");
+    q = forSpouse ? await agentQ("Sample Spouse C", forSpouse) : null;
+    step(`B150 pass (P-411 (1), QA-303): the principal's answer for the adult spouse (${forSpouse}) is marked "Answered by the principal for Sample Spouse C" and fills the spouse's IMM 5257 at once`, q?.answer?.mark === "by_principal" && /^Answered by the principal for Sample Spouse C/.test(q.answer.why) && ns > 0 && (await writes("Sample Spouse C")).draft.written_now === w0 + ns, { answer: q?.answer, before: w0, boxes: ns, now: (await writes("Sample Spouse C")).draft });
+    step("B150 fail (P-411 (1)): the adult confirms it before signing: it stays not confirmed", q?.answer?.confirmed === false);
+    // (3) An answer the officer types (P-411 (2)).
+    q = await pick("Sample Spouse C", false);
+    const typed = q?.fact, ng = q ? boxesOf(q) : 0;
+    w0 = (await writes("Sample Spouse C")).draft.written_now;
+    if (q) await put(q, valueOf(q, q.options?.length ? 1 : 2), "user-O");
+    q = typed ? await agentQ("Sample Spouse C", typed) : null;
+    step(`B150 pass (P-411 (2), QA-302): an officer-typed answer (${typed}) is marked "entered by staff" and fills the spouse's IMM 5257 at once`, q?.answer?.mark === "by_staff" && /entered by staff/.test(q.answer.why) && ng > 0 && (await writes("Sample Spouse C")).draft.written_now === w0 + ng, { answer: q?.answer, before: w0, boxes: ng, now: (await writes("Sample Spouse C")).draft });
+    step("B150 fail (P-411 (2)): it stays on the Confirm list (not confirmed)", q?.answer?.confirmed === false);
+    await o.reload(); await idle(o);
+    await o.getByRole("tab", { name: /^Sample Applicant C(?!'s )/ }).click();
+    step("B150 (P-411 (2)): the Agent view marks the officer's passport number \"Entered by staff · to confirm\"", await shows(travel.getByText("Entered by staff · to confirm").first()));
+    // (4) The officer corrects the principal's own answer (P-411 (2)): a correction never empties a filled box.
+    q = own ? await agentQ("Sample Applicant C", own) : null;
+    w0 = (await writes("Sample Applicant C")).draft.written_now;
+    const fix = q ? await put(q, valueOf(q, 1), "user-O") : null;
+    q = own ? await agentQ("Sample Applicant C", own) : null;
+    step("B150 pass (P-411 (2), QA-303): the officer's correction keeps the box filled (a copy made now writes as many form fields), marked \"entered by staff\" and to confirm", fix?.status === 200 && q?.answer?.mark === "by_staff" && q.answer.confirmed === false && (await writes("Sample Applicant C")).draft.written_now === w0, { before: w0, now: (await writes("Sample Applicant C")).draft, answer: q?.answer });
+  }
+
+  // ── 4. R1d: forms filled from declared and confirmed answers (P-411); never overwritten (RT-13…RT-16)
   await o.goto(`${BASE}/cases/${caseId}`); await idle(o);
   const forms = o.locator("section", { has: o.getByRole("heading", { name: "Prepare application", exact: true }) });
   const imm = forms.getByRole("listitem").filter({ has: o.getByRole("heading", { name: /IMM 5257 for Sample Applicant C/ }) });
-  step("forms: IMM 5257 for the principal says what a copy made now writes and what blocks filing", await shows(imm.getByText(/Confirmed answers for \d+ of \d+ form fields/)) && await shows(imm.getByText(/facts? to answer or confirm before filing|Facts confirmed/)));
+  step("forms (QA-301): IMM 5257 for the principal says what a copy made now writes, \"Declared or confirmed answers\", and what blocks filing", await shows(imm.getByText(/Declared or confirmed answers for \d+ of \d+ form fields/)) && await shows(forms.getByText("The forms to file, filled from declared and confirmed answers.")) && await shows(imm.getByText(/facts? to answer or confirm before filing|Facts confirmed/)));
   await imm.getByRole("button", { name: "Generate a copy" }).click();
   step("forms RT-13 pass: the copy is generated in the background, then shown as generated, read back and checked", await shows(imm.getByText("Generated", { exact: true })) && await shows(imm.getByText(/form fields written.* · read back and checked/)));
   await state(o, "forms-generated", [1440, 1024]);
@@ -294,7 +352,9 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   const openList = imm.locator("details[data-fields-open]");
   await openList.locator("summary").click();
   step("QA-165 part 2 pass: IMM 5257 lists the mandatory form fields still empty, each with why, in the form's words (never a field path)", await shows(openList.getByText(/^Marked mandatory on IRCC's form, still empty \(\d+\): .*may ask for more/)) && await shows(openList.getByRole("listitem").filter({ hasText: /— (needs an answer|no question asks it yet|fill it in Adobe|filled by hand): / }).first()) && await gone(openList.getByText(/form1\[|\[0\]\./)));
-  step("QA-165 part 2 fail (Devin on #592): two different fields that share words are two lines, each named (Taiwan PIN, Israel passport), never one line counting both", await shows(openList.getByText(/form field: Taiwan PIN\)/)) && await shows(openList.getByText(/form field: Israel Passport Indicator\)/)));
+  // QA-165 (#1318 review M1): IMM 5257's own script requires the Taiwan PIN and Israel passport boxes only for a passport it codes
+  // 203 or 206; this case's passport is neither, so they are not listed (two fields sharing words, each named: check_qa165_mandatory.ts).
+  step("QA-165 fail guard (#1318 M1): the Taiwan PIN and Israel passport boxes are not listed for a passport that is neither Taiwan's nor Israel's", await gone(openList.getByText(/form field: Taiwan PIN\)/)) && await gone(openList.getByText(/form field: Israel Passport Indicator\)/)));
   { // Its own screenshots (not state(): that would renumber this check's committed set), sideways scroll and axe.
     const own = o.viewportSize(), dir = path.join(SHOTS, "..", "..", "..", "QA-165", "screenshots"); fs.mkdirSync(dir, { recursive: true });
     for (const w of [1440, 390]) {
@@ -311,7 +371,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   // says it for the principal's education in the Agent view, then confirms the section.
   const edu = o.locator("section").filter({ has: o.getByRole("heading", { name: "Education history" }) }).filter({ hasText: "for Sample Applicant C" });
   step("M3 agent: the blocking list names the empty group (\"Entries in … : add them, or say none apply\")", await shows(imm.getByText(/Entries in "Education history": add them, or say none apply \(Sample Applicant C\): not answered/)));
-  await o.getByRole("tab", { name: /^Sample Applicant C/ }).click();
+  await o.getByRole("tab", { name: /^Sample Applicant C(?!'s )/ }).click();
   await edu.getByRole("button", { name: "None apply" }).click();
   step("M3 agent pass (P-72): the officer's \"none apply\" waits for Confirm section", await shows(edu.getByText("None apply", { exact: true })) && await shows(edu.getByText("To confirm")));
   await edu.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
@@ -340,6 +400,8 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
     if (!todo.length && !groups.length) break;
     for (const q of todo) await call("PUT", `/runtime/cases/${caseId}/answers/${q.subjectId}/${q.fact}`, { value: sample(q), expectedId: q.answer?.id ?? null }, "user-O");
     for (const g of groups) await call("PUT", `/runtime/cases/${caseId}/groups/${g.subjectId}/${g.section}/none-apply`, { noneApply: true, expectedId: g.group.none_apply?.id ?? null }, "user-O");
+    // P-244 (B140): a background answer the officer recorded waits for the client; the client re-confirms it (as on their questionnaire, "This is right") before the officer confirms the section.
+    for (const s of (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body.sections) for (const q of s.questions) for (const a of [q.answer, ...q.rows.map((r) => r.answer)]) if (a?.awaits_client) await call("POST", `/runtime/cases/${caseId}/answers/${a.id}/reconfirm`, {}, "user-P");
     const fresh = (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body;
     for (const sec of fresh.sections.filter((x) => todo.some((q) => q.subjectId === x.subjectId) || groups.some((g) => g.subjectId === x.subjectId))) {
       const seen = [...sec.questions.flatMap((q) => [q.answer?.id, ...q.rows.map((r) => r.answer?.id)]), sec.group?.none_apply?.id].filter(Boolean);
@@ -405,7 +467,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   const inPage = [];
   const personTab = (p) => async () => {
     await p.evaluate(() => { window.__tab0 = null; addEventListener("pointerdown", () => { window.__tab0 = performance.now(); }, { capture: true, once: true }); });
-    await p.getByRole("tab", { name: /^Sample Applicant C/ }).click(); await p.getByRole("heading", { name: "Travel and identity documents" }).waitFor();
+    await p.getByRole("tab", { name: /^Sample Applicant C(?!'s )/ }).click(); await p.getByRole("heading", { name: "Travel and identity documents" }).waitFor();
     inPage.push(await p.evaluate(() => (window.__tab0 === null ? null : Math.round(performance.now() - window.__tab0))));
   };
   const backToApplication = (p) => async () => { await p.getByRole("tab", { name: /^The application/ }).click(); await p.getByRole("heading", { name: "Application details" }).waitFor(); };
@@ -441,7 +503,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
     const fl = await call("GET", `/runtime/cases/${caseId}/forms`, undefined, "user-O");
     const imm5257 = (fl.body?.forms ?? []).find((x) => x.form === "IMM 5257" && /Sample Applicant C/.test(x.person));
     const jobs = (imm5257?.fields_open ?? []).filter((o) => /occupation|employer|job/i.test(o.label));
-    step("QA-165 part 2 fail (review M-2 on #592): after a confirmed \"none apply\" for employment, its required row fields say so and the way out, never \"not answered yet\"", jobs.length > 0 && jobs.every((o) => o.reason === "fill it in Adobe" && /"none apply" is confirmed for "Employment and activity history"/.test(o.why)), jobs.map((o) => `${o.label}: ${o.reason}`));
+    step("QA-165 part 2 fail (review M-2 on #592): after a confirmed \"none apply\" for employment, its required row fields say so and the way out, never \"not answered yet\"", jobs.length > 0 && jobs.every((o) => o.reason === "fill it in Adobe" && /"none apply" is answered for "Employment and activity history"/.test(o.why)), jobs.map((o) => `${o.label}: ${o.reason}`));
     step("QA-165 part 2 pass (review M-1 on #592): a line a question fills is named by the case's question, never \"Date of birth\" on another field", !(imm5257?.fields_open ?? []).some((o) => /Date of birth \(form field: (Country|Status)/.test(o.label)), (imm5257?.fields_open ?? []).map((o) => o.label));
   }
   await browser.close();

@@ -14,7 +14,7 @@
 // Part 1 feeds both configurations to the helper without a server. Part 2 reads each live, on this copy: the fixture
 // first, then Demo › Reset and Load the configured checkpoint, each through a case opened by the helper; on the
 // checkpoint it also fills the case the packs' way and checks the helper's UCI fix (a UCI the release's own checks
-// accept: what is left to confirm is only IMM 5476's representative facts, worked out by hand at C1-9). Sample data, live AI off, no model call (US$0). It fails on a main
+// accept: since B107 nothing is left to confirm, worked out by hand at C1-9). Sample data, live AI off, no model call (US$0). It fails on a main
 // without row C1 (no expectedLines).
 //   zsh studio/tools/isolated.sh rt_c1 4479 start && tsx studio/tests/check_m3_c1_expected_lines.ts 4479 xr_studio_rt_c1
 import { spawnSync } from "node:child_process";
@@ -141,26 +141,34 @@ if (expectedFor) {
   // The helper's UCI fix, on the same case filled the packs' way (C7.7-9's own reading of stage 1). Worked by hand since
   // A2 (7 Nov): the case team answers "uses a representative" Yes, so the adults' IMM 5476 applies. Its released map,
   // IMM 5476 (11-2021), reads 22 facts about the representative (REP_FACTS); the firm record fills five of them
-  // (engine/runtime/team.ts: the names at :84; the membership ID, licensing body and firm name at :114-116), so 17 are
-  // left that no route accepts before row B107 (#1072 names them; nothing about a person on the case). So stage 1 is 17
-  // for each adult's filing and 0 for each child's, and every form but the adults' IMM 5476 is ready.
+  // (engine/runtime/team.ts: the names; the membership ID, licensing body and firm name). Row B107 (#1231, QA-300) changes
+  // this, worked by hand from its two sources: the firm record also fills question 7's office block (address 7, phone 2,
+  // e-mail 1: engine/runtime/team.ts representativeContact), and IMM 5476 (11-2021)'s own gates leave the other boxes
+  // unasked for a CICC representative (samples/form-field-gates.json: the law society's province, part (i)'s category and
+  // "other", the student-at-law's two facts, the fax's two). Before B107, 17 were left that no route accepted. Now none
+  // is: stage 1 is 0 for every filing, and every form that applies is ready.
   const REP_FACTS = ["person.family_name", "person.given_names", "representative.membership_id", "representative.licensing_body", "representative.licensing_province", "representative.uncompensated_other_description",
     "representative.uncompensated_category", "person.address_city", "person.address_country", "person.email", "person.fax_country_code", "person.fax_number", "representative.supervising_lawyer_name",
     "representative.supervising_lawyer_membership_id", "representative.organization_name", "person.phone_country_code", "person.phone_number", "person.address_postal_code", "person.address_province_state",
     "person.address_street_name", "person.address_street_number", "person.address_apt_unit"];
-  const FROM_FIRM = ["person.family_name", "person.given_names", "representative.membership_id", "representative.licensing_body", "representative.organization_name"];
-  const LEFT = REP_FACTS.filter((f) => !FROM_FIRM.includes(f)).sort();
+  const FROM_FIRM = ["person.family_name", "person.given_names", "representative.membership_id", "representative.licensing_body", "representative.organization_name",
+    "person.address_apt_unit", "person.address_street_number", "person.address_street_name", "person.address_city", "person.address_province_state", "person.address_postal_code", "person.address_country",
+    "person.phone_country_code", "person.phone_number", "person.email"];
+  const GATED_FOR_CICC = ["representative.licensing_province", "representative.uncompensated_category", "representative.uncompensated_other_description", "representative.supervising_lawyer_name",
+    "representative.supervising_lawyer_membership_id", "person.fax_country_code", "person.fax_number"];
+  const LEFT = REP_FACTS.filter((f) => !FROM_FIRM.includes(f) && !GATED_FOR_CICC.includes(f)).sort();
   const STAGE1: Record<string, number> = { "Sample Client A": LEFT.length, "Sample Spouse A": LEFT.length, "Sample Child A1": 0, "Sample Child A2": 0 };
   await fillEverything(c.id);
   const p = (await prepare(c.id)).p, nameOf = new Map(Object.entries(c.subjects).map(([n, s]) => [s, n]));
   const stage1 = ((await m3.call("GET", `/runtime/cases/${c.id}/prepare`, undefined, m3.officerOf(c.id))).body?.stage1 ?? []) as { filing: string; to_confirm: number }[];
   const byName = Object.fromEntries(stage1.map((x) => [nameOf.get(p?.filings.find((f) => f.id === x.filing)?.applicants[0]?.subject ?? "") ?? x.filing, x.to_confirm]));
-  ok(`C1-9 checkpoint: filled the packs' way, stage 1 is exactly ${LEFT.length} to confirm for each adult's filing (IMM 5476's representative facts no route fills before B107) and 0 for each child's (the UCI was the one other fact left)`,
-    LEFT.length === 17 && Object.keys(STAGE1).every((n) => byName[n] === STAGE1[n]) && stage1.length === 4, byName);
-  const forms = ((await m3.call("GET", `/runtime/cases/${c.id}/forms`, undefined, m3.officerOf(c.id))).body?.forms ?? []) as { form?: string; code?: string; person: string; applies: boolean; readiness: { ready: boolean; missing: { about: string; fact: string }[] } }[];
-  const notReady = forms.filter((f) => f.applies && !f.readiness.ready);
-  const repOnly = notReady.every((f) => (f.form ?? f.code) === "IMM 5476" && f.readiness.missing.every((m) => m.about === "The representative") && [...new Set(f.readiness.missing.map((m) => m.fact))].sort().join("|") === LEFT.join("|"));
-  ok("C1-9b checkpoint: the only forms not ready are the two adults' IMM 5476, each missing exactly those 17 facts about the representative", repOnly && sorted(notReady.map((f) => f.person)).join("|") === "Sample Client A|Sample Spouse A", notReady.map((f) => `${f.form ?? f.code}/${f.person}: ${f.readiness.missing.length}`));
+  ok(`C1-9 checkpoint: filled the packs' way, stage 1 is 0 to confirm for every filing (since B107 the firm record or IMM 5476's own gates settle all 22 representative facts; the UCI was the one other fact left)`,
+    REP_FACTS.length === 22 && FROM_FIRM.length + GATED_FOR_CICC.length === 22 && LEFT.length === 0 && Object.keys(STAGE1).every((n) => byName[n] === STAGE1[n]) && stage1.length === 4, byName);
+  const forms = ((await m3.call("GET", `/runtime/cases/${c.id}/forms`, undefined, m3.officerOf(c.id))).body?.forms ?? []) as { form?: string; code?: string; person: string; applies: boolean; readiness: { ready: boolean; missing: { about: string; fact: string; reason: string }[] } }[];
+  // QA-165 (#1318): readiness also names the mandatory form fields a copy leaves empty that no answer fills (IMM 5257 SCH1's
+  // by-hand boxes, "left empty on the form"); those are said on Ready to file and hold no lock back. No fact is left to answer.
+  const notReady = forms.filter((f) => f.applies && f.readiness.missing.some((m) => m.reason !== "left empty on the form"));
+  ok("C1-9b checkpoint: every form that applies waits on no fact, the adults' IMM 5476 included (B107: nothing about the representative is left to answer)", notReady.length === 0, notReady.map((f) => `${f.form ?? f.code}/${f.person}: ${f.readiness.missing.map((m) => m.fact).join(", ")}`));
   const uciWarns = ((await prepare(c.id)).p?.readiness ?? []).flatMap((r) => r.warns).filter((w) => w.code === "fact_problem" && /Unique Client Identifier/.test(w.words));
   ok("C1-10 no \"fact with a problem\" warning on the UCI: the helper's Sample UCI is one the release's own checks accept", uciWarns.length === 0, uciWarns.map((w) => w.words.slice(0, 120)));
 }

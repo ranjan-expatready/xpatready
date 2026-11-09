@@ -43,11 +43,11 @@ async function main() {
   const bad = await generate(1);
   ok("C7.6 QA-122 fail: a copy is still made (P-71 blocks filing, not generating)", bad.status === 202 && bad.finished && bad.state === "GENERATED", bad);
   ok("C7.6 QA-122 fail: the invalid value is not written: its form fields say \"not written\" with the problem, and the copy's facts leave it out",
-    bad.mine.length > 0 && bad.mine.every((b) => b.result === "not written" && /confirmed with a problem, not written: Enter a real date/.test(b.why ?? "")) && bad.facts.length === 0, bad);
+    bad.mine.length > 0 && bad.mine.every((b) => b.result === "not written" && /answered with a problem, not written: Enter a real date/.test(b.why ?? "")) && bad.facts.length === 0, bad);
   const real = opt.shape?.datePrecision === "month" ? "2020-01" : "2020-01-15";
   ok("setup: the date is fixed to a real one and confirmed again", await answerAndConfirm(real));
   const good = await generate(2);
   ok("C7.6 QA-122 pass: fixed, the next copy writes it", good.state === "GENERATED" && good.mine.some((b) => b.result === "written") && good.facts.some((f) => f.value === real), good);
-  summary();
+  process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code; before, it always exited 0)
 }
 await main();

@@ -124,7 +124,7 @@ ok("C9-12 pass: a case-level question answered No (release information to someon
 // opens with a representative of record, so "Uses a representative" No cannot be reached by route (row A2); the rule is
 // called directly with that answer. IMM 5476 is "principal, partner and adult children", from 18: a principal of 16 and a
 // child of 19 are listed not needed, a child of 10 is not listed (it was never one of their forms). ----
-const snap = JSON.parse(m3.sql(`select r.snapshot::text from config_release r join pack_work_pin w on w.config_release_id = r.id where w.case_id='${c.id}'`) ?? "null");
+const snap = JSON.parse(m3.sql(`select r.snapshot::text from config_release r join pack_work_pin w on w.config_release_id = r.id where w.case_id='${c.id}' and w.revision = (select max(z.revision) from pack_work_pin z where z.case_id = w.case_id)`) ?? "null");
 const today = new Date(), dob = (y: number) => m3.yearsAgo(y);
 const kin = [{ subjectId: "s-principal", role: "principal", label: "Teen T", applies: true }, { subjectId: "s-child19", role: "child", label: "Child 19", applies: true }, { subjectId: "s-child10", role: "child", label: "Child 10", applies: true }, { subjectId: "s-case", role: "case", label: "The application", applies: true }] as Participant[];
 const ans = (subjectId: string, field: string, value: unknown) => ({ id: `${subjectId}:${field}`, subjectId, field, rowKey: null, value, status: "VERIFIED" as const, channel: "agent_view", actor: m3.OFFICER, at: today.toISOString() });

@@ -1,0 +1,30 @@
+C11.6 on 22185c3b6 (product code = main 152759210), copy qa_p116 :4470, start Sun Nov  8 08:44:11 IST 2026
+NOTICE:  database "xr_studio_qa_p116" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_p116 on http://localhost:4470 (xr_studio_qa_p116), stops itself in 30 min
+reset 201
+load 201
+loaded Sun Nov  8 08:45:28 IST 2026
+C11.6 — Channel per form on the case, inside what IRCC accepts
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C11.6-1 pass: the case shows the combination's IRCC account, read-only ("Filed through APR Portal", P-137) — "APR_PORTAL"
+PASS  C11.6-2 fail: there is no route to change the portal on a case (PATCH …/portal: 404 or 405)
+PASS  C11.6-3 pass: each form item starts on its release line's channel (IMM 5257 ONLINE, IMM 5645 PDF_UPLOAD, IMM 5476 PDF_UPLOAD; Sample, FQ-2) — ["ONLINE","PDF_UPLOAD","PDF_UPLOAD"]
+PASS  C11.6-4 pass: each form item lists the channels IRCC accepts for its edition on this account; IMM 5476 accepts PDF upload only ("Upload this form along with your online application", VV-R10) — ["PDF_UPLOAD"]
+PASS  C11.6-5 pass: the signature value follows edition × channel: IMM 5476 signed by hand and scanned, IMM 5645 as its line says (TYPED_NAME) — ["HAND_SCANNED","TYPED_NAME"]
+PASS  C11.6-6 fail: Online on IMM 5476 is refused with IRCC's own line (422), nothing changed — "IMM 5476 is filed as Online, but the Form library records that IRCC accepts it only as a PDF upload. Choose a way IRCC accepts. IRCC's line: \"Upload this form along with your online application\" (https://www.canada.ca/en/immigration-refugees-citizenship/ser
+PASS  C11.6-7 fail: an unknown channel is a 400 naming the four channels — 400
+PASS  C11.6-8 fail: a client cannot change a channel (403)
+PASS  C11.6-8a fail (r5c §6): a channel outside what the item accepts on the APR Portal is refused with the reason, nothing changed (422; here PAPER on IMM 5476; the fixture's Sample accepts record, setup S4a: Online on IMM 5257) — "IMM 5476 is filed as Paper, but the Form library records that IRCC accepts it only as a PDF upload. Choose a way IRCC accepts. IRCC's line: \"Upload this form along with your online application\" (https://www.canada.ca/en/immigration-refugees-citizenship/serv
+PASS  C11.6-8b fail (FQ-3, recommended): Paper on a visitor visa needs a written accommodation reason (400 without one) — 400
+PASS  C11.6-9 pass: Paper, accepted for IMM 5257 (Sample) and given with a reason, is saved on that person's item only; the spouse's IMM 5257 keeps its line's channel (ONLINE) — {"target":"PAPER","status":200}
+PASS  C11.6-10 pass (data): the change is audited with who, from and to, without client values
+PASS  C11.6-11 fail: a change from an older version is refused (409, Reload) — 409
+PASS  C11.6-12 pass: the combination's own line is unchanged by a case change (configuration stays as released: IMM 5257 ONLINE) — {"line":"ONLINE","released":"ONLINE"}
+
+14/14 passed
+pack exit 0  end Sun Nov  8 08:45:31 IST 2026
+stopped qa_p116 (database and files removed; log in var/isolated-logs/qa_p116-api.log)

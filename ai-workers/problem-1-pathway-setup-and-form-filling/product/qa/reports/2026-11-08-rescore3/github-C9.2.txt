@@ -1,0 +1,1193 @@
+﻿2026-11-08T08:56:45.9547707Z Current runner version: '2.338.2'
+##[group]Runner Image Provisioner
+Hosted Compute Agent
+Version: 20261028.624
+Commit: 54898b74c23fde5556c9b3c3a2290865feef0dfe
+Build Date: 2026-10-28T21:51:42Z
+Worker ID: {d36175a7-1889-4c77-b94c-0f60bf00ac02}
+Region: northcentralus
+Cloud: Azure
+##[endgroup]
+##[group]Operating System
+Ubuntu
+24.04.5
+LTS
+##[endgroup]
+##[group]Runner Image
+Image: ubuntu-24.04
+Version: 20261101.360.1
+Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261101.360/images/ubuntu/Ubuntu2404-Readme.md
+Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261101.360
+##[endgroup]
+##[group]GITHUB_TOKEN Permissions
+Contents: read
+Metadata: read
+##[endgroup]
+Secret source: Actions
+Cache mode: write
+Prepare workflow directory
+Prepare all required actions
+Getting action download info
+Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+Complete job name: packs (C9.2)
+##[group]Run actions/checkout@v4
+with:
+  fetch-depth: 0
+  repository: <owner>/<repo>
+  token: ***
+  ssh-strict: true
+  ssh-user: git
+  persist-credentials: true
+  clean: true
+  sparse-checkout-cone-mode: true
+  fetch-tags: false
+  show-progress: true
+  lfs: false
+  submodules: false
+  set-safe-directory: true
+  allow-unsafe-pr-checkout: false
+env:
+  P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+  S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+##[endgroup]
+Syncing repository: <owner>/<repo>
+##[group]Getting Git version info
+Working directory is '<runner>
+[command]/usr/bin/git version
+git version 2.56.0
+##[endgroup]
+Temporarily overriding HOME='<runner> before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+[command]/usr/bin/git config --global --add safe.directory <runner>
+Deleting the contents of '<runner>
+##[group]Initializing the repository
+[command]/usr/bin/git init <runner>
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: will change to "main" in Git 3.0. To configure the initial branch name
+hint: to use in all of your new repositories, which will suppress this warning,
+hint: call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+hint:
+hint: Disable this message with "git config set advice.defaultBranchName false"
+Initialized empty Git repository in <runner>
+[command]/usr/bin/git remote add origin https://github.com/<owner>/<repo>
+##[endgroup]
+##[group]Disabling automatic garbage collection
+[command]/usr/bin/git config --local gc.auto 0
+##[endgroup]
+##[group]Setting up auth
+[command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+[command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+[command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+##[endgroup]
+##[group]Fetching the repository
+[command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+From https://github.com/<owner>/<repo>
+ * [new branch]          claude/admiring-cray-9nku87 -> origin/claude/admiring-cray-9nku87
+ * [new branch]          claude/admiring-galileo-i2ece1 -> origin/claude/admiring-galileo-i2ece1
+ * [new branch]          claude/adoring-hypatia-3ihatw -> origin/claude/adoring-hypatia-3ihatw
+ * [new branch]          claude/adoring-ramanujan-4u0w7n -> origin/claude/adoring-ramanujan-4u0w7n
+ * [new branch]          claude/affectionate-babbage-g4v02e -> origin/claude/affectionate-babbage-g4v02e
+ * [new branch]          claude/affectionate-lovelace-ijv2o0 -> origin/claude/affectionate-lovelace-ijv2o0
+ * [new branch]          claude/amazing-goldberg-yfcnvc -> origin/claude/amazing-goldberg-yfcnvc
+ * [new branch]          claude/amazing-pasteur-4hakwo -> origin/claude/amazing-pasteur-4hakwo
+ * [new branch]          claude/amazing-pasteur-bvxmz0 -> origin/claude/amazing-pasteur-bvxmz0
+ * [new branch]          claude/audit-outsider-0a5e67 -> origin/claude/audit-outsider-0a5e67
+ * [new branch]          claude/awesome-mendel-nusfn1 -> origin/claude/awesome-mendel-nusfn1
+ * [new branch]          claude/b115-sponsor     -> origin/claude/b115-sponsor
+ * [new branch]          claude/b126-qa295-prepared-by -> origin/claude/b126-qa295-prepared-by
+ * [new branch]          claude/b86-conditions-box -> origin/claude/b86-conditions-box
+ * [new branch]          claude/b86-conditions-box-backup -> origin/claude/b86-conditions-box-backup
+ * [new branch]          claude/beautiful-brahmagupta-dzjgpj -> origin/claude/beautiful-brahmagupta-dzjgpj
+ * [new branch]          claude/beautiful-tesla-kortle -> origin/claude/beautiful-tesla-kortle
+ * [new branch]          claude/blissful-lamport-bazwku -> origin/claude/blissful-lamport-bazwku
+ * [new branch]          claude/blissful-mccarthy-5b5t13 -> origin/claude/blissful-mccarthy-5b5t13
+ * [new branch]          claude/blissful-rubin-fn9ymy -> origin/claude/blissful-rubin-fn9ymy
+ * [new branch]          claude/bold-bell-xm7qwr -> origin/claude/bold-bell-xm7qwr
+ * [new branch]          claude/bold-curie-qolyno -> origin/claude/bold-curie-qolyno
+ * [new branch]          claude/bold-euler-bzu6zv -> origin/claude/bold-euler-bzu6zv
+ * [new branch]          claude/bold-franklin-q5wxdk -> origin/claude/bold-franklin-q5wxdk
+ * [new branch]          claude/brave-ritchie-7cev1n -> origin/claude/brave-ritchie-7cev1n
+ * [new branch]          claude/busy-bell-jkramr -> origin/claude/busy-bell-jkramr
+ * [new branch]          claude/busy-einstein-w2ugbm -> origin/claude/busy-einstein-w2ugbm
+ * [new branch]          claude/busy-lamport-b0nj6x -> origin/claude/busy-lamport-b0nj6x
+ * [new branch]          claude/busy-lamport-b0nj6x-gaps -> origin/claude/busy-lamport-b0nj6x-gaps
+ * [new branch]          claude/busy-lamport-b0nj6x-rescore -> origin/claude/busy-lamport-b0nj6x-rescore
+ * [new branch]          claude/busy-maxwell-dk1jf3 -> origin/claude/busy-maxwell-dk1jf3
+ * [new branch]          claude/busy-rubin-1sjrry -> origin/claude/busy-rubin-1sjrry
+ * [new branch]          claude/c26-saved-imm5484e -> origin/claude/c26-saved-imm5484e
+ * [new branch]          claude/c51-pack-own-subject -> origin/claude/c51-pack-own-subject
+ * [new branch]          claude/canary-new-account-2026-11-07 -> origin/claude/canary-new-account-2026-11-07
+ * [new branch]          claude/canary-switch-2026-11-05 -> origin/claude/canary-switch-2026-11-05
+ * [new branch]          claude/charming-albattani-jhkk4s -> origin/claude/charming-albattani-jhkk4s
+ * [new branch]          claude/charming-cannon-psxisw -> origin/claude/charming-cannon-psxisw
+ * [new branch]          claude/charming-turing-j8veab -> origin/claude/charming-turing-j8veab
+ * [new branch]          claude/charming-wright-r07pbx -> origin/claude/charming-wright-r07pbx
+ * [new branch]          claude/ci-and-lists-patch -> origin/claude/ci-and-lists-patch
+ * [new branch]          claude/compassionate-brown-qx4icx -> origin/claude/compassionate-brown-qx4icx
+ * [new branch]          claude/compassionate-davinci-lafidu -> origin/claude/compassionate-davinci-lafidu
+ * [new branch]          claude/compassionate-lovelace-gqdrwk -> origin/claude/compassionate-lovelace-gqdrwk
+ * [new branch]          claude/compassionate-sagan-24h24c -> origin/claude/compassionate-sagan-24h24c
+ * [new branch]          claude/compassionate-turing-kyyc7q -> origin/claude/compassionate-turing-kyyc7q
+ * [new branch]          claude/cool-cray-pobjf1 -> origin/claude/cool-cray-pobjf1
+ * [new branch]          claude/d0-tests-drafting-22444b -> origin/claude/d0-tests-drafting-22444b
+ * [new branch]          claude/d0-tests-forms-2dd35c -> origin/claude/d0-tests-forms-2dd35c
+ * [new branch]          claude/d0-tests-library-41723d -> origin/claude/d0-tests-library-41723d
+ * [new branch]          claude/d0-tests-m3-visitor-f54fc5 -> origin/claude/d0-tests-m3-visitor-f54fc5
+ * [new branch]          claude/dazzling-hopper-32hn7o -> origin/claude/dazzling-hopper-32hn7o
+ * [new branch]          claude/dazzling-ramanujan-2d655u -> origin/claude/dazzling-ramanujan-2d655u
+ * [new branch]          claude/dreamy-carson-qese5k -> origin/claude/dreamy-carson-qese5k
+ * [new branch]          claude/eager-allen-0cw0m4 -> origin/claude/eager-allen-0cw0m4
+ * [new branch]          claude/eager-wozniak-b441sk -> origin/claude/eager-wozniak-b441sk
+ * [new branch]          claude/ecstatic-fermi-298fmz -> origin/claude/ecstatic-fermi-298fmz
+ * [new branch]          claude/ecstatic-gates-sikt5r -> origin/claude/ecstatic-gates-sikt5r
+ * [new branch]          claude/ecstatic-gates-sikt5r-c54 -> origin/claude/ecstatic-gates-sikt5r-c54
+ * [new branch]          claude/ecstatic-gates-sikt5r-c69 -> origin/claude/ecstatic-gates-sikt5r-c69
+ * [new branch]          claude/ecstatic-gates-sikt5r-packs -> origin/claude/ecstatic-gates-sikt5r-packs
+ * [new branch]          claude/ecstatic-gates-sikt5r-qa149 -> origin/claude/ecstatic-gates-sikt5r-qa149
+ * [new branch]          claude/ecstatic-noether-pkiaxg -> origin/claude/ecstatic-noether-pkiaxg
+ * [new branch]          claude/elegant-hawking-qc3qjh -> origin/claude/elegant-hawking-qc3qjh
+ * [new branch]          claude/elegant-knuth-y7lnq9 -> origin/claude/elegant-knuth-y7lnq9
+ * [new branch]          claude/elegant-pascal-6s6r7y -> origin/claude/elegant-pascal-6s6r7y
+ * [new branch]          claude/eloquent-brahmagupta-r9inu3 -> origin/claude/eloquent-brahmagupta-r9inu3
+ * [new branch]          claude/eloquent-pasteur-2ogd88 -> origin/claude/eloquent-pasteur-2ogd88
+ * [new branch]          claude/eloquent-thompson-u761l3 -> origin/claude/eloquent-thompson-u761l3
+ * [new branch]          claude/eloquent-volta-l2h9rj -> origin/claude/eloquent-volta-l2h9rj
+ * [new branch]          claude/epic-heisenberg-dkr5mu -> origin/claude/epic-heisenberg-dkr5mu
+ * [new branch]          claude/epic-keller-tvupdz -> origin/claude/epic-keller-tvupdz
+ * [new branch]          claude/epic-wright-62f5h5 -> origin/claude/epic-wright-62f5h5
+ * [new branch]          claude/evidence-a5ab73  -> origin/claude/evidence-a5ab73
+ * [new branch]          claude/evidence-c72-app-path -> origin/claude/evidence-c72-app-path
+ * [new branch]          claude/evidence-e1b-2367de -> origin/claude/evidence-e1b-2367de
+ * [new branch]          claude/exciting-mccarthy-up4u21 -> origin/claude/exciting-mccarthy-up4u21
+ * [new branch]          claude/exciting-mccarthy-up4u21-b138 -> origin/claude/exciting-mccarthy-up4u21-b138
+ * [new branch]          claude/exciting-mccarthy-up4u21-b139 -> origin/claude/exciting-mccarthy-up4u21-b139
+ * [new branch]          claude/exciting-mendel-kzb37s -> origin/claude/exciting-mendel-kzb37s
+ * [new branch]          claude/fervent-fermat-mvm1kg -> origin/claude/fervent-fermat-mvm1kg
+ * [new branch]          claude/fervent-ptolemy-w5c6vr -> origin/claude/fervent-ptolemy-w5c6vr
+ * [new branch]          claude/festive-edison-hfb2om -> origin/claude/festive-edison-hfb2om
+ * [new branch]          claude/festive-fermat-t7zw1z -> origin/claude/festive-fermat-t7zw1z
+ * [new branch]          claude/festive-fermat-t7zw1z-flowtest-base -> origin/claude/festive-fermat-t7zw1z-flowtest-base
+ * [new branch]          claude/festive-fermat-t7zw1z-flowtest-code -> origin/claude/festive-fermat-t7zw1z-flowtest-code
+ * [new branch]          claude/festive-fermat-t7zw1z-flowtest-records -> origin/claude/festive-fermat-t7zw1z-flowtest-records
+ * [new branch]          claude/festive-fermat-t7zw1z-flowtest2-base -> origin/claude/festive-fermat-t7zw1z-flowtest2-base
+ * [new branch]          claude/festive-fermat-t7zw1z-flowtest2-code -> origin/claude/festive-fermat-t7zw1z-flowtest2-code
+ * [new branch]          claude/festive-fermat-t7zw1z-flowtest2-records -> origin/claude/festive-fermat-t7zw1z-flowtest2-records
+ * [new branch]          claude/festive-hawking-1m5f2a -> origin/claude/festive-hawking-1m5f2a
+ * [new branch]          claude/festive-hypatia-f3vcuy -> origin/claude/festive-hypatia-f3vcuy
+ * [new branch]          claude/festive-lovelace-jx2dwb -> origin/claude/festive-lovelace-jx2dwb
+ * [new branch]          claude/festive-newton-3nue39 -> origin/claude/festive-newton-3nue39
+ * [new branch]          claude/festive-noether-prh9i1 -> origin/claude/festive-noether-prh9i1
+ * [new branch]          claude/festive-ptolemy-svx0h4 -> origin/claude/festive-ptolemy-svx0h4
+ * [new branch]          claude/festive-turing-gvqe2b -> origin/claude/festive-turing-gvqe2b
+ * [new branch]          claude/focused-dijkstra-ndvqjn -> origin/claude/focused-dijkstra-ndvqjn
+ * [new branch]          claude/focused-volta-8o0bo5 -> origin/claude/focused-volta-8o0bo5
+ * [new branch]          claude/focused-wright-ydjmqc -> origin/claude/focused-wright-ydjmqc
+ * [new branch]          claude/focused-wright-ydjmqc-c1113 -> origin/claude/focused-wright-ydjmqc-c1113
+ * [new branch]          claude/focused-wright-ydjmqc-c34 -> origin/claude/focused-wright-ydjmqc-c34
+ * [new branch]          claude/forms-074d92     -> origin/claude/forms-074d92
+ * [new branch]          claude/forms-apr-552f9d -> origin/claude/forms-apr-552f9d
+ * [new branch]          claude/forms-b112-merge-supplies-about -> origin/claude/forms-b112-merge-supplies-about
+ * [new branch]          claude/forms-b114-condition-fields -> origin/claude/forms-b114-condition-fields
+ * [new branch]          claude/forms-b116-own-unmapped -> origin/claude/forms-b116-own-unmapped
+ * [new branch]          claude/forms-b71-six-submit -> origin/claude/forms-b71-six-submit
+ * [new branch]          claude/forms-b81-not-on-form -> origin/claude/forms-b81-not-on-form
+ * [new branch]          claude/forms-b82-condition-facts -> origin/claude/forms-b82-condition-facts
+ * [new branch]          claude/forms-b83-own-question-screen -> origin/claude/forms-b83-own-question-screen
+ * [new branch]          claude/forms-b84-schedule-copies -> origin/claude/forms-b84-schedule-copies
+ * [new branch]          claude/forms-b97-release-two -> origin/claude/forms-b97-release-two
+ * [new branch]          claude/forms-b99-validated-copies -> origin/claude/forms-b99-validated-copies
+ * [new branch]          claude/forms-background-rule -> origin/claude/forms-background-rule
+ * [new branch]          claude/forms-c101-checkpoint -> origin/claude/forms-c101-checkpoint
+ * [new branch]          claude/forms-c1114-live-finished -> origin/claude/forms-c1114-live-finished
+ * [new branch]          claude/forms-c1114-near -> origin/claude/forms-c1114-near
+ * [new branch]          claude/forms-c1114-replay-checker -> origin/claude/forms-c1114-replay-checker
+ * [new branch]          claude/forms-c1115-link -> origin/claude/forms-c1115-link
+ * [new branch]          claude/forms-c212-complete -> origin/claude/forms-c212-complete
+ * [new branch]          claude/forms-c212-hfb2om -> origin/claude/forms-c212-hfb2om
+ * [new branch]          claude/forms-c212b-hfb2om -> origin/claude/forms-c212b-hfb2om
+ * [new branch]          claude/forms-c212c-hfb2om -> origin/claude/forms-c212c-hfb2om
+ * [new branch]          claude/forms-c24-editions -> origin/claude/forms-c24-editions
+ * [new branch]          claude/forms-c26-checklist -> origin/claude/forms-c26-checklist
+ * [new branch]          claude/forms-c312-fieldmap -> origin/claude/forms-c312-fieldmap
+ * [new branch]          claude/forms-c32-review-new -> origin/claude/forms-c32-review-new
+ * [new branch]          claude/forms-c34-ai-step -> origin/claude/forms-c34-ai-step
+ * [new branch]          claude/forms-c36-rule-on-six -> origin/claude/forms-c36-rule-on-six
+ * [new branch]          claude/forms-c411-contract -> origin/claude/forms-c411-contract
+ * [new branch]          claude/forms-c411-out-of-date -> origin/claude/forms-c411-out-of-date
+ * [new branch]          claude/forms-c411-stale-words -> origin/claude/forms-c411-stale-words
+ * [new branch]          claude/forms-c47-pqr-picks -> origin/claude/forms-c47-pqr-picks
+ * [new branch]          claude/forms-d2-hide-stub -> origin/claude/forms-d2-hide-stub
+ * [new branch]          claude/forms-d2-live-fails-offer-saved -> origin/claude/forms-d2-live-fails-offer-saved
+ * [new branch]          claude/forms-d2-live-saved -> origin/claude/forms-d2-live-saved
+ * [new branch]          claude/forms-d3-replay-recordings -> origin/claude/forms-d3-replay-recordings
+ * [new branch]          claude/forms-f1-check-f6e7f2 -> origin/claude/forms-f1-check-f6e7f2
+ * [new branch]          claude/forms-family-role -> origin/claude/forms-family-role
+ * [new branch]          claude/forms-fix7-4f2b4a -> origin/claude/forms-fix7-4f2b4a
+ * [new branch]          claude/forms-focus-landings -> origin/claude/forms-focus-landings
+ * [new branch]          claude/forms-imm5532-saved -> origin/claude/forms-imm5532-saved
+ * [new branch]          claude/forms-irm-editions -> origin/claude/forms-irm-editions
+ * [new branch]          claude/forms-ledger-tidy-06zafk -> origin/claude/forms-ledger-tidy-06zafk
+ * [new branch]          claude/forms-minors-1101 -> origin/claude/forms-minors-1101
+ * [new branch]          claude/forms-n8-devin-06zafk -> origin/claude/forms-n8-devin-06zafk
+ * [new branch]          claude/forms-p179-7cc21f -> origin/claude/forms-p179-7cc21f
+ * [new branch]          claude/forms-p179b-0857b9 -> origin/claude/forms-p179b-0857b9
+ * [new branch]          claude/forms-p305-bulk-reuse-only -> origin/claude/forms-p305-bulk-reuse-only
+ * [new branch]          claude/forms-park-ext-0266c0 -> origin/claude/forms-park-ext-0266c0
+ * [new branch]          claude/forms-qa-219-merge-alias -> origin/claude/forms-qa-219-merge-alias
+ * [new branch]          claude/forms-qa-221-sch1-who -> origin/claude/forms-qa-221-sch1-who
+ * [new branch]          claude/forms-qa101      -> origin/claude/forms-qa101
+ * [new branch]          claude/forms-qa182-box-words -> origin/claude/forms-qa182-box-words
+ * [new branch]          claude/forms-qa182-pack-run -> origin/claude/forms-qa182-pack-run
+ * [new branch]          claude/forms-qa191-rules -> origin/claude/forms-qa191-rules
+ * [new branch]          claude/forms-qa192-near-reason -> origin/claude/forms-qa192-near-reason
+ * [new branch]          claude/forms-qa193-batch -> origin/claude/forms-qa193-batch
+ * [new branch]          claude/forms-qa195-identity-by-name -> origin/claude/forms-qa195-identity-by-name
+ * [new branch]          claude/forms-qa196-ai-checks-one-door -> origin/claude/forms-qa196-ai-checks-one-door
+ * [new branch]          claude/forms-qa196-landers -> origin/claude/forms-qa196-landers
+ * [new branch]          claude/forms-qa270-file-route -> origin/claude/forms-qa270-file-route
+ * [new branch]          claude/forms-qa285-validated-files -> origin/claude/forms-qa285-validated-files
+ * [new branch]          claude/forms-quarantine-c313 -> origin/claude/forms-quarantine-c313
+ * [new branch]          claude/forms-r69-fix-4af07a -> origin/claude/forms-r69-fix-4af07a
+ * [new branch]          claude/forms-review-records-1101 -> origin/claude/forms-review-records-1101
+ * [new branch]          claude/forms-s1-fix     -> origin/claude/forms-s1-fix
+ * [new branch]          claude/forms-s1-guards-42e331 -> origin/claude/forms-s1-guards-42e331
+ * [new branch]          claude/forms-showmore-wait -> origin/claude/forms-showmore-wait
+ * [new branch]          claude/forms-slice1-finish -> origin/claude/forms-slice1-finish
+ * [new branch]          claude/forms-twins      -> origin/claude/forms-twins
+ * [new branch]          claude/forms-x5a-fill-hardening-06zafk -> origin/claude/forms-x5a-fill-hardening-06zafk
+ * [new branch]          claude/forms-x5a-library-06zafk -> origin/claude/forms-x5a-library-06zafk
+ * [new branch]          claude/forms-x5a-minors-06zafk -> origin/claude/forms-x5a-minors-06zafk
+ * [new branch]          claude/forms-x5a-polish-06zafk -> origin/claude/forms-x5a-polish-06zafk
+ * [new branch]          claude/forms-x8a-cost-wait-hfb2om -> origin/claude/forms-x8a-cost-wait-hfb2om
+ * [new branch]          claude/forms-yesno-facts-qa227 -> origin/claude/forms-yesno-facts-qa227
+ * [new branch]          claude/friendly-davinci-dfsq83 -> origin/claude/friendly-davinci-dfsq83
+ * [new branch]          claude/friendly-lamport-06zafk -> origin/claude/friendly-lamport-06zafk
+ * [new branch]          claude/friendly-newton-2z7hog -> origin/claude/friendly-newton-2z7hog
+ * [new branch]          claude/friendly-newton-urm088 -> origin/claude/friendly-newton-urm088
+ * [new branch]          claude/funny-curie-mbttn2 -> origin/claude/funny-curie-mbttn2
+ * [new branch]          claude/funny-faraday-d3ut5i -> origin/claude/funny-faraday-d3ut5i
+ * [new branch]          claude/funny-gates-pgthb4 -> origin/claude/funny-gates-pgthb4
+ * [new branch]          claude/funny-mccarthy-w2r441 -> origin/claude/funny-mccarthy-w2r441
+ * [new branch]          claude/funny-ptolemy-q50d0c -> origin/claude/funny-ptolemy-q50d0c
+ * [new branch]          claude/funny-ride-h3nvar -> origin/claude/funny-ride-h3nvar
+ * [new branch]          claude/funny-ritchie-bl5d99 -> origin/claude/funny-ritchie-bl5d99
+ * [new branch]          claude/gallant-cerf-xl07vk -> origin/claude/gallant-cerf-xl07vk
+ * [new branch]          claude/gallant-lamport-cj0epp -> origin/claude/gallant-lamport-cj0epp
+ * [new branch]          claude/gate-b           -> origin/claude/gate-b
+ * [new branch]          claude/gifted-bardeen-e0tgby -> origin/claude/gifted-bardeen-e0tgby
+ * [new branch]          claude/gifted-darwin-npel87 -> origin/claude/gifted-darwin-npel87
+ * [new branch]          claude/gifted-turing-a7w1tb -> origin/claude/gifted-turing-a7w1tb
+ * [new branch]          claude/gracious-bardeen-j1ieoh -> origin/claude/gracious-bardeen-j1ieoh
+ * [new branch]          claude/gracious-brahmagupta-tyy57m -> origin/claude/gracious-brahmagupta-tyy57m
+ * [new branch]          claude/gracious-einstein-88n6h2 -> origin/claude/gracious-einstein-88n6h2
+ * [new branch]          claude/gracious-shannon-hd6ir2 -> origin/claude/gracious-shannon-hd6ir2
+ * [new branch]          claude/great-faraday-w28s57 -> origin/claude/great-faraday-w28s57
+ * [new branch]          claude/great-hawking-9m4ng6 -> origin/claude/great-hawking-9m4ng6
+ * [new branch]          claude/hopeful-euler-xlvl2l -> origin/claude/hopeful-euler-xlvl2l
+ * [new branch]          claude/hopeful-faraday-hqhzg9 -> origin/claude/hopeful-faraday-hqhzg9
+ * [new branch]          claude/hopeful-hawking-5rymj8 -> origin/claude/hopeful-hawking-5rymj8
+ * [new branch]          claude/hopeful-keller-blo8iu -> origin/claude/hopeful-keller-blo8iu
+ * [new branch]          claude/hopeful-knuth-gq0p04 -> origin/claude/hopeful-knuth-gq0p04
+ * [new branch]          claude/hopeful-maxwell-4etgzs -> origin/claude/hopeful-maxwell-4etgzs
+ * [new branch]          claude/infallible-hermann-5e51d4 -> origin/claude/infallible-hermann-5e51d4
+ * [new branch]          claude/inspiring-cerf-xt6u6w -> origin/claude/inspiring-cerf-xt6u6w
+ * [new branch]          claude/inspiring-dirac-e1zsqc -> origin/claude/inspiring-dirac-e1zsqc
+ * [new branch]          claude/inspiring-fermi-8kyot6 -> origin/claude/inspiring-fermi-8kyot6
+ * [new branch]          claude/intelligent-euler-rwnbxv -> origin/claude/intelligent-euler-rwnbxv
+ * [new branch]          claude/intelligent-noether-qkzc6a -> origin/claude/intelligent-noether-qkzc6a
+ * [new branch]          claude/intelligent-noether-qkzc6a-b141 -> origin/claude/intelligent-noether-qkzc6a-b141
+ * [new branch]          claude/intelligent-noether-qkzc6a-b144 -> origin/claude/intelligent-noether-qkzc6a-b144
+ * [new branch]          claude/jolly-galileo-7yc31f -> origin/claude/jolly-galileo-7yc31f
+ * [new branch]          claude/keen-bell-k19fvr -> origin/claude/keen-bell-k19fvr
+ * [new branch]          claude/kind-hawking-fc8rds -> origin/claude/kind-hawking-fc8rds
+ * [new branch]          claude/kind-hawking-fc8rds-notes-test -> origin/claude/kind-hawking-fc8rds-notes-test
+ * [new branch]          claude/kind-hawking-fc8rds-qa181 -> origin/claude/kind-hawking-fc8rds-qa181
+ * [new branch]          claude/kind-hawking-fc8rds-quarantine -> origin/claude/kind-hawking-fc8rds-quarantine
+ * [new branch]          claude/kind-hawking-fc8rds-tcfix -> origin/claude/kind-hawking-fc8rds-tcfix
+ * [new branch]          claude/kind-hawking-fc8rds-testdbs -> origin/claude/kind-hawking-fc8rds-testdbs
+ * [new branch]          claude/laughing-bardeen-bsp1va -> origin/claude/laughing-bardeen-bsp1va
+ * [new branch]          claude/lead-watch-v2    -> origin/claude/lead-watch-v2
+ * [new branch]          claude/loving-cannon-husr9q -> origin/claude/loving-cannon-husr9q
+ * [new branch]          claude/loving-franklin-k30mje -> origin/claude/loving-franklin-k30mje
+ * [new branch]          claude/loving-franklin-t3vxdr -> origin/claude/loving-franklin-t3vxdr
+ * [new branch]          claude/loving-pascal-do4fvf -> origin/claude/loving-pascal-do4fvf
+ * [new branch]          claude/loving-ride-hhtdgi -> origin/claude/loving-ride-hhtdgi
+ * [new branch]          claude/lucid-franklin-vb923y -> origin/claude/lucid-franklin-vb923y
+ * [new branch]          claude/lucid-galileo-c7hnlp -> origin/claude/lucid-galileo-c7hnlp
+ * [new branch]          claude/lucid-volta-ily0ht -> origin/claude/lucid-volta-ily0ht
+ * [new branch]          claude/m3-agent-view-4fe7fe -> origin/claude/m3-agent-view-4fe7fe
+ * [new branch]          claude/m3-design-baf010 -> origin/claude/m3-design-baf010
+ * [new branch]          claude/magical-brown-tu96ux -> origin/claude/magical-brown-tu96ux
+ * [new branch]          claude/magical-volta-hcuz9w -> origin/claude/magical-volta-hcuz9w
+ * [new branch]          claude/magical-wozniak-i1qy92 -> origin/claude/magical-wozniak-i1qy92
+ * [new branch]          claude/modest-cerf-yunauq -> origin/claude/modest-cerf-yunauq
+ * [new branch]          claude/modest-darwin-1omjpl -> origin/claude/modest-darwin-1omjpl
+ * [new branch]          claude/modest-hawking-epxq28 -> origin/claude/modest-hawking-epxq28
+ * [new branch]          claude/modest-newton-zn65f9 -> origin/claude/modest-newton-zn65f9
+ * [new branch]          claude/nice-gates-gn2vfq -> origin/claude/nice-gates-gn2vfq
+ * [new branch]          claude/nifty-davinci-2tyof1 -> origin/claude/nifty-davinci-2tyof1
+ * [new branch]          claude/open-case-wait   -> origin/claude/open-case-wait
+ * [new branch]          claude/optimistic-bohr-mk1zo5 -> origin/claude/optimistic-bohr-mk1zo5
+ * [new branch]          claude/optimistic-einstein-vnsfck -> origin/claude/optimistic-einstein-vnsfck
+ * [new branch]          claude/optimistic-goodall-d6gcl6 -> origin/claude/optimistic-goodall-d6gcl6
+ * [new branch]          claude/optimistic-heisenberg-ra6v2n -> origin/claude/optimistic-heisenberg-ra6v2n
+ * [new branch]          claude/optimistic-newton-oblygl -> origin/claude/optimistic-newton-oblygl
+ * [new branch]          claude/opus-rereview-today-2026-11-03 -> origin/claude/opus-rereview-today-2026-11-03
+ * [new branch]          claude/opus-rereview-today-batch2-2026-11-03 -> origin/claude/opus-rereview-today-batch2-2026-11-03
+ * [new branch]          claude/opus-rereview-trial-2026-11-03 -> origin/claude/opus-rereview-trial-2026-11-03
+ * [new branch]          claude/paid-runner-c1114-result -> origin/claude/paid-runner-c1114-result
+ * [new branch]          claude/paid-runner-c117-result -> origin/claude/paid-runner-c117-result
+ * [new branch]          claude/paid-runner-c118-live -> origin/claude/paid-runner-c118-live
+ * [new branch]          claude/paid-runner-c34-v2-result -> origin/claude/paid-runner-c34-v2-result
+ * [new branch]          claude/paid-runner-c411-conditions-v2 -> origin/claude/paid-runner-c411-conditions-v2
+ * [new branch]          claude/paid-runner-c47-v2-jobs -> origin/claude/paid-runner-c47-v2-jobs
+ * [new branch]          claude/paid-runner-c47-v2-result -> origin/claude/paid-runner-c47-v2-result
+ * [new branch]          claude/paid-runner-c47-v2-six -> origin/claude/paid-runner-c47-v2-six
+ * [new branch]          claude/paid-runner-c91-result -> origin/claude/paid-runner-c91-result
+ * [new branch]          claude/paid-runner-d3-c411 -> origin/claude/paid-runner-d3-c411
+ * [new branch]          claude/paid-runner-d3-c47 -> origin/claude/paid-runner-d3-c47
+ * [new branch]          claude/paid-runner-imm5476-result -> origin/claude/paid-runner-imm5476-result
+ * [new branch]          claude/paid-runner-irm0002-result -> origin/claude/paid-runner-irm0002-result
+ * [new branch]          claude/paid-runner-pr1-c1114 -> origin/claude/paid-runner-pr1-c1114
+ * [new branch]          claude/paid-runner-pr1-c34 -> origin/claude/paid-runner-pr1-c34
+ * [new branch]          claude/paid-runner-r146-job-128k -> origin/claude/paid-runner-r146-job-128k
+ * [new branch]          claude/paid-runner-r146-saved-maps-1 -> origin/claude/paid-runner-r146-saved-maps-1
+ * [new branch]          claude/paid-runner-r146-saved-maps-2 -> origin/claude/paid-runner-r146-saved-maps-2
+ * [new branch]          claude/peaceful-mccarthy-ztmhlp -> origin/claude/peaceful-mccarthy-ztmhlp
+ * [new branch]          claude/pensive-brown-a2iw66 -> origin/claude/pensive-brown-a2iw66
+ * [new branch]          claude/pensive-clarke-d97ekz -> origin/claude/pensive-clarke-d97ekz
+ * [new branch]          claude/plan-m3-sprint-cd84b8 -> origin/claude/plan-m3-sprint-cd84b8
+ * [new branch]          claude/practical-bardeen-9xusr5 -> origin/claude/practical-bardeen-9xusr5
+ * [new branch]          claude/practical-bardeen-9xusr5-c42 -> origin/claude/practical-bardeen-9xusr5-c42
+ * [new branch]          claude/practical-bardeen-9xusr5-qa162 -> origin/claude/practical-bardeen-9xusr5-qa162
+ * [new branch]          claude/practical-bardeen-9xusr5-qa165 -> origin/claude/practical-bardeen-9xusr5-qa165
+ * [new branch]          claude/practical-franklin-g2phk2 -> origin/claude/practical-franklin-g2phk2
+ * [new branch]          claude/push-guard-remote-only -> origin/claude/push-guard-remote-only
+ * [new branch]          claude/qa-2026-11-04-8e8d6d -> origin/claude/qa-2026-11-04-8e8d6d
+ * [new branch]          claude/qa-2026-11-05-gate-a-3e7f5b -> origin/claude/qa-2026-11-05-gate-a-3e7f5b
+ * [new branch]          claude/qa-2026-11-06-b120-walk -> origin/claude/qa-2026-11-06-b120-walk
+ * [new branch]          claude/qa-2026-11-06-c101 -> origin/claude/qa-2026-11-06-c101
+ * [new branch]          claude/qa-2026-11-06-c101-final -> origin/claude/qa-2026-11-06-c101-final
+ * [new branch]          claude/qa-2026-11-06-c101-held -> origin/claude/qa-2026-11-06-c101-held
+ * [new branch]          claude/qa-2026-11-06-c46-walk -> origin/claude/qa-2026-11-06-c46-walk
+ * [new branch]          claude/qa-2026-11-06-m2-walk-c8dd7e -> origin/claude/qa-2026-11-06-m2-walk-c8dd7e
+ * [new branch]          claude/qa-2026-11-06-qa271 -> origin/claude/qa-2026-11-06-qa271
+ * [new branch]          claude/qa-2026-11-06-rep-facts -> origin/claude/qa-2026-11-06-rep-facts
+ * [new branch]          claude/qa-2026-11-07-c611 -> origin/claude/qa-2026-11-07-c611
+ * [new branch]          claude/qa-2026-11-07-c611-c81-91bd90 -> origin/claude/qa-2026-11-07-c611-c81-91bd90
+ * [new branch]          claude/qa-2026-11-07-c64 -> origin/claude/qa-2026-11-07-c64
+ * [new branch]          claude/qa-2026-11-07-c69-c82 -> origin/claude/qa-2026-11-07-c69-c82
+ * [new branch]          claude/qa-2026-11-07-c69-c82-works -> origin/claude/qa-2026-11-07-c69-c82-works
+ * [new branch]          claude/qa-2026-11-07-c69r -> origin/claude/qa-2026-11-07-c69r
+ * [new branch]          claude/qa-2026-11-07-c76 -> origin/claude/qa-2026-11-07-c76
+ * [new branch]          claude/qa-2026-11-07-c81-qa235-qa153 -> origin/claude/qa-2026-11-07-c81-qa235-qa153
+ * [new branch]          claude/qa-2026-11-07-lsa6 -> origin/claude/qa-2026-11-07-lsa6
+ * [new branch]          claude/qa-2026-11-08-c64-gate-a -> origin/claude/qa-2026-11-08-c64-gate-a
+ * [new branch]          claude/qa-2026-11-08-c69page -> origin/claude/qa-2026-11-08-c69page
+ * [new branch]          claude/qa-2026-11-08-c77-gaps -> origin/claude/qa-2026-11-08-c77-gaps
+ * [new branch]          claude/qa-2026-11-08-c92-breadth -> origin/claude/qa-2026-11-08-c92-breadth
+ * [new branch]          claude/qa-2026-11-08-m3-rescore -> origin/claude/qa-2026-11-08-m3-rescore
+ * [new branch]          claude/qa-2026-11-08-qa-focus -> origin/claude/qa-2026-11-08-qa-focus
+ * [new branch]          claude/qa-2026-11-08-rescore-batch2 -> origin/claude/qa-2026-11-08-rescore-batch2
+ * [new branch]          claude/qa-after-merge-5f6c8de -> origin/claude/qa-after-merge-5f6c8de
+ * [new branch]          claude/qa-after-merge-69-9e9e6e -> origin/claude/qa-after-merge-69-9e9e6e
+ * [new branch]          claude/qa-after-merge-deda0e6 -> origin/claude/qa-after-merge-deda0e6
+ * [new branch]          claude/qa-after-merge-s1-21bfdf -> origin/claude/qa-after-merge-s1-21bfdf
+ * [new branch]          claude/qa-ai-paths-c2866f -> origin/claude/qa-ai-paths-c2866f
+ * [new branch]          claude/qa-c1112-runtime-vv -> origin/claude/qa-c1112-runtime-vv
+ * [new branch]          claude/qa-c41-pack-2026-11-05 -> origin/claude/qa-c41-pack-2026-11-05
+ * [new branch]          claude/qa-c41-two-sections-2026-11-05 -> origin/claude/qa-c41-two-sections-2026-11-05
+ * [new branch]          claude/qa-c411-pack-2026-11-04 -> origin/claude/qa-c411-pack-2026-11-04
+ * [new branch]          claude/qa-c91-k1-2026-11-04 -> origin/claude/qa-c91-k1-2026-11-04
+ * [new branch]          claude/qa-checkpoint-rows-2026-11-04 -> origin/claude/qa-checkpoint-rows-2026-11-04
+ * [new branch]          claude/qa-coverage-1029 -> origin/claude/qa-coverage-1029
+ * [new branch]          claude/qa-e01030        -> origin/claude/qa-e01030
+ * [new branch]          claude/qa-explore-1029  -> origin/claude/qa-explore-1029
+ * [new branch]          claude/qa-gatea-1050    -> origin/claude/qa-gatea-1050
+ * [new branch]          claude/qa-gatea-978     -> origin/claude/qa-gatea-978
+ * [new branch]          claude/qa-hold-c48-2026-11-04 -> origin/claude/qa-hold-c48-2026-11-04
+ * [new branch]          claude/qa-l10-e3c849    -> origin/claude/qa-l10-e3c849
+ * [new branch]          claude/qa-probe-b88-do-not-merge -> origin/claude/qa-probe-b88-do-not-merge
+ * [new branch]          claude/qa-qa2-c1113     -> origin/claude/qa-qa2-c1113
+ * [new branch]          claude/qa-qa2-c1114     -> origin/claude/qa-qa2-c1114
+ * [new branch]          claude/qa-qa2-c117      -> origin/claude/qa-qa2-c117
+ * [new branch]          claude/qa-qa2-c118      -> origin/claude/qa-qa2-c118
+ * [new branch]          claude/qa-qa2-c310      -> origin/claude/qa-qa2-c310
+ * [new branch]          claude/qa-qa2-c34       -> origin/claude/qa-qa2-c34
+ * [new branch]          claude/qa-qa2-c42       -> origin/claude/qa-qa2-c42
+ * [new branch]          claude/qa-qa2-c91       -> origin/claude/qa-qa2-c91
+ * [new branch]          claude/qa-qa2-m2-nopack -> origin/claude/qa-qa2-m2-nopack
+ * [new branch]          claude/qa-records-b13-2026-11-04 -> origin/claude/qa-records-b13-2026-11-04
+ * [new branch]          claude/qa-records-b14-2026-11-05 -> origin/claude/qa-records-b14-2026-11-05
+ * [new branch]          claude/qa-records-b15-2026-11-05 -> origin/claude/qa-records-b15-2026-11-05
+ * [new branch]          claude/qa-records-b16-2026-11-05 -> origin/claude/qa-records-b16-2026-11-05
+ * [new branch]          claude/qa-records-b17-2026-11-05 -> origin/claude/qa-records-b17-2026-11-05
+ * [new branch]          claude/qa-records-b18-2026-11-05 -> origin/claude/qa-records-b18-2026-11-05
+ * [new branch]          claude/qa-records-b19-2026-11-05 -> origin/claude/qa-records-b19-2026-11-05
+ * [new branch]          claude/qa-records-b20-2026-11-05 -> origin/claude/qa-records-b20-2026-11-05
+ * [new branch]          claude/qa-records-b21-2026-11-05 -> origin/claude/qa-records-b21-2026-11-05
+ * [new branch]          claude/qa-records-b22-2026-11-05 -> origin/claude/qa-records-b22-2026-11-05
+ * [new branch]          claude/qa-records-b23-2026-11-05 -> origin/claude/qa-records-b23-2026-11-05
+ * [new branch]          claude/qa-records-b24-2026-11-05 -> origin/claude/qa-records-b24-2026-11-05
+ * [new branch]          claude/qa-records-b25-2026-11-05 -> origin/claude/qa-records-b25-2026-11-05
+ * [new branch]          claude/qa-records-b26-2026-11-05 -> origin/claude/qa-records-b26-2026-11-05
+ * [new branch]          claude/qa-records-b27-2026-11-05 -> origin/claude/qa-records-b27-2026-11-05
+ * [new branch]          claude/qa-records-b28-2026-11-05 -> origin/claude/qa-records-b28-2026-11-05
+ * [new branch]          claude/qa-records-b29-2026-11-05 -> origin/claude/qa-records-b29-2026-11-05
+ * [new branch]          claude/qa-records-b30-2026-11-05 -> origin/claude/qa-records-b30-2026-11-05
+ * [new branch]          claude/qa-records-b31-2026-11-05 -> origin/claude/qa-records-b31-2026-11-05
+ * [new branch]          claude/qa-records-b32-2026-11-05 -> origin/claude/qa-records-b32-2026-11-05
+ * [new branch]          claude/qa-records-b33-2026-11-05 -> origin/claude/qa-records-b33-2026-11-05
+ * [new branch]          claude/qa-regression-data-2026-11-05 -> origin/claude/qa-regression-data-2026-11-05
+ * [new branch]          claude/qa-regression-held -> origin/claude/qa-regression-held
+ * [new branch]          claude/qa-retest-c47-c54 -> origin/claude/qa-retest-c47-c54
+ * [new branch]          claude/qa-retest-night-232df2 -> origin/claude/qa-retest-night-232df2
+ * [new branch]          claude/qa293-representative-answers -> origin/claude/qa293-representative-answers
+ * [new branch]          claude/qa3-verdict-C10-1 -> origin/claude/qa3-verdict-C10-1
+ * [new branch]          claude/qa3-verdict-C11-18 -> origin/claude/qa3-verdict-C11-18
+ * [new branch]          claude/qa3-verdict-C11-2 -> origin/claude/qa3-verdict-C11-2
+ * [new branch]          claude/qa3-verdict-C11-9 -> origin/claude/qa3-verdict-C11-9
+ * [new branch]          claude/qa3-verdict-C3-10-checkpoint -> origin/claude/qa3-verdict-C3-10-checkpoint
+ * [new branch]          claude/qa3-verdict-C4-1 -> origin/claude/qa3-verdict-C4-1
+ * [new branch]          claude/qa3-verdict-C4-10 -> origin/claude/qa3-verdict-C4-10
+ * [new branch]          claude/qa3-verdict-C4-11 -> origin/claude/qa3-verdict-C4-11
+ * [new branch]          claude/qa3-verdict-C4-2 -> origin/claude/qa3-verdict-C4-2
+ * [new branch]          claude/qa3-verdict-C4-3 -> origin/claude/qa3-verdict-C4-3
+ * [new branch]          claude/qa3-verdict-C4-5 -> origin/claude/qa3-verdict-C4-5
+ * [new branch]          claude/qa3-verdict-C4-8 -> origin/claude/qa3-verdict-C4-8
+ * [new branch]          claude/qa3-verdict-C4-9 -> origin/claude/qa3-verdict-C4-9
+ * [new branch]          claude/qa3-verdict-C5-1 -> origin/claude/qa3-verdict-C5-1
+ * [new branch]          claude/qa3-verdict-C5-3 -> origin/claude/qa3-verdict-C5-3
+ * [new branch]          claude/qa3-verdict-C5-5 -> origin/claude/qa3-verdict-C5-5
+ * [new branch]          claude/qa3-verdict-C5-6 -> origin/claude/qa3-verdict-C5-6
+ * [new branch]          claude/qa3-verdict-C5-7 -> origin/claude/qa3-verdict-C5-7
+ * [new branch]          claude/qa3-verdict-C6-1 -> origin/claude/qa3-verdict-C6-1
+ * [new branch]          claude/qa3-verdict-C6-5 -> origin/claude/qa3-verdict-C6-5
+ * [new branch]          claude/qa3-verdict-C7-5 -> origin/claude/qa3-verdict-C7-5
+ * [new branch]          claude/quarantine-b78-hang -> origin/claude/quarantine-b78-hang
+ * [new branch]          claude/quirky-cannon-thk3q0 -> origin/claude/quirky-cannon-thk3q0
+ * [new branch]          claude/relaxed-babbage-b75u3h -> origin/claude/relaxed-babbage-b75u3h
+ * [new branch]          claude/relaxed-babbage-guwsqw -> origin/claude/relaxed-babbage-guwsqw
+ * [new branch]          claude/relaxed-cannon-cnz95j -> origin/claude/relaxed-cannon-cnz95j
+ * [new branch]          claude/relaxed-cray-2x5cfc -> origin/claude/relaxed-cray-2x5cfc
+ * [new branch]          claude/relaxed-hypatia-kminl1 -> origin/claude/relaxed-hypatia-kminl1
+ * [new branch]          claude/relaxed-knuth-hgakgd -> origin/claude/relaxed-knuth-hgakgd
+ * [new branch]          claude/relaxed-shannon-jp01vj -> origin/claude/relaxed-shannon-jp01vj
+ * [new branch]          claude/reverent-mahavira-cef858 -> origin/claude/reverent-mahavira-cef858
+ * [new branch]          claude/runtime-116-prep -> origin/claude/runtime-116-prep
+ * [new branch]          claude/runtime-answer-sheet -> origin/claude/runtime-answer-sheet
+ * [new branch]          claude/runtime-answer-sheet-2 -> origin/claude/runtime-answer-sheet-2
+ * [new branch]          claude/runtime-answer-sheet-3 -> origin/claude/runtime-answer-sheet-3
+ * [new branch]          claude/runtime-b161-pen-steps -> origin/claude/runtime-b161-pen-steps
+ * [new branch]          claude/runtime-b162-copy-before-ready -> origin/claude/runtime-b162-copy-before-ready
+ * [new branch]          claude/runtime-b77-data -> origin/claude/runtime-b77-data
+ * [new branch]          claude/runtime-br9-hand-write -> origin/claude/runtime-br9-hand-write
+ * [new branch]          claude/runtime-c34-flakes -> origin/claude/runtime-c34-flakes
+ * [new branch]          claude/runtime-c41-concept -> origin/claude/runtime-c41-concept
+ * [new branch]          claude/runtime-c41-roles -> origin/claude/runtime-c41-roles
+ * [new branch]          claude/runtime-c44-period-order -> origin/claude/runtime-c44-period-order
+ * [new branch]          claude/runtime-c46-preview-channels -> origin/claude/runtime-c46-preview-channels
+ * [new branch]          claude/runtime-c48-sqr  -> origin/claude/runtime-c48-sqr
+ * [new branch]          claude/runtime-c69-concept -> origin/claude/runtime-c69-concept
+ * [new branch]          claude/runtime-c76-pen  -> origin/claude/runtime-c76-pen
+ * [new branch]          claude/runtime-c77      -> origin/claude/runtime-c77
+ * [new branch]          claude/runtime-case-feed -> origin/claude/runtime-case-feed
+ * [new branch]          claude/runtime-cross-checks -> origin/claude/runtime-cross-checks
+ * [new branch]          claude/runtime-d1-reset-to-six -> origin/claude/runtime-d1-reset-to-six
+ * [new branch]          claude/runtime-deliverables -> origin/claude/runtime-deliverables
+ * [new branch]          claude/runtime-deliverables-2 -> origin/claude/runtime-deliverables-2
+ * [new branch]          claude/runtime-deliverables-3 -> origin/claude/runtime-deliverables-3
+ * [new branch]          claude/runtime-devin-fixes -> origin/claude/runtime-devin-fixes
+ * [new branch]          claude/runtime-employer-link -> origin/claude/runtime-employer-link
+ * [new branch]          claude/runtime-f6-pqr-picks -> origin/claude/runtime-f6-pqr-picks
+ * [new branch]          claude/runtime-f7-x9    -> origin/claude/runtime-f7-x9
+ * [new branch]          claude/runtime-fees     -> origin/claude/runtime-fees
+ * [new branch]          claude/runtime-g25-check-if -> origin/claude/runtime-g25-check-if
+ * [new branch]          claude/runtime-gate-b-checkpoint -> origin/claude/runtime-gate-b-checkpoint
+ * [new branch]          claude/runtime-gate-b-keys -> origin/claude/runtime-gate-b-keys
+ * [new branch]          claude/runtime-gateb-tail -> origin/claude/runtime-gateb-tail
+ * [new branch]          claude/runtime-handover-2026-11-01 -> origin/claude/runtime-handover-2026-11-01
+ * [new branch]          claude/runtime-handover-mac -> origin/claude/runtime-handover-mac
+ * [new branch]          claude/runtime-isolated-prisma-generate -> origin/claude/runtime-isolated-prisma-generate
+ * [new branch]          claude/runtime-lmia-demo-release -> origin/claude/runtime-lmia-demo-release
+ * [new branch]          claude/runtime-m2gate-7a844f -> origin/claude/runtime-m2gate-7a844f
+ * [new branch]          claude/runtime-m2q-b52c9a -> origin/claude/runtime-m2q-b52c9a
+ * [new branch]          claude/runtime-minors-1nov -> origin/claude/runtime-minors-1nov
+ * [new branch]          claude/runtime-minors-1nov-b -> origin/claude/runtime-minors-1nov-b
+ * [new branch]          claude/runtime-mrz      -> origin/claude/runtime-mrz
+ * [new branch]          claude/runtime-must-verify -> origin/claude/runtime-must-verify
+ * [new branch]          claude/runtime-no-hardcode -> origin/claude/runtime-no-hardcode
+ * [new branch]          claude/runtime-pqr-tab  -> origin/claude/runtime-pqr-tab
+ * [new branch]          claude/runtime-prepare  -> origin/claude/runtime-prepare
+ * [new branch]          claude/runtime-prepare-2 -> origin/claude/runtime-prepare-2
+ * [new branch]          claude/runtime-preview-9fd91e -> origin/claude/runtime-preview-9fd91e
+ * [new branch]          claude/runtime-qa116    -> origin/claude/runtime-qa116
+ * [new branch]          claude/runtime-qa126-128 -> origin/claude/runtime-qa126-128
+ * [new branch]          claude/runtime-qa144-configured-release -> origin/claude/runtime-qa144-configured-release
+ * [new branch]          claude/runtime-qa144-irm0002 -> origin/claude/runtime-qa144-irm0002
+ * [new branch]          claude/runtime-qa144-part1 -> origin/claude/runtime-qa144-part1
+ * [new branch]          claude/runtime-qa145-clean-clone -> origin/claude/runtime-qa145-clean-clone
+ * [new branch]          claude/runtime-qa180-one-gate -> origin/claude/runtime-qa180-one-gate
+ * [new branch]          claude/runtime-qa193-order -> origin/claude/runtime-qa193-order
+ * [new branch]          claude/runtime-qa207-older-editions -> origin/claude/runtime-qa207-older-editions
+ * [new branch]          claude/runtime-qa207-row17 -> origin/claude/runtime-qa207-row17
+ * [new branch]          claude/runtime-qa215    -> origin/claude/runtime-qa215
+ * [new branch]          claude/runtime-qa231-c91 -> origin/claude/runtime-qa231-c91
+ * [new branch]          claude/runtime-qa272-status-list -> origin/claude/runtime-qa272-status-list
+ * [new branch]          claude/runtime-qa76-words -> origin/claude/runtime-qa76-words
+ * [new branch]          claude/runtime-qa78-words -> origin/claude/runtime-qa78-words
+ * [new branch]          claude/runtime-r1-8f1db8 -> origin/claude/runtime-r1-8f1db8
+ * [new branch]          claude/runtime-r146-fix -> origin/claude/runtime-r146-fix
+ * [new branch]          claude/runtime-regression-set -> origin/claude/runtime-regression-set
+ * [new branch]          claude/runtime-s7-6d5965 -> origin/claude/runtime-s7-6d5965
+ * [new branch]          claude/runtime-s7-qa-c7d705 -> origin/claude/runtime-s7-qa-c7d705
+ * [new branch]          claude/runtime-section-noop -> origin/claude/runtime-section-noop
+ * [new branch]          claude/runtime-w1-forms-wait -> origin/claude/runtime-w1-forms-wait
+ * [new branch]          claude/runtime-w115-skip -> origin/claude/runtime-w115-skip
+ * [new branch]          claude/runtime-x1c-sample-rename -> origin/claude/runtime-x1c-sample-rename
+ * [new branch]          claude/saved-b78-review-round6-2026-11-05 -> origin/claude/saved-b78-review-round6-2026-11-05
+ * [new branch]          claude/saved-qa-c1112-pack-2026-11-05 -> origin/claude/saved-qa-c1112-pack-2026-11-05
+ * [new branch]          claude/scope-boundary-draft-5f8737 -> origin/claude/scope-boundary-draft-5f8737
+ * [new branch]          claude/screens-01-fix-c3010a -> origin/claude/screens-01-fix-c3010a
+ * [new branch]          claude/screens-1a-34cb66 -> origin/claude/screens-1a-34cb66
+ * [new branch]          claude/screens-1a-fix   -> origin/claude/screens-1a-fix
+ * [new branch]          claude/screens-1b-queue -> origin/claude/screens-1b-queue
+ * [new branch]          claude/screens-2a-22c0e2 -> origin/claude/screens-2a-22c0e2
+ * [new branch]          claude/screens-96-fix   -> origin/claude/screens-96-fix
+ * [new branch]          claude/screens-96-fix2-6d5fe3 -> origin/claude/screens-96-fix2-6d5fe3
+ * [new branch]          claude/screens-add-dialog-late-seed -> origin/claude/screens-add-dialog-late-seed
+ * [new branch]          claude/screens-b124-unconfirmed -> origin/claude/screens-b124-unconfirmed
+ * [new branch]          claude/screens-b129-recorded -> origin/claude/screens-b129-recorded
+ * [new branch]          claude/screens-b130-printed-copy -> origin/claude/screens-b130-printed-copy
+ * [new branch]          claude/screens-b132-paper-pen -> origin/claude/screens-b132-paper-pen
+ * [new branch]          claude/screens-b133-basis -> origin/claude/screens-b133-basis
+ * [new branch]          claude/screens-b149-receipt -> origin/claude/screens-b149-receipt
+ * [new branch]          claude/screens-b151-unpriced -> origin/claude/screens-b151-unpriced
+ * [new branch]          claude/screens-b152-frozen -> origin/claude/screens-b152-frozen
+ * [new branch]          claude/screens-b78-section-names -> origin/claude/screens-b78-section-names
+ * [new branch]          claude/screens-board-v4 -> origin/claude/screens-board-v4
+ * [new branch]          claude/screens-button-disabled -> origin/claude/screens-button-disabled
+ * [new branch]          claude/screens-c1-before-forms -> origin/claude/screens-c1-before-forms
+ * [new branch]          claude/screens-c119-history-wait -> origin/claude/screens-c119-history-wait
+ * [new branch]          claude/screens-c16-header -> origin/claude/screens-c16-header
+ * [new branch]          claude/screens-c18-age  -> origin/claude/screens-c18-age
+ * [new branch]          claude/screens-c3-15-rename -> origin/claude/screens-c3-15-rename
+ * [new branch]          claude/screens-c313-load-timeout -> origin/claude/screens-c313-load-timeout
+ * [new branch]          claude/screens-c313-own-port -> origin/claude/screens-c313-own-port
+ * [new branch]          claude/screens-c313-port -> origin/claude/screens-c313-port
+ * [new branch]          claude/screens-c314-checks -> origin/claude/screens-c314-checks
+ * [new branch]          claude/screens-c45-supplies -> origin/claude/screens-c45-supplies
+ * [new branch]          claude/screens-c5-5-firm-release-gates -> origin/claude/screens-c5-5-firm-release-gates
+ * [new branch]          claude/screens-card-aba78e -> origin/claude/screens-card-aba78e
+ * [new branch]          claude/screens-checklist -> origin/claude/screens-checklist
+ * [new branch]          claude/screens-f8-empty -> origin/claude/screens-f8-empty
+ * [new branch]          claude/screens-f8-release-polish -> origin/claude/screens-f8-release-polish
+ * [new branch]          claude/screens-fill-guard -> origin/claude/screens-fill-guard
+ * [new branch]          claude/screens-fix-start-setup-race -> origin/claude/screens-fix-start-setup-race
+ * [new branch]          claude/screens-flaky-card -> origin/claude/screens-flaky-card
+ * [new branch]          claude/screens-flaky-studio -> origin/claude/screens-flaky-studio
+ * [new branch]          claude/screens-focus-ring -> origin/claude/screens-focus-ring
+ * [new branch]          claude/screens-forms-tab-refresh -> origin/claude/screens-forms-tab-refresh
+ * [new branch]          claude/screens-g3-demo-release -> origin/claude/screens-g3-demo-release
+ * [new branch]          claude/screens-isolated-false-start -> origin/claude/screens-isolated-false-start
+ * [new branch]          claude/screens-live-state -> origin/claude/screens-live-state
+ * [new branch]          claude/screens-minors-108 -> origin/claude/screens-minors-108
+ * [new branch]          claude/screens-people-names -> origin/claude/screens-people-names
+ * [new branch]          claude/screens-qa120-121 -> origin/claude/screens-qa120-121
+ * [new branch]          claude/screens-qa172-plain-titles -> origin/claude/screens-qa172-plain-titles
+ * [new branch]          claude/screens-qa77-names -> origin/claude/screens-qa77-names
+ * [new branch]          claude/screens-qa82-question-words -> origin/claude/screens-qa82-question-words
+ * [new branch]          claude/screens-records-245 -> origin/claude/screens-records-245
+ * [new branch]          claude/screens-records-273 -> origin/claude/screens-records-273
+ * [new branch]          claude/screens-review-pdf-paths -> origin/claude/screens-review-pdf-paths
+ * [new branch]          claude/screens-review-release-words -> origin/claude/screens-review-release-words
+ * [new branch]          claude/screens-s01-race-diagnostic -> origin/claude/screens-s01-race-diagnostic
+ * [new branch]          claude/screens-s3-fix-a78d1d -> origin/claude/screens-s3-fix-a78d1d
+ * [new branch]          claude/screens-six-combination-data -> origin/claude/screens-six-combination-data
+ * [new branch]          claude/screens-slice-a-62933a -> origin/claude/screens-slice-a-62933a
+ * [new branch]          claude/screens-to-review-focus -> origin/claude/screens-to-review-focus
+ * [new branch]          claude/screens-unquarantine-c31 -> origin/claude/screens-unquarantine-c31
+ * [new branch]          claude/screens-unquarantine-c313 -> origin/claude/screens-unquarantine-c313
+ * [new branch]          claude/screens-x1-focus -> origin/claude/screens-x1-focus
+ * [new branch]          claude/screens-x1b-filing-tag -> origin/claude/screens-x1b-filing-tag
+ * [new branch]          claude/screens-x2-concept -> origin/claude/screens-x2-concept
+ * [new branch]          claude/screens-x2b-apply -> origin/claude/screens-x2b-apply
+ * [new branch]          claude/screens-x2b-preview -> origin/claude/screens-x2b-preview
+ * [new branch]          claude/screens-x4-release-title -> origin/claude/screens-x4-release-title
+ * [new branch]          claude/screens-x4-review-queue-width -> origin/claude/screens-x4-review-queue-width
+ * [new branch]          claude/screens-x4-review-words -> origin/claude/screens-x4-review-words
+ * [new branch]          claude/serene-euler-8fnhka -> origin/claude/serene-euler-8fnhka
+ * [new branch]          claude/serene-euler-vp7ar1 -> origin/claude/serene-euler-vp7ar1
+ * [new branch]          claude/sharp-turing-efuj41 -> origin/claude/sharp-turing-efuj41
+ * [new branch]          claude/sleepy-fermat-cy8jgs -> origin/claude/sleepy-fermat-cy8jgs
+ * [new branch]          claude/sleepy-hawking-ua30ee -> origin/claude/sleepy-hawking-ua30ee
+ * [new branch]          claude/sleepy-planck-0r2sxt -> origin/claude/sleepy-planck-0r2sxt
+ * [new branch]          claude/sleepy-ramanujan-hv8wap -> origin/claude/sleepy-ramanujan-hv8wap
+ * [new branch]          claude/stoic-archimedes-44w8sl -> origin/claude/stoic-archimedes-44w8sl
+ * [new branch]          claude/stoic-euler-v3idvd -> origin/claude/stoic-euler-v3idvd
+ * [new branch]          claude/sweet-knuth-ap2gza -> origin/claude/sweet-knuth-ap2gza
+ * [new branch]          claude/test-speed-nightly -> origin/claude/test-speed-nightly
+ * [new branch]          claude/test-speed-select -> origin/claude/test-speed-select
+ * [new branch]          claude/test-w115-wait   -> origin/claude/test-w115-wait
+ * [new branch]          claude/trusting-galileo-jckmrp -> origin/claude/trusting-galileo-jckmrp
+ * [new branch]          claude/trusting-maxwell-uex4tn -> origin/claude/trusting-maxwell-uex4tn
+ * [new branch]          claude/trusting-maxwell-uex4tn-b134 -> origin/claude/trusting-maxwell-uex4tn-b134
+ * [new branch]          claude/trusting-maxwell-uex4tn-b160 -> origin/claude/trusting-maxwell-uex4tn-b160
+ * [new branch]          claude/trusting-maxwell-uex4tn-b78 -> origin/claude/trusting-maxwell-uex4tn-b78
+ * [new branch]          claude/upbeat-ptolemy-phvh4y -> origin/claude/upbeat-ptolemy-phvh4y
+ * [new branch]          claude/verify-rcic-walk-2026-11-04 -> origin/claude/verify-rcic-walk-2026-11-04
+ * [new branch]          claude/verify-v1-m2-gap-triage -> origin/claude/verify-v1-m2-gap-triage
+ * [new branch]          claude/vibrant-hopper-a48qgk -> origin/claude/vibrant-hopper-a48qgk
+ * [new branch]          claude/vigilant-brown-877btk -> origin/claude/vigilant-brown-877btk
+ * [new branch]          claude/vigilant-curie-kd2ngw -> origin/claude/vigilant-curie-kd2ngw
+ * [new branch]          claude/vigilant-mendel-hsyikh -> origin/claude/vigilant-mendel-hsyikh
+ * [new branch]          claude/vigilant-noether-l2sgvm -> origin/claude/vigilant-noether-l2sgvm
+ * [new branch]          claude/wizardly-bardeen-kfewmp -> origin/claude/wizardly-bardeen-kfewmp
+ * [new branch]          claude/wizardly-bell-gr02rj -> origin/claude/wizardly-bell-gr02rj
+ * [new branch]          claude/wizardly-davinci-ns2xky -> origin/claude/wizardly-davinci-ns2xky
+ * [new branch]          claude/wonderful-einstein-i01w4m -> origin/claude/wonderful-einstein-i01w4m
+ * [new branch]          claude/wonderful-hopper-imruv7 -> origin/claude/wonderful-hopper-imruv7
+ * [new branch]          claude/youthful-davinci-kbb0pl -> origin/claude/youthful-davinci-kbb0pl
+ * [new branch]          claude/youthful-pascal-ecazqy -> origin/claude/youthful-pascal-ecazqy
+ * [new branch]          claude/youthful-planck-mf99ql -> origin/claude/youthful-planck-mf99ql
+ * [new branch]          claude/zealous-goldberg-v9utnh -> origin/claude/zealous-goldberg-v9utnh
+ * [new branch]          claude/zealous-ritchie-ris2kn -> origin/claude/zealous-ritchie-ris2kn
+ * [new branch]          claude/zen-fermi-poiqv8 -> origin/claude/zen-fermi-poiqv8
+ * [new branch]          claude/zen-fermi-poiqv8-c116 -> origin/claude/zen-fermi-poiqv8-c116
+ * [new branch]          claude/zen-fermi-poiqv8-c92 -> origin/claude/zen-fermi-poiqv8-c92
+ * [new branch]          claude/zen-sagan-oztxto -> origin/claude/zen-sagan-oztxto
+ * [new branch]          devin/2026-10-25-goose-verify -> origin/devin/2026-10-25-goose-verify
+ * [new branch]          devin/2026-10-25-interaction-rounds -> origin/devin/2026-10-25-interaction-rounds
+ * [new branch]          devin/2026-10-25-orphan-map -> origin/devin/2026-10-25-orphan-map
+ * [new branch]          devin/2026-10-25-outside-goose-capability-floor -> origin/devin/2026-10-25-outside-goose-capability-floor
+ * [new branch]          devin/2026-10-28-devin-lead-handover -> origin/devin/2026-10-28-devin-lead-handover
+ * [new branch]          devin/2026-10-28-devin-outside-review-setup -> origin/devin/2026-10-28-devin-outside-review-setup
+ * [new branch]          devin/2026-10-29-backbone -> origin/devin/2026-10-29-backbone
+ * [new branch]          devin/2026-10-29-static-docs -> origin/devin/2026-10-29-static-docs
+ * [new branch]          devin/2026-10-30-capability-gaps -> origin/devin/2026-10-30-capability-gaps
+ * [new branch]          devin/2026-10-30-d1-walk -> origin/devin/2026-10-30-d1-walk
+ * [new branch]          devin/2026-10-31-explorer -> origin/devin/2026-10-31-explorer
+ * [new branch]          devin/fix-signoff-body-guard -> origin/devin/fix-signoff-body-guard
+ * [new branch]          devin/lead-2026-10-25-audit -> origin/devin/lead-2026-10-25-audit
+ * [new branch]          devin/ux-audit-2026-10-25 -> origin/devin/ux-audit-2026-10-25
+ * [new branch]          docs/audit-cleanup-2026-10-24 -> origin/docs/audit-cleanup-2026-10-24
+ * [new branch]          evidence/e0-built-2026-11-03 -> origin/evidence/e0-built-2026-11-03
+ * [new branch]          evidence/e0-refresh-2026-11-03 -> origin/evidence/e0-refresh-2026-11-03
+ * [new branch]          forms/2026-10-27-s4-form-library -> origin/forms/2026-10-27-s4-form-library
+ * [new branch]          forms/contract-p158     -> origin/forms/contract-p158
+ * [new branch]          forms/fix-run-card-cost -> origin/forms/fix-run-card-cost
+ * [new branch]          goose/explore-2026-10-25 -> origin/goose/explore-2026-10-25
+ * [new branch]          infra/ci-drafts-skip    -> origin/infra/ci-drafts-skip
+ * [new branch]          infra/m3-hot-file-guard -> origin/infra/m3-hot-file-guard
+ * [new branch]          infra/nightly-github-shards -> origin/infra/nightly-github-shards
+ * [new branch]          infra/rescore-trial     -> origin/infra/rescore-trial
+ * [new branch]          infra/retest-data-checkpoint -> origin/infra/retest-data-checkpoint
+ * [new branch]          infra/two-queues-m2-first -> origin/infra/two-queues-m2-first
+ * [new branch]          lead/2026-10-25-ci-docs-gate -> origin/lead/2026-10-25-ci-docs-gate
+ * [new branch]          lead/2026-10-25-ci-log  -> origin/lead/2026-10-25-ci-log
+ * [new branch]          lead/2026-10-25-f2-merge -> origin/lead/2026-10-25-f2-merge
+ * [new branch]          lead/2026-10-25-nonpoc-cleanup -> origin/lead/2026-10-25-nonpoc-cleanup
+ * [new branch]          lead/2026-10-25-roles-audit -> origin/lead/2026-10-25-roles-audit
+ * [new branch]          lead/2026-10-25-screens02-merge -> origin/lead/2026-10-25-screens02-merge
+ * [new branch]          lead/2026-10-26         -> origin/lead/2026-10-26
+ * [new branch]          lead/2026-10-26-b       -> origin/lead/2026-10-26-b
+ * [new branch]          lead/2026-10-26-c       -> origin/lead/2026-10-26-c
+ * [new branch]          lead/2026-10-26-d       -> origin/lead/2026-10-26-d
+ * [new branch]          lead/2026-10-26-e       -> origin/lead/2026-10-26-e
+ * [new branch]          lead/2026-10-26-f       -> origin/lead/2026-10-26-f
+ * [new branch]          lead/2026-10-26-g       -> origin/lead/2026-10-26-g
+ * [new branch]          lead/2026-10-27         -> origin/lead/2026-10-27
+ * [new branch]          lead/2026-10-28-forms   -> origin/lead/2026-10-28-forms
+ * [new branch]          lead/2026-10-28-forms2  -> origin/lead/2026-10-28-forms2
+ * [new branch]          lead/2026-10-28-qa60    -> origin/lead/2026-10-28-qa60
+ * [new branch]          lead/2026-10-28-r3      -> origin/lead/2026-10-28-r3
+ * [new branch]          lead/2026-10-28-r5      -> origin/lead/2026-10-28-r5
+ * [new branch]          lead/2026-10-28-r6      -> origin/lead/2026-10-28-r6
+ * [new branch]          lead/2026-10-28-r7      -> origin/lead/2026-10-28-r7
+ * [new branch]          lead/2026-10-28-records -> origin/lead/2026-10-28-records
+ * [new branch]          lead/2026-10-28-runtime -> origin/lead/2026-10-28-runtime
+ * [new branch]          lead/2026-10-29-devin   -> origin/lead/2026-10-29-devin
+ * [new branch]          lead/2026-10-29-disk    -> origin/lead/2026-10-29-disk
+ * [new branch]          lead/2026-10-29-f97     -> origin/lead/2026-10-29-f97
+ * [new branch]          lead/2026-10-29-forms   -> origin/lead/2026-10-29-forms
+ * [new branch]          lead/2026-10-29-forms0  -> origin/lead/2026-10-29-forms0
+ * [new branch]          lead/2026-10-29-m3go    -> origin/lead/2026-10-29-m3go
+ * [new branch]          lead/2026-10-29-m3r5    -> origin/lead/2026-10-29-m3r5
+ * [new branch]          lead/2026-10-29-n9      -> origin/lead/2026-10-29-n9
+ * [new branch]          lead/2026-10-29-n9b     -> origin/lead/2026-10-29-n9b
+ * [new branch]          lead/2026-10-29-n9c     -> origin/lead/2026-10-29-n9c
+ * [new branch]          lead/2026-10-29-n9d     -> origin/lead/2026-10-29-n9d
+ * [new branch]          lead/2026-10-29-qa98    -> origin/lead/2026-10-29-qa98
+ * [new branch]          lead/2026-10-29-r10     -> origin/lead/2026-10-29-r10
+ * [new branch]          lead/2026-10-29-r11     -> origin/lead/2026-10-29-r11
+ * [new branch]          lead/2026-10-29-r12     -> origin/lead/2026-10-29-r12
+ * [new branch]          lead/2026-10-29-r13     -> origin/lead/2026-10-29-r13
+ * [new branch]          lead/2026-10-29-r8      -> origin/lead/2026-10-29-r8
+ * [new branch]          lead/2026-10-29-r9      -> origin/lead/2026-10-29-r9
+ * [new branch]          lead/2026-10-29-rt-docs -> origin/lead/2026-10-29-rt-docs
+ * [new branch]          lead/2026-10-29-rt3     -> origin/lead/2026-10-29-rt3
+ * [new branch]          lead/2026-10-29-s2a     -> origin/lead/2026-10-29-s2a
+ * [new branch]          lead/2026-10-29-s3      -> origin/lead/2026-10-29-s3
+ * [new branch]          lead/2026-10-29-s6r     -> origin/lead/2026-10-29-s6r
+ * [new branch]          lead/2026-10-29-screens-qa -> origin/lead/2026-10-29-screens-qa
+ * [new branch]          lead/2026-10-29-w115    -> origin/lead/2026-10-29-w115
+ * [new branch]          lead/2026-10-29-w115s2  -> origin/lead/2026-10-29-w115s2
+ * [new branch]          lead/2026-10-30-fix176  -> origin/lead/2026-10-30-fix176
+ * [new branch]          lead/2026-10-30-forms-p179 -> origin/lead/2026-10-30-forms-p179
+ * [new branch]          lead/2026-10-30-forms-s1 -> origin/lead/2026-10-30-forms-s1
+ * [new branch]          lead/2026-10-30-l10     -> origin/lead/2026-10-30-l10
+ * [new branch]          lead/2026-10-30-l10b    -> origin/lead/2026-10-30-l10b
+ * [new branch]          lead/2026-10-30-l12     -> origin/lead/2026-10-30-l12
+ * [new branch]          lead/2026-10-31-automerge-hosted -> origin/lead/2026-10-31-automerge-hosted
+ * [new branch]          lead/2026-10-31-automerge-sweep -> origin/lead/2026-10-31-automerge-sweep
+ * [new branch]          lead/2026-10-31-decisions -> origin/lead/2026-10-31-decisions
+ * [new branch]          lead/2026-10-31-demo-full-history -> origin/lead/2026-10-31-demo-full-history
+ * [new branch]          lead/2026-10-31-demo-survives -> origin/lead/2026-10-31-demo-survives
+ * [new branch]          lead/2026-10-31-devin-explorer -> origin/lead/2026-10-31-devin-explorer
+ * [new branch]          lead/2026-10-31-features -> origin/lead/2026-10-31-features
+ * [new branch]          lead/2026-10-31-lead-habits -> origin/lead/2026-10-31-lead-habits
+ * [new branch]          lead/2026-10-31-mac-followups -> origin/lead/2026-10-31-mac-followups
+ * [new branch]          lead/2026-10-31-merge-queue -> origin/lead/2026-10-31-merge-queue
+ * [new branch]          lead/2026-10-31-mergify-autoqueue -> origin/lead/2026-10-31-mergify-autoqueue
+ * [new branch]          lead/2026-10-31-nightly-check -> origin/lead/2026-10-31-nightly-check
+ * [new branch]          lead/2026-10-31-one-test-slot -> origin/lead/2026-10-31-one-test-slot
+ * [new branch]          lead/2026-10-31-review  -> origin/lead/2026-10-31-review
+ * [new branch]          lead/2026-10-31-skill-10kb -> origin/lead/2026-10-31-skill-10kb
+ * [new branch]          lead/2026-10-31-standing-rules -> origin/lead/2026-10-31-standing-rules
+ * [new branch]          lead/2026-10-31-switch  -> origin/lead/2026-10-31-switch
+ * [new branch]          lead/2026-10-31-three-slots -> origin/lead/2026-10-31-three-slots
+ * [new branch]          lead/2026-11-01-closeout -> origin/lead/2026-11-01-closeout
+ * [new branch]          lead/2026-11-01-domain  -> origin/lead/2026-11-01-domain
+ * [new branch]          lead/2026-11-01-fresh-bundle -> origin/lead/2026-11-01-fresh-bundle
+ * [new branch]          lead/2026-11-01-handover -> origin/lead/2026-11-01-handover
+ * [new branch]          lead/2026-11-01-handover-2 -> origin/lead/2026-11-01-handover-2
+ * [new branch]          lead/2026-11-01-lean-setup -> origin/lead/2026-11-01-lean-setup
+ * [new branch]          lead/2026-11-01-merge-flow -> origin/lead/2026-11-01-merge-flow
+ * [new branch]          lead/2026-11-01-ops2    -> origin/lead/2026-11-01-ops2
+ * [new branch]          lead/2026-11-01-p219    -> origin/lead/2026-11-01-p219
+ * [new branch]          lead/2026-11-01-p220    -> origin/lead/2026-11-01-p220
+ * [new branch]          lead/2026-11-01-p222    -> origin/lead/2026-11-01-p222
+ * [new branch]          lead/2026-11-01-parallel-batches -> origin/lead/2026-11-01-parallel-batches
+ * [new branch]          lead/2026-11-01-pr-checks-github -> origin/lead/2026-11-01-pr-checks-github
+ * [new branch]          lead/2026-11-01-quarantine -> origin/lead/2026-11-01-quarantine
+ * [new branch]          lead/2026-11-01-quarantine-c31 -> origin/lead/2026-11-01-quarantine-c31
+ * [new branch]          lead/2026-11-01-queue-fix -> origin/lead/2026-11-01-queue-fix
+ * [new branch]          lead/2026-11-01-records-2 -> origin/lead/2026-11-01-records-2
+ * [new branch]          lead/2026-11-01-shard-balance -> origin/lead/2026-11-01-shard-balance
+ * [new branch]          lead/2026-11-01-shards  -> origin/lead/2026-11-01-shards
+ * [new branch]          lead/2026-11-01-state-final -> origin/lead/2026-11-01-state-final
+ * [new branch]          lead/2026-11-01-test-ports -> origin/lead/2026-11-01-test-ports
+ * [new branch]          lead/2026-11-01-unquarantine -> origin/lead/2026-11-01-unquarantine
+ * [new branch]          lead/2026-11-02-b       -> origin/lead/2026-11-02-b
+ * [new branch]          lead/2026-11-02-c       -> origin/lead/2026-11-02-c
+ * [new branch]          lead/2026-11-02-c1112-board -> origin/lead/2026-11-02-c1112-board
+ * [new branch]          lead/2026-11-02-d       -> origin/lead/2026-11-02-d
+ * [new branch]          lead/2026-11-02-finish-first -> origin/lead/2026-11-02-finish-first
+ * [new branch]          lead/2026-11-02-finish-plan -> origin/lead/2026-11-02-finish-plan
+ * [new branch]          lead/2026-11-02-handover -> origin/lead/2026-11-02-handover
+ * [new branch]          lead/2026-11-02-handover-2 -> origin/lead/2026-11-02-handover-2
+ * [new branch]          lead/2026-11-02-handover-check -> origin/lead/2026-11-02-handover-check
+ * [new branch]          lead/2026-11-02-leadx   -> origin/lead/2026-11-02-leadx
+ * [new branch]          lead/2026-11-02-leadx-2 -> origin/lead/2026-11-02-leadx-2
+ * [new branch]          lead/2026-11-02-leadx-3 -> origin/lead/2026-11-02-leadx-3
+ * [new branch]          lead/2026-11-02-leadx-4 -> origin/lead/2026-11-02-leadx-4
+ * [new branch]          lead/2026-11-02-leadx-5 -> origin/lead/2026-11-02-leadx-5
+ * [new branch]          lead/2026-11-02-leadx-6 -> origin/lead/2026-11-02-leadx-6
+ * [new branch]          lead/2026-11-02-leadx-7 -> origin/lead/2026-11-02-leadx-7
+ * [new branch]          lead/2026-11-02-leadx-8 -> origin/lead/2026-11-02-leadx-8
+ * [new branch]          lead/2026-11-02-night-report -> origin/lead/2026-11-02-night-report
+ * [new branch]          lead/2026-11-02-quarantine-c313 -> origin/lead/2026-11-02-quarantine-c313
+ * [new branch]          lead/2026-11-02-quarantine-d1 -> origin/lead/2026-11-02-quarantine-d1
+ * [new branch]          lead/2026-11-02-quarantine-screen01 -> origin/lead/2026-11-02-quarantine-screen01
+ * [new branch]          lead/2026-11-02-records-2 -> origin/lead/2026-11-02-records-2
+ * [new branch]          lead/2026-11-02-records-3 -> origin/lead/2026-11-02-records-3
+ * [new branch]          lead/2026-11-02-records-4 -> origin/lead/2026-11-02-records-4
+ * [new branch]          lead/2026-11-02-records-5 -> origin/lead/2026-11-02-records-5
+ * [new branch]          lead/2026-11-02-records-6 -> origin/lead/2026-11-02-records-6
+ * [new branch]          lead/2026-11-02-records-7 -> origin/lead/2026-11-02-records-7
+ * [new branch]          lead/2026-11-02-rules   -> origin/lead/2026-11-02-rules
+ * [new branch]          lead/2026-11-02-standby -> origin/lead/2026-11-02-standby
+ * [new branch]          lead/2026-11-02-standby-2 -> origin/lead/2026-11-02-standby-2
+ * [new branch]          lead/2026-11-02-ux-baseline -> origin/lead/2026-11-02-ux-baseline
+ * [new branch]          lead/2026-11-02-vv-research -> origin/lead/2026-11-02-vv-research
+ * [new branch]          lead/2026-11-03         -> origin/lead/2026-11-03
+ * [new branch]          lead/2026-11-03-b       -> origin/lead/2026-11-03-b
+ * [new branch]          lead/2026-11-03-c       -> origin/lead/2026-11-03-c
+ * [new branch]          lead/2026-11-03-d       -> origin/lead/2026-11-03-d
+ * [new branch]          lead/2026-11-03-e       -> origin/lead/2026-11-03-e
+ * [new branch]          lead/2026-11-03-handover -> origin/lead/2026-11-03-handover
+ * [new branch]          lead/2026-11-03-lead1-handover -> origin/lead/2026-11-03-lead1-handover
+ * [new branch]          lead/2026-11-03-lead1-records -> origin/lead/2026-11-03-lead1-records
+ * [new branch]          lead/2026-11-03-lead1-start -> origin/lead/2026-11-03-lead1-start
+ * [new branch]          lead/2026-11-03-lead2-handover -> origin/lead/2026-11-03-lead2-handover
+ * [new branch]          lead/2026-11-03-lead3   -> origin/lead/2026-11-03-lead3
+ * [new branch]          lead/2026-11-03-lead3-backup -> origin/lead/2026-11-03-lead3-backup
+ * [new branch]          lead/2026-11-03-lead3-handover -> origin/lead/2026-11-03-lead3-handover
+ * [new branch]          lead/2026-11-03-lead4   -> origin/lead/2026-11-03-lead4
+ * [new branch]          lead/2026-11-03-lead4-watch -> origin/lead/2026-11-03-lead4-watch
+ * [new branch]          lead/2026-11-03-lead5-speedup -> origin/lead/2026-11-03-lead5-speedup
+ * [new branch]          lead/2026-11-03-lead5-wrapup -> origin/lead/2026-11-03-lead5-wrapup
+ * [new branch]          lead/2026-11-03-n1      -> origin/lead/2026-11-03-n1
+ * [new branch]          lead/2026-11-03-p295    -> origin/lead/2026-11-03-p295
+ * [new branch]          lead/2026-11-03-playbook -> origin/lead/2026-11-03-playbook
+ * [new branch]          lead/2026-11-03-reporting -> origin/lead/2026-11-03-reporting
+ * [new branch]          lead/2026-11-03-savings -> origin/lead/2026-11-03-savings
+ * [new branch]          lead/2026-11-03-tonight -> origin/lead/2026-11-03-tonight
+ * [new branch]          lead/2026-11-04-lead1-handover -> origin/lead/2026-11-04-lead1-handover
+ * [new branch]          lead/2026-11-04-lead7   -> origin/lead/2026-11-04-lead7
+ * [new branch]          lead/2026-11-04-lead7-handover -> origin/lead/2026-11-04-lead7-handover
+ * [new branch]          lead/2026-11-04-lead8   -> origin/lead/2026-11-04-lead8
+ * [new branch]          lead/2026-11-05-guard-pipefail -> origin/lead/2026-11-05-guard-pipefail
+ * [new branch]          lead/2026-11-05-lead10  -> origin/lead/2026-11-05-lead10
+ * [new branch]          lead/2026-11-05-lead11  -> origin/lead/2026-11-05-lead11
+ * [new branch]          lead/2026-11-05-lead11b -> origin/lead/2026-11-05-lead11b
+ * [new branch]          lead/2026-11-05-lead11c -> origin/lead/2026-11-05-lead11c
+ * [new branch]          lead/2026-11-05-lead13  -> origin/lead/2026-11-05-lead13
+ * [new branch]          lead/2026-11-05-lead13b -> origin/lead/2026-11-05-lead13b
+ * [new branch]          lead/2026-11-05-lead13c -> origin/lead/2026-11-05-lead13c
+ * [new branch]          lead/2026-11-05-lead14  -> origin/lead/2026-11-05-lead14
+ * [new branch]          lead/2026-11-05-lead14b -> origin/lead/2026-11-05-lead14b
+ * [new branch]          lead/2026-11-05-lead9   -> origin/lead/2026-11-05-lead9
+ * [new branch]          lead/2026-11-07-lead26  -> origin/lead/2026-11-07-lead26
+ * [new branch]          lead/2026-11-07-lead29  -> origin/lead/2026-11-07-lead29
+ * [new branch]          lead/2026-11-07-lead30  -> origin/lead/2026-11-07-lead30
+ * [new branch]          lead/2026-11-07-lead31  -> origin/lead/2026-11-07-lead31
+ * [new branch]          lead/2026-11-07-switch  -> origin/lead/2026-11-07-switch
+ * [new branch]          lead/2026-11-08-hot-list-clear -> origin/lead/2026-11-08-hot-list-clear
+ * [new branch]          lead/2026-11-08-local-lane-alarm -> origin/lead/2026-11-08-local-lane-alarm
+ * [new branch]          lead/backup-2026-10-28  -> origin/lead/backup-2026-10-28
+ * [new branch]          lead/lead-watch-enforce -> origin/lead/lead-watch-enforce
+ * [new branch]          lead/parked-extension-2026-10-26 -> origin/lead/parked-extension-2026-10-26
+ * [new branch]          main                    -> origin/main
+ * [new branch]          mergify/merge-queue/e3843fcf08 -> origin/mergify/merge-queue/e3843fcf08
+ * [new branch]          migration/github-canonical -> origin/migration/github-canonical
+ * [new branch]          pdfs/official-blanks    -> origin/pdfs/official-blanks
+ * [new branch]          runtime/2026-10-27-s5-workspace -> origin/runtime/2026-10-27-s5-workspace
+ * [new branch]          runtime/2026-10-29-w115-slice1-sync -> origin/runtime/2026-10-29-w115-slice1-sync
+ * [new branch]          scout/2026-10-25-1328   -> origin/scout/2026-10-25-1328
+ * [new branch]          screens/2026-10-26-w1-structure -> origin/screens/2026-10-26-w1-structure
+ * [new branch]          screens/2026-10-27-s1-finish -> origin/screens/2026-10-27-s1-finish
+ * [new branch]          screens/2026-10-27-s1s2-fix -> origin/screens/2026-10-27-s1s2-fix
+ * [new branch]          screens/2026-10-27-s2-programs -> origin/screens/2026-10-27-s2-programs
+ * [new branch]          screens/2026-10-27-visual-system -> origin/screens/2026-10-27-visual-system
+ * [new branch]          throwaway/d2-c73-by-diff -> origin/throwaway/d2-c73-by-diff
+ * [new branch]          throwaway/d6-rerun-base -> origin/throwaway/d6-rerun-base
+ * [new branch]          ux/c69-scorecard-2026-11-07 -> origin/ux/c69-scorecard-2026-11-07
+ * [new branch]          ux/m3-scorecard-skills-2026-11-07 -> origin/ux/m3-scorecard-skills-2026-11-07
+ * [new branch]          ux/m3-study-2026-11-07  -> origin/ux/m3-study-2026-11-07
+[command]/usr/bin/git branch --list --remote origin/main
+  origin/main
+[command]/usr/bin/git rev-parse refs/remotes/origin/main
+7e94da44fe70a3d361aca6d6c849d7a71e084be0
+##[endgroup]
+##[group]Determining the checkout info
+##[endgroup]
+[command]/usr/bin/git sparse-checkout disable
+[command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+##[group]Checking out the ref
+[command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+Updating files:  25% (2158/8420)
+Updating files:  26% (2190/8420)
+Updating files:  27% (2274/8420)
+Updating files:  28% (2358/8420)
+Updating files:  29% (2442/8420)
+Updating files:  30% (2526/8420)
+Updating files:  31% (2611/8420)
+Updating files:  32% (2695/8420)
+Updating files:  33% (2779/8420)
+Updating files:  34% (2863/8420)
+Updating files:  35% (2947/8420)
+Updating files:  36% (3032/8420)
+Updating files:  37% (3116/8420)
+Updating files:  38% (3200/8420)
+Updating files:  39% (3284/8420)
+Updating files:  40% (3368/8420)
+Updating files:  41% (3453/8420)
+Updating files:  42% (3537/8420)
+Updating files:  43% (3621/8420)
+Updating files:  44% (3705/8420)
+Updating files:  45% (3789/8420)
+Updating files:  46% (3874/8420)
+Updating files:  47% (3958/8420)
+Updating files:  48% (4042/8420)
+Updating files:  49% (4126/8420)
+Updating files:  50% (4210/8420)
+Updating files:  51% (4295/8420)
+Updating files:  52% (4379/8420)
+Updating files:  53% (4463/8420)
+Updating files:  53% (4470/8420)
+Updating files:  54% (4547/8420)
+Updating files:  55% (4631/8420)
+Updating files:  56% (4716/8420)
+Updating files:  57% (4800/8420)
+Updating files:  58% (4884/8420)
+Updating files:  59% (4968/8420)
+Updating files:  60% (5052/8420)
+Updating files:  61% (5137/8420)
+Updating files:  62% (5221/8420)
+Updating files:  63% (5305/8420)
+Updating files:  64% (5389/8420)
+Updating files:  65% (5473/8420)
+Updating files:  66% (5558/8420)
+Updating files:  67% (5642/8420)
+Updating files:  68% (5726/8420)
+Updating files:  69% (5810/8420)
+Updating files:  70% (5894/8420)
+Updating files:  71% (5979/8420)
+Updating files:  72% (6063/8420)
+Updating files:  73% (6147/8420)
+Updating files:  74% (6231/8420)
+Updating files:  75% (6315/8420)
+Updating files:  76% (6400/8420)
+Updating files:  77% (6484/8420)
+Updating files:  78% (6568/8420)
+Updating files:  79% (6652/8420)
+Updating files:  80% (6736/8420)
+Updating files:  81% (6821/8420)
+Updating files:  82% (6905/8420)
+Updating files:  83% (6989/8420)
+Updating files:  84% (7073/8420)
+Updating files:  85% (7157/8420)
+Updating files:  86% (7242/8420)
+Updating files:  87% (7326/8420)
+Updating files:  87% (7390/8420)
+Updating files:  88% (7410/8420)
+Updating files:  89% (7494/8420)
+Updating files:  90% (7578/8420)
+Updating files:  91% (7663/8420)
+Updating files:  92% (7747/8420)
+Updating files:  93% (7831/8420)
+Updating files:  94% (7915/8420)
+Updating files:  95% (7999/8420)
+Updating files:  96% (8084/8420)
+Updating files:  97% (8168/8420)
+Updating files:  98% (8252/8420)
+Updating files:  99% (8336/8420)
+Updating files: 100% (8420/8420)
+Updating files: 100% (8420/8420), done.
+Switched to a new branch 'main'
+branch 'main' set up to track 'origin/main'.
+##[endgroup]
+[command]/usr/bin/git log -1 --format=%H
+7e94da44fe70a3d361aca6d6c849d7a71e084be0
+##[group]Run actions/setup-node@v4
+with:
+  node-version-file: .nvmrc
+  cache: npm
+  cache-dependency-path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json
+  always-auth: false
+  check-latest: false
+  token: ***
+env:
+  P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+  S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+##[endgroup]
+Node version file is not JSON file
+Resolved .nvmrc as 24.21.0
+Attempting to download 24.21.0...
+(node:2128) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Acquiring 24.21.0 - x64 from https://github.com/actions/node-versions/releases/download/24.21.0-34304089047/node-24.21.0-linux-x64.tar.gz
+Unexpected HTTP response: 504
+Waiting 20 seconds before trying again
+Unexpected HTTP response: 504
+Waiting 18 seconds before trying again
+Extracting ...
+[command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C <runner> -f <runner>
+Adding to the cache ...
+##[group]Environment details
+node: v24.21.0
+npm: 11.19.0
+yarn: 1.22.22
+##[endgroup]
+[command]/opt/hostedtoolcache/node/24.21.0/x64/bin/npm config get cache
+<runner>
+Cache hit for: node-cache-Linux-x64-npm-fe77cc82debb853105a7bea456c089ba62dadb5f6c99530f11e151c4249dff1e
+(node:2128) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+Received 119670272 of 119670272 (100.0%), 159.6 MBs/sec
+Cache Size: ~114 MB (119670272 B)
+[command]/usr/bin/tar -xf <runner> -P -C <runner> --use-compress-program unzstd
+Cache restored successfully
+Cache restored from key: node-cache-Linux-x64-npm-fe77cc82debb853105a7bea456c089ba62dadb5f6c99530f11e151c4249dff1e
+##[group]Run bash "$P/tools/cloud-setup.sh"
+[36;1mbash "$P/tools/cloud-setup.sh"[0m
+shell: /usr/bin/bash -e {0}
+env:
+  P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+  S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+##[endgroup]
+== node 24.21.0
+node v24.21.0 / npm 11.19.0
+== packages (npm ci)
+
+added 406 packages in 4s
+npm warn install-scripts 3 packages have install scripts not yet covered by allowScripts:
+npm warn install-scripts   @prisma/engines@7.8.0 (postinstall: node scripts/postinstall.js)
+npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+npm warn install-scripts   prisma@7.8.0 (preinstall: node scripts/preinstall-entry.js)
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+== prototype packages (contracts and AI runner, AIW-D259; prototype/node_modules links here)
+
+added 19 packages in 904ms
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+== zsh and locale
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+zsh 5.9
+== python helpers (api PY path, hash-pinned)
+pypdf 6.19.0
+== postgresql 18 on 127.0.0.1:54329
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+
+Running kernel seems to be up-to-date.
+
+No services need to be restarted.
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+cluster created
+cluster started
+database zone: America/Toronto
+== schema
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+┌─────────────────────────────────────────────────────────┐
+│  Update available 7.8.0 -> 8.0.0-rc.33                  │
+│                                                         │
+│  This is a major update - please follow the guide at    │
+│  https://pris.ly/d/major-version-upgrade                │
+│                                                         │
+│  Run the following to update                            │
+│    npm i --save-dev prisma@latest                       │
+│    npm i @prisma/client@latest                          │
+└─────────────────────────────────────────────────────────┘
+migrations applied, client generated
+web app built
+== official PDFs (committed, P-83; checked against the manifest checksums, P-31)
+Official sources: 0 fetched and verified, 0 failed, nothing pending.
+cloud setup done — studio on :4400:  zsh ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/start.sh   (lane copies: zsh ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/isolated.sh <name> <port> start)
+##[group]Run cd "$S" && ./node_modules/.bin/playwright install chromium
+[36;1mcd "$S" && ./node_modules/.bin/playwright install chromium[0m
+shell: /usr/bin/bash -e {0}
+env:
+  P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+  S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+##[endgroup]
+Downloading Chrome for Testing 156.0.8078.4 (playwright chromium v1248) from https://cdn.playwright.dev/builds/cft/156.0.8078.4/linux64/chrome-linux64.zip
+|                                                                                |   0% of 191.1 MiB
+|■■■■■■■■                                                                        |  10% of 191.1 MiB
+|■■■■■■■■■■■■■■■■                                                                |  20% of 191.1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 191.1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 191.1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 191.1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 191.1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 191.1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 191.1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 191.1 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 191.1 MiB
+Chrome for Testing 156.0.8078.4 (playwright chromium v1248) downloaded to <runner>
+Downloading FFmpeg (playwright ffmpeg v1013) from https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/1013/ffmpeg-linux.zip
+|                                                                                |   0% of 2.2 MiB
+|■■■■■■■■                                                                        |  10% of 2.2 MiB
+|■■■■■■■■■■■■■■■■                                                                |  20% of 2.2 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 2.2 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 2.2 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 2.2 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 2.2 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 2.2 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 2.2 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 2.2 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 2.2 MiB
+FFmpeg (playwright ffmpeg v1013) downloaded to <runner>
+Downloading Chrome Headless Shell 156.0.8078.4 (playwright chromium-headless-shell v1248) from https://cdn.playwright.dev/builds/cft/156.0.8078.4/linux64/chrome-headless-shell-linux64.zip
+|                                                                                |   0% of 120 MiB
+|■■■■■■■■                                                                        |  10% of 120 MiB
+|■■■■■■■■■■■■■■■■                                                                |  20% of 120 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 120 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 120 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 120 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 120 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 120 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 120 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 120 MiB
+|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 120 MiB
+Chrome Headless Shell 156.0.8078.4 (playwright chromium-headless-shell v1248) downloaded to <runner>
+##[group]Run [ -f "$S/tools/gate-b.mjs" ] || { echo "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)"; exit 2; }
+[36;1m[ -f "$S/tools/gate-b.mjs" ] || { echo "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)"; exit 2; }[0m
+[36;1mecho "### $CAP on $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"[0m
+[36;1mnode "$S/tools/gate-b.mjs" --title "$CAP" --kind code[0m
+shell: /usr/bin/bash -e {0}
+env:
+  P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+  S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+  CAP: C9.2
+  GATE_B_JOBS: 1
+  KIND: code
+  GATE_B_DATA: checkpoint
+##[endgroup]
+Gate B: the PR names C9.2; claims Works for none (no bug check).
+  packs: C9.2.test.ts
+    C9.2.test.ts on the checkpoint: exit 0, 19/19 passed (95 s: copy 3, Load the configured checkpoint 60, run 32)
+  packs took 96 s in all
+Gate B: passed.
+Post job cleanup.
+(node:5931) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Cache hit occurred on the primary key node-cache-Linux-x64-npm-fe77cc82debb853105a7bea456c089ba62dadb5f6c99530f11e151c4249dff1e, not saving cache.
+Post job cleanup.
+[command]/usr/bin/git version
+git version 2.56.0
+Temporarily overriding HOME='<runner> before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+[command]/usr/bin/git config --global --add safe.directory <runner>
+[command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+http.https://github.com/.extraheader
+[command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+[command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Cleaning up orphan processes
+Terminate orphan process: pid (5298) (postgres)
+##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

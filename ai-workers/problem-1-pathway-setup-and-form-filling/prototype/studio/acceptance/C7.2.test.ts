@@ -32,6 +32,16 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   const c = await call("POST", "/runtime/cases", { combinationId: vv, reference: `C72-${Date.now().toString(36)}`, clientActor: CLIENT, principal: { displayName: "Sample Applicant A" } }, OFFICER);
   const caseId = c.body?.id ?? c.body?.case?.id;
   const P = (await call("GET", `/runtime/cases/${caseId}`, undefined, OFFICER)).body?.people?.find((p: { role: string }) => p.role === "principal")?.subject_id;
+  // QA-315: on the configured checkpoint, release 2 files IMM 5257 Online (C10.1 row 9), and an Online form's PDF is a copy
+  // not for filing, which is never validated. The product offers IMM 5257 as a PDF upload too (no IRCC record of what it
+  // accepts on this data, so Online, PDF upload and Paper are offered as Sample, engine/channels.ts allowedChannels), so the
+  // officer files it that way for this person (Ready to file › how it is filed, C11.6) before the copy is made: the copy is
+  // then one to validate. On the fixture the release already files it as a PDF upload, and nothing changes.
+  const prep = (await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, OFFICER)).body;
+  const item = (prep?.items ?? []).find((i: { kind: string; form?: string; subject: string }) => i.kind === "form" && i.form === "IMM 5257" && i.subject === P);
+  const ch = item && item.channel !== "PDF_UPLOAD" ? await call("PATCH", `/runtime/items/${item.id}/channel`, { channel: "PDF_UPLOAD", reason: "Filed as a PDF upload for this person (C7.2's pack, Sample).", version: prep.version }, OFFICER) : null;
+  const filedAs = ch ? ch.body?.item?.channel : item?.channel;
+  ok("C7.2 setup (QA-315): the principal's IMM 5257 is filed as a PDF upload on this case (the officer's choice where the release files it Online), so its copy is one to validate", filedAs === "PDF_UPLOAD", { release: item?.line_channel, was: item?.channel, change: ch && { status: ch.status, words: words(ch) }, now: filedAs });
   const g = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `c72-${Date.now()}` }, OFFICER);
   const copy = String(g.body?.copy?.id ?? g.body?.id ?? "");
   await until(async () => ["GENERATED", "FAILED"].includes((await call("GET", `/runtime/form-copies/${copy}`, undefined, OFFICER)).body?.status), 90_000);
@@ -50,7 +60,9 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
     // P-171 (1), founder's Sample rule: any change to a fact on the form after Validate marks the validated copy out of date.
     const put = await call("PUT", `/runtime/cases/${caseId}/answers/${P}/person.family_name`, { value: "SAMPLE-CHANGED", expectedId: null }, OFFICER);
     const after = (await call("GET", `/runtime/form-copies/${copy}`, undefined, OFFICER)).body;
-    ok("C7.2 P-171 (1): changing a fact on the form after the upload marks the validated copy out of date and asks for Validate again", put.status === 200 && after?.validated?.current !== true && after?.out_of_date === true, { put: put.status, validated: after?.validated?.current, out_of_date: after?.out_of_date });
+    // QA-315: only after an upload that was read back and kept: a refused upload (as on the checkpoint before QA-315) left
+    // nothing to go out of date, so it never passes this line.
+    ok("C7.2 P-171 (1): changing a fact on the form after the upload marks the validated copy out of date and asks for Validate again", up.status < 300 && !!up.body?.id && put.status === 200 && after?.validated?.current !== true && after?.out_of_date === true, { upload: up.status, put: put.status, validated: after?.validated?.current, out_of_date: after?.out_of_date });
   } else {
     ok("C7.2 P-46: the upload reports the barcode check", false, "no generated copy");
     ok("C7.2 fail: a copy whose barcodes cannot be read is never ready for filing", false, "no generated copy");

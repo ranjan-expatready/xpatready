@@ -5,6 +5,7 @@
 import { canonical } from "../../contracts/rules.ts";
 import { INVISIBLE, LONE } from "../contracts/runtime.ts";
 import { checkCondition } from "./validate.ts";
+import { OUTCOME_WORDS } from "../contracts/case-check-words.ts";
 
 /** `whenNotMet` (P-230 (1), BACKLOG R4): what a gate not met means, as data. Absent: Not eligible (the default).
  *  "needs_review": the representative reviews it, so the result is Possibly eligible, never Not eligible (the background
@@ -180,7 +181,9 @@ export function conditionWords(n: unknown): string {
   }
 }
 /** P-230 (1): the change summary says when a gate not met only asks for the representative's review. */
-const whenWords = (g: Gate) => (g.whenNotMet === "needs_review" ? " — when not met: the representative reviews it (never Not eligible)" : "");
+/** B148 (P-236): a gate not met, when its "when not met" is the default, gives this outcome (lower case in a line). */
+const NOT_MET_WORD = OUTCOME_WORDS.NOT_ELIGIBLE.toLowerCase();
+const whenWords = (g: Gate) => (g.whenNotMet === "needs_review" ? ` — when not met: the representative reviews it (never ${OUTCOME_WORDS.NOT_ELIGIBLE} on its own)` : "");
 const shortWords = (c: unknown) => { const w = conditionWords(c); return w.length > 300 ? `${w.slice(0, 297)}…` : w; };
 
 /** BR-1, BR-6: what a release carries, or nothing when no gate and no judgement line is set (so a combination without
@@ -239,7 +242,7 @@ export function eligibilityChanges(prev: SnapshotEligibility | undefined, next: 
     // its values, before and after.
     const rule = canonical(was.condition as never) !== canonical(g.condition as never);
     const when = (was.whenNotMet ?? null) !== (g.whenNotMet ?? null);
-    line(k, "changed", `Gate: ${was.label === g.label ? g.label : `${was.label} → ${g.label}`}${rule ? ` (rule changed: ${shortWords(g.condition)}; was: ${shortWords(was.condition)})` : ""}${when ? ` (when not met: ${g.whenNotMet === "needs_review" ? "the representative reviews it" : "not eligible"}; was: ${was.whenNotMet === "needs_review" ? "the representative reviews it" : "not eligible"})` : ""}`);
+    line(k, "changed", `Gate: ${was.label === g.label ? g.label : `${was.label} → ${g.label}`}${rule ? ` (rule changed: ${shortWords(g.condition)}; was: ${shortWords(was.condition)})` : ""}${when ? ` (when not met: ${g.whenNotMet === "needs_review" ? "the representative reviews it" : NOT_MET_WORD}; was: ${was.whenNotMet === "needs_review" ? "the representative reviews it" : NOT_MET_WORD})` : ""}`);
   }
   // Break report m4: gate order is content (missing facts are listed in gate order), so a reorder is reviewed.
   const keptA = [...a.keys()].filter((k) => b.has(k)), keptB = [...b.keys()].filter((k) => a.has(k));

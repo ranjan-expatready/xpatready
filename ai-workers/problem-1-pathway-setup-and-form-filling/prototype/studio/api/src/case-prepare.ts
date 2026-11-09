@@ -25,10 +25,11 @@ import { releaseModes } from "../../engine/filing-modes.ts";
 import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, feeRule, rulesFrom } from "../../engine/runtime/filings.ts";
 /** Review r1 M4: the biometrics ages come from the fee table, never from code. */
 const bioAges = feeRule("vv.single", "biometrics")?.exempt;
-import { changedGroups, formCoverage, groupFacts, inputHash, readiness as formReadiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
+import { blocksLock, changedGroups, formCoverage, groupFacts, inputHash, readiness as formReadiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
 import { factChanges, markKey, outOfDateReason, representativeWords, restoredFromOf, undoTarget, type ChangeWords, type FactChange } from "../../engine/runtime/out-of-date.ts";
 import { REPRESENTATIVE } from "../../engine/runtime/team.ts";
-import { answerSheet, sectionHash, type Sheet } from "../../engine/runtime/answer-sheet.ts";
+import { partsInFormOrder, sectionHash, sheetOf as layOut, sheetWords, waitsOf, type FormPart, type Layout, type Sheet } from "../../engine/runtime/answer-sheet.ts";
+import { formPartsOf } from "./form-parts.ts";
 import { BIOMETRICS_STEP, channelChange, channelOf, paperLine, prepareVersion, readBackOf, wantedItems, type FormLine, type PaperValidated } from "../../engine/runtime/prepare.ts";
 import { lineCondition, render, type Role } from "../../engine/render.ts";
 import { conditionSubjects } from "../../engine/resolver.ts";
@@ -36,12 +37,15 @@ import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
 import { currentValues, factWords } from "../../engine/runtime/submission-record.ts";
-import { CaseForms, copyNotForFiling, formPassed } from "./fill-case.ts";
+import { CaseForms, copyNotForFiling, formPassed, formReadinessOf, inventoryOf, plainWhy } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
-import { readinessOfCase, type PreparedForm } from "./readiness-inputs.ts";
+import { copyStateOf, readinessOfCase, waitingFactsKey, type PreparedForm } from "./readiness-inputs.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
+import { draftNote, releaseOutOfDate, reviewCounts, touchedFilings } from "../../engine/runtime/release-update.ts";
+import { releaseLabel, type Readiness } from "../../contracts/runtime.ts";
+import { caseInputs, diffCache, pinReleases, targetRelease } from "./release-context.ts";
 
 type H = string | undefined;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -114,7 +118,13 @@ export class CasePrepare {
   }
 
   /** Derives, stores what changed (under the case's row lock, so two reads never make two family groups), and answers. */
-  private async build(actor: Actor, c: Reached) {
+  /** C9.5 (break m3): the view as stored, for a read that must write nothing (GET …/release-update): null when the
+   *  stored filings and items are not the derived ones yet (only a Prepare read stores them). */
+  async peek(actor: Actor, c: Reached) { return this.compose(actor, c, true); }
+
+  private async build(actor: Actor, c: Reached) { return (await this.compose(actor, c, false))!; }
+
+  private async compose(actor: Actor, c: Reached, noWrite: boolean) {
     const s = this.r.snapshotOf(c), pin = c.pins[0];
     // The release must describe the case's own combination (as case-filings.ts): never another combination's filings.
     const own = await this.db.combination.findUnique({ where: { id: c.combinationId }, select: { combinationKey: true, portalKey: true } });
@@ -167,7 +177,8 @@ export class CasePrepare {
       const live = new Map([...onFiling].filter(([, o]) => liveOwner.has(o)).map(([subject, o]) => [subject, liveOwner.get(o)!]));
       const wantKeys = new Set(wanted.filter((w) => live.has(w.subject)).map((w) => `${live.get(w.subject)}|${w.kind}|${w.key}|${w.subject}`));
       // C11.12 (challenge M1): the applicant rows are compared too (who is on it, and applying or declared only).
-      const sameApplicants = (row: (typeof filings0)[number], want: { subject: string; mode: string }[]) => row.applicants.length === want.length && want.every((a) => row.applicants.some((x) => x.subjectId === a.subject && x.mode === a.mode));
+      // C6.13 (m2): and their role, so Make principal (a swap of roles only) refreshes the stored applicant rows.
+      const sameApplicants = (row: (typeof filings0)[number], want: { subject: string; mode: string; role: string }[]) => row.applicants.length === want.length && want.every((a) => row.applicants.some((x) => x.subjectId === a.subject && x.mode === a.mode && x.role === a.role));
       const has = new Set(items0.map((i) => `${i.filingId}|${i.kind}|${i.itemKey}|${i.subjectId}`));
       const changes = !groups.some((g) => g.kind === "FAMILY")
         || first.filings.some((f) => { const row = filings0.find((x) => x.subjectId === f.owner!.subject); return !row || !row.active || row.mode !== f.mode || !sameApplicants(row, f.applicants); })
@@ -207,10 +218,12 @@ export class CasePrepare {
       if (gone.length || back.length) items = await tx.filingItem.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
       return { groups, filings, items: items.filter((i) => i.active) };
     };
-    const stored = (await sync(this.db, false)) ?? await this.db.$transaction(async (tx) => {
+    const ready = await sync(this.db, false);
+    if (!ready && noWrite) return null;
+    const stored = ready ?? await busyWords(() => this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       return (await sync(tx, true))!;
-    }, { timeout: 15_000, maxWait: 10_000 });
+    }, { timeout: 15_000, maxWait: 10_000 }));
 
     // Fees per stored group: a split filing is priced on its own.
     const groupOfSubject = new Map(stored.filings.map((f) => [f.subjectId, f.submissionGroupId]));
@@ -222,18 +235,35 @@ export class CasePrepare {
     const fid = (x: string) => idOfFiling.get(x) ?? x;
     // C11.12 (challenge M1, concept §6): each applicant's own mode (applying or declared only), never the filing's.
     const filings = done.filings.map((f) => ({ id: fid(f.id), combination: f.combination, label: f.label, mode: f.mode, owner: f.owner, applicants: f.applicants.map((a) => ({ subject: a.subject, label: a.label, role: a.role, mode: a.mode })), group: f.group, status: f.status as string, number: f.number }));
-    const groups = done.groups.map((g) => ({ ...g, filings: g.filings.map(fid), reason: stored.groups.find((x) => x.id === g.id)?.reason ?? null }));
+    // B152 (FQ-7): a recorded group reads its fees as they were recorded (submission_group.recorded_fees, written once by
+    // "Record the submission"), never worked out again: a birthday, a corrected date of birth or a new fee table later
+    // changes nothing that was filed. A group recorded before B152 has none and is worked out today, as before.
+    type Frozen = { at: string; totals: (typeof done.groups)[number]["totals"]; total_cents: number | null; fees: unknown[] };
+    const frozen = new Map(stored.groups.filter((x) => x.recordedFees).map((x) => [x.id, x.recordedFees as unknown as Frozen]));
+    const groups = done.groups.map((g) => {
+      const base = { ...g, filings: g.filings.map(fid), reason: stored.groups.find((x) => x.id === g.id)?.reason ?? null }, f = frozen.get(g.id);
+      return f ? { ...base, totals: f.totals, total_cents: f.total_cents, fees_recorded: { at: f.at } } : base;
+    });
+    const frozenFilings = new Set(groups.filter((g) => frozen.has(g.id)).flatMap((g) => g.filings));
     // Review M1: `subject` is the person the line is for (several people share the principal's filing), never the owner.
-    const fees = done.fees.map((f) => ({ filing: fid(f.filing), subject: f.person, payer: f.payer, key: f.line, line: f.label, amount: f.amount_cents / 100, amount_cents: f.amount_cents, amount_words: cad(f.amount_cents), exempt: f.exempt, reason: f.why, ...(f.waiting ? { waiting: f.waiting } : {}),
+    const derivedFees = done.fees.map((f) => ({ filing: fid(f.filing), subject: f.person, payer: f.payer, key: f.line, line: f.label, amount: f.amount_cents / 100, amount_cents: f.amount_cents, amount_words: cad(f.amount_cents), exempt: f.exempt, reason: f.why, ...(f.waiting ? { waiting: f.waiting } : {}),
       source: (f.source ?? done.groups.find((g) => g.filings.includes(f.filing))?.totals.find((t) => t.line === f.line)?.source)?.url ?? "Sample", source_detail: f.source ?? done.groups.find((g) => g.filings.includes(f.filing))?.totals.find((t) => t.line === f.line)?.source ?? null }));
+    const fees = [...derivedFees.filter((l) => !frozenFilings.has(l.filing)), ...groups.filter((g) => frozen.has(g.id)).flatMap((g) => frozen.get(g.id)!.fees as typeof derivedFees)];
 
     // Items in the view: each with one state; a form with its channel, what IRCC accepts and the signature that follows.
     const view = caseView(s, people, answers, rows, "agent", today, groupAnswers);
+    // QA-165 (P-71; #1256 cause 2): each form's readiness also reads what a copy made now would write (a box refused with a
+    // fix, a mandatory box left empty), as GET …/forms does; worked out once per form and person in this view.
+    const readyOf = new Map<string, ReturnType<typeof formReadiness>>(), covs = new Map<string, ReturnType<typeof formCoverage>>();
+    // One coverage per form and person, shared by readiness and the filing's facts fingerprint (factsHash below).
+    const covOf = (form: string, subject: string) => { const k = `${form}|${subject}`; if (!covs.has(k)) covs.set(k, formCoverage(s, people, answers, rows, form, subject)); return covs.get(k)!; };
+    const formReady = (form: string, subject: string) => { const k = `${form}|${subject}`; if (!readyOf.has(k)) readyOf.set(k, formReadinessOf(s, people, answers, rows, view, form, subject, covOf(form, subject))); return readyOf.get(k)!; };
     const accepts = await acceptsOf(this.db, c.workspaceId);
     const lines = new Map((s.forms as FormLine[]).map((l) => [l.form_number, l]));
     const label = new Map(people.map((p) => [p.subjectId, p.label]));
     const enteredRows = await this.db.enteredSection.findMany({ where: { caseId: c.id, supersededAt: null }, include: { snapshot: { select: { inputHash: true, factsJson: true } } } });
     const enteredBy = new Map<string, typeof enteredRows>();
+    const parts = await partsOfRelease(this.db, c); // C7.3: each Online form's own parts, as released
     for (const e of enteredRows) enteredBy.set(e.itemId, [...(enteredBy.get(e.itemId) ?? []), e]);
     const wantedOf = (i: Item) => wanted.find((w) => w.subject === i.subjectId && w.kind === i.kind && w.key === i.itemKey);
     // C8.1: who signs each form item (SH3 R7, in words) and the steps done on a form signed by hand and scanned.
@@ -242,21 +272,30 @@ export class CasePrepare {
     const minor = minorFromAnswers(answers, today); // Devin on #617: an adult dependent child signs their own form
     // C7.7 part 2: per form × person, the validated copy read back that counts (readBackOf: each copy judged on its newest
     // read-back, as the copy view and `lock` do; QA-165), current while the form's facts are what they were when it was read back.
-    const reads = await this.db.validatedCopy.findMany({ where: { copy: { caseId: c.id } }, orderBy: [{ readAt: "desc" }, { id: "asc" }], select: { factsHash: true, readAt: true, readBack: true, copy: { select: { id: true, formNumber: true, subjectId: true, resultJson: true, snapshot: { select: { factsJson: true } } } } } });
+    const reads = await this.db.validatedCopy.findMany({ where: { copy: { caseId: c.id } }, orderBy: [{ readAt: "desc" }, { id: "asc" }], select: { factsHash: true, readAt: true, readBack: true, copy: { select: { id: true, formNumber: true, subjectId: true, resultJson: true, configReleaseId: true, snapshot: { select: { factsJson: true } } } } } });
+    // C9.5 (BR-6, challenge M4): a copy made on an earlier release of the case (before a move) whose form the move
+    // changed is out of date because of the release: words that name both releases and what changed, never fact lines
+    // (so never an Undo), and it never counts as current. Only after a move (more than one pin revision).
+    const pins = pinReleases(c), diffOf = diffCache(), curLabel = releaseLabel(pin.release);
+    const releaseOfCopy = new Map<string, string>(reads.map((v) => [v.copy.id, v.copy.configReleaseId]));
+    const releaseWords = (copy: string | null | undefined, form: string, what: string): string | null => {
+      const rel = copy ? releaseOfCopy.get(copy) : undefined, old = rel && rel !== pin.configReleaseId ? pins.find((p) => p.id === rel) : undefined;
+      return old ? releaseOutOfDate(diffOf(old.id, old.snapshot, pin.configReleaseId, s).forms.get(form), { from: old.label, to: curLabel }, what) : null;
+    };
     const readsOf = new Map<string, { copy: string; at: Date; factsHash: string; readBack: unknown }[]>();
     // Row C3 (review m1): a read-back of a copy stamped "Copy, not for filing" (made while the form was filed Online) never
     // counts, by the same rule as Validate and `lock` (copyNotForFiling): such rows were kept before Validate refused them.
     for (const v of reads) { if (copyNotForFiling(s, v.copy)) continue; const k = `${v.copy.formNumber}|${v.copy.subjectId}`; readsOf.set(k, [...(readsOf.get(k) ?? []), { copy: v.copy.id, at: v.readAt, factsHash: v.factsHash, readBack: v.readBack }]); }
     const paperValidated = (form: string, subject: string): PaperValidated => {
       const v = readBackOf(readsOf.get(`${form}|${subject}`) ?? [], formPassed);
-      return v ? { copy: v.copy, at: v.at.toISOString(), current: v.factsHash === inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? []) } : null;
+      return v ? { copy: v.copy, at: v.at.toISOString(), current: v.factsHash === inputHash(covOf(form, subject)?.facts ?? []) && !releaseWords(v.copy, form, "validated copy") } : null;
     };
     // C9.2 (BR-12): what each finished item read when it was finished (its copy's stored facts, or its entered section's
     // answers), to name each fact that changed since, with its old and new value and the date of the change.
     const printedCopy = (id: string) => stepsOf.get(id)?.print?.copy ?? null;
     const copyIds = [...new Set([...reads.map((v) => v.copy.id), ...stored.items.map((i) => printedCopy(i.id)).filter((x): x is string => !!x)])];
-    const copyFacts = new Map((copyIds.length ? await this.db.formInstance.findMany({ where: { id: { in: copyIds } }, select: { id: true, snapshot: { select: { factsJson: true } } } }) : [])
-      .map((x) => [x.id, (x.snapshot?.factsJson ?? {}) as { facts?: FormFact[]; groups?: GroupFact[] }]));
+    const copyFacts = new Map((copyIds.length ? await this.db.formInstance.findMany({ where: { id: { in: copyIds } }, select: { id: true, configReleaseId: true, snapshot: { select: { factsJson: true } } } }) : [])
+      .map((x) => { releaseOfCopy.set(x.id, x.configReleaseId); return [x.id, (x.snapshot?.factsJson ?? {}) as { facts?: FormFact[]; groups?: GroupFact[] }]; }));
     const scans = await this.db.signedScan.findMany({ where: { caseId: c.id }, orderBy: [{ uploadedAt: "desc" }, { id: "asc" }], select: { id: true, itemId: true, uploadedAt: true } });
     const questionWords = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
     const placementWords = new Map<string, string>();
@@ -273,7 +312,7 @@ export class CasePrepare {
       at: (about, fact) => answerOf(about, fact)?.at ?? null,
       saved: (about, fact) => answerOf(about, fact)?.value ?? null,
     };
-    const nowFacts = (form: string, subject: string) => formCoverage(s, people, answers, rows, form, subject)?.facts ?? [];
+    const nowFacts = (form: string, subject: string) => covOf(form, subject)?.facts ?? [];
     const changesSince = (copy: string | null | undefined, form: string, subject: string) => {
       const then = copy ? copyFacts.get(copy) : undefined;
       if (!then) return { changes: [] as FactChange[], groups: [] as string[] };
@@ -296,11 +335,15 @@ export class CasePrepare {
       const w = wantedOf(i), base = { id: i.id, kind: i.kind as "form" | "document" | "step", filing: i.filingId, subject: i.subjectId, person: label.get(i.subjectId) ?? "", version: i.version };
       if (i.kind === "form") {
         const ch = channelOf(lines.get(i.itemKey), accepts.get(i.itemKey), own!.portalKey, i.channel);
-        const rd = formReadiness(view, i.itemKey, i.subjectId);
+        // QA-165 (#1318): the item's state waits on facts ("Waiting for N facts…"); a mandatory box left empty is not one: it is
+        // its own CRITICAL line on Ready to file (blocksLock, the copy's lock rule too).
+        const rd = { missing: formReady(i.itemKey, i.subjectId).missing.filter(blocksLock) };
         const waits = w?.applies === "cannot_tell";
         // C7.3: an Online form's answer sheet: Out of date when a section entered in the portal changed since (warns only,
         // FQ-6, P-168), Done when every section is entered and current.
-        const sheet = ch.channel === "ONLINE" ? sheetOf(i, s, people, answers, rows, view, enteredBy.get(i.id) ?? []) : null;
+        // QA-309: a section waits only for what this form's readiness names (never "none apply", answered rows or facts the
+        // release never asks), so the sheet and the item read the same rule.
+        const sheet = ch.channel === "ONLINE" ? sheetOf(i, s, people, answers, rows, view, enteredBy.get(i.id) ?? [], parts, rd.missing, covOf(i.itemKey, i.subjectId)) : null;
         const stale = sheet?.sections.filter((x) => x.out_of_date) ?? [];
         const fb = { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null };
         if (stale.length) staleOf.set(i.id, stale.map((x) => x.title));
@@ -315,12 +358,23 @@ export class CasePrepare {
           // Review B1 on #861: this line names who signs too (readiness reads it).
           return { ...fb, signers: signersOf(signPeople, i.subjectId, lines.get(i.itemKey)?.who ?? "each_applicant", lines.get(i.itemKey)?.signed_by, minor), state: "out_of_date", reason: outOfDateReason("entered", `${i.itemKey} (${stale.map((x) => x.title).join(", ")})`, first, changes), changes: changeList(changes) };
         }
-        // Review M2: Done only when every section is entered, current and waits for nothing.
-        const allEntered = !!sheet && sheet.sections.length > 0 && sheet.sections.every((x) => x.entered && !x.out_of_date && !x.waiting.length);
+        // Review M2: Done only when every section is entered, current and waits for nothing, and (QA-309) the form's
+        // readiness names nothing either.
+        const allEntered = !!sheet && sheet.sections.length > 0 && sheet.sections.every((x) => x.entered && !x.out_of_date && !x.waiting.length) && !rd.missing.length;
         const signers = signersOf(signPeople, i.subjectId, lines.get(i.itemKey)?.who ?? "each_applicant", lines.get(i.itemKey)?.signed_by, minor);
         // C8.1: a form signed by hand and scanned is Ready once its signed scan is in, Done once uploaded to IRCC.
         const signed = !waits && ch.signature === "HAND_SCANNED" ? signedState(stepsOf.get(i.id) ?? {}, i.itemKey) : null;
         if (signed) {
+          // C9.5 (BR-6, challenge M4): signed on a copy made on the release the case left, whose form the move changed: out
+          // of date because of the release (no fact lines, no Undo); a new signed copy is asked for on this release.
+          const relSigned = releaseWords(printedCopy(i.id), i.itemKey, "signed form");
+          if (relSigned) {
+            const scan = scans.find((x) => x.itemId === i.id) ?? null;
+            const old = { ...fb, signers, ...signed, state: "out_of_date", reason: relSigned, release_out_of_date: true as const };
+            if (signed.state === "done") return old;
+            return [{ ...old, id: scan?.id ?? i.id, item: i.id, record: "signed_scan" as const },
+              { ...fb, signers, state: "to_do", replaces: scan?.id ?? null, reason: `A new signed ${i.itemKey} is needed: the signed one was made on an earlier release that ${curLabel} changes. Print the new copy, have it signed and upload the scan.` }];
+          }
           // C9.2 (BR-12, BR-20): the signed form is never changed; when a fact on the copy that was printed and signed
           // changed since (the representative of record among them), it is Out of date and a new signed one is asked for.
           const { changes, groups: groupsChanged } = changesSince(printedCopy(i.id), i.itemKey, i.subjectId);
@@ -338,20 +392,27 @@ export class CasePrepare {
         // C7.7 part 2 (r5c BR-8, P-144): a Paper line with its barcode page and its steps, in order.
         // C9.2: a validated copy read back that no longer matches the case is Out of date, naming what changed.
         const validated = !waits && ch.channel !== "ONLINE" ? paperValidated(i.itemKey, i.subjectId) : null;
+        // C9.5 (BR-6, challenge M4): a validated copy made on the release the case left, whose form the move changed.
+        const relValidated = validated ? releaseWords(validated.copy, i.itemKey, "validated copy") : null;
+        if (relValidated) return { ...fb, signers, validated, state: "out_of_date", reason: relValidated, release_out_of_date: true as const };
         const since = validated && !validated.current ? changesSince(validated.copy, i.itemKey, i.subjectId) : null;
         // Only a change it can name marks it (C8.2 break M4: the same value typed again is no change); a Paper line keeps
         // its own Validate-again rule (C7.7, paperLine).
         const staleCopy = since && (since.changes.length || since.groups.length || ch.channel === "PAPER") ? since : null;
         const staleWords = (next?: string) => staleCopy ? { reason: outOfDateReason("validated_copy", i.itemKey, validated!.at, staleCopy.changes, staleCopy.groups.map((g) => `${g} changed`), next), changes: changeList(staleCopy.changes) } : {};
         if (ch.channel === "PAPER" && !waits) {
-          const line = paperLine(i.itemKey, { barcode: isBarcodeForm(i.itemKey), missing: rd.missing.length, validated, signers });
+          // B132: the recorded Printed and Signed in pen; on a barcode form only those done on its current validated copy
+          // (Devin on #1278: a newer read-back is not signed by an earlier print), so readiness never counts an old signature.
+          const pen = stepsOf.get(i.id), barcodeForm = isBarcodeForm(i.itemKey);
+          const penDone = !barcodeForm || (validated?.current && pen?.print?.copy === validated.copy) ? pen : undefined;
+          const line = paperLine(i.itemKey, { barcode: barcodeForm, missing: rd.missing.length, validated, signers, done: penDone });
           // C7.7 (P-144): a Paper line keeps its own next step (a new barcode page), after the words of what changed.
           return { ...fb, signers, ...line, ...(line.state === "out_of_date" ? staleWords("Make a new copy, press Validate again (a new barcode page) and read it back before you print, or undo the change.") : {}) };
         }
         if (staleCopy) return { ...fb, signers, validated, state: "out_of_date", ...staleWords() };
         return { ...base, form: i.itemKey, channel: ch.channel, line_channel: ch.line_channel, accepts: ch.accepts, accepts_quote: ch.accepts_basis?.quote ?? null, signature: ch.signature, signed_by: lines.get(i.itemKey)?.signed_by ?? null, signers,
           channel_changed: i.channel ? { by: i.channelBy, at: i.channelAt?.toISOString() ?? null, reason: i.channelReason } : null,
-          state: waits ? "cannot_start" : allEntered ? "done" : "to_do", reason: allEntered && !waits ? "Every section is entered in the portal, with every answer confirmed and current." : waits ? waitWords(w?.missing ?? []) : rd.missing.length ? `Waiting for ${rd.missing.length} fact${rd.missing.length === 1 ? "" : "s"} to answer or confirm.` : "Every fact it reads is confirmed." };
+          state: waits ? "cannot_start" : allEntered ? "done" : "to_do", reason: allEntered && !waits ? "Every section is entered in the portal, with every answer confirmed and current." : waits ? waitWords(w?.missing ?? []) : sheet ? sheetWords(sheet, rd.missing) : rd.missing.length ? `Waiting for ${rd.missing.length} fact${rd.missing.length === 1 ? "" : "s"} to answer or confirm.` : "Every fact it reads is confirmed." };
       }
       if (i.kind === "document") return { ...base, document_type: w?.document_type ?? i.itemKey, label: w?.label ?? i.itemKey, state: "to_do", reason: "Not requested yet (the checklist, C6.4)." };
       return { ...base, step: BIOMETRICS_STEP.label, neededBefore: "after_filing" as const, state: "cannot_start", reason: w?.applies === "cannot_tell" ? `Waits for the date of birth: no biometrics under ${bioAges?.underAge ?? "?"} or over ${bioAges?.overAge ?? "?"} (VV-R15).` : BIOMETRICS_STEP.after };
@@ -390,7 +451,7 @@ export class CasePrepare {
     const waiting = items.filter(notYetKnown).map((i) => Object.assign(i, { waits_on: asksOf(wanted.find((x) => x.subject === i.subject && x.kind === "form" && x.key === ("form" in i ? i.form : null))?.missing ?? []) }));
     const notNeeded = notNeededForms(s, renderPeople, known, r.forms as RenderedForm[], lines, new Set(filers), ages, people.find((p) => p.role === "case")?.subjectId ?? null, clean, words.label, label);
     // Stage 1 (C7.7): the facts each filing's forms to fill still wait for, counted before any item.
-    const stage1 = filings.map((f) => { const mine = toFill.filter((i) => i.filing === f.id && i.kind === "form") as { form: string; subject: string }[]; const missing = new Set(mine.flatMap((i) => formReadiness(view, i.form, i.subject).missing.map((m) => `${m.about}|${m.fact}`))); return { filing: f.id, to_confirm: missing.size, confirmed: mine.length && !missing.size ? 1 : 0 }; });
+    const stage1 = filings.map((f) => { const mine = toFill.filter((i) => i.filing === f.id && i.kind === "form") as { form: string; subject: string }[]; const missing = new Set(mine.flatMap((i) => formReady(i.form, i.subject).missing.filter(blocksLock).map((m) => `${m.about}|${m.fact}`))); return { filing: f.id, to_confirm: missing.size, confirmed: mine.length && !missing.size ? 1 : 0 }; });
     // C7.6 (L-SA3, P-315): each filing's blocks and warnings from engine/runtime/readiness.ts, on this view's own items.
     // The edition a form is filled on: the release's PDF edition in use (pdfMapInUse, P-32: the newest, as the fill picks
     // it; review M2 on #861); on a line filed Online, its online version, else the PDF edition its answer sheet follows
@@ -406,6 +467,9 @@ export class CasePrepare {
     const records = new Map(items.flatMap((i) => ("record" in i && i.record === "signed_scan" && "item" in i ? [[i.item as string, i]] : [])));
     const markOf = (i: (typeof items)[number] | undefined) => {
       if (!i || i.state !== "out_of_date" || ("channel" in i && i.channel === "ONLINE")) return null;
+      // C9.5 (BR-6): out of date because of the release: the release's words, keyed by the pin revision (a pass covers it
+      // until the next move), never a fact.
+      if ("release_out_of_date" in i && i.release_out_of_date) return { fact: "the release", since: pin.pinnedAt.toISOString(), key: `release|${pin.revision}`, words: "reason" in i ? String(i.reason) : undefined };
       const cs = (i as { changes?: ChangeRow[] }).changes ?? [];
       // bot review on #926: the warning's identity is every change with its value now (a pass never covers a later change);
       // its date is the latest change's.
@@ -419,22 +483,103 @@ export class CasePrepare {
       channel: i.channel, signature: i.signature, signed_by: i.signed_by, signers: "signers" in i ? i.signers : [], state: i.state, reason: i.reason,
       steps: "steps" in i ? (i.steps as PreparedForm["steps"]) : undefined, outOfDate: markOf(i) ?? markOf(records.get(i.id)) }] : []);
     const docItems = items.filter((i) => i.kind === "document") as { id: string; filing: string; subject: string; person: string; document_type: string; label: string }[];
-    const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems,
+    // C9.5 (BR-6, challenge M5): after a move, a review with the same facts counts only if made after the move or the
+    // move touched nothing on its filing. (BR-8, challenge M6): while a newer release is out, only the filings it would
+    // change warn, naming what it changes (passable with a reason, never a block).
+    const st = { people, answers, rows, groups: groupAnswers }, forTouch = filings.map((f) => ({ id: f.id, people: f.applicants.map((a) => a.subject) }));
+    const prev = pins[1];
+    // Review m4 (round 1): every move made after the review counts, not only the newest: a review withdrawn by one move
+    // never comes back with a later move that leaves its filing alone. Moves are read newest first (pins is ordered).
+    const movedTouch = new Map<number, Map<string, string[]>>();
+    const touchedBy = (k: number) => { if (!movedTouch.has(k)) { const to = pins[k], from = pins[k + 1]; movedTouch.set(k, touchedFilings(diffOf(from.id, from.snapshot, to.id, to.snapshot), caseInputs(from.snapshot, to.snapshot, own!.combinationKey, st, today, true), forTouch, { to: to.label })); } return movedTouch.get(k)!; };
+    const reviewAfterMove = prev ? (filing: string, reviewedAt: Date) => {
+      for (let k = 0; k < pins.length - 1 && pins[k].pinnedAt.getTime() >= reviewedAt.getTime(); k++) {
+        const t = touchedBy(k).get(filing) ?? [];
+        if (!reviewCounts({ hashEqual: true, reviewedAt, pinnedAt: pins[k].pinnedAt, revision: pins[k].revision, touched: t.length > 0 }))
+          return `The case moved to ${pins[k].label}, which changes this filing (${t.slice(0, 2).join("; ")}${t.length > 2 ? ` and ${t.length - 2} more` : ""})`;
+      }
+      return null;
+    } : undefined;
+    const target = await targetRelease(this.db, c);
+    const pending = target ? touchedFilings(diffOf(pin.configReleaseId, s, target.id, target.snapshot), caseInputs(s, target.snapshot, own!.combinationKey, st, today, true), forTouch, { to: target.label }) : null;
+    const recordedFiling = new Set(stored.filings.filter((f) => f.status === "SUBMITTED").map((f) => f.id));
+    const releaseUpdate = pending ? (filing: string) => {
+      const w = recordedFiling.has(filing) ? [] : pending.get(filing) ?? []; // break m2: a recorded filing stays on its release
+      return w.length ? { key: String(target!.version), words: `${target!.label} of ${s.combination.label} is out and changes this filing: ${w.slice(0, 2).join("; ")}${w.length > 2 ? ` and ${w.length - 2} more` : ""}. This filing is on ${curLabel}. Move the case from the notice under its header, or pass this warning with a reason.` } : null;
+    } : undefined;
+    // C9.5 (BR-4, BR-6): a form whose newest copy was made on the release the case left, and which the move changed,
+    // says so on its item (to fill again, or filed another way now), until the officer makes a copy on this release.
+    if (prev) {
+      const newest = new Map<string, { id: string; configReleaseId: string }>();
+      for (const x of await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED" }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { id: true, formNumber: true, subjectId: true, configReleaseId: true } }))
+        if (!newest.has(`${x.formNumber}|${x.subjectId}`)) newest.set(`${x.formNumber}|${x.subjectId}`, x);
+      for (const i of items) {
+        if (i.kind !== "form" || !("form" in i) || !i.form || i.state === "out_of_date") continue;
+        const x = newest.get(`${i.form}|${i.subject}`), old = x && x.configReleaseId !== pin.configReleaseId ? pins.find((p) => p.id === x.configReleaseId) : undefined;
+        let note = old ? draftNote(diffOf(old.id, old.snapshot, pin.configReleaseId, s).forms.get(i.form), { from: old.label, to: curLabel }) : null;
+        // Review m3 (round 1): sections entered in the portal before the move, on a form the move changed, are marked by
+        // the release too (no fact lines, no Undo; the entries themselves are never changed).
+        const entered = "channel" in i && i.channel === "ONLINE" ? (enteredBy.get(i.id) ?? []).filter((e) => e.enteredAt.getTime() < pin.pinnedAt.getTime()) : [];
+        if (!note && entered.length) note = releaseOutOfDate(diffOf(prev.id, prev.snapshot, pin.configReleaseId, s).forms.get(i.form), { from: prev.label, to: curLabel }, "entry in the IRCC account");
+        if (note) Object.assign(i, { release_note: note, ...(entered.length && !old ? { release_out_of_date_entered: true } : {}) });
+      }
+    }
+    // C7.7 (BR-9, C7.7-18): the boxes the newest copy of each form on this release leaves "To write by hand", in the
+    // copy's own words (the question's label, else "A form field"; why, without engine words: fill-case.ts plainWhy).
+    // The newest copy, current or not, is the one that would be filed, so a stale copy never hides its by-hand boxes; a
+    // newest copy that is "Copy, not for filing" (made while the line was Online) raises none (review m4). Review m5: the
+    // newest copy per form and person is picked first, and only those copies' results are read.
+    const askedAs = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
+    const newestCopy = new Map<string, string>();
+    for (const x of await this.db.formInstance.findMany({ where: { caseId: c.id, status: "GENERATED", configReleaseId: pin.configReleaseId }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], select: { id: true, formNumber: true, subjectId: true } }))
+      if (!newestCopy.has(`${x.formNumber}|${x.subjectId}`)) newestCopy.set(`${x.formNumber}|${x.subjectId}`, x.id);
+    const handOf = new Map<string, { copy: string; box: string; label: string; why: string; caption?: string | null }[]>();
+    // Breaker M3: each box's own caption from the form's field list, read once a form. Devin on #1331: the field list of the
+    // PDF edition the copy was filled on: the copies here are this release's, and the fill takes pdfMapInUse (P-32), so
+    // the same map is read here, never simply the first edition listed.
+    const captionsOf = new Map<string, Map<string, string>>();
+    const captionOf = (form: string, box: string) => {
+      if (!captionsOf.has(form)) { const file = pdfMapInUse(s.field_maps as FieldMap[], form)?.inventory_file; captionsOf.set(form, new Map((file ? inventoryOf(file)?.fields ?? [] : []).flatMap((x) => (x.data_path && x.caption ? [[x.data_path, x.caption] as [string, string]] : [])))); }
+      return captionsOf.get(form)!.get(box) ?? null;
+    };
+    for (const x of newestCopy.size ? await this.db.formInstance.findMany({ where: { id: { in: [...newestCopy.values()] } }, select: { id: true, formNumber: true, subjectId: true, resultJson: true, snapshot: { select: { factsJson: true } } } }) : []) {
+      if (copyNotForFiling(s, x)) continue;
+      const boxes = ((x.resultJson as { boxes?: { box: string; fact: string | null; result: string; why: string | null }[] } | null)?.boxes ?? []);
+      handOf.set(`${x.formNumber}|${x.subjectId}`, boxes.filter((b) => b.result === "by hand").map((b) => ({ copy: x.id, box: b.box, label: (b.fact && askedAs.get(b.fact)) || "A form field", why: plainWhy(b.why), caption: captionOf(x.formNumber, b.box) })));
+    }
+    // B162 (review M1, m2; breaker M1, M2 on #1344): the newest copy for filing of each form for each person, made on any
+    // release of the case (a move never takes a made copy away; C9.5 BR-4), a newer "Copy, not for filing" never hiding
+    // an older one for filing. It counts only while it holds today's facts (its fingerprint equals the form's facts now,
+    // as the copy view reads it): a copy made before the answers, or before a fact changed, is "older than today's facts".
+    // One read of each copy's flag, channel and fingerprint; never the copies' whole results.
+    const copyRows = await this.db.$queryRaw<{ id: string; form_number: string; subject_id: string; not_for_filing: boolean | null; channel: string | null; input_hash: string; groups: GroupFact[] | null }[]>`SELECT f.id, f.form_number, f.subject_id, (f.result_json->>'not_for_filing')::boolean AS not_for_filing, s.facts_json->>'channel' AS channel, s.input_hash, s.facts_json->'groups' AS groups FROM form_instance f JOIN answer_snapshot s ON s.id = f.snapshot_id WHERE f.case_id = ${c.id}::uuid AND f.status = 'GENERATED' ORDER BY f.created_at DESC, f.id ASC`;
+    const forFiling = new Map<string, { id: string; hash: string; groups: GroupFact[] | null }>();
+    for (const x of copyRows) {
+      const k = `${x.form_number}|${x.subject_id}`;
+      if (forFiling.has(k) || copyNotForFiling(s, { formNumber: x.form_number, resultJson: x.not_for_filing === null ? null : { not_for_filing: x.not_for_filing }, snapshot: { factsJson: x.channel ? { channel: x.channel } : null } })) continue;
+      forFiling.set(k, { id: x.id, hash: x.input_hash, groups: x.groups });
+    }
+    // Devin on #1344: current only when the facts and the repeating groups it reads are both unchanged (copyStateOf).
+    const copyOf = (form: string, subject: string) => copyStateOf(forFiling.get(`${form}|${subject}`), { hash: inputHash(covOf(form, subject)?.facts ?? []), groups: groupFacts(view, form, subject) }, pin.configReleaseId);
+    const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems, reviewAfterMove, releaseUpdate,
+      byHand: (form, subject) => handOf.get(`${form}|${subject}`) ?? [],
+      copy: copyOf,
       documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
-      factsOf: (form, subject) => formReadiness(view, form, subject), owesFact: (fact) => (isClientField(s, fact) ? "client" : "staff"),
+      factsOf: (form, subject) => formReady(form, subject), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
       validatedCurrent: (form, subject) => !!paperValidated(form, subject)?.current, scanned: (item) => !!stepsOf.get(item)?.scan_received,
       editionOf, enteredStale: staleOf, barcode: isBarcodeForm, factsHash: (form, subject) => {
         // Breaker N1 (#861 round 2): the confirmed values the form writes, and every fact it still waits for with its
         // answer as given now (an unconfirmed change is a change the representative did not review).
-        const waiting = formReadiness(view, form, subject).missing.map((m) => [m.fact, m.about, m.reason, answers.filter((x) => x.field === m.fact).map((x) => [x.subjectId, x.rowKey, x.value])]);
-        return createHash("sha256").update(`${inputHash(formCoverage(s, people, answers, rows, form, subject)?.facts ?? [])}|${JSON.stringify(waiting)}`).digest("hex");
+        // C9.5 build discovery: the answers are read with no order (runtime.ts `state`), so two reads could list the same
+        // answers in another order and give another fingerprint, withdrawing a review nobody's facts changed: sorted.
+        return createHash("sha256").update(`${inputHash(covOf(form, subject)?.facts ?? [])}|${waitingFactsKey(formReady(form, subject).missing, answers)}`).digest("hex");
       }, today });
     // C7.6: a filing marked Ready to file (or later) says so; before that, the derived status (Not started). Break B1 on
     // #861: a filing marked Ready to file that is no longer ready (a fact changed, the barcode copy is out of date, a new
     // warning) goes back to Not started, recorded, so nothing downstream trusts a stale "Ready to file".
     const statusOf = new Map(stored.filings.map((f) => [f.id, f.status]));
     for (const f of filings) {
-      if (statusOf.get(f.id) === "READY_TO_FILE" && readiness.find((x) => x.filing === f.id)?.ready === false) {
+      if (!noWrite && statusOf.get(f.id) === "READY_TO_FILE" && readiness.find((x) => x.filing === f.id)?.ready === false) {
         const n = await this.db.filing.updateMany({ where: { id: f.id, status: "READY_TO_FILE" }, data: { status: "NOT_STARTED" } });
         if (n.count) await this.audit.log(c.workspaceId, actor.id, "ready_to_file_reopened", "filing", f.id, `A filing on case ${short(c.id)} is no longer Ready to file: something changed after it was marked (C7.6).`);
         statusOf.set(f.id, "NOT_STARTED");
@@ -443,17 +588,19 @@ export class CasePrepare {
     }
     // Review r3 m1: the version from the very rows this view shows (never a later read), so a write from it is checked
     // against what the officer saw.
-    const version = versionOf(stored.filings, stored.items);
+    // C9.5 (break m9): the pin revision is part of the version, so a write from a screen read before a move (record, split,
+    // channel) is refused under the case's row lock, as Fill is.
+    const version = withRevision(versionOf(stored.filings, stored.items), pin.revision);
     const peopleView = people.filter((p) => p.role !== "case").map((p) => { const f = filings.find((x) => x.applicants.some((a) => a.subject === p.subjectId) || x.owner?.subject === p.subjectId); const nf = done.not_filing.find((x) => x.subject === p.subjectId); return { subject: p.subjectId, label: p.label, role: p.role, applies: p.applies, age: ages.get(p.subjectId) ?? null, filing: f?.id ?? null, why: nf?.why ?? null }; });
     // C8.2 (BR-12, BR-15): a recorded filing reads "submitted" with its record; a form filed with a fact changed since reads
     // "Filed with an earlier value" and opens its task (api/src/submission-record.ts).
     const questionOf = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
-    const tasks = await recordedOverlay(this.db, { workspaceId: c.workspaceId, caseId: c.id, actor: actor.id, filings, items: items as never, label,
-      nowOf: (form, subject) => currentValues(formCoverage(s, people, answers, rows, form, subject)?.boxes ?? []), labelOf: (fact) => questionOf.get(fact) ?? factWords(fact) });
+    const tasks = noWrite ? [] : await recordedOverlay(this.db, { workspaceId: c.workspaceId, caseId: c.id, actor: actor.id, filings, items: items as never, label,
+      nowOf: (form, subject) => currentValues(covOf(form, subject)?.boxes ?? []), labelOf: (fact) => questionOf.get(fact) ?? factWords(fact) });
     return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: true, combination: own!.combinationKey, portal: own!.portalKey ?? null, portal_words: own!.portalKey ? `Filed through ${own!.portalKey === "APR_PORTAL" ? "APR Portal" : own!.portalKey}: set by the combination, not on the case` : null,
       // #325's list of people with no filing, each with the reason (kept for its readers and tests).
       not_filing: done.not_filing,
-      people: peopleView, filings, groups, items: toFill, waiting, not_needed: notNeeded, fees, stage1, readiness, currency: done.currency, fees_worked_out: done.fees_worked_out, fees_why: done.fees_why, basis: done.basis, version, tasks };
+      people: peopleView, filings, groups, items: toFill, waiting, not_needed: notNeeded, fees, stage1, readiness: readiness.map((x) => ({ ...x, pin_revision: pin.revision })), pin_revision: pin.revision, currency: done.currency, fees_worked_out: done.fees_worked_out, fees_why: done.fees_why, basis: done.basis, version, tasks };
   }
 
   /** C6.12 (BR-16): split one filing out of a group, with a reason (the family maximum it loses is said first). The
@@ -515,12 +662,15 @@ export class CasePrepare {
 
   /** C7.3: the answer sheet of an Online form item, for the case officer (a client never reads it). */
   async sheet(actor: Actor, itemId: string): Promise<Sheet & { item: string; form: string; subject: string }> {
-    const { c, item } = await this.onlineItem(actor, itemId);
+    const { c, item, parts } = await this.onlineItem(actor, itemId);
     const s = this.r.snapshotOf(c), people = this.r.peopleOf(c);
     const { answers, rows, groups } = await this.r.state(c);
     const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
     const entered = await this.db.enteredSection.findMany({ where: { itemId: item.id, supersededAt: null }, include: { snapshot: { select: { inputHash: true } } } });
-    return { item: item.id, form: item.itemKey, subject: item.subjectId, ...sheetOf(item, s, people, answers, rows, view, entered) };
+    // QA-309: what the sheet waits for is what the form's readiness names, as on the item (the same coverage for both).
+    const cov = formCoverage(s, people, answers, rows, item.itemKey, item.subjectId);
+    const missing = formReadinessOf(s, people, answers, rows, view, item.itemKey, item.subjectId, cov).missing.filter(blocksLock);
+    return { item: item.id, form: item.itemKey, subject: item.subjectId, ...sheetOf(item, s, people, answers, rows, view, entered, parts, missing, cov) };
   }
 
   /** C7.3: "Entered in the portal" for one section: freezes the answers the officer read (the section's `version`, review
@@ -560,8 +710,10 @@ export class CasePrepare {
     const line = (this.r.snapshotOf(c).forms as FormLine[]).find((l) => l.form_number === item!.itemKey);
     const channel = item!.channel ?? channelOf(line, undefined, null, null).line_channel;
     if (channel !== "ONLINE") refuse(409, "item", `${item!.itemKey} is filed as ${CHANNEL_WORDS[channel as keyof typeof CHANNEL_WORDS]}: its PDF is the deliverable, so it has no answer sheet.`);
-    if (!(PDF_SECTIONS as unknown as Record<string, Record<string, string>>)[item!.itemKey]) refuse(409, "item", `${item!.itemKey} has no section list yet (contracts/pdf-sections.json), so its answer sheet cannot be laid out.`);
-    return { c, item: item! };
+    // C7.3 (P-319): laid out from the form's own parts in the release's configuration, else the twin's Sample sections.
+    const parts = await partsOfRelease(this.db, c);
+    if (!layoutOf(item!.itemKey, this.r.snapshotOf(c), parts)) refuse(409, "item", `${item!.itemKey}'s parts are not set up in this case's release, so its answer sheet cannot be laid out yet. Ask the Lead.`);
+    return { c, item: item!, parts };
   }
 
   /** C11.6: a form item's channel, inside what IRCC accepts for it on the combination's IRCC account. The same channel
@@ -603,26 +755,61 @@ export class CasePrepare {
   }
 }
 
-/** C7.3: one Online form item's answer sheet: the person's boxes for that form (confirmed facts only, P-72), in the PDF
- *  twin's sections, with each entered tick compared against the answers it froze. */
-function sheetOf(item: { itemKey: string; subjectId: string }, s: ReturnType<Runtime["snapshotOf"]>, people: ReturnType<Runtime["peopleOf"]>, answers: Awaited<ReturnType<Runtime["state"]>>["answers"], rows: Awaited<ReturnType<Runtime["state"]>>["rows"], view: ReturnType<typeof caseView>, entered: { sectionKey: string; enteredAt: Date; enteredBy: string; snapshot: { inputHash: string } }[]): Sheet {
-  const cov = formCoverage(s, people, answers, rows, item.itemKey, item.subjectId);
+/** C7.3: one Online form item's answer sheet: the person's boxes for that form (every declared or confirmed answer, each
+ *  with its mark and "to confirm", P-242, P-411), in the form's own parts (else the twin's sections), with each entered
+ *  tick compared against the answers it froze. */
+function sheetOf(item: { itemKey: string; subjectId: string }, s: ReturnType<Runtime["snapshotOf"]>, people: ReturnType<Runtime["peopleOf"]>, answers: Awaited<ReturnType<Runtime["state"]>>["answers"], rows: Awaited<ReturnType<Runtime["state"]>>["rows"], view: ReturnType<typeof caseView>, entered: { sectionKey: string; enteredAt: Date; enteredBy: string; snapshot: { inputHash: string } }[], parts: Map<string, FormPart[]>, missing: Readiness["missing"], cov = formCoverage(s, people, answers, rows, item.itemKey, item.subjectId)): Sheet {
   const labels = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
   const origin = (subject: string, fact: string) => { const a = answers.find((x) => x.subjectId === subject && x.field === fact); return a?.origin?.channel ?? a?.channel; };
-  const sections = (PDF_SECTIONS as unknown as Record<string, Record<string, string>>)[item.itemKey] ?? {};
-  return answerSheet(sections, cov?.boxes ?? [], origin, labels, new Map(entered.map((e) => [e.sectionKey, { at: e.enteredAt.toISOString(), by: e.enteredBy, hash: e.snapshot.inputHash }])));
+  const layout = layoutOf(item.itemKey, s, parts) ?? { basis: "pdf_twin" as const, sections: {} };
+  // P-411 (B150 review M2): the officer types from this sheet, so each answer carries who gave it and whether it is still to confirm.
+  const qs = view.sections.flatMap((x) => x.questions), filing = people.find((p) => p.role === "case")?.subjectId;
+  const markOf = (about: string, fact: string, row: number | null) => {
+    const q = qs.find((x) => x.subjectId === (about === "case" ? filing : about) && x.fact === fact), a = q ? (q.group ? q.rows[row ?? 0]?.answer : q.answer) : null;
+    return a ? { mark: a.mark, confirmed: a.confirmed, why: a.why } : undefined;
+  };
+  // QA-309: a box waits only for what the form's readiness names (`missing`: the item's own rule).
+  return layOut(layout, cov?.boxes ?? [], origin, labels, new Map(entered.map((e) => [e.sectionKey, { at: e.enteredAt.toISOString(), by: e.enteredBy, hash: e.snapshot.inputHash }])), markOf, waitsOf(view, missing, item.subjectId, filing));
+}
+
+/** C7.3: the release's field map for a form (its edition and its form fields in the form's order). */
+type FieldMap = { form_number: string; form_edition?: string; inventory_file?: string; entries?: { data_path: string }[] };
+const fieldMapOf = (s: ReturnType<Runtime["snapshotOf"]>, form: string) => (s.field_maps as FieldMap[]).find((m) => m.form_number === form);
+/** The parts of every form edition the release maps, as they stood when it was released (review M3 on #1075: released
+ *  means frozen), titled by the release's own section titles; read once per request. */
+async function partsOfRelease(db: Db, c: Reached) {
+  const rel = c.pins[0].release, s = rel.snapshot as unknown as ReturnType<Runtime["snapshotOf"]>;
+  const titles = new Map([...((s.section_titles ?? []) as { id: string; title: string }[]), ...((s.sections ?? []) as { id: string; title: string }[])].map((x) => [x.id, x.title] as const));
+  return formPartsOf(db, c.workspaceId, (s.field_maps as FieldMap[]).map((m) => m.form_edition ?? ""), rel.releasedAt, titles);
+}
+/** How a form's sheet is laid out: its own parts for the release's edition, in the form's order (P-319: from the
+ *  configuration); a form whose edition has none takes the twin's Sample sections; neither: null (no sheet yet). */
+function layoutOf(form: string, s: ReturnType<Runtime["snapshotOf"]>, parts: Map<string, FormPart[]>): Layout | null {
+  const m = fieldMapOf(s, form);
+  const own = m?.form_edition ? parts.get(m.form_edition) ?? [] : [];
+  // Review M1 on #1075: the order the form prints its fields is its field list's (the snapshot's entries are sorted by
+  // data path, which is alphabetical); the entries' own order only when the field list cannot be read.
+  const listed = m?.inventory_file ? (inventoryOf(m.inventory_file)?.fields ?? []).map((f) => f.data_path).filter((p): p is string => !!p) : [];
+  if (own.length) return { basis: "form_parts", parts: partsInFormOrder(own, listed.length ? listed : (m?.entries ?? []).map((e) => e.data_path)) };
+  const twin = (PDF_SECTIONS as unknown as Record<string, Record<string, string>>)[form];
+  return twin ? { basis: "pdf_twin", sections: twin } : null;
 }
 
 type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
 /** The view's version from the stored rows (the groups holding a current filing, and the current items), so a write
  *  checks it under the case's row lock exactly as the view computed it. */
 export async function storedVersion(tx: Tx | Db, caseId: string) {
-  const [filings, items] = await Promise.all([
+  const [filings, items, pin] = await Promise.all([
     tx.filing.findMany({ where: { caseId, active: true }, select: { id: true, submissionGroupId: true } }),
     tx.filingItem.findMany({ where: { caseId, active: true }, select: { id: true, channel: true, version: true } }),
+    tx.packWorkPin.findFirst({ where: { caseId }, orderBy: { revision: "desc" }, select: { revision: true } }),
   ]);
-  return versionOf(filings, items);
+  return withRevision(versionOf(filings, items), pin?.revision ?? 1);
 }
+/** C9.5: a case never moved keeps the version it had (revision 1); after a move the revision is part of it. */
+const withRevision = (v: string, revision: number) => (revision > 1 ? `${v}~r${revision}` : v);
+export { busyWords } from "./busy.ts";
+import { busyWords } from "./busy.ts";
 /** The version of a set of current filings and items (the same rule for the view and for a write's check). */
 function versionOf(filings: { id: string; submissionGroupId: string }[], items: { id: string; channel?: string | null; version: number }[]) {
   const groups = [...new Set(filings.map((f) => f.submissionGroupId))].map((id) => ({ id, filings: filings.filter((f) => f.submissionGroupId === id).map((f) => f.id) }));

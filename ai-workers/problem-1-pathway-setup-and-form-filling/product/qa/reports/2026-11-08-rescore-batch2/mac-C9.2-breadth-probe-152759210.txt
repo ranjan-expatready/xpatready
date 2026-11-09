@@ -1,0 +1,27 @@
+C9.2 breadth probe on 679dccd14 (product code = main 152759210), copy qa_c92g :4470, start Sun Nov  8 09:01:18 IST 2026
+
+isolated qa_c92g on http://localhost:4470 (xr_studio_qa_c92g), stops itself in 25 min
+reset 201
+load 201
+C9.2 breadth probe — A corrected employer fact on a linked worker case marks finished items out of date
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  setup: With an LMIA – inside Canada is released on the checkpoint — "391b29d6-132e-4c1c-bfc0-95cbfd290972"
+PASS  setup (C1.3): the worker's case relies on the Sample employer case; the employer facts are copied — {"status":201,"copied":["case.lmia_or_offer_number","organisation.employer_address","organisation.employer_name"]}
+ITEMS [{"form":"IMM 5710","channel":"PDF_UPLOAD","state":"to_do","signature":"NONE"},{"form":"IMM 5707","channel":"PDF_UPLOAD","state":"to_do","signature":"NONE"},{"form":"IMM 5476","channel":"PDF_UPLOAD","state":"to_do","signature":"NONE"}]
+NAME {"value":"Sample Employer Ltd (Sample)","channel":"confirm_section","fills":["IMM 5710"],"filled":true}
+PASS  setup: the copied employer name is on the worker's case, from the employer case — {"id":"64d0cf99-0980-4512-9d86-398ef149a841","value":"Sample Employer Ltd (Sample)","status":"VERIFIED","channel":"confirm_section","by":"user-O","at":"2026-11-08T03:32:37.284Z","answered":{"channel":"linked_file","by":"user-O","at":"2026-11-08T03:32:30.631Z"}
+FINISH {"form":"IMM 5710","channel":"PDF_UPLOAD","validated":true,"before":"82ead1358ce9"}
+PASS  setup: at least one form that prints the employer name is finished (validated or signed and scanned) — ["IMM 5710"]
+PASS  the officer corrects the copied employer name on the worker's case — {"answer":{"id":"c7d917f2-3317-401f-8879-c109132076fc","value":"Sample Employer Limited (Sample)","status":"DECLARED","channel":"agent_view","by":"user-O","at":"2026-11-08T03:32:39.710Z","answered":null,"problems":[],"confirmed":false,"why":"Declared: entered 
+PASS  C9.2 breadth pass: the finished IMM 5710 is Out of date, naming the employer name, the new value and the date — {"state":"out_of_date","reason":"The validated copy of IMM 5710 read back 7 Nov 2026 is out of date: name of the prospective employer of Sample Worker W changed from \"Sample Employer Ltd (Sample)\" to \"Sample Employer Limited (Sample)\" on 7 Nov 2026. Make a
+PASS  C9.2 breadth pass: IMM 5710's validated copy is never changed (same checksum) — {"before":"82ead1358ce9","now":"82ead1358ce9"}
+PASS  C9.2 breadth fail (P-136, P-237): the out-of-date item is a CRITICAL warning that stops Ready to file — {"blocks":[],"warns":["out_of_date/critical","missing_signature/critical","missing_signature/critical","missing_signature/critical","representative_review/critical"]}
+PASS  C9.2 breadth pass (scope): the worker's forms that do not print the employer name keep their state — {"before":[{"form":"IMM 5707","state":"to_do"},{"form":"IMM 5476","state":"to_do"}],"after":[{"form":"IMM 5707","state":"to_do"},{"form":"IMM 5476","state":"to_do"}]}
+PASS  C9.2 breadth pass: Undo restores the copied value; the items are no longer out of date — {"undo":200,"states":["to_do"]}
+AFTER-UNDO "Sample Employer Ltd (Sample)"
+PASS  BR-3: the Sample employer case itself is a stand-in file and is unchanged (nothing on the worker's case writes back)
+
+11/11 passed
+probe exit 0  end Sun Nov  8 09:02:40 IST 2026
+stopped qa_c92g (database and files removed; log in var/isolated-logs/qa_c92g-api.log)

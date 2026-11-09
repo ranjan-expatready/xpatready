@@ -13,6 +13,7 @@ import { factName } from "./fact-name.ts";
 // contract contracts/resolver.ts); its functions are re-exported here for their callers.
 import { aboutOf, conditionSubjects, factsOf, formSigners, isFilingFact, kkey, lineHolders, peopleFor, signsForOthers, subjectsFor, type Known, type Person } from "./resolver.ts";
 import { FILING, ROLE } from "../contracts/resolver.ts";
+import { isListRelation, listBoxWords, relativeOf } from "./runtime/relatives.ts";
 export { aboutOf, conditionSubjects, formSigners, kkey, lineHolders, peopleFor, signsForOthers, subjectsFor };
 export type { Known, Person, Role } from "./resolver.ts";
 
@@ -134,17 +135,24 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
       const about = aboutOf(people, f.person, e, p);
       const base = { box: e.data_path, caption: e.caption ?? "", fact: e.fact, meaning: field.get(e.fact)?.meaning ?? null, about, about_label: label(about), row: e.row ?? null, transform: e.transform, origin: e.origin };
       if (!about) { boxes.push({ ...base, coverage: "unresolved", detail: "that person is not part of this combination; the form field stays blank" }); continue; }
-      const k = kkey(about, e.fact, e.row), n = needs.get(`${about}|${e.fact}`) ?? { fact: e.fact, about, rows: new Set<number>(), forms: new Set<string>(), boxes: 0, maybe: false };
-      if (e.row !== null && e.row !== undefined) n.rows.add(e.row);
+      // B155 (QA-153 probe 2, 8 Nov): a `subject_child` box's row picks the child (R4: the case's n-th child), so the
+      // child's own answer, which has no row, is what it reads: the second child's boxes read the second child's facts.
+      // Review m2 on #1367: only for a fact the child answers once; a repeating one keeps the map's row (IMM 5562's trips).
+      const factRow = e.person === "subject_child" && p?.repeats !== "per_row" ? null : e.row;
+      const k = kkey(about, e.fact, factRow), n = needs.get(`${about}|${e.fact}`) ?? { fact: e.fact, about, rows: new Set<number>(), forms: new Set<string>(), boxes: 0, maybe: false };
+      if (factRow !== null && factRow !== undefined) n.rows.add(factRow);
       n.forms.add(f.form); n.boxes++; if (f.applies === "cannot_tell") n.maybe = true; needs.set(`${about}|${e.fact}`, n);
-      const kv = known.get(k) ?? (e.row === 0 ? known.get(kkey(about, e.fact)) : undefined);
+      const kv = known.get(k) ?? (factRow === 0 ? known.get(kkey(about, e.fact)) : undefined);
       if (kv) { boxes.push({ ...base, coverage: kv.status === "confirmed" ? "confirmed fact" : "answered on screen", detail: kv.source, value: kv.value }); continue; }
       if (!field.has(e.fact)) { boxes.push({ ...base, coverage: "unresolved", detail: "the form field reads a field that is not in the library" }); continue; }
       const docs = docsFor(about, e.fact);
       if (p?.collected_from === "verified_document" || (docs && !p)) { boxes.push({ ...base, coverage: docs ? "document reading" : "unresolved", detail: docs ? `a supported document can supply it: ${docs.join(", ")}` : "collected from a document, but no supported document type supplies it" }); continue; }
       if (!p) { boxes.push({ ...base, coverage: "unresolved", detail: "no question placement: nobody is asked for this value yet" }); continue; }
       const cov: Coverage = p.collected_from === "client_questionnaire" ? "client question" : p.collected_from === "profile_record" || p.collected_from === "existing_record" ? "client profile" : "staff working view";
-      boxes.push({ ...base, coverage: cov, detail: `${sectionTitle.get(p.section_id) ?? p.section_id}${docs ? `; a supported document can also supply it (${docs.join(", ")})` : ""}` });
+      // B155: a list relative's box (a brother or sister, row n) says whose entry it waits for, never the section a
+      // placement happens to sit in ("Your parent 1").
+      const rel = relativeOf(about), where = rel && isListRelation(rel.relation) ? listBoxWords(people.find((x) => x.id === rel.owner)?.label ?? rel.owner, rel.relation, e.row) : sectionTitle.get(p.section_id) ?? p.section_id;
+      boxes.push({ ...base, coverage: cov, detail: `${where}${docs ? `; a supported document can also supply it (${docs.join(", ")})` : ""}` });
     }
     const counts: Record<string, number> = {};
     for (const b of boxes) counts[b.coverage] = (counts[b.coverage] ?? 0) + 1;

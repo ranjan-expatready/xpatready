@@ -5,7 +5,7 @@
 // No database (US$0).
 //   tsx studio/tests/check_sh3_resolver.ts
 import { readFileSync } from "node:fs";
-import { BUILT_SCOPES, FILING, HELD_SCOPES, MERGE_HOPS, SCOPE_RULES, SCOPES, WHO_HOLDERS, WHO_ROLES, factKey, sourceKey, type Known, type PersonOnFiling, type Who } from "../contracts/resolver.ts";
+import { BUILT_SCOPES, FILING, MERGE_HOPS, SCOPE_RULES, SCOPES, WHO_HOLDERS, WHO_ROLES, factKey, sourceKey, type Known, type PersonOnFiling, type Who } from "../contracts/resolver.ts";
 import * as R from "../engine/resolver.ts";
 import * as render from "../engine/render.ts";
 import { linesNamingRemoved, rolesNamedBy } from "../engine/people.ts";
@@ -118,10 +118,10 @@ ok("SH3 R10 agrees with R2: a who that names roles holds exactly the people of t
   const ids = R.subjectsFor(fam, w); return ids.length > 0 && ids.every((id) => roles.includes(fam.find((p) => p.id === id)!.role)) && fam.filter((p) => roles.includes(p.role)).every((p) => ids.includes(p.id));
 }));
 
-// ---- C3.16 shape and held scopes (P-251)
-ok("SH3 C3.16: the four scopes, person and filing built, household and organisation held", same(SCOPES, ["person", "filing", "household", "organisation"]) && same(BUILT_SCOPES, ["person", "filing"]) && same(Object.keys(HELD_SCOPES).sort(), ["household", "organisation"]));
+// ---- C3.16 shape and scopes (#1054)
+ok("SH3 C3.16: the four scopes, all built (#1054)", same(SCOPES, ["person", "filing", "household", "organisation"]) && same(BUILT_SCOPES, ["person", "filing", "household", "organisation"]));
 ok("SH3 C3.16: each scope maps to the team's FieldScope value (SA-1B-130 §7)", same(SCOPES.map((s) => SCOPE_RULES[s].team), ["PERSON", "FILING", "HOUSEHOLD", "ORGANISATION"]));
-ok("SH3 C3.16 (fail): no about-key resolves to a household or organisation subject yet", ["A", "B/parent_1", FILING, "organisation"].every((a) => (BUILT_SCOPES as readonly string[]).includes(R.subjectOf(a).scope)) && R.subjectOf(FILING).scope === "filing");
+ok("SH3 C3.16 (fail): no about-key resolves to a household or organisation subject: their values sit on the filing record", ["A", "B/parent_1", FILING, "organisation"].every((a) => ["person", "filing"].includes(R.subjectOf(a).scope)) && R.subjectOf(FILING).scope === "filing");
 
 // ---- Review m2: the call sites, pinned by what they answer (not only by their source)
 ok("SH3 sources.ts: a document's holder.spouse facts are the partner's (R4 partnerOf), a child's none, a parent's the relatives'", (() => {
@@ -229,4 +229,4 @@ ok("SH3 tidy-up (r4-m3): eligibility reads \"is answered\" from the resolver (R6
 ok("SH3 tidy-up: coverage.ts names a gap's person by the resolver's roleOf (the filing in words, \"the application\")", /resolvedRole\(people, about\)/.test(src("engine/coverage.ts")) && /about === FILING \? "the application"/.test(src("engine/coverage.ts")));
 ok("SH3 (P-249): the resolver satisfies the contract's interface (one object)", R.resolver.boxOwner === R.aboutOf && R.resolver.holders === R.subjectsFor && R.resolver.factsFor === R.factsOf && R.resolver.canonicalFact === R.canonicalFact && R.resolver.documentSubjects === R.documentSubjects && R.resolver.documentRole === R.documentRole);
 
-summary();
+process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code; before, it always exited 0)

@@ -162,10 +162,18 @@ async function api() {
   ok("C1.3 BR-6 fail: two links at the same moment give one link and one set of copies", both.filter((r) => r.status === 201 || r.status === 200).length === 1 && both.filter((r) => r.status === 409).length === 1 && linkedCopies(c3.id) === 3
     && sql(`select count(*) from audit_event where entity='case' and entity_key='${c3.id}' and action='relied on employer case'`) === "1", both.map((r) => r.status));
 
-  // BR-5 and M4 on copied values: Confirm section confirms them, and IMM 5710 is then filled from them.
+  // BR-5 and M4 on copied values: they fill IMM 5710 at once as declared answers entered by staff (P-242, P-411, row B150;
+  // before, only once confirmed), and Confirm section confirms them, writing nothing new.
   const s3 = subjects(c3);
   const formOf = async () => ((await call("GET", `/runtime/cases/${c3.id}/forms`, undefined, OFFICER)).body?.forms ?? []).find((f: { form: string; subject_id: string }) => /5710/.test(f.form) && f.subject_id === s3.principal);
   const before = await formOf();
+  { // B150 review m2: a real copy made before any confirmation writes the three copied facts (not only the draft's count).
+    const g = await call("POST", `/runtime/cases/${c3.id}/forms/${encodeURIComponent(before?.form ?? "IMM 5710")}/${s3.principal}/generate`, { idempotencyKey: `c13-b150-${run}` }, OFFICER);
+    let st = "";
+    for (let i = 0; i < 180 && g.body?.id && !["GENERATED", "FAILED"].includes(st); i++) { st = (await call("GET", `/runtime/form-copies/${g.body.id}`, undefined, OFFICER)).body?.status ?? ""; if (!["GENERATED", "FAILED"].includes(st)) await new Promise((r) => setTimeout(r, 500)); }
+    const boxes = (JSON.parse(sql(`select coalesce(result_json::text, '{}') from form_instance where id='${g.body?.id}'`) || "{}").boxes ?? []) as { fact: string | null; result: string }[];
+    ok("C1.3 (M4, P-411, B150): before confirmation, a copy of IMM 5710 already writes the copied employer name, address and LMIA number", st === "GENERATED" && [NAME, ADDRESS, LMIA].every((f) => boxes.some((b) => b.fact === f && b.result === "written")), { status: st, boxes: boxes.filter((b) => [NAME, ADDRESS, LMIA].includes(b.fact ?? "")) });
+  }
   const q3 = await questions(c3.id);
   const confirmAll = async (subject: string, section: string) => call("POST", `/runtime/cases/${c3.id}/sections/${section}/confirm`, { subjectId: subject, seen: (await questions(c3.id)).filter((q) => q.subjectId === subject && q.section === section && q.answer).map((q) => q.answer!.id) }, OFFICER);
   const nameQ = q3.find((q) => q.fact === NAME && q.subjectId === s3.principal)!, lmiaQ = q3.find((q) => q.fact === LMIA && q.subjectId === s3.filing)!;
@@ -175,7 +183,7 @@ async function api() {
   ok("C1.3 BR-5: Confirm section confirms the copied employer facts (Verified, still sourced from the employer case)", [k1, k2].every((k) => k.status === 201 || k.status === 200) && verified.every((a) => a?.status === "VERIFIED" && a.answered?.channel === "linked_file"), verified.map((a) => [a?.status, a?.answered?.channel]));
   const after = await formOf();
   const missing = new Set((after?.readiness?.missing ?? []).map((m: { fact: string }) => m.fact));
-  ok("C1.3 (M4): once confirmed, IMM 5710 is filled from the copies (3 more boxes written, none of them still missing)", after && before && after.draft.written_now >= before.draft.written_now + 3 && ![NAME, ADDRESS, LMIA].some((f) => missing.has(f)), { before: before?.draft, after: after?.draft });
+  ok("C1.3 (M4, P-411): IMM 5710 is filled from the copies before confirmation (Confirm section writes no new form field), and once confirmed none of them is still missing", after && before && before.draft.written_now >= 3 && after.draft.written_now === before.draft.written_now && ![NAME, ADDRESS, LMIA].some((f) => missing.has(f)), { before: before?.draft, after: after?.draft });
 
   // BR-6 (outside review on #1051): an answer save takes no case lock, so the link locks the current answers it compared.
   // A session holding the lock on a kept (unticked Different) answer for 2 s makes the link wait for it; without the
