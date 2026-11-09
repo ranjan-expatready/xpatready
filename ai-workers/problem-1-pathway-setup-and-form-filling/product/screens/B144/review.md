@@ -153,3 +153,39 @@ The `xmin = pg_current_xact_id()::xid` exemption works for decisions, `one_step`
 **Journey score after fixes: 9.5/10.** "Plain words" is ½ for the C7.6 line wording after a send back; every other criterion is 1.
 
 Verdict: Approve ae65c4b6a9ca2a3eb8ac1401ec1fd89d5b587849
+
+## Re-review (CI round, diff f457a8df7..0b30edb4e)
+This is a diff-only review by the same reviewer on 9 Nov. Head `73dcea38a` follows `0b30edb4e`. It changes one line of `build-notes.md` (exit codes), so the extra diff is records only. The migration is unchanged.
+
+**How I checked.** I ran a fresh copy on :4446 with `copy.sh`, set up gate B's way: Demo › Reset, then Load the configured checkpoint as the author, with no setups. The web stamp and the Prisma client were current, so nothing was rebuilt. Results:
+* pack C8.3 **23/23, exit 0**; the changed fact picked on the checkpoint was `person.email`;
+* unit checks 48/48;
+* `logs-b144/reg3` summaries: packs C8.3, C7.6, C8.1, C8.2 and C6.13 exit 0; `check_c76_readiness_api`, `check_c76_ready_browser`, `check_c81_sign_browser` and the walk exit 0; `setupA2` exits 1 (the known S2w/S7a).
+
+The copy is stopped and the worktree is clean.
+
+**Were any pack steps lowered (P-330 (7))? No.**
+* Every `ok(...)` condition is byte-identical before and after. The only assertion line touched is C8.3-13b, and only its detail payload changed (it now prints the fact and the form states).
+* `onlyOn` (pack) and the walk's set-up no longer require a staff-collected fact. They take one first if there is one, else any text fact only the barcode form reads. So the old set-up picks the same kind of fact as before, and the checkpoint now finds one.
+* The typist checks are unchanged: C8.3-11 still requires `typed_by === officer`, and C8.3-10 requires "changed by Case officer". The same behaviour is proven on both data sets.
+
+**`typedSince` (`engine/runtime/review.ts`) is right for the cases asked:**
+* It reads current answers only (`supersededById: null`), keyed by `subjectId|field`.
+* The typist is the origin, not the confirmer.
+* ISO timestamps compare as strings.
+* The base is the previous round's send, else this round's; for a re-approve it is the approval time, over the changed forms only.
+* The case officer's typing never counts (`by !== actor`).
+* `representative|…` firm-record facts are excluded.
+* Unit pass and fail lines cover it. C8.3-13b depends on it: the builder's 22/23 run without it failed.
+* Legitimate approvals still pass:
+  * officer-only changes, then approve (walk 8);
+  * officer change, then re-approve (C8.3-18);
+  * new representative re-approves (C8.3-14c).
+
+**One new minor (Should, no block): a latent false refusal.**
+* What: `representativeAnswers` (`engine/runtime/team.ts:185-188`) also gives the case subject `case.uses_representative`, from the firm record. Its actor is the representative and its time is `assignedAt`.
+* Why it matters: `typedSince` excludes only keys that start with `representative`. After a change of representative, any form that reads `case.uses_representative` would count that firm-record answer as the new representative's typing. The approval or re-approve would then be refused 409 "You changed a fact…" (break M1's case).
+* Reach: no configured program maps the fact today (`form_field_map` has 0 rows for it on the checkpoint), so it is not reachable now.
+* Fix: exclude answers whose channel is `FIRM_RECORD` (in `typedBy`/`typistOf`), with one unit line.
+
+Verdict: Approve 73dcea38aa67dcb846afddc4d232a72f0d9255ed
