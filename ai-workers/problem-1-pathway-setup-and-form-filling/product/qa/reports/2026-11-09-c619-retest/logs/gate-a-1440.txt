@@ -1,0 +1,127 @@
+PASS  setup: the configured checkpoint has the Visitor visa and With an LMIA open for cases (Demo › Load the configured checkpoint) — ["Express Entry stream","Outside Canada","Spouse or common-law partner","Visitor visa","With an LMIA – inside Canada"]
+PASS  case A (by screens): the passport number and expiry date are entered and confirmed (Confirm section) — [["person.passport_expiry_date","2031-05-09",true],["person.passport_number","Z7100001",true]]
+PASS  C6.19 BR-1: case B shows "Facts from an earlier case" naming case A and its combination — Facts from an earlier case
+
+Client W mw9k10lw has an earlier case with this firm. Nothing is copied until you tick a fact and re-confirm it; the earlier case never changes.
+
+QA619-A-mw9k10lw · Visitor visa · opened 9 Nov 2026
+
+Client W mw9k10lw (principal) · matched to Client W mw9k10lw on QA619-A-m
+PASS  C6.19 BR-2: the passport number and expiry date are offered, each New, with the earlier value and confirm date
+PASS  C6.19 BR-4: nothing ticked, "Re-confirm and use" is disabled
+PASS  C6.19 BR-4 underneath: before the press case B has no passport answer (nothing copied silently) — [null,null]
+PASS  axe: the card has no WCAG A/AA violation
+PASS  no sideways scroll at 1440 px: case B with the card
+PASS  the button counts the ticks (2)
+PASS  C6.19 BR-3: the message says 2 facts were re-confirmed from case A — Re-confirmed 2 facts from QA619-A-mw9k10lw. They are on this case now; the earlier case did not change.
+PASS  C6.19 BR-3 underneath: case B now has the two values exactly as entered on A — [["person.passport_expiry_date","2031-05-09"],["person.passport_number","Z7100001"]]
+PASS  C6.19 BR-4 underneath: the copies arrive confirmed (they were confirmed on A) — [["person.passport_expiry_date",true,"VERIFIED"],["person.passport_number",true,"VERIFIED"]]
+PASS  C6.19 BR-3 underneath: case A's answers are unchanged (same ids, same values)
+PASS  C6.3 next step: the Agent view on B shows the copied passport number, its giver and "copied from <case A>, re-confirmed by Case officer" — Personal details
+for Client W mw9k10lw
+2 answered · 0 to confirm
+25 missing
+Fill this from documents
+Confirm section
+Date the person married or began the common-law relationship with the current spouse or partner
+Not answered
+Add
+Family name as shown on passport or travel document
+Not answered
+Add
+Given name(s) as shown on passport or travel document
+Not answered
+Add
+Current marital status
+Not answered
+Add
+Family name the person has otherwise used (nickname, maiden name, alias)
+Not asked now: a rule hides it.
+Given name(s) the person has otherwise used (nickname, alias)
+Not asked now: a rule h
+Prepare application (case B):
+Prepare application
+
+The forms to file, filled from declared and confirmed answers. A new copy is made only when you ask; a locked copy never changes.
+
+IMM 5476 for Client W mw9k10lw
+Checked copy, not for filing
+8 facts to answer or confirm before filing
+Generate a copy
+
+Declared or confirmed answers for 15 of 34 form fields. A copy also lists the form fields to write by hand.
+
+Facts to answer or confirm (8)
+
+Who signs: Client W mw9k10lw · how it is signed is not set on the release's line yet
+
+IMM 5710 for Client W mw9k10lw
+Checked copy, not for filing
+79 facts to answer or confirm before filing
+2 mandatory form fields left empty
+Generate a copy
+
+Declared or confirmed answers for 2 of 169 form fields. A copy also lists the form fields to write by hand.
+
+Facts to answer or confirm (79)
+Marked mandatory on IRCC's form, still empty (37): Adobe's Validate asks for each, and may ask for more that its own checks make mandatory
+
+Who signs: Client W mw9k10lw · how it is signed is not set on the release's line yet
+
+Add a form to Client W mw9k10lw's filing
+PASS  C7.1 first step: case B's Prepare application lists IMM 5710 for the principal — Prepare application
+
+The forms to file, filled from declared and confirmed answers. A new copy is made only when you ask; a locked copy never changes.
+
+IMM 5476 for Client W mw9k10lw
+Checked copy, not for filing
+8 facts to answer or confirm before filing
+Generate a copy
+
+Declared or confirmed answer
+PASS  C7.1 first step: IMM 5710 counts the two re-confirmed facts ("Declared or confirmed answers for 2 of …") — IMM 5710 for Client W mw9k10lw
+Checked copy, not for filing
+79 facts to answer or confirm before filing
+2 mandatory form fields left empty
+Generate a copy
+
+Declared or confirmed answers for 2 of 169 form fields. A copy also lists the form fields to write by hand.
+
+Facts to answer or confirm (79)
+Mar
+PASS  C7.1 first step: "Generate a copy" of IMM 5710 writes the 2 copied facts, read back and checked — IMM 5710 for Client W mw9k10lw
+Checked copy, not for filing
+79 facts to answer or confirm before filing
+2 mandatory form fields left empty
+Generate a new copy
+
+Declared or confirmed answers for 2 of 169 form fields. A copy also lists the form fields to write by hand.
+
+Facts to answer or confirm (79)
+Marked mandatory on IRCC's form, still empty (37): Adobe's Validate asks for each, and may ask for more that its own checks make mandatory
+Generated
+Copy of 9 Nov, 12:48 · 2 form fields written · rea
+forms API status 200 {"forms":[{"form":"IMM 5476","title":"Use of Representative","subject_id":"8e32572b-f596-48ba-93d5-48bd6c526aca","person":"Client W mw9k10lw","applies":true,"trial_passed":false,"trial_why":"IMM 5476: no fill trial is recorded for edition IMM 5476 (11-2021), so this copy is for checking only, not for filing.","channel":"PDF_UPLOAD","for_filing":true,"needs_validate":false,"draft":{"written_now":15
+PASS  case A (by screens): the expiry date is now 15 Jan 2025, confirmed — {"id":"1c040d04-363b-4fc2-bab0-2cf166d27dfd","value":"2025-01-15","status":"VERIFIED","channel":"confirm_section","by":"user-O","at":"2026-11-09T17:48:14.763Z","answered":{"channel":"agent_view","by":"user-O","at":"2026-11-09T17:48:13.858Z"},"problems":[],"confirmed":true,"why":"Confirmed by the officer","fills":true,"mark":"confirmed"}
+PASS  C6.19 BR-3: the edit on case A did not reach case B (copies, not links) — 2031-05-09
+PASS  QA-338 / C6.19 BR-1: on case C (two earlier cases) no earlier case is chosen, no fact row shows, and the card says so — {"nRadios":2,"nChecked":0,"hint":1}
+PASS  QA-338 / C6.19 BR-6: case B's stale copy of the expiry reads Out of date (naming case A) or Expired, and cannot be ticked — {"newer":"QA619-A-mw9k10lw","expiry":"expired","text":"\tPassport expiry date\t2031-05-09\t9 Nov 2026\tNot answered yet\t\nNew\nExpired\nOut of date\n\nOut of date: QA619-A-mw9k10lw, another earlier case, confirmed a different value later. Check with the client which is true before using either. Later value: 2025-01-15, confirmed 9 Nov 2026.\n\nThe passport expired on 15 Jan 2025: its details cannot be reused. Enter the new passport on this case. Sample on this c"}
+PASS  QA-338 / C6.19 BR-6: case B's copy of the passport number reads Expired and cannot be ticked — 	Number of the passport or travel document	Z7100001	9 Nov 2026	Not answered yet	
+New
+Expired
+
+The passport expired on 15 Jan 2025: its details cannot be reused. Enter the new passport on this case. Sample on this combination: canada.ca states it on "Apply for a visitor visa (canada.ca), Gather your required documents" (recorded 2026-10-27): "All applicants need to include a digital copy of your va
+PASS  QA-338: with only stale copies chosen, "Re-confirm and use" stays disabled
+PASS  axe: the card on case C with case B picked has no WCAG A/AA violation
+PASS  QA-338 underneath: a POST of case B's stale expiry is refused (4xx, Problem Details) and case C has no passport answer — {"status":409,"detail":"Passport expiry date cannot be re-confirmed: Out of date: QA619-A-mw9k10lw, another earlier case, confirmed a different value later. Check with the client which is true before using either. Nothing was copied.","take":1}
+PASS  C6.19 BR-6: on case C the passport number from case A reads Expired (15 Jan 2025), the tick disabled, with its rule's words — 	Number of the passport or travel document	Z7100001	9 Nov 2026	Not answered yet	
+New
+Expired
+
+The passport expired on 15 Jan 2025: its details cannot be reused. Enter the new passport on this case. Sample on this combination: canada.ca states it on "Apply for a visitor visa (canada.ca), Gather your required documents" (recorded 2026-10-27): "All applicants need to include a digital copy of your va
+PASS  no sideways scroll at 1440 px: case C with an expired passport
+PASS  C6.19 BR-7: the client and a configuration person cannot read the card's data (403) — [403,403]
+PASS  no page errors — []
+
+29/29 passed
+exit 0
