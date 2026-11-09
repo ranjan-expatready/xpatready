@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: local_c34e437a-7aca-4783-b0e5-f1a01dce2299 Lead 40 · 9 Nov 13:34 IST (took over from Lead 39 at ~395k context, P-314)
+current_lead: local_f135f805-00be-49fc-ac67-df94b57dbc86 Lead 1 · 9 Nov 17:48 IST (series 2; new account, P-432; took over from Lead 40, series 1)
 
 updated: 2026-11-09 15:52 IST by **Lead 40** (from 13:34 IST) · milestone: **M2 60/60 holds; M3 is 29 capabilities: on main 16 Works by qa's table; #1410 (+C7.9, C7.10, C7.7), #1417 (-C3.16, C6.13, C9.2, C6.12, C11.6), #1419 (+C11.6, C6.12), #1420 (+C9.2) are labelled, so 17 once all four merge** · rules: **`RULES.md`** + DECISIONS P-354 to P-431 · earlier page, word for word: `history/STATE-2026-11-09-1552-lead40.md` · this branch: `lead/2026-11-07-lead31`
 
