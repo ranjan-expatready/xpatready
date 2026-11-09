@@ -265,20 +265,30 @@ await main("C6.5 documents API", "case upload, read once, Confirm & use once, le
   await call("POST", `/runtime/checks/${g2.body?.check}/resolve`, { keep: "answer", reason: "The renewed passport spells it so (Sample)", answerId: aw }, OFFICER);
   r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.given_names/checked-against-document`, { document: kDoc }, OFFICER);
   ok("C6.5 F3 fail (review m1): the newer answer a check was resolved keeping is refused too (409 kept_over_document), with no further check", g2.body?.code === "differs_from_document" && r.status === 409 && r.body?.code === "kept_over_document" && gChecks() === "2" && kAnswer("person.given_names") === "DECLARED|CHILD AW", { g2: g2.body, r: r.body });
-  await answer(c.id, K, "person.given_names", "CHILD AV", OFFICER); // typed after the check was resolved: never kept
+  await answer(c.id, K, "person.given_names", "CHILD AZ", OFFICER); // the value the check opened on (not the one kept), typed again after the resolve
   r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.given_names/checked-against-document`, { document: kDoc }, OFFICER);
-  ok("C6.5 F3 pass (review m4): an answer typed after the resolved check was never kept over the document: it opens a check of its own (409 differs_from_document)", r.status === 409 && r.body?.code === "differs_from_document" && gChecks() === "3" && kAnswer("person.given_names") === "DECLARED|CHILD AV", r.body);
+  ok("C6.5 F3 pass (review m4, n5): an answer typed after the resolve was never kept, even the value the check opened on: it opens a check of its own (409 differs_from_document)", r.status === 409 && r.body?.code === "differs_from_document" && gChecks() === "3" && kAnswer("person.given_names") === "DECLARED|CHILD AZ", r.body);
   ok("C6.5 F3 (review m2): the refusal names the question and the document in words", /^"[A-Z][^"]*": the answer differs from what the document \([^)]+\) reads/.test(r.body?.detail ?? ""), r.body?.detail);
   // Review n1 on f9bea4a3b: the kept answer saved again as a new row (Confirm section, a client's re-confirm) is still the
   // kept answer: refused, no further check; and the proposals say which answers were kept over the document (n4).
-  await call("POST", `/runtime/checks/${sql(`select id from answer_check where subject_id='${K}' and fact='person.given_names' and state='open'`)}/resolve`, { keep: "answer", reason: "The client confirms this spelling (Sample)", answerId: sql(`select id from client_canonical_answer where subject_id='${K}' and canonical_field_key='person.given_names' and superseded_by_id is null`) }, OFFICER);
-  await answer(c.id, K, "person.given_names", "CHILD AX", OFFICER); // the first kept value, saved again as a new row
-  r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.given_names/checked-against-document`, { document: kDoc }, OFFICER);
+  const gCurrent = () => sql(`select id from client_canonical_answer where subject_id='${K}' and canonical_field_key='person.given_names' and superseded_by_id is null`);
+  const gOpen = () => sql(`select id from answer_check where subject_id='${K}' and fact='person.given_names' and state='open'`);
   const keptShown = async () => (((await call("GET", `/runtime/cases/${c.id}/proposals?subject=${K}`, undefined, OFFICER)).body?.proposals ?? []) as (Prop & { kept_over?: boolean })[]).find((x) => x.source.document === kDoc && x.fact === "person.given_names")?.kept_over;
-  const keptNow = await keptShown();
-  ok("C6.5 F3 fail (review n1): a kept value saved again as a new row is still refused (409 kept_over_document), with no further check, and the proposal says it was kept over the document", r.status === 409 && r.body?.code === "kept_over_document" && gChecks() === "3" && keptNow === true, { r: r.body, keptNow });
+  await call("POST", `/runtime/checks/${gOpen()}/resolve`, { keep: "answer", reason: "The client confirms this spelling (Sample)", answerId: gCurrent() }, OFFICER);
   await answer(c.id, K, "person.given_names", "CHILD AU", OFFICER);
-  ok("C6.5 F3 pass (review n4): an answer of another value typed after every resolve is not shown as kept over the document", (await keptShown()) === false);
+  await answer(c.id, K, "person.given_names", "CHILD AZ", OFFICER); // the value kept, saved again as a new row
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.given_names/checked-against-document`, { document: kDoc }, OFFICER);
+  const keptNow = await keptShown();
+  ok("C6.5 F3 fail (review n1): the kept value saved again as a new row is still refused (409 kept_over_document), with no further check, and the proposal says it was kept over the document", r.status === 409 && r.body?.code === "kept_over_document" && gChecks() === "3" && keptNow === true, { r: r.body, keptNow });
+  // Review n6 on 708b18717: only the latest resolved check counts: once a later check kept the document, the older keep
+  // no longer covers that value.
+  await answer(c.id, K, "person.given_names", "CHILD AU", OFFICER);
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.given_names/checked-against-document`, { document: kDoc }, OFFICER);
+  await call("POST", `/runtime/checks/${r.body?.check}/resolve`, { keep: "document", reason: "The passport reads it so (Sample)" }, OFFICER);
+  await answer(c.id, K, "person.given_names", "CHILD AZ", OFFICER);
+  const keptAfter = await keptShown();
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${K}/person.given_names/checked-against-document`, { document: kDoc }, OFFICER);
+  ok("C6.5 F3 pass (review n6, n4): after a later check kept the document, a value an older check kept is not kept over it: not shown as kept, and marking it opens a check (409 differs_from_document)", keptAfter === false && r.status === 409 && r.body?.code === "differs_from_document" && gChecks() === "5" && kAnswer("person.given_names") === "DECLARED|CHILD AZ", { keptAfter, r: r.body });
   // Review M1 on 107aefb7d: a passport nobody has read yet never vouches for an answer it was never compared with.
   const kDoc2 = (await upload(PORT, `/runtime/checklist-lines/${kLine}/documents`, passportPdf({ ...doc, surname: "SAMPLEK", given: "CHILD A", number: "SAMPLEK56", dob: FAMILY[3].dob! }), "child-renewed.pdf", OFFICER)).body?.document?.id as string;
   const numBefore = kAnswer("person.passport_number");

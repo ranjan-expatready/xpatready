@@ -125,15 +125,20 @@ const problem = (status: number, code: string, title: string, detail: string, ex
 };
 
 
-/** Whether an answer is one the officer kept over this document's value with a reason (a check resolved keeping the
- *  answer): then it is never "checked against" that document, and no second check opens for it (Lead 36 on #1369).
- *  The kept answer is the check's own answer, an answer of the same value saved again later (review n1 on f9bea4a3b:
- *  Confirm section or a client's re-confirm writes a new row), or one in force when the check was resolved (review m1:
- *  resolve refuses unless it is sent the current answer, which may be newer than the one the check opened on). */
-export function keptOver<K extends { fact: string; documentId: string; answerId: string; typedValueJson: unknown; resolvedAt: Date | null }>(
-  kept: K[], fact: string, documentId: string, answer: { id: string; valueJson: unknown; effectiveAt: Date }): K | undefined {
-  return kept.find((k) => k.fact === fact && k.documentId === documentId
-    && (k.answerId === answer.id || sameValue(fact, k.typedValueJson, answer.valueJson) || (!!k.resolvedAt && answer.effectiveAt <= k.resolvedAt)));
+/** Whether an answer is one the officer kept over this document's value with a reason: then it is never "checked
+ *  against" that document, and no second check opens for it (Lead 36 on #1369). Only the latest resolved check of this
+ *  person, document and fact counts (review n6 on 708b18717: a later check that kept the document ends an older keep),
+ *  and only when it kept the answer. The answer kept is the one in force when it was resolved (review m1: resolve refuses
+ *  unless it is sent the current answer, which may be newer than the one the check opened on; review n5: never the value
+ *  the check opened on). The current answer is kept when it is that answer, or the same value saved again as a new row
+ *  (review n1: Confirm section or a client's re-confirm). resolved: the resolved checks; history: every answer row of
+ *  the person for these facts, superseded ones included. */
+export function keptOver<K extends { fact: string; documentId: string; kept: string | null; resolvedAt: Date | null }>(
+  resolved: K[], history: { id: string; canonicalFieldKey: string; valueJson: unknown; effectiveAt: Date }[], fact: string, documentId: string, answer: { id: string; valueJson: unknown }): K | undefined {
+  const latest = resolved.filter((k) => k.fact === fact && k.documentId === documentId && k.resolvedAt).sort((a, b) => b.resolvedAt!.getTime() - a.resolvedAt!.getTime())[0];
+  if (!latest || latest.kept !== "answer") return undefined;
+  const inForce = history.filter((a) => a.canonicalFieldKey === fact && a.effectiveAt <= latest.resolvedAt!).sort((a, b) => b.effectiveAt.getTime() - a.effectiveAt.getTime())[0];
+  return inForce && (inForce.id === answer.id || sameValue(fact, inForce.valueJson, answer.valueJson)) ? latest : undefined;
 }
 
 type Placement = { fact: string; section_id: string; repeats: string; scope?: string; question_text?: string };
@@ -330,7 +335,8 @@ export class CaseDocuments {
     const facts = [...new Set(reviews.flatMap((r) => r.values.map((v) => v.fact)))];
     const answers = facts.length ? await this.db.clientCanonicalAnswer.findMany({ where: { subjectId, rowKey: null, supersededById: null, canonicalFieldKey: { in: facts } }, select: { id: true, canonicalFieldKey: true, valueJson: true, effectiveAt: true } }) : [];
     const answerOf = new Map(answers.map((a) => [a.canonicalFieldKey, a]));
-    const kept = ids.length ? await this.db.answerCheck.findMany({ where: { subjectId, documentId: { in: ids }, state: "resolved", kept: "answer" }, select: { fact: true, documentId: true, answerId: true, typedValueJson: true, resolvedAt: true } }) : [];
+    const resolved = ids.length ? await this.db.answerCheck.findMany({ where: { subjectId, documentId: { in: ids }, state: "resolved" }, select: { fact: true, documentId: true, kept: true, resolvedAt: true } }) : [];
+    const history = resolved.some((k) => k.kept === "answer") ? await this.db.clientCanonicalAnswer.findMany({ where: { subjectId, rowKey: null, canonicalFieldKey: { in: [...new Set(resolved.map((k) => k.fact))] } }, select: { id: true, canonicalFieldKey: true, valueJson: true, effectiveAt: true } }) : [];
     const order = (f: string) => { const i = (MRZ_FACTS as readonly string[]).indexOf(f); return i < 0 ? 100 : i; };
     const proposals = reviews.flatMap((r) => [...r.values].sort((a, b) => order(a.fact) - order(b.fact) || a.fact.localeCompare(b.fact)).map((v) => ({
       id: v.id, fact: v.fact, label: labelOf(s, v.fact), value: v.valueJson, subject: v.subjectId,
@@ -345,7 +351,7 @@ export class CaseDocuments {
       left_why: v.state === "proposed" ? notWritable(s, v.fact, v.valueJson) : null,
       // Review n4 on f9bea4a3b: whether the answer the person has now is one the officer kept over this document (so the
       // drawer says so and offers no mark); an answer typed after that resolve is not, and differs like any other.
-      kept_over: answerOf.has(v.fact) && !sameValue(v.fact, answerOf.get(v.fact)!.valueJson, v.valueJson) && !!keptOver(kept, v.fact, v.documentId, answerOf.get(v.fact)!),
+      kept_over: answerOf.has(v.fact) && !sameValue(v.fact, answerOf.get(v.fact)!.valueJson, v.valueJson) && !!keptOver(resolved, history, v.fact, v.documentId, answerOf.get(v.fact)!),
       // L-SA9: whether Confirm & use waits for a tick on this value (the server's own rule, so the drawer never repeats it).
       needs_look: needsLook(s, subjectId === this.caseSubjectOf(c), v, answerOf.get(v.fact)?.valueJson) })));
     return {
@@ -560,7 +566,8 @@ export class CaseDocuments {
       // their recorded judgement that the document is wrong here, so it is never "checked against" it, and no second
       // check opens for a difference already settled.
       // The rule the drawer shows too (keptOver): a later answer of another value was never kept, so it opens a check.
-      const kept = keptOver(await this.db.answerCheck.findMany({ where: { subjectId: who.subjectId, fact, documentId: doc!.id, state: "resolved", kept: "answer" }, select: { id: true, fact: true, documentId: true, answerId: true, typedValueJson: true, resolvedAt: true } }), fact, doc!.id, d.answer);
+      const kept = keptOver(await this.db.answerCheck.findMany({ where: { subjectId: who.subjectId, fact, documentId: doc!.id, state: "resolved" }, select: { id: true, fact: true, documentId: true, kept: true, resolvedAt: true } }),
+        await this.db.clientCanonicalAnswer.findMany({ where: { subjectId: who.subjectId, rowKey: null, canonicalFieldKey: fact }, select: { id: true, canonicalFieldKey: true, valueJson: true, effectiveAt: true } }), fact, doc!.id, d.answer);
       if (kept) problem(409, "kept_over_document", "Not possible now", `"${labelOf(s, fact)}": you kept this answer over what the document (${this.typeName(c, doc!.documentType)}) reads (a resolved check, with its reason), so it is not marked checked against it. Nothing changed.`, { check: kept.id });
       // The check this answer and the document need (one per person, fact and document); a second click finds it open.
       let check: string = randomUUID();

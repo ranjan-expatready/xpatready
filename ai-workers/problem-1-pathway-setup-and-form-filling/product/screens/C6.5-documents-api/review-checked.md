@@ -125,3 +125,94 @@ Verdict: Approve f9bea4a3b
 * **n2 (two clocks):** not changed. Making it exact needs the resolve to record the answer it kept, and the migration's guard forbids changing `answer_id`, so it would take a new migration. The app and database share one host on the reference build. Raised for the tech lead.
 * **n3 (a letter with no saved read):** not changed. Reading it replays only (FQ-10), so `not_read` is the honest answer until part 3.
 * **Checks:** `check_c65_documents_api` 74/74 and `C6.5-screen.test.ts` 33/33, on fresh fixture copies. Type check: no new errors.
+
+## Re-review of 708b18717
+
+Reviewer: fresh context; I did not build it. Diff-only re-review (P-318 (1)) of `708b18717` against the re-review of `f9bea4a3b` (n1, n4, the m3 duplication). Files: `api/src/case-documents.ts` (`keptOver`, the proposals' `kept_over`, `checkedAgainst`), `web/src/runtime/documents-drawer.tsx` (the resolved row, `markOnly`, the refresh after a refusal), `tests/check_c65_documents_api.ts` (F3 n1, F3 n4), `acceptance/C6.5-screen.test.ts` (C6.5-39b).
+
+### Runs (own copy `rv_c65h`, :4438, fixture; US$0, no `*_LIVE` switch; copy stopped and dropped at the end)
+* `check_c65_documents_api.ts`: **74/74**. It ran the two setups itself, since the copy had no Visitor visa.
+* `web-fresh.sh build`, then `C6.5-screen.test.ts`: **33/33**, C6.5-39b included.
+* **Each test fails without its fix.** I ran mutants on a scratch copy of the studio, served on :4438 against the same database. No repository file was edited, and the scratch copy is deleted.
+  * A: the value clause dropped from `keptOver`. API check **73/74**: F3 n1 gets `differs_from_document`.
+  * B: `kept_over` set to "differs", without `keptOver`. API check **73/74**: F3 n4 gets `kept_over: true` for CHILD AU.
+  * C1: no refresh after a refused mark. Screen pack **26/27, then it stops**: C6.5-39b waits 20 s for the check row, which never shows.
+  * C2: the drawer compares by itself again, as `sameShown` did. Screen pack **26/27, then it stops**: C6.5-39b never finds the mark.
+  * C1 and C2 show up as a timeout crash, not as a named FAIL, and the steps after 39b do not run (see the Note below).
+* **Probes** (scratch scripts, each on a fresh case of the same copy):
+  * H1. The check opened by a mark on CHILD AZ. The client changed it to CHILD AW, and the check was resolved keeping AW. Then AZ was typed again. Result: **409 `kept_over_document`**, `kept_over: true`, no check opened.
+  * H1-drawer. AZ was typed before Confirm & use, so Confirm opened the check and the row is `conflict`. AW was kept, then one **Undo** brought AZ back. Result: the row is resolved with `kept_over: true`, so the drawer shows "kept over the document, with a reason" and no mark. Marking gives **409 `kept_over_document`**, and no check opens. On `f9bea4a3b` this was probe P2, which gave a fresh check and was judged right.
+  * H2. CHILD AX was kept over the passport. Later another check was resolved keeping **the document** (VERIFIED CHILD A). Then AX was typed again. Result: **409 `kept_over_document`**, `kept_over: true`, no check opened.
+
+### Answers to the questions asked
+* **Can the value rule wrongly suppress a check? Yes. It is a hole, not an acceptable edge (n5, n6).**
+  * `keptOver` (`case-documents.ts:136`) compares the current answer with the check's `typedValueJson`. That is the value **when the check opened**, not the value the officer kept.
+  * Since m1, resolve keeps the answer in force **at the resolve**, which may differ from the one the check opened on (`:506`). So a value the officer saw replaced and did not keep counts as kept when it returns (H1).
+  * The rule also ignores order. An older keep-answer still applies after a later check on the same document and fact was resolved keeping the document (H2).
+  * Neither case makes anything VERIFIED. In both, the officer is told they kept a value they never kept, and the difference with the passport gets no check.
+* **Can `kept_over` and `checkedAgainst` disagree?** Not in what I found. Both call the same `keptOver` with the same inputs:
+  * the current answer (`rowKey` null, not superseded);
+  * the same person, document and fact;
+  * resolved checks with `kept: "answer"` only (`:333`, `:563`).
+  * In every probe and test run, `kept_over: true` went with 409 `kept_over_document`, and `false` went with a check opening.
+  * The proposals skip the server's `notWritable` condition (`:348` against `:551`). That cannot matter: a check never opens on a value left for a person, so no keep-answer exists for one.
+  * Note: the drawer filters open checks per document (`checks.some(...)`). The server refuses on an open check of the same fact on **any** document (`open_checks`). So with an open check on another current file, the drawer can show a mark that the server refuses. The refusal now refreshes, and the open check shows in that file's block. This edge predates this commit.
+* **Can the restored mark mark VERIFIED an answer the document contradicts?** No.
+  * The resolved row is a proposal of this document, so a read value exists for the fact.
+  * `checkedAgainst` takes the `differs` path whenever that read value is writable and differs (`:551`). Then it either refuses `kept_over_document` or opens a check. It never writes VERIFIED.
+  * C6.5-39b checks this through the screen: DECLARED|CHILD BV, one open check.
+  * The row offers the mark only when the answer is not already VERIFIED (`documents-drawer.tsx:249`).
+* **Can the refresh after a refusal loop or lose an open form?** No.
+  * `refresh` only invalidates queries (`:79`). It runs once per click, from the click handler, never from an effect or a render. Its own failure is swallowed (`:306`).
+  * React Query keeps the data while it refetches, so the drawer is not swapped for the skeleton. The blocks keep their keys (`r.id`, `p.id`), so another value's open "Correct it" or "Answer it" form stays mounted with its draft.
+  * The only part that unmounts is the clicked `markOnly` control: its row stops being "resolved" once the server's check shows. It has no form.
+  * Saving an answer already refreshes on a 409 the same way (`:299`).
+* **Does each test fail without its fix?** Yes (mutants A, B, C1 and C2 above).
+  * F3 n1 pins the value clause, but through an **older** resolve: AX, kept at check 1, saved again after check 3 kept AV. It is not the plainer case of the kept value re-saved right after its own resolve. That case also passes, through check 3's own typed value.
+  * No test covers H1 or H2.
+
+### Each finding of the re-review on f9bea4a3b
+* **n1: closed for the case it named.** The kept value saved again as a new row is still kept (`:136`, F3 n1, mutant A). The way it was closed opens n5 and n6.
+* **n4: closed.** The drawer says "kept over the document" only on the server's `kept_over` (`documents-drawer.tsx:248`). A later answer of another value offers the mark (`:249`). A refused mark shows the check the server opened (`:306`). Tested by C6.5-39b, mutants C1 and C2.
+* **m3 duplication: closed.** `sameShown` is gone, and the drawer reads `kept_over`.
+* **n2 and n3: open, as the builder says.** They are raised for the tech lead, and nothing in this diff changes them.
+
+### New issues, ranked (none Blocker or Major)
+1. **n5, Minor, Should: a value the officer saw replaced and did not keep counts as kept when it returns.** At `case-documents.ts:136`, `sameValue(fact, k.typedValueJson, answer.valueJson)` uses the value the check opened on.
+   * Failure scenario (H1-drawer, walked through the API):
+     1. A child's given names are typed "CHILD AZ"; the passport reads "CHILD A".
+     2. Confirm & use opens a check.
+     3. The client corrects it to "CHILD AW".
+     4. The officer keeps AW, with a reason.
+     5. Someone presses Undo, and AZ is back.
+   * Result: the drawer says "Check resolved · kept over the document, with a reason" for AZ and offers no mark. The server refuses the mark with "you kept this answer". No check ever opens for AZ against the passport, so a spelling nobody kept can go onto the form.
+   * Severity: this is a regression of P2, which the re-review on `f9bea4a3b` found right. It is Minor on the precedent of m4 (the same failure class: an answer never kept treated as kept), because nothing becomes VERIFIED.
+   * Fix: compare with the value of the answer **kept at the resolve**: the row of this person and fact with `effective_at <= resolved_at`, latest first. That is the rule the n1 note proposed, and it carries the n2 clock caveat. Or compare with the check's `typed_value_json` only when the kept answer is the check's own `answer_id`. Add the H1 case as a fail test.
+2. **n6, Minor, Should: an older keep-answer outlives a later keep-document.** `keptOver` takes any resolved keep-answer check of that document and fact (`:135–136`, fed by `:333` and `:563`), whatever came after it.
+   * Failure scenario (H2):
+     1. The officer keeps "CHILD AX" over the passport.
+     2. Later, on another check, they decide the passport is right, and CHILD A is VERIFIED.
+     3. The client re-types AX.
+   * Result: a mark gets 409 "you kept this answer over what the document reads", and no check opens, against the officer's latest judgement.
+   * In the drawer, that row is `used`, so it shows neither the words nor a mark. The false statement is in the API refusal and in `kept_over`.
+   * Fix: only the latest resolved check per person, document and fact counts. A keep-document resolved after it ends the keep. Add H2 as a fail test.
+3. **Note: a missing element in C6.5-39b aborts the pack instead of failing the step.** The `waitFor` timeouts at `C6.5-screen.test.ts:181` and `:184` throw. So mutants C1 and C2 report "crashed" at 26/27, and steps 40, 41, 34 and 35 do not run. The pack still goes red, so this is a Note only.
+
+### Journey score
+The visible change is the drawer's resolved row: the words only on `kept_over`, otherwise the mark, and a refresh after a refusal. The screen pack walks it at 1440 px, including the keyboard and axe steps. I did no new browser walk. The reviewer's journey score for this PR stays **9/10, Pass** (`journey-test-reviewer-checked-2026-11-09.md`). n4, the gap noted then, is closed. The narrower n5 replaces it, through an Undo after a changed-and-kept answer.
+
+### Could not check
+A browser walk by hand, a real screen reader, CI on this head, and the configured checkpoint (fixture only).
+
+Verdict: Approve 708b18717
+
+## Builder's fixes (after the Approve on 708b18717)
+* **n5 and n6:** `keptOver` now counts only the latest resolved check of this person, document and fact, and only when it kept the answer.
+  * The answer kept is the answer in force when that check was resolved: the newest row with `effective_at <= resolved_at`. It is never the value the check opened on.
+  * The current answer is kept when it is that answer, or the same value saved again as a new row (n1 still holds).
+  * Tests:
+    * **n5:** the value the check opened on, typed again after the resolve, opens a check of its own (F3 m4, n5).
+    * **n1:** the latest kept value saved again is still refused.
+    * **n6:** after a later check kept the document, a value an older check kept shows `kept_over: false`, and marking it opens a check.
+* **Checks:** `check_c65_documents_api` 74/74 and `C6.5-screen.test.ts` 33/33, on fresh fixture copies. Type check: no new errors.
+* n2 (two clocks) is unchanged: the rule still compares `effective_at` (database time) with `resolved_at` (app time). It stays with the tech lead.
