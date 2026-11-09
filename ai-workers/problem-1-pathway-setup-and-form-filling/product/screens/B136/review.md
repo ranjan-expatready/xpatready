@@ -2,7 +2,7 @@
 
 **Commit reviewed:** `0b51fe3b9028958c6c421e99219723b915207dc6` (PR #1392, branch `claude/bold-cerf-dstnrw`), diff `origin/main..0b51fe3b9 -- ai-workers/`. While I was reviewing, the branch moved to `08ef01c0d`. That commit changes only the pack's passport query. The working tree also had uncommitted builder edits made after my runs. **This verdict covers 0b51fe3b9 only.**
 **Reviewer:** independent, fresh context. Isolated copy `rev614` on :4437, Demo › Load the configured checkpoint (reloaded fresh 3 times). Playwright at `/opt/pw-browsers/chromium`. Live AI off, US$0. Journey test: `journey-test-reviewer-2026-11-09.md` (this folder), **8/10**.
-**Verdict (skill words): Ship after fixes.**
+**Round 1 (skill words): Ship after fixes.** Round 2 is at the end.
 
 ## Evidence verified, not trusted
 * `tests/check_c614_providers.ts`: 18/18. I removed rules one at a time and the matching tests failed each time: BR-4 age check, unknown age read as adult, `couple_once` dropped from `SHARED_WHO`, representative allowed, fallback removed (the file was restored afterwards).
@@ -74,4 +74,23 @@ D1 4: BR-1 to BR-6 built; the BR-4/BR-5 conflict is open (Minor 1) · D2 4: vers
 ## Could not check
 A real screen reader. An intended user's unaided walk (D17, D20 stay with the founder). Contrast was checked by axe only. The release and case opening steps ran through their own routes, not their screens (other capabilities).
 
-**Verdict: Block** (commit 0b51fe3b9). Fix Major 1 (`SET_PROVIDERS` heading), Major 2 (sign-off words for provider roles) and Major 3 (unaudited save on bad reason text), each with a pack step. The Minors can be fixed or listed as a follow-up row.
+**Round 1 result: Block** (commit 0b51fe3b9). Fix Major 1 (`SET_PROVIDERS` heading), Major 2 (sign-off words for provider roles) and Major 3 (unaudited save on bad reason text), each with a pack step. The Minors can be fixed or listed as a follow-up row.
+
+## Round 2: re-review of `0b51fe3b9..81f399cc963730019de748a174f66987b9945e58` (diff only)
+**Verified on a fresh copy `rev614b` (:4437, checkpoint loaded fresh twice):** pack C6.14 **35/35** · walk 11/11 · check_c614_providers 23/23 · check_engine 44 · c615 34 · c316 40 · vv_checklist 76 · prisma_schema 5. All exit 0.
+**Round-1 Majors, all closed:**
+* Major 1: `library-changes.ts:35` has `SET_PROVIDERS: "Change"`. The H1 reads "Change who provides a shared document: …" (pack C6.14-7, walk step 3).
+* Major 2: `validate.ts:344` names the roles on the line the expert signs, and "not set" when they are cleared (engine "break M2", pack 10b).
+* Major 3: `UNSTORABLE` refuses lone surrogates and control characters (400) before any write, on both routes (engine "break M1", pack 25b).
+**Round-1 Minors, all closed:** waiting line 404 (pack 24b) · editor disabled after a Return (I checked) · audit in words · "Use the defaults" · same people → 409 (26b) · zero-width reason · retired → 409 · field error with `aria-invalid`/`aria-describedby` (axe 0) · wrapping. The fallback-to-a-minor point is kept per SA-1B-151 r3, listed for the tech lead, and no longer pre-ticked.
+**Major R2-1 (Must): the explicit-`any` ratchet fails, so CI fails.**
+* `node tools/count-any.mjs --against 0b51fe3b9` (and `--against origin/main`): 419 against 418. CI runs it at `.github/workflows/ci.yml:270`.
+* New `any`: `engine/validate.ts:344`, `(a.get(key) as any)?.default_provider_roles`; validate.ts went from 23 to 24.
+* Scenario: CI's "no any" step goes red, so the PR cannot merge on green (STANDARDS §7 [M]).
+* Fix: `(a.get(key) as { default_provider_roles?: string[] } | undefined)`.
+
+**Minor R2-2: Add pulls focus away after a move.** `providers-panel.tsx`: the `[moved, edit]` effect runs on every edit change. Up on Sponsor, then Enter on "Add", leaves focus on "Move Sponsor down". Fix: clear `moved` once it has been focused.
+**Minor R2-3: role words copied into `validate.ts:338`.** `providerWords` hard-codes the labels of four role keys. That repeats `roleWords`/`WHO_WORDS`, and custom role labels are not used. Fix: reuse one source.
+**Minor R2-4: double full stop.** The drawer's returned note reads "…: Return: check the order.." when the note already ends in a full stop.
+
+**Verdict: Block** (commit 81f399cc963730019de748a174f66987b9945e58). Fix Major R2-1 (the explicit `any` at `engine/validate.ts:344`). The Minors can be fixed or listed as a follow-up row.

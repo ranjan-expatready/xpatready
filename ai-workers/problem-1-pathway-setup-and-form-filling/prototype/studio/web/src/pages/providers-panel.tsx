@@ -50,7 +50,7 @@ export function ProvidersSection({ typeKey, typeName, who, canAuthor }: { typeKe
         {v.roles.length ? <ol className="ml-5 list-decimal" data-providers-list>{v.roles.map((r) => <li key={r.key} data-provider-role={r.key}>{r.label}</li>)}</ol>
           : <p className="text-text-muted" data-providers-list>Not set: the person the item is for provides it.</p>}
         <p className="text-xs" data-providers-applies={SHARED.has(who) ? "yes" : "no"}>{SHARED.has(who) ? "This line is asked once, so a case names these providers on it." : "This line is asked of each person, so these roles do not apply to it (they apply where a line asks it once)."}</p>
-        {v.open ? <p className="text-xs" data-providers-open>A change to {v.open.change.after.length ? v.open.change.after.join(", then ") : "no roles"} by {v.open.by} {OPEN_WORDS[v.open.status]}{v.open.note ? `: ${v.open.note}` : ""}. <Link className="text-text-link underline" to="/review">To review</Link></p> : null}
+        {v.open ? <p className="text-xs" data-providers-open>A change to {v.open.change.after.length ? v.open.change.after.join(", then ") : "no roles"} by {v.open.by} {OPEN_WORDS[v.open.status]}{v.open.note ? `: ${v.open.note.replace(/[.\s]+$/, "")}` : ""}. <Link className="text-text-link underline" to="/review">To review</Link></p> : null}
         <p className="text-xs text-text-muted">{v.help} For every combination that names {typeName} (used by {v.uses}). Sample until the immigration expert confirms.</p>
         {canAuthor && !edit ? <Button size="sm" variant="secondary" disabled={!!v.open} onClick={() => { setEdit(v.roles.map((r) => r.key)); setReason(""); setMsg(null); }} data-providers-edit>{v.roles.length ? "Change who provides it…" : "Set who provides it…"}</Button> : null}
         {canAuthor && edit ? (
@@ -65,7 +65,7 @@ export function ProvidersSection({ typeKey, typeName, who, canAuthor }: { typeKe
               <label className="text-xs">Add a role
                 <Select aria-label="Add a role" value={add} onChange={(e) => setAdd(e.target.value)} className="mt-1 block"><option value="">Choose a role…</option>{v.choices.filter((c) => !edit.includes(c.key)).map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}</Select>
               </label>
-              <Button size="sm" variant="secondary" disabled={!add} onClick={() => { setEdit((e) => [...e!, add]); setAdd(""); }} data-providers-add>Add</Button></div> : null}
+              <Button size="sm" variant="secondary" disabled={!add} onClick={() => { setMoved(null); setEdit((e) => [...e!, add]); setAdd(""); }} data-providers-add>Add</Button></div> : null}
             <label className="block text-xs">Why it changes, for every combination
               <Textarea aria-label="Why who provides it changes" value={reason} onChange={(e) => setReason(e.target.value)} rows={2} className="mt-1" data-providers-why
                 aria-invalid={reasonError ? true : undefined} aria-describedby={reasonError ? "providers-why-error" : undefined} />
