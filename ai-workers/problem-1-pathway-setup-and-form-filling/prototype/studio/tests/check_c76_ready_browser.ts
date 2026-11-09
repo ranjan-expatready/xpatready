@@ -89,7 +89,11 @@ async function same(label: string) {
 // ---------------------------------------------------------------- the case officer: not ready
 await as(officer); await open();
 const panelText = await panel().innerText();
-ok("C7.6 pass: the panel names the filing and its status \"Not started\", and says what stands before Ready to file, never a percentage", (await filing().getAttribute("data-status")) === "not_started" && /stands? before Ready to file\./.test(await filing().locator("[data-standing]").innerText()) && !/%/.test(panelText), panelText.slice(0, 300));
+// C7.10 (B143, founder P-406 (2): the readiness figure is ours, on Ready to file, beside C7.6): each filing's figure row
+// ([data-figure]) carries the one percentage; C7.6's own words and lines still carry none.
+const linesText = await panel().evaluate((el) => { const c = el.cloneNode(true) as HTMLElement; c.querySelectorAll("[data-figure]").forEach((x) => x.remove()); return c.textContent ?? ""; });
+const percentOnlyInFigure = !/%/.test(linesText) && await panel().locator("[data-figure]").evaluateAll((xs) => xs.every((x) => /\d+%/.test(x.textContent ?? "")));
+ok("C7.6 pass: the panel names the filing and its status \"Not started\", and says what stands before Ready to file, never a percentage in its lines (only C7.10's figure row has one)", (await filing().getAttribute("data-status")) === "not_started" && /stands? before Ready to file\./.test(await filing().locator("[data-standing]").innerText()) && percentOnlyInFigure, panelText.slice(0, 300));
 await same("C7.6 / QA-229 pass (not ready)");
 const owners = await filing().locator("[data-owes]").evaluateAll((els) => els.map((e) => e.getAttribute("data-owes") ?? ""));
 const wanted = ORDER.filter((o) => [...(rd?.blocks ?? []), ...(rd?.warns ?? [])].some((l) => l.owes === o));
