@@ -1,0 +1,17 @@
+# scripts/probe_tooltip_keyboard.cjs on copy qa_c83b (:4473, main 7e32ee210), 1440 px, as the representative, after the
+# builder's check_c83_review_browser.cjs runs 1 and 3 stopped at its line 141 (a Tab onto the "Approval withdrawn"
+# chip, then waiting 20 s for the tooltip). Two of those runs' round-1 pages, six tries each (even: no wait after load;
+# odd: 1.5 s settle). Output verbatim:
+0 no wait | focused: SPAN radix-_r_5_ Approval withdrawn | tooltip: true 4 ms
+1 settled 1.5 s | focused: SPAN  Approval withdrawn | tooltip: false 4002 ms
+2 no wait | focused: SPAN radix-_r_5_ Approval withdrawn | tooltip: true 3 ms
+3 settled 1.5 s | focused: SPAN radix-_r_5_ Approval withdrawn | tooltip: true 5 ms
+4 no wait | focused: SPAN radix-_r_5_ Approval withdrawn | tooltip: true 3 ms
+5 settled 1.5 s | focused: SPAN radix-_r_5_ Approval withdrawn | tooltip: true 4 ms
+0 no wait | focused: SPAN radix-_r_7_ Approval withdrawn | tooltip: true 11 ms
+1 settled 1.5 s | focused: SPAN radix-_r_7_ Approval withdrawn | tooltip: true 4 ms
+2 no wait | focused: SPAN radix-_r_7_ Approval withdrawn | tooltip: true 4 ms
+3 settled 1.5 s | focused: SPAN radix-_r_7_ Approval withdrawn | tooltip: true 4 ms
+4 no wait | focused: SPAN radix-_r_7_ Approval withdrawn | tooltip: true 5 ms
+5 settled 1.5 s | focused: SPAN radix-_r_7_ Approval withdrawn | tooltip: true 4 ms
+# 1 of 12: focus is on the chip (no aria-describedby), and no tooltip within 4 s.
