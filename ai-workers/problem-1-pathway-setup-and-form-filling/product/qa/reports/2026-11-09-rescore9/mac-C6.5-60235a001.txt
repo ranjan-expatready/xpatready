@@ -1,0 +1,48 @@
+C6.5 on fe0703044 (= main 60235a001 + qa records), copy qa_p65 :4473, start Mon Nov  9 11:59:56 IST 2026
+NOTICE:  database "xr_studio_qa_p65" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_p65 on http://localhost:4473 (xr_studio_qa_p65), stops itself in 30 min
+reset 201
+load 201
+loaded Mon Nov  9 12:01:29 IST 2026
+C6.5 — Documents read into proposed facts (Visitor visa, replayed, US$0)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C6.5-E1 pass: the reader reads a synthetic passport's coded lines into proposals about its holder, reader "mrz", page 1, with a confidence
+PASS  C6.5-E2 pass (P-243): number, date of birth and expiry, backed by passed check digits, are collapsed; names stay expanded; one review for the document (P-242)
+PASS  C6.5-E3 pass: place of birth is not proposed (not on the coded lines)
+PASS  C6.5-E4 fail: a bad check digit: no passport number is proposed, it is listed unreadable, and nothing is collapsed (P-243)
+PASS  C6.5-E5 fail: two people's passports on one document: nothing is proposed for either, every fact unreadable (never attributed by guess)
+PASS  C6.5-E6 pass (resolver R11): a two-person document on the principal's line supplies each fact to the person it is about (the spouse's to the spouse)
+PASS  C6.5-E7 fail (resolver R11): with no spouse on the case, the spouse's fact goes to nobody, never to the holder
+PASS  C6.5-1 pass: the synthetic passport is uploaded to Client A's passport line — 201
+PASS  C6.5-2 pass (P-134 D4): an upload proposes and answers nothing by itself
+PASS  C6.5-3 pass: "Fill this from documents" on the passport section proposes the coded-line facts — [["person.family_name","SAMPLED"],["person.given_names","CLIENT A"],["person.sex","Unspecified"],["person.date_of_birth","1986-11-09"],["person.citizenship","IND"],["person.passport_country_of_issue","IND"],["person.passport_number","SAMPLEP12"],["person.passp
+PASS  C6.5-4 pass (AG11-D4 shape): every proposal carries its document, page, reader "mrz" (rules) and a confidence
+PASS  C6.5-5 pass: place of birth is not proposed (not on the coded lines; typed)
+PASS  C6.5-6 pass (no AI): reading a passport made no model call
+PASS  C6.5-7 pass: proposals are not answers: the answers are unchanged until a person accepts
+PASS  C6.5-8 fail: a client cannot run Fill this from documents for the officer's view (403)
+PASS  C6.5-9 pass (P-242, P-243): the passport is one review with one "Confirm & use"; number, date of birth and expiry are collapsed (check digits passed), names expanded — {"id":"7de8965b-2432-454f-acc6-93b83ea5c676","document":"1cc45687-20db-49c4-9f2f-7a6127dfd361","document_name":"Passport information page copy","file_name":"sample-passport.pdf","reader":"mrz","replayed":false,"confirm":"one_per_document","collapsed":["person.
+PASS  C6.5-9b pass (P-242): the client's own typed answer is Declared and is the current answer at once
+PASS  C6.5-9c fail (P-242): a client cannot Confirm & use a document's values (403; staff only) — 403
+PASS  C6.5-10 pass (P-242, P-243): one Confirm & use, with the expanded values the officer ticked, writes the document's values with their provenance (document_read, document, page) and records who and when — {"document":"1cc45687-20db-49c4-9f2f-7a6127dfd361","confirmed":{"by":"user-O","at":"2026-11-09T06:31:31.286Z"},"used":["person.given_names","person.passport_expiry_date","person.passport_number","person.sex"],"agreed":["person.date_of_birth"],"checks":[{"id":"
+PASS  C6.5-11 pass (P-242, amends P-72): a value used by Confirm & use fills at once: the passport number is the current answer, not waiting for Confirm section
+PASS  C6.5-12 pass (BR-7, P-242): the client typed SAMPLEDE, the passport reads SAMPLED: one open check for this person and fact, and the client's answer is not overwritten — [{"id":"d3664c23-0992-4c80-9322-f4c147e93916","subject":"8d74493c-f5fe-41b2-ad51-99ce2d2ae06e","fact":"person.family_name","label":"family name","state":"open","typed":"SAMPLEDE","document_value":"SAMPLED","document":"1cc45687-20db-49c4-9f2f-7a6127dfd361","ans
+PASS  C6.5-13 fail (BR-6): Confirm section is refused while a check is open (409 open_checks) — 409
+PASS  C6.5-14 fail: resolving a check without a reason is refused (400) — 400
+PASS  C6.5-15 pass: the officer keeps the document's value with a reason; the client's value stays on record
+PASS  C6.5-16 fail (P-142 D3): a client cannot mark a value checked against the document (403) — 403
+PASS  C6.5-17 pass: staff mark it checked against the document: VERIFIED with that evidence and who
+PASS  C6.5-18 fail: a coded line whose check digit fails proposes no passport number; the field is flagged unreadable — {"section":"personal_details","subject":"9d0ea736-ec24-4f31-9985-f1bdb8dd24b4","proposals":[{"id":"e54ac914-c82d-4c3b-9563-ed4397e94f7a","fact":"person.family_name","label":"family name","value":"SAMPLES","subject":"9d0ea736-ec24-4f31-9985-f1bdb8dd24b4","sourc
+PASS  C6.5-18b fail (P-243): with a failed check digit nothing is collapsed: date of birth and expiry stay expanded — {"section":"personal_details","subject":"9d0ea736-ec24-4f31-9985-f1bdb8dd24b4","proposals":[{"id":"e54ac914-c82d-4c3b-9563-ed4397e94f7a","fact":"person.family_name","label":"family name","value":"SAMPLES","subject":"9d0ea736-ec24-4f31-9985-f1bdb8dd24b4","sourc
+PASS  C6.5-19a pass: a document with no checklist line (a letter of invitation, Sample) is uploaded to the case's documents — 201
+PASS  C6.5-19 pass (P-110): the cost card comes first: a live read is priced above US$0 and not allowed without the founder's Go; replay US$0 — {"section":"details_of_visit_to_canada","subject":"d62a7bb9-6ed6-434b-a439-b8b9a00fde3f","documents":[{"document":"dbe9cd2f-d029-4d72-89b9-bddb2c1bb818","document_name":"Letter of invitation (Sample)","reader":"ai_vision","cost_usd":0}],"estimate":{"live_usd":
+FAIL  C6.5-19b precondition (FQ-10): a saved AI read of this synthetic letter is recorded (one live read with the founder's Go; until then this and C6.5-20 stay red) — false
+FAIL  C6.5-20 pass: the replayed read of the synthetic letter of invitation proposes the contact's name, marked Replayed, cost US$0 — {"type":"https://expatready.local/problems/no-saved-read","title":"No saved read","status":409,"detail":"There is no saved read of this Letter of invitation (Sample) yet. Nothing was read; no cost.","message":"There is no saved read of this Letter of invitatio
+
+30/32 passed
+pack exit 1  end Mon Nov  9 12:01:31 IST 2026
+stopped qa_p65 (database and files removed; log in var/isolated-logs/qa_p65-api.log)
