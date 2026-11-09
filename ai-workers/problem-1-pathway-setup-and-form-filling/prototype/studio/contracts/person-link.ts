@@ -14,7 +14,7 @@ const reason = (missing: string) => z.string({ message: missing }).trim().min(5,
 /** Send or resend to an adult on the case (the principal or case staff). Without an address: Resend, to the address of
  *  the person's newest link (for the principal after acceptance, the kept address). */
 export const SendLink = z.object({
-  address: z.string({ message: "Enter their email address." }).trim().min(1, "Enter their email address.").max(254, "An email address has at most 254 characters.").optional(),
+  address: z.string({ message: "Enter their email address." }).trim().min(1, "Enter their email address.").max(254, "An email address has at most 254 characters.").refine(clean, "Remove the control or invisible characters from the address.").optional(),
   idempotencyKey: idemKey.optional(),
 });
 /** Take back: case staff say why (kept in the history); the principal may leave it out. */
@@ -35,6 +35,10 @@ export const LINK_RULES = { codeMinutes: 15, wrongTries: 5, linkDays: 14, sessio
 export const LINK_WORDS = {
   unknown: "This link does not work. Ask whoever sent it for a new one.",
   locked: "Too many wrong codes. This link no longer works. Ask whoever sent it for a new one.",
+  /** Break M2: the person is no longer an adult on the case (or has no date of birth); names no one and no age. */
+  notAdult: "This link no longer works: it was sent to someone who cannot have their own link. Ask whoever sent it for a new one.",
+  /** Break M4: the demo inbox is never opened from a client's own pages (stand-in SI-20). */
+  inboxClient: "A client's own pages cannot open a demo mailbox: open the inbox without acting as a client (it stands in for the person's own email).",
   sessionEnded: "Your session on this link has ended. Open the link from your email again and ask for a new code.",
   /** BR-6 (Unconfirmed: no counsel). */
   consent: "Your answers go to the firm handling this application. The person who started it will see how far you have got, not your answers. The firm can change this.",
@@ -50,17 +54,24 @@ export const LINK_WORDS = {
 /** One person's link as a screen shows it. state: none (never sent) · sent · accepted · expired · taken_back ·
  *  superseded · locked. The token and the code are never in it. */
 export type PersonLinkState = {
-  state: "sent" | "accepted" | "expired" | "taken_back" | "superseded" | "locked";
+  state: "sent" | "accepted" | "expired" | "taken_back" | "superseded" | "locked" | "not_adult";
   email_masked: string; given_by: string; sent_at: string; accepted_at: string | null; expires_at: string;
   /** Why it no longer works, naming no person; null while it works. */
   why: string | null;
+  /** When it stopped working (taken back, replaced, locked, ended); null while it works or when it expired. */
+  ended_at: string | null;
+  /** Review m2: the same in the principal's words (they sent it); null while it works. */
+  principal_words: string | null;
 };
+/** Break M1: `by` and `why` are staff's (the case history); the client reads only that it is on, and since when. */
 export type PrivacySetting = { on: boolean; at: string | null; by: string | null; why: string | null };
 /** Progress only, counted on the server (challenge m3): a part is done when nothing required is missing or invalid. */
 export type ProgressOnly = { done: number; asked: number; optional: number; saved_at: string | null };
 /** GET /runtime/cases/:id/people/privacy: one line per person on the case (not the application itself). */
 export type PersonPrivacy = {
   subject_id: string; label: string; role: string;
+  /** Review M1 (C6.13): the case's client, who answers for the family and is never sent a link or made private. */
+  is_client: boolean;
   /** BR-1: an adult may get their own link; otherwise why not (no date of birth, under 18, the principal). */
   adult: boolean; why_not: string | null;
   private: PrivacySetting; link: PersonLinkState | null;

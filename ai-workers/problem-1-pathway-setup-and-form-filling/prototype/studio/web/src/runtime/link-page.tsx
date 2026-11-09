@@ -17,7 +17,7 @@ import { Toaster } from "./cases";
 import { LINK_RULES, LINK_WORDS, type LinkOpened, type LinkSession } from "../../../contracts/person-link";
 import type { ViewQuestion } from "../../../contracts/runtime";
 
-const TOKEN = "xr-link-token", SESSION = "xr-link-session";
+const TOKEN = "xr-link-token", SESSION = "xr-link-session", SENT = "xr-link-code-sent";
 type Stored = Pick<LinkSession, "session" | "case_id" | "subject_id">;
 const store = {
   get: (k: string) => { try { return sessionStorage.getItem(k); } catch { return null; } },
@@ -61,11 +61,11 @@ export function LinkApp() {
       <header className="sticky top-0 z-30 flex h-14 min-w-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
         <img src="/brand/expat-ready-notagline-dark.svg" alt="Expat Ready" className="h-6 dark:hidden" />
         <img src="/brand/expat-ready-notagline.svg" alt="Expat Ready" className="hidden h-6 dark:block" />
-        <span className="h-6 w-px bg-border" />
+        <span className="hidden h-6 w-px bg-border sm:block" />
         <p className="hidden min-w-0 truncate text-sm font-semibold sm:block">Your questions</p>
         <span className="ml-auto flex shrink-0 items-center gap-2">
           <ProposedStandIn today="you prove the email is yours with a link and a 6-digit code; staff and the principal are simulated people" later="the team's sign-in for adult family members (Release 2)" />
-          {stored ? <Button size="sm" variant="ghost" onClick={async () => { await linkApi("/end", { method: "POST" }, stored.session).catch(() => null); end("You signed out. To come back, open the link from your email again and ask for a new code."); }}><LogOut aria-hidden />Sign out</Button> : null}
+          {stored ? <Button size="sm" variant="ghost" aria-label="Sign out" onClick={async () => { await linkApi("/end", { method: "POST" }, stored.session).catch(() => null); end("You signed out. To come back, ask whoever sent your link to send it again."); }}><LogOut aria-hidden /><span className="hidden sm:inline">Sign out</span></Button> : null}
         </span>
       </header>
       <main className="min-w-0 flex-1 px-4 py-5">
@@ -79,7 +79,8 @@ export function LinkApp() {
 /** "Check it's you": Send me a code (a button, never on opening), then the code, forgiving spaces and dashes. */
 function CodeStep({ token, ended, onSession }: { token: string | null; ended: string | null; onSession: (s: LinkSession) => void }) {
   const opened = useQuery<LinkOpened>({ queryKey: ["link", "open", token], queryFn: () => linkApi<LinkOpened>("/open", { method: "POST", json: { token } }), enabled: !!token, retry: false, staleTime: Infinity });
-  const [sent, setSent] = React.useState<string | null>(null);
+  // Break m6: the code step survives a reload (this tab only), so a reload never costs another code.
+  const [sent, setSent] = React.useState<string | null>(() => (token && store.get(SENT) === token ? "restored" : null));
   const [code, setCode] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [dead, setDead] = React.useState<string | null>(null);
@@ -92,7 +93,7 @@ function CodeStep({ token, ended, onSession }: { token: string | null; ended: st
   if (why) return <Shell><h1 className="text-2xl font-semibold">This link no longer works</h1><Notice tone="warn" className="mt-3">{why}</Notice></Shell>;
   const masked = opened.data?.state === "live" ? opened.data.email_masked : "";
   const fail = (e: unknown) => { if (e instanceof ApiError && (e.status === 410 || e.status === 404)) setDead(e.message); else setError(e instanceof ApiError ? e.field("code") ?? e.message : (e as Error).message); };
-  async function send() { setBusy("send"); setError(null); try { await linkApi("/code/send", { method: "POST", json: { token } }); setSent(new Date().toISOString()); setCode(""); } catch (e) { fail(e); } setBusy(null); }
+  async function send() { setBusy("send"); setError(null); try { await linkApi("/code/send", { method: "POST", json: { token } }); if (token) store.set(SENT, token); setSent(new Date().toISOString()); setCode(""); } catch (e) { fail(e); } setBusy(null); }
   async function check() {
     if (!code.trim()) { setError("Enter the 6-digit code from the email."); return; }
     setBusy("check"); setError(null);

@@ -17,7 +17,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { MINOR } from "../../contracts/runtime.ts";
 import { KeepPrivate, LINK_RULES, LINK_WORDS, LinkCode, LinkToken, SendLink, TakeBack, type LinkOpened, type LinkSession, type PeoplePrivacy, type PersonLinkState, type PersonPrivacy } from "../../contracts/person-link.ts";
 import { caseView, OWN_LINK } from "../../engine/runtime/case.ts";
-import { adultCheck, codeCheck, deadWords, ownerOf, linkState, maskAddress, normalAddress, normalCode, officerWords, overLimit, progressOf, sendRefusal, wrongWords, type LinkRow } from "../../engine/runtime/privacy.ts";
+import { adultCheck, codeCheck, deadWords, ownerOf, linkState, maskAddress, normalAddress, normalCode, officerWords, overLimit, principalLinkWords, progressOf, sendRefusal, serverTries, wrongWords, type LinkRow } from "../../engine/runtime/privacy.ts";
 import { actorOf, CaseRead, Db, fail, isDemoWorkspace, OpenRead, RUNTIME_ACTORS, Workspace, type Actor } from "./core.ts";
 import { Runtime, type Reached, type Writer } from "./runtime.ts";
 
@@ -71,9 +71,14 @@ export class PersonLinks {
   private async birthOf(subjectId: string) {
     return (await this.db.clientCanonicalAnswer.findFirst({ where: { subjectId, canonicalFieldKey: MINOR.birthDateField, rowKey: null, supersededById: null }, select: { valueJson: true } }))?.valueJson;
   }
-  private linkState(l: LinkRec, all: LinkRec[], now: Date): PersonLinkState {
-    const row = rowOf(l, all.find((x) => x.id === l.supersededById)?.sentAt);
-    return { state: linkState(row, now), email_masked: l.addressMasked, given_by: nameOf(l.addressGivenBy), sent_at: l.sentAt.toISOString(), accepted_at: l.acceptedAt?.toISOString() ?? null, expires_at: l.expiresAt.toISOString(), why: deadWords(row, now) };
+  private linkState(l: LinkRec, all: LinkRec[], now: Date, label: string): PersonLinkState {
+    const row = rowOf(l, all.find((x) => x.id === l.supersededById)?.sentAt), state = linkState(row, now);
+    return { state, email_masked: l.addressMasked, given_by: nameOf(l.addressGivenBy), sent_at: l.sentAt.toISOString(), accepted_at: l.acceptedAt?.toISOString() ?? null, expires_at: l.expiresAt.toISOString(), why: deadWords(row, now),
+      ended_at: l.voidedAt?.toISOString() ?? null, principal_words: principalLinkWords(state, l.voidedAt ?? (state === "expired" ? l.expiresAt : null), label) };
+  }
+  /** BR-1 with review M1: who may have their own link, deciding "the principal" by the case's client person (C6.13). */
+  private adultOf(c: Reached, p: Reached["participants"][number], birth: unknown, now: Date) {
+    return adultCheck({ role: p.role, label: p.subject.label, isClient: p.subjectId === this.r.clientSubjectOf(c) }, birth, now);
   }
 
   /** GET …/people/privacy: who answers for each person, their link and, for a private adult, progress only (BR-7).
@@ -82,19 +87,21 @@ export class PersonLinks {
     const c = await this.r.reach(actor, caseId, "read");
     const staff = isStaff(actor), now = new Date();
     const st = await this.r.state(c);
-    const full = caseView(this.r.snapshotOf(c), this.r.peopleOf(c), st.answers, st.rows, "sqr", now, st.groups);
+    // Review m1: counted exactly as the client's questionnaire counts it (their relatives' parts are theirs).
+    const full = caseView(this.r.snapshotOf(c), this.r.peopleOf(c), st.answers, st.rows, "sqr", now, st.groups, { background: this.r.backgroundOf(c) });
     const links = await this.db.personLink.findMany({ where: { caseId: c.id }, orderBy: [{ sentAt: "desc" }, { id: "desc" }] });
     const principal = nameOf(c.clientActorId);
     const people = c.participants.filter((p) => p.role !== "case").map((p): PersonPrivacy => {
       const birth = st.answers.find((a) => a.subjectId === p.subjectId && a.field === MINOR.birthDateField && !a.rowKey)?.value;
-      const adult = adultCheck({ role: p.role, label: p.subject.label }, birth, now);
+      const adult = this.adultOf(c, p, birth, now), isClient = p.subjectId === this.r.clientSubjectOf(c);
       const mine = links.filter((l) => l.subjectId === p.subjectId), newest = mine[0] ?? null, accepted = mine.find((l) => l.acceptedAt) ?? null;
-      const link = newest ? this.linkState(newest, links, now) : null;
+      const link = newest ? this.linkState(newest, links, now, p.subject.label) : null;
       const live = !!link && (link.state === "sent" || link.state === "accepted" || link.state === "expired") && !newest!.voidedAt;
-      const progress = p.keepPrivate || link ? progressOf(full.sections.filter((x) => x.subjectId === p.subjectId)) : null;
+      const progress = p.keepPrivate || link ? progressOf(full.sections.filter((x) => ownerOf(x.subjectId) === p.subjectId)) : null;
       return {
-        subject_id: p.subjectId, label: p.subject.label, role: p.role, adult: adult.ok, why_not: adult.ok ? null : adult.why,
-        private: { on: p.keepPrivate, at: p.privateAt?.toISOString() ?? null, by: p.privateBy ? nameOf(p.privateBy) : null, why: p.privateWhy },
+        subject_id: p.subjectId, label: p.subject.label, role: p.role, is_client: isClient, adult: adult.ok, why_not: adult.ok ? null : adult.why,
+        // Break M1: who ticked it and why are staff's (the case history); the client reads that it is on, and since when.
+        private: { on: p.keepPrivate, at: p.privateAt?.toISOString() ?? null, by: staff && p.privateBy ? nameOf(p.privateBy) : null, why: staff ? p.privateWhy : null },
         link, kept_masked: accepted?.addressMasked ?? null, progress,
         words: officerWords({ label: p.subject.label, principal, adult: adult.ok, keepPrivate: p.keepPrivate, privateAt: p.privateAt, link: newest ? { ...rowOf(newest), masked: newest.addressMasked, givenBy: nameOf(newest.addressGivenBy) } : null, acceptedOn: accepted ? { masked: accepted.addressMasked, givenBy: nameOf(accepted.addressGivenBy) } : null, now }),
         can: { send: adult.ok && (staff || !accepted), resend_kept: adult.ok && !!accepted, send_new: staff && adult.ok && !!accepted, take_back: live, tick: staff && adult.ok && !p.keepPrivate },
@@ -109,10 +116,12 @@ export class PersonLinks {
     const c = await this.r.reach(actor, caseId, "answer");
     const b = parse(SendLink, body);
     const p = this.personOf(c, subjectId), label = p.subject.label, now = new Date();
-    const adult = adultCheck({ role: p.role, label }, await this.birthOf(subjectId), now);
+    const adult = this.adultOf(c, p, await this.birthOf(subjectId), now);
     if (!adult.ok) problem(409, "Not possible now", adult.why);
-    // Resend without an address: the newest link's address (after acceptance, the kept one).
-    const typed = b.address ?? (await this.db.personLink.findFirst({ where: { subjectId }, orderBy: [{ sentAt: "desc" }, { id: "desc" }], select: { address: true } }))?.address;
+    // Resend without an address: for the client once accepted, the kept address (BR-3; break m3: never a newer address
+    // staff sent to); otherwise the newest link's address.
+    const kept = isStaff(actor) ? null : (await this.db.personLink.findFirst({ where: { subjectId, acceptedAt: { not: null } }, orderBy: [{ sentAt: "desc" }, { id: "desc" }], select: { address: true } }))?.address;
+    const typed = b.address ?? kept ?? (await this.db.personLink.findFirst({ where: { subjectId }, orderBy: [{ sentAt: "desc" }, { id: "desc" }], select: { address: true } }))?.address;
     if (!typed) fieldError("address", "Enter their email address.");
     const address = normalAddress(typed!);
     if (!address) fieldError("address", "Enter an email address like name@example.com.");
@@ -128,7 +137,9 @@ export class PersonLinks {
     const token = randomBytes(32).toString("base64url"), id = randomUUID(), masked = maskAddress(address!);
     try {
       await inTx(this.db, async (tx) => {
-        await tx.$queryRaw`SELECT id FROM case_participant WHERE subject_id = ${subjectId}::uuid FOR UPDATE`; // one send at a time per person
+        // One send at a time per case (break m1: two people are never given one address at the same moment), then per person.
+        await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
+        await tx.$queryRaw`SELECT id FROM case_participant WHERE subject_id = ${subjectId}::uuid FOR UPDATE`;
         const mine = await tx.personLink.findMany({ where: { subjectId }, orderBy: [{ sentAt: "desc" }, { id: "desc" }] });
         const kept = mine.find((l) => l.acceptedAt)?.address ?? null;
         const others = (await tx.personLink.findMany({ where: { caseId: c.id, subjectId: { not: subjectId }, OR: [{ voidedAt: null }, { acceptedAt: { not: null } }] }, select: { address: true } })).map((x) => x.address);
@@ -150,7 +161,7 @@ export class PersonLinks {
   }
 
   /** A link dies (taken back, superseded, locked): its sessions end and its demo messages go, in the caller's transaction. */
-  private async kill(tx: Tx, linkId: string, why: "taken_back" | "superseded" | "locked", by: string, reason: string | null, now: Date) {
+  private async kill(tx: Tx, linkId: string, why: "taken_back" | "superseded" | "locked" | "not_adult", by: string, reason: string | null, now: Date) {
     const n = await tx.personLink.updateMany({ where: { id: linkId, voidedAt: null }, data: { voidedAt: now, voidWhy: why, voidedBy: by, voidReason: reason, codeHash: null, codeExpiresAt: null } });
     await tx.personLinkSession.updateMany({ where: { linkId, revokedAt: null }, data: { revokedAt: now } });
     await tx.demoMessage.deleteMany({ where: { linkId } });
@@ -180,7 +191,7 @@ export class PersonLinks {
     const c = await this.r.reach(actor, caseId, "officer");
     const b = parse(KeepPrivate, body);
     const p = this.personOf(c, subjectId), now = new Date();
-    const adult = adultCheck({ role: p.role, label: p.subject.label }, await this.birthOf(subjectId), now);
+    const adult = this.adultOf(c, p, await this.birthOf(subjectId), now);
     if (!adult.ok) problem(409, "Not possible now", adult.why);
     const changed = await inTx(this.db, async (tx) => {
       const n = await tx.caseParticipant.updateMany({ where: { subjectId, keepPrivate: false }, data: { keepPrivate: true, privateAt: now, privateBy: actor.id, privateWhy: b.reason } });
@@ -202,12 +213,25 @@ export class PersonLinks {
     if (!l || l.workspaceId !== await this.ws.id()) problem(404, "Not found", LINK_WORDS.unknown);
     return l!;
   }
-  /** A live link, or 410 with why it died (naming no person). */
+  /** Break M2: whether the person is still someone who may have their own link, read now (BR-1: an adult other than the
+   *  case's client, from their current date of birth). A link to someone who is not dies the next time it is used. */
+  private async stillAdult(l: LinkRec) {
+    const c = await this.r.reachByLink(l.caseId), p = c.participants.find((x) => x.subjectId === l.subjectId);
+    return !!p && this.adultOf(c, p, await this.birthOf(l.subjectId), new Date()).ok;
+  }
+  /** A live link, or 410 with why it died (naming no person). A link to someone who is no longer an adult on the case
+   *  dies here, with its reason in the history (break M2: privacy never switches on for a child). */
   private async liveLink(l: LinkRec, now: Date) {
     const newer = l.supersededById ? (await this.db.personLink.findUnique({ where: { id: l.supersededById }, select: { sentAt: true } }))?.sentAt : null;
     const dead = deadWords(rowOf(l, newer), now);
     if (dead) problem(410, "This link no longer works", dead);
     if (!await this.db.caseParticipant.count({ where: { subjectId: l.subjectId, caseId: l.caseId } })) problem(410, "This link no longer works", LINK_WORDS.unknown);
+    if (!await this.stillAdult(l)) {
+      await inTx(this.db, async (tx) => {
+        if (await this.kill(tx, l.id, "not_adult", `person:${l.subjectId}`, null, now)) await audit(tx, l.workspaceId, `person:${l.subjectId}`, "ended", l.subjectId, `The link sent to ${l.addressMasked} on case ${short(l.caseId)} ended: the person cannot have their own link now (under ${MINOR.underAge} or no date of birth, Sample)`);
+      });
+      problem(410, "This link no longer works", LINK_WORDS.notAdult);
+    }
     return l;
   }
 
@@ -215,7 +239,7 @@ export class PersonLinks {
   async open(body: unknown): Promise<LinkOpened> {
     const l = await this.linkByToken(body), now = new Date();
     const newer = l.supersededById ? (await this.db.personLink.findUnique({ where: { id: l.supersededById }, select: { sentAt: true } }))?.sentAt : null;
-    const dead = deadWords(rowOf(l, newer), now);
+    const dead = deadWords(rowOf(l, newer), now) ?? (await this.stillAdult(l) ? null : LINK_WORDS.notAdult); // read only: it dies when used
     return dead ? { state: "dead", why: dead } : { state: "live", email_masked: l.addressMasked, accepted: !!l.acceptedAt };
   }
 
@@ -245,10 +269,15 @@ export class PersonLinks {
   async verify(body: unknown, ip: string): Promise<LinkSession> {
     const now = new Date(), b = parse(LinkCode, body);
     const network = (ip || "unknown").slice(0, 64);
+    // Break m2: a source already over its own limit is refused before its try is written, and the server's count takes
+    // at most each source's own limit, so one source never locks every other adult out of the code step.
+    const counts = async () => (await this.db.$queryRaw<{ address: string; c: bigint }[]>`select address, count(*) as c from person_link_try where kind = 'code_try' and at > now() - interval '1 minute' group by address`).map((x) => ({ address: x.address, tries: Number(x.c) }));
+    const before = await counts();
+    const mine = () => before.find((x) => x.address === network)?.tries ?? 0;
+    if (overLimit({ kind: "code_try", fromNetwork: mine() + 1, onServer: 0 })) problem(429, "Too many", overLimit({ kind: "code_try", fromNetwork: mine() + 1, onServer: 0 })!);
     await this.db.personLinkTry.create({ data: { kind: "code_try", address: network } });
-    const [n] = await this.db.$queryRaw<{ here: bigint; all: bigint }[]>`select coalesce(sum(c) filter (where address = ${network}), 0) as here, coalesce(sum(c), 0) as all
-      from (select address, count(*) as c from person_link_try where kind = 'code_try' and at > now() - interval '1 minute' group by address) t`;
-    const over = overLimit({ kind: "code_try", fromNetwork: Number(n.here), onServer: Number(n.all) });
+    const now2 = await counts();
+    const over = overLimit({ kind: "code_try", fromNetwork: now2.find((x) => x.address === network)?.tries ?? 1, onServer: serverTries(now2) });
     if (over) problem(429, "Too many", over);
     const code = normalCode(b.code);
     if (!code) fieldError("code", "Enter the 6-digit code from the email, like 123 456.");
@@ -283,7 +312,9 @@ export class PersonLinks {
       const who = await tx.caseParticipant.findFirst({ where: { subjectId: l.subjectId, caseId: l.caseId }, select: { role: true } });
       const priv = await tx.caseParticipant.updateMany({ where: { subjectId: l.subjectId, keepPrivate: false }, data: { keepPrivate: true, privateAt: now, privateBy: `person:${l.subjectId}`, privateWhy: "Switched on when the person first entered the right code on their own link." } });
       await tx.personLinkSession.create({ data: { linkId: l.id, tokenHash: sha(token), expiresAt: expires } });
-      await tx.demoMessage.deleteMany({ where: { linkId: l.id, kind: "code" } });
+      // Break M4 (challenge M6): at the right code every message of the link goes, the link email too, so the inbox holds
+      // nothing to mint a new code from; the person comes back through Resend to the kept address.
+      await tx.demoMessage.deleteMany({ where: { linkId: l.id } });
       const role = roleWords(who?.role ?? "person");
       if (first) await audit(tx, l.workspaceId, `person:${l.subjectId}`, "accepted", l.subjectId, `The ${role} on case ${short(l.caseId)} entered the right code on the link sent to ${l.addressMasked}: it is accepted`);
       if (priv.count) await audit(tx, l.workspaceId, `person:${l.subjectId}`, "kept private", l.subjectId, `The answers of the ${role} on case ${short(l.caseId)} are now kept private from the principal (switched on at their first right code)`);
@@ -304,6 +335,7 @@ export class PersonLinks {
     if (dead) problem(401, "Session ended", dead);
     const p = await this.db.caseParticipant.findFirst({ where: { subjectId: s!.link.subjectId, caseId: s!.link.caseId }, include: { subject: true } });
     if (!p) problem(401, "Session ended", LINK_WORDS.unknown);
+    if (!await this.stillAdult(s!.link)) problem(401, "Session ended", LINK_WORDS.notAdult); // break M2 (read only here)
     return { session: s!, link: s!.link, person: p! };
   }
   /** The case and person a session reaches: another case is not found (404), another person refused (403); answers wait
@@ -361,8 +393,10 @@ export class PersonLinks {
 
   /** GET /api/demo/inbox?address=: the email stand-in (SI-20). Demo workspace only (404 elsewhere); messages not yet
    *  expired, newest first. Reads only: an expired message is left out, never deleted here. */
-  async inbox(address: H) {
+  async inbox(address: H, xActor: H) {
     if (!isDemoWorkspace()) fail("Not found.", HttpStatus.NOT_FOUND);
+    // Break M4: a client's own pages and API persona never open a mailbox (SI-21: privacy holds on Client A's persona).
+    if ([...RUNTIME_ACTORS].some((a) => a.id === xActor && (a.duties as readonly string[]).includes("answer"))) problem(403, "Not for clients", LINK_WORDS.inboxClient);
     const a = normalAddress(address ?? "");
     if (!a) fieldError("address", "Enter an email address like name@example.com.");
     const rows = await this.db.demoMessage.findMany({ where: { address: a!, workspaceId: await this.ws.id(), expiresAt: { gt: new Date() } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 50 });
@@ -420,5 +454,5 @@ export class LinkController {
 @Controller("api/demo")
 export class DemoInboxController {
   constructor(@Inject(PersonLinks) private readonly x: PersonLinks) {}
-  @Get("inbox") inbox(@Query("address") address: H) { return this.x.inbox(address); }
+  @Get("inbox") inbox(@Query("address") address: H, @Headers("x-actor") a: H) { return this.x.inbox(address, a); }
 }

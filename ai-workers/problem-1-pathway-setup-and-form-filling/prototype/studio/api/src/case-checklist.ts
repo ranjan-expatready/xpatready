@@ -21,7 +21,6 @@ import { lineKeys, pickMember, setMet, setStatus, type SetStatus } from "../../e
 import { checkValue, knownOf } from "../../engine/runtime/case.ts";
 import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
 import { privateWords, Runtime, type Reached } from "./runtime.ts";
-import { privateFrom } from "../../engine/runtime/privacy.ts";
 import { releaseLabel } from "../../contracts/runtime.ts";
 
 type H = string | undefined;
@@ -136,7 +135,7 @@ export class CaseChecklists {
     const c = await this.r.reach(actor, row!.caseId, want);
     // C6.16 BR-7 (challenge M3): a client never uploads to, or reads the line of, a person kept private from them.
     const who = c.participants.find((p) => p.subjectId === row!.subjectId);
-    if (who && !(actor.duties as readonly string[]).includes("case") && privateFrom({ kind: "client" }, { subjectId: who.subjectId, role: who.role, keepPrivate: who.keepPrivate })) fail(privateWords(who.subject.label), HttpStatus.FORBIDDEN);
+    if (who && !(actor.duties as readonly string[]).includes("case") && this.r.hiddenFromClient(c, who.subjectId)) fail(privateWords(who.subject.label), HttpStatus.FORBIDDEN);
     const list = await this.stored(c);
     const person = list.derived ? list.people.find((p) => p.subject === row!.subjectId) : undefined;
     const shown = person?.lines.find((l) => l.id === id);

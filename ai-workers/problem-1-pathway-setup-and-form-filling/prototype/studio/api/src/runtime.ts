@@ -137,6 +137,19 @@ export class Runtime {
     return withClient(people, clientPersonOf(people, c.filingChanges.map((x) => ({ kind: x.kind as StoredChange["kind"], subject: x.subjectId, other: x.otherSubjectId, at: x.changedAt.toISOString() }))));
   }
 
+  /** C6.16 (review M1, C6.13): the case's client person: the principal, unless Make principal swapped roles (the client
+   *  stays the same person, `peopleOf(c)[].client`). "The principal" of BR-1 and BR-7 is this person. */
+  clientSubjectOf(c: Reached): string | null {
+    const people = this.peopleOf(c);
+    return people.find((x) => x.client === true)?.subjectId ?? people.find((x) => x.role === "principal")?.subjectId ?? null;
+  }
+  /** C6.16 BR-7: the participant (owner of a relative's key) whose stored setting hides them from the client, else null. */
+  hiddenFromClient(c: Reached, subjectId: string) {
+    const owner = ownerOf(subjectId), client = this.clientSubjectOf(c);
+    const p = c.participants.find((x) => x.subjectId === owner);
+    return p && privateFrom({ kind: "client" }, { subjectId: owner, role: p.role, keepPrivate: p.keepPrivate, isClient: owner === client }) ? p : null;
+  }
+
   /** B128 (QA-153): the relatives' answer subjects of this case (a parent a form describes, never a person on it), each
    *  with the key the engine reads it under (`<person>/parent_1`). A relative's subject hangs on the party of the person
    *  whose relative it is, as the application's own subject hangs on the principal's (AnswerSubject: no migration); one
@@ -421,7 +434,7 @@ export class Runtime {
   async clientView(c: Reached) {
     const s = this.snapshotOf(c), people = this.peopleOf(c), now = new Date();
     const st = await this.state(c);
-    const hidden = new Set(c.participants.filter((p) => privateFrom({ kind: "client" }, { subjectId: p.subjectId, role: p.role, keepPrivate: p.keepPrivate })).map((p) => p.subjectId));
+    const hidden = new Set(c.participants.filter((p) => this.hiddenFromClient(c, p.subjectId)).map((p) => p.subjectId));
     const opts = { background: this.backgroundOf(c) };
     if (!hidden.size) return { view: caseView(s, people, st.answers, st.rows, "sqr", now, st.groups, opts), private_people: [] };
     const full = caseView(s, people, st.answers, st.rows, "sqr", now, st.groups, opts);
@@ -482,8 +495,8 @@ export class Runtime {
     // B128, B155: a relative (`<person>/parent_1`, `<person>/sibling`) is that person's: the person's setting decides.
     const owner = ownerOf(subjectId);
     if (w.own !== null) { if (owner !== w.own) fail("Your link is for your own questions only.", HttpStatus.FORBIDDEN); return; }
-    const p = c.participants.find((x) => x.subjectId === owner);
-    if (p && privateFrom({ kind: "client" }, { subjectId: owner, role: p.role, keepPrivate: p.keepPrivate })) fail(privateWords(p.subject.label), HttpStatus.FORBIDDEN);
+    const p = this.hiddenFromClient(c, owner);
+    if (p) fail(privateWords(p.subject.label), HttpStatus.FORBIDDEN);
   }
 
   /** One answer saved by case staff, the client or an adult on their own link (Writer). */
@@ -541,6 +554,12 @@ export class Runtime {
     const stored = subjectId === who!.subjectId ? subjectId : (await this.subjectFor(c, subjectId, true, fieldKey)).stored!;
     try {
       await this.db.$transaction(async (tx) => {
+        // C6.16 (break m8): the setting is read again under a share lock, so a client's save that races the adult's first
+        // right code (which updates this row) is refused once privacy is on, never saved just after.
+        if (!officer && w.own === null) {
+          const owner = ownerOf(subjectId), [row] = await tx.$queryRaw<{ keep_private: boolean; label: string }[]>`SELECT p.keep_private, s.label FROM case_participant p JOIN answer_subject s ON s.id = p.subject_id WHERE p.subject_id = ${owner}::uuid FOR SHARE OF p`;
+          if (row?.keep_private && owner !== this.clientSubjectOf(c)) fail(privateWords(row.label), HttpStatus.FORBIDDEN);
+        }
         // The row stays live until this answer is saved: a removal at the same moment waits, or wins and this one is refused.
         if (rowKey) { const live = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM client_fact_record WHERE row_key = ${rowKey}::uuid AND subject_id = ${stored}::uuid AND group_key = ${groupKey} AND superseded_by_id IS NULL AND NOT tombstone FOR SHARE`; if (!live.length) fail("No such row for this person.", HttpStatus.NOT_FOUND); }
         const current = await tx.clientCanonicalAnswer.findFirst({ where: { subjectId: stored, canonicalFieldKey: fieldKey, rowKey, supersededById: null } });

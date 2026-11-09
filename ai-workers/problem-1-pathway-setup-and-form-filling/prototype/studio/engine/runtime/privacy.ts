@@ -8,7 +8,8 @@ import { ageOn } from "./case.ts";
 
 /** Who is looking: case staff, the case's client (the principal), or an adult on their own link. */
 export type Viewer = { kind: "staff" } | { kind: "client" } | { kind: "link"; subjectId: string };
-export type PrivacyPerson = { subjectId: string; role: string; keepPrivate: boolean };
+/** isClient: the case's client (the principal unless C6.13 Make principal swapped roles; the client stays the same person). */
+export type PrivacyPerson = { subjectId: string; role: string; keepPrivate: boolean; isClient: boolean };
 
 /** BR-2, BR-7, SA-1B-269 rules 2 and 10: whether this viewer may not read this person's values. Staff always read;
  *  the principal reads everyone's except a person whose stored setting is on; a link session reads its own person and
@@ -16,14 +17,17 @@ export type PrivacyPerson = { subjectId: string; role: string; keepPrivate: bool
 export function privateFrom(viewer: Viewer, p: PrivacyPerson): boolean {
   if (viewer.kind === "staff") return false;
   if (viewer.kind === "link") return p.subjectId !== viewer.subjectId && p.role !== "case";
-  return p.keepPrivate;
+  // Review M1 (C6.13): the client's own answers are never hidden from the client, whatever their role is now.
+  return p.keepPrivate && !p.isClient;
 }
 
 export type AdultCheck = { ok: true; age: number } | { ok: false; code: "principal" | "no_birth_date" | "minor"; why: string };
 /** BR-1 (AG07-D23): an adult on the case (18 or over today from their recorded date of birth; the age is Sample,
- *  Unconfirmed: no counsel) other than the principal and the application may get their own link or the staff tick. */
-export function adultCheck(p: { role: string; label: string }, birth: unknown, today: Date): AdultCheck {
-  if (p.role === "principal" || p.role === "case") return { ok: false, code: "principal", why: "The principal answers on their own family link." };
+ *  Unconfirmed: no counsel) other than the case's client and the application may get their own link or the staff tick.
+ *  "The principal" of BR-1 and BR-7 is the case's client person (review M1, C6.13): after Make principal the new
+ *  principal by role is an adult the client answers for, and may get their own link like any other adult. */
+export function adultCheck(p: { role: string; label: string; isClient: boolean }, birth: unknown, today: Date): AdultCheck {
+  if (p.isClient || p.role === "case") return { ok: false, code: "principal", why: p.role === "case" ? "The application is not a person." : `${p.label} answers on their own family link (they are the client on this case).` };
   const age = ageOn(birth, today);
   if (age === null) return { ok: false, code: "no_birth_date", why: `${p.label}'s date of birth is not answered yet (or is not a real past date): answer it first, then ${p.label} can get their own link.` };
   if (age < MINOR.underAge) return { ok: false, code: "minor", why: `${p.label} is under ${MINOR.underAge}: a child's answers stay with the family, so there is no own link and no privacy tick (the age is Sample; Unconfirmed: no counsel).` };
@@ -60,7 +64,7 @@ export function sendRefusal(i: { sender: "client" | "staff"; label: string; addr
 export type LinkRow = { sentAt: Date; expiresAt: Date; acceptedAt: Date | null; voidedAt: Date | null; voidWhy: string | null; newerSentAt?: Date | null };
 /** A link's state: what happened to it last (a dead link stays dead; expiry only counts while it is not voided). */
 export function linkState(l: LinkRow, now: Date): PersonLinkState["state"] {
-  if (l.voidedAt) return l.voidWhy === "taken_back" ? "taken_back" : l.voidWhy === "locked" ? "locked" : "superseded";
+  if (l.voidedAt) return l.voidWhy === "taken_back" ? "taken_back" : l.voidWhy === "locked" ? "locked" : l.voidWhy === "not_adult" ? "not_adult" : "superseded";
   if (l.expiresAt.getTime() <= now.getTime()) return "expired";
   return l.acceptedAt ? "accepted" : "sent";
 }
@@ -72,6 +76,7 @@ export function deadWords(l: LinkRow, now: Date): string | null {
     case "taken_back": return `This link was taken back on ${dayOf(l.voidedAt!)}. Ask whoever sent it for a new one.`;
     case "superseded": return `This link was replaced by a newer one${l.newerSentAt ? ` sent on ${dayOf(l.newerSentAt)}` : ""}. Use the newest email.`;
     case "locked": return LINK_WORDS.locked;
+    case "not_adult": return LINK_WORDS.notAdult;
     case "expired": return `This link expired on ${dayOf(l.expiresAt)}. Ask whoever sent it for a new one.`;
     default: return null;
   }
@@ -86,6 +91,24 @@ export function codeCheck(l: { codeHash: string | null; codeExpiresAt: Date | nu
 }
 /** The words for a wrong code: tries left, or the lock. */
 export const wrongWords = (wrongTries: number) => wrongTries >= LINK_RULES.wrongTries ? LINK_WORDS.locked : `That code is not right. You have ${LINK_RULES.wrongTries - wrongTries} ${LINK_RULES.wrongTries - wrongTries === 1 ? "try" : "tries"} left.`;
+/** Break m2: the server-wide count of code tries in the last minute, where each network address counts at most its own
+ *  limit, so one source that is already refused never fills the server's cap and locks every other adult out. */
+export const serverTries = (perNetwork: { address: string; tries: number }[]) => perNetwork.reduce((n, x) => n + Math.min(x.tries, LINK_RULES.triesPerNetwork), 0);
+
+/** Review m2: what the principal reads under "About <person>" about a link that no longer works. The principal sent it,
+ *  so these name what happened, never "ask whoever sent it". */
+export function principalLinkWords(state: PersonLinkState["state"], endedAt: Date | null, label: string): string | null {
+  const on = endedAt ? ` on ${dayOf(endedAt)}` : "";
+  switch (state) {
+    case "taken_back": return `The link was taken back${on}.`;
+    case "locked": return `${label}'s link stopped working after ${LINK_RULES.wrongTries} wrong codes${on}.`;
+    case "expired": return `${label}'s link expired${on}.`;
+    case "superseded": return "A newer link replaced it.";
+    case "not_adult": return `${label}'s link ended${on}: ${label} cannot have their own link (under ${MINOR.underAge} or no date of birth; Sample).`;
+    default: return null;
+  }
+}
+
 /** BR-4: the limits on sending codes (per email address, in the window) and on typing them (per network address and
  *  for the whole server, per minute). The words when over; null when within. */
 export function overLimit(k: { kind: "code_sent"; sentToAddress: number } | { kind: "code_try"; fromNetwork: number; onServer: number }): string | null {
@@ -114,7 +137,7 @@ export function officerWords(i: { label: string; principal: string; adult: boole
   const st = linkState(i.link, i.now);
   if (st === "accepted") return `With ${i.label} since ${dayOf(i.link.acceptedAt!)} · private from ${i.principal}${proven}`;
   if (st === "sent") return `Link sent ${dayOf(i.link.sentAt)} to ${i.link.masked} (address given by ${i.link.givenBy})${i.keepPrivate ? ` · private from ${i.principal}` : ` · answers by ${i.principal} until ${i.label} opens it`}`;
-  const what = st === "taken_back" ? `Taken back ${dayOf(i.link.voidedAt!)}` : st === "locked" ? `Locked after ${LINK_RULES.wrongTries} wrong codes` : st === "expired" ? `Link expired ${dayOf(i.link.expiresAt)}` : "Link replaced";
+  const what = st === "taken_back" ? `Taken back ${dayOf(i.link.voidedAt!)}` : st === "locked" ? `Locked after ${LINK_RULES.wrongTries} wrong codes` : st === "expired" ? `Link expired ${dayOf(i.link.expiresAt)}` : st === "not_adult" ? `Link ended ${dayOf(i.link.voidedAt!)}: not an adult now` : "Link replaced";
   return `${what}${i.keepPrivate ? ` · still private from ${i.principal}` : ` · answers by ${i.principal}`}${proven}`;
 }
 

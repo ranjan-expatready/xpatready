@@ -13,6 +13,21 @@ export const usePeoplePrivacy = (caseId: string | null) => useApi<PeoplePrivacy>
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const REFRESH = [["runtime"]];
+/** Review m4 (WCAG 2.4.3): a dialog that closes (Escape, Cancel, done) gives the focus back to the button that opened it. */
+function useReturnFocus() {
+  const opener = React.useRef<HTMLElement | null>(typeof document === "undefined" ? null : (document.activeElement as HTMLElement | null));
+  React.useEffect(() => () => { const el = opener.current; window.setTimeout(() => { if (el && document.contains(el)) el.focus(); }, 0); }, []);
+}
+/** BIC-13: "There is a problem" at the top of a dialog, with the same words as the field, linked to it. */
+function ProblemSummary({ error, focus }: { error: string | null; focus: () => void }) {
+  if (!error) return null;
+  return (
+    <div role="alert" className="mb-3 rounded-lg border-2 border-danger bg-surface-raised p-3">
+      <p className="text-sm font-semibold text-text-danger">There is a problem</p>
+      <button type="button" className="mt-1 text-left text-sm font-medium text-text-danger underline" onClick={focus}>{error}</button>
+    </div>
+  );
+}
 
 /** "4 of 7 parts done · last saved 9 Nov 14:10", counted on the server (challenge m3). */
 export function progressLine(p: ProgressOnly) {
@@ -36,6 +51,8 @@ export function PrivateProgress({ label, progress, children }: { label: string; 
 /** Send or resend: one dialog, at most three steps on one screen (address, what happens, Send). Without `address`
  *  the server resends to the newest link's address (for the principal after acceptance, the kept one). */
 function SendDialog({ caseId, person, mode, close }: { caseId: string; person: PersonPrivacy; mode: "send" | "new"; close: () => void }) {
+  useReturnFocus();
+  const field = React.useRef<HTMLInputElement>(null);
   const [address, setAddress] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const key = React.useMemo(() => crypto.randomUUID(), []); // one link per dialog, however often Send is pressed
@@ -45,7 +62,8 @@ function SendDialog({ caseId, person, mode, close }: { caseId: string; person: P
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={mode === "new" ? `Send to a new address for ${person.label}` : `Send to ${person.label}`} description={mode === "new" ? `${person.label} already answers on ${person.kept_masked}. A new address replaces it; the old link stops working.` : undefined}
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={send.isPending} onClick={submit}><Send aria-hidden />{mode === "new" ? "Send to the new address" : `Send to ${person.label}`}</Button></>}>
       <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); submit(); }} noValidate>
-        <Field label={`${person.label}'s email (required)`} hint="Sample addresses only in the prototype (name@example.com)." error={error}><Input type="email" autoComplete="off" value={address} onChange={(e) => { setAddress(e.target.value); setError(null); }} /></Field>
+        <ProblemSummary error={error} focus={() => field.current?.focus()} />
+        <Field label={`${person.label}'s email (required)`} hint="Sample addresses only in the prototype (name@example.com)." error={error}><Input ref={field} type="email" autoComplete="off" value={address} onChange={(e) => { setAddress(e.target.value); setError(null); }} /></Field>
         <p className="text-sm text-text-muted">{LINK_WORDS.dialog(person.label)}</p>
         <button type="submit" hidden />
       </form>
@@ -55,6 +73,7 @@ function SendDialog({ caseId, person, mode, close }: { caseId: string; person: P
 
 /** Take back, confirmed on the page (EXPERIENCE §2.8). Staff give a reason (kept in the history). */
 function TakeBackDialog({ caseId, person, staff, close }: { caseId: string; person: PersonPrivacy; staff: boolean; close: () => void }) {
+  useReturnFocus();
   const [reason, setReason] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const take = useAction(() => api(`/runtime/cases/${caseId}/people/${person.subject_id}/link`, { method: "DELETE", json: reason.trim() ? { reason } : {} }), { success: `${person.label}'s link was taken back.`, invalidate: REFRESH, onDone: close });
@@ -68,6 +87,7 @@ function TakeBackDialog({ caseId, person, staff, close }: { caseId: string; pers
 
 /** The staff tick "Keep private from the principal" (AG-7-107, Q71), with a reason; it stays on (P-412). */
 function TickDialog({ caseId, person, principal, close }: { caseId: string; person: PersonPrivacy; principal: string; close: () => void }) {
+  useReturnFocus();
   const [reason, setReason] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const tick = useAction(() => api(`/runtime/cases/${caseId}/people/${person.subject_id}/private`, { method: "PUT", json: { reason } }), { success: `${person.label}'s answers are now private from ${principal}.`, invalidate: REFRESH, onDone: close });
@@ -89,7 +109,7 @@ export function PrincipalPersonLine({ caseId, person }: { caseId: string; person
   const [dialog, setDialog] = React.useState<"send" | "take" | null>(null);
   const resend = useResend(caseId, person);
   const l = person.link, live = person.can.take_back;
-  if (person.role === "principal") return null;
+  if (person.is_client) return null; // review M1: the case's client, whatever their role after Make principal
   if (!person.adult) return person.why_not && /date of birth/.test(person.why_not) ? <p className="mb-2 text-[13px] text-text-muted">{person.why_not}</p> : null;
   // Resend goes to the newest address (the kept one once accepted); another address only before acceptance (BR-3).
   const actions = (
@@ -102,7 +122,7 @@ export function PrincipalPersonLine({ caseId, person }: { caseId: string; person
   let body: React.ReactNode;
   if (person.private.on && person.progress) body = (
     <PrivateProgress label={person.label} progress={person.progress}>
-      {l?.why ? <p className="mt-2 text-[13px] text-text-muted">{l.state === "taken_back" ? "The link was taken back" : "Their link no longer works"}. You can resend it to {person.kept_masked ?? l.email_masked}, or ask the firm.</p> : null}
+      {l?.principal_words ? <p className="mt-2 text-[13px] text-text-muted">{l.principal_words} You can resend it to {person.kept_masked ?? l.email_masked}, or ask the firm.</p> : null}
       {actions}
     </PrivateProgress>
   );
@@ -115,9 +135,9 @@ export function PrincipalPersonLine({ caseId, person }: { caseId: string; person
   );
   else body = (
     <div className="flex flex-wrap items-center gap-2" data-send-to>
-      <Button size="sm" variant="secondary" className="h-10" onClick={() => setDialog("send")}><Send aria-hidden />Send to {person.label}…</Button>
+      <Button size="sm" variant="secondary" className="h-auto min-h-10 max-w-full whitespace-normal py-2 text-left [overflow-wrap:anywhere]" onClick={() => setDialog("send")}><Send aria-hidden />Send to {person.label}…</Button>
       <TipProvider><Tip focusable tip={LINK_WORDS.dialogTip}><span className="inline-flex items-center gap-1 rounded text-[13px] text-text-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Info className="size-4" aria-hidden />{person.label} answers their own questions</span></Tip></TipProvider>
-      {l ? <p className="w-full text-[13px] text-text-muted">{l.why ?? ""}</p> : null}
+      {l?.principal_words ? <p className="w-full text-[13px] text-text-muted" data-link-ended>{l.principal_words}</p> : null}
     </div>
   );
   return (
@@ -144,10 +164,12 @@ export function OfficerPeoplePanel({ caseId }: { caseId: string }) {
         <Table dense label="Who answers for each person" head={["Person", "Answers", "Progress", ""]}>
           {q.data!.people.map((p) => (
             <tr key={p.subject_id} data-person={p.subject_id}>
-              <td className="px-3 py-2 align-top"><span className="font-medium [overflow-wrap:anywhere]">{p.label}</span><span className="block text-xs text-text-muted">{p.role === "principal" ? "Principal applicant · their own family link" : p.role.replace(/_/g, " ")}</span></td>
+              <td className="px-3 py-2 align-top"><span className="font-medium [overflow-wrap:anywhere]">{p.label}</span><span className="block text-xs text-text-muted">{p.role.replace(/_/g, " ")}{p.is_client ? " · the client: their own family link" : ""}</span></td>
               <td className="px-3 py-2 align-top text-[13px]">
-                {p.private.on ? <Pill tone="info" title={`${p.private.why ?? ""} (${p.private.by ?? ""}, ${p.private.at ? day(p.private.at) : ""})`}><Lock className="size-3" aria-hidden />Private from {q.data!.principal}</Pill> : null}
-                <span className="mt-0.5 block">{p.role === "principal" ? "Answers for the family" : p.words}</span>
+                {p.private.on ? <Pill tone="info"><Lock className="size-3" aria-hidden />Private from {q.data!.principal}</Pill> : null}
+                {/* BIC-14: the reason is visible, not only in a tooltip (staff only: the client's API never carries it). */}
+                {p.private.on && p.private.why ? <span className="mt-0.5 block text-xs text-text-muted" data-private-why>Since {p.private.at ? day(p.private.at) : "—"} · {p.private.by ?? "—"}: {p.private.why}</span> : null}
+                <span className="mt-0.5 block">{p.is_client ? "Answers for the family" : p.words}</span>
                 {!p.adult && p.role !== "principal" ? <span className="block text-xs text-text-muted">{p.why_not}</span> : null}
                 {p.link?.why ? <span className="block text-xs text-text-muted">{p.link.why}</span> : null}
               </td>

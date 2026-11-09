@@ -445,7 +445,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
       </div>
       {people.map(([id, label]) => (
         <section key={id} aria-labelledby={`p-${id}`}>
-          <h2 id={`p-${id}`} className="mb-2 text-base font-semibold [overflow-wrap:anywhere]">{link && !id.includes("/") ? "About you" : `About ${inSentence(label)}`}</h2>
+          <h2 id={`p-${id}`} className="mb-2 text-base font-semibold [overflow-wrap:anywhere]">{link ? (id.includes("/") ? `About ${label.replace(/^.*?['’]s /, "your ")}` : "About you") : `About ${inSentence(label)}`}</h2>
           {link ? null : <div className="mb-2"><HouseholdReads view={view} subjectId={id} words={{ who: WHO, when, shown }} /></div>}
           {!link && lineOf(id) ? <PrincipalPersonLine caseId={view.case.id} person={lineOf(id)!} /> : null}
           {priv.some((p) => p.subject_id === id) ? (lineOf(id) ? null : <PrivateProgress label={label} progress={priv.find((p) => p.subject_id === id)!.progress} />) : (

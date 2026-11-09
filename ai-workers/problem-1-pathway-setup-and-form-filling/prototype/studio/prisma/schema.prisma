@@ -2377,7 +2377,8 @@ model FormEditionAcceptedUntil {
 
 /// C6.16 (B138): a link sent to one adult on a case, so they answer on their own (concept BR-3, BR-4). The token (32
 /// random bytes, in the link's fragment) and the 6-digit code are kept only as sha256. At most one link per person is
-/// not dead (a partial unique index in SQL). void_why: taken_back · superseded · locked (a check in SQL).
+/// not dead, and one address per case among working links (partial unique indexes in SQL). void_why: taken_back ·
+/// superseded · locked · not_adult (a check in SQL).
 model PersonLink {
   id             String    @id @default(uuid()) @db.Uuid
   workspaceId    String    @map("workspace_id") @db.Uuid

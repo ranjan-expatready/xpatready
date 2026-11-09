@@ -6,7 +6,8 @@
 --     principal". On at the adult's first right code or a staff tick with a reason; it stays on (M3 has no untick, Q1):
 --     a trigger refuses true -> false. Every client-route filter reads this column, never an age.
 --   * person_link: a link sent to one adult's address (32-byte token and 6-digit code, both kept only as sha256),
---     who gave the address, 14 days, wrong tries, accepted, consent, and why it died (taken back, superseded, locked).
+--     who gave the address, 14 days, wrong tries, accepted, consent, and why it died (taken back, superseded, locked, or
+--     not_adult: the person is no longer an adult on the case when the link is used, break M2).
 --     At most one link per person is not dead (a partial unique index), so two sends at the same moment cannot leave
 --     two working links.
 --   * person_link_try: code sends and code tries, for the per-address and per-server limits (as extension_code_try).
@@ -63,13 +64,15 @@ CREATE TABLE "person_link" (
 CREATE UNIQUE INDEX "person_link_token_hash_key" ON "person_link"("token_hash");
 -- One link per person that has not died (a resend supersedes the old one in the same transaction).
 CREATE UNIQUE INDEX "person_link_one_open" ON "person_link"("subject_id") WHERE "voided_at" IS NULL;
+-- Two people on one case never hold one address in working links (break m1; the send also locks the case row).
+CREATE UNIQUE INDEX "person_link_one_address_open" ON "person_link"("case_id", "address") WHERE "voided_at" IS NULL;
 CREATE INDEX "person_link_case_id_idx" ON "person_link"("case_id");
 -- The same Send pressed twice (one key) sends once.
 CREATE UNIQUE INDEX "person_link_case_id_send_key_key" ON "person_link"("case_id", "send_key");
 ALTER TABLE "person_link" ADD CONSTRAINT "person_link_case_id_fkey" FOREIGN KEY ("case_id") REFERENCES "runtime_case"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "person_link" ADD CONSTRAINT "person_link_subject_id_fkey" FOREIGN KEY ("subject_id") REFERENCES "answer_subject"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "person_link" ADD CONSTRAINT "person_link_superseded_by_id_fkey" FOREIGN KEY ("superseded_by_id") REFERENCES "person_link"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "person_link" ADD CONSTRAINT "person_link_void_why_check" CHECK ("void_why" IS NULL OR "void_why" IN ('taken_back', 'superseded', 'locked'));
+ALTER TABLE "person_link" ADD CONSTRAINT "person_link_void_why_check" CHECK ("void_why" IS NULL OR "void_why" IN ('taken_back', 'superseded', 'locked', 'not_adult'));
 ALTER TABLE "person_link" ADD CONSTRAINT "person_link_voided_check" CHECK (("voided_at" IS NULL) = ("void_why" IS NULL));
 ALTER TABLE "person_link" ADD CONSTRAINT "person_link_code_check" CHECK (("code_hash" IS NULL) = ("code_expires_at" IS NULL));
 ALTER TABLE "person_link" ADD CONSTRAINT "person_link_wrong_tries_check" CHECK ("wrong_tries" BETWEEN 0 AND 5);
