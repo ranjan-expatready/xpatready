@@ -22,8 +22,8 @@ type Kind = "key" | "program" | "form" | "slice";
  *  "reader content" (text read from an IRCC page, no branch) names no row. */
 type EntryKind = Kind | "fixture";
 type Hit = { file: string; line: number; kind: Kind; text: string };
-type Entry = { guard: string; file: string; kind: EntryKind; text: string; row: string };
-type Token = { kind: "str" | "id"; text: string; line: number };
+type Entry = { guard: string; file: string; kind: EntryKind; text: string; row: string; count?: number };
+type Token = { kind: "str" | "id" | "re"; text: string; line: number };
 
 /** The only entries allowed (P-425's three guards), each naming the row that removes it. Remove an entry in that row's
  *  PR; never add one. */
@@ -45,15 +45,15 @@ const ALLOW: Entry[] = [
   {"guard": "G3 checklist not derived", "file": "api/src/case-stages.ts", "kind": "slice", "text": " its release asks for (the per-person checklist is not worked out yet for this combination)", "row": "M3-S4"},
   {"guard": "M3-S5 answer sheet for online-only forms", "file": "api/src/fill-case.ts", "kind": "program", "text": "Express Entry: the answer sheet only, no PDF copy.", "row": "M3-S5"},
   {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5257 SCH1", "row": "BK-10"},
-  {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5409", "row": "BK-10"},
-  {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5476", "row": "BK-10"},
-  {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5475", "row": "BK-10"},
-  {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IRM 0002", "row": "BK-10"},
+  {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5409", "row": "BK-10", "count": 3},
+  {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5476", "row": "BK-10", "count": 4},
+  {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5475", "row": "BK-10", "count": 4},
+  {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IRM 0002", "row": "BK-10", "count": 2},
   {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "program", "text": "Guide 5256, Question 3: \"If you choose a gender identifier that is different than what you currently have or have had on your Canadian temporary resident document (visa, electronic travel authorization, work permit, study permit or visitor record), you need to complete the Request for a Change of Sex or Gender Identifier (IRM 0002) form and send it with your application.\" and \"You also need to complete this form and send it with your application if you’ve never had a Canadian temporary resident document but you intend to apply for one and you identify with a gender that is different than what appears on your foreign travel document or passport.\"", "row": "BK-10"},
-  {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5707", "row": "BK-10"},
-  {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5645", "row": "BK-10"},
+  {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5707", "row": "BK-10", "count": 2},
+  {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5645", "row": "BK-10", "count": 2},
   {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "program", "text": "canada.ca \"Family Information (IMM 5645)\", Who needs to complete this form? (official-sources/ircc/web-pages/page-imm5645.html, saved 19 Oct 2026): \"This form must be completed by each person, 18 years of age or older, applying for a Temporary Resident Visa, a study or work permit outside Canada.\"; canada.ca \"Apply for a visitor visa\" (official-sources/ircc/canada/pages/visit-canada-apply-visitor-visa.html, modified 2026-08-28, saved 27 Oct 2026): \"Your document checklist may include supporting documents such as the following: Family Information (IMM 5645) form\"; Guide 5256: \"This form must be completed by each person, 18 years of age or older\"", "row": "BK-10"},
-  {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5646", "row": "BK-10"},
+  {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5646", "row": "BK-10", "count": 2},
   {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "guide-5487", "row": "BK-10"},
   {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "program", "text": "Guide 5487, applying for a work permit from outside Canada", "row": "BK-10"},
   {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "program", "text": ", p. 1, documents list item 1: \"Proof of Payment, if applicable\" / \"Note: If you are applying for an open work permit, provide proof of payment for the open work permit holder fee.\" (Sample, Unconfirmed: expert)", "row": "BK-10"},
@@ -78,8 +78,27 @@ const ALLOW: Entry[] = [
 ];
 // ALLOW-END
 
-/** The code's strings (a template's text between its ${…} parts, each part on its own) and names, comments and regular
- *  expressions left out. Enough of TypeScript for a scan: a `/` after a value is division, anywhere else a regex. */
+/** One escape read as the character it stands for ("\\u0049" is "I"), so an escaped key is still a key. */
+function unescape(src: string, j: number): [string, number] {
+  const e = src[j + 1];
+  if (e === "u" && src[j + 2] === "{") { const k = src.indexOf("}", j); return [String.fromCodePoint(parseInt(src.slice(j + 3, k), 16) || 0), k + 1]; }
+  if (e === "u") return [String.fromCharCode(parseInt(src.slice(j + 2, j + 6), 16) || 0), j + 6];
+  if (e === "x") return [String.fromCharCode(parseInt(src.slice(j + 2, j + 4), 16) || 0), j + 4];
+  return [({ n: "\n", t: "\t", r: "\r" } as Record<string, string>)[e] ?? e, j + 2];
+}
+/** Where a ${…} part that starts at `j` ends (just after its `}`), its strings and nested templates skipped whole. */
+function partEnd(src: string, j: number): number {
+  let depth = 1;
+  while (j < src.length && depth) {
+    const c = src[j];
+    if (c === '"' || c === "'" || c === "`") { j++; while (j < src.length && src[j] !== c) { if (src[j] === "\\") j++; else if (c === "`" && src[j] === "$" && src[j + 1] === "{") { j = partEnd(src, j + 2); continue; } j++; } j++; continue; }
+    if (c === "{") depth++; else if (c === "}") depth--;
+    j++;
+  }
+  return j;
+}
+/** The code's strings (a template's text between its ${…} parts, each part on its own), names and regular expressions'
+ *  bodies, comments left out. Enough of TypeScript for a scan: a `/` after a value is division, anywhere else a regex. */
 export function tokens(src: string): Token[] {
   const out: Token[] = [];
   let i = 0, line = 1, prev = "";
@@ -91,18 +110,17 @@ export function tokens(src: string): Token[] {
     if (c === "/" && d === "*") { i += 2; while (i < n && !(src[i] === "*" && src[i + 1] === "/")) { if (src[i] === "\n") line++; i++; } i += 2; continue; }
     if (c === '"' || c === "'") {
       const at = line; let j = i + 1, s = "";
-      while (j < n && src[j] !== c && src[j] !== "\n") { if (src[j] === "\\") { s += src[j + 1]; j += 2; continue; } s += src[j++]; }
+      while (j < n && src[j] !== c && src[j] !== "\n") { if (src[j] === "\\") { const [ch, k] = unescape(src, j); s += ch; j = k; continue; } s += src[j++]; }
       out.push({ kind: "str", text: s, line: at }); i = j + 1; prev = "v"; continue;
     }
     if (c === "`") {
       let at = line, j = i + 1, s = "";
       while (j < n && src[j] !== "`") {
-        if (src[j] === "\\") { s += src[j + 1]; j += 2; continue; }
+        if (src[j] === "\\") { const [ch, k] = unescape(src, j); s += ch; j = k; continue; }
         if (src[j] === "$" && src[j + 1] === "{") {
           out.push({ kind: "str", text: s, line: at }); s = ""; j += 2;
           // The ${…} part is code: scanned on its own (its strings and names count too).
-          let depth = 1; const from = j;
-          while (j < n && depth) { if (src[j] === "{") depth++; else if (src[j] === "}") depth--; j++; }
+          const from = j; j = partEnd(src, j);
           for (const t of tokens(src.slice(from, j - 1))) out.push({ ...t, line: line + t.line - 1 });
           line += (src.slice(from, j).match(/\n/g) ?? []).length; at = line; continue;
         }
@@ -114,7 +132,7 @@ export function tokens(src: string): Token[] {
     if (c === "/" && !/[\w)\]$]/.test(prev)) {
       let j = i + 1, inClass = false;
       while (j < n && src[j] !== "\n") { if (src[j] === "\\") { j += 2; continue; } if (src[j] === "[") inClass = true; else if (src[j] === "]") inClass = false; else if (src[j] === "/" && !inClass) break; j++; }
-      i = j + 1; while (i < n && /[a-z]/.test(src[i])) i++; prev = "v"; continue;
+      out.push({ kind: "re", text: src.slice(i + 1, j), line }); i = j + 1; while (i < n && /[a-z]/.test(src[i])) i++; prev = "v"; continue;
     }
     if (/[A-Za-z_$]/.test(c)) {
       let j = i; while (j < n && /[\w$]/.test(src[j])) j++;
@@ -150,7 +168,9 @@ const FILE_ENDINGS = new Set(["json", "ts", "tsx", "js", "mjs", "cjs", "pdf", "m
 const PROGRAM = /visitor|study.?permit|work.?permit|super.?visa|express.?entry|caregiver|refugee|start.?up.?visa|working.?holiday|post.?graduation|family.?sponsorship|provincial.?nomin/i;
 /** A form or guide number as a whole string ("IMM 5257", "IMM 5257 SCH1", "IRM 0002", "Guide 5256"): what code compares
  *  a form against or keys a table by. A number inside words (a citation, "a form number looks like IMM 5257") is text. */
-const FORM = /^\s*((IMM|IRM|CIT|EMP)[ _-]?\d{4}[A-Z]?( ?(SCH|SCHEDULE|DEP) ?[0-9A-Z]*)?|guide[ _-]?\d{4})\s*$/i;
+const FORM = /^\s*((IMM|IRM|CIT|EMP)[ _-]?\d{4}(?!\d)[A-Z0-9]*( ?(SCH|SCHEDULE|DEP) ?[0-9A-Z]*)?|guide[ _-]?\d{4}(?!\d)[a-z]?)(\.[a-z]{2,4})?\s*$/i;
+/** A form number written into a regular expression with its digits ("/IMM ?5257/"); a pattern for any form ("\\d{4}") is not one. */
+const FORM_IN_RE = /(IMM|IRM|CIT|EMP)[^A-Za-z0-9]{0,6}\d{4}/i;
 /** IRCC's own name (and its URL path) names no program. */
 const DEPARTMENT = /immigration,? refugees,? and citizenship|immigration-refugees-citizenship/gi;
 /** The words of a guard that holds a capability to the combinations worked out so far (P-425's three guards). A refusal
@@ -171,13 +191,25 @@ export function keyLike(s: string, known: Set<string>): boolean {
   return /^[a-z]{2,5}\.[a-z][a-z0-9_]*$/.test(s) && !NOT_KEYS.has(head) && !FILE_ENDINGS.has(rest[0]);
 }
 
+/** A combination's program code on its own ("vv", "sp", "pnp": two or three letters, from the data), the way a branch
+ *  reads it from a key: `key.split(".")[0] === "sp"`, `key.startsWith("vv")`. Longer first parts ("study", "work",
+ *  "lmia") are ordinary words. */
+export const codesOf = (known: Set<string>) => new Set([...known].map((k) => k.split(".")[0]).filter((h) => /^[a-z]{2,3}$/.test(h)));
+/** A regular expression that names a key ("/vv\\.single/") or a program code before a dot ("/^vv\\./"). */
+export function keyInRe(body: string, known: Set<string>): boolean {
+  const plain = body.replace(/\\(.)/g, "$1");
+  if ([...known].some((k) => k.includes(".") && plain.includes(k))) return true;
+  return [...codesOf(known)].some((c) => new RegExp(`(^|[^a-z0-9_])${c}\\.`).test(plain));
+}
+
 export function scan(files: { file: string; src: string }[], known: Set<string>): Hit[] {
   const hits: Hit[] = [];
+  const codes = codesOf(known);
   for (const { file, src } of files) for (const t of tokens(src)) {
     const at = { file, line: t.line, text: t.text };
-    if (t.kind === "str" && keyLike(t.text, known)) hits.push({ ...at, kind: "key" });
+    if ((t.kind === "str" && (keyLike(t.text, known) || codes.has(t.text))) || (t.kind === "re" && keyInRe(t.text, known))) hits.push({ ...at, kind: "key" });
     else if (PROGRAM.test(t.text.replace(DEPARTMENT, ""))) hits.push({ ...at, kind: "program" });
-    else if (t.kind === "str" && FORM.test(t.text)) hits.push({ ...at, kind: "form" });
+    else if ((t.kind === "str" && FORM.test(t.text)) || (t.kind === "re" && FORM_IN_RE.test(t.text))) hits.push({ ...at, kind: "form" });
     else if (t.kind === "str" && SLICE.test(t.text)) hits.push({ ...at, kind: "slice" });
   }
   return hits;
@@ -188,11 +220,13 @@ const same = (a: { file: string; kind: string; text: string }, b: { file: string
  *  its guard, so the list follows the code down). */
 export function judge(hits: Hit[], entries: Entry[], files: string[] = []) {
   const lines = entries.filter((e) => e.kind !== "fixture");
-  return { unexpected: hits.filter((h) => !lines.some((e) => same(e, h))),
-    stale: [...lines.filter((e) => !hits.some((h) => same(e, h))), ...entries.filter((e) => e.kind === "fixture" && !files.some((f) => fixtureOf(f, [e])))] };
+  const unexpected: Hit[] = [], seen = new Map<Entry, number>();
+  // Review M1: an entry allows its text exactly `count` times (default 1), so a second copy of an allowed key fails.
+  for (const h of hits) { const e = lines.find((x) => same(x, h)); const n = e ? (seen.get(e) ?? 0) + 1 : 0; if (e) seen.set(e, n); if (!e || n > (e.count ?? 1)) unexpected.push(h); }
+  return { unexpected, stale: [...lines.filter((e) => (seen.get(e) ?? 0) < (e.count ?? 1)), ...entries.filter((e) => e.kind === "fixture" && !files.some((f) => fixtureOf(f, [e])))] };
 }
-/** Shrink-only: the entries `next` adds over `base`. */
-export const added = (base: Entry[], next: Entry[]) => next.filter((e) => !base.some((b) => same(b, e)));
+/** Shrink-only: the entries `next` adds over `base`, allows more often, or moves to another row (review m2). */
+export const added = (base: Entry[], next: Entry[]) => next.filter((e) => { const b = base.find((x) => same(x, e)); return !b || (e.count ?? 1) > (b.count ?? 1) || e.row !== b.row; });
 
 /** The rows that remove an entry: M3-S1 to M3-S5 (P-425) and the Bake's BK rows (P-452). */
 const ROW = /^(M3-S[1-5]|BK-\d+)$/;
@@ -227,7 +261,13 @@ try { baseText = execFileSync("git", ["show", `origin/main:./${SELF}`], { cwd: R
 if (baseText !== null) {
   const base = allowOf(baseText);
   ok(`pass: nothing added over origin/main's allow-list (${base?.length ?? "unreadable"} there, ${entries.length} here)`, !!base && added(base, entries).length === 0, base ? added(base, entries) : "origin/main's ALLOW block does not read");
-} else console.log("NOTE  B164: origin/main has no copy of this suite yet (this PR adds it) or there is no origin/main here: nothing to compare with yet");
+} else {
+  // Review m1: only "origin/main has no copy yet" is a reason to skip; on GitHub a missing origin/main is a failure.
+  let hasMain = false;
+  try { execFileSync("git", ["rev-parse", "--verify", "-q", "origin/main"], { cwd: ROOT, stdio: "ignore" }); hasMain = true; } catch { hasMain = false; }
+  if (hasMain || !process.env.GITHUB_ACTIONS) console.log(`NOTE  B164: ${hasMain ? "origin/main has no copy of this suite yet (this PR adds it)" : "no origin/main in this copy"}: nothing to compare with yet`);
+  else ok("pass: origin/main is there to compare the allow-list with (CI fetches it)", false);
+}
 ok("fail: an entry added over the base is named", added(entries, [...entries, { guard: "G4", file: "engine/runtime/new.ts", kind: "key", text: "sp.outside", row: "M3-S1" }]).length === 1);
 ok("fail: an entry nothing matches is stale", judge([], entries.slice(0, 1)).stale.length === 1);
 
@@ -245,6 +285,16 @@ const cases: [string, string, Kind][] = [
   ["a form number in a branch", `if (form === "IMM 5257") skip();`, "form"],
   ["a guide number", `const g = "Guide 5709";`, "form"],
   ["a form number with its schedule", `if (f === "IMM 0008 SCH4A") x();`, "form"],
+  // Review on 7b4452f85, M2 and M3: a branch not written as a dotted string, and IRCC's suffixes.
+  ["a key in a regular expression", "const vv = (k: string) => /^vv\\./.test(k);", "key"],
+  ["a full key in a regular expression", "const a = /sp\\.outside/.test(k);", "key"],
+  ["a program code read from a key", `const sp = key.split(".")[0] === "sp";`, "key"],
+  ["a program code as a prefix", `if (key.startsWith("pnp")) go();`, "key"],
+  ["a form number with IRCC's suffix", `if (f === "IMM5257E") go();`, "form"],
+  ["a form's file name", `const f = "imm5257e.pdf";`, "form"],
+  ["a form number in a regular expression", "const r = /IMM ?5257/;", "form"],
+  ["an escaped key", `const k = "\\u0076v.single";`, "key"],
+  ["a key after a brace inside a template's string", "const w = `${x === \"}\" ? \"a\" : \"b\"}`; const k = \"wp.family\";", "key"],
   ["a slice guard's words", `return { why: "Signing is not derived yet for this combination." };`, "slice"],
 ];
 for (const [what, src, kind] of cases) ok(`fail: ${what} is caught (${src})`, caught(src, kind).length === 1, scan([{ file: "x.ts", src }], known));
@@ -255,13 +305,17 @@ ok("fail: a fixture covers only its own files: a new API file beside them is rea
 ok("fail: a fixture no file matches is stale", judge([], [{ guard: "fixture", file: "api/src/gone.ts", kind: "fixture", text: "x".repeat(30), row: "BK-12" }], all).stale.length === 1);
 ok("fail: an entry with no row is refused unless it is reader content", !named({ guard: "G9", file: "api/src/x.ts", kind: "key", text: "sp.outside", row: "" }) && !named({ guard: "reader content", file: "api/src/x.ts", kind: "fixture", text: "x".repeat(30), row: "" }));
 
+ok("fail: an allowed text a second time in its file is caught (review M1: each entry allows its count)", caughtIn("engine/filing-modes.ts", `const again = (k: string) => (k === "vv.single" ? "own" : "shared");`).length === 1);
+ok("fail: an entry that allows more often than origin/main's, or names another row, is added (review M1, m2)", added([{ guard: "g", file: "f", kind: "key", text: "t", row: "M3-S1" }], [{ guard: "g", file: "f", kind: "key", text: "t", row: "M3-S1", count: 2 }]).length === 1 && added([{ guard: "g", file: "f", kind: "key", text: "t", row: "M3-S1" }], [{ guard: "g", file: "f", kind: "key", text: "t", row: "BK-10" }]).length === 1);
+ok("fail: an entry allowing two copies when one is left is stale", judge([{ file: "f", line: 1, kind: "key", text: "t" }], [{ guard: "g", file: "f", kind: "key", text: "t", row: "M3-S1", count: 2 }]).stale.length === 1);
+
 // pass: what is not a key, a program or a guard is left alone.
 const clean = [
   `// A comment may say vv.single, Visitor visa, IMM 5257 and "not derived yet for this combination".`,
   `/* sp.outside, Study permit */ const a = 1;`,
   `const fact = "person.date_of_birth", c = "case.application_date", f = "expected.people", h = "holder.spouse";`,
   `const host = "www.canada.ca", file = "manifest.json", e = "exempt.under_age";`,
-  `const re = /IMM 5257|vv\\.single/; const n = a / b / c;`,
+  `const re = /\\b(IMM|IRM) ?\\d{4}\\b/; const n = a / b / c;`,
   `const r = { role: "spouse_or_partner", words: "Changing the principal is not worked out yet for " };`,
   `export function imm5476() { return "IMM form number"; }`,
   `const w = "That is not a form number: a form number looks like IMM 5257.";`,
