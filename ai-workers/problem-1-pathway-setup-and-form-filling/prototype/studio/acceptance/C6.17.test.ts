@@ -25,8 +25,9 @@ type Line = { id: string; label: string; quote: string | null; state: string; do
 type Checklist = { derived: boolean; why?: string; people?: { subject: string; lines: Line[]; waiting: Line[]; not_needed: Line[] }[] };
 const checklistOf = async (id: string) => (await call("GET", `/runtime/cases/${id}/checklist`)).body as Checklist;
 const allLines = (c: Checklist) => (c.people ?? []).flatMap((x) => [...x.lines, ...x.waiting, ...x.not_needed]);
-/** AGENTS rule 4, P-170: a line's quote names its source with a page and a date, or says it is Sample. */
-const sourced = (l: Line) => /^Sample\b/.test(l.quote ?? "") || (/\bp\. \d+/.test(l.quote ?? "") && /\b\d{4}-\d{2}-\d{2}\b/.test(l.quote ?? ""));
+/** AGENTS rule 4, P-170: a line's quote names its source with a page and a date, or says it is Sample and names the
+ *  form or guide it came from (review m3: a bare "Sample" is not enough). */
+const sourced = (l: Line) => (/^Sample\b/.test(l.quote ?? "") && /\bfrom (IMM|Guide) \d{4}\b/.test(l.quote ?? "")) || (/\bp\. \d+/.test(l.quote ?? "") && /\b\d{4}-\d{2}-\d{2}\b/.test(l.quote ?? ""));
 /** C6.4's upload, as a person's browser sends it (multipart, one file). A Sample PDF; never a real document. */
 const upload = async (lineId: string, name: string) => {
   const fd = new FormData(); fd.append("file", new Blob([new TextEncoder().encode(`%PDF-1.4\n% Sample synthetic document ${name}\n`)]), name);

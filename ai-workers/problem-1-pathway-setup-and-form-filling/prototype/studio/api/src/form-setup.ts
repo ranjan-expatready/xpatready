@@ -116,7 +116,7 @@ export const LMIA_DOCUMENT_SOURCES: SourcedDocuments = {
   checklist: IMM5556,
   cited: {
     "Proof of fee payment (processing fee and other applicable fees receipt)":
-      `${IMM5556}, p. 1, documents list item 1: "Proof of Payment, if applicable. Note: If you are applying for an open work permit, provide proof of payment for the open work permit holder fee." (Sample, Unconfirmed: expert)`,
+      `${IMM5556}, p. 1, documents list item 1: "Proof of Payment, if applicable" / "Note: If you are applying for an open work permit, provide proof of payment for the open work permit holder fee." (Sample, Unconfirmed: expert)`,
     "Passport or travel document information page photocopy":
       `${IMM5556}, p. 1, documents list item 2: "PHOTOCOPIES of passport pages clearly showing each of the following: the passport number; the dates of issue and expiry; your name and date of birth; the stamp made by the Canadian authorities on your most recent entry into Canada; and any other marked page." (Sample, Unconfirmed: expert)`,
     "Marriage certificate or licence (photocopy)":
