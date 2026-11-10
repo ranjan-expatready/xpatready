@@ -24,7 +24,7 @@ Terminal tabs c6 (caffeinate 4 h, from 15:2x) and c7 (open) are Lead 8's; leave 
 ## Tonight (P-451, from 22:0x IST 10 Nov)
 | Lane | Session | Row | Next |
 |---|---|---|---|
-| pipeline | local_8494de44 `pipeline-ci-speed` | measure → 8 shards + suite-times (P-436 (7)) → (4a) | Lead reads `.github/` diffs before labelling (P-423) |
+| pipeline | local_8494de44 `pipeline-ci-speed` | measured (3,855 runs: batch median 43.7 min, p90 55.3; 139 of 400 suites had no timing); **#1502** 8 shards (sim: batch ~44 → ~34 min, +2% machine minutes, free runners) → (4a) next | **Founder: repo variable SHARDS=6 overrides; Lead's change to 8 refused by the classifier 22:5x IST: ask the founder to run `gh variable set SHARDS --body 8` or say "set SHARDS 8"**; Lead reads the diff before labelling (P-423) |
 | runtime | local_32caa215 `runtime-engine-core` | B164 → M3-S1 (warm) | sole holder of schema / case-prepare tonight |
 | Lead | this session | **Bake plan draft done** (`design/bake-plan-2026-11-10.md`, 40 + 15 sessions, exits E1-E4, ~24 Nov); morning: ask its 4 questions one at a time, Q1 first (pace: 3 lanes on plan, recommended) | hourly report IST; trip-wire 75% weekly; caffeinate tab c4 14 h |
 
