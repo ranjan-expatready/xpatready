@@ -173,6 +173,33 @@ await main("C7.8", "Add a library form to one filing", async () => {
   const asOther = await call("GET", `/runtime/filings/${fP}/addable-forms`, undefined, FIRM_READERS.solo);
   ok("C7.8-12 fail: a client 403, a configuration person 403, another firm 404", asClient.status === 403 && asAuthor.status === 403 && asOther.status === 404, [asClient.status, asAuthor.status, asOther.status]);
 
+  // 19 (QA-355, tech lead's ruling on #1446): release forms unchanged by an add. On a case whose facts are all answered,
+  // every form that fills is added and then removed: every release form's lines for that person (written, to fix, what it still
+  // needs, its open fields) are the same before the add, after it and after removing it; and the added form's own copy
+  // asks no fix of an answer the release's forms accept (a map note such as "codes as listed in the inventory" names no
+  // values, engine/options.ts namesNoValues; an added form's list judges only its own copy, engine/runtime/case.ts
+  // judgingMaps). Forms are read by role (release or added), never by number (P-319).
+  type FormRow = { form: string; subject_id: string; added?: unknown; draft?: { written_now: number; to_fix: number }; readiness?: { ready: boolean; missing: unknown[] }; fields_open?: unknown[] };
+  const c3 = await openCase(vv, FAMILY.slice(0, 1));
+  await fillEverything(c3.id);
+  const P3 = Object.values(c3.subjects)[0] as string;
+  const f3 = filingOf((await prepare(c3.id)).p, P3)?.id ?? "";
+  const rows3 = async () => (((await call("GET", `/runtime/cases/${c3.id}/forms`)).body?.forms ?? []) as FormRow[]).filter((f) => f.subject_id === P3);
+  const lines3 = (rs: FormRow[]) => rs.filter((f) => !f.added).map((f) => `${f.form}: written ${f.draft?.written_now}, to fix ${f.draft?.to_fix}, ${f.readiness?.ready ? "ready" : `needs ${f.readiness?.missing.length}`}, open ${f.fields_open?.length ?? 0}`).sort();
+  const before3 = lines3(await rows3());
+  const picks3 = ((await list(f3))?.forms ?? []).filter((f) => f.kind === "fills" && !f.why_not).map((f) => f.form);
+  const adds3 = [];
+  for (const form of picks3) adds3.push(await add(f3, { form, reason: "QA-355: added to check the release's forms (Sample)" }));
+  const after3rows = await rows3(), after3 = lines3(after3rows);
+  const own3 = after3rows.filter((f) => f.added).map((f) => ({ form: f.form, to_fix: f.draft?.to_fix }));
+  const rms3 = [];
+  for (const a of adds3) rms3.push(await call("POST", `/runtime/form-additions/${a.body?.id}/remove`, { reason: "QA-355: undo the add (Sample)" }));
+  const back3 = lines3(await rows3());
+  ok(`C7.8-19 fail: release forms unchanged by an add: adding every form that fills (${picks3.join(", ") || "none"}) and removing them leaves every release form's lines as they were (${before3.length} forms); each added copy asks no fix of an answer the release's forms accept (QA-355)`,
+    picks3.length > 0 && before3.length > 0 && adds3.every((a) => a.status === 201) && rms3.every((r) => r.status === 200) && after3.join("|") === before3.join("|") && back3.join("|") === before3.join("|")
+      && own3.length === picks3.length && own3.every((o) => o.to_fix === 0),
+    { adds: adds3.map((a) => a.status), rms: rms3.map((r) => r.status), before: before3, after: after3, back: back3, own: own3 });
+
   // 13: the screen, at 1440 px: Prepare application lists the added forms with their tag; "+ Add a form" opens the panel.
   const w = await walker(`http://127.0.0.1:${PORT}`);
   try {

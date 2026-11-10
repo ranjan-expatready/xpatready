@@ -5,7 +5,7 @@
 import { evalCondition, kkey, render, type Known, type Person, type Role } from "../render.ts";
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
 import { checkFormat, snapshotFieldFormat, writesParts } from "../field-format.ts";
-import { isCodeRange } from "../options.ts";
+import { namesNoValues } from "../options.ts";
 import { z } from "zod";
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
@@ -111,15 +111,36 @@ function officerMark(a: Answer): { officer?: { by: string; at: string } | null; 
   return { officer: a.officerRecorded ?? null, awaits_client: !!a.awaitsClient };
 }
 
-/** How the forms that read a field write it (from the release's field maps): the precision and limits a value needs. */
-export function shapeOf(s: Snapshot, field: string) {
+const judging = new WeakMap<object, Map<string, unknown>>();
+/** QA-355 (a), the guard (tech lead's ruling on #1446): the field maps that judge an answer. A form added to one filing
+ *  (a map marked `added`, engine/runtime/added-forms.ts withAdditions) judges only its own copy: `form` names the copy
+ *  being judged; without it (the question, the case's own checks) only the release's maps judge. So adding a form never
+ *  changes another form's lines: its lists, limits and box formats apply to its copy alone. The same object per snapshot
+ *  and added form (one for everything else), so snapshotFieldFormat's cache still holds; with no added form, the
+ *  snapshot itself. */
+export function judgingMaps<S extends { field_maps: unknown[] }>(s: S, form?: string | null): S {
+  const maps = s.field_maps as { form_number?: string; added?: boolean }[];
+  if (!maps.some((m) => m.added)) return s;
+  let per = judging.get(s);
+  if (!per) { per = new Map(); judging.set(s, per); }
+  // Review m4: a release form's copy is judged as the case is (one shared key); only an added form gets its own view.
+  const key = form && maps.some((m) => m.added && m.form_number === form) ? form : "";
+  if (!per.has(key)) per.set(key, { ...s, field_maps: maps.filter((m) => !m.added || (!!form && m.form_number === form)) });
+  return per.get(key) as S;
+}
+
+/** How the forms that read a field write it (from the release's field maps; `form`: also that added form's own, for its
+ *  copy, QA-355): the precision and limits a value needs. */
+export const shapeOf = (s: Snapshot, field: string, form?: string | null) => shapeIn(judgingMaps(s, form), field);
+function shapeIn(s: Snapshot, field: string) {
   const ts = (s.field_maps as { entries: { fact?: string | null; transform?: string | null }[] }[]).flatMap((m) => m.entries.filter((e) => e.fact === field).map((e) => e.transform ?? ""));
   const maxes = ts.map((t) => /max (\d+) char/.exec(t)?.[1]).filter(Boolean).map(Number);
   const dayNeeded = ts.some((t) => /date(_part)?:DD|date:YYYY-MM-DD|^date$|date:DD/.test(t)) || !ts.some((t) => /date(_part)?:MM/.test(t));
   // A short code list written in the map itself, "code_list:imm5257.visa_type (VisitorVisa, Transit)": the values a
   // choice field without an answer list may take (labels before any "=code").
   // QA-272: "(01..09)" names no values: on a release that kept it the answer stays open, never one choice called "01..09".
-  const listed = ts.map((t) => /^code_list:\S+ \(([^)]*)\)/.exec(t)?.[1]).find((x) => x && !isCodeRange(x));
+  // QA-355: nor does "(codes as listed in the inventory)" (namesNoValues): an added form's note never closes a shared fact.
+  const listed = ts.map((t) => /^code_list:\S+ \(([^)]*)\)/.exec(t)?.[1]).find((x) => x && !namesNoValues(x));
   const choices = listed ? listed.split(",").map((x) => x.split("=")[0].trim()).filter(Boolean) : null;
   // C3.1 AT-10 (IRCC-F07, P-162): the form's own box limit for the whole answer (read from the PDF) counts too.
   const boxMax = snapshotFieldFormat(s as never, field).rules.filter((r) => r.check === "max_length" && !r.part).map((r) => Number(r.params.n)).filter((n) => n > 0);
@@ -138,7 +159,7 @@ const words = (x: string) => /^[A-Z][a-z]+(?:[A-Z][a-z]+)+$/.test(x) ? x.replace
  *  "code_list:… (Label=code, …)" through its option map (answer key → code). A list without "=code" names its codes
  *  by their labels ("Female", "VisitorVisa"). Where no map labels an answer, the answer list's own label stays. */
 export function optionsOf(s: Snapshot, field: string): { key: string; label: string }[] | null {
-  const entries = (s.field_maps as { entries: { fact?: string | null; transform?: string | null; option_map?: { map?: Record<string, string> } | null }[] }[]).flatMap((m) => m.entries.filter((e) => e.fact === field));
+  const entries = (judgingMaps(s).field_maps as { entries: { fact?: string | null; transform?: string | null; option_map?: { map?: Record<string, string> } | null }[] }[]).flatMap((m) => m.entries.filter((e) => e.fact === field));
   const labelOf = (key: string) => {
     for (const e of entries) {
       const list = /^code_list:\S+ \(([^)]*)\)/.exec(e.transform ?? "")?.[1];
@@ -161,7 +182,8 @@ const chars = (x: string) => [...x].length;
 
 /** Field checks (P-47 tier 1): the value's type, list and limits, then (P-162, C3.1) the format its forms' own boxes
  *  enforce (engine/field-format.ts: digits only for a UCI, a Canadian postal code, …). Plain messages; empty when fine. */
-export function checkValue(s: Snapshot, field: string, value: unknown, today = new Date()): string[] {
+export function checkValue(sIn: Snapshot, field: string, value: unknown, today = new Date(), form?: string | null): string[] {
+  const s = judgingMaps(sIn, form); // QA-355 (a): `form` is the copy being judged; without it, the release's maps only
   const typed = checkType(s, field, value, today);
   return typed.length ? typed : checkFormat(snapshotFieldFormat(s as never, field), value, { today });
 }
@@ -169,7 +191,7 @@ export function checkValue(s: Snapshot, field: string, value: unknown, today = n
 function checkType(s: Snapshot, field: string, value: unknown, today: Date): string[] {
   const f = fieldOf(s, field);
   if (!f) return ["This question is not in the release the case works from."];
-  const shape = shapeOf(s, field), type = String(f.value_type ?? "text");
+  const shape = shapeIn(s, field), type = String(f.value_type ?? "text");
   const str = typeof value === "string" ? value.trim() : null;
   const list = f.answer_list?.values ?? [];
   switch (type) {
