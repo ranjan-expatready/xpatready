@@ -147,10 +147,10 @@ type P = { derived: boolean; version: string; portal: string | null; filings: { 
   if (wp) {
     const other = (await call("POST", "/runtime/cases", { combinationId: wp, reference: `VP-WP-${run}`, clientActor: CLIENT, principal: { displayName: "Sample Client W" } }, OFFICER)).body?.id as string;
     const o = await prep(other);
-    // C11.12 (P-233, BR-10, challenge M3): a release with filing modes but no fee rule gets its filings, with "Fees not
-    // worked out yet" and no fee line, never CAD 0. A release with no modes and no rule stays "not derived yet"
+    // C11.12 (P-233, BR-10, challenge M3): a release with filing modes but no fee rule gets its filings, with words that
+    // say no fee line is set (M3-S1) and no fee line, never CAD 0. A release with no modes and no rule stays "not derived yet"
     // (tests/runtime/check_vv_filings.ts).
-    ok("C11.12 BR-10 pass: another combination with filing modes (wp.family, Sample) gets its filing, no fee line, 'Fees not worked out yet'", o.r.status === 200 && o.r.body.derived === true && o.r.body.filings?.length === 1 && (o.r.body.fees ?? []).length === 0 && o.r.body.fees_worked_out === false && /Fees not worked out yet/.test(o.r.body.fees_why ?? ""), o.r.body);
+    ok("C11.12 BR-10 pass (M3-S1 words): another combination with filing modes (wp.family, Sample) gets its filing, no fee line, and words that say no fee line is set", o.r.status === 200 && o.r.body.derived === true && o.r.body.filings?.length === 1 && (o.r.body.fees ?? []).length === 0 && o.r.body.fees_worked_out === false && /No fee lines in the fee table for .* yet, so no fee is charged/.test(o.r.body.fees_why ?? ""), o.r.body);
     ok("C11.12 BR-10 fail: nothing on it reads as an amount (no CAD 0 anywhere)", !/CAD 0\b/.test(JSON.stringify(o.r.body)));
   } else ok("C11.12 BR-10: another combination with filing modes (no other released combination on this copy)", false, "release wp.family first");
   process.exitCode = summary() ? 1 : 0;

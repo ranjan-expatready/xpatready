@@ -1,8 +1,9 @@
 // B151 ("B5b", screens; Devin on #1233, Lead 31): the fee block names the people with no fee when the fees are not worked
-// out, and says where a recorded group's fees come from. On the configured checkpoint: a real Family sponsorship ›
-// Spouse or common-law partner case (fs.spouse: the sponsor co-files, so the fees are not worked out; a child not
-// travelling is declared only on the principal's application) shows the server's "not worked out" words once, names the
-// declared-only child and each person with no filing with the server's words, and no amount, at 1440 and 1024 px. A
+// out, and says where a recorded group's fees come from. On the configured checkpoint: a real Provincial nominees ›
+// Express Entry stream case (pnp.express_entry: no fee lines in the fee table, so the fees are not worked out; a child
+// not travelling is declared only on the principal's application) shows the server's words once, names the
+// declared-only child and each person with no filing with the server's words, and no amount, at 1440 and 1024 px. M3-S1
+// (P-425) priced the spouse sponsorship this check first used (fs.spouse), so it moved to a combination with no fee row. A
 // recorded Visitor visa group reads "Fees as recorded on <day>" when /prepare says it was frozen (B152), else "Fees as
 // worked out today, not the amount recorded". Every word compared with GET /prepare in the same run; axe (WCAG 2.2 A/AA),
 // no sideways scroll, no duplicate ids. Screenshots: product/screens/C6.12/screenshots/B151-*. No model call (US$0).
@@ -37,13 +38,13 @@ const load = reset.status < 300 ? await post("/demo/load", { sample: "configured
 if (load.status >= 300) { console.log(`STOP  the configured checkpoint did not load: ${load.status} ${load.body?.detail ?? ""}`); process.exit(2); }
 ok("setup: Demo › Load the configured checkpoint (after Reset)", true);
 
-// A real fs.spouse case: the sponsored spouse (principal), the sponsor (co-files), a child who is not travelling.
-const fsId = sql("select c.id from combination c join config_release r on r.combination_id=c.id where c.combination_key='fs.spouse' limit 1");
-const people = [{ role: "principal", name: "Sample Spouse S", dob: yearsAgo(33) }, { role: "sponsor", name: "Sample Sponsor S", dob: yearsAgo(35) }, { role: "child", name: "Sample Child S1", dob: yearsAgo(8), applies: false }] as unknown as Person[];
+// A real pnp.express_entry case: the principal, and a child who is not travelling (on the principal's application).
+const fsId = sql("select c.id from combination c join config_release r on r.combination_id=c.id where c.combination_key='pnp.express_entry' limit 1");
+const people = [{ role: "principal", name: "Sample Applicant E", dob: yearsAgo(33) }, { role: "child", name: "Sample Child E1", dob: yearsAgo(8), applies: false }] as unknown as Person[];
 const fs = fsId ? await openCase(fsId, people) : null;
 const v = fs ? await viewOf(fs.id) : null;
 const declared = (v?.filings ?? []).flatMap((f) => f.applicants.filter((a) => a.mode === "declared_only"));
-ok("setup: the fs.spouse case is released on the checkpoint, its fees are not worked out (a sponsorship), and the child not travelling is declared only", !!v?.derived && v.fees_worked_out === false && !!v.fees_why && declared.some((a) => a.subject === fs?.subjects["Sample Child S1"]), { fsId, worked: v?.fees_worked_out, declared, not_filing: v?.not_filing });
+ok("setup: the Express Entry stream case is released on the checkpoint, its fees are not worked out (no fee lines in the table), and the child not travelling is declared only", !!v?.derived && v.fees_worked_out === false && !!v.fees_why && declared.some((a) => a.subject === fs?.subjects["Sample Child E1"]), { fsId, worked: v?.fees_worked_out, declared, not_filing: v?.not_filing });
 
 const b = await chromium.launch({ headless: true, ...(process.platform === "darwin" ? { channel: "chrome" } : existsSync("/opt/pw-browsers/chromium") ? { executablePath: "/opt/pw-browsers/chromium" } : {}) });
 const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, colorScheme: "light", reducedMotion: "reduce" });
@@ -66,7 +67,7 @@ async function state(name: string) {
   return blockAt1024;
 }
 
-// ---------------------------------------------------------------- the unpriced state names the people (fs.spouse)
+// ---------------------------------------------------------------- the unpriced state names the people (Express Entry stream)
 if (fs && v) {
   await open(fs.id);
   const blk = p.locator('[data-fees][data-fees-worked-out="false"]');
@@ -77,9 +78,9 @@ if (fs && v) {
   const nf = await blk.locator("[data-fee-no-filing]").evaluateAll((els) => els.map((e) => [e.getAttribute("data-fee-no-filing"), (e.textContent ?? "").replace(/\s+/g, " ").trim()]));
   ok("B151 pass: each person with no filing in the server's view is named once with the server's why", nf.length === v.not_filing.length && v.not_filing.every((x) => nf.some(([s, t]) => s === x.subject && t === `${x.label}: no fee. ${x.why}`)), { nf, server: v.not_filing });
   ok("B151 fail: no amount, no total and no basis anywhere in the panel while the fees are not worked out (never CAD 0)", !/CAD/.test(await text(panel())) && (await panel().locator("[data-fee-total], [data-case-fee-total], [data-fee-basis]").count()) === 0);
-  const at1024 = await state("unpriced-fs-spouse");
+  const at1024 = await state("unpriced-pnp-express-entry");
   ok("B151 pass (1024 px): the same people and words at 1024 px", at1024 === words, { at1024, words });
-} else ok("B151: the fs.spouse case could not be opened on the checkpoint", false, { fsId });
+} else ok("B151: the Express Entry stream case could not be opened on the checkpoint", false, { fsId });
 
 // Review M1: a real case where /prepare names a person with no filing while the fees are not worked out: With an LMIA
 // (wp.lmia_inside) with the partner not applying. The check fails if the unpriced block drops not_filing[].
@@ -95,10 +96,16 @@ if (wp && wv) {
   ok("B151 fail (review M1): no amount in that block either", !/CAD/.test(await text(wb)));
   await state("unpriced-wp-lmia-partner");
 }
-// Review m: a person declared only on two filings is named once (the real view, served with the child on both filings).
-if (fs && v && v.filings.length > 1) {
+// Review m: a person declared only on two filings is named once (the real view, served with the child on two filings:
+// this case has one, so the served view adds a second filing in the same group with the child on it).
+if (fs && v && declared.length) {
   const kid = declared[0];
-  await p.route(`**/api/runtime/cases/${fs.id}/prepare*`, async (rt) => { const real = (await (await rt.fetch()).json()) as View; rt.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...real, filings: real.filings.map((x) => x.applicants.some((a) => a.subject === kid.subject) ? x : { ...x, applicants: [...x.applicants, kid] }) }) }); });
+  await p.route(`**/api/runtime/cases/${fs.id}/prepare*`, async (rt) => {
+    const real = (await (await rt.fetch()).json()) as View;
+    const extra = real.filings.length > 1 ? null : { ...real.filings[0], id: `${real.filings[0].id}-b151-second`, applicants: [kid] };
+    const filings = [...real.filings.map((x) => x.applicants.some((a) => a.subject === kid.subject) ? x : { ...x, applicants: [...x.applicants, kid] }), ...(extra ? [extra] : [])];
+    rt.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...real, filings, groups: real.groups.map((g, i) => (extra && i === 0 ? { ...g, filings: [...g.filings, extra.id] } : g)) }) });
+  });
   await open(fs.id);
   ok("B151 pass (review m): a person declared only on two filings is named once", (await p.locator(`[data-fee-declared="${kid.subject}"]`).count()) === 1);
   await p.unroute(`**/api/runtime/cases/${fs.id}/prepare*`);
