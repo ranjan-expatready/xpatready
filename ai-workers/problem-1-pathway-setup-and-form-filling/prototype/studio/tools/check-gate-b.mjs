@@ -312,22 +312,35 @@ ok("command: an unknown option exits 2", r.code === 2, r);
   ok("D2: a merge-queue batch never reads the pull request's diff (no \"by diff\" set; QA-366's re-check is below)", !/by diff/.test(q.out) && !/git diff/.test(q.out), q);
   const n = run(["--title", "screens: x"], { RANGE: "0000000..1111111" });
   ok("D2: on a pull request a diff it cannot read is \"could not run\" (exit 2), never a silent skip", n.code === 2 && /could not run: (git diff 0000000\.\.\.1111111 failed|cannot read .* at the base 0000000)/.test(n.out), n); }
-// QA-366 on the real commits: #1396 (head b0727d19b, C7.5's paid result) checked alone on main 1d07807c8; its batch's base
-// was 7e32ee210, #1435's merge, which gated IMM 5257 boxes C7.5's pack reads (form-field-gates.json ← m3.ts). The batch
-// must run C7.5 again on the checkpoint. On a base with nothing new (its own branch point) it runs nothing. Skipped in a
-// copy without that history (a shallow clone); CI's parts check out every commit.
-{ const H = "b0727d19bf804b576e3536063e257cab296e6ae8", B = "7e32ee210541825ee3d3e4f941698091f8485377";
-  const git = (...a) => spawnSync("git", a, { cwd: HERE, encoding: "utf8" });
-  if (git("cat-file", "-e", `${H}^{commit}`).status || git("cat-file", "-e", `${B}^{commit}`).status) console.log("SKIP  QA-366 replay: commits b0727d19b and 7e32ee210 are not in this copy (shallow clone)");
+// QA-366 on the real commits, as batches (the members come from git's first-parent merges, review of #1476 Major 2):
+// #1396 (C7.5's paid result) checked alone on main 1d07807c8; it merged as 0e0ccbb64 onto 7e32ee210, #1435's merge, which
+// gated IMM 5257 boxes C7.5's pack reads (form-field-gates.json ← m3.ts). 7e32ee210..0e0ccbb64 is that batch; from
+// b56cdbe39 it is a car with #1435 stacked ahead and left out of the title (Mergify names only the car's own PRs). Both
+// must run C7.5 again on the checkpoint. #1459 (qa records with scripts: kind records, no gate B of its own) merged as
+// 2cfdad96: its named rows are not re-checked (Major 1). Skipped in a copy without that history (a shallow clone).
+{ const git = (...a) => spawnSync("git", a, { cwd: HERE, encoding: "utf8" }), have = (...c) => c.every((x) => !git("cat-file", "-e", `${x}^{commit}`).status);
+  const M1396 = "0e0ccbb64e22593e45647879fcacd61edf091358", M1435 = "7e32ee210541825ee3d3e4f941698091f8485377", B1435 = "b56cdbe391c7741915c4684ba287cfee62505f52", M1459 = "2cfdad961a2bd8e081ecafd54cb8b4a83e597723", B1459 = "751310cdb1a70cc6adf5dd8d1c7fdd818ac481e4";
+  if (!have(M1396, M1435, B1435, M1459, B1459)) console.log("SKIP  QA-366 replays: main's 9-10 Nov merges are not in this copy (shallow clone)");
   else {
-    const pf = join(T, "batch.json"), Q = { QUEUE: "true", GATE_B_BATCH_PRS: pf, GATE_B_DATA: "" }, mb = git("merge-base", H, B).stdout.trim();
-    writeFileSync(pf, JSON.stringify([{ n: 1396, title: "lead: C7.5 paid result", body: "Capabilities: C7.5 (steps 1-16)", head: H }]));
-    const q1 = run(["--title", "merge queue: embarking #1396"], { ...Q, RANGE: `${B}..${H}` });
-    ok("QA-366: the batch of #1396 on #1435's main runs C7.5 again, with #1396's steps, on the checkpoint (exit 0 with --no-packs)", q1.code === 0 && /QA-366: the batch adds files these named rows' packs read, so they run again: C7\.5 \(#1396 C7\.5\.test\.ts/.test(q1.out) && /C7\.5 on the checkpoint/.test(q1.out) && /packs: C7\.5\.test\.ts$/m.test(q1.out), q1);
-    const q2 = run(["--title", "merge queue: embarking #1396"], { ...Q, RANGE: `${mb}..${H}` });
-    ok("QA-366: the same PR on its own branch point (the batch adds nothing) runs no pack again", q2.code === 0 && /no named row's pack reads a file this batch adds/.test(q2.out) && !/packs:/.test(q2.out), q2);
-    const q3 = run(["--title", "merge queue: embarking #1396"], { ...Q, RANGE: "" });
-    ok("QA-366: a batch without RANGE could not run (exit 2), never a silent pass", q3.code === 2 && /needs RANGE/.test(q3.out), q3);
+    const pf = join(T, "batch.json"), Q = { QUEUE: "true", GATE_B_BATCH_PRS: pf, GATE_B_DATA: "" }, prs = (x) => writeFileSync(pf, JSON.stringify(x));
+    const P1396 = { n: 1396, title: "lead: C7.5 paid result", body: "Capabilities: C7.5 (steps 1-16)" }, again = /QA-366: the batch adds files these named rows' packs read, so they run again: C7\.5 \(#1396 C7\.5\.test\.ts/;
+    prs([P1396]);
+    const q1 = run(["--title", "merge queue: embarking #1396"], { ...Q, RANGE: `${M1435}..${M1396}` });
+    ok("QA-366: the batch of #1396 on #1435's main runs C7.5 again, with #1396's steps, on the checkpoint (exit 0 with --no-packs)", q1.code === 0 && again.test(q1.out) && /C7\.5 on the checkpoint/.test(q1.out) && /packs: C7\.5\.test\.ts$/m.test(q1.out) && /steps 1, 2, 3/.test(q1.out), q1);
+    const q2 = run(["--title", "merge queue: checking #1396 on main, stacked on 1 pull request ahead"], { ...Q, RANGE: `${B1435}..${M1396}` });
+    ok("QA-366 (Major 2): #1435 stacked ahead and not in the title still counts: C7.5 runs again", q2.code === 0 && again.test(q2.out), q2);
+    prs([{ n: 1459, title: "qa: capability C8.3 after #1440", body: "" }]);
+    const q3 = run(["--title", "merge queue: embarking #1459"], { ...Q, RANGE: `${B1459}..${M1459}` });
+    ok("QA-366 (Major 1): a PR whose own change is records (its gate B never ran) has its named rows not re-checked, and says so", q3.code === 0 && /#1459 names C8\.3, not re-checked: its own change is records/.test(q3.out) && !/packs:/.test(q3.out), q3);
+    prs([{ n: 9999, title: "runtime: C7.5", body: "" }]);
+    const q4 = run(["--title", "merge queue: embarking #9999"], { ...Q, RANGE: `${M1435}..${M1396}` });
+    ok("QA-366: a title PR with no merge in the batch's history runs its named rows (fail closed)", q4.code === 0 && /C7\.5 \(#9999: its merge is not in the batch's history/.test(q4.out) && /packs: C7\.5\.test\.ts$/m.test(q4.out), q4);
+    prs([{ n: 1396, title: "lead: paid result", body: "" }]);
+    const q5 = run(["--title", "merge queue: embarking #1396"], { ...Q, RANGE: `${M1435}..${M1396}` });
+    ok("QA-366: a batch whose PRs name no capability runs nothing again", q5.code === 0 && /no named row's pack reads a file/.test(q5.out) && !/packs:/.test(q5.out), q5);
+    prs([P1396]);
+    const q6 = run(["--title", "merge queue: embarking #1396"], { ...Q, RANGE: "" });
+    ok("QA-366: a batch without RANGE could not run (exit 2), never a silent pass", q6.code === 2 && /needs RANGE/.test(q6.out), q6);
   } }
 rmSync(T, { recursive: true, force: true });
 // The real file parses: every open row has a severity.

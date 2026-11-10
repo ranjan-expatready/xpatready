@@ -41,7 +41,7 @@
 //   rest on GATE_B_DATA, so one gate run pools packs on different data across its job slots (works-set.mjs --pool).
 //   GATE_B_ACCEPTANCE=<folder>: the packs' folder in place of studio/acceptance (check-gate-b.mjs only, for a fixture
 //   pack whose run truly uses no server; #1369 gave C6.5, the old example, its server run).
-//   GATE_B_BATCH_PRS=<file>: a batch's PRs as JSON [{n, title, body, head}] in place of GitHub's API (check-gate-b.mjs
+//   GATE_B_BATCH_PRS=<file>: a batch's PRs as JSON [{n, title, body}] in place of GitHub's API (check-gate-b.mjs
 //   only, for the QA-366 batch re-check on real commits).
 //   GATE_B_RESULTS=<file>: one JSON line per pack run ({id, file, data, where, load, ok, why, infra}) for a caller. A
 //   named step that no pack of its capability printed is a refusal of the capability, not of a pack: it is in the gate's
@@ -64,9 +64,14 @@
 //   arrived only with #1396; the batch re-ran part 1 only): in a merge-queue batch, after part 1, each capability a
 //   batch PR names runs again, with the same steps, when its pack reads a file the batch adds to what that PR's own run
 //   saw: main since the PR's branch point (git merge-base <its head> <the batch's base>, an older base than its CI's
-//   test merge, so it can only run more) and every other PR of the batch. A Works row is left to the protected set (job
-//   "regression"), which runs it in the same batch. A PR's run base is not in git, so the branch point stands in for it.
-//   It never runs a row nobody named, so an unrelated red Partial still refuses nothing (D2's rule above, STATE F15).
+//   test merge, so it can only run more) and every other merge in the tree (the batch's PRs and those stacked ahead,
+//   which Mergify's title leaves out from 4 on). The members and their heads come from git, never the title or the API:
+//   the first-parent merges <base>..<batch head> ("Merge of #N"; second parent = the head as merged). A title PR with no
+//   merge there runs all its named rows (fail closed). A Works row is left to the protected set (job "regression"),
+//   which runs it in the same batch unless qa holds it. A PR whose own change is not code (change-kind.sh: a qa records
+//   PR with evidence scripts joins the product queue) never ran gate B, so its named rows are not re-checked. A PR's run
+//   base is not in git, so the branch point stands in for it. It never runs a row nobody named, so an unrelated red
+//   Partial still refuses nothing (D2's rule above, STATE F15). Review of #1476 (Majors 1, 2).
 //   NOT TESTED (B131, founder 7 Nov ~15:20 IST, P-405; re-test 42357755876 went green on C3.16, C11.5 with no pack and on
 //   C6.5 with no server): a named capability with no acceptance pack to run, or a pack that runs "on no demo data (its run
 //   uses no server)" or "fixture only", ran no test on the data asked for. Each prints "NOT TESTED: <cap> has no
@@ -519,7 +524,7 @@ function diffCaps(range) {
 export function batchRecheck(prs, statusOf) {
   const run = new Map(), why = new Map(), works = new Set();
   for (const pr of prs) for (const [id, steps] of pr.caps) {
-    const t = pr.touched ? pr.touched.get(id) : { files: [], why: "what the batch adds could not be worked out, so it runs" };
+    const t = pr.touched ? pr.touched.get(id) : { files: [], why: "its merge is not in the batch's history, so what the batch adds could not be worked out: it runs" };
     if (!t) continue;
     if (WORKS.test(statusOf(id) ?? "")) { works.add(id); continue; }
     run.set(id, run.has(id) && (run.get(id) === null || steps === null) ? null : steps === null ? null : [...new Set([...(run.get(id) ?? []), ...steps])]);
@@ -527,16 +532,30 @@ export function batchRecheck(prs, statusOf) {
   }
   return { run, why, works: [...works] };
 }
-/** QA-366 in CI: the packs reached by what the batch adds to one PR's own run (main since its branch point, and every
- *  other PR of the batch). base: the batch's base (RANGE). null when a head cannot be read (then its rows all run). */
-function batchTouched(pr, prs, base) {
-  const has = (sha) => sha && (spawnSync("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd: S }).status === 0 || spawnSync("git", ["fetch", "-q", "--no-tags", "origin", sha], { cwd: S }).status === 0);
-  if (!prs.every((q) => has(q.head))) return null;
-  const mb = spawnSync("git", ["merge-base", pr.head, base], { cwd: S, encoding: "utf8" }).stdout.trim();
-  if (!mb) return null;
+/** QA-366 in CI: the batch's members from git (review of #1476, Major 2): the first-parent merges <base>..<head>, each
+ *  { n (its "#N"), merge, head (second parent), files (what that merge added) }. */
+function batchMembers(base, head) {
+  const r = spawnSync("git", ["log", "--first-parent", "--merges", "--format=%H %P%x09%s", `${base}..${head}`], { cwd: S, encoding: "utf8", maxBuffer: 64 << 20 });
+  if (r.status !== 0) throw new Error(`git log ${base}..${head} failed: ${r.stderr.trim()}`);
+  return r.stdout.split("\n").filter(Boolean).map((l) => {
+    const [shas, subject = ""] = l.split("\t"), [merge, p1, p2] = shas.split(" ");
+    return { n: subject.match(/#(\d+)/)?.[1] ?? null, merge, head: p2, files: changedFiles(p1, merge) };
+  });
+}
+/** QA-366: one batch PR's re-check input, or a reason it has none. members: batchMembers; base: the batch's base.
+ *  { touched: id → {files, why} | null (its merge is not in the batch: every named row runs) } or { skip: "why" }. */
+function batchTouched(pr, members, base) {
+  const own = members.filter((m) => m.n === String(pr.n));
+  if (own.length !== 1) return { touched: null };
+  const k = spawnSync("bash", [join(P, "tools/change-kind.sh"), `${base}..${own[0].head}`], { cwd: S, encoding: "utf8", maxBuffer: 64 << 20 });
+  const kind = k.stdout.trim().split("\n").pop();
+  if (k.status !== 0 || !kind) throw new Error(`change-kind.sh for #${pr.n} failed: ${(k.stderr || k.stdout).trim().split("\n").pop()}`);
+  if (kind !== "code") return { skip: `its own change is ${kind}, so its gate B never ran` };
+  const mb = spawnSync("git", ["merge-base", own[0].head, base], { cwd: S, encoding: "utf8" }).stdout.trim();
+  if (!mb) return { touched: null };
   const list = new Set(changedFiles(mb, base));
-  for (const q of prs) if (q.n !== pr.n) for (const f of changedFiles(`${base}...${q.head}`)) list.add(f);
-  return list.size ? packsReachedBy([...list]) : new Map();
+  for (const m of members) if (m !== own[0]) for (const f of m.files) list.add(f);
+  return { touched: list.size ? packsReachedBy([...list]) : new Map() };
 }
 const BUILT = /^[^\p{L}\p{N}]*(works|partial)\b/iu, WORKS = /^[^\p{L}\p{N}]*works\b/iu;
 /** D2's rule (review of #1337): which touched capabilities run. A pack the PR changes: its row if built; a pack that only
@@ -574,13 +593,13 @@ function bugsText(opt) {
 async function batchPrs(title) {
   const nums = [...new Set([...title.matchAll(/#(\d+)/g)].map((m) => m[1]))], auth = process.env.GITHUB_TOKEN, repo = process.env.GITHUB_REPOSITORY;
   if (!nums.length) throw new Error("the merge-queue batch's title names no PR (#nnn)");
-  // GATE_B_BATCH_PRS=<file> (check-gate-b.mjs only): the batch's PRs as JSON [{n, title, body, head}], in place of the API.
+  // GATE_B_BATCH_PRS=<file> (check-gate-b.mjs only): the batch's PRs as JSON [{n, title, body}], in place of the API.
   if (process.env.GATE_B_BATCH_PRS) return JSON.parse(readFileSync(process.env.GATE_B_BATCH_PRS, "utf8"));
   if (!auth || !repo) throw new Error("GITHUB_TOKEN and GITHUB_REPOSITORY are needed to read the batch's PRs");
   return Promise.all(nums.map(async (n) => {
     const r = await fetch(`https://api.github.com/repos/${repo}/pulls/${n}`, { headers: { authorization: `Bearer ${auth}`, accept: "application/vnd.github+json" } });
     if (!r.ok) throw new Error(`cannot read PR #${n} (${r.status})`);
-    const j = await r.json(); return { n, title: j.title ?? "", body: j.body ?? "", head: j.head?.sha ?? null };
+    const j = await r.json(); return { n, title: j.title ?? "", body: j.body ?? "" };
   }));
 }
 /** Part 1 for one PR: the reasons it refuses (empty when it passes). */
@@ -612,10 +631,17 @@ async function main(argv) {
     if (reasons.length) { say("Gate B refuses the batch:"); for (const r of reasons) say(`  * ${r}`); return 1; }
     say("Gate B: the batch's PRs pass part 1 as they read now.");
     // QA-366: a named row's pack runs again when the batch adds a file it reads to what its PR's own run saw.
-    const base = (process.env.RANGE ?? "").match(/^([0-9a-f]{7,40})\.\./)?.[1];
+    const [, base, head] = (process.env.RANGE ?? "").match(/^([0-9a-f]{7,40})\.\.([0-9a-f]{7,40})$/) ?? [];
     if (!base) throw new Error("a merge-queue batch needs RANGE (<base>..<head>) to tell which named packs run again (QA-366)");
-    const { baseScoring } = await import("./works-set.mjs"), sc = baseScoring();
-    const { run, why, works } = batchRecheck(prs.map((pr) => ({ n: pr.n, caps: claims(pr.title, pr.body).caps, touched: batchTouched(pr, prs, base) })), sc.statusOf);
+    const { baseScoring } = await import("./works-set.mjs"), sc = baseScoring(), members = batchMembers(base, head), input = [];
+    for (const pr of prs) {
+      const caps = claims(pr.title, pr.body).caps;
+      if (!caps.size) continue;
+      const t = batchTouched(pr, members, base);
+      if (t.skip) { say(`  #${pr.n} names ${[...caps.keys()].join(", ")}, not re-checked: ${t.skip}`); continue; }
+      input.push({ n: pr.n, caps, touched: t.touched });
+    }
+    const { run, why, works } = batchRecheck(input, sc.statusOf);
     if (works.length) say(`  named Works rows the protected set runs in this batch: ${works.join(", ")}`);
     if (!run.size) { say("  QA-366: no named row's pack reads a file this batch adds to its PR's own run; their packs ran on their own PRs."); return 0; }
     say(`Gate B, QA-366: the batch adds files these named rows' packs read, so they run again: ${[...run.keys()].map((id) => `${id} (${why.get(id)})`).join("; ")}.`);
