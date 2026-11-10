@@ -3,8 +3,9 @@
 # 42780025302, 42772208839, 42771184477, 42758304984, 42751977941; 400 suites). Suites none of those batches ran
 # (quarantined then) take the median of scheduled nightly run 42745187688; check_c83_review_browser.cjs (new 9 Nov,
 # in neither) the median of its 5 PR-run parts on branch claude/intelligent-noether-qkzc6a-b144.
-# run-suites.sh --shard balances the shards by these times (longest first); a suite missing here counts as 30 s. Refresh the same way when many suites are new
-# (the 3 Nov file lacked 139 of 400, which left the longest part ~15 min behind the shortest).
+# run-suites.sh --shard balances the shards by these times (longest first); a suite missing here counts as 30 s.
+# Refresh the same way when many suites are new (the 3 Nov file lacked 139 of 400, which left the longest part
+# ~15 min behind the shortest).
 check_c102_paper_readback.ts	277
 check_b152_recorded_fees_api.ts	264
 check_ai_live_switch.ts	254
