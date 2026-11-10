@@ -1,8 +1,9 @@
 # Seconds per suite on GitHub's 2-core Linux machine, read from the suite tables in the parts' logs: the median of the
 # 8 newest green merge-queue batch runs with 6 parts (10 Nov, pipeline row 2: 42832155459, 42829845295, 42790599897,
 # 42780025302, 42772208839, 42771184477, 42758304984, 42751977941; 400 suites). Suites none of those batches ran
-# (quarantined then) take the median of scheduled nightly run 42745187688. run-suites.sh --shard balances the shards
-# by these times (longest first); a suite missing here counts as 30 s. Refresh the same way when many suites are new
+# (quarantined then) take the median of scheduled nightly run 42745187688; check_c83_review_browser.cjs (new 9 Nov,
+# in neither) the median of its 5 PR-run parts on branch claude/intelligent-noether-qkzc6a-b144.
+# run-suites.sh --shard balances the shards by these times (longest first); a suite missing here counts as 30 s. Refresh the same way when many suites are new
 # (the 3 Nov file lacked 139 of 400, which left the longest part ~15 min behind the shortest).
 check_c102_paper_readback.ts	277
 check_b152_recorded_fees_api.ts	264
@@ -70,6 +71,7 @@ check_c75_review_runs_api.ts	69
 check_forms_tab_refresh_browser.cjs	59
 check_c116_channels_browser.ts	57
 check_forms_c411_draft_qd.ts	57
+check_c83_review_browser.cjs	55
 check_forms_b88_spread.ts	53
 check_b83_own_question_screen_browser.cjs	50
 check_screen02_slice2_browser.cjs	50
@@ -239,8 +241,8 @@ check_s5_slice1.ts	12
 check_c1116_one_way_in_browser.cjs	11
 check_c18_copies.ts	11
 check_forms_c212_progress.ts	11
-check_forms_c31_formats_browser.cjs	11
 check_forms_c31_formats.ts	11
+check_forms_c31_formats_browser.cjs	11
 check_forms_qa53.ts	11
 check_screen01_release_race.ts	11
 check_c1113_near_release_browser.cjs	10
@@ -254,8 +256,8 @@ check_qa91_who_can_be_run.ts	10
 check_s5_slice2.ts	10
 check_x1_overview_strip_browser.cjs	10
 check_x1b_filing_tag_browser.cjs	10
-check_c3_11_signed_scan.ts	9
 check_c313_search_browser.cjs	9
+check_c3_11_signed_scan.ts	9
 check_c46_preview_channels.ts	9
 check_dv_backbone_browser.cjs	9
 check_forms_c33_acceptance.ts	9
@@ -282,10 +284,10 @@ check_qa99_who_can_be_trail.ts	8
 check_s5_live_approval_browser.cjs	8
 check_s5_slice3.ts	8
 check_setup_checklist.ts	8
-check_w1_structure_r3.ts	8
-check_w1_structure.ts	8
 check_w115_slice1.ts	8
 check_w115_slice3.ts	8
+check_w1_structure.ts	8
+check_w1_structure_r3.ts	8
 check_who_fills.ts	8
 check_b102_worked_out.ts	7
 check_c1113_draft_fields.ts	7
@@ -411,6 +413,6 @@ check_uxa1_counts_rules.ts	0
 check_uxa3_words_rules.ts	0
 check_vv_answer_sheet.ts	0
 check_vv_checklist.ts	0
-check_vv_prepare_store.ts	0
 check_vv_prepare.ts	0
+check_vv_prepare_store.ts	0
 check_w1_level_tokens.ts	0

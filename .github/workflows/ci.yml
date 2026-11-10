@@ -25,7 +25,8 @@
 #   only on an error not in typecheck-known.txt), on its own machine beside the parts for records and code, so it adds
 #   machine minutes (about 2 a run) but no wall time: the parts take 20+ minutes, the type check about 1.5.
 #   SHARDS=<1..9>        the number of parallel parts (default 8: pipeline row 2, 10 Nov, measured in its PR; was 4,
-#                        and the variable said 6 from 9 Nov; I1 measured before changing it: see its PR);
+#                        and the repository variable SHARDS is 6 since 9 Nov, which overrides this default until it
+#                        is deleted or set to 8; I1 measured before changing it: see its PR);
 #   PR_SUITES=direct     a builder's PR runs only the suites that import or name its files, never everything
 #                        (select-suites.mjs --direct); the queue still runs every suite;
 #   (BATCH_RUNNER / PR_RUNNER = mac, the founder's Mac, are gone: D1, P-416, 8 Nov; off since 4 Nov. git has them.)
