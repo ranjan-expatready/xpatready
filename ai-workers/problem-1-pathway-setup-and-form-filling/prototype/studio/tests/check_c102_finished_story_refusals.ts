@@ -54,11 +54,19 @@ try {
   const famId = execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", "select id from runtime_case where reference = 'SAMPLE-VV-FAMILY-1'"], { encoding: "utf8" }).trim();
   const view = (await (await fetch(`http://localhost:${PORT}/api/runtime/cases/${famId}/questionnaire?mode=agent`, { headers: { "x-actor": "user-O" } })).json()) as { sections: { questions: { answer: { awaits_client?: boolean } | null; rows: { answer: { awaits_client?: boolean } | null }[] }[] }[] };
   // Review R2-M1, R3-M1: the number the result says the client re-confirmed equals the re-confirmations recorded after the
-  // move to release 2 (the configured checkpoint's own, on release 1, came before it).
-  const claimed = Number((st("facts")?.shows ?? "").match(/the (\d+) background answers? among the officer's/)?.[1] ?? 0);
-  const reconfirmedInData = n(`select count(*) from audit_event where action = 're-confirmed' and entity = 'case fact' and at > (select max(at) from audit_event where action = 'moved_release')`);
+  // move to release 2 (the configured checkpoint's own, on release 1, came before it). C10.2 (#1482): release 2 now asks no
+  // background answer again (IMM 5257's details boxes only after a Yes, the form's own Validate), so the story may make none
+  // after the move; then its words say the release-1 re-confirmations (every person's, review R4-M1), and that number must equal
+  // those made before the move on the family case.
+  const shows = st("facts")?.shows ?? "";
+  const claimed = Number(shows.match(/the (\d+) background answers? among the officer's/)?.[1] ?? 0);
+  const claimedBefore = Number(shows.match(/the (\d+) background answers? the case officer recorded on release 1 \(the configured checkpoint\) (?:was|were) re-confirmed by the client before the move/)?.[1] ?? 0);
+  const moved = "(select max(at) from audit_event where action = 'moved_release')";
+  const reconfirmedInData = n(`select count(*) from audit_event where action = 're-confirmed' and entity = 'case fact' and at > ${moved}`);
+  const reconfirmedBefore = n(`select count(*) from audit_event where action = 're-confirmed' and entity = 'case fact' and at < ${moved} and summary like '%on case ${famId.slice(0, 8)}%'`);
   const awaiting = view.sections.flatMap((x) => x.questions).flatMap((q) => [q.answer, ...q.rows.map((r) => r.answer)]).filter((a) => a?.awaits_client).length;
-  ok("C10.2 (break M1): the facts stage claims no reason the answer route never takes; staff answers for another adult are re-confirmed by the client", !/with a reason|each marked/.test(st("facts")?.shows ?? "x") && claimed > 0 && claimed === reconfirmedInData && awaiting === 0, { awaiting, claimed, reconfirmedInData, shows: st("facts")?.shows.slice(0, 160) });
+  const c618 = claimed > 0 ? claimed === reconfirmedInData : reconfirmedInData === 0 && claimedBefore > 0 && claimedBefore === reconfirmedBefore;
+  ok("C10.2 (break M1): the facts stage claims no reason the answer route never takes; staff answers for another adult are re-confirmed by the client", !/with a reason|each marked/.test(shows || "x") && c618 && awaiting === 0, { awaiting, claimed, reconfirmedInData, claimedBefore, reconfirmedBefore, shows: shows.slice(0, 260) });
   const unrecorded = n("select count(*) from filing f join runtime_case k on k.id = f.case_id where k.reference = 'SAMPLE-VV-FAMILY-1' and f.active and upper(f.status) <> 'SUBMITTED'");
   ok("C10.2 (break M2): the record stage reads Done only when every filing is recorded, else Partly naming what is not", unrecorded ? st("record")?.status === "partial" && /Not recorded yet/.test(st("record")?.why ?? "") : st("record")?.status === "done", { unrecorded, record: st("record")?.status });
   r = await call("POST", "/demo/reset", { confirm: "RESET" });
