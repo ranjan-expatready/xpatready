@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: local_556afbc8-71a2-4cb9-b47f-ab86a53460df Lead 10 · 10 Nov 22:54 IST (series 2; took over from Lead 9 (series 2, local_d3d09334) at ~318k context, ~200k beyond its start read, P-446)
+current_lead: local_556afbc8-71a2-4cb9-b47f-ab86a53460df Lead 10 · 10 Nov 22:54 IST (series 2; took over from Lead 9 (series 2, local_d3d09334) at ~318k context, ~200k beyond its start read, P-446) · **start read ~113k (get_usage 22:58 IST); hand over at the first check after ~313k (P-446 (2))**; check f31dbacd at :13/:43
 
 updated: 2026-11-10 22:47 IST by **Lead 9 (series 2, local_d3d09334-…)** (M3 29/29; night lanes P-451; Bake plan draft) · weekly 65% · milestone: **M2 60/60; M3 29 of 29 Works on main**; next: the Bake (M3.5), plan awaiting the founder (P-450) · rules: **`RULES.md`** (as of P-452) · this branch: `lead/2026-11-07-lead31`
 
