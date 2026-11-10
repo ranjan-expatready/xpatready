@@ -75,3 +75,53 @@ Read: `git diff 3708f4f83 547ca5946 -- ai-workers/problem-1-pathway-setup-and-fo
 Blockers: none. Majors: none. Minors: one, carried forward (the four notes above).
 
 Verdict: Approve
+
+## Round 3 (diff-only, C6.19 pack)
+Read: `git diff 7e21009ab 82e986c8f6831e8d3e99f7ef170caaeedd0713c9`. That is one file, `acceptance/C6.19.test.ts`: +10/−1 in two commits, with no merge of main into the branch.
+
+How I checked it:
+* I worked in a throw-away worktree: 82e986c8f with today's `origin/main` (bdf3b59ec) merged in, never pushed.
+* I ran my own isolated copy on :4466 (`xr_studio_rev_r3c619`). The pack loaded the configured checkpoint itself through `/demo/reset` and `/demo/load`. The copy is now stopped and dropped, and both worktrees are removed.
+* :4400 and the builder's copies were not touched. Live AI off, US$0.
+
+What I verified (not taken from the builder's evidence):
+* **The CI failure's cause is as the builder says.** I ran main's engine (a worktree at `origin/main`) against the checkpoint's With an LMIA release:
+  * `checkValue` refuses "IND" for `person.passport_country_of_issue` with "Choose one of: codes as listed for this box, e.g. CAN (Canada.".
+  * The release's only map line for that fact is IMM 5710's `code_list:imm5710.passport_country (codes as listed for this box, e.g. CAN (Canada)=511)`.
+  * With this PR's engine, "IND" passes on both releases.
+
+  So the old step's "VV accepts, WP refuses" split was QA-355's bug itself. IND is a valid country, so it never tested M4 honestly.
+* **Changing the pack here is right and allowed.** WAY-OF-WORKING says "When a decision changes behaviour, its pack changes in the same PR". The ruling on #1446 (b) changes this behaviour, and leaving the step would turn C6.19 red on main.
+  * P-270 is not touched: no main was merged into the branch.
+  * One PR, one area holds: the change is limited to the step that QA-355's rule broke, and no product code moved.
+* **The new instance is an honest M4 test.** Case B's offer says `problems: ["Keep the answer to 120 characters."], usable: false` for case A's 136-character stored country. That is the challenge's own "a length since shortened" example.
+  * The step checks four things: `usable === false`, the value is the stored one, `STALE.length > 120`, and the reason text. So a failed set-up cannot pass quietly.
+  * The step count is kept, so gate B's step list is unchanged.
+* **It fails when the offer stops checking.** I changed `engine/runtime/earlier-facts.ts:161` to `const problems: string[] = []` and restarted. The pack went to 84/85, and only this M4 step failed.
+* **The SQL stand-in is sound.**
+  * The order (stamp the old row superseded, then insert the new row) meets `runtime_answer_append_only`: only `superseded_by_id` changes, once, from null, to another id. It also meets `uq_answer_current`, because the new row goes in after the old one stops being current. The deferred FK `client_canonical_answer_superseded_by_id_fkey` lets the stamp name a row that does not exist yet.
+  * This is the product's own order (`case-changes.ts:66`, `case-documents.ts:581`).
+  * `psql -c` runs it as one transaction. `execFileSync` throws on an error, so a failed write stops the pack loudly.
+  * The new row copies `status`, `verified_by`, `source_json` and the party and subject. The DB after the run shows 3 rows: DECLARED, then VERIFIED by user-O (superseded), then the current 136-character VERIFIED row by user-O. `confirmation()` reads `status === "VERIFIED"`, so the value is still confirmed on case A.
+  * Later steps are unaffected. `beforeA` (BR-3) is read after the stand-in. `UNTICKED` is still `COUNTRY`: offered, not usable, never ticked. On the merged state, main's new QA-338 steps on cases C, B2 and C2 are green.
+* **Merged state: C6.19 86/86, exit 0, on a freshly loaded checkpoint.** Main has since added a step, so the builder's 85/85 is now 86.
+* **P-319 / P-425:** the added lines contain no form number and no combination key. The quoted map note sits in a comment only, and the change is test code.
+
+Issues:
+* **m1 (Should, not blocking): the step no longer proves the check runs on case B's release rather than case A's.**
+  * The test: I made the offer check against the earlier case's snapshot (`checkWith: r.es` passed into `offerFrom`). The pack stays **85/85 green**, because both releases refuse more than 120 characters.
+  * Today, the fact that case B's release is used rests only on code reading: `offersOf` passes `snapshot = this.runtime.snapshotOf(c)`, case B's.
+  * No honest instance exists on the checkpoint today. I probed all 63 person facts that both releases ask, with 25 values. The only fact that VV accepts and WP refuses is `person.current_residence_country`, and that refusal is itself a map-note artefact (see "Outside this diff").
+  * Fix: once IMM 5710's current-residence label is corrected, add one step: case A's residence "IND" (valid on VV) is refused on case B. Until then, say this limit in the step's comment.
+* **m2 (records): `screens/C6.19/concept.md:16` still gives the example "case A's passport country "IND" is not on the work permit's list".** That example is now known to be the bug. Fix: change it to the length example, in this PR or in the runtime lane's next C6.19 edit.
+
+Outside this diff (for the tech lead / qa; not held against this PR):
+* On With an LMIA, `person.current_residence_country` offers one choice labelled **"only option: Canada"** and refuses "Canada", "CAN" and "511" with "Choose one of: only option: Canada.". The source is IMM 5710's map note `code_list:imm5710.current_cor (only option: Canada=511)`: the note's lead-in is read as part of the label.
+* I reproduced it through the API on a fresh With an LMIA case, and on `origin/main` too, so this PR did not cause it. It is QA-355's bug class in a form `namesNoValues` does not cover, and an officer cannot give an inside-Canada worker a valid answer.
+* It belongs in a new qa item for the forms lane (the map label), probably Major.
+
+Journey test: no screen or flow changed in this diff (test code only), so round 1's reviewer score stands at **9/10**. I wrote no new report.
+
+Blockers: none. Majors: none. Minors: m1, m2 (and round 2's carried Minor).
+
+Verdict: Approve

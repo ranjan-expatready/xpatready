@@ -125,6 +125,9 @@ async function api() {
   // a list and refused "IND" itself, a valid answer; that note names no values (tech lead's ruling on #1446 (b),
   // engine/options.ts namesNoValues). Written as the product writes a correction (the old row superseded, then the new row, in one
   // transaction: the table is append-only and holds one current answer), confirmed as before. Set-up only.
+  // Limit (review round 3, m1): both releases refuse more than 120 characters, so this step proves a refusal is shown and
+  // blocks the tick, not that case B's release (rather than case A's) is the judge; the code passes case B's snapshot
+  // (offersOf). No honest example on the checkpoint tells them apart today (25 values on the 63 shared person facts).
   const STALE = `IND: ${"stored under an older version of this field ".repeat(3).trim()}`;
   const staleId = crypto.randomUUID();
   sql(`begin; update client_canonical_answer set superseded_by_id = '${staleId}' where subject_id = '${pa}' and canonical_field_key = '${COUNTRY}' and row_key is null and superseded_by_id is null; insert into client_canonical_answer (id, workspace_id, party_id, subject_id, canonical_field_id, row_key, value_json, effective_at, canonical_field_key, status, verified_by, verified_at, source_json) select '${staleId}', workspace_id, party_id, subject_id, canonical_field_id, row_key, to_jsonb('${STALE}'::text), effective_at + interval '1 millisecond', canonical_field_key, status, verified_by, verified_at + interval '1 millisecond', source_json from client_canonical_answer where superseded_by_id = '${staleId}'; commit;`);
