@@ -34,4 +34,18 @@ None.
 ## Could not check
 A real screen reader (VoiceOver/NVDA). Safari and Firefox marker hiding: Chromium only, by the CSS, not seen. Dark theme. A rebuilt bundle at 7fc6f108c: web/dist must not be rebuilt here, though the served bundle already showed the 375 px layout. D17/D20 stay with the founder. Journey score: `journey-test-reviewer-2026-11-10.md` (9.5/10, pass, no 0).
 
-**Verdict: Approve** (no open Blocker or Major; Minors m1-m6 for the builder or a follow-up row)
+Verdict on 7fc6f108c: Approve (no open Blocker or Major; Minors m1-m6 for the builder or a follow-up row)
+
+## Re-review 586e27faf (diff only: `git diff 7fc6f108c..586e27faf`, P-277)
+The change: `tests/check_bk2_fold_outs.ts` (+26/-6), `pages/configuration.tsx` (1 import), this review and the journey file committed byte-identical, and 12 BK-2 screenshots retaken (bundle at 9258a1b34). No other web/src change; nothing in engine/, api/src/ or prisma/.
+- **m1 fixed.** `RAW = /<(details|summary)(\s|>|$)/`. A planted `<details` with its attributes on the next line now fails the scan, and self-test 13 covers it.
+- **m2 fixed as far as a code search can go.** `HAND_ARROW` also flags one chevron turned by a `rotate-` class (planted `rotate-180`: fails; self-test 14). The header now says a toggle with neither aria-expanded nor a chevron is not seen. My planted `{o ? "Hide…" : "Show…"}` button still passes, as stated.
+- **m3 fixed for button hosts.** `elementAt()` cuts the element from its own `<` to its closing tag. Planted cases now all fail: an unrelated `<FoldArrow />` on the same line, an unrelated one 2 lines below a multi-line `aria-expanded` button, a self-closing `<Button aria-expanded />`, and "Show the first 5" beside another button in release-update.tsx. Self-tests 15-16 cover them.
+  - **Residual (new Minor m7).** `elementAt` (check_bk2_fold_outs.ts:43) only knows the closing tags `button|Button|summary|a`. A `<div role="button" aria-expanded>` or `<li aria-expanded>` alone fails the scan (good), but with an unrelated `<FoldArrow />` on the next lines it passes: the scan falls back to the first `/>`, which is that FoldArrow's (planted, 16/16). No current element with aria-expanded uses such a host (all are button/Button/input/Input). Fix when convenient: close on the element's own tag name.
+- **m6 fixed.** `configuration.tsx:13` is one import.
+- **m4** is with the tech lead (PR). **m5** is not this row's scope, was already on main, and is listed in the PR. Neither is BK-2's to close.
+- **Runs.** The scan passes 16/16 at 586e27faf (scratch worktree, removed). The retaken 375 px Questionnaires screenshots show the arrow beside the section title, right-pointing when closed and down-pointing when open. I did not restart a copy: the code under web/src changed by one import line only, so my earlier browser run (51/51) and the journey score (9.5/10) stand. I rebuilt nothing and committed nothing.
+
+Verdict on 586e27faf: no open Blocker or Major (Minors: m7 new; m4 and m5 handed to the lead).
+
+**Verdict: Approve**
