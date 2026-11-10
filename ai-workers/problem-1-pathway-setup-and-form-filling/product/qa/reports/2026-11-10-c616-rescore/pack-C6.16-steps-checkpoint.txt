@@ -1,0 +1,80 @@
+C6.16 — Adult privacy and Send to …
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  C6.16-0 pass: a fresh case opens with Client A, Partner, a child of 19, a child of 10 and a child with no date of birth
+PASS  C6.16-1 pass: Client A answers a Partner question, then sends to Partner; the demo inbox holds the link — {"answer":200,"send":201,"link":{"state":"sent","email_masked":"p•••@example.com","given_by":"Client A","sent_at":"2026-11-09T21:32:58.886Z","accepted_at":null,"expires_at":"2026-11-23T21:32:58.886Z","why":null,"ended_at":null,"principal_words":null},"messages
+PASS  C6.16-1 pass: the send answers neither the token nor a code; the link's token is in its fragment
+PASS  C6.16-1 pass: opening the link sends nothing (no code message) and shows the masked address; no referrer — {"state":"live","email_masked":"p•••@example.com","accepted":false}
+PASS  C6.16-1 pass: Send me a code puts a 6-digit code in the inbox; the API answers it masked, never the code — {"sent":true,"email_masked":"p•••@example.com","expires_at":"2026-11-09T21:47:59.003Z"}
+PASS  C6.16-2 fail: a wrong code says how many tries are left — ["That code is not right. You have 4 tries left.","That code is not right. You have 3 tries left.","That code is not right. You have 2 tries left.","That code is not right. You have 1 try left."]
+PASS  C6.16-2 fail: the fifth wrong code voids the link: "Too many wrong codes …", and the right code no longer works — {"type":"https://expatready.local/problems/this-link-no-longer-works","title":"This link no longer works","status":410,"detail":"Too many wrong codes. This link no longer works. Ask whoever sent it for a new one.","message":"Too many wrong codes. This link no 
+PASS  C6.16-2 fail: the locked link explains itself without naming anyone; its messages are gone — {"state":"dead","why":"Too many wrong codes. This link no longer works. Ask whoever sent it for a new one."}
+PASS  C6.16-3 pass (data): before the right code, Partner's answers are not private (a mistyped address never locks Client A out)
+PASS  C6.16-3 fail (race): the same right code sent twice at the same moment gives one session; the other is refused in words — [200,409,"That code was just used, or the link stopped working a moment ago. Press Send me a code for a new one."]
+PASS  C6.16-3 pass: the right code (typed with a space or a dash) gives a session for this case and this person; privacy is now stored on — {"session":"KLZr9fdmV82f7Ga6DeBYcy6qKFh5gBNck-kQy-DKo2o","expires_at":"2026-11-10T05:32:59.271Z","case_id":"c959075b-2464-48a3-b290-32457cfef583","subject_id":"30fdc097-4999-4dfc-8463-8f80c17a19f3","consent_needed":true}
+PASS  C6.16-3 fail (break M4): after the first right code the demo inbox holds no link or code for Partner (nothing to mint a new code from) — []
+PASS  C6.16-3 fail (break M4): Client A's own persona cannot open anyone's demo inbox (403) — [403,"A client's own pages cannot open a demo mailbox: open the inbox without acting as a client (it stands in for the person's own email)."]
+PASS  C6.16-3 fail: no questions before the consent card; the card's words are marked Unconfirmed: no counsel — {"pre":403,"me":{"case_id":"c959075b-2464-48a3-b290-32457cfef583","subject_id":"30fdc097-4999-4dfc-8463-8f80c17a19f3","person":"Sample Partner","case_reference":"ACC-mw9s2bbt-czr0","email_masked":"p•••@example.com","consent_needed":true,"consent":"Your answers
+PASS  C6.16-3 pass: the session reads only Partner's parts (with their parents') and the application's — ["30fdc097-4999-4dfc-8463-8f80c17a19f3","5186aff1-db97-4ec6-891c-1576d7951a95","30fdc097-4999-4dfc-8463-8f80c17a19f3/parent_1","30fdc097-4999-4dfc-8463-8f80c17a19f3/parent_2","30fdc097-4999-4dfc-8463-8f80c17a19f3/sibling"]
+PASS  C6.16-3 pass: Partner answers a question about their own parent on the link — ["30fdc097-4999-4dfc-8463-8f80c17a19f3/parent_1",200,null]
+PASS  C6.16-3 pass: Partner saves their own answer on the link (their own channel) — 200
+PASS  C6.16-3 fail: the application's shared answers are read-only on the link (403) — "Your link is for your own questions only."
+PASS  C6.16-4 pass: Client A's questionnaire shows Partner's progress only (parts done of parts asked, counted on the server) — {"subject_id":"30fdc097-4999-4dfc-8463-8f80c17a19f3","label":"Sample Partner","progress":{"done":1,"asked":26,"optional":0,"saved_at":"2026-11-09T21:32:59.580Z"}}
+PASS  C6.16-4 pass (review m1): the progress Client A's questionnaire shows and the privacy list's are the same count — [{"done":1,"asked":26,"optional":0,"saved_at":"2026-11-09T21:32:59.580Z"},{"done":1,"asked":26,"optional":0,"saved_at":"2026-11-09T21:32:59.580Z"}]
+PASS  C6.16-4 fail: nothing Client A reads carries Partner's private answer (questionnaire, Prospect questionnaire, privacy list)
+PASS  C6.16-4 fail: Client A's PUT on a Partner answer is 403, and the refusal (once a 409 with the current value) never carries it — {"type":"https://expatready.local/problems/403","title":"Not allowed","status":403,"detail":"Sample Partner's answers are private to them and the firm: Sample Partner answers on their own link. You see how far they have got, not their answers.","message":"Samp
+PASS  C6.16-4 fail: Client A's none-apply, add row and remove row on Partner are each 403 — ["government_positions",403,403,201,403]
+PASS  C6.16-4 fail: Client A's upload of a document with no checklist line for Partner is 403 — [403,"Sample Partner's answers are private to them and the firm: Sample Partner answers on their own link. You see how far they have got, not their answers."]
+PASS  C6.16-4 fail: Client A's PUT about Partner's parent is 403, and Client A's questionnaire has no part about Partner's parents — [403]
+PASS  C6.16-4 fail: Client A's re-confirm of a Partner answer is 403 before anything is read (never a 409 with its value) — [403,"Sample Partner's answers are private to them and the firm: Sample Partner answers on their own link. You see how far they have got, not their answers."]
+PASS  C6.16-4 fail: Client A's upload to Partner's document line is 403 (nothing stored) — ["c2b2a1e2-7617-4fa4-b17c-106cdffb09fb",403,"Sample Partner's answers are private to them and the firm: Sample Partner answers on their own link. You see how far they have got, not their answers."]
+PASS  C6.16-5 pass: the case officer reads Partner's private answer and edits it — ["PARTNER-PRIVATE-mw9s2bbt",200]
+PASS  C6.16-5 pass: the officer's people list says what the code proves and who gave the address — "With Sample Partner since 9 Nov · private from Client A · answered on the link sent to p•••@example.com (address given by Client A)"
+PASS  C6.16-6 pass: on the link, Client A's earlier answer shows "answered by" Client A and is not yet confirmed — {"id":"c873fd20-2c79-4814-8804-b4e489f11e66","value":"SAMPLE-BY-CLIENT-A","status":"DECLARED","channel":"questionnaire","by":"user-P","at":"2026-11-09T21:32:58.791Z","answered":null,"problems":[],"confirmed":false,"why":"Answered by the principal for Sample Pa
+PASS  C6.16-6 pass: Confirm saves the same value on the link: a new answer of Partner's own, confirmed — {"id":"d2905c92-2dca-4d4b-80a3-f5c45a0265fb","value":"SAMPLE-BY-CLIENT-A","status":"DECLARED","channel":"own_link","by":"person:30fdc097-4999-4dfc-8463-8f80c17a19f3","at":"2026-11-09T21:33:00.679Z","answered":null,"problems":[],"confirmed":true,"why":"Declared
+PASS  C6.16-6 fail: a Confirm from an older view is refused (409), never saved twice — 409
+PASS  C6.16-7 pass: Client A takes the link back: the session ends at once and says why, naming no one — [200,"This link was taken back on 9 Nov. Ask whoever sent it for a new one.",{"state":"dead","why":"This link was taken back on 9 Nov. Ask whoever sent it for a new one."}]
+PASS  C6.16-7 fail: after take back privacy stays on: Client A sees progress only, and a PUT on an empty Partner question is 403 — ["person.residence_province_state",403]
+PASS  C6.16-7 fail: nothing left to take back is refused in words (409) — "There is no working link to take back for Sample Partner."
+PASS  C6.16-8 pass: Client A resends to the kept address; a second resend replaces the first, which says so — [201,201,{"state":"dead","why":"This link was replaced by a newer one sent on 9 Nov. Use the newest email."}]
+PASS  C6.16-8 fail (B1): Client A may not send Partner's link to a new address (403, in words); the live link is untouched — "Sample Partner already uses p•••@example.com. Ask the firm to send to a new address."
+PASS  C6.16-8 pass (QA-359 break M2): the officer's Resend to the address Client A gave keeps "address given by" Client A — [201,"user-P|user-O"]
+PASS  C6.16-8 pass: case staff send Partner's link to a new address — {"state":"sent","email_masked":"p•••@example.com","given_by":"Case officer","sent_at":"2026-11-09T21:33:01.566Z","accepted_at":null,"expires_at":"2026-11-23T21:33:01.566Z","why":null,"ended_at":null,"principal_words":null}
+PASS  C6.16-8 pass (QA-359): after staff sent to a new address, the privacy list tells Client A that Resend sends the firm's link again; staff's Resend still sends a new one — [{"to_masked":"p•••@example.com","kind":"same"},{"to_masked":"p•••@example.com","kind":"new"}]
+PASS  C6.16-8 pass (QA-359, was break m3): after staff sent to a new address, Client A's Resend (no address) delivers the same link to the staff's address, nothing to the first one; the staff's link stays live — [201,false,null,0,2,1]
+PASS  C6.16-8 fail (QA-359, F12 (b)): Client A may not send it back to the first address (403, in words); the staff's link is untouched — [403,"The firm sent Sample Partner's link to p•••@example.com. Only the firm can change the address."]
+PASS  C6.16-8 pass (QA-359): the history says Client A sent the same link again to the staff's address, and that it still works — "Client A sent the same link again to the spouse or partner on case c959075b, to p•••@example.com (address given by Case officer); it still works"
+PASS  C6.16-8 fail (QA-359 break m3): pressed again within a minute, Resend sends nothing more to the staff's address — [201,2]
+PASS  C6.16-8 fail (QA-359 break M1): after staff take back the link at the new address, Client A's Resend sends nothing anywhere (409, in words) and the list offers no Resend — [200,409,"The firm's link to p•••@example.com no longer works. Only the firm can send Sample Partner a new one.",{"to_masked":"p•••@example.com","kind":"firm"},{"send":false,"resend_kept":false,"send_new":false,"take_back":false,"tick":false}]
+PASS  C6.16-8 fail (review m3): a control character in the address is refused on the field (400), never a 404 — [400,"Remove the control or invisible characters from the address."]
+PASS  C6.16-8 fail (race): the same Send pressed twice at once sends one link — [201,201,null,null]
+PASS  C6.16-8 fail: an address another person on the case uses is refused (409) — "This address is already used for someone else on this case. Use Sample Partner's own address."
+PASS  C6.16-8 fail (race): three resends at the same moment leave exactly one working link, each answered in words (never a 500) — [201,201,201]
+PASS  C6.16-8 fail (data): the database refuses a second working link for one person (the race guard under the row lock) — null
+PASS  C6.16-9 fail: Send to a child of 10 is 409 (under 18, Sample) and to a person with no date of birth 409, each saying why — ["Sample Child 10 is under 18: a child's answers stay with the family, so there is no own link and no privacy tick (the age is Sample; Unconfirmed: no counsel).","Sample Child no date's date of birth is not answered yet (or is not a real past date): answer it 
+PASS  C6.16-9 pass: the privacy list offers no Send for the minor or the person without a date of birth, and says why — ["Sample Child 10 is under 18: a child's answers stay with the family, so there is no own link and no privacy tick (the age is Sample; Unconfirmed: no counsel).","Sample Child no date's date of birth is not answered yet (or is not a real past date): answer it 
+PASS  C6.16-9 fail: the tick is staff's (Client A 403), needs a reason (400), and there is none for a minor (409) — [403,400,409]
+PASS  C6.16-9 pass: staff tick "Keep private from the principal" for the child of 19, with a reason; Client A then sees progress only — {"on":true,"at":"2026-11-09T21:33:03.071Z","by":"Case officer","why":"Asked by the child (Sample)"}
+PASS  C6.16-9 fail (break M1): Client A reads that the child of 19 is private, never the staff's reason or who ticked it; staff read both — [{"on":true,"at":"2026-11-09T21:33:03.071Z","by":null,"why":null},"Asked by the child (Sample)"]
+PASS  C6.16-9 fail (data): the stored setting never switches off (the database refuses it)
+PASS  C6.16-9 fail: a configuration person (403) and another firm (404) reach no one's privacy — [403,404]
+PASS  C6.16-10 pass: the new session (staff's new address) reads Partner's parts
+PASS  C6.16-10 fail: a session with x-actor is 400; another case 404; another person 403 (read and write); staff and client routes 403 — [400,404,403,403,403,403]
+PASS  C6.16-10 fail: no session, or a made-up one, is 401 in words
+PASS  C6.16-11 fail: an expired code is explained (15 minutes) and is not counted as a wrong try — "That code has expired: a code works for 15 minutes. Press Send a new code."
+PASS  C6.16-11 fail: an unknown link names no case and no person — {"type":"https://expatready.local/problems/not-found","title":"Not found","status":404,"detail":"This link does not work. Ask whoever sent it for a new one.","message":"This link does not work. Ask whoever sent it for a new one."}
+PASS  C6.16-11 fail: an expired link says so — {"state":"dead","why":"This link expired on 8 Nov. Ask whoever sent it for a new one."}
+PASS  C6.16-11 fail: codes sent to one address are limited (429 in words after the limit) — [200,200,200,200,200,429,429,429]
+PASS  C6.16-11 fail (race): five wrong codes at the same moment are all counted and lock the link — [400,410,400,400,400]
+PASS  C6.16-13 fail (race, break m1): one address sent to two people at the same moment: one is sent, the other refused in words — [201,409]
+PASS  C6.16-13 fail (break M2): a link sent to someone who is now under 18 sends no code and dies, saying why without naming anyone; privacy stays off — [410,"This link no longer works: it was sent to someone who cannot have their own link. Ask whoever sent it for a new one.",{"state":"dead","why":"This link no longer works: it was sent to someone who cannot have their own link. Ask whoever sent it for a new o
+PASS  C6.16-13 pass (setup): Make principal on Partner (C6.13): Partner is the principal by role, Client A the spouse — [200,200,null]
+PASS  C6.16-13 fail (review M1, break M3): after Make principal the case's client gets no Send and no tick (409 in words), and is never private — [{"send":false,"resend_kept":false,"send_new":false,"take_back":false,"tick":false},"Sample Client A answers on their own family link (they are the client on this case).",409,409]
+PASS  C6.16-13 pass (review M1): the new principal by role is an adult the client answers for, so Send to them is offered and works — [true,null,201,null]
+PASS  C6.16-12 fail (data): reading the privacy list, the inbox, the link's questionnaire and Client A's questionnaire writes nothing — ["3250|27|1|2","3250|27|1|2"]
+PASS  C6.16-12 pass: the history holds send, resend, code sent, wrong code, lockout, accepted, kept private, consent and take back, each with who — ["resent","sent","took back","wrong code","locked","accepted","kept private","code sent","consent"]
+PASS  C6.16-12 fail: no history line carries a token, a code, a full address or a private answer — 0
+PASS  C6.16-12 pass (data): tokens and codes are stored only as sha256
+
+74/74 passed
+exit 0

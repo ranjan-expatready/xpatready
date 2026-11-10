@@ -1,0 +1,4 @@
+PASS  QA-359 setup: Client A sent to A, Partner entered the right code, the officer sent to a new address B
+PASS  QA-359 C6.16: after staff sent Partner's link to B, Client A's Resend sends nothing new to A and leaves B's link live
+
+2/2 passed
