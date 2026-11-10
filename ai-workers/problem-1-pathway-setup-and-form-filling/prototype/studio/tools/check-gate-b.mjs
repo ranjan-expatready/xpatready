@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, touchedPacks, diffSet, batchRecheck, packVerdict, part1, stepsPrinted, stepsUnprinted, packSteps, unprintedReason } from "./gate-b.mjs";
+import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, touchedPacks, diffSet, batchRecheck, checkpointTrigger, checkpointRows, packVerdict, part1, stepsPrinted, stepsUnprinted, packSteps, unprintedReason } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ACC = resolve(HERE, "../acceptance"), P = resolve(HERE, "../../../product");
 /** A fixture pack whose run truly uses no server (only an engine run line), for the gate's no-server rules (B125, B131). */
@@ -222,6 +222,16 @@ ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.te
     ["C3", { files: ["C3.test.ts"], why: "x ← C3.test.ts", direct: false }], ["C4", { files: ["C4.test.ts"], why: "C4.test.ts", direct: true }], ["C5", { files: ["C5.test.ts"], why: "x", direct: false }], ["C6", { files: ["C6.test.ts"], why: "x", direct: false }]]), (id) => st[id]);
   ok("D2 (review of #1337, Blocker 1): a changed pack runs if built; a pack that only reads a changed file runs only for a Works row; a Partial or Not built row reached by reading is listed, not run", ds.run.map((r) => r.id).join() === "C1,C2,C5" && ds.listed.length === 3 && ds.listed.some((l) => /^C3 \(Partial; reads a changed file\)/.test(l)) && ds.listed.some((l) => /^C4 \(Not built/.test(l)), ds);
   ok("D2: a reach that names no pack and no set-up adds nothing; README.md is never a pack", touchedPacks(new Map([[`${top}/tests/check_x.ts`, "y"]]), files, read, top).size === 0); }
+{ // (4a, P-446): a checkpoint step or gate file (select-suites marks the chain "(configured checkpoint)") adds every row
+  // scored on the configured checkpoint, beside the packs the graph reached; a change that reaches no checkpoint adds none.
+  const reached = new Map([["s/acceptance/C6.19.test.ts", "045-form-field-gates.ts (configured checkpoint, changed) ← C6.19.test.ts"], ["s/acceptance/C2.test.ts", "x.ts ← C2.test.ts"]]);
+  ok("(4a): a changed step is read from the chain; one reached on the walk adds no rows (review of #1504 round 2)", checkpointTrigger(reached) === "045-form-field-gates.ts" && checkpointTrigger(new Map([["a", "x.ts ← C2.test.ts"]])) === null
+    && checkpointTrigger(new Map([["a", "routes.json ← 090-x.ts (configured checkpoint) ← C6.19.test.ts"]])) === null, checkpointTrigger(reached));
+  const data = { C7: "checkpoint", C8: "six", C9: "checkpoint", C2: "checkpoint" }, dataOfId = (id) => data[id];
+  const t = checkpointRows(new Map([["C2", { files: ["x.ts"], why: "x.ts ← C2.test.ts", direct: true }]]), "045-form-field-gates.ts", ["C2", "C7", "C8", "C9", "C10"], (id) => (id === "C10" ? "checkpoint" : dataOfId(id)), (id) => id !== "C10");
+  ok("(4a) pass: every row on the checkpoint is added (C7, C9), read-only (not direct); fail: a six row is not (C8), nor a row with no pack (C10), and a row already touched keeps its reason (C2)",
+    t.has("C7") && t.has("C9") && !t.has("C8") && !t.has("C10") && t.get("C7").direct === false && /configured checkpoint/.test(t.get("C7").why) && t.get("C2").direct === true && t.get("C2").why === "x.ts ← C2.test.ts", [...t.keys()]);
+  ok("(4a) fail: no trigger adds nothing", checkpointRows(new Map(), null, ["C7"], dataOfId).size === 0); }
 
 // QA-366 (10 Nov): a merge-queue batch runs a named row's pack again when the batch adds a file that pack reads.
 { const st = { "C7.5": "Partial", "C6.9": "Works", "C8.3": "Partial", "C9.1": "Partial" }, T = (id, why = "form-field-gates.json ← m3.ts ← x") => [id, { files: [`${id}.test.ts`], why }];
