@@ -17,7 +17,9 @@ const ROOT = join(import.meta.dirname, "..");
 const SELF = "tests/check_b164_no_engine_keys.ts";
 
 type Kind = "key" | "program" | "form" | "slice";
-/** "fixture": a file or folder (ending in "/") not read at all: the demo story's and the checkpoint's own sample loaders. */
+/** "fixture": a file or folder (ending in "/") not read at all: the demo story's and the checkpoint's own sample loaders
+ *  (P-452: row BK-12 shrinks the list; a new fixture needs the tech lead's ruling in its PR). An entry whose guard starts
+ *  "reader content" (text read from an IRCC page, no branch) names no row. */
 type EntryKind = Kind | "fixture";
 type Hit = { file: string; line: number; kind: Kind; text: string };
 type Entry = { guard: string; file: string; kind: EntryKind; text: string; row: string };
@@ -27,13 +29,13 @@ type Token = { kind: "str" | "id"; text: string; line: number };
  *  PR; never add one. */
 // ALLOW-START (JSON; shrink-only: compared with origin/main's copy of this block)
 const ALLOW: Entry[] = [
-  {"guard": "fixture", "file": "api/src/demo.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": ""},
-  {"guard": "fixture", "file": "api/src/forms-demo.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": ""},
-  {"guard": "fixture", "file": "api/src/finished-story.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": ""},
-  {"guard": "fixture", "file": "api/src/checkpoint-words.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": ""},
-  {"guard": "fixture", "file": "api/src/sample-case.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": ""},
-  {"guard": "fixture", "file": "api/src/sample-validated.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": ""},
-  {"guard": "fixture", "file": "api/src/features/checkpoint/", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": ""},
+  {"guard": "fixture (BK-12 sample case as a setting)", "file": "api/src/demo.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": "BK-12"},
+  {"guard": "fixture (BK-12 sample case as a setting)", "file": "api/src/forms-demo.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": "BK-12"},
+  {"guard": "fixture (BK-12 sample case as a setting)", "file": "api/src/finished-story.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": "BK-12"},
+  {"guard": "fixture (BK-12 sample case as a setting)", "file": "api/src/checkpoint-words.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": "BK-12"},
+  {"guard": "fixture (BK-12 sample case as a setting)", "file": "api/src/sample-case.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": "BK-12"},
+  {"guard": "fixture (BK-12 sample case as a setting)", "file": "api/src/sample-validated.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": "BK-12"},
+  {"guard": "fixture (BK-12 sample case as a setting)", "file": "api/src/features/checkpoint/", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": "BK-12"},
   {"guard": "G1 EACH_FILES_OWN", "file": "engine/filing-modes.ts", "kind": "key", "text": "vv.single", "row": "M3-S1"},
   {"guard": "G2 fees not worked out", "file": "engine/filing-modes.ts", "kind": "slice", "text": "Fees not worked out yet for ", "row": "M3-S1"},
   {"guard": "G2 fees not worked out", "file": "engine/runtime/filings.ts", "kind": "slice", "text": "Fees not worked out yet for ", "row": "M3-S1"},
@@ -63,8 +65,8 @@ const ALLOW: Entry[] = [
   {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "program", "text": "canada.ca \"Work permit from inside Canada: Forms and documents\" (modified 2026-05-15): \"Your document checklist may include supporting documents such as: … Family Information Form - Visitors, Students and Workers (IMM 5707)\"; IMM 5707 (01-2023) p. 1, Instructions: \"This form must be completed by: each person, 18 years of age or older, or a minor (less than 18 years of age) travelling alone.\"", "row": "BK-10"},
   {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "key", "text": "sp.outside", "row": "BK-10"},
   {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 1294", "row": "BK-10"},
-  {"guard": "stand-in SI-6 words (row to confirm, tech lead)", "file": "api/src/review-runs.ts", "kind": "program", "text": "Stand-in SI-6: the AI review runs live on the Visitor visa forms only (one trial); other form families follow one at a time with their own tests. Severities are Sample until the immigration expert confirms them.", "row": "BK-10"},
-  {"guard": "IRCC checklist-page heading table (row to confirm, tech lead)", "file": "api/src/saved-readings.ts", "kind": "program", "text": "PARENTS AND GRANDPARENTS SUPER VISA", "row": "BK-10"},
+  {"guard": "stand-in SI-6 (BK-14 AI review on any pathway's forms, placeholder row)", "file": "api/src/review-runs.ts", "kind": "program", "text": "Stand-in SI-6: the AI review runs live on the Visitor visa forms only (one trial); other form families follow one at a time with their own tests. Severities are Sample until the immigration expert confirms them.", "row": "BK-14"},
+  {"guard": "reader content: a heading read from IRCC's checklist page, no branch", "file": "api/src/saved-readings.ts", "kind": "program", "text": "PARENTS AND GRANDPARENTS SUPER VISA", "row": ""},
   {"guard": "BK-10 form titles into data", "file": "api/src/sources.ts", "kind": "form", "text": "IMM 5257", "row": "BK-10"},
   {"guard": "BK-10 form titles into data", "file": "api/src/sources.ts", "kind": "form", "text": "IMM 1295", "row": "BK-10"},
   {"guard": "BK-10 form titles into data", "file": "api/src/sources.ts", "kind": "program", "text": "Application for Work Permit made Outside of Canada", "row": "BK-10"},
@@ -192,7 +194,7 @@ export function judge(hits: Hit[], entries: Entry[], files: string[] = []) {
 /** Shrink-only: the entries `next` adds over `base`. */
 export const added = (base: Entry[], next: Entry[]) => next.filter((e) => !base.some((b) => same(b, e)));
 
-/** The rows that remove an entry: M3-S1 to M3-S5 (P-425) and the Bake's BK rows (P-452); a fixture names none. */
+/** The rows that remove an entry: M3-S1 to M3-S5 (P-425) and the Bake's BK rows (P-452). */
 const ROW = /^(M3-S[1-5]|BK-\d+)$/;
 
 const walk = (dir: string): string[] => readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? walk(p) : /\.(tsx?|mjs|cjs|js)$/.test(f) ? [p] : []; });
@@ -217,7 +219,8 @@ ok("pass: every allow-list entry still matches the code (a removed guard takes i
 ok("pass: the scan reads the keys from the data (vv.single, sp.outside, individual.visitors.visitor_visa)", ["vv.single", "sp.outside", "individual.visitors.visitor_visa"].every((k) => known.has(k)));
 
 // The allow-list can only shrink.
-ok("pass: each entry names its guard and the row that removes it (M3-S1 to M3-S5, BK-n); a fixture says why it is one", entries.every((e) => e.guard && (e.kind === "fixture" ? e.row === "" && e.text.length > 20 : ROW.test(e.row))), entries.filter((e) => !(e.kind === "fixture" ? e.row === "" : ROW.test(e.row))));
+const named = (e: Entry) => !!e.guard && (e.guard.startsWith("reader content") ? e.kind !== "fixture" && e.row === "" : ROW.test(e.row) && (e.kind !== "fixture" || e.text.length > 20));
+ok("pass: each entry names its guard and the row that removes it (M3-S1 to M3-S5, BK-n; fixtures BK-12); only reader content names none", entries.every(named), entries.filter((e) => !named(e)));
 ok("pass: this file's own ALLOW block reads back as JSON (so origin/main's copy is read, never skipped)", JSON.stringify(allowOf(readFileSync(join(ROOT, SELF), "utf8"))) === JSON.stringify(ALLOW));
 let baseText: string | null = null;
 try { baseText = execFileSync("git", ["show", `origin/main:./${SELF}`], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }); } catch { baseText = null; }
@@ -249,7 +252,8 @@ for (const [what, src, kind] of cases) ok(`fail: ${what} is caught (${src})`, ca
 const caughtIn = (file: string, src: string) => judge(scan([...engine, { file, src }], known), entries).unexpected.filter((h) => h.file === file);
 ok("fail: a key in a new API file is caught (P-452)", caughtIn("api/src/new-thing.ts", `if (c.combination_key === "fs.spouse") charge();`).length === 1);
 ok("fail: a fixture covers only its own files: a new API file beside them is read", !fixtureOf("api/src/demo-two.ts", entries) && !!fixtureOf("api/src/features/checkpoint/999-new.ts", entries) && !fixtureOf("api/src/features/checkpointer.ts", entries));
-ok("fail: a fixture no file matches is stale", judge([], [{ guard: "fixture", file: "api/src/gone.ts", kind: "fixture", text: "x".repeat(30), row: "" }], all).stale.length === 1);
+ok("fail: a fixture no file matches is stale", judge([], [{ guard: "fixture", file: "api/src/gone.ts", kind: "fixture", text: "x".repeat(30), row: "BK-12" }], all).stale.length === 1);
+ok("fail: an entry with no row is refused unless it is reader content", !named({ guard: "G9", file: "api/src/x.ts", kind: "key", text: "sp.outside", row: "" }) && !named({ guard: "reader content", file: "api/src/x.ts", kind: "fixture", text: "x".repeat(30), row: "" }));
 
 // pass: what is not a key, a program or a guard is left alone.
 const clean = [
