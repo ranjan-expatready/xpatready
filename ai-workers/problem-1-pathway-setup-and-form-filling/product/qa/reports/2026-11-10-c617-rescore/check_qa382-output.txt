@@ -1,0 +1,8 @@
+QA-382 — the 'On file' words go once the new stage's line has its own file
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  setup: stage 1's passport uploaded (C6.4), the next stage started, its passport line says 'On file …' — {"made":201,"up1":201,"go":201,"s2":"On file from Study permit, uploaded 10 Nov 2026: check it for this application."}
+FAIL  QA-382 fail: after this application's own copy is uploaded (201), the line is received and no longer says "On file … check it" (says: "On file from Study permit, uploaded 10 Nov 2026: check it for this application.") — {"after":{"id":"819d0226-acb0-444f-bcec-6f58af74f84c","document_type":"passport_or_travel_document_information_page_photocopy","label":"Passport or travel document information page photocopy","state":"received","reason":"Always needed for this application.","r
+
+1/2 passed
+exit code: 1
