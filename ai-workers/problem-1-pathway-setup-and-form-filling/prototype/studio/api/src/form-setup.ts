@@ -101,6 +101,32 @@ export const SP_DOCUMENT_LINES: CitedDocumentLine[] = [
   { type: "Letter of acceptance", who: "principal_applicant",
     quote: `${IMM5483}, p. 2, documents list item 4: "Letter of acceptance from where you intend to study (including, but not limited to, Designated Learning Institutions)." (Sample, Unconfirmed: expert)` },
 ];
+/** C6.17 (P-444, QA-375): With an LMIA (inside Canada) takes its document lines from the reviewed work-permit release c1-v3
+ *  (300-reviewed-release-documents.ts), whose quotes are from the checklist for workers OUTSIDE Canada (IMM 5488), the New
+ *  Delhi visa office (IMM 5905) and Guide 5487. The checklist for this combination is IMM 5556 (03-2024), Document
+ *  Checklist: Worker (in Canada Applicant): official-sources/ircc/checklists/imm5556e.pdf (sha256 52eea575…, saved 27 Oct
+ *  2026). A line whose document IMM 5556 lists goes in with IMM 5556's own words, page and date; any other line keeps its
+ *  quote, labelled Sample with where it comes from, so no line claims a source it does not have (AGENTS rule 4, P-170).
+ *  Page: IMM 5556 is a dynamic form; documents list items 1 to 5 are in its "page1" part, before the break to page 2. */
+export type SourcedDocuments = { checklist: string; cited: Record<string, string>; sample: (quote: string, from: string | null) => string };
+const IMM5556 = "IMM 5556 (03-2024), canada.ca PDF modified 2024-04-10";
+/** The reviewed release's sources (its lines' source_file), in words: all three are for workers outside Canada. */
+const OUTSIDE_SOURCES: Record<string, string> = { imm5488e: "IMM 5488, the checklist for workers outside Canada", imm5905e: "IMM 5905, the New Delhi visa office's checklist for workers", "guide-5487": "Guide 5487, applying for a work permit from outside Canada" };
+export const LMIA_DOCUMENT_SOURCES: SourcedDocuments = {
+  checklist: IMM5556,
+  cited: {
+    "Proof of fee payment (processing fee and other applicable fees receipt)":
+      `${IMM5556}, p. 1, documents list item 1: "Proof of Payment, if applicable" / "Note: If you are applying for an open work permit, provide proof of payment for the open work permit holder fee." (Sample, Unconfirmed: expert)`,
+    "Passport or travel document information page photocopy":
+      `${IMM5556}, p. 1, documents list item 2: "PHOTOCOPIES of passport pages clearly showing each of the following: the passport number; the dates of issue and expiry; your name and date of birth; the stamp made by the Canadian authorities on your most recent entry into Canada; and any other marked page." (Sample, Unconfirmed: expert)`,
+    "Marriage certificate or licence (photocopy)":
+      `${IMM5556}, p. 1, documents list item 5: "PHOTOCOPY of your Marriage license or Certificate (if applicable)" (Sample, Unconfirmed: expert)`,
+  },
+  sample: (quote, from) => {
+    const stem = (from ?? "").replace(/^.*\/|\.text\.inventory\.json$/g, "");
+    return `Sample: not on ${IMM5556}, the checklist for this combination; the reviewed release took it from ${OUTSIDE_SOURCES[stem] ?? (stem || "a source it does not name")}, so the immigration expert confirms it (Unconfirmed: expert). Its words there: "${quote}"`;
+  },
+};
 /** QA-227: the two Yes/No questions IMM 5476's and IMM 5475's rules read, in the checklists' words (IMM 5484 (05-2026),
  *  official-sources/ircc/checklists/imm5484e.pdf, saved 19 Oct 2026; IMM 5556 (03-2024) for With an LMIA). Asked once
  *  for the application, beside its language of service (the application form's first case question). Sample,
@@ -116,7 +142,7 @@ type RuleFact = typeof GENDER_FACT & { beside?: string[] };
 /** QA-144 slice 4 (B81): an answer a form prints no choice for, marked Not on this form on each of its form fields that
  *  read the fact; cited with the form's printed choices. */
 export type NotOnFormMark = { form: string; fact: string; values: string[]; cite: string };
-export type FormSetup = { application: string; rules: FormRule[]; notOnForm?: NotOnFormMark[]; family?: string; ruleFacts?: RuleFact[]; ownYesNo?: OwnYesNo[]; documentsFromReviewedRelease?: boolean; documentsFromChecklist?: string; documentsCited?: CitedDocumentLine[] };
+export type FormSetup = { application: string; rules: FormRule[]; notOnForm?: NotOnFormMark[]; family?: string; ruleFacts?: RuleFact[]; ownYesNo?: OwnYesNo[]; documentsFromReviewedRelease?: boolean; documentSources?: SourcedDocuments; documentsFromChecklist?: string; documentsCited?: CitedDocumentLine[] };
 /** QA-144 slice 4 (B79, P-319): samples/form-setup.json, each combination's words as data. A fact only a rule reads is
  *  named there by its key and taken from the facts above; an unknown key fails the read, never a rule without its fact. */
 /** B79b (P-319): a fact only a rule reads is named by its key when this file holds it, or given whole in the data (its
@@ -147,7 +173,7 @@ const fromData = (): Record<string, FormSetup> => {
  *  (features/checkpoint/060-sections-from-forms.ts). */
 export const FORM_SETUP: Record<string, FormSetup> = {
   "vv.single": { application: "IMM 5257", rules: VV_FORM_RULES, ruleFacts: [GENDER_FACT, REP_FACT, RELEASE_FACT], documentsFromChecklist: "IMM 5484", family: "IMM 5484 (05-2026) p. 1: \"Family Information form. Must be completed by those aged 18 years or older.\"" },
-  "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES, ruleFacts: [REP_FACT, RELEASE_FACT], documentsFromReviewedRelease: true,
+  "wp.lmia_inside": { application: "IMM 5710", rules: LMIA_FORM_RULES, ruleFacts: [REP_FACT, RELEASE_FACT], documentsFromReviewedRelease: true, documentSources: LMIA_DOCUMENT_SOURCES,
     family: "canada.ca \"Work permit from inside Canada: Forms and documents\" (modified 2026-05-15): \"Your document checklist may include supporting documents such as: … Family Information Form - Visitors, Students and Workers (IMM 5707)\"; IMM 5707 (01-2023) p. 1, Instructions: \"This form must be completed by: each person, 18 years of age or older, or a minor (less than 18 years of age) travelling alone.\"" },
   // IMM 5483 (08-2025) p. 1 adds "or a minor travelling alone": a line has only a minimum age, so that is not in the rule (Unconfirmed: expert, #879).
   "sp.outside": { application: "IMM 1294", rules: SP_FORM_RULES, ruleFacts: [MINOR_FACT, REP_FACT, RELEASE_FACT], documentsCited: SP_DOCUMENT_LINES,
