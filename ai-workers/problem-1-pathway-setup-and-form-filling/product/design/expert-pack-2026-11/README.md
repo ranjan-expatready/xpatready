@@ -1,6 +1,6 @@
 # Immigration expert's review pack — first edition (November 2026)
 
-**For:** the immigration expert (a licensed consultant, RCIC, in good standing with the College of Immigration and Citizenship Consultants). **From:** the evidence lane, for the tech lead (P-455 (2)). **Status: Sample until the expert confirms (P-240). Legal points: Unconfirmed: no counsel. Not legal advice.**
+**For:** the immigration expert (a licensed consultant, RCIC, in good standing with the College of Immigration and Citizenship Consultants). **From:** the evidence lane, for the tech lead (P-455 (2); P-447 to P-455 and the BK rows are recorded on the tech lead's records branch `lead/2026-11-07-lead31`, not yet on `main`). **Status: Sample until the expert confirms (P-240). Legal points: Unconfirmed: no counsel. Not legal advice.**
 
 The founder asked for the pack to be prepared "as per the best in class practices and the industry standard and the government rules and the Canadian RCICI ... and then we will fine tune as required" (10 Nov 2026, P-455 (2)). This is that first edition: every immigration value comes from an official page we hold a dated copy of, or is labelled Sample. The expert's marks turn Sample into confirmed content; the session with the expert is not booked yet.
 
@@ -11,7 +11,7 @@ About 3–4 hours in total; the files can be done in any order.
 | File | What it holds | What to do | Time (estimate) |
 |---|---|---|---|
 | [`visitor-visa-answer-key.md`](visitor-visa-answer-key.md) | Every box the app fills on IMM 5257, IMM 5257 Schedule 1, IMM 5645 and IMM 5476 for a made-up family of four, with the client answer or rule behind it and IRCC's instruction | Read the 8 ranked findings first; then mark each row | 2 h |
-| [`study-permit-content.md`](study-permit-content.md) | The Study permit (outside Canada) content the next build will enter as data: fees, documents with their conditions, which forms and who fills each, the field map basis | Mark each row; answer the questions in §6 | 45 min |
+| [`study-permit-content.md`](study-permit-content.md) | The Study permit (outside Canada) content the next build will enter as data: fees, documents with their conditions, which forms and who fills each, the field map basis | Mark each row; answer the 8 questions in §6 | 45 min |
 | [`professional-practice-checklist.md`](professional-practice-checklist.md) | The steps the CICC Code of Professional Conduct and IRCC's representative rules ask of a licensee, and where the app supports each today | Mark each row; say which gaps matter most | 45 min |
 
 Out of scope for this edition: other pathways, the team's business requirements (retainer screens, billing), and any real client's file. Only sample and test data are used (P-455 (3)).

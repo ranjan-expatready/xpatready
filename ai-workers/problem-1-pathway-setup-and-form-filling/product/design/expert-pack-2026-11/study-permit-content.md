@@ -7,7 +7,7 @@ This is the content the Bake's Study permit row (BK-13, P-449) will enter **as d
 **What was read (no live re-read: canada.ca was not reachable from the cloud session on 10 Nov 2026):**
 * **[G5269]** Guide 5269, Applying for a study permit outside Canada: canada.ca `…/application-forms-guides/guide-5269-applying-study-permit-outside-canada.html`, page date **2026-10-06**, saved 27 Oct 2026 (`official-sources/ircc/instructions/guide-5269.html`).
 * **[C5483]** IMM 5483 (08-2025) E, Document checklist for a study permit, PDF modified 2025-08-11, checked 21 Oct 2026 (`official-sources/ircc/checklists/imm5483e.pdf`, sha256 `6f885da2…`).
-* **[HOW]** canada.ca "Study permit: How to apply" (`…/study-canada/study-permit/apply.html`), saved 27 Oct 2026 (`official-sources/ircc/canada/pages/study-canada-study-permit-apply.html`; our copy shows no page date).
+* **[HOW]** canada.ca "Study permit: How to apply" (`…/study-canada/study-permit/apply.html`), page date 2026-09-02, saved 27 Oct 2026 (`official-sources/ircc/canada/pages/study-canada-study-permit-apply.html`).
 * **[FEES]** the app's fee table `prototype/studio/samples/fee-table.json` (IRCC fee list, page date 2026-09-21, read 2–3 Nov 2026).
 * The app's seeded rows: the Study permit release snapshot from the same isolated copy as the answer key (`main` `8fc65d0b9`, configured checkpoint), and `prototype/studio/api/src/form-setup.ts` (`SP_FORM_RULES`, `SP_DOCUMENT_LINES`, `MINOR_FACT`).
 
@@ -27,11 +27,11 @@ This is the content the Bake's Study permit row (BK-13, P-449) will enter **as d
 | # | Line (proposed data) | Amount | Basis | Official words | Mark |
 |---|---|---|---|---|---|
 | F1 | Study permit (including extensions) | CAD 150 | each person applying for a study permit (per person by role: student; and a child applying for their own study permit) | [G5269] Step 3, "Your fees": "Application (per person) … Study permit (including extensions) 150"; [FEES] `study_permit`: "Study permit (including extensions) – per person 150.00" (IRCC fee list, read 3 Nov 2026) | ☐ |
-| F2 | Biometrics | CAD 85 per person; CAD 170 for a family of 2 or more applying at the same time and place | each person who must give biometrics; none under 14 or over 79 | [G5269] Step 3 lists "Biometrics (per person)" and "Maximum fee for a family of 2 or more people applying at the same time and place", but **the amounts did not load in our copy** ("[Error loading fee. Check the fee list.]"); the amounts come from [FEES] `biometrics` (IRCC fee list, read 2 Nov 2026), the exemptions from canada.ca "When to give biometrics: temporary residents" ("a child under the age of 14; an applicant over the age of 79", page date 2026-03-30) | ☐ |
+| F2 | Biometrics | CAD 85 per person; CAD 170 for a family of 2 or more applying at the same time and place | each person who must give biometrics; none under 14 or over 79; none who gave biometrics in the past 10 years ([G5269]: "You only need to give your biometrics once every 10 years when you apply for a visa or permit.") | [G5269] Step 3 lists "Biometrics (per person)" and "Maximum fee for a family of 2 or more people applying at the same time and place", but **the amounts did not load in our copy** ("[Error loading fee. Check the fee list.]"); the amounts come from [FEES] `biometrics` (IRCC fee list, read 2 Nov 2026; **its quote is a summary of the Lead-checked record, not IRCC's words**: re-read the fee list on the Mac), the exemptions from canada.ca "When to give biometrics: temporary residents" ("a child under the age of 14; an applicant over the age of 79", page date 2026-03-30) | ☐ |
 | F3 | No visitor visa fee for the student | CAD 0 | the visa or eTA is issued with the study permit | [G5269]: "If you need a TRV or an eTA, you do not have to complete a separate application or pay additional fees." | ☐ |
 | F4 | Spouse's open work permit (fees CAD 155 + CAD 100) | not on this combination | a separate application | [G5269]: spouses of full-time post-secondary students "may apply for an open work permit. However, they must complete their own work permit application"; [FEES] `work_permit` 155, `open_work_permit_holder` 100 | ☐ |
 
-Worked example for the expert to confirm (the lead's arithmetic from F1–F2, not app output): a student of 20 applying alone pays CAD 150 + CAD 85 = **CAD 235**. Fees "are subject to change at any time" ([G5269]); re-read the fee list on the Mac before release.
+Worked example for the expert to confirm (the lead's arithmetic from F1–F2, not app output): a student of 20 applying alone, with no biometrics given in the past 10 years, pays CAD 150 + CAD 85 = **CAD 235** (CAD 150 if their biometrics are still valid). Fees "are subject to change at any time" ([G5269]); re-read the fee list on the Mac before release.
 
 ## 3. Documents, with their conditions
 
@@ -41,7 +41,7 @@ Who: "principal" = the student. Condition = the rule the data would carry (Sampl
 |---|---|---|---|---|---|---|
 | D1 | Proof of fee payment | student (one per application) | always | [C5483] p. 1 item 1: "Proof of payment showing the amount paid. … If you or your family members need to give biometric information, the biometric fee should be paid at the same time and in the same way as the processing fee." | yes | ☐ |
 | D2 | Passport information page copy | each applicant | always | [C5483] p. 1 item 2: "A Photocopy of the information page of your valid passport or travel document which includes: The passport number, The issuance and expiry dates, Your photo, name, date and place of birth." | yes | ☐ |
-| D3 | Two photos | each applicant | only when biometrics are **not** required | [C5483] p. 2 item 3: "If you are required to provide biometric fingerprints and photo, you are not required to include paper photos with your application." | no | ☐ |
+| D3 | Two photos | each applicant | only when biometrics are **not** required (so also when the person's biometrics from the past 10 years are still valid: expert to confirm) | [C5483] p. 2 item 3: "If you are required to provide biometric fingerprints and photo, you are not required to include paper photos with your application." | no | ☐ |
 | D4 | Letter of acceptance | student | always | [C5483] p. 2 item 4: "Letter of acceptance from where you intend to study (including, but not limited to, Designated Learning Institutions). Note: Must be issued by the Canadian institution … show the exact amount of tuition fees you are required to pay, the anticipated starting and finishing dates, and the date by which you need to register." | yes | ☐ |
 | D5 | Provincial or territorial attestation letter (PAL/TAL) | student | always, unless an exception applies; not separately when studying in Quebec (the CAQ serves) | [C5483] p. 2 item 5: "Unless you meet one of the exceptions, you must submit a PAL/TAL. A study permit application that does not include a PAL/TAL, or provide proof of meeting an exception outlined in the Ministerial Instructions, will not be accepted for processing."; [G5269]: "If you intend to study in Quebec, the Quebec Acceptance Certificate (CAQ) serves as the PAL/TAL." | no | ☐ |
 | D6 | Quebec Acceptance Certificate (CAQ), attestation of issuance | student | when studying in Quebec | [C5483] p. 2 item 6: "If you plan on studying in the province of Québec, provide the attestation of issuance of your "Québec Acceptance Certificate" (CAQ)"; [G5269]: "submit the updated CAQ in both the Provincial/Territorial Attestation Letter and CAQ sections." | no | ☐ |
@@ -79,13 +79,14 @@ Basis of every map: the official PDF identified by number, edition and checksum 
 
 ## 6. Questions for the expert (one line each; recommendation in brackets)
 
-1. **Q1 Family form for an online study permit:** IMM 5645 or IMM 5707? (Recommend the form the online application asks for, as on the Visitor visa: IMM 5645 online, IMM 5707 only on paper.)
+1. **Q1 Online channel, IMM 1294 and the family form:** a study permit from outside Canada must be applied for online ([G5269], [HOW]). In the IRCC account, is IMM 1294 answered on screen (as IMM 5257 is on the Visitor visa, so the app gives a portal sheet and needs no PDF fill or Adobe trial) or uploaded as a validated PDF? And which family form, IMM 5645 or IMM 5707? (Recommend: follow what the online application asks; the answer sets BK-13's scope, since an on-screen IMM 1294 makes §5's PDF map and fill trial a paper-only fallback.)
 2. **Q2 Minor travelling alone:** must a student under 18 travelling alone fill the family form? [C5483] says yes; the app's rule has no "travelling alone" fact yet. (Recommend yes, with a fact.)
 3. **Q3 Custodian age:** "less than 17" ([C5483]) or "17 years of age or less" ([G5269])? (The app takes the guide's wider words.)
 4. **Q4 Financial support:** the current amount and how firms evidence it (the amount is not in our copies).
 5. **Q5 PAL/TAL exceptions:** which exceptions a firm meets most often, so the condition can name them.
 6. **Q6 Test student for the answer key:** suggest one made-up student (age, province, program, funds) that a typical file looks like.
-7. **Q7 Family members:** should the first Study permit release support an accompanying spouse and children (their own study or work permit applications filed together), or a student alone?
+7. **Q7 Biometrics on file:** does a firm ask for and record the date of the client's last biometrics, so the fee and the photo line follow it? (Recommend a dated fact asked once.)
+8. **Q8 Family members:** should the first Study permit release support an accompanying spouse and children (their own study or work permit applications filed together), or a student alone?
 
 ## 7. Corrections found while preparing this (for the tech lead, not the expert)
 
