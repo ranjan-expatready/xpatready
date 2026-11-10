@@ -14,7 +14,7 @@ The page written for the co-founder: the verdict, how the product works, what is
 | `img/` | The five real screenshots the page shows (sample data). |
 | `src/head.html`, `src/main.html`, `src/appendix.html` | The hand-written parts: styles, the three main screens, the appendix. |
 | `build.py` | Joins the parts and fills the capability table and grid from `qa/CAPABILITIES.md`, and draws Figure 2. |
-| `after-29-plan.md` | A challenged plan for the milestone between the 29 and M4 (the "Bake"), written for the tech lead and the founder on 10 Nov. Advice, not a decision. |
+| `after-29-plan.md` | A challenged plan for the milestone between the 29 and M4 (the "Bake"), written for the tech lead and the founder on 10 Nov. Advice, not a decision. Revised the same day after the founder's clarification ("every form, production grade"): sections 9 to 11 add the sign-in and role model, what replaces the Demo menu's load and reset buttons, and the gap list. |
 
 ## Rebuild
 
