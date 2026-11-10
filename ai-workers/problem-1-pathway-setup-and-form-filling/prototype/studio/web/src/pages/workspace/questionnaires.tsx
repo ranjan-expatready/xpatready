@@ -56,7 +56,7 @@ export function QuestionnairesTab({ id, people, questionnaire, available }: { id
 
 type Line = PeopleLine & { label: string };
 // C11.12 BR-8: the filing mode travels with the line, so a save, Undo, "Use these lines" and Add person never drop it.
-const toLines = (v: PeopleView): Line[] => v.lines.map((l) => ({ role: l.role, label: l.label, min: l.min, max: l.max, applies: l.applies, preview: l.preview, filingMode: l.filingMode ?? null, quote: l.quote ?? null, origin: l.origin }));
+const toLines = (v: PeopleView): Line[] => v.lines.map((l) => ({ role: l.role, label: l.label, min: l.min, max: l.max, applies: l.applies, preview: l.preview, filingMode: l.filingMode ?? null, quote: l.quote ?? null, origin: l.origin, addsFiling: l.addsFiling ?? null }));
 /** The folded line's plain words (board P-161 (2), Lead C1 decision 4): "Principal applicant (always) · Dependent child,
  *  0–5 (optional)"; exact counts and who files their own application stay in Show and edit. A role whose most is 0
  *  cannot be in the application, so the folded line leaves it out (#139 review). */
@@ -82,6 +82,7 @@ function FilingCell({ l, i, editing, mayBeApplicant, name, words, warning, error
       )}
       {principal ? <p className="text-xs text-text-muted">Always, for the principal</p> : words.ifNotTravelling ? <p className="text-xs text-text-muted" data-if-not-travelling>{words.ifNotTravelling}</p> : null}
       {!mayBeApplicant && l.filingMode === "co_files" ? <p className="text-xs text-text-muted">Sent with the principal's application; never alone</p> : null}
+      {l.addsFiling ? <p className="text-xs text-text-muted" data-adds-filing title={l.addsFiling.sourceQuote}>Adds their own {l.addsFiling.filing.toLowerCase()} application when: {l.addsFiling.conditionPlain}</p> : null}
       {warning ? <p className="mt-1 text-xs text-text-warn" data-filing-warning role="status">⚠ {warning.replace(/^[^:]+: [^.]+\. /, "")}{editing ? " You can still save." : ""}</p> : null}
       {error ? <p id={`${id}-error`} role="alert" className="text-xs text-text-danger">{error}</p> : null}
     </div>
@@ -125,7 +126,7 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
     const origin = pr.mode === "rules" ? "CODE_MATCH" : "AI_PROPOSAL";
     // C11.12 BR-8: the guide proposes people and counts, not filing modes, so each role keeps the mode it had.
     setLines((now) => { const base = editing ? now : toLines(v); const modeOf = (role: string) => base.find((l) => l.role === role)?.filingMode ?? null;
-      return [...base.filter((l) => !pr.people.some((x) => x.role === l.role)), ...pr.people.map((x): Line => ({ role: x.role, label: x.label, min: x.min, max: x.max, applies: appliesOf(modeOf(x.role), x.applies), filingMode: modeOf(x.role), quote: x.quote, origin }))]; });
+      return [...base.filter((l) => !pr.people.some((x) => x.role === l.role)), ...pr.people.map((x): Line => ({ role: x.role, label: x.label, min: x.min, max: x.max, applies: appliesOf(modeOf(x.role), x.applies), filingMode: modeOf(x.role), quote: x.quote, origin, addsFiling: base.find((l) => l.role === x.role)?.addsFiling ?? null }))]; });
     setEditing(true); setFilling(false);
   };
   React.useEffect(() => { if (!editing) setLines(toLines(v)); }, [v, editing]);

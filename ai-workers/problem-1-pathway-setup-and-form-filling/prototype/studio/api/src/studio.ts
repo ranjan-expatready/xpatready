@@ -297,7 +297,7 @@ export class Studio {
     if (lines.some((p) => !Number.isInteger(p.min) || !Number.isInteger(p.max) || p.min < 0 || p.max > 9)) fail("The number of people must be a whole number between 0 and 9, minimum no more than maximum.");
     const { errors, lines: ok } = checkPeople(lines, await this.personRoles(workspaceId), strict);
     if (errors.length) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: errors[0].message, errors }, HttpStatus.BAD_REQUEST);
-    return ok.map((p) => ({ role: p.role, label: String(p.label).slice(0, 60), min: p.min, max: p.max, preview: Math.max(p.min, Math.min(p.max, Number(p.preview ?? (p.min || 1)))), applies: p.applies, ...(p.filingMode ? { filingMode: p.filingMode } : {}), ...(p.quote ? { quote: p.quote } : {}), ...(p.origin ? { origin: p.origin } : {}) }));
+    return ok.map((p) => ({ role: p.role, label: String(p.label).slice(0, 60), min: p.min, max: p.max, preview: Math.max(p.min, Math.min(p.max, Number(p.preview ?? (p.min || 1)))), applies: p.applies, ...(p.filingMode ? { filingMode: p.filingMode } : {}), ...(p.quote ? { quote: p.quote } : {}), ...(p.origin ? { origin: p.origin } : {}), ...(p.addsFiling ? { addsFiling: p.addsFiling as Prisma.InputJsonObject } : {}) }));
   }
 
   /** The shared library's person roles (M3; GET /library/roles), in display order. */

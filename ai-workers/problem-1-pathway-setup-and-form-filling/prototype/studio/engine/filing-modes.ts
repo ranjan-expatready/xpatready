@@ -78,8 +78,10 @@ export function filingWords(l: { role: string; filingMode?: LineMode | null; app
 
 // ------------------------------------------------------------------ the plan of filings (preview; the case from PR 2)
 
-export type PlanPerson = { subject: string; role: string; label: string; travelling: boolean };
-export type PlannedFiling = { id: string; owner: PlanPerson; kind: "own" | "family" | "co_filed"; applicants: { person: PlanPerson; mode: "applying" | "declared_only" }[] };
+/** `adds` (M3-S2): the name of a filing this person adds because their line's rule holds on their answers. */
+export type PlanPerson = { subject: string; role: string; label: string; travelling: boolean; adds?: string };
+/** `added`: the filing a person adds (M3-S2), by its name. */
+export type PlannedFiling = { id: string; owner: PlanPerson; kind: "own" | "family" | "co_filed"; applicants: { person: PlanPerson; mode: "applying" | "declared_only" }[]; added?: string };
 /** Who goes on which filing (BR-4, BR-6): Files own → their own filing when travelling, none when not; On the
  *  principal's and Declared only → on the principal's filing, applying when travelling, declared only when not; co_files
  *  → a co-filed filing sent with the principal's; no mode → files nothing. Keyed by the owner, so ids hold steady. */
@@ -93,6 +95,9 @@ export function filingPlan(people: PlanPerson[], modeOf: (role: string) => LineM
   for (const p of people) {
     if (p === principal) continue;
     const to = filingOf(modeOf(p.role));
+    // M3-S2: a person travelling whose line's rule holds files the filing it adds, their own application, instead of
+    // being on the principal's (one application per person; the save keeps it off a line that files its own).
+    if (p.adds && p.travelling && to !== "own" && to !== "co_filed") { filings.push({ id: `filing-${p.subject}`, owner: p, kind: "own", applicants: [{ person: p, mode: "applying" }], added: p.adds }); continue; }
     if (to === "own") { if (p.travelling) filings.push({ id: `filing-${p.subject}`, owner: p, kind: "own", applicants: [{ person: p, mode: "applying" }] }); else notFiling.push({ person: p, why: "Not travelling (not applying on this case): no filing and no fee." }); }
     else if (to === "principal") { if (main) { main.applicants.push({ person: p, mode: p.travelling ? "applying" : "declared_only" }); main.kind = "family"; } else notFiling.push({ person: p, why: "No principal applicant on this case yet, so there is no application to be on." }); }
     else if (to === "co_filed") filings.push({ id: `filing-${p.subject}`, owner: p, kind: "co_filed", applicants: [] });

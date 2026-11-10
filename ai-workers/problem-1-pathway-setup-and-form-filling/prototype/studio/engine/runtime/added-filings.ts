@@ -1,0 +1,28 @@
+// M3-S2 (P-380, P-425; Bake plan row 18): a conditional extra filing, by configuration, on any pathway. A "Who can be in
+// this application" line may carry `addsFiling` (contracts/workspace.ts AddsFiling): a filing its person adds when the
+// line's rule holds on that person's own answers (an accompanying child who will study: their own study permit
+// application). The release carries the line as it was approved; this reads it with the case's answers, and
+// engine/runtime/filings.ts deriveFilings files and prices it. No combination, form or program is named here.
+// Pure: no database, no clock (the answers are read by the caller); tests/runtime/check_added_filings.ts.
+import { lineCondition, type Known } from "../render.ts";
+import type { Snapshot } from "../snapshot.ts";
+import type { Participant } from "./case.ts";
+
+type Line = { role: string; addsFiling?: { filing?: unknown; condition?: unknown; fee?: unknown } | null };
+/** Per person (subject id), the filing their line adds now, with the fee line that charges it. A rule not yet answered
+ *  (cannot tell) adds nothing until it is answered: the question stays open on the questionnaire. Only a person who
+ *  applies on the case adds one (a person not travelling files nothing). */
+export function addedFilings(s: Snapshot, known: Known, people: Participant[]): Map<string, { filing: string; fee?: string }> {
+  const out = new Map<string, { filing: string; fee?: string }>();
+  const lines = ((s.combination?.participants ?? []) as Line[]).filter((l) => l && typeof l.addsFiling?.filing === "string" && l.addsFiling.condition && typeof l.addsFiling.condition === "object");
+  if (!lines.length) return out;
+  const persons = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as never, label: p.label, applies: p.applies }));
+  for (const p of people) {
+    const l = lines.find((x) => x.role === p.role);
+    if (!l || !p.applies || p.role === "case") continue;
+    const a = l.addsFiling!;
+    if (lineCondition(s, known, persons, p.subjectId, a.condition as { subjectKind?: string }).applies !== true) continue;
+    out.set(p.subjectId, { filing: a.filing as string, ...(typeof a.fee === "string" ? { fee: a.fee } : {}) });
+  }
+  return out;
+}

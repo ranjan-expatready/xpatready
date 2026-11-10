@@ -68,6 +68,7 @@ export function withdrawnFieldLines(s: Snapshot, gone: Map<string, string>): Pro
   for (const f of s.forms) say("Forms", f.form_number, `The condition of ${f.form_number}`, conds(f.condition));
   for (const p of s.placements) say("Questions", p.fact, `The condition of the question "${wordsOf.get(p.fact) ?? "a question"}"`, conds(p.condition));
   for (const d of s.document_requirements) say("Documents", d.document_type, `The condition of the document line "${d.document_type}"`, conds(d.condition));
+  for (const l of (s.combination.participants ?? []) as { role: string; label?: string; addsFiling?: { filing?: string; condition?: unknown } | null }[]) if (l.addsFiling) say("Who can be in this application", `${l.label ?? l.role}: ${l.addsFiling.filing ?? "added filing"}`, `The rule that adds "${l.addsFiling.filing ?? "a filing"}" for ${l.label ?? l.role}`, conds(l.addsFiling.condition));
   for (const r of s.rules) say("Rules", r.id, `The rule "${r.then ?? r.when_plain ?? "with no words"}"`, conds(r.when));
   for (const c of s.checks) say("Checks", c.id, `The check "${c.message ?? "with no message"}"`, inText(c.condition)); // a validity rule names its date outside "field"
   for (const g of s.eligibility?.gates ?? []) say("Eligibility", g.key, `The eligibility gate "${g.label}"`, conds(g.condition));
@@ -146,6 +147,15 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   for (const p of s.placements) {
     for (const e of checkCondition(p.condition, types, derived)) out.push({ level: "error", where: "Questions", item: p.fact, message: `Condition ${e}.` });
     if (p.condition && !p.condition_effect) out.push({ level: "error", where: "Questions", item: p.fact, message: "A condition needs an effect (show, hide, require or optional)." });
+  }
+  // M3-S2 (P-380, P-425): a filing a line adds reads the person's answers by a rule like any other, and only a fact the
+  // case asks (or a document supplies, or the library works out) can ever be answered, so the filing can be added.
+  for (const l of (s.combination.participants ?? []) as { role: string; label?: string; addsFiling?: { filing?: string; condition?: unknown } | null }[]) {
+    if (!l.addsFiling) continue;
+    const item = `${l.label ?? l.role}: ${l.addsFiling.filing ?? "added filing"}`;
+    for (const e of checkCondition(l.addsFiling.condition, types, derived)) out.push({ level: "error", where: "Who can be in this application", item, role: l.role, message: `Condition ${e}.` });
+    for (const f of new Set([...JSON.stringify(l.addsFiling.condition ?? null).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1])))
+      if (types.has(f) && !placed.has(f) && !docFacts.has(f) && !derived.has(f)) out.push({ level: "error", where: "Who can be in this application", item, role: l.role, message: `The rule reads ${f}, but nobody is asked it in this combination, so the filing could never be added. Ask it in the questionnaire, or change the rule.` });
   }
   for (const d of s.document_requirements) {
     for (const e of checkCondition(d.condition, types, derived)) out.push({ level: "error", where: "Documents", item: d.document_type, message: `Condition ${e}.` });

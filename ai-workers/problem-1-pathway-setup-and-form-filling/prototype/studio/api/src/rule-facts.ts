@@ -19,8 +19,8 @@ import { keyFor, refuseTakingOverReaders } from "./library-changes.ts";
 import { LibrarySources } from "./library-sources.ts";
 
 /** A rule that reads facts: where it sits, its key there, its sentence and its condition tree. */
-export type RuleRef = { kind: "form" | "question" | "requirement" | "rule" | "check"; key: string; sentence: string; tree: unknown };
-const WORD: Record<RuleRef["kind"], string> = { form: "Form condition", question: "Question condition", requirement: "Document condition", rule: "Rule", check: "Check" };
+export type RuleRef = { kind: "form" | "question" | "requirement" | "rule" | "check" | "filing"; key: string; sentence: string; tree: unknown };
+const WORD: Record<RuleRef["kind"], string> = { form: "Form condition", question: "Question condition", requirement: "Document condition", rule: "Rule", check: "Check", filing: "Added filing" };
 /** The answer types a rule-only fact can take (the library's types; engine/snapshot.ts). */
 export const RULE_FACT_TYPES = Object.keys(VALUE_TYPE_TO_DATA_TYPE);
 /** A fact key as the rules write it: a subject group and a name (person.has_visa_refusal). */
@@ -79,6 +79,9 @@ export function rulesOf(s: Snapshot): RuleRef[] {
   for (const d of s.document_requirements) if (d.condition) out.push({ kind: "requirement", key: d.lineage ?? d.document_type, sentence: say("requirement", d.document_type, d.condition_plain), tree: d.condition });
   for (const r of s.rules) if (r.when) out.push({ kind: "rule", key: r.id, sentence: say("rule", r.id, [r.when_plain, r.then].filter(Boolean).join(", then ")), tree: r.when });
   for (const c of s.checks) if (c.condition && typeof c.condition === "object") out.push({ kind: "check", key: c.id, sentence: say("check", c.id, c.message), tree: c.condition });
+  // M3-S2: the rule on a "Who can be in this application" line that adds a filing (keyed by the line's role).
+  for (const l of (s.combination.participants ?? []) as { role: string; addsFiling?: { filing?: string; condition?: unknown; conditionPlain?: string } | null }[])
+    if (l.addsFiling?.condition) out.push({ kind: "filing", key: `adds_filing.${l.role}`, sentence: say("filing", `${l.addsFiling.filing ?? "filing"} (${l.role.replace(/_/g, " ")})`, l.addsFiling.conditionPlain), tree: l.addsFiling.condition });
   return out;
 }
 
