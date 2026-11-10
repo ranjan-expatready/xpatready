@@ -53,8 +53,8 @@ const release = (account: string | null, online: string[], pdf: string[]) => ({
   ok("M3-S5 fail: the same Online forms on a release with no IRCC account get a copy (no record is read for it)", copyOnlyForms(release(null, ["IMM 5669", "IMM 5406"], []), accepts).size === 2);
   ok("M3-S5 fail: without the library's records every Online form with IRCC's PDF gets its copy (nothing is decided by form number)", copyOnlyForms(ee, new Map()).size === 2);
   const words = answerSheetOnlyWords("IMM 0008", portal);
-  ok("M3-S5: the reason names the form, the account and IRCC's own line (P-170), never a program", /IMM 0008/.test(words) && /through the PR Portal only Online/.test(words) && words.includes(LINE) && !/Express Entry|Visitor/.test(words), words);
-  ok("M3-S5: a record with no line (the founder's) says so in words without one", !/IRCC's line/.test(answerSheetOnlyWords("IMM 5669", secure)) && /through the IRCC secure account only Online/.test(answerSheetOnlyWords("IMM 5669", secure)));
+  ok("M3-S5: the reason names the form, the account and what the record says (here IRCC's own line, P-170), never a program", /IMM 0008/.test(words) && /through the PR Portal only Online/.test(words) && words.includes(LINE) && !/Express Entry|Visitor/.test(words), words);
+  ok("M3-S5: a record with no line (the founder's) says so in words without one", !/The record says/.test(answerSheetOnlyWords("IMM 5669", secure)) && /through the IRCC secure account only Online/.test(answerSheetOnlyWords("IMM 5669", secure)));
 }
 
 // ---------------------------------------------------------------- the shipped records cite IRCC's own line (P-170)

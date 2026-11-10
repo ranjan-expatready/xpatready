@@ -67,9 +67,10 @@ export function answerSheetOnly(records: AcceptRecord[] | undefined, account: st
   const { channels, record } = allowedChannels(records, account);
   return record && channels.includes("ONLINE") && !channels.some((c) => c === "PDF_UPLOAD" || c === "PAPER") ? record : null;
 }
-/** M3-S5: why an answer-sheet-only form has no PDF copy, from its record (IRCC's own line when the record has one). */
+/** M3-S5: why an answer-sheet-only form has no PDF copy, from its record and what the record says (IRCC's line, or the
+ *  reason a person gave when they set it: the library keeps either as the record's line). */
 export const answerSheetOnlyWords = (form: string, r: AcceptRecord) =>
-  `The Form library records that IRCC accepts ${form} ${r.account === "ANY" ? "" : `${throughAccount(r.account)} `}only Online: its answers go on the answer sheet only, with no PDF copy.${r.quote ? ` IRCC's line: "${r.quote}"` : ""}`;
+  `The Form library records that IRCC accepts ${form} ${r.account === "ANY" ? "" : `${throughAccount(r.account)} `}only Online: its answers go on the answer sheet only, with no PDF copy.${r.quote ? ` The record says: "${r.quote}"` : ""}`;
 export async function acceptsOf(db: Pick<PrismaClient, "formEdition">, workspaceId: string): Promise<Accepts> {
   const eds = await db.formEdition.findMany({ where: { workspaceId, channel: { not: "ONLINE" } }, select: { editionLabel: true, accepts: true, form: { select: { formKey: true } } } });
   const newest = new Map<string, (typeof eds)[number]>();
