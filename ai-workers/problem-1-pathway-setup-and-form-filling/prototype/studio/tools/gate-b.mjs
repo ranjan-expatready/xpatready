@@ -501,16 +501,17 @@ function changedFiles(...spec) {
   if (d.status !== 0) throw new Error(`git diff ${spec.join(" ")} failed: ${d.stderr.trim()}`);
   return d.stdout.split("\n").filter(Boolean);
 }
-/** (4a, P-446): the checkpoint step or gate file select-suites.mjs --packs marked in a chain ("<file> (configured
- *  checkpoint) ← <pack>"), or null when the change reaches none. */
+/** (4a, P-446): the changed checkpoint step or gate file select-suites.mjs --packs marked in a chain ("<file>
+ *  (configured checkpoint, changed) ← <pack>"), or null. One only reached on the walk ("(configured checkpoint)") seeds
+ *  its packs there and adds no rows here (review of #1504 round 2: the walk reaches the steps from any hub module). */
 export function checkpointTrigger(reached) {
-  for (const c of reached.values()) { const m = c.split(" ← ").map((x) => x.match(/^(.+) \(configured checkpoint\)$/)).find(Boolean); if (m) return m[1]; }
+  for (const c of reached.values()) { const m = c.split(" ← ").map((x) => x.match(/^(.+) \(configured checkpoint, changed\)$/)).find(Boolean); if (m) return m[1]; }
   return null;
 }
 /** (4a): such a change also touches every row scored on the configured checkpoint (gate B loads it for them, so they read
  *  the change over HTTP, where select-suites' import edges never look); read only, so diffSet runs the Works ones. */
-export function checkpointRows(touched, trigger, ids, dataOfId) {
-  if (trigger) for (const id of ids) if (!touched.has(id) && dataOfId(id) === "checkpoint")
+export function checkpointRows(touched, trigger, ids, dataOfId, hasPack = (id) => packsOf(id).length > 0) {
+  if (trigger) for (const id of ids) if (!touched.has(id) && dataOfId(id) === "checkpoint" && hasPack(id))
     touched.set(id, { files: [trigger], why: `${trigger}: a checkpoint step or gate file, and this row is scored on the configured checkpoint (4a)`, direct: false });
   return touched;
 }
@@ -570,7 +571,8 @@ function batchTouched(pr, members, base) {
   if (!mb) return { touched: null };
   const list = new Set(changedFiles(mb, base));
   for (const m of members) if (m !== own[0]) for (const f of m.files) list.add(f);
-  return { touched: list.size ? packsReachedBy([...list]) : new Map() };
+  const info = {};
+  return { touched: list.size ? packsReachedBy([...list], info) : new Map(), checkpoint: info.checkpoint ?? null };
 }
 const BUILT = /^[^\p{L}\p{N}]*(works|partial)\b/iu, WORKS = /^[^\p{L}\p{N}]*works\b/iu;
 /** D2's rule (review of #1337): which touched capabilities run. A pack the PR changes: its row if built; a pack that only
@@ -654,7 +656,7 @@ async function main(argv) {
       if (!caps.size) continue;
       const t = batchTouched(pr, members, base);
       if (t.skip) { say(`  #${pr.n} names ${[...caps.keys()].join(", ")}, not re-checked: ${t.skip}`); continue; }
-      input.push({ n: pr.n, caps, touched: t.touched });
+      input.push({ n: pr.n, caps, touched: t.touched && checkpointRows(t.touched, t.checkpoint, sc.ids(), sc.dataOf) });   // (4a)
     }
     const { run, why, works } = batchRecheck(input, sc.statusOf);
     if (works.length) say(`  named Works rows the protected set runs in this batch: ${works.join(", ")}`);

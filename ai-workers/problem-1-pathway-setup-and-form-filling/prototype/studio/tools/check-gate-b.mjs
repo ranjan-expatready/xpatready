@@ -224,12 +224,13 @@ ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.te
   ok("D2: a reach that names no pack and no set-up adds nothing; README.md is never a pack", touchedPacks(new Map([[`${top}/tests/check_x.ts`, "y"]]), files, read, top).size === 0); }
 { // (4a, P-446): a checkpoint step or gate file (select-suites marks the chain "(configured checkpoint)") adds every row
   // scored on the configured checkpoint, beside the packs the graph reached; a change that reaches no checkpoint adds none.
-  const reached = new Map([["s/acceptance/C6.19.test.ts", "form-field-gates.json ← 045-form-field-gates.ts (configured checkpoint) ← C6.19.test.ts"], ["s/acceptance/C2.test.ts", "x.ts ← C2.test.ts"]]);
-  ok("(4a): the trigger is read from the chain", checkpointTrigger(reached) === "045-form-field-gates.ts" && checkpointTrigger(new Map([["a", "x.ts ← C2.test.ts"]])) === null, checkpointTrigger(reached));
+  const reached = new Map([["s/acceptance/C6.19.test.ts", "045-form-field-gates.ts (configured checkpoint, changed) ← C6.19.test.ts"], ["s/acceptance/C2.test.ts", "x.ts ← C2.test.ts"]]);
+  ok("(4a): a changed step is read from the chain; one reached on the walk adds no rows (review of #1504 round 2)", checkpointTrigger(reached) === "045-form-field-gates.ts" && checkpointTrigger(new Map([["a", "x.ts ← C2.test.ts"]])) === null
+    && checkpointTrigger(new Map([["a", "routes.json ← 090-x.ts (configured checkpoint) ← C6.19.test.ts"]])) === null, checkpointTrigger(reached));
   const data = { C7: "checkpoint", C8: "six", C9: "checkpoint", C2: "checkpoint" }, dataOfId = (id) => data[id];
-  const t = checkpointRows(new Map([["C2", { files: ["x.ts"], why: "x.ts ← C2.test.ts", direct: true }]]), "045-form-field-gates.ts", ["C2", "C7", "C8", "C9"], dataOfId);
-  ok("(4a) pass: every row on the checkpoint is added (C7, C9), read-only (not direct); fail: a six row is not (C8), and a row already touched keeps its reason (C2)",
-    t.has("C7") && t.has("C9") && !t.has("C8") && t.get("C7").direct === false && /configured checkpoint/.test(t.get("C7").why) && t.get("C2").direct === true && t.get("C2").why === "x.ts ← C2.test.ts", [...t.keys()]);
+  const t = checkpointRows(new Map([["C2", { files: ["x.ts"], why: "x.ts ← C2.test.ts", direct: true }]]), "045-form-field-gates.ts", ["C2", "C7", "C8", "C9", "C10"], (id) => (id === "C10" ? "checkpoint" : dataOfId(id)), (id) => id !== "C10");
+  ok("(4a) pass: every row on the checkpoint is added (C7, C9), read-only (not direct); fail: a six row is not (C8), nor a row with no pack (C10), and a row already touched keeps its reason (C2)",
+    t.has("C7") && t.has("C9") && !t.has("C8") && !t.has("C10") && t.get("C7").direct === false && /configured checkpoint/.test(t.get("C7").why) && t.get("C2").direct === true && t.get("C2").why === "x.ts ← C2.test.ts", [...t.keys()]);
   ok("(4a) fail: no trigger adds nothing", checkpointRows(new Map(), null, ["C7"], dataOfId).size === 0); }
 
 // QA-366 (10 Nov): a merge-queue batch runs a named row's pack again when the batch adds a file that pack reads.

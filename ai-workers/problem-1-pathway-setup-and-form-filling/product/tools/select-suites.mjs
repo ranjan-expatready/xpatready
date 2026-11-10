@@ -432,20 +432,23 @@ if (process.argv.includes("--packs")) {   // D2: the acceptance and test files t
   const appCode = (x) => (x.startsWith(`${S}/api/src/`) && CODE.test(x)) || x.startsWith(`${S}/web/`);
   // (4a, P-446, 10 Nov): the gates and every other checkpoint step reach the app only when a pack loads the configured
   // checkpoint (POST /demo/load {sample: "configured"} runs api/src/features/checkpoint/*; "six" runs none of them), a
-  // read over HTTP that the import edges below never see (#1450 broke C6.19's pack after approval). So a checkpoint step,
-  // a gate file or the code that loads them (checkpoint*.ts), changed or reached on the walk (a data file a step reads, an
-  // engine module a step imports), or demo.ts itself changed (reached on the walk it is only the hub that imports most API
-  // modules for every Demo route, so it would fire for any of them: review of #1504 round 2; nor a file reached through a
-  // folder edge, which is the graph's guess, not a read: sources.ts names studio/tools, so the any-baseline), seeds every pack, test or helper whose code (comments stripped) loads the
-  // configured checkpoint; the walk then adds the packs that import such a helper (acceptance/lib/declared.ts). Its chain
-  // reads "<file> (configured checkpoint) ← <pack>"; gate-b.mjs also adds the Works rows scored on the checkpoint.
+  // read over HTTP that the import edges below never see (#1450 broke C6.19's pack after approval). Such a file, changed
+  // (a step, checkpoint*.ts, demo.ts, a gate file or the gate code), seeds every pack, test or helper whose code (comments
+  // stripped) loads the configured checkpoint; the walk then adds the packs importing such a helper (lib/declared.ts).
+  // Its chain says "(configured checkpoint, changed)", and gate-b.mjs then adds the rows scored on the checkpoint too.
+  // A step or checkpoint*.ts reached on the walk seeds the same packs ("(configured checkpoint)", no rows) only from a
+  // changed data file (samples/routes.json ← routes-data.ts ← 115-routes.ts) or by a file-name edge: never from changed
+  // code through imports (the steps import the hubs core.ts, studio.ts, forms.ts, runtime.ts, features.ts, so nearly any
+  // API change would fire: review of #1504 round 2), never demo.ts on the walk, never past a folder edge (the graph's
+  // guess: sources.ts names studio/tools, which would pull any-baseline.json).
   const CHECKPOINT = new RegExp(`^${esc(S)}/(api/src/features/checkpoint/|api/src/demo\\.ts$|api/src/checkpoint[^/]*\\.ts$|samples/form-field-gates\\.json$|api/src/(features/)?form-field-(gates|condition)\\.ts$|engine/form-field-condition\\.ts$)`);
   const LOADS = /sample\s*:\s*["'`]configured["'`]/;
-  let cpSeeded = false; const loose = new Set();   // reached through a folder edge somewhere on its chain: never a trigger
-  const DEMO = `${S}/api/src/demo.ts`;
+  let cpSeeded = false; const loose = new Set();   // reached through a folder edge on its chain (the graph's guess): never fires
+  const DEMO = `${S}/api/src/demo.ts`, rootOf = (y) => { while (via.get(y)) y = via.get(y); return y; };
   const checkpointSeed = (y, walked) => {
-    if (cpSeeded || !CHECKPOINT.test(y) || (walked && y === DEMO)) return;
-    cpSeeded = true; const tag = `${y} (configured checkpoint)`; via.set(tag, y);
+    if (cpSeeded === "changed" || (cpSeeded && walked) || !CHECKPOINT.test(y) || (walked && y === DEMO)) return;
+    cpSeeded = walked ? "walk" : "changed";
+    const tag = `${y} (configured checkpoint${walked ? "" : ", changed"})`; via.set(tag, via.get(y));
     for (const x of testFiles()) if (!via.has(x) && LOADS.test(stripComments(read(x)))) { via.set(x, tag); if (!stop(x)) todo.push(x); }
   };
   for (const f of changed) if (via.has(f)) checkpointSeed(f);
@@ -465,7 +468,8 @@ if (process.argv.includes("--packs")) {   // D2: the acceptance and test files t
       // Through API and web code only by imports: a file that names an endpoint's module or lists its folder is no read.
       // ... except a pack or test that reads the app file as text (Devin on #1337: C2.12 and C11.1 read App.tsx's routes).
       if (appCode(y) && how !== "import" && !testFile(x)) continue;
-      via.set(x, y); if (how === "folder" || loose.has(y)) loose.add(x); else checkpointSeed(x, true);
+      via.set(x, y);
+      if (how === "folder" || loose.has(y)) loose.add(x); else if (how === "name" || !CODE.test(rootOf(y))) checkpointSeed(x, true);
       if (!stop(x)) todo.push(x);
     }
   }
