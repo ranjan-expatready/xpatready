@@ -23,10 +23,11 @@ Standbys: **Lead 11 `local_aa5c12aa-7202-4cec-8459-10f906f7727b`**, **Lead 12 `l
 **No trip-wire at 75% any more (P-454):** run to 93% weekly, every lane pushed (P-431). **Founder runs from his terminal** (refused for the Lead even with his answer): `gh variable set SHARDS --body 8`, `gh pr ready 1502`, `gh pr edit 1503 --add-label "review: approved"` (Lead's `Reviewer: Approve` comment on #1503 posted 23:2x). Never route through a lane.
 | Lane | Session | Row | Next |
 |---|---|---|---|
-| engine (baton: schema + case-prepare) | local `local_db9f4a97` (founder started Lead 9's card) | M3-S1 | warm M3-S2 (P-454 (3)); told by message |
+| engine (baton: schema + case-prepare) | M3-S1 `local_db9f4a97` ended at ~418k; **M3-S2 `local_eb900554`** (founder clicked the card 00:2x) | #1505 M3-S1 labelled (Lead money read done), queued | M3-S2 starts after #1505 merges |
 | forms | cloud "forms: M3-S5 …" | M3-S5 | warm BK-10 (told by message) |
 | screens | cloud "screens: BK-2 …" | BK-2 fold-out arrows | BK-3 needs a new session (founder's typed turn) |
-| qa | cloud "qa: BK-1 …" | BK-1 journey sort + baseline counts (records PR) | ends at label |
+| qa | cloud "qa: BK-1 …" | #1509 BK-1 baseline (14 Majors); its 3 questions ruled P-456 | ends at label |
+| evidence | cloud "evidence: expert review pack" | #1510 expert pack (P-455 (2)), in the queue | ends at merge |
 | pipeline | local `local_8494de44` | #1502 (draft, Approve bccf34ef) waits for the founder's commands; #1504 in Opus review: Lead reads the CI-tool diff before labelling (P-423) | then (3) auto-dispatch, (4b) |
 | duplicate | cloud "runtime: M3-S1 …" [15c341] | told to STOP 23:2x (one session per row) | check it pushed nothing; archive |
 | Lead 10 | this session | checks :13/:43; hourly report IST | P-455 answered all; burn ~4%/h at 23:27: full speed to 93% then pause; test whether Fable moves all-models; expert pack lane (cloud) |
