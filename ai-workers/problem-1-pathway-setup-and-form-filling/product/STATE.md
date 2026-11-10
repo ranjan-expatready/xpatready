@@ -1,14 +1,24 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: local_62177923-2726-40ba-a539-da2173222e38 Lead 8 · 10 Nov 11:55 IST (series 2; took over from Lead 7 (series 2, local_6426aab1) at ~290k context, ~167k beyond its start read, P-446)
+current_lead: local_d3d09334-4567-4aad-9e1b-65163549d7c7 Lead 9 · 10 Nov 18:28 IST (series 2; took over from Lead 8 (series 2, local_62177923) at ~315k context, ~186k beyond its start read, P-446; Lead 8 held past 200k for the Acrobat step, founder away)
 
-updated: 2026-11-10 12:38 IST by **Lead 8 (series 2, local_62177923-…)** (founder asks A1-A7; P-447 to P-450; #1491) · weekly 53% · milestone: **M2 60/60; M3 25 of 29 Works on main**; target 26, then 29 (P-434, P-439) · rules: **`RULES.md`** (as of P-450) · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-10 18:28 IST by **Lead 8 (series 2, local_62177923-…)** at hand-over to Lead 9 · weekly 53% · milestone: **M2 60/60; M3 25 of 29 Works on main**; target 26, then 29 (P-434, P-439) · rules: **`RULES.md`** (as of P-450) · this branch: `lead/2026-11-07-lead31`
 
 ## Hand-over: Lead 7 (series 2) → Lead 8 (series 2), 11:55 IST 10 Nov: word for word in `history/STATE-2026-11-10-1525-lead7s2-handover-block.md` (its rows are carried in Live rows below).
 **Founder 12:0x-12:1x IST (Lead 8): Bake answers recorded as P-447** (walk twice as exit, no co-founder watch first, lean cap 24). **Answered ~12:3x as P-448:** Bake = lean Bake + generic engine core (~40 sessions, second exit: no code change, data edits allowed, on Study permit (P-449); screens-only is M4 Track A's exit); founder to book the immigration expert (P-240: nothing Sample releases outside the demo). #1475 requeue refused by the classifier 11:56: founder to tick Mergify's box or name it.
 **Lessons (Lead 7):** claude.ai's session list re-renders after load: open a lane by clicking its link found by text in JS, and confirm the title before typing. The auto-mode classifier refuses the Lead's label toggle (remove + re-add) unless the founder names the PR. Fable corrected three of Lead 7's numbers: check evidence before proposing rule changes.
 
 ## Lead 40's last block (series 1): `history/STATE-2026-11-09-1748-lead40-final.md` (live items listed there; this page's 02:55 copy keeps the line).
+
+## Hand-over: Lead 8 (series 2) → Lead 9 (series 2), 18:28 IST 10 Nov — read this first
+**Founder away ~15:30-18:30 IST, on Remote Control only.** 27 of 29 Works. Weekly 58% (~2%/h). Paid cap US$30, spent US$0. Records: P-447 to P-450 (Bake, generic core, exit tests, after-M3 plan); founder asks A1-A7 below stay until ticked.
+1. **C10.2:** #1492 merged 15:51 (main ddc2a6eb3, demo updated). Lead 8 loaded the finished story (founder pre-approved, see Live rows), copy **9c00dbfc-7f65-4782-8562-b737cd301c57** (case f870d8df…), opened it in Acrobat and pressed Validate: **"Validation completed successfully"** (16:2x). **Not saved:** Acrobat's Save As panel is a separate macOS process outside the computer-use grant; it is open on the Mac now. **Next:** when the founder is back, he saves it (Save As › Downloads, `paper-9c00dbfc-validated.pdf`) or closes the panel; then read back: `curl -s -X POST -H 'x-actor: user-O' -F file=@<file> http://localhost:4400/api/runtime/form-copies/9c00dbfc-7f65-4782-8562-b737cd301c57/validated`, record (`tools/record-validated-samples.ts --paper "the tech lead, Adobe on the Mac"`, commit `samples/validated-imm5257-paper.json`), note printed pages of Languages / Details of visit / Background Information on #1492, dispatch nightly C10.2 checkpoint, then a qa fresh reader → Works. **Do not reload the story before the read-back** (a reload makes the copy stale, 409). Original backed up at the Lead 8 scratchpad `orig-9c00dbfc.pdf` (sha c18c8a145cf5).
+2. **C7.5:** unblocked by #1492. Run #1463's kit now: re-measure the sheet (`c75-pack-case.ts`, no `--expect`), checksum in #1463, ledger first, Terminal tab, one attempt; qa labels the result PR. ETA ~17:30.
+3. **(4a)** suite-selection fix: C7.8 lane briefed 13:4x; read its PR; P-214.
+4. **CI:** #1491 merged (75 min). Next: 8 shards + timing refresh (check CI budget first); `run-suites.sh:252` comment still says 45 min.
+5. **Routed findings for qa to log:** IMM 5710 "Canada/CAN/511" Major (LMIA), C6.19 concept.md:16 wording Minor.
+6. **After the 29:** the milestone plan with the founder (P-450), one question at a time; Fable's questions 16-18 and booking the immigration expert (A7).
+Terminal tabs c6 (caffeinate 4 h, from 15:2x) and c7 (open) are Lead 8's; leave c6 running.
 
 ## Live rows (Lead 8, 13:33 IST 10 Nov) — **27 of 29 Works** (C7.8 #1450 and C6.5 #1475 merged ~13:3x)
 | Row | Where it stands | Next step | ETA IST |
