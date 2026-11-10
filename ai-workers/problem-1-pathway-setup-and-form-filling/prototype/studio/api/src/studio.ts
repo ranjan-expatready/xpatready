@@ -25,6 +25,7 @@ import { PreferencesBody, PROGRAMS_VIEWS, type Preferences, type ProgramsView } 
 import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { filingProblems, filingWarnings, modeSent } from "../../engine/filing-modes.ts";
+import { eachFilesOwnOf } from "../../engine/runtime/filings.ts";
 import { conditionFactProblems } from "../../engine/coverage.ts";
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
 import { aiLive, usesFakeLauncher } from "./sources.ts";
@@ -325,7 +326,7 @@ export class Studio {
       if (hit.length) throw new HttpException({ type: "https://expatready.local/problems/confirm", title: "Confirm the change", status: 409, detail: `${hit.map((h) => h.form).join(", ")} ${hit.length === 1 ? "names" : "name"} a person you removed (${[...new Set(hit.flatMap((h) => h.roles))].map((r) => participantsLabel(c!.participants as any[], r)).join(", ")}). Save anyway, or keep the person.`, confirm: true, lines: hit }, HttpStatus.CONFLICT);
     }
     // C11.12 BR-7 (P-233 (3)): a mode IRCC's guide contradicts is saved with a warning, never refused.
-    return { ...(await this.writePeople(actor, c!, participants, "updated")), warnings: filingWarnings(c!.combinationKey, participants) };
+    return { ...(await this.writePeople(actor, c!, participants, "updated")), warnings: filingWarnings(eachFilesOwnOf(c!.combinationKey), participants) };
   }
 
   /** Undo the last save of "Who can be in this application", while nothing was saved after it. */
