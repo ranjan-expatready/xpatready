@@ -82,7 +82,7 @@ export const HELD = {
   validate: "Validate is a person's step in Adobe Reader (P-46, P-171): never simulated, so a barcode PDF waits for a person",
 } as const;
 
-type Q = { subjectId: string; fact: string; label?: string; group: string | null; value_type: string; collected_from: string; required: boolean; hidden: boolean; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; answer: { id: string; confirmed: boolean; awaits_client?: boolean } | null; rows: { row: string; answer: { id: string; confirmed?: boolean; awaits_client?: boolean } | null }[] };
+type Q = { subjectId: string; fact: string; label?: string; group: string | null; value_type: string; collected_from: string; required: boolean; hidden: boolean; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; answer: { id: string; confirmed: boolean; awaits_client?: boolean; officer?: { by: string; at: string } | null } | null; rows: { row: string; answer: { id: string; confirmed?: boolean; awaits_client?: boolean; officer?: { by: string; at: string } | null } | null }[] };
 type Section = { subjectId: string; section: string; questions: Q[]; group: { required: boolean; rows: number; none_apply: { id: string; confirmed?: boolean } | null } | null };
 type Person = { subject: string; label: string; role: string; age: number | null; applies: boolean };
 
@@ -168,7 +168,15 @@ export async function finishFamilyCase(r: Routes, caseId: string, s: StorySample
     const left = now.filter(waitsOnFact), empty = now.reduce((n, f) => n + f.readiness.missing.filter((m) => m.reason === "left empty on the form").length, 0);
     const by = [byClient && `${byClient} by the client`, onBehalf && `${onBehalf} by the case officer for another adult`, answered - byClient - onBehalf && `${answered - byClient - onBehalf} by the case officer`].filter(Boolean).join(", ");
     const kinds = [...byKindLabels];
-    const said = `${answered} answer${answered === 1 ? "" : "s"} typed (${by || "none needed"}), ${reconfirmed ? `the ${reconfirmed} background answer${reconfirmed === 1 ? "" : "s"} among the officer's marked for the client to re-confirm, re-confirmed by the client (C6.18)` : "no answer marked for the client to re-confirm"}, ${confirmed} section${confirmed === 1 ? "" : "s"} confirmed by the case officer${kinds.length ? `; ${kinds.length} question${kinds.length === 1 ? "" : "s"} the Sample record does not hold took a Sample value by kind of answer (for example: ${kinds.slice(0, 3).map((k) => `"${k}"`).join(", ")})` : ""}`;
+    // C6.18 when release 2 asks no new background answer of another adult (C10.2, #1482: IMM 5257's details boxes are asked
+    // only after a Yes, the form's own Validate): the officer's background answers recorded on release 1 by the configured
+    // checkpoint, each re-confirmed by the client before the move, are said as they stand on the case (never claimed as
+    // this stage's own).
+    const earlier = reconfirmed ? 0 : (await get<{ sections: Section[] }>(`/runtime/cases/${caseId}/questionnaire?mode=agent`)).sections
+      .flatMap((x) => x.questions).flatMap((q) => [q.answer, ...q.rows.map((x) => x.answer)]).filter((a) => a?.officer && !a.awaits_client).length;
+    const reconfirmWords = reconfirmed ? `the ${reconfirmed} background answer${reconfirmed === 1 ? "" : "s"} among the officer's marked for the client to re-confirm, re-confirmed by the client (C6.18)`
+      : earlier ? `no background answer asked again on release 2; the ${earlier} the case officer recorded for another adult on release 1 ${earlier === 1 ? "was" : "were"} re-confirmed by the client before the move (C6.18)` : "no answer marked for the client to re-confirm";
+    const said = `${answered} answer${answered === 1 ? "" : "s"} typed (${by || "none needed"}), ${reconfirmWords}, ${confirmed} section${confirmed === 1 ? "" : "s"} confirmed by the case officer${kinds.length ? `; ${kinds.length} question${kinds.length === 1 ? "" : "s"} the Sample record does not hold took a Sample value by kind of answer (for example: ${kinds.slice(0, 3).map((k) => `"${k}"`).join(", ")})` : ""}`;
     if (left.length) throw new Stop(`Still not ready after ${said}: ${left.slice(0, 3).map((f) => `${f.form} for ${f.person} (${f.readiness.missing.filter((m) => m.reason !== "left empty on the form").slice(0, 2).map((m) => m.label).join(", ")})`).join("; ")}`);
     const followUps = byKind.some((f) => /national_id_|us_green_card_/.test(f));
     return { status: "done", shows: `Every form of release 2 waits on no fact for every person: ${said}.${empty ? ` ${empty} mandatory form field${empty === 1 ? "" : "s"} no answer fills ${empty === 1 ? "is" : "are"} named on Ready to file (QA-165).` : ""}${followUps ? ` ${HELD.followUps}.` : ""}`, why: null };
