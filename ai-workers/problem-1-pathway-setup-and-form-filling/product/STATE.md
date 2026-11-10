@@ -21,15 +21,7 @@ updated: 2026-11-10 18:28 IST by **Lead 8 (series 2, local_62177923-…)** at ha
 6. **After the 29:** the milestone plan with the founder (P-450), one question at a time; Fable's questions 16-18 and booking the immigration expert (A7).
 Terminal tabs c6 (caffeinate 4 h, from 15:2x) and c7 (open) are Lead 8's; leave c6 running.
 
-## Live rows (Lead 8, 13:33 IST 10 Nov) — **27 of 29 Works** (C7.8 #1450 and C6.5 #1475 merged ~13:3x)
-| Row | Where it stands | Next step | ETA IST |
-|---|---|---|---|
-| C10.2 | #1482 merged (main 1c8f335f7); nightly 42778144501 (C10.2, checkpoint) running; founder validated copy a3b3beec in Acrobat 13:3x (ApplicationValidatedFlag Yes) but read-back refused: Adobe clears IMM 5257 "c) language most at ease" (lov, product wrote 01) when b) ableToCommunicate = English; verified by Lead 8 from the saved file's data (the founder's steps were right) | C10.2 forms lane (claude.ai "forms: C10.2 purpose-of-visit gate") briefed 13:3x: gate lov in form-field-gates.json + failing test; after merge founder re-loads the story and re-validates; then qa fresh reader | ~15:30 |
-| Founder away 15:2x-~18:30 IST (remote only) | chose "You drive Acrobat (Rec.)": Lead 8 has computer-use grant for Acrobat (com.adobe.Acrobat.Pro, background app_* tools); caffeinate 4 h in Terminal tab c6 | after #1492 merges: **founder pre-approved the Lead loading the finished story itself** (typed ~15:5x IST: "I can pre-approve you ... So I'm pre-approved and I'm writing it. You will definish the story"): POST /api/demo/checkpoints/finished-story {confirm: RESET}; Lead runs tools/finished-story-paper-copy.ts, validates in Acrobat via app_* tools, saves to ~/Downloads, reads back, records (tools/record-validated-samples.ts), notes printed pages of Languages / Details of visit / Background Information for #1492's lane. **The grant is per session: Lead 8 holds the hand-over until this is done.** | ~16:15 |
-| C7.5 | #1463 kit approved under US$30, held | **still held**: the lov gate fix changes IMM 5257 gates again; run after it merges (re-measure the sheet, checksum in #1463, Terminal tab, ledger first) | ~16:30 |
-| (4a) | suite-selection fix, P-214 | C7.8 lane briefed 13:4x (select-suites maps gate files to every reading pack + failing test) | ~15:00 |
-| CI | #1491 shard limit 75 min: Opus Approve 8481c13bd, CI green, labelled 13:3x | merges; then brief 8 shards + timing refresh (check CI budget first) | ~14:00 |
-| Routed findings | from the C7.8 lane's last report: IMM 5710 "Canada/CAN/511" country answer Major (LMIA; probably not #1450's) and C6.19 concept.md:16 wording Minor | give to qa to log in BUGS.md (qa alone edits it) at the next qa lane | next qa lane |
+## Live rows (Lead 8, 13:33 IST): superseded by the hand-over block above; word for word in `history/STATE-2026-11-10-1850-lead8s2-live-rows-1333.md`.
 
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
 | # | Ask (IST) | Status |
