@@ -10,8 +10,7 @@ import { irccWords } from "../../../contracts/workspace";
 import { normalizeLabel } from "../../../contracts/programs";
 import { ItemSources, SOURCE_SAY } from "@/components/source-panel";
 import { fieldName } from "@/lib/field-name";
-import { FoldOut } from "@/components/fold-out";
-import { FoldArrow } from "@/components/fold-out";
+import { FoldArrow, FoldOut } from "@/components/fold-out";
 
 export const WHO: [string, string][] = [["each_applicant", "Each applicant"], ["principal_applicant", "Principal applicant"], ["spouse_or_partner", "Spouse or partner"], ["couple_once", "Once per couple"], ["each_dependent_child", "Each child"], ["each_person", "Each person"], ["case", "The application (once)"], ["representative", "The representative"], ["sponsor", "The sponsor"]];
 /** QA-221 (ruling C): a form line may also name the principal applicant, a spouse or partner, and each child 18 or older
