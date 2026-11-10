@@ -2,7 +2,7 @@
 
 current_lead: local_62177923-2726-40ba-a539-da2173222e38 Lead 8 · 10 Nov 11:55 IST (series 2; took over from Lead 7 (series 2, local_6426aab1) at ~290k context, ~167k beyond its start read, P-446)
 
-updated: 2026-11-10 11:55 IST by **Lead 7 (series 2, local_6426aab1-…)** at hand-over to Lead 8 (series 2, local_62177923-…) · weekly 32% · milestone: **M2 60/60; M3 22 of 29 Works on main**; target 26, then 29 (P-434, P-439) · rules: **`RULES.md`** (as of P-444) · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-10 12:38 IST by **Lead 8 (series 2, local_62177923-…)** (founder asks A1-A7; P-447 to P-450; #1491) · weekly 53% · milestone: **M2 60/60; M3 25 of 29 Works on main**; target 26, then 29 (P-434, P-439) · rules: **`RULES.md`** (as of P-450) · this branch: `lead/2026-11-07-lead31`
 
 ## Hand-over: Lead 7 (series 2) → Lead 8 (series 2), 11:55 IST 10 Nov — read this first (Lead 6's block with Lead 7's updates, word for word: `history/STATE-2026-11-10-1155-lead6s2-handover-block-with-lead7-updates.md`)
 **Founder (awake, typing):** hourly reports in IST; **24 of 29 Works** on main; forecast 26 ~12:15, 29 ~14:00. Rules now **as of P-446** (read P-445 and P-446 in DECISIONS: Lead hands over at the first check after **200k beyond its own start read**; record your start context, P-446 (2)). Paid cap **US$30** today, spent US$0. Weekly **49% at 11:26, ~6%/h** (85% ≈ 17:30 IST at this rate): after the 29, slow down. GoHighLevel and the duplicate Playwright server were removed by the founder 09:4x; six claude.ai connectors off. Standbys: **Lead 9 `local_d3d09334-…`** (+ Lead 10 if started below).
@@ -20,19 +20,19 @@ updated: 2026-11-10 11:55 IST by **Lead 7 (series 2, local_6426aab1-…)** at ha
 
 ## Lead 40's last block (series 1): `history/STATE-2026-11-09-1748-lead40-final.md` (live items listed there; this page's 02:55 copy keeps the line).
 
-## For the founder (P-390: asked at his next typed turn, oldest first, one at a time)
-F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026-11-07-1545-lead30.md`); F7 answered (P-406; row in `history/STATE-2026-11-07-1555-lead31.md`). F9-F13 answered 18:25-18:36 IST, all as recommended (P-412; rows in `history/STATE-2026-11-07-1837-lead31.md`).
+## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
+| # | Ask (IST) | Status |
+|---|---|---|
+| A1 | 11:4x Bake before M4: screens, flows, one sign-in with role picker, polish, fast UI lane | ruled P-447 to P-449; plan after the 29 |
+| A2 | 12:1x why one combination; generic engine for all | ruled P-448/P-449 (generic core in the Bake) |
+| A3 | 12:2x CI cut-offs: root cause and lasting fix | #1491 (75 min) in review; next: 8 shards + timing refresh (Lead briefs after #1491); queue every-suite rule after (4a) + a week's measure |
+| A4 | 12:3x run tests smartly, no blind testing, no quality cut | answered: PR runs targeted, queue full by design until (4a) proven; approval to come with numbers |
+| A5 | 12:4x finish M3; then detailed milestone plan with counted lists before the Chrome extension; internal production grade | P-450; plan after the 29 |
+| A6 | approvals one at a time; tell him when to press Demo › Load the finished story | at C10.2 merge (#1482) |
+| A7 | Fable's questions 16-18 (internal use on what data; employer LMIA side in?; Chrome extension in?) and booking the immigration expert | ask after the 29 |
 
-| # | Question | Lead's recommendation | Blocks | Since | Status |
-|---|---|---|---|---|---|
-| F2 | Look at C6.9's new screen (A4, #1172) with `reports/best-in-class-C6.9-A4-2026-11-07.md` | changes become follow-up rows | nothing | 7 Nov 08:35 | open (walk screenshots: #1199) |
-| F8 | Look on the demo at the M3 screens merged since P-392 (B1 documents, A2/QA-293 representative's tab, B124, B126) with the drift audit (`reports/m3-screens-vs-boards-2026-11-07.md`) | show with B147's tab; no decision needed now | nothing | 7 Nov 15:50 | open (P-408) |
-| F14 | FQ-7: which date a recorded group's ages count on (B152 #1279: a submission recorded later than its "Submitted on" date) | the recording day for now (as built); price at "Submitted on" in a follow-up row | nothing (B152 carries on) | 7 Nov 20:30 | open |
-| F15 | CI lane's D2 deviation (#1337): a Partial row reached only through a shared file its pack reads is listed, not run. Also: may the Lead delete `throwaway/d6-rerun-base` and `throwaway/d2-c73-by-diff`? | accept the deviation; yes, delete both | nothing | 8 Nov 17:25 | open |
-| F16 | C7.8 (B141) F1-F3: form with no passed trial is a Blank official PDF; blank added form with no completed copy is a CRITICAL warning passed with a reason; F3 as its concept recommends | built as recommended (reversible, P-390) | nothing | 9 Nov 09:20 | open |
-| F17 | C7.10 (B143) BR-9: the figure departs from BR-30 so that 100 means Ready (documents done when received, every finding counted, no form approval, no retainer or deficiency library) | as built (reversible, P-390) | nothing | 9 Nov 09:58 | open |
-| F18 | C6.14 (B136) when nobody matches: filing's first applicant or principal applicant (SA-1B-151 reads two ways; differs on a couple-once line on Visitor visa) | first applicant, as built (reversible) | nothing | 9 Nov 11:28 | open |
-| F19 | QA-369 (C6.16): may Client A take back a link the firm sent to a new address, before the adult accepts? | yes, as built (P-443): nothing is disclosed and only the firm can send again | nothing | 10 Nov 03:30 | open |
+## For the founder (P-390)
+Open F2, F8, F14, F15, F16, F17, F18, F19 (none blocks work), word for word in `history/STATE-2026-11-10-1240-lead8s2-for-the-founder-table.md`; ask at his typed turns, one at a time.
 
 ## Start here (next Lead)
 **Roles (P-384):** the founder gives product direction only; the Lead owns the pipeline. Every label needs a PR comment line `Reviewer: Approve <head sha>` (label guard). Records-only PRs: the Lead labels after reading the diff (P-385); `records` queue. GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Notes: `~/Library/Application Support/Claude/side-session-notes/lead10-saved-2026-11-05/` (never a folder named for a session); Lead 26's are in `history/lead-notes-2026-11-07/`.
