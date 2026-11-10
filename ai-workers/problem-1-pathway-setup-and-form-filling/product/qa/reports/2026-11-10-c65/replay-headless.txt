@@ -1,0 +1,20 @@
+PASS  round 1 · 400 px · the application · Details of visit to Canada: words as walked · sideways scroll none · axe 0 violations · opened in 202 ms
+PASS  round 1 · 400 px · Spouse A · Personal details: words as walked · sideways scroll none · axe 0 violations · opened in 245 ms
+PASS  round 1 · 400 px · Child A1 · Personal details: words as walked · sideways scroll none · axe 0 violations · opened in 252 ms
+PASS  round 1 · 1024 px · the application · Details of visit to Canada: words as walked · sideways scroll none · axe 0 violations · opened in 182 ms
+PASS  round 1 · 1024 px · Spouse A · Personal details: words as walked · sideways scroll none · axe 0 violations · opened in 247 ms
+PASS  round 1 · 1024 px · Child A1 · Personal details: words as walked · sideways scroll none · axe 0 violations · opened in 231 ms
+PASS  round 1 · 1440 px · the application · Details of visit to Canada: words as walked · sideways scroll none · axe 0 violations · opened in 182 ms
+PASS  round 1 · 1440 px · Spouse A · Personal details: words as walked · sideways scroll none · axe 0 violations · opened in 166 ms
+PASS  round 1 · 1440 px · Child A1 · Personal details: words as walked · sideways scroll none · axe 0 violations · opened in 226 ms
+PASS  round 2 · 400 px · the application · Details of visit to Canada: words as walked · sideways scroll none · axe 0 violations · opened in 171 ms
+PASS  round 2 · 400 px · Spouse A · Personal details: words as walked · sideways scroll none · axe 0 violations · opened in 226 ms
+PASS  round 2 · 400 px · Child A1 · Personal details: words as walked · sideways scroll none · axe 0 violations · opened in 181 ms
+PASS  round 2 · 1024 px · the application · Details of visit to Canada: words as walked · sideways scroll none · axe 0 violations · opened in 197 ms
+PASS  round 2 · 1024 px · Spouse A · Personal details: words as walked · sideways scroll none · axe 0 violations · opened in 247 ms
+PASS  round 2 · 1024 px · Child A1 · Personal details: words as walked · sideways scroll none · axe 0 violations · opened in 176 ms
+PASS  round 2 · 1440 px · the application · Details of visit to Canada: words as walked · sideways scroll none · axe 0 violations · opened in 173 ms
+PASS  round 2 · 1440 px · Spouse A · Personal details: words as walked · sideways scroll none · axe 0 violations · opened in 253 ms
+PASS  round 2 · 1440 px · Child A1 · Personal details: words as walked · sideways scroll none · axe 0 violations · opened in 271 ms
+18/18 passed
+exit 0
