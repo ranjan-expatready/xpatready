@@ -3,10 +3,12 @@
 // no server, no model call (US$0). Amounts are Sample until the immigration expert confirms (P-171).
 //   tsx studio/tests/runtime/check_vv_filings.ts
 import fc from "fast-check";
-import { BIOMETRICS_FEE_SOURCE, deriveFilings, familyFee, VISITOR_FEE_SOURCE } from "../../engine/runtime/filings.ts";
+import { BIOMETRICS_FEE_SOURCE, deriveFilings, familyFee, FEE_TABLE } from "../../engine/runtime/filings.ts";
 import type { CaseFilings } from "../../contracts/runtime.ts";
 import type { Participant } from "../../engine/runtime/case.ts";
 import { recorder } from "./api.ts";
+// B164 (P-425): the Visitor visa's fee line is read from the fee table here; the engine names no program.
+const VISITOR_FEE_SOURCE = FEE_TABLE.lines.find((l) => l.key === "visitor_visa")!.source;
 
 const { ok, summary } = recorder();
 const person = (i: number, role: Participant["role"], applies = true): Participant => ({ subjectId: `s-${i}`, role, label: `Client ${String.fromCharCode(65 + i)}`, applies });
