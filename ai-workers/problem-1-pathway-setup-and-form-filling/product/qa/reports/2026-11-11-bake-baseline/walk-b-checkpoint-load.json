@@ -1,0 +1,77 @@
+{
+ "seconds": 113.577,
+ "released": [
+  "Visitors \u203a Visitor visa",
+  "Study permits \u203a Study permit \u203a Outside Canada",
+  "Work permits \u203a Employer-specific work permit \u203a With an LMIA \u2013 inside Canada",
+  "Provincial nominees \u203a Express Entry stream",
+  "Family sponsorship \u203a Spouse or common-law partner"
+ ],
+ "checkpoint": [
+  {
+   "row": "1",
+   "status": "done",
+   "title": "Ingest PDF forms; a held file approved by a second person"
+  },
+  {
+   "row": "2",
+   "status": "out",
+   "title": "Online forms captured with the browser extension"
+  },
+  {
+   "row": "3",
+   "status": "done",
+   "title": "AI maps form fields to shared fields (saved answers, US$0)"
+  },
+  {
+   "row": "4",
+   "status": "done",
+   "title": "A person reviews: accept with a reason, edit, reject"
+  },
+  {
+   "row": "5",
+   "status": "done",
+   "title": "New shared fields approved by a second person"
+  },
+  {
+   "row": "6",
+   "status": "done",
+   "title": "Reset returns to a blank workspace"
+  },
+  {
+   "row": "7",
+   "status": "done",
+   "title": "Sections and questions from the forms' own parts (rules, US$0)"
+  },
+  {
+   "row": "8",
+   "status": "done",
+   "title": "Smart questionnaire (SQR) per person, PQR picks, preview by person"
+  },
+  {
+   "row": "9",
+   "status": "done",
+   "title": "Channels for release 2 (Mixed: IMM 5257 Online, so IMM 5645 as the family information form; IMM 5476 PDF upload, signed by hand and scanned)"
+  },
+  {
+   "row": "10",
+   "status": "done",
+   "title": "Review and release: submit, expert ticks, a different person releases"
+  },
+  {
+   "row": "11",
+   "status": "done",
+   "title": "A family case on release 1"
+  },
+  {
+   "row": "12",
+   "status": "done",
+   "title": "IMM 5257 filled as a PDF and read back equal"
+  },
+  {
+   "row": "17",
+   "status": "done",
+   "title": "New edition: IMM 5476 2021 \u2192 11-2025 comparison and impact"
+  }
+ ]
+}
