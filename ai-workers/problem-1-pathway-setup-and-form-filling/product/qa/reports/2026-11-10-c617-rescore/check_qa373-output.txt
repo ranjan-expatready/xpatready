@@ -1,0 +1,8 @@
+QA-373 — the Start next stage dialog's buttons fit at 400 px
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  setup: a case on the route's first stage — {"made":201}
+FAIL  QA-373 fail: at 400 px both footer buttons are fully inside the viewport (Cancel x=-24.9, Start x=55.0) — {"cancel":{"x":-24.875,"y":797,"width":71.84375,"height":36},"start":{"x":54.96875,"y":797,"width":304.03125,"height":36}}
+
+1/2 passed
+exit code: 1

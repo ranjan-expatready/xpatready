@@ -1,0 +1,8 @@
+QA-372 — Start next stage counts the forms the new stage lists
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  setup: a case on the route's first stage moved to the next stage — {"made":201,"go":201}
+FAIL  QA-372 fail: the preview's forms (IMM 5409, IMM 5475, IMM 5476, IMM 5707, IMM 5710) are the forms the new stage's Prepare lists (IMM 5476, IMM 5710), or it names the ones that may apply apart — {"said":["IMM 5409","IMM 5475","IMM 5476","IMM 5707","IMM 5710"],"listed":["IMM 5476","IMM 5710"]}
+
+1/2 passed
+exit code: 1
