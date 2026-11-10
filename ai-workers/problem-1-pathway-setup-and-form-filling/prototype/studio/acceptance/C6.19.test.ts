@@ -128,7 +128,6 @@ async function api() {
   const STALE = `IND: ${"stored under an older version of this field ".repeat(3).trim()}`;
   const staleId = crypto.randomUUID();
   sql(`begin; update client_canonical_answer set superseded_by_id = '${staleId}' where subject_id = '${pa}' and canonical_field_key = '${COUNTRY}' and row_key is null and superseded_by_id is null; insert into client_canonical_answer (id, workspace_id, party_id, subject_id, canonical_field_id, row_key, value_json, effective_at, canonical_field_key, status, verified_by, verified_at, source_json) select '${staleId}', workspace_id, party_id, subject_id, canonical_field_id, row_key, to_jsonb('${STALE}'::text), effective_at + interval '1 millisecond', canonical_field_key, status, verified_by, verified_at + interval '1 millisecond', source_json from client_canonical_answer where superseded_by_id = '${staleId}'; commit;`);
-  ok("setup (challenge M4): case A's confirmed passport country now holds a value longer than the field allows", sql(`select value_json #>> '{}' from client_canonical_answer where subject_id='${pa}' and canonical_field_key='${COUNTRY}' and superseded_by_id is null`) === STALE && STALE.length > 120);
   const unconfirmed = both.includes(ISSUED) ? ISSUED : null;
   if (unconfirmed) await answer(a.id, pa, ISSUED, VALUES[ISSUED]); // entered by staff after the confirm: not confirmed on case A
   // The client's own answer (a client field the principal typed) counts as confirmed on case A without staff (P-411).
@@ -153,7 +152,7 @@ async function api() {
   const facts = e.people.find((p) => p.subject_id === pb)!.facts, fact = (k: string) => facts.find((f) => f.fact === k);
   const usable = passport.filter((k) => k !== COUNTRY);
   ok("C6.19 BR-2: case A's confirmed passport facts are offered for the principal, each New", passport.every((k) => fact(k)?.state === "new") && usable.every((k) => fact(k)?.usable), facts.map((f) => [f.fact, f.state, f.usable]));
-  ok("C6.19 BR-2 fail (challenge M4): a value this case's release refuses (case A's stored passport country, longer than the 120 characters the field allows) is shown with the reason and cannot be ticked", fact(COUNTRY)?.usable === false && fact(COUNTRY)?.value === STALE && /120 characters/.test(JSON.stringify(fact(COUNTRY))), fact(COUNTRY));
+  ok("C6.19 BR-2 fail (challenge M4): a value this case's release refuses (case A's stored passport country, longer than the 120 characters the field allows) is shown with the reason and cannot be ticked", fact(COUNTRY)?.usable === false && fact(COUNTRY)?.value === STALE && STALE.length > 120 && /120 characters/.test(JSON.stringify(fact(COUNTRY))), fact(COUNTRY));
   if (own) ok("C6.19 BR-2: the client's own answer on case A (confirmed there as the client's) is offered", !!fact(own)?.usable, fact(own));
   ok("C6.19 BR-2 fail: an answer not confirmed on case A, and any application fact, are not offered", (!unconfirmed || !fact(unconfirmed)) && !facts.some((f) => f.fact.startsWith("case.")), facts.map((f) => f.fact));
 
