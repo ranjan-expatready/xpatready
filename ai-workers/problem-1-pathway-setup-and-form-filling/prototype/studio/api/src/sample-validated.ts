@@ -79,7 +79,10 @@ export const savedReadBacks = (file: string = VALIDATED_FILE): SavedFile | null 
 export async function copiesWithHash(db: Db, caseId: string) {
   const people = await db.caseParticipant.findMany({ where: { caseId }, select: { subjectId: true, subject: { select: { label: true } } } });
   const nameOf = (about: string) => about === "case" ? "case" : people.find((p) => p.subjectId === about)?.subject.label ?? about;
-  const copies = await db.formInstance.findMany({ where: { caseId, formNumber: "IMM 5257", status: "GENERATED" }, orderBy: { createdAt: "desc" }, select: { id: true, workspaceId: true, subjectId: true, sha256: true, path: true, snapshot: { select: { inputHash: true, factsJson: true } } } });
+  // C6.17 (BR-7): copies of the case's current stage only (its combination's releases).
+  const k = await db.case.findUnique({ where: { id: caseId }, select: { combinationId: true, pins: { select: { configReleaseId: true, combinationId: true } } } });
+  const releases = (k?.pins ?? []).filter((p) => p.combinationId === k!.combinationId).map((p) => p.configReleaseId);
+  const copies = await db.formInstance.findMany({ where: { caseId, formNumber: "IMM 5257", status: "GENERATED", configReleaseId: { in: releases } }, orderBy: { createdAt: "desc" }, select: { id: true, workspaceId: true, subjectId: true, sha256: true, path: true, snapshot: { select: { inputHash: true, factsJson: true } } } });
   const newest = new Map<string, (typeof copies)[number]>();
   for (const c of copies) if (!newest.has(c.subjectId)) newest.set(c.subjectId, c);
   return [...newest.values()].map((c) => ({ ...c, person: nameOf(c.subjectId), familyHash: familyFactsHash(((c.snapshot?.factsJson as { facts?: Fact[] } | null)?.facts ?? []), nameOf), valuesHash: valuesHash(c.path) }));

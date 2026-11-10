@@ -44,6 +44,13 @@ export function passportPdf(p: Passport, breakDigit = false): Buffer {
 /** A synthetic letter of invitation (fixed bytes: a saved AI read replays by its checksum, US$0). */
 export const letterPdf = () => textPdf(["SYNTHETIC SPECIMEN - MADE-UP TEST DOCUMENT - NOT VALID", "Letter of invitation (Sample)", "I, SAMPLE HOST B, of 1 Sample Road, Sample City, Ontario,", "invite SAMPLED CLIENT A and family to visit me", "from 1 March to 15 April. I will host them at my home.", "Relationship: sibling. Signed: SAMPLE HOST B"]);
 
+/** QA-352: a synthetic proof of financial support (a printed statement with a table; fixed bytes: its saved AI read
+ *  replays by its checksum, US$0). `variant` makes other bytes with no saved read (the no-saved-read step). */
+export const fundsPdf = (variant = "") => textPdf(["SYNTHETIC SPECIMEN - MADE-UP TEST DOCUMENT - NOT VALID", `Proof of financial support (Sample)${variant}`, "SAMPLE BANK (Sample, not a real bank)", "Account statement for SAMPLED CLIENT A",
+  "Date        Description        Balance CAD", "2026-10-01  Opening balance    12,500.00", "2026-10-31  Closing balance    14,200.00", "Funds available: CAD 14,200.00"]);
+/** QA-352: a synthetic marriage certificate (fixed bytes, as fundsPdf). */
+export const marriagePdf = (variant = "") => textPdf(["SYNTHETIC SPECIMEN - MADE-UP TEST DOCUMENT - NOT VALID", `MARRIAGE CERTIFICATE (Sample)${variant}`, "This certifies that SAMPLED CLIENT A and SAMPLES SPOUSE A", "were married on 14 June 2019 at Sample City."]);
+
 /** POST a file as multipart to an API path, as the officer's browser would. */
 export async function upload(port: number, path: string, file: Buffer, name: string, actor: string, fields: Record<string, string> = {}) {
   const fd = new FormData(); fd.append("file", new Blob([new Uint8Array(file)]), name);

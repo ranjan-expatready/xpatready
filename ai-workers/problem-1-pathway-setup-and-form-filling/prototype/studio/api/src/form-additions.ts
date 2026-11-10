@@ -34,6 +34,9 @@ type H = string | undefined;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const short = (id: string) => id.slice(0, 8);
 const problem = (status: number, detail: string, field = "form") => new HttpException({ type: "https://expatready.local/problems/form-addition", title: "Not added", status, detail, errors: [{ field, message: detail }] }, status);
+/** C6.17 (BR-10, review of #1262 M2): a filing of an ended stage is history: its forms are neither added nor removed. */
+const stageEnded = (): never => { throw new HttpException({ type: "https://expatready.local/problems/form-addition", title: "Changed since you read it", status: 409, code: "stage_ended",
+  detail: "This filing belongs to an earlier stage of the case, which has ended: its forms are kept as they were and can no longer be changed.", errors: [{ field: "filing", message: "An ended stage's filing: read-only." }] }, HttpStatus.CONFLICT); };
 /** BR-6 (Q2): added forms are a PDF upload or on Paper in M3; Online is not offered. */
 const ADD_CHANNELS: Channel[] = ["PDF_UPLOAD", "PAPER"];
 /** Breaker m2: a person's name, never their id, on a screen ("Added by Case officer"). */
@@ -49,12 +52,14 @@ type LibForm = { form: string; title: string; formKind: string; editionId: strin
 export class FormAdditions {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Runtime) private readonly r: Runtime, @Inject(Audit) private readonly audit: Audit) {}
 
-  /** The filing (of a case this person may work on as case staff) and its case. */
+  /** The filing (of a case this person may work on as case staff, on the case's current stage) and its case. */
   private async filing(actor: Actor, filingId: string) {
     const f = UUID.test(filingId) ? await this.db.filing.findUnique({ where: { id: filingId }, include: { applicants: true } }) : null;
     if (!f) fail("No such filing.", HttpStatus.NOT_FOUND);
     const c = await this.r.reach(actor, f!.caseId, "officer");
     if (!f!.active) fail("This filing is no longer part of the case.", HttpStatus.NOT_FOUND);
+    // C6.17 (BR-10, review of #1262 M2): only the current stage's filings take or lose a form (the database refuses too).
+    if (f!.stageId !== c.stage.id) stageEnded();
     return { f: f!, c };
   }
 
@@ -187,7 +192,8 @@ export class FormAdditions {
     if (typeof b.form !== "string" || !b.form.trim()) throw problem(400, "Name the form to add, by its number.");
     const { f, c } = await this.filing(actor, filingId);
     const who = this.personOn(c, f, b.subject);
-    await refuseIfRecorded(this.db, (await this.db.filing.findMany({ where: { caseId: c.id }, select: { id: true } })).map((x) => x.id), "the list of forms");
+    // C6.17 (review of #1262 M1): only the current stage's records: an ended stage's record never freezes the next application.
+    await refuseIfRecorded(this.db, (await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id }, select: { id: true } })).map((x) => x.id), "the list of forms");
     const x = (await this.library(c.workspaceId, b.form.trim())).find(Boolean);
     if (!x) throw problem(404, "No such form in the firm's library.");
     const j = this.judge(c, who.subject, x!, await this.releaseNow(c));
@@ -217,7 +223,8 @@ export class FormAdditions {
       // Breaker M1: one form is filed one way on a case. The case's row lock above serialises adds on this case, so the
       // first addition of this form read here is the truth: if another person's addition landed after this request read
       // the case, this one is refused rather than stored with another channel, signature or frozen form.
-      const first = await tx.filingFormAddition.findFirst({ where: { caseId: c.id, formKey: x!.form, removedAt: null }, orderBy: [{ addedAt: "asc" }, { id: "asc" }] });
+      // C6.17 (review of #1262 M4): one form is filed one way on the current stage; an ended stage's addition binds nothing.
+      const first = await tx.filingFormAddition.findFirst({ where: { caseId: c.id, formKey: x!.form, removedAt: null, filing: { stageId: c.stage.id } }, orderBy: [{ addedAt: "asc" }, { id: "asc" }] });
       if (first && first.id !== same?.id) throw problem(409, `${x!.form} was just added on this case for another person by ${personName(first.addedBy)}: read the form again, it is then added the same way (one form is filed one way on a case).`);
       return tx.filingFormAddition.create({ data: { workspaceId: c.workspaceId, caseId: c.id, filingId: f.id, subjectId: who.subject, formKey: x!.form, editionId: same?.editionId ?? x!.editionId!, editionLabel: same?.editionLabel ?? x!.edition!, kind,
         frozen: frozen as object, frozenSha256: frozenHash(frozen), trial: (trial ?? undefined) as object | undefined, channel, signature, signedBy: off ? "none" : "parent_for_minor", signatureReason: off ? reasonOf(b.signature_reason) : null,
@@ -232,21 +239,23 @@ export class FormAdditions {
       tag: ADDED_TAG, added_by: a.addedBy, added_by_name: personName(a.addedBy), added_at: a.addedAt.toISOString(), reason: a.reason, removed: a.removedAt ? { by: a.removedBy, at: a.removedAt.toISOString(), reason: a.removedReason } : null };
   }
 
-  /** The addition (of a case this person may work on as case staff), and its case. */
-  private async addition(actor: Actor, id: string) {
-    const a = UUID.test(id) ? await this.db.filingFormAddition.findUnique({ where: { id } }) : null;
+  /** The addition (of a case this person may work on as case staff), and its case. `write`: on the current stage only. */
+  private async addition(actor: Actor, id: string, write = false) {
+    const a = UUID.test(id) ? await this.db.filingFormAddition.findUnique({ where: { id }, include: { filing: { select: { stageId: true } } } }) : null;
     if (!a) fail("No such added form.", HttpStatus.NOT_FOUND);
     const c = await this.r.reach(actor, a!.caseId, "officer");
+    // C6.17 (BR-10, review of #1262 M2): an ended stage's added form is history: read (its blank PDF), never removed.
+    if (write && a!.filing.stageId !== c.stage.id) stageEnded();
     return { a: a!, c };
   }
 
-  /** POST …/form-additions/:id/remove (BR-8): a reason is required; refused once anything on the case is recorded; the row
+  /** POST …/form-additions/:id/remove (BR-8): a reason is required; refused once anything on the case's current stage is recorded; the row
    *  is kept, marked removed. */
   async remove(actor: Actor, id: string, body: unknown) {
-    const { a, c } = await this.addition(actor, id);
+    const { a, c } = await this.addition(actor, id, true);
     const reason = typeof (body as { reason?: unknown })?.reason === "string" ? ((body as { reason: string }).reason).trim().slice(0, 500) : "";
     if (!reason) throw problem(400, "Say why the form is removed: a removal is recorded with a reason.", "reason");
-    await refuseIfRecorded(this.db, (await this.db.filing.findMany({ where: { caseId: c.id }, select: { id: true } })).map((x) => x.id), "the list of forms");
+    await refuseIfRecorded(this.db, (await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id }, select: { id: true } })).map((x) => x.id), "the list of forms"); // C6.17 (review of #1262 M1)
     if (a.removedAt) throw problem(409, `${a.formKey} was already removed by ${personName(a.removedBy ?? "")} on ${dayWords(a.removedAt.toISOString())}.`);
     const n = await this.db.filingFormAddition.updateMany({ where: { id: a.id, removedAt: null }, data: { removedAt: new Date(), removedBy: actor.id, removedReason: reason } });
     if (n.count !== 1) throw problem(409, `${a.formKey} was already removed.`);

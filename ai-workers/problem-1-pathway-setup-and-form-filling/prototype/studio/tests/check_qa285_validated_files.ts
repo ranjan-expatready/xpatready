@@ -44,6 +44,8 @@ const saved = (over: Partial<SavedReadBack> = {}, top: { case_reference?: string
 function fakeDb() {
   return {
     caseParticipant: { findMany: async () => [{ subjectId: "s1", subject: { label: "Client A (Sample)" } }] },
+    // C6.17 (BR-7): the copies read are the current stage's (its combination's pinned releases).
+    case: { findUnique: async () => ({ combinationId: "c1", pins: [{ configReleaseId: "r1", combinationId: "c1" }] }) },
     formInstance: {
       findMany: async () => [{ id: "copy-1", workspaceId: "w1", subjectId: "s1", sha256: "c", path: copyPath, snapshot: { inputHash: "facts-now", factsJson: { facts } } }],
       // As the database guard: a generated copy is never changed.

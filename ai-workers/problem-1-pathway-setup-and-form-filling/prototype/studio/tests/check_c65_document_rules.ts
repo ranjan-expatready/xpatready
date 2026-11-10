@@ -1,13 +1,17 @@
 // C6.5 part 2 (M3 plan row C7): the document rules of api/src/case-documents.ts that need no database, each with a
 // passing and a failing check: which reader reads a document type (P-134: an identity document never goes to AI), how a
 // typed answer and a read value compare, the release's words for a coded value, what Confirm & use leaves for a person,
-// the cost card's price (p2/ledger.ts costUsd) and the saved-read lookup by checksum (FQ-10). No AI, US$0.
+// the cost card's price (p2/ledger.ts costUsd) and the saved-read lookup by checksum (FQ-10); QA-352: the reader and the
+// facts each document proposes from the library's own data, and whom it is read for. No AI, US$0.
 //   tsx --tsconfig studio/api/tsconfig.json studio/tests/check_c65_document_rules.ts
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { documentCheckNote, pleaseCheckWords } from "../api/src/runtime.ts";
-import { CASE_KINDS, inReleaseWords, letterReadUsd, notWritable, readerOf, sameValue, savedRead } from "../api/src/case-documents.ts";
+import { CASE_KINDS, inFactType, inReleaseWords, letterReadUsd, notWritable, readerOf, readFor, sameValue, savedRead, typedOf, type LibraryType } from "../api/src/case-documents.ts";
+import { countCorrections } from "../api/src/document-review-rule.ts";
+import { OFFICER_ENTRY } from "../engine/runtime/background.ts";
+import { isIdentityName } from "../engine/identity-documents.ts";
 import { costUsd, LETTER_READ_CARD } from "../../p2/ledger.ts";
 import { MAX_ATTEMPTS } from "../../p2/policy.ts";
 import { MRZ_FACTS } from "../engine/runtime/mrz.ts";
@@ -22,7 +26,29 @@ ok("C6.5 R1 (fail): the absent parent's passport copy is not read as the line's 
 ok("C6.5 R1 (fail): a passport-size photo is not the passport: not read", readerOf({ key: "visa_application_photos", name: "Passport size photos" }) === null);
 ok("C6.5 R2 (P-134 fail): another identity document (a national ID, a birth certificate) is never sent to AI: a person reads it", readerOf({ key: "national_id", name: "National identity card" }) === null && readerOf({ key: "birth_certificate", name: "Birth certificate" }) === null);
 ok("C6.5 R2: a letter of invitation with no checklist line is read by AI vision (replay only), giving the visit's facts (Sample)", readerOf({ key: "letter_of_invitation", name: "Letter of invitation (Sample)" })?.reader === "ai_vision" && CASE_KINDS.letter_of_invitation.supplies.includes("case.visit_contact_name"));
-ok("C6.5 R2 (fail): a document with no reader (proof of funds) is not read", readerOf({ key: "proof_of_financial_support", name: "Proof of financial support" }) === null);
+ok("C6.5 R2 (fail): a document the library says nothing about (no reader kind, no facts) is not read", readerOf({ key: "proof_of_financial_support", name: "Proof of financial support" }) === null);
+
+// ---- QA-352 (P-437): the reader and its facts come from the library's own data (P-319, P-425/P-426)
+const lib = (key: string, name: string, readerKind: string, supplies_facts: string[], extra: Partial<LibraryType> = {}): LibraryType => ({ key, name, supplies_facts, reader_profile: { readerKind, identityDocument: false }, ...extra });
+const funds = lib("proof_of_financial_support", "Proof of financial support", "letter_or_record", ["case.funds_available_cad"]);
+const marriage = lib("marriage_certificate_copy", "Marriage certificate copy", "letter_or_record", ["relationship.union_start_date"]);
+ok("C6.5 R8 pass (QA-352): proof of funds, read by the library as a letter or record, is read by AI vision and proposes exactly the facts the library says it supplies", readerOf(funds)?.reader === "ai_vision" && JSON.stringify(readerOf(funds)?.supplies) === JSON.stringify(["case.funds_available_cad"]));
+ok("C6.5 R8 fail (QA-352): proof of funds the library reads by a person, by its printed layout (Textract, not built) or with no facts is not read by AI", readerOf({ ...funds, reader_profile: { readerKind: "person_only" } }) === null && readerOf({ ...funds, reader_profile: { readerKind: "printed_layout" } }) === null && readerOf({ ...funds, supplies_facts: [] }) === null);
+ok("C6.5 R9 pass (QA-352): a marriage certificate, read by the library as a letter or record, is read by AI vision and proposes the union start date", readerOf(marriage)?.reader === "ai_vision" && JSON.stringify(readerOf(marriage)?.supplies) === JSON.stringify(["relationship.union_start_date"]));
+ok("C6.5 R9 fail (QA-352, R11): a fact the library says is about the holder's spouse is never proposed by AI vision (never attributed by guess); a type flagged identity, or of an identity category, never goes to AI (P-134)",
+  JSON.stringify(readerOf({ ...marriage, supplies_facts: ["relationship.union_start_date", "person.family_name_at_birth"], supplies_about: { "person.family_name_at_birth": "holder.spouse" } })?.supplies) === JSON.stringify(["relationship.union_start_date"])
+  && readerOf({ ...marriage, reader_profile: { readerKind: "letter_or_record", identityDocument: true } }) === null && readerOf({ ...marriage, category: "identity" }) === null);
+ok("C6.5 R10 fail (QA-352, P-134): a minor's birth certificate is an identity document: never AI, even where the library reads it as a record and lists the date of birth (a person reads it)",
+  readerOf(lib("copy_of_the_minor_s_birth_certificate", "Copy of the minor's birth certificate", "letter_or_record", ["person.date_of_birth"])) === null);
+const placed = { placements: [{ fact: "case.funds_available_cad", section_id: "visit", repeats: "once_per_case" }, { fact: "relationship.union_start_date", section_id: "personal", repeats: "per_person" }, { fact: "case.visit_contact_name", section_id: "visit", repeats: "once_per_case" }] } as unknown as Snapshot;
+ok("C6.5 R11 pass (QA-352, R5): a document whose every asked fact is the application's (proof of funds) is read for the application, wherever its line is", readFor(placed, ["case.funds_available_cad"], "client-a", "case-subject") === "case-subject");
+ok("C6.5 R11 fail (QA-352): a document of a person's facts (marriage certificate), one that mixes a person's and the application's facts, or a fact the release does not ask stays its holder's", readFor(placed, ["relationship.union_start_date"], "client-a", "case-subject") === "client-a"
+  && readFor(placed, ["relationship.union_start_date", "case.funds_available_cad"], "client-a", "case-subject") === "client-a" && readFor(placed, ["case.not_asked_here"], "client-a", "case-subject") === "client-a" && readFor(placed, ["case.funds_available_cad"], "client-a", null) === "client-a");
+{
+  // The library data the sample loader proposes (samples/document-supplies-read.json), as the readers read it.
+  const data = JSON.parse(readFileSync(join(import.meta.dirname, "..", "samples", "document-supplies-read.json"), "utf8")) as { supplies: Record<string, { facts: { fact: string; about: string; source: string; quote: string; readOn: string }[] }> };
+  ok("C6.5 R12 (QA-352, P-170): every set the loader proposes is cited (page, quote, date) and about the holder, and no identity document is in it (P-134)", Object.entries(data.supplies).every(([k, v]) => v.facts.length > 0 && v.facts.every((f) => /page \d/.test(f.source) && f.quote.length > 3 && /^\d{4}-\d{2}-\d{2}$/.test(f.readOn) && f.about === "holder") && !isIdentityName(k.replace(/_/g, " "))));
+}
 
 // ---- typed versus document (BR-7)
 ok("C6.5 R3: a name compares without case and repeated spaces (the coded line is upper case)", sameValue("person.family_name", "Sampled ", "SAMPLED") && sameValue("person.given_names", "client  a", "CLIENT A"));
@@ -40,6 +66,35 @@ ok("C6.5 R4 (fail): with no such word offered, the code stays as read (never a g
 ok("C6.5 R5: a passport number or a real date is written by Confirm & use", notWritable(snap(null), "person.passport_number", "SAMPLEP12") === null && notWritable(snap(null), "person.date_of_birth", "1986-04-13") === null);
 ok("C6.5 R5 (fail): a country given only as a coded-line code is left for a person (no code table is sourced)", /country code "IND"/.test(notWritable(snap(null), "person.citizenship", "IND") ?? ""));
 ok("C6.5 R5 (fail): a value its own question refuses (not a real date) is left for a person, with the question's words", /real date/.test(notWritable(snap(null), "person.date_of_birth", "1986-02-30") ?? ""));
+
+// ---- QA-352 (P-294 ruling on #1444): a read value in its fact's own type. The funds for the stay as a release asks it
+// (a CAD amount, whole dollars) and a plain number fact; the saved AI read of the proof of funds gave "14200.00".
+{
+  const num = { canonical_fields: [{ id: "case.funds_available_cad", value_type: "number", item_version: 1 }, { id: "person.children_count", value_type: "number", item_version: 1 }, { id: "person.passport_number", value_type: "text", item_version: 1 }],
+    placements: [], forms: [], sections: [], document_types: [],
+    field_maps: [{ form_edition: "Sample", entries: [{ fact: "case.funds_available_cad", outcome: "mapped", caption: "Funds", data_path: "form.funds", transform: "CAD whole dollars" }, { fact: "person.children_count", outcome: "mapped", caption: "Children", data_path: "form.children", transform: "" }] }] } as unknown as Snapshot;
+  const F = "case.funds_available_cad", typed = (v: unknown, fact = F) => inFactType(num, fact, v);
+  const left = (v: unknown, words: RegExp, fact = F) => { const t = typed(v, fact); return t.value === v && words.test(t.why ?? "") && words.test(notWritable(num, fact, v) ?? ""); };
+  ok("C6.5 R13 pass (QA-352): \"14200.00\" (the saved read's own text) is the number 14200, noting what the reader gave, and Confirm & use writes it", typed("14200.00").value === 14200 && typed("14200.00").why === undefined && /gave "14200.00"/.test(typed("14200.00").note ?? "") && notWritable(num, F, "14200.00") === null, typed("14200.00"));
+  ok("C6.5 R13 fail (QA-352): \"14200.50\" is not a whole number: never rounded, left for a person with the reason in words", left("14200.50", /not a whole number; it is never rounded/) && left("14,200.5", /not a whole number/));
+  ok("C6.5 R14 pass (QA-352): \"14,200\" (thousands commas) is 14200, and \"1,214,200\" is 1214200", typed("14,200").value === 14200 && typed("1,214,200").value === 1214200 && notWritable(num, F, "14,200") === null);
+  ok("C6.5 R14 fail (QA-352, review n2): commas out of their places (\"14,20,0\", \"1,4200\", \"00,200\") are not a number: left for a person in words, never guessed", left("14,20,0", /not a number this question can take/) && left("1,4200", /not a number this question can take/) && left("00,200", /not a number this question can take/));
+  ok("C6.5 R15 pass (QA-352, review m2): \"CAD 14,200.00\", \"14,200.00 CAD\", \"C$14,200\", \"CA$14,200\", \"$14,200 CAD\", \"CAD$14,200\" and \"CAD $14,200\" are 14200 where the question asks Canadian dollars",
+    ["CAD 14,200.00", "14,200.00 CAD", "C$14,200", "CA$14,200", "$14,200 CAD", "CAD$14,200", "CAD $14,200"].every((x) => typed(x).value === 14200 && notWritable(num, F, x) === null));
+  ok("C6.5 R15 fail (QA-352): another currency (\"USD 14,200.00\"), dollars not named (\"$14,200\"), two currencies, or an amount of money for a plain number stay proposals with the reason in words (never converted)",
+    left("USD 14,200.00", /in USD, not Canadian dollars/) && left("US$14,200", /in US\$, not Canadian dollars/) && left("$14,200", /without saying which dollars/) && left("CAD 14,200 USD", /two currencies \(CAD and USD\)/) && left("$14,200 USD", /in USD, not Canadian dollars/) && left("CAD 3", /takes a plain number/, "person.children_count"));
+  ok("C6.5 R16 pass (QA-352): a whole number that is too big for the form stays a proposal, with the question's own words; a number given as a number, and text of another type, are kept as they are",
+    /too long|0 or more/.test(notWritable(num, F, "CAD 9,999,999,999,999") ?? "") && typed(14200).value === 14200 && typed("SAMPLEP12", "person.passport_number").value === "SAMPLEP12" && typed("3", "person.children_count").value === 3);
+  ok("C6.5 R16 fail (QA-352): a negative amount or words (\"-14,200\", \"fourteen thousand\") are never turned into a number", left("-14,200", /not a number this question can take/) && left("fourteen thousand", /not a number this question can take/));
+  ok("C6.5 R17 pass (review m3 on 9d56a3538): a whole number the reader gave as a number is kept and written", typed(3, "person.children_count").value === 3 && typed(3, "person.children_count").why === undefined && notWritable(num, "person.children_count", 3) === null);
+  ok("C6.5 R17 fail (review m3): a number given as a number but not whole (14200.5) is never written or rounded, on a plain number fact too", left(14200.5, /not a whole number; it is never rounded/, "person.children_count") && left(14200.5, /not a whole number/));
+  // Review m1 on 9d56a3538: the correction counts compare a read in its fact's type (document-review-counts.ts passes typedOf).
+  const at = new Date("2026-11-09T10:00:00Z"), later = new Date("2026-11-09T11:00:00Z");
+  const counted = (read: unknown, typedAnswer: unknown) => countCorrections([{ id: "v1", subjectId: "case", fact: F, review: "expanded", valueJson: typedOf(num, F, read), documentId: "d1", readAt: at, left: notWritable(num, F, read) !== null }],
+    [{ subjectId: "case", fact: F, valueJson: typedAnswer, channel: OFFICER_ENTRY, actor: "staff", at: later }], []).by_mode.expanded;
+  ok("C6.5 R18 pass (review m1): a read stored as the text \"14200.00\" and staff typing 14200 is no correction", counted("14200.00", 14200).corrected === 0 && counted("14200.00", 14200).read === 1);
+  ok("C6.5 R18 fail (review m1): staff typing 14000 over that read is one correction", counted("14200.00", 14000).corrected === 1);
+}
 
 // ---- the cost card (P-110, P-295), priced by the spend ledger
 const one = letterReadUsd(1), two = letterReadUsd(2), m = LETTER_READ_CARD.model;

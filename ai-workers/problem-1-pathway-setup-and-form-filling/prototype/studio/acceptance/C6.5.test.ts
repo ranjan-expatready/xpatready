@@ -16,10 +16,13 @@
 //   zsh studio/tools/isolated.sh c65 4440 start && tsx studio/acceptance/C6.5.test.ts 4440 xr_studio_c65
 //   (the full pack, server steps included, on its copy; gate B reads this line: P-400 question on PR C6.5 part 2)
 import { CLIENT, FAMILY, FIXED, OFFICER, PORT, agent, answer, call, main, needVisitorVisa, ok, openCase, sql } from "./lib/m3.ts";
-import { letterPdf, mrz, passportPdf, textPdf, upload } from "./lib/fixtures.ts";
+import { fundsPdf, letterPdf, marriagePdf, mrz, passportPdf, textPdf, upload } from "./lib/fixtures.ts";
 import { readPassport } from "../engine/runtime/mrz.ts";
+import { LETTER_READ_CARD, runCardUsd } from "../../p2/ledger.ts";
 import { documentFacts } from "../engine/sources.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 type Proposal = { id: string; fact: string; value: unknown; source: { document: string; page: number; reader: string }; confidence: number; state: string; review?: "collapsed" | "expanded"; replayed?: boolean };
 type Review = { document: string; confirm: string; collapsed: string[]; expanded: string[] };
@@ -144,4 +147,86 @@ await main("C6.5", "Documents read into proposed facts (Visitor visa, replayed, 
   ok("C6.5-19b precondition (FQ-10): a saved AI read of this synthetic letter is recorded (one live read with the founder's Go; until then this and C6.5-20 stay red)", r.body?.replay_available === true, r.body?.replay_available);
   r = await call("POST", `/runtime/cases/${c.id}/sections/${visit}/fill-from-documents`, { subjectId: c.caseSubject, mode: "replay" }, OFFICER);
   ok("C6.5-20 pass: the replayed read of the synthetic letter of invitation proposes the contact's name, marked Replayed, cost US$0", r.status === 200 && (r.body?.proposals ?? []).some((x: Proposal) => x.fact === "case.visit_contact_name" && x.replayed === true && x.source?.reader === "ai_vision") && r.body?.cost_usd === 0, r.body);
+
+  // QA-352 (the tech lead's ruling P-437): every checklist document that offers "Fill this from documents" is read by
+  // some reader. qa's replay: a proof of financial support on Client A's own line is read by AI vision for the
+  // application (the funds for the stay are the application's, resolver R5), with the facts the library says it supplies
+  // (configured checkpoint step 335), replayed from its saved read at US$0. Live AI off: never a live read here (P-175).
+  // These steps run where the release's library reads proof of funds as a letter or record (the configured checkpoint,
+  // C6.5's scoring data: its type comes from IMM 5484's own reading); the fixture's type is the author's own add, which
+  // the library records as read by a person, so there nothing reads it, as the library says.
+  const readAsRecord = (key: string) => sql(`select count(*) from config_release r, jsonb_array_elements(r.snapshot->'document_types') t where r.combination_id='${vv}' and r.version=(select max(version) from config_release where combination_id='${vv}') and t->>'key'='${key}' and t->'reader_profile'->>'readerKind'='letter_or_record'`) === "1";
+  // Review m3 on 43a29fc4b: on the configured checkpoint (known by a combination only it releases, as lib/declared.ts)
+  // the reader must be there: a refused step 335 or a changed reading fails here, never only notes.
+  const onCheckpoint = sql("select count(*) from config_release r join combination c on c.id=r.combination_id where c.combination_key='wp.lmia_inside'") !== "0";
+  if (onCheckpoint) ok("C6.5-21e pass (QA-352, P-437): on the configured checkpoint the library reads proof of funds and the marriage certificate as records and says the facts they supply", readAsRecord("proof_of_financial_support") && readAsRecord("marriage_certificate_copy")
+    && sql(`select count(*) from config_release r, jsonb_array_elements(r.snapshot->'document_types') t where r.combination_id='${vv}' and r.version=(select max(version) from config_release where combination_id='${vv}') and ((t->>'key'='proof_of_financial_support' and t->'supplies_facts' ? 'case.funds_available_cad') or (t->>'key'='marriage_certificate_copy' and t->'supplies_facts' ? 'relationship.union_start_date'))`) === "2");
+  if (!readAsRecord("proof_of_financial_support")) { console.log("NOTE  C6.5-21 to -25: this release's library reads proof of funds by a person (the configured checkpoint reads it as a record); not run here"); return; }
+  const fundsLine = ((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, OFFICER)).body?.people?.find((x: { subject: string }) => x.subject === P)?.lines ?? []).find((x: { label: string }) => /financial support/i.test(x.label))?.id;
+  u = await upload(PORT, `/runtime/checklist-lines/${fundsLine}/documents`, fundsPdf(", a copy with no saved read"), "sample-funds-unsaved.pdf", OFFICER);
+  ok("C6.5-21a pass (QA-352): a synthetic proof of financial support is uploaded to Client A's own checklist line", u.status === 201, [fundsLine, u.status]);
+  r = await call("POST", `/runtime/cases/${c.id}/sections/${visit}/fill-from-documents/plan`, { subjectId: c.caseSubject }, OFFICER);
+  const fundsDoc = (r.body?.documents ?? []).find((x: { document: string }) => x.document === u.body?.document?.id);
+  ok("C6.5-21 pass (QA-352, P-110): the application's visit section now offers the proof of funds, read by AI vision, its cost first (live priced, not allowed)", r.status === 200 && fundsDoc?.reader === "ai_vision" && r.body?.estimate?.live_usd > 0 && r.body?.live_allowed === false, r.body);
+  const letterDoc = sql(`select id from case_document where subject_id='${c.caseSubject}' and document_type='letter_of_invitation' and current`);
+  r = await call("POST", `/runtime/cases/${c.id}/sections/${visit}/fill-from-documents`, { subjectId: c.caseSubject }, OFFICER);
+  ok("C6.5-21f pass (QA-352 review M1): without a mode (the drawer's first call) the letter's stored read stays shown and the unread proof of funds waits for its cost, named with whose it is", r.status === 200 && (r.body?.reviews ?? []).some((x: { document: string }) => x.document === letterDoc) && (r.body?.waiting_for_cost ?? []).some((x: { document: string; code: string; document_name: string }) => x.document === u.body?.document?.id && x.code === "cost_first" && /Sample Client A/.test(x.document_name)), r.body);
+  r = await call("POST", `/runtime/cases/${c.id}/sections/${visit}/fill-from-documents`, { subjectId: c.caseSubject, mode: "replay" }, OFFICER);
+  ok("C6.5-21c fail (QA-352, review M1): a proof of funds with no saved read is never read live: listed on its own (no_saved_read), nothing stored, no cost, and the letter's read beside it stays shown", r.status === 200 && r.body?.cost_usd === 0 && (r.body?.waiting_for_cost ?? []).some((x: { document: string; code: string }) => x.document === u.body?.document?.id && x.code === "no_saved_read") && (r.body?.reviews ?? []).some((x: { document: string }) => x.document === letterDoc) && sql(`select count(*) from document_review where document_id='${u.body?.document?.id}'`) === "0", r.body);
+  const planNow = await call("POST", `/runtime/cases/${c.id}/sections/${visit}/fill-from-documents/plan`, { subjectId: c.caseSubject }, OFFICER);
+  ok("C6.5-21g fail (QA-352 review m2): the cost card prices only the file not read yet (one read), never the letter already read", planNow.body?.estimate?.worst_usd === runCardUsd(LETTER_READ_CARD, 1).worst_usd && planNow.body?.estimate?.usual_usd === runCardUsd(LETTER_READ_CARD, 1).usual_usd, planNow.body?.estimate);
+  r = await call("POST", `/runtime/cases/${c.id}/sections/${section}/fill-from-documents`, { subjectId: P }, OFFICER);
+  ok("C6.5-21h fail (QA-352 review m4): Client A's proposals list no value of a document read for the application (the letter, the proof of funds)", !(((await call("GET", `/runtime/cases/${c.id}/proposals?subject=${P}`, undefined, OFFICER)).body?.proposals ?? []) as Proposal[]).some((x) => x.source?.document === letterDoc || x.source?.document === u.body?.document?.id));
+  ok("C6.5-21i fail (QA-352): Client A's proof of funds is no evidence for Client A's own answers (it is read for the application): 404", (await call("POST", `/runtime/cases/${c.id}/answers/${P}/person.passport_number/checked-against-document`, { document: u.body?.document?.id }, OFFICER)).status === 404);
+  ok("C6.5-21d fail (QA-352): Client A's own sections never read the proof of funds (it gives only the application's facts)", r.status === 200 && !(r.body?.reviews ?? []).some((x: { document: string }) => x.document === u.body?.document?.id) && !(r.body?.not_read ?? []).some((x: { document: string }) => x.document === u.body?.document?.id), r.body);
+  u = await upload(PORT, `/runtime/checklist-lines/${fundsLine}/documents`, fundsPdf(), "sample-funds.pdf", OFFICER);
+  const funds = u.body?.document?.id;
+  r = await call("POST", `/runtime/cases/${c.id}/sections/${visit}/fill-from-documents/plan`, { subjectId: c.caseSubject }, OFFICER);
+  ok("C6.5-21b precondition (QA-352): a saved AI read of this synthetic proof of funds is recorded (one live read on the Mac by the tech lead; until then this, C6.5-22 and C6.5-23 stay red)", r.body?.replay?.find((x: { document: string }) => x.document === funds)?.replay_available === true, r.body?.replay);
+  r = await call("POST", `/runtime/cases/${c.id}/sections/${visit}/fill-from-documents`, { subjectId: c.caseSubject, mode: "replay" }, OFFICER);
+  const fundsValue = ((r.body?.proposals ?? []) as (Proposal & { subject: string })[]).find((x) => x.source?.document === funds && x.fact === "case.funds_available_cad");
+  ok("C6.5-22 pass (QA-352, qa's replay): \"Fill this from documents\" on the visit section proposes the funds for the stay from the proof of funds, about the application, reader AI vision, Replayed, expanded for a look (P-243), only the library's facts, US$0", r.status === 200 && Number(fundsValue?.value) === 14200 && ((r.body?.proposals ?? []) as Proposal[]).filter((x) => x.source?.document === funds).every((x) => x.fact === "case.funds_available_cad") && fundsValue?.subject === c.caseSubject && fundsValue?.replayed === true && fundsValue?.source.reader === "ai_vision" && fundsValue?.review === "expanded" && r.body?.cost_usd === 0, r.body);
+  r = await call("POST", `/runtime/cases/${c.id}/documents/${funds}/confirm-and-use`, { subjectId: c.caseSubject, checked: fundsValue ? [fundsValue.id] : [] }, OFFICER);
+  ok("C6.5-23 pass (QA-352, P-242): one Confirm & use on the application, with the value ticked, writes the funds as the application's answer with the document's provenance", r.status === 200 && /"document_read"/.test(sql(`select source_json::text from client_canonical_answer where subject_id='${c.caseSubject}' and canonical_field_key='case.funds_available_cad' and superseded_by_id is null`) ?? "") && r.body?.used?.includes("case.funds_available_cad"), r.body);
+  r = await call("POST", `/runtime/cases/${c.id}/documents/${funds}/confirm-and-use`, { subjectId: P }, OFFICER);
+  ok("C6.5-23b fail (QA-352): the proof of funds is not confirmed on Client A (it is read for the application): 422, nothing written", r.status === 422, r.status);
+  r = await call("POST", `/runtime/cases/${c.id}/answers/${c.caseSubject}/case.funds_available_cad/checked-against-document`, { document: funds }, OFFICER);
+  ok("C6.5-23c pass (QA-352 review m4): staff mark the application's funds checked against Client A's proof of funds (read for the application): VERIFIED with that document", r.status === 200 && r.body?.answer?.checked_against?.document === funds, r.body);
+  {
+    // P-294 ruling on #1444: the real saved read (p2/runs, never edited) gives the funds as the text "14200.00"; it is
+    // stored and used in the fact's own type, so the application's answer is the number 14200, VERIFIED.
+    const sha = sql(`select sha256 from case_document where id='${funds}'`) ?? "", file = join(import.meta.dirname, "..", "..", "p2", "runs", `studio-document-read-${sha}.json`);
+    const saved = existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as { proposals: { fact: string; value: unknown }[] }).proposals.find((x) => x.fact === "case.funds_available_cad")?.value : undefined;
+    const row = sql(`select value_json::text || '|' || status from client_canonical_answer where subject_id='${c.caseSubject}' and canonical_field_key='case.funds_available_cad' and superseded_by_id is null`);
+    const read = sql(`select value_json::text || '|' || state || '|' || coalesce(note, '') from read_value where document_id='${funds}' and fact='case.funds_available_cad'`) ?? "";
+    ok("C6.5-23e pass (QA-352, P-294 ruling on #1444): the real saved read gives the funds as the text \"14200.00\"; it is used as the number 14200, VERIFIED, and the read keeps what the reader gave", saved === "14200.00" && row === "14200|VERIFIED" && read.startsWith("14200|used|") && /gave "14200\.00"/.test(read), { saved, row, read });
+  }
+  // Review M1 on 43a29fc4b, its own scenario: a second applicant's statement with no saved read never hides the first
+  // one's read (each applicant's proof of funds is read for the application).
+  const sFundsLine = ((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, OFFICER)).body?.people?.find((x: { subject: string }) => x.subject === S)?.lines ?? []).find((x: { label: string }) => /financial support/i.test(x.label))?.id;
+  const sFunds = sFundsLine ? (await upload(PORT, `/runtime/checklist-lines/${sFundsLine}/documents`, fundsPdf(", Spouse A's copy with no saved read"), "spouse-funds.pdf", OFFICER)).body?.document?.id : null;
+  const both = [await call("POST", `/runtime/cases/${c.id}/sections/${visit}/fill-from-documents`, { subjectId: c.caseSubject }, OFFICER), await call("POST", `/runtime/cases/${c.id}/sections/${visit}/fill-from-documents`, { subjectId: c.caseSubject, mode: "replay" }, OFFICER)];
+  ok("C6.5-23d fail (QA-352 review M1): Spouse A's statement with no saved read waits on its own, named as Spouse A's; Client A's read proof of funds stays in the drawer, with and without replay", !!sFunds && both.every((x) => x.status === 200 && (x.body?.reviews ?? []).some((v: { document: string }) => v.document === funds) && (x.body?.waiting_for_cost ?? []).some((w: { document: string; document_name: string }) => w.document === sFunds && /Sample Spouse A/.test(w.document_name))), both.map((x) => x.body));
+
+  // QA-352: a marriage certificate copy (the configured checkpoint's release asks it of a married applicant, IMM 5484;
+  // the fixture's release has no such line, so these steps run on the checkpoint: nightly data=checkpoint, P-400).
+  if (!readAsRecord("marriage_certificate_copy")) {
+    console.log("NOTE  C6.5-24 to -25b: this release has no marriage certificate line (the configured checkpoint has one); not run here");
+    return;
+  }
+  // The line is "once for the couple", on the spouse's list (resolver R2: couple_once → the partner).
+  for (const who of [P, S]) await answer(c.id, who, "person.marital_status", "married", typist);
+  const marriageLine = ((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, OFFICER)).body?.people?.find((x: { subject: string }) => x.subject === S)?.lines ?? []).find((x: { label: string }) => /marriage/i.test(x.label))?.id;
+  u = await upload(PORT, `/runtime/checklist-lines/${marriageLine}/documents`, marriagePdf(", a copy with no saved read"), "sample-marriage-unsaved.pdf", OFFICER);
+  ok("C6.5-24a pass (QA-352): the couple answers married; a synthetic marriage certificate copy is uploaded to the line that brings, on Spouse A's list", u.status === 201, [marriageLine, u.status]);
+  r = await call("POST", `/runtime/cases/${c.id}/sections/${section}/fill-from-documents`, { subjectId: S, mode: "replay" }, OFFICER);
+  ok("C6.5-24c fail (QA-352): a marriage certificate with no saved read is never read live: listed on its own (no_saved_read), nothing stored, no cost", r.status === 200 && (r.body?.waiting_for_cost ?? []).some((x: { document: string; code: string }) => x.document === u.body?.document?.id && x.code === "no_saved_read") && sql(`select count(*) from document_review where document_id='${u.body?.document?.id}'`) === "0", r.body);
+  u = await upload(PORT, `/runtime/checklist-lines/${marriageLine}/documents`, marriagePdf(), "sample-marriage.pdf", OFFICER);
+  const marriage = u.body?.document?.id;
+  r = await call("POST", `/runtime/cases/${c.id}/sections/${section}/fill-from-documents/plan`, { subjectId: S }, OFFICER);
+  ok("C6.5-24 pass (QA-352, P-110): Spouse A's personal details offer the marriage certificate, read by AI vision, its cost first", r.status === 200 && (r.body?.documents ?? []).some((x: { document: string; reader: string }) => x.document === marriage && x.reader === "ai_vision") && r.body?.live_allowed === false, r.body);
+  ok("C6.5-24b precondition (QA-352): a saved AI read of this synthetic marriage certificate is recorded (one live read on the Mac by the tech lead; until then this and C6.5-25 stay red)", r.body?.replay?.find((x: { document: string }) => x.document === marriage)?.replay_available === true, r.body?.replay);
+  r = await call("POST", `/runtime/cases/${c.id}/sections/${section}/fill-from-documents`, { subjectId: S, mode: "replay" }, OFFICER);
+  const union = ((r.body?.proposals ?? []) as (Proposal & { subject: string })[]).find((x) => x.source?.document === marriage && x.fact === "relationship.union_start_date");
+  ok("C6.5-25 pass (QA-352): the replayed read of the marriage certificate proposes the date of the marriage, about Spouse A, expanded for a look (P-243: dates always reviewed), only the library's facts, US$0", r.status === 200 && union?.value === "2019-06-14" && union?.subject === S && union?.review === "expanded" && ((r.body?.proposals ?? []) as Proposal[]).filter((x) => x.source?.document === marriage).every((x) => x.fact === "relationship.union_start_date") && r.body?.cost_usd === 0, r.body);
 });

@@ -1,0 +1,17 @@
+{
+  "document_sha256": "9cb0e46fbb27ae1a8a76a7b7112f32b598d61f6c4d1aa206b4a915d51f5ae262",
+  "reader": "ai_vision",
+  "model": "claude-opus-5-5",
+  "cost_usd": 0.0127,
+  "read_at": "2026-11-09T15:04:54.000Z",
+  "proposals": [
+    {
+      "fact": "relationship.union_start_date",
+      "value": "2019-06-14",
+      "page": 1,
+      "confidence": 0.95,
+      "note": "Marriage date stated as 14 June 2019 at Sample City (synthetic specimen)."
+    }
+  ],
+  "unreadable": []
+}

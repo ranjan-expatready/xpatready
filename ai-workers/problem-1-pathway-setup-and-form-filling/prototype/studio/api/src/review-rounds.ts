@@ -25,6 +25,7 @@ import { CasePrepare, type ReviewBasis, type ReviewBasisForm } from "./case-prep
 import type { ReadinessView } from "./readiness-inputs.ts";
 import { reviewItemsOf } from "./review-items.ts";
 import { busyWords } from "./busy.ts";
+import { newestPin } from "./stage-scope.ts"; // C6.17 (BR-9)
 
 type H = string | undefined;
 type Tx = Parameters<Parameters<Db["$transaction"]>[0]>[0];
@@ -84,7 +85,7 @@ export class ReviewRounds {
   private async checklistFor(c: Reached, view: Awaited<ReturnType<ReviewRounds["basisOf"]>>["view"], basis: ReviewBasis, filing: string): Promise<CheckItem[]> {
     const rd = view.readiness.find((x) => x.filing === filing);
     const docs = view.items.filter((i) => i.kind === "document" && i.filing === filing);
-    const verified = docs.length ? await this.db.checklistLine.count({ where: { caseId: c.id, state: "approved", OR: docs.map((d) => ({ subjectId: d.subject, documentType: d.document_type ?? "" })) } }) : 0;
+    const verified = docs.length ? await this.db.checklistLine.count({ where: { caseId: c.id, stageId: c.stage.id, state: "approved", OR: docs.map((d) => ({ subjectId: d.subject, documentType: d.document_type ?? "" })) } }) : 0;
     const subjects = new Set(this.formsOf(basis, filing).map((f) => f.subject));
     const by = new Map<string, number>();
     for (const a of basis.answers) if (a.status === "VERIFIED" && subjects.has(a.subjectId)) by.set(a.actor, (by.get(a.actor) ?? 0) + 1);
@@ -146,7 +147,8 @@ export class ReviewRounds {
   /** Under the case's row lock: the case must still be on the release the page read (C9.5's rule for the review). */
   private async lockCase(tx: Tx, c: Reached) {
     await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
-    const newest = await tx.packWorkPin.findFirst({ where: { caseId: c.id }, orderBy: { revision: "desc" }, select: { revision: true } });
+    // C6.17 (BR-9): the current stage's chain; null when "Start next stage" moved the case meanwhile (refused).
+    const newest = await newestPin(tx, c.id, c.combinationId);
     if (newest?.revision !== c.pins[0].revision) refuse({ status: 409, detail: "This case moved to another release meanwhile: nothing was recorded. Reload." });
   }
   private async nextNumbers(tx: Tx, caseId: string, filings: string[]) {
@@ -179,7 +181,7 @@ export class ReviewRounds {
       const no = mayDecide(actor.id, rep); if (no) refuse({ status: 403, detail: `"Review now" sends and opens the review in one step: ${no}` });
     }
     const { view, basis } = await this.basisOf(actor, c);
-    const stored = await this.db.filing.findMany({ where: { caseId: c.id }, select: { id: true, status: true, active: true } });
+    const stored = await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id }, select: { id: true, status: true, active: true } }) // C6.17: the current stage's filings only;
     const open = new Set((await this.db.reviewRoundFiling.findMany({ where: { caseId: c.id, status: { in: ["sent", "under_review"] } }, select: { filingId: true } })).map((x) => x.filingId));
     // Every filing the case has stored, a removed one too (C6.13: refused in words, 409), labelled as the view labels it.
     const filings = stored.map((s) => ({ id: s.id, label: view.filings.find((f) => f.id === s.id)?.label ?? "That filing", active: s.active && view.filings.some((f) => f.id === s.id), recorded: s.status === "SUBMITTED", inOpenRound: open.has(s.id), openBlocks: view.readiness.find((r) => r.filing === s.id)?.blocks.length ?? 0 }));
@@ -279,9 +281,11 @@ export class ReviewRounds {
 
   // ---------------------------------------------------------------- BR-3 open, BR-2 checks
 
-  private async rowOf(round: { id: string }, filing: string) {
+  private async rowOf(c: Reached, round: { id: string }, filing: string) {
     const row = await this.db.reviewRoundFiling.findUnique({ where: { roundId_filingId: { roundId: round.id, filingId: filing } } });
     if (!row) refuse({ status: 404, detail: "That filing is not in this review." });
+    // C6.17 (BR-5, BR-10): an ended stage's filings are history; their review is read, never opened, ticked or decided.
+    if ((await this.db.filing.findUnique({ where: { id: filing }, select: { stageId: true } }))?.stageId !== c.stage.id) refuse({ status: 409, detail: "This filing is on an ended stage of the case: its review is history and cannot be changed." });
     return row!;
   }
   /** F2: the one permission check, refused in the page's own words (403). */
@@ -293,7 +297,7 @@ export class ReviewRounds {
     const { round, c } = await this.roundOf(actor, id);
     const b = parsed(ReviewOpen, body);
     await this.mustDecide(actor, c);
-    await this.rowOf(round, b.filing);
+    await this.rowOf(c, round, b.filing);
     // Break m4: a filing removed from the application is not opened (it can still be sent back).
     if (!(await this.db.filing.findUnique({ where: { id: b.filing }, select: { active: true } }))?.active) refuse({ status: 409, detail: "This filing was removed from the application: send it back, or add it back first." });
     const moved = await this.db.$transaction(async (tx) => {
@@ -303,7 +307,7 @@ export class ReviewRounds {
       await this.audit(tx, c, actor, "review_opened", round.id, `${actor.name} opened a filing's review on case ${c.id.slice(0, 8)} (round ${round.number})`, { case: c.id, filing: b.filing });
       return row.id;
     }, TX);
-    const row = await this.rowOf(round, b.filing);
+    const row = await this.rowOf(c, round, b.filing);
     return { filing: b.filing, status: row.status, opened: !!moved, opened_by: row.openedBy, opened_at: row.openedAt?.toISOString() ?? null };
   }
 
@@ -313,7 +317,7 @@ export class ReviewRounds {
     const { round, c } = await this.roundOf(actor, id);
     const b = parsed(ReviewTick, body);
     await this.mustDecide(actor, c);
-    const row = await this.rowOf(round, b.filing);
+    const row = await this.rowOf(c, round, b.filing);
     const item = await this.db.reviewCheck.findUnique({ where: { roundFilingId_itemKey: { roundFilingId: row.id, itemKey: b.item } } });
     if (!item) refuse({ status: 404, detail: "That checklist item is not on this filing's review." });
     const done = await this.db.$transaction(async (tx) => {
@@ -334,7 +338,7 @@ export class ReviewRounds {
     const { round, c } = await this.roundOf(actor, id);
     const b = parsed(ReviewDecision, body);
     const rep = await this.mustDecide(actor, c);
-    const row = await this.rowOf(round, b.filing);
+    const row = await this.rowOf(c, round, b.filing);
     const filing = await this.db.filing.findUnique({ where: { id: b.filing }, select: { status: true, active: true } });
     // Break m4: a removed filing can still be sent back (closing its round); it is never approved.
     if (!filing?.active && b.verdict === "approve") refuse({ status: 409, detail: "This filing is no longer on the application (it was removed): send it back instead. Nothing was recorded." });
@@ -418,7 +422,7 @@ export class ReviewRounds {
     const { round, c } = await this.roundOf(actor, id);
     const b = parsed(ReviewReapprove, body);
     const rep = await this.mustDecide(actor, c);
-    const row = await this.rowOf(round, b.filing);
+    const row = await this.rowOf(c, round, b.filing);
     const filing = await this.db.filing.findUnique({ where: { id: b.filing }, select: { status: true, active: true } });
     if (!filing?.active || filing.status === "SUBMITTED") refuse({ status: 409, detail: "This filing is recorded as submitted or no longer on the application: its review is closed." });
     if (row.status !== "approved") refuse({ status: 409, detail: "Only an approved filing is re-approved; this one is not approved. Reload." });

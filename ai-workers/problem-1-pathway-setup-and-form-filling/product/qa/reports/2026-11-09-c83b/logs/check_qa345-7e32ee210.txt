@@ -1,0 +1,14 @@
+NOTICE:  database "xr_studio_qa_q345" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_q345 on http://localhost:4470 (xr_studio_qa_q345), stops itself in 40 min
+loaded by screen in 121.2 s: Configured checkpoint loaded in 121.0 s
+QA-345 — C8.3: the filed validated copy of a barcode form is stamped by an approval after a send back
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  QA-345 setup: a barcode form, a send back that changed one of its facts, round 2 approved (its stamp holds no file, as today) — {"bc":"IMM 5257","fact":"person.email","dec":200,"kindBefore":"none"}
+PASS  QA-345 (C8.3, concept 'Beaten', row B144): the validated copy filed for a barcode form is under an approval that stamps that file, or the approval asks again (not 'approved' with no file) — {"state":"approved","stamp":{"at":"2026-11-09T17:47:49.834Z","by":"user-R","file_kind":"validated_copy","file_sha256":"d09ab3c0742f83ce32d995c7eb1ee0adca5d8f27a0b3a1feaa5f871a2147b761"},"liveSha":"d09ab3c0742f83ce32d995c7eb1ee0adca5d8f27a0b3a1feaa5f871a2147b76
+
+2/2 passed
+EXIT 0

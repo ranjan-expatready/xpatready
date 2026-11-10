@@ -1,0 +1,10 @@
+isolated qa_q361 on http://localhost:4475 (xr_studio_qa_q361), stops itself in 40 min
+loaded by screen in 117.2 s: Configured checkpoint loaded in 116.8 s
+PASS  QA-361 setup: round 1 with the spouse's one withdrawn form (setup_c83_walk.ts)
+FAIL  QA-361 (C8.3, BIC-14): every Tab onto the "Approval withdrawn" chip opens its tooltip (40 tries) — {"misses":[{"try":25,"settled":true,"focused":"Approval withdrawn"},{"try":38,"settled":false,"focused":"Approval withdrawn"}]}
+
+1/2 passed
+qa361 on the checkpoint EXIT 1
+
+23/23 passed
+builder check on the checkpoint EXIT 0

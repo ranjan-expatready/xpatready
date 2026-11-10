@@ -1,0 +1,9 @@
+QA-361 — the finished story's Paper IMM 5257: its phone blocks can pass Adobe's Validate
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  QA-361 setup: the finished story is loaded — 202
+PASS  QA-361 setup: the Paper IMM 5257 copy of the story's Paper person exists — {"person":"Child 18 or over (Sample)","caseId":"81688866-baa1-4a9f-9dd5-76d70e9772ae","subject":"b692391c-fbbf-488c-9e18-38893596eced"}
+FAIL  QA-361-1: every phone block written "Canada/US" carries its North American number parts (else Adobe's Validate requires them and the case holds no such number) — [{"name":"main telephone","canadaUS":"0","country":"91","na":0,"intl":"9800000001"},{"name":"alternate telephone","canadaUS":"1","country":"1","na":0,"intl":""},{"name":"fax","canadaUS":"1","country":"1","na":0,"intl":""}]
+FAIL  QA-361-2: no person step says "The number is already written" for a Canada/US block with no number parts — {"copyFound":true,"sayWritten":2,"haveParts":0,"step":"this telephone number: after the form's first Validate, tick \"Canada/US\" again. The number is already written and the switch is written ticked, but Validate cle"}
+
+2/4 passed

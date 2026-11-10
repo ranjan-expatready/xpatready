@@ -1,0 +1,10 @@
+isolated qa_q363 on http://localhost:4476 (xr_studio_qa_q363), stops itself in 30 min
+loaded by screen in 128.1 s: Configured checkpoint loaded in 127.9 s
+QA-363 — C8.3: a withdrawal for a different validated copy is worded as a file change, not a fact change
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  QA-363 setup: round 2 approved with no file, stamped on the first read-back, withdrawn by a second validated copy of the same facts (#1440's C8.3-23 path) — {"bc":"IMM 5257","fact":"person.email","dec":200,"kindBefore":"none","kindMoved":"validated_copy","state":"approval_withdrawn","withdrawn":"Approval withdrawn: the validated copy read back since is not the file this approval stamped. Re-approve to stamp the fi
+FAIL  QA-363 (C8.3): on a file withdrawal, the stamp line does not read as the current file ("Stamped with the validated copy read back" with nothing saying it is an earlier copy) and the tooltip does not say a fact changed — {"file_words":"Stamped with the validated copy read back","tooltip":"Approved earlier; a fact on it changed since, so the representative checks it again."}
+
+1/2 passed
+EXIT 1
