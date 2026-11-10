@@ -84,6 +84,7 @@ try {
   await (await chooser).setFiles({ name: "sample-passport-study.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n% Sample synthetic passport copy (C6.17 walk)\n") });
   await passport.locator("[data-state-words]", { hasText: "Received" }).waitFor();
   ok("C6.17-5 (P-444): on the study permit's Documents panel the officer uploads Client A's passport copy through the line's menu: Received, the file named", /sample-passport-study\.pdf/.test(await passport.innerText()));
+  await passport.scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, 200));
   await state("study-document-uploaded", "[data-documents-panel]", [1440, 1024], "P444a");
   await p.locator("[data-start-next]").focus(); await p.keyboard.press("Enter"); await p.locator("[data-start-dialog]").waitFor(); await settle();
   const dlg = p.locator("[data-start-dialog]"), docs = await p.locator("[data-start-documents]").innerText();
@@ -110,6 +111,7 @@ try {
   ok("C6.17-9 (P-444, BR-6): the work permit's own passport line, Not requested, says \"On file from Study permit, uploaded …: check it for this application\"",
     /^On file from Study permit, uploaded \d{1,2} \w{3} \d{4}: check it for this application\.$/.test((await onFile.innerText()).trim())
     && /Not requested/.test(await p.locator("[data-documents-panel] [data-line]").filter({ has: p.locator("[data-on-file]") }).first().innerText()), await onFile.innerText());
+  await onFile.scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, 200));
   await state("new-stage-on-file", "[data-documents-panel]", [1440, 1024], "P444b");
   ok("no page error or console error on the way", errs.length === 0, errs);
 } catch (e) {
