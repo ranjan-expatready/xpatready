@@ -1,0 +1,14 @@
+nightly.yml run 42759023740 (this repository's Actions, run id 42759023740): event workflow_dispatch, branch main, head 66e74115eb0ca5a9301433e08f6234237b9c37a3, created 2026-11-10T04:57:01Z, conclusion success.
+Jobs: plan 129640072596 success (CAPS: C6.17); packs (C6.17) 129640099845 success; works, works-plan, suites skipped.
+Job 129640099845 log, lines 1222-1239 (fetched by qa 05:06 UTC):
+2026-11-10T04:58:38.7598549Z   CAP: C6.17
+2026-11-10T04:58:38.7598828Z   GATE_B_JOBS: 1
+2026-11-10T04:58:38.7599087Z   KIND: code
+2026-11-10T04:58:38.7599328Z   GATE_B_DATA: checkpoint
+2026-11-10T04:58:38.7599668Z ##[endgroup]
+2026-11-10T04:58:38.8111854Z Gate B: the PR names C6.17; claims Works for none (no bug check).
+2026-11-10T04:58:38.8113118Z   packs: C6.17.test.ts
+2026-11-10T05:01:15.6844284Z     C6.17.test.ts on the checkpoint: exit 0, 47/47 passed (156 s: copy 4, Load the configured checkpoint 75, run 77)
+2026-11-10T05:01:15.6845565Z   packs took 157 s in all
+2026-11-10T05:01:15.6846165Z Gate B: passed.
+2026-11-10T05:01:15.6975373Z Post job cleanup.

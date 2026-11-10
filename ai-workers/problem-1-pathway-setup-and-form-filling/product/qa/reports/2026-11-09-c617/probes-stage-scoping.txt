@@ -1,0 +1,18 @@
+### probes (filing stage 1 b735c6a0-cf1b-4296-96fd-f3728537b73c, filing stage 2 0fbb03b7-83de-4cb6-ae86-bc43bea71294)
+1. GET /prepare (stage 2): form numbers and any 'added' rows:
+["IMM 5409","IMM 5475","IMM 5476","IMM 5707","IMM 5710"]
+2. remove the ended stage's IMM 0008 DEP addition:
+{"type":"https://expatready.local/problems/form-addition","title":"Changed since you read it","status":409,"detail":"This filing belongs to an earlier stage of the case, which has ended: its forms are kept as they were and can no longer be changed.","message":"This filing belongs to an earlier stage of the case, which has ended: its forms are kept as they were and can no longer be changed.","code":"stage_ended","errors":[{"field":"filing","message":"An ended stage's filing: read-only."}]} HTTP 409
+3. add IMM 5406 to the ended stage's filing:
+{"type":"https://expatready.local/problems/form-addition","title":"Changed since you read it","status":409,"detail":"This filing belongs to an earlier stage of the case, which has ended: its forms are kept as they were and can no longer be changed.","message":"This filing belongs to an earlier stage of the case, which has ended: its forms are kept as they were and can no longer be changed.","code":"stage_ended","errors":[{"field":"filing","message":"An ended stage's filing: read-only."}]} HTTP 409
+4. the ended stage's blank PDF is still readable:
+HTTP 200 application/pdf 448821 bytes magic: %PDF-1.7
+5. the database refuses a removed mark on the ended stage's addition:
+ERROR:  case_stage_ended: this filing's stage has ended; its items and records are kept as they were
+CONTEXT:  PL/pgSQL function runtime_stage_row_via_filing() line 16 at RAISE
+6. stage 2's addable list: IMM 5710 and IMM 0008 DEP:
+{"form":"IMM 5710","kind":"blank","why_not":"IMM 5710 is part of this application's forms (for this person: it applies now), so it is not added by hand.","same_as":null}
+{"form":"IMM 0008 DEP","kind":"blank","why_not":null,"same_as":null}
+7. additions after the probes (stage|form|removed):
+study|IMM 0008 DEP|f
+study|IMM 5710|f
