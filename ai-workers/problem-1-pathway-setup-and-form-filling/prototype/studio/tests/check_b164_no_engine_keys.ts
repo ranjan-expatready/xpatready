@@ -86,22 +86,10 @@ function unescape(src: string, j: number): [string, number] {
   if (e === "x") return [String.fromCharCode(parseInt(src.slice(j + 2, j + 4), 16) || 0), j + 4];
   return [({ n: "\n", t: "\t", r: "\r" } as Record<string, string>)[e] ?? e, j + 2];
 }
-/** Where a ${…} part that starts at `j` ends (just after its `}`), its strings and nested templates skipped whole. */
-function partEnd(src: string, j: number): number {
-  let depth = 1;
-  while (j < src.length && depth) {
-    const c = src[j];
-    if (c === '"' || c === "'" || c === "`") { j++; while (j < src.length && src[j] !== c) { if (src[j] === "\\") j++; else if (c === "`" && src[j] === "$" && src[j + 1] === "{") { j = partEnd(src, j + 2); continue; } j++; } j++; continue; }
-    if (c === "{") depth++; else if (c === "}") depth--;
-    j++;
-  }
-  return j;
-}
-/** The code's strings (a template's text between its ${…} parts, each part on its own), names and regular expressions'
- *  bodies, comments left out. Enough of TypeScript for a scan: a `/` after a value is division, anywhere else a regex. */
-export function tokens(src: string): Token[] {
-  const out: Token[] = [];
-  let i = 0, line = 1, prev = "";
+/** Reads code from `i` to the end, or (`part`) to the `}` that closes a template's ${…} part, so a part is read by the
+ *  same rules as any code (review round 2: a quote inside a regular expression in a part ended the scan). */
+function lex(src: string, i: number, line: number, part: boolean, out: Token[]): { i: number; line: number } {
+  let prev = "", depth = 0;
   const n = src.length;
   while (i < n) {
     const c = src[i], d = src[i + 1];
@@ -118,11 +106,8 @@ export function tokens(src: string): Token[] {
       while (j < n && src[j] !== "`") {
         if (src[j] === "\\") { const [ch, k] = unescape(src, j); s += ch; j = k; continue; }
         if (src[j] === "$" && src[j + 1] === "{") {
-          out.push({ kind: "str", text: s, line: at }); s = ""; j += 2;
-          // The ${…} part is code: scanned on its own (its strings and names count too).
-          const from = j; j = partEnd(src, j);
-          for (const t of tokens(src.slice(from, j - 1))) out.push({ ...t, line: line + t.line - 1 });
-          line += (src.slice(from, j).match(/\n/g) ?? []).length; at = line; continue;
+          out.push({ kind: "str", text: s, line: at }); s = "";
+          ({ i: j, line } = lex(src, j + 2, line, true, out)); at = line; continue;
         }
         if (src[j] === "\n") line++;
         s += src[j++];
@@ -139,9 +124,18 @@ export function tokens(src: string): Token[] {
       const w = src.slice(i, j); out.push({ kind: "id", text: w, line });
       prev = /^(return|typeof|case|in|of|delete|void|throw|new|yield|await|else|do)$/.test(w) ? "(" : "v"; i = j; continue;
     }
+    if (part && c === "{") depth++;
+    if (part && c === "}") { if (depth === 0) return { i: i + 1, line }; depth--; }
     if (!/\s/.test(c)) prev = c;
     i++;
   }
+  return { i, line };
+}
+/** The code's strings (a template's text between its ${…} parts; each part is code), names and regular expressions'
+ *  bodies, comments left out. Enough of TypeScript for a scan: a `/` after a value is division, anywhere else a regex. */
+export function tokens(src: string): Token[] {
+  const out: Token[] = [];
+  lex(src, 0, 1, false, out);
   return out;
 }
 
@@ -168,7 +162,7 @@ const FILE_ENDINGS = new Set(["json", "ts", "tsx", "js", "mjs", "cjs", "pdf", "m
 const PROGRAM = /visitor|study.?permit|work.?permit|super.?visa|express.?entry|caregiver|refugee|start.?up.?visa|working.?holiday|post.?graduation|family.?sponsorship|provincial.?nomin/i;
 /** A form or guide number as a whole string ("IMM 5257", "IMM 5257 SCH1", "IRM 0002", "Guide 5256"): what code compares
  *  a form against or keys a table by. A number inside words (a citation, "a form number looks like IMM 5257") is text. */
-const FORM = /^\s*((IMM|IRM|CIT|EMP)[ _-]?\d{4}(?!\d)[A-Z0-9]*( ?(SCH|SCHEDULE|DEP) ?[0-9A-Z]*)?|guide[ _-]?\d{4}(?!\d)[a-z]?)(\.[a-z]{2,4})?\s*$/i;
+const FORM = /^\s*((IMM|IRM|CIT|EMP)[ _-]?\d{4}(?!\d)[A-Z0-9]*( [A-Z])?( ?(SCH|SCHEDULE|DEP) ?[0-9A-Z]*)?|guide[ _-]?\d{4}(?!\d)[a-z]?)(\.[a-z]{2,4})?\s*$/i;
 /** A form number written into a regular expression with its digits ("/IMM ?5257/"); a pattern for any form ("\\d{4}") is not one. */
 const FORM_IN_RE = /(IMM|IRM|CIT|EMP)[^A-Za-z0-9]{0,6}\d{4}/i;
 /** IRCC's own name (and its URL path) names no program. */
@@ -205,11 +199,14 @@ export function keyInRe(body: string, known: Set<string>): boolean {
 export function scan(files: { file: string; src: string }[], known: Set<string>): Hit[] {
   const hits: Hit[] = [];
   const codes = codesOf(known);
-  for (const { file, src } of files) for (const t of tokens(src)) {
+  for (const { file, src } of files) for (const [i, t, list] of tokens(src).map((t, i, list) => [i, t, list] as const)) {
     const at = { file, line: t.line, text: t.text };
+    // A module's name ("fs" in `import … from "fs"`, `require("fs")`, `import("fs")`) is not a program code (review r2 m2).
+    const before = list[i - 1];
+    if (t.kind === "str" && before?.kind === "id" && /^(from|require|import)$/.test(before.text) && !keyLike(t.text, known)) continue;
     if ((t.kind === "str" && (keyLike(t.text, known) || codes.has(t.text))) || (t.kind === "re" && keyInRe(t.text, known))) hits.push({ ...at, kind: "key" });
     else if (PROGRAM.test(t.text.replace(DEPARTMENT, ""))) hits.push({ ...at, kind: "program" });
-    else if ((t.kind === "str" && FORM.test(t.text)) || (t.kind === "re" && FORM_IN_RE.test(t.text))) hits.push({ ...at, kind: "form" });
+    else if ((t.kind === "str" && (FORM.test(t.text) || FORM.test(t.text.split("/").pop() ?? ""))) || (t.kind === "re" && FORM_IN_RE.test(t.text))) hits.push({ ...at, kind: "form" });
     else if (t.kind === "str" && SLICE.test(t.text)) hits.push({ ...at, kind: "slice" });
   }
   return hits;
@@ -308,6 +305,18 @@ ok("fail: an entry with no row is refused unless it is reader content", !named({
 ok("fail: an allowed text a second time in its file is caught (review M1: each entry allows its count)", caughtIn("engine/filing-modes.ts", `const again = (k: string) => (k === "vv.single" ? "own" : "shared");`).length === 1);
 ok("fail: an entry that allows more often than origin/main's, or names another row, is added (review M1, m2)", added([{ guard: "g", file: "f", kind: "key", text: "t", row: "M3-S1" }], [{ guard: "g", file: "f", kind: "key", text: "t", row: "M3-S1", count: 2 }]).length === 1 && added([{ guard: "g", file: "f", kind: "key", text: "t", row: "M3-S1" }], [{ guard: "g", file: "f", kind: "key", text: "t", row: "BK-10" }]).length === 1);
 ok("fail: an entry allowing two copies when one is left is stale", judge([{ file: "f", line: 1, kind: "key", text: "t" }], [{ guard: "g", file: "f", kind: "key", text: "t", row: "M3-S1", count: 2 }]).stale.length === 1);
+
+// Review round 2 (M): a file is read to its last line of code, so nothing after a mis-read string goes unread.
+const lastRead = (src: string) => Math.max(0, ...tokens(src).map((t) => t.line));
+/** The code after the last line the scan read: only closing brackets and comments may be left there. */
+const unreadOf = (src: string) => src.trimEnd().split("\n").slice(lastRead(src)).join("\n").replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/[})\];,\s]/g, "");
+const unread = engine.filter(({ src }) => unreadOf(src) !== "");
+ok(`pass: every file is read to its last line of code (${engine.length} files)`, unread.length === 0, unread.map((f) => `${f.file}: read to line ${lastRead(f.src)}`));
+ok("fail: code left after a string that swallows the rest is named", unreadOf("const a = `abc\nconst k = 1;\nexport { a };\n") !== "" && unreadOf("const a = 1;\n}\n// end\n") === "");
+ok("fail: a quote inside a regular expression in a template's part does not end the scan (review round 2)", caughtIn("api/src/new-thing.ts", "const s = `${a.replace(/'/g, \"\")}`;\nconst k = \"sp.outside\";").length === 1);
+ok("pass: a form number with a space before its language letter is caught (\"IMM 5257 E\")", FORM.test("IMM 5257 E"));
+ok("fail: a form's file at the end of a path is caught", caughtIn("api/src/new-thing.ts", `const p = "official-sources/ircc/forms/imm5257e.pdf";`).length === 1);
+ok("pass: a module named like a program code is not a key (import … from \"fs\")", caughtIn("api/src/new-thing.ts", `import { readFileSync } from "fs";\nconst m = require("fs");`).length === 0);
 
 // pass: what is not a key, a program or a guard is left alone.
 const clean = [
