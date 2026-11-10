@@ -101,7 +101,7 @@
     {
       "form": "IMM 5257",
       "edition": "IMM 5257 (09-2023)",
-      "file": "official-sources/ircc/forms/imm5257e.pdf (the edition the configured checkpoint's library reads; manifest: sha256 0dc03b24…a562e, downloaded 2026-10-19). Found by Adobe Acrobat's own Validate on the finished story's Paper copy (C10.2, 9 Nov 2026): \"7. Current country of residence (status)\" must contain a value, and twice \"not required\"",
+      "file": "official-sources/ircc/forms/imm5257e.pdf (the edition the configured checkpoint's library reads; manifest: sha256 0dc03b24…a562e, downloaded 2026-10-19). Found by Adobe Acrobat's own Validate on the finished story's Paper copy (C10.2, 9 Nov 2026): \"7. Current country of residence (status)\" must contain a value, and twice \"not required\"; and on 10 Nov 2026 (the tech lead's Validate on the story's Paper copy 79a7d94f): \"You entered information that is not required, please review\", then \"-Details Of Visit- The following field must contain a value: 1a) Purpose of my visit\". Each Validate shows only the first such message, so every box the same script empties for the story's values is gated here, not only the one Validate showed",
       "gates": [
         {
           "box": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Other[0]",
@@ -126,6 +126,30 @@
           "gate": { "op": "eq", "field": "person.applying_from_status", "value": "Other" },
           "words": "the immigration status in the country from where the person is applying is Other",
           "cite": "IMM 5257 (09-2023) p. 1, question 9 B, \"Other\" box of the status row (\"If your immigration status is other, please give details\"); the form's own Validate script (validateCWA): \"if (oStatus.rawValue == \"06\" ){  //\"06\" is Other … } else { … if (!oOther.isNull){ … oStatus.rawValue = null;\", so details beside any other status empty the required status box; the form's own message on it: \"You entered information that is not required, please review\"; the form's list of values for status: \"Citizen\" (01), \"Permanent resident\" (02), \"Visitor\" (03), \"Worker\" (04), \"Student\" (05), \"Other\" (06), \"Protected Person\" (07), \"Refugee Claimant\" (08), \"Foreign National\" (09). Read 9 Nov 2026."
+        },
+        {
+          "box": "form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].Other[0].Other[0]",
+          "gate": { "op": "eq", "field": "case.visit_purpose", "value": "Other" },
+          "words": "the purpose of the visit is Other",
+          "cite": "IMM 5257 (09-2023) Details of visit to Canada (the template's subform Page3, which starts a new page; the printed page number was not read here), question 1: \"a) Purpose of my visit\" and \"b) Other\" (\"Question 1 B. If you replied Other to Question 1 A, please provide details.\"); the form's own Validate script (validateDetailsOfVisit): \"if (oPurpose.rawValue == \"03\" ) {  //03 is LIC code other … } else { //negative Case: if Other has a value and purpose is not other throw an error … if(!oOther.isNull){ … oPurpose.rawValue = null;\", so details beside any other purpose empty the required purpose box (then: \"-Details Of Visit- The following field must contain a value: 1a) Purpose of my visit\"); the form's own message on it: \"You entered information that is not required, please review\"; the form's list of values for purpose (VisitPurposeList): \"Business\" (01), \"Tourism\" (02), \"Short-Term Studies\" (04), \"Returning Student\" (05), \"Returning Worker\" (06), \"Super Visa: For Parents or Grandparents\" (07), \"Other\" (03), \"Family Visit\" (08), \"Visit\" (13). Read 10 Nov 2026."
+        },
+        {
+          "box": "form1[0].Page3[0].BackgroundInfo2[0].Details[0].refusedDetails[0]",
+          "gate": { "op": "or", "args": [{ "op": "eq", "field": "person.overstayed_or_unauthorized_in_canada", "value": true }, { "op": "eq", "field": "person.refused_visa_entry_or_removed", "value": true }, { "op": "eq", "field": "person.previously_applied_to_canada", "value": true }] },
+          "words": "the person answered Yes to Background Information question 2 a), 2 b) or 2 c)",
+          "cite": "IMM 5257 (09-2023) Background Information (the template's subform Page3, which starts a new page; the printed page number was not read here), question 2: \"2 a) Have you ever remained beyond the validity of your status, attended school without authorization or worked without authorization in Canada?\", \"2 b) Have you ever been refused a visa or permit, denied entry or ordered to leave Canada or any other country?\", 2 c) \"Have you previously applied to enter or remain in Canada?\", then \"2 d) If you answered \"yes\" to 2a), 2b or 2C) please provide details.\"; the form's own Validate script (validateBackGroundInformation): \"//Negative case: if notes has a value, make sure Yes has been clicked above somewhere if (!q2D.isNull && (q2A.rawValue == \"N\" && q2B.rawValue == \"N\"  && q2C.rawValue == \"N\" )){ … q2A.No.rawValue = null; q2A.Yes.rawValue = null;\" (and the same for 2 b) and 2 c)), so details beside three No answers empty the three required Yes/No boxes; the form's own message on it: \"You entered information that is not required, please review\". Read 10 Nov 2026."
+        },
+        {
+          "box": "form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].details[0]",
+          "gate": { "op": "eq", "field": "person.criminal_history", "value": true },
+          "words": "the person answered Yes to Background Information question 3 a)",
+          "cite": "IMM 5257 (09-2023) Background Information (the template's subform Page3, which starts a new page; the printed page number was not read here), question 3: \"3 a) Have you ever committed, been arrested for, been charged with or convicted of any criminal offence in any country?\", then \"b) If you answered \"yes\" to question 3a) above, please provide details.\"; the form's own Validate script (validateBackGroundInformation): \"//Negative case: if notes has a value, make sure Yes has been clicked above somewhere if (!q3B.isNull && (q3A.rawValue == \"N\")){ … q3A.No.rawValue = null; q3A.Yes.rawValue = null;\", so details beside No empty the required Yes/No box; the form's own message on it: \"You entered information that is not required, please review\". Read 10 Nov 2026."
+        },
+        {
+          "box": "form1[0].Page3[0].PageWrapper[0].Military[0].militaryServiceDetails[0]",
+          "gate": { "op": "eq", "field": "person.military_service", "value": true },
+          "words": "the person answered Yes to Background Information question 4 a) (military, militia, civil defence, security organization or police service)",
+          "cite": "IMM 5257 (09-2023) Background Information (the template's subform Page3, which starts a new page; the printed page number was not read here), question 4: \"4 a) Did you serve in any military, militia, or civil defence unit or serve in a security organization or police force (including non obligatory national service, reserve or volunteer units)?\", then \"4 b) If you answered \"yes\" to question 4 a), please provide dates of service and countries where you served.\"; the form's own Validate script (validateBackGroundInformation): \"//Negative case: if notes has a value, make sure Yes has been clicked above somewhere if (!q4B.isNull && (q4A.rawValue == \"N\")){ … q4A.No.rawValue = null; q4A.Yes.rawValue = null;\", so details beside No empty the required Yes/No box; the form's own message on it: \"You entered information that is not required, please review\". Read 10 Nov 2026."
         }
       ]
     }
