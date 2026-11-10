@@ -21,6 +21,15 @@ updated: 2026-11-10 18:28 IST by **Lead 8 (series 2, local_62177923-…)** at ha
 6. **After the 29:** the milestone plan with the founder (P-450), one question at a time; Fable's questions 16-18 and booking the immigration expert (A7).
 Terminal tabs c6 (caffeinate 4 h, from 15:2x) and c7 (open) are Lead 8's; leave c6 running.
 
+## Live rows (Lead 9, 19:0x IST 10 Nov) — 27 of 29 Works; all 29 forecast ~22:00 IST
+| Row | Where it stands | Next step | ETA IST |
+|---|---|---|---|
+| C10.2 | founder saved 9c00dbfc 18:30; read back 18:5x HTTP 201, written 75 equal 75; PDF in `.tools/solution-1-prototype/validated-imm5257/` (sha 8f7ae900); record in **#1495** (Opus Approve db61392dd posted), CI running | label on green; after merge dispatch nightly C10.2 checkpoint, post run id in #1495; qa lane verdict | ~21:30 |
+| C7.5 | sheet moved to **bd4761bdb306** (56 fields, main ddc2a6eb3); paid run **de49e801 US$0.87**, 2 rounds, 4 findings, 18:51 IST; result **#1496** | qa lane (local_69e52de7) re-scores, Approves and labels (P-275); merges → Works | ~21:45 |
+| (4a) | C7.8 lane briefed 13:4x; no PR yet | read when pushed (P-214) | ? |
+| Owed | printed pages of Languages / Details of visit / Background Information for #1492; 8 CI shards brief | Lead | after the 29 |
+Paid today: US$0.87 of US$30. Checks missed 15:50-18:53 IST (hand-over gap), told the founder 19:0x.
+
 ## Live rows (Lead 8, 13:33 IST): superseded by the hand-over block above; word for word in `history/STATE-2026-11-10-1850-lead8s2-live-rows-1333.md`.
 
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
