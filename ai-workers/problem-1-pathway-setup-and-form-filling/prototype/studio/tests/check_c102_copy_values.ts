@@ -182,6 +182,12 @@ try {
   ok("C10.2-v7 fail: the 10 Nov combination (b) English, c) 01) is caught", bl.length === 1 && /c\) "01" beside b\) "English"/.test(bl[0]), bl);
   const gateC = Number(sql(`select count(*) from config_release r, jsonb_array_elements(r.snapshot->'field_maps') m, jsonb_array_elements(m->'entries') e where r.id='${filed.release}' and m->>'form_number'='IMM 5257' and e->'condition_rule'->'gate' is not null and e->>'data_path' = '${LG}lov[0]'`) || 0);
   const boxC = boxes.find((b) => b.box === `${LG}lov[0]`);
+  // Review m2 on #1492: the gate compares b)'s stored answer with "Both"; no story person answers Both, so the question's own
+  // keys are read here (a b) stored under other keys, a linked answer list's slugs say, would leave c) never written).
+  const famCase = sql("select id from runtime_case where reference = 'SAMPLE-VV-FAMILY-1'");
+  const qv = await (await fetch(`http://localhost:${PORT}/api/runtime/cases/${famCase}/questionnaire?mode=agent`, { headers: { "x-actor": "user-O" } })).json() as { sections: { questions: { fact: string; options: { key: string }[] | null }[] }[] };
+  const abilityKeys = [...new Set(qv.sections.flatMap((x) => x.questions).filter((q) => q.fact === "person.official_language_ability").flatMap((q) => (q.options ?? []).map((o) => o.key)))];
+  ok("C10.2-v7 pass (review m2): the question for Languages b) offers the key \"Both\" exactly, the value the gate on c) compares", abilityKeys.includes("Both"), abilityKeys);
   ok("C10.2-v7 pass (B107 data, 10 Nov): the Paper copy's release carries the gate on Languages c), and the copy (b) English) leaves c) empty saying \"Not needed: written only when …\"", gateC === 1 && !!boxC && boxC.result !== "written" && /^Not needed: written only when/.test(boxC.why ?? ""), { gateC, boxC });
 } catch (e) {
   ok("the check ran to its end", false, (e as Error).message);
