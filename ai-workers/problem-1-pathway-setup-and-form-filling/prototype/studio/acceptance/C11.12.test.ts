@@ -69,7 +69,10 @@ run(async () => {
     { role: "sponsor", min: 1, max: 1, applies: false },
   ]);
   v = await view(fs);
-  ok("C11.12 pass: on a PR family combination (Spouse sponsorship, fs.spouse) a child can be on the principal's filing, applying; one filing holds both (Sample)", r.status < 300 && Array.isArray(v?.filings) && v.filings.length === 1 && v.filings[0].roles.includes("child"), r.status >= 300 ? words(r) : v?.filings);
+  // M3-S1 (P-425): the sponsor line saved with no mode follows the fee table's mode for it, as a case does (co-files), so
+  // the sponsorship is a filing of its own beside the principal's; the principal's one filing holds the child.
+  const own = Array.isArray(v?.filings) ? (v.filings as { kind: string; roles: string[] }[]).filter((f) => f.kind !== "co_filed") : [];
+  ok("C11.12 pass: on a PR family combination (Spouse sponsorship, fs.spouse) a child can be on the principal's filing, applying; one filing holds both (Sample)", r.status < 300 && own.length === 1 && own[0].roles.includes("principal") && own[0].roles.includes("child"), r.status >= 300 ? words(r) : v?.filings);
   r = await save(fs, [
     { role: "principal", min: 1, max: 1, applies: true, filing: "own_application" },
     { role: "child", min: 0, max: 4, applies: false, filing: "declared_only" },
