@@ -33,7 +33,6 @@ export const FEE_TABLE = FEES as unknown as FeeTable;
 // A line removed from the table leaves these undefined; the module never throws on load (break r1 B: a deleted line
 // stopped the whole API).
 const line = (key: string) => (Array.isArray(FEE_TABLE.lines) ? FEE_TABLE.lines.find((l) => l?.key === key) : undefined);
-export const VISITOR_FEE_SOURCE = line("visitor_visa")?.source as FeeSource;
 export const BIOMETRICS_FEE_SOURCE = line("biometrics")?.source as FeeSource;
 /** VV-R15 (compliance-trace): who gives no biometrics, in IRCC's words with the page and its date. "Over 79" is read as
  *  80 or older, and age is counted as at today until the group is recorded (FQ-7, open). */
