@@ -43,6 +43,7 @@ Standbys: **Lead 11 `local_aa5c12aa-7202-4cec-8459-10f906f7727b`** only; start a
 | A4 | 12:3x run tests smartly, no blind testing, no quality cut | answered: PR runs targeted, queue full by design until (4a) proven; approval to come with numbers |
 | A5 | 12:4x finish M3; then detailed milestone plan with counted lists before the Chrome extension; internal production grade | P-450; plan after the 29 |
 | A6 | approvals one at a time; tell him when to press Demo › Load the finished story | at C10.2 merge (#1482) |
+| A8 | 23:0x (10 Nov, Lead 10) plan the next 2 days high level + hourly; best quality and speed; sequence, parallel lanes, models (Fable allowed); one question at a time, no assumptions | pace ruled P-453 (3 lanes, plan only); more questions in progress; hourly plan to follow |
 | A7 | Fable's questions 16-18 (internal use on what data; employer LMIA side in?; Chrome extension in?) and booking the immigration expert | ask after the 29 |
 
 ## For the founder (P-390)
