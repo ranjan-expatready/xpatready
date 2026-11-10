@@ -1,0 +1,11 @@
+# key | supplies_facts | readerKind | identityDocument (release v2 of combination 4145d431, the walked case's pinned release; scripts/coverage.sh)
+adoption_or_guardianship_papers|[]|person_only|false
+copy_of_the_absent_parent_s_signed_passport_or_national_id|[]|person_only|true
+copy_of_the_minor_s_birth_certificate|[]|person_only|true
+custody_documents|[]|person_only|false
+fee_payment_receipt|[]|letter_or_record|false
+letter_of_authorization_for_a_minor|[]|person_only|false
+marriage_certificate_copy|["relationship.union_start_date"]|letter_or_record|false
+passport_information_page_copy|[]|coded_lines|true
+proof_of_financial_support|["case.funds_available_cad"]|letter_or_record|false
+document types on the release: 9
