@@ -4,10 +4,10 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { basename, join, sep } from "node:path";
-import { officialUrl } from "../../engine/canada.ts";
+import { officialUrl, pageText } from "../../engine/canada.ts";
 import { normaliseCode } from "../../contracts/form-library.ts";
 import { CanadaError } from "./canada.ts";
-import type { Channel } from "../../contracts/forms.ts";
+import { CHANNELS as FILING_CHANNELS, IRCC_ACCOUNTS, type Channel } from "../../contracts/forms.ts";
 
 const STUDIO = join(import.meta.dirname, "..", ".."), SOLUTION = join(STUDIO, "..", "..");
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
@@ -102,6 +102,30 @@ export function filingWhy(note: string | null | undefined): string | null {
   if (/\bpaper\b|\bmail(?:ed)?\b|\bsend (?:this|the|it|us)\b/i.test(line)) return "IRCC's page speaks of paper filing, not a PDF upload";
   if (/\bcomputer\b|\bvalidat\w*\b|\bdownload\b/i.test(line)) return "IRCC's line says how to fill the form in, not how it is filed";
   return "IRCC's line does not say how the form is filed";
+}
+
+/** Text compared as a person reads it: case, curly quotes, dashes and spacing do not matter. */
+export const sameText = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
+export type AccountAccept = { form: string; account: string; channels: Channel[]; quote: string; url: string; read: string };
+/** M3-S5 (P-113, P-170): the sample's records of what an IRCC account accepts (samples/form-library-sample.json
+ *  account_accepts), each kept only with a known account and channels, IRCC's line (at most 400 characters), a canada.ca
+ *  address, the date it was read, and the line on that page's recorded copy (`pageOf`: the page's HTML, or null when no
+ *  copy is recorded). Nothing invented: a record that fails is left out with its reason. */
+export async function accountAccepts(records: unknown, pageOf: (url: string) => Promise<string | null>): Promise<{ ok: AccountAccept[]; problems: string[] }> {
+  const out: { ok: AccountAccept[]; problems: string[] } = { ok: [], problems: [] };
+  for (const v of Array.isArray(records) ? records : []) {
+    const r = (v ?? {}) as Partial<Record<keyof AccountAccept, unknown>>, form = typeof r.form === "string" ? r.form : "?";
+    const why = (w: string) => out.problems.push(`${form}: what ${typeof r.account === "string" ? r.account : "an account"} accepts was not used: ${w}`);
+    if (typeof r.account !== "string" || !(IRCC_ACCOUNTS as readonly string[]).includes(r.account)) { why("not a known IRCC account"); continue; }
+    if (!Array.isArray(r.channels) || !r.channels.length || !r.channels.every((c) => (FILING_CHANNELS as readonly string[]).includes(c))) { why("not a known channel"); continue; }
+    if (typeof r.quote !== "string" || !r.quote.trim() || r.quote.length > 400) { why("no line from IRCC (at most 400 characters)"); continue; }
+    if (typeof r.url !== "string" || !officialUrl(r.url).ok) { why("its page is not a canada.ca address"); continue; }
+    if (typeof r.read !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(r.read) || Number.isNaN(Date.parse(r.read))) { why("no date it was read (YYYY-MM-DD)"); continue; }
+    const html = await pageOf(r.url);
+    if (html === null || !sameText(pageText(html)).includes(sameText(r.quote))) { why("its line is not on its recorded canada.ca page"); continue; }
+    out.ok.push({ form, account: r.account, channels: r.channels as Channel[], quote: r.quote, url: r.url, read: r.read });
+  }
+  return out;
 }
 
 /** Load sample's Sample fixtures (samples/form-library-sample.json): what IRCC accepts per form, a page for a form canada.ca's
