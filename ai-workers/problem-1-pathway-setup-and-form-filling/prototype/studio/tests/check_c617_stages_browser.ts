@@ -109,7 +109,7 @@ try {
   await onFile.waitFor();
   ok("C6.17-9 (P-444, BR-6): the work permit's own passport line, Not requested, says \"On file from Study permit, uploaded …: check it for this application\"",
     /^On file from Study permit, uploaded \d{1,2} \w{3} \d{4}: check it for this application\.$/.test((await onFile.innerText()).trim())
-    && /Not requested/.test(await p.locator("[data-documents-panel] [data-line]").filter({ has: onFile }).innerText()), await onFile.innerText());
+    && /Not requested/.test(await p.locator("[data-documents-panel] [data-line]").filter({ has: p.locator("[data-on-file]") }).first().innerText()), await onFile.innerText());
   await state("new-stage-on-file", "[data-documents-panel]", [1440, 1024], "P444b");
   ok("no page error or console error on the way", errs.length === 0, errs);
 } catch (e) {
