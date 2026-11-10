@@ -37,7 +37,7 @@ import { ACTORS, Audit, Db, need, PROTOTYPE, PY, ROOT, STUDIO, VAR, Workspace, t
 import { aboutUsd, lastFinishedUsd } from "./finder-cost.ts";
 import { aiLive, overrideOf, Sources, type LaunchOverride } from "./sources.ts";
 import { checkOverride, costPlanNow, endedOverrides, spendOverride } from "./cost-gate.ts";
-import { channelProposal, channelsFrom, channelsRead, recordedCopy, sampleFixtures, type ChannelProposal, type ChannelReading } from "./filing.ts";
+import { accountAccepts, channelProposal, channelsFrom, channelsRead, recordedCopy, sameText, sampleFixtures, type ChannelProposal, type ChannelReading } from "./filing.ts";
 import { WHO } from "./studio.ts";
 import { linkFinderGuides } from "./guide-sources.ts";
 import { LIVE_RUN, newestFirst, StepRunner, worstRoundUsd, type AiStep, type RoundOut, type SavedRun } from "./rounds.ts";
@@ -95,7 +95,6 @@ const ATTACHABLE = new Set(["always", "condition", "alternative"]);
 export { libraryType };
 const STOPWORDS = new Set(["and", "or", "the", "a", "an", "of", "for", "to", "in", "with", "your", "retail", "corporate", "employers", "temporary", "residence", "permanent", "canada", "application", "apply"]);
 const words = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter((w) => w.length > 1 && !STOPWORDS.has(w)).map((w) => w.replace(/s$/, ""));
-const sameText = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
 
 type Page = { url: string; title: string; kind: "package" | "guide"; text: string; sha256: string; inventory: { file: string; sha256: string } | null };
 /** W1-10 slice 1 (prompt v2): each form also says how IRCC says it is filed (`channel`); answers saved with v1 have none. */
@@ -849,7 +848,7 @@ export class Finder implements OnModuleInit {
       }
     }
     // C-12 (P-171 (3)) and plan §8 Q1: the founder's records and the sample accounts, Sample, each with its basis.
-    const extra = (() => { try { return JSON.parse(readFileSync(fixtureFile ?? join(STUDIO, "samples", "form-library-sample.json"), "utf8")) as { founder_accepts?: { records?: { form: string; account: string; channels: string[] }[] }; account_accepts?: { records?: { form: string; account: string; channels: string[]; quote: string; url: string; read: string }[] }; accounts?: { combinations?: Record<string, { account: string; url: string }> } }; } catch { return {}; } })();
+    const extra = (() => { try { return JSON.parse(readFileSync(fixtureFile ?? join(STUDIO, "samples", "form-library-sample.json"), "utf8")) as { founder_accepts?: { records?: { form: string; account: string; channels: string[] }[] }; account_accepts?: { records?: unknown }; accounts?: { combinations?: Record<string, { account: string; url: string }> } }; } catch { return {}; } })();
     // A founder's record for a form the library does not hold yet waits for it (said once, never "not used").
     const waiting: string[] = [];
     for (const r of extra.founder_accepts?.records ?? []) {
@@ -861,14 +860,12 @@ export class Finder implements OnModuleInit {
     // M3-S5 (P-113, P-170): what an IRCC account accepts, from IRCC's own line (Sample until the expert confirms); used only
     // when the line is on its recorded canada.ca page, like the per-form fixtures above (nothing invented).
     const waitingIrcc: string[] = [];
-    for (const r of extra.account_accepts?.records ?? []) {
+    const acc = await accountAccepts(extra.account_accepts?.records, async (url) => { try { return (await this.canada.get(url, "html")).bytes.toString("utf8"); } catch (e) { if (!(e instanceof CanadaError)) throw e; return null; } });
+    notUsed.push(...acc.problems);
+    for (const r of acc.ok) {
       const d = defs.find((x) => normaliseCode(x.formKey) === normaliseCode(r.form)), current = d ? newestEdition(d.editions.filter((e) => e.channel !== "ONLINE")) : null;
-      if (!current && d === undefined) { waitingIrcc.push(r.form); continue; }
-      if (!current || !(IRCC_ACCOUNTS as readonly string[]).includes(r.account) || !r.channels.every((c) => (CHANNELS as readonly string[]).includes(c)) || !officialUrl(r.url).ok) { notUsed.push(`${r.form}: what ${r.account} accepts was not used: ${current ? "not a known account, channel or canada.ca address" : "the form is not in the library"}`); continue; }
-      let said = false;
-      try { said = sameText(pageText((await this.canada.get(r.url, "html")).bytes.toString("utf8"))).includes(sameText(r.quote)); } catch (e) { if (!(e instanceof CanadaError)) throw e; }
-      if (!said) { notUsed.push(`${r.form}: what ${r.account} accepts was not used: its line is not on its recorded canada.ca page`); continue; }
-      await this.db.formEditionAccept.upsert({ where: { formEditionId_account: { formEditionId: current.id, account: r.account } }, update: {}, create: { workspaceId, formEditionId: current.id, account: r.account, channels: r.channels as Channel[], basis: "SAMPLE_FIXTURE", quote: r.quote.slice(0, 400), sourceUrl: r.url, readOn: new Date(`${r.read}T00:00:00Z`), setBy: "system" } }); accepts++;
+      if (!current) { if (d === undefined) waitingIrcc.push(r.form); else notUsed.push(`${r.form}: what ${r.account} accepts was not used: the form has no PDF edition in the library`); continue; }
+      await this.db.formEditionAccept.upsert({ where: { formEditionId_account: { formEditionId: current.id, account: r.account } }, update: {}, create: { workspaceId, formEditionId: current.id, account: r.account, channels: r.channels, basis: "SAMPLE_FIXTURE", quote: r.quote, sourceUrl: r.url, readOn: new Date(`${r.read}T00:00:00Z`), setBy: "system" } }); accepts++;
     }
     for (const [key, a] of Object.entries(extra.accounts?.combinations ?? {})) {
       if (!(IRCC_ACCOUNTS as readonly string[]).includes(a.account)) { notUsed.push(`${key}: not a known IRCC account`); continue; }

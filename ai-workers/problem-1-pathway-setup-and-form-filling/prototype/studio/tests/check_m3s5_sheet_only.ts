@@ -14,6 +14,7 @@ import { copyOnlyForms, pdfForms } from "../engine/runtime/forms.ts";
 import { partsInFormOrder, sheetOf, type FormPart } from "../engine/runtime/answer-sheet.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import type { BoxRow } from "../engine/render.ts";
+import { accountAccepts } from "../api/src/filing.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -64,6 +65,30 @@ const release = (account: string | null, online: string[], pdf: string[]) => ({
   ok("M3-S5 (P-170): each shipped account record has IRCC's line, its canada.ca page and the date it was read", recs.length === 4 && recs.every((r) => r.quote === LINE && /^https:\/\/www\.canada\.ca\/.*guide-5289/.test(r.url) && /^\d{4}-\d{2}-\d{2}$/.test(r.read)), recs.map((r) => r.form));
   const page = readFileSync(join(STUDIO, "..", "..", "official-sources", "ircc", "instructions", "guide-5289.html"), "utf8").replace(/<[^>]+>/g, " ").replace(/&#39;|&rsquo;/g, "'").replace(/\s+/g, " ");
   ok("M3-S5 (P-170): the line is on the recorded Guide 5289 page, under its \"digital forms\" list naming those forms", page.includes("You must fill out these forms within the portal. Do not fill out the PDF form") && ["IMM 0008", "IMM 5669", "IMM 5406", "IMM 5562"].every((x) => page.includes(`(${x})`)));
+}
+
+// ---------------------------------------------------------------- a record is loaded only with IRCC's line on its page (review m2)
+{
+  const f = JSON.parse(readFileSync(join(STUDIO, "samples", "form-library-sample.json"), "utf8")) as { account_accepts?: { records?: Record<string, unknown>[] } };
+  const recs = f.account_accepts?.records ?? [];
+  const html = readFileSync(join(STUDIO, "..", "..", "official-sources", "ircc", "instructions", "guide-5289.html"), "utf8");
+  const page = async (url: string) => (/guide-5289/.test(url) ? html : null);
+  const shipped = await accountAccepts(recs, page);
+  ok("M3-S5 (review m2) pass: the shipped records load, each with IRCC's line found on its recorded page", shipped.ok.length === 4 && !shipped.problems.length && shipped.ok.every((r) => r.account === "PR_PORTAL" && r.channels.join() === "ONLINE"), shipped.problems);
+  const one = recs[0], bad = async (patch: Record<string, unknown>, pageOf = page) => accountAccepts([{ ...one, ...patch }], pageOf);
+  let r = await bad({ quote: "You may fill out the PDF form." });
+  ok("M3-S5 (review m2) fail: a line that is not on the recorded page is not used, with the reason", !r.ok.length && /its line is not on its recorded canada\.ca page/.test(r.problems[0] ?? ""), r.problems);
+  r = await bad({}, async () => null);
+  ok("M3-S5 (review m2) fail: a page with no recorded copy is not used (nothing invented)", !r.ok.length && /not on its recorded/.test(r.problems[0] ?? ""), r.problems);
+  r = await bad({ url: "https://example.com/guide-5289.html" });
+  ok("M3-S5 (review m2) fail: a page that is not canada.ca's is not used", !r.ok.length && /not a canada\.ca address/.test(r.problems[0] ?? ""), r.problems);
+  r = await bad({ account: "SOME_PORTAL" });
+  ok("M3-S5 (review m2) fail: an unknown account is not used", !r.ok.length && /not a known IRCC account/.test(r.problems[0] ?? ""), r.problems);
+  r = await bad({ channels: ["FAX"] });
+  ok("M3-S5 (review m2) fail: an unknown channel is not used", !r.ok.length && /not a known channel/.test(r.problems[0] ?? ""), r.problems);
+  r = await bad({ read: "last week" });
+  ok("M3-S5 (review m2) fail: a record without the date it was read is not used (P-170)", !r.ok.length && /no date it was read/.test(r.problems[0] ?? ""), r.problems);
+  ok("M3-S5 (review m2) fail: a list that is not a list loads nothing and never throws", (await accountAccepts({ form: "IMM 0008" }, page)).ok.length === 0);
 }
 
 // ---------------------------------------------------------------- an Online form outside the Visitor visa gets its sheet
