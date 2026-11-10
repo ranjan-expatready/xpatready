@@ -14,6 +14,7 @@ import { Button, Field, Notice, Panel, Pill, Textarea } from "@/components/ui/co
 import { Skeleton } from "@/components/ui/skeleton";
 import { inSentence, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 import { kindOf, putAnswer, QuestionField, refusal, shown, toDraft, toValue, WHO, type View } from "./questionnaire";
+import { FoldOut } from "@/components/fold-out";
 
 type Reader = "mrz" | "ai_vision";
 export type Proposal = { id: string; fact: string; label: string; value: unknown; subject: string; source: { document: string; page: number; reader: Reader };
@@ -135,7 +136,7 @@ function CostCard({ plan, docs, replaying, replay }: { plan: Plan; docs: { docum
     <section aria-label="Cost before reading" className="rounded-lg border border-border px-4 py-3 text-[13px]" data-cost-card>
       <p className="font-medium">{docs.map((x) => x.document_name).join(", ")}: read by AI</p>
       <p className="mt-1">A live read would cost about {usd(plan.estimate.usual_usd)}, at most {usd(plan.estimate.worst_usd)}. It is not offered here: it needs approval first.</p>
-      <details className="mt-1 text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">{plan.estimate.basis}</p><p className="mt-1">{plan.live_why}</p></details>
+      <FoldOut className="mt-1 text-xs text-text-muted" summary="Details"><p className="mt-1">{plan.estimate.basis}</p><p className="mt-1">{plan.live_why}</p></FoldOut>
       {can ? <Button size="sm" className="mt-2" busy={replaying} onClick={replay}>Replay the saved read · US$0</Button> : null}
       {missing.length ? <p className="mt-2 text-text-muted" data-no-saved-read>{can ? `No saved read yet for ${missing.length === 1 ? "one file" : `${missing.length} files`} (${missing.map((x) => x.document_name).join(", ")}): its first read is a paid run that needs approval first.` : "No saved read yet. The first read of this document is a paid run that needs approval first."} Nothing was sent. Type the values for now.</p> : null}
     </section>
@@ -231,10 +232,9 @@ function DocumentBlock({ caseId, subjectId, section, review, fill, checks, quest
           </Row>
         ))}
         {collapsed.length ? (
-          <details className="px-4 py-2.5 text-[13px]" data-collapsed>
-            <summary className="cursor-pointer">{collapsed.length} value{collapsed.length === 1 ? "" : "s"} checked by the {review.document_name.toLowerCase().includes("passport") ? "passport's" : "document's"} check digits: {collapsed.map((p) => p.label).join(", ")}</summary>
+          <FoldOut className="px-4 py-2.5 text-[13px]" data-collapsed summary={<>{collapsed.length} value{collapsed.length === 1 ? "" : "s"} checked by the {review.document_name.toLowerCase().includes("passport") ? "passport's" : "document's"} check digits: {collapsed.map((p) => p.label).join(", ")}</>}>
             <ul className="mt-2 space-y-1">{collapsed.map((p) => <li key={p.id} className="text-xs" data-collapsed-value={p.fact}><span className="text-text-muted">{p.label}:</span> <b className="font-medium">{value(p, p.value)}</b> · page {p.source.page} · check digit passed</li>)}</ul>
-          </details>
+          </FoldOut>
         ) : null}
         {confirmed ? mine.filter((p) => p.state !== "proposed").map((p) => {
           // Break m1: once its check is resolved, a difference says so, with the value the person has now.

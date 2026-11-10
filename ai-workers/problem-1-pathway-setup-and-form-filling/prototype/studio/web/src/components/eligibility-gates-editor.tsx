@@ -16,6 +16,7 @@ import { useLibraryFields } from "@/pages/configuration";
 import { Tip } from "@/components/status";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { FoldOut } from "@/components/fold-out";
 
 /** contracts/eligibility.ts EligibilityGatesView, as the web reads it (that module's type imports reach engine files
  *  that need Node, which the web build cannot type-check). */
@@ -186,7 +187,7 @@ function GatesForm({ id, read, taken, waiting, close, reload }: { id: string; re
                 {(["not_eligible", "needs_review"] as const).map((w) => <label key={w} className="flex items-center gap-1.5"><input type="radio" name={`not-met-${r.uid}`} checked={r.whenNotMet === w} onChange={() => set(r.uid, { whenNotMet: w })} />{NOT_MET[w]}</label>)}
                 {errors[`gates.${i}.whenNotMet`] ? <p className="text-xs text-text-danger">{errors[`gates.${i}.whenNotMet`]}</p> : null}
               </fieldset>
-              {r.key ? <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary>Key: <span className="mono">{r.key}</span> (kept when the label changes; tests and earlier checks name it)</details> : null}
+              {r.key ? <FoldOut className="text-xs text-text-muted" summary="Details">Key: <span className="mono">{r.key}</span> (kept when the label changes; tests and earlier checks name it)</FoldOut> : null}
               {r.confirm ? (
                 <div className="flex flex-wrap items-center gap-2 rounded-md bg-danger/10 px-3 py-2 text-xs" role="group" aria-label={`Remove ${r.label || `gate ${i + 1}`}?`} data-gate-confirm>
                   <span>Remove "{r.label || `gate ${i + 1}`}"? Cases already open keep it; cases opened after this change is released do not. A test that expects this gate fails until its expected values change.</span>

@@ -22,6 +22,7 @@ import type { CaseForm } from "../../../contracts/runtime";
 import { PEN_STEP_WORDS, PEN_STEPS, penRefusal, SIGN_STEPS, stepRefusal, type PenStepKey, type SignStepKey, type StepsDone } from "../../../engine/runtime/sign-order";
 import { noRetryOnRefusal } from "./questionnaire";
 import { useFirm } from "./team";
+import { FoldOut } from "@/components/fold-out";
 
 type PrepItem = { id: string; kind: string; form?: string; subject: string; person: string; filing: string; signature?: Signature; signed_by?: string | null; signers?: string[];
   state: string; reason?: string; replaces?: string | null; record?: string;
@@ -199,7 +200,7 @@ function SignBlock({ caseId, item, f, filing }: { caseId: string; item: PrepItem
       const x = q.data?.signed_scans[q.data.signed_scans.length - 1];
       return <>{x ? <span data-scan-file><span className="[overflow-wrap:anywhere]">{x.file_name}</span> · {MEDIA_WORDS[x.media_type] ?? x.media_type} · {size(x.size_bytes)} · </span> : null}{by}
         {/* Challenge m6: the checksum reachable by keyboard, off the main line (EXPERIENCE §5: no hashes on the main path). */}
-        {x ? <details className="mt-0.5"><summary className="inline-flex min-h-6 cursor-pointer items-center text-text-link">Checksum</summary><span className="mono break-all text-text-muted">SHA-256 {x.sha256}</span></details> : null}</>;
+        {x ? <FoldOut className="mt-0.5" summaryClassName="inline-flex min-h-6 items-center text-text-link" summary="Checksum"><span className="mono break-all text-text-muted">SHA-256 {x.sha256}</span></FoldOut> : null}</>;
     }
     return by;
   }

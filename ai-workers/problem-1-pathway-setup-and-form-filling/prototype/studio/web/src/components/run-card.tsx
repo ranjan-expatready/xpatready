@@ -10,6 +10,7 @@ import { Button, Notice } from "@/components/ui/controls";
 import { Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
 import { costWords } from "../../../contracts/start-setup";
+import { FoldOut } from "@/components/fold-out";
 
 type RunStep = { n: number; kind: string; label: string; uses: "rules" | "ai"; status: string; message: string | null; usd: number; started_at: string | null; finished_at: string | null; details?: string | null; counts: { done: number; total: number; unit: string } | null };
 export type RunView = { id: string; operation: string; label: string; scope: string | null; status: string; status_word: string; message: string | null; step: { n: number; m: number; label: string } | null; steps: RunStep[];
@@ -88,10 +89,9 @@ function StepDetails({ text }: { text: string }) {
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
   if (!lines.length) return null;
   return (
-    <details className="mt-1" data-step-details>
-      <summary className="cursor-pointer text-text-link underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">See {lines.length === 1 ? "the reason" : `the ${lines.length} reasons`}</summary>
+    <FoldOut className="mt-1" data-step-details summaryClassName="text-text-link underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" summary={<>See {lines.length === 1 ? "the reason" : `the ${lines.length} reasons`}</>}>
       <ul className="mt-1 list-disc space-y-1 pl-5 text-text-muted">{lines.map((l, i) => <li key={i} className="break-words">{l}</li>)}</ul>
-    </details>
+    </FoldOut>
   );
 }
 

@@ -10,6 +10,7 @@ import { irccWords } from "../../../contracts/workspace";
 import { normalizeLabel } from "../../../contracts/programs";
 import { ItemSources, SOURCE_SAY } from "@/components/source-panel";
 import { fieldName } from "@/lib/field-name";
+import { FoldArrow, FoldOut } from "@/components/fold-out";
 
 export const WHO: [string, string][] = [["each_applicant", "Each applicant"], ["principal_applicant", "Principal applicant"], ["spouse_or_partner", "Spouse or partner"], ["couple_once", "Once per couple"], ["each_dependent_child", "Each child"], ["each_person", "Each person"], ["case", "The application (once)"], ["representative", "The representative"], ["sponsor", "The sponsor"]];
 /** QA-221 (ruling C): a form line may also name the principal applicant, a spouse or partner, and each child 18 or older
@@ -52,8 +53,8 @@ export function ConfigArea({ id, areas }: { id: string; areas: ("documents" | "q
       <div className="space-y-6">
         {areas.includes("documents") ? <Documents id={id} s={s} fields={fields} /> : null}
         {areas.includes("questions") ? <section aria-labelledby="cfg-q" className="space-y-3"><h2 id="cfg-q" className="font-semibold">Questions by section</h2><Questions id={id} s={s} /></section> : null}
-        {areas.includes("rules") ? <details className="rounded-xl border border-border bg-surface-raised px-4 py-3" data-rules><summary className="cursor-pointer font-semibold">Rules used here ({s.rules.length})</summary><div className="mt-3 space-y-3"><Rules id={id} s={s} fields={fields} /></div></details> : null}
-        {areas.includes("checks") ? <details className="rounded-xl border border-border bg-surface-raised px-4 py-3" data-checks><summary className="cursor-pointer font-semibold">Checks on these answers ({(s.checks ?? []).length})</summary><div className="mt-3 space-y-3"><Checks id={id} s={s} meaning={fields.meaning} /></div></details> : null}
+        {areas.includes("rules") ? <FoldOut className="rounded-xl border border-border bg-surface-raised px-4 py-3" data-rules summaryClassName="font-semibold" summary={<>Rules used here ({s.rules.length})</>}><div className="mt-3 space-y-3"><Rules id={id} s={s} fields={fields} /></div></FoldOut> : null}
+        {areas.includes("checks") ? <FoldOut className="rounded-xl border border-border bg-surface-raised px-4 py-3" data-checks summaryClassName="font-semibold" summary={<>Checks on these answers ({(s.checks ?? []).length})</>}><div className="mt-3 space-y-3"><Checks id={id} s={s} meaning={fields.meaning} /></div></FoldOut> : null}
       </div>
     </RevCtx.Provider>
   );
@@ -170,8 +171,8 @@ function Questions({ id, s }: { id: string; s: any }) {
         <div key={x.id} className="rounded-xl border border-border bg-surface-raised">
           {/* The section toggle and its Remove are siblings, never a button inside a button (axe nested-interactive). */}
           <div className="flex items-center justify-between gap-2 pr-2">
-            <button className="flex-1 px-4 py-3 text-left" onClick={() => setOpen(open === x.id ? null : x.id)} aria-expanded={open === x.id}>
-              <span className="font-medium">{x.title}</span> <span className="text-xs text-text-muted">· {by(x.id).length} question placements</span>
+            <button className="flex flex-1 items-start gap-1.5 px-4 py-3 text-left" onClick={() => setOpen(open === x.id ? null : x.id)} aria-expanded={open === x.id}>
+              <FoldArrow open={open === x.id} className="mt-[0.2em] text-text-muted" /><span><span className="font-medium">{x.title}</span> <span className="text-xs text-text-muted">· {by(x.id).length} question placements</span></span>
             </button>
             <Button size="sm" variant="ghost" onClick={() => sel.mutate({ key: x.id, on: false })} aria-label={`Remove from questionnaire: ${x.title}`}>Remove from questionnaire</Button>
           </div>
