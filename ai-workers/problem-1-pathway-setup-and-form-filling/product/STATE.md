@@ -21,7 +21,10 @@ updated: 2026-11-10 18:28 IST by **Lead 8 (series 2, local_62177923-…)** at ha
 6. **After the 29:** the milestone plan with the founder (P-450), one question at a time; Fable's questions 16-18 and booking the immigration expert (A7).
 Terminal tabs c6 (caffeinate 4 h, from 15:2x) and c7 (open) are Lead 8's; leave c6 running.
 
-## Live rows (Lead 9, 19:0x IST 10 Nov) — 27 of 29 Works; all 29 forecast ~22:00 IST
+## M3: 29 of 29 Works (21:1x IST 10 Nov, qa #1499 fresh reader; C7.5 + C10.2 on nightly 42841699712, main 87212b14d)
+**Next (P-450):** detailed milestone plan with the founder, one question at a time (A5, A7); then the Bake. **#1463** superseded: qa's close refused, waits for the founder's named word.
+
+## Live rows (Lead 9, 19:0x IST 10 Nov) — kept for the record
 | Row | Where it stands | Next step | ETA IST |
 |---|---|---|---|
 | C10.2 | founder saved 9c00dbfc 18:30; read back 18:5x HTTP 201, written 75 equal 75; PDF in `.tools/solution-1-prototype/validated-imm5257/` (sha 8f7ae900); record in **#1495** (Opus Approve db61392dd posted), CI running | label on green; after merge dispatch nightly C10.2 checkpoint, post run id in #1495; qa lane verdict | ~21:30 |
