@@ -117,7 +117,7 @@ export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
     // Only the family_maximum basis caps a line (P-247): any other basis charges each person or application in full.
     familyMaxCents: l.basis === "family_maximum" ? Math.round(l.family_max!.cad * 100) : 0, familyFrom: l.basis === "family_maximum" ? l.family_max!.from_people : Number.MAX_SAFE_INTEGER,
     source: l.source, ...(l.exempt ? { exempt: { underAge: l.exempt.under_age, overAge: l.exempt.over_age, source: l.exempt.source } } : {}), ...(l.roles ? { roles: l.roles } : {}) }));
-  return { label: c.label, modes: new Map(modes), fees, groupWhy: c.group_why, coFiledWhy: typeof c.co_filed_why === "string" ? c.co_filed_why : undefined, basisNote: typeof c.basis_note === "string" && c.basis_note.trim() ? c.basis_note : undefined, table: { as_of: table.as_of, read: table.read } };
+  return { label: c.label, modes: new Map(modes), fees, groupWhy: c.group_why, coFiledWhy: typeof c.co_filed_why === "string" && c.co_filed_why.trim() ? c.co_filed_why : undefined, basisNote: typeof c.basis_note === "string" && c.basis_note.trim() ? c.basis_note : undefined, table: { as_of: table.as_of, read: table.read } };
 }
 const RULES = { get: (key: string) => rulesFrom(FEE_TABLE, key) };
 
@@ -245,7 +245,11 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   // Where no line reaches a co-filed application, its fees are unknown, so the case charges nothing at all (never a
   // total that leaves one application out) and says so (BR-10). This follows the data, never the combination.
   const unreached = filings.filter((f) => f.mode === "co_filed" && !reachesCoFiled(fees0, f.owner!.role));
-  const priced = unreached.length ? [] : fees0;
+  // Break on M3-S1 M1: a role the release (or, with no release, the table) says co-files, with nobody of it on the case
+  // yet (the release requires exactly one, BR-4): its application and its own fee are still to come, so no total yet.
+  const coRoles = [...(released ? opts.modes! : rules?.modes ?? new Map<string, LineMode>())].filter(([, m]) => m === "co_files").map(([r]) => r);
+  const missingCo = coRoles.filter((r) => !persons.some((p) => p.role === r));
+  const priced = unreached.length || missingCo.length ? [] : fees0;
   const groups: SubmissionGroup[] = [], fees: FeeLine[] = [];
   for (const gid of [...new Set(filings.map((f) => f.group))]) {
     const mine = filings.filter((f) => f.group === gid);
@@ -297,10 +301,11 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   }
   const feesKnown = priced.length > 0;
   const body = { filings, groups, fees, not_filing: notFiling };
-  const unpriced = unreached.length && fees0.length ? `The fee table has no fee line for ${unreached.map((f) => `${f.owner!.label}'s co-filed application`).join(" or ")} (a per-application line naming its role), so no fee is charged on this case; nothing is guessed.` : noFeeLines(label);
+  const unpriced = missingCo.length && fees0.length ? `No ${missingCo.map((r) => r.replace(/_/g, " ")).join(" or ")} on this case yet: their co-filed application carries its own fee, so no fee is charged until they are added; nothing is guessed.`
+    : unreached.length && fees0.length ? `The fee table has no fee line for ${unreached.map((f) => `${f.owner!.label}'s co-filed application`).join(" or ")} (a per-application line naming its role), so no fee is charged on this case; nothing is guessed.` : noFeeLines(label);
   return { derived: true, combination: combinationKey, label, ...body, currency: "CAD", fees_worked_out: feesKnown,
     fees_why: feesKnown ? null : unpriced,
-    basis: priced.length ? `Fees from the ${rules!.fees[0]?.source.page ?? "fee table"} (fee table as of ${rules!.table?.as_of ?? FEE_TABLE.as_of}, read ${rules!.table?.read ?? FEE_TABLE.read}); Sample until the immigration expert confirms (P-171). ${ageWords(rules!, !!opts.ages)}${rules!.basisNote ? ` ${rules!.basisNote}` : ""} Paying is not built.`
+    basis: priced.length ? `Fees from the ${rules!.fees[0]?.source.page ?? "fee table"} (fee table as of ${rules!.table?.as_of ?? FEE_TABLE.as_of}, read ${rules!.table?.read ?? FEE_TABLE.read}); ${["Sample until the immigration expert confirms (P-171).", ageWords(rules!, !!opts.ages), rules!.basisNote ?? "", "Paying is not built."].filter(Boolean).join(" ")}`
       : `Filings from the release's filing modes (Sample until the immigration expert confirms). ${unpriced} Paying is not built.`,
     why: filings.length ? null : "Nobody on this case is applying, so there is no filing and no fee.",
     version: createHash("sha256").update(JSON.stringify(body)).digest("hex").slice(0, 16) };
