@@ -1,0 +1,515 @@
+<header class="top">
+  <div class="wrap topin">
+    <a class="brand" href="#verdict">Pathway Configurator <span>· Handover</span></a>
+    <nav aria-label="Sections">
+      <a href="#verdict"><b>1</b>Verdict</a>
+      <a href="#how"><b>2</b>How it works</a>
+      <a href="#left"><b>3</b>What is left</a>
+      <a href="#appendix"><b>A–J</b>Appendix</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<!-- ================= SCREEN 1 ================= -->
+<section class="screen" id="verdict">
+<div class="wrap">
+  <div class="kicker"><b>1 · The verdict</b> &nbsp;·&nbsp; Handover for the co-founder &nbsp;·&nbsp; 10 Nov 2026</div>
+  <h1>One fact, entered once, fills every form.</h1>
+  <p class="lead">The Pathway Configurator reference build turns an immigration pathway into data. A content publisher sets a pathway up once. After that, every case is asked each fact once, and its government forms are filled, read back and checked.</p>
+  <div class="verdict">
+    <span><b>Verdict:</b> the engine is proven end to end on one pathway (Visitor visa, a family of four) and configured on four more.</span>
+    <span><b>Recommendation:</b> fund M4. <a href="#asks">See the three asks</a></span>
+  </div>
+
+  <div class="fields" aria-label="Headline numbers">
+    <div class="fld"><span class="lb">Facts in the library</span><div class="v">366</div><div class="n">each defined once</div></div>
+    <div class="fld"><span class="lb">Form boxes they fill</span><div class="v">1,728</div><div class="n">mapped and published</div></div>
+    <div class="fld"><span class="lb">Boxes per fact</span><div class="v">4.7</div><div class="n">on average</div></div>
+    <div class="fld"><span class="lb">IRCC forms</span><div class="v">19</div><div class="n">real PDFs, mapped box by box</div></div>
+    <div class="fld"><span class="lb">Pathways</span><div class="v">5</div><div class="n">configured with forms</div></div>
+  </div>
+  <p class="after">A third of the facts (<b>122 of 366</b>) sit on two or more forms, and those fill <b>72% of all boxes</b> (1,244 of 1,728). Status as of <code>main 66e74115e</code>, 10 Nov 2026 10:06 IST. All immigration content is <b>Sample</b>.</p>
+
+  <div class="block grid2">
+    <div class="card">
+      <h3>Each new pathway starts with most of its facts already in the library</h3>
+      <p class="note">Facts each pathway needs: reused from the library, or new. Published field maps in the demo data, counted 10 Nov 2026.</p>
+      <div class="legend"><span><i class="sw sw-r"></i>Reused from the library</span><span><i class="sw sw-n"></i>New facts added</span></div>
+      <div class="chart">
+        <div class="crow"><div class="clab">1 · Visitor visa<small>7 forms</small></div>
+          <div class="cbar"><span class="seg seg-n" tabindex="0" style="width:76.4%" data-tip="Visitor visa: 159 new facts"></span></div>
+          <div class="cval"><b>first pathway</b><br>159 new</div></div>
+        <div class="crow"><div class="clab">2 · Work permit with an LMIA<small>inside Canada · 5 forms</small></div>
+          <div class="cbar"><span class="seg seg-r" tabindex="0" style="width:45.2%" data-tip="Work permit: 94 facts reused"></span><span class="seg seg-n" tabindex="0" style="width:19.2%" data-tip="Work permit: 40 new facts"></span></div>
+          <div class="cval"><b>70% reused</b><br>94 reused + 40 new</div></div>
+        <div class="crow"><div class="clab">3 · Study permit<small>outside Canada · 6 forms</small></div>
+          <div class="cbar"><span class="seg seg-r" tabindex="0" style="width:51.4%" data-tip="Study permit: 107 facts reused"></span><span class="seg seg-n" tabindex="0" style="width:14.9%" data-tip="Study permit: 31 new facts"></span></div>
+          <div class="cval"><b>78% reused</b><br>107 reused + 31 new</div></div>
+        <div class="crow"><div class="clab">4 · Provincial nominee<small>Express Entry stream · 6 forms</small></div>
+          <div class="cbar"><span class="seg seg-r" tabindex="0" style="width:39.9%" data-tip="Provincial nominee: 83 facts reused"></span><span class="seg seg-n" tabindex="0" style="width:45.2%" data-tip="Provincial nominee: 94 new facts"></span></div>
+          <div class="cval"><b>47% reused</b><br>83 reused + 94 new</div></div>
+        <div class="crow"><div class="clab">5 · Spouse or partner sponsorship<small>8 forms</small></div>
+          <div class="cbar"><span class="seg seg-r" tabindex="0" style="width:79.8%" data-tip="Spouse sponsorship: 166 facts reused"></span><span class="seg seg-n" tabindex="0" style="width:20.2%" data-tip="Spouse sponsorship: 42 new facts"></span></div>
+          <div class="cval"><b>80% reused</b><br>166 reused + 42 new</div></div>
+      </div>
+      <details class="tv"><summary>View as table</summary>
+        <div class="tw" style="margin-top:8px"><table>
+          <thead><tr><th>Pathway</th><th class="num">Forms</th><th class="num">Facts needed</th><th class="num">Reused</th><th class="num">New</th><th class="num">Reused %</th></tr></thead>
+          <tbody>
+            <tr><td>Visitor visa</td><td class="num">7</td><td class="num">159</td><td class="num">0</td><td class="num">159</td><td class="num">0%</td></tr>
+            <tr><td>Work permit with an LMIA, inside Canada</td><td class="num">5</td><td class="num">134</td><td class="num">94</td><td class="num">40</td><td class="num">70%</td></tr>
+            <tr><td>Study permit, outside Canada</td><td class="num">6</td><td class="num">138</td><td class="num">107</td><td class="num">31</td><td class="num">78%</td></tr>
+            <tr><td>Provincial nominee, Express Entry stream</td><td class="num">6</td><td class="num">177</td><td class="num">83</td><td class="num">94</td><td class="num">47%</td></tr>
+            <tr><td>Spouse or partner sponsorship</td><td class="num">8</td><td class="num">208</td><td class="num">166</td><td class="num">42</td><td class="num">80%</td></tr>
+          </tbody></table></div>
+      </details>
+      <p class="foot">The order is the analyst's, not the recorded build order: another order changes each row, not the total of 366. Provincial nominee is the first permanent-residence pathway, so it adds the most. <b>Time to configure a pathway has not been measured.</b></p>
+    </div>
+
+    <div class="card">
+      <h3>One family, one pass</h3>
+      <p class="note">Visitor visa, family of four. Sample case SAMPLE-VV-FAMILY-1 in the demo.</p>
+      <div class="flow3">
+        <div class="fld"><span class="lb">Answers</span><div class="v">292</div></div><i>→</i>
+        <div class="fld"><span class="lb">Boxes written</span><div class="v">562</div></div><i>→</i>
+        <div class="fld"><span class="lb">Forms</span><div class="v">24</div></div>
+      </div>
+      <ul class="checks">
+        <li><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span><b>562 of 562</b> boxes read back equal to what was written</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span><b>24 of 24</b> forms keep IRCC's built-in signatures valid</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span><b>760</b> boxes left empty on purpose, by rule</span></li>
+        <li><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span><b>25</b> boxes left for a hand signature. The product never signs.</span></li>
+      </ul>
+      <p class="foot">Each answer is used 1.9 times on average inside this one case; across pathways the same facts are reused again (chart on the left).</p>
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="hls">
+      <div class="hl">
+        <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+        <h3>Configured, not coded</h3>
+        <p>Forms, questions, documents and rules of a pathway are set in screens and frozen into a release that a second person approves. <b>93 of 112 capabilities Works.</b></p>
+      </div>
+      <div class="hl">
+        <svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="1.5"/><path d="M7 10v4M11 14h6"/></svg>
+        <h3>Asked once</h3>
+        <p>One answer per person per fact, never overwritten. It fills every box mapped to that fact, on every form, for every pathway.</p>
+      </div>
+      <div class="hl">
+        <svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M9.5 14l2 2 3.5-4"/></svg>
+        <h3>Fills real IRCC PDFs, and proves it</h3>
+        <p>Writes IRCC's own PDF forms (the XFA kind), reads every box back and checks the signatures. <b>The team's build refuses XFA forms</b> (28 Oct capture).</p>
+      </div>
+      <div class="hl">
+        <svg viewBox="0 0 24 24"><path d="M11 3l1.8 5.2L18 10l-5.2 1.8L11 17l-1.8-5.2L4 10l5.2-1.8z"/><path d="M19 15v5M16.5 17.5h5"/></svg>
+        <h3>AI drafts, people decide</h3>
+        <p>AI maps form boxes and drafts questions; a person approves each one. Every paid run shows its price first. Product AI spend so far: <b>US$82.65</b> over 136 calls.</p>
+      </div>
+      <div class="hl">
+        <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="12" r="2"/><path d="M6 8v8M8 6c5 0 4 6 8 6"/></svg>
+        <h3>Built by an AI delivery line</h3>
+        <p><b>791 merged pull requests</b> in about three weeks. Only an independent QA lane may mark a capability Works, after its own re-run.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="block grid2">
+    <div class="card">
+      <h3>How configurable, flexible and scalable is it?</h3>
+      <p class="note">Independent audit of the code, 10 Nov 2026. Score out of 10: filled = today, dashed = target after M4. Evidence in <a href="#ap-e">appendix E</a>.</p>
+      <div style="margin-top:8px">
+        <div class="score">
+          <div class="sname">Configurable</div>
+          <div class="dots" role="img" aria-label="6 of 10 today, target 8"><i class="d on"></i><i class="d on"></i><i class="d on"></i><i class="d on"></i><i class="d on"></i><i class="d on"></i><i class="d tg"></i><i class="d tg"></i><i class="d"></i><i class="d"></i></div>
+          <div class="snum">6 <span>→ 8</span></div>
+          <div class="sdet"><p><b>Held back by:</b> seven rule tables (fees, box gates, roles and more) live in files, outside the screens and the release.</p><p><b>Lift:</b> move them into library screens, frozen in the release.</p></div>
+        </div>
+        <div class="score">
+          <div class="sname">Flexible</div>
+          <div class="dots" role="img" aria-label="5 of 10 today, target 8"><i class="d on"></i><i class="d on"></i><i class="d on"></i><i class="d on"></i><i class="d on"></i><i class="d tg"></i><i class="d tg"></i><i class="d tg"></i><i class="d"></i><i class="d"></i></div>
+          <div class="snum">5 <span>→ 8</span></div>
+          <div class="sdet"><p><b>Held back by:</b> the case side has Visitor-visa-only guards and a fixed family shape.</p><p><b>Lift:</b> five general mechanisms, then delete the guards.</p></div>
+        </div>
+        <div class="score">
+          <div class="sname">Scalable</div>
+          <div class="dots" role="img" aria-label="5 of 10 today, target 8"><i class="d on"></i><i class="d on"></i><i class="d on"></i><i class="d on"></i><i class="d on"></i><i class="d tg"></i><i class="d tg"></i><i class="d tg"></i><i class="d"></i><i class="d"></i></div>
+          <div class="snum">5 <span>→ 8</span></div>
+          <div class="sdet"><p><b>Held back by:</b> one PDF process per form, an in-memory queue, local disk, no load test.</p><p><b>Lift:</b> durable job queue, object storage, a cache, a measured run at 1,000 cases.</p></div>
+        </div>
+      </div>
+      <p class="foot"><b>Acid test:</b> a full Study permit case tomorrow needs 7 screen steps by a content publisher plus 5 to 8 repository edits by an engineer. The target is zero edits.</p>
+    </div>
+
+    <div class="caveat">
+      <h3><svg viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v5M12 17.5v.5"/></svg>Not yet proven</h3>
+      <ul style="columns:1">
+        <li><b>Content is Sample.</b> No immigration expert has confirmed it; no answer key is signed.</li>
+        <li><b>Adobe Validate has not passed</b> on a complete form filled by the app (capability C7.2 is Partial).</li>
+        <li><b>Only Visitor visa runs a full case.</b> On other pathways fees, checklists and linked applications still need code.</li>
+        <li><b>No real users, hosted environment or load test.</b> Tenancy, sign-in and hosting are the team platform's.</li>
+        <li><b>Legal points are "Unconfirmed: no counsel"</b>, including whether IRCC's terms allow a portal extension.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ================= SCREEN 2 ================= -->
+<section class="screen" id="how">
+<div class="wrap">
+  <div class="kicker"><b>2 · How it works</b></div>
+  <h2>Set up once. Ask once. The rules fill every box.</h2>
+  <p class="sub">Four pictures: the business flow, one fact fanning out, the technical parts, and the Chrome extension planned for M4. Then four real screens.</p>
+
+  <div class="block">
+    <figure class="fig">
+      <h3>Figure 1 · The flow, from set-up to filing</h3>
+      <div class="figw">
+        <svg viewBox="0 0 1000 318" role="img" aria-label="Two lanes. Set up once per pathway: structure and sources, shared library, questionnaire and documents, release. Every case: open a case pinned to one release, ask once, render, fill and read back, review and file.">
+          <defs>
+            <marker id="f1a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="ah"/></marker>
+            <marker id="f1b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="ah-a"/></marker>
+          </defs>
+          <rect class="bx-l" x="0" y="0" width="1000" height="140" rx="6"/>
+          <text class="m" x="16" y="24">SET UP ONCE PER PATHWAY · content publisher builds, a second person approves</text>
+          <rect class="bx" x="54" y="40" width="200" height="86" rx="4"/>
+          <text class="t" x="68" y="63">Structure and sources</text>
+          <text class="s" x="68" y="83">Program tree, official pages,</text>
+          <text class="s" x="68" y="99">blank IRCC forms loaded</text>
+          <rect class="bx" x="284" y="40" width="200" height="86" rx="4"/>
+          <text class="t" x="298" y="63">Shared library</text>
+          <text class="s" x="298" y="83">Each form box mapped to one</text>
+          <text class="s" x="298" y="99">fact, defined once, reused</text>
+          <text class="ma" x="298" y="116">AI drafts · person approves</text>
+          <rect class="bx" x="514" y="40" width="200" height="86" rx="4"/>
+          <text class="t" x="528" y="63">Questionnaire and documents</text>
+          <text class="s" x="528" y="83">Questions, sections, rules,</text>
+          <text class="s" x="528" y="99">document checklist</text>
+          <text class="ma" x="528" y="116">AI drafts · person approves</text>
+          <rect class="bx-a" x="744" y="40" width="200" height="86" rx="4"/>
+          <text class="t" x="758" y="63">Release</text>
+          <text class="s" x="758" y="83">Frozen and fingerprinted;</text>
+          <text class="s" x="758" y="99">the maker cannot release</text>
+          <text class="s" x="758" y="115">their own work</text>
+          <path class="ar" d="M254 83H282" marker-end="url(#f1a)"/>
+          <path class="ar" d="M484 83H512" marker-end="url(#f1a)"/>
+          <path class="ar" d="M714 83H742" marker-end="url(#f1a)"/>
+
+          <path class="ar-a" d="M844 126V159H136V214" marker-end="url(#f1b)"/>
+          <text class="ma" x="490" y="154" text-anchor="middle">each case is pinned to one release</text>
+
+          <rect class="bx-l" x="0" y="178" width="1000" height="140" rx="6"/>
+          <text class="m" x="230" y="200">EVERY CASE · case officer, client, representative</text>
+          <rect class="bx" x="54" y="216" width="164" height="86" rx="4"/>
+          <text class="t" x="66" y="239">Open a case</text>
+          <text class="s" x="66" y="259">Pinned to one release;</text>
+          <text class="s" x="66" y="275">people added</text>
+          <rect class="bx" x="236" y="216" width="164" height="86" rx="4"/>
+          <text class="t" x="248" y="239">Ask once</text>
+          <text class="s" x="248" y="259">One answer per person</text>
+          <text class="s" x="248" y="275">per fact, never overwritten</text>
+          <rect class="bx-a" x="418" y="216" width="164" height="86" rx="4"/>
+          <text class="t" x="430" y="239">Render</text>
+          <text class="s" x="430" y="259">Rules decide every box:</text>
+          <text class="s" x="430" y="275">fill, leave empty, by hand</text>
+          <rect class="bx" x="600" y="216" width="164" height="86" rx="4"/>
+          <text class="t" x="612" y="239">Fill and read back</text>
+          <text class="s" x="612" y="259">Real IRCC PDF; written =</text>
+          <text class="s" x="612" y="275">read; signatures intact</text>
+          <rect class="bx" x="782" y="216" width="164" height="86" rx="4"/>
+          <text class="t" x="794" y="239">Review and file</text>
+          <text class="s" x="794" y="259">Checks run; a person</text>
+          <text class="s" x="794" y="275">signs and submits</text>
+          <path class="ar" d="M218 259H234" marker-end="url(#f1a)"/>
+          <path class="ar" d="M400 259H416" marker-end="url(#f1a)"/>
+          <path class="ar" d="M582 259H598" marker-end="url(#f1a)"/>
+          <path class="ar" d="M764 259H780" marker-end="url(#f1a)"/>
+        </svg>
+      </div>
+      <figcaption>Blue boxes are the two points that make it safe: nothing reaches a case until it is released, and no person picks a form box by hand.</figcaption>
+      <ul class="pts">
+        <li><b>Set-up is paid once per pathway.</b> AI drafts the box-to-fact maps and the questions; a person approves each one.</li>
+        <li><b>A release is a frozen copy.</b> Open cases stay on the release they started on; a new release never changes them silently.</li>
+        <li><b>On a case, rules decide every box</b> from the answers, and the writer proves what it wrote by reading it back.</li>
+      </ul>
+    </figure>
+  </div>
+
+  <div class="block">
+    <figure class="fig">
+      <h3>Figure 2 · One fact, many boxes</h3>
+      <div class="fsp">
+      <div class="figw narrow">
+<!--FIG_FANOUT-->
+      </div>
+      <div class="fsb">
+      <figcaption>Family name is asked once per person and fills 43 boxes on 15 forms. Each square is one box.</figcaption>
+      <ul class="pts">
+        <li><b>Date of birth</b> goes further: 103 boxes on 17 forms.</li>
+        <li><b>A form is mapped once in the library</b> and reused: the representative form IMM 5476 serves all 5 pathways.</li>
+        <li><b>When IRCC issues a new edition,</b> it is mapped once and the product lists every pathway it touches.</li>
+      </ul>
+      </div>
+      </div>
+    </figure>
+  </div>
+
+  <div class="block">
+    <figure class="fig">
+      <h3>Figure 3 · The technical parts</h3>
+      <div class="figw">
+        <svg viewBox="0 0 1000 400" role="img" aria-label="Web screens call the API; the API runs a pure TypeScript engine made of snapshot, render and runtime; the engine sends box values to a Python PDF writer and draft requests to an AI gateway; both API and engine use a PostgreSQL database; tenancy, sign-in, hosting, billing and client portal belong to the team platform and are not in this build.">
+          <defs>
+            <marker id="f3a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="ah"/></marker>
+          </defs>
+          <rect class="bx" x="20" y="40" width="170" height="150" rx="4"/>
+          <text class="t" x="34" y="66">Web</text>
+          <text class="m" x="34" y="84">React 19 · Vite 8</text>
+          <text class="s" x="34" y="112">Studio: set a pathway up</text>
+          <text class="s" x="34" y="130">Cases: run a case</text>
+          <text class="s" x="34" y="148">History: AI work,</text>
+          <text class="s" x="34" y="164">releases, activity</text>
+
+          <rect class="bx" x="240" y="40" width="170" height="150" rx="4"/>
+          <text class="t" x="254" y="66">API</text>
+          <text class="m" x="254" y="84">NestJS 11 · zod 4</text>
+          <text class="s" x="254" y="112">Checks every request</text>
+          <text class="s" x="254" y="130">Who may do what</text>
+          <text class="s" x="254" y="148">(roles are simulated)</text>
+
+          <rect class="bx-a" x="460" y="20" width="300" height="190" rx="4"/>
+          <text class="t" x="476" y="46">Engine · plain TypeScript</text>
+          <text class="ma" x="476" y="64">the part the team lifts as it is</text>
+          <rect class="bx" x="476" y="80" width="82" height="58" rx="3"/>
+          <text class="t" x="517" y="104" text-anchor="middle">snapshot</text>
+          <text class="s" x="517" y="122" text-anchor="middle">one release</text>
+          <rect class="bx" x="575" y="80" width="82" height="58" rx="3"/>
+          <text class="t" x="616" y="104" text-anchor="middle">render()</text>
+          <text class="s" x="616" y="122" text-anchor="middle">every box</text>
+          <rect class="bx" x="674" y="80" width="72" height="58" rx="3"/>
+          <text class="t" x="710" y="104" text-anchor="middle">runtime</text>
+          <text class="s" x="710" y="122" text-anchor="middle">one case</text>
+          <path class="ar" d="M558 109H573" marker-end="url(#f3a)"/>
+          <path class="ar" d="M657 109H672" marker-end="url(#f3a)"/>
+          <text class="s" x="476" y="164">Names no form. Same input, same output.</text>
+          <text class="s" x="476" y="182">Decides: fill, leave empty, or by hand.</text>
+
+          <rect class="bx" x="810" y="20" width="170" height="88" rx="4"/>
+          <text class="t" x="824" y="44">PDF writer</text>
+          <text class="m" x="824" y="61">Python · pypdf</text>
+          <text class="s" x="824" y="80">Adds to IRCC's file,</text>
+          <text class="s" x="824" y="96">reads every box back</text>
+          <rect class="bx" x="810" y="122" width="170" height="88" rx="4"/>
+          <text class="t" x="824" y="146">AI gateway</text>
+          <text class="m" x="824" y="163">price · ledger · caps</text>
+          <text class="s" x="824" y="182">Claude drafts;</text>
+          <text class="s" x="824" y="198">a person approves</text>
+
+          <path class="ar" d="M190 115H238" marker-end="url(#f3a)"/>
+          <text class="m" x="214" y="107" text-anchor="middle">calls</text>
+          <path class="ar" d="M410 115H458" marker-end="url(#f3a)"/>
+          <text class="m" x="434" y="107" text-anchor="middle">runs</text>
+          <path class="ar" d="M760 64H808" marker-end="url(#f3a)"/>
+          <text class="m" x="784" y="56" text-anchor="middle">values</text>
+          <path class="ar" d="M760 166H808" marker-end="url(#f3a)"/>
+          <text class="m" x="784" y="158" text-anchor="middle">asks</text>
+
+          <rect class="bx" x="240" y="262" width="520" height="70" rx="4"/>
+          <text class="t" x="254" y="288">Database · PostgreSQL 18 through Prisma 7</text>
+          <text class="s" x="254" y="310">Set-up · frozen releases · cases · answers (never overwritten) · activity log</text>
+          <path class="ar" d="M325 190V260" marker-end="url(#f3a)"/>
+          <text class="m" x="333" y="230">reads, writes</text>
+          <path class="ar" d="M610 210V260" marker-end="url(#f3a)"/>
+          <text class="m" x="618" y="240">loads the release</text>
+
+          <rect class="bx-d" x="20" y="352" width="960" height="40" rx="4"/>
+          <text class="m" x="36" y="377">TEAM PLATFORM · NOT IN THIS BUILD</text>
+          <text class="s" x="300" y="377">keeping firms apart · sign-in · hosting · billing · client portal · e-mail</text>
+        </svg>
+      </div>
+      <figcaption>The engine (blue) is the product's core and the part meant to move into the team's platform unchanged. The dashed row is deliberately left to the team.</figcaption>
+      <ul class="pts">
+        <li><b>The engine names no form.</b> It reads a release and a case's answers and returns a decision for every box. That is why a new pathway is data, not code.</li>
+        <li><b>The PDF writer adds to IRCC's file without rewriting it,</b> then reads every box back. That is why IRCC's built-in signatures stay valid.</li>
+        <li><b>All AI goes through one gateway:</b> price shown before a run, every call in a ledger, spending caps of US$5 per job and US$30 per day.</li>
+      </ul>
+    </figure>
+  </div>
+
+  <div class="block">
+    <figure class="fig">
+      <h3>Figure 4 · Chrome extension for the IRCC portal <span class="tag">M4 design · not built</span></h3>
+      <div class="fsp">
+      <div class="figw narrow">
+        <svg viewBox="0 0 700 330" role="img" aria-label="Planned extension: case answers reach an extension in the representative's Chrome through a one-time pairing code; the extension reads the portal screen, looks up a screen map, fills the fields; the representative checks each screen and clicks Next and Submit.">
+          <defs><marker id="f4a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ah"/></marker></defs>
+          <rect class="bx" x="10" y="30" width="150" height="80" rx="4"/>
+          <text class="t" x="22" y="54">Case answers</text>
+          <text class="s" x="22" y="74">this product,</text>
+          <text class="s" x="22" y="90">one release</text>
+          <rect class="bx-a" x="265" y="30" width="170" height="80" rx="4"/>
+          <text class="t" x="277" y="54">Extension</text>
+          <text class="s" x="277" y="74">in the representative's</text>
+          <text class="s" x="277" y="90">own Chrome</text>
+          <rect class="bx" x="535" y="30" width="155" height="80" rx="4"/>
+          <text class="t" x="547" y="54">IRCC portal screen</text>
+          <text class="s" x="547" y="74">the online form</text>
+          <path class="ar" d="M160 70H263" marker-end="url(#f4a)"/>
+          <text class="m" x="212" y="62" text-anchor="middle">one-time code</text>
+          <text class="m" x="212" y="88" text-anchor="middle">8 h token</text>
+          <path class="ar" d="M435 70H533" marker-end="url(#f4a)"/>
+          <text class="m" x="484" y="62" text-anchor="middle">reads, fills</text>
+          <rect class="bx" x="265" y="180" width="170" height="84" rx="4"/>
+          <text class="t" x="277" y="204">Screen map</text>
+          <text class="s" x="277" y="224">one per screen version;</text>
+          <text class="s" x="277" y="240">AI proposes a match when</text>
+          <text class="s" x="277" y="256">a screen changed</text>
+          <path class="ar" d="M350 112V178" marker-start="url(#f4a)" marker-end="url(#f4a)"/>
+          <text class="m" x="358" y="149">looks up</text>
+          <rect class="bx" x="535" y="180" width="155" height="84" rx="4"/>
+          <text class="t" x="547" y="204">Representative</text>
+          <text class="s" x="547" y="224">checks each screen,</text>
+          <text class="s" x="547" y="240">clicks Next and Submit</text>
+          <text class="s" x="547" y="256">themselves</text>
+          <path class="ar" d="M612 110V178" marker-end="url(#f4a)"/>
+          <text class="m" x="620" y="149">shows</text>
+          <rect class="bx-d" x="10" y="286" width="680" height="34" rx="4"/>
+          <text class="m" x="24" y="308">NEVER: passwords · declarations · signatures · pressing Next or Submit</text>
+        </svg>
+      </div>
+      <div class="fsb">
+      <figcaption>A design for M4, taken from the parked extension work. Nothing in this picture is built or tested yet.</figcaption>
+      <ul class="pts">
+        <li><b>It fills; a person files.</b> The representative checks every screen and presses Next and Submit.</li>
+        <li><b>Built for change:</b> one map per screen version, and a changed screen is detected before anything is filled.</li>
+        <li><b>The market is ahead here today:</b> small extensions already ship (one has 205 users). Whether IRCC's terms allow it is "Unconfirmed: no counsel".</li>
+      </ul>
+      </div>
+      </div>
+    </figure>
+  </div>
+
+  <div class="block">
+    <h3 style="margin-bottom:10px">What it looks like today <span class="tag">real screens · Sample data</span></h3>
+    <div class="shots">
+      <figure class="shot"><a href="img/handover-programs.jpg" target="_blank" rel="noopener"><img src="img/handover-programs.jpg" width="1440" height="900" loading="lazy" alt="Studio screen listing the program structure and its combinations"></a>
+        <figcaption><b>Program structure.</b> The tree of pathways; each last level (a combination) owns one configuration and its releases.</figcaption></figure>
+      <figure class="shot"><a href="img/handover-combination.jpg" target="_blank" rel="noopener"><img src="img/handover-combination.jpg" width="1440" height="900" loading="lazy" alt="Visitor visa combination page showing five set-up steps and Release 6"></a>
+        <figcaption><b>One pathway, set up.</b> Visitor visa, live in Release 6: 7 forms, 394 questions, 9 documents, in five steps.</figcaption></figure>
+      <figure class="shot"><a href="img/handover-field.jpg" target="_blank" rel="noopener"><img src="img/handover-field.jpg" width="1440" height="900" loading="lazy" alt="Shared library page for the fact Family name"></a>
+        <figcaption><b>One fact in the shared library.</b> Family name: its meaning, where it is asked, and about whom. Proposed by AI.</figcaption></figure>
+      <figure class="shot"><a href="img/handover-case.jpg" target="_blank" rel="noopener"><img src="img/handover-case.jpg" width="1440" height="900" loading="lazy" alt="Case page for a family of four with readiness, people and filings"></a>
+        <figcaption><b>A case.</b> Family of four on Release 6: readiness, 504 questions for the household, four people and their filings.</figcaption></figure>
+    </div>
+    <p class="foot">Click a screen to open it full size. A 10-minute click-by-click walk is in <a href="#ap-c">appendix C</a>.</p>
+  </div>
+</div>
+</section>
+
+<!-- ================= SCREEN 3 ================= -->
+<section class="screen" id="left">
+<div class="wrap">
+  <div class="kicker"><b>3 · What is left, and the ask</b></div>
+  <h2>M3 is five rows from done. M4 makes it any pathway, and adds the portal.</h2>
+
+  <div class="block grid2e">
+    <div class="card">
+      <h3>M3 · the case side</h3>
+      <div class="big" style="margin-top:8px">24 <span>of 29 Works on main</span></div>
+      <div class="meter" role="img" aria-label="24 Works, 4 Partial, 1 Not built">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="p"></i><i class="p"></i><i class="p"></i><i class="p"></i><i class="n"></i>
+      </div>
+      <div class="tw" style="margin-top:12px"><table>
+        <thead><tr><th>Row</th><th>What it is</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">C6.17</td><td>A case that starts at a later stage; "Start next stage" carries the answers forward. <span class="dim">Its Works request was approved 10 Nov and is waiting to merge.</span></td><td><span class="st st-notbuilt">Not built</span></td></tr>
+          <tr><td class="mono">C6.5</td><td>AI reads an uploaded document and proposes facts; a person confirms each one.</td><td><span class="st st-partial">Partial</span></td></tr>
+          <tr><td class="mono">C7.5</td><td>An independent AI review of a filled form before it goes out.</td><td><span class="st st-partial">Partial</span></td></tr>
+          <tr><td class="mono">C7.8</td><td>The case officer adds a form from the library to one filing.</td><td><span class="st st-partial">Partial</span></td></tr>
+          <tr><td class="mono">C10.2</td><td>The demo's "finished story": one click loads a complete case to show.</td><td><span class="st st-partial">Partial</span></td></tr>
+        </tbody></table></div>
+      <p class="foot">The tech lead's forecast this morning: all 29 during 10 Nov. That is a forecast, not a result. M2 (the set-up side) closed 60 of 60 on 6 Nov.</p>
+    </div>
+
+    <div style="display:grid;gap:16px;align-content:start">
+      <div class="card trk">
+        <h3><span class="tag">M4 · Track A</span>Any pathway, zero code</h3>
+        <ul>
+          <li><b>Five general mechanisms</b> on the case side: an application filed together with its own fees; an extra filing that depends on an answer; a checklist line that can be waived with a reason; one that never can; an answer sheet for forms IRCC takes only online.</li>
+          <li><b>Seven rule files move into screens</b> and into the release.</li>
+          <li><b>Proof:</b> a second pathway family runs a full case with no engineer.</li>
+        </ul>
+      </div>
+      <div class="card trk">
+        <h3><span class="tag">M4 · Track B</span>Chrome extension for the IRCC portal</h3>
+        <ul>
+          <li><b>Six rows:</b> read a screen's structure and match it with AI; detect a changed screen; fill with the representative's check per screen; a navigation helper that never holds a password; a vision fallback with masking; screen maps handed over for four forms.</li>
+          <li><b>Before any real use:</b> a counsel check on IRCC's terms.</li>
+        </ul>
+      </div>
+      <div class="card trk">
+        <h3><span class="tag">Also on the table</span>What else we can do</h3>
+        <ul>
+          <li><b>Scale steps:</b> durable job queue, object storage, cache, a measured run at 1,000 cases.</li>
+          <li><b>Start the team's lift:</b> first count the team's gates against the engine (read-only, US$0).</li>
+          <li><b>Clear the tail:</b> about 15 open Major findings, none Blocker or Critical.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="block">
+    <h3 style="margin-bottom:10px">Against the three baselines</h3>
+    <div class="tw"><table class="cmp">
+      <thead><tr><th></th><th>Manual practice today</th><th>The team's build <span class="dim">(28 Oct capture)</span></th><th>Market tools <span class="dim">(as advertised)</span></th><th>This reference build</th></tr></thead>
+      <tbody>
+        <tr><th>Setting a pathway up</th><td>Lives in people's heads and checklists, case by case.</td><td>Country packs as data, with draft, approve and reject routes. Completeness of its screens not checked.</td><td>The vendor supplies the forms. We found no public statement of pathways a firm configures itself.</td><td>Set in screens, drafted by AI, approved by a second person. 6 combinations, 5 with forms.</td></tr>
+        <tr><th>Entering a fact once</th><td>Retyped on each form.</td><td>A capture-once resolver is designed; reuse is not proven.</td><td>Questionnaire answers fill forms (vendor claims from four tools).</td><td>Measured: 366 facts fill 1,728 boxes; 47% to 80% reuse on pathways 2 to 5.</td></tr>
+        <tr><th>IRCC's PDF forms</th><td>Typed into Adobe by hand.</td><td>Refuses XFA forms; no read-back or barcode handling found.</td><td>Fill IMM PDFs (claims). No vendor page describes read-back or barcodes.</td><td>Writes XFA, 562 of 562 read back, signatures intact. Adobe Validate pass still open.</td></tr>
+        <tr><th>IRCC's online portal</th><td>Typed by hand.</td><td>Nothing found.</td><td><span class="ahead">ahead</span> Extensions already ship: one with 205 users, several smaller.</td><td>An answer sheet today. The extension is an M4 design.</td></tr>
+        <tr><th>Versions and approval</th><td>None.</td><td><span class="ahead">level</span> Pinned versions; no self-approval.</td><td>Not stated publicly.</td><td>Frozen releases; the maker cannot release; cases pinned.</td></tr>
+        <tr><th>Real users, hosting, billing, client portal</th><td>Not applicable.</td><td><span class="ahead">ahead</span> Firms, sign-in, hosting, billing, client portal, mail.</td><td><span class="ahead">ahead</span> Hosted products with paying firms.</td><td>None, by design: these stay with the team platform.</td></tr>
+      </tbody></table></div>
+    <p class="foot">The team's build: a medium-depth scan of the 28 Oct code capture, not a full review. Market tools: vendor pages and listings found by web search on 10 Nov 2026, not tested by us. Sources in <a href="#ap-i">appendix I</a>.</p>
+  </div>
+
+  <div class="block">
+    <h3>How it was built: an AI delivery line with independent QA</h3>
+    <div class="fields sm" style="margin-top:10px">
+      <div class="fld"><span class="lb">Elapsed</span><div class="v">~3 weeks</div><div class="n">19 Oct to 10 Nov 2026</div></div>
+      <div class="fld"><span class="lb">Merged pull requests</span><div class="v">791</div><div class="n">one small item each</div></div>
+      <div class="fld"><span class="lb">Acceptance packs</span><div class="v">85</div><div class="n">plus 7 end-to-end journeys</div></div>
+      <div class="fld"><span class="lb">Check scripts</span><div class="v">406</div><div class="n">run in CI</div></div>
+      <div class="fld"><span class="lb">Product AI spend</span><div class="v">US$82.65</div><div class="n">136 paid calls, all in a ledger</div></div>
+    </div>
+    <p class="after">AI builders each take one small item per pull request. A separate QA lane, working from a fresh start, is the only one that may mark a capability Works. On 3 Nov an independent audit cut a self-reported 52 down to 36 confirmed; since then the rule is <b>evidence, not self-report</b>. Detail in <a href="#ap-f">appendix F</a> and <a href="#ap-g">G</a>.</p>
+  </div>
+
+  <div class="block" id="asks">
+    <h2 style="font-size:1.5rem">The three asks</h2>
+    <div class="grid3" style="margin-top:14px">
+      <div class="card ask">
+        <div class="no">1</div>
+        <h3>Fund M4 Track A: any pathway</h3>
+        <p>Five general mechanisms, seven rule files moved into screens and releases, and proof on a second pathway family with zero code. Takes Configurable and Flexible to 8.</p>
+        <div class="size"><span class="chip">Large</span><span class="chip">about 10 to 20 working days</span><span class="chip">estimate</span></div>
+      </div>
+      <div class="card ask">
+        <div class="no">2</div>
+        <h3>Fund M4 Track B: the Chrome extension</h3>
+        <p>Six rows, from reading a portal screen to handing over screen maps, plus a counsel check on IRCC's terms before any real use.</p>
+        <div class="size"><span class="chip">Large</span><span class="chip">about 10 to 15 working days</span><span class="chip">estimate</span></div>
+      </div>
+      <div class="card ask">
+        <div class="no">3</div>
+        <h3>Get the content confirmed</h3>
+        <p>The immigration expert confirms the Visitor visa content, so Sample becomes confirmed and the answer keys are signed.</p>
+        <div class="size"><span class="chip">Small</span><span class="chip">about 3 to 5 expert days</span><span class="chip">estimate</span></div>
+      </div>
+    </div>
+    <p class="foot">Sizes and ranges are estimates from the open rows, not commitments, and carry no calendar dates.</p>
+  </div>
+</div>
+</section>

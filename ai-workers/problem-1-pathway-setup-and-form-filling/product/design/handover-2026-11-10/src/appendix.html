@@ -1,0 +1,471 @@
+<!-- ================= APPENDIX ================= -->
+<section class="apx" id="appendix">
+<div class="wrap">
+  <div class="kicker"><b>Appendix</b> &nbsp;·&nbsp; the detail, folded</div>
+  <h2>Everything behind the three screens</h2>
+  <p class="sub">Ten sections. Open only what you are curious about. <button class="btn" id="openall" type="button" aria-pressed="false">Open all sections</button></p>
+
+  <!-- A -->
+  <details class="ap" id="ap-a">
+    <summary><span class="l">A</span><span class="h">All 112 capabilities and their status</span><span class="x">93 Works · 8 Partial · 11 Not built</span></summary>
+    <div class="apb">
+      <p>A capability is one thing a named person can do, with its own acceptance test. Only the QA lane changes a status, after a run, with the commit it tested. Source: <code>product/qa/CAPABILITIES.md</code> on <code>main 66e74115e</code>.</p>
+      <h3>By milestone</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Milestone</th><th>What it is</th><th class="num">Works</th><th class="num">Partial</th><th class="num">Not built</th><th class="num">Total</th></tr></thead>
+        <tbody>
+          <tr><td>M2</td><td>Set-up side: structure, sources, library, questionnaires, release</td><td class="num">60</td><td class="num">0</td><td class="num">0</td><td class="num">60</td></tr>
+          <tr><td>M3</td><td>Case side: collect, fill, review, file</td><td class="num">24</td><td class="num">4</td><td class="num">1</td><td class="num">29</td></tr>
+          <tr><td>T</td><td>Thin slice: an early end-to-end cut of one case</td><td class="num">6</td><td class="num">2</td><td class="num">0</td><td class="num">8</td></tr>
+          <tr><td>M4</td><td>Chrome extension (C7.4)</td><td class="num">0</td><td class="num">0</td><td class="num">1</td><td class="num">1</td></tr>
+          <tr><td>Parked</td><td>Set aside by a product decision</td><td class="num">3</td><td class="num">2</td><td class="num">5</td><td class="num">10</td></tr>
+          <tr><td>Team</td><td>Belongs to a team module, not this build</td><td class="num">0</td><td class="num">0</td><td class="num">4</td><td class="num">4</td></tr>
+          <tr><th>All</th><td></td><td class="num"><b>93</b></td><td class="num"><b>8</b></td><td class="num"><b>11</b></td><td class="num"><b>112</b></td></tr>
+        </tbody></table></div>
+      <h3>By step of the product</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Step</th><th class="num">Works</th><th class="num">Partial</th><th class="num">Not built</th><th class="num">Total</th><th>Shape</th></tr></thead>
+        <tbody>
+<!--GRID_ROWS-->
+        </tbody></table></div>
+      <p class="foot">Filled = Works, amber outline = Partial, dashed = Not built.</p>
+      <h3>The full list</h3>
+      <div class="filters" data-group="m"><span>Milestone</span>
+        <button class="btn" type="button" data-v="" aria-pressed="true">All</button>
+        <button class="btn" type="button" data-v="M2" aria-pressed="false">M2</button>
+        <button class="btn" type="button" data-v="M3" aria-pressed="false">M3</button>
+        <button class="btn" type="button" data-v="M4" aria-pressed="false">M4</button>
+        <button class="btn" type="button" data-v="T" aria-pressed="false">Thin slice</button>
+        <button class="btn" type="button" data-v="Parked" aria-pressed="false">Parked</button>
+        <button class="btn" type="button" data-v="Team" aria-pressed="false">Team</button>
+      </div>
+      <div class="filters" data-group="s"><span>Status</span>
+        <button class="btn" type="button" data-v="" aria-pressed="true">All</button>
+        <button class="btn" type="button" data-v="works" aria-pressed="false">Works</button>
+        <button class="btn" type="button" data-v="partial" aria-pressed="false">Partial</button>
+        <button class="btn" type="button" data-v="notbuilt" aria-pressed="false">Not built</button>
+      </div>
+      <p class="foot" id="capcount" aria-live="polite">Showing 112 of 112</p>
+      <div class="tw"><table id="caps">
+        <thead><tr><th>#</th><th>Step</th><th>Capability</th><th>M</th><th>Status</th><th>Tested on</th></tr></thead>
+        <tbody>
+<!--CAPS_ROWS-->
+        </tbody></table></div>
+    </div>
+  </details>
+
+  <!-- B -->
+  <details class="ap" id="ap-b">
+    <summary><span class="l">B</span><span class="h">The journeys it serves</span><span class="x">7 end-to-end journeys · 6 combinations</span></summary>
+    <div class="apb">
+      <p>A journey is a scripted end-to-end walk through the screens by named roles. Each runs on its own fresh copy of the app, at US$0, at phone, tablet and desktop widths, with an accessibility check and a keyboard-only path.</p>
+      <div class="tw"><table>
+        <thead><tr><th>#</th><th>Journey</th><th>Who</th><th>What it proves</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">J1</td><td><b>Forms in</b></td><td>Configuration author</td><td>Official pages and blank IRCC forms are loaded, read and attached to a pathway.</td></tr>
+          <tr><td class="mono">J2</td><td><b>Field mapping</b></td><td>Configuration author</td><td>Every box of a form is mapped to a fact, marked "by hand", or marked "not a fact"; AI proposes, a person decides.</td></tr>
+          <tr><td class="mono">J3</td><td><b>Draft the rest of a pathway</b></td><td>Author, then approver</td><td>Documents, checks and rules are drafted and approved by a second person.</td></tr>
+          <tr><td class="mono">J4</td><td><b>Questionnaires to release</b></td><td>Author, content reviewer, approver</td><td>The questionnaire is built from the facts, reviewed with the immigration expert's duty, and released.</td></tr>
+          <tr><td class="mono">J5</td><td><b>Keep the library tidy</b></td><td>Configuration author</td><td>Lines are reused across pathways; a new form edition is brought in without breaking released work.</td></tr>
+          <tr><td class="mono">J6</td><td><b>Demo and every question type</b></td><td>The founder</td><td>Demo reset and sample; every question type; a filled form headed for Adobe Validate.</td></tr>
+          <tr><td class="mono">J7</td><td><b>Visitor visa end to end</b></td><td>Super Admin, case officer, Client A, representative</td><td>Set-up → case → collection → filing → verification → application ready, for Client A, a spouse and two children.</td></tr>
+        </tbody></table></div>
+      <h3>The six configured combinations (Sample content)</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Combination</th><th>Forms</th><th class="num">Mapped boxes</th><th class="num">Facts used</th><th class="num">All boxes</th><th>Runs a full case?</th></tr></thead>
+        <tbody>
+          <tr><td>Visitor visa</td><td class="mono">IMM 5257, 5257 SCH1, 5409, 5475, 5476, 5645, IRM 0002</td><td class="num">392</td><td class="num">159</td><td class="num">556</td><td>Yes (family of four)</td></tr>
+          <tr><td>Work permit with an LMIA, inside Canada</td><td class="mono">IMM 5409, 5475, 5476, 5707, 5710</td><td class="num">265</td><td class="num">134</td><td class="num">394</td><td>Configured only</td></tr>
+          <tr><td>Study permit, outside Canada</td><td class="mono">IMM 1294, 5409, 5475, 5476, 5646, 5707</td><td class="num">327</td><td class="num">138</td><td class="num">533</td><td>Configured only</td></tr>
+          <tr><td>Provincial nominee, Express Entry stream</td><td class="mono">IMM 0008, 0008 DEP, 5406, 5476, 5562, 5669</td><td class="num">691</td><td class="num">177</td><td class="num">787</td><td>Configured only</td></tr>
+          <tr><td>Spouse or partner sponsorship</td><td class="mono">IMM 0008, 1344, 5406, 5475, 5476, 5532, 5604, 5669</td><td class="num">845</td><td class="num">208</td><td class="num">1,279</td><td>Configured only</td></tr>
+          <tr><td>LMIA, high-wage (employer side)</td><td class="dim">no forms yet</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td>No</td></tr>
+        </tbody></table></div>
+      <p class="foot">"Configured only" means forms, maps, questions and a release exist, but fees, checklists and linked applications on the case side still need the M4 Track A work.</p>
+    </div>
+  </details>
+
+  <!-- C -->
+  <details class="ap" id="ap-c">
+    <summary><span class="l">C</span><span class="h">How to run it and test it</span><span class="x">10-minute walk · no cost</span></summary>
+    <div class="apb">
+      <h3>Start and stop</h3>
+<pre>zsh ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/start.sh
+# then open http://localhost:4400
+zsh ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/stop.sh</pre>
+      <p>A fresh cloud copy needs <code>product/tools/cloud-setup.sh</code> first. Saved AI answers replay at US$0. A live AI run happens only on a button that shows its price.</p>
+      <h3>A 10-minute walk, looking only</h3>
+      <ol class="steps">
+        <li><div><b>Land in the Studio.</b> The top bar reads "Prototype · demo workspace". Note the <b>Demo</b> menu and the <b>Acting as</b> switch (roles are simulated). <span class="min">1 min</span></div></li>
+        <li><div><b>Configure → Program structure.</b> The tree Pathway › Program › Category › Sub-category. The last level is a combination. <span class="min">1 min</span></div></li>
+        <li><div><b>Configure → Immigration programs → Visitor visa.</b> Read the header: "Live", "Demo release", "In Release 6". Five steps: Official pages, Who can be in this application, Forms (7), Questions and documents (9 documents · 394 questions), Review and release. <span class="min">2 min</span></div></li>
+        <li><div><b>Shared library → Fields → Family name.</b> One fact: its definition, "Where it is asked", "Asked about". This is the fact from Figure 2. <span class="min">1 min</span></div></li>
+        <li><div><b>Shared library → Forms.</b> Open a form to see its boxes and the fact each one fills. Then <b>History → Releases</b> and <b>AI work</b> (each run, its steps and cost). <span class="min">2 min</span></div></li>
+        <li><div><b>Switch "Acting as" to Case officer, then open <code>/cases</code> → SAMPLE-VV-FAMILY-1.</b> Read: Release 6, "Readiness: Not ready · 33%", "504 questions for this household · 349 answered", "People and filings · 4 filings". <span class="min">2 min</span></div></li>
+        <li><div><b>From the case: the questionnaire and the review page.</b> "Open it as Client A (simulated)" shows what a client sees. The review page shows the AI review with its price ("Saved US$0.00 / Live about US$1.06"). Look; do not run Live. <span class="min">1 min</span></div></li>
+      </ol>
+      <figure class="shot" style="max-width:640px;margin-top:14px"><a href="img/handover-review.jpg" target="_blank" rel="noopener"><img src="img/handover-review.jpg" width="1440" height="900" loading="lazy" alt="Review page of a case showing the AI review of a filled form with its price"></a>
+        <figcaption><b>The review page.</b> The AI review is marked Stand-in and shows its price before anything runs.</figcaption></figure>
+      <h3>Three rules while testing</h3>
+      <ul>
+        <li><b>Never click a button that shows a price.</b> That is a live, paid AI run (two unapproved runs cost US$0.27 and US$0.17 in October; the rule comes from there).</li>
+        <li><b>Do not use the Demo menu on the shared demo</b> (Load sample, Load the configured checkpoint, Load the finished story, Reset demo). It replaces the data everyone is looking at.</li>
+        <li><b>To change things freely, use your own copy:</b> <code>zsh tools/isolated.sh &lt;name&gt; &lt;port&gt; start</code> (run inside <code>prototype/studio/</code>).</li>
+      </ul>
+      <h3>Run the automated tests</h3>
+<pre>bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/run-suites.sh --changed origin/main..HEAD</pre>
+      <p>85 acceptance packs, 7 journeys and 406 check scripts live under <code>prototype/studio/acceptance/</code> and <code>product/tools/</code>. CI runs them on every pull request and again every night at 01:53 IST.</p>
+    </div>
+  </details>
+
+  <!-- D -->
+  <details class="ap" id="ap-d">
+    <summary><span class="l">D</span><span class="h">Render and form filling, in depth</span><span class="x">from a release to a checked PDF</span></summary>
+    <div class="apb">
+      <h3>The path, with the file that does each step</h3>
+      <div class="tw"><table>
+        <thead><tr><th>#</th><th>Step</th><th>What happens</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td><b>Snapshot</b></td><td>Load the one release the case is pinned to: forms, maps, questions, rules.</td><td class="mono">engine/snapshot.ts</td></tr>
+          <tr><td class="num">2</td><td><b>Render</b></td><td>A pure function: release + answers in, a decision for every question and box out. It names no form.</td><td class="mono">engine/render.ts</td></tr>
+          <tr><td class="num">3</td><td><b>Case view</b></td><td>Who is in the case, which filings, what is still missing, readiness.</td><td class="mono">engine/runtime/case.ts</td></tr>
+          <tr><td class="num">4</td><td><b>Form coverage</b></td><td>Per form and person: which boxes are filled, empty by rule, blank, or by hand.</td><td class="mono">engine/runtime/forms.ts</td></tr>
+          <tr><td class="num">5</td><td><b>Form values</b></td><td>Turn each answer into the exact text or tick the box expects.</td><td class="mono">engine/form-values.ts</td></tr>
+          <tr><td class="num">6</td><td><b>Write and read back</b></td><td>Add the values to IRCC's own PDF without rewriting it, then read every box back and compare. Check IRCC's built-in signatures still verify.</td><td class="mono">api/src/fill.ts → prototype/p5/fill.py</td></tr>
+          <tr><td class="num">7</td><td><b>Validate (a person)</b></td><td>A person opens the form in Adobe and presses Validate; the product reads the validated copy and decodes its barcodes against the facts.</td><td class="mono">tools/read_validated.py · p1/decode_barcodes.py</td></tr>
+          <tr><td class="num">8</td><td><b>Online-only forms</b></td><td>An answer sheet in the portal's screen order, with copy buttons.</td><td class="mono">engine/runtime/answer-sheet.ts</td></tr>
+        </tbody></table></div>
+      <p class="foot">Step 7 is the open one: the demo holds 0 validated copies, which is why capability C7.2 is Partial.</p>
+      <h3>Every published box has a decision</h3>
+      <div class="fields sm">
+        <div class="fld"><span class="lb">Mapped to a fact</span><div class="v">1,728</div><div class="n">366 distinct facts</div></div>
+        <div class="fld"><span class="lb">By hand</span><div class="v">435</div><div class="n">signatures, office use</div></div>
+        <div class="fld"><span class="lb">Not a fact</span><div class="v">254</div><div class="n">buttons, labels</div></div>
+        <div class="fld"><span class="lb">Never filled</span><div class="v">122</div><div class="n">by rule</div></div>
+      </div>
+      <p class="after">2,539 boxes on published forms; none is left undecided.</p>
+      <h3>The data idea in three tables</h3>
+      <ul>
+        <li><b>Fact</b> (<code>CanonicalField</code>): one meaning, such as "family name of a person", defined once.</li>
+        <li><b>Field map</b> (<code>FormFieldMap</code>): one box of one form edition → one fact, for which person, in what format.</li>
+        <li><b>Answer</b> (<code>ClientCanonicalAnswer</code>): one answer per person per fact; a change adds a new line, it never overwrites.</li>
+      </ul>
+      <h3>Per form</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Form</th><th class="num">Mapped boxes</th><th class="num">Facts</th><th class="num">Used by pathways</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">IMM 5669</td><td class="num">269</td><td class="num">50</td><td class="num">2</td></tr>
+          <tr><td class="mono">IMM 0008</td><td class="num">249</td><td class="num">91</td><td class="num">2</td></tr>
+          <tr><td class="mono">IMM 5710</td><td class="num">169</td><td class="num">98</td><td class="num">1</td></tr>
+          <tr><td class="mono">IMM 1294</td><td class="num">169</td><td class="num">96</td><td class="num">1</td></tr>
+          <tr><td class="mono">IMM 5257</td><td class="num">166</td><td class="num">92</td><td class="num">1</td></tr>
+          <tr><td class="mono">IMM 1344</td><td class="num">163</td><td class="num">49</td><td class="num">1</td></tr>
+          <tr><td class="mono">IMM 5645</td><td class="num">119</td><td class="num">9</td><td class="num">1</td></tr>
+          <tr><td class="mono">IMM 5532</td><td class="num">75</td><td class="num">22</td><td class="num">1</td></tr>
+          <tr><td class="mono">IMM 0008 DEP</td><td class="num">68</td><td class="num">53</td><td class="num">1</td></tr>
+          <tr><td class="mono">IMM 5646</td><td class="num">62</td><td class="num">12</td><td class="num">1</td></tr>
+          <tr><td class="mono">IMM 5406</td><td class="num">46</td><td class="num">10</td><td class="num">2</td></tr>
+          <tr><td class="mono">IMM 5257 SCH1</td><td class="num">42</td><td class="num">31</td><td class="num">1</td></tr>
+          <tr><td class="mono">IMM 5707</td><td class="num">39</td><td class="num">9</td><td class="num">2</td></tr>
+          <tr><td class="mono">IMM 5476</td><td class="num">34</td><td class="num">27</td><td class="num">5</td></tr>
+          <tr><td class="mono">IMM 5562</td><td class="num">25</td><td class="num">8</td><td class="num">1</td></tr>
+          <tr><td class="mono">IMM 5409</td><td class="num">16</td><td class="num">11</td><td class="num">3</td></tr>
+          <tr><td class="mono">IRM 0002</td><td class="num">8</td><td class="num">7</td><td class="num">1</td></tr>
+          <tr><td class="mono">IMM 5475</td><td class="num">7</td><td class="num">6</td><td class="num">4</td></tr>
+          <tr><td class="mono">IMM 5604</td><td class="num">2</td><td class="num">2</td><td class="num">1</td></tr>
+        </tbody></table></div>
+      <h3>How far facts travel</h3>
+      <div class="tw"><table>
+        <thead><tr><th>A fact sits on</th><th class="num">Facts</th><th class="num">Boxes they fill</th></tr></thead>
+        <tbody>
+          <tr><td>1 form</td><td class="num">244</td><td class="num">484</td></tr>
+          <tr><td>2 forms</td><td class="num">59</td><td class="num">333</td></tr>
+          <tr><td>3 forms</td><td class="num">16</td><td class="num">152</td></tr>
+          <tr><td>4 forms</td><td class="num">15</td><td class="num">223</td></tr>
+          <tr><td>5 or more forms</td><td class="num">32</td><td class="num">536</td></tr>
+        </tbody></table></div>
+      <p class="foot">Most-shared facts: date of birth (17 forms, 103 boxes), family name (15, 43), given names (15, 42), country of birth (10, 37), marital status (9, 33), UCI (8, 11), e-mail (7, 13).</p>
+      <h3>The family case in full</h3>
+      <p>Sample case SAMPLE-VV-FAMILY-1: 4 people → 24 forms. <b>562</b> boxes written from <b>292</b> person-answers (86 distinct facts); 562 of 562 read back equal; 24 of 24 forms keep IRCC's built-in signatures valid. <b>760</b> boxes not written by rule, <b>79</b> blank because no answer exists yet, <b>25</b> left for a hand signature.</p>
+    </div>
+  </details>
+
+  <!-- E -->
+  <details class="ap" id="ap-e">
+    <summary><span class="l">E</span><span class="h">The audit: evidence and the lift plan</span><span class="x">6 · 5 · 5 today → 8 · 8 · 8</span></summary>
+    <div class="apb">
+      <p>An independent reviewer, in a fresh context that did not build the product, read the code on 10 Nov 2026 and scored it. Scores are a judgement backed by the evidence below, not a measurement.</p>
+      <h3>What counts for it</h3>
+      <ul>
+        <li><b>The core is data.</b> Forms, box-to-fact maps, questions, documents and combinations are rows set in screens, frozen into a hashed release.</li>
+        <li><b>The engine's <code>render()</code> is a pure function and names no form.</b></li>
+        <li><b>Two-person control is enforced:</b> a release is refused when the maker is the releaser; cases stay pinned to their release.</li>
+        <li><b>Answers are append-only,</b> one per person per fact.</li>
+      </ul>
+      <h3>What counts against it</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Score</th><th>Finding</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td>Configurable</td><td>Seven rule tables live in files, outside screens and releases: fees, box gates, script requirements, form roles, own yes/no wording, fact expiry, fill-trial status.</td><td class="mono">samples/fee-table.json · form-field-gates.json · form-script-requirements.json · form-roles.json · own-yes-no.json · fact-expiry-rules.json · fill-trials.json</td></tr>
+          <tr><td>Configurable</td><td>A form set-up table is written in code.</td><td class="mono">FORM_SETUP</td></tr>
+          <tr><td>Flexible</td><td>Visitor-visa-only guards on the case side.</td><td class="mono">engine/filing-modes.ts:31-37 · engine/runtime/filings.ts · engine/runtime/case-checklist.ts</td></tr>
+          <tr><td>Flexible</td><td>A fixed family shape; the representative form IMM 5476 has built-in logic.</td><td class="mono">engine/runtime/</td></tr>
+          <tr><td>Scalable</td><td>One Python process per form with a 180-second limit; an in-memory queue; files on local disk.</td><td class="mono">api/src/fill.ts</td></tr>
+          <tr><td>Scalable</td><td>No cache for a release snapshot; some database indexes missing; the engine reaches the database directly; no load test.</td><td class="mono">engine/snapshot.ts:92</td></tr>
+        </tbody></table></div>
+      <h3>The acid test</h3>
+      <p>"Run a full Study permit case tomorrow": <b>7 screen steps</b> by a content publisher, plus <b>5 to 8 repository edits</b> by an engineer. The target after M4 Track A is zero edits.</p>
+      <h3>The lift plan</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Score</th><th>Step</th><th>Size</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="3">Configurable 6 → 8</td><td>Move the seven rule tables into library screens, frozen in the release</td><td>Large</td></tr>
+          <tr><td>Turn the form set-up table into configuration</td><td>Medium</td></tr>
+          <tr><td>Make fill-trial status a released attribute of a form</td><td>Medium</td></tr>
+          <tr><td rowspan="3">Flexible 5 → 8</td><td>Build the five general mechanisms and delete the Visitor-visa guards</td><td>Large</td></tr>
+          <tr><td>Configurable relatives and repeating groups</td><td>Medium</td></tr>
+          <tr><td>Representative form as a library flag</td><td>Small</td></tr>
+          <tr><td rowspan="3">Scalable 5 → 8</td><td>Durable job queue and object storage for PDFs</td><td>Medium</td></tr>
+          <tr><td>Snapshot cache and the missing indexes</td><td>Small</td></tr>
+          <tr><td>Measure at 1,000 cases and 5,000 boxes; take the database out of the engine</td><td>Medium</td></tr>
+        </tbody></table></div>
+      <p class="foot">Sizes are the reviewer's estimates. Tenancy and hosting are left out of the scores on purpose: they belong to the team platform.</p>
+    </div>
+  </details>
+
+  <!-- F -->
+  <details class="ap" id="ap-f">
+    <summary><span class="l">F</span><span class="h">The delivery pipeline</span><span class="x">dev · QA · CI/CD · optimise · monitor</span></summary>
+    <div class="apb">
+      <figure>
+        <div class="figw">
+          <svg viewBox="0 0 1000 176" role="img" aria-label="Delivery line: the founder decides, the tech lead orders the work, cloud builders make one small pull request per item, a reviewer and a breaker check it, CI and the merge queue merge it, the demo updates itself, and the QA lane gives the verdict; findings go back to the tech lead.">
+            <defs><marker id="f5a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="ah"/></marker></defs>
+            <rect class="bx" x="6" y="20" width="124" height="84" rx="4"/><text class="t" x="16" y="43">Founder</text><text class="s" x="16" y="63">decides the</text><text class="s" x="16" y="79">product</text>
+            <rect class="bx" x="150" y="20" width="124" height="84" rx="4"/><text class="t" x="160" y="43">Tech lead</text><text class="s" x="160" y="63">orders the work,</text><text class="s" x="160" y="79">approves</text>
+            <rect class="bx" x="294" y="20" width="124" height="84" rx="4"/><text class="t" x="304" y="43">Builders</text><text class="s" x="304" y="63">cloud; one item =</text><text class="s" x="304" y="79">one pull request</text>
+            <rect class="bx" x="438" y="20" width="124" height="84" rx="4"/><text class="t" x="448" y="43">Reviewer + breaker</text><text class="s" x="448" y="63">fresh eyes that did</text><text class="s" x="448" y="79">not build it</text>
+            <rect class="bx" x="582" y="20" width="124" height="84" rx="4"/><text class="t" x="592" y="43">CI + merge queue</text><text class="s" x="592" y="63">green checks and</text><text class="s" x="592" y="79">an approval label</text>
+            <rect class="bx" x="726" y="20" width="124" height="84" rx="4"/><text class="t" x="736" y="43">Demo</text><text class="s" x="736" y="63">updates itself</text><text class="s" x="736" y="79">after each merge</text>
+            <rect class="bx-a" x="870" y="20" width="124" height="84" rx="4"/><text class="t" x="880" y="43">QA lane</text><text class="s" x="880" y="63">only QA marks a</text><text class="s" x="880" y="79">capability Works</text>
+            <path class="ar" d="M130 62H148" marker-end="url(#f5a)"/><path class="ar" d="M274 62H292" marker-end="url(#f5a)"/><path class="ar" d="M418 62H436" marker-end="url(#f5a)"/><path class="ar" d="M562 62H580" marker-end="url(#f5a)"/><path class="ar" d="M706 62H724" marker-end="url(#f5a)"/><path class="ar" d="M850 62H868" marker-end="url(#f5a)"/>
+            <path class="ar" d="M932 104V146H212V106" marker-end="url(#f5a)"/>
+            <text class="m" x="572" y="164" text-anchor="middle">findings come back as new items</text>
+          </svg>
+        </div>
+        <figcaption>One small item flows left to right; QA's findings flow back. No one marks their own work as done.</figcaption>
+      </figure>
+      <h3>Dev cycle</h3>
+      <ul>
+        <li><b>One backlog row = one small pull request.</b> Builders work in their own cloud copies on one of four areas: screens, forms, runtime, evidence.</li>
+        <li><b>Design before build</b> for every screen; the founder sees an early look.</li>
+        <li><b>Two independent checks before a pull request is ready:</b> a reviewer and a "breaker" who tries to break the screen through the UI and the API. Both start fresh and did not build it.</li>
+        <li><b>Disagreements are written down with evidence,</b> in the pull request or a challenge note. Never follow blindly, never deviate silently.</li>
+      </ul>
+      <h3>QA cycle</h3>
+      <ul>
+        <li><b>Gate A:</b> QA walks the screens like a person, through to the next step of the journey.</li>
+        <li><b>Gate B:</b> CI runs the capability's acceptance pack on the demo data. A pull request that names a capability with an open Major or Critical finding is blocked.</li>
+        <li><b>"Works" needs three things:</b> the pack green on main on GitHub's machines, an independent re-run, and a verdict from a fresh reader. Only QA changes the status, with the commit tested.</li>
+        <li><b>Coverage floors may only rise:</b> API 97% lines / 82% branches; engine 99% / 89%.</li>
+      </ul>
+      <h3>CI/CD</h3>
+      <ul>
+        <li><b>On every pull request:</b> test suites (<code>ci.yml</code>), guards against pushing sources, PDFs, databases or secrets (<code>guards.yml</code>, <code>.githooks/pre-push</code>), and label checks (<code>label-guard.yml</code>, <code>records-label.yml</code>).</li>
+        <li><b>Merging is automatic:</b> green CI plus the reviewer's label <code>review: approved</code> puts the pull request in a merge queue (<code>.mergify.yml</code>), in batches of up to 6.</li>
+        <li><b>Deploy:</b> after each merge <code>demo-update.yml</code> updates the demo at <code>localhost:4400</code> on the founder's Mac.</li>
+        <li><b>Every night at 01:53 IST</b> <code>nightly.yml</code> re-tests everything on main.</li>
+      </ul>
+      <h3>Optimise</h3>
+      <ul>
+        <li><b>Measured on 1 Nov:</b> 81–85% of a pull request's time was queue wait; 37% of batches failed. Batches and test shards were tuned.</li>
+        <li><b>Measured again (decision P-371):</b> 59% of pull-request check machine-hours were thrown away; fixed.</li>
+        <li><b>Targets:</b> under 10% batch failures; approved to merged in under 1 hour.</li>
+        <li><b>AI tokens are treated like money:</b> cheaper models for read-only work; a tech lead hands over to a fresh one when its context grows too large.</li>
+      </ul>
+      <h3>Monitor</h3>
+      <ul>
+        <li><b>The line:</b> a factory board (queue, waits, batch failures, the bottleneck), a lead watch, a flow watch and a heartbeat, all scripts under <code>product/tools/</code>.</li>
+        <li><b>The product:</b> in-app <b>AI work</b> (each run, its steps and cost), <b>Releases</b> and <b>Activity</b>.</li>
+        <li><b>Money:</b> paid AI runs are capped at US$5 per job and US$30 per day by the founder's rules; every call is in a ledger.</li>
+        <li><b>Not in this build:</b> uptime checks, alerts, backups, access logs. These come with the team platform.</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- G -->
+  <details class="ap" id="ap-g">
+    <summary><span class="l">G</span><span class="h">How the pipeline evolved</span><span class="x">19 Oct → 10 Nov 2026</span></summary>
+    <div class="apb">
+      <ul class="tl">
+        <li><time>19–21 Oct</time><b>Proof phases.</b> AI mapped 461 of 461 form boxes; on the 49 checked boxes, 0 wrong person and 0 invented values in 5 trials. IMM 5257 filled live: 44 written = 44 read back, signatures intact.</li>
+        <li><time>21 Oct</time><b>First Studio.</b> A minimal configuration app; one maker and one reviewer.</li>
+        <li><time>23–27 Oct</time><b>Parallel lanes.</b> Several builders on their own branches; screens built one at a time, design first.</li>
+        <li><time>29–30 Oct</time><b>Two unapproved paid AI runs</b> (US$0.27, US$0.17). New rules: checks never click a priced button; live AI only on the founder's Go.</li>
+        <li><time>31 Oct</time><b>Switch to cloud builders.</b> One small item = one pull request; automatic merge on green CI plus the reviewer's label.</li>
+        <li><time>1–2 Nov</time><b>The flow is measured.</b> 81–85% queue wait, 37% batch failures; batches and shards tuned; a leaner set-up.</li>
+        <li><time>3 Nov</time><b>Evidence review.</b> An independent audit found 52 capabilities self-scored as done but only 36 confirmed. Blank-sheet restart; "Works" now needs an independent re-run and a fresh reader.</li>
+        <li><time>4–6 Nov</time><b>M2 closes 60 of 60</b> (6 Nov). M3 is ordered by a person's journey; the M3 sprint starts 6 Nov 23:17 IST.</li>
+        <li><time>7–9 Nov</time><b>The tech lead owns the pipeline;</b> hand-over by context size; the wasted-CI fix.</li>
+        <li><time>10 Nov</time><b>M3 at 24 of 29</b> on main.</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- H -->
+  <details class="ap" id="ap-h">
+    <summary><span class="l">H</span><span class="h">Limits, and what is out of scope</span><span class="x">by owner</span></summary>
+    <div class="apb">
+      <h3>What this build is, and is not</h3>
+      <p>It is a <b>reference build</b>: a liftable engine inside a tested shell. The engine, the rules, the form maps and the tools are meant as production technology. The screens, API and database are a reference the team rebuilds on its own code base (ERv2). Tenants, environments and real users are the team's to add.</p>
+      <h3>Out of scope, by owner</h3>
+      <div class="tw"><table>
+        <thead><tr><th>What</th><th>Owner</th><th>Reference</th></tr></thead>
+        <tbody>
+          <tr><td>Keeping firms apart, environments, real users</td><td>Team platform</td><td class="mono">P-249, P-335, P-357</td></tr>
+          <tr><td>Case shell, client list, stages, document storage, requests, versions, scanning</td><td>Team (AG-07, AG-09)</td><td class="mono">P-169 · SI-14–16</td></tr>
+          <tr><td>Prospect questionnaire at runtime, client link, login, e-mail, WhatsApp</td><td>Team (AG-08)</td><td class="mono">P-271 · C6.7, C6.8</td></tr>
+          <tr><td>Withdraw an application already submitted</td><td>Team</td><td class="mono">P-406 (1) · C8.4, SI-18</td></tr>
+          <tr><td>Representative's stored signature placed in one click <span class="dim">(legal: Unconfirmed, no counsel)</span></td><td>Team accounts</td><td class="mono">P-406 (3) · C8.5, SI-19</td></tr>
+          <tr><td>Letter templates, holiday calendars, deficiency library, notifications</td><td>Team (SA-1, AG-10, AG-12)</td><td class="mono">P-150, P-169 · SI-12</td></tr>
+          <tr><td>Deadlines and reminders after filing</td><td>Team (Minder)</td><td class="mono">P-169, P-151 (3) · SI-17</td></tr>
+          <tr><td>Billing, fee payment, invoicing, plan gating, AI switch and provider terms</td><td>Team (AG-06, AG-11, SA-3)</td><td class="mono">P-167 · SI-8, SI-13</td></tr>
+          <tr><td>Eligibility scores, cut-off bands, what-if advice</td><td>Team (AG-03)</td><td class="mono">P-164 (1) · SI-1, SI-2</td></tr>
+          <tr><td>Portal capture and online fill</td><td>Ours, M4</td><td class="mono">P-102 → P-245</td></tr>
+          <tr><td>Client questionnaire on the family link; client signing beyond the thin slice</td><td>Ours, after M3</td><td class="mono">P-129</td></tr>
+          <tr><td>Six holds in the team's SA-01B requirement with no ruling yet</td><td>The founder, as its product owner</td><td class="mono">P-251, P-316 (1)</td></tr>
+        </tbody></table></div>
+      <h3>Hand-over to the team</h3>
+      <ul>
+        <li><b>Lifted as it is:</b> the engine (resolver, rules and gates, field maps, PDF writer with read-back, answer-key runner, AI drafting and checker); the contracts (data shapes, six combinations' test data, the journeys and packs); the content (official-sources library, the released Sample configurations).</li>
+        <li><b>Rebuilt by the team:</b> screens, API and database, on ERv2.</li>
+        <li><b>Added by the team:</b> tenancy, environments, real users and roles, case shell, storage, channels, letters, deadlines, billing, production monitoring.</li>
+        <li><b>Order:</b> count first (how far the engine is from the team's rules; read-only, US$0) → make lift-ready → package (the team pulls; we never push to their repositories) → port → bring excluded pieces in on evidence.</li>
+        <li><b>Stand-ins:</b> every placeholder for a team module is marked on screen and listed as SI-1 to SI-19 in <code>product/STAND-INS.md</code>.</li>
+      </ul>
+      <p class="foot">The team's Program Charter V2 lists "AI-assisted features" as deferred and "government form auto-fill" as out of Release 1. Bringing this work in is therefore a decision, not a default.</p>
+      <h3>Where the records and the code disagree</h3>
+      <ul>
+        <li><b>Two capabilities read wider than the code:</b> C6.12 and C6.4 are marked Works with wording that covers sponsorship and permanent residence; the code supports Visitor visa. Worth a correction by QA.</li>
+        <li><b>The state page says M3 22 of 29;</b> main says 24 of 29. This page uses main.</li>
+        <li><b>The earlier handover said 71 packs, 532 scripts and a US$100 AI cap.</b> Today: 85 packs, 406 check scripts, caps of US$5 per job and US$30 per day.</li>
+        <li><b>AI spend:</b> US$29.66 in the product page (proof phases only) against US$82.65 in the ledger to 9 Nov. This page uses the ledger. It is the product's own AI spend, not the cost of the AI builders.</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- I -->
+  <details class="ap" id="ap-i">
+    <summary><span class="l">I</span><span class="h">Market tools, with sources</span><span class="x">web search, 10 Nov 2026 · not tested by us</span></summary>
+    <div class="apb">
+      <p><b>C</b> = the vendor's own claim. <b>V</b> = something we could verify on a public listing. Nothing here was tested hands-on.</p>
+      <div class="tw"><table style="min-width:820px">
+        <thead><tr><th>Tool</th><th>What is said</th><th>Price found</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td><b>Officio</b></td><td>A forms module is listed. A rival says it "often only fills out general fields" (a biased source). The rest is unverified: the vendor site refused our reader.</td><td>Not found</td><td class="src"><a href="https://www.g2.com/products/officio/reviews">g2.com</a> · <a href="https://vflo.inblog.ai/officio-alternative">vflo.inblog.ai</a></td></tr>
+          <tr><td><b>CaseEasy</b> <span class="dim">(Toronto)</span></td><td>Questionnaire data fills government forms (C). A rules-based extension (C). AI: a points-score assistant and document scan live, an agent planned (C). Claims 500+ firms (C).</td><td>CA$79 per user per month on one listing, CA$99 on another</td><td class="src"><a href="https://www.capterra.com/p/199351/CaseEasy/">capterra.com</a> · <a href="https://support.caseeasy.ca/en/articles/17190293-caseeasy-ai-current-capabilities-what-s-next">support.caseeasy.ca</a></td></tr>
+          <tr><td><b>INSZoom</b> <span class="dim">(Mitratech)</span></td><td>Questionnaires feed form auto-population (C). IRCC form updates "within 72 hours" (C, unverified). A public Canada form-update log. A government-notice reader (C).</td><td>Quote-based</td><td class="src"><a href="https://mitratech.com/products/inszoom/features-benefits/">mitratech.com</a> · <a href="https://success.mitratech.com/INSZoom/Product_Updates_And_Form_Updates/Form_Updates/Canada_Form_Updates_01%2F%2F21%2F%2F2021">form-update log</a></td></tr>
+          <tr><td><b>Docketwise</b></td><td>"Responses automatically populate the correct form area" (C). No Canadian forms named.</td><td>Not found</td><td class="src"><a href="https://www.docketwise.com/features/immigration-forms/">docketwise.com</a></td></tr>
+          <tr><td><b>VisaFlo</b></td><td>Questionnaire fills IMM PDFs (C). Chrome extension: 205 users, version 1.0.6, updated 26 Sep 2026 (V). Its own guide warns it breaks when the portal layout changes.</td><td>Not found</td><td class="src"><a href="https://vflo.inblog.ai/officio-alternative">vflo.inblog.ai</a> · our note <code>ai-workers/research/visaflo.md</code></td></tr>
+          <tr><td><b>Migrawise</b></td><td>Extension fills the IRCC portal from case data (C). AI field mapping (C). 13 users (V).</td><td>CAD 15 per AI case</td><td class="src"><a href="https://chromewebstore.google.com/detail/migrawise-autofill/aoimmmacpocjiidpnahemjmaldbfcjic">Chrome Web Store</a></td></tr>
+          <tr><td><b>Smaller extensions</b></td><td>Meridian AutoFile, IRCC Form Filler, Unredacted (about 11 users), ImmPrintr (listed by the Canadian Bar Association).</td><td>Not found</td><td class="src"><a href="https://chromewebstore.google.com/detail/nifngijgapmlfkpfdhgclpdcdlfakime">Chrome Web Store</a> · <a href="https://cba.org/Sections/Immigration-Law/Resources/IMMPrintr">cba.org</a></td></tr>
+          <tr><td><b>eImmigration, LollyLaw</b></td><td>Nothing found on Canadian form filling.</td><td>Not found</td><td class="src">No source</td></tr>
+        </tbody></table></div>
+      <h3>How to read this</h3>
+      <ul>
+        <li><b>Where the market is ahead:</b> shipped portal extensions; real customers and hosted products; breadth (billing, client portal, AI document scan, a points-score assistant).</li>
+        <li><b>Where we found no public statement</b> from any vendor: pathways a firm configures itself; every PDF box mapped to a reusable fact the firm can see; approved, versioned releases with a second person; filling by rule with read-back; handling of XFA forms and their barcodes.</li>
+        <li><b>"No public statement" is not "they cannot".</b> It means a web search did not find it. A hands-on trial of two tools would settle it.</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- J -->
+  <details class="ap" id="ap-j">
+    <summary><span class="l">J</span><span class="h">Glossary</span><span class="x">every term used, in plain words</span></summary>
+    <div class="apb">
+      <dl class="gl">
+        <dt>Combination</dt><dd>The last level of Pathway › Program › Category › Sub-category. It owns one configuration. Example: Retail › Temporary residence › Visitors › Visitor visa. This page calls it a "pathway" where the difference does not matter.</dd>
+        <dt>Fact</dt><dd>One piece of information with one meaning, such as a person's family name. In the code: a canonical field.</dd>
+        <dt>Shared library</dt><dd>Fields (facts), sections, document types, forms, checks and rules, each defined once and reused by every combination.</dd>
+        <dt>Field map</dt><dd>Which fact fills which spot on a PDF or a portal screen, for whom, and how.</dd>
+        <dt>SQR · PQR</dt><dd>Smart questionnaire: what a client answers on a case. Prospect questionnaire: the part a prospect answers before becoming a client.</dd>
+        <dt>Release · release pin</dt><dd>A reviewed, approved, frozen version of a combination · the release a case is fixed to when it opens.</dd>
+        <dt>XFA form</dt><dd>The older Adobe form technology IRCC's fillable PDFs use. The form's logic and barcodes live inside the file, and many PDF tools cannot write it.</dd>
+        <dt>Read-back</dt><dd>After writing a form, reading every box again and comparing it with what was meant to be written.</dd>
+        <dt>Adobe Validate</dt><dd>The button on an IRCC form that checks it and produces its barcodes. A person presses it; the product then reads the result.</dd>
+        <dt>Channel</dt><dd>How a form reaches IRCC: PDF upload, online (with its portal), signed PDF upload, or paper.</dd>
+        <dt>Answer sheet (portal sheet)</dt><dd>The answers in the portal's screen order with copy buttons, for forms IRCC takes online.</dd>
+        <dt>Checkpoint</dt><dd>A saved demo state: blank, configured (the M2 gate), finished story (the M3 gate).</dd>
+        <dt>Pack</dt><dd>A capability's acceptance test, run on a fresh copy of the app with the demo data.</dd>
+        <dt>Journey</dt><dd>A scripted end-to-end walk through the screens by named roles.</dd>
+        <dt>Sample · Demo release</dt><dd>A value not yet confirmed by the immigration expert · a release allowed only in the demo workspace, never counted as real.</dd>
+        <dt>Stand-in · seam</dt><dd>A placeholder we built for a team module, marked on screen and listed with its owner · the place where our build hands over to that module.</dd>
+        <dt>Works · Partial · Not built</dt><dd>QA's three statuses. Only QA changes them, after a run, with the commit tested.</dd>
+        <dt>Gate A · gate B</dt><dd>QA's walk through the screens to the next step (A) · the capability's pack run on the demo data in CI (B).</dd>
+        <dt>Fixture</dt><dd>A small test set-up a pack builds for itself. Works is never counted on a fixture, only on the demo data.</dd>
+        <dt>Content publisher</dt><dd>The team's name for the person who sets a pathway up (the configuration author; in the team's model also the immigration expert).</dd>
+        <dt>Pull request · CI · merge queue</dt><dd>One proposed change to the code · the automatic tests run on it · the line in which approved changes are merged one batch at a time.</dd>
+        <dt>ERv2</dt><dd>The team's own code base (NestJS, Prisma, React), on which screens and API are rebuilt.</dd>
+        <dt>Row-level security · classification registry</dt><dd>The team platform's way of keeping each firm's data apart in the database · its list of which columns hold personal data.</dd>
+        <dt>N-LIFT</dt><dd>The backlog row that counts how far the engine is from the team's rules before it is lifted.</dd>
+        <dt>LMIA · UCI</dt><dd>Labour Market Impact Assessment, the employer's permission behind a work permit · the Unique Client Identifier IRCC gives a person.</dd>
+        <dt>Minder</dt><dd>The team's deadline and reminder engine.</dd>
+        <dt>M2 · M3 · M4</dt><dd>Milestones: the set-up side · the case side · any pathway plus the Chrome extension.</dd>
+        <dt>AG-, SA-, SI-, P-, C-, QA- codes</dt><dd>The team's Agent and Super Admin requirement documents · our stand-in rows · our product decisions · QA's capabilities · QA's findings.</dd>
+      </dl>
+    </div>
+  </details>
+</div>
+</section>
+</main>
+
+<footer>
+<div class="wrap">
+  <p><b>Sources.</b> Repository at <code>main 66e74115e</code> (10 Nov 2026 10:06 IST): <code>product/qa/CAPABILITIES.md</code>, <code>STATE.md</code>, <code>RULES.md</code>, <code>DECISIONS.md</code>, <code>PRODUCT.md</code>, <code>BACKLOG.md</code>, <code>STAND-INS.md</code>, the acceptance journeys, and the engine code. Counts of facts, boxes and the family case: read-only queries on the demo database, 10 Nov 2026. The team's build: code captures of 28 Oct 2026. Market: web search, 10 Nov 2026.</p>
+  <p><b>What this page does not show.</b> Time to configure a pathway (not measured). Hands-on tests of market tools. A full review of the team's code. Any content confirmed by the immigration expert: everything is Sample. Legal points are "Unconfirmed: no counsel".</p>
+  <p>Replaces the handover of 9 Nov 2026.</p>
+</div>
+</footer>
+
+<script>
+(function(){
+  var f={m:'',s:''};
+  var rows=[].slice.call(document.querySelectorAll('#caps tbody tr'));
+  var count=document.getElementById('capcount');
+  function apply(){
+    var n=0;
+    rows.forEach(function(r){
+      var ok=(!f.m||r.dataset.m===f.m)&&(!f.s||r.dataset.s===f.s);
+      r.hidden=!ok; if(ok)n++;
+    });
+    count.textContent='Showing '+n+' of '+rows.length;
+  }
+  [].forEach.call(document.querySelectorAll('.filters'),function(g){
+    g.addEventListener('click',function(e){
+      var b=e.target.closest('button'); if(!b)return;
+      f[g.dataset.group]=b.dataset.v;
+      [].forEach.call(g.querySelectorAll('button'),function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+      apply();
+    });
+  });
+  var all=document.getElementById('openall');
+  all.addEventListener('click',function(){
+    var open=all.getAttribute('aria-pressed')!=='true';
+    [].forEach.call(document.querySelectorAll('details.ap'),function(d){d.open=open});
+    all.setAttribute('aria-pressed',open?'true':'false');
+    all.textContent=open?'Close all sections':'Open all sections';
+  });
+  function openHash(){
+    var id=location.hash.slice(1); if(!id)return;
+    var el=document.getElementById(id);
+    if(el&&el.tagName==='DETAILS'){el.open=true;el.scrollIntoView();}
+  }
+  window.addEventListener('hashchange',openHash); openHash();
+  document.addEventListener('click',function(e){
+    var a=e.target.closest('a[href^="#ap-"]'); if(!a)return;
+    var el=document.getElementById(a.getAttribute('href').slice(1));
+    if(el)el.open=true;
+  });
+})();
+</script>
