@@ -225,6 +225,15 @@ L-SA3 (C1 ready to file) · X3's guarded Add and L-SA11 (C2, P-252) · G5 (P-248
 | B123 GitHub App for lanes | P-376 (5), B108 change (5). **Done when:** the founder has created the App (owner-only step); lanes comment, label and open PRs with its token, on the Mac and in the cloud, without gh's certificate path; approvals are recorded by a session that did not build the change; the key is stored outside the repository; check-docs refuses a token in any committed file. | |
 | B113 "0 sections" on a combination with questions | B79b on #1052: Family sponsorship reads "Questions 285 … · 0 sections" because the placement step chooses only among sections it just placed into (`overview.tsx:42`). **Done when:** the count reads true, with a pass and a fail line, measured on all six; after M2. | |
 
+## Bake (M3.5) draft rows (Lead 9, 10 Nov; plan `design/bake-plan-2026-11-10.md`, awaiting the founder's review, P-450 (2)); IDs cited by B164's guard (P-452)
+| Row | Area | What | Done when | Decisions |
+|---|---|---|---|---|
+| BK-8 | runtime | **Biometrics ages per pathway:** who is exempt from biometrics comes from each pathway's own fee rows, not the Visitor visa's (`api/src/case-prepare.ts:29` `feeRule("vv.single", "biometrics")`) | the guard's `case-prepare.ts:29` exception is gone; packs green on the checkpoint | P-448, P-452 |
+| BK-10 | forms | **Form rules into data:** which forms a filing needs, and their rules, come from release data, not code (`api/src/form-setup.ts` FORM_SETUP and *_FORM_RULES; `api/src/sources.ts` TITLES) | the guard's `form-setup.ts` and `sources.ts` exceptions are gone; packs green on the checkpoint | P-448, P-452 |
+| BK-12 | runtime | **Sample case as a setting:** the sample case a pathway uses is chosen in data, not fixed to the Visitor visa | B164's named-fixture list shrinks (demo, sample, checkpoint loaders) | P-448, P-452 |
+| BK-14 | runtime / forms | **AI review on any pathway's forms (lifts stand-in SI-6):** live review is not limited to Visitor visa forms (`api/src/review-runs.ts:68`) | the guard's `review-runs.ts` exception is gone; C7.5 green; placement for the founder | P-448, P-452 |
+The other BK rows (BK-1 to BK-7, BK-9, BK-11, BK-13) are in the plan, shaped when the founder approves it.
+
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|
