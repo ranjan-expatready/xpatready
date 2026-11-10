@@ -1,0 +1,6 @@
+Gate B: the PR names C6.16; claims Works for none (no bug check).
+  packs: C6.16.test.ts
+    C6.16.test.ts on the checkpoint: exit 0, 68/68 passed (147 s: copy 10, Load the configured checkpoint 128, run 9)
+  packs took 147 s in all
+Gate B: passed.
+exit 0

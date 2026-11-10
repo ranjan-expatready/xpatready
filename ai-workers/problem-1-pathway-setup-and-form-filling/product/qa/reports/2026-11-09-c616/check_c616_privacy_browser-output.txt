@@ -1,0 +1,52 @@
+PASS  C6.16 walk setup: a fresh case with Client A, Partner, a child of 19 and a child of 10; Client A answered one of Partner's questions
+PASS  C6.16 principal: under "About Sample Partner" a Send to Sample Partner… button; none under the child of 10
+PASS  C6.16 axe: the principal's questionnaire with Send to … has no WCAG A/AA violation
+PASS  C6.16: the principal's questionnaire at 390 px has no sideways scroll
+PASS  C6.16 principal (review m4): Escape closes the dialog and the focus returns to Send to …
+PASS  C6.16 principal (BIC-13): Send with no address says what to do on the field and in a summary at the top
+PASS  C6.16 axe: the Send to dialog has no WCAG A/AA violation
+PASS  C6.16 principal: the line says sent to the masked address, not opened yet, with Resend and Take back
+PASS  C6.16 adult: the token leaves the address bar at once; opening the link sent no code
+PASS  C6.16 axe: the link's Check it's you page has no WCAG A/AA violation
+PASS  C6.16: the link page at 390 px has no sideways scroll
+PASS  C6.16 adult (break m6): a reload keeps the code step and sends no new code
+PASS  C6.16 adult: a wrong code shows "There is a problem" with tries left, on the field too
+PASS  C6.16 axe: the wrong-code state has no WCAG A/AA violation
+PASS  C6.16 adult: the consent card says who sees what, marked Unconfirmed: no counsel
+PASS  C6.16 axe: the consent card has no WCAG A/AA violation
+PASS  C6.16 adult: their own parts only (About you), and the application's answers read-only; nobody else's
+PASS  C6.16 axe: the adult's own questions has no WCAG A/AA violation
+PASS  C6.16: the adult's questions at 390 px has no sideways scroll
+PASS  C6.16 adult: every part of theirs, their parents' included, is in their parts list; the read-only list holds only the application's answers
+PASS  C6.16 adult: Client A's earlier answer says who gave it, with Confirm
+PASS  C6.16 axe: a part with Confirm has no WCAG A/AA violation
+PASS  C6.16 adult: Confirm makes it their own answer (own link)
+PASS  C6.16 adult: no call on the link ever carried a simulated person (x-actor)
+PASS  C6.16 principal: Sample Partner shows progress only (parts done of parts asked), never the answers
+PASS  C6.16 axe: the principal's progress-only card has no WCAG A/AA violation
+PASS  C6.16 officer: Partner's row says private from Client A and what the code proves (address given by Client A)
+PASS  C6.16 officer (BIC-14): Partner's privacy reason, since when and by whom are visible text, not only a tooltip
+PASS  C6.16 officer: the child of 10 has no Send and says why; the child of 19 has Send… and Keep private…
+PASS  C6.16 axe: the officer's case page with Own links and privacy has no WCAG A/AA violation
+PASS  C6.16: the officer's case page at 1440 px has no sideways scroll
+PASS  C6.16 officer: Take back without a reason is refused on the field
+PASS  C6.16 axe: the Take back dialog has no WCAG A/AA violation
+PASS  C6.16 officer: the row now reads Taken back · still private
+PASS  C6.16 principal (review m2): after the take back Client A reads what happened in their own words, never "ask whoever sent it"
+PASS  C6.16 adult: after take back the page says why, naming no person
+PASS  C6.16 axe: the dead-link page has no WCAG A/AA violation
+PASS  C6.16 keyboard: Tab reaches Send to …; Enter opens the dialog with the focus on its email field
+PASS  C6.16 keyboard: Enter in the email field sends
+PASS  C6.16 keyboard: Tab reaches Send me a code
+PASS  C6.16 keyboard: Tab reaches the code field
+PASS  C6.16 keyboard: Tab reaches Continue to my questions on the consent card
+PASS  C6.16 keyboard: Tab reaches the first part of their questions; Enter opens it
+PASS  C6.16 keyboard: the part opens with the focus on its heading
+PASS  C6.16: the adult's page with its header at 320 px (break m5) has no sideways scroll
+PASS  C6.16: the officer's page at 200 % (720 px) has no sideways scroll
+PASS  C6.16: the principal's questionnaire at 200 % of 1024 px (512 px) has no sideways scroll
+PASS  C6.16: the demo inbox at 512 px has no sideways scroll
+PASS  C6.16 principal (break M4): acting as Client A, the demo inbox says it does not open for a client, and shows no link
+PASS  C6.16: no page error
+
+50/50 passed
