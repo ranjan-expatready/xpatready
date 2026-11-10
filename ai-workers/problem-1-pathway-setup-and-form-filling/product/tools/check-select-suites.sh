@@ -52,7 +52,9 @@ o=$(dsel "$S/tests/check_queue_tx.ts"); ok "--direct: a changed suite still runs
 
 # The graph's rules, each with a passing and a failing case, on a made-up repository (fixed files, so the real code
 # changing never moves these): who uses what is read from the files themselves.
-G=$(mktemp -d); [ -n "${KEEP_G:-}" ] && echo "synthetic repo: $G" || trap 'rm -rf "$G"' EXIT
+# No scratch folder, no synthetic repo: an empty $G would write its fixtures over the real tree (10 Nov, a sandboxed mktemp).
+G=$(mktemp -d) && [ -d "$G" ] || { echo "FAIL  mktemp -d gave no scratch folder: the synthetic-repo checks did not run"; exit 1; }
+[ -n "${KEEP_G:-}" ] && echo "synthetic repo: $G" || trap 'rm -rf "$G"' EXIT
 ( cd "$G" && git init -q && mkdir -p "$S/engine" "$S/tests" "$S/samples" "$S/tools" "$T" && cp "$ROOT/$T/select-suites.mjs" "$T/"
   printf 'export const core = 1;\n' > "$S/engine/core.ts"; printf 'export const other = 2;\n' > "$S/engine/other.ts"
   printf 'export const boot = 3;\n' > "$S/engine/boot.ts"
@@ -137,4 +139,12 @@ o=$(psel "$S/acceptance/lib/run_pack4.sh"); n=$(grep -c '\.test\.ts$' <<< "$o");
 o=$(psel "$S/acceptance/M3-CONTRACT.md" "$S/tests/fixtures/change_one_value.py"); n=$(grep -c '\.test\.ts$' <<< "$o"); ok "--packs (review round 4): a pack note and a test fixture script reach no pack through generic folder names ($n)" "$([ "$n" = 0 ] && echo 1)" "$(head -3 <<< "$o" | tr '\n' ' ')"
 o=$(printf '%s\n' "$S/tools/any-baseline.json" | node "$T/select-suites.mjs" --packs | grep '/acceptance/C.*\.test\.ts'); ok "--packs (review round 4): tools/any-baseline.json reaches only the packs whose chain names it (no \"tools\" folder edge: $(grep -c . <<< "$o") packs)" "$(! grep -vq 'any-baseline.json ←' <<< "$o" && [ "$(grep -c . <<< "$o")" -le 6 ] && echo 1)" "$(cut -f2 <<< "$o" | head -3 | tr '\n' ' ')"
 o=$(psel "$S/acceptance/lib/no-such-helper-zz9.ts"); ok "--packs: a deleted path that nothing names reaches no pack" "$(! grep -q '\.test\.ts$' <<< "$o" && echo 1)" "$o"
+# (4a) P-446 (founder via Lead 9, 10 Nov): gates and the other checkpoint steps reach the app only when a pack loads the
+# configured checkpoint (POST /demo/load {sample:"configured"} runs api/src/features/checkpoint/*). Packs reach API files
+# only by imports, so #1450 broke C6.19's pack after approval: a gate file or a checkpoint step reaches every pack that
+# loads the configured checkpoint, itself or through a helper it imports (acceptance/lib/declared.ts: C6.3, C6.6).
+o=$(psel "$S/samples/form-field-gates.json"); ok "--packs (4a): the gates file reaches the packs that load the configured checkpoint (C6.19, C1.3), not a pack that never does (C1.5)" "$(grep -qx C6.19.test.ts <<< "$o" && grep -qx C1.3.test.ts <<< "$o" && ! grep -qx C1.5.test.ts <<< "$o" && echo 1)" "$(tr '\n' ' ' <<< "$o" | cut -c1-200)"
+o=$(psel "$S/api/src/form-field-gates.ts"); ok "--packs (4a): the gates' API code reaches them too, and through declared.ts (C6.19, C6.6)" "$(grep -qx C6.19.test.ts <<< "$o" && grep -qx C6.6.test.ts <<< "$o" && ! grep -qx C1.5.test.ts <<< "$o" && echo 1)" "$(tr '\n' ' ' <<< "$o" | cut -c1-200)"
+o=$(psel "$S/api/src/features/checkpoint/110-release-one.ts"); ok "--packs (4a): any checkpoint step reaches the packs that load the configured checkpoint (C6.19, C6.3)" "$(grep -qx C6.19.test.ts <<< "$o" && grep -qx C6.3.test.ts <<< "$o" && ! grep -qx C1.5.test.ts <<< "$o" && echo 1)" "$(tr '\n' ' ' <<< "$o" | cut -c1-200)"
+c=$(printf '%s\n' "$S/samples/form-field-gates.json" | node "$T/select-suites.mjs" --packs | grep '/C6.19.test.ts' | cut -f2); ok "--packs (4a): the chain says why (the configured checkpoint)" "$(grep -q 'configured checkpoint' <<< "$c" && echo 1)" "$c"
 echo "$pass passed, $fail failed"; [ "$fail" = 0 ]

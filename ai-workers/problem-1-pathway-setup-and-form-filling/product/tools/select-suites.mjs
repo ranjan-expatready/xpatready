@@ -429,6 +429,19 @@ if (process.argv.includes("--packs")) {   // D2: the acceptance and test files t
   const chain = (x) => { const c = []; for (let y = x; y; y = via.get(y)) c.push(basename(y)); return c.reverse().join(" ← "); };
   const stop = (x) => RUNNERS.has(x) || x === MAIN || suites.get(basename(x)) === x;
   const appCode = (x) => (x.startsWith(`${S}/api/src/`) && CODE.test(x)) || x.startsWith(`${S}/web/`);
+  // (4a, P-446, 10 Nov): the gates and every other checkpoint step reach the app only when a pack loads the configured
+  // checkpoint (POST /demo/load {sample: "configured"} runs api/src/features/checkpoint/*; "six" runs none of them), a
+  // read over HTTP that the import edges below never see (#1450 broke C6.19's pack after approval). So a changed
+  // checkpoint step or gate file seeds every pack, test or helper whose code (comments stripped) loads it; the walk then
+  // adds the packs that import such a helper (acceptance/lib/declared.ts).
+  const CHECKPOINT = new RegExp(`^${esc(S)}/(api/src/features/checkpoint/|samples/form-field-gates\\.json$|api/src/(features/)?form-field-gates\\.ts$|api/src/form-field-condition\\.ts$|engine/form-field-condition\\.ts$)`);
+  const cp = changed.find((f) => CHECKPOINT.test(f));
+  if (cp) {
+    const LOADS = /sample\s*:\s*["'`]configured["'`]/;
+    let files = []; try { files = execSync(`git ls-files -c -- "${S}/acceptance" "${S}/tests" "${PR}/tests"`, { cwd: ROOT, encoding: "utf8", maxBuffer: 64 << 20 }).split("\n").filter((x) => x && CODE.test(x)); } catch {}
+    const tag = `${cp} (configured checkpoint)`; via.set(tag, null);
+    for (const x of files) if (!via.has(x) && LOADS.test(stripComments(read(x)))) { via.set(x, tag); if (!stop(x)) todo.push(x); }
+  }
   // A deleted file: the files that still name it (by file name, or by its stem in an import path) use it.
   // An import path that ends in its stem is an import edge (so a deleted API or web module is still followed; review m1).
   const named = (f) => { const b = basename(f), stem = b.replace(/\.[^.]+$/, ""), imp = new RegExp(`/${esc(stem)}(?:\\.(?:js|ts|tsx|cjs|mjs))?["']`), nm = new RegExp(`(?<![A-Za-z0-9_.-])${esc(b)}(?![A-Za-z0-9_-])`);
