@@ -1,0 +1,26 @@
+[line menu (stage 1)] Request Upload a file… Not applicable… History
+[passport line after upload] Passport information page copy For each applicant Received Always needed for this application. Source File: sample-passport-qa.pdf · Last change 10 Nov, 05:03 by Case officer (Sample)
+[shot] R02-stage1-passport-uploaded.png
+[start dialog] It starts on Release 3 (the newest release of Work permit with an LMIA (inside Canada), now). Who comes along Sample Client D What carries and what is asked 0 answers about the people used (not copied) 18 questions about this application asked again 88 new questions 5 forms: IMM 5409, IMM 5475, IMM 5476, IMM 5707, IMM 5710 2 documents on the checklist: Passport or travel document information page photocopy; Proof of fee payment (processing fee and other applicable fees receipt) The people's answers are read where they are; this application's own answers (its number, date, office, country where applying) belong to the new application and are asked again. Deadline Can't set: Study permit valid until is missing (Sample rule). Sample Study permit (outside Canada): key details Kept on the ending stage's record (pre-filled only from it). Sample: not cited from canada.ca. UCI (optional) Study permit valid until (optional) No filing record Sample Client D's study permit has no filing record. Say why you are starting the next stage anyway. Reason This cannot be undone.
+[dialog documents] 2 documents on the checklist: Passport or travel document information page photocopy; Proof of fee payment (processing fee and other applicable fees receipt)
+[shot] R03-start-next-dialog-documents.png
+[toast] Work permit with an LMIA (inside Canada) started. 0 answers about Sample Client D used; 18 questions about this application asked again; 88 new questions; 5 forms added; 2 documents on the checklist; deadline 30 Apr 2027 (Sample).
+[shot] R04-started-toast.png
+[stage-2 documents panel] Documents Stand-in What each person must provide, from the case's release. Each line says why it is there. Sample Client D Principal applicant Age: answer "Date of birth" first. 0 of 2 received Passport or travel document information page photocopy For each applicant Not requested Always needed for this application. Source No file yet On file from Study permit, uploaded 10 Nov 2026: check it for this application. Proof of fee payment (processing fee and other applicable fees receipt) For the principal applicant Not requested Always needed for this application. Source No file yet From the case's release; each line rechecked against the case's answers on every read (answers with problems are not used). Sample until the immigration expert confirms. Until the application date is answered, ages for the 18-or-older lines are worked out on today's date (UTC); a line whose condition reads the release's age asks for the application date first.
+[shot] R05-stage2-documents-on-file.png
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+locator.click: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for locator('[data-documents-panel] [data-line]').filter({ has: locator('[data-line-label]').filter({ hasText: /^Passport information page copy$/ }) }).first().locator('[data-line-menu]')[22m
+
+    at /tmp/claude-0/-home-user-xpatready/07bc4aab-0cc9-5354-9601-2316bc2f541d/scratchpad/walk/walk_r2.mjs:33:39 {
+  log: [
+    "  - waiting for locator('[data-documents-panel] [data-line]').filter({ has: locator('[data-line-label]').filter({ hasText: /^Passport information page copy$/ }) }).first().locator('[data-line-menu]')"
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v22.23.4

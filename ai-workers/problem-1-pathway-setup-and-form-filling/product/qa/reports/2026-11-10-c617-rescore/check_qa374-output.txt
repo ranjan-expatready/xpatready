@@ -1,0 +1,8 @@
+QA-374 — Open a case at a later stage shows the deadline it will set
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  setup: a combination that opens at a later stage — ["Express Entry stream","Outside Canada","Spouse or common-law partner","Visitor visa","With an LMIA – inside Canada"]
+FAIL  QA-374 fail: with "valid until" 2027-02-03 typed, Open a case shows the deadline it will set, labelled Sample — {"text":"Earlier stages\nSample route\n\nWork permit with an LMIA (inside Canada) is a later stage of \"Study, then work (Sample route, not a recommended one)\". Record what was done before your firm took the case. Nothing is filed for these stages.\n\nStudy p
+
+1/2 passed
+exit code: 1

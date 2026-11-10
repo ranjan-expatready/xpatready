@@ -1,0 +1,8 @@
+QA-370 — the Start next stage dialog's deadline follows the date typed in it
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  setup: a case on the route's first stage, its next stage offered — {"made":201,"preview":200}
+FAIL  QA-370 fail: with "valid until" 2027-05-31 typed in the dialog, its Deadline line names that date, not "Can't set … missing" (reads: "Can't set: Study permit valid until is missing (Sample rule). Sample") — {"line":"Can't set: Study permit valid until is missing (Sample rule). Sample"}
+
+1/2 passed
+exit code: 1

@@ -1,0 +1,9 @@
+[shot] R07-stage2-passport-on-file-line.png
+[stage-2 passport line menu] Request Upload a file… Not applicable… History
+[shot] R08-stage2-line-menu.png
+[stage-2 passport line after upload] Passport or travel document information page photocopy For each applicant Received Always needed for this application. Source File: sample-passport-work.pdf · Last change 10 Nov, 05:04 by Case officer (Sample) On file from Study permit, uploaded 10 Nov 2026: check it for this application.
+[stage-2 panel count] 1 of 2 received
+[shot] R09-stage2-passport-received.png
+[ended stage panel] Study permit (outside Canada) Ended — next stage started Kept as it was when the next stage started: read only. Key details UCI(also the client's answer) 23456789 entered by the case officer Study permit valid until 30 Apr 2027 entered by the case officer Sample key details: not cited from canada.ca. Filings Sample Client D's filing not started no filing record Its own documents Sample Client D: sample-passport-qa.pdf uploaded 10 Nov 2026 Close
+[shot] R10-ended-stage-own-documents.png
+[errors] []

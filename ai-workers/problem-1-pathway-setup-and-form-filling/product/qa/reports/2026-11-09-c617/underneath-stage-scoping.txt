@@ -1,0 +1,7 @@
+## Underneath, main df52c9fc6, copy qa_c617w, case a816389c-ad09-4be5-a101-c4bac2e5645e (QA-C617-STAGES), after the walk's Start next stage (read 21:34 UTC; additions re-read 21:49 UTC)
+### stages (API, officer)
+{"route":"study_then_work","stages":[{"key":"study","state":"ENDED_NEXT_STARTED","words":"Ended — next stage started","version":2},{"key":"work","state":"CURRENT","words":"Current","version":2}],"current":"de3af843-a2ba-4528-a6fb-c393c5663de5","next":null}
+### form additions per stage (DB: stage|state|form|kind|removed|id)
+study|ENDED_NEXT_STARTED|IMM 0008 DEP|blank|f|3a436316-45fa-46f5-aa44-cb57a61c90a7
+study|ENDED_NEXT_STARTED|IMM 5710|blank|f|ad0d3884-b255-4124-afe7-e88c7a7c5692
+(no addition on the work stage's filing; both stay live on the ended study stage)
