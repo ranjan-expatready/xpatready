@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { noRetryOnRefusal } from "./questionnaire";
 import { useFirm } from "./team";
 import { FigureRow, type Figure } from "./readiness-figure";
+import { FoldOut } from "@/components/fold-out";
 
 type Owes = "staff" | "representative" | "client" | "employer" | "ircc";
 type Line = { code: string; key: string; item?: string; subject?: string; owes: Owes; words: string; unblocks: string; severity: "block" | "critical" | "warning" };
@@ -180,15 +181,14 @@ function FilingReadiness({ caseId, f, r, g, actor, nameOf, officers, review }: {
         </p>
       ) : null}
       {r.passed.length ? (
-        <details className="text-[13px]" open={st !== "submitted"} data-passed>
-          <summary className="flex min-h-6 cursor-pointer items-center text-text-link">Passed with a reason ({r.passed.length})</summary>
+        <FoldOut className="text-[13px]" open={st !== "submitted"} data-passed summaryClassName="flex min-h-6 items-center text-text-link" summary={<>Passed with a reason ({r.passed.length})</>}>
           <ul className="mt-1 space-y-1.5 pl-1">{r.passed.map((p) => (
             <li key={`${p.code}|${p.key}`} className="[overflow-wrap:anywhere]" data-passed-line={p.key} data-code={p.code}>
               <span className="text-text-muted">{p.words}</span>
               <span className="block">“{p.reason}” <span className="text-text-muted">— passed by {nameOf(p.by)}, {when(p.at)}</span></span>
             </li>
           ))}</ul>
-        </details>
+        </FoldOut>
       ) : null}
     </article>
   );

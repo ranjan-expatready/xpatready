@@ -8,6 +8,7 @@ import type { AnswerKeysView, FamilyView, KeyView, RunState, TestItem } from "..
 import { api, useAction, useApi } from "@/lib/api";
 import { Button, Notice, Pill, Table } from "@/components/ui/controls";
 import { FamiliesSection, Gated, KeyEditor, OUTCOME_WORDS, useDuties, WHY, WriteKey } from "@/components/answer-key-editors";
+import { FoldArrow } from "@/components/fold-out";
 
 const RUN_WORDS: Record<RunState, { label: string; tone: string }> = { PASSED: { label: "Passed", tone: "ok" }, FAILED: { label: "Failed", tone: "danger" }, NOT_RUN: { label: "Not run", tone: "neutral" } };
 
@@ -58,7 +59,7 @@ function KeyRow({ k, combinationId, item, family }: { k: KeyView; combinationId:
           <Gated size="sm" variant="ghost" allowed={may.key && !!family} why={!may.key ? WHY.key : "Loading the family…"} onClick={() => setEditing(true)}>Change</Gated>
           <Gated size="sm" variant="outline" allowed={may.run} why={WHY.run} busy={run.isPending} onClick={() => run.mutate(undefined)}>Run</Gated>
           {k.state === "DRAFT" ? <Gated size="sm" variant="secondary" allowed={may.sign} why={WHY.sign} busy={sign.isPending} onClick={() => sign.mutate(undefined)}>Sign</Gated> : null}
-          <Button size="sm" variant="ghost" aria-expanded={open} onClick={() => setOpen((x) => !x)}>{open ? "Hide lines" : "Lines"}</Button>
+          <Button size="sm" variant="ghost" aria-expanded={open} onClick={() => setOpen((x) => !x)}><FoldArrow open={open} />{open ? "Hide lines" : "Lines"}</Button>
         </span>
       </div>
       {k.change_reason && k.state === "DRAFT" ? <p className="mt-1 text-xs text-text-muted">Back to Draft: {k.change_reason}</p> : null}

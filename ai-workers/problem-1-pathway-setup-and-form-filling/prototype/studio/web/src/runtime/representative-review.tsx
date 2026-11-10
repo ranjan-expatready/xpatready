@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import type { FormStamp, ReviewRound, ReviewRoundFiling } from "../../../contracts/runtime";
 import { noRetryOnRefusal } from "./questionnaire";
+import { FoldOut } from "@/components/fold-out";
 
 const TONE: Record<FormStamp["state"], string> = { to_check: "neutral", checked: "info", changed_since_review: "warn", approved: "ok", approval_withdrawn: "warn", sent_back: "danger", not_stamped_waits: "neutral" };
 const ROW_TONE: Record<ReviewRoundFiling["status"], string> = { sent: "neutral", under_review: "info", approved: "ok", sent_back: "danger" };
@@ -193,7 +194,7 @@ export function RepresentativeReviewPage() {
                 </div>
                 {form.withdrawn_words ? <p className="text-[13px] text-text-warn" data-withdrawn>{form.withdrawn_words}</p> : null}
                 <p className="text-[13px] text-text-muted">{form.waits ? "Not stamped: waits for an answer." : form.file.words}{form.channel === "ONLINE" ? " · Filed online" : ""}.
-                  {form.file.sha256 ? <details className="inline"><summary className="ml-1 inline cursor-pointer text-text-link">Details</summary><span className="block break-all text-[12px]">File fingerprint: {form.file.sha256}</span></details> : null}</p>
+                  {form.file.sha256 ? <FoldOut className="inline" summaryClassName="ml-1 inline text-text-link" summary="Details"><span className="block break-all text-[12px]">File fingerprint: {form.file.sha256}</span></FoldOut> : null}</p>
                 {form.changes.length ? (
                   <div data-changes>
                     <h3 className="text-[13px] font-semibold">{form.state === "approval_withdrawn" ? "Changed since it was approved" : "Changed since the round before"} · {plural(form.changes.length, "fact")}</h3>

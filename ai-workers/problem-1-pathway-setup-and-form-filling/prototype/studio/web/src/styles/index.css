@@ -26,3 +26,8 @@ body { background: var(--color-surface); color: var(--color-text); font-family: 
    560 px + 384 px of toasts); above its footer where the panel takes the whole width. */
 body[data-panel-open] [data-toaster] { right: calc(min(560px, 100vw) + 1rem); }
 @media (max-width: 991px) { body[data-panel-open] [data-toaster] { right: 1rem; bottom: 5rem; } }
+/* BK-2: the shared fold-out (components/fold-out.tsx) draws its own arrow instead of the browser's marker, and turns it
+   down while its own <details> is open (the child combinator keeps a closed fold-out inside an open one pointing right). */
+details[data-fold] > summary { list-style: none; }
+details[data-fold] > summary::-webkit-details-marker { display: none; }
+details[data-fold][open] > summary > [data-fold-arrow] { rotate: 90deg; }

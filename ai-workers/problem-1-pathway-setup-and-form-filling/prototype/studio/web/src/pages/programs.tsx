@@ -13,7 +13,7 @@
 import * as React from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Info, LayoutGrid, List as ListIcon, ListTree, Plus, Search, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Info, LayoutGrid, List as ListIcon, ListTree, Plus, Search, X } from "lucide-react";
 import type { CatalogueLeaf, CatalogueResponse, CatalogueSection, SessionView } from "../../../contracts/programs";
 import { PATHWAY_TYPE_LABEL } from "../../../contracts/structure";
 import type { ChipStatus } from "../../../contracts/setup-checklist";
@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { StartSetupButton } from "@/components/start-setup";
 import { STATE_WORDS, STATUS_WORDS } from "../../../contracts/status-words";
 import { channelGroups } from "../../../contracts/forms";
+import { FoldArrow } from "@/components/fold-out";
 
 /** Where Back on a combination page returns to: this page's URL (with the opened combination) and its scroll position. */
 export const CATALOGUE_URL_KEY = "xr-catalogue-url";
@@ -428,7 +429,7 @@ function SectionHeader({ s, accent, shown, filtering, needsOnly, closed, onToggl
   return (
     <h2 id={`sec-${s.pathwayKey}`} className="rounded-lg border border-lv1-b bg-lv1-t py-1 pl-2 text-base" style={{ borderLeft: `4px solid ${pathwayAccent(accent)}` }} data-band>
       <button type="button" aria-expanded={!closed} onClick={onToggle} className="inline-flex items-center gap-2 rounded-md py-0.5 pr-2 text-left outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50">
-        {closed ? <ChevronRight className="size-4 text-text-muted" aria-hidden /> : <ChevronDown className="size-4 text-text-muted" aria-hidden />}
+        <FoldArrow open={!closed} className="size-4 text-text-muted" />
         <LevelMark level="pathway" tip={false} />
         <span className="font-semibold text-lv1">{s.label}</span>
         <span className="text-sm font-normal text-text-muted" data-live-count>{liveCount(s.live, s.combinations)}{filtering ? ` · ${shown} shown` : ""}</span>
@@ -442,7 +443,7 @@ function ProgramHeader({ p, closed, onToggle }: { p: ProgramGroup; closed: boole
   return (
     <h3 className="mb-2 mt-3 pl-1 text-sm" data-program-band>
       <button type="button" aria-expanded={!closed} onClick={onToggle} className="inline-flex min-h-7 items-center gap-2 rounded-md py-0.5 pr-2 text-left outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50">
-        {closed ? <ChevronRight className="size-4 text-text-muted" aria-hidden /> : <ChevronDown className="size-4 text-text-muted" aria-hidden />}
+        <FoldArrow open={!closed} className="size-4 text-text-muted" />
         <span className="font-semibold text-lv2">{p.label}</span>
         <span className="text-xs font-normal text-text-muted" data-live-count>{liveCount(p.live, p.combinations)}</span>
       </button>
@@ -609,7 +610,7 @@ function List({ groups, closed, onToggle, highlight, q, sort, filtering, needsOn
     <div role="row" data-group={key} className={cls} style={style}>
       <span role="rowheader" className="flex items-center">
         <button type="button" aria-expanded={!shut} onClick={() => onToggle(key)} className="inline-flex min-h-7 items-center gap-2 rounded-md px-2 py-0.5 text-sm outline-none hover:text-text-link focus-visible:ring-[3px] focus-visible:ring-ring/50">
-          {shut ? <ChevronRight className="size-4 text-text-muted" aria-hidden /> : <ChevronDown className="size-4 text-text-muted" aria-hidden />}{body}
+          <FoldArrow open={!shut} className="size-4 text-text-muted" />{body}
         </button>
       </span>
     </div>

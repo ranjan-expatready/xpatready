@@ -21,6 +21,7 @@ import { BlockedLine, ImpactPanel, RowAction, useUndoToast } from "@/components/
 import { ACTION_LABEL, RETURNED_LABEL, SAY, TIP, WAITING_LABEL, WHY } from "../../../contracts/lifecycle";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { FieldMapState } from "../../../contracts/form-library";
+import { FoldOut } from "@/components/fold-out";
 
 type Row = { code: string; title: string; type: "form" | "guide" | "checklist"; edition: string | null; /** C3.12 (K3, QA-148): IRCC's month for the edition, printed on it, else its canada.ca page; never the file's date. */ published?: string | null; published_from?: "printed" | "canada_page" | null; published_state?: "date" | "none" | "not_a_month"; /** The PDF's own date (#313), shown apart as "File saved". */ file_date?: string | null; file_date_state?: FileDateState; canada_updated: string | null; accepts: string | null; accepts_basis: string | null; accepts_quote: string | null; accepts_waiting: boolean;
   /** C3.12: the field map of its current edition (contracts/form-library.ts fieldMapState). */
@@ -370,7 +371,7 @@ function FormDrawer({ row, onClose, canAuthor }: { row: Row; onClose: () => void
         {row.form_page_url ? <p><a className="text-text-link underline" href={row.form_page_url} target="_blank" rel="noreferrer">{/\.pdf$/i.test(row.form_page_url) ? "Its file on IRCC's site (no form page)" : "Its page on canada.ca"}</a>{/\.pdf$/i.test(row.form_page_url) ? null : <> · checked {when(row.checked_at)}</>}</p> : <p className="text-text-muted">No canada.ca page recorded yet.</p>}
         {row.type === "form" ? <p data-field-map-panel={row.field_map.kind}>Field map: {row.field_map.words}<span className="block text-xs text-text-muted">{row.field_map.tip}</span></p> : null}
         {row.older_editions.map((e) => <p key={e.label} className="text-text-muted" data-kept-by><span className="font-medium text-text">Earlier edition {e.label.replace(`${row.code} `, "")}</span> · <span data-published-older>{e.published ? `published ${e.published} (${FROM[e.published_from ?? "printed"]})` : publishedText(null, e.published_state).replace(/^(N|I)/, (c) => c.toLowerCase())}</span>{e.file_date ? <> · file saved {e.file_date}</> : null} · {e.kept_by}</p>)}
-        <details><summary className="cursor-pointer text-text-muted">Details</summary><p className="mono break-all text-xs">File fingerprint (SHA-256): {row.fingerprint ?? "none"}</p></details>
+        <FoldOut summaryClassName="text-text-muted" summary="Details"><p className="mono break-all text-xs">File fingerprint (SHA-256): {row.fingerprint ?? "none"}</p></FoldOut>
       </section>
       <section className="mt-4 space-y-2 text-sm" aria-labelledby="fd-acc"><h3 id="fd-acc" className="font-semibold">What IRCC accepts</h3>
         <AcceptsCell r={row} />

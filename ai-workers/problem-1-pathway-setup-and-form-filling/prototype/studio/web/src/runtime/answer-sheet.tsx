@@ -18,6 +18,7 @@ import { Button, Field, Notice, Pill, Textarea } from "@/components/ui/controls"
 import { Skeleton } from "@/components/ui/skeleton";
 import { noRetryOnRefusal } from "./questionnaire";
 import { useFirm } from "./team";
+import { FoldOut } from "@/components/fold-out";
 
 type SheetAnswer = { label: string; fact: string; subject: string; person: string; row: number | null; value: unknown; copy_text: string; source: string; mark: string | null; to_confirm: boolean; why: string | null };
 type SheetSection = { key: string; title: string; named?: false; version: string; entered: { at: string; by: string } | null; out_of_date: boolean; answers: SheetAnswer[]; waiting: { fact: string; subject: string; person: string; label: string }[];
@@ -131,10 +132,9 @@ function SectionCard({ n, x, nameOf, item, caseId, readOnly }: { n: number; x: S
         </div>
       ) : <p className="px-4 py-3 text-[13px] text-text-muted">No answer to type in this section{x.waiting.length ? " yet" : ""}.</p>}
       {x.waiting.length ? (
-        <details className="border-t border-border px-4 py-2 text-[13px]" open data-waiting>
-          <summary className="cursor-pointer font-medium">Still to answer or confirm ({x.waiting.length})</summary>
+        <FoldOut className="border-t border-border px-4 py-2 text-[13px]" open data-waiting summaryClassName="font-medium" summary={<>Still to answer or confirm ({x.waiting.length})</>}>
           <ul className="mt-1 list-disc space-y-0.5 pl-5 text-text-muted">{x.waiting.map((w) => <li key={`${w.subject}|${w.fact}`}>{w.label} <span className="whitespace-nowrap">· {w.person}</span></li>)}</ul>
-        </details>
+        </FoldOut>
       ) : null}
       <EnteredTick x={x} nameOf={nameOf} item={item} caseId={caseId} readOnly={readOnly} />
     </li>
