@@ -1,6 +1,6 @@
 # qa re-score of C6.17 after #1477 (QA-375's fix, P-444), main 66e74115e, 10 Nov 2026
 
-**Verdict (fresh Opus reader that ran nothing, P-303; `verdict.md`): VERDICT_LINE** US$0, live AI off. Cloud qa lane, asked by the tech lead (Lead 7, series 2).
+**Verdict (fresh Opus reader that ran nothing, P-303; `verdict.md`): gate A PASS · QA-375 closed · C6.17 Works (was Partial).** P-339 is met by nightly run 42759023740, job 129640099845, on main's head; no open Blocker, Critical or Major names C6.17. US$0, live AI off. Cloud qa lane, asked by the tech lead (Lead 7, series 2).
 
 ## Runs
 * **GitHub's runners (P-339):** nightly run **42759023740**, dispatched by the tech lead (workflow_dispatch, main, head **66e74115e**, data=checkpoint). Job **129640099845** "packs (C6.17)" logged "C6.17.test.ts on the checkpoint: exit 0, **47/47 passed** (156 s: copy 4, Load the configured checkpoint 75, run 77)", then "Gate B: passed". Conclusion: success. The excerpt is in `github-run-42759023740.txt`.
@@ -26,6 +26,13 @@ The checkpoint was loaded through Demo › Load (116.2 s). Every case, upload an
 * **New: QA-382 · UX · Minor:** "On file from Study permit … check it" stays after the new stage's line has its own file (#1477's review m2, unlogged until now). Check `tests/qa/check_qa382_on_file_after_own_upload.ts` (1/2 today).
 * **Still open, each re-checked on this main (1/2, exit 1):** QA-370, QA-371, QA-372, QA-373, QA-374 (all Minor). Also QA-310 (Minor).
 * **Totals open on C6.17:** 0 Blocker · 0 Critical · 0 Major · 7 Minor.
+
+## From the reader, not logged as rows
+* **A possible Minor, from reading the code only:** document files are matched by person and document type, not by stage (`docsOf` in `case-checklist.ts`; the step that replaces an older file on upload, `case-checklist.ts:264`, `case-documents.ts:299`). If two stages of a route shared a document type, the new stage could show the earlier stage's file as its own, and a new upload could mark the ended stage's file as no longer current. On the checkpoint the two stages' passport document types differ (passport_information_page_copy, passport_or_travel_document_information_page_photocopy), so this cannot be reproduced here, and it is not logged until a reproduction exists. For the forms lane to look at with P-444's follow-up.
+* **Record gaps the reader named:**
+  * The page-error and 5xx claim now has its logs: `walk-log-r2.txt` and `walk-log-r3.txt`. Part R2's log ends in a crash at its last steps, a locator using stage 1's line label; part R3 redid those steps.
+  * There is no `walk/R06`: R2 stopped before it, and R10 shows the same panel.
+  * The excerpt of the Not applicable 409 in `underneath-documents.txt` was cut to 400 characters by qa's command. The code and the words match the upload's 409.
 
 ## Not run
 * c8 coverage, `graph.mjs`, the full suites, a headed pass, and the shared demo (none runs in this container).
