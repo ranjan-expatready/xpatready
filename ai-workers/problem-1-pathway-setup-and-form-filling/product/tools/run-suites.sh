@@ -249,7 +249,7 @@ recopy() { zsh "$S/tools/isolated.sh" "$1" "$2" stop >/dev/null 2>&1
 #   * stdin is /dev/null: a suite, its tsx parent or anything they start never waits on a stdin the runner was handed
 #     (an open pipe: `... | bash run-suites.sh`, a lane's terminal; GitHub's runner already gives a step none);
 #   * timeout -k: a suite (or tsx, which relays the TERM to its child) that ignores the TERM at the limit is killed
-#     SUITES_KILL_AFTER (30) s later; a plain timeout waits for it for ever, until the part's 45-minute job limit, with no
+#     SUITES_KILL_AFTER (30) s later; a plain timeout waits for it for ever, until the part's job limit (75 min in ci.yml, #1491), with no
 #     row and no log;
 #   * one second before the limit its processes (timeout's process group: pid, parent, state, wait channel, age,
 #     command; on Linux each one's open files) are written to its log under a STOP line, so a hang says where it waits.
