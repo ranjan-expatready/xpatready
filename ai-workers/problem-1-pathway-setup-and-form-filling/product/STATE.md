@@ -22,6 +22,7 @@ updated: 2026-11-10 22:47 IST by **Lead 9 (series 2, local_d3d09334-…)** (M3 2
 Terminal tabs c6 (caffeinate 4 h, from 15:2x) and c7 (open) are Lead 8's; leave c6 running.
 
 ## Tonight (P-451, from 22:0x IST 10 Nov)
+**Founder's words needed (each refused by the classifier for the Lead, 22:5x IST):** (1) "set SHARDS 8" (repo variable, 6 overrides #1502's default); (2) "ready 1502" (draft → ready); (3) "label 1503" (Lead's records PR, Self-Approval). Never route these through a lane (7 Nov rule).
 | Lane | Session | Row | Next |
 |---|---|---|---|
 | pipeline | local_8494de44 `pipeline-ci-speed` | measured (3,855 runs: batch median 43.7 min, p90 55.3; 139 of 400 suites had no timing); **#1502** 8 shards (sim: batch ~44 → ~34 min, +2% machine minutes, free runners) → (4a) next | **Founder: repo variable SHARDS=6 overrides; Lead's change to 8 refused by the classifier 22:5x IST: ask the founder to run `gh variable set SHARDS --body 8` or say "set SHARDS 8"**; Lead reads the diff before labelling (P-423) |
