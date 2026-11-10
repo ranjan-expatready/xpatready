@@ -1,0 +1,7 @@
+exit=0
+PASS  QA-361 setup: the finished story is loaded — 202
+PASS  QA-361 setup: the Paper IMM 5257 copy of the story's Paper person exists — {"person":"Child 18 or over (Sample)","caseId":"616402e1-4bca-4d9b-b726-f57f218d1df8","subject":"d068cfac-e274-4197-91b
+PASS  QA-361-1: every phone block written "Canada/US" carries its North American number parts (else Adobe's Validate requires them and the case holds no such number) — [{"name":"main telephone","canad
+PASS  QA-361-2: no person step says "The number is already written" for a Canada/US block with no number parts — {"copyFound":true,"sayWritten":0,"haveParts":0}
+4/4 passed
+

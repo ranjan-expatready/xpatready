@@ -1,0 +1,62 @@
+[header] Readiness: Not ready · 25% (lowest: Visitor visa: Sample Client A)
+[ready-to-file lines before] 8: findings 0
+[case review panel] Review Stand-in Checks across the facts and forms. Each finding is a warning: decide it here, or pass it with a reason on Ready to file. Open Review Add finding 0 open · 0 acknowledged · 0 resolved Rules checks run on every form at every read (US$0). The independent AI review of a filled form runs from the Review page: Saved replays its checked run at US$0. No findings: the facts and forms agree so far.
+[shot] 01-case-review-panel-1440.png
+[h1] Review · ACC-mw9mrdrw-zevb
+[person / form] Sample Client A / IMM 5257 (forms: IMM 5257, IMM 5476, IMM 5707)
+[Saved row] disabled=false · Saved US$0.00 Replays the checked saved review of IMM 5257 (09-2023), recorded on Nov 9, 2026, for exactly these answers (49 form fields). Nothing is sent.
+[Live row] disabled=true · Live about US$1.06, at most US$4.80 Live is off on this copy. A live review needs approval first, with its cost stated. Use Saved (US$0).
+[Live radio disabled] true
+[button] Run review (Saved, US$0.00)
+[shot] 02-run-card-1440.png
+[axe review page before run] 0 violations
+[sideways scroll review page] none
+[result] Review run Saved: 4 new findings. US$0.00. Each finding is a warning: decide it here, or pass it with a reason on Ready to file.
+[shot] 03-after-saved-run-1440.png
+[findings rows] 4
+    open · reasons 2 · quote true · MAJOR AI Replayed Low The two AI rounds disagree; a person decides: Round 1: MAJOR · The applicant applies from India, which differs from the country of residence (Afghanistan), but no status or status dates in India are given on the sheet. Round 2 (blind checker): MINOR · Applying from India (not the country of residence, Afghanistan) but no immigration status or status dates in India are given i
+    open · reasons 2 · quote true · INFO AI Replayed Low The two AI rounds disagree; a person decides: Round 1: raised nothing on this fact. Round 2 (blind checker): INFO · Answer is keyed as 'previously applied to Canada' while the box's caption repeats the refusal question; confirm the answer reflects whether the applicant previously applied to enter or remain in Canada. The form says “No”Show on the form IMM 5257 · Have you appli
+    open · reasons 2 · quote true · MAJOR AI Replayed High Both AI rounds raised it, and the rules found its quote: Round 1: MAJOR · The current marital status says Annulled Marriage, which implies a past marriage. Yet the question 'Have you previously been married or in a common law relationship?' is answered No. Round 2 (blind checker): MAJOR · Current marital status says Annulled Marriage, which implies a prior marriage, but 'Hav
+    open · reasons 2 · quote true · MINOR AI Replayed High Both AI rounds raised it, and the rules found its quote: Round 1: MINOR · The current occupation row ends in 2015-01, the same month it starts (From 2015-01), so the period lasts zero months; for a current activity the end date should likely be blank or later. Round 2 (blind checker): MINOR · The current occupation row ends in 2015-01, the same month it starts (From 2015-01)
+[counts] 4 open · 0 acknowledged · 0 resolved
+[shot] 04-findings-1440.png
+[AI rows] 4 (High 2, Low 2); every Low has 2 reasons: true; every AI row says Replayed: true
+[show on the form] 1 line(s) highlighted: Question 9 A. Is the country or territory from where you are applying the same as your current country or territory of residence? India (quoted by the finding shown) · pressed=true
+[shot] 05-show-on-the-form-1440.png
+[open AI rows before deciding] 4
+[acknowledge with an empty reason] Acknowledge this finding MAJOR · AI · “India” Reason Give a reason of at least 3 characters: it is kept with the finding. Cancel Acknowledge
+[shot] 06-acknowledge-empty-refused-1440.png
+[acknowledged row] acknowledged · MAJOR AI Replayed Low The two AI rounds disagree; a person decides: Round 1: MAJOR · The applicant applies from India, which differs from the country of residence (Afghanistan), but no status or status dates in India are given on the sheet. Round 2 (blind checker): MINOR · Applying from India (not the country of residence, Afghanistan) but no immigration status or status dates in India are given in the same row. The form says “India”Show on the form IMM 5257 · Country or territory you are applying from Acknowledged by Case officer on Nov 9, 07:04 p.m.: “Checked the passport page against the form: as printed (Sample, qa gate A).” Acknowledged
+[shot] 07-acknowledged-1440.png
+[dismissed row] (row gone from the default list)
+[counts after deciding] 2 open · 1 acknowledged · 0 resolved · 1 dismissed
+[open AI rows after deciding] 2
+[shot] 08-after-deciding-1440.png
+[axe review page after run] 0 violations
+[header after] Readiness: Not ready · 33% (lowest: Visitor visa: Sample Client A)
+[finding lines on Ready to file] 2
+    warning · MAJOR finding on IMM 5257: the AI review (High) flags what the form says, “Annulled Marriage”
+    warning · MINOR finding on IMM 5257: the AI review (High) flags what the form says, “2015”
+[finding lines that block] 0
+[ready-to-file summary] Ready to file | | What stands before each filing is Ready to file, by who owes it. Only a barcode form without its validated copy read back blocks; every other line is fixed, or passed with a written reason. | | Send for review | Visitor visa: Sample Client A
+[shot] 09-ready-to-file-findings-1440.png
+[shot] 10-ready-to-file-1440.png
+[pass with an empty reason] Why is this passed? Say why this warning is passed (at least 5 characters, with words). Pass Cancel
+[shot] 11-pass-empty-refused-1440.png
+[line after pass] (line no longer open)
+[finding lines left] 1
+[ready-to-file summary after pass] Ready to file | | What stands before each filing is Ready to file, by who owes it. Only a barcode form without its validated copy read back blocks; every other line is fixed, or passed with a written reason. | | Send for review | Visitor visa: Sample Client A
+[shot] 12-ready-to-file-after-pass-1440.png
+[axe case page] 0 violations
+[sideways scroll case page] none
+[non-GET requests the page sent] 8
+    POST /api/runtime/cases/e70fd108-59da-41f4-bfe4-9b6f12f0ed7e/review-runs/plan {"forms":["IMM 5257"],"subject":"d345cc21-3dba-44be-b839-76dd4e807ef1"}
+    POST /api/runtime/cases/e70fd108-59da-41f4-bfe4-9b6f12f0ed7e/review-runs {"forms":["IMM 5257"],"subject":"d345cc21-3dba-44be-b839-76dd4e807ef1","mode":"replay","planSha256":"1e3b522e20433477a9c4bee37968cdf265680dd63f1741d61e1c046d43d
+    POST /api/runtime/cases/e70fd108-59da-41f4-bfe4-9b6f12f0ed7e/review-runs/plan {"forms":["IMM 5257"],"subject":"d345cc21-3dba-44be-b839-76dd4e807ef1"}
+    POST /api/runtime/findings/b39f7938-b532-4f5c-8e3a-4951635e1ca0/acknowledge {"reason":""}
+    POST /api/runtime/findings/b39f7938-b532-4f5c-8e3a-4951635e1ca0/acknowledge {"reason":"Checked the passport page against the form: as printed (Sample, qa gate A)."}
+    POST /api/runtime/findings/b7d0dc81-96ae-444b-9d04-a58fd2f2eb12/dismiss {"reason":"Does not apply: the client has no other travel document (Sample, qa gate A)."}
+    POST /api/runtime/filings/03f76571-43df-4b89-9c31-1df35fa7e98a/warnings/finding/pass {"reason":"","key":"finding|cad0bfa1-276d-4c9e-abe2-c39175d2171c"}
+    POST /api/runtime/filings/03f76571-43df-4b89-9c31-1df35fa7e98a/warnings/finding/pass {"reason":"The AI finding was checked by the case officer; the form is right as printed (Sample, qa gate A).","key":"finding|cad0bfa1-276d-4c9e-abe2-c39175d2171
+[live requests sent] 0
+[page errors / 5xx] none
