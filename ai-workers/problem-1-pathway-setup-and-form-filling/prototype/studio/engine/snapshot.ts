@@ -196,6 +196,9 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
   for (const m of fieldMaps) for (const e of m.entries) if (e.fact) used.add(e.fact);
   const conditionFields = (c: unknown) => { if (c) for (const m of JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)) used.add(m[1]); };
   for (const c of [...forms.map((f) => f.predicateJson), ...effReq.map((r) => r.predicateJson), ...effRules.map((r) => r.predicateJson)]) conditionFields(c);
+  // M3-S2: a filing a "Who can be in this application" line adds reads the person's answers by its rule: those facts
+  // and their questions travel with the release like any other rule's.
+  for (const p of (Array.isArray(comp.participants) ? comp.participants : []) as { addsFiling?: { condition?: unknown } | null }[]) conditionFields(p?.addsFiling?.condition);
   // Lead check L5: a minimum age is decided by each person's date of birth, so its question travels with the forms.
   if (forms.some((f) => f.minAge)) used.add("person.date_of_birth");
   // QA-262: only the questions this combination places read in their conditions, repeated until nothing new is placed. A

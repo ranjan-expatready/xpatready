@@ -4,6 +4,7 @@
 // answer type, and the rules write one `field` proposal through the one door (insertProposals). Its source is the rule
 // (key and sentence), its key is the one the rule already reads (never typed), and a second person approves it like
 // any library item (proposals.ts LANDERS.field). No model call, US$0. Every value stays Sample (AGENTS rule 4).
+import { addedFilingRules } from "../../engine/runtime/added-filings.ts";
 import { createHash } from "node:crypto";
 import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
@@ -80,8 +81,7 @@ export function rulesOf(s: Snapshot): RuleRef[] {
   for (const r of s.rules) if (r.when) out.push({ kind: "rule", key: r.id, sentence: say("rule", r.id, [r.when_plain, r.then].filter(Boolean).join(", then ")), tree: r.when });
   for (const c of s.checks) if (c.condition && typeof c.condition === "object") out.push({ kind: "check", key: c.id, sentence: say("check", c.id, c.message), tree: c.condition });
   // M3-S2: the rule on a "Who can be in this application" line that adds a filing (keyed by the line's role).
-  for (const l of (s.combination.participants ?? []) as { role: string; addsFiling?: { filing?: string; condition?: unknown; conditionPlain?: string } | null }[])
-    if (l.addsFiling?.condition) out.push({ kind: "filing", key: `adds_filing.${l.role}`, sentence: say("filing", `${l.addsFiling.filing ?? "filing"} (${l.role.replace(/_/g, " ")})`, l.addsFiling.conditionPlain), tree: l.addsFiling.condition });
+  for (const r of addedFilingRules(s)) out.push({ kind: "filing", key: r.key, sentence: say("filing", r.filing, r.plain), tree: r.tree });
   return out;
 }
 

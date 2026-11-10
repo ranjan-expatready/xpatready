@@ -8,7 +8,13 @@ import { lineCondition, type Known } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
 import type { Participant } from "./case.ts";
 
-type Line = { role: string; addsFiling?: { filing?: unknown; condition?: unknown; fee?: unknown } | null };
+type Line = { role: string; addsFiling?: { filing?: unknown; condition?: unknown; conditionPlain?: unknown; fee?: unknown } | null };
+/** The rules of a release's lines that add a filing, keyed `adds_filing.<role>`, for the rules a fact can be added for
+ *  (C3.6, api/src/rule-facts.ts rulesOf) and the facts that travel with the release. */
+export function addedFilingRules(s: Pick<Snapshot, "combination">): { key: string; filing: string; plain: string; tree: unknown }[] {
+  return ((s.combination?.participants ?? []) as Line[]).filter((l) => l?.addsFiling?.condition && typeof l.addsFiling.condition === "object")
+    .map((l) => ({ key: `adds_filing.${l.role}`, filing: `${typeof l.addsFiling!.filing === "string" ? l.addsFiling!.filing : "filing"} (${l.role.replace(/_/g, " ")})`, plain: typeof l.addsFiling!.conditionPlain === "string" ? l.addsFiling!.conditionPlain : "", tree: l.addsFiling!.condition }));
+}
 /** Per person (subject id), the filing their line adds now, with the fee line that charges it. A rule not yet answered
  *  (cannot tell) adds nothing until it is answered: the question stays open on the questionnaire. Only a person who
  *  applies on the case adds one (a person not travelling files nothing). */
