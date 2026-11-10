@@ -17,15 +17,19 @@ updated: 2026-11-10 22:47 IST by **Lead 9 (series 2, local_d3d09334-…)** (M3 2
 3. **Founder's words needed** (classifier refused the Lead 22:5x): "set SHARDS 8", "ready 1502", "label 1503" (records PR #1503, Self-Approval). Never route through a lane.
 4. **Morning:** Bake plan's four questions one at a time (Q1 pace: 3 lanes on plan, recommended); BK-14 placement; then shape BK rows.
 5. Owed: printed pages of Languages / Details of visit / Background Information for #1492 (validated file `.tools/solution-1-prototype/validated-imm5257/paper-9c00dbfc-validated.pdf`).
-Standbys: **Lead 11 `local_aa5c12aa-7202-4cec-8459-10f906f7727b`** only; start a second at the founder's next typed turn.
+Standbys: **Lead 11 `local_aa5c12aa-7202-4cec-8459-10f906f7727b`**, **Lead 12 `local_ff0a1d2d-7d86-42f4-8234-47fbb72cfc8a`** (started 23:2x, P-286).
 
-## Tonight (P-451, from 22:0x IST 10 Nov)
-**Founder's words needed (each refused by the classifier for the Lead, 22:5x IST):** (1) "set SHARDS 8" (repo variable, 6 overrides #1502's default); (2) "ready 1502" (draft → ready); (3) "label 1503" (Lead's records PR, Self-Approval). Never route these through a lane (7 Nov rule).
+## Tonight (P-453, P-454, from 23:2x IST 10 Nov): plan `design/next-2-days-2026-11-11.md`
+**No trip-wire at 75% any more (P-454):** run to 93% weekly, every lane pushed (P-431). **Founder runs from his terminal** (refused for the Lead even with his answer): `gh variable set SHARDS --body 8`, `gh pr ready 1502`, `gh pr edit 1503 --add-label "review: approved"` (Lead's `Reviewer: Approve` comment on #1503 posted 23:2x). Never route through a lane.
 | Lane | Session | Row | Next |
 |---|---|---|---|
-| pipeline | local_8494de44 `pipeline-ci-speed` | measured (3,855 runs: batch median 43.7 min, p90 55.3; 139 of 400 suites had no timing); **#1502** 8 shards (sim: batch ~44 → ~34 min, +2% machine minutes, free runners) → (4a) next | **Founder: repo variable SHARDS=6 overrides; Lead's change to 8 refused by the classifier 22:5x IST: ask the founder to run `gh variable set SHARDS --body 8` or say "set SHARDS 8"**; Lead reads the diff before labelling (P-423) |
-| runtime | local_32caa215 `runtime-engine-core` | B164 → M3-S1 (warm) | sole holder of schema / case-prepare tonight |
-| Lead | this session | **Bake plan draft done** (`design/bake-plan-2026-11-10.md`, 40 + 15 sessions, exits E1-E4, ~24 Nov); morning: ask its 4 questions one at a time, Q1 first (pace: 3 lanes on plan, recommended) | hourly report IST; trip-wire 75% weekly; caffeinate tab c4 14 h |
+| engine (baton: schema + case-prepare) | local `local_db9f4a97` (founder started Lead 9's card) | M3-S1 | warm M3-S2 (P-454 (3)); told by message |
+| forms | cloud "forms: M3-S5 …" | M3-S5 | warm BK-10 (told by message) |
+| screens | cloud "screens: BK-2 …" | BK-2 fold-out arrows | BK-3 needs a new session (founder's typed turn) |
+| qa | cloud "qa: BK-1 …" | BK-1 journey sort + baseline counts (records PR) | ends at label |
+| pipeline | local `local_8494de44` | #1502 (draft, Approve bccf34ef) waits for the founder's commands; #1504 in Opus review: Lead reads the CI-tool diff before labelling (P-423) | then (3) auto-dispatch, (4b) |
+| duplicate | cloud "runtime: M3-S1 …" [15c341] | told to STOP 23:2x (one session per row) | check it pushed nothing; archive |
+| Lead 10 | this session | checks :13/:43; hourly report IST | morning: founder questions one at a time: expert booking, internal data, co-founder walk dates, Fable's use (does it count toward all-models?) |
 
 ## M3: 29 of 29 Works (21:1x IST 10 Nov, qa #1499 fresh reader; C7.5 + C10.2 on nightly 42841699712, main 87212b14d)
 **Next (P-450):** detailed milestone plan with the founder, one question at a time (A5, A7); then the Bake. **#1463** superseded: qa's close refused, waits for the founder's named word.
@@ -43,7 +47,7 @@ Standbys: **Lead 11 `local_aa5c12aa-7202-4cec-8459-10f906f7727b`** only; start a
 | A4 | 12:3x run tests smartly, no blind testing, no quality cut | answered: PR runs targeted, queue full by design until (4a) proven; approval to come with numbers |
 | A5 | 12:4x finish M3; then detailed milestone plan with counted lists before the Chrome extension; internal production grade | P-450; plan after the 29 |
 | A6 | approvals one at a time; tell him when to press Demo › Load the finished story | at C10.2 merge (#1482) |
-| A8 | 23:0x (10 Nov, Lead 10) plan the next 2 days high level + hourly; best quality and speed; sequence, parallel lanes, models (Fable allowed); one question at a time, no assumptions | pace ruled P-453 (3 lanes, plan only); more questions in progress; hourly plan to follow |
+| A8 | 23:0x (10 Nov, Lead 10) plan the next 2 days high level + hourly; best quality and speed; sequence, parallel lanes, models (Fable allowed); one question at a time, no assumptions | P-453, P-454 ruled; plan `design/next-2-days-2026-11-11.md`; open: expert booking, internal data, co-founder walk dates, Fable's use |
 | A7 | Fable's questions 16-18 (internal use on what data; employer LMIA side in?; Chrome extension in?) and booking the immigration expert | ask after the 29 |
 
 ## For the founder (P-390)
@@ -64,5 +68,5 @@ Open F2, F8, F14, F15, F16, F17, F18, F19 (none blocks work), word for word in `
 6. **Records:** on `lead/2026-11-07-lead31` from the scratch worktree `$TMPDIR/lead31-merge`; records PR not opened yet (once a day, P-336).
 
 ## Leads, in order
-**Series 2 (P-433, from 9 Nov 17:48 IST; numbers restart; the current Lead is the one `current_lead:` names):** **Lead 10 (series 2, local_556afbc8-71a2-4cb9-b47f-ab86a53460df)** (from 22:54 IST 10 Nov) · Lead 9 (series 2, local_d3d09334-4567-4aad-9e1b-65163549d7c7) (18:28-22:54 IST 10 Nov, ended at ~318k, P-446) · Lead 8 (series 2, local_62177923-2726-40ba-a539-da2173222e38) (11:55-18:28 IST 10 Nov, ended at ~315k) · Lead 7 (series 2, local_6426aab1-6fa8-47c0-b228-f03365d5cc4a) (08:13-11:55 IST 10 Nov, ended at ~290k) · Lead 6 (series 2, local_8c1fbca5-d3cf-4bf4-8620-9bdb3c9564ca) (07:35-08:13 IST 10 Nov, ended at ~240k) · Lead 5 (series 2, local_6e87a775-b6a8-4a50-8fa7-ad3b03548af6) (00:48-07:35 IST 10 Nov) · Lead 4 (series 2, local_48335a53-6041-4416-9442-c8814319aa84) (23:44 IST 9 Nov-00:48 IST 10 Nov, ended at ~240k, P-440) · Lead 3 (series 2, local_81ca34d8-6a97-4c29-9fd1-471e42cf7f6f) (22:35-23:45 IST 9 Nov, ended at ~255k, P-440) · Lead 2 (series 2, local_a07b26f2-302e-4c73-bd1c-ca20dd9e8a79) (20:30-22:35 IST 9 Nov, ended at ~370k, P-440) · Lead 1 (series 2, local_f135f805-00be-49fc-ac67-df94b57dbc86) (17:48-20:32 IST 9 Nov, ended at ~400k). Standby: Lead 11 (local_aa5c12aa); start a second at the founder's next typed turn (P-286).
+**Series 2 (P-433, from 9 Nov 17:48 IST; numbers restart; the current Lead is the one `current_lead:` names):** **Lead 10 (series 2, local_556afbc8-71a2-4cb9-b47f-ab86a53460df)** (from 22:54 IST 10 Nov) · Lead 9 (series 2, local_d3d09334-4567-4aad-9e1b-65163549d7c7) (18:28-22:54 IST 10 Nov, ended at ~318k, P-446) · Lead 8 (series 2, local_62177923-2726-40ba-a539-da2173222e38) (11:55-18:28 IST 10 Nov, ended at ~315k) · Lead 7 (series 2, local_6426aab1-6fa8-47c0-b228-f03365d5cc4a) (08:13-11:55 IST 10 Nov, ended at ~290k) · Lead 6 (series 2, local_8c1fbca5-d3cf-4bf4-8620-9bdb3c9564ca) (07:35-08:13 IST 10 Nov, ended at ~240k) · Lead 5 (series 2, local_6e87a775-b6a8-4a50-8fa7-ad3b03548af6) (00:48-07:35 IST 10 Nov) · Lead 4 (series 2, local_48335a53-6041-4416-9442-c8814319aa84) (23:44 IST 9 Nov-00:48 IST 10 Nov, ended at ~240k, P-440) · Lead 3 (series 2, local_81ca34d8-6a97-4c29-9fd1-471e42cf7f6f) (22:35-23:45 IST 9 Nov, ended at ~255k, P-440) · Lead 2 (series 2, local_a07b26f2-302e-4c73-bd1c-ca20dd9e8a79) (20:30-22:35 IST 9 Nov, ended at ~370k, P-440) · Lead 1 (series 2, local_f135f805-00be-49fc-ac67-df94b57dbc86) (17:48-20:32 IST 9 Nov, ended at ~400k). Standbys: Lead 11 (local_aa5c12aa), Lead 12 (local_ff0a1d2d) (P-286).
 **Series 1: Leads 1 to 41, before 9 Nov 17:48 IST**, never renamed or renumbered: the full list, word for word, is in `history/STATE-2026-11-09-2130-lead2s2.md` ("Leads, in order").
