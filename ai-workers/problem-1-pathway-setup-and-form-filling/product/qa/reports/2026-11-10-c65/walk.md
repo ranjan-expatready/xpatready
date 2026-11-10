@@ -53,7 +53,7 @@ The quoted words below were read from the page. Live AI was off, and no priced b
   * "5. Details of visit to Canada": "Funds available for the stay, in Canadian dollars · The application · 14200 · **Case officer**" (11c).
   * Both values read from the documents reach the next step, each with Copy.
   * **Noted (QA-379):** the funds' Source says "Case officer", although the value was read from the document.
-* "Open answer sheet: IMM 5257 for Sample Spouse A" (12a, 12b): the funds 14200 are there. Client A's marriage date is under "Still to answer or confirm" (QA-380). The full text of both sheets is in `sheet-client.txt` and `sheet-spouse.txt`.
+* "Open answer sheet: IMM 5257 for Sample Spouse A" (12a, 12b): the funds 14200 are there (12b). Client A's marriage date is under "Still to answer or confirm" (QA-380). That is in `sheet-spouse.txt`, the sheet's full text; screenshot 12b does not show it (the fresh reader's note). The full text of both sheets is in `sheet-client.txt` and `sheet-spouse.txt`.
 
 ## Headless replay (read-only): `replay-headless.txt`, 18/18, exit 0
 The three drawers, in their Used and read-by-a-person states, at 400, 1024 and 1440 px, twice each:

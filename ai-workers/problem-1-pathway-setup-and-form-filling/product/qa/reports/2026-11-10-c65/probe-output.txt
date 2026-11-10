@@ -24,3 +24,6 @@ relationship.union_start_date|CLIENT_LEVEL|RELATIONSHIP
 ## IMM 5257 answer sheet for Client A, GET /runtime/items/<id>/answer-sheet (fact | subject | source | value)
 relationship.union_start_date | 426e6688-b0f2-4a68-a4ad-8dcbb2b214d5 | Document | 2019-06-14
 case.funds_available_cad | case | Case officer | 14200
+
+## QA-353 retest, 10 Nov ~07:53 IST: POST …/sections/details_of_visit_to_canada/fill-from-documents with Client A's subject (the proof of funds is on Client A's line)
+{"section":"details_of_visit_to_canada","subject":"703e201e-31de-4d71-ab8a-4b408fef7814","proposals":[],"reviews":[],"unreadable":[],"not_read":[],"cost_usd":0,"waiting_for_cost":[],"message":"No document of this person can give a fact of this section yet: upload it on the person's checklist line."}

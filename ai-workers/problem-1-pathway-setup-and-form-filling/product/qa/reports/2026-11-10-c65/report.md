@@ -59,16 +59,19 @@ Release v2's nine checklist types, each with `supplies_facts` and `reader_profil
 
 The letter of invitation is a case-level kind read by AI vision: the pack's C6.5-19b and -20 are green.
 
-**On P-437's wording, no document that offers "Fill this from documents" is left unread.** The birth certificate was QA-352's third named document. It is an identity document on the code list (`engine/identity-documents.ts`; P-134, founder: "AI never reads identity documents"), so a person reads it. The Lead records the same in ASSUMPTIONS C11 (Lead's branch): "A minor's birth certificate stays read by a person (P-134 identity list)". P-133 says "foreign civil records by AI vision". Against that, P-134, a founder decision, is the stricter rule and is what is built. The child's date of birth comes from the child's passport by rules. See Question 2.
+Every type on the release is listed (9; `scripts/coverage.sh` is the query, and its output was redone in full after the reader's note).
+
+**On P-437's wording, no document that offers "Fill this from documents" is left unread.** The birth certificate was QA-352's third named document. It is an identity document on the code list (`engine/identity-documents.ts`; P-134, founder: "AI never reads identity documents"), so a person reads it. The Lead records the same in ASSUMPTIONS C11 (Lead's branch): "A minor's birth certificate stays read by a person (P-134 identity list)". P-133's own page names "birth, marriage and divorce certificates" under AI vision (`decisions/P-133-document-reading-technology.md` line 17; the reader found this), so P-133 and P-134 really disagree. P-134 is the stricter rule and is what is built. **QA-381** (Conflict · Minor) puts the question to the founder. The child's date of birth comes from the child's passport by rules. See Question 2.
 
 ## Bugs
-* **QA-352 (Gap · Major): proposed closed.** Proof of funds and the marriage certificate are read and walked by screens. The birth certificate is read by a person, per P-134 and C11. The reader decides.
+* **QA-352 (Gap · Major): closed** (the reader: "close"; moved word for word to `history/qa-bugs-closed-2026-11-10-c65.md`). Proof of funds and the marriage certificate are read and walked by screens. The birth certificate is read by a person, per P-134 and C11.
 * **New QA-379** (Bug · Minor, C7.3, forms): the answer sheet's Source for every application-level answer is "Case officer". The funds read from the document show "Case officer" (11c). The cause is read in the code (`case-prepare.ts` ~875, the subject "case" against the case subject's id).
 * **New QA-380** (Gap · Minor, C6.5, runtime): the couple's marriage certificate, read once, gives the marriage date for Spouse A only. Client A's question stays unanswered, Spouse A's IMM 5257 still asks it, and Client A's drawer says "Nothing to read here" (10, 12b, 13). On this release the fact is person-scoped.
-* **QA-353 (UX · Minor): seen again, unchanged** (API, Client A's subject on the application's section).
+* **QA-353 (UX · Minor): seen again, unchanged** (API, Client A's subject on the application's section; the response is now in `probe-output.txt`, after the reader's note).
+* **New QA-381** (Conflict · Minor, for the founder through the Lead): P-133's page puts birth certificates under AI vision, while P-134 forbids AI on identity documents; what is built follows P-134. It does not hold C6.5.
 * **QA-348 (C7.3):** not retested; it is the same column as QA-379.
 
-That makes **0 Blocker · 0 Critical · 0 Major · 2 Minor new**.
+That makes **0 Blocker · 0 Critical · 0 Major · 3 Minor new** (QA-379, QA-380, QA-381); one Major closed (QA-352).
 
 ## Coverage
 Not run this round: no c8 or graph. A records round on one capability; the suites ran on GitHub for #1444's merge.
@@ -82,7 +85,7 @@ Not run this round: no c8 or graph. A records round on one capability; the suite
 
 ## Questions for the Lead
 1. **Nightly:** please dispatch `nightly.yml` on main with capabilities=C6.5 and data=checkpoint (asked on #1475). The row moves to Works only with that run id in it (P-339).
-2. **P-437 against P-134 (the birth certificate):** P-437 lists "MRZ rules, AI vision" as readers. P-134 forbids AI on identity documents, and the code and ASSUMPTIONS C11 say a person reads the minor's birth certificate. qa reads P-437 as met: the certificate supplies no fact, so it offers no "Fill". Please confirm in DECISIONS or C11 on main. P-133's "foreign civil records by AI vision" against P-134's identity list is a founder pair (AGENTS rule 2).
+2. **P-437 against P-134 (the birth certificate), QA-381:** P-437 lists "MRZ rules, AI vision" as readers. P-134 forbids AI on identity documents, and the code and ASSUMPTIONS C11 say a person reads the minor's birth certificate. qa and the reader read P-437 as met: the certificate supplies no fact, so it offers no "Fill". P-133's page names birth certificates under AI vision, which is a founder conflict (AGENTS rule 2). Please take QA-381 to the founder, and bring P-437 and C11 to main with the Works row.
 3. **QA-380:** should one couple's certificate fill both spouses' marriage date (the supply "about: couple"), or should the configured checkpoint mark the date Household (C3.16)? qa does not hold C6.5 on it.
 4. Seen, not filed: typing only the Day of a date and saving stores `"--20"` as a DECLARED answer, flagged on screen. Is keeping a malformed date as an answer intended?
 
@@ -90,5 +93,15 @@ Not run this round: no c8 or graph. A records round on one capability; the suite
 * *Later · Capability:* a release check that every shared ("once for the couple") document's supplied facts reach both members (QA-380).
 * *Later · Scaffolding:* gate-b.mjs could save each pack's step lines next to its summary, so a qa record can quote steps without a second run.
 
-## Verdict (from `reader-verdict.md`)
-See that file.
+## Verdict (from `reader-verdict.md`, a fresh reader on Opus that ran nothing)
+**Works once a GitHub run is green. Partial until then, held only by P-339; no product gap holds it (about 85%).**
+* **Gate A: PASS.** It ends at C7.3's first step.
+* **P-437: met.**
+* **What moves the row:** a `nightly.yml` run with capabilities=C6.5 and data=checkpoint, on main 2cfdad961 or later, with all three packs green and the run id written in the row.
+* **Bugs:** QA-352 closes. QA-379 and QA-380 stay Minor, and neither holds C6.5. QA-353 stays.
+* **The reader's notes, and what was done:**
+  * 12b does not show Client A's open date: walk.md corrected.
+  * The coverage query was missing: `scripts/coverage.sh` added and its output redone in full (9 types).
+  * QA-353's evidence was missing: added to `probe-output.txt`.
+  * P-133's page names birth certificates: QA-381.
+* **Not verified by the reader:** the packs, the database rows, `ai_batch`, the replay and the GitHub facts (all qa's own runs).

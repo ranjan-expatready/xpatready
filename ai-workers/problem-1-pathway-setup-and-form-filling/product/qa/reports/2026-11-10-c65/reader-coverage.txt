@@ -1,9 +1,11 @@
-2|adoption_or_guardianship_papers|[]|{"proves": "Not stated yet: the person who named it did not say; the second person may state it before accepting.", "readerKind": "person_only", "identityDocument": false}
-2|copy_of_the_absent_parent_s_signed_passport_or_national_id|[]|{"proves": "Not stated yet: the person who named it did not say; the second person may state it before accepting.", "readerKind": "person_only", "identityDocument": true}
-2|copy_of_the_minor_s_birth_certificate|[]|{"proves": "Not stated yet: the person who named it did not say; the second person may state it before accepting.", "readerKind": "person_only", "identityDocument": true}
-2|custody_documents|[]|{"proves": "Not stated yet: the person who named it did not say; the second person may state it before accepting.", "readerKind": "person_only", "identityDocument": false}
-2|fee_payment_receipt|[]|{"proves": "What IMM 5484 (05-2026) asks for: \"Proof of payment showing the amount paid. You must pay your processing fees and any other applicable fees and include a copy of the payment receipt with your appli…\"", "readerKind": "letter_or_record", "identityDocument": fa
-2|letter_of_authorization_for_a_minor|[]|{"proves": "Not stated yet: the person who named it did not say; the second person may state it before accepting.", "readerKind": "person_only", "identityDocument": false}
-2|marriage_certificate_copy|["relationship.union_start_date"]|{"proves": "What IMM 5484 (05-2026) asks for: \"Photocopy of your Marriage License/Certificate\"", "readerKind": "letter_or_record", "identityDocument": false}
-2|passport_information_page_copy|[]|{"proves": "What IMM 5484 (05-2026) asks for: \"A copy of the information page of your valid passport or travel document which includes:\"", "readerKind": "coded_lines", "identityDocument": true}
-2|proof_of_financial_support|["case.funds_available_cad"]|{"proves": "What IMM 5484 (05-2026) asks for: \"Proof of Financial Support. You must include proof that you can support yourself and any family members accompanying you while you are in Canada.\"", "readerKind": "letter_or_record", "identityD
+# key | supplies_facts | readerKind | identityDocument (release v2 of combination 4145d431, the walked case's pinned release; scripts/coverage.sh)
+adoption_or_guardianship_papers|[]|person_only|false
+copy_of_the_absent_parent_s_signed_passport_or_national_id|[]|person_only|true
+copy_of_the_minor_s_birth_certificate|[]|person_only|true
+custody_documents|[]|person_only|false
+fee_payment_receipt|[]|letter_or_record|false
+letter_of_authorization_for_a_minor|[]|person_only|false
+marriage_certificate_copy|["relationship.union_start_date"]|letter_or_record|false
+passport_information_page_copy|[]|coded_lines|true
+proof_of_financial_support|["case.funds_available_cad"]|letter_or_record|false
+document types on the release: 9
