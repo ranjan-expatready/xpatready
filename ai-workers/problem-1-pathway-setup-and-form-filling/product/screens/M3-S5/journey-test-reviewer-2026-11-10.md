@@ -44,3 +44,10 @@ To raise it, most valuable first: keep earlier copies in view (correct data); ma
 ## Not tested
 A real screen reader. A visible-browser walk by a person (headless here). An intended user's unaided walk (D17, D20: the founder). The portal itself (W6, parked).
 Screenshots (scratch, not committed): `/tmp/claude-0/-home-user-xpatready/03fe3e66-fb93-565c-af12-7e162f4de18e/scratchpad/shots/`.
+
+## Round 2: commit e64a1d65a (same day, fresh copy rev_m3s5b on :4457, stopped afterwards)
+* **J6 fixed.** The IMM 5406 copy made before the record stays listed (Generated, Download, "Copy, not for filing"). The Online line adds "A copy made before that record is kept with the forms above, not for filing." (`r2-online-lines-1024.png`).
+* **J7 fixed.** A PDF line moved Online with an Online-only record shows "Answer sheet only", no copy offer, and a 422 in words (API test R4).
+* **Still open (Minor).** The kept-copy row still offers "Generate a new copy", and pressing it returns the 422. The reason still names no source and no Sample label.
+* **Checks.** axe 0 and no sideways scroll at 1440 and 1024 px; no page errors. API test 28/28, pure test 29/29.
+* **Score, round 2: 9/10.** Correct data 1, plain words 1, error recovery ½ (the refused action is still offered), trust and sources ½. The other criteria are unchanged from round 1. Pass.
