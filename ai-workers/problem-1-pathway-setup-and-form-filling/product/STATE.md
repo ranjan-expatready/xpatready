@@ -23,7 +23,7 @@ Standbys: **Lead 11 `local_aa5c12aa-7202-4cec-8459-10f906f7727b`**, **Lead 12 `l
 |---|---|---|---|
 | engine (baton: schema + case-prepare) | M3-S1 `local_db9f4a97` ended at ~418k; **M3-S2 `local_eb900554`** (founder clicked the card 00:2x) | #1505 M3-S1 labelled (Lead money read done), queued | M3-S2 starts after #1505 merges |
 | forms | cloud "forms: M3-S5 …" | M3-S5 | warm BK-10 (told by message) |
-| screens | cloud "screens: BK-2 …" | BK-2 fold-out arrows | BK-3 needs a new session (founder's typed turn) |
+| screens | cloud "screens: BK-2 …" | BK-2 fold-out arrows | warm BK-3 PR 1 (frame), P-457; told by message |
 | qa | cloud "qa: BK-1 …" | #1509 BK-1 baseline (14 Majors); its 3 questions ruled P-456 | ends at label |
 | evidence | cloud "evidence: expert review pack" | #1510 expert pack (P-455 (2)), in the queue | ends at merge |
 | pipeline | local `local_8494de44` | #1502 (draft, Approve bccf34ef) waits for the founder's commands; #1504 in Opus review: Lead reads the CI-tool diff before labelling (P-423) | then (3) auto-dispatch, (4b) |
