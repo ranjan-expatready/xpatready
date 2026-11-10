@@ -1,0 +1,18 @@
+PASS  setup: a case with round 1 (one filing approved, one sent back) and round 2 sent, through the product's routes
+PASS  C8.3 walk 1 pass (P-412 F1): Ready to file shows "Send for review" and, per filing, its review status with "Open the review" (the approval a later change withdrew reads "Approval withdrawn")
+PASS  C8.3 walk 2 pass (BR-1): the dialog lists the filings: one already in an open round (not tickable, says why), one with an open block not ticked by default, its warnings counted; the one button names the count
+PASS  C8.3 walk 3 pass (F2, §4 read-only): the case officer reads the review: "Only the representative of record approves or sends back. You can read this review.", no Approve or Send back
+PASS  C8.3 walk 3b pass (m1): the officer's look opened nothing (still Sent)
+PASS  C8.3 walk 4 pass (BR-3, BR-6): opening by the representative moves the filing to Under review; only the changed form reads "Changed since review"; the detail shows before → after and who typed it
+PASS  axe (WCAG 2.2 AA): round 2, the representative (1024 px)
+PASS  C8.3 walk 5 pass (BR-4, keyboard): a checklist item ticked by keyboard (Space), Approve reached and pressed by keyboard; the dialog asks the one confirmation in the concept's words
+PASS  axe (WCAG 2.2 AA): the approve dialog
+PASS  C8.3 walk 5b pass (break m5, WCAG 2.4.3): Escape closes the dialog and gives the focus back to Approve
+PASS  C8.3 walk 6 fail (BR-5): Send back with no reason is refused on the field, in words; nothing is recorded
+PASS  C8.3 walk 7 fail (BR-4, M4, §4 conflict): a fact changed meanwhile → "Changed while you were reading: reload. Nothing was stamped."; nothing stamped
+PASS  C8.3 walk 8 pass (BR-4): after Reload the representative approves; the filing reads Approved and every form is stamped
+PASS  C8.3 walk 9 pass (P-412 F1, §5): only the form a later change touched reads "Approval withdrawn: … changed by …"; the footer offers "Re-approve 1 changed form"
+FAIL  the walk ran to its end (stopped: locator.innerText: Timeout 30000ms exceeded.) — {"errors":[],"at":"    at /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/check_c83_review_browser.cjs:142:262"}
+PASS  the page threw no script error
+
+15/16 passed

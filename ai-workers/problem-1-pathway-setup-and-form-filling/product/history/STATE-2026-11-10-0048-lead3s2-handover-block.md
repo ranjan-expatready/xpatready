@@ -1,0 +1,19 @@
+# Lead 3 (series 2) hand-over block, 23:45 IST 9 Nov, as last updated by Lead 4 (series 2) at 00:20 IST 10 Nov (word for word)
+
+## Hand-over: Lead 3 (series 2) → Lead 4 (series 2), 23:45 IST — read this first
+**Founder's goal (P-434, P-439):** 26 of 29 Works first, then all 29; hourly report in IST (Works, merged, blocked, next three; last sent 23:31 IST, next 00:30); stop clean at 95% weekly. Paid runs to US$50 today, ledger first (spent ~US$2). Founder asleep from ~23:50 IST: night rules below.
+| Row | Where it stands (23:45 IST) | Next step | ETA IST |
+|---|---|---|---|
+| C6.19 | #1441 merged; qa PASS 85/85, gate A 29/29; records #1455 queued | Lead 3's checkpoint run 42671515103 made only its plan job (no pack ran, red): **re-dispatched 00:19 IST as 42677402885**; its id goes on #1455; Works on green | ~01:00 |
+| C8.3 | #1440 merged; qa #1459 gate A PASS, labelled | #1459's ci was "abandoned" (no test failed): failed part re-run 00:17 IST; merges through the records queue | ~01:00 |
+| C6.17 | #1262 queued at bc7d26488 (Lead 3 merged main, Opus diff-only Approve) | qa-c617 polls until 21:30 UTC, then its round | ~01:30 |
+| C7.5 | #1396 queued (batch draft #1454) | qa-c75 lane: C7.5 round after merge; also labels #1444 (below) | ~01:30 |
+| C6.5 | #1444 Approve a5be1ac5f, CI running, unlabelled | qa-c75 lane told (23:4x, prompt box) to do the paid-result check and label on green (P-275) | ~01:30 |
+| C7.8 | #1450 (QA-355 fix) labelled, CI running | queue, then qa gate A + nightly | ~02:30 |
+| C7.3, C10.2 | #1430, #1435 merged; qa #1456 (C7.3 gate A PASS, Partial only on QA-165) and #1460 (C10.2 gate A FAIL, QA-361 Major) | **P-442:** QA-165 narrowed to C7.2 and C10.2, so C7.3 waits only on its checkpoint run **42677181616** (dispatched 00:18 IST). C10.2: qa-c73-c102 told at 00:21 IST to land QA-361's data fix (10-digit +1 Sample phone); then the Lead dispatches C10.2's checkpoint and re-Validates in Acrobat (granted to Lead 4; open with `open -a "Adobe Acrobat"` from a Terminal tab, the Open dialog is another process; file via `tools/finished-story-paper-copy.ts`, never reload the story in between). Evidence `history/lead4-adobe-validate-c102-2026-11-10.md`. Lead 3's isolated server on :4455 (pid 64981) is the founder's to stop | C7.3 ~01:30, C10.2 ~06:00 |
+| C6.16 | qa #1452 Partial, QA-359 (Major) ruled P-441; nightly C6.16 green on 1d07807c8 (42663208911) | cloud fix-qa359 (#1453 draft); #1452's shard 1 is red only on graph G2 (cites P-412): re-run after the records PR merges, then label | ~03:30 |
+**Records PR** from `lead/2026-11-07-lead31` (P-412 to P-441, P-440 RULES, check-docs guard, skills) opens when the queue is empty (P-436 (3)); #1452 waits on it.
+**Risk:** since 21:59 IST every `pull_request_target` run of label-guard and records-label ends in startup_failure (workflow files unchanged since 7 Nov, no GitHub incident, Actions permissions unchanged); merges still go through and the workflow_run sweep on main succeeds. Cause not found; look when the queue is quiet (a cheap read-only agent).
+**Night rules (lessons from 6-7 Nov and 9 Nov stalls, `memory/no-prompting-calls-unattended`):** no call that can wait on a permission prompt while the founder sleeps: no `run_in_terminal`, no writes into `.claude/`, no settings, no new `request_access`. GitHub by curl only. Read claude.ai/code every check in the built-in browser (Chrome's extension was not connected at 23:40); type into idle lanes by the textbox ref "Prompt", then confirm the bubble. Lanes that poll (qa-c617, qa-c75) still need a check of their pushes.
+**Sessions (series 2):** Lead 5 standby `local_6e87a775-…`; one more standby at the founder's next typed turn. Cloud lanes: qa-c83, qa-c73-c102, qa-c75 (+#1444), qa-c617 (polling), fix-qa359 (#1453); done and idle: qa-c619, qa-c616, fix-c65 (#1444), fix-qa355 (#1450), #1262 fix lane, merged lanes (archive later).
+

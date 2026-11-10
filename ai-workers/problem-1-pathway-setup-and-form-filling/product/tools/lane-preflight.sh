@@ -17,6 +17,7 @@ if [ "${1:-}" = --hook ]; then
 fi
 kb=$(df -Pk / 2>/dev/null | awk 'NR == 2 {print $4}'); gb=$(awk -v k="${kb:-0}" 'BEGIN {printf "%.1f", k / 1048576}')
 load=$(sysctl -n vm.loadavg 2>/dev/null | tr -d '{}' | awk '{print $1}'); [ -n "$load" ] || load=$(awk '{print $1}' /proc/loadavg 2>/dev/null)
+[ -n "$load" ] || load=$(uptime 2>/dev/null | sed -E 's/.*load averages?: *//' | awk '{gsub(",","",$1); print $1}')  # sandbox blocks sysctl (9 Nov)
 copies=$(bash "$DIR/../../prototype/studio/tools/test-copies.sh" --count)
 echo "preflight: disk ${gb} GB free (need ${min}) · load ${load:-?} (max ${maxload}) · test copies ${copies} (cap ${cap})"
 bad=""

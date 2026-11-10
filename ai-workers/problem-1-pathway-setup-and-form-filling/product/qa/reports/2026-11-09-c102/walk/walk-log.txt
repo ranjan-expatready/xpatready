@@ -1,0 +1,29 @@
+  shot /tmp/claude-0/-home-user-xpatready/9ed5c828-6f53-52d9-a253-62c7e7db7c18/scratchpad/c102/walk/00-load-dialog.png
+  shot /tmp/claude-0/-home-user-xpatready/9ed5c828-6f53-52d9-a253-62c7e7db7c18/scratchpad/c102/walk/01-story-loaded.png
+loaded in 239 s; dialog: Finished story loaded | Each step of the family case, done through the same screens' rules by the people who act. No live AI call was made (US$0). | Step	Status | The family case moves to release 2 (C9.5) | The case officer moved the case from Release 1 to Release 6, the Visitor visa's release 2, with a reason. Moved to Release 6. 10 items filed another way now; 3 items no longer required; nothing finished was changed. | 	Done | Facts answered and confirmed by the right people (C6.1–C6.3, C6.18) | Every form of release 2 waits on no fact for every person: 149 answers typed (72 by the client, 77 by the case officer for another adult), the 6 background answers among the officer's marked for the client to re-confirm, re-confirmed by the client (C6.18), 45 sections confirmed by the case officer; 38 questions the Sample record does not hold took a Sample value by kind of answer (for example: "Whether the person the form is about is the principal applicant, rather than the principal applicant's spouse, common-law partner or dependent child", "Whether the person has ever held any government position (for example civil servant, judge, police officer, mayor, member of parliament, hospital administrator)", "Whether the person has ever served in any military, militia, civil defence unit, security organization or police force, including non-obligatory national service, reserve or volunteer units"). | 	Done | One person's IMM 5257 on Paper with a reason; its copy made to validate in Adobe
+PASS  1 the author loads the finished story by screens; the dialog says Finished story loaded {"secs":239,"stages":"move:done facts:done paper:partial forms:partial signed:done documents:done ready:partial record:partial"}
+  shot /tmp/claude-0/-home-user-xpatready/9ed5c828-6f53-52d9-a253-62c7e7db7c18/scratchpad/c102/walk/02-cases-list.png
+  shot /tmp/claude-0/-home-user-xpatready/9ed5c828-6f53-52d9-a253-62c7e7db7c18/scratchpad/c102/walk/03-family-case.png
+PASS  2 the officer opens SAMPLE-VV-FAMILY-1 from the Cases list {"url":"http://127.0.0.1:4471/cases/c092118f-a152-488b-80ff-c378500102bb","header":"Readiness: Not ready · 33% (lowest: Visitor visa: Child 18 or over (Sample))"}
+people: [
+  'Client A (Sample)',
+  'Partner (Sample)',
+  'Child (Sample)',
+  'Child 18 or over (Sample)'
+] | paper item: IMM 5257 to_do Every fact it reads is confirmed. Make the copy, press Validate in Adobe (this adds the barcode page), save it and read the validated copy back here: IRCC returns a barcode form unprocessed without it. | filings: [
+  'Client A (Sample):submitted:cd1a5ddf-dd93-489e-bc05-f5713f13a6bb',
+  'Partner (Sample):submitted:cd1a5ddf-dd93-489e-bc05-f5713f13a6bb',
+  'Child (Sample):submitted:cd1a5ddf-dd93-489e-bc05-f5713f13a6bb',
+  'Child 18 or over (Sample):NOT_STARTED:b3cf05fd-1244-4f3d-af44-e8f6f465d4ce'
+]
+PASS  3 the Online IMM 5257 line reads Done on the case page {"sheetText":"Open answer sheet: IMM 5257 for Client A (Sample)\n,\n· Done\nOpen answer sheet: IMM 5257 for Partner (Sample)\n,\n· Done\nOpen answer sheet: IMM 5257 for Child (Sample)\n,\n· Done","online":["IMM 5257:done","IMM 5257:done","IMM 5257:done"]}
+  shot /tmp/claude-0/-home-user-xpatready/9ed5c828-6f53-52d9-a253-62c7e7db7c18/scratchpad/c102/walk/04-principal-sheet.png
+PASS  3b the principal's sheet: every section ticked, read-only once recorded {"pr":"Every section is ticked “Entered in the portal”","ctl":0}
+paper card: IMM 5257 for Child 18 or over (Sample) | Not validated yet | Read back the validated copy | Validate before filing | Generate a new copy
+FAIL  4a the Paper IMM 5257 card waits only for its Adobe Validate and lists no mandatory field left empty "IMM 5257 for Child 18 or over (Sample)\nNot validated yet\nRead back the validated copy\nValidate before filing\nGenerate a new copy"
+PASS  4b the next step's door, "Read back the validated copy", is offered and enabled (not used: never simulated) 1
+PASS  5 Submission to IRCC: the other three filings recorded in one group; the Paper filing split out and not recorded {"recorded":3,"paper":"NOT_STARTED","sub":"Submission to IRCC | Record what IRCC acknowledged, once per submission. A recorded submission is read-only. | One submission for 3 people applying | Recorded · read-only | Visitor visa: Client A (Sample) | Submitted | Application number | V300000001 | Correct a number… | Submitted on | November 9, 2026 · through APR Portal | Our reference | SAMPLE-VV-FAMILY-1-1 | Fee receipt | No Transaction Approved page uploaded | Receipt number: SAMPLE-RECEIPT-1 | Upload the Transaction Approved page… | UCI "}
+PASS  5b underneath: the Paper filing's only block is the missing validated copy ["barcode_not_validated: IMM 5257 for Child 18 or over (Sample): no validated copy read back for today's facts. Validate it in Adobe and upload the validated copy; IRCC returns it unpro"]
+PASS  6 no page error during the walk []
+CASE c092118f-a152-488b-80ff-c378500102bb PAPER_ITEM b053a931-b6b3-45f5-9a7d-844c5ded0d00 PAPER_SUBJECT 3b691c8a-ed7a-4d73-87a6-69da763155d5
+WALK: 1 FAIL: 4a the Paper IMM 5257 card waits only for its Adobe Validate and lists no mandatory field left empty

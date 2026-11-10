@@ -2,12 +2,13 @@
 // checkpoint with its Sample route "Study, then work" (samples/routes.json, loaded after release one): fresh cases each run,
 // never the Sample family case's data (it is only read, step 13). The route, its stages, forms and documents are read at
 // run time (P-319); every group a step asserts is non-empty or the step FAILS, never skips. Every route, key detail and
-// deadline is Sample (P-412 F13). AI off, US$0. Build discovery D1 (PR): the study and work permits have no derived
-// per-person checklist on the checkpoint (samples/fee-table.json "checklist" is the Visitor visa's only), so step 5 makes
-// no upload and step 9 reads the next release's documents from the dialog; "On file from" is proved by the engine test.
+// deadline is Sample (P-412 F13). AI off, US$0. Build discovery D1 (#1262) is closed by P-444 (QA-375): the study and
+// work permits' per-person checklists are worked out (samples/fee-table.json "checklist"), so step 5 uploads a document
+// through C6.4 on the study stage and step 9 reads the new stage's own lines with "On file from …: check it". Each line's
+// quote cites its official checklist with page and date, or is labelled Sample (AGENTS rule 4, P-170).
 // Runs on a FRESH isolated copy (the checkpoint loads its own configuration):
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx studio/acceptance/C6.17.test.ts 4440 xr_studio_accept
-import { AUTHOR, CLIENT, OFFICER, call, firms, generateCopy, main, ok, prepare, run, sql } from "./lib/m3.ts";
+import { AUTHOR, CLIENT, OFFICER, PORT, call, firms, generateCopy, main, ok, prepare, run, sql } from "./lib/m3.ts";
 import { sampleRelease } from "./lib/sample-release.ts";
 
 type Stage = { id: string; key: string; name: string; state: string; words: string; version: number; combination_id: string; key_details: { field: string; value: string | null }[]; deadline: { due: string | null; why: string; sample: boolean } | null; cannot_start_why: string | null };
@@ -20,6 +21,19 @@ const counts = () => ["runtime_case", "case_stage", "pack_work_pin", "answer_sub
 const open = (combinationId: string, extra: Record<string, unknown> = {}, ref = `C617-${run}-${Math.random().toString(36).slice(2, 6)}`) =>
   call("POST", "/runtime/cases", { combinationId, reference: ref, clientActor: CLIENT, principal: { displayName: "Sample Client A" }, ...extra });
 const UCI = "12345678", VALID = "2027-02-03";
+type Line = { id: string; label: string; quote: string | null; state: string; document: { key: string; name: string }; documents: { id: string }[]; on_file?: { from: string; file_name: string; words: string } };
+type Checklist = { derived: boolean; why?: string; people?: { subject: string; lines: Line[]; waiting: Line[]; not_needed: Line[] }[] };
+const checklistOf = async (id: string) => (await call("GET", `/runtime/cases/${id}/checklist`)).body as Checklist;
+const allLines = (c: Checklist) => (c.people ?? []).flatMap((x) => [...x.lines, ...x.waiting, ...x.not_needed]);
+/** AGENTS rule 4, P-170: a line's quote names its source with a page and a date, or says it is Sample and names the
+ *  form or guide it came from (review m3: a bare "Sample" is not enough). */
+const sourced = (l: Line) => (/^Sample\b/.test(l.quote ?? "") && /\bfrom (IMM|Guide) \d{4}\b/.test(l.quote ?? "")) || (/\bp\. \d+/.test(l.quote ?? "") && /\b\d{4}-\d{2}-\d{2}\b/.test(l.quote ?? ""));
+/** C6.4's upload, as a person's browser sends it (multipart, one file). A Sample PDF; never a real document. */
+const upload = async (lineId: string, name: string) => {
+  const fd = new FormData(); fd.append("file", new Blob([new TextEncoder().encode(`%PDF-1.4\n% Sample synthetic document ${name}\n`)]), name);
+  const res = await fetch(`http://127.0.0.1:${PORT}/api/runtime/checklist-lines/${lineId}/documents`, { method: "POST", headers: { "x-actor": OFFICER }, body: fd }).catch(() => null);
+  return { status: res?.status ?? 0, body: await res?.json().catch(() => null) };
+};
 
 await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async () => {
   // ---------------------------------------------------------------- the checkpoint
@@ -79,6 +93,19 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
   ok("C6.17-5 pass: a case on the first stage: a person's answer and an application answer given, Prepare makes its filing and family group on that stage; the next stage is offered",
     sMade.status === 201 && a1.status < 300 && a2.status < 300 && (p1?.filings.length ?? 0) > 0 && n(`select count(*) from filing where case_id='${S}' and stage_id='${S1}'`) > 0 && n(`select count(*) from submission_group where case_id='${S}' and stage_id='${S1}' and kind='FAMILY'`) === 1 && !!S2,
     { a1: a1.status, a2: a2.status, filings: p1?.filings.length, next: S2 });
+  // P-444 (QA-375): the document the route says carries over (its same_documents pair, read at run time, P-319).
+  const pairs = JSON.parse(sql(`select coalesce(s->'same_documents', '[]') from route, jsonb_array_elements(stages) s where key='${later.stage!.route}' and s->>'key'='${later.stage!.key}'`) ?? "[]") as { from: string; to: string }[];
+  const cl1 = await checklistOf(S!);
+  const fromLine = cl1?.people?.find((x) => x.subject === P)?.lines.find((l) => pairs.some((x) => x.from === l.document.key));
+  const pair = pairs.find((x) => x.from === fromLine?.document.key);
+  const up1 = fromLine ? await upload(fromLine.id, "sample-study-document.pdf") : null;
+  const DOC1 = up1?.body?.document?.id as string | undefined;
+  ok("C6.17-5 pass (P-444): the first stage's per-person checklist is worked out; Client A's document that carries over is uploaded through C6.4 (201, Received), stored against Client A on a line of the first stage",
+    cl1?.derived === true && !!fromLine && !!pair && up1?.status === 201 && up1.body?.state === "received"
+    && sql(`select d.subject_id || '|' || l.stage_id from case_document d join checklist_line l on l.id=d.checklist_line_id where d.id='${DOC1}'`) === `${P}|${S1}`,
+    { derived: cl1?.derived, why: cl1?.why, pairs, line: fromLine?.label, upload: up1?.status, words: up1?.body?.detail });
+  ok("C6.17-5 pass (AGENTS rule 4, P-170): every line of the first stage's checklist quotes its official checklist with page and date, or says Sample",
+    allLines(cl1 ?? { derived: false }).length > 0 && allLines(cl1).every(sourced), allLines(cl1 ?? { derived: false }).filter((l) => !sourced(l)).map((l) => [l.label, l.quote]));
 
   // ---------------------------------------------------------------- C6.17-6: who may
   const f = await firms();
@@ -144,6 +171,25 @@ await main("C6.17", "A multi-stage case (Sample route: Study, then work)", async
   ok("C6.17 breaker M1 fail-first: a form item of the ended stage cannot change its channel by its own route (409); it stays as it was",
     !!itemId && chan?.status === 409 && sql(`select coalesce(channel::text, '') || '|' || version from filing_item where id='${itemId}'`) === `${itemChannel}|${itemVersion}`, { status: chan?.status, words: chan ? words(chan) : null });
   ok("C6.17-9 pass (m2): the ended stage's own record is read only: its filings, its key details", panel?.read_only === true && (panel?.filings ?? []).some((x: { id: string }) => s1Filings.includes(x.id)) && panel.key_details.some((d: { field: string; value: string }) => d.field === dateField && d.value === VALID));
+
+  // ---------------------------------------------------------------- C6.17-9 (P-444, QA-375): the new stage's documents
+  const cl2 = await checklistOf(S!);
+  const mine2 = cl2?.people?.find((x) => x.subject === P);
+  const toLine = mine2?.lines.find((l) => l.document.key === pair?.to);
+  const fromName = sql(`select s->>'client_name' from route, jsonb_array_elements(stages) s where key='${later.stage!.route}' and s->>'key'='${firstKey.key}'`) ?? "";
+  const lineStages = sql(`select string_agg(distinct stage_id::text, ',') from checklist_line where case_id='${S}' and subject_id='${P}' and stage_id <> '${S1}'`);
+  ok("C6.17-9 pass (P-444, BR-6): Start next stage adds documents: the new stage's checklist has Client A's own lines from its release, fresh (on the new stage, Not requested, no file of their own), and the line the route pairs reads \"On file from <first stage>, uploaded <date>: check it for this application\"",
+    cl2?.derived === true && (mine2?.lines.length ?? 0) > 0 && lineStages === S2 && !!toLine && toLine.state === "not_requested" && toLine.documents.length === 0
+    && toLine.on_file?.file_name === "sample-study-document.pdf" && !!fromName && new RegExp(`^On file from ${fromName}, uploaded \\d{1,2} \\w{3} \\d{4}: check it for this application\\.$`).test(toLine.on_file?.words ?? ""),
+    { derived: cl2?.derived, why: cl2?.why, lines: mine2?.lines.map((l) => `${l.label}:${l.state}`), lineStages, onFile: toLine?.on_file });
+  ok("C6.17-9 pass (AGENTS rule 4, P-170): every line of the new stage's checklist quotes its official checklist with page and date, or says Sample; the preview said these documents came from the checklist",
+    allLines(cl2 ?? { derived: false }).length > 0 && allLines(cl2).every(sourced) && preview?.documents_basis === "checklist",
+    { unsourced: allLines(cl2 ?? { derived: false }).filter((l) => !sourced(l)).map((l) => [l.label, l.quote]), basis: preview?.documents_basis });
+  const docsBefore = n(`select count(*) from case_document where subject_id='${P}'`);
+  const upOld = fromLine ? await upload(fromLine.id, "sample-document-too-late.pdf") : null;
+  ok("C6.17-9 fail (P-444, BR-10): the first stage's line takes no upload after the start (409 stage_ended, plain words); nothing stored, and the ended stage's own record still reads its own document",
+    upOld?.status === 409 && upOld.body?.code === "stage_ended" && /earlier stage of the case, which has ended/.test(String(upOld.body?.detail ?? "")) && n(`select count(*) from case_document where subject_id='${P}'`) === docsBefore
+    && (panel?.documents ?? []).some((d: { id: string }) => d.id === DOC1), { status: upOld?.status, words: upOld?.body?.detail, panelDocs: panel?.documents });
 
   // ---------------------------------------------------------------- C6.17-10: stale, last stage
   const stale = await call("POST", `/runtime/cases/${S}/stages/next`, startBody);

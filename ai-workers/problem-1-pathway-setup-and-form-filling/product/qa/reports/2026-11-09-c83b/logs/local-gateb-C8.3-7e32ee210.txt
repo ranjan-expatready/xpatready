@@ -1,0 +1,6 @@
+Gate B: the PR names C8.3; claims Works for none (no bug check).
+  packs: C8.3.test.ts
+    C8.3.test.ts on the checkpoint: exit 0, 25/25 passed (238 s: copy 6, Load the configured checkpoint 114, run 119)
+  packs took 239 s in all
+Gate B: passed.
+EXIT 0

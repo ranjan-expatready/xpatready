@@ -22,7 +22,8 @@ The outcome, in this order (founder, 3 Nov): **quality first** (P-303), **comple
 | Measure | Threshold | Do |
 |---|---|---|
 | Weekly plan | 85 / 90 / 92 / 95% | P-308 word for word: no new rows · lanes stop with "Stopped here" · Lead writes "Resume on the new account" and stops sessions · quiet. From 85% check every 15 min. Measure the rate per hour at every check and forecast each threshold in IST |
-| Your context | ~400k tokens | hand over to the first standby (P-286, P-314) |
+| Your context | ~250k tokens (P-440) | refresh `RULES.md`, then hand over to the first standby (P-286) |
+| Burn per hour | over 3%/h at two checks | read each working session's context share; end idle ones, hand over any over 250k; tell the founder the cause in one line (P-440) |
 | Disk free | under 10 GB · under 4 GB | drop test databases idle **at two checks in a row** (the script lists them; file times are copied from the template, so one idle reading is not proof) · tell Mac builders to pause suite runs |
 | Approved, not merged | over 60 min | find what holds it; dequeued → its owner merges main, or give it to a spare |
 | Lane | no push in 90 min with work left | message "continue" plus its next step; a cloud lane silent after that → replace it |
