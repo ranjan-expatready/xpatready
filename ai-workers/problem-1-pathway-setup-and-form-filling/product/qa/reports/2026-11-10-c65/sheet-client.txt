@@ -1,0 +1,190 @@
+Cases
+
+Acting as (simulated)
+Case officer · Sample firm
+Representative · Sample firm · firm admin
+Second representative · Sample firm
+Solo representative · Sample solo firm
+Client A · Client
+Client B · Client
+Product Studio
+Cases
+›
+ACC-mwa20q3p-jsqu
+›
+IMM 5257 answer sheet
+IMM 5257 answer sheet · Sample Client A
+
+Type these answers into the IRCC account, section by section. Copy gives each answer as the IRCC account takes it.
+
+Filed through APR Portal: set by the combination, not on the case
+
+To do
+Waiting for 67 facts to answer or confirm: Whether the person holds a national identity document (Sample Client A); Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an organization at its request, about the services they received, for research, performance measurement or evaluation; never used to decide about them (IMM 5257, consent before the signature). (Sample Client A); Family name as shown on passport or travel document (Sample Spouse A); and 64 more.
+
+9 of 9 sections still to tick “Entered in the portal”
+
+In the order the form prints its parts, as this release's configuration names them, until the portal's own screens are recorded (W6).
+
+1. Personal details
+Not entered
+Question	Person	Answer	Source	
+Copy
+
+Date the person married or began the common-law relationship with the current spouse or partner	Sample Spouse A	2019-06-14	Document	
+Copy
+
+Current marital status	Sample Client A	MarriedTo confirm
+Declared: entered by staff; it fills the forms now and waits for the officer's "Confirm section"
+	Case officer	
+Copy
+
+Date of birth	Sample Client A	1986-11-10To confirm
+Declared: entered by staff; it fills the forms now and waits for the officer's "Confirm section"
+	Case officer	
+Copy
+Still to answer or confirm (32)
+Family name as shown on passport or travel document · Sample Spouse A
+Given name(s) as shown on passport or travel document · Sample Spouse A
+Whether the person has ever used another name (nickname, maiden name, alias) · Sample Client A
+Country of citizenship · Sample Client A
+Country or territory from which the person is submitting the application · Sample Client A
+Start date of the status in the applying-from country · Sample Client A
+Immigration status in the country from which the person is applying · Sample Client A
+End date of the status in the applying-from country · Sample Client A
+Country or territory where the person currently resides · Sample Client A
+Immigration status in the current country of residence · Sample Client A
+Family name as shown on passport or travel document · Sample Client A
+Given name(s) as shown on passport or travel document · Sample Client A
+A country or territory where the person previously resided · Sample Client A
+City or town of birth · Sample Client A
+Country or territory of birth · Sample Client A
+Start date of the status in a previous country of residence · Sample Client A
+Description of the status in a previous country of residence when it was 'other' · Sample Client A
+Immigration status held in a previous country of residence · Sample Client A
+End date of the status in a previous country of residence · Sample Client A
+Official language in which the person wants to receive service for this application · The application
+Sex or gender marker of the person · Sample Client A
+Unique Client Identifier assigned by IRCC · Sample Client A
+Kind of temporary resident visa requested (visitor or transit) · The application
+Whether the person has taken a designated English or French language test · Sample Client A
+Whether the person can communicate in English, French, both or neither · Sample Client A
+Official language in which the person is most at ease · Sample Client A
+Native language or mother tongue · Sample Client A
+Country or authority that issued the passport · Sample Client A
+Passport expiry date · Sample Client A
+Passport issue date · Sample Client A
+Number of the passport or travel document · Sample Client A
+Whether the person was previously married or in a common-law relationship · Sample Client A
+Entered in the portal
+32 answers still to answer or confirm: tick what you typed; when they are confirmed this section reads out of date until you tick again.
+2. National identity document
+Not entered
+
+No answer to type in this section yet.
+
+Still to answer or confirm (1)
+Whether the person holds a national identity document · Sample Client A
+Entered in the portal
+1 answer still to answer or confirm: tick what you typed; when they are confirmed this section reads out of date until you tick again.
+3. US PR card
+Not entered
+
+No answer to type in this section yet.
+
+Still to answer or confirm (1)
+Whether the person is a lawful permanent resident of the United States · Sample Client A
+Entered in the portal
+1 answer still to answer or confirm: tick what you typed; when they are confirmed this section reads out of date until you tick again.
+4. Contact information
+Not entered
+
+No answer to type in this section yet.
+
+Still to answer or confirm (8)
+Current mailing address · Sample Client A
+E-mail address · Sample Client A
+Fax number including country code · Sample Client A
+Alternate telephone number including country code · Sample Client A
+Type of the alternate telephone number · Sample Client A
+Main telephone number including country code · Sample Client A
+Type of the main telephone number (residence, cellular, business) · Sample Client A
+Current residential address · Sample Client A
+Entered in the portal
+8 answers still to answer or confirm: tick what you typed; when they are confirmed this section reads out of date until you tick again.
+5. Details of visit to Canada
+Not entered
+Question	Person	Answer	Source	
+Copy
+
+Funds available for the stay, in Canadian dollars	The application	14200	Case officer	
+Copy
+Still to answer or confirm (7)
+Address in Canada of the person or institution to be visited · The application
+Name of a person or institution to be visited in Canada · The application
+Relationship of the person or institution to be visited to the traveller · The application
+Planned first day of the stay in Canada · The application
+Planned last day of the stay in Canada · The application
+Description of the visit purpose when it is 'other' · The application
+Purpose of the visit to Canada · The application
+Entered in the portal
+7 answers still to answer or confirm: tick what you typed; when they are confirmed this section reads out of date until you tick again.
+6. Education
+Not entered
+
+No answer to type in this section yet.
+
+Still to answer or confirm (7)
+City or town of the school · Sample Client A
+Country or territory of the school · Sample Client A
+Field of study of a post-secondary education period · Sample Client A
+Start date of a post-secondary education period · Sample Client A
+Province or state of the school · Sample Client A
+Name of the school or facility attended · Sample Client A
+End date of a post-secondary education period · Sample Client A
+Entered in the portal
+7 answers still to answer or confirm: tick what you typed; when they are confirmed this section reads out of date until you tick again.
+7. Employment
+Not entered
+
+No answer to type in this section yet.
+
+Still to answer or confirm (7)
+City or town of an activity period · Sample Client A
+Country or territory of an activity period · Sample Client A
+Company, employer or facility name for an activity period · Sample Client A
+Start date of an activity or occupation period · Sample Client A
+Activity or occupation during a period · Sample Client A
+Province or state of an activity period · Sample Client A
+End date of an activity or occupation period · Sample Client A
+Entered in the portal
+7 answers still to answer or confirm: tick what you typed; when they are confirmed this section reads out of date until you tick again.
+8. Background information
+Not entered
+
+No answer to type in this section yet.
+
+Still to answer or confirm (12)
+Whether the person previously applied to enter or remain in Canada · Sample Client A
+Free-text details of overstay, refusal, removal or previous Canadian applications · Sample Client A
+Whether the person ever remained beyond status, or studied or worked without authorization, in Canada · Sample Client A
+Whether the person was ever refused a visa or permit, denied entry or ordered to leave any country · Sample Client A
+Whether, within the past two years, the person or a family member has had tuberculosis of the lungs or been in close contact with a person with tuberculosis (IMM 5257, Background information, Question 1 a). · Sample Client A
+Whether the person has a physical or mental disorder requiring social or health services other than medication during a stay in Canada · Sample Client A
+Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence · Sample Client A
+Free-text details of criminal history · Sample Client A
+Whether the person has ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings (IMM 5257, Background information, Question 6). · Sample Client A
+Whether the person served in a military, militia, civil defence, security organization or police force · Sample Client A
+Dates and countries of military or security service · Sample Client A
+Whether the person is or was a member of or associated with a group that engaged in or advocated violence for political or religious objectives · Sample Client A
+Entered in the portal
+12 answers still to answer or confirm: tick what you typed; when they are confirmed this section reads out of date until you tick again.
+9. Signature
+Not entered
+
+No answer to type in this section yet.
+
+Still to answer or confirm (1)
+Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an organization at its request, about the services they received, for research, performance measurement or evaluation; never used to decide about them (IMM 5257, consent before the signature). · Sample Client A
+Entered in the portal
+1 answer still to answer or confirm: tick what you typed; when they are confirmed this section reads out of date until you tick again.
