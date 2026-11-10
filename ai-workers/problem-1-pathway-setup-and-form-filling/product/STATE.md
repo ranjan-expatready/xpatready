@@ -18,7 +18,7 @@ updated: 2026-11-11 00:28 IST by **Lead 10 (series 2, local_556afbc8-…)** (Bak
 Standbys: **Lead 11 `local_aa5c12aa-7202-4cec-8459-10f906f7727b`**, **Lead 12 `local_ff0a1d2d-7d86-42f4-8234-47fbb72cfc8a`** (started 23:2x, P-286).
 
 ## Tonight (P-453, P-454, from 23:2x IST 10 Nov): plan `design/next-2-days-2026-11-11.md`
-**No trip-wire at 75% any more (P-454):** run to 93% weekly, every lane pushed (P-431). **Founder typed 00:5x IST "set SHARDS 8, ready 1502, label 1503":** #1502 marked ready and #1503 labelled by the Lead under his words; **SHARDS 8 refused even with his typed words** (gh and API): he sets it by the link (repo Settings › Variables › SHARDS = 8). Lead labels #1502 when its CI on bccf34ef is green (diff read by Lead 9, P-423). Never route through a lane.
+**No trip-wire at 75% any more (P-454):** run to 93% weekly, every lane pushed (P-431). **Founder typed 00:5x IST "set SHARDS 8, ready 1502, label 1503":** #1502 marked ready and #1503 labelled by the Lead under his words; **SHARDS 8 refused even with his typed words** (gh and API): **founder ~01:0x IST: "keep on 6" — SHARDS stays 6**; #1502 still lands for its refreshed suite timings (better balance on 6). Lead labels #1502 when its CI on bccf34ef is green (diff read by Lead 9, P-423). Never route through a lane.
 | Lane | Session | Row | Next |
 |---|---|---|---|
 | engine (baton: schema + case-prepare) | M3-S1 `local_db9f4a97` ended at ~418k; **M3-S2 `local_eb900554`** (founder clicked the card 00:2x) | #1505 M3-S1 labelled (Lead money read done), queued | M3-S2 starts after #1505 merges |
