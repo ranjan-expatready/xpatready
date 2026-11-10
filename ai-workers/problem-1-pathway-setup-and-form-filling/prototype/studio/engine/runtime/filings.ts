@@ -32,8 +32,8 @@ type TableLine = { key: string; label: string; status: string; basis: FeeBasis; 
 /** A combination's row (M3-S1, P-425: every setting a combination needs is here, never a branch on its key):
  *  `group_why` the family group's reason; `co_filed_why` the reason a co-filed application and the principal's are sent
  *  together (IRCC's words); `each_files_own` IRCC's words, with their source, where each family member files their own
- *  application (BR-7's warning). */
-type TableCombination = { label: string; lines: string[]; checklist?: boolean; modes?: Record<string, LineMode>; group_why?: string; co_filed_why?: string;
+ *  application (BR-7's warning); `basis_note` what the priced total leaves out, in words on the case (M3-S1 review M2). */
+type TableCombination = { label: string; lines: string[]; checklist?: boolean; modes?: Record<string, LineMode>; group_why?: string; co_filed_why?: string; basis_note?: string;
   each_files_own?: { says: string; source: FeeSource } | null };
 export type FeeTable = { as_of: string; read: string; status: string; lines: TableLine[]; combinations: Record<string, TableCombination> };
 export const FEE_TABLE = FEES as unknown as FeeTable;
@@ -83,7 +83,7 @@ export type AgeExempt = { underAge: number; overAge: number; source: FeeSource }
 /** A fee line: `roles` limits it to the filings of those roles (spouse and PNP fees); none means every filing. Without a
  *  family maximum the cap never applies (familyFrom is then beyond any household). */
 export type FeeRule = { key: string; label: string; basis?: FeeBasis; perPersonCents: number; familyMaxCents: number; familyFrom: number; source: FeeSource; exempt?: AgeExempt; roles?: string[] };
-type Rules = { label: string; modes: Map<string, LineMode>; fees: FeeRule[]; groupWhy?: string; coFiledWhy?: string;
+type Rules = { label: string; modes: Map<string, LineMode>; fees: FeeRule[]; groupWhy?: string; coFiledWhy?: string; basisNote?: string;
   /** The table these rules were priced from (outside check on #455: the basis names that table, never the shipped one). */
   table?: { as_of: string; read: string } };
 /** What the case adds (C6.12, the stored prepare view): each person's age in whole years (null: no date of birth yet),
@@ -117,12 +117,14 @@ export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
     // Only the family_maximum basis caps a line (P-247): any other basis charges each person or application in full.
     familyMaxCents: l.basis === "family_maximum" ? Math.round(l.family_max!.cad * 100) : 0, familyFrom: l.basis === "family_maximum" ? l.family_max!.from_people : Number.MAX_SAFE_INTEGER,
     source: l.source, ...(l.exempt ? { exempt: { underAge: l.exempt.under_age, overAge: l.exempt.over_age, source: l.exempt.source } } : {}), ...(l.roles ? { roles: l.roles } : {}) }));
-  return { label: c.label, modes: new Map(modes), fees, groupWhy: c.group_why, coFiledWhy: typeof c.co_filed_why === "string" ? c.co_filed_why : undefined, table: { as_of: table.as_of, read: table.read } };
+  return { label: c.label, modes: new Map(modes), fees, groupWhy: c.group_why, coFiledWhy: typeof c.co_filed_why === "string" ? c.co_filed_why : undefined, basisNote: typeof c.basis_note === "string" && c.basis_note.trim() ? c.basis_note : undefined, table: { as_of: table.as_of, read: table.read } };
 }
 const RULES = { get: (key: string) => rulesFrom(FEE_TABLE, key) };
 
-/** C11.12 review M2: the built-in filing mode a case falls back to for a role its release gives none (Sample). */
-export const defaultModeOf = (combinationKey: string, role: string) => RULES.get(combinationKey)?.modes.get(role);
+/** C11.12 review M2: the built-in filing mode a case falls back to for a role its release gives none (Sample). Never
+ *  co_files (BR-4, M3-S1 review M1): a line that is never an applicant and has no mode files nothing, so the table's
+ *  co-filing mode never stands in for a release line saved without it. */
+export const defaultModeOf = (combinationKey: string, role: string): LineMode | undefined => { const m = RULES.get(combinationKey)?.modes.get(role); return m === "co_files" ? undefined : m; };
 /** M3-S1: whether a fee line reaches a co-filing role's own application (a per_application line naming the role). */
 const reachesCoFiled = (fees: FeeRule[], role: string) => fees.some((f) => f.basis === "per_application" && !!f.roles?.includes(role));
 /** C11.12: whether a combination's fees are worked out from the table: it has fee lines, and one reaches each co-filing
@@ -217,7 +219,10 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const label = rules?.label ?? opts.label ?? combinationKey;
   const fees0 = rules?.fees ?? [];
   // BR-2: the principal always files their own application, whatever a table or release says.
-  const modeOf = (role: string): LineMode | null | undefined => (role === "principal" ? "files_own" : opts.modes?.get(role) ?? rules?.modes.get(role));
+  // M3-S1 review M1 (BR-4): once a release says its lines, the table's co-filing mode never stands in for a line saved
+  // without one (that person files nothing); with no release modes (the table alone) the table's modes are the plan.
+  const tableMode = (role: string) => { const m = rules?.modes.get(role); return m === "co_files" && released ? undefined : m; };
+  const modeOf = (role: string): LineMode | null | undefined => (role === "principal" ? "files_own" : opts.modes?.get(role) ?? tableMode(role));
   const persons = people.filter((p) => p.role !== "case");
   const notFiling: NotFiling[] = [];
   const planned: PlanPerson[] = [];
@@ -295,7 +300,7 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const unpriced = unreached.length && fees0.length ? `The fee table has no fee line for ${unreached.map((f) => `${f.owner!.label}'s co-filed application`).join(" or ")} (a per-application line naming its role), so no fee is charged on this case; nothing is guessed.` : noFeeLines(label);
   return { derived: true, combination: combinationKey, label, ...body, currency: "CAD", fees_worked_out: feesKnown,
     fees_why: feesKnown ? null : unpriced,
-    basis: priced.length ? `Fees from the ${rules!.fees[0]?.source.page ?? "fee table"} (fee table as of ${rules!.table?.as_of ?? FEE_TABLE.as_of}, read ${rules!.table?.read ?? FEE_TABLE.read}); Sample until the immigration expert confirms (P-171). ${ageWords(rules!, !!opts.ages)} Paying is not built.`
+    basis: priced.length ? `Fees from the ${rules!.fees[0]?.source.page ?? "fee table"} (fee table as of ${rules!.table?.as_of ?? FEE_TABLE.as_of}, read ${rules!.table?.read ?? FEE_TABLE.read}); Sample until the immigration expert confirms (P-171). ${ageWords(rules!, !!opts.ages)}${rules!.basisNote ? ` ${rules!.basisNote}` : ""} Paying is not built.`
       : `Filings from the release's filing modes (Sample until the immigration expert confirms). ${unpriced} Paying is not built.`,
     why: filings.length ? null : "Nobody on this case is applying, so there is no filing and no fee.",
     version: createHash("sha256").update(JSON.stringify(body)).digest("hex").slice(0, 16) };

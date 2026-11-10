@@ -38,7 +38,7 @@ const TIPS = {
   many: "The fewest and the most of this person a case may have. 0 to 1 means optional.",
   // C11.12 (concept §5): the filing tip, word for word.
   filing: FILING_TIP,
-  fees: "What this person's application pays, in words. Amounts are Sample until the immigration expert confirms; where IRCC's fees for this combination are not worked out yet, nothing is guessed.",
+  fees: "What this person's application pays, in words. Amounts are Sample until the immigration expert confirms; where the fee table sets no fee line for this combination yet, nothing is guessed.",
   answered: "Who types this person's answers. The principal answers for a child under 18 (Sample age, P-78); an adult confirms their own answers.",
   words: "The line in IRCC's guide this comes from, when AI filled it.",
 };

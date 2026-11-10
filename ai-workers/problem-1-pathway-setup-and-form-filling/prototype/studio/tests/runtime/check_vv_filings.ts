@@ -132,7 +132,10 @@ const sum = (r: D, k?: string) => r.fees.filter((f) => !k || f.line === k).reduc
   ok("C11.12 review n1 fail: the principal and the sponsorship alone are not splittable", fs.groups[0].splittable === false);
   const wpSplit = deriveFilings("wp.family", family(2), undefined, { ...modes({ spouse_or_partner: "files_own" }), groupOf: (x) => (x === "s-1" ? "g-own" : "g-fam"), groupKind: (g) => (g === "g-own" ? "separate" : "family") }) as D;
   ok("C11.12 break round 2: a split group with no fee rule says nothing about family maximums", wpSplit.groups.find((g) => g.id === "g-own")?.why === "Split out with a reason: sent on its own.");
-  ok("C11.12 BR-4 pass: a sponsor with no mode files nothing (1 filing, C11.12.test.ts:66–72; a combination with no table row, so no table mode stands in)", (deriveFilings("fs.parent_test", [person(0, "principal"), person(4, "sponsor")], undefined, modes({ principal: "files_own", sponsor: null as never })) as D).filings.length === 1);
+  ok("C11.12 BR-4 pass (M3-S1 review M1): a sponsor with no mode on the release files nothing (1 filing, C11.12.test.ts:66–72), although the fee table's row co-files the sponsor", (deriveFilings("fs.spouse", [person(0, "principal"), person(4, "sponsor")], undefined, modes({ principal: "files_own", sponsor: null as never })) as D).filings.length === 1);
+  ok("M3-S1 review M1 fail: with no release modes at all, the table's own plan stands (the sponsor co-files and pays its own fee)", (deriveFilings("fs.spouse", [person(0, "principal"), person(4, "sponsor")]) as D).filings.some((f) => f.mode === "co_filed" && f.owner?.role === "sponsor"));
+  ok("M3-S1 review M2 pass: the spouse sponsorship case says in words that its total leaves out biometrics (the table's basis_note)", /Biometrics are not in this total/.test((fsPriced as D).basis ?? ""));
+  ok("M3-S1 review M2 fail: a combination with no basis_note says nothing of the kind (the Visitor visa)", !/not in this total/.test((deriveFilings("vv.single", family(2)) as D).basis ?? ""));
 }
 // The threshold decides on its own (review m3): a made-up rule where per-person × people is above the maximum below the threshold.
 {
