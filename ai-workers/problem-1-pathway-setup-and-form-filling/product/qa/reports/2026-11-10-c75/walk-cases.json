@@ -1,0 +1,156 @@
+{
+ "walk (headed)": {
+  "case": "58c7d37b-f541-4e81-b27e-30a517be9b74",
+  "subject": "bd8d4ea5-fb9a-47f4-8d73-c92ab0bbd3b6",
+  "form": "IMM 5257 (09-2023)",
+  "form_fields": 56,
+  "sheet": "prototype/p2/review-sheets/imm-5257-09-2023-bd4761bdb306.sheet.json",
+  "sheet_sha256": "bd4761bdb3067c9a7d1061ffb7f389ca0c35df02665f95eb6aed4618e75372c0",
+  "saved_available": true,
+  "saved_files": [
+   "prototype/p2/runs/studio-form-review-imm-5257-09-2023-0b775139-live-20261110t132145228z-2e36cf.json",
+   "prototype/p2/runs/studio-form-review-check-imm-5257-09-2023-0b775139-live-20261110t132151612z-f24ee9.json"
+  ],
+  "live_allowed": false,
+  "estimate": {
+   "live_usd": 1.06,
+   "live_worst_usd": 4.8,
+   "replay_usd": 0,
+   "remaining_usd": 18.5,
+   "job_cap_usd": 5
+  },
+  "plan_sha256": "643030c73e7c7502343237862339c1ea47903dce0870892fc551a35ba438b4d0"
+ },
+ "replay 1": {
+  "case": "c87d807b-ccf2-48be-a694-adaf9983ed69",
+  "subject": "e28bffa8-db3a-4156-81d3-fe72af4953db",
+  "form": "IMM 5257 (09-2023)",
+  "form_fields": 56,
+  "sheet": "prototype/p2/review-sheets/imm-5257-09-2023-bd4761bdb306.sheet.json",
+  "sheet_sha256": "bd4761bdb3067c9a7d1061ffb7f389ca0c35df02665f95eb6aed4618e75372c0",
+  "saved_available": true,
+  "saved_files": [
+   "prototype/p2/runs/studio-form-review-imm-5257-09-2023-0b775139-live-20261110t132145228z-2e36cf.json",
+   "prototype/p2/runs/studio-form-review-check-imm-5257-09-2023-0b775139-live-20261110t132151612z-f24ee9.json"
+  ],
+  "live_allowed": false,
+  "estimate": {
+   "live_usd": 1.06,
+   "live_worst_usd": 4.8,
+   "replay_usd": 0,
+   "remaining_usd": 18.5,
+   "job_cap_usd": 5
+  },
+  "plan_sha256": "20308ccd3b2de4ef17c63f7f7bfe51732699a53f77b552252f76112a8d47a3ef"
+ },
+ "replay 2": {
+  "case": "dedcd7e9-6956-4993-a489-3d2693477f20",
+  "subject": "921afb4e-99b3-40f2-aa7c-f4e470be31ce",
+  "form": "IMM 5257 (09-2023)",
+  "form_fields": 56,
+  "sheet": "prototype/p2/review-sheets/imm-5257-09-2023-bd4761bdb306.sheet.json",
+  "sheet_sha256": "bd4761bdb3067c9a7d1061ffb7f389ca0c35df02665f95eb6aed4618e75372c0",
+  "saved_available": true,
+  "saved_files": [
+   "prototype/p2/runs/studio-form-review-imm-5257-09-2023-0b775139-live-20261110t132145228z-2e36cf.json",
+   "prototype/p2/runs/studio-form-review-check-imm-5257-09-2023-0b775139-live-20261110t132151612z-f24ee9.json"
+  ],
+  "live_allowed": false,
+  "estimate": {
+   "live_usd": 1.06,
+   "live_worst_usd": 4.8,
+   "replay_usd": 0,
+   "remaining_usd": 18.5,
+   "job_cap_usd": 5
+  },
+  "plan_sha256": "f8247752c23a5ab3a52de155e994dc4a892d6b1c8cb9aee30c7e541e6db992f5"
+ },
+ "replay 3": {
+  "case": "54df91e6-bb1c-47e4-bb59-55c124d47719",
+  "subject": "967c8029-45b5-4407-b4dd-0b239125f7d2",
+  "form": "IMM 5257 (09-2023)",
+  "form_fields": 56,
+  "sheet": "prototype/p2/review-sheets/imm-5257-09-2023-bd4761bdb306.sheet.json",
+  "sheet_sha256": "bd4761bdb3067c9a7d1061ffb7f389ca0c35df02665f95eb6aed4618e75372c0",
+  "saved_available": true,
+  "saved_files": [
+   "prototype/p2/runs/studio-form-review-imm-5257-09-2023-0b775139-live-20261110t132145228z-2e36cf.json",
+   "prototype/p2/runs/studio-form-review-check-imm-5257-09-2023-0b775139-live-20261110t132151612z-f24ee9.json"
+  ],
+  "live_allowed": false,
+  "estimate": {
+   "live_usd": 1.06,
+   "live_worst_usd": 4.8,
+   "replay_usd": 0,
+   "remaining_usd": 18.5,
+   "job_cap_usd": 5
+  },
+  "plan_sha256": "bc948943817916eba2c764f94a9ecbf5fb43589820ef9fbd654921c35d2b767f"
+ },
+ "replay 4": {
+  "case": "8dd36ba9-863b-4a21-a14b-c4303914754e",
+  "subject": "ae5d725f-2b22-40a8-9622-82fa9daa2604",
+  "form": "IMM 5257 (09-2023)",
+  "form_fields": 56,
+  "sheet": "prototype/p2/review-sheets/imm-5257-09-2023-bd4761bdb306.sheet.json",
+  "sheet_sha256": "bd4761bdb3067c9a7d1061ffb7f389ca0c35df02665f95eb6aed4618e75372c0",
+  "saved_available": true,
+  "saved_files": [
+   "prototype/p2/runs/studio-form-review-imm-5257-09-2023-0b775139-live-20261110t132145228z-2e36cf.json",
+   "prototype/p2/runs/studio-form-review-check-imm-5257-09-2023-0b775139-live-20261110t132151612z-f24ee9.json"
+  ],
+  "live_allowed": false,
+  "estimate": {
+   "live_usd": 1.06,
+   "live_worst_usd": 4.8,
+   "replay_usd": 0,
+   "remaining_usd": 18.5,
+   "job_cap_usd": 5
+  },
+  "plan_sha256": "89dd302fd45b3685235a8f6dc46b718317342312147727d52a0fd326a8ef3837"
+ },
+ "replay 5": {
+  "case": "e4a82601-31c5-4e83-9097-4bdf39993fea",
+  "subject": "ea87c888-5d13-4b9e-a3d2-68ea57547be8",
+  "form": "IMM 5257 (09-2023)",
+  "form_fields": 56,
+  "sheet": "prototype/p2/review-sheets/imm-5257-09-2023-bd4761bdb306.sheet.json",
+  "sheet_sha256": "bd4761bdb3067c9a7d1061ffb7f389ca0c35df02665f95eb6aed4618e75372c0",
+  "saved_available": true,
+  "saved_files": [
+   "prototype/p2/runs/studio-form-review-imm-5257-09-2023-0b775139-live-20261110t132145228z-2e36cf.json",
+   "prototype/p2/runs/studio-form-review-check-imm-5257-09-2023-0b775139-live-20261110t132151612z-f24ee9.json"
+  ],
+  "live_allowed": false,
+  "estimate": {
+   "live_usd": 1.06,
+   "live_worst_usd": 4.8,
+   "replay_usd": 0,
+   "remaining_usd": 18.5,
+   "job_cap_usd": 5
+  },
+  "plan_sha256": "78757e51bc6cdf88819db626bc80618aa94320c9577cb37d8ce1212018ae330d"
+ },
+ "replay 6": {
+  "case": "5d89ca45-f95b-44ba-b71c-664b0f08d35f",
+  "subject": "a913b598-73b5-43b7-b2f9-ddeff7a176c5",
+  "form": "IMM 5257 (09-2023)",
+  "form_fields": 56,
+  "sheet": "prototype/p2/review-sheets/imm-5257-09-2023-bd4761bdb306.sheet.json",
+  "sheet_sha256": "bd4761bdb3067c9a7d1061ffb7f389ca0c35df02665f95eb6aed4618e75372c0",
+  "saved_available": true,
+  "saved_files": [
+   "prototype/p2/runs/studio-form-review-imm-5257-09-2023-0b775139-live-20261110t132145228z-2e36cf.json",
+   "prototype/p2/runs/studio-form-review-check-imm-5257-09-2023-0b775139-live-20261110t132151612z-f24ee9.json"
+  ],
+  "live_allowed": false,
+  "estimate": {
+   "live_usd": 1.06,
+   "live_worst_usd": 4.8,
+   "replay_usd": 0,
+   "remaining_usd": 18.5,
+   "job_cap_usd": 5
+  },
+  "plan_sha256": "2210140eb57ad2647e3a216a2d6f4848202338e45e80d065eb1b2f6cf868a097"
+ }
+}

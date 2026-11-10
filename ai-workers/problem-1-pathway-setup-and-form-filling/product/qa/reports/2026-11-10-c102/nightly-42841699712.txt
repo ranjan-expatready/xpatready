@@ -1,0 +1,9 @@
+# nightly.yml run 42841699712 on main 87212b14d (dispatched by the tech lead, Lead 9 (series 2), 20:41 IST, capabilities="C7.5 C10.2", data=checkpoint), conclusion success, ended ~20:51 IST. Jobs: plan 129918336522, packs (C7.5) 129918382799, packs (C10.2) 129918383052. Lines from the jobs' logs (GitHub API), filtered for the gate's result:
+== job 129918382799
+Gate B: the PR names C7.5; claims Works for none (no bug check).
+    C7.5.test.ts on the checkpoint: exit 0, 16/16 passed (116 s: copy 5, Load the configured checkpoint 92, run 19)
+Gate B: passed.
+== job 129918383052
+Gate B: the PR names C10.2; claims Works for none (no bug check).
+    C10.2.test.ts on the checkpoint: exit 0, 14/14 passed (487 s: copy 5, Load the configured checkpoint 94, run 388)
+Gate B: passed.

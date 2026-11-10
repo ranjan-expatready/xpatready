@@ -1,0 +1,20 @@
+# main 0e0ccbb64, fresh isolated copy qa_c75p (:4474), fixture setup (setup_visitor_visa 15/15, setup_vv_m3 44/46: S2w and S7a red as on main, unrelated), scripts/probe_c75_api.ts, live AI off, US$0
+[plan] {"status":200,"replay":true,"live_allowed":false,"sha":"81cbec529a61"}
+[client plan] 403
+[client replay] 403
+[live on a live-off copy (refused, nothing launched)] {"status":409,"detail":"Live is off on this copy. A live review needs approval first, with its cost stated. Use Saved (US$0)."}
+[replay with a stale plan checksum] {"status":409,"detail":"The form's values, its saved review or the cost changed since you looked: nothing ran (US$0). Look at the run card again."}
+[two replays at once] {"a":201,"b":201,"a_cost":0,"b_detail":"Saved: no new finding, 4 already on the case (open, decided or dismissed). US$0.00. Each finding is a warning: decide it here, or pass it with a reason on Ready to file."}
+[AI findings after two concurrent replays] {"n":4,"distinct_fields":4}
+[third replay (sequential)] {"status":201,"note":"Saved: no new finding, 4 already on the case (open, decided or dismissed). US$0.00. Each finding is a warning: decide it here, or pass it with a reason on Ready to file.","n_after":4}
+[model calls made (ai_batch rows added)] 0
+[acknowledge with reason empty] {"status":400,"detail":"Give a reason of at least 3 characters: it is kept with the finding."}
+[acknowledge with reason two letters] {"status":400,"detail":"Give a reason of at least 3 characters: it is kept with the finding."}
+[acknowledge with reason three dots (no words)] {"status":200,"detail":"acknowledged"}
+[finding after the probes] {"id":"295d413c-1742-4aca-a1c1-5f5722bbb430","filing":"f1106d73-e2be-4897-ba77-099901a022ee","subject":"2692c9b6-f1ea-43d7-adc7-225536d390fb","person":"Sample Client A","form":"IMM 5257","field":"person.applying_from_country","fact_label":"Country or territory you are applying from","severity":"MAJOR","source":"ai","state":"acknowledged","quote":"India","rule":null,"agreement":"low","reasons":["Round 1: MAJOR · The applicant applies from India, which differs from the country of residence (Afghanistan), but no status or status dates in India are given on the sheet.","Round 2 (blind checker): MINOR · Applying from India (not the country of residence, Afghanistan) but
+[client acknowledges] 403
+[waive a INFO finding] {"status":422,"detail":"Only a CRITICAL finding is waived; this one is INFO: acknowledge it with a reason instead."}
+[dismiss twice] {"first":200,"second":409,"detail":"This finding is dismissed already, so it cannot be dismissed now."}
+[replay after a dismiss: the dismissed finding stays dismissed, nothing re-added] {"status":201,"note":"Saved: no new finding, 4 already on the case (open, decided or dismissed). US$0.00. Each finding is a warning: decide it here, or pass it with a reason on Ready to file.","n":4,"f2":"dismissed"}
+[activity mentions finding moves] true
+[activity carries the reason text] false

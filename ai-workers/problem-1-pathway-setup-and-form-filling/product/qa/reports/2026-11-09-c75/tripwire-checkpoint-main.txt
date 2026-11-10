@@ -1,0 +1,36 @@
+# main 0e0ccbb64, fresh isolated copy qa_c75tm (:4477), Reset then Load the configured checkpoint (96.2 s, by API as gate-b.mjs does), live AI off, US$0
+PASS  C7.5 saved runs: each committed first round has the blind checker round of the same job, and no round is alone (2 pairs; the saved paid review of IMM 5257 (run b4936d0b, 9 Nov) among them) — ["studio-form-review-check-imm-5257-09-2023-d5c57403-live-20261109t053622100z-bf29df.json","studio-form-review-check-imm-5257-09-2023-e88a4b5b-live-20261109t164658476z-9dc823.json","studio-form-review-imm-5257-09-2023-d5c57403-live-20261109t053614913z-5f1523.j
+PASS  C7.5 saved run (the saved paid review of IMM 5257 (run b4936d0b, 9 Nov)): both rounds are real live answers (caller live, finished, contract-valid), never made up (no test_fixture), at a cost within the job's worst case (US$0.86, as the PR says, US$0.86) — [{"caller":"live","status":"completed","cost":0.429548},{"caller":"live","status":"completed","cost":0.432524}]
+PASS  C7.5 saved run (the saved paid review of IMM 5257 (run b4936d0b, 9 Nov)): both rounds read the same inputs, for the IMM 5257 (09-2023) edition — [{"file":"prototype/p1/inventory/imm5257e.inventory.json","sha256":"004fc9fb8b3162a12ae626a3b666fb65a4ceb7dd537679ccc47114d3aa31208b"},{"file":"prototype/p2/review-sheets/imm-5257-09-2023-3a2acc10d135.sheet.json","sha256":"3a2acc10d135891fa8c64c4f6dc74893a2740
+PASS  C7.5 tripwire pass: the committed sheet and the inventory are exactly what the saved paid review of IMM 5257 (run b4936d0b, 9 Nov) read — []
+PASS  C7.5 tripwire (the saved paid review of IMM 5257 (run b4936d0b, 9 Nov)): its committed sheet is a review-sheet/v1 of IMM 5257 (09-2023), written as the product writes it (same text, same checksum)
+PASS  C7.5 saved run (the saved paid review of IMM 5257 (job imm-5257-09-2023-e88a4b5b, 20261109)): both rounds are real live answers (caller live, finished, contract-valid), never made up (no test_fixture), at a cost within the job's worst case (US$0.89) — [{"caller":"live","status":"completed","cost":0.445288},{"caller":"live","status":"completed","cost":0.445104}]
+PASS  C7.5 saved run (the saved paid review of IMM 5257 (job imm-5257-09-2023-e88a4b5b, 20261109)): both rounds read the same inputs, for the IMM 5257 (09-2023) edition — [{"file":"prototype/p1/inventory/imm5257e.inventory.json","sha256":"004fc9fb8b3162a12ae626a3b666fb65a4ceb7dd537679ccc47114d3aa31208b"},{"file":"prototype/p2/review-sheets/imm-5257-09-2023-123a97599291.sheet.json","sha256":"123a97599291d6ab483b58e88861af6467f33
+PASS  C7.5 tripwire pass: the committed sheet and the inventory are exactly what the saved paid review of IMM 5257 (job imm-5257-09-2023-e88a4b5b, 20261109) read — []
+PASS  C7.5 tripwire (the saved paid review of IMM 5257 (job imm-5257-09-2023-e88a4b5b, 20261109)): its committed sheet is a review-sheet/v1 of IMM 5257 (09-2023), written as the product writes it (same text, same checksum)
+PASS  C7.5 saved runs: no two pairs read the same sheet (each data set has its own)
+PASS  C7.5 tripwire fail: a sheet with one value changed is not the one the run read, said in words naming the run — ["the review sheet prototype/p2/review-sheets/imm-5257-09-2023-3a2acc10d135.sheet.json is not the one the saved paid review of IMM 5257 (run b4936d0b, 9 Nov) read (ec27e52baf28 ≠ 3a2acc10d135)"]
+PASS  C7.5 tripwire fail: an inventory with one byte added is caught, naming the run — ["the inventory prototype/p1/inventory/imm5257e.inventory.json changed since the saved paid review of IMM 5257 (run b4936d0b, 9 Nov) read it (73ebb4a00c28 ≠ 004fc9fb8b31)"]
+PASS  C7.5 tripwire fail: a missing sheet is caught
+      the saved paid review of IMM 5257 (run b4936d0b, 9 Nov) does not match this data: the pack's case gives prototype/p2/review-sheets/imm-5257-09-2023-8bc90b0c0c65.sheet.json. Lines that differ (first 12):
+        form1[0].Page1[0].PersonalDetails[0].Citizenship[0].Citizenship[0]: Afghanistan → India
+        form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Country[0]: India → (none)
+        form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Country[0]: Afghanistan → India
+        form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].FromDate[0]: 2015-01-01 → (none)
+        form1[0].Page1[0].PersonalDetails[0].PlaceBirthCity[0]: SAMPLE → SAMPLE
+        form1[0].Page1[0].PersonalDetails[0].PlaceBirthCountry[0]: India → India
+        form1[0].Page1[0].PersonalDetails[0].SameAsCORIndicator[0]: No → Yes
+        form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].nativeLang[0].nativeLang[0]: Ada → Hindi
+        form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].CountryofIssue[0].CountryofIssue[0]: AFG (Afghanistan) → IND (India)
+        form1[0].Page3[0].BackgroundInfo2[0].VisaChoice1[0]: No → No
+        form1[0].Page3[0].BackgroundInfo2[0].VisaChoice2[0]: No → No
+        form1[0].Page3[0].BackgroundInfo[0].Choice[1]: No → No
+      the saved paid review of IMM 5257 (job imm-5257-09-2023-e88a4b5b, 20261109) does not match this data: the pack's case gives prototype/p2/review-sheets/imm-5257-09-2023-8bc90b0c0c65.sheet.json. Lines that differ (first 12):
+        form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].FromDate[0]: 2015-01-01 → (none)
+        form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Other[0]: SAMPLE → (none)
+        form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].ToDate[0]: 2015-01-01 → (none)
+FAIL  C7.5 tripwire pass (pack's case): on this data the pack's fixed answers give exactly the sheet one committed pair read (none); if this fails the filler, the captions, the data or the pack's answers moved, and no saved run serves this data — {"plan_sheet":"prototype/p2/review-sheets/imm-5257-09-2023-8bc90b0c0c65.sheet.json","recorded":["prototype/p2/review-sheets/imm-5257-09-2023-3a2acc10d135.sheet.json","prototype/p2/review-sheets/imm-5257-09-2023-123a97599291.sheet.json"]}
+FAIL  C7.5 tripwire pass: Saved is offered with exactly that pair, not made up — {"available":false,"why":"No saved review of this form edition with these values yet.","files":[],"made_up":false}
+PASS  C7.5 tripwire fail (a changed answer): another sheet, Saved not offered, a replay refused (409) at US$0, no AI finding added: the run is never reused for other answers — {"sha":"d7edebf32dec32180293ee6bc2c2554bace7050772435eda5a891c9cbdadef13","status":409}
+
+14/16 passed
