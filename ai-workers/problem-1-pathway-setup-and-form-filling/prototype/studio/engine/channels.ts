@@ -58,6 +58,19 @@ export function allowedChannels(records: AcceptRecord[] | undefined, account: st
   if (!r) return { channels: OFFERED_WITHOUT_RECORD, record: null };
   return { channels: r.channels.filter((c) => c !== "NOT_NEEDED" || (r.account !== "ANY" && r.account === account)), record: r };
 }
+/** M3-S5 (P-113, P-171 (3)): the record that makes a form answer-sheet only on this account, or null. A form IRCC accepts
+ *  through the account only Online (no PDF upload, no paper: "Do not fill out the PDF form") is typed into the portal from
+ *  its answer sheet alone, with no PDF copy, so nobody mistakes the PDF for something to file (P-145 holds elsewhere).
+ *  The Form library's record decides, read for the case's own account as on the Forms tab (C-3), never a list of forms:
+ *  no record, a record that also takes a PDF upload or paper, and paper filing are never answer-sheet only. */
+export function answerSheetOnly(records: AcceptRecord[] | undefined, account: string | null | undefined): AcceptRecord | null {
+  const { channels, record } = allowedChannels(records, account);
+  return record && channels.includes("ONLINE") && !channels.some((c) => c === "PDF_UPLOAD" || c === "PAPER") ? record : null;
+}
+/** M3-S5: why an answer-sheet-only form has no PDF copy, from its record and what the record says (IRCC's line, or the
+ *  reason a person gave when they set it: the library keeps either as the record's line). */
+export const answerSheetOnlyWords = (form: string, r: AcceptRecord) =>
+  `The Form library records that IRCC accepts ${form} ${r.account === "ANY" ? "" : `${throughAccount(r.account)} `}only Online: its answers go on the answer sheet only, with no PDF copy.${r.quote ? ` The record says: "${r.quote}"` : ""}`;
 export async function acceptsOf(db: Pick<PrismaClient, "formEdition">, workspaceId: string): Promise<Accepts> {
   const eds = await db.formEdition.findMany({ where: { workspaceId, channel: { not: "ONLINE" } }, select: { editionLabel: true, accepts: true, form: { select: { formKey: true } } } });
   const newest = new Map<string, (typeof eds)[number]>();
