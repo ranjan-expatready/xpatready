@@ -501,12 +501,26 @@ function changedFiles(...spec) {
   if (d.status !== 0) throw new Error(`git diff ${spec.join(" ")} failed: ${d.stderr.trim()}`);
   return d.stdout.split("\n").filter(Boolean);
 }
-/** The packs a list of changed files reaches (select-suites.mjs --packs → touchedPacks). */
-function packsReachedBy(list) {
+/** (4a, P-446): the checkpoint step or gate file select-suites.mjs --packs marked in a chain ("<file> (configured
+ *  checkpoint) ← <pack>"), or null when the change reaches none. */
+export function checkpointTrigger(reached) {
+  for (const c of reached.values()) { const m = c.split(" ← ").map((x) => x.match(/^(.+) \(configured checkpoint\)$/)).find(Boolean); if (m) return m[1]; }
+  return null;
+}
+/** (4a): such a change also touches every row scored on the configured checkpoint (gate B loads it for them, so they read
+ *  the change over HTTP, where select-suites' import edges never look); read only, so diffSet runs the Works ones. */
+export function checkpointRows(touched, trigger, ids, dataOfId) {
+  if (trigger) for (const id of ids) if (!touched.has(id) && dataOfId(id) === "checkpoint")
+    touched.set(id, { files: [trigger], why: `${trigger}: a checkpoint step or gate file, and this row is scored on the configured checkpoint (4a)`, direct: false });
+  return touched;
+}
+/** The packs a list of changed files reaches (select-suites.mjs --packs → touchedPacks); info.checkpoint: checkpointTrigger. */
+function packsReachedBy(list, info = {}) {
   const top = gitTop();
   const r = spawnSync(process.execPath, [join(P, "tools/select-suites.mjs"), "--packs"], { cwd: top, input: list.map((f) => f + "\n").join(""), encoding: "utf8", maxBuffer: 64 << 20 });
   if (r.status !== 0) throw new Error(`select-suites.mjs --packs failed: ${(r.stderr || r.stdout).trim().split("\n").pop()}`);
   const reached = new Map(r.stdout.split("\n").filter(Boolean).map((l) => { const [f, ...c] = l.split("\t"); return [f, c.join("\t")]; }));
+  info.checkpoint = checkpointTrigger(reached);
   const acc = join(S, "acceptance"), files = existsSync(acc) ? readdirSync(acc).filter((f) => PACK.test(f)) : [];
   return touchedPacks(reached, files, (f) => readFileSync(join(acc, f), "utf8"), relative(top, S), new Set(list));
 }
@@ -514,7 +528,8 @@ function diffCaps(range) {
   const [b, h] = range.split(".."), top = gitTop(), rel = relative(top, S);
   const changed = changedFiles(`${b}...${h}`);
   const deleted = changed.filter((f) => f.startsWith(`${rel}/acceptance/`) && PACK.test(f.split("/").pop()) && !existsSync(join(top, f))).map((f) => f.split("/").pop());
-  return { touched: packsReachedBy(changed), deleted };
+  const info = {}, touched = packsReachedBy(changed, info);
+  return { touched, deleted, checkpoint: info.checkpoint };
 }
 /** QA-366: which capabilities a merge-queue batch runs again. prs: [{ n, caps: claims().caps, touched: id → { files, why }
  *  (the packs reached by what the batch adds to that PR's own run), or null when that could not be worked out }];
@@ -655,7 +670,7 @@ async function main(argv) {
   if (byDiff || (scoreIt && cl.caps.size)) {   // the base's statuses, data and holds only when something needs them
     const { baseScoring, groupsOf } = await import("./works-set.mjs"), sc = baseScoring();
     if (byDiff) {
-      const { touched, deleted } = diffCaps(range), { run, listed } = diffSet(touched, sc.statusOf);
+      const { touched, deleted, checkpoint } = diffCaps(range), { run, listed } = diffSet(checkpointRows(touched, checkpoint, sc.ids(), sc.dataOf), sc.statusOf);
       const fresh = run.filter((r) => !cl.caps.has(r.id));
       const note = (s) => (opt.diffGroups ? console.error(s) : console.log(s), process.env.GITHUB_STEP_SUMMARY && appendFileSync(process.env.GITHUB_STEP_SUMMARY, s + "\n"));
       if (fresh.length) note(`Gate B by diff (D2): the change touches ${fresh.map((r) => `${r.id} on the ${sc.dataOf(r.id)} (${r.direct ? "its pack changed" : "Works; its pack reads a changed file"}: ${r.why})`).join("; ")}.`);

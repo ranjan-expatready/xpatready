@@ -105,7 +105,7 @@ export function baseScoring() {
   // A duplicate id reads as Works when any copy is (as protectedSet), else its first status.
   const statusOf = (id) => { const own = all.filter((r) => r.id === id); return (own.find((r) => isWorks(r.status)) ?? own[0])?.status ?? null; };
   const hold = held(atBase(HELD, true));   // qa's holds (a missing file holds nothing here; the queue's set refuses it)
-  return { statusOf, dataOf: (id) => scoringData(id, md, dat), heldOf: (id, files) => files.filter((f) => hold.caps.has(id) || hold.packs.has(f)) };
+  return { statusOf, ids: () => [...new Set(all.map((r) => r.id))], dataOf: (id) => scoringData(id, md, dat), heldOf: (id, files) => files.filter((f) => hold.caps.has(id) || hold.packs.has(f)) };
 }
 /** At most n groups of rows for a job matrix, balanced by weight (a checkpoint pack 2, a six pack 1; heaviest first). */
 export function groupsOf(items, n) {

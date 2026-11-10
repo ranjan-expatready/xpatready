@@ -416,6 +416,8 @@ if (process.argv.includes("--packs")) {   // D2: the acceptance and test files t
   // Data files count too (Devin on #1337: C4.5 reads prototype/expected/source-text/*.txt); images and PDFs under
   // prototype/ are seeded as well, and simply reach nothing when no file reads them.
   const seedable = (f) => f.startsWith(`${PR}/`) || (f.startsWith(`${P}/official-sources/`) && !DOCS.test(f));
+  let tf = null;   // the code files under acceptance/ and tests/, listed once
+  const testFiles = () => tf ??= (() => { try { return execSync(`git ls-files -c -- "${S}/acceptance" "${S}/tests" "${PR}/tests"`, { cwd: ROOT, encoding: "utf8", maxBuffer: 64 << 20 }).split("\n").filter((x) => x && CODE.test(x)); } catch { return []; } })();
   const testFile = (x) => x.startsWith(`${S}/acceptance/`) || x.startsWith(`${S}/tests/`) || x.startsWith(`${PR}/tests/`);
   // A data file's folder is read by a pack or test whose code (comments stripped) names its last two folders, each as a
   // quoted string of its own (join(…, "expected", "source-text", …)). Folder names inside longer paths, in run lines or
@@ -423,25 +425,30 @@ if (process.argv.includes("--packs")) {   // D2: the acceptance and test files t
   // Markdown never takes this rule: a note is read only by its file name, as before.
   const folderReaders = (f) => { if (/\.md$/i.test(f)) return [];
     const c = basename(dirname(f)), b = basename(dirname(dirname(f))), q = (w) => new RegExp(`["'\`]${esc(w)}["'\`]`);
-    let files = []; try { files = execSync(`git ls-files -c -- "${S}/acceptance" "${S}/tests" "${PR}/tests"`, { cwd: ROOT, encoding: "utf8", maxBuffer: 64 << 20 }).split("\n").filter((x) => x && CODE.test(x)); } catch { return []; }
-    return files.filter((x) => { const t = stripComments(read(x)); return q(c).test(t) && q(b).test(t); }); };
+    return testFiles().filter((x) => { const t = stripComments(read(x)); return q(c).test(t) && q(b).test(t); }); };
   for (const f of changed) if (seedable(f) && !via.has(f)) { via.set(f, null); todo.push(f); }
   const chain = (x) => { const c = []; for (let y = x; y; y = via.get(y)) c.push(basename(y)); return c.reverse().join(" ← "); };
   const stop = (x) => RUNNERS.has(x) || x === MAIN || suites.get(basename(x)) === x;
   const appCode = (x) => (x.startsWith(`${S}/api/src/`) && CODE.test(x)) || x.startsWith(`${S}/web/`);
   // (4a, P-446, 10 Nov): the gates and every other checkpoint step reach the app only when a pack loads the configured
   // checkpoint (POST /demo/load {sample: "configured"} runs api/src/features/checkpoint/*; "six" runs none of them), a
-  // read over HTTP that the import edges below never see (#1450 broke C6.19's pack after approval). So a changed
-  // checkpoint step or gate file seeds every pack, test or helper whose code (comments stripped) loads it; the walk then
-  // adds the packs that import such a helper (acceptance/lib/declared.ts).
-  const CHECKPOINT = new RegExp(`^${esc(S)}/(api/src/features/checkpoint/|samples/form-field-gates\\.json$|api/src/(features/)?form-field-gates\\.ts$|api/src/form-field-condition\\.ts$|engine/form-field-condition\\.ts$)`);
-  const cp = changed.find((f) => CHECKPOINT.test(f));
-  if (cp) {
-    const LOADS = /sample\s*:\s*["'`]configured["'`]/;
-    let files = []; try { files = execSync(`git ls-files -c -- "${S}/acceptance" "${S}/tests" "${PR}/tests"`, { cwd: ROOT, encoding: "utf8", maxBuffer: 64 << 20 }).split("\n").filter((x) => x && CODE.test(x)); } catch {}
-    const tag = `${cp} (configured checkpoint)`; via.set(tag, null);
-    for (const x of files) if (!via.has(x) && LOADS.test(stripComments(read(x)))) { via.set(x, tag); if (!stop(x)) todo.push(x); }
-  }
+  // read over HTTP that the import edges below never see (#1450 broke C6.19's pack after approval). So a checkpoint step,
+  // a gate file or the code that loads them (checkpoint*.ts), changed or reached on the walk (a data file a step reads, an
+  // engine module a step imports), or demo.ts itself changed (reached on the walk it is only the hub that imports most API
+  // modules for every Demo route, so it would fire for any of them: review of #1504 round 2; nor a file reached through a
+  // folder edge, which is the graph's guess, not a read: sources.ts names studio/tools, so the any-baseline), seeds every pack, test or helper whose code (comments stripped) loads the
+  // configured checkpoint; the walk then adds the packs that import such a helper (acceptance/lib/declared.ts). Its chain
+  // reads "<file> (configured checkpoint) ← <pack>"; gate-b.mjs also adds the Works rows scored on the checkpoint.
+  const CHECKPOINT = new RegExp(`^${esc(S)}/(api/src/features/checkpoint/|api/src/demo\\.ts$|api/src/checkpoint[^/]*\\.ts$|samples/form-field-gates\\.json$|api/src/(features/)?form-field-(gates|condition)\\.ts$|engine/form-field-condition\\.ts$)`);
+  const LOADS = /sample\s*:\s*["'`]configured["'`]/;
+  let cpSeeded = false; const loose = new Set();   // reached through a folder edge somewhere on its chain: never a trigger
+  const DEMO = `${S}/api/src/demo.ts`;
+  const checkpointSeed = (y, walked) => {
+    if (cpSeeded || !CHECKPOINT.test(y) || (walked && y === DEMO)) return;
+    cpSeeded = true; const tag = `${y} (configured checkpoint)`; via.set(tag, y);
+    for (const x of testFiles()) if (!via.has(x) && LOADS.test(stripComments(read(x)))) { via.set(x, tag); if (!stop(x)) todo.push(x); }
+  };
+  for (const f of changed) if (via.has(f)) checkpointSeed(f);
   // A deleted file: the files that still name it (by file name, or by its stem in an import path) use it.
   // An import path that ends in its stem is an import edge (so a deleted API or web module is still followed; review m1).
   const named = (f) => { const b = basename(f), stem = b.replace(/\.[^.]+$/, ""), imp = new RegExp(`/${esc(stem)}(?:\\.(?:js|ts|tsx|cjs|mjs))?["']`), nm = new RegExp(`(?<![A-Za-z0-9_.-])${esc(b)}(?![A-Za-z0-9_-])`);
@@ -458,7 +465,7 @@ if (process.argv.includes("--packs")) {   // D2: the acceptance and test files t
       // Through API and web code only by imports: a file that names an endpoint's module or lists its folder is no read.
       // ... except a pack or test that reads the app file as text (Devin on #1337: C2.12 and C11.1 read App.tsx's routes).
       if (appCode(y) && how !== "import" && !testFile(x)) continue;
-      via.set(x, y);
+      via.set(x, y); if (how === "folder" || loose.has(y)) loose.add(x); else checkpointSeed(x, true);
       if (!stop(x)) todo.push(x);
     }
   }
