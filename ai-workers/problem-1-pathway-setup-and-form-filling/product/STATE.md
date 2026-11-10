@@ -2,11 +2,9 @@
 
 current_lead: local_556afbc8-71a2-4cb9-b47f-ab86a53460df Lead 10 · 10 Nov 22:54 IST (series 2; took over from Lead 9 (series 2, local_d3d09334) at ~318k context, ~200k beyond its start read, P-446) · **start read ~113k (get_usage 22:58 IST); hand over at the first check after ~313k (P-446 (2))**; check f31dbacd at :13/:43
 
-updated: 2026-11-10 22:47 IST by **Lead 9 (series 2, local_d3d09334-…)** (M3 29/29; night lanes P-451; Bake plan draft) · weekly 65% · milestone: **M2 60/60; M3 29 of 29 Works on main**; next: the Bake (M3.5), plan awaiting the founder (P-450) · rules: **`RULES.md`** (as of P-452) · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-11 00:28 IST by **Lead 10 (series 2, local_556afbc8-…)** (Bake lanes P-453 to P-456) · weekly 72% · milestone: **M2 60/60; M3 29 of 29 Works on main**; next: the Bake (M3.5), plan awaiting the founder (P-450) · rules: **`RULES.md`** (as of P-452) · this branch: `lead/2026-11-07-lead31`
 
-## Hand-over: Lead 7 (series 2) → Lead 8 (series 2), 11:55 IST 10 Nov: word for word in `history/STATE-2026-11-10-1525-lead7s2-handover-block.md` (its rows are carried in Live rows below).
-**Founder 12:0x-12:1x IST (Lead 8): Bake answers recorded as P-447** (walk twice as exit, no co-founder watch first, lean cap 24). **Answered ~12:3x as P-448:** Bake = lean Bake + generic engine core (~40 sessions, second exit: no code change, data edits allowed, on Study permit (P-449); screens-only is M4 Track A's exit); founder to book the immigration expert (P-240: nothing Sample releases outside the demo). #1475 requeue refused by the classifier 11:56: founder to tick Mergify's box or name it.
-**Lessons (Lead 7):** claude.ai's session list re-renders after load: open a lane by clicking its link found by text in JS, and confirm the title before typing. The auto-mode classifier refuses the Lead's label toggle (remove + re-add) unless the founder names the PR. Fable corrected three of Lead 7's numbers: check evidence before proposing rule changes.
+## Hand-over: Lead 7 (series 2) → Lead 8 (series 2): word for word in `history/STATE-2026-11-11-0035-lead10s2-lead7-to-lead8-block.md`.
 
 ## Lead 40's last block (series 1): `history/STATE-2026-11-09-1748-lead40-final.md` (live items listed there; this page's 02:55 copy keeps the line).
 
