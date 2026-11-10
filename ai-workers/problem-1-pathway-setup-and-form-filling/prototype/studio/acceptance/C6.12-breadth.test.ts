@@ -15,7 +15,7 @@
 import { existsSync } from "node:fs";
 import { chromium } from "playwright";
 import { FEE_TABLE } from "../engine/runtime/filings.ts";
-import { FAMILY, OFFICER, PORT, main, needVisitorVisa, ok, openCase, sql } from "./lib/m3.ts";
+import { FAMILY, OFFICER, PORT, answer, call, main, needVisitorVisa, ok, openCase, sql } from "./lib/m3.ts";
 
 let heldN = 0;
 const HELD_WHY = "held: outside the Visitor visa journey under the founder's answer to Q1 (6 Nov, P-380); rows S1 and S2 after M3";
@@ -38,6 +38,23 @@ await main("C6.12 breadth", "Filings and fees: the parts C6.12 is Partial for", 
   // (2) The case officer's question for an accompanying child of a student or worker.
   const studyQ = Number(sql("select count(*) from config_release where snapshot::text ~* '(study|studies)[^\"]{0,40}(6|six) months or more'") ?? 0);
   held("C6.12-23 pass (Partial: child study question): a release of a student or worker combination asks the case officer \"will this child study 6 months or more?\" (yes adds a study permit filing)", studyQ === 0, studyQ > 0, { releasesWithTheQuestion: studyQ });
+  // M3-S2 (review m3): the question reaches a case and its answer adds the filing, on a case of the combination whose
+  // release carries the rule (by data: the release whose line adds a filing; no combination is named here).
+  const withRule = sql("select r.combination_id from config_release r where exists (select 1 from jsonb_array_elements(r.snapshot->'combination'->'participants') p where p ? 'addsFiling') order by r.created_at desc limit 1");
+  const rule = withRule ? JSON.parse(sql(`select p::text from config_release r, jsonb_array_elements(r.snapshot->'combination'->'participants') p where r.combination_id = '${withRule}' and p ? 'addsFiling' order by r.created_at desc limit 1`) ?? "null") as { role: string; addsFiling: { filing: string; condition: { field: string } } } | null : null;
+  if (withRule && rule) {
+    const yearsAgo = (n: number) => { const d = new Date(); d.setUTCFullYear(d.getUTCFullYear() - n); return d.toISOString().slice(0, 10); };
+    const k = await openCase(withRule, [{ role: "principal", name: "Sample Applicant M", dob: yearsAgo(35) }, { role: rule.role, name: "Sample Person M1", dob: yearsAgo(10) }, { role: rule.role, name: "Sample Person M2", dob: yearsAgo(8) }] as never);
+    const filings = async () => (await call("GET", `/runtime/cases/${k.id}/filings`, undefined, k.officer)).body as { filings?: { label: string; owner?: { subject: string }; applicants: { subject: string }[] }[] };
+    const own = (b: Awaited<ReturnType<typeof filings>>, who: string) => (b.filings ?? []).find((f) => f.owner?.subject === k.subjects[who]);
+    const before = await filings();
+    const a1 = await answer(k.id, k.subjects["Sample Person M1"], rule.addsFiling.condition.field, true), a2 = await answer(k.id, k.subjects["Sample Person M2"], rule.addsFiling.condition.field, false);
+    const after = await filings(), prep = (await call("GET", `/runtime/cases/${k.id}/prepare`, undefined, k.officer)).body as { filings?: { label?: string }[] };
+    ok(`C6.12-23 pass (case): the case officer's Yes adds the person's own "${rule.addsFiling.filing}" filing; a No keeps the other on the principal's application (GET …/filings and …/prepare agree)`,
+      !own(before, "Sample Person M1") && a1.status === 200 && a2.status === 200 && own(after, "Sample Person M1")?.label === `${rule.addsFiling.filing}: Sample Person M1` && !own(after, "Sample Person M2")
+        && (after.filings ?? []).some((f) => f.applicants.some((a) => a.subject === k.subjects["Sample Person M2"])) && (prep.filings ?? []).some((f) => f.label === `${rule.addsFiling.filing}: Sample Person M1`),
+      { before: before.filings?.map((f) => f.label), after: after.filings?.map((f) => f.label) });
+  }
   // (3) Other combinations: extensions, study and work permits have their fees, with no family maximum.
   const other = lines.filter((l) => /study|work|extension/i.test(`${l.key} ${l.label ?? ""}`));
   ok("C6.12-24 pass (Partial: other combinations): the fee table prices study permits, work permits and extensions, none with a family maximum", ["study", "work", "extension"].every((w) => other.some((l) => new RegExp(w, "i").test(`${l.key} ${l.label ?? ""}`))) && other.every((l) => !l.family_max && l.basis !== "family_maximum"),

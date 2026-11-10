@@ -1,7 +1,7 @@
 // M3-S2 (P-380, P-425, Bake plan row 18): a filing a "Who can be in this application" line adds when its rule holds on
 // the person's own answers (samples/conditional-filings.json; Sample, cited word for word, Unconfirmed: expert), set on
 // each combination's draft after its form setup (080) and before row 7 (090) and release 1 (110), through the screens' own services: the author saves the line's rule
-// (Questionnaires › Who can be in this application), adds the fact it reads (C3.6: a fact a rule needs), the content
+// through the save the Questionnaires tab uses (Studio.savePeople; no screen builds the rule yet: Not built, a screens row), adds the fact it reads (C3.6: a fact a rule needs), the content
 // reviewer accepts it and the Approver approves it into the library, and the author asks it per person in a section only
 // this combination asks (so no other combination's questionnaire changes). A step refused takes the rule back, so the
 // release is never refused over it, and is named on row 7 (formSetup().refused), never dropped. No model call (US$0).
@@ -57,7 +57,7 @@ export default {
         ctx.log.push(`  ${key}: ${spec.role.replace(/_/g, " ")} line adds "${String(spec.addsFiling.filing)}" when its rule holds (${f.fact} asked per person; samples/conditional-filings.json; Sample, Unconfirmed: expert)`);
       } catch (e) {
         refused.push(`${c.label}: the filing the ${spec.role.replace(/_/g, " ")} line adds was taken back: ${ctx.said(e)}`);
-        try { await save(c.id, ((await people(c.id)).participants as Line[]).map(({ addsFiling: _a, ...l }) => l as Line)); } catch (e2) { refused.push(`${c.label}: taking the rule back was refused: ${ctx.said(e2)}`); }
+        try { await save(c.id, ((await people(c.id)).participants as Line[]).map((l) => { if (l.role !== spec.role) return l; const { addsFiling: _a, ...rest } = l; return rest as Line; })); } catch (e2) { refused.push(`${c.label}: taking the rule back was refused: ${ctx.said(e2)}`); }
       }
     }
   },

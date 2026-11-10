@@ -71,9 +71,10 @@ const TABLE_FOR_RELEASE = TABLE;
   const rel = (lineExtra: Record<string, unknown>, repeats = "per_person", key = "x.any") => addedFilingProblems({ combination: { key, participants: [line("principal", { filingMode: "files_own" }), line("child", { filingMode: "on_principal", ...lineExtra })] }, placements: [{ fact: FACT, repeats }] } as unknown as Snapshot, TYPES, new Set(), new Set([FACT]), new Set(), TABLE_FOR_RELEASE).map((p) => p.message);
   ok("release pass: a line on the principal's application, its fact asked per person, a per-application fee line reaching it", rel({ addsFiling: { ...ADDS, fee: "permit" } }).length === 0, rel({ addsFiling: { ...ADDS, fee: "permit" } }));
   ok("release fail (break M4): its fact asked once for the case is refused", rel({ addsFiling: ADDS }, "once_per_case").some((m) => /asked once for the case/.test(m)));
+  ok("release fail (review m4): a line saved without a mode whose built-in default is files own is refused", rel({ filingMode: null, addsFiling: ADDS }, "per_person", "vv.single").some((m) => /already files their own application/.test(m)));
   ok("release fail (break m9): on a line that files its own application it is refused", rel({ filingMode: "files_own", addsFiling: ADDS }).some((m) => /already files their own application/.test(m)));
   ok("release fail (break m6, M2): a fee line not among the combination's, or not reaching the person, is refused", rel({ addsFiling: { ...ADDS, fee: "nope" } }).some((m) => /nope is not among/.test(m)) && rel({ addsFiling: { ...ADDS, fee: "main_only" } }).some((m) => /main_only is not among/.test(m)));
-  ok("release fail: fee lines with none per application are refused", rel({ addsFiling: { ...ADDS, fee: "bio" } }).some((m) => /per-application fee line/.test(m)));
+  ok("release pass (review M1): a per-person fee line reaching the child may be named", rel({ addsFiling: { ...ADDS, fee: "bio" } }).length === 0);
 }
 
 // (3) Reading it on a case (engine/runtime/added-filings.ts).
@@ -122,7 +123,7 @@ const derive = (adds?: Map<string, { filing: string; fee?: string }>) => deriveF
   const unnamed = derive(new Map([["C1", { filing: "Study permit" }]]));
   ok("fee fail: an added filing whose line names no fee line charges nothing on the case and says why (never a short total)", unnamed.fees_worked_out === false && unnamed.groups.every((g) => g.total_cents === null) && /is added by its rule/.test(unnamed.fees_why ?? "") && unnamed.filings.length === 2, unnamed.fees_why);
   const wrong = derive(new Map([["C1", { filing: "Study permit", fee: "bio" }]]));
-  ok("fee fail: a named line that is not per application is refused the same way", wrong.fees_worked_out === false && /is added by its rule/.test(wrong.fees_why ?? ""));
+  ok("fee pass (review M1): a named per-person line charges the child once, on their own filing, and no per-application line does", wrong.fees_worked_out === true && wrong.fees.filter((f) => f.person === "C1" && f.line === "bio").length === 1 && !wrong.fees.some((f) => f.person === "C1" && f.line !== "bio"), wrong.fees.filter((f) => f.person === "C1"));
   const looseOf = (adds?: Map<string, { filing: string }>) => deriveFilings("x.any", PEOPLE.slice(0, 3), () => undefined, { modes: new Map([["principal", "files_own" as const]]), ...(adds ? { adds } : {}) }) as D;
   const loose = looseOf(new Map([["C1", { filing: "Study permit" }]])), bare = looseOf();
   ok("filing pass: a line with no filing of its own adds it on a Yes (no fee lines: no amount, in words)", loose.filings.some((f) => f.owner?.subject === "C1" && f.label === "Study permit: Child C1") && !loose.not_filing.some((n) => n.subject === "C1") && loose.groups.every((g) => g.total_cents === null), loose.filings.map((f) => f.label));

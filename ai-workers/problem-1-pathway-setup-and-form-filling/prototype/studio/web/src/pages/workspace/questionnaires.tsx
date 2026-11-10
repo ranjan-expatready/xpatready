@@ -82,7 +82,8 @@ function FilingCell({ l, i, editing, mayBeApplicant, name, words, warning, error
       )}
       {principal ? <p className="text-xs text-text-muted">Always, for the principal</p> : words.ifNotTravelling ? <p className="text-xs text-text-muted" data-if-not-travelling>{words.ifNotTravelling}</p> : null}
       {!mayBeApplicant && l.filingMode === "co_files" ? <p className="text-xs text-text-muted">Sent with the principal's application; never alone</p> : null}
-      {l.addsFiling ? <p className="text-xs text-text-muted" data-adds-filing title={l.addsFiling.sourceQuote}>Adds their own {l.addsFiling.filing.toLowerCase()} application when: {l.addsFiling.conditionPlain}{editing ? <> <Button size="sm" variant="ghost" onClick={onRemoveAdds} aria-label={`Remove the ${l.addsFiling.filing.toLowerCase()} application ${name} adds`}>Remove</Button></> : null}</p> : null}
+      {l.addsFiling ? <div className="text-xs text-text-muted" data-adds-filing><p>Adds their own {l.addsFiling.filing.toLowerCase()} application when: {l.addsFiling.conditionPlain} <span className="font-medium">(Sample)</span>{editing ? <> <Button size="sm" variant="ghost" onClick={onRemoveAdds} aria-label={`Remove the ${l.addsFiling.filing.toLowerCase()} application ${name} adds`}>Remove</Button></> : null}</p>
+        <details><summary className="cursor-pointer">Where it comes from</summary><p className="mt-1">{l.addsFiling.sourceQuote}</p></details></div> : null}
       {warning ? <p className="mt-1 text-xs text-text-warn" data-filing-warning role="status">⚠ {warning.replace(/^[^:]+: [^.]+\. /, "")}{editing ? " You can still save." : ""}</p> : null}
       {error ? <p id={`${id}-error`} role="alert" className="text-xs text-text-danger">{error}</p> : null}
     </div>

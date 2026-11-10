@@ -9,7 +9,7 @@ import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rule
 import type { Snapshot } from "./snapshot.ts";
 import { askedChoiceProblems, channelProblems, fingerprintLine, type Accepts } from "./channels.ts";
 import { duplicateValidity, roleWords, validityProblems } from "./runtime/case-checklist.ts";
-import { FEE_TABLE, rulesFrom } from "./runtime/filings.ts";
+import { defaultModeOf, FEE_TABLE, rulesFrom } from "./runtime/filings.ts";
 import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
 import { factSourceProblems, factWords, who } from "./sources.ts";
 import { oathMappedProblems } from "./form-steps.ts";
@@ -105,7 +105,8 @@ export function addedFilingProblems(s: Snapshot, types: Map<string, string>, der
     const item = `${l.label ?? l.role}: ${l.addsFiling.filing ?? "added filing"}`;
     const say = (message: string) => out.push({ level: "error", where: "Who can be in this application", item, role: l.role, message });
     // Break m9: the save's rule again at release (one application per person): never on the principal or a line that files its own.
-    if (l.role === "principal" || l.filingMode === "files_own" || l.filingMode === "co_files") say(`${l.label ?? l.role} already files their own application, so a filing it adds would change nothing. Remove the filing it adds, or change the line's filing.`);
+    // Review m4: a line saved without a mode whose built-in default is "files own" files its own too.
+    if (l.role === "principal" || l.filingMode === "files_own" || l.filingMode === "co_files" || (!l.filingMode && defaultModeOf(s.combination.key, l.role) === "files_own")) say(`${l.label ?? l.role} already files their own application, so a filing it adds would change nothing. Remove the filing it adds, or change the line's filing.`);
     for (const e of checkCondition(l.addsFiling.condition, types, derived)) say(`Condition ${e}.`);
     for (const f of new Set([...JSON.stringify(l.addsFiling.condition ?? null).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]))) {
       if (types.has(f) && !placed.has(f) && !docFacts.has(f) && !derived.has(f)) say(`The rule reads ${f}, but nobody is asked it in this combination, so the filing could never be added. Ask it in the questionnaire, or change the rule.`);
@@ -117,7 +118,6 @@ export function addedFilingProblems(s: Snapshot, types: Map<string, string>, der
     if (feeRules?.fees.length && keys.length) {
       const bad = keys.filter((k) => { const r = feeRules.fees.find((x) => x.key === k); return !r || (r.roles && !r.roles.includes(l.role)); });
       if (bad.length) say(`The fee line${bad.length > 1 ? "s" : ""} ${bad.join(", ")} ${bad.length > 1 ? "are" : "is"} not among this combination's fee lines for a ${l.role.replace(/_/g, " ")}, so the case could not be priced.`);
-      else if (!keys.some((k) => feeRules.fees.find((x) => x.key === k)?.basis === "per_application")) say("Name the per-application fee line the filing it adds pays, so the case can be priced.");
     }
   }
   return out;

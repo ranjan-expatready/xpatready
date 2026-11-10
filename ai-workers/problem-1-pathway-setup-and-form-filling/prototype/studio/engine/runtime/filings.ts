@@ -258,12 +258,12 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const missingCo = coRoles.filter((r) => !persons.some((p) => p.role === r));
   // M3-S2: a filing a person adds is charged only by the fee lines its line names (break M1: no other line counts that
   // person, so they never pay the application they left); each must be one of the combination's lines reaching the
-  // person's role (break M2), at least one per application. Otherwise its fee is unknown, so the case charges nothing
+  // person's role (break M2), on any basis (review M1: a per-person line such as a study permit charges them once). Otherwise its fee is unknown, so the case charges nothing
   // (BR-10), never a short or wrong total.
   const addedFee = new Map(plan.filings.filter((f) => f.added).map((f) => { const k = opts.adds?.get(f.owner.subject)?.fee; return [f.id, typeof k === "string" ? [k] : Array.isArray(k) ? k : []] as const; }));
   const addedOwner = new Map(plan.filings.filter((f) => f.added).map((f) => [f.owner.subject, f.id]));
   const reaches = (key: string, role: string) => { const r = fees0.find((x) => x.key === key); return !!r && (!r.roles || r.roles.includes(role)); };
-  const unpricedAdded = filings.filter((f) => { const k = addedFee.get(f.id); return !!k && (!k.length || !k.every((x) => reaches(x, f.owner!.role)) || !k.some((x) => fees0.find((r) => r.key === x)?.basis === "per_application")); });
+  const unpricedAdded = filings.filter((f) => { const k = addedFee.get(f.id); return !!k && (!k.length || !k.every((x) => reaches(x, f.owner!.role))); });
   const priced = unreached.length || missingCo.length || unpricedAdded.length ? [] : fees0;
   const groups: SubmissionGroup[] = [], fees: FeeLine[] = [];
   for (const gid of [...new Set(filings.map((f) => f.group))]) {
@@ -317,7 +317,7 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const feesKnown = priced.length > 0;
   const body = { filings, groups, fees, not_filing: notFiling };
   const unpriced = missingCo.length && fees0.length ? `No ${missingCo.map((r) => r.replace(/_/g, " ")).join(" or ")} on this case yet: their co-filed application carries its own fee, so no fee is charged until they are added; nothing is guessed.`
-    : unpricedAdded.length && fees0.length ? `${unpricedAdded.map((f) => `${f.label} is added by its rule`).join("; ")}, and its line does not name this combination's fee lines for it (a per-application line, each reaching a ${unpricedAdded.map((f) => f.owner!.role.replace(/_/g, " ")).join(" or ")}), so no fee is charged on this case; nothing is guessed.`
+    : unpricedAdded.length && fees0.length ? `${unpricedAdded.map((f) => `${f.label} is added by its rule`).join("; ")}, and its line does not name this combination's fee lines for it (each reaching a ${unpricedAdded.map((f) => f.owner!.role.replace(/_/g, " ")).join(" or ")}), so no fee is charged on this case; nothing is guessed.`
     : unreached.length && fees0.length ? `The fee table has no fee line for ${unreached.map((f) => `${f.owner!.label}'s co-filed application`).join(" or ")} (a per-application line naming its role), so no fee is charged on this case; nothing is guessed.` : noFeeLines(label);
   return { derived: true, combination: combinationKey, label, ...body, currency: "CAD", fees_worked_out: feesKnown,
     fees_why: feesKnown ? null : unpriced,
