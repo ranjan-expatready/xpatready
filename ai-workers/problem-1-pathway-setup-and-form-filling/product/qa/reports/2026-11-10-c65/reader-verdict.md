@@ -61,3 +61,18 @@ Records condition: P-437 is only on `lead/2026-11-07-lead31`. It should reach ma
   * the headless replay;
   * the GitHub run facts (42619403776, 42738773981, the 403 on dispatch);
   * that Confirm & use was enabled in 04 (the image cannot show it).
+
+## Addendum: run 42748807953
+**C6.5 can now be Works. The row records run 42748807953 (job 129607268530, main bdf3b59ec, data=checkpoint). Nothing stops it except putting P-437 on main with the row (section 4).**
+* **Checked with git (read-only):**
+  * bdf3b59ec includes #1444 (7023eee0f is its ancestor).
+  * The app tree is the same from 2cfdad961 to bdf3b59ec (empty diff), so qa's gate A walk was on the code the run tested.
+  * bdf3b59ec is an ancestor of today's head, 21fc71b1f. Between them, the prototype changes only two qa checks for C6.16 and `tools/gate-b.mjs` and `check-gate-b.mjs` (commits a00b31b93 and fc3091f74: "ci: C7.5, QA-366", how merge-queue batches re-run packs). No C6.5 product file, pack or sample changed.
+  * So the run counts for main's head on C6.5's own code (P-339).
+* **qa's word, not checked:** the run id, the job, its conclusion and the three log lines. They match the condition in section 4 exactly: all three packs, the checkpoint, 13/13 · 33/33 · 57/57, the same counts as qa's local run.
+* **The rest of the verdict holds.**
+  * QA-352: close.
+  * QA-379, QA-380 and QA-353: Minor, and none holds the row. That QA-380 does not hold it is now also the tech lead's word.
+  * QA-381 (the P-133/P-134 conflict, Minor) is the right home for the birth-certificate question. It does not hold C6.5, because what is built follows the stricter rule, P-134.
+  * I have not re-read qa's later additions (coverage.sh, the new probe lines, the 12b wording). My earlier notes on those points stand until someone reads them.
+* **Doubt (small):** the run is on bdf3b59ec, not the head commit itself. The only change after it is gate B's re-run tooling. If the protected set or works-set.mjs insists on the literal head SHA, a re-dispatch on 21fc71b1f would settle it. I judge it not needed.

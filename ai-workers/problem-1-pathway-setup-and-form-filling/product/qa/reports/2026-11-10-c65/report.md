@@ -105,3 +105,10 @@ Not run this round: no c8 or graph. A records round on one capability; the suite
   * QA-353's evidence was missing: added to `probe-output.txt`.
   * P-133's page names birth certificates: QA-381.
 * **Not verified by the reader:** the packs, the database rows, `ai_batch`, the replay and the GitHub facts (all qa's own runs).
+
+## Works, ~09:40 IST (after the tech lead's run)
+The tech lead dispatched nightly **42748807953** on main bdf3b59ec (capabilities=C6.5, data=checkpoint). Job **129607268530**: counts 13/13, screen 33/33, C6.5 57/57, all exit 0 on the checkpoint, Gate B passed.
+
+bdf3b59ec has the same app tree as 2cfdad961, the commit qa walked. Main's head 21fc71b1f changes only C6.16's checks and gate-b tooling.
+
+The same fresh reader's addendum: "the row moves to Works". **C6.5 is Works.** `works-set.mjs --list --milestone all` now protects it on the checkpoint.
