@@ -56,10 +56,11 @@ try {
   // Review R2-M1, R3-M1: the number the result says the client re-confirmed equals the re-confirmations recorded after the
   // move to release 2 (the configured checkpoint's own, on release 1, came before it). C10.2 (#1482): release 2 now asks no
   // background answer again (IMM 5257's details boxes only after a Yes, the form's own Validate), so the story may make none
-  // after the move; then its words say the release-1 re-confirmations, and that number must equal those made before the move.
+  // after the move; then its words say the release-1 re-confirmations (every person's, review R4-M1), and that number must equal
+  // those made before the move on the family case.
   const shows = st("facts")?.shows ?? "";
   const claimed = Number(shows.match(/the (\d+) background answers? among the officer's/)?.[1] ?? 0);
-  const claimedBefore = Number(shows.match(/the (\d+) the case officer recorded for another adult on release 1 (?:was|were) re-confirmed by the client before the move/)?.[1] ?? 0);
+  const claimedBefore = Number(shows.match(/the (\d+) background answers? the case officer recorded on release 1 \(the configured checkpoint\) (?:was|were) re-confirmed by the client before the move/)?.[1] ?? 0);
   const moved = "(select max(at) from audit_event where action = 'moved_release')";
   const reconfirmedInData = n(`select count(*) from audit_event where action = 're-confirmed' and entity = 'case fact' and at > ${moved}`);
   const reconfirmedBefore = n(`select count(*) from audit_event where action = 're-confirmed' and entity = 'case fact' and at < ${moved} and summary like '%on case ${famId.slice(0, 8)}%'`);
