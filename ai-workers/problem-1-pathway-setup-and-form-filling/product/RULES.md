@@ -44,6 +44,7 @@ Each rule once, with the decision that set it. **This page is the start read**: 
 * **Models:** Opus for builders, reviewers, breakers, fresh readers and qa verdicts; Sonnet or Haiku for read-only side work (searches, inventories, measurements) (P-436 (6)). Standbys stay idle: no checks, no reads (P-286).
 
 ## Money (paid AI)
+* **Live AI is off on every copy** (lanes, qa, checks, the Mac's test copies): a live call happens only as a paid run the Lead approved under these rules, from a Terminal tab (P-175; the lead skill's money line before P-440).
 * Day cap **US$30** (P-295, P-309), **US$50 on 9 Nov** (P-429, P-434). The Lead approves each run inside it; above it, the founder.
 * Every run (P-295): usual and worst cost first; worst case reserved in the shared ledger (`.tools/p2-ledger`, `p2/ledger.ts`) before the call; cheapest and most certain first; one attempt, retries only for temporary errors; an independent check; one PR per result; qa labels it (P-275). Job cap US$5 per two attempts unless a worst case is stated first (P-232).
 * Live runs need network the sandbox does not give child processes: the product's launcher runs from a Terminal tab (P-377 (7)); a single scratch read can go by curl from Bash with `allowed_domains` (9 Nov, #1444). A paid run happens on the data Works counts on, never fixture-only.
