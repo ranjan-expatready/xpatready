@@ -31,14 +31,7 @@ Terminal tabs c6 (caffeinate 4 h, from 15:2x) and c7 (open) are Lead 8's; leave 
 ## M3: 29 of 29 Works (21:1x IST 10 Nov, qa #1499 fresh reader; C7.5 + C10.2 on nightly 42841699712, main 87212b14d)
 **Next (P-450):** detailed milestone plan with the founder, one question at a time (A5, A7); then the Bake. **#1463** superseded: qa's close refused, waits for the founder's named word.
 
-## Live rows (Lead 9, 19:0x IST 10 Nov) — kept for the record
-| Row | Where it stands | Next step | ETA IST |
-|---|---|---|---|
-| C10.2 | founder saved 9c00dbfc 18:30; read back 18:5x HTTP 201, written 75 equal 75; PDF in `.tools/solution-1-prototype/validated-imm5257/` (sha 8f7ae900); record in **#1495** (Opus Approve db61392dd posted), CI running | label on green; after merge dispatch nightly C10.2 checkpoint, post run id in #1495; qa lane verdict | ~21:30 |
-| C7.5 | sheet moved to **bd4761bdb306** (56 fields, main ddc2a6eb3); paid run **de49e801 US$0.87**, 2 rounds, 4 findings, 18:51 IST; result **#1496** | qa lane (local_69e52de7) re-scores, Approves and labels (P-275); merges → Works | ~21:45 |
-| (4a) | C7.8 lane briefed 13:4x; no PR yet | read when pushed (P-214) | ? |
-| Owed | printed pages of Languages / Details of visit / Background Information for #1492; 8 CI shards brief | Lead | after the 29 |
-Paid today: US$0.87 of US$30. Checks missed 15:50-18:53 IST (hand-over gap), told the founder 19:0x.
+## Live rows (Lead 9, 19:0x IST): done (29/29); word for word in `history/STATE-2026-11-10-2210-lead9s2-live-rows-1900.md`.
 
 ## Live rows (Lead 8, 13:33 IST): superseded by the hand-over block above; word for word in `history/STATE-2026-11-10-1850-lead8s2-live-rows-1333.md`.
 
