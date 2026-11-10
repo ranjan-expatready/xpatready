@@ -1,0 +1,8 @@
+Gate B: the PR names C6.5; claims Works for none (no bug check).
+  packs: C6.5-counts.test.ts, C6.5-screen.test.ts, C6.5.test.ts
+    C6.5-counts.test.ts on the checkpoint: exit 0, 13/13 passed (143 s: copy 8, Load the configured checkpoint 132, run 4)
+    C6.5-screen.test.ts on the checkpoint: exit 0, 33/33 passed (171 s: copy 8, Load the configured checkpoint 132, run 31)
+    C6.5.test.ts on the checkpoint: exit 0, 57/57 passed (144 s: copy 8, Load the configured checkpoint 131, run 5)
+  packs took 171 s in all
+Gate B: passed.
+exit 0

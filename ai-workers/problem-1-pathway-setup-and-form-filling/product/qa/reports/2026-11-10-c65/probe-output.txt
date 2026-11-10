@@ -1,0 +1,26 @@
+# C6.5 gate A, data underneath (copy qa_c65w :4475, configured checkpoint, main 2cfdad961 app tree), 10 Nov 07:51 IST
+
+## current documents (document_type | subject | file)
+proof_of_financial_support|703e201e-31de-4d71-ab8a-4b408fef7814|sample-funds.pdf
+marriage_certificate_copy|426e6688-b0f2-4a68-a4ad-8dcbb2b214d5|sample-marriage.pdf
+copy_of_the_minor_s_birth_certificate|4e4f8048-5adb-4ecc-9acd-09b14ee62235|sample-birth-certificate.pdf
+
+## document_review (type | reader | confirmed_by)
+proof_of_financial_support|ai_vision|user-O
+marriage_certificate_copy|ai_vision|user-O
+
+## answers written by Confirm & use (subject | fact | value | status | channel | reader)
+2f07b85a-a899-438c-a332-07bdbf2505bf|case.funds_available_cad|14200|VERIFIED|document_read|ai_vision
+426e6688-b0f2-4a68-a4ad-8dcbb2b214d5|relationship.union_start_date|"2019-06-14"|VERIFIED|document_read|ai_vision
+
+## Client A's union start date (person-scoped on this release: canonical_field.scope)
+case.funds_available_cad|CASE_LEVEL|CASE
+relationship.union_start_date|CLIENT_LEVEL|RELATIONSHIP
+0
+
+## model calls (ai_batch rows; 7 before the walk)
+7
+
+## IMM 5257 answer sheet for Client A, GET /runtime/items/<id>/answer-sheet (fact | subject | source | value)
+relationship.union_start_date | 426e6688-b0f2-4a68-a4ad-8dcbb2b214d5 | Document | 2019-06-14
+case.funds_available_cad | case | Case officer | 14200
