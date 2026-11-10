@@ -120,5 +120,18 @@ ok("B107-41 fail: and not after a No", one(Q3B, "person.criminal_history", false
 ok("B107-42 pass: before the deciding answer a gate cannot tell, so the question stays asked and nothing is written", [OTHER_BOX, Q2D, Q3B, Q4B].every((b) => evaluate(g10(b)!.gate, {}, []).result === "cannot_tell"));
 ok("B107-43 fail: each 10 Nov source quotes the form's own script that empties the box beside it, read 10 Nov 2026, with no escaped quote", [OTHER_BOX, Q2D, Q3B, Q4B].every((b) => { const c = g10(b)!.cite; return !c.includes("\\") && /^IMM 5257 \(09-2023\)/.test(c) && /Read 10 Nov 2026\.$/.test(c) && /rawValue = null/.test(c) && /negative/i.test(c); }));
 
+// ---- C10.2 (the founder's Adobe Validate of the story's Paper copy, 10 Nov: the read-back found Languages c) empty where
+// the product wrote 01). IMM 5257 (09-2023)'s validateLanguageSection calls util.enableField(c, false) for any answer to b)
+// but Both, and the form's util.enableField empties a field it disables (rawValue = null), without a message.
+const LANG = `form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].`;
+const cGate = i5257.gates!.find((x) => x.box === `${LANG}lov[0]`);
+const ability = (inv5257.fields.find((f) => f.data_path === `${LANG}ableToCommunicate[0].ableToCommunicate[0]`)?.options_resolved ?? []).filter(([label]) => label);
+const byAbility = ability.map(([label]) => ({ label, holds: cGate ? evaluate(cGate.gate, { "person.official_language_ability": label }, []).result : "no gate" }));
+ok("B107-44 setup: the form lists 4 answers to Languages b) (English, French, Both, Neither) and the data gates c)", ability.length === 4 && ability.some(([l]) => l === "Both") && !!cGate, { ability: ability.map(([l]) => l), gate: !!cGate });
+ok("B107-45 pass: Languages c) is written when b) is Both", byAbility.filter((x) => x.label === "Both").every((x) => x.holds === true) && byAbility.some((x) => x.label === "Both"), byAbility);
+ok("B107-46 fail: and not beside English, French or Neither (the story's Paper person answers English)", byAbility.filter((x) => x.label !== "Both").length === 3 && byAbility.filter((x) => x.label !== "Both").every((x) => x.holds === false), byAbility);
+ok("B107-47 pass: before b) is answered the gate cannot tell, so c) stays asked and is not written", !!cGate && evaluate(cGate.gate, {}, []).result === "cannot_tell");
+ok("B107-48 fail: its source quotes the script that disables c) and the form's own enableField that empties it, read 10 Nov 2026, with no escaped quote", !!cGate && !cGate.cite.includes("\\") && /validateLanguageSection/.test(cGate.cite) && /oField\.rawValue = null/.test(cGate.cite) && /Read 10 Nov 2026\.$/.test(cGate.cite));
+
 console.log(failed ? `\n${failed} failed` : "\nall passed");
 process.exit(failed ? 1 : 0);

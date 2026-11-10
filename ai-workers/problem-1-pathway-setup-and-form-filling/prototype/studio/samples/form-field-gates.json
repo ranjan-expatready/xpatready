@@ -150,6 +150,12 @@
           "gate": { "op": "eq", "field": "person.military_service", "value": true },
           "words": "the person answered Yes to Background Information question 4 a) (military, militia, civil defence, security organization or police service)",
           "cite": "IMM 5257 (09-2023) Background Information (the template's subform Page3, which starts a new page; the printed page number was not read here), question 4: \"4 a) Did you serve in any military, militia, or civil defence unit or serve in a security organization or police force (including non obligatory national service, reserve or volunteer units)?\", then \"4 b) If you answered \"yes\" to question 4 a), please provide dates of service and countries where you served.\"; the form's own Validate script (validateBackGroundInformation): \"//Negative case: if notes has a value, make sure Yes has been clicked above somewhere if (!q4B.isNull && (q4A.rawValue == \"N\")){ … q4A.No.rawValue = null; q4A.Yes.rawValue = null;\", so details beside No empty the required Yes/No box; the form's own message on it: \"You entered information that is not required, please review\". Read 10 Nov 2026."
+        },
+        {
+          "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].lov[0]",
+          "gate": { "op": "eq", "field": "person.official_language_ability", "value": "Both" },
+          "words": "the person is able to communicate in both English and French",
+          "cite": "IMM 5257 (09-2023) Languages (the template's subform Page2; the printed page number was not read here), question 1: \"*b) Are you able to communicate in English and/or French?\" then \"c) In which language are you most at ease?\"; the form's own Validate script (validateLanguageSection, called by validateCompletedForm): \"if(oAbilityToCommunicate.rawValue == \"Both\"){ util.enableField(oLangUsed.somExpression, true); … } else{ //Other lang util.enableField(oLangUsed.somExpression, false);\", and the form's own util.enableField: \"else { oField.access = \"readOnly\"; color.SetColorDisabled(oField); oField.rawValue = null; }\", so beside any answer to b) but Both, Validate empties c) without a message (the founder's Adobe Validate of the story's Paper copy, 10 Nov: c) read back empty where the product wrote 01); the form's list of values for b) (AbleCommunicateEnglishOrFrenchList): \"English\", \"French\", \"Both\", \"Neither\"; for c) (PreferenceLanguageList): \"English\" (01), \"French\" (02). Read 10 Nov 2026."
         }
       ]
     }

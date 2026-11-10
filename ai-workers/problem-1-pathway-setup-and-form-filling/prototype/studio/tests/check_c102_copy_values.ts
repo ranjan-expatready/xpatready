@@ -24,6 +24,10 @@
 //      (validateDetailsOfVisit), the province, country and district checks of the mailing (4) and residential (4)
 //      addresses and the school (2); the telephones read a block's visibility (v4); questions 7 and 9 B are v2;
 //   6. the release the Paper copy is on carries the 10 Nov gates, and the copy says why each such box is empty.
+//   7. (10 Nov, the founder's Adobe Validate: Validate passed, but the read-back found Languages c) empty where the product
+//      wrote 01) on every IMM 5257 copy, no Languages c) beside an answer to b) but Both: validateLanguageSection disables c)
+//      then, and the form's own util.enableField empties a field it disables (rawValue = null), with no message; the release
+//      carries the gate on c) and the Paper copy says why c) is empty.
 // Each has a fail case on a test-only copy with one value changed (the reader must catch it).
 //   zsh studio/tools/isolated.sh rt_c102v 4431 start && tsx studio/tests/check_c102_copy_values.ts 4431 xr_studio_rt_c102v
 import { execFileSync } from "node:child_process";
@@ -166,6 +170,25 @@ try {
   ok("C10.2-v6 pass (B107 data, samples/form-field-gates.json, 10 Nov): the Paper copy's release carries the gates on Details of visit 1 b) and Background Information 2 d), 3 b), 4 b)", inRelease10 === 4, inRelease10);
   const said10 = gated10.map((g) => ({ g: g.split(".").slice(-2).join("."), b: boxes.find((b) => b.box === g) }));
   ok("C10.2-v6 pass: on the Paper copy (purpose Family Visit, No to questions 2 to 4) those four boxes are not written, each saying \"Not needed: written only when …\"", said10.every((x) => !!x.b && x.b.result !== "written" && /^Not needed: written only when/.test(x.b.why ?? "")), said10);
+
+  // 7. Languages c) is kept by the form only beside b) Both (validateLanguageSection + util.enableField's rawValue = null).
+  const LG = `${P2}MaritalStatus[0].SectionA[0].Languages[0].languages[0].`;
+  const cleared7 = (v: Record<string, string>) => (v[`${LG}lov[0]`] && v[`${LG}ableToCommunicate[0].ableToCommunicate[0]`] !== "Both" ? [`c) "${v[`${LG}lov[0]`]}" beside b) "${v[`${LG}ableToCommunicate[0].ableToCommunicate[0]`] ?? ""}"`] : []);
+  const h7 = i5257.flatMap((c) => cleared7(c.read?.values ?? {}).map((w) => `${c.channel || "copy"}: ${w}`));
+  ok(`C10.2-v7 pass (IMM 5257 validateLanguageSection, util.enableField): no Languages c) beside an answer to b) but Both, on every IMM 5257 copy (${i5257.length})`, i5257.length > 0 && h7.length === 0, h7);
+  const badLang = join(tmp, "bad-lang.pdf");
+  execFileSync(PY, ["-I", READER, "--set", filed.path, badLang, `${LG}ableToCommunicate[0].ableToCommunicate[0]=English`, `${LG}lov[0]=01`], { stdio: ["ignore", "pipe", "pipe"] });
+  const bl = cleared7(readCopies([badLang])[0].values);
+  ok("C10.2-v7 fail: the 10 Nov combination (b) English, c) 01) is caught", bl.length === 1 && /c\) "01" beside b\) "English"/.test(bl[0]), bl);
+  const gateC = Number(sql(`select count(*) from config_release r, jsonb_array_elements(r.snapshot->'field_maps') m, jsonb_array_elements(m->'entries') e where r.id='${filed.release}' and m->>'form_number'='IMM 5257' and e->'condition_rule'->'gate' is not null and e->>'data_path' = '${LG}lov[0]'`) || 0);
+  const boxC = boxes.find((b) => b.box === `${LG}lov[0]`);
+  // Review m2 on #1492: the gate compares b)'s stored answer with "Both"; no story person answers Both, so the question's own
+  // keys are read here (a b) stored under other keys, a linked answer list's slugs say, would leave c) never written).
+  const famCase = sql("select id from runtime_case where reference = 'SAMPLE-VV-FAMILY-1'");
+  const qv = await (await fetch(`http://localhost:${PORT}/api/runtime/cases/${famCase}/questionnaire?mode=agent`, { headers: { "x-actor": "user-O" } })).json() as { sections: { questions: { fact: string; options: { key: string }[] | null }[] }[] };
+  const abilityKeys = [...new Set(qv.sections.flatMap((x) => x.questions).filter((q) => q.fact === "person.official_language_ability").flatMap((q) => (q.options ?? []).map((o) => o.key)))];
+  ok("C10.2-v7 pass (review m2): the question for Languages b) offers the key \"Both\" exactly, the value the gate on c) compares", abilityKeys.includes("Both"), abilityKeys);
+  ok("C10.2-v7 pass (B107 data, 10 Nov): the Paper copy's release carries the gate on Languages c), and the copy (b) English) leaves c) empty saying \"Not needed: written only when …\"", gateC === 1 && !!boxC && boxC.result !== "written" && /^Not needed: written only when/.test(boxC.why ?? ""), { gateC, boxC });
 } catch (e) {
   ok("the check ran to its end", false, (e as Error).message);
 } finally {
