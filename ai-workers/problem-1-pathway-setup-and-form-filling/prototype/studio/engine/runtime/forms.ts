@@ -59,7 +59,7 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
       if (c.applies !== true) { const { value: _kept, ...rest } = b; void _kept; return { ...rest, coverage: "not needed" as const, detail: said && c.applies === false ? `Not needed: written only when ${said.replace(/[.\s]+$/, "")}` : notNeededWords(c, rule, words) }; }
     }
     if (b.coverage !== "confirmed fact" || !b.fact) return b;
-    const problems = checkValue(s, b.fact, b.value, today);
+    const problems = checkValue(s, b.fact, b.value, today, form); // QA-355 (a): judged by the release's maps and this form's own
     if (problems.length) return { ...b, coverage: "answered on screen" as const, fix: `answered with a problem, not written: ${problems.join(" ")}` };
     // A No to the gate (declared or confirmed) with a detail still recorded contradicts itself: never written as Yes (nor No). B52: a
     // box that reads its gate itself (asked as its own question) checks the facts its "worked out" step names.
