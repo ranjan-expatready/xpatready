@@ -9,7 +9,7 @@ import { factKey } from "../../contracts/resolver.ts";
 import type { CaseFilings } from "../../contracts/runtime.ts";
 import { checkPeople } from "../../engine/people.ts";
 import { addedFilingRules, addedFilings } from "../../engine/runtime/added-filings.ts";
-import type { Participant } from "../../engine/runtime/case.ts";
+import { caseView, type Participant } from "../../engine/runtime/case.ts";
 import { deriveFilings, rulesFrom, type FeeTable } from "../../engine/runtime/filings.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { checkCondition } from "../../engine/validate.ts";
@@ -65,6 +65,17 @@ const known = new Map<string, unknown>([[factKey("C1", FACT), { value: true }], 
   ok("case pass: a child answered Yes adds the filing, with its fee line", a.size === 1 && a.get("C1")?.filing === "Study permit" && a.get("C1")?.fee === "permit", [...a]);
   ok("case fail: answered No, not answered yet, or not travelling adds nothing", !a.has("C2") && !a.has("C3") && !a.has("C4"));
   ok("case fail: a release whose lines add nothing adds nothing", addedFilings(snap([line("principal"), line("child", { filingMode: "on_principal" })]), known as never, PEOPLE).size === 0);
+}
+
+// (3b) The questionnaire asks the rule's question of each person of the line who applies (engine/render.ts deciders).
+{
+  const base = { combination: { key: "x.any", participants: [line("principal", { filingMode: "files_own" }), line("child", { filingMode: "on_principal", addsFiling: ADDS })] }, forms: [], field_maps: [], document_requirements: [], rules: [], checks: [], derived_fields: [], document_types: [], placements: [{ lineage: "q1", fact: FACT, section_id: "study", order: 1, question_text: "Will this person study for a long time?", repeats: "per_person", tier: "case", collected_from: "staff_working_view" }], sections: [{ id: "study", title: "Study" }], canonical_fields: [{ id: FACT, value_type: "yes_no", meaning: "Studies for a long time", group: "person" }] };
+  const asked = (s: unknown, answers: unknown[] = []) => caseView(s as Snapshot, PEOPLE, answers as never, [], "agent" as never).sections.flatMap((x) => x.questions.filter((q: { fact: string }) => q.fact === FACT).map((q: { subjectId: string }) => q.subjectId));
+  const open = asked(base);
+  ok("questionnaire pass: the rule's question is asked of each child who applies, never the principal or a child not travelling", ["C1", "C2", "C3"].every((c) => open.includes(c)) && !open.includes("P") && !open.includes("C4"), open);
+  ok("questionnaire pass: an answered Yes keeps the question on the case (it can be changed back)", asked(base, [{ subjectId: "C1", field: FACT, value: true }]).includes("C1"));
+  const noRule = { ...base, combination: { key: "x.any", participants: [line("principal"), line("child", { filingMode: "on_principal" })] } };
+  ok("questionnaire fail: without the line's rule nothing reads the question, so it is not asked", asked(noRule).length === 0, asked(noRule));
 }
 
 // (4) Filing and pricing it (engine/runtime/filings.ts), from a made-up fee table.
