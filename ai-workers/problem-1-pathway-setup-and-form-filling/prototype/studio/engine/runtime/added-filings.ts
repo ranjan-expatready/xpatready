@@ -18,8 +18,8 @@ export function addedFilingRules(s: Pick<Snapshot, "combination">): { key: strin
 /** Per person (subject id), the filing their line adds now, with the fee line that charges it. A rule not yet answered
  *  (cannot tell) adds nothing until it is answered: the question stays open on the questionnaire. Only a person who
  *  applies on the case adds one (a person not travelling files nothing). */
-export function addedFilings(s: Snapshot, known: Known, people: Participant[]): Map<string, { filing: string; fee?: string }> {
-  const out = new Map<string, { filing: string; fee?: string }>();
+export function addedFilings(s: Snapshot, known: Known, people: Participant[]): Map<string, { filing: string; fee?: string | string[] }> {
+  const out = new Map<string, { filing: string; fee?: string | string[] }>();
   const lines = ((s.combination?.participants ?? []) as Line[]).filter((l) => l && typeof l.addsFiling?.filing === "string" && l.addsFiling.condition && typeof l.addsFiling.condition === "object");
   if (!lines.length) return out;
   const persons = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as never, label: p.label, applies: p.applies }));
@@ -28,7 +28,7 @@ export function addedFilings(s: Snapshot, known: Known, people: Participant[]): 
     if (!l || !p.applies || p.role === "case") continue;
     const a = l.addsFiling!;
     if (lineCondition(s, known, persons, p.subjectId, a.condition as { subjectKind?: string }).applies !== true) continue;
-    out.set(p.subjectId, { filing: a.filing as string, ...(typeof a.fee === "string" ? { fee: a.fee } : {}) });
+    out.set(p.subjectId, { filing: a.filing as string, ...(typeof a.fee === "string" || (Array.isArray(a.fee) && a.fee.every((k) => typeof k === "string")) ? { fee: a.fee as string | string[] } : {}) });
   }
   return out;
 }

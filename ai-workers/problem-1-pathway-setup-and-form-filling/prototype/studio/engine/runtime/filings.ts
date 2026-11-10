@@ -94,7 +94,7 @@ type Rules = { label: string; modes: Map<string, LineMode>; fees: FeeRule[]; gro
 /** `adds` (M3-S2): per person, the filing their line adds because its rule holds on their answers (engine/runtime/
  *  added-filings.ts), with the fee line that charges it. */
 export type FilingOptions = { ages?: Map<string, number | null>; modes?: Map<string, LineMode | null>; label?: string; groupOf?: (subject: string) => string; groupKind?: (group: string) => SubmissionGroup["kind"];
-  adds?: Map<string, { filing: string; fee?: string }> };
+  adds?: Map<string, { filing: string; fee?: string | string[] }> };
 export const FAMILY_GROUP = "group-family";
 
 /** A combination's rules from the fee table (an own property only: "constructor" or "__proto__" is no combination). */
@@ -256,10 +256,14 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   // yet (the release requires exactly one, BR-4): its application and its own fee are still to come, so no total yet.
   const coRoles = [...(released ? opts.modes! : rules?.modes ?? new Map<string, LineMode>())].filter(([, m]) => m === "co_files").map(([r]) => r);
   const missingCo = coRoles.filter((r) => !persons.some((p) => p.role === r));
-  // M3-S2: a filing a person adds is charged only by the per_application fee line its line names; with none (or one the
-  // combination's fee lines do not hold) its fee is unknown, so the case charges nothing (BR-10), never a short total.
-  const addedFee = new Map(plan.filings.filter((f) => f.added).map((f) => [f.id, opts.adds?.get(f.owner.subject)?.fee]));
-  const unpricedAdded = filings.filter((f) => addedFee.has(f.id) && !fees0.some((r) => r.key === addedFee.get(f.id) && r.basis === "per_application"));
+  // M3-S2: a filing a person adds is charged only by the fee lines its line names (break M1: no other line counts that
+  // person, so they never pay the application they left); each must be one of the combination's lines reaching the
+  // person's role (break M2), at least one per application. Otherwise its fee is unknown, so the case charges nothing
+  // (BR-10), never a short or wrong total.
+  const addedFee = new Map(plan.filings.filter((f) => f.added).map((f) => { const k = opts.adds?.get(f.owner.subject)?.fee; return [f.id, typeof k === "string" ? [k] : Array.isArray(k) ? k : []] as const; }));
+  const addedOwner = new Map(plan.filings.filter((f) => f.added).map((f) => [f.owner.subject, f.id]));
+  const reaches = (key: string, role: string) => { const r = fees0.find((x) => x.key === key); return !!r && (!r.roles || r.roles.includes(role)); };
+  const unpricedAdded = filings.filter((f) => { const k = addedFee.get(f.id); return !!k && (!k.length || !k.every((x) => reaches(x, f.owner!.role)) || !k.some((x) => fees0.find((r) => r.key === x)?.basis === "per_application")); });
   const priced = unreached.length || missingCo.length || unpricedAdded.length ? [] : fees0;
   const groups: SubmissionGroup[] = [], fees: FeeLine[] = [];
   for (const gid of [...new Set(filings.map((f) => f.group))]) {
@@ -272,12 +276,12 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
       // co-filed application is charged only by a line naming its owner's role (M3-S1): its owner pays, covering nobody
       // else (a line with no roles charges the applications of people who apply, as before).
       const units = rule.basis === "per_application"
-        ? mine.filter((f) => (addedFee.has(f.id) ? addedFee.get(f.id) === rule.key : f.mode === "co_filed" ? !!rule.roles?.includes(f.owner!.role) : ofRole(f.owner!.role))).flatMap((f) => {
+        ? mine.filter((f) => (addedFee.has(f.id) ? addedFee.get(f.id)!.includes(rule.key) : f.mode === "co_filed" ? !!rule.roles?.includes(f.owner!.role) : ofRole(f.owner!.role))).flatMap((f) => {
             if (f.mode === "co_filed") return [{ filing: f.id, who: { subject: f.owner!.subject, label: f.owner!.label, role: f.owner!.role, mode: "applying" as const }, covers: 0 }];
             const owner = f.applicants.find((a) => a.subject === f.owner!.subject && a.mode === "applying");
             return owner ? [{ filing: f.id, who: owner, covers: f.applicants.filter((a) => a.mode === "applying").length }] : [];
           })
-        : payers.filter((x) => ofRole(x.who.role));
+        : payers.filter((x) => (addedOwner.has(x.who.subject) ? addedFee.get(addedOwner.get(x.who.subject)!)!.includes(rule.key) : ofRole(x.who.role)));
       if (!units.length) continue;
       const check = new Map(units.map((x) => [x.who.subject, ageCheck(rule, opts.ages?.get(x.who.subject))]));
       const paying = units.filter((x) => { const c = check.get(x.who.subject)!; return "pays" in c && c.pays; });
@@ -313,7 +317,7 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const feesKnown = priced.length > 0;
   const body = { filings, groups, fees, not_filing: notFiling };
   const unpriced = missingCo.length && fees0.length ? `No ${missingCo.map((r) => r.replace(/_/g, " ")).join(" or ")} on this case yet: their co-filed application carries its own fee, so no fee is charged until they are added; nothing is guessed.`
-    : unpricedAdded.length && fees0.length ? `${unpricedAdded.map((f) => `${f.label} is added by its rule`).join("; ")}, and its line names no per-application fee line of this combination's fee table, so no fee is charged on this case; nothing is guessed.`
+    : unpricedAdded.length && fees0.length ? `${unpricedAdded.map((f) => `${f.label} is added by its rule`).join("; ")}, and its line does not name this combination's fee lines for it (a per-application line, each reaching a ${unpricedAdded.map((f) => f.owner!.role.replace(/_/g, " ")).join(" or ")}), so no fee is charged on this case; nothing is guessed.`
     : unreached.length && fees0.length ? `The fee table has no fee line for ${unreached.map((f) => `${f.owner!.label}'s co-filed application`).join(" or ")} (a per-application line naming its role), so no fee is charged on this case; nothing is guessed.` : noFeeLines(label);
   return { derived: true, combination: combinationKey, label, ...body, currency: "CAD", fees_worked_out: feesKnown,
     fees_why: feesKnown ? null : unpriced,

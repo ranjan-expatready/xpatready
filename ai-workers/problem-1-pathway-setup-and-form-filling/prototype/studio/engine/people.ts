@@ -66,6 +66,8 @@ export function checkPeople(list: PeopleLine[], roles: Role[], strict = true): {
       else if (p.role === PRINCIPAL || mode === "files_own" || mode === "co_files") errors.push({ field: at("addsFiling"), message: `${name} already files their own application: a filing it adds goes only on a person who is on the principal's application, declared only, or files nothing (one application per person).` });
       else if (r && !r.mayBeApplicant) errors.push({ field: at("addsFiling"), message: `${r.label} is never an applicant, so no filing can be added for them.` });
       else if (kind !== undefined && kind !== "PERSON") errors.push({ field: at("addsFiling"), message: `${name}: the rule that adds the filing is about the person on this line, so it reads their own answers.` });
+      // Break M4: a fact about the case (one answer for everyone) would add the filing for every person of the line at once.
+      else if ([...JSON.stringify(a.data.condition).matchAll(/"field":"([^"]+)"/g)].some((m) => !m[1].startsWith("person."))) errors.push({ field: at("addsFiling"), message: `${name}: the rule reads only facts about the person (person.…), each answered for them alone.` });
       else adds = a.data;
     }
     return { ...rest, applies, ...(mode ? { filingMode: mode } : {}), ...(adds ? { addsFiling: adds } : {}), label: name }; // Lead check L7: a typed label is kept

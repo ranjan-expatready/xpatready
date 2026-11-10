@@ -12,7 +12,7 @@ import { addedFilingRules, addedFilings } from "../../engine/runtime/added-filin
 import { caseView, type Participant } from "../../engine/runtime/case.ts";
 import { deriveFilings, rulesFrom, type FeeTable } from "../../engine/runtime/filings.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
-import { checkCondition } from "../../engine/validate.ts";
+import { addedFilingProblems, checkCondition } from "../../engine/validate.ts";
 import { recorder } from "./api.ts";
 
 const { ok, summary } = recorder();
@@ -25,6 +25,15 @@ const ROLES = [
   { key: "representative", label: "Representative", takesPartInCase: true, mayBeApplicant: false, retired: false },
 ];
 const line = (role: string, extra: Record<string, unknown> = {}) => ({ role, min: role === "principal" ? 1 : 0, max: role === "principal" ? 1 : 3, applies: role !== "representative", ...extra });
+
+const src = { page: "Made-up fee page", quote: "made up", read: "2026-11-11" };
+const TABLE = { as_of: "2026-11-11", read: "2026-11-11", status: "Sample", lines: [
+  { key: "app", label: "Application fee", status: "Sample", basis: "per_application", per_person_cad: 100, source: src },
+  { key: "permit", label: "Permit fee", status: "Sample", basis: "per_application", per_person_cad: 150, roles: ["child"], source: src },
+  { key: "main_only", label: "Principal's fee", status: "Sample", basis: "per_application", per_person_cad: 70, roles: ["principal"], source: src },
+  { key: "bio", label: "Biometrics fee", status: "Sample", basis: "family_maximum", per_person_cad: 85, family_max: { cad: 170, from_people: 2 }, source: src },
+], combinations: { "x.any": { label: "Any combination", lines: ["app", "permit", "main_only", "bio"], modes: { child: "on_principal" } } } } as unknown as FeeTable;
+const TABLE_FOR_RELEASE = TABLE;
 
 // (1) The save (engine/people.ts checkPeople).
 {
@@ -40,6 +49,8 @@ const line = (role: string, extra: Record<string, unknown> = {}) => ({ role, min
   ok("save fail: never for a person who is never an applicant", rep.errors.some((e) => /never an applicant, so no filing can be added/.test(e.message)), rep.errors);
   const other = checkPeople([line("principal"), line("child", { filingMode: "on_principal", addsFiling: { ...ADDS, condition: { ...RULE, subjectKind: "SPOUSE" } } })] as never, ROLES, true);
   ok("save fail: the rule reads the line's own person, never another's", other.errors.some((e) => /reads their own answers/.test(e.message)), other.errors);
+  const caseFact = checkPeople([line("principal"), line("child", { filingMode: "on_principal", addsFiling: { ...ADDS, condition: { op: "eq", field: "case.study_level", value: "x", subjectKind: "PERSON" } } })] as never, ROLES, true);
+  ok("save fail (break M4): a rule reading a fact about the case is refused (one answer would add the filing for everyone)", caseFact.errors.some((e) => /only facts about the person/.test(e.message)), caseFact.errors);
   const half = checkPeople([line("principal"), line("child", { filingMode: "on_principal", addsFiling: { filing: "Study permit", condition: RULE } })] as never, ROLES, true);
   ok("save fail: without its words and its source it is refused in words", half.errors.some((e) => e.field === "participants[1].addsFiling" && /words|Quote/.test(e.message)), half.errors);
 }
@@ -52,6 +63,17 @@ const line = (role: string, extra: Record<string, unknown> = {}) => ({ role, min
   const rules = addedFilingRules({ combination: { participants: [line("child", { addsFiling: ADDS }), line("principal")] } } as unknown as Snapshot);
   ok("C3.6 pass: the line's rule is a rule a fact can be added for (adds_filing.<role>), with its words and tree", rules.length === 1 && rules[0].key === "adds_filing.child" && rules[0].filing === "Study permit (child)" && rules[0].plain === ADDS.conditionPlain && rules[0].tree === RULE);
   ok("C3.6 fail: a line with no filing it adds lists no rule", addedFilingRules({ combination: { participants: [line("child"), line("principal")] } } as unknown as Snapshot).length === 0);
+}
+
+// (2b) The release's checks of the line (engine/validate.ts addedFilingProblems).
+{
+  const TYPES = new Map([[FACT, "yes_no"]]);
+  const rel = (lineExtra: Record<string, unknown>, repeats = "per_person", key = "x.any") => addedFilingProblems({ combination: { key, participants: [line("principal", { filingMode: "files_own" }), line("child", { filingMode: "on_principal", ...lineExtra })] }, placements: [{ fact: FACT, repeats }] } as unknown as Snapshot, TYPES, new Set(), new Set([FACT]), new Set(), TABLE_FOR_RELEASE).map((p) => p.message);
+  ok("release pass: a line on the principal's application, its fact asked per person, a per-application fee line reaching it", rel({ addsFiling: { ...ADDS, fee: "permit" } }).length === 0, rel({ addsFiling: { ...ADDS, fee: "permit" } }));
+  ok("release fail (break M4): its fact asked once for the case is refused", rel({ addsFiling: ADDS }, "once_per_case").some((m) => /asked once for the case/.test(m)));
+  ok("release fail (break m9): on a line that files its own application it is refused", rel({ filingMode: "files_own", addsFiling: ADDS }).some((m) => /already files their own application/.test(m)));
+  ok("release fail (break m6, M2): a fee line not among the combination's, or not reaching the person, is refused", rel({ addsFiling: { ...ADDS, fee: "nope" } }).some((m) => /nope is not among/.test(m)) && rel({ addsFiling: { ...ADDS, fee: "main_only" } }).some((m) => /main_only is not among/.test(m)));
+  ok("release fail: fee lines with none per application are refused", rel({ addsFiling: { ...ADDS, fee: "bio" } }).some((m) => /per-application fee line/.test(m)));
 }
 
 // (3) Reading it on a case (engine/runtime/added-filings.ts).
@@ -80,12 +102,6 @@ const known = new Map<string, unknown>([[factKey("C1", FACT), { value: true }], 
 
 // (4) Filing and pricing it (engine/runtime/filings.ts), from a made-up fee table.
 type D = Extract<CaseFilings, { derived: true }>;
-const src = { page: "Made-up fee page", quote: "made up", read: "2026-11-11" };
-const TABLE = { as_of: "2026-11-11", read: "2026-11-11", status: "Sample", lines: [
-  { key: "app", label: "Application fee", status: "Sample", basis: "per_application", per_person_cad: 100, source: src },
-  { key: "permit", label: "Permit fee", status: "Sample", basis: "per_application", per_person_cad: 150, roles: ["child"], source: src },
-  { key: "bio", label: "Biometrics fee", status: "Sample", basis: "family_maximum", per_person_cad: 85, family_max: { cad: 170, from_people: 2 }, source: src },
-], combinations: { "x.any": { label: "Any combination", lines: ["app", "permit", "bio"], modes: { child: "on_principal" } } } } as unknown as FeeTable;
 const modes = new Map([["child", "on_principal" as const]]);
 const derive = (adds?: Map<string, { filing: string; fee?: string }>) => deriveFilings("x.any", PEOPLE.slice(0, 4), (k) => rulesFrom(TABLE, k), { modes, ...(adds ? { adds } : {}) }) as D;
 {
@@ -97,7 +113,12 @@ const derive = (adds?: Map<string, { filing: string; fee?: string }>) => deriveF
   ok("filing pass: the child is no longer on the principal's application", !yes.filings[0].applicants.some((a) => a.subject === "C1") && yes.filings[0].applicants.length === 2);
   const fee = (filing: string, line: string) => yes.fees.filter((f) => f.filing === filing && f.line === line);
   ok("fee pass: the named per-application line is charged on the added filing (CAD 150), never another per-application line", fee(own!.id, "permit").length === 1 && fee(own!.id, "permit")[0].amount_cents === 150_00 && fee(own!.id, "app").length === 0, yes.fees);
-  ok("fee pass: the principal's application is charged as before; per-person lines still count the child", fee(yes.filings[0].id, "app")[0]?.amount_cents === 100_00 && yes.groups[0].totals.find((t) => t.line === "bio")?.people === 3 && yes.groups[0].total_cents === 100_00 + 150_00 + 170_00, yes.groups[0].totals);
+  ok("fee pass (break M1): the principal's application is charged as before, and no line the child's line does not name counts the child (biometrics: 2 people)", fee(yes.filings[0].id, "app")[0]?.amount_cents === 100_00 && fee(yes.filings[0].id, "main_only")[0]?.amount_cents === 70_00 && yes.groups[0].totals.find((t) => t.line === "bio")?.people === 2 && !yes.fees.some((f) => f.person === "C1" && f.line !== "permit") && yes.groups[0].total_cents === 100_00 + 70_00 + 150_00 + 170_00, yes.groups[0].totals);
+  ok("fee pass (break M3): a line limited to children (roles) is never charged on the principal's application", fee(yes.filings[0].id, "permit").length === 0);
+  const both = derive(new Map([["C1", { filing: "Study permit", fee: ["permit", "bio"] }]]));
+  ok("fee pass: a line naming biometrics too counts the child in the family maximum (3 people, capped)", both.groups[0].totals.find((t) => t.line === "bio")?.people === 3 && both.groups[0].totals.find((t) => t.line === "bio")?.total_cents === 170_00 && both.fees_worked_out === true);
+  const notTheirs = derive(new Map([["C1", { filing: "Study permit", fee: ["permit", "main_only"] }]]));
+  ok("fee fail (break M2): a named line not reaching the child's role leaves the case unpriced, in words", notTheirs.fees_worked_out === false && /each reaching a child/.test(notTheirs.fees_why ?? ""), notTheirs.fees_why);
   const unnamed = derive(new Map([["C1", { filing: "Study permit" }]]));
   ok("fee fail: an added filing whose line names no fee line charges nothing on the case and says why (never a short total)", unnamed.fees_worked_out === false && unnamed.groups.every((g) => g.total_cents === null) && /is added by its rule/.test(unnamed.fees_why ?? "") && unnamed.filings.length === 2, unnamed.fees_why);
   const wrong = derive(new Map([["C1", { filing: "Study permit", fee: "bio" }]]));
