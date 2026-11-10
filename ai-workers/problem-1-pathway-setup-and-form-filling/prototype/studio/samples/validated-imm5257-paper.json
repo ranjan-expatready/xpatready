@@ -1,0 +1,35 @@
+{
+ "label": "Sample: the read-back of the finished story's Paper IMM 5257 copy (one person's, on release 2), validated in Adobe (C10.2; P-349 row 12b's method). Never a client, never submit. Unconfirmed: expert. Legal: Unconfirmed: no counsel.",
+ "basis": "The copy was made by Demo › Load the finished story, validated with the form's own Validate button in Adobe on the Mac (never simulated), saved, and read back through the product's upload door. The story (api/src/sample-validated.ts storyValidatedFile) sends the file through the upload door again only when the copy's family facts hash and the hash of the values it writes equal the ones here.",
+ "case_reference": "SAMPLE-VV-FAMILY-1",
+ "form": "IMM 5257",
+ "copies": [
+  {
+   "person": "Child 18 or over (Sample)",
+   "family_facts_hash": "64d4414f4e3c6e47f2dfa06d613087822ffa0016c8021c28784b471194533bd1",
+   "values_sha256": "28df8e2f6dd761e88a7d8d0212c46d6838d2b4dd68bca28d37aeeaa199205ee4",
+   "copy_sha256": "d9530af3cf4d8ea1a37e1bd34cc55479ee55647edb3603c87bf15de64e6b1485",
+   "validated_sha256": "8f7ae90099fa6d12658f9b443a4e177dcea3833810112ee593fa3d2515f197b4",
+   "file": "paper-9c00dbfc-validated.pdf",
+   "read_back": {
+    "ok": true,
+    "why": null,
+    "bytes": 1482311,
+    "sha256": "8f7ae90099fa6d12658f9b443a4e177dcea3833810112ee593fa3d2515f197b4",
+    "written": 75,
+    "mismatches": [],
+    "validation": {
+     "flag": "Yes",
+     "passed": true,
+     "kept_by_form": true,
+     "date_last_validated": "2026-11-10"
+    },
+    "barcode_checked": false,
+    "read_back_equal": 75,
+    "other_data_leaves_changed": 39
+   },
+   "read_at": "2026-11-10T13:02:20.291Z",
+   "source": "Validate in Adobe by the tech lead, Adobe on the Mac; read back through the product's upload door and tools/read_validated.py on the Mac. The validated PDF stays on the Mac."
+  }
+ ]
+}
