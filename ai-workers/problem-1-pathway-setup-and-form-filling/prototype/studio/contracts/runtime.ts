@@ -10,7 +10,9 @@ export type CaseRole = string;
 /** P-72 and P-78 (founder, 23 Oct: confirmed by who answered): a person's own answers and the principal's answers for a
  *  minor child count as confirmed; the principal's answers for an adult show "answered by the principal" and become
  *  confirmed when that adult confirms on their own link (not built in R1a) or the officer presses "Confirm section".
- *  The age and the fact it is read from are Sample until the immigration expert confirms them. Unconfirmed: no counsel. */
+ *  The age and the fact it is read from are Sample until the immigration expert confirms them. Unconfirmed: no counsel.
+ *  C6.16 (challenge m5): the same age decides who may get their own link and the privacy tick; Sample, Unconfirmed: no
+ *  counsel (the age of majority is 19 in some provinces and territories). */
 export const MINOR = { birthDateField: "person.date_of_birth", underAge: 18 } as const;
 
 /** Text a person types: no NUL or other control characters (PostgreSQL refuses NUL; a refusal must be a 400, not a 500). */
@@ -38,6 +40,13 @@ export const NewCase = z.object({
    *  not representatives (in a solo firm, its one person). */
   caseOfficers: z.array(z.string().trim().regex(/^user-[A-Za-z0-9]{1,8}$/, "Choose case officers from your firm."), { message: "Choose case officers from your firm." }).min(1, "Choose at least one case officer.").max(5, "A case has at most 5 case officers.").optional(),
   idempotencyKey: idemKey.optional(),
+  /** C6.17 (BR-3, SA-1B-212): opening at a later stage of a route, each earlier stage ticked "Done before we started"
+   *  (or not recorded), with its key details (optional; typed by their field, a wrong type is a 400 on the field). */
+  earlier: z.array(z.object({
+    stage: z.string({ message: "Name the earlier stage." }).regex(/^[a-z][a-z0-9_]{0,40}$/, "Name the earlier stage."),
+    done_before: z.boolean({ message: "Say whether this stage was done before we started." }),
+    key_details: z.record(z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/, "A key detail is named by its field."), z.union([z.string(), z.null()], { message: "Write a key detail as text." })).optional(),
+  }, { message: "Each earlier stage is an object." }), { message: "Earlier stages are a list." }).max(10, "A route has at most 10 earlier stages.").optional(),
 });
 
 /** C6.11 (BR-20, SI-9): the firm admin changes the representative of record, with a reason kept in the history; a new
@@ -90,6 +99,9 @@ export const NoneApply = z.object({
 export const NewRow = z.object({ group: z.string({ message: "Name the repeating group (its section)." }).trim().min(1, "Name the repeating group (its section).").max(80) });
 /** "Confirm section" vouches for what the officer saw: the ids of the answers shown. Any answer that changed or arrived
  *  since is refused with 409 and listed, never confirmed unseen (STANDARDS §4). */
+/** C6.18 (P-244): the client re-confirms an answer their case officer recorded; `value` is what the client has on screen
+ *  (break M1 on #1246: a changed answer is saved, never re-confirmed as the officer's). */
+export const Reconfirm = z.object({ value: z.unknown().optional() }).strict();
 export const ConfirmSection = z.object({
   subjectId: z.string({ message: "Choose whose section to confirm." }).uuid("Choose whose section to confirm."),
   seen: z.array(z.string().uuid("Each reviewed answer is named by its id, as the questionnaire view gives it."), { message: "Send the ids of the answers you reviewed." }).max(500, "Send at most 500 reviewed answer ids; confirm a long section in parts."),
@@ -98,18 +110,42 @@ export const ConfirmSection = z.object({
 export const Address = z.object({ po_box: z.string().optional(), apt_unit: z.string().optional(), street_number: z.string().optional(), street_name: z.string().optional(), city: z.string().optional(), district: z.string().optional(), province: z.string().optional(), postal_code: z.string().optional(), country: z.string().optional() });
 export const Phone = z.object({ type: z.string().optional(), country_code: z.string().optional(), number: z.string().optional(), extension: z.string().optional() });
 
-/** Words shown for an answer's confirmation (P-72). */
+/** Words shown for an answer's confirmation (P-72, P-78, as P-242 and P-411 amend them: every declared answer fills the
+ *  forms at once, marked by who gave it; "confirmed" says only whether it is still on the officer's Confirm list). */
 export const CONFIRM_WORDS = {
   officer: "Confirmed by the officer",
-  client_own: "Counts as confirmed: the client's own answer",
+  client_own: "Declared: the client's own answer; it fills the forms now",
   waits: "Waits for the officer's \"Confirm section\"",
-  by_principal: "Answered by the principal for an adult: confirmed once that person confirms on their own link or the officer presses \"Confirm section\"",
+  staff: "Declared: entered by staff; it fills the forms now and waits for the officer's \"Confirm section\"",
+  by_principal: "Answered by the principal for an adult: declared, it fills the forms now and is confirmed before filing (the officer's \"Confirm section\")",
+  /** C6.13: the principal is not the client (after Make principal): the client answered for them. */
+  by_client: "Answered by the client for an adult: declared, it fills the forms now and is confirmed before filing (the officer's \"Confirm section\")",
+  // C6.18 (P-244) with P-411: a background answer staff recorded (by phone or in person) fills the forms at once and
+  // waits for the client, never for the officer.
+  awaits_client: "Recorded by the case officer: it fills the forms now and waits for the client to re-confirm it before signing",
+  /** C6.16 (P-78): an answer saved on the person's own link (channel own_link) is theirs. */
+  person_own: "Declared: the person's own answer on their own link; it fills the forms now",
 } as const;
+/** P-411 (1): the principal's answer for an adult spouse or adult child, marked with that person's name. */
+/** P-411 (1) also says the adult sees and confirms it before signing; that person's own confirmation is not built yet
+ *  (B150 review m4), so the words name only what happens today: the officer's Confirm section before filing. */
+export const byPrincipalFor = (name: string) => `Answered by the principal for ${name}: declared, it fills ${name}'s forms now and is confirmed before filing (the officer's "Confirm section")`;
+/** C6.13 (BR-3b, break M1): after Make principal the client is not the principal; the client answered for this adult. */
+export const byClientFor = (name: string) => `Answered by the client for ${name}: declared, it fills ${name}'s forms now and is confirmed before filing (the officer's "Confirm section")`;
+/** Who gave the current answer (P-242, P-411): the mark shown beside it. Every mark fills the forms at once. */
+export type AnswerMark = "confirmed" | "declared" | "by_principal" | "by_staff";
 
 /** The questionnaire view (GET /api/runtime/cases/:id/questionnaire): what the engine computes and the web renderer
  *  reads, one shape for both (engine/runtime/case.ts caseView returns it). */
 /** answered: who first gave the answer, when this version is the officer's confirmation of it (review M4). */
-export type ViewAnswer = { id: string; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; by: string; at: string; answered: { channel: string; by: string; at: string } | null; problems: string[]; confirmed: boolean; why: string };
+export type ViewAnswer = { id: string; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; by: string; at: string; answered: { channel: string; by: string; at: string } | null; problems: string[]; confirmed: boolean; why: string;
+  /** C6.19 (additive): a copy from the same client's earlier case: its reference, who re-confirmed it here and when. */
+  copied_from?: { reference: string; by: string; at: string };
+  /** P-242, P-411: whether the answer is written to the forms now (every current answer is), and who gave it. */
+  fills: boolean; mark: AnswerMark;
+  /** C6.18 (P-244), background answers only: the staff member who recorded it and when ("Officer"), or null when the
+   *  client gave it; awaits_client while the client has not re-confirmed it. */
+  officer?: { by: string; at: string } | null; awaits_client?: boolean };
 export type ViewQuestion = {
   subjectId: string; about_label: string; fact: string; label: string; meaning: string; value_type: string;
   shape: { maxLength: number; datePrecision: "day" | "month"; phone: boolean; money: boolean; choices: string[] | null };
@@ -123,6 +159,8 @@ export type ViewQuestion = {
   countries: string[] | null;
   /** Each form this fact fills, for whom (subject: the person's id, so two people with one name never mix) and how many form fields. */
   fills: { form: string; person: string; subject: string; boxes: number }[];
+  /** C6.18 (P-244): a background question (engine/runtime/background.ts); only on the case's own views. */
+  background?: boolean;
 };
 /** A repeating group's own answer: "none apply" (value true) or "entries apply" (false), confirmed like an answer. */
 export type ViewGroup = { required: boolean; client: boolean; rows: number; none_apply: (ViewAnswer & { value: boolean }) | null };
@@ -175,8 +213,30 @@ export type FormCopy = {
 };
 /** One form for one person on the case: what a copy made now would write (the draft), whether it can be filed (P-71),
  *  and every copy made, newest first. */
+/** C7.8 (B141): a form the case officer added to one filing ("Added by the case officer": who, when, why). */
+export type AddedTag = { id: string; tag: string; kind: "fills" | "blank"; by: string; by_name?: string; at: string; reason: string | null; edition: string; words: string;
+  /** BR-4: a newer edition in the library, as information (the added form stays frozen). */
+  newer_edition?: string | null };
+/** C7.8 (B141 BR-5, BR-7): a blank official PDF added to one filing: its download, its item and its completed copy. */
+export type BlankForm = { addition: string; item: string | null; download: string; completed: { id: string; at: string } | null };
+/** C7.8: one library form for one person on a filing (GET …/addable-forms): its kind in words, or why it is not added. */
+export type AddableForm = { form: string; title: string; edition: string | null; kind: "fills" | "blank"; kind_words: string; blank_why: string | null; why_not: { code: string; words: string } | null };
+export type AddableList = { filing: string; subject: string; person: string; people: { subject: string; label: string }[]; forms: AddableForm[]; empty: string };
+/** C7.8: the form picked (GET …/addable-forms/:form): its coverage on this case (fills only), the channel and signature. */
+export type AddableFormDetail = AddableForm & { subject: string; person: string;
+  coverage: { fills: number; total: number; boxes: { box: string; caption: string; label: string; state: "fills" | "not_on_file" | "not_needed" }[] } | null;
+  same_as: { subject: string; at: string; words: string } | null; channels: string[]; channel: string | null; channel_why: string; signature: string; signers: string[]; signers_words: string };
+/** C7.8: an added form as stored (POST …/form-additions, POST …/remove). */
+export type FormAddition = { id: string; filing: string; subject: string; person: string; form: string; kind: string; kind_words: string; edition: string; channel: string; signature: string; signature_reason: string | null;
+  tag: string; added_by: string; added_at: string; reason: string | null; removed: { by: string | null; at: string; reason: string | null } | null };
 export type CaseForm = {
-  form: string; title: string; subject_id: string; person: string; draft: { written_now: number; mapped: number; unconfirmed: number };
+  form: string; title: string; subject_id: string; person: string;
+  /** C7.8: added by the case officer to this person's filing (null or absent: a release form). */
+  added?: AddedTag | null;
+  /** C7.8: a blank official PDF, filled by hand (no copy is made by the product). */
+  blank?: BlankForm | null; /** draft: `written_now` the declared and confirmed answers a copy made now writes (P-242, P-411); `to_fix` the
+   *  answered form fields left blank because the answer needs a fix (QA-122, or a Yes/No contradicting a recorded detail). */
+  draft: { written_now: number; mapped: number; to_fix: number };
   readiness: Readiness; copies: FormCopy[];
   /** The evidence lane's fill trial for this form passed (P-65 (a)); until it does a copy is "Checked copy, not for filing". */
   trial_passed: boolean;
@@ -205,7 +265,10 @@ export const ONLINE_LATER_WAVE = "Online (later wave)";
  *  read with the same startable check that opening a case runs (api/src/runtime.ts), so the dialog never offers a release
  *  the server then refuses. `why` is the case officer's plain sentence (no field keys, no author's steps); the items
  *  themselves are the authors' to fix in Immigration programs. */
-export type OpenableRelease = { combination_id: string; combination: string; version: number; startable: boolean; items: number; why: string | null };
+export type OpenableRelease = { combination_id: string; combination: string; version: number; startable: boolean; items: number; why: string | null;
+  /** C6.17 (BR-3): this combination is a later stage of a route: the route and its earlier stages, each with the key
+   *  details it may record (Sample). Absent for a combination on no route or the first stage of one. */
+  stage?: { route: string; route_label: string; key: string; name: string; earlier: { key: string; name: string; key_details: { field: string; label: string; type: "STRING" | "DATE"; same_every_stage: boolean }[] }[] } };
 /** The one sentence a case officer reads when a release is not ready for cases (the dialog and the 409 say the same). */
 export const notReadyForCases = (label: string, items: number) => `"${label}" is not ready for new cases: ${items === 1 ? "1 item" : `${items} items`} to fix in Immigration programs, by the people who set it up. Cases already open are not affected.`;
 /** QA-38 (P-67): a new case opens on its combination's newest release (api/src/runtime.ts takes the highest version),
@@ -219,7 +282,14 @@ export function newestReleases<T extends { combination_id: string; version: numb
  *  or a section check that fired on a fact it reads (fact "check:<id>", label the check's words, P-47 tier 2);
  *  or confirmed with a problem (it would be written wrong); and a required repeating group with no entries unless
  *  "none apply" is confirmed for it (Lead, break M3), named by its section (fact "group:<section>"). */
-export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "needs a fix" | "a check fired" }[] };
+export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "waits for the client to re-confirm" | "needs a fix" | "a check fired" | "left empty on the form";
+  /** B107: whose fact it is (the question's subject: a person's id, the case's, or "representative"), so who owes it is told by its own subject. */
+  subject?: string;
+  /** QA-165 (P-71): why, in the form's own words, when a form field holds it back: the fix a box refused with ("…is answered
+   *  No, but … is recorded"), or why a field IRCC's form marks mandatory would be left empty ("filled by hand: …"). */
+  why?: string;
+  /** QA-165 (#1318): for "left empty on the form", every form field the line covers (a date's parts are one line). */
+  boxes?: string[] }[] };
 /** QA-76: the role labels a part can carry when no person stands behind it ("The application", "The representative"),
  *  written in the middle of a sentence ("About the representative", "for the representative"); a person's own name,
  *  even one starting with "The", is kept as it is. */
@@ -267,3 +337,96 @@ export type CaseFilings =
 /** G13 (QA-140): a release in the same words in the studio and on a case: "Release N", N being the content pack release
  *  the studio shows (else the combination's released version). */
 export const releaseLabel = (r: { version: number; packVersion?: { version: number } | null }) => `Release ${r.packVersion?.version ?? r.version}`;
+
+// ------------------------------------------------------------------ C9.5 adopt a newer release (B145)
+
+/** C9.5 (BR-5): move a case to the newest release of its combination: the release and pin revision the person read, and
+ *  one reason (pre-filled "Adopting the current release", 3 to 500 characters). */
+export const RELEASE_MOVE_REASON = "Adopting the current release";
+export const ReleaseMove = z.object({
+  target_version: z.number({ message: "Send the release you read (Read the list again)." }).int().positive(),
+  from_revision: z.number({ message: "Send the pin revision you read (Read the list again)." }).int().positive(),
+  reason: text("Say why this case moves to the new release (at least 3 characters).", 3, 500).refine((x) => /[\p{L}\p{N}]/u.test(x), "Say why this case moves to the new release, in words."),
+});
+export type ReleaseChangeLine = { what: string; kind: string; who: string[]; before: string; after: string };
+/** `fillable`: Fill (a new copy on the new release) is the next step for this line. */
+export type ReleaseEffectLine = { id: string; what: string; who: string; why: string; form?: string; subject?: string; fillable?: boolean };
+/** GET /runtime/cases/:id/release-update (computed, writes nothing). `target` null: the case is on the newest release. */
+export type ReleaseUpdate = {
+  case_id: string;
+  current: { version: number; label: string; revision: number; pinned_at: string };
+  target: { version: number; label: string; released_at: string; demo: boolean } | null;
+  combination: string;
+  changes: { forms: ReleaseChangeLine[]; documents: ReleaseChangeLine[]; questions: ReleaseChangeLine[]; eligibility: ReleaseChangeLine[] };
+  fees: string;
+  effects: { fill_again: ReleaseEffectLine[]; filed_another_way: ReleaseEffectLine[]; no_longer_required: ReleaseEffectLine[]; withdrawn: ReleaseEffectLine[]; kept_out_of_date: ReleaseEffectLine[]; unchanged: { count: number; words: string } };
+  /** Filings the difference touches, with what it touches (the Ready to file warning reads the same). */
+  touched: { filing: string; label: string; words: string[] }[];
+  refused: { code: string; reason: string; item?: string } | null;
+  /** Whether this person may move the case (case staff of its firm); the list is shown either way. */
+  can_move: boolean;
+  reason_default: string;
+};
+/** After a move (pin revision 2 on): what it did to the work made before it that still waits (Prepare's groups). */
+export type ReleaseLastMove = { from: { version: number; label: string; revision: number }; to: { version: number; label: string; revision: number }; at: string; reason: string | null; effects: ReleaseUpdate["effects"] };
+/** POST …/release-update: the new pin and what the move did, for the toast. */
+export type ReleaseMoved = { case_id: string; revision: number; version: number; label: string; from: { version: number; label: string; revision: number };
+  /** C7.8: forms the case officer added that the new release holds itself (each replaced by the release's line). */
+  added_forms_replaced?: { form: string; person: string }[];
+  counts: { fill_again: number; filed_another_way: number; no_longer_required: number; withdrawn: number; kept_out_of_date: number }; words: string };
+
+/** C6.17 A multi-stage case (B139; concept §6): one stage of a case as the strip, the stage panel and the dialog read it.
+ *  `cannot_start_why`: a not-started stage whose combination is retired or whose newest release is not startable. Every
+ *  deadline and key detail is Sample (P-412 F13). */
+export type CaseStageView = { id: string; key: string; name: string; client_name: string; combination_id: string; combination: string; ord: number;
+  state: "DONE_BEFORE" | "NOT_RECORDED" | "CURRENT" | "ENDED_NEXT_STARTED" | "NOT_STARTED"; words: string; cannot_start_why: string | null; started_from: "BEGIN" | "NEXT_STAGE" | null;
+  started_at: string | null; ended_at: string | null; version: number;
+  key_details: { field: string; label: string; type: "STRING" | "DATE"; value: string | null; by: string | null; same_every_stage: boolean }[];
+  deadline: { label: string; due: string | null; why: string; sample: true } | null };
+export type CaseStages = { case_id: string; route: { key: string; label: string; basis: string } | null; stages: CaseStageView[]; current: string; next: string | null };
+/** BR-4: what "Start next stage" will do, shown before the click. */
+export type StartNextPreview = { from: { stage: string; name: string; client_name: string; version: number }; to: { stage: string; name: string; release_version: number; release: string } | null;
+  refused: string | null; people: { subject: string; label: string; role: string; comes: boolean; words: string | null }[];
+  counts: { person_answers_used: number; asked_again: number; new_questions: number; forms: number; documents: number };
+  forms: string[]; documents: string[]; documents_basis: "checklist" | "release"; deadline: CaseStageView["deadline"]; key_details: CaseStageView["key_details"];
+  unrecorded: { filing: string; person: string }[]; words: string };
+export const StartNext = z.object({
+  from_stage: z.string({ message: "Send the stage you read (Read the case again)." }).uuid("Send the stage you read (Read the case again)."),
+  stage_version: z.number({ message: "Send the stage version you read (Read the case again)." }).int().positive(),
+  key_details: z.record(z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/, "A key detail is named by its field."), z.union([z.string(), z.null()], { message: "Write a key detail as text." })).optional(),
+  reason: z.string({ message: "Write the reason as text." }).trim().max(500, "Keep the reason to 500 characters.").refine((x) => !INVISIBLE.test(x) && !LONE.test(x), "Remove the control or invisible characters.").optional(),
+});
+export const StageKeyDetails = z.object({
+  stage_version: z.number({ message: "Send the stage version you read (Read the case again)." }).int().positive(),
+  key_details: z.record(z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/, "A key detail is named by its field."), z.union([z.string(), z.null()], { message: "Write a key detail as text." })),
+});
+// ------------------------------------------------------------------ C8.3 Representative review (B144, additive)
+/** POST /runtime/cases/:id/reviews: the filings to send (BR-1); `now`: a solo firm's "Review now" (sent and opened). */
+export const SendForReview = z.object({ filings: z.array(z.string(), { message: "Send filings as a list of filing ids." }), now: z.boolean().optional() });
+/** POST /runtime/reviews/:id/open · …/checks · …/decision · …/reapprove (BR-3, BR-2, BR-4, BR-5, P-412). */
+export const ReviewOpen = z.object({ filing: z.string().uuid({ message: "Name the filing (its id in this review)." }) });
+export const ReviewTick = z.object({ filing: z.string().uuid({ message: "Name the filing (its id in this review)." }), item: z.string().min(1).max(200), ticked: z.boolean({ message: "Say ticked: true or false." }) });
+export const ReviewDecision = z.object({
+  filing: z.string().uuid({ message: "Name the filing (its id in this review)." }),
+  verdict: z.enum(["approve", "send_back"], { message: "Say approve or send_back." }),
+  form_hashes: z.record(z.string(), z.string().nullable()).optional(),
+  confirm_unticked: z.boolean().optional(), self: z.boolean().optional(),
+  reasons: z.array(z.object({ text: z.string(), item: z.string().nullable().optional(), check: z.string().nullable().optional() })).optional(),
+});
+export const ReviewReapprove = z.object({ filing: z.string().uuid({ message: "Name the filing (its id in this review)." }), form_hashes: z.record(z.string(), z.string().nullable()).optional(), self: z.boolean().optional() });
+export type ReviewRowStatus = "sent" | "under_review" | "approved" | "sent_back";
+/** One changed fact (BR-6): before → after, who typed the new value and when (m4). */
+export type ChangedSinceReview = { fact: string; label: string; person: string; was: unknown; now: unknown; was_words: string | null; now_words: string | null; typed_by: string | null; typed_by_name: string | null; typed_at: string | null };
+/** One form's frozen stamp and its state on the page (B2, BR-7). */
+export type FormStamp = { item: string; form: string; person: string; channel: string; waits: boolean;
+  state: "to_check" | "checked" | "changed_since_review" | "approved" | "approval_withdrawn" | "sent_back" | "not_stamped_waits"; state_words: string; tooltip: string | null; withdrawn_words: string | null;
+  file: { kind: string; sha256: string | null; words: string }; stamp: { at: string; by: string; file_kind: string; file_sha256: string | null } | null;
+  live_hash: string | null; changes: ChangedSinceReview[]; facts: { label: string; person: string; value: unknown; value_words: string | null; typed_by_name: string | null; confirmed_by_name: string | null }[] };
+export type ReviewCheckView = { key: string; source: "default" | "program" | "confirmations" | "form"; wording: string; live: Record<string, unknown> | null; live_now: Record<string, unknown> | null; ticked: { by: string; name: string; at: string } | null };
+/** One filing in one round (B1), with its own status and round number. */
+export type ReviewRoundFiling = { filing: string; label: string; filing_round: number; status: ReviewRowStatus; status_words: string;
+  opened: { by: string; name: string; at: string } | null; decided: { by: string; name: string; at: string; kind: string | null; reasons: { text: string; item?: string; check?: string }[] | null; confirmed_unticked: string[] | null } | null;
+  forms: FormStamp[]; checks: ReviewCheckView[]; unticked: number; changed: number; withdrawn: string[]; latest: boolean; reapprovable: boolean; open_critical: string[];
+  history: { round: number; filing_round: number; status: ReviewRowStatus; at: string; by: string | null; reasons: { text: string }[] | null }[] };
+export type ReviewRound = { id: string; case_id: string; number: number; kind: "send" | "review_now" | "one_step" | "reapprove"; sent: { by: string; name: string; at: string };
+  representative: { id: string | null; name: string | null }; can_decide: boolean; read_only_words: string | null; solo: boolean; filings: ReviewRoundFiling[]; rounds: { id: string; number: number; kind: string; at: string }[] };

@@ -1,0 +1,31 @@
+qa probe qa153_entries.mts on a934f2583 (= main d4897ce1b + qa records), copy qa_r153c :4470, start Sun Nov  8 23:44:28 IST 2026
+NOTICE:  database "xr_studio_qa_r153c" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_r153c on http://localhost:4470 (xr_studio_qa_r153c), stops itself in 40 min
+reset 201
+load 201
+loaded Sun Nov  8 23:45:42 IST 2026
+QA-153 entries probe — real brothers and sisters and two children, read back from the PDFs
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  setup: everything answered and confirmed
+KIDS [200,200]
+PASS  every step to take none-apply back, add entries and answer them is accepted — [200,201,201,201,200,200,200,200,200,200,200,200,200,200,200,200,200,200,200,200,200,200,200,200,200,200,201,200,200,200,200,200,200,200]
+READINESS-P []
+PASS  with its entries answered and confirmed, IMM 5645 has no brothers-and-sisters line left — []
+PRINCIPAL-C [{"name":"Alpha Sibling 1","dob":"1981-01-11","address":"Alpha Road 1, Alpha City 1, Canada","occ":"Alpha Job 1"},{"name":"Alpha Sibling 2","dob":"1982-02-12","address":"Alpha Road 2, Alpha City 2, Canada","occ":"Alpha Job 2"},{"name":"Alpha Sibling 3","dob":"1983-03-13","address":"Alpha Road 3, Alpha City 3, Canada","occ":"Alpha Job 3"},{"name":null,"dob":null,"address":null,"occ":null}]
+SPOUSE-C [{"name":"Bravo Sibling 1","dob":"1981-01-11","address":"Bravo Road 1, Bravo City 1, Canada","occ":"Bravo Job 1"},{"name":null,"dob":null,"address":null,"occ":null}]
+SECTION-B [{"name":"SAMPLE","dob":"2016-11-08","address":"First Child Road, Alpha City, Canada","occ":"SAMPLE"},{"name":"SAMPLE","dob":"2011-11-08","address":"Second Child Road, Beta City, Canada","occ":"SAMPLE"},{"name":null,"dob":null,"address":null,"occ":null}]
+PASS  Section C holds the three entries in order — ["Alpha Sibling 1","Alpha Sibling 2","Alpha Sibling 3",null]
+PASS  each row's columns belong to that entry (date of birth, address, occupation) — [{"name":"Alpha Sibling 1","dob":"1981-01-11","address":"Alpha Road 1, Alpha City 1, Canada","occ":"Alpha Job 1"},{"name":"Alpha Sibling 2","dob":"1982-02-12","address":"Alpha Road 2, Alpha City 2, Canada","occ":"Alpha Job 2"},{"name":"Alpha Sibling 3","dob":"
+PASS  the spouse's copy holds only the spouse's entry
+PASS  the principal's copy holds none of the spouse's entries
+PASS  Section B: each child's row holds that child's own address — [{"name":"SAMPLE","dob":"2016-11-08","address":"First Child Road, Alpha City, Canada","occ":"SAMPLE"},{"name":"SAMPLE","dob":"2011-11-08","address":"Second Child Road, Beta City, Canada","occ":"SAMPLE"},{"name":null,"dob":null,"address":null,"occ":null}]
+AFTER-REMOVE {"rm":200,"g2":[{"name":"Alpha Sibling 1","dob":"1981-01-11","address":"Alpha Road 1, Alpha City 1, Canada","occ":"Alpha Job 1"},{"name":"Alpha Sibling 3","dob":"1983-03-13","address":"Alpha Road 3, Alpha City 3, Canada","occ":"Alpha Job 3"},{"name":null,"dob":null,"address":null,"occ":null}]}
+PASS  the middle entry removed: the others close up, with their own columns, and the removed one is gone — [{"name":"Alpha Sibling 1","dob":"1981-01-11","address":"Alpha Road 1, Alpha City 1, Canada","occ":"Alpha Job 1"},{"name":"Alpha Sibling 3","dob":"1983-03-13","address":"Alpha Road 3, Alpha City 3, Canada","occ":"Alpha Job 3"},{"name":null,"dob":null,"address"
+
+9/9 passed
+fill exit 0
+read exit 1  end Sun Nov  8 23:46:57 IST 2026

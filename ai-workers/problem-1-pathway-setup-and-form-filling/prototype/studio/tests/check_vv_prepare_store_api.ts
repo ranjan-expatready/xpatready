@@ -64,7 +64,7 @@ type P = { derived: boolean; version: string; portal: string | null; filings: { 
   ok("C6.12 items pass: each person files their own IMM 5257 on their own filing", [A, S, K].every((s) => its(s).some((i) => i.form === "IMM 5257" && i.filing === filingOf(p, s)?.id)), p?.items.map((i) => `${i.form}:${i.subject.slice(0, 4)}`));
   // The unified view (#356) also lists document and step items (C6.4 checklist, VV-R15 biometrics): these checks are the forms'.
   ok("C6.12 items: each item starts on its combination line's channel, lists the channels IRCC accepts and its signature, and says why it is there", (p?.items ?? []).filter((i) => (i as { kind?: string }).kind === "form").every((i) => i.channel === sql(`select coalesce(x->>'channel','PDF_UPLOAD') from pack_work_pin w join config_release r on r.id=w.config_release_id, jsonb_array_elements(r.snapshot->'forms') x where w.case_id='${c.id}' and x->>'form_number'='${i.form}'`) && i.accepts.length >= 1 && i.accepts.includes(i.channel) && !!i.signature && i.reason.length > 10));
-  const inRelease = new Set(sql(`select string_agg(x->>'form_number', ',') from pack_work_pin w join config_release r on r.id=w.config_release_id, jsonb_array_elements(r.snapshot->'forms') x where w.case_id='${c.id}'`).split(","));
+  const inRelease = new Set(sql(`select string_agg(x->>'form_number', ',') from pack_work_pin w join config_release r on r.id=w.config_release_id, jsonb_array_elements(r.snapshot->'forms') x where w.case_id='${c.id}' and w.revision = (select max(z.revision) from pack_work_pin z where z.case_id = w.case_id)`).split(","));
   ok("C6.12 items (fail): no item names a form outside the case's release, or a person without a filing", (p?.items ?? []).every((i) => ((i as { kind?: string }).kind !== "form" || inRelease.has(i.form)) && p!.filings.some((f) => f.id === i.filing && f.applicants[0].subject === i.subject)));
 
   // Someone stops applying: no filing, fee or item; back again: the same filing and items.
@@ -79,7 +79,7 @@ type P = { derived: boolean; version: string; portal: string | null; filings: { 
   ok("C6.12 pass: the other filings kept their ids throughout", [A, S].every((s) => filingOf(p, s)?.id === first.filings.find((f) => f.applicants[0].subject === s)?.id));
 
   // Review m1: a form that stops applying keeps its item (inactive) and gets it back with the same id and channel.
-  const relC = sql(`select r.id from config_release r join pack_work_pin w on w.config_release_id = r.id where w.case_id = '${c.id}'`);
+  const relC = sql(`select r.id from config_release r join pack_work_pin w on w.config_release_id = r.id where w.case_id = '${c.id}' and w.revision = (select max(z.revision) from pack_work_pin z where z.case_id = w.case_id)`);
   const snap = sql(`select snapshot->'forms' from config_release where id='${relC}'`);
   const item5707 = its(A).find((i) => i.form === "IMM 5707")?.id;
   // As a release without IMM 5707 would be: the snapshot and its fingerprint change together (break B2 refuses one alone).
@@ -136,7 +136,7 @@ type P = { derived: boolean; version: string; portal: string | null; filings: { 
   ok("C6.12 review R2-m1: filings follow the order of the people on the case", JSON.stringify(order) === JSON.stringify(["Sample Client A", "Sample Spouse B", "Sample Child B1", "Sample Child B2", "Sample Child B3", "Sample Child B4"].map((n) => six.subjects[n])), order);
 
   // 409 when the release no longer names the case's combination; another combination: not derived yet.
-  const rel = sql(`select r.id from config_release r join pack_work_pin w on w.config_release_id = r.id where w.case_id = '${c.id}'`);
+  const rel = sql(`select r.id from config_release r join pack_work_pin w on w.config_release_id = r.id where w.case_id = '${c.id}' and w.revision = (select max(z.revision) from pack_work_pin z where z.case_id = w.case_id)`);
   sql(`update config_release set snapshot = jsonb_set(snapshot, '{combination,key}', '"wp.family"') where id = '${rel}'`);
   try {
     r = (await prep(c.id)).r;

@@ -2,11 +2,12 @@
 """Which Mergify queue a pull request joins, read from .mergify.yml itself (B119, P-376 (1), 6 Nov).
 
 Records never block code, by one route (Lead 21's ruling on #1147, 6 Nov): CI labels a records-only PR "records"
-(tools/records-only.sh, from #1139: the one definition of a record), the queue "records", listed after "m2"
-and "m3" so it has the lowest priority, takes the label, and m2 and m3 skip it. This script evaluates the
+(tools/records-only.sh, from #1139: the one definition of a record), the queue "records", listed after
+"product" so it has the lowest priority, takes the label, and product skips it (D1, P-416, 8 Nov: the m2 and m3 queues
+became the one "product" queue). This script evaluates the
 queue_conditions the way Mergify does (the first queue, in file order, whose conditions all hold; on a list such as
 label, "attr=x" holds when any item equals x and "-attr=x" when none does) on fixed PRs, and checks the rules every
-queue keeps (base main, the review label, green ci, records last and refusing drafts). Each fixed PR lists its files;
+queue keeps (base main, the review label, green ci, refusing drafts, records last). Each fixed PR lists its files;
 its label comes from records-only.sh is-records and must agree with the case's expected label (so the definition and
 the cases cannot drift apart), and the label name the queues use must be the one records-only.sh prints. A missing
 records-only.sh fails the check. Then it breaks the configuration on purpose and expects each
@@ -94,18 +95,19 @@ CASES = [  # what, files, a record by #1139's definition?, the queue it must joi
     case("the history folder", [f"{R}/history/lead20-handover.md", f"{R}/history/old/STATE-2026-11-05.txt"], True, "records"),
     case("the way of working (a record under product/)", [f"{R}/WAY-OF-WORKING.md"], True, "records"),
     case("an M3 title on records only still goes to records", [f"{R}/qa/CAPABILITIES.md"], True, "records", "M3 qa: C7.3 scored"),
-    case("records plus one app file: m2", [f"{R}/STATE.md", f"{A}/api/src/core.ts"], False, "m2"),
-    case("records plus one app file, M3 title: m3", [f"{R}/qa/built/C7.3.md", f"{A}/web/src/App.tsx"], False, "m3", "forms: C7.3 — x"),
-    case("app code alone: m2", [f"{A}/api/src/demo.ts"], False, "m2", "runtime: C4.11 — x"),
-    case("a qa script (.cjs) is not a record", [f"{R}/qa/walks/x/walk.cjs"], False, "m2"),
-    case("a tool under product/tools/, even a .md", [f"{R}/tools/README.md"], False, "m2"),
-    case("this row's checker (.py under screens/)", [f"{R}/screens/B119/check-queue-rules.py"], False, "m2"),
-    case("a JSON file under screens/", [f"{R}/screens/12/fixture.json"], False, "m2"),
-    case("the merge queue file itself", [".mergify.yml"], False, "m2"),
-    case("a workflow", [".github/workflows/ci.yml"], False, "m2"),
-    case("a skill", [".claude/skills/next/SKILL.md"], False, "m2"),
-    case("a look-alike name: STATE.md.bak", [f"{R}/STATE.md.bak"], False, "m2"),
-    case("a look-alike place: STATE.md outside product/", [f"{A}/STATE.md"], False, "m2"),
+    case("records plus one app file: product", [f"{R}/STATE.md", f"{A}/api/src/core.ts"], False, "product"),
+    case("records plus one app file, M3 title: product (no title routing)", [f"{R}/qa/built/C7.3.md", f"{A}/web/src/App.tsx"], False, "product", "forms: C7.3 — x"),
+    case("an M3 title on code: product", [f"{A}/web/src/App.tsx"], False, "product", "M3 runtime: C7.5 — x"),
+    case("app code alone: product", [f"{A}/api/src/demo.ts"], False, "product", "runtime: C4.11 — x"),
+    case("a qa script (.cjs) is not a record", [f"{R}/qa/walks/x/walk.cjs"], False, "product"),
+    case("a tool under product/tools/, even a .md", [f"{R}/tools/README.md"], False, "product"),
+    case("this row's checker (.py under screens/)", [f"{R}/screens/B119/check-queue-rules.py"], False, "product"),
+    case("a JSON file under screens/", [f"{R}/screens/12/fixture.json"], False, "product"),
+    case("the merge queue file itself", [".mergify.yml"], False, "product"),
+    case("a workflow", [".github/workflows/ci.yml"], False, "product"),
+    case("a skill", [".claude/skills/next/SKILL.md"], False, "product"),
+    case("a look-alike name: STATE.md.bak", [f"{R}/STATE.md.bak"], False, "product"),
+    case("a look-alike place: STATE.md outside product/", [f"{A}/STATE.md"], False, "product"),
     case("records without the review label: no queue", [f"{R}/STATE.md"], True, None, labels=()),
     case("records with ci not green: no queue", [f"{R}/STATE.md"], True, None, checks=()),
     case("records against another base: no queue", [f"{R}/STATE.md"], True, None, base="lead/x"),
@@ -133,8 +135,8 @@ def problems(cfg, have_script):
     out = []
     qs = cfg.get("queue_rules", [])
     names = [q.get("name") for q in qs]
-    if names[:3] != ["m2", "m3", "records"] or len(names) != 3:
-        out.append(f"queue order is {names}: want m2, m3, records (the first listed has the highest priority; records last)")
+    if names != ["product", "records"]:
+        out.append(f"queue order is {names}: want product, records (the first listed has the highest priority; records last)")
     for q in qs:
         conds = [c.replace(" ", "") for c in q.get("queue_conditions", []) if isinstance(c, str)]
         for need in ("base = main", "label = review: approved", "check-success = ci"):
@@ -146,8 +148,8 @@ def problems(cfg, have_script):
         want = "label=records" if q.get("name") == "records" else "-label=records"
         if want not in conds:
             out.append(f"queue {q.get('name')}: queue_conditions lack {want!r}")
-        if q.get("name") == "records" and "-draft" not in conds:
-            out.append("queue records: queue_conditions lack '-draft'")
+        if "-draft" not in conds:   # every queue refuses drafts (P-371 (1)); records alone before D1
+            out.append(f"queue {q.get('name')}: queue_conditions lack '-draft'")
     for c in CASES:
         try:
             pr, note = labelled(c, have_script)
@@ -179,13 +181,15 @@ def mutations(cfg):
                                      for x in q["queue_conditions"]]
         return c
     return [
-        ("m2 lets records in (-label=records removed)", drop("m2", lambda x: x == "-label=records")),
-        ("m3 lets records in (-label=records removed)", drop("m3", lambda x: x == "-label=records")),
+        ("product lets records in (-label=records removed)", drop("product", lambda x: x == "-label=records")),
         ("records lets unlabelled PRs in (label = records removed)", drop("records", lambda x: x == "label=records")),
         ("records skips green ci", drop("records", lambda x: x.startswith("check-success"))),
         ("records skips the review label", drop("records", lambda x: x.startswith("label=review"))),
         ("records accepts drafts", drop("records", lambda x: x == "-draft")),
-        ("m2 drops base = main", drop("m2", lambda x: x == "base=main")),
+        ("product accepts drafts", drop("product", lambda x: x == "-draft")),
+        ("product drops base = main", drop("product", lambda x: x == "base=main")),
+        ("product skips green ci", drop("product", lambda x: x.startswith("check-success"))),
+        ("product skips the review label", drop("product", lambda x: x.startswith("label=review"))),
         ("records drops base = main", drop("records", lambda x: x == "base=main")),
         ("the label conditions are flipped", flip(cfg)),
         ("records listed first (higher priority than product)", reorder(cfg)),
@@ -213,7 +217,7 @@ def main():
     rest = [x for x in found if not any(x.startswith(c["what"] + ":") for c in CASES)]
     for x in rest: failed += 1; print(f"FAIL  {x}")
     if not rest:
-        passed += 1; print("PASS  order m2, m3, records; every queue keeps base main, the review label and green ci; the label guards; records refuses drafts")
+        passed += 1; print("PASS  order product, records; every queue keeps base main, the review label and green ci; the label guards; every queue refuses drafts")
     for what, broken in mutations(cfg):   # caught = the break adds a problem the real configuration does not have
         if set(problems(broken, have)) - set(found): passed += 1; print(f"PASS  caught: {what}")
         else: failed += 1; print(f"FAIL  not caught: {what}")

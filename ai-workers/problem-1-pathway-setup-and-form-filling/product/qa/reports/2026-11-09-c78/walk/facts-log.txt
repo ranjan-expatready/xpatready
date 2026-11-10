@@ -1,0 +1,38 @@
+IMM 0008 for Sample Client W
+Added by the case officer
+Remove from this filing
+Not validated yet
+Read back the validated copy
+4 facts to answer or confirm before filing
+70 mandatory form fields left empty
+Generate a new copy
+
+Declared or confirmed answers for 42 of 249 form fields; 4 answered but needing a fix stay blank. A copy also lists the form fields to write by hand.
+
+Facts to answer or confirm (4)
+Country or territory where the person currently resides (Sample Client W): needs a fix
+Country or territory of birth (Sample Client W): needs a fix
+Native language or mother tongue (Sample Client W): needs a fix
+Country or authority that issued the passport (Sample Client W): needs a fix
+Marked mandatory on IRCC's form, still empty (79): Adobe's Validate asks for each, and may ask for more that its own checks make mandatory
+Program under which you are applying — no question asks it yet: nothing in this release fills it
+Category under which you are applying — no question asks it yet: nothing in this release fills it
+Question 3. Please indicate how many family members, including you, are in this application. — no question asks it yet: no question placement: nobody is asked for this value yet
+a) Correspondence — no question asks it yet: no question placement: nobody is asked for this value yet
+b) Interview — no question asks it yet: no question placement: nobody is asked for this value yet
+c) Interpreter requested — no question asks it yet: no question placement: nobody is asked for this value yet
+a) Province/Territory — no question asks it yet: no question placement: nobody is asked for this value yet
+Family name (surname) as shown on the person's passport or travel document (form field: Family Name, Personal Details › Q1) — filled by hand: step "max_chars:100" is not in the executable set
+cm — no question asks it yet: no question placement: nobody is asked for this value yet
+Eye colour — no question asks it yet: no question placement: nobody is asked for this value yet
+City or town of birth (form field: Place Birth City, Personal Details) — filled by hand: step "max_chars:30" is not in the executable set
+Country or territory of birth (form field: Place Birth Country, Personal Details) — needs an answer: answered with a problem, not written: Choose one of: codes as listed in the inventory.
+1) (form field: Citizenship1, Personal Details) — no question asks it yet: no question placement: nobody is asked for this value yet
+Country or territory where the person currently resides (form field: Country, Personal Details › Q10) — needs an answer: answered with a problem, not written: Choose one of: codes as listed in the inventory.
+Question 12 A. During the past 5 years have you lived in any country other than your country of citizenship or your current country of resid… — no question asks it yet: no question placement: nobody is asked for this value yet
+Family name (surname) as shown on the person's passport or travel document (form field: Family Name, Q14 › Marital Status) — no question asks it yet: that person is not part of this combination; the form field stays blank
+Question 14 A. Have you previously been married or in a common law relationship? — no question asks it yet: no question placement: nobody is asked for this value yet
+Street name — no question asks it yet: no question placement: nobody is asked for this value yet
+City/Town — no question asks it yet: no question placement: nobody is asked for this value yet
+Country — no question a
+CONTROLS ["BUTTON:","BUTTON:Remove from this filing","BUTTON:Read back the validated copy","BUTTON:Generate a new copy","BUTTON:Download","BUTTON:Validated copy uploaded back","BUTTON:Filed","BUTTON:Printed: the copy of 9 Nov, 14:53"]

@@ -1,0 +1,46 @@
+pack C6.6.test.ts on 234322702 (tree = main e4d63f396), NOLOAD=1, copy qa_r66 :4472, start Sun Nov  8 05:18:15 IST 2026
+NOTICE:  database "xr_studio_qa_r66" does not exist, skipping
+isolated qa_r66 on http://localhost:4472 (xr_studio_qa_r66), stops itself in 50 min
+loaded Sun Nov  8 05:18:19 IST 2026
+C6.6 — Declared answers fill the forms at once, marked by who gave them (P-242, P-411)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+PASS  setup: Demo › Load the configured checkpoint — 201
+PASS  setup: Visitors › Visitor visa is released on the checkpoint
+PASS  setup: a Visitor visa case with the principal and an adult spouse — {"id":"7ea46f99-a72d-49e1-8ed1-ca8ac18f1746","team":{"firm":{"key":"sample-firm","name":"Sample immigration firm","solo":false},"stand_in":{"id":"SI-9","words":"Today: one Sample firm and one Sample solo firm, seeded. Later: the team's AG-01 firm setup and use
+PASS  setup: IMM 5257 Schedule 1 applies to both adults on the checkpoint
+PASS  C6.6-1 pass (P-242, QA-301): the principal's own typed answer is Declared, marked "Declared", never "Counts as confirmed" — {"id":"e4ace63d-e6e2-47cf-89f1-15126051919c","value":"DECLAREDFAM","status":"DECLARED","channel":"questionnaire","by":"user-P","at":"2026-11-07T23:49:25.059Z","answered":null,"problems":[],"confirmed":true,"why":"Declared: the client's own answer; it fills the
+PASS  C6.6-1b pass (P-72 kept): the principal's own answer needs no officer confirmation (it is not on the Confirm list) — {"id":"e4ace63d-e6e2-47cf-89f1-15126051919c","value":"DECLAREDFAM","status":"DECLARED","channel":"questionnaire","by":"user-P","at":"2026-11-07T23:49:25.059Z","answered":null,"problems":[],"confirmed":true,"why":"Declared: the client's own answer; it fills the
+PASS  C6.6-2 pass (QA-302): a copy of IMM 5257 Schedule 1 writes the principal's own family name and given names at once — {"family":"written","given":"written"}
+PASS  C6.6-3 pass (P-411 (1)): the principal's answer for the adult spouse is Declared, marked "Answered by the principal for Sample Spouse A" — {"id":"e8184018-13f9-4d16-a5fb-b73d659e0203","value":"SPOUSEFAM","status":"DECLARED","channel":"questionnaire","by":"user-P","at":"2026-11-07T23:49:25.834Z","answered":null,"problems":[],"confirmed":false,"why":"Answered by the principal for Sample Spouse A: d
+PASS  C6.6-4 pass (P-411 (1), QA-303): the spouse's copy of Schedule 1 writes it at once — "written"
+PASS  C6.6-5 fail (P-411 (1)): the adult confirms it before signing: it is not confirmed, and the spouse's form lists it "not confirmed" before filing — [{"fact":"case.subject_is_principal_applicant","label":"Whether the person the form is about is the principal applicant, rather than the principal applicant's spouse, common-law partner or dependent child","about":"The application","reason":"not answered","sub
+PASS  C6.6-6 pass (P-411 (2)): an officer-typed answer is Declared, marked "entered by staff" — {"id":"5d6fb353-fe31-49a6-9447-56639012b591","value":"STAFFGIVEN","status":"DECLARED","channel":"agent_view","by":"user-O","at":"2026-11-07T23:49:26.621Z","answered":null,"problems":[],"confirmed":false,"why":"Declared: entered by staff; it fills the forms now
+PASS  C6.6-7 pass (P-411 (2), QA-302): the officer-typed answer is written to the spouse's Schedule 1 at once — "written"
+PASS  C6.6-8 fail (P-411 (2)): it stays on the Confirm list: not confirmed, and listed "not confirmed" before filing
+PASS  C6.6-8b pass (P-411, review M1): each "missing or not confirmed" line on Ready to file says an answer fills the form as soon as it is given — ["CRITICAL: IMM 5257 for Sample Client A: 4 facts missing or not confirmed (Entries in \"Employment\": add them, or say none apply, Entries in \"Education\": add them, or say none apply, Entries in \"Personal details\": add them, or say none apply and 1 more).
+PASS  C6.6-8c fail (review M1): no Ready to file line says "Only confirmed facts fill the form" — []
+PASS  C6.6-9 pass (P-411 (2)): the officer's correction is saved and marked "entered by staff", on the Confirm list — {"status":200,"corrected":{"id":"12a86cef-a2ad-45bc-9bc5-2fd56831a84f","value":"OFFICERFAM","status":"DECLARED","channel":"agent_view","by":"user-O","at":"2026-11-07T23:49:27.619Z","answered":null,"problems":[],"confirmed":false,"why":"Declared: entered by sta
+PASS  C6.6-10 pass (P-411 (2), QA-303): the correction never empties the box: a new copy writes the corrected family name — {"family":"written","given":"written"}
+PASS  C6.6-11 pass (P-411 (2)): the draft writes as many form fields after the correction as before — 5
+PASS  C6.6-12 fail (QA-122): a declared date of birth that is not a real date is saved and flagged, but never written — {"status":200,"why":"answered with a problem, not written: Enter a real date as day, month and year. | answered with a problem, not written: Enter a real date as day, month and year. | answered with a problem, not written: Enter a real date as day, month and y
+FAIL  C6.6: the test ran to its end (crashed: browserType.launch: Failed to create a ProcessSingleton for your profile directory. This usually means that the profile is already in use by another instance of Chromium.
+Call log:
+[2m  - <launching> /Applications/Google Chrome.app/Contents/MacOS/Google Chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-back-forward-cache --disable-breakpad --disable-client-side-phishing-detection --disable-component-extensions-with-background-pages --disable-component-update --no-default-browser-check --disable-default-apps --disable-dev-shm-usage --disable-edgeupdater --disable-extensions --disable-features=AvoidUnnecessaryBeforeUnloadCheckSync,DestroyProfileOnBrowserClose,DialMediaRouteProvider,GlobalMediaControls,HttpsUpgrades,LensOverlay,MediaRouter,PaintHolding,ThirdPartyStoragePartitioning,BlockOriginHeaderModificationOnRedirect,AvoidCorsURLLoaderRestartOnRedirect,Translate,AutoDeElevate,OptimizationHints,NetworkTimeServiceQuerying,AimEnabled,msForceBrowserSignIn,msEdgeUpdateLaunchServicesPreferredVersion --enable-features=CDPScreenshotNewSurface --allow-pre-commit-input --disable-hang-monitor --disable-ipc-flooding-protection --disable-popup-blocking --disable-prompt-on-repost --disable-renderer-backgrounding --disable-updater-scheduler --force-color-profile=srgb --metrics-recording-only --no-first-run --password-store=basic --use-mock-keychain --no-service-autorun --export-tagged-pdf --disable-search-engine-choice-screen --unsafely-disable-devtools-self-xss-warnings --edge-skip-compat-layer-relaunch --disable-infobars --disable-search-engine-choice-screen --disable-sync --enable-unsafe-swiftshader --headless --hide-scrollbars --mute-audio --blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4 --no-sandbox --user-data-dir=/tmp/claude-501/playwright_chromiumdev_profile-jubUJZ --remote-debugging-pipe --no-startup-window[22m
+[2m  - <launched> pid=3148[22m
+[2m  - [pid=3148][err] [1108/051929.270228:ERROR:third_party/crashpad/crashpad/util/mach/bootstrap.cc:65] bootstrap_check_in org.chromium.crashpad.child_port_handshake.3150.19595839.QKIMCBHWMNMXXMUE: Permission denied (1100)[22m
+[2m  - [pid=3148][err] [1108/051929.271574:ERROR:third_party/crashpad/crashpad/util/file/file_io.cc:103] ReadExactly: expected 4, observed 0[22m
+[2m  - [pid=3148][err] [1108/051929.272667:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open ~/Library/Application Support/Google/Chrome/Crashpad/settings.dat: Operation not permitted (1)[22m
+[2m  - [pid=3148][err] [1108/051929.272726:ERROR:third_party/crashpad/crashpad/util/file/file_io_posix.cc:208] open ~/Library/Application Support/Google/Chrome/Crashpad/settings.dat: Operation not permitted (1)[22m
+[2m  - [pid=3148][err] [3148:19595817:1108/051929.323472:ERROR:chrome/browser/process_singleton_posix.cc:1046] Failed to create socket directory.[22m
+[2m  - [pid=3148][err] [3148:19595817:1108/051929.323694:ERROR:chrome/app/chrome_main_delegate.cc:624] Failed to create a ProcessSingleton for your profile directory. This means that running multiple instances would start multiple browser processes rather than opening a new window in the existing process. Aborting now to avoid profile corruption.[22m
+[2m  - [pid=3148] <gracefully close start>[22m
+[2m  - [pid=3148] <kill>[22m
+[2m  - [pid=3148] <will force kill>[22m
+[2m  - [pid=3148] exception while trying to kill process: Error: kill EPERM[22m
+[2m  - [pid=3148] <process did exit: exitCode=21, signal=null>[22m
+[2m  - [pid=3148] starting temporary directories cleanup[22m
+[2m  - [pid=3148] finished temporary directories cleanup[22m
+[2m  - [pid=3148] <gracefully close end>[22m
+)
+19/20 passed
+pack exit 1  end Sun Nov  8 05:19:29 IST 2026

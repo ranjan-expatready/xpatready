@@ -12,9 +12,12 @@ import { cannotPass, CODE_WORDS, dayOf, isCritical, passKeys, passProblem, WARN_
 import type { ReadinessView } from "./readiness-inputs.ts";
 import { userIn } from "../../engine/runtime/team.ts";
 import { actorOf, Audit, Db, fail, Workspace, type Actor } from "./core.ts";
+import { newestPin } from "./stage-scope.ts"; // C6.17
 import { firmOfActor } from "./firms.ts";
 import { Runtime } from "./runtime.ts";
 import { CasePrepare } from "./case-prepare.ts";
+import { busyWords } from "./busy.ts";
+import { ReviewRounds } from "./review-rounds.ts"; // C8.3 (M1): the review is a one-step round
 
 type H = string | undefined;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -23,7 +26,7 @@ const problem = (status: number, title: string, detail: string, extra: Record<st
 @Injectable()
 export class FilingReadinessRoutes {
   constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit,
-    @Inject(CasePrepare) private readonly prepare: CasePrepare, @Inject(Workspace) private readonly ws: Workspace) {}
+    @Inject(CasePrepare) private readonly prepare: CasePrepare, @Inject(Workspace) private readonly ws: Workspace, @Inject(ReviewRounds) private readonly rounds: ReviewRounds) {}
 
   /** The filing, reached as staff of its case's firm (a client, configuration people and another firm: 403 or 404).
    *  Break B8 on #861: a filing recorded as submitted is read-only here (C8.2 keeps its record). */
@@ -49,7 +52,12 @@ export class FilingReadinessRoutes {
     const everyone = await this.db.caseTeamMember.findMany({ where: { caseId: c.id } });
     const rep = everyone.find((m) => m.role === "LEAD_REPRESENTATIVE" && !m.endedAt)?.userId ?? null;
     if (!rep || rep !== actor.id) fail("Only the representative of record reviews this filing (P-155). A case officer prepares it; the representative reviews it.", HttpStatus.FORBIDDEN);
-    const b = (body ?? {}) as { note?: unknown; self?: unknown; facts_hash?: unknown };
+    const b = (body ?? {}) as { note?: unknown; self?: unknown; facts_hash?: unknown; pin_revision?: unknown };
+    // C9.5 (break m10): a review sent from a screen read before the case moved to another release is refused (the screen
+    // sends the pin revision it read); the representative reviews what the case files now.
+    // Breaker R2-m4 (round 2): once the case has moved, the screen always sends the revision it read; a review without it is refused.
+    if (c.pins[0].revision > 1 && b.pin_revision === undefined) problem(400, "Some details need fixing", "Send pin_revision: the pin revision of the case you reviewed (this case moved to another release; Reload).", { errors: [{ field: "pin_revision", message: "The pin revision you read (Reload)." }] });
+    if (b.pin_revision !== undefined && b.pin_revision !== c.pins[0].revision) fail("This case moved to another release after you opened the filing: nothing was recorded. Reload and review it again.", HttpStatus.CONFLICT);
     // Break N1 (#861 round 2): the review is of the facts the representative read: the view's `facts_hash` is sent back
     // and a filing changed since is refused (409, Reload), never stamped as reviewed for facts nobody saw.
     if (typeof b.facts_hash !== "string" || !/^[0-9a-f]{64}$/.test(b.facts_hash)) problem(400, "Some details need fixing", "Send facts_hash: the filing's facts_hash from the prepare view you reviewed.", { errors: [{ field: "facts_hash", message: "The facts_hash you read (Reload)." }] });
@@ -70,10 +78,25 @@ export class FilingReadinessRoutes {
     if (!licence) fail("A review needs the representative's licence number on the firm record; none is set.", HttpStatus.CONFLICT);
     const kind = prepared ? "self_reviewed" : "reviewed";
     // Break B2: the review is of the filing's facts as they are now; a later change reopens it.
-    const rd = await this.now(actor, c.id, f.id);
-    if (rd.facts_hash !== b.facts_hash) fail("This filing changed after you read it. Reload and review it again.", HttpStatus.CONFLICT);
-    const row = await this.db.filingReview.create({ data: { workspaceId: f.workspaceId, filingId: f.id, reviewedBy: actor.id, kind, licenceNumber: licence!.number, note, factsHash: rd.facts_hash } });
-    await this.audit.log(f.workspaceId, actor.id, kind, "filing", f.id, `${actor.name} ${kind === "self_reviewed" ? "self-reviewed" : "reviewed"} a filing on case ${c.id.slice(0, 8)} (licence ${licence!.number})`, { case: c.id, note });
+    // C8.3 (challenge M1): the review is a one-step round of the representative's review, through the same code: every
+    // form frozen and stamped (api/src/review-rounds.ts oneStep). A filing already sent for review is decided there (409).
+    const one = await this.rounds.oneStepBasis(actor, c, f.id);
+    const rd = one.rd;
+    if (!rd) fail("This filing's readiness could not be worked out (it is not on the application now).", HttpStatus.CONFLICT);
+    if (rd!.facts_hash !== b.facts_hash) fail("This filing changed after you read it. Reload and review it again.", HttpStatus.CONFLICT);
+    // Devin on #1252 (C9.5): the review and its audit line are written under the case's row lock that a move takes, with
+    // the pin revision read again under it: a move that committed after this review was read refuses it (409), so no
+    // review of the release the case left is ever stamped after the new pin. (The facts are not re-read under the lock:
+    // answer writes do not take it; a later fact change reopens the review as before, break B2.)
+    const row = await busyWords(() => this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR UPDATE`;
+      const newest = await newestPin(tx, c.id, c.combinationId); // C6.17 (BR-9)
+      if (newest?.revision !== c.pins[0].revision) fail("This case moved to another release while you reviewed the filing: nothing was recorded. Reload and review it again.", HttpStatus.CONFLICT);
+      const made = await tx.filingReview.create({ data: { workspaceId: f.workspaceId, filingId: f.id, reviewedBy: actor.id, kind, licenceNumber: licence!.number, note, factsHash: rd!.facts_hash } });
+      await this.rounds.oneStep(tx, c, actor, { filing: f.id, reviewId: made.id, kind, frames: one.frames, checks: one.checks });
+      await tx.auditEvent.create({ data: { workspaceId: f.workspaceId, actor: actor.id, action: kind, entity: "filing", entityKey: f.id, summary: `${actor.name} ${kind === "self_reviewed" ? "self-reviewed" : "reviewed"} a filing on case ${c.id.slice(0, 8)} (licence ${licence!.number})`.slice(0, 600), detail: { case: c.id, note } } });
+      return made;
+    }, { timeout: 20_000, maxWait: 10_000 }));
     const name = firm ? userIn(firm, actor.id)?.name ?? actor.name : actor.name;
     return { id: row.id, filing: f.id, reviewed_by: actor.id, name, kind, licence_number: licence!.number, at: row.reviewedAt.toISOString(),
       words: kind === "self_reviewed" ? `Self-reviewed by ${name} (licence ${licence!.number})` : `Reviewed by ${name} (licence ${licence!.number})` };

@@ -12,10 +12,11 @@ import { MINOR } from "../../contracts/runtime.ts";
 import { lineCondition, lineHolders, type Known, type Person } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
 import { isFilingFact } from "../resolver.ts";
-import { FILING } from "../../contracts/resolver.ts";
+import { FILING, ROLE } from "../../contracts/resolver.ts";
 import { WHO_WORDS } from "../../contracts/lines-bulk.ts";
 import type { Participant } from "./case.ts";
 import { FEE_TABLE } from "./filings.ts";
+import { lineSet, type LineSet, type SnapSet } from "../document-sets.ts";
 
 /** R2 (P-230 (7)): the combinations whose checklist is worked out are data (samples/fee-table.json "checklist": true),
  *  so another combination is a data edit once its requirements are checked, never code. */
@@ -25,10 +26,10 @@ export const APPLICATION_DATE = "case.application_date";
 
 /** A requirement row as the snapshot carries it (engine/snapshot.ts document_requirements). */
 type Req = { lineage: string; document_type: string; document_type_key?: string; who: string; base_or_conditional: string; provided_by: string;
-  condition?: Cond | null; condition_plain?: string | null; source_quote?: string | null; alternatives?: string[] | null };
+  condition?: Cond | null; condition_plain?: string | null; source_quote?: string | null; alternatives?: string[] | null; set_name?: string | null };
 type Cond = { subjectKind?: string; [k: string]: unknown };
-type DocType = { key: string; name: string };
-type Derived = { id: string; inputs?: string[]; reference?: string };
+type DocType = { key: string; name: string; sets?: SnapSet[]; default_provider_roles?: string[] };
+type Derived = { id: string; calculation?: string; inputs?: string[]; reference?: string };
 
 /** A document validity rule from the release: a `document_validity` check whose condition is
  *  `{ op: "issued_within_months", months, before, cite: { page, url, read } }` and whose applies_to is a document type key. */
@@ -51,9 +52,27 @@ export type Missing = { key: string; question: string; answered: boolean;
 export type PersonLine = { id: string; document_type: string; label: string; state: "not_requested"; reason: string; required: boolean; documents: never[];
   need: Need; lineage: string; also_from: string[]; document: { key: string; name: string }; missing: Missing[]; base: boolean;
   provided_by: string; alternatives: { key: string; name: string }[]; quote: string | null; rule: ValidityRule | null;
+  /** C6.15 (SA-1B-19, SA-1B-20): the substitute set the line uses, from its type in the release and the set the line
+   *  picks; null when the type has none (its own only member). */
+  set: LineSet | null;
   /** C6.4 (a), challenge r2 M1: whose line it is (the release's "whose document") and its words, for the Documents panel. */
-  who: string; who_words: string };
-export type PersonChecklist = { subject: string; label: string; role: string; applies: boolean; lines: PersonLine[]; waiting: PersonLine[]; not_needed: PersonLine[]; needed: number; answer_first: number };
+  who: string; who_words: string;
+  /** C6.14 (SA-1B-151, SA-1B-214): a line asked once for the application ("case", C3.16's Filing scope) or once for the
+   *  couple ("couple_once", Household) is one item with providers; any other line is per person (null, no providers). */
+  shared: Shared | null; providers: Provider[]; providers_rule: ProvidersRule | null; providers_words: string | null };
+/** C6.14: who provides a shared item, and why this person. */
+export type Provider = { subject: string; label: string; role: string; why: string };
+export type Shared = "application" | "couple";
+/** type_roles: the document type's default roles matched (SA-1B-151 r1); first_applicant: none set or none left, so the
+ *  person the item is for provides it (r1, r3); changed: the case officer's choice (SA-1B-214 r2, the API sets it). */
+export type ProvidersRule = "type_roles" | "first_applicant" | "changed";
+/** B102 (A6, BR-8): a person's age in whole years as the lines read it: on the date the release's worked-out age is
+ *  measured on (the application date), or, when the release works out no age, on the date the 18-or-older lines use.
+ *  `years` is null when it cannot be worked out yet, and `why` then names what to answer or check first. */
+export type PersonAge = { years: number | null; on: string | null; why: string; worked_out: boolean };
+export type PersonChecklist = { subject: string; label: string; role: string; applies: boolean; lines: PersonLine[]; waiting: PersonLine[]; not_needed: PersonLine[]; needed: number; answer_first: number; age: PersonAge;
+  /** C6.14 BR-4: whether this person may provide a shared document today, and why not (the officer's dialog reads it). */
+  may_provide: { ok: boolean; why: string } };
 export type CaseChecklist =
   | { derived: true; stand_in: "SI-14"; combination: string; people: PersonChecklist[]; basis: string; empty_release: boolean; ages_on: string; ages_on_why: string }
   | { derived: false; combination: string; why: string };
@@ -143,9 +162,28 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
   const say = (m: Missing[], what: string) => m.length && m.every((x) => x.answered)
     ? `${what}: check ${m.map((x) => x.question).join(" and ")}; together they do not give an answer (for example a birth date after the application date).`
     : `${what}: answer ${m.length ? m.map((x) => x.question).join(", ") : "the questions it depends on"} first.`;
+  // B102 (A6): the release's own worked-out age about a person, if it has one (data: its inputs and reference date).
+  // Break MA1: the age the release's document lines read, never another worked-out age that sorts first; none read → none.
+  const linesRead = new Set(reqs.flatMap((r) => (r.condition ? [...JSON.stringify(r.condition).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : [])));
+  const ageValue = derived.find((d) => d.calculation === "age_in_years" && d.id.startsWith("person.") && d.inputs?.length && d.reference && linesRead.has(d.id));
+  const ageOf = (h: string): PersonAge => {
+    const birthKey = ageValue?.inputs?.[0] ?? MINOR.birthDateField, onKey = ageValue?.reference ?? null;
+    const born = known.get(`${h}|${birthKey}`)?.value;
+    const on = onKey ? known.get(`${FILING}|${onKey}`)?.value : agesOn;
+    if (!day(born)) return { years: null, on: null, why: `Age: answer ${words(birthKey)} first.`, worked_out: !!ageValue };
+    if (!day(on)) return { years: null, on: null, why: `Age: answer ${words(onKey!)} first.`, worked_out: !!ageValue };
+    const years = ageInYears(born, on);
+    if (years === undefined) return { years: null, on: String(on), why: `Age: check ${words(birthKey)} and ${onKey ? words(onKey) : "today's date"}; together they give no age (a birth date after ${on}).`, worked_out: !!ageValue };
+    const which = onKey ? (onKey === APPLICATION_DATE ? "the application date" : words(onKey)) : day(appDate) ? "the application date" : "today: the application date is not answered yet";
+    return { years, on: String(on), why: `Age ${years} on ${on} (${which})`, worked_out: !!ageValue };
+  };
   const byPerson = new Map<string, PersonLine[]>(persons.map((p) => [p.id, []]));
   const applying = new Set(persons.filter((p) => p.applies).map((p) => p.id));
   const principal = persons.find((p) => p.role === "principal")?.id;
+  // C6.14 BR-3: providers are matched among everyone on the case, applying or not; BR-4 (SA-1B-151 r3, SA-1B-75 r4,
+  // challenge M2): their age on the day the checklist is read (UTC), not the application date.
+  const providersOn = today.toISOString().slice(0, 10);
+  const everyone = candidatesOf(people, known, providersOn);
   for (const r of reqs) {
     const t = types.find((x) => x.key === r.document_type_key || x.name === r.document_type);
     const document = { key: t?.key ?? r.document_type_key ?? r.document_type, name: t?.name ?? r.document_type };
@@ -180,13 +218,20 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
       const line: PersonLine = { id: `${h}:${r.lineage}`, document_type: document.key, label: document.name, state: "not_requested", reason: why, required: state === "needed", documents: [],
         need: state, lineage: r.lineage, also_from: [], document, missing, base: r.base_or_conditional === "base", provided_by: r.provided_by,
         alternatives: (r.alternatives ?? []).map((k) => ({ key: k, name: types.find((x) => x.key === k)?.name ?? k })), quote: r.source_quote ?? null, rule: rules.get(document.key) ?? null,
-        who: r.who, who_words: whoWords(r.who) };
+        set: lineSet(t, r.set_name, document.name).set, who: r.who, who_words: whoWords(r.who), ...sharedOf(r.who, t?.default_provider_roles ?? [], h, everyone, providersOn) };
       // Minor: two requirements for the same document on one person (e.g. a case line and the principal's own) are one
       // line: the strongest state wins and the other requirement is named in also_from.
       // Break m7: the merged line is "always" when either requirement is.
       const list = byPerson.get(h)!, same = list.findIndex((x) => x.document.key === line.document.key);
       if (same < 0) list.push(line);
-      else { const keep = ORDER[line.need] < ORDER[list[same].need] ? line : list[same], drop = keep === line ? list[same] : line; keep.also_from = [...new Set([...keep.also_from, drop.lineage, ...drop.also_from])].sort(); keep.base ||= drop.base; list[same] = keep; }
+      else {
+        const keep = ORDER[line.need] < ORDER[list[same].need] ? line : list[same], drop = keep === line ? list[same] : line; keep.also_from = [...new Set([...keep.also_from, drop.lineage, ...drop.also_from])].sort(); keep.base ||= drop.base;
+        // C6.14: merged with a shared requirement, the one line keeps its providers (a shared item is never lost), but only
+        // when that requirement applies as strongly as the line it joins: a shared requirement not needed (or waiting)
+        // never makes a needed per-person line shared (Devin on #1392).
+        if (!keep.shared && drop.shared && ORDER[drop.need] <= ORDER[keep.need]) Object.assign(keep, { shared: drop.shared, providers: drop.providers, providers_rule: drop.providers_rule, providers_words: drop.providers_words });
+        list[same] = keep;
+      }
     }
   }
   return { derived: true, stand_in: "SI-14", combination: combinationKey, empty_release: reqs.length === 0, ages_on: agesOn, ages_on_why: agesOnWhy,
@@ -194,10 +239,71 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
     people: persons.map((p) => {
       const all = byPerson.get(p.id)!.sort((a, b) => a.document.name.localeCompare(b.document.name) || a.lineage.localeCompare(b.lineage));
       const of = (n: Need) => all.filter((l) => l.need === n);
-      return { subject: p.id, label: p.label, role: p.role, applies: p.applies, lines: of("needed"), waiting: of("answer_first"), not_needed: of("not_needed"), needed: of("needed").length, answer_first: of("answer_first").length };
+      const cand = everyone.find((x) => x.id === p.id);
+      const may = cand ? mayProvide(cand, providersOn) : { ok: false, why: `A ${roleWords(p.role).replace(/^the /, "")} does not provide documents.` };
+      return { subject: p.id, label: p.label, role: p.role, applies: p.applies, lines: of("needed"), waiting: of("answer_first"), not_needed: of("not_needed"), needed: of("needed").length, answer_first: of("answer_first").length, age: ageOf(p.id), may_provide: may };
     }) };
 }
 const ORDER: Record<Need, number> = { needed: 0, answer_first: 1, not_needed: 2 };
+
+/** C6.14: a person on the case as provider rules read them (age in whole years on the checklist's date, or null). */
+export type Candidate = Person & { age: number | null };
+/** Roles that never provide a document (concept BR-1): the representative acts for the applicants; their documents are not
+ *  the client's (SA-1B-151 r1: a type with source kind client). Shared by the library's choices and the case's people. */
+export const NEVER_PROVIDES = new Set<string>([ROLE.representative]);
+/** Everyone on the case who may be named (not the case's own record, not a role in NEVER_PROVIDES) with their age on `on`,
+ *  read trimmed from answers without problems. */
+export function candidatesOf(people: Participant[], known: Known, on: string): Candidate[] {
+  const born = (id: string) => { const v = known.get(`${id}|${MINOR.birthDateField}`)?.value; return typeof v === "string" ? v.trim() : v; };
+  return people.filter((p) => p.role !== "case" && !NEVER_PROVIDES.has(p.role)).map((p) => ({ id: p.subjectId, role: p.role as Person["role"], label: p.label, applies: p.applies, age: ageInYears(born(p.subjectId), on) ?? null }));
+}
+/** BR-2: the lines that are one item for the application, by their "whose document" (C3.16's Filing and Household). */
+export const SHARED_WHO: Record<string, Shared> = { case: "application", couple_once: "couple" };
+/** BR-4 (SA-1B-151 r3, SA-1B-214 r5; challenge M2, AG-7-15 r6 "can't check" is never a pass): may this person provide?
+ *  18 or older on the date: yes. Under 18: no. Age not known (no valid date of birth): cannot be checked, so not named. */
+export function mayProvide(p: Candidate, on: string): { ok: boolean; why: string } {
+  if (p.age === null) return { ok: false, why: `${p.label}'s age cannot be checked yet (no date of birth): named once it shows 18 or older.` };
+  return p.age >= MINOR.underAge ? { ok: true, why: `${p.age} on ${on}` } : { ok: false, why: `${p.label} is ${p.age} on ${on}: nobody under ${MINOR.underAge} provides a document.` };
+}
+export const roleWords = (role: string) => WHO_WORDS[role === ROLE.principal ? "principal_applicant" : role] ?? role.replace(/_/g, " ");
+/** BR-3 to BR-5: the providers of a shared item on `holder`'s list: the type's roles in order, each matched among everyone
+ *  on the case (applying or not, on any filing), nobody under 18; none set or none left: the holder (the person the item
+ *  is for, the filing's first applicant on this slice). Pure; no combination key (P-425). */
+export function providersFor(roles: string[], holder: string, everyone: Candidate[], on: string): { providers: Provider[]; rule: ProvidersRule; words: string; skipped: string[] } {
+  const out: Provider[] = [], skipped: string[] = [];
+  for (const role of roles) for (const p of everyone.filter((x) => x.role === role)) {
+    if (out.some((x) => x.subject === p.id)) continue;
+    const m = mayProvide(p, on);
+    if (m.ok) out.push({ subject: p.id, label: p.label, role: p.role, why: `Default from the document type: ${roleWords(role)}${p.applies ? "" : " (not applying, still on the case)"}.` });
+    else skipped.push(m.why);
+  }
+  const names = (xs: Provider[]) => xs.map((x) => x.label).join(" and ");
+  if (out.length) return { providers: out, rule: "type_roles", words: `Provided by ${names(out)}: the document type's default ${roles.length > 1 ? "roles" : "role"}.${skipped.length ? ` ${skipped.join(" ")}` : ""}`, skipped };
+  const h = everyone.find((x) => x.id === holder);
+  const first: Provider[] = h ? [{ subject: h.id, label: h.label, role: h.role, why: "The person the item is for provides it." }] : [];
+  const lead = roles.length ? `No one on the case can provide it by the document type's roles (${roles.map(roleWords).join(", then ")})` : "The document type names no provider";
+  return { providers: first, rule: "first_applicant", words: `${lead}: ${h ? `${h.label}, the person the item is for, provides it` : "the person the item is for provides it"}.${skipped.length ? ` ${skipped.join(" ")}` : ""}`, skipped };
+}
+/** C6.14: the shared fields of a line ({ shared: null, providers: [] } for a per-person line, BR-2). */
+function sharedOf(who: string, roles: string[], holder: string, everyone: Candidate[], on: string): Pick<PersonLine, "shared" | "providers" | "providers_rule" | "providers_words"> {
+  const shared = SHARED_WHO[who] ?? null;
+  if (!shared) return { shared: null, providers: [], providers_rule: null, providers_words: null };
+  const p = providersFor(roles, holder, everyone, on);
+  return { shared, providers: p.providers, providers_rule: p.rule, providers_words: p.words };
+}
+/** BR-6: the officer's choice, read against the case as it is now: a chosen person no longer on the case, or now under 18,
+ *  is dropped (named); none left: null, so the defaults apply and the caller says so. */
+export function chosenProviders(chosen: string[], everyone: Candidate[], on: string): { providers: Provider[]; dropped: string[] } {
+  const providers: Provider[] = [], dropped: string[] = [];
+  for (const id of [...new Set(chosen)]) {
+    const p = everyone.find((x) => x.id === id);
+    if (!p) { dropped.push("A person chosen is no longer on the case."); continue; }
+    const m = mayProvide(p, on);
+    if (!m.ok) { dropped.push(m.why); continue; }
+    providers.push({ subject: p.id, label: p.label, role: p.role, why: "Chosen by the case officer." });
+  }
+  return { providers, dropped };
+}
 
 /** C6.4 (a), challenge r2 M1: a release's plain condition as it reads inside a reason ("Needed: …."): its last full stop
  *  removed, and its first word lower-cased only when it is a common opening word ("The applicant is married." → "the

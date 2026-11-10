@@ -20,9 +20,15 @@ for (const [entity, words] of [["sign step", `Case officer marked IMM 5476 "Sign
   ok(`pass (QA-225): the firm's own "${entity}" line is read`, firmMayRead(line(entity, words.replace(THEIRS, OURS)), own));
 }
 // The sweep's other case entities that were missing (C6.4 documents, the checklist, eligibility checks).
-for (const entity of ["case document", "checklist line", "assessment", "assessment_override"]) {
+for (const entity of ["case document", "answer check", "checklist line", "assessment", "assessment_override"]) {
   ok(`fail (sweep): another firm's "${entity}" line is never read`, !firmMayRead(line(entity, `x on case ${THEIRS}`), own));
   ok(`pass (sweep): "${entity}" is a case entity`, CASE_ENTITIES.has(entity) && !isConfigEntity(entity));
+}
+// C7.8 (B141, #1248): a form the case officer added to one filing, or removed from it, is a case line: another firm's
+// is never read; the firm's own is.
+for (const words of [`Case officer added IMM 5532 (Blank official PDF) for the principal on a filing of case ${THEIRS} (reason given)`, `Case officer removed IMM 5532 for the principal from a filing of case ${THEIRS} (reason given)`]) {
+  ok("fail (C7.8): another firm's \"filing form\" line is never read by this firm's staff", !firmMayRead(line("filing form", words), own));
+  ok("pass (C7.8): the firm's own \"filing form\" line is read, and \"filing form\" is a case entity", firmMayRead(line("filing form", words.replace(THEIRS, OURS)), own) && CASE_ENTITIES.has("filing form") && !isConfigEntity("filing form"));
 }
 // #861 (C7.6) on main since: the filing's readiness and review lines, entity "filing".
 ok("fail (#861, C7.6): another firm's \"filing\" line (reviewed, Ready to file reopened) is never read by user-S's firm", !firmMayRead(line("filing", `Representative A reviewed a filing on case ${THEIRS} (licence R000000)`), own) && !firmMayRead(line("filing", "A filing is no longer Ready to file"), own));
@@ -36,6 +42,10 @@ ok("pass (#553, spoof-proof marker): the first case marker wins, so a typed name
 ok("pass: a case line keyed by the case id is the firm's own", firmMayRead(line("case", "x opened a case", `${OURS}-aaaa-bbbb`), own) && !firmMayRead(line("case", "x opened a case", `${THEIRS}-aaaa`), own));
 ok("pass: a configuration line (no case named, a known entity) is read by every firm", firmMayRead(line("form", "Author changed IMM 5257"), own) && firmMayRead(line("library document_type", "Approver approved \"Passport\""), own) && firmMayRead(line("release", "Approver released Visitor visa"), own));
 ok("pass: \"case\" in other words (\"in case\", \"case officer\") is not a case id", caseOf(line("form", "in case the case officer asks")) === null);
+// B102 (A6): "Work it out instead" writes a configuration line (a worked-out value of the shared library, like "rule
+// fact"): its words name no case, so every firm's staff read it, as any configuration line.
+ok("pass (B102): a worked-out value is a configuration line, read by every firm", isConfigEntity("worked-out value") && !CASE_ENTITIES.has("worked-out value") && firmMayRead(line("worked-out value", "Configuration author worked out person.age_years as \"Age in whole years from Date Of Birth, on Application date.\" (Sample)"), own));
+ok("fail (B102): a worked-out value line that named another firm's case would still not be read", !firmMayRead(line("worked-out value", `x on case ${THEIRS}`), own));
 ok("the two lists do not overlap", [...CASE_ENTITIES].every((x) => !CONFIG_ENTITIES.has(x)));
 
 // The sweep: every audit write in api/src (any `.log(` call with five or more arguments, auditEvent.create and

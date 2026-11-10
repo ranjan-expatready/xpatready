@@ -66,6 +66,13 @@ const MONTH = /^(\d{4})-(\d{2})$/;
  *  such a box (engine/runtime/forms.ts markNothingRecorded) and passes Context.nothingRecorded (api/src/fill.ts); with
  *  an empty value and no such flag the box stays blank. */
 const RECORDED = /^derived:(?:any\(([\w.,\s]+)\) recorded|([\w.]+) recorded|valid ([\w.]+) recorded \(not expired\)|any post-secondary education record exists|any previous residence in past 5 years\b.*)$/;
+/** QA-318 (C7.2): a drafted map's prose spelling of the same kind of Yes/No, "derive: true if any <what> is recorded for the
+ *  subject, else false" (IMM 5257 SCH1 (09-2023) Questions 4 and 7), or with the form's own limits on what counts ("true if
+ *  any recorded trip, starting after …, went to …, else false", Question 8). Group 1 is what is recorded; group 2 is set
+ *  when the form counts only some of them. */
+const PROSE_RECORDED = /^derive: true if any (?:(.+?) (?:is|are) recorded(?: for the subject)?|recorded (.+?))(?:, else false)$/i;
+/** Whether a transformation's first step is that prose Yes/No (engine/runtime/forms.ts markNothingRecorded reads it). */
+export const proseRecorded = (transform: string | null | undefined) => PROSE_RECORDED.test(stepsOf(transform)[0] ?? "");
 /** A transformation's steps: separated by ";" (P1/P2 maps) or "->" (the 21 Oct live IMM 5257 draft). Two spelling aliases
  *  from that draft name existing executable steps: date_part:X = date:X, address_part:province_state = address_part:province. */
 const stepsOf = (transform: string | null | undefined) => String(transform ?? "as_is").split(/;|->/).map((s) => s.trim().replace(/^date_part:/, "date:").replace(/^address_part:province_state\b/, "address_part:province")).filter(Boolean);
@@ -93,7 +100,7 @@ export function runTransform(transform: string | undefined, value: unknown, box:
   const hand = (reason: string): Outcome => ({ ok: false, hand: true, reason, steps });
   const blank = (reason: string): Outcome => ({ ok: false, blank: true, reason, steps });
   let v: any = value;
-  if ((v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length)) && !(ctx.nothingRecorded && steps[0] && RECORDED.test(steps[0]))) {
+  if ((v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length)) && !(ctx.nothingRecorded && steps[0] && (RECORDED.test(steps[0]) || PROSE_RECORDED.test(steps[0])))) {
     // A derive-to-N/0 on a missing fact is still a value ("no other name recorded"); everything else stays blank.
     const d = steps.find((s) => s.startsWith("derive:"));
     if (d && /^derive:Y if any .+ (is|are) recorded, else N$/.test(d)) return { ok: true, value: "N", steps };
@@ -114,6 +121,16 @@ export function runTransform(transform: string | undefined, value: unknown, box:
       if (m[3] && any) return hand(`${m[3]} is recorded; whether it is still valid (not expired) is checked by a person`);
       v = any; continue;
     }
+    // QA-318: the prose Yes/No. A box whose own fact is that Yes/No question (SCH1's "Did you serve in any military…?")
+    // writes the person's answer; a confirmed "none apply" (the caller's nothingRecorded) writes No; an entry recorded makes
+    // it Yes, unless the form counts only some entries (Question 8: trips since 18 or in the past five years, to other
+    // countries): then a person decides, in the form's own words. Never a guess.
+    if ((m = PROSE_RECORDED.exec(s))) {
+      if (typeof v === "boolean") continue;
+      if (!present(v)) { v = false; continue; }
+      if (m[2]) return hand(`the form counts only some of them (any recorded ${m[2].replace(/\s+/g, " ")}): a person checks the entries and decides Yes or No`);
+      v = true; continue;
+    }
     // C7.2 cause 1: "A equals B" (applying from the country of residence; residential address same as mailing).
     if ((m = /^derived:([\w.]+) equals ([\w.]+)$/.exec(s))) { const other = ctx.fact?.(m[2]); if (!present(other)) return hand(`${m[2]} is not confirmed, so it cannot be compared`); v = same(v, other); continue; }
     // C7.2 cause 1: the phone switches ("country code of … is (not) 1 -> check_code:1/0").
@@ -130,12 +147,25 @@ export function runTransform(transform: string | undefined, value: unknown, box:
       if (max && v.length > max) return hand(`value is ${v.length} characters; the box holds ${max} (never truncated)`);
       continue;
     }
+    // B107 (QA-300): a length the map states as a step of its own ("as_is; max 30 characters", IMM 5476 (11-2021)'s question
+    // 7): checked on the value as it is now, never truncated.
+    if ((m = /^max (\d+) char(?:s|acters)$/.exec(s))) { const t = String(v); if (t.length > Number(m[1])) return hand(`value is ${t.length} characters; the box holds ${m[1]} (never truncated)`); continue; }
+    // B107: a box that takes digits only (a country calling code): the value's digits; a value with none is written by hand.
+    if (s === "digits_only") { const t = String(v).replace(/\D/g, ""); if (!t) return hand(`no digits in "${String(v)}"`); v = t; continue; }
     if ((m = /^date:(YYYY-MM-DD|YYYY|MM|DD)$/.exec(s))) {
       const d = DATE.exec(String(v)), mo = (m[1] === "YYYY" || m[1] === "MM") && !d ? MONTH.exec(String(v)) : null;
       if (mo) { v = m[1] === "YYYY" ? mo[1] : mo[2]; continue; }
       if (!d) return hand(`not a full date: ${v}`); v = m[1] === "YYYY-MM-DD" ? d[0] : m[1] === "YYYY" ? d[1] : m[1] === "MM" ? d[2] : d[3]; continue;
     }
     if ((m = /^(?:yes_no_code|check_code):([^/]+)\/(.+)$/.exec(s))) { if (typeof v !== "boolean") return hand(`not a yes/no value: ${v}`); v = v ? m[1] : m[2]; continue; }
+    // B128 (QA-153): a drafted family-form map spells the Yes and No tick boxes "derived:checked_if_true:1/0" (check_code:1/0)
+    // and "derived:checked_if_false:1/0" (the same, ticked on No). Only a yes/no value; anything else by hand.
+    if ((m = /^derived:checked_if_(true|false):([^/]+)\/(.+)$/.exec(s))) { if (typeof v !== "boolean") return hand(`not a yes/no value: ${v}`); v = v === (m[1] === "true") ? m[2] : m[3]; continue; }
+    // C7.7 (G25, the tech lead's ruling on #1317): release 2's drafted IMM 5645 map spells the Yes and No tick boxes of each
+    // child's "accompany to Canada" "check_if_yes:1/0" and "check_if_no:1/0": the first code when the answer is that one, the
+    // second otherwise. Only a yes/no value (yes/no words too, as derive_inverse); anything else by hand.
+    // Review m1 (#1328): a list or a record is never read as its one item: by hand.
+    if ((m = /^check_if_(yes|no):([^/]+)\/(.+)$/.exec(s))) { const yn = typeof v === "boolean" ? v : typeof v === "object" ? null : /^(y|yes|true)$/i.test(String(v)) ? true : /^(n|no|false)$/i.test(String(v)) ? false : null; if (yn === null) return hand(`not a yes/no value: ${v}`); v = yn === (m[1] === "yes") ? m[2] : m[3]; continue; }
     if ((m = /^derive:Y if any .+ (?:is|are) recorded, else N$/.exec(s))) { v = (Array.isArray(v) ? v.length > 0 : v !== false && v !== "") ? "Y" : "N"; continue; }
     // C7.7 (G25): an inverted yes/no box, "derive_inverse:1 when the subject has no child records (…), 0 when any child
     // exists": the first code when the fact is No, the second when it is Yes. Only a yes/no value; anything else by hand.
@@ -155,7 +185,8 @@ export function runTransform(transform: string | undefined, value: unknown, box:
     if ((m = /^phone:(country_code_digits|area_code_and_number)$/.exec(s))) { const p = v as Phone; const part = m[1] === "country_code_digits" ? p?.country_code : p?.number; if (!part) return blank(`no ${m[1] === "country_code_digits" ? "country calling code" : "number"}`); v = String(part).replace(/\D/g, ""); continue; }
     if (/^phone_part:nanp_/.test(s)) { const p = v as Phone; if (p.country_code !== "1") return blank("not a North American number"); return hand("North American number parts are not in the executable set yet"); }
     if ((m = /^address_part:(city|province|country|postal_code|street_number|street_name|apt_unit|district|po_box)\b/.exec(s))) { const a = parseAddress(v); const part = a?.[m[1] as keyof Address]; if (!part) return blank(`address has no ${m[1]}`); v = part; const max = /max (\d+) char/.exec(s); if (max && String(v).length > Number(max[1])) return hand(`${m[1]} longer than ${max[1]} characters`); continue; }
-    if ((m = /^address_single_line(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) { const a = parseAddress(v); if (!a) return hand("not an address"); v = typeof value === "string" ? value : oneLine(a); if (m[1] && v.length > Number(m[1])) return hand(`address longer than ${m[1]} characters`); continue; }
+    // B128 (QA-153): "address_single_line_text" (a drafted map's spelling) is the same one-line address.
+    if ((m = /^address_single_line(?:_text)?(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) { const a = parseAddress(v); if (!a) return hand("not an address"); v = typeof value === "string" ? value : oneLine(a); if (m[1] && v.length > Number(m[1])) return hand(`address longer than ${m[1]} characters`); continue; }
     if ((m = /^country_name_text(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) { const c = ISO3[String(v).toUpperCase()] ?? String(v); if (m[1] && c.length > Number(m[1])) return hand(`country name longer than ${m[1]} characters`); v = c; continue; }
     if ((m = /^code_list:[\w.]+(?: \((.*)\))?$/.exec(s))) {
       const inline: Record<string, string> = {};

@@ -14,6 +14,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { crossChecks, ruleWords, type Fact, type Hit } from "../../engine/runtime/cross-checks.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime, type Reached } from "./runtime.ts";
+import { ReviewRuns } from "./review-runs.ts";
 
 type H = string | undefined;
 type Row = Awaited<ReturnType<Db["reviewFinding"]["findMany"]>>[number];
@@ -33,19 +34,21 @@ const refused = (detail: string, status = HttpStatus.CONFLICT): never => { throw
 
 @Injectable()
 export class FindingsService {
-  constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit, @Inject(ReviewRuns) private readonly reviews: ReviewRuns) {}
 
   /** GET /runtime/cases/:id/findings[?source=&state=]: the rules run first, then every finding of the case. */
   async list(actor: Actor, caseId: string, query: unknown): Promise<Findings> {
     const q = parse(FindingsQuery, query);
     const c = await this.r.reach(actor, caseId, "officer");
     await this.runRules(actor, c);
-    const rows = await this.db.reviewFinding.findMany({ where: { caseId: c.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+    // C7.5 part 2 (challenge M6): an AI finding whose quoted words left the form is resolved now, as a rules finding is.
+    await this.reviews.resolveMoved(c);
+    const rows = await this.db.reviewFinding.findMany({ where: { caseId: c.id, stageId: c.stage.id }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
     const { labels } = await this.factsOf(actor, c);
     const all = rows.map((x) => this.shape(c, x, labels));
     const counts = Object.fromEntries(STATE.map((s) => [s, all.filter((f) => f.state === s).length])) as Findings["counts"];
     return { case_id: c.id, findings: all.filter((f) => (!q.source || f.source === q.source) && (!q.state || f.state === q.state)), counts,
-      ai: { available: false, words: "Today: rules checks on every form. The AI review of the Visitor visa forms comes next (a saved run, replayed at US$0)." },
+      ai: { available: false, words: "Rules checks run on every form at every read (US$0). The independent AI review of a filled form runs from the Review page: Saved replays its checked run at US$0." },
       may_waive: (await this.representative(c.id)) === actor.id };
   }
 
@@ -62,7 +65,7 @@ export class FindingsService {
     const { answers } = await this.r.state(c);
     const facts: Fact[] = answers.filter((a) => a.rowKey === null).map((a) => ({ subject: a.subjectId, field: a.field, value: a.value }));
     const hits = crossChecks(facts, people.map((p) => ({ subject: p.subjectId, role: p.role, label: p.label, applies: p.applies })));
-    const live = await this.db.reviewFinding.findMany({ where: { caseId: c.id, NOT: { state: "resolved" } } });
+    const live = await this.db.reviewFinding.findMany({ where: { caseId: c.id, stageId: c.stage.id, NOT: { state: "resolved" } } });
     const rules = live.filter((x) => x.source === "rules");
     const seen = new Set(hits.map((h) => h.fingerprint));
     const gone = rules.filter((x) => !seen.has(x.fingerprint ?? "") && x.state !== "dismissed");
@@ -77,7 +80,7 @@ export class FindingsService {
       // Breaker m1: only a finding still open, acknowledged or waived is resolved; a dismiss made meanwhile stays.
       if (gone.length) resolved = (await tx.reviewFinding.updateMany({ where: { id: { in: gone.map((x) => x.id) }, state: { in: ["open", "acknowledged", "waived"] } }, data: { state: "resolved", resolvedBy: "rules", resolvedAt: new Date() } })).count;
       // Two reads at once: the partial unique index keeps one row per fingerprint; the second insert is skipped.
-      if (fresh.length) await tx.reviewFinding.createMany({ skipDuplicates: true, data: fresh.map((h) => ({ workspaceId: c.workspaceId, caseId: c.id, subjectId: h.subject, filingId: where.filing(h.subject), form: where.form(h), field: h.field, severity: h.severity, source: "rules", ruleKey: h.rule, fingerprint: h.fingerprint, quote: h.quote, createdBy: "rules" })) });
+      if (fresh.length) await tx.reviewFinding.createMany({ skipDuplicates: true, data: fresh.map((h) => ({ workspaceId: c.workspaceId, caseId: c.id, stageId: c.stage.id, subjectId: h.subject, filingId: where.filing(h.subject), form: where.form(h), field: h.field, severity: h.severity, source: "rules", ruleKey: h.rule, fingerprint: h.fingerprint, quote: h.quote, createdBy: "rules" })) });
       for (const x of placed) await tx.reviewFinding.updateMany({ where: { id: x.id, filingId: null }, data: { filingId: x.filing } });
     }).catch((e) => { if (!unique(e)) throw e; });
     if (resolved) await this.audit.log(c.workspaceId, "rules", "resolved", "case", c.id, `The rules resolved ${resolved === 1 ? "1 finding" : `${resolved} findings`} on case ${c.id.slice(0, 8)}: the facts now agree`, { findings: gone.map((x) => x.id) });
@@ -86,7 +89,7 @@ export class FindingsService {
   /** Where a finding sits: the person's own filing (a case fact: the principal's), and the first form the fact fills
    *  for that person (read only when a new rules finding needs it). */
   private async placeOf(actor: Actor, c: Reached, forms: boolean) {
-    const filings = await this.db.filing.findMany({ where: { caseId: c.id, active: true }, include: { applicants: true } });
+    const filings = await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id, active: true }, include: { applicants: true } });
     const people = this.r.peopleOf(c), principal = people.find((p) => p.role === "principal")?.subjectId;
     const caseSubject = people.find((p) => p.role === "case")?.subjectId;
     const fills = forms ? (await this.factsOf(actor, c)).fills : new Map<string, string[]>();
@@ -155,13 +158,13 @@ export class FindingsService {
     if (earlier) return earlier;
     const person = this.r.peopleOf(c).find((p) => p.subjectId === b.subject);
     if (!person || person.role === "case") fail("Choose a person on this case.", HttpStatus.UNPROCESSABLE_ENTITY);
-    if (b.filing && !(await this.db.filing.findFirst({ where: { id: b.filing, caseId: c.id, applicants: { some: { subjectId: b.subject } } } }))) fail("That filing is not this person's filing on this case.", HttpStatus.UNPROCESSABLE_ENTITY);
+    if (b.filing && !(await this.db.filing.findFirst({ where: { id: b.filing, caseId: c.id, stageId: c.stage.id, applicants: { some: { subjectId: b.subject } } } }))) fail("That filing is not this person's filing on this case.", HttpStatus.UNPROCESSABLE_ENTITY);
     const { labels } = await this.factsOf(actor, c);
     if (b.field && !labels.has(`${b.subject}|${b.field}`)) fail("That fact is not asked of this person on this case.", HttpStatus.UNPROCESSABLE_ENTITY);
     const filingId = b.filing ?? (await this.placeOf(actor, c, false)).filing(b.subject);
     let x: Row;
     try {
-      x = await this.db.reviewFinding.create({ data: { workspaceId: c.workspaceId, caseId: c.id, filingId, subjectId: b.subject, form: b.form || null, field: b.field || null, severity: b.severity, source: "manual", quote: b.note, idempotencyKey: key ?? null, idempotencyFingerprint: key ? fingerprint : null, createdBy: actor.id } });
+      x = await this.db.reviewFinding.create({ data: { workspaceId: c.workspaceId, caseId: c.id, stageId: c.stage.id, filingId, subjectId: b.subject, form: b.form || null, field: b.field || null, severity: b.severity, source: "manual", quote: b.note, idempotencyKey: key ?? null, idempotencyFingerprint: key ? fingerprint : null, createdBy: actor.id } });
     } catch (e) {
       if (!unique(e)) throw e;
       return (await replay())!; // two clicks at once: the first stored it

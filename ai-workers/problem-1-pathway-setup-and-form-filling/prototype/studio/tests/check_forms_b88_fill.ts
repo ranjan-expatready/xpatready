@@ -113,4 +113,4 @@ for (const [file, path, asks] of NINE) {
   const box = (JSON.parse(readFileSync(join(INV, `${file}.inventory.json`), "utf8")) as { fields: { data_path: string; options?: unknown }[] }).fields.find((f) => f.data_path === path);
   ok(`C4.11 BR-2 pass: ${file} ${path.split(".").at(-1)} prints its deciding question and has one Yes and one No (step yes_no_code:Y/N)`, !!box && asks.test(printedQuestion(box as never) ?? "") && yesNoStep(box.options) === "yes_no_code:Y/N", { printed: printedQuestion(box as never), step: yesNoStep(box?.options) });
 }
-summary();
+process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code; before, it always exited 0)

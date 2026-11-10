@@ -212,4 +212,37 @@ const adults = { "A|person.date_of_birth": "1980-05-01", "B|person.date_of_birth
   ok("C7.7 (c) fail: unanswered anywhere, the once-per-case input is still asked", none.some((m) => m.key === "person.date_of_birth" && !m.answered), none);
 }
 
+// B102 (A6, BR-8): each person's age as the lines read it, on the release's worked-out reference date (the application
+// date), or what to answer first. Sample (how age counts: Unconfirmed: no counsel).
+{
+  // The release's minor line reads person.age_years (break MA1: the age line follows the value the lines read).
+  const minorLine = req("letter:each_applicant", "invitation_letter", "each_applicant", { base_or_conditional: "conditional", condition: { subjectKind: "PERSON", op: "lt", field: "person.age_years", value: 18 }, condition_plain: "a child under 18" });
+  const S6 = { ...S, document_requirements: [...(S as unknown as { document_requirements: unknown[] }).document_requirements, minorLine] } as unknown as Snapshot;
+  const age = (k: Known, who: string, snap: Snapshot = S6) => (caseChecklist(snap, "vv.single", people, k, TODAY) as D).people.find((p) => p.subject === who)!.age;
+  const a = age(known({ "C|person.date_of_birth": "2016-11-01", "case|case.application_date": "2026-11-01" }), "C");
+  ok("C6.4 B102 BR-8 pass: a child born 2016-11-01 is 10 on the application date 2026-11-01, worked out from the release's value", a.years === 10 && a.on === "2026-11-01" && a.worked_out && a.why === "Age 10 on 2026-11-01 (the application date)", a);
+  const eve = age(known({ "C|person.date_of_birth": "2008-11-02", "case|case.application_date": "2026-11-01" }), "C");
+  ok("C6.4 B102 BR-8 pass and fail: one day short of the 18th birthday on the application date, the age is 17, not 18", eve.years === 17, eve);
+  const noDate = age(known({ "C|person.date_of_birth": "2016-11-01" }), "C");
+  ok("C6.4 B102 BR-8 fail: with no application date the age is not guessed from today; it asks for the date first", noDate.years === null && /^Age: answer "Date the application is submitted" first\.$/.test(noDate.why), noDate);
+  const noBirth = age(known({ "case|case.application_date": "2026-11-01" }), "C");
+  ok("C6.4 B102 BR-8 fail: with no date of birth the age asks for it first", noBirth.years === null && /^Age: answer "Date of birth" first\.$/.test(noBirth.why), noBirth);
+  const after = age(known({ "C|person.date_of_birth": "2027-01-01", "case|case.application_date": "2026-11-01" }), "C");
+  ok("C6.4 B102 BR-8 fail: a birth after the application date gives no age and says to check both dates", after.years === null && /^Age: check .* together they give no age/.test(after.why), after);
+  // Break MA1: a second worked-out age that sorts first ("person.age_on_arrival", on the first day of the stay) and that
+  // no line reads does not decide the age line.
+  const two = { ...S6, derived_fields: [{ id: "person.age_on_arrival", calculation: "age_in_years", inputs: ["person.date_of_birth"], reference: "case.intended_stay_from", executable: true }, ...(S6 as unknown as { derived_fields: unknown[] }).derived_fields] } as unknown as Snapshot;
+  const ma1 = age(known({ "C|person.date_of_birth": "2008-11-02", "case|case.application_date": "2026-11-01", "case|case.intended_stay_from": "2026-12-01" }), "C", two);
+  ok("C6.4 B102 break MA1 pass and fail: the age line reads the worked-out age the lines read (17 on the application date), not another that sorts first (18 on arrival)", ma1.years === 17 && ma1.on === "2026-11-01", ma1);
+  // Review m3: a release whose lines read an age on another date measures and names that date, never the constant.
+  const arrival = { ...S6, derived_fields: [{ id: "person.age_years", calculation: "age_in_years", inputs: ["person.date_of_birth"], reference: "case.intended_stay_from", executable: true }], placements: [...(S6 as unknown as { placements: unknown[] }).placements, { fact: "case.intended_stay_from", question_text: "Planned first day of the stay in Canada" }] } as unknown as Snapshot;
+  const m3 = age(known({ "C|person.date_of_birth": "2008-11-02", "case|case.application_date": "2026-11-01", "case|case.intended_stay_from": "2026-12-01" }), "C", arrival);
+  ok("C6.4 B102 review m3 pass: an age worked out on the first day of the stay is measured on it and says so", m3.years === 18 && m3.on === "2026-12-01" && /\("Planned first day of the stay in Canada"\)$/.test(m3.why), m3);
+  const noRead = age(known({ "C|person.date_of_birth": "2016-11-01" }), "C", S);
+  ok("C6.4 B102 break MA1 fail: a worked-out age no line reads is not used for the age line", !noRead.worked_out, noRead);
+  const plain = { ...S, derived_fields: [] } as unknown as Snapshot;
+  const t = (caseChecklist(plain, "vv.single", people, known({ "C|person.date_of_birth": "2016-11-01" }), TODAY) as D).people.find((p) => p.subject === "C")!.age;
+  ok("C6.4 B102 BR-8 pass: a release that works out no age shows the age the 18-or-older lines use, naming today", t.years === 10 && !t.worked_out && /today: the application date is not answered yet/.test(t.why), t);
+}
+
 process.exitCode = summary() ? 1 : 0;

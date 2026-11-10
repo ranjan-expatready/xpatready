@@ -16,7 +16,10 @@
 //      when its run line has setup steps (they build a combination from an empty workspace, which the six already
 //      holds), labelled "fixture only": a PR claiming Works on such a pack still needs the qa lane's demo-data PASS
 //      (gate A, tech lead 4 Nov). A pack passes on exit 0 with no FAIL line; with named steps, on exit 0 or 1 when every
-//      named step has a PASS line and no FAIL line. Up to GATE_B_JOBS packs (default 3) run side by side, one copy and
+//      named step has a PASS line and no FAIL line. A capability with several packs (C6.5, C6.5-screen, C6.5-counts)
+//      holds each pack to the named steps it prints a line for, and a pack that prints none of them to its whole run;
+//      each named step must be green in one of them (a step no pack prints is refused). Step labels are unique across a
+//      capability's packs (each pack prints only its own). Up to GATE_B_JOBS packs (default 3) run side by side, one copy and
 //      port per slot; each copy's database and folder are removed after its run.
 //   3. Skipped: notes and records PRs (KIND from change-kind.sh, as CI already sorts them) and a PR that names no
 //      capability. A merge-queue batch (QUEUE) re-runs part 1 for each PR it names (#nnn in its title), with that PR's
@@ -32,8 +35,28 @@
 //   already holds are skipped: setup_visitor_visa.ts and lib/setup_vv_m3.ts (also when the gate adds them for a pack on
 //   lib/m3.ts); nightly 42335507309 ran C6.9, C8.2 and C6.4 "fixture only" because of them. A pack's own other setup
 //   (C4.4's setup_c44_types.ts, which the checkpoint lacks) still runs after the load, and the line names it. A pack whose
-//   run uses no server (C6.5 --engine) loads nothing. Unset or "six" is the six, where a pack with setup steps stays on
+//   run uses no server (an engine-only run line; check-gate-b.mjs uses a fixture pack, C99.9) loads nothing. Unset or "six" is the six, where a pack with setup steps stays on
 //   its own fixture.
+//   GATE_B_DATA_OF="C4.8=checkpoint C1.1=six" (D5, P-416, 8 Nov): each named capability's packs run on that data and the
+//   rest on GATE_B_DATA, so one gate run pools packs on different data across its job slots (works-set.mjs --pool).
+//   GATE_B_ACCEPTANCE=<folder>: the packs' folder in place of studio/acceptance (check-gate-b.mjs only, for a fixture
+//   pack whose run truly uses no server; #1369 gave C6.5, the old example, its server run).
+//   GATE_B_RESULTS=<file>: one JSON line per pack run ({id, file, data, where, load, ok, why, infra}) for a caller. A
+//   named step that no pack of its capability printed is a refusal of the capability, not of a pack: it is in the gate's
+//   own reasons and exit code, never in these lines (works-set.mjs names no steps).
+//   BY DIFF (D2, P-416, founder 8 Nov; #1251 merged a red C7.3 step because its title did not name C7.3): on a pull
+//   request (RANGE set, not a batch) the capabilities the change touches are tested too, from the suites' reference
+//   graph (product/tools/select-suites.mjs --packs: a pack, or a set-up script its run line names, that is or reads a
+//   changed file). Which ones (review of #1337: shared files reach 30 rows, several Partial and red on main):
+//     * a pack the PR itself changes (acceptance/<C>*.test.ts): its row, if built (Works or Partial on the base);
+//     * a pack that only reads a changed file: its row only if it is Works (protected: it must stay green);
+//     * the rest are listed, not run ("name it with its green steps to run it": a named capability runs here, in part 1).
+//   An added capability's whole pack must pass. --diff-groups <n> prints that set, minus the named capabilities, as at
+//   most n JSON groups ({caps, data, skip, packs}; about 6 pack weights a machine) for CI's job "packs", which runs each group pooled on 3 slots (GATE_B_NO_DIFF
+//   there, and in part 1). Off CI, without GATE_B_NO_DIFF, the gate adds the set itself. On a pull request every
+//   capability runs on its scoring data (works-set.mjs: qa's REGRESSION-DATA.md, else the row's evidence, else the
+//   checkpoint for an M3 row, else the six) unless GATE_B_DATA or GATE_B_DATA_OF is set. A deleted pack is named. A
+//   batch, the nightly re-test and works-set's runs are unchanged.
 //   NOT TESTED (B131, founder 7 Nov ~15:20 IST, P-405; re-test 42357755876 went green on C3.16, C11.5 with no pack and on
 //   C6.5 with no server): a named capability with no acceptance pack to run, or a pack that runs "on no demo data (its run
 //   uses no server)" or "fixture only", ran no test on the data asked for. Each prints "NOT TESTED: <cap> has no
@@ -177,7 +200,10 @@ export function blockers(cl, bugs) {
     if ((GATING.has(b.severity) || b.severity === "unknown") && b.caps.some((c) => covers(c, id)) && !cl.fixes.has(b.id)) out.push({ cap: id, bug: b.id, severity: b.severity });
   return out;
 }
-export const packsOf = (id, dir = join(S, "acceptance")) =>
+/** The packs' folder: studio/acceptance, or GATE_B_ACCEPTANCE (check-gate-b.mjs only: a folder holding a fixture pack
+ *  whose run truly uses no server, so the gate's no-server rules are proved without a real pack, #1369). */
+const ACC_DIR = () => (process.env.GATE_B_ACCEPTANCE ? resolve(process.env.GATE_B_ACCEPTANCE) : join(S, "acceptance"));
+export const packsOf = (id, dir = ACC_DIR()) =>
   existsSync(dir) ? readdirSync(dir).filter((f) => f === `${id}.test.ts` || (f.startsWith(`${id}-`) && f.endsWith(".test.ts"))).sort() : [];
 
 /** A pack's documented run, from its header: the isolated.sh line and the tsx lines that follow it (continuations
@@ -232,6 +258,29 @@ export function stepsVerdict(id, steps, out) {
   }
   return missing;
 }
+/** Which named steps one pack's run prints a line for (PASS, FAIL or HELD): a capability with several packs holds each
+ *  pack to its own steps, and a pack that prints none of the named steps to its whole run. */
+export function stepsPrinted(id, steps, out) {
+  return steps.filter((s) => new RegExp(`^(?:PASS|FAIL|HELD)\\s+${esc(id)}[- ]${esc(s)}(?![0-9A-Za-z])`, "m").test(out));
+}
+/** What one pack is judged on (review m6 on 155e03cb8: the wiring, testable): null = no steps named (whole run); [] = an
+ *  empty list (refused, it names no step); the named steps it printed; or null when it printed none (its whole run). */
+export function packSteps(id, wanted, out) {
+  if (!wanted || !wanted.length) return wanted;
+  const printed = stepsPrinted(id, wanted, out);
+  return printed.length ? printed : null;
+}
+/** Whether a capability's named steps were all printed by one of its packs: the reason to refuse, or null. Skipped when a
+ *  pack of it could not run (the gate already stops with exit 2, review m3). results: { printed, infra } per pack. */
+export function unprintedReason(id, steps, results) {
+  if (!steps || !steps.length || !results.length || results.some((r) => r.infra)) return null;
+  const unseen = stepsUnprinted(steps, results.map((r) => r.printed ?? []));
+  return unseen.length ? `${id}: named steps no pack printed: ${unseen.map((s) => `${id}-${s}`).join(", ")}` : null;
+}
+/** The named steps no pack of the capability printed (each pack's printed list), so a named step is never unseen. */
+export function stepsUnprinted(steps, printedByPack) {
+  return steps.filter((s) => !printedByPack.some((p) => p.includes(s)));
+}
 /** The verdict on one pack's run: null when it passed, else why. Exit 0 with no FAIL line passes the whole pack; with
  *  named steps (never empty) exit 0 or 1 passes when each named step is green; a crash, a timeout or exit 2 never does. */
 export function packVerdict(id, steps, status, out) {
@@ -265,10 +314,25 @@ export function dataOf(env = process.env) {
   if (v !== "six" && v !== "checkpoint") throw new Error(`GATE_B_DATA must be "six" or "checkpoint", not "${v}"`);
   return v;
 }
+/** GATE_B_DATA_OF (D5): "C4.8=checkpoint C1.1=six" (spaces or commas), each capability's own data. Anything else in it
+ *  is refused, so a typo never quietly runs a row on the wrong data. */
+export function dataMap(env = process.env) {
+  const out = new Map();
+  for (const t of (env.GATE_B_DATA_OF ?? "").split(/[\s,]+/).filter(Boolean)) {
+    const m = t.match(/^(C\d{1,2}\.\d{1,2})=(six|checkpoint)$/);
+    if (!m) throw new Error(`GATE_B_DATA_OF wants "C<n.n>=six|checkpoint" items, not "${t}"`);
+    if (out.has(m[1]) && out.get(m[1]) !== m[2]) throw new Error(`GATE_B_DATA_OF names ${m[1]} twice with different data`);
+    out.set(m[1], m[2]);
+  }
+  return out;
+}
+/** The data one capability's packs run on: its GATE_B_DATA_OF item, else GATE_B_DATA. */
+export const dataFor = (id, env = process.env) => dataMap(env).get(id) ?? dataOf(env);
 /** The run's mode (B131): "retest" for nightly.yml's re-test (GITHUB_EVENT_NAME workflow_dispatch or schedule), where
  *  NOT TESTED is exit 3; "pr" anywhere else (pull_request, a merge-queue run, off CI), where it is a warning. */
 export const RETEST_EVENTS = new Set(["workflow_dispatch", "schedule"]);
-export const modeOf = (env = process.env) => (RETEST_EVENTS.has(env.GITHUB_EVENT_NAME ?? "") ? "retest" : "pr");
+// GATE_B_NOT_TESTED=warn (D5): works-set's pooled runs give their own verdict, so NOT TESTED stays a warning there.
+export const modeOf = (env = process.env) => (env.GATE_B_NOT_TESTED !== "warn" && RETEST_EVENTS.has(env.GITHUB_EVENT_NAME ?? "") ? "retest" : "pr");
 /** The setups Demo › Load the configured checkpoint already holds (it builds vv.single and its release 2, which they
  *  build on an empty workspace): skipped on the checkpoint (B125). Any other setup is the pack's own and still runs. */
 export const IN_CHECKPOINT = new Set(["studio/tests/runtime/setup_visitor_visa.ts", "studio/acceptance/lib/setup_vv_m3.ts"]);
@@ -292,14 +356,14 @@ export const whereOf = (plan, data = "six") => placeOf(plan, data).where;
 /** The NOT TESTED lines (B131) for the named capabilities and the packs that will run: a capability with no pack to
  *  run, and a pack whose run loads no demo data (no server, or "fixture only") on `data`. A pack whose run line cannot
  *  be read is a refusal already (runPack), not counted here. `read` gives a pack file's text. */
-export function notTested(caps, runs, data, read = (f) => readFileSync(join(S, "acceptance", f), "utf8")) {
-  const out = [];
+export function notTested(caps, runs, data, read = (f) => readFileSync(join(ACC_DIR(), f), "utf8")) {
+  const out = [], dataOfId = typeof data === "function" ? data : () => data;   // one data, or each capability's own (D5)
   for (const id of caps) if (!runs.some((r) => r.id === id)) out.push(`NOT TESTED: ${id} has no acceptance pack`);
   for (const r of runs) {
     const plan = runPlan(r.f, read(r.f));
     if (plan.error) continue;
-    const place = placeOf(plan, data);
-    if (place.load === null) out.push(`NOT TESTED on the ${data}: ${r.id} ${r.f} runs ${place.where}`);
+    const d = dataOfId(r.id), place = placeOf(plan, d);
+    if (place.load === null) out.push(`NOT TESTED on the ${d}: ${r.id} ${r.f} runs ${place.where}`);
   }
   return out;
 }
@@ -349,9 +413,9 @@ const fails = (out) => { const f = out.split("\n").filter((l) => /^FAIL\s/.test(
  *  the six (Demo › Reset to the six first); a pack whose run line builds its own data runs on its documented blank copy,
  *  "fixture only". With GATE_B_DATA=checkpoint every pack runs alone on the checkpoint (B125). Returns { log, why, infra }: why is null when it passed; infra when the gate could not run it. */
 async function runPack(id, file, wanted, slot) {
-  const plan = runPlan(file, readFileSync(join(S, "acceptance", file), "utf8"));
+  const plan = runPlan(file, readFileSync(join(ACC_DIR(), file), "utf8"));
   if (plan.error) return { log: [], why: `${file}: ${plan.error}` };
-  const data = dataOf(), { steps, load, where } = placeOf(plan, data), log = [];
+  const data = dataFor(id), { steps, load, where } = placeOf(plan, data), log = [];
   // Only the steps that will run (a setup skipped on the checkpoint is not needed; review m2).
   const missing = steps.map((s) => join(s.cwd === "prototype" ? PROTO : S, s.script)).filter((f) => !existsSync(f));
   if (missing.length) return { log: [], why: `${file}: its run names a file that does not exist: ${missing.map((f) => relative(PROTO, f)).join(", ")}` };
@@ -382,16 +446,73 @@ async function runPack(id, file, wanted, slot) {
     log.push(`    ${file} ${where}: exit ${last}, ${summary(out)} (${sec(t0, Date.now())} s: copy ${sec(t0, tUp)}${onSix ? `, ${demo} ${sec(tUp, tSix)}` : ""}, run ${sec(tSix, Date.now())})`);
     // A held part's steps (P-284) print HELD and fail nothing; the report names them, so a held step is never unseen.
     for (const l of out.split("\n").filter((x) => /^HELD\s/.test(x)).slice(0, 5)) log.push(`      ${l.slice(0, 500)}`);
-    const why = packVerdict(id, wanted, last, out);
+    // Several packs (C6.5-screen beside C6.5): this pack answers for the named steps it prints; none printed, its whole run.
+    // An empty list ("steps ,") is refused as before (packVerdict says it names no step), never read as the whole run.
+    const printed = wanted ? stepsPrinted(id, wanted, out) : null, judged = packSteps(id, wanted, out);
+    if (wanted && wanted.length) log.push(`      judged on ${judged ? `its named steps ${judged.map((x) => `${id}-${x}`).join(", ")}` : "its whole run (it prints none of the named steps)"}`);
+    const why = packVerdict(id, judged, last, out);
     // Exit 2, a crash, a timeout or no summary line: the pack's own last lines say why (never "exit 2" alone).
     const quiet = (last !== 0 && last !== 1) || summary(out) === "no summary line";
     if (quiet) for (const l of tail(out)) log.push(`      ${l}`);
-    return { log, why: why ? `${file} ${where}: ${why}${fails(out)}${quiet ? lastLines(out) : ""}` : null };
+    return { log, why: why ? `${file} ${where}: ${why}${fails(out)}${quiet ? lastLines(out) : ""}` : null, printed };
   } finally {
     await iso("stop");
     spawnSync("dropdb", ["-h", "127.0.0.1", "-p", "54329", "-U", "xr_studio", "--if-exists", db], { env, encoding: "utf8" });
     rmSync(join(S, "var", `isolated-${name}`), { recursive: true, force: true });
   }
+}
+const PACK = /^(C\d{1,2}\.\d{1,2})(-[\w.-]+)?\.test\.ts$/;
+/** D2: the capabilities whose packs are touched: a pack file in `reached` (a changed file, or one that reads a changed
+ *  file), or a pack whose run line names a set-up script in `reached`. reached: repository paths; files: the pack file
+ *  names; read: a pack's text; top: the studio folder's repository path. Returns id → { files, why }. */
+export function touchedPacks(reached, files, read, top, changed = new Set()) {
+  const out = new Map(), proto = top.replace(/\/studio$/, "");
+  for (const f of files) {
+    const m = f.match(PACK); if (!m) continue;
+    const own = `${top}/acceptance/${f}`, plan = runPlan(f, read(f));
+    const steps = plan.error ? [] : plan.steps.map((s) => (s.cwd === "prototype" ? `${proto}/${s.script}` : `${top}/${s.script}`)).filter((x) => x !== own);
+    const hit = reached.has(own) ? reached.get(own) : steps.map((x) => reached.get(x)).find((x) => x !== undefined);
+    if (hit === undefined) continue;
+    const e = out.get(m[1]) ?? { files: [], why: hit, direct: false }; e.files.push(f); e.direct ||= changed.has(own); out.set(m[1], e);
+  }
+  return out;
+}
+/** D2 in CI: git diff <base>...<head> → select-suites.mjs --packs → touchedPacks. Throws when it cannot tell (never a
+ *  silent empty set). */
+function diffCaps(range) {
+  const top = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd: S, encoding: "utf8" }).stdout.trim();
+  const [b, h] = range.split("..");
+  const d = spawnSync("git", ["-c", "core.quotePath=false", "diff", "--no-renames", "--name-only", `${b}...${h}`], { cwd: top, encoding: "utf8", maxBuffer: 64 << 20 });
+  if (d.status !== 0) throw new Error(`git diff ${b}...${h} failed: ${d.stderr.trim()}`);
+  const r = spawnSync(process.execPath, [join(P, "tools/select-suites.mjs"), "--packs"], { cwd: top, input: d.stdout, encoding: "utf8", maxBuffer: 64 << 20 });
+  if (r.status !== 0) throw new Error(`select-suites.mjs --packs failed: ${(r.stderr || r.stdout).trim().split("\n").pop()}`);
+  const reached = new Map(r.stdout.split("\n").filter(Boolean).map((l) => { const [f, ...c] = l.split("\t"); return [f, c.join("\t")]; }));
+  const acc = join(S, "acceptance"), files = existsSync(acc) ? readdirSync(acc).filter((f) => PACK.test(f)) : [], rel = relative(top, S);
+  const changed = new Set(d.stdout.split("\n").filter(Boolean));
+  const deleted = [...changed].filter((f) => f.startsWith(`${rel}/acceptance/`) && PACK.test(f.split("/").pop()) && !existsSync(join(top, f))).map((f) => f.split("/").pop());
+  return { touched: touchedPacks(reached, files, (f) => readFileSync(join(acc, f), "utf8"), rel, changed), deleted };
+}
+const BUILT = /^[^\p{L}\p{N}]*(works|partial)\b/iu, WORKS = /^[^\p{L}\p{N}]*works\b/iu;
+/** D2's rule (review of #1337): which touched capabilities run. A pack the PR changes: its row if built; a pack that only
+ *  reads a changed file: its row only if Works. Returns { run: [{id, why, direct}], listed: ["C… (why not)"] }. */
+export function diffSet(touched, statusOf) {
+  const run = [], listed = [];
+  for (const [id, t] of touched) {
+    const st = statusOf(id) ?? "no row";
+    if (t.direct ? BUILT.test(st) : WORKS.test(st)) run.push({ id, why: `${t.files.join(", ")}: ${t.why.slice(0, 160)}`, direct: t.direct });
+    else listed.push(`${id} (${st.slice(0, 24)}${t.direct || !BUILT.test(st) ? "" : "; reads a changed file"})`);
+  }
+  return { run, listed };
+}
+/** runPack plus one GATE_B_RESULTS line (D5), so a caller pooling many packs reads each verdict without parsing words. */
+async function runPackRecorded(id, file, wanted, slot) {
+  const r = await runPack(id, file, wanted, slot);
+  if (process.env.GATE_B_RESULTS) {
+    let where = null, load = null, data = null;
+    try { data = dataFor(id); const plan = runPlan(file, readFileSync(join(ACC_DIR(), file), "utf8")); if (!plan.error) ({ where, load } = placeOf(plan, data)); } catch { /* the why says it */ }
+    appendFileSync(process.env.GATE_B_RESULTS, JSON.stringify({ id, file, data, where, load, ok: !r.why, why: r.why ?? null, infra: Boolean(r.infra) }) + "\n");
+  }
+  return r;
 }
 /** BUGS.md as it is on the base branch (RANGE "<base>..<head>" from CI), so a PR's own edit to it counts for nothing. */
 function bugsText(opt) {
@@ -427,10 +548,13 @@ async function main(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i], v = () => { if (argv[i + 1] === undefined) throw new Error(`${a} wants a value`); return argv[++i]; };
     if (a === "--title") opt.title = v(); else if (a === "--body-file") opt.body = readFileSync(v(), "utf8"); else if (a === "--body") opt.body = v();
+    else if (a === "--diff-groups") { opt.diffGroups = Number(v()); if (!Number.isInteger(opt.diffGroups) || opt.diffGroups < 1 || opt.diffGroups > 9) throw new Error("--diff-groups wants 1 to 9"); }
     else if (a === "--kind") opt.kind = v(); else if (a === "--bugs") opt.bugs = v(); else if (a === "--no-packs") opt.packs = false; else if (a === "--plan") opt.plan = true;
     else throw new Error(`unknown option ${a}`);
   }
   const say = (s) => { console.log(s); if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, s + "\n"); };
+  // --diff-groups prints only JSON: a batch or a change that is not code has no packs by diff.
+  if (opt.diffGroups && (opt.queue || opt.kind !== "code")) { console.log("[]"); return 0; }
   if (opt.kind === "notes" || opt.kind === "records") { say(`Gate B: skipped (${opt.kind} change).`); return 0; }
   const bugs = openBugs(bugsText(opt));
   if (opt.queue) {   // the batch: part 1 again for each PR, as it reads now
@@ -440,13 +564,43 @@ async function main(argv) {
     say("Gate B: the batch's PRs pass part 1 as they read now (their packs ran on their own PRs)."); return 0;
   }
   const cl = claims(opt.title, opt.body);
+  // D2: on a pull request, the capabilities the change touches (diffSet) are tested too; every one on its scoring data.
+  const range = process.env.RANGE ?? "", onPr = !opt.queue && /^[0-9a-f]{7,40}\.\.[0-9a-f]{7,40}$/.test(range);
+  if (opt.diffGroups && !onPr) { console.log("[]"); return 0; }   // no pull-request range: nothing by diff
+  const byDiff = onPr && (opt.diffGroups || !process.env.GATE_B_NO_DIFF), scoreIt = onPr && !process.env.GATE_B_DATA && !process.env.GATE_B_DATA_OF;
+  if (byDiff || (scoreIt && cl.caps.size)) {   // the base's statuses, data and holds only when something needs them
+    const { baseScoring, groupsOf } = await import("./works-set.mjs"), sc = baseScoring();
+    if (byDiff) {
+      const { touched, deleted } = diffCaps(range), { run, listed } = diffSet(touched, sc.statusOf);
+      const fresh = run.filter((r) => !cl.caps.has(r.id));
+      const note = (s) => (opt.diffGroups ? console.error(s) : console.log(s), process.env.GITHUB_STEP_SUMMARY && appendFileSync(process.env.GITHUB_STEP_SUMMARY, s + "\n"));
+      if (fresh.length) note(`Gate B by diff (D2): the change touches ${fresh.map((r) => `${r.id} on the ${sc.dataOf(r.id)} (${r.direct ? "its pack changed" : "Works; its pack reads a changed file"}: ${r.why})`).join("; ")}.`);
+      if (listed.length) note(`  by diff, not run (a Partial row whose pack only reads a changed file, or not built; name it with its green steps to run it): ${listed.join(", ")}`);
+      if (deleted.length) note(`  pack deleted at the head: ${deleted.join(", ")} (the merge queue refuses a deleted Works pack)`);
+      if (opt.diffGroups) {
+        // A Works row reached only by reading keeps qa's holds (REGRESSION-HELD.md, as the queue's set); a pack the PR
+        // changes runs even when held (the PR may be its fix).
+        const skipOf = (r) => (r.direct ? [] : sc.heldOf(r.id, packsOf(r.id)));
+        const live = fresh.filter((r) => packsOf(r.id).length > skipOf(r).length);
+        for (const r of fresh.filter((x) => !live.includes(x))) note(`  by diff, every pack held (REGRESSION-HELD.md), not run: ${r.id}`);
+        const items = live.map((r) => { const n = packsOf(r.id).length - skipOf(r).length; return { id: r.id, packs: n, weight: n * (sc.dataOf(r.id) === "checkpoint" ? 2 : 1) }; });
+        // As many machines as the work needs (about 6 pack weights each, review m2), at most --diff-groups.
+        const n = Math.max(1, Math.min(opt.diffGroups, Math.ceil(items.reduce((t, x) => t + x.weight, 0) / 6)));
+        console.log(JSON.stringify(groupsOf(items, n).map((g) => ({ caps: g.caps.join(" "), data: g.caps.map((id) => `${id}=${sc.dataOf(id)}`).join(" "), skip: g.caps.flatMap((id) => skipOf(live.find((r) => r.id === id))).join(","), packs: g.packs }))));
+        return 0;
+      }
+      for (const r of fresh) cl.caps.set(r.id, null);
+    }
+    if (scoreIt && cl.caps.size) process.env.GATE_B_DATA_OF = [...cl.caps.keys()].map((id) => `${id}=${sc.dataOf(id)}`).join(" ");
+  }
   if (!cl.caps.size && !cl.unread.length) { say("Gate B: skipped (the PR names no capability: C<n.n> in its title, or a \"Capabilities:\" or \"Claims Works:\" line)."); return 0; }
   // GATE_B_SKIP_PACKS: pack files left out by name (the protected regression set's held packs, works-set.mjs).
   const skip = new Set((process.env.GATE_B_SKIP_PACKS ?? "").split(",").map((x) => x.trim()).filter(Boolean));
   const runs = [...cl.caps].flatMap(([id, st]) => packsOf(id).filter((f) => !skip.has(f)).map((f) => ({ id, f, st })));
   // B131: what ran no test on the data asked for comes first (a wrong GATE_B_DATA is left to the pack run to refuse).
-  let data = null; try { data = dataOf(); } catch { /* refused below when packs run */ }
-  const mode = modeOf(), untested = data ? notTested([...cl.caps.keys()], runs, data) : [];
+  let data = null; try { data = dataOf(); dataMap(); } catch { data = null; /* refused below when packs run */ }
+  const mode = modeOf(), untested = data ? notTested([...cl.caps.keys()], runs, (id) => dataFor(id)) : [];
+  if (process.env.GATE_B_DATA_OF) say(`  data: ${[...cl.caps.keys()].map((id) => `${id} on the ${dataFor(id)}`).join(", ")} (GATE_B_DATA_OF)`);
   for (const l of untested) say(l);
   if (untested.length) for (const l of untested) console.log(`::${mode === "retest" ? "error" : "warning"} title=Gate B NOT TESTED::${l.replace(/^NOT TESTED(?: on the \w+)?: /, "")}`);
   const named = [...cl.caps].map(([id, st]) => (st ? `${id} (steps ${st.join(", ")})` : id)).join(", ");
@@ -455,26 +609,31 @@ async function main(argv) {
   if (skip.size) say(`  held, not run: ${[...skip].join(", ")}`);
   say(`  packs: ${runs.length ? runs.map((r) => r.f).join(", ") : "none for the named capabilities"}`);
   if (opt.plan) {   // what the gate will run, in this GATE_B_DATA (B125: on the checkpoint, the pack alone)
-    for (const r of runs) { const p = runPlan(r.f, readFileSync(join(S, "acceptance", r.f), "utf8")), x = p.error ? null : placeOf(p, dataOf()); console.log(r.f, x ? `${x.where} · load ${x.load ?? "none"} · ${JSON.stringify(x.steps)}` : JSON.stringify(p)); }
+    for (const r of runs) { const p = runPlan(r.f, readFileSync(join(ACC_DIR(), r.f), "utf8")), x = p.error ? null : placeOf(p, dataFor(r.id)); console.log(r.f, x ? `${x.where} · load ${x.load ?? "none"} · ${JSON.stringify(x.steps)}` : JSON.stringify(p)); }
     return 0;
   }
   let infra = false;
   if (opt.packs && runs.length) {
     if (!process.env.GITHUB_ACTIONS && !process.env.GATE_B_PORT) throw new Error("off CI, set GATE_B_PORT (and GATE_B_NAME) to this copy's own ports before running packs, or pass --no-packs");
     const jobs = Number(process.env.GATE_B_JOBS ?? 3);
-    dataOf(); // a wrong GATE_B_DATA stops the gate before any copy starts
+    dataOf(); dataMap(); // a wrong GATE_B_DATA or GATE_B_DATA_OF stops the gate before any copy starts
     if (!Number.isInteger(jobs) || jobs < 1 || jobs > 9) throw new Error(`GATE_B_JOBS must be 1 to 9, not "${process.env.GATE_B_JOBS}"`);
     const results = new Array(runs.length), t0 = Date.now();
     let next = 0;   // one copy and port per slot: a slot runs its packs one after another
     await Promise.all(Array.from({ length: Math.min(jobs, runs.length) }, async (_, slot) => {
-      for (let k = next++; k < runs.length; k = next++) results[k] = await runPack(runs[k].id, runs[k].f, runs[k].st, slot);
+      for (let k = next++; k < runs.length; k = next++) results[k] = await runPackRecorded(runs[k].id, runs[k].f, runs[k].st, slot);
     }));
     for (const r of results) { for (const l of r.log) say(l); if (r.why) reasons.push(r.why); infra ||= Boolean(r.infra); }
+    // Every named step is green in one of its capability's packs: a step none of them prints is refused.
+    for (const [id, st] of cl.caps) {
+      const why = unprintedReason(id, st, runs.map((r, k) => (r.id === id ? results[k] : null)).filter(Boolean));
+      if (why) reasons.push(why);
+    }
     say(`  packs took ${Math.round((Date.now() - t0) / 1000)} s in all`);
   }
   if (reasons.length) { say(infra ? "Gate B could not run every pack, and refuses:" : "Gate B refuses:"); for (const r of reasons) say(`  * ${r}`); return infra ? 2 : 1; }
-  if (untested.length && mode === "retest") { say(`Gate B: NOT TESTED on the ${data} (exit 3): ${untested.length} named ${untested.length === 1 ? "part" : "parts"} ran no test on the data asked for; a re-test job is never green without one (B131).`); return 3; }
-  if (untested.length) { say(`Gate B: passed part 1 and the packs that ran, with ${untested.length} NOT TESTED on the ${data} (a warning on a pull request, never a refusal; B131).`); return 0; }
+  if (untested.length && mode === "retest") { say(`Gate B: NOT TESTED${process.env.GATE_B_DATA_OF ? "" : ` on the ${data}`} (exit 3): ${untested.length} named ${untested.length === 1 ? "part" : "parts"} ran no test on the data asked for; a re-test job is never green without one (B131).`); return 3; }
+  if (untested.length) { say(`Gate B: passed part 1 and the packs that ran, with ${untested.length} NOT TESTED${process.env.GATE_B_DATA_OF ? "" : ` on the ${data}`} (a warning on a pull request, never a refusal; B131).`); return 0; }
   say("Gate B: passed."); return 0;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))

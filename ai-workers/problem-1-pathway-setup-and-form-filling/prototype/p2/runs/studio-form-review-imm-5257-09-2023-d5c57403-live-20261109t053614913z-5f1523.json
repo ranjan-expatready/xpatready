@@ -1,0 +1,128 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-form-review-imm-5257-09-2023-d5c57403-live-20261109t053614913z-5f1523",
+  "idempotency_key": "c03fbde2729ea3471c210c9a63da181059354c44c81412af274b949ee52ab237",
+  "contract_version": "drafting-run/v0",
+  "kind": "form_review",
+  "output_sha256": "4bee414dfa8ba75dc5f8848b0106ba1f352d39002e9ee77eaa20edd1951452e3",
+  "inputs": {
+   "combination": "edition:IMM 5257:09-2023",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5257e.inventory.json",
+     "sha256": "004fc9fb8b3162a12ae626a3b666fb65a4ceb7dd537679ccc47114d3aa31208b"
+    },
+    {
+     "file": "prototype/p2/review-sheets/imm-5257-09-2023-3a2acc10d135.sheet.json",
+     "sha256": "3a2acc10d135891fa8c64c4f6dc74893a27407c50ba5c87a33dc21521285d8b2"
+    }
+   ],
+   "configuration_version": "c75-form-review"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 2,
+   "budget_usd": 2.4,
+   "max_output_tokens": 10000,
+   "prompt_version": "form-review.v1.md",
+   "prompt_sha256": "5018000a8dc0f8fb05f722507acb4e209cfd7a15235b80ce74a150e8a4ab2a95"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 105242,
+    "output_tokens": 429,
+    "duration_ms": 6125
+   }
+  ],
+  "usage": {
+   "input_tokens": 105242,
+   "output_tokens": 429,
+   "cost_usd": 0.429548,
+   "duration_ms": 6125
+  },
+  "started_at": "2026-11-09T05:36:14.915Z",
+  "ended_at": "2026-11-09T05:36:21.452Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "62aa8590e5736f019c4d79cef1b4c926f71f1f5bdc7c3b388860db80f2d2761e",
+  "template_sha256": "5c876169b4950513e26348b1608d026310ae05edc4c7484b23d42f679dd20ff8",
+  "schema_file": "form-review-output.v1.schema.json",
+  "schema_sha256": "720517284c140b8d94beec11eb6a64b7931844481bd348664be39173e65147a3",
+  "known": {
+   "form_edition": "IMM 5257 (09-2023)"
+  },
+  "screened": true,
+  "output_sha256": "4bee414dfa8ba75dc5f8848b0106ba1f352d39002e9ee77eaa20edd1951452e3",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/private/tmp/claude-501/paid-c75/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "f09e346b95218c51a627d1fdb76c0eca47bc006b9b28f1e1ce127efc7a1f89a5",
+  "request_bytes": 237196,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/.tools/p2-ledger/spend.jsonl",
+   "cap_usd": 120,
+   "committed_usd": 74.835428
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5257e.inventory.json",
+    "sha256": "004fc9fb8b3162a12ae626a3b666fb65a4ceb7dd537679ccc47114d3aa31208b",
+    "kind": "inventory"
+   },
+   {
+    "file": "prototype/p2/review-sheets/imm-5257-09-2023-3a2acc10d135.sheet.json",
+    "sha256": "3a2acc10d135891fa8c64c4f6dc74893a27407c50ba5c87a33dc21521285d8b2",
+    "kind": "review_sheet"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "f275453098485be3d556567d3da60ce043952c212ab96190465da865265ec018",
+   "digest_made_at": "2026-11-09T05:36:14.914Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "28025bb52275f7ed714e56d133a453f0",
+   "ticket_expires_at": "2026-11-09T05:38:14.914Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"form_edition\":\"IMM 5257 (09-2023)\",\"findings\":[{\"field\":\"person.employment_to_date\",\"box\":\"form1[0].Page3[0].Occupation[0].OccupationRow1[0].ToYear[0]\",\"severity\":\"MINOR\",\"quote\":\"2015\",\"reason\":\"The current occupation row ends in 2015-01, the same month it starts (From 2015-01), so the period lasts zero months; for a current activity the end date should likely be blank or later.\"},{\"field\":\"person.applying_from_country\",\"box\":\"form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Country[0]\",\"severity\":\"MAJOR\",\"quote\":\"India\",\"reason\":\"The applicant applies from India, which differs from the country of residence (Afghanistan), but no status or status dates in India are given on the sheet.\"},{\"field\":\"person.marital_status\",\"box\":\"form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]\",\"severity\":\"MAJOR\",\"quote\":\"Annulled Marriage\",\"reason\":\"The current marital status says Annulled Marriage, which implies a past marriage. Yet the question 'Have you previously been married or in a common law relationship?' is answered No.\"}],\"unreadable\":[]}"
+}

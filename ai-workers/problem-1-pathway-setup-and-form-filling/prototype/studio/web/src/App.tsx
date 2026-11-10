@@ -23,11 +23,15 @@ import { StructurePage } from "@/pages/structure";
 import { EditionImpactPage, HeldFilePage, LibraryChangePage, MergeReviewPage, FormFieldsPage } from "@/pages/review-items";
 import { ChangeBatchPage, ProposalsPage } from "@/pages/proposals";
 import { RuntimeApp } from "@/runtime/cases";
+import { DemoInbox, LinkApp } from "@/runtime/link-page";
 import { draftBarWords } from "../../contracts/status-words";
+import { FINISHED_STORY_TIP, FinishedStoryDialog } from "@/components/demo-finished-story";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function App() {
   // The case area (runtime lane, R1c) has its own shell: firm and client pages, not the configuration studio.
-  return <BrowserRouter><Routes><Route path="/cases/*" element={<RuntimeApp />} /><Route path="*" element={<Shell />} /></Routes></BrowserRouter>;
+  // C6.16: an adult's own link and the demo inbox (stand-in SI-20) are outside both shells and their simulated people.
+  return <BrowserRouter><Routes><Route path="/cases/*" element={<RuntimeApp />} /><Route path="/link" element={<LinkApp />} /><Route path="/inbox" element={<DemoInbox />} /><Route path="*" element={<Shell />} /></Routes></BrowserRouter>;
 }
 
 function Shell() {
@@ -206,6 +210,8 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
   // Review and release tab shows the published numbers that need a source (G1, P-279). Opens that tab when done. Nothing
   // is released (P-322): Release 1 comes from its sources, then submit, sign-off and approve. Sample (QA-214): c1-v3 is
   // an outside-Canada release.
+  // C10.2: the finished story (DEMO.md checkpoint 3), a job followed in its own dialog.
+  const [storyOpen, setStoryOpen] = React.useState(false);
   const [relOpen, setRelOpen] = React.useState(false);
   const relSources = useAction(() => api<{ combinationId: string; label: string; held: number }>("/demo/release-with-sources", { method: "POST", json: {} }), { success: (r) => `"${r.label}" has the reviewed setup as its draft: answer its ${r.held} number${r.held === 1 ? "" : "s"} without a source to release it (Sample, from the outside-Canada release c1-v3)`, invalidate: [[]], onDone: (r) => { setRelOpen(false); navTo(`/c/${r.combinationId}/review`); } });
   // Demo-only controls in one menu (P-35): scaffolding, never part of the product.
@@ -218,6 +224,7 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
           <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[260px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
             <DropdownMenu.Item className={item} disabled={loaded || programsExist} onSelect={() => setLoadOpen(true)}><Upload className="size-4" />{loaded ? "Sample loaded (reset to load again)" : programsExist ? "Load sample (the Structure has names: reset first)" : "Load sample…"}</DropdownMenu.Item>
             <DropdownMenu.Item className={item} disabled={loaded || programsExist} onSelect={() => setConfOpen(true)}><Upload className="size-4" />{loaded || programsExist ? "Load the configured checkpoint (reset first)" : "Load the configured checkpoint…"}</DropdownMenu.Item>
+            <TooltipProvider delayDuration={300}><Tooltip><TooltipTrigger asChild><DropdownMenu.Item className={item} onSelect={() => setStoryOpen(true)} data-demo-finished-story><Upload className="size-4" />Load the finished story…</DropdownMenu.Item></TooltipTrigger><TooltipContent side="left">{FINISHED_STORY_TIP}</TooltipContent></Tooltip></TooltipProvider>
             <DropdownMenu.Item className={item} onSelect={() => setResetOpen(true)}><RotateCcw className="size-4" />Reset demo…</DropdownMenu.Item>
             <DropdownMenu.Item className={item} onSelect={() => setSixOpen(true)}><RotateCcw className="size-4" />Reset to the six…</DropdownMenu.Item>
             <DropdownMenu.Item className={item} disabled={!loaded} onSelect={() => setRelOpen(true)} data-demo-release-sources><FileText className="size-4" />{loaded ? "Start With an LMIA from its reviewed release…" : "Start With an LMIA from its reviewed release (load the six first)"}</DropdownMenu.Item>
@@ -226,6 +233,7 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
       <ResetDialog open={resetOpen} onOpenChange={setResetOpen} />
+      <FinishedStoryDialog open={storyOpen} onOpenChange={setStoryOpen} />
       <ResetToSixDialog open={sixOpen} onOpenChange={setSixOpen} onDone={(r) => { setLoaded6(r); navTo("/"); }} />
       <Dialog open={loadOpen} onOpenChange={(o) => { if (!load.isPending) setLoadOpen(o); }} title="Load the sample starting point?" description="Everything after this goes through the real screens and rules. US$0: no live AI call."
         footer={<><Button variant="ghost" disabled={load.isPending} onClick={() => setLoadOpen(false)}>Cancel</Button><Button busy={load.isPending} onClick={() => load.mutate(undefined)}><Upload /> Load sample</Button></>}>

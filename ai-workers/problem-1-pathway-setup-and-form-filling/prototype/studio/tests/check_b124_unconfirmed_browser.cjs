@@ -1,7 +1,7 @@
-// B124 (M3 row A8, P-393; C6.9): the eligibility outcome says when it rests on answers not confirmed yet, walked by
+// B124 (M3 row A8, P-393; C6.9): the case check's outcome (P-236 words, B148) says when it rests on answers not confirmed yet, walked by
 // screens on the configured checkpoint. The officer's answers to the three deciding facts are not confirmed: the result
-// reads "Likely eligible, on 3 answers not yet confirmed" and names each with a link to the Agent view; Confirm section
-// on the passport section by screen leaves one; after every section is confirmed the line goes. Possibly eligible
+// reads "Qualifies, on 3 answers not yet confirmed" and names each with a link to the Agent view; Confirm section
+// on the passport section by screen leaves one; after every section is confirmed the line goes. Can't tell yet
 // (can't tell yet) is unchanged. axe, 1440 and 1024 px. Screenshots: product/screens/B124/walk/. US$0, live AI off.
 //   zsh studio/tools/isolated.sh b124 4446 start && node studio/tests/check_b124_unconfirmed_browser.cjs 4446 xr_studio_b124
 const path = require("node:path"); const fs = require("node:fs"); const http = require("node:http"); const { execFileSync } = require("node:child_process");
@@ -40,28 +40,28 @@ const call = (method, p, body, actor = OFFICER) => new Promise((res, rej) => {
   const as = async (width) => { const ctx = await b.newContext({ viewport: { width, height: 900 } }); ctx.setDefaultNavigationTimeout(180_000); ctx.setDefaultTimeout(30_000); await ctx.addInitScript((a) => { try { localStorage.setItem("xr-actor", a); } catch { /* blocked */ } }, OFFICER); return ctx.newPage(); };
   const errors = [];
   const page = await as(1440); page.on("pageerror", (e) => errors.push(String(e)));
-  const eligibility = async (p, caseId) => { await p.goto(`${BASE}/cases/${caseId}/eligibility`, { waitUntil: "networkidle" }); await p.getByRole("button", { name: /Run eligibility check|Run again/ }).first().waitFor({ timeout: 60_000 }); };
+  const eligibility = async (p, caseId) => { await p.goto(`${BASE}/cases/${caseId}/eligibility`, { waitUntil: "networkidle" }); await p.getByRole("button", { name: /Run case check|Run again/ }).first().waitFor({ timeout: 60_000 }); };
   const body = (p) => p.locator("body").innerText();
   const resting = (p) => p.locator("[data-resting-on]");
 
-  // Can't tell yet is unchanged: nothing answered gives Possibly eligible, with no "not yet confirmed" line.
+  // Can't tell yet is unchanged: nothing answered gives Can't tell yet, with no "not yet confirmed" line.
   await eligibility(page, idle.id);
-  await page.getByRole("button", { name: "Run eligibility check" }).click();
+  await page.getByRole("button", { name: "Run case check" }).click();
   await page.getByText(/Rules checked/).first().waitFor({ timeout: 60_000 });
-  ok("fail: Possibly eligible (can't tell yet) is unchanged, with no 'not yet confirmed' line", /Possibly eligible — needs/.test(await body(page)) && (await resting(page).count()) === 0 && !/not yet confirmed/.test(await body(page)));
+  ok("fail: Can't tell yet is unchanged, with no 'not yet confirmed' line", /Can't tell yet — needs/.test(await body(page)) && (await resting(page).count()) === 0 && !/not yet confirmed/.test(await body(page)));
 
   // None confirmed: the outcome says it rests on 3 answers and names each, with a link.
   await eligibility(page, c.id);
-  await page.getByRole("button", { name: "Run eligibility check" }).click();
+  await page.getByRole("button", { name: "Run case check" }).click();
   await page.getByText(/Rules checked/).first().waitFor({ timeout: 60_000 });
   const t1 = await body(page);
-  ok("none confirmed: the outcome reads 'Likely eligible, on 3 answers not yet confirmed'", /Likely eligible, on 3 answers not yet confirmed/.test(t1), t1.match(/Likely[^\n]*/)?.[0]);
+  ok("none confirmed: the outcome reads 'Qualifies, on 3 answers not yet confirmed'", /Qualifies, on 3 answers not yet confirmed/.test(t1), t1.match(/Qualifies[^\n]*/)?.[0]);
   const links = resting(page).getByRole("link");
   ok("none confirmed: the line names each deciding answer with a link to confirm it", (await links.count()) === 3 && /Passport number[\s\S]*Passport expiry date[\s\S]*Criminal history/.test(await resting(page).innerText()), await resting(page).innerText().catch(() => ""));
-  ok("none confirmed: the people list says it too ('Likely · 3 not yet confirmed')", /Likely · 3 not yet confirmed/.test(t1));
+  ok("none confirmed: the people list says it too ('Qualifies · 3 not yet confirmed')", /Qualifies · 3 not yet confirmed/.test(t1));
   await page.screenshot({ path: path.join(OUT, "1-none-confirmed-1440.png") });
   const axe = await new AxeBuilder({ page }).include("main").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
-  ok("axe (WCAG 2.2 AA): the eligibility page with the line", axe.violations.length === 0, axe.violations.map((v) => `${v.id}: ${v.nodes[0]?.target}`));
+  ok("axe (WCAG 2.2 AA): the case check page with the line", axe.violations.length === 0, axe.violations.map((v) => `${v.id}: ${v.nodes[0]?.target}`));
 
   // Some confirmed: follow the link, Confirm section on the passport section by screen.
   await links.first().click();
@@ -72,7 +72,7 @@ const call = (method, p, body, actor = OFFICER) => new Promise((res, rej) => {
   await page.waitForTimeout(1500);
   await eligibility(page, c.id);
   const t2 = await body(page);
-  ok("some confirmed: the outcome reads 'on 1 answer not yet confirmed' and names only Criminal history (no new run needed)", /Likely eligible, on 1 answer not yet confirmed/.test(t2) && /Criminal history/.test(await resting(page).innerText()) && !/Passport/.test(await resting(page).innerText()), await resting(page).innerText().catch(() => t2.slice(0, 300)));
+  ok("some confirmed: the outcome reads 'on 1 answer not yet confirmed' and names only Criminal history (no new run needed)", /Qualifies, on 1 answer not yet confirmed/.test(t2) && /Criminal history/.test(await resting(page).innerText()) && !/Passport/.test(await resting(page).innerText()), await resting(page).innerText().catch(() => t2.slice(0, 300)));
   await page.screenshot({ path: path.join(OUT, "2-some-confirmed-1440.png") });
 
   // 1024 px while the line shows.
@@ -82,6 +82,8 @@ const call = (method, p, body, actor = OFFICER) => new Promise((res, rej) => {
   await small.screenshot({ path: path.join(OUT, "3-some-confirmed-1024.png") });
 
   // All confirmed: every section confirmed by screen; the line goes and the outcome is plain.
+  // P-244 (B140): a background answer the officer recorded waits for the client; the client re-confirms it (as on their questionnaire, "This is right") before the officer confirms the section: Criminal history is one.
+  for (const s of (await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent`)).body?.sections ?? []) for (const q of s.questions) for (const a of [q.answer, ...q.rows.map((r) => r.answer)]) if (a?.awaits_client) await call("POST", `/runtime/cases/${c.id}/answers/${a.id}/reconfirm`, {}, "user-P");
   await page.goto(`${BASE}/cases/${c.id}#a-${c.p}-person-criminal_history`, { waitUntil: "networkidle" });
   const bg = page.locator(`section[id^="s-${c.p}-"]`, { has: page.locator(`[id="a-${c.p}-person-criminal_history"]`) }).first();
   await bg.waitFor({ timeout: 60_000 });
@@ -89,14 +91,14 @@ const call = (method, p, body, actor = OFFICER) => new Promise((res, rej) => {
   await page.waitForTimeout(1500);
   await eligibility(page, c.id);
   const t3 = await body(page);
-  ok("all confirmed: the line goes and the outcome reads plain 'Likely eligible'", (await resting(page).count()) === 0 && /Likely eligible/.test(t3) && !/not yet confirmed/.test(t3) && !/· \d+ not yet confirmed/.test(t3), t3.match(/Likely[^\n]*/g));
+  ok("all confirmed: the line goes and the outcome reads plain 'Qualifies'", (await resting(page).count()) === 0 && (await page.locator("[data-outcome]").innerText()).trim() === "Qualifies" && !/not yet confirmed/.test(t3) && !/· \d+ not yet confirmed/.test(t3), t3.match(/Qualifies[^\n]*/g));
   await page.screenshot({ path: path.join(OUT, "4-all-confirmed-1440.png") });
   await eligibility(small, c.id);
   ok("1024 px: all confirmed, no line, no sideways scroll", (await resting(small).count()) === 0 && !(await small.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)));
   await small.screenshot({ path: path.join(OUT, "5-all-confirmed-1024.png") });
 
-  // Review Major 2 and minor 2: a released gate on an application fact. A case whose (unconfirmed) funds fail it is Not
-  // eligible, the outcome names the funds answer, and its link opens the application's tab, not the person's.
+  // Review Major 2 and minor 2: a released gate on an application fact. A case whose (unconfirmed) funds fail it Does
+  // not qualify, the outcome names the funds answer, and its link opens the application's tab, not the person's.
   const g0 = (await call("GET", `/combinations/${vv}/eligibility-gates`, undefined, AUTHOR)).body;
   const put = await call("PUT", `/combinations/${vv}/eligibility-gates`, { gates: [...g0.gates, { key: "gate.funds_test", label: "Funds of at least CAD 100,000 (B124 test, Sample)", condition: { op: "gte", field: "case.funds_available_cad", value: 100000 } }], judgement: g0.judgement, disclaimer: g0.disclaimer, version: g0.version }, AUTHOR);
   const src = await call("POST", `/combinations/${vv}/sources/sample`, undefined, AUTHOR); // the demo seed: the new number is Sample (setup_vv_m3 S7b)
@@ -110,13 +112,13 @@ const call = (method, p, body, actor = OFFICER) => new Promise((res, rej) => {
   for (const [f, v] of [["person.passport_number", "SAMPLEP25"], ["person.passport_expiry_date", expiry], ["person.criminal_history", false]]) await call("PUT", `/runtime/cases/${c3.id}/answers/${c3.p}/${f}`, { value: v, expectedId: null });
   const funds = await call("PUT", `/runtime/cases/${c3.id}/answers/${c3.cs}/case.funds_available_cad`, { value: "8000", expectedId: null });
   await eligibility(page, c3.id);
-  await page.getByRole("button", { name: "Run eligibility check" }).click();
+  await page.getByRole("button", { name: "Run case check" }).click();
   await page.getByText(/Rules checked/).first().waitFor({ timeout: 60_000 });
   const t4 = await body(page);
-  ok("Not eligible (minor 2): 'Not eligible on this application's rules as written, on N answers not yet confirmed', naming the funds answer", funds.status < 300 && /Not eligible on this application's rules as written, on \d+ answers? not yet confirmed/.test(t4) && /Funds available cad/.test(await resting(page).innerText()), { funds: funds.body?.detail ?? funds.status, line: t4.match(/Not eligible[^\n]*/)?.[0] });
+  ok("Does not qualify (minor 2): 'Does not qualify on this application's rules as written, on N answers not yet confirmed', naming the funds answer", funds.status < 300 && /Does not qualify on this application's rules as written, on \d+ answers? not yet confirmed/.test(t4) && /Funds available cad/.test(await resting(page).innerText()), { funds: funds.body?.detail ?? funds.status, line: t4.match(/Does not qualify[^\n]*/)?.[0] });
   const fundsLink = resting(page).getByRole("link", { name: "Funds available cad" });
   ok("Major 2: the funds link points at the application's question, not the person's", (await fundsLink.getAttribute("href"))?.endsWith(`#a-${c3.cs}-case-funds_available_cad`), await fundsLink.getAttribute("href"));
-  await page.screenshot({ path: path.join(OUT, "6-not-eligible-funds-1440.png") });
+  await page.screenshot({ path: path.join(OUT, "6-does-not-qualify-funds-1440.png") });
   await fundsLink.click();
   await page.locator(`section[id^="s-${c3.cs}-"]`, { has: page.locator(`[id="a-${c3.cs}-case-funds_available_cad"]`) }).first().waitFor({ timeout: 60_000 });
   ok("Major 2: following it opens the application's tab with the funds question", await page.evaluate((id) => !!document.getElementById(`a-${id}-case-funds_available_cad`), c3.cs));
@@ -128,7 +130,7 @@ const call = (method, p, body, actor = OFFICER) => new Promise((res, rej) => {
   const changed = await call("PUT", `/runtime/cases/${c3.id}/answers/${c3.cs}/case.funds_available_cad`, { value: "9000", expectedId: fq?.answer?.id ?? null });
   await eligibility(page, c3.id);
   const t5 = await body(page);
-  ok("minor 4: after an answer changes, the run is out of date and shows no 'not yet confirmed' line", changed.status < 300 && /Out of date/.test(t5) && (await resting(page).count()) === 0 && !/not yet confirmed/.test(t5), { changed: changed.body?.detail ?? changed.status, line: t5.match(/Not eligible[^\n]*/)?.[0] });
+  ok("minor 4: after an answer changes, the run is out of date and shows no 'not yet confirmed' line", changed.status < 300 && /Out of date/.test(t5) && (await resting(page).count()) === 0 && !/not yet confirmed/.test(t5), { changed: changed.body?.detail ?? changed.status, line: t5.match(/Does not qualify[^\n]*/)?.[0] });
 
   ok("no page errors", errors.length === 0, errors);
   await b.close();

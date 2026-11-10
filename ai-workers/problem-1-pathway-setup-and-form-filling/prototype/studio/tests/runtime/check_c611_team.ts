@@ -193,6 +193,6 @@ async function api() {
 async function main() {
   pure();
   await api();
-  summary();
+  process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code; before, it always exited 0)
 }
 main().catch((e) => { console.error(e); process.exitCode = 1; });

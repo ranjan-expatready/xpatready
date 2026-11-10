@@ -45,14 +45,19 @@ export async function itemCombinations(db: Client, workspaceId: string, kind: Us
 
 /** Every use of every document type: [type, combination, how] (a line lists it, a line's alternative, a fact's source). */
 async function documentTypeUses(db: Client, workspaceId: string): Promise<[string, string, "line" | "alternative" | "fact"][]> {
-  const [reqs, facts] = await Promise.all([
+  const [reqs, facts, types] = await Promise.all([
     db.documentRequirement.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, select: { combinationId: true, lineageKey: true, version: true, status: true, documentTypeKey: true, alternatives: true } }),
     db.factSource.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, select: { combinationId: true, lineageKey: true, version: true, status: true, documentTypeKey: true } }),
+    // C6.15 (break F3): a member of a type's substitute set is used by every line naming that type.
+    db.documentType.findMany({ where: { workspaceId, status: { in: [...LIVE] } }, orderBy: { version: "desc" }, select: { documentTypeKey: true, sets: true } }),
   ]);
+  const membersOf = new Map<string, string[]>();
+  for (const t of types) if (!membersOf.has(t.documentTypeKey)) membersOf.set(t.documentTypeKey, (Array.isArray(t.sets) ? (t.sets as { members?: { key?: unknown }[] }[]) : []).flatMap((s) => (s.members ?? []).map((m) => m.key)).filter((k): k is string => typeof k === "string" && k !== t.documentTypeKey));
   const lines = current(reqs, (r) => `${r.combinationId}|${r.lineageKey}`);
   return [
     ...lines.map((r) => [r.documentTypeKey, r.combinationId, "line"] as [string, string, "line"]),
     ...lines.flatMap((r) => (Array.isArray(r.alternatives) ? (r.alternatives as unknown[]) : []).filter((k): k is string => typeof k === "string").map((k) => [k, r.combinationId, "alternative"] as [string, string, "alternative"])),
+    ...lines.flatMap((r) => [...new Set(membersOf.get(r.documentTypeKey) ?? [])].map((k) => [k, r.combinationId, "alternative"] as [string, string, "alternative"])),
     ...current(facts, (f) => `${f.combinationId}|${f.lineageKey}`).filter((f) => f.documentTypeKey).map((f) => [f.documentTypeKey!, f.combinationId, "fact"] as [string, string, "fact"]),
   ];
 }
@@ -231,14 +236,19 @@ export async function openCases(db: Client, combinationIds: string[]): Promise<n
   return combinationIds.length ? db.case.count({ where: { combinationId: { in: combinationIds }, status: "OPEN" } }) : 0;
 }
 
-/** The open cases on these combinations, per pinned release (each case stays on the release it was opened on; every case
- *  pins at open, runtime.ts). A case with no pin yet is counted with `release: null`. */
+/** The open cases on these combinations, per pinned release (each case stays on the release it was opened on until a person
+ *  moves it, C9.5; every case pins at open, runtime.ts; a moved case counts once, on its newest revision). A case with no pin yet is counted with `release: null`. */
 export async function openCasesByRelease(db: Client, combinationIds: string[]): Promise<{ combinationId: string; release: number | null; cases: number }[]> {
   if (!combinationIds.length) return [];
   const [cases, pins] = await Promise.all([
     db.case.findMany({ where: { combinationId: { in: combinationIds }, status: "OPEN" }, select: { id: true, combinationId: true } }),
-    db.packWorkPin.findMany({ where: { combinationId: { in: combinationIds } }, select: { caseId: true, configReleaseId: true } }),
+    // C9.5 (challenge M1): a moved case has several pin revisions; ascending, so the newest one is the one kept per case.
+    db.packWorkPin.findMany({ where: { combinationId: { in: combinationIds } }, select: { caseId: true, configReleaseId: true, combinationId: true }, orderBy: [{ caseId: "asc" }, { revision: "asc" }] }),
   ]);
+  // C6.17 (BR-9, challenge B1): a case with several stages has pins on several combinations; only the pins of the case's
+  // current combination say which release it is on (a case counts under its current combination only, as above).
+  const current = new Map(cases.map((c) => [c.id, c.combinationId]));
+  pins.splice(0, pins.length, ...pins.filter((p) => current.get(p.caseId) === p.combinationId));
   const versions = new Map((await db.configRelease.findMany({ where: { id: { in: [...new Set(pins.map((p) => p.configReleaseId))] } }, select: { id: true, version: true } })).map((r) => [r.id, r.version]));
   const releaseOf = new Map(pins.map((p) => [p.caseId, versions.get(p.configReleaseId) ?? null]));
   const counts = new Map<string, { combinationId: string; release: number | null; cases: number }>();

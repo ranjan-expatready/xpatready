@@ -1,0 +1,59 @@
+{
+ "label": "C10.2 finished story (DEMO.md checkpoint 3): the Sample values people type on the family case after it moves to Visitor visa release 2",
+ "basis": "Sample: made up for the demo, never real immigration values (AGENTS.md rule 4). Every value here is typed through the product's own routes by the person who holds the duty; nothing is written to the database directly. Unconfirmed: expert.",
+ "move_reason": "Adopting the current release (Sample finished story: release 2 files IMM 5257 Online)",
+ "answers": {
+  "basis": "Facts release 2 asks that release 1 did not, by fact, for every person who is asked (Sample).",
+  "facts": {
+   "person.occupation_province_state": "DELHI",
+   "person.occupation_to_date": "2026-10"
+  }
+ },
+ "by_kind": {
+  "basis": "Any other fact release 2 asks that the Sample record does not hold: a Sample value by its kind of answer, said on the result (the acceptance helpers' rule, acceptance/lib/m3.ts). Dates are after every family member's birth (the youngest is born in 2016), so no rules check finds an issue date before a birth. The phone is not a North American (+1) number (QA-361, 9 Nov): the filler writes no North American number parts yet (p5/transforms.ts, phone_part:nanp_*), and IMM 5257 (09-2023) p. 2, its own Validate (validateAlternateTelephone, validateFaxNumber; the Canada/US box's click script), then requires the area code and number boxes, so the Paper copy could not pass; an international number goes in Other + IntlNumber, as the main phone does.",
+  "text": "SAMPLE",
+  "digits": "0000000001",
+  "yes_no": false,
+  "date": "2024-01-15",
+  "month": "2024-01",
+  "expiry": "2035-06-30",
+  "number": "5000",
+  "email": "client.a@example.com",
+  "phone": {
+   "country_code": "91",
+   "number": "9800000002"
+  },
+  "address": {
+   "street_name": "Sample Road",
+   "city": "Sample City",
+   "country": "Canada"
+  }
+ },
+ "passport": {
+  "document_type": "passport_information_page_copy",
+  "words": "SYNTHETIC SPECIMEN: passport information page (Sample, not a real passport)"
+ },
+ "signed_scan_words": "SYNTHETIC SPECIMEN: signed scan (Sample, not a real signature)",
+ "review_note": "Reviewed by the representative of record (Sample finished story)",
+ "pass_reason": "Sample finished story: the demo family's remaining documents are not collected; passed with this reason so the filing can show Ready to file",
+ "record": {
+  "basis": "Sample application numbers and UCIs in the shape the product checks (1-2 letters then 8-9 digits; digits), never real ones. Submitted through the APR Portal (P-98), the combination's portal.",
+  "our_reference_prefix": "SAMPLE-VV-FAMILY-1",
+  "application_number_prefix": "V30000000",
+  "uci_prefix": "100000000",
+  "fee_receipt": "SAMPLE-RECEIPT-1"
+ },
+ "thin_case": {
+  "basis": "A second Visitor visa case opened on release 1 before release 2 goes out, to show a case staying on the release it started on (DEMO.md row 16). Only its principal is added; nothing is answered.",
+  "reference": "SAMPLE-VV-THIN-1",
+  "principal": "Client B (Sample)",
+  "client": "user-Q"
+ },
+ "paper_line": {
+  "basis": "Tech lead's ruling (8 Nov 09:44 IST) and P-380 Q3: one person's IMM 5257 is filed on Paper, with a written reason, so the story keeps a barcode PDF that a person validates in Adobe. Its filing waits for that validated copy (P-315: a barcode form without one blocks Ready to file), so it is split out of the family's group with a reason and the other filings are recorded together (BR-11). Sample.",
+  "person": "Child 18 or over (Sample)",
+  "form": "IMM 5257",
+  "reason": "Sample: the person asked to apply on paper (an accommodation, P-380 Q3)",
+  "split_reason": "Sample: filed on paper, so it goes on its own once its barcode copy is validated in Adobe"
+ }
+}

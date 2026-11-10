@@ -6,6 +6,10 @@
 // "Cannot start yet" in the server's own words (stepRefusal, the one rule in engine/runtime/sign-order.ts). A stale page's
 // refusal shows the server's words. Once the submission is recorded the block is read-only. Staff only. Types live here
 // only (prepare-tab §2). US$0.
+// B161 (Lead 34 on #1334; B132 #1278, P-380 Q3, P-348 (3)): a form signed in pen on Paper shows its Paper line's steps,
+// Validated in Adobe (a barcode form) → Printed → Signed in pen → Mailed to IRCC, in SignBlock's layout; the case officer
+// records Printed and Signed in pen on sign-steps.ts's route, and a step that cannot be done yet says why in the server's
+// own words (penRefusal). Mail is not recorded in the product yet: it says so.
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, Circle, Upload } from "lucide-react";
@@ -15,15 +19,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SIGNATURE_WORDS, type Signature } from "../../../contracts/forms";
 import { MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB } from "../../../contracts/documents";
 import type { CaseForm } from "../../../contracts/runtime";
-import { SIGN_STEPS, stepRefusal, type SignStepKey, type StepsDone } from "../../../engine/runtime/sign-order";
+import { PEN_STEP_WORDS, PEN_STEPS, penRefusal, SIGN_STEPS, stepRefusal, type PenStepKey, type SignStepKey, type StepsDone } from "../../../engine/runtime/sign-order";
 import { noRetryOnRefusal } from "./questionnaire";
 import { useFirm } from "./team";
 
 type PrepItem = { id: string; kind: string; form?: string; subject: string; person: string; filing: string; signature?: Signature; signed_by?: string | null; signers?: string[];
-  state: string; reason?: string; replaces?: string | null; record?: string };
+  state: string; reason?: string; replaces?: string | null; record?: string;
+  /** B161: a Paper line's steps and its validated copy read back, as GET /prepare gives them (engine/runtime/prepare.ts paperLine). */
+  steps?: PaperStep[]; validated?: { copy: string; at: string; current: boolean } | null; barcode_page?: boolean };
+type PaperStep = { key: "validate" | "print" | "sign_in_pen" | "mail"; words: string; done: boolean | null; neededBefore?: string };
 type Filing = { id: string; label: string; status: string; read_only?: boolean };
 type PrepareView = { derived: boolean; filings: Filing[]; items: PrepItem[] };
-type Step = { key: SignStepKey; words: string; done: { at: string; by: string; copy?: string | null } | null };
+type Step = { key: SignStepKey | PenStepKey; words: string; done: { at: string; by: string; copy?: string | null } | null };
 type Scan = { id: string; file_name: string; media_type: string; size_bytes: number; sha256: string; uploaded_by: string; uploaded_at: string };
 type ItemView = { id: string; form: string; sign_steps: Step[]; signed_scans: Scan[] };
 type TeamView = { representative: { id: string; name: string } | null; officers: { id: string; name: string }[] };
@@ -69,6 +76,7 @@ export function SignSteps({ caseId, f }: { caseId: string; f: CaseForm }) {
       </p>
     ) : null}
     {item.signature === "HAND_SCANNED" ? <SignBlock caseId={caseId} item={item} f={f} filing={prep.data!.filings.find((x) => x.id === item.filing)} /> : null}
+    {item.signature === "PEN" && item.steps?.length ? <PenBlock caseId={caseId} item={item} f={f} filing={prep.data!.filings.find((x) => x.id === item.filing)} /> : null}
   </>);
 }
 
@@ -94,8 +102,8 @@ function SignBlock({ caseId, item, f, filing }: { caseId: string; item: PrepItem
   }, [focusTo, busy]);
   const after = async () => { await refresh(); setFocusTo("next"); };
   /** Break M2: before Signed by hand or the scan, the copies are read again; a printed copy whose facts changed since (a
-   *  change made in another tab or by the client) is refused here in words, nothing sent. The server checks only the
-   *  order (a follow-up row asks it to check the printed copy too). True when refused. */
+   *  change made in another tab or by the client) is refused here in words, nothing sent. The server also refuses a step
+   *  naming a copy that is not the one printed now (B130), so a tab read before a new print never signs it. True when refused. */
   async function printedCopyStale(): Promise<boolean> {
     const key = ["runtime", "view", caseId, "forms"];
     await qc.refetchQueries({ queryKey: key });
@@ -124,6 +132,7 @@ function SignBlock({ caseId, item, f, filing }: { caseId: string; item: PrepItem
     try {
       if (await printedCopyStale()) return;
       const fd = new FormData(); fd.append("file", f, f.name);
+      if (done.print?.copy) fd.append("copy", done.print.copy); // B130: the printed copy this scan is of
       await api(`/runtime/items/${item.id}/signed-scan`, { method: "POST", body: fd });
       toast.push({ tone: "ok", text: `${form}: signed scan received` }); await after();
     } catch (e) {
@@ -136,7 +145,7 @@ function SignBlock({ caseId, item, f, filing }: { caseId: string; item: PrepItem
   const st = STATE[item.state] ?? { words: item.state.replace(/_/g, " "), tone: "neutral" };
   const steps = q.data?.sign_steps ?? [];
   const done: StepsDone = Object.fromEntries(steps.filter((s) => s.done).map((s) => [s.key, s.done!]));
-  const nextKey = SIGN_STEPS.find((k) => !done[k]) ?? null;
+  const nextKey = (SIGN_STEPS as readonly (SignStepKey | PenStepKey)[]).find((k) => !done[k]) ?? null;
   const copyOf = (id: string | null | undefined) => copies.find((c) => c.id === id);
   // BR-4 (challenge m2): the copy to print is the newest generated one: current, its file there, and not stamped "Copy,
   // not for filing"; otherwise the copy block's reason. A form whose filling is not proven yet is warned, not blocked
@@ -163,7 +172,7 @@ function SignBlock({ caseId, item, f, filing }: { caseId: string; item: PrepItem
 
   function action(key: SignStepKey) {
     if (key === "print") return <div className="space-y-1">{current ? <p className="text-[13px] text-text-muted">Download the copy above, print it, then record it here.</p> : null}{printAction("Printed: the copy of")}</div>;
-    if (key === "signed") return <Button size="sm" busy={busy} onClick={() => void run("signed", {}, `${form}: Signed by hand`)} data-step-action="signed">Signed by hand</Button>;
+    if (key === "signed") return <Button size="sm" busy={busy} onClick={() => void run("signed", { copy: done.print?.copy ?? undefined }, `${form}: Signed by hand`)} data-step-action="signed">Signed by hand</Button>;
     if (key === "scan_received") return (
       <div className="space-y-1">
         <input ref={file} type="file" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png" className="sr-only" tabIndex={-1} aria-hidden aria-label={`Signed scan of ${form}`} data-scan-input
@@ -174,7 +183,7 @@ function SignBlock({ caseId, item, f, filing }: { caseId: string; item: PrepItem
       </div>
     );
     // BR-7: "Uploaded to IRCC" only once the filing is Ready to file (the server reads it again and refuses otherwise).
-    return ready ? <Button size="sm" busy={busy} onClick={() => void run("uploaded_to_ircc", {}, `${form}: Uploaded to IRCC`)} data-step-action="uploaded_to_ircc">Uploaded to IRCC</Button>
+    return ready ? <Button size="sm" busy={busy} onClick={() => void run("uploaded_to_ircc", { copy: done.print?.copy ?? undefined }, `${form}: Uploaded to IRCC`)} data-step-action="uploaded_to_ircc">Uploaded to IRCC</Button>
       : <p className="text-[13px] text-text-muted" data-step-why>Cannot start yet: {stepRefusal("uploaded_to_ircc", done, form, { viaUpload: true, filingReady: false })}{" "}
           <button type="button" className="text-text-link underline underline-offset-2" onClick={() => focusLater(() => document.getElementById("readiness-h"))}>Go to Ready to file</button></p>;
   }
@@ -216,7 +225,7 @@ function SignBlock({ caseId, item, f, filing }: { caseId: string; item: PrepItem
           ) : null}
           <ol className="space-y-1.5">{steps.map((s, i) => {
             const isNext = s.key === nextKey && !again && !recorded;
-            const why = !s.done && !isNext && !again && !recorded ? stepRefusal(s.key, done, form, { viaUpload: true, filingReady: true }) : null;
+            const why = !s.done && !isNext && !again && !recorded ? stepRefusal(s.key as SignStepKey, done, form, { viaUpload: true, filingReady: true }) : null;
             return (
               <li key={s.key} className="flex flex-wrap items-start gap-x-3 gap-y-1 text-[13px]" data-step={s.key} data-done={s.done ? "yes" : "no"}>
                 <span className="flex items-center gap-1.5 font-medium sm:min-w-48">
@@ -224,11 +233,136 @@ function SignBlock({ caseId, item, f, filing }: { caseId: string; item: PrepItem
                   <span>{i + 1}. {s.words}</span><span className="sr-only">{s.done ? ": done" : isNext ? ": next" : ": not yet"}</span>
                 </span>
                 <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-                  {s.done ? detail(s) : isNext ? <div ref={next}>{action(s.key)}</div> : why ? <span className="text-text-muted" data-step-why>Cannot start yet: {why}</span> : null}
+                  {s.done ? detail(s) : isNext ? <div ref={next}>{action(s.key as SignStepKey)}</div> : why ? <span className="text-text-muted" data-step-why>Cannot start yet: {why}</span> : null}
                 </div>
               </li>
             );
           })}</ol>
+        </>}
+    </section>
+  );
+}
+
+/** B161: the label of each Paper step; the line's own words (paperLine) say what to do under it. */
+const PAPER_LABEL: Record<PaperStep["key"], string> = { validate: "Validated in Adobe", print: PEN_STEP_WORDS.print, sign_in_pen: PEN_STEP_WORDS.sign_in_pen, mail: "Mailed to IRCC" };
+
+/** B161: a form signed in pen on Paper. The rows are the Paper line's steps from GET /prepare (Validate for a barcode form,
+ *  Printed, Signed in pen, Mail); who recorded Printed and Signed in pen, and when, come from the item read. Only the next
+ *  recordable step has a button; a later one says "Cannot start yet" in penRefusal's words, the server's own (sign-order.ts). */
+function PenBlock({ caseId, item, f, filing }: { caseId: string; item: PrepItem; f: CaseForm; filing: Filing | undefined }) {
+  const qc = useQueryClient(), toast = useToast(), firm = useFirm();
+  const team = useApi<TeamView>(["runtime", "team", caseId], `/runtime/cases/${caseId}/team`, { retry: noRetryOnRefusal }).data;
+  const form = item.form ?? "";
+  const q = useApi<ItemView>(["runtime", "view", caseId, "sign-item", item.id], `/runtime/items/${item.id}`, { retry: noRetryOnRefusal, refetchOnWindowFocus: true });
+  const heading = React.useRef<HTMLHeadingElement>(null), next = React.useRef<HTMLDivElement>(null);
+  const [busy, setBusy] = React.useState(false), [refusal, setRefusal] = React.useState<string | null>(null);
+  const [focusTo, setFocusTo] = React.useState<"next" | "heading" | null>(null);
+  React.useEffect(() => {
+    if (!focusTo || busy) return;
+    const to = focusTo; setFocusTo(null);
+    focusLater(() => (to === "next" ? next.current?.querySelector<HTMLElement>("button:not([disabled])") : null) ?? heading.current);
+  }, [focusTo, busy]);
+  const nameOf = (id: string) => (team?.representative?.id === id ? team.representative.name : null) ?? team?.officers.find((o) => o.id === id)?.name ?? firm.data?.users.find((u) => u.id === id)?.name ?? "a person no longer on the firm's list";
+  const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
+  async function run(key: PenStepKey, body: unknown, ok: string) {
+    setBusy(true); setRefusal(null);
+    try {
+      if (key === "sign_in_pen" && !barcode && (await printedCopyStale())) return;
+      await api(`/runtime/items/${item.id}/sign-steps/${key}`, { method: "POST", json: body }); toast.push({ tone: "ok", text: ok }); await refresh(); setFocusTo("next"); }
+    catch (e) { await refresh(); setRefusal((e as Error).message); setFocusTo("heading"); } // the server's own words (a 409 means the page was out of date)
+    finally { setBusy(false); }
+  }
+
+  const st = STATE[item.state] ?? { words: item.state.replace(/_/g, " "), tone: "neutral" };
+  const recordedSteps = q.data?.sign_steps ?? [];
+  const raw: StepsDone = Object.fromEntries(recordedSteps.filter((s) => s.done).map((s) => [s.key, s.done!]));
+  const barcode = !!item.barcode_page, v = item.validated ?? null;
+  // Review Major 1: the steps that count are the server's (case-prepare.ts, B132): on a barcode form only those done on its
+  // current validated copy. A fact changed after Printed makes the validated copy not current, so nothing counts and no
+  // Signed in pen is offered until a new validated copy is read back and printed.
+  const counts = !barcode || (!!v?.current && raw.print?.copy === v.copy);
+  const done: StepsDone = counts ? raw : {};
+  const rec = (k: PenStepKey) => (counts ? done[k] ?? null : null);
+  const copyOf = (id: string | null | undefined) => f.copies.find((c) => c.id === id);
+  // The copy to print: a barcode form's current validated copy (it holds the barcode page; the server prints no other),
+  // else, as SignBlock's (review m2), the newest generated copy that is current, for filing and with its file.
+  const latest = f.copies.find((c) => c.status === "GENERATED"), pending = f.copies[0] && (f.copies[0].status === "QUEUED" || f.copies[0].status === "RUNNING");
+  const notFiled = !f.for_filing ? `${form} is filed Online: a PDF copy is not for filing, so it is not printed to sign.` : latest?.copy_not_for_filing ? `This copy was made while ${form} was filed Online, so it is stamped “Copy, not for filing”. Generate a new copy above and print that one.` : null;
+  const unproven = f.trial_passed ? null : `${f.trial_why ?? `${form}: this form's filling is not proven yet.`} Check the copy against the case before it is signed.`;
+  const vAt = v ? copyOf(v.copy)?.created_at ?? v.at : null; // review m1: the copy's own date, as the done row names it
+  const toPrint = barcode ? (v?.current ? { id: v.copy, at: vAt! } : null) : latest && !latest.out_of_date && latest.file_ok && !notFiled ? { id: latest.id, at: latest.created_at } : null;
+  const notYet = barcode ? penRefusal("print", {}, form, { barcode, validated: false })
+    : pending ? "the copy is being generated…" : notFiled ? notFiled : latest?.out_of_date ? `this copy is out of date: generate a new copy of ${form} above and print that one.` : latest && !latest.file_ok ? `the file of the newest copy of ${form} is missing: generate a new copy above.` : `generate a copy of ${form} above first: the copy printed is named here.`;
+  // The server prints again (its `restart`) when the printed copy is no longer the current validated one, or its facts changed.
+  const again = !!raw.print && (barcode ? !!v?.current && raw.print.copy !== v.copy : !!copyOf(raw.print.copy)?.out_of_date);
+  /** Review m3 (SignBlock's printedCopyStale): before Signed in pen on a form with no barcode page, the copies are read
+   *  again; a printed copy whose facts changed since is refused here in words, nothing sent. True when refused. */
+  async function printedCopyStale(): Promise<boolean> {
+    const key = ["runtime", "view", caseId, "forms"];
+    await qc.refetchQueries({ queryKey: key });
+    const fresh = qc.getQueriesData<{ forms: CaseForm[] }>({ queryKey: key }).flatMap(([, d]) => d?.forms ?? []).find((x) => x.form === f.form && x.subject_id === f.subject_id);
+    if (!fresh?.copies.find((c) => c.id === raw.print?.copy)?.out_of_date) return false;
+    await refresh();
+    setRefusal(`The printed copy of ${form} is out of date: a fact on it changed since it was printed. Nothing was recorded. Print a new copy and have that one signed in pen.`);
+    setFocusTo("heading");
+    return true;
+  }
+  const recorded = !!filing?.read_only || filing?.status.toLowerCase() === "submitted";
+  const nextKey = PEN_STEPS.find((k) => !done[k]) ?? null;
+  const blockId = `pen-${item.id}`;
+  const printLabel = barcode ? "Printed: the validated copy of" : "Printed: the copy of";
+  const printAction = (label: string) => toPrint
+    ? <Button size="sm" busy={busy} onClick={() => void run("print", { copy: toPrint.id }, `${form}: Printed (copy of ${when(toPrint.at)})`)} data-step-action="print">{label} {when(toPrint.at)}</Button>
+    : <p className="text-[13px] text-text-muted" data-step-why>Cannot start yet: {notYet}</p>;
+  function action(key: PenStepKey) {
+    if (key === "print") return <div className="space-y-1">{toPrint && !barcode && unproven ? <p className="text-[13px] text-text-warn" data-unproven>{unproven}</p> : null}{toPrint ? <p className="text-[13px] text-text-muted">Download the copy above, print it{barcode ? " with the barcode page on top" : ""}, then record it here.</p> : null}{printAction(printLabel)}</div>;
+    return <Button size="sm" busy={busy} onClick={() => void run("sign_in_pen", { copy: done.print?.copy ?? undefined }, `${form}: Signed in pen`)} data-step-action="sign_in_pen">Signed in pen</Button>;
+  }
+  function row(s: PaperStep, i: number) {
+    const pen = s.key === "print" || s.key === "sign_in_pen" ? (s.key as PenStepKey) : null;
+    const r = pen ? rec(pen) : null, isDone = pen ? !!r : s.done === true;
+    // A step recorded on a copy that no longer counts (a fact changed, or a newer validated copy) says so; it is not ticked.
+    const old = pen && !r && raw[pen] ? raw[pen]! : null;
+    const isNext = !!pen && pen === nextKey && !again && !recorded;
+    const why = pen && !isDone && !isNext && !again && !recorded ? penRefusal(pen, done, form, { barcode, validated: !!v?.current }) : null;
+    const by = r ? <span className="text-text-muted">recorded by {nameOf(r.by)}, {when(r.at)}</span> : null;
+    const earlier = old ? <span className="block text-text-muted" data-step-old>Recorded on an earlier copy by {nameOf(old.by)}, {when(old.at)}: it no longer counts.</span> : null;
+    const detail = s.key === "validate" ? (isDone && v ? <span className="text-text-muted">validated copy of {when(vAt ?? v.at)}, read back {when(v.at)}</span> : <span className="text-text-muted">{s.words}. It is read back in the copy block above.</span>)
+      : s.key === "mail" ? <span className="text-text-muted" data-step-why>{s.words}. It is not recorded in the product yet.</span>
+      : isDone ? <>{s.key === "print" && r?.copy ? <>Copy of {when(copyOf(r.copy)?.created_at ?? (v?.copy === r.copy ? v.at : r.at))} · </> : null}{by}</>
+      : isNext ? <div ref={next} className="space-y-1">{earlier}<p className="text-[13px] text-text-muted">{s.words}.</p>{action(pen!)}</div>
+      : <>{earlier}{why ? <span className="text-text-muted" data-step-why>Cannot start yet: {why}</span> : <span className="text-text-muted">{s.words}.</span>}</>;
+    return (
+      <li key={s.key} className="flex flex-wrap items-start gap-x-3 gap-y-1 text-[13px]" data-step={s.key} data-done={isDone ? "yes" : "no"}>
+        <span className="flex items-center gap-1.5 font-medium sm:min-w-48">
+          {isDone ? <Check className="size-3.5 text-text-ok" aria-hidden /> : <Circle className="size-3.5 text-text-muted" aria-hidden />}
+          <span>{i + 1}. {PAPER_LABEL[s.key]}</span><span className="sr-only">{isDone ? ": done" : isNext ? ": next" : ": not yet"}</span>
+        </span>
+        <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">{detail}</div>
+      </li>
+    );
+  }
+
+  return (
+    <section aria-labelledby={`${blockId}-h`} className="space-y-2 rounded-lg border border-border bg-surface px-3 py-2" data-pen-block={item.id} data-state={item.state}>
+      <div className="flex flex-wrap items-center gap-2">
+        <h4 ref={heading} id={`${blockId}-h`} tabIndex={-1} className="text-[13px] font-semibold outline-none">Print and sign in pen</h4>
+        <Pill tone={st.tone} title="This form's state on the application">{st.words}</Pill>
+        {item.reason && !recorded ? <span className="min-w-0 flex-1 text-[13px] text-text-muted [overflow-wrap:anywhere]" data-reason>{item.reason}</span> : null}
+      </div>
+      <p className="text-[13px] text-text-muted">On Paper, signed in pen. Printed and Signed in pen are recorded here with who and when.</p>
+      {refusal ? <div data-sign-refusal><Notice tone="danger" title="Not recorded"><p className="[overflow-wrap:anywhere]">{refusal}</p></Notice></div> : null}
+      {q.isLoading ? <><Skeleton className="h-16 w-full" /><span className="sr-only" role="status">Loading the signing steps of {form}…</span></>
+        : q.isError ? <Notice tone="danger" title="The signing steps could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void q.refetch()}>Retry</Button>}>{(q.error as Error).message}</Notice>
+        : <>
+          {recorded ? <p className="text-[13px] text-text-muted" data-sign-readonly>The submission is recorded: this application is read-only.</p> : null}
+          {again && !recorded ? (
+            <div className="space-y-1 rounded-md border border-border px-2 py-1.5" data-sign-again>
+              <p className="text-[13px] text-text-warn">{barcode ? `A newer validated copy of ${form} was read back since it was printed: print that one and have it signed in pen.` : `The printed copy of ${form} is out of date: a fact on it changed. Print a new copy and have that one signed in pen.`}</p>
+              {printAction(barcode ? "Printed: the new validated copy of" : "Printed: the new copy of")}
+            </div>
+          ) : null}
+          <ol className="space-y-1.5">{(item.steps ?? []).map(row)}</ol>
         </>}
     </section>
   );

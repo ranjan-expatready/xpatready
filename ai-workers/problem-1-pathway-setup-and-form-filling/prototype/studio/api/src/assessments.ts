@@ -9,6 +9,7 @@ import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, In
 import type { Assessment as Row, AssessmentOverride, AssessmentReview } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { AssessmentOverrideBody, AssessmentReviewBody, AssessmentRunBody } from "../../contracts/eligibility.ts";
+import { CASE_CHECK_SHORT, outcomeWord } from "../../contracts/case-check-words.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { checkValue, knownOf } from "../../engine/runtime/case.ts";
 import { assess, DISCLAIMER_LOCALE, inputsOf, nowOf, outOfDate, STAND_IN, withUnconfirmedNow, type Input, type ProgramResult } from "../../engine/runtime/eligibility.ts";
@@ -50,7 +51,7 @@ export class Assessments {
     const p = c.participants.find((x) => x.subjectId === person);
     if (!p) fieldError("person", "That person is not on this case.");
     if (p!.role === "case") fieldError("person", "The case itself is not a traveller: choose a person.");
-    if (!p!.applies) fieldError("person", "Not travelling on this application: eligibility is checked only for travellers.");
+    if (!p!.applies) fieldError("person", "Not travelling on this application: the case check is run only for travellers.");
     return p!;
   }
 
@@ -71,7 +72,7 @@ export class Assessments {
     // lock per person, so two clicks at once never write two first runs with no reason (the second needs a reason).
     const { row, envelope } = await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`assessment:${c.id}:${person}`}))`;
-      const earlier = await tx.assessment.count({ where: { caseId: c.id, subjectId: person } });
+      const earlier = await tx.assessment.count({ where: { caseId: c.id, subjectId: person, configReleaseId: { in: c.pins.map((p) => p.configReleaseId) } } });
       if (earlier && !reason) fieldError("reason", "Give a reason for running again, such as 'Passport renewed'.");
       const at = new Date();
       const envelope: Envelope = {
@@ -83,7 +84,7 @@ export class Assessments {
       const row = await tx.assessment.create({ data: { id, workspaceId: c.workspaceId, caseId: c.id, subjectId: person, configReleaseId: release.id, resultJson: envelope as never, runType: envelope.runType, reason, createdBy: actor.id, createdAt: at } });
       return { row, envelope };
     });
-    await this.audit.log(c.workspaceId, actor.id, "created", "assessment", id, `${actor.name} ran an eligibility check on case ${short(c.id)} for person ${short(person)} (${envelope.runType === "RERUN" ? "run again" : "first run"}): ${result.outcome.toLowerCase().replace(/_/g, " ")}`, { outcome: result.outcome, release: release.version });
+    await this.audit.log(c.workspaceId, actor.id, "created", "assessment", id, `${actor.name} ran the ${CASE_CHECK_SHORT} on case ${short(c.id)} for person ${short(person)} (${envelope.runType === "RERUN" ? "run again" : "first run"}): ${outcomeWord(result.outcome)}`, { outcome: result.outcome, release: release.version });
     return this.view(row, [], null, { ...envelope, ...outOfDate(envelope.inputs, nowOf(known, person), true) });
   }
 
@@ -92,7 +93,7 @@ export class Assessments {
   async list(actor: Actor, caseId: string, person?: string) {
     const c = await this.r.reach(actor, caseId, "officer");
     if (person !== undefined) { if (!c.participants.some((p) => p.subjectId === person && p.role !== "case")) fieldError("person", "That person is not on this case."); }
-    const rows = await this.db.assessment.findMany({ where: { caseId: c.id, ...(person ? { subjectId: person } : {}) }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], include: { overrides: { orderBy: { createdAt: "asc" } }, review: true } });
+    const rows = await this.db.assessment.findMany({ where: { caseId: c.id, configReleaseId: { in: c.pins.map((p) => p.configReleaseId) }, ...(person ? { subjectId: person } : {}) }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], include: { overrides: { orderBy: { createdAt: "asc" } }, review: true } });
     const { known } = await this.knownNow(c);
     const gates = (this.r.snapshotOf(c).eligibility as SnapshotEligibility | undefined)?.gates?.length ?? 0;
     return { stand_in: STAND_IN.id, stand_in_words: STAND_IN.words, has_rules: gates > 0, assessments: rows.map((x) => this.view(x, x.overrides, x.review, this.fresh(x, known, c))) };
@@ -110,7 +111,7 @@ export class Assessments {
     const x = UUID.test(id) ? await this.db.assessment.findUnique({ where: { id }, include: { overrides: { orderBy: { createdAt: "asc" } }, review: true } }) : null;
     if (!x) {
       if (!(actor.duties as readonly string[]).includes("case")) fail("Only the case officer can do this.", HttpStatus.FORBIDDEN);
-      fail("No such eligibility check.", HttpStatus.NOT_FOUND);
+      fail("No such case check.", HttpStatus.NOT_FOUND);
     }
     const c = await this.r.reach(actor, x!.caseId, "officer");
     const { known } = await this.knownNow(c);
@@ -139,7 +140,7 @@ export class Assessments {
     // and an override goes only onto the person's latest check (a newer check since the drawer opened: 409).
     const done = await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`assessment-override:${x.id}`}))`;
-      const newer = await tx.assessment.findFirst({ where: { caseId: x.caseId, subjectId: x.subjectId, createdAt: { gt: x.createdAt } }, select: { id: true } });
+      const newer = await tx.assessment.findFirst({ where: { caseId: x.caseId, subjectId: x.subjectId, createdAt: { gt: x.createdAt }, configReleaseId: { in: c.pins.map((p) => p.configReleaseId) } }, select: { id: true } });
       if (newer) refused("The result changed since you opened it: a newer check exists for this person. Reload to see it.");
       const same = await tx.assessmentOverride.findFirst({ where: { assessmentId: x.id, createdBy: actor.id, programKey: b.programKey, label: b.label, reason: b.reason } });
       if (same) return { o: same, repeated: true };
@@ -147,7 +148,7 @@ export class Assessments {
     });
     const o = done.o;
     if (done.repeated) return { id: o.id, programKey: o.programKey, fromOutcome: o.fromOutcome, label: o.label, reason: o.reason, by: o.createdBy, at: o.createdAt.toISOString(), ...(o.stamp as object), repeated: true };
-    await this.audit.log(c.workspaceId, actor.id, "created", "assessment_override", x.id, `${st.name} overrode the eligibility result ${b.fromOutcome.toLowerCase().replace(/_/g, " ")} on case ${short(c.id)} with "${b.label}" (the result itself is unchanged)`, { programKey: b.programKey, before: b.fromOutcome, after: b.label, outOfDate: env.out_of_date });
+    await this.audit.log(c.workspaceId, actor.id, "created", "assessment_override", x.id, `${st.name} overrode the ${CASE_CHECK_SHORT} result "${outcomeWord(b.fromOutcome)}" on case ${short(c.id)} with "${b.label}" (the result itself is unchanged)`, { programKey: b.programKey, before: b.fromOutcome, after: b.label, outOfDate: env.out_of_date });
     return { id: o.id, programKey: o.programKey, fromOutcome: o.fromOutcome, label: o.label, reason: o.reason, by: actor.id, at: o.createdAt.toISOString(), ...stamp };
   }
 
@@ -163,7 +164,7 @@ export class Assessments {
     let r;
     try { r = await this.db.assessmentReview.create({ data: { assessmentId: x.id, reviewedBy: actor.id, note: parsed.data.note || null, stamp: stamp as never } }); }
     catch (e) { if ((e as { code?: string }).code === "P2002") already((await this.db.assessmentReview.findUnique({ where: { assessmentId: x.id } }))!); throw e; }
-    await this.audit.log(c.workspaceId, actor.id, "reviewed", "assessment", x.id, `${st.stamp === "Reviewed" ? "Reviewed" : "Seen"} by ${st.name}: the eligibility check on case ${short(c.id)}${env.out_of_date ? " (out of date when marked)" : ""}`, { stamp: st.stamp, outOfDate: env.out_of_date });
+    await this.audit.log(c.workspaceId, actor.id, "reviewed", "assessment", x.id, `${st.stamp === "Reviewed" ? "Reviewed" : "Seen"} by ${st.name}: the ${CASE_CHECK_SHORT} on case ${short(c.id)}${env.out_of_date ? " (out of date when marked)" : ""}`, { stamp: st.stamp, outOfDate: env.out_of_date });
     return { reviewedBy: r.reviewedBy, reviewedAt: r.reviewedAt.toISOString(), reviewNote: r.note, ...stamp };
   }
 

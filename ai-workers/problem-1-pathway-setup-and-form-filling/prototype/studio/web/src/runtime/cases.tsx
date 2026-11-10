@@ -12,11 +12,20 @@ import { noRetryOnRefusal, Questionnaire, useCaseView, type CanAdd, type CaseInf
 import { FormsPanel } from "./forms";
 import { ItemChannels } from "./item-channels"; // C11.6
 import { FindingsPanel } from "./findings";
+import { ReviewPage } from "./review";
+import { AnswerSheetPage } from "./answer-sheet"; // C7.3 (QA-317)
 import { SubmissionPanel } from "./submission"; // C8.2
 import { DocumentsPanel } from "./checklist"; // C6.4 (a)
 import { CaseTeamChip, OpeningTeam, useFirm } from "./team";
 import { EmployerLinkFor, EmployerLinkLine } from "./employer";
+import { EarlierFactsCard } from "./earlier-facts";
 import { EligibilityCard, EligibilityPage } from "./eligibility";
+import { PeopleAndFilings } from "./filing-changes"; // C6.13
+import { ReleaseNotice } from "./release-update"; // C9.5
+import { EarlierStages, earlierOf, StageStrip } from "./stages"; // C6.17
+import { OfficerPeoplePanel } from "./privacy"; // C6.16
+import { RepresentativeReviewLatest, RepresentativeReviewPage } from "./representative-review"; // C8.3
+import { CaseReadinessPill } from "./readiness-figure"; // C7.10
 import type { OpenableRelease } from "../../../contracts/runtime";
 
 /** Simulated case people (api/src/core.ts RUNTIME_ACTORS); the switch is demo chrome. */
@@ -70,6 +79,10 @@ export function RuntimeApp() {
           <Route path=":id" element={<CasePage />} />
           <Route path=":id/questionnaire" element={<ClientPage />} />
           <Route path=":id/eligibility" element={<EligibilityPage />} />
+          <Route path=":id/review" element={<ReviewPage />} />
+          <Route path=":id/representative-review" element={<RepresentativeReviewLatest />} />
+          <Route path=":id/representative-review/:round" element={<RepresentativeReviewPage />} />
+          <Route path=":id/sheet/:itemId" element={<AnswerSheetPage />} />
           <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/cases">Back to cases</Link></Notice>} />
         </Routes>
       </main>
@@ -131,9 +144,13 @@ function NewCaseDialog({ close }: { close: () => void }) {
   // Review M1 (d7b9b80f): the choice is read against the list now offered, so what the select shows is what is sent
   // (after a reload drops the chosen release, the first offered one is both shown and sent).
   const chosen = combos.some((c) => c.combination_id === f.combinationId) ? f.combinationId : combos[0]?.combination_id;
-  const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: chosen, reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, ...(team.representative ? { representative: team.representative } : {}), ...(team.officer ? { caseOfficers: [team.officer] } : {}), idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => nav(`/cases/${c.id}`) });
+  // C6.17 (BR-3): a later stage of a route records its earlier stages ("Done before we started").
+  const chosenRelease = combos.find((c) => c.combination_id === chosen);
+  const [earlier, setEarlier] = React.useState<Parameters<typeof EarlierStages>[0]["value"]>({});
+  const earlierBody = earlierOf(chosenRelease, earlier);
+  const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: chosen, ...(earlierBody ? { earlier: earlierBody } : {}), reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, ...(team.representative ? { representative: team.representative } : {}), ...(team.officer ? { caseOfficers: [team.officer] } : {}), idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => nav(`/cases/${c.id}`) });
   // Break m1: a 409 (the release stopped being ready while the dialog was open) reloads the list, so it is not offered again.
-  const submit = () => create.mutate(undefined, { onError: (e) => { if (e instanceof ApiError && e.status === 409) void releases.refetch(); const p = e instanceof ApiError ? e.problem.errors ?? [] : []; setErrors(Object.fromEntries(p.map((x) => [x.field.split(".")[0], x.message]))); } });
+  const submit = () => create.mutate(undefined, { onError: (e) => { if (e instanceof ApiError && e.status === 409) void releases.refetch(); const p = e instanceof ApiError ? e.problem.errors ?? [] : []; setErrors(Object.fromEntries(p.flatMap((x) => [[x.field.split(".")[0], x.message], [x.field, x.message]]))); } });
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title="Open a case" description="The case works from the combination's latest release, frozen now: a later release never changes it." guard
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={create.isPending} disabled={!combos.length} title={!combos.length && !releases.isLoading && !loadFailed ? (notReady.length ? "No released combination is ready for new cases yet" : "Nothing is released yet") : undefined} onClick={submit}>Open case</Button></>}>
@@ -143,6 +160,7 @@ function NewCaseDialog({ close }: { close: () => void }) {
             <Select value={chosen} onChange={(e) => setF({ ...f, combinationId: e.target.value })}>{combos.map((c) => <option key={c.combination_id} value={c.combination_id}>{c.combination} · release {c.version}</option>)}</Select>
           </Field>
         )}
+        <EarlierStages release={chosenRelease} value={earlier} onChange={setEarlier} errors={errors} />
         {notReady.length ? (
           <Notice tone="warn" title={combos.length ? "Released, not ready for new cases" : "No released combination is ready for new cases yet"}>
             <ul className="space-y-1 [overflow-wrap:anywhere]" data-testid="not-ready-for-cases">{notReady.map((r) => <li key={r.combination_id}><span className="font-medium">{r.combination} · release {r.version}</span>: {r.why}</li>)}</ul>
@@ -182,10 +200,11 @@ function CasePage() {
       <nav aria-label="Path" className="flex items-center gap-1 text-[13px] text-text-muted"><Link to="/cases" className="inline-flex items-center gap-1 hover:underline"><ArrowLeft className="size-3.5" aria-hidden />Cases</Link><span aria-hidden>›</span><span className="text-text">{c.reference}</span></nav>
       <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
         <div className="min-w-0 flex-1">
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><Pill tone="info" title={`Frozen when the case opened (${new Date(c.pin.pinned_at).toLocaleString("en-CA")}); a later release never changes this case`}>Release {c.pin.release_version}</Pill></h1>
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><Pill tone="info" title={c.pin.revision > 1 ? `Moved to this release on ${new Date(c.pin.pinned_at).toLocaleString("en-CA")}; a later release never changes this case until someone moves it` : `Frozen when the case opened (${new Date(c.pin.pinned_at).toLocaleString("en-CA")}); a later release never changes this case until someone moves it`}>{c.release?.label ?? `Release ${c.pin.release_version}`}</Pill></h1>
+          <div className="mt-1 empty:hidden"><CaseReadinessPill caseId={c.id} /></div>
           {c.team ? <CaseTeamChip caseId={c.id} line={c.team} /> : null}
           {c.employer_link ? <div className="mt-1"><EmployerLinkLine link={c.employer_link} caseId={c.id} /></div> : null}
-          <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · {v.summary.confirmed} confirmed · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>
+          <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · {v.summary.answered - v.summary.confirmed} to confirm · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>
         </div>
         <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">
           <p className="font-medium">Client questionnaire</p>
@@ -193,23 +212,21 @@ function CasePage() {
           <Link to={`/cases/${c.id}/questionnaire`} onClick={() => setActor(c.client)} className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-medium text-text-link hover:underline">Open it as {client?.name ?? "the client"} (simulated)<ExternalLink className="size-3.5" aria-hidden /></Link>
         </div>
       </div>
-      <section aria-labelledby="people" className="rounded-xl border border-border bg-surface-raised">
-        <header className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
-          <h2 id="people" className="text-base font-semibold">People on this case</h2>
-          <span className="flex-1" />
-          {/* B115 (P-319): one Add button per role this case's release lets a person add, never a fixed list. */}
-          {(c.can_add ?? []).map((r) => <Button key={r.role} size="sm" variant="secondary" data-add-role={r.role} onClick={() => setAdding(r)}><UserPlus aria-hidden />Add {lower(r.label)}</Button>)}
-        </header>
-        <ul className="flex flex-wrap gap-2 px-4 py-3">
-          {people.map((p) => <li key={p.subject_id} className="flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><span className="text-xs text-text-muted">{roleOf(p)}</span>{p.co_files ? <Pill title="Their forms are sent with the principal applicant's application, never on their own">Sent with the principal's application</Pill> : p.applies ? null : <Pill title="Not travelling: asked only what the principal's forms need about them">Not travelling</Pill>}</li>)}
-        </ul>
-      </section>
+      <StageStrip caseId={c.id} />
+      <ReleaseNotice caseId={c.id} />
+      {/* C6.13 (B135): people with their filings, Make principal, Remove filing and Add filing back. */}
+      <PeopleAndFilings caseId={c.id} people={c.people} canAdd={c.can_add ?? []} onAdd={setAdding} roleOf={roleOf} nameOf={nameOf} />
+      {/* C6.19: a returning client's confirmed facts from an earlier case, re-confirmed before use. */}
+      <EarlierFactsCard caseId={c.id} />
       <DocumentsPanel caseId={c.id} caseSubject={c.people.find((p) => p.role === "case")?.subject_id ?? ""} nameOf={nameOf} />
       <EligibilityCard caseId={c.id} people={c.people} />
       <ItemChannels caseId={c.id} />
       <FormsPanel caseId={c.id} />
-      <FindingsPanel caseId={c.id} people={c.people} />
+      <FindingsPanel caseId={c.id} people={c.people} openLink={`/cases/${c.id}/review`} />
       <SubmissionPanel caseId={c.id} />
+      {/* C6.16: who answers for each person and their own links, next to the Agent view where their answers are (placed
+          below the case panels so its late load never moves them: check_c69_page_browser's focus check). */}
+      <OfficerPeoplePanel caseId={c.id} />
       <div id="agent-view" className="scroll-mt-4 space-y-3"><h2 id="agent-view-h" className="text-base font-semibold" data-agent-view-h>Agent view</h2>
       <Questionnaire caseId={c.id} mode="agent" /></div>
       {adding ? <AddPersonDialog caseId={c.id} line={adding} close={() => setAdding(null)} /> : null}
@@ -248,7 +265,7 @@ function ClientPage() {
   return <Questionnaire caseId={id!} mode="sqr" />;
 }
 
-function Toaster() {
+export function Toaster() {
   const t = useToast();
   return (
     <div className="pointer-events-none fixed inset-x-4 bottom-4 z-[100] flex flex-col gap-2 sm:left-auto sm:w-96" aria-live="polite">

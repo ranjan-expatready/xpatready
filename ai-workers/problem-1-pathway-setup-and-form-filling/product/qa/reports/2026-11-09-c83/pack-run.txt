@@ -1,0 +1,6 @@
+# nightly 42616655752 (workflow_dispatch on main cfaa199f4, 12:23:47Z), job 129158118178 "packs (C8.3)", completed success 12:28:28Z — lines read from the job log
+  GATE_B_DATA: checkpoint
+Gate B: the PR names C8.3; claims Works for none (no bug check).
+  packs: C8.3.test.ts
+    C8.3.test.ts on the checkpoint: exit 0, 23/23 passed (163 s: copy 5, Load the configured checkpoint 90, run 68)
+Gate B: passed.

@@ -10,7 +10,13 @@ import { LEVEL_OF, LEVEL_WORD, PATHWAY_TYPE_LABEL, type LifecycleAction, type Pa
 import { ACTORS, Audit, Db, need, Workspace, type Actor } from "./core.ts";
 import { actionVerb, changeView } from "./library-changes.ts";
 import { applyFills } from "./who-fills.ts";
+import { applyBackground, KIND as BACKGROUND_KIND } from "./section-background.ts";
 import { applySupplies } from "./document-supplies.ts";
+import { applySets } from "./document-sets.ts";
+import { SETS_KIND } from "../../contracts/document-sets.ts";
+import { applyMustVerify } from "./must-verify.ts";
+import { applyProviders, PROVIDERS_KIND } from "./document-providers.ts"; // C6.14
+import { MUST_VERIFY_KIND } from "../../contracts/must-verify.ts";
 import { SUPPLIES_KIND } from "../../contracts/document-supplies.ts";
 import { applyCondition, COND_KIND } from "./question-condition.ts";
 import { applyFormFieldCondition, FORM_FIELD_KIND } from "./form-field-condition.ts";
@@ -467,8 +473,12 @@ export class Lifecycle {
     if (c.kind === "form_role") return this.applyRole(actor, c); // P-319 (Lead 4 on #833): a form's role, at a second person's approval
     if (c.kind === COND_KIND) return applyCondition(this.db, this.audit, actor, c); // C4.11 part 3 (forms lane): a draft question version with its condition
     if (c.kind === FORM_FIELD_KIND) return applyFormFieldCondition(this.db, this.audit, actor, c); // B86: a draft form field holding the condition
+    if (c.kind === BACKGROUND_KIND) return applyBackground(this.db, this.audit, actor, c); // B154: a draft section with its background mark
     if (c.kind === "placement_fills") return applyFills(this.db, this.audit, actor, c); // C4.9 (runtime lane): a draft placement
     if (c.kind === SUPPLIES_KIND) return applySupplies(this.db, this.audit, actor, c); // C4.5: a draft document type with its facts
+    if (c.kind === SETS_KIND) return applySets(this.db, this.audit, actor, c); // C6.15: a draft document type with its substitute sets
+    if (c.kind === PROVIDERS_KIND) return applyProviders(this.db, this.audit, actor, c); // C6.14: a draft document type with its provider roles
+    if (c.kind === MUST_VERIFY_KIND) return applyMustVerify(this.db, this.audit, actor, c); // C7.9: a draft field with its must-verify flag
     // QA-64, P-116 amended (28 Oct): a library retire or restore takes effect at approval (a structure name or a
     // combination waits for the release). The same check as at a release: a draft listing the form again hands it back.
     if (c.kind === "library_form" && (c.action === "RETIRE" || c.action === "RESTORE")) {

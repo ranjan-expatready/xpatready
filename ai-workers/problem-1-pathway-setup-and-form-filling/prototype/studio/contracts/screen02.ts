@@ -18,7 +18,11 @@ export type LibraryChangeView = {
   /** B86: a question's condition (only what the page reads: what approving it holds on other combinations). */
   condition?: { spread: string | null };
   /** B86: a form field's condition: the form field, its own words, what is proposed, what approving it holds elsewhere. */
-  form_field?: { form: string; edition: string; caption: string; words: string; sentence: string; clear: boolean; spread: string | null; reason: string; ask?: { printed: string; deciding: string; writes: string } | null };
+  /** B154 (P-97, P-244): whether a library section holds background answers, before → after, what it means, its reach. */
+  background?: { section: string; before: string; after: string; on: boolean; questions: number; uses: number; sourced: string[]; documents: string[]; means: string; reason: string };
+  form_field?: { form: string; edition: string; caption: string; words: string; sentence: string; clear: boolean; spread: string | null; reason: string; ask?: { printed: string; deciding: string; writes: string } | null;
+    /** B107: a gate (written only when …) or "filled by hand", from the form's own words; `cite` is the source (P-170). */
+    decided?: { kind: "gate" | "by_hand"; cite: string } | null };
 };
 export type LibraryChangeDetail = LibraryChangeView & { field: { key: string; label: string | null; meaning: string; value_type: string; group: string | null; status: string; /** C3.6: the answer list the field carries, approved with it. */ answer_list?: { key: string; label: string; status: string; values: { code: string; label: string }[] } | null } | null;
   /** A structure name (P-128): the names a branch delete takes with it, and whether a retire or restore takes its combination. */

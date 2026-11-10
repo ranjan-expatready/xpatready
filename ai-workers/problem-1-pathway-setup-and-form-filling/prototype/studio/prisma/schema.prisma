@@ -41,9 +41,12 @@ enum FieldDataType {
   COMPOSITE
 }
 
+/// C3.16 (SA-1B-130): CLIENT_LEVEL is the team's PERSON and CASE_LEVEL its FILING (one reader, engine/field-scope.ts).
 enum FieldScope {
   CLIENT_LEVEL
   CASE_LEVEL
+  HOUSEHOLD
+  ORGANISATION
 }
 
 enum ConditionEffect {
@@ -198,6 +201,7 @@ model Combination {
   releases     ConfigRelease[]
   jobs         DraftingJob[]
   cases        Case[] // runtime lane (R1)
+  caseStages   CaseStage[] // C6.17
   answerKeys   AnswerKey[] // G4 (C5.7)
 
   @@unique([workspaceId, combinationKey])
@@ -677,6 +681,10 @@ model CanonicalField {
   labelChecked      Boolean          @default(false) @map("label_checked")
   /// F1 (challenge point 3): the answer list a choice field takes its values from (the team's CanonicalField.enumSetId).
   answerListKey     String?          @map("answer_list_key")
+  /// C7.9 (row B142, L-SA8; P-242; SA-1B-1 rule 9): the immigration expert's "must verify before filing" flag. Set only
+  /// through a library change the expert approves (api/src/must-verify.ts); a client-given value no one on staff checked
+  /// raises a CRITICAL warning on Ready to file, passable with a reason (P-237), never a block.
+  mustVerifyBeforeFiling Boolean   @default(false) @map("must_verify_before_filing")
   updatedBy         String           @map("updated_by")
   updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -867,6 +875,12 @@ model DocumentType {
   /// A fact not listed is about the holder (the person the checklist line names).
   suppliesAbout   Json?            @map("supplies_about")
   readerProfile   Json?            @map("reader_profile")
+  /// C6.15 (SA-1B-19): named substitute sets, [{ name, mode: "any_one" | "all_together", members: [{ key, when? }] }];
+  /// null = the type is its own only member. Set only through a second person's approval (api/src/document-sets.ts).
+  sets            Json?
+  /// C6.14 (SA-1B-151 §7): ordered person-role keys who provide this document when a line asks it once for the
+  /// application or once for the couple; empty = not set (the person the item is for provides it).
+  defaultProviderRoles String[]    @default([]) @map("default_provider_roles")
   version         Int
   status          DefinitionStatus
   supersedesId    String?          @map("supersedes_id") @db.Uuid
@@ -894,6 +908,8 @@ model DocumentRequirement {
   position        Int?
   /// W1-15 slice 3: library document type keys that count instead of this one ("any one counts")
   alternatives    Json?
+  /// C6.15 (SA-1B-20): the named set of this document type the line picks; null = the set named "Standard".
+  setName         String?          @map("set_name")
   sourceQuote     String?          @map("source_quote")
   sourceFile      String?          @map("source_file")
   note            String?
@@ -1277,8 +1293,20 @@ model Case {
   signSteps   SignStep[]   // C8.1
   signedScans SignedScan[] // C8.1
   findings    ReviewFinding[] // C7.5
+  personLinks PersonLink[] // C6.16
   filingRecords FilingRecord[] // C8.2
   tasks         CaseTask[]     // C8.2
+  filingChanges FilingChange[] // C6.13
+  feeReceipts   FeeReceiptFile[] // C8.2 B149
+  documentReviews DocumentReview[] // C6.5
+  readValues      ReadValue[]      // C6.5
+  answerChecks    AnswerCheck[]    // C6.5
+  stages          CaseStage[] // C6.17
+  formAdditions   FilingFormAddition[] // C7.8
+  reviewRounds      ReviewRound[]       // C8.3
+  reviewRoundRows   ReviewRoundFiling[] // C8.3
+  reviewRoundForms  ReviewRoundForm[]   // C8.3
+  reviewChecks      ReviewCheck[]       // C8.3
 
   /// C6.11 break M2, M3: a reference and an idempotency key are unique within a firm, so one firm neither collides with
   /// nor learns of another firm's cases.
@@ -1352,14 +1380,86 @@ model PackWorkPin {
   revision        Int      @default(1)
   actorId         String   @map("actor_id")
   pinnedAt        DateTime @default(now()) @map("pinned_at") @db.Timestamptz
+  /// C9.5: why the case moved to this release (revision 2 on; the first pin has none). Written once (insert only).
+  reason          String?
 
   case    Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
   /// A pinned release cannot be deleted (released means frozen; STANDARDS §3.7).
   release ConfigRelease @relation(fields: [configReleaseId], references: [id], onDelete: Restrict)
 
-  /// One pin per case and combination until moving a case to a newer release (ADOPT) is built.
-  @@unique([caseId, combinationId])
+  /// C9.5: a move to a newer release is a new revision (insert only; trigger runtime_pin_chain: previous + 1, a higher
+  /// release version of the same combination, a reason). The case reads its newest revision.
+  @@unique([caseId, combinationId, revision])
   @@map("pack_work_pin")
+}
+
+/// C6.17 (B139; concept BR-2; founder P-412 F13 (a)): a route, an ordered list of existing combinations kept as data, with
+/// no new tree level. stages: [{key, staff_name, client_name, combination_key, key_details[{field, label, type,
+/// same_every_stage?}], next, deadline?{label, from, add_days, ...}, same_documents?}]; loaded only with 2+ stages, every
+/// combination present and used once (engine/runtime/stages.ts routeProblems). Sample until the immigration expert
+/// gives real routes (scaffolding: samples/routes.json).
+model Route {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  key         String
+  label       String
+  /// SAMPLE · CITED
+  basis       String   @default("SAMPLE")
+  stages      Json
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([workspaceId, key])
+  @@map("route")
+}
+
+/// C6.17 (B139; concept §2, BR-1..BR-10): one stage of a case, frozen from its route at opening (a case on no route has
+/// one stage). state DONE_BEFORE (made before the firm took the case; key details only) · NOT_RECORDED (an earlier stage
+/// left unticked) · CURRENT (one per case, partial unique case_stage_one_current; its combination is the case's, a
+/// deferred trigger) · ENDED_NEXT_STARTED · NOT_STARTED; forward only (trigger). A worked stage has its own application
+/// subject (challenge B3). key_details: {field: {value, by, at}} on the stage record (SA-1B-212 §7; P-412 F13 (c)).
+model CaseStage {
+  id                   String    @id @default(uuid()) @db.Uuid
+  workspaceId          String    @map("workspace_id") @db.Uuid
+  caseId               String    @map("case_id") @db.Uuid
+  firmKey              String    @map("firm_key")
+  ord                  Int
+  stageKey             String    @map("stage_key")
+  staffName            String    @map("staff_name")
+  clientName           String    @map("client_name")
+  combinationId        String    @map("combination_id") @db.Uuid
+  applicationSubjectId String?   @unique @map("application_subject_id") @db.Uuid
+  state                String
+  startedFrom          String?   @map("started_from")
+  keyDetails           Json      @default("{}") @map("key_details")
+  /// The stage as frozen from its route at opening: {key_details[], deadline?, same_documents[]} (Sample data).
+  spec                 Json      @default("{}")
+  routeKey             String?   @map("route_key")
+  /// The stage version a "Start next stage" request names (409 when it moved).
+  version              Int       @default(1)
+  startedBy            String?   @map("started_by")
+  startedAt            DateTime? @map("started_at") @db.Timestamptz
+  endedBy              String?   @map("ended_by")
+  endedAt              DateTime? @map("ended_at") @db.Timestamptz
+  recordedBy           String?   @map("recorded_by")
+  recordedAt           DateTime? @map("recorded_at") @db.Timestamptz
+  /// Why the next stage was started while a filing had no record (P-237); never in an audit line.
+  reason               String?
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  case        Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  combination Combination       @relation(fields: [combinationId], references: [id], onDelete: Restrict)
+  application AnswerSubject?    @relation(fields: [applicationSubjectId], references: [id], onDelete: NoAction)
+  filings     Filing[]
+  groups      SubmissionGroup[]
+  lines       ChecklistLine[]
+  findings    ReviewFinding[]
+  tasks       CaseTask[]
+
+  @@unique([caseId, ord])
+  @@unique([caseId, combinationId])
+  @@index([workspaceId, caseId])
+  @@map("case_stage")
 }
 
 /// A person (team Party; per workspace here, per firm there).
@@ -1407,7 +1507,9 @@ model PartyRelationship {
   @@map("party_relationship")
 }
 
-/// Whom an answer is about: a person on the case, or the case itself (subjectKind "case", party = the principal).
+/// Whom an answer is about: a person on the case, or the case itself (subjectKind "case", party = the principal), or a
+/// relative a form describes (subjectKind "parent_1", "parent_2", "sibling"; B128, B155), at most one per party and
+/// relation: a partial unique index in SQL (migration 20261108050000_b157_one_relative_subject; B157).
 model AnswerSubject {
   id          String @id @default(uuid()) @db.Uuid
   workspaceId String @map("workspace_id") @db.Uuid
@@ -1422,6 +1524,9 @@ model AnswerSubject {
   groupAnswers ClientGroupAnswer[]
   checklistLines ChecklistLine[]
   documents    CaseDocument[]
+  /// C6.17 (B3): the stage whose application this subject is (one application subject per worked stage).
+  stage          CaseStage?
+  personLinks  PersonLink[] // C6.16
 
   @@map("answer_subject")
 }
@@ -1440,6 +1545,12 @@ model CaseParticipant {
   /// The add-person request's key and fingerprint (QA-28): the same key again returns this person, never a second one.
   idempotencyKey         String? @map("idempotency_key")
   idempotencyFingerprint String? @map("idempotency_fingerprint") @db.VarChar(64)
+  /// C6.16 (B138; AG-7-107 Q71 option B): the team's "Keep private from the principal", stored once per adult. On at the
+  /// adult's first right code on their own link, or by staff with a reason; it stays on (a trigger refuses true to false).
+  keepPrivate Boolean   @default(false) @map("keep_private")
+  privateAt   DateTime? @map("private_at") @db.Timestamptz
+  privateBy   String?   @map("private_by")
+  privateWhy  String?   @map("private_why")
 
   case    Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
   subject AnswerSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
@@ -1540,6 +1651,8 @@ model AnswerSnapshot {
   case    Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
   form    FormInstance?
   entered EnteredSection?
+  reviewFrozen ReviewRoundForm[] @relation("ReviewFrozen") // C8.3
+  reviewStamps ReviewRoundForm[] @relation("ReviewStamp")  // C8.3
 
   @@map("answer_snapshot")
 }
@@ -1599,7 +1712,6 @@ model ValidatedCopy {
   @@index([formInstanceId, readAt])
   @@map("validated_copy")
 }
-
 
 // ─── F2 browser extension (forms lane, P-90; plan §4) ────────────────────────────────────────────────────────────
 
@@ -1727,12 +1839,21 @@ model SubmissionGroup {
   /// Who made the group (the read that first derived it, or the officer who split).
   createdBy   String?  @map("created_by")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  /// B152 (FQ-7, C6.12, C8.2): the group's fee lines and totals as GET …/prepare showed them when the submission was
+  /// recorded, written once by "Record the submission"; a recorded group is read from it, so a birthday, a corrected date
+  /// of birth or a fee-table change later never changes what was filed. Null until recorded.
+  recordedFees Json?   @map("recorded_fees")
+
+  /// C6.17: the stage the group belongs to (one FAMILY group per case and stage: submission_group_one_family, in SQL).
+  stageId String @map("stage_id") @db.Uuid
 
   case    Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  stage   CaseStage      @relation(fields: [stageId], references: [id], onDelete: NoAction)
   filings Filing[]
   records FilingRecord[] // C8.2
 
   @@index([caseId])
+  @@index([stageId])
   @@map("submission_group")
 }
 
@@ -1757,15 +1878,22 @@ model Filing {
   corrections       FilingRecordCorrection[]
   tasks             CaseTask[]
 
+  /// C6.17: the stage (one combination's application) this filing belongs to.
+  stageId    String            @map("stage_id") @db.Uuid
   case       Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  stage      CaseStage         @relation(fields: [stageId], references: [id], onDelete: NoAction)
   group      SubmissionGroup   @relation(fields: [submissionGroupId], references: [id], onDelete: Restrict)
   applicants FilingApplicant[]
   items      FilingItem[]
   findings   ReviewFinding[] // C7.5
+  additions  FilingFormAddition[] // C7.8
   reviews    FilingReview[]  // C7.6
   passes     ReadinessPass[] // C7.6
+  reviewRounds ReviewRoundFiling[] // C8.3
+  reviewForms  ReviewRoundForm[]   // C8.3
 
-  @@unique([caseId, subjectId])
+  @@unique([caseId, stageId, subjectId])
+  @@index([stageId])
   @@map("filing")
 }
 
@@ -1813,6 +1941,7 @@ model FilingItem {
   signSteps   SignStep[]   // C8.1
   signedScans SignedScan[] // C8.1
   tasks       CaseTask[]   // C8.2
+  reviewForms ReviewRoundForm[] // C8.3
 
   @@unique([filingId, kind, itemKey, subjectId])
   @@index([caseId])
@@ -1849,14 +1978,24 @@ model ChecklistLine {
   stateReason  String?   @map("state_reason")
   stateBy      String?   @map("state_by")
   stateAt      DateTime? @map("state_at") @db.Timestamptz
+  /// C6.14 (SA-1B-214 rule 2): the officer's choice of providers (answer_subject ids) on a shared line; empty = the
+  /// document type's defaults. A choice carries a reason (a check in SQL).
+  providers       String[]  @default([]) @db.Uuid
+  providersReason String?   @map("providers_reason")
+  providersBy     String?   @map("providers_by")
+  providersAt     DateTime? @map("providers_at") @db.Timestamptz
   version      Int       @default(1)
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
+  /// C6.17: the stage whose checklist this line is (a new stage's lines start fresh, BR-6).
+  stageId   String         @map("stage_id") @db.Uuid
   case      Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  stage     CaseStage      @relation(fields: [stageId], references: [id], onDelete: NoAction)
   subject   AnswerSubject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   documents CaseDocument[]
 
-  @@unique([caseId, subjectId, documentType])
+  @@unique([caseId, stageId, subjectId, documentType])
+  @@index([stageId])
   @@map("checklist_line")
 }
 
@@ -1883,6 +2022,7 @@ model CaseDocument {
 
   subject AnswerSubject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   line    ChecklistLine? @relation(fields: [checklistLineId], references: [id], onDelete: SetNull)
+  review  DocumentReview? // C6.5: its one read
 
   @@index([subjectId, documentType])
   @@map("case_document")
@@ -2087,7 +2227,6 @@ model SourceEntry {
   @@map("source_entry")
 }
 
-
 /// C8.1 (M3-F; M3-CONTRACT C8.1): one step done on a form item signed by hand and scanned (print · signed · scan_received
 /// · uploaded_to_ircc), with who and when; "print" names the generated copy printed. One current row per item and step
 /// (partial unique index in the migration); superseded_at is for C9.2 (steps re-opened after a fact changes).
@@ -2155,9 +2294,34 @@ model FilingRecord {
   case   Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
   filing Filing          @relation(fields: [filingId], references: [id], onDelete: Cascade)
   group  SubmissionGroup @relation(fields: [submissionGroupId], references: [id], onDelete: Restrict)
+  feeReceipts FeeReceiptFile[] // B149
 
   @@index([caseId])
   @@map("filing_record")
+}
+
+/// C8.2 B149 (P-408; board agent-view frame 7): the fee receipt's evidence, IRCC's "Transaction Approved" page, uploaded
+/// on a recorded filing (the FK to filing_record.filing_id: never before it is recorded). Append-only (a trigger refuses
+/// any UPDATE): a wrong file is followed by a new upload, the newest is the receipt, earlier ones stay in the history. The
+/// file is in the working files (var/), named by the row id, checked by its sha256, as C8.1's signed_scan.
+model FeeReceiptFile {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  filingId    String   @map("filing_id") @db.Uuid
+  fileName    String   @map("file_name")
+  mediaType   String   @map("media_type")
+  sizeBytes   Int      @map("size_bytes")
+  sha256      String   @db.VarChar(64)
+  path        String
+  uploadedBy  String   @map("uploaded_by")
+  uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamptz
+
+  case   Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  record FilingRecord @relation(fields: [filingId], references: [filingId], onDelete: Cascade)
+
+  @@index([filingId])
+  @@map("fee_receipt_file")
 }
 
 /// C8.2: the UCI IRCC gave one person on a recorded filing; only `uci` changes, through a correction (trigger).
@@ -2212,11 +2376,16 @@ model CaseTask {
   doneBy      String?   @map("done_by")
   doneAt      DateTime? @map("done_at") @db.Timestamptz
 
+  /// C6.17 (challenge M3): the stage current when the task was made.
+  stageId String @map("stage_id") @db.Uuid
+
   case   Case        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  stage  CaseStage   @relation(fields: [stageId], references: [id], onDelete: NoAction)
   filing Filing?     @relation(fields: [filingId], references: [id], onDelete: Cascade)
   item   FilingItem? @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@index([caseId])
+  @@index([stageId])
   @@map("case_task")
 }
 
@@ -2253,11 +2422,16 @@ model ReviewFinding {
   createdBy   String    @map("created_by")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
+  /// C6.17 (challenge M3): the stage current when the finding was made.
+  stageId String @map("stage_id") @db.Uuid
+
   case   Case    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  stage  CaseStage @relation(fields: [stageId], references: [id], onDelete: NoAction)
   filing Filing? @relation(fields: [filingId], references: [id], onDelete: SetNull)
 
   @@unique([caseId, idempotencyKey])
   @@index([caseId])
+  @@index([stageId])
   @@map("review_finding")
 }
 
@@ -2277,6 +2451,7 @@ model FilingReview {
   reviewedAt    DateTime @default(now()) @map("reviewed_at") @db.Timestamptz
 
   filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  rounds ReviewRoundFiling[] // C8.3: the approval that wrote it
 
   @@index([filingId])
   @@map("filing_review")
@@ -2317,4 +2492,366 @@ model FormEditionAcceptedUntil {
 
   @@index([formEditionId])
   @@map("form_edition_accepted_until")
+}
+
+/// C6.16 (B138): a link sent to one adult on a case, so they answer on their own (concept BR-3, BR-4). The token (32
+/// random bytes, in the link's fragment) and the 6-digit code are kept only as sha256. At most one link per person is
+/// not dead, and one address per case among working links (partial unique indexes in SQL). void_why: taken_back ·
+/// superseded · locked · not_adult (a check in SQL).
+model PersonLink {
+  id             String    @id @default(uuid()) @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  caseId         String    @map("case_id") @db.Uuid
+  subjectId      String    @map("subject_id") @db.Uuid
+  /// Lower case; never in audit text (the masked address is).
+  address        String
+  addressMasked  String    @map("address_masked")
+  addressGivenBy String    @map("address_given_by")
+  tokenHash      String    @unique @map("token_hash") @db.Char(64)
+  codeHash       String?   @map("code_hash") @db.Char(64)
+  codeExpiresAt  DateTime? @map("code_expires_at") @db.Timestamptz
+  wrongTries     Int       @default(0) @map("wrong_tries")
+  sentBy         String    @map("sent_by")
+  sentAt         DateTime  @default(now()) @map("sent_at") @db.Timestamptz
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz
+  acceptedAt     DateTime? @map("accepted_at") @db.Timestamptz
+  consentedAt    DateTime? @map("consented_at") @db.Timestamptz
+  voidedAt       DateTime? @map("voided_at") @db.Timestamptz
+  voidWhy        String?   @map("void_why")
+  voidedBy       String?   @map("voided_by")
+  voidReason     String?   @map("void_reason")
+  supersededById String?   @map("superseded_by_id") @db.Uuid
+  /// The Send request's idempotency key: the same key again sends nothing new.
+  sendKey        String?   @map("send_key")
+
+  case         Case                @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  subject      AnswerSubject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  supersededBy PersonLink?         @relation("PersonLinkSuperseded", fields: [supersededById], references: [id], onDelete: SetNull)
+  supersedes   PersonLink[]        @relation("PersonLinkSuperseded")
+  sessions     PersonLinkSession[]
+  messages     DemoMessage[]
+
+  @@unique([caseId, sendKey])
+  @@index([caseId])
+  @@map("person_link")
+}
+
+/// C6.16: code sends (per email address) and code tries (per network address), for the limits (as extension_code_try).
+/// kind: code_sent · code_try (a check in SQL).
+model PersonLinkTry {
+  id      BigInt   @id @default(autoincrement())
+  kind    String
+  address String   @db.VarChar(254)
+  at      DateTime @default(now()) @db.Timestamptz
+
+  @@index([kind, at, address])
+  @@map("person_link_try")
+}
+
+/// C6.16 (BR-5): the adult's session on /api/link/* only: 8 hours, its token kept only as sha256, revoked when the link dies.
+model PersonLinkSession {
+  id        String    @id @default(uuid()) @db.Uuid
+  linkId    String    @map("link_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash") @db.Char(64)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz
+
+  link PersonLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@index([linkId])
+  @@map("person_link_session")
+}
+
+/// C6.16 stand-in SI-20 (email, the team's AG-10): the demo inbox by address, demo workspace only. kind: link · code.
+/// A code message is deleted when the code is used or replaced; every message of a link when the link dies.
+model DemoMessage {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  linkId      String   @map("link_id") @db.Uuid
+  address     String
+  kind        String
+  subject     String
+  body        String
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt   DateTime @map("expires_at") @db.Timestamptz
+
+  link PersonLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@index([address, createdAt])
+  @@map("demo_message")
+}
+
+/// C6.13 (B135, P-406 (1)): one Make principal, Remove filing, Add filing back or travelling-flag change on a case, with its
+/// reason (typed changes), the roles around it and the preview basis it was applied over. Append-only (trigger).
+model FilingChange {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @map("workspace_id") @db.Uuid
+  caseId         String   @map("case_id") @db.Uuid
+  /// make_principal · remove_filing · add_back · travelling_flag
+  kind           String
+  subjectId      String   @map("subject_id") @db.Uuid
+  /// make_principal: the former principal
+  otherSubjectId String?  @map("other_subject_id") @db.Uuid
+  rolesBefore    Json     @map("roles_before")
+  rolesAfter     Json     @map("roles_after")
+  reason         String?
+  basis          String?  @db.VarChar(64)
+  changedBy      String   @map("changed_by")
+  changedAt      DateTime @default(now()) @map("changed_at") @db.Timestamptz
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId, changedAt])
+  @@map("filing_change")
+}
+
+/// C6.5 part 2 (P-242, P-243): one read of one stored document by one reader (mrz: coded lines by rules; ai_vision: a
+/// letter, replayed from a saved read only). Its one "Confirm & use" is recorded with who and when.
+model DocumentReview {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  caseId      String    @map("case_id") @db.Uuid
+  subjectId   String    @map("subject_id") @db.Uuid
+  documentId  String    @unique @map("document_id") @db.Uuid
+  /// mrz · ai_vision
+  reader      String
+  replayed    Boolean   @default(false)
+  /// [{fact, reason}]: what the reader could not read (never guessed)
+  unreadable  Json
+  readBy      String    @map("read_by")
+  readAt      DateTime  @default(now()) @map("read_at") @db.Timestamptz
+  confirmedBy String?   @map("confirmed_by")
+  confirmedAt DateTime? @map("confirmed_at") @db.Timestamptz
+
+  case     Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  document CaseDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  values   ReadValue[]
+
+  @@index([caseId, subjectId])
+  @@map("document_review")
+}
+
+/// C6.5 part 2 (BR-4): a value a read proposes, apart from answers until its document's Confirm & use.
+model ReadValue {
+  id                 String    @id @default(uuid()) @db.Uuid
+  workspaceId        String    @map("workspace_id") @db.Uuid
+  caseId             String    @map("case_id") @db.Uuid
+  reviewId           String    @map("review_id") @db.Uuid
+  documentId         String    @map("document_id") @db.Uuid
+  subjectId          String    @map("subject_id") @db.Uuid
+  fact               String
+  valueJson          Json      @map("value_json")
+  page               Int
+  reader             String
+  confidence         Float
+  /// P-243: collapsed (check digits passed) · expanded
+  review             String
+  checked            Boolean   @default(false)
+  note               String?
+  /// proposed · used · agreed · conflict · not_asked
+  state              String    @default("proposed")
+  /// The answer Confirm & use wrote, or the one it agreed with
+  answerId           String?   @map("answer_id") @db.Uuid
+  correctedValueJson Json?     @map("corrected_value_json")
+  correctedBy        String?   @map("corrected_by")
+  correctedAt        DateTime? @map("corrected_at") @db.Timestamptz
+
+  case   Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  read   DocumentReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  checks AnswerCheck[]
+
+  @@unique([reviewId, fact])
+  @@index([caseId, subjectId])
+  @@map("read_value")
+}
+
+/// C6.5 part 2 (BR-7, P-242): a typed answer and a document value that differ; one open per person, fact and document (partial
+/// unique index answer_check_one_open, in SQL); resolved only with a reason.
+model AnswerCheck {
+  id                String    @id @default(uuid()) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  caseId            String    @map("case_id") @db.Uuid
+  subjectId         String    @map("subject_id") @db.Uuid
+  fact              String
+  readValueId       String    @map("read_value_id") @db.Uuid
+  documentId        String    @map("document_id") @db.Uuid
+  answerId          String    @map("answer_id") @db.Uuid
+  typedValueJson    Json      @map("typed_value_json")
+  documentValueJson Json      @map("document_value_json")
+  /// open · resolved
+  state             String    @default("open")
+  /// answer · document
+  kept              String?
+  reason            String?
+  openedBy          String    @map("opened_by")
+  openedAt          DateTime  @default(now()) @map("opened_at") @db.Timestamptz
+  resolvedBy        String?   @map("resolved_by")
+  resolvedAt        DateTime? @map("resolved_at") @db.Timestamptz
+
+  case      Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  readValue ReadValue @relation(fields: [readValueId], references: [id], onDelete: Cascade)
+
+  @@index([caseId, subjectId])
+  @@map("answer_check")
+}
+
+/// C7.8 (B141, SA-1B-177 FilingFormAddition): a library form the case officer added to one filing, for one person on it,
+/// never to the combination. Frozen when added (BR-4): the edition, its published map rows and the fill trial are copied
+/// into `frozen` with their fingerprint, so a later library change never changes this case's form. Insert, then a
+/// removed mark only (a trigger refuses any other change); the row is kept when removed (BR-8).
+model FilingFormAddition {
+  id            String        @id @default(uuid()) @db.Uuid
+  workspaceId   String        @map("workspace_id") @db.Uuid
+  caseId        String        @map("case_id") @db.Uuid
+  filingId      String        @map("filing_id") @db.Uuid
+  /// The person on the filing it is for (BR-1): never a role.
+  subjectId     String        @map("subject_id") @db.Uuid
+  formKey       String        @map("form_key")
+  /// The library edition it was frozen from (no foreign key: the frozen copy stands even if the library row goes).
+  editionId     String        @map("edition_id") @db.Uuid
+  editionLabel  String        @map("edition_label")
+  /// fills (published map rows and a passed fill trial) · blank (the official PDF, filled by hand)
+  kind          String
+  /// The frozen form: title, official file and checksum, the published map rows, the facts' definitions they read.
+  frozen        Json
+  frozenSha256  String        @map("frozen_sha256") @db.VarChar(64)
+  /// The fill trial it was proven by (fills only): the register's record.
+  trial         Json?
+  channel       FilingChannel
+  /// HAND_SCANNED (default) or NONE (switched off by staff with a reason, SA-1B-102 r5).
+  signature     String
+  signedBy      String?       @map("signed_by")
+  signatureReason String?     @map("signature_reason")
+  addedBy       String        @map("added_by")
+  addedAt       DateTime      @default(now()) @map("added_at") @db.Timestamptz
+  reason        String?
+  removedBy     String?       @map("removed_by")
+  removedAt     DateTime?     @map("removed_at") @db.Timestamptz
+  removedReason String?       @map("removed_reason")
+
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@map("filing_form_addition")
+}
+
+/// C8.3 (B144; P-406, P-412; concept screens/B144/concept.md r2, B1): one send for review on a case. kind: send ·
+/// review_now (a solo firm: sent and opened in one step) · one_step (the C7.6 route, challenge M1) · reapprove (P-412:
+/// one-click re-approve of the forms a fact change withdrew). Append-only (trigger).
+model ReviewRound {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  /// Counts per case (1, 2, …).
+  number      Int
+  kind        String
+  sentBy      String   @map("sent_by")
+  sentAt      DateTime @default(now()) @map("sent_at") @db.Timestamptz
+
+  case    Case                @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  filings ReviewRoundFiling[]
+  forms   ReviewRoundForm[]
+
+  @@unique([caseId, number])
+  @@map("review_round")
+}
+
+/// C8.3 (B1, AG-7-29 r9): one filing in one round, with its own status (sent → under_review → approved | sent_back) and
+/// its own round number. At most one open row per filing (partial unique index). Moves guarded by a trigger.
+model ReviewRoundFiling {
+  id                String    @id @default(uuid()) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  caseId            String    @map("case_id") @db.Uuid
+  roundId           String    @map("round_id") @db.Uuid
+  filingId          String    @map("filing_id") @db.Uuid
+  filingRound       Int       @map("filing_round")
+  /// sent · under_review · approved · sent_back
+  status            String    @default("sent")
+  openedBy          String?   @map("opened_by")
+  openedAt          DateTime? @map("opened_at") @db.Timestamptz
+  decidedBy         String?   @map("decided_by")
+  decidedAt         DateTime? @map("decided_at") @db.Timestamptz
+  /// Sent back: [{ text, item?, check? }] (BR-5)
+  reasons           Json?
+  /// Approved: the checklist item keys confirmed unticked (BR-4, AG17-D78)
+  confirmedUnticked Json?     @map("confirmed_unticked")
+  /// The representative of record at the decision (M2)
+  representative    String?
+  /// reviewed · self_reviewed
+  reviewKind        String?   @map("review_kind")
+  selfStatement     String?   @map("self_statement")
+  filingReviewId    String?   @map("filing_review_id") @db.Uuid
+
+  case   Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  round  ReviewRound       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  filing Filing            @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  review FilingReview?     @relation(fields: [filingReviewId], references: [id], onDelete: NoAction)
+  forms  ReviewRoundForm[]
+  checks ReviewCheck[]
+
+  @@unique([roundId, filingId])
+  @@unique([filingId, filingRound])
+  @@index([caseId])
+  @@map("review_round_filing")
+}
+
+/// C8.3 (B2): one form of a filing in a round, by filing item, frozen at send (own answer snapshot, facts hash, file:
+/// validated copy · generated copy matching the facts · none · waits) and stamped once on approval.
+model ReviewRoundForm {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @map("workspace_id") @db.Uuid
+  caseId          String    @map("case_id") @db.Uuid
+  roundId         String    @map("round_id") @db.Uuid
+  roundFilingId   String    @map("round_filing_id") @db.Uuid
+  filingId        String    @map("filing_id") @db.Uuid
+  itemId          String    @map("item_id") @db.Uuid
+  formNumber      String    @map("form_number")
+  subjectId       String    @map("subject_id") @db.Uuid
+  snapshotId      String?   @map("snapshot_id") @db.Uuid
+  factsHash       String?   @map("facts_hash") @db.VarChar(64)
+  /// validated_copy · generated_copy · none · waits
+  fileKind        String    @map("file_kind")
+  fileId          String?   @map("file_id") @db.Uuid
+  fileSha256      String?   @map("file_sha256") @db.VarChar(64)
+  stampSnapshotId String?   @map("stamp_snapshot_id") @db.Uuid
+  stampHash       String?   @map("stamp_hash") @db.VarChar(64)
+  stampFileKind   String?   @map("stamp_file_kind")
+  stampFileSha256 String?   @map("stamp_file_sha256") @db.VarChar(64)
+  stampedBy       String?   @map("stamped_by")
+  stampedAt       DateTime? @map("stamped_at") @db.Timestamptz
+
+  case          Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  round         ReviewRound       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  filing        Filing            @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  row           ReviewRoundFiling @relation(fields: [roundFilingId], references: [id], onDelete: Cascade)
+  item          FilingItem        @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  snapshot      AnswerSnapshot?   @relation("ReviewFrozen", fields: [snapshotId], references: [id], onDelete: Cascade)
+  stampSnapshot AnswerSnapshot?   @relation("ReviewStamp", fields: [stampSnapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([roundFilingId, itemId])
+  @@index([itemId])
+  @@map("review_round_form")
+}
+
+/// C8.3 (BR-2): one checklist item of a filing in a round (default · program · confirmations · form), copied when sent.
+model ReviewCheck {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  caseId        String    @map("case_id") @db.Uuid
+  roundFilingId String    @map("round_filing_id") @db.Uuid
+  itemKey       String    @map("item_key")
+  source        String
+  wording       String
+  /// The item's live state when sent (default items), e.g. { open: 0 } or { verified: 5, required: 5 }
+  live          Json?
+  tickedBy      String?   @map("ticked_by")
+  tickedAt      DateTime? @map("ticked_at") @db.Timestamptz
+
+  case Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  row  ReviewRoundFiling @relation(fields: [roundFilingId], references: [id], onDelete: Cascade)
+
+  @@unique([roundFilingId, itemKey])
+  @@map("review_check")
 }

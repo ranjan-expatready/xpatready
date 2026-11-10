@@ -57,6 +57,12 @@ type SixLines = { basis: string; forms: { code: string; who?: string; channel?: 
 const officialFiles = (): string[] => JSON.parse(readFileSync(join(SOLUTION, "official-sources", "ircc", "manifest.json"), "utf8")).items.map((i: { file: string }) => i.file);
 type SampleFile = { pathways: { key: string; label: string; type: "INDIVIDUAL" | "CORPORATE"; description: string }[]; programs: { pathway: string; key: string; label: string; description: string; categories: SampleNode[] }[] };
 
+/** C10.2: GET /demo/status `checkpoint`, by the audit line each load writes (Reset removes them). */
+const CHECKPOINT_OF: Record<string, "finished_story" | "configured"> = { "finished story": "finished_story", "configured checkpoint": "configured" };
+/** C10.2: the finished story's job, as GET /demo/status `story` shows it. */
+type StoryJob = { state: "idle" | "running" | "done" | "failed"; started_at?: string; finished_at?: string; by?: string; seconds?: number; error?: string;
+  stages?: { key: string; title: string; status: string; shows: string; why: string | null }[]; rows?: CheckpointRow[]; log?: string[]; cases?: { family: string | null; thin: string | null } };
+
 @Injectable()
 export class Demo implements OnModuleInit {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Studio) private readonly studio: Studio, @Inject(Sources) private readonly sources: Sources, @Inject(Ai) private readonly ai: Ai, @Inject(Intake) private readonly intake: Intake, @Inject(Finder) private readonly finder: Finder, @Inject(Forms) private readonly forms: Forms, @Inject(FormLibrary) private readonly formLibrary: FormLibrary, @Inject(ModuleRef) private readonly moduleRef: ModuleRef) {}
@@ -71,7 +77,51 @@ export class Demo implements OnModuleInit {
     // loaded: the sample inputs are in this workspace; programsExist: something blocks loading them (QA-12).
     const [sample, programs] = await Promise.all([this.db.auditEvent.count({ where: { workspaceId, action: "loaded", entity: "sample inputs" } }), this.db.programDef.count({ where: { workspaceId } })]);
     // programsExist: any name in the Structure, Pathways included (W1-03: a read or a reset creates none).
-    return { loaded: sample > 0, programsExist: programs > 0, scope: await this.scope(workspaceId), preserved: this.preserved() };
+    // C10.2: `checkpoint`, the last checkpoint loaded since the last reset (Reset removes the audit lines it reads), and
+    // `story`, the finished story's job (running, done with its stages, or failed with its words).
+    const last = await this.db.auditEvent.findFirst({ where: { workspaceId, action: "loaded", entity: { in: Object.keys(CHECKPOINT_OF) } }, orderBy: { at: "desc" }, select: { entity: true } });
+    return { loaded: sample > 0, programsExist: programs > 0, scope: await this.scope(workspaceId), preserved: this.preserved(), checkpoint: last ? CHECKPOINT_OF[last.entity] : null, story: this.story };
+  }
+
+  /** C10.2 the finished story (DEMO.md checkpoint 3; Demo › Load the finished story): a job. Empties the demo when it has
+   *  anything (only with "RESET" typed, as Reset), loads the configured checkpoint with its finished-story steps
+   *  (features/checkpoint/125, 200: the family case to a recorded submission through the product's own routes, and a thin
+   *  case left on release 1). One load at a time: the claim is taken before anything awaits. Loading twice gives the
+   *  same story: each load starts from empty. US$0. */
+  async finishedStory(actor: Actor, body?: { confirm?: unknown } | null) {
+    need(actor, "author");
+    if (!isDemoWorkspace()) fail(DEMO_ONLY, HttpStatus.CONFLICT);
+    if (this.loading) fail("A sample load, a reset or the finished story is already running: wait for it to finish.", HttpStatus.CONFLICT);
+    this.loading = true;
+    let wipeFirst = false;
+    try {
+      wipeFirst = (await this.db.programDef.count({ where: { workspaceId: await this.ws.id() } })) > 0;
+      if (wipeFirst && body?.confirm !== "RESET") fail('The demo has content: loading the finished story empties it first. Type RESET to confirm.');
+    } catch (e) { this.loading = false; throw e; }
+    const started_at = new Date().toISOString();
+    this.story = { state: "running", started_at, by: actor.id };
+    void this.runStory(actor, wipeFirst, started_at).finally(() => { this.loading = false; });
+    return { state: "running", started_at, emptied_first: wipeFirst, words: "Loading the finished story: the configured checkpoint, then the family case to a recorded submission. This takes a few minutes; Demo › Load the finished story shows when it is done." };
+  }
+  private story: StoryJob = { state: "idle" };
+  private storyAsked = false;
+  private async runStory(actor: Actor, wipeFirst: boolean, started_at: string) {
+    const t0 = Date.now();
+    try {
+      if (wipeFirst) await this.wipe(actor);
+      this.storyAsked = true;
+      const out = await this.loadClaimed(actor, await this.ws.id(), true, true, "Choose Demo › Load the finished story again: it empties the demo first.");
+      const stages = ((out as { story?: StoryJob["stages"] } | undefined)?.story ?? []);
+      const seconds = (Date.now() - t0) / 1000, count = (st: string) => (stages ?? []).filter((x) => x.status === st).length;
+      await this.audit.log(await this.ws.id(), actor.id, "loaded", "finished story", null, `${actor.name} loaded the finished story in ${seconds.toFixed(1)} s: ${count("done")} stages done, ${count("partial")} partly, ${count("waiting")} waiting`);
+      this.story = { state: "done", started_at, finished_at: new Date().toISOString(), by: actor.id, seconds, stages, rows: (out as { checkpoint?: CheckpointRow[] } | undefined)?.checkpoint ?? [], log: out?.log ?? [], cases: (out as { story_cases?: StoryJob["cases"] } | undefined)?.story_cases };
+    } catch (e) {
+      const said = e instanceof HttpException ? (e.getResponse() as { detail?: string; message?: string } | string) : null;
+      const error = typeof said === "string" ? said : said?.detail ?? said?.message ?? "an unexpected error on the server (the details are in the server log)";
+      if (!said) console.error("[demo] the finished story stopped", e);
+      // Break m: the story's own words first, then the refusal (a load's "Reset the demo first" alone misleads here).
+      this.story = { state: "failed", started_at, finished_at: new Date().toISOString(), by: actor.id, seconds: (Date.now() - t0) / 1000, error: `The finished story stopped: ${String(error)}`.slice(0, 600) };
+    } finally { this.storyAsked = false; }
   }
 
   /** body.sample "six" (the Demo menu, S7): the six agreed combinations (P-148). No body: the suites' fixture, today's
@@ -385,7 +435,7 @@ export class Demo implements OnModuleInit {
    *  nothing and times nothing itself: a step's refusal stops the load as before ("Loading stopped after: …"). */
   private async loadConfigured(actor: Actor, workspaceId: string, t0: number, log: string[]) {
     if (!this.steps.length) throw new Error("the configured checkpoint has no steps (Demo.onModuleInit did not read api/src/features/checkpoint)"); // review m7
-    const ctx = { actor, workspaceId, t0, log, db: this.db, audit: this.audit, result: {},
+    const ctx = { actor, workspaceId, t0, log, db: this.db, audit: this.audit, result: {}, story: this.storyAsked ? "finished" : undefined,
       get: <T>(cls: new (...a: never[]) => T) => this.moduleRef.get(cls, { strict: false }), settled: (id: string) => this.settled(id) } as CheckpointContext;
     // Before anything is written, a step may swap an official file in the six's load (row 17's IMM 5476 2021).
     const swap: Record<string, string> = {};
@@ -488,6 +538,7 @@ export class Demo implements OnModuleInit {
   /** Reset's work, once the one-at-a-time claim is held (by reset, or by resetToSix for its whole run). */
   private async wipe(actor: Actor) {
     const workspaceId = await this.ws.id();
+    if (this.story.state !== "running") this.story = { state: "idle" }; // C10.2: a reset forgets the last story's result
     this.ai.forgetQueue(); // queued AI steps of this workspace must not start; running ones find their rows gone and stop
     const before = { scope: await this.scope(workspaceId), preserved: this.preserved() };
     const t0 = Date.now();
@@ -495,6 +546,7 @@ export class Demo implements OnModuleInit {
     await this.db.$transaction(async (tx) => {
       // Children first; every table is scoped to the demo workspace id.
       await tx.case.deleteMany({ where: ws }); await tx.party.deleteMany({ where: ws }); // runtime lane (R1): cases (with their pins and participants), then people with their answers and rows
+      await tx.route.deleteMany({ where: ws }); // C6.17: the Sample routes (no foreign key to the workspace); a case's stages went with its case
       await tx.proposalItem.deleteMany({ where: ws }); await tx.draftingJob.deleteMany({ where: ws }); await tx.aiBatch.deleteMany({ where: ws });
       await tx.testFamily.deleteMany({ where: ws }); // G4 (forms lane): test families; their keys and runs go with them
       await tx.reviewSignoff.deleteMany({ where: ws }); await tx.reviewSubmission.deleteMany({ where: ws }); await tx.configRelease.deleteMany({ where: ws }); await tx.packVersion.deleteMany({ where: ws });

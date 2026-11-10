@@ -1,0 +1,5 @@
+PASS  QA-362 setup: round 2 sent for the principal's filing (setup_c83_walk.ts)
+FAIL  QA-362 (C8.3): each form's "Facts on this form" lists each fact once and counts distinct facts (3 forms read) — {"found":[{"form":"IMM 5476 · Sample Client A","said":31,"rows":31,"distinct":23,"repeated":[["Family name (surname) as shown on passport or travel document · the representative = Representative",2],["Given name(s) as shown on passport or travel document · the representative = Sample",2],["Representative's membership number with their regulatory body · The application = SAMPLE",4],["Canadian province or territory of the law society the representative belongs to · The application = SAMPLE",2]]},{"form":"IMM 5257 · Sample Client A","said":75,"rows":76,"distinct":48,"repeated":[["Country or territory you are applying from · Sample Client A = India",2],["Date of birth · Sample Client A = 1986-11-09",3],["Current mailing address · Sample Client A = Sample City Canada Sample Road",9],["Person's 
+
+1/2 passed
+qa362 EXIT 1

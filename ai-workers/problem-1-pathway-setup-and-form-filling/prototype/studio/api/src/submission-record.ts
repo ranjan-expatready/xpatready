@@ -8,7 +8,8 @@
 //   * refuseIfRecorded: the read-only lock (C8.2-9): a recorded filing is never changed (channel, split, entered, number).
 import { HttpException, HttpStatus } from "@nestjs/common";
 import { RUNTIME_ACTORS, type Db } from "./core.ts";
-import type { CaseTaskView, FilingRecordView } from "../../contracts/submission-record.ts";
+import type { CaseTaskView } from "../../contracts/submission-record.ts";
+import type { RecordWithReceipts } from "../../contracts/fee-receipt.ts";
 import type { FormFact } from "../../engine/runtime/forms.ts";
 import { changedSince, filedEarlierWords } from "../../engine/runtime/submission-record.ts";
 
@@ -30,7 +31,8 @@ export async function refuseIfRecorded(q: Db | Tx, filingIds: string[], what: st
 /** C8.2-9 (review M1): once any filing of a case is recorded, its people are not changed (added, or marked travelling or
  *  not): either would add a filing to a recorded submission or drop a recorded one from the view. */
 export async function refuseIfCaseRecorded(q: Db | Tx, caseId: string, what: string) {
-  if (await q.filingRecord.count({ where: { caseId } })) throw new HttpException({ type: "https://expatready.local/problems/recorded", title: "Recorded as submitted", status: 409,
+  // C6.17 (review M1): only a record on the case's current stage: an ended stage's record never freezes the next application.
+  if (await q.filingRecord.count({ where: { caseId, filing: { stage: { state: "CURRENT" } } } })) throw new HttpException({ type: "https://expatready.local/problems/recorded", title: "Recorded as submitted", status: 409,
     detail: `This application is recorded as submitted to IRCC, so its people are not changed: ${what}. A new applicant goes on a new case.`, errors: [{ field: "case", message: "Recorded as submitted: read-only." }] }, HttpStatus.CONFLICT);
 }
 
@@ -46,7 +48,9 @@ export async function recordedOverlay(db: Db, a: { workspaceId: string; caseId: 
   const ids = a.filings.map((f) => f.id);
   // One read, no transaction (C6.12 break B1: 120 reads of one case at once must all answer; a second transaction per
   // read ran the pool out): each filing with its status, record, UCIs and corrections.
-  const stored = ids.length ? await db.filing.findMany({ where: { id: { in: ids } }, select: { id: true, status: true, record: true,
+  const stored = ids.length ? await db.filing.findMany({ where: { id: { in: ids } }, select: { id: true, status: true,
+    // B149: each record with its fee receipt uploads, oldest first (the newest is the receipt).
+    record: { include: { feeReceipts: { orderBy: [{ uploadedAt: "asc" }, { id: "asc" }], select: { id: true, fileName: true, mediaType: true, sizeBytes: true, uploadedBy: true, uploadedAt: true } } } },
     personRecords: { orderBy: [{ recordedAt: "asc" }, { id: "asc" }] }, corrections: { orderBy: [{ correctedAt: "asc" }, { id: "asc" }] } } }) : [];
   const changed = new Map<string, { filing: string; words: string }>(), current = new Set<string>();
   for (const f of a.filings) {
@@ -54,8 +58,9 @@ export async function recordedOverlay(db: Db, a: { workspaceId: string; caseId: 
     if (!rec) { if (row?.status === "READY_TO_FILE") f.status = "ready_to_file"; continue; }
     const person = (s: string | null) => (s ? a.label.get(s) ?? "a person" : null);
     const applying = f.applicants.filter((x) => (x.mode ?? "applying") === "applying").map((x) => x.subject);
-    const view: FilingRecordView = {
+    const view: RecordWithReceipts = {
       portal: rec.portal, our_reference: rec.ourReference, submitted_on: day(rec.submittedOn), application_number: rec.applicationNumber, fee_receipt: rec.feeReceipt,
+      fee_receipt_files: rec.feeReceipts.map((x) => ({ id: x.id, file_name: x.fileName, media_type: x.mediaType, size_bytes: x.sizeBytes, uploaded_by: nameOf(x.uploadedBy)!, uploaded_at: x.uploadedAt.toISOString() })),
       prepared_by: { id: rec.preparedBy, name: nameOf(rec.preparedBy)! },
       // P-155: the solo firm's one person reviews their own filing: "Self-reviewed".
       reviewed_by: rec.reviewedBy ? { id: rec.reviewedBy, name: nameOf(rec.reviewedBy)!, self: rec.reviewedBy === rec.preparedBy } : null,
@@ -77,10 +82,12 @@ export async function recordedOverlay(db: Db, a: { workspaceId: string; caseId: 
     }
   }
   if (changed.size || current.size) {
-    const open = await db.caseTask.findMany({ where: { caseId: a.caseId, kind: "after_filing_change", state: "open" } });
+    const open = await db.caseTask.findMany({ where: { caseId: a.caseId, stage: { state: "CURRENT" }, kind: "after_filing_change", state: "open" } });
     // One open task per form and kind (a partial unique index): a read that finds the change again adds nothing.
     const fresh = [...changed].filter(([item]) => !open.some((t) => t.itemId === item));
-    if (fresh.length) await db.caseTask.createMany({ data: fresh.map(([item, x]) => ({ workspaceId: a.workspaceId, caseId: a.caseId, filingId: x.filing, itemId: item, kind: "after_filing_change", words: x.words, createdBy: a.actor })), skipDuplicates: true });
+    // C6.17 (challenge M3): a task belongs to the stage current when it is made (a write on an ended stage is refused).
+    const stageId = fresh.length ? (await db.caseStage.findFirst({ where: { caseId: a.caseId, state: "CURRENT" }, select: { id: true } }))?.id : undefined;
+    if (fresh.length && stageId) await db.caseTask.createMany({ data: fresh.map(([item, x]) => ({ workspaceId: a.workspaceId, caseId: a.caseId, stageId, filingId: x.filing, itemId: item, kind: "after_filing_change", words: x.words, createdBy: a.actor })), skipDuplicates: true });
     // Break M4 on #924: an open task says the change as it stands now, and closes itself when the form is current again.
     for (const t of open) {
       const now = changed.get(t.itemId ?? "");
@@ -88,6 +95,6 @@ export async function recordedOverlay(db: Db, a: { workspaceId: string; caseId: 
       if (!now && t.itemId && current.has(t.itemId)) await db.caseTask.updateMany({ where: { id: t.id, state: "open" }, data: { state: "done", doneBy: "rules", doneAt: new Date() } });
     }
   }
-  const tasks = await db.caseTask.findMany({ where: { caseId: a.caseId }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+  const tasks = await db.caseTask.findMany({ where: { caseId: a.caseId, stage: { state: "CURRENT" } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
   return tasks.map((t) => ({ id: t.id, kind: t.kind as "after_filing_change", filing: t.filingId, item: t.itemId, words: t.words, state: t.state as "open" | "done", created_at: t.createdAt.toISOString(), done: t.doneAt ? { by: t.doneBy === "rules" ? "Closed by itself: the form's answers are as filed again" : nameOf(t.doneBy) ?? "", at: t.doneAt.toISOString() } : null }));
 }

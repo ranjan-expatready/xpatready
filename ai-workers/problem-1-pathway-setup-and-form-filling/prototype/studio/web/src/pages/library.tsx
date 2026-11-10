@@ -1,4 +1,5 @@
 import * as React from "react";
+import { MustVerifySection } from "@/pages/must-verify-panel";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ChevronRight, GitMerge, Pencil, Plus, Save, Search, Undo2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,6 +15,7 @@ import { nameOf } from "@/pages/review";
 import { ItemStatusNote, useCanAuthor, useItemLifecycle } from "@/pages/library-item-actions";
 import { TipProvider } from "@/components/status";
 import { AdminDetails } from "@/components/details";
+import { FieldScopePanel, SCOPE_PILL } from "@/pages/field-scope"; // C3.16
 
 /** QA-39: value types in words (the stored code stays the value). */
 const TYPE_WORD: Record<string, string> = { text: "Text", date: "Date", yes_no: "Yes or no", code: "List of choices", country: "Country", number: "Number", address: "Address", phone: "Phone number", email: "Email address",
@@ -115,6 +117,7 @@ export function FieldPage() {
   const actorId = useActorId();
   const session = useApi<any>(["session", actorId], "/session");
   const fields = useLibraryFields();
+  const canAuthorField = useCanAuthor(); // C7.9
   const cur = f.data?.current;
   const place = f.data?.placements?.[0];
   const [meaning, setMeaning] = React.useState(""), [type, setType] = React.useState("text"), [why, setWhy] = React.useState("");
@@ -140,7 +143,7 @@ export function FieldPage() {
     <div className="mx-auto max-w-7xl space-y-5">
       <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to="/library/fields" className="hover:underline">Fields</Link><ChevronRight className="size-3" /><span>{shown}</span></nav>
       {/* UX-A part 4 (EXPERIENCE §5): the field's key is under Details, not under its name. */}
-      <div><h1 className="text-xl font-semibold">{shown}</h1><p className="mt-1 text-sm">{cur.meaning}</p><div className="mt-2 flex gap-1"><Pill>v{cur.version}</Pill>{cur.mergedIntoKey ? <Pill>Merged</Pill> : retiredNow ? <Pill>Retired</Pill> : <OriginPill origin={cur.origin} status={cur.status} />}<Pill>{cur.scope === "CASE_LEVEL" ? "once per case" : "about a person"}</Pill></div><AdminDetails className="mt-2" items={[["Field key", key]]} /></div>
+      <div><h1 className="text-xl font-semibold">{shown}</h1><p className="mt-1 text-sm">{cur.meaning}</p><div className="mt-2 flex gap-1"><Pill>v{cur.version}</Pill>{cur.mergedIntoKey ? <Pill>Merged</Pill> : retiredNow ? <Pill>Retired</Pill> : <OriginPill origin={cur.origin} status={cur.status} />}<Pill>{SCOPE_PILL[cur.scope] ?? "about each person"}</Pill></div><AdminDetails className="mt-2" items={[["Field key", key]]} /></div>
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="space-y-3 rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
           <h2 className="font-semibold">Definition</h2>
@@ -172,7 +175,9 @@ export function FieldPage() {
           </> : null}
         </section>
       </div>
+      <FieldScopePanel fieldKey={key} retired={retiredNow || !!cur.mergedIntoKey} />
       <OtherNames fieldKey={key} cur={cur} shown={shown} retiredNow={retiredNow} actors={session.data?.actors} invalidate={inv} />
+      <MustVerifySection fieldKey={key} canAuthor={canAuthorField} />
       <section data-format-panel className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
         <h2 className="font-semibold">Format</h2>
         <p className="mt-1 text-sm text-text-muted">Type: {TYPE_WORD[cur.valueType] ?? cur.valueType}. The format is read from the official forms that ask it (the PDF form field and the form's own checks, no AI) and the rules listed are checked on every answer; nobody types a rule here.</p>
@@ -303,6 +308,10 @@ export function SectionsPage() {
   const reuse = useReuse("sections");
   const shown = (s.data ?? []).filter((x) => reuse.keep(x.key));
   const [editing, setEditing] = React.useState<{ key: string; title: string } | null>(null);
+  const [marking, setMarking] = React.useState<SectionMark | null>(null);
+  // Review m2: focus goes back to the row's button when the dialog closes.
+  const opener = React.useRef<HTMLElement | null>(null);
+  const closeMark = () => { setMarking(null); const el = opener.current; window.setTimeout(() => el?.isConnected ? el.focus() : document.querySelector<HTMLElement>(`[data-item="${marking?.key}"] [data-background-change] a`)?.focus(), 0); };
   // C11.9: delete, retire and restore through the one guard; a retired section is listed only under "Retired".
   const canAuthor = useCanAuthor();
   const life = useItemLifecycle("sections", () => s.refetch(), canAuthor);
@@ -312,10 +321,61 @@ export function SectionsPage() {
     <TipProvider><div className="mx-auto max-w-6xl space-y-4">
       <div><h1 className="text-xl font-semibold">Sections</h1><p className="mt-1 text-sm text-text-muted">Reusable groups of questions. Each combination selects the sections its questionnaire uses.</p><Origin>the forms' own parts, each confirmed on To review. Nothing is added by hand; a combination picks its sections on its Smart questionnaire (SQR) tab.</Origin></div>
       <div className="flex flex-wrap items-center gap-2"><ReuseBar reuse={reuse} noun="section" /><Select className="w-56" value={retired ? "retired" : "current"} onChange={(e) => setRetired(e.target.value === "retired")} aria-label="Filter"><option value="current">Current sections</option><option value="retired">Retired</option></Select><span className="text-xs text-text-muted">{shownRows.length} of {s.data?.length ?? 0}</span></div>
-      {s.isLoading || reuse.waiting ? <Spinner label="Loading" /> : !s.data?.length ? <EmptyState title="No sections yet" description="Sections come with the forms' parts; add a form first." /> : !shown.length ? <NoneInCombination reuse={reuse} noun="section" /> : !shownRows.length ? <p className="text-sm text-text-muted">{retired ? "No section is retired." : "Every section is retired: choose Retired to see them."}</p> : <Table head={["Section", "Meaning", "Questions", "Used by combinations", "Status"]}>{shownRows.map((x) => <tr key={x.key} data-item={x.key}><td className="font-medium">{x.title}</td><td className="max-w-lg text-xs text-text-muted">{x.meaning}<SourceNote r={x} /></td><td>{x.questions}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={x.key} />{x.retired ? <Pill>Retired</Pill> : <ListPill origin={x.origin} status={x.status} />}</div><ItemStatusNote r={x} /><div className="mt-1.5">{life.action({ ...x, name: x.title }, () => (x.retired ? life.view({ ...x, name: x.title }) : setEditing({ key: x.key, title: x.title })))}</div></td></tr>)}</Table>}
+      {s.isLoading || reuse.waiting ? <Spinner label="Loading" /> : !s.data?.length ? <EmptyState title="No sections yet" description="Sections come with the forms' parts; add a form first." /> : !shown.length ? <NoneInCombination reuse={reuse} noun="section" /> : !shownRows.length ? <p className="text-sm text-text-muted">{retired ? "No section is retired." : "Every section is retired: choose Retired to see them."}</p> : <Table head={["Section", "Meaning", "Questions", "Used by combinations", "Status"]}>{shownRows.map((x) => <tr key={x.key} data-item={x.key}><td className="font-medium">{x.title}</td><td className="max-w-lg text-xs text-text-muted">{x.meaning}<SourceNote r={x} /></td><td>{x.questions}</td><td className="text-xs">{usedWords(x.used_in)}</td><td><div className="flex flex-wrap gap-1"><ReuseMark reuse={reuse} k={x.key} />{x.retired ? <Pill>Retired</Pill> : <ListPill origin={x.origin} status={x.status} />}</div><ItemStatusNote r={x} /><BackgroundMark s={x} /><div className="mt-1.5 flex flex-wrap items-center justify-end gap-1"><BackgroundButton s={x} canAuthor={canAuthor} onOpen={(el) => { opener.current = el; setMarking(x); }} />{life.action({ ...x, name: x.title }, () => (x.retired ? life.view({ ...x, name: x.title }) : setEditing({ key: x.key, title: x.title })))}</div></td></tr>)}</Table>}
       {editing ? <RenameSection section={editing} onClose={() => setEditing(null)} /> : null}
+      {marking ? <BackgroundDialog s={marking} onClose={closeMark} onSent={() => { void s.refetch().then(closeMark); }} /> : null}
       {life.node}
     </div></TipProvider>
+  );
+}
+
+/** B154 (P-97, P-244, P-412 F11): whether a section holds background answers, for every combination. Shown on its row;
+ *  the author proposes a change with a reason, a second person approves it on To review, the next release carries it. */
+type SectionMark = { key: string; title: string; questions: number; retired?: boolean; client_only: boolean; background_change: { id: string; status: string; on: boolean; by: string; reason: string | null } | null };
+const BACKGROUND_MEANS = "The client's own answers for every combination: never from a document or the case officer's records. Staff may record one the client gives by phone or in person, marked Officer, and the client re-confirms it before signing.";
+function BackgroundMark({ s }: { s: SectionMark }) {
+  const ch = s.background_change;
+  if (!s.client_only && !ch) return null;
+  return (
+    <div className="mt-1.5 space-y-1 text-xs" data-background={s.client_only ? "on" : "off"}>
+      {s.client_only ? <Pill title={BACKGROUND_MEANS}>Background answers<span className="sr-only">: {BACKGROUND_MEANS}</span></Pill> : null}
+      {ch ? (
+        <p className="text-text-muted" data-background-change={ch.status}>
+          {ch.status === "WAITING" ? <>Waiting for a second person on <Link className="text-text-link underline" to={`/review/change/${ch.id}`}>To review</Link>: {ch.on ? "background answers" : "no longer background answers"}.</>
+            : ch.status === "RETURNED" ? <>Returned on <Link className="text-text-link underline" to={`/review/change/${ch.id}`}>To review</Link>: correct or withdraw it there.</>
+            : <>Approved: {ch.on ? "background answers" : "no longer background answers"} from the next release (<Link className="text-text-link underline" to={`/review/change/${ch.id}`}>its change</Link>).</>}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+function BackgroundButton({ s, canAuthor, onOpen }: { s: SectionMark; canAuthor: boolean; onOpen: (el: HTMLElement) => void }) {
+  if (!canAuthor || s.retired || s.background_change || !(s.questions > 0 || s.client_only)) return null;
+  const text = s.client_only ? "Not background answers…" : "Background answers…";
+  return <Button size="sm" variant="ghost" onClick={(e) => onOpen(e.currentTarget)} data-background-open aria-label={`${text} ${s.title}`}>{text}</Button>;
+}
+function BackgroundDialog({ s, onClose, onSent }: { s: SectionMark; onClose: () => void; onSent: () => void }) {
+  const on = !s.client_only;
+  const [why, setWhy] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const send = async () => {
+    setBusy(true); setError(null);
+    try { await api(`/library/sections/${encodeURIComponent(s.key)}/background`, { method: "POST", json: { on, reason: why.trim() } }); onSent(); }
+    catch (e) { setError((e as ApiError).message); }
+    finally { setBusy(false); }
+  };
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()} guard title={on ? `Mark "${s.title}" as background answers?` : `"${s.title}": no longer background answers?`}
+      description="For every combination that asks its questions. A second person approves it on To review; it goes out with the next release that carries them."
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => void send()} busy={busy} data-background-send>Send to To review</Button></>}>
+      <div className="space-y-3 text-sm" data-background-form>
+        <p>{on ? <>Its {s.questions} question{s.questions === 1 ? "" : "s"} become background answers. </> : <>Its questions stop being background answers: a document or the case officer may then be chosen as their source, and an answer staff record no longer waits for the client. </>}<span className="text-text-muted">Background answers: {BACKGROUND_MEANS}</span></p>
+        <p className="text-xs text-text-muted">Unconfirmed: expert, no counsel.</p>
+        <Field label="Why (required; shown to the second person)"><Textarea className="min-h-16" value={why} onChange={(e) => setWhy(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "background-error" : undefined} data-background-why /></Field>
+        {error ? <p role="alert" id="background-error" className="text-xs text-text-danger" data-background-error>{error}</p> : null}
+      </div>
+    </Dialog>
   );
 }
 

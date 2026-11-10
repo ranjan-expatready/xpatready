@@ -1,0 +1,20 @@
+GitHub Actions: workflow nightly.yml, run 42616659060 (workflow_dispatch, head cfaa199f4e4ea5b30718d1d113b5104216406781, conclusion success)
+job 129158138530 'packs (C3.16)', conclusion success. Lines from its log:
+2026-11-09T12:25:16.1017919Z ##[group]Run [ -f "$S/tools/gate-b.mjs" ] || { echo "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)"; exit 2; }
+2026-11-09T12:25:16.1018409Z [ -f "$S/tools/gate-b.mjs" ] || { echo "studio/tools/gate-b.mjs is not on this branch yet (gate B, #804)"; exit 2; }
+2026-11-09T12:25:16.1018761Z echo "### $CAP on $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"
+2026-11-09T12:25:16.1019020Z node "$S/tools/gate-b.mjs" --title "$CAP" --kind code
+2026-11-09T12:25:16.1035578Z shell: /usr/bin/bash -e {0}
+2026-11-09T12:25:16.1035737Z env:
+2026-11-09T12:25:16.1035917Z   P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+2026-11-09T12:25:16.1036403Z   S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+2026-11-09T12:25:16.1036687Z   CAP: C3.16
+2026-11-09T12:25:16.1036807Z   GATE_B_JOBS: 1
+2026-11-09T12:25:16.1036927Z   KIND: code
+2026-11-09T12:25:16.1037045Z   GATE_B_DATA: six
+2026-11-09T12:25:16.1037356Z ##[endgroup]
+2026-11-09T12:25:16.1517455Z Gate B: the PR names C3.16; claims Works for none (no bug check).
+2026-11-09T12:25:16.1518862Z   packs: C3.16.test.ts
+2026-11-09T12:26:23.6064630Z     C3.16.test.ts on the six: exit 0, 59/59 passed (67 s: copy 4, Reset to the six 13, run 50)
+2026-11-09T12:26:23.6065482Z   packs took 67 s in all
+2026-11-09T12:26:23.6065784Z Gate B: passed.

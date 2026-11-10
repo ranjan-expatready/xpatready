@@ -1,16 +1,19 @@
-// Form copies from a case (runtime lane, R1d, plan §8 RT-13…RT-15): which confirmed facts one form reads for one
-// person, a hash of them, what changed since a copy was made, and whether the form can be filed (P-71). Pure: the API
-// writes the copy (api/src/fill-case.ts) through the shared filler. Only confirmed facts are ever written (P-72).
+// Form copies from a case (runtime lane, R1d, plan §8 RT-13…RT-15): which facts one form reads for one person, a hash
+// of them, what changed since a copy was made, and whether the form can be filed (P-71). Pure: the API writes the copy
+// (api/src/fill-case.ts) through the shared filler. Every declared or confirmed answer is written at once, marked by who
+// gave it (P-242, P-411, amending P-72's "confirmed facts only"); filing still waits for confirmation (readiness).
 import { answerSheetOnly } from "../../contracts/forms.ts";
 import { createHash } from "node:crypto";
 import { evalCondition, kkey, render, type BoxRow, type Person, type Role } from "../render.ts";
-import { notNeededWords, rulesInForce, showCondition } from "../form-field-condition.ts";
+import { boxGate, notNeededWords, rulesInForce, showCondition } from "../form-field-condition.ts";
 import type { Snapshot } from "../snapshot.ts";
 import { groupLabel, type QuestionnaireView, type Readiness } from "../../contracts/runtime.ts";
 import { checkValue, knownOf, type Answer, type Participant, type Row } from "./case.ts";
-import { recordedDerivation } from "../../../p5/transforms.ts";
+import { proseRecorded, recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
 import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
+import { openLines } from "./open-lines.ts";
+import { cellAsked, entriesOffForm, isListRelative } from "./relatives.ts";
 export { gateOf, type GatePlacement } from "./gates.ts";
 
 /** One confirmed fact a copy reads: which form field, which fact about whom, which row, which value. */
@@ -23,12 +26,12 @@ export const isGateFact = (f: FormFact) => f.box.includes("#gate:");
 /** `edition`: read that PDF edition of the form (an answer key's own, break B1); otherwise the edition in use (P-32). */
 export function formCoverage(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], form: string, subjectId: string, today = new Date(), edition?: string | null) {
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
-  const { known: all } = knownOf(s, people, answers, rows, today);
+  const { known: all } = knownOf(s, people, answers, rows, today, { forForms: true });
   // QA-296: the firm record's facts about the representative fill only a form that names the representative of record.
   const known = formsNamingRepresentative(s.field_maps).has(form) ? all : new Map([...all].filter(([k, v]) => !firmRecordFact(k, v.source)));
   const cov = render(s, renderPeople, known, { today, ...(edition ? { editions: new Map([[form, edition]]) } : {}) }).coverage.find((c) => c.form === form && c.person === subjectId);
   if (!cov) return null;
-  // QA-122 (P-71, P-72): a confirmed answer that fails its checks is never written; its form field is "not written"
+  // QA-122 (P-71, P-72): an answer (declared or confirmed) that fails its checks is never written; its form field is "not written"
   // with the problem as the reason, and readiness lists the fact as "needs a fix".
   // QA-165 (Devin on #715): a "recorded" Yes/No box whose facts are asked under their own Yes/No question (gateOf).
   const placements = s.placements as (GatePlacement & { question_text?: string | null })[];
@@ -40,6 +43,8 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
   // B86 BR-5 (here, not in render: the preview, the question list and "fills" read render and must not move): a form field
   // that holds its question's condition is written only while that condition is true, whatever answer is stored.
   const rules = rulesInForce(s, form, cov.edition);
+  const gateWords = new Map(((s.field_maps as { form_number: string; form_edition?: string; entries: { data_path: string; condition_rule?: unknown }[] }[]).find((m) => m.form_number === form && m.form_edition === cov.edition)?.entries ?? [])
+    .filter((e) => boxGate(e.condition_rule)).map((e) => [e.data_path, String((e.condition_rule as { words?: unknown }).words ?? "")]));
   const subjectOf = (about: string) => (about === "case" ? "case" : about.split("/")[0]);
   // BR-5b: an answer whose question a SHOW condition now hides is "kept and not used" (the screen's own words), so it does
   // not count as recorded. A question that stays visible (REQUIRE) keeps QA-165, and so does a box reading the hidden answer
@@ -49,16 +54,18 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
     const rule = b.about ? rules.get(b.box) : undefined;
     if (rule) {
       const c = evalCondition(s, known, rule, subjectOf(b.about!));
-      if (c.applies !== true) { const { value: _kept, ...rest } = b; void _kept; return { ...rest, coverage: "not needed" as const, detail: notNeededWords(c, rule, words) }; }
+      // B107: a gate says why in the form's own words ("Not needed: written only when the representative is … CICC").
+      const said = gateWords.get(b.box);
+      if (c.applies !== true) { const { value: _kept, ...rest } = b; void _kept; return { ...rest, coverage: "not needed" as const, detail: said && c.applies === false ? `Not needed: written only when ${said.replace(/[.\s]+$/, "")}` : notNeededWords(c, rule, words) }; }
     }
     if (b.coverage !== "confirmed fact" || !b.fact) return b;
     const problems = checkValue(s, b.fact, b.value, today);
-    if (problems.length) return { ...b, coverage: "answered on screen" as const, fix: `confirmed with a problem, not written: ${problems.join(" ")}` };
-    // A confirmed No to the gate with a detail still recorded contradicts itself: never written as Yes (nor No). B52: a
+    if (problems.length) return { ...b, coverage: "answered on screen" as const, fix: `answered with a problem, not written: ${problems.join(" ")}` };
+    // A No to the gate (declared or confirmed) with a detail still recorded contradicts itself: never written as Yes (nor No). B52: a
     // box that reads its gate itself (asked as its own question) checks the facts its "worked out" step names.
     const recorded = (g: string) => [b.fact!, ...(recordedDerivation(b.transform)?.facts ?? [])].find((f) => f !== g && (f === b.fact || !hiddenNow(b.about!, f)) && present(confirmedAt(b.about!, f)?.value));
     const no = b.about ? gatesOf(b).find((g) => confirmedAt(b.about!, g)?.value === false && recorded(g)) : undefined;
-    return no ? { ...b, coverage: "answered on screen" as const, fix: `"${words(no)}" is answered No, but "${words(recorded(no)!)}" is recorded: correct one of them, then confirm, before this is written` } : b;
+    return no ? { ...b, coverage: "answered on screen" as const, fix: `"${words(no)}" is answered No, but "${words(recorded(no)!)}" is recorded: correct one of them before this is written` } : b;
   });
   // The gates' confirmed answers decide these boxes, so a copy keeps them with its facts: a gate changed after the copy
   // (No to Yes, or a No confirmed) makes the copy out of date, as a changed fact does.
@@ -66,41 +73,58 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
   return { ...cov, boxes, facts: [...factsOf(boxes), ...gateFacts].sort((x, y) => x.box.localeCompare(y.box)) };
 }
 
-/** C7.2 cause 3 (P-72): a derived "is anything recorded?" Yes/No box is "N" only when a person answered "none apply"
- *  and it is confirmed: every fact it names was asked of that person (not hidden) in a repeating group that has no
- *  entries and whose "none apply" is confirmed (IMM 5257: post-secondary education, previous countries of residence).
+/** C7.2 cause 3 (P-72, as P-242 and P-411 amend it): a derived "is anything recorded?" Yes/No box is "N" only when a
+ *  person answered "none apply" (declared or confirmed: a declared answer fills at once): every fact it names was asked
+ *  of that person (not hidden) in a repeating group that has no entries and whose "none apply" is answered (IMM 5257:
+ *  post-secondary education, previous countries of residence).
  *  An empty question in a confirmed section is not an answer (Confirm section vouches only for the answers shown;
  *  review r1 B1); "other names", the national identity document and the US card are "N" once their own Yes/No question
- *  (the facts' gate, gateOf) is answered No and confirmed (QA-165). Marked on a copy's boxes only; a later entry or a changed "none apply" makes
+ *  (the facts' gate, gateOf) is answered No (QA-165). Marked on a copy's boxes only; a later entry or a changed "none apply" makes
  *  the copy out of date through its group facts (changedGroups). */
 export function markNothingRecorded(boxes: BoxRow[], view: QuestionnaireView, placements: GatePlacement[] = []): BoxRow[] {
   return boxes.map((b) => {
-    const d = b.coverage === "confirmed fact" || !b.fact || !b.about || b.about === "case" ? null : recordedDerivation(b.transform);
+    // B155: an empty box of a list relative (a brother or sister's row) says why it stays empty: "none apply" answered,
+    // or no such entry; else (no entries and no "none apply" yet) the entry it waits for, as render words it.
+    const list = b.about && b.coverage !== "confirmed fact" && isListRelative(b.about) ? listRowWhy(b, view) : null;
+    if (list) return { ...b, detail: list };
+    // QA-318: the prose spelling of the same Yes/No (proseRecorded) names no other fact: the box's own fact is the one asked.
+    const d = b.coverage === "confirmed fact" || !b.fact || !b.about || b.about === "case" ? null : recordedDerivation(b.transform) ?? (proseRecorded(b.transform) ? { facts: [] } : null);
     if (!d) return b;
     const subject = b.about!.split("/")[0], facts = new Set([b.fact!, ...d.facts]);
     const asked = view.sections.flatMap((s) => s.questions.filter((q) => q.subjectId === subject && facts.has(q.fact)).map((q) => ({ s, q })));
     if (!asked.length || new Set(asked.map(({ q }) => q.fact)).size !== facts.size) return b;
     if (asked.some(({ q }) => q.answer || q.rows.some((r) => r.answer))) return b;
-    const settled = (s: QuestionnaireView["sections"][number]) => !!s.group && s.group.rows === 0 && !!s.group.none_apply?.value && s.group.none_apply.confirmed;
+    const settled = (s: QuestionnaireView["sections"][number]) => !!s.group && s.group.rows === 0 && !!s.group.none_apply?.value && s.group.none_apply.fills;
     if (!asked.some(({ q }) => q.hidden) && asked.every(({ s }) => settled(s))) {
       const titles = [...new Set(asked.map(({ s }) => s.title))].join(", ");
-      return { ...b, nothing_recorded: true as const, detail: `nothing recorded: "none apply" confirmed in ${titles}` };
+      return { ...b, nothing_recorded: true as const, detail: `nothing recorded: "none apply" answered in ${titles}` };
     }
-    // QA-165 (C7.2): a confirmed "No" to the Yes/No question that each of these facts is asked under (IMM 5257's own
+    // QA-165 (C7.2): a "No" (declared or confirmed, P-411) to the Yes/No question that each of these facts is asked under (IMM 5257's own
     // "Have you ever used any other name…?", "Do you have a national identity document?", "Are you a lawful permanent
-    // resident of the United States…?") vouches that nothing is recorded, as a confirmed "none apply" does.
+    // resident of the United States…?") vouches that nothing is recorded, as an answered "none apply" does.
     const gates = asked.map(({ q }) => gateNo(view, placements, subject, q.fact));
-    if (gates.every((g): g is string => !!g)) return { ...b, nothing_recorded: true as const, detail: `nothing recorded: "${[...new Set(gates)].join('", "')}" answered No and confirmed` };
+    if (gates.every((g): g is string => !!g)) return { ...b, nothing_recorded: true as const, detail: `nothing recorded: "${[...new Set(gates)].join('", "')}" answered No` };
     return b;
   });
 }
 
-/** QA-165: the gate's question label when this person answered it No and the answer is confirmed; else null. */
+/** B155: why a list relative's form field (row `b.row`) holds nothing although its group is answered: "none apply" (declared
+ *  or confirmed: it counts at once, P-411), or fewer entries than the form has rows. Null when the group is not answered. */
+function listRowWhy(b: BoxRow, view: QuestionnaireView): string | null {
+  const sec = view.sections.find((x) => x.subjectId === b.about && x.group);
+  if (!sec?.group) return null;
+  const n = sec.group.rows;
+  if (n === 0 && sec.group.none_apply?.value) return `nothing to write: "none apply" answered for ${sec.about_label}`;
+  if (n > 0 && typeof b.row === "number" && b.row >= n) return `nothing to write: ${sec.about_label} ${n === 1 ? "has 1 entry" : `have ${n} entries`}, none for row ${b.row + 1}`;
+  return null;
+}
+
+/** QA-165: the gate's question label when this person answered it No (declared or confirmed: it fills, P-411); else null. */
 export function gateNo(view: QuestionnaireView, placements: GatePlacement[], subject: string, fact: string): string | null {
   const g = gateOf(placements, fact);
   if (!g) return null;
   const q = view.sections.flatMap((s) => s.questions).find((x) => x.subjectId === subject && x.fact === g && !x.hidden);
-  return q?.answer && q.answer.value === false && q.answer.confirmed ? q.label : null;
+  return q?.answer && q.answer.value === false && q.answer.fills ? q.label : null;
 }
 
 /** The forms a case fills as PDFs: the release files them as a PDF (its filing line is not Online) and has their
@@ -152,34 +176,90 @@ export function changedFacts(then: FormFact[], now: FormFact[]): string[] {
  *  person (matched by the person's id) with an answer that is missing, not confirmed, or confirmed with a problem (it
  *  would be written wrong: review and break report M2). A required repeating group the form reads with no entries
  *  blocks too, until "none apply" is answered and confirmed for it (Lead, break M3). Optional facts left empty, or answered
- *  validly and not confirmed (never written, P-72), do not; an optional fact answered with a problem does (QA-122).
+ *  validly and not confirmed (written at once since P-411, confirmed before filing only when required), do not; an optional fact answered with a problem does (QA-122).
  *  A section check that fired on a fact the form reads blocks it as well (P-47 tier 2). */
 /** Whether a fired check blocks "ready to file": only a section check at severity warn or block. */
 export const blocksFiling = (c: { group?: string; severity: string }) => c.group === "section_check" && (c.severity === "warn" || c.severity === "block");
 
-export function readiness(view: QuestionnaireView, form: string, subjectId: string): Readiness {
+/** QA-165 (P-71; diagnosis on #1256, cause 2): what the form itself would write, for readiness: the copy's form fields
+ *  (formCoverage's, each refused one with its `fix`) and the fields IRCC's form marks mandatory that a copy made now
+ *  leaves empty (engine/runtime/mandatory.ts mandatoryOpen, as GET …/forms lists them). */
+export type OnForm = { boxes: (BoxRow & { fix?: string })[]; open: { box: string; label: string; reason: string; why: string }[] };
+
+export function readiness(view: QuestionnaireView, form: string, subjectId: string, onForm?: OnForm): Readiness {
   const reads = view.sections.flatMap((s) => s.questions).filter((q) => q.fills.some((f) => f.form === form && f.subject === subjectId) && !q.hidden);
-  const reason = (a: { confirmed: boolean; problems: string[] } | null | undefined) => (!a ? "not answered" as const : a.problems.length ? "needs a fix" as const : !a.confirmed ? "not confirmed" as const : null);
+  // C6.18 (P-244): a background answer staff recorded is named as waiting for the client, who re-confirms it.
+  const reason = (a: { confirmed: boolean; problems: string[]; awaits_client?: boolean } | null | undefined) => (!a ? "not answered" as const : a.problems.length ? "needs a fix" as const : a.awaits_client ? "waits for the client to re-confirm" as const : !a.confirmed ? "not confirmed" as const : null);
   // QA-122: an optional fact counts only when it is answered with a problem (it would be written wrong, P-71).
   const optional = (a: { problems: string[] } | null | undefined) => (a && a.problems.length ? "needs a fix" as const : null);
   const missing: Readiness["missing"] = reads.flatMap((q) => {
     const why = q.required ? reason : optional;
-    const r = q.group ? q.rows.map((x) => why(x.answer)).find(Boolean) ?? null : why(q.answer);
-    return r ? [{ fact: q.fact, label: q.label, about: q.about_label, reason: r }] : [];
+    // B155: an entry of a list relative (a brother or sister) waits only for what it asks (cellAsked: its row's boxes, or
+    // everything when the entry has no row on the form).
+    const grouped = isListRelative(q.subjectId) ? view.sections.find((s) => s.subjectId === q.subjectId && s.section === q.section)?.questions.filter((x) => x.group) ?? [q] : [];
+    const r = q.group ? q.rows.filter((_, i) => !grouped.length || cellAsked(grouped, q, i)).map((x) => why(x.answer)).find(Boolean) ?? null : why(q.answer);
+    return r ? [{ fact: q.fact, label: q.label, about: q.about_label, reason: r, subject: q.subjectId }] : [];
   });
   const read = new Set(reads.map((q) => `${q.subjectId}|${q.section}`));
   for (const sec of view.sections) {
     if (!sec.group?.required || sec.group.rows > 0 || !read.has(`${sec.subjectId}|${sec.section}`)) continue;
     const na = sec.group.none_apply, r = !na || !na.value ? "not answered" as const : !na.confirmed ? "not confirmed" as const : null;
-    if (r) missing.push({ fact: `group:${sec.section}`, label: groupLabel(sec.title), about: sec.about_label, reason: r });
+    if (r) missing.push({ fact: `group:${sec.section}`, label: groupLabel(sec.title), about: sec.about_label, reason: r, subject: sec.subjectId }); // QA-309 m2: whose group, by id
+  }
+  // B155 (break M1 on #1367): an entry of a list relative with no row on the form (an eighth brother or sister on IMM 5645's
+  // seven rows) is never filed silently: one line each, "left empty on the form" (it never holds a copy's lock back and is
+  // passed with a reason on Ready to file, as a by-hand field is), saying it goes on an extra sheet.
+  for (const sec of view.sections) {
+    if (!sec.group || !isListRelative(sec.subjectId) || !read.has(`${sec.subjectId}|${sec.section}`)) continue;
+    const qs = sec.questions.filter((q) => q.group), room = qs.find((q) => q.capacity)?.capacity ?? 0;
+    for (const i of entriesOffForm(qs)) missing.push({ fact: `entry:${sec.section}:${i + 1}`, label: `Entry ${i + 1} of ${sec.about_label}`, about: sec.about_label, reason: "left empty on the form", why: `the form has room for ${room} entries: write this one on an extra sheet`, subject: sec.subjectId });
   }
   // P-47 tier 2 (C4.4 part 2): a section check (a conflict in the answers) that fired on a fact this form reads for this
   // person blocks filing too, named by its own words (it never blocks saving, P-71). Advice, readiness warnings, official
   // rules and checks still waiting for the expert only warn (P-168, P-136; review c44-part2 M1).
   const readFacts = new Set(reads.map((q) => `${q.subjectId}|${q.fact}`));
   for (const c of view.checks) if (blocksFiling(c) && c.fact && readFacts.has(`${c.subjectId}|${c.fact}`) && !missing.some((m) => m.fact === `check:${c.id}` && m.about === c.about_label))
-    missing.push({ fact: `check:${c.id}`, label: c.message, about: c.about_label, reason: "a check fired" });
+    missing.push({ fact: `check:${c.id}`, label: c.message, about: c.about_label, reason: "a check fired", subject: c.subjectId }); // QA-309 m2
+  if (onForm) missing.push(...formHoldsBack(view, subjectId, onForm, missing));
   return { ready: missing.length === 0, missing };
+}
+
+/** QA-165 (#1318 review M2): what holds a copy's lock back: every readiness line but a mandatory form field left empty. Those
+ *  are the person's own steps in Adobe, or a configuration gap no screen of the case can close; they stay on the forms card
+ *  and as a CRITICAL line on Ready to file (passed with a reason, or fixed, P-315), so locking is never a dead end. */
+export const blocksLock = (m: { reason: string }) => m.reason !== "left empty on the form";
+
+/** QA-165 (P-71: a fact that would be written wrong blocks; "Ready" is never said over a mandatory form field that will be
+ *  empty). Beside the questions: (1) each form field formCoverage refuses with a fix ("…is answered No, but … is recorded",
+ *  a confirmed answer with a problem), as "needs a fix" in the fix's own words; (2) each field IRCC's form marks mandatory
+ *  that a copy made now leaves empty and no question above already explains (filled by hand, a value the box's own list
+ *  cannot hold, "none apply" on a group whose first row the form requires, nothing fills it yet), as "left empty on the
+ *  form" with why. One line per fact for (1), per form field for (2). */
+function formHoldsBack(view: QuestionnaireView, subjectId: string, onForm: OnForm, already: Readiness["missing"]): Readiness["missing"] {
+  const qs = view.sections.flatMap((s) => s.questions);
+  const said = new Set(already.map((m) => `${m.subject ?? subjectId}|${m.fact}`));
+  const person = view.sections.find((s) => s.subjectId === subjectId)?.about_label ?? "";
+  const aboutOf = (about: string | null) => (about ? view.sections.find((s) => s.subjectId === about)?.about_label ?? person : person);
+  const out: Readiness["missing"] = [];
+  const boxOf = new Map(onForm.boxes.map((b) => [b.box, b]));
+  for (const b of onForm.boxes) {
+    if (!b.fix || !b.fact) continue;
+    // QA-309 (review m1): a box about the application is "case" on the form, while its question is asked on the case's own
+    // subject: that subject names it, so a case fact with a problem is one line, "about" the application, never two. The
+    // form's own key is kept as said too, so what is left empty on the form below is decided as before.
+    const own = b.about ?? subjectId, subject = own === "case" ? qs.find((q) => q.fact === b.fact)?.subjectId ?? own : own, k = `${subject}|${b.fact}`;
+    if (said.has(k)) { said.add(`${own}|${b.fact}`); continue; }
+    said.add(k); said.add(`${own}|${b.fact}`);
+    out.push({ fact: b.fact, label: qs.find((q) => q.subjectId === subject && q.fact === b.fact)?.label ?? (b.meaning || b.caption || b.fact), about: aboutOf(subject === own ? b.about : subject), reason: "needs a fix", why: b.fix, subject });
+  }
+  // Named as the forms card names them (openLines: a date's parts are one line; two fields with one caption, such as IMM
+  // 5257's Taiwan PIN and Israel passport boxes, are told apart by the field's own name).
+  const left = onForm.open.filter((o) => { const b = boxOf.get(o.box); return !b?.fix && !(b?.fact && said.has(`${b.about ?? subjectId}|${b.fact}`)); });
+  for (const o of openLines(left)) {
+    const b = boxOf.get(o.box);
+    out.push({ fact: `box:${o.box}`, label: o.label, about: aboutOf(b?.about ?? null), reason: "left empty on the form", why: `${o.reason}: ${o.why}`, subject: b?.about ?? subjectId, boxes: o.boxes });
+  }
+  return out;
 }
 
 /** The repeating groups a form reads for one person, as a copy saw them (break r1d-none-apply M1): whether "none apply"
@@ -194,7 +274,7 @@ export type GroupFact = { key: string; title: string; none: boolean; entries: bo
 export function groupFacts(view: QuestionnaireView, form: string, subjectId: string): GroupFact[] {
   const read = new Set(view.sections.flatMap((s) => s.questions).filter((q) => q.fills.some((f) => f.form === form && f.subject === subjectId) && !q.hidden).map((q) => `${q.subjectId}|${q.section}`));
   return view.sections.filter((s) => s.group && read.has(`${s.subjectId}|${s.section}`))
-    .map((s) => ({ key: `${s.subjectId}|${s.section}`, title: s.title, about: s.about_label, none: s.group!.rows === 0 && !!s.group!.none_apply?.value && s.group!.none_apply.confirmed, entries: s.group!.rows > 0,
+    .map((s) => ({ key: `${s.subjectId}|${s.section}`, title: s.title, about: s.about_label, none: s.group!.rows === 0 && !!s.group!.none_apply?.value && s.group!.none_apply.fills, entries: s.group!.rows > 0,
       rows: [...new Set(s.questions.flatMap((q) => q.rows.map((r) => r.row)))].sort() }))
     .sort((a, b) => a.key.localeCompare(b.key));
 }

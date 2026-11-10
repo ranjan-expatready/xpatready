@@ -5,6 +5,8 @@ import { LinesBulk, LinesBulkController } from "./lines-bulk.ts";
 import { PersonChecklists, PersonChecklistsController } from "./person-checklist.ts";
 import { WhoFills, WhoFillsController } from "./who-fills.ts";
 import { DocumentSupplies, DocumentSuppliesController } from "./document-supplies.ts"; // C4.5
+import { DocumentSets, DocumentSetsController } from "./document-sets.ts"; // C6.15
+import { MustVerify, MustVerifyController } from "./must-verify.ts"; // C7.9
 import { OfficialPagesController, OfficialPagesService } from "./official-pages.ts";
 import "reflect-metadata";
 import { oneAtATime } from "./form-uses.ts";
@@ -50,6 +52,8 @@ import { MAX_DOCUMENT_MB } from "../../contracts/documents.ts";
 import { StartSetup, StartSetupController } from "./start-setup.ts";
 import { LibrarySources, LibrarySourcesController, noFreeAdd } from "./library-sources.ts";
 import { registerFeatures } from "./features.ts";
+import { FieldScopeController, FieldScopes } from "./field-scope.ts"; // C3.16: the library's "Asked about" choice
+import { DocumentProviders, DocumentProvidersController } from "./document-providers.ts"; // C6.14: who provides a shared document
 
 type H = string | undefined;
 
@@ -188,6 +192,9 @@ class ProblemErrors implements ExceptionFilter {
         // C6.4 (break m5): a checklist line takes one PDF, JPEG or PNG of up to 20 MB, worded with its own limits.
         if (/\/checklist-lines\/[^/]+\/documents\/?$/.test(String(host.switchToHttp().getRequest()?.path ?? "")))
           return send(413, "Too large", many ? "Send one file at a time. Nothing was stored." : `The file is larger than ${MAX_DOCUMENT_MB} MB. Nothing was stored.`);
+        // B149 (review M2, break m1): IRCC's Transaction Approved page, one PDF, JPEG or PNG of up to 20 MB (any letter case, as Express routes).
+        if (/\/filings\/[^/]+\/record\/fee-receipt\/?$/i.test(String(host.switchToHttp().getRequest()?.path ?? "")))
+          return send(413, "Too large", many ? "Send one file: the Transaction Approved page. Nothing was stored." : `The file is larger than ${MAX_DOCUMENT_MB} MB: save the Transaction Approved page as a smaller PDF, JPEG or PNG. Nothing was stored.`);
         if (/\/form-copies\/[^/]+\/validated\/?$/.test(String(host.switchToHttp().getRequest()?.path ?? "")))
           return send(413, "Too large", many ? "Send only the one validated PDF you saved from Adobe. Nothing was recorded." : `The file is larger than ${MAX_VALIDATED_MB} MB: send the validated PDF of this form. Nothing was recorded.`);
         const files = MAX_FILES, mb = MAX_BYTES / 1024 / 1024;
@@ -204,6 +211,9 @@ class ProblemErrors implements ExceptionFilter {
     // A malformed id (not a UUID, or with a NUL byte) is simply not found (review #4, break m5); so is a stored file that
     // is gone or whose folder is not a folder (a download: QA-4, break m5).
     if (e?.code === "P2025" || (/^(ENOENT|ENOTDIR)$/.test(String(e?.code)) && e?.status === 404) || e?.code === "P2023" || e?.name === "NotFoundError" || /Error creating UUID|invalid input syntax for type uuid|invalid byte sequence for encoding/i.test(String(e?.message))) return send(404, "Not found", "Not found (it may have been removed by a reset).");
+    // C6.17 (BR-5, BR-10): a write on a stage that has ended (its rows are kept as they were), or a case whose current
+    // stage moved under it, is refused by the database: a 409 with plain words, nothing changed.
+    if (/case_stage_ended|case_stage_current|case_stage_one_current|case_stage_forward/.test(String(e?.message ?? ""))) return send(409, "Changed since you read it", "This case moved to its next stage: the earlier stage's filings, documents and findings are kept as they were and can no longer be changed. Read the case again. Nothing was changed.", { code: "stage_ended" });
     const db = String(e?.message ?? "").match(/combination_level: ([^\n"]+)/);
     if (db) return send(409, "Not allowed at this level", `${db[1].trim()} (refused by the database).`);
     // The detail goes to the server log only: never a database call, a stack or a server path in the browser (review #4).
@@ -212,7 +222,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, FormMastersController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, DocumentSuppliesController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController, DraftQdController, RuleFactsController], providers: [LinesBulk, PqrDrafts, DraftQd, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, FormMasters, WhoFills, DocumentSupplies, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs, RuleFacts] })
+@Module({ controllers: [FieldScopeController, DocumentProvidersController, TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, FormMastersController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, DocumentSuppliesController, DocumentSetsController, MustVerifyController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController, DraftQdController, RuleFactsController], providers: [FieldScopes, DocumentProviders, LinesBulk, PqrDrafts, DraftQd, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, FormMasters, WhoFills, DocumentSupplies, DocumentSets, MustVerify, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs, RuleFacts] })
 class AppModule {}
 
 async function main() {
@@ -227,7 +237,8 @@ async function main() {
     // dotfiles "allow": lane copies live under .claude/worktrees/, and a hidden folder in the path made every page a 404.
     app.useStaticAssets(web, { index: false, dotfiles: "allow" });
     const index = join(web, "index.html");
-    app.getHttpAdapter().getInstance().get(/^\/(?!api\/).*/, (_req: any, res: any) => res.sendFile(index, { dotfiles: "allow" }));
+    // C6.16 (challenge m1): the adult's link page sends no referrer (its token lives in the fragment, never sent anyway).
+    app.getHttpAdapter().getInstance().get(/^\/(?!api\/).*/, (req: any, res: any) => { if (req.path === "/link") res.setHeader("Referrer-Policy", "no-referrer"); res.sendFile(index, { dotfiles: "allow" }); });
   }
   await app.listen(port, "127.0.0.1");
   console.log(`Product Studio on http://localhost:${port}`);

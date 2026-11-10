@@ -1,13 +1,14 @@
 // Draft validation and release differences. Problems are stated in plain words with where they are; errors block
 // submission, warnings are shown and recorded. Conditions are checked against the portable copy of the team's
 // closed predicate contract (contracts/predicate.v0.schema.json) and against the library's field types.
+import { lineSet, setWords, type SnapSet } from "./document-sets.ts";
 import { Ajv } from "ajv";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rules.ts";
 import type { Snapshot } from "./snapshot.ts";
 import { askedChoiceProblems, channelProblems, fingerprintLine, type Accepts } from "./channels.ts";
-import { duplicateValidity, validityProblems } from "./runtime/case-checklist.ts";
+import { duplicateValidity, roleWords, validityProblems } from "./runtime/case-checklist.ts";
 import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
 import { factSourceProblems, factWords, who } from "./sources.ts";
 import { oathMappedProblems } from "./form-steps.ts";
@@ -149,6 +150,12 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   for (const d of s.document_requirements) {
     for (const e of checkCondition(d.condition, types, derived)) out.push({ level: "error", where: "Documents", item: d.document_type, message: `Condition ${e}.` });
     if (d.base_or_conditional === "conditional" && !d.condition) out.push({ level: "error", where: "Documents", item: d.document_type, message: "A conditional requirement needs a condition." });
+    // C6.15 (SA-1B-20 rule 3): a line naming a set its document type does not have is unresolved: not startable.
+    const picked = lineSet((s.document_types ?? []).find((t: { key: string }) => t.key === d.document_type_key), d.set_name, d.document_type).problem;
+    if (picked) out.push({ level: "error", where: "Documents", item: d.document_type, message: picked });
+    // Break F3 (SA-1B-19 rule 6): a retired member of the set the line uses refuses the release, named.
+    const used = lineSet((s.document_types ?? []).find((t: { key: string }) => t.key === d.document_type_key), d.set_name, d.document_type).set;
+    for (const m of (used?.members ?? []).filter((x: { retired?: true }) => x.retired)) out.push({ level: "error", where: "Documents", item: d.document_type, message: `Line "${d.document_type}" uses the set "${used!.name}", whose member ${m.name} is retired. Change the set on the document type first.` });
   }
   for (const r of s.rules) for (const e of checkCondition(r.when, types, derived)) out.push({ level: "error", where: "Rules", item: r.id, message: `Condition ${e}.` });
   for (const c of s.checks.filter((x) => x.condition && typeof x.condition === "object" && x.group !== "document_validity")) for (const e of checkCondition(c.condition, types, derived)) out.push({ level: "warning", where: "Checks", item: c.id, message: `Condition ${e}; the check is not evaluated.` });
@@ -252,6 +259,8 @@ export type Change = { kind: string; key: string; change: "added" | "changed" | 
 export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   const out: Change[] = [];
   const sme = (kind: string, x: any) => ["Rule", "Document requirement", "Check"].includes(kind) || x?.origin === "AI_PROPOSAL" || (kind === "Form" && !!x?.condition);
+  // B154 (P-97, P-244): a section's background mark changes each of its questions; it is named once per section, in words.
+  const marks = new Map<string, { on: boolean; n: number }>();
   for (const [k, id, label] of KINDS) {
     const a = new Map(((prev?.[k] as any[]) ?? []).map((x) => [id(x), x])), b = new Map(((next[k] as any[]) ?? []).map((x) => [id(x), x]));
     for (const [key, x] of b) if (!a.has(key)) out.push({ kind: label, key, change: "added", origin: x.origin, needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.question_text ?? x.fact ?? key });
@@ -263,6 +272,10 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
           out.push({ kind: "Who fills a question", key, change: "changed", origin: x.origin, needs_sme: true, label: `${factWords(next, x.fact)}: filled by ${fills(x.collected_from)}, was ${fills(was.collected_from)} (shared library, every combination)` });
           if (bare({ ...was, collected_from: null }) === bare({ ...x, collected_from: null })) continue;
         }
+        if (k === "placements" && !!was.client_only !== !!x.client_only && was.section_id === x.section_id) { // its own section's mark (a moved question is a placement change)
+          const m = marks.get(x.section_id) ?? { on: !!x.client_only, n: 0 }; m.n++; marks.set(x.section_id, m);
+          if (bare({ ...was, client_only: null }) === bare({ ...x, client_only: null })) continue;
+        }
         // P-319 (Lead 4 on #833): a form's role to IRCC's rules is named in words and needs the immigration expert's sign-off.
         if (k === "forms" && (was.form_role ?? null) !== (x.form_role ?? null)) {
           const fam = (r: unknown) => r === FAMILY_INFORMATION;
@@ -272,6 +285,12 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
         out.push({ kind: label, key, change: "changed", origin: x.origin, needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.fact ?? key });
       }
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: label, key, change: "removed", needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? key });
+  }
+  for (const [key, m] of marks) {
+    const title = [...((next.sections ?? []) as { id: string; title?: string }[]), ...(next.section_titles ?? [])].find((y) => y.id === key)?.title ?? key.replace(/_/g, " ");
+    out.push({ kind: "Background answers", key, change: "changed", needs_sme: true, label: m.on
+      ? `"${title}": its ${m.n} question${m.n === 1 ? " is a background answer" : "s are background answers"} now: the client's own; staff may record one, marked Officer, and the client re-confirms it before signing (shared library, every combination)`
+      : `"${title}": its ${m.n} question${m.n === 1 ? " is" : "s are"} no longer background answers (shared library, every combination)` });
   }
   // C4.1 (P-216): the combination's own section order is part of its release. A move changes no section, so the lines
   // above miss it; it is named once, in words, with each moved section's new place among the sections kept.
@@ -298,7 +317,11 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   // B86 BR-8: a form field's condition rule is named once, in words, for the immigration expert (what a case fills changes
   // with it); a box whose only change is that rule is not counted again in its form's "Field map" line.
   const noRule = (e: Record<string, unknown>) => { const { condition_rule: _r, ...rest } = e; return rest; };
-  const ruleWords = (k: string, e: { caption?: string | null; fact: string }, had: boolean) => `${k.split("|")[0]}, form field "${e.caption ?? "unnamed"}": ${had ? "is filled whenever the form applies again, not only under its question's condition" : `is filled only under the condition of its question "${factWords(next, e.fact)}"`} (shared library; Sample, Unconfirmed: expert)`;
+  const ruleWords = (k: string, e: { caption?: string | null; fact: string; condition_rule?: unknown }, had: boolean) => {
+    // B107: a gate says, in the form's own words, which box takes the answer.
+    const gate = !had && e.condition_rule && typeof e.condition_rule === "object" && "gate" in e.condition_rule ? String((e.condition_rule as { words?: unknown }).words ?? "") : null;
+    return `${k.split("|")[0]}, form field "${e.caption ?? "unnamed"}": ${had ? "is filled whenever the form applies again, not only under its question's condition" : gate ? `is filled only when ${gate.replace(/[.\s]+$/, "")} (the form's words, summarised)` : `is filled only under the condition of its question "${factWords(next, e.fact)}"`} (shared library; Sample, Unconfirmed: expert)`;
+  };
   for (const [k, e] of b) {
     const was = a.get(k), rule = e.condition_rule ?? null, wasRule = was?.condition_rule ?? null;
     if (canonical(rule) !== canonical(wasRule)) out.push({ kind: "Form field condition", key: k, change: !wasRule ? "added" : !rule ? "removed" : "changed", origin: e.origin, needs_sme: true, label: ruleWords(k, e, !rule) });
@@ -323,12 +346,14 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   if (ca && canonical(ca.participants ?? []) !== canonical(cb.participants ?? [])) out.push({ kind: "People on this row", key: cb.key, change: "changed", needs_sme: true, label: `who this row covers: ${(cb.participants ?? []).map((p: any) => `${p.label} (${p.min}–${p.max})`).join(", ")}` });
   if (ca) { const meta = (x: any) => canonical({ key: x.key, label: x.label, program: x.program, pathway: x.pathway, source_basis: x.source_basis, basis_note: x.basis_note, path: x.path ?? null, client_type: x.client_type ?? null, allowed_locations: x.allowed_locations ?? null, portal: x.portal ?? null }); // the portal decides how lines are filed (break round 2 M1)
     if (meta(ca) !== meta(cb)) out.push({ kind: "Row details", key: cb.key, change: "changed", needs_sme: canonical(ca.allowed_locations ?? null) !== canonical(cb.allowed_locations ?? null) || ca.source_basis !== cb.source_basis, label: "name, path, portal, source basis or allowed locations (no line changed)" }); }
+  // C6.14 (break M2): a type's default provider roles are named on the line the expert signs, in words, never keys.
+  const providerWords = (k: string) => roleWords(k).replace(/^the /, ""); // review R2-3: the one wording of roles (case-checklist.ts)
   // C4.5 (challenge m2): the facts a document type supplies by name on the release line the expert signs, never keys.
   const factName = (f: string) => { const d = ((next.canonical_fields ?? []) as { id: string; meaning?: string | null; label?: string | null }[]).find((x) => x.id === f); return String(d?.meaning ?? d?.label ?? f).trim().replace(/\.$/, ""); };
   for (const [k, id, label, behaviour] of [["document_types", (x: any) => x.key, "Document type", true], ["derived_fields", (x: any) => x.id, "Derived definition", true]] as const) {
     const a = new Map(((prev?.[k] as any[]) ?? []).map((x) => [id(x), x])), b = new Map(((next[k] as any[]) ?? []).map((x) => [id(x), x]));
     for (const [key, x] of b) if (!a.has(key)) out.push({ kind: label, key, change: "added", needs_sme: behaviour, label: x.name ?? x.plain ?? key });
-      else if (canonical(a.get(key)) !== canonical(x)) out.push({ kind: label, key, change: "changed", needs_sme: behaviour, label: `${x.name ?? x.plain ?? key}: ${label === "Document type" ? `supplies ${(x.supplies_facts ?? []).map(factName).join(", ") || "no facts"}` : `inputs ${(x.inputs ?? []).join(", ") || "none"}`}` });
+      else if (canonical(a.get(key)) !== canonical(x)) out.push({ kind: label, key, change: "changed", needs_sme: behaviour, label: `${x.name ?? x.plain ?? key}: ${label === "Document type" ? `supplies ${(x.supplies_facts ?? []).map(factName).join(", ") || "no facts"}${x.sets?.length ? `; substitute sets: ${(x.sets as SnapSet[]).map((s) => `${s.name} (${setWords({ mode: s.mode, members: s.members })})`).join("; ")}` : ""}${x.default_provider_roles?.length ? `; provided by (when shared): ${(x.default_provider_roles as string[]).map(providerWords).join(", then ")}` : (a.get(key) as { default_provider_roles?: string[] } | undefined)?.default_provider_roles?.length ? "; provided by (when shared): not set (the person the item is for)" : ""}` : `inputs ${(x.inputs ?? []).join(", ") || "none"}`}` });
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: label, key, change: "removed", needs_sme: behaviour, label: x.name ?? x.plain ?? key });
   }
   // W1-15 slice 1 (challenge M5): each choice over the rules' source and each Pre-qualification tick is named on Review,

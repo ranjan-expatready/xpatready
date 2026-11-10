@@ -2,7 +2,8 @@
 // the forms card. Pure and import-free, so the page and its check share it.
 
 export type OpenFieldIn = { box: string; label: string; reason: string; why: string };
-export type OpenLine = OpenFieldIn & { key: string; n: number };
+/** `boxes`: every form field the line covers (a date's year, month and day are one line), its first one first. */
+export type OpenLine = OpenFieldIn & { key: string; n: number; boxes: string[] };
 
 /** Only the parts of one question merge: boxes under the same parent whose names differ by a date part (a date's year,
  *  month and day are one "Date of birth"); never two fields that merely share words (Devin on #592: IMM 5257's Taiwan
@@ -21,7 +22,7 @@ export function openLines(open: OpenFieldIn[]): OpenLine[] {
   for (const o of open) {
     const parts = segs(o.box), leaf = bare(parts.pop() ?? "").replace(DATE_PART, "");
     const key = `${parts.join(".")}|${leaf}|${o.label}|${o.reason}|${o.why}`;
-    const x = by.get(key); if (x) x.n++; else by.set(key, { ...o, key, n: 1 });
+    const x = by.get(key); if (x) { x.n++; x.boxes.push(o.box); } else by.set(key, { ...o, key, n: 1, boxes: [o.box] });
   }
   const lines = [...by.values()];
   // Lines that read the same are told apart, in words (Devin on #592: by the caption alone, whatever their reasons): first
@@ -52,4 +53,13 @@ export function openLines(open: OpenFieldIn[]): OpenLine[] {
   // Break m-2 on #592: a label that is only a date part ("YYYY", "MM") says nothing; the field's own name says more.
   const said = (l: OpenLine) => (/^(YYYY|MM|DD|Year|Month|Day)$/i.test(l.label.trim()) ? `${words(bare(segs(l.box).at(-1) ?? "").replace(DATE_PART, "")) || "Date"} (${l.label.trim()})` : l.label);
   return lines.map((l) => (out.has(l.key) ? { ...l, label: out.get(l.key)! } : { ...l, label: said(l) }));
+}
+
+/** QA-318 (P-46, P-171): what the forms card counts as facts to answer. Every readiness line that is not a mandatory form
+ *  field left empty, and also a mandatory form field left empty that "needs an answer" (a question fills it and its
+ *  answer is missing), so "Facts confirmed" is never shown over a missing fact. Locking is unchanged: a field left empty
+ *  never holds a copy's lock back (QA-165, #1318 M2); Ready to file names it. */
+export function cardFacts<T extends { reason: string; why?: string }>(missing: T[]): { facts: T[]; emptyFields: T[] } {
+  const waits = (m: T) => m.reason !== "left empty on the form" || /^needs an answer\b/.test(m.why ?? "");
+  return { facts: missing.filter(waits), emptyFields: missing.filter((m) => !waits(m)) };
 }

@@ -1,0 +1,2 @@
+    C7.6-screen.test.ts on the checkpoint: exit 0, 8/8 passed (125 s: copy 5, Load the configured checkpoint 90, run 30)
+    C7.6.test.ts on the checkpoint: exit 0, 27/27 passed (114 s: copy 4, Load the configured checkpoint 89, run 22)

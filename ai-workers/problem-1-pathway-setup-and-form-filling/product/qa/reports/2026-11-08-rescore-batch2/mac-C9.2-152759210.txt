@@ -1,0 +1,29 @@
+C9.2 on 2cd3827eb (product code = main 152759210), copy qa_p92 :4470, start Sun Nov  8 08:42:19 IST 2026
+NOTICE:  database "xr_studio_qa_p92" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_p92 on http://localhost:4470 (xr_studio_qa_p92), stops itself in 30 min
+reset 201
+load 201
+loaded Sun Nov  8 08:43:35 IST 2026
+C9.2 — Changed facts mark finished items out of date (Visitor visa)
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+NOTE  IMM 5257 is ONLINE on the release: the principal's filed on Paper with an accommodation reason (founder Q3) (200)
+NOTE  IMM 5645 is PDF_UPLOAD on the release: the principal's filed Online (200)
+PASS  C9.2-1 pass: before anything is generated, a fact change only recomputes drafts: nothing out of date — 200
+PASS  C9.2-2 pass: IMM 5257 validated and read back, IMM 5476 signed scan in (setup)
+PASS  C9.2-3 pass: the uploaded IMM 5257 is Out of date, naming the fact, the old and new value and the date — "The validated copy of IMM 5257 read back 7 Nov 2026 is out of date: family name (surname) as shown on the person's passport or travel document of Sample Client A changed from \"SAMPLE\" to \"SAMPLEDZ\" on 7 Nov 2026. Make a new copy, press Validate again (a n
+PASS  C9.2-4 pass: the validated copy itself is never changed (same bytes); the signed scan keeps its checksum — {"validatedSha":"c3a8e63f540f00dc3d03855341f85b3fc249154df400b98d19bacae179958f6a","before":"c3a8e63f540f00dc3d03855341f85b3fc249154df400b98d19bacae179958f6a"}
+PASS  C9.2-5 fail (P-136, P-168, P-237): an out-of-date uploaded or signed item is a CRITICAL warning that stops Ready to file — ["CRITICAL: IMM 5257 for Sample Client A is out of date: \"Family name (surname) as shown on the person's passport or travel document\" changed on 2026-11-08 after it was signed or uploaded. Make a new copy.","CRITICAL: IMM 5476 for Sample Client A is out of d
+PASS  C9.2-6 pass: the signed IMM 5476 that prints the family name is Out of date too
+PASS  C9.2-7 pass (scope): the spouse's own IMM 5257 does not use the principal's family name and stays as it was — [["IMM 5476","ready"],["IMM 5645","to_do"],["IMM 5257","to_do"],["IMM 5257 SCH1","to_do"]]
+PASS  C9.2-8 pass: Undo of the change restores the earlier value; the items are no longer out of date — 200
+PASS  C9.2-9 pass: changing the spouse's date of birth marks the principal's entered IMM 5645 section out of date
+PASS  C9.2-10 pass: a new representative of record marks the signed IMM 5476 out of date and asks for a new one — ["out_of_date","to_do"]
+PASS  C9.2-11 pass (data): an answer is never changed in place: the old value stays on record
+
+11/11 passed
+pack exit 0  end Sun Nov  8 08:44:10 IST 2026
+stopped qa_p92 (database and files removed; log in var/isolated-logs/qa_p92-api.log)

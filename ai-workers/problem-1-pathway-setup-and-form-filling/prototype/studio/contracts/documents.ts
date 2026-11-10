@@ -28,6 +28,20 @@ export const NotApplicable = SeenVersion.extend({
   reason: z.string({ message: "Give a reason why this document is not applicable." }).transform((x) => x.replace(INVISIBLE, "").trim())
     .pipe(z.string().min(1, "Give a reason why this document is not applicable.").max(MAX_REASON, `A reason is at most ${MAX_REASON} characters.`)),
 });
+/** C6.14 (SA-1B-214 rule 2; concept product/screens/B136/concept.md BR-6): the case officer's choice of providers for a
+ *  shared line (people on the case, by their subject id), or null to use the document type's defaults again; always with
+ *  a reason (3 characters or more) and, when sent, the line's version as seen. */
+const PROVIDERS_REASON = "Give a reason for changing who provides this document (3 characters or more).";
+/** Break M1 (C6.14): characters PostgreSQL cannot store in text or jsonb (NUL and other controls, half a surrogate pair):
+ *  refused in words (400) before anything is written, so a change is never saved without its audit line. */
+export const UNSTORABLE = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]|[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/;
+const STORABLE = "The reason has a character that cannot be stored (a control character or half of an emoji). Retype it.";
+export const ChangeProviders = SeenVersion.extend({
+  providers: z.array(z.string({ message: "Name each provider by the person's id." }).uuid("Name each provider by the person's id."), { message: "Choose who provides it, or send null to use the defaults." })
+    .min(1, "Choose at least one person, or use the defaults.").max(12, "At most 12 providers.").nullable(),
+  reason: z.string({ message: PROVIDERS_REASON }).refine((x) => !UNSTORABLE.test(x), STORABLE).transform((x) => x.replace(INVISIBLE, "").trim())
+    .pipe(z.string().min(3, PROVIDERS_REASON).max(MAX_REASON, `A reason is at most ${MAX_REASON} characters.`)),
+}).strict();
 
 /** Uploads: one file up to 20 MB, a PDF, JPEG or PNG judged by its own bytes (never by its name or the browser's type). */
 export const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024, MAX_DOCUMENT_MB = MAX_DOCUMENT_BYTES / 1024 / 1024;
@@ -44,4 +58,6 @@ export function cleanName(name: string | undefined): string {
   const n = String(name ?? "").split(/[\\/]/).pop()!.replace(/[\u0000-\u001f\u007f<>"]/g, "").replace(INVISIBLE, "").trim().slice(0, 200);
   return n && !/^\.+$/.test(n) ? n : "document";
 }
-export type StoredDocument = { id: string; current: boolean; file_name: string; media_type: string; size_bytes: number; sha256: string; uploaded_by: string; uploaded_at: string; superseded_at: string | null };
+export type StoredDocument = { id: string; current: boolean; file_name: string; media_type: string; size_bytes: number; sha256: string; uploaded_by: string; uploaded_at: string; superseded_at: string | null;
+  /** C6.15: on a line with a substitute set, the member of the set this file is. */
+  member?: { key: string; name: string } };

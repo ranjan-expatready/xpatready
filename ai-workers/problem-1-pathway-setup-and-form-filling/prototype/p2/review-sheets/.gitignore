@@ -1,0 +1,7 @@
+# C7.5 part 2: written by the Studio from a case's filled form (its review sheet), regenerated deterministically; never committed,
+# except the sheet the one saved paid review of IMM 5257 read (run b4936d0b, 9 Nov): the record of what was sent, and the
+# anchor of tests/check_c75_saved_run_tripwire.ts.
+*
+!.gitignore
+!imm-5257-09-2023-3a2acc10d135.sheet.json
+!imm-5257-09-2023-123a97599291.sheet.json

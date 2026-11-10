@@ -91,5 +91,5 @@ type Rec = { our_reference: string; filings: { id: string; person: string; appli
   ok("C8.2 pass (data): no UCI is copied onto the filing (the person's answer is the one record)", sql(`select count(*) from client_canonical_answer where subject_id='${S}' and canonical_field_key='person.uci' and superseded_by_id is null`) === "1");
   r = await call("GET", `/runtime/cases/${c.id}/filing-record`, undefined, m3.CLIENT);
   ok("C8.2 fail: a client cannot read the filing record (403)", r.status === 403, r.status);
-  summary();
+  process.exitCode = summary() ? 1 : 0; // B160: a red line fails the suite (run-suites.sh judges the exit code; before, it always exited 0)
 })();

@@ -9,12 +9,15 @@ import * as React from "react";
 
 type Source = { page: string; url: string; read: string };
 /** A submission's line total, as engine/runtime/filings.ts familyFee gives it. */
-type Total = { line: string; label: string; people: number; family_max_cents: number; family_from: number; total_cents: number; cap_applied: boolean; why: string; source?: Source };
-type Group = { id: string; kind: string; label?: string; filings: string[]; totals?: Total[]; total_cents?: number | null };
+/** `basis` (B133): the fee table line's own basis (P-247), sent by the engine on each total. */
+type Total = { line: string; label: string; basis?: string; people: number; family_max_cents: number; family_from: number; total_cents: number; cap_applied: boolean; why: string; source?: Source };
+/** `fees_recorded` (B152): the group's fees are read from what was recorded, on that day. */
+type Group = { id: string; kind: string; label?: string; filings: string[]; totals?: Total[]; total_cents?: number | null; fees_recorded?: { at: string } };
 /** A fee line as GET …/prepare maps it (api/src/case-prepare.ts): `subject` is the person the line is for. */
 type FeeLine = { filing: string; subject: string; key: string; line: string; amount_words: string; exempt: boolean; reason: string; waiting?: string; source_detail?: Source | null };
 type Applicant = { subject: string; label: string; mode: string };
-type Filing = { id: string; label: string; owner?: { subject: string; label: string }; applicants: Applicant[] };
+/** `record` (C8.2): present once the filing's submission is recorded. */
+type Filing = { id: string; label: string; owner?: { subject: string; label: string }; applicants: Applicant[]; record?: unknown };
 type NotFiling = { subject: string; label: string; why: string };
 /** The part of the prepare view the fee block reads; every field the panel does not need is optional. */
 export type FeesView = { groups: Group[]; filings: Filing[]; fees?: FeeLine[]; not_filing?: NotFiling[]; fees_worked_out?: boolean; fees_why?: string | null; basis?: string };
@@ -23,15 +26,15 @@ export type FeesView = { groups: Group[]; filings: Filing[]; fees?: FeeLine[]; n
 export const cadWords = (cents: number) => `CAD ${(cents / 100).toFixed(cents % 100 ? 2 : 0)}`;
 
 /** A fee's basis in P-247's words, once per fee on its totals line (challenge M1: never on a person's row, where an exempt
- *  or uncapped row would read "Family maximum"). Read from the server's own total: only the family maximum basis carries
- *  a maximum (engine familyFee); the other two are named in the server's words. null when it cannot be read: then only
- *  the why shows, never a guessed basis. A stopgap until /prepare sends the basis itself (concept question 2). */
+ *  or uncapped row would read "Family maximum"). Read from the total's own `basis` field (B133), never from its words or
+ *  its maximum; a basis the page does not know (or none) names nothing, never a guessed one: then only the why shows. */
 export function basisOf(t: Total | undefined): string | null {
-  if (!t) return null;
-  if (t.family_max_cents > 0) return `Per person, with a family maximum of ${cadWords(t.family_max_cents)} from ${t.family_from} people applying together`;
-  if (/\(per application;/.test(t.why)) return "Per application";
-  if (/\(per person;/.test(t.why)) return "Per person by role";
-  return null;
+  switch (t?.basis) {
+    case "family_maximum": return `Per person, with a family maximum of ${cadWords(t.family_max_cents)} from ${t.family_from} people applying together`;
+    case "per_person_by_role": return "Per person by role";
+    case "per_application": return "Per application";
+    default: return null;
+  }
 }
 
 /** A source's date as the table gives it: a page's own date is never shown as the day we read it (challenge m). */
@@ -43,13 +46,36 @@ function sourcesOf(totals: Total[], lines: FeeLine[]): Source[] {
   return all.filter((s, i) => all.findIndex((x) => x.url === s.url) === i);
 }
 
+/** B151: the people of the case who pay no fee, named with the server's words (people with no filing, once), and the
+ *  declared-only applicants of the given filings. Shown in the priced and the unpriced state alike (Devin on #1233). */
+function NoFee({ notFiling, declared }: { notFiling: NotFiling[]; declared: Applicant[] }) {
+  if (!notFiling.length && !declared.length) return null;
+  return (
+    <ul className="mt-2 space-y-0.5 text-[13px]" data-fee-not-filing>
+      {notFiling.map((n) => <li key={n.subject} className="[overflow-wrap:anywhere]" data-fee-no-filing={n.subject}><span className="font-medium">{n.label}: no fee.</span> <span className="text-text-muted">{n.why}</span></li>)}
+      {declared.map((a) => <li key={`declared-${a.subject}`} className="[overflow-wrap:anywhere]" data-fee-declared={a.subject}><span className="font-medium">{a.label}:</span> <span className="text-text-muted">Declared only: no fee</span></li>)}
+    </ul>
+  );
+}
+
+/** B151 (until or after B152): where a recorded group's fees come from: as recorded on its day (B152's snapshot), or, for
+ *  a group recorded before B152, as worked out today, which is not the amount recorded. Nothing for an unrecorded group. */
+function RecordedNote({ group, filings }: { group: Group; filings: Filing[] }) {
+  if (group.fees_recorded?.at) return <p className="mt-0.5 text-[13px] text-text-muted" data-fees-recorded={group.fees_recorded.at}>Fees as recorded on {new Date(group.fees_recorded.at).toLocaleDateString("en-CA", { day: "numeric", month: "long", year: "numeric" })}</p>;
+  if (filings.some((f) => f.record)) return <p className="mt-0.5 text-[13px] text-text-muted" data-fees-recorded="today">Fees as worked out today, not the amount recorded</p>;
+  return null;
+}
+
 /** The fee block of one submission group. `first`: the case's first submission, which also lists the people with no filing. */
 export function FeeBlock({ view, group, first }: { view: FeesView; group: Group; first: boolean }) {
   const h = `fees-${group.id}`, name = group.label ?? "this submission";
+  // B151: not worked out: the server's words once, under the first submission, and the people with no fee (the case's
+  // people with no filing, and every declared-only applicant of the case's filings), never an amount.
   if (view.fees_worked_out === false) return !first ? null : (
     <div className="mt-3" data-fees={group.id} data-fees-worked-out="false">
       <h4 id={h} className="text-[13px] font-semibold">Fees</h4>
       <p className="mt-1 text-[13px] text-text-muted [overflow-wrap:anywhere]">{view.fees_why ?? "The fees are not worked out for this case."}</p>
+      <NoFee notFiling={view.not_filing ?? []} declared={view.filings.flatMap((f) => f.applicants.filter((a) => a.mode === "declared_only")).filter((a, i, all) => all.findIndex((x) => x.subject === a.subject) === i)} />
     </div>
   );
   if (!view.fees) return null;
@@ -61,6 +87,7 @@ export function FeeBlock({ view, group, first }: { view: FeesView; group: Group;
   return (
     <div className="mt-3" data-fees={group.id}>
       <h4 id={h} className="text-[13px] font-semibold">Fees</h4>
+      <RecordedNote group={group} filings={filings} />
       {/* Break m4: the table is named by its caption, which lists the submission's filings, so six split submissions
           (each "One submission") are told apart by a screen reader. */}
       <table className="mt-1 w-full table-fixed border-collapse text-left text-[13px]">
@@ -104,9 +131,7 @@ export function FeeBlock({ view, group, first }: { view: FeesView; group: Group;
       </ul> : null}
       {/* Challenge M2: while a fee waits for a fact the total is not final, and says so (the server leaves the line out). */}
       {group.total_cents != null ? <p className="mt-1 text-sm font-semibold" data-fee-total>{waiting ? "Total so far" : "Total for this submission"}: {cadWords(group.total_cents)}{waiting ? <span className="font-normal text-text-muted" data-fee-waiting-count> · {waiting} fee{waiting === 1 ? "" : "s"} not counted yet</span> : null}</p> : null}
-      {first && view.not_filing?.length ? <ul className="mt-2 space-y-0.5 text-[13px]" data-fee-not-filing>
-        {view.not_filing.map((n) => <li key={n.subject} className="[overflow-wrap:anywhere]" data-fee-no-filing={n.subject}><span className="font-medium">{n.label}: no fee.</span> <span className="text-text-muted">{n.why}</span></li>)}
-      </ul> : null}
+      {first ? <NoFee notFiling={view.not_filing ?? []} declared={[]} /> : null}
       {sources.length ? <p className="mt-2 text-xs text-text-muted [overflow-wrap:anywhere]" data-fee-sources>Sources: {sources.map((s, i) => <React.Fragment key={s.url}>{i ? " · " : ""}<a href={s.url} target="_blank" rel="noreferrer" className="text-text-link underline">{s.page}</a> ({dateOf(s.read)})</React.Fragment>)}</p> : null}
     </div>
   );

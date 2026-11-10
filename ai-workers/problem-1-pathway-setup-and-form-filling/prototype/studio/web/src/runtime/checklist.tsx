@@ -18,8 +18,21 @@ import { lineId, noRetryOnRefusal } from "./questionnaire";
  *  in engine/runtime/case-checklist.ts). Declared here, not imported: the engine file reads Node modules the web build has not. */
 type Missing = { key: string; question: string; answered: boolean; on: "case" | "person"; subject: string | null };
 export type ChecklistLine = { id: string; label: string; lineage: string; reason: string; required: boolean; who_words: string; quote: string | null; missing: Missing[];
-  state: LineState; state_words: string; state_reason: string | null; state_by: string | null; state_at: string | null; version: number; documents: StoredDocument[]; kept: boolean };
-type Person = { subject: string; label: string; role: string; applies: boolean; lines: ChecklistLine[]; waiting: ChecklistLine[]; not_needed: ChecklistLine[] };
+  state: LineState; state_words: string; state_reason: string | null; state_by: string | null; state_at: string | null; version: number; documents: StoredDocument[]; kept: boolean;
+  /** C6.15: the substitute set the line uses (any one of / all of), and whether the person's files meet it. */
+  set?: { name: string; mode: "any_one" | "all_together"; words: string; members: { key: string; name: string; standard: boolean; when_staff: string | null }[] } | null;
+  set_status?: { met: boolean; words: string } | null;
+  /** C6.17 (BR-6): a file from the stage before, to check for this application. */
+  on_file?: { from: string; file_name: string; uploaded_at: string; words: string };
+  /** C6.14: a line asked once for the application or the couple is one item with providers, and why each was named. */
+  shared?: "application" | "couple" | null; providers?: { subject: string; label: string; role: string; why: string }[];
+  providers_rule?: "type_roles" | "first_applicant" | "changed" | null; providers_words?: string | null;
+  providers_change?: { reason: string; by: string | null; at: string | null; defaults: boolean } | null };
+/** B102 (A6, BR-8): the person's age as the lines read it (engine/runtime/case-checklist.ts PersonAge). */
+type Age = { years: number | null; on: string | null; why: string; worked_out: boolean };
+type Person = { subject: string; label: string; role: string; applies: boolean; lines: ChecklistLine[]; waiting: ChecklistLine[]; not_needed: ChecklistLine[]; age?: Age;
+  /** C6.14 BR-4: whether the person may provide a shared document today (the server's rule), and why not. */
+  may_provide?: { ok: boolean; why: string } };
 export type ChecklistView =
   | { derived: true; stand_in: "SI-14"; people: Person[]; basis: string; empty_release: boolean; ages_on_why: string }
   | { derived: false; why: string };
@@ -59,23 +72,24 @@ function Body({ caseId, caseSubject, d, nameOf }: { caseId: string; caseSubject:
   if (d.empty_release) return <div className="p-4"><Notice tone="warn" title="This release has no document lines">{d.basis}</Notice></div>;
   return (
     <div className="divide-y divide-border">
-      {d.people.map((p) => <PersonDocuments key={p.subject} caseId={caseId} caseSubject={caseSubject} p={p} nameOf={nameOf} />)}
+      {d.people.map((p) => <PersonDocuments key={p.subject} caseId={caseId} caseSubject={caseSubject} p={p} people={d.people} nameOf={nameOf} />)}
       <p className="px-4 py-2 text-xs text-text-muted">{d.basis} {d.ages_on_why}</p>
     </div>
   );
 }
 
-function PersonDocuments({ caseId, caseSubject, p, nameOf }: { caseId: string; caseSubject: string; p: Person; nameOf: (id: string) => string }) {
+function PersonDocuments({ caseId, caseSubject, p, people, nameOf }: { caseId: string; caseSubject: string; p: Person; people: Person[]; nameOf: (id: string) => string }) {
   const { n, m } = received(p.lines);
   const id = `docs-${p.subject}`;
   return (
     <section aria-labelledby={id} className="px-4 py-3" data-documents-person={p.subject}>
       <h3 id={id} className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold"><span className="[overflow-wrap:anywhere]">{p.label}</span>
         <span className="text-xs font-normal text-text-muted">{ROLE[p.role] ?? p.role}</span>
+        {p.age ? <span className={`text-xs font-normal ${p.age.years === null ? "text-text-warn" : "text-text-muted"}`} data-age={p.age.years ?? ""}>{p.age.why}</span> : null}
         {m ? <span className="text-xs font-normal text-text-muted" data-received>{n} of {m} received</span> : null}</h3>
       {!p.applies && !p.lines.length ? <p className="mt-1 text-sm text-text-muted" data-not-travelling>Not travelling with this application: nothing is asked of them.</p> : null}
       {p.applies && !p.lines.length && !p.waiting.length ? <p className="mt-1 text-sm text-text-muted">Nothing is needed from this person now.</p> : null}
-      {p.lines.length ? <ul className="mt-2 divide-y divide-border rounded-lg border border-border">{p.lines.map((l) => <LineRow key={l.id} caseId={caseId} p={p} l={l} nameOf={nameOf} />)}</ul> : null}
+      {p.lines.length ? <ul className="mt-2 divide-y divide-border rounded-lg border border-border">{p.lines.map((l) => <LineRow key={l.id} caseId={caseId} p={p} people={people} l={l} nameOf={nameOf} />)}</ul> : null}
       {p.waiting.length ? (
         <div className="mt-2" data-waiting>
           <p className="text-xs font-medium text-text-muted">May be needed</p>
@@ -98,13 +112,15 @@ function PersonDocuments({ caseId, caseSubject, p, nameOf }: { caseId: string; c
   );
 }
 
-function LineRow({ caseId, p, l, nameOf }: { caseId: string; p: Person; l: ChecklistLine; nameOf: (id: string) => string }) {
+function LineRow({ caseId, p, people, l, nameOf }: { caseId: string; p: Person; people: Person[]; l: ChecklistLine; nameOf: (id: string) => string }) {
   const qc = useQueryClient();
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [na, setNa] = React.useState(false);
   const [history, setHistory] = React.useState(false);
+  const [providers, setProviders] = React.useState(false);
   const file = React.useRef<HTMLInputElement>(null);
+  const member = React.useRef<string | null>(null); // C6.15: which member of the line's set the chosen file is
   // Review and break M1 (WCAG 2.4.3): after every action and when a dialog closes, focus goes back to this line's ⋯ button,
   // which stays focusable while its request runs (aria-busy, not disabled), so the next Tab continues from the line.
   const trigger = React.useRef<HTMLButtonElement>(null);
@@ -119,20 +135,27 @@ function LineRow({ caseId, p, l, nameOf }: { caseId: string; p: Person; l: Check
     finally { setBusy(false); back(); }
   };
   const request = () => run(() => api(`/runtime/checklist-lines/${l.id}/request`, { method: "POST", json: { version: l.version } }));
-  const upload = (f: File) => run(() => { const fd = new FormData(); fd.append("version", String(l.version)); fd.append("file", f, f.name); return api(`/runtime/checklist-lines/${l.id}/documents`, { method: "POST", body: fd }); });
-  const current = l.documents.find((d) => d.current), earlier = l.documents.length - (current ? 1 : 0);
+  const upload = (f: File) => run(() => { const fd = new FormData(); fd.append("version", String(l.version)); if (member.current) fd.append("member", member.current); fd.append("file", f, f.name); return api(`/runtime/checklist-lines/${l.id}/documents`, { method: "POST", body: fd }); });
+  const currents = l.documents.filter((d) => d.current), current = currents[0], earlier = l.documents.length - currents.length;
   const item = "flex cursor-pointer select-none items-center gap-2 rounded px-2 py-1.5 outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[highlighted]:bg-surface";
   const label = `${l.label} for ${p.label}`;
   return (
     <li className="grid gap-x-4 gap-y-1 px-3 py-2.5 text-sm md:grid-cols-[minmax(0,14rem)_8rem_minmax(0,1fr)_auto]" data-line={l.id} data-state={l.state}>
       <div className="min-w-0"><p className="font-medium [overflow-wrap:anywhere]" data-line-label>{l.label}</p>
-        <p className="text-xs text-text-muted" data-who>{l.who_words}</p></div>
+        <p className="text-xs text-text-muted" data-who>{l.who_words}</p>
+        {l.shared ? <div className="mt-1 text-xs" data-shared={l.shared}>
+          <p className="[overflow-wrap:anywhere]"><span className="font-medium">Shared</span> · Provided by <span data-providers>{(l.providers ?? []).map((x) => x.label).join(" and ")}</span></p>
+          <p className="text-text-muted [overflow-wrap:anywhere]" data-providers-rule={l.providers_rule ?? ""}>{l.providers_rule === "changed" ? `Chosen by the case officer${l.providers_change?.at ? ` on ${when(l.providers_change.at)}` : ""}${l.providers_change?.by ? ` (${nameOf(l.providers_change.by)})` : ""}: ${l.providers_change?.reason ?? ""}` : l.providers_rule === "type_roles" ? "Default from the document type" : "The person the item is for"}</p></div> : null}</div>
       {/* Break m3: a kept line says so once, in its reason (the API's words); no second "Kept" label. */}
       <div className="min-w-0"><Pill tone={TONE[l.state] ?? "neutral"}><span data-state-words>{l.state_words}</span></Pill>
         {l.state_reason ? <p className="mt-0.5 text-xs text-text-muted [overflow-wrap:anywhere]">{l.state_reason}</p> : null}</div>
       <div className="min-w-0 text-[13px] [overflow-wrap:anywhere]"><p data-reason>{l.reason}</p>
         {l.quote ? <details className="mt-0.5"><summary className="cursor-pointer text-xs text-text-link">Source</summary><p className="mt-1 text-xs text-text-muted [overflow-wrap:anywhere]" data-quote>{l.quote}</p></details> : null}
-        <p className="mt-0.5 text-xs text-text-muted">{current ? <>File: <span className="[overflow-wrap:anywhere]">{current.file_name}</span>{earlier ? ` · ${earlier} earlier` : ""}</> : "No file yet"}{l.state_at ? ` · Last change ${when(l.state_at)}${l.state_by ? ` by ${nameOf(l.state_by)}` : ""}` : ""}</p>
+        {l.set ? <div className="mt-1 text-xs" data-line-set={l.set.mode}><p>{l.set.words}</p>
+          {l.set.members.filter((m) => m.when_staff).map((m) => <p key={m.key} className="text-text-muted">{m.name} is acceptable when: {m.when_staff}</p>)}
+          {l.set_status ? <p className={l.set_status.met ? "text-text-muted" : "font-medium"} data-set-status={l.set_status.met ? "met" : "open"}>{l.set_status.words}</p> : null}</div> : null}
+        <p className="mt-0.5 text-xs text-text-muted">{current ? <>{currents.length > 1 || current.member ? "Files" : "File"}: <span className="[overflow-wrap:anywhere]">{currents.map((d) => `${d.file_name}${d.member ? ` (${d.member.name})` : ""}`).join(", ")}</span>{earlier ? ` · ${earlier} earlier` : ""}</> : "No file yet"}{l.state_at ? ` · Last change ${when(l.state_at)}${l.state_by ? ` by ${nameOf(l.state_by)}` : ""}` : ""}</p>
+        {l.on_file ? <p className="mt-0.5 text-xs font-medium text-text-warn" data-on-file>{l.on_file.words}</p> : null}
         {error ? <p role="alert" className="mt-1 text-xs text-text-danger" data-line-error>{error}</p> : null}</div>
       <div className="flex items-start justify-end">
         <input ref={file} type="file" className="sr-only" tabIndex={-1} aria-hidden accept="application/pdf,image/jpeg,image/png" data-upload-input
@@ -144,18 +167,21 @@ function LineRow({ caseId, p, l, nameOf }: { caseId: string; p: Person; l: Check
           <DropdownMenu.Portal>
             <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[220px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
               {REQUEST_FROM.includes(l.state) ? <DropdownMenu.Item className={item} disabled={busy} onSelect={() => void request()} data-action="request">{l.state === "not_requested" ? "Request" : "Request again"}</DropdownMenu.Item> : null}
-              {UPLOAD_FROM.includes(l.state) ? <DropdownMenu.Item className={item} disabled={busy} onSelect={() => file.current?.click()} data-action="upload">Upload a file…</DropdownMenu.Item> : null}
+              {UPLOAD_FROM.includes(l.state) && !l.set ? <DropdownMenu.Item className={item} disabled={busy} onSelect={() => { member.current = null; file.current?.click(); }} data-action="upload">Upload a file…</DropdownMenu.Item> : null}
+              {UPLOAD_FROM.includes(l.state) && l.set ? l.set.members.map((m) => <DropdownMenu.Item key={m.key} className={item} disabled={busy} onSelect={() => { member.current = m.key; file.current?.click(); }} data-action="upload" data-member={m.key}>Upload {m.name}…</DropdownMenu.Item>) : null}
               {NOT_APPLICABLE_FROM.includes(l.state) ? <DropdownMenu.Item className={item} onSelect={() => setNa(true)} data-action="not-applicable">Not applicable…</DropdownMenu.Item> : null}
+              {l.shared ? <DropdownMenu.Item className={item} onSelect={() => setProviders(true)} data-action="providers">Change providers…</DropdownMenu.Item> : null}
               <DropdownMenu.Item className={item} onSelect={() => setHistory(true)} data-action="history">History</DropdownMenu.Item>
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
       </div>
       {na ? <NotApplicableDialog l={l} label={label} close={() => { setNa(false); back(); }} done={reload} /> : null}
+      {providers ? <ProvidersDialog l={l} label={l.label} people={people} close={() => { setProviders(false); back(); }} done={reload} /> : null}
       {history ? <Dialog open onOpenChange={(o) => { if (!o) { setHistory(false); back(); } }} title={`History: ${label}`}>
         <div className="min-w-0 space-y-2 text-sm [overflow-wrap:anywhere]" data-history>
           <p>State: {l.state_words}{l.state_at ? `, since ${when(l.state_at)}${l.state_by ? ` by ${nameOf(l.state_by)}` : ""}` : ""}{l.state_reason ? `. Reason: ${l.state_reason}` : ""}.</p>
-          {l.documents.length ? <ul className="space-y-1">{[...l.documents].reverse().map((d) => <li key={d.id}>{d.file_name} · {Math.max(1, Math.round(d.size_bytes / 1024))} KB · {when(d.uploaded_at)} by {nameOf(d.uploaded_by)}{d.current ? " · current" : ` · replaced ${d.superseded_at ? when(d.superseded_at) : ""}`}</li>)}</ul> : <p className="text-text-muted">No file yet.</p>}
+          {l.documents.length ? <ul className="space-y-1">{[...l.documents].reverse().map((d) => <li key={d.id}>{d.file_name}{d.member ? ` (${d.member.name})` : ""} · {Math.max(1, Math.round(d.size_bytes / 1024))} KB · {when(d.uploaded_at)} by {nameOf(d.uploaded_by)}{d.current ? " · current" : ` · replaced ${d.superseded_at ? when(d.superseded_at) : ""}`}</li>)}</ul> : <p className="text-text-muted">No file yet.</p>}
           <p className="text-xs text-text-muted">Opening a file comes with Fill from documents. A full history of every state change is not built yet.</p>
         </div>
       </Dialog> : null}
@@ -185,6 +211,50 @@ function NotApplicableDialog({ l, label, close, done }: { l: ChecklistLine; labe
         <Field label="Reason" error={err.field}><Input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} data-na-reason /></Field>
       </form>
       {err.other ? <p role="alert" className="mt-2 text-sm text-text-danger">{err.other}</p> : null}
+    </Dialog>
+  );
+}
+
+/** C6.14 BR-6 (SA-1B-214 rule 2): the case officer chooses who provides a shared document, or goes back to the document
+ *  type's defaults, always with a reason. People under 18, or whose age cannot be checked yet, cannot be ticked (the server
+ *  says the same and decides; its words show here). */
+function ProvidersDialog({ l, label, people, close, done }: { l: ChecklistLine; label: string; people: Person[]; close: () => void; done: () => Promise<unknown> }) {
+  // Break minor 1: only people who may provide are ticked at the start (the fallback can be a person under 18).
+  const may = (id: string) => people.find((p) => p.subject === id)?.may_provide?.ok !== false;
+  const [chosen, setChosen] = React.useState<string[]>((l.providers ?? []).map((x) => x.subject).filter(may));
+  const [reason, setReason] = React.useState("");
+  const [err, setErr] = React.useState<{ field: string | null; other: string | null }>({ field: null, other: null });
+  const [busy, setBusy] = React.useState(false);
+  const sending = React.useRef(false);
+  const send = async (providers: string[] | null) => {
+    if (sending.current) return;
+    sending.current = true; setBusy(true); setErr({ field: null, other: null });
+    try { await api(`/runtime/checklist-lines/${l.id}/providers`, { method: "POST", json: { providers, reason, version: l.version } }); await done(); close(); }
+    catch (e) {
+      const f = e instanceof ApiError ? e.field("reason") : null;
+      setErr({ field: f, other: f ? null : (e as Error).message });
+      if (e instanceof ApiError && e.status === 409) await done();
+    } finally { sending.current = false; setBusy(false); }
+  };
+  const blocked = (p: Person) => (p.may_provide && !p.may_provide.ok ? p.may_provide.why : null);
+  const candidates = people;
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={`Who provides: ${label}`} description="One item for the whole application: whoever is ticked may upload it. Nobody under 18 provides a document."
+      footer={<>{l.providers_change && !l.providers_change.defaults ? <Button variant="secondary" busy={busy} onClick={() => void send(null)} data-providers-defaults>Use the defaults</Button> : null}
+        <Button variant="secondary" onClick={close}>Cancel</Button><Button busy={busy} disabled={!chosen.length} onClick={() => void send(chosen)} data-providers-save>Save providers</Button></>}>
+      <form onSubmit={(e) => { e.preventDefault(); void send(chosen); }} className="space-y-3">
+        <fieldset><legend className="text-sm font-medium">Providers</legend>
+          <ul className="mt-1 space-y-1">{candidates.map((p) => { const no = blocked(p); return (
+            <li key={p.subject}><label className={`flex items-center gap-2 text-sm ${no ? "text-text-muted" : ""}`}>
+              <input type="checkbox" checked={chosen.includes(p.subject)} disabled={!!no && !chosen.includes(p.subject)} data-provider-option={p.subject}
+                onChange={(e) => setChosen((c) => (e.target.checked ? [...c, p.subject] : c.filter((x) => x !== p.subject)))} />
+              <span className="[overflow-wrap:anywhere]">{p.label}</span> <span className="text-xs text-text-muted">{ROLE[p.role] ?? p.role}</span></label>
+              {no ? <p className="ml-6 text-xs text-text-muted [overflow-wrap:anywhere]" data-provider-blocked={p.subject}>{no}</p> : null}</li>); })}</ul>
+        </fieldset>
+        <Field label="Reason" error={err.field}><Input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} data-providers-reason /></Field>
+      </form>
+      {l.providers_words ? <p className="mt-2 text-xs text-text-muted [overflow-wrap:anywhere]">Now: {l.providers_words}</p> : null}
+      {err.other ? <p role="alert" className="mt-2 text-sm text-text-danger" data-providers-error>{err.other}</p> : null}
     </Dialog>
   );
 }

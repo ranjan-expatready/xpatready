@@ -3,6 +3,7 @@
 import { itemState, libraryFilter, lockItem, openItemChanges, originWords, refuseRetired, retiredFieldKeys } from "./library-items.ts";
 import { current } from "../../engine/where-used.ts";
 import { FILLS_LOCK } from "./who-fills.ts";
+import { openBackgroundChanges } from "./section-background.ts";
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { Prisma, type ReviewSubmission } from "@prisma/client";
 import { canRelease } from "../../../contracts/rules.ts";
@@ -35,6 +36,7 @@ import { gateOf as keyGateOf, keysUnchanged, runKeys, type Gate as KeyGate } fro
 import type { Problem } from "../../engine/validate.ts";
 import { isIdentityName } from "../../engine/identity-documents.ts";
 import { firmMayRead } from "./case-feed.ts";
+import { placementRefusal } from "../../engine/field-scope.ts"; // C3.16: a field asked once for the household or employer stays single and unconditioned
 /** G2 (C5.5, BR-8; shared with G1 BR-8): a refusal carries every blocking problem in `errors[]`, each in words; `detail`
  *  (and `message`, read by older callers) keeps the sentence the screens and checks already show. */
 /** G2 BR-9: the keys a release rests on, frozen in its summary (only when the gate judged it). */
@@ -671,10 +673,18 @@ export class Studio {
     // C4.9 (P-97): who fills an existing placement changes only through a library change with a second person (who-fills.ts).
     const now = [...rows].sort((a, b) => b.version - a.version).find((r) => r.status === "DRAFT" || r.status === "PUBLISHED");
     if (now && now.collectedFrom !== b.collectedFrom) fail(FILLS_LOCK, HttpStatus.CONFLICT);
+    // B154 (break M5, P-97): whether a question is a background answer changes only with a second person, so a question
+    // is not moved between a section that holds background answers and one that does not, and a background section's
+    // new question is the client's to answer.
+    const markOf = async (k: string) => !!(await this.db.logicalSection.findFirst({ where: { workspaceId, sectionKey: k }, orderBy: { version: "desc" } }))?.clientOnly;
+    const into = await markOf(b.sectionKey);
+    if (now && now.sectionKey !== b.sectionKey && (await markOf(now.sectionKey)) !== into) fail(`Moving this question ${into ? "into" : "out of"} a section that holds background answers would change whether it is the client's own answer for every combination. Mark the section on Shared library › Sections instead: a second person approves that.`, HttpStatus.CONFLICT);
+    if (!now && into && b.collectedFrom !== "client_questionnaire") fail("This section holds background answers, the client's own: a new question in it is filled by the client.", HttpStatus.CONFLICT);
     // C11.9 break round 2 (Major 2): checked again and written under the field's lock (a retire approved at once waits).
     const row = await this.db.$transaction(async (tx) => {
       await lockItem(tx, workspaceId, "field", [key]); await refuseRetired(tx, workspaceId, "field", [key]);
       await lockItem(tx, workspaceId, "section", [b.sectionKey]); await refuseRetired(tx, workspaceId, "section", [b.sectionKey]); // round 3 Major 1
+      { const no = placementRefusal((await tx.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" } }))?.scope, { repeats: b.repeats, condition: b.condition }); if (no) fail(no, HttpStatus.UNPROCESSABLE_ENTITY); } // C3.16 (#1054 M3, M1; review m1: under the field's lock)
       if (!rows.length) {
         const order = await tx.sectionQuestion.count({ where: { workspaceId, sectionKey: b.sectionKey } });
         return tx.sectionQuestion.create({ data: { workspaceId, lineageKey: key, canonicalFieldKey: key, displayOrder: order + 1, ...data, version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
@@ -693,11 +703,14 @@ export class Studio {
     const sel = await this.db.sqrSectionSelection.groupBy({ by: ["sectionKey"], where: { workspaceId }, _count: { _all: true } });
     const [src, { ids, labels: used }, open, { formsOf }, questions] = await Promise.all([this.lib.all("section", workspaceId), this.lib.usedInBoth("section", workspaceId), openItemChanges(this.db, workspaceId, "section"), this.formUsage(workspaceId),
       this.db.sectionQuestion.findMany({ where: { workspaceId } })]);
+    const marks = await openBackgroundChanges(this.db, workspaceId); // B154: a waiting change of a section's background mark
     // C3.13 BR-2: a section is used by the forms that fill a field its current questions ask, and by the combinations that
     // choose it; no section holds another, so its sections count is 0.
     const formsIn = new Map<string, Set<string>>();
     for (const x of current(questions, (r) => r.lineageKey)) for (const f of formsOf.get(x.canonicalFieldKey) ?? []) formsIn.set(x.sectionKey, (formsIn.get(x.sectionKey) ?? new Set()).add(f));
-    return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ ...itemState(rows.filter((x) => x.sectionKey === r.sectionKey), open.get(r.sectionKey), "section"), ...sourceSummary(src.get(r.sectionKey)), used_in: used.get(r.sectionKey) ?? [], usedBy: { forms: formsIn.get(r.sectionKey)?.size ?? 0, combinations: ids.get(r.sectionKey)?.size ?? 0, sections: 0 }, key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin, origin_words: originWords(r.origin), questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, combinations: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
+    return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ ...itemState(rows.filter((x) => x.sectionKey === r.sectionKey), open.get(r.sectionKey), "section"), ...sourceSummary(src.get(r.sectionKey)), used_in: used.get(r.sectionKey) ?? [], usedBy: { forms: formsIn.get(r.sectionKey)?.size ?? 0, combinations: ids.get(r.sectionKey)?.size ?? 0, sections: 0 }, key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin,
+      // B154 (P-97, P-244): released mark (the newest published version; a brand-new draft section its own) and any open change of it.
+      client_only: (rows.find((x) => x.sectionKey === r.sectionKey && x.status === "PUBLISHED") ?? r).clientOnly, background_change: marks.get(r.sectionKey) ?? null, origin_words: originWords(r.origin), questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, combinations: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
   }
 
   /** QA-93 (P-116): removing answers with the place the section had, so Undo adds it back in the same place. */
@@ -1200,7 +1213,8 @@ export class Studio {
       fields: await publish(tx.canonicalField, { workspaceId: ws, canonicalFieldKey: { in: snapshot.canonical_fields.map((f) => f.id) } }),
       placements: await publish(tx.sectionQuestion, { workspaceId: ws, lineageKey: { in: snapshot.placements.map((p) => p.lineage) } }),
       sections: await publish(tx.logicalSection, { workspaceId: ws, sectionKey: { in: [...snapshot.sections, ...(snapshot.section_titles ?? [])].map((x) => x.id) } }), // C4.2: pulled sections' titles too
-      documentTypes: await publish(tx.documentType, { workspaceId: ws, documentTypeKey: { in: snapshot.document_requirements.map((d) => d.document_type_key) } }),
+      // C6.15: a type's substitute-set members are published with it (the release names them).
+      documentTypes: await publish(tx.documentType, { workspaceId: ws, documentTypeKey: { in: [...snapshot.document_requirements.map((d) => d.document_type_key), ...(snapshot.document_types ?? []).flatMap((t: { sets?: { members: { key: string }[] }[] }) => (t.sets ?? []).flatMap((x) => x.members.map((m) => m.key)))] } }),
       requirements: await publish(tx.documentRequirement, { combinationId: id }), rules: await publish(tx.predicate, { combinationId: id }), forms: await publish(tx.combinationForm, { combinationId: id }), checks: await publish(tx.check, { combinationId: id }),
       factSources: await publish(tx.factSource, { combinationId: id }), // W1-15 slice 1
       boxes: await publish(tx.formFieldMap, { workspaceId: ws, edition: { form: { usedBy: { some: { combinationId: id } } } } }),
