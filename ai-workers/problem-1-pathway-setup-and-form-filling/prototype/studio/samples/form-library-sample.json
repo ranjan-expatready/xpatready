@@ -63,6 +63,51 @@
    }
   ]
  },
+ "account_accepts": {
+  "note": "M3-S5 (P-113, P-170): what IRCC accepts per account, from IRCC's own line on its recorded canada.ca page; Sample until the immigration expert confirms. Guide 5289 (canada.ca, modified 2026-04-23, saved 27 Oct 2026, official-sources/ircc/instructions/guide-5289.html), \"Filling out your forms\", \"Online forms in the portal\": \"You'll fill out these digital forms online (for yourself, and any family members 18 or older)\": IMM 0008, IMM 5669, IMM 5406, and IMM 5562 \"if it applies to you\"; then \"Instructions for online forms in the portal: You must fill out these forms within the portal. Do not fill out the PDF form.\" So in the PR Portal they are answer-sheet only (no PDF copy). Each record is used only when its line is on its recorded page.",
+  "records": [
+   {
+    "form": "IMM 0008",
+    "account": "PR_PORTAL",
+    "channels": [
+     "ONLINE"
+    ],
+    "quote": "You must fill out these forms within the portal. Do not fill out the PDF form.",
+    "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5289-sponsor-your-spouse-common-law-partner-conjugal-partner-dependent-child-complete-guide.html",
+    "read": "2026-10-27"
+   },
+   {
+    "form": "IMM 5669",
+    "account": "PR_PORTAL",
+    "channels": [
+     "ONLINE"
+    ],
+    "quote": "You must fill out these forms within the portal. Do not fill out the PDF form.",
+    "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5289-sponsor-your-spouse-common-law-partner-conjugal-partner-dependent-child-complete-guide.html",
+    "read": "2026-10-27"
+   },
+   {
+    "form": "IMM 5406",
+    "account": "PR_PORTAL",
+    "channels": [
+     "ONLINE"
+    ],
+    "quote": "You must fill out these forms within the portal. Do not fill out the PDF form.",
+    "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5289-sponsor-your-spouse-common-law-partner-conjugal-partner-dependent-child-complete-guide.html",
+    "read": "2026-10-27"
+   },
+   {
+    "form": "IMM 5562",
+    "account": "PR_PORTAL",
+    "channels": [
+     "ONLINE"
+    ],
+    "quote": "You must fill out these forms within the portal. Do not fill out the PDF form.",
+    "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5289-sponsor-your-spouse-common-law-partner-conjugal-partner-dependent-child-complete-guide.html",
+    "read": "2026-10-27"
+   }
+  ]
+ },
  "accounts": {
   "note": "Plan §8 Q1 (P-143): the IRCC account of sample combinations without a release, from canada.ca pages read 29 Oct (immigration-facts-2026-10-29.md, P-170). The released work-permit sample and rows whose page names no account stay unset (every way offered, Sample).",
   "combinations": {
