@@ -520,8 +520,8 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
         return (
           <div key={s.id} className="rounded-xl border border-border bg-surface-raised" data-section={s.id}>
             <div className="flex items-center justify-between gap-2 pr-2">
-              <button className="flex-1 px-4 py-3 text-left" aria-expanded={isOpen} onClick={() => { const n = new Set(opened); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); setOpenIds(n); }}>
-                <FoldArrow open={isOpen} className="mr-1.5 text-text-muted" /><span className="font-medium">{s.title}</span>{locked ? <span className="ml-2 inline-flex items-center gap-1 text-xs text-text-muted" data-client-only><Lock className="size-3.5" aria-hidden /> Always the client</span> : null} <span className="text-xs text-text-muted">· {s.questions.length} question{s.questions.length === 1 ? "" : "s"} for {role?.label ?? "this person"}{fromDocs ? ` · ${fromDocs} from documents` : ""}</span>
+              <button className="flex flex-1 items-start gap-1.5 px-4 py-3 text-left" aria-expanded={isOpen} onClick={() => { const n = new Set(opened); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); setOpenIds(n); }}>
+                <FoldArrow open={isOpen} className="mt-[0.2em] text-text-muted" /><span><span className="font-medium">{s.title}</span>{locked ? <span className="ml-2 inline-flex items-center gap-1 text-xs text-text-muted" data-client-only><Lock className="size-3.5" aria-hidden /> Always the client</span> : null} <span className="text-xs text-text-muted">· {s.questions.length} question{s.questions.length === 1 ? "" : "s"} for {role?.label ?? "this person"}{fromDocs ? ` · ${fromDocs} from documents` : ""}</span></span>
               </button>
               {canAuthor ? <MoveButtons s={s} order={secOrder.data?.order ?? null} onMove={(d) => void move({ key: s.id, title: s.title }, d)} /> : null}
               {/* QA-93: a question the shared library places in a section is asked whether or not the section is chosen, so

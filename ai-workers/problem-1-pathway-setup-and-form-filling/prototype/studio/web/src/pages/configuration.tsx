@@ -172,8 +172,8 @@ function Questions({ id, s }: { id: string; s: any }) {
         <div key={x.id} className="rounded-xl border border-border bg-surface-raised">
           {/* The section toggle and its Remove are siblings, never a button inside a button (axe nested-interactive). */}
           <div className="flex items-center justify-between gap-2 pr-2">
-            <button className="flex-1 px-4 py-3 text-left" onClick={() => setOpen(open === x.id ? null : x.id)} aria-expanded={open === x.id}>
-              <FoldArrow open={open === x.id} className="mr-1.5 text-text-muted" /><span className="font-medium">{x.title}</span> <span className="text-xs text-text-muted">· {by(x.id).length} question placements</span>
+            <button className="flex flex-1 items-start gap-1.5 px-4 py-3 text-left" onClick={() => setOpen(open === x.id ? null : x.id)} aria-expanded={open === x.id}>
+              <FoldArrow open={open === x.id} className="mt-[0.2em] text-text-muted" /><span><span className="font-medium">{x.title}</span> <span className="text-xs text-text-muted">· {by(x.id).length} question placements</span></span>
             </button>
             <Button size="sm" variant="ghost" onClick={() => sel.mutate({ key: x.id, on: false })} aria-label={`Remove from questionnaire: ${x.title}`}>Remove from questionnaire</Button>
           </div>
