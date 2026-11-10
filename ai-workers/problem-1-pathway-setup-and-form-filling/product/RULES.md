@@ -1,4 +1,4 @@
-# Rules in force — one page (the tech lead keeps it; as of **P-444**, 10 Nov 08:13 IST)
+# Rules in force — one page (the tech lead keeps it; as of **P-445**, 10 Nov 09:0x IST)
 
 Each rule once, with the decision that set it. **This page is the start read**: a new Lead reads it, then only the `DECISIONS.md` rows newer than "as of" above, word for word (P-314, P-440). `tools/check-docs.sh` fails when this page falls more than 3 rows behind DECISIONS (P-440). The previous page, as of P-353, is word for word in `history/RULES-2026-11-09-as-of-P-353.md`. Product rulings (what a screen or rule does) live in their DECISIONS rows: read a row when its capability is touched.
 
@@ -10,7 +10,7 @@ Each rule once, with the decision that set it. **This page is the start read**: 
 ## When a capability counts as Works
 * Its pack is green on `main`'s head on GitHub's runners, on the data its verdict counts on (the six or the configured checkpoint, P-322), with the run id in qa's row (P-339); an independent re-run confirms it (P-290); qa's verdict decides, given by a fresh Opus reader that ran nothing (P-303, P-432).
 * Gate A: qa walks it by screens to the next capability's first step (P-348 (3)). Gate B: CI fails a PR that names a capability with an open Major or Critical unless it fixes that bug (P-317); never drop a capability id to pass it (P-330 (7)).
-* Adobe Validate proves Paper PDF copies only (C7.2, C10.2); a capability with no PDF, like the Online answer sheet (C7.3), is never held on it (P-442). Product rulings since P-440: P-441 (C6.16 Resend after a staff re-address), P-442, P-443 (C6.16: Client A may take back a firm-sent link before the adult accepts; kept as built), P-444 (QA-375 upheld Major: C6.17 must add document lines on the new stage).
+* Adobe Validate proves Paper PDF copies only (C7.2, C10.2); a capability with no PDF, like the Online answer sheet (C7.3), is never held on it (P-442). Pipeline items queued for after the 26 or 22:30 IST: P-445 (3), (4). Product rulings since P-440: P-441 (C6.16 Resend after a staff re-address), P-442, P-443 (C6.16: Client A may take back a firm-sent link before the adult accepts; kept as built), P-444 (QA-375 upheld Major: C6.17 must add document lines on the new stage).
 * An open Major or Critical keeps it Partial (P-305 (3)). A run with no pack, no server or only the fixture is **Not tested**, never green (P-405). A WAIT or HELD line is never green (P-334 (6)).
 * Cloud lanes cannot dispatch Actions (403): they ask, and the Lead dispatches `nightly.yml` for their row (P-439). Live AI tokens or write tokens are never widened for lanes (P-312, P-387).
 
@@ -37,7 +37,7 @@ Each rule once, with the decision that set it. **This page is the start read**: 
 
 ## Tokens: hard rules (P-440; measured in `reports/pipeline-pain-points-2026-11-09*.md`)
 * **Cost is context size.** About 75% of spend is long sessions re-reading 300k+ contexts on every call; output is ~11% (P-436). So:
-* **Hand over at about 250k tokens of context** (P-440; was ~400k, P-314), or sooner if the Lead loses track. A qa or builder session ends with its row (one row per session).
+* **Hand over at about 400k tokens of context by day (08:00-22:30 IST), 250k at night** (P-445; P-440 set 250k, P-314 400k), or sooner if the Lead loses track. Unused connectors stay off (P-445 (2)). A qa or builder session ends with its row (one row per session).
 * **The start read is one page:** this page plus the DECISIONS rows newer than "as of" (P-440). Never re-read big files on a check; read only what changed, by line range (P-372 (3)).
 * **No raw dumps into a Lead's context:** filter every tool output (`head`, `grep`, JSON fields); a PR body or log is read only in the section needed (P-440).
 * **Burn watch every check:** weekly % and the rate per hour from `get_usage`. Over 3%/h at two checks in a row: read each working session's context share, end idle ones, hand over any over 250k, and tell the founder the cause in one line (P-440).
