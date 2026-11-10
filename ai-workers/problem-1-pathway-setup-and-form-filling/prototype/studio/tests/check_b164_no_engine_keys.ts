@@ -43,7 +43,6 @@ const ALLOW: Entry[] = [
   {"guard": "G3 checklist not derived", "file": "engine/runtime/case-checklist.ts", "kind": "slice", "text": "The document checklist per person is not derived yet for this combination (it is worked out once its requirements are checked). Nothing is guessed.", "row": "M3-S4"},
   {"guard": "BK-8 biometrics ages per pathway", "file": "api/src/case-prepare.ts", "kind": "key", "text": "vv.single", "row": "BK-8"},
   {"guard": "G3 checklist not derived", "file": "api/src/case-stages.ts", "kind": "slice", "text": " its release asks for (the per-person checklist is not worked out yet for this combination)", "row": "M3-S4"},
-  {"guard": "M3-S5 answer sheet for online-only forms", "file": "api/src/fill-case.ts", "kind": "program", "text": "Express Entry: the answer sheet only, no PDF copy.", "row": "M3-S5"},
   {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5257 SCH1", "row": "BK-10"},
   {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5409", "row": "BK-10", "count": 3},
   {"guard": "BK-10 form rules into data", "file": "api/src/form-setup.ts", "kind": "form", "text": "IMM 5476", "row": "BK-10", "count": 4},
