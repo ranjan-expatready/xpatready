@@ -26,7 +26,7 @@ Terminal tabs c6 (caffeinate 4 h, from 15:2x) and c7 (open) are Lead 8's; leave 
 |---|---|---|---|
 | pipeline | local_8494de44 `pipeline-ci-speed` | measure → 8 shards + suite-times (P-436 (7)) → (4a) | Lead reads `.github/` diffs before labelling (P-423) |
 | runtime | local_32caa215 `runtime-engine-core` | B164 → M3-S1 (warm) | sole holder of schema / case-prepare tonight |
-| Lead | this session | Bake (M3.5) counted plan draft for the morning | hourly report IST; trip-wire 75% weekly; caffeinate tab c4 14 h |
+| Lead | this session | **Bake plan draft done** (`design/bake-plan-2026-11-10.md`, 40 + 15 sessions, exits E1-E4, ~24 Nov); morning: ask its 4 questions one at a time, Q1 first (pace: 3 lanes on plan, recommended) | hourly report IST; trip-wire 75% weekly; caffeinate tab c4 14 h |
 
 ## M3: 29 of 29 Works (21:1x IST 10 Nov, qa #1499 fresh reader; C7.5 + C10.2 on nightly 42841699712, main 87212b14d)
 **Next (P-450):** detailed milestone plan with the founder, one question at a time (A5, A7); then the Bake. **#1463** superseded: qa's close refused, waits for the founder's named word.
