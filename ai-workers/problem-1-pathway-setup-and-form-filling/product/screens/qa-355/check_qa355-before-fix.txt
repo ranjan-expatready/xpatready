@@ -1,0 +1,7 @@
+QA-355 — adding a form leaves the release's forms as they were
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+FAIL  QA-355 fail: adding IMM 0008 leaves each release form's written and to-fix counts unchanged — {"add":201,"before":["IMM 5257 SCH1: written 11, to fix 0","IMM 5257: written 111, to fix 0","IMM 5476: written 23, to fix 0","IMM 5645: written 25, to fix 0"],"after":["IMM 5257 SCH1: written 11, to fix 0","IMM 5257: written 107, to fix 4","IMM 5476: written 
+PASS  QA-355 pass: removing the addition restores them (the cause is the addition) — {"rm":200,"back":["IMM 5257 SCH1: written 11, to fix 0","IMM 5257: written 111, to fix 0","IMM 5476: written 23, to fix 0","IMM 5645: written 25, to fix 0"]}
+
+1/2 passed
