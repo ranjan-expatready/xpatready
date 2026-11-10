@@ -24,7 +24,8 @@
 # Type check (P-291, the outsider audit of 29 Oct): job "types", tsc --noEmit for api and web (tools/typecheck.mjs; fails
 #   only on an error not in typecheck-known.txt), on its own machine beside the parts for records and code, so it adds
 #   machine minutes (about 2 a run) but no wall time: the parts take 20+ minutes, the type check about 1.5.
-#   SHARDS=<1..9>        the number of parallel parts (default 4; I1 measured before changing it: see its PR);
+#   SHARDS=<1..9>        the number of parallel parts (default 8: pipeline row 2, 10 Nov, measured in its PR; was 4,
+#                        and the variable said 6 from 9 Nov; I1 measured before changing it: see its PR);
 #   PR_SUITES=direct     a builder's PR runs only the suites that import or name its files, never everything
 #                        (select-suites.mjs --direct); the queue still runs every suite;
 #   (BATCH_RUNNER / PR_RUNNER = mac, the founder's Mac, are gone: D1, P-416, 8 Nov; off since 4 Nov. git has them.)
@@ -126,7 +127,7 @@ jobs:
           kind=$(bash "$P/tools/change-kind.sh" "$RANGE") || { echo "change-kind.sh failed"; exit 1; }
           # A batch only when Mergify opened it (gate B break M2): a builder's branch named mergify/* stays a pull request.
           queue=false; [[ "$HEAD_REF" == mergify/* && "$PR_AUTHOR" == "mergify[bot]" ]] && queue=true
-          n="${SHARDS_VAR:-4}"; [[ "$n" =~ ^[1-9]$ ]] || n=4
+          n="${SHARDS_VAR:-8}"; [[ "$n" =~ ^[1-9]$ ]] || n=8
           case "$kind" in code) shards="[$(seq -s, 1 "$n")]";; records) shards="[1]";; *) shards="[]";; esac
           { echo "kind=$kind"; echo "shards=$shards"; echo "n=$n"; echo "queue=$queue"; } >> "$GITHUB_OUTPUT"
           case "$kind" in
@@ -210,7 +211,7 @@ jobs:
     needs: kind
     if: ${{ needs.kind.outputs.shards != '[]' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 75 # 10 Nov (P-214): parts now reach 44-56 min; 3 of the last 7 full runs had parts stopped at 60 (run 42762001529 lost three, dequeuing #1450 after 1 h of CI). 9 Nov: raised from 45 for the same reason. The lasting fix is 8 shards and refreshed suite times (RULES, after the 26).
+    timeout-minutes: 75 # 10 Nov (P-214): parts now reach 44-56 min; 3 of the last 7 full runs had parts stopped at 60 (run 42762001529 lost three, dequeuing #1450 after 1 h of CI). 9 Nov: raised from 45 for the same reason. The lasting fix, 8 shards dealt by refreshed suite times (pipeline row 2, P-436 (7)), puts the longest part at about 32-35 min on the 10 Nov batches; the limit stays 75 until a week of runs shows it.
     permissions: { contents: read, pull-requests: read }
     strategy:
       # P-371 (2): every part runs to its end, so a red part is re-run alone (Re-run failed jobs) and the green parts'
