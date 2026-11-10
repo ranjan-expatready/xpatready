@@ -222,6 +222,18 @@
     "child": "files_own"
    },
    "group_why": "A family's visitor visa applications go together, at the same time and place, so the family maximums apply (BR-16)."
+  },
+  "sp.outside": {
+   "label": "Study permit (outside Canada)",
+   "lines": [],
+   "checklist": true,
+   "note": "C6.17 (P-444, QA-375): the per-person checklist only. Its document lines are the release's, each cited from IMM 5483 (08-2025) with page, quote and date (api/src/form-setup.ts SP_DOCUMENT_LINES). No fee lines: its fees are not worked out from this table yet (the study_permit line waits for its combination's modes), so nothing about money changes."
+  },
+  "wp.lmia_inside": {
+   "label": "Work permit with an LMIA (inside Canada)",
+   "lines": [],
+   "checklist": true,
+   "note": "C6.17 (P-444, QA-375): the per-person checklist only. Its document lines are the release's: those IMM 5556 (03-2024) lists are cited from it with page, quote and date; the others are labelled Sample (api/src/form-setup.ts LMIA_DOCUMENT_SOURCES). No fee lines: its fees are not worked out from this table yet, so nothing about money changes."
   }
  }
 }
