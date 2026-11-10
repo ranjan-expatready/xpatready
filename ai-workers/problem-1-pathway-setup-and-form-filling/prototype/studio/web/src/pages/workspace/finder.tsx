@@ -20,6 +20,7 @@ import { FindFormsStart } from "@/components/start-setup";
 import { useCostGate } from "@/components/cost-warning";
 import { COST_WORDS } from "../../../../contracts/cost-check";
 import { findErrorWords, findRunKey } from "./find-key";
+import { FoldOut } from "@/components/fold-out";
 
 export type FinderState = "ATTACHED" | "DOWNLOADED_ATTACHED" | "NEWER_FILE_SAME_EDITION" | "NOT_FOUND" | "UPLOAD_WAITING_SECOND_PERSON" | "REMOVED_BY_PERSON" | "TO_DECIDE" | "NOT_FOR_THIS_APPLICATION" | "CHECKLIST_IN_LIBRARY";
 export type FinderForm = { code: string; title: string; quote: string | null; conditionPlain: string | null; who: string | null; state: FinderState; why?: string | null; /** C11.15 (P-156 (4)): where the file is on canada.ca when its download failed. */ link?: string | null; lineId?: string | null; lineVersion?: number | null; runId: string; /** QA-103: the library edition the finder used or downloaded. */ edition?: string | null };
@@ -248,7 +249,7 @@ function FinderRows({ id, forms, onRedo, canAuthor }: { id: string; forms: Finde
           </span> : null}
         </li>
       ))}</ul> : null}
-      {notFor.length ? <details className="text-sm" data-not-for><summary className="cursor-pointer text-text-muted">Not for this application ({notFor.length})</summary><ul className="mt-1 space-y-1 pl-4">{notFor.map((f) => <li key={f.code}><span className="mono">{f.code}</span> {f.title}{f.quote ? <span className="text-xs text-text-muted"> · IRCC's words: "{irccWords(f.quote)!.slice(0, 140)}"</span> : null}</li>)}</ul></details> : null}
+      {notFor.length ? <FoldOut className="text-sm" data-not-for summaryClassName="text-text-muted" summary={<>Not for this application ({notFor.length})</>}><ul className="mt-1 space-y-1 pl-4">{notFor.map((f) => <li key={f.code}><span className="mono">{f.code}</span> {f.title}{f.quote ? <span className="text-xs text-text-muted"> · IRCC's words: "{irccWords(f.quote)!.slice(0, 140)}"</span> : null}</li>)}</ul></FoldOut> : null}
     </div>
   );
 }

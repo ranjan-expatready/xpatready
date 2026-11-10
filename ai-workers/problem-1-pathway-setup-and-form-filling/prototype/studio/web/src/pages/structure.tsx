@@ -9,7 +9,7 @@
 import * as React from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Archive, ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, Eye, Info, List as ListIcon, ListTree, Pencil, Plus, RotateCcw, Search, Trash2, Undo2, X } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, ChevronLeft, Eye, Info, List as ListIcon, ListTree, Pencil, Plus, RotateCcw, Search, Trash2, Undo2, X } from "lucide-react";
 import type { Level, LifecycleAction, PathwayType, StructureNode, UsesView } from "../../../contracts/structure";
 import { api, ApiError, useActorId, useApi, useSessionView } from "@/lib/api";
 import { Button, Input, Notice, Pill, Textarea } from "@/components/ui/controls";
@@ -24,6 +24,7 @@ import { LevelMark, pathwayAccent } from "@/components/levels";
 import { cn } from "@/lib/utils";
 import { StartSetupButton } from "@/components/start-setup";
 import { STATE_WORDS, USED_BY_NOTHING_YET } from "../../../contracts/status-words";
+import { FoldArrow } from "@/components/fold-out";
 
 type ListResp = { pathwayType: PathwayType; typeLabel: string; nodes: StructureNode[]; empty: boolean; meaningCheck: { on: boolean; why: string } };
 type Close = { key: string; label: string; trail: string[]; why: string };
@@ -382,7 +383,7 @@ function Row({ n, num, selected, current, justAdded, canAuthor, words, onEdit, o
       className={cn(GRID(wide, list), "min-h-10 px-3 py-1", !list && level >= 2 && "border-t border-border", list && "border-t border-border first-of-type:border-t-0", selected && "bg-primary/10", n.retired && "text-text-muted")}>
       {list ? numText : null}
       <div className={cn("flex min-w-0 items-center gap-1.5", !list && ["", "", "pl-6", "pl-12"][level])}>
-        {!list ? (open !== undefined ? <button type="button" tabIndex={-1} aria-expanded={open} aria-label={`${open ? "Collapse" : "Expand"} ${n.label}`} onClick={onToggle} className="flex size-5 shrink-0 items-center justify-center rounded text-text-muted hover:bg-text/5">{open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}</button> : <span className="size-5 shrink-0" />) : null}
+        {!list ? (open !== undefined ? <button type="button" tabIndex={-1} aria-expanded={open} aria-label={`${open ? "Collapse" : "Expand"} ${n.label}`} onClick={onToggle} className="flex size-5 shrink-0 items-center justify-center rounded text-text-muted hover:bg-text/5"><FoldArrow open={open} className="size-4" /></button> : <span className="size-5 shrink-0" />) : null}
         {!list ? numText : null}
         {list && trail ? <TrailText parts={trail} words={words} /> : <>
           <LevelMark level={n.level} />

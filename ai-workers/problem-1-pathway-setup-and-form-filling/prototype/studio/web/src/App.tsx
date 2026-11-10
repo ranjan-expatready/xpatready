@@ -27,6 +27,7 @@ import { DemoInbox, LinkApp } from "@/runtime/link-page";
 import { draftBarWords } from "../../contracts/status-words";
 import { FINISHED_STORY_TIP, FinishedStoryDialog } from "@/components/demo-finished-story";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { FoldOut } from "@/components/fold-out";
 
 export default function App() {
   // The case area (runtime lane, R1c) has its own shell: firm and client pages, not the configuration studio.
@@ -275,9 +276,9 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
                   <td className="py-1.5"><Pill tone={ROW_TONE[r.status]}>{ROW_WORD[r.status]}</Pill></td>
                 </tr>))}</tbody>
             </table>
-            <details><summary className="cursor-pointer text-text-muted">What the loader did, step by step</summary>
+            <FoldOut summaryClassName="text-text-muted" summary="What the loader did, step by step">
               <ul className="mt-2 space-y-1">{configured.log.map((l, i) => <li key={i} className={l.startsWith("  ") ? "pl-4 text-text-muted" : "font-medium"}>{l.trim()}</li>)}</ul>
-            </details>
+            </FoldOut>
           </div>
         ) : null}
       </Dialog>
@@ -289,9 +290,9 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
               {[["Combinations", loaded6.combinations.length], ["Official files on them", loaded6.combinations.reduce((a, c) => a + c.files, 0)], ["AI proposals waiting for review", loaded6.drafts.proposals_waiting], ["Forms waiting for Draft with AI", loaded6.drafts.waiting_for_draft_with_ai.length]].map(([k, v]) => <div key={k} className="flex justify-between border-b border-border py-1"><span className="text-text-muted">{k}</span><span className="font-medium" data-count={k}>{v}</span></div>)}
             </div>
             {loaded6.missing.length ? <Notice tone="warn" title={`Not found · Upload PDF: ${loaded6.missing.length}`}><ul className="space-y-1" data-load-missing>{loaded6.missing.map((m) => <li key={`${m.combination}${m.code}`}><b>{m.code}</b> on {m.combination}: {m.why}</li>)}</ul></Notice> : null}
-            <details><summary className="cursor-pointer text-text-muted">What the loader did, step by step</summary>
+            <FoldOut summaryClassName="text-text-muted" summary="What the loader did, step by step">
               <ul className="mt-2 space-y-1">{loaded6.log.map((l, i) => <li key={i} className={l.startsWith("  ") ? "pl-4 text-text-muted" : "font-medium"}>{l.trim()}</li>)}</ul>
-            </details>
+            </FoldOut>
           </div>
         ) : null}
       </Dialog>

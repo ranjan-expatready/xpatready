@@ -18,6 +18,7 @@ import { ReadinessPanel } from "./readiness"; // C7.6 (B2): the filings' readine
 import { SignSteps } from "./sign-steps"; // C8.1 (B3): who signs, and the steps of a form signed by hand and scanned
 import { AddedTag, AddFormButton, BlankRow } from "./add-form"; // C7.8 (B141): add a library form to one filing
 import { Link } from "react-router-dom";
+import { FoldOut } from "@/components/fold-out";
 import { sheetPath, STATE_WORDS } from "./answer-sheet"; // C7.3 (QA-317): the Online line opens its answer sheet
 
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -196,26 +197,23 @@ function FormRow({ caseId, f, recorded }: { caseId: string; f: CaseForm; recorde
       {!f.applies ? <p className="text-[13px] text-text-muted">This form no longer applies to {f.person} (for example, not travelling); its copies are kept.</p> : null}
       <p className="text-[13px] text-text-muted" data-draft-words>Declared or confirmed answers for {f.draft.written_now} of {f.draft.mapped} form fields{f.draft.to_fix ? `; ${f.draft.to_fix} answered but needing a fix ${f.draft.to_fix === 1 ? "stays" : "stay"} blank` : ""}. A copy also lists the form fields to write by hand.</p>
       {card.facts.length ? (
-        <details className="text-[13px]">
-          <summary className="flex min-h-6 cursor-pointer items-center text-text-link">Facts to answer or confirm ({card.facts.length})</summary>
+        <FoldOut className="text-[13px]" summaryClassName="flex min-h-6 items-center text-text-link" summary={<>Facts to answer or confirm ({card.facts.length})</>}>
           <ul className="mt-1 list-disc space-y-0.5 pl-6">{card.facts.map((m) => <li key={`${m.fact}|${m.about}`} data-missing-reason={m.reason}><span className="[overflow-wrap:anywhere]">{m.label}</span> <span className="text-text-muted [overflow-wrap:anywhere]">({inSentence(m.about)}): {m.reason === "left empty on the form" && m.why ? m.why : <>{m.reason}{m.why ? ` — ${m.why}` : ""}</>}</span></li>)}</ul>
-        </details>
+        </FoldOut>
       ) : null}
       {/* QA-165 part 2 (P-237, P-238): each mandatory field of IRCC's form a copy leaves empty, with why, before the file is offered. */}
       {f.fields_open?.length ? (
-        <details className="text-[13px]" data-fields-open>
-          <summary className="flex min-h-6 cursor-pointer items-center text-text-link">Marked mandatory on IRCC's form, still empty ({openLines(f.fields_open).length}): Adobe's Validate asks for {openLines(f.fields_open).length === 1 ? "it" : "each"}, and may ask for more that its own checks make mandatory</summary>
+        <FoldOut className="text-[13px]" data-fields-open summaryClassName="flex min-h-6 items-center text-text-link" summary={<>Marked mandatory on IRCC's form, still empty ({openLines(f.fields_open).length}): Adobe's Validate asks for {openLines(f.fields_open).length === 1 ? "it" : "each"}, and may ask for more that its own checks make mandatory</>}>
           <ul className="mt-1 list-disc space-y-0.5 pl-6">{openLines(f.fields_open).map((o) => <li key={o.key}><span className="[overflow-wrap:anywhere]">{o.label}</span>{o.n > 1 ? <span className="text-text-muted"> ({o.n} form fields)</span> : null} <span className="text-text-muted [overflow-wrap:anywhere]">— {o.reason}: {o.why}</span></li>)}</ul>
-        </details>
+        </FoldOut>
       ) : null}
       {latest ? <CopyLine c={latest} canLock={!!canLock} lockBlocked={lockBlocked} locking={locking} setLocking={setLocking} lock={lock} working={working} /> : null}
       {locked && locked !== latest ? <CopyLine c={locked} canLock={false} locking={null} setLocking={() => {}} lock={lock} working={working} /> : null}
       <SignSteps caseId={caseId} f={f} />
       {earlier.length ? (
-        <details className="text-[13px]">
-          <summary className="cursor-pointer text-text-link">Earlier copies ({earlier.length})</summary>
+        <FoldOut className="text-[13px]" summaryClassName="text-text-link" summary={<>Earlier copies ({earlier.length})</>}>
           <ul className="mt-1 space-y-1 pl-4">{earlier.map((c) => <li key={c.id}><CopyLine c={c} canLock={false} locking={null} setLocking={() => {}} lock={lock} working={working} compact /></li>)}</ul>
-        </details>
+        </FoldOut>
       ) : null}
     </li>
   );
@@ -225,7 +223,7 @@ const FIRST = 5;
 /** A list that may be long (38 newly confirmed facts): the first few, the rest behind "more". */
 function Few({ items }: { items: string[] }) {
   if (items.length <= FIRST) return <>{items.join(", ")}</>;
-  return <>{items.slice(0, FIRST).join(", ")} <details className="inline"><summary className="inline cursor-pointer text-text-link">and {items.length - FIRST} more</summary>{items.slice(FIRST).join(", ")}</details></>;
+  return <>{items.slice(0, FIRST).join(", ")} <FoldOut className="inline" summaryClassName="inline text-text-link" summary={<>and {items.length - FIRST} more</>}>{items.slice(FIRST).join(", ")}</FoldOut></>;
 }
 
 function CopyLine({ c, canLock, lockBlocked = null, locking, setLocking, lock, working, compact }: { c: FormCopy; canLock: boolean; lockBlocked?: string | null; locking: keyof typeof LOCK_KINDS | null; setLocking: (k: keyof typeof LOCK_KINDS | null) => void; lock: (id: string, k: keyof typeof LOCK_KINDS) => Promise<void>; working: boolean; compact?: boolean }) {

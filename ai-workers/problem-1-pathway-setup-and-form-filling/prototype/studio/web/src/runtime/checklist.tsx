@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StandIn } from "@/components/stand-in";
 import { NOT_APPLICABLE_FROM, REQUEST_FROM, UPLOAD_FROM, type LineState, type StoredDocument } from "../../../contracts/documents";
 import { lineId, noRetryOnRefusal } from "./questionnaire";
+import { FoldOut } from "@/components/fold-out";
 
 /** What the panel reads of a line as the API answers it (api/src/case-checklist.ts StoredLine, from the engine's PersonLine
  *  in engine/runtime/case-checklist.ts). Declared here, not imported: the engine file reads Node modules the web build has not. */
@@ -104,10 +105,9 @@ function PersonDocuments({ caseId, caseSubject, p, people, nameOf }: { caseId: s
             </li>))}</ul>
         </div>) : null}
       {p.not_needed.length ? (
-        <details className="mt-2 text-sm" data-not-needed>
-          <summary className="cursor-pointer text-xs font-medium text-text-muted">Not needed now ({p.not_needed.length})</summary>
+        <FoldOut className="mt-2 text-sm" data-not-needed summaryClassName="text-xs font-medium text-text-muted" summary={<>Not needed now ({p.not_needed.length})</>}>
           <ul className="mt-1 space-y-1">{p.not_needed.map((l) => <li key={l.id} className="text-[13px]"><span className="font-medium">{l.label}</span>: <span className="text-text-muted">{l.reason}</span></li>)}</ul>
-        </details>) : null}
+        </FoldOut>) : null}
     </section>
   );
 }
@@ -150,7 +150,7 @@ function LineRow({ caseId, p, people, l, nameOf }: { caseId: string; p: Person; 
       <div className="min-w-0"><Pill tone={TONE[l.state] ?? "neutral"}><span data-state-words>{l.state_words}</span></Pill>
         {l.state_reason ? <p className="mt-0.5 text-xs text-text-muted [overflow-wrap:anywhere]">{l.state_reason}</p> : null}</div>
       <div className="min-w-0 text-[13px] [overflow-wrap:anywhere]"><p data-reason>{l.reason}</p>
-        {l.quote ? <details className="mt-0.5"><summary className="cursor-pointer text-xs text-text-link">Source</summary><p className="mt-1 text-xs text-text-muted [overflow-wrap:anywhere]" data-quote>{l.quote}</p></details> : null}
+        {l.quote ? <FoldOut className="mt-0.5" summaryClassName="text-xs text-text-link" summary="Source"><p className="mt-1 text-xs text-text-muted [overflow-wrap:anywhere]" data-quote>{l.quote}</p></FoldOut> : null}
         {l.set ? <div className="mt-1 text-xs" data-line-set={l.set.mode}><p>{l.set.words}</p>
           {l.set.members.filter((m) => m.when_staff).map((m) => <p key={m.key} className="text-text-muted">{m.name} is acceptable when: {m.when_staff}</p>)}
           {l.set_status ? <p className={l.set_status.met ? "text-text-muted" : "font-medium"} data-set-status={l.set_status.met ? "met" : "open"}>{l.set_status.words}</p> : null}</div> : null}

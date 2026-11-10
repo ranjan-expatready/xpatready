@@ -13,6 +13,7 @@ import { PreviewQuestions } from "@/runtime/questionnaire";
 import { Notice, Pill } from "@/components/ui/controls";
 import { cn } from "@/lib/utils";
 import { questionsWords } from "../../../../contracts/counts";
+import { FoldOut } from "@/components/fold-out";
 
 /** C4.6: the preview's extra words per form (engine/runtime/preview.ts outputOf); optional, so an older response reads. */
 type FormOut = PreviewForm & { signature?: string; signatureWords?: string; toSign?: boolean; laterWave?: string | null; checklist?: boolean };
@@ -71,8 +72,7 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
         {p.people.map((x) => <button key={x.subjectId} type="button" aria-pressed={x.subjectId === who.subjectId} className={chip(x.subjectId === who.subjectId)} onClick={() => set("person", x.subjectId)} data-person-chip={x.subjectId}>{x.label} · {x.questions} question{x.questions === 1 ? "" : "s"} · {x.documents} document{x.documents === 1 ? "" : "s"} · {x.forms} form{x.forms === 1 ? "" : "s"}</button>)}
       </div>
       {mine.length ? (
-        <details className="rounded-xl border border-border bg-surface-raised px-4 py-3" open={Object.keys(tweaks).length > 0} data-tweaks>
-          <summary className="cursor-pointer text-sm font-medium">Try answers that change what applies for {who.label} ({mine.length}){Object.keys(tweaks).length ? ` · ${Object.keys(tweaks).length} tried` : ""}</summary>
+        <FoldOut className="rounded-xl border border-border bg-surface-raised px-4 py-3" open={Object.keys(tweaks).length > 0} data-tweaks summaryClassName="text-sm font-medium" summary={<>Try answers that change what applies for {who.label} ({mine.length}){Object.keys(tweaks).length ? ` · ${Object.keys(tweaks).length} tried` : ""}</>}>
           <div className="mt-1 flex flex-wrap gap-x-6 gap-y-2">
             {mine.map((t) => (
               <label key={t.key} className="flex items-center gap-2 text-sm">
@@ -83,7 +83,7 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
               </label>
             ))}
           </div>
-        </details>
+        </FoldOut>
       ) : null}
       <div role="radiogroup" aria-label="Which set" className="flex flex-wrap gap-1 xl:hidden" data-set-switch>
         {SETS.map((x) => <button key={x.key} type="button" role="radio" aria-checked={shown === x.key} className={chip(shown === x.key)} onClick={() => set("set", x.key === "sqr" ? null : x.key)} data-set-button={x.key}>{x.title(p)}</button>)}
@@ -104,7 +104,7 @@ export function PreviewTab({ id, p, empty, fetching, hasRelease }: { id: string;
               <p className="font-medium">From {who.label}'s documents</p>
               <ul className="mt-1 space-y-1">{p.sets.sqr.fromDocuments.map((d) => (
                 <li key={d.document} data-from-document={d.document}>
-                  <details><summary className="cursor-pointer">{d.document} fills {d.facts.length} answer{d.facts.length === 1 ? "" : "s"}</summary><p className="mt-1 text-xs text-text-muted">{d.facts.join(" · ")}</p></details>
+                  <FoldOut summary={<>{d.document} fills {d.facts.length} answer{d.facts.length === 1 ? "" : "s"}</>}><p className="mt-1 text-xs text-text-muted">{d.facts.join(" · ")}</p></FoldOut>
                 </li>
               ))}</ul>
               <p className="mt-1 text-xs text-text-muted">Not asked while the document is on the checklist; if it is missing or cannot be read, the question is asked instead.</p>

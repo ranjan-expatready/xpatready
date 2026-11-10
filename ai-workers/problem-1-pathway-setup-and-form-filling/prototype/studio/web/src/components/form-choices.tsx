@@ -9,6 +9,7 @@ import { api, ApiError, useToast } from "@/lib/api";
 import { Gated, useDuties } from "@/components/answer-key-editors";
 import { Button, Dialog, Notice, Pill, Select, Table } from "@/components/ui/controls";
 import { PERSON } from "@/pages/job";
+import { FoldOut } from "@/components/fold-out";
 
 const NOT_ON_FORM = "__not_on_form";
 const WHY_AUTHOR = "Only the configuration author sets a form's choices.";
@@ -90,7 +91,7 @@ function ChoiceGroup({ group: g, editionId, combinationId, onChanged }: { group:
     <section className="space-y-2 rounded-lg border border-border p-3" data-choice-group={g.list} aria-label={`${g.list_label ?? g.list}, ${whom(g)}`}>
       <div>
         <p className="text-sm font-medium [overflow-wrap:anywhere]">{g.list_label ?? g.list} <span className="font-normal text-text-muted">· {plural(g.form_fields.length, "form field")}: {whom(g)}</span> {g.problems.length ? <Pill tone="danger">Blocks release</Pill> : null}</p>
-        <details className="text-xs text-text-muted" data-choice-fields><summary className="cursor-pointer">Show the {plural(g.form_fields.length, "form field")}</summary><ul className="mt-1 list-disc space-y-0.5 pl-5">{g.form_fields.map((f) => <li key={f.data_path}>{fieldWords(f)}</li>)}</ul></details>
+        <FoldOut className="text-xs text-text-muted" data-choice-fields summary={<>Show the {plural(g.form_fields.length, "form field")}</>}><ul className="mt-1 list-disc space-y-0.5 pl-5">{g.form_fields.map((f) => <li key={f.data_path}>{fieldWords(f)}</li>)}</ul></FoldOut>
         {g.saved ? null : <p className="text-xs text-text-muted" data-not-saved>Nothing saved yet: the choices shown are suggested from the form's own words. Check them and save.</p>}
       </div>
       {refused ? <Notice tone="danger" title="Not saved" action={stale ? <Button size="sm" variant="secondary" onClick={lookAgain}>Look again</Button> : undefined}>{refused}</Notice> : null}

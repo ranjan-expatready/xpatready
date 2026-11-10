@@ -7,6 +7,7 @@ import * as React from "react";
 import { useApi } from "@/lib/api";
 import { Pill } from "@/components/ui/controls";
 import { noRetryOnRefusal } from "./questionnaire";
+import { FoldOut } from "@/components/fold-out";
 
 export type FigureState = "not_ready" | "attention" | "ready";
 export type FigureItem = { kind: "form" | "document" | "facts" | "review" | "check"; key: string; label: string; done: boolean; passed: boolean };
@@ -32,8 +33,7 @@ export function FigureRow({ g }: { g: Figure }) {
         <span className="text-lg font-semibold tabular-nums" title="The share of counted items done, rounded down"><span className="sr-only">Readiness </span>{g.score}%</span>
         <span className="text-[13px] text-text-muted" data-figure-count>{g.done} of {g.countable} done{g.passed ? ` · ${g.passed} passed with a reason` : ""}</span>
       </div>
-      <details className="mt-1 text-[13px]" data-figure-how>
-        <summary className="flex min-h-6 cursor-pointer items-center text-text-link">How this is worked out</summary>
+      <FoldOut className="mt-1 text-[13px]" data-figure-how summaryClassName="flex min-h-6 items-center text-text-link" summary="How this is worked out">
         <ul className="mt-1 space-y-0.5 pl-1">{g.items.map((i) => (
           <li key={i.key} className="flex items-start gap-2 [overflow-wrap:anywhere]" data-figure-item={i.kind} data-done={i.done ? "yes" : "no"}>
             <span className={i.done ? "text-text-ok" : "text-text-muted"} aria-hidden>{i.done ? "✓" : "○"}</span>
@@ -42,7 +42,7 @@ export function FigureRow({ g }: { g: Figure }) {
           </li>
         ))}</ul>
         <p className="mt-2 text-text-muted" data-figure-rule>{g.rule}</p>
-      </details>
+      </FoldOut>
     </div>
   );
 }
