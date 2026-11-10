@@ -80,3 +80,15 @@ A real screen reader. True 200 % browser zoom (a 400 px viewport stood in). An i
 Journey score **9.5/10** (pass): `journey-test-reviewer-2026-11-10.md`.
 
 **Verdict: Approve** at **17538072eeb1673f9f068e76f4f53961781571ec**. No open Blocker or Major. Fix m1–m3, or list them in the PR.
+
+## Round 2 (diff only): ef564b3c8
+Scope: only `git diff 17538072e ef564b3c8 -- …/prototype` (`api/src/form-setup.ts`, `acceptance/C6.17.test.ts`). The other two files in the commit are this review and the journey report, committed unchanged.
+* **m1 fixed.** Item 1 now reads `"Proof of Payment, if applicable" / "Note: If you are applying for an open work permit, provide proof of payment for the open work permit holder fee."` (form-setup.ts:119). These are exactly the two `<p>` paragraphs of IMM 5556 row 5 in the XFA template, and no punctuation is added.
+* **m3 fixed.** `sourced()` (C6.17.test.ts:30) now accepts a Sample quote only with `from (IMM|Guide) NNNN`. I ran it on the strings the code produces at ef564b3c8.
+  * Accepted: the 3 IMM 5556 citations, the 3 IMM 5483 lines, and Sample quotes from IMM 5905, Guide 5487 and IMM 5488.
+  * Refused: a Sample quote whose source is unknown ("from work-permit-outside-…") or missing ("from a source it does not name"), a bare "Sample", and a Sample quote with only a date.
+  * So the step still passes on the checkpoint's real lines, and it fails on an unsourced Sample line.
+* **m2 open as agreed.** It is listed in the PR as a follow-up row. It was a Should against the approved engine's behaviour, so it does not hold the verdict.
+* I did not re-run the pack at this head. The builder reports 47/47 on a fresh copy, and the change only tightens the predicate, which I checked as above.
+
+**Verdict: Approve** at **ef564b3c8d47a96751bb47fb6a755f3f9ea3f474**. No open Blocker or Major.
