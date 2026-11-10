@@ -2,7 +2,7 @@
 
 current_lead: local_d3d09334-4567-4aad-9e1b-65163549d7c7 Lead 9 · 10 Nov 18:28 IST (series 2; took over from Lead 8 (series 2, local_62177923) at ~315k context, ~186k beyond its start read, P-446; Lead 8 held past 200k for the Acrobat step, founder away)
 
-updated: 2026-11-10 18:28 IST by **Lead 8 (series 2, local_62177923-…)** at hand-over to Lead 9 · weekly 53% · milestone: **M2 60/60; M3 25 of 29 Works on main**; target 26, then 29 (P-434, P-439) · rules: **`RULES.md`** (as of P-450) · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-10 22:47 IST by **Lead 9 (series 2, local_d3d09334-…)** (M3 29/29; night lanes P-451; Bake plan draft) · weekly 65% · milestone: **M2 60/60; M3 29 of 29 Works on main**; next: the Bake (M3.5), plan awaiting the founder (P-450) · rules: **`RULES.md`** (as of P-450) · this branch: `lead/2026-11-07-lead31`
 
 ## Hand-over: Lead 7 (series 2) → Lead 8 (series 2), 11:55 IST 10 Nov: word for word in `history/STATE-2026-11-10-1525-lead7s2-handover-block.md` (its rows are carried in Live rows below).
 **Founder 12:0x-12:1x IST (Lead 8): Bake answers recorded as P-447** (walk twice as exit, no co-founder watch first, lean cap 24). **Answered ~12:3x as P-448:** Bake = lean Bake + generic engine core (~40 sessions, second exit: no code change, data edits allowed, on Study permit (P-449); screens-only is M4 Track A's exit); founder to book the immigration expert (P-240: nothing Sample releases outside the demo). #1475 requeue refused by the classifier 11:56: founder to tick Mergify's box or name it.
