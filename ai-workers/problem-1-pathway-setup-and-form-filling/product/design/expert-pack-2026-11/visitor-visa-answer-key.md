@@ -729,3 +729,4 @@ Recorded here so they are not lost; each needs a backlog row decided by the tech
 1. IMM 5476 map on a superseded edition (finding 1).
 2. IMM 5645 Section A reads separate name and address facts instead of the person's own (finding 2); relatives not drawn from the case (QA-153).
 3. `case.subject_is_principal_applicant` answered by placeholder instead of from the person's role (finding 3); UCI placeholder written where IMM 5257 leaves it blank.
+4. 27 of IMM 5645's 139 field-map entries are still DRAFT (unreviewed) on Visitor visa release 2; every other Visitor visa map is fully published (checked on the release snapshot).
