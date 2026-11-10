@@ -160,6 +160,9 @@ export class CaseChecklists {
     // C6.16 BR-7 (challenge M3): a client never uploads to, or reads the line of, a person kept private from them.
     const who = c.participants.find((p) => p.subjectId === row!.subjectId);
     if (who && !(actor.duties as readonly string[]).includes("case") && this.r.hiddenFromClient(c, who.subjectId)) fail(privateWords(who.subject.label), HttpStatus.FORBIDDEN);
+    // C6.17 (BR-10, P-444): a line of a stage that has ended is history, said so (never "the answers no longer call for it").
+    if (row!.stageId !== c.stage.id) throw new HttpException({ type: "https://expatready.local/problems/checklist-line", title: "Changed since you read it", status: 409, code: "stage_ended",
+      detail: "This document line belongs to an earlier stage of the case, which has ended: it is kept as it was and can no longer be changed. Nothing was changed." }, HttpStatus.CONFLICT);
     const list = await this.stored(c);
     const person = list.derived ? list.people.find((p) => p.subject === row!.subjectId) : undefined;
     const shown = person?.lines.find((l) => l.id === id);
