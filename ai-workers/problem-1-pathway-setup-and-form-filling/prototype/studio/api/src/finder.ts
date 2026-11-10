@@ -849,7 +849,7 @@ export class Finder implements OnModuleInit {
       }
     }
     // C-12 (P-171 (3)) and plan §8 Q1: the founder's records and the sample accounts, Sample, each with its basis.
-    const extra = (() => { try { return JSON.parse(readFileSync(fixtureFile ?? join(STUDIO, "samples", "form-library-sample.json"), "utf8")) as { founder_accepts?: { records?: { form: string; account: string; channels: string[] }[] }; accounts?: { combinations?: Record<string, { account: string; url: string }> } }; } catch { return {}; } })();
+    const extra = (() => { try { return JSON.parse(readFileSync(fixtureFile ?? join(STUDIO, "samples", "form-library-sample.json"), "utf8")) as { founder_accepts?: { records?: { form: string; account: string; channels: string[] }[] }; account_accepts?: { records?: { form: string; account: string; channels: string[]; quote: string; url: string; read: string }[] }; accounts?: { combinations?: Record<string, { account: string; url: string }> } }; } catch { return {}; } })();
     // A founder's record for a form the library does not hold yet waits for it (said once, never "not used").
     const waiting: string[] = [];
     for (const r of extra.founder_accepts?.records ?? []) {
@@ -858,12 +858,24 @@ export class Finder implements OnModuleInit {
       if (!current || !(IRCC_ACCOUNTS as readonly string[]).includes(r.account) || !r.channels.every((c) => (CHANNELS as readonly string[]).includes(c))) { notUsed.push(`${r.form}: the founder's record (P-171) was not used: ${current ? "not a known account or channel" : "the form is not in the library"}`); continue; }
       await this.db.formEditionAccept.upsert({ where: { formEditionId_account: { formEditionId: current.id, account: r.account } }, update: {}, create: { workspaceId, formEditionId: current.id, account: r.account, channels: r.channels as Channel[], basis: "FOUNDER_SAMPLE", quote: null, setBy: "system" } }); accepts++;
     }
+    // M3-S5 (P-113, P-170): what an IRCC account accepts, from IRCC's own line (Sample until the expert confirms); used only
+    // when the line is on its recorded canada.ca page, like the per-form fixtures above (nothing invented).
+    const waitingIrcc: string[] = [];
+    for (const r of extra.account_accepts?.records ?? []) {
+      const d = defs.find((x) => normaliseCode(x.formKey) === normaliseCode(r.form)), current = d ? newestEdition(d.editions.filter((e) => e.channel !== "ONLINE")) : null;
+      if (!current && d === undefined) { waitingIrcc.push(r.form); continue; }
+      if (!current || !(IRCC_ACCOUNTS as readonly string[]).includes(r.account) || !r.channels.every((c) => (CHANNELS as readonly string[]).includes(c)) || !officialUrl(r.url).ok) { notUsed.push(`${r.form}: what ${r.account} accepts was not used: ${current ? "not a known account, channel or canada.ca address" : "the form is not in the library"}`); continue; }
+      let said = false;
+      try { said = sameText(pageText((await this.canada.get(r.url, "html")).bytes.toString("utf8"))).includes(sameText(r.quote)); } catch (e) { if (!(e instanceof CanadaError)) throw e; }
+      if (!said) { notUsed.push(`${r.form}: what ${r.account} accepts was not used: its line is not on its recorded canada.ca page`); continue; }
+      await this.db.formEditionAccept.upsert({ where: { formEditionId_account: { formEditionId: current.id, account: r.account } }, update: {}, create: { workspaceId, formEditionId: current.id, account: r.account, channels: r.channels as Channel[], basis: "SAMPLE_FIXTURE", quote: r.quote.slice(0, 400), sourceUrl: r.url, readOn: new Date(`${r.read}T00:00:00Z`), setBy: "system" } }); accepts++;
+    }
     for (const [key, a] of Object.entries(extra.accounts?.combinations ?? {})) {
       if (!(IRCC_ACCOUNTS as readonly string[]).includes(a.account)) { notUsed.push(`${key}: not a known IRCC account`); continue; }
       // A released combination keeps its account as released: only rows without a release take it.
       await this.db.combination.updateMany({ where: { workspaceId, combinationKey: key, portalKey: null, releases: { none: {} } }, data: { portalKey: a.account } });
     }
-    return { pages, accepts, acceptsSaved, guides, noGuide, notUsed, note: waiting.length ? `the founder's records for ${[...new Set(waiting)].join(", ")} (P-171) wait for the form to be in the library` : null };
+    return { pages, accepts, acceptsSaved, guides, noGuide, notUsed, note: [waiting.length ? `the founder's records for ${[...new Set(waiting)].join(", ")} (P-171) wait for the form to be in the library` : "", waitingIrcc.length ? `IRCC's lines for ${[...new Set(waitingIrcc)].join(", ")} (M3-S5) wait for the form to be in the library` : ""].filter(Boolean).join("; ") || null };
   }
 
   /** Stop: no step starts after it and no AI call is sent after it; a call already sent is recorded at its cost (the
