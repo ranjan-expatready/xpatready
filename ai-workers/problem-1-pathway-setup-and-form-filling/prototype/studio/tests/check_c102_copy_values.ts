@@ -17,9 +17,12 @@
 //      none yet (p5/transforms.ts phone_part:nanp_*), and the form's own Validate then requires them (IMM 5257 p. 2,
 //      validateAlternateTelephone, validateFaxNumber, the Canada/US box's click script).
 //   5. (10 Nov: the tech lead's Acrobat Validate stopped at "-Details Of Visit- … 1a) Purpose of my visit" after "not
-//      required") on every IMM 5257 copy, nothing any of the form's own "negative case" branches empties a box for: each
-//      branch that reads only stored values (not a box's visibility: v4 covers the telephones), modelled from the official
-//      template below (NOT_REQUIRED). Validate shows only the first such message, so v5 reads them all at once;
+//      required") on every IMM 5257 copy, nothing 14 of the form's own "negative case" branches empty a box for (the
+//      detail-beside-an-answer ones, modelled from the official template below, NOT_REQUIRED). Validate shows only the
+//      first such message, so v5 reads them all at once. Not modelled (review m1 on #1482; none fires on the story on
+//      10 Nov): validateCWA "same as current country" Yes with row data, the Transit visa beside a purpose, funds or Other
+//      (validateDetailsOfVisit), the province, country and district checks of the mailing (4) and residential (4)
+//      addresses and the school (2); the telephones read a block's visibility (v4); questions 7 and 9 B are v2;
 //   6. the release the Paper copy is on carries the 10 Nov gates, and the copy says why each such box is empty.
 // Each has a fail case on a test-only copy with one value changed (the reader must catch it).
 //   zsh studio/tools/isolated.sh rt_c102v 4431 start && tsx studio/tests/check_c102_copy_values.ts 4431 xr_studio_rt_c102v
@@ -59,8 +62,8 @@ function cleared(v: Record<string, string>): string[] {
   return out;
 }
 
-// IMM 5257 (09-2023), its own Validate (validateCompletedForm calls each in this order): every "negative case" branch that
-// reads only stored values, read 10 Nov 2026 from the official template (official-sources/ircc/forms/imm5257e.pdf, sha256
+// IMM 5257 (09-2023), its own Validate (validateCompletedForm calls each in this order): 14 "negative case" branches that
+// empty a box for a detail beside an answer (the rest: see 5. above), read 10 Nov 2026 from the official template (official-sources/ircc/forms/imm5257e.pdf, sha256
 // 0dc03b24…a562e). Each empties a required box (a status, a purpose, a Yes/No) when a detail sits beside an answer that
 // does not ask for it; the form then says "You entered information that is not required, please review" (only the first
 // time), and later that the emptied box "must contain a value". Test-side reading, independent of the gate data.
