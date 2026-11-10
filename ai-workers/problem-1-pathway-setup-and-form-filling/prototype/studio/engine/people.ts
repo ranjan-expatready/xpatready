@@ -9,6 +9,9 @@ type Role = Pick<PersonRoleView, "key" | "label" | "takesPartInCase" | "mayBeApp
 
 /** The principal applicant is the one role every case has (P-119: exactly one). */
 export const PRINCIPAL = "principal";
+/** BR-4 (C11.12 concept): the role whose line may co-file, a person who takes part in a case and never applies (the
+ *  sponsor). One rule for the studio's save and the fee engine (engine/runtime/filings.ts, M3-S1). */
+export const CO_FILING_ROLE = "sponsor";
 
 /** Field errors for a list of people. strict (the S5 editor): an applicant tick on a role that may not be an applicant
  *  is refused; not strict (older callers: New combination, the sample loader) it is set to "not an applicant". */
@@ -42,7 +45,7 @@ export function checkPeople(list: PeopleLine[], roles: Role[], strict = true): {
       mode = null;
     }
     if (mode === "co_files") { // BR-4
-      if (p.role !== "sponsor" && !r?.mayBeApplicant && p.role !== PRINCIPAL) errors.push({ field: at("filingMode"), message: `${name} takes part in the case but files no application: only the sponsor files the sponsorship.` });
+      if (p.role !== CO_FILING_ROLE && !r?.mayBeApplicant && p.role !== PRINCIPAL) errors.push({ field: at("filingMode"), message: `${name} takes part in the case but files no application: only the sponsor files the sponsorship.` });
       else if (r?.mayBeApplicant || p.role === PRINCIPAL) errors.push({ field: at("filingMode"), message: `${name} may be an applicant: choose Files own application, On the principal's application or Declared only. Only a person who is never an applicant (a sponsor) files the sponsorship.` });
       else if (p.min !== 1 || p.max !== 1) errors.push({ field: at("max"), message: `One ${name.toLowerCase()} co-files: set how many to 1 to 1.` });
       if (coFilers++) errors.push({ field: at("filingMode"), message: "Only one person files the sponsorship: keep one co-filing line." });

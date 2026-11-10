@@ -1,5 +1,5 @@
 {
- "about": "R2 (P-230 (7)): the dated fee table, data and never code. Each line cites IRCC's page, quote and date (P-170). Status: Researched (source, date): may change; Sample until the immigration expert confirms (P-171). Sources: the IRCC fee list itself for the study permit, work permit, open work permit holder and visitor extension lines (read 2026-11-03); research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md rows 1a, 1b, 1c; product/screens/W1-baseline/immigration-facts-2026-10-29.md row 19. Each line carries its basis (P-247): per_application (once per application filed), per_person_by_role (each person of the named roles), per_position (not worked out yet), or family_maximum (each person, capped once enough people apply together). A fee change is an edit to this file with its test (tests/check_r2_fee_table.ts, run by CI). Part 2 of R2 moves it into a stored library table frozen with each release (setup S7a, PUT /library/fees).",
+ "about": "R2 (P-230 (7)): the dated fee table, data and never code. Each line cites IRCC's page, quote and date (P-170). Status: Researched (source, date): may change; Sample until the immigration expert confirms (P-171). Sources: the IRCC fee list itself for the study permit, work permit, open work permit holder and visitor extension lines (read 2026-11-03); research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md rows 1a, 1b, 1c; product/screens/W1-baseline/immigration-facts-2026-10-29.md row 19. Each line carries its basis (P-247): per_application (once per application filed), per_person_by_role (each person of the named roles), per_position (not worked out yet), or family_maximum (each person, capped once enough people apply together). M3-S1 (P-425, read 2026-11-10): a per_application line may name a role that co-files (the sponsor: takes part, never applies), and is then charged on that person's co-filed application, which carries its own fees; a combination's settings (each_files_own, co_filed_why) are data here, never code. A fee change is an edit to this file with its test (tests/check_r2_fee_table.ts, run by CI). Part 2 of R2 moves it into a stored library table frozen with each release (setup S7a, PUT /library/fees).",
  "as_of": "2026-09-21",
  "read": "2026-11-02",
  "status": "Researched (source, date): may change",
@@ -56,26 +56,26 @@
   },
   {
    "key": "spouse_sponsorship",
-   "label": "Spouse or partner sponsorship fee",
-   "status": "Researched (IRCC fee list, 2026-11-02): may change",
-   "basis": "per_person_by_role",
-   "per_person_cad": 1260,
+   "label": "Sponsorship and processing fee (spouse or partner)",
+   "status": "Researched (IRCC fee list, 2026-11-10): may change",
+   "basis": "per_application",
+   "per_person_cad": 660,
    "roles": [
-    "principal"
+    "sponsor"
    ],
    "source": {
     "page": "IRCC fee list",
     "url": "https://ircc.canada.ca/english/information/fees/fees.asp",
-    "quote": "Sponsor your spouse or partner $1,260.00",
+    "quote": "Sponsor your spouse or partner without right of permanent residence fee … 660.00",
     "quote_kind": "IRCC's words",
-    "read": "2026-11-02",
-    "checked": "IRCC fee list page date 2026-09-21; Lead research 2 Nov (research file row 1c: sponsorship, processing and the right of permanent residence fee together); Sample until the immigration expert confirms (P-171)"
+    "read": "2026-11-10",
+    "checked": "IRCC fee list, Spouse, partner or children (abroad and in Canada), page date 2026-11-10, read 2026-11-10 (M3-S1). Guide 5289, Pay the fees: \"This amount includes the sponsorship fee and the processing fee.\" Charged once on the sponsor's co-filed sponsorship application (per_application, role sponsor); with the right of permanent residence fee (pr_rprf, CAD 600) it makes the fee list's \"Sponsor your spouse or partner … 1,260.00\". Sample until the immigration expert confirms (P-171)."
    }
   },
   {
    "key": "spouse_dependent_child",
    "label": "Dependent child fee (sponsorship)",
-   "status": "Researched (IRCC fee list, 2026-11-02): may change",
+   "status": "Researched (IRCC fee list, 2026-11-10): may change",
    "basis": "per_person_by_role",
    "per_person_cad": 180,
    "roles": [
@@ -84,10 +84,10 @@
    "source": {
     "page": "IRCC fee list",
     "url": "https://ircc.canada.ca/english/information/fees/fees.asp",
-    "quote": "dependent child CAD 180",
-    "quote_kind": "summary of the research file",
-    "read": "2026-11-02",
-    "checked": "IRCC fee list page date 2026-09-21; Lead research 2 Nov (research file row 1c); the row's quoted $270.00 is the economic class's child fee: to confirm (question in the R2 PR)"
+    "quote": "Include any dependent child … 180.00 (per child)",
+    "quote_kind": "IRCC's words",
+    "read": "2026-11-10",
+    "checked": "IRCC fee list, Spouse, partner or children (abroad and in Canada), page date 2026-11-10, read 2026-11-10 (M3-S1; settles the R2 PR's question: CAD 180, not the economic class's CAD 270). Guide 5289: \"Dependent children don't need to pay the right of permanent residence fee.\" Sample until the immigration expert confirms (P-171)."
    }
   },
   {
@@ -125,6 +125,25 @@
     "quote_kind": "IRCC's words",
     "read": "2026-11-02",
     "checked": "IRCC fee list page date 2026-09-21; Lead research 2 Nov (research file row 1c); Sample until the immigration expert confirms (P-171)"
+   }
+  },
+  {
+   "key": "pr_rprf",
+   "label": "Right of permanent residence fee",
+   "status": "Researched (IRCC fee list, 2026-11-10): may change",
+   "basis": "per_person_by_role",
+   "per_person_cad": 600,
+   "roles": [
+    "principal",
+    "spouse_or_partner"
+   ],
+   "source": {
+    "page": "IRCC fee list",
+    "url": "https://ircc.canada.ca/english/information/fees/fees.asp",
+    "quote": "Right of permanent residence fee 600.00",
+    "quote_kind": "IRCC's words",
+    "read": "2026-11-10",
+    "checked": "IRCC fee list, Right of permanent residence fee, page date 2026-11-10, read 2026-11-10 (M3-S1): \"For most permanent residence applications, you need to pay the right of permanent residence fee (RPRF) when your application is approved.\" Guide 5289: \"Dependent children don't need to pay the right of permanent residence fee\", so the line names the principal and the spouse or partner, never a child. Charged on the permanent residence application. Sample until the immigration expert confirms (P-171)."
    }
   },
   {
@@ -221,7 +240,18 @@
     "spouse_or_partner": "files_own",
     "child": "files_own"
    },
-   "group_why": "A family's visitor visa applications go together, at the same time and place, so the family maximums apply (BR-16)."
+   "group_why": "A family's visitor visa applications go together, at the same time and place, so the family maximums apply (BR-16).",
+   "each_files_own": {
+    "says": "Guide 5256 says family members complete their own application forms.",
+    "source": {
+     "page": "Guide 5256: Applying for a visitor visa",
+     "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5256-applying-visitor-visa-temporary-resident-visa.html",
+     "quote": "Family members must complete their own application forms.",
+     "quote_kind": "IRCC's words",
+     "read": "2026-03-31",
+     "checked": "compliance-trace IRCC-P2-02; official-sources/ircc/instructions/guide-5256.html, \"Do I have to apply separately for my family members?\" (re-read 2026-11-10, M3-S1). BR-7's warning (P-233 (3)), moved from code into data (P-425)."
+    }
+   }
   },
   "sp.outside": {
    "label": "Study permit (outside Canada)",
@@ -234,6 +264,21 @@
    "lines": [],
    "checklist": true,
    "note": "C6.17 (P-444, QA-375): the per-person checklist only. Its document lines are the release's: those IMM 5556 (03-2024) lists are cited from it with page, quote and date; the others are labelled Sample (api/src/form-setup.ts LMIA_DOCUMENT_SOURCES). No fee lines: its fees are not worked out from this table yet, so nothing about money changes."
+  },
+  "fs.spouse": {
+   "label": "Spouse or common-law partner sponsorship",
+   "lines": [
+    "spouse_sponsorship",
+    "pr_rprf",
+    "spouse_dependent_child"
+   ],
+   "modes": {
+    "principal": "files_own",
+    "sponsor": "co_files",
+    "child": "on_principal"
+   },
+   "co_filed_why": "The sponsorship and the principal's application are sent together and cannot be split (IRCC: the principal \"will submit both applications together online\").",
+   "note": "M3-S1 (P-425): two filings in one submission, the sponsor's co-filed sponsorship application and the principal's permanent residence application (canada.ca \"Sponsor your spouse, partner or child: Apply\", saved 2026-10-27: \"there are 2 applications: Sponsorship application … Permanent residence application\"). The sponsorship carries its own fee (spouse_sponsorship, per application, role sponsor); the principal's application carries the right of permanent residence fee and each dependent child's fee. Modes as the release's lines (samples/wave1.json). Biometrics are not listed: their exemptions here are cited for temporary residents only, so nothing is guessed. Sample until the immigration expert confirms (P-171)."
   }
  }
 }

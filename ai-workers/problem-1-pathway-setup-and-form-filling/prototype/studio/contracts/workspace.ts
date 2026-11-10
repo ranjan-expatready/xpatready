@@ -106,8 +106,9 @@ export type PeopleView = {
   gets: string;
   /** C11.12 PR 3: what the editor needs to work out the preview and the warnings as the author edits (the same pure
    *  functions as the server, engine/filing-modes.ts): the combination, whether its fees are worked out, and the
-   *  built-in filing mode a case falls back to per role (Sample). */
-  combinationKey: string; combinationLabel: string; feesKnown: boolean; defaults: Record<string, LineMode>;
+   *  built-in filing mode a case falls back to per role (Sample). `eachFilesOwn` (M3-S1, P-425): IRCC's words where
+   *  each family member files their own application, from the fee table (BR-7's warning), or null. */
+  combinationKey: string; combinationLabel: string; feesKnown: boolean; defaults: Record<string, LineMode>; eachFilesOwn: string | null;
 };
 /** C11.12 (concept §6): the read-only words of a line's filing mode. */
 export type FilingWords = { filingWords: string; ifNotTravelling: string | null; fees: string | null; tip: string | null };

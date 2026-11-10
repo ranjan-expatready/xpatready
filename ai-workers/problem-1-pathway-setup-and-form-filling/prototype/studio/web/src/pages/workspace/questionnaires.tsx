@@ -159,7 +159,7 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
   // C11.12 (P-233): the words, warnings and "What a case gets" are worked out here with the server's own pure functions
   // (engine/filing-modes.ts), so they follow each edit before Save and match what the save and a case will do.
   const words = (l: Line) => filingWords({ role: l.role, filingMode: l.filingMode ?? null, applies: l.applies }, !!role(l.role)?.mayBeApplicant, v.feesKnown, v.combinationLabel);
-  const warnings = filingWarnings(v.combinationKey, shown.map((l) => ({ role: l.role, label: nameOf(l), filingMode: l.filingMode ?? null })));
+  const warnings = filingWarnings(v.eachFilesOwn, shown.map((l) => ({ role: l.role, label: nameOf(l), filingMode: l.filingMode ?? null })));
   const warningOf = (r: string) => { const name = nameOf(shown.find((l) => l.role === r) ?? { role: r }); return warnings.find((w) => w.startsWith(`${name}:`)) ?? null; };
   const gets = previewFilings(shown.map((l) => ({ ...l, label: nameOf(l), filingMode: l.filingMode ?? null })), v.combinationLabel, v.feesKnown, (r) => v.defaults[r]);
   if (!unfolded && !editing && !filling) return (
