@@ -29,7 +29,7 @@ Standbys: **Lead 11 `local_aa5c12aa-7202-4cec-8459-10f906f7727b`**, **Lead 12 `l
 | qa | cloud "qa: BK-1 …" | BK-1 journey sort + baseline counts (records PR) | ends at label |
 | pipeline | local `local_8494de44` | #1502 (draft, Approve bccf34ef) waits for the founder's commands; #1504 in Opus review: Lead reads the CI-tool diff before labelling (P-423) | then (3) auto-dispatch, (4b) |
 | duplicate | cloud "runtime: M3-S1 …" [15c341] | told to STOP 23:2x (one session per row) | check it pushed nothing; archive |
-| Lead 10 | this session | checks :13/:43; hourly report IST | morning: founder questions one at a time: expert booking, internal data, co-founder walk dates, Fable's use (does it count toward all-models?) |
+| Lead 10 | this session | checks :13/:43; hourly report IST | P-455 answered all; burn ~4%/h at 23:27: full speed to 93% then pause; test whether Fable moves all-models; expert pack lane (cloud) |
 
 ## M3: 29 of 29 Works (21:1x IST 10 Nov, qa #1499 fresh reader; C7.5 + C10.2 on nightly 42841699712, main 87212b14d)
 **Next (P-450):** detailed milestone plan with the founder, one question at a time (A5, A7); then the Bake. **#1463** superseded: qa's close refused, waits for the founder's named word.
@@ -47,7 +47,7 @@ Standbys: **Lead 11 `local_aa5c12aa-7202-4cec-8459-10f906f7727b`**, **Lead 12 `l
 | A4 | 12:3x run tests smartly, no blind testing, no quality cut | answered: PR runs targeted, queue full by design until (4a) proven; approval to come with numbers |
 | A5 | 12:4x finish M3; then detailed milestone plan with counted lists before the Chrome extension; internal production grade | P-450; plan after the 29 |
 | A6 | approvals one at a time; tell him when to press Demo › Load the finished story | at C10.2 merge (#1482) |
-| A8 | 23:0x (10 Nov, Lead 10) plan the next 2 days high level + hourly; best quality and speed; sequence, parallel lanes, models (Fable allowed); one question at a time, no assumptions | P-453, P-454 ruled; plan `design/next-2-days-2026-11-11.md`; open: expert booking, internal data, co-founder walk dates, Fable's use |
+| A8 | 23:0x (10 Nov, Lead 10) plan the next 2 days high level + hourly; best quality and speed; sequence, parallel lanes, models (Fable allowed); one question at a time, no assumptions | done: P-453 to P-455 (pace, night run, burn, expert pack, sample data only, walk as soon as ready, Fable for planning); plan `design/next-2-days-2026-11-11.md` |
 | A7 | Fable's questions 16-18 (internal use on what data; employer LMIA side in?; Chrome extension in?) and booking the immigration expert | ask after the 29 |
 
 ## For the founder (P-390)
