@@ -1,0 +1,25 @@
+nightly.yml run 42707165919 (run_number 264, event workflow_dispatch, dispatched by the tech lead Lead 5 at 03:28 IST 10 Nov),
+head_branch main, head_sha 751310cdb1a70cc6adf5dd8d1c7fdd818ac481e4, conclusion success. Read by qa through the GitHub API
+(actions get_workflow_run, list_workflow_jobs, get_job_logs), 10 Nov 2026.
+Jobs: plan success · packs (C6.16) success (job 129466930672) · suites, works-plan, works skipped (a named-capability run).
+
+Job 129466930672 "packs (C6.16)", step 6 "C6.16 acceptance pack, on the six where its run allows (gate-b.mjs; live AI off, US$0)",
+its log, word for word (timestamps kept):
+2026-11-09T21:57:37.6966725Z   CAP: C6.16
+2026-11-09T21:57:37.6966841Z   GATE_B_JOBS: 1
+2026-11-09T21:57:37.6966959Z   KIND: code
+2026-11-09T21:57:37.6967075Z   GATE_B_DATA: checkpoint
+2026-11-09T21:57:37.8578697Z Gate B: the PR names C6.16; claims Works for none (no bug check).
+2026-11-09T21:57:37.8581098Z   packs: C6.16.test.ts
+2026-11-09T21:58:50.2377765Z     C6.16.test.ts on the checkpoint: exit 0, 74/74 passed (72 s: copy 4, Load the configured checkpoint 63, run 4)
+2026-11-09T21:58:50.2379332Z   packs took 72 s in all
+2026-11-09T21:58:50.2379707Z Gate B: passed.
+
+(The step's name says "on the six where its run allows"; the env and the result line show it ran on the configured checkpoint.)
+
+Main since the run: origin/main is 2cfdad961 (#1459). Files changed under prototype/ between 751310cdb and 2cfdad961
+(git diff --name-only), all qa checks, none read by the C6.16 pack or the app:
+  studio/tests/qa/README.md
+  studio/tests/qa/check_qa376_withdrawn_tooltip_keyboard.cjs
+  studio/tests/qa/check_qa377_review_facts_repeated.cjs
+  studio/tests/qa/check_qa378_file_withdrawal_words.ts

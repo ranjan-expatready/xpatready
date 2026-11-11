@@ -2,7 +2,7 @@
 // of them, what changed since a copy was made, and whether the form can be filed (P-71). Pure: the API writes the copy
 // (api/src/fill-case.ts) through the shared filler. Every declared or confirmed answer is written at once, marked by who
 // gave it (P-242, P-411, amending P-72's "confirmed facts only"); filing still waits for confirmation (readiness).
-import { answerSheetOnly } from "../../contracts/forms.ts";
+import { answerSheetOnly, type Accepts } from "../channels.ts";
 import { createHash } from "node:crypto";
 import { evalCondition, kkey, render, type BoxRow, type Person, type Role } from "../render.ts";
 import { boxGate, notNeededWords, rulesInForce, showCondition } from "../form-field-condition.ts";
@@ -59,7 +59,7 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
       if (c.applies !== true) { const { value: _kept, ...rest } = b; void _kept; return { ...rest, coverage: "not needed" as const, detail: said && c.applies === false ? `Not needed: written only when ${said.replace(/[.\s]+$/, "")}` : notNeededWords(c, rule, words) }; }
     }
     if (b.coverage !== "confirmed fact" || !b.fact) return b;
-    const problems = checkValue(s, b.fact, b.value, today);
+    const problems = checkValue(s, b.fact, b.value, today, form); // QA-355 (a): judged by the release's maps and this form's own
     if (problems.length) return { ...b, coverage: "answered on screen" as const, fix: `answered with a problem, not written: ${problems.join(" ")}` };
     // A No to the gate (declared or confirmed) with a detail still recorded contradicts itself: never written as Yes (nor No). B52: a
     // box that reads its gate itself (asked as its own question) checks the facts its "worked out" step names.
@@ -136,9 +136,10 @@ export function pdfForms(s: Snapshot): Set<string> {
 }
 
 /** P-145: the forms filed Online that have IRCC's PDF in the release (an official file and its form field map): a PDF copy
- *  is made from the same confirmed facts, "Copy, not for filing". Express Entry's IMM 5669 and IMM 5406 are not (P-171 (3)). */
-export function copyOnlyForms(s: Snapshot): Set<string> {
-  const online = new Set((s.forms as { form_number: string; channel?: string }[]).filter((f) => f.channel === "ONLINE" && !answerSheetOnly(f.form_number, s.combination.portal)).map((f) => f.form_number));
+ *  is made from the same confirmed facts, "Copy, not for filing". A form the Form library records IRCC accepts through the
+ *  case's account only Online is not (M3-S5, P-171 (3): answer sheet only; `accepts` is the library's, acceptsOf). */
+export function copyOnlyForms(s: Snapshot, accepts: Accepts): Set<string> {
+  const online = new Set((s.forms as { form_number: string; channel?: string }[]).filter((f) => f.channel === "ONLINE" && !answerSheetOnly(accepts.get(f.form_number), s.combination.portal)).map((f) => f.form_number));
   return new Set((s.field_maps as { form_number: string; channel?: string; official_file?: string }[]).filter((m) => m.channel !== "ONLINE" && m.official_file && online.has(m.form_number)).map((m) => m.form_number));
 }
 

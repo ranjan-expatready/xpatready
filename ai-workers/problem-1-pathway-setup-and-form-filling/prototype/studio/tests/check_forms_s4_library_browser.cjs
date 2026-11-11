@@ -182,6 +182,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     step("QA-64: the confirm says a library retire takes effect when it is approved, not with the next release", /When it is approved/.test(paneText) && !/next release/.test(paneText), paneText.slice(0, 300));
     await pane.getByLabel(/Why retire it/).fill("Uploaded by mistake; no combination uses it");
     await sleep(400); // Send has just turned from disabled to enabled: scan after its colour transition, not mid-way
+    // BK-3: the frame's "where am I" band moved every page down; at the scroll the click left, a row's actions button sat
+    // half under the sticky header and axe counted it as a small target (CI, 4 runs; the button is not the panel's). Scan
+    // from the top of the page, where nothing sits under the header; the panel is sticky, so it is in view for the scan.
+    await p.evaluate(() => window.scrollTo(0, 0)); await sleep(150);
+    step("the retire confirm panel is in view for the axe scan", await pane.evaluate((e) => { const r = e.getBoundingClientRect(); return r.top >= 56 && r.top < window.innerHeight && r.width > 0; }));
     await axe("retire confirm (impact panel)");
     await pane.locator("[data-confirm-send]").click();
     for (let i = 0; i < 20 && !sql(`select status from library_change where kind='library_form' and key='IMM 5604'`); i++) await sleep(250);

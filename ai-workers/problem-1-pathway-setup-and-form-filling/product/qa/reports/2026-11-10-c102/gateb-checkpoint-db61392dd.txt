@@ -1,0 +1,5 @@
+Gate B: the PR names C10.2; claims Works for none (no bug check).
+  packs: C10.2.test.ts
+    C10.2.test.ts on the checkpoint: exit 0, 16/16 passed (399 s: copy 3, Load the configured checkpoint 78, run 318)
+  packs took 399 s in all
+Gate B: passed.

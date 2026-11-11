@@ -9,6 +9,7 @@ import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rule
 import type { Snapshot } from "./snapshot.ts";
 import { askedChoiceProblems, channelProblems, fingerprintLine, type Accepts } from "./channels.ts";
 import { duplicateValidity, roleWords, validityProblems } from "./runtime/case-checklist.ts";
+import { defaultModeOf, FEE_TABLE, rulesFrom } from "./runtime/filings.ts";
 import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
 import { factSourceProblems, factWords, who } from "./sources.ts";
 import { oathMappedProblems } from "./form-steps.ts";
@@ -68,6 +69,7 @@ export function withdrawnFieldLines(s: Snapshot, gone: Map<string, string>): Pro
   for (const f of s.forms) say("Forms", f.form_number, `The condition of ${f.form_number}`, conds(f.condition));
   for (const p of s.placements) say("Questions", p.fact, `The condition of the question "${wordsOf.get(p.fact) ?? "a question"}"`, conds(p.condition));
   for (const d of s.document_requirements) say("Documents", d.document_type, `The condition of the document line "${d.document_type}"`, conds(d.condition));
+  for (const l of (s.combination.participants ?? []) as { role: string; label?: string; addsFiling?: { filing?: string; condition?: unknown } | null }[]) if (l.addsFiling) say("Who can be in this application", `${l.label ?? l.role}: ${l.addsFiling.filing ?? "added filing"}`, `The rule that adds "${l.addsFiling.filing ?? "a filing"}" for ${l.label ?? l.role}`, conds(l.addsFiling.condition));
   for (const r of s.rules) say("Rules", r.id, `The rule "${r.then ?? r.when_plain ?? "with no words"}"`, conds(r.when));
   for (const c of s.checks) say("Checks", c.id, `The check "${c.message ?? "with no message"}"`, inText(c.condition)); // a validity rule names its date outside "field"
   for (const g of s.eligibility?.gates ?? []) say("Eligibility", g.key, `The eligibility gate "${g.label}"`, conds(g.condition));
@@ -92,6 +94,41 @@ export const withoutWithdrawnKeys = (problems: Problem[], gone: Map<string, stri
     return { ...p, message, ...(gone.has(p.item) ? { label: gone.get(p.item) } : {}) };
   });
 };
+
+/** M3-S2 (P-380, P-425): the release's checks of a "Who can be in this application" line's filing it adds (one place for
+ *  validate and its checks, tests/runtime/check_added_filings.ts). `table` is the fee table (the shipped one by default). */
+export function addedFilingProblems(s: Snapshot, types: Map<string, string>, derived: Set<string>, placed: Set<string>, docFacts: Set<string>, table = FEE_TABLE): Problem[] {
+  const out: Problem[] = [];
+  const feeRules = rulesFrom(table, s.combination.key);
+  for (const l of (s.combination.participants ?? []) as { role: string; label?: string; filingMode?: string | null; addsFiling?: { filing?: string; condition?: unknown; fee?: unknown } | null }[]) {
+    if (!l.addsFiling) continue;
+    const item = `${l.label ?? l.role}: ${l.addsFiling.filing ?? "added filing"}`;
+    const say = (message: string) => out.push({ level: "error", where: "Who can be in this application", item, role: l.role, message });
+    // Break m9: the save's rule again at release (one application per person): never on the principal or a line that files its own.
+    // Review m4: a line saved without a mode whose built-in default is "files own" files its own too.
+    if (l.role === "principal" || l.filingMode === "files_own" || l.filingMode === "co_files" || (!l.filingMode && defaultModeOf(s.combination.key, l.role) === "files_own")) say(`${l.label ?? l.role} already files their own application, so a filing it adds would change nothing. Remove the filing it adds, or change the line's filing.`);
+    for (const e of checkCondition(l.addsFiling.condition, types, derived)) say(`Condition ${e}.`);
+    for (const f of new Set([...JSON.stringify(l.addsFiling.condition ?? null).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]))) {
+      if (types.has(f) && !placed.has(f) && !docFacts.has(f) && !derived.has(f)) say(`The rule reads ${f}, but nobody is asked it in this combination, so the filing could never be added. Ask it in the questionnaire, or change the rule.`);
+      // Break M4: answered once for the case, one Yes would add the filing for every person of the line.
+      else if (placed.has(f) && !s.placements.some((p: { fact: string; repeats?: string | null }) => p.fact === f && p.repeats === "per_person")) say(`The rule reads ${f}, which is asked once for the case, so one answer would add the filing for everyone on this line. Ask it per person.`);
+    }
+    // Break m6 (and M2 at release): each fee line it names is one of this combination's and reaches this person's role,
+    // on any basis (review n3: no basis is required; a per-person line alone is enough).
+    const keys = typeof l.addsFiling.fee === "string" ? [l.addsFiling.fee] : Array.isArray(l.addsFiling.fee) ? (l.addsFiling.fee as string[]) : [];
+    if (feeRules?.fees.length && keys.length) {
+      const bad = keys.filter((k) => { const r = feeRules.fees.find((x) => x.key === k); return !r || (r.roles && !r.roles.includes(l.role)); });
+      if (bad.length) say(`The fee line${bad.length > 1 ? "s" : ""} ${bad.join(", ")} ${bad.length > 1 ? "are" : "is"} not among this combination's fee lines for a ${l.role.replace(/_/g, " ")}, so the case could not be priced.`);
+      // Review n1: once the filing is added, only the lines it names count the person, so a per-person or family-maximum
+      // line that charges their role and is not named stops counting them: the case would show a short total as worked out.
+      // A warning, not a refusal: the author may know the person does not pay it (the line's words say so).
+      const missed = feeRules.fees.filter((r) => r.basis !== "per_application" && (!r.roles || r.roles.includes(l.role)) && !keys.includes(r.key));
+      if (missed.length) out.push({ level: "warning", where: "Who can be in this application", item, role: l.role,
+        message: `${missed.map((r) => `"${r.label}" (${r.key})`).join(", ")} ${missed.length > 1 ? "charge" : "charges"} each ${l.role.replace(/_/g, " ")} on this combination, but the filing it adds does not name ${missed.length > 1 ? "them" : "it"}, so once the filing is added that person is not counted on ${missed.length > 1 ? "them" : "it"} and the case's total can be short (unless a family maximum is already reached). Name ${missed.length > 1 ? "them" : "it"} among the filing's fee lines, unless that person does not pay ${missed.length > 1 ? "them" : "it"}.` });
+    }
+  }
+  return out;
+}
 
 export function validate(s: Snapshot, library: { key: string; valueType: string }[], derivedRows: { id: string; calculation: string }[], accepts?: Accepts): Problem[] {
   const out: Problem[] = [];
@@ -147,6 +184,9 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     for (const e of checkCondition(p.condition, types, derived)) out.push({ level: "error", where: "Questions", item: p.fact, message: `Condition ${e}.` });
     if (p.condition && !p.condition_effect) out.push({ level: "error", where: "Questions", item: p.fact, message: "A condition needs an effect (show, hide, require or optional)." });
   }
+  // M3-S2 (P-380, P-425): a filing a line adds reads the person's answers by a rule like any other, and only a fact the
+  // case asks (or a document supplies, or the library works out) can ever be answered, so the filing can be added.
+  out.push(...addedFilingProblems(s, types, derived, placed, docFacts));
   for (const d of s.document_requirements) {
     for (const e of checkCondition(d.condition, types, derived)) out.push({ level: "error", where: "Documents", item: d.document_type, message: `Condition ${e}.` });
     if (d.base_or_conditional === "conditional" && !d.condition) out.push({ level: "error", where: "Documents", item: d.document_type, message: "A conditional requirement needs a condition." });

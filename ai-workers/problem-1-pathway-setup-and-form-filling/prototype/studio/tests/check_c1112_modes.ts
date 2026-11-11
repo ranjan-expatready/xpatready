@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { checkPeople } from "../engine/people.ts";
 import { FILING_NOT_SET_BLOCKS, releaseModes, filingNotSet, filingOf, filingPlan, filingProblems, filingWarnings, filingWords, modeSent, previewFilings } from "../engine/filing-modes.ts";
 import { missingItems } from "../engine/programs.ts";
-import { defaultModeOf, deriveFilings } from "../engine/runtime/filings.ts";
+import { defaultModeOf, deriveFilings, eachFilesOwnOf, FEE_TABLE, hasFeeRules } from "../engine/runtime/filings.ts";
 import { PeopleLine, type LineMode } from "../contracts/workspace.ts";
 import { recorder } from "./runtime/api.ts";
 
@@ -60,8 +60,11 @@ ok("C11.12 BR-6 fail: Files own and not travelling gets no filing (and is said w
 ok("C11.12 BR-6 pass: one mapping helper for the stored views", filingOf("files_own") === "own" && filingOf("on_principal") === "principal" && filingOf("declared_only") === "principal" && filingOf("co_files") === "co_filed" && filingOf(null) === "none");
 
 // BR-7 warn, don't block; the release check needs a mode on every applicant role
-ok("C11.12 BR-7 pass: Visitor visa child On the principal's warns with the guide's words", filingWarnings("vv.single", [{ role: "child", label: "Child", filingMode: "on_principal" }])[0] === "Child: On the principal's application. Check this: Guide 5256 says family members complete their own application forms.");
-ok("C11.12 BR-7 pass (m5): Declared only on Visitor visa warns too; Express Entry does not", filingWarnings("vv.single", [{ role: "child", filingMode: "declared_only" }]).length === 1 && filingWarnings("pnp.express_entry", [{ role: "child", filingMode: "on_principal" }]).length === 0);
+ok("C11.12 BR-7 pass: Visitor visa child On the principal's warns with the guide's words", filingWarnings(eachFilesOwnOf("vv.single"), [{ role: "child", label: "Child", filingMode: "on_principal" }])[0] === "Child: On the principal's application. Check this: Guide 5256 says family members complete their own application forms.");
+// M3-S1 (P-425): which combinations warn, and IRCC's words with their source, are the fee table's data, never code.
+ok("M3-S1 pass: BR-7's words come from the fee table with their source (Guide 5256, its own words, a date read)", eachFilesOwnOf("vv.single") === FEE_TABLE.combinations["vv.single"].each_files_own?.says && FEE_TABLE.combinations["vv.single"].each_files_own?.source.quote === "Family members must complete their own application forms." && /^\d{4}-\d{2}-\d{2}$/.test(FEE_TABLE.combinations["vv.single"].each_files_own?.source.read ?? ""));
+ok("M3-S1 fail: a combination whose row says nothing warns about nothing; neither does an inherited name", eachFilesOwnOf("fs.spouse") === null && eachFilesOwnOf("sp.outside") === null && eachFilesOwnOf("constructor") === null && filingWarnings(null, [{ role: "child", filingMode: "on_principal" }]).length === 0);
+ok("C11.12 BR-7 pass (m5): Declared only on Visitor visa warns too; Express Entry does not", filingWarnings(eachFilesOwnOf("vv.single"), [{ role: "child", filingMode: "declared_only" }]).length === 1 && filingWarnings(eachFilesOwnOf("pnp.express_entry"), [{ role: "child", filingMode: "on_principal" }]).length === 0);
 ok("C11.12 BR-7 fail: an applicant role with no mode is missing before a new release", filingNotSet([P, { role: "child", label: "Child", min: 0, max: 4 }], roles).join() === "Child");
 ok("C11.12 BR-7 pass: the principal, a representative and a role at most 0 need no mode", filingNotSet([{ ...P, filingMode: undefined }, rep(), { role: "child", min: 0, max: 0 }], roles).length === 0);
 ok("C11.12 BR-7 fail (PR 3): with the Filing column on the screen, a role with no mode blocks a new release (error); switched off it is a warning", FILING_NOT_SET_BLOCKS && filingProblems([P, { role: "child", label: "Child", min: 0, max: 4 }], roles)[0]?.level === "error" && filingProblems([P, { role: "child", label: "Child", min: 0, max: 4 }], roles, false)[0]?.level === "warning" &&  filingProblems([P, { role: "child", label: "Child", min: 0, max: 4 }], roles)[0]?.item === "Filing for Child");
@@ -79,7 +82,13 @@ ok("C11.12 BR-8 pass: every family line of the Demo sample (wave1.json) has a fi
 
 // BR-10 fees never guessed; the preview's words
 const pv = previewFilings([{ ...P, label: "Principal applicant" }, { role: "child", label: "Child", min: 0, max: 4, preview: 2, applies: true, filingMode: "on_principal" }] as never, "Provincial nominee", false);
-ok("C11.12 BR-10 pass: a combination with no fee rule says 'not worked out yet', never CAD 0", pv.filings[0].fee === "Fees not worked out yet for Provincial nominee; nothing is guessed." && !/CAD 0/.test(JSON.stringify(pv)));
+ok("C11.12 BR-10 pass (M3-S1 words): a combination with no fee rule says no fee line is set, never CAD 0", pv.filings[0].fee === "No fee lines in the fee table for Provincial nominee yet, so no fee is charged; nothing is guessed." && !/CAD 0/.test(JSON.stringify(pv)));
+// M3-S1: a co-filed application's own fees in the editor's words and preview: its own when a line reaches it, else none.
+const coWords = filingWords({ role: "sponsor", filingMode: "co_files", applies: false }, false, true, "Spouse sponsorship");
+const coPv = previewFilings([P, sponsor()] as never, "Spouse sponsorship", true);
+ok("M3-S1 pass: with fees worked out, the co-filing line and its preview filing say it pays its own application's fees", coWords.fees === "Pays its own application's fees, on this filing (Sample amounts)." && coPv.filings.find((f) => f.kind === "co_filed")?.fee === coWords.fees);
+ok("M3-S1 review M1 (BR-4): the built-in mode a line falls back to is never co_files (a never-applicant line saved without a mode files nothing); applicant roles keep theirs", defaultModeOf("fs.spouse", "sponsor") === undefined && defaultModeOf("fs.spouse", "child") === "on_principal" && defaultModeOf("vv.single", "child") === "files_own");
+ok("M3-S1 fail: hasFeeRules is false when no fee line reaches a co-filing role (a table without a sponsor line), true for the shipped spouse sponsorship row", hasFeeRules("vv.single", ["sponsor"]) === false && hasFeeRules("vv.single") === true && hasFeeRules("fs.spouse", ["sponsor"]) === true && filingWords({ role: "sponsor", filingMode: "co_files", applies: false }, false, false, "Visitor visa").fees === "No fee lines in the fee table for Visitor visa yet, so no fee is charged; nothing is guessed.");
 ok("C11.12 preview pass: on the principal's: '1 filing', 3 people on it", pv.gets === "1 filing" && pv.filings[0].people === 3 && pv.filings[0].roles.join() === "principal,child");
 const co = previewFilings([P, sponsor()] as never, "Spouse sponsorship", false);
 ok("C11.12 preview pass: a co-filed sponsorship is a second filing that cannot be split", co.filings.length === 2 && co.submissions[0].splittable === false && /sent together/.test(co.gets), co.gets);

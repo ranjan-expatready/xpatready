@@ -8,8 +8,9 @@
 import * as React from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Check, Circle, Loader2, Square } from "lucide-react";
+import { Check, Circle, Loader2, Square } from "lucide-react";
 import { api, ApiError, useAction, useActorId, useApi } from "@/lib/api";
+import { useWhere } from "@/components/frame"; // BK-3: one "where am I" line
 import { Button, Field, Notice, Pill, Select } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StandIn } from "@/components/stand-in";
@@ -19,6 +20,7 @@ import type { Finding } from "../../../contracts/findings";
 import type { ReviewRunPlan, ReviewRunResult } from "../../../api/src/review-run-shapes";
 import { FindingsPanel } from "./findings";
 import { noRetryOnRefusal, useCaseView, type CasePerson } from "./questionnaire";
+import { FoldOut } from "@/components/fold-out";
 
 /** The firm's staff (the simulated people of cases.tsx); a client never sees the review. */
 const STAFF = new Set(["user-O", "user-R", "user-T", "user-S"]);
@@ -42,6 +44,7 @@ export function ReviewPage() {
   const { id } = useParams();
   const actor = useActorId();
   const view = useCaseView(id!, "agent");
+  useWhere(view.data ? [{ label: "Cases", to: "/cases" }, { label: view.data.case.reference, to: `/cases/${id}` }, { label: "Review" }] : null); // BK-3
   const forms = useApi<{ forms: CaseForm[] }>(["runtime", "view", id!, "forms", actor], isOfficer(actor) ? `/runtime/cases/${id}/forms` : null, { retry: noRetryOnRefusal });
   const prep = useApi<{ derived: boolean; filings?: Filing[] }>(["runtime", "view", id!, "prepare"], isOfficer(actor) ? `/runtime/cases/${id}/prepare` : null, { retry: noRetryOnRefusal });
   const [subject, setSubject] = React.useState<string | null>(null);
@@ -63,7 +66,6 @@ export function ReviewPage() {
   const show = (f: Finding) => { setShown(f); if (f.subject !== person?.subject_id) setSubject(f.subject); if (f.form && f.form !== form) setForm(f.form); };
   return (
     <div className="mx-auto max-w-7xl space-y-5" data-review-page>
-      <nav aria-label="Path" className="flex items-center gap-1 text-[13px] text-text-muted"><Link to="/cases" className="inline-flex items-center gap-1 hover:underline"><ArrowLeft className="size-3.5" aria-hidden />Cases</Link><span aria-hidden>›</span><Link to={`/cases/${c.id}`} className="hover:underline">{c.reference}</Link><span aria-hidden>›</span><span className="text-text">Review</span></nav>
       <div>
         <h1 className="text-2xl font-semibold [overflow-wrap:anywhere]">Review · {c.reference}</h1>
         <p className="mt-1 text-sm text-text-muted">Before the forms go out: the rules' checks on every form, and an independent AI review of a filled form. Each finding is a warning: decide it here, or pass it with a reason on Ready to file. Staff only.</p>
@@ -181,10 +183,10 @@ function RunCard({ caseId, persons, person, forms, formsLoaded, formsError, form
             {error ? <Notice tone="danger" title="The review did not run">{error}</Notice> : null}
             {result ? <Notice tone={result.forms.some((f) => f.from) ? "ok" : "warn"} title={result.forms.some((f) => f.from) ? "Review run" : "The review did not finish"}>
               <p>{result.note}</p>
-              {dropped.length ? <details className="mt-2 text-[12px]"><summary className="inline-flex min-h-6 cursor-pointer items-center py-1">{dropped.length} AI finding{dropped.length === 1 ? "" : "s"} left out by the rules</summary>
-                <ul className="mt-1 list-disc pl-5">{dropped.map((d, i) => <li key={i} className="[overflow-wrap:anywhere]">{d.why}</li>)}</ul></details> : null}
-              {unreadable.length ? <details className="mt-2 text-[12px]"><summary className="inline-flex min-h-6 cursor-pointer items-center py-1">{unreadable.length} form field{unreadable.length === 1 ? "" : "s"} the AI could not judge (for a person)</summary>
-                <ul className="mt-1 list-disc pl-5">{unreadable.map((u, i) => <li key={i} className="[overflow-wrap:anywhere]">{u.round}: {u.box}: {u.why}</li>)}</ul></details> : null}
+              {dropped.length ? <FoldOut className="mt-2 text-[12px]" summaryClassName="inline-flex min-h-6 items-center py-1" summary={<>{dropped.length} AI finding{dropped.length === 1 ? "" : "s"} left out by the rules</>}>
+                <ul className="mt-1 list-disc pl-5">{dropped.map((d, i) => <li key={i} className="[overflow-wrap:anywhere]">{d.why}</li>)}</ul></FoldOut> : null}
+              {unreadable.length ? <FoldOut className="mt-2 text-[12px]" summaryClassName="inline-flex min-h-6 items-center py-1" summary={<>{unreadable.length} form field{unreadable.length === 1 ? "" : "s"} the AI could not judge (for a person)</>}>
+                <ul className="mt-1 list-disc pl-5">{unreadable.map((u, i) => <li key={i} className="[overflow-wrap:anywhere]">{u.round}: {u.box}: {u.why}</li>)}</ul></FoldOut> : null}
             </Notice> : null}
           </div>
         </div>

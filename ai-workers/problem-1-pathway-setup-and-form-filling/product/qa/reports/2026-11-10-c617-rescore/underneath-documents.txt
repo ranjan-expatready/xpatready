@@ -1,0 +1,23 @@
+## Underneath, main 66e74115e (branch head app code identical), copy qa_c617r, case c8fd9fb0-f456-48fe-9bb5-a8a1879ed283 (QA-C617-DOCS), after walk parts R2 and R3 (05:05 UTC)
+### checklist lines per stage (stage | state | document_type | line state | version)
+study | ENDED_NEXT_STARTED | fee_payment_receipt | not_requested | 1
+study | ENDED_NEXT_STARTED | letter_of_acceptance | not_requested | 1
+study | ENDED_NEXT_STARTED | passport_information_page_copy | received | 2
+work | CURRENT | passport_or_travel_document_information_page_photocopy | received | 2
+work | CURRENT | proof_of_fee_payment_processing_fee_and_other_applicable | not_requested | 1
+### documents (stage of its line | file | line document_type)
+(re-read below with the right join)
+### GET /checklist (officer): lines with on_file
+[{"label":"Passport or travel document information page photocopy","state":"received","on_file":{"from":"Study permit (outside Canada)","file_name":"sample-passport-qa.pdf","uploaded_at":"2026-11-10T05:03:42.837Z","words":"On file from Study permit, uploaded 10 Nov 2026: check it for this application."}}]
+### probe: upload on the ended study stage's passport line e01ec0f9-ad6d-48c5-ba03-0ad2aa4c504c (version 2)
+{"type":"https://expatready.local/problems/checklist-line","title":"Changed since you read it","status":409,"detail":"This document line belongs to an earlier stage of the case, which has ended: it is kept as it was and can no longer be changed. Nothing was changed.","message":"This document line belongs to an earlier stage of the case, which has ended: it is kept as it was and can no longer be changed. Nothing was changed.","code":"stage_ended"} HTTP 409
+
+### probe: request / not-applicable on the ended stage's line
+{"type":"https://expatready.local/problems/checklist-line","title":"Changed since you read it","status":409,"detail":"This document line belongs to an earlier stage of the case, which has ended: it is kept as it was and can no longer be changed. Nothing was changed.","message":"This document line belongs to an earlier stage of the case, which has ended: it is kept as it was and can no longer be ch
+
+### documents after the probes
+(re-read below with the right join)
+### documents (stage of its line | file), re-read 05:05 UTC, after the probes
+study | sample-passport-qa.pdf
+work | sample-passport-work.pdf
+(the probes added nothing to the ended study stage)

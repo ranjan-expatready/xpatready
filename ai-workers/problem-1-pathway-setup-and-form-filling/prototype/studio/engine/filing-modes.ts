@@ -27,14 +27,10 @@ export function filingOf(m: LineMode | null | undefined): "own" | "principal" | 
 export const appliesOf = (m: LineMode | null | undefined, stored: boolean) => (m ? m === "files_own" || m === "on_principal" : stored);
 
 /** BR-7 (Q3, P-233 (3)): a combination whose IRCC guide says each family member applies on their own. A mode that puts
- *  family on the principal's application there is saved with this warning, never refused (no program-type field). */
-const EACH_FILES_OWN: Record<string, string> = {
-  // Guide 5256 (Visitor visa, outside Canada): "Family members must complete their own application forms" (2026-03-31;
-  // compliance-trace IRCC-P2-02).
-  "vv.single": "Guide 5256 says family members complete their own application forms.",
-};
-export function filingWarnings(combinationKey: string, lines: { role: string; label?: string; filingMode?: LineMode | null }[]): string[] {
-  const says = EACH_FILES_OWN[combinationKey];
+ *  family on the principal's application there is saved with this warning, never refused (no program-type field).
+ *  M3-S1 (P-425): which combinations, and IRCC's words with their source, are data (samples/fee-table.json, a
+ *  combination's `each_files_own`, read by engine/runtime/filings.ts eachFilesOwnOf); `says` is those words, or nothing. */
+export function filingWarnings(says: string | null | undefined, lines: { role: string; label?: string; filingMode?: LineMode | null }[]): string[] {
   if (!says) return [];
   return lines.filter((l) => l.role !== "principal" && (l.filingMode === "on_principal" || l.filingMode === "declared_only"))
     .map((l) => `${l.label ?? l.role}: ${l.filingMode === "on_principal" ? "On the principal's application" : "Declared only"}. Check this: ${says}`);
@@ -59,15 +55,20 @@ export function filingProblems(lines: Parameters<typeof filingNotSet>[0], roles:
 /** The P-119 card sentence (questionnaires.tsx TIPS.card), word for word, and the filing tip (concept §5). */
 export const APPLICANT_TIP = "Each person marked as applicant gets their own forms, questions and documents.";
 export const FILING_TIP = "How this person's application goes to IRCC. Files own application: their own application, number and fee. On the principal's application: one application for the family; forms and fees repeat per person on it. Declared only: named on the principal's application but not accompanying; no fee.";
-export const notWorkedOut = (combination: string) => `Fees not worked out yet for ${combination}; nothing is guessed.`;
+/** M3-S1 (P-425): the words where the fee table sets no fee line for a combination. They follow the data (a combination
+ *  with no lines, or none reaching a co-filed application), never which combination it is. */
+export const noFeeLines = (combination: string) => `No fee lines in the fee table for ${combination} yet, so no fee is charged; nothing is guessed.`;
+/** M3-S1: a co-filed application's own fees, when the fee table charges it (a per-application line naming its role). */
+export const CO_FILED_FEES = "Pays its own application's fees, on this filing (Sample amounts).";
 
-/** The read-only words of a line (concept §4, §5). `feesKnown`: the combination has fee rules (Sample amounts). */
+/** The read-only words of a line (concept §4, §5). `feesKnown`: the combination has fee rules (Sample amounts) that
+ *  reach every co-filed application on it (engine/runtime/filings.ts hasFeeRules). */
 export function filingWords(l: { role: string; filingMode?: LineMode | null; applies: boolean }, mayBeApplicant: boolean, feesKnown: boolean, combination: string): FilingWords {
   const m = l.role === "principal" ? (l.filingMode ?? "files_own") : l.filingMode ?? null;
-  const fee = (known: string) => (feesKnown ? known : notWorkedOut(combination));
+  const fee = (known: string) => (feesKnown ? known : noFeeLines(combination));
   const tip = l.applies || m === "files_own" || m === "on_principal" ? `${APPLICANT_TIP} ${FILING_TIP}` : mayBeApplicant ? FILING_TIP : null;
   if (!mayBeApplicant) return m === "co_files"
-    ? { filingWords: "Files the sponsorship (sent with the principal's application)", ifNotTravelling: null, fees: notWorkedOut(combination), tip: "A co-filed application: always sent with the principal's application, never on its own." }
+    ? { filingWords: "Files the sponsorship (sent with the principal's application)", ifNotTravelling: null, fees: fee(CO_FILED_FEES), tip: "A co-filed application: always sent with the principal's application, never on its own." }
     : { filingWords: "Files nothing", ifNotTravelling: null, fees: null, tip: null };
   if (m === "files_own") return { filingWords: "Files own application", ifNotTravelling: l.role === "principal" ? null : "If not travelling: no filing", fees: fee("Pays their own fees; family maximums apply within one submission (Sample amounts)."), tip };
   if (m === "on_principal") return { filingWords: "On the principal's application", ifNotTravelling: "If not travelling: declared only, no fee", fees: fee("Fees repeat per person on the principal's application (Sample amounts)."), tip };
@@ -77,8 +78,10 @@ export function filingWords(l: { role: string; filingMode?: LineMode | null; app
 
 // ------------------------------------------------------------------ the plan of filings (preview; the case from PR 2)
 
-export type PlanPerson = { subject: string; role: string; label: string; travelling: boolean };
-export type PlannedFiling = { id: string; owner: PlanPerson; kind: "own" | "family" | "co_filed"; applicants: { person: PlanPerson; mode: "applying" | "declared_only" }[] };
+/** `adds` (M3-S2): the name of a filing this person adds because their line's rule holds on their answers. */
+export type PlanPerson = { subject: string; role: string; label: string; travelling: boolean; adds?: string };
+/** `added`: the filing a person adds (M3-S2), by its name. */
+export type PlannedFiling = { id: string; owner: PlanPerson; kind: "own" | "family" | "co_filed"; applicants: { person: PlanPerson; mode: "applying" | "declared_only" }[]; added?: string };
 /** Who goes on which filing (BR-4, BR-6): Files own → their own filing when travelling, none when not; On the
  *  principal's and Declared only → on the principal's filing, applying when travelling, declared only when not; co_files
  *  → a co-filed filing sent with the principal's; no mode → files nothing. Keyed by the owner, so ids hold steady. */
@@ -92,6 +95,9 @@ export function filingPlan(people: PlanPerson[], modeOf: (role: string) => LineM
   for (const p of people) {
     if (p === principal) continue;
     const to = filingOf(modeOf(p.role));
+    // M3-S2: a person travelling whose line's rule holds files the filing it adds, their own application, instead of
+    // being on the principal's (one application per person; the save keeps it off a line that files its own).
+    if (p.adds && p.travelling && to !== "own" && to !== "co_filed") { filings.push({ id: `filing-${p.subject}`, owner: p, kind: "own", applicants: [{ person: p, mode: "applying" }], added: p.adds }); continue; }
     if (to === "own") { if (p.travelling) filings.push({ id: `filing-${p.subject}`, owner: p, kind: "own", applicants: [{ person: p, mode: "applying" }] }); else notFiling.push({ person: p, why: "Not travelling (not applying on this case): no filing and no fee." }); }
     else if (to === "principal") { if (main) { main.applicants.push({ person: p, mode: p.travelling ? "applying" : "declared_only" }); main.kind = "family"; } else notFiling.push({ person: p, why: "No principal applicant on this case yet, so there is no application to be on." }); }
     else if (to === "co_filed") filings.push({ id: `filing-${p.subject}`, owner: p, kind: "co_filed", applicants: [] });
@@ -117,7 +123,7 @@ export function previewFilings(lines: { role: string; label?: string; min: numbe
   if (!filings.length || !people.some((p) => p.role === "principal")) return { filings: [] as PreviewFiling[], submissions: [] as { filings: string[]; splittable: boolean; words: string }[], gets: "Add the principal applicant to see what a case gets." };
   const out: PreviewFiling[] = filings.map((f) => {
     const declared = f.applicants.filter((a) => a.mode === "declared_only").length, paying = f.applicants.length - declared;
-    const fee = f.kind === "co_filed" || !feesKnown ? notWorkedOut(combination) : `Fees for ${n(paying, "person", "people")} on this filing${declared ? `; ${declared} declared only, no fee` : ""} (Sample amounts; family maximums within one submission).`;
+    const fee = !feesKnown ? noFeeLines(combination) : f.kind === "co_filed" ? CO_FILED_FEES : `Fees for ${n(paying, "person", "people")} on this filing${declared ? `; ${declared} declared only, no fee` : ""} (Sample amounts; family maximums within one submission).`;
     const words = f.kind === "co_filed" ? `${f.owner.label}: the sponsorship (cannot be sent alone)` : `${f.owner.label}'s application${f.applicants.length > 1 ? ` (${n(f.applicants.length, "person", "people")}${declared ? `, ${declared} declared only` : ""})` : ""}`;
     return { id: f.id, principal: f.owner.role, roles: [...new Set([f.owner, ...f.applicants.map((a) => a.person)].map((p) => p.role))], kind: f.kind, people: f.applicants.length, declaredOnly: declared, fee, words };
   });

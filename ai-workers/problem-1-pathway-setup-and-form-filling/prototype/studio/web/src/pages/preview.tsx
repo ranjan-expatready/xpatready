@@ -1,11 +1,12 @@
 import * as React from "react";
-import { ChevronDown, ChevronRight, Download, FileCheck2, RotateCcw } from "lucide-react";
+import { Download, FileCheck2, RotateCcw } from "lucide-react";
 import { api, getActor, useAction, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill, Select, Stat, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { ONLINE_LATER } from "../../../contracts/forms";
 import { inSentence } from "../../../contracts/runtime";
+import { FoldArrow } from "@/components/fold-out";
 
 const COV: Record<string, [string, string]> = {
   "confirmed fact": ["ok", "bg-ok"], "answered on screen": ["info", "bg-primary"], "document reading": ["ai", "bg-[#7c3aed]"], "client question": ["info", "bg-primary/50"],
@@ -94,7 +95,7 @@ function Questions({ v, answer }: { v: any; answer: (a: string, f: string, x: an
       ) : null}
       {sections.map((sec) => { const list = qs.filter((q) => q.section_title === sec); const todo = list.filter((q) => q.status === "needs an answer" || q.status === "may be needed").length; const isOpen = open === sec; return (
         <div key={sec} className="rounded-xl border border-border bg-surface-raised">
-          <button className="flex w-full items-center justify-between px-4 py-3 text-left" onClick={() => setOpen(isOpen ? null : sec)} aria-expanded={isOpen}><span className="flex items-center gap-2">{isOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}<span className="font-medium">{sec}</span></span><span className="flex gap-1"><Pill>{list.length} items</Pill>{todo ? <Pill tone="warn">{todo} to ask</Pill> : <Pill tone="ok">complete</Pill>}</span></button>
+          <button className="flex w-full items-center justify-between px-4 py-3 text-left" onClick={() => setOpen(isOpen ? null : sec)} aria-expanded={isOpen}><span className="flex items-center gap-2"><FoldArrow open={isOpen} className="size-4" /><span className="font-medium">{sec}</span></span><span className="flex gap-1"><Pill>{list.length} items</Pill>{todo ? <Pill tone="warn">{todo} to ask</Pill> : <Pill tone="ok">complete</Pill>}</span></button>
           {isOpen ? <Table dense className="rounded-none border-x-0 border-b-0" head={["Question", "About", "Status", "Value or why"]}>{list.map((q) => <tr key={`${q.about}|${q.fact}`}><td className="max-w-md"><p>{q.label}</p><p className="mono text-text-muted">{q.fact}{q.rows.length ? ` · rows ${q.rows.map((r: number) => r + 1).join(", ")}` : ""}</p></td><td className="text-xs">{q.about_label}</td><td><StatusQ s={q.status} /></td><td className="max-w-md text-xs">{q.value !== undefined ? <b>{typeof q.value === "object" ? JSON.stringify(q.value) : String(q.value)}</b> : q.status === "needs an answer" || q.status === "may be needed" ? <AnswerInput q={q} answer={answer} /> : null}<p className="text-text-muted">{q.why}</p></td></tr>)}</Table> : null}
         </div>); })}
       {!qs.length ? <Notice>No questions for this selection.</Notice> : null}
@@ -123,7 +124,7 @@ function Forms({ v, id, mode, profile }: { v: any; id: string; mode: string; pro
       {v.forms.map((f: any) => { const c = v.coverage.find((x: any) => x.form === f.form && x.person === f.person); const key = `${f.form}|${f.person}`; const total = c ? c.boxes.length : 0; return (
         <div key={key} className="rounded-xl border border-border bg-surface-raised">
           <div className="flex flex-wrap items-center gap-3 px-4 py-3">
-            <button className="flex min-w-0 flex-1 items-center gap-2 text-left" onClick={() => setOpen(open === key ? null : key)} aria-expanded={open === key} disabled={!c}>{c ? (open === key ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />) : <span className="size-4" />}<span><span className="font-medium">{f.form}</span> <span className="text-xs text-text-muted">{f.title} · {f.person_label}</span></span></button>
+            <button className="flex min-w-0 flex-1 items-center gap-2 text-left" onClick={() => setOpen(open === key ? null : key)} aria-expanded={open === key} disabled={!c}>{c ? <FoldArrow open={open === key} className="size-4" /> : <span className="size-4" />}<span><span className="font-medium">{f.form}</span> <span className="text-xs text-text-muted">{f.title} · {f.person_label}</span></span></button>
             {APPLIES(f.applies)}
             <span className="max-w-sm truncate text-xs text-text-muted" title={f.why}>{f.why}{f.missing.length ? ` (waiting for ${f.missing.join(", ")})` : ""}</span>
             {c && total ? <div className="flex h-2 w-48 overflow-hidden rounded-full bg-surface" title={Object.entries(c.counts).map(([k, n]) => `${k}: ${n}`).join(" · ")}>{Object.entries(COV).map(([k, [, bar]]) => (c.counts[k] ? <span key={k} className={bar} style={{ width: `${(100 * c.counts[k]) / total}%` }} /> : null))}</div> : null}

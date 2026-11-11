@@ -1,0 +1,5 @@
+Gate B: the PR names C7.5; claims Works for none (no bug check).
+  packs: C7.5.test.ts
+    C7.5.test.ts on the checkpoint: exit 0, 16/16 passed (95 s: copy 3, Load the configured checkpoint 74, run 18)
+  packs took 95 s in all
+Gate B: passed.

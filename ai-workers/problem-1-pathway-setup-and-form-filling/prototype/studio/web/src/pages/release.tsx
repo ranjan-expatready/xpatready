@@ -42,7 +42,6 @@ export function ReleasePage() {
   const what = [ok.length ? `${ok.length} combination${ok.length === 1 ? "" : "s"}` : null, lib.length ? `${lib.length} library change${lib.length === 1 ? "" : "s"}` : null].filter(Boolean).join(" and ");
   return (
     <div className="mx-auto max-w-5xl space-y-5">
-      <nav aria-label="Breadcrumb" className="text-xs text-text-muted"><Link to="/" className="hover:underline">Immigration programs</Link> › Review and release</nav>
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Review and release</h1>
         <p className="mt-1 text-sm text-text-muted">Everyone's changes are in one shared draft. Releasing publishes together every combination that has passed its review (submitted, and signed by the content reviewer where an expert must sign); firms keep what was approved until then. {x.last ? `Last release: Release ${x.last.version}, ${fmtDate(x.last.at)}.` : "Nothing released yet."}</p>

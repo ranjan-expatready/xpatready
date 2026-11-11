@@ -5,6 +5,7 @@
 import * as React from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError, useAction, useActorId, useApi } from "@/lib/api";
+import { useWhere } from "@/components/frame";
 import { ChangePreview, useChangeCheck } from "@/ChangePreview";
 import { Button, Input, Notice, Panel, Pill, Textarea } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
@@ -18,6 +19,7 @@ import type { SessionView } from "../../../contracts/programs";
 import type { FieldReadersView, FieldWithdrawn } from "../../../contracts/own-question";
 import type { HeldFileView, ImpactAccepted, ImpactChange, ImpactComponentKind, ImpactDrafted, ImpactReview, LibraryChangeDetail, LibraryChangeView, MergeSide, MergeView } from "../../../contracts/screen02";
 import { RECHECK, SAY } from "../../../contracts/lifecycle";
+import { FoldOut } from "@/components/fold-out";
 
 const inv = [["review-queue"], ["draft"], ["catalogue"]];
 function useMe() {
@@ -26,8 +28,10 @@ function useMe() {
   const duties: readonly string[] = s.data?.actor?.duties ?? [];
   return { id, has: (d: string) => duties.includes(d), name: s.data?.actor?.name };
 }
+/** BK-3: the page's place, shown on the frame's one "where am I" line. */
 function Crumbs({ here }: { here: string }) {
-  return <nav aria-label="Path" className="text-xs text-text-muted"><Link to="/review" className="hover:underline">To review</Link> › {here}</nav>;
+  useWhere([{ label: "To review", to: "/review" }, { label: here }]);
+  return null;
 }
 function Head({ title, chip, tone = "warn", sub }: { title: string; chip?: string; tone?: string; sub?: React.ReactNode }) {
   return <div><div className="flex flex-wrap items-center gap-3"><h1 className="text-2xl font-bold tracking-tight">{title}</h1>{chip ? <Pill tone={tone}>{chip}</Pill> : null}</div>{sub ? <p className="mt-1 text-sm text-text-muted">{sub}</p> : null}</div>;
@@ -148,7 +152,7 @@ export function LibraryChangePage() {
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}
         {x.status === "WAITING" && x.supplies && x.decision_note ? <div data-came-back><Notice tone="warn" title="This changed after it was proposed: decide what it does now">{x.decision_note}. What it does now is above; the reason was written for what it did before.</Notice></div> : null}
       </div>
-      {x.form_field ? null : <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span>{x.kind === "field" ? " (generated from the group and the name)" : ""}</p></details>}
+      {x.form_field ? null : <FoldOut className="text-xs text-text-muted" summary="Details"><p className="mt-1">Key: <span className="mono">{x.key}</span>{x.kind === "field" ? " (generated from the group and the name)" : ""}</p></FoldOut>}
       {x.status === "RETURNED" && !mine ? <p className="text-sm text-text-muted" data-withdraw-not-mine>Only {x.proposed_by ?? "the person who proposed it"} can {LIFECYCLE_KINDS.includes(x.kind) ? "send it again" : "correct it"} or withdraw it.</p>
         : x.status === "RETURNED" ? (x.form_field ? <><Notice title={x.form_field.ask ? "Ask it again" : "Confirm it again"}>{x.form_field.ask ? "A returned change of a form field is not sent again from here: withdraw it, then ask the Yes/No as its deciding question again on Review and release." : "A returned change of a form field is not sent again from here: withdraw it, then confirm the form field again on Review and release."}</Notice><Withdraw id={x.id} label="Withdraw it" /></> : (x as unknown as { must_verify?: unknown }).must_verify ? <><Notice title="Propose it again">A returned change of "must verify before filing" is not sent again from here: withdraw it, then propose it again on its field (Shared library › Fields › the field).</Notice><Withdraw id={x.id} label="Withdraw it" /></> /* C7.9, review M2 on #1282 */
           : (x as unknown as { sets?: unknown }).sets ? <><Notice title="Propose it again">A returned change of a document's substitute sets is not sent again from here: withdraw it, then propose the sets again in the line's drawer (Documents tab).</Notice><Withdraw id={x.id} label="Withdraw it" /></> /* C6.15: the same dead end */

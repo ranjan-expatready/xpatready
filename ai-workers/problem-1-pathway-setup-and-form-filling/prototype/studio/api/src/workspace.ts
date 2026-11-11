@@ -9,12 +9,12 @@ import { newestEdition, pdfMapInUse } from "../../engine/programs.ts";
 import { questionnairesView } from "../../engine/runtime/questionnaires.ts";
 import { previewFamily } from "../../engine/runtime/preview.ts";
 import { aliasOf, appliesOf, filingWarnings, filingWords, isLineMode, previewFilings } from "../../engine/filing-modes.ts";
-import { defaultModeOf, hasFeeRules } from "../../engine/runtime/filings.ts";
+import { defaultModeOf, eachFilesOwnOf, hasFeeRules } from "../../engine/runtime/filings.ts";
 import { wordsOnly } from "../../engine/render.ts";
 import { choiceEditionsOf } from "../../engine/options.ts";
 import { acceptsOf, allowedChannels, channelProblems, filingKind, filingMethod, lineOf, notAcceptedWords, notNeededWords, signatureOf } from "../../engine/channels.ts";
 import { ACCOUNT_WORDS, CHANNEL_WORDS, throughAccount, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, type Channel } from "../../contracts/forms.ts";
-import { type LineMode, answeredBy, irccWords, ourWords, signedByLabel, tabOf, type LastFormChange, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
+import { type AddsFiling, type LineMode, answeredBy, irccWords, ourWords, signedByLabel, tabOf, type LastFormChange, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
 import { actorOf, Db, fail, readerOf, type Actor } from "./core.ts";
 import { FormProgressService } from "./form-progress.ts";
 import { chipOf, type FormStepChip } from "../../contracts/form-progress.ts";
@@ -138,8 +138,10 @@ export class WorkspaceViews {
     const c = await this.db.combination.findUniqueOrThrow({ where: { id } });
     const roles = await this.studio.personRoles(workspaceId);
     const state = await this.studio.peopleState(id);
-    type Stored = { role: string; label?: string; min: number; max: number; applies?: boolean; preview?: number; filingMode?: unknown; quote?: string | null; origin?: "HUMAN" | "AI_PROPOSAL" | "SAMPLE" };
-    const feesKnown = hasFeeRules(c.combinationKey);
+    type Stored = { role: string; label?: string; min: number; max: number; applies?: boolean; preview?: number; filingMode?: unknown; quote?: string | null; origin?: "HUMAN" | "AI_PROPOSAL" | "SAMPLE"; addsFiling?: AddsFiling | null };
+    // M3-S1: worked out only when a fee line also reaches each co-filed application (as the case's own filings do).
+    const coFilers = (c.participants as Stored[]).filter((p) => p.filingMode === "co_files").map((p) => p.role);
+    const feesKnown = hasFeeRules(c.combinationKey, coFilers);
     const lines = (c.participants as Stored[]).map((p) => {
       const r = roles.find((x) => x.key === p.role);
       // C11.12 BR-3 (B1): a mode stored on a role that is never an applicant (earlier setup runs) is dropped on read.
@@ -147,12 +149,13 @@ export class WorkspaceViews {
       const filingMode = stored && !!r?.mayBeApplicant === (stored !== "co_files") ? stored : null;
       const applies = appliesOf(filingMode, p.applies !== false) && !!r?.mayBeApplicant;
       return { role: p.role, label: p.label ?? r?.label ?? p.role, roleLabel: r?.label ?? p.role, meaning: r?.meaning ?? "", min: p.min, max: p.max, applies, preview: p.preview, filingMode, filing: aliasOf(filingMode),
-        ...filingWords({ role: p.role, filingMode, applies }, !!r?.mayBeApplicant, feesKnown, c.label), quote: p.quote ?? null, origin: p.origin, mayBeApplicant: !!r?.mayBeApplicant, answeredBy: answeredBy(p.role) };
+        ...filingWords({ role: p.role, filingMode, applies }, !!r?.mayBeApplicant, feesKnown, c.label), quote: p.quote ?? null, origin: p.origin, mayBeApplicant: !!r?.mayBeApplicant, answeredBy: answeredBy(p.role), addsFiling: p.addsFiling ?? null }; // M3-S2: kept, so a save keeps it
     });
     // C11.12 "What a case gets": the plan of filings for one case of each line's preview count (concept §4).
     const plan = previewFilings(lines, c.label, feesKnown, (role) => defaultModeOf(c.combinationKey, role));
     const defaults = Object.fromEntries(roles.map((r) => [r.key, defaultModeOf(c.combinationKey, r.key)]).filter(([, m]) => !!m)) as Record<string, LineMode>;
-    return { ...state, lines, roles, warnings: filingWarnings(c.combinationKey, lines), ...plan, combinationKey: c.combinationKey, combinationLabel: c.label, feesKnown, defaults };
+    const eachFilesOwn = eachFilesOwnOf(c.combinationKey);
+    return { ...state, lines, roles, warnings: filingWarnings(eachFilesOwn, lines), ...plan, combinationKey: c.combinationKey, combinationLabel: c.label, feesKnown, defaults, eachFilesOwn };
   }
 
   /** Preview: an unsaved case of one Sample family, read by caseView (never saved, never a real person). */

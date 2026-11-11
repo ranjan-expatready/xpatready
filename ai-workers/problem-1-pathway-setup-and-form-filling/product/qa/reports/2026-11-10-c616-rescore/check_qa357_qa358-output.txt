@@ -1,0 +1,5 @@
+FAIL  QA-357 C6.16: after a staff tick with no link sent, Client A's card does not say the person is answering on their own link — Sample Child 19 is answering on their own link 0 of 27 parts done · last saved 9 Nov, 21:33 Their answers are private to them and the firm.
+FAIL  QA-358 C6.16: the adult's own part shows no staff words about Client A's answer ("the officer's 'Confirm section'") — d the application sees how far you have got, not your answers. Answered by the principal for Sample Partner: declared, it fills Sample Partner's forms now and is confirmed before filing (the officer's "Confirm section")
+FAIL  QA-357 C6.16: after a take back, Client A's card does not say the person is answering on their own link — 200 Sample Partner is answering on their own link 0 of 26 parts done · last saved 9 Nov, 21:33 Their answers are private to them and the firm. The link was taken back on 9 Nov. You can resend it to p•••@example.com, or ask the firm. Resend
+
+0/3 passed

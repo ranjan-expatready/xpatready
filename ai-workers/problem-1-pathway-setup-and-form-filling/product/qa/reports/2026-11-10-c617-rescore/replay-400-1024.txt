@@ -1,0 +1,21 @@
+## Replay at 400 and 1024 px, twice each, main 66e74115e, copy qa_c617r, 05:07 UTC (scripts/walk_c617_replay.mjs; ended-stage panel of case QA-C617-DOCS)
+{"width":400,"pass":1,"state":"open-later-stage","axe":[],"sideways":false}
+{"width":400,"pass":1,"state":"start-next-dialog","axe":[],"sideways":false}
+{"width":400,"pass":1,"state":"ended-stage-panel","axe":[],"sideways":false}
+{"width":400,"pass":1,"state":"cancel leaves stage 1 current (Start next stage still offered)","ok":true,"errors":[]}
+{"width":400,"pass":2,"state":"open-later-stage","axe":[],"sideways":false}
+{"width":400,"pass":2,"state":"start-next-dialog","axe":[],"sideways":false}
+{"width":400,"pass":2,"state":"ended-stage-panel","axe":[],"sideways":false}
+{"width":400,"pass":2,"state":"cancel leaves stage 1 current (Start next stage still offered)","ok":true,"errors":[]}
+{"width":1024,"pass":1,"state":"open-later-stage","axe":[],"sideways":false}
+{"width":1024,"pass":1,"state":"start-next-dialog","axe":[],"sideways":false}
+{"width":1024,"pass":1,"state":"ended-stage-panel","axe":[],"sideways":false}
+{"width":1024,"pass":1,"state":"cancel leaves stage 1 current (Start next stage still offered)","ok":true,"errors":[]}
+{"width":1024,"pass":2,"state":"open-later-stage","axe":[],"sideways":false}
+{"width":1024,"pass":2,"state":"start-next-dialog","axe":[],"sideways":false}
+{"width":1024,"pass":2,"state":"ended-stage-panel","axe":[],"sideways":false}
+{"width":1024,"pass":2,"state":"cancel leaves stage 1 current (Start next stage still offered)","ok":true,"errors":[]}
+{"width":400,"pass":1,"state":"work-stage documents panel (On file line)","axe":[],"sideways":false,"errors":[]}
+{"width":400,"pass":2,"state":"work-stage documents panel (On file line)","axe":[],"sideways":false,"errors":[]}
+{"width":1024,"pass":1,"state":"work-stage documents panel (On file line)","axe":[],"sideways":false,"errors":[]}
+{"width":1024,"pass":2,"state":"work-stage documents panel (On file line)","axe":[],"sideways":false,"errors":[]}

@@ -1,0 +1,23 @@
+{
+ "case": "4a01ece0-2857-4d80-a9ab-d0452630aa1a",
+ "subject": "08fbb3d0-7164-494c-bbe2-23f5be14162a",
+ "form": "IMM 5257 (09-2023)",
+ "form_fields": 49,
+ "sheet": "prototype/p2/review-sheets/imm-5257-09-2023-3a2acc10d135.sheet.json",
+ "sheet_sha256": "3a2acc10d135891fa8c64c4f6dc74893a27407c50ba5c87a33dc21521285d8b2",
+ "saved_available": true,
+ "saved_files": [
+  "prototype/p2/runs/studio-form-review-imm-5257-09-2023-d5c57403-live-20261109t053614913z-5f1523.json",
+  "prototype/p2/runs/studio-form-review-check-imm-5257-09-2023-d5c57403-live-20261109t053622100z-bf29df.json"
+ ],
+ "live_allowed": false,
+ "estimate": {
+  "live_usd": 1.06,
+  "live_worst_usd": 4.8,
+  "replay_usd": 0,
+  "remaining_usd": 60,
+  "job_cap_usd": 5
+ },
+ "plan_sha256": "1e36097ed21319720ac31d1e612755bc217b135466db081bc4800cc5e2cfc356",
+ "live_request": "curl -s -X POST http://127.0.0.1:4479/api/runtime/cases/4a01ece0-2857-4d80-a9ab-d0452630aa1a/review-runs -H 'content-type: application/json' -H 'x-actor: user-O' -d '{\"forms\":[\"IMM 5257\"],\"subject\":\"08fbb3d0-7164-494c-bbe2-23f5be14162a\",\"mode\":\"live\",\"planSha256\":\"1e36097ed21319720ac31d1e612755bc217b135466db081bc4800cc5e2cfc356\"}'"
+}

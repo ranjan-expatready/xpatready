@@ -1,6 +1,6 @@
 // "Who can be in this application" (S5, P-119, challenge M3/M4): the rules a save must pass, read against the shared
 // library's person roles (one list for the editor, the validator and the runtime; no role list in code). Pure.
-import { FILING_CHOICE, type LineMode, type PeopleLine, type PersonRoleView } from "../contracts/workspace.ts";
+import { AddsFiling, FILING_CHOICE, type LineMode, type PeopleLine, type PersonRoleView } from "../contracts/workspace.ts";
 import { appliesOf, isLineMode, modeSent } from "./filing-modes.ts";
 import { rolesNamedBy as named } from "./resolver.ts";
 
@@ -9,6 +9,9 @@ type Role = Pick<PersonRoleView, "key" | "label" | "takesPartInCase" | "mayBeApp
 
 /** The principal applicant is the one role every case has (P-119: exactly one). */
 export const PRINCIPAL = "principal";
+/** BR-4 (C11.12 concept): the role whose line may co-file, a person who takes part in a case and never applies (the
+ *  sponsor). One rule for the studio's save and the fee engine (engine/runtime/filings.ts, M3-S1). */
+export const CO_FILING_ROLE = "sponsor";
 
 /** Field errors for a list of people. strict (the S5 editor): an applicant tick on a role that may not be an applicant
  *  is refused; not strict (older callers: New combination, the sample loader) it is set to "not an applicant". */
@@ -42,7 +45,7 @@ export function checkPeople(list: PeopleLine[], roles: Role[], strict = true): {
       mode = null;
     }
     if (mode === "co_files") { // BR-4
-      if (p.role !== "sponsor" && !r?.mayBeApplicant && p.role !== PRINCIPAL) errors.push({ field: at("filingMode"), message: `${name} takes part in the case but files no application: only the sponsor files the sponsorship.` });
+      if (p.role !== CO_FILING_ROLE && !r?.mayBeApplicant && p.role !== PRINCIPAL) errors.push({ field: at("filingMode"), message: `${name} takes part in the case but files no application: only the sponsor files the sponsorship.` });
       else if (r?.mayBeApplicant || p.role === PRINCIPAL) errors.push({ field: at("filingMode"), message: `${name} may be an applicant: choose Files own application, On the principal's application or Declared only. Only a person who is never an applicant (a sponsor) files the sponsorship.` });
       else if (p.min !== 1 || p.max !== 1) errors.push({ field: at("max"), message: `One ${name.toLowerCase()} co-files: set how many to 1 to 1.` });
       if (coFilers++) errors.push({ field: at("filingMode"), message: "Only one person files the sponsorship: keep one co-filing line." });
@@ -51,8 +54,23 @@ export function checkPeople(list: PeopleLine[], roles: Role[], strict = true): {
     if (strict && mode === "declared_only" && p.applies) errors.push({ field: at("applies"), message: "Declared only means not accompanying: choose another filing or untick applicant." });
     let applies = appliesOf(mode, p.applies);
     if (applies && r && !r.mayBeApplicant) { if (strict) errors.push({ field: at("applies"), message: `${r.label} is never an applicant: they take part in the case but file no application of their own.` }); applies = false; }
-    const { filing: _alias, filingMode: _sent, ...rest } = p;
-    return { ...rest, applies, ...(mode ? { filingMode: mode } : {}), label: name }; // Lead check L7: a typed label is kept
+    // M3-S2 (P-380, P-425): a filing the line's person adds when its rule on their answers holds. One application per
+    // person per combination (the stored filing is keyed by its owner), so it goes only on a line whose person applies
+    // but files no application of their own (On the principal's, Declared only, or no mode), never on the principal's.
+    const { filing: _alias, filingMode: _sent, addsFiling: adds0, ...rest } = p;
+    let adds: AddsFiling | null = null;
+    if (adds0 != null) {
+      const a = AddsFiling.safeParse(adds0);
+      const kind = a.success ? (a.data.condition as { subjectKind?: unknown }).subjectKind : undefined;
+      if (!a.success) errors.push({ field: at("addsFiling"), message: `${name}: ${a.error.issues[0]?.message ?? "the filing it adds is not complete."}` });
+      else if (p.role === PRINCIPAL || mode === "files_own" || mode === "co_files") errors.push({ field: at("addsFiling"), message: `${name} already files their own application: a filing it adds goes only on a person who is on the principal's application, declared only, or files nothing (one application per person).` });
+      else if (r && !r.mayBeApplicant) errors.push({ field: at("addsFiling"), message: `${r.label} is never an applicant, so no filing can be added for them.` });
+      else if (kind !== undefined && kind !== "PERSON") errors.push({ field: at("addsFiling"), message: `${name}: the rule that adds the filing is about the person on this line, so it reads their own answers.` });
+      // Break M4: a fact about the case (one answer for everyone) would add the filing for every person of the line at once.
+      else if ([...JSON.stringify(a.data.condition).matchAll(/"field":"([^"]+)"/g)].some((m) => !m[1].startsWith("person."))) errors.push({ field: at("addsFiling"), message: `${name}: the rule reads only facts about the person (person.…), each answered for them alone.` });
+      else adds = a.data;
+    }
+    return { ...rest, applies, ...(mode ? { filingMode: mode } : {}), ...(adds ? { addsFiling: adds } : {}), label: name }; // Lead check L7: a typed label is kept
   });
   if (!list.some((p) => p.role === PRINCIPAL)) errors.push({ field: "participants", message: "Add the principal applicant: every case has exactly one." });
   return { errors, lines };

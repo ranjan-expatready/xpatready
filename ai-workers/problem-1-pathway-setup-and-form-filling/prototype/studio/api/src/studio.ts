@@ -25,6 +25,7 @@ import { PreferencesBody, PROGRAMS_VIEWS, type Preferences, type ProgramsView } 
 import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { filingProblems, filingWarnings, modeSent } from "../../engine/filing-modes.ts";
+import { eachFilesOwnOf } from "../../engine/runtime/filings.ts";
 import { conditionFactProblems } from "../../engine/coverage.ts";
 import { LibrarySources, type SourceLine } from "./library-sources.ts";
 import { aiLive, usesFakeLauncher } from "./sources.ts";
@@ -296,7 +297,7 @@ export class Studio {
     if (lines.some((p) => !Number.isInteger(p.min) || !Number.isInteger(p.max) || p.min < 0 || p.max > 9)) fail("The number of people must be a whole number between 0 and 9, minimum no more than maximum.");
     const { errors, lines: ok } = checkPeople(lines, await this.personRoles(workspaceId), strict);
     if (errors.length) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: errors[0].message, errors }, HttpStatus.BAD_REQUEST);
-    return ok.map((p) => ({ role: p.role, label: String(p.label).slice(0, 60), min: p.min, max: p.max, preview: Math.max(p.min, Math.min(p.max, Number(p.preview ?? (p.min || 1)))), applies: p.applies, ...(p.filingMode ? { filingMode: p.filingMode } : {}), ...(p.quote ? { quote: p.quote } : {}), ...(p.origin ? { origin: p.origin } : {}) }));
+    return ok.map((p) => ({ role: p.role, label: String(p.label).slice(0, 60), min: p.min, max: p.max, preview: Math.max(p.min, Math.min(p.max, Number(p.preview ?? (p.min || 1)))), applies: p.applies, ...(p.filingMode ? { filingMode: p.filingMode } : {}), ...(p.quote ? { quote: p.quote } : {}), ...(p.origin ? { origin: p.origin } : {}), ...(p.addsFiling ? { addsFiling: p.addsFiling as Prisma.InputJsonObject } : {}) }));
   }
 
   /** The shared library's person roles (M3; GET /library/roles), in display order. */
@@ -325,7 +326,7 @@ export class Studio {
       if (hit.length) throw new HttpException({ type: "https://expatready.local/problems/confirm", title: "Confirm the change", status: 409, detail: `${hit.map((h) => h.form).join(", ")} ${hit.length === 1 ? "names" : "name"} a person you removed (${[...new Set(hit.flatMap((h) => h.roles))].map((r) => participantsLabel(c!.participants as any[], r)).join(", ")}). Save anyway, or keep the person.`, confirm: true, lines: hit }, HttpStatus.CONFLICT);
     }
     // C11.12 BR-7 (P-233 (3)): a mode IRCC's guide contradicts is saved with a warning, never refused.
-    return { ...(await this.writePeople(actor, c!, participants, "updated")), warnings: filingWarnings(c!.combinationKey, participants) };
+    return { ...(await this.writePeople(actor, c!, participants, "updated")), warnings: filingWarnings(eachFilesOwnOf(c!.combinationKey), participants) };
   }
 
   /** Undo the last save of "Who can be in this application", while nothing was saved after it. */

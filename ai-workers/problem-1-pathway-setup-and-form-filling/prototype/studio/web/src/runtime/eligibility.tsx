@@ -6,8 +6,9 @@
 // a client sees no card and no page. Rules only, no AI (US$0).
 import * as React from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Check, CircleHelp, History, X } from "lucide-react";
+import { Check, CircleHelp, History, X } from "lucide-react";
 import { api, ApiError, useAction, useActorId, useApi } from "@/lib/api";
+import { useWhere } from "@/components/frame"; // BK-3: one "where am I" line
 import { Button, Field, Input, Notice, Panel, Pill, Textarea } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StandIn } from "@/components/stand-in";
@@ -17,6 +18,7 @@ import { lineId, noRetryOnRefusal, useCaseView, type CasePerson } from "./questi
 import { useFirm } from "./team";
 import { restingOn, restingWords } from "./eligibility-unconfirmed";
 import { CASE_CHECK, CASE_CHECK_SHORT, OUTCOME_WORDS, outcomeWord } from "../../../contracts/case-check-words";
+import { FoldOut } from "@/components/fold-out";
 
 type Gate = { key: string; label: string; state: "met" | "not_met" | "not_answered"; facts: string[]; values: Record<string, unknown>; missing: string[]; whenNotMet?: "not_eligible" | "needs_review"; unconfirmed?: string[]; restsOn?: string[] };
 type Result = { programKey: string; programLabel: string; outcome: string; score: number | null; maxScore?: number | null; failedGates: string[]; missingInputs: string[]; reviewGates?: string[]; gates: Gate[]; judgement: string[] };
@@ -128,6 +130,7 @@ export function EligibilityPage() {
   const actor = useActorId();
   const view = useCaseView(id!, "agent");
   const q = useAssessments(id!);
+  useWhere(view.data ? [{ label: "Cases", to: "/cases" }, { label: view.data.case.reference, to: `/cases/${id}` }, { label: CASE_CHECK }] : null); // BK-3
   const [chosen, setChosen] = React.useState<string | null>(null);
   const [drawer, setDrawerState] = React.useState<"run" | "override" | "review" | "history" | null>(null);
   // Break m3 on 2572b9b0 (WCAG 2.4.3): a drawer gives focus back to the button that opened it.
@@ -157,7 +160,6 @@ export function EligibilityPage() {
   };
   return (
     <div className="mx-auto max-w-7xl space-y-5">
-      <nav aria-label="Path" className="flex items-center gap-1 text-[13px] text-text-muted"><Link to="/cases" className="inline-flex items-center gap-1 hover:underline"><ArrowLeft className="size-3.5" aria-hidden />Cases</Link><span aria-hidden>›</span><Link to={`/cases/${c.id}`} className="hover:underline">{c.reference}</Link><span aria-hidden>›</span><span className="text-text">{CASE_CHECK}</span></nav>
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{CASE_CHECK} · {c.reference}<StandIn id="SI-1" today="our own checks on this application's rules, three outcomes and no score" later="the team's AG-03 Qualifier fills this page and adds scores, cut-offs and advice" /></h1>
@@ -223,8 +225,7 @@ function Result({ caseId, caseSubject, asked, a, r, runs, open }: { caseId: stri
       <div className="flex flex-wrap items-center gap-2">
         <span data-outcome className="contents"><Help tip={outcomeTip(r)}><Pill tone={o.tone} className="px-2 py-1 text-sm">{o.text}</Pill></Help></span>
       </div>
-      <details data-how className="text-sm">
-        <summary className="cursor-pointer text-text-link">How this result is worked out</summary>
+      <FoldOut data-how className="text-sm" summaryClassName="text-text-link" summary="How this result is worked out">
         <ul className="mt-1 list-disc space-y-0.5 pl-5 text-text-muted">
           <li>Every rule must be met. When a rule that disqualifies is not met, the result is “{OUTCOME_WORDS.NOT_ELIGIBLE}”, even if facts are still missing.</li>
           <li>A fact not answered, or a rule for the representative's review that is not met, gives “{OUTCOME_WORDS.POSSIBLY_ELIGIBLE}”. A rule for the representative's review never gives “{OUTCOME_WORDS.NOT_ELIGIBLE}” on its own.</li>
@@ -232,7 +233,7 @@ function Result({ caseId, caseSubject, asked, a, r, runs, open }: { caseId: stri
           {r.judgement.length ? <li>The lines under Officer's judgement never change the result.</li> : null}
           <li data-score>{r.score === null || r.score === undefined ? "No points score on this application." : `Score: ${r.score}${r.maxScore ? ` of ${r.maxScore}` : ""}.`}</li>
         </ul>
-      </details>
+      </FoldOut>
       {resting.length ? (
         <p className="text-sm" data-resting-on={resting.join(" ")}>
           “{r.outcome === "LIKELY_ELIGIBLE" ? OUTCOME_WORDS.LIKELY_ELIGIBLE : OUTCOME_WORDS.NOT_ELIGIBLE}” rests on {resting.length === 1 ? "an answer" : "answers"} not yet confirmed:{" "}

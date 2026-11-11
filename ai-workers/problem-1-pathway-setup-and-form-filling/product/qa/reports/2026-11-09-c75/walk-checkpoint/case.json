@@ -1,0 +1,22 @@
+{
+ "case": "35bc61ef-ef59-48c6-a3af-db25478462cc",
+ "subject": "acc24ddb-e0a1-4683-847a-353c744f1d2d",
+ "form": "IMM 5257 (09-2023)",
+ "form_fields": 61,
+ "sheet": "prototype/p2/review-sheets/imm-5257-09-2023-8bc90b0c0c65.sheet.json",
+ "sheet_sha256": "8bc90b0c0c652521800a31a125dbe7f25780766453578a9fc759feffbd0e494c",
+ "saved_available": false,
+ "saved_files": [],
+ "live_allowed": false,
+ "estimate": {
+  "live_usd": 1.06,
+  "live_worst_usd": 4.8,
+  "replay_usd": 0,
+  "remaining_usd": 60,
+  "job_cap_usd": 5
+ },
+ "plan_sha256": "6ebb905c26a1e39c5bd080b422330c07b6059a6ef2980cd0bd5e5fa722d01f1c",
+ "live_request": "curl -s -X POST http://127.0.0.1:4478/api/runtime/cases/35bc61ef-ef59-48c6-a3af-db25478462cc/review-runs -H 'content-type: application/json' -H 'x-actor: user-O' -d '{\"forms\":[\"IMM 5257\"],\"subject\":\"acc24ddb-e0a1-4683-847a-353c744f1d2d\",\"mode\":\"live\",\"planSha256\":\"6ebb905c26a1e39c5bd080b422330c07b6059a6ef2980cd0bd5e5fa722d01f1c\"}'"
+}
+the sheet is 8bc90b0c0c65, not the expected 123a97599291: stop, nothing was run
+case exit 1

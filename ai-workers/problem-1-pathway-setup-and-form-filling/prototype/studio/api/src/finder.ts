@@ -37,7 +37,7 @@ import { ACTORS, Audit, Db, need, PROTOTYPE, PY, ROOT, STUDIO, VAR, Workspace, t
 import { aboutUsd, lastFinishedUsd } from "./finder-cost.ts";
 import { aiLive, overrideOf, Sources, type LaunchOverride } from "./sources.ts";
 import { checkOverride, costPlanNow, endedOverrides, spendOverride } from "./cost-gate.ts";
-import { channelProposal, channelsFrom, channelsRead, recordedCopy, sampleFixtures, type ChannelProposal, type ChannelReading } from "./filing.ts";
+import { accountAccepts, channelProposal, channelsFrom, channelsRead, recordedCopy, sameText, sampleFixtures, type ChannelProposal, type ChannelReading } from "./filing.ts";
 import { WHO } from "./studio.ts";
 import { linkFinderGuides } from "./guide-sources.ts";
 import { LIVE_RUN, newestFirst, StepRunner, worstRoundUsd, type AiStep, type RoundOut, type SavedRun } from "./rounds.ts";
@@ -95,7 +95,6 @@ const ATTACHABLE = new Set(["always", "condition", "alternative"]);
 export { libraryType };
 const STOPWORDS = new Set(["and", "or", "the", "a", "an", "of", "for", "to", "in", "with", "your", "retail", "corporate", "employers", "temporary", "residence", "permanent", "canada", "application", "apply"]);
 const words = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter((w) => w.length > 1 && !STOPWORDS.has(w)).map((w) => w.replace(/s$/, ""));
-const sameText = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
 
 type Page = { url: string; title: string; kind: "package" | "guide"; text: string; sha256: string; inventory: { file: string; sha256: string } | null };
 /** W1-10 slice 1 (prompt v2): each form also says how IRCC says it is filed (`channel`); answers saved with v1 have none. */
@@ -849,7 +848,7 @@ export class Finder implements OnModuleInit {
       }
     }
     // C-12 (P-171 (3)) and plan §8 Q1: the founder's records and the sample accounts, Sample, each with its basis.
-    const extra = (() => { try { return JSON.parse(readFileSync(fixtureFile ?? join(STUDIO, "samples", "form-library-sample.json"), "utf8")) as { founder_accepts?: { records?: { form: string; account: string; channels: string[] }[] }; accounts?: { combinations?: Record<string, { account: string; url: string }> } }; } catch { return {}; } })();
+    const extra = (() => { try { return JSON.parse(readFileSync(fixtureFile ?? join(STUDIO, "samples", "form-library-sample.json"), "utf8")) as { founder_accepts?: { records?: { form: string; account: string; channels: string[] }[] }; account_accepts?: { records?: unknown }; accounts?: { combinations?: Record<string, { account: string; url: string }> } }; } catch { return {}; } })();
     // A founder's record for a form the library does not hold yet waits for it (said once, never "not used").
     const waiting: string[] = [];
     for (const r of extra.founder_accepts?.records ?? []) {
@@ -858,12 +857,22 @@ export class Finder implements OnModuleInit {
       if (!current || !(IRCC_ACCOUNTS as readonly string[]).includes(r.account) || !r.channels.every((c) => (CHANNELS as readonly string[]).includes(c))) { notUsed.push(`${r.form}: the founder's record (P-171) was not used: ${current ? "not a known account or channel" : "the form is not in the library"}`); continue; }
       await this.db.formEditionAccept.upsert({ where: { formEditionId_account: { formEditionId: current.id, account: r.account } }, update: {}, create: { workspaceId, formEditionId: current.id, account: r.account, channels: r.channels as Channel[], basis: "FOUNDER_SAMPLE", quote: null, setBy: "system" } }); accepts++;
     }
+    // M3-S5 (P-113, P-170): what an IRCC account accepts, from IRCC's own line (Sample until the expert confirms); used only
+    // when the line is on its recorded canada.ca page, like the per-form fixtures above (nothing invented).
+    const waitingIrcc: string[] = [];
+    const acc = await accountAccepts(extra.account_accepts?.records, async (url) => { try { return (await this.canada.get(url, "html")).bytes.toString("utf8"); } catch (e) { if (!(e instanceof CanadaError)) throw e; return null; } });
+    notUsed.push(...acc.problems);
+    for (const r of acc.ok) {
+      const d = defs.find((x) => normaliseCode(x.formKey) === normaliseCode(r.form)), current = d ? newestEdition(d.editions.filter((e) => e.channel !== "ONLINE")) : null;
+      if (!current) { if (d === undefined) waitingIrcc.push(r.form); else notUsed.push(`${r.form}: what ${r.account} accepts was not used: the form has no PDF edition in the library`); continue; }
+      await this.db.formEditionAccept.upsert({ where: { formEditionId_account: { formEditionId: current.id, account: r.account } }, update: {}, create: { workspaceId, formEditionId: current.id, account: r.account, channels: r.channels, basis: "SAMPLE_FIXTURE", quote: r.quote, sourceUrl: r.url, readOn: new Date(`${r.read}T00:00:00Z`), setBy: "system" } }); accepts++;
+    }
     for (const [key, a] of Object.entries(extra.accounts?.combinations ?? {})) {
       if (!(IRCC_ACCOUNTS as readonly string[]).includes(a.account)) { notUsed.push(`${key}: not a known IRCC account`); continue; }
       // A released combination keeps its account as released: only rows without a release take it.
       await this.db.combination.updateMany({ where: { workspaceId, combinationKey: key, portalKey: null, releases: { none: {} } }, data: { portalKey: a.account } });
     }
-    return { pages, accepts, acceptsSaved, guides, noGuide, notUsed, note: waiting.length ? `the founder's records for ${[...new Set(waiting)].join(", ")} (P-171) wait for the form to be in the library` : null };
+    return { pages, accepts, acceptsSaved, guides, noGuide, notUsed, note: [waiting.length ? `the founder's records for ${[...new Set(waiting)].join(", ")} (P-171) wait for the form to be in the library` : "", waitingIrcc.length ? `IRCC's lines for ${[...new Set(waitingIrcc)].join(", ")} (M3-S5) wait for the form to be in the library` : ""].filter(Boolean).join("; ") || null };
   }
 
   /** Stop: no step starts after it and no AI call is sent after it; a call already sent is recorded at its cost (the

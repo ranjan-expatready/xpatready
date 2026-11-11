@@ -1,0 +1,17 @@
+PASS  QA-366: a named Partial row whose pack reads a file the batch adds runs again with its PR's steps; a named row not reached does not
+PASS  QA-366: a named Works row is left to the protected set (job regression), never run twice
+PASS  QA-366: two PRs naming one row: the union of their steps; the whole pack when either names it without steps
+PASS  QA-366: when what the batch adds cannot be worked out (a head not found), every named row runs again but Works (fail closed)
+PASS  QA-366: a row nobody named never runs, whatever the batch touches (an unrelated red Partial refuses nothing; D2, STATE F15)
+PASS  B131: no pack on a pull request: exit 0, "NOT TESTED: C11.5 has no acceptance pack" and a ::warning:: annotation, never "Gate B: passed." alone
+PASS  B131: a normal pack on the checkpoint in a re-test is unchanged: exit 0, "Gate B: passed.", no NOT TESTED line, the same output as before
+PASS  D2: a merge-queue batch never reads the pull request's diff (no "by diff" set; QA-366's re-check is below)
+PASS  QA-366: the batch of #1396 on #1435's main runs C7.5 again, with #1396's steps, on the checkpoint (exit 0 with --no-packs)
+PASS  QA-366 (Major 2): #1435 stacked ahead and not in the title still counts: C7.5 runs again
+PASS  QA-366 (Major 1): a PR whose own change is records (its gate B never ran) has its named rows not re-checked, and says so
+PASS  QA-366: a title PR with no merge in the batch's history runs its named rows (fail closed)
+PASS  QA-366: a batch whose PRs name no capability runs nothing again
+PASS  QA-366: a batch without RANGE could not run (exit 2), never a silent pass
+206 passed, 1 failed
+FAIL  D2: --diff-groups prints only [] with no pull-request range, for a batch and for a change that is not code — [{"code":0,"out":"[]\nERROR: failed to copy trust settings of system certificate-2529 … (the rest of this line is the same certificate warning repeated)
+Why it fails here: the check expects the tool's whole output to be "[]"; it was "[]" followed by 30 lines "ERROR: failed to copy trust settings of system certificate-25291" that this Mac lane's sandbox prints for any Node TLS set-up (code 0). The QA-366 lines above are the retest.

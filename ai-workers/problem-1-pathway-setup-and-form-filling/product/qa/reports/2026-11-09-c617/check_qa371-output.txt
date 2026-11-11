@@ -1,0 +1,8 @@
+QA-371 — the current stage's panel does not call a recorded client answer 'Not recorded'
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+PASS  setup: opened at the later stage; the UCI is Client A's current answer — {"made":201,"answer":"12345678"}
+FAIL  QA-371 fail: the current stage's panel shows the client's UCI 12345678, never "Not recorded" (reads: "UCI(also the client's answer) Not recorded") — {"uciLine":"UCI(also the client's answer) Not recorded"}
+
+1/2 passed
+exit code: 1

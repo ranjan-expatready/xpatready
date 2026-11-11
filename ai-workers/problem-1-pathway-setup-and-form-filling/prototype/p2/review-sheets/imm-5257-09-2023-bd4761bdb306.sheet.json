@@ -1,0 +1,342 @@
+{
+ "contract": "review-sheet/v1",
+ "form_edition": "IMM 5257 (09-2023)",
+ "fields": [
+  {
+   "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]",
+   "caption": "a) Your current marital status",
+   "fact": "person.marital_status",
+   "value": "Annulled Marriage"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]",
+   "caption": "Question 2 A Have you ever used any other name such as a nickname, maiden name or alias?",
+   "fact": "person.has_used_other_name",
+   "value": "No"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].Citizenship[0].Citizenship[0]",
+   "caption": "Citizenship",
+   "fact": "person.citizenship",
+   "value": "India"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Country[0]",
+   "caption": "Country or territory where the person currently resides",
+   "fact": "person.current_residence_country",
+   "value": "India"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]",
+   "caption": "Immigration status in the current country of residence",
+   "fact": "person.current_residence_status",
+   "value": "Citizen"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].DOBDay[0]",
+   "caption": "Date of birth (DD)",
+   "fact": "person.date_of_birth",
+   "value": "13"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].DOBMonth[0]",
+   "caption": "Date of birth (MM)",
+   "fact": "person.date_of_birth",
+   "value": "04"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].DOBYear[0]",
+   "caption": "Date of birth (YYYY)",
+   "fact": "person.date_of_birth",
+   "value": "1986"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].Name[0].FamilyName[0]",
+   "caption": "Family name (as shown on your passport or travel document)",
+   "fact": "person.family_name",
+   "value": "SAMPLE"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].Name[0].GivenName[0]",
+   "caption": "Given name(s) (as shown on your passport or travel document)",
+   "fact": "person.given_names",
+   "value": "SAMPLE"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].PlaceBirthCity[0]",
+   "caption": "City/Town",
+   "fact": "person.birth_city",
+   "value": "SAMPLE"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].PlaceBirthCountry[0]",
+   "caption": "Country or Territory",
+   "fact": "person.birth_country",
+   "value": "India"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].SameAsCORIndicator[0]",
+   "caption": "Question 9 A. Is the country from where you are applying the same as your current country of residence?",
+   "fact": "person.applying_from_country",
+   "value": "Yes"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].ServiceIn[0].ServiceIn[0]",
+   "caption": "I want service in",
+   "fact": "case.service_language",
+   "value": "English"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].Sex[0].Sex[0]",
+   "caption": "Sex",
+   "fact": "person.sex",
+   "value": "F Female"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].UCIClientID[0]",
+   "caption": "UCI",
+   "fact": "person.uci",
+   "value": "0000000001"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].VisaType[0].VisaType[0]",
+   "caption": "Visa requested",
+   "fact": "case.visa_type_requested",
+   "value": "Visitor Visa"
+  },
+  {
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].Streetname[0].Streetname[0]",
+   "caption": "Street name",
+   "fact": "person.mailing_address",
+   "value": "Sample Road"
+  },
+  {
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].CityTow[0].CityTown[0]",
+   "caption": "City/Town",
+   "fact": "person.mailing_address",
+   "value": "Sample City"
+  },
+  {
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].Country[0].Country[0]",
+   "caption": "Country or Territory",
+   "fact": "person.mailing_address",
+   "value": "Canada"
+  },
+  {
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].SameAsMailingIndicator[0]",
+   "caption": "Question 2 Is your residential address the same as your mailing address?",
+   "fact": "person.residential_address",
+   "value": "Yes"
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].LanguageTest[0]",
+   "caption": "1d. Have you taken a test form a designated testing agency to assess your proficiency in English or French?",
+   "fact": "person.language_test_taken",
+   "value": "No"
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].ableToCommunicate[0].ableToCommunicate[0]",
+   "caption": "b) Are you able to communicate in English and/or French?",
+   "fact": "person.official_language_ability",
+   "value": "English"
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].nativeLang[0].nativeLang[0]",
+   "caption": "a) Native language/Mother Tongue",
+   "fact": "person.native_language",
+   "value": "Hindi"
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].CountryofIssue[0].CountryofIssue[0]",
+   "caption": "Country or territory of issue",
+   "fact": "person.passport_country_of_issue",
+   "value": "IND (India)"
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].ExpiryDate[0]",
+   "caption": "Expiry date",
+   "fact": "person.passport_expiry_date",
+   "value": "2035-06-30"
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDate[0].IssueDate[0]",
+   "caption": "Issue date",
+   "fact": "person.passport_issue_date",
+   "value": "2015-01-01"
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].PassportNum[0].PassportNum[0]",
+   "caption": "Passport number",
+   "fact": "person.passport_number",
+   "value": "SAMPLE"
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevMarriedIndicator[0]",
+   "caption": "Question 11 A. Have you previously been married or in a common law relationship?",
+   "fact": "relationship.previously_married_or_common_law",
+   "value": "No"
+  },
+  {
+   "box": "form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]",
+   "caption": "National Identity Document Section Question 1. Do you have a national identity document?",
+   "fact": "person.us_permanent_resident",
+   "value": "No"
+  },
+  {
+   "box": "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]",
+   "caption": "National Identity Document Section Question 1. Do you have a national identity document?",
+   "fact": "person.has_national_id",
+   "value": "No"
+  },
+  {
+   "box": "form1[0].Page3[0].BackgroundInfo2[0].Details[0].VisaChoice3[0]",
+   "caption": "Question 2 B. Have you ever been refused any kind of visa, admission, or been ordered to leave Canada or any other country?",
+   "fact": "person.previously_applied_to_canada",
+   "value": "No"
+  },
+  {
+   "box": "form1[0].Page3[0].BackgroundInfo2[0].VisaChoice1[0]",
+   "caption": "Question 2 A. Have you ever remained beyond the validity of your status, attended school without authorization or worked without authorization in Canada?",
+   "fact": "person.overstayed_or_unauthorized_in_canada",
+   "value": "No"
+  },
+  {
+   "box": "form1[0].Page3[0].BackgroundInfo2[0].VisaChoice2[0]",
+   "caption": "Question 2 B. Have you ever been refused any kind of visa, admission, or been ordered to leave Canada or any other country?",
+   "fact": "person.refused_visa_entry_or_removed",
+   "value": "No"
+  },
+  {
+   "box": "form1[0].Page3[0].BackgroundInfo[0].Choice[0]",
+   "caption": "Background Information Section Question 1 A. Within the past two years, have you or a family member ever had tuberculosis of the lungs or been in close contact with a person with tuberculosis?",
+   "fact": "person.tuberculosis_in_past_two_years",
+   "value": "No"
+  },
+  {
+   "box": "form1[0].Page3[0].BackgroundInfo[0].Choice[1]",
+   "caption": "Question 1 B Do you have any physical or mental disorder that would require social or health services, other than medication, during a stay in Canada?",
+   "fact": "person.health_condition_requiring_services",
+   "value": "No"
+  },
+  {
+   "box": "form1[0].Page3[0].DetailsOfVisit[0].Contacts_Row1[0].AddressInCanada[0].AddressInCanada[0]",
+   "caption": "Address in Canada",
+   "fact": "case.visit_contact_address_in_canada",
+   "value": "Sample Road, Sample City, Canada"
+  },
+  {
+   "box": "form1[0].Page3[0].DetailsOfVisit[0].Contacts_Row1[0].Name[0].Name[0]",
+   "caption": "Name",
+   "fact": "case.visit_contact_name",
+   "value": "SAMPLE"
+  },
+  {
+   "box": "form1[0].Page3[0].DetailsOfVisit[0].Contacts_Row1[0].RelationshipToMe[0].RelationshipToMe[0]",
+   "caption": "Relationship to me",
+   "fact": "case.visit_contact_relationship",
+   "value": "SAMPLE"
+  },
+  {
+   "box": "form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].Funds[0].Funds[0]",
+   "caption": "Funds available for my stay (CAD)",
+   "fact": "case.funds_available_cad",
+   "value": "5000"
+  },
+  {
+   "box": "form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].HowLongStay[0].FromDate[0]",
+   "caption": "From",
+   "fact": "case.intended_stay_from",
+   "value": "2030-03-01"
+  },
+  {
+   "box": "form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].HowLongStay[0].ToDate[0]",
+   "caption": "Planned last day of the stay in Canada (To)",
+   "fact": "case.intended_stay_to",
+   "value": "2030-04-15"
+  },
+  {
+   "box": "form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].PurposeOfVisit[0].PurposeOfVisit[0]",
+   "caption": "a) Purpose of my visit",
+   "fact": "case.visit_purpose",
+   "value": "Business"
+  },
+  {
+   "box": "form1[0].Page3[0].Occupation[0].OccupationRow1[0].CityTown[0].CityTown[0]",
+   "caption": "City/Town",
+   "fact": "person.occupation_city",
+   "value": "SAMPLE"
+  },
+  {
+   "box": "form1[0].Page3[0].Occupation[0].OccupationRow1[0].Country[0].Country[0]",
+   "caption": "Country or Territory",
+   "fact": "person.occupation_country",
+   "value": "India"
+  },
+  {
+   "box": "form1[0].Page3[0].Occupation[0].OccupationRow1[0].Employer[0]",
+   "caption": "Company/Employer/Facility name",
+   "fact": "person.occupation_employer",
+   "value": "SAMPLE"
+  },
+  {
+   "box": "form1[0].Page3[0].Occupation[0].OccupationRow1[0].FromMonth[0]",
+   "caption": "Start date of an activity or occupation period (MM)",
+   "fact": "person.occupation_from_date",
+   "value": "01"
+  },
+  {
+   "box": "form1[0].Page3[0].Occupation[0].OccupationRow1[0].FromYear[0]",
+   "caption": "Start date of an activity or occupation period (YYYY)",
+   "fact": "person.occupation_from_date",
+   "value": "2015"
+  },
+  {
+   "box": "form1[0].Page3[0].Occupation[0].OccupationRow1[0].Occupation[0].Occupation[0]",
+   "caption": "Current Activity/Occupation",
+   "fact": "person.occupation_title",
+   "value": "SAMPLE"
+  },
+  {
+   "box": "form1[0].Page3[0].Occupation[0].OccupationRow1[0].ToMonth[0]",
+   "caption": "End date of an activity or occupation period (MM)",
+   "fact": "person.occupation_to_date",
+   "value": "01"
+  },
+  {
+   "box": "form1[0].Page3[0].Occupation[0].OccupationRow1[0].ToYear[0]",
+   "caption": "End date of an activity or occupation period (YYYY)",
+   "fact": "person.occupation_to_date",
+   "value": "2015"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]",
+   "caption": "Question 3 A. Have you ever committed, been arrested for, been charged with or convicted of any criminal offence in any country?",
+   "fact": "person.criminal_history",
+   "value": "No"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].GovPosition[0].Choice[0]",
+   "caption": "Question 6. Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings?",
+   "fact": "person.ill_treatment_of_prisoners_or_civilians",
+   "value": "No"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Military[0].Choice[0]",
+   "caption": "Question 4 A. Did you serve in any military, militia, or civil defence unit or serve in a security organization or police force (including non obligatory national service, reserve or volunteer units)?",
+   "fact": "person.military_service",
+   "value": "No"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].Choice[0]",
+   "caption": "Question 5. Are you, or have you ever been a member or associated with any political party, or other group or organization which has engaged in or advocated violence as a means to achieving a political or religious objective, or which has b",
+   "fact": "person.violent_organization_association",
+   "value": "No"
+  },
+  {
+   "box": "form1[0].Page3[0].Signature[0].Consent0[0].Choice[0]",
+   "caption": "Question 6. Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings?",
+   "fact": "person.consents_to_research_contact",
+   "value": "No"
+  }
+ ]
+}

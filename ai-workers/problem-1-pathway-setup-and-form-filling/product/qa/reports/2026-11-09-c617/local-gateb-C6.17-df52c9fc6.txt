@@ -1,0 +1,7 @@
+main df52c9fc6; cmd: GATE_B_DATA=checkpoint GATE_B_PORT=4475 GATE_B_NAME=qa_c617g node studio/tools/gate-b.mjs --title 'qa: C6.17 local gate B stand-in' --kind code; 21:45:31 UTC
+Gate B: the PR names C6.17; claims Works for none (no bug check).
+  packs: C6.17.test.ts
+    C6.17.test.ts on the checkpoint: exit 0, 42/42 passed (206 s: copy 4, Load the configured checkpoint 98, run 104)
+  packs took 209 s in all
+Gate B: passed.
+EXIT CODE: 0

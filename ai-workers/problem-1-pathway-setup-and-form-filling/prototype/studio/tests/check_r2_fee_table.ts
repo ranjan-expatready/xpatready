@@ -52,14 +52,19 @@ const edited: FeeTable = { ...FEE_TABLE, lines: FEE_TABLE.lines.map((l) => (l.ke
 ok("R2: a changed amount in the table changes the fee (one person CAD 120, five capped at CAD 600)", total(viaData("vv.single", family(1, 0), edited), "visitor_visa") === 120_00 && total(viaData("vv.single", family(2, 3), edited), "visitor_visa") === 600_00);
 ok("R2 fail: the shipped table is untouched by that edit (CAD 100 still)", total(deriveFilings("vv.single", family(1, 0)), "visitor_visa") === 100_00);
 
-// ── Another combination is a data edit: spouse sponsorship's lines apply only to their roles
-const spouse: FeeTable = { ...FEE_TABLE, combinations: { ...FEE_TABLE.combinations, "fs.spouse": { label: "Spouse sponsorship", lines: ["spouse_sponsorship", "spouse_dependent_child"], modes: { principal: "files_own", child: "files_own" } } } };
-const sp = viaData("fs.spouse", [...family(1, 2)], spouse) as Derived;
+// ── Another combination is a data edit (M3-S1, P-425): the shipped spouse sponsorship row, its lines only on their roles
+// and filings: the sponsor's co-filed sponsorship carries its own fee, the principal's application the rest.
+const sponsor = person("SP", "sponsor");
+const sp = deriveFilings("fs.spouse", [...family(1, 2), sponsor]) as Derived;
 const linesOf = (who: string) => sp.fees.filter((f) => f.payer === who).map((f) => `${f.line}:${f.amount_cents}`).sort();
-ok("R2: spouse sponsorship from data only: the principal pays CAD 1,260, each dependent child CAD 180, no visitor or biometrics line", sp.derived && linesOf("P").join() === "spouse_sponsorship:126000" && linesOf("C0").join() === "spouse_dependent_child:18000" && !sp.fees.some((f) => /visitor|biometrics/.test(f.line)), { P: linesOf("P"), C0: linesOf("C0") });
-ok("R2 fail: a role the table gives no filing (the spouse here) files nothing and pays nothing, and says why", sp.not_filing.length === 0 && !(viaData("fs.spouse", family(2, 0), spouse) as Derived).fees.some((f) => f.payer === "S") && (viaData("fs.spouse", family(2, 0), spouse) as Derived).not_filing.some((n) => n.subject === "S"));
-ok("R2 fail: a combination not in the table is not derived and says so; an inherited name is never a combination", deriveFilings("fs.spouse", family(1, 0)).derived === false && /not derived yet/.test((deriveFilings("fs.spouse", family(1, 0)) as { why: string }).why) && rulesFrom(FEE_TABLE, "constructor") === undefined && rulesFrom(FEE_TABLE, "__proto__") === undefined);
-ok("R2: spouse and PNP fee lines are in the table, cited, ready for their combinations (data edit)", ["spouse_sponsorship", "spouse_dependent_child", "pr_adult", "pr_dependent_child"].every((k) => FEE_TABLE.lines.some((l) => l.key === k && l.per_person_cad > 0)));
+const coFiled = sp.derived ? sp.filings.find((f) => f.mode === "co_filed") : undefined;
+ok("R2 + M3-S1 pass: spouse sponsorship from data only: the sponsor pays CAD 660 on the co-filed sponsorship, the principal CAD 600 (right of permanent residence), each dependent child CAD 180, no visitor or biometrics line",
+  sp.derived && linesOf("SP").join() === "spouse_sponsorship:66000" && linesOf("P").join() === "pr_rprf:60000" && linesOf("C0").join() === "spouse_dependent_child:18000" && linesOf("C1").join() === "spouse_dependent_child:18000"
+  && sp.fees.find((f) => f.line === "spouse_sponsorship")?.filing === coFiled?.id && !sp.fees.some((f) => /visitor|biometrics/.test(f.line)), { SP: linesOf("SP"), P: linesOf("P"), C0: linesOf("C0") });
+ok("R2 + M3-S1 pass: the two filings are one submission whose total is the fee list's CAD 1,260 plus CAD 180 per child (1,620 for two children)", sp.derived && sp.fees_worked_out && sp.groups.length === 1 && sp.groups[0].total_cents === 162000 && sp.groups[0].filings.length === 2, sp.groups.map((g) => g.total_cents));
+ok("R2 fail: a role the table gives no filing (the spouse here) files nothing and pays nothing, and says why", !sp.not_filing.length && !(deriveFilings("fs.spouse", [...family(2, 0), sponsor]) as Derived).fees.some((f) => f.payer === "S") && (deriveFilings("fs.spouse", [...family(2, 0), sponsor]) as Derived).not_filing.some((n) => n.subject === "S"));
+ok("R2 fail: a combination not in the table is not derived and says so; an inherited name is never a combination", deriveFilings("pnp.express_entry", family(1, 0)).derived === false && /no filing or fee is worked out/.test((deriveFilings("pnp.express_entry", family(1, 0)) as { why: string }).why) && rulesFrom(FEE_TABLE, "constructor") === undefined && rulesFrom(FEE_TABLE, "__proto__") === undefined);
+ok("R2: spouse and PNP fee lines are in the table, cited, ready for their combinations (data edit)", ["spouse_sponsorship", "spouse_dependent_child", "pr_rprf", "pr_adult", "pr_dependent_child"].every((k) => FEE_TABLE.lines.some((l) => l.key === k && l.per_person_cad > 0)));
 
 // ── C6.12 step 24: study permit, work permit, open work permit holder and visitor extension lines (IRCC fee list, page
 // date 2026-09-21, read 3 Nov 2026; compliance-trace FEE-R01…R04). Each is charged to every person applying, none capped.
@@ -126,17 +131,23 @@ ok("R2 (break r1): the shipped table passes the same checks (Visitor visa derive
 ok("R2 (break on #500 m1) fail: a table with no combinations is not derived, and nothing throws", (() => { try { return rulesFrom({ ...FEE_TABLE, combinations: undefined } as unknown as FeeTable, "vv.single") === undefined; } catch { return false; } })());
 const appAged: FeeTable = { ...perApp, lines: perApp.lines.map((l) => (l.key === "app_fee" ? { ...l, exempt: FEE_TABLE.lines.find((x) => x.key === "biometrics")!.exempt } : l)) };
 ok("R2 (break on #500 m3) fail: an age exemption on a per-application line is refused (the owner's age would decide for everyone on it)", rulesFrom(appAged, "t.app") === undefined && rulesFrom(perApp, "t.app") !== undefined);
-// Break on #500 M2: a sponsorship combination added to the table with the sample's modes (the sponsor co-files) is not
-// priced from the table: no basis reaches the sponsor, so the sponsorship fee would land on the sponsored person.
+// M3-S1 (P-425; was break on #500 M2): a sponsorship combination added to the table with the sample's modes (the
+// sponsor co-files) is priced from the table: its per_application line naming the sponsor lands on the sponsor's
+// co-filed application, never on the sponsored person.
 const fsOut: FeeTable = { ...FEE_TABLE, combinations: { ...FEE_TABLE.combinations, "fs.outside": { label: "Spouse sponsorship (outside Canada)", lines: ["spouse_sponsorship", "spouse_dependent_child"], modes: { principal: "files_own", sponsor: "co_files", child: "on_principal" } } } };
-ok("R2 + C11.12 (break on #500 M2) fail: a table combination whose sponsor co-files is not derived from the table, never charged to the sponsored person", rulesFrom(fsOut, "fs.outside") === undefined);
-const fsRel = deriveFilings("fs.outside", [...family(1, 1), person("SP", "sponsor")], (k) => rulesFrom(fsOut, k), { modes: new Map([["sponsor", "co_files"], ["child", "on_principal"]]), label: "Spouse sponsorship" }) as Derived;
-ok("R2 + C11.12 (break on #500 M2) pass: its filings still come from the release (the sponsorship co-filed), with no amount and words that say so", fsRel.derived && fsRel.fees.length === 0 && fsRel.fees_worked_out === false && fsRel.filings.some((f) => f.mode === "co_filed") && fsRel.groups.every((g) => g.total_cents === null) && /not worked out yet/.test(fsRel.fees_why ?? ""), { fees: fsRel.fees.length, why: fsRel.fees_why });
-// Review on #500 M1: R2's own spouse table (principal and child only) with the release bringing a co-filing sponsor:
-// the sponsored principal is never charged the sponsorship fee, and no line says otherwise.
-const spRel = deriveFilings("fs.spouse", [...family(1, 1), person("SP", "sponsor")], (k) => rulesFrom(spouse, k), { modes: new Map([["sponsor", "co_files"]]) }) as Derived;
-ok("R2 + C11.12 (review on #500 M1) fail: a release that adds a co-filing sponsor to a priced table combination charges no one (never CAD 1,260 on the sponsored person)", spRel.derived && spRel.fees.length === 0 && spRel.fees_worked_out === false && spRel.groups.every((g) => g.total_cents === null), spRel.fees.map((f) => `${f.payer}:${f.line}:${f.amount_cents}`));
-ok("R2 + C11.12 (review on #500 M1) pass: the same table without a sponsor on the case still prices from data", (viaData("fs.spouse", family(1, 1), spouse) as Derived).fees.some((f) => f.payer === "P" && f.amount_cents === 126000));
+ok("M3-S1 pass: a table combination whose sponsor co-files is derived from the table (the co-filing mode is a setting, not a refusal)", rulesFrom(fsOut, "fs.outside")?.modes.get("sponsor") === "co_files");
+const fsRel = deriveFilings("fs.outside", [...family(1, 1), sponsor], (k) => rulesFrom(fsOut, k), { modes: new Map([["sponsor", "co_files"], ["child", "on_principal"]]), label: "Spouse sponsorship" }) as Derived;
+const relCo = fsRel.derived ? fsRel.filings.find((f) => f.mode === "co_filed") : undefined;
+ok("M3-S1 pass: the sponsorship fee is on the sponsor's co-filed filing, paid by the sponsor, and the sponsored principal pays none of it", fsRel.derived && fsRel.fees_worked_out && fsRel.fees.filter((f) => f.line === "spouse_sponsorship").map((f) => `${f.payer}@${f.filing}:${f.amount_cents}`).join() === `SP@${relCo?.id}:66000` && !fsRel.fees.some((f) => f.payer === "P" && f.line === "spouse_sponsorship") && /co-filed application/.test(fsRel.fees.find((f) => f.line === "spouse_sponsorship")?.why ?? ""), fsRel.fees.map((f) => `${f.payer}:${f.line}:${f.amount_cents}`));
+const perRoleSponsor: FeeTable = { ...fsOut, lines: fsOut.lines.map((l) => (l.key === "spouse_sponsorship" ? { ...l, basis: "per_person_by_role" as const } : l)) };
+const representativeLine: FeeTable = { ...fsOut, lines: fsOut.lines.map((l) => (l.key === "spouse_sponsorship" ? { ...l, roles: ["representative"] } : l)) };
+ok("M3-S1 fail: a co-filing role on a per-person line (no person basis reaches a co-filer), or a role that never co-files on a line, is not derived, never guessed", rulesFrom(perRoleSponsor, "fs.outside") === undefined && rulesFrom(representativeLine, "fs.outside") === undefined);
+// Review on #500 M1, kept by the data: a release that adds a co-filing sponsor to a priced table whose lines name no
+// sponsor: the co-filed application's fees are unknown, so nobody is charged (never a total that leaves it out).
+const spouseNoSponsorLine: FeeTable = { ...FEE_TABLE, combinations: { ...FEE_TABLE.combinations, "fs.test": { label: "Spouse sponsorship", lines: ["pr_rprf", "spouse_dependent_child"], modes: { principal: "files_own", child: "files_own" } } } };
+const spRel = deriveFilings("fs.test", [...family(1, 1), sponsor], (k) => rulesFrom(spouseNoSponsorLine, k), { modes: new Map([["sponsor", "co_files"]]) }) as Derived;
+ok("R2 + M3-S1 (review on #500 M1) fail: a co-filed application no fee line reaches charges no one on the case, total null, and the words name that application", spRel.derived && spRel.fees.length === 0 && spRel.fees_worked_out === false && spRel.groups.every((g) => g.total_cents === null) && /no fee line for SP's co-filed application/.test(spRel.fees_why ?? ""), { fees: spRel.fees.map((f) => `${f.payer}:${f.line}:${f.amount_cents}`), why: spRel.fees_why });
+ok("R2 + M3-S1 (review on #500 M1) pass: the same table without a sponsor on the case still prices from data", (viaData("fs.test", family(1, 1), spouseNoSponsorLine) as Derived).fees.some((f) => f.payer === "P" && f.line === "pr_rprf" && f.amount_cents === 60000));
 // Review on #500 m2: a per-application line limited to roles, and the covering count leaves out declared-only people.
 const appRoles: FeeTable = { ...perApp, lines: perApp.lines.map((l) => (l.key === "app_fee" ? { ...l, roles: ["child"] } : l)), combinations: { "t.app": { label: "Test", lines: ["app_fee"], modes: { principal: "files_own", child: "files_own" } } } };
 const ar = viaData("t.app", family(1, 2), appRoles) as Derived;
@@ -155,6 +166,7 @@ const why12 = (ageCheck(r12, 10) as { why: string }).why;
 ok("R2 (review r1 m6) fail: an edited age speaks with the table's limit and the source's own words, never a made-up IRCC quote", /^Under 12:/.test(why12) && why12.includes(`"${r12.exempt!.source.quote}"`) && !/the age of 12/.test(why12), why12);
 
 // ── The checklist's combinations are data
-ok("R2: the checklist is worked out for the combinations the table marks (Visitor visa today)", DERIVED_FOR.has("vv.single"));
+ok("R2: the checklist is worked out for the combinations the table marks (Visitor visa; C6.17, P-444: the study permit and With an LMIA)", ["vv.single", "sp.outside", "wp.lmia_inside"].every((k) => DERIVED_FOR.has(k)));
+ok("C6.17 fail (P-444): marking a combination's checklist adds no fee: the study permit and With an LMIA have no fee lines, so their fees stay not worked out", ["sp.outside", "wp.lmia_inside"].every((k) => FEE_TABLE.combinations[k]?.lines.length === 0 && rulesFrom(FEE_TABLE, k) === undefined));
 ok("R2 fail: a combination the table does not mark has no checklist yet", !DERIVED_FOR.has("fs.spouse") && !DERIVED_FOR.has("pnp.express_entry") && [...DERIVED_FOR].every((k) => FEE_TABLE.combinations[k]?.checklist === true));
 process.exitCode = summary() ? 1 : 0;

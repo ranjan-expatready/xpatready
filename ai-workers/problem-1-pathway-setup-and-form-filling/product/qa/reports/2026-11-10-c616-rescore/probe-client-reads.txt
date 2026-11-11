@@ -1,0 +1,22 @@
+cases/:id                                  {"user-P":"200","user-O":"200"}
+cases/:id/assessments                      {"user-P":"403","user-O":"200"}
+cases/:id/checklist                        {"user-P":"403","user-O":"200"}
+cases/:id/checks                           {"user-P":"403","user-O":"200"}
+cases/:id/document-reviews/counts          {"user-P":"403","user-O":"200"}
+cases/:id/earlier-facts                    {"user-P":"403","user-O":"200"}
+cases/:id/employer-cases                   {"user-P":"403","user-O":"409"}
+cases/:id/filing-changes                   {"user-P":"403","user-O":"200"}
+cases/:id/filing-record                    {"user-P":"403","user-O":"200"}
+cases/:id/filings                          {"user-P":"403","user-O":"200"}
+cases/:id/findings                         {"user-P":"403","user-O":"200"}
+cases/:id/forms                            {"user-P":"403","user-O":"200"}
+cases/:id/people/privacy                   {"user-P":"200","user-O":"200"}
+cases/:id/prepare                          {"user-P":"403","user-O":"200"}
+cases/:id/proposals                        {"user-P":"403","user-O":"200"}
+cases/:id/questionnaire                    {"user-P":"200","user-O":"200 CARRIES by.client.a.mw9s40ui,Privatestreetmw9s40ui","user-P?mode=agent":"403","user-P?mode=pqr":"200"}
+cases/:id/release-update                   {"user-P":"403","user-O":"200"}
+cases/:id/reviews                          {"user-P":"403","user-O":"200"}
+cases/:id/stages                           {"user-P":"403","user-O":"200"}
+cases/:id/stages/:stage                    {"user-P":"403","user-O":"404"}
+cases/:id/stages/next                      {"user-P":"403","user-O":"200"}
+cases/:id/team                             {"user-P":"403","user-O":"200"}

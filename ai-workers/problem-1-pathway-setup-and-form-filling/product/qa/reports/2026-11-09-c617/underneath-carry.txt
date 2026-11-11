@@ -1,0 +1,18 @@
+## Underneath, case bd9bd192-10ea-4d6f-8a6f-33728ca29907 (QA-C617-CARRY), main df52c9fc6, copy qa_c617w, after walk part C (21:40 UTC)
+### stages (API, officer)
+{"key":"study","state":"ENDED_NEXT_STARTED","words":"Ended — next stage started","key_details":[{"field":"person.uci","value":"87654321"},{"field":"stage.permit_valid_until","value":"2027-05-31"}],"deadline":null}
+{"key":"work","state":"CURRENT","words":"Current","key_details":[{"field":"person.uci","value":null},{"field":"stage.permit_valid_until","value":null}],"deadline":{"label":"Apply for the work permit by","due":"2027-05-31","why":"The day study permit valid until (2027-05-31). Sample: not cited from canada.ca.","sample":true}}
+### application-subject answers per stage (stage | state | fact | value | channel | actor)
+study | ENDED_NEXT_STARTED | case.authorizes_release_to_designated_individual | false | questionnaire | user-Q
+study | ENDED_NEXT_STARTED | case.service_language | "English" | questionnaire | user-Q
+work | CURRENT | case.authorizes_release_to_designated_individual | false | questionnaire | user-Q
+### Client C's person answers (one current row each; fact | value | channel | actor)
+person.family_name | "Sample" | questionnaire | user-Q
+person.given_names | "Client C" | questionnaire | user-Q
+person.marital_status | "single" | questionnaire | user-Q
+person.sex | "F Female" | questionnaire | user-Q
+person.uci | "87654321" | stage_record | user-O
+### form copies: form | status | release's combination | stage whose combination it is
+IMM 5710 | GENERATED | wp.lmia_inside | work
+### the IMM 5710 copy's written fields (from result_json)
+5

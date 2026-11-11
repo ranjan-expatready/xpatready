@@ -16,6 +16,18 @@
 //      IMM 5257 copy, no telephone block is written "Canada/US" without its North American number parts: the filler writes
 //      none yet (p5/transforms.ts phone_part:nanp_*), and the form's own Validate then requires them (IMM 5257 p. 2,
 //      validateAlternateTelephone, validateFaxNumber, the Canada/US box's click script).
+//   5. (10 Nov: the tech lead's Acrobat Validate stopped at "-Details Of Visit- … 1a) Purpose of my visit" after "not
+//      required") on every IMM 5257 copy, nothing 14 of the form's own "negative case" branches empty a box for (the
+//      detail-beside-an-answer ones, modelled from the official template below, NOT_REQUIRED). Validate shows only the
+//      first such message, so v5 reads them all at once. Not modelled (review m1 on #1482; none fires on the story on
+//      10 Nov): validateCWA "same as current country" Yes with row data, the Transit visa beside a purpose, funds or Other
+//      (validateDetailsOfVisit), the province, country and district checks of the mailing (4) and residential (4)
+//      addresses and the school (2); the telephones read a block's visibility (v4); questions 7 and 9 B are v2;
+//   6. the release the Paper copy is on carries the 10 Nov gates, and the copy says why each such box is empty.
+//   7. (10 Nov, the founder's Adobe Validate: Validate passed, but the read-back found Languages c) empty where the product
+//      wrote 01) on every IMM 5257 copy, no Languages c) beside an answer to b) but Both: validateLanguageSection disables c)
+//      then, and the form's own util.enableField empties a field it disables (rawValue = null), with no message; the release
+//      carries the gate on c) and the Paper copy says why c) is empty.
 // Each has a fail case on a test-only copy with one value changed (the reader must catch it).
 //   zsh studio/tools/isolated.sh rt_c102v 4431 start && tsx studio/tests/check_c102_copy_values.ts 4431 xr_studio_rt_c102v
 import { execFileSync } from "node:child_process";
@@ -53,6 +65,30 @@ function cleared(v: Record<string, string>): string[] {
   }
   return out;
 }
+
+// IMM 5257 (09-2023), its own Validate (validateCompletedForm calls each in this order): 14 "negative case" branches that
+// empty a box for a detail beside an answer (the rest: see 5. above), read 10 Nov 2026 from the official template (official-sources/ircc/forms/imm5257e.pdf, sha256
+// 0dc03b24…a562e). Each empties a required box (a status, a purpose, a Yes/No) when a detail sits beside an answer that
+// does not ask for it; the form then says "You entered information that is not required, please review" (only the first
+// time), and later that the emptied box "must contain a value". Test-side reading, independent of the gate data.
+const P1 = "form1[0].Page1[0].", P2 = "form1[0].Page2[0].", P3 = "form1[0].Page3[0].", CT = `${P2}ContactInformation[0].contact[0].`;
+type Branch = { fn: string; when: (v: Record<string, string>) => boolean; details: string[] };
+const NOT_REQUIRED: Branch[] = [
+  { fn: "validateNames (alias No)", when: (v) => v[`${P1}PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]`] === "N", details: [`${P1}PersonalDetails[0].AliasName[0].AliasFamilyName[0]`, `${P1}PersonalDetails[0].AliasName[0].AliasGivenName[0]`] },
+  ...["Row2", "Row3"].map((r) => ({ fn: `validatePCOR (${r} Other beside a status but 06)`, when: (v: Record<string, string>) => v[`${PD}PreviousCOR[0].${r}[0].Status[0]`] !== "06", details: [`${PD}PreviousCOR[0].${r}[0].Other[0]`] })),
+  { fn: "validateMaritalStatus (spouse beside a status but married or common-law, 01/03)", when: (v) => !["01", "03"].includes(v[`${P1}MaritalStatus[0].SectionA[0].MaritalStatus[0]`] ?? ""), details: ["DateOfMarriage[0]", "FamilyName[0]", "GivenName[0]"].map((x) => `${P1}MaritalStatus[0].SectionA[0].${x}`) },
+  { fn: "validatePrevMarriedSection (previous spouse beside No)", when: (v) => v[`${P2}MaritalStatus[0].SectionA[0].PrevMarriedIndicator[0]`] === "N", details: ["PMFamilyName[0]", "GivenName[0].PMGivenName[0]", "TypeOfRelationship[0]", "FromDate[0]", "ToDate[0].ToDate[0]", "PrevSpouseDOB[0].DOBYear[0]", "PrevSpouseDOB[0].DOBMonth[0]", "PrevSpouseDOB[0].DOBDay[0]"].map((x) => `${P2}MaritalStatus[0].SectionA[0].${x}`) },
+  { fn: "validateIdentityDocument (national identity document beside No)", when: (v) => v[`${P2}natID[0].q1[0].natIDIndicator[0]`] === "N", details: ["DocNum[0].DocNum[0]", "CountryofIssue[0].CountryofIssue[0]", "IssueDate[0].IssueDate[0]", "ExpiryDate[0]"].map((x) => `${P2}natID[0].natIDdocs[0].${x}`) },
+  { fn: "validateUSCard (US card beside No)", when: (v) => v[`${P2}USCard[0].q1[0].usCardIndicator[0]`] === "N", details: ["DocNum[0].DocNum[0]", "ExpiryDate[0]"].map((x) => `${P2}USCard[0].usCarddocs[0].${x}`) },
+  { fn: "validateResidentialAddress (a residential address beside same as mailing: Yes; or a mailing PO box)", when: (v) => v[`${CT}SameAsMailingIndicator[0]`] === "Y", details: [`${CT}AddressRow1[0].POBox[0].POBox[0]`, ...["ResidentialAddressRow1[0].AptUnit[0].AptUnit[0]", "ResidentialAddressRow1[0].StreetNum[0].StreetNum[0]", "ResidentialAddressRow1[0].StreetName[0].Streetname[0]", "ResidentialAddressRow1[0].CityTown[0].CityTown[0]", "ResidentialAddressRow2[0].Country[0].Country[0]", "ResidentialAddressRow2[0].ProvinceState[0].ProvinceState[0]", "ResidentialAddressRow2[0].PostalCode[0].PostalCode[0]", "ResidentialAddressRow2[0].District[0]"].map((x) => CT + x)] },
+  { fn: "validateDetailsOfVisit (question 1 b) Other beside a purpose but Other, 03)", when: (v) => v[`${P3}DetailsOfVisit[0].PurposeRow1[0].PurposeOfVisit[0].PurposeOfVisit[0]`] !== "03", details: [`${P3}DetailsOfVisit[0].PurposeRow1[0].Other[0].Other[0]`] },
+  { fn: "validateEducation (a school beside No)", when: (v) => v[`${P3}Education[0].EducationIndicator[0]`] === "N", details: ["FromYear[0]", "FromMonth[0]", "ToYear[0]", "ToMonth[0]", "FieldOfStudy[0]", "School[0]", "CityTown[0]", "Country[0].Country[0]", "ProvState[0]"].map((x) => `${P3}Education[0].Edu_Row1[0].${x}`) },
+  { fn: "validateBackGroundInformation (question 1 c) beside No to 1 a) and 1 b))", when: (v) => v[`${P3}BackgroundInfo[0].Choice[0]`] === "N" && v[`${P3}BackgroundInfo[0].Choice[1]`] === "N", details: [`${P3}BackgroundInfo[0].Details[0].MedicalDetails[0]`] },
+  { fn: "validateBackGroundInformation (question 2 d) beside No to 2 a), 2 b) and 2 c))", when: (v) => ["VisaChoice1[0]", "VisaChoice2[0]", "Details[0].VisaChoice3[0]"].every((x) => v[`${P3}BackgroundInfo2[0].${x}`] === "N"), details: [`${P3}BackgroundInfo2[0].Details[0].refusedDetails[0]`] },
+  { fn: "validateBackGroundInformation (question 3 b) beside No to 3 a))", when: (v) => v[`${P3}PageWrapper[0].BackgroundInfo3[0].Choice[0]`] === "N", details: [`${P3}PageWrapper[0].BackgroundInfo3[0].details[0]`] },
+  { fn: "validateBackGroundInformation (question 4 b) beside No to 4 a))", when: (v) => v[`${P3}PageWrapper[0].Military[0].Choice[0]`] === "N", details: [`${P3}PageWrapper[0].Military[0].militaryServiceDetails[0]`] },
+];
+const notRequired = (v: Record<string, string>) => NOT_REQUIRED.flatMap((b) => (b.when(v) ? b.details.filter((d) => v[d]).map((d) => `${b.fn}: ${d.split(".").slice(-2).join(".")} "${v[d]}"`) : []));
 
 const tmp = mkdtempSync(join(tmpdir(), "xr-c102v-"));
 try {
@@ -119,6 +155,40 @@ try {
   execFileSync(PY, ["-I", READER, "--set", filed.path, badPhone, `${CI}PhoneNumbers[0].AltPhone[0].CanadaUS[0]=1`, `${CI}PhoneNumbers[0].AltPhone[0].Other[0]=0`, `${CI}PhoneNumbers[0].AltPhone[0].NumberCountry[0]=1`, `${CI}PhoneNumbers[0].AltPhone[0].IntlNumber[0].IntlNumber[0]=`], { stdio: ["ignore", "pipe", "pipe"] });
   const bp = naStuck(readCopies([badPhone])[0].values);
   ok("C10.2-v4 fail: the 9 Nov combination (the alternate telephone written \"Canada/US\", country code 1, no number parts) is caught", bp.some((b) => /AltPhone/.test(b)), bp); // asserts the box it sets only, whatever the base copy holds (the v2 fail case's lesson, 178b95d)
+
+  // 5. 10 Nov: every "negative case" branch of the form's own Validate that reads stored values (NOT_REQUIRED), on every copy.
+  const nr = i5257.flatMap((c) => notRequired(c.read?.values ?? {}).map((w) => `${c.channel || "copy"}: ${w}`));
+  ok(`C10.2-v5 pass (IMM 5257's own Validate, ${NOT_REQUIRED.length} branches: validateDetailsOfVisit, validateBackGroundInformation and the rest): no detail beside an answer that does not ask for it, on every IMM 5257 copy (${i5257.length})`, i5257.length > 0 && nr.length === 0, nr);
+  const purposeAt = `${P3}DetailsOfVisit[0].PurposeRow1[0].`, badDetail = join(tmp, "bad-detail.pdf");
+  execFileSync(PY, ["-I", READER, "--set", filed.path, badDetail, `${purposeAt}PurposeOfVisit[0].PurposeOfVisit[0]=08`, `${purposeAt}Other[0].Other[0]=SAMPLE`, `${P3}PageWrapper[0].Military[0].Choice[0]=N`, `${P3}PageWrapper[0].Military[0].militaryServiceDetails[0]=SAMPLE`], { stdio: ["ignore", "pipe", "pipe"] });
+  const bd = notRequired(readCopies([badDetail])[0].values);
+  ok("C10.2-v5 fail: the 10 Nov combination (purpose Family Visit, 08, with \"Other\" details SAMPLE) and question 4 b) details beside No are caught", bd.some((w) => /validateDetailsOfVisit.*Other\[0\]\.Other\[0\] "SAMPLE"/.test(w)) && bd.some((w) => /question 4 b\)/.test(w)), bd); // asserts the boxes it sets only
+
+  // 6. The 10 Nov gates are in the Paper copy's release, and the copy says why each such box is empty.
+  const gated10 = ["DetailsOfVisit[0].PurposeRow1[0].Other[0].Other[0]", "BackgroundInfo2[0].Details[0].refusedDetails[0]", "PageWrapper[0].BackgroundInfo3[0].details[0]", "PageWrapper[0].Military[0].militaryServiceDetails[0]"].map((x) => P3 + x);
+  const inRelease10 = Number(sql(`select count(*) from config_release r, jsonb_array_elements(r.snapshot->'field_maps') m, jsonb_array_elements(m->'entries') e where r.id='${filed.release}' and m->>'form_number'='IMM 5257' and e->'condition_rule'->'gate' is not null and e->>'data_path' in (${gated10.map((g) => `'${g}'`).join(",")})`) || 0);
+  ok("C10.2-v6 pass (B107 data, samples/form-field-gates.json, 10 Nov): the Paper copy's release carries the gates on Details of visit 1 b) and Background Information 2 d), 3 b), 4 b)", inRelease10 === 4, inRelease10);
+  const said10 = gated10.map((g) => ({ g: g.split(".").slice(-2).join("."), b: boxes.find((b) => b.box === g) }));
+  ok("C10.2-v6 pass: on the Paper copy (purpose Family Visit, No to questions 2 to 4) those four boxes are not written, each saying \"Not needed: written only when …\"", said10.every((x) => !!x.b && x.b.result !== "written" && /^Not needed: written only when/.test(x.b.why ?? "")), said10);
+
+  // 7. Languages c) is kept by the form only beside b) Both (validateLanguageSection + util.enableField's rawValue = null).
+  const LG = `${P2}MaritalStatus[0].SectionA[0].Languages[0].languages[0].`;
+  const cleared7 = (v: Record<string, string>) => (v[`${LG}lov[0]`] && v[`${LG}ableToCommunicate[0].ableToCommunicate[0]`] !== "Both" ? [`c) "${v[`${LG}lov[0]`]}" beside b) "${v[`${LG}ableToCommunicate[0].ableToCommunicate[0]`] ?? ""}"`] : []);
+  const h7 = i5257.flatMap((c) => cleared7(c.read?.values ?? {}).map((w) => `${c.channel || "copy"}: ${w}`));
+  ok(`C10.2-v7 pass (IMM 5257 validateLanguageSection, util.enableField): no Languages c) beside an answer to b) but Both, on every IMM 5257 copy (${i5257.length})`, i5257.length > 0 && h7.length === 0, h7);
+  const badLang = join(tmp, "bad-lang.pdf");
+  execFileSync(PY, ["-I", READER, "--set", filed.path, badLang, `${LG}ableToCommunicate[0].ableToCommunicate[0]=English`, `${LG}lov[0]=01`], { stdio: ["ignore", "pipe", "pipe"] });
+  const bl = cleared7(readCopies([badLang])[0].values);
+  ok("C10.2-v7 fail: the 10 Nov combination (b) English, c) 01) is caught", bl.length === 1 && /c\) "01" beside b\) "English"/.test(bl[0]), bl);
+  const gateC = Number(sql(`select count(*) from config_release r, jsonb_array_elements(r.snapshot->'field_maps') m, jsonb_array_elements(m->'entries') e where r.id='${filed.release}' and m->>'form_number'='IMM 5257' and e->'condition_rule'->'gate' is not null and e->>'data_path' = '${LG}lov[0]'`) || 0);
+  const boxC = boxes.find((b) => b.box === `${LG}lov[0]`);
+  // Review m2 on #1492: the gate compares b)'s stored answer with "Both"; no story person answers Both, so the question's own
+  // keys are read here (a b) stored under other keys, a linked answer list's slugs say, would leave c) never written).
+  const famCase = sql("select id from runtime_case where reference = 'SAMPLE-VV-FAMILY-1'");
+  const qv = await (await fetch(`http://localhost:${PORT}/api/runtime/cases/${famCase}/questionnaire?mode=agent`, { headers: { "x-actor": "user-O" } })).json() as { sections: { questions: { fact: string; options: { key: string }[] | null }[] }[] };
+  const abilityKeys = [...new Set(qv.sections.flatMap((x) => x.questions).filter((q) => q.fact === "person.official_language_ability").flatMap((q) => (q.options ?? []).map((o) => o.key)))];
+  ok("C10.2-v7 pass (review m2): the question for Languages b) offers the key \"Both\" exactly, the value the gate on c) compares", abilityKeys.includes("Both"), abilityKeys);
+  ok("C10.2-v7 pass (B107 data, 10 Nov): the Paper copy's release carries the gate on Languages c), and the copy (b) English) leaves c) empty saying \"Not needed: written only when …\"", gateC === 1 && !!boxC && boxC.result !== "written" && /^Not needed: written only when/.test(boxC.why ?? ""), { gateC, boxC });
 } catch (e) {
   ok("the check ran to its end", false, (e as Error).message);
 } finally {

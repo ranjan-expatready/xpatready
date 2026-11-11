@@ -1,0 +1,30 @@
+# Six replays of the C7.5 walk by script (replay-walk-1024-a.js with W and CASE changed), Playwright tool, #1496 head e562ee06e, copy qa_c75a (:4475, configured checkpoint loaded by screen), 10 Nov ~19:15 IST
+# Each run printed exactly these lines; only the ids in "non-GET sent" differ (cases below, one fresh pack case each, from walk-cases.json "replay 1".."replay 6").
+# 1024 a c87d807b · 1024 b dedcd7e9 · 400 a 54df91e6 · 400 b 8dd36ba9 · 1440 a e4a82601 · 1440 b 5d89ca45
+[header] Readiness: Not ready · 22% (lowest: Visitor visa: Sample Client A)
+[finding lines before] 0
+[Saved] disabled=false · Saved US$0.00 Replays the checked saved review of IMM 5257 (09-2023), recorded on Nov 10, 2026, for exactly these answers (56 form fields). Nothing is sent.
+[Live] disabled=true radio-disabled=true
+[axe review before] 0 violations
+[sideways review] none
+[result] Review run Saved: 4 new findings. US$0.00. Each finding is a warning: decide it here, or pass it with a reason on Ready to file.
+[AI rows] 4 (High 1, Low 3); every Low 2 reasons true; all Replayed true
+[show on the form] 1 highlighted, pressed=true
+[ack empty] Acknowledge this finding MAJOR · AI · “No” Reason Give a reason of at least 3 characters: it is kept with the finding. Cancel Acknowledge
+[acked] acknowledged
+[counts] 2 open · 1 acknowledged · 0 resolved · 1 dismissed
+[axe review after] 0 violations
+[header after] Readiness: Not ready · 30% (lowest: Visitor visa: Sample Client A)
+[finding lines] 2: warning · INFO finding on IMM 5257: the AI review (Low: the two rounds disagree) flags what the form says, “2035-06-30” || warning · MAJOR finding on IMM 5257: the AI review (High) flags what the form says, “Canada”
+[blocking] 0
+[pass empty] Why is this passed? Say why this warning is passed (at least 5 characters, with words). Pass Cancel
+[line after pass] closed
+[finding lines left] 1
+[header after pass] Readiness: Not ready · 38% (lowest: Visitor visa: Sample Client A)
+[axe case] 0 violations
+[sideways case] none
+[non-GET sent] 8: POST …/cases/<case>/review-runs/plan · POST …/cases/<case>/review-runs ("mode":"replay") · POST …/review-runs/plan · POST …/findings/<id>/acknowledge {"reason":""} · POST …/findings/<id>/acknowledge {"reason":"Che… · POST …/findings/<id>/dismiss {"reason":"Does no… · POST …/filings/<id>/warnings/finding/pass (empty, then with a reason)
+[live requests] 0
+[errors/5xx] none
+# Console: 2 errors per run, both "400 (Bad Request)": …/findings/<id>/acknowledge and …/filings/<id>/warnings/finding/pass, the two empty reasons refused as designed.
+# Gate B's output names no steps (gate-b.mjs prints the count only); steps -6b, -7, -8, -9, -15 are green because 16 of 16 passed with exit 0.

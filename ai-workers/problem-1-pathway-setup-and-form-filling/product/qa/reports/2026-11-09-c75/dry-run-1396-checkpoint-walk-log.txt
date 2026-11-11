@@ -1,0 +1,73 @@
+# Dry run of the gate A walk on #1396 head b0727d19b merged with main 1d07807c8 (local), configured checkpoint, 1024 px, fresh copy qa_c75dry; before #1396 merged; not the counted gate A
+[header] Readiness: Not ready · 22% (lowest: Visitor visa: Sample Client A)
+[ready-to-file lines before] 8: findings 0
+[case review panel] Review Stand-in Checks across the facts and forms. Each finding is a warning: decide it here, or pass it with a reason on Ready to file. Open Review Add finding 0 open · 0 acknowledged · 0 resolved Rules checks run on every form at every read (US$0). The independent AI review of a filled form runs from the Review page: Saved replays its checked run at US$0. No findings: the facts and forms agree so far.
+[shot] 01-case-review-panel-1024.png
+[h1] Review · ACC-mw9ifw9w-esxr
+[person / form] Sample Client A / IMM 5257 (forms: IMM 5257, IMM 5257 SCH1, IMM 5476, IMM 5645)
+[Saved row] disabled=false · Saved US$0.00 Replays the checked saved review of IMM 5257 (09-2023), recorded on Nov 9, 2026, for exactly these answers (64 form fields). Nothing is sent.
+[Live row] disabled=true · Live about US$1.06, at most US$4.80 Live is off on this copy. A live review needs approval first, with its cost stated. Use Saved (US$0).
+[Live radio disabled] true
+[button] Run review (Saved, US$0.00)
+[shot] 02-run-card-1024.png
+[axe review page before run] 0 violations
+[sideways scroll review page] none
+[result] Review run Saved: 9 new findings. US$0.00. Each finding is a warning: decide it here, or pass it with a reason on Ready to file.
+[shot] 03-after-saved-run-1024.png
+[findings rows] 9
+    open · reasons 2 · quote true · MAJOR AI Replayed Low The two AI rounds disagree; a person decides: Round 1: MAJOR · The mailing address is in Canada and is the same as the residential address. This conflicts with the current country of residence being India and with applying from that same country. Round 2 (blind checker): raised nothing on this fact. The form says “Canada”Show on the form IMM 5257 · Current mailing address Ope
+    open · reasons 2 · quote true · MAJOR AI Replayed Low The two AI rounds disagree; a person decides: Round 1: raised nothing on this fact. Round 2 (blind checker): MAJOR · Current marital status is Annulled Marriage, which implies a prior marriage, yet the previous marriage question is answered No. The form says “No”Show on the form IMM 5257 · Whether the person was previously married or in a common-law relationship Open Acknowle
+    open · reasons 2 · quote true · MAJOR AI Replayed High Both AI rounds raised it, and the rules found its quote: Round 1: MAJOR · The current occupation shows an end date of 2015-01, the same as its start date. That contradicts it being the current activity and leaves the period since 2015 unexplained. Round 2 (blind checker): MAJOR · The current occupation ends in 01/2015, the same month it starts, so the applicant's present act
+    open · reasons 2 · quote true · MINOR AI Replayed High Both AI rounds raised it, and the rules found its quote: Round 1: MINOR · Details for an 'Other' status are filled in, but the immigration status chosen is Citizen. Round 2 (blind checker): MINOR · Other-status details are filled although the immigration status in the current country of residence is Citizen, not Other. The form says “SAMPLE”Show on the form IMM 5257 · Descri
+    open · reasons 2 · quote true · MINOR AI Replayed High Both AI rounds raised it, and the rules found its quote: Round 1: MINOR · The end date of the current residence status is the same day as its start date (2015-01-01), and the status is shown as Citizen in India, which has no end date. It looks like a placeholder. Round 2 (blind checker): MINOR · The end date of status in the current country of residence is the same day as it
+    open · reasons 2 · quote true · MINOR AI Replayed High Both AI rounds raised it, and the rules found its quote: Round 1: MINOR · Details are given even though questions 2a, 2b and 2c were all answered No. Round 2 (blind checker): MINOR · Details are given although questions 2a, 2b and 2c are all answered No. The form says “SAMPLE”Show on the form IMM 5257 · Free-text details of overstay, refusal, removal or previous Canadian app
+    open · reasons 2 · quote true · MINOR AI Replayed High Both AI rounds raised it, and the rules found its quote: Round 1: MINOR · 'Other' purpose text is filled in, but the purpose of visit chosen is Business. Round 2 (blind checker): MINOR · The Other purpose box is filled although the purpose of visit is Business, not Other. The form says “SAMPLE”Show on the form IMM 5257 · Visit purpose other Open Acknowledge… Dismiss…
+    open · reasons 2 · quote true · MINOR AI Replayed High Both AI rounds raised it, and the rules found its quote: Round 1: MINOR · Criminal history details are filled in although Question 3a was answered No. Round 2 (blind checker): MINOR · Criminal history details are filled although question 3a is answered No. The form says “SAMPLE”Show on the form IMM 5257 · Free-text details of criminal history Open Acknowledge… Dismiss…
+    open · reasons 2 · quote true · MINOR AI Replayed High Both AI rounds raised it, and the rules found its quote: Round 1: MINOR · Military service details are filled in although Question 4a was answered No. Round 2 (blind checker): MINOR · Military service details are filled although question 4a is answered No. The form says “SAMPLE”Show on the form IMM 5257 · Dates and countries of military or security service Open Acknowledge… 
+[counts] 9 open · 0 acknowledged · 0 resolved
+[shot] 04-findings-1024.png
+[AI rows] 9 (High 7, Low 2); every Low has 2 reasons: true; every AI row says Replayed: true
+[show on the form] 1 line(s) highlighted: Country or Territory Canada (quoted by the finding shown) · pressed=true
+[shot] 05-show-on-the-form-1024.png
+[open AI rows before deciding] 9
+[acknowledge with an empty reason] Acknowledge this finding MAJOR · AI · “Canada” Reason Give a reason of at least 3 characters: it is kept with the finding. Cancel Acknowledge
+[shot] 06-acknowledge-empty-refused-1024.png
+[acknowledged row] acknowledged · MAJOR AI Replayed Low The two AI rounds disagree; a person decides: Round 1: MAJOR · The mailing address is in Canada and is the same as the residential address. This conflicts with the current country of residence being India and with applying from that same country. Round 2 (blind checker): raised nothing on this fact. The form says “Canada”Show on the form IMM 5257 · Current mailing address Acknowledged by Case officer on Nov 9, 05:03 p.m.: “Checked the passport page against the form: as printed (Sample, qa gate A).” Acknowledged
+[shot] 07-acknowledged-1024.png
+[dismissed row] (row gone from the default list)
+[counts after deciding] 7 open · 1 acknowledged · 0 resolved · 1 dismissed
+[open AI rows after deciding] 7
+[shot] 08-after-deciding-1024.png
+[axe review page after run] 0 violations
+[header after] Readiness: Not ready · 22% (lowest: Visitor visa: Sample Client A)
+[finding lines on Ready to file] 7
+    warning · MAJOR finding on IMM 5257: the AI review (High) flags what the form says, “2015”
+    warning · MINOR finding on IMM 5257: the AI review (High) flags what the form says, “SAMPLE”
+    warning · MINOR finding on IMM 5257: the AI review (High) flags what the form says, “2015-01-01”
+    warning · MINOR finding on IMM 5257: the AI review (High) flags what the form says, “SAMPLE”
+    warning · MINOR finding on IMM 5257: the AI review (High) flags what the form says, “SAMPLE”
+    warning · MINOR finding on IMM 5257: the AI review (High) flags what the form says, “SAMPLE”
+    warning · MINOR finding on IMM 5257: the AI review (High) flags what the form says, “SAMPLE”
+[finding lines that block] 0
+[ready-to-file summary] Ready to file | | What stands before each filing is Ready to file, by who owes it. Only a barcode form without its validated copy read back blocks; every other line is fixed, or passed with a written reason. | | Send for review | Visitor visa: Sample Client A
+[shot] 09-ready-to-file-findings-1024.png
+[shot] 10-ready-to-file-1024.png
+[pass with an empty reason] Why is this passed? Say why this warning is passed (at least 5 characters, with words). Pass Cancel
+[shot] 11-pass-empty-refused-1024.png
+[line after pass] (line no longer open)
+[finding lines left] 6
+[ready-to-file summary after pass] Ready to file | | What stands before each filing is Ready to file, by who owes it. Only a barcode form without its validated copy read back blocks; every other line is fixed, or passed with a written reason. | | Send for review | Visitor visa: Sample Client A
+[shot] 12-ready-to-file-after-pass-1024.png
+[axe case page] 0 violations
+[sideways scroll case page] none
+[non-GET requests the page sent] 8
+    POST /api/runtime/cases/1202b009-0ea5-4823-b126-27de9e27992a/review-runs/plan {"forms":["IMM 5257"],"subject":"1845c9c6-43b6-4e9e-9014-77edd6a62004"}
+    POST /api/runtime/cases/1202b009-0ea5-4823-b126-27de9e27992a/review-runs {"forms":["IMM 5257"],"subject":"1845c9c6-43b6-4e9e-9014-77edd6a62004","mode":"replay","planSha256":"abe7f536ce19cd6c9945a0ed9b36bad3aa6f262dface1c7ff156d2699df
+    POST /api/runtime/cases/1202b009-0ea5-4823-b126-27de9e27992a/review-runs/plan {"forms":["IMM 5257"],"subject":"1845c9c6-43b6-4e9e-9014-77edd6a62004"}
+    POST /api/runtime/findings/390a37bf-43ef-40fa-98f5-d63c4089733e/acknowledge {"reason":""}
+    POST /api/runtime/findings/390a37bf-43ef-40fa-98f5-d63c4089733e/acknowledge {"reason":"Checked the passport page against the form: as printed (Sample, qa gate A)."}
+    POST /api/runtime/findings/9ca8067e-316f-462b-9c59-8e119f53436d/dismiss {"reason":"Does not apply: the client has no other travel document (Sample, qa gate A)."}
+    POST /api/runtime/filings/f8547b50-f52b-4fd4-a5f7-d1eae3f99b60/warnings/finding/pass {"reason":"","key":"finding|f96f86c8-0d18-4202-af22-9fcea597c4cf"}
+    POST /api/runtime/filings/f8547b50-f52b-4fd4-a5f7-d1eae3f99b60/warnings/finding/pass {"reason":"The AI finding was checked by the case officer; the form is right as printed (Sample, qa gate A).","key":"finding|f96f86c8-0d18-4202-af22-9fcea597c4c
+[live requests sent] 0
+[page errors / 5xx] none

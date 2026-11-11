@@ -55,10 +55,8 @@ export const channelGroups = (lines: { code: string; channel?: string | null; do
  *  evidence (E1 imm5257, imm0008; P1 IMM 1295); IMM 5707 and IMM 5409 make no barcode (Help Centre 1523, read 29 Oct). */
 export const BARCODE_FORMS = ["IMM 5257", "IMM 0008", "IMM 1344", "IMM 1295"] as const;
 export const isBarcodeForm = (form: string) => (BARCODE_FORMS as readonly string[]).includes(form);
-/** P-171 (3), Lead's answer to plan §8 Q5: on Express Entry (the IRCC secure account) IMM 5669 and IMM 5406 are Online lines
- *  with the answer sheet only: no PDF copy, so nobody mistakes the paper PDF for something to file. Elsewhere P-145 holds. */
-export const ANSWER_SHEET_ONLY: Record<string, readonly string[]> = { IRCC_SECURE_ACCOUNT: ["IMM 5669", "IMM 5406"] };
-export const answerSheetOnly = (form: string, account: string | null | undefined) => !!account && (ANSWER_SHEET_ONLY[account] ?? []).includes(form);
+/** P-171 (3) and M3-S5: which forms are answer-sheet only (no PDF copy) is the Form library's record of what IRCC accepts
+ *  per account, never a list here: engine/channels.ts answerSheetOnly. */
 /** P-145: the words on a PDF copy of a form filed Online. */
 export const NOT_FOR_FILING = "Copy, not for filing";
 /** P-102, P-107 (P-114: the channel follows the filing route): Online stays selectable per line; the product fills it only once the browser extension returns. */

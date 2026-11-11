@@ -12,6 +12,7 @@ import { Tip } from "@/components/status";
 import { Button, Notice, Pill } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { ErrorState } from "@/components/ui/error-state";
+import { FoldOut } from "@/components/fold-out";
 
 const STATE: Record<FormFieldState, { word: string; tone: string; tip: string }> = {
   not_confirmed: { word: "Not confirmed", tone: "warn", tip: "Nobody has said yet that this form field's words say the same as the condition, so the draft cannot be released." },
@@ -84,9 +85,8 @@ export function FormFieldsHeld({ combinationId, questions, shown }: { combinatio
   const held = questions.filter((q) => !shown.has(q.fact) && q.rows.some((r) => HOLDS.has(r.state)));
   if (!held.length) return null;
   return (
-    <details className="rounded-xl border border-border bg-surface-raised p-4" data-form-fields-held>
-      <summary className="cursor-pointer font-medium">Form fields holding a question's condition ({held.length} question{held.length === 1 ? "" : "s"})</summary>
+    <FoldOut className="rounded-xl border border-border bg-surface-raised p-4" data-form-fields-held summaryClassName="font-medium" summary={<>Form fields holding a question's condition ({held.length} question{held.length === 1 ? "" : "s"})</>}>
       <div className="mt-2 space-y-3">{held.map((q) => <FormFieldsPanel key={q.fact} combinationId={combinationId} view={q} />)}</div>
-    </details>
+    </FoldOut>
   );
 }

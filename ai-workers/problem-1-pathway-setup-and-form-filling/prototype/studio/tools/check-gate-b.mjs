@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, touchedPacks, diffSet, packVerdict, part1, stepsPrinted, stepsUnprinted, packSteps, unprintedReason } from "./gate-b.mjs";
+import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, touchedPacks, diffSet, batchRecheck, checkpointTrigger, checkpointRows, packVerdict, part1, stepsPrinted, stepsUnprinted, packSteps, unprintedReason } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ACC = resolve(HERE, "../acceptance"), P = resolve(HERE, "../../../product");
 /** A fixture pack whose run truly uses no server (only an engine run line), for the gate's no-server rules (B125, B131). */
@@ -222,12 +222,37 @@ ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.te
     ["C3", { files: ["C3.test.ts"], why: "x ← C3.test.ts", direct: false }], ["C4", { files: ["C4.test.ts"], why: "C4.test.ts", direct: true }], ["C5", { files: ["C5.test.ts"], why: "x", direct: false }], ["C6", { files: ["C6.test.ts"], why: "x", direct: false }]]), (id) => st[id]);
   ok("D2 (review of #1337, Blocker 1): a changed pack runs if built; a pack that only reads a changed file runs only for a Works row; a Partial or Not built row reached by reading is listed, not run", ds.run.map((r) => r.id).join() === "C1,C2,C5" && ds.listed.length === 3 && ds.listed.some((l) => /^C3 \(Partial; reads a changed file\)/.test(l)) && ds.listed.some((l) => /^C4 \(Not built/.test(l)), ds);
   ok("D2: a reach that names no pack and no set-up adds nothing; README.md is never a pack", touchedPacks(new Map([[`${top}/tests/check_x.ts`, "y"]]), files, read, top).size === 0); }
+{ // (4a, P-446): a checkpoint step or gate file (select-suites marks the chain "(configured checkpoint)") adds every row
+  // scored on the configured checkpoint, beside the packs the graph reached; a change that reaches no checkpoint adds none.
+  const reached = new Map([["s/acceptance/C6.19.test.ts", "045-form-field-gates.ts (configured checkpoint, changed) ← C6.19.test.ts"], ["s/acceptance/C2.test.ts", "x.ts ← C2.test.ts"]]);
+  ok("(4a): a changed step is read from the chain; one reached on the walk adds no rows (review of #1504 round 2)", checkpointTrigger(reached) === "045-form-field-gates.ts" && checkpointTrigger(new Map([["a", "x.ts ← C2.test.ts"]])) === null
+    && checkpointTrigger(new Map([["a", "routes.json ← 090-x.ts (configured checkpoint) ← C6.19.test.ts"]])) === null, checkpointTrigger(reached));
+  const data = { C7: "checkpoint", C8: "six", C9: "checkpoint", C2: "checkpoint" }, dataOfId = (id) => data[id];
+  const t = checkpointRows(new Map([["C2", { files: ["x.ts"], why: "x.ts ← C2.test.ts", direct: true }]]), "045-form-field-gates.ts", ["C2", "C7", "C8", "C9", "C10"], (id) => (id === "C10" ? "checkpoint" : dataOfId(id)), (id) => id !== "C10");
+  ok("(4a) pass: every row on the checkpoint is added (C7, C9), read-only (not direct); fail: a six row is not (C8), nor a row with no pack (C10), and a row already touched keeps its reason (C2)",
+    t.has("C7") && t.has("C9") && !t.has("C8") && !t.has("C10") && t.get("C7").direct === false && /configured checkpoint/.test(t.get("C7").why) && t.get("C2").direct === true && t.get("C2").why === "x.ts ← C2.test.ts", [...t.keys()]);
+  ok("(4a) fail: no trigger adds nothing", checkpointRows(new Map(), null, ["C7"], dataOfId).size === 0); }
+
+// QA-366 (10 Nov): a merge-queue batch runs a named row's pack again when the batch adds a file that pack reads.
+{ const st = { "C7.5": "Partial", "C6.9": "Works", "C8.3": "Partial", "C9.1": "Partial" }, T = (id, why = "form-field-gates.json ← m3.ts ← x") => [id, { files: [`${id}.test.ts`], why }];
+  const caps = (...xs) => new Map(xs);
+  const a = batchRecheck([{ n: 1396, caps: caps(["C7.5", [1, 2, 3]], ["C8.3", null]), touched: new Map([T("C7.5")]) }], (id) => st[id]);
+  ok("QA-366: a named Partial row whose pack reads a file the batch adds runs again with its PR's steps; a named row not reached does not", [...a.run].map(([k, v]) => `${k}=${v}`).join() === "C7.5=1,2,3" && /^#1396 C7\.5\.test\.ts: form-field-gates\.json/.test(a.why.get("C7.5")), a);
+  const b = batchRecheck([{ n: 1, caps: caps(["C6.9", null], ["C9.1", null]), touched: new Map([T("C6.9"), T("C9.1")]) }], (id) => st[id]);
+  ok("QA-366: a named Works row is left to the protected set (job regression), never run twice", [...b.run.keys()].join() === "C9.1" && b.works.join() === "C6.9", b);
+  const c = batchRecheck([{ n: 1, caps: caps(["C7.5", [1, 2]]), touched: new Map([T("C7.5")]) }, { n: 2, caps: caps(["C7.5", [2, 5]]), touched: new Map([T("C7.5")]) }], (id) => st[id]);
+  const d = batchRecheck([{ n: 1, caps: caps(["C7.5", [1, 2]]), touched: new Map([T("C7.5")]) }, { n: 2, caps: caps(["C7.5", null]), touched: new Map([T("C7.5")]) }], (id) => st[id]);
+  ok("QA-366: two PRs naming one row: the union of their steps; the whole pack when either names it without steps", c.run.get("C7.5").join() === "1,2,5" && d.run.get("C7.5") === null && /#1 .*; #2 /.test(c.why.get("C7.5")), [c, d]);
+  const e = batchRecheck([{ n: 3, caps: caps(["C8.3", null], ["C6.9", null]), touched: null }], (id) => st[id]);
+  ok("QA-366: when what the batch adds cannot be worked out (a head not found), every named row runs again but Works (fail closed)", [...e.run.keys()].join() === "C8.3" && /could not be worked out/.test(e.why.get("C8.3")), e);
+  const f = batchRecheck([{ n: 4, caps: caps(), touched: new Map([T("C7.5"), T("C8.3")]) }], (id) => st[id]);
+  ok("QA-366: a row nobody named never runs, whatever the batch touches (an unrelated red Partial refuses nothing; D2, STATE F15)", f.run.size === 0, f); }
 
 // The command itself: skips, refusal and pass (packs off; the real BUGS.md is not read, so the cases stay true).
 const T = mkdtempSync(join(tmpdir(), "gate-b-")), bf = join(T, "BUGS.md"); writeFileSync(bf, BUGS);
 // Each command case starts from a clean CI environment: the job's own QUEUE, KIND, RANGE, PR_* and GITHUB_* values
 // (a merge-queue batch sets QUEUE=true, a records PR KIND=records) would otherwise change what the gate does (#826).
-const CLEAN = { GITHUB_STEP_SUMMARY: "", PR_TITLE: "", PR_BODY: "", QUEUE: "", KIND: "code", RANGE: "", GITHUB_TOKEN: "", GATE_B_PORT: "", GATE_B_NAME: "", GATE_B_JOBS: "", GATE_B_SKIP_PACKS: "", GITHUB_EVENT_NAME: "", GATE_B_DATA: "six", GATE_B_DATA_OF: "", GATE_B_RESULTS: "", GATE_B_NO_DIFF: "" };
+const CLEAN = { GATE_B_BATCH_PRS: "", GITHUB_STEP_SUMMARY: "", PR_TITLE: "", PR_BODY: "", QUEUE: "", KIND: "code", RANGE: "", GITHUB_TOKEN: "", GATE_B_PORT: "", GATE_B_NAME: "", GATE_B_JOBS: "", GATE_B_SKIP_PACKS: "", GITHUB_EVENT_NAME: "", GATE_B_DATA: "six", GATE_B_DATA_OF: "", GATE_B_RESULTS: "", GATE_B_NO_DIFF: "" };
 const run = (args, env = {}) => { const r = spawnSync(process.execPath, [join(HERE, "gate-b.mjs"), "--bugs", bf, "--no-packs", ...args], { encoding: "utf8", env: { ...process.env, ...CLEAN, ...env } }); return { code: r.status, out: r.stdout + r.stderr }; };
 let r = run(["--title", "forms: C11.13 reason", "--body", "Claims Works: C11.13"]);
 const r3a = run(["--title", "forms: x", "--body", "## Claims Works (as built)\n- C11.13"]), r3b = run(["--title", "forms: x", "--body", "## Claims Works (as built)\n- C11.13\n\nFixes: QA-192"]);
@@ -294,9 +319,39 @@ ok("command: an unknown option exits 2", r.code === 2, r);
   const gb = run(["--title", "x", "--diff-groups", "5"], { RANGE: "0000000..1111111" });
   ok("D2: --diff-groups with a range it cannot read is could-not-run (exit 2), never []", gb.code === 2 && !/^\[/.test(gb.out.trim()), gb);
   const q = run(["--title", "Merge queue: embarking #1 together"], { RANGE: "0000000..1111111", QUEUE: "true" });
-  ok("D2: a merge-queue batch never reads the diff (its own part 1 for each PR only)", !/by diff/.test(q.out) && !/git diff/.test(q.out), q);
+  ok("D2: a merge-queue batch never reads the pull request's diff (no \"by diff\" set; QA-366's re-check is below)", !/by diff/.test(q.out) && !/git diff/.test(q.out), q);
   const n = run(["--title", "screens: x"], { RANGE: "0000000..1111111" });
   ok("D2: on a pull request a diff it cannot read is \"could not run\" (exit 2), never a silent skip", n.code === 2 && /could not run: (git diff 0000000\.\.\.1111111 failed|cannot read .* at the base 0000000)/.test(n.out), n); }
+// QA-366 on the real commits, as batches (the members come from git's first-parent merges, review of #1476 Major 2):
+// #1396 (C7.5's paid result) checked alone on main 1d07807c8; it merged as 0e0ccbb64 onto 7e32ee210, #1435's merge, which
+// gated IMM 5257 boxes C7.5's pack reads (form-field-gates.json ← m3.ts). 7e32ee210..0e0ccbb64 is that batch; from
+// b56cdbe39 it is a car with #1435 stacked ahead and left out of the title (Mergify names only the car's own PRs). Both
+// must run C7.5 again on the checkpoint. #1459 (qa records with scripts: kind records, no gate B of its own) merged as
+// 2cfdad96: its named rows are not re-checked (Major 1). Skipped in a copy without that history (a shallow clone).
+{ const git = (...a) => spawnSync("git", a, { cwd: HERE, encoding: "utf8" }), have = (...c) => c.every((x) => !git("cat-file", "-e", `${x}^{commit}`).status);
+  const M1396 = "0e0ccbb64e22593e45647879fcacd61edf091358", M1435 = "7e32ee210541825ee3d3e4f941698091f8485377", B1435 = "b56cdbe391c7741915c4684ba287cfee62505f52", M1459 = "2cfdad961a2bd8e081ecafd54cb8b4a83e597723", B1459 = "751310cdb1a70cc6adf5dd8d1c7fdd818ac481e4";
+  if (!have(M1396, M1435, B1435, M1459, B1459)) console.log("SKIP  QA-366 replays: main's 9-10 Nov merges are not in this copy (shallow clone)");
+  else {
+    const pf = join(T, "batch.json"), Q = { QUEUE: "true", GATE_B_BATCH_PRS: pf, GATE_B_DATA: "" }, prs = (x) => writeFileSync(pf, JSON.stringify(x));
+    const P1396 = { n: 1396, title: "lead: C7.5 paid result", body: "Capabilities: C7.5 (steps 1-16)" }, again = /QA-366: the batch adds files these named rows' packs read, so they run again: C7\.5 \(#1396 C7\.5\.test\.ts/;
+    prs([P1396]);
+    const q1 = run(["--title", "merge queue: embarking #1396"], { ...Q, RANGE: `${M1435}..${M1396}` });
+    ok("QA-366: the batch of #1396 on #1435's main runs C7.5 again, with #1396's steps, on the checkpoint (exit 0 with --no-packs)", q1.code === 0 && again.test(q1.out) && /C7\.5 on the checkpoint/.test(q1.out) && /packs: C7\.5\.test\.ts$/m.test(q1.out) && /steps 1, 2, 3/.test(q1.out), q1);
+    const q2 = run(["--title", "merge queue: checking #1396 on main, stacked on 1 pull request ahead"], { ...Q, RANGE: `${B1435}..${M1396}` });
+    ok("QA-366 (Major 2): #1435 stacked ahead and not in the title still counts: C7.5 runs again", q2.code === 0 && again.test(q2.out), q2);
+    prs([{ n: 1459, title: "qa: capability C8.3 after #1440", body: "" }]);
+    const q3 = run(["--title", "merge queue: embarking #1459"], { ...Q, RANGE: `${B1459}..${M1459}` });
+    ok("QA-366 (Major 1): a PR whose own change is records (its gate B never ran) has its named rows not re-checked, and says so", q3.code === 0 && /#1459 names C8\.3, not re-checked: its own change is records/.test(q3.out) && !/packs:/.test(q3.out), q3);
+    prs([{ n: 9999, title: "runtime: C7.5", body: "" }]);
+    const q4 = run(["--title", "merge queue: embarking #9999"], { ...Q, RANGE: `${M1435}..${M1396}` });
+    ok("QA-366: a title PR with no merge in the batch's history runs its named rows (fail closed)", q4.code === 0 && /C7\.5 \(#9999: its merge is not in the batch's history/.test(q4.out) && /packs: C7\.5\.test\.ts$/m.test(q4.out), q4);
+    prs([{ n: 1396, title: "lead: paid result", body: "" }]);
+    const q5 = run(["--title", "merge queue: embarking #1396"], { ...Q, RANGE: `${M1435}..${M1396}` });
+    ok("QA-366: a batch whose PRs name no capability runs nothing again", q5.code === 0 && /no named row's pack reads a file/.test(q5.out) && !/packs:/.test(q5.out), q5);
+    prs([P1396]);
+    const q6 = run(["--title", "merge queue: embarking #1396"], { ...Q, RANGE: "" });
+    ok("QA-366: a batch without RANGE could not run (exit 2), never a silent pass", q6.code === 2 && /needs RANGE/.test(q6.out), q6);
+  } }
 rmSync(T, { recursive: true, force: true });
 // The real file parses: every open row has a severity.
 const real = openBugs(readFileSync(join(P, "qa/BUGS.md"), "utf8"));

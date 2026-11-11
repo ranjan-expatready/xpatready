@@ -1,0 +1,20 @@
+{
+  "_about": "M3-S2 (P-380, P-425, Bake plan row 18): a filing a \"Who can be in this application\" line adds when its rule holds on the person's own answers, per combination, which the configured checkpoint sets through the product routes (Questionnaires › Who can be in this application; C3.6 add the fact a rule needs; Library approval; placement), as the author, the content reviewer and the Approver. Data, not code (P-319). Every quote is word for word from the official page named in it, with its date (P-170); the line, its rule and its question are Sample, Unconfirmed: expert (AGENTS rule 4). The rule asks \"6 months or more\": IRCC needs no study permit for a course or program of six months or less, so a course of exactly six months is asked as a yes and adds a study permit application the child may make but does not need (Sample; the immigration expert confirms the boundary).",
+  "sp.outside": {
+    "status": "Sample, Unconfirmed: expert",
+    "role": "child",
+    "addsFiling": {
+      "filing": "Study permit",
+      "condition": { "op": "eq", "field": "person.studies_six_months_or_more", "value": true, "subjectKind": "PERSON" },
+      "conditionPlain": "the child will study in Canada for 6 months or more (a course or program of six months or less needs no study permit)",
+      "sourceQuote": "Guide 5269, Applying for a Study Permit outside Canada (canada.ca, modified 2026-10-06, saved 2026-10-27, official-sources/ircc/instructions/guide-5269.html), \"May my children attend school?\": \"Your children may attend school in Canada. You must apply for their study permit at the same time as your own.\" and, under \"Are there activities for which a study permit is not required?\": \"taking a course or a program of study which is six months or less that can be completed within the period authorized upon entry into Canada.\""
+    },
+    "fact": {
+      "fact": "person.studies_six_months_or_more",
+      "label": "Studies in Canada for 6 months or more",
+      "meaning": "Whether this person will study in Canada in a course or program of 6 months or more (IRCC needs a study permit for a course or program longer than six months; Guide 5269).",
+      "valueType": "yes_no",
+      "question": "Will this person study in Canada for 6 months or more?"
+    }
+  }
+}
