@@ -83,3 +83,13 @@ I did not re-run the DB suites. I rely on the coordinator's runs of B83, the hel
 **Blockers:** none. **Majors:** none (M1 fixed). **Minors:** m1, m2 and m4 to m7 stand, as follow-up rows.
 
 Verdict: Approve (1b82360dc85c73a8d107464eedd4ed327b9dc640)
+
+## Re-review f8c336244 (diff only: `git diff 1b2974096 f8c336244`, 11 Nov)
+**Diff:** one line, the last line of `tests/check_forms_held_conditions_pure.ts`. It is now `process.exitCode = summary() ? 1 : 0;`, the B160 guard's form (`summary()` returns the number of FAIL lines).
+**Checked:**
+* On f8c336244 the suite gives 15/15 and exits 0.
+* In a throwaway copy with one line forced to fail, it exits 1, so a FAIL line now fails the suite. The copy is removed.
+
+No other change. **Blockers:** none. **Majors:** none. **Minors:** as before.
+
+Verdict: Approve (f8c336244782382b561ab75c71981649af4614bf)
