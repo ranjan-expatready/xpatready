@@ -22,8 +22,8 @@ import { newestEdition } from "../../engine/editions.ts";
 import { personName } from "./form-additions.ts";
 import { caseView } from "../../engine/runtime/case.ts";
 import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, gateOf, inputHash, isGateFact, markNothingRecorded, pdfForms, readiness, releaseForms, blocksLock, type FormFact, type GatePlacement, type GroupFact, type OnForm } from "../../engine/runtime/forms.ts";
-import { answerSheetOnly, CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Channel } from "../../contracts/forms.ts";
-import { lineOf } from "../../engine/channels.ts";
+import { CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Channel } from "../../contracts/forms.ts";
+import { acceptsOf, answerSheetOnly, answerSheetOnlyWords, lineOf, notAcceptedWords } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
 import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, PY, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
 import { newestPin } from "./stage-scope.ts"; // C6.17
@@ -192,15 +192,22 @@ export class CaseForms implements OnModuleInit {
     const s = this.runtime.snapshotOf(c), people = this.runtime.peopleOf(c);
     const { answers, rows, groups } = await this.runtime.state(c);
     const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
-    const pdf = new Set([...pdfForms(s), ...copyOnlyForms(s)]); // P-145: an Online form with IRCC's PDF gets a copy not for filing
+    // P-145: an Online form with IRCC's PDF gets a copy not for filing, unless the Form library records that IRCC accepts it
+    // through the case's account only Online (M3-S5: the answer sheet only).
+    const accepts = await acceptsOf(this.db, c.workspaceId), copyOnly = copyOnlyForms(s, accepts);
+    const pdf = new Set([...pdfForms(s), ...copyOnly]);
+    const sheetOnly = (form: string) => answerSheetOnly(accepts.get(form), s.combination.portal);
     const titles = new Map((s.forms as { form_number: string; title?: string }[]).map((f) => [f.form_number, f.title ?? f.form_number]));
     const copies = await this.db.formInstance.findMany({ where: { caseId, configReleaseId: { in: c.pins.map((p) => p.configReleaseId) } }, orderBy: { createdAt: "desc" }, include: { snapshot: true, validated: { orderBy: { readAt: "desc" }, take: 1 } } });
     const labels = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
     const caseWords = caseWordsOf(s, view);
     const items = await this.itemChannels(c.id), nameOf = { caseReference: c.reference, of: nameOfPeople(people) };
     const forms: CaseForm[] = [];
+    // M3-S5 review M1: an Online form whose copies were made before the library recorded it Online only keeps them in view
+    // (only those: the forms this release copies with no record read).
+    const withCopies = new Set(copies.map((x) => x.formNumber)), listed = [...new Set([...pdf, ...[...copyOnlyForms(s, new Map())].filter((f) => withCopies.has(f))])].sort();
     for (const p of people.filter((x) => x.role !== "case")) {
-      for (const form of [...pdf].sort()) {
+      for (const form of listed) {
         const cov = formCoverage(s, people, answers, rows, form, p.subjectId);
         const applies = !!cov && cov.applies !== false;
         const mine = copies.filter((x) => x.formNumber === form && x.subjectId === p.subjectId);
@@ -212,6 +219,8 @@ export class CaseForms implements OnModuleInit {
         // such a form with copies stays listed as before (its copies in view); /prepare says "Cannot start yet" for it.
         if (!opts.includeWaiting && cov?.applies === "cannot_tell" && !mine.length) continue;
         if (chosen(s, items, form, p.subjectId) === "NOT_NEEDED" && !mine.length) continue; // C11.6 (Devin on #1056): nothing to fill or file
+        // M3-S5 review m1: filed Online where the library records IRCC accepts it only Online: the answer sheet only, no copy to make.
+        if (chosen(s, items, form, p.subjectId) === "ONLINE" && sheetOnly(form) && !mine.length) continue;
         const channel = chosen(s, items, form, p.subjectId);
         const onForm = onFormOf(s, form, cov, view, caseWords); // QA-165: readiness and the open fields read the same copy
         forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialOf(s, form).passed, trial_why: trialOf(s, form).why, channel, for_filing: channel !== "ONLINE" && channel !== "NOT_NEEDED", needs_validate: needsValidate(form, channel),
@@ -248,12 +257,15 @@ export class CaseForms implements OnModuleInit {
     // C11.6 (Devin on #1056): the release's Online lines, plus any form a person's item was moved to Online; each lists
     // the people whose own channel is Online now (by person, not by name).
     const movedOnline = new Set([...items].filter(([, ch]) => ch === "ONLINE").map(([k]) => k.slice(k.indexOf("|") + 1)));
-    const hasPdf = (form: string) => copyOnlyForms(s).has(form) || pdfForms(s).has(form);
+    // M3-S5 (review m1): an answer-sheet-only form offers no copy, even a PDF line a person's item was moved Online from;
+    // (review M1) a copy made before the record stays listed with the forms above, and the line says so.
+    const hasPdf = (form: string) => !sheetOnly(form) && (copyOnly.has(form) || pdfForms(s).has(form));
+    const madeBefore = (form: string) => copies.some((x) => x.formNumber === form);
     const online = (s.forms as { form_number: string; title?: string; channel?: string }[]).filter((f) => f.channel === "ONLINE" || movedOnline.has(f.form_number)).map((f) => ({
       form: f.form_number, title: f.title ?? f.form_number,
       people: people.filter((p) => p.role !== "case" && chosen(s, items, f.form_number, p.subjectId) === "ONLINE" && view.forms.some((x) => x.form === f.form_number && x.person === p.label && x.applies === true)).map((p) => p.label), // review m1 (QA-246): never a form still waiting for an answer
       pdf_copy: hasPdf(f.form_number),
-      why_no_copy: hasPdf(f.form_number) ? null : answerSheetOnly(f.form_number, s.combination.portal) ? "Express Entry: the answer sheet only, no PDF copy." : "IRCC's PDF of this form is not in this case's release.",
+      why_no_copy: hasPdf(f.form_number) ? null : sheetOnly(f.form_number) ? `${answerSheetOnlyWords(f.form_number, sheetOnly(f.form_number)!)}${madeBefore(f.form_number) ? " A copy made before that record is kept with the forms above, not for filing." : ""}` : "IRCC's PDF of this form is not in this case's release.",
     })).filter((f) => f.people.length);
     return { forms, online };
   }
@@ -298,8 +310,12 @@ export class CaseForms implements OnModuleInit {
     const { answers, rows, groups } = await this.runtime.state(c);
     const channel = chosen(s, await this.itemChannels(c.id), form, idOf(subjectId, "person"));
     if (channel === "NOT_NEEDED") fail(`${form} is Not needed in this case's release: the IRCC account asks it itself, so nothing is filled.`, HttpStatus.UNPROCESSABLE_ENTITY);
-    if (answerSheetOnly(form, s.combination.portal)) fail(`${form} is filed Online through the IRCC secure account: its answers go on the answer sheet only, with no PDF copy.`, HttpStatus.UNPROCESSABLE_ENTITY);
-    if (!pdfForms(s).has(form) && !copyOnlyForms(s).has(form)) fail(channel === "ONLINE" ? `${form} is filed Online and IRCC's PDF of it is not in this case's release: its answers go on the answer sheet.` : `${form} has no PDF to fill in this case's release.`, channel === "ONLINE" ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.NOT_FOUND);
+    // M3-S5 (P-171 (3)): a form the Form library records IRCC accepts through this account only Online has no PDF copy.
+    // On a PDF upload or Paper item the PDF is the deliverable (the frozen release decides); review m4: an item filed outside
+    // what the record accepts is told so in the library's words.
+    const accepts = await acceptsOf(this.db, c.workspaceId), sheetOnly = answerSheetOnly(accepts.get(form), s.combination.portal);
+    if (sheetOnly && channel === "ONLINE") fail(answerSheetOnlyWords(form, sheetOnly), HttpStatus.UNPROCESSABLE_ENTITY);
+    if (!pdfForms(s).has(form) && !copyOnlyForms(s, accepts).has(form)) fail(sheetOnly ? notAcceptedWords(form, channel, sheetOnly) : channel === "ONLINE" ? `${form} is filed Online and IRCC's PDF of it is not in this case's release: its answers go on the answer sheet.` : `${form} has no PDF to fill in this case's release.`, channel === "ONLINE" || sheetOnly ? HttpStatus.UNPROCESSABLE_ENTITY : HttpStatus.NOT_FOUND);
     const cov = formCoverage(s, people, answers, rows, form, subjectId);
     if (!cov || cov.applies === false) fail(`${form} does not apply to that person on this case.`, HttpStatus.UNPROCESSABLE_ENTITY);
     const view = caseView(s, people, answers, rows, "agent", new Date(), groups);

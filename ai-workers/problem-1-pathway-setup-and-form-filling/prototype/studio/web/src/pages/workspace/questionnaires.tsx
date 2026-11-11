@@ -7,7 +7,7 @@
 import * as React from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, BookOpen, ChevronDown, Plus, Undo2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, Plus, Undo2, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { type BulkSourceResult, type CountryPqrView, type FactSourceRow, type PeopleLine, type PeoplePlan, type PeopleProposal, type PeopleView, type QuestionnaireQuestion, type QuestionnairesView, stillAskedWords } from "../../../../contracts/workspace";
 import { api, ApiError, useAction, useApi, useSessionView, useToast } from "@/lib/api";
@@ -32,6 +32,7 @@ import type { LineMode } from "../../../../contracts/workspace";
 import { APPLICATION_ROLE, personFactRows, personFactsWords } from "../../../../contracts/counts";
 // QA-172: a fact answered without a question is named by its short name (as an unwritten question, QA-82), never its meaning.
 import { factName } from "../../../../engine/fact-name";
+import { FoldArrow } from "@/components/fold-out";
 
 const TIPS = {
   card: "Sets which people a case may include and how many; each person marked as applicant gets their own forms, questions and documents.",
@@ -167,7 +168,7 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
   if (!unfolded && !editing && !filling) return (
     <section aria-labelledby="who-can-be" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-surface-raised px-5 py-3 shadow-sm" data-who-can-be data-folded>
       <p className="min-w-0 text-sm"><span id="who-can-be" className="font-semibold">Who can be in this application</span> <span className="text-text-muted" data-people-words>· {peopleWords(shown, nameOf)}</span></p>
-      <Button size="sm" variant="ghost" onClick={() => setUnfolded(true)} aria-expanded={false}><ChevronDown /> {canAuthor ? "Show and edit" : "Show"}</Button>
+      <Button size="sm" variant="ghost" onClick={() => setUnfolded(true)} aria-expanded={false}><FoldArrow /> {canAuthor ? "Show and edit" : "Show"}</Button>
     </section>
   );
   return (
@@ -325,7 +326,7 @@ function PqrSet({ id, roleLabel, n }: { id: string; roleLabel: string; n: number
       {c ? (
         <div className="text-sm" data-pqr-country>
           <p><span className="font-medium">Country Prospect questionnaire (PQR):</span> {c.lines.length} question{c.lines.length === 1 ? "" : "s"} from {c.combinations} of {c.released} released combination{c.released === 1 ? "" : "s"}. It is put together from each combination's newest release, so nothing is set there.{pending ? <span className="text-text-muted" data-pqr-pending> This combination's draft changes {pending} line{pending === 1 ? "" : "s"} at its next release.</span> : null}{" "}
-            {c.lines.length ? <button type="button" className="font-medium text-text-link underline" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Hide the list" : "Show the list"}</button> : null}</p>
+            {c.lines.length ? <button type="button" className="font-medium text-text-link underline" aria-expanded={open} onClick={() => setOpen(!open)}><FoldArrow open={open} className="mr-0.5" />{open ? "Hide the list" : "Show the list"}</button> : null}</p>
           {open ? (
             <div className="mt-2">
               <Table dense head={["Question", "Person", "Asked by"]} label="Country Prospect questionnaire (PQR) questions">
@@ -521,8 +522,8 @@ function QuestionsByPerson({ id, q, available }: { id: string; q: Questionnaires
         return (
           <div key={s.id} className="rounded-xl border border-border bg-surface-raised" data-section={s.id}>
             <div className="flex items-center justify-between gap-2 pr-2">
-              <button className="flex-1 px-4 py-3 text-left" aria-expanded={isOpen} onClick={() => { const n = new Set(opened); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); setOpenIds(n); }}>
-                <span className="font-medium">{s.title}</span>{locked ? <span className="ml-2 inline-flex items-center gap-1 text-xs text-text-muted" data-client-only><Lock className="size-3.5" aria-hidden /> Always the client</span> : null} <span className="text-xs text-text-muted">· {s.questions.length} question{s.questions.length === 1 ? "" : "s"} for {role?.label ?? "this person"}{fromDocs ? ` · ${fromDocs} from documents` : ""}</span>
+              <button className="flex flex-1 items-start gap-1.5 px-4 py-3 text-left" aria-expanded={isOpen} onClick={() => { const n = new Set(opened); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); setOpenIds(n); }}>
+                <FoldArrow open={isOpen} className="mt-[0.2em] text-text-muted" /><span><span className="font-medium">{s.title}</span>{locked ? <span className="ml-2 inline-flex items-center gap-1 text-xs text-text-muted" data-client-only><Lock className="size-3.5" aria-hidden /> Always the client</span> : null} <span className="text-xs text-text-muted">· {s.questions.length} question{s.questions.length === 1 ? "" : "s"} for {role?.label ?? "this person"}{fromDocs ? ` · ${fromDocs} from documents` : ""}</span></span>
               </button>
               {canAuthor ? <MoveButtons s={s} order={secOrder.data?.order ?? null} onMove={(d) => void move({ key: s.id, title: s.title }, d)} /> : null}
               {/* QA-93: a question the shared library places in a section is asked whether or not the section is chosen, so

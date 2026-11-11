@@ -12,6 +12,7 @@ import { api, getActor, useApi, useToast } from "@/lib/api";
 import { Button, Field, Input, Notice, Panel, Pill, Select, Textarea } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AddableForm, AddableFormDetail, AddableList, CaseForm } from "../../../contracts/runtime";
+import { FoldOut } from "@/components/fold-out";
 
 const CHANNEL: Record<string, string> = { PDF_UPLOAD: "PDF upload", PAPER: "Paper" };
 const day = (at: string) => new Date(at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -132,8 +133,8 @@ function Picked({ caseId, filing, form, subject, onAdded }: { caseId: string; fi
       {x.kind === "fills" && x.coverage ? (
         <div className="text-[13px]" data-coverage={`${x.coverage.fills}/${x.coverage.total}`}>
           <p><strong>{x.coverage.fills} of {x.coverage.total}</strong> form fields fill from this case's confirmed facts. Its filling is proven for this edition; a form field with no confirmed fact on this case stays blank and is listed.</p>
-          <details className="mt-1"><summary className="cursor-pointer text-text-link">Not on file ({x.coverage.boxes.filter((b) => b.state === "not_on_file").length})</summary>
-            <ul className="mt-1 max-h-40 list-disc overflow-y-auto pl-5">{x.coverage.boxes.filter((b) => b.state === "not_on_file").map((b) => <li key={b.box} className="[overflow-wrap:anywhere]">{b.label}</li>)}</ul></details>
+          <FoldOut className="mt-1" summaryClassName="text-text-link" summary={<>Not on file ({x.coverage.boxes.filter((b) => b.state === "not_on_file").length})</>}>
+            <ul className="mt-1 max-h-40 list-disc overflow-y-auto pl-5">{x.coverage.boxes.filter((b) => b.state === "not_on_file").map((b) => <li key={b.box} className="[overflow-wrap:anywhere]">{b.label}</li>)}</ul></FoldOut>
         </div>
       ) : x.kind === "blank" ? <p className="text-[13px]">Blank official PDF: download it, fill it by hand, upload the completed copy.{x.blank_why ? ` ${x.blank_why}` : ""}</p> : null}
       {x.same_as ? <p className="text-[13px] text-text-muted">{x.same_as.words}</p> : null}

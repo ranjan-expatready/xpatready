@@ -19,6 +19,7 @@ import type { Finding } from "../../../contracts/findings";
 import type { ReviewRunPlan, ReviewRunResult } from "../../../api/src/review-run-shapes";
 import { FindingsPanel } from "./findings";
 import { noRetryOnRefusal, useCaseView, type CasePerson } from "./questionnaire";
+import { FoldOut } from "@/components/fold-out";
 
 /** The firm's staff (the simulated people of cases.tsx); a client never sees the review. */
 const STAFF = new Set(["user-O", "user-R", "user-T", "user-S"]);
@@ -181,10 +182,10 @@ function RunCard({ caseId, persons, person, forms, formsLoaded, formsError, form
             {error ? <Notice tone="danger" title="The review did not run">{error}</Notice> : null}
             {result ? <Notice tone={result.forms.some((f) => f.from) ? "ok" : "warn"} title={result.forms.some((f) => f.from) ? "Review run" : "The review did not finish"}>
               <p>{result.note}</p>
-              {dropped.length ? <details className="mt-2 text-[12px]"><summary className="inline-flex min-h-6 cursor-pointer items-center py-1">{dropped.length} AI finding{dropped.length === 1 ? "" : "s"} left out by the rules</summary>
-                <ul className="mt-1 list-disc pl-5">{dropped.map((d, i) => <li key={i} className="[overflow-wrap:anywhere]">{d.why}</li>)}</ul></details> : null}
-              {unreadable.length ? <details className="mt-2 text-[12px]"><summary className="inline-flex min-h-6 cursor-pointer items-center py-1">{unreadable.length} form field{unreadable.length === 1 ? "" : "s"} the AI could not judge (for a person)</summary>
-                <ul className="mt-1 list-disc pl-5">{unreadable.map((u, i) => <li key={i} className="[overflow-wrap:anywhere]">{u.round}: {u.box}: {u.why}</li>)}</ul></details> : null}
+              {dropped.length ? <FoldOut className="mt-2 text-[12px]" summaryClassName="inline-flex min-h-6 items-center py-1" summary={<>{dropped.length} AI finding{dropped.length === 1 ? "" : "s"} left out by the rules</>}>
+                <ul className="mt-1 list-disc pl-5">{dropped.map((d, i) => <li key={i} className="[overflow-wrap:anywhere]">{d.why}</li>)}</ul></FoldOut> : null}
+              {unreadable.length ? <FoldOut className="mt-2 text-[12px]" summaryClassName="inline-flex min-h-6 items-center py-1" summary={<>{unreadable.length} form field{unreadable.length === 1 ? "" : "s"} the AI could not judge (for a person)</>}>
+                <ul className="mt-1 list-disc pl-5">{unreadable.map((u, i) => <li key={i} className="[overflow-wrap:anywhere]">{u.round}: {u.box}: {u.why}</li>)}</ul></FoldOut> : null}
             </Notice> : null}
           </div>
         </div>

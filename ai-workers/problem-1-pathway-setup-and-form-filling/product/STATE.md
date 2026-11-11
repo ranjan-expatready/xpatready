@@ -1,40 +1,53 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: local_8c1fbca5-d3cf-4bf4-8620-9bdb3c9564ca Lead 6 · 10 Nov 07:45 IST (series 2; took over from Lead 5 (series 2, local_6e87a775) at ~315k context, P-440)
+current_lead: local_d3d09334-4567-4aad-9e1b-65163549d7c7 Lead 9 · 10 Nov 18:28 IST (series 2; took over from Lead 8 (series 2, local_62177923) at ~315k context, ~186k beyond its start read, P-446; Lead 8 held past 200k for the Acrobat step, founder away)
 
-updated: 2026-11-10 07:45 IST by **Lead 5 (series 2, local_6e87a775-…)** at hand-over to Lead 6 (series 2, local_8c1fbca5-…) · weekly ~30% · milestone: **M2 60/60; M3 22 of 29 Works on main** (C6.19, C7.3 tonight); target 26, then 29 (P-434, P-439) · rules: **`RULES.md`** (as of P-442; DECISIONS to P-444) · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-10 22:47 IST by **Lead 9 (series 2, local_d3d09334-…)** (M3 29/29; night lanes P-451; Bake plan draft) · weekly 65% · milestone: **M2 60/60; M3 29 of 29 Works on main**; next: the Bake (M3.5), plan awaiting the founder (P-450) · rules: **`RULES.md`** (as of P-450) · this branch: `lead/2026-11-07-lead31`
 
-## Hand-over: Lead 5 (series 2) → Lead 6 (series 2), 07:45 IST 10 Nov — read this first (Lead 4's and Lead 5's blocks word for word: `history/STATE-2026-11-10-0745-lead5s2-final.md`)
-**Founder (awake, typed 07:20 IST):** wants everything done in 2-3 hours to report; told it is not possible: ~25-26 in 3 h, all 29 in ~6-8 h. He approved (AskUserQuestion, 07:28): start the three lanes and two standbys; **toggle #1450** (done). Hourly report in IST. Paid runs to US$30/day (RULES Money), ledger first.
-| Row | Where it stands (07:45 IST) | Next step | ETA IST |
-|---|---|---|---|
-| C6.16 | qa #1452 says Works (nightly 42707165919 green); shard 1 red only on G2 (P-412 not on main) | **#1474 merges** → re-run #1452's failed part → read + Approve + label (P-385) | ~09:00 |
-| C8.3 | #1459 merged; row Partial until P-339 | nightly C8.3 dispatched 07:2x: run id to qa (no qa lane now: Lead posts it in a records PR or a new qa lane) | ~09:30 |
-| C7.8 | #1450 toggled 07:29, ci running | on green Mergify queues it; then qa gate A + nightly (new qa lane) | ~10:30 |
-| C10.2 | #1460 merged; nightly 42702480732 green; QA-361 fix merged | **Adobe re-Validate on the Mac with the founder**: `request_access` "Acrobat" (founder-typed turn), steps in #1460's "Question for the tech lead"; then qa-c73-c102 re-scores | ~09:30 |
-| C6.17 | #1472 gate A PASS, Partial; QA-375 Major (P-444) | cloud **forms-c617-qa375** (started 07:28) builds the fix; nightly C6.17 dispatched 03:57 | ~12:00 |
-| C6.5 | #1444 merged | cloud **qa-c65** (started 07:28) runs the round; asks for nightly C6.5 | ~10:30 |
-| C7.5 | #1463 gate A FAIL: QA-364 (new paid run), QA-366 (CI gap) | cloud **c75-fix** (07:28): lands #1463, fixes QA-366, posts the paid re-run kit; **the Lead runs the paid call** from a Terminal tab (founder awake) | ~13:00 |
-**Records PR #1474** (DECISIONS P-412 to P-444, RULES, tools and skills): independent Opus reviewer Approve (rounds 1-3, last on merge 301645758; `side-session-notes/local_a07b26f2-…/review-1474-tools-skills.md`); the Lead's records-only Approve on the hand-over head. **Label on green CI** (GitHub runs no CI while a PR conflicts: check `mergeable_state` first).
-**Clean-up done 07:25:** 20 cloud and 7 Mac sessions archived; founder killed 4 orphan test servers. Left for the founder (auto mode refused): `git worktree remove /private/tmp/claude-501/paid-c75` and `.claude/worktrees/visual-handover-7a9ead` (both clean). Test DBs: 10 (176 MB), left.
-**Sessions:** cloud lanes qa-c616 (#1452), qa-c617 (#1472, awaiting input), qa-c73-c102 (C10.2), C7.8 fix lane (#1450), forms-c617-qa375, qa-c65, c75-fix. Standby: **Lead 7** `local_6426aab1-…`; one more at the founder's next typed turn (P-286).
-**Lessons tonight:** ci runs that create no jobs (re-run them; Mergify times out batches); a Lead commit after an Approve voids it (re-Approve records-only); scratch clones cannot write `.git/config` in the sandbox; claude.ai session menu "More options → Archive" archives without a dialog.
+## Hand-over: Lead 7 (series 2) → Lead 8 (series 2), 11:55 IST 10 Nov: word for word in `history/STATE-2026-11-10-1525-lead7s2-handover-block.md` (its rows are carried in Live rows below).
+**Founder 12:0x-12:1x IST (Lead 8): Bake answers recorded as P-447** (walk twice as exit, no co-founder watch first, lean cap 24). **Answered ~12:3x as P-448:** Bake = lean Bake + generic engine core (~40 sessions, second exit: no code change, data edits allowed, on Study permit (P-449); screens-only is M4 Track A's exit); founder to book the immigration expert (P-240: nothing Sample releases outside the demo). #1475 requeue refused by the classifier 11:56: founder to tick Mergify's box or name it.
+**Lessons (Lead 7):** claude.ai's session list re-renders after load: open a lane by clicking its link found by text in JS, and confirm the title before typing. The auto-mode classifier refuses the Lead's label toggle (remove + re-add) unless the founder names the PR. Fable corrected three of Lead 7's numbers: check evidence before proposing rule changes.
 
 ## Lead 40's last block (series 1): `history/STATE-2026-11-09-1748-lead40-final.md` (live items listed there; this page's 02:55 copy keeps the line).
 
-## For the founder (P-390: asked at his next typed turn, oldest first, one at a time)
-F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026-11-07-1545-lead30.md`); F7 answered (P-406; row in `history/STATE-2026-11-07-1555-lead31.md`). F9-F13 answered 18:25-18:36 IST, all as recommended (P-412; rows in `history/STATE-2026-11-07-1837-lead31.md`).
+## Hand-over: Lead 8 (series 2) → Lead 9 (series 2), 18:28 IST 10 Nov — read this first
+**Lead 9 (series 2, local_d3d09334) start, 18:28 IST:** start context ~118k (get_usage; P-446 (2)): hand over at the first check after ~318k. Check a7b56479 at :13/:43. Weekly 58%.
+**Founder away ~15:30-18:30 IST, on Remote Control only.** 27 of 29 Works. Weekly 58% (~2%/h). Paid cap US$30, spent US$0. Records: P-447 to P-450 (Bake, generic core, exit tests, after-M3 plan); founder asks A1-A7 below stay until ticked.
+1. **C10.2:** #1492 merged 15:51 (main ddc2a6eb3, demo updated). Lead 8 loaded the finished story (founder pre-approved, see Live rows), copy **9c00dbfc-7f65-4782-8562-b737cd301c57** (case f870d8df…), opened it in Acrobat and pressed Validate: **"Validation completed successfully"** (16:2x). **Not saved:** Acrobat's Save As panel is a separate macOS process outside the computer-use grant; it is open on the Mac now. **Next:** when the founder is back, he saves it (Save As › Downloads, `paper-9c00dbfc-validated.pdf`) or closes the panel; then read back: `curl -s -X POST -H 'x-actor: user-O' -F file=@<file> http://localhost:4400/api/runtime/form-copies/9c00dbfc-7f65-4782-8562-b737cd301c57/validated`, record (`tools/record-validated-samples.ts --paper "the tech lead, Adobe on the Mac"`, commit `samples/validated-imm5257-paper.json`), note printed pages of Languages / Details of visit / Background Information on #1492, dispatch nightly C10.2 checkpoint, then a qa fresh reader → Works. **Do not reload the story before the read-back** (a reload makes the copy stale, 409). Original backed up at the Lead 8 scratchpad `orig-9c00dbfc.pdf` (sha c18c8a145cf5).
+2. **C7.5:** unblocked by #1492. Run #1463's kit now: re-measure the sheet (`c75-pack-case.ts`, no `--expect`), checksum in #1463, ledger first, Terminal tab, one attempt; qa labels the result PR. ETA ~17:30.
+3. **(4a)** suite-selection fix: C7.8 lane briefed 13:4x; read its PR; P-214.
+4. **CI:** #1491 merged (75 min). Next: 8 shards + timing refresh (check CI budget first); `run-suites.sh:252` comment still says 45 min.
+5. **Routed findings for qa to log:** IMM 5710 "Canada/CAN/511" Major (LMIA), C6.19 concept.md:16 wording Minor.
+6. **After the 29:** the milestone plan with the founder (P-450), one question at a time; Fable's questions 16-18 and booking the immigration expert (A7).
+Terminal tabs c6 (caffeinate 4 h, from 15:2x) and c7 (open) are Lead 8's; leave c6 running.
 
-| # | Question | Lead's recommendation | Blocks | Since | Status |
-|---|---|---|---|---|---|
-| F2 | Look at C6.9's new screen (A4, #1172) with `reports/best-in-class-C6.9-A4-2026-11-07.md` | changes become follow-up rows | nothing | 7 Nov 08:35 | open (walk screenshots: #1199) |
-| F8 | Look on the demo at the M3 screens merged since P-392 (B1 documents, A2/QA-293 representative's tab, B124, B126) with the drift audit (`reports/m3-screens-vs-boards-2026-11-07.md`) | show with B147's tab; no decision needed now | nothing | 7 Nov 15:50 | open (P-408) |
-| F14 | FQ-7: which date a recorded group's ages count on (B152 #1279: a submission recorded later than its "Submitted on" date) | the recording day for now (as built); price at "Submitted on" in a follow-up row | nothing (B152 carries on) | 7 Nov 20:30 | open |
-| F15 | CI lane's D2 deviation (#1337): a Partial row reached only through a shared file its pack reads is listed, not run. Also: may the Lead delete `throwaway/d6-rerun-base` and `throwaway/d2-c73-by-diff`? | accept the deviation; yes, delete both | nothing | 8 Nov 17:25 | open |
-| F16 | C7.8 (B141) F1-F3: form with no passed trial is a Blank official PDF; blank added form with no completed copy is a CRITICAL warning passed with a reason; F3 as its concept recommends | built as recommended (reversible, P-390) | nothing | 9 Nov 09:20 | open |
-| F17 | C7.10 (B143) BR-9: the figure departs from BR-30 so that 100 means Ready (documents done when received, every finding counted, no form approval, no retainer or deficiency library) | as built (reversible, P-390) | nothing | 9 Nov 09:58 | open |
-| F18 | C6.14 (B136) when nobody matches: filing's first applicant or principal applicant (SA-1B-151 reads two ways; differs on a couple-once line on Visitor visa) | first applicant, as built (reversible) | nothing | 9 Nov 11:28 | open |
-| F19 | QA-369 (C6.16): may Client A take back a link the firm sent to a new address, before the adult accepts? | yes, as built (P-443): nothing is disclosed and only the firm can send again | nothing | 10 Nov 03:30 | open |
+## Tonight (P-451, from 22:0x IST 10 Nov)
+| Lane | Session | Row | Next |
+|---|---|---|---|
+| pipeline | local_8494de44 `pipeline-ci-speed` | measured (3,855 runs: batch median 43.7 min, p90 55.3; 139 of 400 suites had no timing); **#1502** 8 shards (sim: batch ~44 → ~34 min, +2% machine minutes, free runners) → (4a) next | **Founder: repo variable SHARDS=6 overrides; Lead's change to 8 refused by the classifier 22:5x IST: ask the founder to run `gh variable set SHARDS --body 8` or say "set SHARDS 8"**; Lead reads the diff before labelling (P-423) |
+| runtime | local_32caa215 `runtime-engine-core` | B164 → M3-S1 (warm) | sole holder of schema / case-prepare tonight |
+| Lead | this session | **Bake plan draft done** (`design/bake-plan-2026-11-10.md`, 40 + 15 sessions, exits E1-E4, ~24 Nov); morning: ask its 4 questions one at a time, Q1 first (pace: 3 lanes on plan, recommended) | hourly report IST; trip-wire 75% weekly; caffeinate tab c4 14 h |
+
+## M3: 29 of 29 Works (21:1x IST 10 Nov, qa #1499 fresh reader; C7.5 + C10.2 on nightly 42841699712, main 87212b14d)
+**Next (P-450):** detailed milestone plan with the founder, one question at a time (A5, A7); then the Bake. **#1463** superseded: qa's close refused, waits for the founder's named word.
+
+## Live rows (Lead 9, 19:0x IST): done (29/29); word for word in `history/STATE-2026-11-10-2210-lead9s2-live-rows-1900.md`.
+
+## Live rows (Lead 8, 13:33 IST): superseded by the hand-over block above; word for word in `history/STATE-2026-11-10-1850-lead8s2-live-rows-1333.md`.
+
+## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
+| # | Ask (IST) | Status |
+|---|---|---|
+| A1 | 11:4x Bake before M4: screens, flows, one sign-in with role picker, polish, fast UI lane | ruled P-447 to P-449; plan after the 29 |
+| A2 | 12:1x why one combination; generic engine for all | ruled P-448/P-449 (generic core in the Bake) |
+| A3 | 12:2x CI cut-offs: root cause and lasting fix | #1491 (75 min) in review; next: 8 shards + timing refresh (Lead briefs after #1491); queue every-suite rule after (4a) + a week's measure |
+| A4 | 12:3x run tests smartly, no blind testing, no quality cut | answered: PR runs targeted, queue full by design until (4a) proven; approval to come with numbers |
+| A5 | 12:4x finish M3; then detailed milestone plan with counted lists before the Chrome extension; internal production grade | P-450; plan after the 29 |
+| A6 | approvals one at a time; tell him when to press Demo › Load the finished story | at C10.2 merge (#1482) |
+| A7 | Fable's questions 16-18 (internal use on what data; employer LMIA side in?; Chrome extension in?) and booking the immigration expert | ask after the 29 |
+
+## For the founder (P-390)
+Open F2, F8, F14, F15, F16, F17, F18, F19 (none blocks work), word for word in `history/STATE-2026-11-10-1240-lead8s2-for-the-founder-table.md`; ask at his typed turns, one at a time.
 
 ## Start here (next Lead)
 **Roles (P-384):** the founder gives product direction only; the Lead owns the pipeline. Every label needs a PR comment line `Reviewer: Approve <head sha>` (label guard). Records-only PRs: the Lead labels after reading the diff (P-385); `records` queue. GitHub: curl + `gh auth token` with `allowed_domains` (P-363). Times only from `TZ=Asia/Kolkata date`. Notes: `~/Library/Application Support/Claude/side-session-notes/lead10-saved-2026-11-05/` (never a folder named for a session); Lead 26's are in `history/lead-notes-2026-11-07/`.
@@ -51,5 +64,5 @@ F1, F3, F4, F5 answered (P-391, P-393, P-396, P-403; rows in `history/STATE-2026
 6. **Records:** on `lead/2026-11-07-lead31` from the scratch worktree `$TMPDIR/lead31-merge`; records PR not opened yet (once a day, P-336).
 
 ## Leads, in order
-**Series 2 (P-433, from 9 Nov 17:48 IST; numbers restart; the current Lead is the one `current_lead:` names):** **Lead 5 (series 2, local_6e87a775-b6a8-4a50-8fa7-ad3b03548af6)** (from 00:48 IST 10 Nov) · Lead 4 (series 2, local_48335a53-6041-4416-9442-c8814319aa84) (23:44 IST 9 Nov-00:48 IST 10 Nov, ended at ~240k, P-440) · Lead 3 (series 2, local_81ca34d8-6a97-4c29-9fd1-471e42cf7f6f) (22:35-23:45 IST 9 Nov, ended at ~255k, P-440) · Lead 2 (series 2, local_a07b26f2-302e-4c73-bd1c-ca20dd9e8a79) (20:30-22:35 IST 9 Nov, ended at ~370k, P-440) · Lead 1 (series 2, local_f135f805-00be-49fc-ac67-df94b57dbc86) (17:48-20:32 IST 9 Nov, ended at ~400k). Standby: none; start two at the founder's next typed turn (P-286).
+**Series 2 (P-433, from 9 Nov 17:48 IST; numbers restart; the current Lead is the one `current_lead:` names):** **Lead 8 (series 2, local_62177923-2726-40ba-a539-da2173222e38)** (from 11:55 IST 10 Nov) · Lead 7 (series 2, local_6426aab1-6fa8-47c0-b228-f03365d5cc4a) (08:13-11:55 IST 10 Nov, ended at ~290k) · Lead 6 (series 2, local_8c1fbca5-d3cf-4bf4-8620-9bdb3c9564ca) (07:35-08:13 IST 10 Nov, ended at ~240k) · Lead 5 (series 2, local_6e87a775-b6a8-4a50-8fa7-ad3b03548af6) (00:48-07:35 IST 10 Nov) · Lead 4 (series 2, local_48335a53-6041-4416-9442-c8814319aa84) (23:44 IST 9 Nov-00:48 IST 10 Nov, ended at ~240k, P-440) · Lead 3 (series 2, local_81ca34d8-6a97-4c29-9fd1-471e42cf7f6f) (22:35-23:45 IST 9 Nov, ended at ~255k, P-440) · Lead 2 (series 2, local_a07b26f2-302e-4c73-bd1c-ca20dd9e8a79) (20:30-22:35 IST 9 Nov, ended at ~370k, P-440) · Lead 1 (series 2, local_f135f805-00be-49fc-ac67-df94b57dbc86) (17:48-20:32 IST 9 Nov, ended at ~400k). Standby: none; start two at the founder's next typed turn (P-286).
 **Series 1: Leads 1 to 41, before 9 Nov 17:48 IST**, never renamed or renumbered: the full list, word for word, is in `history/STATE-2026-11-09-2130-lead2s2.md` ("Leads, in order").
