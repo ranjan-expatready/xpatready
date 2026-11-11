@@ -45,3 +45,15 @@ Task 1 · next step obvious ½ (M1) · plain words 1 · feedback 1 · correct da
 A real screen reader. The "no one holds the duty" state (needs another set of people in `core.ts`; untested in either suite). The must-verify, merge, held-file and form-fields hand-offs were checked by reading the code only (one review-duty library change was walked). An Approver who edited the draft being refused by the server's words (unchanged server code, not walked). D17/D20: an intended user's unaided walk stays with the founder.
 
 Verdict: Request changes (reviewed commit 2e99ebb9b7d7c25a4b3c8eb55b1252f5184ce653). To fix before `review: approved`: M1. m1 is a Should.
+
+## Re-review (11 Nov 2026, head `35790d36d93d22645a58e28cbc57c09b579a93e9`)
+Scope: `git diff 2e99ebb9b..35790d36d -- …/prototype/studio` (`release.tsx`, `check_bk4b_handoffs_browser.cjs`), plus records only (`qa/built/BK-4b.md`, this review, the journey report, one screenshot).
+* **M1: fixed.** `web/src/pages/release.tsx:85` shows the hand-off only when `!canApprove && session.data && (ok.length || lib.length)`. The ternary renders the hand-off or `null`, never a stray `0`. Checked against the server: the per-person self-hold in `api/src/programs.ts` `draft()` (`if (actor && …includes("approve"))`) applies only to approve-duty holders. For the author and the Content reviewer, `ok`/`lib` are therefore exactly what an approver would release, so the condition is computed from the page's state, as BR-2 asks.
+* **Fail case added** (`check_bk4b_handoffs_browser.cjs:189-201`). It repeats my reproduction: everything is released by `user-B`, then an unsubmitted change; `/release` as the author and as the Content reviewer shows "Nothing ready to release" and no `[data-handoff]`. The pass side (`:139-145`, with releasable library changes) still shows the hand-off to the Approver.
+* **Run on :4475** (isolated copy, stopped after; screenshots redirected to my scratchpad): `check_bk4b_handoffs.ts` **14/14**, `check_bk4b_handoffs_browser.cjs` **42/42**, exit 0.
+* **m1 (focus after a same-page hand-off):** I accept the builder's reasoning. Moving focus to `<main>` would be worse, and the right target is the next person's own action, which comes with BK-4a's notice. It stays a Should, noted in the PR; it does not block.
+* Journey score after the fix: next step obvious 1, error recovery 1 → **10/10** on the same evidence (J9 now holds).
+
+Open Blocker or Major: none.
+
+Verdict: Approve (head 35790d36d93d22645a58e28cbc57c09b579a93e9)
