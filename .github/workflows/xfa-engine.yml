@@ -1,4 +1,4 @@
-# B170a (founder P-464, P-471; plan design/xfa-reuse-analysis-2026-11-11.md §4.1 row a, §4.3): the team's XFA engine,
+# B170a (founder P-464, P-470, P-471; plan design/xfa-reuse-analysis-2026-11-11.md §4.1 row a, §4.3): our XFA engine,
 # copied unchanged into packages/xfa-engine/ (PROVENANCE.md), is built and its own unit tests run here: Node from .nvmrc
 # (24.21.0), npm ci from the package's own lockfile, tsc build, Vitest (201 files, 3,369 tests on 11 Nov). Its own job and
 # its own install: the studio's install, suites and parts in ci.yml do not change (nothing imports the engine yet; row c
