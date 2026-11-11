@@ -128,7 +128,7 @@
     "read": "2026-10-27",
     "page_modified": "2026-09-11",
     "recorded": "official-sources/ircc/canada/pages/immigrate-canada-family-sponsorship-spouse-partner-children-apply.html",
-    "why": "B169 (P-170): the six's and the configured checkpoint's key for spousal sponsorship (samples/wave1.json), the demo story's fs.outside; the quote is the recorded page's own sentence, word for word (canada.ca \"Apply to sponsor your spouse, partner or children\", modified 2026-09-11, recorded 27 Oct 2026). Sample, Unconfirmed: expert."
+    "why": "B169 (P-170): the six's and the configured checkpoint's key for spousal sponsorship (samples/wave1.json), the demo story's fs.outside; the quote is the recorded page's own sentence, word for word (canada.ca \"Sponsor your spouse, partner or child: How to apply\", modified 2026-09-11, recorded 27 Oct 2026). Sample, Unconfirmed: expert."
    },
    "lm.high_wage": {
     "account": "LMIA_ONLINE",

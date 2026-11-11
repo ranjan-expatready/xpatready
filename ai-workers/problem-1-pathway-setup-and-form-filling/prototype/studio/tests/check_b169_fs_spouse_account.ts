@@ -5,7 +5,7 @@
 // quote and date (P-170; Sample, Unconfirmed: expert).
 // Part 1 is pure (files only). Part 2, with a port, reads an isolated copy: Demo › Reset to the six and Demo › Load the
 // configured checkpoint each leave fs.spouse on the PR Portal. Live AI off, US$0.
-//   zsh studio/tools/isolated.sh b169_acct 4484 start && tsx studio/tests/check_b169_fs_spouse_account.ts 4484 xr_studio_b169_acct
+//   zsh studio/tools/isolated.sh b169_acct 4455 start && tsx studio/tests/check_b169_fs_spouse_account.ts 4455 xr_studio_b169_acct
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -36,6 +36,9 @@ function sixPages(): Map<string, string | null> {
  *  the combinations that do not. */
 export const missingAccounts = (lib: Library, six: Map<string, string | null>): string[] =>
   [...six].filter(([key, page]) => page && Object.values(lib.accounts.combinations).some((a) => a.url === page) && !lib.accounts.combinations[key]).map(([key]) => key);
+/** The recorded page's own date, its dcterms.modified meta (review m2 on 9540d3057: any content="<date>" matched, so
+ *  dcterms.issued passed too). */
+export const pageModified = (html: string) => html.match(/<meta\s+name="dcterms\.modified"[^>]*\scontent="([^"]+)"/)?.[1] ?? null;
 /** A recorded page's words as a person reads them: tags and scripts out, entities read, white space collapsed. */
 const pageWords = (html: string) => html.replace(/<(script|style)[\s\S]*?<\/\1>/g, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&rsquo;|&#8217;/g, "’").replace(/&amp;/g, "&").replace(/\s+/g, " ");
 
@@ -47,9 +50,10 @@ const pageWords = (html: string) => html.replace(/<(script|style)[\s\S]*?<\/\1>/
   const recorded = fs?.recorded ? join(SOLUTION, fs.recorded) : "";
   const html = recorded && existsSync(recorded) ? readFileSync(recorded, "utf8") : "";
   ok("P-170: its quote is the recorded page's own sentence, word for word as a person reads it", !!html && !!fs.quote && pageWords(html).includes(fs.quote), { quote: fs?.quote, recorded: fs?.recorded });
-  ok("P-170: its page date is the recorded page's own (dcterms.modified), and the date it was read is given", !!fs?.page_modified && html.includes(`content="${fs.page_modified}"`) && /^\d{4}-\d{2}-\d{2}$/.test(fs.read ?? ""), { page_modified: fs?.page_modified, read: fs?.read });
+  ok("P-170: its page date is the recorded page's own (dcterms.modified), and the date it was read is given", !!fs?.page_modified && pageModified(html) === fs.page_modified && /^\d{4}-\d{2}-\d{2}$/.test(fs.read ?? ""), { page_modified: fs?.page_modified, read: fs?.read });
   ok("fs.spouse's guide is linked as fs.outside's is (Guide 5289)", !!LIB.guides["fs.spouse"]?.url && LIB.guides["fs.spouse"].url === LIB.guides["fs.outside"]?.url);
   ok("pass: every combination the six holds whose page has a recorded account carries it under its own key", missingAccounts(LIB, six).length === 0, missingAccounts(LIB, six));
+  ok("fail: a page_modified set to the page's issued date (2023-08-04, its dcterms.issued) is refused, though the page holds it", !!html && html.includes(`content="2023-08-04"`) && pageModified(html) !== "2023-08-04");
   const without = structuredClone(LIB); delete without.accounts.combinations["fs.spouse"];
   ok("fail: with fs.spouse's entry missing, the rule refuses and names fs.spouse (as on main before this row)", JSON.stringify(missingAccounts(without, six)) === JSON.stringify(["fs.spouse"]), missingAccounts(without, six));
 
