@@ -82,7 +82,9 @@ Challenger: a fresh context that did not draft `concept-draft.md` or `design/boa
 * **m1-m7:** RESET only when programs exist; the fold-out dropped (both stay in the Demo menu); the confirm button destructive; PR 2 lands only the author on `/start` (BK-4 rev 2 matches); the row count under "Goes" and the kept-files check in the done notice; one name "Starting points" with a Demo pill and doors off in a non-demo workspace; times "typically …" with measured seconds printed.
 
 ## Lead response
+Tech lead (Lead 19, series 2), 11 Nov ~21:1x IST, on the PR at head 2fa228923: **approved** (P-223 (4)). Rulings P-484, all as the author recommended: (Q1, B1) E1 is a named change on Visitor visa, then release N+1 through both gates by the screens, zero code; this amends P-456 (1), because the one unreleased pathway has no form; no runtime PR, and BK-5 PR 1 does not wait. (Q2) Door 2 is two calls (reset, then load) with the part-way failure words (BR-6). Every Major and Minor is taken in rev 2 as the author's reply says.
 
 ## Agreement
+Agreed: build BK-5 PR 1 and PR 2 from `concept.md` rev 2 as approved. Lanes: PR 1 its own lane (breaker, new page, P-278); PR 2 after BK-4a merges.
 
 ## Build discoveries

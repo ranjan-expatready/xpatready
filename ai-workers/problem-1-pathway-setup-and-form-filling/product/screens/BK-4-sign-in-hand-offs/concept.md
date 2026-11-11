@@ -1,6 +1,6 @@
-# BK-4: sign in by role, and hand-off buttons where work changes hands (concept DRAFT, rev 2)
+# BK-4: sign in by role, and hand-off buttons where work changes hands (concept, rev 2, approved)
 
-Concept lane (skill screen-concept, steps A1-A7), 11 Nov 2026, for the tech lead's approval (P-223 (4)); not yet `concept.md`. Row: Bake plan row 4 (`design/bake-plan-2026-11-10.md`), P-447 (2); squeeze S1-S2 (`design/bake-squeeze-2026-11-11.md`, #1572), P-481; measure P-456 (3); style P-473. Board: `design/board-bk4.html`. Paths under `prototype/studio/` unless stated; read on `origin/main` 68a7b59d1. **Rev 2** applies the fresh challenge (`challenge.md`: M1-M5, m1-m8; the author's reply is in `challenge.md`, "Author's reply").
+Concept lane (skill screen-concept, steps A1-A7), 11 Nov 2026, **Approved** by the tech lead (Lead 19, series 2) at head 2fa228923, 11 Nov ~21:1x IST (P-223 (4)); rulings recorded as **P-484** (all five recommendations taken). Row: Bake plan row 4 (`design/bake-plan-2026-11-10.md`), P-447 (2); squeeze S1-S2 (`design/bake-squeeze-2026-11-11.md`, #1572), P-481; measure P-456 (3); style P-473. Board: `design/board-bk4.html`. Paths under `prototype/studio/` unless stated; read on `origin/main` 68a7b59d1. **Rev 2** applies the fresh challenge (`challenge.md`: M1-M5, m1-m8; the author's reply is in `challenge.md`, "Author's reply").
 
 ## 1. Job and journey
 * **Job:** one person walks the whole journey and changes role only by (a) signing in once on a role card, (b) the frame's one person picker, or (c) a hand-off button that names who takes over. Nothing else changes the person.
@@ -63,10 +63,10 @@ Sign-in page, picker, notice, `people.ts`: **Scaffolding** for the team's three 
 | **4c** case hand-offs (after BK-3 PR 3) | `runtime/cases.tsx` (Client A hand-off, `:278`), `runtime/questionnaire.tsx`, `runtime/readiness.tsx` | case → Client A → back to the firm → representative by buttons; Client B's case targets Client B; walk with 0 picker use |
 Shared files: 4a and 4c both edit `cases.tsx` (different hunks: header and `:60` vs `:216, :278`); merge `main` only on a conflict (P-270).
 
-## 11. Questions (recommendation first)
-1. **First visit: page or gate?** *Rec: a page:* unknown person → sign-in; missing → the Configuration author; walks start at `/sign-in` (BK-5 PR 2). A gate later changes the 11 browser checks that set no person.
-2. **Does a frame link that names the person ("Cases (as Case officer) →") count as the picker for E1?** *Rec: yes:* it names the person and the notice follows; P-456 was a Lead ruling.
-3. **Client back to the firm:** *Rec: the hand-off carries `?from=` (web only).* Alternative: an additive `officer` field on the client's case view (runtime lane's file).
+## 11. Questions, answered by the Lead (P-484)
+1. **First visit: page or gate?** **Ruled: a page** (as recommended): unknown person → sign-in; missing → the Configuration author; walks start at `/sign-in` (BK-5 PR 2). A gate later changes the 11 browser checks that set no person.
+2. **Does a frame link that names the person ("Cases (as Case officer) →") count as the picker for E1?** **Ruled: yes** (as recommended): it names the person and the notice follows; P-456 was a Lead ruling.
+3. **Client back to the firm:** **Ruled: the hand-off carries `?from=` (web only)**; no `officer` field.
 
 ## Definition of ready
-Acceptance tests named (§8); row text §10; decisions: Q1-Q3 answered by the Lead; fresh challenge done; Lead approval (P-223 (4)).
+Acceptance tests named (§8); row text §10; decisions: Q1-Q3 answered (P-484); fresh challenge done; Lead approval given (P-223 (4)). **Ready.** Lanes (Lead 19): 4a this screens lane (breaker on 4a, P-278); 4b its own lane; 4c the BK-3 lane, after BK-3 PR 3 merges.
