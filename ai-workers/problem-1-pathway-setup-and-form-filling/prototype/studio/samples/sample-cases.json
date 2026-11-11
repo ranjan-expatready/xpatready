@@ -1,0 +1,31 @@
+{
+ "about": "BK-12 (P-448, P-452; Bake plan row 26): the Sample case each combination opens, by its combination key: data, never code. Read by api/src/sample-case.ts (sampleCasesFrom), which names no combination: a pathway gets its own Sample case by an entry here alone. 'story': the combination whose Sample case the demo story opens (DEMO.md rows 11-12, the configured checkpoint and the finished story). Per combination: 'reference' (the case's reference; lower-cased, it starts every idempotency key, so loading twice opens the same case), 'principal' (the principal applicant's name on the case), 'people' (each further person: an id the answers use, a role from the release and the name shown), 'answers' (a file in samples/ in the shape of sample-family-imm5257.json: 'case', 'everyone', 'people' by id, optional 'job_place', 'not_answered' and 'none_apply'), and optionally 'record' (the ids whose facts come from the existing sample record, engine/import.ts sampleFamilyFacts), 'made_up' (facts made up per id, each labelled Sample), 'family_name_from_principal' (ids given the principal's family name from the record) and 'validated' (the saved read-backs of this case's copies, api/src/sample-validated.ts). Status: Sample (AGENTS rule 4): made-up people, never a client, never submitted. Unconfirmed: expert. Legal: Unconfirmed: no counsel.",
+ "story": "vv.single",
+ "cases": {
+  "vv.single": {
+   "about": "Sample: the family of four of DEMO.md rows 11-12 (QA-231, C10.1 rows 11-12, B99), as api/src/sample-case.ts opened it before BK-12. The record has one child and no child's date of birth: the second child's name and both children's dates of birth are made up here, labelled Sample.",
+   "reference": "SAMPLE-VV-FAMILY-1",
+   "principal": "Client A (Sample)",
+   "people": [
+    { "id": "spouse_or_partner", "role": "spouse_or_partner", "displayName": "Partner (Sample)" },
+    { "id": "child-1", "role": "child", "displayName": "Child (Sample)" },
+    { "id": "child-2", "role": "child", "displayName": "Child 18 or over (Sample)" }
+   ],
+   "record": ["case", "principal", "spouse_or_partner", "child-1"],
+   "made_up": {
+    "child-1": { "person.date_of_birth": "2016-05-20" },
+    "child-2": { "person.given_names": "SECOND CHILD", "person.date_of_birth": "2007-03-14" }
+   },
+   "family_name_from_principal": ["child-2"],
+   "answers": "sample-family-imm5257.json",
+   "validated": "samples/validated-imm5257.json"
+  },
+  "sp.outside": {
+   "about": "Sample (BK-12): one made-up student applying from outside Canada, so the Study permit opens its own Sample case by data alone (P-449's run). Every value is made up; none is an IRCC value.",
+   "reference": "SAMPLE-SP-STUDENT-1",
+   "principal": "Student A (Sample)",
+   "people": [],
+   "answers": "sample-student-answers.json"
+  }
+ }
+}

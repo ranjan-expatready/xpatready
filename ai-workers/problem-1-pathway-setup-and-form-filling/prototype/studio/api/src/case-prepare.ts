@@ -24,16 +24,14 @@ import { acceptsOf } from "../../engine/channels.ts";
 import { caseChecklist } from "../../engine/runtime/case-checklist.ts";
 import { caseView, checkValue, isClientField, knownOf, optionsOf } from "../../engine/runtime/case.ts";
 import { releaseModes } from "../../engine/filing-modes.ts";
-import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, feeRule, rulesFrom } from "../../engine/runtime/filings.ts";
+import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, rulesFrom, stepRule } from "../../engine/runtime/filings.ts";
 import { addedFilings } from "../../engine/runtime/added-filings.ts";
-/** Review r1 M4: the biometrics ages come from the fee table, never from code. */
-const bioAges = feeRule("vv.single", "biometrics")?.exempt;
 import { blocksLock, changedGroups, formCoverage, gateOf, groupFacts, inputHash, markNothingRecorded, readiness as formReadiness, type FormFact, type GatePlacement, type GroupFact } from "../../engine/runtime/forms.ts";
 import { factChanges, markKey, outOfDateReason, representativeWords, restoredFromOf, undoTarget, type ChangeWords, type FactChange } from "../../engine/runtime/out-of-date.ts";
 import { REPRESENTATIVE } from "../../engine/runtime/team.ts";
 import { changesOf, partsInFormOrder, sectionHash, sheetOf as layOut, sheetWords, waitsOf, type FormPart, type Layout, type Sheet, type SheetAnswer } from "../../engine/runtime/answer-sheet.ts";
 import { formPartsOf } from "./form-parts.ts";
-import { BIOMETRICS_STEP, channelChange, channelOf, paperLine, prepareVersion, readBackOf, wantedItems, type FormLine, type PaperValidated } from "../../engine/runtime/prepare.ts";
+import { BIOMETRICS_STEP, biometricsWaits, channelChange, channelOf, paperLine, prepareVersion, readBackOf, wantedItems, type FormLine, type PaperValidated } from "../../engine/runtime/prepare.ts";
 import { lineCondition, render, type Role } from "../../engine/render.ts";
 import { conditionSubjects } from "../../engine/resolver.ts";
 import { snapshotHash } from "../../engine/snapshot.ts";
@@ -188,7 +186,11 @@ export class CasePrepare {
     // Break M2: a co-filing sponsor gets the forms that name them, never an applicant's biometrics step.
     const coFilers = new Set(first.filings.filter((f) => f.mode === "co_filed").map((f) => f.owner!.subject));
     const filers = [...onFiling.keys()];
-    const wanted = [...wantedItems(filers.filter((x) => !coFilers.has(x)), r.forms as never, docs as never, feeRule(own!.combinationKey, "biometrics"), ages),
+    // Review r1 M4, BK-8 (P-448, P-452): who gives biometrics (the ages, IRCC's page) comes from the case's own
+    // combination's fee rows (the line its row lists for the step), read once for the items and their words; never
+    // another pathway's.
+    const bio = stepRule(own!.combinationKey, BIOMETRICS_STEP.key);
+    const wanted = [...wantedItems(filers.filter((x) => !coFilers.has(x)), r.forms as never, docs as never, bio, ages),
       ...wantedItems(filers.filter((x) => coFilers.has(x)), r.forms as never, new Map(), undefined, ages)];
     const wantApplicants = (owner: string) => first.filings.find((f) => f.owner!.subject === owner)!.applicants;
 
@@ -466,7 +468,7 @@ export class CasePrepare {
           state: waits ? "cannot_start" : allEntered ? "done" : "to_do", reason: allEntered && !waits ? "Every section is entered in the portal, with every answer confirmed and current." : waits ? waitWords(w?.missing ?? []) : sheet ? sheetWords(sheet, rd.missing) : rd.missing.length ? `Waiting for ${rd.missing.length} fact${rd.missing.length === 1 ? "" : "s"} to answer or confirm.` : "Every fact it reads is confirmed." };
       }
       if (i.kind === "document") return { ...base, document_type: w?.document_type ?? i.itemKey, label: w?.label ?? i.itemKey, state: "to_do", reason: "Not requested yet (the checklist, C6.4)." };
-      return { ...base, step: BIOMETRICS_STEP.label, neededBefore: "after_filing" as const, state: "cannot_start", reason: w?.applies === "cannot_tell" ? `Waits for the date of birth: no biometrics under ${bioAges?.underAge ?? "?"} or over ${bioAges?.overAge ?? "?"} (VV-R15).` : BIOMETRICS_STEP.after };
+      return { ...base, step: BIOMETRICS_STEP.label, neededBefore: "after_filing" as const, state: "cannot_start", reason: w?.applies === "cannot_tell" ? biometricsWaits(bio) : BIOMETRICS_STEP.after };
     });
     // C6.11 (VV-R10, BR-20): a form that names the representative (IMM 5476's licence part, the library's representative.*
     // facts, from the firm record) says which representative of record it is for, so a change of representative shows on

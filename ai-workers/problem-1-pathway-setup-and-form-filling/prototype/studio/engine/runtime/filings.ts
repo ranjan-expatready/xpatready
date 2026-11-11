@@ -29,8 +29,10 @@ import ROLES from "../../samples/person-roles.json" with { type: "json" };
  *  derived, never guessed. */
 export const FEE_BASES = ["per_application", "per_person_by_role", "per_position", "family_maximum"] as const;
 export type FeeBasis = (typeof FEE_BASES)[number];
+/** `step` (BK-8, P-448): the IRCC step this line pays for ("biometrics"): the prepare view finds a combination's step by
+ *  it, so each pathway names its own line, with its own ages and source, never another pathway's. */
 type TableLine = { key: string; label: string; status: string; basis: FeeBasis; per_person_cad: number; family_max?: { cad: number; from_people: number } | null; roles?: string[];
-  exempt?: { under_age: number; over_age: number; source: FeeSource } | null; source: FeeSource };
+  exempt?: { under_age: number; over_age: number; source: FeeSource } | null; source: FeeSource; step?: string };
 /** A combination's row (M3-S1, P-425: every setting a combination needs is here, never a branch on its key):
  *  `group_why` the family group's reason; `co_filed_why` the reason a co-filed application and the principal's are sent
  *  together (IRCC's words); `each_files_own` IRCC's words, with their source, where each family member files their own
@@ -75,7 +77,10 @@ export function soundLine(l: TableLine | undefined): l is TableLine {
   if (l.basis === "family_maximum" && !(m && cents(m.cad) && m.cad > 0 && Number.isInteger(m.from_people) && m.from_people >= 2)) return false;
   // Break on #500 M1: ages in order and never negative (swapped ages exempted everyone); m3: an age exemption belongs to
   // a person, so a line charged once per application cannot carry one (the owner's age would decide for everyone on it).
-  if (l.exempt && !(Number.isInteger(l.exempt.under_age) && Number.isInteger(l.exempt.over_age) && l.exempt.under_age >= 0 && l.exempt.under_age <= l.exempt.over_age && l.exempt.source)) return false;
+  // BK-8 break m1: the exemption's source names its page (its words cite it).
+  if (l.exempt && !(Number.isInteger(l.exempt.under_age) && Number.isInteger(l.exempt.over_age) && l.exempt.under_age >= 0 && l.exempt.under_age <= l.exempt.over_age && l.exempt.source && typeof l.exempt.source.page === "string" && l.exempt.source.page.trim())) return false;
+  // BK-8: a step the line pays for is a word, when given.
+  if (l.step !== undefined && (typeof l.step !== "string" || !l.step.trim())) return false;
   if (l.exempt && l.basis === "per_application") return false;
   return true;
 }
@@ -84,7 +89,7 @@ export function soundLine(l: TableLine | undefined): l is TableLine {
 export type AgeExempt = { underAge: number; overAge: number; source: FeeSource };
 /** A fee line: `roles` limits it to the filings of those roles (spouse and PNP fees); none means every filing. Without a
  *  family maximum the cap never applies (familyFrom is then beyond any household). */
-export type FeeRule = { key: string; label: string; basis?: FeeBasis; perPersonCents: number; familyMaxCents: number; familyFrom: number; source: FeeSource; exempt?: AgeExempt; roles?: string[] };
+export type FeeRule = { key: string; label: string; basis?: FeeBasis; perPersonCents: number; familyMaxCents: number; familyFrom: number; source: FeeSource; exempt?: AgeExempt; roles?: string[]; step?: string };
 type Rules = { label: string; modes: Map<string, LineMode>; fees: FeeRule[]; groupWhy?: string; coFiledWhy?: string; basisNote?: string;
   /** The table these rules were priced from (outside check on #455: the basis names that table, never the shipped one). */
   table?: { as_of: string; read: string } };
@@ -107,6 +112,9 @@ export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
   if (new Set(keys).size !== keys.length) return undefined;
   const lines = c.lines.map((k) => table.lines.find((l) => l.key === k));
   if (!lines.every(soundLine)) return undefined;
+  // BK-8: one line per step in a combination (two biometrics lines would leave which ages apply to chance).
+  const steps = (lines as TableLine[]).flatMap((l) => (l.step ? [l.step] : []));
+  if (new Set(steps).size !== steps.length) return undefined;
   // C11.12 (BR-1, BR-2): a mode the engine knows on every role, and the principal files their own application. Anything
   // else (the principal "on the principal's", a misspelt mode) makes the combination not derived, never guessed.
   const modes = Object.entries(c.modes ?? {});
@@ -121,7 +129,7 @@ export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
     key: l.key, label: l.label, basis: l.basis, perPersonCents: Math.round(l.per_person_cad * 100),
     // Only the family_maximum basis caps a line (P-247): any other basis charges each person or application in full.
     familyMaxCents: l.basis === "family_maximum" ? Math.round(l.family_max!.cad * 100) : 0, familyFrom: l.basis === "family_maximum" ? l.family_max!.from_people : Number.MAX_SAFE_INTEGER,
-    source: l.source, ...(l.exempt ? { exempt: { underAge: l.exempt.under_age, overAge: l.exempt.over_age, source: l.exempt.source } } : {}), ...(l.roles ? { roles: l.roles } : {}) }));
+    source: l.source, ...(l.exempt ? { exempt: { underAge: l.exempt.under_age, overAge: l.exempt.over_age, source: l.exempt.source } } : {}), ...(l.roles ? { roles: l.roles } : {}), ...(l.step ? { step: l.step } : {}) }));
   return { label: c.label, modes: new Map(modes), fees, groupWhy: c.group_why, coFiledWhy: typeof c.co_filed_why === "string" && c.co_filed_why.trim() ? c.co_filed_why : undefined, basisNote: typeof c.basis_note === "string" && c.basis_note.trim() ? c.basis_note : undefined, table: { as_of: table.as_of, read: table.read } };
 }
 const RULES = { get: (key: string) => rulesFrom(FEE_TABLE, key) };
@@ -145,8 +153,12 @@ export function eachFilesOwnOf(combinationKey: string): string | null {
   const says = c?.each_files_own?.says;
   return typeof says === "string" && says.trim() ? says : null;
 }
-/** The fee rule of a combination by its key (biometrics: its ages, VV-R15), for the items and words that need it. */
+/** The fee rule of a combination by its line key (a fee line's own settings); an IRCC step's line is found by its step
+ *  instead (stepRule, BK-8). */
 export const feeRule = (combinationKey: string, key: string): FeeRule | undefined => RULES.get(combinationKey)?.fees.find((f) => f.key === key);
+/** BK-8 (P-448, P-452): the fee line a combination lists for an IRCC step (its `step`, e.g. "biometrics"): each pathway's
+ *  own line, with its own ages and source; none when its fee rows list no such line (or are not sound). */
+export const stepRule = (combinationKey: string, step: string, rules: (key: string) => Rules | undefined = RULES.get): FeeRule | undefined => rules(combinationKey)?.fees.find((f) => f.step === step);
 
 export const cad = (cents: number) => `CAD ${(cents / 100).toFixed(cents % 100 ? 2 : 0)}`;
 /** Whole years between a date of birth (YYYY-MM-DD) and today; null without one. */

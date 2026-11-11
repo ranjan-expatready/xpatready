@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false,
+    // DOM types are required by the runtime-neutral core: TextDecoder, CompressionStream, WebCrypto (later tasks).
+    // @types/node is loaded for tests/fixtures only; tsconfig.build.json sets `types: []` so src cannot use node APIs.
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"]
+  },
+  "include": ["src"]
+}
