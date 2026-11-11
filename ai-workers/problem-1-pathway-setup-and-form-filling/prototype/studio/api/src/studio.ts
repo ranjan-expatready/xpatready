@@ -38,6 +38,7 @@ import type { Problem } from "../../engine/validate.ts";
 import { isIdentityName } from "../../engine/identity-documents.ts";
 import { firmMayRead } from "./case-feed.ts";
 import { placementRefusal } from "../../engine/field-scope.ts"; // C3.16: a field asked once for the household or employer stays single and unconditioned
+import { fillTrialsOf, releaseFillTrials } from "./fill-trials.ts"; // BK-11: each form's fill trial in the release
 /** G2 (C5.5, BR-8; shared with G1 BR-8): a refusal carries every blocking problem in `errors[]`, each in words; `detail`
  *  (and `message`, read by older callers) keeps the sentence the screens and checks already show. */
 /** G2 BR-9: the keys a release rests on, frozen in its summary (only when the gate judged it). */
@@ -442,7 +443,9 @@ export class Studio {
       program: { key: (programNode ?? c.program).programNodeKey, label: (programNode ?? c.program).label, kind: (programNode ?? c.program).nodeKind, source_basis: (programNode ?? c.program).sourceBasis }, pathway: parent ? { key: parent.programNodeKey, label: parent.label, client_type: parent.clientType } : null,
       path: chain.map((n) => ({ key: n.programNodeKey, label: n.label, level: LEVEL[n.nodeKind].name })), allowed_locations: c.program.allowedLocations,
       attachments: c.attachments, jobs: c.jobs.map((j) => ({ ...j, detail: undefined })),
-      releases: c.releases.map((r) => ({ id: r.id, version: r.version, demo: isDemoWorkspace() && isDemoSnapshot(r.snapshot), release: r.packVersion?.version ?? r.version, label: releaseLabel(r), sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis })),
+      releases: c.releases.map((r) => ({ id: r.id, version: r.version, demo: isDemoWorkspace() && isDemoSnapshot(r.snapshot), release: r.packVersion?.version ?? r.version, label: releaseLabel(r), sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis,
+        // BK-11: the release's forms and their fill trials as frozen at release; null for a release made before BK-11.
+        fill_trials: fillTrialsOf(r.summary) })),
       draft: { sha256, matches_release: !!last && last.sha256 === sha256, changes, problems, counts: this.counts(snapshot),
         // G2 BR-9: what a release would rest on (per item and key), and whether it would be a Demo release.
         answer_keys: { demo: gate.demo, judged: gate.judged, items: gate.items.map((i) => ({ ...i, keys: i.keys.map((k) => ({ ...k, changed_since_release: changedSince(last?.summary, k) })) })) } },
@@ -1204,7 +1207,8 @@ export class Studio {
     const last = await tx.configRelease.findFirst({ where: { combinationId: id }, orderBy: { version: "desc" } });
     const version = (last?.version ?? 0) + 1;
     if (last) await tx.configRelease.update({ where: { id: last.id }, data: { status: "SUPERSEDED" } });
-    const r = await tx.configRelease.create({ data: { workspaceId: ws, combinationId: id, version, status: "RELEASED", snapshot: snapshot as any, sha256, summary: m.summary as any, authorId: m.authors.join(","), submitterId: m.submitter, approverId: m.approver, packVersionId: m.packVersionId, basis: c.sourceBasis === "ILLUSTRATIVE" ? "Illustrative combination: not source-verified for this program; prototype only" : "Source-backed configuration; prototype only, not specialist-confirmed for production" } });
+    // BK-11 (P-448): each form's fill trial, frozen with the release (api/src/fill-trials.ts releaseFillTrials).
+    const r = await tx.configRelease.create({ data: { workspaceId: ws, combinationId: id, version, status: "RELEASED", snapshot: snapshot as any, sha256, summary: { ...m.summary, fill_trials: releaseFillTrials(snapshot) } as any, authorId: m.authors.join(","), submitterId: m.submitter, approverId: m.approver, packVersionId: m.packVersionId, basis: c.sourceBasis === "ILLUSTRATIVE" ? "Illustrative combination: not source-verified for this program; prototype only" : "Source-backed configuration; prototype only, not specialist-confirmed for production" } });
     const publish = async (delegate: any, where: any) => {
       const drafts = await delegate.findMany({ where: { ...where, status: "DRAFT" } });
       for (const d of drafts) { if (d.supersedesId) await delegate.update({ where: { id: d.supersedesId }, data: { status: "SUPERSEDED" } }); await delegate.update({ where: { id: d.id }, data: { status: "PUBLISHED" } }); }

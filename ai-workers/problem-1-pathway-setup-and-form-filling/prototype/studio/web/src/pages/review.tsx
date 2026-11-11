@@ -13,6 +13,8 @@ import { UnsourcedNumbers } from "@/components/unsourced-numbers";
 import { Link } from "react-router-dom";
 import { AnswerKeyBlock, fixOnTests } from "@/components/answer-key-gate";
 import { FormFieldsHeld, FormFieldsPanel, useFormFieldsOfCombination } from "@/components/form-field-conditions";
+import { ReleaseFillTrials } from "@/components/release-fill-trials";
+import { FILL_TRIAL_WORDS } from "../../../contracts/release-fill-trials";
 
 /** The simulated person's name for an id the server stores (QA-10: never "user-A" on screen). */
 export const nameOf = (actors: { id: string; name: string }[] | undefined, id: string | null | undefined) => actors?.find((a) => a.id === id)?.name ?? id ?? "";
@@ -130,7 +132,7 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
         <Button onClick={() => approve.mutate(undefined)} busy={approve.isPending} disabled={!sub || !can("approve")} title={!can("approve") ? "Only the approver duty can release" : ""}><Rocket /> Approve and release</Button>
       </div>
       {v.releases.length ? (
-        <div><p className="mb-2 font-medium">Released versions</p><Table dense head={["Version", "Author / submitter / approver", "Released", "Basis"]}>{v.releases.map((x: any) => <tr key={x.id}><td title={`Fingerprint (SHA-256): ${x.sha256}`}>v{x.version}{(d.releases ?? []).find((y: { id: string; demo?: boolean }) => y.id === x.id)?.demo ? <> <span data-demo-release><Pill tone="warn" title="Sample content: a demo release, never counted as a real publish.">Demo release</Pill></span></> : null} <span className="text-xs text-text-muted">· Release {x.release}</span> {x.status === "SUPERSEDED" ? <Pill>superseded</Pill> : <Pill tone="ok">current</Pill>}</td><td className="text-xs">{String(x.author ?? "").split(",").map((a: string) => nameOf(session.data.actors, a)).join(", ")} / {nameOf(session.data.actors, x.submitter)} / {nameOf(session.data.actors, x.approver)}</td><td className="whitespace-nowrap text-xs">{fmtWhen(x.released_at)}</td><td className="max-w-md text-xs text-text-muted">{x.basis}</td></tr>)}</Table></div>
+        <div><p className="mb-2 font-medium">Released versions</p><Table dense head={["Version", "Author / submitter / approver", "Released", FILL_TRIAL_WORDS.heading, "Basis"]}>{v.releases.map((x: any) => <tr key={x.id}><td title={`Fingerprint (SHA-256): ${x.sha256}`}>v{x.version}{(d.releases ?? []).find((y: { id: string; demo?: boolean }) => y.id === x.id)?.demo ? <> <span data-demo-release><Pill tone="warn" title="Sample content: a demo release, never counted as a real publish.">Demo release</Pill></span></> : null} <span className="text-xs text-text-muted">· Release {x.release}</span> {x.status === "SUPERSEDED" ? <Pill>superseded</Pill> : <Pill tone="ok">current</Pill>}</td><td className="text-xs">{String(x.author ?? "").split(",").map((a: string) => nameOf(session.data.actors, a)).join(", ")} / {nameOf(session.data.actors, x.submitter)} / {nameOf(session.data.actors, x.approver)}</td><td className="whitespace-nowrap text-xs">{fmtWhen(x.released_at)}</td><td className="max-w-sm">{/* BK-11 */}<ReleaseFillTrials trials={x.fill_trials} /></td><td className="max-w-md text-xs text-text-muted">{x.basis}</td></tr>)}</Table></div>
       ) : null}
     </div>
   );

@@ -10,6 +10,8 @@ import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { PROTOTYPE, STUDIO } from "./core.ts";
+import { pdfMapInUse } from "../../engine/programs.ts";
+import { FILL_TRIAL_WORDS, type FillTrialReason, type ReleaseFillTrial } from "../../contracts/release-fill-trials.ts";
 
 /** One map entry as the snapshot carries it (engine/snapshot.ts field_maps[].entries). */
 export type MapEntry = { data_path: string; fact?: string | null; outcome?: string | null; person?: string | null; row?: number | null; transform?: string | null; condition?: unknown; option_map?: unknown };
@@ -36,7 +38,8 @@ export function verdictPasses(statusText: string): boolean {
   return (/^Passes\b/.test(verdict) || /^The product's part passes\b/.test(verdict)) && !/\bdoes not pass\b/.test(verdict);
 }
 
-export type TrialAnswer = { passed: boolean; why: string | null; record: TrialRecord | null };
+/** `reason` (BK-11): why it is not proven, as a code the release words read (contracts/release-fill-trials.ts). */
+export type TrialAnswer = { passed: boolean; why: string | null; record: TrialRecord | null; reason?: FillTrialReason };
 export const TRIAL_WORDS = {
   noEdition: (form: string) => `${form}: this copy's form edition is not known, so its filling is not proven: for checking only, not for filing.`,
   otherFile: (form: string, edition: string) => `${form}: this copy's file of edition ${edition} is not the file the fill trial ran on, so its filling is not proven: for checking only, not for filing until a trial of this file passes.`,
@@ -48,15 +51,37 @@ export const TRIAL_WORDS = {
 /** Whether a form's filling is proven for this edition and this field map (P-65 (a), SA-1B-174). */
 export function trialFor(m: EditionMap | null | undefined, trials: TrialRecord[] = readTrials(), readStatus = (f: string) => readFileSync(join(PROTOTYPE, "..", f), "utf8")): TrialAnswer {
   const form = m?.form_number ?? "This form";
-  if (!m?.form_sha256) return { passed: false, why: TRIAL_WORDS.noEdition(form), record: null };
+  if (!m?.form_sha256) return { passed: false, why: TRIAL_WORDS.noEdition(form), record: null, reason: "no_edition" };
   const edition = m.form_edition ?? m.form_sha256.slice(0, 12);
   const mine = trials.filter((t) => t.form === m.form_number && t.form_sha256 === m.form_sha256);
   // Review minor 2: the same printed edition with another file (canada.ca serves a newer file under one label) is said so.
-  if (!mine.length) return { passed: false, why: trials.some((t) => t.form === m.form_number && t.edition === m.form_edition) ? TRIAL_WORDS.otherFile(form, edition) : TRIAL_WORDS.none(form, edition), record: null };
+  if (!mine.length) { const other = trials.some((t) => t.form === m.form_number && t.edition === m.form_edition); return { passed: false, why: other ? TRIAL_WORDS.otherFile(form, edition) : TRIAL_WORDS.none(form, edition), record: null, reason: other ? "other_file" : "none" }; }
   const version = mapVersion(m.entries);
   // A record with its map version counts only for that map; one without (the E1 trials) counts for its edition.
   const same = mine.find((t) => t.map_version === version) ?? mine.find((t) => t.map_version === null);
-  if (!same) return { passed: false, why: TRIAL_WORDS.otherMap(form, edition, mine[mine.length - 1].recorded_on), record: mine[mine.length - 1] };
+  if (!same) return { passed: false, why: TRIAL_WORDS.otherMap(form, edition, mine[mine.length - 1].recorded_on), record: mine[mine.length - 1], reason: "other_map" };
   let text = ""; try { text = readStatus(same.status_file); } catch { /* no record: not proven */ }
-  return verdictPasses(text) ? { passed: true, why: null, record: same } : { passed: false, why: TRIAL_WORDS.notPassed(form, edition), record: same };
+  return verdictPasses(text) ? { passed: true, why: null, record: same } : { passed: false, why: TRIAL_WORDS.notPassed(form, edition), record: same, reason: "not_passed" };
+}
+
+/** BK-11 (P-448, P-460): each form line of a release with its fill trial, frozen into the release row's summary at
+ *  release (api/src/studio.ts publishRow, api/src/demo.ts). The trial is the one a case's copy is judged by (fill-case.ts
+ *  trialOf): the PDF edition in use (P-32) and its field map. A document line (a checklist, a guide) is not a form a
+ *  case fills, so it has none. Names no pathway and no form (P-319, P-452). */
+export function releaseFillTrials(snapshot: { forms: unknown[]; field_maps: unknown[] }, trials: TrialRecord[] = readTrials(), readStatus?: (f: string) => string): ReleaseFillTrial[] {
+  const maps = snapshot.field_maps as EditionMap[];
+  return (snapshot.forms as { form_number: string; title?: string | null; form_kind?: string | null }[]).filter((f) => (f.form_kind ?? "data_form") !== "document").map((f) => {
+    const map = pdfMapInUse(maps, f.form_number);
+    const t = trialFor(map, trials, readStatus); // undefined: the default reader
+    const edition = map?.form_edition ?? null;
+    return t.passed
+      ? { form: f.form_number, title: f.title ?? null, status: "passed", edition, recorded_on: t.record?.recorded_on ?? null, evidence: t.record?.status_file ?? null, reason: null, why: null }
+      : { form: f.form_number, title: f.title ?? null, status: "not_yet", edition, recorded_on: null, evidence: null, reason: t.reason ?? "none", why: FILL_TRIAL_WORDS.reason[t.reason ?? "none"](edition) };
+  });
+}
+
+/** BK-11: the fill trials a stored release summary carries, or null for a release made before BK-11 (never "not yet"). */
+export function fillTrialsOf(summary: unknown): ReleaseFillTrial[] | null {
+  const t = summary && typeof summary === "object" ? (summary as { fill_trials?: unknown }).fill_trials : undefined;
+  return Array.isArray(t) ? (t as ReleaseFillTrial[]) : null;
 }
