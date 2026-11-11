@@ -1,0 +1,7 @@
+{
+ "validateButton": "Summary.ValidateBtn",
+ "validatedFlag": "Summary.Flag",
+ "validatedValue": "Yes",
+ "firstMissingField": "firstVar",
+ "barcodes": "Summary.Barcodes"
+}

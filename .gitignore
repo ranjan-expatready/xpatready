@@ -10,6 +10,11 @@ archive/
 /archive
 *.pdf
 !ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/**/*.pdf
+# B170a (L1, Lead 16, 11 Nov): the XFA engine's four made-up test PDFs; the push guard admits them by path and SHA-256 only
+!packages/xfa-engine/fixtures/synthetic/synthetic-form.pdf
+!packages/xfa-engine/src/__tests__/fixtures/aesv2-cleartext-metadata.pdf
+!packages/xfa-engine/src/__tests__/fixtures/aesv2-sample.pdf
+!packages/xfa-engine/src/__tests__/fixtures/rc4-sample.pdf
 *.zip
 *.tar.gz
 *.dump
@@ -49,3 +54,5 @@ ai-workers/problem-1-pathway-setup-and-form-filling/product/scout/reports/playwr
 
 # Real-name list for product/tools/sync-requirements.sh (AGENTS rule 5): Mac only, never pushed
 ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/requirements-names.txt
+# B170a: the XFA engine package builds into dist/ (never committed; CI builds it)
+packages/xfa-engine/dist/

@@ -1,0 +1,2080 @@
+{
+ "version": 2,
+ "pages": [
+  {
+   "index": 0,
+   "widthPt": 320,
+   "heightPt": 440,
+   "items": [
+    {
+     "kind": "line",
+     "x1Pt": 9.75,
+     "y1Pt": 10,
+     "x2Pt": 310.25,
+     "y2Pt": 10,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 310,
+     "y1Pt": 10.25,
+     "x2Pt": 310,
+     "y2Pt": 29.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 9.75,
+     "y1Pt": 30,
+     "x2Pt": 310.25,
+     "y2Pt": 30,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 10,
+     "y1Pt": 10.25,
+     "x2Pt": 10,
+     "y2Pt": 29.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 10,
+      "widthPt": 300,
+      "heightPt": 20
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 16.27,
+       "runs": [
+        {
+         "text": "SAMPLE FORM - FICTITIOUS",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 410,
+      "widthPt": 300,
+      "heightPt": 14
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 416.27,
+       "runs": [
+        {
+         "text": "PAGE 1 OF 3",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 40,
+      "widthPt": 300,
+      "heightPt": 22
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 48.778,
+       "runs": [
+        {
+         "text": "Sample Services Form",
+         "fontId": "fallback:Courier",
+         "sizePt": 14,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 62,
+      "widthPt": 300,
+      "heightPt": 34
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 68.27,
+       "runs": [
+        {
+         "text": "This fictitious form has bold words, some italic ",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      },
+      {
+       "xPt": 10,
+       "yBaselinePt": 80.27,
+       "runs": [
+        {
+         "text": "ones and enough text to wrap over more than one ",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      },
+      {
+       "xPt": 10,
+       "yBaselinePt": 92.27,
+       "runs": [
+        {
+         "text": "line in its box.",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "line",
+     "x1Pt": 14.75,
+     "y1Pt": 101,
+     "x2Pt": 155.25,
+     "y2Pt": 101,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 155,
+     "y1Pt": 101.25,
+     "x2Pt": 155,
+     "y2Pt": 130.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 14.75,
+     "y1Pt": 131,
+     "x2Pt": 155.25,
+     "y2Pt": 131,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 15,
+     "y1Pt": 101.25,
+     "x2Pt": 15,
+     "y2Pt": 130.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 15,
+      "yPt": 101,
+      "widthPt": 140,
+      "heightPt": 30
+     },
+     "lines": [
+      {
+       "xPt": 15,
+       "yBaselinePt": 107.27,
+       "runs": [
+        {
+         "text": "A positioned note",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "line",
+     "x1Pt": 15,
+     "y1Pt": 161,
+     "x2Pt": 215,
+     "y2Pt": 141,
+     "thicknessPt": 1,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "dashed"
+    },
+    {
+     "kind": "box",
+     "rect": {
+      "xPt": 170,
+      "yPt": 101,
+      "widthPt": 60,
+      "heightPt": 30
+     },
+     "fill": [
+      200,
+      220,
+      240
+     ]
+    },
+    {
+     "kind": "line",
+     "x1Pt": 169,
+     "y1Pt": 101,
+     "x2Pt": 231,
+     "y2Pt": 101,
+     "thicknessPt": 2,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 230,
+     "y1Pt": 102,
+     "x2Pt": 230,
+     "y2Pt": 130,
+     "thicknessPt": 2,
+     "colour": [
+      128,
+      128,
+      128
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 169,
+     "y1Pt": 131,
+     "x2Pt": 231,
+     "y2Pt": 131,
+     "thicknessPt": 2,
+     "colour": [
+      128,
+      128,
+      128
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 170,
+     "y1Pt": 102,
+     "x2Pt": 170,
+     "y2Pt": 130,
+     "thicknessPt": 2,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "image",
+     "imageId": "sha256:12fdc9361c0f4b0d574b792d0aac8776087b57e62b0c0b067851a37d525f604b",
+     "rect": {
+      "xPt": 240,
+      "yPt": 101,
+      "widthPt": 40,
+      "heightPt": 40
+     },
+     "aspect": "fit"
+    }
+   ]
+  },
+  {
+   "index": 1,
+   "widthPt": 320,
+   "heightPt": 440,
+   "items": [
+    {
+     "kind": "line",
+     "x1Pt": 9.75,
+     "y1Pt": 10,
+     "x2Pt": 310.25,
+     "y2Pt": 10,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 310,
+     "y1Pt": 10.25,
+     "x2Pt": 310,
+     "y2Pt": 29.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 9.75,
+     "y1Pt": 30,
+     "x2Pt": 310.25,
+     "y2Pt": 30,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 10,
+     "y1Pt": 10.25,
+     "x2Pt": 10,
+     "y2Pt": 29.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 10,
+      "widthPt": 300,
+      "heightPt": 20
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 16.27,
+       "runs": [
+        {
+         "text": "SAMPLE FORM - FICTITIOUS",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 410,
+      "widthPt": 300,
+      "heightPt": 14
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 416.27,
+       "runs": [
+        {
+         "text": "PAGE 2 OF 3",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "line",
+     "x1Pt": 99.75,
+     "y1Pt": 40,
+     "x2Pt": 270.25,
+     "y2Pt": 40,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 270,
+     "y1Pt": 40.25,
+     "x2Pt": 270,
+     "y2Pt": 57.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 99.75,
+     "y1Pt": 58,
+     "x2Pt": 270.25,
+     "y2Pt": 58,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 100,
+     "y1Pt": 40.25,
+     "x2Pt": 100,
+     "y2Pt": 57.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 40,
+      "widthPt": 90,
+      "heightPt": 18
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 46.269999999999996,
+       "runs": [
+        {
+         "text": "Name",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Details[0].Name[0]",
+     "widget": "textEdit",
+     "rect": {
+      "xPt": 10,
+      "yPt": 40,
+      "widthPt": 260,
+      "heightPt": 18
+     },
+     "contentRect": {
+      "xPt": 100,
+      "yPt": 40,
+      "widthPt": 170,
+      "heightPt": 18
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": "",
+     "maxChars": 40,
+     "multiLine": false,
+     "ariaLabel": "Name"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 70,
+      "widthPt": 260,
+      "heightPt": 38
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 76.27,
+       "runs": [
+        {
+         "text": "Two short",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      },
+      {
+       "xPt": 10,
+       "yBaselinePt": 88.27,
+       "runs": [
+        {
+         "text": "lines of notes",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 58,
+      "widthPt": 260,
+      "heightPt": 12
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 64.27,
+       "runs": [
+        {
+         "text": "Notes",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Details[0].Notes[0]",
+     "widget": "textEdit",
+     "rect": {
+      "xPt": 10,
+      "yPt": 58,
+      "widthPt": 260,
+      "heightPt": 50
+     },
+     "contentRect": {
+      "xPt": 10,
+      "yPt": 70,
+      "widthPt": 260,
+      "heightPt": 38
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": "Two short\nlines of notes",
+     "multiLine": true,
+     "ariaLabel": "Notes"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 99.75,
+     "y1Pt": 108,
+     "x2Pt": 270.25,
+     "y2Pt": 108,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 270,
+     "y1Pt": 108.25,
+     "x2Pt": 270,
+     "y2Pt": 125.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 99.75,
+     "y1Pt": 126,
+     "x2Pt": 270.25,
+     "y2Pt": 126,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 100,
+     "y1Pt": 108.25,
+     "x2Pt": 100,
+     "y2Pt": 125.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 108,
+      "widthPt": 90,
+      "heightPt": 18
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 114.27,
+       "runs": [
+        {
+         "text": "Age",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Details[0].Age[0]",
+     "widget": "numericEdit",
+     "rect": {
+      "xPt": 10,
+      "yPt": 108,
+      "widthPt": 260,
+      "heightPt": 18
+     },
+     "contentRect": {
+      "xPt": 100,
+      "yPt": 108,
+      "widthPt": 170,
+      "heightPt": 18
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": "",
+     "ariaLabel": "Age"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 99.75,
+     "y1Pt": 126,
+     "x2Pt": 270.25,
+     "y2Pt": 126,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 270,
+     "y1Pt": 126.25,
+     "x2Pt": 270,
+     "y2Pt": 143.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 99.75,
+     "y1Pt": 144,
+     "x2Pt": 270.25,
+     "y2Pt": 144,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 100,
+     "y1Pt": 126.25,
+     "x2Pt": 100,
+     "y2Pt": 143.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 126,
+      "widthPt": 90,
+      "heightPt": 18
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 132.27,
+       "runs": [
+        {
+         "text": "Secret",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Details[0].Secret[0]",
+     "widget": "passwordEdit",
+     "rect": {
+      "xPt": 10,
+      "yPt": 126,
+      "widthPt": 260,
+      "heightPt": 18
+     },
+     "contentRect": {
+      "xPt": 100,
+      "yPt": 126,
+      "widthPt": 170,
+      "heightPt": 18
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": "",
+     "ariaLabel": "Secret"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 99.75,
+     "y1Pt": 144,
+     "x2Pt": 270.25,
+     "y2Pt": 144,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 270,
+     "y1Pt": 144.25,
+     "x2Pt": 270,
+     "y2Pt": 161.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 99.75,
+     "y1Pt": 162,
+     "x2Pt": 270.25,
+     "y2Pt": 162,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 100,
+     "y1Pt": 144.25,
+     "x2Pt": 100,
+     "y2Pt": 161.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 100,
+      "yPt": 144,
+      "widthPt": 170,
+      "heightPt": 18
+     },
+     "lines": [
+      {
+       "xPt": 100,
+       "yBaselinePt": 150.27,
+       "runs": [
+        {
+         "text": "Green",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 144,
+      "widthPt": 90,
+      "heightPt": 18
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 150.27,
+       "runs": [
+        {
+         "text": "Shade",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Details[0].Shade[0]",
+     "widget": "choiceList",
+     "rect": {
+      "xPt": 10,
+      "yPt": 144,
+      "widthPt": 260,
+      "heightPt": 18
+     },
+     "contentRect": {
+      "xPt": 100,
+      "yPt": 144,
+      "widthPt": 170,
+      "heightPt": 18
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": "g",
+     "items": [
+      {
+       "value": "r",
+       "label": "Red"
+      },
+      {
+       "value": "g",
+       "label": "Green"
+      },
+      {
+       "value": "b",
+       "label": "Blue"
+      }
+     ],
+     "ariaLabel": "Shade"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 99.75,
+     "y1Pt": 162,
+     "x2Pt": 270.25,
+     "y2Pt": 162,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 270,
+     "y1Pt": 162.25,
+     "x2Pt": 270,
+     "y2Pt": 179.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 99.75,
+     "y1Pt": 180,
+     "x2Pt": 270.25,
+     "y2Pt": 180,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 100,
+     "y1Pt": 162.25,
+     "x2Pt": 100,
+     "y2Pt": 179.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 100,
+      "yPt": 162,
+      "widthPt": 170,
+      "heightPt": 18
+     },
+     "lines": [
+      {
+       "xPt": 100,
+       "yBaselinePt": 168.27,
+       "runs": [
+        {
+         "text": "15/06/2026",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 162,
+      "widthPt": 90,
+      "heightPt": 18
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 168.27,
+       "runs": [
+        {
+         "text": "Date",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Details[0].When[0]",
+     "widget": "dateTimeEdit",
+     "rect": {
+      "xPt": 10,
+      "yPt": 162,
+      "widthPt": 260,
+      "heightPt": 18
+     },
+     "contentRect": {
+      "xPt": 100,
+      "yPt": 162,
+      "widthPt": 170,
+      "heightPt": 18
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": "2026-06-15",
+     "ariaLabel": "Date"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 102.48,
+     "y1Pt": 185.3,
+     "x2Pt": 104.67047482407358,
+     "y2Pt": 187.8555539614192,
+     "thicknessPt": 1.2,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 103.94431628699937,
+     "y1Pt": 187.8973092044454,
+     "x2Pt": 107.52,
+     "y2Pt": 182.6,
+     "thicknessPt": 1.2,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 180,
+      "widthPt": 90,
+      "heightPt": 16
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 186.27,
+       "runs": [
+        {
+         "text": "Agree",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Details[0].Agree[0]",
+     "widget": "checkButton",
+     "rect": {
+      "xPt": 10,
+      "yPt": 180,
+      "widthPt": 260,
+      "heightPt": 16
+     },
+     "contentRect": {
+      "xPt": 100,
+      "yPt": 180,
+      "widthPt": 10,
+      "heightPt": 10
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": "1",
+     "ariaLabel": "Agree",
+     "checked": true,
+     "mark": "check"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 196,
+      "widthPt": 260,
+      "heightPt": 14
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 202.27,
+       "runs": [
+        {
+         "text": "Pick one",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Details[0].Pick[0].Yes[0]",
+     "widget": "checkButton",
+     "rect": {
+      "xPt": 100,
+      "yPt": 226,
+      "widthPt": 14,
+      "heightPt": 14
+     },
+     "contentRect": {
+      "xPt": 100,
+      "yPt": 226,
+      "widthPt": 10,
+      "heightPt": 10
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": "",
+     "checked": false,
+     "mark": "circle"
+    },
+    {
+     "kind": "box",
+     "rect": {
+      "xPt": 152.5,
+      "yPt": 228.5,
+      "widthPt": 5,
+      "heightPt": 5
+     },
+     "fill": [
+      0,
+      0,
+      0
+     ],
+     "corners": [
+      {
+       "corner": "topLeft",
+       "radiusPt": 2.5,
+       "inverted": false,
+       "join": "round"
+      },
+      {
+       "corner": "topRight",
+       "radiusPt": 2.5,
+       "inverted": false,
+       "join": "round"
+      },
+      {
+       "corner": "bottomRight",
+       "radiusPt": 2.5,
+       "inverted": false,
+       "join": "round"
+      },
+      {
+       "corner": "bottomLeft",
+       "radiusPt": 2.5,
+       "inverted": false,
+       "join": "round"
+      }
+     ]
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Details[0].Pick[0].No[0]",
+     "widget": "checkButton",
+     "rect": {
+      "xPt": 150,
+      "yPt": 226,
+      "widthPt": 14,
+      "heightPt": 14
+     },
+     "contentRect": {
+      "xPt": 150,
+      "yPt": 226,
+      "widthPt": 10,
+      "heightPt": 10
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": "N",
+     "checked": true,
+     "mark": "circle"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 236,
+      "widthPt": 90,
+      "heightPt": 18
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 242.27,
+       "runs": [
+        {
+         "text": "Default ui",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Details[0].Plain[0]",
+     "widget": "defaultUi",
+     "rect": {
+      "xPt": 10,
+      "yPt": 236,
+      "widthPt": 260,
+      "heightPt": 18
+     },
+     "contentRect": {
+      "xPt": 100,
+      "yPt": 236,
+      "widthPt": 170,
+      "heightPt": 18
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": "",
+     "ariaLabel": "Default ui"
+    }
+   ]
+  },
+  {
+   "index": 2,
+   "widthPt": 320,
+   "heightPt": 440,
+   "items": [
+    {
+     "kind": "line",
+     "x1Pt": 9.75,
+     "y1Pt": 10,
+     "x2Pt": 310.25,
+     "y2Pt": 10,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 310,
+     "y1Pt": 10.25,
+     "x2Pt": 310,
+     "y2Pt": 29.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 9.75,
+     "y1Pt": 30,
+     "x2Pt": 310.25,
+     "y2Pt": 30,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 10,
+     "y1Pt": 10.25,
+     "x2Pt": 10,
+     "y2Pt": 29.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 10,
+      "widthPt": 300,
+      "heightPt": 20
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 16.27,
+       "runs": [
+        {
+         "text": "SAMPLE FORM - FICTITIOUS",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 410,
+      "widthPt": 300,
+      "heightPt": 14
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 416.27,
+       "runs": [
+        {
+         "text": "PAGE 3 OF 3",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "line",
+     "x1Pt": 9.75,
+     "y1Pt": 40,
+     "x2Pt": 110.25,
+     "y2Pt": 40,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 110,
+     "y1Pt": 40.25,
+     "x2Pt": 110,
+     "y2Pt": 55.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 9.75,
+     "y1Pt": 56,
+     "x2Pt": 110.25,
+     "y2Pt": 56,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 10,
+     "y1Pt": 40.25,
+     "x2Pt": 10,
+     "y2Pt": 55.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 40,
+      "widthPt": 100,
+      "heightPt": 16
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 46.269999999999996,
+       "runs": [
+        {
+         "text": "Item",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "line",
+     "x1Pt": 109.75,
+     "y1Pt": 40,
+     "x2Pt": 210.25,
+     "y2Pt": 40,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 210,
+     "y1Pt": 40.25,
+     "x2Pt": 210,
+     "y2Pt": 55.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 109.75,
+     "y1Pt": 56,
+     "x2Pt": 210.25,
+     "y2Pt": 56,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 110,
+     "y1Pt": 40.25,
+     "x2Pt": 110,
+     "y2Pt": 55.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 110,
+      "yPt": 40,
+      "widthPt": 100,
+      "heightPt": 16
+     },
+     "lines": [
+      {
+       "xPt": 110,
+       "yBaselinePt": 46.269999999999996,
+       "runs": [
+        {
+         "text": "Count",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "line",
+     "x1Pt": 9.75,
+     "y1Pt": 56,
+     "x2Pt": 110.25,
+     "y2Pt": 56,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 110,
+     "y1Pt": 56.25,
+     "x2Pt": 110,
+     "y2Pt": 71.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 9.75,
+     "y1Pt": 72,
+     "x2Pt": 110.25,
+     "y2Pt": 72,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 10,
+     "y1Pt": 56.25,
+     "x2Pt": 10,
+     "y2Pt": 71.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 56,
+      "widthPt": 100,
+      "heightPt": 16
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 62.269999999999996,
+       "runs": [
+        {
+         "text": "First item",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "line",
+     "x1Pt": 109.75,
+     "y1Pt": 56,
+     "x2Pt": 210.25,
+     "y2Pt": 56,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 210,
+     "y1Pt": 56.25,
+     "x2Pt": 210,
+     "y2Pt": 71.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 109.75,
+     "y1Pt": 72,
+     "x2Pt": 210.25,
+     "y2Pt": 72,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "line",
+     "x1Pt": 110,
+     "y1Pt": 56.25,
+     "x2Pt": 110,
+     "y2Pt": 71.75,
+     "thicknessPt": 0.5,
+     "colour": [
+      0,
+      0,
+      0
+     ],
+     "stroke": "solid"
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Summary[0].Grid[0].Line1[0].Count1[0]",
+     "widget": "numericEdit",
+     "rect": {
+      "xPt": 110,
+      "yPt": 56,
+      "widthPt": 100,
+      "heightPt": 16
+     },
+     "contentRect": {
+      "xPt": 110,
+      "yPt": 56,
+      "widthPt": 100,
+      "heightPt": 16
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": ""
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 72,
+      "widthPt": 48,
+      "heightPt": 20
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 78.27,
+       "runs": [
+        {
+         "text": "Validate",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Summary[0].ValidateBtn[0]",
+     "widget": "button",
+     "rect": {
+      "xPt": 10,
+      "yPt": 72,
+      "widthPt": 80,
+      "heightPt": 20
+     },
+     "contentRect": {
+      "xPt": 58,
+      "yPt": 72,
+      "widthPt": 32,
+      "heightPt": 20
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": "",
+     "ariaLabel": "Validate"
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 92,
+      "widthPt": 18,
+      "heightPt": 20
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 98.27,
+       "runs": [
+        {
+         "text": "Ask",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Summary[0].AskBtn[0]",
+     "widget": "button",
+     "rect": {
+      "xPt": 10,
+      "yPt": 92,
+      "widthPt": 80,
+      "heightPt": 20
+     },
+     "contentRect": {
+      "xPt": 28,
+      "yPt": 92,
+      "widthPt": 62,
+      "heightPt": 20
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": "",
+     "ariaLabel": "Ask"
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Summary[0].Sign[0]",
+     "widget": "signature",
+     "rect": {
+      "xPt": 10,
+      "yPt": 112,
+      "widthPt": 120,
+      "heightPt": 30
+     },
+     "contentRect": {
+      "xPt": 10,
+      "yPt": 112,
+      "widthPt": 120,
+      "heightPt": 30
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": ""
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Summary[0].Photo[0]",
+     "widget": "imageEdit",
+     "rect": {
+      "xPt": 10,
+      "yPt": 142,
+      "widthPt": 60,
+      "heightPt": 40
+     },
+     "contentRect": {
+      "xPt": 10,
+      "yPt": 142,
+      "widthPt": 60,
+      "heightPt": 40
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": ""
+    },
+    {
+     "kind": "text",
+     "rect": {
+      "xPt": 10,
+      "yPt": 182,
+      "widthPt": 90,
+      "heightPt": 16
+     },
+     "lines": [
+      {
+       "xPt": 10,
+       "yBaselinePt": 188.27,
+       "runs": [
+        {
+         "text": "Flag",
+         "fontId": "fallback:Courier",
+         "sizePt": 10,
+         "colour": [
+          0,
+          0,
+          0
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "field",
+     "som": "xfa[0].form[0].form1[0].Summary[0].Flag[0]",
+     "widget": "textEdit",
+     "rect": {
+      "xPt": 10,
+      "yPt": 182,
+      "widthPt": 120,
+      "heightPt": 16
+     },
+     "contentRect": {
+      "xPt": 100,
+      "yPt": 182,
+      "widthPt": 30,
+      "heightPt": 16
+     },
+     "access": "open",
+     "presence": "visible",
+     "value": "",
+     "multiLine": false,
+     "ariaLabel": "Flag"
+    }
+   ]
+  }
+ ],
+ "resources": {
+  "fonts": [
+   {
+    "id": "fallback:Courier",
+    "family": "Courier",
+    "weight": "normal",
+    "posture": "normal",
+    "format": "truetype",
+    "bytes": {
+     "$bytesBase64": ""
+    }
+   }
+  ],
+  "images": [
+   {
+    "id": "sha256:12fdc9361c0f4b0d574b792d0aac8776087b57e62b0c0b067851a37d525f604b",
+    "format": "rgba",
+    "widthPx": 2,
+    "heightPx": 2,
+    "bytes": {
+     "$bytesBase64": "/wAA/wD/AP8AAP///////w=="
+    }
+   }
+  ]
+ },
+ "issues": [
+  {
+   "som": "xfa[0].form[0].form1[0].Intro[0].Blurb[0]",
+   "feature": "font.Courier"
+  }
+ ]
+}

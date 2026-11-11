@@ -1,0 +1,146 @@
+[
+ {
+  "id": "programs",
+  "base": "http://localhost:4480",
+  "path": "/",
+  "label": "/ (the six, Configuration author)"
+ },
+ {
+  "id": "activity",
+  "base": "http://localhost:4480",
+  "path": "/activity",
+  "label": "/activity (the six, Configuration author)"
+ },
+ {
+  "id": "ai",
+  "base": "http://localhost:4480",
+  "path": "/ai",
+  "label": "/ai (the six, Configuration author)"
+ },
+ {
+  "id": "ai-batch",
+  "base": "http://localhost:4480",
+  "path": "/ai/2b7b48fa-4e96-440d-a7d1-407f5ce70994",
+  "label": "/ai/:id (the six, Configuration author)"
+ },
+ {
+  "id": "pathway-documents",
+  "base": "http://localhost:4480",
+  "path": "/c/4209309a-e0d5-4124-8d6d-6411204d35a6/documents",
+  "label": "/c/:id/documents (the six, Configuration author)"
+ },
+ {
+  "id": "pathway-forms",
+  "base": "http://localhost:4480",
+  "path": "/c/4209309a-e0d5-4124-8d6d-6411204d35a6/forms",
+  "label": "/c/:id/forms (the six, Configuration author)"
+ },
+ {
+  "id": "pathway-ai-job",
+  "base": "http://localhost:4480",
+  "path": "/c/4209309a-e0d5-4124-8d6d-6411204d35a6/jobs/946345f6-5aa3-4636-be3b-aa0a851b4c24",
+  "label": "/c/:id/jobs/:id (the six, Configuration author)"
+ },
+ {
+  "id": "pathway-overview",
+  "base": "http://localhost:4480",
+  "path": "/c/4209309a-e0d5-4124-8d6d-6411204d35a6/overview",
+  "label": "/c/:id/overview (the six, Configuration author)"
+ },
+ {
+  "id": "pathway-preview",
+  "base": "http://localhost:4480",
+  "path": "/c/4209309a-e0d5-4124-8d6d-6411204d35a6/preview",
+  "label": "/c/:id/preview (the six, Configuration author)"
+ },
+ {
+  "id": "pathway-questionnaires",
+  "base": "http://localhost:4480",
+  "path": "/c/4209309a-e0d5-4124-8d6d-6411204d35a6/questionnaires",
+  "label": "/c/:id/questionnaires (the six, Configuration author)"
+ },
+ {
+  "id": "pathway-review",
+  "base": "http://localhost:4480",
+  "path": "/c/4209309a-e0d5-4124-8d6d-6411204d35a6/review",
+  "label": "/c/:id/review (the six, Configuration author)"
+ },
+ {
+  "id": "pathway-sources",
+  "base": "http://localhost:4480",
+  "path": "/c/4209309a-e0d5-4124-8d6d-6411204d35a6/sources",
+  "label": "/c/:id/sources (the six, Configuration author)"
+ },
+ {
+  "id": "pathway-tests",
+  "base": "http://localhost:4480",
+  "path": "/c/4209309a-e0d5-4124-8d6d-6411204d35a6/tests",
+  "label": "/c/:id/tests (the six, Configuration author)"
+ },
+ {
+  "id": "lib-checks",
+  "base": "http://localhost:4480",
+  "path": "/library/checks",
+  "label": "/library/checks (the six, Configuration author)"
+ },
+ {
+  "id": "lib-documents",
+  "base": "http://localhost:4480",
+  "path": "/library/documents",
+  "label": "/library/documents (the six, Configuration author)"
+ },
+ {
+  "id": "lib-fields",
+  "base": "http://localhost:4480",
+  "path": "/library/fields",
+  "label": "/library/fields (the six, Configuration author)"
+ },
+ {
+  "id": "lib-forms",
+  "base": "http://localhost:4480",
+  "path": "/library/forms",
+  "label": "/library/forms (the six, Configuration author)"
+ },
+ {
+  "id": "lib-rules",
+  "base": "http://localhost:4480",
+  "path": "/library/rules",
+  "label": "/library/rules (the six, Configuration author)"
+ },
+ {
+  "id": "lib-sections",
+  "base": "http://localhost:4480",
+  "path": "/library/sections",
+  "label": "/library/sections (the six, Configuration author)"
+ },
+ {
+  "id": "release",
+  "base": "http://localhost:4480",
+  "path": "/release",
+  "label": "/release (the six, Configuration author)"
+ },
+ {
+  "id": "releases",
+  "base": "http://localhost:4480",
+  "path": "/releases",
+  "label": "/releases (the six, Configuration author)"
+ },
+ {
+  "id": "to-review",
+  "base": "http://localhost:4480",
+  "path": "/review",
+  "label": "/review (the six, Configuration author)"
+ },
+ {
+  "id": "to-review-proposals",
+  "base": "http://localhost:4480",
+  "path": "/review/proposals?group=combination%3A35e55454-de41-44d3-81b8-2bf9027b75b7",
+  "label": "/review/proposals (the six, Configuration author)"
+ },
+ {
+  "id": "structure",
+  "base": "http://localhost:4480",
+  "path": "/structure",
+  "label": "/structure (the six, Configuration author)"
+ }
+]
