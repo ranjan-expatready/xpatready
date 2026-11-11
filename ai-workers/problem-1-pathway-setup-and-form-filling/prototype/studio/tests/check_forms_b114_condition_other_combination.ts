@@ -145,15 +145,17 @@ run(async () => {
 
   // A condition reaches every question it needs: a placed question's deciding question is carried, and so is the deciding
   // question of that one (the repeat). SQL on this copy's published rows, put back after; the draft returns to its fingerprint.
-  // Bake row 6: a question a form reads would have its condition held (asked every time), so the chain starts on one no form
-  // field, rule or line reads.
-  const cp = others["Study permit"], cfg = await config(cp);
-  const read = new Set<string>([...(cfg.snapshot.field_maps ?? []).flatMap((m: { entries: { fact?: string | null }[] }) => m.entries.map((e) => e.fact ?? "")), ...JSON.stringify([cfg.snapshot.rules, cfg.snapshot.document_requirements, cfg.snapshot.forms, cfg.snapshot.checks]).matchAll(/"field":"([^"]+)"/g)].map((x) => (typeof x === "string" ? x : x[1])));
-  const mine = (cfg.snapshot.placements.find((p: { fact: string }) => !read.has(p.fact)) ?? cfg.snapshot.placements[0]).fact as string;
-  ok("setup: a question Study permit asks that nothing else on it reads", !read.has(mine), mine);
+  // Bake row 6 (QA-237, QA-239): a condition that would hide a question a form reads is held (asked every time), so the chain
+  // uses "required when" (REQUIRE), which hides nothing and is never held; the original effects are put back after.
+  const cp = others["Study permit"], cfg = await config(cp), mine = cfg.snapshot.placements[0].fact as string;
   const pool = sql(`select distinct canonical_field_key from section_question where status in ('PUBLISHED','DRAFT') and canonical_field_key not in (${facts(cfg).map((f) => `'${f}'`).join(",")}) order by 1 limit 2`).split("\n").filter(Boolean);
   ok("setup: two questions this combination does not ask", pool.length === 2, pool);
-  const set = (fact: string, on: string | null) => sql(`update section_question set predicate_json = ${on ? `'{"field":"${on}","op":"exists"}'::jsonb` : "null"} where canonical_field_key='${fact}'`);
+  const effects = new Map<string, string>();
+  const set = (fact: string, on: string | null) => {
+    if (!effects.has(fact)) effects.set(fact, sql(`select coalesce(condition_effect::text,'') from section_question where canonical_field_key='${fact}' order by version desc limit 1`));
+    const was = effects.get(fact) ? `'${effects.get(fact)}'` : "null";
+    sql(`update section_question set predicate_json = ${on ? `'{"field":"${on}","op":"exists"}'::jsonb` : "null"}, condition_effect = ${on ? "'REQUIRE'" : was} where canonical_field_key='${fact}'`);
+  };
   set(mine, pool[0]); set(pool[0], pool[1]);
   const chain = facts(await config(cp));
   ok("C4.11 pass (repeat): a placed question's deciding question travels", chain.includes(pool[0]), chain.length);

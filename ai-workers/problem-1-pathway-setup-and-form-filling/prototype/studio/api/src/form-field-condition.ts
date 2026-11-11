@@ -30,8 +30,8 @@ const sameCondition = (a: unknown, b: unknown) => bareCond(a) !== null && bareCo
 const keyOf = (formEditionId: string, dataPath: string) => `${formEditionId}:${dataPath}`;
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-const NO_WORDS = "This form field's map has no words about when it is filled, so nothing says it is conditional, and it cannot be confirmed. This combination stays held until the form can carry the condition, or the condition is removed.";
-const WORKED_OUT = "This Yes/No is worked out from other answers and must write No when the answer is No, so it cannot be filled only under this condition. This combination stays held until the form can carry the condition, or the condition is removed.";
+const NO_WORDS = "This form field's map has no words about when it is filled, so nothing says it is conditional, and it cannot be confirmed. Until it can, the condition is held on this combination: the question is asked every time.";
+const WORKED_OUT = "This Yes/No is worked out from other answers and must write No when the answer is No, so it cannot be filled only under this condition. Until it can, the condition is held on this combination: the question is asked every time.";
 /** B88: why a worked-out Yes/No can be asked as its condition's deciding question, or why not (BR-1, BR-2), in words. */
 const CAN_ASK = (deciding: string) => `This Yes/No prints its own question. If it asks the same as "${deciding}", it is asked as that question: it writes the person's own answer, Y or N, and no longer reads this hidden answer. A second person approves.`;
 const ASKED = (deciding: string) => `Asked as "${deciding}": it writes the person's own answer, Y or N, and no longer reads this answer. Undo makes it worked out from other answers again.`;
@@ -159,6 +159,19 @@ async function filersOf(db: Pick<Db, "formEdition" | "combinationForm">, workspa
 export class FormFieldConditions {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit, @Inject(Workspace) private readonly ws: Workspace) {}
 
+  /** QA-237, QA-239: the combination's draft as the library holds it for this door: held conditions back on their
+   *  questions (engine/held-conditions.ts), and their deciding fields' words and types from the library, since a held
+   *  condition does not pull its deciding question into the combination. */
+  private async libraryView(snapshot: Snapshot): Promise<Snapshot> {
+    const s = withHeldConditions(snapshot);
+    const have = new Set((s.canonical_fields as { id: string }[]).map((f) => f.id));
+    const keys = [...new Set((s.held_conditions ?? []).flatMap((h) => [...JSON.stringify(h.condition ?? null).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1])))].filter((k) => !have.has(k));
+    if (!keys.length) return s;
+    const workspaceId = await this.ws.id();
+    const rows = effective(await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: keys } } }), (f) => f.canonicalFieldKey, "draft");
+    return { ...s, canonical_fields: [...s.canonical_fields, ...rows.map((f) => ({ id: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType }))] };
+  }
+
   /** BR-1: the condition a form field is compared with: a waiting card's while it belongs to this combination and targets
    *  this question and the library holds no condition or the same one; else the question's own SHOW condition. Never typed. */
   private async conditionOf(workspaceId: string, combinationId: string, fact: string, s: Snapshot, item?: string): Promise<{ tree: unknown; sentence: string | null; why: string | null }> {
@@ -249,7 +262,7 @@ export class FormFieldConditions {
     const workspaceId = await this.ws.id();
     const c = /^[0-9a-f-]{36}$/i.test(combinationId) ? await this.db.combination.findUnique({ where: { id: combinationId } }) : null;
     if (!c || c.workspaceId !== workspaceId) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
-    const s = withHeldConditions((await buildSnapshot(this.db, workspaceId, combinationId, "draft")).snapshot); // QA-237: the library's condition, held here or not
+    const s = await this.libraryView((await buildSnapshot(this.db, workspaceId, combinationId, "draft")).snapshot); // QA-237: the library's condition, held here or not
     const entries = (s.field_maps as { entries: { fact?: string | null; outcome?: string; condition_rule?: unknown }[] }[]).flatMap((m) => m.entries.filter((e) => e.outcome === "mapped" && e.fact));
     // A HIDE condition too: the rule refuses it, and the panel says what to do (break n4 on #1053). B88 (breaker M2): a question
     // whose only reader was asked as its deciding question is still listed, so its Undo stays reachable.
@@ -269,7 +282,7 @@ export class FormFieldConditions {
     const workspaceId = await this.ws.id();
     const c = /^[0-9a-f-]{36}$/i.test(combinationId) ? await this.db.combination.findUnique({ where: { id: combinationId } }) : null;
     if (!c || c.workspaceId !== workspaceId) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
-    const s = withHeldConditions((await buildSnapshot(this.db, workspaceId, combinationId, "draft")).snapshot); // QA-237: the library's condition, held here or not
+    const s = await this.libraryView((await buildSnapshot(this.db, workspaceId, combinationId, "draft")).snapshot); // QA-237: the library's condition, held here or not
     if (!(s.canonical_fields as { id: string }[]).some((f) => f.id === fact)) throw problem(404, "Not found", "This combination does not read that question.");
     const cond = await this.conditionOf(workspaceId, combinationId, fact, s, item);
     const rows = await this.rowsOf(workspaceId, combinationId, fact, s, cond.tree);
@@ -285,7 +298,7 @@ export class FormFieldConditions {
     const b = parsed.data, workspaceId = await this.ws.id();
     const c = await this.db.combination.findUnique({ where: { id: b.combinationId } });
     if (!c || c.workspaceId !== workspaceId) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
-    const s = withHeldConditions((await buildSnapshot(this.db, workspaceId, c.id, "draft")).snapshot); // QA-237: the library's condition, held here or not
+    const s = await this.libraryView((await buildSnapshot(this.db, workspaceId, c.id, "draft")).snapshot); // QA-237: the library's condition, held here or not
     const cond = b.clear ? { tree: null, sentence: null, why: null } : await this.conditionOf(workspaceId, c.id, b.fact, s, b.item);
     if (!b.clear && !cond.tree) throw problem(409, "No condition to hold", `${cond.why} Nothing was changed.`);
     const rows = await this.rowsOf(workspaceId, c.id, b.fact, s, cond.tree);

@@ -152,7 +152,7 @@ run(async () => {
   await call("POST", `/library/changes/${stale}/withdraw`, { note: "Withdrawn by a test (B86)." }, AUTHOR);
   sql(`update form_field_map set condition=null where form_edition_id='${row.form_edition_id}' and data_path='${row.data_path.replace(/'/g, "''")}'`);
   r = await call("POST", "/library/form-field-conditions", body, AUTHOR);
-  ok("BR-2 fail: a form field with no words cannot be confirmed: 409, saying what it holds", r.status === 409 && /no words/.test(words(r)) && /stays held/.test(words(r)), words(r));
+  ok("BR-2 fail: a form field with no words cannot be confirmed: 409, saying what it holds", r.status === 409 && /no words/.test(words(r)) && /the condition is held on this combination/.test(words(r)), words(r));
   sql(`update form_field_map set condition=$$${words0}$$ where form_edition_id='${row.form_edition_id}' and data_path='${row.data_path.replace(/'/g, "''")}'`);
 
   // ---------------------------------------------------------------- ruling 3: the second person is told the spread
