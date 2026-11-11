@@ -103,7 +103,7 @@ type Rules = { label: string; modes: Map<string, LineMode>; fees: FeeRule[]; gro
 /** `adds` (M3-S2): per person, the filing their line adds because its rule holds on their answers (engine/runtime/
  *  added-filings.ts), with the fee line that charges it. */
 export type FilingOptions = { ages?: Map<string, number | null>; modes?: Map<string, LineMode | null>; label?: string; groupOf?: (subject: string) => string; groupKind?: (group: string) => SubmissionGroup["kind"];
-  adds?: Map<string, { filing: string; fee?: string | string[] }> };
+  adds?: Map<string, { filing: string; fee?: string | string[]; waits?: string }> };
 export const FAMILY_GROUP = "group-family";
 
 /** A combination's rules from the fee table (an own property only: "constructor" or "__proto__" is no combination). */
@@ -137,7 +137,9 @@ export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
     const sound = (v: unknown): v is RoleFees => { const x = v as Partial<RoleFees> | null;
       return !!x && typeof x === "object" && Array.isArray(x.lines) && x.lines.length > 0 && new Set(x.lines).size === x.lines.length && x.lines.every((k) => typeof k === "string" && c.lines.includes(k))
         && (x.filing === undefined || (typeof x.filing === "string" && x.filing.trim().length > 0)); };
-    if (!entries.length || entries.some(([role, v]) => !APPLICANT_ROLES.has(role) || !sound(v))) return undefined;
+    // Break M5: a role's line reaches that role (a line limited to other roles never charges it, as for an added filing).
+    const reachesRole = (role: string, k: string) => { const l = (lines as TableLine[]).find((x) => x.key === k); return !l?.roles || l.roles.includes(role); };
+    if (!entries.length || entries.some(([role, v]) => !APPLICANT_ROLES.has(role) || !sound(v) || !(v as RoleFees).lines.every((k) => reachesRole(role, k)))) return undefined;
     byRole = new Map(entries.map(([role, v]) => { const x = v as RoleFees; return [role, { lines: [...x.lines], ...(x.filing ? { filing: x.filing.trim() } : {}) }] as const; }));
   }
   // A line the engine cannot charge soundly makes the combination not derived: a missing line, a basis not worked out
@@ -262,7 +264,8 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const notFiling: NotFiling[] = [];
   const planned: PlanPerson[] = [];
   for (const p of persons) {
-    const adds = p.applies ? opts.adds?.get(p.subjectId) : undefined;
+    // BK-15 break M2: a rule still waiting for its answer adds nothing yet (the person's filing and fees wait below).
+    const adds0 = p.applies ? opts.adds?.get(p.subjectId) : undefined, adds = adds0 && !adds0.waits ? adds0 : undefined;
     if (modeOf(p.role) === undefined && !adds) notFiling.push({ subject: p.subjectId, label: p.label, role: p.role, why: `${label}: no filing is set for a ${p.role.replace(/_/g, " ")} (Who can be in this application), so nothing is filed for ${p.label}.` });
     else planned.push({ subject: p.subjectId, role: p.role, label: p.label, travelling: p.applies, ...(adds ? { adds: adds.filing } : {}) });
   }
@@ -274,7 +277,9 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   // principal's group (it cannot be sent alone).
   // BK-15: with fees by role, a person's own filing is named by the filing their role makes (the document they apply for).
   const byRole = rules?.byRole;
-  const filings: CaseFiling[] = plan.filings.map((f) => ({ id: f.id, combination: combinationKey, label: f.kind === "co_filed" ? `${label}: sponsorship (${f.owner.label})` : f.added ? `${f.added}: ${f.owner.label}` : `${byRole?.get(f.owner.role)?.filing ?? label}: ${f.owner.label}`,
+  // BK-15 break M2: whose added filing waits for its rule's answer (which application they make is not known yet).
+  const waiting = new Map(persons.filter((p) => p.applies && opts.adds?.get(p.subjectId)?.waits).map((p) => [p.subjectId, { ...opts.adds!.get(p.subjectId)!, label: p.label }] as const));
+  const filings: CaseFiling[] = plan.filings.map((f) => ({ id: f.id, combination: combinationKey, label: f.kind === "co_filed" ? `${label}: sponsorship (${f.owner.label})` : f.added ? `${f.added}: ${f.owner.label}` : waiting.has(f.owner.subject) ? `Application to be decided: ${f.owner.label}` : `${byRole?.get(f.owner.role)?.filing ?? label}: ${f.owner.label}`,
     mode: f.kind === "co_filed" ? "co_filed" : "files_own", owner: { subject: f.owner.subject, label: f.owner.label, role: f.owner.role },
     applicants: f.applicants.map((a) => ({ subject: a.person.subject, label: a.person.label, role: a.person.role, mode: a.mode })),
     group: f.kind === "co_filed" && principal ? groupOf(principal.owner.subject) : groupOf(f.owner.subject), status: "NOT_STARTED", number: null }));
@@ -300,7 +305,10 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   // own) cannot be priced, so the case charges nothing and says so (BR-10), never a total that leaves them out.
   const charged = (role: string, key: string, ofRole: (r: string) => boolean) => (byRole ? !!byRole.get(role)?.lines.includes(key) : ofRole(role));
   const unpricedRole = byRole ? filings.flatMap((f) => f.applicants.filter((a) => a.mode === "applying" && !addedOwner.has(a.subject) && !byRole.has(a.role))) : [];
-  const priced = unreached.length || missingCo.length || unpricedAdded.length || unpricedRole.length ? [] : fees0;
+  // Review M3: with fees by role each person's fees follow their own application, so a person applying on someone else's
+  // (a release that still puts them on the principal's) is not priced by their role's lines; nothing is guessed.
+  const onOthers = byRole ? filings.flatMap((f) => f.applicants.filter((a) => a.mode === "applying" && a.subject !== f.owner?.subject).map((a) => ({ a, owner: f.owner!.label }))) : [];
+  const priced = unreached.length || missingCo.length || unpricedAdded.length || unpricedRole.length || onOthers.length || waiting.size ? [] : fees0;
   const groups: SubmissionGroup[] = [], fees: FeeLine[] = [];
   for (const gid of [...new Set(filings.map((f) => f.group))]) {
     const mine = filings.filter((f) => f.group === gid);
@@ -354,6 +362,8 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const body = { filings, groups, fees, not_filing: notFiling };
   const unpriced = missingCo.length && fees0.length ? `No ${missingCo.map((r) => r.replace(/_/g, " ")).join(" or ")} on this case yet: their co-filed application carries its own fee, so no fee is charged until they are added; nothing is guessed.`
     : unpricedAdded.length && fees0.length ? `${unpricedAdded.map((f) => `${f.label} is added by its rule`).join("; ")}, and its line does not name this combination's fee lines for it (each reaching a ${unpricedAdded.map((f) => f.owner!.role.replace(/_/g, " ")).join(" or ")}), so no fee is charged on this case; nothing is guessed.`
+    : waiting.size && fees0.length ? `Waits for ${[...waiting.values()].map((w) => `${w.label}'s answer: whether ${w.waits} (it decides whether they file a ${w.filing.toLowerCase()} application)`).join("; ")}. Which application a person makes decides what they pay, so no fee is charged until it is answered; nothing is guessed.`
+    : onOthers.length && fees0.length ? `${onOthers.map((x) => `${x.a.label} is on ${x.owner}'s application`).join("; ")}, but in this combination each family member files their own application and pays for the document they apply for, so no fee is charged on this case; nothing is guessed. Give their line its own application.`
     : unpricedRole.length && fees0.length ? `The fee table names no fee lines for a ${[...new Set(unpricedRole.map((a) => a.role.replace(/_/g, " ")))].join(" or ")} in this combination (${unpricedRole.map((a) => a.label).join(", ")}), so no fee is charged on this case; nothing is guessed.`
     : unreached.length && fees0.length ? `The fee table has no fee line for ${unreached.map((f) => `${f.owner!.label}'s co-filed application`).join(" or ")} (a per-application line naming its role), so no fee is charged on this case; nothing is guessed.` : noFeeLines(label);
   return { derived: true, combination: combinationKey, label, ...body, currency: "CAD", fees_worked_out: feesKnown,

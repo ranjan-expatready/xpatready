@@ -6,6 +6,8 @@
 //   tsx studio/tests/check_bk15_fees_by_role.ts
 import { deriveFilings, FEE_TABLE, rulesFrom, type FeeTable } from "../engine/runtime/filings.ts";
 import { filingPlan } from "../engine/filing-modes.ts";
+import { addedFilingProblems } from "../engine/validate.ts";
+import type { Snapshot } from "../engine/snapshot.ts";
 import type { CaseFilings } from "../contracts/runtime.ts";
 import type { Participant } from "../engine/runtime/case.ts";
 import { recorder } from "./runtime/api.ts";
@@ -74,5 +76,41 @@ const plan = filingPlan([{ subject: "s", role: "principal", label: "S", travelli
 ok("BK-15 pass: on a line that files its own, the added filing replaces it (one application per person)", plan.filings.length === 2 && plan.filings[1].added === "Study permit");
 const away = filingPlan([{ subject: "s", role: "principal", label: "S", travelling: true }, { subject: "k", role: "child", label: "K", travelling: false, adds: "Study permit" }], () => "files_own");
 ok("BK-15 fail: a person not travelling files nothing, added or own", away.filings.length === 1 && away.notFiling.length === 1);
+
+// Break M2 (BR-10): a child whose "6 months or more" is not answered yet: which application they make is not known, so
+// nothing is charged, in words, and their filing is not named as a visitor visa.
+const pending = new Map([[kidS.subjectId, { filing: adds0.filing, fee: adds0.fee, waits: "the child will study in Canada for 6 months or more" }]]);
+const wait = deriveFilings("sp.outside", fam, undefined, { modes, ages, adds: pending }) as D;
+ok("BK-15 fail (break M2): an unanswered rule leaves the case unpriced, in words naming the person and the question", !wait.fees_worked_out && wait.fees.length === 0 && /Waits for Child S's answer: whether the child will study in Canada for 6 months or more/.test(wait.fees_why ?? ""), wait.fees_why);
+ok("BK-15 fail (break M2): their filing is not named as a document yet (\"Application to be decided\"), never \"Visitor visa\"", labelOf(wait, "k1") === "Application to be decided: Child S", labelOf(wait, "k1"));
+ok("BK-15 pass (break M2): answered, the same family is priced again (CAD 825)", (deriveFilings("sp.outside", fam, undefined, { modes, ages, adds }) as D).groups[0].total_cents === 825_00);
+
+// Break M5: a role's fee line must reach that role (a line limited to other roles never charges it).
+const narrowed = { ...FEE_TABLE, lines: FEE_TABLE.lines.map((l) => (l.key === "visitor_visa" ? { ...l, roles: ["principal"] } : l)) } as FeeTable;
+ok("BK-15 fail (break M5): fees by role naming a line limited to other roles is refused (not derived)", rulesFrom(narrowed, "sp.outside") === undefined);
+ok("BK-15 pass (break M5): the shipped lines reach their roles", !!rulesFrom(FEE_TABLE, "sp.outside"));
+
+// Break M1 and m6: the release's checks read the fees by role.
+const FACT = "person.studies_six_months_or_more", TYPES = new Map([[FACT, "yes_no"]]);
+const rel = (child: Record<string, unknown>, extra: Record<string, unknown>[] = []) => addedFilingProblems({ combination: { key: "sp.outside", participants: [{ role: "principal", filingMode: "files_own" }, ...extra, { role: "child", label: "Child", filingMode: "files_own", ...child }] }, placements: [{ fact: FACT, repeats: "per_person" }] } as unknown as Snapshot, TYPES, new Set(), new Set([FACT]), new Set());
+const ADD = { filing: "Study permit", condition: { op: "eq", field: FACT, value: true, subjectKind: "PERSON" }, conditionPlain: "the child will study 6 months or more" };
+ok("BK-15 pass (break M1): the studying child's study permit naming the study permit and biometrics raises nothing (no advice to name another document's fees)", rel({ addsFiling: { ...ADD, fee: ["study_permit", "biometrics"] } }).length === 0, rel({ addsFiling: { ...ADD, fee: ["study_permit", "biometrics"] } }).map((x) => x.message));
+const short = rel({ addsFiling: { ...ADD, fee: ["study_permit"] } });
+ok("BK-15 fail (break M1): leaving out biometrics (an IRCC step every role pays) is warned, naming only it", short.length === 1 && short[0].level === "warning" && /"Biometrics fee" \(biometrics\)/.test(short[0].message) && !/work_permit|visitor_visa|open_work_permit_holder/.test(short[0].message), short.map((x) => x.message));
+ok("BK-15 pass (break m6): every applying line of the shipped release has its role's fee lines: no warning", !rel({ addsFiling: { ...ADD, fee: ["study_permit", "biometrics"] } }, [{ role: "spouse_or_partner", filingMode: "files_own" }]).some((x) => /names no fee lines/.test(x.message)));
+const noSpouse = { ...FEE_TABLE, combinations: { ...FEE_TABLE.combinations, "sp.outside": { ...FEE_TABLE.combinations["sp.outside"], fees_by_role: noChild } } } as unknown as FeeTable;
+const m6 = addedFilingProblems({ combination: { key: "sp.outside", participants: [{ role: "principal", filingMode: "files_own" }, { role: "child", label: "Child", filingMode: "files_own" }] }, placements: [] } as unknown as Snapshot, TYPES, new Set(), new Set(), new Set(), noSpouse);
+ok("BK-15 fail (break m6): an applying line whose role has no fee lines is warned at release", m6.some((x) => x.level === "warning" && /names no fee lines for a child/.test(x.message)), m6.map((x) => x.message));
+
+// Review M3: a release that still puts a child on the principal's application (on_principal): with fees by role each
+// person's fees follow their own application, so nothing is charged, in words, never a visitor visa on the student's.
+const onP = deriveFilings("sp.outside", [student, kidV], undefined, { modes: new Map([...modes, ["child", "on_principal" as never]]), ages }) as D;
+ok("BK-15 fail (review M3): a child on the student's application is not priced by their role's lines; the case says why", !onP.fees_worked_out && onP.fees.length === 0 && /Child V is on Student A's application/.test(onP.fees_why ?? "") && /files their own application/.test(onP.fees_why ?? ""), onP.fees_why);
+ok("BK-15 pass (review M3): the same child filing their own is priced (visitor visa)", (deriveFilings("sp.outside", [student, kidV], undefined, { modes, ages }) as D).fees.some((l) => l.person === "k2" && l.line === "visitor_visa"));
+
+// Review m6: the two guards no other line proves: never on the principal's line at release; a co-filing person stays co-filed.
+ok("BK-15 fail (review m6): at release, a filing added on the principal's line is refused", addedFilingProblems({ combination: { key: "sp.outside", participants: [{ role: "principal", filingMode: "files_own", addsFiling: { ...ADD, fee: ["study_permit", "biometrics"] } }] }, placements: [{ fact: FACT, repeats: "per_person" }] } as unknown as Snapshot, TYPES, new Set(), new Set([FACT]), new Set()).some((x) => x.level === "error" && /combination's own application/.test(x.message)));
+const co = filingPlan([{ subject: "s", role: "principal", label: "S", travelling: true }, { subject: "z", role: "sponsor", label: "Z", travelling: true, adds: "Study permit" }], (r) => (r === "sponsor" ? "co_files" : "files_own"));
+ok("BK-15 fail (review m6): a co-filing person's added filing never replaces their co-filed application", co.filings.length === 2 && co.filings[1].kind === "co_filed" && !co.filings[1].added, co.filings);
 
 process.exit(summary() ? 1 : 0);

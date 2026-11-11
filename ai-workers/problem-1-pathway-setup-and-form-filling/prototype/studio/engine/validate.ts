@@ -125,10 +125,19 @@ export function addedFilingProblems(s: Snapshot, types: Map<string, string>, der
       // Review n1: once the filing is added, only the lines it names count the person, so a per-person or family-maximum
       // line that charges their role and is not named stops counting them: the case would show a short total as worked out.
       // A warning, not a refusal: the author may know the person does not pay it (the line's words say so).
-      const missed = feeRules.fees.filter((r) => r.basis !== "per_application" && (!r.roles || r.roles.includes(l.role)) && !keys.includes(r.key));
+      // BK-15 (break M1): with fees by role, the other lines belong to other documents; only an IRCC step the role pays
+      // whatever it files (its role's line with a step, e.g. biometrics) must be named again.
+      const own = feeRules.byRole?.get(l.role);
+      const missed = feeRules.fees.filter((r) => r.basis !== "per_application" && !keys.includes(r.key) && (feeRules.byRole ? !!own?.lines.includes(r.key) && !!r.step : !r.roles || r.roles.includes(l.role)));
       if (missed.length) out.push({ level: "warning", where: "Who can be in this application", item, role: l.role,
         message: `${missed.map((r) => `"${r.label}" (${r.key})`).join(", ")} ${missed.length > 1 ? "charge" : "charges"} each ${l.role.replace(/_/g, " ")} on this combination, but the filing it adds does not name ${missed.length > 1 ? "them" : "it"}, so once the filing is added that person is not counted on ${missed.length > 1 ? "them" : "it"} and the case's total can be short (unless a family maximum is already reached). Name ${missed.length > 1 ? "them" : "it"} among the filing's fee lines, unless that person does not pay ${missed.length > 1 ? "them" : "it"}.` });
     }
+  }
+  // BK-15 (break m6): with fees by role, each line whose person applies names its role's fee lines; else every case with
+  // that person is unpriced (BR-10). A warning: the case says so in words.
+  if (feeRules?.byRole) for (const l of (s.combination.participants ?? []) as { role: string; label?: string; filingMode?: string | null }[]) {
+    if (l.role === "principal" || l.filingMode === "files_own" || l.filingMode === "on_principal") if (!feeRules.byRole.has(l.role))
+      out.push({ level: "warning", where: "Who can be in this application", item: l.label ?? l.role, role: l.role, message: `The fee table names no fee lines for a ${l.role.replace(/_/g, " ")} in this combination, so a case with ${l.label ?? "this person"} on it shows no fees (nothing is guessed). Add the role to the combination's fees by role.` });
   }
   return out;
 }

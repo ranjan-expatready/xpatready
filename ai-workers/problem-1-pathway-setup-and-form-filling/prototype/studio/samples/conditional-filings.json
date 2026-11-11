@@ -5,7 +5,7 @@
     "role": "child",
     "addsFiling": {
       "filing": "Study permit",
-   "fee": ["study_permit", "biometrics"],
+      "fee": ["study_permit", "biometrics"],
       "condition": { "op": "eq", "field": "person.studies_six_months_or_more", "value": true, "subjectKind": "PERSON" },
       "conditionPlain": "the child will study in Canada for 6 months or more (a course or program of six months or less needs no study permit)",
       "sourceQuote": "Guide 5269, Applying for a Study Permit outside Canada (canada.ca, modified 2026-10-06, saved 2026-10-27, official-sources/ircc/instructions/guide-5269.html), \"May my children attend school?\": \"Your children may attend school in Canada. You must apply for their study permit at the same time as your own.\" and, under \"Are there activities for which a study permit is not required?\": \"taking a course or a program of study which is six months or less that can be completed within the period authorized upon entry into Canada.\""

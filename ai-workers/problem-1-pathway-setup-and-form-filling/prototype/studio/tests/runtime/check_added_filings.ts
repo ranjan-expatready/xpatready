@@ -132,8 +132,10 @@ const S = snap([line("principal", { filingMode: "files_own" }), line("child", { 
 const known = new Map<string, unknown>([[factKey("C1", FACT), { value: true }], [factKey("C2", FACT), { value: false }], [factKey("C4", FACT), { value: true }]]);
 {
   const a = addedFilings(S, known as never, PEOPLE);
-  ok("case pass: a child answered Yes adds the filing, with its fee line", a.size === 1 && a.get("C1")?.filing === "Study permit" && a.get("C1")?.fee === "permit", [...a]);
-  ok("case fail: answered No, not answered yet, or not travelling adds nothing", !a.has("C2") && !a.has("C3") && !a.has("C4"));
+  ok("case pass: a child answered Yes adds the filing, with its fee line", a.get("C1")?.filing === "Study permit" && a.get("C1")?.fee === "permit" && !a.get("C1")?.waits, [...a]);
+  ok("case fail: answered No, or not travelling, adds nothing", !a.has("C2") && !a.has("C4"));
+  // BK-15 break M2 (BR-10): not answered yet adds nothing, but says it waits (its filing and fees wait for the answer).
+  ok("case fail (BK-15): not answered yet adds nothing yet; it waits, with the rule in words", a.size === 2 && a.get("C3")?.waits === "the child will study for a long time", a.get("C3"));
   // Review M2 (round 2), A1: a list of fee lines is carried to the case as it was released.
   const listed = addedFilings(snap([line("principal", { filingMode: "files_own" }), line("child", { filingMode: "on_principal", addsFiling: { ...ADDS, fee: ["permit", "bio"] } })]), known as never, PEOPLE);
   ok("case pass (A1): a line naming a list of fee lines carries the list to the case", JSON.stringify(listed.get("C1")?.fee) === JSON.stringify(["permit", "bio"]), [...listed]);

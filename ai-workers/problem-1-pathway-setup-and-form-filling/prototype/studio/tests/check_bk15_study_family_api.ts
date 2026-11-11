@@ -46,8 +46,14 @@ const family = async (key: string, ref: string) => {
   return { id, A, S, K1, K2, prep: async () => (await call("GET", `/runtime/cases/${id}/prepare`)).body as Prep, status: open.status };
 };
 const f = await family("sp.outside", "BK15");
+// Child V will not study 6 months or more (answered No); Child S is left unanswered for now.
+const vNo = (await call("PUT", `/runtime/cases/${f.id}/answers/${f.K2}/person.studies_six_months_or_more`, { value: false, expectedId: null })).status;
+// Break M2 (BR-10): before Child S's "6 months or more" is answered, which application they make is not known: no fee.
+const before = await f.prep();
+ok("BK-15 fail (break M2): unanswered, the case charges nothing and says it waits for Child S's answer; their filing is not named a visitor visa",
+  !before.fees_worked_out && before.fees.length === 0 && /Waits for Sample Child S's answer/.test(before.fees_why ?? "") && before.filings.find((x) => x.owner?.subject === f.K1)?.label === "Application to be decided: Sample Child S", { why: before.fees_why, labels: before.filings.map((x) => x.label) });
 const studies = (await call("PUT", `/runtime/cases/${f.id}/answers/${f.K1}/person.studies_six_months_or_more`, { value: true, expectedId: null })).body?.answer?.id;
-ok("BK-15 setup: a Study permit family of four is opened and Child S's \"6 months or more\" answered Yes", f.status === 201 && !!f.K2 && !!studies);
+ok("BK-15 setup: a Study permit family of four is opened; Child V's \"6 months or more\" answered No, then Child S's Yes", f.status === 201 && !!f.K2 && vNo === 200 && !!studies);
 let p = await f.prep();
 const label = (s: string) => p.filings.find((x) => x.owner?.subject === s)?.label;
 const linesOf = (s: string) => p.fees.filter((x) => x.subject === s).map((x) => x.key).sort().join(",");
@@ -62,7 +68,7 @@ ok("BK-15 fail (C5): the child who does not study and the spouse are never charg
 ok("BK-15 fail: only the spouse is charged a work permit or the open work permit holder fee; only the child who does not study a visitor visa",
   p.fees.filter((x) => x.key === "work_permit" || x.key === "open_work_permit_holder").length === 2 && p.fees.filter((x) => x.key === "work_permit" || x.key === "open_work_permit_holder").every((x) => x.subject === f.S)
   && p.fees.filter((x) => x.key === "visitor_visa").length === 1 && p.fees.filter((x) => x.key === "visitor_visa").every((x) => x.subject === f.K2));
-ok("BK-15 pass: the case says what stays Sample (open work permit eligibility, a visa-exempt child, the Québec CAQ), with no file path", /open work permit/.test(p.basis) && /visa-exempt/.test(p.basis) && /CAQ/.test(p.basis) && !/samples\/|\.json/.test(p.basis), p.basis);
+ok("BK-15 pass: the case says what stays Sample (open work permit eligibility, a visa-exempt child, the Québec CAQ), with no file path nor decision code of its own", /open work permit/.test(p.basis) && /visa-exempt/.test(p.basis) && /CAQ/.test(p.basis) && !/samples\/|\.json|P-486/.test(p.basis), p.basis);
 
 // The child stops studying (answered No): their filing becomes a visitor visa, never a study permit.
 await call("PUT", `/runtime/cases/${f.id}/answers/${f.K1}/person.studies_six_months_or_more`, { value: false, expectedId: studies });
