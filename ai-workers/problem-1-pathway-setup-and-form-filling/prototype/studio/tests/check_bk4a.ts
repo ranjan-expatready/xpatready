@@ -4,8 +4,8 @@
 //     RUNTIME_ACTORS): same ids, names, roles and duties; a list that drifts fails (fail side: a changed copy is caught).
 // (2) One picker: the only "Simulated person" select is the frame's; the Studio's old PersonaSwitch is gone.
 // (3) BR-1: in web/src a person changes only at the known places (sign-in, picker, the two frame links, the case area's
-//     first person and its BR-8 button, and the case page's two client links that BK-4c turns into hand-offs); nothing
-//     else writes xr-actor. A new call site fails until it is listed here with its reason.
+//     first person and its BR-8 button, and BK-4c's one hand-off button, runtime/hand-off.tsx); nothing else writes
+//     xr-actor. A new call site fails until it is listed here with its reason.
 // (4) BK-4a's own scope (concept §8, side by side with 4b and 4c): no "switch to" words in the frame, the Studio shell,
 //     the sign-in page or the case area's file.
 // (5) The sign-in page's address has its "where am I" words and is a first page; BR-6 and BR-8 are wired.
@@ -54,14 +54,15 @@ ok("BK-4a (2): the Studio's old PersonaSwitch is gone", !/function PersonaSwitch
 // (3) Every place a person changes, with its reason (BR-1).
 const ALLOWED: Record<string, number> = {
   "components/frame.tsx": 3, // leaveCasesAsStudio and enterCasesAsStaff (the frame links that name the person, P-484 (4)); the picker
-  "runtime/cases.tsx": 4, // the first person of a browser with none (BR-6/BR-8); BR-8's "Continue as Case officer"; "Open it as Client A" and "Act as Client A" (BK-4c's hand-offs)
+  "runtime/cases.tsx": 2, // the first person of a browser with none (BR-6/BR-8); BR-8's "Continue as Case officer"
+  "runtime/hand-off.tsx": 1, // BK-4c: the case area's hand-off button (to the case's client, back to the firm, to the representative)
   "pages/sign-in.tsx": 1, // signing in
   "lib/api.ts": 0, // defines setActor
 };
 const sites: Record<string, number> = {};
 for (const f of files) { const r = relative(WEB, f), n = (readFileSync(f, "utf8").match(/\bsetActor\(/g) ?? []).length - (r === "lib/api.ts" ? 1 : 0); if (n > 0) sites[r] = n; }
 const extra = Object.entries(sites).filter(([f, n]) => (ALLOWED[f] ?? 0) !== n);
-ok("BR-1: a person changes only at the listed places (sign-in, picker, frame links, the case area's first person and BR-8, BK-4c's two client links)", extra.length === 0, { sites, allowed: ALLOWED });
+ok("BR-1: a person changes only at the listed places (sign-in, picker, frame links, the case area's first person and BR-8, BK-4c's hand-off button)", extra.length === 0, { sites, allowed: ALLOWED });
 // Break m6: the helpers that change the person count too (a call site is a person change the check must see).
 const HELPERS_ALLOWED: Record<string, number> = {
   "components/frame.tsx": 2, // the frame's other-area link: leaveCasesAsStudio or enterCasesAsStaff, by area (it names the person)

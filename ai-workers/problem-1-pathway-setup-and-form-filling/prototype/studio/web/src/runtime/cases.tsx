@@ -3,7 +3,7 @@
 // The people are simulated (demo chrome: the "Acting as" switch is not for porting); the server decides what each may do.
 import * as React from "react";
 import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowRight, ExternalLink, Plus, UserPlus } from "lucide-react";
+import { ArrowRight, Plus, UserPlus } from "lucide-react";
 import { api, ApiError, getActor, personChosen, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +27,7 @@ import { EarlierStages, earlierOf, StageStrip } from "./stages"; // C6.17
 import { OfficerPeoplePanel } from "./privacy"; // C6.16
 import { RepresentativeReviewLatest, RepresentativeReviewPage } from "./representative-review"; // C8.3
 import { CaseReadinessPill } from "./readiness-figure"; // C7.10
+import { HandOff } from "./hand-off"; // BK-4c
 import type { OpenableRelease } from "../../../contracts/runtime";
 
 /** Simulated case people (the firm and the clients of lib/simulated-people.ts, BK-4a); the picker is demo chrome. */
@@ -219,8 +220,9 @@ function CasePage() {
         </div>
         <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">
           <p className="font-medium">Client questionnaire</p>
-          <p className="text-xs text-text-muted">{client?.name ?? "The client"} answers on their phone, for everyone travelling.</p>
-          <Link to={`/cases/${c.id}/questionnaire`} onClick={() => setActor(c.client)} className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-medium text-text-link hover:underline">Open it as {client?.name ?? "the client"} (simulated)<ExternalLink className="size-3.5" aria-hidden /></Link>
+          {/* BK-4c (BR-2, BR-4, BR-7): the questionnaire is the case's own client's; the hand-off carries who hands back (?from=). */}
+          {client ? <HandOff className="mt-1.5" to={c.client} go={`/cases/${c.id}/questionnaire?from=${encodeURIComponent(actor)}`} next={<>{client.name} answers on their phone, for everyone travelling.</>} data="client" />
+            : <p className="text-xs text-text-muted">The client answers on their phone, for everyone travelling.</p>}
         </div>
       </div>
       <StageStrip caseId={c.id} />
@@ -282,9 +284,12 @@ function ClientPage() {
   const { id } = useParams();
   const actor = useActorId();
   useCaseWhere(id!, "Client questionnaire", !isClient(actor)); // BK-3: staff see the case's reference; the client's line is their own
+  // BK-4c: "Act as Client A" was a literal id; the hand-off goes to this case's own client (Client B's case: Client B).
+  const view = useApi<{ case: { client: string } }>(["runtime", "view", id, "agent", actor], !isClient(actor) && isFirmStaff(actor) ? `/runtime/cases/${id}/questionnaire?mode=agent` : null, { retry: noRetryOnRefusal });
   if (!isClient(actor)) return (
-    <Notice title="This is the Client questionnaire" action={<Button size="sm" variant="secondary" onClick={() => setActor("user-P")}>Act as Client A</Button>}>
+    <Notice title="This is the Client questionnaire">
       As the case officer, review and change answers on <Link className="text-text-link underline" to={`/cases/${id}`}>the case page</Link>.
+      {view.data ? <HandOff className="mt-2" to={view.data.case.client} go={`/cases/${id}/questionnaire?from=${encodeURIComponent(actor)}`} next={<>{personOf(view.data.case.client)?.name ?? "The client"} answers this questionnaire.</>} data="client" /> : null}
     </Notice>
   );
   return <Questionnaire caseId={id!} mode="sqr" />;
