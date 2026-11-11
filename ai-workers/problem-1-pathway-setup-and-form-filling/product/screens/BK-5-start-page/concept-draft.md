@@ -1,66 +1,66 @@
-# BK-5: start page, three starting points and a reset (concept DRAFT)
+# BK-5: starting points page, three starting points and a reset (concept DRAFT, rev 2)
 
-Concept lane (skill screen-concept, steps A1-A7), 11 Nov 2026, for the tech lead's approval (P-223 (4)); not yet `concept.md`. Row: Bake plan row 5 (`design/bake-plan-2026-11-10.md`), P-447 (2); squeeze S3 (`design/bake-squeeze-2026-11-11.md`, #1572), P-481; E1's start, P-456 (1); style P-473. Board: `design/board-bk5.html`. Paths under `prototype/studio/` unless stated; read on `origin/main` 68a7b59d1. Same concept lane as BK-4 (one author keeps sign-in and start page consistent).
+Concept lane (skill screen-concept, steps A1-A7), 11 Nov 2026, for the tech lead's approval (P-223 (4)); not yet `concept.md`. Row: Bake plan row 5 (`design/bake-plan-2026-11-10.md`), P-447 (2); squeeze S3 (`design/bake-squeeze-2026-11-11.md`, #1572), P-481; E1's start, P-456 (1); style P-473. Board: `design/board-bk5.html`. Paths under `prototype/studio/` unless stated; read on `origin/main` 68a7b59d1. Same concept lane as BK-4. **Rev 2** applies the fresh challenge (`challenge.md`: B1, M1, M2, m1-m7); the author's reply is in `challenge.md`, "Author's reply".
 
 ## 1. Job and journey
-* **Job:** whoever runs the demo or a walk picks where the story starts, in one place, in words a newcomer understands, and lands on the first screen of that story; today the same choices hide in a Demo menu of seven items with three disabled states (`App.tsx:212-225`).
-* **Persona:** the person running the demo (founder, co-founder, qa's fresh reader): signed in as the Configuration author, because every load needs the author duty (`api/src/demo.ts:91, 129, 175`, `need(actor, "author")`).
-* **Journey:** sign-in (BK-4a) → **start page** → first screen of the story (E1: the Studio's Immigration programs with one pathway left to release, P-456 (1)).
+* **Job:** whoever runs the demo or a walk picks where the story starts, in one place, in plain words, and lands on its first screen; today the same choices hide in a Demo menu of seven items with three disabled states (`App.tsx:212-225`).
+* **Persona:** the person running the demo (founder, co-founder, qa's fresh reader), as the Configuration author: every load needs the author duty (`api/src/demo.ts:91, 129, 175, 527`).
+* **Journey:** sign-in (BK-4a) → **Starting points** → the first screen of the story (E1: Immigration programs, then the pathway to change and release, Q1).
 
 ## 2. Ten layers
-* **Exists, unchanged (facts):** every load and reset is a server route behind the author duty and the demo-workspace guard: `POST /demo/reset {confirm:"RESET"}`, `POST /demo/load {sample:"six"|"configured"}` (refused while programs exist), `POST /demo/reset-to-six {confirm}`, `POST /demo/checkpoints/finished-story {confirm}` (a job; it empties first), `GET /demo/status` → `programsExist`, `checkpoint` ("configured" | "finished_story" | null), `story` (`api/src/main.ts:137-139`, `demo.ts:59-103`, `demo-reset-to-six.ts`, `demo-finished-story.ts`). The dialogs that call them are in `App.tsx:226-288` and `components/demo-finished-story.tsx`.
-* **What each starting point is** (`product/DEMO.md` "Checkpoints"): blank (sources only); the six (Sample, nothing reviewed); configured (A and B released, the thin family case on release 1; the other four not released); finished story.
-* **New:** one page `/start` in the Studio frame; one Demo menu item "Starting points…" at the top. **No API, schema or engine change.** Demo chrome, listed as not for porting (EXPERIENCE §1).
+* **Exists, unchanged (facts):** every load and reset is a server route behind the author duty and the demo guard: `POST /demo/reset {confirm}`, `POST /demo/load {sample:"six"|"configured"}` (refused while programs exist, `demo.ts:149`), `POST /demo/checkpoints/finished-story {confirm}` (a job that empties first under its own lock, `demo.ts:90-110`), `GET /demo/status` → `programsExist`, `checkpoint` (from the last "loaded" audit line since a reset: "configured" | "finished_story" | null), `story` (`main.ts:137-139`, `demo.ts:59-83`).
+* **What the configured checkpoint really is (measured, BK-1's load, `qa/reports/2026-11-11-bake-baseline/walk-b-checkpoint-load.json`, 113.6 s):** 5 of the 6 pathways released (Visitor visa, Study permit outside Canada, With an LMIA inside Canada, Express Entry stream, Spouse or common-law partner; `features/checkpoint/110-release-one.ts:21-36`); High-wage position has no form and stays unreleased; Visitor visa released twice; the **family** case open (`120-family-case.ts`). `DEMO.md` row 2 ("A and B released … the thin family case") is out of date: for the Lead's records.
+* **New:** one page `/start` in the Studio frame and one Demo menu item "Starting points…". **No API, schema or engine change.** Demo chrome, not for porting (EXPERIENCE §1).
 
 ## 3. Business rules
 | BR | Rule | Source |
 |---|---|---|
-| BR-1 | Every starting point empties the demo first and says so before it runs; kept: saved AI answers, official PDFs, spend record (checked unchanged). | `App.tsx:301, 339-343`; P-35 |
-| BR-2 | Destructive: one confirmation, typing RESET, as every reset today. | EXPERIENCE §2.8; `demo.ts:177` |
-| BR-3 | Only a person with the author duty can start one; others see the doors disabled with the reason and the way (sign in as the Configuration author). The server refuses anyway. | `demo.ts:91`; P-456 (3) (the picker is an allowed change) |
-| BR-4 | The page says which starting point is loaded now (from `/demo/status`), or "Something else (changed since loading)" when it cannot tell. | EXPERIENCE §2.7 "counts say what they count" |
-| BR-5 | Running shows real progress only (elapsed time; the finished story's own state); one run at a time (the server's 409 shown in words). | EXPERIENCE §4; `demo.ts:93` |
-| BR-6 | A failure midway says what is left (e.g. "The demo is now empty; the configured load stopped: <server words>") and offers Try again. | D1 review 2 (`App.tsx:331-333`) |
-| BR-7 | US$0: no live AI call on any door (replayed answers only). | P-175; `App.tsx:229` |
+| BR-1 | Every starting point empties the demo first and says so before it runs: what goes (with the row count from `/demo/status` `scope`), what comes back, what is kept; the done notice says whether the kept files are byte-identical. | `App.tsx:301, 309-310, 339-343`; `demo.ts:576-577` |
+| BR-2 | Destructive: typing RESET, with the red destructive button, **only when the workspace has programs**; an empty workspace starts at once. | EXPERIENCE §2.8; `App.tsx:217`; `demo-finished-story.tsx:32` |
+| BR-3 | Only the author duty can start one; others see the doors disabled with the reason and "Sign in as the Configuration author". Not a demo workspace (`/session` `workspace.demo`): doors disabled up front. The server refuses anyway. | `demo.ts:91`; `studio.ts:133` |
+| BR-4 | The page says "Last loaded: <door>" only from `/demo/status` (`configured`, `finished_story`, or no programs = "Nothing set up"); anything else reads "Another state (for example the six, or a load not finished)". | EXPERIENCE §2.7 |
+| BR-5 | Running shows real progress only (elapsed seconds; the story's own state, which survives a reload); every 409 shows the server's own words. | EXPERIENCE §4; `demo.ts:93, 149` |
+| BR-6 | Door 2 is two calls (reset, then load). If the load stops: "Emptied; the configured load stopped part way: <server words>. Start again empties it first." Try again runs both calls (RESET still typed). The page says "Keep this page open until it finishes" for door 2. | challenge M1; `demo.ts:164` |
+| BR-7 | US$0: no live AI call on any door. | P-175 |
 
-## 4. Layout (pattern: Dialog/wizard as a page: one choice, ≤3 options)
-* **Where:** `/start`, Studio frame; where-line "Start"; no Back (an area's first page for the demo). PR 2 (after 4a): signing in as a Studio person lands here.
-* **Header:** H1 "Where should the story start?"; one line: "Each starting point empties the demo workspace and loads a known state. Saved AI answers, official PDFs and the spend record are kept. US$0." Status line: "Now loaded: Pathways released, ready to walk".
-* **Three door cards** (one row at 1440 px, stacked at 375 px), each: name, two lines of what you will see, time, one button.
-  1. **Nothing set up** — "An empty Studio: add a program, find its forms, let AI draft from saved answers." ~10 s. Button "Start from nothing" (the reset to blank).
-  2. **Pathways released, ready to walk** — "The six pathways set up; each released where its rules allow (Visitor visa and With an LMIA at least, DEMO.md), a family case on Visitor visa's release 1; the rest wait to be finished and released. The walk starts here." ~2 min (BK-1: 114 s). The builder records the exact released count on its own copy and puts it in the card's words. Button "Start here" — **the one filled blue button** (E1's door, P-456 (1)).
-  3. **The finished story** — "The family case all the way through: forms filled, signed, every filing ready to file." a few minutes, runs in the background. Button "Load the finished story".
-* **The reset:** the loaded door's card says "Loaded now" and its button reads **"Start again from here"** (reloads that door). Doors 1 and 2 run reset then load, two calls in a row (door 1 is the reset alone).
-* **Fold-out "Other starting points"** (FoldOut): "The six pathways, nothing reviewed" (Reset to the six) and "With an LMIA from its reviewed release" (after the six). Same dialogs as the Demo menu, reused.
-* **Confirm dialog** per door: "Empty the demo and start from <door>?" · Goes / Comes back / Kept columns (as `ResetToSixDialog`) · Type RESET · [Cancel] [Empty and start]. Running: spinner with elapsed seconds and the step ("Emptying…", "Loading the configured checkpoint…"). Done: toast + land on `/` (doors 1-2) or stay with the story's result (door 3, as today).
-* **States:** normal · loaded-now · not the author (doors disabled, reason, link "Sign in as the Configuration author" → `/sign-in`, or the picker before 4a) · running (another tab running: 409 words) · failed midway (BR-6) · server down (frame notice) · not a demo workspace (server words, doors disabled).
+## 4. Layout (pattern: Dialog/wizard as a page: one choice, three options)
+* **Name everywhere:** "Starting points" (menu item, where-line "Demo › Starting points", tab title "Starting points · Product Studio", H1) with a "Demo" pill by the H1.
+* **Header:** H1; line: "Each starting point empties the demo workspace and loads a known state. Saved AI answers, official PDFs and the spend record are kept and checked. US$0." Then "Last loaded: …" (BR-4).
+* **Three door cards** (one row at 1440 px, stacked at 375 px): name, two lines of what you will see, typical time, one button.
+  1. **Nothing set up** — "An empty Studio: add a program, find its forms, let AI draft from saved answers." Typically a few seconds. "Start from nothing" (the reset).
+  2. **Pathways released, ready to walk** — "Five of the six pathways released, a family case open on Visitor visa. The walk starts here: change one thing on a pathway and release it through both checks." Typically 2 minutes. "Start here" — **the one filled blue button** (E1's door).
+  3. **The finished story** — "The family case all the way through: forms filled, signed, every filing ready to file." A few minutes, in the background. "Load the finished story".
+* **Reset:** the last-loaded card shows "Last loaded"; its filled button becomes "Continue to Immigration programs" and a secondary "Start again from here" reloads it (with BR-2). Door 1 is the reset to blank.
+* **Confirm dialog** per door: "Empty the demo and start from <door>?" · Goes ("All configuration, releases and cases: {n} rows", from `scope.total_rows`) / Comes back / Kept · Type RESET (only when programs exist) · [Cancel] [Empty and start] (destructive). **Running:** elapsed seconds and the step ("Emptying…", "Loading the configured checkpoint…"). **Done:** toast with the measured seconds and the kept-files check; land on `/` (doors 1-2) or stay with the story's result (door 3, as today).
+* **States:** normal · last loaded · another state · not the author · not a demo workspace · running · busy (409 words) · stopped part way (BR-6) · server down (frame notice).
+* The six and "With an LMIA from its reviewed release" stay in the Demo menu only (no fold-out here).
 
-## 5. Best in class (4b, P-392)
-* **Atlassian Jira "sample data" / JSM "sample space"** (support.atlassian.com "Create a Jira Cloud board with sample data"; "Test, explore and learn with your sample space"): a ready, realistic project chosen at creation and named so it is easy to delete. **Copy:** a named, realistic starting state chosen in one click. **Beat:** we say exactly what is in it and what is kept.
-* **Stripe test mode, "Delete all test data"** (docs.stripe.com testing; Developers › Overview: review what will be removed, then delete; cannot be undone): **copy** "review what goes, then confirm". **Beat:** we also list what is kept and check it unchanged.
-* **Start screens with few choices** (Word's Blank / templates / recent; Notion's empty page or template, product knowledge, not re-checked today): **copy** three big choices, the blank one first.
-* **Effort saved:** today the walker must know that "Load the configured checkpoint" is disabled until "Reset demo…" has run, type RESET, then load (3 menu steps, 2 dialogs). After: one card, one RESET, one wait. BIC scorecard: BIC-11, BIC-18, BIC-20 apply; others (questions, documents, filing): N/A.
+## 5. Best in class (4b, P-392; read 11 Nov 2026)
+* **Atlassian, "Create a Jira Cloud board with sample data"** (support.atlassian.com KB) and Jira Service Management's sample space ("Test, explore and learn with your sample space"): a realistic, ready project chosen in one step. **Copy:** a named, realistic starting state in one click.
+* **Stripe test mode, "Delete all test data"** (docs.stripe.com, testing: Developers › Overview; review what will be removed, then delete; cannot be undone). **Copy:** show what goes before confirming. **Beat:** we also show what is kept and prove it unchanged after (BR-1, `preserved_unchanged`).
+* **Start screens with three choices** (Word's Blank / templates; Notion's empty page or template; product knowledge, not re-checked): **copy** few big choices, blank first.
+* **Effort saved:** today the walker must know "Load the configured checkpoint" is disabled until "Reset demo…" ran (2 dialogs, RESET, then load). After: one card, RESET only if needed, one wait. BIC: BIC-11, BIC-18, BIC-20 apply; others N/A.
 
 ## 6. Copy
-Disabled reason: "Only the Configuration author loads a starting point." · 409: "Another load or reset is running in this workspace: wait for it to finish, then try again." · Not demo: the server's words. · Done (door 2): "Pathways released, ready to walk: loaded in 112 s. Pick a pathway that is not released yet to finish and release it."
+Disabled: "Only the Configuration author loads a starting point." + "Sign in as the Configuration author" · Not demo: "This workspace is not the demo: starting points would empty real work, so they are off." · Done (door 2): "Pathways released, ready to walk: loaded in {s} s. Kept files checked unchanged. Pick the pathway to change, then Review and release." · Card times read "typically …" and the done toast prints the measured seconds.
 
 ## 7. Contract and tests
-* **Contract:** existing routes only (§2). Door 2 from a non-empty workspace = `POST /demo/reset` then `POST /demo/load {sample:"configured"}`; door 1 = reset; door 3 = finished-story with `confirm`.
-* **Tests:** browser `tests/check_bk5_start_browser.cjs` (1440, 375 px, axe, keyboard): one pass and one fail per BR. BR-1/2: no request until RESET is typed; BR-3 fail: as the Approver every door is disabled and no `/demo/*` POST is sent; BR-4: after door 2, "Loaded now" on card 2; BR-5 fail: a second tab's start reads the 409 words; BR-6 fail: load routed to 500 after the reset → "The demo is now empty…" + Try again; BR-7: no request to a live AI route. Door 2 run end to end once on the lane's own copy (~2 min).
-* **Breaker (P-278):** new page; destructive actions; double click, two tabs, reload while running.
+* **Contract:** existing routes only (§2). Door 1 = reset; door 2 = reset (when programs exist) then load configured; door 3 = finished-story (`confirm` when programs exist).
+* **Browser** `tests/check_bk5_start_browser.cjs` (1440, 375 px, axe, keyboard), one pass and one fail per BR: BR-2: no POST until RESET when programs exist; none asked when empty; BR-3: as the Approver every door is disabled and no `/demo/*` POST is sent; BR-4: after door 2 "Last loaded"; a load running in another tab reads "Another state"; BR-5: a second start reads the 409 words; BR-6: a configured step made to fail **after the six loaded** gives the part-way words and Try again re-runs both; BR-7: no live AI route called. Door 2 end to end once on the lane's copy, seconds recorded.
+* The Demo menu item's name avoids Reset, Load and "configured checkpoint" (tests match those, `tests/qa/check_qa_wording_1029.cjs:100`). **Breaker (P-278):** new page, destructive actions, two tabs, double click, reload while running.
 
 ## 8. Capability or scaffolding; Needed for the proof
-Whole page: **Scaffolding** (demo chrome, P-35; not ported) · **Needed for the proof** (E1, E2 start here). The Demo menu's other items stay for now: 49 test files click them; removing them is a follow-up, **Not built**.
+Whole page: **Scaffolding** (demo chrome, P-35) · **Needed for the proof** (E1, E2 start here). Removing the Demo menu's other items (49 test files click them): **Not built**, follow-up.
 
 ## 9. The two PRs
-| PR | Files | Done when |
+| PR | Files (all `web/src/`) | Done when |
 |---|---|---|
-| **BK-5 PR 1** start page, beside BK-4 | new `web/src/pages/start.tsx`; `App.tsx` (route `/start`, Demo menu item "Starting points…" first); `components/where.ts` (words for `/start`) | BR-1 to BR-7 pass and fail; door 2 lands on Immigration programs with the released pathways marked; breaker Approve; walk by screens 1440 px: Demo › Starting points → door 2 → first set-up step |
-| **BK-5 PR 2** sign-in → start page, after 4a merges | `pages/sign-in.tsx` (Studio people land on `/start`), `pages/start.tsx` (disabled state links to `/sign-in`) | gate A walk: sign-in → start page → door 2 → the pathway to release, 0 person changes outside BK-4's BR-1 |
+| **BK-5 PR 1** Starting points, beside BK-4 | new `pages/start.tsx`; `App.tsx` (route `/start`, tab title, Demo menu item "Starting points…" first); `components/where.ts` | BR-1 to BR-7 pass and fail; door 2 lands on Immigration programs; breaker Approve; walk by screens 1440 px: Demo › Starting points → door 2 → Review and release of the named pathway |
+| **BK-5 PR 2** sign-in → Starting points, after 4a | `pages/sign-in.tsx` (people with the author duty land on `/start`; other Studio people on `/`), `pages/start.tsx` (disabled state links to `/sign-in`) | gate A walk: sign-in → Starting points → door 2 → change → release, 0 person changes outside BK-4's BR-1 |
 
 ## 10. Questions (recommendation first)
-1. **The second door: "the six" (Bake plan) or the configured checkpoint (P-456 (1))?** *Rec: the configured checkpoint as door 2*, because E1 starts there by ruling and the six cannot be walked to a release (BK-1 §2.5); the six stays under "Other starting points". This changes the plan's door name "Six pathways set up".
-2. **Door 2 as two calls (reset, then load) or one new server route?** *Rec: two calls in the Bake* (no API change, BR-6 covers the midway failure); a one-step route is a follow-up only if the breaker finds the gap unsafe.
+1. **E1's pathway (challenge B1): the configured checkpoint leaves no pathway with forms unreleased, so P-456 (1)'s "one pathway left unreleased" cannot be met as loaded.** *Rec: amend E1 to "a named change on a released pathway, then release N+1 through both checks", as BK-1's Walk B did; name Visitor visa,* so "Open a case on Release N" carries straight on to the family case. Zero code, BK-5 stays web only. Alternative: a runtime-lane change gives the configured load an opt-in "leave one unreleased" (and one call that empties first): a cold walker then sees a pathway marked "Not released", at the cost of one more PR (~5.5 h, beside BK-4) that BK-5 PR 1 would wait for.
+2. **Door 2 as two calls or one?** *Rec: two calls with BR-6's words in the Bake* (follows Q1's recommendation: no runtime change); if the Lead takes Q1's alternative, the same runtime PR makes it one call and BR-6 shrinks.
 
 ## Definition of ready
 Acceptance tests named (§7); row text §9; decisions: Q1-Q2 answered by the Lead; fresh challenge done; Lead approval (P-223 (4)).

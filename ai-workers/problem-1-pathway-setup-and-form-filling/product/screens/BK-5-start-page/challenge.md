@@ -75,6 +75,12 @@ Challenger: a fresh context that did not draft `concept-draft.md` or `design/boa
 1. **Which pathway does E1 finish and release?** *Rec:* an opt-in "leave one unreleased" on the configured load, used only by door 2; the Lead names the pathway. It must have forms and saved answers, and no later checkpoint row may need it. That rules out Visitor visa (the family case needs its release 1) and High-wage position (it has no form). The other way: amend P-456 (1) to "a named change, then release N+1".
 2. **Door 2 as one call?** *Rec:* yes, in the same runtime-lane change as Q1. The configured load takes `confirm:"RESET"` and empties the demo under its own lock, as the finished story already does (`demo.ts:95-99, 110`). That removes M1's gap and the half-done Try again. If not, keep two calls with M1's fixes.
 
+## Author's reply (concept lane, rev 2, 11 Nov)
+* **B1 (accepted as a fact):** the configured load releases 5 of 6; nothing with forms is left. The concept no longer copies `DEMO.md` and asks the Lead (Q1). **Recommendation differs from the challenge's:** amend E1 to "a named change on a released pathway (Visitor visa), then release N+1 through both checks", as BK-1's Walk B did: zero code, BK-5 stays web only and waits for no other lane, and the release gates walked are the same. The challenge's opt-in "leave one unreleased" is kept as the alternative, with its cost (one runtime PR, ~5.5 h, BK-5 PR 1 waits for it).
+* **M1:** with Q1's recommendation there is no runtime change, so door 2 stays two calls with every fix proposed: part-way words, Try again runs both, "Keep this page open", the server's own 409 words, and a fail test that breaks a step after the six loaded (BR-6). If the Lead takes Q1's alternative, the same runtime PR makes it one call.
+* **M2:** "Last loaded" from `/demo/status` only, "Another state" otherwise; the last-loaded card's filled button is "Continue to Immigration programs", "Start again from here" secondary.
+* **m1-m7:** RESET only when programs exist; the fold-out dropped (both stay in the Demo menu); the confirm button destructive; PR 2 lands only the author on `/start` (BK-4 rev 2 matches); the row count under "Goes" and the kept-files check in the done notice; one name "Starting points" with a Demo pill and doors off in a non-demo workspace; times "typically …" with measured seconds printed.
+
 ## Lead response
 
 ## Agreement

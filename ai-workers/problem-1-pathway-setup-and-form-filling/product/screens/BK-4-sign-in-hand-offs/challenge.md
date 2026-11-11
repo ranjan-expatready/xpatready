@@ -52,6 +52,15 @@ Fresh challenger, 11 Nov 2026, on `concept-draft.md` and `design/board-bk4.html`
 1. **First visit: a page or a gate?** *Recommend a page:* an unknown person goes to sign-in, a missing one is the Configuration author, and the walk starts at `/sign-in` (M3). A gate later costs 11 checks.
 2. **Does a link in the frame that names the person ("Cases (as Case officer) →") count as a hand-off for E1?** *Recommend yes*, if it names the person (the Lead may rule; P-456 was a Lead ruling).
 
+## Author's reply (concept lane, rev 2, 11 Nov)
+All five Majors and all eight Minors are taken into `concept-draft.md` rev 2:
+* **M1:** new BR-8: `cases.tsx:60` becomes a notice with one "Continue as Case officer →" button when a person was chosen on purpose; a browser with no person chosen keeps today's arrival as the Case officer (it is the first person, so E1 does not count it, and the browser checks that set no person keep working). The release pill names its person; the guard covers the two helpers; the walk counts Back and the pill.
+* **M2:** web only: `web/src/lib/people.ts` plus a code check against `core.ts`; no API change in 4a. 4c's target: `?from=` carried by "Hand to Client A" (recommended, Q3), the `officer` field as the alternative for the Lead.
+* **M3:** BR-6 = unknown → sign-in; missing → the Configuration author.
+* **M4:** the picker is a native `<select>` with three groups; the 7 test files and `check_bk3_frame_browser.cjs:126` are named in 4a's "done when".
+* **M5:** each PR guards its own scope; the last to merge adds the whole-`web/src` check; `review-items.tsx:161` and `cases.tsx:110` are owned (4b, 4a).
+* **m1-m8:** BR-3 rewritten with the proposer rule and a real fail test; hand-offs are buttons (BR-7); `:278` uses the case's client; the client hand-off only in `sqr` mode and not on a person's link; "Hand to Client A (simulated)"; the echo keeps `combination.tsx:116` with its own attribute; Q2 asks the Lead about frame links; best in class now cites help.salesforce.com, support.docusign.com, docs.github.com with the date read, and V4 (no hand-off row, checked); thin "beats" dropped.
+
 ## Lead response
 
 ## Agreement
