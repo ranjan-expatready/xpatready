@@ -8,9 +8,24 @@
 // Online): a family case filled by the pack helper, then IMM 5257's answer sheet against its PDF copy, field by field.
 // US$0, live AI off.
 //   zsh tools/isolated.sh qa_c73 4473 start && <Demo › Load the finished story> && tsx tests/qa/check_c73_pdf_vs_sheet.ts 4473 xr_studio_qa_c73 [dump]
-import { FAMILY, call, fillEverything, generateCopy, main, needVisitorVisa, ok, openCase, prepare, sql } from "../../acceptance/lib/m3.ts";
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
+import { FAMILY, agent, call, copyBytes, fillEverything, generateCopy, main, needVisitorVisa, ok, openCase, prepare, sql } from "../../acceptance/lib/m3.ts";
+const STUDIO = join(import.meta.dirname, "..", ".."), SOL = join(STUDIO, "..", ".."), PY = join(SOL, "..", "..", ".tools", "solution-1-prototype", ".venv", "bin", "python");
+/** What the PDF copy itself writes: its XFA data leaves (data path → text), read by p1/e5_roundtrip.py as other checks do. */
+function written(pdf: Buffer): Record<string, string> {
+  const code = `
+import sys, json, xml.etree.ElementTree as ET
+sys.path.insert(0, ${JSON.stringify(join(SOL, "prototype", "p1"))})
+import e5_roundtrip as E
+b = sys.stdin.buffer.read(); parts = {k: v.get_object().get_data() for k, v in E.xfa_streams(E.open_reader(b)).items()}
+print(json.dumps({p: v for p, v in E.leaves(E.data_root(ET.fromstring(parts["datasets"]))) if v.strip()}))`;
+  const r = spawnSync(PY, ["-I", "-c", code], { input: pdf, encoding: "buffer", timeout: 120_000, maxBuffer: 1 << 26 });
+  if (r.status !== 0) throw new Error(String(r.stderr).slice(-400));
+  return JSON.parse(String(r.stdout));
+}
 type Box = { box: string; fact: string; about: string; about_label?: string; value?: unknown; detail?: string };
-type Line = { fact: string; subject: string; person: string; value: unknown; copy_text: string };
+type Line = { label?: string; fact: string; subject: string; person: string; value: unknown; copy_text: string };
 await main("QA-392", "C7.3: the answer sheet and the PDF copy of the same form agree, box by box", async () => {
   const c = await openCase(needVisitorVisa(), FAMILY.slice(0, 2));
   ok("QA-392 setup: every fact answered and confirmed by the pack helper", await fillEverything(c.id));
@@ -33,4 +48,36 @@ await main("QA-392", "C7.3: the answer sheet and the PDF copy of the same form a
   const maps = JSON.parse(sql(`select coalesce(json_agg(m->>'form_edition'), '[]')::text from form_instance f join pack_work_pin w on w.case_id = f.case_id join config_release r on r.id = w.config_release_id, jsonb_array_elements(r.snapshot->'field_maps') m where f.id = '${copyId}' and m->>'form_number' = 'IMM 5257'`) ?? "[]") as string[];
   console.log(`NOTE  QA-392 suspect 2: the case's release maps IMM 5257 in ${maps.length} edition(s): ${maps.join(", ")}; with one, the sheet's first map is the PDF's edition`);
   ok("QA-392d pass (suspect 2, on this data): the release maps one edition of IMM 5257, so the sheet and the PDF read the same edition", maps.length === 1, maps);
+});
+
+// QA-392b (11 Nov; #1553's reviewer, relayed by Lead 17): the Yes side. With an entry in Education and in Previous
+// residence, the PDF writes EducationIndicator = Y and PCRIndicator = Y; the sheet must say Yes to those questions too.
+await main("QA-392b", "C7.3: with an entry, the sheet says Yes where the PDF copy writes Y", async () => {
+  const c = await openCase(needVisitorVisa(), FAMILY.slice(0, 1));
+  await fillEverything(c.id);
+  const P = c.subjects[FAMILY[0].name];
+  type Sec = { subjectId: string; section: string; title: string; group: { rows: number; none_apply?: { id: string; value: boolean } | null } | null; questions: { fact: string }[] };
+  const facts = ["person.education_school_name", "person.previous_residence_country"];
+  for (const fact of facts) {
+    const sec = (((await agent(c.id))?.sections ?? []) as Sec[]).find((x) => x.subjectId === P && x.group && x.questions.some((q) => q.fact === fact));
+    if (!sec) { console.log(`NOTE  QA-392b: no group asks ${fact} for the principal`); continue; }
+    if (sec.group?.none_apply?.value) await call("PUT", `/runtime/cases/${c.id}/groups/${P}/${sec.section}/none-apply`, { noneApply: false, expectedId: sec.group.none_apply.id });
+    const add = await call("POST", `/runtime/cases/${c.id}/groups/${P}/rows`, { group: sec.section });
+    console.log(`NOTE  QA-392b: ${sec.title}: "none apply" taken back, one entry added (${add.status})`);
+  }
+  // The pack helper answers and confirms the new rows like every other required answer (Sample values).
+  await fillEverything(c.id); await fillEverything(c.id);
+  const item = (((await prepare(c.id)).p as any)?.items ?? []).find((i: any) => i.subject === P && i.form === "IMM 5257" && i.channel === "ONLINE");
+  const sheet = (await call("GET", `/runtime/items/${item?.id}/answer-sheet`)).body as { sections: { key: string; answers: Line[] }[] };
+  const copyId = await generateCopy(c.id, "IMM 5257", P);
+  const pdf = written(await copyBytes(copyId ?? ""));
+  const boxes = JSON.parse(sql(`select s.facts_json->'boxes' from form_instance f join answer_snapshot s on s.id = f.snapshot_id where f.id = '${copyId}'`) ?? "[]") as (Box & { transform?: string })[];
+  const lines = (sheet?.sections ?? []).flatMap((x) => x.answers);
+  for (const end of ["EducationIndicator[0]", "PCRIndicator[0]"]) {
+    const b = boxes.find((x) => x.box.endsWith(end) && x.about === P), w = b ? pdf[b.box] : undefined;
+    const said = lines.filter((l) => l.subject === P && l.fact === b?.fact).map((l) => `${l.label}: ${l.copy_text}`);
+    console.log(`NOTE  QA-392b ${end}: the PDF writes ${JSON.stringify(w)}; the sheet's lines for ${b?.fact}: ${JSON.stringify(said)}`);
+    ok(`QA-392b setup: the PDF copy writes ${end} = Y once the principal has an entry`, w === "Y", { box: b?.box, written: w, value: b?.value, detail: b?.detail });
+    ok(`QA-392b fail today: the answer sheet says Yes to the question ${end} asks (the PDF writes Y)`, lines.some((l) => l.subject === P && l.fact === b?.fact && /^Yes$/i.test(String(l.copy_text))), said);
+  }
 });
