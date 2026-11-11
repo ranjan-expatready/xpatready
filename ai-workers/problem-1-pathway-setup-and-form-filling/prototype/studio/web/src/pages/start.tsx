@@ -11,6 +11,7 @@
 // US$0: no door calls a live AI route (BR-7).
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { enterCasesAsStaff } from "@/components/frame";
 import { useQueryClient } from "@tanstack/react-query";
 import { DoorOpen, RotateCcw } from "lucide-react";
 import { api, ApiError, setActor, useActorId, useApi, useToast } from "@/lib/api";
@@ -112,7 +113,7 @@ export function StartPage() {
               <p className="text-xs text-text-muted">{d.typical}</p>
               {storyRunning ? <StoryRunning startedAt={story?.started_at} onOpen={() => setStoryOpen(true)} /> : null}
               {d.key === "story" && story?.state === "failed" ? <Notice tone="danger" title="The finished story stopped"><span data-story-failed>{story.error}</span></Notice> : null}
-              {d.key === "story" && isLast && story?.cases?.family ? <Link className="text-sm text-text-link underline" to={`/cases/${story.cases.family}`}>Open the family case</Link> : null}
+              {d.key === "story" && isLast && story?.cases?.family ? <Link className="text-sm text-text-link underline" to={`/cases/${story.cases.family}`} onClick={enterCasesAsStaff /* BK-4a: a link into Cases names its person (P-484 (4)) */}>Open the family case (as Case officer)</Link> : null}
               <div className="mt-auto flex flex-wrap gap-2 pt-1">
                 {isLast ? <>
                   <Button asChild variant={filled === d.key ? "default" : "secondary"}><Link to="/" data-start-continue>Continue to Immigration programs</Link></Button>
