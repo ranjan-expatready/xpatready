@@ -57,6 +57,7 @@ const ALLOWED: Record<string, number> = {
   "runtime/cases.tsx": 2, // the first person of a browser with none (BR-6/BR-8); BR-8's "Continue as Case officer"
   "runtime/hand-off.tsx": 1, // BK-4c: the case area's hand-off button (to the case's client, back to the firm, to the representative)
   "pages/sign-in.tsx": 1, // signing in
+  "pages/start.tsx": 1, // BK-5's "Sign in as the Configuration author" on the first-run page (a named button; the frame's notice names it)
   "lib/api.ts": 0, // defines setActor
 };
 const sites: Record<string, number> = {};
