@@ -2,7 +2,7 @@
 
 Written 11 Nov 2026, 12:3x IST, by the Fable planner for B170 (read-only: no product code changed). Brief: `xfa-engine-reuse-brief-2026-11-11.md`. Records only.
 
-**In one paragraph.** The team's engine is real, well tested and safe to run, but narrower than its plans read: its form-script part works today on **2 IRCC forms (IMM 5257 and IMM 1295)** and refuses 18 of the other 19 blank forms in the share with a clear reason. On those two forms it does the one thing we could not do without Adobe: it runs the form's own Validate and builds the form's own barcode texts in under a second, on a server, with no screen. On our own finished-story copy of IMM 5257 it gave the same answer Adobe gave. So the plan is small and exact: **reuse the engine's form-script part as it is, behind one thin adapter, as a check**; keep our proven writer; do not build the browser viewer now (the team has not built its screens either); and send the team a measured list of what we found.
+**In one paragraph.** The team's engine is real, well tested and safe to run, but narrower than its plans read: its form-script part works today on **2 IRCC forms (IMM 5257 and IMM 1295)** and refuses 18 of the other 19 blank forms in the share with a clear reason. On those two forms it does the one thing we could not do without Adobe: it runs the form's own Validate and builds the form's own barcode texts in under a second, on a server, with no screen. On our own finished-story copy of IMM 5257 it gave the same answer Adobe gave. So the plan is small and exact: **reuse the engine's form-script part as it is, behind one thin adapter, as a check**; keep our proven writer; show the filled form in the app **read-only** as its own small row (section 8, added after the Lead's challenge: the engine drew our own filled IMM 5257 as real pages in 1.5 seconds); do not build fill-in-the-browser screens (the team has not built them either, and our forms are filled from case facts); and send the team a measured list of what we found.
 
 Words used here: **engine** = the team's TypeScript package `xfa-engine`. **Form's own check** = the Validate button's script that IRCC ships inside the PDF. **Barcode text** = the characters a barcode holds (the form builds them; Adobe then draws them as a picture). **Adapter** = a small file on our side that calls the engine and turns its answer into our words; no engine code is changed.
 
@@ -85,9 +85,9 @@ This matches the team's own note of 19 Oct ("0 of 19 load fully"). **Of our four
 | V4 | PDF writing | **Not now. One trial row later (B170e)** | Ours is proven by Adobe and by signature checks on the forms that count; swapping it risks two Works rows (C7.1, C10.2) for no new capability. But ours leans on private library internals and needs Python, `openssl` and a hand-made environment. A side-by-side trial can earn the swap: same values through both writers, same data read back, signatures intact, one Adobe Validate. Only then decide. If it wins: about 680 Python lines and the Python step leave the fill path. |
 | V5 | Barcode texts as **proof equal to Adobe's** | **Not now** | Measured: 2 of 5 texts differ from Adobe's by a number format (T1). Until the team fixes it, the engine's text is an early warning, and Adobe's stored text stays the truth. |
 | V6 | Engine-made "validated" Paper copies with no Adobe step | **Not now** | Whether IRCC accepts barcodes made outside Adobe is **Unconfirmed: no counsel**. Adobe Validate stays the proof for Paper copies (P-442). The engine's result is never called "validated" in our app. |
-| V7 | Page layout and HTML page dump (a read-only picture of the filled form) | **Not now; first candidate after the Bake** | Real and tested for 2 forms, but the team's own Acrobat side-by-side was pending, barcodes are placeholders, and the dump is a helper script, not a supported part. Possible later use: a read-only preview and qa pictures without Acrobat. Ask the team to make the dump a supported part first. |
+| V7 | Page layout and HTML page dump (a read-only picture of the filled form) | **Reuse with a thin adapter, read-only (row B170d).** Changed from "not now" after the Lead's challenge and a run on our own copy (section 8) | Cost: 1 to 2 builder sessions after B170a. Risk: low (static pages with no script, drawn on the server, nothing added to the browser bundle); the team's own side-by-side with Acrobat was still pending on 20 Oct, barcodes show as grey placeholders, and the page writer is a 304-line helper script outside the package, so we need the team's OK to carry it or their export of it. Moves: "download to look at the form" goes away for IMM 5257 and IMM 1295; qa and packs get form pictures without Acrobat. |
 | V8 | Browser worker | **Not now** | Only a browser viewer needs it. On the server we isolate with a separate process, as we do for Python today. |
-| V9 | Viewer screens (fill in the browser) | **Not now: there is nothing to reuse yet** | The team has plans and mock-ups, no screens. Building them here would be building, not reusing, and the team's own first open question is whether the viewer or the answer sheet is the product. Their mock-ups are a good reference when we get there. |
+| V9 | Viewer screens (fill and edit in the browser) | **Not now: there is nothing to reuse yet, and we do not need it** | The team has plans and mock-ups, no screens. Building them here would be building, not reusing. Our forms are filled from case facts, so an officer does not type into the form; what the founder's example needs is seeing the form (V7) and not having to download and re-upload it (V6 and section 8), neither of which needs editing. Their mock-ups are a good reference if that changes. |
 | V10 | The team's build-and-verify scripts for the package | **Reuse as is** (on the Mac, in the scratch clone) | They make the single package file we pin in B170a, with the notice files. |
 | V11 | The team's test data (made-up people for both forms) and attack tests | **Reuse as is, where they run** | The made-up data lets our CI prove "a complete form passes" with no client data. Their unit tests stay in their repository. |
 | V12 | Extending the engine to the 18 refused forms | **Not ours** | That is the team's coverage plan. Doing it here would fork their code, the opposite of reuse. We send the measured list (5). |
@@ -117,12 +117,23 @@ This matches the team's own note of 19 Oct ("0 of 19 load fully"). **Of our four
 * Moves: QA-165's list from 2 false alarms to 0 on IMM 5257; fewer failed Adobe sessions (the officer learns before opening Adobe).
 * Cost: 1 to 2 builder sessions (engine layer, then the screen line). UI: one line on an existing row, existing component, no new screen.
 
-**B170d · report for the team** (planner, records only): `design/xfa-reuse-report-<date>.md` after a to c merge, with before and after numbers and the findings in 5.
+**B170d · see the filled form in the app, read-only (the founder's "open the PDF in the browser" example).** After B170a; for the screens (UX) lane. Needs Q2's yes and one OK from the team (carry their page-writer helper, or they export it).
+* What: one API route that returns the engine's drawing of one page of a form copy (static HTML with its own no-script policy, made on the server in the adapter's separate process), and a "View form" action on the copy's row that opens the pages in a framed panel with page 1 of N and next/previous. Read-only: no typing, no Validate button, no download change. Forms the engine cannot read keep today's Download only, with the quiet reason line. The barcode page shows the team's grey placeholders with a caption "Adobe draws the barcodes".
+* Done when: on the finished story's IMM 5257 the panel shows 5 pages (6 for a validated copy) with the case's values in place (name, date of birth, passport checked by a Playwright test against the facts); a page opens in under 3 seconds; the frame runs no script (checked); axe passes on the panel; a refused form shows no "View form"; a walk by screens before review (P-352) with pictures beside Acrobat's for pages 1 and 2, differences listed for the team.
+* Moves: one download removed per look at a form, for 2 forms; form pictures for qa and packs without Acrobat. It does **not** remove the download and re-upload around Adobe Validate (that is B170f).
+* Cost: 1 to 2 builder sessions. Browser bundle: +0 (drawn on the server). A page is 0.3 to 1.7 MB of HTML (page 1 carries the form's fonts and images).
+
+**B170f · validate in the app, no download and re-upload (trial and decision gate, not a switch).** After B170b and c; needs the founder's ruling on Q5.
+* What: for a form the engine reads, run the form's own Validate on the server, write the result with the engine's writer, and compare that copy with an Adobe-validated copy of the same case: flag, date, every value, and the barcodes Adobe prints from each.
+* Done when: a report shows the two copies side by side for IMM 5257 and IMM 1295 with every difference named (T1 is one), and Adobe opens the engine-validated copy as validated. The founder then rules, with counsel and the immigration expert, whether the engine's result may stand for Paper or PDF-upload copies. Until then Adobe stays the proof (P-442); **Unconfirmed: no counsel**.
+* Moves, if ruled yes: the download, Adobe, save and re-upload steps go away for those forms. This is the step the founder's example is really about.
+
+**Report for the team** (planner, records only, at the end): `design/xfa-reuse-report-<date>.md` after the rows merge, with before and after numbers and the findings in 5.
 
 **B170e · writer trial (decision gate, not a swap).** Only after a to c, and only if the founder wants it (Q3).
 * Done when: a report shows, for IMM 5257 and IMM 1295 on the same values, both writers' outputs read back equal, signatures intact on both, Adobe Validate passed once on the engine-written copy, and the lines and tools a swap would remove. The swap itself would be a later row.
 
-**Not rows now:** the read-only page preview (V7) and the browser viewer (V9): revisit at the next milestone plan, when the team has shipped screens or a supported page dump.
+**Not a row now:** fill-and-edit in the browser (V9): revisit only if officers need to type into a form, and when the team has shipped its screens.
 
 ### 4.2 Engineering choices
 
@@ -171,6 +182,7 @@ This matches the team's own note of 19 Oct ("0 of 19 load fully"). **Of our four
 | T4 | The list of problem boxes over-reports boxes the form marks mandatory but its script asks for only sometimes (Taiwan PIN, Israel passport on IMM 5257), while Validate passes. A caller needs to know which answer to trust. | `validate.mjs`: 2 problems listed, Validate complete |
 | T5 | Coverage decides the engine's value to us: 2 of our 4 barcode forms today. In our order of need: repeating sections (IMM 0008 and six more), FormCalc (IMM 1344), postal-code and "zero" patterns (IMM 1294, 5710 and three more), shared boxes (3 forms). | `breadth.mjs`, table 1.3 |
 | T6 | A supported way to get one HTML page per form page would let others reuse the layout without the viewer. | `scripts/lib/render-html.mjs` is outside the package |
+| T8 | For engine-validated copies the team's owner chose to write Adobe's own program identity into the form's reader-information box (their decision O-1, against their planner's advice). If such a copy is ever filed, a file not made by Adobe would say it was. Worth counsel's view before any use. | `plans/xfa-engine-runtime/OVERVIEW.md`, open decisions |
 | T7 | Adobe keeps each barcode's text in the saved file as well as drawing it, so a validated copy can be checked without reading pictures. | Their test `restore-calculate.test.ts`; our validated copy |
 
 ---
@@ -179,15 +191,15 @@ This matches the team's own note of 19 Oct ("0 of 19 load fully"). **Of our four
 
 | # | Question | My recommendation and why |
 |---|---|---|
-| **Q1** (blocks B170a) | How may the engine reach our GitHub repository and CI? The share says its branches are not to be pushed without the team lead's OK; our rule 1 never commits `code/`. | **Ask the team lead (through the founder) to OK one built package file, with no source, in our private repository.** Without it the engine works only on the Mac and the main gain (every copy, in CI) is lost. Alternative: Mac-only until the team publishes the package itself. |
-| **Q2** | Browser viewer now, or after the Bake? | **After, and a read-only preview first.** The team has no screens to reuse; the engine reads only 2 forms; the Bake is running. |
+| **Q1** (blocks B170a). Short form for the founder: "May one built package of the team's engine (no source) sit in our private repository so CI can use it? It needs the team lead's OK." | How may the engine reach our GitHub repository and CI? The share says its branches are not to be pushed without the team lead's OK; our rule 1 never commits `code/`. | **Ask the team lead (through the founder) to OK one built package file, with no source, in our private repository.** Without it the engine works only on the Mac and the main gain (every copy, in CI) is lost. Alternative: Mac-only until the team publishes the package itself. |
+| **Q2** (restated after the Lead's challenge, section 8) | Show the filled form inside the app, read-only, for the two forms the engine reads, as a small row now (B170d)? Or wait until after the Bake? | **Yes, as row B170d right after the package row, outside the Bake's count.** It is cheap (1 to 2 sessions, nothing added to the browser), it is the founder's own example, and it reuses what the team did build. Fill-and-edit in the browser: not now. |
 | **Q3** | Should the engine's writer replace our Python writer, or sit beside it? | **Beside it. A trial row (B170e) after a to c, swap only on evidence.** Ours is proven where it counts; theirs is cleaner but proven on fewer copies. |
 | **Q4** | Who extends the engine to the other forms? | **The team.** We send the measured list (T5) in priority order. We do not fork. |
-| **Q5** | May an engine-validated copy stand in for Adobe Validate on Paper copies? | **No change: Adobe stays the proof (P-442). Unconfirmed: no counsel.** Revisit with counsel and the immigration expert. |
+| **Q5** | May an engine-validated copy stand in for Adobe Validate, so the officer no longer downloads and re-uploads? | **Not yet: Adobe stays the proof (P-442). Unconfirmed: no counsel. But run the trial (B170f)** so the ruling rests on a side-by-side, and tell the team the two blockers (T1, and T8 below). This is the question behind the founder's "download and re-upload" example. |
 
 **Challenges to the brief (for the Lead to answer or accept):**
 1. The brief's first row was "barcode payload check with the engine closes the C7.2 gap without Adobe". Measured, the engine's barcode text is not yet equal to Adobe's (T1), so it cannot close the gap alone. The plan closes it by reading Adobe's own stored text and using the engine as the early check. C7.2 still needs the Mac's Adobe Validate evidence (P-442).
-2. The brief lists "the viewer if the founder agrees" as a likely row. There is no viewer to reuse; I recommend it is not a row at all for now.
+2. The brief lists "the viewer if the founder agrees" as a likely row. There are no viewer screens to reuse. **The Lead challenged this (12:4x IST) and was right in part:** the page drawing underneath is real and worked on our own copy, so a read-only view is now row B170d (section 8). Fill-and-edit stays out.
 3. The brief says "maybe nothing" for the writer. I agree for now, but our writer's own note says "demonstration-only" and it depends on private library internals; that is a risk worth one trial row, which the founder should see.
 
 ---
@@ -198,3 +210,33 @@ This matches the team's own note of 19 Oct ("0 of 19 load fully"). **Of our four
 * The team's owner checks in Adobe (round trips, 18 Oct) are taken from their plan files, not repeated.
 * That the text stored in the file equals the drawn barcode is the first step of B170b, not yet shown.
 * IRCC's acceptance of anything not made by Adobe: **Unconfirmed: no counsel**.
+
+---
+
+## 8. The Lead's challenge on the viewer (11 Nov 12:4x IST): evidence and answer
+
+The founder's example, as the Lead passed it on: "the PDF is there; now in our application you have to download and re-upload. I have given the XFA code, which opens the PDF in the browser itself ... so easy and so fancy and modern." The Lead asked three things, with evidence.
+
+**(1) Does it draw our own filled form? Yes, for IMM 5257.**
+* The team's page-dump script on our finished-story copy `9c00dbfc`: **5 pages for the generated copy, 6 for the Adobe-validated one (the sixth is the barcode page), in 1.5 to 1.6 seconds each**, process start included. Page 1 reads like the real form: government header, title, the Validate and Clear Form buttons drawn, and the Sample person's values in their boxes (family name, given names, sex, date of birth, place of birth, citizenship, marital status, ticked boxes).
+* The barcode page shows five grey boxes marked "barcode": the engine does not draw barcodes (the team's "Plan B", not started).
+* IMM 1295: we have no finished-story copy of it; the team's own Adobe-validated IMM 1295 drew 6 pages in 2.2 seconds.
+* How I looked: the sandbox here cannot start a headless browser, and the built-in browser would not open a local file, so I flattened the page's drawing layers to one picture with `rsvg-convert` (system fonts, not the form's own embedded fonts, which a real browser would use). Pictures: shared notes folder, `b170-render/pictures/`; the HTML pages beside them. **Not confirmed:** the look in a real browser, and a side-by-side with Acrobat (the team's own was pending on 20 Oct). Both are in B170d's "Done when".
+
+**(2) Cost: read-only view against editing in the browser.**
+
+| | Read-only view (B170d) | Fill and edit in the browser |
+|---|---|---|
+| What exists on the team's side | Layout in the package; a 304-line page writer as a helper script | Layout and a worker protocol; **no screens** (9 planned tasks, 19 open questions, mock-ups) |
+| Where the engine runs | On our server, in the adapter's separate process | In the browser, in a background worker with a watchdog |
+| Added to the browser | Nothing: static HTML pages with no script, in a frame | About 1.1 MB of engine code (0.3 MB compressed) + 0.5 MB sandbox (WebAssembly) + 0.5 MB of libraries, plus worker and WebAssembly set-up in the build |
+| Our new code | One route, one framed panel, tests | Field widgets, message boxes, focus, save and replay, limits, accessibility: weeks, and it would be us building what the team planned |
+| Sessions | 1 to 2 | Not estimated; not reuse |
+
+**(3) Does it remove download and re-upload? Not by itself.**
+* The read-only view removes the download an officer makes only to look at the form. That is real but small.
+* The download and re-upload the founder means is the round trip through Adobe: download the copy, press Validate in Adobe, save, upload the validated copy. That step exists because Adobe Validate is our proof (P-442), not because the form cannot be shown. Showing the form does not remove it.
+* What would remove it is the engine pressing the form's own Validate on the server and writing the validated copy (verdict V6). **No editing viewer is needed for that**, because our forms are filled from case facts. Measured today it already works technically on our own copy (Validate in 0.2 s, 5 barcode texts). It is blocked by three things that are not engineering on our side: the barcode text is not yet equal to Adobe's (T1); the reader-identity choice (T8); and whether IRCC accepts it (**Unconfirmed: no counsel**). The team's own decisions of 20 Oct point the same way ("Validate runs again inside Approve & download"). Row B170f turns this into a side-by-side the founder can rule on.
+
+**Answer.** I change V7 from "not now" to a row (B170d) and keep "no fill-and-edit screens". The order I recommend: B170a (package) → B170b and B170c (checks) with B170d (view) in the screens lane beside them → B170f (trial for validate in the app) → the founder's ruling on Q5.
+
