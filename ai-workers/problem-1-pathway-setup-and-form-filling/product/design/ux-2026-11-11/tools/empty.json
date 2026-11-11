@@ -1,0 +1,8 @@
+[
+{"id":"programs--empty","base":"http://localhost:4480","path":"/","label":"Programs, empty database"},
+{"id":"to-review--empty","base":"http://localhost:4480","path":"/review","label":"To review, empty"},
+{"id":"lib-fields--empty","base":"http://localhost:4480","path":"/library/fields","label":"Fields, empty"},
+{"id":"release--empty","base":"http://localhost:4480","path":"/release","label":"Release, empty"},
+{"id":"cases--empty","base":"http://localhost:4480","path":"/cases","actor":"user-O","label":"Cases, empty"},
+{"id":"not-found","base":"http://localhost:4480","path":"/no-such-page","label":"Page not found"}
+]

@@ -1,0 +1,98 @@
+[
+ {
+  "id": "dialog-correct-number",
+  "base": "http://localhost:4481",
+  "path": "/cases/39424168-e33b-43f4-b40e-3b247509319d",
+  "actor": "user-O",
+  "label": "Case page › Correct a number… dialog",
+  "widths": [
+   1440,
+   375
+  ],
+  "steps": "const b=page.getByRole(\"button\",{name:new RegExp(\"^Correct a number\")}).first(); await b.scrollIntoViewIfNeeded(); await b.click({timeout:8000}); await page.waitForTimeout(700);"
+ },
+ {
+  "id": "dialog-send-link",
+  "base": "http://localhost:4481",
+  "path": "/cases/39424168-e33b-43f4-b40e-3b247509319d",
+  "actor": "user-O",
+  "label": "Case page › Send… (a person's own link) dialog",
+  "widths": [
+   1440,
+   375
+  ],
+  "steps": "const b=page.getByRole(\"button\",{name:new RegExp(\"^Send…$\")}).first(); await b.scrollIntoViewIfNeeded(); await b.click({timeout:8000}); await page.waitForTimeout(700);"
+ },
+ {
+  "id": "dialog-keep-private",
+  "base": "http://localhost:4481",
+  "path": "/cases/39424168-e33b-43f4-b40e-3b247509319d",
+  "actor": "user-O",
+  "label": "Case page › Keep private… dialog",
+  "widths": [
+   1440,
+   375
+  ],
+  "steps": "const b=page.getByRole(\"button\",{name:new RegExp(\"^Keep private\")}).first(); await b.scrollIntoViewIfNeeded(); await b.click({timeout:8000}); await page.waitForTimeout(700);"
+ },
+ {
+  "id": "dialog-case-team",
+  "base": "http://localhost:4481",
+  "path": "/cases/39424168-e33b-43f4-b40e-3b247509319d",
+  "actor": "user-O",
+  "label": "Case page › Case team dialog",
+  "widths": [
+   1440,
+   375
+  ],
+  "steps": "const b=page.getByRole(\"button\",{name:new RegExp(\"^Case team$\")}).first(); await b.scrollIntoViewIfNeeded(); await b.click({timeout:8000}); await page.waitForTimeout(700);"
+ },
+ {
+  "id": "dialog-client-send-to-adult",
+  "base": "http://localhost:4481",
+  "path": "/cases/39424168-e33b-43f4-b40e-3b247509319d/questionnaire",
+  "actor": "user-P",
+  "label": "Client › Send to an adult… dialog",
+  "widths": [
+   1440,
+   375
+  ],
+  "steps": "const b=page.getByRole(\"button\",{name:new RegExp(\"^Send to \")}).first(); await b.scrollIntoViewIfNeeded(); await b.click({timeout:8000}); await page.waitForTimeout(700);"
+ },
+ {
+  "id": "dialog-field-merge",
+  "base": "http://localhost:4481",
+  "path": "/library/fields/person.date_of_birth",
+  "actor": "user-A",
+  "label": "Field page › Merge into… dialog",
+  "widths": [
+   1440,
+   375
+  ],
+  "steps": "const b=page.getByRole(\"button\",{name:new RegExp(\"^Merge into\")}).first(); await b.scrollIntoViewIfNeeded(); await b.click({timeout:8000}); await page.waitForTimeout(700);"
+ },
+ {
+  "id": "dialog-field-must-verify",
+  "base": "http://localhost:4481",
+  "path": "/library/fields/person.date_of_birth",
+  "actor": "user-A",
+  "label": "Field page › Propose: must verify before filing… dialog",
+  "widths": [
+   1440,
+   375
+  ],
+  "steps": "const b=page.getByRole(\"button\",{name:new RegExp(\"^Propose: must verify\")}).first(); await b.scrollIntoViewIfNeeded(); await b.click({timeout:8000}); await page.waitForTimeout(700);"
+ },
+ {
+  "id": "add-person-dialog",
+  "base": "http://localhost:4481",
+  "path": "/cases/39424168-e33b-43f4-b40e-3b247509319d",
+  "actor": "user-O",
+  "label": "Add spouse or partner dialog (on the finished story case)",
+  "widths": [
+   1440,
+   375
+  ],
+  "steps": "const b=page.getByRole(\"button\",{name:/^Add spouse or partner/}).first(); await b.click({timeout:8000}); await page.waitForTimeout(700);"
+ }
+]

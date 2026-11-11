@@ -1,0 +1,2069 @@
+{
+ "date": "2026-11-11",
+ "commit": "fbfb263c7",
+ "data": "",
+ "dims": [
+  "D1",
+  "D2",
+  "D3",
+  "D4",
+  "D5",
+  "D6",
+  "D7",
+  "D8",
+  "D9",
+  "D10",
+  "D11",
+  "D12",
+  "D13",
+  "D14"
+ ],
+ "weights": [
+  2,
+  3,
+  3,
+  3,
+  2,
+  1.5,
+  1.5,
+  1.5,
+  2,
+  1.5,
+  1,
+  1,
+  1,
+  2
+ ],
+ "screens": {
+  "programs": {
+   "purpose": "See every combination the firm offers and where its set-up stands; start or resume one.",
+   "on_journey": true,
+   "pattern": "Catalogue",
+   "data": "the six",
+   "scores": {
+    "D1": 7,
+    "D2": 6,
+    "D3": 6,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 5,
+    "D7": 7,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 7,
+    "D12": 8,
+    "D13": 9,
+    "D14": 7,
+    "weighted": 6.8
+   },
+   "problems": [
+    "Every live pathway reads 'Needs you' and '4 of 5 steps to do' beside 'Live' (UXF-17)",
+    "Two filter rows, a segmented switch and a search before the first card; 6 filled buttons in view (UXF-05 pattern)",
+    "Cards one per program group leave most of the 1440 px width empty; the list view is denser"
+   ],
+   "findings": [
+    "UXF-17",
+    "UXF-24"
+   ]
+  },
+  "structure": {
+   "purpose": "Add and arrange pathways, programs, categories and sub-categories.",
+   "on_journey": false,
+   "pattern": "Catalogue (tree)",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 6,
+    "D3": 5,
+    "D4": 6,
+    "D5": 6,
+    "D6": 6,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 7,
+    "D11": 3,
+    "D12": 8,
+    "D13": 7,
+    "D14": 6,
+    "weighted": 6
+   },
+   "problems": [
+    "98 px sideways scroll and 25 targets under 24 px at 375 px (UXF-15)",
+    "63 buttons on one tree; level colours help, but every row carries its own actions"
+   ],
+   "findings": [
+    "UXF-15"
+   ]
+  },
+  "pathway-overview": {
+   "purpose": "One pathway's set-up at a glance: the five set-up steps, what is done, and the next step.",
+   "on_journey": true,
+   "pattern": "Workspace",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 4,
+    "D3": 4,
+    "D4": "n/a",
+    "D5": 6,
+    "D6": 4,
+    "D7": 7,
+    "D8": 5,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 7,
+    "D14": 5,
+    "weighted": 5.6
+   },
+   "problems": [
+    "The one next step waits on someone else ('Waiting for the immigration expert: Choose the checklist page') and its link leads nowhere actionable (UXF-08, QA-240)",
+    "Four numbers for one thing: tab '7 to fix', step '6 problems block release', tile '13 problems to fix', release step '14 problems to fix' (UXF-06)",
+    "The header block (title, 40-word metadata line, next-step card, Sample banner) fills ~450 px before the tabs, on every tab (UXF-07)"
+   ],
+   "findings": [
+    "UXF-06",
+    "UXF-07",
+    "UXF-08"
+   ]
+  },
+  "pathway-forms": {
+   "purpose": "Choose and set up the forms a pathway files: find, add, map, channel.",
+   "on_journey": true,
+   "pattern": "Workspace",
+   "data": "the six",
+   "scores": {
+    "D1": 5,
+    "D2": 5,
+    "D3": 4,
+    "D4": 6,
+    "D5": 7,
+    "D6": 6,
+    "D7": 7,
+    "D8": 5,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 7,
+    "D14": 7,
+    "weighted": 6
+   },
+   "problems": [
+    "1,716 words and 8 filled buttons on one tab (UXF-05 pattern)",
+    "'Forms 199 to do' on the tab vs 'Review 184 proposals' on Overview (UXF-06)",
+    "IRCC quotes cut mid-word; form codes in monospace; form titles in capitals as the PDF prints them (UXF-24)"
+   ],
+   "findings": [
+    "UXF-06",
+    "UXF-07",
+    "UXF-24"
+   ]
+  },
+  "pathway-ai-job": {
+   "purpose": "Decide AI's field-map proposals for one form: reuse, new shared field, or reject.",
+   "on_journey": true,
+   "pattern": "Source + proposals",
+   "data": "the six",
+   "scores": {
+    "D1": 5,
+    "D2": 5,
+    "D3": 3,
+    "D4": 4,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 5,
+    "D9": 7,
+    "D10": 7,
+    "D11": 3,
+    "D12": 8,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 5.6
+   },
+   "problems": [
+    "Raw keys on the main path (`case.subject_is_principal_applicant`, `yes_no`) (UXF-13, QA-190)",
+    "29 filled buttons on one page; no bulk accept for new definitions: IMM 5257 alone needs 84 clicks (UXF-13, UXF-23, QA-241)",
+    "119 px sideways scroll at 375 px (UXF-15)",
+    "Good: keyboard keys J/K/A/N, evidence per proposal, 'Saved, US$0'"
+   ],
+   "findings": [
+    "UXF-13",
+    "UXF-15",
+    "UXF-23"
+   ]
+  },
+  "pathway-questionnaires": {
+   "purpose": "The Smart questionnaire: which questions each person is asked, in which section, and when.",
+   "on_journey": true,
+   "pattern": "Workspace",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 6,
+    "D3": 5,
+    "D4": 6,
+    "D5": 6,
+    "D6": 6,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 7,
+    "D14": 7,
+    "weighted": 6.3
+   },
+   "problems": [
+    "Questions listed by their field meaning, not by the words the client will read (UXF-02 source)",
+    "Tab '1 to do' while its 'Needs you' filter reads 0 (BK-1 observation)"
+   ],
+   "findings": [
+    "UXF-02",
+    "UXF-06"
+   ]
+  },
+  "pathway-documents": {
+   "purpose": "Which documents each person must give, and why.",
+   "on_journey": false,
+   "pattern": "Workspace",
+   "data": "the six",
+   "scores": {
+    "D1": 7,
+    "D2": 6,
+    "D3": 7,
+    "D4": 6,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 7,
+    "D12": 8,
+    "D13": 8,
+    "D14": 7,
+    "weighted": 6.8
+   },
+   "problems": [
+    "Compact and clear; inherits the heavy header (UXF-07)"
+   ],
+   "findings": [
+    "UXF-07"
+   ]
+  },
+  "pathway-preview": {
+   "purpose": "See what a chosen family would be asked and which forms they get.",
+   "on_journey": false,
+   "pattern": "Workspace (preview)",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 6,
+    "D3": 5,
+    "D4": 6,
+    "D5": 7,
+    "D6": 6,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 7,
+    "D14": 7,
+    "weighted": 6.3
+   },
+   "problems": [
+    "Useful idea (preview beside the editor); 786 words before the preview reads as a client page"
+   ],
+   "findings": [
+    "UXF-07"
+   ]
+  },
+  "pathway-tests": {
+   "purpose": "Sample families run against the set-up, with expected results.",
+   "on_journey": false,
+   "pattern": "Workspace",
+   "data": "the six",
+   "scores": {
+    "D1": 7,
+    "D2": 6,
+    "D3": 7,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 7,
+    "D12": 8,
+    "D13": 7,
+    "D14": 7,
+    "weighted": 6.8
+   },
+   "problems": [
+    "Fine as a side screen; inherits the header"
+   ],
+   "findings": [
+    "UXF-07"
+   ]
+  },
+  "pathway-review": {
+   "purpose": "Submit the pathway, the expert signs, a second person releases.",
+   "on_journey": true,
+   "pattern": "Change set",
+   "data": "the six",
+   "scores": {
+    "D1": 5,
+    "D2": 6,
+    "D3": 4,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 5,
+    "D7": 7,
+    "D8": 5,
+    "D9": 6,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 7,
+    "D14": 7,
+    "weighted": 6
+   },
+   "problems": [
+    "Two different pages called 'Review and release': this tab and the draft banner's link to the shared Release page (UXF-09)",
+    "'14 problems to fix' here vs '7 to fix' on the tab (UXF-06)",
+    "The three numbered steps are clear; the role box explains duties well; three people and no hand-off button (UXF-10)"
+   ],
+   "findings": [
+    "UXF-06",
+    "UXF-09",
+    "UXF-10"
+   ]
+  },
+  "pathway-sources": {
+   "purpose": "The /sources route: shows the Forms tab (same page).",
+   "on_journey": false,
+   "pattern": "Workspace",
+   "data": "the six",
+   "scores": {
+    "D1": 5,
+    "D2": 5,
+    "D3": 4,
+    "D4": 6,
+    "D5": 7,
+    "D6": 6,
+    "D7": 7,
+    "D8": 5,
+    "D9": 6,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 7,
+    "D14": 7,
+    "weighted": 6
+   },
+   "problems": [
+    "A second address for the Forms tab: the crawl finds two routes, one page (UXF-09 class)"
+   ],
+   "findings": [
+    "UXF-09"
+   ]
+  },
+  "to-review": {
+   "purpose": "Everything that waits for a person, with its next step.",
+   "on_journey": true,
+   "pattern": "Library list (queue)",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 7,
+    "D3": 5,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 6,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 5,
+    "D12": 8,
+    "D13": 8,
+    "D14": 7,
+    "weighted": 6.5
+   },
+   "problems": [
+    "Each row's 'What and why' packs 6 numbers ('57 form fields, 40 mapped. 29 shared fields proposed: 0 reuse, 29 new, 0 ambiguous, 0 conflicting…') (UXF-05 pattern)",
+    "'Needs you' counts rows here and combinations on Programs (QA-179)",
+    "Good: a Next step column with a verb"
+   ],
+   "findings": [
+    "UXF-06"
+   ]
+  },
+  "to-review--approver": {
+   "purpose": "The Approver's queue: approve new shared fields one by one.",
+   "on_journey": true,
+   "pattern": "Library list (queue)",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 6,
+    "D3": 5,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 6,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 5,
+    "D12": 8,
+    "D13": 8,
+    "D14": 7,
+    "weighted": 6.4
+   },
+   "problems": [
+    "Each new shared field is approved on its own page and returns to the list (103 waiting after one form, BK-1) (UXF-23)"
+   ],
+   "findings": [
+    "UXF-23"
+   ]
+  },
+  "release": {
+   "purpose": "The shared draft: every change across pathways and the library, released together.",
+   "on_journey": true,
+   "pattern": "Change set",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 6,
+    "D3": 4,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 6,
+    "D7": 6,
+    "D8": 5,
+    "D9": 6,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 8,
+    "D14": 8,
+    "weighted": 6.2
+   },
+   "problems": [
+    "Same name as the pathway's tab (UXF-09)",
+    "The list of 72 library changes is 2,807 words, one line each, no grouping"
+   ],
+   "findings": [
+    "UXF-09"
+   ]
+  },
+  "release--story": {
+   "purpose": "The shared Release page as the Approver.",
+   "on_journey": false,
+   "pattern": "Change set",
+   "data": "finished story",
+   "scores": {
+    "D1": 6,
+    "D2": 6,
+    "D3": 4,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 6,
+    "D7": 6,
+    "D8": 5,
+    "D9": 6,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 8,
+    "D14": 8,
+    "weighted": 6.2
+   },
+   "problems": [
+    "As above, as the Approver"
+   ],
+   "findings": [
+    "UXF-09"
+   ]
+  },
+  "releases": {
+   "purpose": "History of releases.",
+   "on_journey": false,
+   "pattern": "Library list",
+   "data": "the six",
+   "scores": {
+    "D1": 7,
+    "D2": 6,
+    "D3": 8,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 7,
+    "D12": 8,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 7.1
+   },
+   "problems": [
+    "Fine"
+   ],
+   "findings": []
+  },
+  "releases--story": {
+   "purpose": "History of releases after the story.",
+   "on_journey": false,
+   "pattern": "Library list",
+   "data": "finished story",
+   "scores": {
+    "D1": 7,
+    "D2": 6,
+    "D3": 7,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 7,
+    "D12": 8,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 7
+   },
+   "problems": [
+    "Fine"
+   ],
+   "findings": []
+  },
+  "lib-fields": {
+   "purpose": "The shared fields every form fills from.",
+   "on_journey": false,
+   "pattern": "Library list",
+   "data": "the six",
+   "scores": {
+    "D1": 7,
+    "D2": 6,
+    "D3": 7,
+    "D4": 6,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 8,
+    "D14": 7,
+    "weighted": 6.8
+   },
+   "problems": [
+    "Search and facets; rows open a field page"
+   ],
+   "findings": []
+  },
+  "lib-sections": {
+   "purpose": "Shared question sections.",
+   "on_journey": false,
+   "pattern": "Library list",
+   "data": "the six",
+   "scores": {
+    "D1": 7,
+    "D2": 6,
+    "D3": 7,
+    "D4": 6,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 8,
+    "D14": 7,
+    "weighted": 6.8
+   },
+   "problems": [
+    "Fine"
+   ],
+   "findings": []
+  },
+  "lib-documents": {
+   "purpose": "Shared document types.",
+   "on_journey": false,
+   "pattern": "Library list",
+   "data": "the six",
+   "scores": {
+    "D1": 7,
+    "D2": 6,
+    "D3": 7,
+    "D4": 6,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 8,
+    "D14": 7,
+    "weighted": 6.8
+   },
+   "problems": [
+    "Fine"
+   ],
+   "findings": []
+  },
+  "lib-forms": {
+   "purpose": "The form library: editions, field counts, where used.",
+   "on_journey": false,
+   "pattern": "Library list",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 6,
+    "D3": 5,
+    "D4": 6,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 4,
+    "D12": 8,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 6.4
+   },
+   "problems": [
+    "139 buttons; 40 targets under 24 px at 375 px (UXF-15)"
+   ],
+   "findings": [
+    "UXF-15"
+   ]
+  },
+  "lib-checks": {
+   "purpose": "Shared checks.",
+   "on_journey": false,
+   "pattern": "Library list",
+   "data": "the six",
+   "scores": {
+    "D1": 7,
+    "D2": 6,
+    "D3": 7,
+    "D4": 6,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 8,
+    "D14": 7,
+    "weighted": 6.8
+   },
+   "problems": [
+    "Fine"
+   ],
+   "findings": []
+  },
+  "lib-rules": {
+   "purpose": "The central read-only list of rules as sentences.",
+   "on_journey": false,
+   "pattern": "Library list (read-only)",
+   "data": "the six",
+   "scores": {
+    "D1": 7,
+    "D2": 6,
+    "D3": 6,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 8,
+    "D14": 7,
+    "weighted": 6.8
+   },
+   "problems": [
+    "Rules read as sentences (good); 472 words"
+   ],
+   "findings": []
+  },
+  "field-page": {
+   "purpose": "One shared field: meaning, rules, where used, history.",
+   "on_journey": false,
+   "pattern": "Library list › detail",
+   "data": "finished story",
+   "scores": {
+    "D1": 5,
+    "D2": 5,
+    "D3": 3,
+    "D4": 6,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 3,
+    "D12": 7,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 5.9
+   },
+   "problems": [
+    "3,162 words and 36 fold-outs; 56,796 px tall at 375 px (UXF-05 pattern, UXF-15)",
+    "Raw keys in text (`person.date_of_birth`, `date_part`)"
+   ],
+   "findings": [
+    "UXF-13",
+    "UXF-15"
+   ]
+  },
+  "ai": {
+   "purpose": "AI work history.",
+   "on_journey": false,
+   "pattern": "Library list",
+   "data": "the six",
+   "scores": {
+    "D1": 7,
+    "D2": 6,
+    "D3": 7,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 7,
+    "D12": 8,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 7
+   },
+   "problems": [
+    "Fine"
+   ],
+   "findings": []
+  },
+  "ai-batch": {
+   "purpose": "One AI batch.",
+   "on_journey": false,
+   "pattern": "Library list › detail",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 6,
+    "D3": 6,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 6.7
+   },
+   "problems": [
+    "808 words"
+   ],
+   "findings": []
+  },
+  "activity": {
+   "purpose": "Who did what, when.",
+   "on_journey": false,
+   "pattern": "Library list",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 6,
+    "D3": 4,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 4,
+    "D12": 8,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 6.4
+   },
+   "problems": [
+    "3,011 words in one list; 22,640 px at 375 px"
+   ],
+   "findings": []
+  },
+  "cases": {
+   "purpose": "The firm's cases; open a new one.",
+   "on_journey": true,
+   "pattern": "Library list",
+   "data": "finished story",
+   "scores": {
+    "D1": 7,
+    "D2": 8,
+    "D3": 9,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 6,
+    "D10": 8,
+    "D11": 7,
+    "D12": 8,
+    "D13": 8,
+    "D14": 7,
+    "weighted": 7.3
+   },
+   "problems": [
+    "A different frame from the Studio: no left menu, different header (UXF-10)",
+    "Browser tab still 'Immigration programs · Product Studio' (QA-390)"
+   ],
+   "findings": [
+    "UXF-10"
+   ]
+  },
+  "open-case-dialog": {
+   "purpose": "Open a case on a released combination for a principal applicant.",
+   "on_journey": true,
+   "pattern": "Dialog",
+   "data": "configured",
+   "scores": {
+    "D1": 7,
+    "D2": 8,
+    "D3": 7,
+    "D4": 6,
+    "D5": 6,
+    "D6": 7,
+    "D7": 7,
+    "D8": 6,
+    "D9": 7,
+    "D10": 7,
+    "D11": 7,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 6,
+    "weighted": 6.8
+   },
+   "problems": [
+    "The picker names 'Outside Canada · release 1' with no program, and 'Visitor visa · release 2' where the pathway says 'Release 6' (UXF-11)",
+    "Empty submit: messages on the field in good words, but no summary, focus stays on the button, and the hint disappears (UXF-12)"
+   ],
+   "findings": [
+    "UXF-11",
+    "UXF-12"
+   ]
+  },
+  "case-page--officer": {
+   "purpose": "Everything about one case: people and filings, documents, forms, check, review, submission, fees, Agent view.",
+   "on_journey": true,
+   "pattern": "Workspace (case)",
+   "data": "finished story",
+   "scores": {
+    "D1": 4,
+    "D2": 4,
+    "D3": 2,
+    "D4": 5,
+    "D5": 6,
+    "D6": 6,
+    "D7": 6,
+    "D8": 5,
+    "D9": 6,
+    "D10": 7,
+    "D11": 3,
+    "D12": 5,
+    "D13": 6,
+    "D14": 7,
+    "weighted": 5
+   },
+   "problems": [
+    "One page of 10,877 words, 63 sections, 140 buttons; 51,724 px tall at 375 px (about 64 phone screens) (UXF-05)",
+    "No single next step: 4-12 filled buttons in view and 33 'Pass with a reason…' (UXF-05)",
+    "First view: six counts in one sentence ('487 questions · 332 answered · 0 to confirm · 0 required not answered · 40 … not asked here')",
+    "PDF round trip per copy: Download → Adobe → validate → upload to IRCC → 'Validated copy uploaded back'; 28 Download buttons for one family, named only by time (UXF-14, QA-288)",
+    "At 375 px the People table breaks names mid-letter (UXF-15); settles in ~4.4 s (UXF-19)"
+   ],
+   "findings": [
+    "UXF-05",
+    "UXF-14",
+    "UXF-15",
+    "UXF-16",
+    "UXF-19",
+    "UXF-24"
+   ]
+  },
+  "case-page--representative": {
+   "purpose": "The same case page, as the representative.",
+   "on_journey": true,
+   "pattern": "Workspace (case)",
+   "data": "finished story",
+   "scores": {
+    "D1": 4,
+    "D2": 4,
+    "D3": 2,
+    "D4": 5,
+    "D5": 6,
+    "D6": 6,
+    "D7": 6,
+    "D8": 5,
+    "D9": 6,
+    "D10": 7,
+    "D11": 3,
+    "D12": 5,
+    "D13": 6,
+    "D14": 7,
+    "weighted": 5
+   },
+   "problems": [
+    "Same page as the case officer's; nothing is ordered for the representative's job"
+   ],
+   "findings": [
+    "UXF-05"
+   ]
+  },
+  "case-page--new-case": {
+   "purpose": "A new family case, mid-way.",
+   "on_journey": true,
+   "pattern": "Workspace (case)",
+   "data": "configured (walk)",
+   "scores": {
+    "D1": 4,
+    "D2": 3,
+    "D3": 2,
+    "D4": 4,
+    "D5": 6,
+    "D6": 6,
+    "D7": 6,
+    "D8": 5,
+    "D9": 6,
+    "D10": 7,
+    "D11": 3,
+    "D12": 6,
+    "D13": 6,
+    "D14": 7,
+    "weighted": 4.8
+   },
+   "problems": [
+    "7,555 words and 12 filled buttons on a case opened minutes ago (UXF-05)",
+    "Confirming answers: 11 person tabs, 'Confirm section' per section; 113 clicks left 78 still to confirm (UXF-05, UXF-19)",
+    "The visible 'Confirm section' buttons are disabled with 'Nothing answered yet' on a section reading '12 answered' (UXF-06)"
+   ],
+   "findings": [
+    "UXF-05",
+    "UXF-06",
+    "UXF-19"
+   ]
+  },
+  "case-eligibility": {
+   "purpose": "Eligibility answers for the case.",
+   "on_journey": false,
+   "pattern": "Workspace",
+   "data": "finished story",
+   "scores": {
+    "D1": 7,
+    "D2": 7,
+    "D3": 8,
+    "D4": 6,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 7,
+    "D12": 8,
+    "D13": 7,
+    "D14": 7,
+    "weighted": 7
+   },
+   "problems": [
+    "Short and clear"
+   ],
+   "findings": []
+  },
+  "case-check": {
+   "purpose": "The case's own check: rules on every form, and an AI review of a filled form.",
+   "on_journey": true,
+   "pattern": "Source + proposals",
+   "data": "finished story",
+   "scores": {
+    "D1": 6,
+    "D2": 5,
+    "D3": 4,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 5,
+    "D9": 7,
+    "D10": 8,
+    "D11": 5,
+    "D12": 6,
+    "D13": 8,
+    "D14": 8,
+    "weighted": 6.1
+   },
+   "problems": [
+    "Named 'Review', beside 'Representative's review' and 'To review' (UXF-09)",
+    "A priced 'Live' option sits beside the US$0 'Saved' one on a staff page (cost shown first: good)",
+    "972 words; the form's printed values as a 2-column table"
+   ],
+   "findings": [
+    "UXF-09"
+   ]
+  },
+  "representative-review": {
+   "purpose": "The representative checks each filing and approves it or sends it back.",
+   "on_journey": true,
+   "pattern": "Change set",
+   "data": "finished story",
+   "scores": {
+    "D1": 5,
+    "D2": 5,
+    "D3": 3,
+    "D4": "n/a",
+    "D5": 6,
+    "D6": 6,
+    "D7": 5,
+    "D8": 6,
+    "D9": 7,
+    "D10": 7,
+    "D11": 4,
+    "D12": 7,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 5.7
+   },
+   "problems": [
+    "102 facts per form, each with a 2-4 line source ('Typed by Case officer (Sample) · confirmed by Case officer (Sample)'): a family's review is 300+ rows (UXF-18)",
+    "Checklist checkboxes on the left: unclear whether they are the representative's to tick",
+    "No filled button: approve and send back are not the obvious next step (UXF-18)"
+   ],
+   "findings": [
+    "UXF-18",
+    "UXF-16"
+   ]
+  },
+  "answer-sheet": {
+   "purpose": "The online form's answers in the portal's order, to copy across.",
+   "on_journey": false,
+   "pattern": "Workspace",
+   "data": "finished story",
+   "scores": {
+    "D1": 6,
+    "D2": 6,
+    "D3": 4,
+    "D4": 6,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 5,
+    "D12": 7,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 6.3
+   },
+   "problems": [
+    "85 copy buttons; 1,365 words; good for its job"
+   ],
+   "findings": []
+  },
+  "client-questionnaire": {
+   "purpose": "The client's list of parts to answer, with status.",
+   "on_journey": true,
+   "pattern": "Task list (GOV.UK)",
+   "data": "finished story",
+   "scores": {
+    "D1": 8,
+    "D2": 8,
+    "D3": 5,
+    "D4": 5,
+    "D5": 7,
+    "D6": 5,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": 7,
+    "D14": 6,
+    "weighted": 6.6
+   },
+   "problems": [
+    "Clean task list, phone-first: the best screen in the product",
+    "90 parts for the finished story's family; 59 → 72 → 65 while answering (UXF-01, UXF-04, QA-388)",
+    "Part names come from form section titles: 'Indicate whether you are', 'Applicant', 'Signature'; 'Personal details' twice (UXF-02)"
+   ],
+   "findings": [
+    "UXF-01",
+    "UXF-02",
+    "UXF-04"
+   ]
+  },
+  "client-task-list--new": {
+   "purpose": "The task list mid-way, on a new family case.",
+   "on_journey": true,
+   "pattern": "Task list (GOV.UK)",
+   "data": "configured (walk)",
+   "scores": {
+    "D1": 8,
+    "D2": 8,
+    "D3": 5,
+    "D4": 5,
+    "D5": 7,
+    "D6": 5,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": 7,
+    "D14": 6,
+    "weighted": 6.6
+   },
+   "problems": [
+    "As above: 59 of 65 parts done after the walk; 'Continue where you left off'"
+   ],
+   "findings": [
+    "UXF-01",
+    "UXF-04"
+   ]
+  },
+  "client-question-page": {
+   "purpose": "One part of the client questionnaire.",
+   "on_journey": true,
+   "pattern": "Question page (GOV.UK)",
+   "data": "configured (walk)",
+   "scores": {
+    "D1": 7,
+    "D2": 8,
+    "D3": 4,
+    "D4": 3,
+    "D5": 6,
+    "D6": 7,
+    "D7": 4,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 7,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 6,
+    "weighted": 6
+   },
+   "problems": [
+    "Part 1 asks the client whether they are the principal applicant: the case already knows (UXF-02, BIC-01)",
+    "Questions read as data definitions in the third person ('Whether the person has ever used another name') under 'Answering for Client A (you)' (UXF-02)",
+    "22 of 72 parts break the 5-input bar; 'Personal details' has 57 inputs, 4,751 px at 375 px (UXF-01)",
+    "Countries are free text: 'Country or territory of birth' accepted '1986-05-20' (UXF-03)",
+    "No 'Why we ask'; the only help is system words ('Declared: the client's own answer; it fills the forms now') (UXF-22)"
+   ],
+   "findings": [
+    "UXF-01",
+    "UXF-02",
+    "UXF-03",
+    "UXF-22"
+   ]
+  },
+  "client-question-page--long": {
+   "purpose": "The longest part: Personal details (57 inputs).",
+   "on_journey": true,
+   "pattern": "Question page (GOV.UK)",
+   "data": "configured (walk)",
+   "scores": {
+    "D1": 6,
+    "D2": 7,
+    "D3": 2,
+    "D4": 2,
+    "D5": 5,
+    "D6": 7,
+    "D7": 4,
+    "D8": 7,
+    "D9": 7,
+    "D10": 7,
+    "D11": 5,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 6,
+    "weighted": 5.3
+   },
+   "problems": [
+    "57 inputs on one page; 26 targets under 24 px at 375 px (UXF-01, UXF-15)"
+   ],
+   "findings": [
+    "UXF-01",
+    "UXF-03",
+    "UXF-15"
+   ]
+  },
+  "client-questionnaire--as-staff": {
+   "purpose": "Staff who open the client's link see a notice and a way to the case.",
+   "on_journey": false,
+   "pattern": "Notice",
+   "data": "finished story",
+   "scores": {
+    "D1": 7,
+    "D2": 7,
+    "D3": 8,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 7,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 7,
+    "weighted": 7.1
+   },
+   "problems": [
+    "Good recovery notice; tells the representative 'As the case officer' (BK-1 obs.)"
+   ],
+   "findings": []
+  },
+  "client-link": {
+   "purpose": "The client's link page (scaffolding).",
+   "on_journey": false,
+   "pattern": "Notice",
+   "data": "finished story",
+   "scores": {
+    "D1": 7,
+    "D2": 6,
+    "D3": 9,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 6,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": 7,
+    "D14": 7,
+    "weighted": 7.1
+   },
+   "problems": [
+    "Scaffolding; not scored in the journey"
+   ],
+   "findings": []
+  },
+  "demo-inbox": {
+   "purpose": "The demo's simulated e-mail inbox (scaffolding, never ported).",
+   "on_journey": false,
+   "pattern": "Demo chrome",
+   "data": "finished story",
+   "scores": {
+    "D1": "n/a",
+    "D2": "n/a",
+    "D3": "n/a",
+    "D4": "n/a",
+    "D5": "n/a",
+    "D6": "n/a",
+    "D7": "n/a",
+    "D8": "n/a",
+    "D9": "n/a",
+    "D10": "n/a",
+    "D11": "n/a",
+    "D12": "n/a",
+    "D13": "n/a",
+    "D14": "n/a",
+    "weighted": "n/a"
+   },
+   "problems": [
+    "Scaffolding, not scored"
+   ],
+   "findings": []
+  },
+  "programs--story": {
+   "purpose": "Programs after the finished story.",
+   "on_journey": false,
+   "pattern": "Catalogue",
+   "data": "finished story",
+   "scores": {
+    "D1": 7,
+    "D2": 6,
+    "D3": 6,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 5,
+    "D7": 7,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 7,
+    "D12": 8,
+    "D13": 9,
+    "D14": 7,
+    "weighted": 6.8
+   },
+   "problems": [
+    "As Programs"
+   ],
+   "findings": [
+    "UXF-17"
+   ]
+  },
+  "open-case-dialog--error": {
+   "purpose": "Open a case after an empty submit.",
+   "on_journey": true,
+   "pattern": "Dialog (error state)",
+   "data": "configured",
+   "scores": {
+    "D1": 7,
+    "D2": 8,
+    "D3": 7,
+    "D4": 6,
+    "D5": 5,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 7,
+    "D11": 7,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 6,
+    "weighted": 6.7
+   },
+   "problems": [
+    "Field messages say what to do ('Give the case a reference of at least 3 characters.'), but there is no summary, focus stays on the button, and the hint under the field is replaced by the error (UXF-12)"
+   ],
+   "findings": [
+    "UXF-12"
+   ]
+  },
+  "to-review-proposals": {
+   "purpose": "AI proposals grouped by combination or form edition, to decide.",
+   "on_journey": false,
+   "pattern": "Source + proposals (grouped)",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 6,
+    "D3": 5,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 6.5
+   },
+   "problems": [
+    "454 words and 22 buttons; each group says why a proposal is Low, but its only action sends you to another page (QA-230)"
+   ],
+   "findings": [
+    "UXF-23"
+   ]
+  },
+  "review-change": {
+   "purpose": "One library change: what it is, who proposed it, approve or return.",
+   "on_journey": true,
+   "pattern": "Change set (one change)",
+   "data": "configured",
+   "scores": {
+    "D1": 7,
+    "D2": 6,
+    "D3": 8,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 7,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 7.1
+   },
+   "problems": [
+    "Short and clear when decided; the Approver still opens one page per change (UXF-23)"
+   ],
+   "findings": [
+    "UXF-23"
+   ]
+  },
+  "review-edition": {
+   "purpose": "A new form edition: what changed, its impact on the library, the components and combinations.",
+   "on_journey": false,
+   "pattern": "Change set (edition impact)",
+   "data": "configured",
+   "scores": {
+    "D1": 6,
+    "D2": 7,
+    "D3": 5,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 7,
+    "D8": 6,
+    "D9": 7,
+    "D10": 6,
+    "D11": 6,
+    "D12": 8,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 6.6
+   },
+   "problems": [
+    "axe at 375 px: 'Scrollable region must have keyboard access' (serious, 1 node) (UXF-21)",
+    "Form fields with no printed caption show the raw form path ('IMM_5476[0].Page1[0].RadioButtonList[0]') (QA-203)",
+    "Good: cost first, the deadline of the previous edition, one filled button"
+   ],
+   "findings": [
+    "UXF-21",
+    "UXF-13"
+   ]
+  },
+  "representative-review-round1": {
+   "purpose": "An earlier review round by its address.",
+   "on_journey": false,
+   "pattern": "Notice (error state)",
+   "data": "finished story",
+   "scores": {
+    "D1": 6,
+    "D2": 5,
+    "D3": 8,
+    "D4": "n/a",
+    "D5": 4,
+    "D6": 6,
+    "D7": 5,
+    "D8": 6,
+    "D9": 6,
+    "D10": 7,
+    "D11": 7,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 6,
+    "weighted": 6.1
+   },
+   "problems": [
+    "An unknown round reads 'No such case' on a case that exists, with only Retry (UXF-25)",
+    "No page heading on the error state (UXF-25)"
+   ],
+   "findings": [
+    "UXF-25"
+   ]
+  },
+  "pathway-preview--studio": {
+   "purpose": "The pathway preview's studio view: pick people and answers, see questions and forms.",
+   "on_journey": false,
+   "pattern": "Workspace (preview)",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 6,
+    "D3": 6,
+    "D4": 6,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 7,
+    "D14": 7,
+    "weighted": 6.5
+   },
+   "problems": [
+    "8 pickers; a second address for the same preview"
+   ],
+   "findings": [
+    "UXF-09"
+   ]
+  },
+  "pathway-overview--approver": {
+   "purpose": "A pathway's Overview as the Approver.",
+   "on_journey": false,
+   "pattern": "Workspace",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 4,
+    "D3": 4,
+    "D4": "n/a",
+    "D5": 6,
+    "D6": 4,
+    "D7": 7,
+    "D8": 5,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 7,
+    "D14": 5,
+    "weighted": 5.6
+   },
+   "problems": [
+    "Same page as the author's: the steps and counts are the author's, nothing says what the Approver does here (UXF-08)"
+   ],
+   "findings": [
+    "UXF-06",
+    "UXF-08"
+   ]
+  },
+  "cases--not-found": {
+   "purpose": "A case address that does not exist.",
+   "on_journey": false,
+   "pattern": "Notice (error state)",
+   "data": "finished story",
+   "scores": {
+    "D1": 7,
+    "D2": 7,
+    "D3": 9,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 8,
+    "D10": 7,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 7.5
+   },
+   "problems": [
+    "Plain words and a way back; no page heading (UXF-25)"
+   ],
+   "findings": [
+    "UXF-25"
+   ]
+  },
+  "case-page--client-blocked": {
+   "purpose": "The case page opened by the client.",
+   "on_journey": false,
+   "pattern": "Notice (permission)",
+   "data": "finished story",
+   "scores": {
+    "D1": 7,
+    "D2": 8,
+    "D3": 9,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 8,
+    "D10": 7,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 7,
+    "weighted": 7.5
+   },
+   "problems": [
+    "Says where to go; 'for the case officer' though the representative also works here; no page heading (UXF-25)"
+   ],
+   "findings": [
+    "UXF-25"
+   ]
+  },
+  "studio--as-case-staff": {
+   "purpose": "The Studio opened by a case officer.",
+   "on_journey": false,
+   "pattern": "Notice (permission)",
+   "data": "finished story",
+   "scores": {
+    "D1": 7,
+    "D2": 8,
+    "D3": 9,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 7,
+    "D8": 7,
+    "D9": 8,
+    "D10": 7,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 7.7
+   },
+   "problems": [
+    "Good recovery: says why and links to the cases; no page heading (UXF-25)"
+   ],
+   "findings": [
+    "UXF-25"
+   ]
+  },
+  "add-person-dialog": {
+   "purpose": "Add a spouse or child to the case.",
+   "on_journey": true,
+   "pattern": "Dialog",
+   "data": "finished story",
+   "scores": {
+    "D1": 8,
+    "D2": 8,
+    "D3": 8,
+    "D4": 5,
+    "D5": 6,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 7,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 6,
+    "weighted": 7
+   },
+   "problems": [
+    "Asks only a name; no date of birth, so biometrics and age wait (QA-248)",
+    "Clean dialog: one filled button named 'Add'"
+   ],
+   "findings": []
+  },
+  "dialog-correct-number": {
+   "purpose": "Correct a recorded IRCC application number, with a reason.",
+   "on_journey": false,
+   "pattern": "Dialog",
+   "data": "finished story",
+   "scores": {
+    "D1": 8,
+    "D2": 8,
+    "D3": 8,
+    "D4": 7,
+    "D5": 7,
+    "D6": 7,
+    "D7": 7,
+    "D8": 8,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 7.7
+   },
+   "problems": [
+    "Clean: two fields, the reason has a hint, one filled button named for the action"
+   ],
+   "findings": []
+  },
+  "dialog-send-link": {
+   "purpose": "Send an adult their own questionnaire link.",
+   "on_journey": false,
+   "pattern": "Dialog",
+   "data": "finished story",
+   "scores": {
+    "D1": 8,
+    "D2": 8,
+    "D3": 8,
+    "D4": 7,
+    "D5": 7,
+    "D6": 7,
+    "D7": 7,
+    "D8": 8,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 7,
+    "weighted": 7.6
+   },
+   "problems": [
+    "Clean; 'required' in words; Sample address hint"
+   ],
+   "findings": []
+  },
+  "dialog-keep-private": {
+   "purpose": "Keep an adult's answers private from the principal, with a reason.",
+   "on_journey": false,
+   "pattern": "Dialog",
+   "data": "finished story",
+   "scores": {
+    "D1": 8,
+    "D2": 8,
+    "D3": 8,
+    "D4": 7,
+    "D5": 7,
+    "D6": 7,
+    "D7": 7,
+    "D8": 8,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 7.7
+   },
+   "problems": [
+    "The title is the question; one field; good"
+   ],
+   "findings": []
+  },
+  "dialog-case-team": {
+   "purpose": "Who is on the case, since when, and its history.",
+   "on_journey": false,
+   "pattern": "Dialog (read)",
+   "data": "finished story",
+   "scores": {
+    "D1": 8,
+    "D2": 7,
+    "D3": 8,
+    "D4": "n/a",
+    "D5": 8,
+    "D6": 8,
+    "D7": 7,
+    "D8": 8,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 7.8
+   },
+   "problems": [
+    "Reads well at 375 px; 'Only the firm admin changes the case team' says why it is read-only"
+   ],
+   "findings": []
+  },
+  "dialog-client-send-to-adult": {
+   "purpose": "Client A sends an adult their own link.",
+   "on_journey": false,
+   "pattern": "Dialog",
+   "data": "finished story",
+   "scores": {
+    "D1": 8,
+    "D2": 8,
+    "D3": 8,
+    "D4": 7,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 8,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 7,
+    "weighted": 7.5
+   },
+   "problems": [
+    "Clean; nothing says what the adult will see or that Client A then stops seeing their answers"
+   ],
+   "findings": [
+    "UXF-20"
+   ]
+  },
+  "dialog-field-merge": {
+   "purpose": "Propose merging two shared fields that mean the same.",
+   "on_journey": false,
+   "pattern": "Dialog",
+   "data": "finished story",
+   "scores": {
+    "D1": 8,
+    "D2": 8,
+    "D3": 8,
+    "D4": 8,
+    "D5": 7,
+    "D6": 7,
+    "D7": 8,
+    "D8": 8,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 7.9
+   },
+   "problems": [
+    "Pick-list limited to fields of the same kind; the reason's rule is in the hint"
+   ],
+   "findings": []
+  },
+  "dialog-field-must-verify": {
+   "purpose": "Propose that a field must be verified before filing (opens inline on the field page).",
+   "on_journey": false,
+   "pattern": "Inline panel (field page)",
+   "data": "finished story",
+   "scores": {
+    "D1": 5,
+    "D2": 5,
+    "D3": 3,
+    "D4": 6,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 3,
+    "D12": 7,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 5.9
+   },
+   "problems": [
+    "Opens inline inside the 3,222-word field page, not as a dialog: 15 inputs and 2 filled buttons in view"
+   ],
+   "findings": [
+    "UXF-05"
+   ]
+  },
+  "programs--empty": {
+   "purpose": "First run: nothing set up.",
+   "on_journey": false,
+   "pattern": "Catalogue (empty)",
+   "data": "empty database",
+   "scores": {
+    "D1": 8,
+    "D2": 9,
+    "D3": 9,
+    "D4": "n/a",
+    "D5": 8,
+    "D6": 8,
+    "D7": 8,
+    "D8": 7,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": 9,
+    "D14": 8,
+    "weighted": 8.2
+   },
+   "problems": [
+    "Teaches the first action ('Open Program structure'); two filled buttons compete"
+   ],
+   "findings": []
+  },
+  "to-review--empty": {
+   "purpose": "Nothing waits.",
+   "on_journey": false,
+   "pattern": "Library list (empty)",
+   "data": "empty database",
+   "scores": {
+    "D1": 8,
+    "D2": 7,
+    "D3": 9,
+    "D4": "n/a",
+    "D5": 8,
+    "D6": 8,
+    "D7": 7,
+    "D8": 7,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": 8,
+    "D14": 8,
+    "weighted": 7.9
+   },
+   "problems": [
+    "Fine"
+   ],
+   "findings": []
+  },
+  "lib-fields--empty": {
+   "purpose": "No fields yet.",
+   "on_journey": false,
+   "pattern": "Library list (empty)",
+   "data": "empty database",
+   "scores": {
+    "D1": 8,
+    "D2": 7,
+    "D3": 9,
+    "D4": "n/a",
+    "D5": 8,
+    "D6": 8,
+    "D7": 7,
+    "D8": 7,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": 8,
+    "D14": 8,
+    "weighted": 7.9
+   },
+   "problems": [
+    "Fine"
+   ],
+   "findings": []
+  },
+  "release--empty": {
+   "purpose": "Nothing to release.",
+   "on_journey": false,
+   "pattern": "Change set (empty)",
+   "data": "empty database",
+   "scores": {
+    "D1": 8,
+    "D2": 7,
+    "D3": 9,
+    "D4": "n/a",
+    "D5": 8,
+    "D6": 8,
+    "D7": 7,
+    "D8": 7,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 7.8
+   },
+   "problems": [
+    "Fine"
+   ],
+   "findings": []
+  },
+  "cases--empty": {
+   "purpose": "No cases yet.",
+   "on_journey": false,
+   "pattern": "Library list (empty)",
+   "data": "empty database",
+   "scores": {
+    "D1": 8,
+    "D2": 8,
+    "D3": 9,
+    "D4": "n/a",
+    "D5": 8,
+    "D6": 8,
+    "D7": 7,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": 8,
+    "D14": 8,
+    "weighted": 7.8
+   },
+   "problems": [
+    "Says what to do; the case frame differs from the Studio's (UXF-10)"
+   ],
+   "findings": [
+    "UXF-10"
+   ]
+  },
+  "not-found": {
+   "purpose": "A wrong address.",
+   "on_journey": false,
+   "pattern": "Notice",
+   "data": "empty database",
+   "scores": {
+    "D1": 7,
+    "D2": 8,
+    "D3": 9,
+    "D4": "n/a",
+    "D5": 8,
+    "D6": 7,
+    "D7": 7,
+    "D8": 7,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 7.8
+   },
+   "problems": [
+    "One link back"
+   ],
+   "findings": []
+  }
+ },
+ "journey": {
+  "screens": 23,
+  "per_dimension": {
+   "D1": 6.1,
+   "D2": 6.1,
+   "D3": 4.7,
+   "D4": 4.8,
+   "D5": 6.4,
+   "D6": 6.1,
+   "D7": 6,
+   "D8": 5.9,
+   "D9": 6.7,
+   "D10": 7.7,
+   "D11": 5.7,
+   "D12": 7.5,
+   "D13": 7.2,
+   "D14": 6.8
+  },
+  "weighted": 6.1
+ },
+ "off_journey": {
+  "screens": 44,
+  "per_dimension": {
+   "D1": 6.8,
+   "D2": 6.5,
+   "D3": 6.8,
+   "D4": 6.3,
+   "D5": 7,
+   "D6": 6.9,
+   "D7": 6.4,
+   "D8": 6.7,
+   "D9": 7.2,
+   "D10": 7.8,
+   "D11": 6.6,
+   "D12": 7.9,
+   "D13": 7.5,
+   "D14": 7.5
+  },
+  "weighted": 6.9
+ },
+ "product_weighted": 6.4
+}
