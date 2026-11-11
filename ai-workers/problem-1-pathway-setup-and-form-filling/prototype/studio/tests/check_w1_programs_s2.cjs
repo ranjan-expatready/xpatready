@@ -290,6 +290,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("S1 fix: under 'Used by' a Not started combination gets Start setup; one with setup keeps Open", await start.count() === 1 && await panel().locator("[data-used-by]").getByRole("link", { name: "Open Visitor visa" }).count() === 1);
   await start.click();
   await p.waitForURL(/\/c\/[0-9a-f-]+\/(sources|forms)/); // S3 item 5: Start setup opens the Forms tab
+  // BK-3: the frame's line shows "Immigration programs › Combination" until the page names the levels; wait for them (fails loudly).
+  await p.waitForFunction((xs) => { const n = document.querySelector('nav[aria-label="Path"]'); return !!n && xs.every((x) => n.innerText.includes(x)); }, nsTr.path, { timeout: 30000 });
   const place = await p.getByRole("navigation", { name: "Path" }).innerText().catch(() => "");
   step("S3: Start setup in Edit creates the setup and opens it on its Forms tab, its place shown (read-only)", nsTr.path.every((x) => place.includes(x)) && await p.getByRole("heading", { level: 1, name: nsTr.label }).count() === 1, place);
   await p.goto(`${BASE}/structure?node=${encodeURIComponent(nsTr.nodeKey)}`);

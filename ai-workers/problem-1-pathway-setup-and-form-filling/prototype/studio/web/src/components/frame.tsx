@@ -6,7 +6,7 @@
 // reached the cases only through the Demo menu, and the case area's way back to the Studio was hidden below 768 px).
 import * as React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ArrowLeft, ArrowRight, ChevronRight, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { setActor, useToast } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { backOf, whereFromAddress, type Area, type Crumb, type Where } from "./where";
@@ -34,15 +34,16 @@ function WhereLine({ area, where, staff }: { area: Area; where: Where; staff: bo
   const other = !staff ? null : area === "studio" ? { to: "/cases", label: "Cases", title: "The firm's cases: open one on a released combination" }
     : area === "cases" ? { to: "/", label: "Product Studio", title: "Set up and release the combinations firms open cases on" } : null;
   return (
-    <div className="-mx-4 -mt-5 mb-5 flex items-center gap-x-3 border-b border-border bg-surface-raised px-4 py-1.5 text-[13px] text-text-muted md:-mx-6 md:px-6" data-where={area}>
-      {back ? <Link to={back.to} title={`Back to ${back.label}`} data-where-back className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-md pr-1 font-medium text-text-link outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-primary/40"><ArrowLeft className="size-3.5" aria-hidden />Back</Link> : null}
+    <div className="-mx-4 -mt-5 mb-5 flex items-center gap-x-3 border-b border-border bg-surface-raised px-4 py-1.5 text-sm text-text-muted md:-mx-6 md:px-6" data-where={area}>
+      {/* The name says where Back goes ("Back: To review"); the menu is hidden below 768 px, so Back is the way out there. */}
+      {back ? <Link to={back.to} aria-label={`Back: ${back.label}`} title={`Back to ${back.label}`} data-where-back className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-md pr-1 font-medium text-text-link outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-primary/40"><ArrowLeft className="size-3.5" aria-hidden />Back</Link> : null}
       {back ? <span className="h-4 w-px shrink-0 bg-border" aria-hidden /> : null}
       <nav aria-label="Path" className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1 gap-y-0.5">
         {crumbs.map((c, i) => {
           const last = i === crumbs.length - 1;
           return (
             <React.Fragment key={`${i}${c.label}`}>
-              {i ? <ChevronRight className="size-3.5 shrink-0" aria-hidden /> : null}
+              {i ? <span aria-hidden className="shrink-0">›</span> : null}
               {c.to ? <Link to={c.to} title={c.title} data-place={c.place} className={cn("[overflow-wrap:anywhere] hover:underline", i === 0 && "font-medium text-text-link", c.className)}>{c.label}</Link>
                 : <span data-place={c.place} aria-current={last ? "page" : undefined} className={cn("[overflow-wrap:anywhere]", last && "text-text", c.className)}>{c.label}</span>}
             </React.Fragment>

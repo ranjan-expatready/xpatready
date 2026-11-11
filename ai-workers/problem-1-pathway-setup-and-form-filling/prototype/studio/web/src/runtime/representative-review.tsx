@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { FormStamp, ReviewRound, ReviewRoundFiling } from "../../../contracts/runtime";
-import { noRetryOnRefusal } from "./questionnaire";
+import { noRetryOnRefusal, useCaseWhere } from "./questionnaire";
 import { FoldOut } from "@/components/fold-out";
 
 const TONE: Record<FormStamp["state"], string> = { to_check: "neutral", checked: "info", changed_since_review: "warn", approved: "ok", approval_withdrawn: "warn", sent_back: "danger", not_stamped_waits: "neutral" };
@@ -46,6 +46,7 @@ function Chip({ tone, words, tip, data }: { tone: string; words: string; tip: st
 /** /cases/:id/representative-review: the newest round, or the empty state that teaches "Send for review". */
 export function RepresentativeReviewLatest() {
   const { id } = useParams(), nav = useNavigate();
+  useCaseWhere(id!, "Representative's review"); // BK-3
   const list = useApi<{ rounds: { id: string }[] }>(["runtime", "reviews", id], `/runtime/cases/${id}/reviews`, { retry: noRetryOnRefusal });
   React.useEffect(() => { const r = list.data?.rounds[0]; if (r) nav(`/cases/${id}/representative-review/${r.id}`, { replace: true }); }, [list.data, id, nav]);
   if (list.isLoading || list.data?.rounds.length) return <div className="mx-auto max-w-6xl space-y-3"><Skeleton className="h-8 w-80" /><Skeleton className="h-64 w-full" /><span className="sr-only" role="status">Loading the review…</span></div>;
@@ -62,6 +63,7 @@ export function RepresentativeReviewPage() {
   const { id, round } = useParams(), actor = useActorId(), qc = useQueryClient(), toast = useToast(), nav = useNavigate();
   const key = ["runtime", "review", round];
   const q = useApi<ReviewRound>(key, `/runtime/reviews/${round}`, { retry: noRetryOnRefusal });
+  useCaseWhere(id!, "Representative's review"); // BK-3
   const v = q.data;
   // Review m7: "Open the review" on a filing names it (?filing=), so its own row is selected.
   const [search] = useSearchParams();
@@ -123,7 +125,7 @@ export function RepresentativeReviewPage() {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="mx-auto max-w-6xl space-y-4" data-review-page data-round={v.number}>
-          <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
             <h1 ref={heading} tabIndex={-1} className="text-2xl font-semibold outline-none">Representative's review · Round {v.number}</h1>
             <p className="text-sm text-text-muted">The representative of record checks each form and approves it or sends it back. {v.kind === "reapprove" ? "Re-approved after a change" : v.kind === "one_step" ? "Reviewed in one step from Ready to file" : `Sent by ${v.sent.name}`}, {when(v.sent.at)} · Representative of record: {v.representative.name ?? "none set"}.</p>

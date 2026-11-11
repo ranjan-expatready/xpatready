@@ -19,7 +19,7 @@ export function whereFromAddress(area: Area, path: string): Where {
   if (area === "client") {
     // The client's first page is their questionnaire (its heading says "Client questionnaire").
     const mine = s[1] ? { to: `/cases/${s[1]}/questionnaire`, label: "Client questionnaire" } : null;
-    return s[2] === "questionnaire" || !mine ? { crumbs: [{ label: s[1] ? "Client questionnaire" : "Your application" }], back: null } : { crumbs: [{ label: mine.label, to: mine.to }, { label: CASE_PAGE[s[2]] ?? "Page not found" }], back: mine };
+    return s[2] === "questionnaire" || !mine ? { crumbs: [{ label: s[1] ? "Client questionnaire" : "Your application" }], back: null } : { crumbs: [{ label: mine.label, to: mine.to }, { label: s[2] ? CASE_PAGE[s[2]] ?? "Page not found" : "Case" }], back: mine };
   }
   if (area === "cases") {
     if (!s[1]) return { crumbs: [{ label: "Cases" }], back: null };

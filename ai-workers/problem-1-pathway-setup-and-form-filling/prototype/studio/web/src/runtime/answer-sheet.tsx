@@ -57,7 +57,7 @@ export function AnswerSheetPage() {
   const prep = useApi<Prep>(["runtime", "view", id!, "prepare", actor], officer ? `/runtime/cases/${id}/prepare` : null, { retry: noRetryOnRefusal, refetchOnWindowFocus: true });
   const firm = useFirm();
   const nameOf = (u: string) => firm.data?.users.find((x) => x.id === u)?.name ?? "the case team";
-  useWhere(sheet.data ? [{ label: "Cases", to: "/cases" }, { label: prep.data?.reference ?? "Case", to: `/cases/${id}` }, { label: `${sheet.data.form} answer sheet` }] : null); // BK-3
+  useWhere(!sheet.isLoading && !prep.isLoading ? [{ label: "Cases", to: "/cases" }, { label: prep.data?.reference ?? "Case", to: `/cases/${id}` }, { label: sheet.data ? `${sheet.data.form} answer sheet` : "Answer sheet" }] : null); // BK-3
   const back = <Link to={`/cases/${id}`} className="text-text-link underline">Back to the case</Link>;
   if (!officer) return <Notice title="This page is for the case officer">The answer sheet is what the firm types into the IRCC account; a client never sees it. {back}</Notice>;
   if (sheet.isLoading) return <div className="mx-auto max-w-6xl space-y-3" aria-busy="true"><Skeleton className="h-8 w-1/3" /><Skeleton className="h-40 w-full" /></div>;

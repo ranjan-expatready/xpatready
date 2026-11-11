@@ -8,7 +8,7 @@ import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useTo
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Frame, useWhere } from "@/components/frame"; // BK-3
-import { noRetryOnRefusal, Questionnaire, useCaseView, type CanAdd, type CaseInfo, type CasePerson } from "./questionnaire";
+import { noRetryOnRefusal, Questionnaire, useCaseView, useCaseWhere, type CanAdd, type CaseInfo, type CasePerson } from "./questionnaire";
 import { FormsPanel } from "./forms";
 import { ItemChannels } from "./item-channels"; // C11.6
 import { FindingsPanel } from "./findings";
@@ -245,6 +245,7 @@ function AddPersonDialog({ caseId, line, close }: { caseId: string; line: CanAdd
 function ClientPage() {
   const { id } = useParams();
   const actor = useActorId();
+  useCaseWhere(id!, "Client questionnaire", !isClient(actor)); // BK-3: staff see the case's reference; the client's line is their own
   if (!isClient(actor)) return (
     <Notice title="This is the Client questionnaire" action={<Button size="sm" variant="secondary" onClick={() => setActor("user-P")}>Act as Client A</Button>}>
       As the case officer, review and change answers on <Link className="text-text-link underline" to={`/cases/${id}`}>the case page</Link>.

@@ -12,6 +12,7 @@ import { Button, Dialog, Input, Notice, Pill, Select, Textarea } from "@/compone
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { useWhere } from "@/components/frame"; // BK-3
 import { historyGaps, type Period } from "../../../../contracts/history";
 import { EmployerCaseSource, LINKED_FILE, type EmployerLink } from "./employer";
 import { HouseholdReads, ScopeTag } from "./scope-tag"; // C3.16
@@ -45,6 +46,12 @@ const cellAnswer = (q: Question, row?: string) => (row ? q.rows.find((r) => r.ro
 export function useCaseView(caseId: string, mode: Mode) {
   const actor = useActorId();
   return useApi<View>(["runtime", "view", caseId, mode, actor], `/runtime/cases/${caseId}/questionnaire${mode === "agent" ? "?mode=agent" : ""}`, { retry: noRetryOnRefusal });
+}
+/** BK-3: a case page's place on the frame's line, "Cases › <reference> › <page>". The reference comes from the case's
+ *  prepare view, which the case pages already read (same query). */
+export function useCaseWhere(caseId: string, here: string, on = true) {
+  const prep = useApi<{ reference?: string }>(["runtime", "view", caseId, "prepare"], on ? `/runtime/cases/${caseId}/prepare` : null, { retry: noRetryOnRefusal });
+  useWhere(on && prep.data?.reference ? [{ label: "Cases", to: "/cases" }, { label: prep.data.reference, to: `/cases/${caseId}` }, { label: here }] : null);
 }
 /** A refusal (4xx) is an answer, not a failure: show it at once instead of retrying. */
 export const noRetryOnRefusal = (n: number, e: Error) => !(e instanceof ApiError && e.status < 500) && n < 1;

@@ -32,7 +32,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const job = (await api(`/combinations/${vv}`)).body?.jobs?.find((j) => j.id)?.id;
   const field = (await api("/library/fields?retired=all")).body?.[0]?.key;
   const batch = (await api("/ai/batches")).body?.[0]?.id;
-  const caseId = (await api("/runtime/cases", { actor: "user-O" })).body?.cases?.[0]?.id;
+  const firstCase = (await api("/runtime/cases", { actor: "user-O" })).body?.cases?.[0], caseId = firstCase?.id, ref = firstCase?.reference;
   const item = (await api(`/runtime/cases/${caseId}/prepare`, { actor: "user-O" })).body?.items?.find((i) => i.id)?.id;
   step("setup: a combination, an AI job, a field, an AI run, a case and a case form item to open", !!(vv && job && field && batch && caseId && item), { vv, job, field, batch, caseId, item });
 
@@ -48,7 +48,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     ["/no-such-page", S, "not found"],
     ["/cases", O, "home"], [`/cases/${caseId}`, O], [`/cases/${caseId}/questionnaire`, O], [`/cases/${caseId}/eligibility`, O], [`/cases/${caseId}/review`, O],
     [`/cases/${caseId}/representative-review`, O], [`/cases/${caseId}/sheet/${item}`, O], [`/cases/${caseId}/no-such-page`, O, "not found"],
-    [`/cases/${caseId}/questionnaire`, C, "home"], ["/link", null, "home"], ["/inbox", null],
+    [`/cases/${caseId}/questionnaire`, C, "home"], [`/cases/${caseId}`, C], ["/link", null, "home"], ["/inbox", null],
   ];
   const as = async (actor) => { await p.evaluate((a) => { try { if (a) localStorage.setItem("xr-actor", a); } catch { /* ignore */ } }, actor); };
   /** Opens a route as a person and waits, failing loudly, for the frame's line and the page under it. */
@@ -63,12 +63,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const line = () => p.evaluate(() => {
     const w = [...document.querySelectorAll("[data-where]")], el = w[0];
     const paths = document.querySelectorAll('nav[aria-label="Path"]');
-    const crumbs = el ? [...el.querySelectorAll('nav[aria-label="Path"] a, nav[aria-label="Path"] span')].map((x) => x.textContent.trim()).filter(Boolean) : [];
-    const back = el?.querySelector("[data-where-back]"), other = el?.querySelector("[data-where-area]");
+    const crumbs = el ? [...el.querySelectorAll('nav[aria-label="Path"] a, nav[aria-label="Path"] span:not([aria-hidden])')].map((x) => x.textContent.trim()).filter(Boolean) : [];
+    const back = el?.querySelector("[data-where-back]"), backName = back?.getAttribute("aria-label") ?? null, other = el?.querySelector("[data-where-area]");
     const seen = (x) => !!x && x.getClientRects().length > 0 && x.getBoundingClientRect().width > 0;
     const r = el?.getBoundingClientRect();
     return { lines: w.length, paths: paths.length, inLine: el ? el.querySelectorAll('nav[aria-label="Path"]').length : 0, crumbs, top: r ? Math.round(r.top) : null,
-      back: seen(back) ? back.getAttribute("href") : null, other: seen(other) ? other.textContent.trim() : null, here: location.pathname, sideways: document.documentElement.scrollWidth > window.innerWidth + 1,
+      back: seen(back) ? back.getAttribute("href") : null, backName, other: seen(other) ? other.textContent.trim() : null, here: location.pathname, sideways: document.documentElement.scrollWidth > window.innerWidth + 1,
       lineFits: !!r && r.right <= window.innerWidth + 1 && el.scrollWidth <= el.clientWidth + 1,
       notFound: /Page not found/.test(document.querySelector("main")?.innerText ?? "") };
   });
@@ -80,11 +80,19 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   for (const width of [1440, 375]) {
     await p.setViewportSize({ width, height: width === 375 ? 812 : 900 });
     for (const [url, actor, kind] of ROUTES) {
-      await open(url, actor); const x = await line();
+      await open(url, actor);
+      // A case page names the case once its data is in (fails loudly when it never does).
+      if (actor === O && url.startsWith(`/cases/${caseId}`) && kind !== "not found") await p.waitForFunction((r) => (document.querySelector('[data-where] nav')?.textContent ?? "").includes(r), ref, { timeout: 15000 });
+      const x = await line();
       const name = `BK-3 ${width} ${url}${actor ? ` as ${actor}` : ""}`;
       step(`${name}: one "where am I" line at the top, naming the place (${x.crumbs.join(" › ")})`, x.lines === 1 && x.inLine === 1 && x.paths === 1 && x.crumbs.length >= 1 && x.top !== null && x.top < 200 && (kind === "not found" ? x.crumbs.at(-1) === "Page not found" : x.crumbs.at(-1) !== "Page not found"), x);
       if (kind === "home") step(`${name}: an area's first page (no Back needed)`, x.back === null, x.back);
-      else { step(`${name}: Back, one level up (${x.back})`, !!x.back && x.back.split("?")[0] !== x.here, x); if (x.back) targets.set(x.back, actor); }
+      else {
+        step(`${name}: Back, one level up (${x.back})`, !!x.back && x.back.split("?")[0] !== x.here, x); if (x.back) targets.set(x.back, actor);
+        step(`${name}: Back's name says where it goes (${x.backName})`, /^Back: \S/.test(x.backName ?? ""), x.backName);
+      }
+      // Every case page names the case by its reference, as the case page does (review m3), and never "Page not found" for the client (m2).
+      if (actor === O && url.startsWith(`/cases/${caseId}`) && kind !== "not found") step(`${name}: the line names the case ${ref}`, x.crumbs[0] === "Cases" && x.crumbs[1] === ref, x.crumbs);
       const staff = actor === S || actor === O;
       if (staff) step(`${name}: the other area is on the line (${x.other})`, x.other === (actor === S ? "Cases" : "Product Studio"), x.other);
       else step(`${name}: no other area for a client or an outside page`, x.other === null, x.other);

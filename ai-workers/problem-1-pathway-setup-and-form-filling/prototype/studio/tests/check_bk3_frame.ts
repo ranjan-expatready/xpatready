@@ -26,12 +26,13 @@ ok("BK-3: the routes are found (Studio, link page, inbox and the case area)", to
 const sample = (p: string) => p.replace(/:tab/, "forms").replace(/:[a-zA-Z]+/g, "x1");
 /** Which frame area a route opens in, and as whom. */
 const areaOf = (p: string): Area => (p === "/link" || p === "/inbox" ? "outside" : p.startsWith("/cases") ? "cases" : "studio");
-const HOMES = new Set(["studio:/", "cases:/cases", "outside:/link", "client:/cases/x1/questionnaire"]);
+const HOMES = new Set(["studio:/", "cases:/cases", "outside:/link", "client:/cases", "client:/cases/x1/questionnaire"]);
 /** Does an address open a route of the app (and not the not-found page)? */
 const known = [...top, ...caseRoutes].map((p) => new RegExp(`^${p.replace(/:[a-zA-Z]+/g, "[^/]+")}$`));
 const opens = (to: string) => known.some((r) => r.test(to.split(/[?#]/)[0]));
 
-const all: [Area, string][] = [...top.map((p) => [areaOf(p), p] as [Area, string]), ...caseRoutes.map((p) => ["cases", p] as [Area, string]), ["client", "/cases/:id/questionnaire"]];
+// The client too, on every case route (Client A can open any of them; only the questionnaire is theirs).
+const all: [Area, string][] = [...top.map((p) => [areaOf(p), p] as [Area, string]), ...caseRoutes.map((p) => ["cases", p] as [Area, string]), ...caseRoutes.map((p) => ["client", p] as [Area, string])];
 for (const [area, p] of all) {
   const addr = sample(p), w = whereFromAddress(area, addr), here = w.crumbs[w.crumbs.length - 1]?.label ?? "";
   ok(`BK-3 ${area} ${p}: the line names the place ("${w.crumbs.map((c) => c.label).join(" › ")}")`, w.crumbs.length > 0 && !!here && here !== "Page not found" && here !== "Page", w);

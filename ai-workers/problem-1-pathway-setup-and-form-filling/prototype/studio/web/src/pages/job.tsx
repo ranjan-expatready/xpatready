@@ -35,7 +35,7 @@ export function JobTrail({ id, combination, here }: { id: string; combination?: 
   // QA-75 (break m1, m3): the trail follows the job's own combination, not the address; a step of no combination goes back to AI work.
   // BK-3: shown on the frame's one "where am I" line.
   const cid = combination?.id ?? id;
-  useWhere(!combination ? [{ label: "AI work", to: "/ai" }, { label: here }] : [{ label: combination.label, to: `/c/${cid}` }, { label: "Forms", to: `/c/${cid}/forms` }, { label: here }]);
+  useWhere(!combination ? [{ label: "History" }, { label: "AI work", to: "/ai" }, { label: here }] : [{ label: combination.label, to: `/c/${cid}` }, { label: "Forms", to: `/c/${cid}/forms` }, { label: here }]);
   return null;
 }
 

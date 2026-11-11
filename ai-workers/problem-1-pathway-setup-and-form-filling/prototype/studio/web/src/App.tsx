@@ -31,8 +31,9 @@ import { FoldOut } from "@/components/fold-out";
 import { Frame } from "@/components/frame";
 
 export default function App() {
-  // The case area (runtime lane, R1c) has its own shell: firm and client pages, not the configuration studio.
-  // C6.16: an adult's own link and the demo inbox (stand-in SI-20) are outside both shells and their simulated people.
+  // BK-3: every route renders through the one Frame (components/frame.tsx): the Studio below, the case area (runtime
+  // lane, R1c) in RuntimeApp, and an adult's own link and the demo inbox (C6.16, stand-in SI-20), which stay outside the
+  // simulated people.
   return <BrowserRouter><Routes><Route path="/cases/*" element={<RuntimeApp />} /><Route path="/link" element={<LinkApp />} /><Route path="/inbox" element={<DemoInbox />} /><Route path="*" element={<Shell />} /></Routes></BrowserRouter>;
 }
 
