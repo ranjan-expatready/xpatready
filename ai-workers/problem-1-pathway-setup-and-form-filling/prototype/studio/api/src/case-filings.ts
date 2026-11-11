@@ -1,9 +1,10 @@
 // C6.12 (M3-B, runtime lane; P-171, P-135; M3 case view r5c BR-1, BR-16, BR-18): a case's filings, submission group and
 // fee lines, derived from its pinned release's combination and its people on every read (nothing stored, nothing typed by
-// hand). The case officer reads them; a client and configuration people do not (deny by default, as runtime.ts). Visitor
-// visa only in this slice: other combinations answer "not derived yet". Amounts Sample until the expert confirms. US$0.
+// hand). The case officer reads them; a client and configuration people do not (deny by default, as runtime.ts). Any
+// combination its release and the fee table describe (P-425). Amounts Sample until the expert confirms. US$0.
 import { Controller, Get, Headers, HttpStatus, Inject, Injectable, Param } from "@nestjs/common";
-import { checkValue } from "../../engine/runtime/case.ts";
+import { checkValue, knownOf } from "../../engine/runtime/case.ts";
+import { addedFilings } from "../../engine/runtime/added-filings.ts";
 import { releaseModes } from "../../engine/filing-modes.ts";
 import { ageOn, deriveFilings, FAMILY_GROUP } from "../../engine/runtime/filings.ts";
 import { actorOf, CaseRead, Db, fail, type Actor } from "./core.ts";
@@ -32,15 +33,17 @@ export class CaseFilings {
     // C6.12 (prepare view): the same ages, filing modes and stored submission groups as GET …/prepare, so the two never
     // price a case differently (read only: the prepare view stores the filings).
     const today = new Date();
-    const { answers } = await this.r.state(c);
+    const { answers, rows: answerRows } = await this.r.state(c);
     const ages = new Map(people.filter((p) => p.role !== "case").map((p) => [p.subjectId, ageOn(answers.find((a) => a.subjectId === p.subjectId && a.field === "person.date_of_birth" && !a.rowKey && checkValue(s, a.field, a.value, today).length === 0)?.value as string | undefined, today)]));
     const modes = releaseModes(s.combination.participants ?? []); // C11.12: the same reading as GET …/prepare
+    // M3-S2: the filings people's lines add, from the same answers as GET …/prepare (an answer its checks reject decides nothing).
+    const adds = addedFilings(s, knownOf(s, people, answers.filter((a) => checkValue(s, a.field, a.value, today).length === 0), answerRows, today).known, people);
     const rows = await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id, active: true }, include: { group: { select: { kind: true, recordedFees: true } } } });
     // Review m5: the stored group's own id, as GET …/prepare shows it ("group-family" only before the first prepare read).
     const groupOf = new Map(rows.map((f) => [f.subjectId, f.submissionGroupId]));
     const kindOf = new Map(rows.map((f) => [f.submissionGroupId, f.group.kind === "FAMILY" ? "family" as const : "separate" as const]));
     const family = rows.find((f) => f.group.kind === "FAMILY")?.submissionGroupId ?? FAMILY_GROUP;
-    const d = deriveFilings(own!.combinationKey, people, undefined, { ages, modes, label: s.combination.label, groupOf: (x) => groupOf.get(x) ?? family, groupKind: (g) => kindOf.get(g) ?? "family" });
+    const d = deriveFilings(own!.combinationKey, people, undefined, { ages, modes, adds, label: s.combination.label, groupOf: (x) => groupOf.get(x) ?? family, groupKind: (g) => kindOf.get(g) ?? "family" });
     return { case_id: c.id, reference: c.reference, release_version: pin.release.version, ...frozenIn(d, rows) };
   }
 }

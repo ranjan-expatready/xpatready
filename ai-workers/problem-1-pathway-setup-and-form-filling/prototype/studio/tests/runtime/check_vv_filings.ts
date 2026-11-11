@@ -87,7 +87,7 @@ const sum = (r: D, k?: string) => r.fees.filter((f) => !k || f.line === k).reduc
 // Only the Visitor visa is derived in this slice; nothing is guessed for others.
 {
   const other = deriveFilings("ee.pnp", family(3));
-  ok("C6.12 (fail): another combination is not derived yet and says so, with no filings or fees, in plain words", other.derived === false && /not derived yet/.test(other.why) && !("filings" in other) && !/C6\.12/.test(other.why));
+  ok("C6.12 (fail): a combination with no filing modes and no fee row is not derived and says what it waits for, with no filings or fees, in plain words", other.derived === false && /no filing or fee is worked out/.test(other.why) && !/not derived yet/.test(other.why) && !("filings" in other) && !/C6\.12/.test(other.why));
   for (const k of ["constructor", "toString", "__proto__"]) ok(`C6.12 (break m3): the key "${k}" is not derived, never a crash`, deriveFilings(k, family(1)).derived === false);
   ok("C6.12: the Visitor visa is derived", deriveFilings("vv.single", family(2)).derived === true);
   ok("C6.12: the version changes when the people change and stays the same otherwise", d(family(2)).version === d(family(2)).version && d(family(2)).version !== d(family(3)).version);

@@ -21,6 +21,9 @@ export const WHERE_STEP: Record<string, { step: StepKey; part?: "documents" | "q
   Eligibility: { step: "questions_documents", part: "questions" },
   // C11.12: "Filing for <role>" is about Who can be in this application (the people step).
   People: { step: "people" },
+  // M3-S2: a filing a "Who can be in this application" line adds (engine/validate.ts addedFilingProblems,
+  // withdrawnFieldLines) is fixed on the same line, so the people step too.
+  "Who can be in this application": { step: "people" },
   // G2 (C5.5): answer-key tests gate the release; their lines open Tests from step 5.
   Tests: { step: "release" },
   // G5 (C5.1, P-248): "No form line yet" and "No document line yet" (engine/programs.ts releaseLineProblems) hold the
