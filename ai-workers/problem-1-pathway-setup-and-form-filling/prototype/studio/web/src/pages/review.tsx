@@ -168,7 +168,8 @@ function ReviewHandOff({ v, me, people, needSme, unsignedSme, retired, combinati
     return <HandOff id="author" done="Returned to the author" next={<>{to ? theName(to) : "the author"} corrects it and submits it again.</>} to={to} label={to ? `Hand back to ${theName(to)} →` : undefined} noOne="No one in this workspace holds the author duty, so nobody can correct it." />;
   }
   const last = v.releases[0];
-  if (latest?.status === "APPROVED" && last && !retired) {
+  // Only while the draft is the release: once the author changes it again, the next step on this tab is theirs (BR-2).
+  if (latest?.status === "APPROVED" && last && !retired && v.draft.matches_release) {
     // m6: an echo of the header's "Open a case on Release N" (combination.tsx:116 stays), with its own attribute.
     return <div data-handoff-open-case><HandOff id="open-case" done={`Released in Release ${last.release}`} next="the firm opens a case on it." to={{ id: "", name: "Case officer", duties: [] }} path={`/cases?open=${combinationId}`} act={() => actAsCaseStaff()} label={`Open a case on Release ${last.release} (as Case officer) →`} /></div>;
   }
