@@ -30,7 +30,7 @@ qa lane, cloud copy. Lead 17's ask, from the master analysis on #1532 (`design/m
   * **C7.3-15:** every box the PDF writes from an answer has its sheet line.
   * **C7.3-16** (P-245): every sheet line is a box the PDF copy carries.
   * Fresh configured checkpoint (:4474): **exit 0, 16/16**, C7.3-14 HELD (PCRIndicator, EducationIndicator). Finished story (:4473): the same, before the hold 16/17.
-* **C7.3 row:** stays Works, with QA-392 noted on it.
+* **C7.3 row: Partial** while QA-392 is open (Lead 17 on #1549, P-305 (3)). Suspects (2) and (3) accepted as not reproduced; (2) stays covered by S3 rule 10. QA-392's fix goes to a forms lane.
 
 ## Questions for the Lead
-1. **C7.3: Works with a held step, or Partial while QA-392 is open?** Precedent cuts both ways: C7.8 stayed Partial while QA-355 (Major) was open; C10.1 stays Works with R12c held. Recommendation: **Partial**. The sheet is the officer's only source for Online filing and it misses two answers, which also keeps QA-392 counted for E3 on the journey. The pack keeps running either way, since a held step fails nothing.
+~~C7.3 Works or Partial?~~ Answered by Lead 17 on #1549: **Partial** (P-305 (3)).
