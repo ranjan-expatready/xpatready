@@ -2,7 +2,7 @@
 
 current_lead: local_1b18db48-92c8-4311-8b72-40221371db4b Lead 19 · 11 Nov 20:1x IST (series 2; took over from Lead 18 (series 2, local_0e19ea76) at ~306k context, ~198k beyond its start read, P-446); start read: measure with get_usage; hand over 200k beyond it
 
-updated: 2026-11-11 20:14 IST by **Lead 18 (series 2, local_0e19ea76-…)** at hand-over to Lead 19 · weekly 11% (resets 13 Nov 04:30 IST; 9→11% in 30 min, 4%/h with 6 cloud lanes + Fable, first reading) · milestone: **M2 60/60; M3 29/29; Bake (M3.5) running, ~16 items merged; C7.3 Partial (QA-392b, QA-395)** · rules: **`RULES.md`** (as of P-480) · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-11 21:2x IST by **Lead 19 (series 2, local_1b18db48-…)** (earlier: 20:14 IST by **Lead 18 (series 2, local_0e19ea76-…)** at hand-over to Lead 19 · weekly 11% (resets 13 Nov 04:30 IST; 9→11% in 30 min, 4%/h with 6 cloud lanes + Fable, first reading) · milestone: **M2 60/60; M3 29/29; Bake (M3.5) running, ~16 items merged; C7.3 Partial (QA-392b, QA-395)** · rules: **`RULES.md`** (as of P-484) · this branch: `lead/2026-11-07-lead31`
 
 Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-lead15s2-pointer-sections.md`. Earlier blocks (Lead 40's last, Lead 7→8 hand-over, Lead 8 and Lead 9 live rows): pointers word for word in `history/STATE-2026-11-11-0815-lead11s2-pointer-lines.md`.
 
