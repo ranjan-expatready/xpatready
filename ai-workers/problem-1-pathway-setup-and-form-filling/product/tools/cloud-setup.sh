@@ -43,7 +43,7 @@ brew_zsh() { local b=/home/linuxbrew/.linuxbrew/bin/brew; [ -x "$b" ] || return 
   HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 HOMEBREW_NO_ANALYTICS=1 "$b" install --quiet zsh >/dev/null &&
     $SUDO ln -sf "$("$b" --prefix)/bin/zsh" /usr/bin/zsh; }
 command -v zsh >/dev/null || apt zsh || brew_zsh
-locale -a 2>/dev/null | grep -qi '^en_US.utf8$' || { apt locales && $SUDO locale-gen en_US.UTF-8 >/dev/null; } ||
+locale -a 2>/dev/null | grep -qi '^en_US.utf8$' || { apt locales || true; $SUDO locale-gen en_US.UTF-8 >/dev/null; } ||
   echo "WARNING: en_US.UTF-8 could not be installed (apt unreachable); continuing with the image's locales" >&2
 command -v zsh >/dev/null && echo "zsh $(zsh --version | cut -d' ' -f2)"
 
@@ -108,7 +108,7 @@ if [ "$(uname -s)" = Linux ]; then
   HB=/opt/homebrew/opt/postgresql@18/bin; $SUDO mkdir -p "$HB" /opt/homebrew/bin
   for t in psql createdb dropdb pg_dump pg_restore; do $SUDO ln -sf "$PGBIN/$t" "$HB/$t"; done
   if [ "$(id -u)" = 0 ]; then ln -sf /usr/local/bin/pg_ctl "$HB/pg_ctl"; else $SUDO ln -sf "$PGBIN/pg_ctl" "$HB/pg_ctl"; fi
-  command -v pdftoppm >/dev/null || apt poppler-utils
+  command -v pdftoppm >/dev/null || apt poppler-utils || echo "WARNING: poppler-utils could not be installed (apt unreachable)" >&2
   for t in openssl pdftoppm pdftotext pdfinfo python3 tesseract; do
     command -v "$t" >/dev/null && [ ! -e "/opt/homebrew/bin/$t" ] && $SUDO ln -sf "$(command -v "$t")" "/opt/homebrew/bin/$t"; done
   CR=$(ls -d /opt/pw-browsers/chromium-*/chrome-linux*/chrome 2>/dev/null | sort -V | tail -1)
