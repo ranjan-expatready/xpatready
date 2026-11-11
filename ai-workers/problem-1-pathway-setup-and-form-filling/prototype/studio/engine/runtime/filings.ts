@@ -37,8 +37,11 @@ type TableLine = { key: string; label: string; status: string; basis: FeeBasis; 
  *  `group_why` the family group's reason; `co_filed_why` the reason a co-filed application and the principal's are sent
  *  together (IRCC's words); `each_files_own` IRCC's words, with their source, where each family member files their own
  *  application (BR-7's warning); `basis_note` what the priced total leaves out, in words on the case (M3-S1 review M2). */
+/** `fees_by_role` (BK-15, P-486): per role, the filing that role's person makes (its name, e.g. the document they apply
+ *  for) and the fee lines that charge them; with it, each person pays only their role's lines (or the lines a filing
+ *  their line adds names), never every line reaching their role. */
 type TableCombination = { label: string; lines: string[]; checklist?: boolean; modes?: Record<string, LineMode>; group_why?: string; co_filed_why?: string; basis_note?: string;
-  each_files_own?: { says: string; source: FeeSource } | null };
+  each_files_own?: { says: string; source: FeeSource } | null; fees_by_role?: Record<string, { filing?: string; lines: string[] }> };
 export type FeeTable = { as_of: string; read: string; status: string; lines: TableLine[]; combinations: Record<string, TableCombination> };
 export const FEE_TABLE = FEES as unknown as FeeTable;
 // A line removed from the table leaves these undefined; the module never throws on load (break r1 B: a deleted line
@@ -90,7 +93,8 @@ export type AgeExempt = { underAge: number; overAge: number; source: FeeSource }
 /** A fee line: `roles` limits it to the filings of those roles (spouse and PNP fees); none means every filing. Without a
  *  family maximum the cap never applies (familyFrom is then beyond any household). */
 export type FeeRule = { key: string; label: string; basis?: FeeBasis; perPersonCents: number; familyMaxCents: number; familyFrom: number; source: FeeSource; exempt?: AgeExempt; roles?: string[]; step?: string };
-type Rules = { label: string; modes: Map<string, LineMode>; fees: FeeRule[]; groupWhy?: string; coFiledWhy?: string; basisNote?: string;
+export type RoleFees = { filing?: string; lines: string[] };
+type Rules = { label: string; modes: Map<string, LineMode>; fees: FeeRule[]; groupWhy?: string; coFiledWhy?: string; basisNote?: string; byRole?: Map<string, RoleFees>;
   /** The table these rules were priced from (outside check on #455: the basis names that table, never the shipped one). */
   table?: { as_of: string; read: string } };
 /** What the case adds (C6.12, the stored prepare view): each person's age in whole years (null: no date of birth yet),
@@ -123,6 +127,19 @@ export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
   // on a role that may apply, co_files only on one that takes part and never applies (M3-S1: its fees are the
   // per_application lines naming its role, charged on its own filing, never on the person it is filed with).
   if (modes.some(([role, m]) => (m === "co_files" ? !CO_FILING_ROLES.has(role) : !APPLICANT_ROLES.has(role)))) return undefined;
+  // BK-15 (P-486): fees by role, when given, name for each role that may apply its own fee lines (one of this
+  // combination's each, at least one, once each) and, in words, the filing it makes. Anything else: not derived.
+  let byRole: Map<string, RoleFees> | undefined;
+  if (c.fees_by_role !== undefined) {
+    const v0: unknown = c.fees_by_role;
+    if (!v0 || typeof v0 !== "object" || Array.isArray(v0)) return undefined;
+    const entries = Object.entries(v0 as Record<string, unknown>);
+    const sound = (v: unknown): v is RoleFees => { const x = v as Partial<RoleFees> | null;
+      return !!x && typeof x === "object" && Array.isArray(x.lines) && x.lines.length > 0 && new Set(x.lines).size === x.lines.length && x.lines.every((k) => typeof k === "string" && c.lines.includes(k))
+        && (x.filing === undefined || (typeof x.filing === "string" && x.filing.trim().length > 0)); };
+    if (!entries.length || entries.some(([role, v]) => !APPLICANT_ROLES.has(role) || !sound(v))) return undefined;
+    byRole = new Map(entries.map(([role, v]) => { const x = v as RoleFees; return [role, { lines: [...x.lines], ...(x.filing ? { filing: x.filing.trim() } : {}) }] as const; }));
+  }
   // A line the engine cannot charge soundly makes the combination not derived: a missing line, a basis not worked out
   // (per_position), a family maximum without its cap, or a per-role line naming no role.
   const fees = (lines as TableLine[]).map((l): FeeRule => ({
@@ -130,7 +147,7 @@ export function rulesFrom(table: FeeTable, key: string): Rules | undefined {
     // Only the family_maximum basis caps a line (P-247): any other basis charges each person or application in full.
     familyMaxCents: l.basis === "family_maximum" ? Math.round(l.family_max!.cad * 100) : 0, familyFrom: l.basis === "family_maximum" ? l.family_max!.from_people : Number.MAX_SAFE_INTEGER,
     source: l.source, ...(l.exempt ? { exempt: { underAge: l.exempt.under_age, overAge: l.exempt.over_age, source: l.exempt.source } } : {}), ...(l.roles ? { roles: l.roles } : {}), ...(l.step ? { step: l.step } : {}) }));
-  return { label: c.label, modes: new Map(modes), fees, groupWhy: c.group_why, coFiledWhy: typeof c.co_filed_why === "string" && c.co_filed_why.trim() ? c.co_filed_why : undefined, basisNote: typeof c.basis_note === "string" && c.basis_note.trim() ? c.basis_note : undefined, table: { as_of: table.as_of, read: table.read } };
+  return { label: c.label, modes: new Map(modes), fees, groupWhy: c.group_why, coFiledWhy: typeof c.co_filed_why === "string" && c.co_filed_why.trim() ? c.co_filed_why : undefined, basisNote: typeof c.basis_note === "string" && c.basis_note.trim() ? c.basis_note : undefined, ...(byRole ? { byRole } : {}), table: { as_of: table.as_of, read: table.read } };
 }
 const RULES = { get: (key: string) => rulesFrom(FEE_TABLE, key) };
 
@@ -255,7 +272,9 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const principal = plan.filings.find((f) => f.owner.role === "principal");
   // Keyed by the owner, so a filing keeps its id when someone else stops travelling. A co-filed filing is always in the
   // principal's group (it cannot be sent alone).
-  const filings: CaseFiling[] = plan.filings.map((f) => ({ id: f.id, combination: combinationKey, label: f.kind === "co_filed" ? `${label}: sponsorship (${f.owner.label})` : f.added ? `${f.added}: ${f.owner.label}` : `${label}: ${f.owner.label}`,
+  // BK-15: with fees by role, a person's own filing is named by the filing their role makes (the document they apply for).
+  const byRole = rules?.byRole;
+  const filings: CaseFiling[] = plan.filings.map((f) => ({ id: f.id, combination: combinationKey, label: f.kind === "co_filed" ? `${label}: sponsorship (${f.owner.label})` : f.added ? `${f.added}: ${f.owner.label}` : `${byRole?.get(f.owner.role)?.filing ?? label}: ${f.owner.label}`,
     mode: f.kind === "co_filed" ? "co_filed" : "files_own", owner: { subject: f.owner.subject, label: f.owner.label, role: f.owner.role },
     applicants: f.applicants.map((a) => ({ subject: a.person.subject, label: a.person.label, role: a.person.role, mode: a.mode })),
     group: f.kind === "co_filed" && principal ? groupOf(principal.owner.subject) : groupOf(f.owner.subject), status: "NOT_STARTED", number: null }));
@@ -277,7 +296,11 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const addedOwner = new Map(plan.filings.filter((f) => f.added).map((f) => [f.owner.subject, f.id]));
   const reaches = (key: string, role: string) => { const r = fees0.find((x) => x.key === key); return !!r && (!r.roles || r.roles.includes(role)); };
   const unpricedAdded = filings.filter((f) => { const k = addedFee.get(f.id); return !!k && (!k.length || !k.every((x) => reaches(x, f.owner!.role))); });
-  const priced = unreached.length || missingCo.length || unpricedAdded.length ? [] : fees0;
+  // BK-15: with fees by role, a person applying whose role names no fee lines (and whose line adds no filing naming its
+  // own) cannot be priced, so the case charges nothing and says so (BR-10), never a total that leaves them out.
+  const charged = (role: string, key: string, ofRole: (r: string) => boolean) => (byRole ? !!byRole.get(role)?.lines.includes(key) : ofRole(role));
+  const unpricedRole = byRole ? filings.flatMap((f) => f.applicants.filter((a) => a.mode === "applying" && !addedOwner.has(a.subject) && !byRole.has(a.role))) : [];
+  const priced = unreached.length || missingCo.length || unpricedAdded.length || unpricedRole.length ? [] : fees0;
   const groups: SubmissionGroup[] = [], fees: FeeLine[] = [];
   for (const gid of [...new Set(filings.map((f) => f.group))]) {
     const mine = filings.filter((f) => f.group === gid);
@@ -289,12 +312,12 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
       // co-filed application is charged only by a line naming its owner's role (M3-S1): its owner pays, covering nobody
       // else (a line with no roles charges the applications of people who apply, as before).
       const units = rule.basis === "per_application"
-        ? mine.filter((f) => (addedFee.has(f.id) ? addedFee.get(f.id)!.includes(rule.key) : f.mode === "co_filed" ? !!rule.roles?.includes(f.owner!.role) : ofRole(f.owner!.role))).flatMap((f) => {
+        ? mine.filter((f) => (addedFee.has(f.id) ? addedFee.get(f.id)!.includes(rule.key) : f.mode === "co_filed" ? !!rule.roles?.includes(f.owner!.role) : charged(f.owner!.role, rule.key, ofRole))).flatMap((f) => {
             if (f.mode === "co_filed") return [{ filing: f.id, who: { subject: f.owner!.subject, label: f.owner!.label, role: f.owner!.role, mode: "applying" as const }, covers: 0 }];
             const owner = f.applicants.find((a) => a.subject === f.owner!.subject && a.mode === "applying");
             return owner ? [{ filing: f.id, who: owner, covers: f.applicants.filter((a) => a.mode === "applying").length }] : [];
           })
-        : payers.filter((x) => (addedOwner.has(x.who.subject) ? addedFee.get(addedOwner.get(x.who.subject)!)!.includes(rule.key) : ofRole(x.who.role)));
+        : payers.filter((x) => (addedOwner.has(x.who.subject) ? addedFee.get(addedOwner.get(x.who.subject)!)!.includes(rule.key) : charged(x.who.role, rule.key, ofRole)));
       if (!units.length) continue;
       const check = new Map(units.map((x) => [x.who.subject, ageCheck(rule, opts.ages?.get(x.who.subject))]));
       const paying = units.filter((x) => { const c = check.get(x.who.subject)!; return "pays" in c && c.pays; });
@@ -331,6 +354,7 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const body = { filings, groups, fees, not_filing: notFiling };
   const unpriced = missingCo.length && fees0.length ? `No ${missingCo.map((r) => r.replace(/_/g, " ")).join(" or ")} on this case yet: their co-filed application carries its own fee, so no fee is charged until they are added; nothing is guessed.`
     : unpricedAdded.length && fees0.length ? `${unpricedAdded.map((f) => `${f.label} is added by its rule`).join("; ")}, and its line does not name this combination's fee lines for it (each reaching a ${unpricedAdded.map((f) => f.owner!.role.replace(/_/g, " ")).join(" or ")}), so no fee is charged on this case; nothing is guessed.`
+    : unpricedRole.length && fees0.length ? `The fee table names no fee lines for a ${[...new Set(unpricedRole.map((a) => a.role.replace(/_/g, " ")))].join(" or ")} in this combination (${unpricedRole.map((a) => a.label).join(", ")}), so no fee is charged on this case; nothing is guessed.`
     : unreached.length && fees0.length ? `The fee table has no fee line for ${unreached.map((f) => `${f.owner!.label}'s co-filed application`).join(" or ")} (a per-application line naming its role), so no fee is charged on this case; nothing is guessed.` : noFeeLines(label);
   return { derived: true, combination: combinationKey, label, ...body, currency: "CAD", fees_worked_out: feesKnown,
     fees_why: feesKnown ? null : unpriced,

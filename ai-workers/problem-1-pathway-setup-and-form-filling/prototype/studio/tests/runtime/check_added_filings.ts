@@ -43,9 +43,12 @@ const TABLE_FOR_RELEASE = TABLE;
   const none = checkPeople([line("principal", { filingMode: "files_own" }), line("child", { addsFiling: ADDS })] as never, ROLES, true);
   ok("save pass: so may a line with no filing of its own", none.errors.length === 0 && !!none.lines[1].addsFiling, none.errors);
   const own = checkPeople([line("principal", { filingMode: "files_own" }), line("child", { filingMode: "files_own", addsFiling: ADDS })] as never, ROLES, true);
-  ok("save fail: a line whose person files their own application cannot add one (one application per person)", own.errors.some((e) => e.field === "participants[1].addsFiling" && /already files their own application/.test(e.message)), own.errors);
+  // BK-15 (P-486): on a line that files its own, the added filing is made instead of it (still one application per person).
+  ok("save pass (BK-15): a line whose person files their own application may add a filing, made instead of their own", own.errors.length === 0 && !!own.lines[1].addsFiling, own.errors);
+  const co = checkPeople([line("principal", { filingMode: "files_own" }), line("child", { filingMode: "co_files", addsFiling: ADDS })] as never, ROLES, true);
+  ok("save fail (BK-15): never on a co-filing line", co.errors.some((e) => e.field === "participants[1].addsFiling"), co.errors);
   const main = checkPeople([line("principal", { filingMode: "files_own", addsFiling: ADDS })] as never, ROLES, true);
-  ok("save fail: never on the principal's line", main.errors.some((e) => /already files their own application/.test(e.message)), main.errors);
+  ok("save fail: never on the principal's line", main.errors.some((e) => /files the combination's own application/.test(e.message)), main.errors);
   const rep = checkPeople([line("principal"), line("representative", { addsFiling: ADDS })] as never, ROLES, false);
   ok("save fail: never for a person who is never an applicant", rep.errors.some((e) => /never an applicant, so no filing can be added/.test(e.message)), rep.errors);
   const other = checkPeople([line("principal"), line("child", { filingMode: "on_principal", addsFiling: { ...ADDS, condition: { ...RULE, subjectKind: "SPOUSE" } } })] as never, ROLES, true);
@@ -88,8 +91,10 @@ const TABLE_FOR_RELEASE = TABLE;
   ok("release pass (n1): an unnamed per-application line (the principal's application fee) or a line not reaching a child raises no warning", !relP({ addsFiling: BOTH }).some((p) => /\b(app|main_only)\b/.test(p.message)));
   ok("release pass (n1): naming no fee line raises no warning (the case is left unpriced in words, never short)", relP({ addsFiling: ADDS }).length === 0, rel({ addsFiling: ADDS }));
   ok("release fail (break M4): its fact asked once for the case is refused", rel({ addsFiling: ADDS }, "once_per_case").some((m) => /asked once for the case/.test(m)));
-  ok("release fail (review m4): a line saved without a mode whose built-in default is files own is refused", rel({ filingMode: null, addsFiling: ADDS }, "per_person", "vv.single").some((m) => /already files their own application/.test(m)));
-  ok("release fail (break m9): on a line that files its own application it is refused", rel({ filingMode: "files_own", addsFiling: ADDS }).some((m) => /already files their own application/.test(m)));
+  // BK-15 (P-486): a line that files its own (saved so, or by its built-in default) may add a filing made instead of it.
+  ok("release pass (BK-15, was review m4): a line saved without a mode whose built-in default is files own may add a filing", !rel({ filingMode: null, addsFiling: ADDS }, "per_person", "vv.single").some((m) => /own application/.test(m)));
+  ok("release pass (BK-15, was break m9): so may a line that files its own application", !rel({ filingMode: "files_own", addsFiling: ADDS }).some((m) => /own application/.test(m)));
+  ok("release fail (BK-15, break m9): never on a co-filing line", rel({ filingMode: "co_files", addsFiling: ADDS }).some((m) => /co-filed one, so a filing it adds has no place/.test(m)));
   ok("release fail (break m6, M2): a fee line not among the combination's, or not reaching the person, is refused", rel({ addsFiling: { ...ADDS, fee: "nope" } }).some((m) => /nope is not among/.test(m)) && rel({ addsFiling: { ...ADDS, fee: "main_only" } }).some((m) => /main_only is not among/.test(m)));
   ok("release pass (review M1): a per-person fee line reaching the child may be named (no refusal)", !relP({ addsFiling: { ...ADDS, fee: "bio" } }).some((p) => p.level === "error"));
 }
