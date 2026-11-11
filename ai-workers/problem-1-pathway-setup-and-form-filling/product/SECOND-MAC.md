@@ -50,9 +50,15 @@ bash ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/
 The same command reinstalls only what a lockfile changed, migrates, rebuilds and restarts. Your data is kept; to start
 over, use the app's **Demo › Load the finished story** (or **Reset to the six**).
 
-**Differences from the founder's demo.** The copies the founder checked with Adobe Acrobat's Validate live only on the
-founder's Mac (PDFs are never committed), so on your copy the finished story's validated Paper form says its validated
-file is kept on the Mac. Everything else is the same code and the same sample data.
+**Differences from the founder's demo: two things live only on the founder's Mac**, never in git (measured 11 Nov, B168):
+* **The Adobe-validated Paper form** (`.tools/solution-1-prototype/validated-imm5257/`; PDFs are never committed). Without
+  it, 4 of the finished story's 8 stages show "partly": the validated file is kept on the Mac, so one person's filing
+  is not Ready to file and the submission is not recorded for that person. The founder can hand you that folder (one
+  file, about 1.4 MB, Sample data) to put at the same place in your clone; then Demo › Load the finished story gives all 8.
+* **The AI spend ledger** (`.tools/p2-ledger`): the founder's past AI spend. Your copy shows US$0.00 spent; it cannot
+  spend anything, as it has no key.
+
+Everything else is the same code and the same sample data.
 
 ## 4. Your agent works through the same pipeline
 Open Claude Code (or another agent) at the clone's top folder; it reads `AGENTS.md` and

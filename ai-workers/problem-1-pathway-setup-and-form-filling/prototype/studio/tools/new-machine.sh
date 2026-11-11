@@ -177,11 +177,13 @@ if [ "$programs" = 0 ]; then
   state=running; i=0
   while [ "$state" = running ] && [ $i -lt 400 ]; do sleep 3; i=$((i + 1))
     state=$(api GET /demo/status | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).story?.state??"?")}catch{console.log("?")}})'); done
-  api GET /demo/status | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s),t=j.story||{};const st=t.stages||[];const n=k=>st.filter(x=>x.status===k).length;
+  [ "$state" = "?" ] && die "the API stopped answering while the story loaded (its log: $STUDIO/var/api.log); run this again to restart it, then Demo › Load the finished story (it empties the half-loaded demo first)"
+  api GET /demo/status | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{let j;try{j=JSON.parse(s)}catch{return console.log("finished story: no answer from the API")}const t=j.story||{};const st=t.stages||[];const n=k=>st.filter(x=>x.status===k).length;
     console.log(t.state==="done"?`finished story loaded in ${Math.round(t.seconds)} s: ${n("done")} stages done, ${n("partial")} partly, ${n("waiting")} waiting (checkpoint: ${j.checkpoint})`:`finished story: ${t.state} ${t.error??""}`);
     for (const x of st) if (x.status!=="done") console.log(`  ${x.status}: ${x.title}${x.why?" ("+x.why+")":""}`)})'
   [ "$state" = done ] || die "the finished story did not finish (Demo › Load the finished story shows why; the API log: $STUDIO/var/api.log)"
 else say "the database has content ($programs programs): kept as it is (Demo › Load the finished story reloads it)"; fi
 
+[ -n "$(ls -A "${STUDIO_VALIDATED_DIR:-$TOOLS/validated-imm5257}" 2>/dev/null)" ] || say "note: no Adobe-validated Paper form in $TOOLS/validated-imm5257 (it lives on the founder's Mac, never in git): 4 of the story's 8 stages stay partly done; product/SECOND-MAC.md §3"
 git -C "$ROOT" config core.hooksPath .githooks 2>/dev/null || true   # the push guard (AGENTS.md rule 1)
 say "Product Studio: http://localhost:$PORT   (stop: bash ${0#$ROOT/} stop)"
