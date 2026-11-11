@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: local_ff0a1d2d-7d86-42f4-8234-47fbb72cfc8a Lead 12 · 11 Nov 09:55 IST (series 2; took over from Lead 11 (series 2, local_aa5c12aa) at ~328k context, ~210k beyond its start read, P-446) · **start read ~122k (get_usage 10:0x IST); hand over at the first check after ~322k (P-446 (2))**; check b2bef5da at :13/:43; weekly 93%
+current_lead: local_ff0a1d2d-7d86-42f4-8234-47fbb72cfc8a Lead 12 · 11 Nov 09:55 IST (series 2; took over from Lead 11 (series 2, local_aa5c12aa) at ~328k context, ~210k beyond its start read, P-446) · **start read ~122k (get_usage 10:0x IST); hand over at the first check after ~322k (P-446 (2))**; check aba2f1ac every 15 min from 90% (lead-watch); weekly 93% at 10:23 (~1.5%/h: 96% ≈ 12:20, 98% ≈ 13:40 IST)
 
 updated: 2026-11-11 09:54 IST by **Lead 11 (series 2, local_aa5c12aa-…)** at hand-over to Lead 12 · weekly 92% · milestone: **M2 60/60; M3 29/29 Works on main**; Bake (M3.5) running · rules: **`RULES.md`** (as of P-460) · this branch: `lead/2026-11-07-lead31`
 
@@ -14,7 +14,7 @@ Earlier blocks (Lead 40's last, Lead 7→8 hand-over, Lead 8 and Lead 9 live row
 4. **Next rows (warm, same lanes):** BK-3 PR 2 (screens); M3-S3 waivable line (runtime, after #1513); forms row owed: spousal sponsorship's IRCC account on the six and checkpoint (`fs.spouse` beside `fs.outside`). First row on the new account: **B168** (app starts on any Mac, P-459).
 5. **Founder items:** remove unused plugins from his terminal (github, context7, storiesonboard; product-management under Customize); keep clawmem unless he says; add the co-founder as a GitHub collaborator; book the immigration expert (A7).
 6. Standbys: **Lead 13 `local_dd945839-a5dc-408f-90d1-99687a98bc5f`**; start a second at the founder's next typed turn (P-286).
-**Lead 12 (10:0x IST):** #1518 question answered (PR comment + lane prompt, delivered): diff-only third Opus round on 4f412720c..f5d842494 (P-293 (3)); #1513 schema/case-prepare diff read (no schema or migration; `knownOf` moved earlier, `adds` passed): label on green; #1519 lane fixing CI suite s4_library.
+**Lead 12 (10:0x IST):** #1518 question answered (PR comment + lane prompt, delivered): diff-only third Opus round on 4f412720c..f5d842494 (P-293 (3)); #1513 schema/case-prepare diff read (no schema or migration; `knownOf` moved earlier, `adds` passed): label on green; #1519 lane fixing CI suite s4_library. **10:2x:** #1518 and #1513 labelled and queued (Mergify ETA ~11:00 / ~11:13 IST); #1519 Approve on 0283b69ac, CI running; briefed warm rows: B169 (new BACKLOG row, the fs.spouse IRCC account) to the forms lane after #1518 merges, M3-S3 to the runtime lane after #1513 merges.
 
 ## Tonight (P-453 to P-455, 10-11 Nov): night result and owed items word for word in `history/STATE-2026-11-11-0810-lead11s2-tonight-block.md` (owed: qa findings from #1507; #1505 follow-up questions; 4 Mac test copies need the founder's terminal).
 
