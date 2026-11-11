@@ -83,7 +83,7 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   // checkpoint each adult has their own IMM 5257 sheet; on the fixture each their own IMM 5707 sheet). Where only the
   // principal's item of the form is Online, the spouse's date is read on the principal's sheet, if that form carries it.
   // And every date of birth a sheet read shows, whoever's, is marked entered by staff and to confirm (review m1).
-  type SA = { fact: string; subject?: string; value?: unknown; copy_text?: string; mark?: string | null; to_confirm?: boolean };
+  type SA = { fact: string; subject?: string; value?: unknown; copy_text?: string; source?: string; mark?: string | null; to_confirm?: boolean };
   const S = c.subjects["Sample Spouse A"];
   const dobs = (sh: Sheet | null) => (sh?.sections ?? []).flatMap((x) => x.answers as SA[]).filter((x) => x.fact === "person.date_of_birth");
   const dobOn = (sh: Sheet | null, subject: string) => dobs(sh).find((x) => x.subject === subject);
@@ -130,11 +130,15 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   // QA-392 (fixed by its forms PR): the sheet reads the same rule as the copy (engine/runtime/forms.ts markNothingRecorded),
   // so each such box has its line, for the same person and fact, and says the same No the PDF wrote.
   const lineOf = (b: Box) => lines.find((l) => l.subject === b.about && l.fact === b.fact);
-  const missing14 = nothing.filter((b) => { const l = lineOf(b); return !l || l.value !== false || l.copy_text !== "No"; }).map((b) => `${b.about_label}: ${b.box.split(".").slice(-2).join(".")} (${lineOf(b)?.copy_text ?? "no line"})`);
+  // Review m1 on #1553: its source and mark are those of the "none apply" that vouches for it (the questionnaire's own).
+  const groups = ((await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent`, undefined, OFFICER)).body?.sections ?? []) as { subjectId: string; questions: { fact: string }[]; group: { none_apply: { value: boolean; mark: string; channel: string; answered: { channel: string } | null } | null } | null }[];
+  const vouch = (b: Box) => groups.find((x) => x.subjectId === b.about && x.group?.none_apply?.value && x.questions.some((q) => q.fact === b.fact))?.group?.none_apply;
+  const sourceOf = (ch?: string) => (/document/.test(ch ?? "") ? "Document" : ch === "questionnaire" || ch === "own_link" ? "Client" : "Case officer");
+  const missing14 = nothing.filter((b) => { const l = lineOf(b), v = vouch(b); return !l || l.value !== false || l.copy_text !== "No" || !v || l.source !== sourceOf(v.answered?.channel ?? v.channel) || l.mark !== v.mark; }).map((b) => `${b.about_label}: ${b.box.split(".").slice(-2).join(".")} (${lineOf(b)?.copy_text ?? "no line"}, ${lineOf(b)?.source}, ${lineOf(b)?.mark}; none apply ${vouch(b)?.mark ?? "none"})`);
   // Never vacuous: a release that maps a "recorded" Yes/No box (the checkpoint's IMM 5257: Question 8 A, Education
   // Question 1) must give at least one; only a release that maps none (pack 4's fixture) has nothing to compare.
   const recorded = boxes.filter((b) => b.about && b.about !== "case" && (recordedDerivation(b.transform) || proseRecorded(b.transform)));
-  ok(`C7.3-14 fail (QA-392): each "nothing recorded" Yes/No box the PDF copy writes as No (a list answered "none apply") has its line on the answer sheet for that person, reading the same No${recorded.length ? "" : " (this release maps no such box)"}`, !!copyId && (nothing.length > 0 || !recorded.length) && missing14.length === 0, { copy: copyId, recorded: recorded.length, nothing: nothing.length, missing: missing14 });
+  ok(`C7.3-14 fail (QA-392): each "nothing recorded" Yes/No box the PDF copy writes as No (a list answered "none apply") has its line on the answer sheet for that person, reading the same No, with the source and mark of that "none apply"${recorded.length ? "" : " (this release maps no such box)"}`, !!copyId && (nothing.length > 0 || !recorded.length) && missing14.length === 0, { copy: copyId, recorded: recorded.length, nothing: nothing.length, missing: missing14 });
   const valued = boxes.filter((b) => b.value !== undefined && b.value !== null && b.value !== "");
   ok("C7.3-15 pass: every box the PDF copy writes from an answer has its line on the answer sheet", valued.length > 0 && valued.every((b) => on.has(`${b.about}|${b.fact}`)), valued.filter((b) => !on.has(`${b.about}|${b.fact}`)).map((b) => b.box));
   const carried = new Set(boxes.map((b) => `${b.about}|${b.fact}`));

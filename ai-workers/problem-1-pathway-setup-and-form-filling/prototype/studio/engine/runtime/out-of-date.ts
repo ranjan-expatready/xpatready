@@ -42,7 +42,7 @@ export function factChanges(then: (Pick<FormFact, "fact" | "about" | "row" | "va
     // C8.2 break M4: the same value typed again (left unconfirmed) is no change.
     if (x && !y && pending !== null && same(pending, x.value)) continue;
     const person = factPerson(f.about, f.row, words);
-    out.set(id, { fact: f.fact, about, relation, label: f.label ?? words.label(f.fact), person, was: x?.value ?? null, now: y ? y.value : pending, confirmed: !!y || pending === null, at: words.at(f.about, f.fact) });
+    out.set(id, { fact: f.fact, about, relation, label: y?.label ?? x?.label ?? words.label(f.fact), person, was: x?.value ?? null, now: y ? y.value : pending, confirmed: !!y || pending === null, at: words.at(f.about, f.fact) });
   }
   return [...out.values()].sort((p, q) => p.person.localeCompare(q.person) || p.label.localeCompare(q.label));
 }

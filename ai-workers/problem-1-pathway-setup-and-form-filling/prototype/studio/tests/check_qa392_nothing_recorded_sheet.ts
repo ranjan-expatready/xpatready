@@ -16,6 +16,7 @@ import { formValues, type Inventory } from "../engine/form-values.ts";
 import { runTransform } from "../../p5/transforms.ts";
 import type { BoxRow } from "../engine/render.ts";
 import type { QuestionnaireView } from "../contracts/runtime.ts";
+import { factChanges } from "../engine/runtime/out-of-date.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -62,5 +63,13 @@ const open = markNothingRecorded(boxesOf(), viewOf({ previous: "open", education
 ok("QA-392 fail: a list whose \"none apply\" is not answered, or that holds an entry, is not marked; the PDF does not write it, and the sheet shows no No for it", open.every((b) => !b.nothing_recorded)
   && MAP.every((m) => !formValues(snapshot, { entries: MAP.map((x) => ({ data_path: x.box, fact: x.fact })) }, inv, open).values[m.box])
   && !sheetFor(open).sections.some((s) => s.answers.some((a) => a.value === false)), open.map((b) => b.nothing_recorded ?? false));
+
+// A ticked part's No changes (case-prepare.ts passes a "nothing recorded" line's label, quoted): the change is named by the
+// form's question whether the No is taken back or an entry replaces it (review m3 on #1553), else by the fact's words.
+const words = { label: (f: string) => (f === MAP[1].fact ? "Name of the school or facility attended" : f), person: () => "Client A", at: () => null };
+const q = `\u201c${caption(EDU)}\u201d`, was = [{ fact: MAP[1].fact, about: P, row: null, value: false, label: q }];
+const back = factChanges(was, [], words)[0], entry = factChanges(was, [{ fact: MAP[1].fact, about: P, row: null, value: "SAMPLE" }], words)[0];
+const plain = factChanges([{ fact: MAP[1].fact, about: P, row: null, value: "A" }], [{ fact: MAP[1].fact, about: P, row: null, value: "B" }], words)[0];
+ok("QA-392 pass: a \"nothing recorded\" No taken back, or replaced by an entry, is named by the form's question; any other change keeps the fact's words", back?.label === q && entry?.label === q && plain?.label === "Name of the school or facility attended", [back?.label, entry?.label, plain?.label]);
 
 process.exit(summary() ? 1 : 0);
