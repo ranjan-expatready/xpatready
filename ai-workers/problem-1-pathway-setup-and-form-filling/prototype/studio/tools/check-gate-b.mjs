@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, touchedPacks, diffSet, batchRecheck, checkpointTrigger, checkpointRows, packVerdict, part1, stepsPrinted, stepsUnprinted, packSteps, unprintedReason } from "./gate-b.mjs";
+import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, touchedPacks, diffSet, batchRecheck, checkpointTrigger, checkpointRows, packsReachedBy, packVerdict, part1, stepsPrinted, stepsUnprinted, packSteps, unprintedReason } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ACC = resolve(HERE, "../acceptance"), P = resolve(HERE, "../../../product");
 /** A fixture pack whose run truly uses no server (only an engine run line), for the gate's no-server rules (B125, B131). */
@@ -232,6 +232,23 @@ ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.te
   ok("(4a) pass: every row on the checkpoint is added (C7, C9), read-only (not direct); fail: a six row is not (C8), nor a row with no pack (C10), and a row already touched keeps its reason (C2)",
     t.has("C7") && t.has("C9") && !t.has("C8") && !t.has("C10") && t.get("C7").direct === false && /configured checkpoint/.test(t.get("C7").why) && t.get("C2").direct === true && t.get("C2").why === "x.ts ← C2.test.ts", [...t.keys()]);
   ok("(4a) fail: no trigger adds nothing", checkpointRows(new Map(), null, ["C7"], dataOfId).size === 0); }
+{ // B178 (11 Nov; jobs 130502524770 and 130506124510 named C7.5 only by the (4a) checkpoint rule): select-suites.mjs
+  // --packs prints its reach (447 lines, 74 KB for QA-366's #1435 batch, C7.5.test.ts near the end) and then calls
+  // process.exit(0). Node writes stdout to a pipe asynchronously on POSIX: what the pipe could not take at once is queued,
+  // and process.exit drops it, so on a busy runner the list's tail was lost. The stand-in below makes that certain: one
+  // 4 MB write (far past a 64 KB pipe), the C7.5 line last, then process.exit(0). gate-b must still read every line.
+  const d = mkdtempSync(join(tmpdir(), "gate-b-b178-")), stub = join(d, "select-suites-stub.mjs"), rel = "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio";
+  writeFileSync(stub, `import { readFileSync } from "node:fs"; readFileSync(0);
+const fill = Array.from({ length: 40000 }, (_, i) => \`${rel}/tests/filler_\${i}.ts\\tfiller.json ← filler_\${i}.ts \${"x".repeat(40)}\\n\`).join("");
+process.stdout.write(fill + "${rel}/acceptance/C7.5.test.ts\\tform-field-gates.json ← m3.ts ← C7.5.test.ts\\n");
+process.exit(0);
+`);
+  const was = process.env.GATE_B_SELECT_SUITES; process.env.GATE_B_SELECT_SUITES = stub;
+  let t, err = null; try { t = packsReachedBy(["x"]); } catch (e) { err = e.message; }
+  if (was === undefined) delete process.env.GATE_B_SELECT_SUITES; else process.env.GATE_B_SELECT_SUITES = was;
+  rmSync(d, { recursive: true, force: true });
+  ok("B178: a 4 MB reach list whose last line is C7.5's pack arrives whole (select-suites ends with process.exit): C7.5 is touched by its own pack, not only by (4a)",
+    !err && t?.get("C7.5")?.files.join() === "C7.5.test.ts" && t.get("C7.5").why === "form-field-gates.json ← m3.ts ← C7.5.test.ts", err ?? [...(t ?? [])].map(([k]) => k).slice(-3)); }
 
 // QA-366 (10 Nov): a merge-queue batch runs a named row's pack again when the batch adds a file that pack reads.
 { const st = { "C7.5": "Partial", "C6.9": "Works", "C8.3": "Partial", "C9.1": "Partial" }, T = (id, why = "form-field-gates.json ← m3.ts ← x") => [id, { files: [`${id}.test.ts`], why }];
