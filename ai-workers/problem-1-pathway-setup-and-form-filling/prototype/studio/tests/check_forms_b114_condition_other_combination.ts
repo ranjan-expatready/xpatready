@@ -110,7 +110,8 @@ run(async () => {
   await conditionOn(vv, (c) => JSON.stringify(c).includes(ASKED_ON_VV));
   const own = await config(vv);
   ok("C4.11 pass (own condition): Visitor visa still carries the question that decides its own condition", facts(own).includes(FOREIGN), facts(own).length);
-  ok("C4.11 pass (own condition): Visitor visa's question has the condition", own.snapshot.placements.some((p: { fact: string; condition: unknown }) => p.fact === ASKED_ON_VV && p.condition));
+  // Bake row 6 (QA-237): until IMM 5257's form field holds the same condition, Visitor visa holds it too (asked every time).
+  ok("C4.11 pass (own condition): Visitor visa's question carries the condition, in force or held until its form field holds it", own.snapshot.placements.some((p: { fact: string; condition: unknown }) => p.fact === ASKED_ON_VV && p.condition) || (own.snapshot.held_conditions ?? []).some((h: { fact: string; condition: unknown }) => h.fact === ASKED_ON_VV && h.condition));
   // QA-239 (Bake row 6, PR #1534): the combination that asks the question cannot honour Visitor visa's condition (its forms
   // read the answer), so the condition is held there: the question stays asked every time, a warning says why, and nothing
   // refuses it. Before, Hiding showed on it and its Submit was refused (the bug).
@@ -144,7 +145,12 @@ run(async () => {
 
   // A condition reaches every question it needs: a placed question's deciding question is carried, and so is the deciding
   // question of that one (the repeat). SQL on this copy's published rows, put back after; the draft returns to its fingerprint.
-  const cp = others["Study permit"], cfg = await config(cp), mine = cfg.snapshot.placements[0].fact as string;
+  // Bake row 6: a question a form reads would have its condition held (asked every time), so the chain starts on one no form
+  // field, rule or line reads.
+  const cp = others["Study permit"], cfg = await config(cp);
+  const read = new Set<string>([...(cfg.snapshot.field_maps ?? []).flatMap((m: { entries: { fact?: string | null }[] }) => m.entries.map((e) => e.fact ?? "")), ...JSON.stringify([cfg.snapshot.rules, cfg.snapshot.document_requirements, cfg.snapshot.forms, cfg.snapshot.checks]).matchAll(/"field":"([^"]+)"/g)].map((x) => (typeof x === "string" ? x : x[1])));
+  const mine = (cfg.snapshot.placements.find((p: { fact: string }) => !read.has(p.fact)) ?? cfg.snapshot.placements[0]).fact as string;
+  ok("setup: a question Study permit asks that nothing else on it reads", !read.has(mine), mine);
   const pool = sql(`select distinct canonical_field_key from section_question where status in ('PUBLISHED','DRAFT') and canonical_field_key not in (${facts(cfg).map((f) => `'${f}'`).join(",")}) order by 1 limit 2`).split("\n").filter(Boolean);
   ok("setup: two questions this combination does not ask", pool.length === 2, pool);
   const set = (fact: string, on: string | null) => sql(`update section_question set predicate_json = ${on ? `'{"field":"${on}","op":"exists"}'::jsonb` : "null"} where canonical_field_key='${fact}'`);
