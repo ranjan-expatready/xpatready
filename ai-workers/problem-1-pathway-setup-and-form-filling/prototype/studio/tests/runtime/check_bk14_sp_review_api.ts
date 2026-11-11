@@ -8,13 +8,18 @@
 // that form. Each rule with a passing and a failing case. No live call: STUDIO_*_LIVE is never set (P-175), US$0.
 //   zsh studio/tools/isolated.sh rt_bk14 4491 start STUDIO_MADE_UP_REVIEW_RUNS=1 && tsx --tsconfig studio/api/tsconfig.json studio/tests/runtime/check_bk14_sp_review_api.ts 4491 xr_studio_rt_bk14
 import * as m3 from "../../acceptance/lib/m3.ts";
-import { answersFor, inputsOf, writeMadeUp, type Plan } from "../fixtures/c75-made-up-run.ts";
+import { existsSync, readdirSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { answersFor, inputsOf, MADE_UP, writeMadeUp, type Plan } from "../fixtures/c75-made-up-run.ts";
 import { printedEditionParts } from "../../engine/rounds.ts";
 
 const { call, sql, ok } = m3;
 const AUTHOR = "user-A";
 const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? ""); // eslint-disable-line @typescript-eslint/no-explicit-any -- API bodies are read loosely in checks
+/** This file's own made-up runs on this copy (an earlier run of it): removed first, so Saved starts with nothing recorded. */
+const dropMine = () => { if (existsSync(MADE_UP)) for (const f of readdirSync(MADE_UP).filter((x) => x.includes("c75fixturebk14"))) rmSync(join(MADE_UP, f)); };
 (async () => {
+  dropMine();
   let sp = sql("select id from combination where combination_key='sp.outside'");
   if (!sp) {
     const l = await call("POST", "/demo/load", { sample: "configured" }, AUTHOR);
@@ -29,7 +34,10 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
 
   const c = await m3.openCase(sp, [{ role: "principal", name: "Sample Student S14", dob: m3.FIXED.dob }]);
   const P = c.subjects["Sample Student S14"];
-  ok("setup: a Study permit case is opened, filled and confirmed by the case officer", !!c.id && !!P && await m3.fillEverything(c.id), { case: c.id });
+  // Every question with a sample value (m3.fillEverything; a box no route fills yet may stay open, said on Ready to file):
+  // what matters here is that the application form has boxes to review, checked on its run card below.
+  await m3.fillEverything(c.id);
+  ok("setup: a Study permit case is opened and its answers filled by the case officer", !!c.id && !!P, { case: c.id });
   await m3.confirmAll(c.id, P); await m3.confirmAll(c.id, c.caseSubject);
 
   const forms = ((await call("GET", `/runtime/cases/${c.id}/forms`)).body?.forms ?? []) as { form: string; subject_id: string; draft: { written_now: number } }[];
