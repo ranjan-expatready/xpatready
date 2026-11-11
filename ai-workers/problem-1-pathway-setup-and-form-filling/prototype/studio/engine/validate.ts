@@ -18,7 +18,7 @@ import { sourceKey } from "../contracts/resolver.ts"; // SH3 R8
 import { NO_FIELD_MAP } from "./setup-checklist.ts";
 import { formsWithoutFieldMap } from "./programs.ts"; // QA-180: one rule for release and Open a case
 import { FAMILY_INFORMATION } from "./form-completeness.ts";
-import { bareCond, conditionConflicts, HELD_OPENING } from "./held-conditions.ts"; // QA-237, QA-239
+import { bareCond, conditionConflicts, HELD_OPENING, withHeldConditions } from "./held-conditions.ts"; // QA-237, QA-239
 import { sourceChanges } from "./source-register.ts"; // G1 BR-9: the "Source" lines only; the gate stays out of validate()
 
 // C-11: a field map's form field list, read once per file (paths are relative to the Solution 1 folder, as in fill.ts).
@@ -68,7 +68,9 @@ export function withdrawnFieldLines(s: Snapshot, gone: Map<string, string>): Pro
   const wordsOf = new Map((s.canonical_fields as { id: string; label?: string | null; meaning?: string | null }[]).map((f) => [f.id, f.label ?? f.meaning ?? "a question"]));
   const roleOf = new Map(((s.combination.participants ?? []) as { role: string; label?: string }[]).map((p) => [p.role, p.label ?? p.role]));
   for (const f of s.forms) say("Forms", f.form_number, `The condition of ${f.form_number}`, conds(f.condition));
-  for (const p of s.placements) say("Questions", p.fact, `The condition of the question "${wordsOf.get(p.fact) ?? "a question"}"`, conds(p.condition));
+  // QA-237/239 (#1534, P-477): a held condition is not used here, but one that reads a withdrawn field is still broken in the
+  // library, so it holds Submit by name like any other reader (the library's view, held conditions back on).
+  for (const p of withHeldConditions(s).placements) say("Questions", p.fact, `The condition of the question "${wordsOf.get(p.fact) ?? "a question"}"`, conds(p.condition));
   for (const d of s.document_requirements) say("Documents", d.document_type, `The condition of the document line "${d.document_type}"`, conds(d.condition));
   for (const l of (s.combination.participants ?? []) as { role: string; label?: string; addsFiling?: { filing?: string; condition?: unknown } | null }[]) if (l.addsFiling) say("Who can be in this application", `${l.label ?? l.role}: ${l.addsFiling.filing ?? "added filing"}`, `The rule that adds "${l.addsFiling.filing ?? "a filing"}" for ${l.label ?? l.role}`, conds(l.addsFiling.condition));
   for (const r of s.rules) say("Rules", r.id, `The rule "${r.then ?? r.when_plain ?? "with no words"}"`, conds(r.when));
@@ -181,7 +183,8 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   const pulledTitle = new Map((s.section_titles ?? []).map((x) => [x.id, x.title]));
   // Round 2 (review): the label is the title, and the message starts with it, so Review prints it once, never the key.
   for (const [id, n] of pulled) { const t = pulledTitle.get(id) ?? "A library section"; out.push({ level: "warning", where: "Questions", item: id, label: t, message: `${t}: not chosen for this combination, but forms or rules still need ${n} of its question${n === 1 ? "" : "s"}, so ${n === 1 ? "it is" : "they are"} asked after the chosen sections. Add the section on the Smart questionnaire (SQR) tab to give ${n === 1 ? "it" : "them"} a place.` }); }
-  for (const p of s.placements) {
+  // QA-237/239 (#1534): a held condition is checked as a condition too: holding never hides a broken one.
+  for (const p of withHeldConditions(s).placements) {
     for (const e of checkCondition(p.condition, types, derived)) out.push({ level: "error", where: "Questions", item: p.fact, message: `Condition ${e}.` });
     if (p.condition && !p.condition_effect) out.push({ level: "error", where: "Questions", item: p.fact, message: "A condition needs an effect (show, hide, require or optional)." });
   }
