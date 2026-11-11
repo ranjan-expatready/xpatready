@@ -1,0 +1,26 @@
+{
+ "about": "QA-403 (P-486, the tech lead's ruling 11 Nov ~23:5x IST, reversible): facts the firm or the case already knows are never asked of the client; the case officer sets them, in plain words. Data, not code (P-319): the configured checkpoint (api/src/features/checkpoint/097-who-fills.ts) changes who fills each question below through the product's own route (Library › a field › Change who fills, C4.9: the author proposes with the reason, the Approver approves on To review, it goes out with the next release), and gives its question and its help the words below through the placement route (Library › Fields › placement). A question in a background or declarations section is never moved (P-97): the route refuses it. These are the firm's own facts about its filing, not immigration values: no IRCC value is set here.",
+ "questions": [
+  {
+   "fact": "case.representative_form_action",
+   "fills": "CASE_OFFICER",
+   "question": "Does this Use of a Representative form (IMM 5476) appoint the representative, or cancel an appointment? Write appoint or cancel.",
+   "help": "Why we ask: IMM 5476 has one box for appointing a representative and one for cancelling. Your firm knows which; the client is not asked.",
+   "reason": "QA-403 (P-486): the firm's own filing; the firm knows whether it appoints or cancels, so the client is not asked."
+  },
+  {
+   "fact": "case.application_type",
+   "fills": "CASE_OFFICER",
+   "question": "Which kind of temporary residence application is this case: visitor, worker, student or other?",
+   "help": "Why we ask: IMM 5475, IMM 5476 and IMM 5645 name the kind of application. It follows from the case's pathway; the client is not asked.",
+   "reason": "QA-403 (P-486): the kind of application follows from the case's pathway, which the firm chose; the client is not asked."
+  },
+  {
+   "fact": "case.submission_office_name",
+   "fills": "CASE_OFFICER",
+   "question": "Which IRCC office has the application, if it was already submitted? Leave it empty for a new application.",
+   "help": "Why we ask: IMM 5475 and IMM 5476 ask for the office only when the application was already sent. Your firm sends it; the client is not asked.",
+   "reason": "QA-403 (P-486): the firm submits the application and knows the office; the client is not asked."
+  }
+ ]
+}

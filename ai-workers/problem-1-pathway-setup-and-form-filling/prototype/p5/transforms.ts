@@ -83,6 +83,8 @@ export function recordedDerivation(transform: string | null | undefined): { fact
 }
 const present = (x: unknown) => !(x === undefined || x === null || x === "" || x === false || (Array.isArray(x) && !x.length));
 /** Two confirmed values are the same answer: addresses by their one-line form, anything else by its trimmed text. */
+/** QA-403: a value as one lower-case word to compare with a map's word, or null when it is not one word or number. */
+const wordOf = (x: unknown): string | null => (typeof x === "string" || typeof x === "number") && /^[\w-]+$/.test(String(x).trim()) ? String(x).trim().toLowerCase() : null;
 function same(a: unknown, b: unknown): boolean {
   if ((a && typeof a === "object") || (b && typeof b === "object")) { const x = parseAddress(a), y = parseAddress(b); return !!x && !!y && oneLine(x).toUpperCase() === oneLine(y).toUpperCase(); }
   return String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
@@ -141,7 +143,10 @@ export function runTransform(transform: string | undefined, value: unknown, box:
       if (m[1] && t.length > Number(m[1])) return hand(`amount is ${t.length} characters; the box holds ${m[1]} (never truncated)`);
       v = t; continue;
     }
-    if ((m = /^as_is(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) {
+    // QA-403: a drafted map may describe what the value is, "as_is (plain-language application type)": the note says what
+    // the words are, not how to change them, so the value is written as it is. Only a note that starts "plain-language" or
+    // "plain language"; any other note stays not executable (by hand).
+    if ((m = /^as_is(?: \((?:max (\d+) char(?:s|acters)|plain[- ]language[^()]*)\))?$/.exec(s))) {
       v = typeof v === "boolean" ? (v ? "Yes" : "No") : String(v);
       const max = Number(m[1] ?? box.max_chars ?? 0);
       if (max && v.length > max) return hand(`value is ${v.length} characters; the box holds ${max} (never truncated)`);
@@ -161,6 +166,20 @@ export function runTransform(transform: string | undefined, value: unknown, box:
     // B128 (QA-153): a drafted family-form map spells the Yes and No tick boxes "derived:checked_if_true:1/0" (check_code:1/0)
     // and "derived:checked_if_false:1/0" (the same, ticked on No). Only a yes/no value; anything else by hand.
     if ((m = /^derived:checked_if_(true|false):([^/]+)\/(.+)$/.exec(s))) { if (typeof v !== "boolean") return hand(`not a yes/no value: ${v}`); v = v === (m[1] === "true") ? m[2] : m[3]; continue; }
+    // QA-403: tick boxes set by one answer's value. "derived: 1 if case.representative_form_action = appoint, else 0 (…)"
+    // (IMM 5476) writes the first code when the named fact (else the box's own value) equals the word, the second otherwise;
+    // "derived:checked_if_application_type_is_visitor:1/0" the same for its own value, and
+    // "derived:checked_if_application_type_not_visitor_worker_or_student:1/0" (IMM 5645) the first code when the value is
+    // none of the words. Words compare without case; a value that is not one word or number (a list, a record) goes by hand.
+    if ((m = /^derived: ?(\S+) if ([a-z]+\.[\w.]+) = ([\w-]+), else (\S+?)(?: \([^()]*\))?$/.exec(s))) {
+      const w = wordOf(ctx.fact?.(m[2]) ?? v); if (w === null) return hand(`not a single word: ${JSON.stringify(ctx.fact?.(m[2]) ?? v)}`);
+      v = w === m[3].toLowerCase() ? m[1] : m[4]; continue;
+    }
+    if ((m = /^derived:checked_if_([a-z0-9_]+?)_(is|not)_([a-z0-9]+(?:_[a-z0-9]+)*):([^/]+)\/(.+)$/.exec(s)) && m[1] !== "true" && m[1] !== "false") {
+      const w = wordOf(v); if (w === null) return hand(`not a single word: ${JSON.stringify(v)}`);
+      const words = m[2] === "is" ? [m[3]] : m[3].replace(/_or_/g, "_").split("_");
+      v = (m[2] === "is" ? words.includes(w) : !words.includes(w)) ? m[4] : m[5]; continue;
+    }
     // C7.7 (G25, the tech lead's ruling on #1317): release 2's drafted IMM 5645 map spells the Yes and No tick boxes of each
     // child's "accompany to Canada" "check_if_yes:1/0" and "check_if_no:1/0": the first code when the answer is that one, the
     // second otherwise. Only a yes/no value (yes/no words too, as derive_inverse); anything else by hand.
