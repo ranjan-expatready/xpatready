@@ -1,0 +1,72 @@
+# BK-4: sign in by role, and hand-off buttons where work changes hands (concept, rev 2, approved)
+
+Concept lane (skill screen-concept, steps A1-A7), 11 Nov 2026, **Approved** by the tech lead (Lead 19, series 2) at head 2fa228923, 11 Nov ~21:1x IST (P-223 (4)); rulings recorded as **P-484** (all five recommendations taken). Row: Bake plan row 4 (`design/bake-plan-2026-11-10.md`), P-447 (2); squeeze S1-S2 (`design/bake-squeeze-2026-11-11.md`, #1572), P-481; measure P-456 (3); style P-473. Board: `design/board-bk4.html`. Paths under `prototype/studio/` unless stated; read on `origin/main` 68a7b59d1. **Rev 2** applies the fresh challenge (`challenge.md`: M1-M5, m1-m8; the author's reply is in `challenge.md`, "Author's reply").
+
+## 1. Job and journey
+* **Job:** one person walks the whole journey and changes role only by (a) signing in once on a role card, (b) the frame's one person picker, or (c) a hand-off button that names who takes over. Nothing else changes the person.
+* **Personas:** the nine simulated people (`api/src/core.ts:39-55`): Studio (Configuration author, Content reviewer, Approver), Firm (Case officer, Representative, Second representative, Solo representative), Clients (Client A, Client B).
+* **Journey (E1, P-456 (1)):** sign in → finish and submit a pathway → expert signs → Approver releases → firm opens a case → Client A answers → back to the firm → send for representative review → representative decides.
+* **Measure (P-456 (3)):** person changes after the first not by a hand-off button or the picker: today **4** (BK-1 §2.1); after BK-4: **0**, Back and the release pill included.
+
+## 2. Ten layers
+* **Today (facts):** the person lives in one place, `web/src/lib/api.ts:7-11` (`actor`, key `xr-actor`, default `user-A`, sent as `x-actor`); the server decides every right (`actorOf`, `core.ts:58-61`, deny by default). But there are **two pickers** (`PersonaSwitch`, `App.tsx:158-172`; case-area select, `runtime/cases.tsx:66-70`, people hard-coded at `:32-39`) and **silent switches** through helpers: `cases.tsx:60` (any non-case person becomes the Case officer on arrival, also after Back or from a typed address), `leaveCasesAsStudio` (`frame.tsx:20-23`, used by `Product Studio →` and the release pill `cases.tsx:248`), `actAsCaseStaff` (`cases.tsx:45`), "Act as Client A" with a literal id (`cases.tsx:278`). Six places tell the walker to switch by hand (`review-items.tsx:161, 162, 311, 350, 439`, `release.tsx:83`) and one more in Cases (`cases.tsx:110`).
+* **Team's model:** three separate sign-in groups, Expat Ready staff, firm users, clients (SA-07 §3.0, `domain/requirements-2026-11-02/.../SA-07-platform-users_v2.17_2026-10-17.md:370-373`). Our groups copy that; no passwords (simulated, P-335).
+* **New:** a sign-in page, one picker, a person-change notice, hand-off buttons. **No API, schema or migration change; web only** (Bake plan §3: screens = `web/src/`). The nine people come from one web list `web/src/lib/people.ts`, checked against `core.ts` by a code check (`/session` cannot serve the sign-in page: it answers 401 to an unknown person, `main.ts:63`).
+
+## 3. "The current person": the one state, owned by 4a
+`web/src/lib/api.ts` `actor` (`xr-actor`) stays **the only** current person. **4a owns** its code, `lib/people.ts`, the picker, the sign-in page, the one notice "Now: <name> (simulated)" on **every** change (a listener on `setActor`), and a `personChosen()` flag (a stored value exists). **4b and 4c only call `setActor(id)` in a button's click handler, then navigate**; they never write `xr-actor`, keep a copy, or toast. Targets come from data (duties from `/session` `actors`, the case team, the case's `client`, the hand-off's `from`), never a literal id. `actAsCaseStaff` and `leaveCasesAsStudio` keep their names and signatures.
+
+## 4. Business rules
+| BR | Rule | Source |
+|---|---|---|
+| BR-1 | After the first, a person changes only by the sign-in page, the picker or a hand-off button (a frame link that names the person counts as the picker's, Q2); every change shows "Now: <name> (simulated)" once. | P-456 (3); P-447 (1) |
+| BR-2 | A hand-off names who takes over and shows only when the next step belongs to someone else (computed from the step's state). | EXPERIENCE §2.5; BK-1 §2.1 |
+| BR-3 | The target holds the needed duty and is not refused by the server: an expert item ("must verify") goes to the expert-duty holder; any other library item to a review-duty holder who is not its proposer (`proposed_by_id`, `uploadedBy`); release to the approve duty. An Approver who edited the draft is refused by the server's own words (`api/src/studio.ts:1108-1111`). | `review-items.tsx:70, 161, 284, 331`; D254 |
+| BR-4 | A hand-off moves to where the next person works (same page in the Studio; the case, the questionnaire or the review round in Cases). | P-447 (1) "no dead end" |
+| BR-5 | Rights stay on the server: the picker and buttons only choose who asks. | STANDARDS §6 S-1; P-335 |
+| BR-6 | A stored person who is **unknown** opens the sign-in page with "Choose who you are". A **missing** one is the Configuration author, as today (Q1). | `api.ts:7`; `App.tsx:95-98` |
+| BR-7 | A hand-off is a button, not a link: it changes the person in this tab, then moves. | one `xr-actor` per browser (`api.ts:7,10`) |
+| BR-8 | In Cases, a person chosen on purpose who may not work there sees "Cases are worked by the firm" and one button "Continue as Case officer →", never a silent switch. A browser with no person chosen keeps today's arrival as the Case officer (it is the first person). | replaces `cases.tsx:60`; pattern `App.tsx:101` |
+
+## 5. Layout (sign-in: one-choice page; picker: frame chrome; hand-offs: inline next step)
+* **4a Sign-in page** `/sign-in` (own frame area, no menu, `where.ts` words): H1 "Who are you today?"; line "Simulated people: no passwords. Pick a role; buttons carry you on when work changes hands." **Four cards**, the first person of each stage: Configuration author, Approver, Case officer, Representative (one line of job each). Fold-out **More people** (BK-2's FoldOut): Content reviewer, Second representative, Solo representative, Client A, Client B, under Expat Ready staff · Firm · Clients. A card is one button; no filled button on the page. After choosing: Studio → `/`, firm → `/cases`, clients → `/cases` (today's notice, with new words and no "switch", Q3).
+* **4a Header picker:** a native `<select aria-label="Simulated person">` (7 test files use `selectOption` on it; keyboard-complete) with three `<optgroup>`s and options "Name · role"; last option "Sign-in page…". Both areas; below 640 px the name only. Choosing someone whose area differs goes to their home. The where-line's other-area link names who it switches to ("Cases (as Case officer) →"); the release pill says "(as Configuration author)".
+* **Hand-off shape (4b, 4c):** under the step's own action, one line: ✓ what was done · "Next: <who> <does what>." · a secondary button "**Hand to <who> →**". Brand blue only for the page's one filled button (P-473); no orange.
+* **4b Studio:** pathway Review and release (`review.tsx`): after Submit → "Hand to the Content reviewer"; after the last expert item is signed, or at once when none needs the expert (`studio.ts:97-98`) → "Hand to the Approver"; after a Return → "Hand back to the Configuration author"; after release → "Open a case on Release N (as Case officer) →" (an echo of `combination.tsx:116`, which stays; own attribute `data-handoff-open-case`). Shared Release page (`release.tsx:83`) and the five `review-items.tsx` sentences become hand-offs by BR-3.
+* **4c Cases (after BK-3 PR 3):** "Open it as Client A" (`cases.tsx:216`) becomes a hand-off "Hand to Client A (simulated) →" carrying `?from=<officer id>`; "Act as Client A" (`:278`) uses the case's own `client`. Client's "Every part is answered" (`questionnaire.tsx:451`, `sqr` mode only, never on a person's own link) → "Hand back to <from> →" to `/cases/:id`; no `from`, no button (today's words). After "Send for review" (`readiness.tsx:296-303`) → "Hand to <representative of record> →" to the round; solo firm: none ("Review now" already opens it).
+* **States:** sign-in normal; unknown person (BR-6); server down (frame notice). Picker: in Studio, in Cases. Hand-off: shown; hidden (you are next, or nothing next); no one holds the duty ("No one in this workspace holds the approve duty, so nobody can release."); Cases arrival notice (BR-8).
+
+## 6. Best in class (4b, P-392; read 11 Nov 2026)
+* **GitHub account switcher** (docs.github.com "Switching between accounts"; github.blog changelog 2023-11-03 "Multi-account support"): switch from the avatar menu without signing in again; "never any mixing of user permissions between saved accounts". **Copy:** one picker in the header; rights follow the person (BR-5).
+* **Salesforce "Log In as Another User"** (help.salesforce.com, `xcloud.logging_in_as_another_user`): an admin with Modify All Data clicks Login beside a user; logging out returns to the admin; logins are audited. **Copy:** the acting person is always named. **Beat:** the walker never goes back to a users list: the next person is one button away.
+* **DocuSign "Set Signing Order and View the Order Diagram"** (support.docusign.com): recipients act in order; the next one is notified when the previous finishes; the order diagram shows who is next. **Copy:** the hand-off names the next person in order. **Beat:** the next person is chosen from duties and the case team, so it cannot be the wrong one (BR-3).
+* **Case tools** (`reports/verify-2026-11-03/V4-best-in-class.md`): no row on role change or hand-off (checked). Google's account chooser (developers.google.com, Sign in with Google button UX: "Use another account"): **copy** a short list plus "More people".
+* **Effort saved:** today 4 manual switches from a select of 3-6 names; after: one click per hand-off, target from data. BIC (case side): BIC-11, BIC-14, BIC-18, BIC-20 apply; the rest (questions, documents, filing): N/A.
+
+## 7. Copy
+Notice: "Now: Approver (simulated). Releases what others prepared." · Hand-off: "Submitted. Next: the Content reviewer signs the immigration content." / "Hand to the Content reviewer →" (tip, keyboard too: "You act as the Content reviewer (simulated) in this tab. Use the person picker to come back.") · Sign-in, unknown: "Choose who you are: the person this browser remembered is not in this workspace." · Cases notice (BR-8): "Cases are worked by the firm. The Configuration author sets up pathways; a firm person opens and works cases." [Continue as Case officer →] · Client at `/cases`: "Clients open their questionnaire from the link their officer sends." (no "switch").
+
+## 8. Contract and tests
+* **Contract:** none new. `lib/people.ts` mirrors `ACTORS` + `RUNTIME_ACTORS`; `tests/check_bk4_people.ts` fails when they differ.
+* **Each PR guards its own scope (side by side):** 4a: frame, header, `cases.tsx:60, 110` (no "switch to" words, case-insensitive; every person change goes through `setActor` or the two helpers); 4b: `pages/` (none of the six sentences left); 4c: `runtime/`. The last of the three to merge adds the whole-`web/src` check.
+* **Browser** (1440 and 375 px, axe), one pass and one fail per BR: BR-3 fail: the proposer of a library change is never the target; BR-5 fail: Client A from the picker gets no Studio read; BR-6: `xr-actor=user-Z` → sign-in, no `xr-actor` → Configuration author; BR-8: Approver chosen, then `/cases` → notice, `xr-actor` unchanged; Back after "Product Studio (as Configuration author) →" changes nobody. The walk counts changes outside BR-1: 0.
+* **Tests 4a touches** (named in its "done when"): the 7 `selectOption` files (`check_studio_browser.cjs:35`, `check_screen01_browser.cjs:45`, `check_forms_s4_library_browser.cjs:203`, `check_w1_qa51_52_54.cjs:67`, `qa/check_qa_s01_channels.cjs:22`, `qa/check_qa_m2_journeys.cjs:40`, `runtime/check_runtime_r1c.cjs:70`) keep working on the native select; `check_bk3_frame_browser.cjs:126`. **Breaker (P-278) on 4a.**
+
+## 9. Capability or scaffolding; Needed for the proof
+Sign-in page, picker, notice, `people.ts`: **Scaffolding** for the team's three sign-in pages (P-33), marked Simulated · Needed (E1). Hand-offs: **Capability** (the product's "send to" steps; in production they assign work rather than switch people) · Needed. Assigning to a named user, notifications: **Not built** (AG-07, M4).
+
+## 10. The three PRs (built side by side after approval)
+| PR | Files (all `web/src/`) | Done when |
+|---|---|---|
+| **4a** role picker | `lib/api.ts`, new `lib/people.ts`, `components/frame.tsx`, new `pages/sign-in.tsx`, `App.tsx` (route; `PersonaSwitch` → picker), `runtime/cases.tsx` (picker; BR-8 at `:60`; words at `:110`; pill words), `components/where.ts` | BR-1, 5, 6, 8 pass and fail; one picker in both areas; the named tests green; breaker Approve; walk by screens 1440 px |
+| **4b** Studio hand-offs | `pages/review.tsx`, `pages/release.tsx`, `pages/review-items.tsx` | BR-2, 3, 4, 7: submit → expert → Approver → "Open a case" by buttons; return → author; library items by BR-3; walk with 0 picker use |
+| **4c** case hand-offs (after BK-3 PR 3) | `runtime/cases.tsx` (Client A hand-off, `:278`), `runtime/questionnaire.tsx`, `runtime/readiness.tsx` | case → Client A → back to the firm → representative by buttons; Client B's case targets Client B; walk with 0 picker use |
+Shared files: 4a and 4c both edit `cases.tsx` (different hunks: header and `:60` vs `:216, :278`); merge `main` only on a conflict (P-270).
+
+## 11. Questions, answered by the Lead (P-484)
+1. **First visit: page or gate?** **Ruled: a page** (as recommended): unknown person → sign-in; missing → the Configuration author; walks start at `/sign-in` (BK-5 PR 2). A gate later changes the 11 browser checks that set no person.
+2. **Does a frame link that names the person ("Cases (as Case officer) →") count as the picker for E1?** **Ruled: yes** (as recommended): it names the person and the notice follows; P-456 was a Lead ruling.
+3. **Client back to the firm:** **Ruled: the hand-off carries `?from=` (web only)**; no `officer` field.
+
+## Definition of ready
+Acceptance tests named (§8); row text §10; decisions: Q1-Q3 answered (P-484); fresh challenge done; Lead approval given (P-223 (4)). **Ready.** Lanes (Lead 19): 4a this screens lane (breaker on 4a, P-278); 4b its own lane; 4c the BK-3 lane, after BK-3 PR 3 merges.
