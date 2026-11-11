@@ -3,6 +3,7 @@
 **Tested on a real switch, 5 Nov 19:14 IST; corrected the same evening.** Canary requested and pushed inside 5 minutes; nothing on GitHub lost. The work lives on GitHub (P-82), so an account switch loses at most what a lane has not pushed. Every lane pushes after each step (P-344 (1)).
 
 **Found on the real switch:**
+* **Connectors (P-445 (2), A11, 11 Nov):** on a new account check the Lead's start read with `get_usage` (about 115-120k on 11 Nov). Notion, Google Drive and Claude Docs are off by default; a new account can switch them back on: turn them off again (composer + menu, Connectors).
 * **Token rules carry over (P-440):** they live in `RULES.md` "Tokens: hard rules" and the `lead` and `lead-watch` skills, not in any account. The new Lead reads `RULES.md` plus only the newer DECISIONS rows, hands over at about 250k context, and watches the burn per hour at every check (over 3%/h at two checks: find the cause).
 * **The new account may not be empty.** It read 87% weekly on arrival, not 0%. Run `get_usage` first and tell the founder before starting lanes: the crew depends on it (P-356).
 * The app's session list shows nothing from the old account, running or not. A cloud lane on the old account may still push until its limit: read each stack head again before a label.
