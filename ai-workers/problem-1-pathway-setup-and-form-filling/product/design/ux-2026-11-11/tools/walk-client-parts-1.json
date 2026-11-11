@@ -1,0 +1,135 @@
+[
+ {
+  "part": "Part 1 of 59 · Indicate whether you are",
+  "h": "Indicate whether you are",
+  "questions": 1,
+  "inputs": 2,
+  "words": 53
+ },
+ {
+  "part": "Part 2 of 59 · Details of visit to Canada",
+  "h": "Details of visit to Canada",
+  "questions": 18,
+  "inputs": 18,
+  "words": 157
+ },
+ {
+  "part": "Part 3 of 59 · Your full name, date of birth and application",
+  "h": "Your full name, date of birth and application",
+  "questions": 2,
+  "inputs": 2,
+  "words": 62
+ },
+ {
+  "part": "Part 4 of 59 · Request for a change of sex or gender identifier",
+  "h": "Request for a change of sex or gender identifier",
+  "questions": 2,
+  "inputs": 3,
+  "words": 101
+ },
+ {
+  "part": "Part 5 of 59 · Appointing or cancelling a representative",
+  "h": "Appointing or cancelling a representative",
+  "questions": 1,
+  "inputs": 1,
+  "words": 47
+ },
+ {
+  "part": "Part 6 of 59 · Your declaration",
+  "h": "Your declaration",
+  "questions": 1,
+  "inputs": 2,
+  "words": 50
+ },
+ {
+  "part": "Part 7 of 59 · Personal details",
+  "h": "Personal details",
+  "questions": 4,
+  "inputs": 8,
+  "words": 112
+ },
+ {
+  "part": "Part 8 of 58 · Signature",
+  "h": "Signature",
+  "questions": 1,
+  "inputs": 2,
+  "words": 69
+ },
+ {
+  "part": "Part 9 of 58 · Government positions",
+  "h": "Government positions",
+  "questions": 1,
+  "inputs": 2,
+  "words": 135
+ },
+ {
+  "part": "Part 10 of 58 · Membership or Association with Organizations",
+  "h": "Membership or Association with Organizations",
+  "questions": 0,
+  "inputs": 0,
+  "words": 136
+ },
+ {
+  "part": "Part 11 of 58 · Employment",
+  "h": "Employment",
+  "questions": 0,
+  "inputs": 0,
+  "words": 103
+ },
+ {
+  "part": "Part 12 of 58 · Education",
+  "h": "Education",
+  "questions": 0,
+  "inputs": 0,
+  "words": 98
+ },
+ {
+  "part": "Part 13 of 58 · Statutory declaration of common-law union",
+  "h": "Statutory declaration of common-law union",
+  "questions": 6,
+  "inputs": 6,
+  "words": 72
+ },
+ {
+  "part": "Part 14 of 58 · Military service",
+  "h": "Military service",
+  "questions": 1,
+  "inputs": 2,
+  "words": 146
+ },
+ {
+  "part": "Part 15 of 58 · Previous travel",
+  "h": "Previous travel",
+  "questions": 0,
+  "inputs": 0,
+  "words": 97
+ },
+ {
+  "part": "Part 16 of 58 · Contact information",
+  "h": "Contact information",
+  "questions": 23,
+  "inputs": 27,
+  "words": 149
+ },
+ {
+  "part": "Part 17 of 58 · Personal details",
+  "h": "Personal details",
+  "questions": 49,
+  "inputs": 67,
+  "words": 550
+ },
+ {
+  "part": "Part 18 of 66 · US PR card",
+  "h": "US PR card",
+  "questions": 1,
+  "inputs": 2,
+  "words": 40
+ },
+ {
+  "part": "Part 19 of 66 · Background information",
+  "h": "Background information",
+  "questions": 12,
+  "inputs": 21,
+  "words": 250
+ }
+]
