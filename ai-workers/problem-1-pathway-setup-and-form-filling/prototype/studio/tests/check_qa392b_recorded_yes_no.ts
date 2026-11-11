@@ -50,7 +50,7 @@ for (const fact of ["person.education_school_name", "person.previous_residence_c
   ok(`setup: the principal's list for ${fact} takes an entry`, !!g && (await call("POST", `/runtime/cases/${c.id}/groups/${P}/rows`, { group: g }, OFFICER)).status < 300, g);
 }
 ok("setup: every fact answered and confirmed (the principal's entries, the spouse's lists \"none apply\")", await fillEverything(c.id));
-const item = (who: string) => itemsOf((await prepare(c.id)).p, who, FORM).find((i) => i.channel === "ONLINE");
+const item = async (who: string) => itemsOf((await prepare(c.id)).p, who, FORM).find((i) => i.channel === "ONLINE");
 
 async function check(who: string, name: string, expectYes: boolean) {
   const it = await item(who);
