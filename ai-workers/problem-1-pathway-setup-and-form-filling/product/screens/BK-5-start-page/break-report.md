@@ -55,3 +55,33 @@ Keyboard only: Demo menu → Starting points… → Tab ×18 to "Start from noth
 
 ## Verdict
 **Not ready at 2029a76fbab7b1f359c4bb0d9dc8347d360482ab.** One Blocker (B1: a destructive start without RESET on an unread, failed or stale status) and five Minors. A fresh break of B1 is needed on the head that claims the fix (0dae1533f or later), including Repro 2: a slow and a failing `/demo/status`.
+
+## Re-break (f1e4f40)
+Head **f1e4f4068dedfaca206f1f7a20c63e4fbe8e2101**: fresh copy `screens_bk5b` on :4462, with `web/dist` checked fresh (`web-fresh.sh ensure`; the bundle carries "did not start"). The only code change since 2029a76 is `web/src/pages/start.tsx`. Same tools as above; US$0.
+
+**B1: fixed (held).**
+* **Two tabs (t1), on all three doors:** the page was open on an empty demo, and then the six loaded through the API (17 programs). The stale dialog still opens with "no RESET needed". Pressing the button sends **0 POSTs**. The page says "The demo has programs now (loaded meanwhile, for example in another tab): nothing was emptied. Type RESET to confirm.", the RESET field appears, and "Goes" re-reads as 1234 rows. 17 programs are kept on every door.
+* **Slow first `/demo/status` (15 s, t8):** all three doors stay off until it answers, and a forced click opens no dialog. After the answer they come on.
+* **`/demo/status` answering 500:** the doors stay off and "The demo's state could not be read" shows.
+* **Status read fine, but the re-read inside `go()` answering 500:** "Not started: re-read boom", 0 POSTs, 17 programs kept.
+
+**B1-r · Minor: the window between the re-read and the reset is as long as the re-read's answer takes to arrive, not milliseconds.**
+* *How:* on an empty demo, open door 1 (no RESET asked) and press it. The server answers the re-read at 1.2 s with `programsExist:false`, and the answer is delivered 50 s later (a held route, standing in for a very slow link). Meanwhile another client loads the six, which finishes at 33.8 s with 17 programs.
+* *Result:* the page then sends `POST /demo/reset {"confirm":"RESET"}` at 51.2 s and gets 201. Programs go 17 → 0 with no RESET typed.
+* *Where the server lock helps:* with a 25 s hold, the other load was still running, so the reset got a 409 and nothing was lost. The load's lock covers a load in progress. It does not cover one that finished inside the gap, or a program made by hand.
+* *Why Minor:* it needs a pathological answer delay plus a second writer.
+* *Fix:* closing it needs the server to judge "empty" atomically, for example a reset confirm that is refused when programs exist. That is an API change, so it is for the Lead, outside this PR.
+
+**Your minors:**
+* **m1: fixed.** A 409 load between the calls now reads title "Emptied, not loaded" with "Emptied; the configured load did not start: The sample inputs are already loading… Start again empties it first."
+* **m2: fixed, with a nit.** A Try again refused by a 409 reads "…wait for it to finish, then reset. Nothing more was done: the demo is still as the last try left it (emptied, not fully loaded)." The nit: the 409 itself says another load is writing into the demo right now, so "still as the last try left it" is not quite true. Something like "another load is changing it" would be exact. Optional.
+* **m3: fixed.** A page opened 1.3 s into a configured load read "Another state", followed by itself, and showed "Last loaded: Pathways released, ready to walk" 12 s after the load ended (181.8 s), with no reload.
+* **m4: fixed.** Both Escape and Cancel return focus to the door that opened the dialog ("Load the finished story").
+* **m5: partly.**
+  * The empty confirm now says "No programs: only 1 record line, such as the last reset's activity line".
+  * On a never-reset copy it reads "only 0 record lines, such as the last reset's activity line" (nit).
+  * The part-way words with two instructions are unchanged. That was optional.
+
+**New nit (Minor):** after "The demo has changed", keyboard focus sits on the dialog container, not the new RESET field. axe found 0 issues on that state.
+
+**Re-break verdict:** **Ready at f1e4f4068dedfaca206f1f7a20c63e4fbe8e2101 for the breaker.** B1 is closed for stale, unread and failing status on all three doors. What remains is Minor: B1-r (the window grows with answer latency; the real fix is server-side, for the Lead) and three nits.
