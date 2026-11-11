@@ -106,7 +106,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const toRep = p.locator("[data-handoff=representative]");
   await toRep.waitFor({ timeout: 30000 });
   const tr = await toRep.innerText();
-  step("BR-2: after Send for review, the panel names who takes over: \"Sent for review (round 1) · Next: Representative … checks each form\"", /Sent for review \(round 1\)/.test(tr) && /Next: Representative.* checks each form and approves it or sends it back\./.test(tr) && /Hand to the Representative \(simulated\)/.test(tr), tr);
+  step("BR-2: after Send for review, the panel names who takes over: \"Sent for review (round 1) · Next: Representative … checks each form\"", /Sent for review \(round 1\)/.test(tr) && /Next: the Representative checks each form and approves it or sends it back\./.test(tr) && /Hand to the Representative \(simulated\)/.test(tr), tr);
   step("BR-3: the target is the case's representative of record (user-R), not the officer", (await toRep.getAttribute("data-handoff-to")) === "user-R");
   await axe(p, "the hand-off to the representative", "[data-handoff=representative]");
   await toRep.scrollIntoViewIfNeeded(); await p.screenshot({ path: path.join(SHOTS, "bk4c-to-representative-1440.png") });
@@ -147,12 +147,26 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await setup2.context().close();
   p = await fresh("user-O");
   await p.goto(`${BASE}/cases/${fam2}`); await p.locator("[data-handoff=client]").waitFor({ timeout: 60000 });
+  // Review m1 (BR-2): the case page's words follow the case's own summary (every required question answered, or not).
+  const sum = (await api2(`/runtime/cases/${fam2}/questionnaire?mode=agent`, { actor: "user-O" })).body?.summary ?? {};
+  const allAnswered = sum.missing === 0 && sum.answered > 0, ct = await p.locator("[data-handoff=client]").innerText();
+  step(`review m1: the case page's hand-off words match the case (${allAnswered ? "every required question answered" : "questions left"})`, allAnswered ? /has answered every required question and can still check the answers/.test(ct) : /answers on their phone/.test(ct), { sum, ct });
+  // Review m2: the tip shows on keyboard focus.
+  await p.locator("[data-handoff=client] button").focus(); await p.keyboard.press("Shift"); 
+  const tipShown = await p.locator("[data-handoff-tip]").first().waitFor({ timeout: 3000 }).then(() => true, () => false);
+  step("review m2: the hand-off's tip shows on keyboard focus (\"You act as Client A (simulated) in this tab…\")", tipShown && /You act as Client A \(simulated\) in this tab/.test(await p.locator("[data-handoff-tip]").first().innerText()));
   await p.locator("[data-handoff=client] button").click();
   await p.waitForURL((u) => u.pathname === `/cases/${fam2}/questionnaire`, { timeout: 15000 }).catch(() => {});
+  // Review m4: Back to the officer's page as the client, then the link back keeps the hand back.
+  await p.locator("[data-handoff=back]").waitFor({ timeout: 30000 }).catch(() => {});
+  await p.goBack(); await p.getByText("This page is for the case officer").waitFor({ timeout: 15000 }).catch(() => {});
+  await p.getByRole("link", { name: "your Client questionnaire" }).click();
+  await p.locator("[data-handoff=back]").waitFor({ timeout: 30000 }).catch(() => {});
+  step("review m4: Back to the officer's page, then \"your Client questionnaire\": the hand back is still there (from kept)", new URL(p.url()).searchParams.get("from") === "user-O" && await p.locator("[data-handoff=back]").count() === 1, p.url());
   const back = p.locator("[data-handoff=back]");
   await back.waitFor({ timeout: 30000 }).catch(() => {});
   const bt = await back.innerText().catch(() => "");
-  step("BR-2: every part answered → \"Next: Case officer reviews your answers\" and \"Hand back to the Case officer (simulated)\"", /Every part is answered/.test(await p.locator("main").innerText()) && /Next: Case officer reviews your answers\./.test(bt) && /Hand back to the Case officer \(simulated\)/.test(bt) && (await back.getAttribute("data-handoff-to")) === "user-O", bt);
+  step("BR-2: every part answered → \"Next: the Case officer picks up from here.\" and \"Hand back to the Case officer (simulated)\"", /Every part is answered/.test(await p.locator("main").innerText()) && /Next: the Case officer picks up from here\./.test(bt) && /Hand back to the Case officer \(simulated\)/.test(bt) && (await back.getAttribute("data-handoff-to")) === "user-O", bt);
   await axe(p, "the client's hand back", "[data-handoff=back]");
   await p.screenshot({ path: path.join(SHOTS, "bk4c-client-hand-back-1440.png") });
   await p.setViewportSize({ width: 400, height: 900 });
@@ -170,7 +184,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("P-456 (3): officer → Client A → officer by hand-offs only (0 other person changes)", w3.length === 2 && w3.every((w) => w.by === "handoff") && w3.map((w) => w.to).join(",") === "user-P,user-O", w3);
   await p.context().close();
   // Fail sides: no `from`, a Studio person, an unknown id: no hand back (today's words only).
-  for (const [q, why] of [["", "no from"], ["?from=user-B", "from a Studio person (the Approver)"], ["?from=user-Z", "from an unknown id"], ["?from=user-P", "from a client"]]) {
+  for (const [q, why] of [["", "no from"], ["?from=user-B", "from a Studio person (the Approver)"], ["?from=user-Z", "from an unknown id"], ["?from=user-P", "from a client"], ["?from=user-S", "a hand-typed firm person who did not hand it over (review m3)"], ["?from=user-O", "the case's officer typed by hand, no hand-off in this tab (review m3)"]]) {
     p = await fresh("user-P");
     await p.goto(`${BASE}/cases/${fam2}/questionnaire${q}`); await p.getByText("Every part is answered").waitFor({ timeout: 30000 }).catch(() => {});
     step(`BR-2 fail side: every part answered but ${why}: no hand back`, /Every part is answered/.test(await p.locator("main").innerText()) && await p.locator("[data-handoff=back]").count() === 0);

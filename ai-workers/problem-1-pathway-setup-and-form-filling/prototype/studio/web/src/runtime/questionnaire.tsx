@@ -20,8 +20,8 @@ import { DocumentsButton } from "./documents-drawer"; // C6.5 part 2b
 import { fillsText, groupLabel, inSentence, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 import type { ProgressOnly } from "../../../contracts/person-link";
 import { PrincipalPersonLine, PrivateProgress, usePeoplePrivacy } from "./privacy"; // C6.16
-import { HandOff, handName } from "./hand-off"; // BK-4c
-import { isFirmStaff, personOf } from "@/lib/simulated-people"; // BK-4c
+import { HandOff, handName, handedFrom } from "./hand-off"; // BK-4c
+import { isFirmStaff } from "@/lib/simulated-people"; // BK-4c
 
 /** role: any role the case's release lists (B115: the sponsor too); role_label is that role in the release's own words. */
 export type CasePerson = { subject_id: string; role: string; role_label?: string | null; label: string; applies: boolean; co_files?: boolean;
@@ -455,7 +455,8 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
         <div className="mt-2 h-2 rounded-full bg-text/10" role="progressbar" aria-valuemin={0} aria-valuemax={parts.length} aria-valuenow={done} aria-label="Parts done"><div className="h-2 rounded-full bg-primary" style={{ width: `${(100 * done) / Math.max(parts.length, 1)}%` }} /></div>
         {next >= 0 ? <Button className="mt-4 h-11 w-full text-base" onClick={() => open(next)}>{done ? "Continue where you left off" : "Start"} <ChevronRight /></Button> : <Notice tone="ok" className="mt-4" title="Every part is answered">Your officer reviews your answers and may ask you about some of them.
           {/* BK-4c (BR-2, BR-4): back to whoever handed over (?from=, a firm person), on the case page; never on a person's own link. */}
-          {!link && from && isFirmStaff(from) ? <HandOff className="mt-2" to={from} go={`/cases/${view.case.id}`} label={`Hand back to ${handName(from)} (simulated)`} next={<>{personOf(from)!.name} reviews your answers.</>} data="back" /> : null}</Notice>}
+          {/* Review m3: only to the person who handed it over in this tab (a hand-typed ?from= of anyone else shows nothing). */}
+          {!link && from && isFirmStaff(from) && handedFrom(view.case.id) === from ? <HandOff className="mt-2" to={from} go={`/cases/${view.case.id}`} label={`Hand back to ${handName(from)} (simulated)`} next={<>{handName(from)} picks up from here.</>} data="back" /> : null}</Notice>}
       </div>
       {people.map(([id, label]) => (
         <section key={id} aria-labelledby={`p-${id}`}>

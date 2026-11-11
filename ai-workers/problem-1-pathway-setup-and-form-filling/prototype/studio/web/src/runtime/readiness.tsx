@@ -18,7 +18,7 @@ import { noRetryOnRefusal } from "./questionnaire";
 import { useFirm } from "./team";
 import { FigureRow, type Figure } from "./readiness-figure";
 import { FoldOut } from "@/components/fold-out";
-import { HandOff } from "./hand-off"; // BK-4c
+import { HandOff, handName } from "./hand-off"; // BK-4c
 
 type Owes = "staff" | "representative" | "client" | "employer" | "ircc";
 type Line = { code: string; key: string; item?: string; subject?: string; owes: Owes; words: string; unblocks: string; severity: "block" | "critical" | "warning" };
@@ -90,7 +90,7 @@ export function ReadinessPanel({ caseId }: { caseId: string }) {
         <p className="min-w-0 flex-1 text-[13px] text-text-muted">What stands before each filing is Ready to file, by who owes it. Only a barcode form without its validated copy read back blocks; every other line is fixed, or passed with a written reason.</p>
         {v?.derived && v.filings.length ? <Button size="sm" variant="secondary" onClick={() => setSending(true)} data-send-for-review title="Send for review: the representative of record checks each form and approves it or sends it back."><Send aria-hidden />{firm.data?.solo && rounds.data?.representative === actor ? "Review now" : "Send for review"}</Button> : null}
       </header>
-      {handTo && waiting ? <HandOff className="border-b border-border px-4 py-2.5" to={handTo} go={`/cases/${caseId}/representative-review/${waiting.id}`} done={`Sent for review (round ${waiting.number})`} next={<>{nameOf(handTo)} checks each form and approves it or sends it back.</>} data="representative" /> : null}
+      {handTo && waiting ? <HandOff className="border-b border-border px-4 py-2.5" to={handTo} go={`/cases/${caseId}/representative-review/${waiting.id}`} done={`Sent for review (round ${waiting.number})`} next={<>{handName(handTo) ?? nameOf(handTo)} checks each form and approves it or sends it back.</>} data="representative" /> : null}
       {sending && v ? <SendForReviewDialog caseId={caseId} filings={v.filings} readiness={v.readiness ?? []} rounds={rounds.data} now={!!firm.data?.solo && rounds.data?.representative === actor} close={() => setSending(false)} /> : null}
       {q.isLoading ? <div className="p-4"><Skeleton className="h-16 w-full" /><span className="sr-only" role="status">Loading what stands before Ready to file…</span></div>
         : q.isError ? <div className="p-4"><Notice tone="danger" title="Readiness could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void q.refetch()}>Retry</Button>}>{(q.error as Error).message}</Notice></div>

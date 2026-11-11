@@ -27,7 +27,7 @@ import { EarlierStages, earlierOf, StageStrip } from "./stages"; // C6.17
 import { OfficerPeoplePanel } from "./privacy"; // C6.16
 import { RepresentativeReviewLatest, RepresentativeReviewPage } from "./representative-review"; // C8.3
 import { CaseReadinessPill } from "./readiness-figure"; // C7.10
-import { HandOff } from "./hand-off"; // BK-4c
+import { HandOff, handedFrom } from "./hand-off"; // BK-4c
 import type { OpenableRelease } from "../../../contracts/runtime";
 
 /** Simulated case people (the firm and the clients of lib/simulated-people.ts, BK-4a); the picker is demo chrome. */
@@ -203,7 +203,8 @@ function CasePage() {
   const { hash } = useLocation(), loaded = !!view.data;
   useWhere(view.data ? [{ label: "Cases", to: "/cases" }, { label: view.data.case.reference }] : null); // BK-3: the frame's line names the case
   React.useEffect(() => { if (loaded && hash === "#agent-view") document.getElementById("agent-view")?.scrollIntoView({ block: "start" }); }, [loaded, hash]);
-  if (!isOfficer(actor)) return <Notice title="This page is for the case officer">As a client, open <Link className="text-text-link underline" to={`/cases/${id}/questionnaire`}>your Client questionnaire</Link>.</Notice>;
+  // Review m4: a client who pressed Back after a hand-off returns to their questionnaire with its hand back.
+  if (!isOfficer(actor)) { const from = handedFrom(id!); return <Notice title="This page is for the case officer">As a client, open <Link className="text-text-link underline" to={`/cases/${id}/questionnaire${from ? `?from=${encodeURIComponent(from)}` : ""}`}>your Client questionnaire</Link>.</Notice>; }
   if (view.isLoading) return <div className="space-y-3"><Skeleton className="h-8 w-1/3" /><Skeleton className="h-24 w-full" /></div>;
   if (view.isError) return <Notice tone="danger" title="This case could not be opened">{(view.error as Error).message}</Notice>;
   const v = view.data!, c = v.case, people = c.people.filter((p) => p.role !== "case");
@@ -221,7 +222,9 @@ function CasePage() {
         <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">
           <p className="font-medium">Client questionnaire</p>
           {/* BK-4c (BR-2, BR-4, BR-7): the questionnaire is the case's own client's; the hand-off carries who hands back (?from=). */}
-          {client ? <HandOff className="mt-1.5" to={c.client} go={`/cases/${c.id}/questionnaire?from=${encodeURIComponent(actor)}`} next={<>{client.name} answers on their phone, for everyone travelling.</>} data="client" />
+          {client ? <HandOff className="mt-1.5" to={c.client} go={`/cases/${c.id}/questionnaire?from=${encodeURIComponent(actor)}`} handsCase={{ caseId: c.id, from: actor }} data="client"
+              // Review m1 (BR-2): once every required question is answered, the words say so; the client may still check them.
+              next={v.summary.missing === 0 && v.summary.answered > 0 ? <>{client.name} has answered every required question and can still check the answers.</> : <>{client.name} answers on their phone, for everyone travelling.</>} />
             : <p className="text-xs text-text-muted">The client answers on their phone, for everyone travelling.</p>}
         </div>
       </div>
@@ -289,7 +292,7 @@ function ClientPage() {
   if (!isClient(actor)) return (
     <Notice title="This is the Client questionnaire">
       As the case officer, review and change answers on <Link className="text-text-link underline" to={`/cases/${id}`}>the case page</Link>.
-      {view.data ? <HandOff className="mt-2" to={view.data.case.client} go={`/cases/${id}/questionnaire?from=${encodeURIComponent(actor)}`} next={<>{personOf(view.data.case.client)?.name ?? "The client"} answers this questionnaire.</>} data="client" /> : null}
+      {view.data ? <HandOff className="mt-2" to={view.data.case.client} go={`/cases/${id}/questionnaire?from=${encodeURIComponent(actor)}`} handsCase={{ caseId: id!, from: actor }} next={<>{personOf(view.data.case.client)?.name ?? "The client"} answers this questionnaire.</>} data="client" /> : null}
     </Notice>
   );
   return <Questionnaire caseId={id!} mode="sqr" />;
