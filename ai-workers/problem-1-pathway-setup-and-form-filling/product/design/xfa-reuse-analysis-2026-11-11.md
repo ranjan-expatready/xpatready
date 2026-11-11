@@ -1,21 +1,28 @@
 # Adopting the team's XFA engine: analysis and plan (row B170, founder ask A16)
 
-Written 11 Nov 2026 by the Fable planner for B170 (read-only: no product code changed). Brief: `xfa-engine-reuse-brief-2026-11-11.md`. Records only. **Third version**, after the founder's ruling P-464 (what changed since the first two: section 9).
+Written 11 Nov 2026 by the Fable planner for B170 (read-only: no product code changed). Brief: `xfa-engine-reuse-brief-2026-11-11.md`. Records only. **Fourth version**, after the founder's rulings P-464 to P-467 (what changed since the earlier ones: section 9).
 
-**In one paragraph.** The founder ruled (P-464): we own this code, so **the whole engine is copied unchanged into our repository as its own package, its tests run in our CI, and each feature is switched on where our tests prove it.** This page says, for every feature in the share, whether it is on now, on after a named row, or not used, and why. The honest picture the plan rests on: the engine is real, well tested and safe to run, but narrower than its plans read. Its form-script part works today on **2 IRCC forms (IMM 5257 and IMM 1295)** and refuses 18 of the other 19 blank forms in the share with a clear reason. On those two forms it does what we could not do without Adobe: it runs the form's own Validate and builds the form's own barcode texts in under a second on a server, and it draws the filled form as pages. On our own finished-story copy of IMM 5257 it gave the same Validate answer Adobe gave. Two things are not yet true and are rows, not assumptions: its barcode text is not yet equal to Adobe's (2 of 5 differ by a number format), and it does not draw barcodes.
+**In one paragraph.** The founder ruled (P-464 to P-467): we own this code; the engine's source is copied unchanged into our repository as its own package with its tests in our CI; **each part is then judged head to head against ours on the same inputs. The better one wins, a tie keeps ours, and where theirs is the better base with a gap we adopt it and fix it.** Nothing is force-fitted and nothing good is left behind. Measured result (section 3): **ours stays** for writing the PDF, reading it, the field lists, the signature check, the "validated in Adobe" check and the barcode check on a validated copy. **Theirs wins** for two things we do not have: pressing the form's own Validate before download (same answer as Adobe on our own copy, in 0.2 seconds) and showing the filled form in the app (our own form drawn as pages in 1.5 seconds). **Theirs is the better base but needs a fix** for the barcode text (3 of 5 equal to Adobe's today) and for form coverage: its form-script part reads **2 IRCC forms (IMM 5257 and IMM 1295)** and refuses 18 of the other 19 blank forms in the share. The writer is a measured tie, so ours stays until a trial measures the two numbers still missing.
 
-Words used here: **engine** = the team's TypeScript package `xfa-engine`. **Form's own check** = the Validate button's script that IRCC ships inside the PDF. **Barcode text** = the characters a barcode holds (the form builds them; Adobe then draws them as a picture). **Adapter** = one small file on our side that calls the engine and turns its answer into our words. **Switch** = a setting that turns one engine feature on in the app; every switch starts off and is turned on by the row that proves it.
+Words used here: **engine** = the team's TypeScript package `xfa-engine`. **Form's own check** = the Validate button's script that IRCC ships inside the PDF. **Barcode text** = the characters a barcode holds (the form builds them; Adobe then draws them as a picture). **Adapter** = one small file on our side that calls the engine and turns its answer into our words. **Switch** = a setting that turns one engine feature on in the app; every switch starts off and is turned on by the row that proves it. **Head to head** = ours and theirs run on the same form and the same data, numbers side by side.
 
 ---
 
-## 0. The founder's ruling (P-464, 11 Nov) and what it changes
+## 0. The founder's rulings (P-464 to P-467, 11 Nov) and what they change
 
 His words, as the Lead passed them on: "it is a production grade development ... subject to testing and validating whether it meets all our standards"; "adopt the entire code without writing from the scratch ... save token ... we know that it is tested ... move fast, speed, quality"; "there's no approval required from any team ... we are the owner ... we can use it the way we want"; the report to the team says "from your POC, this is what we have used, that's why we used, and if there's any element which we don't want to use ... why".
 
 He chose: the engine's source, unchanged, in our repository as its own package (`packages/xfa-engine/`), with a note of where it came from (the team's version), its tests in our CI, one thin adapter, and our fixes kept small so newer team versions can be taken in. The share's "do not push" note is overridden by the owner. Test PDFs stay out of git.
 
+**P-465 (his words):** "make sure that you're not force fitting any XFA. If any of our functionality is better ... don't force fit it, but don't leave anything good. Analyze, evaluate, don't assume anything, and then pick up the best ... I don't want you to start force-fitting and using the XFA and throw away our good stuff." So: a measured head to head per part; the better wins; a tie keeps ours; the copied source stays only if at least one part wins, and only winning parts go live.
+
+**P-466:** Q2 answered, "Yes, small row now": "View form" (read-only) comes right after the source copy, outside the Bake's count; it counts only after a look in a real browser and a side-by-side with Acrobat; no editing in the browser now.
+
+**P-467 (his words):** "there may be better in XFA, but it has some improvement required or small adjustment required. So they will pick up from XFA and improve it if it is missing in our existing POC." So a third verdict: theirs is the better base but needs a fix; we adopt it and improve it, small and recorded against the team's version, listed in the team report.
+
 What this changes from my first version, and what I think of it:
-* **Framing:** from "reuse where it makes sense" to "adopt all, switch each feature on where our tests prove it". Nothing is left behind; some features are simply off, with the reason and what would turn them on.
+* **Framing:** from "reuse where it makes sense" to "bring the whole source in, judge each part head to head, switch on only what wins". Some parts are simply off, with the reason and what would turn them on.
+* **The head to head corrected my own plan in one place:** reading the barcode text Adobe stores in a validated copy needs no engine at all; our own reader does it (measured, 5 of 5). Row e now uses ours for that and the engine only for the text expected before Adobe.
 * **Packaging:** I had recommended one built package file with no source. The founder's choice is better for three reasons I can show: the tests come with it and run in our CI; the page writer (a helper script outside the built package) comes with it, so the read-only view needs nobody's OK; and a small fix such as the barcode number format (finding T1) becomes possible. Its one cost is drift from the team's copy, handled by the rules in 4.2.
 * **"We know that it is tested": true for two forms.** Section 1 is the measured boundary. The founder's own condition ("subject to testing and validating whether it meets all our standards") is what the switches and the rows' "Done when" lines carry out.
 
@@ -88,22 +95,66 @@ This matches the team's own note of 19 Oct ("0 of 19 load fully"). **Of our four
 
 ---
 
-## 3. Every feature in the share: on now, on after a row, or not used
+## 3. Ours against theirs, measured (P-465, P-467)
 
-**On now** = switched on by one of the first rows (B170a to f), no open question. **On after …** = waits for the named row or ruling. **Not used** = copied and tested with the rest, switch off, with the reason and what would change it. Everything in `packages/xfa-engine/` is copied whatever its verdict.
+Rule: the better one wins; **a tie keeps ours**; where theirs is the better base but has a gap, we adopt it and fix it (small, recorded); nothing is assumed. Every cell is a measured number or says "not measured yet" with the row that measures it. Same inputs on both sides: the blank IMM 5257 from canada.ca (sha256 `0dc03b24…`), the data of our finished-story Paper IMM 5257 (copy `9c00dbfc`, 483 KB of form data), its Adobe-validated twin, and the team's test forms. Scripts: `h2h_ours.py`, `h2h_engine.mjs` and the earlier probes, in the shared notes folder.
 
-### 3.1 Reading and writing the PDF
+The four verdicts: **Ours wins** · **Theirs wins as is** · **Theirs is the better base, needs a fix** · **Not used**. One more, honest one: **Not decided (ours stays)**, where a number that could change the result is not measured yet.
+
+### 3.1 Where both sides have something
+
+| Part | Ours | Theirs | Verdict |
+|---|---|---|---|
+| **H1 · Write values into the PDF** | Python (`e5_roundtrip.py`, `page_fields.py`, `fill.py`, about 680 lines) on the `pypdf` library's private internals; its own note says "demonstration-only" | Own TypeScript writer (PDF layer about 2,000 lines, 26 test files) | **Not decided: a tie on everything measured, so ours stays.** Row i measures the two missing numbers. |
+| · original bytes kept | yes (the copy starts with the blank's exact bytes) | yes | tie |
+| · DocMDP and UR3 signatures (our `openssl` check) | verified, verified | verified, verified | tie |
+| · encryption kept; the other side's reader reads it back equal | yes; the engine reads our copy equal | yes; our reader reads the engine's copy equal | tie |
+| · bytes added for the same data | 87,660 | 87,901 | tie |
+| · time for the write itself (5 runs) | 89 to 107 ms | 36 to 76 ms, opening included | theirs, but neither is felt by a person; the app's whole fill step is not measured yet (row i) |
+| · same input gives the same file | not shown: my re-run differs from the app's copy after the blank's bytes (the app also runs its page-fields step; not looked into) | yes, twice identical | theirs |
+| · Adobe Validate on a copy of **our** data | **passed** (10 Nov; 75 of 75 values read back) | **not measured yet** (row i). The team's owner passed Adobe on their own made-up data (18 Oct) | ours, until measured |
+| · forms it has written and proven | every Paper form the app fills today | IMM 5257 here; the other forms **not measured yet** (row i) | ours, until measured |
+| · upkeep | Python environment, `openssl`, `pdftotext`, private library internals that can change under us | no outside tool; one package | theirs |
+| **H2 · Open the PDF and read its data** | `pypdf` (reading the data: 11 ms); field lists exist for 38 forms | 24 of 24 files in the share open (30 to 39 ms) | **Tie: ours stays** for our own reading. Each side reads the other's copy and gets the same data. Theirs is used only inside its own features. |
+| **H3 · Field list per form** (boxes, required marks, labels) | 38 forms; feeds 18 saved field maps | no such output | **Ours wins** (nothing to compare) |
+| **H4 · Signature check** | DocMDP and UR3 verified with `openssl` on every copy | none | **Ours wins** |
+| **H5 · "Was this copy validated in Adobe?"** | Reads the flag and date on all 4 barcode forms (English and French, two date shapes) | Reads the flag only on the 2 forms it can load; same answer as ours on our validated copy | **Ours wins** (4 forms against 2, same correctness) |
+| **H6 · Which mandatory boxes are still empty, before download** | Required marks plus a hand-kept list of script conditions. On our finished-story IMM 5257: **2 of 46 listed**, both boxes the form's own script does not ask for | Presses the form's own Validate: **"Validation completed successfully", as Adobe said**; 0.2 s; names the first missing box and the form's message when it fails | **Theirs wins as is, on the forms it reads (2). Ours stays for the others** (38 forms with a field list). |
+| **H7 · Do the barcodes match the facts?** | Picture decode of the barcode Adobe drew: the truth by definition, but by hand on the Mac, minutes per copy, not in CI. Any barcode form. **Also measured now: our own reader finds the 5 barcode texts Adobe stored in our validated copy (5 of 5, no picture needed).** | Builds the form's barcode text itself: 0.2 s, in CI, 2 forms; **3 of 5 equal to Adobe's, 2 differ by a number format** | **Split.** For a validated copy: **ours wins**, with a small addition to our reader (row e, no engine). For the text expected before Adobe, which we do not have at all: **theirs is the better base, needs a fix** (row g). Same for IMM 0008 and IMM 1344: not measured yet (row e). |
+| **H8 · A stand-in for Validate in tests** | Writes the flag by hand (test only), any form | Runs the real script, 2 forms | **Tie: ours stays** in tests. The real script is H6. |
+
+### 3.2 Where only theirs exists
+
+| Part | Measured | Verdict |
+|---|---|---|
+| **N1 · The form's own Validate before download** | Same answer as Adobe on our copy; 0.2 s | **Theirs wins as is** (2 forms). Row f. |
+| **N2 · The form's own barcode text before Adobe** | 3 of 5 equal to Adobe on three validated copies | **Better base, needs a fix** (month "03" against "3"). Rows e and g. |
+| **N3 · See the filled form in the app ("View form")** | Our own form drawn as 5 and 6 pages in 1.5 s; barcodes are placeholders. Real-browser look and Acrobat side-by-side: **not measured yet** (row d) | **Theirs wins**; the founder said yes (P-466), and it counts only after those two measures. If the side-by-side finds differences, it becomes "needs a fix". |
+| **N4 · Reading more of our forms** | 2 of 21 blank forms load; 18 refused with a named reason (1.3); 2 of our 4 barcode forms | **Better base, needs a fix** (P-467). Row j sizes each reason first; fix rows follow, small ones ours, large ones agreed with the team (Q4). |
+| **N5 · A validated copy with no Adobe step** | Works technically on our copy (0.2 s). Against an Adobe-validated copy of the same case: **not measured yet** (row h) | **Not decided.** Adobe stays the proof (P-442); **Unconfirmed: no counsel**; Q5. |
+| **N6 · The machinery under N1 to N3** (form model, box paths, script sandbox, events, safe XML, reading Adobe's saved state, fonts, layout) | 3,367 of 3,369 unit tests; nothing unsupported on the two forms | **Comes in with the winners.** Nothing of ours competes. |
+| **N7 · Browser worker; clear-button, user-access and host-request reports** | Unit tests only | **Not used**: only a fill-and-edit screen needs them, and our forms are filled from case facts. |
+
+### 3.3 What this means for the copy (P-464, P-465)
+
+At least three parts win (N1, N3, and N2 after its fix), so the source copy stays. **Only these go live, each behind its switch, each by its row:** the form's own check (row f), the expected barcode text (row e, then g), View form (row d). **Ours stays** for writing, reading, field lists, signature checks, the validated flag, and the barcode check on a validated copy. Everything else in the package is present, tested in CI and off.
+
+### 3.4 Every feature in the share, and when it goes live
+
+The same result, feature by feature, so nothing in the share is left unjudged. **On now** = part of a winner (or the machinery under one), switched on by one of the first rows (B170a to f). **On after …** = waits for the named row or ruling. **Not used** = copied and tested with the rest, switch off, with the reason and what would change it. Everything in `packages/xfa-engine/` is copied whatever its verdict.
+
+#### Reading and writing the PDF
 
 | # | Feature | Proven by | Verdict | Why · what it moves |
 |---|---|---|---|---|
-| F1 | Open the PDF: objects, cross-reference tables and streams, object streams, compression | Unit tests; the team's match against `qpdf`; my run: 24 of 24 open | **On now** (inside every engine feature, from row c) | It is the engine's front door. We do **not** move our own field lists (inventories) to it: they feed 18 saved field maps and work; no number would move. |
+| F1 | Open the PDF: objects, cross-reference tables and streams, object streams, compression | Unit tests; the team's match against `qpdf`; my run: 24 of 24 open | **On now** (inside every engine feature, from row c) | It is the engine's front door. Head to head H2 and H3: a tie on reading, and ours wins on field lists, so our own reading stays ours. |
 | F2 | Decrypt the kind of encryption IRCC uses (AESV2); refuse every other kind with a named error | Unit tests; all 24 files are encrypted and open | **On now** | Same door. Refusing other kinds is right for us too. |
 | F3 | Pull out the form's inside parts (template, data, saved form state) | Unit tests; 24 of 24 | **On now** | Needed by everything below. |
 | F4 | Pull out the fonts embedded in the PDF | Unit tests; used by the page dump | **On after B170d** (view) | Only drawing pages needs it. |
-| F5 | Write changed data back as an addition at the end of the file, re-encrypted, original bytes untouched | Unit tests; the team's owner opened results in Adobe Reader for both forms (18 Oct) | **On after B170i** (writer trial); until then our Python writer stays | Ours is proven by Adobe and by signature checks on the copies that count (C7.1 fill, C10.2 finished story). Swapping risks two Works rows for no new capability, so the swap has to be earned side by side. If it wins: about 680 Python lines, `pypdf` private internals, and the Python step leave the fill path. The engine does not check signatures; our `openssl` check stays either way. |
+| F5 | Write changed data back as an addition at the end of the file, re-encrypted, original bytes untouched | Unit tests; the team's owner opened results in Adobe Reader for both forms (18 Oct) | **On after B170i** (writer trial); until then our Python writer stays | Head to head H1: a tie on everything measured, and a tie keeps ours. Ours is proven by Adobe on our data (C7.1 fill, C10.2 finished story); theirs is not measured on our data yet. If it wins: about 680 Python lines, `pypdf` private internals, and the Python step leave the fill path. The engine does not check signatures; our `openssl` check stays either way. |
 | F6 | Safe XML reading (refuses document-type tricks; cleans illegal characters on write) | Unit tests | **On now** (inside) | Defence we get for free. |
 
-### 3.2 Understanding and running the form
+#### Understanding and running the form
 
 | # | Feature | Proven by | Verdict | Why · what it moves |
 |---|---|---|---|---|
@@ -124,7 +175,7 @@ This matches the team's own note of 19 Oct ("0 of 19 load fully"). **Of our four
 | F21 | Form descriptor: five or six box names per form (Validate button, flag, flag value, first-missing note, barcode group, clear button) | The two descriptors in the tests work on our copies | **On now, as data on our form record** (row c) | Forms stay data (P-319, P-449). Later replaces the names fixed inside `read_validated.py`. |
 | F22 | Made-up data files for both forms and the way to apply them | Tests | **On now, in tests** | CI can prove "a complete form passes" with no client data. |
 
-### 3.3 Drawing the form
+#### Drawing the form
 
 | # | Feature | Proven by | Verdict | Why · what it moves |
 |---|---|---|---|---|
@@ -135,7 +186,7 @@ This matches the team's own note of 19 Oct ("0 of 19 load fully"). **Of our four
 | F27 | Browser worker: one form per killable background worker, replay, watchdog | Unit tests; a measured kill-and-replay proof | **Not used** | We run the engine on the server in a separate process. On if the engine ever runs in the browser. |
 | F28 | Viewer screens (open, fill, validate, download in the browser) | **Not in the share**: plans (9 tasks), 19 open questions, 11 mock-up pages | Nothing to adopt; mock-ups kept as reference | Our forms are filled from facts; see section 8 for what the founder's example really needs. |
 
-### 3.4 Around the engine
+#### Around the engine
 
 | # | Item | Verdict | Why |
 |---|---|---|---|
@@ -154,7 +205,7 @@ This matches the team's own note of 19 Oct ("0 of 19 load fully"). **Of our four
 
 ### 4.1 Rows (text for the Lead to add to BACKLOG; Opus builders; each one PR from `origin/main`)
 
-Order and who can run beside whom: **a** first. Then **b** and **c** side by side. After c: **d** (screens lane) beside **e then f** (one runtime lane, both touch `fill-case.ts`). **g** after b. **h** after e, f and g. **i** and **j** when a lane is free. Letters changed from the earlier versions of this page: the map is in section 9.
+Order and who can run beside whom: **a** first. Then **c** (small) with **d** right behind it in the screens lane (P-466; the lane writes d's concept while c lands), and **b** beside them. After c: **e then f** (one runtime lane, both touch `fill-case.ts`). **g** after b. **h** after e, f and g. **i** and **j** when a lane is free. Letters changed from the earlier versions of this page: the map is in section 9.
 
 **B170a · the engine's source in our repository, its tests green in our CI (no app change).**
 * What: copy `packages/xfa-engine/` unchanged from the team's commit `a0119727` to `packages/xfa-engine/` at our repository's root, plus the team's `tsconfig.base.json` at the root (the package's settings point at it). Add `packages/xfa-engine/PROVENANCE.md` (source commit, bundle checksum `897c25bf…`, date, the six MIT libraries, the pdf.js notice, how to take a newer version) and `PATCHES.md` (our changes to the copy: empty). Add an npm lockfile for the package with the exact versions the team pinned. One new CI job: Node 24.21.0, install, build, the unit tests; it runs when `packages/xfa-engine/**` changes and nightly. The technology-gate record (`STANDARDS.md` §1) for the five new libraries and Vitest goes in the PR.
@@ -172,14 +223,14 @@ Order and who can run beside whom: **a** first. Then **b** and **c** side by sid
 * Done when: on CI, with the made-up form from the engine's fixtures and with the fetched blank IMM 5257, the adapter returns "not complete" with the form's own first missing box and message; a form the engine refuses returns `not available` with the reason and exit 0; no form number or box name appears in the adapter or the engine (checked by the existing guard, extended to `packages/xfa-engine/src`); with every switch off the app behaves exactly as today.
 * Cost: 1 session.
 
-**B170d · "View form": the filled form in the app, read-only (the founder's "opens the PDF in the browser").** After c; screens lane; needs Q2's yes.
+**B170d · "View form": the filled form in the app, read-only (the founder's "opens the PDF in the browser").** Right after a and c; screens lane; the founder said yes (P-466), outside the Bake's count. **It counts only after a look in a real browser and a side-by-side with Acrobat.**
 * What: one API route that returns the engine's drawing of one page of a form copy (static HTML with its own no-script policy, made on the server through the adapter), and a "View form" action on the copy's row that opens the pages in a framed panel with "page 1 of N" and next/previous. Read-only: no typing, no Validate button, no change to Download. Forms the engine cannot read keep Download only, with the quiet reason line. The barcode page shows grey placeholders with the caption "Adobe draws the barcodes".
-* Done when: on the finished story's IMM 5257 the panel shows 5 pages (6 for a validated copy) with the case's values in place (name, date of birth, passport: a Playwright test against the facts); a page opens in under 3 seconds; the frame runs no script (checked); axe passes on the panel; a refused form shows no "View form"; a walk by screens before review (P-352) with pictures beside Acrobat's for pages 1 and 2, differences listed.
+* Done when: on the finished story's IMM 5257 the panel shows 5 pages (6 for a validated copy) with the case's values in place (name, date of birth, passport: a Playwright test against the facts); a page opens in under 3 seconds; the frame runs no script (checked); axe passes on the panel; a refused form shows no "View form"; a walk by screens in a real browser before review (P-352) with pictures beside Acrobat's for every page of IMM 5257 and IMM 1295, each difference listed and either accepted by the Lead or fixed as a recorded patch (P-467).
 * Moves: one download removed per look at a form, for 2 forms; form pictures for qa and packs without Acrobat. It does **not** remove the download and re-upload around Adobe Validate (that is row h).
 * Cost: 1 to 2 sessions. Browser bundle: +0. A page is 0.3 to 1.7 MB of HTML (page 1 carries the form's fonts and images).
 
 **B170e · barcode check (C7.2: the form passes Adobe Validate and its barcodes match the facts).** After c.
-* What: (1) on an uploaded validated copy, read the barcode texts **Adobe stored in the file**, split them into pieces and compare each with the case facts written into the form; fill the contract's `barcodes` block (`checked`, `expected`, `decoded`, `matched`). (2) On a generated copy, before download, ask the engine for the form's own barcode texts and compare the same way, labelled "expected". (3) One test compares engine texts with Adobe's on the recorded sample and **expects the known month difference by name** (T1), so it turns red the day row g lands.
+* What: (1) on an uploaded validated copy, read the barcode texts **Adobe stored in the file** with **our own reader** (head to head H7: ours wins here; no engine; measured 5 of 5 on our validated IMM 5257), split them into pieces and compare each with the case facts written into the form; fill the contract's `barcodes` block (`checked`, `expected`, `decoded`, `matched`). Where the texts sit is data on the form record, for all four barcode forms; IMM 0008 and IMM 1344 are measured in this row. (2) On a generated copy of a form the engine reads, before download, ask the engine for the form's own barcode texts and compare the same way, labelled "expected". (3) One test compares engine texts with Adobe's on the recorded sample and **expects the known month difference by name** (T1), so it turns red the day row g lands.
 * One-time proof first (in the PR, from evidence we already hold): the texts stored in the file equal the texts decoded from the drawn barcodes, using the evidence lane's existing IMM 1295 and IMM 5257 decodes. If they are not equal, stop: part (1) falls back to today's picture decode and only part (2) ships.
 * Done when: the barcode-report step of `acceptance/C7.2.test.ts` passes on GitHub's runners (today it fails because the `barcodes` block is absent; the pack stands at 2 of 10). QA-315 (IMM 5257 filed Online on the checkpoint, so the upload step is refused) and the pack's own "never ready" step are separate debts this row does not claim; a wrong fact in one barcode piece makes the copy "not ready" with the piece named; on forms the engine refuses, the line reads "barcode check not available for this form yet: <reason>" and today's behaviour is kept.
 * Moves: C7.2's barcode step from "not done" to green in CI; with QA-315 fixed and the Mac's Adobe evidence (already recorded for C10.2's copy) the row can reach Works by qa's verdict; three hand steps on the Mac (capture, decode, compare) removed for IMM 5257 and IMM 1295; about 480 lines of Python barcode tooling become evidence-only.
@@ -191,7 +242,7 @@ Order and who can run beside whom: **a** first. Then **b** and **c** side by sid
 * Done when: on the finished story's IMM 5257 the line reads "passes" and the empty-box list shows 0 of 46 (today 2 of 46); a copy with a missing passport number shows the form's own message for that box; a refused form shows today's list unchanged; the word "validated" is still used only for Adobe's result.
 * Cost: 1 to 2 sessions (engine layer, then the screen line).
 
-**B170g · barcode text equal to Adobe's (finding T1).** After b.
+**B170g · barcode text equal to Adobe's (finding T1; "better base, needs a fix", P-467).** After b.
 * What: the smallest change in our copy of the engine that makes a number box with a leading zero come out as Adobe writes it ("3", not "03"), with a unit test on a made-up form; listed in `PATCHES.md` and sent to the team with the evidence.
 * Done when: on the Mac, the engine's five barcode texts equal Adobe's on all three validated copies we hold (today 3 of 5 on each); row e's "known difference" test is updated; the engine's own tests stay green.
 * Cost: 1 session, if the rule is as simple as the evidence suggests; the builder stops and reports if Adobe's rule turns out wider (decimals, signs).
@@ -201,10 +252,11 @@ Order and who can run beside whom: **a** first. Then **b** and **c** side by sid
 * Done when: a report shows the two copies side by side for IMM 5257 and IMM 1295 with every difference named, and Adobe opens the engine-validated copy as validated. The founder then rules, with counsel and the immigration expert, whether the engine's result may stand for Paper or PDF-upload copies. Until then Adobe stays the proof (P-442); **Unconfirmed: no counsel**.
 * Moves, if ruled yes: the download, Adobe, save and re-upload steps go away for those forms. This is the step the founder's example is really about.
 
-**B170i · writer trial (decision gate, not a swap).** Needs Q3.
-* Done when: a report shows, for IMM 5257 and IMM 1295 on the same values, both writers' outputs read back equal, signatures intact on both, Adobe Validate passed once on the engine-written copy, and the lines and tools a swap would remove. The swap itself would be a later row.
+**B170i · writer trial: the two numbers the head to head still lacks (decision gate, not a swap).** Needs Q3.
+* Already measured (H1): bytes kept, both signatures, read-back, size and time are a tie on IMM 5257.
+* Done when: a report adds (1) Adobe Validate on an engine-written copy of our finished-story data, and (2) both writers on every Paper form the app fills, read back equal with signatures intact, plus the app's whole fill step timed on both and the lines and tools a swap would remove. If theirs then wins, the swap is a later row; if it is still a tie, ours stays.
 
-**B170j · which refused forms a small change would open (read-only sizing).** Needs Q4.
+**B170j · which refused forms a fix would open (read-only sizing; "better base, needs a fix", P-467).** Fix rows follow it; who does the large ones is Q4.
 * What: for the 18 refused forms, size each reason. First look: the five refused for input patterns (IMM 1294 Study permit, IMM 5710, 5476, 5708, 5709) may be a small addition; repeating sections (IMM 0008 and six more), shared boxes (3) and FormCalc (2) look large.
 * Done when: a one-page table: reason, forms, size (small or large), what the team already plans. No engine change in this row.
 
@@ -274,9 +326,9 @@ With the source in our repository, T1 becomes our small patch (row g) and still 
 | # | Question | My recommendation and why |
 |---|---|---|
 | **Q1** | How may the engine reach our repository and CI? | **Answered by the founder, P-464:** the source, unchanged, as its own package; we are the owner; no approval needed. (I had recommended a built package with no source; his choice is better, section 0.) |
-| **Q2** | "Show the filled form inside the app, read-only, for the two forms the engine reads (IMM 5257, IMM 1295), as a small row now (B170d)? Or wait until after the Bake?" | **Yes, now, outside the Bake's count.** 1 to 2 sessions, nothing added to the browser, and it is his own example. Fill-and-edit in the browser: not now. He should hear plainly that this lets him see the form but does not yet end download and re-upload (Q5). |
-| **Q3** | "Should the engine's writer replace our Python writer, or sit beside it until a side-by-side trial?" | **Beside it; trial row B170i; swap only on evidence.** Ours is proven where it counts; theirs is cleaner and removes Python from the fill path, but is proven on fewer copies. |
-| **Q4** | "The engine reads 2 of 21 forms. Who extends it: we, in our copy, or the team?" | **Small additions ours (after the sizing in B170j); large ones (repeating sections, shared boxes, FormCalc) asked of the team first.** We own the code, so we may; but two teams extending the same engine apart is how a copy becomes a rebuild. |
+| **Q2** | Show the filled form inside the app, read-only, as a small row now? | **Answered by the founder, P-466: yes, small row now** (B170d), outside the Bake's count; it counts only after a real-browser look and an Acrobat side-by-side; no editing in the browser. |
+| **Q3** | "Head to head, our writer and the engine's are a tie on everything measured so far. Keep ours and run one trial (row i) for the two numbers still missing, or leave the question closed?" | **Keep ours (a tie keeps ours) and run the trial when a lane is free.** The missing numbers are Adobe Validate on an engine-written copy of our data, and all our forms. The reason to look at all: ours rests on private library internals and its own note says "demonstration-only". |
+| **Q4** | "The engine reads 2 of 21 forms. P-467 says we improve it where it is the better base. Who does the large pieces (repeating sections, shared boxes, FormCalc): we, in our copy, or the team?" | **Small fixes ours, after the sizing in row j; large ones agreed with the team first.** We own the code, so we may; but two teams extending the same engine apart is how a copy becomes a rebuild, and "fixes stay small" is the founder's own line. |
 | **Q5** | "May the form's own Validate, run by the engine in our app, stand in for Adobe Validate, so nobody downloads and re-uploads?" | **Not yet: Adobe stays the proof (P-442); Unconfirmed: no counsel. Run the trial (B170h) so the ruling rests on a side-by-side.** Two blockers to settle first: T1 (barcode text) and T8 (the copy would carry Adobe's program identity). |
 
 ### 6.2 For the Lead (pipeline, not product)
@@ -292,7 +344,8 @@ With the source in our repository, T1 becomes our small patch (row g) and still 
 
 1. **To the brief:** "the barcode payload check with the engine closes the C7.2 gap without Adobe." Measured, the engine's barcode text is not yet equal to Adobe's (T1). The plan closes the gap by reading Adobe's own stored text (row e), fixes the difference (row g), and keeps Adobe Validate as the proof (P-442).
 2. **From the Lead, on the viewer** (section 8): accepted in part. A read-only view is row d. Fill-and-edit stays out: nothing to adopt, and our forms are filled from facts.
-3. **To the founder's "we know that it is tested":** tested, yes, on two forms. Eighteen are refused today. The switches and "Done when" lines are how his own condition ("subject to testing and validating") is met.
+3. **To the founder's "we know that it is tested":** tested, yes, on two forms. Eighteen are refused today. The head to head (section 3) and the "Done when" lines are how his own conditions ("subject to testing and validating", "don't assume anything") are met.
+5. **To my own second version:** I had the engine read Adobe's stored barcode text. The head to head shows our reader does that already; using the engine there would have been force-fitting. Corrected in row e.
 4. **On our own writer:** its own note says "demonstration-only" and it uses private library internals. That risk is why the writer trial (row i) is worth the founder's look even though nothing is broken.
 
 ---
@@ -342,6 +395,8 @@ The founder's example, as the Lead passed it on: "the PDF is there; now in our a
 |---|---|---|
 | 1 | 11 Nov, first push (`07a40a279`) | "Reuse where it makes sense": the form-script part behind an adapter, as one built package with no source; view and viewer "not now". |
 | 2 | 11 Nov (`313a6cff3`) | After the Lead's challenge and a run on our own copy: read-only view became a row; a validate-in-the-app trial was added. |
-| 3 | 11 Nov, this version | After the founder's ruling P-464: adopt the whole source as `packages/xfa-engine/`, tests in our CI, switch features on where tests prove them. Every feature now has a verdict (section 3). The two "failing" tests were re-run alone and pass (load, not Node version). The team's two blank test forms were found byte-identical to ours. New rows for the source copy, real-form tests, the barcode-text fix and form-coverage sizing. |
+| 3 | 11 Nov (`de6baeef4`) | After the founder's ruling P-464: adopt the whole source as `packages/xfa-engine/`, tests in our CI, switch features on where tests prove them. Every feature now has a verdict (section 3). The two "failing" tests were re-run alone and pass (load, not Node version). The team's two blank test forms were found byte-identical to ours. New rows for the source copy, real-form tests, the barcode-text fix and form-coverage sizing. |
+
+| 4 | 11 Nov, this version | After P-465 to P-467: a measured head to head, ours against theirs (new section 3: writer, reader, validated flag, mandatory boxes, barcodes), four verdicts, Q2 answered. The writer was measured both ways on the same form and data: a tie, so ours stays. Row e now reads Adobe's stored barcode text with our own reader. |
 
 Row letters, old to new: package row (old a) → **a** source copy and **c** adapter; barcode check (old b) → **e**; form's own check (old c) → **f**; view (old d) → **d**; writer trial (old e) → **i**; validate-in-the-app trial (old f) → **h**; new: **b** real-form tests, **g** barcode text equal to Adobe, **j** coverage sizing.
