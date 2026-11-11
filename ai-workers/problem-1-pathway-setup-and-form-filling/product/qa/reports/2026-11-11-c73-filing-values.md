@@ -35,9 +35,9 @@ qa lane, cloud copy. Lead 17's ask, from the master analysis on #1532 (`design/m
 ## Questions for the Lead
 ~~C7.3 Works or Partial?~~ Answered by Lead 17 on #1549: **Partial** (P-305 (3)).
 
-## Yes side: QA-392b and QA-395 (Lead 17's relay of #1553's reviewer; main df3d60ed5)
+## Yes side: QA-396 and QA-395 (Lead 17's relay of #1553's reviewer; main df3d60ed5)
 Fresh configured checkpoint (:4476). A Visitor visa case on release 2 (principal), filled by the pack helper. Education and Previous residence then take back "none apply" and get one entry each (helper's Sample values), and the IMM 5257 copy is generated. The PDF is read through its own XFA data (`p1/e5_roundtrip.py`).
-* **QA-392b (Bug · Major), reproduced.**
+* **QA-396 (Bug · Major), reproduced.**
   * The PDF writes `EducationIndicator = Y` and `PCRIndicator = Y`.
   * The answer sheet has no Yes line for either question. Each indicator box appears as a second copy of the entry's own line: "Name of the school or facility attended: SAMPLE" twice; "A country or territory where the person previously resided: India" twice.
   * The officer is never told to answer Yes online.
@@ -45,9 +45,10 @@ Fresh configured checkpoint (:4476). A Visitor visa case on release 2 (principal
   * The previous-residence entry is India (the person's citizenship and residence), 2015-01-01 to 2015-01-01, yet the PDF writes Q8 A = Y.
   * The question counts only another country, within the past 5 years, for more than 6 months.
   * Cause: `p5/transforms.ts:68` reads "any previous residence in past 5 years…" as "any entry". Previous travel (QA-318) is instead left to a person.
-  * The fixes for QA-392b and QA-395 must agree: the sheet's Yes or No should be the corrected one.
+  * The fixes for QA-396 and QA-395 must agree: the sheet's Yes or No should be the corrected one.
 * **Pack** `C7.3.test.ts`:
-  * **C7.3-15** now matches by person, fact, row **and value**, on that second copy. A "recorded?" box (`derived:any …`) must read as the Y or N the PDF writes; every other box must carry the same answer. It is **HELD for QA-392b** (P-284), naming both boxes.
+  * **C7.3-15** now matches by person, fact, row **and value**, on that second copy. A "recorded?" box (`derived:any …`) must read as the Y or N the PDF writes; every other box must carry the same answer. It is **HELD for QA-396** (P-284), naming both boxes.
   * The former person-and-fact check stays a plain step, **C7.3-15a**, so nothing that passes today is hidden.
-  * Fresh checkpoint: **exit 0, 16/16** (C7.3-14 and C7.3-15 HELD; all other boxes match by value).
-* qa check `tests/qa/check_c73_pdf_vs_sheet.ts` part QA-392b: 2 FAIL today (Education, Q8 A), its setup lines PASS.
+  * After #1557's review (Block c23689a31): only the "recorded?" boxes are held; every other box on that copy is the plain step **C7.3-15v**, and C7.3-15 FAILs unless the copy writes at least one Y (the entries were really added).
+  * On main's code with #1553 merged, fresh checkpoint: **exit 0, 18/18**. C7.3-14 passes (#1553's fix), 15a, 16 and 15v pass, and C7.3-15 is HELD for QA-396 on the two Yes boxes. Pack 4's fixture: C7.3 19/19, `check_vv_prepare_api.ts` 42/42.
+* qa check `tests/qa/check_c73_pdf_vs_sheet.ts` part QA-396: 2 FAIL today (Education, Q8 A), its setup lines PASS.

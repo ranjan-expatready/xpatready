@@ -41,7 +41,7 @@ await main("QA-392", "C7.3: the answer sheet and the PDF copy of the same form a
   ok("QA-392 setup: the PDF copy writes at least one \"nothing recorded\" Yes/No box as No (a list answered \"none apply\")", nothing.length > 0, boxes.length);
   ok("QA-392a fail today (suspect 1): each \"nothing recorded\" box the PDF writes as No has its line on the answer sheet, for that person", nothing.every((b) => has.has(`${b.about}|${b.fact}`)), nothing.filter((b) => !has.has(`${b.about}|${b.fact}`)).map((b) => `${b.about_label}: ${b.box.split(".").slice(-2).join(".")} (${b.detail})`));
   const valued = boxes.filter((b) => b.value !== undefined && b.value !== null && b.value !== "");
-  ok("QA-392b pass: every box the PDF writes from an answer has its line on the sheet", valued.length > 0 && valued.every((b) => has.has(`${b.about}|${b.fact}`)), valued.filter((b) => !has.has(`${b.about}|${b.fact}`)).map((b) => b.box));
+  ok("QA-396 pass: every box the PDF writes from an answer has its line on the sheet", valued.length > 0 && valued.every((b) => has.has(`${b.about}|${b.fact}`)), valued.filter((b) => !has.has(`${b.about}|${b.fact}`)).map((b) => b.box));
   const stored = new Set(boxes.map((b) => `${b.about}|${b.fact}`));
   ok("QA-392c pass (suspect 3, P-245): every sheet line is a box the PDF copy carries (no signature, oath or other value the PDF never prints)", lines.every((l) => stored.has(`${l.subject}|${l.fact}`)), lines.filter((l) => !stored.has(`${l.subject}|${l.fact}`)).map((l) => l.fact));
   // Suspect 2: the sheet's layout reads the first field map of the form (case-prepare.ts:894); the PDF the newest (P-32).
@@ -50,9 +50,9 @@ await main("QA-392", "C7.3: the answer sheet and the PDF copy of the same form a
   ok("QA-392d pass (suspect 2, on this data): the release maps one edition of IMM 5257, so the sheet and the PDF read the same edition", maps.length === 1, maps);
 });
 
-// QA-392b (11 Nov; #1553's reviewer, relayed by Lead 17): the Yes side. With an entry in Education and in Previous
+// QA-396 (11 Nov; #1553's reviewer, relayed by Lead 17): the Yes side. With an entry in Education and in Previous
 // residence, the PDF writes EducationIndicator = Y and PCRIndicator = Y; the sheet must say Yes to those questions too.
-await main("QA-392b", "C7.3: with an entry, the sheet says Yes where the PDF copy writes Y", async () => {
+await main("QA-396", "C7.3: with an entry, the sheet says Yes where the PDF copy writes Y", async () => {
   const c = await openCase(needVisitorVisa(), FAMILY.slice(0, 1));
   await fillEverything(c.id);
   const P = c.subjects[FAMILY[0].name];
@@ -60,10 +60,10 @@ await main("QA-392b", "C7.3: with an entry, the sheet says Yes where the PDF cop
   const facts = ["person.education_school_name", "person.previous_residence_country"];
   for (const fact of facts) {
     const sec = (((await agent(c.id))?.sections ?? []) as Sec[]).find((x) => x.subjectId === P && x.group && x.questions.some((q) => q.fact === fact));
-    if (!sec) { console.log(`NOTE  QA-392b: no group asks ${fact} for the principal`); continue; }
+    if (!sec) { console.log(`NOTE  QA-396: no group asks ${fact} for the principal`); continue; }
     if (sec.group?.none_apply?.value) await call("PUT", `/runtime/cases/${c.id}/groups/${P}/${sec.section}/none-apply`, { noneApply: false, expectedId: sec.group.none_apply.id });
     const add = await call("POST", `/runtime/cases/${c.id}/groups/${P}/rows`, { group: sec.section });
-    console.log(`NOTE  QA-392b: ${sec.title}: "none apply" taken back, one entry added (${add.status})`);
+    console.log(`NOTE  QA-396: ${sec.title}: "none apply" taken back, one entry added (${add.status})`);
   }
   // The pack helper answers and confirms the new rows like every other required answer (Sample values).
   await fillEverything(c.id); await fillEverything(c.id);
@@ -76,8 +76,8 @@ await main("QA-392b", "C7.3: with an entry, the sheet says Yes where the PDF cop
   for (const end of ["EducationIndicator[0]", "PCRIndicator[0]"]) {
     const b = boxes.find((x) => x.box.endsWith(end) && x.about === P), w = b ? pdf[b.box] : undefined;
     const said = lines.filter((l) => l.subject === P && l.fact === b?.fact).map((l) => `${l.label}: ${l.copy_text}`);
-    console.log(`NOTE  QA-392b ${end}: the PDF writes ${JSON.stringify(w)}; the sheet's lines for ${b?.fact}: ${JSON.stringify(said)}`);
-    ok(`QA-392b setup: the PDF copy writes ${end} = Y once the principal has an entry`, w === "Y", { box: b?.box, written: w, value: b?.value, detail: b?.detail });
-    ok(`QA-392b fail today: the answer sheet says Yes to the question ${end} asks (the PDF writes Y)`, lines.some((l) => l.subject === P && l.fact === b?.fact && /^Yes$/i.test(String(l.copy_text))), said);
+    console.log(`NOTE  QA-396 ${end}: the PDF writes ${JSON.stringify(w)}; the sheet's lines for ${b?.fact}: ${JSON.stringify(said)}`);
+    ok(`QA-396 setup: the PDF copy writes ${end} = Y once the principal has an entry`, w === "Y", { box: b?.box, written: w, value: b?.value, detail: b?.detail });
+    ok(`QA-396 fail today: the answer sheet says Yes to the question ${end} asks (the PDF writes Y)`, lines.some((l) => l.subject === P && l.fact === b?.fact && /^Yes$/i.test(String(l.copy_text))), said);
   }
 });
