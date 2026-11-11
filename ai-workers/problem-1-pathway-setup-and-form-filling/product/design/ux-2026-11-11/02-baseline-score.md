@@ -1,15 +1,15 @@
 # UX baseline: the whole product scored, screen by screen (step 2 of A19 (k))
 
-**Round 1, 11 Nov 2026, `main` fbfb263c7.** The UX planner, read-only on product code (P-455 (5)). Rubric: `01-rubric.md`. Ground truth: `inventory/<screen>.yaml` (53 files, one per screen or state, crawled), `score-history.md` (screen × dimension, dated), `shots/` (1440 and 375 px), `tools/` (the crawl, the walk and the scores, so the next round repeats this one exactly).
+**Round 1, 11 Nov 2026, `main` fbfb263c7.** The UX planner, read-only on product code (P-455 (5)). Rubric: `01-rubric.md`. Ground truth: `inventory/<screen>.yaml` (68 files, one per screen, state or dialog, crawled; `inventory/INDEX.md` maps every route to its files and says why the few unreached ones are not reached), `score-history.md` (screen × dimension, dated), `shots/` (1440 and 375 px), `tools/` (the crawl, the walk and the scores, so the next round repeats this one exactly).
 
 ## 1. In one paragraph
 
-**The journey scores 6.0 of 10; the whole product 6.3.** The product is honest, accessible and well built underneath: 0 axe violations on all 53 screens at both widths, sources and AI marked everywhere, empty states that teach, and a client task list that already looks like GOV.UK. What holds it at 6 is **load on the brain**: the case page is one page of 10,877 words (about 64 phone screens tall), and a family of three meets **72 question pages and 414 answer boxes**. One of those pages has 57 inputs; questions read like database definitions ("Whether the person has ever used another name"). Numbers disagree with each other ("7 to fix", "6 problems", "13 problems", "14 problems" for one pathway), and the next step often waits on someone else. The two lowest journey dimensions are **cognitive load (4.4)** and **forms and data entry (4.7)**; the highest are **accessibility (7.7)** and **speed (7.5)**. The founder's words fit the evidence: it is "really heavy on people's brain", not ugly. So the plan (`03-plan-to-9.md`) cuts and orders first, with a few shared pieces, and polishes last.
+**The journey scores 6.1 of 10; the whole product 6.4.** The product is honest, accessible and well built underneath: 0 axe violations on 67 of 68 screens at both widths (one serious, on the edition review at 375 px), sources and AI marked everywhere, empty states that teach, and a client task list that already looks like GOV.UK. What holds it at 6 is **load on the brain**: the case page is one page of 10,877 words (about 64 phone screens tall), and a family of three meets **72 question pages and 414 answer boxes**. One of those pages has 57 inputs; questions read like database definitions ("Whether the person has ever used another name"). Numbers disagree with each other ("7 to fix", "6 problems", "13 problems", "14 problems" for one pathway), and the next step often waits on someone else. The two lowest journey dimensions are **cognitive load (4.7)** and **forms and data entry (4.8)**; the highest are **accessibility (7.7)** and **speed (7.5)**. The founder's words fit the evidence: it is "really heavy on people's brain", not ugly. So the plan (`03-plan-to-9.md`) cuts and orders first, with a few shared pieces, and polishes last.
 
 ## 2. How it was measured
 
 * **Copies:** three isolated copies of `main` fbfb263c7 on fresh databases (`tools/isolated.sh`): `:4480` empty, then the six (Load sample, 19.8 s); `:4481` the finished story (179.8 s); `:4482` the configured checkpoint (115.9 s), for the walk. **Live AI off** (`STUDIO_AI_LIVE` unset), **US$0**, no priced button pressed (P-175). Loaders run by their demo routes, as scaffolding (P-33).
-* **Crawl (ground truth, the Lead's ruling of 12:5x IST):** `tools/discover.mjs` follows every link from the menu's pages as each person (author, case officer, representative, Client A) and keeps one example per route pattern: **27 Studio routes, 10 case routes**. Then `tools/crawl.mjs` opens each at **1440 × 900 and 375 × 812**, opens every fold-out, clicks only tabs, and records: the accessibility tree (`ariaSnapshot`, kept in the scratch run), every section with its fields (label, type, hint, required, invalid), actions (filled or not, disabled, icon-only, tooltip, opens a dialog), links, fold-outs (arrow or not), tabs and notices, plus counts (words, words in the first view, type sizes, filled buttons, raw keys, targets under 24 px, sideways scroll, page height) and **axe-core 4.14 (WCAG 2.0-2.2 A and AA)**. Dialogs, question pages and error states were added as targets with their own steps (`tools/extra.json`). **53 screens and states, 106 crawled views, 0 axe violations.**
+* **Crawl (ground truth, the Lead's ruling of 12:5x IST):** `tools/discover.mjs` follows every link from the menu's pages as each person (author, case officer, representative, Client A) and keeps one example per route pattern: **27 Studio routes, 10 case routes**. Then `tools/crawl.mjs` opens each at **1440 × 900 and 375 × 812**, opens every fold-out, clicks only tabs, and records: the accessibility tree (`ariaSnapshot`, kept in the scratch run), every section with its fields (label, type, hint, required, invalid), actions (filled or not, disabled, icon-only, tooltip, opens a dialog), links, fold-outs (arrow or not), tabs and notices, plus counts (words, words in the first view, type sizes, filled buttons, raw keys, targets under 24 px, sideways scroll, page height) and **axe-core 4.14 (WCAG 2.0-2.2 A and AA)**. Dialogs, question pages and error states were added as targets with their own steps (`tools/extra.json`). **68 screens, states and dialogs, 136 crawled views, 1 axe violation** (`review-edition` at 375 px: a scrollable region without keyboard access). The first push had 53; the Lead asked to finish the inventory, which added the review sub-pages reachable on the data, the case and field dialogs, the permission and error states, and the Approver's views (`tools/finish.json`, `tools/dialogs.json`). Four review sub-pages and six case dialogs need a state none of the three data sets holds: `inventory/INDEX.md` lists each with what it needs.
 * **Walk (a new user, by screens):** `tools/walk-step.mjs` drives one step at a time and logs clicks and typing (`tools/walk.log`); `tools/walk-client-answers.js` (qa's BK-1 filler, instrumented) answers the client questionnaire part by part and records each part's inputs and words (`tools/walk-client-parts-*.json`). Release, generate, send and the representative's approvals were walked in full by qa's BK-1 the night before (`qa/bake-baseline-2026-11-11.md`), and are cited, not repeated.
 * **Scores:** by hand against the anchors, from the evidence above; one line of evidence per problem in each inventory file. `tools/scores.mjs` computes every weighted score, so no number is typed twice.
 
@@ -34,8 +34,8 @@
 
 | Measure | Result | Bar (rubric anchor 8) |
 |---|---|---|
-| Screens and states inventoried | **53** (27 Studio routes, 10 case routes, 6 empty states, 5 dialogs and question pages, 5 extra states) | every route and state |
-| axe violations (WCAG 2.0-2.2 A/AA) | **0 on 106 views** (3 contrast checks "incomplete" on pathway Forms) | 0 |
+| Screens, states and dialogs inventoried | **68**: every router address but 4 review sub-pages (state not in the data; INDEX), 6 empty states, 9 dialogs, 6 error and permission states, Approver views | every route and state |
+| axe violations (WCAG 2.0-2.2 A/AA) | **1 on 136 views** (edition review at 375 px, serious); 3 contrast checks "incomplete" on pathway Forms | 0 |
 | Fold-outs without an arrow | **0** (BK-2 has landed: one shared fold-out) | 0 |
 | Words on the case page / its first view | **10,877** / 351 (1440 px) | first view ≤ ~120 words on a staff page |
 | Case page height at 375 px | **51,724 px** (~64 phone screens); field page 56,796 px | a staff page reflows; the whole case is not one page |
@@ -82,16 +82,17 @@ Each finding names the dimensions it moves and the screens. "For qa" marks a fau
 | UXF-22 | Typography drifts: 6-7 sizes on case and client pages, one-off 13 px, capitals and monospace form titles | D1, D8 | case, pathway tabs | — |
 | UXF-23 | Approving new shared fields one page at a time (103 waiting after one form) | D2, D4 | To review (Approver) | QA-241 |
 | UXF-24 | Copy cut mid-word in IRCC quotes and in lists; "and 1 more" fold-outs | D1, D14 | pathway Forms, Review | QA-222 (same class) |
+| UXF-25 | Error and permission states have no page heading; an unknown review round reads "No such case" on a case that exists; the client's blocked page says "for the case officer" when the representative also works there | D5, D10, D14 | representative's review by round, case not found, case page as client, Studio as case staff | — |
 
 ## 5. Scores
 
-### 5.1 The journey, per dimension (21 journey screens and states)
+### 5.1 The journey, per dimension (23 journey screens, states and dialogs)
 
 | D1 Polish | D2 Next step | D3 Load | D4 Forms | D5 Errors | D6 Feedback | D7 Help | D8 Consistency | D9 Navigation | D10 Access | D11 Responsive | D12 Speed | D13 Empty | D14 Trust | **Weighted** |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 6.0 | 6.0 | **4.4** | **4.7** | 6.5 | 6.0 | 6.0 | 5.9 | 6.7 | 7.7 | 5.6 | 7.5 | 7.2 | 6.8 | **6.0** |
+| 6.1 | 6.1 | **4.7** | **4.8** | 6.4 | 6.1 | 6.0 | 5.9 | 6.7 | 7.7 | 5.7 | 7.5 | 7.2 | 6.8 | **6.1** |
 
-Off-journey screens: 6.8. Whole product (journey weighted 3): **6.3**. Empty states alone: 7.8-8.2.
+Off-journey screens: 6.9. Whole product (journey weighted 3): **6.4**. Empty states alone: 7.8-8.2; the small dialogs 7.6-8.0 (they already follow the bar: one filled button named for its action, hints, required in words). The first push of this round read 6.0 on 21 journey states; the finished inventory adds the Approver's change page and the Open a case error state to the journey.
 
 ### 5.2 Journey screens (weighted score; all 14 dimensions in `score-history.md`)
 
@@ -102,7 +103,8 @@ Off-journey screens: 6.8. Whole product (journey weighted 3): **6.3**. Empty sta
 | Client question page, longest | Client A | **5.3** | 57 inputs on one page (UXF-01) |
 | Cases | Case officer | **7.3** | Second frame; tab title (UXF-10) |
 | Open a case | Case officer | **6.8** | Release numbers, error pattern (UXF-11, 12) |
-| Add spouse or child | Case officer | **6.9** | Name only (QA-248) |
+| Open a case, empty submit | Case officer | **6.7** | No summary, focus stays on the button, hint replaced (UXF-12) |
+| Add spouse or child | Case officer | **7.0** | Name only (QA-248) |
 | Case page | Case officer / Representative | **5.0 / 5.0** | One 10,877-word page; no single next step; round trip; 375 px (UXF-05, 14, 15, 19) |
 | Case page, new case | Case officer | **4.8** | 12 filled buttons; confirm by section × person (UXF-05, 06) |
 | Case check ("Review") | Case officer | **6.1** | Name clash; 972 words (UXF-09) |
@@ -115,10 +117,11 @@ Off-journey screens: 6.8. Whole product (journey weighted 3): **6.3**. Empty sta
 | Review and release (tab) | Author | **6.0** | Name clash; counts; no hand-off (UXF-06, 09, 10) |
 | To review | Author / Approver | **6.5 / 6.4** | Six numbers per row; one page per approval (UXF-23) |
 | Release (shared) | Approver | **6.2** | 2,807 words of changes; name clash (UXF-09) |
+| A library change | Approver | **7.1** | Short and clear; one page per change (UXF-23) |
 
 ## 6. What is already good (keep it; build on it)
 
-* **Accessibility floor:** 0 axe violations everywhere, a visible focus ring, real buttons and labels (`web/src/styles/index.css`), and contrast already corrected above the team's own token.
+* **Accessibility floor:** 0 axe violations on 67 of 68 screens, a visible focus ring, real buttons and labels (`web/src/styles/index.css`), and contrast already corrected above the team's own token.
 * **The client side's shape is right:** a GOV.UK task list, one part per page, Save and continue, "Save and come back later", "✓ Saved", and a "Check these answers … leave them for now and continue" summary. The fault is content and length, not pattern.
 * **Empty states teach** ("Nothing set up in Retail yet … Open Program structure"): 7.8-8.2.
 * **Trust is built in:** IRCC's own words quoted, sources and AI marked, Undo on set-up changes, cost shown before any AI run, roles and duties explained.

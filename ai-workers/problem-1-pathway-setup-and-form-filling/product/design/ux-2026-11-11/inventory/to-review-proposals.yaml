@@ -7,13 +7,13 @@ persona: Configuration author
 crawled:
   date: "2026-11-11"
   commit: fbfb263c7
-  data: ""
+  data: the six
   load_ms:
     375: 1367
     1440: 1334
-purpose: ""
+purpose: "AI proposals grouped by combination or form edition, to decide."
 on_journey: false
-pattern: ""
+pattern: Source + proposals (grouped)
 states: [default]
 screenshots: [shots/to-review-proposals@1440.jpg, shots/to-review-proposals@375.jpg]
 counts:
@@ -120,6 +120,22 @@ sections:
       - heading: Check 1
         actions: [Open Provincial nomination certificate]
       - heading: Decide 0
-scores: {}
-top_problems: []
-findings: []
+scores:
+  D1: 6
+  D2: 6
+  D3: 5
+  D4: n/a
+  D5: 7
+  D6: 7
+  D7: 6
+  D8: 6
+  D9: 7
+  D10: 8
+  D11: 6
+  D12: 8
+  D13: 7
+  D14: 8
+  weighted: 6.5
+top_problems:
+  - "454 words and 22 buttons; each group says why a proposal is Low, but its only action sends you to another page (QA-230)"
+findings: [UXF-23]

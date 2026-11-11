@@ -17,27 +17,27 @@ description: The UX rules a Pathway Configurator screens builder follows and the
 
 # UX standard (rules; each one is checked)
 
-The bar is `EXPERIENCE.md` (+ BIC-01 to BIC-20); these rules make it testable. Scores and anchors: `product/design/ux-2026-11-11/01-rubric.md`.
+The bar is `EXPERIENCE.md` (+ BIC-01 to BIC-20); these rules make it testable. Scores and anchors: `product/design/ux-2026-11-11/01-rubric.md`. Style decided by the founder (P-473): **calm work app, plain second-person client words with "Why we ask" (IRCC's wording on staff views), calm motion without a motion library, quiet surfaces.**
 
 **Reuse, never rebuild:** page header `PageHeader`, next step `NextStep`, errors `ErrorSummary` + field error, help `Hint` / "Why we ask" fold / `Tooltip`, fold-out `FoldOut`, tables `Table`, marks for Sample and demo. A screen that draws its own version is a Must.
 
 **Each panel** (`uxCheck` counts these at 1440 and 375 px):
 1. One heading; at most **1 filled button**, named for what it does ("Send to the client"), never "Next"/"Submit" alone.
-2. At most **3 type sizes**, all from the scale; no arbitrary values (`text-[13px]`); red only for errors.
+2. At most **3 type sizes**, all from the scale; no arbitrary values (`text-[13px]`). **Quiet surfaces (P-473):** white panels on light grey, near-black text; brand blue only for the one filled button, links and focus; orange only for "needs you"; red only for errors.
 3. **No raw keys, ids, hashes or file paths** on the main path (Details drawer for admins).
 4. Every count says what it counts, and the **same thing shows the same number** wherever it appears.
 
 **Each page:**
 5. One `PageHeader`: title, one status, ≤ 20 words of "what this is", the `NextStep` panel. First view (1440 px) ≤ **120 words on a staff page**, ≤ **60 on a client page**.
 6. **One next step** for the person looking. If it is someone else's, name them and offer the hand-off; a next-step link must land on an enabled control for that step.
-7. At most **one row of tabs**; deeper levels are sections, a list or a drawer. Edit in a drawer or dialog; the page keeps its scroll and filters.
-8. **Client pages:** ≤ **5 answer boxes per page**; questions in the second person, as questions, ≤ 20 words; a hint or "Why we ask" on each; pick-lists for countries and lists; a fact the case knows is never asked (BIC-01).
+7. **Calm work app (P-473):** a record opens on a home (summary, status, one next step), with at most **one row of sub-pages or tabs**; deeper levels are sections, a list or a drawer; no record is one long page (≤ 3,000 words per page). Edit in a drawer or dialog; the page keeps its scroll and filters.
+8. **Client pages:** ≤ **5 answer boxes per page**; **plain words to "you" (P-473)**: each a question, ≤ 20 words, grade 6-8, with a short "Why we ask"; pick-lists for countries and lists; a fact the case knows is never asked (BIC-01). **Staff views** (Agent view, representative's review) show IRCC's exact wording beside the plain one.
 9. **Errors:** a summary at the top ("There is a problem") with the field's own words as links, focus on the summary, the hint kept, the input kept; the message says what and how to fix (BIC-13).
 10. **Help:** needed-to-act text is visible (hint or titled fold), never only in a tooltip; every icon-only button, status chip and unexplained number has a tooltip on hover and focus (BIC-14).
 11. **States drawn:** empty (teaches the first action), loading (skeleton in the final layout), error, read-only (says why) (EXPERIENCE §4).
 12. **375 px:** no sideways scroll; tables stack; targets ≥ 24 px (client: ≥ 44 px); nothing cut or covered (toasts included).
 13. **Marks:** Sample and demo marks once per section, quiet style; never removed (P-240).
-14. **Motion:** only drawers, fold-outs and toasts, 150-200 ms, off under reduced motion.
+14. **Calm motion (P-473):** only drawers, fold-outs and toasts move, 150-200 ms, CSS transitions, off under reduced motion; **no motion library**, no celebrations; a "done" moment is words and a check mark.
 
 **Proof in the PR (builder):** (a) the row's measure, before and after, from `npm run ux:crawl`; (b) `uxCheck` + axe at 1440 and 375 px in the PR's Playwright test; (c) the `inventory/<screen>.yaml` diff (a new field, section or filled button is a line the reviewer reads); (d) screenshots at 1440 and 375 px.
 
@@ -74,5 +74,5 @@ Folder of the current round: `product/design/ux-<date>/` (round 1: `ux-2026-11-1
 ## Why these rules and not more
 
 * Each rule maps to a rubric anchor at 8 (`01-rubric.md` §3) and to the BIC check it serves, so a builder meeting them lands a screen at about 8, and the audit can tell if they did.
-* Left out on purpose: colour choices (the brand decides), a motion library, dark-mode design, command palette, illustrations (rubric §1 "Where we deliberately do NOT follow a source").
+* Left out on purpose: new colours (the brand decides; P-473 fixes only where each brand colour is used), a motion library (P-473), dark-mode design, command palette, illustrations (rubric §1 "Where we deliberately do NOT follow a source").
 * The numbers (120 words, 5 boxes, 3 sizes, 1 filled button) are starting values from the baseline and the sources (GOV.UK question pages, NN/g progressive disclosure, BIC-19). The Lead can tune them after round 2 with the crawl's counts, and records the change as a decision.

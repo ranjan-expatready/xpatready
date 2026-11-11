@@ -135,7 +135,8 @@ for (const t of targets) {
       const sid = `${t.id}${stateName ? "--" + stateName : ""}`;
       fs.writeFileSync(path.join(outdir, "raw", `${sid}@${width}.aria.yaml`), aria);
       const shot = `${sid}@${width}.jpg`;
-      await page.screenshot({ path: path.join(outdir, "shots", shot), fullPage: true, type: "jpeg", quality: 55, clip: undefined }).catch(() => {});
+      // A dialog is fixed to the viewport: a full-page shot loses it, so a dialog state is shot as the viewport.
+      await page.screenshot({ path: path.join(outdir, "shots", shot), fullPage: !info.dialog, type: "jpeg", quality: 55 }).catch(() => {});
       states.push({ state: stateName || "default", shot, ...info, axe });
     };
     if (!error) {

@@ -7,13 +7,13 @@ persona: Case officer
 crawled:
   date: "2026-11-11"
   commit: fbfb263c7
-  data: ""
+  data: configured
   load_ms:
     375: 2289
     1440: 2245
-purpose: ""
-on_journey: false
-pattern: ""
+purpose: Open a case after an empty submit.
+on_journey: true
+pattern: Dialog (error state)
 states: [default]
 screenshots: [shots/open-case-dialog--error@1440.jpg, shots/open-case-dialog--error@375.jpg]
 counts:
@@ -105,6 +105,22 @@ sections:
             hint: Prepares the case.
             options: 3
         actions: ["About: relies on an employer case · icon-only", Cancel, Open case]
-scores: {}
-top_problems: []
-findings: []
+scores:
+  D1: 7
+  D2: 8
+  D3: 7
+  D4: 6
+  D5: 5
+  D6: 7
+  D7: 6
+  D8: 6
+  D9: 7
+  D10: 7
+  D11: 7
+  D12: 8
+  D13: n/a
+  D14: 6
+  weighted: 6.7
+top_problems:
+  - "Field messages say what to do ('Give the case a reference of at least 3 characters.'), but there is no summary, focus stays on the button, and the hint under the field is replaced by the error (UXF-12)"
+findings: [UXF-12]

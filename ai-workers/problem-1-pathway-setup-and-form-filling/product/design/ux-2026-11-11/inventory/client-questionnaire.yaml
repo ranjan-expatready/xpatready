@@ -7,13 +7,13 @@ persona: Client A
 crawled:
   date: "2026-11-11"
   commit: fbfb263c7
-  data: ""
+  data: finished story
   load_ms:
     375: 1473
     1440: 1496
-purpose: ""
-on_journey: false
-pattern: ""
+purpose: "The client's list of parts to answer, with status."
+on_journey: true
+pattern: Task list (GOV.UK)
 states: [default]
 screenshots: [shots/client-questionnaire@1440.jpg, shots/client-questionnaire@375.jpg]
 counts:
@@ -193,6 +193,24 @@ sections:
           - Personal details Done
       - heading: About Child 18 or over (Sample)'s brothers and sisters
         actions: [Brothers and sisters Done]
-scores: {}
-top_problems: []
-findings: []
+scores:
+  D1: 8
+  D2: 8
+  D3: 5
+  D4: 5
+  D5: 7
+  D6: 5
+  D7: 6
+  D8: 7
+  D9: 7
+  D10: 8
+  D11: 8
+  D12: 8
+  D13: 7
+  D14: 6
+  weighted: 6.6
+top_problems:
+  - "Clean task list, phone-first: the best screen in the product"
+  - "90 parts for the finished story's family; 59 → 72 → 65 while answering (UXF-01, UXF-04, QA-388)"
+  - "Part names come from form section titles: 'Indicate whether you are', 'Applicant', 'Signature'; 'Personal details' twice (UXF-02)"
+findings: [UXF-01, UXF-02, UXF-04]

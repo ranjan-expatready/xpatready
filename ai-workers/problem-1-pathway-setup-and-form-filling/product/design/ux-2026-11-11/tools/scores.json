@@ -887,33 +887,6 @@
     "UXF-12"
    ]
   },
-  "add-person-dialog": {
-   "purpose": "Add a spouse or child to the case.",
-   "on_journey": true,
-   "pattern": "Dialog",
-   "data": "configured",
-   "scores": {
-    "D1": 7,
-    "D2": 8,
-    "D3": 8,
-    "D4": 5,
-    "D5": 6,
-    "D6": 7,
-    "D7": 6,
-    "D8": 7,
-    "D9": 7,
-    "D10": 8,
-    "D11": 7,
-    "D12": 8,
-    "D13": "n/a",
-    "D14": 6,
-    "weighted": 6.9
-   },
-   "problems": [
-    "Asks only a name; no date of birth, so biometrics and age wait (QA-248)"
-   ],
-   "findings": []
-  },
   "case-page--officer": {
    "purpose": "Everything about one case: people and filings, documents, forms, check, review, submission, fees, Agent view.",
    "on_journey": true,
@@ -1131,7 +1104,7 @@
    ],
    "findings": []
   },
-  "client-task-list": {
+  "client-questionnaire": {
    "purpose": "The client's list of parts to answer, with status.",
    "on_journey": true,
    "pattern": "Task list (GOV.UK)",
@@ -1371,6 +1344,522 @@
     "UXF-17"
    ]
   },
+  "open-case-dialog--error": {
+   "purpose": "Open a case after an empty submit.",
+   "on_journey": true,
+   "pattern": "Dialog (error state)",
+   "data": "configured",
+   "scores": {
+    "D1": 7,
+    "D2": 8,
+    "D3": 7,
+    "D4": 6,
+    "D5": 5,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 7,
+    "D11": 7,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 6,
+    "weighted": 6.7
+   },
+   "problems": [
+    "Field messages say what to do ('Give the case a reference of at least 3 characters.'), but there is no summary, focus stays on the button, and the hint under the field is replaced by the error (UXF-12)"
+   ],
+   "findings": [
+    "UXF-12"
+   ]
+  },
+  "to-review-proposals": {
+   "purpose": "AI proposals grouped by combination or form edition, to decide.",
+   "on_journey": false,
+   "pattern": "Source + proposals (grouped)",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 6,
+    "D3": 5,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 6.5
+   },
+   "problems": [
+    "454 words and 22 buttons; each group says why a proposal is Low, but its only action sends you to another page (QA-230)"
+   ],
+   "findings": [
+    "UXF-23"
+   ]
+  },
+  "review-change": {
+   "purpose": "One library change: what it is, who proposed it, approve or return.",
+   "on_journey": true,
+   "pattern": "Change set (one change)",
+   "data": "configured",
+   "scores": {
+    "D1": 7,
+    "D2": 6,
+    "D3": 8,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 7,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 7.1
+   },
+   "problems": [
+    "Short and clear when decided; the Approver still opens one page per change (UXF-23)"
+   ],
+   "findings": [
+    "UXF-23"
+   ]
+  },
+  "review-edition": {
+   "purpose": "A new form edition: what changed, its impact on the library, the components and combinations.",
+   "on_journey": false,
+   "pattern": "Change set (edition impact)",
+   "data": "configured",
+   "scores": {
+    "D1": 6,
+    "D2": 7,
+    "D3": 5,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 7,
+    "D8": 6,
+    "D9": 7,
+    "D10": 6,
+    "D11": 6,
+    "D12": 8,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 6.6
+   },
+   "problems": [
+    "axe at 375 px: 'Scrollable region must have keyboard access' (serious, 1 node) (UXF-21)",
+    "Form fields with no printed caption show the raw form path ('IMM_5476[0].Page1[0].RadioButtonList[0]') (QA-203)",
+    "Good: cost first, the deadline of the previous edition, one filled button"
+   ],
+   "findings": [
+    "UXF-21",
+    "UXF-13"
+   ]
+  },
+  "representative-review-round1": {
+   "purpose": "An earlier review round by its address.",
+   "on_journey": false,
+   "pattern": "Notice (error state)",
+   "data": "finished story",
+   "scores": {
+    "D1": 6,
+    "D2": 5,
+    "D3": 8,
+    "D4": "n/a",
+    "D5": 4,
+    "D6": 6,
+    "D7": 5,
+    "D8": 6,
+    "D9": 6,
+    "D10": 7,
+    "D11": 7,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 6,
+    "weighted": 6.1
+   },
+   "problems": [
+    "An unknown round reads 'No such case' on a case that exists, with only Retry (UXF-25)",
+    "No page heading on the error state (UXF-25)"
+   ],
+   "findings": [
+    "UXF-25"
+   ]
+  },
+  "pathway-preview--studio": {
+   "purpose": "The pathway preview's studio view: pick people and answers, see questions and forms.",
+   "on_journey": false,
+   "pattern": "Workspace (preview)",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 6,
+    "D3": 6,
+    "D4": 6,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 7,
+    "D14": 7,
+    "weighted": 6.5
+   },
+   "problems": [
+    "8 pickers; a second address for the same preview"
+   ],
+   "findings": [
+    "UXF-09"
+   ]
+  },
+  "pathway-overview--approver": {
+   "purpose": "A pathway's Overview as the Approver.",
+   "on_journey": false,
+   "pattern": "Workspace",
+   "data": "the six",
+   "scores": {
+    "D1": 6,
+    "D2": 4,
+    "D3": 4,
+    "D4": "n/a",
+    "D5": 6,
+    "D6": 4,
+    "D7": 7,
+    "D8": 5,
+    "D9": 7,
+    "D10": 8,
+    "D11": 6,
+    "D12": 8,
+    "D13": 7,
+    "D14": 5,
+    "weighted": 5.6
+   },
+   "problems": [
+    "Same page as the author's: the steps and counts are the author's, nothing says what the Approver does here (UXF-08)"
+   ],
+   "findings": [
+    "UXF-06",
+    "UXF-08"
+   ]
+  },
+  "cases--not-found": {
+   "purpose": "A case address that does not exist.",
+   "on_journey": false,
+   "pattern": "Notice (error state)",
+   "data": "finished story",
+   "scores": {
+    "D1": 7,
+    "D2": 7,
+    "D3": 9,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 8,
+    "D10": 7,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 7.5
+   },
+   "problems": [
+    "Plain words and a way back; no page heading (UXF-25)"
+   ],
+   "findings": [
+    "UXF-25"
+   ]
+  },
+  "case-page--client-blocked": {
+   "purpose": "The case page opened by the client.",
+   "on_journey": false,
+   "pattern": "Notice (permission)",
+   "data": "finished story",
+   "scores": {
+    "D1": 7,
+    "D2": 8,
+    "D3": 9,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 8,
+    "D10": 7,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 7,
+    "weighted": 7.5
+   },
+   "problems": [
+    "Says where to go; 'for the case officer' though the representative also works here; no page heading (UXF-25)"
+   ],
+   "findings": [
+    "UXF-25"
+   ]
+  },
+  "studio--as-case-staff": {
+   "purpose": "The Studio opened by a case officer.",
+   "on_journey": false,
+   "pattern": "Notice (permission)",
+   "data": "finished story",
+   "scores": {
+    "D1": 7,
+    "D2": 8,
+    "D3": 9,
+    "D4": "n/a",
+    "D5": 7,
+    "D6": 7,
+    "D7": 7,
+    "D8": 7,
+    "D9": 8,
+    "D10": 7,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 7.7
+   },
+   "problems": [
+    "Good recovery: says why and links to the cases; no page heading (UXF-25)"
+   ],
+   "findings": [
+    "UXF-25"
+   ]
+  },
+  "add-person-dialog": {
+   "purpose": "Add a spouse or child to the case.",
+   "on_journey": true,
+   "pattern": "Dialog",
+   "data": "finished story",
+   "scores": {
+    "D1": 8,
+    "D2": 8,
+    "D3": 8,
+    "D4": 5,
+    "D5": 6,
+    "D6": 7,
+    "D7": 6,
+    "D8": 7,
+    "D9": 7,
+    "D10": 8,
+    "D11": 7,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 6,
+    "weighted": 7
+   },
+   "problems": [
+    "Asks only a name; no date of birth, so biometrics and age wait (QA-248)",
+    "Clean dialog: one filled button named 'Add'"
+   ],
+   "findings": []
+  },
+  "dialog-correct-number": {
+   "purpose": "Correct a recorded IRCC application number, with a reason.",
+   "on_journey": false,
+   "pattern": "Dialog",
+   "data": "finished story",
+   "scores": {
+    "D1": 8,
+    "D2": 8,
+    "D3": 8,
+    "D4": 7,
+    "D5": 7,
+    "D6": 7,
+    "D7": 7,
+    "D8": 8,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 7.7
+   },
+   "problems": [
+    "Clean: two fields, the reason has a hint, one filled button named for the action"
+   ],
+   "findings": []
+  },
+  "dialog-send-link": {
+   "purpose": "Send an adult their own questionnaire link.",
+   "on_journey": false,
+   "pattern": "Dialog",
+   "data": "finished story",
+   "scores": {
+    "D1": 8,
+    "D2": 8,
+    "D3": 8,
+    "D4": 7,
+    "D5": 7,
+    "D6": 7,
+    "D7": 7,
+    "D8": 8,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 7,
+    "weighted": 7.6
+   },
+   "problems": [
+    "Clean; 'required' in words; Sample address hint"
+   ],
+   "findings": []
+  },
+  "dialog-keep-private": {
+   "purpose": "Keep an adult's answers private from the principal, with a reason.",
+   "on_journey": false,
+   "pattern": "Dialog",
+   "data": "finished story",
+   "scores": {
+    "D1": 8,
+    "D2": 8,
+    "D3": 8,
+    "D4": 7,
+    "D5": 7,
+    "D6": 7,
+    "D7": 7,
+    "D8": 8,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 7.7
+   },
+   "problems": [
+    "The title is the question; one field; good"
+   ],
+   "findings": []
+  },
+  "dialog-case-team": {
+   "purpose": "Who is on the case, since when, and its history.",
+   "on_journey": false,
+   "pattern": "Dialog (read)",
+   "data": "finished story",
+   "scores": {
+    "D1": 8,
+    "D2": 7,
+    "D3": 8,
+    "D4": "n/a",
+    "D5": 8,
+    "D6": 8,
+    "D7": 7,
+    "D8": 8,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 7.8
+   },
+   "problems": [
+    "Reads well at 375 px; 'Only the firm admin changes the case team' says why it is read-only"
+   ],
+   "findings": []
+  },
+  "dialog-client-send-to-adult": {
+   "purpose": "Client A sends an adult their own link.",
+   "on_journey": false,
+   "pattern": "Dialog",
+   "data": "finished story",
+   "scores": {
+    "D1": 8,
+    "D2": 8,
+    "D3": 8,
+    "D4": 7,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 8,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 7,
+    "weighted": 7.5
+   },
+   "problems": [
+    "Clean; nothing says what the adult will see or that Client A then stops seeing their answers"
+   ],
+   "findings": [
+    "UXF-20"
+   ]
+  },
+  "dialog-field-merge": {
+   "purpose": "Propose merging two shared fields that mean the same.",
+   "on_journey": false,
+   "pattern": "Dialog",
+   "data": "finished story",
+   "scores": {
+    "D1": 8,
+    "D2": 8,
+    "D3": 8,
+    "D4": 8,
+    "D5": 7,
+    "D6": 7,
+    "D7": 8,
+    "D8": 8,
+    "D9": 8,
+    "D10": 8,
+    "D11": 8,
+    "D12": 8,
+    "D13": "n/a",
+    "D14": 8,
+    "weighted": 7.9
+   },
+   "problems": [
+    "Pick-list limited to fields of the same kind; the reason's rule is in the hint"
+   ],
+   "findings": []
+  },
+  "dialog-field-must-verify": {
+   "purpose": "Propose that a field must be verified before filing (opens inline on the field page).",
+   "on_journey": false,
+   "pattern": "Inline panel (field page)",
+   "data": "finished story",
+   "scores": {
+    "D1": 5,
+    "D2": 5,
+    "D3": 3,
+    "D4": 6,
+    "D5": 7,
+    "D6": 7,
+    "D7": 6,
+    "D8": 6,
+    "D9": 7,
+    "D10": 8,
+    "D11": 3,
+    "D12": 7,
+    "D13": 7,
+    "D14": 8,
+    "weighted": 5.9
+   },
+   "problems": [
+    "Opens inline inside the 3,222-word field page, not as a dialog: 15 inputs and 2 filled buttons in view"
+   ],
+   "findings": [
+    "UXF-05"
+   ]
+  },
   "programs--empty": {
    "purpose": "First run: nothing set up.",
    "on_journey": false,
@@ -1537,44 +2026,44 @@
   }
  },
  "journey": {
-  "screens": 21,
+  "screens": 23,
   "per_dimension": {
-   "D1": 6,
-   "D2": 6,
-   "D3": 4.4,
-   "D4": 4.7,
-   "D5": 6.5,
-   "D6": 6,
+   "D1": 6.1,
+   "D2": 6.1,
+   "D3": 4.7,
+   "D4": 4.8,
+   "D5": 6.4,
+   "D6": 6.1,
    "D7": 6,
    "D8": 5.9,
    "D9": 6.7,
    "D10": 7.7,
-   "D11": 5.6,
+   "D11": 5.7,
    "D12": 7.5,
    "D13": 7.2,
    "D14": 6.8
   },
-  "weighted": 6
+  "weighted": 6.1
  },
  "off_journey": {
-  "screens": 29,
+  "screens": 44,
   "per_dimension": {
    "D1": 6.8,
-   "D2": 6.3,
-   "D3": 6.7,
-   "D4": 6,
-   "D5": 7.2,
-   "D6": 7,
-   "D7": 6.3,
-   "D8": 6.5,
-   "D9": 7.1,
-   "D10": 8,
-   "D11": 6.4,
+   "D2": 6.5,
+   "D3": 6.8,
+   "D4": 6.3,
+   "D5": 7,
+   "D6": 6.9,
+   "D7": 6.4,
+   "D8": 6.7,
+   "D9": 7.2,
+   "D10": 7.8,
+   "D11": 6.6,
    "D12": 7.9,
    "D13": 7.5,
    "D14": 7.5
   },
-  "weighted": 6.8
+  "weighted": 6.9
  },
- "product_weighted": 6.3
+ "product_weighted": 6.4
 }
