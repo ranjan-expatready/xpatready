@@ -6,7 +6,7 @@
 // MADE-UP saved review of exactly this sheet (written by this file into the copy's own folder, labelled test_fixture,
 // never in p2/runs, never committed, never counted; tests/fixtures/c75-made-up-run.ts) replays into the case's findings on
 // that form. Each rule with a passing and a failing case. No live call: STUDIO_*_LIVE is never set (P-175), US$0.
-//   zsh studio/tools/isolated.sh rt_bk14 4491 start STUDIO_MADE_UP_REVIEW_RUNS=1 && tsx --tsconfig studio/api/tsconfig.json studio/tests/runtime/check_bk14_sp_review_api.ts 4491 xr_studio_rt_bk14
+//   zsh studio/tools/isolated.sh rt_bk14 4491 start STUDIO_MADE_UP_REVIEW_RUNS=1 && tsx studio/tests/runtime/check_bk14_sp_review_api.ts 4491 xr_studio_rt_bk14
 import * as m3 from "../../acceptance/lib/m3.ts";
 import { existsSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
