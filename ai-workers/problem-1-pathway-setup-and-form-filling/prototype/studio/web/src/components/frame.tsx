@@ -18,9 +18,11 @@ export type { Area, Crumb, Where } from "./where";
  *  before the page changed and the Studio opened as the case officer ("This page is for the configuration people"). */
 let leavingCases = false;
 export function leaveCasesAsStudio(e?: React.MouseEvent) {
-  if (e && (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) return; // a new tab or window: this page stays
+  if (e && !plainClick(e)) return; // a new tab or window: this page stays
   leavingCases = true; setActor("user-A");
 }
+/** A click that follows the link in this tab (not a new tab or window): only then may a link switch the simulated person. */
+export const plainClick = (e: React.MouseEvent) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
 /** The case area asks this before acting as the case officer; arriving there again clears it. */
 export function casesLeaving(arrived = false) { if (arrived) leavingCases = false; return leavingCases; }
 

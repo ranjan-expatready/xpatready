@@ -7,7 +7,7 @@ import { ArrowRight, ExternalLink, Plus, UserPlus } from "lucide-react";
 import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
-import { casesLeaving, Frame, leaveCasesAsStudio, useWhere } from "@/components/frame"; // BK-3
+import { casesLeaving, Frame, leaveCasesAsStudio, plainClick, useWhere } from "@/components/frame"; // BK-3
 import { noRetryOnRefusal, Questionnaire, useCaseView, useCaseWhere, type CanAdd, type CaseInfo, type CasePerson } from "./questionnaire";
 import { FormsPanel } from "./forms";
 import { ItemChannels } from "./item-channels"; // C11.6
@@ -42,7 +42,7 @@ const isOfficer = (id: string) => STAFF.has(id);
 const isClient = (id: string) => id === "user-P" || id === "user-Q";
 /** BK-3 PR 2: a link from the Studio into the case area acts as firm staff (the case officer unless already staff), as
  *  the case area's own "Product Studio →" acts as the Studio person. */
-export const actAsCaseStaff = () => { if (!STAFF.has(getActor())) setActor("user-O"); };
+export const actAsCaseStaff = (e?: React.MouseEvent) => { if ((!e || plainClick(e)) && !STAFF.has(getActor())) setActor("user-O"); };
 /** "Sponsor" → "sponsor"; an abbreviation in capitals ("IMM", "PR") keeps its case. */
 const lower = (w: string) => w.replace(/\b([A-Z])([a-z])/g, (_, a: string, b: string) => a.toLowerCase() + b);
 const ROLE: Record<string, string> = { case: "Application", principal: "Principal applicant", spouse_or_partner: "Spouse or partner", child: "Child" };
@@ -129,6 +129,9 @@ function NewCaseDialog({ close, initial }: { close: () => void; initial?: string
   // the others are named apart, with the reason, and never offered.
   const releases = useApi<OpenableRelease[]>(["runtime", "openable"], "/runtime/openable");
   const nav = useNavigate();
+  // BK-3 PR 2 (review m2): opened from /cases?open=<id>, the list's address loses that choice before the case opens, so
+  // browser Back from the new case returns to the list, not to the dialog again.
+  const [sp] = useSearchParams();
   const key = React.useMemo(() => crypto.randomUUID(), []);
   // Break m2: a body that is not a list (a proxy's HTML page) reads as "could not load", never a blank app.
   const rows = Array.isArray(releases.data) ? releases.data : [];
@@ -148,7 +151,7 @@ function NewCaseDialog({ close, initial }: { close: () => void; initial?: string
   const askedOff = initial && f.combinationId === initial && releases.isSuccess && !loadFailed && !combos.some((c) => c.combination_id === initial) ? notReady.find((r) => r.combination_id === initial) ?? null : undefined;
   const [earlier, setEarlier] = React.useState<Parameters<typeof EarlierStages>[0]["value"]>({});
   const earlierBody = earlierOf(chosenRelease, earlier);
-  const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: chosen, ...(earlierBody ? { earlier: earlierBody } : {}), reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, ...(team.representative ? { representative: team.representative } : {}), ...(team.officer ? { caseOfficers: [team.officer] } : {}), idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => nav(`/cases/${c.id}`) });
+  const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: chosen, ...(earlierBody ? { earlier: earlierBody } : {}), reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, ...(team.representative ? { representative: team.representative } : {}), ...(team.officer ? { caseOfficers: [team.officer] } : {}), idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => { if (sp.has("open")) nav("/cases", { replace: true }); nav(`/cases/${c.id}`); } });
   // Break m1: a 409 (the release stopped being ready while the dialog was open) reloads the list, so it is not offered again.
   const submit = () => create.mutate(undefined, { onError: (e) => { if (e instanceof ApiError && e.status === 409) void releases.refetch(); const p = e instanceof ApiError ? e.problem.errors ?? [] : []; setErrors(Object.fromEntries(p.flatMap((x) => [[x.field.split(".")[0], x.message], [x.field, x.message]]))); } });
   return (

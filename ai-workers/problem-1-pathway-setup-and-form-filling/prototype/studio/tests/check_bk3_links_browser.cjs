@@ -56,6 +56,13 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step(`${W}: the button fits the screen and is at least 24 px high`, !!box && box.x >= 0 && box.x + box.width <= width + 1 && box.height >= 24, box);
     await axe(`${W} the combination's header`, "[data-open-case]");
     await p.screenshot({ path: path.join(SHOTS, `pr2-combination-open-a-case-${width}.png`) });
+    // Review m1: a Ctrl/Cmd-click opens the case list in a new tab and leaves this tab as the Studio person.
+    if (width === 1440) {
+      const [tab] = await Promise.all([ctx.waitForEvent("page", { timeout: 15000 }), btn.click({ modifiers: ["ControlOrMeta"] })]);
+      await tab.close(); await p.waitForTimeout(300);
+      step(`${W}: a Ctrl/Cmd-click opens a new tab and this tab stays the Studio person's`, new URL(p.url()).pathname === `/c/${released.combination_id}` && await p.evaluate(() => localStorage.getItem("xr-actor")) === "user-A" && !/for the configuration people/.test(await p.locator("main").innerText()), await p.evaluate(() => localStorage.getItem("xr-actor")));
+      await as("user-A"); await p.goto(`${BASE}/c/${released.combination_id}`); await header(); await btn.waitFor({ timeout: 15000 });
+    }
     await btn.click();
     const dlg = p.getByRole("dialog", { name: "Open a case" });
     await dlg.waitFor({ timeout: 15000 }).catch(() => {});
@@ -98,8 +105,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await header();
     step(`${W}: the combination's page loaded (its name in the heading)`, ((await p.locator("h1").first().textContent()) ?? "").length > 0 && await p.locator("[data-open-case]").count() === 1);
 
+    // Review m2: browser Back from there passes the case and reaches the case list, never the Open a case dialog again.
+    await p.goBack(); await p.locator("[data-case-release]").waitFor({ timeout: 30000 }).catch(() => {});
+    step(`${W}: browser Back from the Studio returns to the case`, new URL(p.url()).pathname === `/cases/${caseId}`, p.url());
+    await p.goBack(); await p.locator("h1").first().waitFor({ timeout: 30000 }).catch(() => {}); await p.waitForTimeout(500);
+    step(`${W}: Back again lands on the case list without ?open and without the dialog`, new URL(p.url()).pathname === "/cases" && new URL(p.url()).search === "" && await p.getByRole("dialog").count() === 0, p.url());
+
     // A combination with no release offers no such button.
-    await p.goto(`${BASE}/c/${none.id}`); await header();
+    await as("user-A"); await p.goto(`${BASE}/c/${none.id}`); await header();
     step(`${W}: a combination with no release (${none.label}) offers no Open a case button`, await p.locator("[data-open-case]").count() === 0 && /Not released yet/.test(await p.locator("main").innerText()));
     // Asked for by address, the dialog says so and never swaps silently; Cancel drops the address's choice.
     await as("user-O"); await p.goto(`${BASE}/cases?open=${none.id}`);
@@ -111,6 +124,17 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step(`${W}: Cancel closes the dialog and drops ?open from the address`, await p.getByRole("dialog").count() === 0 && new URL(p.url()).search === "", p.url());
     await p.reload(); await p.locator("h1").first().waitFor({ timeout: 30000 }); await p.waitForTimeout(500);
     step(`${W}: a reload after Cancel does not reopen the dialog`, await p.getByRole("dialog").count() === 0);
+    // Review m3: a released combination that is not ready for new cases (the server's startable check, here answered so
+    // by the test) is named in the dialog's notice, never swapped silently.
+    await p.route("**/api/runtime/openable", async (r) => { const res = await r.fetch(); const rows = await res.json(); await r.fulfill({ response: res, json: rows.map((x) => x.combination_id === released.combination_id ? { ...x, startable: false, items: 1, why: `"${x.combination}" is not ready for new cases: 1 item to fix.` } : x) }); });
+    await p.goto(`${BASE}/cases?open=${released.combination_id}`);
+    await p.locator("[data-asked-off]").waitFor({ timeout: 15000 }).catch(() => {});
+    const off = (await p.locator("[data-asked-off]").textContent().catch(() => "")) ?? "";
+    step(`${W}: /cases?open=<released, not ready> says that combination is not ready for new cases`, off.includes(`"${released.combination}" is not ready for new cases`), off);
+    step(`${W}: and the dialog does not offer it`, !(await p.getByRole("dialog").getByLabel("Combination (released)").locator("option").allTextContents().catch(() => [])).some((o) => o.startsWith(`${released.combination} ·`)));
+    await p.unroute("**/api/runtime/openable");
+    await p.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+    await p.getByRole("dialog").waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
     step(`${W}: no sideways scroll on the case list`, await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
   }
   step("no page error on the way", errs.length === 0, errs.join(" | "));
