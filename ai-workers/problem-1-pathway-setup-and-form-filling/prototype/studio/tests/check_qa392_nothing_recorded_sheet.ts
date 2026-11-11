@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { markNothingRecorded } from "../engine/runtime/forms.ts";
 import { sheetOf } from "../engine/runtime/answer-sheet.ts";
-import { formValues, type Inventory } from "../engine/form-values.ts";
+import { formValues, recordedYesNo, type Inventory } from "../engine/form-values.ts";
 import { runTransform } from "../../p5/transforms.ts";
 import type { BoxRow } from "../engine/render.ts";
 import type { QuestionnaireView } from "../contracts/runtime.ts";
@@ -40,7 +40,9 @@ function viewOf(lists: { previous: "none" | "open" | number; education: "none" |
 }
 const snapshot = { canonical_fields: [] } as unknown as Parameters<typeof formValues>[0];
 const layout = { basis: "form_parts" as const, parts: [{ key: "personal", title: "Personal details", named: true, fieldKeys: [PCR] }, { key: "education", title: "Education", named: true, fieldKeys: [EDU] }] };
-const sheetFor = (boxes: BoxRow[]) => sheetOf(layout, boxes, () => "questionnaire", new Map([[MAP[0].fact, "Country"], [MAP[1].fact, "Name of school"]]), new Map(), () => undefined, () => false);
+const ENTRIES = { entries: MAP.map((m) => ({ data_path: m.box, fact: m.fact })) };
+// QA-392b: the sheet reads each recorded box's Yes or No from the copy's own value step, as api/src/case-prepare.ts does.
+const sheetFor = (boxes: BoxRow[]) => sheetOf(layout, boxes, () => "questionnaire", new Map([[MAP[0].fact, "Country"], [MAP[1].fact, "Name of school"]]), new Map(), () => undefined, () => false, undefined, recordedYesNo(formValues(snapshot, ENTRIES, inv, boxes).boxes));
 
 // Both lists answered "none apply": the one rule marks both boxes; the copy writes N; the sheet carries the same No.
 const marked = markNothingRecorded(boxesOf(), viewOf({ previous: "none", education: "none" }));
@@ -63,6 +65,26 @@ const open = markNothingRecorded(boxesOf(), viewOf({ previous: "open", education
 ok("QA-392 fail: a list whose \"none apply\" is not answered, or that holds an entry, is not marked; the PDF does not write it, and the sheet shows no No for it", open.every((b) => !b.nothing_recorded)
   && MAP.every((m) => !formValues(snapshot, { entries: MAP.map((x) => ({ data_path: x.box, fact: x.fact })) }, inv, open).values[m.box])
   && !sheetFor(open).sections.some((s) => s.answers.some((a) => a.value === false)), open.map((b) => b.nothing_recorded ?? false));
+
+// QA-392b (the Yes side): a list with an entry (a confirmed school, a confirmed previous residence) makes the copy write Y;
+// the sheet's line for that box is that Yes, in the form's own question, in place of the entry's own value ("SAMPLE").
+const withEntries = boxesOf().map((b) => ({ ...b, coverage: "confirmed fact" as const, value: "SAMPLE" }));
+const pdfYes = formValues(snapshot, ENTRIES, inv, withEntries), yesLines = sheetFor(withEntries).sections.flatMap((s) => s.answers);
+ok("QA-392b setup: with an entry in each list the PDF copy writes both boxes as Y (the existing fill, unchanged)", MAP.every((m) => pdfYes.values[m.box] === "Y"), MAP.map((m) => pdfYes.values[m.box]));
+for (const m of MAP) {
+  const line = yesLines.find((l) => l.subject === P && l.fact === m.fact && l.row === null);
+  ok(`QA-392b pass: ${m.box.split(".").pop()}'s line reads Yes, as the PDF writes Y, in the form's own question, never the entry's value`, !!line && line.value === true && line.copy_text === "Yes" && line.label === caption(m.box) && line.recorded === true, line && [line.label.slice(0, 40), line.copy_text]);
+}
+ok("QA-392b fail: no line shows the entry's own value under the box's line any more (the second \"Name of school: SAMPLE\")", !yesLines.some((l) => l.row === null && l.copy_text === "SAMPLE"), yesLines.map((l) => [l.label.slice(0, 30), l.copy_text]));
+// Review M1 on #1563: two form fields sharing one caption (IMM 5257's US card Yes/No carries the national identity
+// document's caption) each keep the release's own question; a caption no other box shares is the form's own question.
+const twin = withEntries.map((b, i) => (i === 1 ? { ...b, caption: caption(PCR) } : b));
+const twinLines = sheetFor(twin).sections.flatMap((s) => s.answers);
+ok("QA-392b review M1 (fail): a caption two form fields share labels neither; each line keeps the release's own question", twinLines.length === 2 && twinLines.every((l) => l.label !== caption(PCR)) && twinLines.some((l) => l.label === "Country") && twinLines.some((l) => l.label === "Name of school"), twinLines.map((l) => l.label));
+
+// The one rule reads only what the copy writes: a box the copy leaves to a person (here: refused, not confirmed) has no Yes/No.
+const notWritten = recordedYesNo(formValues(snapshot, ENTRIES, inv, boxesOf()).boxes);
+ok("QA-392b fail: a recorded box the copy does not write (not confirmed, no \"none apply\") has no Yes or No on the sheet", notWritten.size === 0 && !sheetFor(boxesOf()).sections.some((s) => s.answers.length), [...notWritten]);
 
 // A ticked part's No changes (case-prepare.ts passes a "nothing recorded" line's label, quoted): the change is named by the
 // form's question whether the No is taken back or an entry replaces it (review m3 on #1553), else by the fact's words.
