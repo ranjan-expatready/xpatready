@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { CaseTaskView } from "../../../contracts/submission-record";
 import type { RecordWithReceipts } from "../../../contracts/fee-receipt";
 import { MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, mediaOf } from "../../../contracts/documents";
+import { ACCOUNT_WORDS, throughAccount } from "../../../contracts/forms";
 import { noRetryOnRefusal } from "./questionnaire";
 import { CaseFees, FeeBlock } from "./fees"; // C6.12 (B5): each submission's fees, from this same read
 
@@ -31,7 +32,9 @@ const whoOf = (f: Filing) => f.applicants.find((a) => a.mode === "applying")?.la
 const day = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-CA", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 const when = (at: string) => new Date(at).toLocaleString("en-CA", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 const todayHere = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
-const PORTAL: Record<string, string> = { APR_PORTAL: "APR Portal" };
+/** B171 (B169 review M1): the IRCC account in words from the Forms tab's contract, for every account (only the APR Portal
+ *  had words; the PR Portal read "through PR_PORTAL"); paper reads "on paper, with no IRCC account". */
+const through = (account: string) => (account === "PAPER" ? throughAccount(account) : `through ${ACCOUNT_WORDS[account as "ANY"] ?? account}`);
 type Problem = Record<string, string>;
 /** A save from a dialog: its refusals show on the dialog's own fields, never also as a toast over its buttons (break m on
  *  #924); a 409 re-reads the case, so the next try carries the version now (it failed again until a reload). */
@@ -133,7 +136,7 @@ function FilingLine({ f, onCorrect }: { f: Filing; onCorrect: (from: HTMLElement
         <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 text-[13px] sm:grid-cols-[max-content_1fr]" data-record>
           <dt className="text-text-muted">Application number</dt>
           <dd className="flex flex-wrap items-center gap-2"><span className="font-mono" data-number>{r.application_number}</span><Button size="sm" variant="ghost" onClick={(e) => onCorrect(e.currentTarget)}>Correct a number…</Button></dd>
-          <dt className="text-text-muted">Submitted on</dt><dd>{day(r.submitted_on)}{r.portal ? ` · through ${PORTAL[r.portal] ?? r.portal}` : ""}</dd>
+          <dt className="text-text-muted">Submitted on</dt><dd>{day(r.submitted_on)}{r.portal ? ` · ${through(r.portal)}` : ""}</dd>
           <dt className="text-text-muted">Our reference</dt><dd className="[overflow-wrap:anywhere]">{r.our_reference}</dd>
           <dt className="text-text-muted">Fee receipt</dt><dd><FeeReceipt f={f} r={r} /></dd>
           <dt className="text-text-muted">UCI</dt>
@@ -227,7 +230,7 @@ function RecordDialog({ caseId, view, group, close, recorded }: { caseId: string
   };
   const err = (id: string, k: string) => errors[`${id}.${k}`] ?? null;
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title="Record the submission" description={<>One record for the whole submission, as IRCC acknowledged it{view.portal ? ` through ${PORTAL[view.portal] ?? view.portal}` : ""}. It cannot be undone: afterwards the filings are read-only and a wrong number is fixed with “Correct a number”.</>}
+    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title="Record the submission" description={<>One record for the whole submission, as IRCC acknowledged it{view.portal ? ` ${through(view.portal)}` : ""}. It cannot be undone: afterwards the filings are read-only and a wrong number is fixed with “Correct a number”.</>}
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={act.isPending} onClick={submit}>Record the submission</Button></>}>
       <form ref={formRef} className="space-y-5" onSubmit={(e) => { e.preventDefault(); submit(); }} data-record-form>
         {errors.form || errors.filings || errors.version ? <Notice tone="danger" title="Not recorded">{errors.form ?? errors.filings ?? errors.version}</Notice> : null}
