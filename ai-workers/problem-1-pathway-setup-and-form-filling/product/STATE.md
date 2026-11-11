@@ -1,6 +1,6 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: local_6fc6d874-c86a-46c9-9dc0-d6a28e84b1d7 Lead 17 · 11 Nov 14:16 IST (series 2; took over from Lead 16 (series 2, local_02100e4c) at ~276k context, ~200k beyond its start read, P-446); **start read ~113k (get_usage 14:2x IST); hand over at the first check after ~313k (P-446)**; check e56639f7 (:13/:43)
+current_lead: local_6fc6d874-c86a-46c9-9dc0-d6a28e84b1d7 Lead 17 · 11 Nov 14:16 IST (series 2; took over from Lead 16 (series 2, local_02100e4c) at ~276k context, ~200k beyond its start read, P-446); **start read ~113k at 14:2x; hand over at the first check after ~313k (P-446)**; check e56639f7 (:13/:43)
 
 updated: 2026-11-11 14:5x IST by **Lead 17 (series 2, local_6fc6d874-…)** (block below is Lead 16's hand-over, with Lead 17's live lines first); earlier: 14:1x IST by Lead 16 at hand-over to Lead 17 · weekly 4% (resets 13 Nov 04:30 IST) · milestone: **M2 60/60; M3 28/29 Works (C7.8 re-score owed)**; Bake (M3.5) running · rules: **`RULES.md`** (as of P-477) · this branch: `lead/2026-11-07-lead31`
 
