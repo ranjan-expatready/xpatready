@@ -66,3 +66,31 @@ A real screen reader: does a notice in a frame that remounts on an area change g
 
 ## Verdict
 **Verdict: Block** (commit 6de01ae84). To fix before Approve: 1. `check_bk3_links_browser.cjs:95` updated and green at both widths. 2. The release pill names "(as Configuration author)" on screen, with a browser assertion. Minors 3–7: fix in this PR, or list each with a follow-up row.
+
+## Round 2 (a7fc096c8)
+Same reviewer, diff only (`git diff 6de01ae84..a7fc096c8`), at the exact head `a7fc096c885ab24e863cc7860a76ab918c05a0f7`. :4442 served the new build (`index-B34w9GUC.js`, which contains the new words). Browser checks ran from scratchpad copies, so no tracked screenshot was touched. US$0.
+**Re-run:**
+- tsc (web): exit 0.
+- `check_bk4a.ts` 22/22; `check_bk3_frame.ts` 130/130.
+- Explicit `any`: 417.
+- graph: exit 0.
+- Browser: `check_bk4a_browser` **46/46**, `check_bk3_links_browser` **56/56**, `check_bk3_frame_browser` **431/431**.
+
+**Round 1 findings**
+* Major 1 (red suite): **fixed**. `check_bk3_links_browser.cjs` expects the new text and name, and passes at 1440 and 375.
+* Major 2 (pill does not name the person): **fixed**. On screen it reads "Release 1 (as Configuration author) →" at 1440 and 375, with 0 px sideways scroll. The accessible name starts with the visible words. Clicking it gives user-A and one notice. `check_bk4a_browser` asserts it.
+* Minor 3 (picker on input): **fixed** for Windows and Linux. An arrow key alone changes nobody; Enter commits with one notice; Tab away reverts. The breaker's M1 is also confirmed: an Approver who leaves Cases stays the Approver.
+* Minor 5 (picker at 640 px): **fixed**. Options show names only; at 375 px the picker reads "Client B" in full (160 px).
+* Minor 6 (stale words): **fixed**.
+* Minor 7 (records): **answered**. `build-notes-4a.md`; the concept is in records PR #1575.
+* Minor 4 (no notice when signing in as the default person): **still open**. In a fresh browser, choosing "Configuration author" on `/sign-in` still shows no "Now: …" notice (probe P1: no notice, stored user-A). Breaker m1 fixed a different gap (the case area's first switch). `PersonNotice` (`frame.tsx` ~177-190) still skips a change whose id equals the default.
+
+**New in this round**
+* **Minor (Should): the picker's `keyed` flag sticks** (`frame.tsx` `PersonPicker`). A key press that moves nothing still sets it, for example ArrowUp on the first option. A following pointer pick is then only marked: probe P2 shows "Approver" while the stored person is still user-A, and it changes only after an extra Enter (blur reverts it).
+  - Risk on macOS (demo platform; reasoned, not run): arrow keys open the native list there, so a choice from that list may also wait for a second Enter.
+  - So the build-notes line "the browser's own open list applies at once" does not always hold.
+  - Fix: clear `keyed` on pointer down, or set it only when the key changed the value. Or commit a pending choice on blur. Then check on macOS.
+
+No Blocker or Major is open. Minor 4 and the `keyed` Minor go in this PR or as follow-up rows. The breaker's m2 and m7 and the case page's 375 px / 200 % scroll stay as recorded limits (`build-notes-4a.md`); "Open a case" naming is BK-4b's.
+
+**Verdict: Approve** (a7fc096c8)
