@@ -32,6 +32,7 @@ export function whereFromAddress(area: Area, path: string): Where {
     case undefined: return { crumbs: [{ label: "Immigration programs" }], back: null };
     case "structure": return top("Program structure");
     case "release": return top("Review and release");
+    case "start": return top("Starting points", "Demo"); // BK-5: Demo › Starting points
     case "releases": return top("Releases", "History");
     case "activity": return top("Activity", "History");
     case "review": return s[1] ? { crumbs: [{ label: "To review", to: "/review" }, { label: REVIEW_ITEM[s[1]] ?? "No such page" }] } : top("To review");
