@@ -938,7 +938,9 @@ export class Runtime {
     need(actor, "case");
     const workspaceId = await this.ws.id();
     const take = Math.min(Math.max(Number(q.take ?? 50) || 50, 1), 100);
-    const client = typeof q.client === "string" && q.client ? q.client : null;
+    // Break m5: one login or none; a list or an empty value is refused, never read as "every client".
+    if (q.client !== undefined && (typeof q.client !== "string" || !q.client)) fieldError("client", "Name one client login.");
+    const client = q.client ?? null;
     const rows = await this.db.case.findMany({ where: { workspaceId, firmKey: firmOfActor(actor)?.key ?? "", ...(client ? { clientActorId: client } : {}) }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: take + 1, ...(q.after ? { cursor: { id: q.after }, skip: 1 } : {}), include: { combination: { select: { label: true } } } });
     const page = rows.slice(0, take);
     // The people of this page's cases in one query (never one per row), only for one client's page.

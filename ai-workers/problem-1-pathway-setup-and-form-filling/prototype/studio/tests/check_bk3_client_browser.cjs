@@ -147,6 +147,53 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const solo = await p.locator("[data-client-case]:visible").evaluateAll((rs) => rs.map((r) => r.getAttribute("data-client-case")));
     step(`${W}: the solo representative sees only the solo firm's case of Client A (BR-2)`, JSON.stringify(solo) === JSON.stringify(["BK3C-S1"]), solo);
   }
+  // Break m5: ?client= names one login; an empty value or a list is refused (400), never read as "every client".
+  for (const bad of ["client=", "client=user-P&client=user-Q"]) { // ("client[]=" is another parameter name to this server: ignored like any unknown one, the plain firm list)
+    const r = await api(`/runtime/cases?${bad}`, { actor: "user-O" });
+    step(`API fail side: ?${bad} is refused (400), not the firm's whole list`, r.status === 400, { status: r.status, n: r.body?.cases?.length });
+  }
+
+  await p.setViewportSize({ width: 1440, height: 900 });
+  // Break m2: an answer that is not a list (a proxy's page) reads as "could not load", never "no cases".
+  await as("user-O");
+  await p.route(/\/api\/runtime\/cases\?client=/, (r) => r.fulfill({ status: 200, contentType: "text/html", body: "<html>proxy</html>" }));
+  await p.goto(`${BASE}/cases/clients/user-P`); await p.getByText("This client's cases could not be loaded", { exact: true }).waitFor({ timeout: 30000 }).catch(() => {});
+  const proxyText = await p.locator("main").innerText();
+  step("break m2: a non-list answer says the cases could not be loaded, and never \"no cases\" or \"0 cases shown\"", /could not be loaded/.test(proxyText) && !/no cases|0 cases shown/.test(proxyText), proxyText.slice(0, 200));
+  await p.unroute(/\/api\/runtime\/cases\?client=/);
+  // Review m4: the notice offers Try again, and it loads the cases once the answer is right.
+  await p.getByRole("button", { name: "Try again" }).click(); await p.locator("[data-client-case]:visible").first().waitFor({ timeout: 30000 }).catch(() => {});
+  step("review m4: Try again on the could-not-load notice loads the cases", (await p.locator("[data-client-case]:visible").count()) > 0);
+
+  // Break M1: more than one page of Client A's cases; Load more, then switch "Acting as" to the solo firm: the Sample
+  // firm's later page is dropped, never shown beside the solo firm's case. Break m1: a failed Load more says so.
+  const extra = [];
+  for (let i = 0; i < 100; i += 5) extra.push(...await Promise.all([0, 1, 2, 3, 4].map((k) => open("user-O", `BK3C-M${String(i + k).padStart(3, "0")}`, "user-P", `Sample Principal M${i + k}`))));
+  step("setup: 100 more Sample-firm cases for Client A (two pages)", extra.every((c) => c?.id), extra.filter((c) => !c?.id).slice(0, 2));
+  await p.goto(`${BASE}/cases/clients/user-P`); await p.locator("[data-client-case]:visible").first().waitFor({ timeout: 30000 });
+  await p.route(/after=/, (r) => r.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ title: "Server error", status: 500, detail: "Broken on purpose" }) }));
+  step("no page error in the walk so far", errs.length === 0, errs);
+  errs.length = 0;
+  await p.getByRole("button", { name: "Load more" }).click(); await p.getByText("More cases could not be loaded", { exact: true }).waitFor({ timeout: 15000 }).catch(() => {});
+  step("break m1: a failed Load more says so, with no page error", (await p.getByText("More cases could not be loaded", { exact: true }).count()) === 1 && errs.length === 0, errs);
+  await p.unroute(/after=/);
+  await p.getByRole("button", { name: "Load more" }).click();
+  await p.waitForFunction(() => document.querySelectorAll("tr[data-client-case]").length > 100, null, { timeout: 30000 }).catch(() => {});
+  const before = await p.locator("tr[data-client-case]").count();
+  step("Load more adds Client A's next page", before > 100, before);
+  await p.locator('select[aria-label="Simulated person"]').selectOption("user-S");
+  await p.waitForFunction(() => document.querySelectorAll("[data-client-case]").length > 0 && [...document.querySelectorAll("tr[data-client-case]")].every((r) => r.getAttribute("data-client-case") === "BK3C-S1"), null, { timeout: 30000 }).catch(() => {});
+  const after = await p.locator("tr[data-client-case]").evaluateAll((rs) => rs.map((r) => r.getAttribute("data-client-case")));
+  const lineAfter = await p.locator("[data-client-line]").innerText();
+  step("break M1: after switching to the solo firm, only the solo firm's case shows and the count says 1 (BR-2, BR-5)", JSON.stringify(after) === JSON.stringify(["BK3C-S1"]) && /1 case shown at/.test(lineAfter), { n: after.length, first: after.slice(0, 3), lineAfter });
+  // The same on the firm's case list (the pattern this page copied).
+  await as("user-O"); await p.goto(`${BASE}/cases`); await p.getByRole("button", { name: "Load more" }).waitFor({ timeout: 30000 });
+  await p.getByRole("button", { name: "Load more" }).click();
+  await p.waitForFunction(() => document.querySelectorAll("tbody tr").length > 50, null, { timeout: 30000 }).catch(() => {});
+  await p.locator('select[aria-label="Simulated person"]').selectOption("user-S");
+  await p.waitForFunction(() => document.querySelectorAll("tbody tr").length > 0 && document.querySelectorAll("tbody tr").length < 10, null, { timeout: 30000 }).catch(() => {});
+  const soloList = await p.locator("tbody tr td:first-child").allInnerTexts();
+  step("break M1 on Cases: after Load more and a switch to the solo firm, no Sample-firm case stays listed", soloList.length > 0 && soloList.every((r) => !/^BK3C-(A|B|M)/.test(r.trim()) && r.trim() !== "SAMPLE-VV-FAMILY-1"), soloList.slice(0, 5));
   step("no page error in the walk", errs.length === 0, errs);
   await b.close();
   console.log(`${pass}/${pass + fail} passed`);
