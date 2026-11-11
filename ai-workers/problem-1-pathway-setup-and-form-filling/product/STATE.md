@@ -4,12 +4,10 @@ current_lead: local_aa5c12aa-7202-4cec-8459-10f906f7727b Lead 11 · 11 Nov 07:57
 
 updated: 2026-11-11 07:57 IST by **Lead 10 (series 2, local_556afbc8-…)** at hand-over to Lead 11 · weekly 88% · milestone: **M2 60/60; M3 29 of 29 Works on main**; next: the Bake (M3.5), plan awaiting the founder (P-450) · rules: **`RULES.md`** (as of P-452) · this branch: `lead/2026-11-07-lead31`
 
-## Hand-over: Lead 7 (series 2) → Lead 8 (series 2): word for word in `history/STATE-2026-11-11-0035-lead10s2-lead7-to-lead8-block.md`.
-
-## Lead 40's last block (series 1): `history/STATE-2026-11-09-1748-lead40-final.md` (live items listed there; this page's 02:55 copy keeps the line).
+Earlier blocks (Lead 40's last, Lead 7→8 hand-over, Lead 8 and Lead 9 live rows): pointers word for word in `history/STATE-2026-11-11-0815-lead11s2-pointer-lines.md`.
 
 ## Hand-over: Lead 10 (series 2) → Lead 11 (series 2), 07:57 IST 11 Nov — read this first (Lead 9's block word for word: `history/STATE-2026-11-11-0800-lead9s2-handover-block.md`)
-**Founder awake (typing at 07:3x-07:5x).** Rules as of P-457. Weekly **88%** at 07:57 (~1-2%/h); **at ~91% message every running lane "stop" (push and stop); 93% ≈ 10:00-10:30 IST**, then pause to Sun 15 Nov 22:30 IST (P-431, P-455 (1)). Paid US$0. No subagent running. Founder rule (memory): in every summary put each code's plain-words purpose beside it.
+**Founder awake (typing at 07:3x-07:5x).** Rules as of P-457. Weekly **88%** at 07:57 (~1-2%/h); ~~at ~91% "stop"; 93%~~ **superseded by P-458: lanes stop at 96%, Lead done by 98%**, then pause to Sun 15 Nov 22:30 IST or the account switch. Paid US$0. No subagent running. Founder rule (memory): in every summary put each code's plain-words purpose beside it.
 1. **Running (cloud):** BK-3 PR 1 one frame (task_16eb5fe4); BK-10 form rules into data (task_c5c51151); **finish M3-S2 #1513** (task_07d5bc97, started 07:5x; holds the schema + case-prepare baton; hand-over and round-2 review are a PR comment). Recent pushes: `claude/amazing-davinci-wvk1b3`, `claude/dazzling-johnson-j6s8st`.
 2. **#1518 ("forms: BK-10 — form rules into data (form-setup.ts names no combination)") has a "Question for the tech lead": answer it first.**
 3. Report for the founder: `design/progress-and-roadmap-2026-11-11.md` (night result, sequence to M4, hourly, analysis). Two-day plan: `design/next-2-days-2026-11-11.md`.
@@ -17,18 +15,21 @@ updated: 2026-11-11 07:57 IST by **Lead 10 (series 2, local_556afbc8-…)** at h
 5. Standbys: **Lead 12 `local_ff0a1d2d-7d86-42f4-8234-47fbb72cfc8a`**; start a second at the founder's next typed turn (P-286).
 **Lead 11 (07:58 IST):** start read **~117k** (get_usage 08:0x); hand over at the first check after ~317k (P-446 (2)); check b9a8ac49 at :13/:43; weekly 88%. **#1518 answered 08:1x** (PR comment 6785224559 + its claude.ai prompt box, delivered): (1) `sources.ts` TITLES in this PR, title from the form's stored `displayName`, refuse when none, 8 B164 entries removed; (2) **new forms row owed: "spousal sponsorship's IRCC account on the six and checkpoint"** (`fs.spouse` beside `fs.outside` in `accounts`/`guides`, canada.ca cite, re-score the `fs.spouse` release check and C7.3); not in #1518. Chrome extension not connected: lanes reached through the built-in browser.
 
-## Tonight (P-453, P-454, from 23:2x IST 10 Nov): plan `design/next-2-days-2026-11-11.md`
-**No trip-wire at 75% any more (P-454):** run to 93% weekly, every lane pushed (P-431). **Founder typed 00:5x IST "set SHARDS 8, ready 1502, label 1503":** #1502 marked ready and #1503 labelled by the Lead under his words; **SHARDS 8 refused even with his typed words** (gh and API): **founder ~01:0x IST: "keep on 6" — SHARDS stays 6**; #1502 still lands for its refreshed suite timings (better balance on 6). Lead labels #1502 when its CI on bccf34ef is green (diff read by Lead 9, P-423). Never route through a lane.
-**Night result (02:57 IST):** merged #1501 B164, #1504 suite selection, #1502 refreshed timings (SHARDS stays 6, founder), #1505 M3-S1, #1507 M3-S5, #1506 BK-2, #1509 BK-1 baseline (14 Majors), #1510 expert pack, #1503 records. Queue empty; no lane working. Weekly 81% (~2%/h).
-**Waiting for the founder's click (cards, cloud):** task_07d5bc97 finish M3-S2 #1513 (draft at 30852243d; hand-over and round-2 review in its PR comment; holds the schema + case-prepare baton); task_c5c51151 BK-10 form rules into data; task_16eb5fe4 BK-3 PR 1 one frame (BK-2 merged, so ready).
-**Owed:** qa findings from #1507 (IMM 5669 fill `KeyError: 'datasets'`; Express Entry release has no account); #1505's follow-up questions (PR biometrics line, sponsor-only co-filing, table-level dates); 4 leftover Mac test copies (4475, 4478, 4482, 4494) the sandbox cannot stop: founder's terminal (`isolated.sh <name> <port> stop`); archive the ended lanes (M3-S1, M3-S2 first builder, pipeline, B164, qa C7.5) at the founder's word.
+## Tonight (P-453 to P-455, 10-11 Nov): night result and owed items word for word in `history/STATE-2026-11-11-0810-lead11s2-tonight-block.md` (owed: qa findings from #1507; #1505 follow-up questions; 4 Mac test copies need the founder's terminal).
+
+## Next 7 hours (Lead 11, 08:05-15:05 IST 11 Nov; P-458)
+Budget: 88% at 07:57, ~1.5%/h with three lanes, so **96% (lanes stop) ≈ 13:00-14:00 IST, 98% (Lead's records pushed) ≈ 14:30**; then the account switch.
+| # | Goal (what it gives a person) | How | Expected |
+|---|---|---|---|
+| G1 | **#1518 BK-10 merged** (form rules are data: a data edit alone changes a pathway's forms, the Bake's exit test, P-449) | forms lane adds `sources.ts` titles (Lead's answer), Opus re-review of that diff, label, queue | ~10:30 |
+| G2 | **#1519 BK-3 PR 1 merged** (one frame round every screen: where am I, and a way back) | screens lane: Opus review, label, queue | ~10:00 |
+| G3 | **#1513 M3-S2 merged** (an extra filing is added when a configured rule fits a person) | finish lane: round-2 review, label; frees the schema + case-prepare baton | ~11:00 |
+| G4 | **Warm next rows reach pushed PRs**: BK-3 PR 2 (screens), M3-S3 waivable line with a reason (engine, after G3), forms row "spousal sponsorship's IRCC account on the six and checkpoint" (forms, after G1) | same lanes, warm (P-341); started only by message to a lane that holds the context, sessions only in the founder's typed turns | PRs open by ~13:00; merge after the switch if not before |
+| G5 | **qa re-scores** after G1-G3 merge (no Works drops) | qa cloud lane at the founder's typed turn, or a card | ~12:00 |
+| G6 | **Nothing lost**: Lead commits records each check; lanes push after every step; at 96% "finish, push, stop"; by 98% STATE + `RESUME-ON-NEW-ACCOUNT.md` pushed | Lead | 14:30 |
 
 ## M3: 29 of 29 Works (21:1x IST 10 Nov, qa #1499 fresh reader; C7.5 + C10.2 on nightly 42841699712, main 87212b14d)
 **Next (P-450):** detailed milestone plan with the founder, one question at a time (A5, A7); then the Bake. **#1463** superseded: qa's close refused, waits for the founder's named word.
-
-## Live rows (Lead 9, 19:0x IST): done (29/29); word for word in `history/STATE-2026-11-10-2210-lead9s2-live-rows-1900.md`.
-
-## Live rows (Lead 8, 13:33 IST): superseded by the hand-over block above; word for word in `history/STATE-2026-11-10-1850-lead8s2-live-rows-1333.md`.
 
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
 | # | Ask (IST) | Status |
@@ -40,6 +41,7 @@ updated: 2026-11-11 07:57 IST by **Lead 10 (series 2, local_556afbc8-…)** at h
 | A5 | 12:4x finish M3; then detailed milestone plan with counted lists before the Chrome extension; internal production grade | P-450; plan after the 29 |
 | A6 | approvals one at a time; tell him when to press Demo › Load the finished story | at C10.2 merge (#1482) |
 | A8 | 23:0x (10 Nov, Lead 10) plan the next 2 days high level + hourly; best quality and speed; sequence, parallel lanes, models (Fable allowed); one question at a time, no assumptions | done: P-453 to P-455 (pace, night run, burn, expert pack, sample data only, walk as soon as ready, Fable for planning); plan `design/next-2-days-2026-11-11.md` |
+| A9 | 08:0x (11 Nov, via Lead 10) archive finished local and cloud sessions; watch disk; 7-hour goals and how; hand over at ~70%, commit often; ~10% left then account switch. **08:0x (typed to Lead 11):** go to ~97% with 3% for hand-over, no risk to quality, speed or rework | local: 9 archived (Leads 5, 6, 9, 10; M3-S1, M3-S2 first builder, pipeline, B164, qa); Leads 7 and 8 refused by auto mode (founder can archive them); Fable session local_bade3622 kept (ask); cloud: next; disk 16 GB free; stop line P-458 (96/98%); 7-hour goals below |
 | A7 | Fable's questions 16-18 (internal use on what data; employer LMIA side in?; Chrome extension in?) and booking the immigration expert | ask after the 29 |
 
 ## For the founder (P-390)

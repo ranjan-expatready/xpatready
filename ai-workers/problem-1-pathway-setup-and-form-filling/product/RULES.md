@@ -1,4 +1,4 @@
-# Rules in force — one page (the tech lead keeps it; as of **P-457**, 11 Nov 00:28 IST)
+# Rules in force — one page (the tech lead keeps it; as of **P-458**, 11 Nov 08:0x IST)
 
 Each rule once, with the decision that set it. **This page is the start read**: a new Lead reads it, then only the `DECISIONS.md` rows newer than "as of" above, word for word (P-314, P-440). `tools/check-docs.sh` fails when this page falls more than 3 rows behind DECISIONS (P-440). The previous page, as of P-452, is word for word in `history/RULES-2026-11-11-as-of-P-452.md` (earlier: `history/RULES-2026-11-09-as-of-P-353.md`). Product rulings (what a screen or rule does) live in their DECISIONS rows: read a row when its capability is touched.
 
@@ -53,7 +53,7 @@ Each rule once, with the decision that set it. **This page is the start read**: 
 * Live runs need network the sandbox does not give child processes: the product's launcher runs from a Terminal tab (P-377 (7)); a single scratch read can go by curl from Bash with `allowed_domains` (9 Nov, #1444). A paid run happens on the data Works counts on, never fixture-only.
 
 ## Account and budget
-* Use the plan to its limit (P-344). From 93% weekly every lane reaches a clean pushed point; by 95% everything is pushed and STATE and `RESUME-ON-NEW-ACCOUNT.md` are ready (P-431). On a switch: `get_usage` first, then the resume page; these rules carry over because they live in the repository.
+* Use the plan to its limit (P-344). **This week (P-458): lanes push after every step; at 96% weekly every lane finishes its step, pushes and stops; by 98% STATE and `RESUME-ON-NEW-ACCOUNT.md` are pushed; 2% buffer** (was P-431: 93%/95%). On a switch: `get_usage` first, then the resume page; these rules carry over because they live in the repository.
 
 ## Process freeze (P-312)
 No change to the workflow, tools or these rules until **10 Nov 22:30 IST**, except on a measured number and the founder's word (P-420, P-436, P-440), each with the number it should move, checked after a fixed period, kept or undone.
