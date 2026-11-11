@@ -39,8 +39,9 @@ async function release(id: string) {
 }
 /** Whether the question is asked on the case now, as the officer's questionnaire and the client's show it. */
 async function asked(caseId: string) {
-  const view = async (mode: string, actor: string) => ((await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=${mode}`, undefined, actor)).body?.sections ?? []) as { questions: { fact: string }[] }[];
-  const has = (ss: { questions: { fact: string }[] }[]) => ss.some((s) => (s.questions ?? []).some((q) => q.fact === FACT));
+  // Review m2: a question the condition hides is still listed, marked hidden; asked means listed and not hidden.
+  const view = async (mode: string, actor: string) => ((await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=${mode}`, undefined, actor)).body?.sections ?? []) as { questions: { fact: string; hidden?: boolean }[] }[];
+  const has = (ss: { questions: { fact: string; hidden?: boolean }[] }[]) => ss.some((s) => (s.questions ?? []).some((q) => q.fact === FACT && !q.hidden));
   return { officer: has(await view("agent", m3.officerOf(caseId))), client: has(await view("client", m3.CLIENT)) };
 }
 
@@ -73,6 +74,8 @@ m3.main("QA-402", "a condition on a case-level question is in force when the for
   // ── on a case of the new release: asked only when the purpose is Other ──
   const c = await m3.openCase(vv, [{ role: "principal", name: "Sample Client Q402", dob: m3.FIXED.dob }]);
   const purpose = async (v: string) => m3.answer(c.id, c.caseSubject, DECIDER, v);
+  const blank = await asked(c.id);
+  ok("QA-402 fail: with the purpose not answered yet, neither the client nor the officer is asked \"Visit purpose other\"", !blank.client && !blank.officer, blank);
   const r1 = await purpose("Business");
   const notOther = await asked(c.id);
   ok("QA-402 fail: with a purpose other than Other, neither the client nor the officer is asked \"Visit purpose other\"", r1.status < 300 && !notOther.client && !notOther.officer, { status: r1.status, words: words(r1), ...notOther });

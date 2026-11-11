@@ -7,6 +7,7 @@ import { conditionsToHold, withHeldConditions } from "../engine/held-conditions.
 import { validate, withdrawnFieldLines, type Problem } from "../engine/validate.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { recorder } from "./runtime/api.ts";
+import { wayOut } from "../web/src/lib/form-fields-way-out.ts";
 
 const { ok, summary } = recorder();
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
@@ -99,5 +100,14 @@ const ogErr = errs(otherGate).filter((e) => /^Hiding a value a form reads/.test(
 ok("QA-402 pass: not held (another snapshot), the refusal also says the form's own condition", ogErr.length === 1 && /F reads it only when the purpose of the visit is Other \(the form's own condition\)/.test(ogErr[0].message), ogErr.map((e) => e.message));
 const hide = clone(caseLevel); hide.placements[0].condition_effect = "HIDE";
 ok("QA-402 fail (control): a HIDE condition is never compatible with a gate (the form writes it exactly when it would be hidden)", conditionsToHold(hide).length === 1, conditionsToHold(hide));
+
+// Review M1 on f798e79: Review and release puts "Form fields that read this answer" under a problem only when that door is
+// its way out. A gated form field is never listed there, so under a reason that is only the form's own condition the panel
+// read "No form reads this answer". Tested on the release check's own messages.
+ok("QA-402 pass (M1): a held condition whose only reason is a form's own condition gets no \"Form fields that read this answer\" panel", ogWarn.length === 1 && !wayOut(ogWarn[0].message), ogWarn.map((w) => w.message));
+ok("QA-402 pass (M1): nor does the refusal that names a form's own condition, whose way out says to match it", ogErr.length === 1 && !wayOut(ogErr[0].message) && /Make the question's condition the same as the form's own condition, or remove it\./.test(ogErr[0].message) && !/its form fields apply/.test(ogErr[0].message), ogErr.map((e) => e.message));
+const heldWarn = warns(H).find((w) => /^Condition not used on this combination/.test(w.message));
+ok("QA-402 fail (control, M1): a held condition a plain form field reads keeps the panel under it", !!heldWarn && wayOut(heldWarn.message));
+ok("QA-402 fail (control, M1): so does a refusal a plain form field causes", errs(base).some((e) => /^Hiding a value a form reads/.test(e.message) && wayOut(e.message)));
 
 process.exitCode = summary() ? 1 : 0; // B160: a FAIL line fails the suite
