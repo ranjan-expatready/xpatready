@@ -53,8 +53,8 @@ export function ReviewPage() {
   const people = view.data?.case.people ?? [];
   const persons = people.filter((p) => p.role !== "case");
   const person = persons.find((p) => p.subject_id === subject) ?? persons[0];
-  // The person's PDF forms on the case, in the case's own order (its release's forms, then any added); BK-14: any of them
-  // can be reviewed, so none is put first by its number.
+  // The person's PDF forms on the case, in the order the case's forms list gives them (GET …/forms); BK-14: any of them can
+  // be reviewed, so none is put first by its number.
   const mine = [...new Set((forms.data?.forms ?? []).filter((f) => f.subject_id === person?.subject_id).map((f) => f.form))];
   const form = formPick && mine.includes(formPick) ? formPick : mine[0] ?? null;
   const plan = usePlan(id!, person?.subject_id ?? null, form);
