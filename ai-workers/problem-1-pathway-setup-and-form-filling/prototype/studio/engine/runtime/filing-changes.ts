@@ -70,7 +70,9 @@ function lineWords(l: FeeLine | undefined): string {
 }
 const payable = (f: CaseFilings) => (f.derived ? f.fees.filter((l) => !l.exempt && !(l as { waiting?: string }).waiting).reduce((s, l) => s + l.amount_cents, 0) : 0);
 
-export type FilingChangeLine = { person: string; label: string; words: string[] };
+/** `on` (BK-9): the owner's name when the person has no application of their own here, only a place on someone's
+ *  shared one (before or after the change), so the line is never called "their filing". */
+export type FilingChangeLine = { person: string; label: string; words: string[]; on?: string };
 /** BR-4, BR-5: per person (by name), what changes between the derivation now and after: their filing starting or
  *  stopping, applicants joining or leaving, and each fee line's amount. A person whose filing changes is a dependant
  *  named in the warning. `extra` adds words per person (items, Ready to file, a minor's signer: the API's part). */
@@ -107,7 +109,8 @@ export function diffFilings(before: CaseFilings, after: CaseFilings, people: Par
       }
     }
     words.push(...(extra.get(s) ?? []));
-    if (words.length) out.push({ person: s, label: p.label, words });
+    const onOwner = movedTo.get(s) ?? (!b.has(s) && !a.has(s) ? [...a.values(), ...b.values()].find((x) => x.applicants.some((y) => y.subject === s))?.owner?.subject : undefined);
+    if (words.length) out.push({ person: s, label: p.label, words, ...(onOwner ? { on: label(onOwner) } : {}) });
   }
   return { lines: out, totals: { before_cents: payable(before), after_cents: payable(after) } };
 }

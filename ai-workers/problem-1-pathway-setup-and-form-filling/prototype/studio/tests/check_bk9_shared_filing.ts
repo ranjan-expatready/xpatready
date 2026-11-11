@@ -51,6 +51,7 @@ const derive = (ps: Participant[], modes = SHARED) => deriveFilings(KEY, ps, und
   const words = d.lines.flatMap((l) => l.words.map((w) => `${l.label}: ${w}`));
   ok("C6.13 BK-9: make principal pass: the preview says the shared application moves to the spouse, as one application", words.some((w) => /^Spouse A: The family's application is now Spouse A's \(the same application/.test(w)) && words.some((w) => /^Client A: Now on Spouse A's application/.test(w)), words);
   ok("C6.13 BK-9: make principal fail: it never says an application stops or starts", !words.some((w) => /stops|starts again/.test(w)), words);
+  ok("C6.13 BK-9: make principal pass (walk finding): the former principal's line says whose application they are on now", d.lines.find((l) => l.person === "a")?.on === "Spouse A" && !d.lines.find((l) => l.person === "b")?.on, d.lines);
   ok("C6.13 BK-9: make principal fail: a child still cannot swap with a parent", /child of the principal/.test(refusal(applyChange("make_principal", "k", fam(), o))?.words ?? ""));
 }
 
@@ -72,6 +73,7 @@ const derive = (ps: Participant[], modes = SHARED) => deriveFilings(KEY, ps, und
   ok("C6.13 BK-9: own filings pass: Make principal swaps roles; each keeps their own application, nothing moves", derive(mp, OWN).filings.length === 3 && !d.lines.some((l) => l.words.some((w) => /family's application|stops|starts again/.test(w))), d.lines);
   const rm = after(applyChange("remove_filing", "k", fam(), { ...o, modeOf: own }))!;
   const d2 = diffFilings(derive(fam(), OWN), derive(rm, OWN), fam());
+  ok("C6.13 BK-9: own filings fail (walk finding): no line is said to be on someone else's application", !d2.lines.some((l) => l.on));
   ok("C6.13 BK-9: own filings fail: removing the child's own filing still says it stops", d2.lines.some((l) => l.person === "k" && l.words.includes("Their own filing stops (not travelling)")), d2.lines);
 }
 

@@ -41,7 +41,7 @@ const inverse = (kind: ChangeKind, subject: string, other: string | null): { kin
 
 export type FilingChangePreview = {
   kind: ChangeKind; subject: string; title: string; stays: string;
-  changes: { person: string; label: string; words: string[] }[];
+  changes: { person: string; label: string; words: string[]; on?: string }[];
   totals: { before_cents: number; after_cents: number } | null; basis: string;
 };
 
@@ -71,8 +71,11 @@ export class FilingChanges {
     const extra = await this.extraWords(c, kind, subject, other, people, before, then);
     const diff = diffFilings(before, then, people, extra);
     const me = people.find((p) => p.subjectId === subject)!, them = other ? people.find((p) => p.subjectId === other) : undefined;
-    const title = kind === "make_principal" ? `Make ${me.label} the principal applicant?` : kind === "remove_filing" ? `Remove ${me.label}'s filing?` : `Add ${me.label}'s filing back?`;
-    const stays = kind === "make_principal"
+    // BK-9: a person on someone's shared application has no filing of their own: the words name that application.
+    const onApp = kind !== "make_principal" ? diff.lines.find((l) => l.person === subject)?.on ?? (before.derived ? before.filings.find((f) => f.owner?.subject !== subject && f.applicants.some((a) => a.subject === subject))?.owner?.label : undefined) : undefined;
+    const title = kind === "make_principal" ? `Make ${me.label} the principal applicant?` : onApp ? (kind === "remove_filing" ? `Take ${me.label} off as travelling on ${onApp}'s application?` : `Add ${me.label} back as travelling on ${onApp}'s application?`) : kind === "remove_filing" ? `Remove ${me.label}'s filing?` : `Add ${me.label}'s filing back?`;
+    const stays = onApp ? (kind === "remove_filing" ? `${me.label} stays on ${onApp}'s application, declared only (not travelling): asked only what the others' forms need about them. Their answers and uploads are kept.` : `${me.label} applies on ${onApp}'s application again, with the same items as before.`)
+      : kind === "make_principal"
       ? `${me.label} becomes principal applicant; ${them?.label ?? "the principal"} becomes spouse or partner. Each person keeps their own answers and uploads, and the client who answers the questionnaire stays the same person, so no answer becomes confirmed or unconfirmed.`
       : kind === "remove_filing" ? `${me.label} stays on the case, not travelling: asked only what the others' forms need about them. Their answers and uploads are kept.`
       : `${me.label} files their own application again: the same filing, with its items and channels as before.`;
