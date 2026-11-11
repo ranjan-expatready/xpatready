@@ -90,3 +90,51 @@ live (cloud proxy): quotes checked against saved copies only.
 
 **Verdict: Block** — fix issues 1, 2 and 3 with pass and fail lines, then re-review the new commit. Minors 4–7: fix
 here or record as follow-up rows.
+
+---
+
+# Re-review: 6c695913a (diff-only, `git diff 2ff49d6d2..6c695913a`), 11 Nov 2026
+
+The PR changed after the first review, so this section is appended (the file is now over 100 lines). Evidence:
+- Suites on an extract of 6c695913a:
+  - `check_bk15_fees_by_role` 38/38, `runtime/check_added_filings` 59/59;
+  - `check_r2_fee_table` 87/87, `check_vv_filings` 61/61, `check_c1112_modes` 49/49;
+  - B164 52/52 (run on the working copy, which matches 6c695913a).
+- My copy :4458 (`rvbk15b`, configured checkpoint loaded, stopped after): `check_bk15_study_family_api` 15/15.
+- 10 changes made by hand to the new rules: every one makes a test fail. They removed the wait when an answer is
+  missing (in `added-filings` and in `deriveFilings`), the "to be decided" label, the person on another's application,
+  the role guard, the old and the no-step warning, the m6 warning, the principal check at release, and `co_filed` in
+  the plan.
+
+| Item | Status on 6c695913a | Evidence |
+|---|---|---|
+| Review M1 = breaker B2 ("M2"): guessed fee when the answer is missing | **Fixed** | Live, missing answer: "Application to be decided: Sample Child Q", no amount, "Waits for Sample Child Q's answer …; nothing is guessed". The invalid "maybe" waits too; No gives "Visitor visa" CAD 100. Two children waiting are both named; a child waiting but not travelling files nothing. Visitor visa waits the same way. |
+| Review M2 = breaker B1 ("M1"): release advice to overcharge | **Fixed** | The Study permit draft on :4458 has 0 "Who can be in this application" problems. In the suite, leaving out biometrics warns about biometrics only (pass and fail tests). |
+| Review M3: `on_principal` release priced a visitor visa on the student's application | **Fixed** | Released v2 with child On the principal's on :4458 (SME signed, approved). The case is unpriced: "Sample Child W is on Sample Student T's application, but in this combination each family member files their own application … nothing is guessed." Pass and fail tests. |
+| Review m4 = breaker B5 ("M5"): line `roles` bypassed | **Fixed** | `rulesFrom` refuses (`filings.ts` `reachesRole`); fail test; the change to remove it is caught. |
+| Breaker B6 ("m6"): no release warning for a role missing from fees by role | **Fixed, one gap (Minor)** | It warns on lines that are the principal, files own or on the principal's. A line saved with **no mode** files its own at runtime (the table's default) but gets no warning (pure check). The case still says why at runtime (BR-10 holds). |
+| Breaker B7 ("m7"): studio words | **Fixed, one gap (Minor)** | It says "Files a study permit application instead of their own when:" on a files-own line. A line with no mode whose default is files own still reads "Adds their own …" (`questionnaires.tsx:86`). |
+| Review m5: words | **Fixed for this PR** | "P-486" and "their line adds it" are gone. |
+| Review m6: tests the changes slipped past | **Fixed** | The principal check at release and co-filing in the plan each fail when removed. |
+| Review m7: indentation | **Fixed** | PR body path: to be fixed at the final update. |
+
+**Minors left (Should; fix here or record as follow-up rows, none blocks):**
+- n1. The wait sentence has two parentheses in a row: "(a course or program of six months or less needs no study
+  permit) (it decides whether …)". Fix: "… 6 months or more, which decides whether …".
+- n2. "Give their line its own application." is read by the case officer, who cannot change a release line. Fix: "Ask
+  the configuration author to give the child's line its own application."
+- n3. The B6 and B7 gaps above, for lines saved with no mode.
+- n4. Earlier words, not from this PR: "(P-171)", "(FQ-7)", and "starts at 5 people applying together" counted per
+  line. Proposed: one follow-up words row.
+
+**Not counted (outside this row):** the forms do not follow the filing (B4), and a recorded filing gets a new label (B3,
+whose fix is in `case-prepare.ts`). Both are with the tech lead as PR questions.
+
+**Journey re-score (reviewer): 8½/10, pass.** Correct data 1, feedback and state 1, error recovery 1 (the waiting
+state is drawn, and an invalid answer waits). Plain words ½ (n1, n2). Next step ½ (the wait names the question but does
+not link to it). Speed ½ (first view about 1.5–1.6 s on a dev server). The other four criteria stay at 1. No criterion
+is at 0.
+
+**Could not check:** CI on 6c695913a and the packs. Screen reader. D17 and D20 (the founder's).
+
+**Verdict: Approve** for 6c695913a. No Blocker or Major is open; Minors n1–n4 are Should.

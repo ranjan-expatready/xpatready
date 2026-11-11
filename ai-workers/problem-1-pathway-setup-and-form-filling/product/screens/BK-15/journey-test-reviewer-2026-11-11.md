@@ -59,3 +59,16 @@ idle) in 1.7–2.5 s on the dev server; the save and refresh in about 0.1 s.
 ## Not tested
 A real screen reader; an intended user's unaided walk (D17, D20 stay with the founder); a visible browser (headless
 only in this cloud session); 15-minute hostile file and long-text break: no new input field in this change.
+
+## Re-test on 6c695913a (same day)
+Re-walked on my copy :4458 (`rvbk15b`, stopped after). These journeys were re-run:
+- **5. Empty:** **held.** "Application to be decided", no amount, and the words name the question.
+- **6. Invalid answer:** **held.** "maybe" waits the same way.
+- **9. Release advice:** **held.** No false warning on the Study permit draft.
+- **10. On the principal's application:** **held.** The case is unpriced, in words.
+
+1024 px: no sideways scroll, no page errors.
+
+**Re-score: 8½/10, pass, no criterion at 0.** Correct data, feedback and state, and error recovery rise to 1. Plain
+words and next step stay at ½: the wait sentence has two parentheses in a row, "Give their line its own application"
+is addressed to the officer, and there is no link to the question.
