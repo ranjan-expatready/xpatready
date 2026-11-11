@@ -186,6 +186,19 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("BR-2: after the hand-off the person who decides sees Approve and no hand-off", await p.locator('[data-handoff="decide"]').count() === 0);
     await p.setViewportSize({ width: 1440, height: 900 });
   }
+  // BR-2 fail on the Release page (review M1): with everything released and only an unsubmitted change left, nothing
+  // would be released, so the page hands nothing to the Approver; the next step is the author's own submit.
+  const shared = (await api("/draft", { actor: "user-B" })).body;
+  const all = await api("/pack/release", { method: "POST", actor: "user-B", data: { expectedChanges: shared?.changes } });
+  const again = await api(`/combinations/${ID}/requirements/${encodeURIComponent(req?.lineage ?? "")}`, { method: "PATCH", data: { documentTypeKey: req?.document_type_key, attachMode: "COMBINATION_MANDATORY", appliesToRoles: req?.who, providedBy: "client" } });
+  step("setup: everything releasable is released, then the author changes the Visitor visa again (not submitted)", all.status < 300 && again.status < 300, { all: all.status, again: again.status, detail: all.body?.detail });
+  for (const [actor, name] of [["user-A", "author"], ["user-C", "Content reviewer"]]) {
+    await p.evaluate((a) => localStorage.setItem("xr-actor", a), actor);
+    await p.goto(`${BASE}/release`);
+    await btn("Nothing ready to release").waitFor({ timeout: 30000 });
+    step(`Release page, nothing ready (${name}) (BR-2 fail): no hand-off to the Approver`, await p.locator("[data-handoff]").count() === 0, await p.locator("[data-handoff]").allInnerTexts());
+  }
+  await shot("release-page-nothing-ready-1440");
   step("no page error during the walk", errs.length === 0, errs);
   await b.close();
   console.log(`\n${pass} passed, ${fail} failed`);
