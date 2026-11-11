@@ -68,6 +68,11 @@ export function StartPage() {
   const me = session.data?.actor, author = !!me?.duties?.includes("author"), demo = session.data?.workspace?.demo !== false;
   const authorPerson = session.data?.actors?.find((a) => a.duties.includes("author"));
   const s = status.data, last = lastLoaded(s), story = s?.story;
+  // When the story's job stops, every screen reads again, this one included: GET /demo/status reads the checkpoint line
+  // before the job's state, so the answer that first says "done" can still carry the checkpoint from before the job's
+  // last line (seen in this page's check, 11 Nov), and polling stops there.
+  const qc = useQueryClient(), wasRunning = React.useRef(false);
+  React.useEffect(() => { const running = story?.state === "running"; if (wasRunning.current && !running) void qc.invalidateQueries(); wasRunning.current = running; }, [story?.state, qc]);
   // BR-3: only the author duty, only in the demo workspace; both known up front, never after a click.
   const off = !session.data ? "Reading who is acting…" : !demo ? "This workspace is not the demo: starting points would empty real work, so they are off." : !author ? "Only the Configuration author loads a starting point." : null;
   const toast = useToast();

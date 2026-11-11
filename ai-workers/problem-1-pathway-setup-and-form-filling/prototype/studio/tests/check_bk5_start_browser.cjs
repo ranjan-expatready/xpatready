@@ -189,8 +189,12 @@ const LONG = 400000;
   step("BR-5 fail: a reset while the story runs shows the server's own words", /running: wait for it to finish/.test(await p.locator("[data-start-failed]").innerText()), await p.locator("[data-start-failed]").innerText());
   await p.keyboard.press("Escape"); await dialog().waitFor({ state: "detached" });
   await p.waitForFunction(() => !document.querySelector("[data-door=story] [data-story-running]"), null, { timeout: LONG, polling: 2000 });
+  // Without a reload: the page reads the demo again when the job stops (GET /demo/status can answer "done" with the
+  // checkpoint from before the job's last line; review of this check's run 2).
+  await p.locator("[data-last-loaded]").filter({ hasText: "Last loaded: The finished story" }).waitFor({ timeout: 15000 }).catch(() => undefined);
+  const storyState = await api("/demo/status");
   const llStory = await lastLoaded();
-  step("BR-4 pass: after the story, \"Last loaded: The finished story\"", /Last loaded: The finished story/.test(llStory), llStory);
+  step("BR-4 pass: after the story, without a reload, \"Last loaded: The finished story\"", /Last loaded: The finished story/.test(llStory), { llStory, story: storyState.body?.story?.state, error: storyState.body?.story?.error, checkpoint: storyState.body?.checkpoint });
   const famLink = door("story").getByRole("link", { name: "Open the family case" });
   step("Gate A (door 3): its card opens the family case", await famLink.count() === 1);
   if (await famLink.count()) { await famLink.click(); await p.waitForURL(/\/cases\/[^/]+$/, { timeout: 30000 }); }
