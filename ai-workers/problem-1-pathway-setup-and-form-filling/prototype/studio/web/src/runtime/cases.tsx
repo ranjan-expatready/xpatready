@@ -2,8 +2,8 @@
 // /cases: the officer's case list, one case (people + agent view), and the client's questionnaire (SQR, phone first).
 // The people are simulated (demo chrome: the "Acting as" switch is not for porting); the server decides what each may do.
 import * as React from "react";
-import { Link, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ExternalLink, Plus, UserPlus } from "lucide-react";
+import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { ArrowRight, ExternalLink, Plus, UserPlus } from "lucide-react";
 import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,6 +40,9 @@ const PEOPLE = [
 const STAFF = new Set(["user-O", "user-R", "user-T", "user-S"]);
 const isOfficer = (id: string) => STAFF.has(id);
 const isClient = (id: string) => id === "user-P" || id === "user-Q";
+/** BK-3 PR 2: a link from the Studio into the case area acts as firm staff (the case officer unless already staff), as
+ *  the case area's own "Product Studio →" acts as the Studio person. */
+export const actAsCaseStaff = () => { if (!STAFF.has(getActor())) setActor("user-O"); };
 /** "Sponsor" → "sponsor"; an abbreviation in capitals ("IMM", "PR") keeps its case. */
 const lower = (w: string) => w.replace(/\b([A-Z])([a-z])/g, (_, a: string, b: string) => a.toLowerCase() + b);
 const ROLE: Record<string, string> = { case: "Application", principal: "Principal applicant", spouse_or_partner: "Spouse or partner", child: "Child" };
@@ -86,7 +89,12 @@ type CaseRow = { id: string; reference: string; combination: string; status: str
 function CaseList() {
   const actor = useActorId();
   const cases = useApi<{ cases: CaseRow[]; next: string | null }>(["runtime", "cases", actor], "/runtime/cases", { retry: noRetryOnRefusal });
-  const [open, setOpen] = React.useState(false);
+  // BK-3 PR 2: "Open a case on Release N" on a released combination lands here as /cases?open=<combinationId>: the
+  // dialog opens with that combination chosen; closing it drops the address's choice, so a reload does not reopen it.
+  const [sp, setSp] = useSearchParams();
+  const asked = sp.get("open");
+  const [open, setOpen] = React.useState(!!asked);
+  const close = () => { setOpen(false); if (sp.has("open")) { const n = new URLSearchParams(sp); n.delete("open"); setSp(n, { replace: true }); } };
   // Later pages through the API's cursor, appended below the first (PR 10 review): page 1 stays live, later ones are kept.
   const [more, setMore] = React.useState<{ rows: CaseRow[]; next: string | null } | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -108,12 +116,12 @@ function CaseList() {
         : !rows.length ? <Notice title="No cases yet">Open a case for a released combination; then add the family and send the client their questionnaire.</Notice>
         : <Table head={["Reference", "Combination", "Status", "Opened"]}>{rows.map((c) => <tr key={c.id}><td><Link className="font-medium text-text-link hover:underline" to={`/cases/${c.id}`}>{c.reference}</Link></td><td>{c.combination}</td><td><Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill></td><td>{new Date(c.created_at).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric" })}</td></tr>)}</Table>}
       {rows.length ? <div className="flex items-center gap-3 text-[13px] text-text-muted"><span>{rows.length} case{rows.length === 1 ? "" : "s"} shown</span>{next ? <Button size="sm" variant="secondary" busy={loading} onClick={() => void loadMore()}>Load more</Button> : null}</div> : null}
-      {open ? <NewCaseDialog close={() => setOpen(false)} /> : null}
+      {open ? <NewCaseDialog close={close} initial={asked} /> : null}
     </div>
   );
 }
 
-function NewCaseDialog({ close }: { close: () => void }) {
+function NewCaseDialog({ close, initial }: { close: () => void; initial?: string | null }) {
   // QA-38: a case opens on the combination's newest release, so the list names that one (the server's rule).
   // V3 B1 (P-297 (3)): the server says which of them a case can open on (the same startable check as opening one);
   // the others are named apart, with the reason, and never offered.
@@ -125,7 +133,7 @@ function NewCaseDialog({ close }: { close: () => void }) {
   const loadFailed = releases.isError || (releases.isSuccess && !Array.isArray(releases.data));
   const combos = rows.filter((r) => r.startable);
   const notReady = rows.filter((r) => !r.startable);
-  const [f, setF] = React.useState({ combinationId: "", reference: "", principal: "", clientActor: "user-P" });
+  const [f, setF] = React.useState({ combinationId: initial ?? "", reference: "", principal: "", clientActor: "user-P" });
   const firm = useFirm();
   const [team, setTeam] = React.useState<{ representative: string; officer: string }>({ representative: "", officer: "" });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -134,6 +142,8 @@ function NewCaseDialog({ close }: { close: () => void }) {
   const chosen = combos.some((c) => c.combination_id === f.combinationId) ? f.combinationId : combos[0]?.combination_id;
   // C6.17 (BR-3): a later stage of a route records its earlier stages ("Done before we started").
   const chosenRelease = combos.find((c) => c.combination_id === chosen);
+  // BK-3 PR 2: the combination asked for from the Studio, when no case can open on it now, is said, never swapped silently.
+  const askedOff = initial && f.combinationId === initial && releases.isSuccess && !loadFailed && !combos.some((c) => c.combination_id === initial) ? notReady.find((r) => r.combination_id === initial) ?? null : undefined;
   const [earlier, setEarlier] = React.useState<Parameters<typeof EarlierStages>[0]["value"]>({});
   const earlierBody = earlierOf(chosenRelease, earlier);
   const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: chosen, ...(earlierBody ? { earlier: earlierBody } : {}), reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, ...(team.representative ? { representative: team.representative } : {}), ...(team.officer ? { caseOfficers: [team.officer] } : {}), idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => nav(`/cases/${c.id}`) });
@@ -143,6 +153,7 @@ function NewCaseDialog({ close }: { close: () => void }) {
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title="Open a case" description="The case works from the combination's latest release, frozen now: a later release never changes it." guard
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={create.isPending} disabled={!combos.length} title={!combos.length && !releases.isLoading && !loadFailed ? (notReady.length ? "No released combination is ready for new cases yet" : "Nothing is released yet") : undefined} onClick={submit}>Open case</Button></>}>
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (combos.length) submit(); }}>
+        {askedOff !== undefined ? <div data-asked-off><Notice tone="warn" title={askedOff ? `"${askedOff.combination}" is not ready for new cases` : "That combination has no release a case can open on"}>{combos.length ? "Choose another released combination below, or ask the people who set it up." : "Ask the people who set it up."}</Notice></div> : null}
         {releases.isLoading ? <Skeleton className="h-9 w-full" /> : loadFailed ? <Notice tone="warn" title="Could not load the released combinations">{releases.error instanceof Error ? releases.error.message : "Close this and try again."}</Notice> : !combos.length ? (notReady.length ? null : <Notice tone="warn" title="Nothing is released yet">A case opens only on a released combination.</Notice>) : (
           <Field label="Combination (released)" error={errors.combinationId}>
             <Select value={chosen} onChange={(e) => setF({ ...f, combinationId: e.target.value })}>{combos.map((c) => <option key={c.combination_id} value={c.combination_id}>{c.combination} · release {c.version}</option>)}</Select>
@@ -188,7 +199,7 @@ function CasePage() {
     <div className="mx-auto max-w-7xl space-y-5">
       <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
         <div className="min-w-0 flex-1">
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><Pill tone="info" title={c.pin.revision > 1 ? `Moved to this release on ${new Date(c.pin.pinned_at).toLocaleString("en-CA")}; a later release never changes this case until someone moves it` : `Frozen when the case opened (${new Date(c.pin.pinned_at).toLocaleString("en-CA")}); a later release never changes this case until someone moves it`}>{c.release?.label ?? `Release ${c.pin.release_version}`}</Pill></h1>
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><ReleasePill c={c} /></h1>
           <div className="mt-1 empty:hidden"><CaseReadinessPill caseId={c.id} /></div>
           {c.team ? <CaseTeamChip caseId={c.id} line={c.team} /> : null}
           {c.employer_link ? <div className="mt-1"><EmployerLinkLine link={c.employer_link} caseId={c.id} /></div> : null}
@@ -219,6 +230,18 @@ function CasePage() {
       <Questionnaire caseId={c.id} mode="agent" /></div>
       {adding ? <AddPersonDialog caseId={c.id} line={adding} close={() => setAdding(null)} /> : null}
     </div>
+  );
+}
+
+/** The case's release; BK-3 PR 2 (qa baseline dead end 2): it opens the combination's set-up in the Studio, acting as
+ *  the Studio person as "Product Studio →" does. The case stays on its frozen release whatever the Studio shows. */
+function ReleasePill({ c }: { c: CaseInfo }) {
+  const when = new Date(c.pin.pinned_at).toLocaleString("en-CA");
+  const label = c.release?.label ?? `Release ${c.pin.release_version}`;
+  const frozen = c.pin.revision > 1 ? `Moved to this release on ${when}; a later release never changes this case until someone moves it` : `Frozen when the case opened (${when}); a later release never changes this case until someone moves it`;
+  return (
+    <Link to={`/c/${c.combination_id}`} onClick={() => setActor("user-A")} data-case-release aria-label={`${label}: open its set-up in Product Studio`} title={`${frozen}. Opens its set-up in Product Studio.`}
+      className="inline-flex min-h-6 items-center rounded-md outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-primary/40"><Pill tone="info">{label}<ArrowRight className="size-3" aria-hidden /></Pill></Link>
   );
 }
 
