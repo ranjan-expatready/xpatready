@@ -171,7 +171,7 @@ const LONG = 400000;
     await dialog().getByRole("button", { name: "Empty and start" }).click();
     await p.locator("[data-start-running]").waitFor({ timeout: 10000 });
     const runWords = await p.locator("[data-start-running]").innerText();
-    step("BR-5: running shows the step and real elapsed seconds", /(Emptying…|Loading the configured checkpoint…) \d+ s/.test(runWords), runWords);
+    step("BR-5: running shows the step and real elapsed seconds", /(Reading the demo's state…|Emptying…|Loading the configured checkpoint…) \d+ s/.test(runWords), runWords);
     await p.locator("[data-start-failed]").waitFor({ timeout: LONG });
     failedWords = await p.locator("[data-start-failed]").innerText();
   } finally { sql(`drop trigger if exists bk5_refuse_last on audit_event`); sql(`drop function if exists bk5_refuse_last()`); }
