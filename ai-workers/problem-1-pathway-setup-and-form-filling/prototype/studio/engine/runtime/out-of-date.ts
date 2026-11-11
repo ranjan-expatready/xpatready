@@ -23,7 +23,8 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stri
 /** The facts whose value differs between what an item read (`then`) and today (`now`), one line per person and fact
  *  (a fact written in several form fields is one change). A fact no longer read is a change to "no answer", or to its
  *  newest saved value marked not confirmed yet. Representative facts (from the firm record) are about "representative". */
-export function factChanges(then: Pick<FormFact, "fact" | "about" | "row" | "value">[], now: Pick<FormFact, "fact" | "about" | "row" | "value">[], words: ChangeWords): FactChange[] {
+/** `label` (QA-392): a fact's own words where the caller has better ones than the fact's (a sheet line in the form's question). */
+export function factChanges(then: (Pick<FormFact, "fact" | "about" | "row" | "value"> & { label?: string })[], now: (Pick<FormFact, "fact" | "about" | "row" | "value"> & { label?: string })[], words: ChangeWords): FactChange[] {
   // The whole "about" (a person, or a person's relation such as "<id>/parent_1"; bot review on #926): two relatives with the
   // same fact are never folded into one, so a change to either one is seen.
   const key = (f: { fact: string; about: string; row: number | null }) => `${f.about}|${f.fact}|${f.row ?? ""}`;
@@ -41,7 +42,7 @@ export function factChanges(then: Pick<FormFact, "fact" | "about" | "row" | "val
     // C8.2 break M4: the same value typed again (left unconfirmed) is no change.
     if (x && !y && pending !== null && same(pending, x.value)) continue;
     const person = factPerson(f.about, f.row, words);
-    out.set(id, { fact: f.fact, about, relation, label: words.label(f.fact), person, was: x?.value ?? null, now: y ? y.value : pending, confirmed: !!y || pending === null, at: words.at(f.about, f.fact) });
+    out.set(id, { fact: f.fact, about, relation, label: y?.label ?? x?.label ?? words.label(f.fact), person, was: x?.value ?? null, now: y ? y.value : pending, confirmed: !!y || pending === null, at: words.at(f.about, f.fact) });
   }
   return [...out.values()].sort((p, q) => p.person.localeCompare(q.person) || p.label.localeCompare(q.label));
 }
