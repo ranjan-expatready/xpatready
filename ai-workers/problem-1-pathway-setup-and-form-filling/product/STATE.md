@@ -16,6 +16,8 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
 6. **Bake count:** 16 of 28 rows done at 21:47 + BK-5 PR 1; walk 0's 4 Majors in build; forecast walk 1 ~13 Nov night slips by the outage (~5.5 h).
 7. **Standbys:** Lead 22 `local_99d39f48-9a5d-4c1d-b146-66b246983fd7`; start a second at the founder's next typed turn in the desktop app (P-286). Lead 20's check 952951b9 deleted; create yours (`run lead-watch; read STATE Start here`).
 
+**Lead 21 live (from 01:24 IST 12 Nov):** check 27be0fb3 (:13/:43); start read 124k (hand over ~324k); weekly 22%. 01:3x: CI on the 15 re-run PRs mostly queued; **#1568 guards** (outage fail, never re-run) re-run. **#1580 (BK-4a) conflicts with main** (`App.tsx`, after #1581) and its last ci failed two suites on the release pill's words; #1583 (QA-401) stacks on it. Both lanes ended, so the **BK-5 lane** (claude.ai "BK-5 PR 1: start page", 51%; built **#1589 BK-4c**, approved 280e16d) now owns #1580 → #1583 → #1589: merge main, fix the two suites, re-review diff, label (brief sent, bubble confirmed). Ruled (P-486): BK-4c hand-back only when all is answered, kept; quieter line only if walk 1 stalls. Owed: qa row for C11.1's pack set-up (picks IMM 5707, removed on the checkpoint). #1570 diff read (22:14): label on green. Label #1569, #1579 on green.
+
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
 | # | Ask (IST) | Status |
 |---|---|---|
