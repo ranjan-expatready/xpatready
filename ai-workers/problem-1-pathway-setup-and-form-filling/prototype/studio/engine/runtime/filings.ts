@@ -5,7 +5,9 @@
 // (BR-18): a capped line is carried by the principal's filing and the others are marked exempt ("Family Rate"), so the
 // filings' lines always add up to the group's total. Each group is priced on its own (a filing split out pays alone), and
 // an age-limited line counts only the people its ages reach when ages are given (VV-R15). A co-filed application (M3-S1)
-// carries its own fees: a per_application line naming its role. With neither table nor release modes: not derived.
+// carries its own fees: a per_application line naming its role. A filing a person adds (M3-S2: their line's rule holds on
+// their answers) is their own application, charged only by the fee line the line names. With neither table nor release
+// modes there is nothing to work from, and it says so.
 // Pure: no database, no clock; tests/runtime/check_vv_filings.ts. Shape: contracts/runtime.ts CaseFilings (r5c §"New").
 //
 // Filing modes per role come from the release ("Who can be in this application", M3-0) when it says them, else this
@@ -89,7 +91,10 @@ type Rules = { label: string; modes: Map<string, LineMode>; fees: FeeRule[]; gro
 /** What the case adds (C6.12, the stored prepare view): each person's age in whole years (null: no date of birth yet),
  *  the filing modes the release says per role (M3-0; a role it leaves out falls back to the table below), and the
  *  submission group each person's filing is in (a split is stored; default the family group). */
-export type FilingOptions = { ages?: Map<string, number | null>; modes?: Map<string, LineMode | null>; label?: string; groupOf?: (subject: string) => string; groupKind?: (group: string) => SubmissionGroup["kind"] };
+/** `adds` (M3-S2): per person, the filing their line adds because its rule holds on their answers (engine/runtime/
+ *  added-filings.ts), with the fee line that charges it. */
+export type FilingOptions = { ages?: Map<string, number | null>; modes?: Map<string, LineMode | null>; label?: string; groupOf?: (subject: string) => string; groupKind?: (group: string) => SubmissionGroup["kind"];
+  adds?: Map<string, { filing: string; fee?: string | string[] }> };
 export const FAMILY_GROUP = "group-family";
 
 /** A combination's rules from the fee table (an own property only: "constructor" or "__proto__" is no combination). */
@@ -215,7 +220,8 @@ function ageWords(rules: Rules, ages: boolean): string {
 export function deriveFilings(combinationKey: string, people: Participant[], rulesFor: (key: string) => Rules | undefined = (k) => RULES.get(k), opts: FilingOptions = {}): CaseFilings {
   const rules = rulesFor(combinationKey);
   const released = !!opts.modes?.size;
-  if (!rules && !released) return { derived: false, combination: combinationKey, why: `Filings and fees are not derived yet for this combination (they are worked out once its fee lines and filing modes are in the fee table). Nothing is guessed.` };
+  // B164 (M3-S2): no data to work from is said as the data it waits for, never as a slice of combinations.
+  if (!rules && !released) return { derived: false, combination: combinationKey, why: `No filing is set for anyone in this combination (Who can be in this application) and the fee table has no row it can price from, so no filing or fee is worked out. Nothing is guessed.` };
   const label = rules?.label ?? opts.label ?? combinationKey;
   const fees0 = rules?.fees ?? [];
   // BR-2: the principal always files their own application, whatever a table or release says.
@@ -227,8 +233,9 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const notFiling: NotFiling[] = [];
   const planned: PlanPerson[] = [];
   for (const p of persons) {
-    if (modeOf(p.role) === undefined) notFiling.push({ subject: p.subjectId, label: p.label, role: p.role, why: `${label}: no filing is set for a ${p.role.replace(/_/g, " ")} (Who can be in this application), so nothing is filed for ${p.label}.` });
-    else planned.push({ subject: p.subjectId, role: p.role, label: p.label, travelling: p.applies });
+    const adds = p.applies ? opts.adds?.get(p.subjectId) : undefined;
+    if (modeOf(p.role) === undefined && !adds) notFiling.push({ subject: p.subjectId, label: p.label, role: p.role, why: `${label}: no filing is set for a ${p.role.replace(/_/g, " ")} (Who can be in this application), so nothing is filed for ${p.label}.` });
+    else planned.push({ subject: p.subjectId, role: p.role, label: p.label, travelling: p.applies, ...(adds ? { adds: adds.filing } : {}) });
   }
   const plan = filingPlan(planned, modeOf);
   for (const n of plan.notFiling) notFiling.push({ subject: n.person.subject, label: n.person.label, role: n.person.role, why: n.why });
@@ -236,7 +243,7 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const principal = plan.filings.find((f) => f.owner.role === "principal");
   // Keyed by the owner, so a filing keeps its id when someone else stops travelling. A co-filed filing is always in the
   // principal's group (it cannot be sent alone).
-  const filings: CaseFiling[] = plan.filings.map((f) => ({ id: f.id, combination: combinationKey, label: f.kind === "co_filed" ? `${label}: sponsorship (${f.owner.label})` : `${label}: ${f.owner.label}`,
+  const filings: CaseFiling[] = plan.filings.map((f) => ({ id: f.id, combination: combinationKey, label: f.kind === "co_filed" ? `${label}: sponsorship (${f.owner.label})` : f.added ? `${f.added}: ${f.owner.label}` : `${label}: ${f.owner.label}`,
     mode: f.kind === "co_filed" ? "co_filed" : "files_own", owner: { subject: f.owner.subject, label: f.owner.label, role: f.owner.role },
     applicants: f.applicants.map((a) => ({ subject: a.person.subject, label: a.person.label, role: a.person.role, mode: a.mode })),
     group: f.kind === "co_filed" && principal ? groupOf(principal.owner.subject) : groupOf(f.owner.subject), status: "NOT_STARTED", number: null }));
@@ -249,7 +256,16 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   // yet (the release requires exactly one, BR-4): its application and its own fee are still to come, so no total yet.
   const coRoles = [...(released ? opts.modes! : rules?.modes ?? new Map<string, LineMode>())].filter(([, m]) => m === "co_files").map(([r]) => r);
   const missingCo = coRoles.filter((r) => !persons.some((p) => p.role === r));
-  const priced = unreached.length || missingCo.length ? [] : fees0;
+  // M3-S2: a filing a person adds is charged only by the fee lines its line names (break M1: no other line counts that
+  // person, so they never pay the application they left); each must be one of the combination's lines reaching the
+  // person's role (break M2), on any basis (review M1: a per-person line such as a study permit charges them once). Otherwise its fee is unknown, so the case charges nothing
+  // (BR-10). A line that charges the person but is not named stops counting them (review n1): the author names every
+  // such line, and the release warns of one left out (engine/validate.ts addedFilingProblems).
+  const addedFee = new Map(plan.filings.filter((f) => f.added).map((f) => { const k = opts.adds?.get(f.owner.subject)?.fee; return [f.id, typeof k === "string" ? [k] : Array.isArray(k) ? k : []] as const; }));
+  const addedOwner = new Map(plan.filings.filter((f) => f.added).map((f) => [f.owner.subject, f.id]));
+  const reaches = (key: string, role: string) => { const r = fees0.find((x) => x.key === key); return !!r && (!r.roles || r.roles.includes(role)); };
+  const unpricedAdded = filings.filter((f) => { const k = addedFee.get(f.id); return !!k && (!k.length || !k.every((x) => reaches(x, f.owner!.role))); });
+  const priced = unreached.length || missingCo.length || unpricedAdded.length ? [] : fees0;
   const groups: SubmissionGroup[] = [], fees: FeeLine[] = [];
   for (const gid of [...new Set(filings.map((f) => f.group))]) {
     const mine = filings.filter((f) => f.group === gid);
@@ -261,12 +277,12 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
       // co-filed application is charged only by a line naming its owner's role (M3-S1): its owner pays, covering nobody
       // else (a line with no roles charges the applications of people who apply, as before).
       const units = rule.basis === "per_application"
-        ? mine.filter((f) => (f.mode === "co_filed" ? !!rule.roles?.includes(f.owner!.role) : ofRole(f.owner!.role))).flatMap((f) => {
+        ? mine.filter((f) => (addedFee.has(f.id) ? addedFee.get(f.id)!.includes(rule.key) : f.mode === "co_filed" ? !!rule.roles?.includes(f.owner!.role) : ofRole(f.owner!.role))).flatMap((f) => {
             if (f.mode === "co_filed") return [{ filing: f.id, who: { subject: f.owner!.subject, label: f.owner!.label, role: f.owner!.role, mode: "applying" as const }, covers: 0 }];
             const owner = f.applicants.find((a) => a.subject === f.owner!.subject && a.mode === "applying");
             return owner ? [{ filing: f.id, who: owner, covers: f.applicants.filter((a) => a.mode === "applying").length }] : [];
           })
-        : payers.filter((x) => ofRole(x.who.role));
+        : payers.filter((x) => (addedOwner.has(x.who.subject) ? addedFee.get(addedOwner.get(x.who.subject)!)!.includes(rule.key) : ofRole(x.who.role)));
       if (!units.length) continue;
       const check = new Map(units.map((x) => [x.who.subject, ageCheck(rule, opts.ages?.get(x.who.subject))]));
       const paying = units.filter((x) => { const c = check.get(x.who.subject)!; return "pays" in c && c.pays; });
@@ -302,6 +318,7 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   const feesKnown = priced.length > 0;
   const body = { filings, groups, fees, not_filing: notFiling };
   const unpriced = missingCo.length && fees0.length ? `No ${missingCo.map((r) => r.replace(/_/g, " ")).join(" or ")} on this case yet: their co-filed application carries its own fee, so no fee is charged until they are added; nothing is guessed.`
+    : unpricedAdded.length && fees0.length ? `${unpricedAdded.map((f) => `${f.label} is added by its rule`).join("; ")}, and its line does not name this combination's fee lines for it (each reaching a ${unpricedAdded.map((f) => f.owner!.role.replace(/_/g, " ")).join(" or ")}), so no fee is charged on this case; nothing is guessed.`
     : unreached.length && fees0.length ? `The fee table has no fee line for ${unreached.map((f) => `${f.owner!.label}'s co-filed application`).join(" or ")} (a per-application line naming its role), so no fee is charged on this case; nothing is guessed.` : noFeeLines(label);
   return { derived: true, combination: combinationKey, label, ...body, currency: "CAD", fees_worked_out: feesKnown,
     fees_why: feesKnown ? null : unpriced,

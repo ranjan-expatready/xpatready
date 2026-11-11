@@ -198,6 +198,20 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   }
   for (const f of s.forms) if (f.condition) for (const row of forms.filter((x) => x.form === f.form_number)) keepAnswered(f.condition, conditionSubjects(people, row.person, f.condition.subjectKind), `whether ${f.form_number} applies to ${row.person_label}`);
 
+  // M3-S2 (P-425): a "Who can be in this application" line's rule that adds a filing decides it for each person of the
+  // line who applies (engine/runtime/added-filings.ts reads the same rule), so its question is asked of them and kept once
+  // answered, like a form's or a document line's condition.
+  for (const l of (s.combination?.participants ?? []) as { role: string; addsFiling?: { filing?: unknown; condition?: { subjectKind?: string } } | null }[]) {
+    const tree = l?.addsFiling?.condition;
+    if (!tree || typeof tree !== "object") continue;
+    for (const person of people.filter((x) => x.role === l.role && x.applies)) {
+      const what = `whether ${person.label} files their own ${String(l.addsFiling!.filing ?? "application").toLowerCase()} application`;
+      const c = lineCondition(s, known, people, person.id, tree);
+      if (c.applies === "cannot_tell") addDecider(c.missing, c.about ?? person.id, what);
+      keepAnswered(tree, conditionSubjects(people, person.id, tree.subjectKind), what);
+    }
+  }
+
   // ------------------------------------------------------------ document checklist
   // Q2 (#325): whose list a line is on comes from its own "who" (lineHolders); its condition is decided on its subject.
   const checklist = s.document_requirements.flatMap((d) => {

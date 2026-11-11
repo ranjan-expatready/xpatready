@@ -25,6 +25,7 @@ import { caseChecklist } from "../../engine/runtime/case-checklist.ts";
 import { caseView, checkValue, isClientField, knownOf, optionsOf } from "../../engine/runtime/case.ts";
 import { releaseModes } from "../../engine/filing-modes.ts";
 import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, feeRule, rulesFrom } from "../../engine/runtime/filings.ts";
+import { addedFilings } from "../../engine/runtime/added-filings.ts";
 /** Review r1 M4: the biometrics ages come from the fee table, never from code. */
 const bioAges = feeRule("vv.single", "biometrics")?.exempt;
 import { blocksLock, changedGroups, formCoverage, groupFacts, inputHash, readiness as formReadiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
@@ -167,11 +168,13 @@ export class CasePrepare {
     // M3-0, C11.12: the filing mode per role is the release's ("Who can be in this application"); a role it leaves out
     // uses the default. One reading of the release's modes for this view and GET …/filings (releaseModes).
     const modes = releaseModes(s.combination.participants ?? []);
-    const first = deriveFilings(own!.combinationKey, people, undefined, { ages, modes, label: s.combination.label });
+    // M3-S2: a filing a person's line adds when its rule holds on their answers (the same reading as GET …/filings).
+    const { known } = knownOf(s, people, clean, rows, today);
+    const adds = addedFilings(s, known, people);
+    const first = deriveFilings(own!.combinationKey, people, undefined, { ages, modes, adds, label: s.combination.label });
     if (!first.derived) return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: false, why: first.why, portal: own!.portalKey ?? null, filings: [], groups: [], items: [], waiting: [], not_needed: [], fees: [], readiness: [], figures: [], case_figure: null, stage1: [], version: "0" };
 
     // Items the release and the case give each filer (forms by who and minimum age, the checklist's documents, biometrics).
-    const { known } = knownOf(s, people, clean, rows, today);
     const renderPeople = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
     const r = render(s, renderPeople, known, { today });
     const list = caseChecklist(s, own!.combinationKey, people, known, today);
@@ -259,7 +262,7 @@ export class CasePrepare {
     // Fees per stored group: a split filing is priced on its own.
     const groupOfSubject = new Map(stored.filings.map((f) => [f.subjectId, f.submissionGroupId]));
     const kindOf = new Map(stored.groups.map((g) => [g.id, g.kind === "FAMILY" ? "family" as const : "separate" as const]));
-    const d = deriveFilings(own!.combinationKey, people, undefined, { ages, modes, label: s.combination.label, groupOf: (subj) => groupOfSubject.get(subj) ?? FAMILY_GROUP, groupKind: (g) => kindOf.get(g) ?? "family" });
+    const d = deriveFilings(own!.combinationKey, people, undefined, { ages, modes, adds, label: s.combination.label, groupOf: (subj) => groupOfSubject.get(subj) ?? FAMILY_GROUP, groupKind: (g) => kindOf.get(g) ?? "family" });
     if (!d.derived) fail("The filings could not be worked out.", HttpStatus.CONFLICT);
     const done = d as Extract<typeof d, { derived: true }>;
     const idOfFiling = new Map(stored.filings.map((f) => [`filing-${f.subjectId}`, f.id]));

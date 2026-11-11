@@ -14,7 +14,7 @@ import { wordsOnly } from "../../engine/render.ts";
 import { choiceEditionsOf } from "../../engine/options.ts";
 import { acceptsOf, allowedChannels, channelProblems, filingKind, filingMethod, lineOf, notAcceptedWords, notNeededWords, signatureOf } from "../../engine/channels.ts";
 import { ACCOUNT_WORDS, CHANNEL_WORDS, throughAccount, CHANNELS, SIGNATURE_FITS, SIGNATURE_WORDS, type Channel } from "../../contracts/forms.ts";
-import { type LineMode, answeredBy, irccWords, ourWords, signedByLabel, tabOf, type LastFormChange, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
+import { type AddsFiling, type LineMode, answeredBy, irccWords, ourWords, signedByLabel, tabOf, type LastFormChange, type RemovedForm, type FamilyKey, type OnlyIf, type PeopleView, type QuestionnairesView, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
 import { actorOf, Db, fail, readerOf, type Actor } from "./core.ts";
 import { FormProgressService } from "./form-progress.ts";
 import { chipOf, type FormStepChip } from "../../contracts/form-progress.ts";
@@ -138,7 +138,7 @@ export class WorkspaceViews {
     const c = await this.db.combination.findUniqueOrThrow({ where: { id } });
     const roles = await this.studio.personRoles(workspaceId);
     const state = await this.studio.peopleState(id);
-    type Stored = { role: string; label?: string; min: number; max: number; applies?: boolean; preview?: number; filingMode?: unknown; quote?: string | null; origin?: "HUMAN" | "AI_PROPOSAL" | "SAMPLE" };
+    type Stored = { role: string; label?: string; min: number; max: number; applies?: boolean; preview?: number; filingMode?: unknown; quote?: string | null; origin?: "HUMAN" | "AI_PROPOSAL" | "SAMPLE"; addsFiling?: AddsFiling | null };
     // M3-S1: worked out only when a fee line also reaches each co-filed application (as the case's own filings do).
     const coFilers = (c.participants as Stored[]).filter((p) => p.filingMode === "co_files").map((p) => p.role);
     const feesKnown = hasFeeRules(c.combinationKey, coFilers);
@@ -149,7 +149,7 @@ export class WorkspaceViews {
       const filingMode = stored && !!r?.mayBeApplicant === (stored !== "co_files") ? stored : null;
       const applies = appliesOf(filingMode, p.applies !== false) && !!r?.mayBeApplicant;
       return { role: p.role, label: p.label ?? r?.label ?? p.role, roleLabel: r?.label ?? p.role, meaning: r?.meaning ?? "", min: p.min, max: p.max, applies, preview: p.preview, filingMode, filing: aliasOf(filingMode),
-        ...filingWords({ role: p.role, filingMode, applies }, !!r?.mayBeApplicant, feesKnown, c.label), quote: p.quote ?? null, origin: p.origin, mayBeApplicant: !!r?.mayBeApplicant, answeredBy: answeredBy(p.role) };
+        ...filingWords({ role: p.role, filingMode, applies }, !!r?.mayBeApplicant, feesKnown, c.label), quote: p.quote ?? null, origin: p.origin, mayBeApplicant: !!r?.mayBeApplicant, answeredBy: answeredBy(p.role), addsFiling: p.addsFiling ?? null }; // M3-S2: kept, so a save keeps it
     });
     // C11.12 "What a case gets": the plan of filings for one case of each line's preview count (concept §4).
     const plan = previewFilings(lines, c.label, feesKnown, (role) => defaultModeOf(c.combinationKey, role));
