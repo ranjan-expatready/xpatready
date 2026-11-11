@@ -97,3 +97,36 @@
 - `check_bk12_sample_case.ts` and `check_m3_c1_expected_lines.ts`: they need a running copy or database.
 - `run-suites.sh --changed`.
 - The IRCC fee list page itself: the biometrics amounts rest on the existing line's citation.
+
+## Re-review on 864484a8d (diff-only: `git diff 5ce20369a 864484a8d`)
+
+**Verdict: Approve** (no open Blocker or Major).
+
+- **M1: closed.** `fee-table.json` and `check_r2_fee_table.ts` are identical to origin/main (0 diff lines), so `rulesFrom(FEE_TABLE, "sp.outside")` is `undefined` and the Study permit's fees are "not worked out", as on main. No wrong total can show (BR-10).
+- **The new record claims match the code at 68a7b59d1.**
+  - `filings.ts:276-280`: an added filing is priced only by the lines it names; none named → `unpricedAdded` → `priced = []`.
+  - `filings.ts:297`: a payer without an added filing is counted by `ofRole`.
+  - The CAD 450 / CAD 620 figures are the ones I measured.
+  - C5/R-e is framed as a general row (a person whose line can add a filing), not a Study permit branch.
+- **D8's quote is word for word** in the saved `guide-5269.html` (tag-stripped).
+- **m1:** moot (those tests are reverted).
+- **m3:** closed by ASSUMPTIONS C12-C14. Their content is accurate; re-scoring the top line is left to the Lead.
+- **m4:** closed. `answerValues` on ["Québec", …] gives `quebec`, which the condition and the Sample answer use.
+- **Code and test runs.** Still no change under engine, api/src, web/src, packages or p5. On the new head:
+
+  | Suite | Result |
+  |---|---|
+  | `check_r2_fee_table` | 87/87 |
+  | `check_bk10_form_rules_data` | 20/20 |
+  | `check_b164_no_engine_keys` | 51/51 |
+  | `runtime/check_added_filings` | 56/56 |
+
+- **New Minor (n1, records; fix or list in the PR).** Dry-run §6 D7 still reads "A child on the student's application pays the study permit fee per person (Sample)". Its "Where" is "`samples/fee-table.json` sp.outside note", and that note no longer says this: the fee lines are not entered. Reword D7 as the expert's question only ("what a non-studying child needs"), or fold it into D8/C5.
+- **Journey score (re-walk, same method): 8/10, Pass.**
+  - Correct data is now 1: no wrong total for any family; fees are said not worked out.
+  - Task completed ½: fees are deferred to R-e by design.
+  - Feedback and state ½.
+  - Error recovery ½.
+  - Plain words 1; trust and sources 1.
+  - That is 5/6 applicable criteria, 8.3 → 8/10.
+- **Could not check:** the same items as above (the live dry-run numbers, the DB-backed suites, `run-suites.sh`).
