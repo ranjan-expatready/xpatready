@@ -55,7 +55,10 @@ const g = none.find((x) => x.title === "Education") ?? none[0];
 const back = await call("PUT", `/runtime/cases/${c.id}/groups/${g.subjectId}/${g.section}/none-apply`, { noneApply: false, expectedId: g.group!.none_apply!.id }, OFFICER);
 it = await item();
 s = await sheet(it!.id);
-ok("QA-309 (fail): a \"none apply\" taken back waits again: the item is not Done and its reason names the group", back.status < 300 && it?.state === "to_do" && /^Waiting for \d+ facts? to answer or confirm: /.test(it?.reason ?? "") && s.sections.some((x) => x.waiting.length > 0), { back: back.status, state: it?.state, reason: it?.reason });
+// QA-392: the ticked part held the No its "none apply" gives (the sheet says what the PDF copy writes), so taking it back
+// makes that part out of date (P-65: the portal still holds that No): the reason names the form's question and the change,
+// and the part waits again.
+ok("QA-309 (fail): a \"none apply\" taken back waits again: the item is not Done; its reason names the ticked part and the form's question whose No changed (QA-392); the part waits again", back.status < 300 && it?.state === "out_of_date" && new RegExp(`\\(${g.title}\\) as entered in the portal .* is out of date: \u201c[^\u201d]+\\?\u201d of ${g.about_label} changed from No to no answer`).test(it?.reason ?? "") && s.sections.some((x) => x.waiting.length > 0), { back: back.status, state: it?.state, reason: it?.reason });
 const again = ((await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent`, undefined, OFFICER)).body?.sections as Group[]).find((x) => x.subjectId === g.subjectId && x.section === g.section);
 await call("PUT", `/runtime/cases/${c.id}/groups/${g.subjectId}/${g.section}/none-apply`, { noneApply: true, expectedId: again?.group?.none_apply?.id ?? null }, OFFICER);
 const sec = ((await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent`, undefined, OFFICER)).body?.sections as (Group & { questions: unknown[] })[]).find((x) => x.subjectId === g.subjectId && x.section === g.section);
