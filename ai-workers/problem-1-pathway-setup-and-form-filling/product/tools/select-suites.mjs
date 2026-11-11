@@ -474,8 +474,10 @@ if (process.argv.includes("--packs")) {   // D2: the acceptance and test files t
     }
   }
   for (const x of via.keys()) if (x.startsWith(`${S}/acceptance/`) || x.startsWith(`${S}/tests/`)) console.log(`${x}\t${chain(x)}`);
-  process.exit(0);
-}
+  // B178 (#1567): never process.exit() after printing. On POSIX Node writes stdout to a pipe asynchronously, so exit can
+  // drop the tail on a slow reader (gate B lost C7.5.test.ts, line 421 of 447). Set the code and let the output drain.
+  process.exitCode = 0;
+} else {
 const why = new Map(), alls = [], browserWhy = [];
 const add = (n, r) => { if (!why.has(n)) why.set(n, []); if (!why.get(n).includes(r)) why.get(n).push(r); };
 for (const f of changed) {
@@ -505,10 +507,13 @@ for (const f of changed) {
   if (f.startsWith(`${S}/api/src/`)) for (const n of apiScanners) add(n, "reads every file in api/src");
   if (f.startsWith(`${S}/web/src/`)) for (const n of webScanners) add(n, "reads every file in web/src");
 }
-if (alls.length) { console.log(`ALL\t${alls[0]}${alls.length > 1 ? ` (+${alls.length - 1} more)` : ""}`); process.exit(0); }
+if (alls.length) console.log(`ALL\t${alls[0]}${alls.length > 1 ? ` (+${alls.length - 1} more)` : ""}`);   // B178: no exit
+else {
 if (browserWhy.length) for (const n of browser) add(n, `every browser suite: ${browserWhy[0]}${browserWhy.length > 1 ? ` (+${browserWhy.length - 1} more)` : ""}`);
 if (RUNTIME_GROUP.some((n) => why.has(n))) for (const n of RUNTIME_GROUP) if (!why.has(n) && suites.has(n)) add(n, "runtime R1 suites run together (one copy, in order)");
 for (const n of SMOKE) if (suites.has(n)) add(n, "smoke");
 for (const n of suites.keys()) if (why.has(n)) {
   const r = why.get(n); console.log(`${n}\t${r.slice(0, 2).join("; ")}${r.length > 2 ? ` (+${r.length - 2} more)` : ""}`);
 }
+}   // else: not ALL (B178)
+}   // else: not --packs (B178)
