@@ -43,12 +43,41 @@ export const ruleFactOf = (key: string, f: RuleFact, rules: FormRule[]): RuleFac
   if (bad) throw new Error(`samples/form-setup.json, ${key}: the rule fact ${f.fact ?? "(no key)"} needs a person. or case. key, the form of one of this combination's rules, a label, a meaning, a cite, valueType yes_no, and "beside" as a list of fact keys when given`);
   return f;
 };
+/** BK-10 review m1: the only names each part of the data may use, so a misspelt name ("conditon", "familybyChannel")
+ *  fails the read instead of silently dropping a condition or a family form, as the typed code once refused it. */
+const KNOWN = {
+  file: ["about", "familyFormByChannel", "ruleFacts", "combinations"],
+  combination: ["about", "application", "rules", "ruleFacts", "familyByChannel", "notOnForm", "documentsCited", "documentsFromChecklist", "documentsFromReviewedRelease", "documentSources"],
+  rule: ["form", "condition", "minAge", "who", "channel", "retire", "cite"],
+  ruleFact: ["about", "fact", "rule", "cite", "label", "valueType", "meaning", "beside"],
+  documentLine: ["type", "who", "quote", "reuse"],
+  notOnForm: ["form", "fact", "values", "cite"],
+  documentSources: ["checklist", "cited", "sampleSources"],
+} as const;
+const unknownIn = (o: unknown, part: keyof typeof KNOWN): string[] => (o && typeof o === "object" ? Object.keys(o).filter((k) => !(KNOWN[part] as readonly string[]).includes(k)).map((k) => `${part} "${k}"`) : [`${part} that is not an object`]);
+/** A rule's values have their kinds: a form and a cite as text, a condition as an object, a minimum age as a whole
+ *  number, who as text, channel only ONLINE and retire only true. */
+const ruleProblems = (r: FormRule): string[] => [...unknownIn(r, "rule"),
+  ...(typeof r.form !== "string" || !r.form ? ["a rule without its form"] : []), ...(typeof r.cite !== "string" || !r.cite ? [`${r.form || "a rule"} without a cite`] : []),
+  ...(r.condition !== undefined && (typeof r.condition !== "object" || r.condition === null || Array.isArray(r.condition)) ? [`${r.form}'s condition is not an object`] : []),
+  ...(r.minAge !== undefined && !Number.isInteger(r.minAge) ? [`${r.form}'s minAge is not a whole number`] : []),
+  ...(r.who !== undefined && typeof r.who !== "string" ? [`${r.form}'s who is not text`] : []),
+  ...(r.channel !== undefined && r.channel !== "ONLINE" ? [`${r.form}'s channel is not ONLINE`] : []),
+  ...(r.retire !== undefined && r.retire !== true ? [`${r.form}'s retire is not true`] : [])];
 /** BK-10: a combination's own words, checked so a bad entry fails the read (never a line without its rule's words): an
- *  application form, rules each with a form and a cite, and at most one place its document lines come from. */
+ *  application form, rules each with a form and a cite, at most one place its document lines come from, and only known
+ *  names (review m1). The words name what failed. */
 const combinationOf = (key: string, c: CombinationData, facts: RuleFact[]): FormSetup => {
   const where = [c.documentsFromChecklist, c.documentsFromReviewedRelease, c.documentsCited].filter((x) => x !== undefined).length;
-  if (!c.application || !Array.isArray(c.rules) || !c.rules.every((r) => r.form && r.cite) || where > 1 || (c.documentSources && !c.documentsFromReviewedRelease))
-    throw new Error(`samples/form-setup.json, ${key}: a combination needs its application form, rules each with a form and a cite, at most one of documentsFromChecklist, documentsFromReviewedRelease and documentsCited, and documentSources only with documentsFromReviewedRelease`);
+  const problems = [...unknownIn(c, "combination"), ...(!c.application ? ["no application form"] : []),
+    ...(!Array.isArray(c.rules) ? ["no list of rules"] : c.rules.flatMap(ruleProblems)),
+    ...(where > 1 ? ["more than one of documentsFromChecklist, documentsFromReviewedRelease and documentsCited (at most one)"] : []),
+    ...(c.documentSources && !c.documentsFromReviewedRelease ? ["documentSources without documentsFromReviewedRelease"] : []),
+    ...(c.documentSources ? unknownIn(c.documentSources, "documentSources") : []),
+    ...(c.documentsCited ?? []).flatMap((x) => unknownIn(x, "documentLine")), ...(c.notOnForm ?? []).flatMap((x) => unknownIn(x, "notOnForm")),
+    ...(c.ruleFacts ?? []).flatMap((f) => (typeof f === "object" ? unknownIn(f, "ruleFact") : []))];
+  if (problems.length)
+    throw new Error(`samples/form-setup.json, ${key}: ${problems.join("; ")}. A combination needs its application form, rules each with a form and a cite, at most one of documentsFromChecklist, documentsFromReviewedRelease and documentsCited, documentSources only with documentsFromReviewedRelease, and only known names`);
   const ds = c.documentSources;
   return { application: c.application, rules: c.rules, ...(c.notOnForm ? { notOnForm: c.notOnForm } : {}),
     ...(c.familyByChannel ? { family: c.familyByChannel } : {}),
@@ -65,6 +94,8 @@ const combinationOf = (key: string, c: CombinationData, facts: RuleFact[]): Form
  *  change by data alone). The family form needs both channels, each a form, the other one and a cite. */
 export const formSetupFrom = (file = FORM_SETUP_FILE): { setup: Record<string, FormSetup>; family: SetupData["familyFormByChannel"] } => {
   const d = JSON.parse(readFileSync(file, "utf8")) as SetupData;
+  const top = [...unknownIn(d, "file"), ...(d.ruleFacts ?? []).flatMap((f) => unknownIn(f, "ruleFact"))];
+  if (top.length) throw new Error(`samples/form-setup.json: ${top.join("; ")} is not a known name`);
   const fam = d.familyFormByChannel;
   if (!(["paper", "online"] as const).every((ch) => fam?.[ch]?.form && fam[ch].other && fam[ch].cite)) throw new Error("samples/form-setup.json: familyFormByChannel needs paper and online, each with its form, the other form and a cite");
   const facts = (d.ruleFacts ?? []).map(({ about: _about, ...f }) => f);

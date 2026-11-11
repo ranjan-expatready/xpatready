@@ -42,14 +42,6 @@ const ALLOW: Entry[] = [
   {"guard": "G3 checklist not derived", "file": "api/src/case-stages.ts", "kind": "slice", "text": " its release asks for (the per-person checklist is not worked out yet for this combination)", "row": "M3-S4"},
   {"guard": "stand-in SI-6 (BK-14 AI review on any pathway's forms, placeholder row)", "file": "api/src/review-runs.ts", "kind": "program", "text": "Stand-in SI-6: the AI review runs live on the Visitor visa forms only (one trial); other form families follow one at a time with their own tests. Severities are Sample until the immigration expert confirms them.", "row": "BK-14"},
   {"guard": "reader content: a heading read from IRCC's checklist page, no branch", "file": "api/src/saved-readings.ts", "kind": "program", "text": "PARENTS AND GRANDPARENTS SUPER VISA", "row": ""},
-  {"guard": "BK-10 form titles into data", "file": "api/src/sources.ts", "kind": "form", "text": "IMM 5257", "row": "BK-10"},
-  {"guard": "BK-10 form titles into data", "file": "api/src/sources.ts", "kind": "form", "text": "IMM 1295", "row": "BK-10"},
-  {"guard": "BK-10 form titles into data", "file": "api/src/sources.ts", "kind": "program", "text": "Application for Work Permit made Outside of Canada", "row": "BK-10"},
-  {"guard": "BK-10 form titles into data", "file": "api/src/sources.ts", "kind": "form", "text": "IMM 5707", "row": "BK-10"},
-  {"guard": "BK-10 form titles into data", "file": "api/src/sources.ts", "kind": "form", "text": "IMM 5409", "row": "BK-10"},
-  {"guard": "BK-10 form titles into data", "file": "api/src/sources.ts", "kind": "form", "text": "IMM 5476", "row": "BK-10"},
-  {"guard": "BK-10 form titles into data", "file": "api/src/sources.ts", "kind": "form", "text": "IMM 5475", "row": "BK-10"},
-  {"guard": "BK-10 form titles into data", "file": "api/src/sources.ts", "kind": "form", "text": "IMM 5257 SCH1", "row": "BK-10"},
 ];
 // ALLOW-END
 

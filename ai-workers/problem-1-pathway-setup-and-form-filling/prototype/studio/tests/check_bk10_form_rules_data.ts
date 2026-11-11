@@ -72,6 +72,19 @@ try {
   ok("fail: a family form table without its online form is refused", !!noOnline?.includes("familyFormByChannel"), noOnline);
   const noApp = refusal((d) => { (d.combinations["wp.lmia_inside"] as { application?: string }).application = ""; });
   ok("fail: a combination without its application form is refused", !!noApp?.includes("wp.lmia_inside"), noApp);
+  // Review m1: a misspelt name or a value of the wrong kind fails the read, never a condition or a family form dropped silently.
+  const misspeltCondition = refusal((d) => { const r = d.combinations["sp.outside"].rules.find((x) => x.form === "IMM 5646") as Record<string, unknown>; r.conditon = r.condition; delete r.condition; });
+  ok("fail: a rule whose condition is misspelt (\"conditon\") is refused, never read as a line every student files", !!misspeltCondition?.includes("sp.outside") && misspeltCondition.includes('rule "conditon"'), misspeltCondition);
+  const misspeltFamily = refusal((d) => { const c = d.combinations["vv.single"] as Record<string, unknown>; c.familybyChannel = c.familyByChannel; delete c.familyByChannel; });
+  ok("fail: a misspelt family form name (\"familybyChannel\") is refused, never a family form dropped without a word", !!misspeltFamily?.includes("vv.single") && misspeltFamily.includes('combination "familybyChannel"'), misspeltFamily);
+  const textAge = refusal((d) => { (d.combinations["vv.single"].rules[0] as Record<string, unknown>).minAge = "18"; });
+  ok("fail: a minimum age written as text is refused", !!textAge?.includes("IMM 5257 SCH1's minAge is not a whole number"), textAge);
+  const badChannel = refusal((d) => { (d.combinations["fs.spouse"].rules.find((x) => x.channel) as Record<string, unknown>).channel = "online"; });
+  ok("fail: a channel other than ONLINE is refused", !!badChannel?.includes("fs.spouse") && badChannel.includes("channel is not ONLINE"), badChannel);
+  const unknownTop = refusal((d) => { (d as Record<string, unknown>).combination = {}; });
+  ok("fail: an unknown name at the top of the file is refused", !!unknownTop?.includes('file "combination"'), unknownTop);
+  const unknownFact = refusal((d) => { (d.ruleFacts[0] as Record<string, unknown>).lable = "x"; });
+  ok("fail: an unknown name in a shared rule fact is refused", !!unknownFact?.includes('ruleFact "lable"'), unknownFact);
 } finally { rmSync(DIR, { recursive: true, force: true }); }
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

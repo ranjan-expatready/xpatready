@@ -28,8 +28,6 @@ import { Studio } from "./studio.ts";
 import { draftSourceProblems } from "./source-register.ts";
 import { Forms } from "./forms.ts";
 import { FormLibrary } from "./form-library.ts";
-import { FAMILY_FORM_BY_CHANNEL, FORM_SETUP } from "./form-setup.ts";
-export { FAMILY_FORM_BY_CHANNEL, FORM_SETUP }; // B71: kept for the callers that read them from here (BK-10: each combination's rules are FORM_SETUP[key].rules, from samples/form-setup.json)
 export { BY_HAND_REASON, RELEASE, SAMPLES } from "./features/checkpoint/_constants.ts";
 
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
