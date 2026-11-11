@@ -40,6 +40,12 @@ P-258 named four shared services. On main: **SH2 where-used is done** (`where-us
 | **S7** | **Health, request log, browser errors** (part 8 M1-M3) | M4 and M5 lanes see their breakage at once; the founder's demo | `GET session` as health; error/warn logs only | part 8's exits for M1-M3 | 2.5 | none |
 | | **Total** | | | | **~15.5** | |
 
+**Written 11 Nov (Lead 16's word: contracts written, S5/S7 briefed, not started):** `07a-contract-S1-rule-tables.md`, `07b-contract-S3-filing-values.md`, `07c-contract-S4-release-and-pin.md`, `07d-briefs-S5-S7.md`. Findings that change this table:
+* fees are outside every release today (`api/src/release-update.ts:23`), and moving them needs **both** batons;
+* gates and roles are already frozen in the release with two-person approval, so A2 and A4 become screens only;
+* pins are per case and combination, and the stage key blocks repeatable stages (`schema.prisma:1459`), so U1 needs S4 first;
+* two suspected differences between the PDF and the answer sheet are sent to qa (07b).
+
 **Start now, beside the Bake:** S7 (no baton; pipeline lane) and S5 (no baton). Also write the **S1, S3 and S4 contracts** as concept documents (no code) so they are agreed when the schema baton frees. S2 can start after QA-275's Bake fix lands, to avoid a clash on `fill-case.ts`.
 
 ## 3. M4: any pathway by set-up, proven (counted list)
