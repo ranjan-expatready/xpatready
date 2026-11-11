@@ -174,7 +174,7 @@ function FormRow({ caseId, f, recorded }: { caseId: string; f: CaseForm; recorde
   // QA-318: the card counts a mandatory form field that still needs an answer as a fact to answer (cardFacts), so
   // "Facts confirmed" is never shown over it; the lock is unchanged (#1318 M2).
   const card = cardFacts(missing), emptyFields = card.emptyFields.length;
-  const why = !f.for_filing ? `${f.form} is filed Online: this PDF is a copy, not for filing.` : latest?.copy_not_for_filing ? `This copy was made while ${f.form} was filed Online, so it is stamped “Copy, not for filing”. Generate a new copy to file it.` : !f.trial_passed ? (f.trial_why ?? `${f.form}: this form's filling is not proven yet, so this copy is for checking only, not for filing.`) : facts.length ? notReady(facts.length)
+  const why = !f.for_filing ? `${f.form} is filed Online: this PDF is a copy, not for filing.` : !f.trial_passed ? (f.trial_why ?? `${f.form}: this form's filling is not proven yet, so this copy is for checking only, not for filing.`) : latest?.copy_not_for_filing ? `This copy was made while ${f.form} was filed Online, so it is stamped “Copy, not for filing”. Generate a new copy to file it.` : facts.length ? notReady(facts.length)
     : f.needs_validate && !latest?.validated?.current ? `Validate ${f.form} in Adobe, save it and read the validated copy back before it is filed.` : null;
   const use: CopyUse = !f.applies ? "kept" : !f.for_filing || !f.trial_passed ? "check" : "file";
   const canLock = lockable && !why && use !== "kept";
@@ -202,7 +202,8 @@ function FormRow({ caseId, f, recorded }: { caseId: string; f: CaseForm; recorde
           <RefreshCw aria-hidden />{latest ? "Generate a new copy" : "Generate a copy"}
         </Button> : null}
       </div>
-      {!f.applies ? <p className="text-[13px] text-text-muted [overflow-wrap:anywhere]" data-not-applying>This form no longer applies to {f.person}{f.applies_why ? `: ${f.applies_why}` : ""}. Its copies are kept as they were, never filed.</p> : null}
+      {/* Review M1: a copy locked before the form stopped applying stays the record of what was filed or uploaded back. */}
+      {!f.applies ? <p className="text-[13px] text-text-muted [overflow-wrap:anywhere]" data-not-applying>This form no longer applies to {f.person}{f.applies_why ? `: ${f.applies_why}` : ""}. {locked?.locked ? `Its copy locked as “${LOCK_KINDS[locked.locked.kind]}” on ${when(locked.locked.at)} stays as it was; no new copy is filed.` : "Its copies are kept as they were, never filed."}</p> : null}
       {f.applies ? <p className="text-[13px] text-text-muted" data-draft-words>Declared or confirmed answers for {f.draft.written_now} of {f.draft.mapped} form fields{f.draft.to_fix ? `; ${f.draft.to_fix} answered but needing a fix ${f.draft.to_fix === 1 ? "stays" : "stay"} blank` : ""}. A copy also lists the form fields to write by hand.</p> : null}
       {f.applies && card.facts.length ? (
         <FoldOut className="text-[13px]" summaryClassName="flex min-h-6 items-center text-text-link" summary={<>Facts to answer or confirm ({card.facts.length})</>}>
@@ -282,9 +283,10 @@ function CopyLine({ c, use = "file", canLock, lockBlocked = null, locking, setLo
           is never told "to file it". */}
       {!compact && c.stale ? <p className="flex items-start gap-1 text-[13px] text-text-warn"><AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden /><span>Facts changed after this copy was locked; the locked file is kept as it was. Added, changed or removed: <Few items={c.changed} />.</span></p>
         : !compact && c.out_of_date && use !== "kept" ? <p className="flex items-start gap-1 text-[13px] text-text-warn"><AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden /><span>{use === "check" ? "Facts changed since this copy was made; generate a new copy to check the current answers." : "Facts changed since this copy was made; generate a new copy to file it."} Added, changed or removed: <Few items={c.changed} />.</span></p> : null}
-      {!compact && c.status === "GENERATED" && c.by_hand.length ? <p className="text-[13px] text-text-muted">To write by hand in Adobe: <Few items={c.by_hand.map((b) => `${b.label}${b.why ? ` (${b.why})` : ""}`)} />.</p> : null}
+      {/* Review M3: a kept copy is never prepared further: no by-hand or not-on-form instructions. */}
+      {!compact && use !== "kept" && c.status === "GENERATED" && c.by_hand.length ? <p className="text-[13px] text-text-muted">To write by hand in Adobe: <Few items={c.by_hand.map((b) => `${b.label}${b.why ? ` (${b.why})` : ""}`)} />.</p> : null}
       {/* B81: not "by hand": the form has no such choice to write. Who it is about comes first (the same words on many form fields). */}
-      {!compact && c.status === "GENERATED" && c.not_on_form?.length ? <p className="text-[13px] text-text-warn" data-not-on-form>Not on this form: <Few items={c.not_on_form.map((b) => `${b.label}${b.person ? ` of ${b.person}` : ""}: ${b.why}`)} /></p> : null}
+      {!compact && use !== "kept" && c.status === "GENERATED" && c.not_on_form?.length ? <p className="text-[13px] text-text-warn" data-not-on-form>Not on this form: <Few items={c.not_on_form.map((b) => `${b.label}${b.person ? ` of ${b.person}` : ""}: ${b.why}`)} /></p> : null}
       {!compact && c.status === "FAILED" ? <p className="text-[13px] text-text-danger">{c.error}</p> : null}
       {!compact && use !== "kept" && c.status === "GENERATED" && c.person_steps.length ? <p className="text-[13px] text-text-muted">Before filing, on the PDF: {c.person_steps.join(" ")}</p> : null}
     </div>

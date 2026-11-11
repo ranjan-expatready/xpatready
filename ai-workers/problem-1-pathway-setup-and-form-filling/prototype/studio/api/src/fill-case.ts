@@ -431,7 +431,7 @@ export class CaseForms implements OnModuleInit {
     const { answers, rows, groups } = await this.runtime.state(c);
     const cov = formCoverage(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId);
     // QA-391 (P-65, C9.5): a form that no longer applies is kept and listed, never filed or uploaded back.
-    if (!cov || cov.applies === false) conflict(`${x.formNumber} no longer applies to this person (${notApplyingWhy(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId, (f) => factWords(this.runtime.snapshotOf(c), f))}): its copies are kept, never filed.`);
+    if (!cov || cov.applies === false) conflict(`${x.formNumber} no longer applies to this person: ${notApplyingWhy(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId, (f) => factWords(this.runtime.snapshotOf(c), f))}. Its copies are kept, never filed.`);
     const lockView = caseView(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, "agent", new Date(), groups);
     const changed = [...changedFacts((x.snapshot.factsJson as Stored).facts, cov?.facts ?? []), ...changedGroups((x.snapshot.factsJson as Stored).groups, groupFacts(lockView, x.formNumber, x.subjectId))];
     if (changed.length) conflict(`This copy is out of date (${changed.length} change${changed.length === 1 ? "" : "s"} since it was made); generate a new copy and lock that one.`);
