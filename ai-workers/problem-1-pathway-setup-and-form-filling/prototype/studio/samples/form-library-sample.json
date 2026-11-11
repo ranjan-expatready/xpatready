@@ -39,6 +39,10 @@
   "fs.outside": {
    "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5289-sponsor-your-spouse-common-law-partner-conjugal-partner-dependent-child-complete-guide.html"
   },
+  "fs.spouse": {
+   "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5289-sponsor-your-spouse-common-law-partner-conjugal-partner-dependent-child-complete-guide.html",
+   "why": "B169: the six's and the configured checkpoint's key for the same combination as the demo story's fs.outside (samples/wave1.json), so its guide is linked there too."
+  },
   "lm.high_wage": {
    "url": null,
    "why": "An employer's application to ESDC through LMIA Online: IRCC publishes no guide for it."
@@ -116,6 +120,15 @@
     "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/family-sponsorship/spouse-partner-children/apply.html",
     "quote": "Online in the PR Portal: the principal applicant submits the sponsorship and PR applications together",
     "read": "2026-10-29"
+   },
+   "fs.spouse": {
+    "account": "PR_PORTAL",
+    "url": "https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/family-sponsorship/spouse-partner-children/apply.html",
+    "quote": "The principal applicant (the person you’re sponsoring) will submit both applications together online using the Permanent Residence (PR) Portal.",
+    "read": "2026-10-27",
+    "page_modified": "2026-09-11",
+    "recorded": "official-sources/ircc/canada/pages/immigrate-canada-family-sponsorship-spouse-partner-children-apply.html",
+    "why": "B169 (P-170): the six's and the configured checkpoint's key for spousal sponsorship (samples/wave1.json), the demo story's fs.outside; the quote is the recorded page's own sentence, word for word (canada.ca \"Apply to sponsor your spouse, partner or children\", modified 2026-09-11, recorded 27 Oct 2026). Sample, Unconfirmed: expert."
    },
    "lm.high_wage": {
     "account": "LMIA_ONLINE",
