@@ -56,9 +56,10 @@ export function SignInPage() {
 /** One person: the whole card is one button (no filled button on this page: nothing here is the one next step). */
 function PersonCard({ p, current, onChoose }: { p: Person; current: boolean; onChoose: (p: Person) => void }) {
   return (
-    <button type="button" onClick={() => onChoose(p)} data-sign-in-as={p.id} aria-label={`Sign in as ${p.name}${current ? " (signed in now)" : ""}`}
+    <button type="button" onClick={() => onChoose(p)} data-sign-in-as={p.id}
       className={cn("flex min-h-24 flex-col items-start gap-1 rounded-xl border bg-surface-raised p-4 text-left outline-none hover:border-primary/60 focus-visible:ring-[3px] focus-visible:ring-ring/50", current ? "border-primary" : "border-border")}>
-      <span className="flex w-full items-center gap-2 font-medium">{p.name}{current ? <Check className="ml-auto size-4 text-text-link" aria-hidden /> : null}</span>
+      {/* The name a screen reader says starts with the words on the card (WCAG 2.5.3, label in name). */}
+      <span className="flex w-full items-center gap-2 font-medium"><span className="sr-only">Sign in as </span>{p.name}{current ? <><span className="sr-only"> (signed in now)</span><Check className="ml-auto size-4 text-text-link" aria-hidden /></> : null}</span>
       <span className="text-sm text-text-muted">{p.job}</span>
       <span className="mt-auto pt-1 text-[11px] text-text-muted">{GROUP_WORDS[p.group]} · Simulated</span>
     </button>

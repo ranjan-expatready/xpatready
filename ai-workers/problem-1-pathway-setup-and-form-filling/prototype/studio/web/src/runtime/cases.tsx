@@ -50,7 +50,8 @@ export function RuntimeApp() {
   // page says so and offers one named button (it counts as a hand-off). BK-3 PR 2: not while a link is leaving for the
   // Studio as the Studio person (casesLeaving); arriving clears that.
   const [, switched] = React.useState(0);
-  React.useLayoutEffect(() => { casesLeaving(true); }, []);
+  // Arriving clears the leaving mark and draws again, so Back into the case area shows BR-8's notice, never a blank page.
+  React.useLayoutEffect(() => { if (casesLeaving()) { casesLeaving(true); switched((n) => n + 1); } }, []);
   React.useLayoutEffect(() => { if (!casesLeaving() && !personChosen() && !isCasePerson(getActor())) { setActor(CASE_OFFICER); switched((n) => n + 1); } }, [actor]);
   if (!isCasePerson(getActor())) return casesLeaving() || !personChosen() ? null : <NotACasePerson />;
   const client = isClient(actor);
