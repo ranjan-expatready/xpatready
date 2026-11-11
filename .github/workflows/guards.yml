@@ -28,8 +28,12 @@ jobs:
       - name: zsh (isolated.sh is a zsh script)
         # P-214 (11 Nov 2026): when the runner cannot reach Ubuntu's servers, take zsh from the image's Homebrew.
         run: |
-          command -v zsh || (sudo apt-get update -qq; sudo apt-get install -y -qq zsh) || {
-            HOMEBREW_NO_AUTO_UPDATE=1 /home/linuxbrew/.linuxbrew/bin/brew install --quiet zsh &&
-            sudo ln -sf "$(/home/linuxbrew/.linuxbrew/bin/brew --prefix)/bin/zsh" /usr/bin/zsh; }
+          if ! command -v zsh; then
+            sudo apt-get update -qq || true
+            if ! sudo apt-get install -y -qq zsh; then
+              HOMEBREW_NO_AUTO_UPDATE=1 /home/linuxbrew/.linuxbrew/bin/brew install --quiet zsh
+              sudo ln -sf "$(/home/linuxbrew/.linuxbrew/bin/brew --prefix)/bin/zsh" /usr/bin/zsh
+            fi
+          fi
       - name: every guard's test, and each fails without its guard
         run: bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/check-guards.sh --mutate
