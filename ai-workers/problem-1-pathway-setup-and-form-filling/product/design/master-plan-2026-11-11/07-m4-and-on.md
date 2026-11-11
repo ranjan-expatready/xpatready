@@ -87,7 +87,7 @@ P-258 named four shared services. On main: **SH2 where-used is done** (`where-us
 | 4 | Backup and restore drill | pipeline | 1-2 | restore < 30 min, timed | after-29 §11 C |
 | 5 | Monitoring M4-M10 (part 8; M1-M3 are S7) | pipeline | 4-5 | part 8's exits | A19 (j) |
 | 6 | Lint + formatter in CI, `any` ratchet, coverage per module (B112 remainder) | pipeline | 2-3 | lint 0 errors on every PR; `any` ≤100 | P-358 |
-| 7 | B165 splits with the two import cycles broken first (if not done in the Bake's outside rows) | runtime | 3-5 | 0 cycles; no file >800 lines but the schema | P-438 (3) |
+| 7 | B165 splits with the three import cycles broken first (if not done in the Bake's outside rows) | runtime | 3-5 | 0 cycles; no file >800 lines but the schema | P-438 (3) |
 | 8 | Internal workspace walkable (name on sign-in, no demo controls, "copy the client's link") and sign-in page | screens | 3 | qa walk passes | after-29 1e, 1c+, 1d+ |
 | 9 | **UX to 9-10:** the UX lane's plan (`design/ux-2026-11-11/`): polish, wording cuts, proof on screen | screens | per that plan (after-29 estimated 20-24) | journey screens ≥9 on the journey-test score | A19 (h) |
 | 10 | Content freshness loop: correction vs rule-change publish, "in force from", change watch (gap G4) | runtime + screens | 3-5 | a rule-change publish dates its effect and cites its source | SA-1B-297-300 |
