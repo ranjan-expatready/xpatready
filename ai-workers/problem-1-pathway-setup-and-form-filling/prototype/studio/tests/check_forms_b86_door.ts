@@ -35,7 +35,8 @@ run(async () => {
   // The draft's errors are what Submit refuses on; until B82 is on main Submit on the six stops earlier, for other reasons (QA-233).
   const hiding = async (fact: string) => {
     const errors = ((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []) as { item?: string; message?: string; level?: string }[];
-    return { lines: errors.filter((e) => e.level === "error" && e.item === fact && /^Hiding a value a form reads/.test(e.message ?? "")).map((e) => e.message ?? "") };
+    // Bake row 6 (QA-237, PR #1534): not confirmed, the condition is held (a warning), never an error that refuses.
+    return { lines: errors.filter((e) => e.level === "error" && e.item === fact && /^Hiding a value a form reads/.test(e.message ?? "")).map((e) => e.message ?? ""), held: errors.filter((e) => e.level === "warning" && e.item === fact && /^Condition not used on this combination: /.test(e.message ?? "")).map((e) => e.message ?? "") };
   };
   const approve = (id: string, by = APPROVER) => call("POST", `/library/changes/${id}/approve`, { note: "Checked against the form's words by a test (B86)." }, by);
 
@@ -80,7 +81,7 @@ run(async () => {
   const cond = sql(`select id from library_change where kind='placement_condition' and key='${GIVEN}' and status='WAITING'`);
   ok("setup: a second person approves it", (await approve(cond)).status < 300);
   let h = await hiding(GIVEN);
-  ok("Done when 2 fail: approved, not confirmed: the draft's error, in the rule's words", h.lines.length === 1 && /Make the form or its form fields apply under the same condition, or remove the question's condition\.$/.test(h.lines[0]), h);
+  ok("Done when 2 (QA-237): approved, not confirmed: no error refuses the draft; the condition is held, and the warning says how to use it", h.lines.length === 0 && h.held.length === 1 && /To use the condition here, make the form or its form fields apply under the same condition/.test(h.held[0]), h);
 
   // ---------------------------------------------------------------- the way out on Review and release (no card any more)
   r = await call("GET", FIELDS(vv, GIVEN), undefined, AUTHOR);
@@ -97,7 +98,7 @@ run(async () => {
   ok("BR-3 pass: a second person approves", (await approve(gc)).status < 300 && ruleOf(g.form_edition_id, g.data_path).includes(GATE), ruleOf(g.form_edition_id, g.data_path));
   ok("Done when 6 pass: the form field's words are kept as they were", sql(`select condition from form_field_map where form_edition_id='${g.form_edition_id}' and data_path='${g.data_path.replace(/'/g, "''")}' order by version desc limit 1`).includes("one name only on the form"));
   h = await hiding(GIVEN);
-  ok("Done when 1 pass: the draft's errors no longer hold \"Hiding a value\" for that question", h.lines.length === 0, h);
+  ok("Done when 1 pass: the condition is no longer held for that question (no error, no warning)", h.lines.length === 0 && h.held.length === 0, h);
   r = await call("GET", `/combinations/${vv}/form-field-conditions`, undefined, AUTHOR);
   sql(`update section_question set condition_effect='HIDE' where lineage_key='${GIVEN}' and status='DRAFT'`);
   const hide = ((await call("GET", `/combinations/${vv}/form-field-conditions`, undefined, AUTHOR)).body?.questions ?? []).find((q: { fact: string }) => q.fact === GIVEN);
@@ -134,7 +135,7 @@ run(async () => {
   const back2 = r.body?.id;
   ok("BR-7 pass: proposed again, then approved, the form field holds nothing", r.status < 300 && (await approve(back2)).status < 300 && ruleOf(row.form_edition_id, row.data_path) === "", ruleOf(row.form_edition_id, row.data_path));
   r = await call("POST", "/library/form-field-conditions", { combinationId: vv, fact: GIVEN, formEditionId: g.form_edition_id, dataPath: g.data_path, clear: true }, AUTHOR);
-  ok("break B1 pass: Undo of a confirmed form field with its condition approved: waits for a second person, in words, and names what it holds", r.status < 300 && /holds every combination/.test((await call("GET", `/library/changes/${r.body?.id}`, undefined, APPROVER)).body?.form_field?.spread ?? ""), words(r));
+  ok("break B1 pass: Undo of a confirmed form field with its condition approved: waits for a second person, in words, and names what it holds", r.status < 300 && /asks it every time again \(the condition is held there/.test((await call("GET", `/library/changes/${r.body?.id}`, undefined, APPROVER)).body?.form_field?.spread ?? ""), words(r));
   ok("break B1 pass: approved, confirm again is open: the way back and forward both work", (await approve(r.body?.id)).status < 300 && (await call("POST", "/library/form-field-conditions", { combinationId: vv, fact: GIVEN, formEditionId: g.form_edition_id, dataPath: g.data_path }, AUTHOR)).status < 300);
   ok("BR-7 pass: the earlier approved change is closed, not left open", sql(`select status from library_change where id='${nc}'`) === "WITHDRAWN", sql(`select status from library_change where id='${nc}'`));
   await saved();
@@ -151,7 +152,7 @@ run(async () => {
   await call("POST", `/library/changes/${stale}/withdraw`, { note: "Withdrawn by a test (B86)." }, AUTHOR);
   sql(`update form_field_map set condition=null where form_edition_id='${row.form_edition_id}' and data_path='${row.data_path.replace(/'/g, "''")}'`);
   r = await call("POST", "/library/form-field-conditions", body, AUTHOR);
-  ok("BR-2 fail: a form field with no words cannot be confirmed: 409, saying what it holds", r.status === 409 && /no words/.test(words(r)) && /stays held/.test(words(r)), words(r));
+  ok("BR-2 fail: a form field with no words cannot be confirmed: 409, saying what it holds", r.status === 409 && /no words/.test(words(r)) && /the condition is held on this combination/.test(words(r)), words(r));
   sql(`update form_field_map set condition=$$${words0}$$ where form_edition_id='${row.form_edition_id}' and data_path='${row.data_path.replace(/'/g, "''")}'`);
 
   // ---------------------------------------------------------------- ruling 3: the second person is told the spread
@@ -159,7 +160,7 @@ run(async () => {
   await T.people(other);
   await T.questionsBySteps(other);
   r = await call("GET", FIELDS(vv, NAME, itemOf(NAME)), undefined, AUTHOR);
-  ok("ruling 3 pass: the panel names how many other combinations and form fields this holds", /other combination/.test(r.body?.spread ?? "") && /form field/.test(r.body?.spread ?? "") && /cannot be released/.test(r.body?.spread ?? ""), r.body?.spread);
+  ok("ruling 3 pass (Bake row 6): the panel names how many other combinations and form fields hold the condition, and that it stops none of them releasing", /other combination/.test(r.body?.spread ?? "") && /form field/.test(r.body?.spread ?? "") && /the question stays asked every time \(the condition is held/.test(r.body?.spread ?? "") && /Nothing stops it being released\./.test(r.body?.spread ?? ""), r.body?.spread);
   r = await call("POST", "/library/form-field-conditions", body, AUTHOR);
   const spread = await call("GET", `/library/changes/${r.body?.id}`, undefined, APPROVER);
   ok("ruling 3 pass: so does the second person's line", /other combination/.test(spread.body?.form_field?.spread ?? ""), spread.body?.form_field);

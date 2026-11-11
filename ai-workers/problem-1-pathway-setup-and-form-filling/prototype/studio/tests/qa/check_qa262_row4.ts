@@ -10,7 +10,8 @@ const vv = T.combo("vv.single"), sp = T.combo("sp.outside"), ee = T.combo("pnp.e
 const order = process.env.QA262_ORDER === "vv-first" ? ["Visitor visa first", [vv, sp, ee]] : ["Visitor visa last", [sp, ee, T.combo("fs.spouse"), T.combo("wp.lmia_inside"), vv]];
 type Row = { form_edition_id: string; data_path: string; edition: string; caption: string; can_confirm: boolean; can_ask: boolean };
 const errors = async (id: string) => ((await call("POST", `/combinations/${id}/submit`, { note: "QA-262 row 4" }, AUTHOR)).body?.errors ?? []) as { item?: string; message?: string }[];
-const hiding = async (id: string) => (await errors(id)).filter((e) => /Hiding a value a form reads/.test(e.message ?? ""));
+// Bake row 6 (QA-237, QA-239, PR #1534): a condition not yet honoured is held (a warning on the draft), not a Hiding error.
+const hiding = async (id: string) => [...(await errors(id)).filter((e) => /Hiding a value a form reads/.test(e.message ?? "")), ...(((await call("GET", `/combinations/${id}`)).body?.draft?.problems ?? []) as { level?: string; item?: string; message?: string }[]).filter((e) => e.level === "warning" && /^Condition not used on this combination: /.test(e.message ?? ""))];
 const config = async (id: string, mode: string) => (await call("GET", `/combinations/${id}/config?mode=${mode}`)).body;
 async function release(id: string) {
   const sub = await call("POST", `/combinations/${id}/submit`, { note: "QA-262 row 4" }, AUTHOR);
