@@ -62,3 +62,18 @@ Row 3: "Set-up screens and case screens share one frame: a 'where am I' line, a 
 The builder's full `run-suites.sh --changed` (257 suites) and CI. A visible (headed) browser: the walk was headless Playwright with screenshots. A real screen reader. Dark theme. More than 100 real cases for one client (only simulated by rewriting `take`). An intended user's unaided walk (D17, D20 stay with the founder).
 
 **Verdict: Approve** (commit ef1038a29d2a7298be179789de94b08e5b730e87; no open Blocker or Major). m1-m6 are Shoulds: fix them, or list them in the PR with follow-up rows.
+
+## Re-review: diff only, ef1038a29..9f61dbdc8 (11 Nov 2026)
+Fix commit for the breaker's M1 and m3, and m1-m5 above. Built from the worktree holding 9f61dbdc8 (node_modules and .tools linked for the run, links removed after), copy screens_bk3r on :4444, stopped.
+- **Client browser check: 75/75**, exit 0. **Frame check: 147/147.** `tsc --noEmit` web and api: no error in cases.tsx or runtime.ts.
+- **Mutation (requested):** in a scratch worktree of 9f61dbdc8, ClientCasesPage's owner keying was reverted (`more = kept`, rows appended regardless of owner). The check then gives **74/75**, failing exactly "break M1: after switching to the solo firm, only the solo firm's case shows". It found 4 rows (BK3C-S1, BK3C-A2, BK3C-A1, …), "4 cases shown at Sample solo practice". The scratch worktree was removed. The Cases-list step keeps its own keying (`owner: actor`), read in the diff.
+- **Break M1 (Load more rows survive a switch): fixed** on the client page (`owner = actor|clientKey`) and on Cases (`owner = actor`). A late answer is stored under the old owner and dropped.
+- **m1 (role words): fixed as the minimum.** The fallback is capitalised ("Sponsor", as the case page). A role whose release word differs from its key would still differ; Should, follow-up row only if such a role appears.
+- **m2 (failed Load more): fixed.** "More cases could not be loaded" with the server's detail; no page error; the next Load more clears it and adds the page (my walk: 100 → 103 shown).
+- **m3 (switch): fixed** (break M1). **m4 (Try again): fixed.** The danger notice carries a Try again button (it also works by keyboard: Enter loads the rows). A non-list answer reads "could not be loaded", never "0 cases".
+- **m5 (?client=): fixed.** `client=` and `client=a&client=b` → 400 "Name one client login." `client[]=user-P` is another parameter name here: 200 with the plain firm list (50 rows, no people, the same as no filter). Not a leak; accepted, as the builder says.
+- **Breaker m3 (firm read on every view): fixed.** The firm name is read only when the page shows it (same cache key as `useFirm`). An unknown key sent no case or firm read (request log).
+- **m6:** the builder updates the PR body. **Focus after the dialog closes:** pre-existing, a follow-up row.
+- **New, Minor r1 (Should): the Load-more error survives a person switch.** Failing case: Load more fails as the case officer, then Acting as → Solo representative. "More cases could not be loaded" still shows above "1 case shown at Sample solo practice", which has no Load more, and it is still there after switching back. `moreError` is not keyed to `owner` the way `kept` is (cases.tsx, ClientCasesPage). Fix: store `{ owner, message }` and show it only when the owner matches. Needs more than 100 cases of one client, and the message is wrong, not the data; not a Major.
+
+**Verdict: Approve** (commit 9f61dbdc8; no open Blocker or Major). r1 is a Should: fix it, or list it in the PR with a follow-up row.
