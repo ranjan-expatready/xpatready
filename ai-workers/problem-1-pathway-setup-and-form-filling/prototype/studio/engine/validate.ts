@@ -113,11 +113,18 @@ export function addedFilingProblems(s: Snapshot, types: Map<string, string>, der
       // Break M4: answered once for the case, one Yes would add the filing for every person of the line.
       else if (placed.has(f) && !s.placements.some((p: { fact: string; repeats?: string | null }) => p.fact === f && p.repeats === "per_person")) say(`The rule reads ${f}, which is asked once for the case, so one answer would add the filing for everyone on this line. Ask it per person.`);
     }
-    // Break m6 (and M2 at release): the fee lines it names are this combination's, reach this person, one per application.
+    // Break m6 (and M2 at release): each fee line it names is one of this combination's and reaches this person's role,
+    // on any basis (review n3: no basis is required; a per-person line alone is enough).
     const keys = typeof l.addsFiling.fee === "string" ? [l.addsFiling.fee] : Array.isArray(l.addsFiling.fee) ? (l.addsFiling.fee as string[]) : [];
     if (feeRules?.fees.length && keys.length) {
       const bad = keys.filter((k) => { const r = feeRules.fees.find((x) => x.key === k); return !r || (r.roles && !r.roles.includes(l.role)); });
       if (bad.length) say(`The fee line${bad.length > 1 ? "s" : ""} ${bad.join(", ")} ${bad.length > 1 ? "are" : "is"} not among this combination's fee lines for a ${l.role.replace(/_/g, " ")}, so the case could not be priced.`);
+      // Review n1: once the filing is added, only the lines it names count the person, so a per-person or family-maximum
+      // line that charges their role and is not named stops counting them: the case would show a short total as worked out.
+      // A warning, not a refusal: the author may know the person does not pay it (the line's words say so).
+      const missed = feeRules.fees.filter((r) => r.basis !== "per_application" && (!r.roles || r.roles.includes(l.role)) && !keys.includes(r.key));
+      if (missed.length) out.push({ level: "warning", where: "Who can be in this application", item, role: l.role,
+        message: `${missed.map((r) => `"${r.label}" (${r.key})`).join(", ")} ${missed.length > 1 ? "charge" : "charges"} each ${l.role.replace(/_/g, " ")} on this combination, but the filing it adds does not name ${missed.length > 1 ? "them" : "it"}, so once the filing is added that person is not counted on ${missed.length > 1 ? "them" : "it"} and the case's total is short. Name ${missed.length > 1 ? "them" : "it"} among the filing's fee lines, unless that person does not pay ${missed.length > 1 ? "them" : "it"}.` });
     }
   }
   return out;

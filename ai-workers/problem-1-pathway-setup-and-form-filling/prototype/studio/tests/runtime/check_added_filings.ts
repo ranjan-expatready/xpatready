@@ -11,8 +11,8 @@ import { checkPeople } from "../../engine/people.ts";
 import { addedFilingRules, addedFilings } from "../../engine/runtime/added-filings.ts";
 import { caseView, type Participant } from "../../engine/runtime/case.ts";
 import { deriveFilings, rulesFrom, type FeeTable } from "../../engine/runtime/filings.ts";
-import type { Snapshot } from "../../engine/snapshot.ts";
-import { addedFilingProblems, checkCondition } from "../../engine/validate.ts";
+import { releaseConditionFacts, type Snapshot } from "../../engine/snapshot.ts";
+import { addedFilingProblems, checkCondition, validate, withdrawnFieldLines } from "../../engine/validate.ts";
 import { recorder } from "./api.ts";
 
 const { ok, summary } = recorder();
@@ -68,13 +68,54 @@ const TABLE_FOR_RELEASE = TABLE;
 // (2b) The release's checks of the line (engine/validate.ts addedFilingProblems).
 {
   const TYPES = new Map([[FACT, "yes_no"]]);
-  const rel = (lineExtra: Record<string, unknown>, repeats = "per_person", key = "x.any") => addedFilingProblems({ combination: { key, participants: [line("principal", { filingMode: "files_own" }), line("child", { filingMode: "on_principal", ...lineExtra })] }, placements: [{ fact: FACT, repeats }] } as unknown as Snapshot, TYPES, new Set(), new Set([FACT]), new Set(), TABLE_FOR_RELEASE).map((p) => p.message);
-  ok("release pass: a line on the principal's application, its fact asked per person, a per-application fee line reaching it", rel({ addsFiling: { ...ADDS, fee: "permit" } }).length === 0, rel({ addsFiling: { ...ADDS, fee: "permit" } }));
+  const relP = (lineExtra: Record<string, unknown>, repeats = "per_person", key = "x.any", o: { types?: Map<string, string>; placed?: Set<string>; docFacts?: Set<string>; derived?: Set<string> } = {}) => addedFilingProblems({ combination: { key, participants: [line("principal", { filingMode: "files_own" }), line("child", { filingMode: "on_principal", ...lineExtra })] }, placements: [{ fact: FACT, repeats }] } as unknown as Snapshot, o.types ?? TYPES, o.derived ?? new Set(), o.placed ?? new Set([FACT]), o.docFacts ?? new Set(), TABLE_FOR_RELEASE);
+  const rel = (...a: Parameters<typeof relP>) => relP(...a).map((p) => p.message);
+  const BOTH = { ...ADDS, fee: ["permit", "bio"] };
+  ok("release pass: a line on the principal's application, its fact asked per person, naming every fee line that charges a child (per application, family maximum)", relP({ addsFiling: BOTH }).length === 0, rel({ addsFiling: BOTH }));
+  // Review M2 (round 2), V3: the rule's fact must be asked of someone (or supplied by a document, or worked out).
+  ok("release fail (V3): a rule reading a fact nobody in this combination is asked is refused, in words", rel({ addsFiling: BOTH }, "per_person", "x.any", { placed: new Set() }).some((m) => m === `The rule reads ${FACT}, but nobody is asked it in this combination, so the filing could never be added. Ask it in the questionnaire, or change the rule.`), rel({ addsFiling: BOTH }, "per_person", "x.any", { placed: new Set() }));
+  ok("release pass (V3): the same fact supplied by a document, or worked out by the library, is accepted", rel({ addsFiling: BOTH }, "per_person", "x.any", { placed: new Set(), docFacts: new Set([FACT]) }).length === 0 && rel({ addsFiling: BOTH }, "per_person", "x.any", { placed: new Set(), derived: new Set([FACT]) }).length === 0);
+  // V9: the rule's condition is checked against the library (checkCondition), on the line itself.
+  const unknown = rel({ addsFiling: BOTH }, "per_person", "x.any", { types: new Map() });
+  ok("release fail (V9): a rule reading a fact the library lacks is refused on the line", unknown.some((m) => m === `Condition reads ${FACT}, which is not in the library.`), unknown);
+  const badNode = rel({ addsFiling: { ...BOTH, condition: { op: "nope", field: FACT, value: true, subjectKind: "PERSON" } } });
+  ok("release fail (V9): a rule that is not a valid condition is refused on the line", badNode.some((m) => /^Condition /.test(m)), badNode);
+  ok("release pass (V9): a rule reading a library fact with a valid condition raises no condition line", !rel({ addsFiling: BOTH }).some((m) => /^Condition /.test(m)));
+  // Review n1: a per-person or family-maximum line charging the role that the line does not name: a warning, in words.
+  const short = relP({ addsFiling: { ...ADDS, fee: "permit" } });
+  ok("release warn (n1): naming only the per-application line leaves the family-maximum biometrics line out: a warning naming it (the total would be short)", short.length === 1 && short[0].level === "warning" && /"Biometrics fee" \(bio\) charges each child/.test(short[0].message) && /total is short/.test(short[0].message), short);
+  ok("release pass (n1): an unnamed per-application line (the principal's application fee) or a line not reaching a child raises no warning", !relP({ addsFiling: BOTH }).some((p) => /\b(app|main_only)\b/.test(p.message)));
+  ok("release pass (n1): naming no fee line raises no warning (the case is left unpriced in words, never short)", relP({ addsFiling: ADDS }).length === 0, rel({ addsFiling: ADDS }));
   ok("release fail (break M4): its fact asked once for the case is refused", rel({ addsFiling: ADDS }, "once_per_case").some((m) => /asked once for the case/.test(m)));
   ok("release fail (review m4): a line saved without a mode whose built-in default is files own is refused", rel({ filingMode: null, addsFiling: ADDS }, "per_person", "vv.single").some((m) => /already files their own application/.test(m)));
   ok("release fail (break m9): on a line that files its own application it is refused", rel({ filingMode: "files_own", addsFiling: ADDS }).some((m) => /already files their own application/.test(m)));
   ok("release fail (break m6, M2): a fee line not among the combination's, or not reaching the person, is refused", rel({ addsFiling: { ...ADDS, fee: "nope" } }).some((m) => /nope is not among/.test(m)) && rel({ addsFiling: { ...ADDS, fee: "main_only" } }).some((m) => /main_only is not among/.test(m)));
-  ok("release pass (review M1): a per-person fee line reaching the child may be named", rel({ addsFiling: { ...ADDS, fee: "bio" } }).length === 0);
+  ok("release pass (review M1): a per-person fee line reaching the child may be named (no refusal)", !relP({ addsFiling: { ...ADDS, fee: "bio" } }).some((p) => p.level === "error"));
+}
+
+// (2c) The rule outside the helper: a withdrawn field's line, validate()'s own wiring, and the facts that travel with
+// the release (engine/validate.ts withdrawnFieldLines, validate; engine/snapshot.ts releaseConditionFacts).
+{
+  const ADDS_OK = { ...ADDS, fee: ["permit", "bio"] };
+  const bare = (participants: unknown[], placements: unknown[] = [{ lineage: "q1", fact: FACT, section_id: "study", order: 1, question_text: "Will this person study for a long time?", repeats: "per_person", tier: "case", collected_from: "staff_working_view" }]) => ({ combination: { key: "x.none", participants }, forms: [], field_maps: [], document_requirements: [], rules: [], checks: [], derived_fields: [], document_types: [], fact_sources: [], placements, sections: [{ id: "study", title: "Study" }], section_titles: [], canonical_fields: [{ id: FACT, value_type: "yes_no", meaning: "Studies for a long time", group: "person" }] }) as unknown as Snapshot;
+  const withRule = [line("principal", { filingMode: "files_own" }), line("child", { label: "Child", filingMode: "on_principal", addsFiling: ADDS_OK })];
+  const noRule = [line("principal", { filingMode: "files_own" }), line("child", { label: "Child", filingMode: "on_principal" })];
+  // V8: withdrawing the field the rule reads names the rule, never the key.
+  const gone = new Map([[FACT, "Studies for a long time"]]);
+  const w = withdrawnFieldLines(bare(withRule), gone);
+  ok("release fail (V8): withdrawing the field the rule reads holds release on the rule, by its name and the field's", w.some((p) => p.where === "Who can be in this application" && p.label === `The rule that adds "Study permit" for Child` && p.message === `It reads "Studies for a long time", a new field that was withdrawn. Point it at another field, or remove it.`), w);
+  ok("release pass (V8): with no rule on the line, or the field still in the library, no such line", !withdrawnFieldLines(bare(noRule), gone).some((p) => p.where === "Who can be in this application") && withdrawnFieldLines(bare(withRule), new Map([["person.other", "Other"]])).length === 0);
+  // V7: validate() itself runs the line's checks (the tests above call the helper; this one calls validate).
+  const LIB = [{ key: FACT, valueType: "yes_no" }];
+  const vFail = validate(bare(withRule, []), LIB, []).filter((p) => p.where === "Who can be in this application");
+  ok("release fail (V7): validate() refuses a line whose rule's fact nobody is asked", vFail.some((p) => p.level === "error" && /nobody is asked it in this combination/.test(p.message)), vFail);
+  const vPass = validate(bare(withRule), LIB, []).filter((p) => p.where === "Who can be in this application");
+  ok("release pass (V7): validate() raises nothing on the line once the fact is asked per person", vPass.length === 0, vPass);
+  // S1: the rule's facts travel with the release (engine/snapshot.ts assemble seeds the facts a release carries from these).
+  const FORM_COND = { op: "eq", field: "person.form_fact", value: true, subjectKind: "PERSON" };
+  const facts = releaseConditionFacts([FORM_COND, null], withRule);
+  ok("snapshot pass (S1): the fact a line's added filing reads travels with the release, beside the forms' own", facts.has(FACT) && facts.has("person.form_fact"), [...facts]);
+  ok("snapshot fail (S1): a line with no rule adds no fact (only the forms' own travel)", [...releaseConditionFacts([FORM_COND], noRule)].join() === "person.form_fact" && releaseConditionFacts([], "not a list").size === 0);
 }
 
 // (3) Reading it on a case (engine/runtime/added-filings.ts).
@@ -87,6 +128,11 @@ const known = new Map<string, unknown>([[factKey("C1", FACT), { value: true }], 
   const a = addedFilings(S, known as never, PEOPLE);
   ok("case pass: a child answered Yes adds the filing, with its fee line", a.size === 1 && a.get("C1")?.filing === "Study permit" && a.get("C1")?.fee === "permit", [...a]);
   ok("case fail: answered No, not answered yet, or not travelling adds nothing", !a.has("C2") && !a.has("C3") && !a.has("C4"));
+  // Review M2 (round 2), A1: a list of fee lines is carried to the case as it was released.
+  const listed = addedFilings(snap([line("principal", { filingMode: "files_own" }), line("child", { filingMode: "on_principal", addsFiling: { ...ADDS, fee: ["permit", "bio"] } })]), known as never, PEOPLE);
+  ok("case pass (A1): a line naming a list of fee lines carries the list to the case", JSON.stringify(listed.get("C1")?.fee) === JSON.stringify(["permit", "bio"]), [...listed]);
+  const mixed = addedFilings(snap([line("principal", { filingMode: "files_own" }), line("child", { filingMode: "on_principal", addsFiling: { ...ADDS, fee: ["permit", 7] } })]), known as never, PEOPLE);
+  ok("case fail (A1): a list with a non-key in it carries no fee line (the case is left unpriced, in words)", mixed.has("C1") && mixed.get("C1")!.fee === undefined, [...mixed]);
   ok("case fail: a release whose lines add nothing adds nothing", addedFilings(snap([line("principal"), line("child", { filingMode: "on_principal" })]), known as never, PEOPLE).size === 0);
 }
 

@@ -68,9 +68,11 @@ export const ALIAS_OF: Partial<Record<LineMode, keyof typeof FILING_ALIAS>> = { 
 /** M3-S2 (P-380, P-425): a filing a line's person adds when a configured condition on their own answers holds (an
  *  accompanying child who will study: their own study permit application). `filing` names it on the case; `condition`
  *  is a rule over the person's answers (contracts/predicate.v0.schema.json, about the person), checked against the
- *  library at release; `fee` the fee table's line (or lines) charged on it, at least one per application and each reaching
- *  the person's role, and no other line counts the person (none: the case is not priced while the filing is added, never
- *  a total that leaves it out or charges it the application it left); `sourceQuote` IRCC's words with page and date (P-170). */
+ *  library at release; `fee` the fee table's line (or lines) charged on it, on any basis, each one of the combination's
+ *  lines reaching the person's role (refused at release otherwise), and no line it does not name counts the person, so the
+ *  author names every line that charges them (the release warns of a per-person or family-maximum line left out). None
+ *  named: the case is not priced while the filing is added, never charging it the application it left; `sourceQuote`
+ *  IRCC's words with page and date (P-170). */
 const FeeKey = z.string().trim().regex(/^[a-z][a-z0-9_]{1,60}$/, "Choose the fee line by its key in the fee table.");
 export const AddsFiling = z.object({
   filing: z.string({ error: "Name the filing it adds." }).trim().min(3, "Name the filing it adds (3 characters or more).").max(80, "Keep the filing's name under 80 characters."),

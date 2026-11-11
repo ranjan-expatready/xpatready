@@ -166,6 +166,14 @@ function docSets(t: { sets?: unknown }, effTypes: { documentTypeKey: string; nam
   const sets = snapSets(t.sets, (k) => effTypes.find((x) => x.documentTypeKey === k)?.name ?? newest(k)?.name, (k) => newest(k)?.status === "RETIRED");
   return sets ? { sets } : {};
 }
+const fieldsOfCondition = (c: unknown): string[] => (c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : []);
+/** The facts a release's own conditions read (its forms', document lines' and rules'), with, M3-S2 (P-380, P-425), the
+ *  rule of each "Who can be in this application" line that adds a filing: it reads the person's answers like any other
+ *  rule, so those facts and their questions travel with the release (pure; tests/runtime/check_added_filings.ts). */
+export function releaseConditionFacts(conditions: unknown[], participants: unknown): Set<string> {
+  const lines = (Array.isArray(participants) ? participants : []) as ({ addsFiling?: { condition?: unknown } | null } | null)[];
+  return new Set([...conditions, ...lines.map((p) => p?.addsFiling?.condition)].flatMap(fieldsOfCondition));
+}
 function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; sections: any[]; questions: any[]; doctypes: any[]; derived: any[]; selections: any[]; cforms: any[]; requirements: any[]; rules: any[]; checks: any[]; sources?: any[]; entries?: SourceEntry[]; allMaps: any[]; shared: { lists: Map<string, { key: string; label: string }[]>; effFields: any[]; effSections: any[]; effQuestions: any[]; effTypes: any[]; entriesOf: (editionId: string) => any[] } }): { snapshot: Snapshot; sha256: string } {
   const { derived, selections, cforms, requirements, rules, checks, allMaps, shared } = rows;
   const effSources = effective(rows.sources ?? [], (r: any) => r.lineageKey, mode).filter((r: any) => r.status !== "RETIRED" && (r.source || r.prequalification));
@@ -194,11 +202,8 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
   const selected = new Set(selections.map((s) => s.sectionKey));
   const used = new Set<string>();
   for (const m of fieldMaps) for (const e of m.entries) if (e.fact) used.add(e.fact);
-  const conditionFields = (c: unknown) => { if (c) for (const m of JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)) used.add(m[1]); };
-  for (const c of [...forms.map((f) => f.predicateJson), ...effReq.map((r) => r.predicateJson), ...effRules.map((r) => r.predicateJson)]) conditionFields(c);
-  // M3-S2: a filing a "Who can be in this application" line adds reads the person's answers by its rule: those facts
-  // and their questions travel with the release like any other rule's.
-  for (const p of (Array.isArray(comp.participants) ? comp.participants : []) as { addsFiling?: { condition?: unknown } | null }[]) conditionFields(p?.addsFiling?.condition);
+  const conditionFields = (c: unknown) => { for (const f of fieldsOfCondition(c)) used.add(f); };
+  for (const f of releaseConditionFacts([...forms.map((f) => f.predicateJson), ...effReq.map((r) => r.predicateJson), ...effRules.map((r) => r.predicateJson)], comp.participants)) used.add(f);
   // Lead check L5: a minimum age is decided by each person's date of birth, so its question travels with the forms.
   if (forms.some((f) => f.minAge)) used.add("person.date_of_birth");
   // QA-262: only the questions this combination places read in their conditions, repeated until nothing new is placed. A

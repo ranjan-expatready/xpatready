@@ -259,7 +259,8 @@ export function deriveFilings(combinationKey: string, people: Participant[], rul
   // M3-S2: a filing a person adds is charged only by the fee lines its line names (break M1: no other line counts that
   // person, so they never pay the application they left); each must be one of the combination's lines reaching the
   // person's role (break M2), on any basis (review M1: a per-person line such as a study permit charges them once). Otherwise its fee is unknown, so the case charges nothing
-  // (BR-10), never a short or wrong total.
+  // (BR-10). A line that charges the person but is not named stops counting them (review n1): the author names every
+  // such line, and the release warns of one left out (engine/validate.ts addedFilingProblems).
   const addedFee = new Map(plan.filings.filter((f) => f.added).map((f) => { const k = opts.adds?.get(f.owner.subject)?.fee; return [f.id, typeof k === "string" ? [k] : Array.isArray(k) ? k : []] as const; }));
   const addedOwner = new Map(plan.filings.filter((f) => f.added).map((f) => [f.owner.subject, f.id]));
   const reaches = (key: string, role: string) => { const r = fees0.find((x) => x.key === key); return !!r && (!r.roles || r.roles.includes(role)); };
