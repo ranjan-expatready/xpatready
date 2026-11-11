@@ -147,8 +147,9 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount, retired 
 
 /** BK-4b (BR-2, BR-3): who takes the combination's review over now, from the newest submission's state. None while
  *  the next step is yours, or nothing waits on anyone (no submission, or one the draft has since changed). */
-function ReviewHandOff({ v, me, people, needSme, unsignedSme, retired, combinationId }: { v: any; me: Person; people: Person[]; needSme: number; unsignedSme: number; retired: boolean; combinationId: string }) {
-  const latest = v.submission as { status: string; stale?: boolean; submittedBy: string } | null;
+type HandOffReview = { submission: { status: string; stale?: boolean; submittedBy: string } | null; releases: { release: number }[]; draft: { matches_release: boolean } };
+function ReviewHandOff({ v, me, people, needSme, unsignedSme, retired, combinationId }: { v: HandOffReview; me: Person; people: Person[]; needSme: number; unsignedSme: number; retired: boolean; combinationId: string }) {
+  const latest = v.submission;
   if (latest?.status === "SUBMITTED" && !latest.stale) {
     if (unsignedSme) {
       // The expert's changes go to the holder of the expert duty; the submitter never signs their own (studio.ts signoff).
