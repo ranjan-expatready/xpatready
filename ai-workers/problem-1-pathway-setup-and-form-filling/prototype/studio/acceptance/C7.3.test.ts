@@ -17,6 +17,7 @@
 //   tsx studio/acceptance/C7.3.test.ts 4440 xr_studio_accept
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { proseRecorded, recordedDerivation } from "../../p5/transforms.ts";
 import { CLIENT, OFFICER, call, expectedFor, fillEverything, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql, yearsAgo, answer, confirmAll, generateCopy } from "./lib/m3.ts";
 
 type Sheet = { order_basis: string; form?: string; sections: { key: string; title: string; entered: { at: string; by: string } | null; out_of_date?: boolean; answers: { label: string; fact: string; value: unknown; copy_text: string; source: string; subject?: string }[]; waiting?: { fact: string }[] }[] };
@@ -122,15 +123,19 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   // markNothingRecorded), as engine/form-values.ts writes them; a sheet line is the same person's same fact.
   const copyId = await generateCopy(c.id, FORM, P);
   ({ s } = await sheet());
-  type Box = { box: string; fact: string; about: string; about_label?: string; value?: unknown; detail?: string };
+  type Box = { box: string; fact: string; about: string; about_label?: string; value?: unknown; detail?: string; transform?: string | null };
   const boxes = JSON.parse(sql(`select s.facts_json->'boxes' from form_instance f join answer_snapshot s on s.id = f.snapshot_id where f.id = '${copyId}'`) ?? "[]") as Box[];
   const lines = (s?.sections ?? []).flatMap((x) => x.answers as SA[]), on = new Set(lines.map((l) => `${l.subject}|${l.fact}`));
   const nothing = boxes.filter((b) => /^nothing recorded/.test(b.detail ?? ""));
   // Held while QA-392 is open (P-284, as C10.1 R12c): it prints HELD naming the bug, fails nothing in the whole run, and is
   // never green for a PR that claims it (gate-b.mjs stepsVerdict). The PR that fixes QA-392 turns this into a plain ok().
   const missing14 = nothing.filter((b) => !on.has(`${b.about}|${b.fact}`)).map((b) => `${b.about_label}: ${b.box.split(".").slice(-2).join(".")}`);
-  const pass14 = !!copyId && nothing.length > 0 && missing14.length === 0;
-  if (pass14 || !copyId || !nothing.length) ok("C7.3-14 fail (QA-392): each \"nothing recorded\" Yes/No box the PDF copy writes as No (a list answered \"none apply\") has its line on the answer sheet for that person", pass14, { copy: copyId, nothing: nothing.length, missing: missing14 });
+  // Never vacuous, never a false red (#1553's reviewer; check_vv_prepare_api.ts on pack 4's fixture, #1549's CI): a release
+  // that maps a "recorded?" Yes/No box must give at least one "nothing recorded" box; one that maps none has nothing to compare.
+  const recordedMapped = boxes.some((b) => b.about && b.about !== "case" && (!!recordedDerivation(b.transform) || proseRecorded(b.transform)));
+  const pass14 = !!copyId && (nothing.length > 0 || !recordedMapped) && missing14.length === 0;
+  const label14 = `C7.3-14 fail (QA-392): each "nothing recorded" Yes/No box the PDF copy writes as No (a list answered "none apply") has its line on the answer sheet for that person${recordedMapped ? "" : " (this release maps no such box)"}`;
+  if (pass14 || !copyId || !nothing.length) ok(label14, pass14, { copy: copyId, recorded_mapped: recordedMapped, nothing: nothing.length, missing: missing14 });
   else console.log(`HELD  C7.3-14 (QA-392): red, held: the PDF copy writes ${missing14.length} "nothing recorded" box(es) as No that the answer sheet leaves out: ${missing14.join("; ")}`);
   const valued = boxes.filter((b) => b.value !== undefined && b.value !== null && b.value !== "");
   ok("C7.3-15 pass: every box the PDF copy writes from an answer has its line on the answer sheet", valued.length > 0 && valued.every((b) => on.has(`${b.about}|${b.fact}`)), valued.filter((b) => !on.has(`${b.about}|${b.fact}`)).map((b) => b.box));
