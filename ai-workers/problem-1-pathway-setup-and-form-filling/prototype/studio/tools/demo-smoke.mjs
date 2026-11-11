@@ -23,8 +23,11 @@ const summary = (title, rows) => {
   if (!process.env.GITHUB_STEP_SUMMARY) return;
   try { appendFileSync(process.env.GITHUB_STEP_SUMMARY, [`### ${title}`, ...rows.map((r) => `- ${r}`), ""].join("\n") + "\n"); } catch { /* the summary is a convenience */ }
 };
+/** One read of the API, given up after the screen wait (review M2: a copy that accepts and never answers is named, never
+ *  waited on for the step's whole limit). A copy that does not answer throws, in words. */
 const api = async (path, actor) => {
-  const r = await fetch(`${BASE}/api${path}`, { headers: actor ? { "x-actor": actor } : {} });
+  const r = await fetch(`${BASE}/api${path}`, { headers: actor ? { "x-actor": actor } : {}, signal: AbortSignal.timeout(WAIT) })
+    .catch((e) => { throw new Error(e?.name === "TimeoutError" ? `no answer within ${WAIT / 1000} s` : `no answer (${String(e?.cause?.code ?? e?.message ?? e)})`); });
   return { status: r.status, body: await r.json().catch(() => null) };
 };
 class Broke extends Error { constructor(screen, why) { super(`${screen}: ${why}`); this.screen = screen; this.why = why; } }
@@ -32,7 +35,7 @@ class Broke extends Error { constructor(screen, why) { super(`${screen}: ${why}`
 /** One screen: open `path` as `actor`, wait for `expect` (a locator maker), let the page's reads settle (at most 5 s),
  *  and fail on errors met on the way. `later`: what a later screen of the same page owns (its reads, by path, and its
  *  section), so a break there is named by that screen, not this one. */
-async function screen(page, name, actor, path, expect, extra, later = null) {
+async function screen(page, name, actor, path, expect, extra, later = null, missing = null) {
   const errors = [], server = [];
   const onError = (e) => errors.push(String(e?.message ?? e).split("\n")[0].slice(0, 200));
   const onResponse = (r) => { const u = new URL(r.url()); if (u.pathname.startsWith("/api/") && r.status() >= 500 && !later?.reads.test(u.pathname)) server.push(`${r.request().method()} ${u.pathname} answered ${r.status()}`); };
@@ -44,7 +47,9 @@ async function screen(page, name, actor, path, expect, extra, later = null) {
     if (!res || res.status() >= 400) throw new Broke(name, `the page answered ${res?.status() ?? "nothing"}`);
     const want = expect(page);
     const appeared = await want.first().waitFor({ state: "visible", timeout: WAIT }).then(() => true, () => false);
-    if (appeared) await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
+    // Let the page's other reads land before the error checks (at most 5 s; a page that keeps reading, as Prepare
+    // application does while a copy is being made, never settles, and that is said, not a break).
+    if (appeared && !(await page.waitForLoadState("networkidle", { timeout: 5000 }).then(() => true, () => false))) say(`NOTE  ${name}: the page was still reading after 5 s`);
     // A failed read shows as a danger notice (role=alert) with these words (web/src: "could not be loaded", "could not
     // be opened", "could not load", "went wrong"); a script error or a 5xx is a break even when the content appeared.
     const alertSel = later ? `[role="alert"]:not(${later.section} [role="alert"])` : '[role="alert"]';
@@ -52,7 +57,7 @@ async function screen(page, name, actor, path, expect, extra, later = null) {
     if (errors.length) throw new Broke(name, `a script error on the page: ${errors[0]}`);
     if (server.length) throw new Broke(name, `a server error: ${server[0]}`);
     if (alerts.length) throw new Broke(name, `the page shows "${alerts[0].slice(0, 160)}"`);
-    if (!appeared) throw new Broke(name, `${want.toString().replace(/^locator\(/, "").slice(0, 120)} did not appear within ${WAIT / 1000} s`);
+    if (!appeared) throw new Broke(name, `${missing ?? want.toString().replace(/^locator\(/, "").slice(0, 120) + " did not appear"} within ${WAIT / 1000} s`);
     if (extra) await extra(page);
     if (errors.length) throw new Broke(name, `a script error on the page: ${errors[0]}`);
     if (server.length) throw new Broke(name, `a server error: ${server[0]}`);
@@ -66,15 +71,23 @@ async function screen(page, name, actor, path, expect, extra, later = null) {
 async function walk() {
   // 1. The copy's health (M1): a database down, a full disk or a stuck fill queue named before any page opens.
   const h = await api("/health").catch((e) => ({ status: 0, body: { error: e.message } }));
+  // (a copy that does not answer at all, or not within the wait, is named here: "Health: the copy does not answer")
   if (h.status !== 200) {
     const parts = (h.body?.failing ?? []).map((k) => `${k} — ${h.body?.checks?.[k]?.words ?? ""}`).join("; ");
     throw new Broke("Health (/api/health)", h.status === 0 ? `the copy does not answer (${h.body?.error})` : `${h.status}: ${parts || JSON.stringify(h.body).slice(0, 200)}`);
   }
   say(`PASS  Health (/api/health): commit ${String(h.body?.sha ?? "").slice(0, 9)}, ${h.body?.checks?.disk?.free_gb} GB free, ${h.body?.checks?.fill_queue?.waiting ?? 0} copies in the fill queue`);
 
-  // The case to walk, from the case officer's own list (the same read as the Cases screen).
-  const list = await api("/runtime/cases", OFFICER);
-  const rows = Array.isArray(list.body?.cases) ? list.body.cases : [];
+  // The case to walk, from the case officer's own list (the same read as the Cases screen), every page of it (review m5:
+  // the list is 50 a page, newest first, so an older finished story is on a later page).
+  const rows = [];
+  for (let after = "", pages = 0; pages < 20; pages++) {
+    const list = await api(`/runtime/cases?take=100${after ? `&after=${encodeURIComponent(after)}` : ""}`, OFFICER).catch((e) => { throw new Broke("Cases (/cases), as the Case officer", `the case list read: ${e.message}`); });
+    if (list.status !== 200 || !Array.isArray(list.body?.cases)) throw new Broke("Cases (/cases), as the Case officer", `the case list read answered ${list.status}`);
+    rows.push(...list.body.cases);
+    if (rows.some((c) => c.reference === STORY_REF) || !list.body.next) break;
+    after = list.body.next;
+  }
   const story = rows.find((c) => c.reference === STORY_REF) ?? null;
   const theCase = story ?? [...rows].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0] ?? null;
 
@@ -92,7 +105,7 @@ async function walk() {
     await screen(page, "Immigration programs (/), as the Configuration author", AUTHOR, "/", (p) => p.getByRole("heading", { level: 1, name: "Immigration programs" }));
     // 3. Case officer: Cases.
     await screen(page, "Cases (/cases), as the Case officer", OFFICER, "/cases", (p) => p.getByRole("heading", { level: 1, name: "Cases" }),
-      theCase ? async (p) => { if (!(await p.getByText(theCase.reference, { exact: true }).first().isVisible().catch(() => false))) throw new Broke("Cases (/cases), as the Case officer", `the case ${theCase.reference} is not in the list`); } : undefined);
+      theCase ? async (p) => { if (!(await p.getByText(theCase.reference, { exact: true }).first().waitFor({ state: "visible", timeout: WAIT }).then(() => true, () => false))) throw new Broke("Cases (/cases), as the Case officer", `the case ${theCase.reference} is not in the list`); } : undefined);
     if (!theCase) { say("SKIP  Case page, Forms and Client questionnaire: no case on this copy (Demo › Load the finished story adds one)"); return { story: false, skipped: true }; }
     if (!story) say(`NOTE  no finished story on this copy: walking the newest case, ${theCase.reference}`);
     // 4. The case page.
@@ -109,11 +122,11 @@ async function walk() {
         say(`NOTE  ${forms} form rows on ${theCase.reference}`);
       });
     // 6. The client: the questionnaire on that case, as the case's own client login.
-    const view = await api(`/runtime/cases/${theCase.id}/questionnaire?mode=agent`, OFFICER);
+    const view = await api(`/runtime/cases/${theCase.id}/questionnaire?mode=agent`, OFFICER).catch((e) => ({ status: 0, body: { error: e.message } }));
     const client = view.body?.case?.client;
     if (typeof client === "string" && client) {
       const qPath = `/cases/${theCase.id}/questionnaire`;
-      await screen(page, `Client questionnaire (${qPath}), as the case's client`, client, qPath, (p) => p.locator("main").getByRole("heading").first());
+      await screen(page, `Client questionnaire (${qPath}), as the case's client`, client, qPath, (p) => p.getByRole("heading", { level: 1, name: "Client questionnaire" }), undefined, null, "the questionnaire did not open for the client");
     } else say(`SKIP  Client questionnaire: the case view names no client (${view.status})`);
     return { story: !!story, skipped: false };
   } finally { await browser.close().catch(() => {}); }

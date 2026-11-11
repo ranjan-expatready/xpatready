@@ -4,8 +4,10 @@
 // purpose, it fails and names that screen. The breaks are made by a small proxy in front of the copy, so the walk and the
 // app are the ones that ship: (1) the case page's own read answers a case with no body (the page crashes) → "Case page";
 // (2) the forms read answers 500 (Prepare application shows its error) → "Forms", the case page itself still passing;
-// (3) the web app's script is missing (every page blank) → the first screen, "Immigration programs"; (4) the database
-// down → "Health". No button is pressed, live AI is off; US$0, no model call.
+// (3) the web app's script is missing (every page blank) → the first screen, "Immigration programs"; (4) a read of the
+// case page answers 404 (no script error, no 5xx: only the page's own error notice says so) → "Case page", "the page
+// shows" (review M1); (5) the database down → "Health"; (6) a copy that accepts and never answers → "Health" within the
+// wait (review M2). No button is pressed, live AI is off; US$0, no model call.
 //   zsh studio/tools/isolated.sh m4smoke 4433 start && tsx studio/tests/check_m4_demo_smoke.ts 4433 xr_studio_m4smoke
 import { spawn, spawnSync } from "node:child_process";
 import { createServer, request, type Server } from "node:http";
@@ -18,7 +20,7 @@ const STUDIO = join(import.meta.dirname, ".."), SMOKE = join(STUDIO, "tools", "d
 const { call, until, sql } = client(PORT, DB);
 const { ok, summary } = recorder();
 
-type Break = "none" | "case" | "forms" | "bundle";
+type Break = "none" | "case" | "forms" | "bundle" | "notice";
 let mode: Break = "none";
 /** A proxy to the copy that breaks one thing on purpose (the mode). */
 function proxy(): Promise<Server> {
@@ -31,6 +33,9 @@ function proxy(): Promise<Server> {
       res.writeHead(500, { "content-type": "application/problem+json" }); res.end(JSON.stringify({ title: "Internal server error", status: 500, detail: "broken on purpose (M4 test)" })); return;
     }
     if (mode === "bundle" && /\.js$/.test(path) && !path.startsWith("/api/")) { res.writeHead(404); res.end(); return; }
+    if (mode === "notice" && req.method === "GET" && /^\/api\/runtime\/cases\/[^/]+\/prepare$/.test(path)) {
+      res.writeHead(404, { "content-type": "application/problem+json" }); res.end(JSON.stringify({ title: "Not found", status: 404, detail: "broken on purpose (M4 test)" })); return;
+    }
     const up = request({ host: "127.0.0.1", port: PORT, path: req.url, method: req.method, headers: { ...req.headers, host: `127.0.0.1:${PORT}` } }, (r) => { res.writeHead(r.statusCode ?? 502, r.headers); r.pipe(res); });
     up.on("error", () => { if (!res.headersSent) res.writeHead(502); res.end(); });
     req.pipe(up);
@@ -38,10 +43,10 @@ function proxy(): Promise<Server> {
   return new Promise((ok) => s.listen(0, "127.0.0.1", () => ok(s)));
 }
 /** Runs the walk as the demo update does, in its own process (asynchronously: the proxy lives in this one). */
-const smoke = (port: number): Promise<{ code: number | null; out: string; s: number }> => new Promise((done) => {
+const smoke = (port: number, waitMs = 15000): Promise<{ code: number | null; out: string; s: number }> => new Promise((done) => {
   const t = Date.now();
   let out = "";
-  const ch = spawn(process.execPath, [SMOKE, "--base", `http://127.0.0.1:${port}`, "--timeout-ms", "15000"], { env: { ...process.env, GITHUB_STEP_SUMMARY: "" } });
+  const ch = spawn(process.execPath, [SMOKE, "--base", `http://127.0.0.1:${port}`, "--timeout-ms", String(waitMs)], { env: { ...process.env, GITHUB_STEP_SUMMARY: "" } });
   const kill = setTimeout(() => ch.kill("SIGKILL"), 300_000);
   ch.stdout.on("data", (d) => { out += d; }); ch.stderr.on("data", (d) => { out += d; });
   ch.on("close", (code) => { clearTimeout(kill); done({ code, out, s: Math.round((Date.now() - t) / 1000) }); });
@@ -84,6 +89,11 @@ try {
   const b = await smoke(via);
   ok("M4 fail (the web app's script missing): the walk fails at the first screen, Immigration programs", b.code === 1 && /SMOKE FAIL: broke at Immigration programs/.test(b.out), tail(b.out));
 
+  mode = "notice";
+  const n = await smoke(via);
+  ok("M4 fail (a case-page read answers 404: only the page's error notice shows it): the walk names the Case page and quotes the notice",
+    n.code === 1 && /SMOKE FAIL: broke at Case page \(/.test(n.out) && /the page shows "[^"]*could not be loaded/.test(n.out) && !/a script error|a server error/.test(n.out), tail(n.out));
+
   // The database down: the copy's own health (M1) is the first thing the walk reads.
   mode = "none";
   const psql = (q: string) => spawnSync("/opt/homebrew/opt/postgresql@18/bin/psql", ["postgresql://xr_studio@127.0.0.1:54329/postgres", "-XAtc", q], { encoding: "utf8" });
@@ -92,6 +102,13 @@ try {
   const d = await smoke(via);
   psql(`alter database "${DB}" with allow_connections true`);
   ok("M4 fail (database down): the walk fails at Health, naming the database", d.code === 1 && /SMOKE FAIL: broke at Health \(\/api\/health\)/.test(d.out) && /database — The database does not answer/.test(d.out), tail(d.out));
+
+  // A copy that accepts and never answers (a hung server): named at Health within the wait, never the step's whole limit.
+  const silent = createServer(() => { /* never answers */ });
+  await new Promise<void>((r) => silent.listen(0, "127.0.0.1", () => r()));
+  const hung = await smoke((silent.address() as AddressInfo).port, 4000);
+  silent.closeAllConnections(); silent.close();
+  ok("M4 fail (a copy that never answers): the walk fails at Health within the wait (4 s here), in words", hung.code === 1 && /SMOKE FAIL: broke at Health/.test(hung.out) && /does not answer \(no answer within 4 s\)/.test(hung.out) && hung.s < 15, { s: hung.s, out: tail(hung.out) });
 } catch (e) { ok(`M4: the check ran to its end (crashed: ${(e as Error).message})`, false); }
 finally { server?.close(); }
 process.exitCode = summary() ? 1 : 0;

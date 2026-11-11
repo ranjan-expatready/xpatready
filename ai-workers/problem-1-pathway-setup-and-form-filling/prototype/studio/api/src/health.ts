@@ -8,17 +8,13 @@ import { Controller, Get, Inject, Injectable, Res } from "@nestjs/common";
 import { execFileSync } from "node:child_process";
 import { existsSync, statfsSync } from "node:fs";
 import { Db, OpenRead, STUDIO, VAR_ROOT } from "./core.ts";
-import { HEALTH_LIMITS, judgeHealth, type Health, type HealthLimits, type HealthProbes } from "./health-verdict.ts";
+import { HEALTH_LIMITS, judgeHealth, within, type Health, type HealthLimits, type HealthProbes } from "./health-verdict.ts";
 
 /** The commit this copy runs, read once at start-up ("unknown" outside a git checkout). */
 function gitSha(): string {
   try { return execFileSync("git", ["rev-parse", "HEAD"], { cwd: STUDIO, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 5000 }).trim() || "unknown"; } catch { return "unknown"; }
 }
 
-const within = <T,>(ms: number, p: Promise<T>): Promise<T> => {
-  let t: NodeJS.Timeout | undefined;
-  return Promise.race([p, new Promise<never>((_, no) => { t = setTimeout(() => no(new Error(`no answer within ${ms} ms`)), ms); })]).finally(() => clearTimeout(t));
-};
 
 @Injectable()
 export class HealthService {

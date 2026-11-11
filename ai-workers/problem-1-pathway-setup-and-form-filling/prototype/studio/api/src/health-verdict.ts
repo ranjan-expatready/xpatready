@@ -1,13 +1,23 @@
 // M1: the verdict of GET /api/health (api/src/health.ts), apart from Nest so a test reads it without a server
 // (tests/check_m1_health.ts). Pure: the probes' findings and the limits in, the answer out.
-/** The limits, each overridable by the copy's environment (whole numbers). */
+/** A limit from the copy's environment: a positive number, else the default (review m9: "abc" must never make a part
+ *  that cannot fail, as NaN compares false). */
+export const limitOf = (raw: string | undefined, dflt: number) => { const n = Number(raw); return raw != null && raw.trim() !== "" && Number.isFinite(n) && n > 0 ? n : dflt; };
+/** The limits, each overridable by the copy's environment. */
 export const HEALTH_LIMITS = {
   /** Below this many GB free, new copies, uploads and the database's own writes may fail. */
-  minFreeGb: Number(process.env.HEALTH_MIN_FREE_GB ?? 2),
+  minFreeGb: limitOf(process.env.HEALTH_MIN_FREE_GB, 2),
   /** A form copy queued or running longer than this many minutes is stuck (one fill takes seconds to a minute). */
-  fillMaxAgeMin: Number(process.env.HEALTH_FILL_MAX_AGE_MIN ?? 15),
+  fillMaxAgeMin: limitOf(process.env.HEALTH_FILL_MAX_AGE_MIN, 15),
   /** The database ping waits this long before it counts as not answering. */
-  dbTimeoutMs: Number(process.env.HEALTH_DB_TIMEOUT_MS ?? 2000),
+  dbTimeoutMs: limitOf(process.env.HEALTH_DB_TIMEOUT_MS, 2000),
+};
+
+/** `p`, or a refusal after `ms`: a database that hangs (a lock, a stopped server that keeps the socket) is named within
+ *  the limit, never waited on. */
+export const within = <T,>(ms: number, p: Promise<T>): Promise<T> => {
+  let t: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([p, new Promise<never>((_, no) => { t = setTimeout(() => no(new Error(`no answer within ${ms} ms`)), ms); })]).finally(() => clearTimeout(t));
 };
 export type HealthLimits = typeof HEALTH_LIMITS;
 

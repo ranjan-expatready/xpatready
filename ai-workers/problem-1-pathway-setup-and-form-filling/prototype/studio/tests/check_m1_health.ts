@@ -5,7 +5,7 @@
 // "database"; the database back → 200 again. Open: no person header needed. US$0, no model call.
 //   zsh studio/tools/isolated.sh m1health 4434 start && tsx studio/tests/check_m1_health.ts 4434 xr_studio_m1health
 import { execFileSync } from "node:child_process";
-import { judgeHealth, type HealthProbes } from "../api/src/health-verdict.ts";
+import { judgeHealth, limitOf, within, type HealthProbes } from "../api/src/health-verdict.ts";
 import { recorder } from "./runtime/api.ts";
 
 const PORT = Number(process.argv[2] ?? 4434), DB = process.argv[3] ?? "xr_studio_m1health";
@@ -32,6 +32,12 @@ const judge = (p: Partial<HealthProbes>) => judgeHealth({ ...well, ...p }, LIMIT
   ok("M1 pass (fill queue): one copy being made for 40 s → well, with its count and age", busy.status === "ok" && busy.checks.fill_queue.waiting === 1 && busy.checks.fill_queue.oldest_age_s === 40, busy.checks.fill_queue);
   const two = judge({ database: { ok: false, error: "x" }, freeBytes: 0 });
   ok("M1 fail: two parts bad → both named, in a fixed order", two.failing.join() === "database,disk", two.failing);
+  // Review m7: a database that hangs (a lock, a server that keeps the socket) is refused within the ping limit.
+  const t = Date.now(), hung = await within(300, new Promise<never>(() => {})).then(() => "answered", (e: Error) => e.message);
+  ok("M1 fail (database hangs): a ping that never answers is refused at the limit, in words, never waited on", hung === "no answer within 300 ms" && Date.now() - t < 1500, { hung, ms: Date.now() - t });
+  ok("M1 pass: a ping that answers within the limit passes through", await within(300, Promise.resolve(7)) === 7);
+  // Review m9: a limit that is not a positive number falls back to its default (NaN would make a part that cannot fail).
+  ok("M1 (limits): a set number is used; \"abc\", \"\", 0, -1 and unset fall back to the default", limitOf("5", 2) === 5 && limitOf("2.5", 2) === 2.5 && ["abc", "", " ", "0", "-1", undefined].every((r) => limitOf(r, 2) === 2));
 }
 
 // ---- Part 2: a live copy
@@ -47,7 +53,9 @@ try {
   const a = await health();
   ok("M1 pass (live): a healthy copy answers 200, status ok, with no person header", a.status === 200 && a.body?.status === "ok", a);
   ok("M1 (live): the answer names database, disk and fill_queue, the commit (40 hex) and is never cached", ["database", "disk", "fill_queue"].every((k) => a.body?.checks?.[k]) && /^[0-9a-f]{40}$/.test(a.body?.sha ?? "") && a.cache === "no-store", { sha: a.body?.sha, cache: a.cache });
-  ok("M1 (live): a healthy answer within 500 ms (plan: <100 ms on the Mac)", a.ms < 500, a.ms);
+  // The plan's bar is <100 ms on the Mac (measured 10 ms here); 500 ms leaves room for a busy CI machine so a slow runner
+  // never fails a check that is about whether the copy is well (review m8: kept, with this reason).
+  ok("M1 (live): a healthy answer within 500 ms (plan: <100 ms on the Mac; measured in the NOTE below)", a.ms < 500, a.ms);
   console.log(`NOTE  healthy answer in ${a.ms} ms; disk ${a.body?.checks?.disk?.free_gb} GB free`);
   // The database made unreachable for this copy only: no new connection, and the pool's open ones ended.
   psql(`alter database "${DB}" with allow_connections false`); cut = true;
