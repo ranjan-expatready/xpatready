@@ -4,8 +4,7 @@
 // Approve, and the other way round an officer saw Approve and was refused 403. Walked at 1440 px in a real browser:
 // the Case officer opens round 2 (read-only line, no Approve or Send back); the picker → Representative of record: the
 // read-only line is gone and Approve and Send back show; the picker → Case officer: the read-only line is back and no
-// Approve shows at any moment after the change (fail side: a stale Approve could be pressed). Also on the case page
-// (Ready to file's review line). The data comes from tests/runtime/setup_c83_walk.ts (the product's own routes), as
+// Approve shows from the first frame after the change (fail side: a stale Approve could be pressed). The data comes from tests/runtime/setup_c83_walk.ts (the product's own routes), as
 // check_c83_review_browser.cjs. No model call (US$0).
 //   COPY_PREFIX=screens zsh studio/tools/isolated.sh screens_qa401 4447 start && node studio/tests/check_qa401_person_rights_browser.cjs 4447 xr_studio_screens_qa401
 const fs = require("node:fs");
@@ -57,6 +56,7 @@ const ok = (name, cond, detail) => { if (cond) { pass++; console.log(`PASS  ${na
     await watchApprove();
     await picker.selectOption(d.officer);
     await readOnly.waitFor(T).catch(() => {});
+    await p.waitForTimeout(500);
     const saw = await stopWatch();
     ok("QA-401 (reverse): after the picker's change to the Case officer, the read-only line is back", (await readOnly.count()) === 1);
     ok("QA-401 fail side (reverse): the Case officer never sees Approve after the change, not even for a moment (a stale Approve was refused 403)", !saw && (await approve.count()) === 0 && (await back.count()) === 0, { saw });
