@@ -69,3 +69,31 @@ None.
 Journey test: `journey-test-reviewer-2026-11-11.md`, **8/10** (pass, no 0).
 
 **Verdict: Block.** To fix: **M1** (three red suites, then the full run green). Also fix m1 (an [M] line) in the same push. m2-m5 are Shoulds: fix them or list them with a follow-up row.
+
+## Re-review: head 4272bc0a8 (diff `d2705074e..4272bc0a8` only)
+11 Nov 2026 · same reviewer. **Copies:** bk3rev2 on :4446 (configured checkpoint) and rr_* on :4447-4449. The served bundle was rebuilt from this head (it contains "No such page"). Live AI was off (US$0). All copies are stopped and test-copies.sh shows 0. Suite screenshots were restored with git checkout.
+**What changed:** 9 code and test files, +60/−25, still web/src plus tests. build-notes.md was added, and this review and the journey report were committed as I wrote them.
+
+### My earlier list, item by item
+- **M1: closed.** I ran the three formerly red suites at this head:
+  - check_c69_page_browser 55/55: the separator is the text "›" again, in an `aria-hidden` span (frame.tsx).
+  - check_screen01_browser 116/116: the line says "No such page", so "Page not found" appears once (my spot check on `/nope`: once).
+  - check_w1_programs_s2 90/90: the test waits for the levels before reading the line (check_w1_programs_s2.cjs:293-294). The read and the assertion are unchanged.
+  - Builder's browser walk: 423/423. Static check: 128/128.
+  - No assertion was weakened. In check_bk3_frame.ts the not-found word moved from "Page not found" to "No such page" on both the pass and fail sides, and the old `here !== "Page"` guard went with it. That is harmless: no route's words end in "Page".
+- **m1: closed.** The band is `text-sm`: computed 14px on every page I opened.
+- **m2: closed.** Client A on `/cases/:id` sees "Client questionnaire › Case" with Back to their questionnaire, and no "Page not found". The static check now walks every case route as the client.
+- **m3: closed.** `useCaseWhere` (runtime/questionnaire.tsx) reads the reference from `/prepare`, which returns 200 for the representative.
+  - The line reads "Cases › SAMPLE-VV-FAMILY-1 › Representative's review" for the Representative (user-R) and the Second representative (user-T), and "› Client questionnaire" for the case officer.
+  - The hooks are called before every early return (representative-review.tsx:49 and :66, cases.tsx:248).
+- **m4: closed.** Back's accessible name is "Back: <target>": "Back: Immigration programs" on /activity, "Back: SAMPLE-VV-FAMILY-1" on a case page.
+  - The name starts with the visible word, so WCAG 2.5.3 (label in name) holds.
+  - The visible text is still "Back". That is acceptable now that the name and the hover title both give the target.
+- **m5: closed.** build-notes.md records both departures: the band instead of header crumbs, and the person switch on the area link (demo until BK-4).
+- **Nits: closed.** The App.tsx comment is rewritten, the indentation is fixed, and an AI job with no combination keeps "History".
+
+**New findings in the diff:** none at Major or above. (`useCaseWhere` shares review.tsx's `/prepare` query key: same endpoint, same data, so nothing is fetched twice.) **Not checked:** the other selected suites. The builder reports targeted runs green; the full 146 run when the PR is marked ready.
+
+Journey score: unchanged at 8/10 for the first pass. The four half-point criteria were raised by m1-m4, which are now closed. Re-scoring would give 9½/10; only the 375 px wrap and the title tooltip on hover stay as they are.
+
+**Verdict: Approve** (head 4272bc0a86e5358dad953196a9afb40220f88f4b; no open Blocker or Major).
