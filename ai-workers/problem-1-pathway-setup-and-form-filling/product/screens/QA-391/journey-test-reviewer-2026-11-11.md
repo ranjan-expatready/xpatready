@@ -53,3 +53,19 @@ To raise the score, most valuable first: M1 (the state), then M2 (the age reason
 - Two tabs or a double click on the lock: the button is not offered on kept rows.
 
 Screenshots (not committed): `/tmp/claude-0/-home-user-xpatready/ace8db74-715e-5d4a-92c5-f8724332d4d8/scratchpad/shots/`.
+
+## Re-test at eeff622a3 (reviewer, 11 Nov)
+Copy: the reviewer's own on :4456, `rv391b`, configured checkpoint, then the finished story via the suite; stopped after use.
+- **J3 (not travelling):** "they are not travelling with this application". Held.
+- **J4 (age):** "they are under 18, and this form is asked of them only from age 18". Held.
+- **J5 (filed, then no longer applies):** "Its copy locked as “Filed” on … stays as it was; no new copy is filed." Held.
+- **M3:** no by-hand, not-on-form or before-filing lines on kept rows. Held.
+- **J6:** the 409 now says the reason in plain words.
+- The suite passes 24/24 and qa's repro 6/6. axe 0 at 1440 and 1024 px.
+
+| Criterion | Was | Now | Evidence |
+|---|---|---|---|
+| Plain words | ½ | ½ | M2 is fixed. Minor n1 remains (under the age while the rule still waits reads "its own rule reads No"), and the long questionnaire labels sit in the sentence |
+| Feedback and state | ½ | 1 | One state per row: the filed copy is named, the others "never filed" |
+| Trust and sources | ½ | 1 | The reason names the true cause: the age, the person, or whose answer |
+| **Total** | 8½ | **9½ / 10** | Pass. No Major is open |

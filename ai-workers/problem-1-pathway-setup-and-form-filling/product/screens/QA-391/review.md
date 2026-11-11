@@ -46,3 +46,33 @@ BIC-03 Partly (dependent forms marked "no longer applies"; M2's reason is wrong)
 - An intended user's unaided walk (D17, D20 stay with the founder).
 
 Screenshots, not committed: `/tmp/claude-0/-home-user-xpatready/ace8db74-715e-5d4a-92c5-f8724332d4d8/scratchpad/shots/` (`kept-row-{1440,1024,400}x1.png`, `kept-row-720x2.png`, `online-row-1440.png`, `full-1440.png`, `rv-*.png`).
+
+## Re-review at eeff622a32269ebcddcd33a07458361254c06dc2 (diff only: a118065..eeff622a3)
+Where: the reviewer's own copy on :4456 (`rv391b`, `--ttl 60`, stopped after use). It ran the configured checkpoint with the round-1 edge cases set up again, then the builder's suite, which loads the finished story itself. :4450 was already stopped.
+
+**Verdict: Approve.** M1, M2, M3, m2 and m3 are fixed. m1 is covered. No Blocker or Major is open.
+
+**What was fixed (evidence):**
+- **M1.** Partner's IMM 5257 and IMM 5475 copies were locked Filed, then Partner was marked not travelling (`PATCH …/people`). The rows read "Its copy locked as “Filed” on 11 Nov, 16:07 stays as it was; no new copy is filed." beside "Stale · Filed". A kept IMM 5707 copy locked as "Validated copy uploaded back" reads the same with its own kind. Rows with no lock still read "never filed". Screenshots: `rv2-IMM_5257_93b34001.png`, `rv2-IMM_5707_7599b283.png`.
+- **M2.** Child 18 or over, date of birth 2014: IMM 5257 SCH1, IMM 5476 and IMM 5707 read "they are under 18, and this form is asked of them only from age 18". The rule-based reasons now name whose answer:
+  - "…; the application's answer is not Yes" for the case question (IMM 5475);
+  - "…; their answer is not Yes" for the person's question (IRM 0002).
+  Screenshot: `rv2-IMM_5257_SCH1_7599b283.png`.
+- **M3.** The kept IMM 5707 rows (Partner, and Child 18 or over) show no "To write by hand", "Not on this form" or "Before filing". Client A's applying IMM 5707 still lists its by-hand field (`rv2-IMM_5707_d19de974.png`).
+- **m2.** The 409 reads "IRM 0002 no longer applies to this person: it is needed only when "…" is Yes; their answer is not Yes. Its copies are kept, never filed." The age reason works there too, with no nested brackets.
+- **m3.** In `forms.tsx`, the trial check now comes before "Generate a new copy to file it".
+- **m1, the suite.** `check_qa391_kept_forms_browser.cjs 4456 xr_studio_rv391b`: **24/24 PASS** (3 min 15 s). qa's repro: 6/6 PASS.
+  - Each new rule has a pass line and a fail line: M1 locked against not locked, M2 age against "always required", M3 kept against applying by-hand. Each fail line fails if its fix is removed.
+  - The suite sets Partner not travelling in the database rather than by the route. The reviewer checked that the route gives the same state.
+
+**Regression checks (all held):**
+- Forms that apply keep Generate, Validate, the lock buttons and "to file it" (Client A, Child 18 or over IMM 5257).
+- The reasons are computed once per list. GET …/forms takes 0.37 s with 14 kept rows.
+- axe finds 0 violations at 1440 and 1024 px. No console errors.
+- Kept rows do not overflow at 400 px or at 200 % zoom.
+
+**Open Minors (Should; none blocks):**
+- **n1, untrue reason in one case.** `engine/runtime/forms.ts` `notApplyingWords` gives the age reason only when `rule?.applies !== "cannot_tell"`. Render's `both()` reads a waiting rule plus a failed age as No (`render.ts:72`). So a person under the age, whose rule still waits for an answer, gets "its own rule reads No on this case's answers". That is untrue: the age is the reason. It is reachable only with a copy of an age-limited conditional form (IMM 5476) whose answer is still missing. Fix: drop the `cannot_tell` exclusion. The form does not apply and the rule is not No, so the age decided it.
+- **n2, carried from m2.** A text value would print raw (`is "common_law"; their answer is not "common_law"`). Not reached on any case today (no kept IMM 5409). Use the choice's label.
+
+**Not caused by this PR, for qa to log if not already listed:** on the configured checkpoint at 400 px, the page scrolls sideways by up to 500 px. The causes are the people tables and the applying IMM 5257 rows' "Validated in Adobe on the Mac and read back equal (Sample)…" span (`ValidatedState`). This PR does not change that span for forms that apply, and the finished story on :4450 showed no overflow.
