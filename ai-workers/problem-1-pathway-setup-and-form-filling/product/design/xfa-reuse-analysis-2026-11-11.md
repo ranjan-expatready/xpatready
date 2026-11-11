@@ -141,63 +141,63 @@ At least three parts win (N1, N3, and N2 after its fix), so the source copy stay
 
 ### 3.4 Every feature in the share, and when it goes live
 
-The same result, feature by feature, so nothing in the share is left unjudged. **On now** = part of a winner (or the machinery under one), switched on by one of the first rows (B170a to f). **On after …** = waits for the named row or ruling. **Not used** = copied and tested with the rest, switch off, with the reason and what would change it. Everything in `packages/xfa-engine/` is copied whatever its verdict.
+The same result, feature by feature, so nothing in the share is left unjudged. Each line carries one of the four verdicts (**ours wins** · **theirs as is** · **theirs + fix** · **not used**) with its number or "not measured yet" and the row that measures it, then when it goes live. **On now** = part of a winner (or the machinery under one), switched on by one of the first rows (B170a to f). **On after …** = waits for the named row or ruling. **Not used** = copied and tested with the rest, switch off, with the reason and what would change it. Everything in `packages/xfa-engine/` is copied whatever its verdict.
 
 #### Reading and writing the PDF
 
-| # | Feature | Proven by | Verdict | Why · what it moves |
+| # | Feature | Proven by | Verdict and when | Why · what it moves |
 |---|---|---|---|---|
-| F1 | Open the PDF: objects, cross-reference tables and streams, object streams, compression | Unit tests; the team's match against `qpdf`; my run: 24 of 24 open | **On now** (inside every engine feature, from row c) | It is the engine's front door. Head to head H2 and H3: a tie on reading, and ours wins on field lists, so our own reading stays ours. |
-| F2 | Decrypt the kind of encryption IRCC uses (AESV2); refuse every other kind with a named error | Unit tests; all 24 files are encrypted and open | **On now** | Same door. Refusing other kinds is right for us too. |
-| F3 | Pull out the form's inside parts (template, data, saved form state) | Unit tests; 24 of 24 | **On now** | Needed by everything below. |
-| F4 | Pull out the fonts embedded in the PDF | Unit tests; used by the page dump | **On after B170d** (view) | Only drawing pages needs it. |
-| F5 | Write changed data back as an addition at the end of the file, re-encrypted, original bytes untouched | Unit tests; the team's owner opened results in Adobe Reader for both forms (18 Oct) | **On after B170i** (writer trial); until then our Python writer stays | Head to head H1: a tie on everything measured, and a tie keeps ours. Ours is proven by Adobe on our data (C7.1 fill, C10.2 finished story); theirs is not measured on our data yet. If it wins: about 680 Python lines, `pypdf` private internals, and the Python step leave the fill path. The engine does not check signatures; our `openssl` check stays either way. |
-| F6 | Safe XML reading (refuses document-type tricks; cleans illegal characters on write) | Unit tests | **On now** (inside) | Defence we get for free. |
+| F1 | Open the PDF: objects, cross-reference tables and streams, object streams, compression | Unit tests; the team's match against `qpdf`; my run: 24 of 24 open | **Theirs as is**, inside its own features (24 of 24 open). For our own reading a tie keeps ours (H2). When: **On now** (inside every engine feature, from row c) | It is the engine's front door. Head to head H2 and H3: a tie on reading, and ours wins on field lists, so our own reading stays ours. |
+| F2 | Decrypt the kind of encryption IRCC uses (AESV2); refuse every other kind with a named error | Unit tests; all 24 files are encrypted and open | **Theirs as is** (24 of 24 encrypted files open). When: **On now** | Same door. Refusing other kinds is right for us too. |
+| F3 | Pull out the form's inside parts (template, data, saved form state) | Unit tests; 24 of 24 | **Theirs as is** (24 of 24). When: **On now** | Needed by everything below. |
+| F4 | Pull out the fonts embedded in the PDF | Unit tests; used by the page dump | **Theirs as is** (fonts drawn in the pages of section 8; real-browser look not measured yet, row d). When: **On after B170d** (view) | Only drawing pages needs it. |
+| F5 | Write changed data back as an addition at the end of the file, re-encrypted, original bytes untouched | Unit tests; the team's owner opened results in Adobe Reader for both forms (18 Oct) | **Ours wins (a tie keeps ours, H1).** Adobe Validate on an engine-written copy of our data: not measured yet, row i. When: **On after B170i** (writer trial); until then our Python writer stays | Head to head H1: a tie on everything measured, and a tie keeps ours. Ours is proven by Adobe on our data (C7.1 fill, C10.2 finished story); theirs is not measured on our data yet. If it wins: about 680 Python lines, `pypdf` private internals, and the Python step leave the fill path. The engine does not check signatures; our `openssl` check stays either way. |
+| F6 | Safe XML reading (refuses document-type tricks; cleans illegal characters on write) | Unit tests | **Theirs as is** (unit tests; nothing of ours to compare). When: **On now** (inside) | Defence we get for free. |
 
 #### Understanding and running the form
 
 | # | Feature | Proven by | Verdict | Why · what it moves |
 |---|---|---|---|---|
-| F7 | Form model with a gate that refuses what it cannot model, naming the reason | Unit tests; 2 forms pass, 18 refused cleanly (1.3) | **On now** | The gate's reason becomes our line "not available for this form yet: …". Never a silent pass. |
-| F8 | Merge template and data: values, choice lists, date/number/text patterns | Unit tests; both forms; the team's check of every value against three Adobe-saved copies (270, 270 and 268 values identical) | **On now** | Lets the engine read a copy written by our writer or saved by Adobe. |
-| F9 | Find any box by its path | Unit tests; all 186 barcode references on both forms | **On now** | Used by the checks. |
-| F10 | Read the state Adobe saves with a form (so a saved copy reopens as Adobe left it) | The team's Adobe-copy tests | **On now** | Needed to read validated copies in row e. |
-| F11 | Script sandbox (QuickJS in WebAssembly): time, memory and pattern limits, attack tests | Unit tests including hostile scripts; one gap the team lists (a giant pattern written straight into script code) | **On now** | Our inputs are official IRCC forms, not hostile ones; we still run it in a separate process with a time limit. |
-| F12 | Event engine: load events, calculations, click, exit, change, before-save | Unit tests; both forms load with nothing unsupported | **On now** | Runs the form as Adobe would. |
-| F13 | Set a value the way a person types it (the form's own scripts react) | Unit tests; the team's fill sample | **On after B170h** (validate in the app) | Our forms are filled from case facts by our writer; the checks read that copy. Typing through scripts is how an engine-made copy would be filled, so it waits for that trial. |
-| F14 | Press the form's own Validate and report the result | Unit tests; **my run on our copy: same sentence as Adobe, 0.2 s** | **On now** (row f) | QA-165's list stops guessing which conditional boxes count; the officer learns before opening Adobe. |
-| F15 | Build the form's own barcode texts | Unit tests; my runs: 3 of 5 equal to Adobe, 2 differ by a number format (T1) | **On now as "expected"** (row e); **as equal to Adobe after B170g** | Row e compares barcode pieces with the facts on every copy. Calling it Adobe-equal waits for the fix. |
-| F16 | List every problem box | Unit tests; my run: 2 boxes, the same two QA-165 lists | **On now, with care** (row f) | It over-reports boxes the form marks mandatory but asks for only sometimes (T4). Validate decides; the list explains. |
-| F17 | Record the form's messages and where it moves focus | Unit tests | **On now** (row f) | The form's own message is what we show. |
-| F18 | Clock, time zone and reader identity passed in, never fixed in code | Unit tests | **Clock and zone on now; reader identity on after B170h** | The validated date depends on the zone. Reader identity matters only for an engine-made validated copy (T8). |
-| F19 | Save the engine's data into the PDF | Unit tests; the team's Adobe reopen | **On after B170h / B170i** | Same reason as F5 and F13. |
-| F20 | Clear-form button report, "may the user do this" checks, record of host requests | Unit tests | **Not used** | Only a screen where a person types into the form needs them. On if fill-and-edit in the browser is ever wanted. |
-| F21 | Form descriptor: five or six box names per form (Validate button, flag, flag value, first-missing note, barcode group, clear button) | The two descriptors in the tests work on our copies | **On now, as data on our form record** (row c) | Forms stay data (P-319, P-449). Later replaces the names fixed inside `read_validated.py`. |
-| F22 | Made-up data files for both forms and the way to apply them | Tests | **On now, in tests** | CI can prove "a complete form passes" with no client data. |
+| F7 | Form model with a gate that refuses what it cannot model, naming the reason | Unit tests; 2 forms pass, 18 refused cleanly (1.3) | **Theirs + fix** (2 of 21 blank forms pass the gate; row j sizes the 18 refusals). When: **On now** | The gate's reason becomes our line "not available for this form yet: …". Never a silent pass. |
+| F8 | Merge template and data: values, choice lists, date/number/text patterns | Unit tests; both forms; the team's check of every value against three Adobe-saved copies (270, 270 and 268 values identical) | **Theirs + fix** (values equal to Adobe's on 270, 270 and 268 leaves; barcode number format 3 of 5, row g; 5 forms refused for input patterns, row j). When: **On now** | Lets the engine read a copy written by our writer or saved by Adobe. |
+| F9 | Find any box by its path | Unit tests; all 186 barcode references on both forms | **Theirs as is** (186 of 186 barcode references found, the team's number). When: **On now** | Used by the checks. |
+| F10 | Read the state Adobe saves with a form (so a saved copy reopens as Adobe left it) | The team's Adobe-copy tests | **Theirs as is** (our Adobe-validated copy loads with 5 of 5 stored barcode texts). When: **On now** | Needed to read validated copies in row e. |
+| F11 | Script sandbox (QuickJS in WebAssembly): time, memory and pattern limits, attack tests | Unit tests including hostile scripts; one gap the team lists (a giant pattern written straight into script code) | **Theirs as is** (attack tests pass; one gap the team lists). When: **On now** | Our inputs are official IRCC forms, not hostile ones; we still run it in a separate process with a time limit. |
+| F12 | Event engine: load events, calculations, click, exit, change, before-save | Unit tests; both forms load with nothing unsupported | **Theirs as is** (0 unsupported calls on both forms). When: **On now** | Runs the form as Adobe would. |
+| F13 | Set a value the way a person types it (the form's own scripts react) | Unit tests; the team's fill sample | **Not used** for now (on our data: not measured yet, row h). When: **On after B170h** (validate in the app) | Our forms are filled from case facts by our writer; the checks read that copy. Typing through scripts is how an engine-made copy would be filled, so it waits for that trial. |
+| F14 | Press the form's own Validate and report the result | Unit tests; **my run on our copy: same sentence as Adobe, 0.2 s** | **Theirs as is** (same answer as Adobe on our copy, 0.2 s; ours lists 2 of 46 false alarms, H6). When: **On now** (row f) | QA-165's list stops guessing which conditional boxes count; the officer learns before opening Adobe. |
+| F15 | Build the form's own barcode texts | Unit tests; my runs: 3 of 5 equal to Adobe, 2 differ by a number format (T1) | **Theirs + fix** (3 of 5 equal to Adobe; row g). When: **On now as "expected"** (row e); **as equal to Adobe after B170g** | Row e compares barcode pieces with the facts on every copy. Calling it Adobe-equal waits for the fix. |
+| F16 | List every problem box | Unit tests; my run: 2 boxes, the same two QA-165 lists | **Theirs as is**, with care (2 boxes listed, the same two as ours). When: **On now, with care** (row f) | It over-reports boxes the form marks mandatory but asks for only sometimes (T4). Validate decides; the list explains. |
+| F17 | Record the form's messages and where it moves focus | Unit tests | **Theirs as is** (the form's message read on our copy). When: **On now** (row f) | The form's own message is what we show. |
+| F18 | Clock, time zone and reader identity passed in, never fixed in code | Unit tests | **Theirs as is** for clock and zone; reader identity **not used** until row h. When: **Clock and zone on now; reader identity on after B170h** | The validated date depends on the zone. Reader identity matters only for an engine-made validated copy (T8). |
+| F19 | Save the engine's data into the PDF | Unit tests; the team's Adobe reopen | **Ours wins (a tie keeps ours, H1)**; engine-saved copies not measured yet on our data (rows h, i). When: **On after B170h / B170i** | Same reason as F5 and F13. |
+| F20 | Clear-form button report, "may the user do this" checks, record of host requests | Unit tests | **Not used.** When: **Not used** | Only a screen where a person types into the form needs them. On if fill-and-edit in the browser is ever wanted. |
+| F21 | Form descriptor: five or six box names per form (Validate button, flag, flag value, first-missing note, barcode group, clear button) | The two descriptors in the tests work on our copies | **Theirs as is** (the 2 descriptors work on our copies). When: **On now, as data on our form record** (row c) | Forms stay data (P-319, P-449). Later replaces the names fixed inside `read_validated.py`. |
+| F22 | Made-up data files for both forms and the way to apply them | Tests | **Theirs as is**, in tests. When: **On now, in tests** | CI can prove "a complete form passes" with no client data. |
 
 #### Drawing the form
 
 | # | Feature | Proven by | Verdict | Why · what it moves |
 |---|---|---|---|---|
-| F23 | Page layout: units, font measures, plain and rich text, boxes, flow, page breaks, lines, images | Unit tests (56 files); page counts match saved forms; **my run on our copy: 5 and 6 pages in 1.5 s** (section 8) | **On after B170d** (view) | The team's own side-by-side with Acrobat was pending on 20 Oct, so row d includes one. |
-| F24 | Render tree: the pages as checked data a screen can draw | Unit tests | **On after B170d** | The contract between engine and screen. |
-| F25 | HTML page writer (one static page per form page, no script) | Used for the renders in the share and mine | **On after B170d** | A helper script, now inside our copy, so no extra OK is needed. |
-| F26 | Drawing the barcode picture | **Not in the share** (the team's "Plan B", not started) | Nothing to adopt | Adobe draws barcodes. The view shows placeholders with a caption. |
-| F27 | Browser worker: one form per killable background worker, replay, watchdog | Unit tests; a measured kill-and-replay proof | **Not used** | We run the engine on the server in a separate process. On if the engine ever runs in the browser. |
-| F28 | Viewer screens (open, fill, validate, download in the browser) | **Not in the share**: plans (9 tasks), 19 open questions, 11 mock-up pages | Nothing to adopt; mock-ups kept as reference | Our forms are filled from facts; see section 8 for what the founder's example really needs. |
+| F23 | Page layout: units, font measures, plain and rich text, boxes, flow, page breaks, lines, images | Unit tests (56 files); page counts match saved forms; **my run on our copy: 5 and 6 pages in 1.5 s** (section 8) | **Theirs as is**, pending two measures (real browser, Acrobat side-by-side: not measured yet, row d); a difference found there makes it theirs + fix. When: **On after B170d** (view) | The team's own side-by-side with Acrobat was pending on 20 Oct, so row d includes one. |
+| F24 | Render tree: the pages as checked data a screen can draw | Unit tests | **Theirs as is** (same two measures pending, row d). When: **On after B170d** | The contract between engine and screen. |
+| F25 | HTML page writer (one static page per form page, no script) | Used for the renders in the share and mine | **Theirs as is** (same two measures pending, row d). When: **On after B170d** | A helper script, now inside our copy, so no extra OK is needed. |
+| F26 | Drawing the barcode picture | **Not in the share** (the team's "Plan B", not started) | **Not used** (nothing to adopt). When: nothing to adopt | Adobe draws barcodes. The view shows placeholders with a caption. |
+| F27 | Browser worker: one form per killable background worker, replay, watchdog | Unit tests; a measured kill-and-replay proof | **Not used.** When: **Not used** | We run the engine on the server in a separate process. On if the engine ever runs in the browser. |
+| F28 | Viewer screens (open, fill, validate, download in the browser) | **Not in the share**: plans (9 tasks), 19 open questions, 11 mock-up pages | **Not used** (nothing to adopt). When: nothing to adopt; mock-ups kept as reference | Our forms are filled from facts; see section 8 for what the founder's example really needs. |
 
 #### Around the engine
 
 | # | Item | Verdict | Why |
 |---|---|---|---|
-| F29 | The engine's unit tests (201 files, 3,369 tests) | **On now, in our CI** (row a) | The founder's condition. |
-| F30 | The real-form suite (401 tests on IMM 5257 and IMM 1295, some on Adobe-saved copies) | **On after B170b** | The two blank forms are **byte-identical to the copies our CI already fetches from canada.ca** (same sha256), so the blank-form part can run in CI. The Adobe-saved copies cannot be fetched and are PDFs, so that part runs on the Mac. |
-| F31 | A made-up XFA form built by the tests (`fixtures/synthetic`) | **On now** | Lets our adapter tests run with no IRCC file at all. |
-| F32 | Sample scripts: write, fill, render, measure layout, measure isolation | **Fill and render on after rows h and d; the others not used** | Fill is the pattern for row h, render for row d. |
-| F33 | The team's scripts that build one package file for their front end | **Not used** | With the source in our repository we build from source. |
-| F34 | Specification, plans, owner decisions, open questions | **Reference** | Their decision "Validate runs again inside Approve & download" points where row h points. |
-| F35 | Test forms and Adobe checks (24 PDFs, renders) | **Used on the Mac only; never in git** | Evidence for rows b, g and h. |
-| F36 | The rest of the team's repository inside the bundle (their API, worker, contracts) | **Outside this ask** | The newest capture under `code/` is the read-only reference for it (AGENTS rule 3). |
+| F29 | The engine's unit tests (201 files, 3,369 tests) | **Theirs as is** (3,367 of 3,369 in a full run; the 2 others pass alone). When: **On now, in our CI** (row a) | The founder's condition. |
+| F30 | The real-form suite (401 tests on IMM 5257 and IMM 1295, some on Adobe-saved copies) | **Theirs as is**; our own run not measured yet (row b). When: **On after B170b** | The two blank forms are **byte-identical to the copies our CI already fetches from canada.ca** (same sha256), so the blank-form part can run in CI. The Adobe-saved copies cannot be fetched and are PDFs, so that part runs on the Mac. |
+| F31 | A made-up XFA form built by the tests (`fixtures/synthetic`) | **Theirs as is.** When: **On now** | Lets our adapter tests run with no IRCC file at all. |
+| F32 | Sample scripts: write, fill, render, measure layout, measure isolation | **Theirs as is** for render (row d); fill **not used** until row h; the measuring scripts **not used**. When: **Fill and render on after rows h and d; the others not used** | Fill is the pattern for row h, render for row d. |
+| F33 | The team's scripts that build one package file for their front end | **Not used.** When: **Not used** | With the source in our repository we build from source. |
+| F34 | Specification, plans, owner decisions, open questions | **Not used** as code; reference. When: **Reference** | Their decision "Validate runs again inside Approve & download" points where row h points. |
+| F35 | Test forms and Adobe checks (24 PDFs, renders) | **Theirs as is**, on the Mac only. When: **Used on the Mac only; never in git** | Evidence for rows b, g and h. |
+| F36 | The rest of the team's repository inside the bundle (their API, worker, contracts) | **Not used** (outside this ask). When: **Outside this ask** | The newest capture under `code/` is the read-only reference for it (AGENTS rule 3). |
 
 ---
 
@@ -331,14 +331,14 @@ With the source in our repository, T1 becomes our small patch (row g) and still 
 | **Q4** | "The engine reads 2 of 21 forms. P-467 says we improve it where it is the better base. Who does the large pieces (repeating sections, shared boxes, FormCalc): we, in our copy, or the team?" | **Small fixes ours, after the sizing in row j; large ones agreed with the team first.** We own the code, so we may; but two teams extending the same engine apart is how a copy becomes a rebuild, and "fixes stay small" is the founder's own line. |
 | **Q5** | "May the form's own Validate, run by the engine in our app, stand in for Adobe Validate, so nobody downloads and re-uploads?" | **Not yet: Adobe stays the proof (P-442); Unconfirmed: no counsel. Run the trial (B170h) so the ruling rests on a side-by-side.** Two blockers to settle first: T1 (barcode text) and T8 (the copy would carry Adobe's program identity). |
 
-### 6.2 For the Lead (pipeline, not product)
+### 6.2 For the Lead (pipeline, not product): all four accepted by the Lead, 11 Nov
 
 | # | Point | My recommendation |
 |---|---|---|
-| L1 | The copied package holds four made-up test PDFs (not IRCC forms: `fixtures/synthetic/synthetic-form.pdf` and three encryption samples) and a made-up e-mail address in two data files. The push guard refuses PDFs and personal details. | Allow those four files by path and checksum (they are test data the unit tests need), after the builder shows the guard's output from a scratch clone. The alternative, leaving them out, breaks "unchanged" and some tests. |
-| L2 | Row a is about 512 files and 63,000 lines. | Record a one-time exception to the ~800-line habit; review it as provenance (tree comparison), not line by line. |
-| L3 | Guards. | Add `packages/xfa-engine/src` to the "no form number in engine code" guard and to the Bake's "no code change" list once row a lands. |
-| L4 | AGENTS rule 1 says `code/` is never committed; P-464 puts a copy of team code at `packages/xfa-engine/`. | One line in AGENTS by the Lead so the next agent does not read the package as a mistake. |
+| L1 (accepted: by path and checksum only, after the builder shows the guard's output from a scratch clone) | The copied package holds four made-up test PDFs (not IRCC forms: `fixtures/synthetic/synthetic-form.pdf` and three encryption samples) and a made-up e-mail address in two data files. The push guard refuses PDFs and personal details. | Allow those four files by path and checksum (they are test data the unit tests need), after the builder shows the guard's output from a scratch clone. The alternative, leaving them out, breaks "unchanged" and some tests. |
+| L2 (accepted: tree comparison with `a0119727`, 0 differences, plus the reviewer's read of what our CI runs; one-time) | Row a is about 512 files and 63,000 lines. | Record a one-time exception to the ~800-line habit; review it as provenance (tree comparison), not line by line. |
+| L3 (accepted: in row a or c) | Guards. | Add `packages/xfa-engine/src` to the "no form number in engine code" guard and to the Bake's "no code change" list once row a lands. |
+| L4 (accepted: in the Lead's records PR) | AGENTS rule 1 says `code/` is never committed; P-464 puts a copy of team code at `packages/xfa-engine/`. | One line in AGENTS by the Lead so the next agent does not read the package as a mistake. |
 
 ### 6.3 Challenges, and where they stand
 
