@@ -1,6 +1,6 @@
 # B170a (founder P-464, P-470, P-471; plan design/xfa-reuse-analysis-2026-11-11.md §4.1 row a, §4.3): our XFA engine,
 # copied unchanged into packages/xfa-engine/ (PROVENANCE.md), is built and its own unit tests run here: Node from .nvmrc
-# (24.21.0), npm ci from the package's own lockfile, tsc build, Vitest (201 files, 3,369 tests on 11 Nov). Its own job and
+# (24.21.0), npm ci from the package's own lockfile, tsc build, Vitest on one worker (201 files, 3,369 tests on 11 Nov). Its own job and
 # its own install: the studio's install, suites and parts in ci.yml do not change (nothing imports the engine yet; row c
 # adds the adapter). The real-form suite (corpus: qpdf and IRCC PDFs) is not run here: row b.
 # When: a pull request that changes the package (P-371 (1): not while it is a draft; ready runs it), nightly, or by hand.
@@ -26,7 +26,7 @@ jobs:
   xfa-engine:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: packages/xfa-engine
@@ -41,6 +41,10 @@ jobs:
         run: npm ci --legacy-peer-deps --no-audit --no-fund
       - name: build (tsc -p tsconfig.build.json)
         run: npm run build
-      - name: unit tests (vitest run; the package's own config leaves out the corpus suite)
+      - name: unit tests (vitest run, one worker; the package's own config leaves out the corpus suite)
         # The package's "test" script calls pnpm; this is the same two steps without it.
-        run: npx vitest run
+        # One worker (run 42985969798, 11 Nov: with the config's 4 workers on this 4-vCPU runner, 7 load-sensitive limit
+        # tests failed: 5 ran past Vitest's default 5 s and 2 missed their own bounds, 203 ms of 200 and 3.31 s of 3 s;
+        # alone on the Mac the same tests take 25-50% less). --testTimeout raises only Vitest's per-test hang guard
+        # (default 5 s); every time bound the engine's tests assert themselves stays as written. Mac, one worker: 159 s.
+        run: npx vitest run --maxWorkers=1 --testTimeout=30000
