@@ -16,3 +16,8 @@
 
 3. **Open question, unanswered: #1532 (master analysis) 08:27 UTC:** send three suspected PDF-vs-answer-sheet differences (`fill-case.ts:322` vs `case-prepare.ts:887`; `fieldMapOf` first map `case-prepare.ts:894`; oath/signature box P-245) to qa as a C7.3 check. Lead 16's view: accept, brief the qa lane in claude.ai.
 4. **Rows in flight (cloud):** BK-3 PR 2 #1525, BK-8 #1535, BK-11 #1537 (approved, labelling), BK-12 #1533 (approved, labelling), QA-237+239 #1534 (labelled; qa's OK owed on C4.11 steps 24/27, P-477), QA-276 #1531, pipeline #1536 (session ended), B171 (account words; B169 #1523 waits for it; lm.high_wage marked Sample, B172), qa (QA-391 Major; C7.8 nightly dispatched 13:1x; QA-355/318/234/BK-9 retests), UX #1530 (P-473 into plan + skill), master analysis #1532. Merged since 13:03: #1539, #1528 (QA-275), #1524 (M3-S3). **4 approved not queued at 14:14: find what holds them.**
+
+## Lead 16 hand-over block, items 1 and 5, moved word for word by Lead 17 (series 2) at 15:3x IST 11 Nov (superseded by the Lead 17 live lines; owed points carried there)
+
+1. **B170a #1545 (XFA engine source, P-471/P-476, public repo):** approved at 8c125c74b; **xfa-engine CI FAILED 14:0x (run 42985969798, unit tests step)**; builder `local_d641d988` told to fix (load-sensitive limit tests?), re-review diff-only, 3 green runs, then label. Lead files are the Lead's commit 82949dca4 (keep). **Owed by the Lead after it merges:** `xfa-engine` as a Mergify condition for `packages/xfa-engine/**`; AGENTS line (L4).
+5. **Mac:** B168 `local_70775a02` waits on the founder's Terminal approval in its own session; B170 planner `local_329c6d82` (Q1-Q5 answered; report owed at the end). 
