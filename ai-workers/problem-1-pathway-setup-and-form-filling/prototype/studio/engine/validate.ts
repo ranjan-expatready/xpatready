@@ -18,7 +18,7 @@ import { sourceKey } from "../contracts/resolver.ts"; // SH3 R8
 import { NO_FIELD_MAP } from "./setup-checklist.ts";
 import { formsWithoutFieldMap } from "./programs.ts"; // QA-180: one rule for release and Open a case
 import { FAMILY_INFORMATION } from "./form-completeness.ts";
-import { bareCond, conditionConflicts, HELD_OPENING, withHeldConditions } from "./held-conditions.ts"; // QA-237, QA-239
+import { bareCond, conditionConflicts, HELD_OPENING, readsWhen, withHeldConditions } from "./held-conditions.ts"; // QA-237, QA-239
 import { sourceChanges } from "./source-register.ts"; // G1 BR-9: the "Source" lines only; the gate stays out of validate()
 
 // C-11: a field map's form field list, read once per file (paths are relative to the Solution 1 folder, as in fill.ts).
@@ -217,8 +217,11 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   for (const h of s.held_conditions ?? []) {
     const q = `"${(meaningOf.get(h.fact) ?? h.fact).trim().replace(/\.$/, "")}"`;
     const formReads = h.why.some((w) => / reads its answer (whenever the form applies|under a different condition)$/.test(w));
+    // QA-402: a form that writes the answer only under its own condition (a gate) is not changed from "Form fields that read
+    // this answer" (that door never touches a gate): the question's condition is made the form's own instead.
     const asks = h.why.some((w) => /^it depends on /.test(w));
-    const tail = formReads ? "To use the condition here, make the form or its form fields apply under the same condition (Form fields that read this answer)." : asks ? "To use the condition here, ask the question it depends on." : "To use the condition here, nothing else may read the answer outside it.";
+    const gated = h.why.some((w) => / reads its answer only when .+ \(the form's own condition\)$/.test(w));
+    const tail = formReads ? "To use the condition here, make the form or its form fields apply under the same condition (Form fields that read this answer)." : gated ? "To use the condition here, make it the same as the form's own condition: show the question only when the form writes its answer." : asks ? "To use the condition here, ask the question it depends on." : "To use the condition here, nothing else may read the answer outside it.";
     out.push({ level: "warning", where: "Questions", item: h.fact, message: `${HELD_OPENING}: the question ${q} is asked every time here, because ${h.why.join("; and ")}. ${tail} Combinations that can honour the condition still use it.` });
   }
   // Only the derived definitions this combination reads (Lead check item 3): the library holds every definition, and
@@ -276,7 +279,7 @@ function reachability(s: Snapshot, placed: Set<string>, docFacts: Set<string>, d
   const fieldsOf = (c: any) => c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : [];
   for (const { placement: p, forms, conditions, unreachable } of conditionConflicts(s, placed, docFacts, derived)) {
     const eff = p.condition_effect ?? "SHOW", when = p.condition_plain ?? "its condition";
-    for (const { form, ok, formConditioned } of forms) if (!ok) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a form reads: the question ${words(p.fact)} is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}", but ${form} reads it ${formConditioned ? "under a different condition" : "whenever the form applies"}. Make the form or its form fields apply under the same condition, or remove the question's condition.` });
+    for (const f of forms) if (!f.ok) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a form reads: the question ${words(p.fact)} is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}", but ${f.form} reads it ${readsWhen(f)}. ${f.gate ? "Make the question's condition the same as the form's own condition, or remove it." : "Make the form or its form fields apply under the same condition, or remove the question's condition."}` });
     for (const what of conditions) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a condition reads: ${what} reads the answer to ${words(p.fact)}, whose question is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}". The condition could never be decided while the question is hidden.` });
     for (const f of unreachable) out.push({ level: "error", where: "Questions", item: p.fact, message: `Unreachable question: ${words(p.fact)} depends on ${words(f)}, which no question, supported document or derived definition supplies, so it can never be decided.` });
   }
