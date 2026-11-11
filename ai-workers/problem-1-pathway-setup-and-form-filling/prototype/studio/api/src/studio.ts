@@ -1259,12 +1259,16 @@ export class Studio {
   }
 }
 
-/** QA-276: the questions this combination places as released that its draft no longer places, because a reviewed draft
- *  moved them to a section it did not choose. Its release publishes their drafts too: publishing only the draft's
- *  placements left the old placement published, so the fingerprint check refused every press with nobody editing. */
+/** QA-276: the questions this combination places as released, in a section it chose, that its draft no longer places,
+ *  because a reviewed draft moved them to a section it did not choose. Its release publishes their drafts too:
+ *  publishing only the draft's placements left the old placement published, so the fingerprint check refused every
+ *  press with nobody editing. Only moves out of a chosen section (review Major 1): a question dropped because a form or
+ *  rule stopped reading it leaves the published copy once those lines publish, so its own draft edit stays a draft. */
 async function movedOut(db: Parameters<typeof buildSnapshot>[0], workspaceId: string, combinationId: string, draft: Snapshot): Promise<string[]> {
   const placed = new Set(draft.placements.map((p) => p.lineage));
-  return (await buildSnapshot(db, workspaceId, combinationId, "published")).snapshot.placements.map((p) => p.lineage).filter((l) => !placed.has(l));
+  const { snapshot } = await buildSnapshot(db, workspaceId, combinationId, "published");
+  const chosen = new Set(snapshot.sections.map((x) => x.id));
+  return snapshot.placements.filter((p) => chosen.has(p.section_id) && !placed.has(p.lineage)).map((p) => p.lineage);
 }
 
 /** QA-74: the simulated people's names for stored ids (one id, or several joined by commas), never "user-A" on screen. */

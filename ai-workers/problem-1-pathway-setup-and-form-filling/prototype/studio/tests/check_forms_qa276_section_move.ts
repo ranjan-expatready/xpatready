@@ -70,6 +70,7 @@ run(async () => {
   const draft = await config(sp), published = await config(sp, "published");
   ok("C5.1 fail (QA-276): the released copy no longer asks the moved question", !facts(published).includes(FACT), facts(published).length);
   ok("C5.1 fail (QA-276): the draft equals the release, so nothing is left to release", draft.sha256 === published.release?.sha256, { draft: draft.sha256, release: published.release?.sha256 });
+  ok("C5.1 fail (QA-276, BR-14): the person who made the move is an author of the release", sql(`select author_id from config_release where combination_id='${sp}' order by version desc limit 1`).split(",").includes(AUTHOR));
   ok("C5.1 fail (QA-276): the move is published, the old placement superseded", sql(`select status||':'||section_key from section_question where lineage_key='${FACT}' order by version`) === `SUPERSEDED:${selected}\nPUBLISHED:${other}`);
 
   // Moving it back releases too.
@@ -92,5 +93,26 @@ run(async () => {
   ok("C5.1 pass (QA-276 recovery): moving it back releases, 201", third.status === 201, third);
   const d3 = await config(sp), p3 = await config(sp, "published");
   ok("C5.1 pass: the released copy asks the question again, and equals the draft", facts(p3).includes(FACT) && d3.sha256 === p3.release?.sha256, { draft: d3.sha256, release: p3.release?.sha256 });
+
+  // Review Major 1: only a move out of a chosen section publishes with the release. A question in a section Study permit
+  // did not choose, asked only because a rule reads it, leaves the draft when the rule is retired; an unrelated edit to its
+  // words that no reviewer of this release saw stays a draft. Labelled SQL: a new Sample yes/no field, as above.
+  const RULED = "qa276.rule_read";
+  sql(`insert into canonical_field (id,workspace_id,canonical_field_key,version,status,meaning,value_type,data_type,scope,subject_kind,origin,label,group_key,label_checked,updated_by) select gen_random_uuid(),workspace_id,'${RULED}',1,'PUBLISHED','A Sample question a rule reads','yes_no','BOOLEAN','CLIENT_LEVEL','PERSON','HUMAN','QA-276 rule question','person',true,'user-A' from canonical_field limit 1`);
+  const ask = (questionText: string) => call("POST", `/library/fields/${RULED}/placement`, { sectionKey: other, collectedFrom: "client_questionnaire", repeats: "per_person", tier: "case", questionText }, AUTHOR);
+  await ask("Original words?");
+  const rule = await call("POST", `/combinations/${sp}/rules`, { condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: RULED, value: true }, whenPlain: "QA-276 Sample rule", thenPlain: "nothing, a Sample check", forWhom: "each_applicant" }, AUTHOR);
+  await approveWaiting();
+  ok("setup (Major 1): a rule on Study permit reads a question in a section it did not choose", rule.status < 300 && facts(await config(sp)).includes(RULED), words(rule));
+  const fourth = await release(sp);
+  ok("setup (Major 1): released, 201", fourth.status === 201, fourth);
+  const edit = await ask("EDITED words nobody reviewed?");
+  const retire = await call("PATCH", `/combinations/${sp}/rules/${rule.body?.predicateKey}`, { retire: true }, AUTHOR);
+  ok("setup (Major 1): its words edited and the rule retired, so the draft no longer asks it", edit.status < 300 && retire.status < 300 && !facts(await config(sp)).includes(RULED), words(retire));
+  const fifth = await release(sp);
+  ok("C5.1 pass (Major 1): the release goes through, 201", fifth.status === 201, fifth);
+  ok("C5.1 fail (Major 1): the unrelated edit to a question dropped by a rule is not published by this release", sql(`select string_agg(status::text||':'||coalesce(question_text,''),' | ' order by version) from section_question where lineage_key='${RULED}'`) === "PUBLISHED:Original words? | DRAFT:EDITED words nobody reviewed?");
+  const d5 = await config(sp), p5 = await config(sp, "published");
+  ok("C5.1 pass (Major 1): the draft equals the release", d5.sha256 === p5.release?.sha256, { draft: d5.sha256, release: p5.release?.sha256 });
   done();
 });
