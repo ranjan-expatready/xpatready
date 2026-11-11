@@ -1012,9 +1012,10 @@ export class Studio {
   // ------------------------------------------------------------------ review and release (D254 duties)
   async draftAuthors(combinationId: string, s: Snapshot, workspaceId: string): Promise<string[]> {
     const ids = new Set<string>();
+    const moved = await movedOut(this.db, workspaceId, combinationId, s); // QA-276: its release publishes these moves too
     const draftRows = await Promise.all([
       this.db.canonicalField.findMany({ where: { workspaceId, status: "DRAFT", canonicalFieldKey: { in: s.canonical_fields.map((f) => f.id) } }, select: { updatedBy: true } }),
-      this.db.sectionQuestion.findMany({ where: { workspaceId, status: "DRAFT", lineageKey: { in: s.placements.map((p) => p.lineage) } }, select: { updatedBy: true } }),
+      this.db.sectionQuestion.findMany({ where: { workspaceId, status: "DRAFT", lineageKey: { in: [...s.placements.map((p) => p.lineage), ...moved] } }, select: { updatedBy: true } }),
       this.db.documentRequirement.findMany({ where: { combinationId, status: { in: ["DRAFT", "RETIRED"] } }, select: { updatedBy: true } }),
       this.db.predicate.findMany({ where: { combinationId, status: { in: ["DRAFT", "RETIRED"] } }, select: { updatedBy: true } }),
       this.db.combinationForm.findMany({ where: { combinationId, status: { in: ["DRAFT", "RETIRED"] } }, select: { updatedBy: true } }),
@@ -1026,7 +1027,7 @@ export class Studio {
     // row uses) are authored too: every authoring event since the last release counts (grounding audit finding 2).
     const comp = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId }, include: { program: true } });
     const since = (await this.db.configRelease.findFirst({ where: { combinationId }, orderBy: { version: "desc" } }))?.releasedAt ?? new Date(0);
-    const keys = [...new Set([...s.canonical_fields.map((f) => f.id), ...s.sections.map((x) => x.id), ...s.placements.flatMap((p) => [p.lineage, p.fact]), ...(s.document_types ?? []).map((t: any) => t.key), ...(s.derived_fields ?? []).map((d) => d.id), comp.program.programNodeKey])];
+    const keys = [...new Set([...s.canonical_fields.map((f) => f.id), ...s.sections.map((x) => x.id), ...s.placements.flatMap((p) => [p.lineage, p.fact]), ...moved, ...(s.document_types ?? []).map((t: any) => t.key), ...(s.derived_fields ?? []).map((d) => d.id), comp.program.programNodeKey])];
     const events = await this.db.auditEvent.findMany({ where: { workspaceId, at: { gt: since }, action: { in: ["created", "updated", "retired", "renamed", "applied", "reused"] }, OR: [{ combinationId }, { combinationId: null, entityKey: { in: keys } }] }, select: { actor: true } });
     for (const e of events) ids.add(e.actor);
     return [...ids];
@@ -1212,9 +1213,10 @@ export class Studio {
       for (const d of drafts) { if (d.supersedesId) await delegate.update({ where: { id: d.supersedesId }, data: { status: "SUPERSEDED" } }); await delegate.update({ where: { id: d.id }, data: { status: "PUBLISHED" } }); }
       return drafts.length;
     };
+    const moved = await movedOut(tx, ws, id, snapshot); // QA-276: a question this draft moves out publishes its move
     const n = {
       fields: await publish(tx.canonicalField, { workspaceId: ws, canonicalFieldKey: { in: snapshot.canonical_fields.map((f) => f.id) } }),
-      placements: await publish(tx.sectionQuestion, { workspaceId: ws, lineageKey: { in: snapshot.placements.map((p) => p.lineage) } }),
+      placements: await publish(tx.sectionQuestion, { workspaceId: ws, lineageKey: { in: [...snapshot.placements.map((p) => p.lineage), ...moved] } }),
       sections: await publish(tx.logicalSection, { workspaceId: ws, sectionKey: { in: [...snapshot.sections, ...(snapshot.section_titles ?? [])].map((x) => x.id) } }), // C4.2: pulled sections' titles too
       // C6.15: a type's substitute-set members are published with it (the release names them).
       documentTypes: await publish(tx.documentType, { workspaceId: ws, documentTypeKey: { in: [...snapshot.document_requirements.map((d) => d.document_type_key), ...(snapshot.document_types ?? []).flatMap((t: { sets?: { members: { key: string }[] }[] }) => (t.sets ?? []).flatMap((x) => x.members.map((m) => m.key)))] } }),
@@ -1257,6 +1259,18 @@ export class Studio {
     // C8.2 (breaker M1 on #553): government identifiers never travel in the feed; the audit row keeps them (AG-7-95).
     return kept.map((e) => ({ ...e, ...(e.entity === "application number" ? { detail: null } : {}), who: peopleNames(e.actor) }));
   }
+}
+
+/** QA-276: the questions this combination places as released, in a section it chose, that its draft no longer places,
+ *  because a reviewed draft moved them to a section it did not choose. Its release publishes their drafts too:
+ *  publishing only the draft's placements left the old placement published, so the fingerprint check refused every
+ *  press with nobody editing. Only moves out of a chosen section (review Major 1): a question dropped because a form or
+ *  rule stopped reading it leaves the published copy once those lines publish, so its own draft edit stays a draft. */
+async function movedOut(db: Parameters<typeof buildSnapshot>[0], workspaceId: string, combinationId: string, draft: Snapshot): Promise<string[]> {
+  const placed = new Set(draft.placements.map((p) => p.lineage));
+  const { snapshot } = await buildSnapshot(db, workspaceId, combinationId, "published");
+  const chosen = new Set(snapshot.sections.map((x) => x.id));
+  return snapshot.placements.filter((p) => chosen.has(p.section_id) && !placed.has(p.lineage)).map((p) => p.lineage);
 }
 
 /** QA-74: the simulated people's names for stored ids (one id, or several joined by commas), never "user-A" on screen. */
