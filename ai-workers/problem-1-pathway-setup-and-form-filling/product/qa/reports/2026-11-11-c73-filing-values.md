@@ -25,7 +25,12 @@ qa lane, cloud copy. Lead 17's ask, from the master analysis on #1532 (`design/m
 
 ## Checks
 * `tests/qa/check_c73_pdf_vs_sheet.ts`: **6/7** on main 03dff193d (QA-392a FAIL; b, c, d PASS), run on two fresh cases.
-* C7.3 pack: steps C7.3-14 to C7.3-16 added (see below).
+* **C7.3 pack** (`acceptance/C7.3.test.ts`; the pack is qa's, P-334 (4)): steps added on the pack's own case.
+  * **C7.3-14** (QA-392): each "nothing recorded" box the PDF writes as No has its sheet line. While QA-392 is open it prints `HELD … red, held` naming it (P-284, as C10.1 R12c), so the protected set stays green and gate B never counts it green for a PR that claims it. The fixing PR turns it into a plain `ok()`.
+  * **C7.3-15:** every box the PDF writes from an answer has its sheet line.
+  * **C7.3-16** (P-245): every sheet line is a box the PDF copy carries.
+  * Fresh configured checkpoint (:4474): **exit 0, 16/16**, C7.3-14 HELD (PCRIndicator, EducationIndicator). Finished story (:4473): the same, before the hold 16/17.
+* **C7.3 row:** stays Works, with QA-392 noted on it.
 
 ## Questions for the Lead
-None. The ruling on QA-392's severity follows your rule (a value IRCC would see differently is Major).
+1. **C7.3: Works with a held step, or Partial while QA-392 is open?** Precedent cuts both ways: C7.8 stayed Partial while QA-355 (Major) was open; C10.1 stays Works with R12c held. Recommendation: **Partial**. The sheet is the officer's only source for Online filing and it misses two answers, which also keeps QA-392 counted for E3 on the journey. The pack keeps running either way, since a held step fails nothing.
