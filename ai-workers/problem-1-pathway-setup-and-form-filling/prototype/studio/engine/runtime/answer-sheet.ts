@@ -110,6 +110,11 @@ export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels:
     if (!other) { other = { key: otherKey, title: "Other questions", version: "", entered: null, out_of_date: false, answers: [], waiting: [] }; out.push(other); byKey.set(otherKey, other); }
     return other;
   };
+  // QA-392b review M1: a form field's caption names its own question only when no other form field of the form shares it
+  // (IMM 5257's field list gives the US card's Yes/No the national identity document's caption): else the release's label.
+  const captions = new Map<string, number>();
+  for (const b of boxes) if (b.caption) captions.set(b.caption, (captions.get(b.caption) ?? 0) + 1);
+  const ownCaption = (b: BoxRow) => (b.caption && captions.get(b.caption) === 1 ? b.caption : undefined);
   for (const b of boxes) {
     if (!b.fact || b.coverage === "not needed") continue; // B86 BR-5: nothing to enter, nothing to wait for
     const sec = sectionOf(b.box);
@@ -125,7 +130,7 @@ export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels:
     const yn = yesNo?.get(b.box);
     if (yn !== undefined) {
       const m = markOf(subject, b.fact, b.row), at = sec.answers.findIndex(same);
-      const line: SheetAnswer = { label: b.caption || label, fact: b.fact, subject, person: b.about_label, row: b.row, value: yn, copy_text: copyText(yn), source: sourceOf(origin(subject.split("/")[0], b.fact)), mark: m?.mark ?? null, to_confirm: !!m && !m.confirmed, why: m?.why ?? null, recorded: true };
+      const line: SheetAnswer = { label: ownCaption(b) ?? label, fact: b.fact, subject, person: b.about_label, row: b.row, value: yn, copy_text: copyText(yn), source: sourceOf(origin(subject.split("/")[0], b.fact)), mark: m?.mark ?? null, to_confirm: !!m && !m.confirmed, why: m?.why ?? null, recorded: true };
       if (at < 0) sec.answers.push(line); else if (!sec.answers[at].recorded) sec.answers[at] = line;
     } else if (b.coverage === "confirmed fact") {
       if (sec.answers.some(same)) continue;

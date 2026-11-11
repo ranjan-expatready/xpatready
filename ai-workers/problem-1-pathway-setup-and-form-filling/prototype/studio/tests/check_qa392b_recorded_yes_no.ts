@@ -64,14 +64,21 @@ async function check(who: string, name: string, expectYes: boolean) {
   // What the PDF holds for each recorded box, by its data path (the reader's paths drop the [0] of the last step at most).
   const pdfOf = (box: string) => values[box] ?? values[box.replace(/\[0\]$/, "")] ?? Object.entries(values).find(([k]) => k.replace(/\[0\]/g, "") === box.replace(/\[0\]/g, ""))?.[1];
   const yesNo = (b: Box, v: string | undefined) => { const m = /(?:yes_no_code|check_code):([^/;\s]+)\/([^;\s]+)\s*$/.exec(b.transform ?? ""); return !v || !m ? undefined : v === m[1] ? true : v === m[2] ? false : undefined; };
+  // Review M1: the form's caption labels the line only when no other form field of the copy shares it (IMM 5257's field
+  // list gives the US card's Yes/No the national identity document's caption); else the release's own question.
+  const shared = (caption?: string) => !!caption && boxes.filter((x) => x.caption === caption).length > 1;
+  const labelOk = (b: Box, label: string) => (shared(b.caption) ? label !== b.caption && label.length > 3 : label === b.caption);
   const written = recorded.map((b) => ({ b, pdf: pdfOf(b.box) })).filter((x) => yesNo(x.b, x.pdf) !== undefined);
-  const wrong = written.filter(({ b, pdf }) => { const l = lines.find((x) => x.subject === b.about && x.fact === b.fact && x.row === null); const want = yesNo(b, pdf); return !l || l.value !== want || l.copy_text !== (want ? "Yes" : "No") || !(b.caption && l.label === b.caption); })
+  const wrong = written.filter(({ b, pdf }) => { const l = lines.find((x) => x.subject === b.about && x.fact === b.fact && x.row === null); const want = yesNo(b, pdf); return !l || l.value !== want || l.copy_text !== (want ? "Yes" : "No") || !labelOk(b, l.label); })
     .map(({ b, pdf }) => { const l = lines.find((x) => x.subject === b.about && x.fact === b.fact && x.row === null); return `${b.box.split(".").slice(-2).join(".")}: PDF ${pdf}, sheet ${l ? `${l.label.slice(0, 40)}… = ${l.copy_text}` : "no line"}`; });
   ok(`QA-392b${expectYes ? "" : " (fail: \"none apply\")"}: for every "recorded" Yes/No box the PDF copy of ${name}'s ${FORM} writes (${written.length}), the answer sheet carries the same answer, Yes or No, on that person's line for the box's fact, labelled with the form's own question`, written.length >= 2 && wrong.length === 0, wrong);
   for (const [path, label] of [["PCRIndicator", "Question 8 A"], ["EducationIndicator", "Education Section Question 1"]] as const) {
     const b = recorded.find((x) => x.box.includes(path)), pdf = b ? pdfOf(b.box) : undefined, l = b ? lines.find((x) => x.subject === b.about && x.fact === b.fact && x.row === null) : undefined;
     ok(`QA-392b${expectYes ? "" : " (fail)"}: ${name}'s ${path}: the PDF writes ${expectYes ? "Y" : "N"} and the sheet's "${label} …?" reads ${expectYes ? "Yes" : "No"}`, pdf === (expectYes ? "Y" : "N") && l?.copy_text === (expectYes ? "Yes" : "No") && l.label.startsWith(label), { pdf, line: l ? [l.label.slice(0, 50), l.copy_text] : null });
   }
+  const lineOf = (path: string) => { const b = recorded.find((x) => x.box.includes(path)); return b ? lines.find((x) => x.subject === b.about && x.fact === b.fact && x.row === null) : undefined; };
+  const us = lineOf("usCardIndicator"), nat = lineOf("natIDIndicator");
+  ok(`QA-392b review M1 (fail): ${name}'s US card line never asks the national identity document's question (the two boxes share one caption on IMM 5257's field list)`, !!us && !!nat && us.label !== nat.label && !/national identity/i.test(us.label), { us: us?.label, nat: nat?.label });
   return lines;
 }
 const linesP = await check(P, "Sample Client A", true);

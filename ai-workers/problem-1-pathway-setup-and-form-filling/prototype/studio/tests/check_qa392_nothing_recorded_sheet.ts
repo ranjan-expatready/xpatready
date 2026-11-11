@@ -76,6 +76,12 @@ for (const m of MAP) {
   ok(`QA-392b pass: ${m.box.split(".").pop()}'s line reads Yes, as the PDF writes Y, in the form's own question, never the entry's value`, !!line && line.value === true && line.copy_text === "Yes" && line.label === caption(m.box) && line.recorded === true, line && [line.label.slice(0, 40), line.copy_text]);
 }
 ok("QA-392b fail: no line shows the entry's own value under the box's line any more (the second \"Name of school: SAMPLE\")", !yesLines.some((l) => l.row === null && l.copy_text === "SAMPLE"), yesLines.map((l) => [l.label.slice(0, 30), l.copy_text]));
+// Review M1 on #1563: two form fields sharing one caption (IMM 5257's US card Yes/No carries the national identity
+// document's caption) each keep the release's own question; a caption no other box shares is the form's own question.
+const twin = withEntries.map((b, i) => (i === 1 ? { ...b, caption: caption(PCR) } : b));
+const twinLines = sheetFor(twin).sections.flatMap((s) => s.answers);
+ok("QA-392b review M1 (fail): a caption two form fields share labels neither; each line keeps the release's own question", twinLines.length === 2 && twinLines.every((l) => l.label !== caption(PCR)) && twinLines.some((l) => l.label === "Country") && twinLines.some((l) => l.label === "Name of school"), twinLines.map((l) => l.label));
+
 // The one rule reads only what the copy writes: a box the copy leaves to a person (here: refused, not confirmed) has no Yes/No.
 const notWritten = recordedYesNo(formValues(snapshot, ENTRIES, inv, boxesOf()).boxes);
 ok("QA-392b fail: a recorded box the copy does not write (not confirmed, no \"none apply\") has no Yes or No on the sheet", notWritten.size === 0 && !sheetFor(boxesOf()).sections.some((s) => s.answers.length), [...notWritten]);
