@@ -41,6 +41,15 @@ ok("QA-395 pass: one counting entry among others is enough: Yes", c([["India", "
 ok("QA-395 fail (a person decides): another country without its dates cannot be counted: null", c([["Kenya", "2022-01-01", undefined]]) === null);
 ok("QA-395 fail (a person decides): citizenship not answered: null", c([["Kenya", "2022-01-01", "2023-01-01"]], { residence: "India" }) === null);
 ok("QA-395 pass: an incomplete entry does not hide a counting one: Yes", c([["Kenya", "2022-01-01", undefined], ["Peru", "2022-01-01", "2023-06-01"]]) === true);
+// Review M1 on #1566: an end before its start is a slip a person corrects, never a stay that does not count.
+const back = countedOf(box(), view([["Kenya", "2025-11-11", "2023-11-11"]]), TODAY);
+ok("QA-395 review M1 (fail): another country whose end is before its start goes to a person (null), naming the entry and the slip", back?.counted === null && /Kenya ends \(2023-11-11\) before it starts \(2025-11-11\)/.test(back.detail), back);
+ok("QA-395 review M1 (pass): a backwards entry does not hide a counting one: Yes", c([["Kenya", "2025-11-11", "2023-11-11"], ["Peru", "2022-01-01", "2023-06-01"]]) === true);
+// Review m2: months are calendar months, kept to the month's last day (31 Aug + 6 months is 28 Feb, never 3 Mar).
+ok("QA-395 review m2 (pass): 31 Aug to 2 Mar is more than 6 months: Yes", c([["United States", "2025-08-31", "2026-03-02"]]) === true);
+ok("QA-395 review m2 (fail): 31 Aug to 28 Feb is 6 months, not more: No", c([["United States", "2025-08-31", "2026-02-28"]]) === false);
+// Review m6: a person is told which entry to check and why.
+ok("QA-395 review m6: the reason names the entry and what it lacks", /Kenya lacks its dates/.test(countedOf(box(), view([["Kenya", "2022-01-01", undefined]]), TODAY)?.detail ?? ""), countedOf(box(), view([["Kenya", "2022-01-01", undefined]]), TODAY)?.detail);
 ok("QA-395 fail: a box no rule names is not counted (null result, the RECORDED rule as before)", countedOf(box({ box: "form1[0].Page3[0].Education[0].EducationIndicator[0]" }), view([["United States", "2023-01-01", "2025-01-01"]]), TODAY) === null);
 // The fill's step takes the count; marked boxes carry it; "none apply" (not confirmed) is untouched.
 const marked = markNothingRecorded([box()], view([["India", "2015-01-01", "2015-01-01"]]), [], TODAY)[0];

@@ -121,7 +121,8 @@ function dayOf(v: unknown, end: boolean): Date | null {
   if (!m) return null;
   return m[3] ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : new Date(Date.UTC(+m[1], +m[2] - (end ? 0 : 1), end ? 0 : 1));
 }
-const addMonths = (d: Date, n: number) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, d.getUTCDate()));
+/** n calendar months later, the day kept or, past the month's end, its last day (31 Aug + 6 months = 28 or 29 Feb; review m2). */
+const addMonths = (d: Date, n: number) => { const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n + 1, 0)).getUTCDate(); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, Math.min(d.getUTCDate(), last))); };
 const sameText = (a: unknown, b: unknown) => String(a ?? "").trim().toLowerCase() === String(b ?? "").trim().toLowerCase();
 /** QA-395: whether a person's entries count for a box under its rule (`rules`, samples/recorded-counts.json): an entry counts
  *  when its country is none of the rule's `other_than` facts and its period covers more than `more_than_months` months of the
@@ -137,15 +138,17 @@ export function countedOf(b: BoxRow, view: QuestionnaireView, today: Date, rules
   const others = rule.other_than.map(own);
   const rows = qs.find((q) => q.fact === rule.entry)?.rows ?? [];
   const since = addMonths(today, -12 * rule.past_years), asked = `"${rule.quote}"`;
-  let open = false;
+  const missing: string[] = []; // review m6: which entry a person checks, and why
   for (const r of rows) {
     const country = cell(rule.entry, r.row), from = dayOf(cell(rule.from, r.row), false), to = dayOf(cell(rule.to, r.row), true);
     if (country !== undefined && others.some((o) => o !== undefined && sameText(o, country))) continue; // the person's own country never counts
-    if (country === undefined || !from || !to || others.some((o) => o === undefined)) { open = true; continue; }
+    if (country === undefined || !from || !to || others.some((o) => o === undefined)) { missing.push(`${country === undefined ? "an entry" : String(country)} lacks ${country === undefined ? "its country" : !from || !to ? "its dates" : "a fact it is compared with"}`); continue; }
+    // Review M1: an end before its start is a slip a person corrects, never a stay that does not count.
+    if (to < from) { missing.push(`${String(country)} ends (${String(cell(rule.to, r.row))}) before it starts (${String(cell(rule.from, r.row))})`); continue; }
     const start = from > since ? from : since, end = to < today ? to : today;
     if (end > addMonths(start, rule.more_than_months)) return { counted: true, detail: `Yes to ${asked}: ${String(country)} from ${String(cell(rule.from, r.row))} to ${String(cell(rule.to, r.row))}` };
   }
-  return open ? { counted: null, detail: `${asked}: an entry lacks its country or dates, or a fact it is compared with is not answered: a person checks the entries and decides Yes or No` }
+  return missing.length ? { counted: null, detail: `${asked}: ${missing.join("; ")}: a person checks the entries and decides Yes or No` }
     : { counted: false, detail: `No to ${asked}: no entry is another country for more than ${rule.more_than_months} months of the past ${rule.past_years} years` };
 }
 
