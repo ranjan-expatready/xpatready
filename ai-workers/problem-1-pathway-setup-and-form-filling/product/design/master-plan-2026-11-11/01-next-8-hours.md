@@ -148,3 +148,14 @@ Basis: a builder row takes 2-4 h of session (build → reviewer → breaker wher
 3. **BK-9 may already be done or smaller than 2 sessions.** P-448 named "the shared-filing refusals in filing-changes.ts". On main fbfb263c7, B164's allow-list (`tests/check_b164_no_engine_keys.ts:31-44`) has no entry for `filing-changes.ts`, and I found no pathway-specific refusal there. *Recommend:* shape BK-9 by first checking whether M3-S1/M3-S2 lifted it. If they did, close it with that evidence and return its 2 sessions to the reserve.
 4. **B169 #1523 reuses the merged branch `claude/amazing-davinci-wvk1b3`** (BK-10, #1518), against "fresh branch from origin/main, one session per branch" (RULES, P-278, P-436 (2)). Its 3-file diff against main is clean. *Recommend:* allow it this once (no harm in the diff), and add one line to the lane brief template: "new row = new branch name".
 5. **Retest three open Majors that main may already fix, before any builder takes them:** QA-318 (fix commits to 84e54dd4d on main; BK-1: "not reproduced"), QA-355 (C7.8 commits 82e986c8f and 0e7357078 on main; the row cites 8d00b2a65 from before them), QA-234 (BK-1: "probably fixed"). *Recommend:* one qa lane now, ~1 h, on main fbfb263c7 with each row's own check. It can save 2-5 Bake sessions and move E3 today. If QA-355 still fails, it needs no baton: its cause is in `engine/runtime/`.
+
+## Tech lead's rulings (Lead 15, 11 Nov 12:4x IST, PR #1532 comment 6789418330)
+
+1. Baton split **accepted**: schema = M3-S3 (#1524); `case-prepare.ts` = **BK-8, started as a cloud lane**.
+2. Retest first **accepted**: QA-318, QA-355 (with C7.8) and QA-234 go to the qa re-score lane, plus the BK-9 check. No builder takes them until qa reports.
+3. `SHARDS=8`: the founder runs it (P-454 (5)); queue job waits watched over the next three runs.
+4. **BK-11 started** as a forms lane (it waits behind M3-S3 if it needs a column). BK-9 is closed with evidence if qa finds no refusal; its 2 sessions go to the reserve.
+5. B169 on a merged branch: allowed once; briefs now say "a new row starts a new branch name".
+
+Also accepted: part 8's M1 + M4 (pipeline lane started); the M3 challenge (the founder is told "M3: 28 of 29 Works, C7.8 Partial awaiting re-score"). Part 4's "upgrade" question was put to the founder.
+**Forecast effect:** BK-8 and BK-11 now run in the window. The "possible" row in §4 moves to "likely" for BK-8. Expected at 20:30 IST: 17-19 of 40 sessions, plus up to 3 journey Majors closed by retests.
