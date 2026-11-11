@@ -1,0 +1,38 @@
+{
+ "label": "Sample (BK-12): made-up answers for one made-up student's Study permit case, saved and confirmed by api/src/sample-case.ts from samples/sample-cases.json. Never a client, never submitted. No value here is an IRCC value. Unconfirmed: expert. Legal: Unconfirmed: no counsel.",
+ "source": "Made up for BK-12 (P-448, P-449: a pathway's Sample case is chosen in data). Only questions the Study permit's release asks are answered (an answer it does not ask is refused in words by the loader).",
+ "case": {
+  "case.school_name": "SAMPLE COLLEGE",
+  "case.study_field": "SAMPLE FIELD OF STUDY",
+  "case.study_start_date": "2027-09-01",
+  "case.study_end_date": "2029-04-30",
+  "case.tuition_cost": 20000,
+  "case.funds_available_cad": 30000
+ },
+ "everyone": {
+  "person.citizenship": "India",
+  "person.birth_country": "India",
+  "person.birth_city": "MUMBAI",
+  "person.current_residence_country": "India",
+  "person.current_residence_status": "Citizen",
+  "person.applying_from_country": "India",
+  "person.has_used_other_name": false,
+  "person.has_national_id": false,
+  "person.us_permanent_resident": false,
+  "person.passport_country_of_issue": "IND",
+  "person.passport_issue_date": "2022-01-15",
+  "person.passport_expiry_date": "2032-01-14",
+  "person.native_language": "Hindi"
+ },
+ "people": {
+  "principal": {
+   "person.family_name": "STUDENT",
+   "person.given_names": "SAMPLE",
+   "person.date_of_birth": "2006-02-10",
+   "person.sex": "Female",
+   "person.marital_status": "single",
+   "person.passport_number": "Z7000099",
+   "person.email": "student.a@example.com"
+  }
+ }
+}
