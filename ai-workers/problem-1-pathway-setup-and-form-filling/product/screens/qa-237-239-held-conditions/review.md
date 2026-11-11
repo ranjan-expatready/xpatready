@@ -65,3 +65,21 @@ The other readers of `s.placements[].condition` in Submit's problems are `derive
 **Major (re-review):** M1, the loop check, above. **Blockers:** none. **Minors:** m1, m2 and m4 to m7 stand; m3 is closed.
 
 Verdict: Block (M1: walk `withHeldConditions` for the loop map too, with its pure test)
+
+## Re-review 1b82360dc (diff only: `git diff fb4e565ec 1b82360dc`, 11 Nov)
+**Diff:** three files.
+* `engine/validate.ts`: one line. The loop map in `reachability` (`:286`) now reads `withHeldConditions(s).placements`.
+* `tests/check_forms_held_conditions_pure.ts`: +7, a loop control and a held-loop case.
+* This file: my Block section, unchanged from what I wrote.
+
+**Result:** M1 is fixed.
+* The pure test gives 15/15 on 1b82360dc.
+* My probe from the last round (two held questions that decide each other) now gives 2 loop errors held and 2 not held. Before the fix it gave 0 held.
+* The loop's words name only placed questions, so no field code reaches the message.
+* `askedInOrder` shares `reachability`, so step 5 and the change-set R8 now see such a loop too. That narrows m4 for loops; R8's "Unreachable" part stands.
+
+I did not re-run the DB suites. I rely on the coordinator's runs of B83, the held test and the C4.11 packs, which were re-running at the time of writing.
+
+**Blockers:** none. **Majors:** none (M1 fixed). **Minors:** m1, m2 and m4 to m7 stand, as follow-up rows.
+
+Verdict: Approve (1b82360dc85c73a8d107464eedd4ed327b9dc640)
