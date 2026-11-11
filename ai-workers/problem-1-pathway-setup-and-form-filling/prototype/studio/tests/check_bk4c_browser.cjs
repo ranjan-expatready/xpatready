@@ -120,6 +120,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.screenshot({ path: path.join(SHOTS, "bk4c-representative-round-1440.png") });
   await p.goto(`${BASE}/cases/${family}`); await p.locator("[data-readiness]").waitFor({ timeout: 60000 }); await p.waitForTimeout(1500);
   step("BR-2 fail side: the representative themself sees no hand-off to themself", await p.locator("[data-handoff=representative]").count() === 0);
+  // Break M1 (BR-2): with a round waiting, the client card shows no second "Next" and no button to the client.
+  const card = p.locator("[data-client-card=in-review]");
+  step("break M1: while round 1 waits, the client card says the round is with the representative, with no hand-off to the client", await card.count() === 1 && /Round 1 is with the representative of record now\./.test(await card.innerText()) && await p.locator("[data-handoff=client]").count() === 0);
   const w4 = await writes(p);
   step("P-456 (3): officer → representative by the hand-off only (0 other person changes)", w4.length === 1 && w4.every((w) => w.by === "handoff" && w.to === "user-R"), w4);
   await p.context().close();
@@ -129,9 +132,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.goto(`${BASE}/cases/${caseB}/questionnaire`); await p.locator("[data-handoff=client]").waitFor({ timeout: 30000 });
   step("400 px: the questionnaire address's hand-off fits the screen, no sideways scroll", await fits(p, "[data-handoff=client] button") && !(await sideways(p)));
   await p.screenshot({ path: path.join(SHOTS, "bk4c-questionnaire-handoff-400.png") });
+  await p.goto(`${BASE}/cases/${caseB}`); await p.locator("[data-handoff=client]").waitFor({ timeout: 60000 });
+  step("400 px: the case page's hand-off to the client fits, its words keep a readable width (button under them)", await fits(p, "[data-handoff=client] button") && await roomy(p, "[data-handoff=client]"));
+  await p.locator("[data-handoff=client]").scrollIntoViewIfNeeded(); await p.screenshot({ path: path.join(SHOTS, "bk4c-case-to-client-400.png") });
   await p.goto(`${BASE}/cases/${family}`); await p.locator("[data-handoff=representative]").waitFor({ timeout: 60000 });
-  step("400 px: the case page's hand-offs fit the screen (client, representative)", await fits(p, "[data-handoff=client] button") && await fits(p, "[data-handoff=representative] button"));
-  step("400 px: the hand-off's words keep a readable width (the button wraps under them)", await roomy(p, "[data-handoff=client]") && await roomy(p, "[data-handoff=representative]"));
+  step("400 px: the hand-off to the representative fits, its words keep a readable width", await fits(p, "[data-handoff=representative] button") && await roomy(p, "[data-handoff=representative]"));
   await p.locator("[data-handoff=representative]").scrollIntoViewIfNeeded(); await p.screenshot({ path: path.join(SHOTS, "bk4c-case-handoffs-400.png") });
   await axe(p, "the case page's hand-offs at 400 px", "[data-handoff]");
   await p.context().close();
@@ -150,7 +155,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   // Review m1 (BR-2): the case page's words follow the case's own summary (every required question answered, or not).
   const sum = (await api2(`/runtime/cases/${fam2}/questionnaire?mode=agent`, { actor: "user-O" })).body?.summary ?? {};
   const allAnswered = sum.missing === 0 && sum.answered > 0, ct = await p.locator("[data-handoff=client]").innerText();
-  step(`review m1: the case page's hand-off words match the case (${allAnswered ? "every required question answered" : "questions left"})`, allAnswered ? /has answered every required question and can still check the answers/.test(ct) : /answers on their phone/.test(ct), { sum, ct });
+  step(`review m1, break M1: the case page's words match the case (${allAnswered ? "every required question answered: no \"Next\"" : "questions left: Next"})`, allAnswered ? /has answered every required question and can still check the answers/.test(ct) && !/Next:/.test(ct) : /Next: Client A answers on their phone/.test(ct), { sum, ct });
   // Review m2: the tip shows on keyboard focus.
   await p.locator("[data-handoff=client] button").focus(); await p.keyboard.press("Shift"); 
   const tipShown = await p.locator("[data-handoff-tip]").first().waitFor({ timeout: 3000 }).then(() => true, () => false);

@@ -199,6 +199,9 @@ function CasePage() {
   // C6.4 (a), challenge r2 m5: a person's name, never their id (the firm's people, then the simulated clients).
   const nameOf = React.useCallback((who: string) => firm.data?.users.find((u) => u.id === who)?.name ?? PEOPLE.find((p) => p.id === who)?.name ?? "someone at the firm", [firm.data]);
   const [adding, setAdding] = React.useState<CanAdd | null>(null);
+  // BK-4c (break M1, BR-2): a review round waiting means the representative is next, not the client (same query as Ready to file).
+  const rounds = useApi<{ rounds: { number: number; filings: { status: string }[] }[] }>(["runtime", "reviews", id], isOfficer(actor) ? `/runtime/cases/${id}/reviews` : null, { retry: noRetryOnRefusal });
+  const inReview = (rounds.data?.rounds ?? []).filter((x) => x.filings.some((f) => f.status === "sent" || f.status === "under_review")).sort((a, b) => b.number - a.number)[0];
   // K13 (break m7): "Answer in the Agent view" (eligibility) lands on the Agent view, not the top of the case page.
   const { hash } = useLocation(), loaded = !!view.data;
   useWhere(view.data ? [{ label: "Cases", to: "/cases" }, { label: view.data.case.reference }] : null); // BK-3: the frame's line names the case
@@ -222,9 +225,12 @@ function CasePage() {
         <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">
           <p className="font-medium">Client questionnaire</p>
           {/* BK-4c (BR-2, BR-4, BR-7): the questionnaire is the case's own client's; the hand-off carries who hands back (?from=). */}
-          {client ? <HandOff className="mt-1.5" to={c.client} go={`/cases/${c.id}/questionnaire?from=${encodeURIComponent(actor)}`} handsCase={{ caseId: c.id, from: actor }} data="client"
-              // Review m1 (BR-2): once every required question is answered, the words say so; the client may still check them.
-              next={v.summary.missing === 0 && v.summary.answered > 0 ? <>{client.name} has answered every required question and can still check the answers.</> : <>{client.name} answers on their phone, for everyone travelling.</>} />
+          {/* Break M1 (BR-2): "Next: <client>" only while the client owes required answers and no review round waits; every
+              required question answered: where it stands, and the client may still check; a round waiting: no button here
+              (Ready to file hands to the representative). */}
+          {client && inReview ? <p className="mt-1.5 text-[13px] text-text-muted" data-client-card="in-review">{client.name} answers on their phone, for everyone travelling. Round {inReview.number} is with the representative of record now.</p>
+            : client ? <HandOff className="mt-1.5" to={c.client} go={`/cases/${c.id}/questionnaire?from=${encodeURIComponent(actor)}`} handsCase={{ caseId: c.id, from: actor }} data="client"
+              {...(v.summary.missing === 0 && v.summary.answered > 0 ? { line: <>{client.name} has answered every required question and can still check the answers.</> } : { next: <>{client.name} answers on their phone, for everyone travelling.</> })} />
             : <p className="text-xs text-text-muted">The client answers on their phone, for everyone travelling.</p>}
         </div>
       </div>

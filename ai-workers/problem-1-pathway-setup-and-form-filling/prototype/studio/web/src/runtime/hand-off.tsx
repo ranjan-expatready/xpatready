@@ -31,9 +31,10 @@ const fromKey = (caseId: string) => `xr-handed-from:${caseId}`;
 export function handedFrom(caseId: string): string | null { try { return sessionStorage.getItem(fromKey(caseId)); } catch { return null; } }
 function rememberFrom(caseId: string, who: string) { try { sessionStorage.setItem(fromKey(caseId), who); } catch { /* private window: no hand back */ } }
 
-/** One hand-off line. `to`: who takes over (unknown → nothing is shown); `go`: where they work next; `handsCase`: this
+/** One hand-off line. `to`: who takes over (unknown → nothing is shown); `go`: where they work next; `next`: "Next: …"
+ *  when the next step is theirs (BR-2), else `line` says where things stand without a "Next" (break M1); `handsCase`: this
  *  hand-off gives a case's questionnaire to its client from `from` (remembered for the hand back). */
-export function HandOff({ to, go, done, next, label, className, data, handsCase }: { to: string | null | undefined; go: string; done?: React.ReactNode; next: React.ReactNode; label?: string; className?: string; data?: string; handsCase?: { caseId: string; from: string } }) {
+export function HandOff({ to, go, done, next, line, label, className, data, handsCase }: { to: string | null | undefined; go: string; done?: React.ReactNode; next?: React.ReactNode; line?: React.ReactNode; label?: string; className?: string; data?: string; handsCase?: { caseId: string; from: string } }) {
   const nav = useNavigate();
   const p = to ? personOf(to) : undefined;
   if (!p) return null;
@@ -45,11 +46,17 @@ export function HandOff({ to, go, done, next, label, className, data, handsCase 
       {/* The words keep a readable width; on a narrow screen the button wraps under them (400 px check). */}
       <p className="min-w-[min(100%,16rem)] flex-1 [overflow-wrap:anywhere]">
         {done ? <span className="text-text-ok"><Check className="mr-1 inline size-3.5 align-[-2px]" aria-hidden />{done}</span> : null}
-        {done ? " · " : null}<span>Next: {next}</span>
+        {done ? " · " : null}{next ? <span>Next: {next}</span> : <span className="text-text-muted">{line}</span>}
       </p>
       <TooltipProvider delayDuration={300}><Tooltip><TooltipTrigger asChild>
         <Button size="sm" variant="secondary"
-          onClick={(e) => { if (!plainClick(e)) return; if (handsCase) rememberFrom(handsCase.caseId, handsCase.from); setActor(p.id); nav(go); }} data-handoff-button>
+          onClick={(e) => {
+            if (!plainClick(e)) return;
+            if (handsCase) rememberFrom(handsCase.caseId, handsCase.from);
+            // Break m3: the new person and the new page render together (one transition), so neither page shows for a frame
+            // to the wrong person.
+            React.startTransition(() => { setActor(p.id); nav(go); });
+          }} data-handoff-button>
           {words} <ArrowRight aria-hidden />
         </Button>
       </TooltipTrigger><TooltipContent data-handoff-tip>{tip}</TooltipContent></Tooltip></TooltipProvider>

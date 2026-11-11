@@ -33,7 +33,7 @@ ok("BK-4c (1) fail side: a literal person change is caught by the same reading",
 // (2)
 const h = read("hand-off.tsx");
 ok("BK-4c (2): the hand-off is a Button (BR-7), not a link", /<Button[^>]*data-handoff-button|data-handoff-button/.test(h) && !/<Link\b/.test(h));
-ok("BK-4c (2): a modified click changes nobody (plainClick guards the change), then it moves", /if \(!plainClick\(e\)\) return; if \(handsCase\) rememberFrom\(handsCase\.caseId, handsCase\.from\); setActor\(p\.id\); nav\(go\);/.test(h));
+ok("BK-4c (2): a modified click changes nobody (plainClick guards the change), then it moves", /if \(!plainClick\(e\)\) return;\s+if \(handsCase\) rememberFrom\(handsCase\.caseId, handsCase\.from\);[\s\S]{0,250}React\.startTransition\(\(\) => \{ setActor\(p\.id\); nav\(go\); \}\);/.test(h));
 ok("BK-4c (2), review m2: the tip shows on keyboard focus too (a Tooltip, not only a title)", /<TooltipTrigger asChild>/.test(h) && !/title=\{`You act as/.test(h));
 ok("BK-4c (2): the button names the person and says Simulated", /Hand to \$\{who\} \(simulated\)/.test(h));
 ok("BK-4c: a client is named, a role reads with \"the\"; an unknown id names nobody (no button)", /return p\.group === "client" \? p\.name : `the \$\{p\.name\}`;/.test(h) && /if \(!p\) return null;/.test(h) && personOf("user-Q")?.group === "client" && personOf("user-Z") === undefined);
@@ -41,6 +41,7 @@ ok("BK-4c: a client is named, a role reads with \"the\"; an unknown id names nob
 // (3)
 const cases = read("cases.tsx"), q = read("questionnaire.tsx"), r = read("readiness.tsx");
 ok("BK-4c (3): the case page hands to the case's own client with ?from=<who hands over>", /<HandOff[^>]*to=\{c\.client\}[^>]*go=\{`\/cases\/\$\{c\.id\}\/questionnaire\?from=\$\{encodeURIComponent\(actor\)\}`\} handsCase=\{\{ caseId: c\.id, from: actor \}\}/.test(cases));
+ok("BK-4c (3), break M1: on the case page \"Next: <client>\" only while required answers are owed and no round waits (no second Next)", /\{client && inReview \? <p[^>]*data-client-card="in-review"/.test(cases) && /v\.summary\.missing === 0 && v\.summary\.answered > 0 \? \{ line: /.test(cases));
 ok("BK-4c (3): the questionnaire address hands to the case's own client (was a literal \"Act as Client A\")", /<HandOff[^>]*to=\{view\.data\.case\.client\}/.test(cases));
 ok("BK-4c (3), review m3: the client hands back to `from` only when it is a firm person who handed it over in this tab, never on a person's own link", /\{!link && from && isFirmStaff\(from\) && handedFrom\(view\.case\.id\) === from \? <HandOff[^>]*to=\{from\} go=\{`\/cases\/\$\{view\.case\.id\}`\}/.test(q));
 ok("BK-4c review m4: a client back on the officer's page returns to the questionnaire with who handed it over", /handedFrom\(id!\)[\s\S]{0,200}questionnaire\$\{from \? `\?from=/.test(cases));
