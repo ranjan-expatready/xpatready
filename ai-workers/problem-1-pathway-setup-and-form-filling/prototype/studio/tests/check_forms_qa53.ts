@@ -43,6 +43,7 @@ function routes(dir = API) {
 const REVIEWED: Record<string, "case" | "open"> = {
   "/api/session": "open", "/api/attachments/:id/file": "open", "/api/intake/held/:id/file": "open", // QA-270: /api/artifacts/:id/file is a configuration read now
   "/api/releases": "case", "/api/activity": "case",
+  "/api/health": "open", // M1: is this copy well (database, disk, fill queue, commit); no case or person data
 };
 /** C6.16 (B138): reads open to the shared guard because they have a guard of their own, each asked below.
  *  /api/link/*: an adult's own link (stand-in SI-21): a Bearer session from the link's code, x-actor refused (400),
