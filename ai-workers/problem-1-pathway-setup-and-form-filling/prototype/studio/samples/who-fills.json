@@ -11,7 +11,7 @@
   {
    "fact": "case.application_type",
    "fills": "CASE_OFFICER",
-   "question": "Which kind of temporary residence application is this case: visitor, worker, student or other?",
+   "question": "Which kind of application is this case: visitor, worker, student or other?",
    "help": "Why we ask: IMM 5475, IMM 5476 and IMM 5645 name the kind of application. It follows from the case's pathway; the client is not asked.",
    "reason": "QA-403 (P-486): the kind of application follows from the case's pathway, which the firm chose; the client is not asked."
   },

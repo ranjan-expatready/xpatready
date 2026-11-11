@@ -4,7 +4,7 @@
 // snapshot's map and the form's field list (inventory); no database, file, clock or vendor call. Shared by the real
 // fill (writeForm, which then writes the PDF) and the answer-key runner (engine/answer-keys.ts), so a test checks
 // exactly what a fill writes.
-import { runTransform } from "../../p5/transforms.ts";
+import { runTransform, wordsInSteps } from "../../p5/transforms.ts";
 import { codeAsksMore, codeForValue, hasCodes, labelForText, notOnFormValue, type ListValue, type OptionMap } from "./options.ts";
 import { byAPerson, inFormFormat } from "./form-steps.ts";
 import type { BoxRow } from "./render.ts";
@@ -15,7 +15,7 @@ export type InventoryBox = { data_path?: string | null; som?: string | null; ui?
 export type Inventory = { fields: InventoryBox[]; groups?: unknown[] };
 /** What happened to one form field: written (with the value), or why not. */
 export type BoxResult = BoxRow & { result: "written" | "by a person" | "not written" | "by hand" | "not on this form" | "blank"; written?: string; why?: string; fix?: string };
-type Entry = { data_path: string; fact?: string | null; option_map?: OptionMap | null };
+type Entry = { data_path: string; fact?: string | null; transform?: string | null; option_map?: OptionMap | null };
 type Def = { id: string; answer_list?: { values: ListValue[] } };
 
 /** B81: what the officer reads of a copy's refused answers: whose they are and why, apart from what is written by hand. */
@@ -33,6 +33,10 @@ export function formValues(snapshot: Snapshot, map: { entries: Entry[] }, inv: I
   const write = (path: string, v: string) => (values[path] = inFormFormat(box.get(path) ?? {}, v));
   // C7.2 cause 1: the derivations that compare two facts read the other one from the same person's confirmed facts.
   const confirmed = new Map<string, unknown>(covBoxes.filter((b) => b.coverage === "confirmed fact" && b.fact && (b.row === null || b.row === undefined)).map((b) => [`${b.about}|${b.fact}`, b.value]));
+  // QA-403 (review M1 on #1588): the words this form's steps name for each fact, so a box that ticks by a word knows
+  // every answer its fact can take, and any other answer goes by hand.
+  const wordsOf = new Map<string, string[]>();
+  for (const e of map.entries) if (e.fact) { const w = wordsInSteps(e.transform, e.fact); if (w.length) wordsOf.set(e.fact, [...(wordsOf.get(e.fact) ?? []), ...w]); }
   // F1 slice 2 and 2b (evidence lane F2, F6): a signature or the oath block is never written, whatever is mapped to it.
   const boxes = covBoxes.map((r): BoxResult => {
     const person = byAPerson(inv.fields, box.get(r.box) ?? { data_path: r.box });
@@ -48,7 +52,7 @@ export function formValues(snapshot: Snapshot, map: { entries: Entry[] }, inv: I
     // A text form field (no codes in its transform and no choices of its own) writes the value's label, never its key.
     const own = box.get(r.box) ?? {};
     const text = list && !hasCodes(r.transform) && !(Array.isArray(own.options_resolved) && own.options_resolved.length);
-    const o = runTransform(r.transform ?? "as_is", r.nothing_recorded ? null : text ? labelForText(r.value, list) : r.value, own, { fact: (k) => confirmed.get(`${r.about}|${k}`), nothingRecorded: !!r.nothing_recorded });
+    const o = runTransform(r.transform ?? "as_is", r.nothing_recorded ? null : text ? labelForText(r.value, list) : r.value, own, { fact: (k) => confirmed.get(`${r.about}|${k}`), nothingRecorded: !!r.nothing_recorded, ownFact: r.fact ?? undefined, words: r.fact ? wordsOf.get(r.fact) : undefined });
     if (o.ok) { write(r.box, o.value); return { ...r, result: "written", written: values[r.box], ...(r.nothing_recorded ? { why: r.detail } : {}) }; }
     return { ...r, result: "hand" in o ? "by hand" : "blank", why: o.reason };
   });

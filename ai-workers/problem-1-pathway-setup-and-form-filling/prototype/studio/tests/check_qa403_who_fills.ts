@@ -10,7 +10,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runTransform } from "../../p5/transforms.ts";
+import { runTransform, wordsInSteps } from "../../p5/transforms.ts";
 import { whoFillsFrom, WHO_FILLS_FILE } from "../api/src/features/checkpoint/097-who-fills.ts";
 import { client, recorder } from "./runtime/api.ts";
 
@@ -43,21 +43,31 @@ const fails: [string, (d: typeof raw) => void, RegExp][] = [
 ];
 for (const [what, change, words] of fails) { const said = refusal(copy(change)); ok(`QA-403 fail: ${what} is refused, naming it`, words.test(said), said); }
 
-// (3) The filler's new steps (general: any form whose drafted map uses these words), each a pass and a fail.
+// (3) The filler's new steps (general: any form whose drafted map uses these words), each a pass and a fail. The caller
+// (engine/form-values.ts) gives each box its own fact and the words the form's steps name for it (wordsInSteps).
 const box = { ui: "checkButton" };
-const run = (s: string, v: unknown, facts: Record<string, unknown> = {}) => runTransform(s, v, box, { fact: (k: string) => facts[k] } as never);
 const APPOINT = "derived: 1 if case.representative_form_action = appoint, else 0 (checkbox codes on/off/neutral = 1/0/2 per inventory)";
 const CANCEL = "derived: 1 if case.representative_form_action = cancel, else 0 (checkbox codes on/off/neutral = 1/0/2 per inventory)";
-const rep = { "case.representative_form_action": "Appoint" };
+const IS_V = "derived:checked_if_application_type_is_visitor:1/0", IS_W = "derived:checked_if_application_type_is_worker:1/0", IS_S = "derived:checked_if_application_type_is_student:1/0", OTHER = "derived:checked_if_application_type_not_visitor_worker_or_student:1/0";
+const REP = "case.representative_form_action", APP = "case.application_type";
+const wordsOf = (fact: string, steps: string[]) => steps.flatMap((t) => wordsInSteps(t, fact));
+const REP_WORDS = wordsOf(REP, [APPOINT, CANCEL]), APP_WORDS = wordsOf(APP, [IS_V, IS_W, IS_S, OTHER]);
+const run = (s: string, v: unknown, own: string, words: string[], facts: Record<string, unknown> = {}) => runTransform(s, v, box, { fact: (k: string) => facts[k], ownFact: own, words } as never);
 const val = (o: ReturnType<typeof runTransform>) => ("value" in o ? o.value : null);
-ok("C7.1 pass: IMM 5476's appoint box is ticked (1) when the case officer wrote appoint, in any case; its cancel box is not (0)", val(run(APPOINT, "Appoint", rep)) === "1" && val(run(CANCEL, "Appoint", rep)) === "0");
-ok("C7.1 fail: a value that is not one word (a list) is never ticked: by hand, with its reason", "hand" in run(APPOINT, ["appoint"], { "case.representative_form_action": ["appoint"] }) && /not a single word/.test((run(APPOINT, ["appoint"], { "case.representative_form_action": ["appoint"] }) as { reason: string }).reason));
-const IS_V = "derived:checked_if_application_type_is_visitor:1/0", IS_W = "derived:checked_if_application_type_is_worker:1/0", OTHER = "derived:checked_if_application_type_not_visitor_worker_or_student:1/0";
-ok("C7.1 pass: IMM 5645's application-type ticks: visitor ticks Visitor only; other ticks Other only", val(run(IS_V, "visitor")) === "1" && val(run(IS_W, "visitor")) === "0" && val(run(OTHER, "visitor")) === "0" && val(run(OTHER, "other")) === "1" && val(run(IS_V, "other")) === "0");
-ok("C7.1 fail: a record as the application type is by hand, never ticked", "hand" in run(IS_V, { kind: "visitor" }) && "hand" in run(OTHER, { kind: "visitor" }));
-ok("C7.1 pass: the yes/no ticks the filler ran before still run the same (checked_if_true, checked_if_false)", val(run("derived:checked_if_true:1/0", true)) === "1" && val(run("derived:checked_if_false:1/0", true)) === "0" && "hand" in run("derived:checked_if_true:1/0", "visitor"));
-ok("C7.1 pass: as_is with a plain-language note writes the value as it is", val(run("as_is (plain-language application type)", "visitor")) === "visitor" && val(run("as_is (max 7 chars)", "visitor")) === "visitor");
-ok("C7.1 fail: as_is with any other note stays not executable (by hand); over the length still by hand", /not in the executable set/.test((run("as_is (uppercase)", "visitor") as { reason: string }).reason) && "hand" in run("as_is (max 3 chars)", "visitor"));
+const why = (o: ReturnType<typeof runTransform>) => ("reason" in o ? String(o.reason) : "");
+ok("C7.1 pass: the words each fact can take are read from the form's own steps (appoint, cancel; visitor, worker, student)", REP_WORDS.join() === "appoint,cancel" && [...new Set(APP_WORDS)].sort().join() === "student,visitor,worker", { REP_WORDS, APP_WORDS });
+ok("C7.1 pass: IMM 5476's appoint box is ticked (1) when the case officer wrote appoint, in any case; its cancel box is not (0)", val(run(APPOINT, "Appoint", REP, REP_WORDS)) === "1" && val(run(CANCEL, "Appoint", REP, REP_WORDS)) === "0");
+ok("C7.1 fail (review M1): a misspelt answer (apoint) ticks neither box silently: both go by hand, naming the words the form takes", "hand" in run(APPOINT, "apoint", REP, REP_WORDS) && "hand" in run(CANCEL, "apoint", REP, REP_WORDS) && /not one of the words this form takes \(appoint, cancel\)/.test(why(run(CANCEL, "apoint", REP, REP_WORDS))));
+ok("C7.1 fail: a value that is not one word (a list) is never ticked: by hand, with its reason", /not a single word/.test(why(run(APPOINT, ["appoint"], REP, REP_WORDS))));
+ok("C7.1 fail (review m1): a step naming another fact compares that fact only: not answered, by hand (never the box's own value)", /case\.other_fact is not answered/.test(why(run("derived: 1 if case.other_fact = appoint, else 0", "appoint", REP, REP_WORDS))));
+ok("C7.1 pass: IMM 5645's application-type ticks: visitor ticks Visitor only; worker ticks Worker only", val(run(IS_V, "Visitor", APP, APP_WORDS)) === "1" && val(run(IS_W, "visitor", APP, APP_WORDS)) === "0" && val(run(OTHER, "visitor", APP, APP_WORDS)) === "0" && val(run(IS_W, "worker", APP, APP_WORDS)) === "1" && val(run(IS_V, "worker", APP, APP_WORDS)) === "0");
+ok("C7.1 fail (review M1): a misspelt or unknown type (vistor, trv) never ticks Other by elimination: every tick goes by hand", ["vistor", "trv"].every((x) => [IS_V, IS_W, IS_S, OTHER].every((t) => "hand" in run(t, x, APP, APP_WORDS))));
+ok("C7.1 fail (review M1): \"other\" names no tick of the form's steps, so Other goes by hand too (never a guess)", "hand" in run(OTHER, "other", APP, APP_WORDS));
+ok("C7.1 fail: a record as the application type is by hand, never ticked", "hand" in run(IS_V, { kind: "visitor" }, APP, APP_WORDS) && "hand" in run(OTHER, { kind: "visitor" }, APP, APP_WORDS));
+ok("C7.1 pass (review m3): a name holding \"is\" is read from the box's own fact, never split there", val(run("derived:checked_if_person_is_resident_is_yes:1/0", "yes", "person.person_is_resident", ["yes", "no"])) === "1" && val(run("derived:checked_if_person_is_resident_is_yes:1/0", "no", "person.person_is_resident", ["yes", "no"])) === "0");
+ok("C7.1 pass: the yes/no ticks the filler ran before still run the same (checked_if_true, checked_if_false)", val(run("derived:checked_if_true:1/0", true, "case.x", [])) === "1" && val(run("derived:checked_if_false:1/0", true, "case.x", [])) === "0" && "hand" in run("derived:checked_if_true:1/0", "visitor", "case.x", []));
+ok("C7.1 pass: as_is with a plain-language note writes the value as it is", val(run("as_is (plain-language application type)", "visitor", APP, [])) === "visitor" && val(run("as_is (plain-language application type text)", "visitor", APP, [])) === "visitor" && val(run("as_is (max 7 chars)", "visitor", APP, [])) === "visitor");
+ok("C7.1 fail (review m2): as_is with any other note, or a plain-language note that orders a change, stays not executable (by hand)", ["as_is (uppercase)", "as_is (plain-language, write in uppercase)", "as_is (plain-language application type in uppercase)"].every((t) => /not in the executable set/.test(why(run(t, "visitor", APP, [])))) && "hand" in run("as_is (max 3 chars)", "visitor", APP, []));
 
 // (4) The checkpoint step names no fact and no combination (P-319): the data does.
 const step = readFileSync(join(STUDIO, "api/src/features/checkpoint/097-who-fills.ts"), "utf8").replace(/\/\/.*$|\/\*[\s\S]*?\*\//gm, "");
