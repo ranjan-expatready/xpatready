@@ -69,4 +69,4 @@ const bothHeld = (() => { const out = clone(loop); out.held_conditions = out.pla
 ok("fail (control): the loop not held is an error", errs(loop).some((e) => /in a loop/.test(e.message)), errs(loop).map((e) => e.message));
 ok("pass: two held conditions that decide each other are still refused as a loop, by their words", errs(bothHeld).some((e) => /^Questions decide each other in a loop: "(Other name|Has another name)"/.test(e.message)), errs(bothHeld).map((e) => e.message));
 
-summary();
+process.exitCode = summary() ? 1 : 0; // B160: a FAIL line fails the suite
