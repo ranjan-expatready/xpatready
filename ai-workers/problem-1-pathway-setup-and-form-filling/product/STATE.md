@@ -52,13 +52,11 @@ Open F2, F8, F14, F15, F16, F17, F18, F19 (none blocks work), word for word in `
 **Stall guard (P-388, P-389):** no prompt-waiting call while the founder is away; `lead-watch.sh` ACT when the last check is over 40 min old. Watchdog: first standby (Lead 34 once Lead 33 tells it).
 **Hand-over (P-409):** no hand-over with an in-process subagent running; its result goes to a file named in the hand-over block; briefs say report to the current Lead. Skill edit at the founder's next typed turn.
 **Never run guard/test suites in the main copy** (7 Nov 09:18 incident): scratch clone only, deleted after.
-**To-do, in order:**
-1. Check (:13/:43, prompt exactly `run lead-watch; read STATE Start here`).
-2. **Lanes, counted only after a push:** the live list in the Lead 32 block (P-414). Read each lane's newest PR comment for "tech lead" every check, and reply in its claude.ai session.
-3. **qa:** re-scores after each merged batch; C6.9 and C8.2 Works on qa's #1238.
-4. **P-388 measurement:** 2 failed of the first 10 batches after 09:19 IST (23113b92e5 the C1 and A3 clash; 0f532b98fc not read yet): 20%, over the 10% bar. `flow-measure.py` hit a rate limit today: read `actions/workflows/ci.yml/runs` directly. Trip-wire: P-399.
-5. **Hourly report** against `design/next-12-hours-2026-11-07.md` section 7 (P-399); halfway review 20:00 IST, block review 02:00 IST.
-6. **Records:** on `lead/2026-11-07-lead31` from the scratch worktree `$TMPDIR/lead31-merge`; records PR not opened yet (once a day, P-336).
+**To-do, in order (Lead 11, 11 Nov):** (earlier list word for word: `history/STATE-2026-11-11-0910-lead11s2-old-todo.md`)
+1. Check (:13/:43, prompt exactly `run lead-watch; read STATE Start here`): usage (P-458: lanes stop at 96%, Lead's records by 98%), lanes, queue.
+2. Lanes count only after a push; read each lane PR's newest comment for "tech lead" and reply in its claude.ai session (built-in browser while Chrome is disconnected).
+3. Next 7 hours G1-G6 above; hourly report in IST with each code's plain purpose beside it.
+4. Records on `lead/2026-11-07-lead31`; STATE under 12 KB.
 
 ## Leads, in order
 **Series 2 (P-433, from 9 Nov 17:48 IST; numbers restart; the current Lead is the one `current_lead:` names):** **Lead 11 (series 2, local_aa5c12aa-7202-4cec-8459-10f906f7727b)** (from 07:57 IST 11 Nov) · Lead 10 (series 2, local_556afbc8-71a2-4cb9-b47f-ab86a53460df) (22:54 IST 10 Nov-07:57 IST 11 Nov, ended at ~314k, P-446) · Lead 9 (series 2, local_d3d09334-4567-4aad-9e1b-65163549d7c7) (18:28-22:54 IST 10 Nov, ended at ~318k, P-446) · Lead 8 (series 2, local_62177923-2726-40ba-a539-da2173222e38) (11:55-18:28 IST 10 Nov, ended at ~315k) · Lead 7 (series 2, local_6426aab1-6fa8-47c0-b228-f03365d5cc4a) (08:13-11:55 IST 10 Nov, ended at ~290k) · Lead 6 (series 2, local_8c1fbca5-d3cf-4bf4-8620-9bdb3c9564ca) (07:35-08:13 IST 10 Nov, ended at ~240k) · Lead 5 (series 2, local_6e87a775-b6a8-4a50-8fa7-ad3b03548af6) (00:48-07:35 IST 10 Nov) · Lead 4 (series 2, local_48335a53-6041-4416-9442-c8814319aa84) (23:44 IST 9 Nov-00:48 IST 10 Nov, ended at ~240k, P-440) · Lead 3 (series 2, local_81ca34d8-6a97-4c29-9fd1-471e42cf7f6f) (22:35-23:45 IST 9 Nov, ended at ~255k, P-440) · Lead 2 (series 2, local_a07b26f2-302e-4c73-bd1c-ca20dd9e8a79) (20:30-22:35 IST 9 Nov, ended at ~370k, P-440) · Lead 1 (series 2, local_f135f805-00be-49fc-ac67-df94b57dbc86) (17:48-20:32 IST 9 Nov, ended at ~400k). Standby: Lead 12 (local_ff0a1d2d); and **Lead 13 `local_dd945839-a5dc-408f-90d1-99687a98bc5f`** (started 08:5x by the founder's click, P-286).
