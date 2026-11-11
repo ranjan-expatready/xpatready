@@ -29,6 +29,10 @@ const choicesAt = (p: { where?: unknown; message?: unknown }): string | null => 
 
 /** B86: the rule's own opening words; the problem's item is the question it names. */
 const HIDING = /^Hiding a value a form reads/;
+/** QA-237, QA-239: a library condition this combination cannot honour is held (engine/held-conditions.ts HELD_OPENING): a
+ *  warning, with the same way to put it in force, the form fields that read the answer, under it. */
+const HELD = /^Condition not used on this combination/;
+const wayOut = (m?: string) => HIDING.test(m ?? "") || HELD.test(m ?? "");
 /** changesCount: the combination's draft changes as the summary counts them (the shared draft bar's and the header's one
  *  count, UX-A part 3); undefined while it loads. */
 export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: any; changesCount?: number; countFailed?: boolean; onRetryCount?: () => void }) {
@@ -61,7 +65,7 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
   const draftChanges = changesCount === 0 || counting ? [] : v.draft.changes;
   const changes: any[] = sub ? sub.changeSummary : draftChanges;
   const signed = new Map<string, any>((v.signoffs ?? []).map((s: any) => [s.itemRef, s]));
-  const errors = v.draft.problems.filter((p: any) => p.level === "error"), warnings = v.draft.problems.filter((p: any) => p.level === "warning");
+  const errors = v.draft.problems.filter((p: any) => p.level === "error"), warnings = v.draft.problems.filter((p: any) => p.level === "warning").sort((a: { message?: string }, b: { message?: string }) => Number(HELD.test(b.message ?? "")) - Number(HELD.test(a.message ?? ""))); // QA-237: its way out is on the row too
   // G1 PR 2b: numbers without a source have their own block (each with Add source); the validation list shows the rest.
   const gateOf = (p: { gate?: string }) => p.gate;
   // G5 (C5.1, P-248): no form line is its own warning box above the list (said once, with where to add one).
@@ -71,7 +75,7 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
   const unsourced = errors.filter((p: { gate?: string }) => gateOf(p) === "no-source").length, others = errors.filter((p: { gate?: string }) => gateOf(p) !== "no-source" && p !== noFormLine && p !== noDocLine)
     .sort((a: { message?: string }, b: { message?: string }) => Number(HIDING.test(b.message ?? "")) - Number(HIDING.test(a.message ?? ""))); // B86: its way out is on the row, so never behind "Show all"
   const formFields = formFieldsView.data?.questions ?? [];
-  const underProblem = new Set<string>(others.filter((p: { message?: string; item?: string }) => HIDING.test(p.message ?? "") && p.item).map((p: { item?: string }) => p.item as string));
+  const underProblem = new Set<string>([...others, ...warnings].filter((p: { message?: string; item?: string }) => wayOut(p.message) && p.item).map((p: { item?: string }) => p.item as string));
   const ref = (c: any) => `${c.kind}|${c.key}`;
   const needSme = changes.filter((c) => c.needs_sme), unsignedSme = needSme.filter((c) => !signed.has(ref(c)));
   const can = (duty: string) => me.duties.includes(duty);

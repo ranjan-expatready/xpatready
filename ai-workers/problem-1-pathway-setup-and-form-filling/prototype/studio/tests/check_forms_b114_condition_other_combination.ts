@@ -110,11 +110,16 @@ run(async () => {
   await conditionOn(vv, (c) => JSON.stringify(c).includes(ASKED_ON_VV));
   const own = await config(vv);
   ok("C4.11 pass (own condition): Visitor visa still carries the question that decides its own condition", facts(own).includes(FOREIGN), facts(own).length);
-  ok("C4.11 pass (own condition): Visitor visa's question has the condition", own.snapshot.placements.some((p: { fact: string; condition: unknown }) => p.fact === ASKED_ON_VV && p.condition));
-  // Hiding is not relaxed: the combination that asks the question still sees it, and is refused on the draft's own problems.
+  // Bake row 6 (QA-237): until IMM 5257's form field holds the same condition, Visitor visa holds it too (asked every time).
+  ok("C4.11 pass (own condition): Visitor visa's question carries the condition, in force or held until its form field holds it", own.snapshot.placements.some((p: { fact: string; condition: unknown }) => p.fact === ASKED_ON_VV && p.condition) || (own.snapshot.held_conditions ?? []).some((h: { fact: string; condition: unknown }) => h.fact === ASKED_ON_VV && h.condition));
+  // QA-239 (Bake row 6, PR #1534): the combination that asks the question cannot honour Visitor visa's condition (its forms
+  // read the answer), so the condition is held there: the question stays asked every time, a warning says why, and nothing
+  // refuses it. Before, Hiding showed on it and its Submit was refused (the bug).
   const lmiaHiding = await hiding(lmia);
-  ok("C4.11 fail (P-303): With an LMIA asks that question, so Hiding still shows on it", lmiaHiding > 0, lmiaHiding);
-  ok("C4.11 fail (P-303): and its Submit is refused on it", (await call("POST", `/combinations/${lmia}/submit`, { note: "B114" }, AUTHOR)).status === 400);
+  ok("C4.11 pass (QA-239): With an LMIA asks that question, and no Hiding error shows on it", lmiaHiding === 0, lmiaHiding);
+  const lmiaHeld = ((await call("GET", `/combinations/${lmia}`)).body?.draft?.problems ?? []).filter((p: { level?: string; item?: string; message?: string }) => p.level === "warning" && p.item === ASKED_ON_VV && /^Condition not used on this combination: /.test(p.message ?? "")).length;
+  ok("C4.11 pass (QA-239): instead the condition is held on With an LMIA, with a warning saying why", lmiaHeld === 1, lmiaHeld);
+  ok("C4.11 pass (QA-239): With an LMIA's released draft is unchanged by it (the question is asked as it was released)", (await config(lmia)).sha256 === (await call("GET", `/combinations/${lmia}/config?mode=published`)).body?.release?.sha256);
   for (const [name, id] of Object.entries(others)) {
     const c = await config(id);
     ok(`C4.11 fail (QA-262): the condition on Visitor visa does not change ${name}'s draft`, c.sha256 === before.get(id)!.sha, { before: before.get(id)!.sha, now: c.sha256 });
@@ -140,10 +145,17 @@ run(async () => {
 
   // A condition reaches every question it needs: a placed question's deciding question is carried, and so is the deciding
   // question of that one (the repeat). SQL on this copy's published rows, put back after; the draft returns to its fingerprint.
+  // Bake row 6 (QA-237, QA-239): a condition that would hide a question a form reads is held (asked every time), so the chain
+  // uses "required when" (REQUIRE), which hides nothing and is never held; the original effects are put back after.
   const cp = others["Study permit"], cfg = await config(cp), mine = cfg.snapshot.placements[0].fact as string;
   const pool = sql(`select distinct canonical_field_key from section_question where status in ('PUBLISHED','DRAFT') and canonical_field_key not in (${facts(cfg).map((f) => `'${f}'`).join(",")}) order by 1 limit 2`).split("\n").filter(Boolean);
   ok("setup: two questions this combination does not ask", pool.length === 2, pool);
-  const set = (fact: string, on: string | null) => sql(`update section_question set predicate_json = ${on ? `'{"field":"${on}","op":"exists"}'::jsonb` : "null"} where canonical_field_key='${fact}'`);
+  const effects = new Map<string, string>();
+  const set = (fact: string, on: string | null) => {
+    if (!effects.has(fact)) effects.set(fact, sql(`select coalesce(condition_effect::text,'') from section_question where canonical_field_key='${fact}' order by version desc limit 1`));
+    const was = effects.get(fact) ? `'${effects.get(fact)}'` : "null";
+    sql(`update section_question set predicate_json = ${on ? `'{"field":"${on}","op":"exists"}'::jsonb` : "null"}, condition_effect = ${on ? "'REQUIRE'" : was} where canonical_field_key='${fact}'`);
+  };
   set(mine, pool[0]); set(pool[0], pool[1]);
   const chain = facts(await config(cp));
   ok("C4.11 pass (repeat): a placed question's deciding question travels", chain.includes(pool[0]), chain.length);

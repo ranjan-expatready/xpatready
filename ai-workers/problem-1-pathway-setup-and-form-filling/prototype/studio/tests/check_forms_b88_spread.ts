@@ -1,8 +1,9 @@
 // B88 (QA-239, C4.11; concept BR-1 to BR-5, BR-7, BR-8): on the six through people's steps, with every condition Visitor
-// visa's saved run proposes accepted and approved there, each other combination's "Hiding a value a form reads" errors are
-// cleared by product steps only: B86's door for plain form fields, and B88's for the worked-out Yes/No that prints its
-// condition's deciding question (asked as that question, a second person approves). Before that, Submit refuses them all;
-// the rule is not relaxed for any field (P-303). Saved answers only: US$0, live AI off. Every condition is Sample.
+// visa's saved run proposes accepted and approved there, each other combination's held conditions are put in force by
+// product steps only: B86's door for plain form fields, and B88's for the worked-out Yes/No that prints its condition's
+// deciding question (asked as that question, a second person approves). Before that, the conditions are held there (the
+// question asked every time, a warning; Bake row 6, QA-239): nothing a form reads is hidden, and nothing refuses Submit.
+// Saved answers only: US$0, live AI off. Every condition is Sample.
 //   zsh studio/tools/isolated.sh forms_b88 4455 start && tsx studio/tests/check_forms_b88_spread.ts 4455 xr_studio_forms_b88
 import { randomUUID } from "node:crypto";
 import { APPROVER, AUTHOR, pack2, REVIEWER, run } from "../acceptance/lib/pack2.ts";
@@ -31,6 +32,9 @@ run(async () => {
   await until(async () => ["COMPLETED", "DONE", "FAILED", "STOPPED", "CANCELLED"].includes(String((await call("GET", `/runs/${r0.body?.runId}`)).body?.status ?? "").toUpperCase()), 180_000);
   const errors = async (id: string) => ((await call("POST", `/combinations/${id}/submit`, { note: "B88" }, AUTHOR)).body?.errors ?? []) as { item?: string; message?: string }[];
   const hidingOf = async (id: string) => (await errors(id)).filter((e) => HIDING.test(e.message ?? ""));
+  // Bake row 6 (QA-239, PR #1534): a condition another combination cannot honour is held there (a warning, the question asked
+  // every time), never a refusal. The doors below still put it in force there.
+  const heldOf = async (id: string) => (((await call("GET", `/combinations/${id}`)).body?.draft?.problems ?? []) as { level?: string; item?: string; message?: string }[]).filter((e) => e.level === "warning" && /^Condition not used on this combination: /.test(e.message ?? ""));
   const unreachable = async (id: string) => (await errors(id)).filter((e) => /Unreachable question/.test(e.message ?? ""));
   const others = keys.filter((k) => k !== "vv.single");
   const base = new Map<string, number>();
@@ -46,10 +50,11 @@ run(async () => {
   ok("setup: Visitor visa's saved run proposes conditions on 7 questions; all accepted there and approved by a second person (the saved list replays, so vv.single-ae2133b8a398 did not move)", one.size === 7 && approved === 7, { questions: [...one.keys()], approved });
 
   // ---------------------------------------------------------------- QA-239: the spread, by route
-  const held = new Map<string, { item?: string; message?: string }[]>();
-  for (const k of others) held.set(k, await hidingOf(T.combo(k)));
+  const held = new Map<string, { item?: string; message?: string }[]>(), refusedBy = new Map<string, number>();
+  for (const k of others) { held.set(k, await heldOf(T.combo(k))); refusedBy.set(k, (await hidingOf(T.combo(k))).length); }
   const heldCount = Object.fromEntries([...held].map(([k, v]) => [k, v.length]));
-  ok("C4.11 B88 fail (QA-239): conditions approved on Visitor visa put Hiding errors on other combinations whose authors did nothing; Submit refuses them in the rule's words", [...held.values()].filter((v) => v.length > 0).length >= 4 && [...held.values()].flat().every((e) => /Make the form or its form fields apply under the same condition, or remove the question's condition\.$/.test(e.message ?? "")), heldCount);
+  ok("C4.11 B88 pass (QA-239): conditions approved on Visitor visa refuse no other combination: no Hiding error on any of them", [...refusedBy.values()].every((n) => n === 0), Object.fromEntries(refusedBy));
+  ok("C4.11 B88 pass (QA-239): instead at least 4 other combinations hold them (the question asked every time), each warning saying how to use it there", [...held.values()].filter((v) => v.length > 0).length >= 4 && [...held.values()].flat().every((e) => /reads its answer/.test(e.message ?? "")), heldCount);
   const unr: Record<string, number> = {}; for (const k of keys) unr[k] = (await unreachable(T.combo(k))).length;
   ok("C4.11 B88: no Unreachable question on any of the six (every deciding question is asked; so none is named)", Object.values(unr).every((n) => n === 0), unr);
 
@@ -159,7 +164,7 @@ run(async () => {
   const through = { confirmed: 0, asked: 0, refused: [] as string[] };
   const clearAll = async (k: string) => {
     const id = T.combo(k);
-    for (let pass = 0; pass < 2; pass++) for (const fact of [...new Set((await hidingOf(id)).map((e) => e.item!))]) {
+    for (let pass = 0; pass < 2; pass++) for (const fact of [...new Set((await heldOf(id)).map((e) => e.item!))]) {
       for (const x of ((await call("GET", FIELDS(id, fact), undefined, AUTHOR)).body?.rows ?? []) as Row[]) {
         if (!x.can_confirm && !x.can_ask) continue;
         const p = await call("POST", "/library/form-field-conditions", { combinationId: id, fact, formEditionId: x.form_edition_id, dataPath: x.data_path, ...(x.can_ask ? { ask: true } : {}) }, AUTHOR);
@@ -172,8 +177,8 @@ run(async () => {
   // The person on each other combination first; then Visitor visa's own (it holds the same errors on IMM 5257).
   for (const k of [...others, "vv.single"]) await clearAll(k);
   const left: Record<string, string[]> = {};
-  for (const k of keys) { const h = await hidingOf(T.combo(k)); if (h.length) left[k] = h.map((e) => `${e.item}: ${(e.message ?? "").slice(-160)}`); }
-  ok("C4.11 B88 pass (QA-239, Done when): with the conditions accepted on Visitor visa, every other combination's Hiding errors are cleared through product steps (B86's door and B88's), each by a second person", !Object.keys(left).length && Number(sql(`select count(distinct key) from library_change where kind='form_field_condition' and action='SET_FORM_FIELD_QUESTION' and status='APPROVED'`)) === 9 && !through.refused.length, { ...through, left });
+  for (const k of keys) { const h = [...await hidingOf(T.combo(k)), ...await heldOf(T.combo(k))]; if (h.length) left[k] = h.map((e) => `${e.item}: ${(e.message ?? "").slice(-160)}`); }
+  ok("C4.11 B88 pass (QA-239, Done when): with the conditions accepted on Visitor visa, every other combination's held conditions are put in force through product steps (B86's door and B88's), each by a second person", !Object.keys(left).length && Number(sql(`select count(distinct key) from library_change where kind='form_field_condition' and action='SET_FORM_FIELD_QUESTION' and status='APPROVED'`)) === 9 && !through.refused.length, { ...through, left });
   ok("C4.11 B88 BR-5: the conditions are still in force: no question lost its condition to get there", sql(`select count(distinct lineage_key) from section_question where predicate_json is not null and lineage_key in (${[...one.keys()].map((f) => `'${f}'`).join(",")}) and status in ('DRAFT','PUBLISHED')`) === "7");
   const unr2: Record<string, number> = {}; for (const k of keys) unr2[k] = (await unreachable(T.combo(k))).length;
   ok("C4.11 B88: still no Unreachable question on any of the six", Object.values(unr2).every((n) => n === 0), unr2);
