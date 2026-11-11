@@ -50,6 +50,9 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   const caseId: string = k.body?.id ?? "";
   const principal: string = (k.body?.people ?? []).find((p: { role: string }) => p.role === "principal")?.subject_id ?? "";
   const list = async () => (await call("GET", `/runtime/cases/${caseId}/checklist`, undefined, OFFICER)).body as { derived?: boolean; people?: { subject: string; lines: { id: string; document_type: string; waivable: boolean; state: string; state_reason?: string | null; required: boolean; version?: number }[] }[] };
+  // Review M5: Ready to file (api/src/readiness-inputs.ts, through the prepare view) warns of a document not received.
+  const missing = async () => ((await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, OFFICER)).body?.readiness ?? []).flatMap((r: { warns: { code: string; words: string }[]; blocks: { code: string; words: string }[] }) => [...r.warns, ...r.blocks])
+    .filter((w: { code: string; words: string }) => w.code === "missing_document" && /Passport information page copy not received/.test(w.words)).length;
   const lineOf = async (doc: string) => (await list()).people?.find((p) => p.subject === principal)?.lines.find((l) => l.document_type === doc);
   const pass = await lineOf("passport_information_page_copy"), fee = await lineOf("fee_payment_receipt");
   ok("case pass: on the case the passport line is waivable; the fee receipt line is not", k.status < 300 && pass?.waivable === true && fee?.waivable === false, [k.status, pass?.waivable, fee?.waivable]);
@@ -65,12 +68,20 @@ const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? 
   const after = await lineOf("passport_information_page_copy");
   const stored = sql(`select state || '|' || state_reason || '|' || state_by || '|' || (state_at is not null) from checklist_line where id='${pass?.id}'`);
   ok("waive pass: the case officer waives it with a reason: Waived, not required, who and when kept", waived.status === 200 && after?.state === "waived" && after?.required === false && stored === `waived|${reason}|${OFFICER}|true`, [waived.status, words(waived), after?.state, stored]);
+  const notMissing = await missing();
+  ok("readiness pass (review M5): Ready to file no longer warns that the waived passport copy is not received", notMissing === 0, notMissing);
   const audited = Number(sql(`select count(*) from audit_event where entity_key='${pass?.id}' and action='waived'`) ?? 0);
   ok("waive pass (history): the waiver is in the case's history", audited === 1, audited);
+  const why = sql(`select detail->>'reason' from audit_event where entity_key='${pass?.id}' and action='waived'`);
+  ok("waive pass (history, break M2): the history keeps the reason given", why === reason, why);
   const again = await call("POST", `/runtime/checklist-lines/${pass?.id}/waive`, { reason }, OFFICER);
   ok("waive fail: a waived line cannot be waived again (409)", again.status === 409, again.status);
   const back = await call("POST", `/runtime/checklist-lines/${pass?.id}/request`, {}, OFFICER);
   ok("take back pass: asking for the document again takes the waiver back (Requested, required again)", back.status === 200 && (await lineOf("passport_information_page_copy"))?.state === "requested", [back.status, words(back)]);
+  const missingAgain = await missing();
+  ok("readiness fail (review M5): once asked for again, Ready to file warns that it is not received", missingAgain === 1, missingAgain);
+  const was = sql(`select (detail->>'from') || '|' || (detail->>'from_reason') || '|' || (detail->>'from_by') from audit_event where entity_key='${pass?.id}' and action='requested'`);
+  ok("take back pass (break M2): once taken back, the history still says who waived it and why", was === `waived|${reason}|${OFFICER}`, was);
 
   process.exitCode = summary() ? 1 : 0;
 })();

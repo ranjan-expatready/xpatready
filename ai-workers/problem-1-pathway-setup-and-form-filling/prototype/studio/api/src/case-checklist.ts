@@ -189,7 +189,11 @@ export class CaseChecklists {
       if (to === "requested" && now?.state === "requested" && seen === undefined) return this.moved(c, id);
       fail("Someone changed this line after you opened it: read the checklist again to see its state now, then try again.", HttpStatus.CONFLICT);
     }
-    await this.audit.log(c.workspaceId, actor.id, words, "checklist line", id, `${actor.name} ${words} ${shown.label} for the ${person.role} on case ${short(c.id)} (${STATE_WORDS[row.state as LineState]} to ${STATE_WORDS[to]})`);
+    // M3-S3 break M2: the history keeps the reason given and, when a line leaves Waived or Not applicable, the reason and
+    // person it had, so a waiver taken back still says who waived it and why.
+    const was = row.stateReason ? { from: row.state, from_reason: row.stateReason, from_by: row.stateBy, from_at: row.stateAt?.toISOString() ?? null } : {};
+    await this.audit.log(c.workspaceId, actor.id, words, "checklist line", id, `${actor.name} ${words} ${shown.label} for the ${person.role} on case ${short(c.id)} (${STATE_WORDS[row.state as LineState]} to ${STATE_WORDS[to]})${reason ? `: ${reason}` : ""}`,
+      { to, ...(reason ? { reason } : {}), ...was });
     return this.moved(c, id);
   }
 
@@ -251,7 +255,7 @@ export class CaseChecklists {
     if (bytes.length > MAX_DOCUMENT_BYTES) fail(`The file is larger than ${MAX_DOCUMENT_MB} MB. Nothing was stored.`, HttpStatus.PAYLOAD_TOO_LARGE);
     const media = mediaOf(bytes);
     if (!media) fail("Send a PDF, JPEG or PNG file (judged by the file itself, not its name). Nothing was stored.", HttpStatus.UNSUPPORTED_MEDIA_TYPE);
-    if (!UPLOAD_FROM.includes(row.state as LineState)) fail(`${shown.label} for ${person.label} is Not applicable: request it again before uploading. Nothing was stored.`, HttpStatus.CONFLICT);
+    if (!UPLOAD_FROM.includes(row.state as LineState)) fail(`${shown.label} for ${person.label} is ${STATE_WORDS[row.state as LineState]}: request it again before uploading. Nothing was stored.`, HttpStatus.CONFLICT);
     // C6.15 (SA-1B-19 rule 1): on a line with a substitute set, the file is one member of it ("member": its document type
     // key); left out, it is the line's own type when that is a member. Any member of the set the line uses counts.
     const member = memberOf(shown, (body as { member?: unknown } | null)?.member);

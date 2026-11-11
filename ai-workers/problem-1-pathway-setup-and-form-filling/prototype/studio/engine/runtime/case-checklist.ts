@@ -4,9 +4,10 @@
 // questions still to answer), so the list changes as the case's answers change. A line whose document type has a
 // validity rule in the release (a `document_validity` check, applies_to = the document type key; e.g. the police
 // certificate's 6 months, P-171) carries that rule with its citation: the rule is release data, never an engine constant
-// (STANDARDS §3.1; Lead on #283). Visitor visa (vv.single) only in this slice; others answer "not derived yet". Pure:
-// no database, no clock (the date is passed in). Tests: tests/runtime/check_vv_checklist.ts. Uploads and AI reading are
-// C6.5; waiving (P-171 (6)) and the Express Entry block (P-172) are permanent-residence rules, not this combination's.
+// (STANDARDS §3.1; Lead on #283). Only the combinations the fee table marks (DERIVED_FOR); others answer "not derived
+// yet". Pure: no database, no clock (the date is passed in). Tests: tests/runtime/check_vv_checklist.ts,
+// check_m3s3_waivable.ts. Uploads and AI reading are C6.5; a line's waiver (M3-S3, P-171 (6)) is release data on the
+// line; the Express Entry block (P-172) is M3-S4.
 import { ageInYears } from "../../../contracts/rules.ts";
 import { MINOR } from "../../contracts/runtime.ts";
 import { lineCondition, lineHolders, type Known, type Person } from "../render.ts";
@@ -135,9 +136,10 @@ export function issuedWithin(rule: Pick<ValidityRule, "months">, issuedOn: strin
 /** Each person's checklist on this case, from the release's requirements and what is known about each person. `known`
  *  holds only answers without problems (the caller drops the others, B-M2), so a rejected answer never decides a line. */
 export function caseChecklist(s: Snapshot, combinationKey: string, people: Participant[], answers: Known, today: Date): CaseChecklist {
-  // M3-S3 (narrows the guard; M3-S4 removes it): a release whose author set a line's waiver has had its document lines
-  // checked line by line, so its checklist is worked out, on any combination; the fee table's checklist mark as before.
-  if (!DERIVED_FOR.has(combinationKey) && !((s.document_requirements ?? []) as Req[]).some((r) => r?.waiver === "waivable")) return { derived: false, combination: combinationKey, why: "The document checklist per person is not derived yet for this combination (it is worked out once its requirements are checked). Nothing is guessed." };
+  // M3-S3 review M1: a line's waiver never decides whether the checklist is worked out (ticking one line would switch the
+  // whole list on, unticking it off, stranding a waived line). That stays the fee table's data mark (P-230 (7)), which
+  // C6.17 widened to the study and work permits once their lines were cited; M3-S4 removes the guard.
+  if (!DERIVED_FOR.has(combinationKey)) return { derived: false, combination: combinationKey, why: "The document checklist per person is not derived yet for this combination (it is worked out once its requirements are checked). Nothing is guessed." };
   // Break M1: an answer saved with spaces around it (" 1980-01-01 ") passes its checks, which trim; it is read trimmed.
   const known: Known = new Map([...answers].map(([k, v]) => [k, typeof v.value === "string" ? { ...v, value: v.value.trim() } : v]));
   const persons: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Person["role"], label: p.label, applies: p.applies }));
