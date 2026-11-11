@@ -11,14 +11,14 @@ import { api, ApiError, useActorId, useApi } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StandIn } from "@/components/stand-in";
-import { NOT_APPLICABLE_FROM, REQUEST_FROM, UPLOAD_FROM, type LineState, type StoredDocument } from "../../../contracts/documents";
+import { NOT_APPLICABLE_FROM, REQUEST_FROM, UPLOAD_FROM, WAIVE_FROM, type LineState, type StoredDocument } from "../../../contracts/documents";
 import { lineId, noRetryOnRefusal } from "./questionnaire";
 import { FoldOut } from "@/components/fold-out";
 
 /** What the panel reads of a line as the API answers it (api/src/case-checklist.ts StoredLine, from the engine's PersonLine
  *  in engine/runtime/case-checklist.ts). Declared here, not imported: the engine file reads Node modules the web build has not. */
 type Missing = { key: string; question: string; answered: boolean; on: "case" | "person"; subject: string | null };
-export type ChecklistLine = { id: string; label: string; lineage: string; reason: string; required: boolean; who_words: string; quote: string | null; missing: Missing[];
+export type ChecklistLine = { id: string; label: string; lineage: string; reason: string; required: boolean; waivable?: boolean; who_words: string; quote: string | null; missing: Missing[];
   state: LineState; state_words: string; state_reason: string | null; state_by: string | null; state_at: string | null; version: number; documents: StoredDocument[]; kept: boolean;
   /** C6.15: the substitute set the line uses (any one of / all of), and whether the person's files meet it. */
   set?: { name: string; mode: "any_one" | "all_together"; words: string; members: { key: string; name: string; standard: boolean; when_staff: string | null }[] } | null;
@@ -39,7 +39,7 @@ export type ChecklistView =
   | { derived: false; why: string };
 
 const HAVE: readonly LineState[] = ["received", "being_checked", "approved"];
-const TONE: Partial<Record<LineState, string>> = { requested: "info", received: "ok", being_checked: "info", approved: "ok", rejected: "danger", not_applicable: "neutral" };
+const TONE: Partial<Record<LineState, string>> = { requested: "info", received: "ok", being_checked: "info", approved: "ok", rejected: "danger", not_applicable: "neutral", waived: "neutral" };
 const ROLE: Record<string, string> = { principal: "Principal applicant", spouse_or_partner: "Spouse or partner", child: "Child" };
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 /** A question's words as a link's text: the engine quotes it ("Current marital status"); a screen reader should not read the marks. */
@@ -116,7 +116,7 @@ function LineRow({ caseId, p, people, l, nameOf }: { caseId: string; p: Person; 
   const qc = useQueryClient();
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
-  const [na, setNa] = React.useState(false);
+  const [na, setNa] = React.useState<false | "not-applicable" | "waive">(false);
   const [history, setHistory] = React.useState(false);
   const [providers, setProviders] = React.useState(false);
   const file = React.useRef<HTMLInputElement>(null);
@@ -169,14 +169,15 @@ function LineRow({ caseId, p, people, l, nameOf }: { caseId: string; p: Person; 
               {REQUEST_FROM.includes(l.state) ? <DropdownMenu.Item className={item} disabled={busy} onSelect={() => void request()} data-action="request">{l.state === "not_requested" ? "Request" : "Request again"}</DropdownMenu.Item> : null}
               {UPLOAD_FROM.includes(l.state) && !l.set ? <DropdownMenu.Item className={item} disabled={busy} onSelect={() => { member.current = null; file.current?.click(); }} data-action="upload">Upload a file…</DropdownMenu.Item> : null}
               {UPLOAD_FROM.includes(l.state) && l.set ? l.set.members.map((m) => <DropdownMenu.Item key={m.key} className={item} disabled={busy} onSelect={() => { member.current = m.key; file.current?.click(); }} data-action="upload" data-member={m.key}>Upload {m.name}…</DropdownMenu.Item>) : null}
-              {NOT_APPLICABLE_FROM.includes(l.state) ? <DropdownMenu.Item className={item} onSelect={() => setNa(true)} data-action="not-applicable">Not applicable…</DropdownMenu.Item> : null}
+              {NOT_APPLICABLE_FROM.includes(l.state) ? <DropdownMenu.Item className={item} onSelect={() => setNa("not-applicable")} data-action="not-applicable">Not applicable…</DropdownMenu.Item> : null}
+              {l.waivable && WAIVE_FROM.includes(l.state) ? <DropdownMenu.Item className={item} onSelect={() => setNa("waive")} data-action="waive">Waive…</DropdownMenu.Item> : null}
               {l.shared ? <DropdownMenu.Item className={item} onSelect={() => setProviders(true)} data-action="providers">Change providers…</DropdownMenu.Item> : null}
               <DropdownMenu.Item className={item} onSelect={() => setHistory(true)} data-action="history">History</DropdownMenu.Item>
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
       </div>
-      {na ? <NotApplicableDialog l={l} label={label} close={() => { setNa(false); back(); }} done={reload} /> : null}
+      {na ? <NotApplicableDialog l={l} label={label} waive={na === "waive"} close={() => { setNa(false); back(); }} done={reload} /> : null}
       {providers ? <ProvidersDialog l={l} label={l.label} people={people} close={() => { setProviders(false); back(); }} done={reload} /> : null}
       {history ? <Dialog open onOpenChange={(o) => { if (!o) { setHistory(false); back(); } }} title={`History: ${label}`}>
         <div className="min-w-0 space-y-2 text-sm [overflow-wrap:anywhere]" data-history>
@@ -189,7 +190,8 @@ function LineRow({ caseId, p, people, l, nameOf }: { caseId: string; p: Person; 
   );
 }
 
-function NotApplicableDialog({ l, label, close, done }: { l: ChecklistLine; label: string; close: () => void; done: () => Promise<unknown> }) {
+/** Not applicable, or (M3-S3, P-171 (6)) Waive on a line its release marks waivable: both need a reason. */
+function NotApplicableDialog({ l, label, waive, close, done }: { l: ChecklistLine; label: string; waive?: boolean; close: () => void; done: () => Promise<unknown> }) {
   const [reason, setReason] = React.useState("");
   const [err, setErr] = React.useState<{ field: string | null; other: string | null }>({ field: null, other: null });
   const [busy, setBusy] = React.useState(false);
@@ -197,7 +199,7 @@ function NotApplicableDialog({ l, label, close, done }: { l: ChecklistLine; labe
   const save = async () => {
     if (sending.current) return; // break m2: Enter pressed twice sends one request
     sending.current = true; setBusy(true); setErr({ field: null, other: null });
-    try { await api(`/runtime/checklist-lines/${l.id}/not-applicable`, { method: "POST", json: { reason, version: l.version } }); await done(); close(); }
+    try { await api(`/runtime/checklist-lines/${l.id}/${waive ? "waive" : "not-applicable"}`, { method: "POST", json: { reason, version: l.version } }); await done(); close(); }
     catch (e) {
       const f = e instanceof ApiError ? e.field("reason") : null;
       setErr({ field: f, other: f ? null : (e as Error).message });
@@ -205,8 +207,8 @@ function NotApplicableDialog({ l, label, close, done }: { l: ChecklistLine; labe
     } finally { sending.current = false; setBusy(false); }
   };
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={`Not applicable: ${label}`} description="The line stays on the list with your reason; any file is kept."
-      footer={<><Button variant="secondary" onClick={close}>Cancel</Button><Button busy={busy} onClick={() => void save()} data-na-save>Mark not applicable</Button></>}>
+    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={`${waive ? "Waive" : "Not applicable"}: ${label}`} description={waive ? "The document is needed, but you waive it: the line stays on the list as Waived with your reason, your name and the time. Request it again to take the waiver back." : "The line stays on the list with your reason; any file is kept."}
+      footer={<><Button variant="secondary" onClick={close}>Cancel</Button><Button busy={busy} onClick={() => void save()} data-na-save>{waive ? "Waive" : "Mark not applicable"}</Button></>}>
       <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
         <Field label="Reason" error={err.field}><Input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} data-na-reason /></Field>
       </form>

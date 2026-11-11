@@ -910,6 +910,8 @@ model DocumentRequirement {
   alternatives    Json?
   /// C6.15 (SA-1B-20): the named set of this document type the line picks; null = the set named "Standard".
   setName         String?          @map("set_name")
+  /// M3-S3 (P-171 (6)): "waivable" lets the case officer waive the line on a case with a reason; null: not waivable.
+  waiver          String?
   sourceQuote     String?          @map("source_quote")
   sourceFile      String?          @map("source_file")
   note            String?
@@ -1974,7 +1976,7 @@ model ChecklistLine {
   /// The requirement lineage the line was first written for (the derived line's lineage).
   lineage      String
   state        String    @default("not_requested")
-  /// Why the line is Not applicable (required for that state, a check in SQL).
+  /// Why the line is Not applicable or Waived (required for those states, a check in SQL).
   stateReason  String?   @map("state_reason")
   stateBy      String?   @map("state_by")
   stateAt      DateTime? @map("state_at") @db.Timestamptz

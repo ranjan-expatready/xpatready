@@ -194,7 +194,7 @@ function DocumentDrawer({ combinationId, revision, line, roles, roleLabel, canAu
       <div className="space-y-4 text-sm" data-doc-drawer>
         <p className="text-xs text-text-muted">{line.status === "PUBLISHED" ? "Released · changes go out with the next release" : "In this draft · goes out with the next release"}</p>
         <section aria-labelledby="dd-who" className="space-y-1"><h3 id="dd-who" className="font-semibold">Who and when</h3>
-          <dl className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-1"><dt className="text-text-muted">Who</dt><dd>{whoLabel(line.who)}</dd><dt className="text-text-muted">When</dt><dd>{line.base ? "Always" : `Only if: ${line.when}`}</dd><dt className="text-text-muted">Provided by</dt><dd>{line.providedBy === "client" ? "The client" : line.providedBy === "agent" ? "The firm" : line.providedBy.replace(/_/g, " ")}</dd></dl>
+          <dl className="grid grid-cols-[9rem_1fr] gap-x-3 gap-y-1"><dt className="text-text-muted">Who</dt><dd>{whoLabel(line.who)}</dd><dt className="text-text-muted">When</dt><dd>{line.base ? "Always" : `Only if: ${line.when}`}</dd><dt className="text-text-muted">Provided by</dt><dd>{line.providedBy === "client" ? "The client" : line.providedBy === "agent" ? "The firm" : line.providedBy.replace(/_/g, " ")}</dd><dt className="text-text-muted">Waivable</dt><dd data-drawer-waivable>{line.waivable ? "Yes: the case officer may waive it on a case, with a reason" : "No"}</dd></dl>
         </section>
         <section aria-labelledby="dd-alt" className="space-y-1"><h3 id="dd-alt" className="font-semibold">Alternatives · any one counts</h3>
           {line.alternatives.length ? <>

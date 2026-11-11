@@ -303,7 +303,7 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   const marks = new Map<string, { on: boolean; n: number }>();
   for (const [k, id, label] of KINDS) {
     const a = new Map(((prev?.[k] as any[]) ?? []).map((x) => [id(x), x])), b = new Map(((next[k] as any[]) ?? []).map((x) => [id(x), x]));
-    for (const [key, x] of b) if (!a.has(key)) out.push({ kind: label, key, change: "added", origin: x.origin, needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.question_text ?? x.fact ?? key });
+    for (const [key, x] of b) if (!a.has(key)) out.push({ kind: label, key, change: "added", origin: x.origin, needs_sme: sme(label, x), label: `${x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.question_text ?? x.fact ?? key}${label === "Document requirement" && x.waiver === "waivable" ? " (waivable by the case officer, with a reason)" : ""}` });
       else if (bare(a.get(key)) !== bare(x)) {
         // C4.9 (P-97): who fills a question for every combination is named once, in words, for the immigration expert.
         const was = a.get(key);
@@ -322,7 +322,9 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
           out.push({ kind: "Family information form rule", key, change: "changed", origin: x.origin, needs_sme: true, label: fam(x.form_role) ? `${key} is now this combination's family information form ([IRCC-F09]: it fills the family information line)` : fam(was.form_role) ? `${key} is no longer a family information form ([IRCC-F09]: it no longer fills the family information line)` : `${key}'s role changed` });
           if (bare({ ...was, form_role: null }) === bare({ ...x, form_role: null })) continue;
         }
-        out.push({ kind: label, key, change: "changed", origin: x.origin, needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.fact ?? key });
+        // M3-S3 break M3: whether the case officer may waive a document line is said in words, so the second person sees it.
+        const waiver = label === "Document requirement" && (a.get(key)?.waiver ?? null) !== (x.waiver ?? null) ? (x.waiver === "waivable" ? " (now waivable by the case officer, with a reason)" : " (no longer waivable)") : "";
+        out.push({ kind: label, key, change: "changed", origin: x.origin, needs_sme: sme(label, x), label: `${x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.fact ?? key}${waiver}` });
       }
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: label, key, change: "removed", needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? key });
   }
