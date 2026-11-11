@@ -92,7 +92,10 @@ function same(a: unknown, b: unknown): boolean {
 export type Context = { fact?: (key: string) => unknown;
   /** C7.2 cause 3: the caller vouches that a person confirmed nothing applies (a group's "none apply"): only then does an
    *  empty value reach a "recorded" step and give "N". Without it an empty value stays blank, as for every other step. */
-  nothingRecorded?: boolean };
+  nothingRecorded?: boolean;
+  /** QA-395: the caller has worked out a "recorded" Yes/No whose form counts only some entries (engine/runtime/forms.ts
+   *  countedOf): true or false is the answer; null means a person decides (`countedWhy` says why). */
+  counted?: boolean | null; countedWhy?: string };
 
 /** Runs one transformation text on one value for one box. `rows` lets "select …" pick among a person's rows. */
 export function runTransform(transform: string | undefined, value: unknown, box: Box, ctx: Context = {}): Outcome {
@@ -113,6 +116,9 @@ export function runTransform(transform: string | undefined, value: unknown, box:
     if (s.startsWith("select ")) return hand(`record selection "${s}" is not in the executable set`);
     // C7.2 cause 3: the "recorded" derivations give Yes or No (a missing value reaches here only when the caller passed it on purpose, see RECORDED).
     if ((m = RECORDED.exec(s))) {
+      // QA-395: the form counts only some entries, and the caller has counted them by the form's own words.
+      if (ctx.counted === null) return hand(ctx.countedWhy ?? "the form counts only some of the entries: a person checks them and decides Yes or No");
+      if (typeof ctx.counted === "boolean") { v = ctx.counted; continue; }
       const named = (m[1] ?? "").split(",").map((f) => f.trim()).filter(Boolean);
       // B88 (review R2-M1): a box asked as its own Yes/No reads the person's answer; an explicit No while a detail it names is
       // still recorded contradicts itself, so it is never written as Y (or N) on any path: a person decides (QA-165's rule).

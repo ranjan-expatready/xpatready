@@ -10,6 +10,7 @@ import type { Snapshot } from "../snapshot.ts";
 import { groupLabel, type QuestionnaireView, type Readiness } from "../../contracts/runtime.ts";
 import { checkValue, knownOf, type Answer, type Participant, type Row } from "./case.ts";
 import { proseRecorded, recordedDerivation } from "../../../p5/transforms.ts";
+import COUNTS from "../../samples/recorded-counts.json" with { type: "json" };
 import { gateOf, type GatePlacement } from "./gates.ts";
 import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
 import { openLines } from "./open-lines.ts";
@@ -81,8 +82,11 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
  *  review r1 B1); "other names", the national identity document and the US card are "N" once their own Yes/No question
  *  (the facts' gate, gateOf) is answered No (QA-165). Marked on a copy's boxes only; a later entry or a changed "none apply" makes
  *  the copy out of date through its group facts (changedGroups). */
-export function markNothingRecorded(boxes: BoxRow[], view: QuestionnaireView, placements: GatePlacement[] = []): BoxRow[] {
+export function markNothingRecorded(boxes: BoxRow[], view: QuestionnaireView, placements: GatePlacement[] = [], today = new Date()): BoxRow[] {
   return boxes.map((b) => {
+    // QA-395: a "recorded" Yes/No whose form counts only some entries (samples/recorded-counts.json) is worked out from them.
+    const count = b.coverage === "confirmed fact" ? countedOf(b, view, today) : null;
+    if (count) return { ...b, counted: count.counted, detail: count.detail };
     // B155: an empty box of a list relative (a brother or sister's row) says why it stays empty: "none apply" answered,
     // or no such entry; else (no entries and no "none apply" yet) the entry it waits for, as render words it.
     const list = b.about && b.coverage !== "confirmed fact" && isListRelative(b.about) ? listRowWhy(b, view) : null;
@@ -106,6 +110,43 @@ export function markNothingRecorded(boxes: BoxRow[], view: QuestionnaireView, pl
     if (gates.every((g): g is string => !!g)) return { ...b, nothing_recorded: true as const, detail: `nothing recorded: "${[...new Set(gates)].join('", "')}" answered No` };
     return b;
   });
+}
+
+/** QA-395 (P-319): the rules for a "recorded" Yes/No whose form counts only some entries, from the form's own words (data). */
+export type CountRule = { form: string; box: string; quote: string; entry: string; from: string; to: string; other_than: string[]; past_years: number; more_than_months: number };
+const COUNT_RULES = (COUNTS as { rules: CountRule[] }).rules;
+/** A date answer as the first ("from") or last ("to") day it names (YYYY-MM-DD, or YYYY-MM to the month). */
+function dayOf(v: unknown, end: boolean): Date | null {
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(String(v ?? "").trim());
+  if (!m) return null;
+  return m[3] ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : new Date(Date.UTC(+m[1], +m[2] - (end ? 0 : 1), end ? 0 : 1));
+}
+const addMonths = (d: Date, n: number) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, d.getUTCDate()));
+const sameText = (a: unknown, b: unknown) => String(a ?? "").trim().toLowerCase() === String(b ?? "").trim().toLowerCase();
+/** QA-395: whether a person's entries count for a box under its rule (`rules`, samples/recorded-counts.json): an entry counts
+ *  when its country is none of the rule's `other_than` facts and its period covers more than `more_than_months` months of the
+ *  past `past_years` years (the part inside them). True when one counts; false when every entry is complete and none does;
+ *  null (a person decides) when one could still count but lacks its country or dates, or a fact it is compared with is
+ *  not answered. Null for a box no rule names. Answers count once they fill (declared or confirmed, P-411). Pure. */
+export function countedOf(b: BoxRow, view: QuestionnaireView, today: Date, rules: CountRule[] = COUNT_RULES): { counted: boolean | null; detail: string } | null {
+  const rule = rules.find((r) => r.box === b.box && r.entry === b.fact);
+  if (!rule || !b.about || b.about.includes("/") || b.about === "case") return null;
+  const qs = view.sections.flatMap((s) => s.questions.filter((q) => q.subjectId === b.about));
+  const own = (fact: string) => { const a = qs.find((q) => q.fact === fact)?.answer; return a?.fills ? a.value : undefined; };
+  const cell = (fact: string, row: string) => { const a = qs.find((q) => q.fact === fact)?.rows.find((r) => r.row === row)?.answer; return a?.fills ? a.value : undefined; };
+  const others = rule.other_than.map(own);
+  const rows = qs.find((q) => q.fact === rule.entry)?.rows ?? [];
+  const since = addMonths(today, -12 * rule.past_years), asked = `"${rule.quote}"`;
+  let open = false;
+  for (const r of rows) {
+    const country = cell(rule.entry, r.row), from = dayOf(cell(rule.from, r.row), false), to = dayOf(cell(rule.to, r.row), true);
+    if (country !== undefined && others.some((o) => o !== undefined && sameText(o, country))) continue; // the person's own country never counts
+    if (country === undefined || !from || !to || others.some((o) => o === undefined)) { open = true; continue; }
+    const start = from > since ? from : since, end = to < today ? to : today;
+    if (end > addMonths(start, rule.more_than_months)) return { counted: true, detail: `Yes to ${asked}: ${String(country)} from ${String(cell(rule.from, r.row))} to ${String(cell(rule.to, r.row))}` };
+  }
+  return open ? { counted: null, detail: `${asked}: an entry lacks its country or dates, or a fact it is compared with is not answered: a person checks the entries and decides Yes or No` }
+    : { counted: false, detail: `No to ${asked}: no entry is another country for more than ${rule.more_than_months} months of the past ${rule.past_years} years` };
 }
 
 /** B155: why a list relative's form field (row `b.row`) holds nothing although its group is answered: "none apply" (declared

@@ -47,7 +47,10 @@ export type Coverage = "confirmed fact" | "answered on screen" | "document readi
 export type BoxRow = { box: string; caption: string; fact: string | null; meaning: string | null; about: string | null; about_label: string; row: number | null; coverage: Coverage; detail: string; value?: unknown; transform?: string | null; origin?: string;
   /** C7.2 cause 3 (set on a case copy only, engine/runtime/forms.ts markNothingRecorded): a derived "is anything recorded?"
    *  Yes/No whose facts sit in a repeating group with no entries and a confirmed "none apply". */
-  nothing_recorded?: true };
+  nothing_recorded?: true;
+  /** QA-395 (set on a case copy only, engine/runtime/forms.ts markNothingRecorded, samples/recorded-counts.json): a "recorded"
+   *  Yes/No whose form counts only some entries: true or false as the entries count, null when a person must decide. */
+  counted?: boolean | null };
 /** QA-392: the answer a `nothing_recorded` box stands for: No (the PDF copy's "recorded" step gives it from a confirmed
  *  "none apply", p5/transforms.ts runTransform; the Online answer sheet shows it as that same No). */
 export const NOTHING_RECORDED = false;
