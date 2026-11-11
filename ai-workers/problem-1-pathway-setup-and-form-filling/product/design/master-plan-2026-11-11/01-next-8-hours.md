@@ -132,7 +132,7 @@ Basis: a builder row takes 2-4 h of session (build → reviewer → breaker wher
 **The critical path after today is serial, not lanes:**
 * Runtime chain: M3-S3 → M3-S4 (schema) in parallel with BK-8 → QA-165/318 → QA-315 (case-prepare), then BK-13 = ~6-7 sessions on the longer branch, ~1.5 days. Running QA-355 beside them (no baton) and retesting QA-318/QA-355/QA-234 can take a further 2-5 sessions off.
 * Screens chain: BK-3 PR 2 → PRs 3-4 (concept first) → BK-4 (3) → BK-5 (2) → BK-6 walk = ~8 sessions, ~2 days.
-* With both chains running continuously: **Bake rows done ~13-14 Nov IST**, walk 1 on ~14 Nov, the co-founder's walk within 24 h (P-455 (4)). That is a week earlier than the 21-24 Nov in the Bake plan, because P-461/P-462 removed the budget limit the plan was paced on. A chain that idles overnight adds ~half a day.
+* With both chains running continuously: **Bake rows done and the full walk ~13-14 Nov IST** (**ruled P-472**: the founder chose the full walk with BK-5 in walk 1 and no shortened reviews; this replaces P-463's "walk exit early 12 Nov"), the co-founder's walk within 24 h (P-455 (4)). That is a week earlier than the 21-24 Nov in the Bake plan, because P-461/P-462 removed the budget limit the plan was paced on. A chain that idles overnight adds ~half a day.
 
 **What "more lanes" cannot buy:** the two chains above. Lanes beyond ~6 builders add outside-the-caps rows and fixes, not an earlier Bake exit. They also add CI load (section 3, point 2).
 
@@ -159,3 +159,7 @@ Basis: a builder row takes 2-4 h of session (build → reviewer → breaker wher
 
 Also accepted: part 8's M1 + M4 (pipeline lane started); the M3 challenge (the founder is told "M3: 28 of 29 Works, C7.8 Partial awaiting re-score"). Part 4's "upgrade" question was put to the founder.
 **Forecast effect:** BK-8 and BK-11 now run in the window. The "possible" row in §4 moves to "likely" for BK-8. Expected at 20:30 IST: 17-19 of 40 sessions, plus up to 3 journey Majors closed by retests.
+
+## Update, 11 Nov ~13:3x IST (Lead 16, P-472)
+
+The challenge to P-463 was accepted. **The founder chose the full walk, ~13-14 Nov IST (P-472).** BK-5 (start page) stays inside walk 1, and no review is shortened. This file's forecast already read ~13-14 Nov; the line in §4 now cites P-472. P-463's "walk exit early 12 Nov IST" is replaced. That wording lives only in DECISIONS on the Lead's branch, nowhere in this folder.

@@ -123,7 +123,7 @@ P-258 named four shared services. On main: **SH2 where-used is done** (`where-us
 
 * **"Complete M4 in ~8 hours" (A19 (d)) is not possible.** The schema chain alone is ~4-6 sessions in series, F2 needs a person's 5-10 hours of Adobe checks, and M4 starts when the Bake's baton rows have merged. What 8 hours can buy now: S7 and S5 built, the S1/S3/S4 contracts written and agreed, T1's re-trace done, and the content research for one pathway (citations only). All of them are off the Bake's batons.
 * **With ~10 lanes, no budget cap (P-461, P-462) and lanes running continuously:**
-  * Bake rows done ~13-14 Nov IST and the walks ~14-15 Nov (part 1);
+  * Bake rows done and the full walk ~13-14 Nov IST (P-472), the co-founder's walk within 24 h after (P-455 (4));
   * **M4 ~20-24 Nov**: the schema chain, the person's Adobe time, and review rounds set the pace, not lane count;
   * **M5 ~27 Nov-2 Dec**, overlapping M4 from about the 22nd.
   * These are planning ranges, not promises. Each row's design and the first five rows' measured cost (P-453) will narrow them.
