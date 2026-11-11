@@ -199,7 +199,7 @@ function StartDialog({ door, status, onClose, onStory }: { door: DoorKey; status
       {failed ? <Notice tone="danger" title={failed.title} className="mb-3"><span data-start-failed>{failed.words}</span></Notice> : null}
       <div className="grid gap-4 text-sm sm:grid-cols-3" data-start-confirm={door}>
         <div><p className="mb-1 font-medium">Goes</p><ul className="list-disc space-y-1 pl-5" data-start-goes>
-          <li>All configuration, releases and cases: {status ? <b>{status.scope.total_rows} rows</b> : "the rows in the demo"}</li>
+          <li>All configuration, releases and cases: {status ? <b>{status.scope.total_rows} row{status.scope.total_rows === 1 ? "" : "s"}</b> : "the rows in the demo"}</li>
           <li>The demo's working files{status ? ` (${status.scope.files})` : ""}</li></ul></div>
         <div><p className="mb-1 font-medium">Comes back</p><ul className="list-disc space-y-1 pl-5" data-start-comes>{d.comes.map((c) => <li key={c}>{c}</li>)}</ul></div>
         <div><p className="mb-1 font-medium">Kept</p><ul className="list-disc space-y-1 pl-5" data-start-kept>
