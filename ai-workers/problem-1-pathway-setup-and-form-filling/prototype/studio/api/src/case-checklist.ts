@@ -1,7 +1,7 @@
 // C6.4 (M3-B, runtime lane; P-171; M3 case view r5c "checklist per person"): a case's document checklist, one list per
 // person, from its pinned release's requirements and rechecked against the case's answers on every read.
-// The case officer reads it; a client and configuration people do not (deny by default, as runtime.ts). Visitor visa
-// only in this slice: other combinations answer "not derived yet". Sample until the immigration expert confirms. US$0.
+// The case officer reads it; a client and configuration people do not (deny by default, as runtime.ts). Every
+// combination's list is worked out from its release (M3-S4, P-425). Sample until the immigration expert confirms. US$0.
 // Storage slice (M3-C; SI-14 stand-in for the team's storage): a line the person needs is kept as a checklist_line row
 // (written on read, so it keeps its id and state when the answers take it away and bring it back); the officer requests
 // it, the officer or the case's client uploads it (the file is the person's: case_document), or the officer marks it Not
@@ -132,7 +132,8 @@ export class CaseChecklists {
         const row = rowOf.get(`${p.subject}|${l.document.key}`), documents = filesOf(p.subject, l);
         const state = (row?.state ?? "not_requested") as LineState;
         const reason = kept ? `${l.reason} Kept on the list: it is ${STATE_WORDS[state]}${documents.length ? " and has a file" : ""}, so it is not dropped when the answers change.` : l.reason;
-        return { ...l, ...providersNow(l, row), id: row?.id ?? l.id, derived_id: l.id, reason, required: kept || ((state === "not_applicable" || state === "waived") && !l.never_waivable) ? false : l.required, state, state_words: STATE_WORDS[state], state_reason: row?.stateReason ?? null,
+        // M3-S4 review m1: a kept line no longer needed blocks nothing, so it does not say never waivable either.
+        return { ...l, ...providersNow(l, row), ...(kept ? { never_waivable: false } : {}), id: row?.id ?? l.id, derived_id: l.id, reason, required: kept || ((state === "not_applicable" || state === "waived") && !l.never_waivable) ? false : l.required, state, state_words: STATE_WORDS[state], state_reason: row?.stateReason ?? null,
           state_by: row?.stateBy ?? null, state_at: row?.stateAt?.toISOString() ?? null, version: row?.version ?? 0, documents, kept, set_status: setStatusOf(l, currentKeys(p.subject, l)), ...((): { on_file?: NonNullable<ReturnType<typeof onFile>> } => { const f = onFile(p.subject, l.document.key); return f ? { on_file: f } : {}; })() };
       };
       // A line no longer needed that was acted on (requested, a file, Not applicable) stays on the person's list.
@@ -204,8 +205,8 @@ export class CaseChecklists {
   /** M3-S4 (P-172): a line its release marks never waivable cannot be marked Not applicable either (that would lift its
    *  block on Ready to file by another name); refused in words, nothing changed. */
   async notApplicable(actor: Actor, id: string, body: unknown) {
+    const { shown, person } = await this.line(actor, id, "officer"); // review m3: who may act is checked before the body
     const b = parse(NotApplicable, body);
-    const { shown, person } = await this.line(actor, id, "officer");
     if (shown.never_waivable) fail(neverWords(shown.label, person.label, "marked not applicable"), HttpStatus.UNPROCESSABLE_ENTITY);
     return this.setState(actor, id, NOT_APPLICABLE_FROM, "not_applicable", b.reason, "marked not applicable", b.version);
   }
@@ -213,8 +214,8 @@ export class CaseChecklists {
   /** M3-S3 (P-171 (6)): the case officer waives a line its release marks waivable, with a reason; who and when are kept
    *  on the line and in the history. A line not marked waivable is refused in words (Not applicable stays its way). */
   async waive(actor: Actor, lineId: string, body: unknown) {
+    const { shown, person } = await this.line(actor, lineId, "officer"); // review m3: who may act is checked before the body
     const b = parse(Waive, body);
-    const { shown, person } = await this.line(actor, lineId, "officer");
     if (shown.never_waivable) fail(neverWords(shown.label, person.label, "waived"), HttpStatus.UNPROCESSABLE_ENTITY);
     if (!shown.waivable) fail(`${shown.label} for ${person.label} cannot be waived: its line in the release is not marked waivable. Nothing was changed.`, HttpStatus.UNPROCESSABLE_ENTITY);
     return this.setState(actor, lineId, WAIVE_FROM, "waived", b.reason, "waived", b.version);

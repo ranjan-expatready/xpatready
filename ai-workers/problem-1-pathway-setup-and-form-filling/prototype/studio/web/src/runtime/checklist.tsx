@@ -149,7 +149,7 @@ function LineRow({ caseId, p, people, l, nameOf }: { caseId: string; p: Person; 
       {/* Break m3: a kept line says so once, in its reason (the API's words); no second "Kept" label. */}
       <div className="min-w-0"><Pill tone={TONE[l.state] ?? "neutral"}><span data-state-words>{l.state_words}</span></Pill>
         {/* M3-S4 (P-172): the release says this line can never be waived; Ready to file waits until it is received. */}
-        {l.never_waivable ? <p className="mt-0.5 text-xs font-medium" data-never-waivable>Never waived: Ready to file waits until it is received</p> : null}
+        {l.never_waivable ? <p className="mt-0.5 text-xs font-medium" data-never-waivable>{l.state === "not_applicable" || l.state === "waived" ? "Never waived now: it still blocks Ready to file; request it again" : "Never waived: Ready to file waits until it is received"}</p> : null}
         {l.state_reason ? <p className="mt-0.5 text-xs text-text-muted [overflow-wrap:anywhere]">{l.state_reason}</p> : null}</div>
       <div className="min-w-0 text-[13px] [overflow-wrap:anywhere]"><p data-reason>{l.reason}</p>
         {l.quote ? <FoldOut className="mt-0.5" summaryClassName="text-xs text-text-link" summary="Source"><p className="mt-1 text-xs text-text-muted [overflow-wrap:anywhere]" data-quote>{l.quote}</p></FoldOut> : null}

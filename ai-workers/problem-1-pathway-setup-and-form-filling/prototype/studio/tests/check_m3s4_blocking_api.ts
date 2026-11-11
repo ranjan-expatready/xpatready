@@ -23,11 +23,11 @@ const waiverNow = () => sql(`select coalesce(waiver, '') from document_requireme
 
 // (1) The author's save.
 const bad = await call("PATCH", path, body({ waiver: "blocking" }), AUTHOR);
-ok("save fail: a waiver other than waivable, never or none is refused in words (400), nothing saved", bad.status === 400 && /Waiver: choose "waivable", "never", or none/.test(words(bad)) && waiverNow() === "", [bad.status, words(bad)]);
+ok("C6.4 M3-S4: save fail: a waiver other than waivable, never or none is refused in words (400), nothing saved", bad.status === 400 && /Waiver: choose "waivable", "never", or none/.test(words(bad)) && waiverNow() === "", [bad.status, words(bad)]);
 const save = await call("PATCH", path, body({ waiver: "never" }), AUTHOR);
-ok("save pass: the author makes the letter of acceptance line never waivable (a new draft version)", save.status < 300 && waiverNow() === "never", [save.status, words(save)]);
+ok("C6.4 M3-S4: save pass: the author makes the letter of acceptance line never waivable (a new draft version)", save.status < 300 && waiverNow() === "never", [save.status, words(save)]);
 const kept = await call("PATCH", path, body({ note: row.note ?? undefined }), AUTHOR);
-ok("save pass: a later edit that does not send the waiver keeps it", kept.status < 300 && waiverNow() === "never", [kept.status, words(kept)]);
+ok("C6.4 M3-S4: save pass: a later edit that does not send the waiver keeps it", kept.status < 300 && waiverNow() === "never", [kept.status, words(kept)]);
 
 // (2) Released by a second and a third person; the review names the change in words.
 let r = { status: 0, body: null as any }, named = false;
@@ -41,9 +41,9 @@ for (let attempt = 0; attempt < 2; attempt++) {
   r = await call("POST", `/combinations/${sp}/approve`, undefined, APPROVER);
   if (!/changed while it was being released/.test(words(r))) break;
 }
-ok("release pass: the second person's review names the line as never waivable, in words", named);
+ok("C6.4 M3-S4: release pass: the second person's review names the line as never waivable, in words", named);
 const released = sql(`select r.snapshot::text ~ '"waiver": ?"never"' from config_release r where r.combination_id='${sp}' order by r.version desc limit 1`);
-ok("release pass: the new release carries the line's waiver", r.status < 300 && released === "t", [r.status, words(r), released]);
+ok("C6.4 M3-S4: release pass: the new release carries the line's waiver", r.status < 300 && released === "t", [r.status, words(r), released]);
 
 // (3) A case on the new release.
 const f = await firms();
@@ -53,16 +53,26 @@ const P = c.subjects["Sample Student S4"];
 type L = { id: string; document_type: string; waivable: boolean; never_waivable: boolean; state: string; required: boolean; version: number };
 const lineOf = async (doc: string) => ((await call("GET", `/runtime/cases/${c.id}/checklist`, undefined, officer)).body?.people ?? []).find((p: { subject: string }) => p.subject === P)?.lines.find((l: L) => l.document_type === doc) as L | undefined;
 const letter = await lineOf(DOC), passport = await lineOf("passport_information_page_copy");
-ok("case pass: on the case the letter line is never waivable (and not waivable); the passport line is neither", !!letter && letter.never_waivable === true && letter.waivable === false && letter.required === true && passport?.never_waivable === false, [letter, passport?.never_waivable]);
+ok("C6.4 M3-S4: case pass: on the case the letter line is never waivable (and not waivable); the passport line is neither", !!letter && letter.never_waivable === true && letter.waivable === false && letter.required === true && passport?.never_waivable === false, [letter, passport?.never_waivable]);
 
 const waive = await call("POST", `/runtime/checklist-lines/${letter?.id}/waive`, { reason: "The school sends it later (Sample)" }, officer);
-ok("waive fail: the never waivable line cannot be waived (422, in words), nothing changed", waive.status === 422 && /cannot be waived: its line in the release is never waivable, so Ready to file waits until it is received/.test(words(waive)) && (await lineOf(DOC))?.state === "not_requested", [waive.status, words(waive)]);
+ok("C6.4 M3-S4: waive fail: the never waivable line cannot be waived (422, in words), nothing changed", waive.status === 422 && /cannot be waived: its line in the release is never waivable, so Ready to file waits until it is received/.test(words(waive)) && (await lineOf(DOC))?.state === "not_requested", [waive.status, words(waive)]);
 const na = await call("POST", `/runtime/checklist-lines/${letter?.id}/not-applicable`, { reason: "Not needed (Sample)" }, officer);
-ok("not applicable fail: nor marked Not applicable (422, in words), nothing changed", na.status === 422 && /cannot be marked not applicable: its line in the release is never waivable/.test(words(na)) && (await lineOf(DOC))?.state === "not_requested", [na.status, words(na)]);
-const byClient = await call("POST", `/runtime/checklist-lines/${letter?.id}/not-applicable`, { reason: "Not needed (Sample)" }, CLIENT);
-ok("not applicable fail: a client is refused before anything else (403)", byClient.status === 403, byClient.status);
+ok("C6.4 M3-S4: not applicable fail: nor marked Not applicable (422, in words), nothing changed", na.status === 422 && /cannot be marked not applicable: its line in the release is never waivable/.test(words(na)) && (await lineOf(DOC))?.state === "not_requested", [na.status, words(na)]);
+const byClient = await call("POST", `/runtime/checklist-lines/${letter?.id}/not-applicable`, {}, CLIENT);
+const waiveClient = await call("POST", `/runtime/checklist-lines/${letter?.id}/waive`, {}, CLIENT);
+ok("C6.4 M3-S4: not applicable fail (review m3): a client is refused before the body is read (403, not 400), for both actions", byClient.status === 403 && waiveClient.status === 403, [byClient.status, waiveClient.status]);
 const naOther = await call("POST", `/runtime/checklist-lines/${passport?.id}/not-applicable`, { reason: "Held by the visa office (Sample)" }, officer);
-ok("not applicable pass: a line that is not never waivable is still marked Not applicable as before", naOther.status === 200 && (await lineOf("passport_information_page_copy"))?.state === "not_applicable", [naOther.status, words(naOther)]);
+ok("C6.4 M3-S4: not applicable pass: a line that is not never waivable is still marked Not applicable as before", naOther.status === 200 && (await lineOf("passport_information_page_copy"))?.state === "not_applicable", [naOther.status, words(naOther)]);
+
+// (3b) Review m6: a line marked Not applicable before its release said never (set here in SQL, as an older release
+// would have left it) stays required and still blocks; asking for it again is the way out.
+sql(`update checklist_line set state='not_applicable', state_reason='Marked before the release said never (Sample)', state_by='${officer}', state_at=now(), version=version+1 where id='${letter?.id}'`);
+const legacy = await lineOf(DOC);
+const legacyBlocks = codes(readinessOf((await prepare(c.id, officer)).p, filingOf((await prepare(c.id, officer)).p, P)?.id)?.blocks);
+ok("C7.6 M3-S4: legacy fail: Not applicable from before, the line stays required and never waivable, and Ready to file is still blocked", legacy?.state === "not_applicable" && legacy.required === true && legacy.never_waivable === true && legacyBlocks.includes("document_never_waivable"), [legacy?.state, legacy?.required, legacyBlocks]);
+const again = await call("POST", `/runtime/checklist-lines/${letter?.id}/request`, { version: legacy?.version }, officer);
+ok("C6.4 M3-S4: legacy pass: asking for it again takes it back to Requested", again.status === 200 && (await lineOf(DOC))?.state === "requested", [again.status, words(again)]);
 
 // (4) Ready to file: blocked while the letter is not received; the block cannot be passed.
 let p = (await prepare(c.id, officer)).p;
@@ -71,18 +81,18 @@ const blocked = await readyToFile(c.id, rep);
 p = (await prepare(c.id, officer)).p;
 const rd = readinessOf(p, fid);
 const block = (rd?.blocks ?? []).find((b: { code: string; words: string }) => b.code === "document_never_waivable");
-ok("ready fail: with every warning passed and the review done, Ready to file is still refused while the letter is not received", !!fid && !blocked.includes(fid) && !!block && /Letter of acceptance not received\. Its release says it can never be waived/i.test(block.words), { fid, blocked, blocks: rd?.blocks, warns: codes(rd?.warns) });
+ok("C7.6 M3-S4: ready fail: with every warning passed and the review done, Ready to file is still refused while the letter is not received", !!fid && !blocked.includes(fid) && !!block && /Letter of acceptance not received\. Its release says it can never be waived/i.test(block.words), { fid, blocked, blocks: rd?.blocks, warns: codes(rd?.warns) });
 const ready1 = await call("POST", `/runtime/filings/${fid}/ready`, {}, officer);
-ok("ready fail: the Ready to file route answers 409 and names the block", ready1.status === 409 && codes(ready1.body?.blocks).includes("document_never_waivable") && /block/.test(words(ready1)), [ready1.status, words(ready1), codes(ready1.body?.blocks)]);
+ok("C7.6 M3-S4: ready fail: the Ready to file route answers 409 and names the block", ready1.status === 409 && codes(ready1.body?.blocks).includes("document_never_waivable") && /block/.test(words(ready1)), [ready1.status, words(ready1), codes(ready1.body?.blocks)]);
 const passIt = await call("POST", `/runtime/filings/${fid}/warnings/document_never_waivable/pass`, { reason: "We will send it later (Sample)" }, officer);
-ok("pass fail: the block cannot be passed with a reason (409, in words), nothing stored", passIt.status === 409 && /cannot be passed: fix it instead/.test(words(passIt)) && sql(`select count(*) from readiness_pass where filing_id='${fid}' and code='document_never_waivable'`) === "0", [passIt.status, words(passIt)]);
+ok("C7.6 M3-S4: pass fail: the block cannot be passed with a reason (409, in words), nothing stored", passIt.status === 409 && /cannot be passed: fix it instead/.test(words(passIt)) && sql(`select count(*) from readiness_pass where filing_id='${fid}' and code='document_never_waivable'`) === "0", [passIt.status, words(passIt)]);
 
 // (5) The letter is received: Ready to file is allowed.
 const fd = new FormData(); fd.append("version", String((await lineOf(DOC))?.version ?? 0)); fd.append("file", new Blob([new TextEncoder().encode("%PDF-1.4\n% Sample synthetic letter of acceptance\n")]), "letter.pdf");
 const up = await fetch(`http://127.0.0.1:${PORT}/api/runtime/checklist-lines/${letter?.id}/documents`, { method: "POST", headers: { "x-actor": officer }, body: fd });
-ok("received pass: the letter is uploaded and the line is Received", up.status === 201 && (await lineOf(DOC))?.state === "received", up.status);
+ok("C7.6 M3-S4: received pass: the letter is uploaded and the line is Received", up.status === 201 && (await lineOf(DOC))?.state === "received", up.status);
 const allowed = await readyToFile(c.id, rep);
 p = (await prepare(c.id, officer)).p;
-ok("ready pass: once received, the block is gone and Ready to file is allowed", allowed.includes(fid) && !codes(readinessOf(p, fid)?.blocks).includes("document_never_waivable") && filingOf(p, P)?.status === "ready_to_file", { allowed, blocks: readinessOf(p, fid)?.blocks, status: filingOf(p, P)?.status });
+ok("C7.6 M3-S4: ready pass: once received, the block is gone and Ready to file is allowed", allowed.includes(fid) && !codes(readinessOf(p, fid)?.blocks).includes("document_never_waivable") && filingOf(p, P)?.status === "ready_to_file", { allowed, blocks: readinessOf(p, fid)?.blocks, status: filingOf(p, P)?.status });
 
 process.exitCode = summary() ? 1 : 0;

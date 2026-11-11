@@ -2,8 +2,8 @@
 // view. Its filings, submission groups and items are derived from the pinned release and the case on every read and
 // stored (tables filing, filing_applicant, submission_group, filing_item) so their ids stay when people change, a split
 // stays split and a form keeps the channel the case officer chose. Fees are worked out per group on each read
-// (engine/runtime/filings.ts). The case officer reads and changes it; a client and configuration people do not. Visitor
-// visa only in this slice; other combinations answer "not derived yet". No model call (US$0). Readiness is C7.6's
+// (engine/runtime/filings.ts). The case officer reads and changes it; a client and configuration people do not. A
+// combination whose filings cannot be worked out (filings.ts) says why. No model call (US$0). Readiness is C7.6's
 // (engine/runtime/readiness.ts, M3-A3; L-SA3, P-315): this view gathers its inputs (api/src/readiness-inputs.ts) and
 // shows the result per filing; the rules are never decided here.
 // One implementation (#356 on #325's tables, migration 20261102030000): #325's guards are kept (the release must match

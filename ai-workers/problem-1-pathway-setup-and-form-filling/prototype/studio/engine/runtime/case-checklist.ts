@@ -228,7 +228,11 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
       const list = byPerson.get(h)!, same = list.findIndex((x) => x.document.key === line.document.key);
       if (same < 0) list.push(line);
       else {
-        const keep = ORDER[line.need] < ORDER[list[same].need] ? line : list[same], drop = keep === line ? list[same] : line; keep.also_from = [...new Set([...keep.also_from, drop.lineage, ...drop.also_from])].sort(); keep.base ||= drop.base; keep.never_waivable ||= drop.never_waivable; keep.waivable = keep.waivable && drop.waivable && !keep.never_waivable;
+        const keep = ORDER[line.need] < ORDER[list[same].need] ? line : list[same], drop = keep === line ? list[same] : line; keep.also_from = [...new Set([...keep.also_from, drop.lineage, ...drop.also_from])].sort(); keep.base ||= drop.base;
+        // M3-S4 review M2: never waivable only from a requirement that applies as strongly as the line it joins (as C6.14's
+        // providers below), so one whose condition does not hold for this person never blocks Ready to file.
+        if (ORDER[drop.need] <= ORDER[keep.need]) keep.never_waivable ||= drop.never_waivable;
+        keep.waivable = keep.waivable && drop.waivable && !keep.never_waivable;
         // C6.14: merged with a shared requirement, the one line keeps its providers (a shared item is never lost), but only
         // when that requirement applies as strongly as the line it joins: a shared requirement not needed (or waiting)
         // never makes a needed per-person line shared (Devin on #1392).
