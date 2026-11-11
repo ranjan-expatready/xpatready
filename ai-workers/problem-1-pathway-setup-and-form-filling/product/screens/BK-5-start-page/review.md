@@ -92,3 +92,29 @@ Persona: the Configuration author running the demo. Journeys: J1 (main) Demo men
 A headed (visible) browser (headless only) · a real screen reader · an intended user's unaided walk (D17, D20 stay with the founder) · server down beyond the frame's notice · E1's change and release N+1 (BK-5 PR 2 and the walk).
 
 **Verdict: Changes needed** at 2029a76fbab7b1f359c4bb0d9dc8347d360482ab (Block). Fix M1, with its fail test. m1-m4 should be fixed or listed in the PR.
+
+## Re-review (f1e4f40)
+Diff only: `2029a76f..f1e4f4068dedfaca206f1f7a20c63e4fbe8e2101`, covering `web/src/pages/start.tsx` and `tests/check_bk5_start_browser.cjs`. I used a fresh isolated copy on :4461 (stopped after). US$0. The later head 56025a12a changes records only (break report, screenshots), not product code.
+* **Re-ran:** `check_bk5_start_browser.cjs` passed **44/44** from a scratch copy, with the new M1, m3 and m4 steps. Door 2 took 152.7 s, slowed by the coordinator's run on the same machine; the card says "typically".
+* **M1: closed, and checked by my own break run** (`review_break2.cjs`, not committed):
+  * **Stale tab, every door:** the tab read the demo as empty; another tab then loaded the six (17 programs). Doors 1, 2 and 3 each sent **no POST**, and 17 programs remained. Each said "The demo has programs now … nothing was emptied. Type RESET to confirm.", and the RESET field appeared.
+  * **RESET then typed:** the demo emptied, as expected.
+  * **`/demo/status` failing (500):** all 3 doors were off, with "The demo's state could not be read".
+  * **Code:** unknown state asks for RESET (`start.tsx` `needsReset = status ? … : true`), and doors stay off while `!s`. `go()` re-reads `/demo/status` before emptying, and sends the person's own RESET when programs exist. The milliseconds left between that read and the reset are covered by the server's one-at-a-time claim: a running load gets a 409.
+  * **Test:** the new step fails if the re-read is removed, because a `/demo/reset` POST would appear.
+* **m1: closed.** The empty demo's Goes line now reads "No programs: only 1 record line, such as the last reset's activity line".
+* **m3: closed.** The check waits for the case page itself, and `bk5-11` now shows it.
+* **m4: closed.** The title is set only in `App.tsx`.
+* **Breaker's minors: checked.**
+  * Focus returns to the opening door on close (my run: blank, configured and story).
+  * "Another state" with programs re-reads every 10 s: a configured load finished in another tab, and the open page showed "Last loaded: Pathways released, ready to walk" 10.3 s later, without a reload.
+  * The 409 "did not start" words and the kept part-way context on a refused retry read correctly in the code.
+  * The 10 s poll keeps running while the six alone are loaded: one light GET, demo only, not a finding.
+* **m2: open, for the Lead** (BR-6 keeps the server's words). It is not blocking.
+* **Changed scores:**
+  * D2 3→4, D11 4, D16 4→5.
+  * BIC-18 Partly→**Met**: doors stay off until the demo's state is read, and a failed read says so.
+  * Journey: feedback and state ½→1, correct data ½→1. Plain words stays ½ for m2. **Journey score 9.5/10.**
+* No new Blocker, Major or Minor.
+
+Verdict: Approve (f1e4f4068dedfaca206f1f7a20c63e4fbe8e2101)
