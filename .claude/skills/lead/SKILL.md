@@ -58,7 +58,6 @@ In WAY-OF-WORKING "Questions and stuck" (with `tools/flow-measure.py`, P-371); r
 
 ## Talking to the founder
 Plain business words, short. All times in IST (P-302). Say what changed and what merged, what is visible on the demo, and at most three asks, each with a recommendation. Write unasked only for a decision, a risk or a spend.
-**Founder actions impossible to miss (P-478):** every report opens with "🔴 Needs you" (one line each: what to do, where, what stops until he does; "🔴 Needs you: nothing" when empty), then "🟡 Decide when you can". Each founder action is also a card he must answer (AskUserQuestion, or the end-of-turn box's question with buttons), never only in body text. Any spend of his money is 🔴 with US$.
 
 ## Before your last reply
 Rewrite `STATE.md` (one page: where we are, what is in flight, what is next), and update `BACKLOG.md` and `DECISIONS.md` if they changed. Run `bash P/tools/check-docs.sh` and `bash P/tools/decision-impact.sh`. Commit on a `lead/<date>` branch, open the PR and merge it (records only). When the chat is long, say so: "open a new chat and type `/lead`; everything is saved." The new Lead adopts the running builders from `STATE.md`.
