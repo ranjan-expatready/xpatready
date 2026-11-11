@@ -92,7 +92,7 @@ export function RequirementDialog({ id, r, fields, onClose, onSaved }: { id: str
   const [waiting, setWaiting] = React.useState<{ message: string; name: string } | null>(null);
   const types = useApi<any[]>(["doc-types"], "/library/document-types", { refetchInterval: waiting ? 5000 : false, refetchOnWindowFocus: !!waiting });
   const isNew = !r.lineage;
-  const [f, setF] = React.useState<any>({ alternatives: r.alternatives ?? [], documentTypeKey: r.document_type_key ?? "", newTypeName: "", appliesToRoles: r.who ?? "each_applicant", attachMode: r.base_or_conditional === "conditional" ? "ANSWER_CONDITIONAL" : "COMBINATION_MANDATORY", condition: r.condition ?? null, conditionPlain: r.condition_plain ?? "", providedBy: r.provided_by ?? "client", sourceQuote: r.source_quote ?? "", sourceFile: r.source_file ?? "", note: r.note ?? "" });
+  const [f, setF] = React.useState<any>({ waiver: r.waiver ?? null, alternatives: r.alternatives ?? [], documentTypeKey: r.document_type_key ?? "", newTypeName: "", appliesToRoles: r.who ?? "each_applicant", attachMode: r.base_or_conditional === "conditional" ? "ANSWER_CONDITIONAL" : "COMBINATION_MANDATORY", condition: r.condition ?? null, conditionPlain: r.condition_plain ?? "", providedBy: r.provided_by ?? "client", sourceQuote: r.source_quote ?? "", sourceFile: r.source_file ?? "", note: r.note ?? "" });
   const set = (p: any) => setF((x: any) => ({ ...x, ...p }));
   const landed = waiting ? (types.data ?? []).find((t) => !t.retired && normalizeLabel(t.name) === normalizeLabel(waiting.name)) : undefined;
   React.useEffect(() => { if (landed && !f.documentTypeKey) set({ documentTypeKey: landed.documentTypeKey, newTypeName: "" }); }, [landed?.documentTypeKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -117,6 +117,9 @@ export function RequirementDialog({ id, r, fields, onClose, onSaved }: { id: str
             <Select aria-label="Add an alternative" className="h-8 w-64" value="" onChange={(e) => { if (e.target.value) set({ alternatives: [...f.alternatives, e.target.value] }); }}><option value="">Add an alternative…</option>{(types.data ?? []).filter((t) => t.documentTypeKey !== f.documentTypeKey && !(f.alternatives as string[]).includes(t.documentTypeKey) && !t.retired).map((t) => <option key={t.documentTypeKey} value={t.documentTypeKey}>{t.name}</option>)}</Select>
           </span>
         </Field>
+        {/* M3-S3 (P-171 (6)): whether the case officer may waive this line on a case, with a reason. */}
+        <label className="flex items-start gap-2 text-sm" data-waivable><input type="checkbox" className="mt-1" checked={f.waiver === "waivable"} onChange={(e) => set({ waiver: e.target.checked ? "waivable" : null })} />
+          <span><span className="font-medium">Waivable</span><span className="block text-text-muted">The case officer may waive this document on a case, with a reason; their name and the time are kept.</span></span></label>
         <Field label="Source quote" hint="Exact words from the attached official source; leave empty if none (it then shows as unsourced)."><Textarea value={f.sourceQuote} onChange={(e) => set({ sourceQuote: e.target.value })} /></Field>
       </div>
     </Dialog>
