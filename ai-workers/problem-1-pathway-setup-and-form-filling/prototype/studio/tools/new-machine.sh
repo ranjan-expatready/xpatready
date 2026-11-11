@@ -52,10 +52,11 @@ find_node() {
 pg_major() { "$1/postgres" --version 2>/dev/null | sed -nE 's/.* ([0-9]+)(\.[0-9]+)?.*/\1/p' | head -1; }
 find_pg() {  # the newest major of 16 and up; 18 first when there is one
   local d best="" bestv=0 v
-  for d in "${STUDIO_PG_BIN:-}" "$(command -v pg_config >/dev/null 2>&1 && pg_config --bindir || true)" \
-           "$(dirname "$(command -v pg_ctl 2>/dev/null || echo /nonexistent/pg_ctl)")" \
+  # Homebrew's opt/ links first: they survive `brew upgrade`, where pg_config's Cellar folder (…/18.6_1/bin) does not.
+  for d in "${STUDIO_PG_BIN:-}" \
            ${BREW_PREFIX:+"$BREW_PREFIX/opt/postgresql@18/bin" "$BREW_PREFIX/opt/postgresql@17/bin" "$BREW_PREFIX/opt/postgresql@16/bin" "$BREW_PREFIX/opt/postgresql/bin"} \
-           /Applications/Postgres.app/Contents/Versions/*/bin; do
+           /Applications/Postgres.app/Contents/Versions/latest/bin /Applications/Postgres.app/Contents/Versions/*/bin \
+           "$(dirname "$(command -v pg_ctl 2>/dev/null || echo /nonexistent/pg_ctl)")" "$(command -v pg_config >/dev/null 2>&1 && pg_config --bindir || true)"; do
     [ -n "$d" ] && [ -x "$d/pg_ctl" ] && [ -x "$d/initdb" ] && [ -x "$d/psql" ] && [ -x "$d/createdb" ] && [ -x "$d/postgres" ] || continue
     v=$(pg_major "$d"); [ -n "$v" ] && [ "$v" -ge 16 ] && [ "$v" -gt "$bestv" ] && { best="$d"; bestv="$v"; }
   done
@@ -110,16 +111,18 @@ mkdir -p "$STAMPS" "$TOOLS"
 fresh() { [ -f "$STAMPS/$1" ] && [ "$(cat "$STAMPS/$1")" = "$(sha "$2")" ]; }
 stamp() { sha "$2" > "$STAMPS/$1"; }
 if [ -d "$STUDIO/node_modules/.bin" ] && fresh studio-lock "$STUDIO/package-lock.json"; then say "studio packages up to date"
-else (cd "$STUDIO" && npm ci --no-fund --no-audit) && stamp studio-lock "$STUDIO/package-lock.json"; fi
+else (cd "$STUDIO" && npm ci --no-fund --no-audit) || die "npm ci for the studio failed (above)"; stamp studio-lock "$STUDIO/package-lock.json"; fi
 PN="$TOOLS/node"; PSRC="$PROTO/env/node"
 if [ -d "$PN/node_modules" ] && fresh proto-lock "$PSRC/package-lock.json"; then say "prototype packages up to date"
-else mkdir -p "$PN" && cp "$PSRC/package.json" "$PSRC/package-lock.json" "$PN/" && (cd "$PN" && npm ci --no-fund --no-audit) && stamp proto-lock "$PSRC/package-lock.json"; fi
+else mkdir -p "$PN"; cp "$PSRC/package.json" "$PSRC/package-lock.json" "$PN/"
+  (cd "$PN" && npm ci --no-fund --no-audit) || die "npm ci for the prototype packages failed (above)"; stamp proto-lock "$PSRC/package-lock.json"; fi
 [ -e "$PROTO/node_modules/ajv" ] || die "prototype/node_modules does not reach $PN/node_modules (the committed link): ask the tech lead"
 VENV="$TOOLS/.venv"; LOCK="$PROTO/env/requirements.lock"
 if [ -x "$VENV/bin/python" ] && fresh py-lock "$LOCK"; then say "form helpers up to date"
 else
-  [ -x "$VENV/bin/python" ] || "$PY" -m venv "$VENV"
-  "$VENV/bin/python" -m pip install -q --disable-pip-version-check --require-hashes --no-deps --only-binary :all: -r "$LOCK" && stamp py-lock "$LOCK"
+  [ -x "$VENV/bin/python" ] || "$PY" -m venv "$VENV" || die "could not make the form helpers' Python environment ($VENV)"
+  "$VENV/bin/python" -m pip install -q --disable-pip-version-check --require-hashes --no-deps --only-binary :all: -r "$LOCK" || die "pip could not install the form helpers' packages (above)"
+  stamp py-lock "$LOCK"
 fi
 "$VENV/bin/python" -I -c "import pypdf, cryptography, zxingcpp" || die "the form helpers' packages do not import: ask the tech lead"
 say "form helpers ready"
@@ -128,7 +131,8 @@ say "== database"
 if [ -n "$OWN_DB" ]; then
   if [ ! -f "$PGDATA_DIR/PG_VERSION" ]; then
     mkdir -p "$PGDATA_DIR"
-    initdb -D "$PGDATA_DIR" -U xr_studio -A trust -E UTF8 --locale=en_US.UTF-8 >/dev/null && say "cluster created ($PGDATA_DIR, role xr_studio)"
+    initdb -D "$PGDATA_DIR" -U xr_studio -A trust -E UTF8 --locale=en_US.UTF-8 >/dev/null || die "initdb could not create the cluster in $PGDATA_DIR"
+    say "cluster created ($PGDATA_DIR, role xr_studio)"
     # Its own port, local connections only (TCP; no socket file outside the copy). The zone stays the Mac's own, as the
     # demo's cluster does.
     printf '%s\n' "port = $PGPORT" "listen_addresses = '127.0.0.1'" "unix_socket_directories = ''" >> "$PGDATA_DIR/postgresql.conf"
@@ -152,11 +156,13 @@ fi
 psql "$DB_URL" -XAtqc "select 1" >/dev/null || die "cannot connect to $DB_URL"
 export DATABASE_URL="$DB_URL"
 cd "$STUDIO"
-./node_modules/.bin/prisma migrate deploy >/dev/null && ./node_modules/.bin/prisma generate >/dev/null && say "database schema up to date"
+./node_modules/.bin/prisma migrate deploy >/dev/null || die "the migrations did not apply"
+./node_modules/.bin/prisma generate >/dev/null || die "prisma generate failed"
+say "database schema up to date"
 
 say "== web app and api"
 mkdir -p var
-bash tools/web-fresh.sh build
+bash tools/web-fresh.sh build || die "the web build failed (var/web-build.log)"
 STUDIO_PORT="$PORT" zsh tools/restart-api.sh >/dev/null 2>&1 || { tail -30 var/api.log; die "the API did not start (its log: $STUDIO/var/api.log)"; }
 say "api up on :$PORT"
 
