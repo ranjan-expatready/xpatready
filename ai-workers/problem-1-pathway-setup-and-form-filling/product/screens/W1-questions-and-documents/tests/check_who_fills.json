@@ -1,7 +1,7 @@
 {
-  "at": "2026-10-30T05:09:27.884Z",
-  "port": 16438,
-  "pass": 26,
+  "at": "2026-11-11T07:04:56.146Z",
+  "port": 4452,
+  "pass": 28,
   "fail": 0,
   "log": [
     {
@@ -51,7 +51,7 @@
       "name": "C4.9 pass: the author proposes the case officer for every combination; it waits for a second person",
       "ok": true,
       "detail": {
-        "id": "80393067-3d72-4e6d-b126-7e52d80bfec7",
+        "id": "282aeb3c-5399-4530-8ead-3b8e8b36b0bb",
         "status": "WAITING",
         "label": "Field and level of study of a period of education · filled by the case officer, for every combination",
         "before": "CLIENT",
@@ -73,7 +73,7 @@
       "name": "C4.9: the row shows the waiting change, who proposed it and why",
       "ok": true,
       "detail": {
-        "id": "80393067-3d72-4e6d-b126-7e52d80bfec7",
+        "id": "282aeb3c-5399-4530-8ead-3b8e8b36b0bb",
         "to": "CASE_OFFICER",
         "status": "WAITING",
         "by": "Configuration author",
@@ -101,6 +101,20 @@
       "detail": {
         "rule": "AGENT",
         "change": "APPROVED"
+      }
+    },
+    {
+      "name": "C4.9 QA-114: approved but not released, the library still says the client fills it (the released value); the change says the case officer from the next release",
+      "ok": true,
+      "detail": {
+        "library": "CLIENT",
+        "change": {
+          "id": "282aeb3c-5399-4530-8ead-3b8e8b36b0bb",
+          "to": "CASE_OFFICER",
+          "status": "APPROVED",
+          "by": "Configuration author",
+          "reason": "Sample: the office holds this for every case"
+        }
       }
     },
     {
@@ -137,6 +151,14 @@
     {
       "name": "C4.9: once released, the row has no open change",
       "ok": true
+    },
+    {
+      "name": "C4.9 QA-114 pass: once released, the library says the case officer fills it",
+      "ok": true,
+      "detail": {
+        "library": "CASE_OFFICER",
+        "change": null
+      }
     },
     {
       "name": "C4.9 + C4.10 pass: this combination may still choose the client for it (an override, reviewed at its release)",
