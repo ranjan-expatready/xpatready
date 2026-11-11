@@ -19,7 +19,7 @@ import type { Response } from "express";
 import PDF_SECTIONS from "../../contracts/pdf-sections.json" with { type: "json" };
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { CHANNEL_WORDS, isBarcodeForm } from "../../contracts/forms.ts";
+import { ACCOUNT_WORDS, CHANNEL_WORDS, isBarcodeForm, throughAccount } from "../../contracts/forms.ts";
 import { acceptsOf } from "../../engine/channels.ts";
 import { caseChecklist } from "../../engine/runtime/case-checklist.ts";
 import { caseView, checkValue, isClientField, knownOf, optionsOf } from "../../engine/runtime/case.ts";
@@ -48,6 +48,9 @@ import { pdfMapInUse } from "../../engine/programs.ts";
 import { draftNote, releaseOutOfDate, reviewCounts, touchedFilings } from "../../engine/runtime/release-update.ts";
 import { releaseLabel, type Readiness } from "../../contracts/runtime.ts";
 import { caseInputs, diffCache, pinReleases, targetRelease } from "./release-context.ts";
+/** B171 (B169 review M1): the IRCC account in words, from the Forms tab's own contract (contracts/forms.ts), for every
+ *  account: "through PR Portal", "on paper, with no IRCC account"; never the raw key (only "APR Portal" had words). */
+const filedThrough = (account: string) => (account === "PAPER" ? throughAccount(account) : `through ${ACCOUNT_WORDS[account as "ANY"] ?? account}`);
 
 type H = string | undefined;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -668,7 +671,7 @@ export class CasePrepare {
     const questionOf = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
     const tasks = noWrite ? [] : await recordedOverlay(this.db, { workspaceId: c.workspaceId, caseId: c.id, actor: actor.id, filings, items: items as never, label,
       nowOf: (form, subject) => currentValues(covOf(form, subject)?.boxes ?? []), labelOf: (fact) => questionOf.get(fact) ?? factWords(fact) });
-    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: true, combination: own!.combinationKey, portal: own!.portalKey ?? null, portal_words: own!.portalKey ? `Filed through ${own!.portalKey === "APR_PORTAL" ? "APR Portal" : own!.portalKey}: set by the combination, not on the case` : null,
+    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: true, combination: own!.combinationKey, portal: own!.portalKey ?? null, portal_words: own!.portalKey ? `Filed ${filedThrough(own!.portalKey)}: set by the combination, not on the case` : null,
       // #325's list of people with no filing, each with the reason (kept for its readers and tests).
       not_filing: done.not_filing,
       people: peopleView, filings, groups, items: toFill, waiting, not_needed: notNeeded, fees, stage1, readiness: readiness.map(({ figure: _f, ...x }) => ({ ...x, pin_revision: pin.revision })),
