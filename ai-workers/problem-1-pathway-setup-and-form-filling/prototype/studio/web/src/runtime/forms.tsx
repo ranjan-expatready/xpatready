@@ -126,11 +126,16 @@ function ValidatedState({ caseId, c, form }: { caseId: string; c: FormCopy; form
   );
 }
 
-function CopyState({ c }: { c: FormCopy }) {
+/** QA-391 (P-65, C9.5): what a copy is for. "file": a copy to file; "check": for reading and checking only (filed Online,
+ *  or the form's filling not proven yet); "kept": the form no longer applies, so the copy is kept and listed, never filed. */
+type CopyUse = "file" | "check" | "kept";
+
+function CopyState({ c, use = "file" }: { c: FormCopy; use?: CopyUse }) {
   if (busy(c)) return <Pill tone="info" title="The copy is being written and checked">{c.status === "QUEUED" ? "Waiting to generate…" : "Generating…"}</Pill>;
   if (c.status === "FAILED") return <Pill tone="danger" title={c.error ?? ""}>Failed</Pill>;
   if (c.stale) return <Pill tone="danger" title={`Facts changed after this copy was locked: ${c.changed.join(", ")}`}><Lock className="size-3" aria-hidden />Stale · {c.locked ? LOCK_KINDS[c.locked.kind] : ""}</Pill>;
   if (c.locked) return <Pill tone="ok" title={`Locked ${when(c.locked.at)}: it never changes`}><Lock className="size-3" aria-hidden />{LOCK_KINDS[c.locked.kind]}</Pill>;
+  if (use === "kept") return <span className="inline-flex" data-copy-kept><Pill title="This form no longer applies: the copy is kept as it was, never filed">Kept, never filed</Pill></span>;
   if (c.out_of_date) return <Pill tone="warn" title={`Facts changed since this copy was made: ${c.changed.join(", ")}`}>Out of date</Pill>;
   return <Pill tone="ok"><Check className="size-3" aria-hidden />Generated</Pill>;
 }
@@ -169,10 +174,11 @@ function FormRow({ caseId, f, recorded }: { caseId: string; f: CaseForm; recorde
   // QA-318: the card counts a mandatory form field that still needs an answer as a fact to answer (cardFacts), so
   // "Facts confirmed" is never shown over it; the lock is unchanged (#1318 M2).
   const card = cardFacts(missing), emptyFields = card.emptyFields.length;
-  const why = !f.for_filing ? `${f.form} is filed Online: this PDF is a copy, not for filing.` : latest?.copy_not_for_filing ? `This copy was made while ${f.form} was filed Online, so it is stamped “Copy, not for filing”. Generate a new copy to file it.` : !f.trial_passed ? (f.trial_why ?? `${f.form}: this form's filling is not proven yet, so this copy is for checking only, not for filing.`) : facts.length ? notReady(facts.length)
+  const why = !f.for_filing ? `${f.form} is filed Online: this PDF is a copy, not for filing.` : !f.trial_passed ? (f.trial_why ?? `${f.form}: this form's filling is not proven yet, so this copy is for checking only, not for filing.`) : latest?.copy_not_for_filing ? `This copy was made while ${f.form} was filed Online, so it is stamped “Copy, not for filing”. Generate a new copy to file it.` : facts.length ? notReady(facts.length)
     : f.needs_validate && !latest?.validated?.current ? `Validate ${f.form} in Adobe, save it and read the validated copy back before it is filed.` : null;
-  const canLock = lockable && !why;
-  const lockBlocked = lockable && why ? why : null;
+  const use: CopyUse = !f.applies ? "kept" : !f.for_filing || !f.trial_passed ? "check" : "file";
+  const canLock = lockable && !why && use !== "kept";
+  const lockBlocked = lockable && why && use !== "kept" ? why : null;
   return (
     <li className="space-y-2 px-4 py-3" data-row-form={`${f.form}|${f.subject_id}`}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -180,39 +186,42 @@ function FormRow({ caseId, f, recorded }: { caseId: string; f: CaseForm; recorde
         <h3 ref={heading} tabIndex={-1} className="text-sm font-semibold outline-none">{f.form} <span className="font-normal text-text-muted">for</span> <span className="[overflow-wrap:anywhere]">{f.person}</span></h3>
         {f.added ? <AddedTag caseId={caseId} f={f} recorded={recorded} /> : null}
         {!f.for_filing ? <Pill tone="info" title="Filed Online: IRCC's PDF filled from the same declared and confirmed answers, for reading and checking only">Copy, not for filing</Pill>
-          : !f.trial_passed ? <Pill tone="warn" title="This form's filling is not proven yet, so the copy is for checking only">Checked copy, not for filing</Pill> : null}
-        {f.for_filing && f.needs_validate && latest?.status === "GENERATED" ? <ValidatedState caseId={caseId} c={latest} form={f.form} /> : null}
+          : !f.trial_passed && f.applies ? <Pill tone="warn" title="This form's filling is not proven yet, so the copy is for checking only">Checked copy, not for filing</Pill> : null}
+        {/* QA-391: a form that no longer applies is kept and listed, never filed: nothing to confirm, validate or generate. */}
+        {f.applies && f.for_filing && f.needs_validate && latest?.status === "GENERATED" ? <ValidatedState caseId={caseId} c={latest} form={f.form} /> : null}
         {/* Break M2 (C-9): a barcode form with no current validated copy is never "Ready to file", in words. QA-229 (B2): nor is
             any form: "Ready to file" is the filing's, said by the readiness panel; a form says "Facts confirmed". */}
-        {!card.facts.length && f.for_filing && f.needs_validate && !latest?.validated?.current ? <Pill tone="warn" title="Every fact is confirmed; IRCC returns a barcode form unprocessed unless it was validated in Adobe" data-needs-validated>Validate before filing</Pill>
+        {!f.applies ? null
+          : !card.facts.length && f.for_filing && f.needs_validate && !latest?.validated?.current ? <Pill tone="warn" title="Every fact is confirmed; IRCC returns a barcode form unprocessed unless it was validated in Adobe" data-needs-validated>Validate before filing</Pill>
           : !card.facts.length ? <Pill tone="ok" title="Every required fact this form reads is confirmed and passes its checks. Whether the filing is Ready to file is under Ready to file below."><Check className="size-3" aria-hidden />Facts confirmed</Pill>
           : <Pill tone="warn">{card.facts.length} fact{card.facts.length === 1 ? "" : "s"} to answer or confirm before filing</Pill>}
         {/* QA-165 (#1318): never "ready" over a mandatory box a copy leaves empty: said apart from the facts, listed below. */}
-        {emptyFields ? <Pill tone="warn" title="IRCC's form marks these form fields mandatory and a copy made now leaves them empty (listed below); Ready to file waits on them until they are fixed or passed with a reason" data-fields-left-empty>{emptyFields} mandatory form field{emptyFields === 1 ? "" : "s"} left empty</Pill> : null}
+        {f.applies && emptyFields ? <Pill tone="warn" title="IRCC's form marks these form fields mandatory and a copy made now leaves them empty (listed below); Ready to file waits on them until they are fixed or passed with a reason" data-fields-left-empty>{emptyFields} mandatory form field{emptyFields === 1 ? "" : "s"} left empty</Pill> : null}
         <span className="flex-1" />
-        <Button size="sm" variant={!latest || latest.out_of_date || latest.status === "FAILED" ? "default" : "secondary"} disabled={!f.applies} busy={working || (latest ? busy(latest) : false)} onClick={() => void generate()}>
+        {f.applies ? <Button size="sm" variant={!latest || latest.out_of_date || latest.status === "FAILED" ? "default" : "secondary"} busy={working || (latest ? busy(latest) : false)} onClick={() => void generate()}>
           <RefreshCw aria-hidden />{latest ? "Generate a new copy" : "Generate a copy"}
-        </Button>
+        </Button> : null}
       </div>
-      {!f.applies ? <p className="text-[13px] text-text-muted">This form no longer applies to {f.person} (for example, not travelling); its copies are kept.</p> : null}
-      <p className="text-[13px] text-text-muted" data-draft-words>Declared or confirmed answers for {f.draft.written_now} of {f.draft.mapped} form fields{f.draft.to_fix ? `; ${f.draft.to_fix} answered but needing a fix ${f.draft.to_fix === 1 ? "stays" : "stay"} blank` : ""}. A copy also lists the form fields to write by hand.</p>
-      {card.facts.length ? (
+      {/* Review M1: a copy locked before the form stopped applying stays the record of what was filed or uploaded back. */}
+      {!f.applies ? <p className="text-[13px] text-text-muted [overflow-wrap:anywhere]" data-not-applying>This form no longer applies to {f.person}{f.applies_why ? `: ${f.applies_why}` : ""}. {locked?.locked ? `Its copy locked as “${LOCK_KINDS[locked.locked.kind]}” on ${when(locked.locked.at)} stays as it was; no new copy is filed.` : "Its copies are kept as they were, never filed."}</p> : null}
+      {f.applies ? <p className="text-[13px] text-text-muted" data-draft-words>Declared or confirmed answers for {f.draft.written_now} of {f.draft.mapped} form fields{f.draft.to_fix ? `; ${f.draft.to_fix} answered but needing a fix ${f.draft.to_fix === 1 ? "stays" : "stay"} blank` : ""}. A copy also lists the form fields to write by hand.</p> : null}
+      {f.applies && card.facts.length ? (
         <FoldOut className="text-[13px]" summaryClassName="flex min-h-6 items-center text-text-link" summary={<>Facts to answer or confirm ({card.facts.length})</>}>
           <ul className="mt-1 list-disc space-y-0.5 pl-6">{card.facts.map((m) => <li key={`${m.fact}|${m.about}`} data-missing-reason={m.reason}><span className="[overflow-wrap:anywhere]">{m.label}</span> <span className="text-text-muted [overflow-wrap:anywhere]">({inSentence(m.about)}): {m.reason === "left empty on the form" && m.why ? m.why : <>{m.reason}{m.why ? ` — ${m.why}` : ""}</>}</span></li>)}</ul>
         </FoldOut>
       ) : null}
       {/* QA-165 part 2 (P-237, P-238): each mandatory field of IRCC's form a copy leaves empty, with why, before the file is offered. */}
-      {f.fields_open?.length ? (
+      {f.applies && f.fields_open?.length ? (
         <FoldOut className="text-[13px]" data-fields-open summaryClassName="flex min-h-6 items-center text-text-link" summary={<>Marked mandatory on IRCC's form, still empty ({openLines(f.fields_open).length}): Adobe's Validate asks for {openLines(f.fields_open).length === 1 ? "it" : "each"}, and may ask for more that its own checks make mandatory</>}>
           <ul className="mt-1 list-disc space-y-0.5 pl-6">{openLines(f.fields_open).map((o) => <li key={o.key}><span className="[overflow-wrap:anywhere]">{o.label}</span>{o.n > 1 ? <span className="text-text-muted"> ({o.n} form fields)</span> : null} <span className="text-text-muted [overflow-wrap:anywhere]">— {o.reason}: {o.why}</span></li>)}</ul>
         </FoldOut>
       ) : null}
-      {latest ? <CopyLine c={latest} canLock={!!canLock} lockBlocked={lockBlocked} locking={locking} setLocking={setLocking} lock={lock} working={working} /> : null}
-      {locked && locked !== latest ? <CopyLine c={locked} canLock={false} locking={null} setLocking={() => {}} lock={lock} working={working} /> : null}
+      {latest ? <CopyLine c={latest} use={use} canLock={!!canLock} lockBlocked={lockBlocked} locking={locking} setLocking={setLocking} lock={lock} working={working} /> : null}
+      {locked && locked !== latest ? <CopyLine c={locked} use={use} canLock={false} locking={null} setLocking={() => {}} lock={lock} working={working} /> : null}
       <SignSteps caseId={caseId} f={f} />
       {earlier.length ? (
         <FoldOut className="text-[13px]" summaryClassName="text-text-link" summary={<>Earlier copies ({earlier.length})</>}>
-          <ul className="mt-1 space-y-1 pl-4">{earlier.map((c) => <li key={c.id}><CopyLine c={c} canLock={false} locking={null} setLocking={() => {}} lock={lock} working={working} compact /></li>)}</ul>
+          <ul className="mt-1 space-y-1 pl-4">{earlier.map((c) => <li key={c.id}><CopyLine c={c} use={use} canLock={false} locking={null} setLocking={() => {}} lock={lock} working={working} compact /></li>)}</ul>
         </FoldOut>
       ) : null}
     </li>
@@ -226,7 +235,7 @@ function Few({ items }: { items: string[] }) {
   return <>{items.slice(0, FIRST).join(", ")} <FoldOut className="inline" summaryClassName="inline text-text-link" summary={<>and {items.length - FIRST} more</>}>{items.slice(FIRST).join(", ")}</FoldOut></>;
 }
 
-function CopyLine({ c, canLock, lockBlocked = null, locking, setLocking, lock, working, compact }: { c: FormCopy; canLock: boolean; lockBlocked?: string | null; locking: keyof typeof LOCK_KINDS | null; setLocking: (k: keyof typeof LOCK_KINDS | null) => void; lock: (id: string, k: keyof typeof LOCK_KINDS) => Promise<void>; working: boolean; compact?: boolean }) {
+function CopyLine({ c, use = "file", canLock, lockBlocked = null, locking, setLocking, lock, working, compact }: { c: FormCopy; use?: CopyUse; canLock: boolean; lockBlocked?: string | null; locking: keyof typeof LOCK_KINDS | null; setLocking: (k: keyof typeof LOCK_KINDS | null) => void; lock: (id: string, k: keyof typeof LOCK_KINDS) => Promise<void>; working: boolean; compact?: boolean }) {
   const toast = useToast();
   const confirmRef = React.useRef<HTMLButtonElement>(null);
   const buttons = React.useRef<Partial<Record<keyof typeof LOCK_KINDS, HTMLButtonElement | null>>>({}), back = React.useRef<keyof typeof LOCK_KINDS | null>(null);
@@ -249,7 +258,7 @@ function CopyLine({ c, canLock, lockBlocked = null, locking, setLocking, lock, w
   return (
     <div className={compact ? "flex flex-wrap items-center gap-2" : "space-y-1.5 rounded-lg border border-border bg-surface px-3 py-2"}>
       <div className="flex flex-wrap items-center gap-2 text-[13px]">
-        <CopyState c={c} />
+        <CopyState c={c} use={use} />
         <span className="text-text-muted">Copy of {when(c.created_at)}{c.counts ? ` · ${c.counts.written} form fields written${c.counts.by_hand ? `, ${c.counts.by_hand} by hand` : ""}${c.counts.not_on_form ? `, ${c.counts.not_on_form} not on this form` : ""}` : ""}{c.intact ? " · read back and checked" : ""}</span>
         {c.status === "GENERATED" && c.file_ok ? <Button size="sm" variant="ghost" onClick={() => void download()} aria-label={`Download the copy of ${when(c.created_at)}`}><Download aria-hidden />Download</Button> : null}
         {c.status === "GENERATED" && !c.file_ok ? <Pill tone="danger" title="The file is missing from the working files">File missing</Pill> : null}
@@ -270,12 +279,16 @@ function CopyLine({ c, canLock, lockBlocked = null, locking, setLocking, lock, w
           <Button size="sm" variant="ghost" onClick={cancel}>Cancel</Button>
         </div>
       ) : null}
-      {!compact && (c.out_of_date || c.stale) ? <p className="flex items-start gap-1 text-[13px] text-text-warn"><AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden /><span>{c.stale ? "Facts changed after this copy was locked; the locked file is kept as it was." : "Facts changed since this copy was made; generate a new copy to file it."} Added, changed or removed: <Few items={c.changed} />.</span></p> : null}
-      {!compact && c.status === "GENERATED" && c.by_hand.length ? <p className="text-[13px] text-text-muted">To write by hand in Adobe: <Few items={c.by_hand.map((b) => `${b.label}${b.why ? ` (${b.why})` : ""}`)} />.</p> : null}
+      {/* QA-391: a kept copy (the form no longer applies) is never told to be made again or filed; a copy for checking only
+          is never told "to file it". */}
+      {!compact && c.stale ? <p className="flex items-start gap-1 text-[13px] text-text-warn"><AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden /><span>Facts changed after this copy was locked; the locked file is kept as it was. Added, changed or removed: <Few items={c.changed} />.</span></p>
+        : !compact && c.out_of_date && use !== "kept" ? <p className="flex items-start gap-1 text-[13px] text-text-warn"><AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden /><span>{use === "check" ? "Facts changed since this copy was made; generate a new copy to check the current answers." : "Facts changed since this copy was made; generate a new copy to file it."} Added, changed or removed: <Few items={c.changed} />.</span></p> : null}
+      {/* Review M3: a kept copy is never prepared further: no by-hand or not-on-form instructions. */}
+      {!compact && use !== "kept" && c.status === "GENERATED" && c.by_hand.length ? <p className="text-[13px] text-text-muted">To write by hand in Adobe: <Few items={c.by_hand.map((b) => `${b.label}${b.why ? ` (${b.why})` : ""}`)} />.</p> : null}
       {/* B81: not "by hand": the form has no such choice to write. Who it is about comes first (the same words on many form fields). */}
-      {!compact && c.status === "GENERATED" && c.not_on_form?.length ? <p className="text-[13px] text-text-warn" data-not-on-form>Not on this form: <Few items={c.not_on_form.map((b) => `${b.label}${b.person ? ` of ${b.person}` : ""}: ${b.why}`)} /></p> : null}
+      {!compact && use !== "kept" && c.status === "GENERATED" && c.not_on_form?.length ? <p className="text-[13px] text-text-warn" data-not-on-form>Not on this form: <Few items={c.not_on_form.map((b) => `${b.label}${b.person ? ` of ${b.person}` : ""}: ${b.why}`)} /></p> : null}
       {!compact && c.status === "FAILED" ? <p className="text-[13px] text-text-danger">{c.error}</p> : null}
-      {!compact && c.status === "GENERATED" && c.person_steps.length ? <p className="text-[13px] text-text-muted">Before filing, on the PDF: {c.person_steps.join(" ")}</p> : null}
+      {!compact && use !== "kept" && c.status === "GENERATED" && c.person_steps.length ? <p className="text-[13px] text-text-muted">Before filing, on the PDF: {c.person_steps.join(" ")}</p> : null}
     </div>
   );
 }

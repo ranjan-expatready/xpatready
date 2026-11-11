@@ -1,7 +1,7 @@
 import * as React from "react";
 import { RunChip } from "@/components/run-card";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Scale, Database, FileStack, FileText, Inbox, Layers, ListTree, Moon, RotateCcw, Sparkles, Sun, Upload } from "lucide-react";
+import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, DoorOpen, Scale, Database, FileStack, FileText, Inbox, Layers, ListTree, Moon, RotateCcw, Sparkles, Sun, Upload } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
@@ -9,6 +9,7 @@ import { Button, Dialog, Input, Notice, Pill, Table } from "@/components/ui/cont
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { ProgramsPage } from "@/pages/programs";
+import { StartPage } from "@/pages/start";
 import { ReleasePage } from "@/pages/release";
 import { FormsPage } from "@/pages/library-forms";
 import { ChecksPage, RulesPage } from "@/pages/library-rules";
@@ -63,7 +64,7 @@ function Shell() {
   ];
   // QA-80: the browser tab names the page ("<page> · Product Studio"), from the menu item the address belongs to.
   // A page reached from the draft bar, not the menu, names itself too (QA-80 retest: "/release" said "Product Studio" alone).
-  const here = nav.find((n) => n.match ? n.match(loc.pathname) : loc.pathname.startsWith(n.to)) ?? (loc.pathname === "/release" ? { label: "Review and release" } : undefined);
+  const here = nav.find((n) => n.match ? n.match(loc.pathname) : loc.pathname.startsWith(n.to)) ?? (loc.pathname === "/release" ? { label: "Review and release" } : loc.pathname === "/start" ? { label: "Starting points" } : undefined); // BK-5: Demo › Starting points
   React.useEffect(() => { document.title = here ? `${here.label} · Product Studio` : "Product Studio"; }, [here?.label]);
   return (
     <Frame area="studio" title="Product Studio" subtitle="Pathway Configurator" home="/" staff={!casePerson}
@@ -100,6 +101,7 @@ function Shell() {
       {!casePerson ? <ReturnStrip /> : null}
       {casePerson ? <Notice tone="warn" title="This page is for the configuration people" action={<Link className="whitespace-nowrap text-text-link underline" to="/cases">Open your cases</Link>}>{me.name} (simulated) works on cases. Programs, forms and rules are set up here by the configuration people; your work is in Cases.</Notice> : <Routes>
         <Route path="/" element={<ProgramsPage />} />
+        <Route path="/start" element={<StartPage />} />
         <Route path="/review" element={<ToReviewPage />} />
         <Route path="/structure" element={<StructurePage />} />
         <Route path="/review/change/:id" element={<LibraryChangePage />} />
@@ -213,6 +215,8 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
         <DropdownMenu.Trigger asChild><Button size="sm" variant="secondary" busy={load.isPending || loadConf.isPending}>Demo <ChevronDown /></Button></DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[260px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
+            {/* BK-5 (P-484): the start page, first; its name avoids Reset, Load and "configured checkpoint" (tests match those). */}
+            <DropdownMenu.Item className={item} onSelect={() => navTo("/start")} data-demo-starting-points><DoorOpen className="size-4" />Starting points…</DropdownMenu.Item>
             <DropdownMenu.Item className={item} disabled={loaded || programsExist} onSelect={() => setLoadOpen(true)}><Upload className="size-4" />{loaded ? "Sample loaded (reset to load again)" : programsExist ? "Load sample (the Structure has names: reset first)" : "Load sample…"}</DropdownMenu.Item>
             <DropdownMenu.Item className={item} disabled={loaded || programsExist} onSelect={() => setConfOpen(true)}><Upload className="size-4" />{loaded || programsExist ? "Load the configured checkpoint (reset first)" : "Load the configured checkpoint…"}</DropdownMenu.Item>
             <TooltipProvider delayDuration={300}><Tooltip><TooltipTrigger asChild><DropdownMenu.Item className={item} onSelect={() => setStoryOpen(true)} data-demo-finished-story><Upload className="size-4" />Load the finished story…</DropdownMenu.Item></TooltipTrigger><TooltipContent side="left">{FINISHED_STORY_TIP}</TooltipContent></Tooltip></TooltipProvider>
