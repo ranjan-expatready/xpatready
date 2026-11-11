@@ -211,8 +211,11 @@ export class FormFieldConditions {
     const decider = (tree as { field?: unknown } | null)?.field;
     // B88 BR-1: the deciding question a worked-out Yes/No may be asked as: only "X is Yes", X a Yes/No field about the same group.
     const yes = decidingYes(tree);
-    const yesField = yes ? (s.canonical_fields as { id: string; value_type?: string }[]).find((f) => f.id === yes) : undefined;
-    const yesLabel = yes ? (await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: yes, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" }, select: { label: true } }))?.label ?? null : null;
+    const yesRow = yes ? await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: yes, status: { in: ["DRAFT", "PUBLISHED"] } }, orderBy: { version: "desc" }, select: { label: true, valueType: true } }) : null;
+    // QA-239: where the condition is held, its deciding question is not pulled into this combination yet (asking it is what
+    // brings it in), so the library's own field answers whether it is a Yes/No.
+    const yesField = yes ? (s.canonical_fields as { id: string; value_type?: string }[]).find((f) => f.id === yes) ?? (yesRow ? { id: yes, value_type: yesRow.valueType } : undefined) : undefined;
+    const yesLabel = yesRow?.label ?? null;
     const yesProblem = !yes ? "shape" as const : !yesField || !["yes_no", "boolean"].includes(yesField.value_type ?? "") ? "type" as const : yes.split(".")[0] !== fact.split(".")[0] ? "group" as const : null;
     return maps.flatMap((m) => m.entries.filter((e) => reads(m, e)).map((e) => {
       const ed = edOf(m), formEditionId = ed?.id ?? "";
