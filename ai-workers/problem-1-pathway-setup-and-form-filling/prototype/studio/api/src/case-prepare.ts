@@ -38,6 +38,7 @@ import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
 import { currentValues, factWords } from "../../engine/runtime/submission-record.ts";
+import { formValues, recordedYesNo } from "../../engine/form-values.ts";
 import { CaseForms, copyNotForFiling, formPassed, formReadinessOf, inventoryOf, plainWhy } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
@@ -405,9 +406,10 @@ export class CasePrepare {
           // C9.2: each stale section's answers as entered, against what it shows now (warns only, FQ-6, P-168).
           const ticks = enteredBy.get(i.id) ?? [];
           const changes = stale.flatMap((x) => {
-            const e = ticks.find((t) => t.sectionKey === x.key), then = ((e?.snapshot.factsJson ?? {}) as { answers?: { fact: string; subject: string; row: number | null; value: unknown; label?: string; nothing_recorded?: true }[] }).answers ?? [];
-            // QA-392: a "nothing recorded" No is named by the form's question it answers, never the list's column.
-            const own = (a: { label?: string; nothing_recorded?: true }) => (a.nothing_recorded && a.label ? `“${a.label}”` : undefined);
+            const e = ticks.find((t) => t.sectionKey === x.key), then = ((e?.snapshot.factsJson ?? {}) as { answers?: { fact: string; subject: string; row: number | null; value: unknown; label?: string; recorded?: true; nothing_recorded?: true }[] }).answers ?? [];
+            // QA-392, QA-392b: a "recorded" Yes/No is named by the form's question it answers, never the list's column (a
+            // tick saved before QA-392b marks it `nothing_recorded`).
+            const own = (a: { label?: string; recorded?: true; nothing_recorded?: true }) => ((a.recorded || a.nothing_recorded) && a.label ? `“${a.label}”` : undefined);
             return factChanges(then.map((a) => ({ fact: a.fact, about: a.subject, row: a.row, value: a.value, label: own(a) })), x.answers.map((a) => ({ fact: a.fact, about: a.subject, row: a.row, value: a.value, label: own(a) })), words);
           });
           const first = ticks.filter((t) => stale.some((x) => x.key === t.sectionKey)).map((t) => t.enteredAt).sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
@@ -897,9 +899,15 @@ function sheetOf(item: { itemKey: string; subjectId: string }, s: ReturnType<Run
   };
   // QA-309: a box waits only for what the form's readiness names (`missing`: the item's own rule).
   // QA-392: the boxes as the PDF copy writes them (fill-case.ts generate): the same rule marks the "nothing recorded" ones.
-  return layOut(layout, cov ? markNothingRecorded(cov.boxes, view, s.placements as GatePlacement[]) : [], origin, labels, new Map(entered.map((e) => [e.sectionKey, { at: e.enteredAt.toISOString(), by: e.enteredBy, hash: e.snapshot.inputHash }])), markOf, waitsOf(view, missing, item.subjectId, filing),
+  // QA-392b: each "recorded" Yes/No box's Yes or No is the copy's own value step's (formValues, on the edition the copy
+  // fills, P-32; else the edition the sheet lays out), read back through the box's yes/no code (recordedYesNo).
+  const boxes = cov ? markNothingRecorded(cov.boxes, view, s.placements as GatePlacement[]) : [];
+  const map = pdfMapInUse(s.field_maps as FieldMap[], item.itemKey) ?? fieldMapOf(s, item.itemKey);
+  const inv = map?.inventory_file ? inventoryOf(map.inventory_file) : null;
+  const yesNo = recordedYesNo(formValues(s as unknown as Parameters<typeof formValues>[0], { entries: map?.entries ?? [] }, inv ?? { fields: [] }, boxes).boxes);
+  return layOut(layout, boxes, origin, labels, new Map(entered.map((e) => [e.sectionKey, { at: e.enteredAt.toISOString(), by: e.enteredBy, hash: e.snapshot.inputHash }])), markOf, waitsOf(view, missing, item.subjectId, filing),
     // QA-317 (review M1): a choice is copied in the release's own words, never its key.
-    (fact, v) => (typeof v === "string" ? optionsOf(s, fact)?.find((o) => o.key === v)?.label : undefined));
+    (fact, v) => (typeof v === "string" ? optionsOf(s, fact)?.find((o) => o.key === v)?.label : undefined), yesNo);
 }
 
 /** C7.3: the release's field map for a form (its edition and its form fields in the form's order). */
