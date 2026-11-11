@@ -8,8 +8,8 @@
 //     configuration dump of 6 Nov reads them (product/screens/M3-plan/packs-2026-11-06.md, "What the checkpoint's Visitor
 //     visa holds", on the M3 plan's branch, PR #1167), with what rows A1 (#1084) and A2 (#1072) set on them since (7 Nov):
 //     who signs (samples/checkpoint-stage-one.json, "signers": IMM 5257 a parent for a minor, IMM 5476 the person and the
-//     representative) and who files IMM 5476 (api/src/form-setup.ts VV_FORM_RULES: the principal, a partner, a child from
-//     18); the four answer-only lines' facts from the same VV_FORM_RULES; and what row A3 (#1198) sets inside release 2's
+//     representative) and who files IMM 5476 (samples/form-setup.json vv.single rules: the principal, a partner, a child from
+//     18); the four answer-only lines' facts from the same rules; and what row A3 (#1198) sets inside release 2's
 //     draft ("release_two" in the same file): IMM 5645 signed by the person, IMM 5645 and Schedule 1 a typed name.
 // Part 1 feeds both configurations to the helper without a server. Part 2 reads each live, on this copy: the fixture
 // first, then Demo › Reset and Load the configured checkpoint, each through a case opened by the helper; on the
@@ -49,9 +49,9 @@ const FIXTURE_LINES: Snap[] = [
  *  "IMM 5645 who=each_applicant ch=PDF_UPLOAD minAge=18", and IMM 5409, IMM 5475, IMM 5476 (sig=HAND_SCANNED), IRM 0002
  *  attach=ANSWER_CONDITIONAL. Since 7 Nov (A1, A2 merged): IMM 5257 signed "parent_for_minor" and IMM 5476
  *  "person_and_representative" (checkpoint-stage-one.json, VV-R09, VV-R10); IMM 5476 filed by the principal, a partner and
- *  a child from 18 (VV_FORM_RULES, VV-R10). Row A3 (#1198; checkpoint-stage-one.json "release_two"): IMM 5645 signed by
+ *  a child from 18 (samples/form-setup.json vv.single, VV-R10). Row A3 (#1198; checkpoint-stage-one.json "release_two"): IMM 5645 signed by
  *  "person", and IMM 5645 and SCH1 signed with a typed name (Sample, FQ-2). SCH1, IMM 5409, IMM 5475, IRM 0002 keep no
- *  signer ("signers_not_set" there). The conditions are VV_FORM_RULES'. */
+ *  signer ("signers_not_set" there). The conditions are those rules'. */
 const RELEASE2_LINES: Snap[] = [
   { form_number: "IMM 5257", who: "each_applicant", status: "always", channel: "ONLINE", signed_by: "parent_for_minor" },
   { form_number: "IMM 5257 SCH1", who: "principal_partner_adult_children", status: "always", signature: "TYPED_NAME", min_age: 18 },

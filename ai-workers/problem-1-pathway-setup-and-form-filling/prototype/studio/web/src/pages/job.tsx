@@ -217,7 +217,7 @@ function ApplyDialog({ job, onClose, onDone }: { job: any; onClose: () => void; 
       <div className="space-y-3">
         <p className="text-sm">{job.items.filter((i: any) => i.decision !== "RETURNED").length} fields decided ({n} new or re-pointed), {job.items.filter((i: any) => i.decision === "RETURNED").length} returned (their form fields become unresolved with the reason).</p>
         <Field label="Who files this form"><Select value={who} onChange={(e) => setWho(e.target.value)}><option value="each_applicant">Each applicant</option><option value="principal_applicant">The principal applicant only</option><option value="each_person">Each person</option></Select></Field>
-        <Field label="Form title" hint="Optional; defaults to the official title."><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Application for Temporary Resident Visa" /></Field>
+        <Field label="Form title" hint="Kept from the Form library when it holds this form; needed when the form is new to the library."><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Application for Temporary Resident Visa" /></Field>
       </div>
     </Dialog>
   );

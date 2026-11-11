@@ -4,7 +4,7 @@
 // the packs C8.2 and C6.9 and by the walk product/screens/B104-checkpoint-stage-one/walk-stage1-1440.cjs (PR #1084).
 //   tsx studio/tests/check_b104_stage_one.ts
 import { applyStageOne, releaseTwoOf, stageOneOf, stageOneProblems, type StageOne, type StageOnePort } from "../api/src/checkpoint-stage-one-data.ts";
-import { VV_FORM_RULES, FAMILY_FORM_BY_CHANNEL, FORM_SETUP } from "../api/src/form-setup.ts";
+import { FAMILY_FORM_BY_CHANNEL, FORM_SETUP } from "../api/src/form-setup.ts";
 
 let failed = 0;
 const ok = (label: string, cond: boolean, detail: unknown = "") => { if (!cond) failed++; console.log(`${cond ? "PASS" : "FAIL"}  ${label}${cond ? "" : ` — ${JSON.stringify(detail).slice(0, 300)}`}`); };
@@ -13,7 +13,7 @@ const vv = stageOneOf("vv.single");
 ok("B104-1 pass: the Visitor visa has Stage 1 data, and the sample file passes its guard", !!vv && stageOneProblems(vv).length === 0, vv ? stageOneProblems(vv) : "no vv.single entry");
 ok("B104-2 pass: a combination with no entry gets nothing (no combination is assumed, P-319)", stageOneOf("wp.lmia_inside") === null && stageOneOf(undefined) === null);
 // Every form the file names is a line the checkpoint puts on the Visitor visa (FORM_SETUP), so none is silently skipped.
-const lines = new Set([FORM_SETUP["vv.single"].application, ...VV_FORM_RULES.map((r) => r.form), FAMILY_FORM_BY_CHANNEL.paper.form]);
+const lines = new Set([FORM_SETUP["vv.single"].application, ...FORM_SETUP["vv.single"].rules.map((r) => r.form), FAMILY_FORM_BY_CHANNEL.paper.form]);
 const named = (vv?.signers ?? []).map((s) => s.form);
 ok("B104-3 pass: each form whose signer is set is a line of the configured Visitor visa", named.length === 3 && named.every((f) => lines.has(f)), { named, lines: [...lines] });
 ok("B104-4 pass: the account is APR Portal and the gates are the two Sample gates and four officer's-judgement lines (S7)",

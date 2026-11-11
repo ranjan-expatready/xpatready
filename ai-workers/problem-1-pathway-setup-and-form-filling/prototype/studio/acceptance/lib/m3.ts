@@ -249,13 +249,13 @@ const FAMILY_FORMS = ["IMM 5707", "IMM 5645"];
 /**  - VV-R07 (line 40): IMM 5707 by each person 18 or older; the same minimum age is the line's `min_age`, read as
  *    configured. "principal_partner_adult_children" (IMM 5257 SCH1): its own words, "The principal applicant, his or her
  *    spouse or common-law partner, if applicable, and all dependent children aged 18 years or older" — no row in
- *    compliance-trace.md yet; the quote is in api/src/form-setup.ts VV_FORM_RULES (QA-221, the tech lead's ruling C, 4 Nov): the minimum
+ *    compliance-trace.md yet; the quote is in samples/form-setup.json vv.single rules (QA-221, the tech lead's ruling C, 4 Nov): the minimum
  *    age gates dependent children only.
  *  - VV-R09 (line 42): 18 or older signs their own; under 18 a parent signs (a line signed "parent_for_minor").
  *  - VV-R10 (line 43): IMM 5476 is signed by the applicant and the representative (a line signed
  *    "person_and_representative"); it applies when a representative is used (its condition, read as configured).
  *  - IMM 5409, IMM 5475, IRM 0002 apply only on an answer: their conditions are read as configured, never decided here
- *    (no row in compliance-trace.md; their quotes are in api/src/form-setup.ts VV_FORM_RULES).
+ *    (no row in compliance-trace.md; their quotes are in samples/form-setup.json vv.single rules).
  *  Read as configured, so where a release departs from a cited rule the answer follows the release (release 2 on the
  *  checkpoint, 7 Nov: Schedule 1, IMM 5645 and the answer-only forms have no "signed by" set, samples/checkpoint-stage-one.json
  *  "signers_not_set", so the person is expected to sign); a pack that matches it exactly records the release's gap, it
