@@ -312,7 +312,18 @@ export function knownOf(s: Snapshot, people: Participant[], answers: Answer[], r
   }
   // C7.7 (G25): "has any children" is worked out from the people on the case, never left by hand when the case holds them.
   for (const [subjectId, value] of hasChildrenOf(people)) known.set(kkey(subjectId, HAS_CHILDREN), { value, status: "confirmed", source: HAS_CHILDREN_SOURCE });
+  // QA-400 (P-485): whether each person is the principal applicant is worked out from their role on the case, never asked.
+  for (const [subjectId, value] of principalOf(people)) known.set(kkey(subjectId, IS_PRINCIPAL), { value, status: "confirmed", source: IS_PRINCIPAL_SOURCE });
   return { known, confirm };
+}
+
+/** QA-400 (P-485, the C7.7 pattern): `person.is_principal_applicant` is worked out for every person on the case from
+ *  their role: Yes for the principal applicant, No for everyone else (a spouse or partner, a child, any other applicant).
+ *  It is never asked (each fact asked once: the role is already on the case), and it names no form or program: any
+ *  form's box that says whether its person is the principal applicant reads it per person. */
+export const IS_PRINCIPAL = "person.is_principal_applicant", IS_PRINCIPAL_SOURCE = "worked out: the person's role on the case";
+export function principalOf(people: Participant[]): Map<string, boolean> {
+  return new Map(people.filter((p) => p.role !== "case").map((p) => [p.subjectId, p.role === "principal"]));
 }
 
 /** C7.7 (G25, QA-139): `person.has_children` is derived for the principal and the spouse or partner: Yes when the case
@@ -391,8 +402,8 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const firstOf = (q: { about: string; section: string }) => (isListRelative(q.about) ? firstList.get(q.about)! : first.get(`${q.section}|${q.about}`)!);
   const orderIn = (q: { about: string; fact: string }) => (isListRelative(q.about) ? boxAt.get(`${q.about}|${q.fact}`) ?? Number.MAX_SAFE_INTEGER : placed(q.fact));
   const countries = (s.canonical_fields as FieldDef[]).find((f) => f.answer_list?.key === "country")?.answer_list?.values.map((v) => v.label) ?? null;
-  const derivedYes = hasChildrenOf(people);
-  const needed = r.questions.filter((q) => asked(q) && !(q.fact === HAS_CHILDREN && derivedYes.has(q.about)) && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
+  const derivedYes = hasChildrenOf(people), derivedPrincipal = principalOf(people);
+  const needed = r.questions.filter((q) => asked(q) && !(q.fact === HAS_CHILDREN && derivedYes.has(q.about)) && !(q.fact === IS_PRINCIPAL && derivedPrincipal.has(q.about)) && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
     .sort((a, b) => firstOf(a) - firstOf(b) || orderIn(a) - orderIn(b));
   const notAsked = r.questions.filter((q) => asked(q)).length - needed.length;
   // Review Major 1 (#1256): a parent is named by the boxes the person's forms write them into ("Sample Client W's
