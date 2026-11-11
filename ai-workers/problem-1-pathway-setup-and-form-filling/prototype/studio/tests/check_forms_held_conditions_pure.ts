@@ -1,4 +1,4 @@
-// QA-237, QA-239 (Bake row 6, #1534; P-477): a library condition a combination cannot honour is held there (asked every
+// QA-237, QA-239 (Bake row 6, #1534; P-477); QA-402 (a form field the form writes only under its own gate): a library condition a combination cannot honour is held there (asked every
 // time, a warning, engine/held-conditions.ts), never a refusal. But a held condition that is itself broken still refuses
 // Submit by name: one that reads a withdrawn field (B83 M5, tech lead's reading on #1534 after the merge queue's failure of
 // check_b83_undo_withdraw.ts, 11 Nov) or is not a valid condition. Pure: made-up snapshot, no server, no database; US$0.
@@ -68,5 +68,36 @@ loop.placements[1] = { ...loop.placements[1], condition: { subjectKind: "PRINCIP
 const bothHeld = (() => { const out = clone(loop); out.held_conditions = out.placements.map((p: any) => ({ lineage: p.lineage, fact: p.fact, condition: p.condition, condition_effect: p.condition_effect, condition_plain: p.condition_plain, why: ["F reads its answer whenever the form applies"] })); for (const p of out.placements) Object.assign(p, { condition: null, condition_effect: null, condition_plain: null }); return out as Snapshot; })();
 ok("fail (control): the loop not held is an error", errs(loop).some((e) => /in a loop/.test(e.message)), errs(loop).map((e) => e.message));
 ok("pass: two held conditions that decide each other are still refused as a loop, by their words", errs(bothHeld).some((e) => /^Questions decide each other in a loop: "(Other name|Has another name)"/.test(e.message)), errs(bothHeld).map((e) => e.message));
+
+// ---------------------------------------------------------------- QA-402: a form field the form writes only under a gate
+// IMM 5257's "b) Other" (a question asked once per application) is written only when the purpose is Other: the form's own
+// gate (B107, cited data). A question shown under that same condition is never hidden while the form reads it, so the
+// condition is in force here; under another condition it is held, saying the form's own words, and the way out does not
+// send the author to "Form fields that read this answer" (that door never touches a gate).
+const purpose = { subjectKind: "CASE", op: "eq", field: "case.purpose", value: "Other" };
+const caseLevel: any = clone(base);
+caseLevel.canonical_fields = [{ id: "case.purpose", meaning: "Visit purpose", value_type: "text" }, { id: "case.purpose_other", meaning: "Visit purpose other", value_type: "text" }];
+caseLevel.placements = [
+  { lineage: "po", fact: "case.purpose_other", section_id: "s", collected_from: "client_questionnaire", repeats: "once_per_case", client_visible: true, condition: purpose, condition_effect: "SHOW", condition_plain: "Visit purpose other is asked only when Visit purpose is Other" },
+  { lineage: "pp", fact: "case.purpose", section_id: "s", collected_from: "client_questionnaire", repeats: "once_per_case", client_visible: true, condition: null, condition_effect: null },
+];
+const gateRule = (gate: unknown) => ({ gate, words: "the purpose of the visit is Other", cite: "Made up for a pure check (Sample, not an IRCC value)." });
+caseLevel.field_maps = [{ form_number: "F", form_edition: "F-1", entries: [
+  { data_path: "other", outcome: "mapped", fact: "case.purpose_other", person: "none", row: null, transform: "as_is", condition: "Only when purpose = Other", condition_rule: gateRule({ op: "eq", field: "case.purpose", value: "Other" }) },
+  { data_path: "purpose", outcome: "mapped", fact: "case.purpose", person: "none", row: null, transform: "as_is", condition: null }] }];
+ok("QA-402 pass: a case-level question shown only when the form's own gate holds is not held: the condition is in force", conditionsToHold(caseLevel).length === 0, conditionsToHold(caseLevel));
+ok("QA-402 pass: and the draft has neither a Hiding error nor a held warning for it", !errs(caseLevel).some((e) => /Hiding a value/.test(e.message)) && !warns(caseLevel).some((w) => /^Condition not used/.test(w.message)), validate(caseLevel, lib(caseLevel), []).map((e) => e.message));
+const noGate = clone(caseLevel); delete noGate.field_maps[0].entries[0].condition_rule;
+ok("QA-402 fail (control): the same form field without its gate reads the answer whenever the form applies, so the condition is held", conditionsToHold(noGate).length === 1 && /^F reads its answer whenever the form applies$/.test(conditionsToHold(noGate)[0].why[0]), conditionsToHold(noGate));
+const otherGate = clone(caseLevel); otherGate.placements[0].condition = { ...purpose, value: "Business" };
+const og = conditionsToHold(otherGate);
+ok("QA-402 fail: a condition other than the form's own gate is held, the reason in the form's own words (never \"whenever the form applies\")", og.length === 1 && og[0].why[0] === "F reads its answer only when the purpose of the visit is Other (the form's own condition)", og);
+const OG: Snapshot = (() => { const out = clone(otherGate), p = out.placements[0]; out.held_conditions = [{ lineage: "po", fact: "case.purpose_other", condition: p.condition, condition_effect: p.condition_effect, condition_plain: p.condition_plain, why: og[0]?.why ?? [] }]; Object.assign(p, { condition: null, condition_effect: null, condition_plain: null }); return out; })();
+const ogWarn = warns(OG).filter((w) => /^Condition not used on this combination/.test(w.message));
+ok("QA-402 pass: its warning says how to use it here (the form's own condition) and does not send the author to \"Form fields that read this answer\"", ogWarn.length === 1 && /make it the same as the form's own condition/.test(ogWarn[0].message) && !/Form fields that read this answer/.test(ogWarn[0].message), ogWarn.map((w) => w.message));
+const ogErr = errs(otherGate).filter((e) => /^Hiding a value a form reads/.test(e.message));
+ok("QA-402 pass: not held (another snapshot), the refusal also says the form's own condition", ogErr.length === 1 && /F reads it only when the purpose of the visit is Other \(the form's own condition\)/.test(ogErr[0].message), ogErr.map((e) => e.message));
+const hide = clone(caseLevel); hide.placements[0].condition_effect = "HIDE";
+ok("QA-402 fail (control): a HIDE condition is never compatible with a gate (the form writes it exactly when it would be hidden)", conditionsToHold(hide).length === 1, conditionsToHold(hide));
 
 process.exitCode = summary() ? 1 : 0; // B160: a FAIL line fails the suite
