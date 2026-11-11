@@ -33,14 +33,12 @@ Budget: 88% at 07:57, ~1.5%/h with three lanes, so **96% (lanes stop) ≈ 13:00-
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
 | # | Ask (IST) | Status |
 |---|---|---|
-| A3 | 12:2x CI cut-offs: root cause and lasting fix | #1491 (75 min) in review; next: 8 shards + timing refresh (Lead briefs after #1491); queue every-suite rule after (4a) + a week's measure |
-| A4 | 12:3x run tests smartly, no blind testing, no quality cut | answered: PR runs targeted, queue full by design until (4a) proven; approval to come with numbers |
 | A5 | 12:4x finish M3; then detailed milestone plan with counted lists before the Chrome extension; internal production grade | P-450; plan after the 29 |
-| A6 | approvals one at a time; tell him when to press Demo › Load the finished story | at C10.2 merge (#1482) |
-| A1, A2, A8 | done (ruled P-447 to P-449, P-453 to P-455) | word for word in `history/STATE-2026-11-11-0845-lead11s2-founder-asks-done.md` |
+| A1-A4, A6, A8 | done/answered (ruled P-447 to P-449, P-453 to P-455) | word for word in `history/STATE-2026-11-11-0845-lead11s2-founder-asks-done.md` and `history/STATE-2026-11-11-0840-lead11s2-founder-asks-A3-A4-A6.md` |
 | A9 | 08:0x (11 Nov, via Lead 10) archive finished local and cloud sessions; watch disk; 7-hour goals and how; hand over at ~70%, commit often; ~10% left then account switch. **08:0x (typed to Lead 11):** go to ~97% with 3% for hand-over, no risk to quality, speed or rework | local: 11 archived (Leads 5-10; M3-S1, M3-S2 first builder, pipeline, B164, qa; Leads 7-8 on the founder's "Yes, archive them" 08:2x); Fable session local_bade3622 kept (ask); cloud: 14 archived 08:1x-08:2x (BK-2, M3-S5, expert pack, BK-1, M3-S1 cloud, C10.2, C7.8, qa C6.17, qa C6.5, forms C6.17, qa C8.3, C7.5, qa C6.16, qa C7.3/C10.2), founder's word; **done**; disk 16 GB free; stop line P-458 (96/98%); 7-hour goals below |
 | A10 | 08:1x (11 Nov, typed to Lead 11) fast-track by running in parallel, cost-optimised, no quality loss, no force fit, fresh industry view | answered in chat 08:1x: this account's last ~9% buys the same work at any width; after the switch run 5 lanes on file-disjoint rows, kept while batch failures <10% and approved-to-merged <1 h; Lead start read cut by turning off unused connectors (P-445 (2), founder's settings) |
 | A11 | 08:1x (11 Nov, typed to Lead 11) check every token-saving decision of the last 5 days (Fable report, analyses) is in the plan; remove the unused connectors or give the link; no cost to code quality or speed | connectors: Notion, Google Drive, Claude Docs turned off by the Lead 08:2x (also off for new sessions); unused plugins and user servers (product-management, context7, github, storiesonboard; clawmem is the founder's call) need his terminal; audit by a Sonnet reader in the shared notes (token-saving-audit-2026-11-11) |
+| A12 | 08:3x (11 Nov) the co-founder should see the latest app, its behaviour and all its demo data as the founder pushes, simply, best practice for two founders | answered in chat: his fresh copy has an empty database and Mac-only paths in `start.sh`; options asked one at a time |
 | A7 | Fable's questions 16-18 (internal use on what data; employer LMIA side in?; Chrome extension in?) and booking the immigration expert | ask after the 29 |
 
 ## For the founder (P-390)
