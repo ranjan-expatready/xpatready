@@ -35,3 +35,16 @@ Main's server run (Postgres permissions), C7.2 and C7.3-screen re-runs, axe, 400
 Journey score: **8/10** (pass), `journey-test-reviewer-2026-11-11.md`.
 
 **Verdict: Block.** To fix: M1. Then fix the Shoulds or list them in the PR. Reviewed commit **c6a0c7636b75eb9d0a14f746aa3f40fd036fcc69**.
+
+## Re-review (diff)
+Diff only, `git diff c6a0c7636..0c87e7b74`: `engine/runtime/forms.ts` (countedOf, addMonths), the data file's basis, and 5 new test lines. My two reports are committed unchanged. Port 4457, US$0.
+* **M1: fixed.** The new check runs after the own-country skip (`forms.ts:146`). An entry with `to < from` becomes null with the reason "Kenya ends (2023-11-11) before it starts (2025-11-11)". Live on a fresh checkpoint, with the same input as before: Q8 A is left by hand, with that reason both on the copy's by-hand line and in readiness ("Question 8 A … left empty on the form — filled by hand: … Kenya ends … before it starts …"). Before this fix it wrote N with no line. A backwards entry does not hide a counting one: the test's pass line gives Y. If the check is removed, the new fail line goes red, because the entry then reads as a complete stay that does not count (the builder reports 21/22).
+* **m2: fixed.** Months now stop at the month's last day. Probe: 31 Aug to 28 Feb gives N, 31 Aug to 2 Mar gives Y, 31 Aug to 3 Mar gives Y.
+* **m6: partly fixed.** The reason now names each entry and what it lacks ("Kenya lacks its dates", "an entry lacks its country"). The copy's by-hand line is still labelled "A country or territory where the person previously resided" (`api/src/fill-case.ts:285`). The reason quotes Q8 A, so the officer can tell. It stays a Minor, not blocking.
+* **m1 and m3: recorded.** The basis now records two more readings as "Unconfirmed: immigration expert": each entry counts on its own, and a backwards or incomplete entry goes to a person. It also records that a rule matches by data path and fact, so IMM 1294 and IMM 1295 take it (same Q8 A, 11 Nov 2026), and that a form which counts differently needs its own rule first.
+* **m4, m5 and m7: listed in the PR**, not fixed. All three are Minors, and m7 still needs its own row before C7.2 claims Works.
+* **Re-run on 0c87e7b74:** `check_qa395_counted` **22/22**. `check_qa395_q8a_counts` **9/9** on a fresh checkpoint. C7.3 **17/17** on the checkpoint. My edge-case probe agrees: one case changed (backwards dates now go to a person), m2 now counts calendar months, and the null reasons are more specific; no other result moved. Not re-run: C7.3-screen, C7.3-tick (no changed code reaches them), the type check (builder: no new errors).
+
+No Blocker or Major remains open.
+
+**Verdict: Approve.** Commit **0c87e7b74ff227b9dc1a89f833969ebf6a10e688**.
