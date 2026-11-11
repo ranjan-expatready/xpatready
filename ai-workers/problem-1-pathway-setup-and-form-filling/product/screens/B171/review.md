@@ -98,3 +98,43 @@ case") · D19 5 (case page → answer sheet → record → recorded).
 - A real screen reader. An intended user's own walk without help (D17 and D20 stay with the founder).
 - The builder's `run-suites.sh --changed` exit code (it was still running in the builder's session).
 - `acceptance/C11.6.test.ts` (it needs its own setup scripts first).
+
+## Re-review of the merge d1b89f4c3 (diff only)
+Scope (P-303, P-293): the one diff-only check after the approval of 042dd0ac2. The head is d1b89f4c3, a merge of `origin/main`
+(df3d60ed5) into 79ff6896f, made at the tech lead's request under P-270 after CI shard 5 failed `check_b164_no_engine_keys.ts`. I did
+not re-review B171's own change.
+
+1. **The merge changes no B171 line and brings in nothing except main.** `git diff origin/main d1b89f4c3 --stat` lists exactly B171's
+   12 files (+284/−5): `case-prepare.ts`, `submission.tsx`, `check_b171_account_words.ts`, `review.md`, the reviewer journey report
+   and the 7 screenshots. `git diff 79ff6896f d1b89f4c3` is empty for 11 of them. `case-prepare.ts` is the one that differs, because
+   main changed it (BK-8, 5fb174b0f and 3222b54b5: the `bioAges`/`feeRule` imports become `stepRule`/`biometricsWaits`). B171's own
+   hunks are the same text before and after the merge (merge base 62d622327→79ff6896f compared with origin/main→d1b89f4c3: the
+   import line, the `filedThrough` helper and the `portal_words` line). Only their line offsets moved, by 2.
+2. **The b164 test file is main's, byte for byte.** `cmp` with `origin/main:…/tests/check_b164_no_engine_keys.ts` shows no
+   difference, and `git diff origin/main d1b89f4c3` has nothing for that file. Compared with 79ff6896f, the merge drops two
+   allow-list entries, `api/src/sample-case.ts` (BK-12) and `api/src/case-prepare.ts` "vv.single" (BK-8), so the list now matches
+   main's and B171 adds nothing of its own. The test passes: `npx tsx tests/check_b164_no_engine_keys.ts` gives **52 passed, 0 failed,
+   exit 0**.
+3. **Nothing from main reaches the code B171 changed.**
+   - Between the merge base and origin/main, nothing changes `contracts/forms.ts` (`ACCOUNT_WORDS`, `throughAccount`) or
+     `web/src/runtime/submission.tsx`.
+   - No `+`/`−` line in main's changes to `api/`, `engine/`, `contracts/` or `prisma/` mentions `portalKey`, `portal_words`,
+     `PR_PORTAL`, `APR_PORTAL`, `ACCOUNT_WORDS` or `throughAccount`.
+   - BK-12's `sample-case.ts` change touches no portal or account data. Its only lines that match "through" are comments.
+   - Main's `contracts/documents.ts` change still exports `MAX_DOCUMENT_BYTES`, `MAX_DOCUMENT_MB` and `mediaOf`, which
+     `submission.tsx` imports.
+   - Main's change to `case-prepare.ts` is in the biometrics lines (about lines 27–35, 189–193 and 469), not in `portal_words`.
+   - `packages/xfa-engine` (516 files) sits outside the studio, apart from its own `.github/workflows/xfa-engine.yml`.
+
+   Because nothing touches this code, I did not rerun `check_b171_account_words.ts` on an isolated copy. On the merged head, the
+   builder reported 14/14, exit 0, on a fresh copy.
+   As an extra check, I typechecked the merged tree. `web` (`tsc --noEmit -p web/tsconfig.json`): 0 errors. `api`
+   (`-p api/tsconfig.json`): 15 errors, all in five older test files that are not in B171's diff (`check_c18_age_case`,
+   `check_c69_runs`, `check_cost_check`, `check_vv_checklist`, `check_x2b_bulk_apply`). None are in `case-prepare.ts`,
+   `submission.tsx` or `check_b171_account_words.ts`.
+
+Not checked: CI on d1b89f4c3. When I looked, `types` and shards 1–8 were still queued, and `kind`, `label` and `guard` had passed.
+The label `review: approved` waits on green CI as usual.
+
+Verdict: Approve d1b89f4c3a6fd8a6615c3a83e0fe9e38acc9a780. The merge brings in main only and leaves B171's lines unchanged. The b164
+test is main's file byte for byte and passes 52/0. Nothing merged from main touches the account words B171 changed.
