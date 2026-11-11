@@ -35,7 +35,6 @@ const ALLOW: Entry[] = [
   {"guard": "fixture (BK-12 sample case as a setting)", "file": "api/src/checkpoint-words.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": "BK-12"},
   {"guard": "fixture (BK-12 sample case as a setting)", "file": "api/src/sample-validated.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": "BK-12"},
   {"guard": "fixture (BK-12 sample case as a setting)", "file": "api/src/features/checkpoint/", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": "BK-12"},
-  {"guard": "stand-in SI-6 (BK-14 AI review on any pathway's forms, placeholder row)", "file": "api/src/review-runs.ts", "kind": "program", "text": "Stand-in SI-6: the AI review runs live on the Visitor visa forms only (one trial); other form families follow one at a time with their own tests. Severities are Sample until the immigration expert confirms them.", "row": "BK-14"},
   {"guard": "reader content: a heading read from IRCC's checklist page, no branch", "file": "api/src/saved-readings.ts", "kind": "program", "text": "PARENTS AND GRANDPARENTS SUPER VISA", "row": ""},
 ];
 // ALLOW-END

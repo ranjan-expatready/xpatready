@@ -16,11 +16,26 @@
 // /prepare's answer; /prepare must then hold that very item.
 //   tsx studio/acceptance/C7.3.test.ts 4440 xr_studio_accept
 import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { proseRecorded, recordedDerivation } from "../../p5/transforms.ts";
-import { CLIENT, OFFICER, call, expectedFor, fillEverything, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql, yearsAgo, answer, confirmAll, generateCopy } from "./lib/m3.ts";
+import { CLIENT, OFFICER, call, expectedFor, fillEverything, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql, yearsAgo, answer, confirmAll, generateCopy, agent, copyBytes } from "./lib/m3.ts";
 
 type Sheet = { order_basis: string; form?: string; sections: { key: string; title: string; entered: { at: string; by: string } | null; out_of_date?: boolean; answers: { label: string; fact: string; value: unknown; copy_text: string; source: string; subject?: string }[]; waiting?: { fact: string }[] }[] };
+/** QA-396: what a PDF copy itself writes (its XFA data leaves, data path → text), read by p1/e5_roundtrip.py as the
+ *  QA-165 checks read it; null when the reader is not on this machine (the step then says so, never a pass). */
+function writtenByPdf(pdf: Buffer): Record<string, string> | null {
+  const SOL = join(import.meta.dirname, "..", "..", ".."), PY = join(SOL, "..", "..", ".tools", "solution-1-prototype", ".venv", "bin", "python");
+  const code = `
+import sys, json, xml.etree.ElementTree as ET
+sys.path.insert(0, ${JSON.stringify(join(SOL, "prototype", "p1"))})
+import e5_roundtrip as E
+b = sys.stdin.buffer.read(); parts = {k: v.get_object().get_data() for k, v in E.xfa_streams(E.open_reader(b)).items()}
+print(json.dumps({p: v for p, v in E.leaves(E.data_root(ET.fromstring(parts["datasets"]))) if v.strip()}))`;
+  const r = spawnSync(PY, ["-I", "-c", code], { input: pdf, encoding: "buffer", timeout: 120_000, maxBuffer: 1 << 26 });
+  return r.status === 0 ? JSON.parse(String(r.stdout)) : null;
+}
+
 const TWINS = JSON.parse(readFileSync(join(import.meta.dirname, "..", "contracts", "pdf-sections.json"), "utf8")) as Record<string, Record<string, string>>;
 /** The form's own parts as the database held them when the case's release was released, in the order the form's own
  *  field list prints them (review M4 on #1075: read apart from the route, from the field list, not the field map's
@@ -140,7 +155,49 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   const recorded = boxes.filter((b) => b.about && b.about !== "case" && (recordedDerivation(b.transform) || proseRecorded(b.transform)));
   ok(`C7.3-14 fail (QA-392): each "nothing recorded" Yes/No box the PDF copy writes as No (a list answered "none apply") has its line on the answer sheet for that person, reading the same No, with the source and mark of that "none apply"${recorded.length ? "" : " (this release maps no such box)"}`, !!copyId && (nothing.length > 0 || !recorded.length) && missing14.length === 0, { copy: copyId, recorded: recorded.length, nothing: nothing.length, missing: missing14 });
   const valued = boxes.filter((b) => b.value !== undefined && b.value !== null && b.value !== "");
-  ok("C7.3-15 pass: every box the PDF copy writes from an answer has its line on the answer sheet", valued.length > 0 && valued.every((b) => on.has(`${b.about}|${b.fact}`)), valued.filter((b) => !on.has(`${b.about}|${b.fact}`)).map((b) => b.box));
+  ok("C7.3-15a pass: every box the PDF copy writes from an answer has a line on the answer sheet for the same person and fact", valued.length > 0 && valued.every((b) => on.has(`${b.about}|${b.fact}`)), valued.filter((b) => !on.has(`${b.about}|${b.fact}`)).map((b) => b.box));
   const carried = new Set(boxes.map((b) => `${b.about}|${b.fact}`));
   ok("C7.3-16 pass (P-245): every answer-sheet line is a box the PDF copy carries (never a signature, the oath or another value the PDF does not print)", lines.length > 0 && lines.every((l) => carried.has(`${l.subject}|${l.fact}`)), lines.filter((l) => !carried.has(`${l.subject}|${l.fact}`)).map((l) => l.fact));
+  // QA-396 (11 Nov; #1553's reviewer, Lead 17): C7.3-15 matches each box to its sheet line by value too, on a copy made
+  // after the principal has one Education and one Previous residence entry. A box that says whether anything is recorded
+  // ("derived:any …") must read on the sheet as the Yes or No the PDF writes; every other box as the same answer (person,
+  // fact, row, value). Held while QA-396 is open (P-284, as C10.1 R12c): HELD names it, fails nothing in the whole run, and is
+  // never green for a PR that claims it. The PR that fixes QA-396 turns it into a plain ok().
+  type Sec = { subjectId: string; section: string; group: { none_apply?: { id: string; value: boolean } | null } | null; questions: { fact: string }[] };
+  for (const fact of ["person.education_school_name", "person.previous_residence_country"]) {
+    const g = (((await agent(c.id))?.sections ?? []) as Sec[]).find((x) => x.subjectId === P && x.group && x.questions.some((q) => q.fact === fact));
+    if (!g) continue;
+    if (g.group?.none_apply?.value) await call("PUT", `/runtime/cases/${c.id}/groups/${P}/${g.section}/none-apply`, { noneApply: false, expectedId: g.group.none_apply.id }, OFFICER);
+    await call("POST", `/runtime/cases/${c.id}/groups/${P}/rows`, { group: g.section }, OFFICER);
+  }
+  await fillEverything(c.id); await fillEverything(c.id);
+  const copy2 = await generateCopy(c.id, FORM, P);
+  ({ s } = await sheet());
+  type Box2 = Box & { transform?: string | null; row?: number | null };
+  type SL = SA & { row?: number | null; copy_text?: string };
+  const boxes2 = JSON.parse(sql(`select s.facts_json->'boxes' from form_instance f join answer_snapshot s on s.id = f.snapshot_id where f.id = '${copy2}'`) ?? "[]") as Box2[];
+  const pdf2 = copy2 ? writtenByPdf(await copyBytes(copy2)) : null;
+  const lines2 = (s?.sections ?? []).flatMap((x) => x.answers as SL[]);
+  const isRecorded15 = (b: Box2) => !!b.about && b.about !== "case" && (!!recordedDerivation(b.transform) || proseRecorded(b.transform));
+  // Review of #1557 (Block c23689a31): only the "recorded?" boxes are held for QA-396; any other box that does not match
+  // its sheet line by value is a plain FAIL (C7.3-15v), so a future regression there is never hidden by the hold.
+  const offRec: string[] = [], offPlain: string[] = [];
+  for (const b of boxes2) {
+    const mine = lines2.filter((l) => l.subject === b.about && l.fact === b.fact);
+    if (isRecorded15(b)) {
+      const w = pdf2?.[b.box]; if (w !== "Y" && w !== "N") continue;
+      if (!mine.some((l) => String(l.copy_text) === (w === "Y" ? "Yes" : "No"))) offRec.push(`${b.about_label}: ${b.box.split(".").slice(-2).join(".")} written ${w}, no "${w === "Y" ? "Yes" : "No"}" line (${mine.map((l) => l.copy_text).join(", ") || "none"})`);
+    } else if (b.value !== undefined && b.value !== null && b.value !== "") {
+      if (!mine.some((l) => (b.row == null || l.row == null || l.row === b.row) && JSON.stringify(l.value) === JSON.stringify(b.value))) offPlain.push(`${b.about_label}: ${b.box.split(".").slice(-2).join(".")} = ${JSON.stringify(b.value)}, sheet: ${mine.map((l) => JSON.stringify(l.value)).join(", ") || "no line"}`);
+    }
+  }
+  ok("C7.3-15v pass: on the copy with entries, every box that is not a \"recorded?\" box has its sheet line by person, fact, row and value", !!copy2 && boxes2.length > 0 && offPlain.length === 0, offPlain.slice(0, 6));
+  // As C7.3-14: a release that maps no "recorded?" box (pack 4's fixture) has nothing to hold; one that maps such a box must
+  // show at least one written Y (the entries were added), else the step proves nothing about the Yes side and FAILs.
+  const mapped15 = boxes2.some(isRecorded15), yes15 = boxes2.filter((b) => isRecorded15(b) && pdf2?.[b.box] === "Y").length;
+  const ready15 = !!copy2 && (!mapped15 || (!!pdf2 && yes15 > 0));
+  const label15 = `C7.3-15 fail (QA-396): with entries recorded, each "recorded?" box reads on the sheet as the Yes or No the PDF copy writes${mapped15 ? "" : " (this release maps no such box)"}`;
+  if (ready15 && !offRec.length) ok(label15, true, { boxes: boxes2.length, written_yes: yes15 });
+  else if (!ready15) ok(label15, false, { copy: copy2, pdf_read: !!pdf2, recorded_boxes: boxes2.filter(isRecorded15).length, written_yes: yes15 });
+  else console.log(`HELD  C7.3-15 (QA-396): red, held: ${offRec.length} "recorded?" box(es) the PDF copy writes have no sheet line with that Yes or No: ${offRec.slice(0, 6).join("; ")}`);
 });
