@@ -43,6 +43,8 @@
 //   pack whose run truly uses no server; #1369 gave C6.5, the old example, its server run).
 //   GATE_B_BATCH_PRS=<file>: a batch's PRs as JSON [{n, title, body}] in place of GitHub's API (check-gate-b.mjs
 //   only, for the QA-366 batch re-check on real commits).
+//   GATE_B_SELECT_SUITES=<script>: a stand-in for product/tools/select-suites.mjs --packs (check-gate-b.mjs only, B178:
+//   a long reach list must arrive whole).
 //   GATE_B_RESULTS=<file>: one JSON line per pack run ({id, file, data, where, load, ok, why, infra}) for a caller. A
 //   named step that no pack of its capability printed is a refusal of the capability, not of a pack: it is in the gate's
 //   own reasons and exit code, never in these lines (works-set.mjs names no steps).
@@ -81,7 +83,8 @@
 //   run, off CI) it is a ::warning:: and the exit stays as it was. Which packs run, and their lines, do not change.
 // Exit: 0 pass or skipped · 1 the gate refuses (the reasons are printed) · 2 the gate could not run · 3 NOT TESTED in a
 //   re-test run (nothing refused, but a named capability ran no test on the data asked for; B131). 1 and 2 win over 3.
-import { readFileSync, readdirSync, existsSync, appendFileSync, rmSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync, appendFileSync, rmSync, mkdtempSync, openSync, closeSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { spawn, spawnSync } from "node:child_process";
 import { join, resolve, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -515,12 +518,22 @@ export function checkpointRows(touched, trigger, ids, dataOfId, hasPack = (id) =
     touched.set(id, { files: [trigger], why: `${trigger}: a checkpoint step or gate file, and this row is scored on the configured checkpoint (4a)`, direct: false });
   return touched;
 }
-/** The packs a list of changed files reaches (select-suites.mjs --packs → touchedPacks); info.checkpoint: checkpointTrigger. */
-function packsReachedBy(list, info = {}) {
-  const top = gitTop();
-  const r = spawnSync(process.execPath, [join(P, "tools/select-suites.mjs"), "--packs"], { cwd: top, input: list.map((f) => f + "\n").join(""), encoding: "utf8", maxBuffer: 64 << 20 });
-  if (r.status !== 0) throw new Error(`select-suites.mjs --packs failed: ${(r.stderr || r.stdout).trim().split("\n").pop()}`);
-  const reached = new Map(r.stdout.split("\n").filter(Boolean).map((l) => { const [f, ...c] = l.split("\t"); return [f, c.join("\t")]; }));
+/** The packs a list of changed files reaches (select-suites.mjs --packs → touchedPacks); info.checkpoint: checkpointTrigger.
+ *  Its stdout goes to a file, never a pipe (B178, 11 Nov): select-suites ends --packs with process.exit(0), and Node writes
+ *  to a pipe asynchronously on POSIX, so the part of the list the pipe had not taken yet was dropped on a busy runner
+ *  (QA-366's #1435 batch reaches 447 lines, 74 KB; C7.5.test.ts near the end was lost and (4a) alone named C7.5). Writes
+ *  to a file are synchronous, so the list arrives whole. */
+export function packsReachedBy(list, info = {}) {
+  const top = gitTop(), dir = mkdtempSync(join(tmpdir(), "gate-b-packs-")), file = join(dir, "packs.txt");
+  let r, stdout;
+  try {
+    const fd = openSync(file, "w");
+    try { r = spawnSync(process.execPath, [process.env.GATE_B_SELECT_SUITES || join(P, "tools/select-suites.mjs"), "--packs"], { cwd: top, input: list.map((f) => f + "\n").join(""), stdio: ["pipe", fd, "pipe"], encoding: "utf8", maxBuffer: 64 << 20 }); }
+    finally { closeSync(fd); }
+    stdout = readFileSync(file, "utf8");
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+  if (r.status !== 0) throw new Error(`select-suites.mjs --packs failed: ${(r.stderr || stdout || r.error?.message || "").trim().split("\n").pop()}`);
+  const reached = new Map(stdout.split("\n").filter(Boolean).map((l) => { const [f, ...c] = l.split("\t"); return [f, c.join("\t")]; }));
   info.checkpoint = checkpointTrigger(reached);
   const acc = join(S, "acceptance"), files = existsSync(acc) ? readdirSync(acc).filter((f) => PACK.test(f)) : [];
   return touchedPacks(reached, files, (f) => readFileSync(join(acc, f), "utf8"), relative(top, S), new Set(list));
