@@ -11,3 +11,8 @@
 ## Lead 16 hand-over block, item 6, moved word for word by Lead 17 (series 2) at 14:3x IST 11 Nov
 
 6. Standbys: **Lead 18 `local_0e19ea76-e360-4637-baeb-03445e46ef55`**; start a second at the founder's next typed turn (P-286). Check 7e82928c deleted by Lead 16; create yours (`run lead-watch; read STATE Start here`).
+
+## Lead 16 hand-over block, items 3 and 4, moved word for word by Lead 17 (series 2) at 14:5x IST 11 Nov (item 3 answered 14:2x; item 4 superseded by the Lead 17 live lines)
+
+3. **Open question, unanswered: #1532 (master analysis) 08:27 UTC:** send three suspected PDF-vs-answer-sheet differences (`fill-case.ts:322` vs `case-prepare.ts:887`; `fieldMapOf` first map `case-prepare.ts:894`; oath/signature box P-245) to qa as a C7.3 check. Lead 16's view: accept, brief the qa lane in claude.ai.
+4. **Rows in flight (cloud):** BK-3 PR 2 #1525, BK-8 #1535, BK-11 #1537 (approved, labelling), BK-12 #1533 (approved, labelling), QA-237+239 #1534 (labelled; qa's OK owed on C4.11 steps 24/27, P-477), QA-276 #1531, pipeline #1536 (session ended), B171 (account words; B169 #1523 waits for it; lm.high_wage marked Sample, B172), qa (QA-391 Major; C7.8 nightly dispatched 13:1x; QA-355/318/234/BK-9 retests), UX #1530 (P-473 into plan + skill), master analysis #1532. Merged since 13:03: #1539, #1528 (QA-275), #1524 (M3-S3). **4 approved not queued at 14:14: find what holds them.**
