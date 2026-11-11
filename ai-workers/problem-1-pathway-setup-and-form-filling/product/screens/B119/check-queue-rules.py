@@ -113,6 +113,11 @@ CASES = [  # what, files, a record by #1139's definition?, the queue it must joi
     case("records against another base: no queue", [f"{R}/STATE.md"], True, None, base="lead/x"),
     case("a draft records PR: no queue (a draft runs no check, #875)", [f"{R}/STATE.md"], True, None, draft=True),
     case("code without the review label: no queue", [f"{A}/api/src/core.ts"], False, None, labels=()),
+    # B170a (#1545): a change to the XFA engine also needs the xfa-engine workflow's check green (Lead 18, 11 Nov).
+    case("an XFA engine change with xfa-engine green: product", ["packages/xfa-engine/src/x.ts"], False, "product",
+         checks=("ci", "xfa-engine")),
+    case("an XFA engine change without the xfa-engine check: no queue", ["packages/xfa-engine/src/x.ts"], False, None),
+    case("the xfa-engine workflow itself without its check: no queue", [".github/workflows/xfa-engine.yml"], False, None),
     # The label alone routes: a hand-added "records" on code joins records (lowest priority; its batch still runs ci,
     # and change-kind.sh calls it code, so every suite runs), never a product batch.
     case("a hand-added records label on code: records, behind every product PR", [f"{A}/api/src/core.ts"], None, "records",
@@ -180,6 +185,11 @@ def mutations(cfg):
                                      if isinstance(x, str) and x.replace(" ", "") in ("label=records", "-label=records") else x
                                      for x in q["queue_conditions"]]
         return c
+    def no_xfa(c):   # B170a: an engine change no longer needs the engine's own check
+        c = copy.deepcopy(c)
+        for q in c["queue_rules"]:
+            q["queue_conditions"] = [x for x in q["queue_conditions"] if not (isinstance(x, dict) and "xfa-engine" in str(x))]
+        return c
     return [
         ("product lets records in (-label=records removed)", drop("product", lambda x: x == "-label=records")),
         ("records lets unlabelled PRs in (label = records removed)", drop("records", lambda x: x == "label=records")),
@@ -194,6 +204,7 @@ def mutations(cfg):
         ("the label conditions are flipped", flip(cfg)),
         ("records listed first (higher priority than product)", reorder(cfg)),
         ("no records queue", no_records(cfg)),
+        ("product drops the xfa-engine gate", no_xfa(cfg)),
     ]
 
 
