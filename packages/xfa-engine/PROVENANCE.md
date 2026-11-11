@@ -41,8 +41,8 @@ No output means every file has the same path, mode and content (git's object id)
 **The lockfile:** `package-lock.json` was made with Node 24.21.0 and npm 11.19.0: `npm install --legacy-peer-deps --before 2026-10-18T09:45:00Z` (the time of the source repository's last lockfile change). Every runtime package (the seven above, with the FFI types) has exactly the version in the source repository's `pnpm-lock.yaml`. Vitest's own build tools resolve slightly newer than that lock (for example `vite` 8.3.4 against 8.1.0, `rolldown` 1.2.14 against 1.1.3): test tooling only, never shipped, and the tests pass with them (below). npm 11 does not run `fsevents`' install script (a macOS file watcher, optional); nothing needs it.
 
 **Other people's code inside the source** (from the source repository's NOTICE, made by its `scripts/build-xfa-engine-dist.mjs`, not copied here):
-* **pdf.js** (Mozilla Foundation and contributors), Apache-2.0, version cited v4.10.38: 37 files are semantic ports of pdf.js' XFA layout code (not verbatim copies); each carries an "Origin" comment naming the pdf.js file and function. Licence text: `third-party/Apache-2.0.txt`.
-* **PDFium** (BSD-style): `src/model/form-packet/checksum.ts` reproduces the behaviour of PDFium's XFA checksum (a behavioural port, not a copy). Its licence terms are an open item in that NOTICE; they stay one here.
+* **pdf.js** (Mozilla Foundation and contributors), Apache-2.0: 25 non-test files under `src/` are marked `(Apache-2.0)` as semantic ports of pdf.js' XFA layout code (not verbatim copies), 24 of them citing v4.10.38; each carries an "Origin" comment naming the pdf.js file and function (the NOTICE's own rule: a non-test `.ts` file containing `(Apache-2.0)`). Two more files read like ports without that mark (`src/layout/box/border.ts:53`, `src/layout/text/rich/flow.ts:26`); they join the licence open item below. Licence text: `third-party/Apache-2.0.txt`.
+* **PDFium** (BSD-style): `src/model/form-packet/checksum.ts` reproduces the behaviour of PDFium's XFA checksum (a behavioural port, not a copy). Its licence terms are an open item in that NOTICE; they stay one here, with the two unmarked pdf.js-like files above.
 * Nothing copyleft.
 
 ## Technology gate (`STANDARDS.md` §1), for the five new libraries and Vitest
@@ -58,7 +58,7 @@ No output means every file has the same path, mode and content (git's object id)
 
 * `npm ci --legacy-peer-deps`: exit 0 (also exit 0 without the flag).
 * `npm run build` (`tsc -p tsconfig.build.json`): exit 0.
-* `npx vitest run`: **201 test files, 3,369 tests passed, 0 failed**, 76 s. (The planner saw one load-sensitive limit test fail once per full run on 11 Nov and pass alone; this run had none. The CI job must be green three runs in a row.)
+* `npx vitest run`: **201 test files, 3,369 tests passed, 0 failed**, 76 s, in this git checkout (outside a git checkout one test that needs git is skipped: 3,368 passed, 1 skipped; the reviewer's clean export). (The planner saw one load-sensitive limit test fail once per full run on 11 Nov and pass alone; this run had none. The CI job must be green three runs in a row.)
 * Not run: the real-form suite (`npm run test:corpus`, 401 tests; needs `qpdf` and the IRCC PDFs): row b.
 
 ## If a newer version ever arrives
