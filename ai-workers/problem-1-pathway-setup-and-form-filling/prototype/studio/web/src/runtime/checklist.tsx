@@ -39,7 +39,7 @@ export type ChecklistView =
   | { derived: false; why: string };
 
 const HAVE: readonly LineState[] = ["received", "being_checked", "approved"];
-const TONE: Partial<Record<LineState, string>> = { requested: "info", received: "ok", being_checked: "info", approved: "ok", rejected: "danger", not_applicable: "neutral" };
+const TONE: Partial<Record<LineState, string>> = { requested: "info", received: "ok", being_checked: "info", approved: "ok", rejected: "danger", not_applicable: "neutral", waived: "neutral" };
 const ROLE: Record<string, string> = { principal: "Principal applicant", spouse_or_partner: "Spouse or partner", child: "Child" };
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 /** A question's words as a link's text: the engine quotes it ("Current marital status"); a screen reader should not read the marks. */
