@@ -137,7 +137,8 @@
     "account": "LMIA_ONLINE",
     "url": "https://www.canada.ca/en/employment-social-development/services/foreign-workers/median-wage/high.html",
     "quote": "Online through LMIA Online (Job Bank for employers)",
-    "read": "2026-10-29"
+    "read": "2026-10-29",
+    "why": "Sample: page not yet recorded (paraphrase). The quote is not ESDC's words: the ESDC median-wage page is not in official-sources/ yet. Follow-up row B172 records it on the Mac (quote, date, SHA-256) and puts its own sentence here (Lead 16 on #1523, P-170)."
    }
   }
  }

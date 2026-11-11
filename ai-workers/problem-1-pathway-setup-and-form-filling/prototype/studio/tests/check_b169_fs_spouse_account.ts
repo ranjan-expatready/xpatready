@@ -14,7 +14,9 @@ const PORT = process.argv[2] ? Number(process.argv[2]) : null, DB = process.argv
 const STUDIO = join(import.meta.dirname, ".."), SOLUTION = join(STUDIO, "..", "..");
 let pass = 0, fail = 0;
 const ok = (n: string, c: unknown, d?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  B169: ${n}${!c && d !== undefined ? ` — ${JSON.stringify(d).slice(0, 300)}` : ""}`); };
-type Account = { account: string; url: string; quote: string; read: string; page_modified?: string; recorded?: string };
+type Account = { account: string; url: string; quote: string; read: string; page_modified?: string; recorded?: string; why?: string };
+/** Lead 16 on #1523: the one entry that may stand as a paraphrase until its page is recorded (B172), and its label. */
+const PARAPHRASE_OK = "lm.high_wage", PARAPHRASE_LABEL = "Sample: page not yet recorded (paraphrase)";
 type Library = { guides: Record<string, { url?: string | null }>; accounts: { combinations: Record<string, Account> } };
 const LIB = JSON.parse(readFileSync(join(STUDIO, "samples", "form-library-sample.json"), "utf8")) as Library;
 
@@ -54,15 +56,22 @@ const pageWords = (html: string) => html.replace(/<(script|style)[\s\S]*?<\/\1>/
   ok("fs.spouse's guide is linked as fs.outside's is (Guide 5289)", !!LIB.guides["fs.spouse"]?.url && LIB.guides["fs.spouse"].url === LIB.guides["fs.outside"]?.url);
   ok("pass: every combination the six holds whose page has a recorded account carries it under its own key", missingAccounts(LIB, six).length === 0, missingAccounts(LIB, six));
   ok("fail: a page_modified set to the page's issued date (2023-08-04, its dcterms.issued) is refused, though the page holds it", !!html && html.includes(`content="2023-08-04"`) && pageModified(html) !== "2023-08-04");
-  // Lead 16 on #1523 (P-170): every account entry that names a recorded page quotes that page word for word, with the
-  // page's own date. fs.outside's quote was a paraphrase of the same sentence fs.spouse quotes.
-  const unquoted = (lib: Library) => Object.entries(lib.accounts.combinations).filter(([, a]) => {
-    const file = a.recorded ? join(SOLUTION, a.recorded) : "", page = file && existsSync(file) ? readFileSync(file, "utf8") : "";
-    return a.recorded && !(page && pageWords(page).includes(a.quote) && pageModified(page) === a.page_modified);
+  // Lead 16 on #1523 (P-170): every account entry quotes a recorded page word for word, with the page's own date.
+  // fs.outside's quote was a paraphrase of the same sentence fs.spouse quotes. One entry only, lm.high_wage, whose ESDC
+  // page is not recorded yet (follow-up row B172), may stand as a paraphrase, and only under its Sample label.
+  const unquoted = (lib: Library) => Object.entries(lib.accounts.combinations).filter(([key, a]) => {
+    if (!a.recorded) return !(key === PARAPHRASE_OK && (a.why ?? "").startsWith(PARAPHRASE_LABEL));
+    const file = join(SOLUTION, a.recorded), page = existsSync(file) ? readFileSync(file, "utf8") : "";
+    return !(page && pageWords(page).includes(a.quote) && pageModified(page) === a.page_modified);
   }).map(([key]) => key);
-  ok("P-170: fs.outside quotes the recorded page, as fs.spouse does", !!LIB.accounts.combinations["fs.outside"]?.recorded && unquoted(LIB).length === 0, unquoted(LIB));
+  ok("P-170: every account entry quotes its recorded page (fs.outside, fs.spouse), lm.high_wage alone stands as a labelled paraphrase", !!LIB.accounts.combinations["fs.outside"]?.recorded && unquoted(LIB).length === 0, unquoted(LIB));
   const paraphrased = structuredClone(LIB); paraphrased.accounts.combinations["fs.outside"].quote = "Online in the PR Portal: the principal applicant submits the sponsorship and PR applications together";
   ok("fail: fs.outside's earlier paraphrase is refused (not on the recorded page)", JSON.stringify(unquoted(paraphrased)) === JSON.stringify(["fs.outside"]), unquoted(paraphrased));
+  const unlabelled = structuredClone(LIB); delete unlabelled.accounts.combinations["lm.high_wage"].why;
+  ok("fail: lm.high_wage's paraphrase without its Sample label is refused", JSON.stringify(unquoted(unlabelled)) === JSON.stringify(["lm.high_wage"]), unquoted(unlabelled));
+  const borrowed = structuredClone(LIB), fo = borrowed.accounts.combinations["fs.outside"];
+  delete fo.recorded; fo.why = `${PARAPHRASE_LABEL}.`; fo.quote = "Online in the PR Portal: the principal applicant submits the sponsorship and PR applications together";
+  ok("fail: the Sample label is accepted for lm.high_wage only (on fs.outside it is refused)", JSON.stringify(unquoted(borrowed)) === JSON.stringify(["fs.outside"]), unquoted(borrowed));
   const without = structuredClone(LIB); delete without.accounts.combinations["fs.spouse"];
   ok("fail: with fs.spouse's entry missing, the rule refuses and names fs.spouse (as on main before this row)", JSON.stringify(missingAccounts(without, six)) === JSON.stringify(["fs.spouse"]), missingAccounts(without, six));
 
