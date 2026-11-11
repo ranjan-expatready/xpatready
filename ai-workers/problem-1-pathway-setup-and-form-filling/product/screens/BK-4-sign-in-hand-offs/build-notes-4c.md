@@ -25,5 +25,16 @@
 ## Deviations
 * A hand-off is a `Button` (BR-7). Its words are "Hand to <who> (simulated)", with "(simulated)" kept as BK-4a's frame links do. A modified click is ignored instead of opening a tab, since there is no link to open.
 
+## Review and break round 1 (on 5a13935), fixed at 950c168
+* **Break M1 (BR-2):** the case page's client hand-off showed in every state. It now says "Next: <client> answers…" only while the case has required questions not answered and no review round waits.
+  * Every required question answered: a quieter line ("has answered every required question and can still check the answers"), with no "Next". The button is kept so the officer can still let the client check.
+  * A round waiting: the card says the round is with the representative of record, and there is no button. There is never a second "Next".
+* **Review m3 / break m1:** a hand-typed `?from=` of someone who did not hand over in this tab gives no hand back. The hand-off button records who handed the case's questionnaire to its client, per tab (`sessionStorage`), and the hand back shows only for that person. The client's view carries no case team, so this record is the proxy for "on this case's team".
+* **Review m4 / break m4:** after Back, the officer page's notice for a client links back to the questionnaire with the recorded `from`.
+* **Review m2 / break m6:** the tip is a Tooltip, so it also shows on keyboard focus.
+* **Review m5 / break m5:** one way of naming people ("Next: the Representative checks…", "Next: the Case officer picks up from here."); no sentence repeated.
+* **Break m3:** the person and the page now change in one React transition, so neither page shows to the wrong person for a frame.
+* **Not fixed: break m2 (Minor).** If another session changes the representative, an open page hands to the old one until it reads the rounds again. That person lands on the round, where the server lets them only read (BR-5). A reload shows the new representative. Recorded as a known limit.
+
 ## Checks
 See the PR body. US$0, live AI off.
