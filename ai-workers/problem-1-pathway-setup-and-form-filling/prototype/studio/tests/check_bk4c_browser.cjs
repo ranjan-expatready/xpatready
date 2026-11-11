@@ -137,7 +137,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator("[data-handoff=client]").scrollIntoViewIfNeeded(); await p.screenshot({ path: path.join(SHOTS, "bk4c-case-to-client-400.png") });
   await p.goto(`${BASE}/cases/${family}`); await p.locator("[data-handoff=representative]").waitFor({ timeout: 60000 });
   step("400 px: the hand-off to the representative fits, its words keep a readable width", await fits(p, "[data-handoff=representative] button") && await roomy(p, "[data-handoff=representative]"));
-  await p.locator("[data-handoff=representative]").scrollIntoViewIfNeeded(); await p.screenshot({ path: path.join(SHOTS, "bk4c-case-handoffs-400.png") });
+  // Review r2 (records): the shot waits for the scrolled panel to paint (one run saved a blank frame).
+  await p.locator("[data-handoff=representative]").scrollIntoViewIfNeeded(); await p.locator("[data-handoff=representative] button").waitFor({ state: "visible" }); await p.waitForTimeout(800);
+  await p.screenshot({ path: path.join(SHOTS, "bk4c-case-handoffs-400.png") });
   await axe(p, "the case page's hand-offs at 400 px", "[data-handoff]");
   await p.context().close();
 

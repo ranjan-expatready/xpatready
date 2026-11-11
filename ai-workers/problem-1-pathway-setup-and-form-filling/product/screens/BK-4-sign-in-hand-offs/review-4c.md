@@ -80,3 +80,25 @@ D1 4: every 4c hand-off is wired; BR-2 and BR-3 partly (Minors 1, 3) · D2 4: th
 A real screen reader · Safari and macOS · the solo firm in a browser (source guard only) · re-running the packs (reasoned above) · an intended user's unaided walk (D17, D20 stay with the founder).
 
 **Verdict: Approve (5a13935ede2d7721e36fb611e42fa473f8658f06).** There are 0 Blockers and 0 Majors. Fix Minors 1–5 in this PR, or list each as a follow-up row.
+
+## Re-review (96d47a1)
+Same reviewer, diff only (`git diff 5a13935e..96d47a1a`), at the exact head `96d47a1a376804d6b57c26db0d4244e49ae5d86e`. Fresh copy on :4461, web rebuilt at this head (the bundle contains `xr-handed-from`), stopped afterwards. Checks ran from scratchpad copies, so no tracked screenshot was touched. US$0, no priced button.
+**Re-run:** tsc (web) exit 0 · `check_bk4c.ts` 16/16 · `check_bk4a.ts` 22/22 · `check_bk4c_browser.cjs` **46/46**. My own probes on the finished story (`probe2.cjs`): every frame was sampled during each hand-off; data, 1024 px and 400 px were checked.
+**My round 1 Minors and the breaker's findings:**
+* **Break M1 (BR-2) and my m1: fixed.**
+  * Every required question answered: "Client A has answered every required question and can still check the answers." No "Next", and the button stays.
+  * A round waiting: "Client A answers on their phone, for everyone travelling. Round 4 is with the representative of record now." There is no client button, and this holds after a reload, so there is one "Next" on the page.
+  * With answers owed (configured checkpoint): "Next: Client A answers…" (check line 2). The card is axe clean, with 0 px of sideways scroll at 1024 and 400 px.
+* **m2 / break m6: fixed.** The tip is a Radix Tooltip. Tab shows "You act as Client A (simulated) in this tab…", Escape closes it, and the focus ring is visible.
+* **m3 / break m1: fixed.** The hand back shows only when `from` is the person who handed over in this tab (`sessionStorage`). A hand-typed `from=user-S`, or `from=user-O` with no hand-off in this tab, shows nothing (check lines). This is a fair proxy, since the client's view carries no case team.
+* **m4 / break m4: fixed.** Back, then "your Client questionnaire", keeps `from=user-O` and the hand back.
+* **m5 / break m5: fixed.** The lines now read "Next: the Representative checks each form…" and "Next: the Case officer picks up from here.", with no repeated sentence.
+* **Break m3: fixed.** In my per-frame sampling, 0 of 71 frames (to client), 0 of 52 (hand back) and 0 of 129 (to the representative) showed an intermediate notice to the wrong person. The notice showed once per hand-off.
+* **Break m2 (stale representative after another session changes it):** accepted as a known limit (`build-notes-4c.md`). The server keeps that person read-only (BR-5), and a reload corrects it.
+
+**New in this round:**
+* **Minor (records): a committed screenshot is blank.** `screenshots/bk4c-case-handoffs-400.png` at 96d47a1 is an empty grey frame (2.9 KB). My run of the same check produced the right image (Ready to file with "Hand to the Representative", 400 px). **Fix:** re-capture it, or wait for the hand-off to be visible before the shot. No code change.
+
+No Blocker or Major is open.
+
+**Verdict: Approve (96d47a1a376804d6b57c26db0d4244e49ae5d86e)**
