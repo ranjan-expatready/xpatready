@@ -73,3 +73,33 @@ Fixing M1 raises Correct data and Error recovery to 1, which gives 8.5.
 * Keyboard-only and 200 % zoom.
 
 **Verdict: Block.** To fix: **M1**. Should: m1–m6. Follow-up row: the BR-14 bug at who-fills.ts:107.
+
+## Re-review on 30090f8bd (diff only: `git diff 4c6cf8e9b 30090f8bd`)
+Same reviewer, 11 Nov 2026. Fresh copy `rv_qa403c` on :4448 (configured checkpoint), now stopped. US$0, live AI off.
+* **M1: fixed.** `formValues` (engine/form-values.ts:36-39, :55) gives each box its own fact and the words that the form's steps name for that fact (`wordsInSteps`). The "else" code, and the "none of these" tick, are written only for another of those words. Anything else goes by hand, with "not one of the words this form takes (…)".
+  * My end-to-end run: the officer saved `apoint` and IMM 5476 was generated. Counts went from by_hand 0 / written 21 (on 4c6cf8e9b) to **by_hand 2 / written 19**.
+  * In unit probes, `vistor`, `trv` and `other` go by hand on every IMM 5645 tick. `visitor` ticks only Visitor, and `worker` ticks only Worker.
+  * The breaker's round 2 (break-report.md F1, F2) read the same back from the PDFs. After 59a5564b3 only data and records changed.
+  * The other caller, p5/engine.ts:313, passes no words. There an unknown word goes by hand and a listed word gives its own code, so it is safe.
+* **m1: fixed.** The `=` step compares only the named fact; when that fact is not answered, the box goes by hand. Tested.
+* **m2: fixed.** The rule now needs `plain-language` followed by lowercase words only, and `NOTE_ORDERS` turns away a note with an order such as "write", "uppercase" or "code". `as_is (plain-language, write in uppercase)` and `… in uppercase` go by hand, as tested. A side effect: `NOTE_ORDERS` has no word boundary at the end, so "add" also matches "address". That only sends a box by hand, which is the safe direction.
+* **m3: partly fixed.** The name is now read from the box's own fact, so `person_is_resident_is_yes` parses correctly (tested). Splitting the `not_` list on `_` is unchanged. My probe: `checked_if_status_not_common_law_or_married` plus a step that names `common_law` ticks the "not" box for `common_law`. **n1 (Minor, Should):** no map has a multi-word word today. Refuse `_` inside the `not_` words, or split only on `_or_` and the known words. A follow-up is fine.
+* **m6: fixed in data.** The question no longer says "temporary residence". It offers only visitor, worker or student and says to tick Other by hand, which matches the "other goes by hand" behaviour (F3).
+* **m4: worked around in data.** The office question itself now says how to pass the line for a new application. That runtime screens show no help text stays a listed follow-up.
+* **m5: mostly fixed.** The PR body now says the content reviewer approves and records the BR-14 bug as question 4. **n2 (Minor, records):** its "Checks" heading still says "head 4c6cf8e9b". Update it to 30090f8bd with the results below.
+* **Data:** plain words, no immigration values. The questions end without a full stop (F6 is listed as a follow-up).
+* **Tests, re-run by me on 30090f8bd:**
+  * `check_qa403_who_fills`: **36/36, exit 0**, including the new fail lines for M1, m1, m2 and m3.
+  * `check_p5_engine`: 35/35.
+  * Not re-run: the R1 group, which the builder reports as r1c 140/140, r1d 97/97 and r1a 99/99. The code it reaches (the fill) is covered above.
+* **Follow-up rows owed (not this PR):**
+  * who-fills.ts:107 writes the draft as the approver (BR-14).
+  * Runtime help text (m4/F5).
+  * F4: an application type that contradicts the pathway is not checked.
+  * F6: the case page adds "." after a question.
+  * F7: the permanent-residence wording.
+  * n1.
+
+**Journey score (re-walk of the changed parts): 8.5/10, a pass; no criterion at 0.** Correct data and error recovery each rise to 1 (a wrong word now goes by hand with a reason). The rest stay as scored above.
+
+**Verdict: Approve** for 30090f8bd. No Blocker or Major is open. n1 and n2 are Minor and do not hold the merge.
