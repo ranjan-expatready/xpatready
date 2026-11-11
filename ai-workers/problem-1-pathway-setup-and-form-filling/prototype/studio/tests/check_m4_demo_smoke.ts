@@ -7,7 +7,7 @@
 // (3) the web app's script is missing (every page blank) → the first screen, "Immigration programs"; (4) the database
 // down → "Health". No button is pressed, live AI is off; US$0, no model call.
 //   zsh studio/tools/isolated.sh m4smoke 4433 start && tsx studio/tests/check_m4_demo_smoke.ts 4433 xr_studio_m4smoke
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createServer, request, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
@@ -37,11 +37,15 @@ function proxy(): Promise<Server> {
   });
   return new Promise((ok) => s.listen(0, "127.0.0.1", () => ok(s)));
 }
-const smoke = (port: number) => {
+/** Runs the walk as the demo update does, in its own process (asynchronously: the proxy lives in this one). */
+const smoke = (port: number): Promise<{ code: number | null; out: string; s: number }> => new Promise((done) => {
   const t = Date.now();
-  const r = spawnSync(process.execPath, [SMOKE, "--base", `http://127.0.0.1:${port}`, "--timeout-ms", "15000"], { encoding: "utf8", timeout: 300_000, env: { ...process.env, GITHUB_STEP_SUMMARY: "" } });
-  return { code: r.status, out: `${r.stdout ?? ""}${r.stderr ?? ""}`, s: Math.round((Date.now() - t) / 1000) };
-};
+  let out = "";
+  const ch = spawn(process.execPath, [SMOKE, "--base", `http://127.0.0.1:${port}`, "--timeout-ms", "15000"], { env: { ...process.env, GITHUB_STEP_SUMMARY: "" } });
+  const kill = setTimeout(() => ch.kill("SIGKILL"), 300_000);
+  ch.stdout.on("data", (d) => { out += d; }); ch.stderr.on("data", (d) => { out += d; });
+  ch.on("close", (code) => { clearTimeout(kill); done({ code, out, s: Math.round((Date.now() - t) / 1000) }); });
+});
 const tail = (o: string) => o.trim().split("\n").slice(-4).join(" | ");
 
 let server: Server | null = null;
@@ -52,7 +56,7 @@ try {
   const story = (await call("GET", "/demo/status", undefined, "user-A")).body?.story;
   ok("M4 set-up: the finished story is loaded on the copy", loaded && story?.state === "done" && !!sql(`select id from runtime_case where reference='SAMPLE-VV-FAMILY-1'`), { status: r.status, state: story?.state, error: story?.error });
 
-  const a = smoke(PORT);
+  const a = await smoke(PORT);
   console.log(a.out.trim().split("\n").map((l) => `      ${l}`).join("\n"));
   ok("M4 pass: on main's finished story the walk passes (exit 0)", a.code === 0 && /SMOKE PASS/.test(a.out), tail(a.out));
   ok("M4 pass: it walked every screen of the journey by role (health, programs, cases, the story's case, its forms, the client's questionnaire)",
@@ -63,21 +67,21 @@ try {
   server = await proxy();
   const via = (server.address() as AddressInfo).port;
   mode = "none";
-  const p = smoke(via);
+  const p = await smoke(via);
   ok("M4 (the proxy itself breaks nothing): through the proxy with no break, the walk passes", p.code === 0, tail(p.out));
 
   mode = "case";
-  const c = smoke(via);
+  const c = await smoke(via);
   ok("M4 fail (case page broken on purpose): the walk fails (exit 1) and names the Case page", c.code === 1 && /SMOKE FAIL: broke at Case page \(\/cases\/[^ ]+, SAMPLE-VV-FAMILY-1\)/.test(c.out), tail(c.out));
   ok("M4 (case page): the screens before it are said to work", /PASS  Cases \(\/cases\)/.test(c.out) && !/PASS  Case page/.test(c.out), tail(c.out));
 
   mode = "forms";
-  const f = smoke(via);
+  const f = await smoke(via);
   ok("M4 fail (forms broken on purpose): the walk fails and names Forms, with the server error, the case page itself passing",
     f.code === 1 && /SMOKE FAIL: broke at Forms \(Prepare application on SAMPLE-VV-FAMILY-1\)/.test(f.out) && /PASS  Case page/.test(f.out) && /forms answered 500/.test(f.out), tail(f.out));
 
   mode = "bundle";
-  const b = smoke(via);
+  const b = await smoke(via);
   ok("M4 fail (the web app's script missing): the walk fails at the first screen, Immigration programs", b.code === 1 && /SMOKE FAIL: broke at Immigration programs/.test(b.out), tail(b.out));
 
   // The database down: the copy's own health (M1) is the first thing the walk reads.
@@ -85,7 +89,7 @@ try {
   const psql = (q: string) => spawnSync("/opt/homebrew/opt/postgresql@18/bin/psql", ["postgresql://xr_studio@127.0.0.1:54329/postgres", "-XAtc", q], { encoding: "utf8" });
   psql(`alter database "${DB}" with allow_connections false`);
   psql(`select pg_terminate_backend(pid) from pg_stat_activity where datname = '${DB}' and pid <> pg_backend_pid()`);
-  const d = smoke(via);
+  const d = await smoke(via);
   psql(`alter database "${DB}" with allow_connections true`);
   ok("M4 fail (database down): the walk fails at Health, naming the database", d.code === 1 && /SMOKE FAIL: broke at Health \(\/api\/health\)/.test(d.out) && /database — The database does not answer/.test(d.out), tail(d.out));
 } catch (e) { ok(`M4: the check ran to its end (crashed: ${(e as Error).message})`, false); }
