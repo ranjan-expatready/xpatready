@@ -71,7 +71,7 @@ run(async () => {
   const lineNow = () => sql(`select f.who || '|' || coalesce(f.min_age::text, '') from combination_form f join gov_form_def g on g.id=f.gov_form_def_id where f.combination_id='${wp}' and g.form_key='${SCH1}' order by f.version desc limit 1`);
   const before = lineNow();
   // On the six the line arrives with its field map as "each applicant" (the default); the author sets who fills it on the
-  // Forms tab, as a person does from the form's own words. The checkpoint's loader sets it itself (demo.ts VV_FORM_RULES).
+  // Forms tab, as a person does from the form's own words. The checkpoint's loader sets it itself (samples/form-setup.json vv.single rules).
   const byAuthor = before !== `${WHO_SCH1}|18`;
   const childAsked = async () => ((await call("GET", `/combinations/${wp}/workspace?tab=questionnaires`)).body?.questionnaire?.roles ?? []).find((x: any) => x.role === "child")?.questions ?? null;
   const childBefore = byAuthor ? await childAsked() : null;

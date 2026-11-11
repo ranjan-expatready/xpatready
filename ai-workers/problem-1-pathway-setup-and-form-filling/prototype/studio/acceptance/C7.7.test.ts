@@ -131,7 +131,7 @@ await main("C7.7", "Deliverables list per filing (Visitor visa)", async () => {
   // becomes a line with no field map (added where the release lacks it; its own map set aside where it has one); its
   // fingerprint is refitted with it (the pin is frozen by a trigger, lifted for one statement as
   // tests/check_vv_prepare_store_api.ts does), and all is put back in `finally`. Who and minimum age are Sample (SCH1's
-  // are the checkpoint's, api/src/form-setup.ts VV_FORM_RULES; DEP's "each dependent child"). A line the release already
+  // are the checkpoint's, samples/form-setup.json vv.single rules; DEP's "each dependent child"). A line the release already
   // writes is its own and is not replaced. The copies the steps make stay on the case (a copy is never deleted); only the
   // release and its pins are put back.
   const rel = sql(`select config_release_id from pack_work_pin where case_id='${c.id}' order by revision desc limit 1`);

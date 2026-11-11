@@ -26,7 +26,7 @@ import { factsHeld, factsOf } from "./_facts-asked.ts";
  *  load's log); a refused line is named in `refused`, never dropped silently. C6.17 (P-444, QA-375): `sources`, when the
  *  combination's setup names them, replaces each quote with the combination's own checklist's words (page, quote, date)
  *  where that checklist lists the document, and labels every other line Sample with the source it came from
- *  (api/src/form-setup.ts LMIA_DOCUMENT_SOURCES). */
+ *  (samples/form-setup.json wp.lmia_inside documentSources). */
 async function reviewedDocumentLines(ctx: CheckpointContext, author: Actor, reviewer: Actor, workspaceId: string, combinationId: string, refused: string[], say: (e: unknown) => string, sources?: SourcedDocuments) {
   const studio = ctx.get(Studio);
   type Line = { document_type: string; status: string; who: string; provided_by?: string | null; condition?: unknown; condition_plain?: string | null; source_quote?: string | null; source_file?: string | null };
