@@ -51,7 +51,10 @@ export default {
             const others = new Set((await db.sqrSectionSelection.findMany({ where: { workspaceId, combinationId: { not: c.id } }, select: { sectionKey: true } })).map((s) => s.sectionKey));
             const own = (await db.sqrSectionSelection.findMany({ where: { combinationId: c.id }, orderBy: { sectionOrder: "asc" }, select: { sectionKey: true } })).find((s) => !others.has(s.sectionKey));
             if (!own) throw new Error("no section is asked by this combination alone, so the question would reach other combinations' cases");
-            await studio.placeField(author, f.fact, { sectionKey: own.sectionKey, collectedFrom: "staff_working_view", repeats: "per_person", tier: "case", questionText: f.question });
+            // Rule only (CI on #1513: QA-144, B78): a question in a section the row selects is otherwise asked of every
+            // applicant, the principal too, though only the child's line rule reads it; rule only, it is asked of each
+            // person the rule decides (engine/render.ts deciders), so Preview and the case ask the same people.
+            await studio.placeField(author, f.fact, { sectionKey: own.sectionKey, collectedFrom: "staff_working_view", repeats: "per_person", tier: "case", questionText: f.question, ruleOnly: true });
           }
         });
         ctx.log.push(`  ${key}: ${spec.role.replace(/_/g, " ")} line adds "${String(spec.addsFiling.filing)}" when its rule holds (${f.fact} asked per person; samples/conditional-filings.json; Sample, Unconfirmed: expert)`);

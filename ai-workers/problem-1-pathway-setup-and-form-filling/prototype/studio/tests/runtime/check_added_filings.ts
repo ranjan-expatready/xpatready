@@ -10,6 +10,7 @@ import type { CaseFilings } from "../../contracts/runtime.ts";
 import { checkPeople } from "../../engine/people.ts";
 import { addedFilingRules, addedFilings } from "../../engine/runtime/added-filings.ts";
 import { caseView, type Participant } from "../../engine/runtime/case.ts";
+import { render } from "../../engine/render.ts";
 import { deriveFilings, rulesFrom, type FeeTable } from "../../engine/runtime/filings.ts";
 import { releaseConditionFacts, type Snapshot } from "../../engine/snapshot.ts";
 import { addedFilingProblems, checkCondition, validate, withdrawnFieldLines } from "../../engine/validate.ts";
@@ -143,6 +144,14 @@ const known = new Map<string, unknown>([[factKey("C1", FACT), { value: true }], 
   const open = asked(base);
   ok("questionnaire pass: the rule's question is asked of each child who applies, never the principal or a child not travelling", ["C1", "C2", "C3"].every((c) => open.includes(c)) && !open.includes("P") && !open.includes("C4"), open);
   ok("questionnaire pass: an answered Yes keeps the question on the case (it can be changed back)", asked(base, [{ subjectId: "C1", field: FACT, value: true }]).includes("C1"));
+  // CI on #1513 (QA-144, B78): Preview (engine/render.ts) asks a question placed in a selected section of every applicant,
+  // so the checkpoint places the rule's question rule only: then only the people the line's rule decides are asked.
+  const ruleOnly = { ...base, placements: base.placements.map((q) => ({ ...q, rule_only: true })) };
+  const PREVIEW_PEOPLE = [{ id: "P", role: "principal", label: "Client A", applies: true }, { id: "C1", role: "child", label: "Child C1", applies: true }, { id: "C4", role: "child", label: "Child C4", applies: false }];
+  const previewAsked = (s: unknown) => render(s as Snapshot, PREVIEW_PEOPLE as never, new Map() as never).questions.filter((q) => q.fact === FACT).map((q) => q.about);
+  ok("preview pass (rule only): Preview asks the rule's question of the travelling child only, never the principal or a child not travelling", JSON.stringify(previewAsked(ruleOnly)) === JSON.stringify(["C1"]), previewAsked(ruleOnly));
+  ok("preview fail (not rule only): placed in a selected section without rule only, Preview also asks the principal (why the checkpoint places it rule only)", previewAsked(base).includes("P"), previewAsked(base));
+  ok("questionnaire pass (rule only): the case asks it of each child who applies, never the principal", (() => { const o = asked(ruleOnly); return ["C1", "C2", "C3"].every((c) => o.includes(c)) && !o.includes("P") && !o.includes("C4"); })(), asked(ruleOnly));
   const noRule = { ...base, combination: { key: "x.any", participants: [line("principal"), line("child", { filingMode: "on_principal" })] } };
   ok("questionnaire fail: without the line's rule nothing reads the question, so it is not asked", asked(noRule).length === 0, asked(noRule));
 }
