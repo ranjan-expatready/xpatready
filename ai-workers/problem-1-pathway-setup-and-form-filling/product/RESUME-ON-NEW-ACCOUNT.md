@@ -2,7 +2,7 @@
 
 **Tested on a real switch, 5 Nov 19:14 IST; corrected the same evening.** Canary requested and pushed inside 5 minutes; nothing on GitHub lost. The work lives on GitHub (P-82), so an account switch loses at most what a lane has not pushed. Every lane pushes after each step (P-344 (1)).
 
-**First row on the new account (P-459, 11 Nov):** B168, the app starts on any Mac (co-founder copy), in a founder-typed turn.
+**First row on the new account (P-459, 11 Nov):** B168, the app starts on any Mac (co-founder copy), in a founder-typed turn. Also owed after the switch (founder, 11 Nov 11:3x IST): the fresh barcode check on a Paper IMM 5257 copy made by today's app (Adobe draws the barcode page; `prototype/p1/decode_barcodes.py`, then `prototype/evidence-lane/E1/tools/barcode_compare.py`); proof so far in `design/demo-pdf-proof-2026-11-11.md`.
 
 **Found on the real switch:**
 * **Connectors (P-445 (2), A11, 11 Nov):** on a new account check the Lead's start read with `get_usage` (about 115-120k on 11 Nov). Notion, Google Drive and Claude Docs are off by default; a new account can switch them back on: turn them off again (composer + menu, Connectors).
