@@ -62,4 +62,11 @@ const invalid = held(base); invalid.held_conditions![0].condition = { subjectKin
 ok("pass: a held condition that is not a valid condition (a field the library lacks) still refuses, as it does when not held", errs(invalid).some((e) => e.item === "person.a" && /^Condition /.test(e.message)), errs(invalid).map((e) => e.message));
 ok("fail (control): a valid held condition has no condition error", !errs(H).some((e) => /^Condition /.test(e.message)), errs(H).map((e) => e.message));
 
+// Re-review on fb4e565ec (Block): two questions whose conditions decide each other, both held, must still be named as a loop.
+const loop = clone(base);
+loop.placements[1] = { ...loop.placements[1], condition: { subjectKind: "PRINCIPAL", op: "eq", field: "person.a", value: "x" }, condition_effect: "SHOW", condition_plain: "Has another name is asked only when Other name is x" };
+const bothHeld = (() => { const out = clone(loop); out.held_conditions = out.placements.map((p: any) => ({ lineage: p.lineage, fact: p.fact, condition: p.condition, condition_effect: p.condition_effect, condition_plain: p.condition_plain, why: ["F reads its answer whenever the form applies"] })); for (const p of out.placements) Object.assign(p, { condition: null, condition_effect: null, condition_plain: null }); return out as Snapshot; })();
+ok("fail (control): the loop not held is an error", errs(loop).some((e) => /in a loop/.test(e.message)), errs(loop).map((e) => e.message));
+ok("pass: two held conditions that decide each other are still refused as a loop, by their words", errs(bothHeld).some((e) => /^Questions decide each other in a loop: "(Other name|Has another name)"/.test(e.message)), errs(bothHeld).map((e) => e.message));
+
 summary();

@@ -50,3 +50,18 @@ The DB and browser suites I did not re-run (b86 door, b88 spread, b114, groundin
 **Blockers:** none. **Majors:** none. **Minors:** m1–m7 above (follow-up rows; none blocks this row's Done when).
 
 Verdict: Approve
+
+## Re-review fb4e565ec (diff only: `git diff 68edeebcc fb4e565ec`, 11 Nov)
+**Diff:** `engine/validate.ts` (+6/−3) and the new `tests/check_forms_held_conditions_pure.ts`. Nothing else changed.
+
+**Is the fix right? Yes, for the two checks it covers.** `withdrawnFieldLines` (`validate.ts:73`) and the condition-validity loop (`:187`) now read `withHeldConditions(s).placements`. So a held condition that reads a withdrawn field, or reads a field the library lacks, refuses Submit by name, as it did before holding. The hold itself and its warning are unchanged. The pure test gives 13/13 on fb4e565ec and 11/13 with 68edeebcc's `validate.ts` put back. The two failures are exactly the B83 M5 line and the invalid-condition line (my run, in a throwaway worktree). It also covers each kind of hold reason (closes m3). I did not re-run check_b83_undo_withdraw; I rely on the coordinator's 173/173 against 172/173.
+
+**Can holding still hide another broken-condition check? Yes, one: the loop check.** `validate.ts:285` builds the "Questions decide each other in a loop" map from `s.placements`, where held conditions are stripped. Pure probe (made-up snapshot, scratchpad only): two questions whose conditions read each other, and form F reads both. Not held, 2 loop errors. Held, as `buildSnapshots` holds them, **0**.
+This is the same class as the B83 M5 line the tech lead ruled must refuse: a condition that is broken in the library itself. The new comment at `:186` ("holding never hides a broken one") is not yet true.
+Whether harm reaches a case: none on the holding combination (the question is asked every time). Combinations that use the condition still refuse. But the holding combination's release publishes the looping library rows. And the change-set R8 check (`api/src/change-sets.ts:114`, m4) simulates on the same stripped view, so it would not see such a loop being made either.
+**Fix:** one line. Build `dep` from `withHeldConditions(s).placements` (the `s` passed into `reachability`), and add a loop case to the pure test.
+The other readers of `s.placements[].condition` in Submit's problems are `derivedRead` (`:248`: warnings, and gate reads), `gateProblems` (correct to use the stripped view: the question is asked every time here) and `draftSourceProblems` (numbers, not validity). None of them is a broken-condition refusal.
+
+**Major (re-review):** M1, the loop check, above. **Blockers:** none. **Minors:** m1, m2 and m4 to m7 stand; m3 is closed.
+
+Verdict: Block (M1: walk `withHeldConditions` for the loop map too, with its pure test)
