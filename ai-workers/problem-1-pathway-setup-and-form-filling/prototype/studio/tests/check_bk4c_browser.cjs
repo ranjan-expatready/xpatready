@@ -38,6 +38,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const said = async (p, re) => { try { await p.locator("[data-toaster]").getByText(re).first().waitFor({ timeout: 8000 }); return true; } catch { return false; } };
   const axe = async (p, name, include) => { const r = await new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).include(include).analyze(); step(`axe: ${name} has no WCAG 2.2 AA violation`, r.violations.length === 0, r.violations.map((v) => `${v.id}: ${v.nodes[0]?.target}`)); };
   const sideways = (p) => p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+  /** The hand-off's words keep a readable width (not squeezed beside the button; 400 px). */
+  const roomy = async (p, sel) => { const w = await p.locator(sel).first().locator("p").first().evaluate((x) => x.getBoundingClientRect().width); return w >= Math.min(256, p.viewportSize().width - 64); };
   const fits = async (p, sel) => { const box = await p.locator(sel).first().boundingBox(); const w = p.viewportSize().width; return !!box && box.x >= 0 && box.x + box.width <= w + 1; };
 
   // Set-up: the configured checkpoint, its family case (Client A), and a new Client B case through the officer's route.
@@ -129,6 +131,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.screenshot({ path: path.join(SHOTS, "bk4c-questionnaire-handoff-400.png") });
   await p.goto(`${BASE}/cases/${family}`); await p.locator("[data-handoff=representative]").waitFor({ timeout: 60000 });
   step("400 px: the case page's hand-offs fit the screen (client, representative)", await fits(p, "[data-handoff=client] button") && await fits(p, "[data-handoff=representative] button"));
+  step("400 px: the hand-off's words keep a readable width (the button wraps under them)", await roomy(p, "[data-handoff=client]") && await roomy(p, "[data-handoff=representative]"));
   await p.locator("[data-handoff=representative]").scrollIntoViewIfNeeded(); await p.screenshot({ path: path.join(SHOTS, "bk4c-case-handoffs-400.png") });
   await axe(p, "the case page's hand-offs at 400 px", "[data-handoff]");
   await p.context().close();

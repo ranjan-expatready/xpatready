@@ -31,8 +31,9 @@ export function HandOff({ to, go, done, next, label, className, data }: { to: st
   const words = label ?? `Hand to ${who} (simulated)`;
   return (
     <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px]", className)} data-handoff={data ?? ""} data-handoff-to={p.id}>
-      <p className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-        {done ? <span className="inline-flex items-center gap-1 text-text-ok"><Check className="size-3.5" aria-hidden />{done}</span> : null}
+      {/* The words keep a readable width; on a narrow screen the button wraps under them (400 px check). */}
+      <p className="min-w-[min(100%,16rem)] flex-1 [overflow-wrap:anywhere]">
+        {done ? <span className="text-text-ok"><Check className="mr-1 inline size-3.5 align-[-2px]" aria-hidden />{done}</span> : null}
         {done ? " · " : null}<span>Next: {next}</span>
       </p>
       <Button size="sm" variant="secondary" title={`You act as ${p.name} (simulated) in this tab. Use the person picker to come back.`}
