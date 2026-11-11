@@ -17,7 +17,7 @@
 //   tsx studio/acceptance/C7.3.test.ts 4440 xr_studio_accept
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { CLIENT, OFFICER, call, expectedFor, fillEverything, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql, yearsAgo, answer, confirmAll } from "./lib/m3.ts";
+import { CLIENT, OFFICER, call, expectedFor, fillEverything, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql, yearsAgo, answer, confirmAll, generateCopy } from "./lib/m3.ts";
 
 type Sheet = { order_basis: string; form?: string; sections: { key: string; title: string; entered: { at: string; by: string } | null; out_of_date?: boolean; answers: { label: string; fact: string; value: unknown; copy_text: string; source: string; subject?: string }[]; waiting?: { fact: string }[] }[] };
 const TWINS = JSON.parse(readFileSync(join(import.meta.dirname, "..", "contracts", "pdf-sections.json"), "utf8")) as Record<string, Record<string, string>>;
@@ -82,7 +82,7 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   // checkpoint each adult has their own IMM 5257 sheet; on the fixture each their own IMM 5707 sheet). Where only the
   // principal's item of the form is Online, the spouse's date is read on the principal's sheet, if that form carries it.
   // And every date of birth a sheet read shows, whoever's, is marked entered by staff and to confirm (review m1).
-  type SA = { fact: string; subject?: string; value?: unknown; mark?: string | null; to_confirm?: boolean };
+  type SA = { fact: string; subject?: string; value?: unknown; copy_text?: string; mark?: string | null; to_confirm?: boolean };
   const S = c.subjects["Sample Spouse A"];
   const dobs = (sh: Sheet | null) => (sh?.sections ?? []).flatMap((x) => x.answers as SA[]).filter((x) => x.fact === "person.date_of_birth");
   const dobOn = (sh: Sheet | null, subject: string) => dobs(sh).find((x) => x.subject === subject);
@@ -117,4 +117,22 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   ok("C7.3-12 pass (P-65): a changed fact marks the entered section out of date, the frozen answers unchanged, the new value shown", s?.sections[0]?.out_of_date === true && s.sections[0].answers.some((x) => x.fact === "person.family_name" && x.value === "SAMPLEDX"));
   p = (await prepare(c.id)).p;
   ok("C7.3-13 pass: the Online form item reads Out of date; it warns only (an entered Online section, BR-9 and P-168; P-136 also said \"entered\": FQ-6)", itemsOf(p, P, FORM)[0]?.state === "out_of_date" && !(p?.readiness ?? []).some((x) => x.blocks.some((b) => b.words.includes(FORM) && b.code === "out_of_date")));
+  // QA-392 (qa lane, 11 Nov; master analysis #1532, 07b suspects (a) and (c); Lead 17's ask): the sheet and the PDF copy of
+  // the same form agree box by box. What the PDF wrote is the boxes fill-case.ts stored with the copy (after
+  // markNothingRecorded), as engine/form-values.ts writes them; a sheet line is the same person's same fact.
+  const copyId = await generateCopy(c.id, FORM, P);
+  ({ s } = await sheet());
+  type Box = { box: string; fact: string; about: string; about_label?: string; value?: unknown; detail?: string };
+  const boxes = JSON.parse(sql(`select s.facts_json->'boxes' from form_instance f join answer_snapshot s on s.id = f.snapshot_id where f.id = '${copyId}'`) ?? "[]") as Box[];
+  const lines = (s?.sections ?? []).flatMap((x) => x.answers as SA[]), on = new Set(lines.map((l) => `${l.subject}|${l.fact}`));
+  const nothing = boxes.filter((b) => /^nothing recorded/.test(b.detail ?? ""));
+  // QA-392 (fixed by its forms PR): the sheet reads the same rule as the copy (engine/runtime/forms.ts markNothingRecorded),
+  // so each such box has its line, for the same person and fact, and says the same No the PDF wrote.
+  const lineOf = (b: Box) => lines.find((l) => l.subject === b.about && l.fact === b.fact);
+  const missing14 = nothing.filter((b) => { const l = lineOf(b); return !l || l.value !== false || l.copy_text !== "No"; }).map((b) => `${b.about_label}: ${b.box.split(".").slice(-2).join(".")} (${lineOf(b)?.copy_text ?? "no line"})`);
+  ok("C7.3-14 fail (QA-392): each \"nothing recorded\" Yes/No box the PDF copy writes as No (a list answered \"none apply\") has its line on the answer sheet for that person, reading the same No", !!copyId && nothing.length > 0 && missing14.length === 0, { copy: copyId, nothing: nothing.length, missing: missing14 });
+  const valued = boxes.filter((b) => b.value !== undefined && b.value !== null && b.value !== "");
+  ok("C7.3-15 pass: every box the PDF copy writes from an answer has its line on the answer sheet", valued.length > 0 && valued.every((b) => on.has(`${b.about}|${b.fact}`)), valued.filter((b) => !on.has(`${b.about}|${b.fact}`)).map((b) => b.box));
+  const carried = new Set(boxes.map((b) => `${b.about}|${b.fact}`));
+  ok("C7.3-16 pass (P-245): every answer-sheet line is a box the PDF copy carries (never a signature, the oath or another value the PDF does not print)", lines.length > 0 && lines.every((l) => carried.has(`${l.subject}|${l.fact}`)), lines.filter((l) => !carried.has(`${l.subject}|${l.fact}`)).map((l) => l.fact));
 });

@@ -28,7 +28,7 @@ import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, feeRule, rulesFrom 
 import { addedFilings } from "../../engine/runtime/added-filings.ts";
 /** Review r1 M4: the biometrics ages come from the fee table, never from code. */
 const bioAges = feeRule("vv.single", "biometrics")?.exempt;
-import { blocksLock, changedGroups, formCoverage, groupFacts, inputHash, readiness as formReadiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
+import { blocksLock, changedGroups, formCoverage, gateOf, groupFacts, inputHash, markNothingRecorded, readiness as formReadiness, type FormFact, type GatePlacement, type GroupFact } from "../../engine/runtime/forms.ts";
 import { factChanges, markKey, outOfDateReason, representativeWords, restoredFromOf, undoTarget, type ChangeWords, type FactChange } from "../../engine/runtime/out-of-date.ts";
 import { REPRESENTATIVE } from "../../engine/runtime/team.ts";
 import { changesOf, partsInFormOrder, sectionHash, sheetOf as layOut, sheetWords, waitsOf, type FormPart, type Layout, type Sheet, type SheetAnswer } from "../../engine/runtime/answer-sheet.ts";
@@ -875,16 +875,22 @@ export class CasePrepare {
  *  tick compared against the answers it froze. */
 function sheetOf(item: { itemKey: string; subjectId: string }, s: ReturnType<Runtime["snapshotOf"]>, people: ReturnType<Runtime["peopleOf"]>, answers: Awaited<ReturnType<Runtime["state"]>>["answers"], rows: Awaited<ReturnType<Runtime["state"]>>["rows"], view: ReturnType<typeof caseView>, entered: { sectionKey: string; enteredAt: Date; enteredBy: string; snapshot: { inputHash: string } }[], parts: Map<string, FormPart[]>, missing: Readiness["missing"], cov = formCoverage(s, people, answers, rows, item.itemKey, item.subjectId)): Sheet {
   const labels = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
-  const origin = (subject: string, fact: string) => { const a = answers.find((x) => x.subjectId === subject && x.field === fact); return a?.origin?.channel ?? a?.channel; };
+  // QA-392: a box written No because nothing is recorded has no answer of its own: its source and mark are those of the
+  // answer that vouches for it (the list's "none apply", else the No to the Yes/No question it is asked under).
+  const qs = view.sections.flatMap((x) => x.questions), filing = people.find((p) => p.role === "case")?.subjectId;
+  const vouch = (subject: string, fact: string) => view.sections.find((x) => x.subjectId === subject && x.group?.none_apply?.value && x.questions.some((q) => q.fact === fact))?.group?.none_apply
+    ?? (() => { const g = gateOf(s.placements as GatePlacement[], fact); const a = g ? qs.find((q) => q.subjectId === subject && q.fact === g)?.answer : null; return a?.value === false ? a : null; })();
+  const origin = (subject: string, fact: string) => { const a = answers.find((x) => x.subjectId === subject && x.field === fact); if (a) return a.origin?.channel ?? a.channel; const v = vouch(subject, fact); return v?.answered?.channel ?? v?.channel; };
   const layout = layoutOf(item.itemKey, s, parts) ?? { basis: "pdf_twin" as const, sections: {} };
   // P-411 (B150 review M2): the officer types from this sheet, so each answer carries who gave it and whether it is still to confirm.
-  const qs = view.sections.flatMap((x) => x.questions), filing = people.find((p) => p.role === "case")?.subjectId;
   const markOf = (about: string, fact: string, row: number | null) => {
-    const q = qs.find((x) => x.subjectId === (about === "case" ? filing : about) && x.fact === fact), a = q ? (q.group ? q.rows[row ?? 0]?.answer : q.answer) : null;
+    const subject = about === "case" ? filing : about;
+    const q = qs.find((x) => x.subjectId === subject && x.fact === fact), a = (q ? (q.group ? q.rows[row ?? 0]?.answer : q.answer) : null) ?? (subject && row === null ? vouch(subject, fact) : null);
     return a ? { mark: a.mark, confirmed: a.confirmed, why: a.why } : undefined;
   };
   // QA-309: a box waits only for what the form's readiness names (`missing`: the item's own rule).
-  return layOut(layout, cov?.boxes ?? [], origin, labels, new Map(entered.map((e) => [e.sectionKey, { at: e.enteredAt.toISOString(), by: e.enteredBy, hash: e.snapshot.inputHash }])), markOf, waitsOf(view, missing, item.subjectId, filing),
+  // QA-392: the boxes as the PDF copy writes them (fill-case.ts generate): the same rule marks the "nothing recorded" ones.
+  return layOut(layout, cov ? markNothingRecorded(cov.boxes, view, s.placements as GatePlacement[]) : [], origin, labels, new Map(entered.map((e) => [e.sectionKey, { at: e.enteredAt.toISOString(), by: e.enteredBy, hash: e.snapshot.inputHash }])), markOf, waitsOf(view, missing, item.subjectId, filing),
     // QA-317 (review M1): a choice is copied in the release's own words, never its key.
     (fact, v) => (typeof v === "string" ? optionsOf(s, fact)?.find((o) => o.key === v)?.label : undefined));
 }
