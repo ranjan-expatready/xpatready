@@ -5,16 +5,16 @@
 // waivable line not received is a block that cannot be passed while any other missing document stays a warning
 // (engine/runtime/readiness.ts), and release review names the change in words (engine/validate.ts diff). Combination
 // keys are made up ("x.any", "y.other"), so no pathway is named. No database, no server, no model call (US$0). The
-// routes (waive and Not applicable refused, Ready to file refused then allowed) are tests/runtime/check_m3s4_blocking_api.ts.
-//   tsx studio/tests/runtime/check_m3s4_never_waivable.ts
-import { Waiver } from "../../contracts/documents.ts";
-import type { Known } from "../../engine/render.ts";
-import { caseChecklist, type CaseChecklist } from "../../engine/runtime/case-checklist.ts";
-import type { Participant } from "../../engine/runtime/case.ts";
-import { BLOCK_CODES, cannotPass, CODE_WORDS, filingReadiness, type DocumentItem } from "../../engine/runtime/readiness.ts";
-import type { Snapshot } from "../../engine/snapshot.ts";
-import { diff } from "../../engine/validate.ts";
-import { recorder } from "./api.ts";
+// routes (waive and Not applicable refused, Ready to file refused then allowed) are tests/check_m3s4_blocking_api.ts.
+//   tsx studio/tests/check_m3s4_never_waivable.ts
+import { Waiver } from "../contracts/documents.ts";
+import type { Known } from "../engine/render.ts";
+import { caseChecklist, type CaseChecklist } from "../engine/runtime/case-checklist.ts";
+import type { Participant } from "../engine/runtime/case.ts";
+import { BLOCK_CODES, cannotPass, CODE_WORDS, filingReadiness, type DocumentItem } from "../engine/runtime/readiness.ts";
+import type { Snapshot } from "../engine/snapshot.ts";
+import { diff } from "../engine/validate.ts";
+import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
 const TODAY = new Date("2026-11-11T12:00:00Z");

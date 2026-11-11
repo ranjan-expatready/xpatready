@@ -3,9 +3,9 @@
 // person release it; on a case the line can neither be waived nor marked Not applicable (in words), and Ready to file is
 // refused, the block named and not passable, until the document is received; then Ready to file is allowed. Each rule
 // has a passing and a failing case. Product routes only (no SQL write), no model call (US$0).
-//   zsh studio/tools/isolated.sh rt_m3s4 4431 start && tsx studio/tests/runtime/check_m3s4_blocking_api.ts 4431 xr_studio_rt_m3s4
-import { call, filingOf, firms, openCase, PORT, prepare, readinessOf, readyToFile, sql, yearsAgo } from "../../acceptance/lib/m3.ts";
-import { recorder } from "./api.ts";
+//   zsh studio/tools/isolated.sh rt_m3s4 4434 start && tsx studio/tests/check_m3s4_blocking_api.ts 4434 xr_studio_rt_m3s4
+import { call, filingOf, firms, openCase, PORT, prepare, readinessOf, readyToFile, sql, yearsAgo } from "../acceptance/lib/m3.ts";
+import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
 const AUTHOR = "user-A", REVIEWER = "user-C", APPROVER = "user-B", CLIENT = "user-P";
