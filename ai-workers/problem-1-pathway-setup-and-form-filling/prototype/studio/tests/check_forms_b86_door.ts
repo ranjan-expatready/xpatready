@@ -135,7 +135,7 @@ run(async () => {
   const back2 = r.body?.id;
   ok("BR-7 pass: proposed again, then approved, the form field holds nothing", r.status < 300 && (await approve(back2)).status < 300 && ruleOf(row.form_edition_id, row.data_path) === "", ruleOf(row.form_edition_id, row.data_path));
   r = await call("POST", "/library/form-field-conditions", { combinationId: vv, fact: GIVEN, formEditionId: g.form_edition_id, dataPath: g.data_path, clear: true }, AUTHOR);
-  ok("break B1 pass: Undo of a confirmed form field with its condition approved: waits for a second person, in words, and names what it holds", r.status < 300 && /holds every combination/.test((await call("GET", `/library/changes/${r.body?.id}`, undefined, APPROVER)).body?.form_field?.spread ?? ""), words(r));
+  ok("break B1 pass: Undo of a confirmed form field with its condition approved: waits for a second person, in words, and names what it holds", r.status < 300 && /asks it every time again \(the condition is held there/.test((await call("GET", `/library/changes/${r.body?.id}`, undefined, APPROVER)).body?.form_field?.spread ?? ""), words(r));
   ok("break B1 pass: approved, confirm again is open: the way back and forward both work", (await approve(r.body?.id)).status < 300 && (await call("POST", "/library/form-field-conditions", { combinationId: vv, fact: GIVEN, formEditionId: g.form_edition_id, dataPath: g.data_path }, AUTHOR)).status < 300);
   ok("BR-7 pass: the earlier approved change is closed, not left open", sql(`select status from library_change where id='${nc}'`) === "WITHDRAWN", sql(`select status from library_change where id='${nc}'`));
   await saved();
@@ -160,7 +160,7 @@ run(async () => {
   await T.people(other);
   await T.questionsBySteps(other);
   r = await call("GET", FIELDS(vv, NAME, itemOf(NAME)), undefined, AUTHOR);
-  ok("ruling 3 pass: the panel names how many other combinations and form fields this holds", /other combination/.test(r.body?.spread ?? "") && /form field/.test(r.body?.spread ?? "") && /cannot be released/.test(r.body?.spread ?? ""), r.body?.spread);
+  ok("ruling 3 pass (Bake row 6): the panel names how many other combinations and form fields hold the condition, and that it stops none of them releasing", /other combination/.test(r.body?.spread ?? "") && /form field/.test(r.body?.spread ?? "") && /the question stays asked every time \(the condition is held/.test(r.body?.spread ?? "") && /Nothing stops it being released\./.test(r.body?.spread ?? ""), r.body?.spread);
   r = await call("POST", "/library/form-field-conditions", body, AUTHOR);
   const spread = await call("GET", `/library/changes/${r.body?.id}`, undefined, APPROVER);
   ok("ruling 3 pass: so does the second person's line", /other combination/.test(spread.body?.form_field?.spread ?? ""), spread.body?.form_field);
