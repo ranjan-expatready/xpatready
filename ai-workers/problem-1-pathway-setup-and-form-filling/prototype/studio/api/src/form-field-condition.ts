@@ -55,7 +55,7 @@ export async function spreadOf(db: Client, workspaceId: string, fact: string, tr
   const live = [...newest.values()].filter((l) => l.status !== "RETIRED" && l.combinationId !== except && open.has(l.combinationId));
   const filed = new Set(live.map((l) => l.govFormDefId)), held = new Set(live.map((l) => l.combinationId)), fields = rows.filter((r) => filed.has(r.edition.govFormDefId)).length;
   if (!held.size) return { combinations: 0, form_fields: 0, words: null };
-  return { combinations: held.size, form_fields: fields, words: `${plural(held.size, "other combination")} ask${held.size === 1 ? "s" : ""} this question, and ${plural(fields, "form field")} there ${fields === 1 ? "does" : "do"} not hold this condition: there the question stays asked every time (the condition is held, QA-239) until ${fields === 1 ? "that form field holds" : "those form fields hold"} it. Nothing stops ${held.size === 1 ? "it" : "them"} being released.` };
+  return { combinations: held.size, form_fields: fields, words: `${plural(held.size, "other combination")} ask${held.size === 1 ? "s" : ""} this question, and ${plural(fields, "form field")} there ${fields === 1 ? "does" : "do"} not hold this condition: there the question stays asked every time (the condition is held there) until ${fields === 1 ? "that form field holds" : "those form fields hold"} it. Nothing stops ${held.size === 1 ? "it" : "them"} being released.` };
 }
 
 /** What the second person compares on To review. */
@@ -302,7 +302,7 @@ export class FormFieldConditions {
     const raw = effective(rawRows, (x) => x.dataPath, "draft")[0];
     if (b.ask || (b.clear && row.state === "asked")) return this.proposeAsk(actor, workspaceId, c.id, b, row, raw, s, !!b.clear);
     // Break m8: taking a rule off holds whoever asks this question under its condition, so the second person is told that too.
-    const spread = cond.tree ? await spreadOf(this.db, workspaceId, b.fact, cond.tree, c.id) : { words: showCondition(s.placements as never, b.fact) ? `Taking it off means every combination that asks this question and files ${row.form} asks it every time again (the condition is held there, QA-237) until the form field holds the condition again.` : null };
+    const spread = cond.tree ? await spreadOf(this.db, workspaceId, b.fact, cond.tree, c.id) : { words: showCondition(s.placements as never, b.fact) ? `Taking it off means every combination that asks this question and files ${row.form} asks it every time again (the condition is held there) until the form field holds the condition again.` : null };
     const name = factWords(s, b.fact), field = row.caption || "a form field";
     const label = (b.clear ? `${row.form} · ${field}: filled whenever the form applies again` : `${row.form} · ${field}: filled only when ${cond.sentence ?? "its question is asked"}`).slice(0, 300);
     const key = keyOf(b.formEditionId, b.dataPath);

@@ -212,11 +212,11 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   // QA-237, QA-239: a library condition this combination cannot honour is held, never a refusal: the question is asked
   // every time here, and the author is told why and how to use the condition (engine/held-conditions.ts).
   for (const h of s.held_conditions ?? []) {
-    const q = `"${(meaningOf.get(h.fact) ?? h.fact).trim().replace(/\.$/, "")}"`, when = (h.condition_plain ?? "").trim().replace(/\.$/, "");
+    const q = `"${(meaningOf.get(h.fact) ?? h.fact).trim().replace(/\.$/, "")}"`;
     const formReads = h.why.some((w) => / reads its answer (whenever the form applies|under a different condition)$/.test(w));
     const asks = h.why.some((w) => /^it depends on /.test(w));
     const tail = formReads ? "To use the condition here, make the form or its form fields apply under the same condition (Form fields that read this answer)." : asks ? "To use the condition here, ask the question it depends on." : "To use the condition here, nothing else may read the answer outside it.";
-    out.push({ level: "warning", where: "Questions", item: h.fact, message: `${HELD_OPENING}: the question ${q} is asked every time here, because ${h.why.join("; and ")}. ${tail} Its condition${when ? ` (${when})` : ""} stays in the library for the combinations that can honour it.` });
+    out.push({ level: "warning", where: "Questions", item: h.fact, message: `${HELD_OPENING}: the question ${q} is asked every time here, because ${h.why.join("; and ")}. ${tail} Combinations that can honour the condition still use it.` });
   }
   // Only the derived definitions this combination reads (Lead check item 3): the library holds every definition, and
   // one nobody here uses is not this combination's warning.
