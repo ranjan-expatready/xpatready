@@ -1,0 +1,37 @@
+# BK-11 Fill-trial status in the release: independent review
+
+PR #1537, branch `claude/inspiring-mccarthy-204gsy`, commit `48081d1d5ff56e824a83d5da8e744b46f76cc6da`, against `origin/main`. Reviewer: a fresh session that did not build it (11 Nov). Row: Bake (M3.5) Track 2 row 25 (`design/bake-plan-2026-11-10.md:50`), P-448, P-449, P-452, P-460 (branch `lead/2026-11-07-lead31`). No `concept.md`: this is a Bake row, so I judged it against the row's "Done when" and the standards.
+
+**Verdict: Block.** There is 1 Major (M1). Fix it, re-run the two BK-11 checks, and this can be approved.
+
+## What I ran (isolated copy forms_rev on :4458, live AI off, stopped afterwards)
+* `check_bk11_release_fill_trials.ts`: 17/17 passed. `check_bk11_release_fill_trials_api.ts 4458 xr_studio_forms_rev`: 8/8 passed. `check_s2_fill_trials` 14/14, `check_contract_seams` 116/116 and `check_edition_in_use` 20/20 all exit 0.
+* Data underneath. Release 2 (approve path, `studio.ts:1119` → `publishRow`) has `summary.fill_trials` with 6 entries: IMM 1295, 5409 and 5707 passed, with their date and `E1/*/STATUS.md`; 5257 SCH1, 5475 and 5476 not yet, each with a reason. The snapshot has no `fill_trial` key and `snapshotHash(snapshot) === sha256`.
+* Writers of `config_release`: `git grep configRelease.create` finds only `studio.ts:1211` (publishRow, reached from single approve :1119 and Release-page bulk :1186) and `demo.ts:198` (import). Both write the field. The remaining raw `insert into config_release` statements are in tests only (x2b, r1d); they copy existing rows or use `'{}'`, and read "Not recorded", which is correct.
+* Screen walk: 1440, 1024, 400 px and 720 px at DPR 2 (200 % zoom). Page has no sideways scroll at any width; at 400 px the table scrolls inside its own container, as the table already did before this PR. Axe WCAG 2.2 A/AA on the table, with the fold-out closed and open: 0 violations. Keyboard: Tab reaches the summary, Enter opens it, focus ring visible. No console or page errors. Screenshots: `/tmp/claude-0/-home-user-xpatready/8a9b23c8-ee6a-5e28-ae4d-532ccde19f91/scratchpad/walk/`.
+
+## The design choice (summary, not snapshot)
+I agree with it. Freezing the status in `summary` keeps the release fingerprint and `validate.ts diff()` stable; the API test proves the hash is unchanged. It also gives BK-13 (P-449 / P-460 "Study permit by data") a per-form `status / recorded_on / evidence / reason` record to read from the release itself. There is no schema column, and the code names no pathway or form: `fill-trials.ts:64-87`, the contract and the component are generic, and the P-319 test line covers them. "Not recorded in this release" for a release made before BK-11 is the honest choice: it does not claim "Not yet". The trial counted is `pdfMapInUse` → `trialFor`, the same as `fill-case.ts:162 trialOf` (P-32), which is right. The one place where it does **not** match the case is which lines count as forms (M1).
+
+## Issues
+**Major**
+* **M1. The release uses its own form-line filter instead of the engine's one rule, so a filed form can be missing from the list and a "Not needed" line counted.** `api/src/fill-trials.ts:73` keeps a line when `form_kind !== "document"`. The engine has one rule for what a filed form line is: `engine/programs.ts:164 isFormLine` (`libraryType`, `engine/form-type.ts:7`, "one rule for … every path that makes a form line and the release import"). Under that rule, a legacy `document` row titled as a form is a filed form, and a `NOT_NEEDED` line is not. **Failure scenario:** the seeded library has `IMM 5802 | document | Offer of employment form (employer form)`. `attachNow` accepts it (`form-library.ts:382`: `notFiledWords` is null for it) once its PDF is uploaded and approved. A release with it then has `pdfForms` filling IMM 5802, and lock refuses it on its unproven trial (`fill-case.ts:440`). But `summary.fill_trials` has no entry for it, and the screen says "k of n forms" without it. BK-13 and qa would read the release as complete. A line marked Not needed does the opposite: nothing is filled for it, yet it is listed and counted as "Not yet". Reproduced on synthetic lines (scratchpad `formline.mts`): `isFormLine X=true Y(NOT_NEEDED)=false`; `pdfForms` = X, Z; `releaseFillTrials` = Y, Z. **Fix:** filter with `isFormLine` from `engine/programs.ts`, and use the same rule in the API test's expected list (`tests/check_bk11_release_fill_trials_api.ts:37`). Add a pass/fail pair to the pure test: a `document` line titled "… form" is listed, a `NOT_NEEDED` line is not. Then correct the BR-4 wording at `tests/check_bk11_release_fill_trials.ts:57`.
+
+**Minor**
+* **m1. A repository path is shown on screen.** `web/src/components/release-fill-trials.tsx:17` renders `evidence: prototype/evidence-lane/E1/imm1295/STATUS.md` in the visible fold-out. EXPERIENCE §46 [M] says "no … file paths on the main path". It is only partly met, because the path sits behind a disclosure. Fix: show "evidence record" in plain words and keep the path in a `title` or the details.
+* **m2. The words do not say the status is as at release.** `contracts/release-fill-trials.ts:31` and the summary at `release-fill-trials.tsx:11` read "3 of 6 forms with a passed fill trial". A trial recorded after the release does not change this list, but lock (`fill-case.ts:440`) uses the live register. A publisher could read "Not yet" as the current state. Fix: "… at release".
+* **m3. A form filed only Online always shows "Not yet".** A line with only an ONLINE edition gets `no_edition` (`contracts/release-fill-trials.ts:33`) and the warn pill "Not yet", but no fill trial can ever apply to it. The wording is accurate; the pill implies something is still to do. Settle this once M1's rule is used, for example a neutral pill for "no PDF to fill".
+
+## D1–D20 (1–5)
+D1 4: meets the row, except M1. · D2 3: release data can omit a filed form (M1). · D3 4: one contract and one trial function, but the form-line rule is duplicated (M1). · D4 4 · D5 5: frozen at release; pre-BK-11 rows read null, not "not yet". · D6 4: evidence path and date recorded. · D7 N/A: no AI. · D8 4: on Review › Released versions. · D9 3: says why a form is not yet proven, but not where a trial gets recorded. · D10 3: m1 path, m2. · D11 4: Passed / Not yet / Not recorded are distinct. · D12 4: team Pill and FoldOut, see the screenshot. · D13 5: axe 0, keyboard, focus ring, 200 %. · D14 5: team components. · D15 5: no extra request; computed once at release. · D16 4: each rule has a pass and a fail case, but the filter test asserts the wrong rule (M1). · D17 simulated only. · D18 4: date and evidence record per passed form. · D19 4: release → BK-13 reader is in place. · D20 simulated only.
+
+## BIC-01–BIC-20
+N/A. EXPERIENCE §6 covers case screens (P-407); this is the Studio's configuration Review tab.
+
+## Graph (P-86)
+`graph.mjs` ran (exit 0). GRAPH.md has no BK-11 line yet. The new component serves one capability (fill-trial status per release form). Both BK-11 tests name it. No new route: the combination review route now returns an extra field.
+
+## Could not check
+A real screen reader. An intended user's unaided walk (D17, D20 are the founder's). M1 end to end in the app: the seeded IMM 5802 has no file, and attaching it returns 409 "No file yet". I proved M1 at function level against the engine's own `isFormLine` and `pdfForms`. Journey score: `journey-test-reviewer-2026-11-11.md`, **8/10**.
+
+**Verdict: Block.** To fix: M1 (blocking). m1–m3 should be fixed but do not block.

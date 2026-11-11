@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { PROTOTYPE, STUDIO } from "./core.ts";
-import { pdfMapInUse } from "../../engine/programs.ts";
+import { isFormLine, pdfMapInUse } from "../../engine/programs.ts";
 import { FILL_TRIAL_WORDS, type FillTrialReason, type ReleaseFillTrial } from "../../contracts/release-fill-trials.ts";
 
 /** One map entry as the snapshot carries it (engine/snapshot.ts field_maps[].entries). */
@@ -65,15 +65,18 @@ export function trialFor(m: EditionMap | null | undefined, trials: TrialRecord[]
 }
 
 /** BK-11 (P-448, P-460): each form line of a release with its fill trial, frozen into the release row's summary at
- *  release (api/src/studio.ts publishRow, api/src/demo.ts). The trial is the one a case's copy is judged by (fill-case.ts
- *  trialOf): the PDF edition in use (P-32) and its field map. A document line (a checklist, a guide) is not a form a
- *  case fills, so it has none. Names no pathway and no form (P-319, P-452). */
+ *  release (api/src/studio.ts publishRow, api/src/demo.ts). The lines are the engine's form lines (engine/programs.ts
+ *  isFormLine: what a case files; review M1), so a checklist or guide and a line marked Not needed have none, and an old
+ *  "document" row titled as a form has one. The trial is the one a case's copy is judged by (fill-case.ts trialOf): the
+ *  PDF edition in use (P-32) and its field map. A line filed Online fills no PDF, so it is said so (filed_online), never
+ *  as a missing trial. Names no pathway and no form (P-319, P-452). */
 export function releaseFillTrials(snapshot: { forms: unknown[]; field_maps: unknown[] }, trials: TrialRecord[] = readTrials(), readStatus?: (f: string) => string): ReleaseFillTrial[] {
   const maps = snapshot.field_maps as EditionMap[];
-  return (snapshot.forms as { form_number: string; title?: string | null; form_kind?: string | null }[]).filter((f) => (f.form_kind ?? "data_form") !== "document").map((f) => {
+  return (snapshot.forms as { form_number: string; title?: string | null; form_kind?: string | null; channel?: string | null }[]).filter(isFormLine).map((f) => {
     const map = pdfMapInUse(maps, f.form_number);
-    const t = trialFor(map, trials, readStatus); // undefined: the default reader
     const edition = map?.form_edition ?? null;
+    if (f.channel === "ONLINE") return { form: f.form_number, title: f.title ?? null, status: "not_yet", edition: null, recorded_on: null, evidence: null, reason: "filed_online", why: FILL_TRIAL_WORDS.reason.filed_online(null) };
+    const t = trialFor(map, trials, readStatus); // undefined: the default reader
     return t.passed
       ? { form: f.form_number, title: f.title ?? null, status: "passed", edition, recorded_on: t.record?.recorded_on ?? null, evidence: t.record?.status_file ?? null, reason: null, why: null }
       : { form: f.form_number, title: f.title ?? null, status: "not_yet", edition, recorded_on: null, evidence: null, reason: t.reason ?? "none", why: FILL_TRIAL_WORDS.reason[t.reason ?? "none"](edition) };

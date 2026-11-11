@@ -52,15 +52,19 @@ ok("BK-11 BR-3 pass: with an older PDF edition and an online version beside it, 
 const olderInUse = { forms: [line("FORM A")], field_maps: [map("FORM A", SHA.a, entries, { form_edition: "FORM A (01-2025)" }), map("FORM A", SHA.b, entries, { form_edition: "FORM A (06-2026)" })] };
 ok("BK-11 BR-3 fail: a newer PDF edition with no trial is the one in use, so the older edition's passed trial does not count", releaseFillTrials(olderInUse, register, read)[0]?.status === "not_yet");
 
-// ─────────────── BR-4: one entry per form line a case fills, in the release's own order; a document line has none
+// ─────────────── BR-4: one entry per form line a case files (engine/programs.ts isFormLine, review M1), in the release's order
 ok("BK-11 BR-4 pass: one entry per form line, in the release's order", out.map((t) => t.form).join(",") === "FORM A,FORM B,FORM C,FORM D,FORM E,FORM N");
-ok("BK-11 BR-4 fail: a document line (a checklist or guide) is not a form a case fills, so it carries no fill trial", !of("CHECKLIST"));
+ok("BK-11 BR-4 fail: a checklist line (an old \"document\" row not titled as a form) is not filed, so it carries no fill trial", !of("CHECKLIST"));
+const kinds = releaseFillTrials({ forms: [line("OLD ROW", { form_kind: "document", title: "Offer of employment form (test words)" }), line("SKIPPED", { channel: "NOT_NEEDED" }), line("PORTAL", { channel: "ONLINE" })], field_maps: [map("OLD ROW", SHA.b), map("SKIPPED", SHA.a), map("PORTAL", SHA.a)] }, register, read);
+ok("BK-11 BR-4 pass (review M1): an old \"document\" row titled as a form is filed, so the release lists it with its trial", kinds.some((t) => t.form === "OLD ROW" && t.status === "not_yet" && t.reason === "none"), kinds);
+ok("BK-11 BR-4 fail (review M1): a line marked Not needed files nothing, so the release neither lists nor counts it", !kinds.some((t) => t.form === "SKIPPED"), kinds.map((t) => t.form));
+ok("BK-11 BR-4 pass (review m3): a line filed Online fills no PDF: it says so (filed_online), even with a PDF edition beside it", kinds.find((t) => t.form === "PORTAL")?.reason === "filed_online" && kinds.find((t) => t.form === "PORTAL")?.status === "not_yet" && kinds.find((t) => t.form === "PORTAL")?.why === FILL_TRIAL_WORDS.reason.filed_online(null));
 
 // ─────────────── BR-5: a stored release's summary: carried, or null for a release made before BK-11 (never "not yet")
 ok("BK-11 BR-5 pass: a release summary with fill_trials gives them back as stored", fillTrialsOf({ counts: {}, fill_trials: out })?.length === out.length);
 ok("BK-11 BR-5 fail: a release made before BK-11 (no fill_trials) reads null, and the screen words say not recorded, never \"Not yet\"",
   fillTrialsOf({ counts: {} }) === null && fillTrialsOf(null) === null && fillTrialCount(null) === FILL_TRIAL_WORDS.not_recorded && !/Not yet/.test(fillTrialCount(undefined)));
-ok("BK-11 BR-5 pass: the count says how many of the release's forms have a passed trial", fillTrialCount(out) === "1 of 6 forms with a passed fill trial" && fillTrialCount(out.slice(0, 1)) === "1 of 1 form with a passed fill trial", fillTrialCount(out));
+ok("BK-11 BR-5 pass (review m2): the count says it is as at release and how many of the release's forms have a passed trial", fillTrialCount(out) === "At release: 1 of 6 forms with a passed fill trial" && fillTrialCount(out.slice(0, 1)) === "At release: 1 of 1 form with a passed fill trial", fillTrialCount(out));
 
 // ─────────────── the real register: one recorded E1 edition reads "passed" through the same function
 const real = readTrials();

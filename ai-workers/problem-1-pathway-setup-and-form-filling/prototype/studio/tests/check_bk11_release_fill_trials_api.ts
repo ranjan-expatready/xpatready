@@ -10,6 +10,7 @@ import { client, recorder } from "./runtime/api.ts";
 import { sourceEveryNumber } from "./fixtures/source-every-number.cjs"; // G1 (C5.4): a release needs every number sourced
 import { releaseFillTrials, readTrials } from "../api/src/fill-trials.ts";
 import { snapshotHash, type Snapshot } from "../engine/snapshot.ts";
+import { isFormLine } from "../engine/programs.ts";
 
 const PORT = Number(process.argv[2] ?? 4451), DB = process.argv[3] ?? "xr_studio_forms_bk11";
 const { call } = client(PORT, DB);
@@ -34,7 +35,7 @@ try {
   // ─────────────── Release 1: the imported reviewed release carries each form's trial
   let rel = await releasesOf(wp);
   const r1 = rel.find((x) => x.version === 1)!, s1 = stored(wp, 1);
-  const forms1 = (s1.snapshot.forms as { form_number: string; form_kind?: string }[]).filter((f) => (f.form_kind ?? "data_form") !== "document").map((f) => f.form_number);
+  const forms1 = (s1.snapshot.forms as { form_number: string; form_kind?: string; title?: string; channel?: string }[]).filter(isFormLine).map((f) => f.form_number); // review M1: the engine's form lines
   ok("BK-11 pass: Release 1 lists every form line it fills, each with its fill-trial status", Array.isArray(r1?.fill_trials) && r1.fill_trials!.map((t) => t.form).join(",") === forms1.join(",") && r1.fill_trials!.every((t) => t.status === "passed" || t.status === "not_yet"), r1?.fill_trials);
   ok("BK-11 pass: what the release carries is what the trial register and the evidence say for its own forms (frozen at release)", same(r1.fill_trials, releaseFillTrials(s1.snapshot)));
   const passed = r1.fill_trials!.filter((t) => t.status === "passed"), notYet = r1.fill_trials!.filter((t) => t.status === "not_yet");

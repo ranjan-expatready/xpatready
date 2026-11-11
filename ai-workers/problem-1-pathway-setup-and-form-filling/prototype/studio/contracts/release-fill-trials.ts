@@ -5,7 +5,7 @@
 // draft-against-release changes stay as they were. Names no pathway and no form (P-319, P-452). Pure.
 
 /** Why a form has no passed trial, in the release's words (api/src/fill-trials.ts TrialAnswer.reason). */
-export type FillTrialReason = "no_edition" | "other_file" | "none" | "other_map" | "not_passed";
+export type FillTrialReason = "no_edition" | "other_file" | "none" | "other_map" | "not_passed" | "filed_online";
 
 /** One form line of a release and its fill trial at the moment of release. */
 export type ReleaseFillTrial = {
@@ -26,6 +26,11 @@ export type ReleaseFillTrial = {
 export const FILL_TRIAL_WORDS = {
   passed: "Passed",
   not_yet: "Not yet",
+  /** A line filed Online fills no PDF: no fill trial applies to it (review m3). */
+  filed_online: "Filed online",
+  /** Review m2: the list is as at release; a case's lock reads the trial register as it is now. */
+  as_at_release: "As at release. A trial recorded later counts for cases at once and shows here from the next release.",
+  evidence: "evidence record",
   /** A release made before BK-11 carries no fill-trial status: never shown as "Not yet", which would claim a fact. */
   not_recorded: "Not recorded in this release: it was released before fill-trial status was carried",
   heading: "Fill trials",
@@ -35,6 +40,7 @@ export const FILL_TRIAL_WORDS = {
     none: (edition: string | null) => `No fill trial is recorded for edition ${edition ?? "in use"}.`,
     other_map: (edition: string | null) => `The fill trial of edition ${edition ?? "in use"} ran on an earlier version of its field map.`,
     not_passed: (edition: string | null) => `The fill trial of edition ${edition ?? "in use"} did not pass from the product's file.`,
+    filed_online: (_edition: string | null) => "Filed online: IRCC's portal takes the answers, so no PDF is filled and no fill trial applies.",
   } satisfies Record<FillTrialReason, (edition: string | null) => string>,
 } as const;
 
@@ -42,5 +48,5 @@ export const FILL_TRIAL_WORDS = {
 export function fillTrialCount(trials: readonly ReleaseFillTrial[] | null | undefined): string {
   if (!Array.isArray(trials)) return FILL_TRIAL_WORDS.not_recorded;
   const passed = trials.filter((t) => t.status === "passed").length;
-  return `${passed} of ${trials.length} form${trials.length === 1 ? "" : "s"} with a passed fill trial`;
+  return `At release: ${passed} of ${trials.length} form${trials.length === 1 ? "" : "s"} with a passed fill trial`;
 }

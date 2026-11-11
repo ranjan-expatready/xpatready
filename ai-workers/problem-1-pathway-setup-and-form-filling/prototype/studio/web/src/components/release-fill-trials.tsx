@@ -9,13 +9,14 @@ export function ReleaseFillTrials({ trials }: { trials: ReleaseFillTrial[] | nul
   if (!Array.isArray(trials)) return <span className="text-xs text-text-muted" data-fill-trials="not-recorded">{FILL_TRIAL_WORDS.not_recorded}</span>;
   return (
     <FoldOut data-fill-trials summaryClassName="text-xs" summary={fillTrialCount(trials)}>
+      <p className="mt-1 text-xs text-text-muted">{FILL_TRIAL_WORDS.as_at_release}</p>
       <ul className="mt-1 space-y-1 text-xs">
         {trials.map((t) => (
           <li key={t.form} data-fill-trial={t.form} data-fill-trial-status={t.status}>
             <span className="mono font-medium">{t.form}</span>{t.title ? <span className="text-text-muted"> {t.title}</span> : null}{" "}
             {t.status === "passed"
-              ? <><Pill tone="ok">{FILL_TRIAL_WORDS.passed}</Pill> <span className="text-text-muted">{t.edition ? `${t.edition} · ` : ""}{t.recorded_on ? fmtDate(t.recorded_on) : ""}{t.evidence ? <> · evidence: <span className="mono">{t.evidence}</span></> : null}</span></>
-              : <><Pill tone="warn">{FILL_TRIAL_WORDS.not_yet}</Pill> <span className="text-text-muted">{t.why}</span></>}
+              ? <><Pill tone="ok">{FILL_TRIAL_WORDS.passed}</Pill> <span className="text-text-muted">{t.edition ? `${t.edition} · ` : ""}{t.recorded_on ? fmtDate(t.recorded_on) : ""}{t.evidence ? <> · <span className="underline decoration-dotted" title={t.evidence} data-fill-trial-evidence={t.evidence}>{FILL_TRIAL_WORDS.evidence}</span></> : null}</span></>
+              : <><Pill tone={t.reason === "filed_online" ? "neutral" : "warn"}>{t.reason === "filed_online" ? FILL_TRIAL_WORDS.filed_online : FILL_TRIAL_WORDS.not_yet}</Pill> <span className="text-text-muted">{t.why}</span></>}
           </li>
         ))}
       </ul>
