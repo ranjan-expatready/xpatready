@@ -88,3 +88,28 @@ Graph: `graph.mjs` reports G1 0 and G2 0. The route POST /runtime/cases/:id/fili
 2. Major 2: `engine/runtime/filing-changes.ts:55-59`, with tests using `applies: false`.
 
 Minors 3–6 should go in the same PR (each is one or two lines).
+
+## Re-review at c0ec66cb3 (independent reviewer, 11 Nov; diff only: `git diff c920937f1 c0ec66cb3`)
+Own copy `rv_bk9b` on :4437, configured checkpoint, live AI off, US$0. The copy was stopped and its database dropped. I reran my round-1 probes (scratchpad, not committed) unchanged.
+
+Fixes checked:
+* **Major 1 fixed.** `api/src/filing-changes.ts:109-110` counts the child's signed scans by item subject on an active filing of the stage. Express Entry probe A2 now says "1 form already signed by hand by Sample PA: to be signed again (warning)", the same as the Visitor visa control. A new API check covers it.
+* **Major 2 fixed.** `engine/runtime/filing-changes.ts:54-55`: the co-filed refusal now comes before the travelling checks, for both Remove filing and Add filing back.
+  * Family sponsorship probes C1 and probe3: both answer 422 "…is neither removed nor added back on its own". Add back no longer writes a change. A child of the same release can still be taken off (C2, 200).
+  * The pure test now uses `applies: false` (18/18).
+  * Residual checked: `defaultModeOf` never returns `co_files` on purpose (a line with no mode files nothing), so the API and the screen's `co_files` flag agree.
+* **Minor 3 fixed.** The reset's `updateMany` and its words now match the owner OR any applicant.
+  * Probe A'3/A'4 (Make principal, then Remove child with no prepare read between): "Marked Ready to file → Not started" is shown, and the status is NOT_STARTED.
+  * Own filings are unchanged: each own filing's only applicant is its owner. C6.13 32/32 and the C6.13 browser walk 13/13 confirm.
+* **Minor 4 fixed.** Done words are "Sample SP taken off as travelling on Sample PA's application." (A6). A dialog with any `on` line says "application" in every header.
+* **Minor 5 fixed.** For the Study permit child with their own added filing, the titles are "Remove Sample SK3's filing?" and "Add Sample SK3's filing back?" (D1, D3), matching their lines. One residual, not blocking: Remove's line still says "Sample SK3 joins this filing" for someone joining declared only.
+* **Minor 6 fixed.** Header comment.
+* **No regression:**
+  * Race probe: 42×200 and 6×409, one row, same filing id, items 12/12.
+  * Suites: `check_bk9_shared_filing.ts` 18/18, `check_bk9_shared_filing_api.ts` 16/16, `runtime/check_filing_changes.ts` 26/26, B164 guard 52/52 (allow-list unchanged), C6.13 32/32, QA-329 7/7, C11.12-runtime 4/4, `check_c613_filing_changes_browser.cjs` 13/13.
+  * The new SQL set-up writes in the API check (a signed scan, a Ready to file mark) are named in its header. The signed-scan route needs every sign step first, so they are acceptable.
+* **Not rerun:** tsc. I relied on the builder's report (api 15 = base, web 0) and on CI.
+
+Journey score is unchanged at 8.5/10 from round 1. Its two ½ marks on words and data are now addressed; I did not re-walk the screens beyond the C6.13 browser walk.
+
+**Verdict: Approve.** No open Blocker or Major. The Approve covers exactly commit `c0ec66cb32d9ef360c9638b5d4b3f467b5a5f432`. Any later push needs a fresh look.
