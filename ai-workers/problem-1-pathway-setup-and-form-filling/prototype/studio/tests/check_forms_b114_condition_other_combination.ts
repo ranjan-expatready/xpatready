@@ -111,10 +111,14 @@ run(async () => {
   const own = await config(vv);
   ok("C4.11 pass (own condition): Visitor visa still carries the question that decides its own condition", facts(own).includes(FOREIGN), facts(own).length);
   ok("C4.11 pass (own condition): Visitor visa's question has the condition", own.snapshot.placements.some((p: { fact: string; condition: unknown }) => p.fact === ASKED_ON_VV && p.condition));
-  // Hiding is not relaxed: the combination that asks the question still sees it, and is refused on the draft's own problems.
+  // QA-239 (Bake row 6, PR #1534): the combination that asks the question cannot honour Visitor visa's condition (its forms
+  // read the answer), so the condition is held there: the question stays asked every time, a warning says why, and nothing
+  // refuses it. Before, Hiding showed on it and its Submit was refused (the bug).
   const lmiaHiding = await hiding(lmia);
-  ok("C4.11 fail (P-303): With an LMIA asks that question, so Hiding still shows on it", lmiaHiding > 0, lmiaHiding);
-  ok("C4.11 fail (P-303): and its Submit is refused on it", (await call("POST", `/combinations/${lmia}/submit`, { note: "B114" }, AUTHOR)).status === 400);
+  ok("C4.11 pass (QA-239): With an LMIA asks that question, and no Hiding error shows on it", lmiaHiding === 0, lmiaHiding);
+  const lmiaHeld = ((await call("GET", `/combinations/${lmia}`)).body?.draft?.problems ?? []).filter((p: { level?: string; item?: string; message?: string }) => p.level === "warning" && p.item === ASKED_ON_VV && /^Condition not used on this combination: /.test(p.message ?? "")).length;
+  ok("C4.11 pass (QA-239): instead the condition is held on With an LMIA, with a warning saying why", lmiaHeld === 1, lmiaHeld);
+  ok("C4.11 pass (QA-239): With an LMIA's released draft is unchanged by it (the question is asked as it was released)", (await config(lmia)).sha256 === (await call("GET", `/combinations/${lmia}/config?mode=published`)).body?.release?.sha256);
   for (const [name, id] of Object.entries(others)) {
     const c = await config(id);
     ok(`C4.11 fail (QA-262): the condition on Visitor visa does not change ${name}'s draft`, c.sha256 === before.get(id)!.sha, { before: before.get(id)!.sha, now: c.sha256 });

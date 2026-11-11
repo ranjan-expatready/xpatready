@@ -35,7 +35,8 @@ run(async () => {
   // The draft's errors are what Submit refuses on; until B82 is on main Submit on the six stops earlier, for other reasons (QA-233).
   const hiding = async (fact: string) => {
     const errors = ((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []) as { item?: string; message?: string; level?: string }[];
-    return { lines: errors.filter((e) => e.level === "error" && e.item === fact && /^Hiding a value a form reads/.test(e.message ?? "")).map((e) => e.message ?? "") };
+    // Bake row 6 (QA-237, PR #1534): not confirmed, the condition is held (a warning), never an error that refuses.
+    return { lines: errors.filter((e) => e.level === "error" && e.item === fact && /^Hiding a value a form reads/.test(e.message ?? "")).map((e) => e.message ?? ""), held: errors.filter((e) => e.level === "warning" && e.item === fact && /^Condition not used on this combination: /.test(e.message ?? "")).map((e) => e.message ?? "") };
   };
   const approve = (id: string, by = APPROVER) => call("POST", `/library/changes/${id}/approve`, { note: "Checked against the form's words by a test (B86)." }, by);
 
@@ -80,7 +81,7 @@ run(async () => {
   const cond = sql(`select id from library_change where kind='placement_condition' and key='${GIVEN}' and status='WAITING'`);
   ok("setup: a second person approves it", (await approve(cond)).status < 300);
   let h = await hiding(GIVEN);
-  ok("Done when 2 fail: approved, not confirmed: the draft's error, in the rule's words", h.lines.length === 1 && /Make the form or its form fields apply under the same condition, or remove the question's condition\.$/.test(h.lines[0]), h);
+  ok("Done when 2 (QA-237): approved, not confirmed: no error refuses the draft; the condition is held, and the warning says how to use it", h.lines.length === 0 && h.held.length === 1 && /To use the condition here, make the form or its form fields apply under the same condition/.test(h.held[0]), h);
 
   // ---------------------------------------------------------------- the way out on Review and release (no card any more)
   r = await call("GET", FIELDS(vv, GIVEN), undefined, AUTHOR);
@@ -97,7 +98,7 @@ run(async () => {
   ok("BR-3 pass: a second person approves", (await approve(gc)).status < 300 && ruleOf(g.form_edition_id, g.data_path).includes(GATE), ruleOf(g.form_edition_id, g.data_path));
   ok("Done when 6 pass: the form field's words are kept as they were", sql(`select condition from form_field_map where form_edition_id='${g.form_edition_id}' and data_path='${g.data_path.replace(/'/g, "''")}' order by version desc limit 1`).includes("one name only on the form"));
   h = await hiding(GIVEN);
-  ok("Done when 1 pass: the draft's errors no longer hold \"Hiding a value\" for that question", h.lines.length === 0, h);
+  ok("Done when 1 pass: the condition is no longer held for that question (no error, no warning)", h.lines.length === 0 && h.held.length === 0, h);
   r = await call("GET", `/combinations/${vv}/form-field-conditions`, undefined, AUTHOR);
   sql(`update section_question set condition_effect='HIDE' where lineage_key='${GIVEN}' and status='DRAFT'`);
   const hide = ((await call("GET", `/combinations/${vv}/form-field-conditions`, undefined, AUTHOR)).body?.questions ?? []).find((q: { fact: string }) => q.fact === GIVEN);
