@@ -125,7 +125,7 @@ graph LR
 
 **What the module graph says:**
 1. **The screens depend only on `contracts`** (the typed API shapes), apart from 5 imports of `engine/core` from `web/pages`. That is a clean seam. A shared service built in M4 or for the extension can serve the same contracts.
-2. **Two cycles to break before the shared services (M4/M5):** `engine/core ⇄ engine/runtime` (46 one way, **7 back**), and `api core ⇄ api forms ⇄ api library` (27/14, 16/11). A cycle means one change pulls the other, which raises merge conflicts and makes extraction into a service harder. B165 (split the five busiest files, outside the caps) should break these cycles first, not only split by size.
+2. **Cycles to break before the shared services (M4/M5)** (the 11 Nov fresh reader counts **three** at folder level, adding `web/src` root ⇄ `components` ⇄ `pages` ⇄ `runtime`: `05a-scores-measured-2026-11-11.md`): `engine/core ⇄ engine/runtime` (46 one way, **7 back**), and `api core ⇄ api forms ⇄ api library` (27/14, 16/11). A cycle means one change pulls the other, which raises merge conflicts and makes extraction into a service harder. B165 (split the five busiest files, outside the caps) should break these cycles first, not only split by size.
 3. **`api/src` has 138 flat files plus 85 under `features/`.** The batons are the biggest shared files: `prisma/schema.prisma` 2,857 lines, `api/src/case-prepare.ts` 952. Next largest: `studio.ts` 1,262, `web/src/runtime/questionnaire.tsx` 1,044, `proposals.ts` 1,035, `sources.ts` 996, `runtime.ts` 967, `finder.ts` 952. These are where parallel lanes collide.
 4. **Demo and checkpoint data are code** (`api_checkpoint_data` 47 files importing forms/core/demo-seed). That is B164's 7 fixture entries; BK-12 moves the choice to data.
 

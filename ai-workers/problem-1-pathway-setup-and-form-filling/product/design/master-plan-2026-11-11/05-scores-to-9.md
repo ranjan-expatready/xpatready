@@ -15,12 +15,12 @@ Master analysis, part 5 of 8 (A19 (f); P-460). Read-only, on `origin/main` fbfb2
 | Dimension | Today | After the Bake (forecast) | 8 needs | 9-10 needs | Milestone |
 |---|---|---|---|---|---|
 | **Configurable** | 6 | 7 | M4 Track A (seven tables on screens) | screens-only set-up of an unseen pathway; content-freshness loop | M4 (8-9), M5 (10) |
-| **Flexible** | 5 | 7 | relatives, repeating groups, no fixed family shape | all six to ready-to-file; routes and linked cases; an unseen shape by data | M4 (8-9), M4/M5 (10) |
+| **Flexible** | 5 (re-measured 6) | 7 | relatives, repeating groups, no fixed family shape | all six to ready-to-file; routes and linked cases; an unseen shape by data | M4 (8-9), M4/M5 (10) |
 | **Scalable** | 5 | 5 | durable queue, storage, cache, indexes, the 1,000-case run | concurrency, 10,000 cases, restore drill, soak with alerts | M5 |
-| **Design (code)** | 4 (5 Nov) | 5 | break cycles, split the busiest files | one-way module graph, services behind contracts | Bake outside the caps (B165) + M5 |
-| **Safe to change** | 4 (5 Nov) | 5 | lint + types in CI, coverage measured | coverage floor per module, mutation spot-checks | M5 |
-| **Readability** | 3 (5 Nov) | 4 | formatter, file size ≤800 lines, `any` ratchet | naming and module docs checked by a reader | M5 |
-| **Rule logic** | 6 (5 Nov) | 7 | B112's four defects closed; per-rule pass and fail tests | rules as data with answer keys signed | Bake + M4 |
+| **Design (code)** | 4 (5 Nov; re-measured 4) | 5 | break the 3 folder-level cycles, split the busiest files | one-way module graph, services behind contracts | Bake outside the caps (B165) + M5 |
+| **Safe to change** | 4 (5 Nov; re-measured 5) | 5-6 | lint + format in CI, coverage per PR (types and an `any` ratchet are already in CI) | coverage floor per module, mutation spot-checks | M5 |
+| **Readability** | 3 (5 Nov; re-measured 3) | 4 | formatter; file size ≤800 lines; `any` 419 → ≤100 | naming and module docs checked by a reader | M5 |
+| **Rule logic** | 6 (5 Nov; re-measured 6: 0 of 4 defects closed, 1 partly) | 7 | B112's four defects closed; per-rule pass and fail tests | rules as data with answer keys signed | Bake + M4 |
 | **Proven (P-460 "not yet proven")** | 1 of 5 | 2 of 5 | expert answer keys; Validate on every Paper form | load test passed; counsel's word on the extension | A7, M4, M5, team |
 
 The Bake does not reach 8 on any dimension, by decision: P-447/P-448 keep it lean, and Scalable is named for the next milestone (P-460). **9-10 is a two-milestone target (M4 + M5)**, not a Bake target.
@@ -64,18 +64,18 @@ The Bake does not reach 8 on any dimension, by decision: P-447/P-448 keep it lea
 
 ### Code quality (P-358's independent read, 5 Nov): design 4, safe to change 4, readability 3, rule logic 6
 
-Not re-measured since 5 Nov. The proxies on main today:
+**Re-measured on 11 Nov by a fresh reader: `05a-scores-measured-2026-11-11.md`.** Its numbers replace the first draft's here. The proxies on main today:
 - **no linter or formatter** in the studio or in `ci.yml` (no config file; B112's "lint runs in CI on every PR" is not done);
-- ~318 `any` uses by grep in `api/src`, `engine` and `web/src` (the 5 Nov figure of 418 came from `tools/count-any.mjs`, a different method);
+- **419 `any`** by grep in `api/src`, `engine` and `web/src`; CI already has an `any` ratchet (`count-any.mjs --against`, `ci.yml:272`, baseline 433);
 - files over 900 lines: `schema.prisma` 2,857, `studio.ts` 1,262, `questionnaire.tsx` 1,044, `proposals.ts` 1,035, `sources.ts` 996, `runtime.ts` 967, `finder.ts` 952, `case-prepare.ts` 952;
-- import cycles `engine/core ⇄ engine/runtime` and `api core ⇄ forms ⇄ library` (part 3 §3b).
+- **3 folder-level import cycles**: `engine` root ⇄ `engine/runtime`, `api/src` root ⇄ `features/*`, and `web/src` root ⇄ `components` ⇄ `pages` ⇄ `runtime`; web imports 10 non-contract files. The first draft said 2; the reader's script also parses `@/` imports;
 
 | Dimension | 8 needs (measured) | 9-10 needs (measured) | Rows |
 |---|---|---|---|
 | Design 4 | 0 import cycles between module groups; no file over 800 lines except the schema (or the schema split by model group through the gate); the case-preparing code split per capability | services behind `contracts` only (web already is); a module map in the repository that CI checks | B165 (Bake outside the caps; make "break the cycles" its first goal), M5 shared services |
-| Safe to change 4 | lint + format + types in CI on every PR (B112 remainder); coverage measured per module with Node's own V8 coverage (no new tool) and printed per PR | coverage floor per engine module (≥85% lines on `engine/`), a weekly mutation spot-check on rule code | M5 pipeline rows |
-| Readability 3 | formatter applied once (one PR, no behaviour change); `any` ratchet in CI (count may only fall), target ≤100 | ≤20 `any`; module README per engine folder; a fresh reader scores ≥9 | M5 |
-| Rule logic 6 | B112's four confirmed defects each with a fail test and fixed; `npm audit --omit=dev` 0 high | every rule table has pass and fail tests generated from its rows; answer keys signed | Bake (check B112's status in part 2), M4 |
+| Safe to change 4 (now 5) | lint + format in CI on every PR (B112 remainder; types are already in CI with 16 known errors); coverage printed per module per PR with the `c8` already installed (the last figure is by hand, 28 Oct: api 97.21% lines, engine 99.38%) | coverage floor per engine module (≥85% lines on `engine/`), a weekly mutation spot-check on rule code | M5 pipeline rows |
+| Readability 3 | formatter applied once (one PR, no behaviour change); `any` 419 → ≤100 through the existing ratchet (lower its baseline per PR) | ≤20 `any`; module README per engine folder; a fresh reader scores ≥9 | M5 |
+| Rule logic 6 | B112's four confirmed defects each with a fail test and fixed (today: approval not atomic `api/src/screen02.ts:134-141`; implication by substring `engine/validate.ts:274`; REQUIRE differs `engine/render.ts:266-272` vs `engine/runtime/case.ts:414`; fill route has an identity check but no duty check, `api/src/main.ts:128`); `npm audit --omit=dev` 0 high (not measured: no audit step in CI) | every rule table has pass and fail tests generated from its rows; answer keys signed | Bake (check B112's status in part 2), M4 |
 
 ### Proven (P-460, "Not yet proven"): 1 of 5 today
 
@@ -90,8 +90,8 @@ Not re-measured since 5 Nov. The proxies on main today:
 ## 3. What to do now (no new rows inside the Bake)
 
 1. **Adopt this rubric** as the re-score sheet. P-460 already says every milestone plan lists the scores. Add "with the measured numbers above", and name the re-scorer: a fresh reader, Fable for planning reads (P-455 (5)).
-2. **Re-measure the four code scores once now**, read-only, so M5 starts from 11 Nov's numbers, not 5 Nov's. One Fable or Opus fresh reader, ~1 session, at the same time as the Bake.
-3. **Give B165 a design goal, not only a size goal:** break the two import cycles first (part 3 §3b). It stays outside the caps.
+2. **Done 11 Nov (Lead 16's word):** a fresh Fable reader re-measured all seven scores: Design 4, Safe to change 5, Readability 3, Rule logic 6, Configurable 6, Flexible 6, Scalable 5 (`05a-scores-measured-2026-11-11.md`). **B112's four rule defects are still open (0 of 4 closed, 1 partly).** They are small, so they are proposed as a Bake-outside-the-caps row now (Rule logic 6 → 7 at ~1-2 sessions).
+3. **Give B165 a design goal, not only a size goal:** break the three import cycles first (part 3 §3b; 05a). It stays outside the caps.
 4. **Ask the founder one question** (through the Lead): is 9-10 the target **after M5**, with 8 after M4 as P-460 says? Recommendation: yes. Reaching 9-10 on Scalable and on the code scores needs M5's rows, and neither the Bake nor M4 alone can show it with numbers.
 
 ## Question for the tech lead (posted on the PR)
@@ -102,7 +102,7 @@ Not re-measured since 5 Nov. The proxies on main today:
 - B164 allow-list 12 → 1;
 - combinations ready to file 1 → 6;
 - the 1,000-case run with p95 budgets;
-- cycles 2 → 0;
+- cycles 3 → 0;
 - lint in CI;
 - the `any` ratchet.
 
