@@ -1,6 +1,10 @@
 # Demo update (P-189, founder 31 Oct): after every merge to main the demo app (:4400) on the founder's Mac moves to the
 # new main by itself, data kept (migrations applied, no reset), and the job summary lists what is new. Runs on the
 # Mac's runner (xr-mac); the demo copy is .claude/worktrees/demo-main, detached on origin/main. No AI call, US$0.
+# M1 + M4 (A19 (j), founder: detect problems as soon as they happen): after the restart, the copy's health
+# (GET /api/health) and a smoke walk by screens (studio/tools/demo-smoke.mjs: sign in by role, the finished-story case,
+# its forms, the client's questionnaire; read-only, no button pressed). A broken screen turns this run red and its
+# summary names the screen, so the team sees it before the founder does.
 name: demo-update
 on:
   push: { branches: [main] }
@@ -34,3 +38,18 @@ jobs:
           curl -fsS -o /dev/null --retry 10 --retry-delay 3 --retry-all-errors http://localhost:4400/
           echo "demo answers on :4400"
           { echo "### What's new on the demo (:4400)"; git -C "$D" log --no-merges --format='- %s' "$old..$new" | head -30 || true; } >> "$GITHUB_STEP_SUMMARY"
+      - name: health and smoke walk on :4400 (M1, M4)
+        timeout-minutes: 4
+        run: |
+          set -euo pipefail
+          ROOT="$HOME/Desktop/Xpatready"
+          D="$ROOT/.claude/worktrees/demo-main"
+          [ -d "$D" ] || { echo "no demo copy at $D: skipped"; exit 0; }
+          export PATH="$ROOT/.tools/node-v24.21.0/bin:$PATH"
+          # The walk of the code just checked out (the demo copy's own), on the demo itself; exit 1 names the broken
+          # screen, exit 2 means it could not run (never green: a walk not run is not a pass, P-405).
+          node "$D/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/demo-smoke.mjs" --base http://localhost:4400 --shots "$RUNNER_TEMP/demo-smoke"
+      - name: the broken screen's screenshot
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with: { name: demo-smoke, path: "${{ runner.temp }}/demo-smoke", if-no-files-found: ignore, retention-days: 7 }
