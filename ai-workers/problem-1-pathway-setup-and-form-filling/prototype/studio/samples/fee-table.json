@@ -256,9 +256,17 @@
   },
   "sp.outside": {
    "label": "Study permit (outside Canada)",
-   "lines": [],
+   "lines": [
+    "study_permit",
+    "biometrics"
+   ],
    "checklist": true,
-   "note": "C6.17 (P-444, QA-375): the per-person checklist only. Its document lines are the release's, each cited from IMM 5483 (08-2025) with page, quote and date (samples/form-setup.json sp.outside documentsCited). No fee lines: its fees are not worked out from this table yet (the study_permit line waits for its combination's modes), so nothing about money changes."
+   "modes": {
+    "principal": "files_own",
+    "child": "on_principal"
+   },
+   "group_why": "A student's family members apply at the same time as the student (Guide 5269: \"You must apply for their study permit at the same time as your own.\"), so the biometrics family maximum applies within one submission (Sample).",
+   "note": "BK-13 step 1 (P-449, P-481 S6): the Study permit's fees as data. Lines: study_permit (CAD 150 per person) and biometrics (CAD 85 per person, family maximum CAD 170 for 2 or more), both the table's own cited lines. Checked against Guide 5269 (canada.ca, modified 2026-10-06, saved 2026-10-27, official-sources/ircc/instructions/guide-5269.html), Step 3. Pay the fees: \"There are two types of fees: an application processing fee; a biometric fee.\" and the fee table \"Application (per person) $CAN Study permit (including extensions) 150\" then \"Biometrics (per person)\" and \"Biometrics (per family) (2 or more people) Maximum fee for a family of 2 or more people applying at the same time and place\" (the saved copy loads the biometrics amounts from the fee list, so the amounts rest on the biometrics line's own citation). Modes checked against the seeded release rows (samples/wave1.json sp.outside participants): principal files_own, child on_principal; the release's modes win for the roles it names (engine/runtime/filings.ts), so these only repeat them. A child on the principal's application pays the study permit fee per person (Sample: a child who does not study needs another permit or none; the immigration expert confirms). Amounts Sample until the immigration expert confirms (P-171, P-240). C6.17 (P-444, QA-375): the per-person checklist as before, its document lines the release's (samples/form-setup.json sp.outside documentsCited)."
   },
   "wp.lmia_inside": {
    "label": "Work permit with an LMIA (inside Canada)",
