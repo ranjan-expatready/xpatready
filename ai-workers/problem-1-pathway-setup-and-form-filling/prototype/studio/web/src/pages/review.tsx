@@ -15,6 +15,8 @@ import { AnswerKeyBlock, fixOnTests } from "@/components/answer-key-gate";
 import { FormFieldsHeld, FormFieldsPanel, useFormFieldsOfCombination } from "@/components/form-field-conditions";
 import { ReleaseFillTrials } from "@/components/release-fill-trials";
 import { FILL_TRIAL_WORDS } from "../../../contracts/release-fill-trials";
+import { HandOff, holderOf, theName, type Person } from "@/components/hand-off";
+import { actAsCaseStaff } from "@/runtime/cases"; // BK-4b: the open-case hand-off acts as firm staff, as combination.tsx:116
 
 /** The simulated person's name for an id the server stores (QA-10: never "user-A" on screen). */
 export const nameOf = (actors: { id: string; name: string }[] | undefined, id: string | null | undefined) => actors?.find((a) => a.id === id)?.name ?? id ?? "";
@@ -35,7 +37,7 @@ const HELD = /^Condition not used on this combination/;
 const wayOut = (m?: string) => HIDING.test(m ?? "") || HELD.test(m ?? "");
 /** changesCount: the combination's draft changes as the summary counts them (the shared draft bar's and the header's one
  *  count, UX-A part 3); undefined while it loads. */
-export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: any; changesCount?: number; countFailed?: boolean; onRetryCount?: () => void }) {
+export function ReviewTab({ d, changesCount, countFailed, onRetryCount, retired }: { d: any; changesCount?: number; countFailed?: boolean; onRetryCount?: () => void; retired?: boolean }) {
   const id = d.combination.id;
   const actorId = useActorId();
   const r = useApi<any>(["review", id, actorId], `/combinations/${id}/review`);
@@ -135,11 +137,44 @@ export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: a
         {v.draft.answer_keys?.demo ? /* C5.5 BR-3 (reviewer MJ1): the server's one derivation, demo workspace and Sample content in the draft (m9) */ <span className="self-center"><span data-demo-release><Pill tone="warn" title="Sample content: a demo release, never counted as a real publish.">Demo release</Pill></span></span> : null}
         <Button onClick={() => approve.mutate(undefined)} busy={approve.isPending} disabled={!sub || !can("approve")} title={!can("approve") ? "Only the approver duty can release" : ""}><Rocket /> Approve and release</Button>
       </div>
+      <ReviewHandOff v={v} me={me} people={session.data.actors} needSme={needSme.length} unsignedSme={unsignedSme.length} retired={!!retired} combinationId={id} />
       {v.releases.length ? (
         <div><p className="mb-2 font-medium">Released versions</p><Table dense head={["Version", "Author / submitter / approver", "Released", FILL_TRIAL_WORDS.heading, "Basis"]}>{v.releases.map((x: any) => <tr key={x.id}><td title={`Fingerprint (SHA-256): ${x.sha256}`}>v{x.version}{(d.releases ?? []).find((y: { id: string; demo?: boolean }) => y.id === x.id)?.demo ? <> <span data-demo-release><Pill tone="warn" title="Sample content: a demo release, never counted as a real publish.">Demo release</Pill></span></> : null} <span className="text-xs text-text-muted">· Release {x.release}</span> {x.status === "SUPERSEDED" ? <Pill>superseded</Pill> : <Pill tone="ok">current</Pill>}</td><td className="text-xs">{String(x.author ?? "").split(",").map((a: string) => nameOf(session.data.actors, a)).join(", ")} / {nameOf(session.data.actors, x.submitter)} / {nameOf(session.data.actors, x.approver)}</td><td className="whitespace-nowrap text-xs">{fmtWhen(x.released_at)}</td><td className="max-w-sm">{/* BK-11 */}<ReleaseFillTrials trials={x.fill_trials} /></td><td className="max-w-md text-xs text-text-muted">{x.basis}</td></tr>)}</Table></div>
       ) : null}
     </div>
   );
+}
+
+/** BK-4b (BR-2, BR-3): who takes the combination's review over now, from the newest submission's state. None while
+ *  the next step is yours, or nothing waits on anyone (no submission, or one the draft has since changed). */
+type HandOffReview = { submission: { status: string; stale?: boolean; submittedBy: string } | null; releases: { release: number }[]; draft: { matches_release: boolean } };
+function ReviewHandOff({ v, me, people, needSme, unsignedSme, retired, combinationId }: { v: HandOffReview; me: Person; people: Person[]; needSme: number; unsignedSme: number; retired: boolean; combinationId: string }) {
+  const latest = v.submission;
+  if (latest?.status === "SUBMITTED" && !latest.stale) {
+    if (unsignedSme) {
+      // The expert's changes go to the holder of the expert duty; the submitter never signs their own (studio.ts signoff).
+      const to = holderOf(people, "sme", [latest.submittedBy]);
+      if (to?.id === me.id) return null;
+      const signed = needSme - unsignedSme;
+      return <HandOff id="content-reviewer" done={signed ? `Submitted; ${signed} of ${needSme} expert changes signed` : "Submitted"} next={<>{to ? theName(to) : "the immigration expert"} signs the immigration content.</>} to={to} noOne="No one in this workspace holds the immigration expert's duty, so nobody can sign the content." />;
+    }
+    // Release needs only the expert's sign-offs (studio.ts gateOf); the approver is never the submitter (BR-14).
+    const to = holderOf(people, "approve", [latest.submittedBy]);
+    if (to?.id === me.id) return null;
+    return <HandOff id="approver" done={needSme ? "Signed by the immigration expert" : "Submitted; no change needs the immigration expert"} next={<>{to ? theName(to) : "a second person"} releases it.</>} to={to} noOne="No one in this workspace holds the approve duty, so nobody can release." />;
+  }
+  if (latest?.status === "RETURNED") {
+    if (me.duties.includes("author")) return null;
+    const to = people.find((p) => p.id === latest.submittedBy && p.duties.includes("author")) ?? holderOf(people, "author");
+    return <HandOff id="author" done="Returned to the author" next={<>{to ? theName(to) : "the author"} corrects it and submits it again.</>} to={to} label={to ? `Hand back to ${theName(to)} →` : undefined} noOne="No one in this workspace holds the author duty, so nobody can correct it." />;
+  }
+  const last = v.releases[0];
+  // Only while the draft is the release: once the author changes it again, the next step on this tab is theirs (BR-2).
+  if (latest?.status === "APPROVED" && last && !retired && v.draft.matches_release) {
+    // m6: an echo of the header's "Open a case on Release N" (combination.tsx:116 stays), with its own attribute.
+    return <div data-handoff-open-case><HandOff id="open-case" done={`Released in Release ${last.release}`} next="the firm opens a case on it." to={{ id: "", name: "Case officer", duties: [] }} path={`/cases?open=${combinationId}`} act={() => actAsCaseStaff()} label={`Open a case on Release ${last.release} (as Case officer) →`} /></div>;
+  }
+  return null;
 }
 
 function StepCard({ n, title, who, text, done }: { n: number; title: string; who: string; text: string; done: boolean }) {
