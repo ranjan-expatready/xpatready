@@ -18,8 +18,8 @@
   {
    "fact": "case.submission_office_name",
    "fills": "CASE_OFFICER",
-   "question": "Which IRCC office has the application, if it was already submitted? Leave it empty for a new application.",
-   "help": "Why we ask: IMM 5475 and IMM 5476 ask for the office only when the application was already sent. Your firm sends it; the client is not asked.",
+   "question": "Which IRCC office has the application, if it was already submitted?",
+   "help": "Why we ask: IMM 5475 and IMM 5476 ask for the office only when the application was already sent. Your firm sends it; the client is not asked. For a new application there is no office yet: on Ready to file, pass this line with the reason \"new application\".",
    "reason": "QA-403 (P-486): the firm submits the application and knows the office; the client is not asked."
   }
  ]
