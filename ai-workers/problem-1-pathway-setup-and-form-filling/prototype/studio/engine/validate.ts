@@ -282,7 +282,8 @@ function reachability(s: Snapshot, placed: Set<string>, docFacts: Set<string>, d
   }
   // Loops: question A depends on B, which depends (directly or through others) on A.
   const dep = new Map<string, string[]>();
-  for (const p of s.placements) if (p.condition) dep.set(p.fact, [...new Set([...(dep.get(p.fact) ?? []), ...fieldsOf(p.condition)])]);
+  // QA-237/239 (#1534 re-review): a loop is broken in the library itself, so held conditions count (the library's view).
+  for (const p of withHeldConditions(s).placements) if (p.condition) dep.set(p.fact, [...new Set([...(dep.get(p.fact) ?? []), ...fieldsOf(p.condition)])]);
   const reported = new Set<string>();
   const visit = (start: string, at: string, path: string[]) => {
     for (const next of dep.get(at) ?? []) {
