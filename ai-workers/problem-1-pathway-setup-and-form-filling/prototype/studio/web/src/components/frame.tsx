@@ -48,7 +48,8 @@ export function useWhere(crumbs: Crumb[] | null, back?: { to: string; label: str
 function WhereLine({ area, where, staff }: { area: Area; where: Where; staff: boolean }) {
   const { crumbs } = where;
   const back = backOf(where);
-  // BK-4a (concept §5): the link names who it acts as when it changes the person (P-484 (4): it counts as the picker).
+  // BK-4a (concept §5): the link names who it acts as when it changes the person (P-484 (4): it counts as the picker);
+  // below 640 px it may wrap to two lines, so the line never scrolls sideways.
   const me = useActorId();
   const other = !staff ? null : area === "studio" ? { to: "/cases", label: isFirmStaff(me) ? "Cases" : `Cases (as ${personOf(CASE_OFFICER)!.name})`, title: "The firm's cases: open one on a released combination" }
     : area === "cases" ? { to: "/", label: isStudioPerson(me) ? "Product Studio" : `Product Studio (as ${personOf(STUDIO_AUTHOR)!.name})`, title: "Set up and release the combinations firms open cases on" } : null;
@@ -70,7 +71,7 @@ function WhereLine({ area, where, staff }: { area: Area; where: Where; staff: bo
           );
         })}
       </nav>
-      {other ? <Link to={other.to} title={other.title} data-where-area onClick={(e) => { if (area === "cases") leaveCasesAsStudio(e); else enterCasesAsStaff(e); }} className="inline-flex min-h-8 shrink-0 items-center gap-1 whitespace-nowrap text-text-link hover:underline">{other.label}<ArrowRight className="size-3.5" aria-hidden /></Link> : null}
+      {other ? <Link to={other.to} title={other.title} data-where-area onClick={(e) => { if (area === "cases") leaveCasesAsStudio(e); else enterCasesAsStaff(e); }} className="inline-flex min-h-8 max-w-[45%] shrink-0 items-center justify-end gap-1 text-right text-text-link hover:underline sm:max-w-none sm:whitespace-nowrap">{other.label}<ArrowRight className="size-3.5" aria-hidden /></Link> : null}
     </div>
   );
 }
