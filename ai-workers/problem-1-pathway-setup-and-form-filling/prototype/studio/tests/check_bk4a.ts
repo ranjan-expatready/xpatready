@@ -56,6 +56,7 @@ const ALLOWED: Record<string, number> = {
   "components/frame.tsx": 3, // leaveCasesAsStudio and enterCasesAsStaff (the frame links that name the person, P-484 (4)); the picker
   "runtime/cases.tsx": 4, // the first person of a browser with none (BR-6/BR-8); BR-8's "Continue as Case officer"; "Open it as Client A" and "Act as Client A" (BK-4c's hand-offs)
   "pages/sign-in.tsx": 1, // signing in
+  "pages/start.tsx": 1, // BK-5's "Sign in as the Configuration author" on the first-run page (a named button; the frame's notice names it)
   "lib/api.ts": 0, // defines setActor
 };
 const sites: Record<string, number> = {};
