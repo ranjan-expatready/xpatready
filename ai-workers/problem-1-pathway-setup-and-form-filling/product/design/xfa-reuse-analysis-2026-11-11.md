@@ -345,8 +345,8 @@ With the source in our repository, T1 becomes our small patch (row g) and still 
 1. **To the brief:** "the barcode payload check with the engine closes the C7.2 gap without Adobe." Measured, the engine's barcode text is not yet equal to Adobe's (T1). The plan closes the gap by reading Adobe's own stored text (row e), fixes the difference (row g), and keeps Adobe Validate as the proof (P-442).
 2. **From the Lead, on the viewer** (section 8): accepted in part. A read-only view is row d. Fill-and-edit stays out: nothing to adopt, and our forms are filled from facts.
 3. **To the founder's "we know that it is tested":** tested, yes, on two forms. Eighteen are refused today. The head to head (section 3) and the "Done when" lines are how his own conditions ("subject to testing and validating", "don't assume anything") are met.
-5. **To my own second version:** I had the engine read Adobe's stored barcode text. The head to head shows our reader does that already; using the engine there would have been force-fitting. Corrected in row e.
-4. **On our own writer:** its own note says "demonstration-only" and it uses private library internals. That risk is why the writer trial (row i) is worth the founder's look even though nothing is broken.
+4. **To my own second version:** I had the engine read Adobe's stored barcode text. The head to head shows our reader does that already; using the engine there would have been force-fitting. Corrected in row e.
+5. **On our own writer:** its own note says "demonstration-only" and it uses private library internals. That risk is why the writer trial (row i) is worth the founder's look even though nothing is broken.
 
 ---
 
