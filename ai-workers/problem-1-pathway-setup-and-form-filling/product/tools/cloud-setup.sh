@@ -10,10 +10,23 @@ ROOT="$(git rev-parse --show-toplevel)"; cd "$ROOT"
 P="ai-workers/problem-1-pathway-setup-and-form-filling"; STUDIO="$P/prototype/studio"
 NODE_VER=24.21.0; PGPORT="${PGPORT:-54329}"
 SUDO=""; [ "$(id -u)" = 0 ] || SUDO="sudo -n"
-apt_ready=""; apt() { command -v apt-get >/dev/null || return 1; [ -n "$apt_ready" ] || { $SUDO apt-get update -qq; apt_ready=1; }
-  # Never prompt: a cloud image may already carry a config file (e.g. /etc/zsh/zshrc), so keep the existing one.
-  $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Dpkg::Options::=--force-confdef \
+# Never prompt: a cloud image may already carry a config file (e.g. /etc/zsh/zshrc), so keep the existing one.
+apt_install() { $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Dpkg::Options::=--force-confdef \
     -o Dpkg::Options::=--force-confold "$@" </dev/null >/dev/null; }
+# Three tries (P-214, 11 Nov 2026: GitHub's runners stopped resolving azure.archive.ubuntu.com and every CI job failed
+# with exit 100 at "zsh and locale"). After a failure, point apt at the main Ubuntu archive instead of the runner's
+# Azure mirror, refresh the package lists and try again, after 10 s, then 20 s.
+apt_ready=""; apt() { command -v apt-get >/dev/null || return 1; local i f
+  for i in 1 2 3; do
+    [ -n "$apt_ready" ] || { $SUDO apt-get update -qq || true; apt_ready=1; }
+    apt_install "$@" && return 0
+    [ "$i" = 3 ] && break
+    echo "apt: installing $* failed (try $i of 3); switching to archive.ubuntu.com and retrying" >&2
+    for f in /etc/apt/apt-mirrors.txt /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+      [ -f "$f" ] && $SUDO sed -i 's|azure\.archive\.ubuntu\.com|archive.ubuntu.com|g' "$f"
+    done
+    apt_ready=""; sleep $((i * 10))
+  done; return 1; }
 
 echo "== node $NODE_VER"
 if [ ! -x "$ROOT/.tools/node-v$NODE_VER/bin/node" ] && [ "$(node -v 2>/dev/null)" != "v$NODE_VER" ]; then
