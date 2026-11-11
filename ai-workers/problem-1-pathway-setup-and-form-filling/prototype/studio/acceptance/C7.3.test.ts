@@ -178,11 +178,11 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   const boxes2 = JSON.parse(sql(`select s.facts_json->'boxes' from form_instance f join answer_snapshot s on s.id = f.snapshot_id where f.id = '${copy2}'`) ?? "[]") as Box2[];
   const pdf2 = copy2 ? writtenByPdf(await copyBytes(copy2)) : null;
   const lines2 = (s?.sections ?? []).flatMap((x) => x.answers as SL[]);
-  const recorded = (b: Box2) => !!b.about && b.about !== "case" && (!!recordedDerivation(b.transform) || proseRecorded(b.transform));
+  const isRecorded15 = (b: Box2) => !!b.about && b.about !== "case" && (!!recordedDerivation(b.transform) || proseRecorded(b.transform));
   const off: string[] = [];
   for (const b of boxes2) {
     const mine = lines2.filter((l) => l.subject === b.about && l.fact === b.fact);
-    if (recorded(b)) {
+    if (isRecorded15(b)) {
       const w = pdf2?.[b.box]; if (w !== "Y" && w !== "N") continue;
       if (!mine.some((l) => String(l.copy_text) === (w === "Y" ? "Yes" : "No"))) off.push(`${b.about_label}: ${b.box.split(".").slice(-2).join(".")} written ${w}, no "${w === "Y" ? "Yes" : "No"}" line (${mine.map((l) => l.copy_text).join(", ") || "none"})`);
     } else if (b.value !== undefined && b.value !== null && b.value !== "") {
@@ -191,9 +191,9 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   }
   // As C7.3-14: a release that maps no "recorded?" box (pack 4's fixture) is judged on the other boxes, by value; the PDF is
   // read only where such a box exists, and an unreadable PDF there is a FAIL, never a pass.
-  const mapped15 = boxes2.some(recorded), ready15 = !!copy2 && (!mapped15 || !!pdf2);
+  const mapped15 = boxes2.some(isRecorded15), ready15 = !!copy2 && (!mapped15 || !!pdf2);
   const label15 = `C7.3-15 fail (QA-392b): with entries recorded, each box the PDF copy writes has its sheet line by person, fact and value; a "recorded?" box reads the Yes or No the PDF writes${mapped15 ? "" : " (this release maps no such box)"}`;
   if (ready15 && !off.length) ok(label15, true, { boxes: boxes2.length });
-  else if (!ready15) ok(label15, false, { copy: copy2, pdf_read: !!pdf2, recorded_boxes: boxes2.filter(recorded).length });
+  else if (!ready15) ok(label15, false, { copy: copy2, pdf_read: !!pdf2, recorded_boxes: boxes2.filter(isRecorded15).length });
   else console.log(`HELD  C7.3-15 (QA-392b): red, held: ${off.length} box(es) the PDF copy writes have no sheet line with that value: ${off.slice(0, 6).join("; ")}`);
 });
