@@ -83,7 +83,7 @@ const TABLE_FOR_RELEASE = TABLE;
   ok("release pass (V9): a rule reading a library fact with a valid condition raises no condition line", !rel({ addsFiling: BOTH }).some((m) => /^Condition /.test(m)));
   // Review n1: a per-person or family-maximum line charging the role that the line does not name: a warning, in words.
   const short = relP({ addsFiling: { ...ADDS, fee: "permit" } });
-  ok("release warn (n1): naming only the per-application line leaves the family-maximum biometrics line out: a warning naming it (the total would be short)", short.length === 1 && short[0].level === "warning" && /"Biometrics fee" \(bio\) charges each child/.test(short[0].message) && /total is short/.test(short[0].message), short);
+  ok("release warn (n1): naming only the per-application line leaves the family-maximum biometrics line out: a warning naming it (the total would be short)", short.length === 1 && short[0].level === "warning" && /"Biometrics fee" \(bio\) charges each child/.test(short[0].message) && /total can be short/.test(short[0].message), short);
   ok("release pass (n1): an unnamed per-application line (the principal's application fee) or a line not reaching a child raises no warning", !relP({ addsFiling: BOTH }).some((p) => /\b(app|main_only)\b/.test(p.message)));
   ok("release pass (n1): naming no fee line raises no warning (the case is left unpriced in words, never short)", relP({ addsFiling: ADDS }).length === 0, rel({ addsFiling: ADDS }));
   ok("release fail (break M4): its fact asked once for the case is refused", rel({ addsFiling: ADDS }, "once_per_case").some((m) => /asked once for the case/.test(m)));

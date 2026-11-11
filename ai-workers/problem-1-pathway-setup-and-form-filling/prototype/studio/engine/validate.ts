@@ -124,7 +124,7 @@ export function addedFilingProblems(s: Snapshot, types: Map<string, string>, der
       // A warning, not a refusal: the author may know the person does not pay it (the line's words say so).
       const missed = feeRules.fees.filter((r) => r.basis !== "per_application" && (!r.roles || r.roles.includes(l.role)) && !keys.includes(r.key));
       if (missed.length) out.push({ level: "warning", where: "Who can be in this application", item, role: l.role,
-        message: `${missed.map((r) => `"${r.label}" (${r.key})`).join(", ")} ${missed.length > 1 ? "charge" : "charges"} each ${l.role.replace(/_/g, " ")} on this combination, but the filing it adds does not name ${missed.length > 1 ? "them" : "it"}, so once the filing is added that person is not counted on ${missed.length > 1 ? "them" : "it"} and the case's total is short. Name ${missed.length > 1 ? "them" : "it"} among the filing's fee lines, unless that person does not pay ${missed.length > 1 ? "them" : "it"}.` });
+        message: `${missed.map((r) => `"${r.label}" (${r.key})`).join(", ")} ${missed.length > 1 ? "charge" : "charges"} each ${l.role.replace(/_/g, " ")} on this combination, but the filing it adds does not name ${missed.length > 1 ? "them" : "it"}, so once the filing is added that person is not counted on ${missed.length > 1 ? "them" : "it"} and the case's total can be short (unless a family maximum is already reached). Name ${missed.length > 1 ? "them" : "it"} among the filing's fee lines, unless that person does not pay ${missed.length > 1 ? "them" : "it"}.` });
     }
   }
   return out;
