@@ -32,7 +32,7 @@ import type { LineMode } from "../../../../contracts/workspace";
 import { APPLICATION_ROLE, personFactRows, personFactsWords } from "../../../../contracts/counts";
 // QA-172: a fact answered without a question is named by its short name (as an unwritten question, QA-82), never its meaning.
 import { factName } from "../../../../engine/fact-name";
-import { FoldArrow } from "@/components/fold-out";
+import { FoldArrow, FoldOut } from "@/components/fold-out";
 
 const TIPS = {
   card: "Sets which people a case may include and how many; each person marked as applicant gets their own forms, questions and documents.",
@@ -57,7 +57,7 @@ export function QuestionnairesTab({ id, people, questionnaire, available }: { id
 
 type Line = PeopleLine & { label: string };
 // C11.12 BR-8: the filing mode travels with the line, so a save, Undo, "Use these lines" and Add person never drop it.
-const toLines = (v: PeopleView): Line[] => v.lines.map((l) => ({ role: l.role, label: l.label, min: l.min, max: l.max, applies: l.applies, preview: l.preview, filingMode: l.filingMode ?? null, quote: l.quote ?? null, origin: l.origin }));
+const toLines = (v: PeopleView): Line[] => v.lines.map((l) => ({ role: l.role, label: l.label, min: l.min, max: l.max, applies: l.applies, preview: l.preview, filingMode: l.filingMode ?? null, quote: l.quote ?? null, origin: l.origin, addsFiling: l.addsFiling ?? null }));
 /** The folded line's plain words (board P-161 (2), Lead C1 decision 4): "Principal applicant (always) · Dependent child,
  *  0–5 (optional)"; exact counts and who files their own application stay in Show and edit. A role whose most is 0
  *  cannot be in the application, so the folded line leaves it out (#139 review). */
@@ -66,7 +66,7 @@ const howMany = (l: { min: number; max: number }) => (l.min === l.max ? (l.min =
 /** C11.12 (board r2 frame 1): how one person's application is filed. Editing: the three choices for a role that may be
  *  an applicant, Files nothing or Files the sponsorship for one that never is; the principal always files their own. */
 const MODE_WORDS: Record<LineMode, string> = { files_own: "Files own application", on_principal: "On the principal's application", declared_only: "Declared only (not accompanying)", co_files: "Files the sponsorship (sent with the principal's application)" };
-function FilingCell({ l, i, editing, mayBeApplicant, name, words, warning, error, onMode }: { l: Line; i: number; editing: boolean; mayBeApplicant: boolean; name: string; words: ReturnType<typeof filingWords>; warning: string | null; error?: string; onMode: (m: LineMode | null) => void }) {
+function FilingCell({ l, i, editing, mayBeApplicant, name, words, warning, error, onMode, onRemoveAdds }: { l: Line; i: number; editing: boolean; mayBeApplicant: boolean; name: string; words: ReturnType<typeof filingWords>; warning: string | null; error?: string; onMode: (m: LineMode | null) => void; onRemoveAdds: () => void }) {
   const principal = l.role === "principal";
   const id = `filing-${i}`;
   // Review M2 (PR 3): only the sponsor co-files; the representative (and any other never-applicant role) files nothing.
@@ -83,6 +83,8 @@ function FilingCell({ l, i, editing, mayBeApplicant, name, words, warning, error
       )}
       {principal ? <p className="text-xs text-text-muted">Always, for the principal</p> : words.ifNotTravelling ? <p className="text-xs text-text-muted" data-if-not-travelling>{words.ifNotTravelling}</p> : null}
       {!mayBeApplicant && l.filingMode === "co_files" ? <p className="text-xs text-text-muted">Sent with the principal's application; never alone</p> : null}
+      {l.addsFiling ? <div className="text-xs text-text-muted" data-adds-filing><p>Adds their own {l.addsFiling.filing.toLowerCase()} application when: {l.addsFiling.conditionPlain} <span className="font-medium">(Sample)</span>{editing ? <> <Button size="sm" variant="ghost" onClick={onRemoveAdds} aria-label={`Remove the ${l.addsFiling.filing.toLowerCase()} application ${name} adds`}>Remove</Button></> : null}</p>
+        <FoldOut summary="Where it comes from"><p className="mt-1">{l.addsFiling.sourceQuote}</p></FoldOut></div> : null}
       {warning ? <p className="mt-1 text-xs text-text-warn" data-filing-warning role="status">⚠ {warning.replace(/^[^:]+: [^.]+\. /, "")}{editing ? " You can still save." : ""}</p> : null}
       {error ? <p id={`${id}-error`} role="alert" className="text-xs text-text-danger">{error}</p> : null}
     </div>
@@ -126,7 +128,7 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
     const origin = pr.mode === "rules" ? "CODE_MATCH" : "AI_PROPOSAL";
     // C11.12 BR-8: the guide proposes people and counts, not filing modes, so each role keeps the mode it had.
     setLines((now) => { const base = editing ? now : toLines(v); const modeOf = (role: string) => base.find((l) => l.role === role)?.filingMode ?? null;
-      return [...base.filter((l) => !pr.people.some((x) => x.role === l.role)), ...pr.people.map((x): Line => ({ role: x.role, label: x.label, min: x.min, max: x.max, applies: appliesOf(modeOf(x.role), x.applies), filingMode: modeOf(x.role), quote: x.quote, origin }))]; });
+      return [...base.filter((l) => !pr.people.some((x) => x.role === l.role)), ...pr.people.map((x): Line => ({ role: x.role, label: x.label, min: x.min, max: x.max, applies: appliesOf(modeOf(x.role), x.applies), filingMode: modeOf(x.role), quote: x.quote, origin, addsFiling: base.find((l) => l.role === x.role)?.addsFiling ?? null }))]; });
     setEditing(true); setFilling(false);
   };
   React.useEffect(() => { if (!editing) setLines(toLines(v)); }, [v, editing]);
@@ -199,7 +201,7 @@ export function WhoCanBe({ id, v }: { id: string; v: PeopleView }) {
                 <td className="py-2 pr-3" data-label="How many">{editing && !principal ? (
                   <span className="flex items-center gap-1.5"><Input aria-label={`Fewest ${nameOf(l)}`} className="h-8 w-14" inputMode="numeric" value={String(l.min)} onChange={(e) => set(i, { min: Number(e.target.value.replace(/\D/g, "").slice(0, 1) || 0) })} /><span className="text-text-muted">to</span><Input aria-label={`Most ${nameOf(l)}`} className="h-8 w-14" inputMode="numeric" value={String(l.max)} onChange={(e) => set(i, { max: Number(e.target.value.replace(/\D/g, "").slice(0, 1) || 0) })} /></span>
                 ) : howMany(l)}{err(i, "max") || err(i, "min") ? <p role="alert" className="text-xs text-text-danger">{err(i, "max") ?? err(i, "min")}</p> : null}</td>
-                <td className="py-2 pr-3" data-label="Filing" data-filing={l.filingMode ?? (principal ? "files_own" : "")}><FilingCell l={l} i={i} editing={editing} mayBeApplicant={!!r?.mayBeApplicant} name={nameOf(l)} words={words(l)} warning={warningOf(l.role)} error={err(i, "filingMode") ?? err(i, "applies")} onMode={(m) => set(i, { filingMode: m, applies: appliesOf(m, l.applies) && !!r?.mayBeApplicant })} /></td>
+                <td className="py-2 pr-3" data-label="Filing" data-filing={l.filingMode ?? (principal ? "files_own" : "")}><FilingCell l={l} i={i} editing={editing} mayBeApplicant={!!r?.mayBeApplicant} name={nameOf(l)} words={words(l)} warning={warningOf(l.role)} error={err(i, "filingMode") ?? err(i, "applies")} onMode={(m) => set(i, { filingMode: m, applies: appliesOf(m, l.applies) && !!r?.mayBeApplicant })} onRemoveAdds={() => set(i, { addsFiling: null })} /></td>
                 <td className="py-2 pr-3 text-text-muted" data-label="Answered by">{v.lines.find((x) => x.role === l.role)?.answeredBy ?? (l.role === "child" ? "Principal, under 18" : "Themselves")}</td>
                 <td className="max-w-56 py-2 pr-3 text-xs text-text-muted" data-label="Fees" data-fees>{words(l).fees ?? (r?.mayBeApplicant ? "—" : "No fee")}</td>
                 <td className="max-w-72 py-2 pr-3 text-xs text-text-muted" data-label="IRCC's words">{l.quote ? `"${l.quote}"` : l.origin === "AI_PROPOSAL" || l.origin === "CODE_MATCH" ? "" : "—"}{l.origin === "AI_PROPOSAL" ? <Pill tone="ai" className="ml-1">AI</Pill> : l.origin === "CODE_MATCH" ? <span data-origin-rules><Pill className="ml-1" title="Found by rules in the guide's sentences; no AI">Rules</Pill></span> : null}</td>

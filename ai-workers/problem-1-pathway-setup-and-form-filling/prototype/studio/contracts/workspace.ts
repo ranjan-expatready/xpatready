@@ -65,6 +65,24 @@ export const FILING_CHOICE = "Filing: choose Files own application, On the princ
 export const FILING_ALIAS = { own_application: "files_own", on_principal_applying: "on_principal", declared_only: "declared_only" } as const satisfies Record<string, LineMode>;
 export const ALIAS_OF: Partial<Record<LineMode, keyof typeof FILING_ALIAS>> = { files_own: "own_application", on_principal: "on_principal_applying", declared_only: "declared_only" };
 
+/** M3-S2 (P-380, P-425): a filing a line's person adds when a configured condition on their own answers holds (an
+ *  accompanying child who will study: their own study permit application). `filing` names it on the case; `condition`
+ *  is a rule over the person's answers (contracts/predicate.v0.schema.json, about the person), checked against the
+ *  library at release; `fee` the fee table's line (or lines) charged on it, on any basis, each one of the combination's
+ *  lines reaching the person's role (refused at release otherwise), and no line it does not name counts the person, so the
+ *  author names every line that charges them (the release warns of a per-person or family-maximum line left out). None
+ *  named: the case is not priced while the filing is added, never charging it the application it left; `sourceQuote`
+ *  IRCC's words with page and date (P-170). */
+const FeeKey = z.string().trim().regex(/^[a-z][a-z0-9_]{1,60}$/, "Choose the fee line by its key in the fee table.");
+export const AddsFiling = z.object({
+  filing: z.string({ error: "Name the filing it adds." }).trim().min(3, "Name the filing it adds (3 characters or more).").max(80, "Keep the filing's name under 80 characters."),
+  condition: z.record(z.string(), z.unknown(), { error: "Build the rule that adds the filing." }),
+  conditionPlain: z.string({ error: "Say the rule in words." }).trim().min(5, "Say the rule in words (5 characters or more).").max(300, "Keep the rule's words under 300 characters."),
+  fee: z.union([FeeKey, z.array(FeeKey).min(1, "Choose at least one fee line.").max(6, "At most 6 fee lines.")]).optional(),
+  sourceQuote: z.string({ error: "Quote the official words that say it, with the page and date." }).trim().min(10, "Quote the official words that say it, with the page and date.").max(1500),
+}).strict();
+export type AddsFiling = z.infer<typeof AddsFiling>;
+
 /** One line of "Who can be in this application". `quote` and `origin` say where it came from (AI from the guide in
  *  slice 3, or a person); `basis` is Sample until the immigration expert confirms the numbers. */
 export const PeopleLine = z.object({
@@ -81,6 +99,7 @@ export const PeopleLine = z.object({
   filing: z.enum(["own_application", "on_principal_applying", "declared_only"], { error: FILING_CHOICE }).nullable().optional(),
   quote: z.string().trim().max(400).nullable().optional(),
   origin: z.enum(["HUMAN", "AI_PROPOSAL", "CODE_MATCH", "SAMPLE"]).optional(), // CODE_MATCH: found by rules from the guide, no AI (Lead check L3)
+  addsFiling: AddsFiling.nullable().optional(), // M3-S2
 });
 export type PeopleLine = z.infer<typeof PeopleLine>;
 /** PATCH /combinations/:id/people. `version` is the one read (a stale save is a 409); `confirmRemove` answers the
