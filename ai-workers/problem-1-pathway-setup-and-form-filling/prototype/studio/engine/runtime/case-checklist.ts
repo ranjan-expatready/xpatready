@@ -4,9 +4,10 @@
 // questions still to answer), so the list changes as the case's answers change. A line whose document type has a
 // validity rule in the release (a `document_validity` check, applies_to = the document type key; e.g. the police
 // certificate's 6 months, P-171) carries that rule with its citation: the rule is release data, never an engine constant
-// (STANDARDS §3.1; Lead on #283). Visitor visa (vv.single) only in this slice; others answer "not derived yet". Pure:
-// no database, no clock (the date is passed in). Tests: tests/runtime/check_vv_checklist.ts. Uploads and AI reading are
-// C6.5; waiving (P-171 (6)) and the Express Entry block (P-172) are permanent-residence rules, not this combination's.
+// (STANDARDS §3.1; Lead on #283). Only the combinations the fee table marks (DERIVED_FOR); others answer "not derived
+// yet". Pure: no database, no clock (the date is passed in). Tests: tests/runtime/check_vv_checklist.ts,
+// check_m3s3_waivable.ts. Uploads and AI reading are C6.5; a line's waiver (M3-S3, P-171 (6)) is release data on the
+// line; the Express Entry block (P-172) is M3-S4.
 import { ageInYears } from "../../../contracts/rules.ts";
 import { MINOR } from "../../contracts/runtime.ts";
 import { lineCondition, lineHolders, type Known, type Person } from "../render.ts";
@@ -26,7 +27,7 @@ export const APPLICATION_DATE = "case.application_date";
 
 /** A requirement row as the snapshot carries it (engine/snapshot.ts document_requirements). */
 type Req = { lineage: string; document_type: string; document_type_key?: string; who: string; base_or_conditional: string; provided_by: string;
-  condition?: Cond | null; condition_plain?: string | null; source_quote?: string | null; alternatives?: string[] | null; set_name?: string | null };
+  condition?: Cond | null; condition_plain?: string | null; source_quote?: string | null; alternatives?: string[] | null; set_name?: string | null; waiver?: string | null };
 type Cond = { subjectKind?: string; [k: string]: unknown };
 type DocType = { key: string; name: string; sets?: SnapSet[]; default_provider_roles?: string[] };
 type Derived = { id: string; calculation?: string; inputs?: string[]; reference?: string };
@@ -55,6 +56,9 @@ export type PersonLine = { id: string; document_type: string; label: string; sta
   /** C6.15 (SA-1B-19, SA-1B-20): the substitute set the line uses, from its type in the release and the set the line
    *  picks; null when the type has none (its own only member). */
   set: LineSet | null;
+  /** M3-S3 (P-171 (6)): the case officer may waive this line with a reason (the release's line says so). A line merged
+   *  from two requirements is waivable only when both are. */
+  waivable: boolean;
   /** C6.4 (a), challenge r2 M1: whose line it is (the release's "whose document") and its words, for the Documents panel. */
   who: string; who_words: string;
   /** C6.14 (SA-1B-151, SA-1B-214): a line asked once for the application ("case", C3.16's Filing scope) or once for the
@@ -132,6 +136,9 @@ export function issuedWithin(rule: Pick<ValidityRule, "months">, issuedOn: strin
 /** Each person's checklist on this case, from the release's requirements and what is known about each person. `known`
  *  holds only answers without problems (the caller drops the others, B-M2), so a rejected answer never decides a line. */
 export function caseChecklist(s: Snapshot, combinationKey: string, people: Participant[], answers: Known, today: Date): CaseChecklist {
+  // M3-S3 review M1: a line's waiver never decides whether the checklist is worked out (ticking one line would switch the
+  // whole list on, unticking it off, stranding a waived line). That stays the fee table's data mark (P-230 (7)), which
+  // C6.17 widened to the study and work permits once their lines were cited; M3-S4 removes the guard.
   if (!DERIVED_FOR.has(combinationKey)) return { derived: false, combination: combinationKey, why: "The document checklist per person is not derived yet for this combination (it is worked out once its requirements are checked). Nothing is guessed." };
   // Break M1: an answer saved with spaces around it (" 1980-01-01 ") passes its checks, which trim; it is read trimmed.
   const known: Known = new Map([...answers].map(([k, v]) => [k, typeof v.value === "string" ? { ...v, value: v.value.trim() } : v]));
@@ -218,14 +225,14 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
       const line: PersonLine = { id: `${h}:${r.lineage}`, document_type: document.key, label: document.name, state: "not_requested", reason: why, required: state === "needed", documents: [],
         need: state, lineage: r.lineage, also_from: [], document, missing, base: r.base_or_conditional === "base", provided_by: r.provided_by,
         alternatives: (r.alternatives ?? []).map((k) => ({ key: k, name: types.find((x) => x.key === k)?.name ?? k })), quote: r.source_quote ?? null, rule: rules.get(document.key) ?? null,
-        set: lineSet(t, r.set_name, document.name).set, who: r.who, who_words: whoWords(r.who), ...sharedOf(r.who, t?.default_provider_roles ?? [], h, everyone, providersOn) };
+        set: lineSet(t, r.set_name, document.name).set, waivable: r.waiver === "waivable", who: r.who, who_words: whoWords(r.who), ...sharedOf(r.who, t?.default_provider_roles ?? [], h, everyone, providersOn) };
       // Minor: two requirements for the same document on one person (e.g. a case line and the principal's own) are one
       // line: the strongest state wins and the other requirement is named in also_from.
       // Break m7: the merged line is "always" when either requirement is.
       const list = byPerson.get(h)!, same = list.findIndex((x) => x.document.key === line.document.key);
       if (same < 0) list.push(line);
       else {
-        const keep = ORDER[line.need] < ORDER[list[same].need] ? line : list[same], drop = keep === line ? list[same] : line; keep.also_from = [...new Set([...keep.also_from, drop.lineage, ...drop.also_from])].sort(); keep.base ||= drop.base;
+        const keep = ORDER[line.need] < ORDER[list[same].need] ? line : list[same], drop = keep === line ? list[same] : line; keep.also_from = [...new Set([...keep.also_from, drop.lineage, ...drop.also_from])].sort(); keep.base ||= drop.base; keep.waivable &&= drop.waivable;
         // C6.14: merged with a shared requirement, the one line keeps its providers (a shared item is never lost), but only
         // when that requirement applies as strongly as the line it joins: a shared requirement not needed (or waiting)
         // never makes a needed per-person line shared (Devin on #1392).

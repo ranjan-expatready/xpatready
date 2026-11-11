@@ -2,17 +2,20 @@
 // Owned by the runtime lane. Uploads are multipart (one file, field "file"); the rest are JSON.
 import { z } from "zod";
 
-export const LINE_STATES = ["not_requested", "requested", "received", "being_checked", "approved", "rejected", "not_applicable"] as const;
+export const LINE_STATES = ["not_requested", "requested", "received", "being_checked", "approved", "rejected", "not_applicable", "waived"] as const;
 export type LineState = (typeof LINE_STATES)[number];
 /** The team's words for each state (M3-CONTRACT C6.4). */
 export const STATE_WORDS: Record<LineState, string> = {
   not_requested: "Not requested", requested: "Requested", received: "Received", being_checked: "Being checked",
-  approved: "Approved", rejected: "Rejected", not_applicable: "Not applicable",
+  approved: "Approved", rejected: "Rejected", not_applicable: "Not applicable", waived: "Waived",
 };
 /** From which states each action may move a line. Uploading on a Not applicable line is refused: request it first. */
-export const REQUEST_FROM: readonly LineState[] = ["not_requested", "rejected", "not_applicable"];
+export const REQUEST_FROM: readonly LineState[] = ["not_requested", "rejected", "not_applicable", "waived"];
 export const UPLOAD_FROM: readonly LineState[] = ["not_requested", "requested", "received", "being_checked", "approved", "rejected"];
 export const NOT_APPLICABLE_FROM: readonly LineState[] = ["not_requested", "requested", "received", "being_checked", "approved", "rejected"];
+/** M3-S3 (P-171 (6)): a line its release marks waivable may be waived, with a reason, from the same states; requesting it
+ *  again takes the waiver back (REQUEST_FROM). */
+export const WAIVE_FROM: readonly LineState[] = NOT_APPLICABLE_FROM;
 
 export const MAX_REASON = 500;
 /** Characters a person cannot see: zero-width spaces and joiners, the byte-order mark and bidirectional controls (a
@@ -27,6 +30,11 @@ export const SeenVersion = z.object({ version: z.preprocess((v) => (v === "" || 
 export const NotApplicable = SeenVersion.extend({
   reason: z.string({ message: "Give a reason why this document is not applicable." }).transform((x) => x.replace(INVISIBLE, "").trim())
     .pipe(z.string().min(1, "Give a reason why this document is not applicable.").max(MAX_REASON, `A reason is at most ${MAX_REASON} characters.`)),
+});
+/** M3-S3 (P-171 (6)): waiving a waivable line, always with a reason. */
+export const Waive = SeenVersion.extend({
+  reason: z.string({ message: "Give a reason for waiving this document." }).transform((x) => x.replace(INVISIBLE, "").trim())
+    .pipe(z.string().min(1, "Give a reason for waiving this document.").max(MAX_REASON, `A reason is at most ${MAX_REASON} characters.`)),
 });
 /** C6.14 (SA-1B-214 rule 2; concept product/screens/B136/concept.md BR-6): the case officer's choice of providers for a
  *  shared line (people on the case, by their subject id), or null to use the document type's defaults again; always with

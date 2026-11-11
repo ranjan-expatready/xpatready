@@ -46,7 +46,7 @@ type SourceLine = { kind: "form" | "document"; key: string; typeKey: string; who
 type BatchTarget = { combinationId: string; label: string; short: string; typeKey: string; keys: string[]; before: Record<string, unknown>[]; after: { id: string; status: string; version: number; sig: string }[] };
 type DocRow = Prisma.DocumentRequirementGetPayload<object>;
 /** What a document line says (as lineSig for forms): an edit that keeps its status and version still changes this. */
-const docSig = (r: DocRow) => JSON.stringify([r.documentTypeKey, r.attachMode, r.predicateJson, r.conditionPlain, r.appliesToRoles, r.providedBy, r.isRequired, r.position, r.alternatives, r.note, r.sourceQuote]);
+const docSig = (r: DocRow) => JSON.stringify([r.documentTypeKey, r.attachMode, r.predicateJson, r.conditionPlain, r.appliesToRoles, r.providedBy, r.isRequired, r.position, r.alternatives, r.note, r.sourceQuote, ...(r.waiver ? [r.waiver] : [])]); // M3-S3 review m4: the waiver too
 /** Break m1: a short fingerprint of what a source line says, so an apply can tell it changed after the preview. */
 const versionOf = (l: SourceLine) => createHash("sha256").update(JSON.stringify([l.kind, l.typeKey, l.who, l.attachMode, l.predicateJson ?? null, l.conditionPlain, l.channel ?? null, l.copied])).digest("hex").slice(0, 16);
 const sigOf = (kind: "form" | "document", r: LineRow | DocRow) => (kind === "form" ? lineSig(r as LineRow) : docSig(r as DocRow));
@@ -276,7 +276,7 @@ export class LinesBulk {
     if (op === "add") {
       let key = `${line.typeKey}:${line.who}`;
       if (all.some((r) => r.lineageKey === key)) key = `${key}:${Date.now().toString(36)}${randomUUID().slice(0, 4)}`;
-      await tx.documentRequirement.create({ data: { workspaceId: ws, combinationId: id, lineageKey: key, documentTypeKey: line.typeKey, appliesToRoles: line.who, attachMode: line.attachMode as "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL", predicateJson: (line.predicateJson ?? Prisma.DbNull) as Prisma.InputJsonValue, conditionPlain: line.conditionPlain, ...(line.copied as { providedBy: string; isRequired: boolean; alternatives: Prisma.InputJsonValue }), sourceQuote: `Copied from ${from}`.slice(0, 500), version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
+      await tx.documentRequirement.create({ data: { workspaceId: ws, combinationId: id, lineageKey: key, documentTypeKey: line.typeKey, appliesToRoles: line.who, attachMode: line.attachMode as "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL", predicateJson: (line.predicateJson ?? Prisma.DbNull) as Prisma.InputJsonValue, conditionPlain: line.conditionPlain, ...(line.copied as { providedBy: string; isRequired: boolean; alternatives: Prisma.InputJsonValue; waiver?: string }), sourceQuote: `Copied from ${from}`.slice(0, 500), version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
       keys = [key];
     } else {
       keys = [...newestBy(all).values()].filter((r) => r.status !== "RETIRED" && r.documentTypeKey === line.typeKey && r.appliesToRoles === line.who).map((r) => r.lineageKey);
@@ -434,7 +434,7 @@ export class LinesBulk {
     if (!r || r.status === "RETIRED") throw gone();
     const t = await db.documentType.findFirst({ where: { workspaceId: src.workspaceId, documentTypeKey: r.documentTypeKey }, orderBy: { version: "desc" }, select: { name: true } });
     return { kind, key, typeKey: r.documentTypeKey, who: r.appliesToRoles, attachMode: r.attachMode, predicateJson: r.predicateJson, conditionPlain: r.conditionPlain, words: `${t?.name ?? r.documentTypeKey} · from ${WHO_WORDS[r.appliesToRoles] ?? r.appliesToRoles} · ${when(r)}`,
-      short: t?.name ?? r.documentTypeKey, copied: { providedBy: r.providedBy, isRequired: r.isRequired, alternatives: r.alternatives ?? Prisma.DbNull } };
+      short: t?.name ?? r.documentTypeKey, copied: { providedBy: r.providedBy, isRequired: r.isRequired, alternatives: r.alternatives ?? Prisma.DbNull, ...(r.waiver ? { waiver: r.waiver } : {}) } }; // M3-S3 review m4: a waivable line is copied waivable
   }
 
   /** BR-C1 "cannot: retired": nothing new may use a form or document type that is retired, or whose retirement is open (P-116). */

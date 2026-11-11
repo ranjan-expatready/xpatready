@@ -1,0 +1,58 @@
+[
+ {
+  "id": "review-change",
+  "base": "http://localhost:4482",
+  "path": "/review/change/3e7902cd-bce5-41a2-8574-5a11013ebd46",
+  "actor": "user-B",
+  "label": "A library change's page (approved: Add shared field), as the Approver"
+ },
+ {
+  "id": "review-edition",
+  "base": "http://localhost:4482",
+  "path": "/review/edition/b7e87ef4-3ce6-4dda-8441-38d74f636201",
+  "actor": "user-A",
+  "label": "New edition review (AI's impact across combinations)",
+  "tabs": true
+ },
+ {
+  "id": "representative-review-round1",
+  "base": "http://localhost:4481",
+  "path": "/cases/39424168-e33b-43f4-b40e-3b247509319d/representative-review/1",
+  "actor": "user-R",
+  "label": "Representative's review, an earlier round"
+ },
+ {
+  "id": "pathway-preview--studio",
+  "base": "http://localhost:4480",
+  "path": "/c/f229f9bf-76c4-432e-9ec5-ddfc04ce3532/preview?view=studio",
+  "label": "Pathway preview, studio view"
+ },
+ {
+  "id": "pathway-overview--approver",
+  "base": "http://localhost:4480",
+  "path": "/c/f229f9bf-76c4-432e-9ec5-ddfc04ce3532/overview",
+  "actor": "user-B",
+  "label": "Pathway Overview as the Approver (read-only for the author's steps)"
+ },
+ {
+  "id": "cases--not-found",
+  "base": "http://localhost:4481",
+  "path": "/cases/no-such-case",
+  "actor": "user-O",
+  "label": "A case address that does not exist"
+ },
+ {
+  "id": "case-page--client-blocked",
+  "base": "http://localhost:4481",
+  "path": "/cases/39424168-e33b-43f4-b40e-3b247509319d",
+  "actor": "user-P",
+  "label": "The case page opened by the client (permission state)"
+ },
+ {
+  "id": "studio--as-case-staff",
+  "base": "http://localhost:4481",
+  "path": "/",
+  "actor": "user-O",
+  "label": "The Studio opened by a case officer (permission notice)"
+ }
+]

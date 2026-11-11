@@ -25,6 +25,14 @@ type DocLine = { document: { key: string; name: string }; document_type: string;
  *  instruction letter"). */
 export const BIOMETRICS_STEP = { key: "biometrics", label: "Give biometrics", after: "IRCC's biometrics instruction letter comes after you apply (VV-R17): book and give them then." } as const;
 
+/** BK-8 (P-448, P-452): the words of a biometrics step that waits for a date of birth, from the case's own combination's
+ *  biometrics rule: its ages and the IRCC page they are read from (the table's citation, P-170), never another pathway's
+ *  ages or a pathway's rule number. A rule without ages never waits (ageCheck), so its words name no age. */
+export function biometricsWaits(rule: FeeRule | undefined): string {
+  const e = rule?.exempt;
+  return e ? `Waits for the date of birth: no biometrics under ${e.underAge} or over ${e.overAge} (IRCC, ${e.source.page}).` : "Waits for the date of birth.";
+}
+
 /** The items each filer should have now, from the release's forms per person (render), each person's needed documents
  *  (the checklist's `lines`) and the biometrics rule with each person's age. A form that does not apply is left out; one
  *  that cannot be told yet (its condition or the age waits for an answer) is kept, so it says what it waits for. */
