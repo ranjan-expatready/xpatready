@@ -71,7 +71,9 @@ run(async () => {
     if (asks.length) { worked += asks.length; if (still > 0) keptByYesNo++; }
     console.log(`NOTE  C4.11-27 ${name}: ${still} held left with its plain form fields confirmed and ${asks.length} worked-out Yes/No not yet asked`);
     for (const { f, x } of asks) { const why = await through(id, f, x, true); if (why) refused.push(`${name} ${why}`); }
-    after[name] = (await hiding(id)).length;
+    const left = await hiding(id);
+    for (const e of left) console.log(`NOTE  C4.11-27 ${name} still held: ${e.message}`);
+    after[name] = left.length;
   }
   ok("C4.11-27 fail: with every plain form field confirmed, each combination with a worked-out Yes/No still holds the condition until that Yes/No is asked, so B88's door is what clears it", worked > 0 && keptByYesNo === Object.values(FOUR).length, { worked_out: worked, combinations_still_held: keptByYesNo });
   ok("C4.11-27 pass (QA-239): through B86's and B88's doors only, each with a second person, no condition is held on Spouse, Express Entry, Study permit and With an LMIA", Object.values(after).every((n) => n === 0) && !refused.length, { after, refused });
