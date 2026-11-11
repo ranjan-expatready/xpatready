@@ -16,7 +16,9 @@ import type { AnswerMark, QuestionnaireView, Readiness } from "../../contracts/r
 
 /** `mark`, `to_confirm`, `why` (P-411): who gave the answer ("answered by the principal for <name>", "entered by staff"),
  *  and whether it still waits for the officer's Confirm section; null and false where the case view has no such answer. */
-export type SheetAnswer = { label: string; fact: string; subject: string; person: string; row: number | null; value: unknown; copy_text: string; source: "Document" | "Client" | "Case officer"; mark: AnswerMark | null; to_confirm: boolean; why: string | null };
+export type SheetAnswer = { label: string; fact: string; subject: string; person: string; row: number | null; value: unknown; copy_text: string; source: "Document" | "Client" | "Case officer"; mark: AnswerMark | null; to_confirm: boolean; why: string | null;
+  /** QA-392: a Yes/No the PDF copy writes No because nothing is recorded; its label is the form's own question. */
+  nothing_recorded?: true };
 /** The mark of the current answer behind a box (the case view's), by its whole "about", fact and row. */
 export type MarkOf = (about: string, fact: string, row: number | null) => { mark: AnswerMark; confirmed: boolean; why: string } | undefined;
 /** `version`: the section's fingerprint now; a tick sends the one it read, so it freezes what the officer saw. */
@@ -119,7 +121,7 @@ export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels:
     if (b.coverage === "confirmed fact" || b.nothing_recorded) {
       if (sec.answers.some((a) => a.subject === subject && a.fact === b.fact && a.row === b.row)) continue;
       const m = markOf(subject, b.fact, b.row), value = b.nothing_recorded ? NOTHING_RECORDED : b.value;
-      sec.answers.push({ label: b.nothing_recorded ? b.caption || label : label, fact: b.fact, subject, person: b.about_label, row: b.row, value, copy_text: wordsOf?.(b.fact, value) ?? copyText(value), source: sourceOf(origin(subject.split("/")[0], b.fact)), mark: m?.mark ?? null, to_confirm: !!m && !m.confirmed, why: m?.why ?? null });
+      sec.answers.push({ label: b.nothing_recorded ? b.caption || label : label, fact: b.fact, subject, person: b.about_label, row: b.row, value, copy_text: wordsOf?.(b.fact, value) ?? copyText(value), source: sourceOf(origin(subject.split("/")[0], b.fact)), mark: m?.mark ?? null, to_confirm: !!m && !m.confirmed, why: m?.why ?? null, ...(b.nothing_recorded ? { nothing_recorded: true as const } : {}) });
     } else if ((!waits || waits(subject, b.fact)) && !sec.waiting.some((w) => w.subject === subject && w.fact === b.fact)) sec.waiting.push({ fact: b.fact, subject, person: b.about_label, label });
   }
   // A part of the form with nothing to type for this person (a signature block, the spouse's part on a case with no

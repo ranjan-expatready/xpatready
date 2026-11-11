@@ -400,8 +400,10 @@ export class CasePrepare {
           // C9.2: each stale section's answers as entered, against what it shows now (warns only, FQ-6, P-168).
           const ticks = enteredBy.get(i.id) ?? [];
           const changes = stale.flatMap((x) => {
-            const e = ticks.find((t) => t.sectionKey === x.key), then = ((e?.snapshot.factsJson ?? {}) as { answers?: { fact: string; subject: string; row: number | null; value: unknown }[] }).answers ?? [];
-            return factChanges(then.map((a) => ({ fact: a.fact, about: a.subject, row: a.row, value: a.value })), x.answers.map((a) => ({ fact: a.fact, about: a.subject, row: a.row, value: a.value })), words);
+            const e = ticks.find((t) => t.sectionKey === x.key), then = ((e?.snapshot.factsJson ?? {}) as { answers?: { fact: string; subject: string; row: number | null; value: unknown; label?: string; nothing_recorded?: true }[] }).answers ?? [];
+            // QA-392: a "nothing recorded" No is named by the form's question it answers, never the list's column.
+            const own = (a: { label?: string; nothing_recorded?: true }) => (a.nothing_recorded && a.label ? `“${a.label}”` : undefined);
+            return factChanges(then.map((a) => ({ fact: a.fact, about: a.subject, row: a.row, value: a.value, label: own(a) })), x.answers.map((a) => ({ fact: a.fact, about: a.subject, row: a.row, value: a.value, label: own(a) })), words);
           });
           const first = ticks.filter((t) => stale.some((x) => x.key === t.sectionKey)).map((t) => t.enteredAt).sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
           // Review B1 on #861: this line names who signs too (readiness reads it).
