@@ -101,7 +101,6 @@ export function recordApproval(row: Approval, bytes: Buffer) {
   if (row.official) { writeFileSync(join(dir, `${row.sha256}.approval.json`), JSON.stringify({ contract: "official-download/v1", sha256: row.sha256, kind: row.kind, code: row.code, edition: row.edition, file_name: row.fileName, form_page: row.irccPage, source_url: row.official.sourceUrl, fetched_at: row.approvedAt.toISOString(), started_by: row.uploadedBy }, null, 1) + "\n"); return; }
   writeFileSync(join(dir, `${row.sha256}.approval.json`), JSON.stringify({ contract: "approved-source/v1", sha256: row.sha256, kind: row.kind, code: row.code, edition: row.edition, file_name: row.fileName, ircc_page: row.irccPage, uploaded_by: row.uploadedBy, approved_by: row.approvedBy, approved_at: row.approvedAt.toISOString() }, null, 1) + "\n");
 }
-const TITLES: Record<string, string> = { "IMM 5257": "Application for Temporary Resident Visa", "IMM 1295": "Application for Work Permit made Outside of Canada", "IMM 5707": "Family Information", "IMM 5409": "Statutory Declaration of Common-law Union", "IMM 5476": "Use of a Representative", "IMM 5475": "Authority to Release Personal Information to a Designated Individual", "IMM 5257 SCH1": "Schedule 1: Application for Temporary Residence" }; // P-171 (a); source: canada.ca application forms index and the IMM 5257 SCH1 page, read 29 Oct 2026
 
 /** Break M6: one file per running launcher (its process group id), removed when it ends. */
 const LAUNCHES = () => join(VAR_ROOT, "launches");
@@ -883,8 +882,14 @@ export class Sources {
     const decision = new Map(job.items.map((i) => [i.proposedKey, i]));
     const formKey = item.edition.split(" (")[0];
     const ws = job.workspaceId;
+    // BK-10 (Lead 11 on #1518, option (a)): a form's title comes from its own record in the Form library (its displayName,
+    // kept as stored); a form new to the library takes the title the person gives, and without one applying is refused
+    // with words, before anything is written. No form's title is kept in code.
+    const title = b.title?.trim();
+    if (!title && !(await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId: ws, formKey } }, select: { id: true } })))
+      fail(`${formKey} is not in the Form library yet, so there is no title on record for it. Give the form's title, as printed on the form, and apply again.`, HttpStatus.UNPROCESSABLE_ENTITY);
     const res = await this.db.$transaction(async (tx) => {
-      const def = await tx.govFormDef.upsert({ where: { workspaceId_formKey: { workspaceId: ws, formKey } }, update: {}, create: { workspaceId: ws, formKey, displayName: b.title?.trim() || TITLES[formKey] || formKey, formKind: "data_form" } });
+      const def = await tx.govFormDef.upsert({ where: { workspaceId_formKey: { workspaceId: ws, formKey } }, update: {}, create: { workspaceId: ws, formKey, displayName: title || formKey, formKind: "data_form" } });
       await forgetDeletion(tx, ws, formKey); // X5 slice c
       // An edition uploaded to the library first (Screen 01, P-25) has no box map yet: the draft fills it in.
       let ed = (await tx.formEdition.findFirst({ where: { workspaceId: ws, sha256: a.sha256 } })) ?? (await tx.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId: ws, editionLabel: item.edition } } }));
