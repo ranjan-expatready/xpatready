@@ -4,8 +4,9 @@ import * as React from "react";
 import { RunCard, type RunView } from "@/components/run-card";
 import { fmtWhen } from "@/components/status";
 import { Link, useParams } from "react-router-dom";
-import { ChevronRight, CircleStop, RotateCw, Sparkles } from "lucide-react";
+import { CircleStop, RotateCw, Sparkles } from "lucide-react";
 import { api, useAction, useActorId, useApi } from "@/lib/api";
+import { useWhere } from "@/components/frame";
 import { Button, Notice, Pill, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { ErrorState } from "@/components/ui/error-state";
@@ -48,6 +49,7 @@ export function AiBatchPage() {
   const actorId = useActorId();
   const session = useApi<{ actor?: { duties?: string[] } }>(["session", actorId], "/session");
   const canAuthor = (session.data?.actor?.duties ?? []).includes("author");
+  useWhere(b.data ? [{ label: "History" }, { label: "AI work", to: "/ai" }, { label: b.data.scopeLabel }] : null); // BK-3: the frame's line
   const retry = useAction(() => api(`/ai/batches/${batchId}/retry`, { method: "POST" }), { success: "Retrying the failed steps only", invalidate: [["ai-batch", batchId], ["ai-batches"], ["catalogue"]] });
   // C11.8 review m4 (AT-3 on the page): an ended field-map run with a failure says what went wrong in words (the run
   // view's error line), not only the count; its way out on this page is the Retry button or the Saved link.
@@ -60,7 +62,6 @@ export function AiBatchPage() {
   // QA-80: the same breadcrumb, heading and left edge as every other page.
   if (d.operation === "find_forms" || d.operation === "upload_form" || d.operation === "draft_questions_documents") return (
     <div className="mx-auto max-w-6xl space-y-5">
-      <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to="/ai" className="hover:underline">AI work</Link><ChevronRight className="size-3" /><span>{d.scopeLabel}</span></nav>
       <h1 className="flex items-center gap-2 text-xl font-semibold"><Sparkles className="size-5 text-[#7c3aed]" /> {d.operation_label}</h1>
       <RunCard runId={d.id} />
     </div>
@@ -73,7 +74,6 @@ export function AiBatchPage() {
   const stuck = [...latest.values()].filter((j) => j.needs_person);
   return (
     <div className="mx-auto max-w-6xl space-y-5">
-      <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to="/ai" className="hover:underline">AI work</Link><ChevronRight className="size-3" /><span>{d.scopeLabel}</span></nav>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold"><Sparkles className="size-5 text-[#7c3aed]" /> {d.operation_label}</h1>
