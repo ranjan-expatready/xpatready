@@ -8,7 +8,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { backOf, whereFromAddress, type Area } from "../web/src/components/where";
+import { backOf, whereFromAddress, type Area } from "../web/src/components/where.ts";
 
 const STUDIO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const WEB = join(STUDIO, "web/src");
