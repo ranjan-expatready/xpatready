@@ -40,9 +40,13 @@ the same command followed by `stop`.
 * Prefer a PostgreSQL server you already run: `DATABASE_URL=postgresql://<user>@127.0.0.1:5432/xr_studio_demo` in front
   (the database is created when missing).
 * A tool installed somewhere the search does not look: `STUDIO_NODE_BIN=…/bin`, `STUDIO_PG_BIN=…/bin`,
-  `STUDIO_PYTHON=…/python3.14` in front.
+  `STUDIO_PYTHON=…/python3.14` in front (each is then used alone).
+* At the end it may print an `export PATH=…` line: add it to `~/.zprofile` (Homebrew keeps `node@24` and
+  `postgresql@18` off the PATH on purpose), so your agent's checks find the same Node and PostgreSQL. Those checks
+  (`isolated.sh`, `run-suites.sh`) use this cluster on 54329 only: keep the default port if your agent will build.
 
 ## 3. Every day: follow main
+This clone is your **demo copy**: it stays on `main` and is never edited.
 ```bash
 git checkout main && git pull
 bash ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/new-machine.sh
@@ -60,18 +64,30 @@ over, use the app's **Demo › Load the finished story** (or **Reset to the six*
 
 Everything else is the same code and the same sample data.
 
-## 4. Your agent works through the same pipeline
-Open Claude Code (or another agent) at the clone's top folder; it reads `AGENTS.md` and
-`ai-workers/problem-1-pathway-setup-and-form-filling/product/WAY-OF-WORKING.md` and `RULES.md`. The rules for it:
-* **Never `/lead`.** The tech lead is the founder's main copy only (P-188). Your agent is a builder: `/next <area> <row>`
-  for a ready row in `BACKLOG.md`, or your ask written down as a question for the tech lead first.
-* **Before taking a row**, read `STATE.md`: its lanes table says who is building what, and which lane holds the schema
-  (one migration in flight at a time). Never touch `prisma/` migrations, `contracts/` or another lane's row without the
-  tech lead's yes. Never edit `STATE.md`, `DECISIONS.md` or `qa/CAPABILITIES.md`.
-* **One small row = one PR:** `git fetch origin && git checkout -b claude/<area>-<word> origin/main`; push after every
-  step; a draft PR; the checks in the `/next` skill; a review by the reviewer agent on Opus, which ends with the PR
-  comment `Reviewer: Approve <full head sha>`; then mark the PR ready and add the label `review: approved`. On green
-  checks the merge queue merges it and the founder's demo updates itself. Any later push needs a new review.
+## 4. Your agent works through the same pipeline, in its own copy
+**Never in the demo copy, and never `/lead`.** The tools read a Mac copy on `main` as the tech lead's copy, and the
+tech lead is the founder's main copy only (P-188): if an agent there answers "type `/lead`", do not. Give each piece of
+work its own copy on a builder branch, then open the agent there:
+```bash
+git fetch origin
+git worktree add ../Xpatready-<area> -b claude/<area>-<word> origin/main
+cd ../Xpatready-<area>
+```
+(`<area>` is `screens`, `forms`, `runtime` or `evidence`; the branch name is how the tools know the copy's area.) Start
+Claude Code there and type `/next <area> <row>` for a ready row in `BACKLOG.md`; an ask of yours that has no row yet
+goes first to the tech lead as a question. The agent reads `AGENTS.md`,
+`ai-workers/problem-1-pathway-setup-and-form-filling/product/WAY-OF-WORKING.md` and `RULES.md`; the rules for it:
+* **Before taking a row**, read `STATE.md`: its lanes table says who is building what, and who holds
+  `prisma/schema.prisma` and `api/src/case-prepare.ts` (one builder at a time on each). Never touch a held file,
+  `contracts/` or another lane's row without the tech lead's yes. Builders never edit `STATE.md`, `RULES.md`,
+  `DECISIONS.md` or `BACKLOG.md`; `qa/CAPABILITIES.md` and `qa/BUGS.md` are qa's.
+* **One small row = one PR:** branch from `origin/main` (above); push after every step; a draft PR; the checks in the
+  `/next` skill; a review by the reviewer agent on Opus, plus the breaker agent for money, schema, permissions or a new
+  screen; the reviewer's Approve as the PR comment `Reviewer: Approve <full head sha>`; then mark the PR ready and add
+  the label `review: approved`. On green checks the merge queue merges it and the founder's demo updates itself. Any
+  later push needs a new review. The tech lead reads the diff before labelling anything touching money, permissions,
+  the schema, a migration, `.github/` or `.mergify.yml`.
 * Questions go in the PR as "Question for the tech lead", with a recommendation.
 * Never set any `STUDIO_*_LIVE` switch (that spends money); never commit `.tools/`, PDFs, databases, logs or secrets
   (the push guard refuses them); no personal names in project files.
+* When the PR is merged: `git worktree remove ../Xpatready-<area>` (from the demo copy) and a new copy for the next row.
