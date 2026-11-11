@@ -79,3 +79,13 @@ Reviewer: Opus, fresh context (did not build). 11 Nov 2026. Commit reviewed: **6
 Note: during the review the working copy showed 23 deleted `screens/R1-thin-slice/screenshots/r1c/*` files. These come from the builder's background C7.1 run (`tests/runtime/check_runtime_r1c.cjs` writes there), not from this review. I left them as they are.
 
 **Verdict: Approve** (no open Blocker or Major), for commit 61e6261b2ffdca186e635aaacc9364ca2596c8cb. Minors m1 (record and open a qa row) and m5 (say in the PR) go in the PR body; m2 and m3 are small test hardenings, welcome in this PR or next.
+
+## Re-review (11 Nov 2026): head f3d83d563b5fb763a193e803c782553a3a653c9c
+Scope: `git diff 61e6261b2..f3d83d563 -- …/prototype/studio` (2 files). The other 2 files in the diff are this review's own records.
+
+* **m3, closed.** The fix is at `040-field-map-review.ts:70-71`: a correction applies only when `payload.kind === "field"` (the SCH1 proposal's payload is `kind: "field"`, checked in my copy's database earlier). Check B now also asserts "1 edited, 1 returned with a reason". If a correction ever takes the showcase's first item, that line goes red.
+* **m2, closed.** There are two new A lines on `scopeRefusal`. Mutation check, engine only with no server: as committed, both lines pass. With the `person.is_principal_applicant` entry removed from PERSON_ONLY (`field-scope.ts:53`), the household-refusal line fails and the ordinary-key line still passes. I then restored the file; it is unchanged in git.
+* **Not re-run here:** the full check against the configured checkpoint. The builder reports 20/20. The packs reported are r1c 140/140, r1d 97/97, r1a 98/98, qa122 7/7, C10.1 28/28 and qa144 35/35; the R1 order re-run is still in progress.
+* **Still open:** m1 (c1-v3: PR body plus a tech-lead question), m4 and m5 (PR body). The IMM 0008 DEP box goes to qa. None of them blocks.
+
+**Verdict: Approve**, for head f3d83d563b5fb763a193e803c782553a3a653c9c.
