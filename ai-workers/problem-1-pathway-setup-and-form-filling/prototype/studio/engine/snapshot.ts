@@ -11,6 +11,7 @@ import { compareEditions } from "./programs.ts";
 import { gateFacts, snapshotEligibility, type SnapshotEligibility } from "./eligibility-gates.ts";
 import { frozenSources, publishedNumbers, type FrozenSource, type SourceEntry } from "./source-register.ts";
 import { snapSets } from "./document-sets.ts";
+import { conditionsToHold } from "./held-conditions.ts"; // QA-237, QA-239
 
 export type Mode = "draft" | "published";
 type Versioned = { status: string; version: number; id?: string; supersedesId?: string | null };
@@ -72,6 +73,10 @@ export type Snapshot = {
    *  section reaches its cases (review M2 on #866); present only when there are any, so other configurations keep
    *  their fingerprint. Without it a pulled question showed its section's raw key. */
   section_titles?: { id: string; title: string }[];
+  /** QA-237, QA-239 (engine/held-conditions.ts): the library conditions this combination cannot honour, so its question is
+   *  asked every time here (its placement carries no condition). Present only when there are any; never part of the
+   *  fingerprint, so another combination's condition never makes this one "changed". */
+  held_conditions?: { lineage: string; fact: string; condition: unknown; condition_effect: string | null; condition_plain: string | null; why: string[] }[];
   row_versions: Record<string, string>;
 };
 
@@ -85,7 +90,7 @@ export const sourceEntryOf = (r: { itemKind: string; itemKey: string; valuePath:
 /** The release fingerprint of a snapshot as stored: the same expression assemble() uses (C6.12 break B2: a route that
  *  stores what a release says re-checks the snapshot against its release's sha256, since a row can be edited underneath). */
 export function snapshotHash(snapshot: Snapshot): string {
-  const { row_versions: _rv, mode: _m, ...hashed } = snapshot;
+  const { row_versions: _rv, mode: _m, held_conditions: _h, ...hashed } = snapshot;
   return sha256(canonical(content({ ...hashed, forms: hashed.forms.map(fingerprintLine) }) as Parameters<typeof canonical>[0]));
 }
 
@@ -130,7 +135,18 @@ export async function buildSnapshots(db: PrismaClient, workspaceId: string, comb
   for (const comp of comps) {
     // The row's full path, pathway first (SA-1B-55): Pathway › Program › Category › Sub-category.
     const chain: any[] = []; for (let n: any = comp.program; n; n = n.parentNodeKey ? nodes.find((x) => x.programNodeKey === n.parentNodeKey) : null) chain.unshift(n);
-    out.set(comp.id, assemble(comp, chain, mode, { fields, sections, questions, doctypes, derived, selections: by(gSel, comp.id), cforms: by(gForms, comp.id), requirements: by(gReq, comp.id), rules: by(gRules, comp.id), checks: by(gChecks, comp.id), sources: by(gSources, comp.id), entries: entries.filter((e) => e.key.startsWith(`${comp.combinationKey}/`)), allMaps, shared }));
+    const parts = { fields, sections, questions, doctypes, derived, selections: by(gSel, comp.id), cforms: by(gForms, comp.id), requirements: by(gReq, comp.id), rules: by(gRules, comp.id), checks: by(gChecks, comp.id), sources: by(gSources, comp.id), entries: entries.filter((e) => e.key.startsWith(`${comp.combinationKey}/`)), allMaps, shared };
+    // QA-237, QA-239: a library condition this combination cannot honour is held here (asked every time), until none is
+    // left; holding one can stop a deciding question being pulled in, so the next pass may hold another (bounded).
+    const held = new Map<string, string[]>();
+    let built = assemble(comp, chain, mode, parts, held);
+    for (let pass = 0; pass < 8; pass++) {
+      const more = conditionsToHold(built.snapshot).filter((h) => !held.has(h.lineage));
+      if (!more.length) break;
+      for (const h of more) held.set(h.lineage, h.why);
+      built = assemble(comp, chain, mode, parts, held);
+    }
+    out.set(comp.id, built);
   }
   return out;
 }
@@ -174,7 +190,7 @@ export function releaseConditionFacts(conditions: unknown[], participants: unkno
   const lines = (Array.isArray(participants) ? participants : []) as ({ addsFiling?: { condition?: unknown } | null } | null)[];
   return new Set([...conditions, ...lines.map((p) => p?.addsFiling?.condition)].flatMap(fieldsOfCondition));
 }
-function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; sections: any[]; questions: any[]; doctypes: any[]; derived: any[]; selections: any[]; cforms: any[]; requirements: any[]; rules: any[]; checks: any[]; sources?: any[]; entries?: SourceEntry[]; allMaps: any[]; shared: { lists: Map<string, { key: string; label: string }[]>; effFields: any[]; effSections: any[]; effQuestions: any[]; effTypes: any[]; entriesOf: (editionId: string) => any[] } }): { snapshot: Snapshot; sha256: string } {
+function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; sections: any[]; questions: any[]; doctypes: any[]; derived: any[]; selections: any[]; cforms: any[]; requirements: any[]; rules: any[]; checks: any[]; sources?: any[]; entries?: SourceEntry[]; allMaps: any[]; shared: { lists: Map<string, { key: string; label: string }[]>; effFields: any[]; effSections: any[]; effQuestions: any[]; effTypes: any[]; entriesOf: (editionId: string) => any[] } }, held: Map<string, string[]> = new Map()): { snapshot: Snapshot; sha256: string } {
   const { derived, selections, cforms, requirements, rules, checks, allMaps, shared } = rows;
   const effSources = effective(rows.sources ?? [], (r: any) => r.lineageKey, mode).filter((r: any) => r.status !== "RETIRED" && (r.source || r.prequalification));
   const rv: Record<string, string> = {};
@@ -214,7 +230,7 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
     size = used.size;
     for (const d of derived) if ([...used].includes(d.derivedKey)) for (const i of [...d.inputs, d.reference]) used.add(i);
     placements = effQuestions.filter((q) => selected.has(q.sectionKey) || used.has(q.canonicalFieldKey));
-    for (const q of placements) conditionFields(q.predicateJson);
+    for (const q of placements) if (!held.has(q.lineageKey)) conditionFields(q.predicateJson);
   }
   // W1-15 (P-97): a placement in a section only the client answers says so (only then, so the fingerprint keeps).
   const clientOnly = new Set(effSections.filter((x: any) => x.clientOnly).map((x: any) => x.sectionKey));
@@ -232,7 +248,7 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
     mode,
     canonical_fields: effFields.filter((f) => used.has(f.canonicalFieldKey)).sort((a, b) => a.canonicalFieldKey.localeCompare(b.canonicalFieldKey)).map((f) => { note("field", f.canonicalFieldKey, f); return snapField(f, shared.lists); }),
     sections: selections.map((s) => effSections.find((x) => x.sectionKey === s.sectionKey)).filter(Boolean).map((s) => { note("section", s!.sectionKey, s!); return { id: s!.sectionKey, title: s!.title, meaning: s!.meaning, item_version: s!.version, status: s!.status }; }),
-    placements: placements.sort((a, b) => a.sectionKey.localeCompare(b.sectionKey) || a.displayOrder - b.displayOrder || a.lineageKey.localeCompare(b.lineageKey)).map((q) => { note("placement", q.lineageKey, q); return { lineage: q.lineageKey, fact: q.canonicalFieldKey, section_id: q.sectionKey, order: q.displayOrder, question_text: q.questionText, help_text: q.helpText, repeats: q.repeats, tier: q.tier, collected_from: q.collectedFrom, client_visible: q.clientVisible, condition: q.predicateJson, condition_effect: q.conditionEffect, condition_plain: q.conditionPlain, rule_only: q.ruleOnly, ...(clientOnly.has(q.sectionKey) ? { client_only: true } : {}), ...markOf(effFields.find((f) => f.canonicalFieldKey === q.canonicalFieldKey)?.scope), item_version: q.version, status: q.status }; }),
+    placements: placements.sort((a, b) => a.sectionKey.localeCompare(b.sectionKey) || a.displayOrder - b.displayOrder || a.lineageKey.localeCompare(b.lineageKey)).map((q) => { note("placement", q.lineageKey, q); return { lineage: q.lineageKey, fact: q.canonicalFieldKey, section_id: q.sectionKey, order: q.displayOrder, question_text: q.questionText, help_text: q.helpText, repeats: q.repeats, tier: q.tier, collected_from: q.collectedFrom, client_visible: q.clientVisible, ...(held.has(q.lineageKey) ? { condition: null, condition_effect: null, condition_plain: null } : { condition: q.predicateJson, condition_effect: q.conditionEffect, condition_plain: q.conditionPlain }), rule_only: q.ruleOnly, ...(clientOnly.has(q.sectionKey) ? { client_only: true } : {}), ...markOf(effFields.find((f) => f.canonicalFieldKey === q.canonicalFieldKey)?.scope), item_version: q.version, status: q.status }; }),
     // C11.9 (P-116): the combination's filing order when one is set (lineage keys); lines it does not name follow by key.
     forms: forms.sort(byFilingOrder(comp.formOrder)).map((f) => { note("form", f.lineageKey, f); return { form_number: f.form.formKey, title: f.form.displayName, form_kind: f.form.formKind, ...(f.form.formRole ? { form_role: f.form.formRole } : {}), who: f.who, status: f.attachMode === "COMBINATION_MANDATORY" ? "always" : "conditional", condition: f.predicateJson, condition_plain: f.conditionPlain, source_quote: f.sourceQuote, item_version: f.version, origin: f.origin, ...(f.channel && f.channel !== "PDF_UPLOAD" ? { channel: f.channel } : {}), ...(f.signature && f.signature !== "NONE" ? { signature: f.signature } : {}), ...formEditions(f, comp.portalKey),
       // S5: only when set, so a line that keeps the defaults keeps its fingerprint (no draft change appears).
@@ -253,7 +269,9 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
   const pulled = [...new Set(placements.map((q) => q.sectionKey).filter((k) => !selected.has(k)))].sort();
   const titled = pulled.map((k) => effSections.find((x) => x.sectionKey === k)).filter(Boolean).map((x) => ({ id: x!.sectionKey as string, title: x!.title as string }));
   if (titled.length) snapshot.section_titles = titled;
-  const { row_versions: _rv, mode: _m, ...hashed } = snapshot;
+  const heldRows = placements.filter((q) => held.has(q.lineageKey));
+  if (heldRows.length) snapshot.held_conditions = heldRows.map((q) => ({ lineage: q.lineageKey, fact: q.canonicalFieldKey, condition: q.predicateJson, condition_effect: q.conditionEffect ?? null, condition_plain: q.conditionPlain ?? null, why: held.get(q.lineageKey)! }));
+  const { row_versions: _rv, mode: _m, held_conditions: _h, ...hashed } = snapshot;
   // C-8 (W1-10 slice 1): a PDF upload signed by hand and scanned is fingerprinted in its old spelling, so a combination
   // released before the slice does not show "changed since release".
   return { snapshot, sha256: sha256(canonical(content({ ...hashed, forms: hashed.forms.map(fingerprintLine) }) as any)) };

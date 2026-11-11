@@ -10,6 +10,7 @@ import type { FormFieldRow, FormFieldState, FormFieldsOfCombination, FormFieldsO
 import { problemFromZod } from "../../contracts/programs.ts";
 import { askedStep, blockFacts, boxGate, decidingYes, isWorkedOutYesNo, plainWords, showCondition, whenWords, yesNoStep } from "../../engine/form-field-condition.ts";
 import { buildSnapshot, effective, type Snapshot } from "../../engine/snapshot.ts";
+import { withHeldConditions } from "../../engine/held-conditions.ts";
 import { factWords } from "../../engine/sources.ts";
 import { bareCond } from "../../engine/validate.ts";
 import { actorOf, Audit, Db, need, readerOf, revise, strip, Workspace, type Actor } from "./core.ts";
@@ -54,7 +55,7 @@ export async function spreadOf(db: Client, workspaceId: string, fact: string, tr
   const live = [...newest.values()].filter((l) => l.status !== "RETIRED" && l.combinationId !== except && open.has(l.combinationId));
   const filed = new Set(live.map((l) => l.govFormDefId)), held = new Set(live.map((l) => l.combinationId)), fields = rows.filter((r) => filed.has(r.edition.govFormDefId)).length;
   if (!held.size) return { combinations: 0, form_fields: 0, words: null };
-  return { combinations: held.size, form_fields: fields, words: `${plural(held.size, "other combination")} ask${held.size === 1 ? "s" : ""} this question, and ${plural(fields, "form field")} there ${fields === 1 ? "does" : "do"} not hold this condition: ${held.size === 1 ? "it" : "they"} cannot be released until ${fields === 1 ? "that form field holds" : "those form fields hold"} it, or the condition is removed.` };
+  return { combinations: held.size, form_fields: fields, words: `${plural(held.size, "other combination")} ask${held.size === 1 ? "s" : ""} this question, and ${plural(fields, "form field")} there ${fields === 1 ? "does" : "do"} not hold this condition: there the question stays asked every time (the condition is held, QA-239) until ${fields === 1 ? "that form field holds" : "those form fields hold"} it. Nothing stops ${held.size === 1 ? "it" : "them"} being released.` };
 }
 
 /** What the second person compares on To review. */
@@ -245,7 +246,7 @@ export class FormFieldConditions {
     const workspaceId = await this.ws.id();
     const c = /^[0-9a-f-]{36}$/i.test(combinationId) ? await this.db.combination.findUnique({ where: { id: combinationId } }) : null;
     if (!c || c.workspaceId !== workspaceId) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
-    const { snapshot: s } = await buildSnapshot(this.db, workspaceId, combinationId, "draft");
+    const s = withHeldConditions((await buildSnapshot(this.db, workspaceId, combinationId, "draft")).snapshot); // QA-237: the library's condition, held here or not
     const entries = (s.field_maps as { entries: { fact?: string | null; outcome?: string; condition_rule?: unknown }[] }[]).flatMap((m) => m.entries.filter((e) => e.outcome === "mapped" && e.fact));
     // A HIDE condition too: the rule refuses it, and the panel says what to do (break n4 on #1053). B88 (breaker M2): a question
     // whose only reader was asked as its deciding question is still listed, so its Undo stays reachable.
@@ -265,7 +266,7 @@ export class FormFieldConditions {
     const workspaceId = await this.ws.id();
     const c = /^[0-9a-f-]{36}$/i.test(combinationId) ? await this.db.combination.findUnique({ where: { id: combinationId } }) : null;
     if (!c || c.workspaceId !== workspaceId) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
-    const { snapshot: s } = await buildSnapshot(this.db, workspaceId, combinationId, "draft");
+    const s = withHeldConditions((await buildSnapshot(this.db, workspaceId, combinationId, "draft")).snapshot); // QA-237: the library's condition, held here or not
     if (!(s.canonical_fields as { id: string }[]).some((f) => f.id === fact)) throw problem(404, "Not found", "This combination does not read that question.");
     const cond = await this.conditionOf(workspaceId, combinationId, fact, s, item);
     const rows = await this.rowsOf(workspaceId, combinationId, fact, s, cond.tree);
@@ -281,7 +282,7 @@ export class FormFieldConditions {
     const b = parsed.data, workspaceId = await this.ws.id();
     const c = await this.db.combination.findUnique({ where: { id: b.combinationId } });
     if (!c || c.workspaceId !== workspaceId) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
-    const { snapshot: s } = await buildSnapshot(this.db, workspaceId, c.id, "draft");
+    const s = withHeldConditions((await buildSnapshot(this.db, workspaceId, c.id, "draft")).snapshot); // QA-237: the library's condition, held here or not
     const cond = b.clear ? { tree: null, sentence: null, why: null } : await this.conditionOf(workspaceId, c.id, b.fact, s, b.item);
     if (!b.clear && !cond.tree) throw problem(409, "No condition to hold", `${cond.why} Nothing was changed.`);
     const rows = await this.rowsOf(workspaceId, c.id, b.fact, s, cond.tree);
@@ -298,7 +299,7 @@ export class FormFieldConditions {
     const raw = effective(rawRows, (x) => x.dataPath, "draft")[0];
     if (b.ask || (b.clear && row.state === "asked")) return this.proposeAsk(actor, workspaceId, c.id, b, row, raw, s, !!b.clear);
     // Break m8: taking a rule off holds whoever asks this question under its condition, so the second person is told that too.
-    const spread = cond.tree ? await spreadOf(this.db, workspaceId, b.fact, cond.tree, c.id) : { words: showCondition(s.placements as never, b.fact) ? `Taking it off holds every combination that asks this question and files ${row.form}: they cannot be released until the form field holds the condition again, or the condition is removed.` : null };
+    const spread = cond.tree ? await spreadOf(this.db, workspaceId, b.fact, cond.tree, c.id) : { words: showCondition(s.placements as never, b.fact) ? `Taking it off means every combination that asks this question and files ${row.form} asks it every time again (the condition is held there, QA-237) until the form field holds the condition again.` : null };
     const name = factWords(s, b.fact), field = row.caption || "a form field";
     const label = (b.clear ? `${row.form} · ${field}: filled whenever the form applies again` : `${row.form} · ${field}: filled only when ${cond.sentence ?? "its question is asked"}`).slice(0, 300);
     const key = keyOf(b.formEditionId, b.dataPath);
