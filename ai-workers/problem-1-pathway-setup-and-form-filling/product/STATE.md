@@ -27,8 +27,7 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
 | A7 | Fable's questions 16-18 (internal use on what data; employer LMIA side in?; Chrome extension in?) and booking the immigration expert | ask after the 29 |
 | A18 | 12:0x (11 Nov) start B168, three stopped rows, B170, two standbys | done (P-461); word for word in `history/STATE-2026-11-11-1455-lead17s2-founder-ask-A18.md`; B170 report owed at its end |
 | A19 | 12:2x-12:5x (11 Nov, spoken) parts (a)-(l) | in progress; word for word in `history/STATE-2026-11-11-2055-lead19s2-founder-ask-A19.md` |
-| A21 | 19:37 (11 Nov, spoken) (a) progress, on track? (b) is the validated Sample PDF needed for the co-founder's demo; if so park it with his GitHub access (c) a clear plan for what comes next (d) blockers, pipeline health, optimisations | (b) P-480 parked (not needed for the demo); (a), (c), (d) answered in chat 19:37; lanes started for the idle Bake rows |
-| A22 | 19:5x (11 Nov, spoken) can the Bake be squeezed without lowering quality (parallel vs sequence, hybrid; many runners and VMs, tokens fine if they produce outcomes); talk it through with Fable; is the speed like M1-M3 and how is it decided; how to gauge Bake progress without capabilities | Fable planner `local_20e33376` started 20:00 (its file, bake-squeeze, comes in its own records PR; summary to the current Lead); merges/day 33, 36, 29 (9-11 Nov) answered in chat; final plan to the founder from the planner's file |
+| A21, A22 | 19:37, 19:5x (11 Nov, spoken): progress and plan; Bake squeeze | answered (P-480, P-481 to P-484); word for word in `history/STATE-2026-11-11-2256-lead20s2-founder-asks-A21-A22.md` |
 | A20 | 15:2x (11 Nov, spoken) anything needing him (spend, approval, a block on cost, quality, timeline or solution) very clear, in a card, highlighted red | done: P-478 (🔴 Needs you block + card) on RULES.md and in the lead-watch skill (lead skill at its 10 KB cap) |
 
 ## For the founder (P-390)
