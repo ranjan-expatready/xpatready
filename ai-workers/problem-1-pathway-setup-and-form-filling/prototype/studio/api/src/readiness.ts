@@ -8,7 +8,7 @@
 // representative of record's own (P-155), "Self-reviewed" when they prepared it themself; a client and configuration
 // people get 403. The inputs: api/src/readiness-inputs.ts. Legal points: Unconfirmed: no counsel. US$0.
 import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post } from "@nestjs/common";
-import { cannotPass, CODE_WORDS, dayOf, isCritical, passKeys, passProblem, WARN_CODES, type WarnCode } from "../../engine/runtime/readiness.ts";
+import { BLOCK_CODES, cannotPass, CODE_WORDS, dayOf, isCritical, passKeys, passProblem, WARN_CODES, type WarnCode } from "../../engine/runtime/readiness.ts";
 import type { ReadinessView } from "./readiness-inputs.ts";
 import { userIn } from "../../engine/runtime/team.ts";
 import { actorOf, Audit, Db, fail, Workspace, type Actor } from "./core.ts";
@@ -107,7 +107,7 @@ export class FilingReadinessRoutes {
   async pass(actor: Actor, id: string, code: string, body: unknown) {
     const { f, c } = await this.filing(actor, id);
     const no = cannotPass(code);
-    if (no) fail(no, (WARN_CODES as readonly string[]).includes(code) || code === "barcode_not_validated" ? HttpStatus.CONFLICT : HttpStatus.NOT_FOUND);
+    if (no) fail(no, (WARN_CODES as readonly string[]).includes(code) || (BLOCK_CODES as readonly string[]).includes(code) ? HttpStatus.CONFLICT : HttpStatus.NOT_FOUND);
     const b = (body ?? {}) as { reason?: unknown; key?: unknown };
     const why = passProblem(b.reason);
     if (why) problem(400, "Some details need fixing", why, { errors: [{ field: "reason", message: why }] });

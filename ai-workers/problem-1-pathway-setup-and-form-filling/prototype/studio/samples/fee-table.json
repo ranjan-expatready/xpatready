@@ -235,7 +235,6 @@
     "visitor_visa",
     "biometrics"
    ],
-   "checklist": true,
    "modes": {
     "principal": "files_own",
     "spouse_or_partner": "files_own",
@@ -257,14 +256,12 @@
   "sp.outside": {
    "label": "Study permit (outside Canada)",
    "lines": [],
-   "checklist": true,
-   "note": "C6.17 (P-444, QA-375): the per-person checklist only. Its document lines are the release's, each cited from IMM 5483 (08-2025) with page, quote and date (samples/form-setup.json sp.outside documentsCited). No fee lines: its fees are not worked out from this table yet (the study_permit line waits for its combination's modes), so nothing about money changes."
+   "note": "C6.17 (P-444, QA-375): its per-person checklist is its release's document lines (worked out for every combination since M3-S4, P-425), each cited from IMM 5483 (08-2025) with page, quote and date (samples/form-setup.json sp.outside documentsCited). No fee lines: its fees are not worked out from this table yet (the study_permit line waits for its combination's modes), so nothing about money changes."
   },
   "wp.lmia_inside": {
    "label": "Work permit with an LMIA (inside Canada)",
    "lines": [],
-   "checklist": true,
-   "note": "C6.17 (P-444, QA-375): the per-person checklist only. Its document lines are the release's: those IMM 5556 (03-2024) lists are cited from it with page, quote and date; the others are labelled Sample (samples/form-setup.json wp.lmia_inside documentSources). No fee lines: its fees are not worked out from this table yet, so nothing about money changes."
+   "note": "C6.17 (P-444, QA-375): its per-person checklist is its release's document lines (worked out for every combination since M3-S4, P-425): those IMM 5556 (03-2024) lists are cited from it with page, quote and date; the others are labelled Sample (samples/form-setup.json wp.lmia_inside documentSources). No fee lines: its fees are not worked out from this table yet, so nothing about money changes."
   },
   "fs.spouse": {
    "label": "Spouse or common-law partner sponsorship",

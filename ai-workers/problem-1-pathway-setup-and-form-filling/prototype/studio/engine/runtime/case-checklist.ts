@@ -4,10 +4,11 @@
 // questions still to answer), so the list changes as the case's answers change. A line whose document type has a
 // validity rule in the release (a `document_validity` check, applies_to = the document type key; e.g. the police
 // certificate's 6 months, P-171) carries that rule with its citation: the rule is release data, never an engine constant
-// (STANDARDS §3.1; Lead on #283). Only the combinations the fee table marks (DERIVED_FOR); others answer "not derived
-// yet". Pure: no database, no clock (the date is passed in). Tests: tests/runtime/check_vv_checklist.ts,
-// check_m3s3_waivable.ts. Uploads and AI reading are C6.5; a line's waiver (M3-S3, P-171 (6)) is release data on the
-// line; the Express Entry block (P-172) is M3-S4.
+// (STANDARDS §3.1; Lead on #283). Every combination's checklist is worked out from its own release (M3-S4, P-425: no
+// combination list decides it; a release with no document lines gives empty lists). Pure: no database, no clock (the
+// date is passed in). Tests: tests/runtime/check_vv_checklist.ts, check_m3s3_waivable.ts, check_m3s4_never_waivable.ts.
+// Uploads and AI reading are C6.5; a line's waiver is release data on the line: "waivable" (M3-S3, P-171 (6)) or
+// "never" (M3-S4, P-172: it blocks Ready to file until received, engine/runtime/readiness.ts).
 import { ageInYears } from "../../../contracts/rules.ts";
 import { MINOR } from "../../contracts/runtime.ts";
 import { lineCondition, lineHolders, type Known, type Person } from "../render.ts";
@@ -16,12 +17,8 @@ import { isFilingFact } from "../resolver.ts";
 import { FILING, ROLE } from "../../contracts/resolver.ts";
 import { WHO_WORDS } from "../../contracts/lines-bulk.ts";
 import type { Participant } from "./case.ts";
-import { FEE_TABLE } from "./filings.ts";
 import { lineSet, type LineSet, type SnapSet } from "../document-sets.ts";
 
-/** R2 (P-230 (7)): the combinations whose checklist is worked out are data (samples/fee-table.json "checklist": true),
- *  so another combination is a data edit once its requirements are checked, never code. */
-export const DERIVED_FOR = new Set(Object.entries(FEE_TABLE.combinations).filter(([, c]) => c.checklist).map(([k]) => k));
 /** The fact a Visitor visa's ages are worked out on (the release's person.age_years uses the same reference). */
 export const APPLICATION_DATE = "case.application_date";
 
@@ -59,6 +56,9 @@ export type PersonLine = { id: string; document_type: string; label: string; sta
   /** M3-S3 (P-171 (6)): the case officer may waive this line with a reason (the release's line says so). A line merged
    *  from two requirements is waivable only when both are. */
   waivable: boolean;
+  /** M3-S4 (P-172): the release's line is never waivable: no waiver and no Not applicable, and Ready to file is blocked
+   *  until it is received. A line merged from two requirements is never waivable when either is. */
+  never_waivable: boolean;
   /** C6.4 (a), challenge r2 M1: whose line it is (the release's "whose document") and its words, for the Documents panel. */
   who: string; who_words: string;
   /** C6.14 (SA-1B-151, SA-1B-214): a line asked once for the application ("case", C3.16's Filing scope) or once for the
@@ -78,8 +78,8 @@ export type PersonChecklist = { subject: string; label: string; role: string; ap
   /** C6.14 BR-4: whether this person may provide a shared document today, and why not (the officer's dialog reads it). */
   may_provide: { ok: boolean; why: string } };
 export type CaseChecklist =
-  | { derived: true; stand_in: "SI-14"; combination: string; people: PersonChecklist[]; basis: string; empty_release: boolean; ages_on: string; ages_on_why: string }
-  | { derived: false; combination: string; why: string };
+  /** M3-S4 (P-425): always worked out from the release (`derived` stays true for the readers that ask). */
+  { derived: true; stand_in: "SI-14"; combination: string; people: PersonChecklist[]; basis: string; empty_release: boolean; ages_on: string; ages_on_why: string };
 
 const isObj = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
 const plainText = (x: unknown) => typeof x === "string" && x.trim().length > 0 && !/[<>]/.test(x);
@@ -136,10 +136,6 @@ export function issuedWithin(rule: Pick<ValidityRule, "months">, issuedOn: strin
 /** Each person's checklist on this case, from the release's requirements and what is known about each person. `known`
  *  holds only answers without problems (the caller drops the others, B-M2), so a rejected answer never decides a line. */
 export function caseChecklist(s: Snapshot, combinationKey: string, people: Participant[], answers: Known, today: Date): CaseChecklist {
-  // M3-S3 review M1: a line's waiver never decides whether the checklist is worked out (ticking one line would switch the
-  // whole list on, unticking it off, stranding a waived line). That stays the fee table's data mark (P-230 (7)), which
-  // C6.17 widened to the study and work permits once their lines were cited; M3-S4 removes the guard.
-  if (!DERIVED_FOR.has(combinationKey)) return { derived: false, combination: combinationKey, why: "The document checklist per person is not derived yet for this combination (it is worked out once its requirements are checked). Nothing is guessed." };
   // Break M1: an answer saved with spaces around it (" 1980-01-01 ") passes its checks, which trim; it is read trimmed.
   const known: Known = new Map([...answers].map(([k, v]) => [k, typeof v.value === "string" ? { ...v, value: v.value.trim() } : v]));
   const persons: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Person["role"], label: p.label, applies: p.applies }));
@@ -225,14 +221,14 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
       const line: PersonLine = { id: `${h}:${r.lineage}`, document_type: document.key, label: document.name, state: "not_requested", reason: why, required: state === "needed", documents: [],
         need: state, lineage: r.lineage, also_from: [], document, missing, base: r.base_or_conditional === "base", provided_by: r.provided_by,
         alternatives: (r.alternatives ?? []).map((k) => ({ key: k, name: types.find((x) => x.key === k)?.name ?? k })), quote: r.source_quote ?? null, rule: rules.get(document.key) ?? null,
-        set: lineSet(t, r.set_name, document.name).set, waivable: r.waiver === "waivable", who: r.who, who_words: whoWords(r.who), ...sharedOf(r.who, t?.default_provider_roles ?? [], h, everyone, providersOn) };
+        set: lineSet(t, r.set_name, document.name).set, waivable: r.waiver === "waivable", never_waivable: r.waiver === "never", who: r.who, who_words: whoWords(r.who), ...sharedOf(r.who, t?.default_provider_roles ?? [], h, everyone, providersOn) };
       // Minor: two requirements for the same document on one person (e.g. a case line and the principal's own) are one
       // line: the strongest state wins and the other requirement is named in also_from.
       // Break m7: the merged line is "always" when either requirement is.
       const list = byPerson.get(h)!, same = list.findIndex((x) => x.document.key === line.document.key);
       if (same < 0) list.push(line);
       else {
-        const keep = ORDER[line.need] < ORDER[list[same].need] ? line : list[same], drop = keep === line ? list[same] : line; keep.also_from = [...new Set([...keep.also_from, drop.lineage, ...drop.also_from])].sort(); keep.base ||= drop.base; keep.waivable &&= drop.waivable;
+        const keep = ORDER[line.need] < ORDER[list[same].need] ? line : list[same], drop = keep === line ? list[same] : line; keep.also_from = [...new Set([...keep.also_from, drop.lineage, ...drop.also_from])].sort(); keep.base ||= drop.base; keep.never_waivable ||= drop.never_waivable; keep.waivable = keep.waivable && drop.waivable && !keep.never_waivable;
         // C6.14: merged with a shared requirement, the one line keeps its providers (a shared item is never lost), but only
         // when that requirement applies as strongly as the line it joins: a shared requirement not needed (or waiting)
         // never makes a needed per-person line shared (Devin on #1392).

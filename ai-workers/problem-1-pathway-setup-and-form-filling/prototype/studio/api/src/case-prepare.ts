@@ -515,7 +515,7 @@ export class CasePrepare {
     const maps = ((s as { field_maps?: { form_number: string; form_edition: string; channel?: string }[] }).field_maps ?? []);
     const pdfOf = (form: string) => pdfMapInUse(maps, form)?.form_edition ?? null;
     const editionOf = (form: string, channel: string) => (channel === "ONLINE" ? maps.find((m) => m.form_number === form && m.channel === "ONLINE")?.form_edition : null) ?? pdfOf(form);
-    const docLine = (subject: string, type: string) => (docs.get(subject) as { document_type: string; required: boolean }[] | undefined)?.find((x) => x.document_type === type);
+    const docLine = (subject: string, type: string) => (docs.get(subject) as { document_type: string; required: boolean; never_waivable: boolean }[] | undefined)?.find((x) => x.document_type === type);
     // Break B3: "cannot start" ones too. Review m7: built field by field, so a line missing a field is a type error, not a 500.
     // C9.2 (BR-12, P-136, P-237): an out-of-date validated, signed or uploaded item is a CRITICAL "out of date" line on its
     // filing (an Online section entered before a change warns, enteredStale). A signed scan's own out-of-date record is
@@ -635,7 +635,7 @@ export class CasePrepare {
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems, reviewAfterMove, releaseUpdate,
       byHand: (form, subject) => handOf.get(`${form}|${subject}`) ?? [],
       copy: copyOf,
-      documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
+      documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true, never_waivable: docLine(d.subject, d.document_type)?.never_waivable ?? false })), // M3-S4
       factsOf: (form, subject) => formReady(form, subject),
       // C7.9 (P-242): the must-verify facts this form writes from an unchecked client-given value.
       unverifiedOf: (form, subject) => unverifiedOf(s, answers, formCoverage(s, people, answers, rows, form, subject)?.facts ?? [], reading), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
