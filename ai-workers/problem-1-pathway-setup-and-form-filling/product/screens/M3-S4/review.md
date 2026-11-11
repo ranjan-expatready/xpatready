@@ -137,3 +137,21 @@ Commit `d38208185af93dde7e45037d4dac3500fc94ebd5`. Copy `rv_m3s4b` on :4437 (con
 **Verdict: Block** (commit d38208185af93dde7e45037d4dac3500fc94ebd5). To fix, then a diff-only re-review:
 1. Major N1: `engine/runtime/case-checklist.ts:234` with `api/src/case-prepare.ts:637`. A never-waivable requirement waiting for an answer, merged into a plain needed line, raises no block.
 2. Minors m7 and m8: fix them, or list them in the PR.
+
+## Re-review at c9cd0b9bb (diff only: `d38208185..c9cd0b9bb`, N1 and m8)
+Commit `c9cd0b9bb30afc4b79c4fd74c09f816ccb404ecf`. Copy `rv_m3s4c` on :4437 (configured checkpoint, live AI off, US$0), stopped after.
+* **Suites run:** `check_m3s4_never_waivable` 32/32; `check_m3s4_blocking_api` 20/20; `check_c710_figure` 37/37; `check_c76_readiness` 91/91; `check_c95_release_update` 34/34; `check_vv_checklist` 76/76; `check_c614_providers` 27/27; `check_m3s3_waivable` 15/15; B164 52/0.
+* **N1 fixed.** `engine/runtime/case-checklist.ts:239-242`.
+  * My earlier probe: "base + never, condition unanswered" now gives `needed, never_waivable: true`; the other five cells are unchanged ("false" stays plain; "true" is never outright).
+  * Merge order, traced by hand: plain+waiting-never, waiting-never+plain, and a needed never with a waiting never, in either order. Each gives the same result, and a needed never requirement drops `never_if`. A kept line drops `never_if` too.
+  * On screen, on the API suite's case:
+    * the line reads "Never waived if "Current marital status" calls for it: Ready to file waits until it is received or that answer rules it out";
+    * the menu has no Waive… and no Not applicable…;
+    * the block is the same words with no pass, and the figure shows "Letter of acceptance … Not done";
+    * axe 0; no sideways scroll at 1024 or 400 px; no page errors.
+  * Tests: pure pass and fail tests, plus the API "waiting pass (re-review N1)" check.
+* **m8 fixed.** The "May be needed" card shows "Never waived: Ready to file waits until this is answered and, if it is needed, received" (`web/src/runtime/checklist.tsx:101`). I read this in the code only: no waiting card was on my cases.
+* **m7 stays as a listed Minor** in the PR. I accept that.
+* **New, Minor m9.** On a line that is never waivable only through `never_if`, the 422 for Waive or Not applicable (`api/src/case-checklist.ts` `neverWords`) says "…never waivable, so Ready to file waits until it is received". It leaves out "or that answer rules it out". The refusal is right; only the words are less exact. Fix it, or list it in the PR.
+
+**Verdict: Approve.** No open Blocker or Major. This Approve covers exactly the head `c9cd0b9bb30afc4b79c4fd74c09f816ccb404ecf`; it does not cover any later commit. Open Minors, listed or to be listed in the PR: m7 and m9.
