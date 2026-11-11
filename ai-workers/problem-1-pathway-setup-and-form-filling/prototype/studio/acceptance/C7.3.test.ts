@@ -18,6 +18,7 @@
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
+import { proseRecorded, recordedDerivation } from "../../p5/transforms.ts";
 import { CLIENT, OFFICER, call, expectedFor, fillEverything, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql, yearsAgo, answer, confirmAll, generateCopy, agent, copyBytes } from "./lib/m3.ts";
 
 type Sheet = { order_basis: string; form?: string; sections: { key: string; title: string; entered: { at: string; by: string } | null; out_of_date?: boolean; answers: { label: string; fact: string; value: unknown; copy_text: string; source: string; subject?: string }[]; waiting?: { fact: string }[] }[] };
@@ -137,15 +138,19 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   // markNothingRecorded), as engine/form-values.ts writes them; a sheet line is the same person's same fact.
   const copyId = await generateCopy(c.id, FORM, P);
   ({ s } = await sheet());
-  type Box = { box: string; fact: string; about: string; about_label?: string; value?: unknown; detail?: string };
+  type Box = { box: string; fact: string; about: string; about_label?: string; value?: unknown; detail?: string; transform?: string | null };
   const boxes = JSON.parse(sql(`select s.facts_json->'boxes' from form_instance f join answer_snapshot s on s.id = f.snapshot_id where f.id = '${copyId}'`) ?? "[]") as Box[];
   const lines = (s?.sections ?? []).flatMap((x) => x.answers as SA[]), on = new Set(lines.map((l) => `${l.subject}|${l.fact}`));
   const nothing = boxes.filter((b) => /^nothing recorded/.test(b.detail ?? ""));
   // Held while QA-392 is open (P-284, as C10.1 R12c): it prints HELD naming the bug, fails nothing in the whole run, and is
   // never green for a PR that claims it (gate-b.mjs stepsVerdict). The PR that fixes QA-392 turns this into a plain ok().
   const missing14 = nothing.filter((b) => !on.has(`${b.about}|${b.fact}`)).map((b) => `${b.about_label}: ${b.box.split(".").slice(-2).join(".")}`);
-  const pass14 = !!copyId && nothing.length > 0 && missing14.length === 0;
-  if (pass14 || !copyId || !nothing.length) ok("C7.3-14 fail (QA-392): each \"nothing recorded\" Yes/No box the PDF copy writes as No (a list answered \"none apply\") has its line on the answer sheet for that person", pass14, { copy: copyId, nothing: nothing.length, missing: missing14 });
+  // Never vacuous, never a false red (#1553's reviewer; check_vv_prepare_api.ts on pack 4's fixture, #1549's CI): a release
+  // that maps a "recorded?" Yes/No box must give at least one "nothing recorded" box; one that maps none has nothing to compare.
+  const recordedMapped = boxes.some((b) => b.about && b.about !== "case" && (!!recordedDerivation(b.transform) || proseRecorded(b.transform)));
+  const pass14 = !!copyId && (nothing.length > 0 || !recordedMapped) && missing14.length === 0;
+  const label14 = `C7.3-14 fail (QA-392): each "nothing recorded" Yes/No box the PDF copy writes as No (a list answered "none apply") has its line on the answer sheet for that person${recordedMapped ? "" : " (this release maps no such box)"}`;
+  if (pass14 || !copyId || !nothing.length) ok(label14, pass14, { copy: copyId, recorded_mapped: recordedMapped, nothing: nothing.length, missing: missing14 });
   else console.log(`HELD  C7.3-14 (QA-392): red, held: the PDF copy writes ${missing14.length} "nothing recorded" box(es) as No that the answer sheet leaves out: ${missing14.join("; ")}`);
   const valued = boxes.filter((b) => b.value !== undefined && b.value !== null && b.value !== "");
   ok("C7.3-15a pass: every box the PDF copy writes from an answer has a line on the answer sheet for the same person and fact", valued.length > 0 && valued.every((b) => on.has(`${b.about}|${b.fact}`)), valued.filter((b) => !on.has(`${b.about}|${b.fact}`)).map((b) => b.box));
@@ -171,7 +176,7 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   const boxes2 = JSON.parse(sql(`select s.facts_json->'boxes' from form_instance f join answer_snapshot s on s.id = f.snapshot_id where f.id = '${copy2}'`) ?? "[]") as Box2[];
   const pdf2 = copy2 ? writtenByPdf(await copyBytes(copy2)) : null;
   const lines2 = (s?.sections ?? []).flatMap((x) => x.answers as SL[]);
-  const recorded = (b: Box2) => /^derived:any\b/.test(b.transform ?? "");
+  const recorded = (b: Box2) => !!b.about && b.about !== "case" && (!!recordedDerivation(b.transform) || proseRecorded(b.transform));
   const off: string[] = [];
   for (const b of boxes2) {
     const mine = lines2.filter((l) => l.subject === b.about && l.fact === b.fact);
@@ -182,8 +187,11 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
       if (!mine.some((l) => (b.row == null || l.row == null || l.row === b.row) && JSON.stringify(l.value) === JSON.stringify(b.value))) off.push(`${b.about_label}: ${b.box.split(".").slice(-2).join(".")} = ${JSON.stringify(b.value)}, sheet: ${mine.map((l) => JSON.stringify(l.value)).join(", ") || "no line"}`);
     }
   }
-  const ready15 = !!copy2 && !!pdf2 && boxes2.some(recorded);
-  if (ready15 && !off.length) ok("C7.3-15 fail (QA-392b): with entries recorded, each box the PDF copy writes has its sheet line by person, fact and value; a \"recorded?\" box reads the Yes or No the PDF writes", true, { boxes: boxes2.length });
-  else if (!ready15) ok("C7.3-15 fail (QA-392b): with entries recorded, each box the PDF copy writes has its sheet line by person, fact and value", false, { copy: copy2, pdf_read: !!pdf2, recorded_boxes: boxes2.filter(recorded).length });
+  // As C7.3-14: a release that maps no "recorded?" box (pack 4's fixture) is judged on the other boxes, by value; the PDF is
+  // read only where such a box exists, and an unreadable PDF there is a FAIL, never a pass.
+  const mapped15 = boxes2.some(recorded), ready15 = !!copy2 && (!mapped15 || !!pdf2);
+  const label15 = `C7.3-15 fail (QA-392b): with entries recorded, each box the PDF copy writes has its sheet line by person, fact and value; a "recorded?" box reads the Yes or No the PDF writes${mapped15 ? "" : " (this release maps no such box)"}`;
+  if (ready15 && !off.length) ok(label15, true, { boxes: boxes2.length });
+  else if (!ready15) ok(label15, false, { copy: copy2, pdf_read: !!pdf2, recorded_boxes: boxes2.filter(recorded).length });
   else console.log(`HELD  C7.3-15 (QA-392b): red, held: ${off.length} box(es) the PDF copy writes have no sheet line with that value: ${off.slice(0, 6).join("; ")}`);
 });
