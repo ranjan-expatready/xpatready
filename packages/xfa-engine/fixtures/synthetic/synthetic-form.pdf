@@ -1,0 +1,83 @@
+%PDF-1.7
+%‚„œ”
+1 0 obj
+<</Type/Catalog/Pages 2 0 R/AcroForm <</Fields[]/XFA [<74656d706c617465> 10 0 R <6461746173657473> 11 0 R]>>>>
+endobj
+2 0 obj
+<</Type/Pages/Kids[]/Count 0>>
+endobj
+4 0 obj
+<</Type/Sig>>
+endobj
+6 0 obj
+<</Type/Sig>>
+endobj
+10 0 obj
+<</Length 8783>>
+stream
+<?xml version="1.0" encoding="UTF-8"?><template xmlns="http://www.xfa.org/schema/xfa-template/2.8/"><subform name="form1" layout="tb"><pageSet><pageArea name="Cover" id="pA"><contentArea x="10pt" y="40pt" w="300pt" h="360pt"/><medium short="320pt" long="440pt"/><occur min="1" max="1"/><field name="CurA" id="curA" presence="hidden"><ui><numericEdit/></ui><event activity="ready" ref="$layout"><script contentType="application/x-javascript">this.rawValue = xfa.layout.page(this);</script></event></field><field name="TotA" id="totA" presence="hidden"><ui><numericEdit/></ui><event activity="ready" ref="$layout"><script contentType="application/x-javascript">this.rawValue = xfa.layout.pageCount();</script></event></field><draw name="Header" x="10pt" y="10pt" w="300pt" h="20pt"><value><text>SAMPLE FORM - FICTITIOUS</text></value><border><edge thickness="0.5pt"/></border></draw><draw name="Pages" x="10pt" y="410pt" w="300pt" h="14pt"><value><exData contentType="text/html"><body xmlns="http://www.w3.org/1999/xhtml" xmlns:xfa="http://www.xfa.org/schema/xfa-data/1.0/"><p>PAGE<span style="xfa-spacerun:yes"> </span><span xfa:embedType="uri" xfa:embedMode="raw" xfa:embed="#curA"></span> OF<span style="xfa-spacerun:yes"> </span><span xfa:embedType="uri" xfa:embedMode="raw" xfa:embed="#totA"></span></p></body></exData></value></draw></pageArea><pageArea name="Body" id="pB"><contentArea x="10pt" y="40pt" w="300pt" h="360pt"/><medium short="320pt" long="440pt"/><field name="CurB" id="curB" presence="hidden"><ui><numericEdit/></ui><event activity="ready" ref="$layout"><script contentType="application/x-javascript">this.rawValue = xfa.layout.page(this);</script></event></field><field name="TotB" id="totB" presence="hidden"><ui><numericEdit/></ui><event activity="ready" ref="$layout"><script contentType="application/x-javascript">this.rawValue = xfa.layout.pageCount();</script></event></field><draw name="Header" x="10pt" y="10pt" w="300pt" h="20pt"><value><text>SAMPLE FORM - FICTITIOUS</text></value><border><edge thickness="0.5pt"/></border></draw><draw name="Pages" x="10pt" y="410pt" w="300pt" h="14pt"><value><exData contentType="text/html"><body xmlns="http://www.w3.org/1999/xhtml" xmlns:xfa="http://www.xfa.org/schema/xfa-data/1.0/"><p>PAGE<span style="xfa-spacerun:yes"> </span><span xfa:embedType="uri" xfa:embedMode="raw" xfa:embed="#curB"></span> OF<span style="xfa-spacerun:yes"> </span><span xfa:embedType="uri" xfa:embedMode="raw" xfa:embed="#totB"></span></p></body></exData></value></draw></pageArea></pageSet><variables><text name="firstVar"/></variables><event activity="preSave"><script contentType="application/x-javascript">if (Summary.Flag.rawValue == "Yes") { Summary.Barcodes.bc1.rawValue = "SAMPLE|" + Details.Name.rawValue; }</script></event><subform name="Intro" layout="tb" w="300pt">
+<draw name="Title" w="300pt" h="22pt"><font typeface="Courier" size="14pt" weight="bold"/><value><text>Sample Services Form</text></value></draw>
+<draw name="Blurb" w="300pt"><value><exData contentType="text/html"><body xmlns="http://www.w3.org/1999/xhtml" xmlns:xfa="http://www.xfa.org/schema/xfa-data/1.0/"><p>This fictitious form has <span style="font-weight:bold">bold words</span>, some <span style="font-style:italic">italic ones</span> and enough text to wrap over more than one line in its box.</p></body></exData></value></draw>
+<subform name="Panel" layout="position" w="300pt" h="110pt">
+<draw name="Note" x="5pt" y="5pt" w="140pt" h="30pt"><value><text>A positioned note</text></value><border><edge thickness="0.5pt"/></border></draw>
+<draw name="Rule" x="5pt" y="45pt" w="200pt" h="20pt"><value><line slope="/"><edge stroke="dashed" thickness="1pt"/></line></value></draw>
+<subform name="Block" x="160pt" y="5pt" w="60pt" h="30pt"><border><edge stroke="lowered" thickness="2pt"/><fill><color value="200,220,240"/></fill></border></subform>
+<draw name="Logo" x="230pt" y="5pt" w="40pt" h="40pt"><value><image aspect="fit" contentType="image/bmp">Qk1GAAAAAAAAADYAAAAoAAAAAgAAAAIAAAABABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/wAA////AAAAAP8A/wAAAA==</image></value></draw>
+</subform>
+</subform><subform name="Details" layout="tb" w="300pt"><breakBefore targetType="pageArea" startNew="1"/>
+<field name="Name" w="260pt" h="18pt"><ui><textEdit><border><edge thickness="0.5pt"/></border></textEdit></ui><caption placement="left" reserve="90pt"><value><text>Name</text></value></caption><value><text maxChars="40"/></value><assist><speak>Full name of the person</speak></assist></field>
+<field name="Notes" w="260pt" h="50pt"><ui><textEdit multiLine="1"/></ui><caption placement="top" reserve="12pt"><value><text>Notes</text></value></caption><assist><toolTip>Free notes</toolTip></assist></field>
+<field name="Age" w="260pt" h="18pt"><ui><numericEdit><border><edge thickness="0.5pt"/></border></numericEdit></ui><caption placement="left" reserve="90pt"><value><text>Age</text></value></caption><value><integer/></value></field>
+<field name="Secret" w="260pt" h="18pt"><ui><passwordEdit><border><edge thickness="0.5pt"/></border></passwordEdit></ui><caption placement="left" reserve="90pt"><value><text>Secret</text></value></caption></field>
+<field name="Shade" w="260pt" h="18pt"><ui><choiceList><border><edge thickness="0.5pt"/></border></choiceList></ui><caption placement="left" reserve="90pt"><value><text>Shade</text></value></caption><items/><items presence="hidden" save="1"/><bindItems ref="xfa.datasets.LOV.Shade[*]" labelRef="$" valueRef="code"/></field>
+<field name="When" w="260pt" h="18pt"><ui><dateTimeEdit><border><edge thickness="0.5pt"/></border></dateTimeEdit></ui><caption placement="left" reserve="90pt"><value><text>Date</text></value></caption><value><date/></value><format><picture>date{DD/MM/YYYY}</picture></format></field>
+<field name="Agree" w="260pt" h="16pt"><ui><checkButton shape="square" mark="check"/></ui><caption placement="left" reserve="90pt"><value><text>Agree</text></value></caption><items><integer>1</integer><integer>0</integer></items><value><integer/></value></field>
+<exclGroup name="Pick" w="260pt" h="40pt"><caption placement="top" reserve="14pt"><value><text>Pick one</text></value></caption>
+<field name="Yes" x="90pt" y="16pt" w="14pt" h="14pt"><ui><checkButton shape="round" mark="circle"/></ui><items><text>Y</text></items></field>
+<field name="No" x="140pt" y="16pt" w="14pt" h="14pt"><ui><checkButton shape="round" mark="circle"/></ui><items><text>N</text></items></field>
+</exclGroup>
+<field name="Plain" w="260pt" h="18pt"><ui></ui><caption placement="left" reserve="90pt"><value><text>Default ui</text></value></caption></field>
+</subform><subform name="Summary" layout="tb" w="300pt"><breakBefore targetType="pageArea" startNew="1"/>
+<subform name="Grid" layout="table" columnWidths="100pt 100pt" w="200pt">
+<subform name="Head" layout="row"><draw name="c1" w="100pt" h="16pt"><value><text>Item</text></value><border><edge thickness="0.5pt"/></border></draw><draw name="c2" w="100pt" h="16pt"><value><text>Count</text></value><border><edge thickness="0.5pt"/></border></draw></subform>
+<subform name="Line1" layout="row"><draw name="c1" w="100pt" h="16pt"><value><text>First item</text></value><border><edge thickness="0.5pt"/></border></draw><field name="Count1" w="100pt" h="16pt"><ui><numericEdit><border><edge thickness="0.5pt"/></border></numericEdit></ui><value><integer/></value></field></subform>
+</subform>
+<field name="ValidateBtn" w="80pt" h="20pt"><ui><button highlight="outline"/></ui><caption placement="left" reserve="0pt"><value><text>Validate</text></value></caption><event activity="click"><script contentType="application/x-javascript">firstVar.value = "";
+if (Details.Name.isNull) { firstVar.value = Details.Name.somExpression; xfa.host.setFocus(Details.Name); xfa.host.messageBox("Name is required", "Check", 0, 0); }
+Summary.Flag.rawValue = firstVar.value == "" ? "Yes" : "No";
+Summary.Barcodes.presence = firstVar.value == "" ? "visible" : "hidden";
+firstVar.value = "";</script></event></field>
+<field name="AskBtn" w="80pt" h="20pt"><ui><button/></ui><caption placement="left" reserve="0pt"><value><text>Ask</text></value></caption><event activity="click"><script contentType="application/x-javascript">xfa.host.messageBox("Continue?", "Confirm", 2, 1);</script></event></field>
+<field name="Sign" w="120pt" h="30pt"><ui><signature/></ui></field>
+<field name="Photo" w="60pt" h="40pt"><ui><imageEdit/></ui></field>
+<field name="Flag" w="120pt" h="16pt"><ui><textEdit/></ui><caption placement="left" reserve="90pt"><value><text>Flag</text></value></caption></field>
+<subform name="Barcodes" presence="hidden" layout="tb" w="280pt">
+<field name="bc1" w="270pt" h="60pt"><ui><barcode type="pdf417" dataColumnCount="3"/></ui></field>
+</subform>
+</subform></subform></template>
+endstream
+endobj
+11 0 obj
+<</Length 377>>
+stream
+<?xml version="1.0" encoding="UTF-8"?><xfa:datasets xmlns:xfa="http://www.xfa.org/schema/xfa-data/1.0/"><LOV><Shade code="r">Red</Shade><Shade code="g">Green</Shade><Shade code="b">Blue</Shade></LOV><xfa:data><form1><Details><Shade>g</Shade><When>2026-06-15</When><Agree>1</Agree><Pick>N</Pick><Notes>Two short
+lines of notes</Notes></Details></form1></xfa:data></xfa:datasets>
+endstream
+endobj
+xref
+0 3
+0000000000 65535 f
+0000000015 00000 n
+0000000141 00000 n
+4 1
+0000000187 00000 n
+6 1
+0000000216 00000 n
+10 2
+0000000245 00000 n
+0000009079 00000 n
+trailer
+<</Size 12/Root 1 0 R>>
+startxref
+9506
+%%EOF

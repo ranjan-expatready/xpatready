@@ -1,0 +1,53 @@
+{
+  "name": "@expatready-eros/xfa-engine",
+  "version": "0.1.0",
+  "license": "UNLICENSED",
+  "private": true,
+  "description": "Country-neutral XFA PDF engine: PDF object parsing, XFA packet extraction and incremental write-back.",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./protocol": {
+      "types": "./dist/worker/protocol-entry.d.ts",
+      "import": "./dist/worker/protocol-entry.js"
+    },
+    "./worker": {
+      "types": "./dist/worker/index.d.ts",
+      "import": "./dist/worker/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit --incremental --tsBuildInfoFile node_modules/.cache/erv2-tsc/src.tsbuildinfo",
+    "lint": "node ../../scripts/quality/eslint-cached.mjs --group xfa-engine-src src/",
+    "test": "pnpm run build && vitest run",
+    "test:watch": "vitest",
+    "test:corpus": "node scripts/run-corpus.mjs",
+    "sample:write": "pnpm run build && node scripts/write-sample.mjs",
+    "sample:fill": "pnpm run build && node scripts/fill-sample.mjs",
+    "sample:render": "pnpm run build && node scripts/render-sample.mjs",
+    "measure:layout": "pnpm run build && node scripts/measure-layout.mjs",
+    "measure:isolation": "pnpm run build && node scripts/measure-isolation.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  },
+  "dependencies": {
+    "@jitl/quickjs-wasmfile-release-sync": "0.32.0",
+    "@noble/hashes": "2.2.0",
+    "@xmldom/xmldom": "0.9.12",
+    "acorn": "8.17.0",
+    "quickjs-emscripten-core": "0.32.0",
+    "zod": "4.4.3"
+  }
+}
