@@ -2,6 +2,8 @@
 
 **Tested on a real switch, 5 Nov 19:14 IST; corrected the same evening.** Canary requested and pushed inside 5 minutes; nothing on GitHub lost. The work lives on GitHub (P-82), so an account switch loses at most what a lane has not pushed. Every lane pushes after each step (P-344 (1)).
 
+**First row on the new account (P-459, 11 Nov):** B168, the app starts on any Mac (co-founder copy), in a founder-typed turn.
+
 **Found on the real switch:**
 * **Connectors (P-445 (2), A11, 11 Nov):** on a new account check the Lead's start read with `get_usage` (about 115-120k on 11 Nov). Notion, Google Drive and Claude Docs are off by default; a new account can switch them back on: turn them off again (composer + menu, Connectors).
 * **Token rules carry over (P-440):** they live in `RULES.md` "Tokens: hard rules" and the `lead` and `lead-watch` skills, not in any account. The new Lead reads `RULES.md` plus only the newer DECISIONS rows, hands over at about 250k context, and watches the burn per hour at every check (over 3%/h at two checks: find the cause).
