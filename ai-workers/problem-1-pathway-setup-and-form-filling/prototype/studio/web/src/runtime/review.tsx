@@ -8,8 +8,9 @@
 import * as React from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Check, Circle, Loader2, Square } from "lucide-react";
+import { Check, Circle, Loader2, Square } from "lucide-react";
 import { api, ApiError, useAction, useActorId, useApi } from "@/lib/api";
+import { useWhere } from "@/components/frame"; // BK-3: one "where am I" line
 import { Button, Field, Notice, Pill, Select } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StandIn } from "@/components/stand-in";
@@ -43,6 +44,7 @@ export function ReviewPage() {
   const { id } = useParams();
   const actor = useActorId();
   const view = useCaseView(id!, "agent");
+  useWhere(view.data ? [{ label: "Cases", to: "/cases" }, { label: view.data.case.reference, to: `/cases/${id}` }, { label: "Review" }] : null); // BK-3
   const forms = useApi<{ forms: CaseForm[] }>(["runtime", "view", id!, "forms", actor], isOfficer(actor) ? `/runtime/cases/${id}/forms` : null, { retry: noRetryOnRefusal });
   const prep = useApi<{ derived: boolean; filings?: Filing[] }>(["runtime", "view", id!, "prepare"], isOfficer(actor) ? `/runtime/cases/${id}/prepare` : null, { retry: noRetryOnRefusal });
   const [subject, setSubject] = React.useState<string | null>(null);
@@ -64,7 +66,6 @@ export function ReviewPage() {
   const show = (f: Finding) => { setShown(f); if (f.subject !== person?.subject_id) setSubject(f.subject); if (f.form && f.form !== form) setForm(f.form); };
   return (
     <div className="mx-auto max-w-7xl space-y-5" data-review-page>
-      <nav aria-label="Path" className="flex items-center gap-1 text-[13px] text-text-muted"><Link to="/cases" className="inline-flex items-center gap-1 hover:underline"><ArrowLeft className="size-3.5" aria-hidden />Cases</Link><span aria-hidden>›</span><Link to={`/cases/${c.id}`} className="hover:underline">{c.reference}</Link><span aria-hidden>›</span><span className="text-text">Review</span></nav>
       <div>
         <h1 className="text-2xl font-semibold [overflow-wrap:anywhere]">Review · {c.reference}</h1>
         <p className="mt-1 text-sm text-text-muted">Before the forms go out: the rules' checks on every form, and an independent AI review of a filled form. Each finding is a warning: decide it here, or pass it with a reason on Ready to file. Staff only.</p>

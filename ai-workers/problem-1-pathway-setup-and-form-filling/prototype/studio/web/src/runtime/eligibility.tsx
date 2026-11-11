@@ -6,8 +6,9 @@
 // a client sees no card and no page. Rules only, no AI (US$0).
 import * as React from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Check, CircleHelp, History, X } from "lucide-react";
+import { Check, CircleHelp, History, X } from "lucide-react";
 import { api, ApiError, useAction, useActorId, useApi } from "@/lib/api";
+import { useWhere } from "@/components/frame"; // BK-3: one "where am I" line
 import { Button, Field, Input, Notice, Panel, Pill, Textarea } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StandIn } from "@/components/stand-in";
@@ -129,6 +130,7 @@ export function EligibilityPage() {
   const actor = useActorId();
   const view = useCaseView(id!, "agent");
   const q = useAssessments(id!);
+  useWhere(view.data ? [{ label: "Cases", to: "/cases" }, { label: view.data.case.reference, to: `/cases/${id}` }, { label: CASE_CHECK }] : null); // BK-3
   const [chosen, setChosen] = React.useState<string | null>(null);
   const [drawer, setDrawerState] = React.useState<"run" | "override" | "review" | "history" | null>(null);
   // Break m3 on 2572b9b0 (WCAG 2.4.3): a drawer gives focus back to the button that opened it.
@@ -158,7 +160,6 @@ export function EligibilityPage() {
   };
   return (
     <div className="mx-auto max-w-7xl space-y-5">
-      <nav aria-label="Path" className="flex items-center gap-1 text-[13px] text-text-muted"><Link to="/cases" className="inline-flex items-center gap-1 hover:underline"><ArrowLeft className="size-3.5" aria-hidden />Cases</Link><span aria-hidden>›</span><Link to={`/cases/${c.id}`} className="hover:underline">{c.reference}</Link><span aria-hidden>›</span><span className="text-text">{CASE_CHECK}</span></nav>
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{CASE_CHECK} · {c.reference}<StandIn id="SI-1" today="our own checks on this application's rules, three outcomes and no score" later="the team's AG-03 Qualifier fills this page and adds scores, cut-offs and advice" /></h1>

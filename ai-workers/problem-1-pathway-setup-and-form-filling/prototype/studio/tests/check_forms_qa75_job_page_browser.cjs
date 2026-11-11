@@ -39,7 +39,8 @@ const CODE = /\b[A-Z]{2,}_[A-Z_]{2,}\b/; // a status or system code on screen (N
   step("QA-75 pass: the heading names the form", h1.includes(edition) && /AI-proposed field map/.test(h1), h1);
   step("QA-75 fail: no internal words in the basis line (prototype-only exception, provider route)", !/prototype-only|provider route|AI-processing rule/i.test(t1), t1.match(/[^.]*(prototype-only|provider route)[^.]*/i)?.[0]);
   step("QA-75 fail: no \"comparison … below\" when no proposal is shown", !/below/.test(t1), t1.match(/[^.]*below[^.]*/)?.[0]);
-  const trail = p.getByRole("navigation", { name: "Where you are" });
+  // BK-3: the job's trail is on the frame's one "where am I" line, named Path like every page's.
+  const trail = p.getByRole("navigation", { name: "Path" });
   const crumbs = await trail.getByRole("link").evaluateAll((as) => as.map((a) => [a.textContent.trim(), a.getAttribute("href")]));
   step("QA-75 pass: the trail reads \"<combination> › Forms\", Forms opening the Forms tab", crumbs.length >= 2 && crumbs[0][0] === label && crumbs[1][0] === "Forms" && crumbs[1][1] === `/c/${combo}/forms`, crumbs);
   step("QA-75 fail: the trail never says \"Sources and forms\"", !/Sources and forms/.test(t1));
@@ -71,7 +72,7 @@ const CODE = /\b[A-Z]{2,}_[A-Z_]{2,}\b/; // a status or system code on screen (N
   // Break m1: the job opened under another combination's address still links to its own.
   const other = sql(`select id from combination where id <> '${combo}' order by label limit 1`);
   await open(other, withForm);
-  const crumbs2 = await p.getByRole("navigation", { name: "Where you are" }).getByRole("link").evaluateAll((as) => as.map((a) => a.getAttribute("href")));
+  const crumbs2 = await p.getByRole("navigation", { name: "Path" }).getByRole("link").evaluateAll((as) => as.map((a) => a.getAttribute("href")));
   step("QA-75 fail (break m1): the trail follows the job's combination, not the address", crumbs2[0] === `/c/${combo}` && crumbs2[1] === `/c/${combo}/forms`, crumbs2);
   await p.setViewportSize({ width: 400, height: 900 }); await open(combo, withForm);
   step("QA-75 pass: no sideways scroll at 400 px", await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));

@@ -10,6 +10,7 @@ import { NearLine, ownReason, type NearView } from "@/components/near-line";
 import { FormFieldConditions } from "@/components/form-field-conditions";
 import { BAND_TIPS, BAND_WORDS, BANDS, type Band, type ChangeBatch, type DecideResult, type ProposalsView, type QueueProposal } from "../../../contracts/review-proposals";
 import { api, useAction, useActorId, useApi } from "@/lib/api";
+import { useWhere } from "@/components/frame";
 import { Button, Input, Notice, Panel, Pill, Select, Table, Textarea } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -23,8 +24,10 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 /** QA-196: a shared yes/no answer in words; an answer-list value by its key. */
 const answerWord = (v: string) => (v === "true" ? "Yes (true)" : v === "false" ? "No (false)" : v);
 
+/** BK-3: the page's place, shown on the frame's one "where am I" line. */
 function Crumbs({ here }: { here: string }) {
-  return <nav aria-label="Path" className="text-xs text-text-muted"><Link to="/review" className="hover:underline">To review</Link> › {here}</nav>;
+  useWhere([{ label: "To review", to: "/review" }, { label: here }]);
+  return null;
 }
 
 export function ProposalsPage() {

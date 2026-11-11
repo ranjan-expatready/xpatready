@@ -13,7 +13,7 @@ import { Button, Field, Input, Notice, Pill } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProposedStandIn } from "./privacy";
 import { byPerson, QuestionnaireIoContext, shown, Sqr, type QuestionnaireIo, type View } from "./questionnaire";
-import { Toaster } from "./cases";
+import { Frame } from "@/components/frame"; // BK-3: one frame, the demo inbox included
 import { LINK_RULES, LINK_WORDS, type LinkOpened, type LinkSession } from "../../../contracts/person-link";
 import type { ViewQuestion } from "../../../contracts/runtime";
 
@@ -57,22 +57,13 @@ export function LinkApp() {
   const qc = useQueryClient();
   const end = React.useCallback((words: string | null) => { store.del(SESSION); setStored(null); setEnded(words); qc.removeQueries({ queryKey: ["link"] }); }, [qc]);
   return (
-    <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-30 flex h-14 min-w-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
-        <img src="/brand/expat-ready-notagline-dark.svg" alt="Expat Ready" className="h-6 dark:hidden" />
-        <img src="/brand/expat-ready-notagline.svg" alt="Expat Ready" className="hidden h-6 dark:block" />
-        <span className="hidden h-6 w-px bg-border sm:block" />
-        <p className="hidden min-w-0 truncate text-sm font-semibold sm:block">Your questions</p>
-        <span className="ml-auto flex shrink-0 items-center gap-2">
-          <ProposedStandIn today="you prove the email is yours with a link and a 6-digit code; staff and the principal are simulated people" later="the team's sign-in for adult family members (Release 2)" />
-          {stored ? <Button size="sm" variant="ghost" aria-label="Sign out" onClick={async () => { await linkApi("/end", { method: "POST" }, stored.session).catch(() => null); end("You signed out. To come back, ask whoever sent your link to send it again."); }}><LogOut aria-hidden /><span className="hidden sm:inline">Sign out</span></Button> : null}
-        </span>
-      </header>
-      <main className="min-w-0 flex-1 px-4 py-5">
-        {stored ? <SessionArea stored={stored} onEnded={end} /> : <CodeStep token={token} ended={ended} onSession={(s) => { const v = { session: s.session, case_id: s.case_id, subject_id: s.subject_id }; store.set(SESSION, JSON.stringify(v)); setEnded(null); setStored(v); }} />}
-      </main>
-      <Toaster />
-    </div>
+    <Frame area="outside" title="Your questions"
+      controls={<span className="flex shrink-0 items-center gap-2">
+        <ProposedStandIn today="you prove the email is yours with a link and a 6-digit code; staff and the principal are simulated people" later="the team's sign-in for adult family members (Release 2)" />
+        {stored ? <Button size="sm" variant="ghost" aria-label="Sign out" onClick={async () => { await linkApi("/end", { method: "POST" }, stored.session).catch(() => null); end("You signed out. To come back, ask whoever sent your link to send it again."); }}><LogOut aria-hidden /><span className="hidden sm:inline">Sign out</span></Button> : null}
+      </span>}>
+      {stored ? <SessionArea stored={stored} onEnded={end} /> : <CodeStep token={token} ended={ended} onSession={(s) => { const v = { session: s.session, case_id: s.case_id, subject_id: s.subject_id }; store.set(SESSION, JSON.stringify(v)); setEnded(null); setStored(v); }} />}
+    </Frame>
   );
 }
 
@@ -184,7 +175,8 @@ export function DemoInbox() {
   const shownAddress = params.get("address");
   const q = useQuery({ queryKey: ["inbox", shownAddress], queryFn: () => api<{ messages: { id: string; kind: string; subject: string; body: string; link: string | null; created_at: string }[] }>(`/demo/inbox?address=${encodeURIComponent(shownAddress!)}`), enabled: !!shownAddress, retry: false, refetchInterval: 5000 });
   return (
-    <div className="mx-auto max-w-xl px-4 py-5">
+    <Frame area="outside" title="Demo inbox">
+    <div className="mx-auto max-w-xl">
       <div className="flex items-center gap-2"><h1 className="text-2xl font-semibold">Demo inbox</h1><ProposedStandIn today="links and codes go to this demo inbox by address (Demo workspace only)" later="the team's email sending (AG-10)" /></div>
       <p className="mt-1 text-sm text-text-muted">Demo chrome, not for porting: it stands in for a person's email.</p>
       <form className="mt-3 flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); setParams({ address }); }}>
@@ -204,5 +196,6 @@ export function DemoInbox() {
         ))}
       </ul>
     </div>
+    </Frame>
   );
 }

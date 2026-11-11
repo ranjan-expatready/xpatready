@@ -1,7 +1,7 @@
 import * as React from "react";
 import { MustVerifySection } from "@/pages/must-verify-panel";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ChevronRight, GitMerge, Pencil, Plus, Save, Search, Undo2 } from "lucide-react";
+import { GitMerge, Pencil, Plus, Save, Search, Undo2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, useAction, useActorId, useApi } from "@/lib/api";
 import { ChangePreview, useChangeCheck } from "@/ChangePreview";
@@ -25,6 +25,7 @@ const TYPES = Object.keys(TYPE_WORD);
 const COLLECTED: [string, string][] = [["client_questionnaire", "Client questionnaire"], ["verified_document", "A verified document"], ["staff_working_view", "The case officer (Agent view)"], ["profile_record", "Client profile"], ["existing_record", "Existing record"]];
 const collectedWord = (k: string) => COLLECTED.find(([x]) => x === k)?.[1] ?? k.replace(/_/g, " ");
 import { fieldName } from "@/lib/field-name";
+import { useWhere } from "@/components/frame";
 import { SuppliesPanel } from "@/pages/supplies-panel";
 export { fieldName }; // QA-39, QA-71 (one copy in lib/field-name.ts)
 /** QA-71: lists show a draft or AI-proposed mark only; the version and "Imported release" are on the item's page. */
@@ -119,6 +120,7 @@ export function FieldPage() {
   const fields = useLibraryFields();
   const canAuthorField = useCanAuthor(); // C7.9
   const cur = f.data?.current;
+  useWhere(cur ? [{ label: "Shared library" }, { label: "Fields", to: "/library/fields" }, { label: (cur.labelChecked && cur.label) || fieldName(key) }] : null); // BK-3: the frame's line
   const place = f.data?.placements?.[0];
   const [meaning, setMeaning] = React.useState(""), [type, setType] = React.useState("text"), [why, setWhy] = React.useState("");
   // C3.15: the reason is counted as the server counts it (NFKC, invisible characters removed; Devin on #712).
@@ -141,7 +143,6 @@ export function FieldPage() {
   const retiredNow = cur.status === "RETIRED";
   return (
     <div className="mx-auto max-w-7xl space-y-5">
-      <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to="/library/fields" className="hover:underline">Fields</Link><ChevronRight className="size-3" /><span>{shown}</span></nav>
       {/* UX-A part 4 (EXPERIENCE §5): the field's key is under Details, not under its name. */}
       <div><h1 className="text-xl font-semibold">{shown}</h1><p className="mt-1 text-sm">{cur.meaning}</p><div className="mt-2 flex gap-1"><Pill>v{cur.version}</Pill>{cur.mergedIntoKey ? <Pill>Merged</Pill> : retiredNow ? <Pill>Retired</Pill> : <OriginPill origin={cur.origin} status={cur.status} />}<Pill>{SCOPE_PILL[cur.scope] ?? "about each person"}</Pill></div><AdminDetails className="mt-2" items={[["Field key", key]]} /></div>
       <div className="grid gap-5 lg:grid-cols-2">
