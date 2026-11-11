@@ -4,18 +4,18 @@
 // through POST /api/demo/sample-case with no engine, API or screen code naming it (B164's guard reads sample-case.ts and
 // demo-sample-case.ts), the Visitor visa's family case still loads as before (rows 11 and 12), and a combination whose
 // data names no Sample case is refused in words. Made-up people (Sample). No model call (US$0).
-//   zsh studio/tools/isolated.sh runtime_bk12 4432 start && tsx studio/tests/runtime/check_bk12_sample_case.ts 4432 xr_studio_runtime_bk12
+//   zsh studio/tools/isolated.sh runtime_bk12 4432 start && tsx studio/tests/check_bk12_sample_case.ts 4432 xr_studio_runtime_bk12
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { sampleAnswersFile, sampleCasesFrom, SAMPLE_CASES_FILE } from "../../api/src/sample-cases.ts";
-import { FORM_SETUP } from "../../api/src/form-setup.ts";
-import { client, recorder } from "./api.ts";
+import { sampleAnswersFile, sampleCasesFrom, SAMPLE_CASES_FILE } from "../api/src/sample-cases.ts";
+import { FORM_SETUP } from "../api/src/form-setup.ts";
+import { client, recorder } from "./runtime/api.ts";
 
 const PORT = Number(process.argv[2] ?? 4432), DB = process.argv[3] ?? "xr_studio_runtime_bk12";
 const { call, sql } = client(PORT, DB);
 const { ok, summary } = recorder();
-const STUDIO = join(import.meta.dirname, "..", "..");
+const STUDIO = join(import.meta.dirname, "..");
 
 // (1) The data, read as it is.
 const data = sampleCasesFrom();
@@ -45,6 +45,9 @@ const fails: [string, (d: typeof raw) => void, RegExp][] = [
   ["a person without a role", (d) => { delete d.cases["vv.single"].people[0].role; }, /vv\.single: each person needs an id, a role and a displayName/],
   ["a person's id given twice", (d) => { d.cases["vv.single"].people[1].id = "spouse_or_partner"; }, /vv\.single: a person's id is given twice/],
   ["made-up facts for an id on no one", (d) => { d.cases["vv.single"].made_up["child-9"] = { "person.given_names": "X" }; }, /vv\.single: child-9 is on no one/],
+  ["a reference that differs only in case (review m4)", (d) => { d.cases["sp.outside"].reference = "sample-vv-family-1"; }, /reference sample-vv-family-1 is also vv\.single's \(ignoring case\)/],
+  ["a misspelt answers file, before any case opens (review m2)", (d) => { d.cases["sp.outside"].answers = "sample-studnet-answers.json"; }, /sp\.outside: answers file samples\/sample-studnet-answers\.json is not there/],
+  ["a validated file that is not there (review m2)", (d) => { d.cases["vv.single"].validated = "samples/nothing-here.json"; }, /vv\.single: validated file samples\/nothing-here\.json is not there/],
   ["a story that names no case", (d) => { d.story = "x.none"; }, /story: "x\.none" names no case/],
 ];
 for (const [what, change, words] of fails) { const said = refusal(copy(change)); ok(`BK-12 fail: ${what} is refused, naming it`, words.test(said), said); }

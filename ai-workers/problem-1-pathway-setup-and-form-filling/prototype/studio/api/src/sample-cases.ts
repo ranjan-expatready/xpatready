@@ -2,7 +2,7 @@
 // samples/sample-cases.json, by combination key (its "about" says what each field means). Pure: it reads files only and
 // never loads core.ts, so a test reads it (and a changed copy of the data) without a server. api/src/sample-case.ts opens
 // the case; this file names no combination and no form.
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const STUDIO = join(import.meta.dirname, "..", "..");
@@ -25,7 +25,11 @@ export function sampleCasesFrom(file = SAMPLE_CASES_FILE): SampleCases {
     const say = (p: string) => problems.push(`${key}: ${p}`);
     for (const f of Object.keys(c)) if (!KNOWN.has(f)) say(`"${f}" is not a known name`);
     for (const f of ["reference", "principal", "answers"] as const) if (typeof c[f] !== "string" || !c[f].trim()) say(`needs its ${f}`);
-    if (typeof c.reference === "string") { if (refs.has(c.reference)) say(`reference ${c.reference} is also ${refs.get(c.reference)}'s`); refs.set(c.reference, key); }
+    // Review m4: the reference, lower-cased, starts every idempotency key, so two references are told apart ignoring case.
+    if (typeof c.reference === "string") { const r = c.reference.toLowerCase(); if (refs.has(r)) say(`reference ${c.reference} is also ${refs.get(r)}'s (ignoring case)`); refs.set(r, key); }
+    // Review m2: the files are checked here, before any case opens (a misspelt name would stop a half-opened case).
+    if (typeof c.answers === "string" && c.answers.trim() && !existsSync(join(STUDIO, "samples", c.answers))) say(`answers file samples/${c.answers} is not there`);
+    if (c.validated !== undefined && (typeof c.validated !== "string" || !existsSync(join(STUDIO, c.validated)))) say(`validated file ${String(c.validated)} is not there (a path from the studio folder)`);
     if (!Array.isArray(c.people)) say("needs its people (an empty list for a principal alone)");
     const ids = ["case", "principal", ...(Array.isArray(c.people) ? c.people : []).map((p) => p?.id)];
     for (const p of Array.isArray(c.people) ? c.people : []) if (!p?.id || !p.role || !p.displayName) say("each person needs an id, a role and a displayName");
