@@ -25,8 +25,8 @@ ok("BK-3: the routes are found (Studio, link page, inbox and the case area)", to
 /** A sample address for a route pattern: each :param becomes a value. */
 const sample = (p: string) => p.replace(/:tab/, "forms").replace(/:[a-zA-Z]+/g, "x1");
 /** Which frame area a route opens in, and as whom. */
-const areaOf = (p: string): Area => (p === "/link" || p === "/inbox" ? "outside" : p.startsWith("/cases") ? "cases" : "studio");
-const HOMES = new Set(["studio:/", "cases:/cases", "outside:/link", "client:/cases", "client:/cases/x1/questionnaire"]);
+const areaOf = (p: string): Area => (p === "/link" || p === "/inbox" || p === "/sign-in" ? "outside" : p.startsWith("/cases") ? "cases" : "studio"); // BK-4a: the sign-in page
+const HOMES = new Set(["studio:/", "cases:/cases", "outside:/link", "outside:/sign-in", "client:/cases", "client:/cases/x1/questionnaire"]);
 /** Does an address open a route of the app (and not the not-found page)? */
 const known = [...top, ...caseRoutes].map((p) => new RegExp(`^${p.replace(/:[a-zA-Z]+/g, "[^/]+")}$`));
 const opens = (to: string) => known.some((r) => r.test(to.split(/[?#]/)[0]));
@@ -48,7 +48,7 @@ for (const [area, addr, to] of [["studio", "/no-such-page", "/"], ["studio", "/l
 }
 
 // One frame: each shell renders through Frame, and the old headers are gone.
-ok("BK-3: App.tsx routes the case area, the link page and the inbox to components that use the Frame", /path="\/cases\/\*" element=\{<RuntimeApp \/>\}/.test(app) && /<Frame area="studio"/.test(app));
+ok("BK-3: App.tsx routes the case area, the link page and the inbox to components that use the Frame", /path="\/cases\/\*" element=\{(<KnownPerson>)?<RuntimeApp \/>/.test(app) && /<Frame area="studio"/.test(app));
 ok("BK-3: the case area renders through the Frame", /<Frame area=\{client \? "client" : "cases"\}/.test(cases));
 ok("BK-3: the link page and the demo inbox render through the Frame", (read("runtime/link-page.tsx").match(/<Frame area="outside"/g) ?? []).length === 2);
 const files: string[] = [];

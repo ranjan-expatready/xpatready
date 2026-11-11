@@ -15,7 +15,8 @@ const CASE_PAGE: Record<string, string> = { questionnaire: "Client questionnaire
 /** The line from the address alone: every route of App.tsx and runtime/cases.tsx has its words here. */
 export function whereFromAddress(area: Area, path: string): Where {
   const s = path.split("/").filter(Boolean).map((x) => { try { return decodeURIComponent(x); } catch { return x; } });
-  if (area === "outside") return s[0] === "inbox" ? { crumbs: [{ label: "Demo inbox" }], back: { to: "/cases", label: "Cases" } } : { crumbs: [{ label: "Your questions" }], back: null };
+  // BK-4a: the sign-in page is a first page (no Back), outside both areas.
+  if (area === "outside") return s[0] === "inbox" ? { crumbs: [{ label: "Demo inbox" }], back: { to: "/cases", label: "Cases" } } : s[0] === "sign-in" ? { crumbs: [{ label: "Sign in" }], back: null } : { crumbs: [{ label: "Your questions" }], back: null };
   if (area === "client") {
     // The client's first page is their questionnaire (its heading says "Client questionnaire").
     const mine = s[1] ? { to: `/cases/${s[1]}/questionnaire`, label: "Client questionnaire" } : null;
