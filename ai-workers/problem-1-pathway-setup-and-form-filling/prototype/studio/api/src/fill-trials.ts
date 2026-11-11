@@ -68,14 +68,16 @@ export function trialFor(m: EditionMap | null | undefined, trials: TrialRecord[]
  *  release (api/src/studio.ts publishRow, api/src/demo.ts). The lines are the engine's form lines (engine/programs.ts
  *  isFormLine: what a case files; review M1), so a checklist or guide and a line marked Not needed have none, and an old
  *  "document" row titled as a form has one. The trial is the one a case's copy is judged by (fill-case.ts trialOf): the
- *  PDF edition in use (P-32) and its field map. A line filed Online fills no PDF, so it is said so (filed_online), never
- *  as a missing trial. Names no pathway and no form (P-319, P-452). */
+ *  PDF edition in use (P-32) and its field map. A line filed Online with no PDF edition in the release fills no PDF, so it
+ *  is said so (filed_online), never as a missing trial; one with a PDF edition is judged by that edition's trial. Names no pathway and no form (P-319, P-452). */
 export function releaseFillTrials(snapshot: { forms: unknown[]; field_maps: unknown[] }, trials: TrialRecord[] = readTrials(), readStatus?: (f: string) => string): ReleaseFillTrial[] {
   const maps = snapshot.field_maps as EditionMap[];
   return (snapshot.forms as { form_number: string; title?: string | null; form_kind?: string | null; channel?: string | null }[]).filter(isFormLine).map((f) => {
     const map = pdfMapInUse(maps, f.form_number);
     const edition = map?.form_edition ?? null;
-    if (f.channel === "ONLINE") return { form: f.form_number, title: f.title ?? null, status: "not_yet", edition: null, recorded_on: null, evidence: null, reason: "filed_online", why: FILL_TRIAL_WORDS.reason.filed_online(null) };
+    // Re-review M2: a line filed Online still has its PDF filled when the release carries one (P-145 copy, or a person moved
+    // to Paper), so its trial counts as for any line; only an Online line with no PDF edition has none to apply.
+    if (f.channel === "ONLINE" && !map) return { form: f.form_number, title: f.title ?? null, status: "not_yet", edition: null, recorded_on: null, evidence: null, reason: "filed_online", why: FILL_TRIAL_WORDS.reason.filed_online(null) };
     const t = trialFor(map, trials, readStatus); // undefined: the default reader
     return t.passed
       ? { form: f.form_number, title: f.title ?? null, status: "passed", edition, recorded_on: t.record?.recorded_on ?? null, evidence: t.record?.status_file ?? null, reason: null, why: null }

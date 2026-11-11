@@ -35,3 +35,22 @@ N/A. EXPERIENCE §6 covers case screens (P-407); this is the Studio's configurat
 A real screen reader. An intended user's unaided walk (D17, D20 are the founder's). M1 end to end in the app: the seeded IMM 5802 has no file, and attaching it returns 409 "No file yet". I proved M1 at function level against the engine's own `isFormLine` and `pdfForms`. Journey score: `journey-test-reviewer-2026-11-11.md`, **8/10**.
 
 **Verdict: Block.** To fix: M1 (blocking). m1–m3 should be fixed but do not block.
+
+## Re-review: head `185a23fe5981a9ac03d216b5caa66442e109e863` (11 Nov, diff-only against `48081d1d5`)
+What I read: `git diff 48081d1d5 185a23fe5 -- ai-workers/` (fill-trials.ts, contracts, the component, both BK-11 tests). What I ran, in a throwaway worktree at 185a23fe5: pure test 20/20. Mutation checks: putting the old `form_kind !== "document"` filter back fails the two new M1 lines (18/20); removing the ONLINE branch fails the m3 line (19/20). Both were restored afterwards. I did not re-run the API test or the walk; the builder reports API 8/8 and tsc clean.
+
+* **M1: fixed.** `fill-trials.ts:75` filters with `engine/programs.ts isFormLine`. The pure test has the pass/fail pair (an old "document" row titled as a form is listed; a Not needed line is not), and the API test's expected list uses the same rule.
+* **m2: fixed.** "At release: k of n …" plus the as-at-release line (`contracts/release-fill-trials.ts:32`).
+* **m1: fixed, with a new minor (m4).** The path is now only in a `title` (`release-fill-trials.tsx:18`).
+* **m3: the fix goes too far, so it is now a Major (M2).**
+
+**Major**
+* **M2. Every Online line is now said to have "no PDF … no fill trial", even when the release has a PDF edition that cases fill.** `api/src/fill-trials.ts:78` returns `filed_online` for every line with `channel === "ONLINE"`, before `pdfMapInUse` / `trialFor` run. Its words (`contracts/release-fill-trials.ts:43`) say "no PDF is filled and no fill trial applies". But a line filed Online that has IRCC's PDF in the release still gets a PDF copy, "Copy, not for filing" (P-145, `engine/runtime/forms.ts:141 copyOnlyForms`). And a person moved to Paper on that line files the PDF (`fill-case.ts:67-73`, Row C3), and lock then requires its trial (`fill-case.ts:440`).
+  * **Failure scenario (the :4400 demo):** checkpoint `130-release-two.ts:30` sets the Visitor visa's IMM 5257 to ONLINE for Release 2. The register has a passed trial for IMM 5257 (09-2023), recorded 23 Oct. At 48081d1d that line read "Passed, 23 Oct, evidence". At 185a23fe it reads the neutral "Filed online … no PDF is filled", with no edition, date or evidence. So the release hides a passed trial that its own cases rely on, and BK-13 or qa would learn nothing about that PDF edition.
+  * I reproduced this at function level (scratch `online.mts`): the IMM 5257 line with its real register sha and channel ONLINE makes `copyOnlyForms` = IMM 5257; the release reads `filed_online`, `edition: null`; the same line on PDF upload reads `passed`.
+  * **Fix:** use `filed_online` only when the line has no PDF edition in use (`!pdfMapInUse(maps, f.form_number)`). Otherwise run `trialFor` as for any line. Add a pass/fail pair: an Online line with a PDF edition whose trial passed reads "passed"; an Online line with only an online edition reads `filed_online`. The earlier m3 was about a line with only an Online edition; that is the case the neutral pill fits.
+
+**Minor**
+* **m4.** The evidence reference is now only in a `title` on a non-focusable `<span>` (`release-fill-trials.tsx:18`). A keyboard or touch user cannot reach it, and the row asks for "passed with date and evidence reference". Fix: make it focusable (`tabIndex={0}`, or a small disclosure), or show the record's name in words. Not blocking.
+
+**Verdict: Block** for head `185a23fe5981a9ac03d216b5caa66442e109e863`. To fix: M2 (blocking). m4 should be fixed but does not block. Everything else from the first review is closed.

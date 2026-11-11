@@ -15,7 +15,7 @@ export function ReleaseFillTrials({ trials }: { trials: ReleaseFillTrial[] | nul
           <li key={t.form} data-fill-trial={t.form} data-fill-trial-status={t.status}>
             <span className="mono font-medium">{t.form}</span>{t.title ? <span className="text-text-muted"> {t.title}</span> : null}{" "}
             {t.status === "passed"
-              ? <><Pill tone="ok">{FILL_TRIAL_WORDS.passed}</Pill> <span className="text-text-muted">{t.edition ? `${t.edition} · ` : ""}{t.recorded_on ? fmtDate(t.recorded_on) : ""}{t.evidence ? <> · <span className="underline decoration-dotted" title={t.evidence} data-fill-trial-evidence={t.evidence}>{FILL_TRIAL_WORDS.evidence}</span></> : null}</span></>
+              ? <><Pill tone="ok">{FILL_TRIAL_WORDS.passed}</Pill> <span className="text-text-muted">{t.edition ? `${t.edition} · ` : ""}{t.recorded_on ? fmtDate(t.recorded_on) : ""}{t.evidence ? <> · <span className="underline decoration-dotted" tabIndex={0} title={t.evidence} aria-label={`${FILL_TRIAL_WORDS.evidence}: ${t.evidence}`} data-fill-trial-evidence={t.evidence}>{FILL_TRIAL_WORDS.evidence}</span></> : null}</span></>
               : <><Pill tone={t.reason === "filed_online" ? "neutral" : "warn"}>{t.reason === "filed_online" ? FILL_TRIAL_WORDS.filed_online : FILL_TRIAL_WORDS.not_yet}</Pill> <span className="text-text-muted">{t.why}</span></>}
           </li>
         ))}

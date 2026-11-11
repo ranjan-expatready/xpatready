@@ -26,7 +26,7 @@ export type ReleaseFillTrial = {
 export const FILL_TRIAL_WORDS = {
   passed: "Passed",
   not_yet: "Not yet",
-  /** A line filed Online fills no PDF: no fill trial applies to it (review m3). */
+  /** A line filed Online with no PDF edition in the release fills no PDF: no fill trial applies to it (review m3, re-review M2). */
   filed_online: "Filed online",
   /** Review m2: the list is as at release; a case's lock reads the trial register as it is now. */
   as_at_release: "As at release. A trial recorded later counts for cases at once and shows here from the next release.",
@@ -40,7 +40,7 @@ export const FILL_TRIAL_WORDS = {
     none: (edition: string | null) => `No fill trial is recorded for edition ${edition ?? "in use"}.`,
     other_map: (edition: string | null) => `The fill trial of edition ${edition ?? "in use"} ran on an earlier version of its field map.`,
     not_passed: (edition: string | null) => `The fill trial of edition ${edition ?? "in use"} did not pass from the product's file.`,
-    filed_online: (_edition: string | null) => "Filed online: IRCC's portal takes the answers, so no PDF is filled and no fill trial applies.",
+    filed_online: (_edition: string | null) => "Filed online, with no PDF edition in this release: no PDF is filled, so no fill trial applies.",
   } satisfies Record<FillTrialReason, (edition: string | null) => string>,
 } as const;
 
