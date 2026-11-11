@@ -13,9 +13,14 @@ HERE="$(cd "$(dirname "$0")" && pwd)"; NM="${NEW_MACHINE_SCRIPT:-$HERE/../../pro
 T="$(mktemp -d "${TMPDIR:-/tmp}/check-new-machine.XXXXXX")"; trap 'rm -rf "$T"' EXIT
 pass=0; fail=0
 ok() { if [ "$2" = "$3" ]; then pass=$((pass + 1)); echo "PASS  $1"; else fail=$((fail + 1)); echo "FAIL  $1 — expected [$3], got [$2]"; fi; }
-lib() { (NEW_MACHINE_LIB=1 NEW_MACHINE_BREW_PREFIX="${FAKE_BREW-}" NEW_MACHINE_PG_SYSTEM_DIRS="" PATH="$T/path:/usr/bin:/bin:$(dirname "$(command -v node)")" \
-  bash -c 'set -euo pipefail; . "$1"; shift; "$@"' lib "$NM" "$@"); }
-mkdir -p "$T/path"
+# The script under test sees only this test's folders, never the host's: $T/bin holds links to the few commands the
+# functions use, so a PostgreSQL installed on the machine (GitHub's Linux runner has 18 in /usr/lib/postgresql, with
+# pg_config in /usr/bin) is never found by the PATH steps of find_pg.
+BASH_BIN="$(command -v bash)"; mkdir -p "$T/path" "$T/bin"
+for c in dirname sed head cat tr sleep curl node; do ln -s "$(command -v "$c")" "$T/bin/$c"; done
+lib() { (NEW_MACHINE_LIB=1 NEW_MACHINE_BREW_PREFIX="${FAKE_BREW-}" NEW_MACHINE_PG_SYSTEM_DIRS="" PATH="$T/path:$T/bin" \
+  "$BASH_BIN" -c 'set -euo pipefail; . "$1"; shift; "$@"' lib "$NM" "$@"); }
+ok "host: the script under test finds no PostgreSQL but the test's own (no fake installed: not found)" "$(lib find_pg; echo "exit $?")" "exit 1"
 
 # M1: nothing listens on the port (the API died): each poll answers "?", and the wait returns it under errexit+pipefail.
 FREE=$(node -e 'const s=require("net").createServer().listen(0,"127.0.0.1",()=>{const p=s.address().port;s.close(()=>console.log(p))})')
@@ -41,7 +46,7 @@ ok "M2: no 18: the newest of 16 and up" "$(FAKE_BREW=$B lib find_pg)" "$B/opt/po
 # m1: Intel Homebrew's layout: /usr/local/bin/brew is a relative link to ../Homebrew/bin/brew; brew --prefix fails here.
 I="$T/usrlocal"; mkdir -p "$I/bin" "$I/Homebrew/bin" "$I/opt"; printf '#!/bin/sh\nexit 1\n' > "$I/Homebrew/bin/brew"; chmod +x "$I/Homebrew/bin/brew"
 (cd "$I/bin" && ln -s ../Homebrew/bin/brew brew)
-got=$(cd "$T" && NEW_MACHINE_LIB=1 PATH="$I/bin:/usr/bin:/bin" bash -c 'set -euo pipefail; . "$1"; brew_prefix' lib "$NM"; echo "exit $?")
+got=$(cd "$T" && NEW_MACHINE_LIB=1 PATH="$I/bin:$T/bin" "$BASH_BIN" -c 'set -euo pipefail; . "$1"; brew_prefix' lib "$NM"; echo "exit $?")
 ok "m1: Homebrew's prefix through a relative brew link" "$(echo "$got" | tr '\n' ' ')" "$I exit 0 "
 
 # m4: DATABASE_URL.
