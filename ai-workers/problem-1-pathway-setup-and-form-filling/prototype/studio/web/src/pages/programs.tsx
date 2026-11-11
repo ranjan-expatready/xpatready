@@ -266,7 +266,7 @@ export function ProgramsPage() {
           <Tip tip="Rename, reorder or delete Pathways, Programs, Categories and Sub-categories.">
             <Button variant="secondary" onClick={() => nav(`/structure${pathway === "CORPORATE" ? "?t=CORPORATE" : ""}`)}><ListTree /> Program structure</Button>
           </Tip>
-          <Tip tip={!knowsPerson ? "Loading…" : noPerson ? "The studio could not tell who you are: see the notice above, then reload." : canAuthor ? "Opens the Add to Program structure pop-up here. Pick what exists or type new names; the new combination appears on this page as Not started." : "Only a configuration author adds combinations. Switch to the Configuration author."}>
+          <Tip tip={!knowsPerson ? "Loading…" : noPerson ? "The studio could not tell who you are: see the notice above, then reload." : canAuthor ? "Opens the Add to Program structure pop-up here. Pick what exists or type new names; the new combination appears on this page as Not started." : "Only a configuration author adds combinations: choose the Configuration author in the person picker."}>
             <span><Button disabled={!canAuthor} onClick={() => { if (canAuthor) setAdding({ pathwayKey: pathwayKey || answered || undefined, programKey: program || undefined }); }} data-add-combination><Plus /> Add combination</Button></span>
           </Tip>
         </div>
