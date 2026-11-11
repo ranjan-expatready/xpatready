@@ -67,7 +67,8 @@ export default {
           const items = await db.proposalItem.findMany({ where: { runId: j.id, status: "waiting" }, orderBy: { identityKey: "asc" } });
           for (const [n, it] of items.entries()) {
             const meaning = (it.payload as { meaning?: string }).meaning ?? "";
-            const fix = REVIEW_CORRECTIONS.find((c) => c.proposed === (it.payload as { label?: string }).label);
+            // Review m3: only a field proposal is changed to another library field (decide refuses it for a checklist line).
+            const fix = (it.payload as { kind?: string }).kind === "field" ? REVIEW_CORRECTIONS.find((c) => c.proposed === (it.payload as { label?: string }).label) : undefined;
             if (fix) { await sources.decide(author, j.id, it.id, { decision: "CHANGED", key: fix.key, valueType: fix.valueType, meaning: fix.meaning, note: fix.note }); corrected++; }
             else if (j.id === showcase && n === 0) { await sources.decide(author, j.id, it.id, { decision: "RETURNED", note: "Returned by the sample loader to show a return: decide it again on this form's page." }); returned++; }
             else if (j.id === showcase && n === 1 && meaning.length >= 8) { await sources.decide(author, j.id, it.id, { decision: "ACCEPTED", meaning: `${meaning.replace(/\.?\s*$/, "")} (as asked on ${form}).`.slice(0, 500), note: "Edited by the sample loader: the meaning names the form it was read from." }); edited++; }

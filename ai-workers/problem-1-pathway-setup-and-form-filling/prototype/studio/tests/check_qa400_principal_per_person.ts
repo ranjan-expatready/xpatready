@@ -21,6 +21,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { IS_PRINCIPAL, knownOf, principalOf, type Participant } from "../engine/runtime/case.ts";
+import { scopeRefusal, SCOPE_WORDS_REFUSED } from "../engine/field-scope.ts";
 
 const PORT = Number(process.argv[2] ?? 4481);
 const STUDIO = join(import.meta.dirname, ".."), ROOT = join(STUDIO, "..", "..", "..", "..");
@@ -46,6 +47,12 @@ const { known } = knownOf({ canonical_fields: [], placements: [] } as never, peo
 const kv = (id: string) => known.get(`${id}|${IS_PRINCIPAL}`);
 ok("QA-400 A: knownOf carries it per person, confirmed and worked out", kv("p")?.value === true && kv("s")?.value === false && kv("c2")?.value === false && kv("p")?.status === "confirmed" && /worked out/.test(String(kv("p")?.source)), [kv("p"), kv("s")]);
 
+// Review m2: the fact stays about each person: Household is refused for it in the person's words (a shared answer
+// would put the principal's Yes on every adult's SCH1 again); an ordinary person fact may still be made Household.
+const unpublished = { published: false, placements: [], representativeBox: false };
+ok("QA-400 A: the fact can never be made a household answer (person-only)", scopeRefusal({ key: IS_PRINCIPAL, ...unpublished }, "household")?.message === SCOPE_WORDS_REFUSED.personOnly);
+ok("QA-400 A (fail-guard): an ordinary person fact is not refused the same way", scopeRefusal({ key: "person.occupation_sample", ...unpublished }, "household") === null);
+
 // B-D. The configured checkpoint.
 type Res = { status: number; body: any };
 const call = async (method: string, path: string, body?: unknown, actor = "user-A"): Promise<Res> => {
@@ -63,7 +70,7 @@ try {
   const loaded = await call("POST", "/demo/load", { sample: "configured" });
   ok("setup: the configured checkpoint loads", reset.status < 300 && loaded.status < 300, [reset.status, loaded.status, loaded.body?.detail]);
   const rowFour = (loaded.body?.checkpoint ?? []).find((r: { row: string }) => r.row === "4");
-  ok("QA-400 B: the author's review changes the proposed SCH1 key to another library field (checkpoint row 4)", rowFour?.status === "done" && /1 changed to another library field/.test(rowFour?.shows ?? ""), rowFour);
+  ok("QA-400 B: the author's review changes the proposed SCH1 key to another library field, and row 4 keeps its one edit and one return (checkpoint row 4)", rowFour?.status === "done" && /1 changed to another library field/.test(rowFour?.shows ?? "") && /1 edited, 1 returned with a reason/.test(rowFour?.shows ?? ""), rowFour);
 
   const fields: { key: string; scope: string; status: string; value_type: string }[] = (await call("GET", "/library/fields")).body ?? [];
   const field = fields.find((f) => f.key === IS_PRINCIPAL);
