@@ -17,6 +17,7 @@
 //   tsx studio/acceptance/C7.3.test.ts 4440 xr_studio_accept
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { proseRecorded, recordedDerivation } from "../../p5/transforms.ts";
 import { CLIENT, OFFICER, call, expectedFor, fillEverything, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sql, yearsAgo, answer, confirmAll, generateCopy } from "./lib/m3.ts";
 
 type Sheet = { order_basis: string; form?: string; sections: { key: string; title: string; entered: { at: string; by: string } | null; out_of_date?: boolean; answers: { label: string; fact: string; value: unknown; copy_text: string; source: string; subject?: string }[]; waiting?: { fact: string }[] }[] };
@@ -122,7 +123,7 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   // markNothingRecorded), as engine/form-values.ts writes them; a sheet line is the same person's same fact.
   const copyId = await generateCopy(c.id, FORM, P);
   ({ s } = await sheet());
-  type Box = { box: string; fact: string; about: string; about_label?: string; value?: unknown; detail?: string };
+  type Box = { box: string; fact: string; about: string; about_label?: string; value?: unknown; detail?: string; transform?: string | null };
   const boxes = JSON.parse(sql(`select s.facts_json->'boxes' from form_instance f join answer_snapshot s on s.id = f.snapshot_id where f.id = '${copyId}'`) ?? "[]") as Box[];
   const lines = (s?.sections ?? []).flatMap((x) => x.answers as SA[]), on = new Set(lines.map((l) => `${l.subject}|${l.fact}`));
   const nothing = boxes.filter((b) => /^nothing recorded/.test(b.detail ?? ""));
@@ -130,7 +131,10 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   // so each such box has its line, for the same person and fact, and says the same No the PDF wrote.
   const lineOf = (b: Box) => lines.find((l) => l.subject === b.about && l.fact === b.fact);
   const missing14 = nothing.filter((b) => { const l = lineOf(b); return !l || l.value !== false || l.copy_text !== "No"; }).map((b) => `${b.about_label}: ${b.box.split(".").slice(-2).join(".")} (${lineOf(b)?.copy_text ?? "no line"})`);
-  ok("C7.3-14 fail (QA-392): each \"nothing recorded\" Yes/No box the PDF copy writes as No (a list answered \"none apply\") has its line on the answer sheet for that person, reading the same No", !!copyId && nothing.length > 0 && missing14.length === 0, { copy: copyId, nothing: nothing.length, missing: missing14 });
+  // Never vacuous: a release that maps a "recorded" Yes/No box (the checkpoint's IMM 5257: Question 8 A, Education
+  // Question 1) must give at least one; only a release that maps none (pack 4's fixture) has nothing to compare.
+  const recorded = boxes.filter((b) => b.about && b.about !== "case" && (recordedDerivation(b.transform) || proseRecorded(b.transform)));
+  ok(`C7.3-14 fail (QA-392): each "nothing recorded" Yes/No box the PDF copy writes as No (a list answered "none apply") has its line on the answer sheet for that person, reading the same No${recorded.length ? "" : " (this release maps no such box)"}`, !!copyId && (nothing.length > 0 || !recorded.length) && missing14.length === 0, { copy: copyId, recorded: recorded.length, nothing: nothing.length, missing: missing14 });
   const valued = boxes.filter((b) => b.value !== undefined && b.value !== null && b.value !== "");
   ok("C7.3-15 pass: every box the PDF copy writes from an answer has its line on the answer sheet", valued.length > 0 && valued.every((b) => on.has(`${b.about}|${b.fact}`)), valued.filter((b) => !on.has(`${b.about}|${b.fact}`)).map((b) => b.box));
   const carried = new Set(boxes.map((b) => `${b.about}|${b.fact}`));
