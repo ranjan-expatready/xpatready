@@ -45,6 +45,7 @@ ok("QA-275 fail (C4.6): three fills in the same minute are three artifact rows w
 ok("QA-275 pass: each file is named by its own artifact row's id", rows.every((r) => r.id && r.path.endsWith(`-${r.id}.pdf`)), rows.map((r) => r.path));
 ok("QA-275 fail (STANDARDS: a record matches its file): every row's file on disk still has the hash the row recorded", rows.every((r) => r.path && existsSync(join(ROOT, r.path)) && sha(readFileSync(join(ROOT, r.path))) === r.stored), rows.map((r) => ({ path: r.path, stored: r.stored.slice(0, 12), on_disk: r.path && existsSync(join(ROOT, r.path)) ? sha(readFileSync(join(ROOT, r.path))).slice(0, 12) : null })));
 const got = await Promise.all(ids.map(download));
+ok("QA-275 pass: the name a person saves is the file's name with the row's id cut to its first 8 characters, as a case copy's", got.every((g, i) => g.name.includes(`filename="${rows[i].path.split("/").pop()!.replace(`-${ids[i]}.pdf`, `-${ids[i].slice(0, 8)}.pdf`)}"`)), got.map((g) => g.name));
 ok("QA-275 fail (C4.6): each download is the bytes of its own fill (its recorded sha256), the release row is never served the draft's file", got.every((g, i) => g.status === 200 && sha(g.bytes) === rows[i].stored), got.map((g, i) => ({ status: g.status, served: sha(g.bytes).slice(0, 12), stored: rows[i].stored.slice(0, 12), mode: rows[i].mode })));
 ok("QA-275 pass: the draft fill and the release fill really differ (so the check above can tell them apart)", rows[0].mode === "draft" && rows[1].mode === "release" && rows[0].stored !== rows[1].stored, rows.map((r) => ({ mode: r.mode, sha: r.stored.slice(0, 12) })));
 ok("QA-275 pass: each fill's report file is its own (detail.report_file named like its PDF)", rows.every((r, i) => { const rf = sql(`select detail->>'report_file' from generated_artifact where id = '${ids[i]}'`); return rf === r.path.split("/").pop()!.replace(/\.pdf$/, ".report.json") && existsSync(join(ROOT, r.path.replace(/\.pdf$/, ".report.json"))); }));
@@ -54,7 +55,7 @@ const legacyId = randomUUID(), legacyPath = rows[0].path.replace(/-[0-9a-f-]{36}
 copyFileSync(join(ROOT, rows[0].path), join(ROOT, legacyPath));
 sql(`insert into generated_artifact (id, workspace_id, kind, path, sha256, created_by, detail) select '${legacyId}', workspace_id, kind, '${legacyPath}', sha256, created_by, detail from generated_artifact where id = '${ids[0]}'`);
 const old = await download(legacyId);
-ok("QA-275 pass: an earlier fill's link (a minute-named file, as made before) still downloads its own bytes", /-principal-\d{4}-\d\d-\d\dT\d{4}\.pdf$/.test(legacyPath) && old.status === 200 && sha(old.bytes) === rows[0].stored, { legacyPath, status: old.status });
+ok("QA-275 pass: an earlier fill's link (a minute-named file, as made before) still downloads its own bytes, under its own name", /-principal-\d{4}-\d\d-\d\dT\d{4}\.pdf$/.test(legacyPath) && old.status === 200 && sha(old.bytes) === rows[0].stored && old.name.includes(`filename="${legacyPath.split("/").pop()}"`), { legacyPath, status: old.status, name: old.name });
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

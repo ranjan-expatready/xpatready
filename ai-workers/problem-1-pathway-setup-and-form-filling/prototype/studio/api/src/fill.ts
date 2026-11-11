@@ -97,6 +97,8 @@ export class Fill {
 
   async artifact(id: string) {
     const a = await this.db.generatedArtifact.findUniqueOrThrow({ where: { id } });
-    return { path: join(ROOT, a.path), name: a.path.split("/").pop()! };
+    // QA-275: the file on disk carries the row's whole id; the name a person saves carries its first 8 characters, as a
+    // case copy's does (`short`). A file made before QA-275 (named by the minute) keeps its own name.
+    return { path: join(ROOT, a.path), name: a.path.split("/").pop()!.replace(/-([0-9a-f]{8})-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf$/, "-$1.pdf") };
   }
 }
