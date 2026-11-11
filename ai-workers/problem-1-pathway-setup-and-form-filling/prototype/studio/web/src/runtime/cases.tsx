@@ -7,7 +7,7 @@ import { ArrowRight, ExternalLink, Plus, UserPlus } from "lucide-react";
 import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Frame, useWhere } from "@/components/frame"; // BK-3
+import { casesLeaving, Frame, leaveCasesAsStudio, useWhere } from "@/components/frame"; // BK-3
 import { noRetryOnRefusal, Questionnaire, useCaseView, useCaseWhere, type CanAdd, type CaseInfo, type CasePerson } from "./questionnaire";
 import { FormsPanel } from "./forms";
 import { ItemChannels } from "./item-channels"; // C11.6
@@ -54,8 +54,10 @@ export function RuntimeApp() {
   // Arriving from the studio as a configuration person: act as the case officer (configuration people reach no case).
   // The switch re-renders this page itself (qa QA-35): the person hook subscribes only after this effect, so its
   // notice of the switch would be lost and the page would stay blank.
+  // BK-3 PR 2: not while a link is leaving for the Studio as the Studio person (casesLeaving); arriving clears that.
   const [, switched] = React.useState(0);
-  React.useLayoutEffect(() => { if (!PEOPLE.some((p) => p.id === getActor())) { setActor("user-O"); switched((n) => n + 1); } }, [actor]);
+  React.useLayoutEffect(() => { casesLeaving(true); }, []);
+  React.useLayoutEffect(() => { if (!casesLeaving() && !PEOPLE.some((p) => p.id === getActor())) { setActor("user-O"); switched((n) => n + 1); } }, [actor]);
   if (!PEOPLE.some((p) => p.id === getActor())) return null;
   const client = isClient(actor);
   return (
@@ -240,7 +242,7 @@ function ReleasePill({ c }: { c: CaseInfo }) {
   const label = c.release?.label ?? `Release ${c.pin.release_version}`;
   const frozen = c.pin.revision > 1 ? `Moved to this release on ${when}; a later release never changes this case until someone moves it` : `Frozen when the case opened (${when}); a later release never changes this case until someone moves it`;
   return (
-    <Link to={`/c/${c.combination_id}`} onClick={() => setActor("user-A")} data-case-release aria-label={`${label}: open its set-up in Product Studio`} title={`${frozen}. Opens its set-up in Product Studio.`}
+    <Link to={`/c/${c.combination_id}`} onClick={leaveCasesAsStudio} data-case-release aria-label={`${label}: open its set-up in Product Studio`} title={`${frozen}. Opens its set-up in Product Studio.`}
       className="inline-flex min-h-6 items-center rounded-md outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-primary/40"><Pill tone="info">{label}<ArrowRight className="size-3" aria-hidden /></Pill></Link>
   );
 }

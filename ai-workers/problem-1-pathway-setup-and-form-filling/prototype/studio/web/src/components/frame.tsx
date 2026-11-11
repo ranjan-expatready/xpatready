@@ -13,6 +13,17 @@ import { backOf, whereFromAddress, type Area, type Crumb, type Where } from "./w
 
 export type { Area, Crumb, Where } from "./where";
 
+/** BK-3 PR 2: leaving the case area as the Studio person ("Product Studio →", a case's release pill). The case area acts
+ *  as the case officer whenever its person is not one of the case people, so without this it switched straight back
+ *  before the page changed and the Studio opened as the case officer ("This page is for the configuration people"). */
+let leavingCases = false;
+export function leaveCasesAsStudio(e?: React.MouseEvent) {
+  if (e && (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) return; // a new tab or window: this page stays
+  leavingCases = true; setActor("user-A");
+}
+/** The case area asks this before acting as the case officer; arriving there again clears it. */
+export function casesLeaving(arrived = false) { if (arrived) leavingCases = false; return leavingCases; }
+
 const WhereCtx = React.createContext<React.Dispatch<React.SetStateAction<Where | null>> | null>(null);
 
 /** A page names its place more exactly than its address can. null (still loading) keeps the frame's own line. */
@@ -51,7 +62,7 @@ function WhereLine({ area, where, staff }: { area: Area; where: Where; staff: bo
           );
         })}
       </nav>
-      {other ? <Link to={other.to} title={other.title} data-where-area onClick={() => { if (area === "cases") setActor("user-A"); }} className="inline-flex min-h-8 shrink-0 items-center gap-1 whitespace-nowrap text-text-link hover:underline">{other.label}<ArrowRight className="size-3.5" aria-hidden /></Link> : null}
+      {other ? <Link to={other.to} title={other.title} data-where-area onClick={(e) => { if (area === "cases") leaveCasesAsStudio(e); }} className="inline-flex min-h-8 shrink-0 items-center gap-1 whitespace-nowrap text-text-link hover:underline">{other.label}<ArrowRight className="size-3.5" aria-hidden /></Link> : null}
     </div>
   );
 }

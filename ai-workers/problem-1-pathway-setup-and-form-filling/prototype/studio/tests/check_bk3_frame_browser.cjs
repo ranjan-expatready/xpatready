@@ -121,6 +121,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.setViewportSize({ width: 375, height: 812 });
   await open(`/cases/${caseId}`, O); await p.locator("[data-where-area]").click(); await p.locator('[data-where="studio"]').waitFor({ timeout: 15000 }).catch(() => {});
   step("BK-3 375: Product Studio → on a case page opens the Studio", new URL(p.url()).pathname === "/" && await p.locator('[data-where="studio"]').count() === 1, p.url());
+  // BK-3 PR 2: as the Studio person, never the case officer (the case area switched straight back: "This page is for the configuration people").
+  await p.waitForFunction(() => !!document.querySelector("main h1"), null, { timeout: 30000 }).catch(() => {});
+  step("BK-3 375: Product Studio → acts as the Studio person, so the Studio opens its programs (not a refusal)", await p.evaluate(() => localStorage.getItem("xr-actor")) === "user-A" && !/for the configuration people/.test(await p.locator("main").innerText()), await p.evaluate(() => localStorage.getItem("xr-actor")));
   await p.locator("[data-where-area]").click(); await p.locator('[data-where="cases"]').waitFor({ timeout: 15000 }).catch(() => {});
   step("BK-3 375: Cases → in the Studio opens the case list (dead end 2: no longer only the Demo menu)", new URL(p.url()).pathname === "/cases" && await p.locator('[data-where="cases"]').count() === 1, p.url());
 
