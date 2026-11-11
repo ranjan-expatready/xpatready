@@ -69,6 +69,8 @@ const HELPERS_ALLOWED: Record<string, number> = {
   "components/frame.tsx": 2, // the frame's other-area link: leaveCasesAsStudio or enterCasesAsStaff, by area (it names the person)
   "runtime/cases.tsx": 1, // the case's release pill (names "as Configuration author")
   "pages/combination.tsx": 1, // BK-3 PR 2's "Open a case on Release N": BK-4b names the person on it (concept §5)
+  "pages/start.tsx": 1, // BK-5's first-run card "Open the family case (as Case officer)" (the link names its person)
+  "components/demo-finished-story.tsx": 2, // the finished story's "Open the family case" and "Open the case left on release 1", each "(as Case officer)"
 };
 const HELPER = /\b(actAsCaseStaff|enterCasesAsStaff|leaveCasesAsStudio)\b/g;
 const helperUse: Record<string, number> = {};
