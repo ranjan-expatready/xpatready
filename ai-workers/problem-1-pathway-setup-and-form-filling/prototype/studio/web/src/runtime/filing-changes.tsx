@@ -142,7 +142,7 @@ function ChangeDialog({ caseId, kind, subject, initialReason, close, done }: { c
           {others.length ? <p className="rounded-lg bg-warn/15 px-3 py-2 text-sm font-medium text-text-warn" data-dependants>{view.changes.some((c) => c.on) /* BK-9: a shared application */ ? `This changes ${others.length} other ${others.length === 1 ? "person's application" : "people's applications"} too:` : `${others.length} other filing${others.length === 1 ? " depends" : "s depend"} on this one and change${others.length === 1 ? "s" : ""}:`}</p>
             : <p className="text-sm text-text-muted">No other filing changes.</p>}
           <ul className="space-y-2">{view.changes.map((c) => <li key={c.person} className="rounded-lg border border-border px-3 py-2" data-change-filing={c.person}>
-            <p className="font-medium">{c.on ? `${c.label} · on ${c.on}'s application` : `${c.label}'s filing`}{c.person === subject ? " (this one)" : ""}</p>
+            <p className="font-medium">{c.on ? `${c.label} · on ${c.on}'s application` : view.changes.some((x) => x.on) /* review m4: one word per dialog */ ? `${c.label}'s application` : `${c.label}'s filing`}{c.person === subject ? " (this one)" : ""}</p>
             <ul className="ml-4 list-disc text-sm">{c.words.map((w) => <li key={w}>{w}</li>)}</ul></li>)}</ul>
           {view.totals && view.totals.before_cents !== view.totals.after_cents ? <p className="text-sm text-text-muted" data-change-totals>Fees for this case: {cad(view.totals.before_cents)} → {cad(view.totals.after_cents)} (amounts from the cited fee table, Sample).</p> : null}
           <Field label="Why?" hint="Kept with the change and shown on the person's row." error={error}>

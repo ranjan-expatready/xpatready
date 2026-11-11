@@ -51,9 +51,10 @@ export function applyChange(kind: ChangeKind, subject: string, people: Participa
     return { other: principal.subjectId, after: people.map((p) => (p.subjectId === me.subjectId ? { ...p, role: "principal" } : p.subjectId === principal.subjectId ? { ...p, role: SPOUSE } : p)) as Participant[] };
   }
   if (me.role === "principal") return { status: 422, words: "Make someone else principal first: the principal applicant's filing is never removed." };
+  // Review M2: before the travelling checks, as a co-filer is stored not travelling (it files, but does not travel).
+  if (o.modeOf(me.role) === CO_FILED) return { status: 422, words: `${name(me)}'s application is sent together with the principal's application: it is neither removed nor added back on its own.` };
   if (kind === "remove_filing") {
     if (!me.applies) return { status: 422, words: `${name(me)} has no filing: they are not travelling.` };
-    if (o.modeOf(me.role) === CO_FILED) return { status: 422, words: `${name(me)}'s application is sent together with the principal's application and cannot be removed on its own.` };
     return { other: null, after: people.map((p) => (p.subjectId === me.subjectId ? { ...p, applies: false } : p)) };
   }
   if (me.applies) return { status: 422, words: `${name(me)} already has a filing.` };

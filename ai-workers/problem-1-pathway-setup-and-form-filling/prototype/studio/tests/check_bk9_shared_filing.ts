@@ -58,9 +58,12 @@ const derive = (ps: Participant[], modes = SHARED) => deriveFilings(KEY, ps, und
 // (3) A co-filed application (sent together with the principal's) is never removed alone: its mode says so.
 {
   const co: ModeOf = (role) => (role === "sponsor" ? "co_files" : role === "principal" ? "files_own" : "on_principal");
-  const people = [P("c", "case", "Case"), P("a", "principal", "Client A"), P("s", "sponsor", "Sponsor A"), P("k", "child", "Child A1")];
+  // Review M2: the product stores a sponsor as not travelling (applies false): the rule holds for that state too.
+  const people = [P("c", "case", "Case"), P("a", "principal", "Client A"), P("s", "sponsor", "Sponsor A", false), P("k", "child", "Child A1")];
   const r = refusal(applyChange("remove_filing", "s", people, { ...o, modeOf: co }));
   ok("C6.13 BK-9: co-filed fail: the sponsor's co-filed application is not removed alone, said in words (422)", r?.status === 422 && /sent together with the principal's application/.test(r.words), r);
+  const r2 = refusal(applyChange("add_back", "s", people, { ...o, modeOf: co }));
+  ok("C6.13 BK-9: co-filed fail (review M2): nor \"added back\" (it was never removed: the sponsor is stored not travelling)", r2?.status === 422 && /sent together with the principal's application/.test(r2.words), r2);
   ok("C6.13 BK-9: co-filed pass: a child on the principal's application of the same release can be taken off it", !!after(applyChange("remove_filing", "k", people, { ...o, modeOf: co })));
 }
 

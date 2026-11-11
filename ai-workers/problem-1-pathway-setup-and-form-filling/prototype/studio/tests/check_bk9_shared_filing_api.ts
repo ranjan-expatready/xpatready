@@ -5,7 +5,8 @@
 //   Express Entry (the spouse is on the principal's application), when released: Make principal moves the one application
 //     to the spouse, the same filing and items (same ids), the former principal on it as spouse;
 //   Visitor visa (everyone files their own): unchanged, Remove filing stops the child's own filing.
-// Each rule has a passing and a failing case. Product routes only (no SQL write), no model call (US$0).
+// Each rule has a passing and a failing case. Product routes only, except two set-up writes in SQL named where they are
+// (a signed scan; a Ready to file mark). No model call (US$0).
 //   zsh studio/tools/isolated.sh rt_bk9 4436 start && tsx studio/tests/check_bk9_shared_filing_api.ts 4436 xr_studio_rt_bk9
 import { call, firms, openCase, prepare, sql, yearsAgo, type Prepare } from "../acceptance/lib/m3.ts";
 import { recorder } from "./runtime/api.ts";
@@ -55,15 +56,28 @@ const ref = (k: string) => `BK9-${k}-${Date.now().toString(36)}`;
   const ee = comboId("pnp.express_entry");
   if (!ee) ok("C6.13 BK-9: Express Entry is released on the configured checkpoint (needed for Make principal on a shared application)", false, "not released on this copy");
   else {
-    const c = await openCase(ee, [{ role: "principal", name: "Sample Principal E", dob: yearsAgo(35) }, { role: "spouse_or_partner", name: "Sample Spouse E", dob: yearsAgo(33) }], team, ref("ee"));
-    const A = c.subjects["Sample Principal E"], B = c.subjects["Sample Spouse E"];
+    const c = await openCase(ee, [{ role: "principal", name: "Sample Principal E", dob: yearsAgo(35) }, { role: "spouse_or_partner", name: "Sample Spouse E", dob: yearsAgo(33) }, { role: "child", name: "Sample Child E", dob: yearsAgo(8) }], team, ref("ee"));
+    const A = c.subjects["Sample Principal E"], B = c.subjects["Sample Spouse E"], K = c.subjects["Sample Child E"];
     const p0 = (await prepare(c.id, officer)).p;
     // An item is one person's form, document or step: the ones both shapes want keep their id (role-specific ones follow the role).
-    const byKey = (p: Prepare | null) => new Map((p?.items ?? []).filter((i) => i.subject === A || i.subject === B).map((i) => [`${i.subject}|${i.kind}|${i.form ?? i.document_type ?? i.step ?? ""}`, i.id]));
+    const byKey = (p: Prepare | null) => new Map((p?.items ?? []).filter((i) => i.subject === A || i.subject === B || i.subject === K).map((i) => [`${i.subject}|${i.kind}|${i.form ?? i.document_type ?? i.step ?? ""}`, i.id]));
     const fid = p0?.filings[0]?.id, all = byKey(p0);
     ok("C6.13 BK-9 setup: the Express Entry case has one application with the spouse on it", p0?.filings.length === 1 && p0.filings[0].applicants.some((a) => a.subject === B), p0?.filings);
+    // Review M1: a form of the 8-year-old child already signed by hand (set in SQL: the signed-scan route needs every sign
+    // step first) is warned about on the shared application as on an own filing.
+    const kForm = (p0?.items ?? []).find((i) => i.subject === K && i.kind === "form");
+    if (kForm) sql(`insert into signed_scan (id, workspace_id, case_id, item_id, file_name, media_type, size_bytes, sha256, path, uploaded_by) select gen_random_uuid(), workspace_id, case_id, id, 'signed.pdf', 'application/pdf', 10, repeat('0', 64), 'x', 'user-O' from filing_item where id='${kForm.id}'`);
+    // Review m3: the filing is Ready to file before the change (set in SQL as setup).
+    sql(`update filing set status='READY_TO_FILE' where id='${fid}'`);
     const { v, r } = await apply(c.id, "make_principal", B);
     ok("C6.13 BK-9: make principal pass (failed before BK-9): the preview says the family's application moves to the spouse, as one application", v.status === 200 && lines(v).some((w) => /^Sample Spouse E: The family's application is now Sample Spouse E's/.test(w)) && lines(v).some((w) => /^Sample Principal E: Now on Sample Spouse E's application/.test(w)) && !lines(v).some((w) => /stops|starts again/.test(w)), [v.status, words(v), lines(v)]);
+    ok("C6.13 BK-9: make principal pass (review M1): the child's form already signed by hand by the former principal is warned about", !!kForm && lines(v).some((w) => /^Sample Child E: 1 form already signed by hand by Sample Principal E: to be signed again/.test(w)), lines(v));
+    // Review m3: right after (no prepare read in between) taking the child off resets the shared filing's Ready to file.
+    sql(`update filing set status='READY_TO_FILE' where id='${fid}'`);
+    const rm = await apply(c.id, "remove_filing", K);
+    ok("C6.13 BK-9: remove fail (review m3): straight after Make principal, removing the child takes the shared filing back from Ready to file, and says so", rm.r.status === 200 && sql(`select status from filing where id='${fid}'`) === "NOT_STARTED" && lines(rm.v).some((w) => /Marked Ready to file → Not started/.test(w)), [rm.r.status, sql(`select status from filing where id='${fid}'`), lines(rm.v)]);
+    ok("C6.13 BK-9: remove pass (review m4): the done words say the child is off as travelling on the application, not \"filing removed\"", /^Sample Child E taken off as travelling on Sample Spouse E's application/.test(rm.r.body?.words ?? ""), rm.r.body?.words);
+    await apply(c.id, "add_back", K);
     const p1 = (await prepare(c.id, officer)).p;
     const now = p1?.filings[0];
     ok("C6.13 BK-9: make principal pass: the same application (same id) is now the spouse's, the former principal on it as spouse", r.status === 200 && p1?.filings.length === 1 && now?.id === fid && now?.applicants.some((a) => a.subject === B && a.role === "principal") && now?.applicants.some((a) => a.subject === A && a.role === "spouse_or_partner"), [r.status, words(r), p1?.filings, fid]);
