@@ -4,7 +4,9 @@
 // running the same derivation as Prepare application (engine/runtime/filings.ts deriveFilings) on the people as they are
 // now and as they would be, and comparing the two (BR-4, M7): nothing here is a second copy of the fee or filing rules.
 // AG-07 AG-7-45 rule 9 (Make principal, Remove filing, "Make someone else principal first", "shows a warning and never
-// blocks"); AG-7-4 rules 1-3. No database, no clock. Checks: tests/runtime/check_filing_changes.ts.
+// blocks"); AG-7-4 rules 1-3. BK-9 (P-448): the same on every pathway, people on the principal's application included
+// (a shared filing): what moves is worked out by the derivation, never refused for the combination. No database, no
+// clock. Checks: tests/runtime/check_filing_changes.ts, tests/check_bk9_shared_filing.ts.
 import { createHash } from "node:crypto";
 import type { CaseFilings, FeeLine } from "../../contracts/runtime.ts";
 import type { Participant } from "./case.ts";
@@ -31,10 +33,8 @@ export function clientPersonOf(people: Participant[], changes: StoredChange[]): 
 export const withClient = (people: Participant[], client: string | undefined): Participant[] =>
   people.map((p) => (p.role === "case" ? p : { ...p, client: p.subjectId === client }));
 
-/** BR-0 (M5): the changes are worked out only where every applying role of the release files its own application. */
-export function everyoneFilesOwn(people: Participant[], modeOf: ModeOf): boolean {
-  return people.filter((p) => p.role !== "case").every((p) => p.role === "principal" || modeOf(p.role) === "files_own");
-}
+/** BK-9: an application the release sends together with the principal's (co-filed) is never removed on its own. */
+const CO_FILED = "co_files";
 
 /** The people as they would be after the change, or the refusal in words (BR-0 to BR-3, BR-7). `recorded` names a filing
  *  of the case already recorded as submitted (BR-7: then nothing on the case changes). */
@@ -42,7 +42,6 @@ export function applyChange(kind: ChangeKind, subject: string, people: Participa
   const me = people.find((p) => p.subjectId === subject && p.role !== "case");
   if (!me) return { status: 404, words: "No such person on this case." };
   if (o.recorded) return { status: 409, words: `${o.recorded.name}'s application was recorded as submitted to IRCC on ${o.recorded.on} (${o.recorded.number}), so the people and filings of this case are not changed here. Taking back a submitted application is done in the case's lifecycle (not built here).` };
-  if (!everyoneFilesOwn(people, o.modeOf)) return { status: 422, words: `Changing the principal or removing a filing is not worked out yet for ${o.combination}: its people are on the principal's application.` };
   const principal = people.find((p) => p.role === "principal");
   if (kind === "make_principal") {
     if (me.role === "principal") return { status: 422, words: `${name(me)} is already the principal applicant.` };
@@ -54,6 +53,7 @@ export function applyChange(kind: ChangeKind, subject: string, people: Participa
   if (me.role === "principal") return { status: 422, words: "Make someone else principal first: the principal applicant's filing is never removed." };
   if (kind === "remove_filing") {
     if (!me.applies) return { status: 422, words: `${name(me)} has no filing: they are not travelling.` };
+    if (o.modeOf(me.role) === CO_FILED) return { status: 422, words: `${name(me)}'s application is sent together with the principal's application and cannot be removed on its own.` };
     return { other: null, after: people.map((p) => (p.subjectId === me.subjectId ? { ...p, applies: false } : p)) };
   }
   if (me.applies) return { status: 422, words: `${name(me)} already has a filing.` };
@@ -79,15 +79,25 @@ export function diffFilings(before: CaseFilings, after: CaseFilings, people: Par
   const label = (s: string) => people.find((p) => p.subjectId === s)?.label ?? "someone";
   const owners = (f: CaseFilings) => new Map((f.derived ? f.filings : []).filter((x) => x.owner).map((x) => [x.owner!.subject, x]));
   const b = owners(before), a = owners(after);
+  // BK-9: a shared application whose owner changes (Make principal on a family on the principal's application) is one
+  // application that moves: the old owner is on the new owner's application, and the new owner was on the old one's.
+  const movedTo = new Map<string, string>();
+  for (const [from, fb] of b) if (!a.has(from)) for (const [to, fa] of a) if (!b.has(to) && fb.applicants.some((x) => x.subject === to) && fa.applicants.some((x) => x.subject === from)) movedTo.set(from, to);
+  const movedFrom = new Map([...movedTo].map(([f, t]) => [t, f]));
   for (const p of people.filter((x) => x.role !== "case")) {
     const s = p.subjectId, words: string[] = [];
-    const fb = b.get(s), fa = a.get(s);
-    if (fb && !fa) words.push("Their own filing stops (not travelling)");
-    if (!fb && fa) words.push("Their own filing starts again (the same filing and items as before)");
+    let fb = b.get(s);
+    const fa = a.get(s);
+    if (movedTo.has(s)) words.push(`Now on ${label(movedTo.get(s)!)}'s application (the same application, its items and fees kept)`);
+    else if (movedFrom.has(s)) { words.push(`The family's application is now ${p.label}'s (the same application, its items and fees kept)`); fb = b.get(movedFrom.get(s)!); }
+    else if (fb && !fa) words.push("Their own filing stops (not travelling)");
+    else if (!fb && fa) words.push("Their own filing starts again (the same filing and items as before)");
     if (fb && fa) {
       const ab = new Set(fb.applicants.map((x) => x.subject)), aa = new Set(fa.applicants.map((x) => x.subject));
       for (const x of aa) if (!ab.has(x)) words.push(`${label(x)} joins this filing`);
       for (const x of ab) if (!aa.has(x)) words.push(`${label(x)} leaves this filing`);
+      // BK-9 (C11.12): on a shared application a person not travelling stays on it, declared only; said either way.
+      for (const x of fa.applicants) { const was = fb.applicants.find((y) => y.subject === x.subject); if (was && was.mode !== x.mode) words.push(x.mode === "declared_only" ? `${label(x.subject)} is declared on this filing only (not travelling)` : `${label(x.subject)} applies on this filing again`); }
       const lines = new Set([...(before.derived ? before.fees : []), ...(after.derived ? after.fees : [])].filter((l) => l.person === s).map((l) => l.line));
       for (const line of lines) {
         const lb = before.derived ? before.fees.find((l) => l.person === s && l.line === line) : undefined;

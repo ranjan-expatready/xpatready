@@ -86,11 +86,10 @@ export class FilingChanges {
     const extra = new Map<string, string[]>(), add = (s: string, w: string) => extra.set(s, [...(extra.get(s) ?? []), w]);
     const filings = await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id }, select: { id: true, subjectId: true, status: true, active: true } });
     if (kind === "remove_filing") {
-      const mine = filings.find((x) => x.subjectId === subject && x.active);
-      if (mine) {
-        const [items, signed] = await Promise.all([this.db.filingItem.count({ where: { filingId: mine.id, active: true } }), this.db.signedScan.count({ where: { item: { filingId: mine.id } } })]);
-        if (items) add(subject, `${items} item${items === 1 ? "" : "s"} stop applying${signed ? ` (${signed} signed by hand)` : ""}: kept, and they come back if the filing is added back`);
-      }
+      // BK-9: the person's own items, on their own filing or on the principal's shared one.
+      const theirs = { subjectId: subject, filing: { caseId: c.id, stageId: c.stage.id, active: true } };
+      const [items, signed] = await Promise.all([this.db.filingItem.count({ where: { ...theirs, active: true } }), this.db.signedScan.count({ where: { item: theirs } })]);
+      if (items) add(subject, `${items} item${items === 1 ? "" : "s"} stop applying${signed ? ` (${signed} signed by hand)` : ""}: kept, and they come back if the filing is added back`);
     }
     // BR-4 (M6): the principal signs for a minor child (signing.ts, by role): the signer moves with the principal.
     if (kind === "make_principal" && other) {
