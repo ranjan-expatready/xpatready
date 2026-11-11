@@ -61,7 +61,9 @@ Fresh challenger, 11 Nov 2026, on `concept-draft.md` and `design/draft-client-pa
 3. **What a client is.** *Rec: as the draft (the login that answers, marked Simulated).* Make sure the founder knows that in the demo most cases fall under Client A.
 
 ## Lead response
+Tech lead (Lead 19, series 2, ~20:2x IST 11 Nov), on #1570: **Go with B1 fix (a)**: the small additive `?client=` filter on the existing case list in `api/src/runtime.ts`, in this PR (no schema, no new endpoint; runtime.ts is not a baton file); the Lead reads that API diff before the label. Concept approved (P-223 (4)) on condition that B1 and M1-M3 are fixed as written here.
 
 ## Agreement
+Builder: all of B1 (a), M1, M2, M3 (gone with B1) and m1-m3 taken into `concept.md`.
 
 ## Build discoveries

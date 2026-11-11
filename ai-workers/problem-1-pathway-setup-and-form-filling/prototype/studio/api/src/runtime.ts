@@ -929,13 +929,22 @@ export class Runtime {
     return { confirmed, section, missing: sec?.missing ?? [], invalid: sec?.invalid ?? 0, awaiting_client: waiting };
   }
 
-  /** The workspace's cases, newest first, a page at a time (cursor: the last case id of the previous page). */
-  async list(actor: Actor, q: { take?: string; after?: string }) {
+  /** The workspace's cases, newest first, a page at a time (cursor: the last case id of the previous page). Each row names
+   *  its client (the simulated login that answers). BK-3 PR 3 (P-447 (2), challenge B1: one request per page view,
+   *  STANDARDS §5): `client=<login>` keeps one client's cases, inside the same firm filter (C6.11 BR-20), and only then
+   *  each row also lists its people by name and role (no answers, progress or privacy settings: staff see the same names
+   *  on the case page, and keep-private hides people from the client, never from staff, C6.16). */
+  async list(actor: Actor, q: { take?: string; after?: string; client?: string }) {
     need(actor, "case");
     const workspaceId = await this.ws.id();
     const take = Math.min(Math.max(Number(q.take ?? 50) || 50, 1), 100);
-    const rows = await this.db.case.findMany({ where: { workspaceId, firmKey: firmOfActor(actor)?.key ?? "" }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: take + 1, ...(q.after ? { cursor: { id: q.after }, skip: 1 } : {}), include: { combination: { select: { label: true } } } });
-    return { cases: rows.slice(0, take).map((c) => ({ id: c.id, reference: c.reference, combination: c.combination.label, status: c.status, created_at: c.createdAt })), next: rows.length > take ? rows[take - 1].id : null };
+    const client = typeof q.client === "string" && q.client ? q.client : null;
+    const rows = await this.db.case.findMany({ where: { workspaceId, firmKey: firmOfActor(actor)?.key ?? "", ...(client ? { clientActorId: client } : {}) }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: take + 1, ...(q.after ? { cursor: { id: q.after }, skip: 1 } : {}), include: { combination: { select: { label: true } } } });
+    const page = rows.slice(0, take);
+    // The people of this page's cases in one query (never one per row), only for one client's page.
+    const people = new Map<string, { label: string; role: string }[]>();
+    if (client && page.length) for (const p of await this.db.caseParticipant.findMany({ where: { caseId: { in: page.map((c) => c.id) }, role: { not: "case" } }, orderBy: [{ caseId: "asc" }, { order: "asc" }], select: { caseId: true, role: true, subject: { select: { label: true } } } })) people.set(p.caseId, [...(people.get(p.caseId) ?? []), { label: p.subject.label, role: p.role }]);
+    return { cases: page.map((c) => ({ id: c.id, reference: c.reference, combination: c.combination.label, status: c.status, created_at: c.createdAt, client: c.clientActorId, ...(client ? { people: people.get(c.id) ?? [] } : {}) })), next: rows.length > take ? rows[take - 1].id : null };
   }
 }
 
@@ -943,7 +952,7 @@ export class Runtime {
 @Controller("api/runtime")
 export class RuntimeController {
   constructor(@Inject(Runtime) private readonly r: Runtime) {}
-  @Get("cases") list(@Headers("x-actor") a: H, @Query() q: { take?: string; after?: string }) { return this.r.list(actorOf(a), q); }
+  @Get("cases") list(@Headers("x-actor") a: H, @Query() q: { take?: string; after?: string; client?: string }) { return this.r.list(actorOf(a), q); }
   @Post("cases") create(@Headers("x-actor") a: H, @Body() b: unknown) { return this.r.createCase(actorOf(a), b); }
   @Get("openable") openable(@Headers("x-actor") a: H) { return this.r.openable(actorOf(a)); }
   @Get("combinations/:id/employer-link") employerLink(@Headers("x-actor") a: H, @Param("id") id: string) { return this.r.employerLink(actorOf(a), id); }
