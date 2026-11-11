@@ -5,7 +5,7 @@
 import { answerSheetOnly, type Accepts } from "../channels.ts";
 import { createHash } from "node:crypto";
 import { evalCondition, kkey, render, type BoxRow, type Person, type Role } from "../render.ts";
-import { boxGate, notNeededWords, rulesInForce, showCondition } from "../form-field-condition.ts";
+import { boxGate, notNeededWords, rulesInForce, showCondition, whenWords } from "../form-field-condition.ts";
 import type { Snapshot } from "../snapshot.ts";
 import { groupLabel, type QuestionnaireView, type Readiness } from "../../contracts/runtime.ts";
 import { checkValue, knownOf, type Answer, type Participant, type Row } from "./case.ts";
@@ -71,6 +71,23 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
   // (No to Yes, or a No confirmed) makes the copy out of date, as a changed fact does.
   const gateFacts: FormFact[] = cov.boxes.flatMap((b) => (b.about ? gatesOf(b).filter((g) => g !== b.fact) : []).flatMap((g) => { const v = confirmedAt(b.about!, g); return v ? [{ box: `${b.box}#gate:${g}`, fact: g, about: b.about!, row: null, value: v.value }] : []; }));
   return { ...cov, boxes, facts: [...factsOf(boxes), ...gateFacts].sort((x, y) => x.box.localeCompare(y.box)) };
+}
+
+/** QA-391 (P-65, C9.5: kept and listed, never filed): why a form listed for a person (it has copies) no longer applies, in
+ *  words, for "This form no longer applies to <person>: <why>". The person is not travelling, the form is not asked of
+ *  them, or the form's own rule reads No on the case's answers: named by its deciding question (`words`, the screens'
+ *  label), never a field code. */
+export function notApplyingWhy(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], form: string, subjectId: string, words: (fact: string) => string, today = new Date()): string {
+  const p = people.find((x) => x.subjectId === subjectId);
+  if (p && !p.applies) return `${p.label} is not travelling with this application`;
+  const renderPeople: Person[] = people.filter((x) => x.role !== "case").map((x) => ({ id: x.subjectId, role: x.role as Role, label: x.label, applies: x.applies }));
+  const { known } = knownOf(s, people, answers, rows, today, { forForms: true });
+  const line = render(s, renderPeople, known, { today }).forms.find((f) => f.form === form && f.person === subjectId);
+  if (!line) return `this release does not ask it of ${p?.label ?? "this person"}`;
+  // A form with an age limit may stop applying by age, not by its condition: its rule's own words then (render's why).
+  const f = (s.forms as { form_number: string; condition?: unknown; min_age?: number | null }[]).find((x) => x.form_number === form);
+  const when = f && !f.min_age ? whenWords(f.condition, (fact) => words(fact).replace(/[.\s]+$/, "")) : null;
+  return when ? `it is needed only when ${when}, and this case's answer says otherwise` : `its own rule reads No on this case's answers (${String(line.why).replace(/[.\s]+$/, "")})`;
 }
 
 /** C7.2 cause 3 (P-72, as P-242 and P-411 amend it): a derived "is anything recorded?" Yes/No box is "N" only when a
