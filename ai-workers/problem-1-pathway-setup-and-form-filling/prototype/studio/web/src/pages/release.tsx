@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { fmtDate } from "@/components/status";
 import { NearLine, ownReason, type NearView } from "@/components/near-line";
+import { HandOff, holderOf, theName } from "@/components/hand-off";
 
 /** C11.13 (P-120): a library change on the Release page: approved ones are released; ones still waiting for a second
  *  person are listed, never released; a near duplicate says what it is close to and why it is not the same. */
@@ -79,8 +80,10 @@ export function ReleasePage() {
           ) : null}
           {held.length ? <Notice tone="warn" title={`${held.length} held back`}>A held-back combination stays at its last release until its problem is fixed and its review is done. Open it to submit it or see what is waiting.</Notice> : null}
           {err ? <Notice tone="danger" title="Not released">{err}</Notice> : null}
+          {/* BK-4b (BR-2, BR-3): the release is the approve duty's, never yours here: one button hands it over. */}
+          {!canApprove && session.data ? (() => { const to = holderOf(session.data.actors, "approve", [actorId]); return <HandOff id="approver" next={<>{to ? theName(to) : "a second person"} releases what passed its review.</>} to={to} noOne="No one in this workspace holds the approve duty, so nobody can release." />; })() : null}
           <div className="flex flex-wrap items-center justify-end gap-3">
-            {!canApprove ? <p className="text-sm text-text-muted">A different person releases. Switch to the Approver (simulated) to release.</p> : <p className="text-sm text-text-muted">You can release only changes you did not make or submit yourself.</p>}
+            {!canApprove ? <p className="text-sm text-text-muted">A different person releases.</p> : <p className="text-sm text-text-muted">You can release only changes you did not make or submit yourself.</p>}
             <Button disabled={!canApprove || !what || busy} busy={busy} onClick={() => void release()}>{what ? `Release ${what} as Release ${x.next}` : "Nothing ready to release"}</Button>
           </div>
         </>
