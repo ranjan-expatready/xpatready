@@ -86,3 +86,24 @@ Persona: a case officer typing an Online IMM 5257 into IRCC's portal. Fresh chec
 - Main against the branch for prepare-view timing.
 
 **Verdict: Block** (commit 7b5218412). Fix M1, and update the two tests that assert the caption label (`check_qa392b_recorded_yes_no.ts:273`, `check_qa392_nothing_recorded_sheet.ts:190`), with a failing case for a shared caption. m1-m3 are Should and do not block.
+
+## Re-review (diff): 7b5218412..8063765c9 (11 Nov 2026)
+One commit, 8063765c9. It adds this review.md, byte-identical to what I wrote, and fixes M1 in `engine/runtime/answer-sheet.ts` and the two tests.
+
+* **M1: fixed.** `sheetOf` now counts each caption across the person's boxes for the form. `ownCaption` gives a recorded line the form's caption only when no other box shares it; otherwise the line keeps the release's own question (`answer-sheet.ts:113-117`, `:133`).
+  - Both IMM 5257 national-ID and US-card lines now carry the release's own words. The US line reads "Whether the person is a lawful permanent resident of the United States". Q8 A, Education Q1 and Q2 A keep their unique captions.
+* **The new fail cases go red without the fix.**
+  - Pure `check_qa392_nothing_recorded_sheet.ts`: **17/17** at this head. With `b.caption || label` put back it gives **16/17**; the red step is "review M1 (fail): a caption two form fields share labels neither".
+  - API `check_qa392b_recorded_yes_no.ts` on a fresh checkpoint (:4458): **14/14**. Its new step "US card line never asks the national identity document's question" passes for both people.
+* **Re-run at 8063765c9.**
+  - Gate B on the checkpoint (:4458-4459): C7.3 **17/17**, C7.3-screen **15/15**, C7.3-tick **15/15**. "Gate B: passed."
+  - `check_vv_answer_sheet` 47/47, `check_m3s5_sheet_only` 29/29.
+  - The PDF path is still untouched (`fill.ts`, `fill-case.ts`, `form-values.ts` and `p5/transforms.ts` are not in this diff).
+* **n1 (Minor, latent; does not block).** Captions are counted over the coverage boxes. Those come from the map's entries (`engine/render.ts:131-136`), not the whole field list. If a mapped box's caption also belongs to a field that is not in the map, the line would still show that shared, possibly wrong, caption. No such case is known today. Fix when convenient: count over the field list (`inventoryOf`), which `layoutOf` already reads.
+* **m1, m2 and m3 are carried as listed in the PR.** I accept the reasons given:
+  - m1: the order follows the coverage boxes, as on every sheet line.
+  - m2: QA-395 is under its own review as #1566.
+  - m3: every released box decodes.
+* **Journey score is unchanged at 9/10.** The two ½ scores (plain words, correct data) were for M1. With M1 fixed the walk would score 10/10. I did not re-walk the screens; the fix changes only the label and is covered by the API step.
+
+**Verdict: Approve** (commit 8063765c9)
