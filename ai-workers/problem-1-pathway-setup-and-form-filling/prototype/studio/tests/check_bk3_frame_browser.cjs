@@ -70,7 +70,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     return { lines: w.length, paths: paths.length, inLine: el ? el.querySelectorAll('nav[aria-label="Path"]').length : 0, crumbs, top: r ? Math.round(r.top) : null,
       back: seen(back) ? back.getAttribute("href") : null, backName, other: seen(other) ? other.textContent.trim() : null, here: location.pathname, sideways: document.documentElement.scrollWidth > window.innerWidth + 1,
       lineFits: !!r && r.right <= window.innerWidth + 1 && el.scrollWidth <= el.clientWidth + 1,
-      notFound: /Page not found/.test(document.querySelector("main")?.innerText ?? "") };
+      notFound: /Page not found|No such page/.test(document.querySelector("main")?.innerText ?? ""), notFoundTimes: (document.body.innerText.match(/Page not found/g) ?? []).length };
   });
 
   // Seen on origin/main 3a9b91743 before this change (473 px wide at 375): page content, not the frame; in the PR as a finding.
@@ -85,13 +85,14 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       if (actor === O && url.startsWith(`/cases/${caseId}`) && kind !== "not found") await p.waitForFunction((r) => (document.querySelector('[data-where] nav')?.textContent ?? "").includes(r), ref, { timeout: 15000 });
       const x = await line();
       const name = `BK-3 ${width} ${url}${actor ? ` as ${actor}` : ""}`;
-      step(`${name}: one "where am I" line at the top, naming the place (${x.crumbs.join(" › ")})`, x.lines === 1 && x.inLine === 1 && x.paths === 1 && x.crumbs.length >= 1 && x.top !== null && x.top < 200 && (kind === "not found" ? x.crumbs.at(-1) === "Page not found" : x.crumbs.at(-1) !== "Page not found"), x);
+      step(`${name}: one "where am I" line at the top, naming the place (${x.crumbs.join(" › ")})`, x.lines === 1 && x.inLine === 1 && x.paths === 1 && x.crumbs.length >= 1 && x.top !== null && x.top < 200 && (kind === "not found" ? x.crumbs.at(-1) === "No such page" : x.crumbs.at(-1) !== "No such page"), x);
+      if (kind === "not found") step(`${name}: "Page not found" once, in the page's notice (the line does not repeat it)`, x.notFoundTimes === 1, x.notFoundTimes);
       if (kind === "home") step(`${name}: an area's first page (no Back needed)`, x.back === null, x.back);
       else {
         step(`${name}: Back, one level up (${x.back})`, !!x.back && x.back.split("?")[0] !== x.here, x); if (x.back) targets.set(x.back, actor);
         step(`${name}: Back's name says where it goes (${x.backName})`, /^Back: \S/.test(x.backName ?? ""), x.backName);
       }
-      // Every case page names the case by its reference, as the case page does (review m3), and never "Page not found" for the client (m2).
+      // Every case page names the case by its reference, as the case page does (review m3), and never "No such page" for the client (m2).
       if (actor === O && url.startsWith(`/cases/${caseId}`) && kind !== "not found") step(`${name}: the line names the case ${ref}`, x.crumbs[0] === "Cases" && x.crumbs[1] === ref, x.crumbs);
       const staff = actor === S || actor === O;
       if (staff) step(`${name}: the other area is on the line (${x.other})`, x.other === (actor === S ? "Cases" : "Product Studio"), x.other);
@@ -104,7 +105,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       }
     }
   }
-  // Every Back leads to a real page (never "Page not found"), which has its own line.
+  // Every Back leads to a real page (never "Page not found" or "No such page"), which has its own line.
   await p.setViewportSize({ width: 1440, height: 900 });
   for (const [to, actor] of targets) {
     await open(to, actor); const x = await line();

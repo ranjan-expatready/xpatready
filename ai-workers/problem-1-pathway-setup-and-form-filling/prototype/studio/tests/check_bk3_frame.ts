@@ -1,6 +1,6 @@
 // BK-3 PR 1 (P-447 (2), Bake plan row 3): one frame around every screen. Reads every <Route path> of web/src/App.tsx (the
 // Studio, the adult's link page, the demo inbox) and web/src/runtime/cases.tsx (the case area, under /cases) and puts each
-// through the frame's words (web/src/components/where.ts): every route has its own words (never "Page not found"), and every
+// through the frame's words (web/src/components/where.ts): every route has its own words (never "No such page"), and every
 // route but an area's first page has Back to a route that exists. Also: App.tsx sends every route through the one Frame
 // (no shell of its own), and no page draws a trail of its own beside the frame's line. A route added without words fails.
 // Reads the source only: no server, no database, no model call (US$0). The browser walk is check_bk3_frame_browser.cjs.
@@ -35,7 +35,7 @@ const opens = (to: string) => known.some((r) => r.test(to.split(/[?#]/)[0]));
 const all: [Area, string][] = [...top.map((p) => [areaOf(p), p] as [Area, string]), ...caseRoutes.map((p) => ["cases", p] as [Area, string]), ...caseRoutes.map((p) => ["client", p] as [Area, string])];
 for (const [area, p] of all) {
   const addr = sample(p), w = whereFromAddress(area, addr), here = w.crumbs[w.crumbs.length - 1]?.label ?? "";
-  ok(`BK-3 ${area} ${p}: the line names the place ("${w.crumbs.map((c) => c.label).join(" › ")}")`, w.crumbs.length > 0 && !!here && here !== "Page not found" && here !== "Page", w);
+  ok(`BK-3 ${area} ${p}: the line names the place ("${w.crumbs.map((c) => c.label).join(" › ")}")`, w.crumbs.length > 0 && !!here && here !== "No such page", w);
   const back = backOf(w), home = HOMES.has(`${area}:${addr}`);
   if (home) ok(`BK-3 ${area} ${p}: an area's first page, no Back`, back === null, back);
   else ok(`BK-3 ${area} ${p}: Back goes one level up, to a route that exists (${back?.to})`, !!back && back.to !== addr && opens(back.to), back);
@@ -44,7 +44,7 @@ for (const [area, p] of all) {
 // The other side: an address no route has says so, and still has Back to the area's first page.
 for (const [area, addr, to] of [["studio", "/no-such-page", "/"], ["studio", "/library/nothing", "/"], ["cases", "/cases/x1/nothing", "/cases/x1"]] as [Area, string, string][]) {
   const w = whereFromAddress(area, addr);
-  ok(`BK-3 fail side ${addr}: the line says "Page not found" and Back still leads out (${to})`, w.crumbs[w.crumbs.length - 1]?.label === "Page not found" && backOf(w)?.to === to, w);
+  ok(`BK-3 fail side ${addr}: the line says "No such page" (the page's notice alone says "Page not found") and Back still leads out (${to})`, w.crumbs[w.crumbs.length - 1]?.label === "No such page" && backOf(w)?.to === to, w);
 }
 
 // One frame: each shell renders through Frame, and the old headers are gone.

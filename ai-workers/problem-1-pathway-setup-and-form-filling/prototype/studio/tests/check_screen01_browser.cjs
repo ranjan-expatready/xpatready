@@ -357,7 +357,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   // S3 (P-125 (5)): the New combination page is gone; its address is the app's "Page not found". Its name rules are checked
   // on Program structure's endpoints (check_screen01_api) and in the Add pop-up (check_w1_structure_browser).
   await p.goto(`${BASE}/new`); await idle();
-  step("S3 M2: the New combination page is gone (Page not found, with the way back)", await p.locator("main").getByText("Page not found").count() - await p.locator("[data-where]").getByText("Page not found").count() === 1 && await p.getByRole("link", { name: "Back to Immigration programs" }).count() === 1); // BK-3: the frame's line names the place too
+  step("S3 M2: the New combination page is gone (Page not found, with the way back)", await p.getByText("Page not found").count() === 1 && await p.getByRole("link", { name: "Back to Immigration programs" }).count() === 1);
 
   // The With an LMIA combination the steps below open (found on the New combination page before S3).
   const wpId = (await cat("pathway=INDIVIDUAL&filter=all")).rows.find((x) => x.nodeKey === "individual.work_permits.employer_specific.with_lmia").combinationId;

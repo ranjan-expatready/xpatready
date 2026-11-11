@@ -19,13 +19,13 @@ export function whereFromAddress(area: Area, path: string): Where {
   if (area === "client") {
     // The client's first page is their questionnaire (its heading says "Client questionnaire").
     const mine = s[1] ? { to: `/cases/${s[1]}/questionnaire`, label: "Client questionnaire" } : null;
-    return s[2] === "questionnaire" || !mine ? { crumbs: [{ label: s[1] ? "Client questionnaire" : "Your application" }], back: null } : { crumbs: [{ label: mine.label, to: mine.to }, { label: s[2] ? CASE_PAGE[s[2]] ?? "Page not found" : "Case" }], back: mine };
+    return s[2] === "questionnaire" || !mine ? { crumbs: [{ label: s[1] ? "Client questionnaire" : "Your application" }], back: null } : { crumbs: [{ label: mine.label, to: mine.to }, { label: s[2] ? CASE_PAGE[s[2]] ?? "No such page" : "Case" }], back: mine };
   }
   if (area === "cases") {
     if (!s[1]) return { crumbs: [{ label: "Cases" }], back: null };
     const c = { label: "Case", to: `/cases/${s[1]}` };
     if (!s[2]) return { crumbs: [{ label: "Cases", to: "/cases" }, { label: "Case" }] };
-    return { crumbs: [{ label: "Cases", to: "/cases" }, c, { label: CASE_PAGE[s[2]] ?? "Page not found" }] };
+    return { crumbs: [{ label: "Cases", to: "/cases" }, c, { label: CASE_PAGE[s[2]] ?? "No such page" }] };
   }
   const top = (label: string, group?: string): Where => ({ crumbs: [...(group ? [{ label: group }] : []), { label }], back: HOME });
   switch (s[0]) {
@@ -34,15 +34,15 @@ export function whereFromAddress(area: Area, path: string): Where {
     case "release": return top("Review and release");
     case "releases": return top("Releases", "History");
     case "activity": return top("Activity", "History");
-    case "review": return s[1] ? { crumbs: [{ label: "To review", to: "/review" }, { label: REVIEW_ITEM[s[1]] ?? "Page not found" }] } : top("To review");
+    case "review": return s[1] ? { crumbs: [{ label: "To review", to: "/review" }, { label: REVIEW_ITEM[s[1]] ?? "No such page" }] } : top("To review");
     case "ai": return s[1] ? { crumbs: [{ label: "History" }, { label: "AI work", to: "/ai" }, { label: "AI run" }] } : top("AI work", "History");
     case "library":
       if (s[1] === "fields" && s[2]) return { crumbs: [{ label: "Shared library" }, { label: "Fields", to: "/library/fields" }, { label: "Field" }] }; // its name once the page has it (useWhere)
-      return LIBRARY[s[1]] ? top(LIBRARY[s[1]], "Shared library") : top("Page not found");
+      return LIBRARY[s[1]] ? top(LIBRARY[s[1]], "Shared library") : top("No such page");
     case "c":
       if (s[2] === "jobs") return { crumbs: [{ label: "Immigration programs", to: "/" }, { label: "Combination", to: `/c/${s[1]}` }, { label: "AI work" }] };
       return { crumbs: [{ label: "Immigration programs", to: "/" }, { label: "Combination" }] };
-    default: return top("Page not found");
+    default: return top("No such page");
   }
 }
 
