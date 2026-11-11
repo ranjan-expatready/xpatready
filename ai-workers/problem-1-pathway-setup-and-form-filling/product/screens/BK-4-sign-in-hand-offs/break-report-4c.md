@@ -61,3 +61,34 @@ No Blocker found.
 - `/link` with `?from=`, which is held by code only: `!link` at `questionnaire.tsx:458`, and `LinkApp` strips the query on entry.
 
 **Verdict on 5a13935ede2d7721e36fb611e42fa473f8658f06: not ready to merge as is. There is 1 Major (M1, BR-2: the client hand-off always says the client is next) and 6 Minor. There is no Blocker, and rights hold on the server.**
+
+## Re-break (96d47a1)
+
+Head 96d47a1a376804d6b57c26db0d4244e49ae5d86e (the fixes are in 950c168). I used a fresh copy `screens_bk4cb` on :4462; `web-fresh.sh ensure` confirmed the bundle matches the sources. I loaded the finished story, then opened a solo-firm case as user-S (client Client A) with "Review now". I sent and sent back round 1 on SAMPLE-VV-THIN-1, then sent round 2 from the UI. The copy is stopped. c0697ecf7, which came later, changes only tests and the review file, so these results stand for it too. US$0, no priced button.
+
+### Earlier findings, checked again
+- **M1: fixed.**
+  - Filed family case (missing 0): "Client A has answered every required question and can still check the answers." There is no "Next" anywhere on the page.
+  - Thin case: before a round, "Next: Client B answers…". With round 1 sent: "Round 1 is with the representative of record now.", with no client button and one "Next" on the page (Ready to file). After a send back it returns to "Next: Client B answers…". Sending round 2 from the UI updates the card without a reload.
+  - Solo case with "Review now": the round line shows, with no button.
+- **m1: fixed.**
+  - A typed `from` (user-O, R, T, S, or user-O&from=user-S) with no record in the tab gives no hand-back.
+  - After a real hand-off by user-O (record `xr-handed-from:<F>`=user-O), the same tab with `from` user-R, user-S or user-S&from=user-O gives none. `user-O&from=user-S` gives the hand-back to user-O, since the first value is the recorded one.
+  - A record made on case T does not open a hand-back on case F. A second tab, including one opened by `window.open`, gets none. A later hand-off by user-R replaces the record, and the user-O history entries then show none.
+- **m3: fixed.** Sampling every animation frame of all three hand-offs shows no page drawn for the wrong person: the old page stays until the new one is drawn.
+- **m4: fixed.** Back after the hand-off leads to "your Client questionnaire" with `?from=user-O`, and following it brings the hand-back back.
+- **m5: fixed.** The texts read "Next: the Representative checks each form…" and "Next: the Case officer picks up from here."
+- **m6: fixed.** Tabbing to the button shows the tip ("You act as Client A (simulated) in this tab. Use the person picker to come back."), linked by `aria-describedby`. Escape closes it; no tip is left after an Enter hand-off; axe with the tip open: 0 violations.
+- **m2: not fixed.** The builder records it as a known limit; not re-reported.
+
+### New findings
+**n1 (Minor). A double click now navigates twice.** `hand-off.tsx:58` wraps `setActor` and `nav` in `startTransition`, so the button stays mounted for the second click. Steps: as user-O, double-click "Hand to Client A" on the family case. Actual: `history.length` grows by 2 and one Back stays on the same questionnaire address; the representative hand-off does the same (+2; Back stays on the round). The person is right and "Now:" shows once. Expected: one entry, so Back returns to the case page.
+
+**n2 (Minor). The person waiting on the review is told it is with "the representative of record".** At `cases.tsx:231`, user-R (the representative of record) on the thin case and user-S on their solo case both read "Round 1 is with the representative of record now." That is them, and the card gives no way to the round (Ready to file's "Open the review" does).
+
+**n3 (Minor, what is left of M1). The filed case still offers "Hand to Client A".** At `cases.tsx:233`, the family case is "Recorded as submitted … A recorded submission is read-only", and it still shows the client button with "can still check the answers". The concept's "nothing next → hidden" (§5 States) reads against it. The builder notes say keeping the button is a deliberate choice; there is no false "Next" any more.
+
+### Held
+400 px and 720 px ×2 (200%): no sideways scroll and no axe violation on the client card, the in-review line and the representative hand-off. The record survives a reload, and the hand-back stays. `check_bk4c.ts` passes 16/16 and `check_bk4a.ts` 22/22. Rights are unchanged and held on the server.
+
+**Verdict on 96d47a1a376804d6b57c26db0d4244e49ae5d86e: M1 and m1, m3, m4, m5, m6 are fixed. 3 new Minor (n1 double-click history, n2 in-review wording for the representative, n3 filed case keeps the client button) and m2 (a known limit) remain. No Blocker or Major: ready to merge from the breaker's side; the Minors can follow.**
