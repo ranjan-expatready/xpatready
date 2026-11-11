@@ -63,6 +63,18 @@ ok("BK-8 fail: a blank step, or an exemption whose source names no page, makes t
   rulesFrom(blankStep, "wp.lmia_inside") === undefined && rulesFrom(noPage, "wp.lmia_inside") === undefined && !soundLine(noPage.lines.find((l) => l.key === "biometrics_test")));
 ok("BK-8 pass: a rule without ages names no age in its words (it never waits)", biometricsWaits(undefined) === "Waits for the date of birth." && biometricsWaits({ ...vv!, exempt: undefined }) === "Waits for the date of birth.");
 
+// ── Review m1: the shipped table's steps are ones the prepare view knows, and a biometrics line names its step (a missing
+// or misspelt step would charge the fee and give nobody the "Give biometrics" step, in silence).
+const KNOWN_STEPS = new Set<string>([BIOMETRICS_STEP.key]);
+const stepsIn = (t: FeeTable) => t.lines.filter((l) => l.step !== undefined).map((l) => l.step);
+const unmarked = (t: FeeTable) => t.lines.filter((l) => /biometric/i.test(`${l.key} ${l.label}`) && l.step !== BIOMETRICS_STEP.key).map((l) => l.key);
+ok("BK-8 pass: every step the shipped table names is one the prepare view knows, and every biometrics line names its step",
+  stepsIn(FEE_TABLE).length >= 1 && stepsIn(FEE_TABLE).every((x) => KNOWN_STEPS.has(x!)) && unmarked(FEE_TABLE).length === 0, { steps: stepsIn(FEE_TABLE), unmarked: unmarked(FEE_TABLE) });
+const misspelt: FeeTable = structuredClone(FEE_TABLE); misspelt.lines.find((l) => l.key === "biometrics")!.step = "biometric";
+const missing: FeeTable = structuredClone(FEE_TABLE); delete missing.lines.find((l) => l.key === "biometrics")!.step;
+ok("BK-8 fail: a misspelt step, or a biometrics line without one, is named by this check",
+  !stepsIn(misspelt).every((x) => KNOWN_STEPS.has(x!)) && unmarked(misspelt).includes("biometrics") && unmarked(missing).includes("biometrics"));
+
 // ── The prepare view reads one rule, the case's own combination's, for the items and their words (code, comments left out).
 const code = readFileSync(join(ROOT, "api/src/case-prepare.ts"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`])\/\/.*$/gm, "$1");
 const calls = [...code.matchAll(/stepRule\(([^,]+),\s*BIOMETRICS_STEP\.key\)/g)].map((m) => m[1].trim());

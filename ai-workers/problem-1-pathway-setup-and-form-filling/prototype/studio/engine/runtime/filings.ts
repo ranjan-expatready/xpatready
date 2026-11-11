@@ -153,7 +153,8 @@ export function eachFilesOwnOf(combinationKey: string): string | null {
   const says = c?.each_files_own?.says;
   return typeof says === "string" && says.trim() ? says : null;
 }
-/** The fee rule of a combination by its key (biometrics: its ages, VV-R15), for the items and words that need it. */
+/** The fee rule of a combination by its line key (a fee line's own settings); an IRCC step's line is found by its step
+ *  instead (stepRule, BK-8). */
 export const feeRule = (combinationKey: string, key: string): FeeRule | undefined => RULES.get(combinationKey)?.fees.find((f) => f.key === key);
 /** BK-8 (P-448, P-452): the fee line a combination lists for an IRCC step (its `step`, e.g. "biometrics"): each pathway's
  *  own line, with its own ages and source; none when its fee rows list no such line (or are not sound). */
