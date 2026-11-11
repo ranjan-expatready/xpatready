@@ -6,7 +6,7 @@
 // reviewer, approver). On a case of the new release the question is asked only when the purpose is Other: the client and
 // the officer see it with Other, not with another purpose. A condition other than the form's own stays held, saying the
 // form's own condition and a way out that fits. Each rule with a pass and a fail line. US$0, no AI, live off.
-//   zsh studio/tools/isolated.sh rt_q402 4491 start && tsx --tsconfig studio/api/tsconfig.json studio/tests/check_qa402_case_condition.ts 4491 xr_studio_rt_q402
+//   zsh studio/tools/isolated.sh rt_q402 4491 start && tsx studio/tests/check_qa402_case_condition.ts 4491 xr_studio_rt_q402
 import { APPROVER, AUTHOR, REVIEWER } from "../acceptance/lib/pack2.ts";
 import * as m3 from "../acceptance/lib/m3.ts";
 
