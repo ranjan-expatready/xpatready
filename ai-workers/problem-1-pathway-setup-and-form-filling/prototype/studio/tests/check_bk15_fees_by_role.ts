@@ -3,12 +3,12 @@
 // who studies a study permit (their line adds it), any other child a visitor visa, a spouse or partner a work permit with
 // the open work permit holder fee; biometrics per person up to the family maximum. All from samples/fee-table.json
 // (sp.outside fees_by_role) and the release's lines; the engine names no pathway or form (P-319, P-425, B164). Pure, US$0.
-//   tsx studio/tests/runtime/check_bk15_fees_by_role.ts
-import { deriveFilings, FEE_TABLE, rulesFrom, type FeeTable } from "../../engine/runtime/filings.ts";
-import { filingPlan } from "../../engine/filing-modes.ts";
-import type { CaseFilings } from "../../contracts/runtime.ts";
-import type { Participant } from "../../engine/runtime/case.ts";
-import { recorder } from "./api.ts";
+//   tsx studio/tests/check_bk15_fees_by_role.ts
+import { deriveFilings, FEE_TABLE, rulesFrom, type FeeTable } from "../engine/runtime/filings.ts";
+import { filingPlan } from "../engine/filing-modes.ts";
+import type { CaseFilings } from "../contracts/runtime.ts";
+import type { Participant } from "../engine/runtime/case.ts";
+import { recorder } from "./runtime/api.ts";
 import { readFileSync } from "node:fs";
 
 const { ok, summary } = recorder();
@@ -17,10 +17,10 @@ const P = (id: string, role: Participant["role"], label: string, applies = true)
 const student = P("s", "principal", "Student A"), spouse = P("p", "spouse_or_partner", "Spouse A"), kidS = P("k1", "child", "Child S"), kidV = P("k2", "child", "Child V");
 const fam = [student, spouse, kidS, kidV];
 // The release's modes (samples/wave1.json sp.outside: every family member files their own) and the line a studying child adds.
-const wave1 = readFileSync(new URL("../../samples/wave1.json", import.meta.url), "utf8");
+const wave1 = readFileSync(new URL("../samples/wave1.json", import.meta.url), "utf8");
 const spLine = JSON.parse(wave1.match(/"key": "sp\.outside"[\s\S]*?"participants": (\[[^\]]*\])/)![1]) as { role: string; filingMode?: string }[];
 const modes = new Map(spLine.filter((l) => l.filingMode).map((l) => [l.role, l.filingMode as "files_own"]));
-const adds0 = (JSON.parse(readFileSync(new URL("../../samples/conditional-filings.json", import.meta.url), "utf8"))["sp.outside"].addsFiling) as { filing: string; fee: string[] };
+const adds0 = (JSON.parse(readFileSync(new URL("../samples/conditional-filings.json", import.meta.url), "utf8"))["sp.outside"].addsFiling) as { filing: string; fee: string[] };
 const adds = new Map([[kidS.subjectId, { filing: adds0.filing, fee: adds0.fee }]]);
 const ages = new Map<string, number | null>([["s", 30], ["p", 31], ["k1", 15], ["k2", 9]]);
 const sum = (d: D, filter: (l: D["fees"][number]) => boolean = () => true) => d.fees.filter(filter).reduce((s, l) => s + l.amount_cents, 0);
