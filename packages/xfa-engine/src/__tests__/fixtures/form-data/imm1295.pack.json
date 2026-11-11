@@ -1,0 +1,8 @@
+{
+ "validateButton": "Page1.ButtonsHeader.ValidateButton[0]",
+ "validatedFlag": "Page1.PersonalDetails.ApplicationValidatedFlag",
+ "validatedValue": "Yes",
+ "firstMissingField": "globFirstField",
+ "barcodes": "Barcodes",
+ "clearButton": "Page1.ButtonsHeader.ValidateButton[1]"
+}

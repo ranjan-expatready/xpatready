@@ -1,0 +1,15 @@
+[
+{"id":"cases","base":"http://localhost:4481","path":"/cases","actor":"user-O","label":"Cases list (case officer)"},
+{"id":"case-page--officer","base":"http://localhost:4481","path":"/cases/58200d34-733e-4d35-a0c0-fff8f87f2cb4","actor":"user-O","label":"Case page (case officer), finished story family case","tabs":true},
+{"id":"case-page--representative","base":"http://localhost:4481","path":"/cases/58200d34-733e-4d35-a0c0-fff8f87f2cb4","actor":"user-R","label":"Case page (representative)"},
+{"id":"case-eligibility","base":"http://localhost:4481","path":"/cases/58200d34-733e-4d35-a0c0-fff8f87f2cb4/eligibility","actor":"user-O","label":"Eligibility (case officer)"},
+{"id":"case-check","base":"http://localhost:4481","path":"/cases/58200d34-733e-4d35-a0c0-fff8f87f2cb4/review","actor":"user-O","label":"Case check before it leaves (case officer)"},
+{"id":"representative-review","base":"http://localhost:4481","path":"/cases/58200d34-733e-4d35-a0c0-fff8f87f2cb4/representative-review","actor":"user-R","label":"Representative's review"},
+{"id":"client-questionnaire","base":"http://localhost:4481","path":"/cases/58200d34-733e-4d35-a0c0-fff8f87f2cb4/questionnaire","actor":"user-P","label":"Client questionnaire (Client A)"},
+{"id":"client-questionnaire--as-staff","base":"http://localhost:4481","path":"/cases/58200d34-733e-4d35-a0c0-fff8f87f2cb4/questionnaire","actor":"user-O","label":"Client questionnaire opened by staff"},
+{"id":"client-link","base":"http://localhost:4481","path":"/link","actor":"user-P","label":"Client link page"},
+{"id":"demo-inbox","base":"http://localhost:4481","path":"/inbox","actor":"user-P","label":"Demo inbox (scaffolding)"},
+{"id":"programs--story","base":"http://localhost:4481","path":"/","actor":"user-A","label":"Programs after the finished story"},
+{"id":"release--story","base":"http://localhost:4481","path":"/release","actor":"user-B","label":"Release page as Approver (finished story)"},
+{"id":"releases--story","base":"http://localhost:4481","path":"/releases","actor":"user-A","label":"Releases (finished story)"}
+]
