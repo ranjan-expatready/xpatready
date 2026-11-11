@@ -21,3 +21,7 @@
 
 1. **B170a #1545 (XFA engine source, P-471/P-476, public repo):** approved at 8c125c74b; **xfa-engine CI FAILED 14:0x (run 42985969798, unit tests step)**; builder `local_d641d988` told to fix (load-sensitive limit tests?), re-review diff-only, 3 green runs, then label. Lead files are the Lead's commit 82949dca4 (keep). **Owed by the Lead after it merges:** `xfa-engine` as a Mergify condition for `packages/xfa-engine/**`; AGENTS line (L4).
 5. **Mac:** B168 `local_70775a02` waits on the founder's Terminal approval in its own session; B170 planner `local_329c6d82` (Q1-Q5 answered; report owed at the end). 
+
+## Lead 17 live line "Check 14:56", moved word for word at 15:3x IST 11 Nov
+
+**Check 14:56:** weekly 5%, ctx 201k; 0 merged in 30 min (Mergify batch running; #1536 queued 14:52); **#1537 shard 2 red** (`check_b124_unconfirmed_browser.cjs`, C6.9 Agent-view link, failed twice; PR touches `demo.ts`): job re-run 14:5x, if red again → BK-11 lane. **qa #1549: QA-392 Major (PDF writes two Yes/No boxes as No, answer sheet leaves them out); C7.3 ruled Partial (P-305 (3)), qa told; label #1549 after qa's push. QA-392 fix: cloud forms lane "QA-392 · answer sheet matches the PDF (forms)" requested 15:0x on the founder's "Yes, start it" (task_2e480f95; confirm it pushed).**
