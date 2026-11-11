@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Client page board</title>
+<!-- BK-3 PRs 3-4 (P-447 (2), P-457, P-473): drafter's board for the client page and the case↔client links. Self-contained.
+     Tokens copied from web/src/styles/tokens.css (light sheet); shapes from web/src/components/frame.tsx and ui/controls.tsx.
+     All names and references are Sample. -->
+<style>
+:root {
+  --primary: #0862c5; --primary-hover: #054e9c; --primary-10: rgba(8,98,197,.10);
+  --surface: #f7f7f7; --surface-raised: #ffffff; --border: #d9d9d9; --border-strong: #bfbfbf;
+  --text: #2d2d2d; --text-muted: #737373; --text-link: #054e9c;
+  --warn: #ff8500; --text-warn: #663200; --danger: #dc2626; --text-danger: #b91c1c; --ok: #16a34a; --text-ok: #0f5c2e;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #e9ecef; color: var(--text); font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.board { padding: 24px 16px 64px; max-width: 1600px; margin: 0 auto; }
+.board > h1 { font-size: 24px; margin: 0 0 4px; }
+.board > p.lede { margin: 0 0 24px; color: var(--text-muted); max-width: 900px; }
+.state { margin: 0 0 40px; }
+.state > h2 { font-size: 16px; margin: 0 0 4px; }
+.state > p.note { margin: 0 0 12px; color: var(--text-muted); font-size: 12px; max-width: 900px; }
+.pair { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+.label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+.w1440 { width: 1440px; zoom: .62; }
+.w375 { width: 375px; }
+.screen { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+/* Frame header (frame.tsx:83) */
+.hdr { height: 56px; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: var(--surface-raised); border-bottom: 1px solid var(--border); }
+.brand { font-weight: 700; color: var(--primary); letter-spacing: -.01em; white-space: nowrap; }
+.sep { width: 1px; height: 24px; background: var(--border); }
+.area { font-size: 14px; font-weight: 600; }
+.acting { margin-left: auto; border: 1px dashed var(--warn); border-radius: 8px; padding: 4px 8px; font-size: 12px; background: var(--surface); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
+.acting span { color: var(--text-muted); font-size: 11px; margin-right: 6px; }
+/* Where band (frame.tsx:50) */
+.where { display: flex; align-items: center; gap: 12px; padding: 6px 24px; background: var(--surface-raised); border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 14px; }
+.w375 .where { padding: 6px 16px; }
+.back { color: var(--text-link); font-weight: 500; text-decoration: none; min-height: 32px; display: inline-flex; align-items: center; gap: 4px; }
+.vbar { width: 1px; height: 16px; background: var(--border); }
+.crumbs { flex: 1; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-width: 0; }
+.crumbs a { color: var(--text-link); font-weight: 500; text-decoration: none; }
+.crumbs .here { color: var(--text); }
+.other { color: var(--text-link); white-space: nowrap; text-decoration: none; }
+main { padding: 20px 24px 28px; }
+.w375 main { padding: 16px; }
+a { color: var(--text-link); }
+a:focus-visible, button:focus-visible { outline: 3px solid rgba(8,98,197,.4); outline-offset: 2px; border-radius: 4px; }
+.page { max-width: 1024px; margin: 0 auto; }
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.top h1 { font-size: 24px; margin: 0; font-weight: 600; }
+.top p { margin: 2px 0 0; color: var(--text-muted); font-size: 14px; }
+.tip { border-bottom: 1px dotted var(--text-muted); cursor: help; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 8px; border: 0; background: var(--primary); color: #fff; font: inherit; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.btn.ghost { background: transparent; color: var(--text-link); border: 1px solid var(--border); }
+.w375 .top .btn { width: 100%; justify-content: center; height: 44px; }
+h2.sec { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
+.tbl { background: var(--surface-raised); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-size: 12px; font-weight: 500; color: var(--text-muted); background: var(--surface); padding: 8px 12px; border-bottom: 1px solid var(--border); }
+td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td a { font-weight: 500; text-decoration: none; }
+td a:hover { text-decoration: underline; }
+.people { margin: 0; padding: 0; list-style: none; }
+.people li { white-space: nowrap; }
+.people .role { color: var(--text-muted); }
+.pill { display: inline-flex; align-items: center; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); border-radius: 6px; padding: 1px 6px; font-size: 11px; font-weight: 500; line-height: 16px; white-space: nowrap; }
+.pill.info { background: var(--primary-10); color: var(--text-link); border-color: transparent; }
+.sample { display: inline-block; font-size: 11px; color: var(--text-muted); border: 1px dashed var(--border-strong); border-radius: 6px; padding: 0 6px; margin-left: 6px; vertical-align: middle; }
+.count { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+/* Cards at 375 px: one per case */
+.cards { display: grid; gap: 8px; }
+.card { background: var(--surface-raised); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+.card .ref { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.card .ref a { font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; }
+.card .meta { color: var(--text-muted); font-size: 12px; margin: 2px 0 6px; }
+/* Notices (controls.tsx:141) */
+.notice { display: flex; justify-content: space-between; gap: 12px; background: var(--surface-raised); border: 1px solid var(--border); border-left: 4px solid var(--primary); border-radius: 8px; padding: 12px 16px; font-size: 14px; }
+.notice.warn { border-left-color: var(--warn); }
+.notice .t { font-weight: 600; margin: 0; }
+.notice .b { margin: 2px 0 0; color: var(--text-muted); }
+.stack > * + * { margin-top: 12px; }
+/* Skeletons */
+.sk { background: linear-gradient(90deg, #eee 0, #f5f5f5 50%, #eee 100%); border-radius: 6px; }
+@media (prefers-reduced-motion: no-preference) { .sk { background-size: 200% 100%; animation: sh 1.4s linear infinite; } }
+@keyframes sh { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+/* Case header (PR 4) */
+.casehead h1 { font-size: 24px; font-weight: 600; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.casehead .meta { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; color: var(--text-muted); }
+.casehead .new { outline: 2px dashed var(--primary); outline-offset: 3px; border-radius: 4px; }
+.qbox { border: 1px solid var(--border); background: var(--surface-raised); border-radius: 8px; padding: 12px; font-size: 14px; }
+.qbox p { margin: 0; }
+.qbox .m { color: var(--text-muted); font-size: 12px; }
+.callout { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+.legend { font-size: 12px; color: var(--text-muted); border-top: 1px solid #cfd4da; padding-top: 12px; margin-top: 8px; max-width: 900px; }
+</style>
+</head>
+<body>
+<div class="board">
+<h1>Client page (BK-3 PRs 3-4), draft board</h1>
+<p class="lede">Staff page at <code>/cases/clients/&lt;clientKey&gt;</code>. Each state at 1440 px (shown at 62 %) and 375 px. Built from existing reads only: the case list plus one case read per case. Names, references and firms are Sample.</p>
+
+<!-- ============================================================ 1. several cases -->
+<section class="state">
+<h2>1. Several cases (the normal state)</h2>
+<p class="note">Case officer, Sample firm. The where-line is named by the page: Cases › Client A, Back to Cases. One filled button. The person who answers is listed first in each case.</p>
+<div class="pair">
+<div><div class="label">1440 px</div>
+<div class="w1440 screen">
+  <div class="hdr"><span class="brand">Expat Ready</span><span class="sep"></span><span class="area">Cases</span><div class="acting"><span>Acting as (simulated)</span>Case officer · Sample firm</div></div>
+  <div class="where"><a class="back" href="#">← Back</a><span class="vbar"></span><nav class="crumbs" aria-label="Path"><a href="#">Cases</a><span>›</span><span class="here" aria-current="page">Client A</span></nav><a class="other" href="#">Product Studio →</a></div>
+  <main><div class="page">
+    <div class="top"><div><h1>Client A</h1><p><span class="tip" title="The prototype has no client records yet: a client is the login that answers a case.">Simulated client login</span> · answers the questionnaire on 3 cases at Sample firm</p></div><button class="btn">+ Open a case for Client A</button></div>
+    <h2 class="sec">Cases</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Reference</th><th>Combination</th><th>People</th><th>Status</th><th>Opened</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#">VV-2026-014</a></td><td>Visitor visa · Family</td><td><ul class="people"><li>Sample Applicant <span class="role">· Principal applicant</span></li><li>Sample Spouse <span class="role">· Spouse or partner</span></li><li>Sample Child <span class="role">· Child</span></li></ul></td><td><span class="pill">Open</span></td><td>11 Nov 2026</td></tr>
+        <tr><td><a href="#">SP-2026-003</a></td><td>Study permit · Outside Canada</td><td><ul class="people"><li>Sample Applicant <span class="role">· Principal applicant</span></li></ul></td><td><span class="pill">Open</span></td><td>4 Nov 2026</td></tr>
+        <tr><td><a href="#">VV-2026-002</a></td><td>Visitor visa · Single</td><td><ul class="people"><li>Sample Applicant <span class="role">· Principal applicant</span></li></ul></td><td><span class="pill">Open</span></td><td>28 Oct 2026</td></tr>
+      </tbody></table></div>
+    <p class="count">3 cases shown<span class="sample">Sample</span></p>
+  </div></main>
+</div></div>
+<div><div class="label">375 px</div>
+<div class="w375 screen">
+  <div class="hdr"><span class="brand">Expat Ready</span><div class="acting"><span>Acting as</span>Case officer</div></div>
+  <div class="where"><a class="back" href="#">← Back</a><span class="vbar"></span><nav class="crumbs" aria-label="Path"><a href="#">Cases</a><span>›</span><span class="here">Client A</span></nav><a class="other" href="#">Studio →</a></div>
+  <main>
+    <div class="top"><div><h1>Client A</h1><p><span class="tip">Simulated client login</span> · answers on 3 cases at Sample firm</p></div><button class="btn">+ Open a case for Client A</button></div>
+    <h2 class="sec">Cases</h2>
+    <div class="cards">
+      <div class="card"><div class="ref"><a href="#">VV-2026-014</a><span class="pill">Open</span></div><p class="meta">Visitor visa · Family · opened 11 Nov 2026</p><ul class="people"><li>Sample Applicant <span class="role">· Principal applicant</span></li><li>Sample Spouse <span class="role">· Spouse or partner</span></li><li>Sample Child <span class="role">· Child</span></li></ul></div>
+      <div class="card"><div class="ref"><a href="#">SP-2026-003</a><span class="pill">Open</span></div><p class="meta">Study permit · Outside Canada · opened 4 Nov 2026</p><ul class="people"><li>Sample Applicant <span class="role">· Principal applicant</span></li></ul></div>
+      <div class="card"><div class="ref"><a href="#">VV-2026-002</a><span class="pill">Open</span></div><p class="meta">Visitor visa · Single · opened 28 Oct 2026</p><ul class="people"><li>Sample Applicant <span class="role">· Principal applicant</span></li></ul></div>
+    </div>
+    <p class="count">3 cases shown<span class="sample">Sample</span></p>
+  </main>
+</div></div>
+</div>
+</section>
+
+<!-- ============================================================ 2. one case -->
+<section class="state">
+<h2>2. One case</h2>
+<p class="note">Same layout; the count says "1 case". No special single-case shortcut: the case link is the way on.</p>
+<div class="pair">
+<div><div class="label">1440 px</div>
+<div class="w1440 screen">
+  <div class="hdr"><span class="brand">Expat Ready</span><span class="sep"></span><span class="area">Cases</span><div class="acting"><span>Acting as (simulated)</span>Case officer · Sample firm</div></div>
+  <div class="where"><a class="back" href="#">← Back</a><span class="vbar"></span><nav class="crumbs"><a href="#">Cases</a><span>›</span><span class="here">Client B</span></nav><a class="other" href="#">Product Studio →</a></div>
+  <main><div class="page">
+    <div class="top"><div><h1>Client B</h1><p><span class="tip">Simulated client login</span> · answers the questionnaire on 1 case at Sample firm</p></div><button class="btn">+ Open a case for Client B</button></div>
+    <h2 class="sec">Cases</h2>
+    <div class="tbl"><table><thead><tr><th>Reference</th><th>Combination</th><th>People</th><th>Status</th><th>Opened</th></tr></thead>
+      <tbody><tr><td><a href="#">VV-2026-011</a></td><td>Visitor visa · Single</td><td><ul class="people"><li>Sample Visitor <span class="role">· Principal applicant</span></li></ul></td><td><span class="pill">Open</span></td><td>9 Nov 2026</td></tr></tbody></table></div>
+    <p class="count">1 case shown<span class="sample">Sample</span></p>
+  </div></main>
+</div></div>
+<div><div class="label">375 px</div>
+<div class="w375 screen">
+  <div class="hdr"><span class="brand">Expat Ready</span><div class="acting"><span>Acting as</span>Case officer</div></div>
+  <div class="where"><a class="back" href="#">← Back</a><span class="vbar"></span><nav class="crumbs"><a href="#">Cases</a><span>›</span><span class="here">Client B</span></nav><a class="other" href="#">Studio →</a></div>
+  <main>
+    <div class="top"><div><h1>Client B</h1><p><span class="tip">Simulated client login</span> · answers on 1 case at Sample firm</p></div><button class="btn">+ Open a case for Client B</button></div>
+    <h2 class="sec">Cases</h2>
+    <div class="cards"><div class="card"><div class="ref"><a href="#">VV-2026-011</a><span class="pill">Open</span></div><p class="meta">Visitor visa · Single · opened 9 Nov 2026</p><ul class="people"><li>Sample Visitor <span class="role">· Principal applicant</span></li></ul></div></div>
+    <p class="count">1 case shown<span class="sample">Sample</span></p>
+  </main>
+</div></div>
+</div>
+</section>
+
+<!-- ============================================================ 3. loading -->
+<section class="state">
+<h2>3. Loading</h2>
+<p class="note">Skeleton in the final layout (never "No cases" before data). The line reads "Cases › Client" from the address until the page names the client.</p>
+<div class="pair">
+<div><div class="label">1440 px</div>
+<div class="w1440 screen">
+  <div class="hdr"><span class="brand">Expat Ready</span><span class="sep"></span><span class="area">Cases</span><div class="acting"><span>Acting as (simulated)</span>Case officer · Sample firm</div></div>
+  <div class="where"><a class="back" href="#">← Back</a><span class="vbar"></span><nav class="crumbs"><a href="#">Cases</a><span>›</span><span class="here">Client</span></nav><a class="other" href="#">Product Studio →</a></div>
+  <main><div class="page" aria-busy="true">
+    <div class="top"><div><div class="sk" style="width:180px;height:30px"></div><div class="sk" style="width:420px;height:16px;margin-top:8px"></div></div><div class="sk" style="width:210px;height:36px"></div></div>
+    <div class="sk" style="width:60px;height:18px;margin-bottom:8px"></div>
+    <div class="sk" style="width:100%;height:150px;border-radius:12px"></div>
+  </div></main>
+</div></div>
+<div><div class="label">375 px</div>
+<div class="w375 screen">
+  <div class="hdr"><span class="brand">Expat Ready</span><div class="acting"><span>Acting as</span>Case officer</div></div>
+  <div class="where"><a class="back" href="#">← Back</a><span class="vbar"></span><nav class="crumbs"><a href="#">Cases</a><span>›</span><span class="here">Client</span></nav><a class="other" href="#">Studio →</a></div>
+  <main aria-busy="true"><div class="sk" style="width:140px;height:30px"></div><div class="sk" style="width:100%;height:16px;margin:8px 0 12px"></div><div class="sk" style="width:100%;height:44px;margin-bottom:16px"></div><div class="sk" style="width:100%;height:110px;border-radius:12px;margin-bottom:8px"></div><div class="sk" style="width:100%;height:110px;border-radius:12px"></div></main>
+</div></div>
+</div>
+</section>
+
+<!-- ============================================================ 4. empty, partial, more than 100 -->
+<section class="state">
+<h2>4. None at your firm · some reads failed · more than 100 cases</h2>
+<p class="note">Left: Solo representative (Sample solo firm) on Client B, who has no case there; the empty state teaches the one action (BR-2). Right: two honesty notices (BR-5); the rows that loaded stay.</p>
+<div class="pair">
+<div><div class="label">1440 px · empty at this firm</div>
+<div class="w1440 screen">
+  <div class="hdr"><span class="brand">Expat Ready</span><span class="sep"></span><span class="area">Cases</span><div class="acting"><span>Acting as (simulated)</span>Solo representative · Sample solo firm</div></div>
+  <div class="where"><a class="back" href="#">← Back</a><span class="vbar"></span><nav class="crumbs"><a href="#">Cases</a><span>›</span><span class="here">Client B</span></nav><a class="other" href="#">Product Studio →</a></div>
+  <main><div class="page">
+    <div class="top"><div><h1>Client B</h1><p><span class="tip">Simulated client login</span> · no cases at Sample solo firm yet</p></div></div>
+    <div class="notice"><div><p class="t">Client B has no cases at Sample solo firm yet.</p><p class="b">Open one on a released combination; Client B then answers its questionnaire.</p></div><button class="btn">+ Open a case for Client B</button></div>
+  </div></main>
+</div></div>
+<div><div class="label">375 px · partial and more than 100</div>
+<div class="w375 screen">
+  <div class="hdr"><span class="brand">Expat Ready</span><div class="acting"><span>Acting as</span>Case officer</div></div>
+  <div class="where"><a class="back" href="#">← Back</a><span class="vbar"></span><nav class="crumbs"><a href="#">Cases</a><span>›</span><span class="here">Client A</span></nav><a class="other" href="#">Studio →</a></div>
+  <main class="stack">
+    <div class="top" style="margin:0"><div><h1>Client A</h1><p><span class="tip">Simulated client login</span> · answers on 2 cases shown at Sample firm</p></div></div>
+    <div class="notice warn"><div><p class="t">1 of 3 cases could not be read.</p><p class="b">Reload to try again. The cases below are complete.</p></div></div>
+    <div class="notice"><div><p class="t">Showing Client A's cases among your firm's newest 100.</p><p class="b">Older cases are on the Cases list.</p></div></div>
+    <div class="cards"><div class="card"><div class="ref"><a href="#">VV-2026-014</a><span class="pill">Open</span></div><p class="meta">Visitor visa · Family · opened 11 Nov 2026</p></div><div class="card"><div class="ref"><a href="#">VV-2026-002</a><span class="pill">Open</span></div><p class="meta">Visitor visa · Single · opened 28 Oct 2026</p></div></div>
+  </main>
+</div></div>
+</div>
+</section>
+
+<!-- ============================================================ 5. refused -->
+<section class="state">
+<h2>5. No access: a client at the address</h2>
+<p class="note">Client A (or Client B) types a client page's address. Client area: "Your application", no Back. No name, no count, no case read is sent (BR-1). Plain second person, because a client reads it.</p>
+<div class="pair">
+<div><div class="label">1440 px</div>
+<div class="w1440 screen">
+  <div class="hdr"><span class="brand">Expat Ready</span><span class="sep"></span><span class="area">Your application</span><div class="acting"><span>Acting as (simulated)</span>Client A · Client</div></div>
+  <div class="where"><nav class="crumbs"><span class="here">Your application</span></nav></div>
+  <main><div class="page"><div class="notice"><div><p class="t">This page is for the firm's staff</p><p class="b">You open your questionnaire from the link your officer sends.</p></div></div></div></main>
+</div></div>
+<div><div class="label">375 px</div>
+<div class="w375 screen">
+  <div class="hdr"><span class="brand">Expat Ready</span><div class="acting"><span>Acting as</span>Client A</div></div>
+  <div class="where"><nav class="crumbs"><span class="here">Your application</span></nav></div>
+  <main><div class="notice"><div><p class="t">This page is for the firm's staff</p><p class="b">You open your questionnaire from the link your officer sends.</p></div></div></main>
+</div></div>
+</div>
+</section>
+
+<!-- ============================================================ 6. not found -->
+<section class="state">
+<h2>6. Not found: a key that is no client login</h2>
+<p class="note"><code>/cases/clients/user-Z</code>. The line keeps "Cases › Client" and Back to Cases (BR-7).</p>
+<div class="pair">
+<div><div class="label">1440 px</div>
+<div class="w1440 screen">
+  <div class="hdr"><span class="brand">Expat Ready</span><span class="sep"></span><span class="area">Cases</span><div class="acting"><span>Acting as (simulated)</span>Case officer · Sample firm</div></div>
+  <div class="where"><a class="back" href="#">← Back</a><span class="vbar"></span><nav class="crumbs"><a href="#">Cases</a><span>›</span><span class="here">Client</span></nav><a class="other" href="#">Product Studio →</a></div>
+  <main><div class="page"><div class="notice"><div><p class="t">No such client</p><p class="b"><a href="#">Back to cases</a></p></div></div></div></main>
+</div></div>
+<div><div class="label">375 px</div>
+<div class="w375 screen">
+  <div class="hdr"><span class="brand">Expat Ready</span><div class="acting"><span>Acting as</span>Case officer</div></div>
+  <div class="where"><a class="back" href="#">← Back</a><span class="vbar"></span><nav class="crumbs"><a href="#">Cases</a><span>›</span><span class="here">Client</span></nav><a class="other" href="#">Studio →</a></div>
+  <main><div class="notice"><div><p class="t">No such client</p><p class="b"><a href="#">Back to cases</a></p></div></div></main>
+</div></div>
+</div>
+</section>
+
+<!-- ============================================================ 7. case header link (PR 4) -->
+<section class="state">
+<h2>7. The other way: the case page names its client (PR 4)</h2>
+<p class="note">Case header, beside the team line (cases.tsx:209): "Client: Client A" links to the client page (dashed outline marks the new part on this board only). The questionnaire box keeps "Open it as Client A (simulated)". The where-line stays "Cases › VV-2026-014" (question 1).</p>
+<div class="pair">
+<div><div class="label">1440 px</div>
+<div class="w1440 screen">
+  <div class="hdr"><span class="brand">Expat Ready</span><span class="sep"></span><span class="area">Cases</span><div class="acting"><span>Acting as (simulated)</span>Case officer · Sample firm</div></div>
+  <div class="where"><a class="back" href="#">← Back</a><span class="vbar"></span><nav class="crumbs"><a href="#">Cases</a><span>›</span><span class="here">VV-2026-014</span></nav><a class="other" href="#">Product Studio →</a></div>
+  <main><div style="display:flex;gap:24px;align-items:flex-start;max-width:1280px;margin:0 auto">
+    <div class="casehead" style="flex:1">
+      <h1>VV-2026-014 <span class="pill">Open</span> <span class="pill info">Release 3 →</span></h1>
+      <div class="meta"><span>Representative: Representative · Case officer: Case officer</span><a class="new" href="#">Client: Client A</a></div>
+      <p style="margin:4px 0 0;color:var(--text-muted)">48 questions for this household · 31 answered · 5 to confirm · 6 required not answered</p>
+    </div>
+    <div class="qbox"><p style="font-weight:500">Client questionnaire</p><p class="m">Client A answers on their phone, for everyone travelling.</p><a href="#" style="font-size:14px;font-weight:500">Open it as Client A (simulated) ↗</a></div>
+  </div></main>
+</div></div>
+<div><div class="label">375 px</div>
+<div class="w375 screen">
+  <div class="hdr"><span class="brand">Expat Ready</span><div class="acting"><span>Acting as</span>Case officer</div></div>
+  <div class="where"><a class="back" href="#">← Back</a><span class="vbar"></span><nav class="crumbs"><a href="#">Cases</a><span>›</span><span class="here">VV-2026-014</span></nav><a class="other" href="#">Studio →</a></div>
+  <main class="casehead">
+    <h1>VV-2026-014 <span class="pill">Open</span></h1>
+    <div class="meta"><a class="new" href="#" style="min-height:24px;display:inline-flex;align-items:center">Client: Client A</a></div>
+    <p class="callout">Visible at every width (unlike the old hidden link): the way back to the client.</p>
+  </main>
+</div></div>
+</div>
+</section>
+
+<p class="legend">Colours: brand blue only for the one filled button, links and focus; no orange (nothing on this page needs you); no red. Type sizes: 24 / 16 / 14 (+12 for meta). Motion: skeleton shimmer only, off under reduced motion. Board, not code: the build uses Frame, useWhere, Table, Notice, Pill, Button and Skeleton from web/src.</p>
+</div>
+</body>
+</html>
