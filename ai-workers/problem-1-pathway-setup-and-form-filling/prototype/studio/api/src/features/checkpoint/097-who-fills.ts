@@ -1,6 +1,6 @@
 // QA-403 (P-486, reversible): the firm's own facts are the case officer's, never the client's. Who fills each question in
 // samples/who-fills.json is changed through the product's own route (Change who fills, C4.9: the author proposes with
-// the reason, the Approver approves on To review), and its question and help get the file's plain words through the
+// the reason, the content reviewer decides it on To review as the second person), and its question and help get the file's plain words through the
 // placement route, before release 1 (step 110) carries them. Data, not code (P-319): this file names no fact and no
 // combination; a question already filled as the file says, or not placed, is said in the log and left. US$0, no AI.
 import { readFileSync } from "node:fs";
@@ -37,7 +37,7 @@ export function whoFillsFrom(file = WHO_FILLS_FILE): WhoFillsEntry[] {
 
 export default {
   async run(ctx) {
-    const { db, workspaceId, author, approver, said, log } = ctx;
+    const { db, workspaceId, author, sme, said, log } = ctx;
     const studio = ctx.get(Studio), fills = ctx.get(WhoFills), library = ctx.get(Screen02);
     const done: string[] = [], left: string[] = [];
     for (const e of whoFillsFrom()) {
@@ -49,7 +49,9 @@ export default {
           ...(now.predicateJson ? { condition: now.predicateJson, conditionEffect: now.conditionEffect, conditionPlain: now.conditionPlain ?? undefined } : {}), ruleOnly: now.ruleOnly });
         if (fillsOf(now.collectedFrom) === e.fills) { done.push(`${e.fact} (words only; already ${FILLS[e.fills]})`); continue; }
         const c = await fills.propose(author, e.fact, { to: e.fills, reason: e.reason });
-        await library.decideLibraryChange(approver, c.id, "approve", "Approved by the sample loader as the second person (QA-403, P-486: the firm's own fact).");
+        // The content reviewer decides it (the review duty, a second person): approving writes the placement's draft, and
+        // whoever writes a draft may not release it (BR-14), so the Approver stays free to release (step 110).
+        await library.decideLibraryChange(sme, c.id, "approve", "Approved by the sample loader as the second person (QA-403, P-486: the firm's own fact).");
         done.push(e.fact);
       } catch (err) { left.push(`${e.fact}: ${said(err)}`); }
     }
