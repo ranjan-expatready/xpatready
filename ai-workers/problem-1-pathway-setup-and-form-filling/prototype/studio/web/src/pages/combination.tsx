@@ -136,7 +136,7 @@ export function CombinationPage() {
       <div role="tabpanel" aria-label={TABS.find((t) => t.key === tab)!.label}>
         {tab === "overview" ? <OverviewTab d={d} sum={sum.data} show={sp.get("show")} failed={sum.isError} onRetry={() => void sum.refetch()} />
           : tab === "documents" ? <DocumentsTab id={c.id} />
-          : tab === "review" ? <ReviewTab d={d} changesCount={sum.data ? changes : undefined} countFailed={sum.isError} onRetryCount={() => void sum.refetch()} />
+          : tab === "review" ? <ReviewTab d={d} changesCount={sum.data ? changes : undefined} countFailed={sum.isError} onRetryCount={() => void sum.refetch()} retired={retired} />
           : tab === "tests" ? <TestsTab id={c.id} />
           : tab === "preview" && sp.get("view") === "studio" ? <div className="space-y-3"><Link className="text-sm text-text-link underline" to={`/c/${id}/preview`}>Back to the preview by person</Link><StudioPreview d={d} /></div>
           : <WorkspaceTab id={c.id} tab={tab} hasRelease={!!last} />}

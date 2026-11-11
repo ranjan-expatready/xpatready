@@ -1,4 +1,4 @@
-// B88 (QA-239, C4.11): on Study permit, whose author did nothing, Review and release shows the "Hiding a value" problem a
+// B88 (QA-239, C4.11): on Study permit, whose author did nothing, Review and release shows the held condition (Bake row 6) a
 // condition approved on Visitor visa puts there, with its way out: the plain form field (B86's button) and the worked-out
 // Yes/No with the form's printed question beside the deciding question (B88's button). Walked in a real browser at 1440 px
 // by keyboard, the second person's page checked, then the problem gone. Plain words, no field code, axe (WCAG 2.2 AA), no
@@ -41,10 +41,12 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step(`plain words, no field code, ${name}`, !CODES.test(text), text.match(CODES)?.[0]);
     return text;
   };
-  const hiding = async () => ((await api(`/combinations/${sp}/submit`, "POST", { note: "B88 browser" })).body?.errors ?? []).filter((e) => e.item === "person.other_family_name" && /Hiding a value a form reads/.test(e.message ?? ""));
+  // Bake row 6 (QA-239, PR #1534): the condition is held on Study permit (a warning, the question asked every time), never a refusal.
+  const hiding = async () => ((await api(`/combinations/${sp}`)).body?.draft?.problems ?? []).filter((e) => e.item === "person.other_family_name" && e.level === "warning" && /^Condition not used on this combination: /.test(e.message ?? ""));
+  const refusing = async () => ((await api(`/combinations/${sp}/submit`, "POST", { note: "B88 browser" })).body?.errors ?? []).filter((e) => /Hiding a value a form reads/.test(e.message ?? ""));
 
   // ---------------------------------------------------------------- Study permit, whose author did nothing
-  step("C4.11 B88 fail (QA-239): Study permit is held by Visitor visa's condition", (await hiding()).length === 1);
+  step("C4.11 B88 (QA-239): Study permit holds Visitor visa's condition (a warning), and Submit refuses nothing for it", (await hiding()).length === 1 && (await refusing()).length === 0);
   await p.goto(`${BASE}/c/${sp}/review`);
   const under = '[data-form-field-conditions="person.other_family_name"]';
   let text = await check("Review and release, Study permit", under, "review-release");
@@ -79,10 +81,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.locator(`${under} [data-state="waiting"]`).waitFor({ timeout: 60_000 });
   const ffId = (await p.locator(`${under} [data-state="waiting"] a`).first().getAttribute("href")).split("/").pop();
   await api(`/library/changes/${ffId}/approve`, "POST", { note: "Checked against the form's words by a test (B88)." }, "user-B");
-  step("C4.11 B88 pass (QA-239): through these two buttons and a second person, Study permit's Hiding error is gone", (await hiding()).length === 0);
+  step("C4.11 B88 pass (QA-239): through these two buttons and a second person, the condition is in force on Study permit (no longer held)", (await hiding()).length === 0);
   await p.goto(`${BASE}/c/${sp}/review`);
   await p.waitForLoadState("networkidle");
-  step("Review and release no longer shows that problem", (await p.locator("[data-problem]", { hasText: "Hiding a value a form reads" }).count()) === 0);
+  step("Review and release no longer shows that problem", (await p.locator("[data-problem]", { hasText: "Condition not used on this combination" }).count()) === 0);
   // Breaker M2: once no problem shows the panel, its Undo stays reachable under "Form fields holding a question's condition".
   const fol = p.locator("[data-form-fields-held]");
   await fol.waitFor({ timeout: 60_000 });

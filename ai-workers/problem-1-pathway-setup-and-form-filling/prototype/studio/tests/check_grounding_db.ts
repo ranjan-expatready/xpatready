@@ -137,7 +137,11 @@ const sql = (q: string) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1
   r = await call("POST", `/library/fields/person.given_names/placement`, { sectionKey: pl[0], collectedFrom: pl[1], repeats: pl[2], condition: { subjectKind: "PRINCIPAL", op: "eq", field: flag, value: true }, conditionEffect: "SHOW", conditionPlain: `only if ${flag} is yes` });
   ok("a person makes the given-names question conditional (saved as draft)", r.status === 201, { flag, status: r.status });
   r = await call("POST", `/combinations/${wp}/submit`, {});
-  ok("finding 3 at release: submitting a draft that can hide a value IMM 1295 always reads is refused", r.status === 400 && /Hiding a value a form reads/.test(r.body.message), r.body.message);
+  // Bake row 6 (QA-237, QA-239, PR #1534): the guard rail holds without a dead end. The condition is held on this combination
+  // (IMM 1295 reads the answer whenever it applies), so the question is asked every time and nothing it reads is hidden.
+  ok("finding 3 at release: a condition that would hide a value IMM 1295 always reads is not used here: Submit is not refused for it", !(r.status === 400 && /Hiding a value a form reads/.test(r.body.message ?? "")), r.body.message ?? r.status);
+  const held = (await call("GET", `/combinations/${wp}/config?mode=draft`)).body?.snapshot;
+  ok("finding 3 at release: the given-names question is asked every time here (no condition in the draft), and the condition is listed as held", (held?.placements ?? []).filter((p: { fact: string }) => p.fact === "person.given_names").every((p: { condition?: unknown }) => !p.condition) && (held?.held_conditions ?? []).some((h: { fact: string; why: string[] }) => h.fact === "person.given_names" && h.why.some((w) => /IMM 1295 reads its answer/.test(w))), held?.held_conditions);
   r = await call("POST", `/library/fields/person.given_names/placement`, { sectionKey: pl[0], collectedFrom: pl[1], repeats: pl[2] });
   r = await call("POST", `/combinations/${wp}/submit`, {});
   ok("after the condition is removed the draft no longer has that error", !(r.status === 400 && /Hiding a value/.test(r.body.message)), r.body.message ?? r.status);
