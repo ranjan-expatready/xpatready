@@ -214,7 +214,7 @@
         "label": "Province or territory of intended study",
         "meaning": "Whether the person will study in the province of Québec or in another province or territory; a study in Québec needs the Québec Acceptance Certificate (CAQ) (IMM 5483 (08-2025) p. 2, documents list item 6).",
         "values": [
-          "Quebec",
+          "Québec",
           "Another province or territory"
         ],
         "question": "Where in Canada will this person study?",
