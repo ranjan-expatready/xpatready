@@ -135,7 +135,7 @@ function CopyState({ c, use = "file" }: { c: FormCopy; use?: CopyUse }) {
   if (c.status === "FAILED") return <Pill tone="danger" title={c.error ?? ""}>Failed</Pill>;
   if (c.stale) return <Pill tone="danger" title={`Facts changed after this copy was locked: ${c.changed.join(", ")}`}><Lock className="size-3" aria-hidden />Stale · {c.locked ? LOCK_KINDS[c.locked.kind] : ""}</Pill>;
   if (c.locked) return <Pill tone="ok" title={`Locked ${when(c.locked.at)}: it never changes`}><Lock className="size-3" aria-hidden />{LOCK_KINDS[c.locked.kind]}</Pill>;
-  if (use === "kept") return <Pill title="This form no longer applies: the copy is kept as it was, never filed" data-copy-kept>Kept, never filed</Pill>;
+  if (use === "kept") return <span className="inline-flex" data-copy-kept><Pill title="This form no longer applies: the copy is kept as it was, never filed">Kept, never filed</Pill></span>;
   if (c.out_of_date) return <Pill tone="warn" title={`Facts changed since this copy was made: ${c.changed.join(", ")}`}>Out of date</Pill>;
   return <Pill tone="ok"><Check className="size-3" aria-hidden />Generated</Pill>;
 }
@@ -186,7 +186,7 @@ function FormRow({ caseId, f, recorded }: { caseId: string; f: CaseForm; recorde
         <h3 ref={heading} tabIndex={-1} className="text-sm font-semibold outline-none">{f.form} <span className="font-normal text-text-muted">for</span> <span className="[overflow-wrap:anywhere]">{f.person}</span></h3>
         {f.added ? <AddedTag caseId={caseId} f={f} recorded={recorded} /> : null}
         {!f.for_filing ? <Pill tone="info" title="Filed Online: IRCC's PDF filled from the same declared and confirmed answers, for reading and checking only">Copy, not for filing</Pill>
-          : !f.trial_passed ? <Pill tone="warn" title="This form's filling is not proven yet, so the copy is for checking only">Checked copy, not for filing</Pill> : null}
+          : !f.trial_passed && f.applies ? <Pill tone="warn" title="This form's filling is not proven yet, so the copy is for checking only">Checked copy, not for filing</Pill> : null}
         {/* QA-391: a form that no longer applies is kept and listed, never filed: nothing to confirm, validate or generate. */}
         {f.applies && f.for_filing && f.needs_validate && latest?.status === "GENERATED" ? <ValidatedState caseId={caseId} c={latest} form={f.form} /> : null}
         {/* Break M2 (C-9): a barcode form with no current validated copy is never "Ready to file", in words. QA-229 (B2): nor is
@@ -286,7 +286,7 @@ function CopyLine({ c, use = "file", canLock, lockBlocked = null, locking, setLo
       {/* B81: not "by hand": the form has no such choice to write. Who it is about comes first (the same words on many form fields). */}
       {!compact && c.status === "GENERATED" && c.not_on_form?.length ? <p className="text-[13px] text-text-warn" data-not-on-form>Not on this form: <Few items={c.not_on_form.map((b) => `${b.label}${b.person ? ` of ${b.person}` : ""}: ${b.why}`)} /></p> : null}
       {!compact && c.status === "FAILED" ? <p className="text-[13px] text-text-danger">{c.error}</p> : null}
-      {!compact && c.status === "GENERATED" && c.person_steps.length ? <p className="text-[13px] text-text-muted">Before filing, on the PDF: {c.person_steps.join(" ")}</p> : null}
+      {!compact && use !== "kept" && c.status === "GENERATED" && c.person_steps.length ? <p className="text-[13px] text-text-muted">Before filing, on the PDF: {c.person_steps.join(" ")}</p> : null}
     </div>
   );
 }
