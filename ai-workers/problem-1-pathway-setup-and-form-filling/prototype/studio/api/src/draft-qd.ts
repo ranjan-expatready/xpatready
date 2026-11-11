@@ -13,6 +13,7 @@ import { Body, Controller, Get, Headers, HttpCode, HttpException, Inject, Inject
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { buildSnapshot } from "../../engine/snapshot.ts";
+import { withHeldConditions } from "../../engine/held-conditions.ts";
 import { checkWords, documentFacts, factsPerRole, qdChecks, QD_OPERATION, QD_RULES, QD_STEPS, sourceCounts, sourceWords, type QdFinding, type QdKind } from "../../engine/draft-qd.ts";
 import { actorOf, Audit, Db, need, readerOf, type Actor } from "./core.ts";
 import { charsOf, factNames, inputsOf, LIVE_WAITING, PqrDrafts, PQR_AI, type SavedState } from "./pqr-drafts.ts";
@@ -203,7 +204,7 @@ export class DraftQd {
     const c = await this.combination(id);
     const mode = b.data.mode;
     if (mode === "live" && !aiLive()) throw problem(409, "Live is not open yet", LIVE_WAITING);
-    const snapshot = (await buildSnapshot(this.db, c.workspaceId, c.id, "draft")).snapshot;
+    const snapshot = withHeldConditions((await buildSnapshot(this.db, c.workspaceId, c.id, "draft")).snapshot); // QA-237: step 5 reads the library's conditions, held here or not
     const facts = factsPerRole(snapshot);
     if (!facts.total) throw problem(409, "No forms yet", `"${c.label}" has no form fields mapped to facts yet, so there is nothing to draft. Find its forms (Start setup) first.`);
     // The guide steps 5 and 6 read: Live needs it to state its cost (a missing guide is said here, before anything runs).
@@ -301,7 +302,7 @@ export class DraftQd {
         await start(s.kind);
         await slowForTest();
         // Each step reads the draft as it is now: an earlier step may have changed what is waiting, never the draft itself.
-        const snapshot = (await buildSnapshot(this.db, c.workspaceId, c.id, "draft")).snapshot;
+        const snapshot = withHeldConditions((await buildSnapshot(this.db, c.workspaceId, c.id, "draft")).snapshot); // QA-237: step 5 reads the library's conditions, held here or not
         if (NOT_YET[s.kind]) { await end(s.kind, "NOT_YET", NOT_YET[s.kind]!); continue; }
         if (s.kind === "qd_documents") {
           const r = await this.documents(actor, c, plan.mode);

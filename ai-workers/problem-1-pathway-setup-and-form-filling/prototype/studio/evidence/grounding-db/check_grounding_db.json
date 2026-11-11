@@ -1,8 +1,8 @@
 {
- "at": "2026-11-01T16:15:07.242Z",
- "port": 4402,
- "database": "xr_studio_grounding",
- "pass": 32,
+ "at": "2026-11-11T07:15:43.358Z",
+ "port": 4455,
+ "database": "xr_studio_fh",
+ "pass": 35,
  "fail": 0,
  "log": [
   {
@@ -83,6 +83,11 @@
    "detail": "Approver (simulated) does not hold the author duty"
   },
   {
+   "name": "C3.6: the new type waits as a library proposal (202)",
+   "ok": true,
+   "detail": 202
+  },
+  {
    "name": "a base document requirement is added to the draft",
    "ok": true,
    "detail": "passport:each_applicant"
@@ -91,6 +96,11 @@
    "name": "server permission: the content reviewer cannot edit the draft",
    "ok": true,
    "detail": "Content reviewer (simulated) does not hold the author duty"
+  },
+  {
+   "name": "G5 (P-248): the author adds a form line (a release needs one beside its documents)",
+   "ok": true,
+   "detail": 201
   },
   {
    "name": "the new document type is approved by a second person (no release carries an unreviewed library item)",
@@ -102,7 +112,9 @@
    "detail": {
     "submit": 201,
     "items": [
+     "Form|IMM 9999",
      "Document requirement|passport:each_applicant",
+     "Field map|IMM 9999 (01-2026)",
      "Document type|passport"
     ],
     "sme": [
@@ -186,7 +198,7 @@
   {
    "name": "isolated copy: sample inputs load through the normal paths: 5 P-112 pathways (S2 fix 1), 11 programs, 6 combinations set up",
    "ok": true,
-   "detail": 6.344
+   "detail": 8.306
   },
   {
    "name": "a person makes the given-names question conditional (saved as draft)",
@@ -197,14 +209,40 @@
    }
   },
   {
-   "name": "finding 3 at release: submitting a draft that can hide a value IMM 1295 always reads is refused",
+   "name": "finding 3 at release: a condition that would hide a value IMM 1295 always reads is not used here: Submit is not refused for it",
    "ok": true,
-   "detail": "Fix 6 problems before submitting: Given name(s) as shown on passport or travel document: Hiding a value a form reads: the question \"Given name(s) as shown on passport or travel document\" is shown only when \"only if person.biometrics_required is yes\", but IMM 1295 reads it whenever the form applies. Make the form or its form fields apply under the same condition, or remove the question's condition. · Given name(s) as shown on passport or travel document: Hiding a value a form reads: the question \"Given name(s) as shown on passport or travel document\" is shown only when \"only if person.biometrics_required is yes\", but IMM 5257 SCH1 reads it under a different condition. Make the form or its form fields apply under the same condition, or remove the question's condition. · Given name(s) as shown on passport or travel document: Hiding a value a form reads: the question \"Given name(s) as shown on passport or travel document\" is shown only when \"only if person.biometrics_required is yes\", but IMM 5475 reads it under a different condition. Make the form or its form fields apply under the same condition, or remove the question's condition."
+   "detail": "Fix the problems before submitting: 17 numbers have no source entry. Each is listed on Review and release. First: Letter of explanation - exceptional situation, no valid travel document (Venezuelan passport): Passport issue date: before 2019-06-07 has no source entry. Add the official source, or mark 'None published – set by ExpatReady'. · Letter of explanation - exceptional situation, no valid travel document (Venezuelan passport): Passport years since expiry: at least 5 has no source entry. Add the official source, or mark 'None published – set by ExpatReady'. · Letter of explanation - Venezuelan passport extended 5 years: Passport issue date: before 2019-06-07 has no source entry. Add the official source, or mark 'None published – set by ExpatReady'. and 14 more."
+  },
+  {
+   "name": "finding 3 at release: the given-names question is asked every time here (no condition in the draft), and the condition is listed as held",
+   "ok": true,
+   "detail": [
+    {
+     "lineage": "person.given_names",
+     "fact": "person.given_names",
+     "condition": {
+      "op": "eq",
+      "field": "person.biometrics_required",
+      "value": true,
+      "subjectKind": "PRINCIPAL"
+     },
+     "condition_effect": "SHOW",
+     "condition_plain": "only if person.biometrics_required is yes",
+     "why": [
+      "IMM 1295 reads its answer whenever the form applies",
+      "IMM 5257 SCH1 reads its answer under a different condition",
+      "IMM 5475 reads its answer under a different condition",
+      "IMM 5476 reads its answer under a different condition",
+      "IMM 5707 reads its answer under a different condition",
+      "check OR_NAME_NOT_NA reads its answer"
+     ]
+    }
+   ]
   },
   {
    "name": "after the condition is removed the draft no longer has that error",
    "ok": true,
-   "detail": 201
+   "detail": "Fix the problems before submitting: 17 numbers have no source entry. Each is listed on Review and release. First: Letter of explanation - exceptional situation, no valid travel document (Venezuelan passport): Passport issue date: before 2019-06-07 has no source entry. Add the official source, or mark 'None published – set by ExpatReady'. · Letter of explanation - exceptional situation, no valid travel document (Venezuelan passport): Passport years since expiry: at least 5 has no source entry. Add the official source, or mark 'None published – set by ExpatReady'. · Letter of explanation - Venezuelan passport extended 5 years: Passport issue date: before 2019-06-07 has no source entry. Add the official source, or mark 'None published – set by ExpatReady'. and 14 more."
   }
  ]
 }
