@@ -121,6 +121,36 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("frame: a plain click opens the case list as the case officer, said once", await stored(p) === "user-O" && await said(p, /Now: Case officer \(simulated\)/) && await p.getByRole("button", { name: "Open a case" }).isVisible().catch(() => false));
   await p.context().close();
 
+  // 4b. The breaker's findings (break-report-4a.md), each with its fail side.
+  p = await fresh("user-B");
+  await p.goto(`${BASE}/cases/${caseId}`); await p.locator("[data-not-case-person]").waitFor({ timeout: 15000 }).catch(() => {});
+  const plain = p.locator("[data-where-area]");
+  step("break M1: for the Approver the case area's link reads only \"Product Studio\" (it changes nobody)", (await plain.innerText()).trim() === "Product Studio", await plain.innerText());
+  await plain.click(); await p.waitForURL((u) => u.pathname === "/", { timeout: 15000 }).catch(() => {});
+  step("break M1 fail side: the Approver stays the Approver in the Studio (not silently the Configuration author)", new URL(p.url()).pathname === "/" && await stored(p) === "user-B", await stored(p));
+  await p.context().close();
+  p = await fresh("user-A");
+  await p.goto(`${BASE}/`); await where(p);
+  const sel = picker(p);
+  step("break m4: the picker's options are names only (the group says the area)", JSON.stringify(await sel.locator("option").evaluateAll((o) => o.slice(0, 3).map((x) => x.textContent))) === JSON.stringify(["Configuration author", "Content reviewer", "Approver"]));
+  await sel.focus(); await p.keyboard.press("ArrowDown"); await p.waitForTimeout(600);
+  step("break M2 fail side (WCAG 3.2.2): an arrow key on the picker changes nobody and stays on the page", await stored(p) === "user-A" && new URL(p.url()).pathname === "/", { stored: await stored(p), url: p.url() });
+  await p.keyboard.press("Tab"); await p.waitForTimeout(400);
+  step("break M2: leaving the picker without Enter keeps the person and shows them again", await stored(p) === "user-A" && await sel.inputValue() === "user-A", { stored: await stored(p), shown: await sel.inputValue() });
+  await sel.focus(); await p.keyboard.press("ArrowDown"); await p.keyboard.press("Enter");
+  step("break M2: Enter makes the keyboard choice, said once", await said(p, /Now: Content reviewer \(simulated\)/) && await stored(p) === "user-C");
+  await p.context().close();
+  p = await fresh();
+  await p.goto(`${BASE}/cases`); await where(p);
+  step("break m1: a browser with no person that opens the case area is told it is now the case officer", await said(p, /Now: Case officer \(simulated\)/) && await stored(p) === "user-O");
+  await p.context().close();
+  p = await fresh("user-Z");
+  await p.goto(`${BASE}/`); await p.waitForURL((u) => u.pathname === "/sign-in", { timeout: 15000 }).catch(() => {});
+  await p.locator('[data-sign-in-as="user-A"]').click(); await p.waitForURL((u) => u.pathname === "/", { timeout: 15000 }).catch(() => {});
+  await p.goBack(); await p.locator("[data-sign-in]").waitFor({ timeout: 15000 }).catch(() => {});
+  step("break m3 fail side: Back to the sign-in page after choosing no longer says the person is unknown", new URL(p.url()).pathname === "/sign-in" && await p.locator("[data-sign-in-unknown]").count() === 0, p.url());
+  await p.context().close();
+
   // 5. BR-5: a client from the picker reaches no Studio page and no case list.
   p = await fresh("user-P");
   await p.goto(`${BASE}/`); await where(p);

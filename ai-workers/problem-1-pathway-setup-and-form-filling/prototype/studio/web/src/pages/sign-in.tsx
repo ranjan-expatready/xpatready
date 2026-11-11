@@ -3,7 +3,7 @@
 // first person of each stage of the journey; the rest under "More people", in the team's three groups. A page, not a
 // gate (P-484 (3)): it is where a walk starts; a stored person this workspace does not know is sent here (BR-6).
 import * as React from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Check } from "lucide-react";
 import { personChosen, setActor, useActorId } from "@/lib/api";
 import { FIRST_FOUR, GROUP_WORDS, homeOf, PEOPLE, personOf, type Group, type Person } from "@/lib/simulated-people";
@@ -15,7 +15,6 @@ import { cn } from "@/lib/utils";
 export function SignInPage() {
   const id = useActorId();
   const nav = useNavigate();
-  const [sp] = useSearchParams();
   const known = !!personOf(id);
   const current = personChosen() && known ? id : null;
   React.useEffect(() => { document.title = "Sign in · Expat Ready"; }, []);
@@ -30,7 +29,7 @@ export function SignInPage() {
           <h1 className="text-2xl font-semibold">Who are you today?</h1>
           <p className="mt-1 text-sm text-text-muted">Simulated people: no passwords. Pick a role; buttons carry you on when work changes hands.</p>
         </div>
-        {sp.get("unknown") || (personChosen() && !known) ? <div data-sign-in-unknown><Notice title="Choose who you are">The person this browser remembered is not in this workspace.</Notice></div> : null}
+        {personChosen() && !known ? /* break m3: only while the stored person is still unknown */ <div data-sign-in-unknown><Notice title="Choose who you are">The person this browser remembered is not in this workspace.</Notice></div> : null}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {four.map((p) => <PersonCard key={p.id} p={p} current={current === p.id} onChoose={choose} />)}
         </div>

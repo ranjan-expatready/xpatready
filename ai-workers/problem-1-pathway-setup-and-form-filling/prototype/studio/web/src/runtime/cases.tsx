@@ -84,7 +84,7 @@ function NotACasePerson() {
       <div className="mx-auto max-w-5xl space-y-4" data-not-case-person>
         <h1 className="text-2xl font-semibold">Cases</h1>
         <Notice title="Cases are worked by the firm" action={<Button size="sm" variant="secondary" onClick={() => setActor(CASE_OFFICER)} data-continue-as-officer>Continue as {officer.name} <ArrowRight /></Button>}>
-          {me ? `${me.name} (simulated) sets up pathways in Product Studio. ` : ""}A firm person opens and works cases.
+          {me ? `${me.name} (simulated) works in Product Studio. ` : ""}A firm person opens and works cases.
         </Notice>
       </div>
     </Frame>

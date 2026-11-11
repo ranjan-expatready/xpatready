@@ -62,6 +62,22 @@ const sites: Record<string, number> = {};
 for (const f of files) { const r = relative(WEB, f), n = (readFileSync(f, "utf8").match(/\bsetActor\(/g) ?? []).length - (r === "lib/api.ts" ? 1 : 0); if (n > 0) sites[r] = n; }
 const extra = Object.entries(sites).filter(([f, n]) => (ALLOWED[f] ?? 0) !== n);
 ok("BR-1: a person changes only at the listed places (sign-in, picker, frame links, the case area's first person and BR-8, BK-4c's two client links)", extra.length === 0, { sites, allowed: ALLOWED });
+// Break m6: the helpers that change the person count too (a call site is a person change the check must see).
+const HELPERS_ALLOWED: Record<string, number> = {
+  "components/frame.tsx": 2, // the frame's other-area link: leaveCasesAsStudio or enterCasesAsStaff, by area (it names the person)
+  "runtime/cases.tsx": 1, // the case's release pill (names "as Configuration author")
+  "pages/combination.tsx": 1, // BK-3 PR 2's "Open a case on Release N": BK-4b names the person on it (concept §5)
+};
+const HELPER = /\b(actAsCaseStaff|enterCasesAsStaff|leaveCasesAsStudio)\b/g;
+const helperUse: Record<string, number> = {};
+for (const f of files) {
+  const r = relative(WEB, f);
+  // Uses only: not an import line, not where a helper is defined (export function …, export const … = …).
+  const n = readFileSync(f, "utf8").split("\n").filter((l) => !/^\s*import /.test(l) && !/export (function|const) (actAsCaseStaff|enterCasesAsStaff|leaveCasesAsStudio)\b/.test(l)).reduce((a, l) => a + (l.match(HELPER) ?? []).length, 0);
+  if (n) helperUse[r] = n;
+}
+const helperExtra = Object.entries(helperUse).filter(([f, n]) => (HELPERS_ALLOWED[f] ?? 0) !== n);
+ok("BR-1: every use of the person-changing helpers is listed (frame link, release pill, Open a case)", helperExtra.length === 0, { helperUse, allowed: HELPERS_ALLOWED });
 const writers = files.filter((f) => !f.endsWith("lib/api.ts") && /localStorage\.setItem\(\s*["']xr-actor/.test(readFileSync(f, "utf8"))).map((f) => relative(WEB, f));
 ok("BR-1: nothing but lib/api.ts writes the stored person", writers.length === 0, writers);
 ok("BR-1 fail side: a new setActor call in a page would be caught", (() => { const s = { ...sites, "pages/review.tsx": 1 }; return Object.entries(s).some(([f, n]) => (ALLOWED[f] ?? 0) !== n); })());

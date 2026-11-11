@@ -15,6 +15,8 @@ export const getActor = () => actor;
 /** Was the current person chosen (signed in, picked, handed over), not the default of a browser with no stored person? */
 export const personChosen = () => chosen;
 export function setActor(a: string) { actor = a; chosen = true; try { localStorage.setItem("xr-actor", a); } catch { /* private window */ } listeners.forEach((l) => l()); }
+/** BK-4a: hear every change of person (the frame's one notice); returns the way to stop listening. */
+export function onActorChange(l: () => void) { listeners.add(l); return () => { listeners.delete(l); }; }
 export function useActorId() { const [, force] = React.useState(0); React.useEffect(() => { const l = () => force((n) => n + 1); listeners.add(l); return () => { listeners.delete(l); }; }, []); return actor; }
 
 /** A refused request, from the server's Problem Details: a plain reason, and field errors to show on their fields. */
