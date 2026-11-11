@@ -45,7 +45,7 @@ The reader matched by id, which overstates gaps: many uncited cards are built un
 | # | Requirement area (SA-01B v2.1 cards) | In the product today | Planned? |
 |---|---|---|---|
 | G1 | Document validity, dates and checks (SA-1B-153, 155, 156, 22, 105, 21) | partly (C6.4 police-certificate age; fact expiry rules in `samples/fact-expiry-rules.json`) | M4 Track A (fact-expiry table onto a screen); the rest **nowhere** |
-| G2 | Purposes and overflow for list facts (SA-1B-11, B1) | partly (lists fill; overflow pages not) | **nowhere** |
+| G2 | Purposes and overflow for list facts (SA-1B-11, B1) | **built, corrected 11 Nov:** list purposes (current, mailing address, all, latest, date range) and overflow choices (extra sheet, flag for the officer) are set per form field (`contracts/forms.ts:108-131`, F1-P, SA-1B-11, 12, 27). The first draft's "nowhere" came from an id match that missed it; the v2.1 trace (`03a`) has the card | built; what an extra sheet looks like when filled is checked under M4 F2 |
 | G3 | Portal screens as editions; extension fill (SA-1B-32, 173, 175; C7.4 Not built) | answer sheet only (C7.3 Works) | M6 extension (P-245) |
 | G4 | Content freshness: change watch, "in force from", correction vs rule change (SA-1B-297, 298-300) | no | **nowhere** (needed before real use: content changes with IRCC) |
 | G5 | Withdraw a submitted application (C8.4), stored representative signature (C8.5) | no | team (P-406) |
