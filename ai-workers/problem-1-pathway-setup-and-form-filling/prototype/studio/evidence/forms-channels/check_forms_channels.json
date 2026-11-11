@@ -1,10 +1,10 @@
 {
- "at": "2026-11-11T09:18:19.440Z",
- "port": 18450,
- "database": "xr_studio_runtime_forms_f1",
+ "at": "2026-11-02T20:25:50.587Z",
+ "port": 4452,
+ "database": "xr_studio_fb2forms_f1",
  "paid_calls": 0,
  "fixtures": "Sample (tests/fixtures/intake/README.md)",
- "pass": 107,
+ "pass": 105,
  "fail": 0,
  "log": [
   {
@@ -230,34 +230,6 @@
    }
   },
   {
-   "name": "C3.8: option map pass: a form label the value's own label ends with is matched (\"Separated\" for \"Legally Separated\")",
-   "ok": true,
-   "detail": {
-    "map": {
-     "married": "01",
-     "single": "02",
-     "legally_separated": "05"
-    },
-    "unused": [],
-    "codes": [
-     "01",
-     "05",
-     "02"
-    ]
-   }
-  },
-  {
-   "name": "C3.8: option map fail: an exact match keeps its code, an ending two options share and an option two values end with are left for a person",
-   "ok": true,
-   "detail": {
-    "exactFirst": {
-     "separated": "05"
-    },
-    "twoTails": {},
-    "twoValues": {}
-   }
-  },
-  {
    "name": "C3.8: option map fail: a value without a code is a problem (filling would refuse it)",
    "ok": true
   },
@@ -340,8 +312,8 @@
    "name": "C1.6: a configuration without channels keeps its fingerprint (draft equals its release)",
    "ok": true,
    "detail": {
-    "wpRelease": "759d71cbee4571789b5652a6449b770bfd5563a1bbdd6c067bf349fb7614105e",
-    "wpDraft": "759d71cbee4571789b5652a6449b770bfd5563a1bbdd6c067bf349fb7614105e"
+    "wpRelease": "40d553cc02f1ed97c736cbea83abb740e1504db0cb6ae23f745e0f05aef9ce06",
+    "wpDraft": "40d553cc02f1ed97c736cbea83abb740e1504db0cb6ae23f745e0f05aef9ce06"
    }
   },
   {
@@ -564,8 +536,8 @@
    "ok": true,
    "detail": {
     "statuses": [
-     409,
-     200
+     200,
+     409
     ],
     "hist": "1"
    }
@@ -731,12 +703,6 @@
     "document": false,
     "edition": "IMM 5707 (01-2023)",
     "libraryEdition": "IMM 5707 (01-2023)",
-    "choiceEditions": [
-     {
-      "id": "f5e2a28b-3c7f-419b-b784-6a3c8d7dfc1a",
-      "label": "IMM 5707 (01-2023)"
-     }
-    ],
     "boxes": 40,
     "who": "each_applicant",
     "minAge": null,
@@ -794,7 +760,7 @@
     "origin": "HUMAN",
     "quote": null,
     "added": "Added from the library by a person",
-    "revision": "2026-11-11T09:18:13.994Z",
+    "revision": "2026-11-02T20:25:42.104Z",
     "status": "DRAFT",
     "version": 1
    }
@@ -802,7 +768,7 @@
   {
    "name": "C3.8: the review's validator runs the channel rules: the Online line is a warning there too, never an error",
    "ok": true,
-   "detail": 114
+   "detail": 149
   },
   {
    "name": "C1.6: the combination summary carries no portal and no online forms; IMM 5257 shows its PDF edition while filed Online",
@@ -1018,13 +984,13 @@
    "ok": true,
    "detail": [
     {
-     "combination": "9d10c85e-57c4-478b-905d-43530fd10540",
+     "combination": "6a46ece5-bfbb-427e-9b10-67c67e4c59e5",
      "label": "Visitor visa",
      "channel": "PDF_UPLOAD",
      "words": "IMM 5707 is filed as PDF upload, but the Form library records that IRCC accepts it only as Online. Choose a way IRCC accepts."
     },
     {
-     "combination": "f5750cb9-5523-4916-b57e-3a06c98a6850",
+     "combination": "8adb4deb-7c67-42fd-b945-8c003adc3067",
      "label": "With an LMIA",
      "channel": "PDF_UPLOAD",
      "words": "IMM 5707 is filed as PDF upload, but the Form library records that IRCC accepts it only as Online. Choose a way IRCC accepts."
@@ -1264,21 +1230,21 @@
    "ok": true,
    "detail": [
     "The field \"Town of birth\" is retired: it takes no new use or change. Restore it in Shared library › Fields first, or choose another.",
-    "This field was merged into \"Place of birth city\": add the name there."
+    "person.town_of_birth was merged into person.place_of_birth_city: add the label there."
    ]
   },
   {
    "name": "C3.5: merge fail: a field already waiting in a merge cannot enter a second one (no chain, cycle or fork)",
    "ok": true,
    "detail": [
-    "\"Test merge y\" is already in a merge waiting for a second person (\"Test merge x\" into \"Test merge y\"): that one is decided first.",
-    "\"Test merge x\" is already in a merge waiting for a second person (\"Test merge x\" into \"Test merge y\"): that one is decided first."
+    "case.test_merge_y is already in a merge waiting for a second person (case.test_merge_x into case.test_merge_y): decide that one first.",
+    "case.test_merge_x is already in a merge waiting for a second person (case.test_merge_x into case.test_merge_y): decide that one first."
    ]
   },
   {
    "name": "C3.5: merge fail: checked again when approved; a field retired since the proposal stops it and nothing moves",
    "ok": true,
-   "detail": "\"Test merge y\" was retired after this merge was proposed: nothing was changed; reject this merge."
+   "detail": "case.test_merge_y was retired after this merge was proposed: nothing was changed; reject this merge."
   },
   {
    "name": "C3.5: merge fail: the same merge proposed twice at the same moment is stored once",
@@ -1292,8 +1258,8 @@
    "name": "C3.5: alias fail: a curly-apostrophe twin of another field's label, and a label of punctuation only, are refused",
    "ok": true,
    "detail": [
-    "\"Mother’s maiden name\" already names the field \"Family name\": one name points to one shared field. If the two mean the same, merge them instead.",
-    "A name needs letters or digits."
+    "\"Mother’s maiden name\" already names person.family_name: one label points to one shared field (a reviewed merge joins two fields).",
+    "An alias needs letters or digits."
    ]
   },
   {
@@ -1327,7 +1293,7 @@
      "code": "IMM 1295",
      "outcome": "ready",
      "why": null,
-     "change_id": "942d5c57-d39a-488d-9743-02032abe4f8c"
+     "change_id": "526f5c88-9d1e-499b-9698-67bfe90d0c02"
     },
     {
      "code": "IMM 1295",
