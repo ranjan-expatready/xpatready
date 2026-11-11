@@ -73,7 +73,7 @@ const LONG = 400000;
   await door("configured").getByRole("button", { name: "Start here" }).click();
   await dialog().getByText("Empty the demo and start from Pathways released, ready to walk?").waitFor();
   const dt = await dialog().innerText();
-  step("BR-1: the confirm says what goes (with the row count), what comes back and what is kept, checked byte-identical", /Goes/.test(dt) && /All configuration, releases and cases: \d+ rows/.test(dt) && /Comes back/.test(dt) && /Kept/.test(dt) && /checked byte-identical/.test(dt), dt.slice(0, 300));
+  step("BR-1: the confirm says what goes (with the row count), what comes back and what is kept, checked byte-identical", /Goes/.test(dt) && /All configuration, releases and cases: \d+ rows?/.test(dt) && /Comes back/.test(dt) && /Kept/.test(dt) && /checked byte-identical/.test(dt), dt.slice(0, 300));
   step("BR-6: door 2 says to keep this page open until it finishes", /Keep this page open until it finishes/.test(dt));
   step("BR-2 pass: an empty demo asks for no RESET and the destructive button is ready", await p.getByLabel("Type RESET to confirm").count() === 0 && await dialog().getByRole("button", { name: "Empty and start" }).isEnabled() && /bg-danger/.test(await dialog().getByRole("button", { name: "Empty and start" }).getAttribute("class")));
   await shot("bk5-02-confirm-empty-1440");
