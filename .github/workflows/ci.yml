@@ -273,6 +273,7 @@ jobs:
           bash "$P/tools/check-select-suites.sh"
           bash "$P/tools/check-merge-guard.sh"
           bash "$P/tools/check-lane-bind.sh"
+          bash "$P/tools/check-new-machine.sh"   # B168: the any-Mac setup script's own logic
           node "$P/tools/ci-and-lists.mjs"
           node "$P/tools/ci-and-lists.mjs" --self-test
           node "$P/tools/suite-exit.mjs" --self-test   # B160: a suite whose last step is a bare summary() can never fail
