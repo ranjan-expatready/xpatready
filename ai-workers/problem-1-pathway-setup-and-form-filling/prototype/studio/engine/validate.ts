@@ -18,6 +18,7 @@ import { sourceKey } from "../contracts/resolver.ts"; // SH3 R8
 import { NO_FIELD_MAP } from "./setup-checklist.ts";
 import { formsWithoutFieldMap } from "./programs.ts"; // QA-180: one rule for release and Open a case
 import { FAMILY_INFORMATION } from "./form-completeness.ts";
+import { bareCond, conditionConflicts, HELD_OPENING } from "./held-conditions.ts"; // QA-237, QA-239
 import { sourceChanges } from "./source-register.ts"; // G1 BR-9: the "Source" lines only; the gate stays out of validate()
 
 // C-11: a field map's form field list, read once per file (paths are relative to the Solution 1 folder, as in fill.ts).
@@ -208,6 +209,15 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   }
   for (const k of duplicateValidity(s.checks)) out.push({ level: "warning", where: "Checks", item: k, message: `Two document validity rules name ${k}: neither is used until one is removed.` });
   out.push(...reachability(s, placed, docFacts, derived, (f) => `"${(meaningOf.get(f) ?? (s.derived_fields as { id: string; plain?: string | null }[]).find((d) => d.id === f)?.plain ?? f).trim().replace(/\.$/, "")}"`));
+  // QA-237, QA-239: a library condition this combination cannot honour is held, never a refusal: the question is asked
+  // every time here, and the author is told why and how to use the condition (engine/held-conditions.ts).
+  for (const h of s.held_conditions ?? []) {
+    const q = `"${(meaningOf.get(h.fact) ?? h.fact).trim().replace(/\.$/, "")}"`;
+    const formReads = h.why.some((w) => / reads its answer (whenever the form applies|under a different condition)$/.test(w));
+    const asks = h.why.some((w) => /^it depends on /.test(w));
+    const tail = formReads ? "To use the condition here, make the form or its form fields apply under the same condition (Form fields that read this answer)." : asks ? "To use the condition here, ask the question it depends on." : "To use the condition here, nothing else may read the answer outside it.";
+    out.push({ level: "warning", where: "Questions", item: h.fact, message: `${HELD_OPENING}: the question ${q} is asked every time here, because ${h.why.join("; and ")}. ${tail} Combinations that can honour the condition still use it.` });
+  }
   // Only the derived definitions this combination reads (Lead check item 3): the library holds every definition, and
   // one nobody here uses is not this combination's warning.
   const reads = derivedRead(s);
@@ -249,31 +259,23 @@ export function askedInOrder(s: Snapshot): Problem[] {
   return reachability(s, placed, docFacts, derived, (f) => `"${factWords(s, f)}"`);
 }
 
-/** A condition without whose answer it is read from, to compare two of them; null for anything that is not a condition
- *  (a form field's words are never one, B86). */
-export const bareCond = (c: any) => { if (!c || typeof c !== "object") return null; const { subjectKind: _k, ...n } = c; return canonical(n); };
+export { bareCond }; // B86: its home is engine/held-conditions.ts (QA-237, QA-239), next to the conflicts it compares
 
 /** Grounding audit finding 3 (W1 3.4, 3.5): a question's condition must never hide a value that something applicable
  *  still reads, every value that decides a question must be obtainable, and questions must not decide each other in a
- *  loop. Errors block submission and release. A form or box that applies under the same condition is compatible. */
+ *  loop. Errors block submission and release. A form or box that applies under the same condition is compatible.
+ *  QA-237, QA-239: a snapshot built by engine/snapshot.ts already holds a condition this combination cannot honour (the
+ *  question is asked every time, `held_conditions`), so these errors stay for any other snapshot (a drafting run's
+ *  simulation, a hand-made one) and for a deciding fact the library does not define. */
 // C3.8: the messages name each question by its meaning (`words`), never by its field code.
 function reachability(s: Snapshot, placed: Set<string>, docFacts: Set<string>, derived: Set<string>, words: (fact: string) => string): Problem[] {
   const out: Problem[] = [];
   const fieldsOf = (c: any) => c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : [];
-  const readers = new Map<string, { form: string; formCond: any; boxCond: any }[]>();
-  for (const m of s.field_maps) { const f = s.forms.find((x) => x.form_number === m.form_number); if (!f) continue; for (const e of m.entries) if (e.outcome === "mapped" && e.fact) readers.set(e.fact, [...(readers.get(e.fact) ?? []), { form: f.form_number, formCond: f.condition, boxCond: e.condition_rule }]); }
-  const conditions = [...s.rules.map((r) => ({ what: `rule ${r.id}`, tree: r.when })), ...s.document_requirements.map((d) => ({ what: `document "${d.document_type}"`, tree: d.condition })), ...s.forms.map((f) => ({ what: `form ${f.form_number}`, tree: f.condition })), ...(s.checks ?? []).filter((c) => c.condition && typeof c.condition === "object").map((c) => ({ what: `check ${c.id}`, tree: c.condition }))];
-  for (const p of s.placements) {
-    if (!p.condition) continue;
-    const eff = p.condition_effect ?? "SHOW";
-    if (eff === "SHOW" || eff === "HIDE") {
-      const own = bareCond(p.condition), when = p.condition_plain ?? "its condition";
-      const forms = new Map<string, boolean>();
-      for (const r of readers.get(p.fact) ?? []) { const ok = eff === "SHOW" && [r.formCond, r.boxCond].some((c) => bareCond(c) === own); forms.set(r.form, (forms.get(r.form) ?? true) && ok); }
-      for (const [form, ok] of forms) if (!ok) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a form reads: the question ${words(p.fact)} is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}", but ${form} reads it ${s.forms.find((x) => x.form_number === form)?.condition ? "under a different condition" : "whenever the form applies"}. Make the form or its form fields apply under the same condition, or remove the question's condition.` });
-      for (const c of conditions) if (fieldsOf(c.tree).includes(p.fact) && !(eff === "SHOW" && own && canonical(c.tree).includes(own))) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a condition reads: ${c.what} reads the answer to ${words(p.fact)}, whose question is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}". The condition could never be decided while the question is hidden.` });
-    }
-    for (const f of fieldsOf(p.condition)) if (!placed.has(f) && !docFacts.has(f) && !derived.has(f)) out.push({ level: "error", where: "Questions", item: p.fact, message: `Unreachable question: ${words(p.fact)} depends on ${words(f)}, which no question, supported document or derived definition supplies, so it can never be decided.` });
+  for (const { placement: p, forms, conditions, unreachable } of conditionConflicts(s, placed, docFacts, derived)) {
+    const eff = p.condition_effect ?? "SHOW", when = p.condition_plain ?? "its condition";
+    for (const { form, ok, formConditioned } of forms) if (!ok) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a form reads: the question ${words(p.fact)} is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}", but ${form} reads it ${formConditioned ? "under a different condition" : "whenever the form applies"}. Make the form or its form fields apply under the same condition, or remove the question's condition.` });
+    for (const what of conditions) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a condition reads: ${what} reads the answer to ${words(p.fact)}, whose question is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}". The condition could never be decided while the question is hidden.` });
+    for (const f of unreachable) out.push({ level: "error", where: "Questions", item: p.fact, message: `Unreachable question: ${words(p.fact)} depends on ${words(f)}, which no question, supported document or derived definition supplies, so it can never be decided.` });
   }
   // Loops: question A depends on B, which depends (directly or through others) on A.
   const dep = new Map<string, string[]>();
@@ -413,7 +415,7 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   out.push(...eligibilityChanges(prev?.eligibility, next.eligibility)); // C6.9 BR-4
   out.push(...sourceChanges(prev, next)); // G1 BR-9: a source added, changed or removed, for the expert
   // Completeness guard: any other part of the released content that differs is listed rather than silently passed.
-  const covered = new Set(["canonical_fields", "sections", "placements", "forms", "document_requirements", "rules", "checks", "field_maps", "combination", "document_types", "derived_fields", "fact_sources", "eligibility", "sources", "mode", "row_versions", "section_titles"]);
+  const covered = new Set(["canonical_fields", "sections", "placements", "forms", "document_requirements", "rules", "checks", "field_maps", "combination", "document_types", "derived_fields", "fact_sources", "eligibility", "sources", "mode", "row_versions", "section_titles", "held_conditions"]); // QA-237: held conditions show as their placement, never a change of their own
   for (const k of new Set([...Object.keys(prev ?? {}), ...Object.keys(next)])) if (prev && !covered.has(k) && canonical((prev as any)[k] ?? null) !== canonical((next as any)[k] ?? null)) out.push({ kind: "Configuration", key: k, change: "changed", needs_sme: true, label: `${k} changed` });
   return out;
 }

@@ -137,26 +137,29 @@ run(async () => {
   // The run view gives its cost as { spent, worst } (US$).
   ok("C4.11-23 pass: the whole run spent US$0 (Replay and Rules only)", !!view && T.spent() === before && Number(view?.usd?.spent ?? view?.usd ?? NaN) === 0, view?.usd);
   // QA-237, B86 (P-322; qa's wording on #1053, P-334 (4)): a person accepts a condition, a second person approves it, and the way
-  // out of "Hiding a value a form reads" works through the product's own routes. The draft's problems, not a full Submit, until
+  // to put it in force works through the product's own routes. Bake row 6 (QA-237, QA-239, PR #1534): until its form field
+  // holds the same condition, the condition is held here (the question asked every time, a warning), never a refusal. The draft's problems, not a full Submit, until
   // B82 is on main (Submit on the six is still refused for other reasons, QA-233), naming the exact question.
   const FF = "person.other_family_name", held = (await T.queued(vv)).find((x: any) => x.kind === "condition" && x.form_fields?.fact === FF);
   const hidingOf = async () => (((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []) as any[]).filter((p) => p.item === FF && /^Hiding a value a form reads/.test(p.message ?? ""));
+  const heldOf = async () => (((await call("GET", `/combinations/${vv}`)).body?.draft?.problems ?? []) as any[]).filter((p) => p.item === FF && p.level === "warning" && /^Condition not used on this combination: /.test(p.message ?? ""));
+  const placedWith = async () => ((((await call("GET", `/combinations/${vv}/config?mode=draft`)).body?.snapshot?.placements ?? []) as any[]).filter((p) => p.fact === FF)).map((p) => !!p.condition);
   const asSecond = { note: "Approved by the C4.11 pack as the second person (QA-237)." };
   r = await call("POST", "/review/proposals/decide", { ids: [held?.id ?? randomUUID()], action: "accept" }, AUTHOR);
   const accepted = r;
   const change = (((await call("GET", "/library/changes?status=WAITING", undefined, APPROVER)).body ?? []) as any[]).find((c) => c.kind === "placement_condition" && c.key === FF);
   const second = change ? await call("POST", `/library/changes/${change.id}/approve`, asSecond, APPROVER) : { status: 0, body: null };
-  const refused = await hidingOf();
-  ok("C4.11-24 fail (QA-237): a condition accepted and approved, its form field not confirmed: the draft holds \"Hiding a value a form reads\" for that question, in the rule's words", accepted.status < 300 && second.status < 300 && refused.length > 0 && /Make the form or its form fields apply under the same condition, or remove the question's condition\.$/.test(refused[0]?.message ?? ""), refused[0]?.message ?? { accepted: words(accepted), second: words(second as any), change: change?.id ?? null });
+  const refused = await hidingOf(), warned = await heldOf(), heldPlaced = await placedWith();
+  ok("C4.11-24 pass (QA-237): a condition accepted and approved, its form field not confirmed: the draft is not refused for it; the condition is held (the question asked every time, nothing a form reads hidden) and a warning says why and how to use it", accepted.status < 300 && second.status < 300 && refused.length === 0 && warned.length === 1 && /IMM 5257 reads its answer whenever the form applies[.;]/.test(warned[0]?.message ?? "") && /To use the condition here, make the form or its form fields apply under the same condition/.test(warned[0]?.message ?? "") && heldPlaced.length > 0 && heldPlaced.every((x) => !x), { refused: refused.map((e) => e.message), warned: warned.map((e) => e.message), heldPlaced, accepted: words(accepted), second: words(second as any), change: change?.id ?? null });
   const boxes = (await call("GET", `/combinations/${vv}/questions/${encodeURIComponent(FF)}/form-fields`, undefined, AUTHOR)).body?.rows ?? [];
   const toConfirm = boxes.filter((x: any) => x.can_confirm);
   for (const x of toConfirm) {
     const c = await call("POST", "/library/form-field-conditions", { combinationId: vv, fact: FF, formEditionId: x.form_edition_id, dataPath: x.data_path }, AUTHOR);
     if (c.body?.id) await call("POST", `/library/changes/${c.body.id}/approve`, asSecond, APPROVER);
   }
-  const left = await hidingOf();
+  const left = [...await hidingOf(), ...await heldOf()], nowPlaced = await placedWith();
   const inForce = (await call("GET", `/combinations/${vv}/questions/${encodeURIComponent(FF)}/form-fields`, undefined, AUTHOR)).body;
-  ok("C4.11-25 pass (QA-237): the author confirms the form field through the new route, showing its own words, a second person approves: that error is gone for that question and the condition is still in force in the draft", toConfirm.length > 0 && toConfirm.every((x: any) => !!x.words) && left.length === 0 && !!inForce?.sentence && (inForce?.rows ?? []).length > 0 && inForce.rows.every((x: any) => x.state === "confirmed"), { confirmed: toConfirm.length, left: left.map((e) => e.message), rows: inForce?.rows?.map((x: any) => x.state) });
+  ok("C4.11-25 pass (QA-237): the author confirms the form field through the new route, showing its own words, a second person approves: that question is no longer held and the condition is in force in the draft", toConfirm.length > 0 && toConfirm.every((x: any) => !!x.words) && left.length === 0 && nowPlaced.length > 0 && nowPlaced.every((x) => x) && !!inForce?.sentence && (inForce?.rows ?? []).length > 0 && inForce.rows.every((x: any) => x.state === "confirmed"), { confirmed: toConfirm.length, left: left.map((e) => e.message), nowPlaced, rows: inForce?.rows?.map((x: any) => x.state) });
   // qa's wording on #1053 (the fill, BR-5): on a real case of a real release, Yes, a typed name, then No leaves no name for the form.
   // Visitor visa released through people's steps (B82 on main); its other problems are not this step's to prove, so it says them if refused.
   await T.people(vv, VV_PEOPLE.filter((p) => p.role === "principal"));
