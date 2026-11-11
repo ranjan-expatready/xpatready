@@ -10,7 +10,7 @@ import { randomUUID } from "node:crypto";
 import { APPROVER, AUTHOR, REVIEWER, pack2, run } from "../acceptance/lib/pack2.ts";
 
 const T = pack2("QA237");
-const { call, sql, ok, until, words } = T;
+const { call, sql, ok, until, words, done } = T;
 const STEPS = ["facts", "documents", "document_facts", "comes_from", "conditions", "pqr_picks", "checker"];
 const AI = new Set(["documents", "conditions", "pqr_picks", "checker"]);
 const HIDING = /^Hiding a value a form reads/, HELD = /^Condition not used on this combination: /;
@@ -117,4 +117,5 @@ run(async () => {
   const asked = (relSnap?.held_conditions ?? []).map((h) => h.fact);
   ok("C4.11 pass (QA-239): in Study permit's release those questions are asked every time (no condition), so its forms always have the answer", asked.length > 0 && asked.every((f) => (relSnap?.placements ?? []).filter((p) => p.fact === f).every((p) => !p.condition)), asked);
   ok("C4.11: the run still spent US$0", T.spent() === before, T.spent());
+  done();
 });

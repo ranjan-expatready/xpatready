@@ -1,7 +1,8 @@
 // C4.11-27 (QA-239, B88; qa's terms on #1068, P-334 (4)): a question's condition is library-wide, so conditions accepted on
-// Visitor visa hold other combinations whose authors did nothing. On the six through people's steps, each of the four
-// other combinations that read those questions (Spouse, Express Entry, Study permit, With an LMIA) has its "Hiding a value
-// a form reads" errors cleared only through the people's routes: B86's door for plain form fields, B88's for the worked-out
+// Visitor visa reach other combinations whose authors did nothing. Bake row 6 (QA-239, PR #1534): there they are held (the
+// question asked every time, a warning), never a refusal. On the six through people's steps, each of the four other
+// combinations that read those questions (Spouse, Express Entry, Study permit, With an LMIA) puts them in force only
+// through the people's routes: B86's door for plain form fields, B88's for the worked-out
 // Yes/No that prints its condition's deciding question, each approved by a second person. Nothing is written directly; the
 // rule (engine/validate.ts) is not relaxed. Its own file, so C4.11.test.ts stays quick. Saved answers only: US$0, live AI
 // off. Every condition is Sample, Unconfirmed: expert.
@@ -31,7 +32,9 @@ run(async () => {
   await until(async () => ["COMPLETED", "DONE", "FAILED", "STOPPED", "CANCELLED"].includes(String((await call("GET", `/runs/${r0.body?.runId}`)).body?.status ?? "").toUpperCase()), 180_000);
   const errors = async (id: string) => ((await call("POST", `/combinations/${id}/submit`, { note: "C4.11-27" }, AUTHOR)).body?.errors ?? []) as { item?: string; message?: string }[];
   // Submit's errors[] name the question first ("<label>: Hiding a value …"), so the match is not anchored.
-  const hiding = async (id: string) => (await errors(id)).filter((e) => /Hiding a value a form reads/.test(e.message ?? ""));
+  const refusing = async (id: string) => (await errors(id)).filter((e) => /Hiding a value a form reads/.test(e.message ?? ""));
+  // Bake row 6: a condition a combination cannot honour is held there, a warning on its draft naming the question.
+  const hiding = async (id: string) => (((await call("GET", `/combinations/${id}`)).body?.draft?.problems ?? []) as { level?: string; item?: string; message?: string }[]).filter((e) => e.level === "warning" && /^Condition not used on this combination: /.test(e.message ?? ""));
   const unreachable = async (id: string) => (await errors(id)).filter((e) => /Unreachable question/.test(e.message ?? ""));
 
   // Visitor visa's conditions: accepted there by the author (one card per question), approved by a second person.
@@ -44,8 +47,10 @@ run(async () => {
 
   const held: Record<string, number> = {};
   for (const [k, name] of Object.entries(FOUR)) held[name] = (await hiding(T.combo(k))).length;
-  console.log(`NOTE  C4.11-27 Hiding errors before clearing: ${JSON.stringify(held)}`);
-  ok("C4.11-27 fail (QA-239): each of the four other combinations, set up by the people's steps, is held by Visitor visa's conditions (Hiding > 0)", Object.values(held).every((n) => n > 0), held);
+  const refused0: Record<string, number> = {};
+  for (const [k, name] of Object.entries(FOUR)) refused0[name] = (await refusing(T.combo(k))).length;
+  console.log(`NOTE  C4.11-27 held conditions before: ${JSON.stringify(held)}; Hiding errors: ${JSON.stringify(refused0)}`);
+  ok("C4.11-27 pass (QA-239): each of the four other combinations, set up by the people's steps, holds Visitor visa's conditions (the question asked every time, a warning) and is refused for none of them (no Hiding error)", Object.values(held).every((n) => n > 0) && Object.values(refused0).every((n) => n === 0), { held, refused0 });
   const unr: Record<string, number> = {}; for (const [k, name] of Object.entries(FOUR)) unr[name] = (await unreachable(T.combo(k))).length;
   ok("C4.11-27: no Unreachable question on the four", Object.values(unr).every((n) => n === 0), unr);
 
@@ -64,12 +69,12 @@ run(async () => {
     const asks = (await Promise.all(facts.map(async (f) => (await rowsOf(id, f)).filter((y) => y.can_ask).map((x) => ({ f, x }))))).flat();
     const still = (await hiding(id)).length;
     if (asks.length) { worked += asks.length; if (still > 0) keptByYesNo++; }
-    console.log(`NOTE  C4.11-27 ${name}: ${still} Hiding left with its plain form fields confirmed and ${asks.length} worked-out Yes/No not yet asked`);
+    console.log(`NOTE  C4.11-27 ${name}: ${still} held left with its plain form fields confirmed and ${asks.length} worked-out Yes/No not yet asked`);
     for (const { f, x } of asks) { const why = await through(id, f, x, true); if (why) refused.push(`${name} ${why}`); }
     after[name] = (await hiding(id)).length;
   }
-  ok("C4.11-27 fail: with every plain form field confirmed, each combination with a worked-out Yes/No still holds its Hiding error until that Yes/No is asked, so B88's door is what clears it", worked > 0 && keptByYesNo === Object.values(FOUR).length, { worked_out: worked, combinations_still_held: keptByYesNo });
-  ok("C4.11-27 pass (QA-239): through B86's and B88's doors only, each with a second person, Hiding is 0 on Spouse, Express Entry, Study permit and With an LMIA", Object.values(after).every((n) => n === 0) && !refused.length, { after, refused });
+  ok("C4.11-27 fail: with every plain form field confirmed, each combination with a worked-out Yes/No still holds the condition until that Yes/No is asked, so B88's door is what clears it", worked > 0 && keptByYesNo === Object.values(FOUR).length, { worked_out: worked, combinations_still_held: keptByYesNo });
+  ok("C4.11-27 pass (QA-239): through B86's and B88's doors only, each with a second person, no condition is held on Spouse, Express Entry, Study permit and With an LMIA", Object.values(after).every((n) => n === 0) && !refused.length, { after, refused });
   const still = Number(sql(`select count(distinct lineage_key) from section_question where predicate_json is not null and status in ('DRAFT','PUBLISHED') and lineage_key in (${[...one.keys()].map((f) => `'${f}'`).join(",") || "''"})`));
   ok("C4.11-27 pass: the conditions are still in force (none was removed to get there)", still === one.size, { in_force: still, of: one.size });
   const unr2: Record<string, number> = {}; for (const [k, name] of Object.entries(FOUR)) unr2[name] = (await unreachable(T.combo(k))).length;
