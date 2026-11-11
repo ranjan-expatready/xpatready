@@ -63,7 +63,6 @@ export function StartPage() {
   const status = useApi<Status>(["demo-status", "start"], "/demo/status", { refetchInterval: (q) => (q.state.data?.story?.state === "running" ? 3000 : false) });
   const [door, setDoor] = React.useState<DoorKey | null>(null);
   const [storyOpen, setStoryOpen] = React.useState(false);
-  React.useEffect(() => { document.title = "Starting points · Product Studio"; }, []);
 
   const me = session.data?.actor, author = !!me?.duties?.includes("author"), demo = session.data?.workspace?.demo !== false;
   const authorPerson = session.data?.actors?.find((a) => a.duties.includes("author"));
@@ -114,8 +113,8 @@ export function StartPage() {
               <div className="mt-auto flex flex-wrap gap-2 pt-1">
                 {isLast ? <>
                   <Button asChild variant={filled === d.key ? "default" : "secondary"}><Link to="/" data-start-continue>Continue to Immigration programs</Link></Button>
-                  <Button variant="ghost" disabled={!!off || storyRunning} onClick={() => setDoor(d.key)} data-start-door={d.key}><RotateCcw /> Start again from here</Button>
-                </> : <Button variant={filled === d.key ? "default" : "secondary"} disabled={!!off || storyRunning} onClick={() => setDoor(d.key)} data-start-door={d.key}><DoorOpen /> {d.button}</Button>}
+                  <Button variant="ghost" disabled={!!off || !s || storyRunning} onClick={() => setDoor(d.key)} data-start-door={d.key}><RotateCcw /> Start again from here</Button>
+                </> : <Button variant={filled === d.key ? "default" : "secondary"} disabled={!!off || !s || storyRunning} onClick={() => setDoor(d.key)} data-start-door={d.key}><DoorOpen /> {d.button}</Button>}
               </div>
             </section>
           );
@@ -147,26 +146,36 @@ function StartDialog({ door, status, onClose, onStory }: { door: DoorKey; status
   const nav = useNavigate();
   const toast = useToast();
   const [confirm, setConfirm] = React.useState("");
-  const [phase, setPhase] = React.useState<null | "emptying" | "loading" | "starting">(null);
+  const [phase, setPhase] = React.useState<null | "checking" | "emptying" | "loading" | "starting">(null);
   const [since, setSince] = React.useState<number | null>(null);
-  const [failed, setFailed] = React.useState<{ title: string; words: string } | null>(null);
+  const [failed, setFailed] = React.useState<{ title: string; words: string; retry: boolean } | null>(null);
   const once = React.useRef(false); // a double click sends one start
   const secs = useElapsed(phase ? since : null);
-  const needsReset = !!status?.programsExist;
+  // Review M1: an unknown state asks for RESET (never "nothing to lose" without having read it); go() reads it again.
+  const needsReset = status ? status.programsExist : true;
   const ready = !phase && (!needsReset || confirm === "RESET");
   const kept = (r: ResetResult) => (r.preserved_unchanged ? "Kept files checked unchanged." : "Kept files CHANGED: investigate before continuing.");
 
   const go = async () => {
     if (once.current || !ready) return;
     once.current = true; setFailed(null); setSince(Date.now());
-    // The server asks for RESET as the person's guard against losing work; with no programs there is nothing to lose,
-    // so the page sends it for them (BR-2: an empty workspace starts at once).
-    const sure = { confirm: "RESET" };
     let emptied: ResetResult | null = null;
     try {
+      // Review M1: the demo is read again just before anything is emptied: programs loaded meanwhile (another tab, a
+      // stale or unread page) are never emptied without RESET typed. The server asks for RESET as the person's guard
+      // against losing work; only when this read finds no programs, so nothing they made is lost, does the page send it
+      // for them (BR-2: an empty workspace starts at once).
+      setPhase("checking");
+      const now = await api<Status>("/demo/status");
+      if (now.programsExist && confirm !== "RESET") {
+        await qc.invalidateQueries({ queryKey: ["demo-status"] });
+        setFailed({ title: "The demo has changed", words: "The demo has programs now (loaded meanwhile, for example in another tab): nothing was emptied. Type RESET to confirm.", retry: false });
+        return;
+      }
+      const sure = { confirm: now.programsExist ? confirm : "RESET" };
       if (door === "story") {
         setPhase("starting");
-        await api("/demo/checkpoints/finished-story", { method: "POST", json: needsReset ? sure : {} });
+        await api("/demo/checkpoints/finished-story", { method: "POST", json: now.programsExist ? sure : {} });
         void qc.invalidateQueries();
         toast.push({ tone: "info", text: "The finished story is loading in the background: its card shows how far it is." });
         onClose(); onStory();
@@ -191,8 +200,8 @@ function StartDialog({ door, status, onClose, onStory }: { door: DoorKey; status
       const words = (e as Error).message;
       void qc.invalidateQueries(); // whatever happened, every screen reads the demo again
       // BR-6: the reset ran, the load did not finish: the demo is not empty and not loaded, and Start again empties it first.
-      setFailed(emptied ? { title: "Stopped part way", words: `Emptied; the configured load stopped part way: ${words} Start again empties it first.` }
-        : { title: "Not started", words });
+      setFailed(emptied ? { title: "Stopped part way", words: `Emptied; the configured load stopped part way: ${words} Start again empties it first.`, retry: true }
+        : { title: "Not started", words, retry: true });
     } finally { once.current = false; setPhase(null); }
   };
 
@@ -200,11 +209,13 @@ function StartDialog({ door, status, onClose, onStory }: { door: DoorKey; status
   return (
     <Dialog open onOpenChange={(o) => { if (!o && !running) onClose(); }} wide title={`Empty the demo and start from ${d.name}?`}
       description={door === "configured" ? "Two steps: the demo is emptied, then the configured checkpoint loads. Keep this page open until it finishes. US$0: no live AI call." : door === "story" ? "One job on the server: it empties the demo, then loads the story. It keeps going if you leave this page. US$0: no live AI call." : "One step: the demo is emptied. US$0: no live AI call."}
-      footer={<><Button variant="ghost" disabled={running} onClick={onClose}>Cancel</Button><Button variant="destructive" disabled={!ready} busy={running} onClick={() => void go()} data-start-go>{failed ? "Try again" : "Empty and start"}</Button></>}>
+      footer={<><Button variant="ghost" disabled={running} onClick={onClose}>Cancel</Button><Button variant="destructive" disabled={!ready} busy={running} onClick={() => void go()} data-start-go>{failed?.retry ? "Try again" : "Empty and start"}</Button></>}>
       {failed ? <Notice tone="danger" title={failed.title} className="mb-3"><span data-start-failed>{failed.words}</span></Notice> : null}
       <div className="grid gap-4 text-sm sm:grid-cols-3" data-start-confirm={door}>
         <div><p className="mb-1 font-medium">Goes</p><ul className="list-disc space-y-1 pl-5" data-start-goes>
-          <li>All configuration, releases and cases: {status ? <b>{status.scope.total_rows} row{status.scope.total_rows === 1 ? "" : "s"}</b> : "the rows in the demo"}</li>
+          {/* Review m1: on a demo with no programs the rows left are the last reset's own record lines, not anyone's work. */}
+          {status && !status.programsExist ? <li>No programs: only {status.scope.total_rows} record line{status.scope.total_rows === 1 ? "" : "s"}, such as the last reset's activity line</li>
+            : <li>All configuration, releases and cases: {status ? <b>{status.scope.total_rows} row{status.scope.total_rows === 1 ? "" : "s"}</b> : "the rows in the demo"}</li>}
           <li>The demo's working files{status ? ` (${status.scope.files})` : ""}</li></ul></div>
         <div><p className="mb-1 font-medium">Comes back</p><ul className="list-disc space-y-1 pl-5" data-start-comes>{d.comes.map((c) => <li key={c}>{c}</li>)}</ul></div>
         <div><p className="mb-1 font-medium">Kept</p><ul className="list-disc space-y-1 pl-5" data-start-kept>
@@ -212,7 +223,7 @@ function StartDialog({ door, status, onClose, onStory }: { door: DoorKey; status
       </div>
       {running ? (
         <p className="mt-3 inline-flex items-center gap-2 text-sm" role="status" data-start-running>
-          <Spinner /> {phase === "emptying" ? "Emptying…" : phase === "loading" ? "Loading the configured checkpoint…" : "Starting the finished story…"} {secs} s{door === "configured" ? ". Keep this page open until it finishes." : ""}
+          <Spinner /> {phase === "checking" ? "Reading the demo's state…" : phase === "emptying" ? "Emptying…" : phase === "loading" ? "Loading the configured checkpoint…" : "Starting the finished story…"} {secs} s{door === "configured" ? ". Keep this page open until it finishes." : ""}
         </p>
       ) : null}
       {needsReset ? (

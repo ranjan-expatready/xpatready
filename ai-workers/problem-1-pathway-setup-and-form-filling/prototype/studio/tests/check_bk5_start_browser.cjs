@@ -73,7 +73,7 @@ const LONG = 400000;
   await door("configured").getByRole("button", { name: "Start here" }).click();
   await dialog().getByText("Empty the demo and start from Pathways released, ready to walk?").waitFor();
   const dt = await dialog().innerText();
-  step("BR-1: the confirm says what goes (with the row count), what comes back and what is kept, checked byte-identical", /Goes/.test(dt) && /All configuration, releases and cases: \d+ rows?/.test(dt) && /Comes back/.test(dt) && /Kept/.test(dt) && /checked byte-identical/.test(dt), dt.slice(0, 300));
+  step("BR-1: the confirm says what goes (with the row count), what comes back and what is kept, checked byte-identical", /Goes/.test(dt) && /No programs: only \d+ record lines?/.test(dt) && /Comes back/.test(dt) && /Kept/.test(dt) && /checked byte-identical/.test(dt), dt.slice(0, 300));
   step("BR-6: door 2 says to keep this page open until it finishes", /Keep this page open until it finishes/.test(dt));
   step("BR-2 pass: an empty demo asks for no RESET and the destructive button is ready", await p.getByLabel("Type RESET to confirm").count() === 0 && await dialog().getByRole("button", { name: "Empty and start" }).isEnabled() && /bg-danger/.test(await dialog().getByRole("button", { name: "Empty and start" }).getAttribute("class")));
   await shot("bk5-02-confirm-empty-1440");
@@ -85,6 +85,28 @@ const LONG = 400000;
   const before = posts.length;
   await p.keyboard.press("Escape"); await dialog().waitFor({ state: "detached" });
   step("Cancel (Escape) sends nothing", posts.length === before);
+
+  // ---- Review M1: the page never sends RESET for the person on a state it has not read, or that changed meanwhile.
+  await p.route("**/api/demo/status", async (r) => { await new Promise((res) => setTimeout(res, 3000)); await r.continue().catch(() => undefined); });
+  await p.goto(`${BASE}/start`); await p.locator("[data-start-doors]").waitFor();
+  const offUnread = await p.locator("[data-start-door]").evaluateAll((bs) => bs.length === 3 && bs.every((x) => x.disabled));
+  await p.unroute("**/api/demo/status");
+  step("BR-2 fail (review M1): until the demo's state is read every door is off", offUnread);
+  await openStart();
+  await door("blank").getByRole("button", { name: /Start from nothing|Start again from here/ }).click();
+  await dialog().getByText(/Empty the demo and start from Nothing set up/).waitFor();
+  const noResetAsked = await p.getByLabel("Type RESET to confirm").count() === 0;
+  const six = await api("/demo/load", { method: "POST", data: { sample: "six" } }); // "another tab" loads the six meanwhile
+  const pm = posts.length, rm = resets();
+  await dialog().getByRole("button", { name: "Empty and start" }).click();
+  await p.locator("[data-start-failed]").waitFor({ timeout: 30000 });
+  const changed = await p.locator("[data-start-failed]").innerText();
+  const askedNow = await p.getByLabel("Type RESET to confirm").waitFor({ timeout: 10000 }).then(() => true, () => false);
+  step("BR-2 fail (review M1): programs loaded in another tab after the dialog opened: no reset is sent, nothing emptied, RESET is asked", noResetAsked && six.status < 300 && !posts.slice(pm).includes("/api/demo/reset") && resets() === rm && n("select count(*) from program_def") > 0 && /nothing was emptied/.test(changed) && askedNow, { six: six.status, sent: posts.slice(pm), changed });
+  const dFull = await dialog().innerText();
+  step("BR-1: with programs the confirm counts the rows that go", /All configuration, releases and cases: [1-9]\d* rows/.test(dFull), dFull.slice(0, 200));
+  await p.keyboard.press("Escape"); await dialog().waitFor({ state: "detached" });
+  await api("/demo/reset", { method: "POST", data: { confirm: "RESET" } }); // back to empty for what follows
 
   // ---- BR-3: the Approver sees every door off with the reason; nothing is sent; the server refuses a direct POST.
   await as("user-B"); await openStart();
@@ -197,7 +219,14 @@ const LONG = 400000;
   step("BR-4 pass: after the story, without a reload, \"Last loaded: The finished story\"", /Last loaded: The finished story/.test(llStory), { llStory, story: storyState.body?.story?.state, error: storyState.body?.story?.error, checkpoint: storyState.body?.checkpoint });
   const famLink = door("story").getByRole("link", { name: "Open the family case" });
   step("Gate A (door 3): its card opens the family case", await famLink.count() === 1);
-  if (await famLink.count()) { await famLink.click(); await p.waitForURL(/\/cases\/[^/]+$/, { timeout: 30000 }); }
+  let caseShown = false;
+  if (await famLink.count()) {
+    await famLink.click(); await p.waitForURL(/\/cases\/[^/]+$/, { timeout: 30000 });
+    // Review m3: the case's own page, read (no loading placeholders), not only its address.
+    caseShown = await p.waitForFunction(() => { const m = document.querySelector("main"); return !!m && /Case/.test(m.innerText) && m.innerText.length > 200 && !document.querySelector('main [aria-busy="true"], main .animate-pulse, main .animate-spin'); }, null, { timeout: 30000 }).then(() => true, () => false);
+    await p.waitForTimeout(300);
+  }
+  step("Gate A (door 3): the family case opens and shows its page", caseShown);
   await shot("bk5-11-door3-landed-1440");
   await as("user-A"); // the case area acts as a case person; the Studio's author again
 
