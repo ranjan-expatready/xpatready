@@ -186,6 +186,7 @@ function NewCaseDialog({ close, initial, client }: { close: () => void; initial?
 // ------------------------------------------------------------------ officer: one client (BK-3 PR 3)
 
 type ClientCaseRow = CaseRow & { client: string; people?: { label: string; role: string }[] };
+const opened = (at: string) => new Date(at).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric" });
 const personLine = (p: { label: string; role: string }) => `${p.label} · ${ROLE[p.role] ?? p.role.replace(/_/g, " ")}`;
 
 /** BK-3 PR 3 (P-447 (2), concept screens/BK-3-client-page): the client's cases at the viewer's firm, linked both ways with
@@ -222,14 +223,23 @@ function ClientCasesPage() {
       </div>
       {cases.isLoading ? <Skeleton className="h-40 w-full" /> : cases.isError ? <Notice tone="danger" title="This client's cases could not be loaded">{(cases.error as Error).message}</Notice>
         : !rows.length ? <Notice title={`${who.name} has no cases at ${firmName} yet`}>Open a case for them; it lists here.</Notice>
-        : <Table label={`${who.name}'s cases`} head={["Reference", "Combination", "People", "Status", "Opened"]}>{rows.map((c) => (
+        : <>
+          {/* At phone width one card per case (the table would break the names letter by letter); the table from 640 px. */}
+          <ul className="space-y-3 sm:hidden" aria-label={`${who.name}'s cases`}>{rows.map((c) => (
+            <li key={c.id} data-client-case={c.reference} className="rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm">
+              <div className="flex items-start justify-between gap-3"><Link className="inline-flex min-h-6 items-center font-medium text-text-link [overflow-wrap:anywhere] hover:underline" to={`/cases/${c.id}`}>{c.reference}</Link><Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill></div>
+              <p className="text-text-muted">{c.combination} · opened {opened(c.created_at)}</p>
+              {c.people?.length ? <ul className="mt-1.5 space-y-0.5">{c.people.map((p, i) => <li key={i}>{personLine(p)}</li>)}</ul> : <p className="mt-1.5 text-text-muted">No one added yet</p>}
+            </li>))}</ul>
+          <Table className="hidden sm:block" label={`${who.name}'s cases`} head={["Reference", "Combination", "People", "Status", "Opened"]}>{rows.map((c) => (
           <tr key={c.id} data-client-case={c.reference}>
             <td><Link className="inline-flex min-h-6 items-center font-medium text-text-link hover:underline" to={`/cases/${c.id}`}>{c.reference}</Link></td>
             <td>{c.combination}</td>
-            <td>{c.people?.length ? <ul className="space-y-0.5">{c.people.map((p, i) => <li key={i} className="[overflow-wrap:anywhere]">{personLine(p)}</li>)}</ul> : <span className="text-text-muted">No one added yet</span>}</td>
+            <td>{c.people?.length ? <ul className="space-y-0.5">{c.people.map((p, i) => <li key={i}>{personLine(p)}</li>)}</ul> : <span className="text-text-muted">No one added yet</span>}</td>
             <td><Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill></td>
-            <td className="whitespace-nowrap">{new Date(c.created_at).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric" })}</td>
-          </tr>))}</Table>}
+            <td className="whitespace-nowrap">{opened(c.created_at)}</td>
+          </tr>))}</Table>
+        </>}
       {next ? <div className="flex items-center gap-3 text-[13px] text-text-muted"><span>More of {who.name}'s cases</span><Button size="sm" variant="secondary" busy={loading} onClick={() => void loadMore()}>Load more</Button></div> : null}
       {open ? <NewCaseDialog close={() => setOpen(false)} client={who.id} /> : null}
     </div>

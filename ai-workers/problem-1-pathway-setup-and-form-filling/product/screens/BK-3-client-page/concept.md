@@ -28,7 +28,7 @@ Row: bake plan row 3 (`design/bake-plan-2026-11-10.md`), P-447 (2), held for a c
 ## 4. Layout (Workspace, light: header + one list)
 * **Address** `/cases/clients/<login>` (`user-P`, `user-Q`). Line `Cases › Client A`, Back → Cases. A bare `/cases/clients` goes to `/cases`.
 * **Header:** H1 the client's name; one visible line "Simulated client login: the prototype has no client records yet · {n} cases shown at {firm}" (m2: visible words, not a hover-only tooltip); one filled button **Open a case for Client A**.
-* **List "Cases"**, newest first: Reference (link) · Combination · People (name · role) · Status · Opened. At 375 px the table scrolls inside its own box (the app's `Table`), the page does not.
+* **List "Cases"**, newest first: Reference (link) · Combination · People (name · role) · Status · Opened. Below 640 px one card per case (reference, status, combination and date, people), as the board draws; the table from 640 px.
 * **Case header:** "Client: Client A" link under the reference line, at every width. The "Open it as Client A (simulated)" box stays and is the only link that switches the person.
 * **States:** loading (skeleton) · several cases · none at your firm (empty, with the button) · could not load (danger notice) · refused (client) · not found (unknown key). M3's "some reads failed" state no longer exists (one read).
 * Quiet surfaces (P-473): blue only for the one button, links and focus; no orange.
