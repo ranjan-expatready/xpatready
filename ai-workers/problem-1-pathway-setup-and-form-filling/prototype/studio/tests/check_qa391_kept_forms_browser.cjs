@@ -62,7 +62,7 @@ let failed = 0; const ok = (name, pass, detail) => { if (!pass) failed++; consol
   ok("QA-391b fail: a \"Copy, not for filing\" is never told \"to file it\"", online.length > 0 && online.every((r) => !/to file it/i.test(r.text)), online.filter((r) => /to file it/i.test(r.text)).map((r) => r.key));
   const onlineOld = online.filter((r) => /Facts changed since this copy was made/.test(r.text));
   ok("QA-391b pass: its out-of-date copy is told to be made again to check the current answers", onlineOld.length > 0 && onlineOld.every((r) => /generate a new copy to check the current answers/.test(r.text)), online.map((r) => r.key));
-  fs.mkdirSync("var", { recursive: true }); await p.screenshot({ path: `var/qa391-kept-${port}.png`, fullPage: true }).catch(() => {});
+  const VAR = require("path").join(__dirname, "..", "var"); fs.mkdirSync(VAR, { recursive: true }); await p.screenshot({ path: `${VAR}/qa391-kept-${port}.png`, fullPage: true }).catch(() => {});
 
   // Review M2: an age limit is said as the age. The thin case gets a child, 18 or over first, with a copy of each of their forms.
   const thin = (Array.isArray(list) ? list : list.cases).find((c) => c.reference === "SAMPLE-VV-THIN-1");

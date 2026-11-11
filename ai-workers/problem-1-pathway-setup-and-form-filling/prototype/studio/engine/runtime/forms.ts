@@ -79,22 +79,32 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
  *  never a field code, and by whose answer it is); or the person is under the form's age (review M2: the rule and the age
  *  are read apart, as render decides them, so an age is never given as a rule nor a rule as an age). */
 export function notApplyingWhy(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], form: string, subjectId: string, words: (fact: string) => string, today = new Date()): string {
-  const p = people.find((x) => x.subjectId === subjectId);
-  if (p && !p.applies) return "they are not travelling with this application";
+  return notApplyingWords(s, people, answers, rows, words, today)(form, subjectId);
+}
+
+/** notApplyingWhy for a whole list: the case's answers are read and the release rendered once, on the first form that
+ *  needs it (GET …/forms asks for every kept form; the case page's first view stays within its budget). */
+export function notApplyingWords(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], words: (fact: string) => string, today = new Date()): (form: string, subjectId: string) => string {
   const renderPeople: Person[] = people.filter((x) => x.role !== "case").map((x) => ({ id: x.subjectId, role: x.role as Role, label: x.label, applies: x.applies }));
-  const { known } = knownOf(s, people, answers, rows, today, { forForms: true });
-  const line = render(s, renderPeople, known, { today }).forms.find((f) => f.form === form && f.person === subjectId);
-  if (!line) return "this release does not ask it of them";
-  const f = (s.forms as { form_number: string; status?: string; condition?: { subjectKind?: string } | null; min_age?: number | null }[]).find((x) => x.form_number === form);
-  const rule = f?.condition ? lineCondition(s, known, renderPeople, subjectId, f.condition) : null;
-  if (rule?.applies === false) {
-    const when = whenWords(f!.condition, (fact) => words(fact).replace(/[.\s]+$/, ""));
-    const whose = f!.condition!.subjectKind === "CASE" ? "the application's answer" : "their answer";
-    const v = (f!.condition as { value?: unknown }).value, said = v === true ? "Yes" : v === false ? "No" : `"${String(v)}"`;
-    return when ? `it is needed only when ${when}; ${whose} is not ${said}` : "its own rule reads No on this case's answers";
-  }
-  if (f?.min_age && rule?.applies !== "cannot_tell") return `they are under ${f.min_age}, and this form is asked of them only from age ${f.min_age}`;
-  return "its own rule reads No on this case's answers";
+  let once: { known: ReturnType<typeof knownOf>["known"]; forms: ReturnType<typeof render>["forms"] } | null = null;
+  const read = () => { if (!once) { const { known } = knownOf(s, people, answers, rows, today, { forForms: true }); once = { known, forms: render(s, renderPeople, known, { today }).forms }; } return once; };
+  return (form, subjectId) => {
+    const p = people.find((x) => x.subjectId === subjectId);
+    if (p && !p.applies) return "they are not travelling with this application";
+    const { known, forms } = read();
+    const line = forms.find((f) => f.form === form && f.person === subjectId);
+    if (!line) return "this release does not ask it of them";
+    const f = (s.forms as { form_number: string; status?: string; condition?: { subjectKind?: string } | null; min_age?: number | null }[]).find((x) => x.form_number === form);
+    const rule = f?.condition ? lineCondition(s, known, renderPeople, subjectId, f.condition) : null;
+    if (rule?.applies === false) {
+      const when = whenWords(f!.condition, (fact) => words(fact).replace(/[.\s]+$/, ""));
+      const whose = f!.condition!.subjectKind === "CASE" ? "the application's answer" : "their answer";
+      const v = (f!.condition as { value?: unknown }).value, said = v === true ? "Yes" : v === false ? "No" : `"${String(v)}"`;
+      return when ? `it is needed only when ${when}; ${whose} is not ${said}` : "its own rule reads No on this case's answers";
+    }
+    if (f?.min_age && rule?.applies !== "cannot_tell") return `they are under ${f.min_age}, and this form is asked of them only from age ${f.min_age}`;
+    return "its own rule reads No on this case's answers";
+  };
 }
 
 /** C7.2 cause 3 (P-72, as P-242 and P-411 amend it): a derived "is anything recorded?" Yes/No box is "N" only when a
