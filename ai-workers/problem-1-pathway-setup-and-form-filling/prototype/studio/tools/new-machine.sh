@@ -106,9 +106,11 @@ wait_story() {  # $1: polls before giving up (default 400, 20 min at 3 s); print
 stop_all() {
   local pids PGB; pids=$(lsof -ti tcp:"$PORT" -sTCP:LISTEN 2>/dev/null || true)
   [ -n "$pids" ] && kill $pids 2>/dev/null && say "api on :$PORT stopped"
-  if [ -n "$OWN_DB" ] && [ -f "$PGDATA_DIR/PG_VERSION" ] && PGB=$(find_pg "$(cat "$PGDATA_DIR/PG_VERSION")") && "$PGB/pg_ctl" -D "$PGDATA_DIR" status >/dev/null 2>&1; then
-    "$PGB/pg_ctl" -D "$PGDATA_DIR" -m fast stop >/dev/null && say "database stopped (data kept in $PGDATA_DIR)"
-  fi
+  [ -n "$OWN_DB" ] && [ -f "$PGDATA_DIR/PG_VERSION" ] || return 0
+  # The cluster is stopped by the PostgreSQL it was made with; without it, say so rather than leave it running quietly.
+  PGB=$(find_pg "$(cat "$PGDATA_DIR/PG_VERSION")") || { say "database not stopped: PostgreSQL $(cat "$PGDATA_DIR/PG_VERSION"), which made $PGDATA_DIR, is not found (STUDIO_PG_BIN=<its bin folder> bash $0 stop)"; return 0; }
+  "$PGB/pg_ctl" -D "$PGDATA_DIR" status >/dev/null 2>&1 || return 0
+  "$PGB/pg_ctl" -D "$PGDATA_DIR" -m fast stop >/dev/null && say "database stopped (data kept in $PGDATA_DIR)"
   return 0
 }
 if [ -n "${NEW_MACHINE_LIB:-}" ]; then return 0 2>/dev/null || exit 0; fi
