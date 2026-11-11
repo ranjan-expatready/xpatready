@@ -32,6 +32,11 @@ queue_rules:
       - "label = review: approved"
       - check-success = ci
       - -label=records
+      # B170a (#1545, reviewer minor 5; Lead 18, P-214): a PR that changes the XFA engine (the paths that start
+      # .github/workflows/xfa-engine.yml) also needs that workflow's own check green; ci does not run the engine's tests.
+      - or:
+          - check-success = xfa-engine
+          - -files ~= ^(packages/xfa-engine/|tsconfig\.base\.json$|\.nvmrc$|\.github/workflows/xfa-engine\.yml$)
     merge_conditions:
       - check-success = ci
     merge_method: merge
