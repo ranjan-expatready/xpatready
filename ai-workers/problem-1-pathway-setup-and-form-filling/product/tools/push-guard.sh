@@ -16,13 +16,6 @@ PATH_RE='(^|/)(sources|code|archive|\.tools)/|^(sources|code|archive|\.tools)$|(
 SECRET_RE='-----BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{22}|sk-[A-Za-z0-9_-]{20}|xox[baprs]-[A-Za-z0-9-]{10}|AIza[0-9A-Za-z_-]{35}|(password|passwd|api[_-]?key|secret|token)[[:space:]]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9._~+/=-]{16,}'
 # Personal names (AGENTS.md rule 5: roles, not names). Edit this list when a name must be added.
 NAMES_RE='\b(Ranjan|Sanjay|Tanu|Vishrutha|Ayush|Vivek|Ishaan|Tanvi)\b'
-# L1 (B170a, accepted by Lead 16, 11 Nov): the XFA engine's four made-up test PDFs (no IRCC form: a "Sample Services
-# Form" and three ~1.5 KB encryption samples; its unit tests need them), admitted by path AND SHA-256 only. Other bytes at
-# these paths, or these bytes at any other path, still refuse. Test: check-push-guard-fixtures.sh.
-FIXTURE_PDFS='packages/xfa-engine/fixtures/synthetic/synthetic-form.pdf 945434b8b64395dcc2570acf38f43f600118137d79b09bec587cbad83126dd15
-packages/xfa-engine/src/__tests__/fixtures/aesv2-cleartext-metadata.pdf 35d418d0d5fbc020780facc151edeb666fa0844af4e1745482d9d414ffa9d4fb
-packages/xfa-engine/src/__tests__/fixtures/aesv2-sample.pdf 16892a0dae502879df423609ede5679ba8c90b4fefcfcaaf12d0fb835e804614
-packages/xfa-engine/src/__tests__/fixtures/rc4-sample.pdf c9949be9719f563c39c10ef9c099f9d8c8a893c2d6689a74523b58d265a060c1'
 # Self-exclusion: this file legitimately contains the name list; it is skipped for the names scan only
 # (the secrets scan still covers it). Add future names to NAMES_RE — this file is the mechanism.
 GUARD_REL="ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/push-guard.sh"
@@ -52,12 +45,6 @@ check_range() {
     [ -n "$f" ] || continue
     case "$f" in
       *.pdf|*.PDF)
-        want=$(printf '%s\n' "$FIXTURE_PDFS" | awk -v f="$f" '$1 == f { print $2 }')
-        if [ -n "$want" ]; then
-          h=$(git show "$c:$f" 2>/dev/null | shasum -a 256 | cut -d' ' -f1)
-          [ "$h" = "$want" ] || { echo "GUARD: engine test PDF with other bytes than its listed SHA-256 (L1): $f"; bad=1; }
-          continue
-        fi
         case "$f" in
           "$pdf_dir"*) ;;
           *) echo "GUARD: excluded path in $range -> $f"; bad=1; continue ;;
