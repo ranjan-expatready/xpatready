@@ -6,6 +6,8 @@
 // (test scaffolding, P-33).
 //   zsh studio/tools/isolated.sh bk10_titles 4482 start && tsx studio/tests/check_bk10_form_titles.ts 4482 xr_studio_bk10_titles
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { acceptCleanOneByOne } from "./lib/accept-draft.ts";
 
 const PORT = Number(process.argv[2] ?? 4482), DB = process.argv[3] ?? "xr_studio_bk10_titles";
@@ -44,6 +46,15 @@ const said = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? "
   // Pass: a form the library holds keeps the title on its record, with no title given and with one given.
   let job = await decidedDraft();
   const stored = titleOf("IMM 5257");
+  // P-171 (a), P-170 (moved here from check_forms_rounds.ts, which read TITLES): the schedule's library title, on its own
+  // record after the load, is its official one (the saved canada.ca page's heading, read 29 Oct 2026; punctuation and case
+  // aside), never IMM 5669's "Background/Declaration" wording.
+  const words = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const sch1Page = readFileSync(join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc", "canada", "pages", "imm5257-sch1.html"), "utf8");
+  const official = /<h1[^>]*>([^<]+)<span[^>]*>\(IMM 5257 SCH1\)/.exec(sch1Page)?.[1].trim() ?? "";
+  const sch1 = titleOf("IMM 5257 SCH1");
+  ok("P-171 (a) pass: IMM 5257 SCH1's library title, on its record, is its official page's (punctuation and case aside)", !!official && words(sch1) === words(official), { sch1, official });
+  ok("P-171 (a) fail: never IMM 5669's \"Background/Declaration\" wording", sch1 !== "(none)" && !/Background\/Declaration/i.test(sch1), sch1);
   let r = await call("POST", `/jobs/${job}/apply`, {});
   ok("pass: a form the library holds applies with no title given, and keeps the title on its record", r.status === 201 && stored !== "(none)" && titleOf("IMM 5257") === stored, { status: r.status, said: said(r), stored });
   job = await decidedDraft();
