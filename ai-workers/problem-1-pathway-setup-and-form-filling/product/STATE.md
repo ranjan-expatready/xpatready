@@ -29,6 +29,7 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
 | A19 | 12:2x-12:5x (11 Nov, spoken) parts (a)-(l) | in progress; word for word in `history/STATE-2026-11-11-2055-lead19s2-founder-ask-A19.md` |
 | A21, A22 | 19:37, 19:5x (11 Nov, spoken): progress and plan; Bake squeeze | answered (P-480, P-481 to P-484); word for word in `history/STATE-2026-11-11-2256-lead20s2-founder-asks-A21-A22.md` |
 | A20 | 15:2x (11 Nov, spoken) anything needing him (spend, approval, a block on cost, quality, timeline or solution) very clear, in a card, highlighted red | done: P-478 (🔴 Needs you block + card) on RULES.md and in the lead-watch skill (lead skill at its 10 KB cap) |
+| A23 | 23:3x (11 Nov, spoken) every "Decide when you can" question: Lead researches, decides best in class, implements | P-486 standing; CI fast-path kept on the queue; D8 researched from canada.ca (agent running 23:4x), then R-e row; standby Lead 22 `local_99d39f48` started |
 
 ## For the founder (P-390)
 Open F2, F8, F14, F15, F16, F17, F18, F19 (none blocks work), word for word in `history/STATE-2026-11-10-1240-lead8s2-for-the-founder-table.md`; ask at his typed turns, one at a time.
