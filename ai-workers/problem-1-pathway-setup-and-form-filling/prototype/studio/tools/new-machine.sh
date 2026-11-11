@@ -156,8 +156,9 @@ fi
 psql "$DB_URL" -XAtqc "select 1" >/dev/null || die "cannot connect to $DB_URL"
 export DATABASE_URL="$DB_URL"
 cd "$STUDIO"
-./node_modules/.bin/prisma migrate deploy >/dev/null || die "the migrations did not apply"
-./node_modules/.bin/prisma generate >/dev/null || die "prisma generate failed"
+export PRISMA_HIDE_UPDATE_MESSAGE=1   # the team pins Prisma 7.8.0; its "update available" box is noise here
+out=$(./node_modules/.bin/prisma migrate deploy 2>&1) || { printf '%s\n' "$out"; die "the migrations did not apply"; }
+out=$(./node_modules/.bin/prisma generate 2>&1) || { printf '%s\n' "$out"; die "prisma generate failed"; }
 say "database schema up to date"
 
 say "== web app and api"
