@@ -95,4 +95,25 @@ const allowed = await readyToFile(c.id, rep);
 p = (await prepare(c.id, officer)).p;
 ok("C7.6 M3-S4: ready pass: once received, the block is gone and Ready to file is allowed", allowed.includes(fid) && !codes(readinessOf(p, fid)?.blocks).includes("document_never_waivable") && filingOf(p, P)?.status === "ready_to_file", { allowed, blocks: readinessOf(p, fid)?.blocks, status: filingOf(p, P)?.status });
 
+// (6) Break M1: the line made conditional on an answer a new case has not given yet ("may be needed") still blocks, naming
+// the question; a release that changes it also says so on the case that moves (break M3, pure rules in
+// check_m3s4_never_waivable). Released by the same three people.
+const cond = await call("PATCH", path, body({ waiver: "never", attachMode: "ANSWER_CONDITIONAL", condition: { subjectKind: "PERSON", op: "eq", field: "person.marital_status", value: "married" }, conditionPlain: "married (Sample check)" }), AUTHOR);
+let r2 = { status: 0, body: null as any };
+for (let attempt = 0; attempt < 2; attempt++) {
+  for (const x of (await call("GET", "/library/changes?status=WAITING", undefined, REVIEWER)).body ?? []) await call("POST", `/library/changes/${x.id}/approve`, {}, REVIEWER);
+  await call("POST", `/combinations/${sp}/submit`, { note: "M3-S4: the letter line made conditional (Sample check)" }, AUTHOR);
+  const sub2 = (await call("GET", `/combinations/${sp}/review`, undefined, REVIEWER)).body?.submission;
+  await call("POST", `/combinations/${sp}/signoff`, { items: ((sub2?.changeSummary ?? sub2?.change_summary ?? []) as { kind: string; key: string }[]).map((x) => `${x.kind}|${x.key}`), action: "signed" }, REVIEWER);
+  r2 = await call("POST", `/combinations/${sp}/approve`, undefined, APPROVER);
+  if (!/changed while it was being released/.test(words(r2))) break;
+}
+const c2 = await openCase(sp!, [{ role: "principal", name: "Sample Student S4b" }], { representative: rep, caseOfficers: [officer] }, `M3S4b-${Date.now().toString(36)}`);
+const P2 = c2.subjects["Sample Student S4b"];
+const p2 = (await prepare(c2.id, officer)).p, f2 = filingOf(p2, P2)?.id;
+const wait = (readinessOf(p2, f2)?.blocks ?? []).find((b: { code: string; words: string }) => b.code === "document_never_waivable");
+ok("C7.6 M3-S4: waiting pass (break M1): with marital status not answered yet, the conditional never waivable letter still blocks, naming the question", cond.status < 300 && r2.status < 300 && !!wait && /Letter of acceptance may be needed: answer .*first/i.test(wait.words), { save: cond.status, release: [r2.status, words(r2)], blocks: readinessOf(p2, f2)?.blocks });
+const passWait = await call("POST", `/runtime/filings/${f2}/warnings/document_never_waivable/pass`, { reason: "Later (Sample)" }, officer);
+ok("C7.6 M3-S4: waiting fail (break M1): that block cannot be passed either (409)", passWait.status === 409, passWait.status);
+
 process.exitCode = summary() ? 1 : 0;

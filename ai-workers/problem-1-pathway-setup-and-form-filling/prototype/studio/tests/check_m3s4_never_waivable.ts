@@ -15,6 +15,7 @@ import { BLOCK_CODES, cannotPass, CODE_WORDS, filingReadiness, type DocumentItem
 import { readinessFigure } from "../engine/runtime/readiness-figure.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { diff } from "../engine/validate.ts";
+import { releaseDiff, touchedFilings, whatChanges, type CaseInputs } from "../engine/runtime/release-update.ts";
 import { recorder } from "./runtime/api.ts";
 
 const { ok, summary } = recorder();
@@ -31,7 +32,7 @@ const line = (r: CaseChecklist, who: string, doc: string) => r.derived ? r.peopl
 // (1) P-425: the checklist is worked out for any combination from its release's lines; no combination list decides it.
 {
   const any = caseChecklist(snap("x.any", [req("police:each", "police", "each_applicant", "never"), req("passport:each", "passport", "each_applicant")]), "x.any", PEOPLE, known, TODAY);
-  ok("C6.4 M3-S4: guard gone pass: a combination no table names gets its checklist from its release (two people, two lines each)", any.derived === true && (any as D).people.length === 2 && (any as D).people.every((p) => p.lines.length === 2), any.derived ? undefined : any.why);
+  ok("C6.4 M3-S4: guard gone pass: a combination no table names gets its checklist from its release (two people, two lines each)", any.derived === true && (any as D).people.length === 2 && (any as D).people.every((p) => p.lines.length === 2));
   const none = caseChecklist(snap("y.other", []), "y.other", PEOPLE, known, TODAY);
   ok("C6.4 M3-S4: guard gone fail: a release with no document lines gives empty lists and says the release is empty, never a guessed line", none.derived === true && (none as D).empty_release === true && (none as D).people.every((p) => p.lines.length === 0));
 }
@@ -79,7 +80,28 @@ const blocking = caseChecklist(snap("x.any", [req("police:each", "police", "each
   ok("C7.6 M3-S4: figure fail (review M1): marked not applicable before the release said never, it is still counted, not done", was.length === 1 && was[0].done === false, was);
   const done = fig([doc("Police certificate", { never_waivable: true, received: true })]).items.find((i) => i.kind === "document");
   ok("C7.6 M3-S4: figure pass (review M1): once received, it is done", !!done && done.done === true);
+  // Break M1: a never waivable line that may be needed (its condition waits for an answer) blocks until that is known.
+  const waiting = at([doc("Police certificate", { never_waivable: true, required: false, waiting: "Date of birth" })]);
+  ok("C7.6 M3-S4: block pass (break M1): a never waivable line still waiting for an answer blocks, naming what to answer", !waiting.ready && waiting.blocks.length === 1 && waiting.blocks[0].code === "document_never_waivable" && /may be needed: answer Date of birth first/.test(waiting.blocks[0].words), waiting.blocks);
+  const plainWaiting = at([doc("Passport", { required: false, waiting: "Date of birth" })]);
+  ok("C7.6 M3-S4: block fail (break M1): a plain line waiting for an answer neither blocks nor warns (as before)", plainWaiting.ready && plainWaiting.warns.length === 0);
   ok("C7.6 M3-S4: pass refused: the block cannot be passed with a reason, in words", BLOCK_CODES.includes("document_never_waivable") && /cannot be passed/.test(cannotPass("document_never_waivable") ?? "") && !!CODE_WORDS.document_never_waivable);
+}
+
+// (6) Break M3: moving a case to a release that makes a line never waivable says so before the move, and touches the filing.
+{
+  const r = (waiver?: string) => ({ forms: [], document_requirements: [{ lineage: "passport:each", document_type_key: "passport", document_type: "Passport", who: "each_applicant", ...(waiver ? { waiver } : {}) }, { lineage: "photo:each", document_type_key: "photo", document_type: "Photo", who: "each_applicant" }] });
+  const side = { forms: new Map(), documents: new Map([["A", new Map([["passport", "Passport"], ["photo", "Photo"]])]]), questions: new Map() };
+  const x: CaseInputs = { people: [{ id: "A", label: "Client A" }], from: side, to: side, answered: [] };
+  const d = releaseDiff(r() as never, r("never") as never), back = releaseDiff(r("never") as never, r() as never);
+  const line = whatChanges(d, x).documents.find((l) => l.what === "Passport");
+  ok("C6.4 M3-S4: move pass (break M3): what changes names the passport as never waivable now, for Client A", !!line && /never waivable/i.test(line.kind) && line.who.join() === "Client A" && /blocks Ready to file until received/i.test(line.after), whatChanges(d, x).documents);
+  const t = touchedFilings(d, x, [{ id: "F", people: ["A"] }], { to: "Release 7" }).get("F") ?? [];
+  ok("C6.4 M3-S4: move pass (break M3): the filing is touched, in words", t.some((w) => /Release 7 makes Passport never waivable/.test(w)), t);
+  const off = whatChanges(back, x).documents.find((l) => l.what === "Passport");
+  ok("C6.4 M3-S4: move pass (break M3): the other way, it says the line no longer blocks", !!off && /blocks Ready to file until received/i.test(off.before) && !/blocks/i.test(off.after), off);
+  const same = releaseDiff(r("never") as never, r("never") as never);
+  ok("C6.4 M3-S4: move fail (break M3): a release with the same setting changes nothing for the case", whatChanges(same, x).documents.length === 0 && (touchedFilings(same, x, [{ id: "F", people: ["A"] }], { to: "Release 7" }).get("F") ?? []).length === 0);
 }
 
 // (5) The second person sees the setting at release review, in words (engine/validate.ts diff).

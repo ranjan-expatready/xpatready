@@ -5,7 +5,8 @@
 // releases; the prepare view (api/src/case-prepare.ts) and readiness (api/src/readiness-inputs.ts) read the same rules
 // after a move, so a copy made on an earlier release is out of date because of the release, never because of a fact.
 //   BR-3  the difference of two snapshots: forms added, removed, filed another way (channel or signing), on a new map
-//         or edition; document lines added or removed; questions added or removed; an answer's type changed; eligibility.
+//         or edition; document lines added or removed, or made (or no longer) never waivable (M3-S4); questions added or
+//         removed; an answer's type changed; eligibility.
 //   BR-4  each piece of work in one group: to fill again · filed another way now · no longer required · approval
 //         withdrawn · stays as it is, marked out of date · no change (SA-1B-254 rules 5, 6; P-65).
 //   BR-6  a review counts after a move only if it was made after the move, or the move touched nothing on its filing.
@@ -19,14 +20,16 @@ import { pdfMapInUse } from "../programs.ts";
 /** The parts of a released snapshot (engine/snapshot.ts) these rules read. */
 export type FormLineIn = { form_number: string; title?: string | null; channel?: string | null; signature?: string | null; signed_by?: string | null; who?: string | null; min_age?: number | null; condition?: unknown; status?: string | null };
 type MapIn = { form_number: string; form_edition?: string | null; channel?: string | null; entries?: unknown[] };
-export type SnapshotIn = { forms: FormLineIn[]; field_maps?: MapIn[]; document_requirements?: { lineage?: string; document_type_key?: string; document_type?: string; who?: string; condition?: unknown }[];
+export type SnapshotIn = { forms: FormLineIn[]; field_maps?: MapIn[]; document_requirements?: { lineage?: string; document_type_key?: string; document_type?: string; who?: string; condition?: unknown; waiver?: string | null }[];
   canonical_fields?: { id: string; meaning?: string; value_type?: string }[]; eligibility?: { gates?: { key: string; label: string; condition?: unknown }[]; judgement?: string[] } | null };
 
 /** What changed for one form line between two releases (never about a person: see `whatChanges`). */
 export type FormKind = "added" | "removed" | "channel" | "signing" | "map" | "edition" | "rule";
 export type FormDiff = { form: string; title: string; kinds: FormKind[]; before: string; after: string };
 export type ReleaseDiff = { forms: Map<string, FormDiff>; types: Map<string, { label: string; before: string; after: string }>;
-  eligibility: { key: string; label: string; kind: "added" | "removed" | "changed" }[]; documents: { added: Set<string>; removed: Set<string> } };
+  eligibility: { key: string; label: string; kind: "added" | "removed" | "changed" }[];
+  /** `never` (M3-S4 break M3): document types whose lines became never waivable (true) or stopped being (false). */
+  documents: { added: Set<string>; removed: Set<string>; never: Map<string, boolean> } };
 
 /** Bookkeeping that changes when a release publishes an item without changing what it does (as engine/snapshot.ts). */
 const strip = (x: unknown): unknown => Array.isArray(x) ? x.map(strip) : x && typeof x === "object"
@@ -69,7 +72,11 @@ export function releaseDiff(from: SnapshotIn, to: SnapshotIn): ReleaseDiff {
   const docKey = (d: { lineage?: string; document_type_key?: string; who?: string }) => d.lineage ?? `${d.document_type_key}:${d.who}`;
   const da = new Map((from.document_requirements ?? []).map((d) => [docKey(d), d])), db = new Map((to.document_requirements ?? []).map((d) => [docKey(d), d]));
   const typesA = new Set([...da.values()].map((d) => d.document_type_key ?? "")), typesB = new Set([...db.values()].map((d) => d.document_type_key ?? ""));
-  return { forms, types, eligibility, documents: { added: new Set([...typesB].filter((t) => t && !typesA.has(t))), removed: new Set([...typesA].filter((t) => t && !typesB.has(t))) } };
+  // M3-S4 break M3: a type kept in both releases whose lines became, or stopped being, never waivable (Ready to file blocks).
+  const neverOf = (m: Map<string, { document_type_key?: string; waiver?: string | null }>) => new Set([...m.values()].filter((d) => d.waiver === "never").map((d) => d.document_type_key ?? ""));
+  const neverA = neverOf(da), neverB = neverOf(db);
+  const never = new Map([...[...neverB].filter((t) => t && typesA.has(t) && !neverA.has(t)).map((t) => [t, true] as const), ...[...neverA].filter((t) => t && typesB.has(t) && !neverB.has(t)).map((t) => [t, false] as const)]);
+  return { forms, types, eligibility, documents: { added: new Set([...typesB].filter((t) => t && !typesA.has(t))), removed: new Set([...typesA].filter((t) => t && !typesB.has(t))), never } };
 }
 
 /** The case as both releases resolve it: per person, the forms that apply (or may), the document lines and the questions. */
@@ -102,6 +109,9 @@ export function whatChanges(diff: ReleaseDiff, x: CaseInputs): Changes {
     const gone = had.filter((p) => !has.includes(p)), added = has.filter((p) => !had.includes(p));
     if (gone.length) documents.push({ what: docTypes.get(k) ?? k, kind: "No longer asked", who: names(x.people, gone), before: "Asked for", after: "Not asked" });
     if (added.length) documents.push({ what: docTypes.get(k) ?? k, kind: "New", who: names(x.people, added), before: "Not asked", after: "Asked for" });
+    const now = diff.documents.never.get(k), kept = has.filter((p) => had.includes(p));
+    if (now !== undefined && kept.length) documents.push({ what: docTypes.get(k) ?? k, kind: now ? "Never waivable now" : "No longer never waivable", who: names(x.people, kept),
+      before: now ? "A missing one is a warning (or it may be waived)" : "Blocks Ready to file until received", after: now ? "Blocks Ready to file until received; never waived or Not applicable" : "A missing one is a warning again" });
   }
   const qLabel = new Map<string, string>();
   for (const side of [x.from, x.to]) for (const m of side.questions.values()) for (const [f, l] of m) qLabel.set(f, l);
@@ -198,6 +208,7 @@ export function touchedFilings(diff: ReleaseDiff, x: CaseInputs, filings: { id: 
       const a = x.from.documents.get(p) ?? new Map(), b = x.to.documents.get(p) ?? new Map();
       for (const [k, l] of a) if (!b.has(k)) words.push(`${labels.to} no longer asks for ${l}`);
       for (const [k, l] of b) if (!a.has(k)) words.push(`${labels.to} asks for ${l}`);
+      for (const [k, l] of b) { const now = a.has(k) ? diff.documents.never.get(k) : undefined; if (now !== undefined) words.push(now ? `${labels.to} makes ${l} never waivable: it blocks Ready to file until received` : `${labels.to} no longer blocks Ready to file on ${l}`); }
     }
     for (const [fact, t] of diff.types) if (x.answered.some((a) => a.fact === fact && f.people.includes(a.subject))) words.push(`${labels.to} expects "${t.label}" as ${typeWords(t.after)}`);
     out.set(f.id, [...new Set(words)]);

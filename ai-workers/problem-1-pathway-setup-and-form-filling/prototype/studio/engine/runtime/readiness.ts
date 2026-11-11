@@ -87,7 +87,8 @@ export type FormItem = {
     caption?: string | null }[];
 };
 /** `never_waivable` (M3-S4, P-172): the release's line is never waivable; not received, it blocks whatever `required` says. */
-export type DocumentItem = { item?: string; label: string; subject: string; person: string; required: boolean; received: boolean; owes?: Owes; never_waivable?: boolean };
+/** `waiting` (M3-S4 break M1): the questions a never waivable line that may be needed waits for; it blocks until known. */
+export type DocumentItem = { item?: string; label: string; subject: string; person: string; required: boolean; received: boolean; owes?: Owes; never_waivable?: boolean; waiting?: string };
 export type OpenCheck = { fact: string; label: string; subject: string; person: string };
 export type Finding = { id: string; subject?: string; form?: string; severity: "CRITICAL" | "MAJOR" | "MINOR" | "INFO"; words: string };
 export type Fee = { line: string; superseded?: boolean; acceptedUntil: string | null;
@@ -250,7 +251,9 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
   for (const d of x.documents ?? []) {
     if (d.received) continue;
     // M3-S4 (P-172): a line its release marks never waivable blocks until received; passing it with a reason is refused.
-    if (d.never_waivable) block({ code: "document_never_waivable", item: d.item, form: d.label, subject: d.subject, owes: d.owes ?? "client", words: `${d.person}: ${d.label} not received. Its release says it can never be waived, so Ready to file waits until it is received.` });
+    if (d.never_waivable) block({ code: "document_never_waivable", item: d.item, form: d.label, subject: d.subject, owes: d.waiting ? "staff" : d.owes ?? "client",
+      words: d.waiting ? `${d.person}: ${d.label} may be needed: answer ${d.waiting} first. Its release says it can never be waived, so Ready to file waits until that is answered and, if it is needed, until it is received.`
+        : `${d.person}: ${d.label} not received. Its release says it can never be waived, so Ready to file waits until it is received.` });
     else if (d.required) warn({ code: "missing_document", item: d.item, form: d.label, subject: d.subject, owes: d.owes ?? "client", words: `${d.person}: ${d.label} not received.` });
   }
   for (const g of x.findings ?? []) warn({ code: "finding", item: `finding|${g.id}`, subject: g.subject, owes: "staff", words: `${g.severity} finding${g.form ? ` on ${g.form}` : ""}: ${g.words}` });
