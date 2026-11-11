@@ -137,7 +137,7 @@ export class FilingReadinessRoutes {
     const rd = await this.now(actor, c.id, f.id); // also takes a stale "Ready to file" back to Not started (break B1)
     if (!rd.ready) {
       const n = rd.blocks.length, w = rd.warns.length;
-      problem(409, "Not ready to file", `${n ? `${n} block${n === 1 ? "" : "s"} (fix ${n === 1 ? "it" : "them"}: a barcode form needs its validated copy read back)` : ""}${n && w ? " and " : ""}${w ? `${w} open warning${w === 1 ? "" : "s"} (pass each with a reason, or fix ${w === 1 ? "it" : "them"})` : ""} stand before Ready to file.`,
+      problem(409, "Not ready to file", `${n ? `${n} block${n === 1 ? "" : "s"} (fix ${n === 1 ? "it" : "them"}: ${n === 1 ? "it says" : "each says"} what is missing; a block is never passed)` : ""}${n && w ? " and " : ""}${w ? `${w} open warning${w === 1 ? "" : "s"} (pass each with a reason, or fix ${w === 1 ? "it" : "them"})` : ""} stand before Ready to file.`,
         { blocks: rd.blocks, warns: rd.warns });
     }
     // Break B8: marking a filing that is Ready to file again changes nothing and records nothing new.

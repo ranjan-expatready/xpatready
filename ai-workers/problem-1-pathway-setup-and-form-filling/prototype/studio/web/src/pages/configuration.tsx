@@ -117,9 +117,15 @@ export function RequirementDialog({ id, r, fields, onClose, onSaved }: { id: str
             <Select aria-label="Add an alternative" className="h-8 w-64" value="" onChange={(e) => { if (e.target.value) set({ alternatives: [...f.alternatives, e.target.value] }); }}><option value="">Add an alternative…</option>{(types.data ?? []).filter((t) => t.documentTypeKey !== f.documentTypeKey && !(f.alternatives as string[]).includes(t.documentTypeKey) && !t.retired).map((t) => <option key={t.documentTypeKey} value={t.documentTypeKey}>{t.name}</option>)}</Select>
           </span>
         </Field>
-        {/* M3-S3 (P-171 (6)): whether the case officer may waive this line on a case, with a reason. */}
-        <label className="flex items-start gap-2 text-sm" data-waivable><input type="checkbox" className="mt-1" checked={f.waiver === "waivable"} onChange={(e) => set({ waiver: e.target.checked ? "waivable" : null })} />
-          <span><span className="font-medium">Waivable</span><span className="block text-text-muted">The case officer may waive this document on a case, with a reason; their name and the time are kept.</span></span></label>
+        {/* M3-S3, M3-S4 (P-171 (6), P-172): whether the case officer may waive this line on a case, with a reason, or never. */}
+        <fieldset className="space-y-1 text-sm" data-waiver><legend className="font-medium">Waiver on a case</legend>
+          {([[null, "Usual", "A missing document is a warning on Ready to file, passed with a reason."],
+            ["waivable", "Waivable", "The case officer may waive this document on a case, with a reason; their name and the time are kept."],
+            ["never", "Never waivable", "No waiver and no Not applicable: Ready to file is blocked until it is received (for example a document IRCC rejects an application without)."]] as const).map(([v, name, words]) =>
+            <label key={name} className="flex items-start gap-2" data-waiver-option={v ?? "none"}>
+              <input type="radio" name="waiver" className="mt-1" checked={(f.waiver ?? null) === v} onChange={() => set({ waiver: v })} />
+              <span><span className="font-medium">{name}</span><span className="block text-text-muted">{words}</span></span></label>)}
+        </fieldset>
         <Field label="Source quote" hint="Exact words from the attached official source; leave empty if none (it then shows as unsourced)."><Textarea value={f.sourceQuote} onChange={(e) => set({ sourceQuote: e.target.value })} /></Field>
       </div>
     </Dialog>
