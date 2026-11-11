@@ -7,3 +7,7 @@
 ## Lead 16 hand-over block, item 7, moved word for word by Lead 17 (series 2) at 14:5x IST 11 Nov
 
 7. Founder decisions this stretch: P-471 to P-477 (B170a OK; walk 1 full ~13-14 Nov; UX style all four; 18 forms size first; Adobe stays; public repo; held conditions). Founder ran SHARDS=8.
+
+## Lead 16 hand-over block, item 6, moved word for word by Lead 17 (series 2) at 15:0x IST 11 Nov
+
+6. Standbys: **Lead 18 `local_0e19ea76-e360-4637-baeb-03445e46ef55`**; start a second at the founder's next typed turn (P-286). Check 7e82928c deleted by Lead 16; create yours (`run lead-watch; read STATE Start here`).
