@@ -24,7 +24,7 @@ import { acceptsOf } from "../../engine/channels.ts";
 import { caseChecklist } from "../../engine/runtime/case-checklist.ts";
 import { caseView, checkValue, isClientField, knownOf, optionsOf } from "../../engine/runtime/case.ts";
 import { releaseModes } from "../../engine/filing-modes.ts";
-import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, feeRule, rulesFrom } from "../../engine/runtime/filings.ts";
+import { ageOn, cad, deriveFilings, FAMILY_GROUP, FEE_TABLE, rulesFrom, stepRule } from "../../engine/runtime/filings.ts";
 import { addedFilings } from "../../engine/runtime/added-filings.ts";
 import { blocksLock, changedGroups, formCoverage, groupFacts, inputHash, readiness as formReadiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
 import { factChanges, markKey, outOfDateReason, representativeWords, restoredFromOf, undoTarget, type ChangeWords, type FactChange } from "../../engine/runtime/out-of-date.ts";
@@ -187,8 +187,9 @@ export class CasePrepare {
     const coFilers = new Set(first.filings.filter((f) => f.mode === "co_filed").map((f) => f.owner!.subject));
     const filers = [...onFiling.keys()];
     // Review r1 M4, BK-8 (P-448, P-452): who gives biometrics (the ages, IRCC's page) comes from the case's own
-    // combination's fee rows, read once for the items and their words; never another pathway's.
-    const bio = feeRule(own!.combinationKey, "biometrics");
+    // combination's fee rows (the line its row lists for the step), read once for the items and their words; never
+    // another pathway's.
+    const bio = stepRule(own!.combinationKey, BIOMETRICS_STEP.key);
     const wanted = [...wantedItems(filers.filter((x) => !coFilers.has(x)), r.forms as never, docs as never, bio, ages),
       ...wantedItems(filers.filter((x) => coFilers.has(x)), r.forms as never, new Map(), undefined, ages)];
     const wantApplicants = (owner: string) => first.filings.find((f) => f.owner!.subject === owner)!.applicants;
