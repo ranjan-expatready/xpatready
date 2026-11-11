@@ -4,7 +4,7 @@
 // nothing else changed and that the IRCC signatures still verify. Only confirmed facts are written.
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
 import { promisify } from "node:util";
@@ -81,11 +81,14 @@ export class Fill {
     if (!cov) fail(`${b.form} does not apply to that person in this ${view.mode === "release" ? "release" : "draft"}.`, HttpStatus.NOT_FOUND);
     const snapshot: any = view.mode === "release" ? (await this.db.configRelease.findFirst({ where: { combinationId }, orderBy: { version: "desc" } }))!.snapshot : (await this.studio.config(combinationId, "draft")).snapshot;
     const dir = join(VAR("demo"), "outputs"); mkdirSync(dir, { recursive: true });
-    const stamp = new Date().toISOString().replace(/[:.]/g, "").slice(0, 15);
-    const base = `${b.form.replace(/\s+/g, "")}-${b.person}-${stamp}`;
+    // QA-275 (C4.6): each fill has its own file, named by the id of the artifact row that records it (chosen here, before
+    // the file is written), so two fills of one form and person in the same minute never share a path and a row always
+    // serves the bytes it recorded. The time (to the second, UTC) stays in the name for a person reading the folder.
+    const id = randomUUID(), stamp = new Date().toISOString().replace(/[:.]/g, "").slice(0, 17);
+    const base = `${b.form.replace(/\s+/g, "")}-${b.person}-${stamp}-${id}`;
     const { boxes, values, steps, report, out } = await writeForm(snapshot, cov!, b.form, dir, base);
     const pdf = readFileSync(out);
-    const art = await this.db.generatedArtifact.create({ data: { workspaceId: (await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } })).workspaceId, kind: "filled_pdf", path: out.replace(`${ROOT}/`, ""), sha256: sha(pdf), createdBy: actor.id,
+    const art = await this.db.generatedArtifact.create({ data: { id, workspaceId: (await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } })).workspaceId, kind: "filled_pdf", path: out.replace(`${ROOT}/`, ""), sha256: sha(pdf), createdBy: actor.id,
       detail: { form: b.form, person: b.person, mode: view.mode, configuration_sha256: view.sha256, written: Object.keys(values).length, intact: report.intact, read_back_equal: report.read_back_equal, signatures: report.signatures, page_fields: report.page_fields, report_file: `${base}.report.json`, person_steps: steps } } });
     await this.audit.log(art.workspaceId, actor.id, "filled", "PDF", b.form, `${actor.name} filled ${b.form} for ${cov!.person_label} from confirmed sample facts: ${Object.keys(values).length} form fields written, read back ${report.read_back_equal}/${report.written}${report.page_fields?.form_kind === "static" ? (report.page_fields.shown_outside_adobe ? ", every value also shown outside Adobe" : `, ${report.page_fields.read_back_equal} of ${report.page_fields.requested} values shown outside Adobe (the others only in Adobe)`) : ""}, ${report.intact ? "intact" : "NOT intact"} (${view.label})`);
     return { artifact_id: art.id, label: view.label, configuration_sha256: view.sha256, form: b.form, person: b.person, person_label: cov!.person_label, report, boxes, person_steps: steps,
