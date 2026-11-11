@@ -48,6 +48,9 @@ export type BoxRow = { box: string; caption: string; fact: string | null; meanin
   /** C7.2 cause 3 (set on a case copy only, engine/runtime/forms.ts markNothingRecorded): a derived "is anything recorded?"
    *  Yes/No whose facts sit in a repeating group with no entries and a confirmed "none apply". */
   nothing_recorded?: true };
+/** QA-392: the answer a `nothing_recorded` box stands for: No (the PDF copy's "recorded" step gives it from a confirmed
+ *  "none apply", p5/transforms.ts runTransform; the Online answer sheet shows it as that same No). */
+export const NOTHING_RECORDED = false;
 
 /** S5: a line with a minimum age applies to a person once they have reached it on `today`; until their date of birth
  *  is known it cannot be told (and the date of birth is asked, as a deciding question). QA-221 (ruling C): on a line for
