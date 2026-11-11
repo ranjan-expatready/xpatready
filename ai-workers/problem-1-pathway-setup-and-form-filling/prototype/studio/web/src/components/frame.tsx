@@ -38,13 +38,14 @@ function WhereLine({ area, where, staff }: { area: Area; where: Where; staff: bo
       {/* The name says where Back goes ("Back: To review"); the menu is hidden below 768 px, so Back is the way out there. */}
       {back ? <Link to={back.to} aria-label={`Back: ${back.label}`} title={`Back to ${back.label}`} data-where-back className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-md pr-1 font-medium text-text-link outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-primary/40"><ArrowLeft className="size-3.5" aria-hidden />Back</Link> : null}
       {back ? <span className="h-4 w-px shrink-0 bg-border" aria-hidden /> : null}
-      <nav aria-label="Path" className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1 gap-y-0.5">
+      <nav aria-label="Path" className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1">
         {crumbs.map((c, i) => {
           const last = i === crumbs.length - 1;
+          // Each link is at least 24 px high, so a trail wrapped at phone width keeps WCAG 2.2's target size (2.5.8).
           return (
             <React.Fragment key={`${i}${c.label}`}>
               {i ? <span aria-hidden className="shrink-0">›</span> : null}
-              {c.to ? <Link to={c.to} title={c.title} data-place={c.place} className={cn("[overflow-wrap:anywhere] hover:underline", i === 0 && "font-medium text-text-link", c.className)}>{c.label}</Link>
+              {c.to ? <Link to={c.to} title={c.title} data-place={c.place} className={cn("inline-flex min-h-6 items-center [overflow-wrap:anywhere] hover:underline", i === 0 && "font-medium text-text-link", c.className)}>{c.label}</Link>
                 : <span data-place={c.place} aria-current={last ? "page" : undefined} className={cn("[overflow-wrap:anywhere]", last && "text-text", c.className)}>{c.label}</span>}
             </React.Fragment>
           );

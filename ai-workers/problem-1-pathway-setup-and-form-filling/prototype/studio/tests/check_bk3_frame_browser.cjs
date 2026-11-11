@@ -99,9 +99,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       else step(`${name}: no other area for a client or an outside page`, x.other === null, x.other);
       if (width === 375 && onMain(url)) step(`${name}: the line itself fits at 375 px (the page's own sideways scroll is on main too: ${onMain(url)})`, x.lineFits, x);
       else if (width === 375) step(`${name}: no sideways scroll at 375 px`, !x.sideways && x.lineFits, x);
-      if (width === 1440 && (url === "/" || url === `/cases/${caseId}`)) {
+      // axe on the band at both widths (target size bites only when the trail wraps at phone width).
+      if (url === "/" || url === `/c/${vv}/forms` || url === `/cases/${caseId}` || url === `/cases/${caseId}/review`) {
         const r = await new AxeBuilder({ page: p }).include("[data-where]").withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
-        step(`BK-3 ${url}: axe finds no WCAG A/AA violation on the line`, r.violations.length === 0, r.violations.map((v) => `${v.id}: ${v.nodes[0]?.target?.join(" ")}`).join(" | "));
+        step(`BK-3 ${width} ${url}: axe finds no WCAG A/AA violation on the line`, r.violations.length === 0, r.violations.map((v) => `${v.id}: ${v.nodes[0]?.target?.join(" ")}`).join(" | "));
       }
     }
   }
