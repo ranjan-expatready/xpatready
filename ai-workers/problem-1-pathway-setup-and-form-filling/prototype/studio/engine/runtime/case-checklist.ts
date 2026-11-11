@@ -59,6 +59,9 @@ export type PersonLine = { id: string; document_type: string; label: string; sta
   /** M3-S4 (P-172): the release's line is never waivable: no waiver and no Not applicable, and Ready to file is blocked
    *  until it is received. A line merged from two requirements is never waivable when either is. */
   never_waivable: boolean;
+  /** M3-S4 re-review N1: never waivable only because a merged requirement still waits for these answers (its questions);
+   *  left out when the line is never waivable outright. */
+  never_if?: string[];
   /** C6.4 (a), challenge r2 M1: whose line it is (the release's "whose document") and its words, for the Documents panel. */
   who: string; who_words: string;
   /** C6.14 (SA-1B-151, SA-1B-214): a line asked once for the application ("case", C3.16's Filing scope) or once for the
@@ -231,7 +234,12 @@ export function caseChecklist(s: Snapshot, combinationKey: string, people: Parti
         const keep = ORDER[line.need] < ORDER[list[same].need] ? line : list[same], drop = keep === line ? list[same] : line; keep.also_from = [...new Set([...keep.also_from, drop.lineage, ...drop.also_from])].sort(); keep.base ||= drop.base;
         // M3-S4 review M2: never waivable only from a requirement that applies as strongly as the line it joins (as C6.14's
         // providers below), so one whose condition does not hold for this person never blocks Ready to file.
-        if (ORDER[drop.need] <= ORDER[keep.need]) keep.never_waivable ||= drop.never_waivable;
+        // Re-review N1: one still waiting for an answer keeps a needed line never waivable until that answer rules it out,
+        // naming the questions (never_if), so Ready to file is never reached around it.
+        if (drop.never_waivable && ORDER[drop.need] <= ORDER[keep.need]) { keep.never_waivable = true; if (drop.need === "needed") delete keep.never_if; }
+        else if (drop.never_waivable && drop.need === "answer_first" && keep.need === "needed" && (!keep.never_waivable || keep.never_if)) {
+          keep.never_waivable = true; keep.never_if = [...new Set([...(keep.never_if ?? []), ...drop.missing.filter((m) => !m.answered).map((m) => m.question)])];
+        }
         keep.waivable = keep.waivable && drop.waivable && !keep.never_waivable;
         // C6.14: merged with a shared requirement, the one line keeps its providers (a shared item is never lost), but only
         // when that requirement applies as strongly as the line it joins: a shared requirement not needed (or waiting)

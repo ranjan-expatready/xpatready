@@ -95,3 +95,45 @@ The team's `Document.status` has `Waived`; it has no "never waivable" field. Our
 1. Major M1: `engine/runtime/readiness-figure.ts:72,80`. The figure counts the unreceived never-waivable document as Done.
 2. Major M2: `engine/runtime/case-checklist.ts:231`. A never-waivable requirement that does not apply makes a needed line block.
 3. Minors m1–m6: fix them, or list them in the PR.
+
+## Re-review at d38208185 (diff only: `08768fc3c..d38208185`)
+Commit `d38208185af93dde7e45037d4dac3500fc94ebd5`. Copy `rv_m3s4b` on :4437 (configured checkpoint, live AI off, US$0), stopped after.
+* **Suites run:** `check_m3s4_never_waivable` 29/29; `check_m3s4_blocking_api` 19/19; `check_c95_release_update` 34/34; `check_c710_figure` 37/37; `check_c76_readiness` 91/91; `check_readiness_pass_codes` 4/4; `check_m3s3_waivable` 15/15; `check_vv_checklist` 76/76; `check_c614_providers` 27/27; B164 52/0.
+* **My browser journey again:** author by keyboard on Spouse sponsorship; release; move; Not applicable before never. Then a new Study permit case whose letter line now waits for marital status (the API suite leaves it conditional). axe 0, no page errors.
+* **Pure probe:** `caseChecklist` with a plain base line plus a conditional never line, the condition unanswered, false and true.
+
+**Fixed**
+* **M1 fixed.** The block lands on its own document item (`readiness-figure.ts:81`), and a never line in any state is counted (`:73`).
+  * On screen: "Letter of acceptance for Sample Student W · Not done", and no separate check item.
+  * FS case (Not applicable before never): the passport is counted Not done.
+  * Pure fail tests cover both.
+* **M2 fixed.** `engine/runtime/case-checklist.ts:234` carries never only from a requirement that applies as strongly as the line it joins. Probe "false, base+never": `needed, never_waivable: false`. Pass and fail tests are present.
+* **m1 fixed.** A kept line sets `never_waivable: false`.
+* **m2 fixed.** The line reads "Never waived now: it still blocks Ready to file; request it again", and the menu offers Request again (seen).
+* **m3 fixed.** The role is checked before the body: a client gets 403 on both actions (API test).
+* **m4 fixed.** The stale comments and dead text are gone.
+* **m6 partly fixed.** Check labels name C6.4 and C7.6; the stored `required` rule now has the API "legacy" test.
+* **m5 goes to the tech lead** as a PR question. I accept that.
+* **Breaker M1 fixed for a lone line.** A never line that waits for an answer blocks and names the question (seen: "…may be needed: answer "Current marital status" first…").
+* **Breaker M3 fixed.** "What changes" lists "Passport information page copy · Never waivable now" for Client F, and the filing is touched with words (seen before the move).
+* **Rollback note fixed.** It now says released snapshots keep "never".
+
+**New in this diff**
+* **Major N1. The breaker-M1 hole is still open when a plain line for the same document exists.**
+  * Where: the M2 guard at `engine/runtime/case-checklist.ts:234` drops `never_waivable` from an `answer_first` requirement merged into a needed plain line, so `p.waiting` no longer holds it. `waitingNever` (`api/src/case-prepare.ts:637`) reads only `p.waiting`, so nothing blocks.
+  * Scenario (pure probe): a plain "Police certificate · principal" line, plus a conditional never line whose question is unanswered. The result is one line, `needed, never_waivable: false`, with no waiting line.
+  * Effect: Ready to file is reached by passing the missing-document and missing-facts warnings, before the answer that would make it never. Without the plain line the same case blocks. P-172's own shape (a plain per-applicant police line, plus a never line for "children 18+" with the date of birth unanswered) falls into this hole.
+  * My M2 fix wording ("the C6.14 guard") caused this; I should have excluded `answer_first`.
+  * Fix, either of:
+    * (a) carry `never_waivable` from any requirement that is not `not_needed` (blocks until received, or until the answer says it does not apply);
+    * (b) keep the waiting never requirement's questions on the merged line, and feed them to Prepare as a `waiting` never item.
+  * Either way, add a pass test and a fail test for "base + never, condition unanswered".
+* **m7 (Minor).** The release-move rule is per document type, not per person's line (`engine/runtime/release-update.ts:78,112`).
+  * Scenario: a type that is never only on a principal line names "Never waivable now" for every person who has that type, a spouse included.
+  * It also touches their filings, so a review made before the move stops counting (BR-6).
+  * It errs towards asking again. Fix it, or list it in the PR.
+* **m8 (Minor).** The checklist's "May be needed" card does not say the line is never waivable; only the Ready to file block does.
+
+**Verdict: Block** (commit d38208185af93dde7e45037d4dac3500fc94ebd5). To fix, then a diff-only re-review:
+1. Major N1: `engine/runtime/case-checklist.ts:234` with `api/src/case-prepare.ts:637`. A never-waivable requirement waiting for an answer, merged into a plain needed line, raises no block.
+2. Minors m7 and m8: fix them, or list them in the PR.

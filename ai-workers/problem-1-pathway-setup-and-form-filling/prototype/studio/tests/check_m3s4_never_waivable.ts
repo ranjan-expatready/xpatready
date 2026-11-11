@@ -51,6 +51,14 @@ const blocking = caseChecklist(snap("x.any", [req("police:each", "police", "each
   const cond = { ...req("police:old", "police", "each_applicant", "never"), base_or_conditional: "conditional", condition: { subjectKind: "PERSON", op: "eq", field: "person.date_of_birth", value: "1900-01-01" }, condition_plain: "born on 1 January 1900" };
   const notApplying = caseChecklist(snap("x.any", [req("police:each", "police", "each_applicant"), cond]), "x.any", PEOPLE, known, TODAY);
   ok("C6.4 M3-S4: merge fail (review M2): merged with a never waivable requirement that does not apply to the person, the needed line is not never waivable", line(notApplying, "A", "police")?.never_waivable === false && line(notApplying, "A", "police")?.need === "needed", line(notApplying, "A", "police"));
+  // Re-review N1: a never waivable requirement still waiting for an answer, merged into a needed plain line, keeps the line
+  // never waivable and names the question it waits for; a plain line alone does not.
+  const pending = { ...cond, condition: { subjectKind: "PERSON", op: "eq", field: "person.marital_status", value: "married" } };
+  const waitingMerge = caseChecklist(snap("x.any", [req("police:each", "police", "each_applicant"), pending]), "x.any", PEOPLE, known, TODAY);
+  const wm = line(waitingMerge, "A", "police");
+  ok("C6.4 M3-S4: merge pass (re-review N1): merged with a never waivable requirement waiting for an answer, the needed line is never waivable and says what it waits for", wm?.need === "needed" && wm?.never_waivable === true && (wm?.never_if ?? []).length === 1, wm);
+  const plainOnly = caseChecklist(snap("x.any", [req("police:each", "police", "each_applicant")]), "x.any", PEOPLE, known, TODAY);
+  ok("C6.4 M3-S4: merge fail (re-review N1): the plain line alone is not never waivable and waits for nothing", line(plainOnly, "A", "police")?.never_waivable === false && !line(plainOnly, "A", "police")?.never_if);
   const applying = caseChecklist(snap("x.any", [req("police:each", "police", "each_applicant"), { ...cond, condition: { ...cond.condition, value: "1985-01-01" } }]), "x.any", PEOPLE, known, TODAY);
   ok("C6.4 M3-S4: merge pass (review M2): when that requirement does apply, the line is never waivable", line(applying, "A", "police")?.never_waivable === true);
 }
@@ -80,6 +88,9 @@ const blocking = caseChecklist(snap("x.any", [req("police:each", "police", "each
   ok("C7.6 M3-S4: figure fail (review M1): marked not applicable before the release said never, it is still counted, not done", was.length === 1 && was[0].done === false, was);
   const done = fig([doc("Police certificate", { never_waivable: true, received: true })]).items.find((i) => i.kind === "document");
   ok("C7.6 M3-S4: figure pass (review M1): once received, it is done", !!done && done.done === true);
+  // Re-review N1: a needed line whose never waivable requirement waits for an answer blocks until received, naming the answer.
+  const ifNever = at([doc("Police certificate", { never_waivable: true, waiting: "Current marital status" })]);
+  ok("C7.6 M3-S4: block pass (re-review N1): a needed line made never waivable by a requirement waiting for an answer blocks, naming the answer that may lift it", !ifNever.ready && ifNever.blocks.length === 1 && /not received\. Its release says it can never be waived if Current marital status/.test(ifNever.blocks[0].words), ifNever.blocks);
   // Break M1: a never waivable line that may be needed (its condition waits for an answer) blocks until that is known.
   const waiting = at([doc("Police certificate", { never_waivable: true, required: false, waiting: "Date of birth" })]);
   ok("C7.6 M3-S4: block pass (break M1): a never waivable line still waiting for an answer blocks, naming what to answer", !waiting.ready && waiting.blocks.length === 1 && waiting.blocks[0].code === "document_never_waivable" && /may be needed: answer Date of birth first/.test(waiting.blocks[0].words), waiting.blocks);

@@ -133,7 +133,7 @@ export class CaseChecklists {
         const state = (row?.state ?? "not_requested") as LineState;
         const reason = kept ? `${l.reason} Kept on the list: it is ${STATE_WORDS[state]}${documents.length ? " and has a file" : ""}, so it is not dropped when the answers change.` : l.reason;
         // M3-S4 review m1: a kept line no longer needed blocks nothing, so it does not say never waivable either.
-        return { ...l, ...providersNow(l, row), ...(kept ? { never_waivable: false } : {}), id: row?.id ?? l.id, derived_id: l.id, reason, required: kept || ((state === "not_applicable" || state === "waived") && !l.never_waivable) ? false : l.required, state, state_words: STATE_WORDS[state], state_reason: row?.stateReason ?? null,
+        return { ...l, ...providersNow(l, row), ...(kept ? { never_waivable: false, never_if: undefined } : {}), id: row?.id ?? l.id, derived_id: l.id, reason, required: kept || ((state === "not_applicable" || state === "waived") && !l.never_waivable) ? false : l.required, state, state_words: STATE_WORDS[state], state_reason: row?.stateReason ?? null,
           state_by: row?.stateBy ?? null, state_at: row?.stateAt?.toISOString() ?? null, version: row?.version ?? 0, documents, kept, set_status: setStatusOf(l, currentKeys(p.subject, l)), ...((): { on_file?: NonNullable<ReturnType<typeof onFile>> } => { const f = onFile(p.subject, l.document.key); return f ? { on_file: f } : {}; })() };
       };
       // A line no longer needed that was acted on (requested, a file, Not applicable) stays on the person's list.
