@@ -15,7 +15,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { HttpException } from "@nestjs/common";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { ChangeProviders, cleanName, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MEDIA, mediaOf, NOT_APPLICABLE_FROM, NotApplicable, REQUEST_FROM, SeenVersion, STATE_WORDS, UPLOAD_FROM, type LineState, type StoredDocument } from "../../contracts/documents.ts";
+import { ChangeProviders, cleanName, MAX_DOCUMENT_BYTES, MAX_DOCUMENT_MB, MEDIA, mediaOf, NOT_APPLICABLE_FROM, NotApplicable, REQUEST_FROM, SeenVersion, STATE_WORDS, UPLOAD_FROM, WAIVE_FROM, Waive, type LineState, type StoredDocument } from "../../contracts/documents.ts";
 import { candidatesOf, caseChecklist, chosenProviders, mayProvide, roleWords, type PersonLine } from "../../engine/runtime/case-checklist.ts";
 import { fmtDate, onFileFrom } from "../../engine/runtime/stages.ts";
 import { readSpec } from "./routes-data.ts";
@@ -130,7 +130,7 @@ export class CaseChecklists {
         const row = rowOf.get(`${p.subject}|${l.document.key}`), documents = filesOf(p.subject, l);
         const state = (row?.state ?? "not_requested") as LineState;
         const reason = kept ? `${l.reason} Kept on the list: it is ${STATE_WORDS[state]}${documents.length ? " and has a file" : ""}, so it is not dropped when the answers change.` : l.reason;
-        return { ...l, ...providersNow(l, row), id: row?.id ?? l.id, derived_id: l.id, reason, required: kept || state === "not_applicable" ? false : l.required, state, state_words: STATE_WORDS[state], state_reason: row?.stateReason ?? null,
+        return { ...l, ...providersNow(l, row), id: row?.id ?? l.id, derived_id: l.id, reason, required: kept || state === "not_applicable" || state === "waived" ? false : l.required, state, state_words: STATE_WORDS[state], state_reason: row?.stateReason ?? null,
           state_by: row?.stateBy ?? null, state_at: row?.stateAt?.toISOString() ?? null, version: row?.version ?? 0, documents, kept, set_status: setStatusOf(l, currentKeys(p.subject, l)), ...((): { on_file?: NonNullable<ReturnType<typeof onFile>> } => { const f = onFile(p.subject, l.document.key); return f ? { on_file: f } : {}; })() };
       };
       // A line no longer needed that was acted on (requested, a file, Not applicable) stays on the person's list.
@@ -141,7 +141,7 @@ export class CaseChecklists {
       const orphans = rows.filter((x) => x.subjectId === p.subject && !listed.has(x.documentType) && (x.state !== "not_requested" || docsOf(p.subject, x.documentType).length > 0))
         .map((x): PersonLine => ({ id: `${p.subject}:${x.lineage}`, document_type: x.documentType, label: typeName(x.documentType), state: "not_requested", required: false, documents: [],
           reason: p.applies ? `No longer required: ${d.release_label ?? "the case's release"} no longer asks this person for it; its uploads are kept and listed.` : `${p.label} is not travelling with the application now, so the release asks nothing of them.`,
-          need: "not_needed", lineage: x.lineage, also_from: [], document: { key: x.documentType, name: typeName(x.documentType) }, missing: [], base: false, provided_by: "client", alternatives: [], quote: null, rule: null, set: null, who: "", who_words: "", shared: null, providers: [], providers_rule: null, providers_words: null }));
+          need: "not_needed", lineage: x.lineage, also_from: [], document: { key: x.documentType, name: typeName(x.documentType) }, missing: [], base: false, provided_by: "client", alternatives: [], quote: null, rule: null, set: null, waivable: false, who: "", who_words: "", shared: null, providers: [], providers_rule: null, providers_words: null }));
       const lines = [...p.lines.map((l) => out(l, false)), ...keptWaiting.map((l) => out(l, true)), ...keptNot.map((l) => out(l, true)), ...orphans.map((l) => out(l, true))];
       return { ...p, lines, waiting: p.waiting.filter((l) => !acted(l)).map((l) => out(l, false)), not_needed: p.not_needed.filter((l) => !acted(l)).map((l) => out(l, false)) };
     });
@@ -189,7 +189,11 @@ export class CaseChecklists {
       if (to === "requested" && now?.state === "requested" && seen === undefined) return this.moved(c, id);
       fail("Someone changed this line after you opened it: read the checklist again to see its state now, then try again.", HttpStatus.CONFLICT);
     }
-    await this.audit.log(c.workspaceId, actor.id, words, "checklist line", id, `${actor.name} ${words} ${shown.label} for the ${person.role} on case ${short(c.id)} (${STATE_WORDS[row.state as LineState]} to ${STATE_WORDS[to]})`);
+    // M3-S3 break M2: the history keeps the reason given and, when a line leaves Waived or Not applicable, the reason and
+    // person it had, so a waiver taken back still says who waived it and why.
+    const was = row.stateReason ? { from: row.state, from_reason: row.stateReason, from_by: row.stateBy, from_at: row.stateAt?.toISOString() ?? null } : {};
+    await this.audit.log(c.workspaceId, actor.id, words, "checklist line", id, `${actor.name} ${words} ${shown.label} for the ${person.role} on case ${short(c.id)} (${STATE_WORDS[row.state as LineState]} to ${STATE_WORDS[to]})${reason ? `: ${reason}` : ""}`,
+      { to, ...(reason ? { reason } : {}), ...was });
     return this.moved(c, id);
   }
 
@@ -198,6 +202,15 @@ export class CaseChecklists {
   notApplicable(actor: Actor, id: string, body: unknown) {
     const b = parse(NotApplicable, body);
     return this.setState(actor, id, NOT_APPLICABLE_FROM, "not_applicable", b.reason, "marked not applicable", b.version);
+  }
+
+  /** M3-S3 (P-171 (6)): the case officer waives a line its release marks waivable, with a reason; who and when are kept
+   *  on the line and in the history. A line not marked waivable is refused in words (Not applicable stays its way). */
+  async waive(actor: Actor, lineId: string, body: unknown) {
+    const b = parse(Waive, body);
+    const { shown, person } = await this.line(actor, lineId, "officer");
+    if (!shown.waivable) fail(`${shown.label} for ${person.label} cannot be waived: its line in the release is not marked waivable. Nothing was changed.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    return this.setState(actor, lineId, WAIVE_FROM, "waived", b.reason, "waived", b.version);
   }
 
   /** C6.14 BR-6 (SA-1B-214 rule 2): the case officer changes who provides a shared line, or goes back to the type's
@@ -242,7 +255,7 @@ export class CaseChecklists {
     if (bytes.length > MAX_DOCUMENT_BYTES) fail(`The file is larger than ${MAX_DOCUMENT_MB} MB. Nothing was stored.`, HttpStatus.PAYLOAD_TOO_LARGE);
     const media = mediaOf(bytes);
     if (!media) fail("Send a PDF, JPEG or PNG file (judged by the file itself, not its name). Nothing was stored.", HttpStatus.UNSUPPORTED_MEDIA_TYPE);
-    if (!UPLOAD_FROM.includes(row.state as LineState)) fail(`${shown.label} for ${person.label} is Not applicable: request it again before uploading. Nothing was stored.`, HttpStatus.CONFLICT);
+    if (!UPLOAD_FROM.includes(row.state as LineState)) fail(`${shown.label} for ${person.label} is ${STATE_WORDS[row.state as LineState]}: request it again before uploading. Nothing was stored.`, HttpStatus.CONFLICT);
     // C6.15 (SA-1B-19 rule 1): on a line with a substitute set, the file is one member of it ("member": its document type
     // key); left out, it is the line's own type when that is a member. Any member of the set the line uses counts.
     const member = memberOf(shown, (body as { member?: unknown } | null)?.member);
@@ -316,6 +329,7 @@ export class CaseChecklistsController {
   constructor(@Inject(CaseChecklists) private readonly x: CaseChecklists) {}
   @Get("cases/:id/checklist") list(@Headers("x-actor") a: H, @Param("id") id: string) { return this.x.list(actorOf(a), id); }
   @Post("checklist-lines/:id/request") @HttpCode(200) request(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.request(actorOf(a), id, b); }
+  @Post("checklist-lines/:id/waive") @HttpCode(200) waive(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.waive(actorOf(a), id, b); }
   @Post("checklist-lines/:id/not-applicable") @HttpCode(200) notApplicable(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.notApplicable(actorOf(a), id, b); }
   @Post("checklist-lines/:id/providers") @HttpCode(200) providers(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.providers(actorOf(a), id, b); }
   // The limit is one byte over 20 MB so a file of exactly 20 MB is taken (break m5); the route's own check refuses more.

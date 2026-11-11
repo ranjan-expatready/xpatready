@@ -347,6 +347,8 @@ export type ChecklistLineRow = {
   quote: string | null; status: string; origin: string; position: number | null; rank: number; by: string | null;
   /** C6.15 (SA-1B-20): the substitute set the line picks (null: "Standard"). */
   setName?: string | null;
+  /** M3-S3 (P-171 (6)): the case officer may waive this line on a case, with a reason. */
+  waivable?: boolean;
   /** C3.11: worked out from a form line filed as Signed PDF upload (never stored), with why; changed on that line only. */
   automatic?: { form: string; reason: string };
 };
