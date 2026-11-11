@@ -124,7 +124,7 @@ P-258 named four shared services. On main: **SH2 where-used is done** (`where-us
 * **"Complete M4 in ~8 hours" (A19 (d)) is not possible.** The schema chain alone is ~4-6 sessions in series, F2 needs a person's 5-10 hours of Adobe checks, and M4 starts when the Bake's baton rows have merged. What 8 hours can buy now: S7 and S5 built, the S1/S3/S4 contracts written and agreed, T1's re-trace done, and the content research for one pathway (citations only). All of them are off the Bake's batons.
 * **With ~10 lanes, no budget cap (P-461, P-462) and lanes running continuously:**
   * Bake rows done and the full walk ~13-14 Nov IST (P-472), the co-founder's walk within 24 h after (P-455 (4));
-  * **M4 ~20-24 Nov**: the schema chain, the person's Adobe time, and review rounds set the pace, not lane count;
+  * **M4 ~20-24 Nov** (~21-25 Nov with the rows added from the trace, §8): the schema chain, the person's Adobe time, and review rounds set the pace, not lane count;
   * **M5 ~27 Nov-2 Dec**, overlapping M4 from about the 22nd.
   * These are planning ranges, not promises. Each row's design and the first five rows' measured cost (P-453) will narrow them.
 
@@ -142,3 +142,25 @@ P-258 named four shared services. On main: **SH2 where-used is done** (`where-us
 - The S1 rule-table, S3 filing-values and S4 release-and-pin (SH4, open) contracts can be written as concept documents now and agreed before the schema baton frees.
 
 *Recommend:* two lanes now (pipeline: S7; runtime, no baton: S5) and one concept lane for the three contracts. M4's first schema row (S1) then starts the hour M3-S4 merges.
+
+## 8. Rows added from the SA-01B v2.1 trace (`03a`), 11 Nov ~14:0x IST
+
+The card-by-card trace found plan gaps: cards that part 2 sends to M4/M5 with no row in this file's counted lists, and Not-planned cards. Added here so nothing drops (P-450):
+
+| Milestone | Row | Cards / backlog | What changes for the user | Sessions |
+|---|---|---|---|---|
+| M4 | **K1 Government steps, deadlines and key dates** | SA-1B-45, 46, 233, 157; B11, B39 (part 3 G8 said "nowhere") | a case shows the government's steps and key dates (e.g. biometrics within the deadline) worked out from released rules | 2-3 |
+| M4 | **R1 M4-only requirement rows** | B14 (103), B18 (104), B26 (46-47), B38 (106, 18), B44 (1, 132), B45 (39, 40) | each row's own "done when" (part 2 §2a) | 4-6 (shaped per row) |
+| M4 | **P1 Partly remainders: read, then rows** | 292, 293, 294, 131, 152, 221, 171 (+217, 220 held) | — (a 1-session read sizes them) | 1 + rows |
+| M4 | A6 widened: document validity (what a document must outlive) | SA-1B-22, 156 | — | +1 |
+| M4 | A8 widened: questionnaire target matches field scopes (a release check) | SA-1B-112 | — | +0.5 |
+| M4 | S6 / A7 widened: accuracy record per box | SA-1B-180 | — | +0.5 |
+| M4 (if the founder rules SA1B-D93 yes) | Application fix, filing-scoped (after S3) | SA-1B-176 | — | 1-2 |
+| M4 (if the founder places the employer side in M4) | L-SA5 Sample employer combination joins content rows 21-24 | SA-1B-284; Ch11's 8 founder-question cards | — | 3-5 |
+| M5 | **D1 Value in force on a date** (the resolver reads the value in force on the filing's date; row 10 covers only authoring) | SA-1B-252 | — | 1-2 |
+| M5 | **W1 Release withdrawal** (open filings warned CRITICAL, one click to move, using S4's `adopt`) | SA-1B-301, 257 | — | 1-2 |
+| M5 | Row 10 widened: box notices | SA-1B-179 | — | +1 |
+
+**Effect on the totals:** M4 rises to **~60-80 sessions** (from ~50-65); M5 to **~50-65** (from ~45-60). The M4 forecast in §6 stays ~20-24 Nov only if the added rows run on the parallel lanes (they touch no baton except K1, which may need a schema column), so I now give **~21-25 Nov**.
+
+**Placed outside M4/M5:** SA-1B-107-110 "Copy on emails" (team, founder to confirm), 178 (team, P-335), 267 (team, AG-18), 73/74 (founder question, held SA1B-D72/D66).

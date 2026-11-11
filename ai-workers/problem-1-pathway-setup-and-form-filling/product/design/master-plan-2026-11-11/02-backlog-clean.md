@@ -29,10 +29,10 @@ Master analysis, part 2 of 8 (A19 (e); P-450: "whatever we have discussed should
 |---|---|---|---|
 | done (evidence) | 161 | 0 | 161 |
 | Bake | 28 | 15 | 43 |
-| M4 | 49 | 0 | 49 |
+| M4 | 48 | 0 | 48 |
 | M5 | 46 | 156 (111 into the UX lane's plan, 45 triage with a re-test first) | 202 |
 | M6 extension | 2 | 0 | 2 |
-| team | 7 | 0 | 7 |
+| team | 8 | 0 | 8 |
 | parked (by decision) | 1 | 0 | 1 |
 | duplicate of X | 14 | 0 | 14 |
 | **drop proposed to the founder** | **4** | 0 | **4** |
@@ -338,7 +338,7 @@ If B108 is dropped, close draft #1086. B108's "what breaks at 1,000" list goes t
 | B35 | Reset one combination | **drop proposed** | P-447 (2): BK-5 start page gives three starting points and a reset; D1 #407 | no longer needed |
 | B36 | Dead endpoints tidy | **M5** | no merge | hardening |
 | B37 | Filing channel from IRCC's line read by AI, not by keywords | **M4** | no merge; C11.6, C11.18 Works by hand | AI reads the channel |
-| B16 | Eligibility gates and scoring grids per programme, as data (gates with Sample values pull… | **M4** | C6.9 Works for gates | scoring grids per programme: rule tables |
+| B16 | Eligibility gates and scoring grids per programme, as data | **done (gates) + team (scoring)** | C6.9 Works for gates; scoring grids, cut-off bands and what-if advice stay with AG-03: P-164 (1), STAND-INS SI-2 | corrected 11 Nov from "M4" by the v2.1 trace (03a) |
 | B17 | Reference tables: fixed types, versioned definitions with key and range rules, console an… | **M4** | no merge | reference tables: M4 Track A rule tables |
 | B18 | Regulator setup: representative types, licensing body, licence format checked against sam… | **M4** | no merge | regulator content |
 | B19 | Government fees per category or sub-category, with who pays | **duplicate of B40** | B40 | same change: fee table with who pays |
@@ -636,14 +636,14 @@ Rules: each Major goes to its Bake row; an Ambiguity or Conflict row needs a Lea
 | source list | rows in | done | Bake | M4 | M5 | M6 extension | team | parked | duplicate of | drop proposed | check | open: founder | open: Lead | other | rows out |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1. BACKLOG.md (Lead branch) | 242 | 147 | 14 | 27 | 33 | 1 | 3 | 0 | 10 | 2 | 5 | 0 | 0 | 0 | 242 |
-| 2a. BACKLOG-requirements.md (main) | 37 | 7 | 0 | 12 | 8 | 0 | 4 | 1 | 3 | 2 | 0 | 0 | 0 | 0 | 37 |
+| 2a. BACKLOG-requirements.md (main) | 37 | 7 | 0 | 11 | 8 | 0 | 5 | 1 | 3 | 2 | 0 | 0 | 0 | 0 | 37 |
 | 2b. BACKLOG-requirements-qa.md (main) | 13 | 4 | 0 | 6 | 2 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 13 |
 | 3a. Bake plan | 9 | 0 | 9 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 9 |
 | 3b. Bake plan | 8 | 0 | 0 | 4 | 3 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 8 |
 | 4a. STATE founder asks (table rows) | 9 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 5 | 0 | 9 |
 | 4b. STATE 'For the founder' F-items | 8 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 8 | 0 | 0 | 8 |
 | 5. P-460 items | 7 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2 | 7 |
-| **all** | **333** | **161** | **28** | **49** | **46** | **2** | **7** | **1** | **14** | **4** | **5** | **9** | **5** | **2** | **333** |
+| **all** | **333** | **161** | **28** | **48** | **46** | **2** | **8** | **1** | **14** | **4** | **5** | **9** | **5** | **2** | **333** |
 
 'other' = P-460 rows mapped to more than one place (Bake + M4/M5), which is what the brief asks for those.
 ## Drops proposed to the founder
