@@ -1,7 +1,8 @@
 import * as React from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { CheckCheck, ChevronRight, CornerUpLeft, GitMerge, Plus, Sparkles } from "lucide-react";
+import { CheckCheck, CornerUpLeft, GitMerge, Plus, Sparkles } from "lucide-react";
 import { api, useAction, useApi } from "@/lib/api";
+import { useWhere } from "@/components/frame";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Stat, Textarea } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { ErrorState } from "@/components/ui/error-state";
@@ -32,9 +33,10 @@ const stepNameOf = (kind: string, mode: string) => STEP_NAME[kind] ?? (mode === 
 /** QA-75: the trail "<combination> › Forms › <step>", never the retired "Sources and forms". */
 export function JobTrail({ id, combination, here }: { id: string; combination?: { id?: string; label: string } | null; here: string }) {
   // QA-75 (break m1, m3): the trail follows the job's own combination, not the address; a step of no combination goes back to AI work.
-  if (!combination) return <nav aria-label="Where you are" className="flex flex-wrap items-center gap-1 text-xs text-text-muted"><Link to="/ai" className="hover:underline">AI work</Link><ChevronRight className="size-3" aria-hidden /><span>{here}</span></nav>;
-  id = combination.id ?? id;
-  return <nav aria-label="Where you are" className="flex flex-wrap items-center gap-1 text-xs text-text-muted"><Link to={`/c/${id}`} className="hover:underline">{combination?.label ?? "Combination"}</Link><ChevronRight className="size-3" aria-hidden /><Link to={`/c/${id}/forms`} className="hover:underline">Forms</Link><ChevronRight className="size-3" aria-hidden /><span>{here}</span></nav>;
+  // BK-3: shown on the frame's one "where am I" line.
+  const cid = combination?.id ?? id;
+  useWhere(!combination ? [{ label: "AI work", to: "/ai" }, { label: here }] : [{ label: combination.label, to: `/c/${cid}` }, { label: "Forms", to: `/c/${cid}/forms` }, { label: here }]);
+  return null;
 }
 
 export function JobPage() {

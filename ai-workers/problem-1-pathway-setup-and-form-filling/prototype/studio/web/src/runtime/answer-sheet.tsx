@@ -12,8 +12,9 @@
 import * as React from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, Copy, Lock } from "lucide-react";
+import { Check, Copy, Lock } from "lucide-react";
 import { api, ApiError, useActorId, useApi, useToast } from "@/lib/api";
+import { useWhere } from "@/components/frame"; // BK-3: one "where am I" line
 import { Button, Field, Notice, Pill, Textarea } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { noRetryOnRefusal } from "./questionnaire";
@@ -56,6 +57,7 @@ export function AnswerSheetPage() {
   const prep = useApi<Prep>(["runtime", "view", id!, "prepare", actor], officer ? `/runtime/cases/${id}/prepare` : null, { retry: noRetryOnRefusal, refetchOnWindowFocus: true });
   const firm = useFirm();
   const nameOf = (u: string) => firm.data?.users.find((x) => x.id === u)?.name ?? "the case team";
+  useWhere(sheet.data ? [{ label: "Cases", to: "/cases" }, { label: prep.data?.reference ?? "Case", to: `/cases/${id}` }, { label: `${sheet.data.form} answer sheet` }] : null); // BK-3
   const back = <Link to={`/cases/${id}`} className="text-text-link underline">Back to the case</Link>;
   if (!officer) return <Notice title="This page is for the case officer">The answer sheet is what the firm types into the IRCC account; a client never sees it. {back}</Notice>;
   if (sheet.isLoading) return <div className="mx-auto max-w-6xl space-y-3" aria-busy="true"><Skeleton className="h-8 w-1/3" /><Skeleton className="h-40 w-full" /></div>;
@@ -84,11 +86,6 @@ export function AnswerSheetPage() {
   const [stateWord, tone] = STATE_WORDS[item?.state ?? ""] ?? [item?.state ?? "", "neutral"];
   return (
     <div className="mx-auto max-w-6xl space-y-4" data-answer-sheet={s.item}>
-      <nav aria-label="Path" className="flex flex-wrap items-center gap-1 text-[13px] text-text-muted">
-        <Link to="/cases" className="inline-flex items-center gap-1 hover:underline"><ArrowLeft className="size-3.5" aria-hidden />Cases</Link><span aria-hidden>›</span>
-        <Link to={`/cases/${id}`} className="hover:underline">{prep.data?.reference ?? "Case"}</Link><span aria-hidden>›</span>
-        <span className="text-text">{s.form} answer sheet</span>
-      </nav>
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold [overflow-wrap:anywhere]">{s.form} answer sheet · {item?.person ?? ""}</h1>
         <p className="text-sm text-text-muted">Type these answers into the IRCC account, section by section. Copy gives each answer as the IRCC account takes it.</p>

@@ -3,11 +3,11 @@
 // The people are simulated (demo chrome: the "Acting as" switch is not for porting); the server decides what each may do.
 import * as React from "react";
 import { Link, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, Plus, UserPlus, X } from "lucide-react";
+import { ExternalLink, Plus, UserPlus } from "lucide-react";
 import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { Frame, useWhere } from "@/components/frame"; // BK-3
 import { noRetryOnRefusal, Questionnaire, useCaseView, type CanAdd, type CaseInfo, type CasePerson } from "./questionnaire";
 import { FormsPanel } from "./forms";
 import { ItemChannels } from "./item-channels"; // C11.6
@@ -54,40 +54,28 @@ export function RuntimeApp() {
   const [, switched] = React.useState(0);
   React.useLayoutEffect(() => { if (!PEOPLE.some((p) => p.id === getActor())) { setActor("user-O"); switched((n) => n + 1); } }, [actor]);
   if (!PEOPLE.some((p) => p.id === getActor())) return null;
+  const client = isClient(actor);
   return (
-    <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-30 flex h-14 min-w-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
-        <Link to={isClient(actor) ? "#" : "/cases"} className="flex shrink-0 items-center" aria-label="Cases home">
-          <img src="/brand/expat-ready-notagline-dark.svg" alt="Expat Ready" className="h-6 dark:hidden" />
-          <img src="/brand/expat-ready-notagline.svg" alt="Expat Ready" className="hidden h-6 dark:block" />
-        </Link>
-        <span className="hidden h-6 w-px bg-border sm:block" />
-        <p className="hidden text-sm font-semibold sm:block">{isClient(actor) ? "Your application" : "Cases"}</p>
-        <div className="ml-auto flex min-w-0 items-center gap-2">
-          <label className="flex min-w-0 items-center gap-2 rounded-lg border border-dashed border-warn bg-surface px-2 py-1" title="Simulated people for the prototype: not part of the product">
-            <span className="hidden whitespace-nowrap text-[11px] text-text-muted md:inline">Acting as (simulated)</span>
-            <select className="min-w-0 bg-transparent text-xs font-medium" value={actor} onChange={(e) => setActor(e.target.value)} aria-label="Simulated person">
-              {PEOPLE.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.role}</option>)}
-            </select>
-          </label>
-          <Link to="/" onClick={() => setActor("user-A")} className="hidden whitespace-nowrap text-xs text-text-link hover:underline md:inline">Product Studio</Link>
-        </div>
-      </header>
-      <main className="min-w-0 flex-1 px-4 py-5 md:px-6">
-        <Routes>
-          <Route index element={<CaseList />} />
-          <Route path=":id" element={<CasePage />} />
-          <Route path=":id/questionnaire" element={<ClientPage />} />
-          <Route path=":id/eligibility" element={<EligibilityPage />} />
-          <Route path=":id/review" element={<ReviewPage />} />
-          <Route path=":id/representative-review" element={<RepresentativeReviewLatest />} />
-          <Route path=":id/representative-review/:round" element={<RepresentativeReviewPage />} />
-          <Route path=":id/sheet/:itemId" element={<AnswerSheetPage />} />
-          <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/cases">Back to cases</Link></Notice>} />
-        </Routes>
-      </main>
-      <Toaster />
-    </div>
+    <Frame area={client ? "client" : "cases"} title={client ? "Your application" : "Cases"} home={client ? undefined : "/cases"} staff={!client}
+      controls={
+        <label className="flex min-w-0 items-center gap-2 rounded-lg border border-dashed border-warn bg-surface px-2 py-1" title="Simulated people for the prototype: not part of the product">
+          <span className="hidden whitespace-nowrap text-[11px] text-text-muted md:inline">Acting as (simulated)</span>
+          <select className="min-w-0 bg-transparent text-xs font-medium" value={actor} onChange={(e) => setActor(e.target.value)} aria-label="Simulated person">
+            {PEOPLE.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.role}</option>)}
+          </select>
+        </label>}>
+      <Routes>
+        <Route index element={<CaseList />} />
+        <Route path=":id" element={<CasePage />} />
+        <Route path=":id/questionnaire" element={<ClientPage />} />
+        <Route path=":id/eligibility" element={<EligibilityPage />} />
+        <Route path=":id/review" element={<ReviewPage />} />
+        <Route path=":id/representative-review" element={<RepresentativeReviewLatest />} />
+        <Route path=":id/representative-review/:round" element={<RepresentativeReviewPage />} />
+        <Route path=":id/sheet/:itemId" element={<AnswerSheetPage />} />
+        <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/cases">Back to cases</Link></Notice>} />
+      </Routes>
+    </Frame>
   );
 }
 
@@ -189,6 +177,7 @@ function CasePage() {
   const [adding, setAdding] = React.useState<CanAdd | null>(null);
   // K13 (break m7): "Answer in the Agent view" (eligibility) lands on the Agent view, not the top of the case page.
   const { hash } = useLocation(), loaded = !!view.data;
+  useWhere(view.data ? [{ label: "Cases", to: "/cases" }, { label: view.data.case.reference }] : null); // BK-3: the frame's line names the case
   React.useEffect(() => { if (loaded && hash === "#agent-view") document.getElementById("agent-view")?.scrollIntoView({ block: "start" }); }, [loaded, hash]);
   if (!isOfficer(actor)) return <Notice title="This page is for the case officer">As a client, open <Link className="text-text-link underline" to={`/cases/${id}/questionnaire`}>your Client questionnaire</Link>.</Notice>;
   if (view.isLoading) return <div className="space-y-3"><Skeleton className="h-8 w-1/3" /><Skeleton className="h-24 w-full" /></div>;
@@ -197,7 +186,6 @@ function CasePage() {
   const client = PEOPLE.find((p) => p.id === c.client);
   return (
     <div className="mx-auto max-w-7xl space-y-5">
-      <nav aria-label="Path" className="flex items-center gap-1 text-[13px] text-text-muted"><Link to="/cases" className="inline-flex items-center gap-1 hover:underline"><ArrowLeft className="size-3.5" aria-hidden />Cases</Link><span aria-hidden>›</span><span className="text-text">{c.reference}</span></nav>
       <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><Pill tone="info" title={c.pin.revision > 1 ? `Moved to this release on ${new Date(c.pin.pinned_at).toLocaleString("en-CA")}; a later release never changes this case until someone moves it` : `Frozen when the case opened (${new Date(c.pin.pinned_at).toLocaleString("en-CA")}); a later release never changes this case until someone moves it`}>{c.release?.label ?? `Release ${c.pin.release_version}`}</Pill></h1>
@@ -265,15 +253,3 @@ function ClientPage() {
   return <Questionnaire caseId={id!} mode="sqr" />;
 }
 
-export function Toaster() {
-  const t = useToast();
-  return (
-    <div className="pointer-events-none fixed inset-x-4 bottom-4 z-[100] flex flex-col gap-2 sm:left-auto sm:w-96" aria-live="polite">
-      {t.list.map((x) => (
-        <div key={x.id} className={cn("pointer-events-auto flex items-start gap-3 rounded-lg border border-border border-l-4 bg-surface-raised px-4 py-3 text-sm shadow-lg", x.tone === "ok" ? "border-l-ok" : x.tone === "danger" ? "border-l-danger" : "border-l-primary")}>
-          <p className="min-w-0 flex-1 [overflow-wrap:anywhere]">{x.text}</p><button className="shrink-0 text-text-muted" aria-label="Dismiss" onClick={() => t.drop(x.id)}><X className="size-4" /></button>
-        </div>
-      ))}
-    </div>
-  );
-}

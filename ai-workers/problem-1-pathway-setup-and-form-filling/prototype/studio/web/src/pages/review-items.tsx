@@ -5,6 +5,7 @@
 import * as React from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError, useAction, useActorId, useApi } from "@/lib/api";
+import { useWhere } from "@/components/frame";
 import { ChangePreview, useChangeCheck } from "@/ChangePreview";
 import { Button, Input, Notice, Panel, Pill, Textarea } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
@@ -27,8 +28,10 @@ function useMe() {
   const duties: readonly string[] = s.data?.actor?.duties ?? [];
   return { id, has: (d: string) => duties.includes(d), name: s.data?.actor?.name };
 }
+/** BK-3: the page's place, shown on the frame's one "where am I" line. */
 function Crumbs({ here }: { here: string }) {
-  return <nav aria-label="Path" className="text-xs text-text-muted"><Link to="/review" className="hover:underline">To review</Link> › {here}</nav>;
+  useWhere([{ label: "To review", to: "/review" }, { label: here }]);
+  return null;
 }
 function Head({ title, chip, tone = "warn", sub }: { title: string; chip?: string; tone?: string; sub?: React.ReactNode }) {
   return <div><div className="flex flex-wrap items-center gap-3"><h1 className="text-2xl font-bold tracking-tight">{title}</h1>{chip ? <Pill tone={tone}>{chip}</Pill> : null}</div>{sub ? <p className="mt-1 text-sm text-text-muted">{sub}</p> : null}</div>;

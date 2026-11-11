@@ -1,7 +1,7 @@
 import * as React from "react";
 import { RunChip } from "@/components/run-card";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Scale, Database, FileStack, FileText, Inbox, Layers, ListTree, Moon, RotateCcw, Sparkles, Sun, Upload, X } from "lucide-react";
+import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Scale, Database, FileStack, FileText, Inbox, Layers, ListTree, Moon, RotateCcw, Sparkles, Sun, Upload } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
@@ -28,6 +28,7 @@ import { draftBarWords } from "../../contracts/status-words";
 import { FINISHED_STORY_TIP, FinishedStoryDialog } from "@/components/demo-finished-story";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FoldOut } from "@/components/fold-out";
+import { Frame } from "@/components/frame";
 
 export default function App() {
   // The case area (runtime lane, R1c) has its own shell: firm and client pages, not the configuration studio.
@@ -64,26 +65,17 @@ function Shell() {
   const here = nav.find((n) => n.match ? n.match(loc.pathname) : loc.pathname.startsWith(n.to)) ?? (loc.pathname === "/release" ? { label: "Review and release" } : undefined);
   React.useEffect(() => { document.title = here ? `${here.label} · Product Studio` : "Product Studio"; }, [here?.label]);
   return (
-    <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-30 flex h-14 min-w-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
-        <Link to="/" className="flex shrink-0 items-center gap-3" aria-label="Product Studio home">
-          {/* Team BrandLogo convention: the "-dark" artwork is brand blue for light surfaces; the plain one is white. */}
-          <img src="/brand/expat-ready-notagline-dark.svg" alt="Expat Ready" className="h-6 dark:hidden" />
-          <img src="/brand/expat-ready-notagline.svg" alt="Expat Ready" className="hidden h-6 dark:block" />
-        </Link>
-        <span className="hidden h-6 w-px bg-border sm:block" />
-        <div className="hidden shrink-0 leading-tight sm:block"><p className="text-sm font-semibold">Product Studio</p><p className="text-[11px] text-text-muted">Pathway Configurator</p></div>
-        <Pill tone="warn" className="ml-1 hidden lg:inline-flex" title="Working prototype on a local demo database: no sign-in, simulated people, not production">Prototype · demo workspace</Pill>
-        <div className="ml-auto flex min-w-0 items-center gap-2">
-          <RunChip />
-          <DemoControls loaded={!!session.data?.sampleLoaded} programsExist={(session.data?.counts?.programs ?? 0) > 0} />
-          {/* QA-54: the list holds the Studio people; a case person who arrives here is shown too, so the header names them. */}
-          <PersonaSwitch actors={casePerson ? [...(session.data?.actors ?? []), me] : session.data?.actors ?? []} />
-          <ThemeToggle />
-        </div>
-      </header>
-      {!casePerson && <DraftBar />}
-      <div className="flex flex-1">
+    <Frame area="studio" title="Product Studio" subtitle="Pathway Configurator" home="/" staff={!casePerson}
+      badge={<Pill tone="warn" className="ml-1 hidden lg:inline-flex" title="Working prototype on a local demo database: no sign-in, simulated people, not production">Prototype · demo workspace</Pill>}
+      controls={<>
+        <RunChip />
+        <DemoControls loaded={!!session.data?.sampleLoaded} programsExist={(session.data?.counts?.programs ?? 0) > 0} />
+        {/* QA-54: the list holds the Studio people; a case person who arrives here is shown too, so the header names them. */}
+        <PersonaSwitch actors={casePerson ? [...(session.data?.actors ?? []), me] : session.data?.actors ?? []} />
+        <ThemeToggle />
+      </>}
+      band={!casePerson ? <DraftBar /> : null}
+      menu={<>
         {/* The menu column's white background and border run the full page height (S1-finish); the menu itself stays in view. */}
         <div className={cn("hidden w-56 shrink-0 border-r border-border bg-surface-raised", !casePerson && "md:block")} data-menu-column>
         <nav aria-label="Studio" className="sticky top-14 flex h-[calc(100vh-3.5rem)] flex-col gap-0.5 p-3">
@@ -98,45 +90,42 @@ function Shell() {
           </div>
         </nav>
         </div>
-        <main className="min-w-0 flex-1 px-4 py-6 md:px-6">
-          {session.isError ? ((session.error as ApiError).status ?? 500) < 500
-            ? <Notice tone="danger" title="The studio did not accept the simulated person">Pick a person under Simulated person, then reload this page. ({(session.error as Error).message})</Notice>
-            : <Notice tone="danger" title="The studio server is not answering">Start it with studio/start.sh, then reload this page. ({(session.error as Error).message})</Notice>
-            : !session.isPending && !session.data?.actor ? <Notice tone="danger" title="The studio answered without a person">Something between this page and the studio changed its answer. Reload this page; if it stays, restart the studio.</Notice> : null}
-          {/* C2.12: a page opened from a form's guided path keeps the way back (?form=&c=). */}
-          {!casePerson ? <ReturnStrip /> : null}
-          {casePerson ? <Notice tone="warn" title="This page is for the configuration people" action={<Link className="whitespace-nowrap text-text-link underline" to="/cases">Open your cases</Link>}>{me.name} (simulated) works on cases. Programs, forms and rules are set up here by the configuration people; your work is in Cases.</Notice> : <Routes>
-            <Route path="/" element={<ProgramsPage />} />
-            <Route path="/review" element={<ToReviewPage />} />
-            <Route path="/structure" element={<StructurePage />} />
-            <Route path="/review/change/:id" element={<LibraryChangePage />} />
-            <Route path="/review/proposals" element={<ProposalsPage />} />
-            <Route path="/review/batch/:id" element={<ChangeBatchPage />} />
-            <Route path="/review/merge/:id" element={<MergeReviewPage />} />
-            <Route path="/review/held/:id" element={<HeldFilePage />} />
-            <Route path="/review/edition/:id" element={<EditionImpactPage />} />
-            <Route path="/review/form-fields/:id" element={<FormFieldsPage />} />
-            <Route path="/c/:id" element={<CombinationPage />} />
-            <Route path="/c/:id/:tab" element={<CombinationPage />} />
-            <Route path="/c/:id/jobs/:jobId" element={<JobPage />} />
-            <Route path="/library/fields" element={<FieldsPage />} />
-            <Route path="/library/fields/:key" element={<FieldPage />} />
-            <Route path="/library/sections" element={<SectionsPage />} />
-            <Route path="/library/documents" element={<DocumentTypesPage />} />
-            <Route path="/library/forms" element={<FormsPage />} />
-            <Route path="/library/checks" element={<ChecksPage />} />
-            <Route path="/library/rules" element={<RulesPage />} />
-            <Route path="/release" element={<ReleasePage />} />
-            <Route path="/ai" element={<AiWorkPage />} />
-            <Route path="/ai/:batchId" element={<AiBatchPage />} />
-            <Route path="/releases" element={<ReleasesPage />} />
-            <Route path="/activity" element={<ActivityPage />} />
-            <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/">Back to Immigration programs</Link></Notice>} />
-          </Routes>}
-        </main>
-      </div>
-      <Toaster />
-    </div>
+      </>}>
+      {session.isError ? ((session.error as ApiError).status ?? 500) < 500
+        ? <Notice tone="danger" title="The studio did not accept the simulated person">Pick a person under Simulated person, then reload this page. ({(session.error as Error).message})</Notice>
+        : <Notice tone="danger" title="The studio server is not answering">Start it with studio/start.sh, then reload this page. ({(session.error as Error).message})</Notice>
+        : !session.isPending && !session.data?.actor ? <Notice tone="danger" title="The studio answered without a person">Something between this page and the studio changed its answer. Reload this page; if it stays, restart the studio.</Notice> : null}
+      {/* C2.12: a page opened from a form's guided path keeps the way back (?form=&c=). */}
+      {!casePerson ? <ReturnStrip /> : null}
+      {casePerson ? <Notice tone="warn" title="This page is for the configuration people" action={<Link className="whitespace-nowrap text-text-link underline" to="/cases">Open your cases</Link>}>{me.name} (simulated) works on cases. Programs, forms and rules are set up here by the configuration people; your work is in Cases.</Notice> : <Routes>
+        <Route path="/" element={<ProgramsPage />} />
+        <Route path="/review" element={<ToReviewPage />} />
+        <Route path="/structure" element={<StructurePage />} />
+        <Route path="/review/change/:id" element={<LibraryChangePage />} />
+        <Route path="/review/proposals" element={<ProposalsPage />} />
+        <Route path="/review/batch/:id" element={<ChangeBatchPage />} />
+        <Route path="/review/merge/:id" element={<MergeReviewPage />} />
+        <Route path="/review/held/:id" element={<HeldFilePage />} />
+        <Route path="/review/edition/:id" element={<EditionImpactPage />} />
+        <Route path="/review/form-fields/:id" element={<FormFieldsPage />} />
+        <Route path="/c/:id" element={<CombinationPage />} />
+        <Route path="/c/:id/:tab" element={<CombinationPage />} />
+        <Route path="/c/:id/jobs/:jobId" element={<JobPage />} />
+        <Route path="/library/fields" element={<FieldsPage />} />
+        <Route path="/library/fields/:key" element={<FieldPage />} />
+        <Route path="/library/sections" element={<SectionsPage />} />
+        <Route path="/library/documents" element={<DocumentTypesPage />} />
+        <Route path="/library/forms" element={<FormsPage />} />
+        <Route path="/library/checks" element={<ChecksPage />} />
+        <Route path="/library/rules" element={<RulesPage />} />
+        <Route path="/release" element={<ReleasePage />} />
+        <Route path="/ai" element={<AiWorkPage />} />
+        <Route path="/ai/:batchId" element={<AiBatchPage />} />
+        <Route path="/releases" element={<ReleasesPage />} />
+        <Route path="/activity" element={<ActivityPage />} />
+        <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/">Back to Immigration programs</Link></Notice>} />
+      </Routes>}
+    </Frame>
   );
 }
 
@@ -360,16 +349,4 @@ function Preserved({ list }: { list: any[] }) {
   return <Table dense head={["Kept", "Files", "Fingerprint (SHA-256)"]}>{list.map((p) => <tr key={p.label}><td>{p.label}</td><td>{p.files}</td><td className="mono">{p.sha256.slice(0, 16)}…</td></tr>)}</Table>;
 }
 
-function Toaster() {
-  const t = useToast();
-  return (
-    <div data-toaster className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-2" aria-live="polite">
-      {t.list.map((x) => (
-        <div key={x.id} className={cn("pointer-events-auto flex items-start gap-3 rounded-lg border border-border border-l-4 bg-surface-raised px-4 py-3 text-sm shadow-lg", x.tone === "ok" ? "border-l-ok" : x.tone === "danger" ? "border-l-danger" : "border-l-primary")}>
-          <p className="min-w-0 flex-1 [overflow-wrap:anywhere]">{x.text}</p><button className="shrink-0 text-text-muted" aria-label="Dismiss" onClick={() => t.drop(x.id)}><X className="size-4" /></button>
-        </div>
-      ))}
-    </div>
-  );
-}
 export { getActor };

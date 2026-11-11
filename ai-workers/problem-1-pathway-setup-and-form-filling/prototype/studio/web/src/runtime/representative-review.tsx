@@ -7,9 +7,9 @@
 // keeps the facts hashes it loaded and sends them; a change meanwhile is a 409 with Reload, nothing stamped (M4). The
 // server works everything out (api/src/review-rounds.ts); nothing is decided here. Legal points: Unconfirmed: no counsel.
 import * as React from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, RotateCcw } from "lucide-react";
+import { Check, RotateCcw } from "lucide-react";
 import { api, ApiError, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Field, Notice, Pill, Select, Textarea } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -51,7 +51,6 @@ export function RepresentativeReviewLatest() {
   if (list.isLoading || list.data?.rounds.length) return <div className="mx-auto max-w-6xl space-y-3"><Skeleton className="h-8 w-80" /><Skeleton className="h-64 w-full" /><span className="sr-only" role="status">Loading the review…</span></div>;
   return (
     <div className="mx-auto max-w-6xl space-y-4" data-review-empty>
-      <Link to={`/cases/${id}`} className="inline-flex items-center gap-1 text-sm text-text-link hover:underline"><ArrowLeft className="size-4" aria-hidden />Back to the case</Link>
       <h1 className="text-2xl font-semibold">Representative's review</h1>
       {list.isError ? <Notice tone="danger" title="The review could not be loaded">{(list.error as Error).message}</Notice>
         : <Notice title="Nothing is sent for review yet">When the filings are prepared, the case officer presses <strong>Send for review</strong> at the head of Ready to file on the case page. The representative of record then checks each form here and approves it or sends it back with reasons.</Notice>}
@@ -117,15 +116,14 @@ export function RepresentativeReviewPage() {
   }
 
   if (q.isLoading) return <div className="mx-auto max-w-6xl space-y-3" data-review-loading><Skeleton className="h-8 w-80" /><div className="grid gap-4 lg:grid-cols-[340px_1fr]"><Skeleton className="h-96" /><Skeleton className="h-96" /></div><span className="sr-only" role="status">Loading the review…</span></div>;
-  if (q.isError || !v) return <div className="mx-auto max-w-6xl space-y-3"><Link to={`/cases/${id}`} className="inline-flex items-center gap-1 text-sm text-text-link hover:underline"><ArrowLeft className="size-4" aria-hidden />Back to the case</Link><Notice tone="danger" title="This review could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void q.refetch()}>Retry</Button>}>{(q.error as Error | undefined)?.message ?? "Not found."}</Notice></div>;
+  if (q.isError || !v) return <div className="mx-auto max-w-6xl space-y-3"><Notice tone="danger" title="This review could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void q.refetch()}>Retry</Button>}>{(q.error as Error | undefined)?.message ?? "Not found."}</Notice></div>;
   const decidable = !!row && v.can_decide && row.status === "under_review";
   const reapprovable = !!row && v.can_decide && row.reapprovable;
   const changedForms = row?.forms.filter((x) => x.state === "approval_withdrawn") ?? [];
   return (
     <TooltipProvider delayDuration={200}>
       <div className="mx-auto max-w-6xl space-y-4" data-review-page data-round={v.number}>
-        <Link to={`/cases/${id}`} className="inline-flex items-center gap-1 text-sm text-text-link hover:underline"><ArrowLeft className="size-4" aria-hidden />Back to the case</Link>
-        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
             <h1 ref={heading} tabIndex={-1} className="text-2xl font-semibold outline-none">Representative's review · Round {v.number}</h1>
             <p className="text-sm text-text-muted">The representative of record checks each form and approves it or sends it back. {v.kind === "reapprove" ? "Re-approved after a change" : v.kind === "one_step" ? "Reviewed in one step from Ready to file" : `Sent by ${v.sent.name}`}, {when(v.sent.at)} · Representative of record: {v.representative.name ?? "none set"}.</p>
