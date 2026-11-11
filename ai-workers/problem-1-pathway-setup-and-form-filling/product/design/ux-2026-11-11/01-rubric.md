@@ -169,7 +169,7 @@ The founder's order is "simplicity, perfection, scalability, stability, reliabil
 | D6 Feedback, D7 Help, D8 Consistency, D10 Accessibility | 1.5 each | Necessary everywhere; most are cheap once shared |
 | D11 Responsiveness, D12 Speed, D13 Empty and loading | 1 each | Client pages raise D11 by counting 375 px double |
 
-**Weighted score** = Σ (score × weight) ÷ Σ weights (sum of weights = 28).
+**Weighted score** = Σ (score × weight) ÷ Σ weights (sum of weights = 26; a dimension scored n/a on a screen drops out of both sums).
 
 **"Best for our purpose", the stop line.** We stop improving when, on the journey's screens at both widths:
 1. the weighted journey score is **≥ 8.5**;

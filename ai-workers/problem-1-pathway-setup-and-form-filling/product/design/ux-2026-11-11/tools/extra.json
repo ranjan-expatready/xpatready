@@ -1,0 +1,13 @@
+[
+{"id":"field-page","base":"http://localhost:4481","path":"/library/fields/person.date_of_birth","label":"A shared field's page (Date of birth)"},
+{"id":"open-case-dialog","base":"http://localhost:4482","path":"/cases","actor":"user-O","label":"Open a case dialog","steps":"await page.getByRole('button',{name:'Open a case'}).click(); await page.waitForTimeout(500);"},
+{"id":"open-case-dialog--error","base":"http://localhost:4482","path":"/cases","actor":"user-O","label":"Open a case dialog, empty submit","steps":"await page.getByRole('button',{name:'Open a case'}).click(); await page.waitForTimeout(400); await page.getByRole('button',{name:'Open case'}).click(); await page.waitForTimeout(500);"},
+{"id":"add-person-dialog","base":"http://localhost:4482","path":"/cases/53465e1a-2e2d-4bde-b425-89903f3bd86e","actor":"user-O","label":"Add spouse or partner dialog","steps":"await page.getByRole('button',{name:'Add spouse or partner (travelling)'}).click(); await page.waitForTimeout(500);"},
+{"id":"case-page--new-case","base":"http://localhost:4482","path":"/cases/53465e1a-2e2d-4bde-b425-89903f3bd86e","actor":"user-O","label":"Case page, a new family case mid-way (case officer)"},
+{"id":"client-question-page","base":"http://localhost:4482","path":"/cases/53465e1a-2e2d-4bde-b425-89903f3bd86e/questionnaire?part=1","actor":"user-P","label":"Client questionnaire, one part (part 1)"},
+{"id":"client-question-page--long","base":"http://localhost:4482","path":"/cases/53465e1a-2e2d-4bde-b425-89903f3bd86e/questionnaire?part=15","actor":"user-P","label":"Client questionnaire, Personal details part (57 inputs)"},
+{"id":"client-question-page--error","base":"http://localhost:4482","path":"/cases/53465e1a-2e2d-4bde-b425-89903f3bd86e/questionnaire?part=19","actor":"user-P","label":"Client questionnaire, a part with an answer missing after Save","steps":"await page.getByRole('button',{name:'Save and continue'}).click(); await page.waitForTimeout(1200);"},
+{"id":"client-task-list--new","base":"http://localhost:4482","path":"/cases/53465e1a-2e2d-4bde-b425-89903f3bd86e/questionnaire","actor":"user-P","label":"Client questionnaire task list, mid-way"},
+{"id":"answer-sheet","base":"http://localhost:4481","path":"/cases/58200d34-733e-4d35-a0c0-fff8f87f2cb4/sheet/6ba153fd-f3a4-4114-b52a-505338e43595","actor":"user-O","label":"Online answer sheet (portal order)"},
+{"id":"to-review--approver","base":"http://localhost:4480","path":"/review","actor":"user-B","label":"To review as the Approver"}
+]
