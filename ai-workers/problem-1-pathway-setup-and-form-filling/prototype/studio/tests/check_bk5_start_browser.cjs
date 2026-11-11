@@ -85,6 +85,8 @@ const LONG = 400000;
   const before = posts.length;
   await p.keyboard.press("Escape"); await dialog().waitFor({ state: "detached" });
   step("Cancel (Escape) sends nothing", posts.length === before);
+  await p.waitForFunction(() => document.activeElement?.getAttribute("data-start-door") === "configured", null, { timeout: 3000 }).catch(() => undefined);
+  step("Keyboard (break m4): closing the confirm puts focus back on the door that opened it", await p.evaluate(() => document.activeElement?.getAttribute("data-start-door")) === "configured");
 
   // ---- Review M1: the page never sends RESET for the person on a state it has not read, or that changed meanwhile.
   await p.route("**/api/demo/status", async (r) => { await new Promise((res) => setTimeout(res, 3000)); await r.continue().catch(() => undefined); });

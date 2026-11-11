@@ -13,7 +13,7 @@ import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { DoorOpen, RotateCcw } from "lucide-react";
-import { api, setActor, useActorId, useApi, useToast } from "@/lib/api";
+import { api, ApiError, setActor, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { FinishedStoryDialog } from "@/components/demo-finished-story";
@@ -60,7 +60,11 @@ function useElapsed(from: number | null) {
 export function StartPage() {
   const actorId = useActorId();
   const session = useApi<Session>(["session", actorId], "/session");
-  const status = useApi<Status>(["demo-status", "start"], "/demo/status", { refetchInterval: (q) => (q.state.data?.story?.state === "running" ? 3000 : false) });
+  const status = useApi<Status>(["demo-status", "start"], "/demo/status", { refetchInterval: (q) => {
+    // The story's job: every 3 s. Break m3: "Another state" with programs may be a load running elsewhere (another tab, or
+    // this one before a reload): read again every 10 s, so "Last loaded" follows when it finishes.
+    const d = q.state.data; return d?.story?.state === "running" ? 3000 : d && d.programsExist && !d.checkpoint ? 10_000 : false;
+  } });
   const [door, setDoor] = React.useState<DoorKey | null>(null);
   const [storyOpen, setStoryOpen] = React.useState(false);
 
@@ -121,7 +125,10 @@ export function StartPage() {
         })}
       </div>
       <p className="text-xs text-text-muted">The six on their own and "With an LMIA from its reviewed release" stay in the Demo menu.</p>
-      {door ? <StartDialog door={door} status={s} onClose={() => setDoor(null)} onStory={() => setStoryOpen(true)} /> : null}
+      {door ? <StartDialog door={door} status={s} onClose={() => {
+        // Break m4: the dialog is unmounted on close, so focus goes back to the door that opened it (when it is still there).
+        const k = door; setDoor(null); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-start-door="${k}"]`)?.focus());
+      }} onStory={() => setStoryOpen(true)} /> : null}
       <FinishedStoryDialog open={storyOpen} onOpenChange={setStoryOpen} />
     </div>
   );
@@ -197,11 +204,14 @@ function StartDialog({ door, status, onClose, onStory }: { door: DoorKey; status
       toast.push({ tone: emptied.preserved_unchanged ? "ok" : "danger", text: `${NAME.configured}: loaded in ${total.toFixed(0)} s. ${kept(emptied)} Pick the pathway to change, then Review and release.` });
       onClose(); nav("/");
     } catch (e) {
-      const words = (e as Error).message;
+      const words = (e as Error).message, refused = e instanceof ApiError && e.status === 409;
       void qc.invalidateQueries(); // whatever happened, every screen reads the demo again
       // BR-6: the reset ran, the load did not finish: the demo is not empty and not loaded, and Start again empties it first.
-      setFailed(emptied ? { title: "Stopped part way", words: `Emptied; the configured load stopped part way: ${words} Start again empties it first.`, retry: true }
-        : { title: "Not started", words, retry: true });
+      // Break m1: a load refused (409) before it began wrote nothing: the demo is emptied, not part loaded.
+      // Break m2: a retry refused before anything ran leaves the demo as the last try left it, and says so.
+      setFailed(emptied ? (refused ? { title: "Emptied, not loaded", words: `Emptied; the configured load did not start: ${words} Start again empties it first.`, retry: true }
+          : { title: "Stopped part way", words: `Emptied; the configured load stopped part way: ${words} Start again empties it first.`, retry: true })
+        : { title: "Not started", words: failed?.title === "Stopped part way" || failed?.title === "Emptied, not loaded" ? `${words} Nothing more was done: the demo is still as the last try left it (emptied, not fully loaded).` : words, retry: true });
     } finally { once.current = false; setPhase(null); }
   };
 
