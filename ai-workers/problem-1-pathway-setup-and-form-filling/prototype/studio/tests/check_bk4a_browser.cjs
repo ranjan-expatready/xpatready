@@ -103,6 +103,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("BR-8: Continue as Case officer changes the person, said once", await said(p, /Now: Case officer \(simulated\)/) && await stored(p) === "user-O");
   await p.getByRole("link", { name: /Client questionnaire|Open it as Client A/ }).first().waitFor({ timeout: 30000 }).catch(() => {});
   step("BR-8: the case page then opens as the case officer", await p.locator("[data-not-case-person]").count() === 0 && new URL(p.url()).pathname === `/cases/${caseId}`);
+  // Review M2 (BR-1): the case's release pill says on screen who you become in the Studio.
+  const pill = p.locator("[data-case-release]");
+  step("review M2: the release pill shows \"(as Configuration author)\" on screen, and its name starts with its words", /\(as Configuration author\)/.test(await pill.innerText()) && (await pill.getAttribute("aria-label")).startsWith((await pill.innerText()).replace(/\s+/g, " ").trim().replace(/ ?→$/, "")), { text: await pill.innerText(), name: await pill.getAttribute("aria-label") });
   // The frame link names who it acts as; Back afterwards changes nobody.
   const toStudio = p.locator("[data-where-area]");
   step("frame: the case area's link to the Studio names who it acts as", (await toStudio.innerText()).trim() === "Product Studio (as Configuration author)", await toStudio.innerText());

@@ -1,6 +1,6 @@
 // BK-4a (P-447 (2), P-456 (3), P-484; screens/BK-4-sign-in-hand-offs/concept.md §3): the nine simulated people, in the
 // team's three sign-in groups (SA-07 §3.0: Expat Ready staff, firm users, clients). One list for the sign-in page, the
-// header's person picker and the case area. It mirrors api/src/core.ts ACTORS + RUNTIME_ACTORS (tests/check_bk4_people.ts
+// header's person picker and the case area. It mirrors api/src/core.ts ACTORS + RUNTIME_ACTORS (tests/check_bk4a.ts
 // fails when they differ); the server still decides every right from x-actor. Scaffolding for the team's sign-in pages
 // (P-33): no passwords, Simulated on every screen. No imports, so the code check reads it without a browser.
 

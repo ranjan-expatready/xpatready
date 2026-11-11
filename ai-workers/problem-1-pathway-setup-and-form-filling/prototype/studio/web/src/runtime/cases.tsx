@@ -252,8 +252,9 @@ function ReleasePill({ c }: { c: CaseInfo }) {
   const label = c.release?.label ?? `Release ${c.pin.release_version}`;
   const frozen = c.pin.revision > 1 ? `Moved to this release on ${when}; a later release never changes this case until someone moves it` : `Frozen when the case opened (${when}); a later release never changes this case until someone moves it`;
   return (
-    <Link to={`/c/${c.combination_id}`} onClick={leaveCasesAsStudio} data-case-release aria-label={`${label}: open its set-up in Product Studio (as ${personOf(STUDIO_AUTHOR)!.name})`} title={`${frozen}. Opens its set-up in Product Studio as the ${personOf(STUDIO_AUTHOR)!.name} (simulated).`}
-      className="inline-flex min-h-6 items-center rounded-md outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-primary/40"><Pill tone="info">{label}<ArrowRight className="size-3" aria-hidden /></Pill></Link>
+    // BK-4a (review M2, BR-1): the pill says on screen who you become in the Studio, and its name starts with those words.
+    <Link to={`/c/${c.combination_id}`} onClick={leaveCasesAsStudio} data-case-release aria-label={`${label} (as ${personOf(STUDIO_AUTHOR)!.name}): open its set-up in Product Studio`} title={`${frozen}. Opens its set-up in Product Studio as the ${personOf(STUDIO_AUTHOR)!.name} (simulated).`}
+      className="inline-flex min-h-6 items-center rounded-md outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-primary/40"><Pill tone="info">{label}<span className="font-normal" data-case-release-person> (as {personOf(STUDIO_AUTHOR)!.name})</span><ArrowRight className="size-3" aria-hidden /></Pill></Link>
   );
 }
 

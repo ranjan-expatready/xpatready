@@ -78,7 +78,7 @@ function Shell() {
   React.useEffect(() => { document.title = here ? `${here.label} · Product Studio` : "Product Studio"; }, [here?.label]);
   return (
     <Frame area="studio" title="Product Studio" subtitle="Pathway Configurator" home="/" staff={!casePerson}
-      badge={<Pill tone="warn" className="ml-1 hidden lg:inline-flex" title="Working prototype on a local demo database: no sign-in, simulated people, not production">Prototype · demo workspace</Pill>}
+      badge={<Pill tone="warn" className="ml-1 hidden lg:inline-flex" title="Working prototype on a local demo database: simulated people signed in by role, no passwords, not production">Prototype · demo workspace</Pill>}
       controls={<>
         <RunChip />
         <DemoControls loaded={!!session.data?.sampleLoaded} programsExist={(session.data?.counts?.programs ?? 0) > 0} />
