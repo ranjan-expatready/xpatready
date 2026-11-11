@@ -18,10 +18,11 @@ import type { z } from "zod";
 import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type AddedTag, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
+import { factWords } from "../../engine/sources.ts";
 import { newestEdition } from "../../engine/editions.ts";
 import { personName } from "./form-additions.ts";
 import { caseView } from "../../engine/runtime/case.ts";
-import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, gateOf, inputHash, isGateFact, markNothingRecorded, pdfForms, readiness, releaseForms, blocksLock, type FormFact, type GatePlacement, type GroupFact, type OnForm } from "../../engine/runtime/forms.ts";
+import { changedFacts, changedGroups, copyOnlyForms, formCoverage, groupFacts, gateOf, inputHash, isGateFact, markNothingRecorded, notApplyingWhy, notApplyingWords, pdfForms, readiness, releaseForms, blocksLock, type FormFact, type GatePlacement, type GroupFact, type OnForm } from "../../engine/runtime/forms.ts";
 import { CHANNEL_WORDS, isBarcodeForm, NOT_FOR_FILING, type Channel } from "../../contracts/forms.ts";
 import { acceptsOf, answerSheetOnly, answerSheetOnlyWords, lineOf, notAcceptedWords } from "../../engine/channels.ts";
 import type { BoxRow } from "../../engine/render.ts";
@@ -203,6 +204,7 @@ export class CaseForms implements OnModuleInit {
     const caseWords = caseWordsOf(s, view);
     const items = await this.itemChannels(c.id), nameOf = { caseReference: c.reference, of: nameOfPeople(people) };
     const forms: CaseForm[] = [];
+    const whyKept = notApplyingWords(s, people, answers, rows, (f) => labels.get(f) ?? factWords(s, f)); // QA-391
     // M3-S5 review M1: an Online form whose copies were made before the library recorded it Online only keeps them in view
     // (only those: the forms this release copies with no record read).
     const withCopies = new Set(copies.map((x) => x.formNumber)), listed = [...new Set([...pdf, ...[...copyOnlyForms(s, new Map())].filter((f) => withCopies.has(f))])].sort();
@@ -223,7 +225,7 @@ export class CaseForms implements OnModuleInit {
         if (chosen(s, items, form, p.subjectId) === "ONLINE" && sheetOnly(form) && !mine.length) continue;
         const channel = chosen(s, items, form, p.subjectId);
         const onForm = onFormOf(s, form, cov, view, caseWords); // QA-165: readiness and the open fields read the same copy
-        forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialOf(s, form).passed, trial_why: trialOf(s, form).why, channel, for_filing: channel !== "ONLINE" && channel !== "NOT_NEEDED", needs_validate: needsValidate(form, channel),
+        forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, applies_why: applies ? null : whyKept(form, p.subjectId), trial_passed: trialOf(s, form).passed, trial_why: trialOf(s, form).why, channel, for_filing: channel !== "ONLINE" && channel !== "NOT_NEEDED", needs_validate: needsValidate(form, channel),
           draft: { written_now: cov?.facts.filter((x) => !isGateFact(x)).length ?? 0, mapped: cov?.mapped ?? 0, to_fix: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
           readiness: readiness(view, form, p.subjectId, onForm), fields_open: onForm?.open ?? [], copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId), copyNotForFiling(s, x), nameOf)),
           added: addedTag(s, form, p.subjectId) });
@@ -429,6 +431,8 @@ export class CaseForms implements OnModuleInit {
       conflict(`This copy of ${x.formNumber} was made while it was filed Online, so it is stamped "${NOT_FOR_FILING}". Generate a new copy and lock that one.`);
     const { answers, rows, groups } = await this.runtime.state(c);
     const cov = formCoverage(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId);
+    // QA-391 (P-65, C9.5): a form that no longer applies is kept and listed, never filed or uploaded back.
+    if (!cov || cov.applies === false) conflict(`${x.formNumber} no longer applies to this person: ${notApplyingWhy(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId, (f) => factWords(this.runtime.snapshotOf(c), f))}. Its copies are kept, never filed.`);
     const lockView = caseView(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, "agent", new Date(), groups);
     const changed = [...changedFacts((x.snapshot.factsJson as Stored).facts, cov?.facts ?? []), ...changedGroups((x.snapshot.factsJson as Stored).groups, groupFacts(lockView, x.formNumber, x.subjectId))];
     if (changed.length) conflict(`This copy is out of date (${changed.length} change${changed.length === 1 ? "" : "s"} since it was made); generate a new copy and lock that one.`);
