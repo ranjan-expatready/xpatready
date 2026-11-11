@@ -62,3 +62,29 @@ The other selected suites (the builder's run and CI). A retired combination in t
 Journey test: `journey-test-reviewer-pr2-2026-11-11.md`, **8½/10** (pass, no 0).
 
 **Verdict: Approve** (commit 47595217af66f58dfcde82b7c695b2e61b70fb02; no open Blocker or Major). m1-m3 and the release-number follow-up are Shoulds: fix them, or list them in the PR with a follow-up row.
+
+## Re-review (diff only): d2204b626 (`git diff 47595217a..d2204b626 -- '*.tsx' '*.cjs'`)
+11 Nov 2026 · same reviewer. **Copy:** rv_bk3r on :4484 (fresh each time). Live AI was off (US$0). Stopped afterwards; test-copies.sh shows 0.
+**What changed:** 3 code and test files, +35/−5, still web/src plus one test. My review, the journey report and the three screenshots were committed unchanged.
+- **m1: closed.**
+  - `plainClick` (frame.tsx) is now the one test for "follows the link in this tab". Both `leaveCasesAsStudio` and `actAsCaseStaff(e)` (cases.tsx:45) use it. A Ctrl/Cmd-click on "Open a case on Release N" opens the new tab and leaves the Studio tab as the author.
+  - The new suite step asserts exactly that. At 47595217a my walk saw that tab turn into the refusal, so the step would have failed there.
+  - Keyboard Enter still switches the person: Enter fires a click with button 0 and no modifiers.
+- **m2: closed.**
+  - When the dialog came from `?open`, `onDone` first replaces the list's address with `/cases`, then pushes the case.
+  - My direct walk: Studio → Open a case → Enter → case RR-1 (once, by API) → browser Back lands on `/cases` with no dialog.
+  - The suite's Back-twice step (Studio → case → list, no `?open`, no dialog) passes at both widths. Opening from the list's own button is unchanged: no `open`, so there is no replace.
+- **m3: closed.**
+  - The suite answers `/runtime/openable` with `startable:false` for the released combination (a client-side route).
+  - It asserts the notice `"<combination>" is not ready for new cases` and that the select does not offer it.
+  - A test-side stand-in is enough here: the server's startable check and its 409 are unchanged and covered by their own suites. This step only proves the dialog's branch.
+- **No new findings.** Two navigations in one `onDone` are safe: both history operations run in order before the next render.
+- **Evidence:**
+  - check_bk3_links_browser.cjs **56/56 twice** on a fresh :4484.
+  - check_bk3_frame.ts 128/128. Web `tsc` is clean.
+  - "Product Studio →" still opens the Studio as the author, not the refusal.
+  - I did not re-run check_bk3_frame_browser. The only frame.tsx change is extracting `plainClick`, with the same logic. The links suite and my walk exercise both callers.
+- **Still open, as before:** the release-number follow-up ("release 2" in the dialog vs "Release 6"), a Should with a follow-up row. Also the PR 1 browser-Back-to-Studio note, for BK-4. Neither blocks.
+- **Not checked:** the selected suites beyond these (the builder's run and the ready check).
+
+**Verdict: Approve** (head d2204b626205aef616598fdc4df3302db31e1cec; no open Blocker or Major).
