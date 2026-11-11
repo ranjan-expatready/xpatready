@@ -10,7 +10,7 @@ ROOT="$(git rev-parse --show-toplevel)"; cd "$ROOT"
 P="ai-workers/problem-1-pathway-setup-and-form-filling"; STUDIO="$P/prototype/studio"
 NODE_VER=24.21.0; PGPORT="${PGPORT:-54329}"
 SUDO=""; [ "$(id -u)" = 0 ] || SUDO="sudo -n"
-apt_ready=""; apt() { command -v apt-get >/dev/null || return 1; [ -n "$apt_ready" ] || { $SUDO apt-get update -qq; apt_ready=1; }
+apt_ready=""; apt() { command -v apt-get >/dev/null || return 1; [ -n "$apt_ready" ] || { $SUDO apt-get update -qq || true; apt_ready=1; }
   # Never prompt: a cloud image may already carry a config file (e.g. /etc/zsh/zshrc), so keep the existing one.
   $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Dpkg::Options::=--force-confdef \
     -o Dpkg::Options::=--force-confold "$@" </dev/null >/dev/null; }
@@ -35,8 +35,17 @@ elif [ -f "$PSRC/package-lock.json" ]; then mkdir -p "$PN" && cp "$PSRC/package.
 else echo "WARNING: $PSRC/package-lock.json is missing (the Mac's .tools/solution-1-prototype/node lock, P-82): the API cannot start"; fi
 
 echo "== zsh and locale"
-command -v zsh >/dev/null || apt zsh
-locale -a 2>/dev/null | grep -qi '^en_US.utf8$' || { apt locales; $SUDO locale-gen en_US.UTF-8 >/dev/null; }
+# P-214 (11 Nov 2026): GitHub's runners stopped resolving every *.ubuntu.com mirror, so apt failed with exit 100 in every
+# CI job. When apt cannot install zsh, take it from Homebrew, which GitHub's Ubuntu runner image carries and which
+# downloads from GitHub's own package registry, and link it to /usr/bin/zsh so every later step finds it.
+# brew_get <formula> <dir> <tool>...: install the formula and link each tool into <dir>. Also used for poppler below.
+brew_get() { local b=/home/linuxbrew/.linuxbrew/bin/brew f="$1" d="$2" t; shift 2; [ -x "$b" ] || return 1
+  echo "apt could not install $f; installing it with Homebrew instead" >&2
+  HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 HOMEBREW_NO_ANALYTICS=1 "$b" install --quiet "$f" >/dev/null || return 1
+  for t in "$@"; do $SUDO ln -sf "$("$b" --prefix)/bin/$t" "$d/$t" || return 1; done; }
+command -v zsh >/dev/null || apt zsh || brew_get zsh /usr/bin zsh
+locale -a 2>/dev/null | grep -qi '^en_US.utf8$' || { apt locales || true; $SUDO locale-gen en_US.UTF-8 >/dev/null; } ||
+  echo "WARNING: en_US.UTF-8 could not be installed (apt unreachable); continuing with the image's locales" >&2
 command -v zsh >/dev/null && echo "zsh $(zsh --version | cut -d' ' -f2)"
 
 echo "== python helpers (api PY path, hash-pinned)"
@@ -100,7 +109,9 @@ if [ "$(uname -s)" = Linux ]; then
   HB=/opt/homebrew/opt/postgresql@18/bin; $SUDO mkdir -p "$HB" /opt/homebrew/bin
   for t in psql createdb dropdb pg_dump pg_restore; do $SUDO ln -sf "$PGBIN/$t" "$HB/$t"; done
   if [ "$(id -u)" = 0 ]; then ln -sf /usr/local/bin/pg_ctl "$HB/pg_ctl"; else $SUDO ln -sf "$PGBIN/pg_ctl" "$HB/pg_ctl"; fi
-  command -v pdftoppm >/dev/null || apt poppler-utils
+  # P-214: the fill and form suites read PDFs with poppler; without it they fail, so Homebrew stands in when apt is down.
+  command -v pdftoppm >/dev/null || apt poppler-utils || brew_get poppler /usr/local/bin pdftoppm pdftotext pdfinfo ||
+    echo "WARNING: poppler-utils could not be installed (apt and Homebrew unreachable)" >&2
   for t in openssl pdftoppm pdftotext pdfinfo python3 tesseract; do
     command -v "$t" >/dev/null && [ ! -e "/opt/homebrew/bin/$t" ] && $SUDO ln -sf "$(command -v "$t")" "/opt/homebrew/bin/$t"; done
   CR=$(ls -d /opt/pw-browsers/chromium-*/chrome-linux*/chrome 2>/dev/null | sort -V | tail -1)
