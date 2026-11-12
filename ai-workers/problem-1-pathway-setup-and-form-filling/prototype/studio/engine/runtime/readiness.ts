@@ -8,8 +8,9 @@
 // permitted person passes with a recorded reason (who, when, reason; AG-07 BR-26, AG07-D24 `waive-deficiency`).
 // Block (cannot be passed, only fixed):
 //   P-144  barcode_not_validated  a barcode form on PDF upload or Paper with no validated copy read back for today's facts
-//   (P-172, Express Entry police certificates and medical exam, stays the one named exception: not built here yet,
-//    Express Entry is not on the M3 path; it joins BLOCK_CODES when that combination does.)
+//   P-172  document_never_waivable  a document line its release marks never waivable (M3-S4: any combination's line, e.g.
+//                          Express Entry's police certificates and medical exam) not received yet; a Not applicable or
+//                          Waived state never lifts it (api/src/case-checklist.ts refuses both on such a line)
 // CRITICAL warnings (passed with a reason, or fixed):
 //   P-238  missing_facts   a required fact the form reads is not answered or not confirmed
 //          fact_problem    a fact the form reads is answered with a problem (an optional one too, QA-122)
@@ -37,11 +38,11 @@ export type { Channel, Signature };
 /** Who owes a block or warning: the left list groups by these (You · Client · Employer · IRCC; r5c "One left list"). */
 export type Owes = "staff" | "representative" | "client" | "employer" | "ircc";
 
-export type BlockCode = "barcode_not_validated";
+export type BlockCode = "barcode_not_validated" | "document_never_waivable";
 /** P-315: the former blocks, now CRITICAL warnings passed with a recorded reason (P-237, P-238). */
 export type CriticalCode = "missing_facts" | "fact_problem" | "open_check" | "out_of_date" | "missing_signature" | "edition_expired" | "representative_review" | "fields_left_empty" | "no_copy" | "must_verify" | "hand_filled_copy";
 export type WarnCode = CriticalCode | "missing_document" | "finding" | "edition_superseded" | "copy_stale" | "entered_out_of_date" | "hand_write" | "release_update";
-export const BLOCK_CODES: readonly BlockCode[] = ["barcode_not_validated"];
+export const BLOCK_CODES: readonly BlockCode[] = ["barcode_not_validated", "document_never_waivable"];
 export const CRITICAL_CODES: readonly CriticalCode[] = ["missing_facts", "fact_problem", "open_check", "out_of_date", "missing_signature", "edition_expired", "representative_review", "fields_left_empty", "no_copy", "must_verify", "hand_filled_copy"];
 export const WARN_CODES: readonly WarnCode[] = [...CRITICAL_CODES, "missing_document", "finding", "edition_superseded", "copy_stale", "entered_out_of_date", "hand_write", "release_update"];
 export const isCritical = (code: string): code is CriticalCode => (CRITICAL_CODES as readonly string[]).includes(code);
@@ -85,7 +86,10 @@ export type FormItem = {
     /** Breaker M3: the box's own caption on the form ("Visitor", "Yes"), so two boxes of one question read apart. */
     caption?: string | null }[];
 };
-export type DocumentItem = { item?: string; label: string; subject: string; person: string; required: boolean; received: boolean; owes?: Owes };
+/** `never_waivable` (M3-S4, P-172): the release's line is never waivable; not received, it blocks whatever `required` says. */
+/** `waiting` (M3-S4 break M1, re-review N1): the questions a never waivable line waits for: one that may be needed, or a
+ *  needed line that is never waivable only if they call for it; either blocks until received or ruled out. */
+export type DocumentItem = { item?: string; label: string; subject: string; person: string; required: boolean; received: boolean; owes?: Owes; never_waivable?: boolean; waiting?: string };
 export type OpenCheck = { fact: string; label: string; subject: string; person: string };
 export type Finding = { id: string; subject?: string; form?: string; severity: "CRITICAL" | "MAJOR" | "MINOR" | "INFO"; words: string };
 export type Fee = { line: string; superseded?: boolean; acceptedUntil: string | null;
@@ -245,7 +249,15 @@ export function filingReadiness(x: FilingInput): FilingReadiness {
     // B149 (P-342, P-408): any firm staff may pass this with a reason (P-330 (3)), so the words say what happens.
     : "The representative of record has not reviewed this filing. Passing it needs a reason, which is kept in the history." });
   if (x.releaseUpdate) warn({ code: "release_update", item: `release|${x.filing}`, part: x.releaseUpdate.key, owes: "staff", words: x.releaseUpdate.words });
-  for (const d of x.documents ?? []) if (d.required && !d.received) warn({ code: "missing_document", item: d.item, form: d.label, subject: d.subject, owes: d.owes ?? "client", words: `${d.person}: ${d.label} not received.` });
+  for (const d of x.documents ?? []) {
+    if (d.received) continue;
+    // M3-S4 (P-172): a line its release marks never waivable blocks until received; passing it with a reason is refused.
+    if (d.never_waivable) block({ code: "document_never_waivable", item: d.item, form: d.label, subject: d.subject, owes: d.waiting && !d.required ? "staff" : d.owes ?? "client",
+      words: d.waiting && d.required ? `${d.person}: ${d.label} not received. Its release says it can never be waived if ${d.waiting} calls for it, so Ready to file waits until it is received or that answer rules it out.`
+        : d.waiting ? `${d.person}: ${d.label} may be needed: answer ${d.waiting} first. Its release says it can never be waived, so Ready to file waits until that is answered and, if it is needed, until it is received.`
+        : `${d.person}: ${d.label} not received. Its release says it can never be waived, so Ready to file waits until it is received.` });
+    else if (d.required) warn({ code: "missing_document", item: d.item, form: d.label, subject: d.subject, owes: d.owes ?? "client", words: `${d.person}: ${d.label} not received.` });
+  }
   for (const g of x.findings ?? []) warn({ code: "finding", item: `finding|${g.id}`, subject: g.subject, owes: "staff", words: `${g.severity} finding${g.form ? ` on ${g.form}` : ""}: ${g.words}` });
 
   // A pass covers the warning lines it named when it was written, with a reason (BR-26); a new line needs a new pass.
@@ -306,7 +318,7 @@ export function signatureNeeded(f: Pick<FormItem, "channel" | "signature" | "sig
 /** People's words for each code (never the key itself). */
 export const CODE_WORDS: Record<BlockCode | WarnCode, string> = {
   missing_facts: "Missing facts", fields_left_empty: "Mandatory form fields left empty", fact_problem: "A fact with a problem", open_check: "An open check", out_of_date: "Out of date",
-  missing_signature: "A missing signature", barcode_not_validated: "No validated copy read back", edition_expired: "Past IRCC's accepted-until date",
+  missing_signature: "A missing signature", barcode_not_validated: "No validated copy read back", document_never_waivable: "A document that can never be waived", edition_expired: "Past IRCC's accepted-until date",
   representative_review: "The representative's review", must_verify: "A value to verify before filing", missing_document: "A missing document", finding: "A review finding",
   edition_superseded: "A newer edition or fee", copy_stale: "A PDF copy out of date", entered_out_of_date: "A portal section entered before a change",
   hand_write: "A line to write by hand", no_copy: "No current copy made for filing", hand_filled_copy: "Filled by hand: upload the completed copy", release_update: "A newer release",

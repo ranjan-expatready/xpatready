@@ -4,7 +4,6 @@
 // 79). C6.12 step 24 adds the study permit, work permit, open work permit holder and visitor extension lines. Each rule has a pass and a fail. Pure: no server, no database; US$0.
 //   tsx studio/tests/check_r2_fee_table.ts
 import { ageCheck, deriveFilings, FEE_BASES, FEE_TABLE, feeRule, rulesFrom, type FeeTable } from "../engine/runtime/filings.ts";
-import { DERIVED_FOR } from "../engine/runtime/case-checklist.ts";
 import type { Participant } from "../engine/runtime/case.ts";
 import { recorder } from "./runtime/api.ts";
 
@@ -165,8 +164,7 @@ const r12 = rulesFrom(younger, "vv.single")!.fees.find((f) => f.key === "biometr
 const why12 = (ageCheck(r12, 10) as { why: string }).why;
 ok("R2 (review r1 m6) fail: an edited age speaks with the table's limit and the source's own words, never a made-up IRCC quote", /^Under 12:/.test(why12) && why12.includes(`"${r12.exempt!.source.quote}"`) && !/the age of 12/.test(why12), why12);
 
-// ── The checklist's combinations are data
-ok("R2: the checklist is worked out for the combinations the table marks (Visitor visa; C6.17, P-444: the study permit and With an LMIA)", ["vv.single", "sp.outside", "wp.lmia_inside"].every((k) => DERIVED_FOR.has(k)));
-ok("C6.17 fail (P-444): marking a combination's checklist adds no fee: the study permit and With an LMIA have no fee lines, so their fees stay not worked out", ["sp.outside", "wp.lmia_inside"].every((k) => FEE_TABLE.combinations[k]?.lines.length === 0 && rulesFrom(FEE_TABLE, k) === undefined));
-ok("R2 fail: a combination the table does not mark has no checklist yet", !DERIVED_FOR.has("fs.spouse") && !DERIVED_FOR.has("pnp.express_entry") && [...DERIVED_FOR].every((k) => FEE_TABLE.combinations[k]?.checklist === true));
+// ── The checklist is worked out for every combination from its release (M3-S4, P-425); the table only prices
+ok("M3-S4 pass: the fee table carries no checklist mark: no combination list decides whose checklist is worked out", Object.values(FEE_TABLE.combinations).every((c) => !("checklist" in c)));
+ok("C6.17 fail (P-444): the study permit and With an LMIA have no fee lines, so their fees stay not worked out", ["sp.outside", "wp.lmia_inside"].every((k) => FEE_TABLE.combinations[k]?.lines.length === 0 && rulesFrom(FEE_TABLE, k) === undefined));
 process.exitCode = summary() ? 1 : 0;

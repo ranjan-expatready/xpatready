@@ -1,7 +1,7 @@
 // C6.4 (M3-B, runtime lane; P-171; M3 case view r5c "checklist per person"): a case's document checklist, one list per
 // person, from its pinned release's requirements and rechecked against the case's answers on every read.
-// The case officer reads it; a client and configuration people do not (deny by default, as runtime.ts). Visitor visa
-// only in this slice: other combinations answer "not derived yet". Sample until the immigration expert confirms. US$0.
+// The case officer reads it; a client and configuration people do not (deny by default, as runtime.ts). Every
+// combination's list is worked out from its release (M3-S4, P-425). Sample until the immigration expert confirms. US$0.
 // Storage slice (M3-C; SI-14 stand-in for the team's storage): a line the person needs is kept as a checklist_line row
 // (written on read, so it keeps its id and state when the answers take it away and bring it back); the officer requests
 // it, the officer or the case's client uploads it (the file is the person's: case_document), or the officer marks it Not
@@ -62,6 +62,9 @@ export function memberOf(line: Parameters<typeof pickMember>[0], raw: unknown): 
 /** The working files' folder for documents (the person's own, by the row id). */
 const DOCS = () => VAR(WORKSPACE_KEY);
 
+/** M3-S4 (P-172): why a never waivable line is refused a waiver or Not applicable, in words. */
+const neverWords = (doc: string, who: string, act: string) => `${doc} for ${who} cannot be ${act}: its line in the release is never waivable, so Ready to file waits until it is received. Nothing was changed.`;
+
 @Injectable()
 export class CaseChecklists {
   constructor(@Inject(Runtime) private readonly r: Runtime, @Inject(Db) private readonly db: Db, @Inject(Audit) private readonly audit: Audit) {}
@@ -87,8 +90,7 @@ export class CaseChecklists {
 
   /** The derived checklist with its stored lines: every needed line gets its row (created once, then kept). */
   private async stored(c: Reached) {
-    const { d, everyone } = await this.derive(c);
-    if (!d.derived) return d;
+    const { d, everyone } = await this.derive(c); // M3-S4 (P-425): always worked out from the case's release
     const needed = d.people.flatMap((p) => p.lines.map((l) => ({ workspaceId: c.workspaceId, caseId: c.id, stageId: c.stage.id, subjectId: p.subject, documentType: l.document.key, lineage: l.lineage })));
     if (needed.length) await this.db.checklistLine.createMany({ data: needed, skipDuplicates: true });
     const rows = await this.db.checklistLine.findMany({ where: { caseId: c.id, stageId: c.stage.id } });
@@ -130,7 +132,8 @@ export class CaseChecklists {
         const row = rowOf.get(`${p.subject}|${l.document.key}`), documents = filesOf(p.subject, l);
         const state = (row?.state ?? "not_requested") as LineState;
         const reason = kept ? `${l.reason} Kept on the list: it is ${STATE_WORDS[state]}${documents.length ? " and has a file" : ""}, so it is not dropped when the answers change.` : l.reason;
-        return { ...l, ...providersNow(l, row), id: row?.id ?? l.id, derived_id: l.id, reason, required: kept || state === "not_applicable" || state === "waived" ? false : l.required, state, state_words: STATE_WORDS[state], state_reason: row?.stateReason ?? null,
+        // M3-S4 review m1: a kept line no longer needed blocks nothing, so it does not say never waivable either.
+        return { ...l, ...providersNow(l, row), ...(kept ? { never_waivable: false, never_if: undefined } : {}), id: row?.id ?? l.id, derived_id: l.id, reason, required: kept || ((state === "not_applicable" || state === "waived") && !l.never_waivable) ? false : l.required, state, state_words: STATE_WORDS[state], state_reason: row?.stateReason ?? null,
           state_by: row?.stateBy ?? null, state_at: row?.stateAt?.toISOString() ?? null, version: row?.version ?? 0, documents, kept, set_status: setStatusOf(l, currentKeys(p.subject, l)), ...((): { on_file?: NonNullable<ReturnType<typeof onFile>> } => { const f = onFile(p.subject, l.document.key); return f ? { on_file: f } : {}; })() };
       };
       // A line no longer needed that was acted on (requested, a file, Not applicable) stays on the person's list.
@@ -141,7 +144,7 @@ export class CaseChecklists {
       const orphans = rows.filter((x) => x.subjectId === p.subject && !listed.has(x.documentType) && (x.state !== "not_requested" || docsOf(p.subject, x.documentType).length > 0))
         .map((x): PersonLine => ({ id: `${p.subject}:${x.lineage}`, document_type: x.documentType, label: typeName(x.documentType), state: "not_requested", required: false, documents: [],
           reason: p.applies ? `No longer required: ${d.release_label ?? "the case's release"} no longer asks this person for it; its uploads are kept and listed.` : `${p.label} is not travelling with the application now, so the release asks nothing of them.`,
-          need: "not_needed", lineage: x.lineage, also_from: [], document: { key: x.documentType, name: typeName(x.documentType) }, missing: [], base: false, provided_by: "client", alternatives: [], quote: null, rule: null, set: null, waivable: false, who: "", who_words: "", shared: null, providers: [], providers_rule: null, providers_words: null }));
+          need: "not_needed", lineage: x.lineage, also_from: [], document: { key: x.documentType, name: typeName(x.documentType) }, missing: [], base: false, provided_by: "client", alternatives: [], quote: null, rule: null, set: null, waivable: false, never_waivable: false, who: "", who_words: "", shared: null, providers: [], providers_rule: null, providers_words: null }));
       const lines = [...p.lines.map((l) => out(l, false)), ...keptWaiting.map((l) => out(l, true)), ...keptNot.map((l) => out(l, true)), ...orphans.map((l) => out(l, true))];
       return { ...p, lines, waiting: p.waiting.filter((l) => !acted(l)).map((l) => out(l, false)), not_needed: p.not_needed.filter((l) => !acted(l)).map((l) => out(l, false)) };
     });
@@ -199,16 +202,21 @@ export class CaseChecklists {
 
   request(actor: Actor, id: string, body: unknown) { const b = parse(SeenVersion, body); return this.setState(actor, id, REQUEST_FROM, "requested", null, "requested", b.version); }
 
-  notApplicable(actor: Actor, id: string, body: unknown) {
+  /** M3-S4 (P-172): a line its release marks never waivable cannot be marked Not applicable either (that would lift its
+   *  block on Ready to file by another name); refused in words, nothing changed. */
+  async notApplicable(actor: Actor, id: string, body: unknown) {
+    const { shown, person } = await this.line(actor, id, "officer"); // review m3: who may act is checked before the body
     const b = parse(NotApplicable, body);
+    if (shown.never_waivable) fail(neverWords(shown.label, person.label, "marked not applicable"), HttpStatus.UNPROCESSABLE_ENTITY);
     return this.setState(actor, id, NOT_APPLICABLE_FROM, "not_applicable", b.reason, "marked not applicable", b.version);
   }
 
   /** M3-S3 (P-171 (6)): the case officer waives a line its release marks waivable, with a reason; who and when are kept
    *  on the line and in the history. A line not marked waivable is refused in words (Not applicable stays its way). */
   async waive(actor: Actor, lineId: string, body: unknown) {
+    const { shown, person } = await this.line(actor, lineId, "officer"); // review m3: who may act is checked before the body
     const b = parse(Waive, body);
-    const { shown, person } = await this.line(actor, lineId, "officer");
+    if (shown.never_waivable) fail(neverWords(shown.label, person.label, "waived"), HttpStatus.UNPROCESSABLE_ENTITY);
     if (!shown.waivable) fail(`${shown.label} for ${person.label} cannot be waived: its line in the release is not marked waivable. Nothing was changed.`, HttpStatus.UNPROCESSABLE_ENTITY);
     return this.setState(actor, lineId, WAIVE_FROM, "waived", b.reason, "waived", b.version);
   }
