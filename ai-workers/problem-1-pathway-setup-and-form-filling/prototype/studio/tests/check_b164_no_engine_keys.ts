@@ -35,8 +35,6 @@ const ALLOW: Entry[] = [
   {"guard": "fixture (BK-12 sample case as a setting)", "file": "api/src/checkpoint-words.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": "BK-12"},
   {"guard": "fixture (BK-12 sample case as a setting)", "file": "api/src/sample-validated.ts", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": "BK-12"},
   {"guard": "fixture (BK-12 sample case as a setting)", "file": "api/src/features/checkpoint/", "kind": "fixture", "text": "loads the demo story's or the configured checkpoint's own Sample content (P-93, DEMO.md), as a person would on the screens; a case's own path never runs it", "row": "BK-12"},
-  {"guard": "G3 checklist not derived", "file": "engine/runtime/case-checklist.ts", "kind": "slice", "text": "The document checklist per person is not derived yet for this combination (it is worked out once its requirements are checked). Nothing is guessed.", "row": "M3-S4"},
-  {"guard": "G3 checklist not derived", "file": "api/src/case-stages.ts", "kind": "slice", "text": " its release asks for (the per-person checklist is not worked out yet for this combination)", "row": "M3-S4"},
   {"guard": "reader content: a heading read from IRCC's checklist page, no branch", "file": "api/src/saved-readings.ts", "kind": "program", "text": "PARENTS AND GRANDPARENTS SUPER VISA", "row": ""},
 ];
 // ALLOW-END

@@ -2,8 +2,8 @@
 // view. Its filings, submission groups and items are derived from the pinned release and the case on every read and
 // stored (tables filing, filing_applicant, submission_group, filing_item) so their ids stay when people change, a split
 // stays split and a form keeps the channel the case officer chose. Fees are worked out per group on each read
-// (engine/runtime/filings.ts). The case officer reads and changes it; a client and configuration people do not. Visitor
-// visa only in this slice; other combinations answer "not derived yet". No model call (US$0). Readiness is C7.6's
+// (engine/runtime/filings.ts). The case officer reads and changes it; a client and configuration people do not. A
+// combination whose filings cannot be worked out (filings.ts) says why. No model call (US$0). Readiness is C7.6's
 // (engine/runtime/readiness.ts, M3-A3; L-SA3, P-315): this view gathers its inputs (api/src/readiness-inputs.ts) and
 // shows the result per filing; the rules are never decided here.
 // One implementation (#356 on #325's tables, migration 20261102030000): #325's guards are kept (the release must match
@@ -42,7 +42,7 @@ import { CaseForms, copyNotForFiling, formPassed, formReadinessOf, inventoryOf, 
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
-import { copyStateOf, readinessOfCase, waitingFactsKey, type PreparedForm } from "./readiness-inputs.ts";
+import { copyStateOf, readinessOfCase, waitingFactsKey, type PreparedForm, type ReadinessInputs } from "./readiness-inputs.ts";
 import { lowestOf } from "../../engine/runtime/readiness-figure.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
 import { draftNote, releaseOutOfDate, reviewCounts, touchedFilings } from "../../engine/runtime/release-update.ts";
@@ -515,7 +515,7 @@ export class CasePrepare {
     const maps = ((s as { field_maps?: { form_number: string; form_edition: string; channel?: string }[] }).field_maps ?? []);
     const pdfOf = (form: string) => pdfMapInUse(maps, form)?.form_edition ?? null;
     const editionOf = (form: string, channel: string) => (channel === "ONLINE" ? maps.find((m) => m.form_number === form && m.channel === "ONLINE")?.form_edition : null) ?? pdfOf(form);
-    const docLine = (subject: string, type: string) => (docs.get(subject) as { document_type: string; required: boolean }[] | undefined)?.find((x) => x.document_type === type);
+    const docLine = (subject: string, type: string) => (docs.get(subject) as { document_type: string; required: boolean; never_waivable: boolean; never_if?: string[] }[] | undefined)?.find((x) => x.document_type === type);
     // Break B3: "cannot start" ones too. Review m7: built field by field, so a line missing a field is a type error, not a 500.
     // C9.2 (BR-12, P-136, P-237): an out-of-date validated, signed or uploaded item is a CRITICAL "out of date" line on its
     // filing (an Online section entered before a change warns, enteredStale). A signed scan's own out-of-date record is
@@ -632,10 +632,17 @@ export class CasePrepare {
     // C7.9 (review M1 on #1282): answers read as knownOf reads them: the application's subject as "case", relatives under
     // their own key (state() keys them), removed rows never.
     const reading = { aboutOf: (id: string) => (people.find((p) => p.subjectId === id)?.role === "case" ? "case" : id), liveRows: new Set(rows.map((x) => x.rowKey)) };
+    // M3-S4 break M1: a never waivable line that may be needed (its condition waits for an answer) blocks its person's
+    // filing until the answer decides it, so Ready to file is never reached around it.
+    const waitingNever = list.people.flatMap((p) => p.waiting.filter((l) => l.never_waivable).flatMap((l) => {
+      const filing = filings.find((f) => f.applicants.some((a) => a.subject === p.subject))?.id;
+      const ask = l.missing.filter((m) => !m.answered).map((m) => m.question);
+      return filing ? [{ subject: p.subject, person: p.label, filing, document_type: l.document.key, label: l.label, required: false, never_waivable: true, waiting: ask.length ? ask.join(", ") : "the questions its condition reads" }] : [];
+    }));
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems, reviewAfterMove, releaseUpdate,
       byHand: (form, subject) => handOf.get(`${form}|${subject}`) ?? [],
       copy: copyOf,
-      documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
+      documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true, never_waivable: docLine(d.subject, d.document_type)?.never_waivable ?? false, ...(docLine(d.subject, d.document_type)?.never_if?.length ? { waiting: docLine(d.subject, d.document_type)!.never_if!.join(", ") } : {}) }) as ReadinessInputs["documents"][number]).concat(waitingNever), // M3-S4
       factsOf: (form, subject) => formReady(form, subject),
       // C7.9 (P-242): the must-verify facts this form writes from an unchecked client-given value.
       unverifiedOf: (form, subject) => unverifiedOf(s, answers, formCoverage(s, people, answers, rows, form, subject)?.facts ?? [], reading), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's

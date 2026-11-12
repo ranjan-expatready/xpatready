@@ -37,7 +37,7 @@ type TableLine = { key: string; label: string; status: string; basis: FeeBasis; 
  *  `group_why` the family group's reason; `co_filed_why` the reason a co-filed application and the principal's are sent
  *  together (IRCC's words); `each_files_own` IRCC's words, with their source, where each family member files their own
  *  application (BR-7's warning); `basis_note` what the priced total leaves out, in words on the case (M3-S1 review M2). */
-type TableCombination = { label: string; lines: string[]; checklist?: boolean; modes?: Record<string, LineMode>; group_why?: string; co_filed_why?: string; basis_note?: string;
+type TableCombination = { label: string; lines: string[]; modes?: Record<string, LineMode>; group_why?: string; co_filed_why?: string; basis_note?: string;
   each_files_own?: { says: string; source: FeeSource } | null };
 export type FeeTable = { as_of: string; read: string; status: string; lines: TableLine[]; combinations: Record<string, TableCombination> };
 export const FEE_TABLE = FEES as unknown as FeeTable;
