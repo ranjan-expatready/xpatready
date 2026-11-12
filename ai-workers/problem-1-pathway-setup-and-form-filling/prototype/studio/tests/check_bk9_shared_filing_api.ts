@@ -1,7 +1,9 @@
 // BK-9 API checks (P-448, Bake plan row 23): on the configured checkpoint, through the product's routes, a family's shared
 // filing (people on the principal's application) is changed on any pathway, never refused for the combination:
-//   Study permit (its children are on the principal's application): Remove filing for the child keeps one application,
-//     the child on it declared only, their items no longer applying; Add filing back brings the same items back (same ids);
+//   A combination whose release puts its children on the principal's application (found by data, BK-15: since P-486 the
+//     Study permit's children file their own; Express Entry's are on the principal's): Remove filing for the child keeps
+//     one application, the child on it declared only, their items no longer applying; Add filing back brings the same
+//     items back (same ids);
 //   Express Entry (the spouse is on the principal's application), when released: Make principal moves the one application
 //     to the spouse, the same filing and items (same ids), the former principal on it as spouse;
 //   Visitor visa (everyone files their own): unchanged, Remove filing stops the child's own filing.
@@ -15,7 +17,9 @@ const { ok, summary } = recorder();
 const AUTHOR = "user-A";
 const words = (r: { body: any }) => String(r.body?.detail ?? r.body?.message ?? JSON.stringify(r.body?.errors ?? ""));
 const comboId = (key: string) => sql(`select c.id from combination c where c.combination_key='${key}' and exists (select 1 from config_release r where r.combination_id=c.id)`);
-if (!comboId("sp.outside")) { const l = await call("POST", "/demo/load", { sample: "configured" }, AUTHOR); if (l.status >= 300) { console.error("STOP  the configured checkpoint did not load", l.status); process.exit(2); } }
+if (!comboId("vv.single")) { const l = await call("POST", "/demo/load", { sample: "configured" }, AUTHOR); if (l.status >= 300) { console.error("STOP  the configured checkpoint did not load", l.status); process.exit(2); } }
+// BK-15 (P-486): the released combination whose newest release puts a child on the principal's application, by data.
+const childOnPrincipal = sql(`select c.id from combination c join lateral (select r.snapshot from config_release r where r.combination_id=c.id order by r.version desc limit 1) r on true where exists (select 1 from jsonb_array_elements(r.snapshot->'combination'->'participants') p where p->>'role'='child' and p->>'filingMode'='on_principal') order by c.combination_key limit 1`);
 const f = await firms();
 const officer = f.officer ?? "user-O", rep = f.rep ?? "user-R";
 const team = { representative: rep, caseOfficers: [officer] };
@@ -28,14 +32,15 @@ const lines = (v: { body: any }) => ((v.body?.changes ?? []) as { label: string;
 const itemIds = (p: Prepare | null, subject: string) => (p?.items ?? []).filter((i) => i.subject === subject).map((i) => i.id).sort();
 const ref = (k: string) => `BK9-${k}-${Date.now().toString(36)}`;
 
-// (1) Study permit: the child is on the principal's application.
+// (1) A child on the principal's application (found by data).
 {
-  const sp = comboId("sp.outside")!;
+  if (!childOnPrincipal) ok("C6.13 BK-9 setup: a released combination puts a child on the principal's application (needed for Remove filing on a shared application)", false, "none released on this copy");
+  const sp = childOnPrincipal!;
   const c = await openCase(sp, [{ role: "principal", name: "Sample Student K", dob: yearsAgo(30) }, { role: "child", name: "Sample Child K", dob: yearsAgo(8) }], team, ref("sp"));
   const S = c.subjects["Sample Student K"], K = c.subjects["Sample Child K"];
   const p0 = (await prepare(c.id, officer)).p;
   const kItems = itemIds(p0, K);
-  ok("C6.13 BK-9 setup: the Study permit case has one application with the child applying on it, and the child has items", p0?.filings.length === 1 && p0.filings[0].applicants.some((a) => a.subject === K && a.mode === "applying") && kItems.length > 0, p0?.filings);
+  ok("C6.13 BK-9 setup: the case has one application with the child applying on it, and the child has items", p0?.filings.length === 1 && p0.filings[0].applicants.some((a) => a.subject === K && a.mode === "applying") && kItems.length > 0, p0?.filings);
   const { v, r } = await apply(c.id, "remove_filing", K);
   ok("C6.13 BK-9: remove pass (failed before BK-9 with 422 \"not worked out yet\"): the preview is given and names the child declared only on the principal's application", v.status === 200 && lines(v).some((w) => /Sample Child K is declared on this filing only \(not travelling\)/.test(w)) && lines(v).some((w) => /Sample Child K: \d+ items? stop applying/.test(w)), [v.status, words(v), lines(v)]);
   const childLine = ((v.body?.changes ?? []) as { person: string; on?: string }[]).find((l) => l.person === K);

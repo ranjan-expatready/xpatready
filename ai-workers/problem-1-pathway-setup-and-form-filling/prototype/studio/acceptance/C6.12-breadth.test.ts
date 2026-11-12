@@ -42,7 +42,7 @@ await main("C6.12 breadth", "Filings and fees: the parts C6.12 is Partial for", 
   // release carries the rule (by data: the release whose line adds a filing; no combination is named here).
   const withRule = sql("select r.combination_id from config_release r where exists (select 1 from jsonb_array_elements(r.snapshot->'combination'->'participants') p where p ? 'addsFiling') order by r.released_at desc, r.version desc limit 1");
   const rule = withRule ? JSON.parse(sql(`select p::text from config_release r, jsonb_array_elements(r.snapshot->'combination'->'participants') p where r.combination_id = '${withRule}' and p ? 'addsFiling' order by r.released_at desc, r.version desc limit 1`) ?? "null") as { role: string; addsFiling: { filing: string; condition: { field: string } } } | null : null;
-  const caseStep = `C6.12-23 pass (case): the case officer's Yes adds the person's own "${rule?.addsFiling.filing ?? "added"}" filing; a No keeps the other on the principal's application (GET …/filings and …/prepare agree)`;
+  const caseStep = `C6.12-23 pass (case): the case officer's Yes adds the person's own "${rule?.addsFiling.filing ?? "added"}" filing; a No leaves the other on their line's own filing, never the added one (the principal's, or their own: BK-15, P-486) (GET …/filings and …/prepare agree)`;
   // Review n2: no release carrying the rule is never silent: HELD while the part is absent (no release asks the
   // question), else a FAIL (the question is released but the rule that reads it is not, e.g. step 085 was taken back).
   if (!withRule || !rule) held(caseStep, studyQ === 0, false, { why: "no release carries a line whose rule adds a filing (step 085 refused or taken back: see the checkpoint's row 7)", releasesWithTheQuestion: studyQ });
@@ -55,7 +55,7 @@ await main("C6.12 breadth", "Filings and fees: the parts C6.12 is Partial for", 
     const a1 = await answer(k.id, k.subjects["Sample Person M1"], rule.addsFiling.condition.field, true), a2 = await answer(k.id, k.subjects["Sample Person M2"], rule.addsFiling.condition.field, false);
     const after = await filings(), prep = (await call("GET", `/runtime/cases/${k.id}/prepare`, undefined, k.officer)).body as { filings?: { label?: string }[] };
     ok(caseStep,
-      !own(before, "Sample Person M1") && a1.status === 200 && a2.status === 200 && own(after, "Sample Person M1")?.label === `${rule.addsFiling.filing}: Sample Person M1` && !own(after, "Sample Person M2")
+      own(before, "Sample Person M1")?.label !== `${rule.addsFiling.filing}: Sample Person M1` && a1.status === 200 && a2.status === 200 && own(after, "Sample Person M1")?.label === `${rule.addsFiling.filing}: Sample Person M1` && own(after, "Sample Person M2")?.label !== `${rule.addsFiling.filing}: Sample Person M2`
         && (after.filings ?? []).some((f) => f.applicants.some((a) => a.subject === k.subjects["Sample Person M2"])) && (prep.filings ?? []).some((f) => f.label === `${rule.addsFiling.filing}: Sample Person M1`),
       { before: before.filings?.map((f) => f.label), after: after.filings?.map((f) => f.label) });
   }
