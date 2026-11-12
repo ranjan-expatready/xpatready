@@ -9,6 +9,7 @@ on:
       - ".claude/skills/lead/**"
       - ".claude/skills/next/**"
       - ".claude/skills/qa/**"
+      - ".github/workflows/comment-run.yml"
       - ".github/workflows/label-guard.yml"
       - ".github/workflows/guards.yml"
       - "ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/**"

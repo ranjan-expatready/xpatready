@@ -1,0 +1,111 @@
+# D3 (P-506, founder 12 Nov ~21:3x IST): builders start their own test runs by a fixed PR comment, repository members
+# only. Before this, a cloud lane got HTTP 403 starting an Actions run (P-439) and the tech lead relayed every nightly
+# re-test and re-run by hand (ask → run: median 0.64 h, worst 15.3 h; product/design/factory-plan-2026-11-12.md).
+# The repository is public, so the gate comes first:
+#   * issue_comment runs main's copy of this file, never a PR's (a PR cannot edit the gate it is judged by);
+#   * nothing is checked out, so no PR code (and no code at all) runs; the commands only call GitHub's API;
+#   * the job starts only for a comment on a pull request by OWNER, MEMBER or COLLABORATOR (author_association), and
+#     the parser checks both again; an outsider's comment starts no machine and gets no reply (a reply would let
+#     anyone on the internet make this repository post);
+#   * the comment's first line must match one fixed command exactly (allow-listed capability ids and data values);
+#     the text reaches the script only through env, never pasted in with ${{ }}, and is never echoed back;
+#   * the token holds actions: write (start or re-run a run) and pull-requests: write (the reply), nothing else.
+# Commands (first line of the comment, exactly):
+#   /run nightly C7.3 [C5.4 …] [six|checkpoint]   nightly.yml on main, re-testing those capabilities' packs (1 to 8),
+#                                                  on the six (default) or the checkpoint, as the Lead does (P-439)
+#   /rerun failed                                  re-runs only the failed parts of the PR's newest ci run for its
+#                                                  head (P-371: never cancel; only when the log shows no code cause)
+# The reply names the run, or why it was refused. Test: product/tools/check-comment-run.sh (in check-guards.sh).
+name: comment-run
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  actions: write
+  pull-requests: write
+# One command at a time per PR, none cancelled (P-371).
+concurrency:
+  group: comment-run-${{ github.event.issue.number }}
+  cancel-in-progress: false
+jobs:
+  run:
+    if: "github.event.issue.pull_request && contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), github.event.comment.author_association) && (startsWith(github.event.comment.body, '/run ') || startsWith(github.event.comment.body, '/rerun'))"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - id: p
+        name: read the command (no token in this step)
+        env:
+          BODY: ${{ github.event.comment.body }}
+          ASSOC: ${{ github.event.comment.author_association }}
+          IS_PR: ${{ github.event.issue.pull_request && 'yes' || '' }}
+        run: |
+          export LC_ALL=C   # [0-9] means the ten ASCII digits, nothing else
+          out() { printf '%s=%s\n' "$1" "$2" >> "$GITHUB_OUTPUT"; }
+          refuse() { out action refuse; out reason "$1"; exit 0; }
+          # Gate: a pull request, and a repository member (checked again here, whatever the job's if says).
+          if [ "$IS_PR" != yes ]; then out action ignore; exit 0; fi
+          case "$ASSOC" in OWNER|MEMBER|COLLABORATOR) ;; *) out action ignore; exit 0;; esac
+          line=${BODY%%$'\n'*}; line=${line%$'\r'}; line=${line%"${line##*[! ]}"}
+          if [ "${#line}" -gt 120 ]; then refuse "the command line is longer than 120 characters"; fi
+          re_run='^/run nightly(( C[0-9]{1,2}\.[0-9]{1,2}){1,8})( (six|checkpoint))?$'
+          if [ "$line" = "/rerun failed" ]; then
+            out action rerun
+          elif [[ "$line" =~ $re_run ]]; then
+            caps=$(printf '%s\n' ${BASH_REMATCH[1]} | sort -u | tr '\n' ' '); caps=${caps% }
+            out action nightly; out caps "$caps"; out data "${BASH_REMATCH[4]:-six}"
+          elif [[ "$line" == "/run nightly" ]]; then
+            refuse "name 1 to 8 capabilities, e.g. \`/run nightly C7.3 C5.4\`; the full nightly set runs every night at 01:53 IST (ask the tech lead for an extra one)"
+          else
+            refuse "not a known command. Use \`/run nightly C7.3 [C5.4 …] [six|checkpoint]\` (1 to 8 capability ids; data six or checkpoint, nightly.yml's choices; a pack with no run on that data uses its fixture by itself) or \`/rerun failed\`, alone on the comment's first line"
+          fi
+      - name: start the run and reply on the pull request
+        if: steps.p.outputs.action != 'ignore'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.issue.number }}
+          ACTION: ${{ steps.p.outputs.action }}
+          CAPS: ${{ steps.p.outputs.caps }}
+          DATA: ${{ steps.p.outputs.data }}
+          REASON: ${{ steps.p.outputs.reason }}
+          THIS_RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          export LC_ALL=C
+          reply() { gh api -X POST "repos/$REPO/issues/$PR/comments" -f body="**comment-run (D3, P-506):** $1" >/dev/null || { echo "::error::could not reply on the PR"; exit 1; }; }
+          case "$ACTION" in
+            refuse)
+              reply "refused: $REASON. ([this run]($THIS_RUN))"; exit 0;;
+            nightly)
+              # Defence in depth: the values were validated by the parser; check their shape again before use.
+              [[ "$CAPS" =~ ^C[0-9]{1,2}\.[0-9]{1,2}( C[0-9]{1,2}\.[0-9]{1,2}){0,7}$ && "$DATA" =~ ^(six|checkpoint)$ ]] || { reply "refused: the parsed values failed their check. ([this run]($THIS_RUN))"; exit 1; }
+              since=$(date -u -d '-60 seconds' +%Y-%m-%dT%H:%M:%SZ)
+              if ! gh api -X POST "repos/$REPO/actions/workflows/nightly.yml/dispatches" -f ref=main -f "inputs[capabilities]=$CAPS" -f "inputs[data]=$DATA" >/dev/null; then
+                reply "could not start nightly.yml (GitHub refused the dispatch; see [this run]($THIS_RUN)). Ask the tech lead."; exit 1
+              fi
+              url=""
+              for _ in 1 2 3 4 5 6 7 8 9 10; do
+                url=$(gh api -X GET "repos/$REPO/actions/workflows/nightly.yml/runs" -f event=workflow_dispatch -f branch=main -f "created=>=$since" -f per_page=1 --jq '.workflow_runs[0].html_url // empty' 2>/dev/null) || url=""
+                [ -n "$url" ] && break; sleep 3
+              done
+              where=${url:-"the newest run on [nightly's page]($GITHUB_SERVER_URL/$REPO/actions/workflows/nightly.yml)"}
+              reply "started nightly.yml on main: re-test of $CAPS on the $DATA data: $where. ([this run]($THIS_RUN))";;
+            rerun)
+              head=$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha) && [[ "$head" =~ ^[0-9a-f]{40}$ ]] || { reply "could not read the PR's head. ([this run]($THIS_RUN))"; exit 1; }
+              run=$(gh api -X GET "repos/$REPO/actions/workflows/ci.yml/runs" -f head_sha="$head" -f event=pull_request -f per_page=1 \
+                --jq '.workflow_runs[0] // empty | [.id, .status, (.conclusion // "none"), .html_url] | @tsv') || { reply "could not list the ci runs. ([this run]($THIS_RUN))"; exit 1; }
+              [ -n "$run" ] || { reply "refused: no ci run for the head ${head:0:7}. ([this run]($THIS_RUN))"; exit 0; }
+              IFS=$'\t' read -r id status conclusion url <<< "$run"
+              [[ "$id" =~ ^[0-9]+$ ]] || { reply "could not read the ci run. ([this run]($THIS_RUN))"; exit 1; }
+              if [ "$status" != completed ]; then reply "refused: the newest ci run for ${head:0:7} is still $status ($url); re-run its failed parts once it ends (P-371: never cancel). ([this run]($THIS_RUN))"; exit 0; fi
+              case "$conclusion" in
+                failure|timed_out|cancelled) ;;
+                *) reply "refused: the newest ci run for ${head:0:7} ended $conclusion, nothing to re-run ($url). ([this run]($THIS_RUN))"; exit 0;;
+              esac
+              if gh api -X POST "repos/$REPO/actions/runs/$id/rerun-failed-jobs" >/dev/null; then
+                reply "re-running the failed parts of the newest ci run for ${head:0:7}: $url (only when its log shows no code cause, P-371). ([this run]($THIS_RUN))"
+              else
+                reply "could not re-run $url (GitHub refused; see [this run]($THIS_RUN)). Ask the tech lead."; exit 1
+              fi;;
+            *) echo "::error::unknown action"; exit 1;;
+          esac
