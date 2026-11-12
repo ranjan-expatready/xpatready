@@ -96,3 +96,37 @@ Same reviewer role, fresh context, 12 Nov 2026. Scope: `git diff 9f0fc27e6 112c3
 * **8/10, fail: one criterion at 0.** It returns to pass when the line wraps again.
 
 **Verdict: Request changes** (Block until 112c3fc20's m3 wrap regression is fixed and its width check is added). m1 and m2 are approved as they are.
+
+## Re-review 754e0d7be (diff-only, P-277)
+Same reviewer role, fresh context, 12 Nov 2026. Scope: `git diff 112c3fc20 754e0d7be` (`cases.tsx` household line, the pack check, this file). Own isolated copy on :4464, stopped after each run; live AI off, US$0.
+* **Re-ran:** `check_qa417_counts_browser.cjs` **52/52**, exit 0, on four fresh copies. `cases.tsx` already imports `React` (`:4`), so `React.Fragment` needs nothing new.
+* **The check catches the round-2 bug.** I did not rebuild 112c3fc20 (no other file edited). Instead, on the live page I rebuilt the line into 112c3fc20's DOM: the space inside each nowrap span, none between them. The new line's own test then fails on both cases. At 375 px `line` and `page` are both false; at 1024 px `line` is false, and `page` is also false on vv. On 754e0d7be's DOM both are true. This matches the builder's 47/4.
+* **m3: closed.** The space is now a sibling text node between the nowrap spans (`cases.tsx:310`), so the line breaks there. Measured with my scratch script on the pack's two cases (vv: 7 links, sp: 5 links):
+
+| Width | Line box | Rows (vv / sp) | `scrollWidth` = `clientWidth` | Page width | "·" not on its link's row |
+|---|---|---|---|---|---|
+| 375 | 343 px | 5 / 5 | yes | 375 (no sideways scroll) | 0 |
+| 1024 | 329 px | 7 / 5 | yes | 1024 (no sideways scroll) | 0 |
+| 1440 | 633 px, ends x = 713 inside its column | 3 / 2 | yes | 1440 | 0 |
+
+  * **Stress test, standing in for the big family.** I cloned the items 4× in the same structure (20 and 28 links). The line still fits its box at all three widths, and 0 "·" sit apart from their link.
+  * Screenshots (`r3-375-QA417-vv-mwd.png`, `r3-1440-QA417-vv-mwd.png`, `r3-1024-QA417-sp-mwd-stress.png`) are in my session scratchpad `m3r3/`, not committed. A row starts with "· Label (n)" and the "·" never stands alone. The first row reads "To confirm, in the Agent view: Sample Client A (1)".
+* **The m1 setup line: good.** `ok(… m1 setup: the case has the representative's tab …)` turns round 2's note (a) into a failing line. It passes on both cases.
+* **No regression in the diff.**
+  * The link markup, `href`, `data-household-tab` and classes are unchanged.
+  * Keyboard check at 375, 720 and 1024 px on both cases: Tab reaches the first link, and Enter opens that person's tab (`data-state="active"` on the same id).
+  * No console or page errors.
+  * The check puts the viewport back to 1440 before the click steps, and those steps still pass.
+* **720 px (1440 at 200 % zoom), the older column bug.** This is round 1's Minor 3; that code is not in this diff. The header column is 41 px wide, and the release chip, team chip and reference overflow it as before. Each nowrap "· link" item is now 50 px wide, so it pokes out 9–17 px (`scrollWidth` 58 against `clientWidth` 41). It ends at x = 74, and the card starts at x = 81, so nothing overlaps and the page does not scroll (`r3-720-header.png`). Round 1 already had the line at 1600 px tall there. The fix to the column fixes this too.
+  * **Still no row in `qa/BUGS.md` or `BACKLOG.md`.** File it, as round 2 asked. It is not a blocker for this PR.
+* **Notes (no change asked here):**
+  * The new comment in the check says "no '·' alone at a line's start", but no line asserts that; only the width is checked. The structure guarantees it, so the comment overstates the test a little.
+  * Round 2's note (b) and the sp m2 `if` (background answer) are unchanged.
+
+**Journey (reviewer role), re-scored on the diff:**
+* Task completed 1 · next step obvious 1 (all links inside the column at 375, 1024 and 1440) · plain words 1 · feedback and state 1 · correct data 1 (counts unchanged, 52/52) · error recovery 1.
+* Accessibility and screen sizes ½: no sideways scroll at 375, 1024 or 1440, and keyboard works; the 200 % zoom column is older code.
+* Speed 1 (no data path changed) · visual quality 1 (neat wrapping, no lone separators) · trust and sources 1.
+* **9.5/10, pass (no criterion at 0).**
+
+**Verdict: Approve 754e0d7be** (no open Must or Blocker; m1, m2 and m3 closed). Journey score 9.5/10.
