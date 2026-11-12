@@ -48,8 +48,9 @@ export const SCOPE_WORDS_REFUSED = {
   employerHousehold: "This is the employer's fact: choose Organisation, not Household.",
 } as const;
 
-/** Facts that are always about one person (challenge m2): the representative's own, date of birth, "has any children". */
-const PERSON_ONLY = new Set<string>([MINOR.birthDateField, "person.has_children"]);
+/** Facts that are always about one person (challenge m2): the representative's own, date of birth, "has any children",
+ *  "is the principal applicant" (QA-400). */
+const PERSON_ONLY = new Set<string>([MINOR.birthDateField, "person.has_children", "person.is_principal_applicant" /* QA-400: worked out per person */]);
 
 /** What the scope route needs to know about a field to decide (read by api/src/field-scope.ts). */
 export type ScopeFacts = {

@@ -388,7 +388,7 @@ jobs:
     needs: kind
     if: ${{ needs.kind.outputs.kind != 'notes' && needs.kind.outputs.mode != 'same' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30 # 11 Nov (P-214): 15 until GitHub's runners could not reach Ubuntu's servers; cloud-setup.sh's apt wait (~7 min) plus the Homebrew zsh fallback outlasted it (run 43052598478). Back to 15 when apt resolves again.
     permissions: { contents: read }
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product

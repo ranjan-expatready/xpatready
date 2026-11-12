@@ -51,9 +51,6 @@ export type BoxRow = { box: string; caption: string; fact: string | null; meanin
   /** QA-395 (set on a case copy only, engine/runtime/forms.ts markNothingRecorded, samples/recorded-counts.json): a "recorded"
    *  Yes/No whose form counts only some entries: true or false as the entries count, null when a person must decide. */
   counted?: boolean | null };
-/** QA-392: the answer a `nothing_recorded` box stands for: No (the PDF copy's "recorded" step gives it from a confirmed
- *  "none apply", p5/transforms.ts runTransform; the Online answer sheet shows it as that same No). */
-export const NOTHING_RECORDED = false;
 
 /** S5: a line with a minimum age applies to a person once they have reached it on `today`; until their date of birth
  *  is known it cannot be told (and the date of birth is asked, as a deciding question). QA-221 (ruling C): on a line for
