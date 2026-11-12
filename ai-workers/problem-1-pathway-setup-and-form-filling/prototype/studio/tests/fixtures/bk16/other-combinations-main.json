@@ -1,7 +1,10 @@
 {
- "about": "BK-16 PR 2 (P-496 (1), option (A)): the released placements, chosen sections and form lines of the four configured-checkpoint combinations other than the Study permit, captured from main 3ea36a0d3 (12 Nov 2026) on a fresh isolated copy that loaded the configured checkpoint (saved AI answers, US$0). tests/check_bk16_family_forms_api.ts compares the same projection of the head with it: a family member's later form (IMM 1295) must not move another combination's release. Re-capture from main only when a merged row changes these releases on purpose, and say why in that row.",
+ "about": "BK-16 PR 2 (P-496 (1), (A3), tech lead on #1632): the four configured-checkpoint combinations other than the Study permit, captured from main 3ea36a0d3 (12 Nov 2026) on a fresh isolated copy that loaded the configured checkpoint (saved AI answers, US$0). Per combination: release_fingerprint, its release's sha256 (engine/snapshot.ts snapshotHash; status is not in it); snapshot_sha256, the sha256 of the WHOLE release snapshot, canonical, with the status of the items in status_may_differ ignored (tests/lib/release-snapshot-compare.ts); status_may_differ, the 37 shared library items the Study permit's release now carries first (IMM 1295 reuses their questions), so they read PUBLISHED where main reads DRAFT; and the readable placements, sections and form lines, for a failure's words. tests/check_bk16_family_forms_api.ts compares the head's latest releases with it: any other difference fails. Re-capture from main only when a merged row changes these releases on purpose, and say why in that row.",
  "captured_from": "origin/main 3ea36a0d3",
  "vv.single": {
+  "release_fingerprint": "f4a464df21d8b65fc9a4bf4f50970897229bc1a40284908216b8b5dee5398bdf",
+  "snapshot_sha256": "f504e974f98393f88bac65ed18cdcdf5e6e15d209e8a4bd4f808f4631a48b384",
+  "status_may_differ": [],
   "placements": [
    "applicant | person.present_occupation | client_questionnaire | per_person |  | ",
    "appointing_or_cancelling_a_representative | case.representative_form_action | staff_working_view | once_per_case | Does this Use of a Representative form (IMM 5476) appoint the representative, or cancel an appointment? Write appoint or cancel | ",
@@ -184,6 +187,39 @@
   ]
  },
  "wp.lmia_inside": {
+  "release_fingerprint": "64fd1d5383f33e18bd612cba318288c920c98c7676197efe43325c0ba2f07b1e",
+  "snapshot_sha256": "88070a8f32a18669616c67fecd5b5baa8168fdd8405d5add2d48159b6eafce19",
+  "status_may_differ": [
+   "field:case.intended_employment_end_date",
+   "field:case.intended_employment_start_date",
+   "field:case.intended_job_duties",
+   "field:case.intended_job_title",
+   "field:case.lmia_or_offer_number",
+   "field:case.work_location_address",
+   "field:case.work_permit_type",
+   "field:person.education_field_and_level",
+   "field:person.employment_city",
+   "field:person.employment_country",
+   "field:person.employment_employer",
+   "field:person.employment_end_date",
+   "field:person.employment_start_date",
+   "field:person.preferred_service_language",
+   "placement:case.intended_employment_end_date",
+   "placement:case.intended_employment_start_date",
+   "placement:case.intended_job_duties",
+   "placement:case.intended_job_title",
+   "placement:case.lmia_or_offer_number",
+   "placement:case.work_location_address",
+   "placement:case.work_permit_type",
+   "placement:person.education_field_and_level",
+   "placement:person.employment_city",
+   "placement:person.employment_country",
+   "placement:person.employment_employer",
+   "placement:person.employment_end_date",
+   "placement:person.employment_start_date",
+   "placement:person.preferred_service_language",
+   "section:details_of_intended_work_in_canada"
+  ],
   "placements": [
    "applicant | person.present_occupation | client_questionnaire | per_person |  | ",
    "appointing_or_cancelling_a_representative | case.representative_form_action | staff_working_view | once_per_case | Does this Use of a Representative form (IMM 5476) appoint the representative, or cancel an appointment? Write appoint or cancel | ",
@@ -335,6 +371,16 @@
   ]
  },
  "pnp.express_entry": {
+  "release_fingerprint": "6eeaf0c2f480d91c0a0b937602bdda6d18260171e72461a54e95f07c34bcf91d",
+  "snapshot_sha256": "6c5f2e5c2c8ee22e8372595216fe4fe214f8df693e98b95b9f117f7dfce35ba2",
+  "status_may_differ": [
+   "field:person.education_end_date",
+   "field:person.education_start_date",
+   "field:person.residence_country",
+   "placement:person.education_end_date",
+   "placement:person.education_start_date",
+   "placement:person.residence_country"
+  ],
   "placements": [
    "addresses | person.residence_country | client_questionnaire | per_row |  | ",
    "addresses | person.residence_end_date | client_questionnaire | per_row |  | ",
@@ -531,6 +577,12 @@
   ]
  },
  "fs.spouse": {
+  "release_fingerprint": "368f4fd095b2a36331a701c3cf351fb46fab0bfde7ffba91292fb503a8483ace",
+  "snapshot_sha256": "c77a7b3541cc847f87eb2e7743096eb91531d461eb645dcd4f375860a68617e0",
+  "status_may_differ": [
+   "field:relationship.relationship_start_date",
+   "placement:relationship.relationship_start_date"
+  ],
   "placements": [
    "addresses | person.residence_country | client_questionnaire | per_row |  | ",
    "addresses | person.residence_end_date | client_questionnaire | per_row |  | ",

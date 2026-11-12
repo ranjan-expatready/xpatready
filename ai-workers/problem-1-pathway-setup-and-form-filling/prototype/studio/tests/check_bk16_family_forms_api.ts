@@ -5,12 +5,15 @@
 // All from data: samples/form-setup.json sp.outside (IMM 1294 for the student and each child who studies, PR 1's who;
 // IMM 1295 for a spouse or partner; IMM 5257 for a child who does not study), samples/conditional-filings.json (who
 // answers, and its "Why we ask"), samples/wave1.json (IMM 1295 among the Study permit's sources, marked "later"). Visitor visa unchanged, and the other
-// four combinations' releases byte-identical to main's (fixtures/bk16/other-combinations-main.json, P-496 (1)).
+// four combinations' whole releases identical to main's but for the status of named shared items, and their
+// fingerprints identical (fixtures/bk16/other-combinations-main.json, P-496 (1), (A3)).
 // Loads the configured checkpoint itself (about 2.5 minutes; saved AI answers only, US$0, live AI off). Sample.
 //   zsh studio/tools/isolated.sh bk16 4454 start && tsx studio/tests/check_bk16_family_forms_api.ts 4454 xr_studio_bk16
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { snapshotHash } from "../engine/snapshot.ts";
+import { releaseSha, withStatusIgnored } from "./lib/release-snapshot-compare.ts";
 
 const PORT = Number(process.argv[2]), DB = process.argv[3];
 if (!PORT || PORT === 4400 || !/^xr_studio_(?!demo)/.test(DB ?? "")) { console.error("usage: <port of an isolated copy, never 4400> <its database>"); process.exit(2); }
@@ -36,21 +39,47 @@ if (loaded.status >= 300) { console.log("FAIL  the configured checkpoint did not
 const snap = (key: string, part: string) => JSON.parse(sql(`select r.snapshot->'${part}' from config_release r join combination c on c.id=r.combination_id where c.combination_key='${key}' order by r.version desc limit 1`) || "[]");
 const combo = (key: string) => sql(`select id from combination where combination_key='${key}'`);
 
-// P-496 (1), option (A): IMM 1295 joins the shared library only for the Study permit spouse's rule, so it is decided,
-// sectioned and placed after every combination's own forms (samples/wave1.json "later"). Byte check: the other four
-// combinations' released placements, chosen sections and form lines are exactly main's (fixtures/bk16, captured from main).
+// P-496 (1), option (A), and (A3) (tech lead on #1632): IMM 1295 joins the shared library only for the Study permit
+// spouse's rule, so it is decided, sectioned and placed after every combination's own forms (samples/wave1.json "later").
+// Byte check: each of the other four combinations' WHOLE latest release snapshot is main's (fixtures/bk16, captured from
+// main), where only the status of the shared items named in the fixture may differ (the Study permit's release now
+// carries them first); and each release's fingerprint (its stored sha256, which status does not enter) is main's, so no
+// case pinned to these releases reads them as changed.
 const MAIN = JSON.parse(readFileSync(join(import.meta.dirname, "fixtures", "bk16", "other-combinations-main.json"), "utf8")) as Record<string, unknown>;
+type Fixture = { release_fingerprint: string; snapshot_sha256: string; status_may_differ: string[]; placements: string[]; sections: string[]; forms: string[] };
 type Placement = { section_id: string; fact: string; collected_from: string; repeats: string; question_text?: string | null; rule_only?: boolean };
-const released = (key: string) => ({
-  placements: (snap(key, "placements") as Placement[]).map((x) => [x.section_id, x.fact, x.collected_from, x.repeats, x.question_text ?? "", x.rule_only ? "rule_only" : ""].join(" | ")).sort(),
-  sections: (snap(key, "sections") as { id: string; title: string }[]).map((x) => `${x.id} | ${x.title}`),
-  forms: (snap(key, "forms") as { form_number: string; who: string; status: string }[]).map((x) => `${x.form_number} | ${x.who} | ${x.status}`).sort(),
+const latest = (key: string) => JSON.parse(execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", `select json_build_object('sha256', r.sha256, 'snapshot', r.snapshot) from config_release r join combination c on c.id=r.combination_id where c.combination_key='${key}' order by r.version desc limit 1`], { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 }).trim() || "null") as { sha256: string; snapshot: Record<string, unknown> } | null;
+const readable = (s: Record<string, unknown>) => ({
+  placements: ((s.placements ?? []) as Placement[]).map((x) => [x.section_id, x.fact, x.collected_from, x.repeats, x.question_text ?? "", x.rule_only ? "rule_only" : ""].join(" | ")).sort(),
+  sections: ((s.sections ?? []) as { id: string; title: string }[]).map((x) => `${x.id} | ${x.title}`),
+  forms: ((s.forms ?? []) as { form_number: string; who: string; status: string }[]).map((x) => `${x.form_number} | ${x.who} | ${x.status}`).sort(),
 });
+let probe: Record<string, unknown> | null = null;
 for (const key of ["vv.single", "wp.lmia_inside", "pnp.express_entry", "fs.spouse"]) {
-  const head = released(key), main = MAIN[key] as typeof head;
+  const main = MAIN[key] as Fixture, rel = latest(key);
+  const head = rel ? readable(rel.snapshot) : { placements: [], sections: [], forms: [] };
   const gone = (k: keyof typeof head) => main[k].filter((x) => !head[k].includes(x)), added = (k: keyof typeof head) => head[k].filter((x) => !main[k].includes(x));
-  ok(`BK-16 (P-496 (1)): ${key}'s released placements, chosen sections and form lines are byte-identical to main's (${main.placements.length} placements)`,
-    JSON.stringify(head) === JSON.stringify(main), { placementsGone: gone("placements"), placementsAdded: added("placements"), sectionsGone: gone("sections"), sectionsAdded: added("sections"), formsGone: gone("forms"), formsAdded: added("forms") });
+  const found = rel ? withStatusIgnored(rel.snapshot, main.status_may_differ).missing : ["no release"];
+  ok(`BK-16 (P-496 (1), A3): ${key}'s whole release snapshot is main's, only the status of ${main.status_may_differ.length} named shared items may differ (${main.placements.length} placements)`,
+    !!rel && found.length === 0 && releaseSha(rel.snapshot, main.status_may_differ) === main.snapshot_sha256,
+    { namedItemsNotFound: found, placementsGone: gone("placements"), placementsAdded: added("placements"), sectionsGone: gone("sections"), sectionsAdded: added("sections"), formsGone: gone("forms"), formsAdded: added("forms") });
+  ok(`BK-16 (P-496 (1), A3): ${key}'s release fingerprint is main's (status does not enter it), so no case reads its release as changed`,
+    !!rel && rel.sha256 === main.release_fingerprint && snapshotHash(rel.snapshot as never) === rel.sha256, { head: rel?.sha256, main: main.release_fingerprint });
+  if (key === "wp.lmia_inside" && rel) probe = rel.snapshot;
+}
+// Fail side of the comparison (pure, on With an LMIA's own release): a changed wording on a named item, or a status
+// flip on an item the fixture does not name, is a difference; the named items' status alone is not.
+{
+  const main = MAIN["wp.lmia_inside"] as Fixture, s = probe ?? {};
+  const named = main.status_may_differ.find((n) => n.startsWith("placement:"))?.slice("placement:".length);
+  const edit = (f: (x: Record<string, unknown>) => void) => { const c = JSON.parse(JSON.stringify(s)) as Record<string, unknown>; f(c); return releaseSha(c, main.status_may_differ); };
+  const placements = (c: Record<string, unknown>) => (c.placements ?? []) as Record<string, unknown>[];
+  const flipNamed = edit((c) => { for (const p of placements(c)) if (p.lineage === named) p.status = p.status === "DRAFT" ? "PUBLISHED" : "DRAFT"; });
+  const reword = edit((c) => { for (const p of placements(c)) if (p.lineage === named) p.question_text = "Changed wording"; });
+  const unnamed = placements(s).find((p) => !main.status_may_differ.includes(`placement:${String(p.lineage)}`))?.lineage;
+  const flipOther = edit((c) => { for (const p of placements(c)) if (p.lineage === unnamed) p.status = p.status === "DRAFT" ? "PUBLISHED" : "DRAFT"; });
+  ok("BK-16 (A3) fail side: a named item's status alone moves nothing; its changed wording, or another item's status, fails the check",
+    !!named && !!unnamed && flipNamed === main.snapshot_sha256 && reword !== main.snapshot_sha256 && flipOther !== main.snapshot_sha256, { named, unnamed });
 }
 
 // The release, as the checkpoint set it from data.
