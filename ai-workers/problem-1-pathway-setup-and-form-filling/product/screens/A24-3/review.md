@@ -141,3 +141,38 @@ At 1024, 720 (200 %) and 400 px the page scrolls 0 px sideways. No page errors.
 **Not checked:** the full CI run on this head (the guard only, while it is a draft); a real screen reader (r2); D17 and D20 (stay with the founder).
 
 **Verdict: Approve** `1abf9bdbe3d76f4622befbb6000799fc17481058`. There is no open Blocker or Major. r1 and r2 are for the builder to fix or record. The label applies to this commit only.
+
+## Round 3 (CI fix): `ba0f77c0e` (diff `d325ba13a..ba0f77c0e` only)
+Reviewed `ba0f77c0e465ba0ce6f5cb56fc711e00c8ba44d6`. The only file changed is `tests/runtime/check_runtime_r1c.cjs` (+6 −1); the web is the same as the approved `1abf9bdbe`. I ran on my own copy on :4448 (`rev_a243`), then stopped it. Screenshots the runs rewrote under R1-thin-slice and QA-165 are restored, and my probe script is deleted.
+
+**Ran:** the R1 group exactly as run-suites does: setup exit 0, r1c **140/140**, r1d **97/97**, r1a `--reset` **99/99** (load about 1.0 on 4 cores). The builder's logs agree: the old step gives 139/140 and fails on this step (`r1g-before-r1c.txt`); `r1g-head2-*` shows 140, 97 and 99.
+
+**(a) Root cause: right, and not a product bug.**
+* In a Visitor visa family each person files their own application. CS-10's Principal applicant column therefore repeats that person's name in their own row. This is by design: approved in round 2 and the same as in the Express Entry and sponsorship rows.
+* The old step's `section(People and filings).getByText("Sample Child C")` now matches two cells.
+* I reproduced it on a Visitor visa family. With …/prepare loaded, the old locator raises `strict mode violation`, and `shows()` turns that into `false`. If …/prepare has not loaded yet, there is one match and the step passes. So the CI red is a race in the check, not a regression.
+
+**(b) The new locator is sound** (probe on the same case). `section` matches 1 element.
+
+| What the probe did | Result |
+|---|---|
+| `tbody tr td:first-child` + `getByText(name, { exact: true })`, child present | true, one match |
+| An absent name | false |
+| Child's row removed, and the child's name put in another row's Principal applicant cell | false (mutation) |
+
+So the step still fails when the child is missing, and the column cannot mask a missing child. The step also logs each part now (`tabsShown`, `tabsRight`, `childRow`). The Person cell is the row's first `td`, filing-changes.tsx:87.
+
+**(c) The budget miss is noise.**
+* Case page first view (best of 3) on this PR's web across runs: 589 ms (`rel-scr_r1`, the round-1 web) · 971 · 801 · **1026** (the miss, load 1.3) · 665 (mine).
+* The spread on the same build is about 360 ms. The budget's own fail-guard still works: 1.1 s answers measure 1430 ms.
+* What A24-3 adds to the first view:
+  * No request: the header reads the case's `people` the page already has, and the column reads the …/prepare the table already loaded.
+  * One more `td` per row.
+  * One Radix tooltip in the header, rendered closed.
+
+  None of this is on the path the timer waits for at a cost near 400 ms.
+* Not measured: main's web side by side on this machine.
+
+**Findings:** none new. r1 and r2 from round 2 stand (Minor).
+
+**Verdict: Approve** `ba0f77c0e465ba0ce6f5cb56fc711e00c8ba44d6`, for this commit only. CI must still go green on this head.
