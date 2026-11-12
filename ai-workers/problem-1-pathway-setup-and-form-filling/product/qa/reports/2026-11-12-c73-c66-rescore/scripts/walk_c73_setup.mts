@@ -61,10 +61,15 @@ await main("walk C7.3 (qa setup, 12 Nov)", "principal Yes / spouse No on Q8 A, I
     if (i.channel === "PDF_UPLOAD" && mine.some((l: { form: string; barcode?: boolean }) => l.form === i.form && l.barcode)) await L.validateRoundTrip(c.id, i.form!, i.subject);
     if (i.signature === "HAND_SCANNED") await L.signByHand(c.id, i.id, i.form!, i.subject);
   }
-  await call("POST", `/runtime/filings/${fid}/review`, { note: "Reviewed (Sample)", facts_hash: L.readinessOf(await view(), fid)?.facts_hash }, f.rep ?? "");
-  const warns = L.readinessOf(await view(), fid)?.warns ?? [];
-  for (const l of warns) await call("POST", `/runtime/filings/${fid}/warnings/${l.code}/pass`, { reason: "Passed for the walk (Sample)", key: l.key }, officer);
+  // Every filing of the submission (one per person): the submission is recorded only once every filing is Ready to file.
+  let warns: unknown[] = [];
+  for (const g of (v?.filings ?? []) as { id: string }[]) {
+    await call("POST", `/runtime/filings/${g.id}/review`, { note: "Reviewed (Sample)", facts_hash: L.readinessOf(await view(), g.id)?.facts_hash }, f.rep ?? "");
+    const ws = L.readinessOf(await view(), g.id)?.warns ?? []; warns = warns.concat(ws);
+    for (const l of ws) await call("POST", `/runtime/filings/${g.id}/warnings/${l.code}/pass`, { reason: "Passed for the walk (Sample)", key: l.key }, officer);
+  }
   const fin = await view(); const after = L.readinessOf(fin, fid);
+  console.log("FILINGS " + (fin?.filings ?? []).map((g: { id: string }) => `${g.id}:${JSON.stringify(L.readinessOf(fin, g.id)?.warns?.length ?? null)}open/${L.readinessOf(fin, g.id)?.blocks?.length ?? null}blocks`).join(" "));
   for (const [name, who] of [[PN, P], [SN, S]] as const) {
     const item = L.itemsOf(fin, who, "IMM 5257").find((i: { channel: string }) => i.channel === "ONLINE") ?? L.itemsOf(fin, who, "IMM 5257")[0];
     const copyId = await generateCopy(c.id, "IMM 5257", who);
