@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { answer, call, confirmAll, copyBytes, FAMILY, fillEverything, generateCopy, needVisitorVisa, openCase, sql, yearsAgo, type Case, type Person } from "./m3.ts";
 
 const STUDIO = join(import.meta.dirname, "..", "..");
-const PY = join(STUDIO, "..", "..", "..", "..", ".tools", "solution-1-prototype", ".venv", "bin", "python"), READER = join(STUDIO, "tests", "fixtures", "read_choice_values.py");
+const PY = join(STUDIO, "..", "..", "..", "..", ".tools", "solution-1-prototype", ".venv", "bin", "python"), READER = join(STUDIO, "tests/fixtures/read_choice_values.py"); // one string: names the reader alone, not its folder (select-suites)
 const dir = mkdtempSync(join(tmpdir(), "qa415-"));
 
 export const STUDY_FAMILY: Person[] = [
