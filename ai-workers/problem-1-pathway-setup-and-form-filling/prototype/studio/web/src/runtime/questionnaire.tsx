@@ -423,17 +423,20 @@ function markPassed(caseId: string, s: Section) { try { const x = passedParts(ca
 
 /** QA-441 (P-498): where Save and continue goes: the first later part that is not done, wrapping round to the first
  *  parts, or the overview (null) when every other part is done. On a first pass that is the next part; on a second pass
- *  the client skips the parts already done. Each part is judged on the view just reloaded (`fresh`, in any order; the
- *  shown view's part when the reload lacks it), its checks, and the parts passed on this device. */
-function nextNotDone(parts: Section[], index: number, passed: Set<string>, checks: ViewCheck[], fresh: Section[] = []): number | null {
-  const key = (s: Section) => `${s.subjectId}|${s.section}`;
-  const now = new Map(fresh.map((s) => [key(s), s] as const));
-  for (let k = 1; k < parts.length; k++) {
-    const i = (index + k) % parts.length, s = parts[i];
-    if (!partState(now.get(key(s)) ?? s, passed, checks).done) return i;
+ *  the client skips the parts already done. `parts` is the order the questionnaire shows after the save (review m1: a
+ *  save can add or remove parts, so the index is read on that order); `from` is the part left, -1 when the save
+ *  removed it (then the search starts at `after`, where it stood). Judged with the parts' checks and the parts passed
+ *  on this device. */
+function nextNotDone(parts: Section[], from: number, after: number, passed: Set<string>, checks: ViewCheck[]): number | null {
+  const start = from >= 0 ? from : after - 1;
+  for (let k = 1; k <= parts.length; k++) {
+    const i = (((start + k) % parts.length) + parts.length) % parts.length;
+    if (i === from) continue;
+    if (!partState(parts[i], passed, checks).done) return i;
   }
   return null;
 }
+const partKey = (s: Section) => `${s.subjectId}|${s.section}`;
 
 function partState(s: Section, passed: Set<string>, checks: ViewCheck[] = []) {
   if (checks.some((c) => c.subjectId === s.subjectId && c.section === s.section)) return { tone: "warn", text: "Check answers", done: false };
@@ -444,7 +447,9 @@ function partState(s: Section, passed: Set<string>, checks: ViewCheck[] = []) {
   return { tone: "ok", text: "Done", done: true };
 }
 
-export function Sqr({ view }: { view: View }) {
+/** `order`: the parts this questionnaire shows for a view (by default every part, person by person); Save and continue
+ *  reads its target on the order of the view just reloaded (QA-441). The adult's own link shows only their parts. */
+export function Sqr({ view, order = (v: View) => byPerson(v).sections }: { view: View; order?: (v: View) => Section[] }) {
   const [params, setParams] = useSearchParams();
   const parts = view.sections;
   const raw = params.get("part");
@@ -453,7 +458,7 @@ export function Sqr({ view }: { view: View }) {
   const from = params.get("from");
   const go = (i: number | null) => { setParams({ ...(i === null ? {} : { part: String(i + 1) }), ...(from ? { from } : {}) }); window.scrollTo({ top: 0 }); };
   if (index === null) return <SqrOverview view={view} open={go} />;
-  return <SqrPart key={`${parts[index].subjectId}|${parts[index].section}`} view={view} index={index} go={go} />;
+  return <SqrPart key={`${parts[index].subjectId}|${parts[index].section}`} view={view} index={index} go={go} order={order} />;
 }
 
 function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) {
@@ -509,7 +514,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
   );
 }
 
-function SqrPart({ view, index, go }: { view: View; index: number; go: (i: number | null) => void }) {
+function SqrPart({ view, index, go, order }: { view: View; index: number; go: (i: number | null) => void; order: (v: View) => Section[] }) {
   const caseId = view.case.id, part = view.sections[index], total = view.sections.length;
   const qc = useQueryClient(), toast = useToast(), io = React.useContext(QuestionnaireIoContext);
   const person = view.case.people.find((p) => p.subject_id === part.subjectId);
@@ -576,7 +581,11 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
     const flagged = (fresh?.checks ?? view.checks).some((c) => c.subjectId === part.subjectId && c.section === part.section) || now.missing.length > 0;
     const stay = !ok || invalid || flagged;
     if (forward && !stay) markPassed(caseId, part);
-    if (target === "next") { to = nextNotDone(view.sections, index, passedParts(caseId), fresh?.checks ?? view.checks, fresh?.sections); setLeaveTo({ to, words }); }
+    if (target === "next") {
+      const parts = fresh ? order(fresh) : view.sections;
+      to = nextNotDone(parts, parts.findIndex((s) => partKey(s) === partKey(part)), index, passedParts(caseId), fresh?.checks ?? view.checks);
+      setLeaveTo({ to, words });
+    }
     if (stay) { setSummary(true); setFocusSummary((n) => n + 1); return; }
     go(to);
   }

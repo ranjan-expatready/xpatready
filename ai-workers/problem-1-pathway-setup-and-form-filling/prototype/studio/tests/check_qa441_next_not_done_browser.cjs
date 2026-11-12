@@ -32,13 +32,17 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(e.message));
     return p;
   };
-  const partOf = async (p) => { const t = await p.getByText(/^Part \d+ of \d+/).first().innerText().catch(() => ""); const m = /^Part (\d+) of (\d+) · (.*)$/.exec(t.trim()); return m ? { n: Number(m[1]), of: Number(m[2]), title: m[3] } : null; };
+  // The part shown, or null on the overview (review m3: no wait when there is no part line).
+  const partOf = async (p) => { const l = p.getByText(/^Part \d+ of \d+/).first(); const t = (await l.count()) ? await l.innerText() : ""; const m = /^Part (\d+) of (\d+) · (.*)$/.exec(t.trim()); return m ? { n: Number(m[1]), of: Number(m[2]), title: m[3] } : null; };
   const openPart = async (p, caseId, n) => { await p.goto(`${BASE}/cases/${caseId}/questionnaire?part=${n}`); await p.getByText(new RegExp(`^Part ${n} of \\d+`)).waitFor({ timeout: 30000 }); };
-  /** Press Save and continue and wait until the client has left part `from` (another part, or the overview), or the summary shows. */
+  /** Press Save and continue and wait until the client has left part `from` (another part, or the overview), or the
+   *  summary shows; a wait that times out is a failed step naming it (review m2), never silent. */
+  const settled = (p, why) => p.waitForFunction(() => !document.querySelector("button[aria-busy]"), undefined, { timeout: 15000 }).then(() => true, () => { step(`${why}: the page settles (no busy button)`, false); return false; });
   const saveAndContinue = async (p, from) => {
     await p.getByRole("button", { name: "Save and continue" }).click();
-    await p.waitForFunction((n) => { const t = document.querySelector("main")?.innerText ?? ""; return !new RegExp(`(^|\\n)Part ${n} of \\d+`).test(t) || /You can fix these now/.test(t); }, from, { timeout: 30000 }).catch(() => {});
-    await p.waitForFunction(() => !document.querySelector("button[aria-busy]"), undefined, { timeout: 15000 }).catch(() => {});
+    const left = await p.waitForFunction((n) => { const t = document.querySelector("main")?.innerText ?? ""; return !new RegExp(`(^|\\n)Part ${n} of \\d+`).test(t) || /You can fix these now/.test(t); }, from, { timeout: 30000 }).then(() => true, () => false);
+    if (!left) step(`Save and continue on Part ${from}: the client leaves the part or sees the summary within 30 s`, false);
+    await settled(p, `Save and continue on Part ${from}`);
   };
   const overview = async (p) => /Every part is answered/.test(await p.locator("main").innerText()) && (await partOf(p)) === null;
   const axe = async (p, name) => { const r = await new AxeBuilder({ page: p }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).include("main").analyze(); step(`axe: ${name} has no WCAG 2.2 AA violation`, r.violations.length === 0, r.violations.map((v) => `${v.id}: ${v.nodes[0]?.target}`)); };
@@ -104,7 +108,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const summary = p.getByRole("button", { name: "leave them for now and continue" });
   step("(4) the part that needs fixing keeps the client, with the summary (P-47, QA-36)", (await partOf(p))?.n === target?.n && await summary.isVisible().catch(() => false));
   await summary.click();
-  await p.waitForFunction(() => !/(^|\n)Part \d+ of \d+/.test(document.querySelector("main")?.innerText ?? ""), undefined, { timeout: 15000 }).catch(() => {});
+  const left4 = await p.waitForFunction(() => !/(^|\n)Part \d+ of \d+/.test(document.querySelector("main")?.innerText ?? ""), undefined, { timeout: 15000 }).then(() => true, () => false);
+  if (!left4) step("(4) \"leave them for now and continue\": the client leaves the part within 15 s", false, await partOf(p));
   const main4 = await p.locator("main").innerText();
   step("(4) QA-441: \"leave them for now and continue\" → the overview, as no other part is left (not the next part, done)", (await partOf(p)) === null && new RegExp(`${total - 1} of ${total} parts done`).test(main4), (await partOf(p)) ?? main4.slice(0, 200));
   await p.screenshot({ path: path.join(SHOTS, "qa441-4-overview-one-left-1440.png"), fullPage: false });
