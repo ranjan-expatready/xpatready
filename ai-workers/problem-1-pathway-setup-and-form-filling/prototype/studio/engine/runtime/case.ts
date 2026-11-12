@@ -457,9 +457,12 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   // birth and marital status come before the parts a form's age limit or condition drops (a 0-4 child never meets
   // Military service first). What decides what is read from the release with no answers given, so the order never moves
   // while the client answers.
-  // People come in the case's order (the application first, then the principal, spouse, children; a relative after the
-  // person they belong to), never by their id.
-  const rankOf = new Map(people.map((p, i) => [p.subjectId, p.role === "case" ? -1 : i]));
+  // People come in the case's order (the principal first, then the spouse, children; a relative after the person they
+  // belong to), never by their id. The application's own parts (the visit, its contact) come right after the principal's
+  // own (Lead 26's done-when 3, "main applicant first"; Lead 27, #1643: the forms' readiness reasons, read in this order,
+  // keep naming the person's facts first), unless one of them decides a question asked earlier.
+  const principalAt = people.findIndex((p) => p.role === "principal");
+  const rankOf = new Map(people.map((p, i) => [p.subjectId, p.role === "case" ? (principalAt < 0 ? -1 : principalAt + 0.25) : i]));
   const rank = (id: string) => { const [owner, rel] = id.split("/"); return (rankOf.get(owner) ?? people.length) + (rel ? 0.5 : 0); };
   // The sections the combination's author chose and ordered (C4.1, P-216) keep that order.
   const authored = new Set((s.sections as { id: string }[]).map((x) => x.id));

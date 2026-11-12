@@ -70,9 +70,15 @@ for (const [key, name] of [["vv.single", "Visitor visa"], ["sp.outside", "Study 
     const f = await family(key, `QA439-${who}`);
     const s = f.people[who];
     const before = walk(await view(f.id));
-    // Review M1 (#1643): people come in the case's order (the application, principal, spouse, child), never by their id.
-    const firstSeen = [...new Set(before.map((q) => q.subject).filter((x) => !x.includes("/") && f.roleOf.has(x)))].map((x) => f.roleOf.get(x));
-    ok(`QA-439 pass (${name}, case ${who}): people come in the case's order, the application first`, JSON.stringify(firstSeen) === JSON.stringify(["case", "principal", "spouse_or_partner", "child"]), firstSeen);
+    // Review M1 (#1643): people come in the case's order (principal, spouse, child), never by their id; Lead 26's done-when
+    // 3: the main applicant first. The application's own parts come right after the principal's own (Lead 27: the forms'
+    // readiness reasons, read in this order, name the person's facts first). Another person's part that decides one of the
+    // principal's (the spouse's personal details before the common-law declaration) may come earlier: the decider rule.
+    const parts = [...new Set(before.map((q) => `${q.subject}|${q.section}`))].map((k) => ({ k, role: f.roleOf.get(k.split("|")[0]) }));
+    const firstSeen = [...new Set(parts.map((x) => x.role).filter((r) => r && r !== "case"))];
+    const caseAt = parts.findIndex((x) => x.role === "case"), principalLast = parts.findLastIndex((x) => x.role === "principal");
+    ok(`QA-439 pass (${name}, case ${who}): people come in the case's order, the main applicant first; the application's own parts start right after the principal's last part`,
+      JSON.stringify(firstSeen) === JSON.stringify(["principal", "spouse_or_partner", "child"]) && parts[0]?.role === "principal" && caseAt === principalLast + 1, { firstSeen, caseAt, principalLast, around: parts.slice(Math.max(0, caseAt - 2), caseAt + 2) });
     if (who === "principal") {
       const caseSubject = [...f.roleOf].find(([, r]) => r === "case")![0];
       const late = before.flatMap((q, i) => { const g = gates.get(q.fact); if (!g) return []; return [...g].map((d) => ({ q, i, d: before.findIndex((x) => x.fact === d && x.subject === (d.startsWith("case.") ? caseSubject : q.subject.split("/")[0])) })).filter((x) => x.d > x.i); });
