@@ -143,9 +143,12 @@ try {
   const dlg = page.getByRole("dialog");
   await dlg.waitFor({ timeout: 10_000 });
   await shot(page, "record-dialog");
-  await dlg.getByLabel("Application number").fill("V300000777");
-  await dlg.getByLabel("Our reference").fill("SAMPLE-QA-C73");
-  const uci = dlg.getByLabel(/UCI/); if (await uci.count()) await uci.first().fill("1111-2222");
+  // One set of fields per person in a family submission (12 Nov run 3: two "Application number" fields).
+  const fillAll = async (label: string | RegExp, val: (i: number) => string) => { const l = dlg.getByLabel(label); const n = await l.count(); for (let i = 0; i < n; i++) await l.nth(i).fill(val(i)); return n; };
+  const nApp = await fillAll("Application number", (i) => `V30000077${7 - i}`);
+  const nRef = await fillAll("Our reference", (i) => `SAMPLE-QA-C73-${i + 1}`);
+  const nUci = await fillAll(/UCI/, (i) => `1111-222${i}`);
+  log("  dialog fields filled: application numbers", nApp, "references", nRef, "UCI", nUci);
   await dlg.getByRole("button", { name: "Record the submission", exact: true }).click();
   await dlg.waitFor({ state: "hidden", timeout: 15_000 }).catch(() => {});
   await w.settle(page, "after record");
