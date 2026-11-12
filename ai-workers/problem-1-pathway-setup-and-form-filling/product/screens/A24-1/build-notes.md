@@ -21,7 +21,7 @@ Screens (A24-2, A24-3: list column, heading, search, "Client:", optional referen
 ## Open Minors (follow-ups, none blocks)
 * n1: a reference written with look-alike characters (Unicode dashes, a Cyrillic С, fullwidth digits) can still read like a case number; fix: NFKC and dash folding before the check.
 * n2: an idempotency key reused with `reference: null` and then without the field gives 409 (the fingerprint hashes the null).
-* Break m6 (before A24-1): reference uniqueness ignores letter case only in Postgres's sense (`Dup-x` and `DUP-x` both open); matters once A24-2 makes the reference searchable.
+* Break m6 (before A24-1): reference uniqueness is case-sensitive (`Dup-x` and `DUP-x` both open); matters once A24-2 makes the reference searchable.
 
 ## Rollback
 Drop triggers `trg_case_participant_principal`, `trg_runtime_case_with_principal` and function `runtime_case_has_principal()`; drop constraint `case_participant_one_principal`; drop trigger `trg_runtime_case_number_fixed` and its function; drop column `runtime_case.case_number`; drop function `runtime_next_case_number(uuid, text, timestamptz)`; drop table `firm_case_counter`; `reference` back to NOT NULL only while every case has one. Written in the migration's header.
