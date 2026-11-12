@@ -12,6 +12,27 @@ import { STUDIO } from "../../core.ts";
 type Correction = { proposed: string; key: string; valueType?: string; meaning?: string; note: string };
 export const REVIEW_CORRECTIONS: Correction[] = (JSON.parse(readFileSync(join(STUDIO, "samples", "review-corrections.json"), "utf8")) as { corrections: Correction[] }).corrections;
 
+/** BK-16 (P-496): the sources a combination's setup marks "later" in samples/wave1.json (a form the library gains only
+ *  for a family member's rule, e.g. a spouse's own application), each kept only when that setup lists it among its
+ *  sources. Data, never a form or program in code. Exported, pure over the file's content, for its check. */
+export function laterSourcesByKey(sample: unknown): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  const walk = (n: unknown): void => {
+    if (Array.isArray(n)) { for (const x of n) walk(x); return; }
+    if (!n || typeof n !== "object") return;
+    const o = n as Record<string, unknown>, s = o.setup as { key?: unknown; sources?: unknown; later?: unknown } | undefined;
+    if (s && typeof s.key === "string" && Array.isArray(s.later) && Array.isArray(s.sources))
+      for (const f of s.later) if (typeof f === "string" && (s.sources as unknown[]).includes(f)) out.set(s.key, new Set([...(out.get(s.key) ?? []), f]));
+    for (const v of Object.values(o)) walk(v);
+  };
+  walk(sample);
+  return out;
+}
+export const laterSources = (sample: unknown): Set<string> => new Set([...laterSourcesByKey(sample).values()].flatMap((s) => [...s]));
+/** BK-16 (P-496): each combination's later sources, by its key (samples/wave1.json); 080 holds their forms back. */
+export const LATER_BY_KEY = laterSourcesByKey(JSON.parse(readFileSync(join(STUDIO, "samples", "wave1.json"), "utf8")));
+const LATER = new Set([...LATER_BY_KEY.values()].flatMap((s) => [...s]));
+
 /** How many drafts were applied to their combinations (row 8, 095, reads it). */
 export const fieldMapReview = stateOf(() => ({ applied: 0 }));
 /** How many proposals a field-map step reported (its detail counts). */
@@ -32,15 +53,20 @@ const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
  *  could start in the same millisecond and land in either order, so person.date_of_birth's meaning, and with it IMM
  *  5257's review sheet, changed from load to load. The showcase is the draft with the most proposals, a tie going to the
  *  first in this order. */
-export function reviewOrder<J extends Job>(jobs: J[], fileOf: Map<string, string>, batches: BatchPlan[] = []): { order: J[]; showcase: string | undefined } {
+export function reviewOrder<J extends Job>(jobs: J[], fileOf: Map<string, string>, batches: BatchPlan[] = [], later: ReadonlySet<string> = new Set()): { order: J[]; showcase: string | undefined } {
   const rank = new Map([...batches].sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime() || byText(a.id, b.id)).map((b, i) => [b.id, i]));
   const place = new Map(batches.map((b) => [b.id, new Map(b.targets.map((t, i) => [t.attachmentId ?? "", i] as [string, number]).reverse())]));
   const batchOf = (j: J) => rank.get(j.batchId ?? "") ?? Number.MAX_SAFE_INTEGER;
   const placeOf = (j: J) => place.get(j.batchId ?? "")?.get(j.attachmentId ?? "") ?? Number.MAX_SAFE_INTEGER;
   const file = (j: J) => fileOf.get(j.attachmentId ?? "") ?? "";
-  const order = [...jobs].sort((a, b) => batchOf(a) - batchOf(b) || placeOf(a) - placeOf(b) || byText(file(a), file(b)) || byText(runOf(a), runOf(b)) || byText(a.id, b.id));
-  const most = Math.max(0, ...order.map((j) => counted(j.detail)));
-  return { order, showcase: order.find((j) => counted(j.detail) === most)?.id };
+  // BK-16 (P-496): a source a combination marks "later" (samples/wave1.json) is decided after every combination's own
+  // listed forms, so it reuses the keys they name and never renames another combination's facts.
+  const lateOf = (j: J) => (later.has(file(j)) ? 1 : 0);
+  const order = [...jobs].sort((a, b) => lateOf(a) - lateOf(b) || batchOf(a) - batchOf(b) || placeOf(a) - placeOf(b) || byText(file(a), file(b)) || byText(runOf(a), runOf(b)) || byText(a.id, b.id));
+  // BK-16: the showcase is chosen among the drafts that are not marked later, so a later source never moves it (and
+  // with it the one return and edit) off a form another combination releases.
+  const own = order.filter((j) => !lateOf(j)), most = Math.max(0, ...own.map((j) => counted(j.detail)));
+  return { order, showcase: own.find((j) => counted(j.detail) === most)?.id };
 }
 
 export default {
@@ -53,7 +79,7 @@ export default {
     const batchIds = [...new Set(found.map((j) => j.batchId).filter((x): x is string => !!x))];
     const batches: BatchPlan[] = (batchIds.length ? await db.aiBatch.findMany({ where: { id: { in: batchIds } }, select: { id: true, startedAt: true, plan: true } }) : [])
       .map((b) => ({ id: b.id, startedAt: b.startedAt, targets: ((b.plan as { targets?: { attachmentId?: string | null }[] } | null)?.targets ?? []) }));
-    const { order: jobs, showcase } = reviewOrder(found, fileOf, batches);
+    const { order: jobs, showcase } = reviewOrder(found, fileOf, batches, LATER);
     let accepted = 0, edited = 0, returned = 0, applied = 0, corrected = 0;
     const refused: string[] = [];
     // One edit and one return stay visible (DEMO.md row 4), on the form with the most proposals (reviewOrder).

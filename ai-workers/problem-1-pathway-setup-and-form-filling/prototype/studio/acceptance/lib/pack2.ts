@@ -27,6 +27,15 @@ export const VV_PEOPLE = [
   { role: "representative", min: 0, max: 1, applies: false },
 ];
 
+/** BK-16 (Hand-over 3 on #1632): a combination's entry in samples/conditional-filings.json, read as the configured
+ *  checkpoint's step 085 reads it (that step imports the loader's Nest services, so it is read here, not imported). */
+type ConditionalFiling = { role: string; addsFiling: Record<string, unknown>; fact: { fact: string; label: string; meaning: string; valueType: string; question: string; collectedFrom?: string; helpText?: string } };
+export function conditionalFiling(combinationKey: string): ConditionalFiling | null {
+  const all = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "samples", "conditional-filings.json"), "utf8")) as Record<string, ConditionalFiling | string>;
+  const spec = all[combinationKey];
+  return spec && typeof spec === "object" ? spec : null;
+}
+
 export function pack2(id: string) {
   const PORT = Number(process.argv[2] ?? 4440), DB = process.argv[3] ?? "xr_studio_accept";
   const { call, sql, until } = client(PORT, DB);
@@ -127,6 +136,22 @@ export function pack2(id: string) {
       const same = sql("select canonical_field_key || '|' || coalesce(label, '') from canonical_field where value_type = 'yes_no' and group_key = 'person' and status in ('DRAFT', 'PUBLISHED')").split("\n").map((l) => l.split("|")).find(([, l]) => l && norm(l) === norm(y.label))?.[0];
       if (say(`ask "${y.label}" as its own question`, await call("POST", `/editions/${ed}/form-fields/own-question`, { dataPath: y.dataPath, reason: "Asked as its own question by a test, in the form's words (B52 setup)", ...(same ? { field: same } : { label: y.label, meaning: y.meaning, nearReason: OWN_YES_NO_NEAR }) }, AUTHOR))) out.ownYesNo++;
     }
+    // BK-16 (Hand-over 3 on #1632), as the configured checkpoint's step 085 does (api/src/features/checkpoint/
+    // 085-conditional-filings.ts): the combination's samples/conditional-filings.json entry. The author saves the line's
+    // rule on "Who can be in this application", adds the fact it reads (C3.6) for that rule, accepts it and a second person
+    // approves it, before the form rules below read the fact; it is asked per person once the sections are placed (below).
+    const filing = conditionalFiling(sql(`select combination_key from combination where id = '${comboId}'`));
+    if (filing) {
+      const before = JSON.parse(sql(`select participants::text from combination where id = '${comboId}'`) || "[]") as { role: string }[];
+      const f = filing.fact;
+      if (!before.some((l) => l.role === filing.role)) out.refused.push(`conditional filing: no "${filing.role}" line in Who can be in this application`);
+      else if (say(`the filing the ${filing.role} line adds`, await call("PATCH", `/combinations/${comboId}/people`, { version: Number(sql(`select participants_version from combination where id = '${comboId}'`)), participants: before.map((l) => (l.role === filing.role ? { ...l, addsFiling: filing.addsFiling } : l)), confirmRemove: true }, AUTHOR))
+        && sql(`select count(*) from canonical_field where canonical_field_key = '${f.fact}' and status in ('DRAFT', 'PUBLISHED')`) === "0") {
+        const added = await call("POST", `/combinations/${comboId}/rule-facts`, { fact: f.fact, rule: `adds_filing.${filing.role}`, label: f.label, meaning: f.meaning, valueType: f.valueType }, AUTHOR);
+        if (say(`rule fact ${f.fact}`, added) && added.body?.proposalId) say("accept the rule fact", await call("POST", "/review/proposals/decide", { ids: [added.body.proposalId], action: "accept", reason: "Accepted by a test: the fact a filing a line adds reads (samples/conditional-filings.json; Sample, Unconfirmed: expert; M3-S2)." }, AUTHOR));
+        await approveAll();
+      }
+    }
     // B71 (P-319, AGENTS rule 4): with the maps applied, the author sets each form line as IRCC's own words set it, on the
     // Forms tab's own routes: a rule in words becomes its rule; the family information form follows how the application
     // form is filed and the other one is taken off; a fact only a rule reads is added for its rule (C3.6) and approved by a
@@ -184,6 +209,14 @@ export function pack2(id: string) {
       const sec = at.map((k) => sql(`select section_key from section_question where canonical_field_key = '${k}' order by version desc limit 1`)).find(Boolean);
       if (sec) say(`place ${rf.fact}`, await call("POST", `/library/fields/${encodeURIComponent(rf.fact)}/placement`, { sectionKey: sec, collectedFrom: "client_questionnaire", repeats: rf.fact.startsWith("case.") ? "once_per_case" : "per_person", tier: "case" }, AUTHOR));
       else out.refused.push(`${rf.fact}: none of ${at.join(", ")} is asked in a section`);
+    }
+    // BK-16, as step 085: the conditional filing's fact is asked once per person, by whom the data names, in a section
+    // this combination asks and no other does (QA-227), rule only (asked of each person the rule decides).
+    const cf = filing?.fact;
+    if (cf && sql(`select count(*) from canonical_field where canonical_field_key = '${cf.fact}' and status in ('DRAFT', 'PUBLISHED')`) !== "0" && sql(`select count(*) from section_question where canonical_field_key = '${cf.fact}' and status <> 'RETIRED'`) === "0") {
+      const own = sql(`select s.section_key from sqr_section_selection s where s.combination_id = '${comboId}' and not exists (select 1 from sqr_section_selection o where o.combination_id <> '${comboId}' and o.section_key = s.section_key) order by s.section_order limit 1`);
+      if (own) say(`place ${cf.fact}`, await call("POST", `/library/fields/${encodeURIComponent(cf.fact)}/placement`, { sectionKey: own, collectedFrom: cf.collectedFrom ?? "staff_working_view", repeats: "per_person", tier: "case", questionText: cf.question, ...(cf.helpText ? { helpText: cf.helpText } : {}), ruleOnly: true }, AUTHOR));
+      else out.refused.push(`${cf.fact}: no section is asked by this combination alone`);
     }
     await approveAll();
     return out;
