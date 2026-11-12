@@ -51,14 +51,18 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step("gate A: the walk starts on the sign-in page with no person stored", await p.evaluate(() => localStorage.getItem("xr-actor")) === null);
     await p.locator('[data-sign-in-as="user-A"]').click(); await p.waitForURL((u) => u.pathname === "/start", { timeout: 15000 });
     step("gate A: the Configuration author's card lands on Starting points (BK-5 PR 2)", await p.evaluate(() => localStorage.getItem("xr-actor")) === "user-A");
+    // Review m1: on a copy whose last load was door 2 the door reads "Start again from here" (its Continue link is the
+    // filled control); either button reloads it. Review m2: the shot waits for the doors to come on.
+    const door2 = p.locator('[data-door="configured"]').locator('[data-start-door="configured"]');
+    await p.waitForFunction(() => !document.querySelector('[data-start-door="configured"]')?.disabled, null, { timeout: 30000 });
     await p.screenshot({ path: path.join(SHOTS, "..", "..", "BK-5-start-page", "screenshots", "bk5-pr2-01-start-after-sign-in-1440.png") });
-    const door2 = p.locator('[data-door="configured"]').getByRole("button", { name: "Start here" });
-    await door2.waitFor({ timeout: 30000 }); await door2.click();
+    await door2.click();
     const dlg = p.getByRole("dialog"); await dlg.waitFor({ timeout: 15000 });
     if (await p.getByLabel("Type RESET to confirm").count()) await p.getByLabel("Type RESET to confirm").fill("RESET");
     await dlg.locator("[data-start-go]").click();
     await p.waitForURL((u) => u.pathname === "/", { timeout: 600000 });
     await p.getByRole("heading", { level: 1 }).first().waitFor({ timeout: 30000 });
+    await p.getByText("Visitor visa", { exact: false }).first().waitFor({ timeout: 30000 }); // review m2: the cards, not their skeletons
     step("gate A: door 2 loads the configured checkpoint and lands on Immigration programs", new URL(p.url()).pathname === "/" && await p.evaluate(() => localStorage.getItem("xr-actor")) === "user-A", p.url());
     await p.screenshot({ path: path.join(SHOTS, "..", "..", "BK-5-start-page", "screenshots", "bk5-pr2-02-door2-landed-1440.png") });
     const rows = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body?.rows ?? [];
