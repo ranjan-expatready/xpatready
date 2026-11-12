@@ -356,7 +356,7 @@ export type Mode = "sqr" | "agent";
  *  `skipDocumentFacts` (Preview only for now, Lead Q2 29 Oct; the case default with M3's documents-first intake, C6.5):
  *  a fact a document on that person's checklist supplies is not asked (P-130); it names the document, or null to ask.
  *  What it skips is listed per person and document in `from_documents`. */
-export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date(), groupAnswers: GroupAnswer[] = [], opts: { skipDocumentFacts?: (subjectId: string, fact: string) => string | null; background?: ReadonlySet<string> } = {}): QuestionnaireView {
+export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date(), groupAnswers: GroupAnswer[] = [], opts: { skipDocumentFacts?: (subjectId: string, fact: string) => string | null; background?: ReadonlySet<string>; partOrder?: false } = {}): QuestionnaireView {
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
   const caseSubject = people.find((p) => p.role === "case")!;
   const { known, confirm } = knownOf(s, people, answers, rows, today);
@@ -463,7 +463,11 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const rank = (id: string) => { const [owner, rel] = id.split("/"); return (rankOf.get(owner) ?? people.length) + (rel ? 0.5 : 0); };
   // The sections the combination's author chose and ordered (C4.1, P-216) keep that order.
   const authored = new Set((s.sections as { id: string }[]).map((x) => x.id));
-  const questions = decidersFirst(inForms, whatDecides(s, people, renderPeople, caseSubject.subjectId, today), rank, (section) => authored.has(section));
+  const ordered = decidersFirst(inForms, whatDecides(s, people, renderPeople, caseSubject.subjectId, today), rank, (section) => authored.has(section));
+  // The parts keep one order while the client answers (an answer never sends a part behind the one the client is on, where
+  // "Save and continue" would pass it): the order of this questionnaire with no answers given; a part only an answer adds
+  // keeps its place after the part before it.
+  const questions = opts.partOrder === false ? ordered : inPartOrder(ordered, caseView(s, people, [], [], mode, today, [], { ...opts, partOrder: false }).sections.map((x) => `${x.subjectId}|${x.section}`));
   // A repeating group's "none apply" (Lead, break M3): confirmed by the same rule as an answer to the group's facts
   // (P-72, P-78), read as an answer to its first client fact (else its first fact).
   const birthOf = (subjectId: string) => answers.find((a) => a.subjectId === subjectId && a.field === MINOR.birthDateField && !a.rowKey)?.value;
@@ -546,6 +550,16 @@ function whatDecides(s: Snapshot, people: Participant[], renderPeople: Person[],
     out.delete(`${q.subjectId}|${q.fact}`);
     return out;
   };
+}
+
+/** QA-439: `qs` with its parts in the order `order` gives (stable: a part `order` does not name stays right after the part
+ *  before it); the questions inside each part keep their order. */
+export function inPartOrder<T extends { subjectId: string; section: string }>(qs: T[], order: string[]): T[] {
+  const at = new Map(order.map((k, i) => [k, i])), parts = new Map<string, T[]>();
+  for (const q of qs) { const k = `${q.subjectId}|${q.section}`; (parts.get(k) ?? parts.set(k, []).get(k)!).push(q); }
+  let last = -1, step = 0;
+  const pos = [...parts.keys()].map((k, i) => { const p = at.get(k); if (p !== undefined) { last = p; step = 0; return { k, i, p }; } step++; return { k, i, p: last + step / 1e4 }; });
+  return pos.sort((a, b) => a.p - b.p || a.i - b.i).flatMap((x) => parts.get(x.k)!);
 }
 
 /** QA-439 (P-498): the questions in their order, by person (`rank`): each person's sections the author ordered first, in

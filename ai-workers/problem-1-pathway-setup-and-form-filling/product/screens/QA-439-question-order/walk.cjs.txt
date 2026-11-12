@@ -1,0 +1,78 @@
+// QA-439 walk at 1440 px: the officer opens a family case (principal, spouse, child born 2023), Client A walks the
+// questionnaire by "Save and continue" (answers typed on screen like qa's A25 filler), every part logged; screenshots of
+// the overview, part 1 and the child's first part; ends at "Hand back to the Case officer" (C6.3's first step).
+//   node walk.cjs <port> <combination id> <out dir>
+const { chromium } = require("playwright");
+const fs = require("fs");
+const [, , PORT, COMBO, OUT] = process.argv;
+const BASE = `http://localhost:${PORT}`;
+const call = async (method, url, body, actor) => { const r = await fetch(`${BASE}/api${url}`, { method, headers: { "x-actor": actor, ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, body: await r.json().catch(() => null) }; };
+(async () => {
+  const open = await call("POST", "/runtime/cases", { combinationId: COMBO, reference: `WALK-${Date.now()}`, clientActor: "user-P", principal: { displayName: "Sample Applicant A" } }, "user-O");
+  const id = open.body.id;
+  for (const [role, name] of [["spouse_or_partner", "Sample Spouse A"], ["child", "Sample Child A"]]) await call("POST", `/runtime/cases/${id}/people`, { role, displayName: name }, "user-O");
+  const browser = await chromium.launch();
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  await ctx.addInitScript((a) => { try { if (!sessionStorage.getItem("w-init")) { localStorage.setItem("xr-actor", a); sessionStorage.setItem("w-init", "1"); } } catch {} }, "user-P");
+  const page = await ctx.newPage(); page.setDefaultTimeout(15000);
+  await page.goto(`${BASE}/cases/${id}/questionnaire`); await page.waitForLoadState("networkidle");
+  await page.screenshot({ path: `${OUT}/qa439-overview-1440.png`, fullPage: true });
+  await page.getByRole("button", { name: /^Start/ }).click(); await page.waitForLoadState("networkidle");
+  await page.screenshot({ path: `${OUT}/qa439-part1-1440.png` });
+  const log = []; let childShot = false, scroll = false;
+  for (let step = 0; step < 120; step++) {
+    const main = await page.locator("main").innerText();
+    const part = main.match(/Part (\d+) of (\d+)[^\n]*/)?.[0] ?? "";
+    if (!part) { log.push(`[${step}] no part on screen`); break; }
+    const who = /Answered once for the whole application/.test(main) ? "The application" : (main.match(/Answering for ([^\n.]+)/)?.[1] ?? "").trim();
+    const isChild = /Child/.test(who);
+    if (isChild && !childShot) { await page.screenshot({ path: `${OUT}/qa439-child-first-part-1440.png` }); childShot = true; }
+    if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) scroll = true;
+    const groups = await page.locator("main input[type=radio]:visible").evaluateAll((es) => [...new Set(es.map((e) => e.name))]);
+    for (const g of groups) {
+      const opts = page.locator(`main input[type=radio][name="${g}"]:visible`);
+      if (await opts.evaluateAll((es) => es.some((e) => e.checked))) continue;
+      const labels = await opts.evaluateAll((es) => es.map((e) => (e.labels?.[0]?.innerText || e.value || "").trim()));
+      let k = labels.findIndex((l) => /^No\b/.test(l)); if (k < 0) k = 0;
+      await opts.nth(k).check({ force: true }).catch(() => {});
+    }
+    const fields = page.locator("main input:visible:not([type=radio]):not([type=checkbox]), main textarea:visible, main select:visible");
+    const n = await fields.count();
+    for (let i = 0; i < n; i++) {
+      const f = fields.nth(i);
+      const m = await f.evaluate((e) => ({ tag: e.tagName, type: e.type, val: e.value, label: (e.labels?.[0]?.innerText || e.getAttribute("aria-label") || e.name || "").toLowerCase().trim(), legend: (e.closest("fieldset")?.querySelector("legend")?.innerText || "").toLowerCase(), opts: e.tagName === "SELECT" ? [...e.options].map((o) => o.text) : [], max: e.maxLength }));
+      if (m.val) continue;
+      if (/^(day|month|year)$/.test(m.label)) { const lg = m.legend; const end = /last day|until|end|expir/.test(lg); await f.fill(m.label === "day" ? (end ? "20" : "14") : m.label === "month" ? (end ? "07" : "06") : /birth/.test(lg) ? (isChild ? "2023" : "1986") : end || /planned|first day/.test(lg) ? "2027" : "2020").catch(() => {}); continue; }
+      if (m.tag === "SELECT") { let p = m.opts.findIndex((o) => /^(India|Indian)$/i.test(o)); if (p < 0 && /marital/.test(m.label + m.legend)) p = m.opts.findIndex((o) => (isChild ? /^single/i : /^married/i).test(o)); if (p < 0) p = m.opts.findIndex((o, j) => j > 0 && o && !/choose|select/i.test(o)); if (p >= 0) await f.selectOption({ index: p }).catch(() => {}); continue; }
+      const L = m.label; let v = "Sample";
+      if (/city|town|place/.test(L) && m.type !== "date") v = "New Delhi";
+      else if (m.type === "date" || /date|birth/.test(L)) v = /birth/.test(L) ? (isChild ? "2023-03-14" : "1986-05-20") : "2024-01-15";
+      else if (m.type === "email" || /e-?mail/.test(L)) v = "client.a@example.com";
+      else if (m.type === "tel" || /phone|telephone|country code|^number$/.test(L)) v = /country code/.test(L) ? "91" : "4165550100";
+      else if (m.type === "number" || /amount|funds|cad|cost/.test(L)) v = "8000";
+      else if (/postal|zip/.test(L)) v = /canada/.test(m.legend) ? "K1A 0B1" : "110001";
+      else if (/^country/.test(L)) v = /canada/.test(m.legend) ? "Canada" : "India";
+      else if (/city|town|place/.test(L)) v = "New Delhi";
+      else if (/uci|client identifier/.test(L)) v = "1122334455";
+      if (m.max > 0 && v.length > m.max) v = v.slice(0, m.max);
+      await f.fill(v).catch(() => {});
+    }
+    const none = page.getByRole("button", { name: "None apply" });
+    for (let k = 0; k < (await none.count()); k++) await none.nth(k).click().catch(() => {});
+    const title = main.split("\n").find((l) => l.startsWith("Part ")) ?? part;
+    await page.getByRole("button", { name: "Save and continue" }).click().catch(() => log.push(`[${step}] no Save and continue`));
+    await page.waitForTimeout(600);
+    for (let w = 0; w < 30 && /Saving…/.test(await page.locator("main").innerText()); w++) await page.waitForTimeout(400);
+    const after = (await page.locator("main").innerText()).match(/Part (\d+) of (\d+)[^\n]*/)?.[0] ?? "(no part)";
+    log.push(`[${step}] ${who || "?"} · ${title} -> ${after}`);
+    if (after === part) { log.push(`STUCK on ${part}`); break; }
+    if (after === "(no part)") break;
+  }
+  await page.screenshot({ path: `${OUT}/qa439-after-walk-1440.png`, fullPage: false });
+  const end = await page.locator("main").innerText();
+  log.push(`end: ${end.slice(0, 300).replace(/\n/g, " | ")}`);
+  log.push(`sideways scroll at 1440: ${scroll}`);
+  fs.writeFileSync(`${OUT}/walk-log.txt`, log.join("\n") + "\n");
+  console.log(log.join("\n"));
+  await browser.close();
+})().catch((e) => { console.error(e); process.exit(1); });

@@ -3,7 +3,7 @@
 // (another person's too), a question after the questions in its part that decide it; nothing else moves; a circle keeps
 // its order. Pure: no server, no database.
 //   tsx studio/tests/check_qa439_deciders_first.ts
-import { decidersFirst } from "../engine/runtime/case.ts";
+import { decidersFirst, inPartOrder } from "../engine/runtime/case.ts";
 
 let pass = 0, fail = 0;
 const ok = (n: string, c: boolean, d?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  QA-439 rule: ${n}${!c && d !== undefined ? ` — ${JSON.stringify(d)}` : ""}`); };
@@ -47,6 +47,11 @@ const circle = [q("k", "s1", "a"), q("k", "s2", "b")];
 const c = show(decidersFirst(circle, rule({ "k|a": ["k|b"], "k|b": ["k|a"] })));
 ok("fail: a circle of deciders keeps its order, every question once", JSON.stringify(c) === JSON.stringify(["k:s1:a", "k:s2:b"]), c);
 ok("fail: a decider no question holds (answered elsewhere, not asked) moves nothing", JSON.stringify(show(decidersFirst(child, rule({ "k|served": ["k|gone"] })))) === JSON.stringify(show(child)));
+
+// One order while the client answers: parts follow the given order; a part it does not name stays after its predecessor.
+const now = [q("k", "b", "1"), q("k", "new", "1"), q("k", "a", "1"), q("k", "a", "2")];
+const o = show(inPartOrder(now, ["k|a", "k|b"]));
+ok("pass: parts follow the order given (the questions inside a part keep theirs); a part it does not name stays after the part before it", JSON.stringify(o) === JSON.stringify(["k:a:1", "k:a:2", "k:b:1", "k:new:1"]), o);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

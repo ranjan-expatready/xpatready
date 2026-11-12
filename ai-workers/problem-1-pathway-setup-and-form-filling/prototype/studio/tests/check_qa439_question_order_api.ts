@@ -64,6 +64,11 @@ for (const [key, name] of [["vv.single", "Visitor visa"], ["sp.outside", "Study 
     ok(`QA-439 fail-before (${name}, ${who}): every question the ${who}'s date of birth and marital status take away comes after both of them in the client's walk`,
       put.every((r) => r.status === 200) && decided.length > 0 && early.length === 0,
       { saved: put.map((r) => r.status), decided: decided.length, dob, marital, first_before: early.slice(0, 6).map((q) => `${q.i}: ${q.part} · ${q.fact}`) });
+    // The order holds while the client answers: the parts still asked keep the order they had (Save and continue never
+    // passes a part that moved behind the one the client is on).
+    const partsOf = (qs: typeof before) => [...new Set(qs.map((x) => `${x.subject}|${x.section}`))];
+    const kept = new Set(partsOf(after)), was = partsOf(before).filter((k) => kept.has(k)), now = partsOf(after).filter((k) => was.includes(k));
+    ok(`QA-439 fail (${name}, ${who}): after the ${who}'s two answers the parts still asked keep their order`, JSON.stringify(was) === JSON.stringify(now), { first_moved: was.findIndex((k, i) => now[i] !== k), was: was.slice(0, 8), now: now.slice(0, 8) });
     if (who === "child") {
       const adult = (qs: typeof before) => qs.filter((q) => q.subject === s && ADULT_ONLY.includes(q.section));
       const seen = adult(before).filter((q) => before.indexOf(q) < Math.max(dob, marital));
