@@ -44,7 +44,7 @@ export function SignInPage() {
                 </section>
               ) : null;
             })}
-            <p className="text-xs text-text-muted">Clients usually arrive from their case: the case officer's "Open it as Client A".</p>
+            <p className="text-xs text-text-muted">Clients usually arrive from their case: the case officer's "Hand to Client A (simulated)".</p>
           </div>
         </FoldOut>
       </div>
