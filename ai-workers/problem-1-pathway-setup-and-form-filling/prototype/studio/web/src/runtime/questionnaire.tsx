@@ -421,6 +421,20 @@ export const tabHash = (subjectId: string) => `#tab-${encodeURIComponent(subject
 
 function markPassed(caseId: string, s: Section) { try { const x = passedParts(caseId); x.add(`${s.subjectId}|${s.section}`); localStorage.setItem(passedKey(caseId), JSON.stringify([...x])); } catch { /* private window: the part stays "Optional" */ } }
 
+/** QA-441 (P-498): where Save and continue goes: the first later part that is not done, wrapping round to the first
+ *  parts, or the overview (null) when every other part is done. On a first pass that is the next part; on a second pass
+ *  the client skips the parts already done. Each part is judged on the view just reloaded (`fresh`, in any order; the
+ *  shown view's part when the reload lacks it), its checks, and the parts passed on this device. */
+function nextNotDone(parts: Section[], index: number, passed: Set<string>, checks: ViewCheck[], fresh: Section[] = []): number | null {
+  const key = (s: Section) => `${s.subjectId}|${s.section}`;
+  const now = new Map(fresh.map((s) => [key(s), s] as const));
+  for (let k = 1; k < parts.length; k++) {
+    const i = (index + k) % parts.length, s = parts[i];
+    if (!partState(now.get(key(s)) ?? s, passed, checks).done) return i;
+  }
+  return null;
+}
+
 function partState(s: Section, passed: Set<string>, checks: ViewCheck[] = []) {
   if (checks.some((c) => c.subjectId === s.subjectId && c.section === s.section)) return { tone: "warn", text: "Check answers", done: false };
   const invalid = s.questions.some((q) => (q.group ? q.rows.some((r) => r.answer?.problems.length) : q.answer?.problems.length));
@@ -550,7 +564,9 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   // an answer that needs a fix, a check, or an empty required question keeps the person on the part with the summary
   // and a way to leave anyway in the direction they chose.
   const [leaveTo, setLeaveTo] = React.useState<{ to: number | null; words: string }>({ to: index + 1 < total ? index + 1 : null, words: "leave them for now and continue" });
-  async function leave(to: number | null, words: string, forward: boolean) {
+  // `to` "next": the next part that is not done (QA-441), worked out on the view the save reloaded.
+  async function leave(target: number | null | "next", words: string, forward: boolean) {
+    let to = target === "next" ? (index + 1 < total ? index + 1 : null) : target;
     setLeaveTo({ to, words });
     const ok = await save();
     if (!alive.current) return;
@@ -558,11 +574,13 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
     const now = fresh?.sections.find((s) => s.subjectId === part.subjectId && s.section === part.section) ?? part;
     const invalid = now.questions.some((q) => (q.group ? q.rows.some((r) => r.answer?.problems.length) : q.answer?.problems.length));
     const flagged = (fresh?.checks ?? view.checks).some((c) => c.subjectId === part.subjectId && c.section === part.section) || now.missing.length > 0;
-    if (!ok || invalid || flagged) { setSummary(true); setFocusSummary((n) => n + 1); return; }
-    if (forward) markPassed(caseId, part);
+    const stay = !ok || invalid || flagged;
+    if (forward && !stay) markPassed(caseId, part);
+    if (target === "next") { to = nextNotDone(view.sections, index, passedParts(caseId), fresh?.checks ?? view.checks, fresh?.sections); setLeaveTo({ to, words }); }
+    if (stay) { setSummary(true); setFocusSummary((n) => n + 1); return; }
     go(to);
   }
-  const saveAndContinue = () => leave(index + 1 < total ? index + 1 : null, "leave them for now and continue", true);
+  const saveAndContinue = () => leave("next", "leave them for now and continue", true);
   const back = () => (d.dirty.length ? leave(index > 0 ? index - 1 : null, "leave them for now and go back", false) : go(index > 0 ? index - 1 : null));
   async function addRow() {
     if (adding) return;
