@@ -103,7 +103,15 @@ SKIP="check_catalogue_scale.cjs"
 # Back on this list until that is fixed; the nightly full set still runs it. Fix row (proposed on #1236): run it so the
 # exit cannot deadlock (Node 24's own type stripping instead of tsx's loader thread, or no process.exit), then 3 batch
 # passes in a row.
-QUARANTINE="check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts check_d1_reset_to_six_browser.cjs check_b78_section_names.ts"
+# check_c613_filing_changes_browser.cjs (C6.13 filing changes by screens, runtime) quarantined 12 Nov by the tech lead's
+# ruling on #1612 (Lead 23, P-205): its focus check "C6.13 walk 6a pass (review M4): after the change, focus is back on
+# the person's row (its menu button)" fails at random. On main's code (348fa8b11's api, a fresh isolated copy each run)
+# it failed 1 of 3 runs, 13/14 with only 6a red; on #1612's branch 1 of 2. It reads document.activeElement right after
+# the done line appears, with no wait for the focus move (as check_forms_c36's focus check above). The quarantine is the
+# whole suite (this list is per suite); its 13 other steps still run nightly, and acceptance/C6.13.test.ts (32 steps)
+# still runs in PR and queue packs. Fix row QA-420 (qa/BUGS.md, runtime): the check waits for the focus move (or the
+# product moves focus only after its re-render), 5 runs green in a row, then off this list in that PR.
+QUARANTINE="check_forms_c36_rule_facts_browser.cjs check_screen01_api.ts check_d1_reset_to_six_browser.cjs check_b78_section_names.ts check_c613_filing_changes_browser.cjs"
 # Automatic quarantine (B122): only well-formed entries; anything else is named and ignored, never run blind.
 AUTOQ=" "
 for e in ${SUITES_QUARANTINE_AUTO:-}; do
