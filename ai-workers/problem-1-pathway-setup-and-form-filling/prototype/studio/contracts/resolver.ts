@@ -127,6 +127,11 @@ export const WHO_HOLDERS = {
   // any age, and dependent children from an age (IMM 5257 SCH1 (09-2023) p. 1). Named here like each_applicant; the
   // line's minimum age then gates dependent children only (engine/render.ts ageGate).
   principal_partner_adult_children: "as each_applicant; the line's minimum age applies to dependent children only (the principal applicant and a spouse or partner always fill it)",
+  // BK-16 (P-490, the tech lead's ruling on #1614): a form for the principal applicant always and for each dependent child
+  // only while the line's condition holds for that child (a study permit application: the student and each child who
+  // studies, never a spouse or partner). Its condition is never read for the principal; a child with no condition on the
+  // line, or not answered yet, gets no form (never an error; the question is still asked). engine/render.ts reads it.
+  principal_and_children_when: "the principal, and each child while the line's condition holds for that child (never a spouse or partner)",
   each_adult_18_plus: "as each_applicant (the age is applied by the line's minimum age, not here); read from release data and the runtime (case-checklist.ts), not offered in the studio's list (api/src/studio.ts WHO)",
   principal_applicant: "the principal",
   spouse_or_partner: "the spouse or partner",
@@ -138,6 +143,8 @@ export const WHO_HOLDERS = {
   sponsor: "the sponsor (Sample role, the immigration expert confirms)",
 } as const;
 export type Who = keyof typeof WHO_HOLDERS;
+/** BK-16 (P-490): the "who" above whose condition gates dependent children only. */
+export const PRINCIPAL_CHILDREN_WHEN = "principal_and_children_when";
 /** R2: a subject kind on a line or its condition. */
 export const SUBJECT_KINDS = ["CASE", "PRINCIPAL", "SPOUSE", "DEPENDENT", "EACH_APPLICANT", "EACH_PERSON", "DOCUMENT"] as const;
 /** R10: the roles a "who" names by role (each_applicant, principal_applicant, each_person and case name none). */

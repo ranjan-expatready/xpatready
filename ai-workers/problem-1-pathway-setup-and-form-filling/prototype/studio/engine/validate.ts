@@ -14,7 +14,7 @@ import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
 import { factSourceProblems, factWords, who } from "./sources.ts";
 import { oathMappedProblems } from "./form-steps.ts";
 import { eligibilityChanges, gateProblems } from "./eligibility-gates.ts";
-import { sourceKey } from "../contracts/resolver.ts"; // SH3 R8
+import { PRINCIPAL_CHILDREN_WHEN, sourceKey } from "../contracts/resolver.ts"; // SH3 R8
 import { NO_FIELD_MAP } from "./setup-checklist.ts";
 import { formsWithoutFieldMap } from "./programs.ts"; // QA-180: one rule for release and Open a case
 import { FAMILY_INFORMATION } from "./form-completeness.ts";
@@ -146,6 +146,8 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     for (const e of checkCondition(f.condition, types, derived)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `Condition ${e}.` });
     // S5 (challenge M1): "Only if" in words with no rule cannot be evaluated on a case, so it is never released as is.
     if (f.status === "conditional" && !f.condition) out.push({ level: "error", where: "Forms", item: f.form_number, message: `Turn "${f.condition_plain ?? "only if"}" into a rule: the condition is in words only, so a case cannot tell whom ${f.form_number} applies to. Open the form on the Forms tab and build the rule.` });
+    // BK-16 (P-490): a "principal, and each child while its condition holds" line with no condition never reaches a child.
+    if (f.who === PRINCIPAL_CHILDREN_WHEN && !f.condition && f.status !== "conditional") out.push({ level: "warning", where: "Forms", item: f.form_number, message: `${f.form_number} is for the principal applicant and each child while its condition holds, but it has no condition, so no child ever gets it. Build its condition on the Forms tab, or choose "Principal applicant".` });
     // Lead check L5: a minimum age is decided by each person's date of birth (engine/render.ts ageGate asks it as a
     // deciding question); with nobody asked for it the form could never be decided, so release is refused.
     if (f.min_age && !placed.has(BIRTH) && !docFacts.has(BIRTH)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} applies from age ${f.min_age}${f.who === "principal_partner_adult_children" ? " for a dependent child" : ""}, so ${f.who === "principal_partner_adult_children" ? "each child's" : "each person's"} date of birth decides it, but nobody is asked for a date of birth in this combination. Add the date of birth question to this combination's questionnaire, or clear the minimum age.` });
