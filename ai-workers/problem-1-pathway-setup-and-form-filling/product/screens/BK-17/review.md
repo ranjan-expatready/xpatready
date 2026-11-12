@@ -168,3 +168,62 @@ They are not part of `8b09dbc76`, and I did not review them.
 * If the kept application is then recorded, "Application kept as prepared: <name>" becomes its recorded label. That label is honest, but it names no document.
 
 **Verdict: Approve** for commit `d69657a08`: no Blocker or Major is open.
+
+## Round 4 (diff-only, cb24bd7c8..af157ce4d)
+
+Fresh reviewer (did not build it), 12 Nov 2026. Head `af157ce4d` (`git log --oneline -3`). Scope: the merge of main `e7988ea5c` and the test set-up commit `af157ce4d`. Copy `rt_bk17rv` on :4438 only, stopped and dropped after the review. Live AI off, US$0, no priced button.
+
+**What I ran (exit codes).**
+* `check_bk17_recorded_filing_api 4438 xr_studio_rt_bk17rv` on the branch: 26/26 (exit 0). The child's frozen `study_permit` line reads 15000 before and after, and the group total is 47000.
+* The same check on **main's product code**: 20/26. The 4 files came from `origin/main`, the new test was kept, and the server ran from a scratch mirror on the same port and a fresh database. The working tree was not touched (`git status` clean). The 6 red steps match the builder's claim:
+  * (1) "read as recorded" and "never relabelled" (main relabels the child "Visitor visa");
+  * the stored `recorded_fees.labels`;
+  * GET …/filings;
+  * (2) both "other way" steps (main relabels to "Study permit: Sample Child N").
+* `check_bk17_keep_recorded` (pure): 25/25 (exit 0). The file is unchanged since cb24bd7c8.
+* Regression on the merged code, same copy, all exit 0:
+  * `check_bk15_study_family_api` 15/15
+  * `check_b152_recorded_fees_api` 20/20
+  * `check_bk9_shared_filing_api` 16/16
+  * `check_c82_record_api` 71/71
+  * `check_bk15_fees_by_role` 38/38 (pure)
+  * `check_bk16_children_when` 21/21 (pure)
+* `tsc -p api/tsconfig.json`: 15 errors, none in the 4 BK-17 files (the same count as round 2).
+
+**The merge (`e7988ea5c`) has no hand edits.**
+* `git show --cc` and `git show --remerge-diff` are empty.
+* `git merge-tree --write-tree cb24bd7c8 3ea36a0d3` gives tree `221efcd1f…`, which equals `e7988ea5c^{tree}`. The merge is exactly git's automatic result.
+* Main changed none of `case-prepare.ts`, `case-filings.ts`, `submission-record.ts` or `submission.ts`: `git diff 348fa8b11 3ea36a0d3` on them is empty.
+* The PR's changed lines in those files are identical before and after the merge (149+/27-, `diff` of the +/- lines is empty).
+
+**Main's new behaviour is consistent with BK-17.**
+* BK-15 (`engine/filing-modes.ts`, `engine/runtime/filings.ts`): a child on a `files_own` line whose rule holds gets the added filing *instead of* their own, with the same id `filing-<subject>`. Otherwise the child gets "Visitor visa" (`fees_by_role`).
+* So an answer now relabels the same row, and BK-17's `keepRecorded` (keyed by the stored row) holds the recorded label both ways. The 6 steps that are red on main and green on the branch prove it.
+* Nothing in main reads or writes a recorded filing's label or people. No main test records a Study permit case and then changes the answer.
+
+**The B1 claim is true on current data.**
+* `samples/conditional-filings.json` holds the only `addsFiling` (sp.outside, role child). `085-conditional-filings.ts` sets only that line.
+* sp.outside's modes put every role on `files_own` (`samples/fee-table.json`). The control case confirms it on the copy: after No, the child has their own "Visitor visa" filing, 2 filings.
+* No answer can therefore put a person onto someone else's filing. A move needs a line that both adds a filing and has the `principal` mode, and no released line does. Remove, Add back and Make principal are refused on a recorded case (BR-7).
+
+**What holds in the new set-up.** No assertion is removed without a replacement, and none is weakened against its target.
+* (1) The new fee step has a real guard (`kidSp(before0).length === 1`). Round 1's m3 is no longer vacuous at route level. Both fee steps also pass on main (frozen fees came with b152), and they are named "pass", not fail-first, which is honest.
+* (2) is stronger than before: it adds the frozen fees and the child's own label.
+* (3) adds the student's recorded row read as recorded.
+* (4) asserts the relabel with the same id.
+* The header comment matches what is asserted.
+
+**Findings.**
+
+**r4-m1, Minor (Should): the route check for breaks B1 and B2 no longer fails on the bug, and three of its steps are still named after B2.**
+* On main's product code every case (3) step passes (6/6, seen above). Case (3) is now a guard that an unrecorded application follows the answers. It no longer exercises the B1 path.
+* The steps "fail (break B2)" / "pass (break B2)" (`check_bk17_recorded_filing_api.ts`, case (3)) name a break whose cause they cannot reproduce.
+* The sync wiring that fixed B1 and B2 is now proven by no test. That wiring is `case-prepare.ts:214-224`: `keptRowsOf` feeds `keep`/`ownerOf`, so the row is not made inactive and the stage still lists it. The pure check covers only `keptRowsOf`/`keepRecorded`.
+* Not Major: the path is unreachable on current data, and the builder states it.
+* **Fix:** rename those steps (e.g. "unrecorded beside recorded"). In the test header, say that the sync wiring of B1/B2 has no fail-first route case until a released line both adds a filing and puts the person on another's application.
+
+**Journey score.** I did not walk it again this round: there is no product or UI change in the PR's own diff, and the merge is git's automatic result. The last journey record is round 1's 7/10 at `0646a9071`, and its Major (M1) was fixed and approved in rounds 2-3. There is no new score for this check.
+
+**Could not check:** a browser walk of main's new screens (outside this diff); 200 % zoom; a screen reader.
+
+**Verdict: Approve** for commit `af157ce4d`: no Blocker or Major is open. r4-m1 is a Should; r2-m2 is still listed for a later row.

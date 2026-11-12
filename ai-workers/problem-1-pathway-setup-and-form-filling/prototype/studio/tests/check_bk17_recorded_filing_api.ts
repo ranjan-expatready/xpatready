@@ -8,11 +8,14 @@
 // Prepare read relabelled the child's recorded application (BK-15 breaker B3: "Study permit" → "Visitor visa").
 // After: both recorded applications read as they were recorded (same ids, labels, numbers, people, items, frozen fees), on
 // GET …/prepare and GET …/filings, both ways (Yes → No, No → Yes) and with no third application; an application not
-// recorded still follows the answers, even beside a recorded one (break B2: the stage names it as not recorded); and an
+// recorded still follows the answers, even beside a recorded one (the stage names it as not recorded); and an
 // unrecorded family with the same answer is worked out again (control). Break B1 (an answer that moves a person onto a
 // recorded filing, which takes nobody) has no route case on current data: the only line rule that adds a filing
 // (samples/conditional-filings.json, sp.outside) now switches the child between two applications of their own, so
-// check_bk17_keep_recorded proves B1 (keptRowsOf) on its own. No model call (US$0).
+// check_bk17_keep_recorded proves B1 (keptRowsOf, keepRecorded) on its own. Case (3) keeps the breaker's set-up but
+// passes on main's code too: no route check here fails on B1/B2 any more, and the sync wiring that fixed them
+// (keptRowsOf feeding sync in case-prepare.ts: the kept row stays active and the stage still lists it) is proven by no
+// test until a combination's line can again move a person onto another filing (review r4-m1). No model call (US$0).
 //   zsh studio/tools/isolated.sh rt_bk17 4436 start && tsx studio/tests/check_bk17_recorded_filing_api.ts 4436 xr_studio_rt_bk17
 import { answer, call, confirmAll, firms, inDays, openCase, prepare, readyToFile, sql, yearsAgo, type Prepare } from "../acceptance/lib/m3.ts";
 import { recorder } from "./runtime/api.ts";
@@ -106,7 +109,7 @@ ok("BK-17 pass: GET …/filings agrees: the child's recorded application is list
   ok("BK-17 fail (other way): the child's recorded application is never relabelled (still \"Visitor visa: Sample Child N\", the child alone on it) and the student's never gains the child", nKid()?.id === nKidBefore?.id && nKid()?.label === "Visitor visa: Sample Child N" && nKid()?.applicants.map((a) => a.subject).join() === NK && (nv?.filings.find((x) => x.owner?.subject === NS)?.applicants ?? []).every((a) => a.subject !== NK), [nKid()?.label, nKid()?.applicants, nv?.filings.find((x) => x.owner?.subject === NS)?.applicants]);
 }
 
-// (3) Break B2 (BK-17 breaker): the child's application is split out and only the student's group is recorded. After "No"
+// (3) The breaker's B1/B2 set-up (no longer reaching them, see the header): the child's application is split out and only the student's group is recorded. After "No"
 // the child is still on their own (unrecorded) application, never on the student's recorded one, and ending the stage
 // still names it as not recorded.
 {
@@ -132,11 +135,11 @@ ok("BK-17 pass: GET …/filings agrees: the child's recorded application is list
   // the unrecorded application still follows the answer beside the recorded one, which reads as recorded.
   ok("BK-17 pass (unrecorded beside recorded): after \"No\", the child's unrecorded application follows the answer (same filing, \"Visitor visa: Sample Child X\", the child applying, with items), never on no filing", xn.status === 200 && !!xKidNow && xKidNow.label === "Visitor visa: Sample Child X" && xKidNow.applicants.some((a) => a.subject === XK && a.mode === "applying") && (xv?.items ?? []).some((i) => i.filing === xKidNow.id && i.subject === XK), { before: xBefore, now: xKidNow, items: (xv?.items ?? []).filter((i) => i.subject === XK).length });
   ok("BK-17 fail (unrecorded beside recorded): the student's recorded application reads as recorded (same id, label, number, people, items)", JSON.stringify(shape(xv).find((x) => x.id === xStudentBefore?.id)) === JSON.stringify(xStudentBefore), { before: xStudentBefore, now: shape(xv).find((x) => x.id === xStudentBefore?.id) });
-  ok("BK-17 fail (break B2): the student's recorded application never gains the child, and the child's row is never made inactive", (xv?.filings.find((x) => x.owner?.subject === XS)?.applicants ?? []).every((a) => a.subject !== XK) && sql(`select active::text from filing where id='${xKid?.id}'`) === "true", [xv?.filings.find((x) => x.owner?.subject === XS)?.applicants, sql(`select active::text from filing where id='${xKid?.id}'`)]);
+  ok("BK-17 fail (unrecorded beside recorded): the student's recorded application never gains the child, and the child's row is never made inactive", (xv?.filings.find((x) => x.owner?.subject === XS)?.applicants ?? []).every((a) => a.subject !== XK) && sql(`select active::text from filing where id='${xKid?.id}'`) === "true", [xv?.filings.find((x) => x.owner?.subject === XS)?.applicants, sql(`select active::text from filing where id='${xKid?.id}'`)]);
   const xfl = (await call("GET", `/runtime/cases/${r.id}/filings`, undefined, officer)).body as { filings: { id: string; applicants: { subject: string }[] }[] };
-  ok("BK-17 pass (break B2): GET …/filings agrees: the child is on their own application", (xfl?.filings ?? []).some((x) => x.id === `filing-${XK}` && x.applicants.some((a) => a.subject === XK)), xfl?.filings);
+  ok("BK-17 pass (unrecorded beside recorded): GET …/filings agrees: the child is on their own application", (xfl?.filings ?? []).some((x) => x.id === `filing-${XK}` && x.applicants.some((a) => a.subject === XK)), xfl?.filings);
   const nx = await call("GET", `/runtime/cases/${r.id}/stages/next`, undefined, officer);
-  ok("BK-17 fail (break B2): ending the stage still names the child's application as not recorded (so a reason is required)", nx.status !== 200 || ((nx.body?.unrecorded ?? []) as { filing: string }[]).some((u) => u.filing === xKid?.id), [nx.status, nx.body?.unrecorded ?? nx.body?.detail]);
+  ok("BK-17 fail (unrecorded beside recorded): ending the stage still names the child's application as not recorded (so a reason is required)", nx.status !== 200 || ((nx.body?.unrecorded ?? []) as { filing: string }[]).some((u) => u.filing === xKid?.id), [nx.status, nx.body?.unrecorded ?? nx.body?.detail]);
 }
 
 // (4) Control: an unrecorded family with the same answer is worked out again (only a recorded filing is kept).
