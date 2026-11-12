@@ -11,3 +11,5 @@ Read only our repository's git history, `qa/CAPABILITIES.md`, the team's require
 | `c8_sample.py`, `c9_frs.py` | requirement-line sample and pointer lines (C-1, C-2) |
 | `c10_span.py`, `c11_lanes.py`, `c12_sens.py` | module span, lane crossing, sensitivity (C-12) |
 | `c13_size_capacity.py` | size band 433-704 and week rates (C-4, C-19) |
+
+**Withdrawn or superseded outputs (Lead 26 challenge, 12 Nov):** `c13_size_capacity.py` prints "PRs per Works 6.3 / 3.7" (withdrawn: a counting artefact of the 3-4 Nov re-proof; on all confirmations it is 2.95 → 3.21) and the size band "433-704" (superseded by the plan's 1.4 range ~310-700, which adds a 0.1 floor for prose modules).

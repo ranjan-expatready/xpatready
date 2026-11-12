@@ -1,4 +1,4 @@
-# Script outputs, 12 Nov IST, main 56b630913 (our app only; the team's app is measured in the private comparison). Re-run commands in the plan's Evidence section.
+# Script outputs, 12 Nov IST, sample cut at main 5797feb18 (#1628) (our app only; the team's app is measured in the private comparison). Re-run commands in the plan's Evidence section.
 
 ## measure_structure.py
 [ours] api: folders=2 files=228 test_files=0 lines=32931
