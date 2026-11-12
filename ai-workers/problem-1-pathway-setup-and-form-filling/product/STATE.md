@@ -27,7 +27,7 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
 5. **Standbys:** Lead 25 `local_08cf41af-225a-44c9-9d75-2060969d3cca` stays; start one more at the founder's next typed turn. Lead 23's check becbb89b is deleted; create yours.
 
 **Lead 24 live (13:4x IST):** check f13c1979 at :13/:43. Live line and 13:3x check, word for word: `history/STATE-2026-11-12-1345-lead24s2-live-and-check-1330.md`. In short: #1620 round 3 allowed; #1631 in batch #1635; **#1612 dequeued on its own `check_bk17`** (main's BK-15/16), fresh-lane card task_d4445cc9; #1627 requeued; #1616 waits for the qa lane's merge of main, then the Lead's Approve; A26 done (P-493); extension done (P-495).
-**Extension (P-495, B184):** 40 sessions, three lanes from 16 Nov, Sample-complete 24 Nov-2 Dec IST; plan `design/chrome-extension-sizing-2026-11-12.md`. **Founder to send** `design/counsel-brief-extension-2026-11-12.md` Part A to counsel and Part B (SP-2, ~1 h) to the expert. Started by the founder ~13:5x: BK-17 fix lane and extension SP-1 lane (cloud). Lead 25 has read RULES and STATE.
+**Extension (P-495, B184):** 40 sessions, three lanes from 16 Nov, Sample-complete 24 Nov-2 Dec IST; plan `design/chrome-extension-sizing-2026-11-12.md`. **Founder sending (said so 13:45 IST)** `design/counsel-brief-extension-2026-11-12.md` Part A to counsel and Part B (SP-2, ~1 h) to the expert. Started by the founder ~13:5x: BK-17 fix lane and extension SP-1 lane (cloud). Lead 25 has read RULES and STATE.
 
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
 | # | Ask (IST) | Status |
