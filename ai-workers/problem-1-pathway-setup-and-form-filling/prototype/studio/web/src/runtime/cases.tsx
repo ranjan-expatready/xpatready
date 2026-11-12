@@ -122,6 +122,8 @@ function CaseList() {
   // A24-2 (P-492, design §6): search, kept in the address (?q=) so Back and a reload keep it; sent a moment after typing stops.
   const q = (sp.get("q") ?? "").trim();
   const [typed, setTyped] = React.useState(q);
+  // The address changed from outside (the frame's "Cases", Back): the box follows it, so it never shows other words.
+  React.useEffect(() => { setTyped((t) => (t.trim() === q ? t : q)); }, [q]);
   React.useEffect(() => {
     const t = setTimeout(() => setSp((p) => { const n = new URLSearchParams(p), w = typed.trim(); if (w) n.set("q", w); else n.delete("q"); return n; }, { replace: true }), 300);
     return () => clearTimeout(t);
