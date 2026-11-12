@@ -191,8 +191,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await dlg.getByLabel("Case reference").fill("S5-QA38"); await dlg.getByLabel("Principal applicant's name").fill("Sample Applicant Q");
   await dlg.getByRole("button", { name: "Open case" }).click();
   await o.waitForURL(/\/cases\/[0-9a-f-]{36}$/, { timeout: 30000 }).catch(loud("the new case opens"));
-  await o.getByText(/^Release \d+$/).first().waitFor({ timeout: 15000 }).catch(loud("the case names its release"));
-  step("C6.1 QA-38 pass: the case opens pinned to release 2, as the list said", await o.getByText("Release 2", { exact: true }).count() > 0 && await o.getByText("Release 1", { exact: true }).count() === 0);
+  // BK-4a: the case's release pill also names its person ("Release 2 (as Configuration author)"), so it is read by its attribute.
+  const pill = o.locator("[data-case-release]").first();
+  await pill.waitFor({ timeout: 15000 }).catch(loud("the case names its release"));
+  const pillRelease = (await pill.textContent().catch(() => "") ?? "").replace(/\s*\(as [^)]*\)\s*$/, "").trim();
+  step("C6.1 QA-38 pass: the case opens pinned to release 2, as the list said", pillRelease === "Release 2", pillRelease);
   await o.locator('[data-online-form="IMM 1295"]').waitFor({ timeout: 15000 }).catch(loud("the case lists IMM 1295 as filed Online"));
   const onl = await o.locator('[data-online-form="IMM 1295"]').innerText().catch(() => "");
   // P-145 (forms slice 1): the Online row says how it is filed and that its PDF is only a copy, not for filing.
