@@ -226,7 +226,15 @@ export class CasePrepare {
       if (!write) return null;
       let family = groups.find((g) => g.kind === "FAMILY");
       if (!family) { family = await tx.submissionGroup.create({ data: { workspaceId: c.workspaceId, caseId: c.id, stageId: c.stage.id, kind: "FAMILY", createdBy: actor.id } }); groups = [family, ...groups]; }
-      let filings = await tx.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id } });
+      let filings = await tx.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id }, include: { applicants: true } });
+      // BK-9: a shared application whose owner changed (Make principal on a family on the principal's application) is the
+      // same application: its row moves to the new owner, so its items, copies and passes keep their ids.
+      for (const f of first.filings) {
+        const to = f.owner!.subject;
+        if (filings.some((x) => x.subjectId === to)) continue;
+        const from = filings.find((x) => x.active && !owners.includes(x.subjectId) && f.applicants.some((a) => a.subject === x.subjectId) && x.applicants.some((a) => a.subjectId === to));
+        if (from) { await tx.filing.update({ where: { id: from.id }, data: { subjectId: to } }); from.subjectId = to; }
+      }
       for (const f of first.filings) {
         const subject = f.owner!.subject, row = filings.find((x) => x.subjectId === subject);
         // A co-filed sponsorship always goes in the principal's group (it cannot be sent alone).

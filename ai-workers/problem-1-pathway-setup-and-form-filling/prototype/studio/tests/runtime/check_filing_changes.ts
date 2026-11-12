@@ -2,7 +2,7 @@
 // filing back, and the client-person rule of engine/runtime/case.ts confirmation (BR-3b). Each rule has a passing and a
 // failing case. No database, no server, no model call (US$0). Amounts come from the cited fee table (Sample, P-171).
 //   tsx studio/tests/runtime/check_filing_changes.ts
-import { applyChange, basisOf, clientPersonOf, diffFilings, everyoneFilesOwn, withClient, type ModeOf } from "../../engine/runtime/filing-changes.ts";
+import { applyChange, basisOf, clientPersonOf, diffFilings, withClient, type ModeOf } from "../../engine/runtime/filing-changes.ts";
 import { confirmation, type Participant } from "../../engine/runtime/case.ts";
 import { deriveFilings } from "../../engine/runtime/filings.ts";
 import type { CaseFilings } from "../../contracts/runtime.ts";
@@ -17,11 +17,11 @@ const o = { modeOf: own, combination: "Visitor visa", recorded: null };
 const after = (r: ReturnType<typeof applyChange>) => ("after" in r ? r.after : null);
 const refusal = (r: ReturnType<typeof applyChange>) => ("status" in r ? r : null);
 
-// BR-0: only where every applying role files its own application.
-ok("C6.13 BR-0 pass: Visitor visa (every role files own) allows the changes", everyoneFilesOwn(fam(), own));
+// BR-0, since BK-9 (P-448): every pathway, people on the principal's application included (tests/check_bk9_shared_filing.ts).
+ok("C6.13 BR-0 pass: Visitor visa (every role files own) allows the changes", !!after(applyChange("remove_filing", "b", fam(), o)));
 const onPrincipal: ModeOf = (role) => (role === "child" ? "on_principal" : "files_own");
-const r0 = refusal(applyChange("remove_filing", "b", fam(), { ...o, modeOf: onPrincipal }));
-ok("C6.13 BR-0 fail: a release with people on the principal's application refuses in words (422)", r0?.status === 422 && /not worked out yet for Visitor visa/.test(r0.words), r0);
+const r0 = applyChange("remove_filing", "k1", fam(), { ...o, modeOf: onPrincipal });
+ok("C6.13 BR-0 + BK-9: a release with people on the principal's application is no longer refused for the combination", !!after(r0) && !/not worked out yet/.test(JSON.stringify(r0)), r0);
 
 // BR-1: Remove filing stops the person's filing; they stay on the case.
 const rm = after(applyChange("remove_filing", "b", fam(), o));
