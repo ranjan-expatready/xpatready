@@ -182,13 +182,14 @@ const serve = async (id: string, edit: (x: View) => View) => {
   await p.route(`**/api/runtime/cases/${id}/prepare*`, (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(edit(structuredClone(real))) }));
   await open(id, real.groups[0].id); return real;
 };
-// BR-4 on real data (review and break m5): the checkpoint's study permit combination has filing modes but no fee rule.
-const spId = sql("select c.id from combination c join config_release r on r.combination_id=c.id where c.combination_key='sp.outside' limit 1");
-const sp = spId ? await openCase(spId, [{ role: "principal", name: "Sample Student A", dob: yearsAgo(22) }]) : null;
+// BR-4 on real data (review and break m5): the checkpoint's With an LMIA combination has filing modes but no fee rule
+// (BK-15, P-486: the study permit's fees are now worked out, so it no longer serves here).
+const spId = sql("select c.id from combination c join config_release r on r.combination_id=c.id where c.combination_key='wp.lmia_inside' limit 1");
+const sp = spId ? await openCase(spId, [{ role: "principal", name: "Sample Worker A", dob: yearsAgo(22) }]) : null;
 const vs = sp?.id ? await viewOf(sp.id) : null;
 if (sp && vs?.groups?.length) await open(sp.id, vs.groups[0].id);
 const spText = sp && vs?.groups?.length ? await text(panel()) : "";
-ok("C6.12-25 BR-4 pass (real data): a study permit case on the checkpoint shows the server's \"fees not worked out\" words once, and no amount", !!vs && vs.fees_worked_out === false && !!vs.fees_why && spText.split(vs.fees_why).length === 2 && !/CAD/.test(spText), { spId, worked: vs?.fees_worked_out, why: vs?.fees_why });
+ok("C6.12-25 BR-4 pass (real data): a With an LMIA case on the checkpoint shows the server's \"fees not worked out\" words once, and no amount", !!vs && vs.fees_worked_out === false && !!vs.fees_why && spText.split(vs.fees_why).length === 2 && !/CAD/.test(spText), { spId, worked: vs?.fees_worked_out, why: vs?.fees_why });
 const c2 = await openCase(vv, FAMILY.slice(0, 2));
 // BR-4: fees not worked out (C11.12 BR-10): the server's why, no amount, no total.
 let real = await serve(c2.id, (x) => ({ ...x, fees_worked_out: false, fees_why: "Fees not worked out yet for this combination (Sample words from the engine's notWorkedOut).", fees: [], groups: x.groups.map((g) => ({ ...g, totals: [], total_cents: null })) }));
