@@ -20,7 +20,7 @@ fx_flaky_js() { echo 'const f=require("path").join(process.env.FX_STATE, require
 fx() {  # fx <case> <suite...>: a fresh fixture folder holding only these suites
   local d="$W/$1"; mkdir -p "$d/tests" "$d/state"; shift
   for s in "$@"; do case "$s" in
-    check_fx_ok*) echo 'console.log("PASS fine"); console.log("1 passed")' ;;
+    check_fx_ok*|check_dv_backbone_browser.cjs|check_screen01_api.ts) echo 'console.log("PASS fine"); console.log("1 passed")' ;;
     check_fx_flaky*) echo 'const f=require("path").join(process.env.FX_STATE, require("path").basename(__filename)); const fs=require("fs"); const n=fs.existsSync(f)?Number(fs.readFileSync(f,"utf8")):0; fs.writeFileSync(f,String(n+1)); if(n===0){console.log("FAIL read ECONNRESET");process.exit(1)} console.log("PASS ok on try "+(n+1)); console.log("1 passed")' ;;
     check_fx_broken*) echo 'const f=require("path").join(process.env.FX_STATE, require("path").basename(__filename)); const fs=require("fs"); const n=fs.existsSync(f)?Number(fs.readFileSync(f,"utf8")):0; fs.writeFileSync(f,String(n+1)); console.log("FAIL a real break"); process.exit(1)' ;;
     check_fx_slow*) echo 'console.log("STOP waited 20 min"); process.exit(124)' ;;
@@ -225,6 +225,33 @@ c1=$(SUITES_QUARANTINE_AUTO="$AQ" rs sh --retry --skip-quarantined --shard 1/2);
 c2=$(SUITES_QUARANTINE_AUTO="$AQ" rs sh --retry --skip-quarantined --shard 2/2)
 ran=$(cat "$W/sh1.out" "$W/sh.out" | grep -E '^\| check_fx_ok_[a-d]\.cjs \| PASS' | cut -d'|' -f2 | sort | tr -d ' ' | tr '\n' ' ')
 ok "B122: two parts with the same automatic quarantine run every other suite exactly once and skip the quarantined one" "$([ "$ran" = "check_fx_ok_a.cjs check_fx_ok_b.cjs check_fx_ok_c.cjs check_fx_ok_d.cjs " ] && [ "$(tries sh check_fx_broken.cjs)" = 0 ] && [ "$c1$c2" = 00 ] && echo 1)" "exits $c1 $c2; ran: $ran"
+
+# 7d. #1660 (12 Nov, CI shard 6/6 red: "| (none) | FAIL | | suites were chosen but none ran |"): a shard dealt no unit
+# passes and says so; a shard dealt only quarantined units gives their rows and passes; a choice that runs nothing
+# without shards still fails; a unit dealt to a shard that leaves no row fails. The choice comes from --changed over a
+# synthetic one-file commit (a root note): the selector then picks its smoke set, as in a PR check. Of it, this folder
+# holds check_dv_backbone_browser.cjs (9 s in suite-times.tsv) and check_screen01_api.ts (quarantined: weight 0), so
+# with 3 shards the deal is dv_backbone → 1, screen01_api → 2 (the first least-loaded), nothing → 3.
+SB=$(git rev-parse HEAD); SBLOB=$(printf 'check-flaky fixture\n' | git hash-object -w --stdin)
+GIT_INDEX_FILE="$W/idx" git read-tree "$SB" && GIT_INDEX_FILE="$W/idx" git update-index --add --cacheinfo "100644,$SBLOB,zz-check-flaky-fixture.md"
+SH=$(GIT_AUTHOR_NAME=fixture GIT_AUTHOR_EMAIL=fixture@example.com GIT_COMMITTER_NAME=fixture GIT_COMMITTER_EMAIL=fixture@example.com \
+  git commit-tree "$(GIT_INDEX_FILE="$W/idx" git write-tree)" -p "$SB" -m "check-flaky fixture: one root note")
+srow() { grep -E '^\| [^|]+ \| (PASS|FAIL|quarantined|skipped|remembered|passed on retry|failed twice) \|' "$1" | tr '\n' ' '; }   # result rows only
+fx sz check_dv_backbone_browser.cjs check_screen01_api.ts check_fx_ok.cjs
+sz1=$(rs sz --changed "$SB..$SH" --shard 1/3); cp "$W/sz.out" "$W/sz1.out"
+sz2=$(rs sz --changed "$SB..$SH" --shard 2/3); cp "$W/sz.out" "$W/sz2.out"
+sz3=$(rs sz --changed "$SB..$SH" --shard 3/3); cp "$W/sz.out" "$W/sz3.out"
+ok "#1660: the deal's shard 1/3 runs the timed suite" "$(grep -qE '^\| check_dv_backbone_browser\.cjs \| PASS \|' "$W/sz1.out" && [ "$sz1" = 0 ] && echo 1)" "exit $sz1; $(srow "$W/sz1.out")"
+ok "#1660: shard 2/3, dealt only a quarantined unit, gives its quarantined row and passes" "$(grep -qE '^\| check_screen01_api\.ts \| quarantined \|' "$W/sz2.out" && ! grep -q '(none)' "$W/sz2.out" && [ "$sz2" = 0 ] && echo 1)" "exit $sz2; $(srow "$W/sz2.out")"
+ok "#1660 fail-before: shard 3/3, dealt no unit, says so and passes (main failed it: \"suites were chosen but none ran\")" "$(grep -qF '| (none) | PASS | | 2 chosen units, none dealt to shard 3/3 |' "$W/sz3.out" && [ "$sz3" = 0 ] && echo 1)" "exit $sz3; $(srow "$W/sz3.out")"
+fx sznone check_fx_ok.cjs
+c=$(rs sznone --changed "$SB..$SH")
+ok "#1660: without shards, a choice that runs nothing still fails (a real fault)" "$(grep -qF '| (none) | FAIL | | suites were chosen but none ran |' "$W/sznone.out" && [ "$c" = 1 ] && echo 1)" "exit $c; $(srow "$W/sznone.out")"
+NOROW="$W/run-suites.norow.sh"
+sed 's/{ rows+=("| \$f | quarantined | | \$(qwhy "\$f") |"); continue; }/continue/' "$T/run-suites.sh" > "$NOROW"
+ok "#1660: the no-row runner copy for the next check really drops the quarantined row" "$(! grep -q '| quarantined |' "$NOROW" && grep -q 'left no row' "$NOROW" && echo 1)" "sed changed nothing"
+c=$(CI= COPY_PREFIX= SUITES_LOCKS="$W/locks" SUITES_TESTS_DIR="$W/sz/tests" SUITES_OUT="$W/sz/out" FX_STATE="$W/sz/state" bash "$NOROW" --changed "$SB..$SH" --shard 2/3 > "$W/szn.out" 2>&1; echo $?)
+ok "#1660: a unit dealt to a shard that leaves no row fails, by name" "$(grep -qF '| check_screen01_api.ts | FAIL | | dealt to shard 2/3 but left no row (ran, quarantined or skipped) |' "$W/szn.out" && [ "$c" = 1 ] && echo 1)" "exit $c; $(srow "$W/szn.out")"
 
 # 7c. The b78 hang (6 Nov): the runner gives every suite /dev/null as stdin and timeout -k, and writes a hung suite's
 # processes to its log. Each case runs under an outer limit, on this runner and on a copy with main's old plain

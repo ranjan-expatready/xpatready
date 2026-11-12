@@ -378,15 +378,25 @@ fi
 for t in check_p2_guard check_p2_launch; do
   [ -z "${SUITES_TESTS_DIR:-}" ] && [ -f "$P/prototype/tests/$t.ts" ] && picked "$t.ts" && myturn "$t.ts" && run "$t.ts" plain "$S/node_modules/.bin/tsx" "$P/prototype/tests/$t.ts"
 done
+# Every unit dealt to this shard leaves a row: ran, quarantined or skipped (#1660, 12 Nov). One that left none is a
+# fault in this script, never a silent pass. (The R1 unit's row is check_runtime_r1a.ts, run or failed.)
+if [ "$SHARDS" -gt 1 ]; then
+  for u in $MINE; do
+    hit=0; for r in ${rows[@]+"${rows[@]}"}; do case "$r" in "| $u |"*) hit=1; break;; esac; done
+    [ "$hit" = 1 ] || { rows+=("| $u | FAIL | | dealt to shard $SHARD/$SHARDS but left no row (ran, quarantined or skipped) |"); fail=1; }
+  done
+fi
 # Remembered suites (--skip-green), listed once (shard 1): what they would have run is shown, never silently dropped.
 if [ "$SHARD" = 1 ] && [ "$REMEMBER" != " " ]; then
   for f in $REMEMBER; do chosen "$f" || continue; why=$(awk -F'\t' -v n="$f" '$1 == n { print $2; exit }' "$GREEN" | tr '|' '/' | cut -c1-90)
     rows+=("| $f | remembered | | ${why:-green on this base, inputs unchanged} |"); done
 fi
 # A choice that ran nothing is a fault, never a pass.
-# A shard can rightly get nothing when few suites were chosen (fewer than n): that shard says so and passes.
+# A shard can rightly get nothing: few units chosen (fewer than n), or units that weigh 0 in the deal (quarantined, or
+# 0 s in suite-times.tsv) all going to the first least-loaded shard. That shard says so and passes. MINE is " <deal> ",
+# so an empty deal is blanks only, never exactly " " (#1660, 12 Nov: shard 6/6 of 18 units, dealt none, failed here).
 if [ -n "$PICK" ] && [ "${#rows[@]}" -eq 0 ]; then
-  if [ "$SHARDS" -gt 1 ] && [ "$MINE" = " " ]; then rows=("| (none) | PASS | | $TURN chosen units, none for shard $SHARD/$SHARDS |")
+  if [ "$SHARDS" -gt 1 ] && [ -z "${MINE// /}" ]; then rows=("| (none) | PASS | | $TURN chosen units, none dealt to shard $SHARD/$SHARDS |")
   else rows=("| (none) | FAIL | | suites were chosen but none ran |"); fail=1; fi
 fi
 # Each failing suite's FAIL lines and the end of its log, on stderr: the job log shows why it failed even when the
