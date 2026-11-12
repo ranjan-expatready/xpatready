@@ -149,7 +149,20 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.context().close();
   p = await fresh("user-Z");
   await p.goto(`${BASE}/`); await p.waitForURL((u) => u.pathname === "/sign-in", { timeout: 15000 }).catch(() => {});
-  await p.locator('[data-sign-in-as="user-A"]').click(); await p.waitForURL((u) => u.pathname === "/", { timeout: 15000 }).catch(() => {});
+  await p.locator('[data-sign-in-as="user-A"]').click(); await p.waitForURL((u) => u.pathname === "/start", { timeout: 15000 }).catch(() => {});
+  // BK-5 PR 2 (concept §9, challenge m4): the author duty starts a walk on Starting points; other Studio people land on
+  // Immigration programs (the Approver above), never on doors they cannot open.
+  const startHeading = p.getByRole("heading", { level: 1, name: /Starting points/ }); await startHeading.waitFor({ timeout: 15000 }).catch(() => {});
+  step("BK-5 PR 2: the Configuration author lands on Starting points, signed in", new URL(p.url()).pathname === "/start" && await stored(p) === "user-A" && await startHeading.isVisible(), p.url());
+  // Break m1 (PR 2), fail side: outside the demo workspace every door is off for the author too (start.tsx BR-3), so the
+  // author's card lands on Immigration programs, not on a page with nothing to do (the session's answer changed in the
+  // browser only, as check_bk5_start_browser does).
+  await p.route("**/api/session", async (r) => { const res = await r.fetch(); const j = await res.json(); j.workspace = { ...j.workspace, demo: false }; await r.fulfill({ response: res, json: j }); });
+  await p.goto(`${BASE}/sign-in`); await p.locator("[data-sign-in]").waitFor({ timeout: 15000 });
+  await p.waitForResponse((r) => new URL(r.url()).pathname === "/api/session", { timeout: 15000 }).catch(() => {});
+  await p.locator('[data-sign-in-as="user-A"]').click(); await p.waitForURL((u) => u.pathname !== "/sign-in", { timeout: 15000 });
+  step("BK-5 PR 2 fail side (break m1): outside the demo workspace the author lands on Immigration programs, not Starting points", new URL(p.url()).pathname === "/" && await stored(p) === "user-A", p.url());
+  await p.unroute("**/api/session");
   await p.goBack(); await p.locator("[data-sign-in]").waitFor({ timeout: 15000 }).catch(() => {});
   step("break m3 fail side: Back to the sign-in page after choosing no longer says the person is unknown", new URL(p.url()).pathname === "/sign-in" && await p.locator("[data-sign-in-unknown]").count() === 0, p.url());
   await p.context().close();

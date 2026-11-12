@@ -27,7 +27,7 @@ ok("BK-4b BR-1: no page tells the walker to switch person by hand (\"switch to â
 // Pages that may change the person themselves, at most this many times each, with the reason. Not a hand-off: the
 // person is chosen on purpose there (the other two ways BR-1 allows, the sign-in page and its stand-in).
 const PAGE_WRITES_ALLOWED: Record<string, number> = {
-  "pages/start.tsx": 1, // BK-5 PR 1 (P-484): "Sign in as the Configuration author" on Demo â€º Starting points, the sign-in's stand-in until BK-5 PR 2 links to /sign-in
+  // pages/start.tsx: none since BK-5 PR 2 ("Sign in as the Configuration author" links to /sign-in).
   "pages/sign-in.tsx": 1, // BK-4a (#1580, P-484): signing in on a role card (check_bk4a.ts ALLOWED); none until #1580 merges
 };
 const writes = files.flatMap((f) => hits(f, /\bsetActor\(|["']xr-actor["']/));
