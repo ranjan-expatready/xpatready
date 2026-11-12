@@ -12,7 +12,7 @@ Planning study by the Fable planner (P-455 (5)), 12 Nov 2026, for the founder an
 2. **Our app is one big box.** One NestJS module, 141 files side by side in one folder, seven files over 800 lines, no lint and no rule that keeps one area out of another. The team's app is built as many small fenced modules under a file-size limit. Nobody decided against modules; the prototype grew into a product without that step.
 3. **What it costs, measured on 301 app PRs (2-12 Nov):** 22-29% of them hit a real merge conflict (**~216 PR-hours** lost, measured from the moment of conflict); fix-and-re-review rounds after a first Approve are frequent (71 of 131 PRs had two or more Approves). Merges are not slow (queue median 1.1 h); machines are not short (runner wait median 0, P-489). **Output (≈5 confirmed capabilities a day) was capped by how many rows were ready to confirm**: by 10-11 Nov only 14-15 rows were not yet Works, 11 of them Parked or Team, while PRs per capability had already fallen from 6.3 to 3.7.
 4. **The fix, in order of certainty:** (a) **now, cheap and certain** (after the Bake's tag commit): make `main.ts` and `demo.ts` self-registering, split `schema.prisma` by domain, and add an 800-line ratchet: three files with 18% of app conflict hits; (b) **keep rows ready ahead of the builders** (the design → look → brief step), and time qa's verdicts, because those now limit output; (c) **only on measured need**: the full modular monolith (bounded contexts, import boundaries), with lanes cut by *vertical streams*, since 59% of app PRs cross the six horizontal lanes first proposed. The released-pack contract between configurator and case side **already exists**.
-5. **Four decisions for you** are at the end (section 6). The rest is the Lead's to run (P-384).
+5. **Five decisions for you** are at the end (section 6). The rest is the Lead's to run (P-384).
 
 ---
 
@@ -399,6 +399,8 @@ flowchart TB
   PLAT -.->|"public index.ts only"| CFG
   PLAT -.->|"public index.ts only"| CASE
 ```
+
+> Parts 4 and 5 below show the plan as first written; after the challenge the order is: measure ready rows and qa verdict time → keep rows ready → cheap structure fix → full migration only on need (Challenge, "The corrected order"), and the Part 5 bars are an upper bound, not a forecast.
 
 **Part 4, delivery: the constraint and the order of fixes (Theory of Constraints)**
 
