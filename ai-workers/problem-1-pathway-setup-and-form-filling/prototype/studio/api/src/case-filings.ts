@@ -10,7 +10,7 @@ import { ageOn, deriveFilings, FAMILY_GROUP } from "../../engine/runtime/filings
 import { actorOf, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import type { Participant } from "../../engine/runtime/case.ts";
-import { keepRecorded, recordedRowsOf } from "./submission-record.ts";
+import { feesOnTheirFilings, keepRecorded, keptRowsOf } from "./submission-record.ts";
 
 type H = string | undefined;
 
@@ -47,8 +47,10 @@ export class CaseFilings {
     const d = deriveFilings(own!.combinationKey, people, undefined, { ages, modes, adds, label: s.combination.label, groupOf: (x) => groupOf.get(x) ?? family, groupKind: (g) => kindOf.get(g) ?? "family" });
     // BK-17: a recorded filing reads as recorded here too (its label, people and group), as GET …/prepare reads it.
     const name = new Map(people.map((p) => [p.subjectId, p.label]));
-    const kept = d.derived ? keepRecorded(d, recordedRowsOf(rows, rows.map((r) => r.group)), { labelOf: (x) => name.get(x) ?? "", combination: own!.combinationKey, combinationLabel: d.label, idOf: (r) => `filing-${r.subjectId}`, kindOf: (g) => kindOf.get(g) ?? "family" }) : null;
-    const shown = kept && d.derived ? { ...d, ...kept, fees: d.fees.filter((l) => kept.filings.some((f) => f.id === l.filing)) } as typeof d : d;
+    const kept = d.derived ? keepRecorded(d, keptRowsOf(d.filings, rows, rows.map((r) => r.group)), { labelOf: (x) => name.get(x) ?? "", combination: own!.combinationKey, combinationLabel: d.label, idOf: (r) => `filing-${r.subjectId}`, kindOf: (g) => kindOf.get(g) ?? "family" }) : null;
+    const frozen = new Set(rows.filter((r) => r.group.recordedFees).map((r) => r.submissionGroupId));
+    const placed = kept && d.derived ? feesOnTheirFilings(d.fees, kept.groups, kept.filings, { filing: (l) => l.filing, person: (l) => l.person, frozen: (g) => frozen.has(g), labelOf: (x) => name.get(x) ?? "a person" }) : null;
+    const shown = kept && placed && d.derived ? { ...d, filings: kept.filings, groups: placed.groups, fees: placed.lines } as typeof d : d;
     return { case_id: c.id, reference: c.reference, release_version: pin.release.version, ...frozenIn(shown, rows) };
   }
 }
