@@ -226,8 +226,10 @@ ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.te
     const idx = join(mkdtempSync(join(tmpdir(), "gb486-")), "index"), envI = { env: { ...process.env, GIT_INDEX_FILE: idx } };
     const blob = git(["hash-object", "-w", "--stdin"], { input: pinned.stdout.split("\n").filter((l) => !/C11\.12-runtime\.test\.ts checkpoint row/.test(l)).join("\n") }).stdout.trim();
     git(["read-tree", base], envI); git(["update-index", "--cacheinfo", `100644,${blob},${HELD_PATH}`], envI);
-    const tree = git(["write-tree"], envI).stdout.trim(), noRow = tree ? git(["commit-tree", tree, "-p", base, "-m", "check-gate-b: a base without the checkpoint row (dangling, P-486 review m1)"]).stdout.trim() : "";
-    const nr = noRow ? plan({ RANGE: `${noRow}..${head}` }) : { code: -1, out: "could not build the base" };
+    // CI's runner has no git identity (shard 1 on #1609): the dangling commit names its own.
+    const who = { GIT_AUTHOR_NAME: "check-gate-b", GIT_AUTHOR_EMAIL: "check-gate-b@localhost", GIT_COMMITTER_NAME: "check-gate-b", GIT_COMMITTER_EMAIL: "check-gate-b@localhost" };
+    const tree = git(["write-tree"], envI).stdout.trim(), made = tree ? git(["commit-tree", tree, "-p", base, "-m", "check-gate-b: a base without the checkpoint row (dangling, P-486 review m1)"], { env: { ...process.env, ...who } }) : null, noRow = made?.stdout.trim() ?? "";
+    const nr = noRow ? plan({ RANGE: `${noRow}..${head}` }) : { code: -1, out: `could not build the base: ${tree ? made?.stderr.trim() : "no tree"}` };
     ok("P-486 fail (review m1): a base whose hold file lacks the row leaves C11.12-runtime.test.ts on the six, whatever the working tree says", nr.code === 0 && /^C11\.12-runtime\.test\.ts on the six\b/m.test(nr.out) && !/as qa's checkpoint rows/.test(nr.out), nr.out.slice(0, 600));
     // Review m3: off a pull request (no RANGE, as the nightly's own runs) the gate moves nothing.
     const off = plan({});
