@@ -64,7 +64,7 @@ export function FindingsPanel({ caseId, people, filings, title = "Review", openL
     <section aria-labelledby="review-h" className="rounded-xl border border-border bg-surface-raised" data-findings>
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3">
         <h2 id="review-h" tabIndex={-1} className="text-base font-semibold outline-none">{title}</h2>
-        <StandIn id="SI-6" today="rules checks on every form (US$0); the AI review runs live on the Visitor visa forms only and is replayed elsewhere." later="other form families one at a time (team AG-11 AI Doers)." />
+        <StandIn id="SI-6" today="rules checks on every form (US$0); the AI review reads any form the case's release names, with Sample severities." later="severities confirmed by the immigration expert (team AG-11 AI Doers)." />
         <p className="min-w-0 flex-1 text-[13px] text-text-muted">Checks across the facts and forms. Each finding is a warning: decide it here, or pass it with a reason on Ready to file.</p>
         {openLink ? <Link to={openLink} className="text-[13px] font-medium text-text-link hover:underline" data-open-review>Open Review</Link> : null}
         <Button size="sm" variant="secondary" onClick={(e) => { back.current = e.currentTarget; setAdding(true); }}><Plus aria-hidden />Add finding</Button>
