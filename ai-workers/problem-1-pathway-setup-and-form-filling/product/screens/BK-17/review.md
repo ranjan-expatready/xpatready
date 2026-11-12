@@ -227,3 +227,15 @@ Fresh reviewer (did not build it), 12 Nov 2026. Head `af157ce4d` (`git log --one
 **Could not check:** a browser walk of main's new screens (outside this diff); 200 % zoom; a screen reader.
 
 **Verdict: Approve** for commit `af157ce4d`: no Blocker or Major is open. r4-m1 is a Should; r2-m2 is still listed for a later row.
+
+### Round 4 follow-up (aa6dd85ad)
+
+Diff-only: `git diff af157ce4d aa6dd85ad -- …/tests/check_bk17_recorded_filing_api.ts`. Only names and comments changed (word diff: 6 replacements). Every assertion expression is the same.
+* **r4-m1: fixed.**
+  * The three case (3) steps that were named "break B2" now read "unrecorded beside recorded". No step name mentions B1 or B2 any more.
+  * Case (3)'s comment says it keeps the breaker's set-up but no longer reaches B1/B2.
+  * The header says case (3) passes on main's code too. It says the sync wiring (`keptRowsOf` feeding sync in `case-prepare.ts`: the kept row stays active and the stage still lists it) is proven by no test until a line can again move a person onto another filing.
+  * These words match what I measured in round 4.
+* **Re-run** on :4438, a fresh copy at `aa6dd85ad`, stopped and dropped afterwards, US$0: `check_bk17_recorded_filing_api` 26/26 (exit 0).
+
+**Verdict: Approve** for commit `aa6dd85ad`: no Blocker or Major is open. r2-m2 is still listed for a later row.
