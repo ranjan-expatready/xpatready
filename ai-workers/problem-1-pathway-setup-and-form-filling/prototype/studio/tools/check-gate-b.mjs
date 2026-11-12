@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, touchedPacks, diffSet, batchRecheck, checkpointTrigger, checkpointRows, packVerdict, part1, stepsPrinted, stepsUnprinted, packSteps, unprintedReason } from "./gate-b.mjs";
+import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, dataForPack, notTested, modeOf, touchedPacks, diffSet, batchRecheck, checkpointTrigger, checkpointRows, packsReachedBy, packVerdict, part1, stepsPrinted, stepsUnprinted, packSteps, unprintedReason } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ACC = resolve(HERE, "../acceptance"), P = resolve(HERE, "../../../product");
 /** A fixture pack whose run truly uses no server (only an engine run line), for the gate's no-server rules (B125, B131). */
@@ -195,6 +195,47 @@ ok("a pack with setup steps is labelled \"fixture only\"; a pack alone runs on t
   let refused = ""; try { dataOf({ GATE_B_DATA: "checkpont" }); } catch (e) { refused = e.message; }
   ok("GATE_B_DATA with any other value is refused in words, never run on the six by mistake", /GATE_B_DATA must be "six" or "checkpoint", not "checkpont"/.test(refused), refused); }
 ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.test.ts", "// nothing here\nimport x from 'y';").error));
+// P-486 (Lead 22 on #1591): on a pull request, a pack qa's hold file names as a checkpoint row runs on the configured
+// checkpoint, as the nightly does (C11.12-runtime: red on the six by design, P-322); every other pack keeps its data.
+// Review M1 (#1609): qa's live hold file is never read here (a notes PR editing it runs no check-gate-b.mjs); its text
+// is pinned at commit 348fa8b11, which holds the row, and a base without it is built as a dangling commit.
+{ const { checkpointPacks } = await import("./works-set.mjs");
+  const HOLD = "- C11.12-runtime.test.ts checkpoint row (P-322): not run on the six, where it is red (exit 2); green on the configured checkpoint (4/4, run 41866440174)\n- C7.5-runs.test.ts red on main, run 41799999999 (a plain hold)\n- C3.2-x.test.ts checkpoint row (P-322), red, run 41799999999, lifted 5 Nov\n- C4.1-y.test.ts red, run 41799999999: not a checkpoint row";
+  const cp = checkpointPacks(HOLD);
+  ok("P-486 pass: the hold file's checkpoint row is read (C11.12-runtime.test.ts)", cp.has("C11.12-runtime.test.ts"), [...cp]);
+  ok("P-486 fail: a plain hold, a lifted checkpoint-row pack line (review m2) and \"not a checkpoint row\" (review m5) move no pack", cp.size === 1 && !cp.has("C7.5-runs.test.ts") && !cp.has("C3.2-x.test.ts") && !cp.has("C4.1-y.test.ts"), [...cp]);
+  const e = { GATE_B_DATA: "six", GATE_B_DATA_OF: "C11.12=six" };
+  ok("P-486 pass: with C11.12=six, C11.12-runtime.test.ts runs on the checkpoint", dataForPack("C11.12", "C11.12-runtime.test.ts", e, cp) === "checkpoint");
+  ok("P-486 fail: C11.12's other pack keeps its capability's data (the six), and with no hold file every pack does", dataForPack("C11.12", "C11.12.test.ts", e, cp) === "six" && dataForPack("C11.12", "C11.12-runtime.test.ts", e, new Set()) === "six");
+  // Review m4: NOT TESTED reads each pack's own data (a pack with setup steps is "fixture only" on the six, never on the checkpoint).
+  const setup = (f) => `// zsh studio/tools/isolated.sh p97 4611 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4611 xr_studio_p97 && tsx studio/acceptance/${f} 4611 xr_studio_p97`;
+  const nt = notTested(["C9.7"], [{ id: "C9.7", f: "C9.7-a.test.ts" }, { id: "C9.7", f: "C9.7-b.test.ts" }], (id, f) => dataForPack(id, f, { GATE_B_DATA: "six" }, new Set(["C9.7-a.test.ts"])), setup);
+  ok("P-486 pass (review m4): NOT TESTED reads each pack's data: the checkpoint row is tested there, its sibling on the six is not", nt.length === 1 && /C9\.7-b\.test\.ts/.test(nt[0]) && !nt.some((l) => /C9\.7-a/.test(l)), nt);
+  const PIN = "348fa8b11", HELD_PATH = "ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/REGRESSION-HELD.md";
+  const git = (a, extra = {}) => spawnSync("git", a, { cwd: HERE, encoding: "utf8", ...extra });
+  const pinned = git(["show", `${PIN}:${HELD_PATH}`]);
+  ok("P-486 pass: qa's hold file at the pinned commit names C11.12-runtime.test.ts a checkpoint row", pinned.status === 0 && checkpointPacks(pinned.stdout).has("C11.12-runtime.test.ts"), pinned.stderr.slice(0, 200));
+  // The gate itself, with C11.12=six: its plan says where each pack runs, reading the hold file at RANGE's base.
+  const plan = (env) => { const r = spawnSync(process.execPath, [join(HERE, "gate-b.mjs"), "--plan", "--title", "runtime: C11.12"], { encoding: "utf8", env: { ...process.env, PR_TITLE: "", PR_BODY: "", QUEUE: "", KIND: "code", GATE_B_DATA: "", GATE_B_NO_DIFF: "1", GATE_B_DATA_OF: "C11.12=six", GITHUB_STEP_SUMMARY: "", GATE_B_SKIP_PACKS: "", RANGE: "", ...env } }); return { code: r.status, out: r.stdout + r.stderr }; };
+  const head = git(["rev-parse", "HEAD"]).stdout.trim(), base = git(["rev-parse", `${PIN}^{commit}`]).stdout.trim();
+  if (head && base) {
+    const pr = plan({ RANGE: `${base}..${head}` });
+    ok("P-486 pass (the gate's plan on a pull request whose base holds the row): C11.12-runtime.test.ts runs on the checkpoint, and says why", pr.code === 0 && /^C11\.12-runtime\.test\.ts on the checkpoint\b/m.test(pr.out) && /on the checkpoint, as qa's checkpoint rows \(REGRESSION-HELD\.md, P-322\): C11\.12-runtime\.test\.ts/.test(pr.out), pr.out.slice(0, 600));
+    ok("P-486 fail (the gate's plan): C11.12.test.ts stays on the six", /^C11\.12\.test\.ts on the six\b/m.test(pr.out), pr.out.slice(0, 600));
+    // Review m1: the base's hold file decides, never the working tree's: a base whose file lacks the row moves nothing.
+    const idx = join(mkdtempSync(join(tmpdir(), "gb486-")), "index"), envI = { env: { ...process.env, GIT_INDEX_FILE: idx } };
+    const blob = git(["hash-object", "-w", "--stdin"], { input: pinned.stdout.split("\n").filter((l) => !/C11\.12-runtime\.test\.ts checkpoint row/.test(l)).join("\n") }).stdout.trim();
+    git(["read-tree", base], envI); git(["update-index", "--cacheinfo", `100644,${blob},${HELD_PATH}`], envI);
+    // CI's runner has no git identity (shard 1 on #1609): the dangling commit names its own.
+    const who = { GIT_AUTHOR_NAME: "check-gate-b", GIT_AUTHOR_EMAIL: "check-gate-b@localhost", GIT_COMMITTER_NAME: "check-gate-b", GIT_COMMITTER_EMAIL: "check-gate-b@localhost" };
+    const tree = git(["write-tree"], envI).stdout.trim(), made = tree ? git(["commit-tree", tree, "-p", base, "-m", "check-gate-b: a base without the checkpoint row (dangling, P-486 review m1)"], { env: { ...process.env, ...who } }) : null, noRow = made?.stdout.trim() ?? "";
+    const nr = noRow ? plan({ RANGE: `${noRow}..${head}` }) : { code: -1, out: `could not build the base: ${tree ? made?.stderr.trim() : "no tree"}` };
+    ok("P-486 fail (review m1): a base whose hold file lacks the row leaves C11.12-runtime.test.ts on the six, whatever the working tree says", nr.code === 0 && /^C11\.12-runtime\.test\.ts on the six\b/m.test(nr.out) && !/as qa's checkpoint rows/.test(nr.out), nr.out.slice(0, 600));
+    // Review m3: off a pull request (no RANGE, as the nightly's own runs) the gate moves nothing.
+    const off = plan({});
+    ok("P-486 fail (review m3): off a pull request (no RANGE) every pack keeps its capability's data", off.code === 0 && /^C11\.12-runtime\.test\.ts on the six\b/m.test(off.out) && !/as qa's checkpoint rows/.test(off.out), off.out.slice(0, 600));
+  } else ok(`P-486: the gate's plan needs the pinned commit ${PIN} (CI fetches the full history)`, false);
+}
 // D5 (P-416, 8 Nov): GATE_B_DATA_OF gives each capability its own data, so one gate run pools rows on different data.
 { const e = { GATE_B_DATA: "six", GATE_B_DATA_OF: "C4.8=checkpoint, C1.1=six C9.1=checkpoint" };
   ok("D5: GATE_B_DATA_OF names a capability's data; the rest take GATE_B_DATA", dataFor("C4.8", e) === "checkpoint" && dataFor("C1.1", e) === "six" && dataFor("C7.3", e) === "six" && dataFor("C7.3", { ...e, GATE_B_DATA: "checkpoint" }) === "checkpoint" && dataMap(e).size === 3);
@@ -232,6 +273,23 @@ ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.te
   ok("(4a) pass: every row on the checkpoint is added (C7, C9), read-only (not direct); fail: a six row is not (C8), nor a row with no pack (C10), and a row already touched keeps its reason (C2)",
     t.has("C7") && t.has("C9") && !t.has("C8") && !t.has("C10") && t.get("C7").direct === false && /configured checkpoint/.test(t.get("C7").why) && t.get("C2").direct === true && t.get("C2").why === "x.ts ← C2.test.ts", [...t.keys()]);
   ok("(4a) fail: no trigger adds nothing", checkpointRows(new Map(), null, ["C7"], dataOfId).size === 0); }
+{ // B178 (11 Nov; jobs 130502524770 and 130506124510 named C7.5 only by the (4a) checkpoint rule): select-suites.mjs
+  // --packs prints its reach (447 lines, 74 KB for QA-366's #1435 batch, C7.5.test.ts near the end) and then calls
+  // process.exit(0). Node writes stdout to a pipe asynchronously on POSIX: what the pipe could not take at once is queued,
+  // and process.exit drops it, so on a busy runner the list's tail was lost. The stand-in below makes that certain: one
+  // 4 MB write (far past a 64 KB pipe), the C7.5 line last, then process.exit(0). gate-b must still read every line.
+  const d = mkdtempSync(join(tmpdir(), "gate-b-b178-")), stub = join(d, "select-suites-stub.mjs"), rel = "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio";
+  writeFileSync(stub, `import { readFileSync } from "node:fs"; readFileSync(0);
+const fill = Array.from({ length: 40000 }, (_, i) => \`${rel}/tests/filler_\${i}.ts\\tfiller.json ← filler_\${i}.ts \${"x".repeat(40)}\\n\`).join("");
+process.stdout.write(fill + "${rel}/acceptance/C7.5.test.ts\\tform-field-gates.json ← m3.ts ← C7.5.test.ts\\n");
+process.exit(0);
+`);
+  const was = process.env.GATE_B_SELECT_SUITES; process.env.GATE_B_SELECT_SUITES = stub;
+  let t, err = null; try { t = packsReachedBy(["x"]); } catch (e) { err = e.message; }
+  if (was === undefined) delete process.env.GATE_B_SELECT_SUITES; else process.env.GATE_B_SELECT_SUITES = was;
+  rmSync(d, { recursive: true, force: true });
+  ok("B178: a 4 MB reach list whose last line is C7.5's pack arrives whole (select-suites ends with process.exit): C7.5 is touched by its own pack, not only by (4a)",
+    !err && t?.get("C7.5")?.files.join() === "C7.5.test.ts" && t.get("C7.5").why === "form-field-gates.json ← m3.ts ← C7.5.test.ts", err ?? [...(t ?? [])].map(([k]) => k).slice(-3)); }
 
 // QA-366 (10 Nov): a merge-queue batch runs a named row's pack again when the batch adds a file that pack reads.
 { const st = { "C7.5": "Partial", "C6.9": "Works", "C8.3": "Partial", "C9.1": "Partial" }, T = (id, why = "form-field-gates.json ← m3.ts ← x") => [id, { files: [`${id}.test.ts`], why }];

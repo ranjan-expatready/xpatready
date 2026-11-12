@@ -18,6 +18,7 @@ import { sourceKey } from "../contracts/resolver.ts"; // SH3 R8
 import { NO_FIELD_MAP } from "./setup-checklist.ts";
 import { formsWithoutFieldMap } from "./programs.ts"; // QA-180: one rule for release and Open a case
 import { FAMILY_INFORMATION } from "./form-completeness.ts";
+import { bareCond, conditionConflicts, HELD_OPENING, readsWhen, withHeldConditions } from "./held-conditions.ts"; // QA-237, QA-239
 import { sourceChanges } from "./source-register.ts"; // G1 BR-9: the "Source" lines only; the gate stays out of validate()
 
 // C-11: a field map's form field list, read once per file (paths are relative to the Solution 1 folder, as in fill.ts).
@@ -67,7 +68,9 @@ export function withdrawnFieldLines(s: Snapshot, gone: Map<string, string>): Pro
   const wordsOf = new Map((s.canonical_fields as { id: string; label?: string | null; meaning?: string | null }[]).map((f) => [f.id, f.label ?? f.meaning ?? "a question"]));
   const roleOf = new Map(((s.combination.participants ?? []) as { role: string; label?: string }[]).map((p) => [p.role, p.label ?? p.role]));
   for (const f of s.forms) say("Forms", f.form_number, `The condition of ${f.form_number}`, conds(f.condition));
-  for (const p of s.placements) say("Questions", p.fact, `The condition of the question "${wordsOf.get(p.fact) ?? "a question"}"`, conds(p.condition));
+  // QA-237/239 (#1534, P-477): a held condition is not used here, but one that reads a withdrawn field is still broken in the
+  // library, so it holds Submit by name like any other reader (the library's view, held conditions back on).
+  for (const p of withHeldConditions(s).placements) say("Questions", p.fact, `The condition of the question "${wordsOf.get(p.fact) ?? "a question"}"`, conds(p.condition));
   for (const d of s.document_requirements) say("Documents", d.document_type, `The condition of the document line "${d.document_type}"`, conds(d.condition));
   for (const l of (s.combination.participants ?? []) as { role: string; label?: string; addsFiling?: { filing?: string; condition?: unknown } | null }[]) if (l.addsFiling) say("Who can be in this application", `${l.label ?? l.role}: ${l.addsFiling.filing ?? "added filing"}`, `The rule that adds "${l.addsFiling.filing ?? "a filing"}" for ${l.label ?? l.role}`, conds(l.addsFiling.condition));
   for (const r of s.rules) say("Rules", r.id, `The rule "${r.then ?? r.when_plain ?? "with no words"}"`, conds(r.when));
@@ -180,7 +183,8 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   const pulledTitle = new Map((s.section_titles ?? []).map((x) => [x.id, x.title]));
   // Round 2 (review): the label is the title, and the message starts with it, so Review prints it once, never the key.
   for (const [id, n] of pulled) { const t = pulledTitle.get(id) ?? "A library section"; out.push({ level: "warning", where: "Questions", item: id, label: t, message: `${t}: not chosen for this combination, but forms or rules still need ${n} of its question${n === 1 ? "" : "s"}, so ${n === 1 ? "it is" : "they are"} asked after the chosen sections. Add the section on the Smart questionnaire (SQR) tab to give ${n === 1 ? "it" : "them"} a place.` }); }
-  for (const p of s.placements) {
+  // QA-237/239 (#1534): a held condition is checked as a condition too: holding never hides a broken one.
+  for (const p of withHeldConditions(s).placements) {
     for (const e of checkCondition(p.condition, types, derived)) out.push({ level: "error", where: "Questions", item: p.fact, message: `Condition ${e}.` });
     if (p.condition && !p.condition_effect) out.push({ level: "error", where: "Questions", item: p.fact, message: "A condition needs an effect (show, hide, require or optional)." });
   }
@@ -208,6 +212,18 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   }
   for (const k of duplicateValidity(s.checks)) out.push({ level: "warning", where: "Checks", item: k, message: `Two document validity rules name ${k}: neither is used until one is removed.` });
   out.push(...reachability(s, placed, docFacts, derived, (f) => `"${(meaningOf.get(f) ?? (s.derived_fields as { id: string; plain?: string | null }[]).find((d) => d.id === f)?.plain ?? f).trim().replace(/\.$/, "")}"`));
+  // QA-237, QA-239: a library condition this combination cannot honour is held, never a refusal: the question is asked
+  // every time here, and the author is told why and how to use the condition (engine/held-conditions.ts).
+  for (const h of s.held_conditions ?? []) {
+    const q = `"${(meaningOf.get(h.fact) ?? h.fact).trim().replace(/\.$/, "")}"`;
+    const formReads = h.why.some((w) => / reads its answer (whenever the form applies|under a different condition)$/.test(w));
+    // QA-402: a form that writes the answer only under its own condition (a gate) is not changed from "Form fields that read
+    // this answer" (that door never touches a gate): the question's condition is made the form's own instead.
+    const asks = h.why.some((w) => /^it depends on /.test(w));
+    const gated = h.why.some((w) => / reads its answer only when .+ \(the form's own condition\)$/.test(w));
+    const tail = formReads ? "To use the condition here, make the form or its form fields apply under the same condition (Form fields that read this answer)." : gated ? "To use the condition here, make it the same as the form's own condition: show the question only when the form writes its answer." : asks ? "To use the condition here, ask the question it depends on." : "To use the condition here, nothing else may read the answer outside it.";
+    out.push({ level: "warning", where: "Questions", item: h.fact, message: `${HELD_OPENING}: the question ${q} is asked every time here, because ${h.why.join("; and ")}. ${tail} Combinations that can honour the condition still use it.` });
+  }
   // Only the derived definitions this combination reads (Lead check item 3): the library holds every definition, and
   // one nobody here uses is not this combination's warning.
   const reads = derivedRead(s);
@@ -249,35 +265,28 @@ export function askedInOrder(s: Snapshot): Problem[] {
   return reachability(s, placed, docFacts, derived, (f) => `"${factWords(s, f)}"`);
 }
 
-/** A condition without whose answer it is read from, to compare two of them; null for anything that is not a condition
- *  (a form field's words are never one, B86). */
-export const bareCond = (c: any) => { if (!c || typeof c !== "object") return null; const { subjectKind: _k, ...n } = c; return canonical(n); };
+export { bareCond }; // B86: its home is engine/held-conditions.ts (QA-237, QA-239), next to the conflicts it compares
 
 /** Grounding audit finding 3 (W1 3.4, 3.5): a question's condition must never hide a value that something applicable
  *  still reads, every value that decides a question must be obtainable, and questions must not decide each other in a
- *  loop. Errors block submission and release. A form or box that applies under the same condition is compatible. */
+ *  loop. Errors block submission and release. A form or box that applies under the same condition is compatible.
+ *  QA-237, QA-239: a snapshot built by engine/snapshot.ts already holds a condition this combination cannot honour (the
+ *  question is asked every time, `held_conditions`), so these errors stay for any other snapshot (a drafting run's
+ *  simulation, a hand-made one) and for a deciding fact the library does not define. */
 // C3.8: the messages name each question by its meaning (`words`), never by its field code.
 function reachability(s: Snapshot, placed: Set<string>, docFacts: Set<string>, derived: Set<string>, words: (fact: string) => string): Problem[] {
   const out: Problem[] = [];
   const fieldsOf = (c: any) => c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : [];
-  const readers = new Map<string, { form: string; formCond: any; boxCond: any }[]>();
-  for (const m of s.field_maps) { const f = s.forms.find((x) => x.form_number === m.form_number); if (!f) continue; for (const e of m.entries) if (e.outcome === "mapped" && e.fact) readers.set(e.fact, [...(readers.get(e.fact) ?? []), { form: f.form_number, formCond: f.condition, boxCond: e.condition_rule }]); }
-  const conditions = [...s.rules.map((r) => ({ what: `rule ${r.id}`, tree: r.when })), ...s.document_requirements.map((d) => ({ what: `document "${d.document_type}"`, tree: d.condition })), ...s.forms.map((f) => ({ what: `form ${f.form_number}`, tree: f.condition })), ...(s.checks ?? []).filter((c) => c.condition && typeof c.condition === "object").map((c) => ({ what: `check ${c.id}`, tree: c.condition }))];
-  for (const p of s.placements) {
-    if (!p.condition) continue;
-    const eff = p.condition_effect ?? "SHOW";
-    if (eff === "SHOW" || eff === "HIDE") {
-      const own = bareCond(p.condition), when = p.condition_plain ?? "its condition";
-      const forms = new Map<string, boolean>();
-      for (const r of readers.get(p.fact) ?? []) { const ok = eff === "SHOW" && [r.formCond, r.boxCond].some((c) => bareCond(c) === own); forms.set(r.form, (forms.get(r.form) ?? true) && ok); }
-      for (const [form, ok] of forms) if (!ok) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a form reads: the question ${words(p.fact)} is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}", but ${form} reads it ${s.forms.find((x) => x.form_number === form)?.condition ? "under a different condition" : "whenever the form applies"}. Make the form or its form fields apply under the same condition, or remove the question's condition.` });
-      for (const c of conditions) if (fieldsOf(c.tree).includes(p.fact) && !(eff === "SHOW" && own && canonical(c.tree).includes(own))) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a condition reads: ${c.what} reads the answer to ${words(p.fact)}, whose question is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}". The condition could never be decided while the question is hidden.` });
-    }
-    for (const f of fieldsOf(p.condition)) if (!placed.has(f) && !docFacts.has(f) && !derived.has(f)) out.push({ level: "error", where: "Questions", item: p.fact, message: `Unreachable question: ${words(p.fact)} depends on ${words(f)}, which no question, supported document or derived definition supplies, so it can never be decided.` });
+  for (const { placement: p, forms, conditions, unreachable } of conditionConflicts(s, placed, docFacts, derived)) {
+    const eff = p.condition_effect ?? "SHOW", when = p.condition_plain ?? "its condition";
+    for (const f of forms) if (!f.ok) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a form reads: the question ${words(p.fact)} is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}", but ${f.form} reads it ${readsWhen(f)}. ${f.gate ? "Make the question's condition the same as the form's own condition, or remove it." : "Make the form or its form fields apply under the same condition, or remove the question's condition."}` });
+    for (const what of conditions) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a condition reads: ${what} reads the answer to ${words(p.fact)}, whose question is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}". The condition could never be decided while the question is hidden.` });
+    for (const f of unreachable) out.push({ level: "error", where: "Questions", item: p.fact, message: `Unreachable question: ${words(p.fact)} depends on ${words(f)}, which no question, supported document or derived definition supplies, so it can never be decided.` });
   }
   // Loops: question A depends on B, which depends (directly or through others) on A.
   const dep = new Map<string, string[]>();
-  for (const p of s.placements) if (p.condition) dep.set(p.fact, [...new Set([...(dep.get(p.fact) ?? []), ...fieldsOf(p.condition)])]);
+  // QA-237/239 (#1534 re-review): a loop is broken in the library itself, so held conditions count (the library's view).
+  for (const p of withHeldConditions(s).placements) if (p.condition) dep.set(p.fact, [...new Set([...(dep.get(p.fact) ?? []), ...fieldsOf(p.condition)])]);
   const reported = new Set<string>();
   const visit = (start: string, at: string, path: string[]) => {
     for (const next of dep.get(at) ?? []) {
@@ -296,6 +305,13 @@ const KINDS: [keyof Snapshot, (x: any) => string, string][] = [
 // C-8 (W1-10 slice 1): a line released as "Signed PDF upload" and now PDF upload + signed by hand and scanned is unchanged.
 const bare = (x: any) => { const { item_version, status, origin, ...r } = fingerprintLine(x); void item_version; void status; void origin; return canonical(r); };
 export type Change = { kind: string; key: string; change: "added" | "changed" | "removed"; origin?: string; needs_sme: boolean; label: string };
+/** M3-S3, M3-S4: a document line's waiver setting in the release review's words (added, and changed from one to another). */
+const WAIVER_ADDED: Record<string, string> = { waivable: " (waivable by the case officer, with a reason)", never: " (never waivable: it blocks Ready to file until received)" };
+function waiverChange(was: string | null, now: string | null): string {
+  if (now === "waivable") return `${was === "never" ? " (no longer blocks Ready to file;" : " ("} now waivable by the case officer, with a reason)`;
+  if (now === "never") return " (now never waivable: it blocks Ready to file until received)";
+  return was === "never" ? " (no longer blocks Ready to file: a missing one is a warning again)" : " (no longer waivable)";
+}
 export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   const out: Change[] = [];
   const sme = (kind: string, x: any) => ["Rule", "Document requirement", "Check"].includes(kind) || x?.origin === "AI_PROPOSAL" || (kind === "Form" && !!x?.condition);
@@ -303,7 +319,7 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   const marks = new Map<string, { on: boolean; n: number }>();
   for (const [k, id, label] of KINDS) {
     const a = new Map(((prev?.[k] as any[]) ?? []).map((x) => [id(x), x])), b = new Map(((next[k] as any[]) ?? []).map((x) => [id(x), x]));
-    for (const [key, x] of b) if (!a.has(key)) out.push({ kind: label, key, change: "added", origin: x.origin, needs_sme: sme(label, x), label: `${x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.question_text ?? x.fact ?? key}${label === "Document requirement" && x.waiver === "waivable" ? " (waivable by the case officer, with a reason)" : ""}` });
+    for (const [key, x] of b) if (!a.has(key)) out.push({ kind: label, key, change: "added", origin: x.origin, needs_sme: sme(label, x), label: `${x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.question_text ?? x.fact ?? key}${label === "Document requirement" ? (WAIVER_ADDED[x.waiver as string] ?? "") : ""}` });
       else if (bare(a.get(key)) !== bare(x)) {
         // C4.9 (P-97): who fills a question for every combination is named once, in words, for the immigration expert.
         const was = a.get(key);
@@ -323,7 +339,8 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
           if (bare({ ...was, form_role: null }) === bare({ ...x, form_role: null })) continue;
         }
         // M3-S3 break M3: whether the case officer may waive a document line is said in words, so the second person sees it.
-        const waiver = label === "Document requirement" && (a.get(key)?.waiver ?? null) !== (x.waiver ?? null) ? (x.waiver === "waivable" ? " (now waivable by the case officer, with a reason)" : " (no longer waivable)") : "";
+        // M3-S4: and whether it is never waivable (it blocks Ready to file until received).
+        const waiver = label === "Document requirement" && (a.get(key)?.waiver ?? null) !== (x.waiver ?? null) ? waiverChange(a.get(key)?.waiver ?? null, x.waiver ?? null) : "";
         out.push({ kind: label, key, change: "changed", origin: x.origin, needs_sme: sme(label, x), label: `${x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.fact ?? key}${waiver}` });
       }
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: label, key, change: "removed", needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? key });
@@ -413,7 +430,7 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   out.push(...eligibilityChanges(prev?.eligibility, next.eligibility)); // C6.9 BR-4
   out.push(...sourceChanges(prev, next)); // G1 BR-9: a source added, changed or removed, for the expert
   // Completeness guard: any other part of the released content that differs is listed rather than silently passed.
-  const covered = new Set(["canonical_fields", "sections", "placements", "forms", "document_requirements", "rules", "checks", "field_maps", "combination", "document_types", "derived_fields", "fact_sources", "eligibility", "sources", "mode", "row_versions", "section_titles"]);
+  const covered = new Set(["canonical_fields", "sections", "placements", "forms", "document_requirements", "rules", "checks", "field_maps", "combination", "document_types", "derived_fields", "fact_sources", "eligibility", "sources", "mode", "row_versions", "section_titles", "held_conditions"]); // QA-237: held conditions show as their placement, never a change of their own
   for (const k of new Set([...Object.keys(prev ?? {}), ...Object.keys(next)])) if (prev && !covered.has(k) && canonical((prev as any)[k] ?? null) !== canonical((next as any)[k] ?? null)) out.push({ kind: "Configuration", key: k, change: "changed", needs_sme: true, label: `${k} changed` });
   return out;
 }

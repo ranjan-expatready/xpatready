@@ -228,6 +228,8 @@ export type ChecklistLine = {
   setName?: string | null;
   /** M3-S3 (P-171 (6)): the case officer may waive this line on a case, with a reason. */
   waivable?: boolean;
+  /** M3-S4 (P-172): never waivable: no waiver, no Not applicable, and Ready to file is blocked until it is received. */
+  neverWaivable?: boolean;
   /** Its place on this checklist: the set position, else its place in the default order (always first, then by name). */
   rank: number;
   /** C3.11: a line worked out from a form line (never stored), with why it is there; changed only on that form line. */
@@ -287,7 +289,7 @@ export function checklist(s: Snapshot): { role: string; label: string; lines: Ch
         lineage: r.lineage, role, document: { key: t?.key ?? r.document_type_key, name: t?.name ?? r.document_type }, who: r.who,
         base: r.base_or_conditional === "base", when: r.base_or_conditional === "base" ? "Always" : (r.condition_plain ?? "Only if its condition holds"),
         providedBy: r.provided_by, alternatives: ((r.alternatives ?? []) as string[]).map((k) => ({ key: k, name: types.find((x) => x.key === k)?.name ?? k })),
-        supplies, aboutOthers: supplies.filter((x) => x.about !== "holder").length, setName: r.set_name ?? null, waivable: r.waiver === "waivable", quote: r.source_quote ?? null, status: r.status, origin: r.origin, position: r.position ?? null, rank: 0,
+        supplies, aboutOthers: supplies.filter((x) => x.about !== "holder").length, setName: r.set_name ?? null, waivable: r.waiver === "waivable", neverWaivable: r.waiver === "never", quote: r.source_quote ?? null, status: r.status, origin: r.origin, position: r.position ?? null, rank: 0,
       };
       byRole.set(role, [...(byRole.get(role) ?? []), line]);
     }

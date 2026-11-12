@@ -25,8 +25,9 @@ ok("BK-3: the routes are found (Studio, link page, inbox and the case area)", to
 /** A sample address for a route pattern: each :param becomes a value. */
 const sample = (p: string) => p.replace(/:tab/, "forms").replace(/:[a-zA-Z]+/g, "x1");
 /** Which frame area a route opens in, and as whom. */
-const areaOf = (p: string): Area => (p === "/link" || p === "/inbox" ? "outside" : p.startsWith("/cases") ? "cases" : "studio");
-const HOMES = new Set(["studio:/", "cases:/cases", "outside:/link", "client:/cases", "client:/cases/x1/questionnaire"]);
+const areaOf = (p: string): Area => (p === "/link" || p === "/inbox" || p === "/sign-in" ? "outside" : p.startsWith("/cases") ? "cases" : "studio"); // BK-4a: the sign-in page
+// BK-3 PR 3: a client page's address, for a client, is refused with no Back (it is not a case of theirs, challenge M2).
+const HOMES = new Set(["studio:/", "cases:/cases", "outside:/link", "outside:/sign-in", "client:/cases", "client:/cases/x1/questionnaire", "client:/cases/clients", "client:/cases/clients/x1"]);
 /** Does an address open a route of the app (and not the not-found page)? */
 const known = [...top, ...caseRoutes].map((p) => new RegExp(`^${p.replace(/:[a-zA-Z]+/g, "[^/]+")}$`));
 const opens = (to: string) => known.some((r) => r.test(to.split(/[?#]/)[0]));
@@ -42,13 +43,28 @@ for (const [area, p] of all) {
   for (const c of w.crumbs.filter((x) => x.to)) ok(`BK-3 ${area} ${p}: the crumb "${c.label}" opens a route that exists`, opens(c.to!), c.to);
 }
 // The other side: an address no route has says so, and still has Back to the area's first page.
-for (const [area, addr, to] of [["studio", "/no-such-page", "/"], ["studio", "/library/nothing", "/"], ["cases", "/cases/x1/nothing", "/cases/x1"]] as [Area, string, string][]) {
+for (const [area, addr, to] of [["studio", "/no-such-page", "/"], ["studio", "/library/nothing", "/"], ["cases", "/cases/x1/nothing", "/cases/x1"], ["cases", "/cases/clients/x1/nothing", "/cases/clients/x1"]] as [Area, string, string][]) {
   const w = whereFromAddress(area, addr);
   ok(`BK-3 fail side ${addr}: the line says "No such page" (the page's notice alone says "Page not found") and Back still leads out (${to})`, w.crumbs[w.crumbs.length - 1]?.label === "No such page" && backOf(w)?.to === to, w);
 }
 
+// BK-3 PR 3 (challenge M2): /cases/clients/... is a client page, never a case. opens() reads ":id" as any segment, so these
+// rows assert the exact words and Back, and that no crumb or Back of a client page points at a case address.
+const exact: [Area, string, string[], string | null][] = [
+  ["cases", "/cases/clients", ["Cases", "Clients"], "/cases"],
+  ["cases", "/cases/clients/user-P", ["Cases", "Client"], "/cases"],
+  ["client", "/cases/clients", ["Your application"], null],
+  ["client", "/cases/clients/user-P", ["Your application"], null],
+];
+for (const [area, addr, words, to] of exact) {
+  const w = whereFromAddress(area, addr), back = backOf(w);
+  ok(`BK-3 PR 3 ${area} ${addr}: the line reads "${words.join(" › ")}" and Back goes to ${to ?? "nowhere (no Back)"}`, JSON.stringify(w.crumbs.map((c) => c.label)) === JSON.stringify(words) && (back?.to ?? null) === to, { w, back });
+  const links = [...w.crumbs.map((c) => c.to), back?.to].filter((x): x is string => !!x);
+  ok(`BK-3 PR 3 ${area} ${addr}: no crumb or Back leads to a case address made of "clients"`, !links.some((x) => /^\/cases\/clients(\/(questionnaire|eligibility|review|representative-review|sheet))?$/.test(x) && x !== "/cases/clients/user-P"), links);
+}
+
 // One frame: each shell renders through Frame, and the old headers are gone.
-ok("BK-3: App.tsx routes the case area, the link page and the inbox to components that use the Frame", /path="\/cases\/\*" element=\{<RuntimeApp \/>\}/.test(app) && /<Frame area="studio"/.test(app));
+ok("BK-3: App.tsx routes the case area, the link page and the inbox to components that use the Frame", /path="\/cases\/\*" element=\{(<KnownPerson>)?<RuntimeApp \/>/.test(app) && /<Frame area="studio"/.test(app));
 ok("BK-3: the case area renders through the Frame", /<Frame area=\{client \? "client" : "cases"\}/.test(cases));
 ok("BK-3: the link page and the demo inbox render through the Frame", (read("runtime/link-page.tsx").match(/<Frame area="outside"/g) ?? []).length === 2);
 const files: string[] = [];

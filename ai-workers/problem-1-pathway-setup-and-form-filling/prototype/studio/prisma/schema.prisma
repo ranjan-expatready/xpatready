@@ -910,7 +910,8 @@ model DocumentRequirement {
   alternatives    Json?
   /// C6.15 (SA-1B-20): the named set of this document type the line picks; null = the set named "Standard".
   setName         String?          @map("set_name")
-  /// M3-S3 (P-171 (6)): "waivable" lets the case officer waive the line on a case with a reason; null: not waivable.
+  /// M3-S3, M3-S4 (P-171 (6), P-172): "waivable" lets the case officer waive the line on a case with a reason; "never":
+  /// no waiver and no Not applicable, and Ready to file is blocked until it is received; null: neither (a warning).
   waiver          String?
   sourceQuote     String?          @map("source_quote")
   sourceFile      String?          @map("source_file")

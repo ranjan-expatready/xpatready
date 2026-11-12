@@ -119,13 +119,13 @@ const ALL = (p: Person) => [...p.lines, ...p.waiting, ...p.not_needed];
   } finally { sql(`update config_release set snapshot = jsonb_set(snapshot, '{combination,key}', '"vv.single"') where id = '${rel}'`); }
   ok("C6.4 pass: the same case reads again once the release is as released", (await list()).status === 200);
 
-  // Not derived yet: a case on another released combination says so and lists nothing.
+  // M3-S4 (P-425): a case on another released combination gets its checklist from its own release, one list per person.
   const wp = sql("select c.id from combination c where c.combination_key='wp.family' and exists (select 1 from config_release r where r.combination_id=c.id)");
   if (wp) {
     const other = (await call("POST", "/runtime/cases", { combinationId: wp, reference: `M3B-C64-WP-${run}`, clientActor: CLIENT, principal: { displayName: "Sample Applicant B" } }, OFFICER)).body?.id as string;
     r = await call("GET", `/runtime/cases/${other}/checklist`, undefined, OFFICER);
-    ok("C6.4 fail: another combination's case is not derived yet and says so, with no lists", r.status === 200 && r.body.derived === false && /not derived yet/.test(r.body.why) && !r.body.people, r.body);
-  } else ok("C6.4 fail: another combination's case is not derived yet (no other released combination on this copy)", false, "release wp.family first");
+    ok("C6.4 + M3-S4 pass: another combination's case is worked out from its own release, one list for its one person", r.status === 200 && r.body.derived === true && r.body.people?.length === 1 && !/not derived yet/.test(JSON.stringify(r.body)), r.body);
+  } else ok("C6.4 + M3-S4: another combination's case is worked out (no other released combination on this copy)", false, "release wp.family first");
 
   // A person who stops travelling has no applicant lines.
   await call("PATCH", `/runtime/cases/${caseId}/people/${spouse}`, { applies: false }, OFFICER);

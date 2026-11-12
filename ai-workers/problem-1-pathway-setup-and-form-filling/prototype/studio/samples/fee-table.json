@@ -1,5 +1,5 @@
 {
- "about": "R2 (P-230 (7)): the dated fee table, data and never code. Each line cites IRCC's page, quote and date (P-170). Status: Researched (source, date): may change; Sample until the immigration expert confirms (P-171). Sources: the IRCC fee list itself for the study permit, work permit, open work permit holder and visitor extension lines (read 2026-11-03); research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md rows 1a, 1b, 1c; product/screens/W1-baseline/immigration-facts-2026-10-29.md row 19. Each line carries its basis (P-247): per_application (once per application filed), per_person_by_role (each person of the named roles), per_position (not worked out yet), or family_maximum (each person, capped once enough people apply together). M3-S1 (P-425, read 2026-11-10): a per_application line may name a role that co-files (the sponsor: takes part, never applies), and is then charged on that person's co-filed application, which carries its own fees; a combination's settings (each_files_own, co_filed_why) are data here, never code. A fee change is an edit to this file with its test (tests/check_r2_fee_table.ts, run by CI). Part 2 of R2 moves it into a stored library table frozen with each release (setup S7a, PUT /library/fees).",
+ "about": "R2 (P-230 (7)): the dated fee table, data and never code. Each line cites IRCC's page, quote and date (P-170). Status: Researched (source, date): may change; Sample until the immigration expert confirms (P-171). Sources: the IRCC fee list itself for the study permit, work permit, open work permit holder and visitor extension lines (read 2026-11-03); research_notes/visitor-visa-and-six-combinations-research-2026-11-02.md rows 1a, 1b, 1c; product/screens/W1-baseline/immigration-facts-2026-10-29.md row 19. Each line carries its basis (P-247): per_application (once per application filed), per_person_by_role (each person of the named roles), per_position (not worked out yet), or family_maximum (each person, capped once enough people apply together). M3-S1 (P-425, read 2026-11-10): a per_application line may name a role that co-files (the sponsor: takes part, never applies), and is then charged on that person's co-filed application, which carries its own fees; a combination's settings (each_files_own, co_filed_why) are data here, never code. A fee change is an edit to this file with its test (tests/check_r2_fee_table.ts, run by CI). Part 2 of R2 moves it into a stored library table frozen with each release (setup S7a, PUT /library/fees). BK-8 (P-448): a line's step names the IRCC step it pays for (biometrics); the prepare view finds a combination's biometrics step and its ages by it, so a pathway lists its own line (one per step), never another pathway's.",
  "as_of": "2026-09-21",
  "read": "2026-11-02",
  "status": "Researched (source, date): may change",
@@ -26,6 +26,7 @@
   {
    "key": "biometrics",
    "label": "Biometrics fee",
+   "step": "biometrics",
    "status": "Researched (IRCC fee list, 2026-11-02): may change",
    "basis": "family_maximum",
    "per_person_cad": 85,
@@ -234,7 +235,6 @@
     "visitor_visa",
     "biometrics"
    ],
-   "checklist": true,
    "modes": {
     "principal": "files_own",
     "spouse_or_partner": "files_own",
@@ -256,14 +256,12 @@
   "sp.outside": {
    "label": "Study permit (outside Canada)",
    "lines": [],
-   "checklist": true,
-   "note": "C6.17 (P-444, QA-375): the per-person checklist only. Its document lines are the release's, each cited from IMM 5483 (08-2025) with page, quote and date (samples/form-setup.json sp.outside documentsCited). No fee lines: its fees are not worked out from this table yet (the study_permit line waits for its combination's modes), so nothing about money changes."
+   "note": "C6.17 (P-444, QA-375): its per-person checklist is its release's document lines (worked out for every combination since M3-S4, P-425), each cited from IMM 5483 (08-2025) with page, quote and date (samples/form-setup.json sp.outside documentsCited). No fee lines: its fees are not worked out from this table yet (the study_permit line waits for its combination's modes), so nothing about money changes."
   },
   "wp.lmia_inside": {
    "label": "Work permit with an LMIA (inside Canada)",
    "lines": [],
-   "checklist": true,
-   "note": "C6.17 (P-444, QA-375): the per-person checklist only. Its document lines are the release's: those IMM 5556 (03-2024) lists are cited from it with page, quote and date; the others are labelled Sample (samples/form-setup.json wp.lmia_inside documentSources). No fee lines: its fees are not worked out from this table yet, so nothing about money changes."
+   "note": "C6.17 (P-444, QA-375): its per-person checklist is its release's document lines (worked out for every combination since M3-S4, P-425): those IMM 5556 (03-2024) lists are cited from it with page, quote and date; the others are labelled Sample (samples/form-setup.json wp.lmia_inside documentSources). No fee lines: its fees are not worked out from this table yet, so nothing about money changes."
   },
   "fs.spouse": {
    "label": "Spouse or common-law partner sponsorship",

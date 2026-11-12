@@ -1,0 +1,373 @@
+[
+ {
+  "part": "Part 19 of 66 · Background information",
+  "h": "Background information",
+  "questions": 10,
+  "inputs": 19,
+  "words": 303
+ },
+ {
+  "part": "Part 20 of 66 · Your parent 1 (mother or father)",
+  "h": "Your parent 1 (mother or father)",
+  "questions": 8,
+  "inputs": 9,
+  "words": 71
+ },
+ {
+  "part": "Part 21 of 66 · Statutory declaration of common-law union",
+  "h": "Statutory declaration of common-law union",
+  "questions": 1,
+  "inputs": 1,
+  "words": 46
+ },
+ {
+  "part": "Part 22 of 66 · Other documentary evidence",
+  "h": "Other documentary evidence",
+  "questions": 1,
+  "inputs": 2,
+  "words": 42
+ },
+ {
+  "part": "Part 23 of 66 · Applicant",
+  "h": "Applicant",
+  "questions": 1,
+  "inputs": 1,
+  "words": 32
+ },
+ {
+  "part": "Part 24 of 66 · Your parent 1 (mother or father)",
+  "h": "Your parent 1 (mother or father)",
+  "questions": 8,
+  "inputs": 9,
+  "words": 77
+ },
+ {
+  "part": "Part 25 of 66 · Statutory declaration of common-law union",
+  "h": "Statutory declaration of common-law union",
+  "questions": 1,
+  "inputs": 1,
+  "words": 40
+ },
+ {
+  "part": "Part 26 of 66 · Personal details",
+  "h": "Personal details",
+  "questions": 5,
+  "inputs": 5,
+  "words": 60
+ },
+ {
+  "part": "Part 27 of 66 · Applicant",
+  "h": "Applicant",
+  "questions": 1,
+  "inputs": 1,
+  "words": 32
+ },
+ {
+  "part": "Part 28 of 66 · Your parent 1 (mother or father)",
+  "h": "Your parent 1 (mother or father)",
+  "questions": 8,
+  "inputs": 9,
+  "words": 77
+ },
+ {
+  "part": "Part 29 of 66 · Statutory declaration of common-law union",
+  "h": "Statutory declaration of common-law union",
+  "questions": 1,
+  "inputs": 1,
+  "words": 40
+ },
+ {
+  "part": "Part 30 of 66 · Personal details",
+  "h": "Personal details",
+  "questions": 5,
+  "inputs": 5,
+  "words": 60
+ },
+ {
+  "part": "Part 31 of 66 · Brothers and sisters",
+  "h": "Brothers and sisters",
+  "questions": 0,
+  "inputs": 0,
+  "words": 113
+ },
+ {
+  "part": "Part 32 of 66 · National identity document",
+  "h": "National identity document",
+  "questions": 1,
+  "inputs": 2,
+  "words": 38
+ },
+ {
+  "part": "Part 33 of 66 · Signature",
+  "h": "Signature",
+  "questions": 1,
+  "inputs": 2,
+  "words": 71
+ },
+ {
+  "part": "Part 34 of 66 · Government positions",
+  "h": "Government positions",
+  "questions": 1,
+  "inputs": 2,
+  "words": 137
+ },
+ {
+  "part": "Part 35 of 66 · Membership or Association with Organizations",
+  "h": "Membership or Association with Organizations",
+  "questions": 0,
+  "inputs": 0,
+  "words": 138
+ },
+ {
+  "part": "Part 36 of 66 · Employment",
+  "h": "Employment",
+  "questions": 0,
+  "inputs": 0,
+  "words": 105
+ },
+ {
+  "part": "Part 37 of 66 · Education",
+  "h": "Education",
+  "questions": 0,
+  "inputs": 0,
+  "words": 100
+ },
+ {
+  "part": "Part 38 of 66 · Statutory declaration of common-law union",
+  "h": "Statutory declaration of common-law union",
+  "questions": 6,
+  "inputs": 6,
+  "words": 74
+ },
+ {
+  "part": "Part 39 of 66 · Military service",
+  "h": "Military service",
+  "questions": 1,
+  "inputs": 2,
+  "words": 148
+ },
+ {
+  "part": "Part 40 of 66 · Previous travel",
+  "h": "Previous travel",
+  "questions": 0,
+  "inputs": 0,
+  "words": 99
+ },
+ {
+  "part": "Part 41 of 66 · Contact information",
+  "h": "Contact information",
+  "questions": 23,
+  "inputs": 27,
+  "words": 151
+ },
+ {
+  "part": "Part 42 of 66 · Personal details",
+  "h": "Personal details",
+  "questions": 49,
+  "inputs": 67,
+  "words": 552
+ },
+ {
+  "part": "Part 43 of 72 · Background information",
+  "h": "Background information",
+  "questions": 12,
+  "inputs": 21,
+  "words": 252
+ },
+ {
+  "part": "Part 44 of 72 · Your parent 1 (mother or father)",
+  "h": "Your parent 1 (mother or father)",
+  "questions": 8,
+  "inputs": 9,
+  "words": 73
+ },
+ {
+  "part": "Part 45 of 72 · Statutory declaration of common-law union",
+  "h": "Statutory declaration of common-law union",
+  "questions": 1,
+  "inputs": 1,
+  "words": 61
+ },
+ {
+  "part": "Part 46 of 72 · Applicant",
+  "h": "Applicant",
+  "questions": 1,
+  "inputs": 1,
+  "words": 32
+ },
+ {
+  "part": "Part 47 of 72 · Your parent 1 (mother or father)",
+  "h": "Your parent 1 (mother or father)",
+  "questions": 8,
+  "inputs": 9,
+  "words": 77
+ },
+ {
+  "part": "Part 48 of 72 · Statutory declaration of common-law union",
+  "h": "Statutory declaration of common-law union",
+  "questions": 1,
+  "inputs": 1,
+  "words": 40
+ },
+ {
+  "part": "Part 49 of 72 · Personal details",
+  "h": "Personal details",
+  "questions": 5,
+  "inputs": 5,
+  "words": 60
+ },
+ {
+  "part": "Part 50 of 72 · Applicant",
+  "h": "Applicant",
+  "questions": 1,
+  "inputs": 1,
+  "words": 32
+ },
+ {
+  "part": "Part 51 of 72 · Your parent 1 (mother or father)",
+  "h": "Your parent 1 (mother or father)",
+  "questions": 8,
+  "inputs": 9,
+  "words": 77
+ },
+ {
+  "part": "Part 52 of 72 · Statutory declaration of common-law union",
+  "h": "Statutory declaration of common-law union",
+  "questions": 1,
+  "inputs": 1,
+  "words": 40
+ },
+ {
+  "part": "Part 53 of 72 · Personal details",
+  "h": "Personal details",
+  "questions": 5,
+  "inputs": 5,
+  "words": 60
+ },
+ {
+  "part": "Part 54 of 72 · Brothers and sisters",
+  "h": "Brothers and sisters",
+  "questions": 0,
+  "inputs": 0,
+  "words": 113
+ },
+ {
+  "part": "Part 55 of 72 · National identity document",
+  "h": "National identity document",
+  "questions": 1,
+  "inputs": 2,
+  "words": 36
+ },
+ {
+  "part": "Part 56 of 72 · Signature",
+  "h": "Signature",
+  "questions": 1,
+  "inputs": 2,
+  "words": 69
+ },
+ {
+  "part": "Part 57 of 72 · Government positions",
+  "h": "Government positions",
+  "questions": 1,
+  "inputs": 2,
+  "words": 135
+ },
+ {
+  "part": "Part 58 of 72 · Membership or Association with Organizations",
+  "h": "Membership or Association with Organizations",
+  "questions": 0,
+  "inputs": 0,
+  "words": 136
+ },
+ {
+  "part": "Part 59 of 72 · Employment",
+  "h": "Employment",
+  "questions": 0,
+  "inputs": 0,
+  "words": 103
+ },
+ {
+  "part": "Part 60 of 72 · Education",
+  "h": "Education",
+  "questions": 0,
+  "inputs": 0,
+  "words": 98
+ },
+ {
+  "part": "Part 61 of 72 · Statutory declaration of common-law union",
+  "h": "Statutory declaration of common-law union",
+  "questions": 6,
+  "inputs": 6,
+  "words": 72
+ },
+ {
+  "part": "Part 62 of 72 · Military service",
+  "h": "Military service",
+  "questions": 1,
+  "inputs": 2,
+  "words": 146
+ },
+ {
+  "part": "Part 63 of 72 · Previous travel",
+  "h": "Previous travel",
+  "questions": 0,
+  "inputs": 0,
+  "words": 97
+ },
+ {
+  "part": "Part 64 of 72 · Contact information",
+  "h": "Contact information",
+  "questions": 23,
+  "inputs": 27,
+  "words": 149
+ },
+ {
+  "part": "Part 65 of 72 · Applicant",
+  "h": "Applicant",
+  "questions": 1,
+  "inputs": 1,
+  "words": 26
+ },
+ {
+  "part": "Part 66 of 72 · Other documentary evidence",
+  "h": "Other documentary evidence",
+  "questions": 6,
+  "inputs": 11,
+  "words": 115
+ },
+ {
+  "part": "Part 67 of 72 · US PR card",
+  "h": "US PR card",
+  "questions": 1,
+  "inputs": 2,
+  "words": 40
+ },
+ {
+  "part": "Part 68 of 72 · Background information",
+  "h": "Background information",
+  "questions": 12,
+  "inputs": 21,
+  "words": 250
+ },
+ {
+  "part": "Part 69 of 72 · Your parent 1 (mother or father)",
+  "h": "Your parent 1 (mother or father)",
+  "questions": 8,
+  "inputs": 9,
+  "words": 71
+ },
+ {
+  "part": "Part 70 of 72 · Personal details",
+  "h": "Personal details",
+  "questions": 46,
+  "inputs": 64,
+  "words": 527
+ },
+ {
+  "part": "Part 65 of 65 · Statutory declaration of common-law union",
+  "h": "Statutory declaration of common-law union",
+  "questions": 1,
+  "inputs": 1,
+  "words": 51
+ }
+]

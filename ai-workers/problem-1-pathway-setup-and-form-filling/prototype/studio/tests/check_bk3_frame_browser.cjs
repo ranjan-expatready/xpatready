@@ -95,7 +95,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       // Every case page names the case by its reference, as the case page does (review m3), and never "No such page" for the client (m2).
       if (actor === O && url.startsWith(`/cases/${caseId}`) && kind !== "not found") step(`${name}: the line names the case ${ref}`, x.crumbs[0] === "Cases" && x.crumbs[1] === ref, x.crumbs);
       const staff = actor === S || actor === O;
-      if (staff) step(`${name}: the other area is on the line (${x.other})`, x.other === (actor === S ? "Cases" : "Product Studio"), x.other);
+      if (staff) step(`${name}: the other area is on the line (${x.other})`, x.other === (actor === S ? "Cases (as Case officer)" : "Product Studio (as Configuration author)"), x.other); // BK-4a: the link names who it acts as
       else step(`${name}: no other area for a client or an outside page`, x.other === null, x.other);
       if (width === 375 && onMain(url)) step(`${name}: the line itself fits at 375 px (the page's own sideways scroll is on main too: ${onMain(url)})`, x.lineFits, x);
       else if (width === 375) step(`${name}: no sideways scroll at 375 px`, !x.sideways && x.lineFits, x);
@@ -121,6 +121,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.setViewportSize({ width: 375, height: 812 });
   await open(`/cases/${caseId}`, O); await p.locator("[data-where-area]").click(); await p.locator('[data-where="studio"]').waitFor({ timeout: 15000 }).catch(() => {});
   step("BK-3 375: Product Studio → on a case page opens the Studio", new URL(p.url()).pathname === "/" && await p.locator('[data-where="studio"]').count() === 1, p.url());
+  // BK-3 PR 2: as the Studio person, never the case officer (the case area switched straight back: "This page is for the configuration people").
+  await p.waitForFunction(() => !!document.querySelector("main h1"), null, { timeout: 30000 }).catch(() => {});
+  step("BK-3 375: Product Studio → acts as the Studio person, so the Studio opens its programs (not a refusal)", await p.evaluate(() => localStorage.getItem("xr-actor")) === "user-A" && !/for the configuration people/.test(await p.locator("main").innerText()), await p.evaluate(() => localStorage.getItem("xr-actor")));
   await p.locator("[data-where-area]").click(); await p.locator('[data-where="cases"]').waitFor({ timeout: 15000 }).catch(() => {});
   step("BK-3 375: Cases → in the Studio opens the case list (dead end 2: no longer only the Demo menu)", new URL(p.url()).pathname === "/cases" && await p.locator('[data-where="cases"]').count() === 1, p.url());
 

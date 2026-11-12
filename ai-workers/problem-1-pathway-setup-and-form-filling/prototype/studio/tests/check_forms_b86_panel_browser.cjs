@@ -1,5 +1,5 @@
 // B86 (QA-237, C4.11; Done when 9): "Form fields that read this answer", walked in a real browser at 1440 px by keyboard: on a
-// condition's card, on the second person's page, and under a "Hiding a value" problem on Review and release. Plain words, no
+// condition's card, on the second person's page, and under a held condition's warning on Review and release (Bake row 6). Plain words, no
 // field code, axe (WCAG 2.2 AA), no sideways scroll at 1440 and 400 px. Saved answers only: US$0. All conditions are Sample.
 //   zsh studio/tools/isolated.sh forms_b86b 4452 start && node studio/tests/check_forms_b86_panel_browser.cjs 4452 xr_studio_forms_b86b
 const { execFileSync } = require("node:child_process");
@@ -73,8 +73,11 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const under = '[data-form-field-conditions="person.other_given_names"]';
   text = await check("Review and release", under, "review-release");
   step("the refusal's way out is on the problem: the form field, its own words, one button", /one name only on the form/.test(text) && (await p.locator(under).getByRole("button", { name: "Says the same as this condition" }).count()) === 1, text);
-  const first = await p.locator("[data-problem]").first().innerText();
-  step("BR (m5): \"Hiding a value\" sorts first, so it is never behind Show all", /Hiding a value a form reads/.test(first), first);
+  // Bake row 6 (QA-237, PR #1534): not confirmed, the condition is held (a warning), never an error; its panel is the way to use it.
+  const showAll = p.getByRole("button", { name: /^Show all \d+$/ });
+  if (await showAll.count()) await showAll.first().click();
+  const heldLine = await p.locator("[data-problem]", { hasText: "Condition not used on this combination" }).allInnerTexts();
+  step("QA-237: the condition is held, one warning saying why and how to use it; no \"Hiding a value\" error", heldLine.length === 1 && /To use the condition here/.test(heldLine[0]) && (await p.locator("[data-problem]", { hasText: "Hiding a value a form reads" }).count()) === 0, heldLine.join(" | "));
 
   // ---------------------------------------------------------------- the one request fails (break n1, EXPERIENCE §4)
   await p.route("**/api/combinations/*/form-field-conditions", (route) => route.abort());

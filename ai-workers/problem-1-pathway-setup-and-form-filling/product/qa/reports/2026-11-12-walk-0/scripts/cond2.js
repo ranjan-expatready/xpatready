@@ -1,0 +1,11 @@
+const sec = page.locator("main section").filter({ hasText: "Where it is asked" }).first();
+const f = sec.getByLabel("Field", { exact: true }); await f.fill("Visit purpose"); await f.press("Tab"); await page.waitForTimeout(600);
+await sec.getByLabel("Comparison", { exact: true }).selectOption({ label: "is" });
+const v = sec.getByLabel("Value", { exact: true }); console.log("value tag", await v.evaluate(e => e.tagName + "|" + e.getAttribute("list")));
+await v.fill("Other"); await v.press("Tab"); await page.waitForTimeout(600);
+console.log("status:", (await sec.innerText()).replace(/\s+/g, " ").match(/Condition (is valid|[^.]*)\.?/)?.[0]);
+console.log("plain words:", await sec.getByLabel("In plain words").inputValue());
+const reqs = []; page.on("response", r => { if (r.request().method() !== "GET") reqs.push(r.url().replace(/^.*\/api/, "") + " " + r.status()); });
+await sec.getByRole("button", { name: "Save placement as draft" }).click(); await page.waitForTimeout(1500);
+console.log("REQS", reqs.join(" ; "));
+console.log("ALERTS", (await page.locator("[role=alert],[data-sonner-toast]").allInnerTexts()).join(" | ").replace(/\s+/g, " ").slice(0, 600));

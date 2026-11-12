@@ -5,12 +5,13 @@ import { tabOf, TABS, type WorkspaceView } from "../../../contracts/workspace";
 import { TestsTab } from "@/components/answer-keys";
 import { waitsForMap } from "../../../engine/setup-checklist";
 import { nextStepHref, STEP_LABEL, tabCounts, tabSteps, type BadgeTab, type ItemKind } from "../../../contracts/setup-checklist";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Plus, Sparkles } from "lucide-react";
 import { useWhere, type Crumb } from "@/components/frame"; // BK-3: one "where am I" line
 import { CATALOGUE_URL_KEY, STATUS_WORD } from "@/pages/programs";
 import { StepTip, useNextStep } from "@/components/next-step";
 import { StatusChip, TipProvider } from "@/components/status";
 import { useApi } from "@/lib/api";
+import { actAsCaseStaff } from "@/runtime/cases"; // BK-3 PR 2
 import { Button, Notice, Pill } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { peopleWords } from "@/lib/people";
@@ -110,6 +111,10 @@ export function CombinationPage() {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-bold">{c.label}</h1>{/* UX-A part 3 (break M1): a retired combination says Retired, with no next step and no badges (one word per state). */}{row?.retired ? <span data-status="RETIRED"><Pill tone="neutral" title="Retired at a release: hidden from new setups; open cases and earlier releases keep it.">{STATE_WORDS.RETIRED}</Pill></span> : row ? <StatusChip status={row.status} text={STATUS_WORD[row.status as keyof typeof STATUS_WORD]} /> : null}{last?.demo ? <span data-demo-release><Pill tone="warn" title="Sample content: a demo release, never counted as a real publish.">Demo release</Pill></span> : null}</div>
           <p className="mt-1 text-sm text-text-muted">{facts}</p>
+          {/* BK-3 PR 2 (qa baseline dead end 2): a released combination opens a case on its newest release in one click, the
+              Open a case dialog with it chosen. None before its first release, and none once retired (no new cases). */}
+          {last && row && !row.retired ? <Button size="sm" variant="secondary" className="mt-2" asChild><Link to={`/cases?open=${c.id}`} onClick={actAsCaseStaff} data-open-case>
+            <Plus aria-hidden />Open a case on Release {last.release}</Link></Button> : null}
         </div>
         {row && !row.retired ? <NextStep row={row} setup={sum.data?.setup ?? null} /> : null}
       </div>
@@ -131,7 +136,7 @@ export function CombinationPage() {
       <div role="tabpanel" aria-label={TABS.find((t) => t.key === tab)!.label}>
         {tab === "overview" ? <OverviewTab d={d} sum={sum.data} show={sp.get("show")} failed={sum.isError} onRetry={() => void sum.refetch()} />
           : tab === "documents" ? <DocumentsTab id={c.id} />
-          : tab === "review" ? <ReviewTab d={d} changesCount={sum.data ? changes : undefined} countFailed={sum.isError} onRetryCount={() => void sum.refetch()} />
+          : tab === "review" ? <ReviewTab d={d} changesCount={sum.data ? changes : undefined} countFailed={sum.isError} onRetryCount={() => void sum.refetch()} retired={retired} />
           : tab === "tests" ? <TestsTab id={c.id} />
           : tab === "preview" && sp.get("view") === "studio" ? <div className="space-y-3"><Link className="text-sm text-text-link underline" to={`/c/${id}/preview`}>Back to the preview by person</Link><StudioPreview d={d} /></div>
           : <WorkspaceTab id={c.id} tab={tab} hasRelease={!!last} />}

@@ -16,7 +16,9 @@ import type { AnswerMark, QuestionnaireView, Readiness } from "../../contracts/r
 
 /** `mark`, `to_confirm`, `why` (P-411): who gave the answer ("answered by the principal for <name>", "entered by staff"),
  *  and whether it still waits for the officer's Confirm section; null and false where the case view has no such answer. */
-export type SheetAnswer = { label: string; fact: string; subject: string; person: string; row: number | null; value: unknown; copy_text: string; source: "Document" | "Client" | "Case officer"; mark: AnswerMark | null; to_confirm: boolean; why: string | null };
+export type SheetAnswer = { label: string; fact: string; subject: string; person: string; row: number | null; value: unknown; copy_text: string; source: "Document" | "Client" | "Case officer"; mark: AnswerMark | null; to_confirm: boolean; why: string | null;
+  /** QA-392, QA-392b: a "recorded" Yes/No box, Yes or No as the PDF copy writes it; its label is the form's own question. */
+  recorded?: true };
 /** The mark of the current answer behind a box (the case view's), by its whole "about", fact and row. */
 export type MarkOf = (about: string, fact: string, row: number | null) => { mark: AnswerMark; confirmed: boolean; why: string } | undefined;
 /** `version`: the section's fingerprint now; a tick sends the one it read, so it freezes what the officer saw. */
@@ -86,7 +88,10 @@ export type ChoiceWords = (fact: string, value: unknown) => string | undefined;
  *  apply", a row fact answered on its rows (the form's spare rows stay empty) or one the release never asks does not;
  *  its section stays on the sheet to tick all the same. Without it, every such box waits. With `wordsOf` (QA-317), a
  *  choice is copied as its option's label (the portal lists labels), its value and the fingerprint staying the key. */
-export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels: Map<string, string>, entered: Map<string, { at: string; by: string; hash: string }>, markOf: MarkOf = () => undefined, waits?: Waits, wordsOf?: ChoiceWords): Sheet {
+/** With `yesNo` (QA-392, QA-392b): the Yes/No each "recorded" box stands for, by data path, as the PDF copy writes it
+ *  (engine/form-values.ts recordedYesNo over the copy's own value step): that box's line is that Yes or No, in the form's
+ *  own question, in place of the list entry's value it reads. */
+export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels: Map<string, string>, entered: Map<string, { at: string; by: string; hash: string }>, markOf: MarkOf = () => undefined, waits?: Waits, wordsOf?: ChoiceWords, yesNo?: Map<string, boolean>): Sheet {
   const parts = layout.basis === "form_parts" ? layout.parts : [];
   const out: SheetSection[] = layout.basis === "form_parts"
     ? parts.map((p) => ({ key: p.key, title: p.title, ...(p.named ? {} : { named: false as const }), version: "", entered: null, out_of_date: false, answers: [], waiting: [] }))
@@ -105,6 +110,11 @@ export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels:
     if (!other) { other = { key: otherKey, title: "Other questions", version: "", entered: null, out_of_date: false, answers: [], waiting: [] }; out.push(other); byKey.set(otherKey, other); }
     return other;
   };
+  // QA-392b review M1: a form field's caption names its own question only when no other form field of the form shares it
+  // (IMM 5257's field list gives the US card's Yes/No the national identity document's caption): else the release's label.
+  const captions = new Map<string, number>();
+  for (const b of boxes) if (b.caption) captions.set(b.caption, (captions.get(b.caption) ?? 0) + 1);
+  const ownCaption = (b: BoxRow) => (b.caption && captions.get(b.caption) === 1 ? b.caption : undefined);
   for (const b of boxes) {
     if (!b.fact || b.coverage === "not needed") continue; // B86 BR-5: nothing to enter, nothing to wait for
     const sec = sectionOf(b.box);
@@ -114,8 +124,16 @@ export function sheetOf(layout: Layout, boxes: BoxRow[], origin: Origin, labels:
     const subject = b.about ?? "", label = labels.get(b.fact) ?? b.meaning ?? b.caption ?? b.fact;
     if (!subject.split("/")[0]) continue; // a box about nobody on this case (for example the spouse's, with no spouse) is not asked for
     asked.add(sec.key);
-    if (b.coverage === "confirmed fact") {
-      if (sec.answers.some((a) => a.subject === subject && a.fact === b.fact && a.row === b.row)) continue;
+    const same = (a: SheetAnswer) => a.subject === subject && a.fact === b.fact && a.row === b.row;
+    // QA-392, QA-392b: a "recorded" Yes/No box is typed as the Yes or No the PDF copy writes for it (one rule with the copy:
+    // its own value step), in the form's own question; it takes the place of a line that showed the entry's value instead.
+    const yn = yesNo?.get(b.box);
+    if (yn !== undefined) {
+      const m = markOf(subject, b.fact, b.row), at = sec.answers.findIndex(same);
+      const line: SheetAnswer = { label: ownCaption(b) ?? label, fact: b.fact, subject, person: b.about_label, row: b.row, value: yn, copy_text: copyText(yn), source: sourceOf(origin(subject.split("/")[0], b.fact)), mark: m?.mark ?? null, to_confirm: !!m && !m.confirmed, why: m?.why ?? null, recorded: true };
+      if (at < 0) sec.answers.push(line); else if (!sec.answers[at].recorded) sec.answers[at] = line;
+    } else if (b.coverage === "confirmed fact") {
+      if (sec.answers.some(same)) continue;
       const m = markOf(subject, b.fact, b.row);
       sec.answers.push({ label, fact: b.fact, subject, person: b.about_label, row: b.row, value: b.value, copy_text: wordsOf?.(b.fact, b.value) ?? copyText(b.value), source: sourceOf(origin(subject.split("/")[0], b.fact)), mark: m?.mark ?? null, to_confirm: !!m && !m.confirmed, why: m?.why ?? null });
     } else if ((!waits || waits(subject, b.fact)) && !sec.waiting.some((w) => w.subject === subject && w.fact === b.fact)) sec.waiting.push({ fact: b.fact, subject, person: b.about_label, label });

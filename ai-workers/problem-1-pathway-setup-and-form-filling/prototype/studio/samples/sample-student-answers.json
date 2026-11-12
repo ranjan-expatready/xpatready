@@ -1,0 +1,113 @@
+{
+ "label": "Sample (BK-12): made-up answers for one made-up student's Study permit case, saved and confirmed by api/src/sample-case.ts from samples/sample-cases.json. Never a client, never submitted. No value here is an IRCC value. Unconfirmed: expert. Legal: Unconfirmed: no counsel.",
+ "source": "Made up for BK-12 (P-448, P-449: a pathway's Sample case is chosen in data). Only questions the Study permit's release asks are answered (an answer it does not ask is refused in words by the loader). BK-13 step 1 (P-449, P-481 S6): widened so the Study permit's forms can be written: every made-up answer the release asks of a single student of 20 studying outside Québec, with no representative-only release and no custodian. Option values are the release's own lists (for example IMM 1294's \"F Female\").",
+ "case": {
+  "case.school_name": "SAMPLE COLLEGE",
+  "case.study_field": "Computing/IT",
+  "case.study_start_date": "2027-09-01",
+  "case.study_end_date": "2029-04-30",
+  "case.tuition_cost": 20000,
+  "case.funds_available_cad": 30000,
+  "case.school_address": {
+   "street_number": "200",
+   "street_name": "SAMPLE AVENUE",
+   "city": "TORONTO",
+   "province": "ON",
+   "postal_code": "M5V 0B2",
+   "country": "Canada"
+  },
+  "case.dli_number": "O000000000000",
+  "case.student_id_number": "SAMPLE-0001",
+  "case.study_level": "College - Diploma",
+  "case.expenses_paid_by": "Myself",
+  "case.room_board_cost": 12000,
+  "case.other_study_cost": 2000,
+  "case.pal_number": "SAMPLE-PAL-0001",
+  "case.pal_expiry_date": "2027-12-31",
+  "case.service_language": "English",
+  "case.authorizes_release_to_designated_individual": false
+ },
+ "everyone": {
+  "person.citizenship": "India",
+  "person.birth_country": "India",
+  "person.birth_city": "MUMBAI",
+  "person.current_residence_country": "India",
+  "person.current_residence_status": "Citizen",
+  "person.applying_from_country": "India",
+  "person.has_used_other_name": false,
+  "person.has_national_id": false,
+  "person.us_permanent_resident": false,
+  "person.passport_country_of_issue": "IND",
+  "person.passport_issue_date": "2022-01-15",
+  "person.passport_expiry_date": "2032-01-14",
+  "person.native_language": "Hindi",
+  "person.official_language_ability": "English",
+  "person.language_test_taken": false,
+  "person.mailing_address": {
+   "street_number": "12",
+   "street_name": "SAMPLE ROAD",
+   "city": "MUMBAI",
+   "postal_code": "400001",
+   "country": "India"
+  },
+  "person.residential_address": {
+   "street_number": "12",
+   "street_name": "SAMPLE ROAD",
+   "city": "MUMBAI",
+   "postal_code": "400001",
+   "country": "India"
+  },
+  "person.telephone_type": "Cellular",
+  "person.phone_number": {
+   "country_code": "91",
+   "number": "9800000099"
+  },
+  "relationship.previous_union_exists": false,
+  "person.military_service": false,
+  "person.bg_tb_contact": false,
+  "person.bg_medical_disorder": false,
+  "person.bg_status_violation_canada": false,
+  "person.bg_refused_or_removed": false,
+  "person.bg_criminal_offence": false,
+  "person.bg_violent_org_membership": false,
+  "person.present_occupation": "STUDENT"
+ },
+ "people": {
+  "principal": {
+   "person.family_name": "STUDENT",
+   "person.given_names": "SAMPLE",
+   "person.date_of_birth": "2006-02-10",
+   "person.sex": "F Female",
+   "person.marital_status": "single",
+   "person.passport_number": "Z7000099",
+   "person.email": "student.a@example.com",
+   "person.minor_studying_without_parent": false,
+   "job": {
+    "person.occupation_title": "STUDENT",
+    "person.occupation_employer": "SAMPLE SECONDARY SCHOOL",
+    "person.occupation_from_date": "2020-06"
+   },
+   "person.intended_study_province": "another_province_or_territory"
+  }
+ },
+ "job_place": {
+  "person.occupation_city": "MUMBAI",
+  "person.occupation_country": "India"
+ },
+ "not_answered": {
+  "case.caq_number": "Asked only for a study in Québec (IMM 5483 (08-2025) p. 2 item 6); this student studies in Ontario.",
+  "person.applying_from_status": "The applying-from country is the country of residence.",
+  "person.preferred_official_language": "Asked only of a person who speaks both English and French.",
+  "person.uci": "A first application: no UCI yet.",
+  "person.fax_number": "No fax number.",
+  "person.alt_phone_number": "No second telephone number.",
+  "person.uscis_number": "Not a lawful permanent resident of the United States."
+ },
+ "none_apply": {
+  "groups": [
+   "personal_details",
+   "education"
+  ],
+  "why": "Sample: the student has no other names and no post-secondary education to list (IMM 1294 asks only post-secondary education)."
+ }
+}

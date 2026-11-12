@@ -1,14 +1,15 @@
 import * as React from "react";
 import { RunChip } from "@/components/run-card";
-import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Scale, Database, FileStack, FileText, Inbox, Layers, ListTree, Moon, RotateCcw, Sparkles, Sun, Upload } from "lucide-react";
+import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, DoorOpen, Scale, Database, FileStack, FileText, Inbox, Layers, ListTree, Moon, RotateCcw, Sparkles, Sun, Upload } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
+import { api, ApiError, getActor, personChosen, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { ProgramsPage } from "@/pages/programs";
+import { StartPage } from "@/pages/start";
 import { ReleasePage } from "@/pages/release";
 import { FormsPage } from "@/pages/library-forms";
 import { ChecksPage, RulesPage } from "@/pages/library-rules";
@@ -28,13 +29,24 @@ import { draftBarWords } from "../../contracts/status-words";
 import { FINISHED_STORY_TIP, FinishedStoryDialog } from "@/components/demo-finished-story";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FoldOut } from "@/components/fold-out";
-import { Frame } from "@/components/frame";
+import { Frame, PersonNotice, PersonPicker } from "@/components/frame";
+import { SignInPage } from "@/pages/sign-in";
+import { personOf } from "@/lib/simulated-people";
 
 export default function App() {
   // BK-3: every route renders through the one Frame (components/frame.tsx): the Studio below, the case area (runtime
   // lane, R1c) in RuntimeApp, and an adult's own link and the demo inbox (C6.16, stand-in SI-20), which stay outside the
   // simulated people.
-  return <BrowserRouter><Routes><Route path="/cases/*" element={<RuntimeApp />} /><Route path="/link" element={<LinkApp />} /><Route path="/inbox" element={<DemoInbox />} /><Route path="*" element={<Shell />} /></Routes></BrowserRouter>;
+  // BK-4a: the sign-in page (P-484 (3): a page, not a gate), one notice for every change of person, and a stored person
+  // this workspace does not know goes to the sign-in page (BR-6) instead of a refusal on every screen.
+  return <BrowserRouter><PersonNotice /><Routes><Route path="/sign-in" element={<SignInPage />} /><Route path="/cases/*" element={<KnownPerson><RuntimeApp /></KnownPerson>} /><Route path="/link" element={<LinkApp />} /><Route path="/inbox" element={<DemoInbox />} /><Route path="*" element={<KnownPerson><Shell /></KnownPerson>} /></Routes></BrowserRouter>;
+}
+
+/** BK-4a BR-6: a person chosen in this browser who is not one of the simulated people opens the sign-in page. A browser
+ *  with no stored person is the Configuration author, as before (P-484 (3)). */
+function KnownPerson({ children }: { children: React.ReactElement }) {
+  const id = useActorId();
+  return personChosen() && !personOf(id) ? <Navigate to="/sign-in?unknown=1" replace /> : children;
 }
 
 function Shell() {
@@ -63,16 +75,16 @@ function Shell() {
   ];
   // QA-80: the browser tab names the page ("<page> · Product Studio"), from the menu item the address belongs to.
   // A page reached from the draft bar, not the menu, names itself too (QA-80 retest: "/release" said "Product Studio" alone).
-  const here = nav.find((n) => n.match ? n.match(loc.pathname) : loc.pathname.startsWith(n.to)) ?? (loc.pathname === "/release" ? { label: "Review and release" } : undefined);
+  const here = nav.find((n) => n.match ? n.match(loc.pathname) : loc.pathname.startsWith(n.to)) ?? (loc.pathname === "/release" ? { label: "Review and release" } : loc.pathname === "/start" ? { label: "Starting points" } : undefined); // BK-5: Demo › Starting points
   React.useEffect(() => { document.title = here ? `${here.label} · Product Studio` : "Product Studio"; }, [here?.label]);
   return (
     <Frame area="studio" title="Product Studio" subtitle="Pathway Configurator" home="/" staff={!casePerson}
-      badge={<Pill tone="warn" className="ml-1 hidden lg:inline-flex" title="Working prototype on a local demo database: no sign-in, simulated people, not production">Prototype · demo workspace</Pill>}
+      badge={<Pill tone="warn" className="ml-1 hidden lg:inline-flex" title="Working prototype on a local demo database: simulated people signed in by role, no passwords, not production">Prototype · demo workspace</Pill>}
       controls={<>
         <RunChip />
         <DemoControls loaded={!!session.data?.sampleLoaded} programsExist={(session.data?.counts?.programs ?? 0) > 0} />
-        {/* QA-54: the list holds the Studio people; a case person who arrives here is shown too, so the header names them. */}
-        <PersonaSwitch actors={casePerson ? [...(session.data?.actors ?? []), me] : session.data?.actors ?? []} />
+        {/* BK-4a: the one person picker (all nine people, three groups); QA-54's case person is in it too. */}
+        <PersonPicker area="studio" />
         <ThemeToggle />
       </>}
       band={!casePerson ? <DraftBar /> : null}
@@ -100,6 +112,7 @@ function Shell() {
       {!casePerson ? <ReturnStrip /> : null}
       {casePerson ? <Notice tone="warn" title="This page is for the configuration people" action={<Link className="whitespace-nowrap text-text-link underline" to="/cases">Open your cases</Link>}>{me.name} (simulated) works on cases. Programs, forms and rules are set up here by the configuration people; your work is in Cases.</Notice> : <Routes>
         <Route path="/" element={<ProgramsPage />} />
+        <Route path="/start" element={<StartPage />} />
         <Route path="/review" element={<ToReviewPage />} />
         <Route path="/structure" element={<StructurePage />} />
         <Route path="/review/change/:id" element={<LibraryChangePage />} />
@@ -155,22 +168,6 @@ function NavItem({ to, label, icon: Icon, active, badge }: { to: string; label: 
   );
 }
 
-function PersonaSwitch({ actors }: { actors: any[] }) {
-  const id = useActorId();
-  const qc = useToast();
-  const me = actors.find((a) => a.id === id);
-  return (
-    <label className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface px-2 py-1">
-      <span className="hidden whitespace-nowrap text-[11px] text-text-muted lg:inline">Acting as</span>
-      <select className="min-w-0 max-w-[13rem] truncate bg-transparent text-xs font-medium xl:max-w-[22rem]" value={id} onChange={(e) => { setActor(e.target.value); const a = actors.find((x) => x.id === e.target.value); qc.push({ tone: "info", text: `Now acting as ${a?.name} (simulated): ${a?.role}` }); }} aria-label="Simulated person">
-        {/* QA-80: one name per person in the header; the staff role and duties are in the tip of "Simulated". */}
-        {actors.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-      </select>
-      <Pill tone="neutral" title={me ? `${me.role}. Duties: ${me.duties.join(", ")}` : undefined}>Simulated</Pill>
-    </label>
-  );
-}
-
 function ThemeToggle() {
   const [t, setT] = React.useState(() => document.documentElement.dataset.theme ?? "light");
   return <Button variant="ghost" size="icon" aria-label={t === "dark" ? "Use the light theme" : "Use the dark theme"} onClick={() => { const n = t === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = n; try { localStorage.setItem("xr-theme", n); } catch { /* ignore */ } setT(n); }}>{t === "dark" ? <Sun /> : <Moon />}</Button>;
@@ -213,6 +210,8 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
         <DropdownMenu.Trigger asChild><Button size="sm" variant="secondary" busy={load.isPending || loadConf.isPending}>Demo <ChevronDown /></Button></DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[260px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
+            {/* BK-5 (P-484): the start page, first; its name avoids Reset, Load and "configured checkpoint" (tests match those). */}
+            <DropdownMenu.Item className={item} onSelect={() => navTo("/start")} data-demo-starting-points><DoorOpen className="size-4" />Starting points…</DropdownMenu.Item>
             <DropdownMenu.Item className={item} disabled={loaded || programsExist} onSelect={() => setLoadOpen(true)}><Upload className="size-4" />{loaded ? "Sample loaded (reset to load again)" : programsExist ? "Load sample (the Structure has names: reset first)" : "Load sample…"}</DropdownMenu.Item>
             <DropdownMenu.Item className={item} disabled={loaded || programsExist} onSelect={() => setConfOpen(true)}><Upload className="size-4" />{loaded || programsExist ? "Load the configured checkpoint (reset first)" : "Load the configured checkpoint…"}</DropdownMenu.Item>
             <TooltipProvider delayDuration={300}><Tooltip><TooltipTrigger asChild><DropdownMenu.Item className={item} onSelect={() => setStoryOpen(true)} data-demo-finished-story><Upload className="size-4" />Load the finished story…</DropdownMenu.Item></TooltipTrigger><TooltipContent side="left">{FINISHED_STORY_TIP}</TooltipContent></Tooltip></TooltipProvider>

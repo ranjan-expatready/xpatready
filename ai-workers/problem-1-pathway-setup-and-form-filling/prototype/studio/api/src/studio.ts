@@ -23,6 +23,7 @@ import { acceptsOf } from "../../engine/channels.ts";
 import { cleanLabel, normalizeLabel, problemFromZod, problemWords } from "../../contracts/programs.ts";
 import { PreferencesBody, PROGRAMS_VIEWS, type Preferences, type ProgramsView } from "../../contracts/session.ts";
 import { DocumentLineEdit, FormLineEdit, PeopleBody, UndoBody, type PersonRoleView } from "../../contracts/workspace.ts";
+import { Waiver } from "../../contracts/documents.ts";
 import { checkPeople, linesNamingRemoved } from "../../engine/people.ts";
 import { filingProblems, filingWarnings, modeSent } from "../../engine/filing-modes.ts";
 import { eachFilesOwnOf } from "../../engine/runtime/filings.ts";
@@ -38,6 +39,7 @@ import type { Problem } from "../../engine/validate.ts";
 import { isIdentityName } from "../../engine/identity-documents.ts";
 import { firmMayRead } from "./case-feed.ts";
 import { placementRefusal } from "../../engine/field-scope.ts"; // C3.16: a field asked once for the household or employer stays single and unconditioned
+import { fillTrialsOf, releaseFillTrials } from "./fill-trials.ts"; // BK-11: each form's fill trial in the release
 /** G2 (C5.5, BR-8; shared with G1 BR-8): a refusal carries every blocking problem in `errors[]`, each in words; `detail`
  *  (and `message`, read by older callers) keeps the sentence the screens and checks already show. */
 /** G2 BR-9: the keys a release rests on, frozen in its summary (only when the gate judged it). */
@@ -442,7 +444,9 @@ export class Studio {
       program: { key: (programNode ?? c.program).programNodeKey, label: (programNode ?? c.program).label, kind: (programNode ?? c.program).nodeKind, source_basis: (programNode ?? c.program).sourceBasis }, pathway: parent ? { key: parent.programNodeKey, label: parent.label, client_type: parent.clientType } : null,
       path: chain.map((n) => ({ key: n.programNodeKey, label: n.label, level: LEVEL[n.nodeKind].name })), allowed_locations: c.program.allowedLocations,
       attachments: c.attachments, jobs: c.jobs.map((j) => ({ ...j, detail: undefined })),
-      releases: c.releases.map((r) => ({ id: r.id, version: r.version, demo: isDemoWorkspace() && isDemoSnapshot(r.snapshot), release: r.packVersion?.version ?? r.version, label: releaseLabel(r), sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis })),
+      releases: c.releases.map((r) => ({ id: r.id, version: r.version, demo: isDemoWorkspace() && isDemoSnapshot(r.snapshot), release: r.packVersion?.version ?? r.version, label: releaseLabel(r), sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: ACTORS.find((x) => x.id === r.approverId)?.name ?? "Approver", summary: r.summary, basis: r.basis,
+        // BK-11: the release's forms and their fill trials as frozen at release; null for a release made before BK-11.
+        fill_trials: fillTrialsOf(r.summary) })),
       draft: { sha256, matches_release: !!last && last.sha256 === sha256, changes, problems, counts: this.counts(snapshot),
         // G2 BR-9: what a release would rest on (per item and key), and whether it would be a Demo release.
         answer_keys: { demo: gate.demo, judged: gate.judged, items: gate.items.map((i) => ({ ...i, keys: i.keys.map((k) => ({ ...k, changed_since_release: changedSince(last?.summary, k) })) })) } },
@@ -818,7 +822,7 @@ export class Studio {
   }
 
   // ------------------------------------------------------------------ the combination's own configuration
-  async saveRequirement(actor: Actor, combinationId: string, lineage: string | null, b: { documentTypeKey?: string; newTypeName?: string; documentTypeName?: string; proves?: string; attachMode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; appliesToRoles: string; providedBy?: string; sourceQuote?: string; sourceFile?: string; note?: string; alternatives?: string[]; retire?: boolean; baseRevision?: string; waiver?: "waivable" | null }) {
+  async saveRequirement(actor: Actor, combinationId: string, lineage: string | null, b: { documentTypeKey?: string; newTypeName?: string; documentTypeName?: string; proves?: string; attachMode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; appliesToRoles: string; providedBy?: string; sourceQuote?: string; sourceFile?: string; note?: string; alternatives?: string[]; retire?: boolean; baseRevision?: string; waiver?: "waivable" | "never" | null }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     const workspaceId = c.workspaceId;
@@ -885,8 +889,9 @@ export class Studio {
     const alternatives = [...new Set((Array.isArray(b.alternatives) ? b.alternatives : []).filter((k) => typeof k === "string" && k && k !== typeKey))];
     if (alternatives.length) { const known = await this.db.documentType.findMany({ where: { workspaceId, documentTypeKey: { in: alternatives } }, select: { documentTypeKey: true } });
       const missing = alternatives.filter((k) => !known.some((t) => t.documentTypeKey === k)); if (missing.length) fail(`An alternative must be a document type in the library: ${missing.join(", ")} is not.`); }
-    // M3-S3 (P-171 (6)): whether the case officer may waive the line on a case, with a reason. Not sent: kept as it was.
-    if (b.waiver !== undefined && b.waiver !== null && b.waiver !== "waivable") fail('Waiver: choose "waivable", or none.');
+    // M3-S3, M3-S4 (P-171 (6), P-172): whether the case officer may waive the line on a case with a reason ("waivable"),
+    // or never ("never": no waiver, no Not applicable, Ready to file blocked until received). Not sent: kept as it was.
+    if (b.waiver !== undefined) { const w = Waiver.safeParse(b.waiver); if (!w.success) fail(w.error.issues[0].message); }
     const data = { ...(b.waiver !== undefined ? { waiver: b.waiver } : {}), alternatives: alternatives.length ? alternatives : Prisma.DbNull, documentTypeKey: typeKey!, attachMode: b.attachMode, predicateJson: b.attachMode === "ANSWER_CONDITIONAL" ? b.condition : null, conditionPlain: b.attachMode === "ANSWER_CONDITIONAL" ? (b.conditionPlain ?? null) : null, appliesToRoles: b.appliesToRoles, providedBy: b.providedBy ?? "client", sourceQuote: b.sourceQuote ?? null, sourceFile: b.sourceFile ?? null, note: b.note ?? null, origin: "HUMAN" as const };
     // C11.9 break round 2 (Major 2): the type and its alternatives are checked again and the line written under their
     // locks, so a retire approved at the same moment either waits for this line (and is refused) or refuses it.
@@ -1012,9 +1017,10 @@ export class Studio {
   // ------------------------------------------------------------------ review and release (D254 duties)
   async draftAuthors(combinationId: string, s: Snapshot, workspaceId: string): Promise<string[]> {
     const ids = new Set<string>();
+    const moved = await movedOut(this.db, workspaceId, combinationId, s); // QA-276: its release publishes these moves too
     const draftRows = await Promise.all([
       this.db.canonicalField.findMany({ where: { workspaceId, status: "DRAFT", canonicalFieldKey: { in: s.canonical_fields.map((f) => f.id) } }, select: { updatedBy: true } }),
-      this.db.sectionQuestion.findMany({ where: { workspaceId, status: "DRAFT", lineageKey: { in: s.placements.map((p) => p.lineage) } }, select: { updatedBy: true } }),
+      this.db.sectionQuestion.findMany({ where: { workspaceId, status: "DRAFT", lineageKey: { in: [...s.placements.map((p) => p.lineage), ...moved] } }, select: { updatedBy: true } }),
       this.db.documentRequirement.findMany({ where: { combinationId, status: { in: ["DRAFT", "RETIRED"] } }, select: { updatedBy: true } }),
       this.db.predicate.findMany({ where: { combinationId, status: { in: ["DRAFT", "RETIRED"] } }, select: { updatedBy: true } }),
       this.db.combinationForm.findMany({ where: { combinationId, status: { in: ["DRAFT", "RETIRED"] } }, select: { updatedBy: true } }),
@@ -1026,7 +1032,7 @@ export class Studio {
     // row uses) are authored too: every authoring event since the last release counts (grounding audit finding 2).
     const comp = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId }, include: { program: true } });
     const since = (await this.db.configRelease.findFirst({ where: { combinationId }, orderBy: { version: "desc" } }))?.releasedAt ?? new Date(0);
-    const keys = [...new Set([...s.canonical_fields.map((f) => f.id), ...s.sections.map((x) => x.id), ...s.placements.flatMap((p) => [p.lineage, p.fact]), ...(s.document_types ?? []).map((t: any) => t.key), ...(s.derived_fields ?? []).map((d) => d.id), comp.program.programNodeKey])];
+    const keys = [...new Set([...s.canonical_fields.map((f) => f.id), ...s.sections.map((x) => x.id), ...s.placements.flatMap((p) => [p.lineage, p.fact]), ...moved, ...(s.document_types ?? []).map((t: any) => t.key), ...(s.derived_fields ?? []).map((d) => d.id), comp.program.programNodeKey])];
     const events = await this.db.auditEvent.findMany({ where: { workspaceId, at: { gt: since }, action: { in: ["created", "updated", "retired", "renamed", "applied", "reused"] }, OR: [{ combinationId }, { combinationId: null, entityKey: { in: keys } }] }, select: { actor: true } });
     for (const e of events) ids.add(e.actor);
     return [...ids];
@@ -1206,15 +1212,17 @@ export class Studio {
     const last = await tx.configRelease.findFirst({ where: { combinationId: id }, orderBy: { version: "desc" } });
     const version = (last?.version ?? 0) + 1;
     if (last) await tx.configRelease.update({ where: { id: last.id }, data: { status: "SUPERSEDED" } });
-    const r = await tx.configRelease.create({ data: { workspaceId: ws, combinationId: id, version, status: "RELEASED", snapshot: snapshot as any, sha256, summary: m.summary as any, authorId: m.authors.join(","), submitterId: m.submitter, approverId: m.approver, packVersionId: m.packVersionId, basis: c.sourceBasis === "ILLUSTRATIVE" ? "Illustrative combination: not source-verified for this program; prototype only" : "Source-backed configuration; prototype only, not specialist-confirmed for production" } });
+    // BK-11 (P-448): each form's fill trial, frozen with the release (api/src/fill-trials.ts releaseFillTrials).
+    const r = await tx.configRelease.create({ data: { workspaceId: ws, combinationId: id, version, status: "RELEASED", snapshot: snapshot as any, sha256, summary: { ...m.summary, fill_trials: releaseFillTrials(snapshot) } as any, authorId: m.authors.join(","), submitterId: m.submitter, approverId: m.approver, packVersionId: m.packVersionId, basis: c.sourceBasis === "ILLUSTRATIVE" ? "Illustrative combination: not source-verified for this program; prototype only" : "Source-backed configuration; prototype only, not specialist-confirmed for production" } });
     const publish = async (delegate: any, where: any) => {
       const drafts = await delegate.findMany({ where: { ...where, status: "DRAFT" } });
       for (const d of drafts) { if (d.supersedesId) await delegate.update({ where: { id: d.supersedesId }, data: { status: "SUPERSEDED" } }); await delegate.update({ where: { id: d.id }, data: { status: "PUBLISHED" } }); }
       return drafts.length;
     };
+    const moved = await movedOut(tx, ws, id, snapshot); // QA-276: a question this draft moves out publishes its move
     const n = {
       fields: await publish(tx.canonicalField, { workspaceId: ws, canonicalFieldKey: { in: snapshot.canonical_fields.map((f) => f.id) } }),
-      placements: await publish(tx.sectionQuestion, { workspaceId: ws, lineageKey: { in: snapshot.placements.map((p) => p.lineage) } }),
+      placements: await publish(tx.sectionQuestion, { workspaceId: ws, lineageKey: { in: [...snapshot.placements.map((p) => p.lineage), ...moved] } }),
       sections: await publish(tx.logicalSection, { workspaceId: ws, sectionKey: { in: [...snapshot.sections, ...(snapshot.section_titles ?? [])].map((x) => x.id) } }), // C4.2: pulled sections' titles too
       // C6.15: a type's substitute-set members are published with it (the release names them).
       documentTypes: await publish(tx.documentType, { workspaceId: ws, documentTypeKey: { in: [...snapshot.document_requirements.map((d) => d.document_type_key), ...(snapshot.document_types ?? []).flatMap((t: { sets?: { members: { key: string }[] }[] }) => (t.sets ?? []).flatMap((x) => x.members.map((m) => m.key)))] } }),
@@ -1257,6 +1265,18 @@ export class Studio {
     // C8.2 (breaker M1 on #553): government identifiers never travel in the feed; the audit row keeps them (AG-7-95).
     return kept.map((e) => ({ ...e, ...(e.entity === "application number" ? { detail: null } : {}), who: peopleNames(e.actor) }));
   }
+}
+
+/** QA-276: the questions this combination places as released, in a section it chose, that its draft no longer places,
+ *  because a reviewed draft moved them to a section it did not choose. Its release publishes their drafts too:
+ *  publishing only the draft's placements left the old placement published, so the fingerprint check refused every
+ *  press with nobody editing. Only moves out of a chosen section (review Major 1): a question dropped because a form or
+ *  rule stopped reading it leaves the published copy once those lines publish, so its own draft edit stays a draft. */
+async function movedOut(db: Parameters<typeof buildSnapshot>[0], workspaceId: string, combinationId: string, draft: Snapshot): Promise<string[]> {
+  const placed = new Set(draft.placements.map((p) => p.lineage));
+  const { snapshot } = await buildSnapshot(db, workspaceId, combinationId, "published");
+  const chosen = new Set(snapshot.sections.map((x) => x.id));
+  return snapshot.placements.filter((p) => chosen.has(p.section_id) && !placed.has(p.lineage)).map((p) => p.lineage);
 }
 
 /** QA-74: the simulated people's names for stored ids (one id, or several joined by commas), never "user-A" on screen. */

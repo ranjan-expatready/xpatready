@@ -5,13 +5,33 @@
 // level up; staff also get the other area on the line at every width (qa baseline 11 Nov, dead ends 2 and 3: the Studio
 // reached the cases only through the Demo menu, and the case area's way back to the Studio was hidden below 768 px).
 import * as React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
-import { setActor, useToast } from "@/lib/api";
+import { getActor, onActorChange, setActor, useActorId, useToast } from "@/lib/api";
+import { CASE_OFFICER, GROUP_WORDS, homeOf, isFirmStaff, isStudioPerson, PEOPLE, personOf, STUDIO_AUTHOR, type Group } from "@/lib/simulated-people";
 import { cn } from "@/lib/utils";
 import { backOf, whereFromAddress, type Area, type Crumb, type Where } from "./where";
 
 export type { Area, Crumb, Where } from "./where";
+
+/** BK-3 PR 2: leaving the case area as the Studio person ("Product Studio →", a case's release pill). The case area acts
+ *  as the case officer whenever its person is not one of the case people, so without this it switched straight back
+ *  before the page changed and the Studio opened as the case officer ("This page is for the configuration people"). */
+let leavingCases = false;
+export function leaveCasesAsStudio(e?: React.MouseEvent) {
+  if (e && !plainClick(e)) return; // a new tab or window: this page stays
+  leavingCases = true;
+  // Break M1 (BR-1): a Studio person stays who they are (the link then says only "Product Studio"); only a case person
+  // becomes the Configuration author, and the link names that.
+  if (!isStudioPerson(getActor())) setActor(STUDIO_AUTHOR);
+}
+/** BK-4a: "Cases (as Case officer) →" from the Studio acts as the case officer (it names the person, so it is the
+ *  picker's, P-484 (4)); firm staff stay who they are. A new tab or window changes nobody. */
+export function enterCasesAsStaff(e?: React.MouseEvent) { if ((!e || plainClick(e)) && !isFirmStaff(getActor())) setActor(CASE_OFFICER); }
+/** A click that follows the link in this tab (not a new tab or window): only then may a link switch the simulated person. */
+export const plainClick = (e: React.MouseEvent) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+/** The case area asks this before acting as the case officer; arriving there again clears it. */
+export function casesLeaving(arrived = false) { if (arrived) leavingCases = false; return leavingCases; }
 
 const WhereCtx = React.createContext<React.Dispatch<React.SetStateAction<Where | null>> | null>(null);
 
@@ -31,8 +51,11 @@ export function useWhere(crumbs: Crumb[] | null, back?: { to: string; label: str
 function WhereLine({ area, where, staff }: { area: Area; where: Where; staff: boolean }) {
   const { crumbs } = where;
   const back = backOf(where);
-  const other = !staff ? null : area === "studio" ? { to: "/cases", label: "Cases", title: "The firm's cases: open one on a released combination" }
-    : area === "cases" ? { to: "/", label: "Product Studio", title: "Set up and release the combinations firms open cases on" } : null;
+  // BK-4a (concept §5): the link names who it acts as when it changes the person (P-484 (4): it counts as the picker);
+  // below 640 px it may wrap to two lines, so the line never scrolls sideways.
+  const me = useActorId();
+  const other = !staff ? null : area === "studio" ? { to: "/cases", label: isFirmStaff(me) ? "Cases" : `Cases (as ${personOf(CASE_OFFICER)!.name})`, title: "The firm's cases: open one on a released combination" }
+    : area === "cases" ? { to: "/", label: isStudioPerson(me) ? "Product Studio" : `Product Studio (as ${personOf(STUDIO_AUTHOR)!.name})`, title: "Set up and release the combinations firms open cases on" } : null;
   return (
     <div className="-mx-4 -mt-5 mb-5 flex items-center gap-x-3 border-b border-border bg-surface-raised px-4 py-1.5 text-sm text-text-muted md:-mx-6 md:px-6" data-where={area}>
       {/* The name says where Back goes ("Back: To review"); the menu is hidden below 768 px, so Back is the way out there. */}
@@ -51,7 +74,7 @@ function WhereLine({ area, where, staff }: { area: Area; where: Where; staff: bo
           );
         })}
       </nav>
-      {other ? <Link to={other.to} title={other.title} data-where-area onClick={() => { if (area === "cases") setActor("user-A"); }} className="inline-flex min-h-8 shrink-0 items-center gap-1 whitespace-nowrap text-text-link hover:underline">{other.label}<ArrowRight className="size-3.5" aria-hidden /></Link> : null}
+      {other ? <Link to={other.to} title={other.title} data-where-area onClick={(e) => { if (area === "cases") leaveCasesAsStudio(e); else enterCasesAsStaff(e); }} className="inline-flex min-h-8 max-w-[45%] shrink-0 items-center justify-end gap-1 text-right text-text-link hover:underline sm:max-w-none sm:whitespace-nowrap">{other.label}<ArrowRight className="size-3.5" aria-hidden /></Link> : null}
     </div>
   );
 }
@@ -102,4 +125,68 @@ function Toaster() {
       ))}
     </div>
   );
+}
+
+/** Keys that move through a closed select without opening it (Windows, Linux): arrows, Home/End, Page keys, a letter. */
+const MOVES = /^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|PageUp|PageDown|[^ ])$/; // not Space: it opens the list
+/** BK-4a (concept §5, P-484): the one person picker, the same in every area. A native select (keyboard-complete; the
+ *  browser checks pick a person with selectOption) in the team's three sign-in groups; its last option opens the sign-in
+ *  page. Choosing someone who works in another area goes to their first page. */
+export function PersonPicker({ area }: { area: "studio" | "cases" | "client" }) {
+  const id = useActorId();
+  const nav = useNavigate();
+  const me = personOf(id);
+  const groups: Group[] = ["staff", "firm", "client"];
+  // Break M2 (WCAG 3.2.2): moving through the list with the keyboard only marks a choice; Enter makes it (a pointer pick or
+  // the browser's own list makes it at once). Leaving the picker without Enter keeps the person.
+  const [pending, setPending] = React.useState<string | null>(null);
+  const keyed = React.useRef(false);
+  React.useEffect(() => { setPending(null); }, [id]);
+  const pick = (next: string) => {
+    setPending(null);
+    if (next === "sign-in") { nav("/sign-in"); return; }
+    if (next === id) return;
+    setActor(next);
+    const studioNow = area === "studio", studioNext = isStudioPerson(next);
+    if (studioNow !== studioNext) nav(homeOf(next));
+  };
+  return (
+    <label className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface px-2 py-1" title="Simulated people for the prototype: no passwords, not part of the product" data-person-picker>
+      <span className="hidden whitespace-nowrap text-[11px] text-text-muted lg:inline">Acting as</span>
+      <select className="min-h-6 min-w-0 max-w-[10rem] truncate bg-transparent text-xs font-medium sm:max-w-[22rem]" value={pending ?? (me ? id : "")} aria-label="Simulated person" aria-description="Choose a person, then press Enter"
+        onKeyDown={(e) => { if (e.key === "Enter") { if (pending) { e.preventDefault(); pick(pending); } } else if (MOVES.test(e.key) && !e.altKey) keyed.current = true; }}
+        onBlur={() => { keyed.current = false; setPending(null); }}
+        onChange={(e) => { const v = e.target.value; if (keyed.current) { keyed.current = false; setPending(v); } else pick(v); }}>
+        {me ? null : <option value="" disabled>Choose who you are</option>}
+        {groups.map((g) => (
+          <optgroup key={g} label={GROUP_WORDS[g]}>
+            {/* Name only (the group says the area; the role is in the tip of "Simulated"), so 375 px shows the whole name. */}
+            {PEOPLE.filter((p) => p.group === g).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </optgroup>
+        ))}
+        <option value="sign-in">Sign-in page…</option>
+      </select>
+      <span className="hidden rounded-md border border-border px-1.5 text-[11px] font-medium text-text-muted sm:inline" title={me ? `${me.role}. Duties: ${me.duties.join(", ")}` : undefined}>Simulated</span>
+    </label>
+  );
+}
+
+/** BK-4a BR-1: every change of person, by any route (sign-in, picker, hand-off, a frame link), is said once. Mounted once
+ *  in App, outside the routes, so a change that also moves to another area is not lost with the old page. */
+export function PersonNotice() {
+  const toast = useToast();
+  const push = React.useRef(toast.push);
+  push.current = toast.push;
+  // Break m1: it listens from the first layout pass (before the case area's own first-person switch), so no change is missed.
+  React.useLayoutEffect(() => {
+    let last = getActor();
+    return onActorChange(() => {
+      const id = getActor();
+      if (id === last) return;
+      last = id;
+      const p = personOf(id);
+      if (p) push.current({ tone: "info", text: `Now: ${p.name} (simulated). ${p.job}.` });
+    });
+  }, []);
+  return null;
 }

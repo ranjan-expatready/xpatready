@@ -15,14 +15,24 @@ const CASE_PAGE: Record<string, string> = { questionnaire: "Client questionnaire
 /** The line from the address alone: every route of App.tsx and runtime/cases.tsx has its words here. */
 export function whereFromAddress(area: Area, path: string): Where {
   const s = path.split("/").filter(Boolean).map((x) => { try { return decodeURIComponent(x); } catch { return x; } });
-  if (area === "outside") return s[0] === "inbox" ? { crumbs: [{ label: "Demo inbox" }], back: { to: "/cases", label: "Cases" } } : { crumbs: [{ label: "Your questions" }], back: null };
+  // BK-4a: the sign-in page is a first page (no Back), outside both areas.
+  if (area === "outside") return s[0] === "inbox" ? { crumbs: [{ label: "Demo inbox" }], back: { to: "/cases", label: "Cases" } } : s[0] === "sign-in" ? { crumbs: [{ label: "Sign in" }], back: null } : { crumbs: [{ label: "Your questions" }], back: null };
   if (area === "client") {
+    // BK-3 PR 3 (challenge M2): a client page's address is not a case: a client there is refused, with no Back to a case.
+    if (s[1] === "clients") return { crumbs: [{ label: "Your application" }], back: null };
     // The client's first page is their questionnaire (its heading says "Client questionnaire").
     const mine = s[1] ? { to: `/cases/${s[1]}/questionnaire`, label: "Client questionnaire" } : null;
     return s[2] === "questionnaire" || !mine ? { crumbs: [{ label: s[1] ? "Client questionnaire" : "Your application" }], back: null } : { crumbs: [{ label: mine.label, to: mine.to }, { label: s[2] ? CASE_PAGE[s[2]] ?? "No such page" : "Case" }], back: mine };
   }
   if (area === "cases") {
     if (!s[1]) return { crumbs: [{ label: "Cases" }], back: null };
+    // BK-3 PR 3 (challenge M2): /cases/clients/<login> is a client page, never a case (case ids are UUIDs); the page names
+    // the client with useWhere. A bare /cases/clients goes to Cases.
+    if (s[1] === "clients") {
+      if (!s[2]) return { crumbs: [{ label: "Cases", to: "/cases" }, { label: "Clients" }] };
+      if (!s[3]) return { crumbs: [{ label: "Cases", to: "/cases" }, { label: "Client" }] };
+      return { crumbs: [{ label: "Cases", to: "/cases" }, { label: "Client", to: `/cases/clients/${encodeURIComponent(s[2])}` }, { label: "No such page" }] };
+    }
     const c = { label: "Case", to: `/cases/${s[1]}` };
     if (!s[2]) return { crumbs: [{ label: "Cases", to: "/cases" }, { label: "Case" }] };
     return { crumbs: [{ label: "Cases", to: "/cases" }, c, { label: CASE_PAGE[s[2]] ?? "No such page" }] };
@@ -32,6 +42,7 @@ export function whereFromAddress(area: Area, path: string): Where {
     case undefined: return { crumbs: [{ label: "Immigration programs" }], back: null };
     case "structure": return top("Program structure");
     case "release": return top("Review and release");
+    case "start": return top("Starting points", "Demo"); // BK-5: Demo › Starting points
     case "releases": return top("Releases", "History");
     case "activity": return top("Activity", "History");
     case "review": return s[1] ? { crumbs: [{ label: "To review", to: "/review" }, { label: REVIEW_ITEM[s[1]] ?? "No such page" }] } : top("To review");
