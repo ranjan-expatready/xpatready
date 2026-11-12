@@ -19,7 +19,7 @@ import type { CaseForm } from "../../../contracts/runtime";
 import type { Finding } from "../../../contracts/findings";
 import type { ReviewRunPlan, ReviewRunResult } from "../../../api/src/review-run-shapes";
 import { FindingsPanel } from "./findings";
-import { noRetryOnRefusal, useCaseView, type CasePerson } from "./questionnaire";
+import { caseWords, noRetryOnRefusal, useCaseView, type CasePerson } from "./questionnaire";
 import { FoldOut } from "@/components/fold-out";
 
 /** The firm's staff (the simulated people of cases.tsx); a client never sees the review. */
@@ -44,7 +44,7 @@ export function ReviewPage() {
   const { id } = useParams();
   const actor = useActorId();
   const view = useCaseView(id!, "agent");
-  useWhere(view.data ? [{ label: "Cases", to: "/cases" }, { label: view.data.case.reference, to: `/cases/${id}` }, { label: "Review" }] : null); // BK-3
+  useWhere(view.data ? [{ label: "Cases", to: "/cases" }, { label: caseWords(view.data.case), to: `/cases/${id}` }, { label: "Review" }] : null); // BK-3
   const forms = useApi<{ forms: CaseForm[] }>(["runtime", "view", id!, "forms", actor], isOfficer(actor) ? `/runtime/cases/${id}/forms` : null, { retry: noRetryOnRefusal });
   const prep = useApi<{ derived: boolean; filings?: Filing[] }>(["runtime", "view", id!, "prepare"], isOfficer(actor) ? `/runtime/cases/${id}/prepare` : null, { retry: noRetryOnRefusal });
   const [subject, setSubject] = React.useState<string | null>(null);
@@ -68,7 +68,7 @@ export function ReviewPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-5" data-review-page>
       <div>
-        <h1 className="text-2xl font-semibold [overflow-wrap:anywhere]">Review · {c.reference}</h1>
+        <h1 className="text-2xl font-semibold [overflow-wrap:anywhere]">Review · {caseWords(c)}</h1>
         <p className="mt-1 text-sm text-text-muted">Before the forms go out: the rules' checks on every form, and an independent AI review of a filled form. Each finding is a warning: decide it here, or pass it with a reason on Ready to file. Staff only.</p>
       </div>
       <RunCard caseId={c.id} persons={persons} person={person ?? null} forms={mine} formsLoaded={!!forms.data} formsError={forms.isError ? (forms.error as Error).message : null} form={form} plan={plan}

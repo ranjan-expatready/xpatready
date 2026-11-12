@@ -148,7 +148,7 @@ function LinkQuestionnaire({ stored, onEnded }: { stored: Stored; onEnded: (word
   const v = view.data!;
   // Their own parts, with the parts about their own parents and brothers and sisters (`<own>/parent_1`, B128, B155).
   const mine = (id: string) => id === v.own || id.startsWith(`${v.own}/`);
-  const own = { ...v, sections: v.sections.filter((s) => mine(s.subjectId)), case: { ...v.case, status: "", combination_id: "", client: "", pin: { release_version: 0, sha256: "", pinned_at: "", revision: 0 } } } as View;
+  const own = { ...v, sections: v.sections.filter((s) => mine(s.subjectId)), case: { ...v.case, case_number: "", status: "", combination_id: "", client: "", pin: { release_version: 0, sha256: "", pinned_at: "", revision: 0 } } } as View;
   const shared = v.sections.filter((s) => !mine(s.subjectId));
   return (
     <QuestionnaireIoContext.Provider value={io}>

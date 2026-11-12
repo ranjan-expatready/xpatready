@@ -9,7 +9,7 @@ import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { casesLeaving, enterCasesAsStaff, Frame, leaveCasesAsStudio, PersonPicker, useWhere } from "@/components/frame"; // BK-3, BK-4a
 import { CASE_OFFICER, isCasePerson, isClientPerson, isFirmStaff, PEOPLE as ALL_PEOPLE, personOf, STUDIO_AUTHOR } from "@/lib/simulated-people"; // BK-4a
-import { noRetryOnRefusal, Questionnaire, tabHash, toConfirmByTab, useCaseView, useCaseWhere, type CanAdd, type CaseInfo, type CasePerson } from "./questionnaire";
+import { caseWords, noRetryOnRefusal, Questionnaire, tabHash, toConfirmByTab, useCaseView, useCaseWhere, type CanAdd, type CaseInfo, type CasePerson } from "./questionnaire";
 import { FormsPanel } from "./forms";
 import { ItemChannels } from "./item-channels"; // C11.6
 import { FindingsPanel } from "./findings";
@@ -28,7 +28,7 @@ import { OfficerPeoplePanel } from "./privacy"; // C6.16
 import { RepresentativeReviewLatest, RepresentativeReviewPage } from "./representative-review"; // C8.3
 import { CaseReadinessPill } from "./readiness-figure"; // C7.10
 import { HandOff, handedFrom } from "./hand-off"; // BK-4c
-import type { OpenableRelease } from "../../../contracts/runtime";
+import type { CaseListRow, OpenableRelease } from "../../../contracts/runtime";
 
 /** Simulated case people (the firm and the clients of lib/simulated-people.ts, BK-4a); the picker is demo chrome. */
 const PEOPLE = ALL_PEOPLE.filter((p) => isCasePerson(p.id));
@@ -96,41 +96,76 @@ function NotACasePerson() {
 
 // ------------------------------------------------------------------ officer: cases
 
-type CaseRow = { id: string; reference: string; combination: string; status: string; created_at: string };
+type CaseRow = Omit<CaseListRow, "created_at"> & { created_at: string };
+
+/** A24-2 (P-492, design §6): a case in a list: its case number, bold, with the firm's own reference under it when it gave
+ *  one; the whole cell opens the case. The space between them keeps the link's name readable ("C-2026-00042 ABC-1"). */
+function CaseCell({ c }: { c: Pick<CaseRow, "id" | "case_number" | "reference"> }) {
+  return (
+    <Link className="inline-flex min-h-6 flex-col justify-center text-text-link hover:underline" to={`/cases/${c.id}`} data-case-number={c.case_number}>
+      <span className="font-semibold tabular-nums whitespace-nowrap">{c.case_number}</span>{c.reference ? <>{" "}<span className="text-[13px] text-text-muted [overflow-wrap:anywhere]" data-case-own-reference>{c.reference}</span></> : null}
+    </Link>
+  );
+}
+/** A24-2: the applications (filings) of the case's current stage; none before the case is prepared. */
+const applicationsOf = (n: number) => n > 0 ? <span className="tabular-nums" data-case-filings={n}>{n}</span> : <span className="text-text-muted" data-case-filings={0} title="Applications appear once the case is prepared">None yet</span>;
+const SEARCH_HELP = "Case number, your own reference, a person's name or an IRCC application number";
 
 function CaseList() {
   const actor = useActorId();
-  const cases = useApi<{ cases: CaseRow[]; next: string | null }>(["runtime", "cases", actor], "/runtime/cases", { retry: noRetryOnRefusal });
   // BK-3 PR 2: "Open a case on Release N" on a released combination lands here as /cases?open=<combinationId>: the
   // dialog opens with that combination chosen; closing it drops the address's choice, so a reload does not reopen it.
   const [sp, setSp] = useSearchParams();
   const asked = sp.get("open");
   const [open, setOpen] = React.useState(!!asked);
-  const close = () => { setOpen(false); if (sp.has("open")) { const n = new URLSearchParams(sp); n.delete("open"); setSp(n, { replace: true }); } };
+  const close = () => { setOpen(false); if (sp.has("open")) setSp((p) => { const n = new URLSearchParams(p); n.delete("open"); return n; }, { replace: true }); };
+  // A24-2 (P-492, design §6): search, kept in the address (?q=) so Back and a reload keep it; sent a moment after typing stops.
+  const q = (sp.get("q") ?? "").trim();
+  const [typed, setTyped] = React.useState(q);
+  React.useEffect(() => {
+    const t = setTimeout(() => setSp((p) => { const n = new URLSearchParams(p), w = typed.trim(); if (w) n.set("q", w); else n.delete("q"); return n; }, { replace: true }), 300);
+    return () => clearTimeout(t);
+  }, [typed, setSp]);
+  const query = q ? `q=${encodeURIComponent(q)}&` : "";
+  const cases = useApi<{ cases: CaseRow[]; next: string | null }>(["runtime", "cases", actor, q], `/runtime/cases${q ? `?${query.slice(0, -1)}` : ""}`, { retry: noRetryOnRefusal });
   // Later pages through the API's cursor, appended below the first (PR 10 review): page 1 stays live, later ones are kept.
   // BK-3 PR 3 (break M1, same on this list): later pages belong to the person they were loaded for (another firm after a
-  // switch of "Acting as"); they are dropped, never shown beside the new person's page 1.
+  // switch of "Acting as"); they are dropped, never shown beside the new person's page 1. A24-2: and to the search.
+  const owner = `${actor}|${q}`;
   const [kept, setMore] = React.useState<{ owner: string; rows: CaseRow[]; next: string | null } | null>(null);
-  const more = kept?.owner === actor ? kept : null;
+  const more = kept?.owner === owner ? kept : null;
   const [loading, setLoading] = React.useState(false);
   const next = more ? more.next : cases.data?.next ?? null;
   async function loadMore() {
     if (!next || loading) return;
     setLoading(true);
-    try { const page = await api<{ cases: CaseRow[]; next: string | null }>(`/runtime/cases?after=${encodeURIComponent(next)}`); setMore((m) => ({ owner: actor, rows: [...(m?.owner === actor ? m.rows : []), ...page.cases], next: page.next })); } finally { setLoading(false); }
+    try { const page = await api<{ cases: CaseRow[]; next: string | null }>(`/runtime/cases?${query}after=${encodeURIComponent(next)}`); setMore((m) => ({ owner, rows: [...(m?.owner === owner ? m.rows : []), ...page.cases], next: page.next })); } finally { setLoading(false); }
   }
   const rows = [...(cases.data?.cases ?? []), ...(more?.rows ?? [])].filter((c, i, all) => all.findIndex((x) => x.id === c.id) === i);
   if (cases.isError && (cases.error as ApiError).status === 403) return <Notice title="Cases are for the case officer">Clients open their questionnaire from the link their officer sends; the case list is the firm's.</Notice>;
+  const clear = () => { setTyped(""); setSp((p) => { const n = new URLSearchParams(p); n.delete("q"); return n; }, { replace: true }); };
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div><h1 className="text-2xl font-semibold">Cases</h1><p className="text-sm text-text-muted">Each case works from one released configuration, frozen when the case opens.</p></div>
         <Button onClick={() => setOpen(true)}><Plus aria-hidden />Open a case</Button>
       </div>
-      {cases.isLoading ? <Skeleton className="h-40 w-full" /> : cases.isError ? <Notice tone="danger" title="Cases could not be loaded">{(cases.error as Error).message}</Notice>
-        : !rows.length ? <Notice title="No cases yet">Open a case for a released combination; then add the family and send the client their questionnaire.</Notice>
-        : <Table head={["Reference", "Combination", "Status", "Opened"]}>{rows.map((c) => <tr key={c.id}><td><Link className="font-medium text-text-link hover:underline" to={`/cases/${c.id}`}>{c.reference}</Link></td><td>{c.combination}</td><td><Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill></td><td>{new Date(c.created_at).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric" })}</td></tr>)}</Table>}
-      {rows.length ? <div className="flex items-center gap-3 text-[13px] text-text-muted"><span>{rows.length} case{rows.length === 1 ? "" : "s"} shown</span>{next ? <Button size="sm" variant="secondary" busy={loading} onClick={() => void loadMore()}>Load more</Button> : null}</div> : null}
+      <form role="search" className="max-w-md" onSubmit={(e) => e.preventDefault()}>
+        <Field label="Search cases" hint={SEARCH_HELP}><Input type="search" value={typed} maxLength={80} onChange={(e) => setTyped(e.target.value)} placeholder="C-2026-00042" data-case-search /></Field>
+      </form>
+      {cases.isLoading ? <Skeleton className="h-40 w-full" /> : cases.isError ? <Notice tone="danger" title={q ? "The search could not be run" : "Cases could not be loaded"}>{cases.error instanceof ApiError ? cases.error.field("q") ?? cases.error.message : (cases.error as Error).message}</Notice>
+        : !rows.length ? (q ? <Notice title={`No case matches "${q}"`} action={<Button size="sm" variant="secondary" onClick={clear}>Clear search</Button>}>Search looks at the {SEARCH_HELP[0].toLowerCase()}{SEARCH_HELP.slice(1)}.</Notice>
+          : <Notice title="No cases yet">Open a case for a released combination; then add the family and send the client their questionnaire.</Notice>)
+        : <Table head={["Case", "Client", "Applications", "Combination", "Status", "Opened"]} headClass={[undefined, undefined, undefined, "hidden md:table-cell", undefined, "hidden md:table-cell"]}>{rows.map((c) => (
+          <tr key={c.id} data-case-row={c.case_number}>
+            <td><CaseCell c={c} /></td>
+            <td data-case-client-name>{c.client_name ?? <span className="text-text-muted">Not named yet</span>}</td>
+            <td>{applicationsOf(c.filings)}</td>
+            <td className="hidden md:table-cell">{c.combination}</td>
+            <td><Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill></td>
+            <td className="hidden whitespace-nowrap md:table-cell">{opened(c.created_at)}</td>
+          </tr>))}</Table>}
+      {rows.length ? <div className="flex items-center gap-3 text-[13px] text-text-muted"><span>{rows.length} case{rows.length === 1 ? "" : "s"} shown{q ? ` for "${q}"` : ""}</span>{next ? <Button size="sm" variant="secondary" busy={loading} onClick={() => void loadMore()}>Load more</Button> : null}</div> : null}
       {open ? <NewCaseDialog close={close} initial={asked} /> : null}
     </div>
   );
@@ -152,6 +187,9 @@ function NewCaseDialog({ close, initial, client }: { close: () => void; initial?
   const combos = rows.filter((r) => r.startable);
   const notReady = rows.filter((r) => !r.startable);
   const [f, setF] = React.useState({ combinationId: initial ?? "", reference: "", principal: "", clientActor: client ?? "user-P" });
+  // A24-2 (P-492, design §6): the case number the firm gives next, read without taking it; the opening takes the real one.
+  const actor = useActorId();
+  const nextNumber = useApi<{ case_number: string }>(["runtime", "next-case-number", actor], "/runtime/next-case-number", { retry: false });
   const firm = useFirm();
   const [team, setTeam] = React.useState<{ representative: string; officer: string }>({ representative: "", officer: "" });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -164,7 +202,7 @@ function NewCaseDialog({ close, initial, client }: { close: () => void; initial?
   const askedOff = initial && f.combinationId === initial && releases.isSuccess && !loadFailed && !combos.some((c) => c.combination_id === initial) ? notReady.find((r) => r.combination_id === initial) ?? null : undefined;
   const [earlier, setEarlier] = React.useState<Parameters<typeof EarlierStages>[0]["value"]>({});
   const earlierBody = earlierOf(chosenRelease, earlier);
-  const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: chosen, ...(earlierBody ? { earlier: earlierBody } : {}), reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, ...(team.representative ? { representative: team.representative } : {}), ...(team.officer ? { caseOfficers: [team.officer] } : {}), idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => { if (sp.has("open")) nav("/cases", { replace: true }); nav(`/cases/${c.id}`); } });
+  const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: chosen, ...(earlierBody ? { earlier: earlierBody } : {}), ...(f.reference.trim() ? { reference: f.reference } : {}), clientActor: f.clientActor, principal: { displayName: f.principal }, ...(team.representative ? { representative: team.representative } : {}), ...(team.officer ? { caseOfficers: [team.officer] } : {}), idempotencyKey: key } }), { success: (c) => `Case ${c.case_number} opened`, invalidate: [["runtime"]], onDone: (c) => { if (sp.has("open")) nav("/cases", { replace: true }); nav(`/cases/${c.id}`); } });
   // Break m1: a 409 (the release stopped being ready while the dialog was open) reloads the list, so it is not offered again.
   const submit = () => create.mutate(undefined, { onError: (e) => { if (e instanceof ApiError && e.status === 409) void releases.refetch(); const p = e instanceof ApiError ? e.problem.errors ?? [] : []; setErrors(Object.fromEntries(p.flatMap((x) => [[x.field.split(".")[0], x.message], [x.field, x.message]]))); } });
   return (
@@ -183,7 +221,12 @@ function NewCaseDialog({ close, initial, client }: { close: () => void; initial?
             <ul className="space-y-1 [overflow-wrap:anywhere]" data-testid="not-ready-for-cases">{notReady.map((r) => <li key={r.combination_id}><span className="font-medium">{r.combination} · release {r.version}</span>: {r.why}</li>)}</ul>
           </Notice>
         ) : null}
-        <Field label="Case reference" hint="Your firm's reference, at least 3 characters" error={errors.reference}><Input value={f.reference} onChange={(e) => setF({ ...f, reference: e.target.value })} /></Field>
+        {/* A24-2 (P-492, CS-7): every case gets a case number when it opens; the firm's own reference is optional. */}
+        <div className="flex flex-col gap-1" data-next-case-number={nextNumber.data?.case_number ?? ""}>
+          <p className="text-xs font-medium text-text">Case number</p>
+          <p className="text-sm">Given when you open{nextNumber.data?.case_number ? <span className="text-text-muted"> ({nextNumber.data.case_number} next)</span> : null}</p>
+        </div>
+        <Field label="Your own reference (optional)" hint="Your firm's reference, if you use one: 3 to 80 characters, not shaped like a case number" error={errors.reference}><Input value={f.reference} onChange={(e) => { setF({ ...f, reference: e.target.value }); if (errors.reference) setErrors(({ reference: _r, ...rest }) => rest); }} /></Field>
         <Field label="Principal applicant's name" hint="Shown to the client as written; Sample names only in the prototype" error={errors.principal}><Input value={f.principal} onChange={(e) => setF({ ...f, principal: e.target.value })} /></Field>
         <Field label="Client login that answers" error={errors.clientActor}><Select value={f.clientActor} onChange={(e) => setF({ ...f, clientActor: e.target.value })}><option value="user-P">Client A (simulated)</option><option value="user-Q">Client B (simulated)</option></Select></Field>
         <OpeningTeam firm={firm} value={team} onChange={setTeam} errors={errors} />
@@ -196,7 +239,7 @@ function NewCaseDialog({ close, initial, client }: { close: () => void; initial?
 
 // ------------------------------------------------------------------ officer: one client (BK-3 PR 3)
 
-type ClientCaseRow = CaseRow & { client: string; people?: { label: string; role: string }[] };
+type ClientCaseRow = CaseRow;
 const opened = (at: string) => new Date(at).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric" });
 /** Break m4: the case page's role words (ROLE); another role in words, capitalised as there ("Sponsor"). */
 const personLine = (p: { label: string; role: string }) => { const r = ROLE[p.role] ?? p.role.replace(/_/g, " "); return `${p.label} · ${r.charAt(0).toUpperCase()}${r.slice(1)}`; };
@@ -249,14 +292,14 @@ function ClientCasesPage() {
         : <>
           {/* At phone width one card per case (the table would break the names letter by letter); the table from 640 px. */}
           <ul className="space-y-3 sm:hidden" aria-label={`${who.name}'s cases`}>{rows.map((c) => (
-            <li key={c.id} data-client-case={c.reference} className="rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm">
-              <div className="flex items-start justify-between gap-3"><Link className="inline-flex min-h-6 items-center font-medium text-text-link [overflow-wrap:anywhere] hover:underline" to={`/cases/${c.id}`}>{c.reference}</Link><Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill></div>
+            <li key={c.id} data-client-case={caseWords(c)} className="rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm">
+              <div className="flex items-start justify-between gap-3"><CaseCell c={c} /><Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill></div>
               <p className="text-text-muted">{c.combination} · opened {opened(c.created_at)}</p>
               {c.people?.length ? <ul className="mt-1.5 space-y-0.5">{c.people.map((p, i) => <li key={i}>{personLine(p)}</li>)}</ul> : <p className="mt-1.5 text-text-muted">No one added yet</p>}
             </li>))}</ul>
-          <Table className="hidden sm:block" label={`${who.name}'s cases`} head={["Reference", "Combination", "People", "Status", "Opened"]}>{rows.map((c) => (
-          <tr key={c.id} data-client-case={c.reference}>
-            <td><Link className="inline-flex min-h-6 items-center font-medium text-text-link hover:underline" to={`/cases/${c.id}`}>{c.reference}</Link></td>
+          <Table className="hidden sm:block" label={`${who.name}'s cases`} head={["Case", "Combination", "People", "Status", "Opened"]}>{rows.map((c) => (
+          <tr key={c.id} data-client-case={caseWords(c)}>
+            <td><CaseCell c={c} /></td>
             <td>{c.combination}</td>
             <td>{c.people?.length ? <ul className="space-y-0.5">{c.people.map((p, i) => <li key={i}>{personLine(p)}</li>)}</ul> : <span className="text-text-muted">No one added yet</span>}</td>
             <td><Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill></td>
@@ -285,7 +328,7 @@ function CasePage() {
   const inReview = (rounds.data?.rounds ?? []).filter((x) => x.filings.some((f) => f.status === "sent" || f.status === "under_review")).sort((a, b) => b.number - a.number)[0];
   // K13 (break m7): "Answer in the Agent view" (eligibility) lands on the Agent view, not the top of the case page.
   const { hash } = useLocation(), loaded = !!view.data;
-  useWhere(view.data ? [{ label: "Cases", to: "/cases" }, { label: view.data.case.reference }] : null); // BK-3: the frame's line names the case
+  useWhere(view.data ? [{ label: "Cases", to: "/cases" }, { label: caseWords(view.data.case) }] : null); // BK-3: the frame's line names the case
   React.useEffect(() => { if (loaded && hash === "#agent-view") document.getElementById("agent-view")?.scrollIntoView({ block: "start" }); }, [loaded, hash]);
   // Review m4: a client who pressed Back after a hand-off returns to their questionnaire with its hand back.
   if (!isOfficer(actor)) { const from = handedFrom(id!); return <Notice title="This page is for the case officer">As a client, open <Link className="text-text-link underline" to={`/cases/${id}/questionnaire${from ? `?from=${encodeURIComponent(from)}` : ""}`}>your Client questionnaire</Link>.</Notice>; }
@@ -300,7 +343,7 @@ function CasePage() {
     <div className="mx-auto max-w-7xl space-y-5">
       <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
         <div className="min-w-0 flex-1">
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><ReleasePill c={c} /></h1>
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]"><span data-case-number-h className="tabular-nums">{c.case_number}</span>{c.reference ? <span className="text-lg font-normal text-text-muted" data-case-own-reference>{c.reference}</span> : null}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><ReleasePill c={c} /></h1>
           <div className="mt-1 empty:hidden"><CaseReadinessPill caseId={c.id} /></div>
           {/* BK-3 PR 3 (P-447 (2)): the case names its client and opens their page; the person acting stays the same. */}
           <p className="mt-1 text-sm text-text-muted">Client: <Link to={`/cases/clients/${encodeURIComponent(c.client)}`} data-case-client className="inline-flex min-h-6 items-center font-medium text-text-link hover:underline">{client?.name ?? "the client"}</Link></p>
