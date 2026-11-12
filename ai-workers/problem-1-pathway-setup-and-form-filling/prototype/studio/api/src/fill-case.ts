@@ -282,7 +282,9 @@ export class CaseForms implements OnModuleInit {
     // file or download as validated).
     const keptElsewhere = !current && nameOf && x.status === "GENERATED" && x.snapshot.inputHash === inputHash(today) ? keptOnMacWords(x, nameOf.caseReference, nameOf.of) : null;
     const stored = x.snapshot.factsJson as Stored, then = stored.facts;
-    const changed = x.status === "GENERATED" ? [...changedFacts(then, today).map((f) => labels.get(f) ?? f), ...changedGroups(stored.groups, todayGroups)] : [];
+    // Review on #1620 (QA-415): a fact nobody is asked has no question label: the form's own caption names it, as for m7.
+    const captionOfFact = new Map((stored.boxes ?? []).filter((b) => b.fact && (b.caption ?? "").trim()).map((b) => [b.fact!, b.caption.trim()] as const));
+    const changed = x.status === "GENERATED" ? [...changedFacts(then, today).map((f) => labels.get(f) ?? captionOfFact.get(f) ?? f), ...changedGroups(stored.groups, todayGroups)] : [];
     const result = x.resultJson as { counts?: FormCopy["counts"]; intact?: boolean; person_steps?: string[]; boxes?: { box?: string; fact: string | null; about_label?: string; result: string; why: string | null }[] } | null;
     // Review m7 on #1620 (QA-415): a fact nobody is asked has no question label: the form's own caption names the box, as
     // Ready to file does (the copy's frozen rows hold it).

@@ -8,7 +8,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { answer, call, confirmAll, copyBytes, FAMILY, fillEverything, generateCopy, needVisitorVisa, openCase, sql, yearsAgo, type Case, type Person } from "./m3.ts";
+import { answer, AUTHOR, call, confirmAll, copyBytes, FAMILY, fillEverything, generateCopy, needVisitorVisa, openCase, sql, yearsAgo, type Case, type Person } from "./m3.ts";
 
 const STUDIO = join(import.meta.dirname, "..", "..");
 const PY = join(STUDIO, "..", "..", "..", "..", ".tools", "solution-1-prototype", ".venv", "bin", "python"), READER = join(STUDIO, "tests/fixtures/read_choice_values.py"); // one string: names the reader alone, not its folder (select-suites)
@@ -20,6 +20,21 @@ export const STUDY_FAMILY: Person[] = [
   { role: "child", name: "Sample Child B", dob: yearsAgo(15) },
 ];
 export const STUDIES = "person.studies_six_months_or_more";
+
+/** The configured checkpoint on this copy (Demo › Load), loaded by the pack itself when the copy holds anything else.
+ *  Gate B runs C7.1's and C6.2's packs on their scoring data, the six (fixture only), where neither family's release
+ *  exists; the checkpoint holds both (the Study permit family's work-permit spouse since #1591). So, as
+ *  tests/check_bk15_study_family_api.ts does, a copy without the Study permit's release is reset and the checkpoint loaded
+ *  as the author (about 2 minutes; saved AI answers only, US$0, live AI off). Gate B gives each pack its own fresh copy,
+ *  so no other pack's data is touched. A copy already on the checkpoint is used as it is. */
+export async function ensureCheckpoint(): Promise<void> {
+  const released = () => Number(sql("select count(*) from config_release r join combination c on c.id = r.combination_id where c.combination_key = 'sp.outside'") ?? "0") > 0;
+  if (released()) return;
+  console.log("NOTE  this copy is not on the configured checkpoint: resetting it and loading the checkpoint (Demo › Load), as the author");
+  const reset = await call("POST", "/demo/reset", { confirm: "RESET" }, AUTHOR);
+  const load = await call("POST", "/demo/load", { sample: "configured" }, AUTHOR);
+  if (load.status >= 300 || !released()) { console.log(`Setup missing: the configured checkpoint did not load (reset ${reset.status}, load ${load.status}): ${JSON.stringify(load.body).slice(0, 300)}`); process.exit(2); }
+}
 
 /** The Study permit combination on this copy, or a stop as setup missing (exit 2: the configured checkpoint holds it). */
 export function needStudyPermit(): string {
@@ -51,7 +66,7 @@ export async function visitorFamily(): Promise<Family> {
 
 /** A person's copy of a form, generated and read back from its file: every non-empty value by data path, and the copy's
  *  own counts and by-hand lines. Null when the person has no such form. */
-export type ReadCopy = { values: Record<string, string>; counts: { by_hand: number } | null; byHand: { fact?: string; label?: string; why?: string }[] };
+export type ReadCopy = { id: string; values: Record<string, string>; counts: { by_hand: number } | null; byHand: { fact?: string; label?: string; why?: string }[] };
 export async function readCopy(f: Family, form: string, name: string): Promise<ReadCopy | null> {
   const subject = f.c.subjects[name];
   if (!f.forms.some((x) => x.form === form && x.subject_id === subject && x.applies)) return null;
@@ -61,7 +76,7 @@ export async function readCopy(f: Family, form: string, name: string): Promise<R
   const file = join(dir, `${id}.pdf`);
   writeFileSync(file, await copyBytes(id, f.c.officer));
   const out = execFileSync(PY, ["-I", READER, file], { encoding: "utf8", maxBuffer: 50 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] }).trim().split("\n").pop()!;
-  return { values: (JSON.parse(out) as { values: Record<string, string> }).values, counts: copy?.counts ?? null, byHand: copy?.by_hand ?? [] };
+  return { id, values: (JSON.parse(out) as { values: Record<string, string> }).values, counts: copy?.counts ?? null, byHand: copy?.by_hand ?? [] };
 }
 /** The value at a data path ending in `tail`. */
 export const at = (vals: Record<string, string> | undefined, tail: string) => Object.entries(vals ?? {}).find(([k]) => k.endsWith(tail))?.[1];

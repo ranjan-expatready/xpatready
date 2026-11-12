@@ -5,16 +5,18 @@
 // and each adult dependant completes their own copy (samples/application-kinds.json, with pages and dates). Read back
 // from the generated files: a Study permit family (the student and the child Student, the spouse, whose filing is a work
 // permit, Worker) and a Visitor visa family (Visitor on every adult's IMM 5645, nothing by hand). Runs on the configured
-// checkpoint (Demo › Load); Sample people; no model call (US$0).
+// checkpoint (Demo › Load; on any other data the pack resets its copy and loads the checkpoint itself, about 2 minutes);
+// Sample people; no model call (US$0).
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx --tsconfig studio/api/tsconfig.json studio/acceptance/C7.1-application-type.test.ts 4440 xr_studio_accept
 import { answer, call, confirmAll, main, ok, openCase } from "./lib/m3.ts";
-import { at, needStudyPermit, readCopy, STUDIES, STUDY_FAMILY, studyFamily, ticked, visitorFamily } from "./lib/application-type.ts";
+import { at, ensureCheckpoint, needStudyPermit, readCopy, STUDIES, STUDY_FAMILY, studyFamily, ticked, visitorFamily } from "./lib/application-type.ts";
 
 const APPLICATION = "SectionA[0].application[0]";
 // A by-hand line names its question (`label`), the fact when it has one: the kind of application's, by either.
 const kindLines = (c: { byHand: { fact?: string; label?: string }[] } | null) => (c?.byHand ?? []).filter((b) => /application_type/.test(b.fact ?? "") || /application type|type of application|kind of application/i.test(b.label ?? "")).length;
 
 await main("C7.1 application type", "Each person's type of application, from their own filing (QA-415)", async () => {
+  await ensureCheckpoint(); // Gate B runs this pack on the six: it loads the checkpoint itself
   const sp = await studyFamily();
   const [a, s, k] = ["Sample Student A", "Sample Spouse B", "Sample Child B"];
   const filings = ((await call("GET", `/runtime/cases/${sp.c.id}/filings`, undefined, sp.c.officer)).body?.filings ?? []) as { label: string; owner?: { subject: string } }[];
@@ -35,6 +37,9 @@ await main("C7.1 application type", "Each person's type of application, from the
   await answer(sp.c.id, sp.c.subjects[k], STUDIES, false);
   await confirmAll(sp.c.id, sp.c.subjects[k]);
   const after = ((await call("GET", `/runtime/cases/${sp.c.id}/filings`, undefined, sp.c.officer)).body?.filings ?? []) as { label: string; owner?: { subject: string } }[];
+  // The Student copy made before is now out of date, and it names what changed in the form's words (never the key).
+  const before = (await call("GET", `/runtime/form-copies/${r5476.k?.id}`, undefined, sp.c.officer)).body as { out_of_date?: boolean; changed?: string[] } | null;
+  ok("C7.1-AT-13 fail: the child's earlier copy is out of date, naming the change by the form's caption, never a field key", before?.out_of_date === true && (before.changed ?? []).some((c) => /^Type of application/.test(c)) && !(before.changed ?? []).some((c) => /application_type/.test(c)), before?.changed);
   const kNo = await readCopy(sp, "IMM 5476", k);
   ok("C7.1-AT-10 fail: answered No, the child's filing becomes a visitor visa and their IMM 5476 says Visitor (never Student)", /^Visitor visa: /.test(after.find((f) => f.owner?.subject === sp.c.subjects[k])?.label ?? "") && at(kNo?.values, APPLICATION) === "Visitor", { filing: after.find((f) => f.owner?.subject === sp.c.subjects[k])?.label, written: at(kNo?.values, APPLICATION) });
 
