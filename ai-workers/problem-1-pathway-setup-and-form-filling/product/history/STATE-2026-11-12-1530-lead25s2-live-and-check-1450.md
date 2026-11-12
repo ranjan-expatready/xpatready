@@ -1,0 +1,6 @@
+# Lead 25 (series 2) live and 14:5x check lines, moved word for word from STATE at 15:3x IST 12 Nov
+
+**Lead 25 live (14:3x IST):** check 94a9e075 at :13/:43; start read ~112k, hand over at ~312k. Done: **#1633** schema read OK (P-423), label removed until the P-496 (2) `case-prepare.ts` fix + re-review, lane briefed; **#1628** requeued (lost runner), lane told; **#1616** `Reviewer: Approve 1ec98a8ef` posted, qa lane labelling; **#1632** no baton, m1 its own row after BK-17 (P-497 (2)), lane told; **QA-417 #1640** ruled web only, P-72/P-78 kept (P-497 (1)), screens lane now QA-417 → A24-2 after #1633. Owed: BACKLOG row for #1632's m1.
+
+**Lead 25 check 14:5x IST:** weekly 37% (0%/h since 14:28); merged 0; queue #1616, #1628, #1627, #1631. #1633 pushed the P-496 fix (head 78c0ad988), awaits its re-review. **#1632's lane handed over** (comment "Hand-over 2"): fresh forms lane card task_a3ac2282. **A25 sweep done: #1637** (24 rows, 3 Major) ruled P-498: renumber to QA-421..444 first (lane told), then the Lead's records Approve; QA-427, QA-441 into the screens chain after QA-417 (lane told); QA-421 card task_a11f776f, QA-439 card task_4517fdff. QA-391 lane (merged) still to check and archive. Owed: BACKLOG rows for #1632's m1 and P-498; the expert gets the sweep's financial-support point.
+
