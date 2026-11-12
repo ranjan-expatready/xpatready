@@ -68,7 +68,11 @@ type Question = { fact: string; about: string; why?: string };
 
   // The form lines from IRCC's words (Guide 5269, IMM 5483), as rules a case reads.
   const line = (form: string) => sql(`select f.attach_mode || '|' || coalesce(f.min_age::text, '') || '|' || coalesce(f.predicate_json::text, '') from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${sp}' and g.form_key = '${form}' and f.status <> 'RETIRED' order by f.version desc limit 1`);
-  ok("QA-144 slice 3 rule IMM 1294: every student files it", line("IMM 1294").startsWith("COMBINATION_MANDATORY|"), line("IMM 1294"));
+  // BK-16 PR 2 (P-490, QA-416): IMM 1294 is now each family member's own application when it is theirs: the student always
+  // (the line's who, principal_and_children_when) and a child only when they will study 6 months or more (its rule, read
+  // for a dependant). A spouse files IMM 1295; a child who does not study, IMM 5257 (check_bk16_family_forms_api.ts).
+  ok("QA-144 slice 3 rule IMM 1294 (BK-16): the student, and each child who will study 6 months or more", /^ANSWER_CONDITIONAL\|\|.*"field": "person\.studies_six_months_or_more".*"value": true.*"subjectKind": "DEPENDENT"/.test(line("IMM 1294"))
+    && sql(`select f.who from combination_form f join gov_form_def g on g.id = f.gov_form_def_id where f.combination_id = '${sp}' and g.form_key = 'IMM 1294' and f.status <> 'RETIRED' order by f.version desc limit 1`) === "principal_and_children_when", line("IMM 1294"));
   ok("QA-144 slice 3 rule IMM 5707 (IMM 5483 p. 1): each person 18 or older", line("IMM 5707").startsWith("COMBINATION_MANDATORY|18|"), line("IMM 5707"));
   ok("QA-144 slice 3 rule IMM 5646 (Guide 5269, Custodians): only for a minor studying without a parent or guardian", /^ANSWER_CONDITIONAL\|\|.*"field": "person\.minor_studying_without_parent".*"value": true/.test(line("IMM 5646")), line("IMM 5646"));
   ok("QA-144 slice 3 rule IMM 5409 (Guide 5269, Step 2): only for a student in a common-law union", /^ANSWER_CONDITIONAL\|\|.*"field": "person\.marital_status".*"value": "common_law"/.test(line("IMM 5409")), line("IMM 5409"));

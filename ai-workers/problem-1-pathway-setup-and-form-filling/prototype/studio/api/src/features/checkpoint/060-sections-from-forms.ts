@@ -7,6 +7,7 @@ import { FORM_SETUP } from "../../form-setup.ts";
 import { decide } from "../../proposals.ts";
 import { type HeldSectionName, namedReason, nameOfHeld, readHeldSectionNames } from "../../section-names.ts";
 import type { CheckpointContext, CheckpointStep } from "./_context.ts";
+import { LATER_BY_KEY } from "./040-field-map-review.ts";
 import { familyForm } from "./_family-form.ts";
 
 /** QA-144 slices 1–4 (tech lead on #798; B79): the combinations the configured checkpoint sets up from their forms' own
@@ -21,6 +22,9 @@ export const sections = stateOf(() => ({
   held: [] as string[],
   /** B78: sections named by the name a person gives them (samples/section-names.json), through the same edit. */
   namedByPerson: [] as HeldSectionName[],
+  /** BK-16 (P-496): sections the form prints a heading over that a person renamed (samples/section-names.json), so a later
+   *  source's part does not join another combination's section of that printed name. */
+  renamedByPerson: [] as HeldSectionName[],
   /** The marital status list IMM 5409's rule reads (ruling 3), once accepted; the first combination's form lines link it
    *  to the shared field and clear it (combination/110). */
   maritalList: null as string | null,
@@ -46,7 +50,9 @@ export async function sectionsFrom(ctx: CheckpointContext, c: { id: string }, fo
     // (another part prints it too). With no printed heading it takes the name a person gives it (B78); with none of
     // those either it stays waiting on To review and is listed as refused.
     const held = p.kind === "section" ? (p.work as { unnamed?: boolean; heading?: string; printed?: string } | null) : null;
-    const given = held?.unnamed && !held.heading ? nameOfHeld(heldNames, p.formEdition, (p.payload as { fieldKeys?: string[] }).fieldKeys?.[0]) : null;
+    // BK-16 (P-496): an entry of samples/section-names.json also names a section the form prints a heading over (a person
+    // renames it there), so a later source's part never joins, by its printed name, a section other combinations chose.
+    const given = p.kind === "section" ? nameOfHeld(heldNames, p.formEdition, (p.payload as { fieldKeys?: string[] }).fieldKeys?.[0]) : null;
     if (held?.unnamed && !held.heading && !given) { s.held.push((p.payload as { label?: string }).label ?? "section"); continue; }
     try {
       const landed = (await decide(db, audit, author, workspaceId, [p.id], given
@@ -54,7 +60,7 @@ export async function sectionsFrom(ctx: CheckpointContext, c: { id: string }, fo
         : held?.unnamed
         ? { action: "edit", payload: { ...(p.payload as object), label: held.heading }, reason: `Named by the sample loader from the heading the form prints over it, "${held.printed ?? held.heading}" (Sample); rename it on Shared library if a person words it better.` }
         : { action: "accept", reason: "Accepted by the sample loader: drafted from the form's own parts (rules, US$0); rename it on Shared library if a person words it better." })).items[0] as { landedAs?: string; joined?: boolean } | undefined;
-      if (given) s.namedByPerson.push(given);
+      if (given) (held?.unnamed && !held.heading ? s.namedByPerson : s.renamedByPerson).push(given);
       // A name the library already holds lands on that section, so it is reused, not added.
       if (p.kind === "section") (landed?.joined ? s.reused : s.made).push(landed?.landedAs ?? ""); else s.maritalList ??= landed?.landedAs ?? null;
     } catch (e) {
@@ -74,13 +80,20 @@ export default {
     s.fromForms = ctx.six.combinations.filter((c) => SET_UP_FROM_FORMS.has(ctx.keyOf.get(c.id) ?? ""));
     s.heldNames = readHeldSectionNames();
     await ctx.timed("sections from the forms' parts (rules)", async () => {
+      const later: { c: (typeof s.fromForms)[number]; forms: { id: string; fileName: string; edition: string | null }[] }[] = [];
       for (const c of s.fromForms) {
         // The family information form the channel takes off (FAMILY_FORM_BY_CHANNEL) gives no sections (review m2).
         const notFiled = (await familyForm(ctx.db, c.id, ctx.keyOf.get(c.id)))?.other ?? null;
         const forms = (await ctx.db.sourceAttachment.findMany({ where: { combinationId: c.id, kind: "Form" }, orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, edition: true } }))
           .filter((a) => !notFiled || !(a.edition ?? "").startsWith(`${notFiled} (`));
-        await sectionsFrom(ctx, c, forms);
+        // BK-16 (P-496): a source the combination marks "later" (samples/wave1.json) gives its sections after every
+        // combination's own, so the shared sections the others' forms make are made first and never regrouped by it.
+        const held = LATER_BY_KEY.get(ctx.keyOf.get(c.id) ?? "");
+        await sectionsFrom(ctx, c, forms.filter((a) => !held?.has(a.fileName)));
+        const hold = forms.filter((a) => held?.has(a.fileName));
+        if (hold.length) later.push({ c, forms: hold });
       }
+      for (const x of later) await sectionsFrom(ctx, x.c, x.forms);
     });
   },
 } satisfies CheckpointStep;

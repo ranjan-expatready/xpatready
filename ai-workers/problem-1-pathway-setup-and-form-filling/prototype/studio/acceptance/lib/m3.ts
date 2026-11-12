@@ -412,7 +412,12 @@ export async function readyToFile(caseId: string, rep: string | null): Promise<s
   // A case whose expected lines cannot be read (not opened by openCase, or pinned to a release older than the newest)
   // keeps the helper's earlier rule, IMM 5257, so no check is lowered; the NOTE line says so.
   if (!expected) console.log(`NOTE  readyToFile: no expected lines for case ${caseId.slice(0, 8)} (not opened by openCase, or its release unread): IMM 5257 is taken as the barcode form, as before row C1`);
-  const barcode = (form: string | undefined, subject: string) => expected ? !!expected[nameOf.get(subject) ?? ""]?.forms.some((l) => l.form === form && l.barcode) : form === "IMM 5257";
+  // BK-16 PR 2 (#1632, merge with BK-17): a conditional line (a "waiting" one, such as IMM 5257 for a child who does not
+  // study) is an item only once its condition applies, so a barcode form on it is validated like an always-filed one.
+  const barcode = (form: string | undefined, subject: string) => {
+    const e = expected?.[nameOf.get(subject) ?? ""];
+    return expected ? !!e && [...e.forms, ...e.waiting].some((l) => l.form === form && l.barcode) : form === "IMM 5257";
+  };
   let p = (await prepare(caseId)).p;
   for (const i of (p?.items ?? []).filter((x) => x.kind === "form" && !["ready", "done"].includes(x.state))) {
     if (i.channel === "PDF_UPLOAD" && barcode(i.form, i.subject)) await validateRoundTrip(caseId, i.form!, i.subject);
