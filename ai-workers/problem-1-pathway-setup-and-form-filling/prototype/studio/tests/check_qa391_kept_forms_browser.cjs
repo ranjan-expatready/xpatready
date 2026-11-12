@@ -83,11 +83,12 @@ let failed = 0; const ok = (name, pass, detail) => { if (!pass) failed++; consol
   // QA-403 (#1588): the story's copies used to have form fields to write by hand only because the filler could not run
   // IMM 5476's and IMM 5645's boxes (appoint or cancel, the kind of application); QA-403 fills them from the case
   // officer's answers. So a kept copy with form fields to write by hand is made on purpose, through the product's routes:
-  // the case officer records words those forms do not name ("withdraw", "visit"), which go by hand (never guessed), and
-  // the Partner's copies of the forms that read them are generated again.
+  // the case officer records a word IMM 5476 does not name ("withdraw"), which goes by hand (never guessed), and the
+  // Partner's copies of the forms that read it are generated again. (QA-415: the kind of application is no longer asked;
+  // it is worked out from each person's own filing, so only the appoint-or-cancel answer makes the by-hand field.)
   const agent = (await call("GET", `/runtime/cases/${fam.id}/questionnaire?mode=agent`)).body;
   const caseQ = (fact) => agent.sections.flatMap((s) => s.questions.map((q) => ({ ...q, subjectId: s.subjectId }))).find((q) => q.fact === fact && !/\//.test(q.subjectId));
-  for (const [fact, value] of [["case.representative_form_action", "withdraw"], ["case.application_type", "visit"]]) {
+  for (const [fact, value] of [["case.representative_form_action", "withdraw"]]) {
     const q = caseQ(fact); if (!q) continue;
     const r = await call("PUT", `/runtime/cases/${fam.id}/answers/${q.subjectId}/${fact}`, { value, expectedId: q.answer?.id ?? null });
     if (r.status >= 300) console.log("note: could not record", fact, r.status, JSON.stringify(r.body).slice(0, 200));

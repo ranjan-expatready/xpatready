@@ -13,6 +13,7 @@ import { gatesInForce } from "../form-field-condition.ts";
 import { SCOPE_TAG } from "../field-scope.ts";
 import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
 import { CLIENT_RECONFIRM } from "./background.ts";
+import { APPLICATION_TYPE, APPLICATION_TYPE_SOURCE, applicationKindsOf, NotWorkedOut } from "./application-kind.ts";
 import { cellAsked, isAskedRelative, isListRelative, listWords, relativeLabel, relativeOf } from "./relatives.ts";
 import type { Period } from "../../../contracts/history.ts";
 import { Address, byClientFor, byPrincipalFor, CONFIRM_WORDS, groupLabel, type AnswerMark, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
@@ -314,6 +315,10 @@ export function knownOf(s: Snapshot, people: Participant[], answers: Answer[], r
   for (const [subjectId, value] of hasChildrenOf(people)) known.set(kkey(subjectId, HAS_CHILDREN), { value, status: "confirmed", source: HAS_CHILDREN_SOURCE });
   // QA-400 (P-485): whether each person is the principal applicant is worked out from their role on the case, never asked.
   for (const [subjectId, value] of principalOf(people)) known.set(kkey(subjectId, IS_PRINCIPAL), { value, status: "confirmed", source: IS_PRINCIPAL_SOURCE });
+  // QA-415 (P-486): each person's kind of application is worked out from their own filing (application-kind.ts), never
+  // asked; read after the answers, since a filing a person's line adds follows their own answers.
+  // One it cannot work out yet (NotWorkedOut) is no answer: its form fields go by hand with the reason (form-values.ts).
+  for (const [subjectId, value] of applicationKindsOf(s, known, people)) known.set(kkey(subjectId, APPLICATION_TYPE), { value, status: "confirmed", source: value instanceof NotWorkedOut ? `not worked out yet: ${value.why}` : APPLICATION_TYPE_SOURCE });
   return { known, confirm };
 }
 
@@ -403,7 +408,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const orderIn = (q: { about: string; fact: string }) => (isListRelative(q.about) ? boxAt.get(`${q.about}|${q.fact}`) ?? Number.MAX_SAFE_INTEGER : placed(q.fact));
   const countries = (s.canonical_fields as FieldDef[]).find((f) => f.answer_list?.key === "country")?.answer_list?.values.map((v) => v.label) ?? null;
   const derivedYes = hasChildrenOf(people), derivedPrincipal = principalOf(people);
-  const needed = r.questions.filter((q) => asked(q) && !(q.fact === HAS_CHILDREN && derivedYes.has(q.about)) && !(q.fact === IS_PRINCIPAL && derivedPrincipal.has(q.about)) && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
+  const needed = r.questions.filter((q) => asked(q) && !(q.fact === HAS_CHILDREN && derivedYes.has(q.about)) && !(q.fact === IS_PRINCIPAL && derivedPrincipal.has(q.about)) && q.fact !== APPLICATION_TYPE /* QA-415: never asked */ && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
     .sort((a, b) => firstOf(a) - firstOf(b) || orderIn(a) - orderIn(b));
   const notAsked = r.questions.filter((q) => asked(q)).length - needed.length;
   // Review Major 1 (#1256): a parent is named by the boxes the person's forms write them into ("Sample Client W's

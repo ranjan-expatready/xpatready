@@ -1,5 +1,5 @@
 {
- "about": "QA-403 (P-486, the tech lead's ruling 11 Nov ~23:5x IST, reversible): facts the firm or the case already knows are never asked of the client; the case officer sets them, in plain words. Data, not code (P-319): the configured checkpoint (api/src/features/checkpoint/097-who-fills.ts) changes who fills each question below through the product's own route (Library › a field › Change who fills, C4.9: the author proposes with the reason, a second person (the content reviewer) approves on To review, it goes out with the next release), and gives its question and its help the words below through the placement route (Library › Fields › placement). A question in a background or declarations section is never moved (P-97): the route refuses it. These are the firm's own facts about its filing, not immigration values: no IRCC value is set here.",
+ "about": "QA-403 (P-486, the tech lead's ruling 11 Nov ~23:5x IST, reversible): facts the firm or the case already knows are never asked of the client; the case officer sets them, in plain words. Data, not code (P-319): the configured checkpoint (api/src/features/checkpoint/097-who-fills.ts) changes who fills each question below through the product's own route (Library › a field › Change who fills, C4.9: the author proposes with the reason, a second person (the content reviewer) approves on To review, it goes out with the next release), and gives its question and its help the words below through the placement route (Library › Fields › placement). A question in a background or declarations section is never moved (P-97): the route refuses it. These are the firm's own facts about its filing, not immigration values: no IRCC value is set here. QA-415 (P-486, 12 Nov): the kind of application is no longer asked of anyone: it is worked out for each person from their own filing (samples/application-kinds.json).",
  "questions": [
   {
    "fact": "case.representative_form_action",
@@ -7,13 +7,6 @@
    "question": "Does this Use of a Representative form (IMM 5476) appoint the representative, or cancel an appointment? Write appoint or cancel",
    "help": "Why we ask: IMM 5476 has one box for appointing a representative and one for cancelling. Your firm knows which; the client is not asked.",
    "reason": "QA-403 (P-486): the firm's own filing; the firm knows whether it appoints or cancels, so the client is not asked."
-  },
-  {
-   "fact": "case.application_type",
-   "fills": "CASE_OFFICER",
-   "question": "Which kind of application is this case: visitor, worker or student? For any other kind, leave it and tick the form's Other box by hand",
-   "help": "Why we ask: IMM 5475, IMM 5476 and IMM 5645 name the kind of application. It follows from the case's pathway; the client is not asked. The forms' own words for it are visitor, worker and student; any other word is written by hand.",
-   "reason": "QA-403 (P-486): the kind of application follows from the case's pathway, which the firm chose; the client is not asked."
   },
   {
    "fact": "case.submission_office_name",
