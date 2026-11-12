@@ -347,3 +347,70 @@ curl ... "$R/actions/workflows/nightly.yml/runs?created=>=2026-11-01T18:30:00Z&p
 The `nightly.yml` ask → dispatch figure (section 2, cause 6) came from a one-off script in the scratchpad: comments matching `dispatch|nightly.yml` together with a request word, paired with the next `workflow_dispatch` run; treat it as rough.
 
 **Not measured, and why:** how long qa takes per verdict (no machine timestamp, as in the 9 Nov study); lanes per day over the window (session lists are not on GitHub); plan % per lane-day (account switched 11 Nov); red-`main` restore time (no tool yet).
+
+---
+
+## Visuals (founder ask A29 (C)): one picture per part
+
+**Part 1, size: where the requirements sit, and what is ours** (2,253 live requirements; section 1.3)
+
+```mermaid
+pie showData
+  title Team spec requirements by group (n = 2,253)
+  "A Configurator (ours, partly built)" : 369
+  "B Case delivery (ours, partly built)" : 440
+  "C Firm front office (not started here)" : 692
+  "D Firm admin and data (team)" : 242
+  "E Platform foundation (team)" : 510
+```
+
+**Part 2, causes: one app PR's path today, with measured medians** (n=131 app PRs with Approve and label, 2-12 Nov)
+
+```mermaid
+flowchart LR
+  A["Lane opens PR"] -->|"0.92 h<br/>build, own CI, review"| B["Reviewer: Approve"]
+  B -->|"0.72 h median<br/>p90 7.3 h<br/>271 PR-h beyond CI"| C["Label: review approved"]
+  C -->|"1.06 h<br/>queue + 42-min batch run"| D["Merged on main"]
+  D -->|"not machine-timed"| E["qa verdict: Works or Partial"]
+  E -->|"~5.5 app PRs per Works<br/>39 re-opens"| A
+  X["Merge main into PR:<br/>29% of app PRs hit a real conflict<br/>~300 PR-h"] -.-> B
+```
+
+**Part 3, target: modules and the one contract between the two sides**
+
+```mermaid
+flowchart TB
+  subgraph CFG["Configurator stream"]
+    SP[spine] --- SO[pack-sources] --- LI[pack-library] --- QD[pack-questionnaire]
+    RE[pack-release]
+  end
+  subgraph CASE["Case-delivery stream"]
+    CC[case-core] --- CQ[case-questionnaire] --- CD[case-documents] --- CF[case-forms] --- CS[case-submission]
+  end
+  subgraph PLAT["Platform / enabling"]
+    PL[platform] --- AI[ai-gateway] --- DD[demo-data]
+  end
+  CFG --> RE
+  RE ==>|"released pack: versioned contract + golden test"| CASE
+  PLAT -.->|"public index.ts only"| CFG
+  PLAT -.->|"public index.ts only"| CASE
+```
+
+**Part 4, delivery: the constraint and the order of fixes (Theory of Constraints)**
+
+| Order | Constraint (measured) | Fix | Measure that proves it |
+|---|---|---|---|
+| 1 | first-pass yield: ~5.5 app PRs per Works | qa's pack before the build; walk before review (P-352) | app PRs per Works ≤3 |
+| 2 | conflicts: 29% of app PRs | module walls S0-S12 | ≤10% of app PRs; co-edit overlap halved per step |
+| 3 | Approve → label wait: p90 7.3 h | wake-up check on PR status comments; label-triggered packs | p90 ≤2 h |
+| 4 | night starts: 24 vs 109 opens | warm spares; routine trial (D4) | night opens per hour vs day |
+
+**Part 5, capacity: Works per day by scenario** (section 5.1; each step a hypothesis with its test)
+
+```mermaid
+xychart-beta
+  title "Confirmed capabilities per day by scenario"
+  x-axis ["Today", "+ first-pass yield", "+ structure", "+ lanes doubled"]
+  y-axis "Works per day" 0 --> 30
+  bar [5.5, 9.3, 12.7, 25]
+```
