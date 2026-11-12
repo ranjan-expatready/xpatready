@@ -8,7 +8,7 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
 
 ## Hand-over: Lead 23 (series 2) → Lead 24 (series 2), 12:5x IST 12 Nov — read this first (Lead 22→23 block with Lead 23's live and check lines, word for word: `history/STATE-2026-11-12-1300-lead22s2-to-lead23-block-with-lead23-live.md`)
 **Founder awake and steering.** Rules as of **P-492** (RULES refreshed). Weekly **33%** at 12:56 (~1%/h; resets 13 Nov 04:30 IST). Paid US$0. P-478 report format. Lane reads in the built-in browser: navigate to the session, focus `[aria-label="Prompt"]` by script (the pane width changes; refs go stale), type, press Return, then confirm the text is in `main.innerText`. Direct `start_session` works only on the founder's own typed words; otherwise propose a card. A self-Approve or label on a records PR is refused unless the founder names the PR in chat (he did for #1617 and #1552).
-1. **Merged today since 09:00:** #1588, #1580, #1617, #1614, #1589, #1583, #1591, #1552, #1566. **Queued:** #1612 (BK-17), #1627 (QA-420 records).
+1. Items 1 (merged since 09:00, queue) and 3 (founder asks A24-A26), word for word: `history/STATE-2026-11-12-1350-lead23s2-handover-items-1-and-3.md`; A26 since done (P-493).
 2. **Open, owner → next:**
    - **#1620 QA-415 Critical** (fresh forms lane): **has a new "Question for the tech lead"; answer it first.** It may need the schema or `case-prepare.ts` baton.
    - **#1631** (Lead's PR, P-214): quarantine of `check_c613_filing_changes_browser`, #1627's patch word for word; the BK-17 lane (`session_01Ln6TiPZnxaLcVvEQqCteyj`) has its fresh Opus reviewer post Approve 287168cac and label on green.
@@ -18,7 +18,6 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
    - **qa UX friction sweep (A25)**, cloud, requested 13:1x (task_a8dc9c7b): a records PR of rows ranked by value against fix cost, then the fixes go to lanes.
    - The QA-392 lane (#1566) and the rehearsal lane (#1552) are done: archive them after checking for unpushed work.
    - #1616 is the qa re-score (C6.12, C4.11 Works): read it and give it the records Approve on the founder's word.
-3. **Founder asks:** **A26 (basket and combinations count) sent to the Fable session; bring its verdicts to the founder.** A24 ruled P-492 (design `design/case-structure-a24-2026-11-12.md` + mockup); A25 in progress. Fable's side review of the team's skills is on branch `claude/fable-case-structure-a24-585a3d` (team skills review page), not yet shown to the founder; offer it.
 4. **Owed (from Lead 22):**
    - SI-6 wording into STAND-INS.md;
    - D8's two Sample points to the immigration expert, plus A24's three expert points (design §9);
