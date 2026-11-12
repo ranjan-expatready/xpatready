@@ -7,8 +7,8 @@
 // permit, Worker) and a Visitor visa family (Visitor on every adult's IMM 5645, nothing by hand). Runs on the configured
 // checkpoint (Demo › Load); Sample people; no model call (US$0).
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx --tsconfig studio/api/tsconfig.json studio/acceptance/C7.1-application-type.test.ts 4440 xr_studio_accept
-import { call, main, ok } from "./lib/m3.ts";
-import { at, readCopy, studyFamily, ticked, visitorFamily } from "./lib/application-type.ts";
+import { answer, call, confirmAll, main, ok } from "./lib/m3.ts";
+import { at, readCopy, STUDIES, studyFamily, ticked, visitorFamily } from "./lib/application-type.ts";
 
 const APPLICATION = "SectionA[0].application[0]";
 // A by-hand line names its question (`label`), the fact when it has one: the kind of application's, by either.
@@ -29,6 +29,14 @@ await main("C7.1 application type", "Each person's type of application, from the
   const r5645 = { a: await readCopy(sp, "IMM 5645", a), s: await readCopy(sp, "IMM 5645", s) };
   if (r5645.a || r5645.s) ok("C7.1-AT-6 pass: on IMM 5645 the student ticks Student only and the spouse Worker only", (!r5645.a || ticked(r5645.a.values).join() === "Student") && (!r5645.s || ticked(r5645.s.values).join() === "Worker"), { a: ticked(r5645.a?.values), s: ticked(r5645.s?.values) });
   else console.log("NOTE  C7.1-AT-6: this release gives the Study permit family no IMM 5645 (its family information form is IMM 5707): IMM 5476 above carries the check.");
+
+  // The kind follows the filing, both ways: the child answered No to "6 months or more" files a visitor visa, so their
+  // IMM 5476 says Visitor, never the Student it said before nor the family's Student.
+  await answer(sp.c.id, sp.c.subjects[k], STUDIES, false);
+  await confirmAll(sp.c.id, sp.c.subjects[k]);
+  const after = ((await call("GET", `/runtime/cases/${sp.c.id}/filings`, undefined, sp.c.officer)).body?.filings ?? []) as { label: string; owner?: { subject: string } }[];
+  const kNo = await readCopy(sp, "IMM 5476", k);
+  ok("C7.1-AT-10 fail: answered No, the child's filing becomes a visitor visa and their IMM 5476 says Visitor (never Student)", /^Visitor visa: /.test(after.find((f) => f.owner?.subject === sp.c.subjects[k])?.label ?? "") && at(kNo?.values, APPLICATION) === "Visitor", { filing: after.find((f) => f.owner?.subject === sp.c.subjects[k])?.label, written: at(kNo?.values, APPLICATION) });
 
   const vv = await visitorFamily();
   const adults = ["Sample Client A", "Sample Spouse A"];

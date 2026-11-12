@@ -8,7 +8,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { answer, call, copyBytes, FAMILY, fillEverything, generateCopy, needVisitorVisa, openCase, sql, yearsAgo, type Case, type Person } from "./m3.ts";
+import { answer, call, confirmAll, copyBytes, FAMILY, fillEverything, generateCopy, needVisitorVisa, openCase, sql, yearsAgo, type Case, type Person } from "./m3.ts";
 
 const STUDIO = join(import.meta.dirname, "..", "..");
 const PY = join(STUDIO, "..", "..", "..", "..", ".tools", "solution-1-prototype", ".venv", "bin", "python"), READER = join(STUDIO, "tests", "fixtures", "read_choice_values.py");
@@ -32,7 +32,13 @@ export type Family = { c: Case; forms: { form: string; subject_id: string; perso
 /** A Study permit family: opened, the child's "6 months or more" answered Yes by the case officer, every answer given. */
 export async function studyFamily(): Promise<Family> {
   const c = await openCase(needStudyPermit(), STUDY_FAMILY);
-  await answer(c.id, c.subjects["Sample Child B"], STUDIES, true);
+  const child = c.subjects["Sample Child B"];
+  await answer(c.id, child, STUDIES, true);
+  // fillEverything answers what is open with its own Sample (a Yes/No is No): the child's Yes is given again after it,
+  // and the child's sections confirmed, so their own answer, not the sample's, decides their filing.
+  await fillEverything(c.id);
+  await answer(c.id, child, STUDIES, true);
+  await confirmAll(c.id, child);
   await fillEverything(c.id);
   return { c, forms: (await call("GET", `/runtime/cases/${c.id}/forms`, undefined, c.officer)).body?.forms ?? [] };
 }
