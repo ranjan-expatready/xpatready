@@ -130,3 +130,71 @@ Same reviewer role, fresh context, 12 Nov 2026. Scope: `git diff 112c3fc20 754e0
 * **9.5/10, pass (no criterion at 0).**
 
 **Verdict: Approve 754e0d7be** (no open Must or Blocker; m1, m2 and m3 closed). Journey score 9.5/10.
+
+## Re-review 2e894d654 (diff-only, P-277, round 4)
+Same reviewer role, fresh context, 12 Nov 2026. Scope: `git diff 7042c1612 2e894d654` (`questionnaire.tsx` AgentSection, the pack check, one line each in `tests/runtime/check_runtime_r1c.cjs` and `tests/qa/check_qa_explore_1025.cjs`). Cause: CI on 7042c1612, r1c "M3 agent pass: Confirm section confirms it". Own isolated copies on :4465 and :4466, each stopped afterwards; the screenshots the suites rewrote in other rows' folders are restored; live AI off, US$0. A fourth round was asked for by the caller (WAY-OF-WORKING caps review rounds at two unless the tech lead decides otherwise).
+* **Re-ran:**
+  * `check_qa417_counts_browser.cjs` **53/53**, exit 0, on a fresh copy.
+  * `check_runtime_r1c.cjs` **140/140**, run alone on a fresh copy after `setup_visitor_visa.ts` (15/15). "M3 agent pass (P-72)" and "Confirm section confirms it" both pass.
+  * `tsc --noEmit -p web/tsconfig.json` exit 0. `graph.mjs --check`: G1 0 · G2 0 · G3 33 · G4 0 · G5 0 · G6 12, the same as round 1.
+  * Did not run `check_qa_explore_1025` (it fails earlier for reasons outside this PR, as the builder says). Its edit is the same one-line change as r1c's.
+* **The new check catches round 3's bug.** At 7042c1612 the client returned early with no request, so "the server confirms none of them" (`waitForResponse`) fails. The firm-record button was enabled there, so "m1: … disabled" fails too. r1c's red CI on 7042c1612 is a second, independent catch.
+* **My own walk** (scratch script, not committed; the pack's Visitor visa family case, officer):
+  * 17 sections show the words. 3 on the representative's tab say "…every answer here is confirmed already". 14 say "…no answer yet" (the application, each person's Employment, Education and so on, brothers and sisters).
+  * Every one has a disabled button. No section has words without a disabled button, or the reverse.
+
+## Your questions
+* **Point 3 still holds.** The row asks for "Confirm section disabled or explained when there is none", and it is now both:
+  * With nothing to send, the button is disabled, and visible words beside it say why.
+  * In a section where everything is confirmed, pressing Confirm section gives "…: nothing to confirm. Every answer here is confirmed already." The section pill already says "N answered · 0 to confirm" before the press.
+  * Nothing is silent any more. Round 3 also covered the confirmed case before any request, but the server is the right judge (below).
+* **A11y of the words beside a disabled button: good.**
+  * The words are plain visible text, rgb(89, 89, 89) on white, about 7:1 contrast.
+  * axe (WCAG 2.2 AA, `#agent-view`) finds 0 violations at 1440, 1024 and 375 px, with both kinds of words on screen.
+  * The accessibility tree reads in order: heading › pills › "Fill this from documents" › text "Nothing to confirm: …" › button "Confirm section" [disabled]. The words come right before the control they explain.
+  * Keyboard users skip the disabled button, as on main. The words are still read in browse mode, and the button's tooltip now only repeats them.
+  * Optional: `aria-describedby` from the button to the words. It is not needed for WCAG.
+  * Layout issue: see Minor m4.
+* **Races: none left that makes the words false.**
+  * When the page is stale and an answer arrived behind it, the server never replies "confirmed 0". `confirmSection` (`api/src/runtime.ts:886-891`) refuses with 409 if any current DECLARED answer is not in `seen`, or if any seen id is gone.
+  * So a 200 reply with `confirmed 0` and `awaiting_client 0` means every shown, non-firm answer is VERIFIED. "Every answer here is confirmed already" is then true. "Still unanswered: N" covers what is missing.
+  * Reproduced: the officer's page showed Sample Spouse A › National identity document as "5 answered · 0 to confirm". As Client A (API), I changed one answer, then pressed Confirm section on the stale page.
+    * The reply was **409**, and the toast said "Some answers in this section changed or arrived after you reviewed it; nothing was confirmed. Review them and confirm again."
+    * The pill refreshed to "1 to confirm". A second press said "1 answer confirmed."
+    * Double-click on a section: 1 POST.
+  * Two gaps remain, neither new:
+    * Answers the screen never shows (round 2 note (b): hidden cells; QA-164's left-out facts) are not "here".
+    * A page that is stale while its section still has no answer shows "no answer yet" until the next refresh. That is the same moment as main's disabled button, now with words.
+* **Editing the two other lanes' test lines: acceptable.**
+  * This PR's new words caused the strict-mode collision. Each edit narrows the step to the element it names: `ConfirmPill`'s exact "Entered by staff · to confirm" (`questionnaire.tsx:800`). The assertion is stricter, not weaker, and a comment cites QA-417.
+  * Areas are file ownership (WAY-OF-WORKING l.16), so name the two runtime and qa files in the PR body for their owners. No change asked.
+* **Toast tone: right.** `info` when 0 are confirmed: a green `ok` for an action that did nothing would claim too much. Errors stay `danger`, and `info` still applies whenever checks are open.
+
+## Issues (all Minor, Should; none blocks)
+* **m4. At 1024 px the words and the button separate** (`r4/hdr-firm-1024.png`, `r4/hdr-empty-1024.png`).
+  * The header is one flex-wrap row, so the words end up at the right of row 2 and the disabled button alone at the left of row 3. "Beside" holds only in reading order there.
+  * At 1440 and 375 px they sit together.
+  * Fix: wrap the words and the `Button` in one `<span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">` (`questionnaire.tsx:966-967`).
+* **m5. "Nothing to confirm: no answer yet" has no test line.** The pack check asserts only the firm-record wording. Add one line, for example the application tab's "Appointing or cancelling a representative" (0 answered): the words say "no answer yet", and the button is disabled.
+* **Note.** A press on a confirmed section now writes an audit line, "confirmed 0 answers in …" (2 in my run). That is main's behaviour, and the action did happen. Round 3 sent nothing.
+* **Still not filed** (rounds 2 and 3 asked for rows): the 200 % zoom header column; `check_qa293_rep_tab_browser`, `check_c611_imm5476_browser`, and now `check_qa_explore_1025` (QA-38's release name, and the `/Sample Applicant N/` tab regex). `qa/BUGS.md` and `BACKLOG.md` have none of them yet.
+
+## Journey (reviewer role), re-scored on the diff
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Pack check 53/53; r1c 140/140 |
+| Next step obvious | 1 | A disabled button now has words; a confirmed section's pill says 0 |
+| Plain words | 1 | "Nothing to confirm: no answer yet" / "…every answer here is confirmed already"; toast wording comes from the server |
+| Feedback and state | 1 | Words before the press, a toast after it; nothing is silent |
+| Correct data | 1 | A stale page gets 409, never a false "confirmed 0"; second press confirms 1 |
+| Error recovery | 1 | The 409 explains; the page refreshes; a second press works |
+| Accessibility and screen sizes | ½ | axe 0 at 1440, 1024 and 375 px; no sideways scroll; the 200 % zoom column is older code |
+| Speed | 1 | One POST per press; nothing added on load |
+| Visual quality | ½ | m4: words and button split at 1024 px |
+| Trust and sources | 1 | The server's reply decides the words |
+
+**9/10, pass (no criterion at 0).** To raise it: m4, then the zoom column row.
+
+**What I could not check:** a real screen reader; an intended user's unaided walk (D17 and D20 stay with the founder); `check_qa_explore_1025` up to its edited line. The `r4/*` screenshots are in my session scratchpad, not committed.
+
+**Verdict: Approve 2e894d654** (no open Blocker, Major or Must; m4 and m5 can follow). Journey score 9/10.
