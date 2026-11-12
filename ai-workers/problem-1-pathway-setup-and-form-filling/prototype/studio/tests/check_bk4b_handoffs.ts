@@ -24,8 +24,17 @@ ok("BK-4b: the pages are found", files.length >= 20, files.length);
 const hits = (f: string, re: RegExp) => read(f).split("\n").map((l, i) => ({ l: l.replace(/^\s*\/\/.*$/, "").replace(/\/\*.*?\*\//g, ""), n: i + 1 })).filter((x) => re.test(x.l)).map((x) => `${f}:${x.n}`);
 const switchWords = files.flatMap((f) => hits(f, /switch to\b/i));
 ok("BK-4b BR-1: no page tells the walker to switch person by hand (\"switch to …\")", switchWords.length === 0, switchWords);
+// Pages that may change the person themselves, at most this many times each, with the reason. Not a hand-off: the
+// person is chosen on purpose there (the other two ways BR-1 allows, the sign-in page and its stand-in).
+const PAGE_WRITES_ALLOWED: Record<string, number> = {
+  "pages/start.tsx": 1, // BK-5 PR 1 (P-484): "Sign in as the Configuration author" on Demo › Starting points, the sign-in's stand-in until BK-5 PR 2 links to /sign-in
+  "pages/sign-in.tsx": 1, // BK-4a (#1580, P-484): signing in on a role card (check_bk4a.ts ALLOWED); none until #1580 merges
+};
 const writes = files.flatMap((f) => hits(f, /\bsetActor\(|["']xr-actor["']/));
-ok("BK-4b BR-1: no page writes the person itself (setActor( or \"xr-actor\")", writes.length === 0, writes);
+const overOf = (ws: string[]) => Object.entries(ws.reduce<Record<string, number>>((m, h) => { const f = h.replace(/:\d+$/, ""); m[f] = (m[f] ?? 0) + 1; return m; }, {})).filter(([f, n]) => n > (PAGE_WRITES_ALLOWED[f] ?? 0));
+const over = overOf(writes);
+ok("BK-4b BR-1: no page writes the person itself (setActor( or \"xr-actor\"), besides the listed sign-in places", over.length === 0, { over, writes });
+ok("BK-4b BR-1 (fail): a planted second write on the start page, and one on review.tsx, are each caught", overOf([...writes, "pages/start.tsx:999"]).length === 1 && overOf([...writes, "pages/review.tsx:1"]).length === 1);
 const literal = files.flatMap((f) => hits(f, /<(?:Decide)?HandOff\b.*\buser-[A-Z]\b/));
 ok("BK-4b BR-3: no hand-off names a literal person id", literal.length === 0, literal);
 
