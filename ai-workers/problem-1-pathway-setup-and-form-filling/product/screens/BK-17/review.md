@@ -94,3 +94,48 @@ Minor because it needs a record made before this PR plus a later answer that mov
 **Could not check:** the builder's 9/17 on main's code (a second copy needed); 200 % zoom; a screen reader; an intended user's walk. Screenshots are in the reviewer's scratchpad (not committed).
 
 **To fix before Approve:** M1. Should: m1, m2, m3.
+
+## Round 2: re-review of `8b09dbc76` (diff `0646a9071..8b09dbc76` only)
+
+**Copy.** `rv_bk17` on :4439, started from a clean tree at `8b09dbc76`, stopped after the review. Live AI off, US$0.
+
+**What I ran (exit codes).**
+* `check_bk17_recorded_filing_api` 24/24 (exit 0). Its B2 check reads the stage route: 200, with the child's application listed as unrecorded.
+* `check_bk17_keep_recorded` 21/21 (exit 0).
+* Regression on the same copy, all exit 0:
+  * `check_b152_recorded_fees_api` 20/20
+  * `check_c82_record_api` 71/71
+  * `check_bk9_shared_filing_api` 16/16
+  * `check_c1112_prepare_api` 29/29
+  * `check_b164_no_engine_keys` 52/52
+* `tsc -p api/tsconfig.json`: 15 errors, none in the BK-17 files.
+* My probe was rewritten for round 2 (the round 1 scripts were gone from the scratchpad). It covered three cases:
+  * M1's split case: No → Yes, 15 reads at once, and the case page in the browser;
+  * a record made before BK-17;
+  * the route set as listed above.
+
+**My round 1 findings.**
+* **M1: fixed.** The case: the student's group is recorded and the child's split-out group is not; the child's answer changes to No.
+  * The child keeps their own application: same row, active, Ready to file, 4 items, a readiness entry.
+  * People and filings reads "Own application · Ready to file" (no more "No filing: not travelling").
+  * Submission to IRCC lists the child's group with "Record the submission…".
+  * GET …/filings agrees.
+  * Yes again restores the derived label.
+  * 15 reads at once: one version, 200, no new rows (2 filings, 2 groups). A second read gives the same version, and there are no page errors.
+* **m1: fixed for a group holding a recorded filing.** The one-person recorded group reads "One submission", with "Recorded as submitted to IRCC: it reads as it was recorded."
+* **m2: fixed for the items.** A record made before BK-17 is reactivated with its filed form items (2 of its 4 items), and readiness is now `ready: true`. Its label still reads "Outside Canada: …", as the PR now states (a record made before BK-17 stored no label). I accept that as a stated limitation.
+* **m3: fixed in pure checks.** `feesOnTheirFilings` now has pass, fail and control cases with real fee lines. The route check names its limit: there are no Study permit (outside Canada) fee lines on the checkpoint.
+
+**Left open. All Minor; none blocks.**
+* **r2-m1: the kept application is relabelled.** Before No, the child's kept, unrecorded application reads "Study permit: Sample Child A". After No it reads "Outside Canada: Sample Child A", while its items are still the study permit forms. It is not recorded, so this is not the row's rule, but it is confusing. If that group is then recorded, the label is frozen. (The breaker found the same; `submission-record.ts:122`.)
+* **r2-m2: the new group words are not on screen.** "Kept as prepared: …" and "Fees not worked out here: …" are in the API `why` only; no panel renders `groups[].why`. A group with `total_cents: null` would show no total and no reason. This is not reachable with shipped data (Study permit (outside Canada) has no fee lines on main).
+* **r2-m3: the mirror case.** The child's group is recorded and the student's is not. The unrecorded family group keeps its derived count and why (the breaker's B3 note; `submission-record.ts:134`).
+
+**Verdict: Approve** for commit `8b09dbc76`: no Blocker or Major is open. r2-m1 to r2-m3 are Should, for a later row.
+
+**Note.** At 05:06 UTC, after my runs, another session left uncommitted edits in this tree to:
+* `case-prepare.ts`, `case-filings.ts` and `submission-record.ts`;
+* both BK-17 tests;
+* `break-report.md`.
+
+They are not part of `8b09dbc76`, and I did not review them.
