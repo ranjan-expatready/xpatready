@@ -90,3 +90,10 @@ The risk is silent: if someone rewords a gate sentence, the step disappears for 
 **Not checked:** a real screen reader; an intended user's unaided walk (D17, D20 stay with the founder); two tabs submitting at once (the Submit is the existing tab's, unchanged here); the check run on main (inferred from the code, as above). At the caller's instruction, the journey test is in this file rather than a separate `journey-test-*.md`.
 
 Verdict: Approve. Blockers: none. Majors: none. Minors: m1 (add a returned-to-author step to `check_qa421`), m2 (an unambiguous combination name in the step; "waiting for your Submit"), m3 (a follow-up row for the tech lead, outside this row), m4 (note only).
+
+## Re-review at 7549aa6 (diff `cfd11fb..7549aa6`, PNGs excluded; my own copy on :4476, started and stopped in the same command)
+* **m1 closed.** New step 4b: the Content reviewer returns the Visitor visa (via `/signoff`, `action:"returned"`). Its setup line pins the sentence `/^Returned to the author/`, so all three `gateOf` sentences the regex depends on are now pinned. Then, at 1440 px, the author sees "Submit Visitor visa for review →" and no hand-off. `check_qa421` passed **18/18, twice**.
+* **m2 closed.** I walked it at 1440, 512 and 375 px with two unsubmitted combinations. The sentence now reads "Next: submit **Visitors › Visitor visa** for review (and 1 more to submit)". axe found 0 violations, nothing scrolls sideways, there were no page errors, and the Submit link is still the only filled button. The button keeps the short name ("Submit Visitor visa for review →", as the row asks). The full path sits beside it in the same panel, so the link's purpose is clear in context (WCAG 2.4.4).
+* m3 now sits with the tech lead as a follow-up row. m4 is resolved: the extra files were the builder's own suite run, and the builder reverted them. My runs left the working tree clean.
+
+Verdict: Approve (at 7549aa6). Blockers: none. Majors: none. Minors: none open (m3 is a follow-up row for the tech lead).
