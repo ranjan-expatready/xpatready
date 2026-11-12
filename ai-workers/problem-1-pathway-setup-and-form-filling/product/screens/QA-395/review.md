@@ -48,3 +48,21 @@ Diff only, `git diff c6a0c7636..0c87e7b74`: `engine/runtime/forms.ts` (countedOf
 No Blocker or Major remains open.
 
 **Verdict: Approve.** Commit **0c87e7b74ff227b9dc1a89f833969ebf6a10e688**.
+
+## Re-review (merge of main)
+Diff only. Approved c147783b0, then two commits: 4bcfaad1e merges origin/main 36e4a4d57 (#1563 merged), and c56da3ec3 updates #1563's own test. 12 Nov 2026, port 4457, fresh checkpoint copies, US$0.
+* **The merge keeps this PR unchanged.** `git diff 36e4a4d57 c56da3ec3 --stat` lists this PR's 9 files plus `tests/check_qa392b_recorded_yes_no.ts`, and nothing else. For each of the 9 files, the added and removed lines of `diff 7ad01b342..c147783b0` and of `diff 36e4a4d57..c56da3ec3` hash the same (sha1 compare). `render.ts` keeps `counted?: boolean | null`, and #1563's removal of `NOTHING_RECORDED` stands. `git grep NOTHING_RECORDED` finds it only in records (QA-392 and QA-392b), not in code.
+* **The test change is a correct knock-on, not a weakening.** #1563's Yes case relied on the old "any entry" reading: India is the principal's own country, so it now rightly gives N. The test now uses a stay that counts (United States, 3 to 1 years ago, answered by the client, then confirmed), so it still proves a Yes.
+* **The sheet now follows the count.** It builds its lines from the same marked boxes (`api/src/case-prepare.ts:911-914`, `markNothingRecorded` then `formValues`). Live on the Online IMM 5257 sheet:
+  - own country, one day in 2015: No
+  - Kenya for 2 years: Yes
+  - Kenya with no end date: no Q8 A line
+  - Kenya with dates typed backwards: no Q8 A line
+
+  These match the PDF in every case.
+* **Re-run on c56da3ec3:** `check_qa392b_recorded_yes_no` **14/14**, `check_qa395_q8a_counts` **9/9**, C7.3 **19/19** (with qa's C7.3-15v and C7.3-15; nothing HELD, no FAIL). The builder's other results are not re-run, because the merge changed no line of this PR.
+* **Note (follow-up, not this PR):** when Q8 A is left to a person, the Online sheet shows no line and says nothing about why. The PDF path does say why (by-hand line and readiness). This is #1563's merged design ("no line when it is left to a person"). Suggest a qa row so the Online officer also sees the reason.
+
+No Blocker or Major is open. The Minors m4, m5, m6 (label) and m7 stay as listed in the PR.
+
+**Verdict: Approve.** Commit **c56da3ec335a1db90fac37a1308776481ec31ff1**.
