@@ -31,6 +31,7 @@ import { CaseActorGuard, utf8Name } from "./case-checklist.ts";
 import { Runtime } from "./runtime.ts";
 import { CasePrepare, storedVersion } from "./case-prepare.ts";
 import type { FiledForm } from "./submission-record.ts";
+import { caseName } from "../../contracts/runtime.ts"; // A24-1: the reference, else the case number
 
 type H = string | undefined;
 type Upload = { fieldname?: string; originalname?: string; buffer?: Buffer; size?: number };
@@ -173,11 +174,11 @@ export class Submission {
       if (b.ucis.length) await tx.filingPersonRecord.createMany({ data: b.ucis.map((u) => ({ workspaceId: c.workspaceId, filingId: filingOfSubject.get(u.subject)!, subjectId: u.subject, uci: u.uci, recordedBy: actor.id })) });
       // AG-7-95 safety: no application number or UCI in the summary; the detail says which filings.
       await new Audit(tx as unknown as Db).log(c.workspaceId, actor.id, "recorded", "submission group", g!.id,
-        `On case ${short(c.id)} (${c.reference}): ${actor.name} recorded the submission of ${want.length} filing${want.length === 1 ? "" : "s"} to IRCC`, { filings: want, ucis: b.ucis.length });
+        `On case ${short(c.id)} (${caseName(c)}): ${actor.name} recorded the submission of ${want.length} filing${want.length === 1 ? "" : "s"} to IRCC`, { filings: want, ucis: b.ucis.length });
     }, { timeout: 15_000, maxWait: 10_000 });
-    const others = await this.db.filing.findMany({ where: { workspaceId: c.workspaceId, applicationNumber: { in: lines.map((l) => l.application_number) }, NOT: { id: { in: want } }, case: { firmKey: c.firmKey } }, select: { case: { select: { reference: true } } } });
+    const others = await this.db.filing.findMany({ where: { workspaceId: c.workspaceId, applicationNumber: { in: lines.map((l) => l.application_number) }, NOT: { id: { in: want } }, case: { firmKey: c.firmKey } }, select: { case: { select: { reference: true, caseNumber: true } } } });
     const after = await this.prepare.view(actor, c.id);
-    return { group: g!.id, recorded: want, warning: duplicateWarning(others.map((o) => o.case)), filings: after.filings.filter((f) => want.includes(f.id)), version: after.version };
+    return { group: g!.id, recorded: want, warning: duplicateWarning(others.map((o) => ({ reference: caseName(o.case) }))), filings: after.filings.filter((f) => want.includes(f.id)), version: after.version };
   }
 
   async correct(actor: Actor, filingId: string, body: unknown) {
@@ -203,12 +204,12 @@ export class Submission {
       await tx.filingRecordCorrection.create({ data: { workspaceId: c.workspaceId, filingId: f!.id, before, after: value, reason: b.reason, correctedBy: actor.id } });
       const person = this.r.peopleOf(c).find((p) => p.subjectId === f!.subjectId)?.label ?? "a person";
       await new Audit(tx as unknown as Db).log(c.workspaceId, actor.id, "corrected", "application number", f!.id,
-        `On case ${short(c.id)} (${c.reference}): ${actor.name} corrected the application number on ${person}'s recorded filing (reason given)`, { before, after: value });
+        `On case ${short(c.id)} (${caseName(c)}): ${actor.name} corrected the application number on ${person}'s recorded filing (reason given)`, { before, after: value });
     });
     // Review M2 (EXPERIENCE 8): the same number on another case of the firm warns, as recording and slice 1 do.
-    const others = await this.db.filing.findMany({ where: { workspaceId: c.workspaceId, applicationNumber: value, NOT: { id: f!.id }, case: { firmKey: c.firmKey } }, select: { case: { select: { reference: true } } } });
+    const others = await this.db.filing.findMany({ where: { workspaceId: c.workspaceId, applicationNumber: value, NOT: { id: f!.id }, case: { firmKey: c.firmKey } }, select: { case: { select: { reference: true, caseNumber: true } } } });
     const after = await this.prepare.view(actor, c.id);
-    return { filing: after.filings.find((x) => x.id === f!.id), warning: duplicateWarning(others.map((o) => o.case)), version: after.version };
+    return { filing: after.filings.find((x) => x.id === f!.id), warning: duplicateWarning(others.map((o) => ({ reference: caseName(o.case) }))), version: after.version };
   }
 
   /** Break M3 on #924: a person's UCI on a recorded filing, added later or corrected, kept with the reason (the old one
@@ -258,7 +259,7 @@ export class Submission {
       // Break R2-B1: a case entity ("person"), so the activity feed shows it only to this case's firm (studio.ts
       // CASE_ENTITIES), and no UCI in the line or its detail: the values are kept in filing_record_correction only.
       await new Audit(tx as unknown as Db).log(c.workspaceId, actor.id, was ? "corrected" : "added", "person", f.id,
-        `On case ${short(c.id)} (${c.reference}): ${actor.name} ${was ? "corrected" : "added"} ${person}'s UCI on a recorded filing (reason given)`, { field: "uci", subject: u.subject });
+        `On case ${short(c.id)} (${caseName(c)}): ${actor.name} ${was ? "corrected" : "added"} ${person}'s UCI on a recorded filing (reason given)`, { field: "uci", subject: u.subject });
     });
     const after = await this.prepare.view(actor, c.id);
     return { filing: after.filings.find((x) => x.id === f.id), warning: null, version: after.version };
