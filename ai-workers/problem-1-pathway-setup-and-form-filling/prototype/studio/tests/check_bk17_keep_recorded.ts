@@ -72,9 +72,19 @@ ok("BK-17 fail (break B3): the kept unrecorded application's group is never call
 const lines = [{ filing: "F-j", person: "j", amount: 100 }, { filing: "F-j", person: "k", amount: 100 }, { filing: "F-s", person: "s", amount: 150 }];
 const gs = [{ ...group("G", ["F-s"]), total_cents: 15000 }, { ...group("H", ["F-j"]), total_cents: 20000, totals: [{ line: "x" }] }];
 const fs = [{ id: "F-s", owner: { subject: "s" }, applicants: [{ subject: "s" }, { subject: "k" }] }, { id: "F-j", owner: { subject: "j" }, applicants: [{ subject: "j" }] }];
-const fe = feesOnTheirFilings(lines, gs, fs, { filing: (l) => l.filing, person: (l) => l.person, frozen: (g) => g === "G", labelOf: (x) => names[x] ?? x });
+const fe = feesOnTheirFilings(lines, gs, fs, { filing: (l) => l.filing, person: (l) => l.person, frozen: (g) => g === "G", labelOf: (x) => names[x] ?? x, held: new Set(["s", "k"]) });
 ok("BK-17 pass (break B4): the group that counted a person kept on a recorded filing shows no total, in words naming them", fe.groups.find((g) => g.id === "H")?.total_cents === null && /Child K is on an application already recorded/.test(fe.groups.find((g) => g.id === "H")?.why ?? "") && !fe.lines.some((l) => l.filing === "F-j"), [fe.groups, fe.lines]);
 ok("BK-17 fail (break B4): the recorded group and its lines are unchanged", fe.groups.find((g) => g.id === "G")?.total_cents === 15000 && fe.lines.some((l) => l.filing === "F-s" && l.person === "s"));
-const clean = feesOnTheirFilings(lines.filter((l) => l.person !== "k"), gs, fs, { filing: (l) => l.filing, person: (l) => l.person, frozen: () => false, labelOf: (x) => x });
+const clean = feesOnTheirFilings(lines.filter((l) => l.person !== "k"), gs, fs, { filing: (l) => l.filing, person: (l) => l.person, frozen: () => false, labelOf: (x) => x, held: new Set(["s", "k"]) });
 ok("BK-17 fail (break B4, control): with every line on its person's filing, lines and totals are as derived", clean.lines.length === 2 && clean.groups.find((g) => g.id === "H")?.total_cents === 20000);
+// Break re-check: with nobody held (nothing recorded), a line for a person on no filing is left as derived (no total blanked).
+const none = feesOnTheirFilings(lines, gs, fs.filter((f) => f.id === "F-j"), { filing: (l) => l.filing, person: (l) => l.person, frozen: () => false, labelOf: (x) => x, held: new Set() });
+ok("BK-17 fail (re-check): with nothing recorded, no group's total is blanked and the derived lines stand", none.groups.find((g) => g.id === "H")?.total_cents === 20000 && none.lines.filter((l) => l.filing === "F-j").length === 2, none);
+// Break re-check: the mirror of B1. The child's split-out group H is recorded; "No" puts the child on the student's
+// unrecorded filing in the derivation (group G says 2 people): the child is taken off it, so G is named for 1 person.
+const mirror = keepRecorded({ filings: [filing("s", "Outside Canada: Student", ["s", "k"])], groups: [{ ...group("G", ["F-s"]), label: "One submission for 2 people applying", why: "One application for the family." }] }, [row("k", ["k"], "Study permit: Child K", "H")], opts);
+ok("BK-17 pass (re-check, B3 mirror): an unrecorded group someone kept on a recorded filing was taken off is named for the people on it", mirror.groups.find((g) => g.id === "G")?.label === "One submission" && mirror.groups.find((g) => g.id === "G")?.why === "One application for the family.", mirror.groups);
+ok("BK-17 fail (re-check, B3 mirror): a group whose people are the derivation's keeps the derived header", keepRecorded({ filings: [filing("s", "Outside Canada: Student", ["s", "j"])], groups: [{ ...group("G", ["F-s"]), label: "One submission for 2 people applying" }] }, [row("k", ["k"], "Study permit: Child K", "H")], opts).groups.find((g) => g.id === "G")?.label === "One submission for 2 people applying");
+// Break re-check (new Minor): a kept unrecorded application says no document is decided for it, never the combination's name.
+ok("BK-17 pass (re-check): the kept unrecorded application reads \"Application kept as prepared: Child K\"", b1.filings.find((f) => f.id === "F-k")?.label === "Application kept as prepared: Child K", b1.filings.find((f) => f.id === "F-k")?.label);
 process.exitCode = summary() ? 1 : 0;

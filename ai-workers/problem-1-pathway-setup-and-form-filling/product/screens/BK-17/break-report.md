@@ -91,3 +91,54 @@ asked.
   - A first BK-9 run failed one line. The cause was `check_c1112_prepare_api`, run before it on the same copy, which
     releases a Visitor visa v2 with the child on the principal's application. The failure did not repeat on a clean
     load, so it is not a finding.
+
+## Re-check at 8b09dbc76
+
+Re-checked 12 Nov on a fresh copy `brk_bk17` on :4435, configured checkpoint, US$0. The copy is stopped and the
+scratch scripts are deleted. Results of the suites on this copy:
+- BK-17: 24/24 (API) and 21/21 (pure).
+- B152: 20/20. BK-9: 16/16. C11.12 prepare: 29/29.
+
+Live fee checks:
+- Visitor visa family of five (one child not travelling): CAD 570, 8 lines, on both routes.
+- Spouse sponsorship with a child: CAD 1,440, 3 lines.
+
+**B1: fixed.**
+Case: the student's group is recorded, the child's group was split out and is not recorded, then the answer is No.
+The child keeps their own filing (READY_TO_FILE, 4 items, row still active). The group reads "Kept as prepared…".
+This was checked over No → Yes → No, and the version is the same on every read.
+After that, recording the child's group works (200), and a later Yes changes nothing.
+
+**B2: fixed.** `GET …/stages/next` lists "K student" as unrecorded after No, so the stage's reason is required again
+(case-stages.ts:187).
+
+**B3: fixed for the recorded group, not fixed for the mirror case (Minor).**
+- Student recorded: the recorded group reads "One submission" ("Recorded as submitted to IRCC: it reads as it was
+  recorded.").
+- Mirror case (the child's split-out group recorded, then No): the unrecorded family group still reads "One submission
+  for 2 people applying" / "One application for the family." with only the student's filing in it, on `…/prepare` and
+  on `…/filings`.
+- Cause: the label is recomputed only when the group holds a recorded filing (submission-record.ts:134).
+
+**B4: fixed in code; checked pure only, because sp.outside has no fee lines on main.**
+I called `feesOnTheirFilings` on the mirror case with BK-15-style lines:
+- the unrecorded group shows `total_cents: null` with the words "Fees not worked out here: Kid is on an application
+  already recorded as submitted…";
+- no line is shown twice.
+
+Note on the same code: it runs on every case (case-prepare.ts:318, case-filings.ts:52). Given any line whose person is
+on no filing of the view, it blanks the group's total with the same "already recorded" words even when nothing is
+recorded (pure call, submission-record.ts:145). I found no such line in shipped data (the engine charges people on
+their own filing), so this is not a finding today.
+
+**B5: not fixed, as stated (it existed before this PR).**
+
+**New, Minor (words): the kept unrecorded application changes its label.**
+In the B1 case, after No the child's kept application reads **"Outside Canada: K student"**, where before it read
+"Study permit: K student".
+- Cause: a kept row has no stored label, so the combination label is used (submission-record.ts:122).
+- Recording it then freezes that label in `recorded_fees.labels`. A later Yes keeps "Outside Canada: K student", though
+  its items are the study permit forms (IMM 1294, IMM 5476) that were prepared under "Study permit".
+
+Unrelated: during this re-check, 4 screenshots under `screens/B171/screenshots/` show as modified in the working tree.
+I did not make or touch them.

@@ -36,7 +36,7 @@ import { lineCondition, render, type Role } from "../../engine/render.ts";
 import { conditionSubjects } from "../../engine/resolver.ts";
 import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
-import { feesOnTheirFilings, keepRecorded, keptRowsOf, recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
+import { feesOnTheirFilings, heldBy, keepRecorded, keptRowsOf, recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
 import { currentValues, factWords } from "../../engine/runtime/submission-record.ts";
 import { formValues, recordedYesNo } from "../../engine/form-values.ts";
 import { CaseForms, copyNotForFiling, formPassed, formReadinessOf, inventoryOf, plainWhy } from "./fill-case.ts";
@@ -301,7 +301,8 @@ export class CasePrepare {
     const fid = (x: string) => idOfFiling.get(x) ?? x;
     // BK-17: a recorded filing reads as recorded (its label, people and group), whatever the answers say now.
     const personOf = new Map(people.map((p) => [p.subjectId, p.label]));
-    const kept = keepRecorded({ filings: done.filings.map((f) => ({ ...f, id: fid(f.id) })), groups: done.groups.map((g) => ({ ...g, filings: g.filings.map(fid) })) }, keptRowsOf(first.filings, stored.filings, stored.groups),
+    const keptRows = keptRowsOf(first.filings, stored.filings, stored.groups);
+    const kept = keepRecorded({ filings: done.filings.map((f) => ({ ...f, id: fid(f.id) })), groups: done.groups.map((g) => ({ ...g, filings: g.filings.map(fid) })) }, keptRows,
       { labelOf: (x) => personOf.get(x) ?? "", combination: own!.combinationKey, combinationLabel: done.label, idOf: (r) => r.id, kindOf: (g) => kindOf.get(g) ?? "family" });
     // C11.12 (challenge M1, concept §6): each applicant's own mode (applying or declared only), never the filing's.
     const filings = kept.filings.map((f) => ({ id: fid(f.id), combination: f.combination, label: f.label, mode: f.mode, owner: f.owner, applicants: f.applicants.map((a) => ({ subject: a.subject, label: a.label, role: a.role, mode: a.mode })), group: f.group, status: f.status as string, number: f.number }));
@@ -315,7 +316,7 @@ export class CasePrepare {
       source: (f.source ?? done.groups.find((g) => g.filings.includes(f.filing))?.totals.find((t) => t.line === f.line)?.source)?.url ?? "Sample", source_detail: f.source ?? done.groups.find((g) => g.filings.includes(f.filing))?.totals.find((t) => t.line === f.line)?.source ?? null }));
     // BK-17 (break B4): a line only on a filing its person is on in the view; a group that charged someone kept on a
     // recorded filing says its fees are not worked out here.
-    const placed = feesOnTheirFilings(derivedFees0, kept.groups, filings, { filing: (l) => l.filing, person: (l) => l.subject, frozen: (g) => frozen.has(g), labelOf: (x) => personOf.get(x) ?? "a person" });
+    const placed = feesOnTheirFilings(derivedFees0, kept.groups, filings, { filing: (l) => l.filing, person: (l) => l.subject, frozen: (g) => frozen.has(g), labelOf: (x) => personOf.get(x) ?? "a person", held: heldBy(keptRows) });
     const derivedFees = placed.lines;
     const groups = placed.groups.map((g) => {
       const base = { ...g, reason: stored.groups.find((x) => x.id === g.id)?.reason ?? null }, f = frozen.get(g.id);

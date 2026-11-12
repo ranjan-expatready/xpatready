@@ -106,6 +106,9 @@ export type RecordedRow = { id: string; subjectId: string; submissionGroupId: st
 type Derived = { id: string; combination: string; label: string; mode: string; owner?: { subject: string; label: string; role: string }; applicants: { subject: string; label: string; role: string; mode: string }[]; group: string; status: string; number: string | null };
 type Group = { id: string; kind: "family" | "separate"; label: string; filings: string[]; splittable: boolean; why: string; totals: unknown[]; total_cents: number | null };
 
+/** The people on kept rows (their owners and applicants): the ones a derivation never moves (BK-17). */
+export const heldBy = (rows: RecordedRow[]) => new Set(rows.flatMap((r) => [r.subjectId, ...r.applicants.map((x) => x.subjectId)]));
+
 /** The labels "Record the submission" stores with a group (recorded_fees.labels, BK-17), by stored filing id. */
 export const recordedLabels = (groups: { recordedFees: unknown }[]) => new Map(groups.flatMap((g) => Object.entries(((g.recordedFees ?? {}) as { labels?: Record<string, string> }).labels ?? {})));
 
@@ -119,20 +122,25 @@ export function keepRecorded<F extends Derived, G extends Group>(d: { filings: F
   const byOwner = new Map(recorded.map((r) => [r.subjectId, r]));
   const held = new Set(recorded.flatMap((r) => [r.subjectId, ...r.applicants.map((x) => x.subjectId)]));
   const asRecorded = (r: RecordedRow, f?: F): F => ({ ...(f ?? { status: "NOT_STARTED", number: null }), id: f?.id ?? a.idOf(r), combination: f?.combination ?? a.combination,
-    label: r.label ?? f?.label ?? `${a.combinationLabel}: ${a.labelOf(r.subjectId)}`, mode: r.mode, group: r.submissionGroupId,
+    // Break re-check: a kept unrecorded application the derivation no longer makes has no document decided by today's
+    // answers: it says so (never the combination's name as if it were its document).
+    label: r.label ?? f?.label ?? (r.recorded === false ? `Application kept as prepared: ${a.labelOf(r.subjectId)}` : `${a.combinationLabel}: ${a.labelOf(r.subjectId)}`), mode: r.mode, group: r.submissionGroupId,
     owner: { subject: r.subjectId, label: a.labelOf(r.subjectId), role: r.applicants.find((x) => x.subjectId === r.subjectId)?.role ?? f?.owner?.role ?? "principal" },
     applicants: r.applicants.map((x) => ({ subject: x.subjectId, label: a.labelOf(x.subjectId), role: x.role, mode: x.mode })) }) as F;
   const filings = d.filings.flatMap((f) => { const r = byOwner.get(f.owner?.subject ?? ""); return r ? [asRecorded(r, f)] : held.has(f.owner?.subject ?? "") ? [] : [{ ...f, applicants: f.applicants.filter((x) => !held.has(x.subject)) }]; });
   for (const r of recorded) if (!d.filings.some((f) => f.owner?.subject === r.subjectId)) filings.push(asRecorded(r));
   const groups = [...d.groups, ...[...new Set(recorded.map((r) => r.submissionGroupId))].filter((g) => !d.groups.some((x) => x.id === g))
     .map((id) => ({ id, kind: a.kindOf(id), label: "One submission", filings: [], splittable: false, why: KEPT_WHY, totals: [], total_cents: null }) as unknown as G)];
-  // Break B3, review m1: a group with a recorded filing is named by the people applying on its filings as kept, and says
-  // it reads as recorded (never the derived group's count or reason, which follow today's answers).
+  // Break B3, review m1: a group with a recorded filing, or whose people differ from the derivation's (someone kept on a
+  // recorded filing taken off it), is named by the people applying on its filings as kept; a recorded one says it reads
+  // as recorded (never the derived group's count or reason, which follow today's answers).
   const recordedIds = new Set(recorded.filter((r) => r.recorded !== false).map((r) => r.subjectId));
+  const applyingOn = (fs: { applicants: { subject: string; mode: string }[] }[]) => new Set(fs.flatMap((f) => f.applicants.filter((x) => x.mode === "applying").map((x) => x.subject)));
   return { filings, groups: groups.map((g) => {
-    const mine = filings.filter((f) => f.group === g.id), applying = new Set(mine.flatMap((f) => f.applicants.filter((x) => x.mode === "applying").map((x) => x.subject)));
-    const isRecorded = mine.some((f) => recordedIds.has(f.owner?.subject ?? ""));
-    return { ...g, filings: mine.map((f) => f.id), ...(isRecorded ? { label: applying.size <= 1 ? "One submission" : `One submission for ${applying.size} people applying`, why: RECORDED_WHY } : {}) };
+    const mine = filings.filter((f) => f.group === g.id), applying = applyingOn(mine), derived = applyingOn(d.filings.filter((f) => g.filings.includes(f.id)));
+    const isRecorded = mine.some((f) => recordedIds.has(f.owner?.subject ?? "")), differs = applying.size !== derived.size || [...applying].some((x) => !derived.has(x));
+    const label = applying.size <= 1 ? "One submission" : `One submission for ${applying.size} people applying`;
+    return { ...g, filings: mine.map((f) => f.id), ...(isRecorded ? { label, why: RECORDED_WHY } : differs ? { label } : {}) };
   }).filter((g) => g.filings.length) };
 }
 const RECORDED_WHY = "Recorded as submitted to IRCC: it reads as it was recorded.";
@@ -143,13 +151,14 @@ const KEPT_WHY = "Kept as prepared: an answer would move its applicant onto an a
  *  group, that group's lines and totals counted them (a family maximum, who pays it): its fees are not worked out here,
  *  in words, never a wrong total (BR-10, nothing is guessed). Recorded groups read their frozen fees (B152) as before. */
 export function feesOnTheirFilings<L, G extends { id: string; filings: string[]; totals: unknown[]; total_cents: number | null; why: string }>(lines: L[], groups: G[], filings: { id: string; owner?: { subject: string }; applicants: { subject: string }[] }[],
-  a: { filing: (l: L) => string; person: (l: L) => string; frozen: (group: string) => boolean; labelOf: (subject: string) => string }): { lines: L[]; groups: G[] } {
+  a: { filing: (l: L) => string; person: (l: L) => string; frozen: (group: string) => boolean; labelOf: (subject: string) => string; held: Set<string> }): { lines: L[]; groups: G[] } {
   const on = (l: L) => { const f = filings.find((x) => x.id === a.filing(l)); return !!f && (f.owner?.subject === a.person(l) || f.applicants.some((x) => x.subject === a.person(l))); };
-  const off = lines.filter((l) => filings.some((f) => f.id === a.filing(l)) && !on(l));
+  // Only a person kept on a recorded filing is "off" (break re-check): with nothing recorded the derived lines stand.
+  const off = lines.filter((l) => filings.some((f) => f.id === a.filing(l)) && !on(l) && a.held.has(a.person(l)));
   const hit = new Map<string, string[]>();
   for (const l of off) { const g = groups.find((x) => x.filings.includes(a.filing(l))); if (g && !a.frozen(g.id)) hit.set(g.id, [...new Set([...(hit.get(g.id) ?? []), a.labelOf(a.person(l))])]); }
   if (!off.length) return { lines: lines.filter((l) => filings.some((f) => f.id === a.filing(l))), groups };
-  return { lines: lines.filter((l) => { const f = filings.find((x) => x.id === a.filing(l)); if (!f) return false; const g = groups.find((x) => x.filings.includes(f.id)); return on(l) && !(g && hit.has(g.id)); }),
+  return { lines: lines.filter((l) => { const f = filings.find((x) => x.id === a.filing(l)); if (!f) return false; const g = groups.find((x) => x.filings.includes(f.id)); return !off.includes(l) && !(g && hit.has(g.id)); }),
     groups: groups.map((g) => hit.has(g.id) ? { ...g, totals: [], total_cents: null, why: `Fees not worked out here: ${hit.get(g.id)!.join(" and ")} ${hit.get(g.id)!.length > 1 ? "are" : "is"} on an application already recorded as submitted, so this submission's fees cannot be counted with them; nothing is guessed.` } : g) };
 }
 
