@@ -144,7 +144,7 @@ tr:hover td{background:var(--surface)}
       <h1 id="case-h" class="grow">C-2026-00042 · Client A <span class="pill need" style="vertical-align:middle">Needs you</span></h1>
       <span class="small muted">Your ref: STU-118 · Opened 4 Nov</span>
     </div>
-    <p class="header-meta">Client: <strong>Client A</strong> (principal applicant) · Retainer: signed 1 Nov, version 2 · Lead representative: Representative 1 · Case officer: Officer 1</p>
+    <p class="header-meta">Client: <strong>Client A</strong> · Retainer: signed 1 Nov, version 2 · Lead representative: Representative 1 · Case officer: Officer 1</p>
 
     <div class="next" role="region" aria-label="Next step">
       <div class="grow">
@@ -159,38 +159,33 @@ tr:hover td{background:var(--surface)}
         <h2>Applications <span class="muted small">· 4, sent together</span></h2>
         <button class="btn" type="button" title="Adds services: a retainer amendment on this case">Add an application</button>
       </div>
-      <div class="grid">
-        <article class="card" aria-labelledby="app1">
-          <div class="row"><h3 id="app1" class="grow">Study permit</h3><span class="pill ok">Forms ready</span></div>
-          <dl class="kv"><dt>Principal</dt><dd>Client A</dd><dt>Configured as</dt><dd>Individual › Study › Study permit (outside Canada), release 3</dd><dt>Fee</dt><dd>CAD 150 + biometrics (family maximum)</dd><dt>IRCC number</dt><dd class="muted">Given when filed</dd></dl>
-          <div class="foot"><span class="small muted">Next: wait for the family's other applications</span><a href="#case">Open</a></div>
-        </article>
-        <article class="card" aria-labelledby="app2">
-          <div class="row"><h3 id="app2" class="grow">Work permit (open)</h3><span class="pill need">Needs you</span></div>
-          <dl class="kv"><dt>Principal</dt><dd>Spouse A</dd><dt>Configured as</dt><dd>Individual › Work › Open work permit, spouse of a student, release 1</dd><dt>Fee</dt><dd>CAD 155 + CAD 100 open work permit holder fee <span class="sample">Sample</span></dd><dt>IRCC number</dt><dd class="muted">Given when filed</dd></dl>
-          <div class="foot"><span class="small next-need">Next: check 2 answers</span><a href="#case">Open</a></div>
-        </article>
-        <article class="card" aria-labelledby="app3">
-          <div class="row"><h3 id="app3" class="grow">Study permit</h3><span class="pill wait">Waiting on client</span></div>
-          <dl class="kv"><dt>Principal</dt><dd>Child A1, 15 (a parent signs)</dd><dt>Configured as</dt><dd>Individual › Study › Study permit (outside Canada), release 3</dd><dt>Fee</dt><dd>CAD 150 + biometrics (family maximum)</dd><dt>IRCC number</dt><dd class="muted">Given when filed</dd></dl>
-          <div class="foot"><span class="small muted">Next: client answers 3 school questions</span><a href="#case">Open</a></div>
-        </article>
-        <article class="card" aria-labelledby="app4">
-          <div class="row"><h3 id="app4" class="grow">Visitor visa</h3><span class="pill ok">Forms ready</span></div>
-          <dl class="kv"><dt>Principal</dt><dd>Child A2, 6</dd><dt>Configured as</dt><dd>Individual › Visitors › Visitor visa, release 2</dd><dt>Fee</dt><dd>CAD 100 + biometrics (family maximum)</dd><dt>IRCC number</dt><dd class="muted">Given when filed</dd></dl>
-          <div class="foot"><span class="small muted">Next: nothing for now</span><a href="#case">Open</a></div>
-        </article>
+      <div style="overflow-x:auto">
+      <table>
+        <caption class="muted small" style="text-align:left;padding-bottom:6px">One application per person; each opens its own page, quick details in a panel on the right</caption>
+        <thead><tr><th scope="col">Principal applicant</th><th scope="col">Application</th><th scope="col">Linked to</th><th scope="col">Status</th><th scope="col">Fee (CAD)</th><th scope="col">IRCC number</th><th scope="col">Next step</th></tr></thead>
+        <tbody>
+          <tr><td><a href="#case">Client A</a></td><td>Study permit<span class="ref">Study permit (outside Canada), release 3</span></td><td class="muted">—</td><td><span class="pill ok">Forms ready</span></td><td>150 + biometrics</td><td class="muted">When filed</td><td class="muted">Wait for the others</td></tr>
+          <tr><td><a href="#case">Spouse A</a></td><td>Work permit (open)<span class="ref">from the Study permit release, Spouse line</span></td><td>Depends on Client A's study permit</td><td><span class="pill need">Needs you</span></td><td>155 + 100 open work permit holder fee <span class="sample">Sample</span></td><td class="muted">When filed</td><td class="next-need">Check 2 answers</td></tr>
+          <tr><td><a href="#case">Child A1</a>, 15</td><td>Study permit<span class="ref">added: studies 6 months or more</span></td><td>Accompanies Client A</td><td><span class="pill wait">Waiting on client</span></td><td>150 + biometrics</td><td class="muted">When filed</td><td>Client answers 3 school questions</td></tr>
+          <tr><td><a href="#case">Child A2</a>, 6</td><td>Visitor visa<span class="ref">from the Study permit release, Child line</span></td><td>Accompanies Client A</td><td><span class="pill ok">Forms ready</span></td><td>100 + biometrics</td><td class="muted">When filed</td><td class="muted">Nothing for now</td></tr>
+        </tbody>
+      </table>
       </div>
-      <div class="group">Submission group: all four applications go together (same time and place), so IRCC's family maximum for biometrics applies once. Each application keeps its own forms, fee, decision and IRCC number; on a temporary application each person is principal on their own and nobody is a co-applicant.</div>
+      <div class="group">Submission group: all four go together (same time and place), so IRCC's family maximum for biometrics applies once. Each application keeps its own forms, fee, decision and IRCC number; each person is the principal applicant of their own, and nobody is a co-applicant. "Depends on" uses IRCC's sense of principal applicant: the student whose permit the spouse's open work permit rests on (Sample until the immigration expert confirms).</div>
     </div>
 
     <div class="section">
       <div class="section-head"><h2>People <span class="muted small">· 4</span></h2><button class="btn" type="button">Add a person</button></div>
-      <div class="grid">
-        <article class="card"><h3>Client A</h3><p class="small muted" style="margin:0">Principal applicant · client of the case · signed the retainer</p><p class="small" style="margin:0">On: Study permit</p></article>
-        <article class="card"><h3>Spouse A</h3><p class="small muted" style="margin:0">Spouse · co-signed the retainer · keeps answers private from the client</p><p class="small" style="margin:0">On: Work permit (open) · own IMM 5476 copy on file</p></article>
-        <article class="card"><h3>Child A1</h3><p class="small muted" style="margin:0">Child, 15 · answered by a parent</p><p class="small" style="margin:0">On: Study permit</p></article>
-        <article class="card"><h3>Child A2</h3><p class="small muted" style="margin:0">Child, 6 · answered by a parent</p><p class="small" style="margin:0">On: Visitor visa</p></article>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th scope="col">Person</th><th scope="col">On the case as</th><th scope="col">Retainer</th><th scope="col">Answers</th></tr></thead>
+        <tbody>
+          <tr><td>Client A</td><td>Client of the case</td><td>Signed</td><td>Own; answers for the children</td></tr>
+          <tr><td>Spouse A</td><td>Spouse</td><td>Co-signed</td><td>Own link; kept private from the client</td></tr>
+          <tr><td>Child A1, 15</td><td>Child</td><td class="muted">—</td><td>Answered by a parent</td></tr>
+          <tr><td>Child A2, 6</td><td>Child</td><td class="muted">—</td><td>Answered by a parent</td></tr>
+        </tbody>
+      </table>
       </div>
     </div>
 
@@ -198,8 +193,8 @@ tr:hover td{background:var(--surface)}
       <a href="#case">Questionnaire</a><a href="#case">Documents</a><a href="#case">Review</a><a href="#case">Submission</a><a href="#case">Activity</a>
     </nav>
     <ul class="notes">
-      <li>One card per application (BIC-08); "Open" leads to that application's own page (forms, documents, checks, fee, record), with quick details in a drawer. No sub-tab per application.</li>
-      <li>Each application names its own combination and release (the M4 model). Today the app reaches the spouse's and children's applications through the Study permit combination's "added filings".</li>
+      <li>Applications and people are tables, as the team's style guide asks for more than one record; a row opens the application's own page (forms, documents, checks, fee, record) or a panel on the right. No sub-tab per application.</li>
+      <li>Today's model, as shown: the spouse's and children's applications come from the Study permit release's lines and added filings (BK-15, BK-17). A combination per application is designed, and built only when a household needs a mix this cannot express.</li>
       <li>"Add an application" offers combinations of the case's pathway; a new family member's application is a retainer amendment on this case. Another pathway (an employer's LMIA) says "Open a linked case".</li>
     </ul>
   </section>
