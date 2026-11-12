@@ -306,7 +306,7 @@ function CasePage() {
           {c.team ? <CaseTeamChip caseId={c.id} line={c.team} /> : null}
           {c.employer_link ? <div className="mt-1"><EmployerLinkLine link={c.employer_link} caseId={c.id} /></div> : null}
           <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · <span data-household-to-confirm={v.summary.answered - v.summary.confirmed}>{v.summary.answered - v.summary.confirmed} to confirm</span> · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>
-          {confirmTabs.length ? <p className="mt-1 text-sm text-text-muted" data-household-tabs>To confirm, in the Agent view: {confirmTabs.map((t, i) => <React.Fragment key={t.id}>{i ? " · " : ""}<a href={tabHash(t.id)} data-household-tab={t.id} className="inline-flex min-h-6 items-center font-medium text-text-link hover:underline">{t.label} ({t.n})</a></React.Fragment>)}</p> : null}
+          {confirmTabs.length ? <p className="mt-1 text-sm text-text-muted" data-household-tabs>To confirm, in the Agent view: {confirmTabs.map((t, i) => <span key={t.id} className="whitespace-nowrap">{i ? "· " : ""}<a href={tabHash(t.id)} data-household-tab={t.id} className="inline-flex min-h-6 items-center whitespace-normal font-medium text-text-link hover:underline">{t.label} ({t.n})</a>{" "}</span>)}</p> : null}
         </div>
         <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">
           <p className="font-medium">Client questionnaire</p>

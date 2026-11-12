@@ -3,7 +3,8 @@
 // §2-§3), at 1440 px as the case officer, before and after Confirm section:
 //   * the household line's "to confirm" = the sum of the people's tabs ("N to confirm") = the sum of every section's pill;
 //   * the household line names each tab with something to confirm, and its link opens that tab;
-//   * Confirm section on a section with nothing to confirm says so, and sends nothing.
+//   * Confirm section on a section with nothing to confirm says so, and sends nothing; in true words (review m1, m2): a
+//     firm-record section's answers are confirmed, and an answer the officer recorded waits for the client.
 // Before the fix the tabs carry no count and the household line names no tab, so this fails there.
 // When the copy has no Visitor visa or Study permit combination it loads the configured checkpoint (POST /demo/load), as
 // the rehearsal did. No model call (US$0).
@@ -137,6 +138,44 @@ async function walk(p, id, tag, shot) {
   p.off("request", onReq);
   ok(`${tag}: and sends nothing`, sent === 0, sent);
   await shot(`${tag}-02-nothing-to-confirm`);
+
+  // Review m1: a section of firm-record answers (the representative's tab) has answers, all confirmed: never "No answer".
+  const toast = (re) => p.getByText(re).last();
+  const repTab = p.locator('[role="tab"]', { hasText: /^The representative/ });
+  if (await repTab.count()) {
+    await repTab.first().click();
+    const firm = p.locator('#agent-view section[aria-labelledby^="h-"]').filter({ has: p.locator("button[data-nothing-to-confirm]") }).filter({ hasText: /[1-9]\d* answered · 0 to confirm/ }).first();
+    ok(`${tag} m1: the representative's tab has a firm-record section with nothing to confirm`, (await firm.count()) === 1);
+    if (await firm.count()) {
+      const title = (await firm.locator("h2").innerText()).trim();
+      await firm.getByRole("button", { name: "Confirm section" }).click();
+      const said = toast(new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} for .*: nothing to confirm\\.`));
+      await said.waitFor(T).catch(() => {});
+      const text = await said.innerText().catch(() => "");
+      ok(`${tag} m1: it says its answers are confirmed, never "No answer is given here yet"`, /Every answer here is confirmed already\./.test(text) && !/No answer is given/.test(text), text);
+    }
+  }
+
+  // Review m2: a background answer the officer recorded waits for the client: Confirm section never says "confirmed already".
+  const view = (await call("GET", `/runtime/cases/${id}/questionnaire?mode=agent`)).body;
+  const bg = (view?.sections ?? []).filter((x) => x.subjectId === target.id && !x.group).flatMap((x) => x.questions.filter((q) => q.background && q.answer && !q.group && q.answer.status === "VERIFIED" && !q.answer.awaits_client).map((q) => ({ x, q })))[0];
+  if (tag === "vv") ok(`${tag} m2 setup: the tab has a confirmed background answer`, !!bg, target);
+  if (bg) {
+    const { x, q } = bg, other = (q.options ?? []).map((o) => o.code ?? o.value ?? o).find((v) => JSON.stringify(v) !== JSON.stringify(q.answer.value));
+    const put = await call("PUT", `/runtime/cases/${id}/answers/${q.subjectId}/${q.fact}`, { value: other ?? (q.value_type === "date" ? "1991-02-02" : "Sample recorded by phone"), expectedId: q.answer.id });
+    ok(`${tag} m2 setup: the officer records it again (it now waits for the client)`, put.status < 300, put.body);
+    await p.reload();
+    await p.locator('[role="tablist"][aria-label="Whose answers"]').waitFor(T);
+    await p.locator(`[role="tab"][data-tab="${target.id}"]`).click();
+    const sec = p.locator(`section[id="s-${x.subjectId}-${x.section}"]`);
+    await sec.waitFor(T);
+    ok(`${tag} m2: with only an answer waiting for the client, the section has nothing for the officer to confirm`, (await sec.locator("button[data-nothing-to-confirm]").count()) === 1);
+    await sec.getByRole("button", { name: "Confirm section" }).click();
+    const said = toast(/: nothing to confirm\..*wait/);
+    await said.waitFor(T).catch(() => {});
+    const text = await said.innerText().catch(() => "");
+    ok(`${tag} m2: it says what waits for the client, never "confirmed already"`, /1 recorded by staff waits for the client to re-confirm\./.test(text) && !/confirmed already/.test(text), text);
+  }
 }
 
 (async () => {

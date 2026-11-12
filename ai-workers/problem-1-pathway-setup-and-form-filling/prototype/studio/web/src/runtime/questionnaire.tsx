@@ -910,7 +910,10 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
   const waiting = [...s.questions.flatMap(shownAnswers), shownGroup].filter((a) => a && a.awaits_client).length;
   async function confirm() {
     if (nothing) {
-      toast.push({ tone: "info", text: `${s.title} for ${inSentence(s.about_label)}: nothing to confirm. ${!seen.length ? "No answer is given here yet." : "Every answer here is confirmed already."}${waiting ? ` ${waiting} recorded by staff wait${waiting === 1 ? "s" : ""} for the client to re-confirm.` : ""}${s.missing.length ? ` Still unanswered: ${s.missing.length}.` : ""}` });
+      // Review m1, m2: "no answer" only when none is given (firm-record answers are given and confirmed, never "seen");
+      // "confirmed already" never beside answers that wait for the client.
+      const why = !s.answered ? " No answer is given here yet." : waiting ? "" : " Every answer here is confirmed already.";
+      toast.push({ tone: "info", text: `${s.title} for ${inSentence(s.about_label)}: nothing to confirm.${why}${waiting ? ` ${waiting} recorded by staff wait${waiting === 1 ? "s" : ""} for the client to re-confirm.` : ""}${s.missing.length ? ` Still unanswered: ${s.missing.length}.` : ""}` });
       return;
     }
     setBusy(true);
