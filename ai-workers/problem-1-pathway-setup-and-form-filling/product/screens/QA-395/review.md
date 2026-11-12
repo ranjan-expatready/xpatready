@@ -66,3 +66,32 @@ Diff only. Approved c147783b0, then two commits: 4bcfaad1e merges origin/main 36
 No Blocker or Major is open. The Minors m4, m5, m6 (label) and m7 stay as listed in the PR.
 
 **Verdict: Approve.** Commit **c56da3ec335a1db90fac37a1308776481ec31ff1**.
+
+## Re-review (merge with QA-403), fresh reviewer
+Diff only. Last approved head 2f1379ee1, then one merge, 272972e95, of origin/main b29d04a20 (brings in #1588, QA-403). I did not build or review this PR before. 12 Nov 2026, ports 4456 and 4457, fresh isolated copies, live AI off, US$0.
+* **The two conflicted files are main's version plus exactly this PR's lines.** `git diff b29d04a20 272972e95` on `p5/transforms.ts` adds the same 6 lines as this PR's own diff (`git diff 36e4a4d57 2f1379ee1`): the `counted`/`countedWhy` doc and field, and the two `ctx.counted` lines at the head of the RECORDED branch (`transforms.ts:144-146`). On `engine/form-values.ts`, the only change is the `runTransform` call and the `why` line (`form-values.ts:71-72`). The call has QA-403's `ownFact`/`words` and this PR's `...(r.counted !== undefined ? {counted, countedWhy} : {})`, each once. The `why` keeps `r.nothing_recorded || r.counted !== undefined`. Nothing from either side is lost or doubled.
+  - QA-403's `wordsInSteps` import, `Entry.transform`, the `wordsOf` map (`form-values.ts:52-55`), `wordOf`/`TICK_EQ`/`tickByName`/`notAWord`, the `as_is (plain-language …)` step and the tick steps (`transforms.ts:205-220`) are all byte-for-byte main's.
+* **The rest of the merge is main's own work.** `git diff 2f1379ee1 272972e95 --stat` lists 73 files. Every file this PR does not touch is identical to b29d04a20. `git diff --name-only b29d04a20 272972e95` lists exactly this PR's 10 files.
+  - For 8 of the 10, the added and removed lines equal this PR's own diff (sorted-hash compare): `forms.ts`, `render.ts`, the counts file, the 3 tests and the 2 records.
+  - The other 2 are the conflicted files, checked line by line above.
+  - Main changed neither `render.ts` nor `runtime/forms.ts` (`git diff 36e4a4d57 b29d04a20` is empty for both).
+* **No wrong interaction inside `runTransform`.** RECORDED is matched before the tick steps, and no tick spelling matches RECORDED (it needs "… recorded" or "any …" after `derived:`). The tick steps never read `counted`. RECORDED never reads `ownFact`/`words`. My pure probe (scratchpad only, not committed) used the real Q8 A step:
+  - Q8 A with `counted: false` plus `ownFact`/`words`, and an entry present: N
+  - `counted: true`: Y
+  - `counted: null`: the `countedWhy` text, by hand
+  - no `counted`: the old path, Y
+  - `checked_if_application_type_is_visitor` with `counted` set: visitor gives 1, worker gives 0, "vistor" goes by hand ("not one of the words this form takes (visitor, worker)")
+  - `TICK_EQ` "1 if case.representative_form_action = appoint" with `counted: null`: 1
+* The legacy caller `p5/engine.ts:313` passes no context, and neither side changed it.
+* **Re-run on 272972e95:**
+  - Pure: `check_qa395_counted` 22/22, `check_qa392_nothing_recorded_sheet` 17/17, `check_vv_answer_sheet` 47/47, `check_forms_b86_fill` 35/35, `check_qa165_gate_follow_ups` 38/38.
+  - Server, `forms_rv8` on 4456: `check_qa403_who_fills` **36/36**, `check_qa395_q8a_counts` **9/9**.
+  - Server, `forms_rv9` on 4457: `check_c72_imm5257_fill` 57/57, `check_qa392b_recorded_yes_no` 14/14.
+  - Both copies were stopped and their databases removed.
+  - Type check (`tsc -p studio/api/tsconfig.json`): 15 errors, all in 5 test files that neither this PR nor the conflict touches (`check_c18_age_case`, `check_c69_runs`, `check_cost_check`, `check_vv_checklist`, `check_x2b_bulk_apply`). None are in `transforms.ts`, `form-values.ts` or `runtime/forms.ts`.
+  - Not re-run: Gate B (C7.2 3/11 as on main, C7.3, C7.3-screen, C7.3-tick). The builder reports them green or unchanged, and the merge changed no line of this PR.
+* **Journey score: 8/10 (pass)**, unchanged from `journey-test-reviewer-2026-11-11.md`. The merge changes no screen and no wording. The Q8 A fill journeys still pass as scripted checks on fresh checkpoints: the counted Yes, the counted No, the by-hand case with its reason, and QA-403's case-officer journey. I did not re-walk them in a browser. D17/D20 stay with the founder.
+
+No Blocker or Major is open. The Minors m4, m5, m6 (label) and m7 stay as listed in the PR.
+
+**Verdict: Approve.** Commit **272972e95ef0bd2de8ee3fd53365f3a50a1c9f78**.
