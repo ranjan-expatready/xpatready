@@ -1,0 +1,92 @@
+# Script outputs, 12 Nov IST, sample cut at main 5797feb18 (#1628) (our app only; the team's app is measured in the private comparison). Re-run commands in the plan's Evidence section.
+
+## measure_structure.py
+[ours] api: folders=2 files=228 test_files=0 lines=32931
+[ours] api non-test files=228 median_lines=67.0 p90=364 max=1284 over800=6 over500=16
+[ours] routes=401 controllers=69 nest_@Module=1 prisma_models=103
+[ours] files per folder: median=87 p90=87 max=87
+[ours] largest non-test api files: [(1284, 'api/src/studio.ts'), (1035, 'api/src/proposals.ts'), (996, 'api/src/sources.ts'), (988, 'api/src/case-prepare.ts'), (978, 'api/src/runtime.ts'), (952, 'api/src/finder.ts'), (728, 'api/src/case-documents.ts'), (654, 'api/src/programs.ts')]
+[ours] web: non-test files=125 test files=0 lines=20668 tsx=114 median=117 p90=366 max=1052 over800=1
+[ours] web top folders: [('components', 51), ('pages', 34), ('runtime', 29), ('lib', 7), ('(top)', 4)]
+[ours] largest web files: [(1052, 'runtime/questionnaire.tsx'), (670, 'pages/programs.tsx'), (589, 'pages/workspace/questionnaires.tsx'), (579, 'pages/structure.tsx'), (488, 'pages/review-items.tsx'), (461, 'pages/workspace/forms.tsx')]
+
+## gates_app_prs.py
+app PRs 301 with Approve comment and label 131
+created->first Approve (build, own CI, review rounds): median 0.92 h, p75 1.52, p90 4.68, sum 571.0 h
+first Approve->first label: median 0.72 h, p75 3.45, p90 7.34, sum 333.9 h
+last label->merged (queue, batch run, dequeues): median 1.06 h, p75 1.83, p90 2.52, sum 200.6 h
+label removals on app PRs: 90 PRs with >=1: 66 with >=3: 5
+excess waiting beyond the mechanical floor: Approve->label 271 PR-h (n=131, floor 1.0 h), label->merge 109 PR-h (floor 0.7 h)
+Approve->label over 3 h: 34 of 131
+
+## conflict_breakdown.py
+app PRs 301 with a real conflict 86
+conflict file-hits by group: {'other': 3, 'app': 173, 'tests': 36, 'records/docs': 49} total 261
+app files with conflicts: 66 hits 173
+  api/src/demo.ts	16	cumulative 9%
+  api/src/case-prepare.ts	12	cumulative 16%
+  api/src/runtime.ts	9	cumulative 21%
+  prisma/schema.prisma	9	cumulative 27%
+  engine/runtime/case.ts	8	cumulative 31%
+  web/src/runtime/questionnaire.tsx	7	cumulative 35%
+  api/src/main.ts	7	cumulative 39%
+  web/src/runtime/cases.tsx	6	cumulative 43%
+  contracts/runtime.ts	5	cumulative 46%
+  api/src/review-queue.ts	5	cumulative 49%
+  engine/runtime/readiness.ts	5	cumulative 51%
+  api/src/library-changes.ts	4	cumulative 54%
+  web/src/pages/review-items.tsx	4	cumulative 56%
+  web/src/pages/review.tsx	4	cumulative 58%
+  api/src/studio.ts	4	cumulative 61%
+Little's law over 257 h: throughput 1.17 app PRs/h (28.1/day), mean time in system W 6.28 h, mean WIP L 7.34 (check L = lam*W = 7.34)
+
+## module_span.py
+module	files	lines
+library	115	14834
+release	47	9507
+structure	36	8104
+case-core	52	7277
+sources	21	5212
+case-submission	30	5196
+case-forms	26	4469
+demo-data	76	4216
+platform	31	3375
+ai-gateway	21	3254
+case-documents	13	2733
+questionnaire-design	11	2324
+case-questionnaire	10	2270
+UNMAPPED	26	1448
+unmapped: ['api/src/features/visitor-visa-filings.ts', 'engine/published-date.ts', 'engine/agreement.ts', 'web/src/components/before-forms.tsx', 'web/src/components/ui/tabs.tsx', 'web/src/components/ui/card.tsx', 'web/src/components/ui/empty-state.tsx', 'web/src/components/ui/tooltip.tsx', 'web/src/components/ui/error-state.tsx', 'web/src/components/ui/badge.tsx', 'web/src/components/ui/spinner.tsx', 'web/src/components/ui/controls.tsx', 'web/src/components/ui/skeleton.tsx', 'web/src/components/lifecycle/index.tsx', 'web/src/lib/item-words.ts', 'web/src/lib/utils.ts', 'web/src/lib/api.ts', 'web/src/lib/simulated-people.ts', 'web/src/lib/form-fields-way-out.ts', 'web/src/pages/workspace/setup-rail.tsx', 'web/src/pages/workspace/find-key.ts', 'web/src/pages/workspace/overview.tsx', 'contracts/case-check-words.ts', 'samples/finder-saved-runs.json', 'samples/form-library-sample.json', 'samples/review-corrections.json']
+app PRs 301; modules touched per PR (demo-data and schema not counted): {0: 13, 1: 75, 2: 70, 3: 55, 4: 41, 5: 47}
+PRs touching prisma/schema.prisma: 38
+app PRs per module: [('release', 120), ('library', 117), ('case-forms', 89), ('case-core', 89), ('structure', 82), ('platform', 69), ('case-submission', 63), ('sources', 56), ('case-questionnaire', 51), ('questionnaire-design', 32), ('ai-gateway', 31), ('case-documents', 28), ('UNMAPPED', 21)]
+top module pairs: [(('library', 'release'), 66), (('release', 'structure'), 55), (('library', 'structure'), 49), (('case-forms', 'release'), 40), (('platform', 'release'), 40), (('case-forms', 'library'), 37), (('platform', 'structure'), 37), (('case-core', 'case-questionnaire'), 36), (('case-core', 'release'), 35), (('case-core', 'case-forms'), 35), (('case-core', 'library'), 34), (('case-forms', 'structure'), 32)]
+hub files: app PRs touching each: [('studio', 39), ('validate', 28), ('render', 20), ('main', 19), ('App', 11), ('core', 4), ('api', 2), ('routes-data', 1)]
+modules per PR with hub files excluded: {0: 19, 1: 83, 2: 69, 3: 59, 4: 31, 5: 40}
+coarse streams per PR (configurator / case-delivery / platform), hubs excluded: {0: 19, 1: 154, 2: 91, 3: 37} [(('case-delivery', 'configurator'), 59), (('case-delivery', 'configurator', 'platform'), 37), (('configurator', 'platform'), 28), (('case-delivery', 'platform'), 4)]
+
+## flow_app_prs.py
+sample: merged PRs 2-12 Nov IST: 657 app: 301
+app open->merge h: median 3.25 p75 6.76 p90 12.29
+app lines: median 100 p90 505 >800: 11
+day	app_merged	median_h	median_lines	with_conflict
+2026-11-02	65	1.68	72	17
+2026-11-03	58	1.89	78	11
+2026-11-04	31	4.91	89	11
+2026-11-05	23	4.88	152	13
+2026-11-06	12	4.83	152	3
+2026-11-07	25	4.66	79	7
+2026-11-08	16	7.45	261	8
+2026-11-09	25	7.35	185	8
+2026-11-10	9	3.43	47	1
+2026-11-11	18	3.34	137	1
+2026-11-12	19	9.66	103	6
+band	n_noconf	med_h_noconf	n_conf	med_h_conf	n_mom_noconf	med_h_mom_noconf
+0-200	126	2.08	34	4.88	44	3.09
+200-500	22	3.32	32	9.21	11	2.35
+500-1000	5	5.28	14	7.35	7	3.7
+1000-1000000000	0	None	6	51.91	0	None
+size-matched extra hours on PRs with a real conflict (sum over bands of (median conf - median clean) x n_conf): 302.1
+app merges by IST hour: [14, 11, 21, 10, 11, 4, 11, 5, 10, 13, 9, 16, 13, 13, 18, 16, 14, 19, 11, 15, 9, 8, 14, 16]
+app PRs opened by IST hour: [16, 8, 3, 3, 1, 3, 6, 9, 14, 17, 11, 13, 23, 25, 10, 18, 26, 7, 14, 14, 10, 14, 18, 18]
+nightly runs 273, dispatched 262; asks 63; ask->next dispatch n=62 median 0.64 h p90 15.28 h
