@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { join, dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, notTested, modeOf, touchedPacks, diffSet, batchRecheck, checkpointTrigger, checkpointRows, packsReachedBy, packVerdict, part1, stepsPrinted, stepsUnprinted, packSteps, unprintedReason } from "./gate-b.mjs";
+import { tail, claims, expand, openBugs, blockers, runPlan, stepsVerdict, packsOf, whereOf, placeOf, IN_CHECKPOINT, dataOf, dataMap, dataFor, dataForPack, notTested, modeOf, touchedPacks, diffSet, batchRecheck, checkpointTrigger, checkpointRows, packsReachedBy, packVerdict, part1, stepsPrinted, stepsUnprinted, packSteps, unprintedReason } from "./gate-b.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url)), ACC = resolve(HERE, "../acceptance"), P = resolve(HERE, "../../../product");
 /** A fixture pack whose run truly uses no server (only an engine run line), for the gate's no-server rules (B125, B131). */
@@ -195,6 +195,27 @@ ok("a pack with setup steps is labelled \"fixture only\"; a pack alone runs on t
   let refused = ""; try { dataOf({ GATE_B_DATA: "checkpont" }); } catch (e) { refused = e.message; }
   ok("GATE_B_DATA with any other value is refused in words, never run on the six by mistake", /GATE_B_DATA must be "six" or "checkpoint", not "checkpont"/.test(refused), refused); }
 ok("a header with no run line is an error, not a skip", Boolean(runPlan("C0.1.test.ts", "// nothing here\nimport x from 'y';").error));
+// P-486 (Lead 22 on #1591): on a pull request, a pack qa's hold file names as a checkpoint row runs on the configured
+// checkpoint, as the nightly does (C11.12-runtime: red on the six by design, P-322); every other pack keeps its data.
+{ const { checkpointPacks } = await import("./works-set.mjs");
+  const HOLD = "- C11.12-runtime.test.ts checkpoint row (P-322): not run on the six, where it is red (exit 2); green on the configured checkpoint (4/4, run 41866440174)\n- C7.5-runs.test.ts red on main, run 41799999999 (a plain hold)\n- C3.2 checkpoint row lifted 5 Nov, green in run 41799999999";
+  const cp = checkpointPacks(HOLD);
+  ok("P-486 pass: the hold file's checkpoint row is read (C11.12-runtime.test.ts)", cp.has("C11.12-runtime.test.ts"), [...cp]);
+  ok("P-486 fail: a plain hold and a lifted line move no pack to the checkpoint", cp.size === 1 && !cp.has("C7.5-runs.test.ts"), [...cp]);
+  const e = { GATE_B_DATA: "six", GATE_B_DATA_OF: "C11.12=six" };
+  ok("P-486 pass: with C11.12=six, C11.12-runtime.test.ts runs on the checkpoint", dataForPack("C11.12", "C11.12-runtime.test.ts", e, cp) === "checkpoint");
+  ok("P-486 fail: C11.12's other pack keeps its capability's data (the six), and with no hold file every pack does", dataForPack("C11.12", "C11.12.test.ts", e, cp) === "six" && dataForPack("C11.12", "C11.12-runtime.test.ts", e, new Set()) === "six");
+  const real = checkpointPacks(readFileSync(join(P, "qa/REGRESSION-HELD.md"), "utf8"));
+  ok("P-486 pass: qa's own hold file names C11.12-runtime.test.ts a checkpoint row", real.has("C11.12-runtime.test.ts"), [...real]);
+  // The gate itself, on a pull request (RANGE) with C11.12=six: its plan says where each pack runs.
+  const sh = (...a) => spawnSync("git", a, { cwd: HERE, encoding: "utf8" }).stdout.trim(), head = sh("rev-parse", "HEAD"), base = sh("rev-parse", "HEAD~1");
+  if (head && base) {
+    const pl = spawnSync(process.execPath, [join(HERE, "gate-b.mjs"), "--plan", "--title", "runtime: C11.12"], { encoding: "utf8", env: { ...process.env, PR_TITLE: "", PR_BODY: "", QUEUE: "", KIND: "code", GATE_B_DATA: "", GATE_B_NO_DIFF: "1", GATE_B_DATA_OF: "C11.12=six", RANGE: `${base}..${head}`, GITHUB_STEP_SUMMARY: "", GATE_B_SKIP_PACKS: "" } });
+    const out = pl.stdout + pl.stderr;
+    ok("P-486 pass (the gate's plan on a pull request, C11.12=six): C11.12-runtime.test.ts runs on the checkpoint, and says why", pl.status === 0 && /^C11\.12-runtime\.test\.ts on the checkpoint\b/m.test(out) && /on the checkpoint, as qa's checkpoint rows \(REGRESSION-HELD\.md, P-322\): C11\.12-runtime\.test\.ts/.test(out), out.slice(0, 600));
+    ok("P-486 fail (the gate's plan): C11.12.test.ts stays on the six", /^C11\.12\.test\.ts on the six\b/m.test(out), out.slice(0, 600));
+  } else ok("P-486: the gate's plan needs two commits (HEAD and HEAD~1) to read the hold file at the base", false);
+}
 // D5 (P-416, 8 Nov): GATE_B_DATA_OF gives each capability its own data, so one gate run pools rows on different data.
 { const e = { GATE_B_DATA: "six", GATE_B_DATA_OF: "C4.8=checkpoint, C1.1=six C9.1=checkpoint" };
   ok("D5: GATE_B_DATA_OF names a capability's data; the rest take GATE_B_DATA", dataFor("C4.8", e) === "checkpoint" && dataFor("C1.1", e) === "six" && dataFor("C7.3", e) === "six" && dataFor("C7.3", { ...e, GATE_B_DATA: "checkpoint" }) === "checkpoint" && dataMap(e).size === 3);
