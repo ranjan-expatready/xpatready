@@ -53,5 +53,19 @@ const now = [q("k", "b", "1"), q("k", "new", "1"), q("k", "a", "1"), q("k", "a",
 const o = show(inPartOrder(now, ["k|a", "k|b"]));
 ok("pass: parts follow the order given (the questions inside a part keep theirs); a part it does not name stays after the part before it", JSON.stringify(o) === JSON.stringify(["k:a:1", "k:a:2", "k:b:1", "k:new:1"]), o);
 
+// Lead 28 (#1643, CI on the merge with main): a part's screening questions (answers a form waits for: the date of birth,
+// the marital status) come together before the first question of the part any of them takes away. The residence country
+// is taken away by the marital status only (the common-law form), yet the birth date that comes later in the part must
+// not come after it; the rest of the part keeps its place.
+const spouse = [q("s", "personal", "name"), q("s", "personal", "marital"), q("s", "personal", "residence"), q("s", "personal", "other"), q("s", "personal", "born"), q("s", "personal", "city")];
+const spouseRule = rule({ "s|residence": ["s|marital"] });
+const screens = (x: Q) => x.fact === "marital" || x.fact === "born";
+const sp = show(decidersFirst(spouse, spouseRule, () => 0, () => false, screens));
+ok("pass: the part's screening questions (marital status, birth date) come together before the first question either takes away",
+  JSON.stringify(sp) === JSON.stringify(["s:personal:name", "s:personal:marital", "s:personal:born", "s:personal:residence", "s:personal:other", "s:personal:city"]), sp);
+const sp0 = show(decidersFirst(spouse, spouseRule));
+ok("fail-before: without the screening rule the birth date stays after the residence the marital status takes away", sp0.indexOf("s:personal:born") > sp0.indexOf("s:personal:residence"), sp0);
+ok("pass: a part none of whose questions a screening question takes away keeps its order", JSON.stringify(show(decidersFirst(spouse, () => new Set(), () => 0, () => false, screens))) === JSON.stringify(show(spouse)));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

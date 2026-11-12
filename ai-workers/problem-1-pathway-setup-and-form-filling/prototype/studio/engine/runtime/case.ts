@@ -483,7 +483,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   }
   // Worked out once per view (review m2): the order with no answers given reuses it.
   const decides = opts.decides ?? whatDecides(s, people, renderPeople, caseSubject.subjectId, today, (k) => { const e = boxGates.get(k); return e?.all ? [...e.keys] : []; });
-  const ordered = decidersFirst(inForms, decides, rank, (section) => authored.has(section));
+  const ordered = decidersFirst(inForms, decides, rank, (section) => authored.has(section), (q) => decides.screens?.has(`${q.subjectId}|${q.fact}`) ?? false);
   // The parts keep one order while the client answers (an answer never sends a part behind the one the client is on, where
   // "Save and continue" would pass it): the order of this questionnaire with no answers given; a part only an answer adds
   // keeps its place after the part before it.
@@ -555,7 +555,10 @@ export type CaseView = ReturnType<typeof caseView>;
  *  by its own condition's facts (same subject), and, when every form that needs it waits for an answer before it applies
  *  (a form's condition, a form's age limit), by the facts those forms wait for. A question also read by a form that
  *  always applies is never decided by a form. Generic: no form, section, combination or fact named here. */
-type Decides = (q: { subjectId: string; fact: string; fills: { form: string; subject: string }[] }) => Set<string>;
+type Decides = ((q: { subjectId: string; fact: string; fills: { form: string; subject: string }[] }) => Set<string>) & {
+  /** Lead 28 (#1643): the screening questions (`<subject>|<fact>`): the answers a form waits for before it applies (its
+   *  condition, its age limit), such as a person's date of birth and marital status. */
+  screens?: ReadonlySet<string> };
 /** The facts a condition reads; a calculated field counts as the answers it is worked out from. */
 function readsOf(s: Snapshot, tree: unknown): string[] {
   const derived = new Map(((s.derived_fields ?? []) as { id: string; inputs?: string[]; reference?: string }[]).map((d) => [d.id, [...(d.inputs ?? []), ...(d.reference ? [d.reference] : [])]]));
@@ -567,7 +570,8 @@ function whatDecides(s: Snapshot, people: Participant[], renderPeople: Person[],
   const r = render(s, renderPeople, knownOf(s, people, [], [], today).known, { today });
   const subjectOf = (about: string) => (about === "case" ? caseSubjectId : about);
   const waits = new Map(r.forms.map((f) => [`${f.form}|${f.person}`, f.applies === true ? [] : f.missing.filter((m) => !m.startsWith("(")).map((m) => `${isFilingFact(m, placementOf(s, m)) ? caseSubjectId : subjectOf(f.person)}|${m}`)]));
-  return (q: { subjectId: string; fact: string; fills: { form: string; subject: string }[] }) => {
+  const screens = new Set([...waits.values()].flat());
+  return Object.assign((q: { subjectId: string; fact: string; fills: { form: string; subject: string }[] }) => {
     const owner = q.subjectId.split("/")[0], out = new Set<string>();
     const p = placementOf(s, q.fact);
     if (p?.condition) for (const f of readsOf(s, p.condition)) out.add(`${isFilingFact(f, placementOf(s, f)) ? caseSubjectId : owner}|${f}`);
@@ -576,7 +580,7 @@ function whatDecides(s: Snapshot, people: Participant[], renderPeople: Person[],
     for (const k of boxGated(`${q.subjectId}|${q.fact}`)) out.add(k);
     out.delete(`${q.subjectId}|${q.fact}`);
     return out;
-  };
+  }, { screens });
 }
 
 /** QA-439 (r1c's 1 s budget for the case page): the order with no answers given depends only on the release, the people
@@ -609,8 +613,11 @@ export function inPartOrder<T extends { subjectId: string; section: string }>(qs
  *  that order (`authored`), then their parts that hold a deciding question, then the rest; then each moved only as far as
  *  it must: a part comes after the parts that hold what decides it (another person's too, and even past the author's
  *  order: a question is never asked before what decides it), and inside a part a question comes after the questions that
- *  decide it. Everything else keeps its place; a circle of deciders keeps the order it had. */
-export function decidersFirst<T extends { subjectId: string; section: string; fact: string }>(qs: T[], decidedBy: (q: T) => Set<string>, rank: (subjectId: string) => number = () => 0, authored: (section: string) => boolean = () => false): T[] {
+ *  decide it. Lead 28 (#1643): a part's screening questions (`screening`: answers a form waits for, such as the date of
+ *  birth and marital status) move together, in their own order, to just before the first question of the part that any
+ *  of them decides, so none of them comes after a question their answers take away. Everything else keeps its place; a
+ *  circle of deciders keeps the order it had. */
+export function decidersFirst<T extends { subjectId: string; section: string; fact: string }>(qs: T[], decidedBy: (q: T) => Set<string>, rank: (subjectId: string) => number = () => 0, authored: (section: string) => boolean = () => false, screening: (q: T) => boolean = () => false): T[] {
   const partOf = (q: T) => `${q.subjectId}|${q.section}`;
   const parts = new Map<string, T[]>(), at = new Map<string, string>();
   for (const q of qs) { (parts.get(partOf(q)) ?? parts.set(partOf(q), []).get(partOf(q))!).push(q); const k = `${q.subjectId}|${q.fact}`; if (!at.has(k)) at.set(k, partOf(q)); }
@@ -621,11 +628,19 @@ export function decidersFirst<T extends { subjectId: string; section: string; fa
   // does not lead back.
   const reaches = <N,>(next: (n: N) => N[], from: N, to: N) => { const seen = new Set<N>(), stack = [from]; while (stack.length) { const n = stack.pop()!; if (n === to) return true; if (seen.has(n)) continue; seen.add(n); stack.push(...next(n)); } return false; };
   const partDeps = (key: string) => [...new Set(parts.get(key)!.flatMap((q) => by.get(q)!.map((k) => at.get(k)!)).filter((d) => d !== key))];
+  // Lead 28 (#1643): the part's screening questions, as one group, just before the first question one of them decides.
+  const screensFirst = (list: T[]) => {
+    const scr = new Set(list.filter(screening)), keys = new Set([...scr].map((q) => `${q.subjectId}|${q.fact}`));
+    const f = list.findIndex((q) => !scr.has(q) && by.get(q)!.some((k) => keys.has(k)));
+    if (f < 0) return list;
+    const rest = list.slice(f);
+    return [...list.slice(0, f), ...rest.filter((q) => scr.has(q)), ...rest.filter((q) => !scr.has(q))];
+  };
   const out: T[] = [], doneParts = new Set<string>();
   const emitPart = (key: string) => {
     if (doneParts.has(key)) return;
     doneParts.add(key);
-    const list = parts.get(key)!;
+    const list = screensFirst(parts.get(key)!);
     for (const d of partDeps(key)) if (!reaches(partDeps, d, key)) emitPart(d);
     const facts = new Map(list.map((q) => [`${q.subjectId}|${q.fact}`, q])), done = new Set<T>();
     const qDeps = (q: T) => by.get(q)!.map((k) => facts.get(k)).filter((d): d is T => !!d && d !== q);
