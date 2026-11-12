@@ -23,7 +23,7 @@ import { lineKeys, pickMember, setMet, setStatus, type SetStatus } from "../../e
 import { checkValue, knownOf } from "../../engine/runtime/case.ts";
 import { actorOf, Audit, CaseRead, Db, fail, VAR, WORKSPACE_KEY, type Actor } from "./core.ts";
 import { privateWords, Runtime, type Reached } from "./runtime.ts";
-import { releaseLabel } from "../../contracts/runtime.ts";
+import { caseName, releaseLabel } from "../../contracts/runtime.ts";
 
 type H = string | undefined;
 type Upload = { fieldname?: string; originalname?: string; buffer?: Buffer; size?: number };
@@ -84,7 +84,7 @@ export class CaseChecklists {
     // B-M2: an answer its own checks reject (a date that is not real, 1900 or 2200 as the application date) never decides
     // a line: only answers without problems are read, so the line asks for the answer again instead.
     const { known } = knownOf(s, people, answers.filter((x) => checkValue(s, x.field, x.value, today).length === 0), rows, today);
-    const d = { case_id: c.id, reference: c.reference, release_version: pin.release.version, release_label: releaseLabel(pin.release), today: today.toISOString().slice(0, 10), ...caseChecklist(s, own!.combinationKey, people, known, today) };
+    const d = { case_id: c.id, reference: caseName(c), release_version: pin.release.version, release_label: releaseLabel(pin.release), today: today.toISOString().slice(0, 10), ...caseChecklist(s, own!.combinationKey, people, known, today) };
     return { d, everyone: d.derived ? candidatesOf(people, known, d.today) : [] }; // C6.14 BR-4: ages on the day it is read
   }
 

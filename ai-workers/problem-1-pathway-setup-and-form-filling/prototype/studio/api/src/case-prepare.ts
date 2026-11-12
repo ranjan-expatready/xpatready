@@ -47,7 +47,7 @@ import { copyStateOf, readinessOfCase, waitingFactsKey, type PreparedForm, type 
 import { lowestOf } from "../../engine/runtime/readiness-figure.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
 import { draftNote, releaseOutOfDate, reviewCounts, touchedFilings } from "../../engine/runtime/release-update.ts";
-import { releaseLabel, type Readiness } from "../../contracts/runtime.ts";
+import { caseName, releaseLabel, type Readiness } from "../../contracts/runtime.ts";
 import { caseInputs, diffCache, pinReleases, targetRelease } from "./release-context.ts";
 /** B171 (B169 review M1): the IRCC account in words, from the Forms tab's own contract (contracts/forms.ts), for every
  *  account: "through PR Portal", "on paper, with no IRCC account"; never the raw key (only "APR Portal" had words). */
@@ -174,7 +174,7 @@ export class CasePrepare {
     const { known } = knownOf(s, people, clean, rows, today);
     const adds = addedFilings(s, known, people);
     const first = deriveFilings(own!.combinationKey, people, undefined, { ages, modes, adds, label: s.combination.label });
-    if (!first.derived) return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: false, why: first.why, portal: own!.portalKey ?? null, filings: [], groups: [], items: [], waiting: [], not_needed: [], fees: [], readiness: [], figures: [], case_figure: null, stage1: [], version: "0" };
+    if (!first.derived) return { case_id: c.id, reference: caseName(c), release_version: pin.release.version, derived: false, why: first.why, portal: own!.portalKey ?? null, filings: [], groups: [], items: [], waiting: [], not_needed: [], fees: [], readiness: [], figures: [], case_figure: null, stage1: [], version: "0" };
 
     // Items the release and the case give each filer (forms by who and minimum age, the checklist's documents, biometrics).
     const renderPeople = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
@@ -715,7 +715,7 @@ export class CasePrepare {
     const questionOf = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
     const tasks = noWrite ? [] : await recordedOverlay(this.db, { workspaceId: c.workspaceId, caseId: c.id, actor: actor.id, filings, items: items as never, label,
       nowOf: (form, subject) => currentValues(covOf(form, subject)?.boxes ?? []), labelOf: (fact) => questionOf.get(fact) ?? factWords(fact) });
-    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: true, combination: own!.combinationKey, portal: own!.portalKey ?? null, portal_words: own!.portalKey ? `Filed ${filedThrough(own!.portalKey)}: set by the combination, not on the case` : null,
+    return { case_id: c.id, reference: caseName(c), release_version: pin.release.version, derived: true, combination: own!.combinationKey, portal: own!.portalKey ?? null, portal_words: own!.portalKey ? `Filed ${filedThrough(own!.portalKey)}: set by the combination, not on the case` : null,
       // #325's list of people with no filing, each with the reason (kept for its readers and tests).
       not_filing: done.not_filing,
       people: peopleView, filings, groups, items: toFill, waiting, not_needed: notNeeded, fees, stage1, readiness: readiness.map(({ figure: _f, ...x }) => ({ ...x, pin_revision: pin.revision })),
