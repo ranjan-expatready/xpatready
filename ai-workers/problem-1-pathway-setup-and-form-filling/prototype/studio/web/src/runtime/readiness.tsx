@@ -18,6 +18,7 @@ import { noRetryOnRefusal } from "./questionnaire";
 import { useFirm } from "./team";
 import { FigureRow, type Figure } from "./readiness-figure";
 import { FoldOut } from "@/components/fold-out";
+import { HandOff, handName } from "./hand-off"; // BK-4c
 
 type Owes = "staff" | "representative" | "client" | "employer" | "ircc";
 type Line = { code: string; key: string; item?: string; subject?: string; owes: Owes; words: string; unblocks: string; severity: "block" | "critical" | "warning" };
@@ -76,6 +77,12 @@ export function ReadinessPanel({ caseId }: { caseId: string }) {
   const [sending, setSending] = React.useState(false);
   const nameOf = (id: string) => (team.data?.representative?.id === id ? team.data.representative.name : null) ?? team.data?.officers.find((o) => o.id === id)?.name ?? firm.data?.users.find((u) => u.id === id)?.name ?? id;
   const v = q.data;
+  // BK-4c (BR-2, BR-3, BR-4): while a round waits for the representative of record and that is someone else, hand it to
+  // them, on that round. Computed from the rounds, so it shows after a reload too; on a solo firm (the representative is
+  // the one acting) there is none ("Review now" already opens the review).
+  const rep = rounds.data?.representative ?? null;
+  const waiting = (rounds.data?.rounds ?? []).filter((x) => x.filings.some((f) => f.status === "sent" || f.status === "under_review")).sort((a, b) => b.number - a.number)[0];
+  const handTo = rep && rep !== actor && waiting ? rep : null;
   return (
     <section aria-labelledby="readiness-h" className="rounded-xl border border-border bg-surface-raised" data-readiness>
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-4 py-3">
@@ -83,6 +90,7 @@ export function ReadinessPanel({ caseId }: { caseId: string }) {
         <p className="min-w-0 flex-1 text-[13px] text-text-muted">What stands before each filing is Ready to file, by who owes it. Only a barcode form without its validated copy read back, or a document its release says can never be waived, blocks; every other line is fixed, or passed with a written reason.</p>
         {v?.derived && v.filings.length ? <Button size="sm" variant="secondary" onClick={() => setSending(true)} data-send-for-review title="Send for review: the representative of record checks each form and approves it or sends it back."><Send aria-hidden />{firm.data?.solo && rounds.data?.representative === actor ? "Review now" : "Send for review"}</Button> : null}
       </header>
+      {handTo && waiting ? <HandOff className="border-b border-border px-4 py-2.5" to={handTo} go={`/cases/${caseId}/representative-review/${waiting.id}`} done={`Sent for review (round ${waiting.number})`} next={<>{handName(handTo) ?? nameOf(handTo)} checks each form and approves it or sends it back.</>} data="representative" /> : null}
       {sending && v ? <SendForReviewDialog caseId={caseId} filings={v.filings} readiness={v.readiness ?? []} rounds={rounds.data} now={!!firm.data?.solo && rounds.data?.representative === actor} close={() => setSending(false)} /> : null}
       {q.isLoading ? <div className="p-4"><Skeleton className="h-16 w-full" /><span className="sr-only" role="status">Loading what stands before Ready to file…</span></div>
         : q.isError ? <div className="p-4"><Notice tone="danger" title="Readiness could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void q.refetch()}>Retry</Button>}>{(q.error as Error).message}</Notice></div>

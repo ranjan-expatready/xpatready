@@ -3,7 +3,7 @@
 // The people are simulated (demo chrome: the "Acting as" switch is not for porting); the server decides what each may do.
 import * as React from "react";
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowRight, ExternalLink, Plus, UserPlus } from "lucide-react";
+import { ArrowRight, Plus, UserPlus } from "lucide-react";
 import { api, ApiError, getActor, personChosen, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +27,7 @@ import { EarlierStages, earlierOf, StageStrip } from "./stages"; // C6.17
 import { OfficerPeoplePanel } from "./privacy"; // C6.16
 import { RepresentativeReviewLatest, RepresentativeReviewPage } from "./representative-review"; // C8.3
 import { CaseReadinessPill } from "./readiness-figure"; // C7.10
+import { HandOff, handedFrom } from "./hand-off"; // BK-4c
 import type { OpenableRelease } from "../../../contracts/runtime";
 
 /** Simulated case people (the firm and the clients of lib/simulated-people.ts, BK-4a); the picker is demo chrome. */
@@ -279,11 +280,15 @@ function CasePage() {
   // C6.4 (a), challenge r2 m5: a person's name, never their id (the firm's people, then the simulated clients).
   const nameOf = React.useCallback((who: string) => firm.data?.users.find((u) => u.id === who)?.name ?? PEOPLE.find((p) => p.id === who)?.name ?? "someone at the firm", [firm.data]);
   const [adding, setAdding] = React.useState<CanAdd | null>(null);
+  // BK-4c (break M1, BR-2): a review round waiting means the representative is next, not the client (same query as Ready to file).
+  const rounds = useApi<{ rounds: { number: number; filings: { status: string }[] }[] }>(["runtime", "reviews", id], isOfficer(actor) ? `/runtime/cases/${id}/reviews` : null, { retry: noRetryOnRefusal });
+  const inReview = (rounds.data?.rounds ?? []).filter((x) => x.filings.some((f) => f.status === "sent" || f.status === "under_review")).sort((a, b) => b.number - a.number)[0];
   // K13 (break m7): "Answer in the Agent view" (eligibility) lands on the Agent view, not the top of the case page.
   const { hash } = useLocation(), loaded = !!view.data;
   useWhere(view.data ? [{ label: "Cases", to: "/cases" }, { label: view.data.case.reference }] : null); // BK-3: the frame's line names the case
   React.useEffect(() => { if (loaded && hash === "#agent-view") document.getElementById("agent-view")?.scrollIntoView({ block: "start" }); }, [loaded, hash]);
-  if (!isOfficer(actor)) return <Notice title="This page is for the case officer">As a client, open <Link className="text-text-link underline" to={`/cases/${id}/questionnaire`}>your Client questionnaire</Link>.</Notice>;
+  // Review m4: a client who pressed Back after a hand-off returns to their questionnaire with its hand back.
+  if (!isOfficer(actor)) { const from = handedFrom(id!); return <Notice title="This page is for the case officer">As a client, open <Link className="text-text-link underline" to={`/cases/${id}/questionnaire${from ? `?from=${encodeURIComponent(from)}` : ""}`}>your Client questionnaire</Link>.</Notice>; }
   if (view.isLoading) return <div className="space-y-3"><Skeleton className="h-8 w-1/3" /><Skeleton className="h-24 w-full" /></div>;
   if (view.isError) return <Notice tone="danger" title="This case could not be opened">{(view.error as Error).message}</Notice>;
   const v = view.data!, c = v.case, people = c.people.filter((p) => p.role !== "case");
@@ -302,8 +307,14 @@ function CasePage() {
         </div>
         <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">
           <p className="font-medium">Client questionnaire</p>
-          <p className="text-xs text-text-muted">{client?.name ?? "The client"} answers on their phone, for everyone travelling.</p>
-          <Link to={`/cases/${c.id}/questionnaire`} onClick={() => setActor(c.client)} className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-medium text-text-link hover:underline">Open it as {client?.name ?? "the client"} (simulated)<ExternalLink className="size-3.5" aria-hidden /></Link>
+          {/* BK-4c (BR-2, BR-4, BR-7): the questionnaire is the case's own client's; the hand-off carries who hands back (?from=). */}
+          {/* Break M1 (BR-2): "Next: <client>" only while the client owes required answers and no review round waits; every
+              required question answered: where it stands, and the client may still check; a round waiting: no button here
+              (Ready to file hands to the representative). */}
+          {client && inReview ? <p className="mt-1.5 text-[13px] text-text-muted" data-client-card="in-review">{client.name} answers on their phone, for everyone travelling. Round {inReview.number} is with the representative of record now.</p>
+            : client ? <HandOff className="mt-1.5" to={c.client} go={`/cases/${c.id}/questionnaire?from=${encodeURIComponent(actor)}`} handsCase={{ caseId: c.id, from: actor }} data="client"
+              {...(v.summary.missing === 0 && v.summary.answered > 0 ? { line: <>{client.name} has answered every required question and can still check the answers.</> } : { next: <>{client.name} answers on their phone, for everyone travelling.</> })} />
+            : <p className="text-xs text-text-muted">The client answers on their phone, for everyone travelling.</p>}
         </div>
       </div>
       <StageStrip caseId={c.id} />
@@ -365,9 +376,12 @@ function ClientPage() {
   const { id } = useParams();
   const actor = useActorId();
   useCaseWhere(id!, "Client questionnaire", !isClient(actor)); // BK-3: staff see the case's reference; the client's line is their own
+  // BK-4c: "Act as Client A" was a literal id; the hand-off goes to this case's own client (Client B's case: Client B).
+  const view = useApi<{ case: { client: string } }>(["runtime", "view", id, "agent", actor], !isClient(actor) && isFirmStaff(actor) ? `/runtime/cases/${id}/questionnaire?mode=agent` : null, { retry: noRetryOnRefusal });
   if (!isClient(actor)) return (
-    <Notice title="This is the Client questionnaire" action={<Button size="sm" variant="secondary" onClick={() => setActor("user-P")}>Act as Client A</Button>}>
+    <Notice title="This is the Client questionnaire">
       As the case officer, review and change answers on <Link className="text-text-link underline" to={`/cases/${id}`}>the case page</Link>.
+      {view.data ? <HandOff className="mt-2" to={view.data.case.client} go={`/cases/${id}/questionnaire?from=${encodeURIComponent(actor)}`} handsCase={{ caseId: id!, from: actor }} next={<>{personOf(view.data.case.client)?.name ?? "The client"} answers this questionnaire.</>} data="client" /> : null}
     </Notice>
   );
   return <Questionnaire caseId={id!} mode="sqr" />;
