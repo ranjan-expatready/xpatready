@@ -87,3 +87,24 @@ Blockers: none.
 Majors: 1. Search cases drops typed characters (`web/src/runtime/cases.tsx:126`).
 Minors: 2. `%`/`_` wildcards in search · 3. result count not announced; "None yet" tooltip `title` only · 4. sub-pages and the frame's line name a referenced case by its reference, not its number.
 Verdict: Block
+
+## Re-review a8bf6fa66
+Scope: only `git diff bc2c42f54..a8bf6fa66` (`cases.tsx`, `runtime.ts` `searchWhere`, the pack). Fresh copy `rev_a24n` on :4446, web rebuilt first; screenshots restored; copy stopped.
+* **Pack:** `check_a24_2_case_list_browser` 39/39, including the three M1 tries and the m1 and m2 checks. Web `tsc` clean.
+* **M1, closed.** The `wrote` ref resets the box only when `q` differs from the value the timer itself wrote (`cases.tsx:126-131`).
+  * My stress probe (same as before: `C-2026-00008`, 250-400 ms per key with jitter) lost **0 of 60** tries, against 4 of 60 at `bc2c42f54`.
+  * Changes from outside still update the box: Back after opening a case keeps `Sample`; typing `?q=C-2026-0000` in the address puts it in the box; Clear search empties box and address; the frame's "Cases" link from a case page shows the full list with an empty box. Leaving within 300 ms of a key leaves no stale write.
+* **m1, closed.** `\`, `%` and `_` are escaped before `contains` (`runtime.ts:994-996`). `%` and `_` now find only the case whose reference holds them. `\`, `%%`, `a_b` and `C-2026-0000_` find none. Results stay inside the firm (unchanged).
+* **m2, closed.** "None yet" is explained in visible text beside the count, and the count is `role="status"`. No sideways scroll at 400 or 1024 px.
+* **m3, not changed: accepted.** It follows A24-1's `caseName`; the PR records it for A24-3 and the tech lead.
+
+New Minors (Should, non-blocking):
+* **The M1 guard is probabilistic.** At the old code's measured rate (about 7 % per try) its three tries would catch a regression in roughly one run in five, so it only partly meets STANDARDS §6 "a rule's test fails when the rule is removed".
+  * Follow-up: make it deterministic. Options: Playwright `page.clock` to fire the 300 ms timer and press a key before the render, or a unit test of the box/address sync.
+* **The count's `role="status"` span is removed while each new search loads** (the list shows a skeleton), then added back with its text. Some screen readers do not announce a live region that is inserted already holding its text. Keeping the region mounted through loading would make it reliable. Not checked with a real screen reader.
+
+Journey score after the fixes: **9.5/10.** Feedback and state rises from ½ to 1 (no lost keys), correct data from ½ to 1 (wildcards escaped), and accessibility stays ½ (status region remounts; no screen reader walk).
+
+Blockers: none. Majors: none open (M1 closed).
+Minors: the M1 guard is probabilistic · the status region remounts on each search · m3 (accepted, A24-3).
+Verdict: Approve
