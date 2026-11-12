@@ -1,0 +1,98 @@
+# Review: A24-3 "Client: <name>" and each filing's principal applicant (P-492), PR #1666 at `aef100e45`
+
+Independent reviewer, 12 Nov 2026. **Commit reviewed: `aef100e456fa14186c2477a239af7df8bade1882` only.** There is no concept.md. The concept is the tech lead's brief (done-when 1-5) plus the design `case-structure-a24-2026-11-12.md` §5.1, §5.2 (CS-4, CS-8, CS-10), §6 and §7 row A24-3, read from `origin/lead/2026-11-07-lead31`. I used my own isolated copy on :4448 (`rev_a243`, configured checkpoint), built from this head's web. I stopped it afterwards. Live AI was off; cost US$0.
+
+## What I ran
+* `tests/check_a24_3_client_principal_browser.ts 4448`: **20/20**. I did not rebuild main's web to see the fail-before; the builder reports 11/20 there. By reading the check, it must fail on main: `[data-case-client-name]` and `[data-filing-principal]` do not exist there.
+* `check_bk3_client_browser.cjs` (the header link was rewritten): **75/75**. `qa/check_qa412_cofiled_sponsor_name.cjs`: QA-413 (no sideways scroll at 400 px) now **passes**. QA-412a/b fail as on main; those are known open bugs and not in this PR.
+* `web` `tsc --noEmit`: exit 0. B164 guard: 52/52. count-any: 417, baseline 433. graph.mjs: nothing for this screen.
+* Overlap with #1660 (A24-2, `17d4cd0fb`): #1660 changes cases.tsx lines 12, 31, 99-246, 288 and 303 (the h1). This PR changes lines 24 and 305-306 only, and neither PR's questionnaire.tsx changes are touched by the other. `git merge-tree aef100e45 17d4cd0fb` merges cleanly, and so does the merge with `origin/main`.
+* CI on `aef100e45`: only `guard` ran (success), because the PR is a draft. The full check has not run yet, so done-when (5) is still open.
+* I walked three more configured-checkpoint cases the check does not open: Express Entry family, Spouse sponsorship plus Add sponsor, and LMIA work permit. On Express Entry I did Make principal by keyboard: Tab to the row menu, then Enter. I checked widths 1024, 720 (200 % zoom) and 400, and ran axe (WCAG 2.2 A/AA) on the header line and the table.
+
+## Done-when
+| # | Result |
+|---|---|
+| 1 | Met. The header shows "Client: Sample Client A (signs in as Client A)". `clientOf` (filing-changes.tsx:37) gives the same person as the server's `clientSubjectOf` (runtime.ts:188) and the list's `client_name`. After Make principal on Visitor visa and on Express Entry, the header still names Client A. |
+| 2 | Partly met. Visitor visa, Study permit (the spouse's Work permit names the spouse), Express Entry (spouse and children "On Sample Client A's application" → Sample Client A; after Make principal → Sample Spouse A) and LMIA are all right. **The sponsor row is wrong in IRCC's words (M1).** |
+| 3 | Partly met. API, database and browser are compared with a fail-before. But no case in the check has a row whose principal applicant differs from the row's person (m1). |
+| 4 | Met. The change is web only, with no program or combination key; B164 passes. |
+| 5 | Open: the full CI run and this review. |
+
+## Findings (ranked)
+**M1. Major (Must): a sponsor is labelled "Principal applicant" of their sponsorship.**
+* Where: filing-changes.tsx:86, using `ownerOf` (:32) and `applicantOf` (:50).
+* Failure scenario (configured checkpoint, product screens only):
+  1. Open a "Spouse or common-law partner" case, then use Add sponsor.
+  2. The sponsor's row now reads: `Sample Sponsor S | Sponsor | Sent with the principal's application | Principal applicant: Sample Sponsor S`.
+* Why it is wrong:
+  * The server's own data says the sponsor is not an applicant: that co-filed filing has `applicants: []` (see also QA-412's header).
+  * In IRCC's terms, the sponsor and the principal applicant are different parties.
+  * The cell contradicts the Filing cell in the same row.
+  * The column's tooltip says "the person it is filed for", which does not fit a sponsor either.
+  * A24 exists to end the confusion around "principal" (design §Overall verdict, row "Words"), so this column must not bring it back.
+* Fix: for a filing with no applicants (co-filed, `p.co_files`), name the principal applicant of the application it is sent with, or show a muted "Not an applicant (sponsor)". Add this case to the check. If the tech lead reads the brief's "from Filing.subjectId" literally, put that in `challenge.md`; do not leave it silent.
+
+**m1. Minor (Should): the check cannot tell this column apart from the Person column.**
+* Where: tests/check_a24_3_client_principal_browser.ts:75, :81, :88.
+* In all three scenarios (Visitor visa, Study permit, Visitor visa after Make principal), every filing is `files_own`, so each person is the principal applicant of their own filing.
+* Failure scenario: replace the cell's words and `data-filing-principal` with the row's own `p.label` / `p.subject_id`. All 20 checks still pass, yet Express Entry would show the spouse and children as their own principal applicants.
+* Fix: add the Express Entry family on the configured checkpoint (spouse and children on the principal's application, before and after Make principal), and add the sponsor case from M1.
+
+**m2. Minor (Should): the link words promise a sign-in.**
+* Where: cases.tsx:308.
+* "(signs in as **Client A**)" makes the link look like it signs you in as the client. It actually opens the client's page (`/cases/clients/user-P`) and the officer stays the actor, which I verified.
+* Fix: give the link words that say where it goes, e.g. "Client A's page", or put "signs in as Client A" outside the link and link "Client page".
+
+**m3. Minor (Should): the new info icon's text is not visible on keyboard focus.**
+* Where: filing-changes.tsx:73.
+* It uses `title` plus `aria-label`, so screen readers hear the text, but a sighted keyboard user sees nothing on focus. BIC-14 asks for help that opens on hover **and** focus.
+* This copies the existing Role icon's pattern, so it is not new debt in kind. Fix it with the app's tooltip component if one exists.
+
+## D1–D20 (1–5)
+D1 requirement fit 3: header right; column wrong for sponsors (M1) · D2 data integrity 4: read-only, values match API and DB · D3 reuse 5: same `prepare` query, no new request · D4 rule integrity 3: CS-10 wording broken for co-filed sponsor · D5 stability 5: skeleton while loading, no page errors · D6 governance 4: comments cite P-492, CS-8, CS-10 · D7 AI trust n/a · D8 orientation 4: client named under heading · D9 flow 4: link to client page kept · D10 language 3: M1, m2 · D11 feedback 4: change line and Undo unchanged, header stable after swap · D12 visual 4: one more column, aligned, team look (ee-after-mp 1440) · D13 accessibility 4: axe 0, keyboard reachable, m3 · D14 team look 4: table, muted words, no new chrome · D15 speed 4: case page with table 1.4–1.8 s on copy · D16 testability 3: mutation-blind column check (m1) · D17 first use simulated only · D18 provenance 4: names from server people/owner · D19 closure 4: list → case → client page round trip passes · D20 pain solved simulated only.
+
+## BIC scorecard (EXPERIENCE §6; case page, this change only)
+| BIC | Score | Evidence |
+|---|---|---|
+| 01–07, 10, 12, 13, 15–17 | N/A | No questions, documents, signing or review touched |
+| 08 Case structure at a glance | Partly | Every person names their application and its principal (EE before/after swap, 1440); sponsor row wrong (M1). Table per team style guide (design §6) |
+| 09 Principal change explicit | Met | Keyboard Make principal on EE: dialog, reason, history line; client stays Client A |
+| 11 One primary action | Met | No buttons added |
+| 14 Help in place | Partly | New icon tooltip on hover only (m3) |
+| 18 States | Met | Skeleton while prepare loads; header falls back to "not named yet" |
+| 19 Cognitive load | Met | 1440 and 1024 screenshots: no ids, one heading per panel |
+| 20 Accessible | Met | Keyboard reachable; 1024 and 720 px (200 %): 0 px sideways; 400 px table scrolls in its box (113 px), page 0; axe 0 |
+
+## Journey test (reviewer, 12 Nov; case officer; my copy :4448, headless Chromium)
+Journeys:
+1. Main: open a Study permit family case; read who the client is and whose application each is. Pass.
+2. Alternate: Express Entry family; spouse and children are on the client's application. Pass.
+3. Make principal by keyboard, then read the header and column. Pass: the client stays Client A, and the column moves to the spouse.
+4. Sponsor case via Add sponsor. **Fail (M1).**
+5. Wrong turn: the header link reads like a sign-in. Partly (m2).
+6. Reload after the swap: same values. Pass.
+7. Widths 1024, 200 % and 400. Pass.
+8. Across the screen boundary: the client link goes to the client's page and back to the case. Pass (BK-3 suite).
+
+Data underneath: the cells equal `GET …/prepare` owner, which equals `filing.subject_id`; the header equals `client_name`; nothing was written except the swap.
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Client and per-application principal readable without opening anything |
+| Next step obvious | 1 | Unchanged |
+| Plain words | ½ | m2, M1 |
+| Feedback and state | 1 | Change line and Undo; header stable |
+| Correct data | ½ | Sponsor named principal applicant (M1) |
+| Error recovery | 1 | Reload and Undo fine |
+| Accessibility and sizes | ½ | axe 0 and widths fine; tooltip not shown on focus (m3) |
+| Speed | 1 | Under 2 s on the copy |
+| Visual quality | 1 | Column fits at 1440 and 1024 |
+| Trust and sources | 1 | Every name comes from the server's people and owner |
+
+**Score 8.5/10**, which is a pass with no 0, but it does not outweigh M1. To raise it: M1 (correct data, plain words), then m2 and m3.
+
+## Not checked
+Main's web fail-before (taken from the builder's report and from reading the check); the full CI run; a real screen reader; an intended user's unaided walk (D17 and D20 stay with the founder); the six alone (per the brief, no case opens there).
+
+**Verdict: Block.** To fix: M1, with its case added to the check (this covers m1). m2 and m3 are for the builder to fix or record. A re-review is needed on the new head.
