@@ -96,8 +96,9 @@ export function filingPlan(people: PlanPerson[], modeOf: (role: string) => LineM
     if (p === principal) continue;
     const to = filingOf(modeOf(p.role));
     // M3-S2: a person travelling whose line's rule holds files the filing it adds, their own application, instead of
-    // being on the principal's (one application per person; the save keeps it off a line that files its own).
-    if (p.adds && p.travelling && to !== "own" && to !== "co_filed") { filings.push({ id: `filing-${p.subject}`, owner: p, kind: "own", applicants: [{ person: p, mode: "applying" }], added: p.adds }); continue; }
+    // being on the principal's. BK-15 (P-486): on a line that files its own, the added filing is made instead of it (a
+    // child who studies files a study permit, not a visitor visa): still one application per person.
+    if (p.adds && p.travelling && to !== "co_filed") { filings.push({ id: `filing-${p.subject}`, owner: p, kind: "own", applicants: [{ person: p, mode: "applying" }], added: p.adds }); continue; }
     if (to === "own") { if (p.travelling) filings.push({ id: `filing-${p.subject}`, owner: p, kind: "own", applicants: [{ person: p, mode: "applying" }] }); else notFiling.push({ person: p, why: "Not travelling (not applying on this case): no filing and no fee." }); }
     else if (to === "principal") { if (main) { main.applicants.push({ person: p, mode: p.travelling ? "applying" : "declared_only" }); main.kind = "family"; } else notFiling.push({ person: p, why: "No principal applicant on this case yet, so there is no application to be on." }); }
     else if (to === "co_filed") filings.push({ id: `filing-${p.subject}`, owner: p, kind: "co_filed", applicants: [] });
