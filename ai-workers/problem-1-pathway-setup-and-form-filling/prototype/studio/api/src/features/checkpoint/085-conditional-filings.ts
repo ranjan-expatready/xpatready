@@ -16,7 +16,9 @@ import type { CheckpointStep } from "./_context.ts";
 import { formSetup } from "./080-form-setup.ts";
 
 export const CONDITIONAL_FILINGS = join(STUDIO, "samples", "conditional-filings.json");
-type Spec = { role: string; addsFiling: Record<string, unknown>; fact: { fact: string; label: string; meaning: string; valueType: string; question: string } };
+/** BK-16 (P-491; QA-418): who answers the fact (`collectedFrom`, the client or the case officer, default the officer as
+ *  before) and its "Why we ask" (`helpText`) are data, in the words the client reads; the officer confirms as usual. */
+type Spec = { role: string; addsFiling: Record<string, unknown>; fact: { fact: string; label: string; meaning: string; valueType: string; question: string; collectedFrom?: string; helpText?: string } };
 type Line = { role: string; addsFiling?: unknown; [k: string]: unknown };
 
 export default {
@@ -45,8 +47,9 @@ export default {
               await library.decideLibraryChange(approver, ch.id, "approve", "Approved by the sample loader as the second person (M3-S2, the fact a filing a line adds reads).");
           }
           if (!(await db.canonicalField.count({ where: { workspaceId, canonicalFieldKey: f.fact, status: { in: ["DRAFT", "PUBLISHED"] } } }))) throw new Error(`${f.fact} did not reach the library`);
-          // Asked once per person, by the case officer, in a section this combination asks and no other does (QA-227: the
-          // library's questions are shared, so a section another combination asks would put the question on its cases too).
+          // Asked once per person, by whoever the data names (the case officer unless it says the client; BK-16, QA-418), in a
+          // section this combination asks and no other does (QA-227: the library's questions are shared, so a section another
+          // combination asks would put the question on its cases too).
           if (!(await db.sectionQuestion.count({ where: { workspaceId, canonicalFieldKey: f.fact, status: { not: "RETIRED" } } }))) {
             const others = new Set((await db.sqrSectionSelection.findMany({ where: { workspaceId, combinationId: { not: c.id } }, select: { sectionKey: true } })).map((s) => s.sectionKey));
             const own = (await db.sqrSectionSelection.findMany({ where: { combinationId: c.id }, orderBy: { sectionOrder: "asc" }, select: { sectionKey: true } })).find((s) => !others.has(s.sectionKey));
@@ -54,7 +57,7 @@ export default {
             // Rule only (CI on #1513: QA-144, B78): a question in a section the row selects is otherwise asked of every
             // applicant, the principal too, though only the child's line rule reads it; rule only, it is asked of each
             // person the rule decides (engine/render.ts deciders), so Preview and the case ask the same people.
-            await studio.placeField(author, f.fact, { sectionKey: own.sectionKey, collectedFrom: "staff_working_view", repeats: "per_person", tier: "case", questionText: f.question, ruleOnly: true });
+            await studio.placeField(author, f.fact, { sectionKey: own.sectionKey, collectedFrom: f.collectedFrom ?? "staff_working_view", repeats: "per_person", tier: "case", questionText: f.question, ...(f.helpText ? { helpText: f.helpText } : {}), ruleOnly: true });
           }
         });
         ctx.log.push(`  ${key}: ${spec.role.replace(/_/g, " ")} line adds "${String(spec.addsFiling.filing)}" when its rule holds (${f.fact} asked per person; samples/conditional-filings.json; Sample, Unconfirmed: expert)`);

@@ -1,5 +1,5 @@
 {
-  "_about": "M3-S2 (P-380, P-425, Bake plan row 18): a filing a \"Who can be in this application\" line adds when its rule holds on the person's own answers, per combination, which the configured checkpoint sets through the product routes (Questionnaires › Who can be in this application; C3.6 add the fact a rule needs; Library approval; placement), as the author, the content reviewer and the Approver. Data, not code (P-319). Every quote is word for word from the official page named in it, with its date (P-170); the line, its rule and its question are Sample, Unconfirmed: expert (AGENTS rule 4). The rule asks \"6 months or more\": IRCC needs no study permit for a course or program of six months or less, so a course of exactly six months is asked as a yes and adds a study permit application the child may make but does not need (Sample; the immigration expert confirms the boundary).",
+  "_about": "M3-S2 (P-380, P-425, Bake plan row 18): a filing a \"Who can be in this application\" line adds when its rule holds on the person's own answers, per combination, which the configured checkpoint sets through the product routes (Questionnaires › Who can be in this application; C3.6 add the fact a rule needs; Library approval; placement), as the author, the content reviewer and the Approver. Data, not code (P-319). Every quote is word for word from the official page named in it, with its date (P-170); the line, its rule and its question are Sample, Unconfirmed: expert (AGENTS rule 4). The rule asks \"6 months or more\": IRCC needs no study permit for a course or program of six months or less, so a course of exactly six months is asked as a yes and adds a study permit application the child may make but does not need (Sample; the immigration expert confirms the boundary). BK-16 (P-491; QA-418): a fact may name who answers it (\"collectedFrom\": client_questionnaire, or staff_working_view, the default) and a short \"Why we ask\" (\"helpText\"), in the words the client reads; the case officer confirms the answer as usual.",
   "sp.outside": {
     "status": "Sample, Unconfirmed: expert",
     "role": "child",
@@ -15,7 +15,9 @@
       "label": "Studies in Canada for 6 months or more",
       "meaning": "Whether this person will study in Canada in a course or program of 6 months or more (IRCC needs a study permit for a course or program longer than six months; Guide 5269).",
       "valueType": "yes_no",
-      "question": "Will this person study in Canada for 6 months or more?"
+      "question": "Will your child study in Canada for 6 months or more?",
+      "collectedFrom": "client_questionnaire",
+      "helpText": "Why we ask: a child who will study in Canada for more than 6 months needs their own study permit; otherwise they come as a visitor. Sample: the immigration expert confirms."
     }
   }
 }
