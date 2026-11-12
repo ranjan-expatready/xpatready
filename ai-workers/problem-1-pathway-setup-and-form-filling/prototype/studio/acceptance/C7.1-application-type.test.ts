@@ -42,6 +42,11 @@ await main("C7.1 application type", "Each person's type of application, from the
   // IMM 5476 copy says so as a by-hand line with the reason (on the copy and on Ready to file), never a blank in silence.
   const open = await openCase(needStudyPermit(), STUDY_FAMILY);
   const waitFam = { c: open, forms: (await call("GET", `/runtime/cases/${open.id}/forms`, undefined, open.officer)).body?.forms ?? [] };
+  // Review M3 (#1620): the forms card never asks for a fix to an answer nobody gives (no "needs a fix" or "Enter text").
+  type Missing = { fact?: string; reason?: string; why?: string };
+  const kForms = (waitFam.forms as unknown as { form: string; subject_id: string; readiness?: { missing?: Missing[] } }[]).filter((x) => x.subject_id === open.subjects[k]);
+  const kindMissing = kForms.flatMap((x) => (x.readiness?.missing ?? []).filter((m) => /application_type/.test(m.fact ?? "")));
+  ok("C7.1-AT-12 fail: the child's forms list no answer to fix for the kind of application (nobody is asked it)", kForms.length > 0 && !kindMissing.some((m) => /fix|problem|Enter text/i.test(`${m.reason} ${m.why}`)), kindMissing);
   const kWait = await readCopy(waitFam, "IMM 5476", k);
   const line = (kWait?.byHand ?? []).find((b) => /waits for an answer/.test(b.why ?? ""));
   ok("C7.1-AT-11 fail: the child's kind not known yet: their IMM 5476 lists the type of application by hand, naming the question it waits for (nothing written)", !!line && /6 months or more/.test(line.why ?? "") && !at(kWait?.values, APPLICATION), { byHand: kWait?.byHand, written: at(kWait?.values, APPLICATION) });

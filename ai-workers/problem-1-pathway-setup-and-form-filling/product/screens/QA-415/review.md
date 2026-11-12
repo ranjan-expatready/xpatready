@@ -72,3 +72,35 @@ BIC-01 Ask once: Met. · BIC-02 Asked for a reason: Met. · BIC-03 No stale answ
 * An untracked `screens/QA-415/screenshots/` folder was already being written by another session at 05:31. It is not mine and I left it untouched.
 
 **Verdict: Block** at 8e3293429. Fix list: M1 (by-hand line or readiness line for a missing kind, plus a fail test on a generated copy) and M2 (skip waiting applicants on the principal's application, plus a fail test). Fix the Minors, or list them in the PR. Correct the PR's note: four C7.1 steps (AT-1, 3, 5, 10) wait for #1591.
+
+## Round 2 (diff-only, P-293): `8e3293429..be6243380`, verdict on head 7a4e143da6ab50cbf35b5277ec2b28c94ba74de2
+**Scope.** I re-reviewed only the builder's two commits (ef56a0f75 and be6243380). The head adds two commits on top of them:
+* 7f8cbac74 brings in main, including #1591 and BK-16. It changes none of the PR's own files. In engine/render.ts it adds BK-16's lines, and the NotWorkedOut row survives the merge.
+* 7a4e143da adds 3 PNGs and nothing else (`git diff 7f8cbac74..HEAD`).
+
+**How I ran it.** Every run was on the head as it is, with no trial merge, on my copy `rv415r3` on :4455 (stopped now). Before that head existed, an earlier pass ran on a scratch worktree of be6243380 merged with forms-bk15 (6be6e17d7). That worktree is removed.
+
+**Results:**
+* Pure check: 33/33.
+* B164: 52/52.
+* check_forms_b81, b86, b88 and b99, and check_qa165_mandatory: all green (scratch trial).
+* C7.1: **10/10, twice**.
+* C6.2: 8/8.
+* Checkpoint rows: all done; row 4 shows "4 changed".
+
+**My earlier findings:**
+* **M1: closed on the copy.** For the waiting child, the copy has 1 by-hand line with the reason, nothing is written, and Ready to file names the box ("the form's box \"Type of application (permanent residence,extension of study permit, etc.)\" is still to be written by hand … waits for an answer: whether the child will study …"). C7.1-AT-11 fails if the line is missing.
+* **M2: closed.** Each applicant's own `waits` is checked (application-kind.ts). The pure fixture with a child on the principal's application fails without the fix.
+* **m1, m4, m5 and m6: closed as described.** m6: dropping `co_filed` is safe, because a co-filed filing has no applicants.
+* **m2 and m3: not Majors.** I agree they become follow-up rows. m2 is QA-400's own gap. For m3, a stored answer never reaches a form (verified in round 1).
+
+**New, from this diff:**
+* **M3 (Major, Must): the forms card tells the officer to fix an answer to a question nobody is asked.**
+  * The value is not worked out (the child's rule waits; the same happens for a filing with no word, and for a combination with no derived filings).
+  * render.ts writes the row as `coverage: "confirmed fact", value: null, by_hand: why`. engine/runtime/forms.ts:63-64 then runs `checkValue` on the null and turns the row into "answered on screen", with the fix "answered with a problem, not written: Enter text."
+  * Seen at 1440 on :4455, case REVIEW-R2-WAIT, IMM 5476 for Sample Child B. The card reads "2 answered but needing a fix stay blank", and "Facts to answer or confirm" lists: "The kind of application this person makes (…) Worked out for each person from their own filing; never asked. (Sample Child B): **needs a fix — answered with a problem, not written: Enter text.**"
+  * The readiness reason is "needs a fix". That blocks the lock (blocksLock), and its words point at an answer that cannot be given. The ruling asked for exactly this check.
+  * **Fix:** in formCoverage, return a row with `by_hand` before `checkValue` (for example `if (b.by_hand) return b;` after the gate check). Its readiness line should say the row's own reason, in the copy's words, and point to the question it waits for. Add a fail step: the forms readiness for the waiting child has no "needs a fix" or "Enter text" line for `person.application_type`, and has one line carrying the reason.
+* **m7 (Should, answering your question): the copy's by-hand line is labelled "A form field"** (api/src/fill-case.ts:287). Its reason names the person and the question they wait for, but not the field. Ready to file already names the box by its caption (case-prepare.ts:621). I would not hold the merge on this. Use the box caption when no question label exists, as Ready to file does, so the copy row reads "Type of application (…)".
+
+**Round 2 verdict: Block** at **7a4e143da6ab50cbf35b5277ec2b28c94ba74de2**. Fix M3, with its fail test. Fix m7 or list it in the PR, and list m2 and m3 as follow-up rows. Everything else from round 1 is closed.
