@@ -23,10 +23,9 @@ on:
 permissions:
   actions: write
   pull-requests: write
-# One command at a time per PR, none cancelled (P-371).
-concurrency:
-  group: comment-run-${{ github.event.issue.number }}
-  cancel-in-progress: false
+# No concurrency group (#1658 break M1): every comment on the PR would join it, even one whose job is skipped, and
+# GitHub cancels a group's pending run when a newer one queues, so any comment could cancel a member's waiting command.
+# Commands are independent: two re-runs of one run, and GitHub refuses the second (the reply says so).
 jobs:
   run:
     if: "github.event.issue.pull_request && contains(fromJSON('[\"OWNER\",\"MEMBER\",\"COLLABORATOR\"]'), github.event.comment.author_association) && (startsWith(github.event.comment.body, '/run ') || startsWith(github.event.comment.body, '/rerun'))"
@@ -46,9 +45,11 @@ jobs:
           # Gate: a pull request, and a repository member (checked again here, whatever the job's if says).
           if [ "$IS_PR" != yes ]; then out action ignore; exit 0; fi
           case "$ASSOC" in OWNER|MEMBER|COLLABORATOR) ;; *) out action ignore; exit 0;; esac
-          line=${BODY%%$'\n'*}; line=${line%$'\r'}; line=${line%"${line##*[! ]}"}
+          line=${BODY%%$'\n'*}; line=${line%$'\r'}
+          if [ "${#line}" -gt 200 ]; then refuse "the command line is longer than 120 characters"; fi   # before trimming (#1658 m2)
+          line=${line%"${line##*[! ]}"}
           if [ "${#line}" -gt 120 ]; then refuse "the command line is longer than 120 characters"; fi
-          re_run='^/run nightly(( C[0-9]{1,2}\.[0-9]{1,2}){1,8})( (six|checkpoint))?$'
+          re_run='^/run nightly(( C[1-9][0-9]?\.[1-9][0-9]?){1,8})( (six|checkpoint))?$'   # no leading zero: C07.3 is not C7.3 (#1658 m6)
           if [ "$line" = "/rerun failed" ]; then
             out action rerun
           elif [[ "$line" =~ $re_run ]]; then
@@ -78,7 +79,7 @@ jobs:
               reply "refused: $REASON. ([this run]($THIS_RUN))"; exit 0;;
             nightly)
               # Defence in depth: the values were validated by the parser; check their shape again before use.
-              [[ "$CAPS" =~ ^C[0-9]{1,2}\.[0-9]{1,2}( C[0-9]{1,2}\.[0-9]{1,2}){0,7}$ && "$DATA" =~ ^(six|checkpoint)$ ]] || { reply "refused: the parsed values failed their check. ([this run]($THIS_RUN))"; exit 1; }
+              [[ "$CAPS" =~ ^C[1-9][0-9]?\.[1-9][0-9]?( C[1-9][0-9]?\.[1-9][0-9]?){0,7}$ && "$DATA" =~ ^(six|checkpoint)$ ]] || { reply "refused: the parsed values failed their check. ([this run]($THIS_RUN))"; exit 1; }
               since=$(date -u -d '-60 seconds' +%Y-%m-%dT%H:%M:%SZ)
               if ! gh api -X POST "repos/$REPO/actions/workflows/nightly.yml/dispatches" -f ref=main -f "inputs[capabilities]=$CAPS" -f "inputs[data]=$DATA" >/dev/null; then
                 reply "could not start nightly.yml (GitHub refused the dispatch; see [this run]($THIS_RUN)). Ask the tech lead."; exit 1
@@ -91,9 +92,13 @@ jobs:
               where=${url:-"the newest run on [nightly's page]($GITHUB_SERVER_URL/$REPO/actions/workflows/nightly.yml)"}
               reply "started nightly.yml on main: re-test of $CAPS on the $DATA data: $where. ([this run]($THIS_RUN))";;
             rerun)
-              head=$(gh api "repos/$REPO/pulls/$PR" --jq .head.sha) && [[ "$head" =~ ^[0-9a-f]{40}$ ]] || { reply "could not read the PR's head. ([this run]($THIS_RUN))"; exit 1; }
-              run=$(gh api -X GET "repos/$REPO/actions/workflows/ci.yml/runs" -f head_sha="$head" -f event=pull_request -f per_page=1 \
-                --jq '.workflow_runs[0] // empty | [.id, .status, (.conclusion // "none"), .html_url] | @tsv') || { reply "could not list the ci runs. ([this run]($THIS_RUN))"; exit 1; }
+              # The PR's head commit, repository and branch: a run of another PR (a fork) on the same commit is not this
+              # PR's run (#1658 break M2; as ci.yml's memory filters on head_repository).
+              pr=$(gh api "repos/$REPO/pulls/$PR" --jq '[.head.sha, (.head.repo.full_name // ""), .head.ref] | @tsv') || pr=""
+              IFS=$'\t' read -r head hrepo href <<< "$pr"
+              [[ "$head" =~ ^[0-9a-f]{40}$ && "$hrepo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && -n "$href" ]] || { reply "could not read the PR's head. ([this run]($THIS_RUN))"; exit 1; }
+              run=$(HREPO="$hrepo" HREF="$href" gh api -X GET "repos/$REPO/actions/workflows/ci.yml/runs" -f head_sha="$head" -f event=pull_request -f per_page=30 \
+                --jq '[.workflow_runs[] | select(.head_repository.full_name == env.HREPO and .head_branch == env.HREF)][0] // empty | [.id, .status, (.conclusion // "none"), .html_url] | @tsv') || { reply "could not list the ci runs. ([this run]($THIS_RUN))"; exit 1; }
               [ -n "$run" ] || { reply "refused: no ci run for the head ${head:0:7}. ([this run]($THIS_RUN))"; exit 0; }
               IFS=$'\t' read -r id status conclusion url <<< "$run"
               [[ "$id" =~ ^[0-9]+$ ]] || { reply "could not read the ci run. ([this run]($THIS_RUN))"; exit 1; }

