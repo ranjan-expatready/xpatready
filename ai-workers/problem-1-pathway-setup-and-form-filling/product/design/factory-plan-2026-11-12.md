@@ -313,7 +313,37 @@ Everything else in this plan is the Lead's under P-384 (pipeline, lane arrangeme
 | # | Decision | Recommendation | Time | Cost | Quality |
 |---|---|---|---|---|---|
 | **D1** | **Which part of the whole product is this factory's to build?** | **A + B now** (configurator and case delivery, ~700 capabilities, band 380-1,280); C (front office) only after the team states what ER v2 builds there (its frontend already has CRM, booking, e-sign, invoicing screens); D + E stay the team's (P-335, P-357). Run H-1's 2-hour sizing test first | sets every later date | none | none |
-| **D2** | **Run the structure track (S0-S12, ~25 small PRs) right after the Bake's tag commit, before M4 product rows that touch the hot files** | **Yes.** Extends P-499 (1)'s "five busiest files" to the full module map, because the top 7 files hold only 39% of conflicts and 72% of app PRs cross modules | ~4-6 working days on 2 lanes (H-6); M4 product rows on other modules run alongside | plan usage only, US$0 | behaviour unchanged; every gate kept; adds lint checks; each step kept only if conflicts fall |
+| **D2** | **Run the structure track (S0-S12, ~25 small PRs) right after the Bake's tag commit, before M4 product rows that touch the hot files** | **Yes.** Extends P-499 (1)'s "five busiest files" to the full module map, because the top 7 files hold only 39% of conflicts and two thirds of app PRs (199 of 301, hub files excluded) touch 2 or more modules | ~4-6 working days on 2 lanes (H-6); M4 product rows on other modules run alongside | plan usage only, US$0 | behaviour unchanged; every gate kept; adds lint checks; each step kept only if conflicts fall |
 | **D3** | **Adopt the team's structure rules as ours: 800-line files, `eslint-plugin-boundaries`, ER v2's module names, Prisma domain files** | **Yes**, so our code drops into ER v2 at the merge (P-450) without a reflow; passes STANDARDS §1 ("what the team already has") | inside D2 | none | higher (same bar as the team) |
 | **D4** | **Night starts: may a scheduled routine start a briefed lane without your typed turn?** (changes P-348 (5)) | **Trial first:** one routine on a docs-only row (H-8); if it works, allow it for briefed rows from BACKLOG, live AI off, no permission widened. Until then, warm spares at your last turn (P-489 (5)) | recovers part of the 4.5× night gap (H-4) | plan usage only | unchanged gates; sessions run unwatched until the next check |
 | **D5** | **When to buy more capacity (a second plan or account) to run ~18 lanes** | **Not now.** Decide when Works/day ≥10 with conflicted app PRs ≤10% for a week (after D2 and the yield change), using H-9 and H-10's measured cost per lane-day | 2nd plan: ~halves the A+B date (5.1, last two rows) | the plan's price (yours) | none if walls are in place; more collisions if not |
+
+---
+
+## Evidence (re-runnable)
+
+All in `factory-plan-2026-11-12-evidence/`; outputs as run are in `outputs.txt`. Python 3, standard library only; run with `python3 -I`. GitHub data is not committed (it carries account names); fetch it with curl as below (`gh` GraphQL fails here, P-363).
+
+```bash
+T=$(gh auth token); R=https://api.github.com/repos/<owner>/xpatready
+for p in $(seq 1 13); do curl -sS -o pulls-$p.json -H "Authorization: Bearer $T" "$R/pulls?state=closed&sort=created&direction=desc&per_page=100&page=$p"; done   # merge into pulls.json
+curl ... "$R/issues/comments?since=2026-11-01T18:30:00Z&sort=created&direction=asc&per_page=100&page=<n>"   # 36 pages → comments.json
+curl ... "$R/issues/events?per_page=100&page=<n>"                                                        # 72 pages back to 1 Nov → events.json
+curl ... "$R/actions/workflows/nightly.yml/runs?created=>=2026-11-01T18:30:00Z&per_page=100&page=<n>"   # 273 runs
+```
+
+| File | What | Plan section |
+|---|---|---|
+| `measure_structure.py` → `erv2-backend-modules.tsv`, `ours-modules.tsv` | files, lines, routes, controllers, `@Module`s, Prisma models, file sizes | 1.1 |
+| `count_frs.py` → `erv2-requirements-fr-counts.tsv` | live and withdrawn numbered requirements per module | 1.2-1.4 |
+| `count_cards.py` → `erv2-requirements-card-counts.tsv` | cards with the team's status marker | 1.2 |
+| `conflicts_from_git.py` → `git-2026-11-02-to-12-prs.tsv`, `-hot-files.tsv` | class by files; merges of `main` inside each PR, replayed with `git merge-tree` | 2.3 |
+| `flow_app_prs.py` → `flow-2026-11-02-to-12-app-flow.tsv` | app PR times, lines, size-matched conflict cost, hours of day | 2.2, 2.3 |
+| `gates_app_prs.py` | Approve / label / merge stages, excess over floors, label removals | 2.3, 4.1 |
+| `conflict_breakdown.py` | conflict hits per file and group; Little's law | 2.3, 4.1 |
+| `module-map.tsv`, `module_span.py` | proposed module per file; modules and streams per app PR | 2.4, 3.2, 3.4 |
+| `works_per_day.py` → `works-per-day-main.tsv` | first-time Works and re-opens per IST day | 2.2, 5 |
+
+The `nightly.yml` ask → dispatch figure (section 2, cause 6) came from a one-off script in the scratchpad: comments matching `dispatch|nightly.yml` together with a request word, paired with the next `workflow_dispatch` run; treat it as rough.
+
+**Not measured, and why:** how long qa takes per verdict (no machine timestamp, as in the 9 Nov study); lanes per day over the window (session lists are not on GitHub); plan % per lane-day (account switched 11 Nov); red-`main` restore time (no tool yet).
