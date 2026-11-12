@@ -7,6 +7,7 @@ import { FORM_SETUP } from "../../form-setup.ts";
 import { decide } from "../../proposals.ts";
 import { type HeldSectionName, namedReason, nameOfHeld, readHeldSectionNames } from "../../section-names.ts";
 import type { CheckpointContext, CheckpointStep } from "./_context.ts";
+import { LATER_BY_KEY } from "./040-field-map-review.ts";
 import { familyForm } from "./_family-form.ts";
 
 /** QA-144 slices 1–4 (tech lead on #798; B79): the combinations the configured checkpoint sets up from their forms' own
@@ -74,13 +75,20 @@ export default {
     s.fromForms = ctx.six.combinations.filter((c) => SET_UP_FROM_FORMS.has(ctx.keyOf.get(c.id) ?? ""));
     s.heldNames = readHeldSectionNames();
     await ctx.timed("sections from the forms' parts (rules)", async () => {
+      const later: { c: (typeof s.fromForms)[number]; forms: { id: string; fileName: string; edition: string | null }[] }[] = [];
       for (const c of s.fromForms) {
         // The family information form the channel takes off (FAMILY_FORM_BY_CHANNEL) gives no sections (review m2).
         const notFiled = (await familyForm(ctx.db, c.id, ctx.keyOf.get(c.id)))?.other ?? null;
         const forms = (await ctx.db.sourceAttachment.findMany({ where: { combinationId: c.id, kind: "Form" }, orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, edition: true } }))
           .filter((a) => !notFiled || !(a.edition ?? "").startsWith(`${notFiled} (`));
-        await sectionsFrom(ctx, c, forms);
+        // BK-16 (P-496): a source the combination marks "later" (samples/wave1.json) gives its sections after every
+        // combination's own, so the shared sections the others' forms make are made first and never regrouped by it.
+        const held = LATER_BY_KEY.get(ctx.keyOf.get(c.id) ?? "");
+        await sectionsFrom(ctx, c, forms.filter((a) => !held?.has(a.fileName)));
+        const hold = forms.filter((a) => held?.has(a.fileName));
+        if (hold.length) later.push({ c, forms: hold });
       }
+      for (const x of later) await sectionsFrom(ctx, x.c, x.forms);
     });
   },
 } satisfies CheckpointStep;

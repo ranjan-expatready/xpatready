@@ -14,7 +14,8 @@ export default {
     const out = formSetup(ctx), library = ctx.get(Screen02), forms = ctx.get(Forms);
     const editions = ((await buildSnapshot(db, workspaceId, c.id, "draft")).snapshot.field_maps as { form_edition: string; channel?: string }[]).filter((m) => m.channel !== "ONLINE").map((m) => m.form_edition);
     const marked = new Set<string>(); // review r2-m1 (#1050): a Not on this form mark that finds no form field is said
-    for (const ed of await db.formEdition.findMany({ where: { workspaceId, editionLabel: { in: editions } }, select: { id: true, form: { select: { formKey: true } } } })) {
+    // BK-16 (P-496): the later pass completes only the held forms' editions (the others were done in the own pass).
+    for (const ed of (await db.formEdition.findMany({ where: { workspaceId, editionLabel: { in: editions } }, select: { id: true, form: { select: { formKey: true } } } })).filter((e) => cc.pass !== "later" || cc.held?.has(e.form.formKey))) {
       for (const f of (await library.formFields(ed.id)).fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) {
         try { await library.decideFormField(author, ed.id, { dataPath: f.dataPath, decision: "by_hand", reason: BY_HAND_REASON }); out.byHand++; } catch (e) { out.refused.push(`${f.dataPath}: ${said(e)}`); }
       }

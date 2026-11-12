@@ -15,19 +15,23 @@ export const REVIEW_CORRECTIONS: Correction[] = (JSON.parse(readFileSync(join(ST
 /** BK-16 (P-496): the sources a combination's setup marks "later" in samples/wave1.json (a form the library gains only
  *  for a family member's rule, e.g. a spouse's own application), each kept only when that setup lists it among its
  *  sources. Data, never a form or program in code. Exported, pure over the file's content, for its check. */
-export function laterSources(sample: unknown): Set<string> {
-  const out = new Set<string>();
+export function laterSourcesByKey(sample: unknown): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
   const walk = (n: unknown): void => {
     if (Array.isArray(n)) { for (const x of n) walk(x); return; }
     if (!n || typeof n !== "object") return;
-    const o = n as Record<string, unknown>, s = o.setup as { sources?: unknown; later?: unknown } | undefined;
-    if (s && Array.isArray(s.later) && Array.isArray(s.sources)) for (const f of s.later) if (typeof f === "string" && (s.sources as unknown[]).includes(f)) out.add(f);
+    const o = n as Record<string, unknown>, s = o.setup as { key?: unknown; sources?: unknown; later?: unknown } | undefined;
+    if (s && typeof s.key === "string" && Array.isArray(s.later) && Array.isArray(s.sources))
+      for (const f of s.later) if (typeof f === "string" && (s.sources as unknown[]).includes(f)) out.set(s.key, new Set([...(out.get(s.key) ?? []), f]));
     for (const v of Object.values(o)) walk(v);
   };
   walk(sample);
   return out;
 }
-const LATER = laterSources(JSON.parse(readFileSync(join(STUDIO, "samples", "wave1.json"), "utf8")));
+export const laterSources = (sample: unknown): Set<string> => new Set([...laterSourcesByKey(sample).values()].flatMap((s) => [...s]));
+/** BK-16 (P-496): each combination's later sources, by its key (samples/wave1.json); 080 holds their forms back. */
+export const LATER_BY_KEY = laterSourcesByKey(JSON.parse(readFileSync(join(STUDIO, "samples", "wave1.json"), "utf8")));
+const LATER = new Set([...LATER_BY_KEY.values()].flatMap((s) => [...s]));
 
 /** How many drafts were applied to their combinations (row 8, 095, reads it). */
 export const fieldMapReview = stateOf(() => ({ applied: 0 }));
