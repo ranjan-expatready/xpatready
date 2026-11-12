@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 import { evalCondition, kkey, lineCondition, render, type BoxRow, type Person, type Role } from "../render.ts";
 import { boxGate, notNeededWords, rulesInForce, showCondition, whenWords } from "../form-field-condition.ts";
 import type { Snapshot } from "../snapshot.ts";
+import { PRINCIPAL_CHILDREN_WHEN, ROLE } from "../../contracts/resolver.ts";
 import { groupLabel, type QuestionnaireView, type Readiness } from "../../contracts/runtime.ts";
 import { checkValue, knownOf, type Answer, type Participant, type Row } from "./case.ts";
 import { proseRecorded, recordedDerivation } from "../../../p5/transforms.ts";
@@ -94,8 +95,16 @@ export function notApplyingWords(s: Snapshot, people: Participant[], answers: An
     const { known, forms } = read();
     const line = forms.find((f) => f.form === form && f.person === subjectId);
     if (!line) return "this release does not ask it of them";
-    const f = (s.forms as { form_number: string; status?: string; condition?: { subjectKind?: string } | null; min_age?: number | null }[]).find((x) => x.form_number === form);
+    const f = (s.forms as { form_number: string; status?: string; who?: string; condition?: { subjectKind?: string } | null; min_age?: number | null }[]).find((x) => x.form_number === form);
     const rule = f?.condition ? lineCondition(s, known, renderPeople, subjectId, f.condition) : null;
+    // BK-16 (P-490): a "principal, and each child while its condition holds" line gives a child no form until it holds.
+    if (f?.who === PRINCIPAL_CHILDREN_WHEN && p?.role === ROLE.child) {
+      if (!f.condition) return "it is asked of a child only when its line's condition holds, and the line has no condition";
+      if (rule?.applies === "cannot_tell") {
+        const when = whenWords(f.condition, (fact) => words(fact).replace(/[.\s]+$/, ""));
+        return `it is needed for a child only when ${when || "its rule holds"}; their answer is not given yet`;
+      }
+    }
     if (rule?.applies === false) {
       const when = whenWords(f!.condition, (fact) => words(fact).replace(/[.\s]+$/, ""));
       const whose = f!.condition!.subjectKind === "CASE" ? "the application's answer" : "their answer";
