@@ -38,6 +38,13 @@ export type LibraryChangeDetail = LibraryChangeView & { field: { key: string; la
 export type MergeSide = { key: string; label: string; meaning: string | null; value_type: string | null; aliases: string[]; form_fields: number; questions: number };
 export type MergeView = { id: string; status: "PROPOSED" | "APPLIED" | "REJECTED"; reason: string; proposed_by: string | null; proposed_by_id: string; proposed_at: string; decided_by: string | null; decision_note: string | null; goes: MergeSide; stays: MergeSide };
 
+/** A portal capture as the capture review reads it (board view 6; forms.ts view). */
+export type CaptureView = {
+  id: string; portal_label: string; form: string; title: string; way: string; status: string; status_detail: string | null;
+  screens: { order: number; title: string; questions: number }[]; questions: number; difference: { change?: string; kind?: string; label?: string; input?: string; screen?: string }[] | null;
+  changes_edition_id: string | null; review_file: string | null; captured_on: string | null; captured_by: string; captured_by_name: string | null;
+};
+
 /** A held file from the one intake (board view 9). */
 export type HeldFileView = { id: string; file: string; kind: string; code: string | null; title: string | null; edition: string | null; outcome: string; reason: string | null; combinationId: string | null; at: string; irccPage: string | null; uploadedBy: string; sha256: string; stored: boolean; /** Why approving would be refused (review-4 Minor 2); null when it can be approved. */ cannotApprove?: string | null };
 
@@ -61,6 +68,10 @@ export type ImpactComponent = { key: string; label: string; field: string; combi
 export type ImpactAiOffer = { boxes: number; words: string; about_usd: number; at_most_usd: number; key?: string };
 export type ImpactDrafted = { job_id: string; again: boolean; proposals: number; cost_usd?: number; message: string };
 export type ImpactAccepted = { edition: string; carried: number; for_a_person: number; combinations: { id: string; label: string }[] };
+
+/** An online version's screen map (board view 5). */
+export type ScreenMapInput = { input: string; label: string | null; screen: string | null; outcome: string; method?: string | null; field: string | null; field_label: string | null; why: string | null };
+export type ScreenMapView = { edition: { id: string; label: string; form: string }; state: "not_drafted" | "drafted" | "accepted"; pdf_edition?: string | null; counts?: Record<string, number>; inputs: ScreenMapInput[] };
 
 /** K1: a PDF edition's form fields with their decision. */
 export type FormFieldRow = { dataPath: string; caption: string | null; heading: string | null; outcome: string; outcome_word: string; field: string | null; reason: string | null; status: string; carried: boolean;

@@ -1,20 +1,25 @@
 // F1 forms channels, slice 2b (forms lane): evidence findings F5 (a static form's page fields set with their appearances,
-// so the as-written file shows its values outside Adobe) and F6 (the oath block of IMM 5409 is a person step), QA-33 and
-// QA-34's fill refusals. Every rule has a passing and a failing case. The filler runs on copies of the official forms in
-// a temporary folder; the API part runs on an isolated copy (its own database and files; the demo is never touched). NO
-// model call (US$0). W1-02 (P-102): QA-15 (capture form codes) and D3 (screen-map drafts) are parked with the extension.
+// so the as-written file shows its values outside Adobe) and F6 (the oath block of IMM 5409 is a person step), QA-15
+// (a form code in any case at capture start) and D3 (a second live screen-map start reuses a finished draft whose
+// proposals are waiting, US$0). Every rule has a passing and a failing case. The filler runs on copies of the official
+// forms in a temporary folder; the API part runs on an isolated copy (its own database and files; the demo is never
+// touched). NO model call (US$0): the screen-map proposals are a hand-written answer, said so in its check.
 //   zsh studio/tools/isolated.sh forms_s2b 4452 start && tsx studio/tests/check_forms_slice2b.ts 4452 xr_studio_forms_s2b
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { factKeyProblem } from "../../contracts/fact-key.ts";
+import { NewCapture } from "../contracts/forms.ts";
 import { byAPerson, isOathBox, isSignatureBox, oathBoxes, personSteps } from "../engine/form-steps.ts";
 import { planDraft, type Prior } from "../engine/parts.ts";
+import { screenMapProposals } from "../engine/twin.ts";
 
 const PORT = Number(process.argv[2] ?? 4452), DB = process.argv[3] ?? "xr_studio_forms_s2b";
 const STUDIO = join(import.meta.dirname, "..");
 const PROTOTYPE = join(STUDIO, "..");
 const ROOT = join(PROTOTYPE, "..", "..", "..");
+const FIX = join(STUDIO, "tests", "fixtures");
 const PY = join(ROOT, ".tools", "solution-1-prototype", ".venv", "bin", "python");
 const log: { name: string; ok: boolean; detail?: unknown }[] = []; let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; log.push({ name, ok: !!c, detail }); console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 240)}` : ""}`); };
@@ -24,7 +29,14 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ }
   return { status: r.status, body: j };
 };
+const upload = async (path: string, names: string[], actor = "user-A"): Promise<Res> => {
+  const fd = new FormData(); for (const n of names) fd.append("files", new Blob([new Uint8Array(readFileSync(join(FIX, "portal", n)))]), n);
+  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": actor }, body: fd });
+  return { status: r.status, body: await r.json() };
+};
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+const until = async (fn: () => Promise<boolean>, ms = 300_000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await new Promise((r) => setTimeout(r, 1000)); } return false; };
+const finished = async (jobId: string) => { let j: Res = { status: 0, body: null }; await until(async () => { j = await call("GET", `/jobs/${jobId}`); return !["QUEUED", "RUNNING"].includes(j.body?.status); }); return j.body; };
 type Field = { data_path?: string | null; som?: string | null; ui?: string | null; caption?: string | null; required?: boolean | null };
 const inventory = (f: string) => JSON.parse(readFileSync(join(PROTOTYPE, "p1", "inventory", `${f}.inventory.json`), "utf8")) as { fields: Field[]; groups?: [] };
 const TMP = mkdtempSync(join(tmpdir(), "forms-s2b-"));
@@ -116,6 +128,11 @@ const shown = (pdf: string) => { try { return execFileSync("pdftotext", ["-layou
   const sig1295 = filler("imm1295e.pdf", { [p1295.data_path!]: "EXAMPLE" }, { [p1295.som!]: "EXAMPLE", "IMM_1295[0].Page1[0].Sig[0]": "X" }, "imm1295-sig");
   ok("F5 fail (break m2): a dynamic form stays 'dynamic' and untouched even when a request names one of its few page fields", sig1295.page_fields?.form_kind === "dynamic" && sig1295.page_fields.written === 0 && sig1295.intact === true, sig1295.page_fields);
 
+  // ──────────────────────────────────────────── QA-15: form codes in any case (contract, no server)
+  const cap = (form: string) => NewCapture.safeParse({ portal: "ircc_portal", form, title: "Visitor visa" }).success;
+  ok("QA-15: 'imm 5257', 'Imm-5257', 'imm_5257' and 'ee profile' pass the capture contract", ["imm 5257", "Imm-5257", "imm_5257", "ee profile", "IMM 5257"].every(cap));
+  ok("QA-15 fail: a code that starts with a digit, holds other signs or is one letter is refused, with the reason on the field", !cap("5257") && !cap("imm 5257!") && !cap("I") && /A form code starts with a letter/.test(NewCapture.safeParse({ portal: "ircc_portal", form: "5257", title: "Visitor visa" }).error?.issues[0].message ?? ""));
+
   // ──────────────────────────────────────────── QA-33: A4 reuse compares the kind of box (no server)
   const inv5257 = inventory("imm5257e");
   const uci = inv5257.fields.find((f) => f.data_path && f.ui === "textEdit" && /UCI/i.test(f.caption ?? ""))!;
@@ -128,12 +145,90 @@ const shown = (pdf: string) => { try { return execFileSync("pdftotext", ["-layou
   await call("POST", "/demo/load");
   const rowId = (k: string) => sql(`select id from combination where combination_key='${k}'`);
   const vv = rowId("vv.single"), wp = rowId("wp.family");
-  // QA-34: fill refusals no suite reached (P-69 coverage floor). W1-02 (P-102): the capture refusals, QA-15 (a form code
-  // in any case at capture start) and D3 (screen-map drafts reused) are parked with the browser extension.
-  let r = await call("POST", `/combinations/${wp}/fill`, { form: "IMM 1295", person: "nobody", mode: "draft" });
+  let r = await call("POST", "/captures", { portal: "ircc_portal", form: "imm 5257", title: "Visitor visa (Sample)" });
+  ok("QA-15 (API): a capture started with 'imm 5257' is the library's IMM 5257 (one form, one code)", r.status === 201 && r.body.form === "IMM 5257" && sql("select count(*) from gov_form_def where form_key ilike 'imm%5257'") === "1", { status: r.status, form: r.body?.form });
+  const c2 = await call("POST", "/captures", { portal: "ircc_portal", form: "5257", title: "Visitor visa (Sample)" });
+  ok("QA-15 fail (API): '5257' is refused with the contract's words", c2.status === 400 && /starts with a letter/.test(JSON.stringify(c2.body)), c2.body);
+  const ee = await call("POST", "/captures", { portal: "ircc_portal", form: "ee_profile_", title: "Express Entry profile (Sample)" });
+  ok("QA-15 (break m5): a trailing separator leaves no trailing space ('ee_profile_' is EE PROFILE)", ee.status === 201 && ee.body.form === "EE PROFILE", ee.body?.form);
+
+  const capFirst = r.body.id as string; // the IMM 5257 capture, used by D3 below
+  // ──────────────────────────────────────────── QA-34: capture and fill refusals no suite reached (P-69 coverage floor)
+  const raw = async (path: string, files: [string, Uint8Array<ArrayBuffer>][]) => {
+    const fd = new FormData(); for (const [n, b] of files) fd.append("files", new Blob([b]), n);
+    const x = await fetch(`http://localhost:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd });
+    return { status: x.status, body: await x.json() };
+  };
+  const listed = await call("GET", "/captures?take=abc&skip=-5");
+  ok("QA-34: the capture list takes odd paging values safely (default page, never a negative offset)", listed.status === 200 && Array.isArray(listed.body) && listed.body.length >= 1, listed.status);
+  const k = (await call("POST", "/captures", { portal: "ircc_portal", form: "IMM 5532", title: "Relationship information (Sample)" })).body.id as string;
+  r = await raw(`/captures/${k}/screens`, []);
+  ok("QA-34 fail: adding screens with no file is refused in plain words", r.status === 400 && /at least one saved screen/.test(r.body.message), r.body?.message);
+  r = await raw(`/captures/${k}/screens`, [["empty.html", new Uint8Array()]]);
+  ok("QA-34 fail: an empty file is refused and nothing is added", r.status === 201 && r.body.results?.[0]?.outcome === "refused" && /empty/.test(r.body.results[0].message), r.body?.results);
+  r = await call("GET", `/captures/${k}/review`);
+  ok("QA-34 fail: the review document does not exist before the capture is finished (404, plain words)", r.status === 404, r.status);
+  r = await call("POST", `/captures/${k}/finish`);
+  ok("QA-34 fail: finishing a capture with no screen is refused with the next step", r.status === 400 && /Add at least one screen/.test(r.body.message), r.body?.message);
+  const page = new Uint8Array(readFileSync(join(FIX, "portal", "imm5257-online-s1-personal.html"))) as Uint8Array<ArrayBuffer>;
+  r = await raw(`/captures/${k}/screens`, [["client 1234567 page.html", page]]);
+  const again = await raw(`/captures/${k}/screens`, [["same.html", page]]);
+  ok("QA-34: a file name carrying a number is not kept (renamed), and the same file again is a duplicate, not a second screen", r.body.results?.[0]?.outcome === "added" && !/1234567/.test(JSON.stringify(r.body)) && again.body.results?.[0]?.outcome === "duplicate", { first: r.body.results?.[0], again: again.body.results?.[0]?.outcome });
+  r = await call("POST", `/captures/${k}/approve`, undefined, "user-C");
+  const ret = await call("POST", `/captures/${k}/return`, { note: "The second screen of the form is missing from this capture." }, "user-C");
+  ok("QA-34 fail: an open capture can be neither approved nor returned (409, plain words)", r.status === 409 && ret.status === 409, [r.body?.message, ret.body?.message]);
+  await call("POST", `/captures/${k}/finish`);
+  r = await call("POST", `/captures/${k}/finish`);
+  ok("QA-34 fail: a held capture cannot be finished again", r.status === 409 && /only an open capture can be finished/.test(r.body.message), r.body?.message);
+  r = await call("POST", `/captures/${k}/return`, { note: "The second screen of the form is missing from this capture." });
+  ok("QA-34 fail: the person who captured it cannot return it to themselves (a second person reviews)", r.status === 403, r.body?.message);
+  r = await call("POST", `/captures/${k}/abandon`, { note: "test: not needed" });
+  const twice = await call("POST", `/captures/${k}/abandon`, {});
+  ok("QA-34: a held capture can be abandoned with a note, once; abandoning again is refused", r.status === 201 && r.body.status === "ABANDONED" && twice.status === 409, [r.body?.status, twice.status]);
+  const pdfEd = sql("select id from form_edition where channel = 'PDF' limit 1");
+  r = await call("POST", `/online-versions/${pdfEd}/screen-map/draft`);
+  ok("QA-34 fail: a screen map is never drafted for a PDF edition", r.status === 400 && /online versions/.test(r.body.message), r.body?.message);
+  r = await call("POST", `/combinations/${wp}/fill`, { form: "IMM 1295", person: "nobody", mode: "draft" });
   ok("QA-34 fail: filling a form for a person it does not apply to is a 404 in plain words", r.status === 404 && /does not apply to that person/.test(r.body.message), r.body?.message);
   r = await call("POST", `/combinations/${wp}/fill`, { form: "IMM 1295", person: "principal" });
   ok("QA-34: with no mode the fill uses the latest release (or says plainly why it cannot)", (r.status === 201 && r.body.label) || (r.status >= 400 && r.status < 500 && typeof r.body.message === "string"), { status: r.status, label: r.body?.label, message: r.body?.message });
+
+  // D3: a finished draft whose proposals are waiting is reused (US$0), never paid for again.
+  const capId = capFirst;
+  await upload(`/captures/${capId}/screens`, ["imm5257-online-s1-personal.html", "imm5257-online-s2-marital.html", "imm5257-online-s3-language.html"]);
+  await call("POST", `/captures/${capId}/finish`);
+  const ed = (await call("POST", `/captures/${capId}/approve`, undefined, "user-C")).body.edition.id as string;
+  await call("POST", `/online-versions/${ed}/screen-map/draft`);
+  await call("POST", `/online-versions/${ed}/screen-map/accept`, {}, "user-C");
+  // The Visitor visa files IMM 5257 online (the library holds only this approved online version in a fresh copy).
+  await call("PATCH", `/combinations/${vv}/portal`, { portal: "ircc_portal" });
+  const line = await call("POST", `/combinations/${vv}/lines`, { kind: "FORM", formKey: "IMM 5257" });
+  ok("D3 setup: the Visitor visa files IMM 5257 through the IRCC Portal", line.status === 201 || line.status === 200, line.body);
+  const open = sql(`select string_agg(data_path, ',' order by data_path) from form_field_map where form_edition_id='${ed}' and outcome='unresolved'`).split(",").filter(Boolean);
+  r = await call("POST", `/online-versions/${ed}/screen-map/ai`, { combinationId: vv, mode: "STUB" });
+  const sm = await finished(r.body.id);
+  ok("D3 setup: the stub draft of the open inputs finished and named the inputs it was sent", sm.status === "COMPLETED" && open.length >= 2 && [...(sm.detail.sent_inputs ?? [])].sort().join() === [...open].sort().join(), { status: sm.status, open: open.length, sent: sm.detail?.sent_inputs?.length });
+  // A completed answer, hand-written for this check (no model call): two proposals, as a finished live draft holds them.
+  const answer = { canonical_fields: [], entries: [open[0], open[1]].map((i) => ({ input: i, outcome: "not_a_fact", person: "none", fact: null, transform: null, confidence: "medium", unresolved_reason: "asked only by the portal", evidence_quote: i })) };
+  const proposals = screenMapProposals(answer, open.map((i) => ({ input: i, type: "text", part: null, label: i })), [], factKeyProblem);
+  sql(`update drafting_job set run_id = 'hand-written-check-answer', detail = detail || '${JSON.stringify(proposals).replace(/'/g, "''")}'::jsonb where id = '${sm.id}'`);
+  const jobsBefore = sql(`select count(*) from drafting_job where kind='screen_map'`);
+  r = await call("POST", `/online-versions/${ed}/screen-map/ai`, { combinationId: vv, mode: "LIVE" });
+  ok("D3: a live start while that draft's proposals wait reuses it: no new job, no AI call, US$0, said plainly (no cost confirmation needed)", r.status === 201 && r.body.reused === true && r.body.id === sm.id && /No new AI call \(US\$0\)/.test(r.body.reused_message) && sql(`select count(*) from drafting_job where kind='screen_map'`) === jobsBefore, { status: r.status, reused: r.body.reused, msg: r.body.reused_message ?? r.body.message });
+  ok("D3: the reuse is in the history (who asked, which version, US$0)", Number(sql(`select count(*) from audit_event where action='reused' and entity='screen-map draft'`)) >= 1);
+  const [x1, x2] = await Promise.all([1, 2].map(() => call("POST", `/online-versions/${ed}/screen-map/ai`, { combinationId: vv, mode: "LIVE", confirmWorstUsd: 9.99 })));
+  ok("D3 fail: two live starts at the same moment are both answered with the waiting draft, never a paid job", [x1, x2].every((x) => x.status === 201 && x.body.reused) && sql(`select count(*) from drafting_job where kind='screen_map'`) === jobsBefore, [x1.status, x2.status]);
+  // An open input the waiting draft was not sent: a new draft would pay again for the ones it answered → refused.
+  sql(`update drafting_job set detail = jsonb_set(detail, '{sent_inputs}', '${JSON.stringify(open.slice(0, -1))}'::jsonb) where id = '${sm.id}'`);
+  r = await call("POST", `/online-versions/${ed}/screen-map/ai`, { combinationId: vv, mode: "LIVE" });
+  ok("D3 fail: when other inputs are open too, a new live draft is refused until the waiting proposals are decided (nothing paid)", r.status === 409 && /proposals? waiting/.test(r.body.message) && sql(`select count(*) from drafting_job where kind='screen_map'`) === jobsBefore, r.body.message);
+  sql(`update drafting_job set detail = jsonb_set(detail, '{sent_inputs}', '${JSON.stringify(open)}'::jsonb) where id = '${sm.id}'`);
+  await call("POST", `/online-versions/${ed}/screen-map/ai/accept`, { jobId: sm.id }, "user-C");
+  r = await call("POST", `/online-versions/${ed}/screen-map/ai`, { combinationId: vv, mode: "LIVE" });
+  ok("D3: once its proposals are accepted nothing waits: a new live draft of what is still open asks for its worst case again", r.status === 409 && /costs at most US\$[0-9.]+/.test(r.body.message) && !r.body.reused, r.body.message);
+  r = await call("POST", `/online-versions/${ed}/screen-map/ai`, { combinationId: vv, mode: "STUB" });
+  ok("D3 fail: a stub start (free) is never turned into a reuse", r.status === 201 && !r.body.reused && r.body.id !== sm.id, { status: r.status, reused: r.body?.reused });
+  await finished(r.body.id);
 
   // F5 through the API: IMM 1295 is dynamic: no page fields set, said so in the report and the artifact.
   const f = (await call("POST", `/combinations/${wp}/fill`, { form: "IMM 1295", person: "principal", mode: "draft" })).body;

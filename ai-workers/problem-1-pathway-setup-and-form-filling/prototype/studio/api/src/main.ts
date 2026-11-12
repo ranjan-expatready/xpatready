@@ -14,6 +14,7 @@ import { Body, Catch, Controller, Delete, Get, Headers, HttpException, Inject, M
 import { APP_GUARD, NestFactory } from "@nestjs/core";
 import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import type { NestExpressApplication } from "@nestjs/platform-express";
+import type { NextFunction, Request, Response } from "express";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { actorOf, Audit, CaseRead, ConfigRead, ConfigReadGuard, Db, OpenRead, readerOf, STUDIO, Workspace } from "./core.ts";
@@ -21,6 +22,8 @@ import { Ai } from "./ai.ts";
 import { Demo } from "./demo.ts";
 import { Fill } from "./fill.ts";
 import { Forms, FormsController } from "./forms.ts";
+import { EXTENSION_ORIGIN, Extension, ExtensionController } from "./extension.ts";
+import { CAPTURE_LIMITS } from "../../contracts/forms.ts";
 import { Intake, MAX_BYTES, MAX_FILES } from "./intake.ts";
 import { Programs } from "./programs.ts";
 import { ReviewQueueController, ReviewQueueService } from "./review-queue.ts";
@@ -222,7 +225,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [FieldScopeController, DocumentProvidersController, TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, FormMastersController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, DocumentSuppliesController, DocumentSetsController, MustVerifyController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController, DraftQdController, RuleFactsController], providers: [FieldScopes, DocumentProviders, LinesBulk, PqrDrafts, DraftQd, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, FormMasters, WhoFills, DocumentSupplies, DocumentSets, MustVerify, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs, RuleFacts] })
+@Module({ controllers: [ExtensionController, FieldScopeController, DocumentProvidersController, TeamController, StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, FormProgressController, Screen02Controller, ReviewProposalsController, ChecklistsController, FormMastersController, StructureController, FormLibraryController, RunsController, WorkspaceController, FactSourcesController, StartSetupController, PersonChecklistsController, WhoFillsController, DocumentSuppliesController, DocumentSetsController, MustVerifyController, LibrarySourcesController, OfficialPagesController, LinesBulkController, PqrDraftsController, DraftQdController, RuleFactsController], providers: [Extension, FieldScopes, DocumentProviders, LinesBulk, PqrDrafts, DraftQd, FormProgressService, OfficialPagesService, FactSources, PersonChecklists, FormMasters, WhoFills, DocumentSupplies, DocumentSets, MustVerify, LibrarySources, { provide: APP_GUARD, useClass: ConfigReadGuard }, WorkspaceViews, PeopleFromGuide, Db, Workspace, Audit, StartSetup, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, Team, CaseForms, ReviewQueueService, Screen02, ReviewProposals, Impact, Checklists, Lifecycle, Structure, Finder, FormLibrary, UploadRuns, Runs, RuleFacts] })
 class AppModule {}
 
 async function main() {
@@ -232,6 +235,16 @@ async function main() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: ["error", "warn"] });
   app.useBodyParser("json", { limit: "5mb" });
   app.useGlobalFilters(new ProblemErrors());
+  // F2b (S-1, XT-3): the browser extension's routes answer one origin, the fixed extension's; no credentials (it sends
+  // its token, never a cookie) and no x-actor header across origins. Every other route sends no CORS header at all.
+  app.use("/api/extension", (req: Request, res: Response, next: NextFunction) => {
+    if (req.headers.origin === EXTENSION_ORIGIN) {
+      res.setHeader("Access-Control-Allow-Origin", EXTENSION_ORIGIN); res.setHeader("Vary", "Origin");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE"); res.setHeader("Access-Control-Allow-Headers", "authorization, content-type"); res.setHeader("Access-Control-Max-Age", "600");
+    }
+    if (req.method === "OPTIONS") return res.status(req.headers.origin === EXTENSION_ORIGIN ? 204 : 403).end();
+    next();
+  });
   const web = join(STUDIO, "web", "dist");
   if (existsSync(web)) {
     // dotfiles "allow": lane copies live under .claude/worktrees/, and a hidden folder in the path made every page a 404.

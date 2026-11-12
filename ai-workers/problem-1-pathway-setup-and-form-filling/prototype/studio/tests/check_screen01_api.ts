@@ -152,7 +152,7 @@ function pdf(title: string, text: string) {
   const att5707 = sql(`select id from source_attachment where combination_id='${vvId}' and edition like 'IMM 5707%' limit 1`);
   r = await call("POST", `/attachments/${att5707}/reuse`, { who: "<script>alert(1)</script>" });
   ok("break M3 fail: reusing a form with a \"who\" that is not on the list is refused; nothing is added", r.status === 400 && sql(`select count(*) from combination_form where combination_id='${vvId}' and lineage_key='IMM 5707'`) === "0", r.body.message);
-  ok("F1: \"+ Add line\" gives the line its default channel (PDF upload: forms come in only as PDFs, P-102)", sql(`select channel from combination_form where combination_id='${ss.combinationId}' and lineage_key='IMM 1295'`) === "PDF_UPLOAD");
+  ok("F1: \"+ Add line\" gives the line its default channel (PDF upload: this combination has no portal)", sql(`select channel from combination_form where combination_id='${ss.combinationId}' and lineage_key='IMM 1295'`) === "PDF_UPLOAD");
   // A change that needs the expert's sign-off (a document requirement), so every review step of QA-1 is exercised.
   const types = (await call("GET", "/library/document-types")).body as any[];
   r = await call("POST", `/combinations/${ss.combinationId}/requirements`, { documentTypeKey: types[0].documentTypeKey, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant" });

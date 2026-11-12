@@ -186,7 +186,11 @@ function pdf(title: string, text: string) {
   r = await intake([["imm5476-next-again.pdf", bytes]]);
   ok("C2.3: the same file uploaded again is no longer held", r?.outcome !== "held", r?.outcome);
 
-  // ─────────────────────────────── C3.5: the merge read by its page (W1-02: the screen-map page is parked)
+  // ─────────────────────────────── C3.9 / C3.5: the screen map and the merge read by their pages
+  const ed = sql("select id from form_edition where channel='ONLINE' limit 1");
+  const edId = ed || "00000000-0000-0000-0000-000000000000";
+  r = await call("GET", `/online-versions/${edId}/screen-map`);
+  ok("C3.9: an online version's screen map reads its state (or a plain 404 when there is none)", ed ? r.status === 200 && ["not_drafted", "drafted", "accepted"].includes(r.body.state) : r.status === 404, r.body?.state ?? r.body?.detail);
   const [mk, mm] = sql("select canonical_field_key from canonical_field where value_type='text' and status='PUBLISHED' and merged_into_key is null group by canonical_field_key order by canonical_field_key desc limit 2").split("\n");
   r = await call("POST", "/library/merges", { keep: mk, merge: mm, reason: "Test input: the same meaning under two keys." });
   const mg = (await call("GET", `/library/merges/${r.body?.id ?? sql("select id from field_merge where status='PROPOSED' limit 1")}`)).body;

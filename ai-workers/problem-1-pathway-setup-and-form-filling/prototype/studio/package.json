@@ -6,6 +6,10 @@
   "engines": {
     "node": "24.21.0"
   },
+  "scripts": {
+    "extension": "tsx extension/build.ts production",
+    "extension:dev": "tsx extension/build.ts development"
+  },
   "dependencies": {
     "@hookform/resolvers": "5.4.0",
     "@nestjs/common": "11.1.29",

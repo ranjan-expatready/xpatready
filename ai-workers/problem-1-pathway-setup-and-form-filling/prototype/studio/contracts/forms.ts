@@ -6,6 +6,33 @@ import { z } from "zod";
 
 /** P-143 (W1-10 slice 1): the four ways a form line is filed. Sample until the immigration expert confirms per form. */
 export const CHANNELS = ["ONLINE", "PDF_UPLOAD", "PAPER", "NOT_NEEDED"] as const;
+// F1 forms channels contract (forms lane, P-61, P-62, P-66), shared by the API, the engine and later the web app: the
+// portal list, the filing channels and their plain words, and the request shapes of the capture, channel, answer-list
+// and merge endpoints (STANDARDS §6: contract first, zod). The capture record itself is the JSON contract
+// contracts/portal-capture.v1.schema.json, which the browser extension (F2) will send unchanged.
+
+/** The representative portals a filing goes through (P-61 facts, IRCC and ESDC pages, 23 Oct). Sample until the
+ *  immigration expert confirms which program is filed where. P-98: the proof of concept proves the APR Portal only, so
+ *  it comes first and is the default; the others stay listed but are not proven now. */
+export const PORTALS = [
+  { key: "apr_portal", label: "APR Portal (Authorized Paid Representatives)", owner: "IRCC" },
+  { key: "ircc_portal", label: "IRCC Portal", owner: "IRCC" },
+  { key: "rep_pr_portal", label: "Representative Permanent Residence Portal", owner: "IRCC" },
+  { key: "lmia_online", label: "LMIA Online", owner: "ESDC" },
+] as const;
+export const PORTAL_KEYS = PORTALS.map((p) => p.key) as [string, ...string[]];
+/** P-98: the portal a new online form or capture starts on when nothing else is chosen. */
+export const DEFAULT_PORTAL = "apr_portal";
+export const portalLabel = (key: string | null | undefined) => PORTALS.find((p) => p.key === key)?.label ?? key ?? "no portal";
+
+/** F3 plan D1: the decisions an online version's screen map holds about its page inputs. A row with any other outcome
+ *  (such as `asked_differently`, a decision about a whole PDF section) is never a page input. */
+export const SCREEN_MAP_OUTCOMES = ["mapped", "not_a_fact", "person_answers_on_screen", "unresolved"] as const;
+/** F3 plan D1: the outcome and the data path prefix of "asked differently online" (a PDF section the portal asks in
+ *  another way); a page element id can never start with "@". */
+export const ASKED_DIFFERENTLY = { outcome: "asked_differently", prefix: "@asked-differently:" } as const;
+export const AskedDifferently = z.object({ group: z.string().trim().min(1).max(80), reason: z.string().trim().min(3).max(300) }).strict();
+
 export type Channel = (typeof CHANNELS)[number];
 export const CHANNEL_WORDS: Record<Channel, string> = { ONLINE: "Online", PDF_UPLOAD: "PDF upload", PAPER: "Paper", NOT_NEEDED: "Not needed" };
 /** What each channel means for the person filing (P-143, research filing_channels.md). */
@@ -80,6 +107,52 @@ export const SetAccount = z.object({
   account: z.enum(IRCC_ACCOUNTS, accountError).nullable(),
   from: z.enum(IRCC_ACCOUNTS, { error: (iss) => (iss.input === undefined ? "Say which IRCC account you changed it from (null when it was not set)." : accountError.error) }).nullable(),
 });
+
+/** How long an approved online version stays current before it must be checked again (Sample, P-61 §5). */
+export const RECHECK_DAYS = 180;
+export const CAPTURE_CONTRACT = "portal-capture/v1";
+export const CAPTURE_WAYS = ["saved_page", "template", "extension", "screenshots"] as const;
+/** Upload and size limits of a capture (break m5): the API and its messages read the same numbers. */
+export const CAPTURE_LIMITS = { files: 30, fileMb: 10, screens: 200 } as const;
+
+export const NewCapture = z.object({
+  portal: z.enum(PORTAL_KEYS, { message: "Choose one of the portals." }),
+  // QA-15: any case and the usual separators ("imm 5257", "IMM-5257", "imm_5257"); the API stores it as the library
+  // writes it (capitals, one space), so it is the same form.
+  form: z.string().trim().regex(/^[A-Za-z][A-Za-z0-9 _-]{1,30}$/, "A form code starts with a letter, for example IMM 5257 or EE PROFILE."),
+  title: z.string().trim().min(3, "Give the form's title as the portal shows it.").max(200),
+  applicationType: z.string().trim().max(200).optional(),
+  /** Screen 01 "Add an online form" (C2.7): the combination it is added from; the online version stays a library one. */
+  combinationId: z.string().uuid("Choose an existing combination.").optional(),
+  /** F2: "extension" for a capture made screen by screen in the browser extension (it adds to the current version, Q2). */
+  way: z.enum(["saved_page", "extension"], { error: "A capture is made from saved pages (or the template) or with the browser extension." }).optional(),
+});
+export const ReturnCapture = z.object({ note: z.string().trim().min(5, "Say what is wrong, so the person who captured it can fix it.").max(1000) });
+export const AbandonCapture = z.object({ note: z.string().trim().max(1000).optional() });
+/** "from": the value the person's screen showed; a save made from an out-of-date screen is refused (STANDARDS §4). */
+export const SetPortal = z.object({ portal: z.enum(PORTAL_KEYS).nullable(), from: z.enum(PORTAL_KEYS).nullable().optional() });
+/** Which source drafting reads for a form (P-62 §1, C2.10): the PDF version first by default, or the online screens alone. */
+export const DRAFT_FROM = ["PDF_FIRST", "ONLINE_ONLY"] as const;
+export type DraftFrom = (typeof DRAFT_FROM)[number];
+export const DRAFT_FROM_WORDS: Record<DraftFrom, string> = { PDF_FIRST: "PDF version first, then the online screens for what differs", ONLINE_ONLY: "Online screens only (the PDF version is not reused)" };
+export const SetDraftFrom = z.object({ draftFrom: z.enum(DRAFT_FROM, { message: "Choose PDF version first or online screens only." }), from: z.enum(DRAFT_FROM).optional() });
+/** "Use the default" for the lines whose default is Online (C1.7): each with the channel the screen showed. */
+export const UseDefaults = z.object({ lines: z.array(z.object({ line: z.string().min(1), from: z.enum(CHANNELS) })).min(1, "Choose at least one form.") });
+/** A capture's status in a combination's words (C2.7): what the author sees on the combination page. */
+export const CAPTURE_STATUS_WORDS: Record<string, string> = { OPEN: "Being captured: add the remaining screens, then finish", HELD: "Awaiting a second person", RETURNED: "Returned to the author", APPROVED: "Approved: an online version in the library", IN_LIBRARY: "Already in the library (identical screens)", ABANDONED: "Abandoned" };
+export const AcceptScreenMap = z.object({ inputs: z.array(z.string()).optional() });
+/** A person maps one online input: to a shared field (for a person), or as "not a fact" with the reason. */
+export const ResolveInput = z.object({
+  input: z.string().trim().min(1, "Name the input (its element id)."),
+  fact: z.string().trim().regex(/^[a-z][a-z0-9_]*\.[a-z0-9_.]+$/, "A shared field id, for example person.place_of_birth_city.").optional(),
+  person: z.string().trim().regex(/^[a-z][a-z0-9_]{1,40}$/).optional(),
+  notAFact: z.literal(true).optional(),
+  /** F2c (Q3, BR-9): a declaration or background question the representative answers on the portal themself; the
+   *  extension never fills it. Set by the immigration expert role (SME duty), approved by a second person with the map. */
+  answerOnScreen: z.literal(true).optional(),
+  reason: z.string().trim().min(5, "Say why it is not a fact.").max(500).optional(),
+}).refine((b) => [!!b.fact, !!b.notAFact, !!b.answerOnScreen].filter(Boolean).length === 1, { message: "Map it to a shared field (fact), mark it not a fact (notAFact), or mark it answered on screen (answerOnScreen): one of the three.", path: ["fact"] })
+  .refine((b) => !(b.notAFact || b.answerOnScreen) || !!b.reason, { message: "Say why.", path: ["reason"] });
 export const NewAlias = z.object({ alias: z.string().trim().min(2).max(200) });
 export const NewAnswerList = z.object({
   key: z.string().trim().regex(/^[a-z][a-z0-9_]{1,60}$/, "A list key in lower case, for example sex or marital_status."),
@@ -132,3 +205,16 @@ export type ListPurpose = { kind: string; overflow: string };
 // G-CORE B2 (BR-3): `expected` is the fingerprint of the preview "What this change touches" the person confirmed.
 export const NewMerge = z.object({ keep: z.string().trim(), merge: z.string().trim(), reason: z.string().trim().min(10, "Say why the two fields mean the same.").max(1000), expected: z.string().max(64).nullish() });
 export const DecideMerge = z.object({ note: z.string().trim().max(1000).optional(), expected: z.string().max(64).nullish() });
+/** The guarded screen_map job for an online version's open inputs (F1 slice 2): STUB proves the path at US$0; LIVE
+ *  is a paid call and repeats the worst case the person saw (to the cent), so nothing is spent unseen. */
+// QA-27: each field says in plain words what it needs, for a missing value and a wrong kind of value alike (zod's own
+// "expected number, received string" never reaches a person).
+export const DraftLeftovers = z.object({
+  combinationId: z.string({ error: "Name the combination this is drafted for." }).uuid("Name the combination this is drafted for."),
+  mode: z.enum(["STUB", "LIVE"], { error: "Choose STUB or LIVE: STUB runs no AI (US$0), LIVE is a paid AI call." }),
+  confirmWorstUsd: z.number({ error: "Send the worst case you were shown as a number of US dollars, for example 0.42." }).nonnegative("The worst case is never below US$0: send the amount you were shown.").optional(),
+});
+export const AcceptAiProposals = z.object({
+  jobId: z.string({ error: "Name the screen-map draft (its job id)." }).uuid("Name the screen-map draft (its job id)."),
+  inputs: z.array(z.string({ error: "Name each input by its id, for example birthCity." }), { error: "List the inputs to accept, for example [\"birthCity\"]; leave it out to accept every proposal." }).optional(),
+});

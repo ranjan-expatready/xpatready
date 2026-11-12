@@ -71,12 +71,12 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
     ok("C3.2: the draft configuration of a combination using the form carries the list purpose", cfg.status === 200 && entry, cfg.status);
   } else ok("C3.2: the draft configuration carries the list purpose (no combination uses that form in the sample)", true, "skipped: no combination");
 
-  // ──────────────────────────────────────────── QA-43 (W1-02: the online-forms list is parked; the rule holds for channels)
+  // ──────────────────────────────────────────── QA-43
   const unknown = "00000000-0000-4000-8000-000000000000";
-  r = await call("GET", `/combinations/${unknown}/channels`);
+  r = await call("GET", `/combinations/${unknown}/online-forms`);
   const known = sql("select id from combination limit 1");
-  const k = await call("GET", `/combinations/${known}/channels`);
-  ok("C1.6: QA-43 an unknown combination on its channels is a 404, a known one its lines", r.status === 404 && k.status === 200 && Array.isArray(k.body.lines), { unknown: r.status, known: k.status });
+  const k = await call("GET", `/combinations/${known}/online-forms`);
+  ok("C2.7: QA-43 an unknown combination on online-forms is a 404, a known one a list", r.status === 404 && k.status === 200 && Array.isArray(k.body), { unknown: r.status, known: k.status });
 
   // Evidence only when asked (--evidence): a regression run leaves the repository as it was.
   const out = process.argv.includes("--evidence") ? join(STUDIO, "evidence", "forms-f1p") : join(STUDIO, "var", "isolated-forms_f1p"); mkdirSync(out, { recursive: true });

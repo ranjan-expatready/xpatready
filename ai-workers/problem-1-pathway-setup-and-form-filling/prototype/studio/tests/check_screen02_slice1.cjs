@@ -13,6 +13,7 @@ const PORT = Number(process.argv[2] ?? 4441), DB = process.argv[3] ?? "xr_studio
 const BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
 const SHOTS = path.join(ROOT, "product", "screens", "02-ai-work", "screenshots", "slice1"); fs.mkdirSync(SHOTS, { recursive: true });
+const FIX = path.join(__dirname, "fixtures", "portal");
 const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 let fail = 0, lastStep = "(before the first step)";
 const step = (name, ok, detail) => { lastStep = name; if (!ok) fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).slice(0, 220)}` : ""}`); };
@@ -82,7 +83,11 @@ function pdf(title, text) {
   r = await api(`/combinations/${ss.id}/submit`, { method: "POST", data: {} });
   const smeItems = ((await api(`/combinations/${ss.id}/review`)).body.submission?.changeSummary ?? []).filter((x) => x.needs_sme).length;
   step("setup: Spouse of a student submitted for review by the author", r.status === 201, `${smeItems} change(s) need the SME duty`);
-  // W1-02 (P-102): portal captures are parked with the browser extension; the merge below is the second-person example.
+  // A portal capture finished by the author (held for a second person).
+  const cap = (await api("/captures", { method: "POST", data: { portal: "ircc_portal", form: "IMM 5257", title: "Application for a visitor visa (online)", applicationType: "Visitor visa" } })).body;
+  await api(`/captures/${cap.id}/screens`, { method: "POST", multipart: { files: { name: "imm5257-online-s1-personal.html", mimeType: "text/html", buffer: fs.readFileSync(path.join(FIX, "imm5257-online-s1-personal.html")) } } });
+  r = await api(`/captures/${cap.id}/finish`, { method: "POST" });
+  step("setup: a portal capture finished by the author is held for a second person", r.body?.status === "HELD", r.body?.status ?? r.body?.detail);
   // A merge proposed by the author (two active text fields).
   const [keep, merge] = sql("select canonical_field_key from canonical_field where value_type='text' and status='PUBLISHED' and merged_into_key is null group by canonical_field_key order by canonical_field_key limit 2").split("\n");
   r = await api("/library/merges", { method: "POST", data: { keep, merge, reason: "Test input: the same meaning under two keys." } });
@@ -103,11 +108,10 @@ function pdf(title, text) {
   step("C5.3 BR-9: the person who submitted a combination waits; it says a different person acts", subA?.state === "waiting" && /not the person who submitted it/.test(subA.waiting_on) && subA.next === null, subA?.waiting_on);
   const subOther = smeItems ? item(qc, subId) : item(qb, subId);
   step(`C5.3: the ${smeItems ? "content reviewer signs" : "approver releases"} the submitted combination from To review (its Review and release tab)`, subOther?.state === "needs" && subOther.next.href === `/c/${ss.id}/review` && subOther.next.label === (smeItems ? "Review and sign" : "Release"), subOther?.next?.label);
+  const capA = item(qa, `capture:${cap.id}`), capC = item(qc, `capture:${cap.id}`);
+  step("C5.3 BR-9: the capturer waits (\"You captured it; a different person approves or returns it.\"); no step offered", capA?.state === "waiting" && /You captured it/.test(capA.waiting_on) && capA.next === null, capA?.waiting_on);
+  step("C5.3: a second person sees Approve or return, linked to the capture review page (slice 2)", capC?.state === "needs" && capC.next.label === "Approve or return" && capC.next.href === `/review/capture/${cap.id}`, capC?.next?.href);
   const mid = sql("select id from field_merge where status='PROPOSED' limit 1");
-  const mA = item(qa, `merge:${mid}`), mC = item(qc, `merge:${mid}`);
-  step("C5.3 BR-9: the proposer of a merge waits (\"You proposed it; a different person approves or rejects it.\"); no step offered", mA?.state === "waiting" && /You proposed it/.test(mA.waiting_on) && mA.next === null, mA?.waiting_on);
-  step("C5.3: a second person sees Approve or reject the merge, linked to the merge review page (slice 2)", mC?.state === "needs" && mC.next.label === "Approve or reject the merge" && mC.next.href === `/review/merge/${mid}`, mC?.next?.href);
-  step("C5.3 P-102: no portal capture or screen map item is ever listed (parked with the browser extension)", [qa, qb, qc].every((q) => q.items.every((i) => i.kind !== "capture" && i.kind !== "screen_map")));
   step("C5.3 BR-9: the proposer of a merge waits; a second person sees the merge to decide", item(qa, `merge:${mid}`)?.state === "waiting" && item(qc, `merge:${mid}`)?.state === "needs", item(qc, `merge:${mid}`)?.what);
   const heldId = sql("select id from intake_item where status='HELD' and outcome='held' order by created_at desc limit 1");
   // FIX (review Must 6): before the IRCC page is recorded, the uploader has the step and the second person waits.
@@ -115,10 +119,8 @@ function pdf(title, text) {
   step("C5.3: the counts add up (Needs you + Waiting for others + Running = All) for each person", [qa, qb, qc].every((q) => q.counts.needs + q.counts.waiting + q.counts.running === q.counts.all && q.items.length === q.counts.all), JSON.stringify(qa.counts));
   const wa = await queue("user-A", "?filter=waiting");
   step("C5.3: Waiting for others lists only waiting items, oldest first", wa.items.length === qa.counts.waiting && wa.items.every((i) => i.state === "waiting") && wa.items.every((i, k, a) => k === 0 || a[k - 1].at <= i.at), wa.items.length);
-  const kq = await queue("user-C", "?filter=all&kind=merge");
-  step("C5.3: the Kind filter keeps only that kind", kq.items.length >= 1 && kq.items.every((i) => i.kind === "merge"), kq.items.length);
-  r = await api("/review-queue?filter=all&kind=capture");
-  step("C5.3 P-102 fail: the parked kind is no longer a filter (plain 400)", r.status === 400, r.body?.detail);
+  const kq = await queue("user-C", "?filter=all&kind=capture");
+  step("C5.3: the Kind filter keeps only that kind", kq.items.length >= 1 && kq.items.every((i) => i.kind === "capture"), kq.items.length);
   const sq = await queue("user-A", "?filter=all&q=spouse"), fq = await queue("user-A", "?filter=all&q=imm%205257");
   step("C5.3: search finds items by combination name and by form code", sq.items.length >= 1 && sq.items.every((i) => /spouse/i.test(`${i.title} ${i.what}`)) && fq.items.length >= 1 && fq.items.every((i) => /IMM 5257/.test(`${i.title} ${i.what}`)), `${sq.items.length} · ${fq.items.length}`);
   r = await api("/review-queue?filter=everything");
@@ -138,8 +140,8 @@ function pdf(title, text) {
   step("C5.3: the author's AI proposals row links to its review page", (await row(`job:${svJob}`).locator("[data-next] a").textContent()) === ai.next.label);
   await state("needs-you-author");
   await p.getByRole("button", { name: /^Waiting for others/ }).click(); await p.waitForURL(/f=waiting/); await ready();
-  step("C5.3: Waiting for others shows the merge as the proposer's, with no step", /You proposed it; a different person approves or rejects it/.test(await row(`merge:${mid}`).textContent()) && /No step for you/.test(await row(`merge:${mid}`).textContent()));
-  await state("waiting-for-others-proposer");
+  step("C5.3: Waiting for others shows the capture as the capturer's, with no step", /You captured it; a different person approves or returns it/.test(await row(`capture:${cap.id}`).textContent()) && /No step for you/.test(await row(`capture:${cap.id}`).textContent()));
+  await state("waiting-for-others-capturer");
   // Keyboard: the AI proposals step is reachable by Tab and opens its review page with Enter.
   await open();
   const link = row(`job:${svJob}`).locator("[data-next] a");
@@ -152,14 +154,15 @@ function pdf(title, text) {
 
   // ======================================================== the page (second person)
   await as("user-C"); await open();
-  const mRow = await row(`merge:${mid}`).textContent();
-  step("C5.3: the second person sees the merge as Needs you with Approve or reject the merge", /Needs you/.test(mRow) && /Approve or reject the merge/.test(mRow), mRow.slice(0, 160));
-  const mHref = await row(`merge:${mid}`).locator("[data-next] a").getAttribute("href");
-  step("C5.3: the merge step is a link to its review page", mHref === `/review/merge/${mid}`, mHref);
+  const capRow = await row(`capture:${cap.id}`).textContent();
+  step("C5.3: the second person sees the capture as Needs you with Approve or return", /Needs you/.test(capRow) && /Approve or return/.test(capRow), capRow.slice(0, 160));
+  const capLink = row(`capture:${cap.id}`).locator("[data-next] a");
+  const capHref = await capLink.getAttribute("href");
+  step("C5.3: the capture step is a link to its review page", capHref === `/review/capture/${cap.id}`, capHref);
   await state("needs-you-second-person");
-  await p.getByLabel("Kind of item").selectOption("merge"); await p.waitForURL(/kind=merge/);
-  await p.waitForFunction(() => { const k = [...document.querySelectorAll("tr[data-kind]")].map((x) => x.getAttribute("data-kind")); return k.length > 0 && k.every((x) => x === "merge"); }, null, { timeout: 10000 }).catch(() => {}); // the check below decides
-  step("C5.3: choosing a kind in the page shows only that kind", (await p.locator("tr[data-kind]").evaluateAll((rs) => rs.map((x) => x.getAttribute("data-kind")))).every((k) => k === "merge"));
+  await p.getByLabel("Kind of item").selectOption("capture"); await p.waitForURL(/kind=capture/);
+  await p.waitForFunction(() => { const k = [...document.querySelectorAll("tr[data-kind]")].map((x) => x.getAttribute("data-kind")); return k.length > 0 && k.every((x) => x === "capture"); }, null, { timeout: 10000 }).catch(() => {}); // the check below decides
+  step("C5.3: choosing a kind in the page shows only that kind", (await p.locator("tr[data-kind]").evaluateAll((rs) => rs.map((x) => x.getAttribute("data-kind")))).every((k) => k === "capture"));
   await open("?q=zzzz");
   step("C5.3: nothing matches: an empty state with Show all", /Nothing matches/.test(await p.locator("main").textContent()) && await p.getByRole("button", { name: "Show all" }).count() === 1);
   await state("nothing-matches");

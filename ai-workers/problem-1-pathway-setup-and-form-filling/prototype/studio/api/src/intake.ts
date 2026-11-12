@@ -359,11 +359,11 @@ export class Intake {
       await this.audit.log(workspaceId, actor.id, "held", "form", read.code ?? name, `${actor.name} uploaded an unverified form source; held before library, attachment or AI use`, { sha256: hash }, combination?.id);
       return r;
     }
-    // F1 (challenge point 1), W1-02 (P-102): a saved portal screen is never kept as a guide; forms come in only as their
-    // official PDF (an online-only form is read from its PDF twin).
+    // F1 (challenge point 1): a saved portal screen is never kept as a guide. It belongs in a portal capture, where a
+    // screen holding an answer is refused and a second person approves the rest (P-66).
     if (read.kind === "portal_screen") {
-      const r: IntakeResult = { file: name, outcome: "refused", ...read, message: "This is a saved portal screen, not a form or a guide: forms come in only as their official PDF. Add the form's PDF from IRCC instead. Nothing was added or attached." };
-      await this.record(actor, workspaceId, combination?.id ?? null, name, "", hash, file.buffer.length, r, "DONE", "saved portal screen: forms come in only as PDFs");
+      const r: IntakeResult = { file: name, outcome: "refused", ...read, message: "This is a saved portal screen, not a guide: add it to a portal capture (with its portal), where it is checked for answers and approved by a second person. Nothing was added or attached." };
+      await this.record(actor, workspaceId, combination?.id ?? null, name, "", hash, file.buffer.length, r, "DONE", "saved portal screen: belongs in a portal capture");
       rmSync(stored, { force: true });
       return r;
     }

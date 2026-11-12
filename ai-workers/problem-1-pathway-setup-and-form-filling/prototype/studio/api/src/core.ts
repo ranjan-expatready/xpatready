@@ -60,6 +60,13 @@ export function actorOf(header: string | undefined): Actor {
   if (!a) throw new HttpException({ type: "https://expatready.local/problems/unknown-actor", title: "Who is this?", status: 401, detail: "Choose a simulated person first: the request named no known person." }, HttpStatus.UNAUTHORIZED);
   return a;
 }
+/** F2b (S-2): the browser extension's token from an Authorization header ("Bearer <token>"), or null. The token is
+ *  opaque (43 base64url characters); anything else is no token. The person it stands for is looked up by its hash
+ *  (api/src/extension.ts); the extension's routes take only this, never the x-actor header. */
+export function bearerOf(header: string | undefined): string | null {
+  const m = /^Bearer ([A-Za-z0-9_-]{43})$/.exec((header ?? "").trim());
+  return m ? m[1] : null;
+}
 
 /** Break m8 (27 Oct): reads of the configuration (catalogue, Structure, path options, where-used, the name check) are
  *  denied by default like writes: a known configuration person reads; nobody, an unknown name or a case person does not. */
