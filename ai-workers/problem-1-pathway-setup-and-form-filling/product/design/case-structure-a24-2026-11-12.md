@@ -1,10 +1,12 @@
-# A24: how a case is structured: principal, main contact, mixed applications, case numbers (Fable planner, 12 Nov 2026)
+# A24: how a case is structured: retainer, principal, client, mixed applications, case numbers (Fable planner, 12 Nov 2026)
 
 **Who and why.** The founder's ask A24 (12 Nov ~12:2x IST, spoken, after a demo to the co-founder), recorded in `product/STATE.md` "Founder asks". The founder's words, in short: follow the co-founder's points only on their merit, and find the best solution for real immigration practice. This page is a planner's design (P-455 (5)): read-only on the app, live AI off, US$0. It changes no rule, state or backlog file; the Lead decides what becomes a row.
 
 **Mockup:** [`case-structure-a24-mockup.html`](case-structure-a24-mockup.html) (static, Sample data, no real names).
 
-**In one paragraph.** The co-founder is right on four of five points, and the fifth (combination per case or per application) shows a real gap. The app already keeps exactly one principal applicant per case (in code only, not in the database). It already gives each family member their own application with their own fee, which is what IRCC asks for temporary residence. But a case is still tied to **one** combination, so a family whose members make *different kinds* of temporary applications works only where that combination was configured to add them (the Study permit family, BK-15/BK-17). The right model, used by IRCC's own wording and by the team's taxonomy, is **one case per household engagement, holding one or more applications, each application on its own combination**. Permanent residence is one application for the whole family and goes in its own case. Case numbers are not generated today: the officer types a "reference". The recommended order is: case numbers plus a database guard for the principal in the Bake **if the founder agrees** (about 7 hours), and the rest in M4, starting with "a combination per application" (about 45-60 hours).
+**In one paragraph.** The co-founder is right on four of five points, and the fifth (combination per case or per application) shows a real gap. The team's own requirements (AG-07 v3.12, AG-05 v2.1, snapshot 2 Nov) already define almost all of this, and this design follows them (§2b): **one signed retainer → one case → one or more filings, each filing on its own combination, all under the case's one pathway**, with server-made case and client numbers. The app already keeps exactly one principal applicant per case (in code only, not in the database). It already gives each family member their own application with their own fee, which is what IRCC asks for temporary residence. But a case is still tied to **one** combination, so a family whose members make *different kinds* of temporary applications works only where that combination was configured to add them (the Study permit family, BK-15/BK-17). Permanent residence is one application for the whole family and normally comes with its own retainer, so it lands in its own case. Case numbers are not generated today: the officer types a "reference". The recommended order: case numbers in the team's format plus a database guard for the principal in the Bake **if the founder agrees** (about 7 hours), and the rest in M4, starting with "a combination per application" (about 45-60 hours). Retainers, leads and client records are the team's modules (AG-02, AG-05), outside this reference app; the app only keeps its case ready to link to them.
+
+**Added after the founder's follow-up (12 Nov, ~13:xx IST):** *"the definition of case was retainer signed … from lead to retainer signing and then case management … each retainer will have each case, and each case may have different pathway combinations if they pertain to the same higher-level pathway … don't follow me blindly."* Verdict 0 (§4) and the chain in §5.0 answer it: **agree, with two refinements** (a case may open before the retainer is signed, with a warning; a firm-service case needs none).
 
 ---
 
@@ -58,6 +60,28 @@ Also reused (not re-researched): `research_notes/Agent view and filing UX/ircc_f
 
 ---
 
+## 2b. What the team's requirements already say (AGENTS rule 2: first source of truth)
+
+Read in `sources/drive-snapshot-2026-11-02-1054/02-functional-requirements/` (the name-free copy is `domain/requirements-2026-11-02/`). Quoted without the examples' sample names.
+
+| Team rule | Words | Where |
+|---|---|---|
+| Case | "A case is the firm's work for one client in one destination country. It holds one or more filings and the people on them." | AG-07 v3.12 glossary "Case" |
+| Filing | "A filing is one application to one government authority. It has its own program, forms, fees, deadlines, rules version, people and decision." | AG-07 glossary "Filing" |
+| Applicant role belongs to the filing | "The role belongs to the filing, so one person can be principal on one filing and spouse on another." Each family member is principal on their own filing; "Spouse or child is used when a family member is included in someone else's filing." | AG-07 glossary "Applicant" |
+| Client | "the person or employer the firm works for"; becomes a client when the retainer is executed (one of the ways in, AG02-D2); client number `CL-<5-digit sequence>` per firm | AG-07 glossary "Client"; AG-7-69 rule 3 |
+| One retainer per case | "When a case opens, ExpatReady links to it the most recent signed retainer of that client … that no other case uses … If there is no such retainer, nothing is linked and the case shows 'Retainer not signed'"; a second case for the same client needs another signed retainer; staff may **Change retainer** (audited) | AG-07 AG-7-1 rule 14 (MS-D24(1)); AG-05 MS-D24(1) pointer |
+| Several signers | "Several client signers on one retainer in Release 1" (spouses, a sponsor and an applicant, a family) | AG-05 AG05-D2 |
+| Case number | "`C-<year>-<5-digit sequence>`", per firm per calendar year, server-assigned, "never reused and is never edited. The prefix `C-` is fixed in Release 1" | AG-07 AG-7-3 (AG7-D18) |
+| Case's pathway | client type `INDIVIDUAL` or `CORPORATE` "from the pathway" is written on the case at creation | AG-07 AG-7-1 data (AG-7-5) |
+| Follow-on matters | "A linked case is a new case joined to an earlier one, for a follow-on matter" (worker permit, re-application, stream changed) | AG-07 glossary "Linked case" |
+| Representative | The lead representative "is filled in from the signed retainer or the firm's default"; one per case | AG-07 glossary "Lead representative" |
+| Firm-service case | A case for something that is not a government application; needs no signed agreement when its service says so | AG-07 glossary; AG-7-111 rule 6 |
+
+**What this changes in this design:** the case number follows AG-7-3 (5 digits, fixed `C-`); the co-founder's "point of contact" is the team's **Client** of the case (not a new "main contact" term); the representative stays per case, from the retainer; "a combination per application" is the team's "filing has its own program, forms, fees … rules version". Nothing here conflicts with the founder's decisions in `DECISIONS.md`; no conflict needs the founder.
+
+---
+
 ## 3. How practice-management tools and firms structure it (general patterns, no screens copied)
 
 Patterns common to legal and immigration practice-management tools (described in general terms; nothing copied):
@@ -75,27 +99,44 @@ Why firms draw the line at the engagement: the service agreement is the legal un
 
 | # | Point | Verdict | Evidence | Risk if ignored |
 |---|---|---|---|---|
-| 1 | Exactly one principal applicant per case | **Agree, and it is already so; add a database guard and fix the words.** | App: `runtime.ts:65`, `person-roles.json:4`. IRCC: the principal applicant is a permanent residence term (S5, S6); temporary residence guides speak of "you" and family members who apply on their own (S1, S4) | Today only code enforces it; a future import or script could store two. Calling every temporary applicant "principal" confuses staff |
-| 2 | One point of contact per case | **Agree, with a change**: call it **Main contact** (a firm term; neither IRCC nor the Code names it), default the principal, any adult on the case may be chosen; keep it apart from the **client(s) on the service agreement** and the **representative of record per application** | Code ss. 1, 22, 24 (S8, S9); IMM 5476 per application and adult children's own copy (S7); app: `clientActorId`, `clientSubjectOf`, `keepPrivate` | One login answering for adults breaks their privacy and consent (C6.16 already guards); a single representative "per case" does not match IMM 5476 once applications differ |
+| 0 | (Founder, follow-up) A case is defined by the signed retainer: lead → retainer → case; each retainer its own case; a case may hold different combinations of the same higher-level pathway | **Agree, with two refinements.** (a) The team already says it: a case links the client's signed retainer that no other case uses (AG-7-1 rule 14), so one signed retainer ↔ one case. But the case is defined by **its client, its destination country and its pathway**; the retainer is its *authority to work*, not its identity: a case may open before signature (it shows "Retainer not signed", warns, never blocks) and a firm-service case may need none. (b) Same pathway, yes (client type comes from the pathway, AG-7-1); within it, any mix of combinations the retainer covers. Adding an application for a new family member mid-case changes the agreed services, so it is a **retainer amendment** on the same case (AG-05 amendments; Code s. 24(3)(g) itemised services), not a new case | AG-07 AG-7-1 rule 14, glossary "Case", "Client"; AG-05 AG05-D2, MS-D24(1); Code s. 24 (S9) | Making the retainer the case's identity would block urgent work before signature and break firm-service cases; allowing two cases on one retainer would split fees and trust records the Code keeps per client (s. 32(d)) |
+| 1 | Exactly one principal applicant per case | **Agree, and it is already so; add a database guard and fix the words.** The case's principal is its client's person (the principal on the case's lead filing). The team also gives each filing its own principal ("the role belongs to the filing"), so on a family's temporary applications each member is principal on their own filing and nobody is a co-applicant | App: `runtime.ts:65`, `person-roles.json:4`, `schema.prisma:1871` ("the filing's principal applicant"). Team: AG-07 glossary "Applicant". IRCC: "principal applicant" is IRCC's permanent residence word (S5, S6); its temporary residence guides say "you" and family members apply on their own (S1, S4) | Today only code enforces it; a future import or script could store two |
+| 2 | One point of contact per case | **Agree, with a change**: it is the team's **Client** of the case (one client per case, AG-07; client code `CL-…`), default the principal; family members may also sign the retainer (AG05-D2) and adults keep their own privacy (C6.16). The **lead representative** stays one per case, from the retainer (AG-07); each adult applicant's own IMM 5476 copy is a document on their filing (S7) | Team: AG-07 "Case", "Client", "Lead representative"; AG-05 AG05-D2. Code ss. 1, 22, 24 (S8, S9); IMM 5476 (S7); app: `clientActorId`, `clientSubjectOf`, `keepPrivate` | One login answering for adults breaks their privacy and consent (C6.16 already guards); a missing adult's IMM 5476 copy is a filing defect |
 | 3 | Mixed temporary applications in one case; permanent residence in its own case | **Agree, with a change.** The household's temporary applications **sent together** share one case (one submission, one payment receipt, fee caps S1, S3). Permanent residence opens its own case (one application for the family, S5; another portal; another service agreement). Change: a temporary application that **depends on** the permanent residence application (a sponsored spouse's open work permit after the acknowledgement of receipt, ircc_filing_units.md row 5b) belongs in the permanent residence case, as a later stage. A member who applies months later is a new stage or a new linked case, by the firm's choice. **The child's study permit needs no principal of its own and has no co-applicants:** it is the child's own application, signed by a parent for a minor (S1, S2) | Fee caps need "same time and place" (S3); IMM 0008 (S5) | Splitting a household that applies together loses the fee caps and the shared facts; putting permanent residence with temporary applications mixes two services, two fees and two timelines in one file |
 | 4 | Combination per application, per case or per pathway? | **Per application.** A combination is "one filing type" (`domain/TAXONOMY.md` §1; skill `immigration-structure` rule 2), and validation case 2 already says "Three combinations in one case". A case holds one or more applications. **Gap:** the app ties the case to one combination; a family's different applications exist only where that combination was configured to add them (`added-filings.ts`, `fees_by_role`). "Visitor for him, study permit for the spouse, work permit for the child" cannot be set up without copying study and work permit forms into the visitor combination | TAXONOMY §1, §4 row 2; `schema.prisma:1266`, `:1463`; P-490 (Option B deferred) | Configuration copied across combinations drifts (a form edition fixed in one, stale in another); forms follow roles, not applications (P-490's workaround) |
-| 5 | Case list and case page; why no case IDs | **Agree, with a change.** Generate a case number at opening (`C-2026-0042`, per firm); keep the firm's own reference as optional. Staff list: a table with case number, main applicant, applications, next step, owner, status, updated; cards only on a phone. Case page: summary plus one next step (P-473), then **Applications** as one card per application (BIC-08), each opening its own sub-page or drawer. **No sub-tab per application**: tabs do not scale past three or four people and hide what waits | `cases.tsx:186` (typed reference), `:132`; BIC-08 (`design/best-in-class-m3-case-screens-2026-11-07.md`); P-473, P-115 (cards/list remembered) | A typed reference collides, is mistyped and carries no order; the co-founder's cold walk will look for one |
+| 5 | Case list and case page; why no case IDs | **Agree; the team already specified it (AG-7-3), the reference app just never built it.** Generate a case number at opening in the team's format (`C-2026-00042`, per firm per year); keep the firm's own reference as optional. Staff list: a table with case number, main applicant, applications, next step, owner, status, updated; cards only on a phone. Case page: summary plus one next step (P-473), then **Applications** as one card per application (BIC-08), each opening its own sub-page or drawer. **No sub-tab per application**: tabs do not scale past three or four people and hide what waits | `cases.tsx:186` (typed reference), `:132`; BIC-08 (`design/best-in-class-m3-case-screens-2026-11-07.md`); P-473, P-115 (cards/list remembered) | A typed reference collides, is mistyped and carries no order; the co-founder's cold walk will look for one |
 
 ---
 
 ## 5. The recommended model
 
+### 5.0 End to end: from lead to filed applications (team modules in brackets)
+
+```
+Lead ──► Prospect ──► Retainer signed (all client signers + the firm) ──► Client  CL-00017     [AG-02, AG-05]
+                                    │ amendment = more services, same case                     
+                                    ▼
+                      Case  C-2026-00042  · one client · one destination country · one pathway  [AG-07; this app]
+                       │   linked to that one signed retainer (no other case uses it)
+                       ├── Applications (filings), one or more, each on its own combination of that pathway
+                       └── Submission groups (filings sent together) ──► IRCC application numbers, UCIs
+Next engagement (e.g. permanent residence later) = new retainer ──► new case, linked to the earlier one
+```
+
+**Is this a good definition for the product? Yes, with the refinements of verdict 0.** It gives every money, trust and file record one home (the Code keeps them per client, ss. 32(d), 36(3)); it matches how firms scope work (§3); it lets one household's applications sent together share the fee caps (S3); and it keeps the corporate side apart (an LMIA is the employer's own case, linked, TAXONOMY §2, AG-17). Its one risk is treating the retainer as the case's identity; the team avoids it by linking, not keying, and so does this design.
+
 ### 5.1 Words (one term per thing)
 
 ```
-Household (people and their relations, reused across cases)
- └── Case  C-2026-0042  · one engagement under one service agreement
-      ├── Principal applicant (exactly one)   ├── Main contact (one adult; default the principal)
+Client (person or employer; client code CL-…)  ·  Household (the client's people and their relations, reused across cases)
+ └── Case  C-2026-00042  · one client, one destination country, one pathway, linked to one signed retainer
+      ├── Principal applicant (exactly one: the client's person; principal on the lead filing)
       ├── People on the case (spouse or partner, children, sponsor …)
+      ├── Lead representative (one per case, from the retainer)
       └── Applications (one or more)
-           ├── Application = one filing to IRCC: one combination, one release pinned, one owner (its applicant),
-           │   its own forms, fee, status, IRCC application number; people on it (permanent residence) as applying or declared only
-           ├── Representative of record (per application; default the case's)
+           ├── Application = one filing to IRCC: one combination, one release pinned, one principal (its applicant),
+           │   its own forms, fee, status, IRCC application number; family on it only where IRCC puts them on it
+           │   (permanent residence: applying or declared only)
            └── Submission group (applications sent together; fee caps apply inside it)
 ```
 
@@ -107,14 +148,15 @@ Household (people and their relations, reused across cases)
 | CS-2 | Every other person is related to the principal (spouse or partner, child, sponsor) as today | Product (today) |
 | CS-3 | A case has one or more applications; each application has one combination and pins that combination's release | Product (M4) |
 | CS-4 | An application is owned by one person (its applicant). A temporary residence application has no co-applicants; a permanent residence application carries the family as applying or declared only (filing modes, today) | Product (today) |
-| CS-5 | Applications may share a case only when they can go in one submission: their combinations go through the same IRCC account (the combination's `portalKey`, data) and the same kind of submission. Anything else is refused in words with "Open a linked case" | Data (M4), no combination named in code |
-| CS-6 | A permanent residence application opens its own case; a temporary application that waits for it is a later stage of that case | Data (routes, M4) |
-| CS-7 | A case opens with a generated case number, unique within the firm, never reused or changed; the firm's own reference is optional and searchable | Product + database (Bake, if agreed) |
-| CS-8 | One main contact per case, an adult on the case; changing it is audited; adults who keep answers private stay private from the main contact (C6.16) | Product (M4) |
-| CS-9 | Representative of record per application, default the case's; an adult applicant's own IMM 5476 copy is a document on their application (S7) | Product (M4) |
+| CS-5 | A case's applications all belong to the case's one pathway (client type, AG-7-1) and its client's household; their combinations may differ. Applications sent together form a submission group, and only combinations going through the same IRCC account (the combination's `portalKey`, data) can share a group. Another pathway (an employer's LMIA) is refused in words with "Open a linked case" | Data (M4), no combination named in code |
+| CS-6 | A new engagement (a new retainer) opens a new case, linked to the earlier one (AG-07 "Linked case"); permanent residence normally does, so it lands in its own case. Adding it to a temporary case warns ("usually its own retainer and case") and never blocks. A temporary application that waits for a permanent residence application is a later stage of that case | Data (routes, M4) |
+| CS-7 | A case opens with a generated case number (AG-7-3), unique within the firm, never reused or changed; the firm's own reference is optional and searchable | Product + database (Bake, if agreed) |
+| CS-8 | One client per case (AG-07), shown on the case with the client code; the client's person answers for minors; other adults may sign the retainer (AG05-D2) and keep their answers private from the client (C6.16) | Product (today in part; client code with the team's client record) |
+| CS-9 | One lead representative per case, from the signed retainer (AG-07); each adult applicant's own IMM 5476 copy is a document on their filing (S7); a per-filing representative only if the immigration expert says firms need it | Product (M4) |
+| CS-11 | A case links at most one signed retainer, used by no other case; without one it shows "Retainer not signed" and warns, never blocks (AG-7-1 rule 14). Adding an application for a new person changes the agreed services: a retainer amendment on the same case | Team module (AG-05); this app keeps a `retainer` slot only |
 | CS-10 | The case shows the applications as cards; each card names its people, status and one next step (BIC-08) | UX (M4) |
 
-**Case number format (CS-7):** `<firm prefix>-<year opened>-<4-digit running number>`, e.g. `C-2026-0042`. The prefix is firm data (`samples/firms.json`, default `C`), the running number restarts each year per firm and grows past 9999 without breaking. Allocated inside the opening transaction from a per-firm, per-year counter row (no gaps on refusal, no duplicates when two officers open at once). Existing cases get numbers by opening date in a backfill. IRCC's application numbers and UCIs stay where they are, per application and per person.
+**Case number format (CS-7, the team's AG-7-3):** `C-<year opened>-<5-digit running number>`, e.g. `C-2026-00042`; the prefix `C-` is fixed in Release 1; the running number restarts each year per firm and grows past 99999 without breaking. Allocated inside the opening transaction from a per-firm, per-year counter row (no gaps on refusal, no duplicates when two officers open at once). Existing cases get numbers by opening date in a backfill. IRCC's application numbers and UCIs stay where they are, per filing and per person. The client code (`CL-<5 digits>`, AG-7-69) belongs to the team's client record (AG-02) and is not built in this app.
 
 **Who is principal when a minor is the student and the parents only visit?** The case's principal is the household's anchor adult (so spouse and children keep their relations), and the child's study permit is the child's own application. No new "parent" role is needed for this. Whether IRCC needs anything else in this situation is **Unconfirmed: ask the immigration expert**.
 
@@ -124,9 +166,9 @@ Household (people and their relations, reused across cases)
 |---|---|---|
 | Case number (Bake if agreed) | `Case.caseNumber` + unique `(workspaceId, firmKey, caseNumber)`; new `firm_case_counter (workspace_id, firm_key, year, next_value)`; `reference` becomes optional | `2026111x_a24_case_number`: add column nullable, backfill by `created_at`, then NOT NULL |
 | Principal guard (Bake if agreed) | `case_participant`: `EXCLUDE (case_id WITH =) WHERE (role = 'principal') DEFERRABLE INITIALLY DEFERRED` (a deferred constraint, so Make principal's two updates still pass) plus a deferred trigger that a case has at least one principal at commit | `2026111x_a24_one_principal` |
-| Main contact | `Case.mainContactSubjectId` (backfill the client person), audit line on change | `…_a24_main_contact` |
+| Retainer slot | `Case.retainerRef` optional text, shown as "Retainer: not signed" until the team's AG-05 links one (no retainer logic here) | `…_a24_retainer_slot` (M4, only if the founder wants it shown) |
 | Combination per application | `Filing.combinationId` (from the stage's), per-filing release pin (a `PackWorkPin` row per application, or `Filing.configReleaseId`); `CaseStage` keeps the route, no longer "one combination for the case" | `…_a24_application_combination`, backfill from the case |
-| Representative per application | `CaseTeamMember.filingId` optional (null = whole case) | `…_a24_rep_per_application` |
+| Adult's own IMM 5476 copy | a document requirement per adult applicant (data), no schema change | none |
 
 Baton files (P-438 (2), one holder at a time): `prisma/schema.prisma` for every migration above; `api/src/case-prepare.ts` only for "combination per application" (prepare reads each application's own release). Neither is touched by the case-number PRs except `schema.prisma`.
 
@@ -136,9 +178,9 @@ Baton files (P-438 (2), one holder at a time): `prisma/schema.prisma` for every 
 
 **Case list (staff).** A table (P-115 keeps Cards/List per person; cards below 640 px as on the client page today). Columns: **Case** (number, bold, with the firm's own reference under it in muted text), **Main applicant** (name), **Applications** (count and short names: "3 · Study permit, Work permit, Visitor visa"), **Next step** (one line, orange only when it needs you, P-473 (4)), **Case officer**, **Status** (shape and text), **Updated**. Filters as chips: My cases · Needs me · Waiting on client · Ready to file · Filed. Search by case number, reference, name, IRCC application number or UCI.
 
-**Case page.** Header: case number, main applicant, status; one line under it: main contact, representative of record, case officer. Then **one next step** card with the one filled button. Below, in order: **Applications** (one card per application: who, application type and combination, status pill, fee, IRCC number when filed, its own next step, "Open"), **People** (summary cards per person: role, which applications they are on, private flag), then links to sub-pages: Questionnaire, Documents, Review, Submission, Activity. An application opens its own sub-page (forms, documents, checks, fee, record) with a person filter; quick details open in a drawer. Sub-tabs exist only for case-level areas, never one per application. Client words stay plain second person with "Why we ask" (P-473 (2)); IRCC's exact words on staff views.
+**Case page.** Header: case number, main applicant, status; one line under it: client (with client code when the team's record exists), retainer status, lead representative, case officer. Then **one next step** card with the one filled button. Below, in order: **Applications** (one card per application: who, application type and combination, status pill, fee, IRCC number when filed, its own next step, "Open"), **People** (summary cards per person: role, which applications they are on, private flag), then links to sub-pages: Questionnaire, Documents, Review, Submission, Activity. An application opens its own sub-page (forms, documents, checks, fee, record) with a person filter; quick details open in a drawer. Sub-tabs exist only for case-level areas, never one per application. Client words stay plain second person with "Why we ask" (P-473 (2)); IRCC's exact words on staff views.
 
-**Open a case.** The case number shows as "Given when you open: C-2026-0043 (next free)"; "Your own reference (optional)". In M4 the dialog picks the principal's application first, then "Add an application" per person (offered only for combinations allowed by CS-5).
+**Open a case.** The case number shows as "Given when you open (C-2026-00043 next)"; "Your own reference (optional)". In M4 the dialog picks the principal's application first, then "Add an application" per person (offered only for combinations allowed by CS-5).
 
 See the mockup for both screens.
 
@@ -150,7 +192,7 @@ See the mockup for both screens.
 
 | PR | What | Files | Lines | Hours |
 |---|---|---|---|---|
-| A24-1 | Case number: migration, counter, allocation at opening, backfill, contracts, `reference` optional, firm prefix as data | `prisma/schema.prisma` (baton), migration, `api/src/runtime.ts`, `contracts/runtime.ts`, `samples/firms.json`, tests | ~450 | 3.5 |
+| A24-1 | Case number: migration, counter, allocation at opening, backfill, contracts, `reference` optional, 5-digit sequence per firm per year (AG-7-3) | `prisma/schema.prisma` (baton), migration, `api/src/runtime.ts`, `contracts/runtime.ts`, `samples/firms.json`, tests | ~450 | 3.5 |
 | A24-2 | Case number on screens: list column and search, page heading, Open a case dialog, client list | `web/src/runtime/cases.tsx` (screens single writer, P-489 (1)), `web` tests, journey screenshots | ~250 | 2 |
 | A24-3 | One principal in the database (deferred exclusion + at-least-one trigger) | `prisma/schema.prisma` (baton), migration, tests | ~150 | 1.5 |
 
@@ -164,12 +206,12 @@ Bake total ~7 h over 3 PRs; A24-1 and A24-3 need the schema baton in turn after 
 | M4-A2 | Prepare reads each application's own release (`case-prepare.ts` baton) | 8 |
 | M4-A3 | Questionnaire across several releases: one question per shared fact, asked once (canonical answers are already per person) | 10 |
 | M4-A4 | Forms follow their application (retires P-490's role-and-condition workaround where it applied) | 8 |
-| M4-A5 | "Add an application" on the case, with CS-5 (same IRCC account and submission kind, data) and words for "open a linked case" | 6 |
+| M4-A5 | "Add an application" on the case, with CS-5 (same pathway; same IRCC account inside a submission group, data), CS-6's warning and words for "open a linked case" | 6 |
 | M4-A6 | Fee derivation per application's own table row (fee caps still across the submission group) | 6 |
 | M4-B1 | Case list v2: API returns main applicant, applications, next step, officer; table, filters, search | 6 |
 | M4-B2 | Case page: summary and one next step, Applications cards, People cards, drawers (folds into UX-13 PR 1, already first in M4) | 8 |
-| M4-C1 | Main contact (schema, chooser, audit, privacy check) | 4 |
-| M4-C2 | Representative per application and adult applicants' own IMM 5476 copy as a document | 5 |
+| M4-C1 | Client line on the case (client's person, retainer status slot), privacy check for adults (C6.16) | 2 |
+| M4-C2 | Each adult applicant's own IMM 5476 copy as a document requirement (data) | 2 |
 | M4-D1 | Permanent residence case linking ("follows" and "waits for" across cases) | 6 |
 
 M4 total ~71 h (about 45-60 h for the "combination per application" core A1-A6 with reviews). Data for Study permit, Visitor visa, Work permit and sponsorship moves from "added filings" to real separate combinations only after M4-A5, through the screens (no code change, P-452).
@@ -180,10 +222,10 @@ M4 total ~71 h (about 45-60 h for the "combination per application" core A1-A6 w
 
 **Pack checks per rule** (unit checks under `tests/`, plus API checks against a fresh database):
 * CS-1: opening makes one principal; adding a second is refused; Make principal passes (deferred constraint); a raw insert of a second principal fails at commit; a case without a principal fails at commit.
-* CS-7: format `C-2026-0001`; 20 parallel openings in one firm give 20 different numbers with no gap; two firms each start at 0001; a refused opening uses no number; an idempotent replay returns the same number; the backfill numbers old cases by opening date; the year rolls to 0001.
-* CS-3/CS-5 (M4): two applications on two combinations in one case each pin their own release; a combination on another IRCC account is refused in words; fee caps still apply across the submission group (the six's family fixture: same totals as today).
+* CS-7: format `C-2026-00001`; 20 parallel openings in one firm give 20 different numbers with no gap; two firms each start at 00001; a refused opening uses no number; an idempotent replay returns the same number; the backfill numbers old cases by opening date; the year rolls to 00001.
+* CS-3/CS-5 (M4): two applications on two combinations in one case each pin their own release; a combination of another pathway is refused in words; two combinations on different IRCC accounts cannot share a submission group; permanent residence added to a temporary case warns and is allowed; fee caps still apply across the submission group (the six's family fixture: same totals as today).
 * CS-4: a temporary application has no co-applicants; a permanent residence application keeps applying and declared-only people (today's filing-mode checks stay green).
-* CS-8/CS-9 (M4): a private adult's answers stay hidden from a main contact who is another adult; the representative of an application defaults to the case's.
+* CS-8/CS-9 (M4): a private adult's answers stay hidden from the client's person; each adult applicant gets their IMM 5476 document line.
 
 **Walk by screens** (journey-test, P-447): open a case and see its number in the toast, list and heading; search by number; open a family Study permit case and see one card per application with its people and fee; (M4) add a visitor application for a grandparent and a work permit for the spouse, see them in one submission with the fee caps.
 
@@ -198,7 +240,7 @@ M4 total ~71 h (about 45-60 h for the "combination per application" core A1-A6 w
 ## 9. Questions for the founder (at most three, each with a recommendation)
 
 1. **Case numbers and the principal guard in the Bake (about 7 hours, 3 PRs) or in M4?** Recommendation: **in the Bake, after the current schema baton**: the co-founder will look for a case number on his cold walk (14 Nov), the work changes no derivation, and the risk is low.
-2. **Adopt the case boundary: one case per household engagement; temporary applications sent together share a case; permanent residence in its own case, with applications that wait for it as its later stages?** Recommendation: **yes**, with the immigration expert confirming CS-5 and CS-6 as Sample until then.
+2. **Adopt the case boundary as the team wrote it: one signed retainer ↔ one case (a case may open before signature, with a warning); one client and one pathway per case; any mix of that pathway's combinations, one per application; a new engagement such as permanent residence = a new retainer and a new linked case (warn, never block)?** Recommendation: **yes**: it is the team's AG-07/AG-05 rule, so the reference app only catches up; the immigration expert confirms CS-5 and CS-6, Sample until then.
 3. **Make "a combination per application" (M4-A1 to A6, about 45-60 hours) the first engine work of M4, ahead of other engine rows?** Recommendation: **yes**: it removes the copied-configuration risk behind P-490 and makes any household mix configurable by screens alone.
 
 For the immigration expert (not the founder): whether every adult must sign the service agreement; whether the representatives' portal puts a household's visitor, study and work applications in one online submission; and the minor-student case in §5.2.
@@ -210,7 +252,11 @@ For the immigration expert (not the founder): whether every adult must sign the 
 | Term | Meaning here |
 |---|---|
 | **Case** | One engagement of the firm for one household under one service agreement; it holds people and one or more applications. "Matter" or "file" in other tools |
-| **Case number** | The number the app gives a case when it opens, e.g. `C-2026-0042`; never reused |
+| **Case number** | The number the app gives a case when it opens, e.g. `C-2026-00042` (team AG-7-3); never reused |
+| **Client code** | The team's number for a client, e.g. `CL-00017` (AG-7-69); not built in this app |
+| **Retainer** | The signed service agreement; one signed retainer links to one case; an amendment adds services to the same case |
+| **Lead representative** | The licensed person whose licence backs the case, from the retainer (team term) |
+| **Linked case** | A new case joined to an earlier one for a follow-on matter (team term) |
 | **Your reference** | The firm's own optional reference for a case (for example from an older system) |
 | **Household** | The principal applicant and the people related to them (spouse or partner, children) |
 | **Principal applicant** | The one person a case is built around; on a permanent residence application, IRCC's "principal applicant" who fills IMM 0008 for the family |
@@ -220,7 +266,7 @@ For the immigration expert (not the founder): whether every adult must sign the 
 | **Combination** | The last level of Pathway › Program › Category › Sub-category: one kind of application, configured and released as versions |
 | **Release** | A frozen version of a combination's configuration; an application pins one |
 | **Submission group** | Applications sent together at the same time and place; IRCC's family fee caps apply only inside it |
-| **Main contact** | The adult the firm talks to about the case (default the principal); a firm term |
+| **Client (of the case)** | The person or employer the firm works for on this case (team term); the co-founder's "point of contact" |
 | **Client (Code)** | Under the consultants' Code, each person who has an agreement with, or consults, the licensee (s. 1) |
 | **Service agreement** | The written agreement the Code requires before services (s. 24); also called a retainer |
 | **Representative of record** | The licensed person named on IMM 5476 for an application; one at a time per application |
