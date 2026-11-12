@@ -223,7 +223,10 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     const w = formWaits.get(`${f.form}|${f.person}`)!;
     if (w.pending?.applies === "cannot_tell") addDecider(w.pending.missing, w.pending.about ?? f.person, `whether ${f.form} applies to ${f.person_label}`);
   }
-  for (const f of s.forms) if (f.condition) for (const row of forms.filter((x) => x.form === f.form_number)) keepAnswered(f.condition, conditionSubjects(people, row.person, f.condition.subjectKind), `whether ${f.form_number} applies to ${row.person_label}`);
+  // BK-16 review m2: on a "principal, and each child while its condition holds" line the condition decides children only,
+  // so an answer is kept as deciding it for a child, never for the principal (rule R1: never read for them).
+  const decidedBy = (f: { who: string }, person: string) => f.who !== PRINCIPAL_CHILDREN_WHEN || people.find((p) => p.id === person)?.role === ROLE.child;
+  for (const f of s.forms) if (f.condition) for (const row of forms.filter((x) => x.form === f.form_number && decidedBy(f, x.person))) keepAnswered(f.condition, conditionSubjects(people, row.person, f.condition.subjectKind), `whether ${f.form_number} applies to ${row.person_label}`);
 
   // M3-S2 (P-425): a "Who can be in this application" line's rule that adds a filing decides it for each person of the
   // line who applies (engine/runtime/added-filings.ts reads the same rule), so its question is asked of them and kept once

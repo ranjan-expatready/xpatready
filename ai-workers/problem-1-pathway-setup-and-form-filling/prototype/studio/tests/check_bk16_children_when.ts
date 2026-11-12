@@ -59,6 +59,10 @@ ok("BK-16 R3 fail: a child answered No gets no form and is not asked its facts",
 ok("BK-16 R4: a child not answered yet gets no form: applies is false (never \"cannot tell\") and nothing is missing", row("STUDY", "child-open")?.applies === false && (row("STUDY", "child-open")?.missing ?? ["x"]).length === 0 && !asks("child-open", "person.school_name"), row("STUDY", "child-open"));
 ok("BK-16 R4: the question that decides it is still asked of that child, as a deciding question", deciding("child-open")?.status === "needs an answer" && (deciding("child-open")?.decides ?? []).some((d) => d === "whether STUDY applies to child-open"), deciding("child-open"));
 ok("BK-16 R4: once answered, it is kept on the case for the children it decided", (deciding("child-yes")?.decides ?? []).includes("whether STUDY applies to child-yes") && (deciding("child-no")?.decides ?? []).includes("whether STUDY applies to child-no"));
+// Review m2: an answer the principal gave is never kept as deciding this line for them (only for each child).
+const withPrincipal = render(snap, family, knownOf({ ...answers, principal: true }));
+const principalQ = withPrincipal.questions.find((q) => q.about === "principal" && q.fact === STUDIES);
+ok("BK-16 R1 (review m2): the principal's own answer is never kept as deciding the line for them", !(principalQ?.decides ?? []).some((d) => d.startsWith("whether STUDY")) && withPrincipal.forms.find((f) => f.form === "STUDY" && f.person === "principal")?.applies === true, principalQ?.decides);
 const why = (id: string) => row("STUDY", id)?.why ?? "";
 ok("BK-16 words: each holder's reason says the rule for them", /^always for the principal applicant; for a child, only when the person studies for a long course$/.test(why("principal")) && /^for a child, when the person studies/.test(why("child-yes"))
   && /^for a child, only when the person studies for a long course$/.test(why("child-no")) && /\(not answered yet\)$/.test(why("child-open")), [why("principal"), why("child-yes"), why("child-no"), why("child-open")]);
