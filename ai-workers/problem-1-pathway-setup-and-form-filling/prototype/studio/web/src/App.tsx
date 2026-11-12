@@ -1,10 +1,10 @@
 import * as React from "react";
 import { RunChip } from "@/components/run-card";
-import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, DoorOpen, Scale, Database, FileStack, FileText, Inbox, Layers, ListTree, Moon, RotateCcw, Sparkles, Sun, Upload } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
+import { api, ApiError, getActor, personChosen, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
@@ -29,13 +29,24 @@ import { draftBarWords } from "../../contracts/status-words";
 import { FINISHED_STORY_TIP, FinishedStoryDialog } from "@/components/demo-finished-story";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FoldOut } from "@/components/fold-out";
-import { Frame } from "@/components/frame";
+import { Frame, PersonNotice, PersonPicker } from "@/components/frame";
+import { SignInPage } from "@/pages/sign-in";
+import { personOf } from "@/lib/simulated-people";
 
 export default function App() {
   // BK-3: every route renders through the one Frame (components/frame.tsx): the Studio below, the case area (runtime
   // lane, R1c) in RuntimeApp, and an adult's own link and the demo inbox (C6.16, stand-in SI-20), which stay outside the
   // simulated people.
-  return <BrowserRouter><Routes><Route path="/cases/*" element={<RuntimeApp />} /><Route path="/link" element={<LinkApp />} /><Route path="/inbox" element={<DemoInbox />} /><Route path="*" element={<Shell />} /></Routes></BrowserRouter>;
+  // BK-4a: the sign-in page (P-484 (3): a page, not a gate), one notice for every change of person, and a stored person
+  // this workspace does not know goes to the sign-in page (BR-6) instead of a refusal on every screen.
+  return <BrowserRouter><PersonNotice /><Routes><Route path="/sign-in" element={<SignInPage />} /><Route path="/cases/*" element={<KnownPerson><RuntimeApp /></KnownPerson>} /><Route path="/link" element={<LinkApp />} /><Route path="/inbox" element={<DemoInbox />} /><Route path="*" element={<KnownPerson><Shell /></KnownPerson>} /></Routes></BrowserRouter>;
+}
+
+/** BK-4a BR-6: a person chosen in this browser who is not one of the simulated people opens the sign-in page. A browser
+ *  with no stored person is the Configuration author, as before (P-484 (3)). */
+function KnownPerson({ children }: { children: React.ReactElement }) {
+  const id = useActorId();
+  return personChosen() && !personOf(id) ? <Navigate to="/sign-in?unknown=1" replace /> : children;
 }
 
 function Shell() {
@@ -68,12 +79,12 @@ function Shell() {
   React.useEffect(() => { document.title = here ? `${here.label} · Product Studio` : "Product Studio"; }, [here?.label]);
   return (
     <Frame area="studio" title="Product Studio" subtitle="Pathway Configurator" home="/" staff={!casePerson}
-      badge={<Pill tone="warn" className="ml-1 hidden lg:inline-flex" title="Working prototype on a local demo database: no sign-in, simulated people, not production">Prototype · demo workspace</Pill>}
+      badge={<Pill tone="warn" className="ml-1 hidden lg:inline-flex" title="Working prototype on a local demo database: simulated people signed in by role, no passwords, not production">Prototype · demo workspace</Pill>}
       controls={<>
         <RunChip />
         <DemoControls loaded={!!session.data?.sampleLoaded} programsExist={(session.data?.counts?.programs ?? 0) > 0} />
-        {/* QA-54: the list holds the Studio people; a case person who arrives here is shown too, so the header names them. */}
-        <PersonaSwitch actors={casePerson ? [...(session.data?.actors ?? []), me] : session.data?.actors ?? []} />
+        {/* BK-4a: the one person picker (all nine people, three groups); QA-54's case person is in it too. */}
+        <PersonPicker area="studio" />
         <ThemeToggle />
       </>}
       band={!casePerson ? <DraftBar /> : null}
@@ -154,22 +165,6 @@ function NavItem({ to, label, icon: Icon, active, badge }: { to: string; label: 
       <Icon className="size-4" />{label}
       {badge ? <span className="ml-auto rounded-md bg-[#7c3aed]/12 px-1.5 text-[11px] font-semibold tabular-nums text-[#6d28d9] dark:text-[#c4b5fd]" aria-label={`${badge} waiting for you`}>{badge}</span> : null}
     </NavLink>
-  );
-}
-
-function PersonaSwitch({ actors }: { actors: any[] }) {
-  const id = useActorId();
-  const qc = useToast();
-  const me = actors.find((a) => a.id === id);
-  return (
-    <label className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface px-2 py-1">
-      <span className="hidden whitespace-nowrap text-[11px] text-text-muted lg:inline">Acting as</span>
-      <select className="min-w-0 max-w-[13rem] truncate bg-transparent text-xs font-medium xl:max-w-[22rem]" value={id} onChange={(e) => { setActor(e.target.value); const a = actors.find((x) => x.id === e.target.value); qc.push({ tone: "info", text: `Now acting as ${a?.name} (simulated): ${a?.role}` }); }} aria-label="Simulated person">
-        {/* QA-80: one name per person in the header; the staff role and duties are in the tip of "Simulated". */}
-        {actors.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-      </select>
-      <Pill tone="neutral" title={me ? `${me.role}. Duties: ${me.duties.join(", ")}` : undefined}>Simulated</Pill>
-    </label>
   );
 }
 

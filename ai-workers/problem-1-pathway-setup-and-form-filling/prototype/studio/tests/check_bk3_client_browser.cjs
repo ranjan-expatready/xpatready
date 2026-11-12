@@ -137,7 +137,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     // BR-1: a client at the address is refused, with no read and no case named.
     await as("user-P"); listReads.length = 0;
     await p.goto(`${BASE}/cases/clients/user-P`); await p.getByText("This page is for the firm's staff", { exact: true }).waitFor({ timeout: 30000 }); await settled();
-    step(`${W}: Client A at a client page is refused, told how to see it (BR-1)`, /Switch to the case officer/.test(await p.locator("main").innerText()));
+    step(`${W}: Client A at a client page is refused, told how to see it (BR-1)`, /Choose a firm person under Acting as to see this client's cases\./.test(await p.locator("main").innerText()));
     step(`${W}: fail side: no case list read, no case reference on screen, no Back to a case address`, listReads.length === 0 && !/BK3C-/.test(await p.locator("main").innerText()) && (await p.locator("[data-where-back]").count()) === 0, { listReads, back: await p.locator("[data-where-back]").count() });
     await axe(`${W} the refusal`, "main");
     if (width === 1440) await p.screenshot({ path: path.join(SHOTS, `pr3-client-refused-${width}.png`) });
