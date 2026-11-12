@@ -160,7 +160,8 @@ export function held(text) {
  *  runs them there on a pull request, as the nightly does; every other pack keeps its capability's data. Read like the
  *  hold file (a line that cannot be read holds nothing and moves nothing). */
 export function checkpointPacks(text) {
-  return new Set([...held(text).packs].filter(([, why]) => /\bcheckpoint row\b/i.test(why)).map(([f]) => f));
+  // Review m5 (#1609): "not a checkpoint row" moves nothing.
+  return new Set([...held(text).packs].filter(([, why]) => /\bcheckpoint row\b/i.test(why) && !/\bnot a checkpoint row\b/i.test(why)).map(([f]) => f));
 }
 /** The same, from the hold file on the base (a pull request's own edit to qa's file moves none of its packs). */
 export const checkpointPacksAtBase = () => checkpointPacks(atBase(HELD, true));
