@@ -1,9 +1,9 @@
 {
- "about": "BK-16 PR 2 (P-496 (1), (A3), tech lead on #1632): the four configured-checkpoint combinations other than the Study permit, captured from main 3ea36a0d3 (12 Nov 2026) on a fresh isolated copy that loaded the configured checkpoint (saved AI answers, US$0). Per combination: release_fingerprint, its release's sha256 (engine/snapshot.ts snapshotHash; status is not in it); snapshot_sha256, the sha256 of the WHOLE release snapshot, canonical, with the status of the items in status_may_differ ignored (tests/lib/release-snapshot-compare.ts); status_may_differ, the 37 shared library items the Study permit's release now carries first (IMM 1295 reuses their questions), so they read PUBLISHED where main reads DRAFT; and the readable placements, sections and form lines, for a failure's words. tests/check_bk16_family_forms_api.ts compares the head's latest releases with it: any other difference fails. Re-capture from main only when a merged row changes these releases on purpose, and say why in that row.",
- "captured_from": "origin/main 3ea36a0d3",
+ "about": "BK-16 PR 2 (P-496 (1), (A3), tech lead on #1632): the four configured-checkpoint combinations other than the Study permit, captured from main 92507436d (12 Nov 2026) on a fresh isolated copy that loaded the configured checkpoint (saved AI answers, US$0). Per combination: release_fingerprint, its release's sha256 (engine/snapshot.ts snapshotHash; status is not in it); snapshot_sha256, the sha256 of the WHOLE release snapshot, canonical, with the status of the items in status_may_differ ignored (tests/lib/release-snapshot-compare.ts); status_may_differ, the 37 shared library items the Study permit's release now carries first (IMM 1295 reuses their questions), so they read PUBLISHED where main reads DRAFT; and the readable placements, sections and form lines, for a failure's words. tests/check_bk16_family_forms_api.ts compares the head's latest releases with it: any other difference fails. Re-capture from main only when a merged row changes these releases on purpose, and say why in that row.",
+ "captured_from": "origin/main 92507436d",
  "vv.single": {
-  "release_fingerprint": "f4a464df21d8b65fc9a4bf4f50970897229bc1a40284908216b8b5dee5398bdf",
-  "snapshot_sha256": "f504e974f98393f88bac65ed18cdcdf5e6e15d209e8a4bd4f808f4631a48b384",
+  "release_fingerprint": "e308cc5186a91c888744b1d2c77b3835eca73b53ce92034f6ba2d09e6bf0631d",
+  "snapshot_sha256": "9380f2998cbcb0069c3aaa3c18d826f73139723ad53d04ab7ab2456f2dcb6d2d",
   "status_may_differ": [],
   "placements": [
    "applicant | person.present_occupation | client_questionnaire | per_person |  | ",
@@ -167,8 +167,8 @@
    "us_pr_card | person.us_green_card_number | client_questionnaire | per_person |  | ",
    "us_pr_card | person.us_permanent_resident | client_questionnaire | per_person |  | ",
    "your_declaration | case.release_authorization_action | client_questionnaire | once_per_case |  | ",
-   "your_full_name_date_of_birth_and_application | case.application_type | staff_working_view | once_per_case | Which kind of application is this case: visitor, worker or student? For any other kind, leave it and tick the form's Other box by hand | ",
    "your_full_name_date_of_birth_and_application | case.submission_office_name | staff_working_view | once_per_case | Which IRCC office has the application, if it was already submitted? For a new application, pass this line on Ready to file with the reason \"new application\" | ",
+   "your_full_name_date_of_birth_and_application | person.application_type | client_questionnaire | per_person |  | ",
    "your_parent_1_mother_or_father | person.present_address | client_questionnaire | per_person |  | ",
    "your_parent_1_mother_or_father | relationship.accompanies_subject_to_canada | client_questionnaire | per_person |  | "
   ],
@@ -187,8 +187,8 @@
   ]
  },
  "wp.lmia_inside": {
-  "release_fingerprint": "64fd1d5383f33e18bd612cba318288c920c98c7676197efe43325c0ba2f07b1e",
-  "snapshot_sha256": "88070a8f32a18669616c67fecd5b5baa8168fdd8405d5add2d48159b6eafce19",
+  "release_fingerprint": "a905d4dbd6432150775193853ef8ec3e7d04f150a6156f176a9f497e823f9d7b",
+  "snapshot_sha256": "c8024f5f33cd22917620d7874aa0c99de57f100fd6b227306b2aac991a71860e",
   "status_may_differ": [
    "field:case.intended_employment_end_date",
    "field:case.intended_employment_start_date",
@@ -353,8 +353,8 @@
    "us_pr_card | person.us_green_card_number | client_questionnaire | per_person |  | ",
    "us_pr_card | person.us_permanent_resident | client_questionnaire | per_person |  | ",
    "your_declaration | case.release_authorization_action | client_questionnaire | once_per_case |  | ",
-   "your_full_name_date_of_birth_and_application | case.application_type | staff_working_view | once_per_case | Which kind of application is this case: visitor, worker or student? For any other kind, leave it and tick the form's Other box by hand | ",
    "your_full_name_date_of_birth_and_application | case.submission_office_name | staff_working_view | once_per_case | Which IRCC office has the application, if it was already submitted? For a new application, pass this line on Ready to file with the reason \"new application\" | ",
+   "your_full_name_date_of_birth_and_application | person.application_type | client_questionnaire | per_person |  | ",
    "your_parent_1_mother_or_father | person.present_address | client_questionnaire | per_person |  | ",
    "your_parent_1_mother_or_father | relationship.accompanies_subject_to_canada | client_questionnaire | per_person |  | "
   ],
@@ -371,8 +371,8 @@
   ]
  },
  "pnp.express_entry": {
-  "release_fingerprint": "6eeaf0c2f480d91c0a0b937602bdda6d18260171e72461a54e95f07c34bcf91d",
-  "snapshot_sha256": "6c5f2e5c2c8ee22e8372595216fe4fe214f8df693e98b95b9f117f7dfce35ba2",
+  "release_fingerprint": "2ac2a1f93bb67e9971fc0b873d1d72e6e9f693d3a46c8b24b4f3b758997d9b47",
+  "snapshot_sha256": "2e74f6b71013e5eb99428fc2b083099ab3f2ab7fca858570ccf0030c0e133be4",
   "status_may_differ": [
    "field:person.education_end_date",
    "field:person.education_start_date",
@@ -557,8 +557,8 @@
    "us_pr_card | person.us_green_card_expiry_date | client_questionnaire | per_person |  | ",
    "us_pr_card | person.us_permanent_resident | client_questionnaire | per_person |  | ",
    "us_pr_card | person.uscis_number | client_questionnaire | per_person |  | ",
-   "your_full_name_date_of_birth_and_application | case.application_type | staff_working_view | once_per_case | Which kind of application is this case: visitor, worker or student? For any other kind, leave it and tick the form's Other box by hand | ",
    "your_full_name_date_of_birth_and_application | case.submission_office_name | staff_working_view | once_per_case | Which IRCC office has the application, if it was already submitted? For a new application, pass this line on Ready to file with the reason \"new application\" | ",
+   "your_full_name_date_of_birth_and_application | person.application_type | client_questionnaire | per_person |  | ",
    "your_parent_1_mother_or_father | person.present_address | client_questionnaire | per_person |  | "
   ],
   "sections": [
@@ -577,8 +577,8 @@
   ]
  },
  "fs.spouse": {
-  "release_fingerprint": "368f4fd095b2a36331a701c3cf351fb46fab0bfde7ffba91292fb503a8483ace",
-  "snapshot_sha256": "c77a7b3541cc847f87eb2e7743096eb91531d461eb645dcd4f375860a68617e0",
+  "release_fingerprint": "222940162a140e962c1e5d4b526b74899b0a2befab8262f5e18fb0b86fb042ae",
+  "snapshot_sha256": "9ffb5ff636af271977512159250602793864920c3002681f836a2f8c07fbba05",
   "status_may_differ": [
    "field:relationship.relationship_start_date",
    "placement:relationship.relationship_start_date"
@@ -792,8 +792,8 @@
    "us_pr_card | person.us_permanent_resident | client_questionnaire | per_person |  | ",
    "us_pr_card | person.uscis_number | client_questionnaire | per_person |  | ",
    "your_declaration | case.release_authorization_action | client_questionnaire | once_per_case |  | ",
-   "your_full_name_date_of_birth_and_application | case.application_type | staff_working_view | once_per_case | Which kind of application is this case: visitor, worker or student? For any other kind, leave it and tick the form's Other box by hand | ",
    "your_full_name_date_of_birth_and_application | case.submission_office_name | staff_working_view | once_per_case | Which IRCC office has the application, if it was already submitted? For a new application, pass this line on Ready to file with the reason \"new application\" | ",
+   "your_full_name_date_of_birth_and_application | person.application_type | client_questionnaire | per_person |  | ",
    "your_parent_1_mother_or_father | person.present_address | client_questionnaire | per_person |  | "
   ],
   "sections": [],
