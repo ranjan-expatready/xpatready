@@ -28,6 +28,7 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
 
 **Lead 24 live (13:4x IST):** check f13c1979 at :13/:43. Live line and 13:3x check, word for word: `history/STATE-2026-11-12-1345-lead24s2-live-and-check-1330.md`. In short: #1620 round 3 allowed; #1631 in batch #1635; **#1612 dequeued on its own `check_bk17`** (main's BK-15/16), fresh-lane card task_d4445cc9; #1627 requeued; #1616 waits for the qa lane's merge of main, then the Lead's Approve; A26 done (P-493); extension done (P-495).
 **Extension (P-495, B184):** 40 sessions, three lanes from 16 Nov, Sample-complete 24 Nov-2 Dec IST; plan `design/chrome-extension-sizing-2026-11-12.md`. **Founder sending (said so 13:45 IST)** `design/counsel-brief-extension-2026-11-12.md` Part A to counsel and Part B (SP-2, ~1 h) to the expert. Started by the founder ~13:5x: BK-17 fix lane and extension SP-1 lane (cloud). Lead 25 has read RULES and STATE.
+**13:57 check (P-496):** #1632 BK-16 PR 2 M1 → option (A) (`"later": true` in `reviewOrder`, byte-identical check); #1633 A24-1 holds the `case-prepare.ts` baton for the `reference` fix; #1612's fresh lane resolves conflicts only. Extension planner archived (founder). Weekly 36%. Lead 24 at ~305k: hand over at the next check.
 
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
 | # | Ask (IST) | Status |
