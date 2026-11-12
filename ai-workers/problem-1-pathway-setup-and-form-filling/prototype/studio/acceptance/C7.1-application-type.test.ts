@@ -7,8 +7,8 @@
 // permit, Worker) and a Visitor visa family (Visitor on every adult's IMM 5645, nothing by hand). Runs on the configured
 // checkpoint (Demo › Load); Sample people; no model call (US$0).
 //   zsh studio/tools/isolated.sh accept 4440 start && tsx --tsconfig studio/api/tsconfig.json studio/acceptance/C7.1-application-type.test.ts 4440 xr_studio_accept
-import { answer, call, confirmAll, main, ok } from "./lib/m3.ts";
-import { at, readCopy, STUDIES, studyFamily, ticked, visitorFamily } from "./lib/application-type.ts";
+import { answer, call, confirmAll, main, ok, openCase } from "./lib/m3.ts";
+import { at, needStudyPermit, readCopy, STUDIES, STUDY_FAMILY, studyFamily, ticked, visitorFamily } from "./lib/application-type.ts";
 
 const APPLICATION = "SectionA[0].application[0]";
 // A by-hand line names its question (`label`), the fact when it has one: the kind of application's, by either.
@@ -37,6 +37,14 @@ await main("C7.1 application type", "Each person's type of application, from the
   const after = ((await call("GET", `/runtime/cases/${sp.c.id}/filings`, undefined, sp.c.officer)).body?.filings ?? []) as { label: string; owner?: { subject: string } }[];
   const kNo = await readCopy(sp, "IMM 5476", k);
   ok("C7.1-AT-10 fail: answered No, the child's filing becomes a visitor visa and their IMM 5476 says Visitor (never Student)", /^Visitor visa: /.test(after.find((f) => f.owner?.subject === sp.c.subjects[k])?.label ?? "") && at(kNo?.values, APPLICATION) === "Visitor", { filing: after.find((f) => f.owner?.subject === sp.c.subjects[k])?.label, written: at(kNo?.values, APPLICATION) });
+
+  // Review M1 (#1620): before the child's "6 months or more" is answered, which application they make is not known: their
+  // IMM 5476 copy says so as a by-hand line with the reason (on the copy and on Ready to file), never a blank in silence.
+  const open = await openCase(needStudyPermit(), STUDY_FAMILY);
+  const waitFam = { c: open, forms: (await call("GET", `/runtime/cases/${open.id}/forms`, undefined, open.officer)).body?.forms ?? [] };
+  const kWait = await readCopy(waitFam, "IMM 5476", k);
+  const line = (kWait?.byHand ?? []).find((b) => /waits for an answer/.test(b.why ?? ""));
+  ok("C7.1-AT-11 fail: the child's kind not known yet: their IMM 5476 lists the type of application by hand, naming the question it waits for (nothing written)", !!line && /6 months or more/.test(line.why ?? "") && !at(kWait?.values, APPLICATION), { byHand: kWait?.byHand, written: at(kWait?.values, APPLICATION) });
 
   const vv = await visitorFamily();
   const adults = ["Sample Client A", "Sample Spouse A"];

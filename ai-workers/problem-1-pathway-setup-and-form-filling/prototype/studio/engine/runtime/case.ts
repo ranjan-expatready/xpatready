@@ -13,7 +13,7 @@ import { gatesInForce } from "../form-field-condition.ts";
 import { SCOPE_TAG } from "../field-scope.ts";
 import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
 import { CLIENT_RECONFIRM } from "./background.ts";
-import { APPLICATION_TYPE, APPLICATION_TYPE_SOURCE, applicationKindsOf } from "./application-kind.ts";
+import { APPLICATION_TYPE, APPLICATION_TYPE_SOURCE, applicationKindsOf, NotWorkedOut } from "./application-kind.ts";
 import { cellAsked, isAskedRelative, isListRelative, listWords, relativeLabel, relativeOf } from "./relatives.ts";
 import type { Period } from "../../../contracts/history.ts";
 import { Address, byClientFor, byPrincipalFor, CONFIRM_WORDS, groupLabel, type AnswerMark, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
@@ -317,7 +317,8 @@ export function knownOf(s: Snapshot, people: Participant[], answers: Answer[], r
   for (const [subjectId, value] of principalOf(people)) known.set(kkey(subjectId, IS_PRINCIPAL), { value, status: "confirmed", source: IS_PRINCIPAL_SOURCE });
   // QA-415 (P-486): each person's kind of application is worked out from their own filing (application-kind.ts), never
   // asked; read after the answers, since a filing a person's line adds follows their own answers.
-  for (const [subjectId, value] of applicationKindsOf(s, known, people)) known.set(kkey(subjectId, APPLICATION_TYPE), { value, status: "confirmed", source: APPLICATION_TYPE_SOURCE });
+  // One it cannot work out yet (NotWorkedOut) is no answer: its form fields go by hand with the reason (form-values.ts).
+  for (const [subjectId, value] of applicationKindsOf(s, known, people)) known.set(kkey(subjectId, APPLICATION_TYPE), { value, status: "confirmed", source: value instanceof NotWorkedOut ? `not worked out yet: ${value.why}` : APPLICATION_TYPE_SOURCE });
   return { known, confirm };
 }
 

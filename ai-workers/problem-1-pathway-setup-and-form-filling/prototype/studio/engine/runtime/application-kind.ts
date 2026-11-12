@@ -15,6 +15,14 @@ import { deriveFilings, FEE_TABLE, rulesFrom, type FeeTable } from "./filings.ts
 import type { Participant } from "./case.ts";
 
 export const APPLICATION_TYPE = "person.application_type", APPLICATION_TYPE_SOURCE = "worked out: the person's own filing";
+/** Review M1 (#1620): a fact the case works out but cannot work out for this person yet (their application waits for an
+ *  answer, or the table has no word for their filing). Its form fields are written by hand with this reason, never left
+ *  blank in silence and never guessed (engine/form-values.ts). It is no value: stored or compared, it is null. */
+export class NotWorkedOut {
+  constructor(readonly why: string) {}
+  toJSON() { return null; }
+  toString() { return ""; }
+}
 export type KindTable = { filings: Record<string, string>; combinations: Record<string, string> };
 export const KIND_TABLE = KINDS as unknown as KindTable;
 
@@ -30,26 +38,36 @@ const wordIn = (m: Record<string, string> | undefined, key: string): string | un
 const roleFiling = (table: FeeTable, combinationKey: string, role: string): string | undefined =>
   (rulesFrom(table, combinationKey) as { byRole?: Map<string, { filing?: string }> } | undefined)?.byRole?.get(role)?.filing;
 
-/** Per person applying (subject id), the kind of their own application: the filing their line adds when its rule holds
- *  (a rule not answered yet decides nothing: no value until it is), else the filing their role makes, else the
- *  combination's own. A person on another person's application (on the principal's) has that application's kind. A
- *  person declared only, not applying, or on a co-filed application (the sponsor's own undertaking) gets none. */
-export function applicationKindsOf(s: Snapshot, known: Known, people: Participant[], table: KindTable = KIND_TABLE, fees: FeeTable = FEE_TABLE): Map<string, string> {
-  const out = new Map<string, string>();
+/** Per person applying (subject id), the kind of their own application: the filing their line adds when its rule holds,
+ *  else the filing their role makes, else the combination's own. A person on another person's application (on the
+ *  principal's) has that application's kind. A person declared only, or not applying, gets none (no form asks it of
+ *  them). A person applying whose kind cannot be worked out (their own rule not answered yet, whoever's application they
+ *  are on; a filing the table has no word for; no filing worked out at all) gets NotWorkedOut with the reason: by hand. */
+export function applicationKindsOf(s: Snapshot, known: Known, people: Participant[], table: KindTable = KIND_TABLE, fees: FeeTable = FEE_TABLE): Map<string, string | NotWorkedOut> {
+  const out = new Map<string, string | NotWorkedOut>();
   const key = s.combination?.key;
   if (!key) return out;
-  const adds = addedFilings(s, known, people);
+  const adds = addedFilings(s, known, people) as Map<string, { filing: string; waits?: string }>;
   // The same fee table for who files what and for the filing a role makes (the shipped one on a case).
   const d = deriveFilings(key, people, (k) => rulesFrom(fees, k), { modes: releaseModes(s.combination.participants ?? []), adds, label: s.combination.label });
-  if (!d.derived) return out;
+  if (!d.derived) {
+    for (const p of people) if (p.role !== "case" && p.applies) out.set(p.subjectId, new NotWorkedOut("This combination works out no filing for anyone yet, so the kind of each person's application is not known: write it by hand."));
+    return out;
+  }
   for (const f of d.filings) {
-    if (f.mode === "co_filed" || !f.owner) continue;
-    const added = adds.get(f.owner.subject) as { filing: string; waits?: string } | undefined;
-    if (added?.waits) continue;
-    const named = added?.filing ?? roleFiling(fees, key, f.owner.role);
+    if (!f.owner) continue;
+    const added = adds.get(f.owner.subject);
+    const named = added && !added.waits ? added.filing : roleFiling(fees, key, f.owner.role);
     const word = named !== undefined ? wordIn(table.filings, named) : wordIn(table.combinations, key);
-    if (!word) continue;
-    for (const a of f.applicants) if (a.mode === "applying") out.set(a.subject, word);
+    for (const a of f.applicants) {
+      if (a.mode !== "applying") continue;
+      // Review M2 (#1620): the applicant's own rule, whoever's application they are on, or the rule of the application
+      // they are on: while it waits for its answer, no kind is guessed.
+      const waits = adds.get(a.subject)?.waits ?? added?.waits;
+      if (waits) out.set(a.subject, new NotWorkedOut(`${a.label}'s application waits for an answer: whether ${waits}. Its kind is worked out once that is answered; until then write it by hand.`));
+      else if (word) out.set(a.subject, word);
+      else out.set(a.subject, new NotWorkedOut(`The product has no kind of application for ${named !== undefined ? `a "${named}" application` : "this combination's application"} yet: write it by hand.`));
+    }
   }
   return out;
 }
