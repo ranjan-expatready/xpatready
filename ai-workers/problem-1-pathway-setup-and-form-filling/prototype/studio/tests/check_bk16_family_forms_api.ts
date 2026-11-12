@@ -23,7 +23,8 @@ const call = async (method: string, path: string, body?: unknown, actor = OFFICE
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 600)}` : ""}`); };
 type Form = { form: string; subject_id: string; applies: boolean | "cannot_tell" };
-type Prep = { fees_worked_out: boolean; fees_why: string | null; filings: { label: string; owner?: { subject: string } }[]; groups: { total_cents: number | null }[] };
+type Prep = { fees_worked_out: boolean; fees_why: string | null; filings: { id: string; label: string; owner?: { subject: string } }[]; groups: { total_cents: number | null }[];
+  readiness: { filing: string; ready: boolean; warns: { code: string; words: string }[] }[] };
 type Q = { subjectId: string; fact: string; label: string; collected_from: string; required: boolean };
 
 // A copy that already holds the configured checkpoint (a re-run) is used as it is; a blank copy loads it.
@@ -69,6 +70,12 @@ ok("BK-16 fail (QA-416): the spouse files IMM 1295 (a work permit, as they are c
 ok("BK-16: before the children's answer, neither child has IMM 1294 or IMM 5257 to fill (which application they make is not known)",
   [f.K1, f.K2].every((k) => !applying(fs, k).some((x) => x === "IMM 1294" || x === "IMM 5257")), [applying(fs, f.K1), applying(fs, f.K2)]);
 let p = await f.prep();
+// m1 (P-491) as it stands: an unanswered child keeps their filing from Ready to file. Their IMM 5257 cannot start until
+// the answer is in (a CRITICAL line, Break B3); PR 1's who gives them no IMM 1294 to wait on, never an error.
+const childLine = (pp: Prep, k: string, name: string) => { const fid = pp.filings.find((x) => x.owner?.subject === k)?.id; const r = pp.readiness.find((x) => x.filing === fid);
+  return { ready: r?.ready, waits: (r?.warns ?? []).some((w) => w.code === "missing_facts" && /IMM 5257/.test(w.words) && w.words.includes(name)) }; };
+ok("BK-16 fail (m1): unanswered, each child's filing is not Ready to file: its IMM 5257 waits for the answer (CRITICAL)",
+  [[f.K1, "Sample Child S"], [f.K2, "Sample Child V"]].every(([k, n]) => childLine(p, k, n).ready === false && childLine(p, k, n).waits), [childLine(p, f.K1, "Sample Child S"), childLine(p, f.K2, "Sample Child V")]);
 ok("BK-16 (QA-418): unanswered, the fees wait for each child's answer", !p.fees_worked_out && /Waits for Sample Child S's answer/.test(p.fees_why ?? "") && /Sample Child V's answer/.test(p.fees_why ?? ""), p.fees_why);
 
 // QA-418: the client sees the question for each child on their own list, and answers it.
@@ -92,6 +99,8 @@ ok("BK-16 fail (QA-416): IMM 1294 is filed by the student and the child who stud
 p = await f.prep();
 const label = (s: string) => p.filings.find((x) => x.owner?.subject === s)?.label;
 ok("BK-16 pass (QA-418): once Client A answers, the fees no longer wait: one total for the family (CAD 825)", p.fees_worked_out && p.groups.length === 1 && p.groups[0].total_cents === 825_00, { why: p.fees_why, totals: p.groups.map((g) => g.total_cents) });
+ok("BK-16 pass (m1): once answered, no child's filing waits on IMM 5257's answer any more",
+  [[f.K1, "Sample Child S"], [f.K2, "Sample Child V"]].every(([k, n]) => !childLine(p, k, n).waits), [childLine(p, f.K1, "Sample Child S"), childLine(p, f.K2, "Sample Child V")]);
 ok("BK-16: each filing is named by the document its forms are for", label(f.S) === "Work permit: Sample Spouse A" && label(f.K1) === "Study permit: Sample Child S" && label(f.K2) === "Visitor visa: Sample Child V", p.filings.map((x) => x.label));
 
 // The child stops studying (No): their forms follow, IMM 5257, never IMM 1294.
