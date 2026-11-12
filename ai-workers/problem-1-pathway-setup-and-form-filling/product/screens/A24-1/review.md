@@ -149,3 +149,32 @@ Verdict: Changes requested
 No Blocker, no open Major.
 
 Verdict: Approve 8e6bd95f04a0f0ca4150f2c2052cd467e20723c3
+
+## Re-review of 4d3cc8767..78c0ad988 (P-496 (2))
+
+**Scope:** `git diff 4d3cc8767..78c0ad988` only (`42c83490c`, `78c0ad988`): the `case-prepare.ts` change, the Prepare lines in `check_a24_case_number_api.ts`, the new `check_a24_record_reference_browser.ts`, two screenshots and the build notes. No new screen, so no journey score. **Copies:** `rev3_a24` (4493) and `rev3_a24r` (4498), both stopped and dropped; the screenshots the browser check rewrote were restored. US$0.
+
+| Check | Result |
+|---|---|
+| `check_a24_case_number_api.ts 4493 xr_studio_rev3_a24` at `78c0ad988` | 23/23 |
+| `check_a24_record_reference_browser.ts 4498 xr_studio_rev3_a24r` at `78c0ad988` | 5/5: "Our reference" = `C-2026-00002` = Prepare; the case with a reference still suggests `A24R-…` |
+| The same browser check on the **old** `case-prepare.ts` (see below) | **4/5**: `{"bareRefs":[""],"prepare":null}`, as the builder reported |
+| `check_a24_case_number_api.ts` on the old `case-prepare.ts` | **22/23**: only the Prepare assertion fails (`[200,null]`); filing record, filings and checklist stay correct |
+
+How the old code was run, without editing the checkout: a Node load hook in the scratchpad (`--import`) served `case-prepare.ts` at `78c0ad988` with both `reference: caseName(c)` reverted to `reference: c.reference`. The server logged "reverted 2 line(s)", and it ran on the `rev3_a24r` database and port.
+
+**What was judged:**
+* **Baton kept.** `case-prepare.ts` differs from `4d3cc8767` in exactly three lines: the import (`caseName` added to the existing `contracts/runtime.ts` import) and `:177` (not derived) and `:691` (derived). Nothing else in the file changed.
+* **Byte-identical words.** `caseName()` returns the reference whenever there is one, so Prepare's value changes only where it was `null`. This is proven at both levels: the API check on `filings` and `prepare`, and the browser check on the dialog box (`A24R-…`). Only one reader uses Prepare's `reference`: `submission.tsx:196`. No test or screen relied on it being null.
+* **A real fail check.** Both new assertions fail on the old code and pass on the new code (runs above). Earlier review M2 and the open hand-off are closed: Record submission no longer starts empty, and can no longer show "null-1".
+* **`reference: null` to `openCase` is honest.** The default for `ref` (`acceptance/lib/m3.ts:92`) applies only to `undefined`, so JSON `null` reaches `POST /runtime/cases`. The contract's `.nullish()` reads that as no reference, which the API check proves (explicit null gives 201 and the next number), and the setup assertion confirms `reference === null` on the opened case. No screen path is faked. The case is made Ready to file through the product's routes (`readyToFile`), and the dialog is reached by its real button.
+* **Build notes.** The hand-off paragraph is replaced by the ruling and its check. The Files list now names `case-prepare.ts` and the new check. Earlier n3 is closed.
+
+**Minors (builder's judgement; none blocks):**
+* **p1:** the browser check's "no null" assertion cannot fail on a one-filing case. The old code gave `""`, not "null", so it passed (it was the one PASS among the four that passed on the old code). The "null-1…" shape from earlier M2 belongs to cases with several filings (`${view.reference}-${i + 1}`). Only the API check covers that, on Prepare's value (case `b`), not in the dialog. A family case in the browser check would make that assertion bite.
+* **p2:** `reference as string` in `single()` hides the null from the type checker. `openCase`'s `ref` could be typed `string | null` instead. Test code only.
+* **p3:** the A24-2 gate in the earlier re-review ("must not ship the optional reference until `case-prepare.ts` uses `caseName()`") is now met by this commit. The tech lead can lift it from the PR comment and the backlog row. A24-2's reviewer still sees the field on its own screen.
+
+No Blocker, no open Major.
+
+Verdict: Approve 78c0ad988a1ec8310852b4c7b196610c930958a1
