@@ -1,13 +1,18 @@
 // BK-17 (P-486, P-481; BK-15 breaker M3, PR #1591): a filing recorded as submitted keeps its label, its people, its items
 // and its frozen fees when an answer changes afterwards. On the configured checkpoint, through the product's routes: a
-// Study permit (outside Canada) family, a student and a child of 15 who studies 6 months or more (the child's line adds
-// their own Study permit application, M3-S2), is made Ready to file and recorded. Then the officer answers "No" to the
-// child's "6 months or more" (allowed: an answer changed after filing opens a "Filed with an earlier value" task, BR-12).
-// Before BK-17 the next Prepare read dropped the child's recorded application (made inactive: the child moved onto the
-// student's recorded application, with new items there), so a submitted filing vanished and another changed its people.
-// After: both recorded applications read as they were recorded (same ids, labels, numbers, people, items, fees), on
-// GET …/prepare and GET …/filings; the other way round (recorded with No, then Yes) makes no new application; and an
-// unrecorded family with the same answer is worked out again as before (control). No model call (US$0).
+// Study permit (outside Canada) family, a student and a child of 15. Since BK-15 and BK-16 (P-486 R-e, P-490; Guide 5269:
+// family members complete their own application forms) each person files their own application: the child's
+// "6 months or more" Yes makes it "Study permit: <child>" (the line adds it, M3-S2), No makes it "Visitor visa: <child>",
+// the same filing (one per owner). The family is made Ready to file and recorded, then the officer changes the child's
+// answer (allowed: an answer changed after filing opens a "Filed with an earlier value" task, BR-12). Before BK-17 the next
+// Prepare read relabelled the child's recorded application (BK-15 breaker B3: "Study permit" → "Visitor visa").
+// After: both recorded applications read as they were recorded (same ids, labels, numbers, people, items, frozen fees), on
+// GET …/prepare and GET …/filings, both ways (Yes → No, No → Yes) and with no third application; an application not
+// recorded still follows the answers, even beside a recorded one (break B2: the stage names it as not recorded); and an
+// unrecorded family with the same answer is worked out again (control). Break B1 (an answer that moves a person onto a
+// recorded filing, which takes nobody) has no route case on current data: the only line rule that adds a filing
+// (samples/conditional-filings.json, sp.outside) now switches the child between two applications of their own, so
+// check_bk17_keep_recorded proves B1 (keptRowsOf) on its own. No model call (US$0).
 //   zsh studio/tools/isolated.sh rt_bk17 4436 start && tsx studio/tests/check_bk17_recorded_filing_api.ts 4436 xr_studio_rt_bk17
 import { answer, call, confirmAll, firms, inDays, openCase, prepare, readyToFile, sql, yearsAgo, type Prepare } from "../acceptance/lib/m3.ts";
 import { recorder } from "./runtime/api.ts";
@@ -43,7 +48,7 @@ ok("BK-17 setup: both filings reach Ready to file", ready.length === 2 && v?.fil
 const g = v!.groups[0];
 const rec = await call("PATCH", `/runtime/groups/${g.id}/record`, { version: v!.version, ucis: [], filings: v!.filings.map((x, i) => ({ filing: x.id, our_reference: `SAMPLE-BK17-${i + 1}`, submitted_on: inDays(0), application_number: `S${Date.now().toString().slice(-7)}${i + 1}`, fee_receipt: "SAMPLE-RECEIPT" })) }, officer);
 v = await view(c.id);
-const before = shape(v), feesBefore = fees(v), kidBefore = kidFiling();
+const before = shape(v), feesBefore = fees(v), kidBefore = kidFiling(), before0 = v;
 ok("BK-17 setup: the submission is recorded (200), both filings read submitted with their numbers", rec.status === 200 && before.length === 2 && before.every((x) => x.status === "submitted" && !!x.number), [rec.status, rec.body?.detail, before]);
 
 const inactive = () => [sql(`select count(*) from filing where case_id='${c.id}' and active=false`), sql(`select count(*) from filing_item where case_id='${c.id}' and active=false`), sql(`select count(*) from filing_applicant a join filing f on f.id=a.filing_id where f.case_id='${c.id}'`)];
@@ -54,8 +59,12 @@ v = await view(c.id);
 const after = shape(v);
 ok("BK-17 pass (fail-first): after the answer changes, the recorded filings read as recorded: same ids, labels, numbers, people and items", JSON.stringify(after) === JSON.stringify(before), { before, after });
 ok("BK-17 fail: the child's recorded application is never relabelled or dropped (still \"Study permit: Sample Child R\", submitted, its number)", kidFiling()?.id === kidBefore?.id && kidFiling()?.label === "Study permit: Sample Child R" && kidFiling()?.status === "submitted" && kidFiling()?.number === kidBefore?.number, kidFiling());
-ok("BK-17 fail: the student's recorded application never gains the child (its people are those recorded)", (v?.filings.find((x) => x.owner?.subject === S)?.applicants ?? []).every((a) => a.subject !== K), v?.filings.find((x) => x.owner?.subject === S)?.applicants);
-ok("BK-17 pass: the frozen fees stay (same groups, totals and lines; Study permit has no fee lines on the checkpoint, so the pure check_bk17_keep_recorded proves the fee rule and check_b152 the frozen amounts)", fees(v) === feesBefore, { now: fees(v), before: feesBefore });
+ok("BK-17 fail: the child stays alone on their own recorded application, and the student's never gains the child (people as recorded)", (kidFiling()?.applicants ?? []).map((a) => `${a.subject}:${a.mode}`).join() === `${K}:applying` && (v?.filings.find((x) => x.owner?.subject === S)?.applicants ?? []).every((a) => a.subject !== K), [kidFiling()?.applicants, v?.filings.find((x) => x.owner?.subject === S)?.applicants]);
+ok("BK-17 pass: the frozen fees stay (same groups, totals and lines)", fees(v) === feesBefore, { now: fees(v), before: feesBefore });
+// Since BK-15 Study permit has fee lines per person (fees_by_role): the child's own Study permit fee line, frozen at the
+// record, stays on the child's recorded application after "No" (a Visitor visa has another fee).
+const kidSp = (f: View | null) => (f?.fees ?? []).filter((l) => l.filing === kidBefore?.id && (l.key ?? l.line) === "study_permit").map((l) => l.amount_cents ?? l.amount);
+ok("BK-17 pass: the child's frozen \"study_permit\" fee line is on their recorded application before and after the answer, same amount, and the group keeps its total", kidSp(before0).length === 1 && JSON.stringify(kidSp(v)) === JSON.stringify(kidSp(before0)) && (v?.groups ?? []).every((x) => x.total_cents !== null), { before: kidSp(before0), now: kidSp(v), totals: (v?.groups ?? []).map((x) => x.total_cents) });
 ok("BK-17 data: after the answer, no filing or item of the recorded case was made inactive and no applicant row was added (inactive filings, inactive items, applicant rows as before)", JSON.stringify(inactive()) === JSON.stringify(stillBefore), { before: stillBefore, after: inactive() });
 const again = await view(c.id);
 ok("BK-17 pass: a second read stores nothing new (same version)", String(again?.version) === String(v?.version), [again?.version, v?.version]);
@@ -76,8 +85,8 @@ const fl = (await call("GET", `/runtime/cases/${c.id}/filings`, undefined, offic
 const flKid = fl?.filings?.find((x) => x.id === `filing-${K}`), flStudent = fl?.filings?.find((x) => x.id === `filing-${S}`);
 ok("BK-17 pass: GET …/filings agrees: the child's recorded application is listed as recorded, in its group, and the student's never gains the child", flKid?.label === "Study permit: Sample Child R" && flKid.applicants.length === 1 && !!flStudent && flStudent.applicants.every((a) => a.subject !== K) && fl.groups.some((x) => x.filings.includes(`filing-${K}`) && x.filings.includes(`filing-${S}`)), fl?.filings?.map((x) => [x.id, x.label, x.applicants.map((a) => a.subject)]));
 
-// (2) The other way: recorded with "No" (the child applying on the student's application), then "Yes". The recorded
-// application keeps the child and no new application is made for them.
+// (2) The other way: recorded with "No" (the child's own "Visitor visa" application), then "Yes". The child's recorded
+// application keeps its label and the child, and no third application (a Study permit) is made for them.
 {
   const r = await openCase(sp, family("N"), team, `BK17-N-${Date.now().toString(36)}`);
   const NS = r.subjects["Sample Student N"], NK = r.subjects["Sample Child N"];
@@ -87,17 +96,19 @@ ok("BK-17 pass: GET …/filings agrees: the child's recorded application is list
   let nv = await view(r.id);
   const nrec = await call("PATCH", `/runtime/groups/${nv!.groups[0].id}/record`, { version: nv!.version, ucis: [], filings: nv!.filings.map((x, i) => ({ filing: x.id, our_reference: `SAMPLE-BK17N-${i + 1}`, submitted_on: inDays(0), application_number: `T${Date.now().toString().slice(-7)}${i + 1}`, fee_receipt: "SAMPLE-RECEIPT" })) }, officer);
   nv = await view(r.id);
-  const nBefore = shape(nv);
-  ok("BK-17 setup: recorded with \"No\": one application, the child applying on the student's", n.length === 1 && nrec.status === 200 && nBefore.length === 1 && nBefore[0].status === "submitted" && nBefore[0].people.includes(`${NK}:applying`), [n.length, nrec.status, nrec.body?.detail, nBefore]);
+  const nBefore = shape(nv), nFees = fees(nv), rows = () => sql(`select count(*) from filing where case_id='${r.id}'`);
+  const nKid = () => nv?.filings.find((x) => x.owner?.subject === NK);
+  const nKidBefore = nKid();
+  ok("BK-17 setup: recorded with \"No\": two applications, the child alone on their own \"Visitor visa: Sample Child N\", both submitted", n.length === 2 && nrec.status === 200 && nBefore.length === 2 && nBefore.every((x) => x.status === "submitted") && nKidBefore?.label === "Visitor visa: Sample Child N" && nKidBefore.applicants.map((a) => `${a.subject}:${a.mode}`).join() === `${NK}:applying` && rows() === "2", [n.length, nrec.status, nrec.body?.detail, nBefore.map((x) => [x.label, x.status, x.people]), rows()]);
   const y = await answer(r.id, NK, STUDIES, true, officer);
   nv = await view(r.id);
-  ok("BK-17 pass (other way): after \"Yes\" the recorded application reads as recorded (the child still on it) and no new application is made for the child", y.status === 200 && JSON.stringify(shape(nv)) === JSON.stringify(nBefore) && sql(`select count(*) from filing where case_id='${r.id}'`) === "1", { y: y.status, before: nBefore, after: shape(nv), rows: sql(`select count(*) from filing where case_id='${r.id}'`) });
-  ok("BK-17 fail (other way): the student's recorded application never loses the child to a new one", nv?.filings.find((x) => x.owner?.subject === NS)?.applicants.some((a) => a.subject === NK && a.mode === "applying") === true, nv?.filings);
+  ok("BK-17 pass (other way): after \"Yes\" both recorded applications read as recorded (same ids, labels, numbers, people, items, frozen fees) and no third application is made", y.status === 200 && JSON.stringify(shape(nv)) === JSON.stringify(nBefore) && fees(nv) === nFees && rows() === "2", { y: y.status, before: nBefore, after: shape(nv), rows: rows() });
+  ok("BK-17 fail (other way): the child's recorded application is never relabelled (still \"Visitor visa: Sample Child N\", the child alone on it) and the student's never gains the child", nKid()?.id === nKidBefore?.id && nKid()?.label === "Visitor visa: Sample Child N" && nKid()?.applicants.map((a) => a.subject).join() === NK && (nv?.filings.find((x) => x.owner?.subject === NS)?.applicants ?? []).every((a) => a.subject !== NK), [nKid()?.label, nKid()?.applicants, nv?.filings.find((x) => x.owner?.subject === NS)?.applicants]);
 }
 
-// (3) Break B1/B2 (BK-17 breaker): the child's application is split out and only the student's group is recorded. "No"
-// would put the child on the student's recorded application, which takes nobody: the child stays on their own
-// (unrecorded) application, so they never vanish and ending the stage still names it as not recorded.
+// (3) Break B2 (BK-17 breaker): the child's application is split out and only the student's group is recorded. After "No"
+// the child is still on their own (unrecorded) application, never on the student's recorded one, and ending the stage
+// still names it as not recorded.
 {
   const r = await openCase(sp, family("X"), team, `BK17-X-${Date.now().toString(36)}`);
   const XS = r.subjects["Sample Student X"], XK = r.subjects["Sample Child X"];
@@ -112,14 +123,18 @@ ok("BK-17 pass: GET …/filings agrees: the child's recorded application is list
   const xrec = await call("PATCH", `/runtime/groups/${sGroup?.id}/record`, { version: xv!.version, ucis: [], filings: [{ filing: sGroup?.filings[0], our_reference: "SAMPLE-BK17X-1", submitted_on: inDays(0), application_number: `X${Date.now().toString().slice(-7)}1`, fee_receipt: "SAMPLE-RECEIPT" }] }, officer);
   xv = await view(r.id);
   ok("BK-17 setup (split): the child's application is split out and only the student's group is recorded", sp1.status === 200 && xrec.status === 200 && xv?.groups.length === 2 && xv.filings.find((x) => x.owner?.subject === XK)?.status !== "submitted", [sp1.status, sp1.body?.detail, xrec.status, xrec.body?.detail, xv?.filings.map((x) => [x.label, x.status])]);
-  const xBefore = shape(xv).find((x) => x.id === xKid?.id);
+  const xBefore = shape(xv).find((x) => x.id === xKid?.id), xStudentBefore = shape(xv).find((x) => x.id === xv?.filings.find((f) => f.owner?.subject === XS)?.id);
   const xn = await answer(r.id, XK, STUDIES, false, officer);
   xv = await view(r.id);
   const xKidNow = xv?.filings.find((x) => x.id === xKid?.id);
-  ok("BK-17 pass (break B1): after \"No\", the child stays on their own application (same filing, still applying, with items, \"Application kept as prepared\"), not on no filing", xn.status === 200 && !!xKidNow && xKidNow.label === "Application kept as prepared: Sample Child X" && xKidNow.applicants.some((a) => a.subject === XK && a.mode === "applying") && (xv?.items ?? []).some((i) => i.filing === xKidNow.id && i.subject === XK), { before: xBefore, now: xKidNow, items: (xv?.items ?? []).filter((i) => i.subject === XK).length });
-  ok("BK-17 fail (break B1): the student's recorded application never gains the child, and the child's row is never made inactive", (xv?.filings.find((x) => x.owner?.subject === XS)?.applicants ?? []).every((a) => a.subject !== XK) && sql(`select active::text from filing where id='${xKid?.id}'`) === "true", [xv?.filings.find((x) => x.owner?.subject === XS)?.applicants, sql(`select active::text from filing where id='${xKid?.id}'`)]);
+  // On current data "No" moves the child onto no other filing (their own becomes "Visitor visa"), so the kept-as-prepared
+  // reading (keptRowsOf, break B1) is not reached here; it is proven in check_bk17_keep_recorded. What a route shows:
+  // the unrecorded application still follows the answer beside the recorded one, which reads as recorded.
+  ok("BK-17 pass (unrecorded beside recorded): after \"No\", the child's unrecorded application follows the answer (same filing, \"Visitor visa: Sample Child X\", the child applying, with items), never on no filing", xn.status === 200 && !!xKidNow && xKidNow.label === "Visitor visa: Sample Child X" && xKidNow.applicants.some((a) => a.subject === XK && a.mode === "applying") && (xv?.items ?? []).some((i) => i.filing === xKidNow.id && i.subject === XK), { before: xBefore, now: xKidNow, items: (xv?.items ?? []).filter((i) => i.subject === XK).length });
+  ok("BK-17 fail (unrecorded beside recorded): the student's recorded application reads as recorded (same id, label, number, people, items)", JSON.stringify(shape(xv).find((x) => x.id === xStudentBefore?.id)) === JSON.stringify(xStudentBefore), { before: xStudentBefore, now: shape(xv).find((x) => x.id === xStudentBefore?.id) });
+  ok("BK-17 fail (break B2): the student's recorded application never gains the child, and the child's row is never made inactive", (xv?.filings.find((x) => x.owner?.subject === XS)?.applicants ?? []).every((a) => a.subject !== XK) && sql(`select active::text from filing where id='${xKid?.id}'`) === "true", [xv?.filings.find((x) => x.owner?.subject === XS)?.applicants, sql(`select active::text from filing where id='${xKid?.id}'`)]);
   const xfl = (await call("GET", `/runtime/cases/${r.id}/filings`, undefined, officer)).body as { filings: { id: string; applicants: { subject: string }[] }[] };
-  ok("BK-17 pass (break B1): GET …/filings agrees: the child is on their own application", (xfl?.filings ?? []).some((x) => x.id === `filing-${XK}` && x.applicants.some((a) => a.subject === XK)), xfl?.filings);
+  ok("BK-17 pass (break B2): GET …/filings agrees: the child is on their own application", (xfl?.filings ?? []).some((x) => x.id === `filing-${XK}` && x.applicants.some((a) => a.subject === XK)), xfl?.filings);
   const nx = await call("GET", `/runtime/cases/${r.id}/stages/next`, undefined, officer);
   ok("BK-17 fail (break B2): ending the stage still names the child's application as not recorded (so a reason is required)", nx.status !== 200 || ((nx.body?.unrecorded ?? []) as { filing: string }[]).some((u) => u.filing === xKid?.id), [nx.status, nx.body?.unrecorded ?? nx.body?.detail]);
 }
@@ -131,6 +146,7 @@ await answer(u.id, UK, STUDIES, true, officer);
 const u1 = await view(u.id);
 await answer(u.id, UK, STUDIES, false, officer);
 const u2 = await view(u.id);
-ok("BK-17 fail (control): unrecorded, \"No\" still moves the child onto the student's application (one filing, the child applying on it)", u1?.filings.length === 2 && u2?.filings.length === 1 && u2.filings[0].applicants.some((a) => a.subject === UK && a.mode === "applying") && u2.filings[0].label === u1.filings.find((x) => x.owner?.subject === u.subjects["Sample Student U"])?.label, [u1?.filings.map((x) => x.label), u2?.filings.map((x) => [x.label, x.applicants])]);
+const uKid = (f: View | null) => f?.filings.find((x) => x.owner?.subject === UK);
+ok("BK-17 fail (control): unrecorded, \"No\" still relabels the child's own application (same filing, \"Study permit\" → \"Visitor visa: Sample Child U\", the child alone on it), the student's unchanged", u1?.filings.length === 2 && u2?.filings.length === 2 && uKid(u1)?.label === "Study permit: Sample Child U" && uKid(u2)?.id === uKid(u1)?.id && uKid(u2)?.label === "Visitor visa: Sample Child U" && uKid(u2)?.applicants.map((a) => a.subject).join() === UK && JSON.stringify(shape(u2).find((x) => x.label.startsWith("Study permit (outside Canada)"))?.people) === JSON.stringify(shape(u1).find((x) => x.label.startsWith("Study permit (outside Canada)"))?.people), [u1?.filings.map((x) => x.label), u2?.filings.map((x) => [x.label, x.applicants.map((a) => a.subject)])]);
 ok("BK-17 fail: a client cannot read the recorded case (403)", (await call("GET", `/runtime/cases/${c.id}/prepare`, undefined, "user-P")).status === 403);
 process.exitCode = summary() ? 1 : 0;
