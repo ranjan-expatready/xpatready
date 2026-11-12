@@ -8,7 +8,7 @@
 // representative of record's own (P-155), "Self-reviewed" when they prepared it themself; a client and configuration
 // people get 403. The inputs: api/src/readiness-inputs.ts. Legal points: Unconfirmed: no counsel. US$0.
 import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post } from "@nestjs/common";
-import { cannotPass, CODE_WORDS, dayOf, isCritical, passKeys, passProblem, WARN_CODES, type WarnCode } from "../../engine/runtime/readiness.ts";
+import { BLOCK_CODES, cannotPass, CODE_WORDS, dayOf, isCritical, passKeys, passProblem, WARN_CODES, type WarnCode } from "../../engine/runtime/readiness.ts";
 import type { ReadinessView } from "./readiness-inputs.ts";
 import { userIn } from "../../engine/runtime/team.ts";
 import { actorOf, Audit, Db, fail, Workspace, type Actor } from "./core.ts";
@@ -107,7 +107,7 @@ export class FilingReadinessRoutes {
   async pass(actor: Actor, id: string, code: string, body: unknown) {
     const { f, c } = await this.filing(actor, id);
     const no = cannotPass(code);
-    if (no) fail(no, (WARN_CODES as readonly string[]).includes(code) || code === "barcode_not_validated" ? HttpStatus.CONFLICT : HttpStatus.NOT_FOUND);
+    if (no) fail(no, (WARN_CODES as readonly string[]).includes(code) || (BLOCK_CODES as readonly string[]).includes(code) ? HttpStatus.CONFLICT : HttpStatus.NOT_FOUND);
     const b = (body ?? {}) as { reason?: unknown; key?: unknown };
     const why = passProblem(b.reason);
     if (why) problem(400, "Some details need fixing", why, { errors: [{ field: "reason", message: why }] });
@@ -137,7 +137,7 @@ export class FilingReadinessRoutes {
     const rd = await this.now(actor, c.id, f.id); // also takes a stale "Ready to file" back to Not started (break B1)
     if (!rd.ready) {
       const n = rd.blocks.length, w = rd.warns.length;
-      problem(409, "Not ready to file", `${n ? `${n} block${n === 1 ? "" : "s"} (fix ${n === 1 ? "it" : "them"}: a barcode form needs its validated copy read back)` : ""}${n && w ? " and " : ""}${w ? `${w} open warning${w === 1 ? "" : "s"} (pass each with a reason, or fix ${w === 1 ? "it" : "them"})` : ""} stand before Ready to file.`,
+      problem(409, "Not ready to file", `${n ? `${n} block${n === 1 ? "" : "s"} (fix ${n === 1 ? "it" : "them"}: ${n === 1 ? "it says" : "each says"} what is missing; a block is never passed)` : ""}${n && w ? " and " : ""}${w ? `${w} open warning${w === 1 ? "" : "s"} (pass each with a reason, or fix ${w === 1 ? "it" : "them"})` : ""} ${n + w === 1 ? "stands" : "stand"} before Ready to file.`,
         { blocks: rd.blocks, warns: rd.warns });
     }
     // Break B8: marking a filing that is Ready to file again changes nothing and records nothing new.

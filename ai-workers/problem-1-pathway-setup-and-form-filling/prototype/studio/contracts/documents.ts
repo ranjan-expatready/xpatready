@@ -36,6 +36,11 @@ export const Waive = SeenVersion.extend({
   reason: z.string({ message: "Give a reason for waiving this document." }).transform((x) => x.replace(INVISIBLE, "").trim())
     .pipe(z.string().min(1, "Give a reason for waiving this document.").max(MAX_REASON, `A reason is at most ${MAX_REASON} characters.`)),
 });
+/** M3-S3, M3-S4 (P-171 (6), P-172): a document line's waiver setting in the release: "waivable" (the case officer may
+ *  waive it on a case, with a reason), "never" (never waived nor marked not applicable: it blocks Ready to file until
+ *  it is received), or null (neither: a missing one is a warning, passed with a reason). */
+export const WAIVERS = ["waivable", "never"] as const;
+export const Waiver = z.enum(WAIVERS, { message: 'Waiver: choose "waivable", "never", or none.' }).nullable();
 /** C6.14 (SA-1B-214 rule 2; concept product/screens/B136/concept.md BR-6): the case officer's choice of providers for a
  *  shared line (people on the case, by their subject id), or null to use the document type's defaults again; always with
  *  a reason (3 characters or more) and, when sent, the line's version as seen. */

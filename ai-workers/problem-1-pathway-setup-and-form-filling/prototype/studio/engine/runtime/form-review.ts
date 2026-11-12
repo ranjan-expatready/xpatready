@@ -1,5 +1,6 @@
 // C7.5 part 2 The independent AI review of one filled form (runtime lane, M3-E; r5c BR-19; AG-11-69, -70; P-121, P-164 (2),
-// P-71, P-168; stand-in SI-6). Pure: no I/O. What the two AI rounds read and how their answers become findings:
+// P-71, P-168; stand-in SI-6; BK-14). Pure: no I/O. What the two AI rounds read and how their answers become findings:
+//  - which form edition and official text a review reads: the case's release alone (reviewSource, BK-14), any form;
 //  - the review sheet: the form edition and, box by box, what the case's copy of it would read today (caption, fact and
 //    value), in a fixed order with nothing about when or for which case it was made. So the same form values give the
 //    same sheet and the same checksum, which is what a saved run is found by ("replay is keyed on the form edition and its
@@ -11,8 +12,27 @@
 //  - a finding's fingerprint (person, form, fact, quoted words) is how a dismissed finding is not raised again.
 import { createHash } from "node:crypto";
 import { compareRounds, type RoundAnswer } from "../agreement.ts";
+import { printedEditionParts } from "../rounds.ts";
 
 export const REVIEW_SHEET = "review-sheet/v1" as const;
+
+/** A release's field map as the review reads it: the form, its printed edition, its official text (inventory) and boxes. */
+export type ReviewFieldMap = { form_number: string; form_edition?: string | null; inventory_file?: string | null; entries: { data_path: string; fact?: string | null }[] };
+/** Where a form's official text lives (p1's inventories): a field map naming any other file is not read. */
+export const OFFICIAL_INVENTORY = /^prototype\/p1\/inventory\/[a-z0-9._-]+\.inventory\.json$/;
+/** BK-14 (lifts SI-6's "one form family only"; P-319, P-425): which form edition a review reads, and from which official
+ *  text, comes from the case's release alone: the edition in use (P-32) as its coverage names it, the release's field map
+ *  of that edition and the inventory that map names. No form, program or pathway is named here, so any release's form
+ *  with a printed edition and its official text can be reviewed by the same two rounds; "no_edition" and
+ *  "no_official_text" say why one cannot. */
+export function reviewSource<M extends ReviewFieldMap>(fieldMaps: readonly M[], form: string, printed: string | null | undefined):
+  { ok: true; printed: string; code: string; edition: string; map: M; inventory_file: string } | { ok: false; why: "no_edition" | "no_official_text"; printed: string } {
+  const p = printed ?? "", parts = printedEditionParts(p);
+  if (!parts || parts.code !== form) return { ok: false, why: "no_edition", printed: p };
+  const map = fieldMaps.find((m) => m.form_number === form && m.form_edition === p);
+  if (!map?.inventory_file || !OFFICIAL_INVENTORY.test(map.inventory_file)) return { ok: false, why: "no_official_text", printed: p };
+  return { ok: true, printed: p, code: parts.code, edition: parts.edition, map, inventory_file: map.inventory_file };
+}
 export const SEVERITIES = ["CRITICAL", "MAJOR", "MINOR", "INFO"] as const;
 export type Severity = (typeof SEVERITIES)[number];
 /** One box of the filled form as the review reads it. */

@@ -346,6 +346,12 @@ export function dataMap(env = process.env) {
 }
 /** The data one capability's packs run on: its GATE_B_DATA_OF item, else GATE_B_DATA. */
 export const dataFor = (id, env = process.env) => dataMap(env).get(id) ?? dataOf(env);
+/** P-486 (Lead 22 on #1591): the packs qa's hold file names as checkpoint rows (works-set.mjs checkpointPacks), set by
+ *  main() on a pull request or a merge-queue batch from the hold file on the base; empty otherwise. */
+let CHECKPOINT_PACKS = new Set();
+/** The data one pack runs on: a checkpoint row's pack on the configured checkpoint (it is red on the six by design, P-322,
+ *  as the nightly runs it), every other pack on its capability's data (dataFor). */
+export const dataForPack = (id, file, env = process.env, checkpoint = CHECKPOINT_PACKS) => (checkpoint.has(file) ? "checkpoint" : dataFor(id, env));
 /** The run's mode (B131): "retest" for nightly.yml's re-test (GITHUB_EVENT_NAME workflow_dispatch or schedule), where
  *  NOT TESTED is exit 3; "pr" anywhere else (pull_request, a merge-queue run, off CI), where it is a warning. */
 export const RETEST_EVENTS = new Set(["workflow_dispatch", "schedule"]);
@@ -380,7 +386,7 @@ export function notTested(caps, runs, data, read = (f) => readFileSync(join(ACC_
   for (const r of runs) {
     const plan = runPlan(r.f, read(r.f));
     if (plan.error) continue;
-    const d = dataOfId(r.id), place = placeOf(plan, d);
+    const d = dataOfId(r.id, r.f), place = placeOf(plan, d);
     if (place.load === null) out.push(`NOT TESTED on the ${d}: ${r.id} ${r.f} runs ${place.where}`);
   }
   return out;
@@ -433,7 +439,7 @@ const fails = (out) => { const f = out.split("\n").filter((l) => /^FAIL\s/.test(
 async function runPack(id, file, wanted, slot) {
   const plan = runPlan(file, readFileSync(join(ACC_DIR(), file), "utf8"));
   if (plan.error) return { log: [], why: `${file}: ${plan.error}` };
-  const data = dataFor(id), { steps, load, where } = placeOf(plan, data), log = [];
+  const data = dataForPack(id, file), { steps, load, where } = placeOf(plan, data), log = [];
   // Only the steps that will run (a setup skipped on the checkpoint is not needed; review m2).
   const missing = steps.map((s) => join(s.cwd === "prototype" ? PROTO : S, s.script)).filter((f) => !existsSync(f));
   if (missing.length) return { log: [], why: `${file}: its run names a file that does not exist: ${missing.map((f) => relative(PROTO, f)).join(", ")}` };
@@ -604,7 +610,7 @@ async function runPackRecorded(id, file, wanted, slot) {
   const r = await runPack(id, file, wanted, slot);
   if (process.env.GATE_B_RESULTS) {
     let where = null, load = null, data = null;
-    try { data = dataFor(id); const plan = runPlan(file, readFileSync(join(ACC_DIR(), file), "utf8")); if (!plan.error) ({ where, load } = placeOf(plan, data)); } catch { /* the why says it */ }
+    try { data = dataForPack(id, file); const plan = runPlan(file, readFileSync(join(ACC_DIR(), file), "utf8")); if (!plan.error) ({ where, load } = placeOf(plan, data)); } catch { /* the why says it */ }
     appendFileSync(process.env.GATE_B_RESULTS, JSON.stringify({ id, file, data, where, load, ok: !r.why, why: r.why ?? null, infra: Boolean(r.infra) }) + "\n");
   }
   return r;
@@ -711,10 +717,15 @@ async function main(argv) {
   // GATE_B_SKIP_PACKS: pack files left out by name (the protected regression set's held packs, works-set.mjs).
   const skip = new Set((process.env.GATE_B_SKIP_PACKS ?? "").split(",").map((x) => x.trim()).filter(Boolean));
   const runs = [...cl.caps].flatMap(([id, st]) => packsOf(id).filter((f) => !skip.has(f)).map((f) => ({ id, f, st })));
+  // P-486 (Lead 22 on #1591): on a pull request or a merge-queue batch, qa's checkpoint rows run on the checkpoint (read
+  // from the hold file on the base, only when a pack is to run).
+  if (runs.length && (onPr || opt.queue)) CHECKPOINT_PACKS = (await import("./works-set.mjs")).checkpointPacksAtBase();
   // B131: what ran no test on the data asked for comes first (a wrong GATE_B_DATA is left to the pack run to refuse).
   let data = null; try { data = dataOf(); dataMap(); } catch { data = null; /* refused below when packs run */ }
-  const mode = modeOf(), untested = data ? notTested([...cl.caps.keys()], runs, (id) => dataFor(id)) : [];
+  const mode = modeOf(), untested = data ? notTested([...cl.caps.keys()], runs, (id, f) => dataForPack(id, f)) : [];
   if (process.env.GATE_B_DATA_OF) say(`  data: ${[...cl.caps.keys()].map((id) => `${id} on the ${dataFor(id)}`).join(", ")} (GATE_B_DATA_OF)`);
+  const moved = runs.filter((r) => CHECKPOINT_PACKS.has(r.f) && dataFor(r.id) !== "checkpoint");
+  if (moved.length) say(`  on the checkpoint, as qa's checkpoint rows (REGRESSION-HELD.md, P-322): ${moved.map((r) => r.f).join(", ")}`);
   for (const l of untested) say(l);
   if (untested.length) for (const l of untested) console.log(`::${mode === "retest" ? "error" : "warning"} title=Gate B NOT TESTED::${l.replace(/^NOT TESTED(?: on the \w+)?: /, "")}`);
   const named = [...cl.caps].map(([id, st]) => (st ? `${id} (steps ${st.join(", ")})` : id)).join(", ");
@@ -723,7 +734,7 @@ async function main(argv) {
   if (skip.size) say(`  held, not run: ${[...skip].join(", ")}`);
   say(`  packs: ${runs.length ? runs.map((r) => r.f).join(", ") : "none for the named capabilities"}`);
   if (opt.plan) {   // what the gate will run, in this GATE_B_DATA (B125: on the checkpoint, the pack alone)
-    for (const r of runs) { const p = runPlan(r.f, readFileSync(join(ACC_DIR(), r.f), "utf8")), x = p.error ? null : placeOf(p, dataFor(r.id)); console.log(r.f, x ? `${x.where} · load ${x.load ?? "none"} · ${JSON.stringify(x.steps)}` : JSON.stringify(p)); }
+    for (const r of runs) { const p = runPlan(r.f, readFileSync(join(ACC_DIR(), r.f), "utf8")), x = p.error ? null : placeOf(p, dataForPack(r.id, r.f)); console.log(r.f, x ? `${x.where} · load ${x.load ?? "none"} · ${JSON.stringify(x.steps)}` : JSON.stringify(p)); }
     return 0;
   }
   let infra = false;
