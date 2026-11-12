@@ -1,0 +1,302 @@
+pr	inner	conf	app_conf	p2_on_main	first_conf_h_after_open	conf_files
+1628	0	0	0	0		
+1566	2	2	1	2	11.457777777777778	ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p5/transforms.ts;engine/form-values.ts;engine/render.ts
+1591	2	1	1	2	6.608333333333333	engine/runtime/filings.ts;samples/fee-table.json;tests/check_r2_fee_table.ts
+1589	3	1	1	1	9.991666666666667	web/src/runtime/cases.tsx
+1614	0	0	0	0		
+1583	3	0	0	1		
+1580	2	2	1	2	6.351111111111111	tests/check_bk3_frame.ts;web/src/App.tsx
+1588	1	1	1	1	6.886388888888889	engine/form-values.ts
+1602	0	0	0	0		
+1582	1	0	0	1		
+1587	0	0	0	0		
+1570	0	0	0	0		
+1563	1	0	0	1		
+1571	1	1	0	1	8.895555555555555	tests/check_b164_no_engine_keys.ts
+1574	0	0	0	0		
+1573	0	0	0	0		
+1576	0	0	0	0		
+1586	0	0	0	0		
+1581	0	0	0	0		
+1534	0	0	0	0		
+1543	1	0	0	1		
+1553	1	1	1	1	1.1861111111111111	api/src/case-prepare.ts
+1525	0	0	0	0		
+1537	0	0	0	0		
+1535	0	0	0	0		
+1536	0	0	0	0		
+1533	0	0	0	0		
+1531	0	0	0	0		
+1524	0	0	0	0		
+1528	0	0	0	0		
+1519	0	0	0	0		
+1513	1	0	0	1		
+1518	0	0	0	0		
+1506	0	0	0	0		
+1507	1	0	0	1		
+1505	0	0	0	0		
+1501	0	0	0	0		
+1495	0	0	0	0		
+1492	0	0	0	0		
+1450	0	0	0	0		
+1482	0	0	0	0		
+1477	0	0	0	0		
+1262	8	7	1	7	44.42472222222222	api/src/case-checklist.ts;api/src/filing-changes.ts;api/src/review-rounds.ts;api/src/runtime.ts;contracts/runtime.ts;prisma/schema.prisma;web/src/runtime/cases.tsx;web/src/runtime/checklist.tsx
+1464	0	0	0	0		
+1453	0	0	0	0		
+1444	0	0	0	0		
+1435	0	0	0	0		
+1430	0	0	0	0		
+1441	0	0	0	0		
+1440	0	0	0	0		
+1257	6	5	1	6	40.973333333333336	api/src/case-checklist.ts;api/src/case-documents.ts;api/src/case-feed.ts;api/src/runtime.ts;contracts/runtime.ts;engine/runtime/case.ts;prisma/schema.prisma;web/src/runtime/cases.tsx;web/src/runtime/questionnaire.tsx
+1411	1	0	0	1		
+1272	3	3	1	3	38.55583333333333	api/src/library-changes.ts;api/src/review-queue.ts;contracts/screen02.ts;web/src/pages/review-items.tsx
+1248	3	2	1	3	47.5975	api/src/case-feed.ts;api/src/case-prepare.ts;engine/runtime/readiness.ts;engine/snapshot.ts;prisma/schema.prisma;web/src/runtime/forms.tsx
+1386	6	0	0	1		
+1421	0	0	0	0		
+1247	3	1	1	3	45.76166666666666	api/src/case-prepare.ts;api/src/readiness-inputs.ts;web/src/runtime/cases.tsx;web/src/runtime/readiness.tsx
+1392	1	1	1	1	3.7408333333333332	api/src/library-changes.ts;api/src/lifecycle.ts;api/src/main.ts;api/src/review-queue.ts;web/src/pages/review-items.tsx
+1404	0	0	0	0		
+1394	0	0	0	0		
+1390	1	1	1	1	1.773611111111111	web/src/runtime/questionnaire.tsx
+1393	0	0	0	0		
+1389	0	0	0	0		
+1282	1	1	1	1	37.45805555555555	api/src/case-prepare.ts;api/src/library-changes.ts;api/src/lifecycle.ts;api/src/main.ts;api/src/review-queue.ts;engine/runtime/readiness.ts;web/src/pages/review-items.tsx
+1375	5	0	0	1		
+1374	2	0	0	1		
+1378	0	0	0	0		
+1382	0	0	0	0		
+1369	0	0	0	0		
+1344	2	1	1	2	3.9941666666666666	acceptance/C7.6.test.ts;engine/runtime/readiness.ts
+1368	0	0	0	0		
+1367	0	0	0	0		
+1370	0	0	0	0		
+1365	0	0	0	0		
+1318	2	1	1	2	4.261666666666667	api/src/case-prepare.ts
+1330	2	0	0	2		
+1340	0	0	0	0		
+1331	0	0	0	0		
+1242	2	1	1	2	16.585833333333333	api/src/runtime.ts;contracts/runtime.ts;engine/runtime/case.ts;prisma/schema.prisma;tests/runtime/check_runtime_r1c.cjs;web/src/runtime/cases.tsx;web/src/runtime/questionnaire.tsx
+1251	2	1	1	2	10.743333333333334	acceptance/C7.3.test.ts;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/B124/walk/1-none-confirmed-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/B124/walk/2-some-confirmed-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/B124/walk/3-some-confirmed-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/B124/walk/4-all-confirmed-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/B124/walk/5-all-confirmed-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/01-empty-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/01-empty-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/02-possibly-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/02-possibly-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/03-out-of-date-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/03-out-of-date-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/04-run-again-reason-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/04-run-again-reason-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/05-needs-review-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/05-needs-review-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/06-override-drawer-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/06-override-drawer-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/07-review-drawer-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/07-review-drawer-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/08-reviewed-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/08-reviewed-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/09-history-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/09-history-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/10-zoom-200.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-01-not-ready-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-01-not-ready-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-02-ready-refused-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-02-ready-refused-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-03-pass-without-reason-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-03-pass-without-reason-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-04-ready-refused-stale-tab-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-04-ready-refused-stale-tab-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-05-warnings-passed-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-05-warnings-passed-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-06-review-open-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-06-review-open-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-07-reviewed-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-07-reviewed-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-08-ready-to-file-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-08-ready-to-file-1440.png;api/src/case-prepare.ts;contracts/runtime.ts;engine/runtime/answer-sheet.ts;engine/runtime/case.ts;engine/runtime/readiness.ts;web/src/runtime/questionnaire.tsx
+1252	4	3	1	4	6.041388888888889	api/src/case-checklist.ts;api/src/runtime.ts;engine/runtime/readiness.ts
+1222	2	1	1	2	12.739444444444445	engine/runtime/case-checklist.ts;web/src/runtime/checklist.tsx
+1246	3	2	1	3	6.590833333333333	api/src/runtime.ts;contracts/runtime.ts;engine/runtime/case.ts
+1268	3	2	1	3	0.815	api/src/library-changes.ts;api/src/main.ts
+1290	2	0	0	1		
+1256	1	1	1	1	6.2122222222222225	engine/runtime/case.ts
+1278	2	0	0	2		
+1255	1	0	0	1		
+1295	0	0	0	0		
+1279	0	0	0	0		
+1231	2	1	1	2	5.376944444444445	engine/runtime/case.ts
+1261	0	0	0	0		
+1274	0	0	0	0		
+1275	0	0	0	0		
+1250	0	0	0	0		
+1054	3	2	1	3	48.8925	api/src/question-condition.ts;api/src/runtime.ts;engine/runtime/case.ts;web/src/runtime/questionnaire.tsx
+1075	1	1	1	1	53.094166666666666	api/src/case-prepare.ts;engine/runtime/answer-sheet.ts
+1233	0	0	0	0		
+1221	1	0	0	0		
+1223	1	0	0	1		
+1225	0	0	0	0		
+1224	0	0	0	0		
+1212	0	0	0	0		
+1197	0	0	0	0		
+1198	1	0	0	1		
+1201	3	0	0	2		
+1204	0	0	0	0		
+1148	1	1	1	1	17.004722222222224	api/src/runtime.ts
+1084	3	2	1	3	13.807777777777778	api/src/demo.ts
+1172	0	0	0	0		
+1073	1	1	1	1	36.21194444444444	api/src/demo.ts;tests/check_stand_ins.ts;web/src/runtime/cases.tsx
+1072	3	2	1	3	33.03277777777778	api/src/demo.ts;api/src/runtime.ts
+1171	0	0	0	0		
+1158	2	1	1	2	0.8988888888888888	api/src/demo.ts
+1156	0	0	0	0		
+1123	3	0	0	1		
+1131	0	0	0	0		
+1052	2	1	1	1	10.62111111111111	acceptance/lib/pack2.ts;api/src/demo.ts;api/src/form-part-placements.ts;api/src/form-setup.ts;samples/form-setup.json
+1134	0	0	0	0		
+1125	0	0	0	0		
+1068	5	3	1	2	1.441111111111111	api/src/form-field-condition.ts;api/src/form-setup.ts;api/src/own-yes-no.ts;api/src/review-queue.ts;tests/lib/forms-b86-setup.ts;web/src/components/form-field-conditions.tsx;web/src/pages/review-items.tsx;web/src/pages/review.tsx
+1115	0	0	0	0		
+1121	0	0	0	0		
+1114	0	0	0	0		
+1053	6	2	1	3	4.1947222222222225	api/src/impact.ts;api/src/review-queue.ts;web/src/pages/review.tsx
+1036	2	1	1	2	7.545	web/src/pages/workspace/questionnaires.tsx
+1050	3	2	1	1	3.9325	api/src/demo.ts;engine/channels.ts;tests/check_c10_1_configured.ts
+1085	1	1	1	0	4.5488888888888885	api/src/demo.ts;tests/check_qa144_vv_release.ts
+1062	2	1	1	2	3.7905555555555557	api/src/form-part-placements.ts
+1100	0	0	0	0		
+1091	0	0	0	0		
+1058	1	0	0	1		
+1057	2	2	1	2	1.6713888888888888	api/src/fill-case.ts;api/src/forms.ts
+1060	0	0	0	0		
+1051	0	0	0	0		
+1056	0	0	0	0		
+1009	1	1	1	1	4.058055555555556	api/src/demo.ts;api/src/studio.ts
+967	5	3	1	4	3.2063888888888887	acceptance/C4.11.test.ts;acceptance/lib/pack2.ts;api/src/demo.ts
+973	2	2	1	2	4.369166666666667	acceptance/C4.1.test.ts;api/src/demo.ts
+1005	1	1	0	1	1.9366666666666668	acceptance/lib/pack2.ts
+868	7	5	1	7	6.560555555555555	api/src/demo.ts;tests/check_c10_1_configured.ts;tests/check_qa144_vv_release.ts
+1006	0	0	0	0		
+978	2	1	1	2	3.3141666666666665	api/src/demo.ts
+998	0	0	0	0		
+993	0	0	0	0		
+881	3	3	1	3	3.785	api/src/demo.ts;tests/check_c10_1_configured.ts
+948	2	0	0	2		
+926	1	1	1	1	4.283055555555555	api/src/case-prepare.ts;api/src/sign-steps.ts
+883	5	3	0	5	5.483333333333333	tests/check_c10_1_browser.cjs;tests/check_c10_1_configured.ts;tests/check_qa144_vv_release.ts
+929	0	0	0	0		
+936	1	1	1	1	1.745	api/src/sources.ts
+924	1	0	0	1		
+879	3	2	1	3	4.207222222222223	api/src/demo.ts;tests/check_c10_1_configured.ts;tests/check_qa144_vv_release.ts
+885	2	0	0	2		
+935	0	0	0	0		
+937	0	0	0	0		
+891	4	1	0	3	3.776666666666667	tests/check_c10_1_configured.ts;tests/check_qa144_vv_release.ts
+861	0	0	0	0		
+872	0	0	0	0		
+866	1	0	0	1		
+878	4	1	1	3	2.1486111111111112	api/src/demo.ts
+870	0	0	0	0		
+867	0	0	0	0		
+798	3	2	1	3	4.847777777777778	api/src/demo.ts;tests/check_c10_1_configured.ts
+882	0	0	0	0		
+837	1	1	0	1	1.9547222222222222	ai-workers/problem-1-pathway-setup-and-form-filling/product/DEMO.md
+833	1	1	1	1	0.38	engine/import.ts
+802	1	1	1	1	2.545	api/src/review-proposals.ts;web/src/pages/proposals.tsx
+714	1	0	0	1		
+829	0	0	0	0		
+820	0	0	0	0		
+794	2	1	0	2	7.176388888888889	ai-workers/problem-1-pathway-setup-and-form-filling/product/reports/verify-2026-11-03/V3/v3_golden_replay.cjs
+726	1	0	0	1		
+793	1	0	0	1		
+790	1	0	0	1		
+788	1	0	0	1		
+784	1	0	0	1		
+791	0	0	0	0		
+762	2	1	0	2	0.5244444444444445	tests/check_c10_1_configured.ts;tests/check_s7_load.ts
+752	1	1	0	1	2.2880555555555557	tests/check_forms_c34_ai.ts
+744	1	0	0	1		
+738	1	1	1	1	1.9027777777777777	engine/render.ts
+740	0	0	0	0		
+728	0	0	0	0		
+741	0	0	0	0		
+719	0	0	0	0		
+732	1	0	0	1		
+718	0	0	0	0		
+735	1	0	0	1		
+733	0	0	0	0		
+730	0	0	0	0		
+722	0	0	0	0		
+712	0	0	0	0		
+700	0	0	0	0		
+715	0	0	0	0		
+709	0	0	0	0		
+691	0	0	0	0		
+689	0	0	0	0		
+699	0	0	0	0		
+698	0	0	0	0		
+693	0	0	0	0		
+661	0	0	0	0		
+688	0	0	0	0		
+680	0	0	0	0		
+676	0	0	0	0		
+683	0	0	0	0		
+673	0	0	0	0		
+666	0	0	0	0		
+659	0	0	0	0		
+643	0	0	0	0		
+647	0	0	0	0		
+640	0	0	0	0		
+637	0	0	0	0		
+636	0	0	0	0		
+627	0	0	0	0		
+622	0	0	0	0		
+626	0	0	0	0		
+617	0	0	0	0		
+615	2	1	1	1	-0.9936111111111111	web/src/pages/review.tsx
+616	0	0	0	0		
+592	0	0	0	0		
+554	3	3	1	3	-0.03027777777777778	api/src/programs.ts;tests/check_s5_slice1_browser.cjs;web/src/pages/combination.tsx;web/src/pages/workspace/forms.tsx;web/src/pages/workspace/preview.tsx
+587	1	1	1	1	1.701111111111111	api/src/core.ts;api/src/programs.ts;api/src/studio.ts
+602	0	0	0	0		
+574	2	2	1	2	-0.04083333333333333	api/src/proposals.ts
+585	1	1	1	1	1.1852777777777779	api/src/rounds.ts;tools/track-a-jobs.ts
+563	1	1	0	1	2.9341666666666666	tests/check_queue_tx.ts
+568	1	1	1	1	2.089722222222222	web/src/pages/review.tsx
+570	0	0	0	0		
+572	0	0	0	0		
+573	0	0	0	0		
+584	0	0	0	0		
+569	0	0	0	0		
+566	0	0	0	0		
+557	1	1	0	1	1.6163888888888889	tests/check_vv_prepare_api.ts
+565	0	0	0	0		
+562	3	0	0	3		
+558	0	0	0	0		
+553	0	0	0	0		
+556	0	0	0	0		
+552	1	0	0	1		
+522	2	1	1	2	2.6658333333333335	api/src/where-used.ts
+543	2	0	0	2		
+545	0	0	0	0		
+541	0	0	0	0		
+525	1	0	0	0		
+500	9	3	1	3	-4.088333333333333	api/src/case-filings.ts;api/src/case-prepare.ts;engine/filing-modes.ts;engine/runtime/filings.ts;tests/check_c1112_modes.ts
+505	2	1	1	2	1.603611111111111	api/src/form-uses.ts
+529	0	0	0	0		
+526	0	0	0	0		
+509	1	0	0	1		
+506	1	0	0	1		
+510	1	0	0	1		
+508	0	0	0	0		
+513	1	0	0	1		
+512	1	0	0	1		
+501	1	0	0	1		
+504	1	0	0	1		
+469	3	0	0	3		
+484	7	2	1	2	-7.042222222222223	ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p5/transforms.ts;api/src/runtime.ts;tests/check_vv_prepare_api.ts;tests/runtime/check_case_engine.ts;web/src/runtime/questionnaire.tsx
+436	3	1	1	3	2.451388888888889	samples/wave1.json
+455	2	1	1	2	1.6052777777777778	api/src/case-prepare.ts
+482	1	0	0	1		
+471	0	0	0	0		
+477	1	0	0	0		
+475	0	0	0	0		
+470	0	0	0	0		
+457	2	0	0	2		
+458	2	0	0	2		
+456	0	0	0	0		
+445	2	0	0	2		
+426	3	1	1	3	1.6513888888888888	api/src/proposals.ts
+435	1	0	0	1		
+429	1	0	0	1		
+408	2	2	1	2	1.0558333333333334	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/built/C6.4.md;prisma/schema.prisma
+418	1	0	0	1		
+428	1	0	0	1		
+427	1	0	0	1		
+407	2	0	0	2		
+414	0	0	0	0		
+412	0	0	0	0		
+358	5	2	1	1	-0.5325	api/src/case-prepare.ts;prisma/schema.prisma
+391	6	1	1	6	2.473333333333333	prisma/schema.prisma
+398	1	0	0	1		
+401	0	0	0	0		
+356	3	1	1	2	6.199722222222222	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/built/C6.12.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/M3-B-prepare/break-report.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/M3-B-prepare/journey-test-reviewer-2026-11-01.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/M3-B-prepare/review.md;api/src/case-filings.ts;api/src/case-prepare.ts;api/src/main.ts;api/src/studio.ts;engine/runtime/filings.ts;engine/snapshot.ts;prisma/schema.prisma;tests/check_vv_prepare_api.ts
+397	0	0	0	0		
+390	0	0	0	0		
+389	0	0	0	0		
+349	3	0	0	3		
+331	6	3	1	6	1.1830555555555555	api/src/library-sources.ts;api/src/main.ts;api/src/studio.ts;web/src/pages/library.tsx
+325	8	7	1	7	-3.288611111111111	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md;api/src/main.ts;prisma/schema.prisma
+345	3	2	1	3	1.6080555555555556	api/src/main.ts;api/src/proposals.ts
+351	2	1	1	2	2.3033333333333332	web/src/pages/ai.tsx
+348	1	0	0	1		
+363	0	0	0	0		
+350	2	0	0	2		
+336	4	2	1	4	-0.7880555555555555	engine/runtime/case.ts;web/src/runtime/questionnaire.tsx
+344	1	0	0	1		
+340	4	1	0	3	-7.233888888888889	ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/W1-setup-checklist/screenshots/before-forms/05-questionnaires-pointer-1440.png
+339	2	0	0	1		

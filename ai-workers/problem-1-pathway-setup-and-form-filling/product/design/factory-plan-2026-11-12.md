@@ -1,25 +1,40 @@
 # The delivery factory: size, causes, structure and decisions (P-502)
 
-Planning study by the Fable planner (P-455 (5)), 12 Nov 2026, for the founder and the current Lead (`tools/current-lead.sh`). Read-only: no app code changed. Live AI off, US$0.
+Planning study by the Fable planner (P-455 (5)), 12 Nov 2026, for the founder and the current Lead (`tools/current-lead.sh`). Read-only: no app code changed. Live AI off, US$0. Challenged twice (a fresh Opus challenger, then Lead 26 with three Opus reviewers); this version folds both in, and the record is at the end.
 
-**Data.** Pulled 12 Nov ~14:30 to 15:45 IST: `origin/main` at `56b630913`; GitHub REST (1,300 closed PRs back to 1 Nov, 3,544 issue comments, 7,200 issue events, 273 `nightly.yml` runs); the team's requirement snapshot `domain/requirements-2026-11-02/` (name-free copy); the team's app was read for **size and structure only** (P-502 (2)); no code of theirs is copied here, and its specifics are kept out of this public repository (founder, 12 Nov: "Strip them, keep private"; the Lead holds the private comparison). Every number names its sample (P-500). Scripts and outputs are in `factory-plan-2026-11-12-evidence/` and re-run in minutes (section "Evidence").
+**Data.** Pulled 12 Nov ~14:30-15:45 IST. The PR sample was cut at `origin/main` = `5797feb18` (#1628, merged 09:55 UTC); GitHub REST: 1,300 closed PRs back to 1 Nov, 3,544 issue comments, 7,200 issue events, 273 `nightly.yml` runs; the team's requirement snapshot `domain/requirements-2026-11-02/` (name-free copy). The team's app was read for size and structure only (P-502 (2)); its specifics are kept out of this public repository (founder, 12 Nov: "Strip them, keep private"; P-504). Every number names its sample (P-500). Scripts and outputs: `factory-plan-2026-11-12-evidence/` (section "Evidence"). Words in *italics* are explained in the glossary at the end.
 
-**Words.** *App PR* = a merged PR that changed app code, by files changed (P-500 folders: `prototype/studio/{api/src,web/src,engine,prisma,contracts,samples,packages}`). *Works* = a capability qa confirmed (RULES "When a capability counts as Works"). *Requirement* = one numbered line in the team's spec (e.g. `AG-7-12`). *Card* = the team's headed, buildable unit with its own status marker. *H-n* = a hypothesis, with the test that settles it; never shipped as a fix (P-502 (1)).
+## The short answer (plain words)
 
-## The short answer (plain words; corrected after the Opus challenge, see "Challenge")
+1. **How big is the product?** Not yet known well enough to plan dates. The team's spec has 2,253 numbered requirement lines in 32 modules, but in a hand-read sample of 40 lines only about 16 describe something a user can do (95% range roughly 25-56%); the rest are rules inside a capability, technical items, or pointers. On that basis, configurator plus case delivery (the part we build) come to **about 310-700 capabilities in total**, of which ~94 are confirmed today. Both ends rest on assumptions (listed in 1.4). A two-hour grouping test settles it, and must split Release 1 from later releases.
+2. **Why our app is not built for that scale.** It is one big box: one NestJS module, 141 files side by side in one folder, seven files over 800 lines, no lint, no rule that keeps one area out of another. The team's app, by contrast, is built as many small fenced modules under a file-size limit. Nobody decided against modules; the prototype grew into a product without that step.
+3. **What it costs today** (301 app PRs, 2-12 Nov): about **a quarter of app PRs hit a real merge conflict on app files** (25%; 22-29% by method), costing about **216 *PR-hours***; second review rounds after a first Approve are common (71 of 131 PRs had two or more Approves). Merges are not slow (queue median 1.1 h) and machines are not short (runner wait median 0, P-489). **What limits confirmed capabilities per day (~5) is not measured**: candidates are rows ready to build, qa verdict time and capacity events; ready rows ran short on about 2 of 10 days (H-13).
+4. **What to do, in order of certainty.** (a) Measure the two missing steps: rows ready ahead of builders, and qa verdict time. (b) After the Bake's tag commit, the cheap fix the Lead already owns (P-499 (1)): make `main.ts` and `demo.ts` register each module's own parts, split `schema.prisma` by area, and stop any file from growing past 800 lines. (c) The full modular rebuild only if conflicts stay high afterwards (D2), with lanes cut by *vertical stream*, not by module. The hand-over between configurator and case side (the released snapshot) already exists.
+5. **Five decisions for you**, in the order to take them (section 6): **D6** whose version wins where the team's app already does the same thing; **D1** what this factory builds; **D2** the full rebuild; **D3** let builders start their own test runs; **D4** night starts without your typed turn.
 
-1. **Size: the 500-600 figure may be right for our part, but nobody has measured it yet.** The team's spec has 2,253 live numbered requirement lines in 32 modules, but only about 4 in 10 of them are user abilities; the rest are rules inside a capability, technical or non-functional items, or pointers. Re-weighted for that, configurator + case delivery come to **~430-700 capabilities in total** (~340-610 still to build); with the front office, **~670-1,160 still to build**. A two-hour grouping test (H-1) settles the number; the spec also mixes Release 1 with later releases, which that test must separate.
-2. **Our app is one big box.** One NestJS module, 141 files side by side in one folder, seven files over 800 lines, no lint and no rule that keeps one area out of another. The team's app is built as many small fenced modules under a file-size limit. Nobody decided against modules; the prototype grew into a product without that step.
-3. **What it costs, measured on 301 app PRs (2-12 Nov):** 22-29% of them hit a real merge conflict (**~216 PR-hours** lost, measured from the moment of conflict); fix-and-re-review rounds after a first Approve are frequent (71 of 131 PRs had two or more Approves). Merges are not slow (queue median 1.1 h); machines are not short (runner wait median 0, P-489). **Output (≈5 confirmed capabilities a day) was capped by how many rows were ready to confirm**: by 10-11 Nov only 14-15 rows were not yet Works, 11 of them Parked or Team, while PRs per capability had already fallen from 6.3 to 3.7.
-4. **The fix, in order of certainty:** (a) **now, cheap and certain** (after the Bake's tag commit): make `main.ts` and `demo.ts` self-registering, split `schema.prisma` by domain, and add an 800-line ratchet: three files with 18% of app conflict hits; (b) **keep rows ready ahead of the builders** (the design → look → brief step), and time qa's verdicts, because those now limit output; (c) **only on measured need**: the full modular monolith (bounded contexts, import boundaries), with lanes cut by *vertical streams*, since 59% of app PRs cross the six horizontal lanes first proposed. The released-pack contract between configurator and case side **already exists**.
-5. **Five decisions for you** are at the end (section 6). The rest is the Lead's to run (P-384).
+## The next two weeks, both tracks, in one order
+
+| # | When (IST) | Track | What | Who | Done when |
+|---|---|---|---|---|---|
+| 1 | now to ~14 Nov | Build | the Bake's last rows and walk 1 (P-499) | lanes, qa | 0 open Majors on the journey |
+| 2 | 14-15 Nov | Build | the co-founder's cold walk (P-482) | co-founder | walk passed |
+| 3 | from 16 Nov | Build | Chrome extension: SP-1, SP-2, E0 and the counsel brief, three lanes (P-495) | lanes | Sample-complete 24 Nov-2 Dec |
+| 4 | this week | Plan | **D6** (whose version wins) and **D1** (what we build), from the private comparison | founder | answered |
+| 5 | this week | Plan | H-1: the two-hour size test, Release 1 split from later | a read-only planner | a size number with a range |
+| 6 | this week | Factory | the two missing measures: rows ready ahead of builders per day; qa verdict time per row | Lead (one tooling PR) | numbers in the daily report |
+| 7 | after the Bake's tag commit (~19 Nov) | Factory | the cheap fix: self-registering `main.ts` and `demo.ts`, split schema, 800-line ratchet (P-499 (1)) | Lead, one structure lane | three small PRs merged, gates green |
+| 8 | after D6 | Plan | head-to-head per capability where both apps overlap (the XFA method, P-464) | planner + Lead | a winner per capability |
+| 9 | after 150 more app PRs | Factory | D2's test (section 6) | Lead | the share of app-file conflicts, with its margin |
+| 10 | after the Bake | Factory | a push check that blocks the team's app terms in this public repository (Lead's tooling row) | Lead | the check runs on every push |
+
+**The 12 Mar 2027 launch (H-14, a hypothesis):** at today's ~5 confirmed capabilities a day, 220-610 still to build takes about 6-17 weeks of steady output; 12 Mar is ~17 weeks away. So the date is reachable only if the size lands in the lower half, or output rises once the limit is known. Settled by H-1 (size) and two weeks of the measures in row 6.
 
 ---
 
 ## 1. Size of the whole product
 
 ### In plain words
-The team's spec is the honest ruler: it lists every requirement the finished product must meet. It has 32 modules (19 for the firm's staff, 13 for the platform team). We have built mostly inside two of them, the configurator (SA-01B) and case delivery (AG-07 to AG-09, AG-19). Even there we are roughly a third of the way by the team's own measure. Front-office modules (CRM, booking, retainers, billing, messages, automation, tasks, reports) are not started here. The platform foundation (tenants, sign-in, roles, subscriptions) is the team's, and their code base already holds most of it.
+The team's spec lists every requirement the finished product must meet. It has 32 modules (19 for the firm's staff, 13 for the platform team). We have built mostly inside two of them: the configurator (SA-01B) and case delivery (AG-07 to AG-09, AG-19), and even there we are part of the way. Front-office modules (CRM, booking, retainers, billing, messages, automation, tasks, reports) are not started here. The platform foundation (tenants, sign-in, roles, subscriptions) is the team's. A requirement line is not a capability, so the count must be converted, and that conversion is the uncertain part.
 
 ### 1.1 Our app's structure (measured)
 
@@ -29,138 +44,129 @@ The team's spec is the honest ruler: it lists every requirement the finished pro
 | Lines | 32,931 api + 20,668 web + 13,739 engine (packs and checks in `tests/`, `acceptance/`) |
 | NestJS `@Module`s | **1** (in `main.ts`) |
 | Backend folders | 1 flat folder of 141 files + `features/` |
-| Controllers / routes | 69 / 401 (decorator count) |
-| Prisma models | 103 in one `schema.prisma` |
+| Controllers / routes | 69 files with a controller (76 `@Controller(` occurrences) / 401 route decorators |
+| Prisma models | 103 in one `schema.prisma` (2,860 lines) |
 | Largest non-test file | 1,284 lines (`api/src/studio.ts`); **7 over 800** (6 api, 1 web) |
-| File-size rule | none (no ESLint in the app) |
-| Module boundaries | none |
+| File-size rule / module boundaries | none / none (no ESLint in the app) |
 
-How measured: `measure_structure.py` (physical lines; routes = `@Get/@Post/@Put/@Patch/@Delete/@All/@Head/@Options` decorators). The team's app was measured the same way for the private comparison: it is built as many small, fenced modules with a file-size limit and a split schema; ours is one. That contrast, not its numbers, is what this plan needs.
+How measured: `measure_structure.py`. The team's app was measured the same way for the private comparison; it is built as many small fenced modules with a file-size limit and a split schema.
 
 ### 1.2 The team's spec, counted
 
 | Unit | Count | How |
 |---|---|---|
 | Modules | 32 (AG-1 to AG-19, SA-1, SA-1B, SA-2 to SA-12) | files in `02-functional-requirements/{agent,super-admin}` |
-| Live numbered requirements | **2,253** (86 withdrawn) | `count_frs.py`: lines that start with the module's own id; struck-through or "Withdrawn" excluded |
-| Cards with the team's status marker | 610: **531 Not built, 78 Partly built, 1 Built** | `count_cards.py`; only modules rewritten in card format carry markers (SA-1B 176, AG-7 106, AG-2 64, AG-6 51, AG-4 47 …) |
-| Cards per requirement (modules with both) | median ~0.8 (SA-1B 0.81, AG-7 0.95, AG-4 0.94, AG-19 0.95, AG-6 0.78, AG-2 0.59, AG-5 0.42) | the two tables above |
-
-Parser error: on SA-01B my parser finds 218 numbered lines where the hand trace (`master-plan-2026-11-11/03a-trace-SA01B-v2.1.md`) counted 179 cards, so requirement counts run ~20% above card counts. That is inside the band below.
+| Numbered requirement lines | 2,253 live (86 withdrawn), of which 131 (6%) are "merged into" or pointer lines | `count_frs.py`; challenger `c9_frs.py` |
+| Of those, user abilities | ~16 in a hand-read random sample of 40 (**assumption**: 40%, 95% range ~25-56%) | challenger `c8_sample.py` |
+| Cards with the team's status marker | 610 (531 Not built, 78 Partly built, 1 Built), only in modules rewritten as cards | `count_cards.py` |
 
 ### 1.3 Mapped to ours: have, partly, lack
 
-| Group | Team modules | Requirements | Ours today | Status here |
+| Group | Team modules | Requirement lines | Ours today | Status here |
 |---|---|---|---|---|
-| **A. Content pack configurator** | SA-1, SA-1B, SA-5 | 369 | C1-C5, C9, C11 (~70 rows, Works) | **Partly.** SA-1B hand trace: 20 of 179 cards built, 92 partly, 15 M4, 9 M5, 15 not planned. Global templates (SA-5) lacking |
-| **B. Case delivery** (Questionnaire · Documents · Forms · Workflow) | AG-3, AG-7, AG-8, AG-9, AG-15, AG-17, AG-19 | 440 | C6-C8, C10 (~28 rows) | **Partly.** Case, people, questionnaire, documents, fill, readiness, filing record exist on Sample data; client portal (AG-15) only the family link; corporate/LMIA (AG-17) one Sample employer case; pathway assessment (AG-3) only the staff case check C6.9 |
-| **C. Firm front office** | AG-2 CRM, AG-4 booking, AG-5 retainer, AG-6 billing, AG-10 messages, AG-11 automation, AG-12 templates, AG-13 tasks, AG-14 reports | 692 | fees worked out (C6.12), a signing order; nothing else | **Lacking here.** What the team's app already has in this group is in the private comparison |
+| **A. Content pack configurator** | SA-1, SA-1B, SA-5 | 369 | C1-C5, C9, C11 (~70 rows) | **Partly.** SA-1B hand trace: 20 of 179 cards built, 92 partly, 15 M4, 9 M5, 15 not planned. Global templates (SA-5) lacking |
+| **B. Case delivery** | AG-3, AG-7, AG-8, AG-9, AG-15, AG-17, AG-19 | 440 | C6-C8, C10 (~28 rows) | **Partly.** Case, people, questionnaire, documents, fill, readiness, filing record on Sample data; client portal only the family link; corporate/LMIA one Sample employer case; assessment only the staff case check C6.9 |
+| **C. Firm front office** | AG-2, AG-4, AG-5, AG-6, AG-10 to AG-14 | 692 | fees worked out (C6.12), a signing order | **Lacking here** |
 | **D. Firm admin and data** | AG-1, AG-16, AG-18 | 242 | stand-in firm and team (C6.11) | **Team's** (P-335, P-357) |
-| **E. Platform foundation** | SA-2, SA-3, SA-4, SA-6 to SA-12 | 510 | simulated users only | **Team's**, much of it already in the team's app |
+| **E. Platform foundation** | SA-2 to SA-4, SA-6 to SA-12 | 510 | simulated users only | **Team's** |
 
-### 1.4 Capabilities still to build: estimate, method, error band
+Where the team's app already covers groups A and B is in the private comparison; it bears on D6.
 
-**Method (calibrated on our own work, not on opinion).** One of our capability rows is a qa-tested user ability. To convert the team's units into ours, I use the one module traced card by card: in SA-01B, **81 of our capabilities** cover **20 cards fully and 92 partly**. Counting a "partly" card as half done gives **66 card-equivalents** (band 48-84 if "partly" means 30-70% done), so **1.23 of our capabilities per card** (band 0.96-1.69). The whole spec is ~1,800 card-equivalents (2,253 requirements × 0.8; band 1,350-2,140 for 0.6-0.95 cards per requirement).
+### 1.4 Capabilities: estimate, method, assumptions
 
-| Scope | Requirements | Card-equivalents (×0.8) | Our capabilities at 1.23 per card | Band | Done (Works) | **Still to build** |
-|---|---|---|---|---|---|---|
-| A + B (ours: configurator + case delivery) | 809 | ~650 | ~800 | 470 to 1,370 | ~94 (partly covering ~70-110 card-equivalents) | **~700** (band 380-1,280) |
-| C (front office, not started) | 692 | ~550 | ~680 | 400 to 1,110 | ~0 | **~680** (band 400-1,110) |
-| **A + B + C** | 1,501 | ~1,200 | ~1,480 | 870 to 2,480 | ~94 | **~1,400** (band ~800-2,400) |
-| D + E (team's) | 752 | ~600 | not ours to build | | the team's app | merge, not build |
+**Method.** Card-format modules (SA-1B, AG-7, AG-19, and in C: AG-2, AG-4, AG-5, AG-6) are converted at their measured cards per line (0.85 for A+B, 0.7 for C). Prose modules have no cards, so their lines are converted at an **assumed** 0.1-0.6 cards per line (0.1 is the lowest ratio seen in a partly converted module; 0.6 the highest prose-like one). Cards become capabilities at an **assumed** 0.9-1.23 capabilities per card, from the SA-01B trace (configurator-only ~0.9; with case-side capabilities cited as evidence, 1.23).
 
-**H-1: "The product is 500-600 capabilities."** Not supported by the spec counts: 500-600 sits below the band unless one capability equals 2-3 of the team's cards. **Test that settles it (2 hours, read-only, Sonnet, US$0):** take three modules of different kinds (AG-4 booking, AG-9 documents, AG-6 billing), group their cards into capability rows the way qa writes them (one user ability, one pack), count, and recompute the ratio. If the ratio is ≥2.5 cards per capability, the founder's figure stands; if near 1, the ~1,400 estimate does.
+| Scope | Capabilities in total | Confirmed (Works) | Still to build |
+|---|---|---|---|
+| A + B (ours) | **~310-700** | ~94 | **~220-610** |
+| A + B + C | ~530-1,250 | ~94 | ~430-1,160 |
+| D + E | team's | | merge, not build |
 
-**H-2: "Group C is ours to build."** Unconfirmed. The team's app already has some front-office screens; who builds the rest after the merge (P-450) is a product decision (section 6, D1).
+`c13_size_capacity.py` (challenger) reproduces the 0.4-0.6 rows; the 0.1 floor is the same formula at 0.1. **H-1: "the product we build is 500-600 capabilities."** Inside the A+B range, so possible. **Test (2 hours, read-only, Sonnet, US$0):** group three modules of different kinds (AG-4 booking, AG-9 documents, AG-6 billing) into capability rows as qa writes them, tagged Release 1 or later (the spec's phasing file), count, and replace both assumed ratios with measured ones.
+
+**H-2: "Group C is ours to build."** Unconfirmed; settled with D1.
 
 ---
 
-## 2. Root cause of our current speed (measured, ranked by cost)
+## 2. Root cause of our current speed (measured)
 
 ### In plain words
-Building is not the slow part, and machines are not short. The time goes to **builders tripping over each other in the same few files**, to **waiting between steps** (approved but not labelled, labelled but queued), and to **doing a capability several times** because gaps show up only after it merges. Under all three sits one design fact: the app is a single box where most changes touch the same central files, so more lanes mean more collisions, not more output.
+Building is not the slow part, and machines are not short. Time goes to **builders editing the same few files at once** and to **second review rounds**. Each confirmed capability takes about three app PRs. What caps confirmed capabilities per day is still unmeasured: it may be rows not ready, qa's verdict time, or capacity events (outages, account switches). Under the conflicts sits one design fact: the app is a single box where many changes meet in the same central files.
 
 ### 2.1 The sample
-**301 app PRs** merged 2-12 Nov IST (GitHub `merged_at`; files from `git diff H^1 H` of each merge on `main`). Same classification as the Lead's `merged-prs-by-files-2026-11-02-to-12.tsv`: on the 612 PRs in both lists, app/non-app agrees on all but one. Of all 657 merges in the window, 301 are app (46%); 212 records or docs, 81 tests only, 63 tooling.
+**301 app PRs** merged 2-12 Nov IST, cut at `5797feb18` (GitHub `merged_at`; files from `git diff H^1 H` of each merge on `main`). Same classification as the Lead's `merged-prs-by-files-2026-11-02-to-12.tsv` (agrees on all but one of 612 shared PRs). Of 657 merges in the window, 301 are app (46%), 212 records or docs, 81 tests only, 63 tooling.
 
-### 2.2 Flow today (app PRs only)
+### 2.2 Flow (app PRs only)
 
 | Measure | Value | Sample |
 |---|---|---|
-| App PRs merged per day | **28.1** (1.17/h); by day 65, 58, 31, 23, 12, 25, 16, 25, 9, 18, 19 (2-12 Nov) | 301 app PRs |
+| App PRs merged per day | 28.1 overall; 37.8 (2-6 Nov) → 18.6 (7-11 Nov) | 301 |
 | Opened → merged | median **3.25 h**, p75 6.8, p90 12.3; mean 6.3 | 301 |
-| Work in progress (Little's law, L = λW) | **7.3** app PRs open at once on average | 257 h window |
-| App lines changed per PR | median 100, p90 505; 11 over 800 | app folders only |
-| Capabilities reaching Works for the first time | 55 in 10 days (2-11 Nov), **5.5/day**, median 4 | `qa/CAPABILITIES.md` history on `main` |
-| Works → lower (re-opened) | 39 (2-12 Nov), 15 and 11 of them on 3-4 Nov (Opus re-proof, P-432) | same |
-| App PRs per first-time Works | ~5.5 (301 / 55); all history 388 app PRs / 94 Works = 4.1 (a floor: 19 rows reached Works on 25 Oct before PRs) | |
+| *Work in progress* | **7.3** app PRs open at once on average (*Little's law*) | 257 h window |
+| App lines changed per PR | median 100, p90 505; 11 over 800 | app folders |
+| Capabilities first reaching Works | 55 in 10 days (2-11 Nov): **~5 a day** (6.0 then 5.0 by week) | `qa/CAPABILITIES.md` on `main` |
+| Works → lower (re-opened) | 39 (2-12 Nov), 26 of them the deliberate 3-4 Nov re-proof (P-432) | same |
+| App PRs per capability turned Works (any time, re-confirmations included) | 189/64 = **2.95** (2-6 Nov) → 93/29 = **3.21** (7-11 Nov): flat | Lead 26 recount, `works_per_day.py` all_to_works column |
 
-### 2.3 Causes, ranked by measured cost
-
-> **Corrected by the challenge (C-6 to C-10):** conflicts 22-29% and ~216 PR-hours; cause 3 is mostly re-review after a first Approve (last Approve → label median 0.2-0.4 h, 68 PR-hours excess, 10 PRs over 3 h); cause 4 is ~23 PR-hours and the label is kept when the merge touches none of the PR's files (P-318 (1)); 26 of the 39 re-opens were the deliberate 3-4 Nov re-proof (rework ~82 PR-hours otherwise). The table below is kept as first written.
-
+### 2.3 Causes, by measured cost
 
 | # | Cause | Measured cost | Sample, method | Mechanism |
 |---|---|---|---|---|
-| 1 | **Rework after merge (the Partial loop)** | ~5.5 app PRs per first-time Works; 39 Works→lower moves; each costs a PR cycle (mean 6.3 h) plus a qa walk: **~250 PR-hours** at one cycle per re-open | `works_per_day.py`; P-501 restates builder PRs per row at 6.5 (title-based) | a capability's gaps are found by qa after merge; the fix is a new PR through every gate. Part is deliberate (3-4 Nov Opus re-proof) |
-| 2 | **Real merge conflicts on shared files** | **86 of 301 app PRs (29%)** had ≥1 conflicted merge of `main`; 145 conflicted merges. Size-matched, a conflicted PR took 4.9 h vs 2.1 h (<200 lines), 9.2 vs 3.3 h (200-500), 7.4 vs 5.3 h (500-1,000); all 6 PRs over 1,000 lines conflicted (median 52 h). **≈300 PR-hours** extra | `conflicts_from_git.py`: every merge commit inside a PR branch is re-merged with `git merge-tree`; exit 1 = a real textual conflict. Floor: rebases and Mergify conflict dequeues are not seen | 66 app files had conflicts; **the top 7 hold 39%**: `api/src/demo.ts` 16, `case-prepare.ts` 12, `runtime.ts` 9, `schema.prisma` 9, `engine/runtime/case.ts` 8, `questionnaire.tsx` 7, `main.ts` 7. Two are **central lists** every feature adds to (`demo.ts`, `main.ts`), a conflict source large teams know well |
-| 3 | **Waiting between Approve and label** | median 0.72 h, p75 3.45, p90 7.3; **271 PR-hours beyond a 1-hour CI floor**; 34 of 131 PRs waited over 3 h | 131 app PRs with both a `Reviewer: Approve` comment and a `review: approved` label (the other 170 predate the label guard or used another format) | after Approve the lane must see green CI and label; a cloud lane that has gone quiet, a baton rule ("one unlabelled baton PR at a time", P-481), or a Lead read (migrations, money, P-423) holds it. Which one dominates is **H-3** (below) |
-| 4 | **Chasing `main` without a conflict** | 62 app PRs merged `main` 96 times with **no** conflict; a small one took 3.1 h vs 2.1 h clean. Each merge drops the label (label guard) and buys a new review and a ~40-50 min CI run: **~60 PR-hours** | same replay | P-270 says merge `main` only on a conflict; the rule is not checked by any tool |
-| 5 | **Queue wait after the label** | median 1.06 h (p90 2.5) against a 42-min batch run (P-489): **109 PR-hours** beyond a 0.7 h floor | last label → merged, 131 PRs | batches (avg 1.6 PRs), dequeues, records merges resetting the queue (55 resets by 9 Nov, earlier study) |
-| 6 | **The Lead relays by hand; lanes cannot dispatch CI or message back** | lane asks for a `nightly.yml` dispatch → next dispatch: median **0.64 h**, p90 **15.3 h** (62 asks); recorded idles: a qa lane 3.4 h with 7 PRs unscored (P-420), four approved green PRs 2-3.5 h (P-439), 8 PRs Ready 7.4 h on an unattended prompt (7 Nov) | comment text match ("dispatch"/"nightly.yml" with a request word) to the next `workflow_dispatch` run; heuristic, so a rough measure | cloud lanes get HTTP 403 on Actions (P-439) and cannot message a session (one-way); only the Lead can dispatch, steer and start |
-| 7 | **Session starts need the founder's typed turn** | app PRs **opened** 01-06 IST: **24** over 11 nights vs **109** in 12-17 IST (4.5×); merges keep flowing at night (68 vs 93), so the queue is not what stops | 301 app PRs by IST hour of `created_at` | sessions start only in a founder-typed turn (P-348 (5)); P-489 records "that cost hours on 11-12 Nov". **H-4:** the night gap is mostly unstarted lanes, not idle ones. Test: compare night opens on nights with ≥3 warm spare lanes (P-489 (5)) against nights without |
-| 8 | **Capacity events** | 4 Nov cloud outage ~13 h (20 of 20 lanes); account switches 5, 6, 9 Nov; the 93% weekly stop 9 Nov | recorded (memory, DECISIONS), not re-measured | the 9 Nov challenge found these, not the pipeline, behind the fall from 80-97 builder merges a day to 20-36 |
+| 1 | **Merge conflicts on shared files** | **75 of 301 app PRs (25%)** had a conflict on an app file when merging `main` (22% by the challenger's stricter merge-of-`main` test; 29% if tests and records count); **~216 *PR-hours***, measured from each PR's first conflict against clean PRs of the same size still open at that age | `conflicts_from_git.py` (every merge inside a PR branch replayed with `git merge-tree`); challenger `c1`-`c4` | 66 app files had conflicts; the top 7 hold 39% of hits: `demo.ts` 16, `case-prepare.ts` 12, `runtime.ts` 9, `schema.prisma` 9, `engine/runtime/case.ts` 8, `questionnaire.tsx` 7, `main.ts` 7. `demo.ts` and `main.ts` are central lists every feature adds to. About a third of all conflict hits are in tests or records, which no module change touches. Stacked branches (55 merges not from `main`) add conflicts of their own |
+| 2 | **Second review rounds** | 71 of 131 app PRs had two or more Approves; from the **last** Approve to the label: median 0.2-0.4 h, **68 PR-hours** beyond 1 h, 10 PRs over 3 h | 131 app PRs with an Approve comment and a label (mostly 7-12 Nov); `gates_app_prs.py`, challenger `c5` | a fix after a first Approve, often after a conflict, buys a new review and a new CI run |
+| 3 | **Queue wait after the label** | median 1.06 h (p90 2.5) against a 42-min batch run (P-489): 109 PR-hours beyond 0.7 h | same 131 | batches (~1.6 PRs), dequeues, records merges resetting the queue |
+| 4 | **The Lead relays by hand** | lane asks for a `nightly.yml` run → next dispatch: median 0.64 h, p90 **15.3 h** (62 asks, rough text match); recorded idles: a qa lane 3.4 h (P-420), four approved PRs 2-3.5 h (P-439), 8 PRs Ready 7.4 h (7 Nov) | `dispatch_waits.py` | cloud lanes get HTTP 403 on Actions (P-439) and cannot message back |
+| 5 | **New sessions need your typed turn** | app PRs **opened** 01-06 IST: 24 over 11 nights vs 109 in 12-17 IST; merges keep flowing at night (68 vs 93) | 301 app PRs by IST hour | sessions start only in a founder-typed turn (P-348 (5)). **H-4:** the night gap is unstarted lanes. Test: nights with ≥3 warm spare lanes vs without |
+| 6 | **Rework after merge** | 13 re-opens outside the 3-4 Nov re-proof × 6.3 h ≈ **82 PR-hours**; by titles a median of 2 PRs per row | `works_per_day.py`; challenger `c7` | gaps found by qa after the merge; a new PR goes through every gate |
+| 7 | **Capacity events** | 4 Nov cloud outage ~13 h; account switches 5, 6, 9 Nov; the 93% weekly stop 9 Nov | recorded (DECISIONS), not re-measured | behind the fall from 37.8 to 18.6 app PRs a day (9 Nov study) |
+| 8 | **Merging `main` without a conflict** | 59 PRs, ~23 PR-hours size-matched; the label is kept when the merge touches none of the PR's files (P-318 (1)) | challenger `c3` | small |
 
-PR-hours overlap (a PR can wait and conflict), so the rows are not added up. They rank which cost is biggest.
+PR-hours overlap (a PR can wait and conflict), so rows are not added up.
 
-### 2.4 The root cause under 1, 2, 4 and part of 3: one box, cross-cutting changes
+**H-13: "Output (~5 Works a day) is limited by rows ready to build."** Evidence is mixed: on 7 Nov `CAPABILITIES.md` had 38 rows not yet Works, ~25 of them buildable M3 rows, while Works on 7-9 Nov were 1, 11 and 4; by 10-11 Nov only 14-15 rows were not Works, 11 of them Parked or Team. So supply bound on about 2 of the 10 days. **Test:** for two weeks, count rows ready ahead of builders each morning and qa verdict time per row (row 6 of the two-week order); the smaller of the two daily rates is the limit.
 
-**Measured:** I mapped every app file to 12 proposed modules (`module-map.tsv`, section 3) and counted the modules each app PR touched. Only **83 of 301 (28%)** stayed in one module (hub files `studio.ts`, `validate.ts`, `render.ts`, `main.ts`, `core.ts`, `App.tsx` excluded); 130 touched 3 or more. At a coarser cut (configurator / case delivery / platform) **154 (51%)** stayed in one; **96 (32%)** touched both configurator and case delivery. Hub files: `studio.ts` in 39 app PRs, `validate.ts` 28, `render.ts` 20, `main.ts` 19.
+### 2.4 Why the conflicts happen (5 whys, from the data)
 
-**Why (5 whys, each step from the data):**
+**Measured:** with every app file mapped to 12 areas (`module-map.tsv`), only 83 of 301 app PRs (28%) stayed in one area (hub files excluded); 156 (52%) touched two or more even without platform and web files. Hub files: `studio.ts` in 39 app PRs, `validate.ts` 28, `render.ts` 20, `main.ts` 19.
 1. Why do PRs collide? They edit the same files (top 7 = 39% of conflict hits).
-2. Why the same files? Central lists (`main.ts` routes, `demo.ts` sample data) and grab-bag services (`studio.ts` "programs and combinations, the shared library, configuration, previews, validation, review and release" in one file, 1,284 lines).
-3. Why grab-bags? No module boundary exists: one `@Module`, one folder, no lint, so the nearest file is the easiest place to add code.
-4. Why does a capability touch configurator and runtime together? The runtime reads configuration directly, not through a stable released-pack contract; a new rule needs both an authoring change and a runtime change. (DDD calls the missing piece a **Published Language** between two contexts.)
-5. Why was it never fixed? The prototype was sized for one or two builders (P-438 kept one repository and deferred splits to "after the 26"); nobody set a file-size or boundary rule, and the per-file splits were planned one at a time, without a target map.
+2. Why the same files? Central lists (`main.ts` routes, `demo.ts` sample data) and grab-bag files (`studio.ts`, 1,284 lines, holds programs, library, configuration, previews, validation, review and release).
+3. Why grab-bags? No module boundary: one `@Module`, one folder, no lint, so the nearest file is the easiest place to add code.
+4. Why does a capability touch the configurator and the case side together? Because a new capability usually extends what is released and how a case uses it: 56 of the 96 PRs that touched both sides changed the released-snapshot contract itself (`contracts/`, `engine/snapshot.ts`). The contract exists (`api/src/runtime.ts:168` reads the pinned, hashed snapshot); ~11 direct configurator reads remain.
+5. Why was it never fixed? The prototype was sized for one or two builders (P-438 deferred splits to "after the 26"); nobody set a file-size or boundary rule.
 
-**What is not the cause (measured):** runner capacity (wait median 0, 316 jobs, P-489); PR size alone (median 100 lines; small PRs still conflict, 34 of 204 under 200 lines); the queue run itself (42 min).
-
-**H-3: "Approve → label waits are mostly lanes gone quiet after Approve."** Test: for the 34 waits over 3 h, read whether the lane pushed or commented in the gap (lane awake) and whether a baton or Lead read was pending (from STATE history). Cheap, read-only, one Sonnet pass.
+**Not the cause (measured):** runner capacity (wait median 0, 316 jobs, P-489); PR size alone (small PRs conflict too); the queue run (42 min). **Limit of the fix:** the three central files hold 18.5% of app conflict hits, but only 14 of 301 PRs (4.7%) had conflicts confined to them, so the cheap fix removes at most a few points by itself.
 
 ---
 
 ## 3. Target structure
 
 ### In plain words
-Split the one big box into about a dozen rooms, each with a front door. A room is one business area (for example "the shared library" or "filling forms"). Code in one room may call another room only through its front door, never by reaching into its back rooms. Every file stays under 800 lines, as in the team's code. Each room has one owning lane, so two lanes rarely edit the same file. Between the configurator side and the case side sits one agreed hand-over: "what was released". The case side reads only that, so most case changes no longer touch configurator files. We get there by moving code without changing behaviour, one small PR at a time, keeping each move only if collisions fall.
+Give each business area its own room with a front door, and keep every file small. Code in one room calls another only through its front door. Lanes are organised by **whole capabilities end to end** (a vertical stream), not one lane per room, because most capabilities cross rooms. We get there in small steps that change no behaviour, the cheapest and most certain first, and stop when conflicts are low enough.
 
-### 3.1 The frameworks, and what each one decides here
+### 3.1 The frameworks, and what each decides here
 
 | Framework (source) | What it says | What it decides for us |
 |---|---|---|
-| **Domain-Driven Design: bounded contexts and context maps** (E. Evans, *Domain-Driven Design*, 2003; M. Fowler, "BoundedContext", martinfowler.com/bliki/BoundedContext.html) | split a model where the language changes; contexts meet through explicit relationships, e.g. a **Published Language** | the module list in 3.2; the configurator and case delivery meet through the released pack, a versioned contract |
-| **Modular monolith** (Shopify Engineering, "Deconstructing the Monolith", 2019, shopify.engineering) | one deployable, one database, strongly bounded internal modules with public interfaces; no microservices until a measured need | keep one repository and one app (P-438 stands); add the inner walls |
-| **Team Topologies** (M. Skelton, M. Pais, 2019, teamtopologies.com/key-concepts) and **Conway's law** (M. Conway, "How Do Committees Invent?", 1968) | stream-aligned teams own a slice end to end; a platform team removes friction; structure of the system mirrors who talks to whom | one owner lane per module group (3.4); a platform/enabling lane for CI, structure and tooling |
-| **File-size limit**: ESLint core rule `max-lines` (eslint.org/docs/latest/rules/max-lines) | small files reduce the chance two changes meet | **800 lines**, a common hard limit, matching the team's practice so code merges without a reflow |
-| **Import boundaries**: `eslint-plugin-boundaries` (github.com/javierbrea/eslint-plugin-boundaries) | default deny between modules; allow only public surfaces | the "front door" rule, checked in CI. STANDARDS §1 gate: a small, widely used ESLint plugin; to be recorded through the gate |
-| **Change-coupling hot spots** (A. Tornhill, *Your Code as a Crime Scene*, 2015; Nagappan, Murphy, Basili, ICSE 2008, org structure predicts defects) | measure where changes and conflicts concentrate; fix those first | the order of the migration (3.5) comes from section 2's conflict counts, not from taste |
-| **Contract tests** (M. Fowler, "ContractTest", martinfowler.com/bliki/ContractTest.html; consumer-driven contracts, docs.pact.io) | a consumer's expectations of a provider are a test the provider must pass | in-process, with our existing `zod` contracts: a golden released-pack test the configurator must keep green, so the case side can trust it. No Pact server needed (one process) |
-| **Strangler fig, branch by abstraction, parallel change** (Fowler: StranglerFigApplication, BranchByAbstraction, ParallelChange) | move behaviour behind a stable interface in small steps; expand, migrate, contract | every migration step is behaviour-unchanged and green; old paths removed only after callers move |
-| **Self-registering modules** (NestJS modules, docs.nestjs.com/modules) | each module keeps its own list; the central file only imports modules | ends `main.ts` and `demo.ts` as conflict magnets (`features/checkpoint/` already does this for demo steps) |
-| **Prisma multi-file schema** (Prisma 7: `schema` may point to a folder) | one schema file per domain | `prisma/models/<module>.prisma`; `schema.prisma` (2,300+ lines, 9 conflicts, 38 app PRs) stops being a shared file |
-| **CODEOWNERS** (docs.github.com, "About code owners") | paths name their owners | routing only (which lane holds a module); no new required review, so no gate changes |
+| **Domain-Driven Design: bounded contexts** (E. Evans, *Domain-Driven Design*, 2003; M. Fowler, "BoundedContext", martinfowler.com/bliki/BoundedContext.html) | split a model where the language changes; contexts meet through explicit, published interfaces | the 12 areas in 3.2; the configurator and the case side already meet through the released snapshot |
+| **Modular monolith** (Shopify Engineering, "Deconstructing the Monolith", 2019) | one deployable, one database, bounded internal modules with public interfaces | keep one repository and one app (P-438 stands); add inner walls only where measured |
+| **Team Topologies** (M. Skelton, M. Pais, 2019, teamtopologies.com/key-concepts) | stream-aligned teams own a slice of value end to end; enabling teams remove friction | lanes by **vertical stream** (a capability from screen to engine); one enabling lane for CI and structure |
+| **File-size limit**: ESLint `max-lines` (eslint.org/docs/latest/rules/max-lines) | small files make it less likely that two changes meet | 800 lines, as a ratchet: existing large files may only shrink |
+| **Import boundaries**: `eslint-plugin-boundaries` (github.com/javierbrea/eslint-plugin-boundaries) | allowed and forbidden imports between parts of the code, checked by lint | only if D2 says yes; through the STANDARDS §1 gate |
+| **Hot spots** (A. Tornhill, *Your Code as a Crime Scene*, 2015) | fix where changes and conflicts concentrate first | the order of the fixes comes from section 2's counts |
+| **Self-registering modules** (NestJS modules, docs.nestjs.com/modules) | each area keeps its own list; the central file only imports areas | ends `main.ts` and `demo.ts` as conflict magnets (`features/checkpoint/` already does this) |
+| **Prisma multi-file schema** (Prisma 7: `schema` may point to a folder) | one schema file per area | `schema.prisma` (2,860 lines, 9 conflicts, 38 app PRs) stops being one shared file |
+| **Parallel change / branch by abstraction** (M. Fowler, ParallelChange and BranchByAbstraction, martinfowler.com/bliki) | move code behind a stable interface in small steps | every step behaviour-unchanged and green |
 
-### 3.2 Proposed modules
+### 3.2 Proposed areas (module map)
 
-Measured from today's files by name (`module-map.tsv`; 26 small files unmapped, mostly shared UI parts). Lines include `api/src`, `engine`, `web/src`, `contracts`, `samples`.
+Measured from today's files by name (`module-map.tsv`; 26 small shared UI files unmapped).
 
-| Module (folder name) | What it owns | Files / lines today | Team spec |
+| Area (folder name) | What it owns | Files / lines today | Team spec |
 |---|---|---|---|
 | `structure` | programs, structure, combinations, channels, start setup | 36 / 8,104 | SA-1B ch. 1-3 |
 | `sources` | official sources, finder, source register | 21 / 5,212 | SA-1B, SA-1 |
-| `library` | forms, form parts, field maps, shared fields, document types, rules, answer keys | 115 / 14,834 | SA-1B ch. 4-6 |
-| `questionnaire-design` | questionnaire design, PQR/SQR drafts | 11 / 2,324 | SA-1B, AG-8 config |
+| `library` | forms, parts, field maps, shared fields, document types, rules, answer keys | 115 / 14,834 | SA-1B ch. 4-6 |
+| `questionnaire-design` | questionnaire design, PQR/SQR drafts | 11 / 2,324 | SA-1B, AG-8 |
 | `release` | review queue, proposals, change sets, rounds, validate, release, editions | 47 / 9,507 | SA-1B ch. 7-11 |
 | `case-core` | case, people, stages, links, employer cases, earlier facts | 52 / 7,277 | AG-7 |
 | `case-questionnaire` | answers, who fills, worked-out values | 10 / 2,270 | AG-8 |
@@ -171,196 +177,97 @@ Measured from today's files by name (`module-map.tsv`; 26 small files unmapped, 
 | `platform` | app shell, health, simulated users and firm, workspace | 31 / 3,375 | SA-2, SA-6, SA-7 |
 | `demo-data` | sample loaders, checkpoint steps | 76 / 4,216 | |
 
-Folder shape per module, the same in `api/src`, `engine`, `web/src` and `contracts`: `<module>/index.ts` (the front door), `<module>/internal/` (private), one Nest `@Module` per backend module. The three hub files are split by responsibility into the modules above: `studio.ts` (1,284 lines; release, library, structure parts), `validate.ts` and `render.ts` (shared engine pieces become `release` and `case-forms` public functions).
+### 3.3 Steps, cheapest and most certain first (P-303, P-309: every gate kept)
 
-**The one contract between the two sides (Published Language).** `release` publishes a released pack (a versioned snapshot, already pinned per case, STANDARDS §3.7). Case modules read only that snapshot through `contracts/released-pack`, never configurator tables. A golden test (one released Sample pack, checked byte for byte) guards it. **H-5:** "with this contract, the 32% of app PRs that touch both sides fall below 15%." Test: count both-sides app PRs for 2 weeks after step S9 (3.5), against today's 32% (n=301).
+| Step | What | Why (measured) | Size | Who decides |
+|---|---|---|---|---|
+| 1 | Measures: conflicts per app PR (app files only, split by whether a hot file was touched), rows ready per day, qa verdict time | D2's test and H-13 need them | 1 tooling PR | Lead |
+| 2 | `main.ts` registers each area's own routes; `demo.ts` becomes per-area sample steps | central lists: 23 conflict hits | 2-4 PRs | Lead (P-499 (1)) |
+| 3 | `schema.prisma` split into per-area files (migrations untouched) | 9 conflicts, 38 app PRs | 1-2 PRs; Lead reads the diff (P-423) | Lead |
+| 4 | ESLint with `max-lines` 800 as a ratchet (the 7 large files may only shrink) | stops new grab-bags | 1 PR | Lead |
+| 5 | Only if D2 says yes: split `case-prepare.ts`, `runtime.ts`, `questionnaire.tsx`, `studio.ts`; move files into area folders; import boundaries | the rest of the top-7 files | 25-30 PRs, 5-8 working days; hot files moved in short freeze windows | **founder (D2)** |
 
-### 3.3 Rules, checked in CI (none lowers a gate)
-
-1. **File size**: `max-lines` 800 (physical lines), error for new and changed files; the 7 files over 800 sit on a shrink-only list that may only get shorter (a *ratchet*), empty by the end of the migration.
-2. **Front doors**: `eslint-plugin-boundaries` default deny across modules; a module imports another only through its `index.ts`; nothing imports `internal/`. Warn first, error after S12.
-3. **Self-registration**: `main.ts` imports modules only; no route defined in it. Sample data per module (`demo-data/<module>/…`), as `features/checkpoint/` already does.
-4. **Merge `main` only on a conflict** (P-270, today unchecked): a check on the PR that flags a merge of `main` which `git merge-tree` shows was conflict-free (62 PRs, ~60 PR-hours in 11 days, section 2).
-5. **Migration stamps** stay (P-348 (8)); with per-module schema files, two PRs editing different modules' models no longer meet in one file.
-
-### 3.4 Lane ownership per module (stream-aligned)
-
-| Lane (stream) | Modules | Share of app PRs that touched these, 2-12 Nov (n=301; a PR can touch several) |
-|---|---|---|
-| Configurator: authoring | `structure`, `sources`, `library`, `questionnaire-design` | structure 82, sources 56, library 117, questionnaire-design 32 |
-| Configurator: release | `release` | 120 |
-| Case: people and answers | `case-core`, `case-questionnaire` | 89, 51 |
-| Case: documents | `case-documents` | 28 |
-| Case: forms and filing | `case-forms`, `case-submission` | 89, 63 |
-| Platform / enabling (Team Topologies "platform") | `platform`, `ai-gateway`, CI, structure moves, tooling | 69, 31 |
-
-Five product streams plus one enabling lane. More lanes per stream only for rows that touch different modules inside it (the Lead's existing "independent rows" test, P-462, now checkable from the module map instead of judgement).
-
-### 3.5 Migration path: small PRs, `main` green, every gate kept (P-303, P-309)
-
-Starts after the Bake's tag commit (P-499 (1)). Each step: behaviour unchanged, under ~800 lines of diff, through review and the queue like any PR, its own row. Order follows section 2's measured hot spots.
-
-| Step | What | Why first (measured) | Size guess |
-|---|---|---|---|
-| S0 | Measurement baseline: `conflicts_from_git.py` and `module_span.py` into `tools/`, weekly numbers per file and per module | the keep/undo rule needs a before | 1 PR |
-| S1 | ESLint with `max-lines` 800 (ratchet list of 7) and `boundaries` in **warn** | no behaviour change; makes drift visible | 1 PR |
-| S2 | `main.ts`: routes move into per-module controllers and one `@Module` per module, registered by import | central list: 7 conflicts, 19 app PRs | 2-3 PRs |
-| S3 | `demo.ts` → per-module sample steps (checkpoint pattern) | top conflict file: 16 | 2 PRs |
-| S4 | `schema.prisma` → `prisma/models/<module>.prisma` (Prisma 7 folder schema) | 9 conflicts, 38 app PRs; migrations untouched | 1-2 PRs; Lead reads diff (schema, P-423) |
-| S5 | `case-prepare.ts` → `case-submission` (prepare, filings, fees parts) | 12 conflicts, 40 app PRs | 2 PRs |
-| S6 | `runtime.ts` and `engine/runtime/case.ts` → `case-core` / `case-questionnaire` | 9 + 8 conflicts | 2-3 PRs |
-| S7 | `web/src/runtime/questionnaire.tsx` (1,052) and `cases.tsx` → module folders | 7 + 6 conflicts | 2 PRs |
-| S8 | `studio.ts` (1,284) split by responsibility into `release`, `library`, `structure` | hub in 39 app PRs | 3 PRs |
-| S9 | `contracts/released-pack` + golden test; case modules read only it | 32% of PRs touch both sides | 2-3 PRs |
-| S10 | Remaining files moved into module folders (`git mv`, imports updated) | mechanical | 1 PR per module |
-| S11 | CODEOWNERS per module (routing only) | lane ownership visible | 1 PR |
-| S12 | `boundaries` and `max-lines` to **error**; ratchet list empty | the walls hold | 1 PR |
-
-About 25 PRs (the "~15" in the short answer counts steps; some steps take 2-3 PRs). At today's median 3.25 h per app PR and two lanes (the structure lane and one product lane on the same files, P-438 (2) holder rule), roughly **4-6 working days**; **H-6**, settled by S2's actual time.
-
-### 3.6 How each step is judged: kept only if conflicts fall (P-438 (3))
-
-Conflicts on one file are rare events (0-2 a day), so a 7-day before/after on raw conflicts is too small to read. Two measures, decided before the step starts (pre-registered):
-* **Leading:** *co-edit overlap*: hours in which two open app PRs both changed the moved code (the old file, or its new module). Measured per step for 7 days before and after, from the PR list and `git diff` per PR. Keep the step if overlap per app PR falls by half or more, or if it falls at all and no gate went red.
-* **Lagging, over the whole migration:** conflicted app PRs as a share of app PRs (today **29%**, n=301) and size-matched extra hours (today ~300 PR-hours per 11 days). Target after S12: **under 10%** of app PRs, measured on the next 300 app PRs.
-* A step that makes neither better is reverted by a normal PR (expand/contract makes that cheap).
+Steps 1-4: about 5-8 small PRs, 1-2 days after the Bake's tag commit.
 
 ---
 
 ## 4. Delivery system
 
 ### In plain words
-A factory is judged by what leaves it finished, how long one item takes, how many items are open at once and how often a finished item comes back. We will read those four every day from tools, on the right sample, and push on the one step that limits output, not on every step at once. Today that step is "a capability done right the first time": about 5.5 app PRs go into each capability qa confirms. Collisions in shared files come second. The platform also has three hard limits (cloud lanes cannot start CI runs, cannot send messages back, and new sessions need your typed turn); each has options below, and the ones that touch permissions are yours.
+Judge the factory by what leaves it finished, how long one item takes, how many are open at once and how often a finished item comes back; find the one step that limits output and work on that step only. Today we cannot yet name that step, because two of the stages are not timed. Three platform limits slow the flow: builders cannot start their own test runs on GitHub, cannot message back, and cannot be started at night without your typed turn.
 
-### 4.1 Flow metrics and targets (each with its sample, P-500)
+### 4.1 Flow measures, inspired by *DORA* (with their samples, P-500)
 
-| Metric (source) | Our measure | Today | Target after S12 + 4.2 |
+| Measure | Ours | Today | Aim |
 |---|---|---|---|
-| Throughput, DORA "deployment frequency" (Forsgren, Humble, Kim, *Accelerate*, 2018; dora.dev) | capabilities reaching Works for the first time per day (qa) | **5.5/day** (2-11 Nov, n=55) | 10/day (the compass), then by section 5 |
-| Lead time for changes, DORA | app PR opened → merged | median 3.25 h, p90 12.3 h (n=301) | median ≤2 h, p90 ≤6 h |
-| Change failure rate, DORA | Works → lower moves per first-time Works; conflicted app PRs | 39/55 (2-12 Nov, incl. the 3-4 Nov re-proof); 29% | ≤15%; ≤10% |
-| Time to restore, DORA | red `main` → green | not measured here (no tool computes it; P-501 names the compass gap) | measure first (S0 adds it) |
-| WIP, Little's law (J. D. C. Little, *Operations Research* 9(3), 1961: L = λW) | open app PRs at once | **7.3** average; throughput 1.17/h × 6.3 h | WIP limit per stream (4.3), so W falls before λ rises |
-| Cycle time by stage | build+review → Approve; Approve → label; label → merged | 0.92 / 0.72 / 1.06 h median (n=131) | Approve → label p90 ≤2 h (from 7.3) |
-| App PRs per Works (first-pass yield) | 301 / 55 | ~5.5 | ≤3 |
+| Throughput | capabilities first reaching Works per day (qa) | ~5 (2-11 Nov, n=55) | set once the limit is known |
+| Lead time | app PR opened → merged | median 3.25 h, p90 12.3 h (n=301) | p90 ≤6 h |
+| Rework | Works → lower per day, outside deliberate re-proofs | 13 in 10 days | ≤1 a day (the compass) |
+| Conflicts (a flow measure, not a DORA key) | app PRs with an app-file conflict | 25% (n=301, margin ±4.9 points); 15% on the last 46 (10-12 Nov, margin ±10) | below 12% (D2) |
+| *Work in progress* | open app PRs | 7.3 | no more than builders |
+| Stage times | build + review → last Approve → label → merged → qa verdict | 0.92 h / 0.2-0.4 h / 1.06 h / **not timed** | time the last stage |
 
-> **Corrected by the challenge (C-10, C-11):** the measured limit in week 2 was the supply of ready rows (and possibly qa verdict time, unmeasured), not first-pass yield, which had already improved from 6.3 to 3.7 app PRs per Works with no gain in Works per day. The text below is kept as first written; the Challenge section gives the corrected order.
+### 4.2 The limiting step (*Theory of Constraints*, E. Goldratt, *The Goal*, 1984)
+Goldratt's first step is to identify the stage with the least capacity. Two stages are not timed (rows ready ahead of builders; qa verdict), so the constraint is **not yet identified** (H-13). Order: time both stages (two weeks); the stage with the lower daily rate is the constraint; work only on it (more ready rows: the design → look → brief step one milestone ahead; or more qa verdict lanes); then measure again.
 
-### 4.2 The constraint (Theory of Constraints: E. Goldratt, *The Goal*, 1984, five focusing steps)
+### 4.3 Lanes
+By vertical stream: a lane takes a capability end to end (screen, API, engine, contract). With the cheap fix in place, two lanes meet mainly where both need the same area's files, which the Lead sees from the module map before assigning (P-462's "independent rows" becomes a lookup). One baton PR at a time on a shared file stays (P-481).
 
-1. **Identify.** Output is Works, not merges. Merges run at 28/day; Works at 5.5/day. The step that converts one into the other loses most: ~5.5 PRs per capability and 39 re-opens (section 2, cause 1). That is the constraint. *Caveat, labelled:* Works/day is also capped by scope (only 29 M3 rows existed; the Bake adds none, P-447), so part of the gap is "nothing left to confirm". **H-7:** "first-pass yield, not scope, limits Works." Test: in M4, track per row app PRs before its first Works and its re-opens; if a row with a ready brief still needs ≥4 PRs, H-7 holds.
-2. **Exploit (no new money).** Make the first PR of a capability pass qa: qa's pack and journey for the row written **before** the build (acceptance-test-driven development, the pack is the spec), the walk by screens before review (P-352, exists), reviewers reading the pack. Gates unchanged; their order changes.
-3. **Subordinate.** Do not open more rows per stream than qa can verdict the same day (WIP limit = qa verdict capacity per day, read from the last 3 days).
-4. **Elevate.** Only then add lanes: the module walls (section 3) are what make extra lanes add output instead of collisions.
-5. **Repeat.** When yield is fixed, the next constraint by today's numbers is conflicts (cause 2), then the Approve → label wait (cause 3).
+### 4.4 Platform limits and options
 
-### 4.3 Lane topology
-
-Five stream lanes and one enabling lane (3.4), plus qa (one verdict lane per active stream, P-434) and the Lead. WIP per stream: one baton PR on a shared file at a time (P-481 stays until S12), at most two open app PRs per lane. The Lead assigns rows by module from the module map, so "independent rows" (P-462) is a lookup, not a judgement.
-
-### 4.4 What the platform cannot do today, and the options
-
-| Limit (measured or recorded) | Cost today | Options | Risk | Who decides |
+| Limit | Cost today | Options | Risk | Who decides |
 |---|---|---|---|---|
-| **Cloud lanes get 403 on Actions** (P-439): they ask, the Lead dispatches `nightly.yml` | ask → dispatch median 0.64 h, p90 15.3 h (62 asks) | (a) a workflow started by a fixed PR comment (`issue_comment`, which runs `main`'s copy of the workflow; a `pull_request: labeled` trigger would run the PR's own copy, and `ci.yml` already runs a PR's changed packs), gated to repository writers by `author_association`; no token widened (b) lanes keep asking (today) | (a) CI minutes; a lane could trigger often. Limit to repository writers and one run per head sha | **you** (section 6, D3): on a public repository a comment trigger is a security setting (P-387); the Lead reads the diff (P-423) |
-| **Cloud lanes cannot message back** (one-way) | relays by hand; quiet lanes found only at the 30-min check | (a) every lane writes a fixed status comment on its PR at each step (exists for questions); a shell check reads them and wakes the Lead only on change (P-436 T2's shell watchdog) (b) the app's own messaging, if it adds replies (outside our control) | (a) none on quality | the Lead |
-| **New sessions start only in your typed turn** (P-348 (5)) | night opens 24 vs 109 by day (11 days); P-489 "cost hours" | (a) warm spare lanes at your last turn, sized to the night's ready rows (P-489 (5), P-499 (3)): no rule change (b) **scheduled cloud routines** that start a briefed lane at set times without a typed turn (the app's "schedule"/routines feature; **H-8**: that a routine can open a builder lane on this repository with today's settings; test: one routine on a docs-only row) (c) keep as is | (b) sessions run with no one watching: money stays off (live AI off in every lane), permissions unchanged, but it changes your P-348 (5) rule | **you** (section 6, D4) |
-| **Session-count caps and the 10-message cap** (recorded 4-9 Nov) | lanes waiting for a click | the same as above, plus fewer, longer-lived lanes per stream (one per module group) | context growth: lanes end at P-446's ~400k | the Lead |
-| **Label refused by the auto-mode classifier for Lead self-labels** (memory, 3-4 Nov) | waits for your named word | records PRs via `records-label.yml` (exists); product PRs labelled by their builder (P-277) | none | the Lead |
+| Builders cannot start test runs (403 on Actions, P-439) | ask → run: median 0.64 h, p90 15.3 h | (a) a run started by a fixed PR comment (`issue_comment`, which uses `main`'s copy of the workflow), allowed only for repository members (`author_association`); never `pull_request_target` building PR code (b) keep relaying | (a) a security setting on a public repository; CI minutes | **you (D3)** |
+| Builders cannot message back | quiet lanes found only at the 30-min check | each lane writes a fixed status comment on its PR at each step; a shell check wakes the Lead only on change | none | Lead |
+| New sessions only in your typed turn (P-348 (5)) | night opens 24 vs 109 | (a) warm spare lanes at your last turn (P-489 (5)) (b) a scheduled routine that starts a briefed lane (H-8: test on one docs-only row) | (b) sessions run unwatched until the next check; live AI stays off | **you (D4)** |
 
 ---
 
-## 5. Capacity model and forecast
+## 5. Capacity and forecast
 
 ### In plain words
-At today's pace (5.5 confirmed capabilities a day) our own part of the product (~700 capabilities) takes about four months and the whole of what is not the team's (~1,400) about eight. The pace can roughly double by getting capabilities right the first time, rise again by removing collisions, and only then rise a lot by adding lanes. Every step after "today" is a hypothesis with a test; the forecast is redone from measured numbers after each one, not believed in advance.
+No date can be promised yet: the size is a range, and the step that limits output is not yet known. The honest forecast is a rule, not a number.
 
-> **Corrected by the challenge (C-19):** the scenario rows stack four untested multipliers on week-1 rates and treat Little's law (an identity) as cause and effect. Read them as an upper bound, not a forecast; the Challenge section gives the corrected forecast rule.
+**Forecast rule.** Confirmed capabilities per day = the smallest of (rows ready per day, builder output per day, qa verdicts per day), each measured over two weeks, never multiplied together. Days to finish = capabilities still to build (from H-1) ÷ that rate, quoted with both ranges. Today's ~5 a day against 220-610 still to build gives 44-122 working days; the launch line (H-14) is in the two-week order above.
 
-### 5.1 The model (Little's law, per stage)
+**Plan usage** is not forecast in %: no measure on the right sample exists (the account switched 11 Nov). **H-10:** plan use grows in step with lane-hours; test with `get_usage` weekly % per lane-day for one week.
 
-Works per day = app PRs per day ÷ app PRs per Works. App PRs per day = lanes × app PRs per lane-day, and, at a fixed number of open PRs, app PRs per day rises as the time per PR falls (L = λW).
+### Hypotheses and their tests
 
-| Scenario | Assumption (labelled) | App PRs/day | App PRs per Works | Works/day | ~700 (A+B) | ~1,400 (A+B+C) |
-|---|---|---|---|---|---|---|
-| **Today** | measured: 28/day, ~9 cloud lanes (P-489), 5.5 per Works | 28 | 5.5 | **5.5** | 127 days (~18 weeks) | 255 days (~36 weeks) |
-| **+ First-pass yield** | **H-7**: qa's pack before the build, PRs per Works 5.5 → 3 | 28 | 3 | **9.3** | 75 days | 150 days |
-| **+ Structure (S0-S12)** | **H-5, H-6**: conflict cost −2/3 (1.0 → 0.33 h per PR on average), Approve→label wait halved (−1 h): mean W 6.3 → ~4.6 h, so ×1.37 at the same WIP | 38 | 3 | **12.7** | 55 days | 110 days |
-| **+ Lanes doubled** | **H-9**: with walls, ~18 lanes keep today's output per lane (no rise in conflicts per PR); qa verdict lanes scale with streams | 77 | 3 | **25** | 28 days (~4 weeks) | 56 days (~8 weeks) |
-
-Error band on every row: the size band of section 1.4 (×0.55 to ×1.7) multiplies the days. Without the yield change, doubling lanes alone gives at most ~11 Works/day and, by today's evidence (P-438, causes 2-4), more collisions.
-
-### 5.2 Hypotheses and the tests that settle them
-
-| # | Hypothesis | Test (cheap first) | Decides |
+| # | Hypothesis | Test | Decides |
 |---|---|---|---|
-| H-1 | the product is 500-600 capabilities | group 3 modules' cards into qa-style rows (2 h, read-only, Sonnet) | the size band |
-| H-3 | Approve → label waits are lanes gone quiet | read the 34 waits over 3 h against lane pushes, batons, Lead reads | which fix: wake-up check, or baton rule |
-| H-4 | night gap = unstarted lanes | nights with vs without ≥3 warm spares | whether D4 is needed |
-| H-5 | the released-pack contract halves both-sides PRs | count for 2 weeks after S9 vs 32% | keep S9 |
-| H-6 | structure track takes 4-6 working days | S2's actual time × steps | the M4 plan |
-| H-7 | first-pass yield, not scope, limits Works | PRs before first Works and re-opens per M4 row | the exploit step |
-| H-8 | a scheduled routine can start a briefed lane here | one routine on a docs-only row | D4's option (b) |
-| H-9 | doubling lanes keeps output per lane once walls exist | conflicts per app PR and app PRs per lane-day for a week at ~18 lanes vs ~9 | D5 |
-| H-10 | plan use grows in step with lane-hours | `get_usage` weekly % per lane-day for one week (no clean number today: the account switched 11 Nov, P-461; 37% weekly on 12 Nov, P-499) | D5's cost |
-
-### 5.3 Plan usage
-
-Not forecast in % here: no measure on the right sample exists (H-10). The token study (9 Nov) gives a Mac-only floor of ~27 M weighted tokens per Works and shows cost is context size (~75% re-reading, P-436); module walls also shrink what a lane must read per row (a module of 2-15k lines instead of a 69k-line app), which lowers cost per Works independently of speed. **H-11**, tested with H-10.
+| H-1 | our part is 500-600 capabilities | three modules grouped into qa-style rows, Release 1 split from later (2 h, read-only) | the size range; D1 |
+| H-4 | the night gap is unstarted lanes | nights with vs without ≥3 warm spares | D4 |
+| H-8 | a scheduled routine can start a briefed lane here | one routine on a docs-only row | D4 option (b) |
+| H-10 | plan use grows with lane-hours | weekly % per lane-day for a week | capacity |
+| H-13 | ready rows limit output | ready rows and qa verdict time for two weeks | the constraint |
+| H-14 | 12 Mar 2027 is reachable | H-1 + H-13 | the launch date |
 
 ---
 
-## 6. Decisions for the founder (at most five, P-254)
+## 6. Decisions for the founder (in the order to take them, P-254)
 
-Everything else in this plan is the Lead's under P-384 (pipeline, lane arrangement, tools, the order of steps, the checks).
+Everything else in this plan is the Lead's to run (P-384).
 
-| # | Decision | Recommendation | Time | Cost | Quality |
-|---|---|---|---|---|---|
-| **D1** | **Which part of the whole product is this factory's to build?** | **A + B now** (configurator and case delivery, ~700 capabilities, band 380-1,280); C (front office) only after the team states what its app builds there; D + E stay the team's (P-335, P-357). Run H-1's 2-hour sizing test first | sets every later date | none | none |
-| **D2** | **The full module migration (S0-S12, 33-37 small PRs, a day or more of a milestone)** | **Not yet.** The Lead does the cheap, certain part now under P-499 (1) (self-registering `main.ts` and `demo.ts`, split schema, 800-line ratchet); the full migration comes back to you only if, after that, conflicted app PRs stay above ~15% over the next 150 app PRs (a pre-registered test, Challenge C-18) | cheap part ~1-2 days; full migration 5-8 working days if chosen | plan usage only, US$0 | behaviour unchanged, gates kept |
-| **D3** | **A comment-triggered pack run for cloud lanes on this public repository** (lanes get 403 on Actions dispatch; an `issue_comment` trigger runs `main`'s workflow file, gated to repository writers by `author_association`) | **Yes, gated to writers**, so lanes stop waiting for the Lead's dispatch (p90 15 h); never `pull_request_target` building PR code | removes the relay wait | CI minutes only | none, if the gate holds; it is a security setting, so yours (P-387) |
-| **D4** | **Night starts: may a scheduled routine start a briefed lane without your typed turn?** (changes P-348 (5)) | **Trial first:** one routine on a docs-only row (H-8); if it works, allow it for briefed rows from BACKLOG, live AI off, no permission widened. Until then, warm spares at your last turn (P-489 (5)) | recovers part of the 4.5× night gap (H-4) | plan usage only | unchanged gates; sessions run unwatched until the next check |
-| **D5** | **When to buy more capacity (a second plan or account) to run ~18 lanes** | **Not now.** Decide when Works/day ≥10 with conflicted app PRs ≤10% for a week (after D2 and the yield change), using H-9 and H-10's measured cost per lane-day | 2nd plan: ~halves the A+B date (5.1, last two rows) | the plan's price (yours) | none if walls are in place; more collisions if not |
+| # | Decision, in plain words | Recommendation | Time | Cost | Quality | If you say no |
+|---|---|---|---|---|---|---|
+| **D6** | **Where the team's app already does the same job as ours (configuration, form filling), whose version wins?** Every week we build before this is answered may be built twice | **Decide per capability, head to head on the same inputs** (as with the XFA engine, P-464): the better wins, a tie keeps theirs | one read-only comparison per area | plan usage only | no duplicate parts at the merge | we keep building ours; the team decides at the merge, and some of our work may be rebuilt or dropped |
+| **D1** | **Which part of the whole product does this factory build?** | **Configurator and case delivery now** (~310-700 capabilities, ~94 done); front office only after the team says what its app covers; platform stays the team's | sets every date | none | none | if wider: front office joins the queue, the launch line moves out; if narrower: we stop at the configurator |
+| **D2** | **The full rebuild into areas** (25-30 more PRs, 5-8 working days) after the cheap fix | **Not now.** After the cheap fix, the Lead measures app-file conflicts on the next 150 app PRs (margin about ±6 points). **20% or more**: the Lead brings the rebuild back to you; **12% or less**: closed; in between: 150 more. The last 46 PRs already ran at 15% | measuring ~1 week | plan usage only | behaviour unchanged either way | the cheap fix still happens (the Lead's); conflicts stay at today's level, ~1 in 4-7 app PRs |
+| **D3** | **Let builders start their own test runs.** Only repository members can trigger them, by a fixed PR comment | **Yes, members only** | saves up to ~15 h of waiting on the worst days | CI minutes only | none if the members-only gate holds | a security setting on a public repository, so yours; if no, the Lead keeps relaying runs by hand |
+| **D4** | **Night starts: may a scheduled routine start a briefed builder without your typed turn?** (changes P-348 (5)) | **Trial first** on one docs-only row (H-8); if it works, allow it for briefed rows, live AI off, no permission widened | recovers part of the night gap (24 vs 109 opens) | plan usage only | gates unchanged; sessions unwatched until the next check | the Lead keeps warm spare lanes at your last turn each night (P-489 (5)) |
 
----
-
-## Evidence (re-runnable)
-
-All in `factory-plan-2026-11-12-evidence/`; outputs as run are in `outputs.txt`. Python 3, standard library only; run with `python3 -I`. GitHub data is not committed (it carries account names); fetch it with curl as below (`gh` GraphQL fails here, P-363).
-
-```bash
-T=$(gh auth token); R=https://api.github.com/repos/<owner>/xpatready
-for p in $(seq 1 13); do curl -sS -o pulls-$p.json -H "Authorization: Bearer $T" "$R/pulls?state=closed&sort=created&direction=desc&per_page=100&page=$p"; done   # merge into pulls.json
-curl ... "$R/issues/comments?since=2026-11-01T18:30:00Z&sort=created&direction=asc&per_page=100&page=<n>"   # 36 pages → comments.json
-curl ... "$R/issues/events?per_page=100&page=<n>"                                                        # 72 pages back to 1 Nov → events.json
-curl ... "$R/actions/workflows/nightly.yml/runs?created=>=2026-11-01T18:30:00Z&per_page=100&page=<n>"   # 273 runs
-```
-
-| File | What | Plan section |
-|---|---|---|
-| `measure_structure.py` → `ours-modules.tsv` | files, lines, routes, controllers, `@Module`s, Prisma models, file sizes | 1.1 |
-| `count_frs.py` → `requirements-fr-counts.tsv` | live and withdrawn numbered requirements per module | 1.2-1.4 |
-| `count_cards.py` → `requirements-card-counts.tsv` | cards with the team's status marker | 1.2 |
-| `conflicts_from_git.py` → `git-2026-11-02-to-12-prs.tsv`, `-hot-files.tsv` | class by files; merges of `main` inside each PR, replayed with `git merge-tree` | 2.3 |
-| `flow_app_prs.py` → `flow-2026-11-02-to-12-app-flow.tsv` | app PR times, lines, size-matched conflict cost, hours of day | 2.2, 2.3 |
-| `gates_app_prs.py` | Approve / label / merge stages, excess over floors, label removals | 2.3, 4.1 |
-| `conflict_breakdown.py` | conflict hits per file and group; Little's law | 2.3, 4.1 |
-| `module-map.tsv`, `module_span.py` | proposed module per file; modules and streams per app PR | 2.4, 3.2, 3.4 |
-| `works_per_day.py` → `works-per-day-main.tsv` | first-time Works and re-opens per IST day | 2.2, 5 |
-
-The `nightly.yml` ask → dispatch figure (section 2, cause 6) came from a one-off script in the scratchpad: comments matching `dispatch|nightly.yml` together with a request word, paired with the next `workflow_dispatch` run; treat it as rough.
-
-**Not measured, and why:** how long qa takes per verdict (no machine timestamp, as in the 9 Nov study); lanes per day over the window (session lists are not on GitHub); plan % per lane-day (account switched 11 Nov); red-`main` restore time (no tool yet).
+Buying more capacity (a second plan) is not a decision now: the Lead re-raises it when the measured constraint is builder output.
 
 ---
 
-## Visuals (founder ask A29 (C)): one picture per part
+## Visuals
 
-**Part 1, size: where the requirements sit, and what is ours** (2,253 live requirements; section 1.3)
+**Requirement lines by group** (2,253; section 1.3)
 
 ```mermaid
 pie showData
-  title Team spec requirements by group (n = 2,253)
+  title Team spec requirement lines by group (n = 2,253)
   "A Configurator (ours, partly built)" : 369
   "B Case delivery (ours, partly built)" : 440
   "C Firm front office (not started here)" : 692
@@ -368,99 +275,78 @@ pie showData
   "E Platform foundation (team)" : 510
 ```
 
-**Part 2, causes: one app PR's path today, with measured medians** (n=131 app PRs with Approve and label, 2-12 Nov)
+**One app PR's path today** (medians; n=131 app PRs with Approve and label; conflicts n=301)
 
 ```mermaid
 flowchart LR
-  A["Lane opens PR"] -->|"0.92 h<br/>build, own CI, review"| B["Reviewer: Approve"]
-  B -->|"0.72 h median<br/>p90 7.3 h<br/>271 PR-h beyond CI"| C["Label: review approved"]
+  A["Builder opens PR"] -->|"0.92 h<br/>build, own CI, review"| B["Reviewer: Approve"]
+  B -->|"71 of 131 PRs need<br/>a second round"| B
+  B -->|"last Approve → label<br/>0.2-0.4 h"| C["Label"]
   C -->|"1.06 h<br/>queue + 42-min batch run"| D["Merged on main"]
-  D -->|"not machine-timed"| E["qa verdict: Works or Partial"]
-  E -->|"~5.5 app PRs per Works<br/>39 re-opens"| A
-  X["Merge main into PR:<br/>29% of app PRs hit a real conflict<br/>~300 PR-h"] -.-> B
+  D -->|"not timed yet"| E["qa verdict"]
+  X["Merge main into PR:<br/>25% of app PRs hit an app-file conflict<br/>~216 PR-hours"] -.-> B
 ```
 
-**Part 3, target: modules and the one contract between the two sides**
+**Order of work (Theory of Constraints)**
 
 ```mermaid
-flowchart TB
-  subgraph CFG["Configurator stream"]
-    SP[structure] --- SO[sources] --- LI[library] --- QD[questionnaire-design]
-    RE[release]
-  end
-  subgraph CASE["Case-delivery stream"]
-    CC[case-core] --- CQ[case-questionnaire] --- CD[case-documents] --- CF[case-forms] --- CS[case-submission]
-  end
-  subgraph PLAT["Platform / enabling"]
-    PL[platform] --- AI[ai-gateway] --- DD[demo-data]
-  end
-  CFG --> RE
-  RE ==>|"released pack: versioned contract + golden test"| CASE
-  PLAT -.->|"public index.ts only"| CFG
-  PLAT -.->|"public index.ts only"| CASE
-```
-
-> Parts 4 and 5 below show the plan as first written; after the challenge the order is: measure ready rows and qa verdict time → keep rows ready → cheap structure fix → full migration only on need (Challenge, "The corrected order"), and the Part 5 bars are an upper bound, not a forecast.
-
-**Part 4, delivery: the constraint and the order of fixes (Theory of Constraints)**
-
-| Order | Constraint (measured) | Fix | Measure that proves it |
-|---|---|---|---|
-| 1 | first-pass yield: ~5.5 app PRs per Works | qa's pack before the build; walk before review (P-352) | app PRs per Works ≤3 |
-| 2 | conflicts: 29% of app PRs | module walls S0-S12 | ≤10% of app PRs; co-edit overlap halved per step |
-| 3 | Approve → label wait: p90 7.3 h | wake-up check on PR status comments; label-triggered packs | p90 ≤2 h |
-| 4 | night starts: 24 vs 109 opens | warm spares; routine trial (D4) | night opens per hour vs day |
-
-**Part 5, capacity: Works per day by scenario** (section 5.1; each step a hypothesis with its test)
-
-```mermaid
-xychart-beta
-  title "Confirmed capabilities per day by scenario"
-  x-axis ["Today", "+ first-pass yield", "+ structure", "+ lanes doubled"]
-  y-axis "Works per day" 0 --> 30
-  bar [5.5, 9.3, 12.7, 25]
+flowchart LR
+  M["1 · Time the two<br/>untimed stages"] --> K["2 · Name the limit:<br/>ready rows or qa verdicts"]
+  K --> W["3 · Work only on it"]
+  M --> F["Cheap fix after the Bake:<br/>self-registering lists,<br/>split schema, 800-line ratchet"]
+  F --> T{"App-file conflicts<br/>on next 150 PRs"}
+  T -->|"≥ 20%"| R["D2: full rebuild back to you"]
+  T -->|"≤ 12%"| Z["Closed"]
 ```
 
 ---
 
-## Challenge (fresh Opus challenger, 12 Nov; re-ran everything from `origin/main` and the downloaded GitHub data)
+## Glossary
 
-The challenger was given only this plan and its evidence. It reproduced every raw count (2,253 requirements, 610 cards, 301 app PRs, 86 conflicted PRs, 55 first-time Works, 39 re-opens, WIP 7.3, night 24 vs day 109, 1 `@Module`, 141 files, 7 files over 800, 401 routes) and found four conclusions wrong or reversed by the plan's own data. I re-checked the ones marked ✔ myself before accepting them. Scripts `c1_conflicts.py` … `c13_size_capacity.py` stay in the planner's scratchpad (not committed; they read the same public data).
+* **App PR:** a merged PR that changed app code, by files changed (P-500 folders).
+* **Works:** a capability qa confirmed (RULES).
+* **PR-hours:** hours added up over PRs; 10 PRs each waiting 2 h = 20 PR-hours. Shows where waiting piles up; it is not calendar time.
+* **Work in progress (WIP):** how many app PRs are open at the same moment.
+* **Little's law:** on average, items open = items finished per hour × hours each item takes (J. D. C. Little, 1961). An identity, used to check numbers, not to predict.
+* **DORA:** four delivery measures from the *Accelerate* research (Forsgren, Humble, Kim, 2018; dora.dev); ours are adapted, since we do not deploy to production.
+* **Theory of Constraints:** output is set by the slowest step; find it, use it fully, then improve it (Goldratt, 1984).
+* **Vertical stream:** a lane that takes a capability through every layer (screen, API, engine), as opposed to one lane per code area.
+* **Ratchet:** a rule that lets a number only improve (a large file may shrink, never grow).
+* **H-n:** a hypothesis with the test that settles it; never shipped as a fix (P-502).
+* **Hot file:** a file where conflicts concentrate.
+* **Margin:** the 95% range around a share from a sample; 15% of 46 PRs could be anything from ~5% to ~25%.
 
-| # | Claim (section) | Challenger's finding | Verdict | What changed in this plan |
-|---|---|---|---|---|
-| C-1 | 2,253 requirements are the size unit (1.2) | 131 counted lines (6%) are "merged into" or pointer lines; in a random sample of 40 lines about 16 are user abilities, the rest rules inside a capability, technical or non-functional items | partly | short answer item 1: requirements are not capabilities; ~40% are |
-| C-2 | ~0.8 cards per requirement (1.2) | near 1 only in modules rewritten as cards, by construction; prose modules run 0.1-0.6 | wrong as a whole-spec ratio | prose modules re-weighted at 0.4-0.6 |
-| C-3 | 81 capabilities → 1.23 per card (1.4) | "81" is not in the trace file (76 or 90 distinct ids); 30 of 90 are case-side capabilities cited as evidence on configurator cards; configurator-only gives ~0.85-0.9 | partly ✔ (I counted 81 from the evidence column of Built/Partly rows only; the method is shown in 1.4) | ratio band widened to 0.9-1.23 |
-| C-4 | ~700 / ~1,400 to build; 500-600 is too low (1.4, H-1) | re-weighted: **A+B 433-704 in total, 340-610 still to build; A+B+C 665-1,156 still to build**; 500-600 sits inside A+B; Release 1 vs later not separated | **wrong** (conclusion) | short answer item 1 rewritten; H-1 stays the deciding test and must also split Release 1 from later |
-| C-5 | structure figures (1.1) | reproduced; 76 `@Controller(` occurrences, not 69 (I counted files containing one) | holds | none |
-| C-6 | 29% of app PRs had a real conflict (2.3) | 55 of 328 merges inside PR branches are not merges of `main` (stacked or sibling branches); conflicts on a merge of `main` touching an app file: 67 PRs (22%) | partly ✔ (my own recount: 75 PRs, 25%; the method for "merge of `main`" differs) | reported as **22-29%**; stacked branches named as a separate cause |
-| C-7 | ~300 PR-hours lost to conflicts (2.3) | reverse causality: conflicted PRs were open a median 3.78 h before their first conflict, longer than a clean PR's whole life (2.08 h); a same-age comparison gives **~216 PR-hours** | partly | **~216 PR-hours** used |
-| C-8 | chasing `main`, ~60 PR-hours; each merge drops the label (cause 4) | ~23 PR-hours size-matched; the label guard already keeps the label when the merge touches none of the PR's files (P-318 (1)) | **wrong** | cause 4 is small; rule 4 of 3.3 kept only as a cheap check |
-| C-9 | Approve → label, 271 PR-hours (cause 3) | 71 of 131 PRs had more than one Approve; from the **last** Approve before the label: median 0.21 h, **68 PR-hours**, 10 PRs over 3 h; the 131 are mostly 7-12 Nov | **wrong** ✔ (my recount: median 0.4 h, 68 PR-hours, 10 over 3 h) | cause 3 re-named "fix-and-re-review after a first Approve"; H-3 now asks why second rounds happen |
-| C-10 | rework ranked first, ~250 PR-hours (cause 1) | 26 of 39 re-opens were the 3-4 Nov re-proof; otherwise ~82 PR-hours; PRs per Works 6.3 (2-6 Nov) → 3.7 (7-11 Nov); by titles a median of 2 PRs per row | partly | rework no longer ranked first |
-| C-11 | the constraint is first-pass yield (4.2) | Works per day held at ~5 while PRs per Works fell 40%; rows not yet Works fell to 14-15 by 10-11 Nov (11 Parked or Team); qa verdict time unmeasured | **wrong** | constraint = **ready-row supply** (and possibly qa verdict time, to be timed) |
-| C-12 | module walls + one lane per module mean lanes rarely meet (2.4, 3.4) | the 2+-module share is real (156 of 301 even without platform and web files), but on the six proposed lanes only 104 PRs (35%) stay in one lane and 178 (59%) cross; the commonest pair (authoring + release, 68 PRs) is split by the plan itself | **wrong** (lane cut) | lanes by **vertical stream** (a capability end to end), not by horizontal module; modules become files' homes, not lane borders |
-| C-13 | add a released-pack contract (why-4, S9, H-5) | it **already exists**: the case reads a pinned, hashed release snapshot (`api/src/runtime.ts:168`, `engine/snapshot.ts`); ~11 direct configurator reads remain; 56 of the 96 both-sides PRs changed the contract itself, i.e. new capabilities extend it | **wrong** ✔ (code read) | S9 and H-5 dropped; "remove the ~11 direct reads" stays as a small cleanup |
-| C-14 | night opens 24 vs 109 (cause 7) | reproduced | holds (hypothesis H-4) | none |
-| C-15 | ask → dispatch p90 15.3 h (cause 6) | script not committed | fixed | `dispatch_waits.py` added; output in `outputs.txt` (same numbers) |
-| C-16 | label- or comment-triggered packs, "not a permission change" (4.4) | `pull_request: labeled` runs the PR's own copy; only `issue_comment` runs `main`'s copy; on a public repository it needs an `author_association` gate: a security decision | **wrong** | 4.4 corrected; now founder decision D3 |
-| C-17 | migration ~25 PRs in 4-6 days (3.5) | the step table sums to **33-37 PRs**; moving hot files conflicts with every concurrent PR on them | understated | D2 now says 33-37 PRs, 5-8 days, and only on measured need |
-| C-18 | 7-day before/after keep rule (3.6) | no power (halving `demo.ts`'s ~10 conflicts a week gives p≈0.3); "keep if it falls at all" is a coin flip; hot files regress to the mean | **test fails** | replaced: one pre-registered test over the next 150 app PRs: keep the full migration off unless conflicted app PRs stay above ~15%; the cheap fix is kept unless a gate goes red |
-| C-19 | capacity 5.5 → 25 Works/day (5.1) | uses week-1 rates; week 2 was 18.6 PRs a day, 3.7 PRs per Works, 5 Works a day; the yield step already happened with no gain; four untested multipliers stacked | **wrong** as a forecast | 5.1 marked an upper bound; forecast rule below |
-| C-20 | DORA mapping (4.1) | DORA's keys mean production deploys and production failures; conflicts are not a change failure rate | partly | read 4.1 as "DORA-inspired"; conflicts kept out of change failure rate |
-| C-21 | five founder decisions (6) | D3 (adopt structure rules) is the Lead's (a higher bar, no money, P-384); the public-repo comment trigger is missing as a security decision | partly | D3 replaced by the comment-trigger decision; structure rules are the Lead's |
-| C-22 | citations | all correctly attributed except Nagappan et al. (ICSE 2008: organisation structure predicts defects, not change-coupling hot spots) | partly | read that citation as "organisation shapes defects", supporting stream ownership, not hot-spot method |
+---
 
-**Missed by the plan (challenger), accepted:**
-* **Ready-row supply is unmeasured** (design → founder's look → brief). It is now the first thing to measure: rows ready ahead of builders per day, and qa verdict time per row.
-* **About a third of conflict file-hits are in tests, acceptance or records**, which modules do not touch: tests per capability in their own files, and records PRs only when the queue is empty (P-436 (3)), address them.
-* **Stacked or baton branches** cause conflicts of their own (55 merges): one baton PR at a time stays (P-481).
-* **Decide the cheap, certain fix apart from the twelve-module migration**: done (short answer item 4 (a); D2).
+## Evidence (re-runnable)
 
-### The corrected order (Theory of Constraints, applied to what was measured)
-1. **Measure the two unmeasured stages first** (1 tooling PR, Lead): rows ready per day ahead of builders, and qa verdict time per row (timestamps in qa's records).
-2. **Keep rows ready ahead of builders**: the design → look → brief step runs one milestone ahead (Lead and founder). If output stays ~5 Works/day with rows waiting, the next limit is qa verdict time: add a verdict lane.
-3. **Cheap structure fix** after the Bake's tag commit (Lead, P-499 (1)): self-registering `main.ts` and `demo.ts`, split schema, 800-line ratchet.
-4. **Full module migration only on measured need** (D2), lanes by vertical stream.
-5. **Forecast rule:** no date for 500-1,100 capabilities until H-1 has sized Release 1 and two weeks of ready-row and verdict data exist; then Works per day = min(ready rows per day, builder output, qa verdicts per day), each measured, never multiplied.
+All in `factory-plan-2026-11-12-evidence/`; outputs in `outputs.txt`. Python 3 standard library, run with `python3 -I`. GitHub data is not committed (it carries account names); fetch it with curl:
+
+```bash
+T=$(gh auth token); R=https://api.github.com/repos/<owner>/xpatready
+for p in $(seq 1 13); do curl -sS -o pulls-$p.json -H "Authorization: Bearer $T" "$R/pulls?state=closed&sort=created&direction=desc&per_page=100&page=$p"; done   # merge into pulls.json
+curl ... "$R/issues/comments?since=2026-11-01T18:30:00Z&sort=created&direction=asc&per_page=100&page=<n>"   # 36 pages → comments.json
+curl ... "$R/issues/events?per_page=100&page=<n>"                                                        # 72 pages → events.json
+curl ... "$R/actions/workflows/nightly.yml/runs?created=>=2026-11-01T18:30:00Z&per_page=100&page=<n>"   # 273 runs
+```
+
+| File | What | Section |
+|---|---|---|
+| `measure_structure.py` → `ours-modules.tsv` | files, lines, routes, `@Module`s, models, file sizes | 1.1 |
+| `count_frs.py` → `requirements-fr-counts.tsv`; `count_cards.py` → `requirements-card-counts.tsv` | requirement lines and cards per module | 1.2 |
+| `conflicts_from_git.py` → `git-2026-11-02-to-12-prs.tsv`, `-hot-files.tsv` | class by files; merges inside each PR replayed with `git merge-tree` | 2.3 |
+| `flow_app_prs.py` → `flow-2026-11-02-to-12-app-flow.tsv` | app PR times, lines, hours of day | 2.2 |
+| `gates_app_prs.py`, `conflict_breakdown.py`, `dispatch_waits.py` | review stages, conflict hits, Little's law, dispatch waits | 2.3, 4 |
+| `module-map.tsv`, `module_span.py` | areas per file; areas per app PR | 2.4, 3.2 |
+| `works_per_day.py` → `works-per-day-main.tsv` | first-time Works and re-opens per day | 2.2 |
+| `challenge/` (challenger's `c1`-`c13`, README) | 22-29%, 216 PR-hours, 68 PR-hours, "71 of 131", size band, week rates | 1.4, 2.3 |
+
+**Not measured:** qa verdict time and rows ready per day (no timestamps yet); lanes per day (not on GitHub); plan % per lane-day.
+
+---
+
+## Challenge record
+
+**Round 1, fresh Opus challenger** (re-ran everything from `origin/main` and the downloaded data; scripts in `challenge/`). It reproduced every raw count and corrected: the size conversion (requirement lines are not capabilities; prose modules convert at far less than card modules); the conflict share and cost (merges of `main` only; same-age comparison); the review wait (re-review after a first Approve, not idle waiting); the lane cut (59% of app PRs crossed six area-based lanes, so lanes are vertical streams); the configurator-to-case contract (it already exists); the comment-triggered run (`pull_request: labeled` runs the PR's own workflow copy, and on a public repository the trigger is a security setting); the migration size (25-30 PRs, not fewer); the keep/undo test (a 7-day window has no statistical power); the capacity scenarios (stacked untested multipliers, withdrawn); the DORA mapping (conflicts are not a change failure rate); and one decision moved to the Lead.
+
+**Round 2, Lead 26 with three Opus reviewers** (evidence; integration and governance; the founder's goal). Corrected: the limit on output is a hypothesis (H-13), not a measure, and the earlier "PRs per Works fell" figure was a re-proof counting artefact (2.95 → 3.21 on all confirmations); withdrawn numbers removed everywhere; D2's trigger set on app-file conflicts with a threshold the sample can resolve; D6 added first, the capacity decision dropped, every decision given an "if no"; one ordered list for both tracks with the launch line; plain words and a glossary; the challenger's scripts committed; the sample's base commit corrected to `5797feb18`. The private comparison (parts A and B of founder ask A29) was revised in the same round, outside this repository.
