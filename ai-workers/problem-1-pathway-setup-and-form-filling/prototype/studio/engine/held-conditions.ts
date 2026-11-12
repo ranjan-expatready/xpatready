@@ -12,13 +12,20 @@ import type { Snapshot } from "./snapshot.ts";
 /** A condition without whose answer it is read from, to compare two of them; null for anything that is not a condition
  *  (a form field's words are never one, B86). */
 export const bareCond = (c: any) => { if (!c || typeof c !== "object") return null; const { subjectKind: _k, ...n } = c; return canonical(n); };
+/** QA-402: a form field's gate (B107, engine/form-field-condition.ts boxGate, kept here so this module imports nothing
+ *  heavy): the form's own condition for writing the answer, with its words; null for a B86 rule or none. */
+const gateOf = (rule: unknown): { tree: unknown; words: string } | null => {
+  const g = rule && typeof rule === "object" && !Array.isArray(rule) ? (rule as { gate?: unknown; words?: unknown }) : null;
+  return g && g.gate && typeof g.gate === "object" && typeof g.words === "string" ? { tree: g.gate, words: g.words } : null;
+};
 const fieldsOf = (c: unknown): string[] => (c ? [...JSON.stringify(c).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]) : []);
 
 /** What reads one conditioned question's answer outside its condition, on this snapshot. */
 export type ConditionConflict = {
   placement: { lineage: string; fact: string; condition: unknown; condition_effect?: string | null; condition_plain?: string | null };
-  /** Each form that reads the answer, and whether every form field of it that does applies under the same condition. */
-  forms: { form: string; ok: boolean; formConditioned: boolean }[];
+  /** Each form that reads the answer, and whether every form field of it that does applies under the same condition.
+   *  QA-402: `gate`, the form's own words of when it writes the answer, when a form field holding a gate (B107) is why. */
+  forms: { form: string; ok: boolean; formConditioned: boolean; gate: string | null }[];
   /** Each condition (rule, document line, form line, check) that reads the answer outside the question's own condition. */
   conditions: string[];
   /** Deciding facts no question, supported document or derived definition supplies. */
@@ -39,9 +46,17 @@ export function conditionConflicts(s: Snapshot, placed = new Set(s.placements.ma
     const c: ConditionConflict = { placement: p, forms: [], conditions: [], unreachable: [] };
     if (eff === "SHOW" || eff === "HIDE") {
       const own = bareCond(p.condition);
-      const forms = new Map<string, boolean>();
-      for (const r of readers.get(p.fact) ?? []) { const ok = eff === "SHOW" && [r.formCond, r.boxCond].some((x) => bareCond(x) === own); forms.set(r.form, (forms.get(r.form) ?? true) && ok); }
-      for (const [form, ok] of forms) c.forms.push({ form, ok, formConditioned: !!s.forms.find((x) => x.form_number === form)?.condition });
+      const forms = new Map<string, boolean>(), gates = new Map<string, string>();
+      // QA-402: a form field the form itself writes only under a gate (B107: IMM 5257's "b) Other" only when the purpose is
+      // Other) reads the answer only under that gate, so a question shown under the same condition is compatible; under
+      // another, the reason is the form's own condition in its words, never "whenever the form applies".
+      for (const r of readers.get(p.fact) ?? []) {
+        const gate = gateOf(r.boxCond);
+        const ok = eff === "SHOW" && [r.formCond, r.boxCond, gate?.tree].some((x) => bareCond(x) === own);
+        forms.set(r.form, (forms.get(r.form) ?? true) && ok);
+        if (!ok && gate && !gates.has(r.form)) gates.set(r.form, gate.words);
+      }
+      for (const [form, ok] of forms) c.forms.push({ form, ok, formConditioned: !!s.forms.find((x) => x.form_number === form)?.condition, gate: ok ? null : gates.get(form) ?? null });
       for (const x of conditions) if (fieldsOf(x.tree).includes(p.fact) && !(eff === "SHOW" && own && canonical(x.tree).includes(own))) c.conditions.push(x.what);
     }
     for (const f of fieldsOf(p.condition)) if (!placed.has(f) && !docFacts.has(f) && !derived.has(f)) c.unreachable.push(f);
@@ -61,7 +76,7 @@ export function conditionsToHold(s: Snapshot): { lineage: string; fact: string; 
     const eff = c.placement.condition_effect ?? "SHOW";
     if (eff !== "SHOW" && eff !== "HIDE") continue;
     const why = [
-      ...c.forms.filter((f) => !f.ok).map((f) => `${f.form} reads its answer ${f.formConditioned ? "under a different condition" : "whenever the form applies"}`),
+      ...c.forms.filter((f) => !f.ok).map((f) => `${f.form} reads its answer ${readsWhen(f)}`),
       ...c.conditions.map((w) => `${w} reads its answer`),
       ...c.unreachable.filter((f) => known.has(f)).map((f) => `it depends on ${words(f)}, which no question, supported document or derived definition supplies here`),
     ];
@@ -76,6 +91,9 @@ export const heldWords = (s: Pick<Snapshot, "canonical_fields">, fact: string) =
   return m.charAt(0).toUpperCase() + m.slice(1);
 };
 
+/** When a form reads a conditioned question's answer outside the condition, in words (QA-402: a gate says the form's own). */
+export const readsWhen = (f: { formConditioned: boolean; gate?: string | null }) =>
+  f.gate ? `only when ${f.gate.trim().replace(/[.\s]+$/, "")} (the form's own condition)` : f.formConditioned ? "under a different condition" : "whenever the form applies";
 /** The opening words of the warning (Review and release shows "Form fields that read this answer" under it, B86). */
 export const HELD_OPENING = "Condition not used on this combination";
 
