@@ -14,7 +14,7 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
 4. **Morning list for the founder (P-507):** (a) D3's builder proposed wording for the `next` skill step 5.5 (skills are write-protected; text in #1658's "Question for the tech lead"); (b) the builders' and qa's skill wording for P-500/P-502/P-504; (c) the D4 trial row (one routine, one docs-only row); (d) owed BACKLOG rows: D3 follow-ups, #1632 m1, P-498's, `flow-measure.py`, #1644 m3, employer-link, push-guard team-app terms (P-504); (e) expert points D8, A24, financial support; SI-6 wording.
 5. **Standbys:** Lead 29 `local_f581db79-88ed-4a5d-a88f-29794a93198b` is first; start one more at the founder's next typed turn. Lead 27's check 56b59def is deleted; create yours.
 
-**Lead 28 live:** took over 23:20 IST (start read ~116k; hand over at ~316k); check 8d8bf893 at :17/:47. Keep-awake refused by the classifier: Lead 27's caffeinate covers to 05:00. 23:20: #1643 queued, #1652 and #1659 labelled not yet queued, #1660 unlabelled (held); walk 1's go waits on the three merges. Weekly 45%.
+**Lead 28 live:** took over 23:20 IST (start read ~116k; hand over at ~316k); check 8d8bf893 at :17/:47. Keep-awake refused by the classifier: Lead 27's caffeinate covers to 05:00. 23:20: #1643 queued, #1652 and #1659 labelled not yet queued, #1660 unlabelled (held); walk 1's go waits on the three merges. Weekly 45%. 23:55: all three queued (batch #1643+#1659 in queue checks since 23:37, #1652 next batch); spare 2 = `session_01Ln6TiQWL7zWj36yxWD4wg2`, Ready for a brief; #1660 CI running, no Approve yet.
 
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
 | # | Ask (IST) | Status |
