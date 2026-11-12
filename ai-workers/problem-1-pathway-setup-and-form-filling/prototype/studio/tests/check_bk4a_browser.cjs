@@ -101,7 +101,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.screenshot({ path: path.join(SHOTS, "bk4a-not-case-person-1440.png") });
   await p.locator("[data-continue-as-officer]").click();
   step("BR-8: Continue as Case officer changes the person, said once", await said(p, /Now: Case officer \(simulated\)/) && await stored(p) === "user-O");
-  await p.getByRole("link", { name: /Client questionnaire|Open it as Client A/ }).first().waitFor({ timeout: 30000 }).catch(() => {});
+  await p.locator("[data-handoff=client]").first().waitFor({ timeout: 30000 }).catch(() => {}); // BK-4c: the case page's hand-off to its client
   step("BR-8: the case page then opens as the case officer", await p.locator("[data-not-case-person]").count() === 0 && new URL(p.url()).pathname === `/cases/${caseId}`);
   // Review M2 (BR-1): the case's release pill says on screen who you become in the Studio.
   const pill = p.locator("[data-case-release]");
