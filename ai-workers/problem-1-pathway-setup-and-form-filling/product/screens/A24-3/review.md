@@ -96,3 +96,48 @@ Data underneath: the cells equal `GET …/prepare` owner, which equals `filing.s
 Main's web fail-before (taken from the builder's report and from reading the check); the full CI run; a real screen reader; an intended user's unaided walk (D17 and D20 stay with the founder); the six alone (per the brief, no case opens there).
 
 **Verdict: Block.** To fix: M1, with its case added to the check (this covers m1). m2 and m3 are for the builder to fix or record. A re-review is needed on the new head.
+
+## Round 2: `1abf9bdbe` (diff `aef100e45..1abf9bdbe` only, P-293 (3))
+Reviewed `1abf9bdbe3d76f4622befbb6000799fc17481058`, the same independent reviewer, 13 Nov. I used my own copy on :4448 (`rev_a243`, configured checkpoint, this head's web), then stopped it. `review.md` is unchanged in the fix commit.
+
+**What I ran:**
+* `check_a24_3_client_principal_browser.ts 4448`: **41/41**.
+* `check_bk3_client_browser.cjs`: **75/75**, after the m2 text change at lines 75 and 104.
+* `web` `tsc --noEmit`: exit 0.
+* `git merge-tree` against #1660's head `17d4cd0fb` and against `origin/main`: both clean. #1660 changes the BK-3 check at line 118, not at lines 75 or 104.
+* Own walk (headless Chromium, officer):
+  1. Opened a spouse sponsorship and added the sponsor **and** a child, so a co-filed group carries more than the principal.
+  2. Tabbed to the tip by keyboard.
+  3. Ran axe (WCAG 2.2 A/AA) on the header and the table.
+  4. Checked widths 1024, 720 and 400.
+  5. Followed the header link by keyboard.
+
+**The earlier findings:**
+* **M1, fixed.** The sponsor's row now reads "Sample Principal S" with "Sample Sponsor R is not an applicant" under it. The child's row reads "On Sample Principal S's application | Sample Principal S".
+  * `principalOf` (filing-changes.tsx:55) applies only to a filing with no applicants. It reads `group`, a string id in prepare (case-prepare.ts:308), so the comparison is sound.
+  * There is no program or combination key in it.
+  * `challenge.md` records the departure from the brief's literal "from Filing.subjectId". It is marked Unconfirmed: no counsel. It is the tech lead's call whether to accept it, and the code reverts in one line.
+* **m1, fixed.** The check now covers:
+  * Express Entry before and after Make principal: every other row names the principal, never themselves.
+  * The sponsorship: the API shows the sponsor as owner with no applicants; the screen shows the principal plus "not an applicant", and never names the sponsor.
+
+  By reading, both mutations now go red: rendering the row's own name, or reverting to the literal owner.
+* **m2, fixed.** The header reads "Client: Sample Principal S · Client A's cases".
+  * The link's name says where it goes. Pressing Enter on it opens `/cases/clients/user-P`, and the actor stays `user-O`.
+  * The middle dot is `aria-hidden`.
+* **m3, fixed.** On keyboard focus the Radix tooltip opens, shows the full text and closes with Esc (screenshot taken at 1440). axe found 0 violations.
+
+At 1024, 720 (200 %) and 400 px the page scrolls 0 px sideways. No page errors.
+
+**Remaining (Minor; neither blocks):**
+* **r1.** `principalOf` takes the **first** filing with applicants in the group (filing-changes.tsx:56). Today the only co-filed combination, spouse sponsorship, has exactly one such filing: the child joins the principal's. A future group holding two applicant filings plus a co-filed one could name the wrong person. Fix when such a combination exists: prefer the filing whose owner's role is `principal`.
+* **r2.** The tip's trigger keeps `aria-label={APPLICANT_TIP}`, and the Radix tooltip adds the same text as its description, so a screen reader may read it twice. Fix: give the trigger a short label such as "About principal applicant".
+
+**Scores changed:**
+* D1 4 · D4 4 · D10 4 · D13 4 (r2) · D16 5.
+* BIC-08 Met · BIC-14 Met.
+* Journey: plain words 1 · correct data 1 · accessibility 1, giving **10/10**, a pass with no 0.
+
+**Not checked:** the full CI run on this head (the guard only, while it is a draft); a real screen reader (r2); D17 and D20 (stay with the founder).
+
+**Verdict: Approve** `1abf9bdbe3d76f4622befbb6000799fc17481058`. There is no open Blocker or Major. r1 and r2 are for the builder to fix or record. The label applies to this commit only.
