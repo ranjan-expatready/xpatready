@@ -139,3 +139,32 @@ Minor because it needs a record made before this PR plus a later answer that mov
 * `break-report.md`.
 
 They are not part of `8b09dbc76`, and I did not review them.
+
+## Round 3 (diff-only): `git diff 8b09dbc76..d69657a08`
+
+**Copy.** `rv_bk17` on :4439, from a clean tree at `d69657a08`, stopped after the review. Live AI off, US$0.
+
+**What I ran (exit codes).**
+* `check_bk17_keep_recorded` 25/25 (exit 0).
+* `check_bk17_recorded_filing_api` 24/24 (exit 0).
+* `check_b152_recorded_fees_api` 20/20 (exit 0).
+* `check_c612_fees_browser` 58/58 (exit 0). This one has real Visitor visa fee lines, with nothing held.
+* My round 2 probe, again (exit 0). It covers the split child after No, 15 reads at once, the case page, and the version.
+
+**Findings.**
+* **r2-m1: fixed.** The child's kept application reads "Application kept as prepared: Sample Child A" on …/prepare and on Submission to IRCC. It is no longer named after the combination.
+  * Its group says "Kept as prepared: …".
+  * Its 4 items and its readiness stay.
+  * 15 reads at once give one version and 200.
+  * There are no page errors.
+* **r2-m3: fixed in pure checks.** An unrecorded group whose applying people differ from the derivation's is named for the people on it (`submission-record.ts`, `differs`). The pure mirror check and its control pass. I did not walk the mirror case on the copy.
+* **Guard: correct.** `feesOnTheirFilings` now treats only the people on kept rows as "off".
+  * With nothing recorded, `keepRecorded` returns the derivation unchanged, and no line or total changes. c612 (real fees) and b152 stay green.
+  * Lines are now kept by `!off.includes(l)` rather than `on(l)`. That only changes cases with something held.
+* **No new pathway-specific code** in the diff (P-319, P-425).
+
+**Still open. Minor; none blocks.**
+* r2-m2: the group words are in the API only (listed for a later row).
+* If the kept application is then recorded, "Application kept as prepared: <name>" becomes its recorded label. That label is honest, but it names no document.
+
+**Verdict: Approve** for commit `d69657a08`: no Blocker or Major is open.
