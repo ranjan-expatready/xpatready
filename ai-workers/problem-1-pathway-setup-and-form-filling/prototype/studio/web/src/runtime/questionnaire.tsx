@@ -408,6 +408,17 @@ export function byPerson(v: View): View {
  *  (no previous jobs, no other names) is done once passed. A per-device convenience; the server holds every answer. */
 const passedKey = (caseId: string) => `xr-passed-${caseId}`;
 function passedParts(caseId: string): Set<string> { try { return new Set(JSON.parse(localStorage.getItem(passedKey(caseId)) ?? "[]") as string[]); } catch { return new Set(); } }
+/** QA-417 (P-497; P-72 and P-78 kept): what each person's tab still has to confirm, summed from the same sections as the
+ *  household line (the engine's summary is the sum of its sections, engine/runtime/case.ts), so the tabs add up to it.
+ *  In the Agent view's tab order; a person with nothing to confirm is kept (n = 0). */
+export function toConfirmByTab(v: View): { id: string; label: string; n: number }[] {
+  const tabs = new Map<string, { id: string; label: string; n: number }>();
+  for (const s of byPerson(v).sections) { const t = tabs.get(s.subjectId) ?? { id: s.subjectId, label: s.about_label, n: 0 }; t.label = s.about_label; t.n += s.answered - s.confirmed; tabs.set(s.subjectId, t); }
+  return [...tabs.values()];
+}
+/** QA-417: the address that opens one person's tab in the Agent view (the household line's links). */
+export const tabHash = (subjectId: string) => `#tab-${encodeURIComponent(subjectId)}`;
+
 function markPassed(caseId: string, s: Section) { try { const x = passedParts(caseId); x.add(`${s.subjectId}|${s.section}`); localStorage.setItem(passedKey(caseId), JSON.stringify([...x])); } catch { /* private window: the part stays "Optional" */ } }
 
 function partState(s: Section, passed: Set<string>, checks: ViewCheck[] = []) {
@@ -822,7 +833,17 @@ function AgentView({ view }: { view: View }) {
   const ids = people.map(([id]) => id).join(" ");
   React.useEffect(() => {
     const go = () => {
-      const target = window.location.hash.slice(1), m = /^a-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-/i.exec(target);
+      const target = window.location.hash.slice(1);
+      // QA-417: the household line's link to a person's tab (#tab-<subject>) opens that tab and brings the tabs into view.
+      const t = /^tab-(.+)$/.exec(target);
+      if (t) {
+        let to = ""; try { to = decodeURIComponent(t[1]); } catch { return; }
+        if (!ids.split(" ").includes(to)) return;
+        setWho(to);
+        requestAnimationFrame(() => requestAnimationFrame(() => { const el = document.querySelector<HTMLElement>(`[data-tab="${CSS.escape(to)}"]`); el?.scrollIntoView({ block: "start" }); el?.focus(); window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search); }));
+        return;
+      }
+      const m = /^a-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-/i.exec(target);
       if (!m || !ids.split(" ").includes(m[1])) return;
       setWho(m[1]);
       // Break m5: the address is cleared once used, so a later render (a person added) does not jump back to this tab.
@@ -833,11 +854,12 @@ function AgentView({ view }: { view: View }) {
     return () => window.removeEventListener("hashchange", go);
   }, [ids]);
   const mine = view.sections.filter((s) => s.subjectId === who);
+  const toConfirm = new Map(toConfirmByTab(view).map((t) => [t.id, t.n])); // QA-417: each tab's "N to confirm"
   return (
     <div className="space-y-4">
       <Tabs value={who} onValueChange={setWho}>
         <TabsList aria-label="Whose answers" className="h-auto flex-wrap">
-          {people.map(([id, label]) => { const m = view.sections.filter((s) => s.subjectId === id).reduce((n, s) => n + s.missing.length, 0); return <TabsTrigger key={id} value={id} className="h-auto max-w-full whitespace-normal text-left [overflow-wrap:anywhere]" title={m ? `${m} required question(s) not answered` : "Every required question answered"}>{label}{m ? <span className="ml-1.5 text-[11px] text-text-muted">{m} missing</span> : null}</TabsTrigger>; })}
+          {people.map(([id, label]) => { const m = view.sections.filter((s) => s.subjectId === id).reduce((n, s) => n + s.missing.length, 0), c = toConfirm.get(id) ?? 0; return <TabsTrigger key={id} value={id} data-tab={id} className="h-auto max-w-full scroll-mt-4 whitespace-normal text-left [overflow-wrap:anywhere]" title={`${m ? `${m} required question(s) not answered` : "Every required question answered"}; ${c ? `${c} answer${c === 1 ? "" : "s"} to confirm (Confirm section)` : "nothing to confirm"}`}>{label}{c ? <span className="ml-1.5 text-[11px] text-text-muted" data-tab-to-confirm={c}>{c} to confirm</span> : null}{m ? <span className="ml-1.5 text-[11px] text-text-muted">{m} missing</span> : null}</TabsTrigger>; })}
         </TabsList>
     <TabsContent value={who} className="grid gap-6 lg:grid-cols-[14rem_minmax(0,1fr)]">
       <nav aria-label="Sections" className="hidden lg:block">
@@ -882,11 +904,17 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
   const open = [...s.questions.flatMap(shownAnswers), shownGroup].filter((a) => a && a.status !== "VERIFIED" && !a.awaits_client).length;
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", view.case.id] });
   const checks = view.checks.filter((c) => c.subjectId === s.subjectId && c.section === s.section);
+  // QA-417 (rehearsal §4): a section with no answer for the officer to confirm says so in words beside its (disabled)
+  // button, never a silent dead button. Review m1: "no answer yet" only when none is given (firm-record answers are given
+  // and confirmed, and never sent as seen).
+  const noneToSend = !seen.length;
   async function confirm() {
     setBusy(true);
     try {
       const r = await api<{ confirmed: number; missing: string[]; awaiting_client?: number }>(`/runtime/cases/${view.case.id}/sections/${s.section}/confirm`, { method: "POST", json: { subjectId: s.subjectId, seen } });
-      toast.push({ tone: checks.length ? "info" : "ok", text: `${s.title} for ${inSentence(s.about_label)}: ${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.${r.awaiting_client ? ` ${r.awaiting_client} recorded by staff wait${r.awaiting_client === 1 ? "s" : ""} for the client to re-confirm.` : ""}${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}${checks.length ? ` ${checks.length} check${checks.length === 1 ? "" : "s"} still open: ${checks.map((c) => c.message).join(" ")}` : ""}` });
+      // QA-417: the server's reply decides the words (the page may not have its latest answers yet); with none confirmed
+      // it says "nothing to confirm", and "confirmed already" never beside answers that wait for the client (review m2).
+      toast.push({ tone: checks.length || !r.confirmed ? "info" : "ok", text: `${s.title} for ${inSentence(s.about_label)}: ${r.confirmed ? `${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.` : `nothing to confirm.${r.awaiting_client ? "" : " Every answer here is confirmed already."}`}${r.awaiting_client ? ` ${r.awaiting_client} recorded by staff wait${r.awaiting_client === 1 ? "s" : ""} for the client to re-confirm.` : ""}${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}${checks.length ? ` ${checks.length} check${checks.length === 1 ? "" : "s"} still open: ${checks.map((c) => c.message).join(" ")}` : ""}` });
     } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
     await refresh();
     setBusy(false);
@@ -935,7 +963,8 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
         <span className="flex-1" />
         {/* C6.5 part 2b: "Fill this from documents" (documents-drawer.tsx), staff only (the Agent view). */}
         <DocumentsButton view={view} s={s} />
-        <Button size="sm" variant={open > 0 ? "default" : "secondary"} disabled={!seen.length} busy={busy} onClick={() => void confirm()} title={seen.length ? "Confirm the answers shown in this section; an answer that changed since you looked is refused, never confirmed unseen" : "Nothing answered yet in this section"}>
+        {noneToSend ? <span className="text-[13px] text-text-muted" data-nothing-to-confirm>{s.answered ? "Nothing to confirm: every answer here is confirmed already" : "Nothing to confirm: no answer yet"}</span> : null}
+        <Button size="sm" variant={open > 0 ? "default" : "secondary"} disabled={noneToSend} busy={busy} onClick={() => void confirm()} title={noneToSend ? "Nothing to confirm in this section" : "Confirm the answers shown in this section; an answer that changed since you looked is refused, never confirmed unseen"}>
           <Check aria-hidden />Confirm section
         </Button>
       </header>
