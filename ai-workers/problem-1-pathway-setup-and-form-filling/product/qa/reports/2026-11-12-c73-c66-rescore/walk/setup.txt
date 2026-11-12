@@ -1,0 +1,13 @@
+walk C7.3 (qa setup, 12 Nov) — principal Yes / spouse No on Q8 A, IMM 5257 Online, every warning passed
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+row Sample Client W person.education_school_name: 201
+row Sample Client W person.previous_residence_country: 201
+row Sample Spouse W person.previous_residence_country: 201
+fillEverything: true
+FILINGS dd4fe5a1-32fc-481d-864b-653320d85920:0open/0blocks 5e16cd52-6516-4c0f-ae66-984587694917:0open/0blocks
+PERSON Sample Client W SUBJECT 78791535-5467-43d3-8d12-73078ecc9a8d ITEM 4f937179-ce94-48ba-a063-1374c00d3431 channel ONLINE state to_do PDF PCRIndicator=Y EducationIndicator=Y (copy d42b7ef6-5877-4631-9e44-213cfe0f5164, 87 values)
+PERSON Sample Spouse W SUBJECT 93270dd7-de98-473c-8319-734eb81f599b ITEM 2038ae08-166f-4306-b32d-eb8b013a9860 channel ONLINE state to_do PDF PCRIndicator=N EducationIndicator=N (copy c83992e6-f536-4ca4-bb0b-df5ceb385446, 80 values)
+CASE 41324247-d88f-4881-8ed7-c851b7593503 FILING dd4fe5a1-32fc-481d-864b-653320d85920 OFFICER user-O REP user-R (release line) warnings_before 14 open_after 0 blocks_after 0
+
+0/0 passed
