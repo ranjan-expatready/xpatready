@@ -265,3 +265,55 @@ Five stream lanes and one enabling lane (3.4), plus qa (one verdict lane per act
 | **New sessions start only in your typed turn** (P-348 (5)) | night opens 24 vs 109 by day (11 days); P-489 "cost hours" | (a) warm spare lanes at your last turn, sized to the night's ready rows (P-489 (5), P-499 (3)): no rule change (b) **scheduled cloud routines** that start a briefed lane at set times without a typed turn (the app's "schedule"/routines feature; **H-8**: that a routine can open a builder lane on this repository with today's settings; test: one routine on a docs-only row) (c) keep as is | (b) sessions run with no one watching: money stays off (live AI off in every lane), permissions unchanged, but it changes your P-348 (5) rule | **you** (section 6, D4) |
 | **Session-count caps and the 10-message cap** (recorded 4-9 Nov) | lanes waiting for a click | the same as above, plus fewer, longer-lived lanes per stream (one per module group) | context growth: lanes end at P-446's ~400k | the Lead |
 | **Label refused by the auto-mode classifier for Lead self-labels** (memory, 3-4 Nov) | waits for your named word | records PRs via `records-label.yml` (exists); product PRs labelled by their builder (P-277) | none | the Lead |
+
+---
+
+## 5. Capacity model and forecast
+
+### In plain words
+At today's pace (5.5 confirmed capabilities a day) our own part of the product (~700 capabilities) takes about four months and the whole of what is not the team's (~1,400) about eight. The pace can roughly double by getting capabilities right the first time, rise again by removing collisions, and only then rise a lot by adding lanes. Every step after "today" is a hypothesis with a test; the forecast is redone from measured numbers after each one, not believed in advance.
+
+### 5.1 The model (Little's law, per stage)
+
+Works per day = app PRs per day ÷ app PRs per Works. App PRs per day = lanes × app PRs per lane-day, and, at a fixed number of open PRs, app PRs per day rises as the time per PR falls (L = λW).
+
+| Scenario | Assumption (labelled) | App PRs/day | App PRs per Works | Works/day | ~700 (A+B) | ~1,400 (A+B+C) |
+|---|---|---|---|---|---|---|
+| **Today** | measured: 28/day, ~9 cloud lanes (P-489), 5.5 per Works | 28 | 5.5 | **5.5** | 127 days (~18 weeks) | 255 days (~36 weeks) |
+| **+ First-pass yield** | **H-7**: qa's pack before the build, PRs per Works 5.5 → 3 | 28 | 3 | **9.3** | 75 days | 150 days |
+| **+ Structure (S0-S12)** | **H-5, H-6**: conflict cost −2/3 (1.0 → 0.33 h per PR on average), Approve→label wait halved (−1 h): mean W 6.3 → ~4.6 h, so ×1.37 at the same WIP | 38 | 3 | **12.7** | 55 days | 110 days |
+| **+ Lanes doubled** | **H-9**: with walls, ~18 lanes keep today's output per lane (no rise in conflicts per PR); qa verdict lanes scale with streams | 77 | 3 | **25** | 28 days (~4 weeks) | 56 days (~8 weeks) |
+
+Error band on every row: the size band of section 1.4 (×0.55 to ×1.7) multiplies the days. Without the yield change, doubling lanes alone gives at most ~11 Works/day and, by today's evidence (P-438, causes 2-4), more collisions.
+
+### 5.2 Hypotheses and the tests that settle them
+
+| # | Hypothesis | Test (cheap first) | Decides |
+|---|---|---|---|
+| H-1 | the product is 500-600 capabilities | group 3 modules' cards into qa-style rows (2 h, read-only, Sonnet) | the size band |
+| H-3 | Approve → label waits are lanes gone quiet | read the 34 waits over 3 h against lane pushes, batons, Lead reads | which fix: wake-up check, or baton rule |
+| H-4 | night gap = unstarted lanes | nights with vs without ≥3 warm spares | whether D4 is needed |
+| H-5 | the released-pack contract halves both-sides PRs | count for 2 weeks after S9 vs 32% | keep S9 |
+| H-6 | structure track takes 4-6 working days | S2's actual time × steps | the M4 plan |
+| H-7 | first-pass yield, not scope, limits Works | PRs before first Works and re-opens per M4 row | the exploit step |
+| H-8 | a scheduled routine can start a briefed lane here | one routine on a docs-only row | D4's option (b) |
+| H-9 | doubling lanes keeps output per lane once walls exist | conflicts per app PR and app PRs per lane-day for a week at ~18 lanes vs ~9 | D5 |
+| H-10 | plan use grows in step with lane-hours | `get_usage` weekly % per lane-day for one week (no clean number today: the account switched 11 Nov, P-461; 37% weekly on 12 Nov, P-499) | D5's cost |
+
+### 5.3 Plan usage
+
+Not forecast in % here: no measure on the right sample exists (H-10). The token study (9 Nov) gives a Mac-only floor of ~27 M weighted tokens per Works and shows cost is context size (~75% re-reading, P-436); module walls also shrink what a lane must read per row (a module of 2-15k lines instead of a 69k-line app), which lowers cost per Works independently of speed. **H-11**, tested with H-10.
+
+---
+
+## 6. Decisions for the founder (at most five, P-254)
+
+Everything else in this plan is the Lead's under P-384 (pipeline, lane arrangement, tools, the order of steps, the checks).
+
+| # | Decision | Recommendation | Time | Cost | Quality |
+|---|---|---|---|---|---|
+| **D1** | **Which part of the whole product is this factory's to build?** | **A + B now** (configurator and case delivery, ~700 capabilities, band 380-1,280); C (front office) only after the team states what ER v2 builds there (its frontend already has CRM, booking, e-sign, invoicing screens); D + E stay the team's (P-335, P-357). Run H-1's 2-hour sizing test first | sets every later date | none | none |
+| **D2** | **Run the structure track (S0-S12, ~25 small PRs) right after the Bake's tag commit, before M4 product rows that touch the hot files** | **Yes.** Extends P-499 (1)'s "five busiest files" to the full module map, because the top 7 files hold only 39% of conflicts and 72% of app PRs cross modules | ~4-6 working days on 2 lanes (H-6); M4 product rows on other modules run alongside | plan usage only, US$0 | behaviour unchanged; every gate kept; adds lint checks; each step kept only if conflicts fall |
+| **D3** | **Adopt the team's structure rules as ours: 800-line files, `eslint-plugin-boundaries`, ER v2's module names, Prisma domain files** | **Yes**, so our code drops into ER v2 at the merge (P-450) without a reflow; passes STANDARDS §1 ("what the team already has") | inside D2 | none | higher (same bar as the team) |
+| **D4** | **Night starts: may a scheduled routine start a briefed lane without your typed turn?** (changes P-348 (5)) | **Trial first:** one routine on a docs-only row (H-8); if it works, allow it for briefed rows from BACKLOG, live AI off, no permission widened. Until then, warm spares at your last turn (P-489 (5)) | recovers part of the 4.5× night gap (H-4) | plan usage only | unchanged gates; sessions run unwatched until the next check |
+| **D5** | **When to buy more capacity (a second plan or account) to run ~18 lanes** | **Not now.** Decide when Works/day ≥10 with conflicted app PRs ≤10% for a week (after D2 and the yield change), using H-9 and H-10's measured cost per lane-day | 2nd plan: ~halves the A+B date (5.1, last two rows) | the plan's price (yours) | none if walls are in place; more collisions if not |
