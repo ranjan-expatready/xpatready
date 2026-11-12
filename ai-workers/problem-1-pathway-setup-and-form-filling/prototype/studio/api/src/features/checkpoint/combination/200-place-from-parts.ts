@@ -7,7 +7,10 @@ import { placed } from "./_placed.ts";
 
 export default {
   async run(ctx, cc) {
-    const p = placed(cc).p = await placeFromFormParts(ctx.db, ctx.get(Studio), ctx.author, cc.c.id);
+    // BK-16 (P-496): in each combination's own pass its held forms (later sources, samples/wave1.json) are left out, though
+    // their field-map apply already put their line on it; the later pass, after every combination, places them, so the
+    // questions the other combinations' forms ask are placed first and kept.
+    const p = placed(cc).p = await placeFromFormParts(ctx.db, ctx.get(Studio), ctx.author, cc.c.id, cc.pass === "own" ? cc.held : undefined);
     formSetup(ctx).placedFacts.push(...p.placed.map((x) => x.fact));
   },
 } satisfies CombinationStep;

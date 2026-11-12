@@ -47,7 +47,9 @@ export async function sectionsFrom(ctx: CheckpointContext, c: { id: string }, fo
     // (another part prints it too). With no printed heading it takes the name a person gives it (B78); with none of
     // those either it stays waiting on To review and is listed as refused.
     const held = p.kind === "section" ? (p.work as { unnamed?: boolean; heading?: string; printed?: string } | null) : null;
-    const given = held?.unnamed && !held.heading ? nameOfHeld(heldNames, p.formEdition, (p.payload as { fieldKeys?: string[] }).fieldKeys?.[0]) : null;
+    // BK-16 (P-496): an entry of samples/section-names.json also names a section the form prints a heading over (a person
+    // renames it there), so a later source's part never joins, by its printed name, a section other combinations chose.
+    const given = p.kind === "section" ? nameOfHeld(heldNames, p.formEdition, (p.payload as { fieldKeys?: string[] }).fieldKeys?.[0]) : null;
     if (held?.unnamed && !held.heading && !given) { s.held.push((p.payload as { label?: string }).label ?? "section"); continue; }
     try {
       const landed = (await decide(db, audit, author, workspaceId, [p.id], given
