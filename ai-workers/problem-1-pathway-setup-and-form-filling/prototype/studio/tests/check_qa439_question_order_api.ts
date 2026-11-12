@@ -108,5 +108,14 @@ for (const [key, name] of [["vv.single", "Visitor visa"], ["sp.outside", "Study 
     }
   }
 }
+// Lead 26's done-when 1 (#1643): the order never depends on the people's ids. The same family built twice (fresh, random
+// ids each time) walks in exactly the same order, read by role, section and question.
+for (const [key, name] of [["vv.single", "Visitor visa"], ["sp.outside", "Study permit (outside Canada)"]] as const) {
+  const seq = async () => { const f = await family(key, "QA439-twice"); const role = (id: string) => { const [own, rel] = id.split("/"); return `${f.roleOf.get(own) ?? own}${rel ? `/${rel}` : ""}`; }; return { ids: [...f.roleOf.keys()], order: walk(await view(f.id)).map((q) => `${role(q.subject)}|${q.section}|${q.fact}`) }; };
+  const one = await seq(), two = await seq();
+  ok(`QA-439 pass (${name}): the same family built twice, with other ids, is asked in exactly the same order`,
+    one.order.length > 0 && JSON.stringify(one.order) === JSON.stringify(two.order) && !one.ids.some((x) => two.ids.includes(x)), { first_difference: one.order.findIndex((k, i) => two.order[i] !== k), n: [one.order.length, two.order.length] });
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
