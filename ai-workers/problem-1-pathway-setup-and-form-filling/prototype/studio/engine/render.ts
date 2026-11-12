@@ -51,7 +51,10 @@ export type BoxRow = { box: string; caption: string; fact: string | null; meanin
   nothing_recorded?: true;
   /** Review M1 on #1620 (QA-415): a worked-out fact the case cannot work out for this person yet: why, in words. The form
    *  field is written by hand with it (engine/form-values.ts), never blank in silence (engine/not-worked-out.ts). */
-  by_hand?: string };
+  by_hand?: string;
+  /** QA-395 (set on a case copy only, engine/runtime/forms.ts markNothingRecorded, samples/recorded-counts.json): a "recorded"
+   *  Yes/No whose form counts only some entries: true or false as the entries count, null when a person must decide. */
+  counted?: boolean | null };
 
 /** S5: a line with a minimum age applies to a person once they have reached it on `today`; until their date of birth
  *  is known it cannot be told (and the date of birth is asked, as a deciding question). QA-221 (ruling C): on a line for
