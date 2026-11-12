@@ -45,7 +45,8 @@ export async function visitorFamily(): Promise<Family> {
 
 /** A person's copy of a form, generated and read back from its file: every non-empty value by data path, and the copy's
  *  own counts and by-hand lines. Null when the person has no such form. */
-export async function readCopy(f: Family, form: string, name: string): Promise<{ values: Record<string, string>; counts: { by_hand: number } | null; byHand: { fact?: string; why?: string }[] } | null {
+export type ReadCopy = { values: Record<string, string>; counts: { by_hand: number } | null; byHand: { fact?: string; label?: string; why?: string }[] };
+export async function readCopy(f: Family, form: string, name: string): Promise<ReadCopy | null> {
   const subject = f.c.subjects[name];
   if (!f.forms.some((x) => x.form === form && x.subject_id === subject && x.applies)) return null;
   const id = await generateCopy(f.c.id, form, subject);

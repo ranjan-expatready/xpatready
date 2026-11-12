@@ -11,7 +11,8 @@ import { call, main, ok } from "./lib/m3.ts";
 import { at, readCopy, studyFamily, ticked, visitorFamily } from "./lib/application-type.ts";
 
 const APPLICATION = "SectionA[0].application[0]";
-const kindLines = (c: { byHand: { fact?: string }[] } | null) => (c?.byHand ?? []).filter((b) => /application_type/.test(b.fact ?? "")).length;
+// A by-hand line names its question (`label`), the fact when it has one: the kind of application's, by either.
+const kindLines = (c: { byHand: { fact?: string; label?: string }[] } | null) => (c?.byHand ?? []).filter((b) => /application_type/.test(b.fact ?? "") || /application type|type of application|kind of application/i.test(b.label ?? "")).length;
 
 await main("C7.1 application type", "Each person's type of application, from their own filing (QA-415)", async () => {
   const sp = await studyFamily();
