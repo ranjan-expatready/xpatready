@@ -34,8 +34,9 @@ const steps = () => sql(`select a.file_name || '§' || j.status || '§' || regex
 /** The sample's forms with a saved field-map answer, in file order (six before R-146's saved maps, ten after #502, thirteen
  *  after R-146's second batch, fourteen after QA-163 drafts the listed but unmapped IMM 5257, fifteen after IMM 5532's
  *  re-run on the inventory row PD fixed, sixteen with IMM 5645 by its four saved parts, eighteen with IMM 0008 DEP and
- *  IMM 5669 since the C11.7 paid runs, 3 Nov). */
-const SAVED = ["imm0008depe.pdf", "imm0008e.pdf", "imm1294e.pdf", "imm1344e.pdf", "imm5257_1e.pdf", "imm5257e.pdf", "imm5406e.pdf", "imm5409e.pdf", "imm5475e.pdf", "imm5476e.pdf", "imm5532e.pdf", "imm5562e.pdf", "imm5604e.pdf", "imm5645e.pdf", "imm5646e.pdf", "imm5669e.pdf", "imm5707e.pdf", "imm5710e.pdf"];
+ *  IMM 5669 since the C11.7 paid runs, 3 Nov; nineteen with IMM 1295, the spouse's form on the Study permit, BK-16 PR 2,
+ *  P-490). */
+const SAVED = ["imm0008depe.pdf", "imm0008e.pdf", "imm1294e.pdf", "imm1295e.pdf", "imm1344e.pdf", "imm5257_1e.pdf", "imm5257e.pdf", "imm5406e.pdf", "imm5409e.pdf", "imm5475e.pdf", "imm5476e.pdf", "imm5532e.pdf", "imm5562e.pdf", "imm5604e.pdf", "imm5645e.pdf", "imm5646e.pdf", "imm5669e.pdf", "imm5707e.pdf", "imm5710e.pdf"];
 const ledger = () => { const f = join(LEDGER_DIR, "spend.jsonl"); return existsSync(f) ? readFileSync(f, "utf8").length : 0; };
 
 (async () => {
@@ -46,19 +47,19 @@ const ledger = () => { const f = join(LEDGER_DIR, "spend.jsonl"); return existsS
     const a = await load();
     if (a.status >= 300) { console.error("STOP  the six did not load", a.body); process.exit(2); }
     const s1 = steps();
-    ok("C11.7 pass (queue transaction room): every saved field-map answer of the sample replays (the eighteen forms), the slowed IMM 5707 one included", s1.map((s) => s.file).join() === SAVED.join() && s1.every((s) => s.status === "COMPLETED") && a.body.drafts.replayed === SAVED.length, s1.map((s) => `${s.file} ${s.status}`));
+    ok("C11.7 pass (queue transaction room): every saved field-map answer of the sample replays (the nineteen forms), the slowed IMM 5707 one included", s1.map((s) => s.file).join() === SAVED.join() && s1.every((s) => s.status === "COMPLETED") && a.body.drafts.replayed === SAVED.length, s1.map((s) => `${s.file} ${s.status}`));
     ok("C11.7 pass: each replay puts exactly the fields it reports on the review queue (IMM 5257 Schedule 1: 29, IMM 5707: 9)", s1.every((s) => s.items === s.said && s.items > 0) && s1.find((s) => s.file === "imm5257_1e.pdf")?.items === 29 && s1.find((s) => s.file === "imm5707e.pdf")?.items === 9, s1.map((s) => `${s.file} ${s.items}/${s.said}`));
     ok("C11.7 pass: the queue holds every replayed proposal", n(`select count(*) from proposal_item where status = 'waiting' and origin = 'ai'`) === s1.reduce((t, s) => t + s.items, 0) && a.body.drafts.proposals_waiting === s1.reduce((t, s) => t + s.items, 0), a.body.drafts);
     ok("C11.7 pass: the load reports where its time goes, step by step", typeof a.body.timings === "object" && Object.keys(a.body.timings).length >= 5, a.body.timings);
 
-    // Fail: past the 60 s room the step fails alone, with nothing of it on the queue; the other seventeen keep theirs.
+    // Fail: past the 60 s room the step fails alone, with nothing of it on the queue; the other eighteen keep theirs.
     server("start", ["STUDIO_SLOW_TX=imm5707e.pdf:61000"]);
     const b = await load();
     const s2 = steps();
     const slow = s2.find((s) => s.file === "imm5707e.pdf"), rest = s2.filter((s) => s.file !== "imm5707e.pdf");
     ok("C11.7 fail: a step that runs past the transaction room fails and leaves nothing half-written on the queue", b.status < 300 && slow?.status === "FAILED" && slow.items === 0 && n(`select count(*) from proposal_item p join drafting_job j on j.id = p.run_id join source_attachment a on a.id = j.attachment_id where a.file_name = 'imm5707e.pdf'`) === 0, slow);
     ok("C11.7 fail: the failed step says why in plain words (no Prisma text, no file path)", /took longer than 60 s, so none was added/.test(slow?.message ?? "") && !/Invalid|prisma|\/Users\//i.test(slow?.message ?? ""), slow?.message);
-    ok("C11.7 fail: its seventeen siblings still complete with their proposals (a failed step never discards the others)", rest.map((s) => s.file).join() === SAVED.filter((f) => f !== "imm5707e.pdf").join() && rest.every((s) => s.status === "COMPLETED" && s.items === s.said && s.items > 0), rest.map((s) => `${s.file} ${s.status} ${s.items}`));
+    ok("C11.7 fail: its eighteen siblings still complete with their proposals (a failed step never discards the others)", rest.map((s) => s.file).join() === SAVED.filter((f) => f !== "imm5707e.pdf").join() && rest.every((s) => s.status === "COMPLETED" && s.items === s.said && s.items > 0), rest.map((s) => `${s.file} ${s.status} ${s.items}`));
     ok("R-143: no live AI call, the spend ledger unchanged", ledger() === before && n(`select count(*) from drafting_job where mode = 'LIVE'`) === 0);
   } finally { server("stop"); }
   console.log(`\n${pass} passed, ${fail} failed`);

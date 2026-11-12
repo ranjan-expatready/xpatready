@@ -24,9 +24,14 @@ export { keepChosenEveryones };
 /** Read once at start-up, so a bad pass file stops it with its name. */
 const PASSES = await featureSteps<PlacementPass>(join(FEATURES_DIR, "placement"));
 
-export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, combinationId: string): Promise<PlacedFromParts> {
+/** `leaveOut` (BK-16, P-496; the configured checkpoint's loader only, never the screen's step): forms whose boxes and line
+ *  this run reads as if not yet on the combination, so a form the loader places in a later pass (a source marked "later"
+ *  in samples/wave1.json) does not put its questions in the shared library before every combination's own forms. */
+export async function placeFromFormParts(db: Db, studio: Studio, author: Actor, combinationId: string, leaveOut: ReadonlySet<string> = new Set()): Promise<PlacedFromParts> {
   const c = await db.combination.findUniqueOrThrow({ where: { id: combinationId }, select: { workspaceId: true } });
-  const { snapshot } = await buildSnapshot(db, c.workspaceId, combinationId, "draft");
+  const built = (await buildSnapshot(db, c.workspaceId, combinationId, "draft")).snapshot;
+  const kept = (x: { form_number?: string }) => !leaveOut.has(x.form_number ?? "");
+  const snapshot = leaveOut.size ? { ...built, forms: built.forms.filter(kept), field_maps: built.field_maps.filter(kept) } : built;
   const out: PlacedFromParts = { placed: [], noSection: [], refused: [], selected: [], unselected: [] };
   for (const pass of PASSES) await pass.run({ db, studio, author, combinationId, workspaceId: c.workspaceId, snapshot, out });
   // A section is chosen on the combination (so the author can order it: C4.1 Move up / Move down) only when choosing it
