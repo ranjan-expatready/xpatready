@@ -79,7 +79,7 @@ const COLLECTED = ["client_questionnaire", "verified_document", "staff_working_v
 export const WHO = ["each_applicant", "principal_applicant", "spouse_or_partner", "couple_once", "each_dependent_child", "each_person", "case", "representative", "sponsor"];
 /** QA-221 (ruling C): a form line may also name "the principal applicant, a spouse or partner, and each dependent child
  *  18 or older" (contracts/resolver.ts); documents and rules keep WHO. */
-export const FORM_WHO = [...WHO, "principal_partner_adult_children"];
+export const FORM_WHO = [...WHO, "principal_partner_adult_children", "principal_and_children_when"]; // BK-16 (P-490): contracts/resolver.ts
 
 /** Business level names over the team's stored node kinds (see createNode). */
 export const LEVEL: Record<string, { name: string; parent: string | null }> = { PATHWAY: { name: "Pathway", parent: null }, PROGRAM: { name: "Program", parent: "PATHWAY" }, STREAM: { name: "Category", parent: "PROGRAM" }, CATEGORY: { name: "Sub-category", parent: "STREAM" } };

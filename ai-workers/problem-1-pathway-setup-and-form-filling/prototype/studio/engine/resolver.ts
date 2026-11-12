@@ -3,7 +3,7 @@
 // factsOf, kkey), engine/sources.ts (spouseOf, roleOf), engine/people.ts (the roles a "who" names) and
 // api/src/form-lines.ts (the merge chain). Pure: no database or vendor call, no country value (P-249 lift-ready); the
 // one store read (R9) comes in as a function. Contract tests: tests/check_sh3_resolver.ts.
-import { FILING, MERGE_HOPS, ROLE, type DocumentAbout, WHO_ROLES, factKey, type Known, type ParticipantLine, type PersonOnFiling, type Resolver, type Role, type Scope, type Subject, type Who } from "../contracts/resolver.ts";
+import { FILING, MERGE_HOPS, PRINCIPAL_CHILDREN_WHEN, ROLE, type DocumentAbout, WHO_ROLES, factKey, type Known, type ParticipantLine, type PersonOnFiling, type Resolver, type Role, type Scope, type Subject, type Who } from "../contracts/resolver.ts";
 
 export type { Known, PersonOnFiling as Person, Role } from "../contracts/resolver.ts";
 /** R8 (kept under its old name for its many callers). */
@@ -39,6 +39,9 @@ export function subjectsFor(people: PersonOnFiling[], who: string, subjectKind?:
   switch (who) {
     case "each_applicant": case "each_adult_18_plus": case "principal_partner_adult_children": return applicants;
     case "principal_applicant": return principal;
+    // BK-16 (P-490): the principal and each child who applies; whether a child's form applies is the line's condition
+    // (engine/render.ts), never this list.
+    case PRINCIPAL_CHILDREN_WHEN: return [...principal, ...find(people, ROLE.child).filter((p) => p.applies).map((p) => p.id)];
     case "spouse_or_partner": case "couple_once": return partner;
     case "each_dependent_child": return children;
     case "each_person": return people.filter((p) => p.role !== ROLE.representative && p.role !== ROLE.sponsor).map((p) => p.id);

@@ -15,7 +15,9 @@ import { FoldArrow, FoldOut } from "@/components/fold-out";
 export const WHO: [string, string][] = [["each_applicant", "Each applicant"], ["principal_applicant", "Principal applicant"], ["spouse_or_partner", "Spouse or partner"], ["couple_once", "Once per couple"], ["each_dependent_child", "Each child"], ["each_person", "Each person"], ["case", "The application (once)"], ["representative", "The representative"], ["sponsor", "The sponsor"]];
 /** QA-221 (ruling C): a form line may also name the principal applicant, a spouse or partner, and each child 18 or older
  *  (IMM 5257 SCH1's own words); documents and rules keep WHO. */
-export const FORM_WHO: [string, string][] = [...WHO, ["principal_partner_adult_children", "Principal, spouse or partner, and each child 18 or older"]];
+/** BK-16 (P-490): or the principal applicant always and each child while the line's condition holds for them (a study
+ *  permit application: the student and each child who studies). */
+export const FORM_WHO: [string, string][] = [...WHO, ["principal_partner_adult_children", "Principal, spouse or partner, and each child 18 or older"], ["principal_and_children_when", "Principal, and each child while its condition holds"]];
 export const whoLabel = (w: string) => FORM_WHO.find(([v]) => v === w)?.[1] ?? w;
 /** Revision tokens of the draft rows the editors open (sent back so a concurrent change is refused, not overwritten). */
 export const RevCtx = React.createContext<Record<string, string>>({});
