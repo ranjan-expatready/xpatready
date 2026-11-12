@@ -395,8 +395,9 @@ fi
 # A shard can rightly get nothing: few units chosen (fewer than n), or units that weigh 0 in the deal (quarantined, or
 # 0 s in suite-times.tsv) all going to the first least-loaded shard. That shard says so and passes. MINE is " <deal> ",
 # so an empty deal is blanks only, never exactly " " (#1660, 12 Nov: shard 6/6 of 18 units, dealt none, failed here).
+# A deal of no unit at all (TURN 0: no chosen suite exists here) stays a FAIL on every shard (review m1).
 if [ -n "$PICK" ] && [ "${#rows[@]}" -eq 0 ]; then
-  if [ "$SHARDS" -gt 1 ] && [ -z "${MINE// /}" ]; then rows=("| (none) | PASS | | $TURN chosen units, none dealt to shard $SHARD/$SHARDS |")
+  if [ "$SHARDS" -gt 1 ] && [ "$TURN" -gt 0 ] && [ -z "${MINE// /}" ]; then rows=("| (none) | PASS | | $TURN chosen units, none dealt to shard $SHARD/$SHARDS |")
   else rows=("| (none) | FAIL | | suites were chosen but none ran |"); fail=1; fi
 fi
 # Each failing suite's FAIL lines and the end of its log, on stderr: the job log shows why it failed even when the

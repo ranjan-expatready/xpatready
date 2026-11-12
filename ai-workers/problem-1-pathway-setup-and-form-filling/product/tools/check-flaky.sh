@@ -231,26 +231,35 @@ ok "B122: two parts with the same automatic quarantine run every other suite exa
 # without shards still fails; a unit dealt to a shard that leaves no row fails. The choice comes from --changed over a
 # synthetic one-file commit (a root note): the selector then picks its smoke set, as in a PR check. Of it, this folder
 # holds check_dv_backbone_browser.cjs (9 s in suite-times.tsv) and check_screen01_api.ts (quarantined: weight 0), so
-# with 3 shards the deal is dv_backbone → 1, screen01_api → 2 (the first least-loaded), nothing → 3.
+# with 3 shards the deal is dv_backbone → 1, screen01_api → 2 (the first least-loaded), nothing → 3. Review m1: a
+# sharded choice that deals no unit at all (TURN 0: nothing chosen exists) is still a FAIL on every shard.
 SB=$(git rev-parse HEAD); SBLOB=$(printf 'check-flaky fixture\n' | git hash-object -w --stdin)
 GIT_INDEX_FILE="$W/idx" git read-tree "$SB" && GIT_INDEX_FILE="$W/idx" git update-index --add --cacheinfo "100644,$SBLOB,zz-check-flaky-fixture.md"
 SH=$(GIT_AUTHOR_NAME=fixture GIT_AUTHOR_EMAIL=fixture@example.com GIT_COMMITTER_NAME=fixture GIT_COMMITTER_EMAIL=fixture@example.com \
-  git commit-tree "$(GIT_INDEX_FILE="$W/idx" git write-tree)" -p "$SB" -m "check-flaky fixture: one root note")
+  git -c commit.gpgsign=false commit-tree "$(GIT_INDEX_FILE="$W/idx" git write-tree)" -p "$SB" -m "check-flaky fixture: one root note")
+# Review m2, m3: the synthetic commit exists, and the deal's three givens hold (each run clears CI's live automatic
+# quarantine, review M1: it could list dv_backbone and empty the deal). A change to any given fails loudly here.
+[ -n "$SH" ] || ok "#1660 set-up: the synthetic commit was made" 0 "git commit-tree gave nothing"
+dvt=$(awk -F'\t' '$1 == "check_dv_backbone_browser.cjs" { print $2 }' "$T/suite-times.tsv")
+ok "#1660 set-up: dv_backbone has a time above 0 s, screen01_api is on the static QUARANTINE list, both in the smoke set" "$([ "${dvt:-0}" -gt 0 ] && grep -qE '^QUARANTINE=".*check_screen01_api\.ts' "$T/run-suites.sh" && printf 'zz.md\n' | node "$T/select-suites.mjs" | grep -q '^check_dv_backbone_browser.cjs.smoke' && printf 'zz.md\n' | node "$T/select-suites.mjs" | grep -q '^check_screen01_api.ts.smoke' && echo 1)" "dv_backbone ${dvt:-none} s; the quarantine list or the smoke set changed: rework 7d's fixture"
 srow() { grep -E '^\| [^|]+ \| (PASS|FAIL|quarantined|skipped|remembered|passed on retry|failed twice) \|' "$1" | tr '\n' ' '; }   # result rows only
 fx sz check_dv_backbone_browser.cjs check_screen01_api.ts check_fx_ok.cjs
-sz1=$(rs sz --changed "$SB..$SH" --shard 1/3); cp "$W/sz.out" "$W/sz1.out"
-sz2=$(rs sz --changed "$SB..$SH" --shard 2/3); cp "$W/sz.out" "$W/sz2.out"
-sz3=$(rs sz --changed "$SB..$SH" --shard 3/3); cp "$W/sz.out" "$W/sz3.out"
+sz1=$(SUITES_QUARANTINE_AUTO= rs sz --changed "$SB..$SH" --shard 1/3); cp "$W/sz.out" "$W/sz1.out"
+sz2=$(SUITES_QUARANTINE_AUTO= rs sz --changed "$SB..$SH" --shard 2/3); cp "$W/sz.out" "$W/sz2.out"
+sz3=$(SUITES_QUARANTINE_AUTO= rs sz --changed "$SB..$SH" --shard 3/3); cp "$W/sz.out" "$W/sz3.out"
 ok "#1660: the deal's shard 1/3 runs the timed suite" "$(grep -qE '^\| check_dv_backbone_browser\.cjs \| PASS \|' "$W/sz1.out" && [ "$sz1" = 0 ] && echo 1)" "exit $sz1; $(srow "$W/sz1.out")"
 ok "#1660: shard 2/3, dealt only a quarantined unit, gives its quarantined row and passes" "$(grep -qE '^\| check_screen01_api\.ts \| quarantined \|' "$W/sz2.out" && ! grep -q '(none)' "$W/sz2.out" && [ "$sz2" = 0 ] && echo 1)" "exit $sz2; $(srow "$W/sz2.out")"
 ok "#1660 fail-before: shard 3/3, dealt no unit, says so and passes (main failed it: \"suites were chosen but none ran\")" "$(grep -qF '| (none) | PASS | | 2 chosen units, none dealt to shard 3/3 |' "$W/sz3.out" && [ "$sz3" = 0 ] && echo 1)" "exit $sz3; $(srow "$W/sz3.out")"
 fx sznone check_fx_ok.cjs
-c=$(rs sznone --changed "$SB..$SH")
+c=$(SUITES_QUARANTINE_AUTO= rs sznone --changed "$SB..$SH")
 ok "#1660: without shards, a choice that runs nothing still fails (a real fault)" "$(grep -qF '| (none) | FAIL | | suites were chosen but none ran |' "$W/sznone.out" && [ "$c" = 1 ] && echo 1)" "exit $c; $(srow "$W/sznone.out")"
 NOROW="$W/run-suites.norow.sh"
 sed 's/{ rows+=("| \$f | quarantined | | \$(qwhy "\$f") |"); continue; }/continue/' "$T/run-suites.sh" > "$NOROW"
+fx szt0 check_fx_ok.cjs
+c=$(SUITES_QUARANTINE_AUTO= rs szt0 --changed "$SB..$SH" --shard 2/3)
+ok "#1660 (review m1): sharded, with no chosen unit at all (0 units), a shard still fails: chosen but none ran" "$(grep -qF '| (none) | FAIL | | suites were chosen but none ran |' "$W/szt0.out" && [ "$c" = 1 ] && echo 1)" "exit $c; $(srow "$W/szt0.out")"
 ok "#1660: the no-row runner copy for the next check really drops the quarantined row" "$(! grep -q '| quarantined |' "$NOROW" && grep -q 'left no row' "$NOROW" && echo 1)" "sed changed nothing"
-c=$(CI= COPY_PREFIX= SUITES_LOCKS="$W/locks" SUITES_TESTS_DIR="$W/sz/tests" SUITES_OUT="$W/sz/out" FX_STATE="$W/sz/state" bash "$NOROW" --changed "$SB..$SH" --shard 2/3 > "$W/szn.out" 2>&1; echo $?)
+c=$(SUITES_QUARANTINE_AUTO= CI= COPY_PREFIX= SUITES_LOCKS="$W/locks" SUITES_TESTS_DIR="$W/sz/tests" SUITES_OUT="$W/sz/out" FX_STATE="$W/sz/state" bash "$NOROW" --changed "$SB..$SH" --shard 2/3 > "$W/szn.out" 2>&1; echo $?)
 ok "#1660: a unit dealt to a shard that leaves no row fails, by name" "$(grep -qF '| check_screen01_api.ts | FAIL | | dealt to shard 2/3 but left no row (ran, quarantined or skipped) |' "$W/szn.out" && [ "$c" = 1 ] && echo 1)" "exit $c; $(srow "$W/szn.out")"
 
 # 7c. The b78 hang (6 Nov): the runner gives every suite /dev/null as stdin and timeout -k, and writes a hung suite's
