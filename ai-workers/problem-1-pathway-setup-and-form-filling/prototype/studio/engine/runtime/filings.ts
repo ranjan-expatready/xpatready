@@ -40,7 +40,7 @@ type TableLine = { key: string; label: string; status: string; basis: FeeBasis; 
 /** `fees_by_role` (BK-15, P-486): per role, the filing that role's person makes (its name, e.g. the document they apply
  *  for) and the fee lines that charge them; with it, each person pays only their role's lines (or the lines a filing
  *  their line adds names), never every line reaching their role. */
-type TableCombination = { label: string; lines: string[]; checklist?: boolean; modes?: Record<string, LineMode>; group_why?: string; co_filed_why?: string; basis_note?: string;
+type TableCombination = { label: string; lines: string[]; modes?: Record<string, LineMode>; group_why?: string; co_filed_why?: string; basis_note?: string;
   each_files_own?: { says: string; source: FeeSource } | null; fees_by_role?: Record<string, { filing?: string; lines: string[] }> };
 export type FeeTable = { as_of: string; read: string; status: string; lines: TableLine[]; combinations: Record<string, TableCombination> };
 export const FEE_TABLE = FEES as unknown as FeeTable;

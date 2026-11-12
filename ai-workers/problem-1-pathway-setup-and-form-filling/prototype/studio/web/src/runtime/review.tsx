@@ -53,8 +53,9 @@ export function ReviewPage() {
   const people = view.data?.case.people ?? [];
   const persons = people.filter((p) => p.role !== "case");
   const person = persons.find((p) => p.subject_id === subject) ?? persons[0];
-  // The person's PDF forms on the case, IMM 5257 first (the one with a live review today, SI-6).
-  const mine = (forms.data?.forms ?? []).filter((f) => f.subject_id === person?.subject_id).map((f) => f.form).sort((a, b) => Number(b === "IMM 5257") - Number(a === "IMM 5257") || a.localeCompare(b));
+  // The person's PDF forms on the case, in the order the case's forms list gives them (GET …/forms); BK-14: any of them can
+  // be reviewed, so none is put first by its number.
+  const mine = [...new Set((forms.data?.forms ?? []).filter((f) => f.subject_id === person?.subject_id).map((f) => f.form))];
   const form = formPick && mine.includes(formPick) ? formPick : mine[0] ?? null;
   const plan = usePlan(id!, person?.subject_id ?? null, form);
   if (!isOfficer(actor)) return <Notice title="This page is for the case officer">The review of a case's forms is the firm's staff's work; a client never sees it.</Notice>;
@@ -141,7 +142,7 @@ function RunCard({ caseId, persons, person, forms, formsLoaded, formsError, form
     <section aria-labelledby="run-h" className="rounded-xl border border-border bg-surface-raised" data-run-card>
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3">
         <h2 id="run-h" className="text-base font-semibold">AI review of a filled form</h2>
-        <StandIn id="SI-6" today="the AI review runs live on the Visitor visa forms only (one trial) and is replayed from its saved run at US$0; severities are Sample until the immigration expert confirms them." later="other form families one at a time, each with its own prompt and tests (team AG-11 AI Doers)." />
+        <StandIn id="SI-6" today="the AI review reads any form the case's release names with its official text; Saved replays a review recorded for that form edition and these values at US$0; severities are Sample until the immigration expert confirms them." later="severities confirmed by the immigration expert (team AG-11 AI Doers)." />
         <p className="min-w-0 flex-1 text-[13px] text-text-muted">Two AI rounds read what the form prints; the rules keep only findings that quote it.</p>
       </header>
       <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">

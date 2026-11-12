@@ -235,7 +235,6 @@
     "visitor_visa",
     "biometrics"
    ],
-   "checklist": true,
    "modes": {
     "principal": "files_own",
     "spouse_or_partner": "files_own",
@@ -263,7 +262,6 @@
     "visitor_visa",
     "biometrics"
    ],
-   "checklist": true,
    "modes": {
     "principal": "files_own",
     "spouse_or_partner": "files_own",
@@ -305,13 +303,12 @@
     }
    },
    "basis_note": "Each family member files their own application and pays for the document they apply for: the student a study permit; a child who will study 6 months or more a study permit (Sample); any other child a visitor visa; a spouse or partner a work permit with the open work permit holder fee. Sample until the immigration expert confirms: which spouses qualify for an open work permit (program level and length), a child from a visa-exempt country (who needs an eTA, not a visitor visa), and whether a family member going to Québec needs their own CAQ (not priced here).",
-   "note": "BK-15 (R-e, P-486, BK-13 dry run gap C5): fees per family member as data. Each role's filing and fee lines are fees_by_role; a child who studies files the study permit their line adds instead of the visitor visa (samples/conditional-filings.json names its fee lines). Amounts are the fee table's own lines (IRCC fee list, cited on each line). C6.17 (P-444, QA-375): the per-person checklist's document lines are the release's, each cited from IMM 5483 (08-2025) (samples/form-setup.json sp.outside documentsCited)."
+   "note": "BK-15 (R-e, P-486, BK-13 dry run gap C5): fees per family member as data. Each role's filing and fee lines are fees_by_role; a child who studies files the study permit their line adds instead of the visitor visa (samples/conditional-filings.json names its fee lines). Amounts are the fee table's own lines (IRCC fee list, cited on each line). C6.17 (P-444, QA-375): its per-person checklist is its release's document lines (worked out for every combination since M3-S4, P-425), each cited from IMM 5483 (08-2025) (samples/form-setup.json sp.outside documentsCited)."
   },
   "wp.lmia_inside": {
    "label": "Work permit with an LMIA (inside Canada)",
    "lines": [],
-   "checklist": true,
-   "note": "C6.17 (P-444, QA-375): the per-person checklist only. Its document lines are the release's: those IMM 5556 (03-2024) lists are cited from it with page, quote and date; the others are labelled Sample (samples/form-setup.json wp.lmia_inside documentSources). No fee lines: its fees are not worked out from this table yet, so nothing about money changes."
+   "note": "C6.17 (P-444, QA-375): its per-person checklist is its release's document lines (worked out for every combination since M3-S4, P-425): those IMM 5556 (03-2024) lists are cited from it with page, quote and date; the others are labelled Sample (samples/form-setup.json wp.lmia_inside documentSources). No fee lines: its fees are not worked out from this table yet, so nothing about money changes."
   },
   "fs.spouse": {
    "label": "Spouse or common-law partner sponsorship",

@@ -2,8 +2,8 @@
 // view. Its filings, submission groups and items are derived from the pinned release and the case on every read and
 // stored (tables filing, filing_applicant, submission_group, filing_item) so their ids stay when people change, a split
 // stays split and a form keeps the channel the case officer chose. Fees are worked out per group on each read
-// (engine/runtime/filings.ts). The case officer reads and changes it; a client and configuration people do not. Visitor
-// visa only in this slice; other combinations answer "not derived yet". No model call (US$0). Readiness is C7.6's
+// (engine/runtime/filings.ts). The case officer reads and changes it; a client and configuration people do not. A
+// combination whose filings cannot be worked out (filings.ts) says why. No model call (US$0). Readiness is C7.6's
 // (engine/runtime/readiness.ts, M3-A3; L-SA3, P-315): this view gathers its inputs (api/src/readiness-inputs.ts) and
 // shows the result per filing; the rules are never decided here.
 // One implementation (#356 on #325's tables, migration 20261102030000): #325's guards are kept (the release must match
@@ -38,11 +38,12 @@ import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
 import { currentValues, factWords } from "../../engine/runtime/submission-record.ts";
+import { formValues, recordedYesNo } from "../../engine/form-values.ts";
 import { CaseForms, copyNotForFiling, formPassed, formReadinessOf, inventoryOf, plainWhy } from "./fill-case.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import { minorFromAnswers, signedState, signersOf } from "../../engine/runtime/signing.ts";
 import { signStepsOf } from "./sign-steps.ts";
-import { copyStateOf, readinessOfCase, waitingFactsKey, type PreparedForm } from "./readiness-inputs.ts";
+import { copyStateOf, readinessOfCase, waitingFactsKey, type PreparedForm, type ReadinessInputs } from "./readiness-inputs.ts";
 import { lowestOf } from "../../engine/runtime/readiness-figure.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
 import { draftNote, releaseOutOfDate, reviewCounts, touchedFilings } from "../../engine/runtime/release-update.ts";
@@ -405,9 +406,10 @@ export class CasePrepare {
           // C9.2: each stale section's answers as entered, against what it shows now (warns only, FQ-6, P-168).
           const ticks = enteredBy.get(i.id) ?? [];
           const changes = stale.flatMap((x) => {
-            const e = ticks.find((t) => t.sectionKey === x.key), then = ((e?.snapshot.factsJson ?? {}) as { answers?: { fact: string; subject: string; row: number | null; value: unknown; label?: string; nothing_recorded?: true }[] }).answers ?? [];
-            // QA-392: a "nothing recorded" No is named by the form's question it answers, never the list's column.
-            const own = (a: { label?: string; nothing_recorded?: true }) => (a.nothing_recorded && a.label ? `“${a.label}”` : undefined);
+            const e = ticks.find((t) => t.sectionKey === x.key), then = ((e?.snapshot.factsJson ?? {}) as { answers?: { fact: string; subject: string; row: number | null; value: unknown; label?: string; recorded?: true; nothing_recorded?: true }[] }).answers ?? [];
+            // QA-392, QA-392b: a "recorded" Yes/No is named by the form's question it answers, never the list's column (a
+            // tick saved before QA-392b marks it `nothing_recorded`).
+            const own = (a: { label?: string; recorded?: true; nothing_recorded?: true }) => ((a.recorded || a.nothing_recorded) && a.label ? `“${a.label}”` : undefined);
             return factChanges(then.map((a) => ({ fact: a.fact, about: a.subject, row: a.row, value: a.value, label: own(a) })), x.answers.map((a) => ({ fact: a.fact, about: a.subject, row: a.row, value: a.value, label: own(a) })), words);
           });
           const first = ticks.filter((t) => stale.some((x) => x.key === t.sectionKey)).map((t) => t.enteredAt).sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
@@ -515,7 +517,7 @@ export class CasePrepare {
     const maps = ((s as { field_maps?: { form_number: string; form_edition: string; channel?: string }[] }).field_maps ?? []);
     const pdfOf = (form: string) => pdfMapInUse(maps, form)?.form_edition ?? null;
     const editionOf = (form: string, channel: string) => (channel === "ONLINE" ? maps.find((m) => m.form_number === form && m.channel === "ONLINE")?.form_edition : null) ?? pdfOf(form);
-    const docLine = (subject: string, type: string) => (docs.get(subject) as { document_type: string; required: boolean }[] | undefined)?.find((x) => x.document_type === type);
+    const docLine = (subject: string, type: string) => (docs.get(subject) as { document_type: string; required: boolean; never_waivable: boolean; never_if?: string[] }[] | undefined)?.find((x) => x.document_type === type);
     // Break B3: "cannot start" ones too. Review m7: built field by field, so a line missing a field is a type error, not a 500.
     // C9.2 (BR-12, P-136, P-237): an out-of-date validated, signed or uploaded item is a CRITICAL "out of date" line on its
     // filing (an Online section entered before a change warns, enteredStale). A signed scan's own out-of-date record is
@@ -632,10 +634,17 @@ export class CasePrepare {
     // C7.9 (review M1 on #1282): answers read as knownOf reads them: the application's subject as "case", relatives under
     // their own key (state() keys them), removed rows never.
     const reading = { aboutOf: (id: string) => (people.find((p) => p.subjectId === id)?.role === "case" ? "case" : id), liveRows: new Set(rows.map((x) => x.rowKey)) };
+    // M3-S4 break M1: a never waivable line that may be needed (its condition waits for an answer) blocks its person's
+    // filing until the answer decides it, so Ready to file is never reached around it.
+    const waitingNever = list.people.flatMap((p) => p.waiting.filter((l) => l.never_waivable).flatMap((l) => {
+      const filing = filings.find((f) => f.applicants.some((a) => a.subject === p.subject))?.id;
+      const ask = l.missing.filter((m) => !m.answered).map((m) => m.question);
+      return filing ? [{ subject: p.subject, person: p.label, filing, document_type: l.document.key, label: l.label, required: false, never_waivable: true, waiting: ask.length ? ask.join(", ") : "the questions its condition reads" }] : [];
+    }));
     const readiness = await readinessOfCase(this.db, { workspaceId: c.workspaceId, caseId: c.id, filings: filings.map((f) => f.id), forms: formItems, reviewAfterMove, releaseUpdate,
       byHand: (form, subject) => handOf.get(`${form}|${subject}`) ?? [],
       copy: copyOf,
-      documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true })),
+      documents: docItems.map((d) => ({ subject: d.subject, person: d.person, filing: d.filing, item: d.id, document_type: d.document_type, label: d.label, required: docLine(d.subject, d.document_type)?.required ?? true, never_waivable: docLine(d.subject, d.document_type)?.never_waivable ?? false, ...(docLine(d.subject, d.document_type)?.never_if?.length ? { waiting: docLine(d.subject, d.document_type)!.never_if!.join(", ") } : {}) }) as ReadinessInputs["documents"][number]).concat(waitingNever), // M3-S4
       factsOf: (form, subject) => formReady(form, subject),
       // C7.9 (P-242): the must-verify facts this form writes from an unchecked client-given value.
       unverifiedOf: (form, subject) => unverifiedOf(s, answers, formCoverage(s, people, answers, rows, form, subject)?.facts ?? [], reading), owesFact: (fact, subject) => (subject !== REPRESENTATIVE && isClientField(s, fact) ? "client" : "staff"), // B107: the representative's facts are the firm record's
@@ -897,9 +906,15 @@ function sheetOf(item: { itemKey: string; subjectId: string }, s: ReturnType<Run
   };
   // QA-309: a box waits only for what the form's readiness names (`missing`: the item's own rule).
   // QA-392: the boxes as the PDF copy writes them (fill-case.ts generate): the same rule marks the "nothing recorded" ones.
-  return layOut(layout, cov ? markNothingRecorded(cov.boxes, view, s.placements as GatePlacement[]) : [], origin, labels, new Map(entered.map((e) => [e.sectionKey, { at: e.enteredAt.toISOString(), by: e.enteredBy, hash: e.snapshot.inputHash }])), markOf, waitsOf(view, missing, item.subjectId, filing),
+  // QA-392b: each "recorded" Yes/No box's Yes or No is the copy's own value step's (formValues, on the edition the copy
+  // fills, P-32; else the edition the sheet lays out), read back through the box's yes/no code (recordedYesNo).
+  const boxes = cov ? markNothingRecorded(cov.boxes, view, s.placements as GatePlacement[]) : [];
+  const map = pdfMapInUse(s.field_maps as FieldMap[], item.itemKey) ?? fieldMapOf(s, item.itemKey);
+  const inv = map?.inventory_file ? inventoryOf(map.inventory_file) : null;
+  const yesNo = recordedYesNo(formValues(s as unknown as Parameters<typeof formValues>[0], { entries: map?.entries ?? [] }, inv ?? { fields: [] }, boxes).boxes);
+  return layOut(layout, boxes, origin, labels, new Map(entered.map((e) => [e.sectionKey, { at: e.enteredAt.toISOString(), by: e.enteredBy, hash: e.snapshot.inputHash }])), markOf, waitsOf(view, missing, item.subjectId, filing),
     // QA-317 (review M1): a choice is copied in the release's own words, never its key.
-    (fact, v) => (typeof v === "string" ? optionsOf(s, fact)?.find((o) => o.key === v)?.label : undefined));
+    (fact, v) => (typeof v === "string" ? optionsOf(s, fact)?.find((o) => o.key === v)?.label : undefined), yesNo);
 }
 
 /** C7.3: the release's field map for a form (its edition and its form fields in the form's order). */

@@ -1,15 +1,14 @@
 // M3-S3 checks (P-171 (6), P-380, P-425): a document line configured as waivable, on any combination. Each rule has a
 // passing and a failing case: the line carries `waivable` from the release (engine/runtime/case-checklist.ts), a line
-// merged from two requirements is waivable only when both are, a waiver never switches the "not derived yet" guard (the
-// fee table's data mark; review M1), the waiver's request needs a reason (contracts/documents.ts Waive) from the states
+// merged from two requirements is waivable only when both are, a waiver never switches the checklist on or off (review
+// M1; since M3-S4 every combination's checklist is worked out from its release, P-425), the waiver's request needs a reason (contracts/documents.ts Waive) from the states
 // Not applicable takes, and release review names a change of waiver in words (engine/validate.ts diff; break M3).
-// Combination keys: a made-up one ("x.pr_any") and the fee table's first marked non-Visitor one, read from the data, so
-// no pathway is named. No database, no server, no
+// Combination key: a made-up one ("x.pr_any"), so no pathway is named. No database, no server, no
 // model call (US$0). The route itself (POST /runtime/checklist-lines/:id/waive) is api/src/case-checklist.ts waive.
 //   tsx studio/tests/runtime/check_m3s3_waivable.ts
 import { LINE_STATES, NOT_APPLICABLE_FROM, REQUEST_FROM, STATE_WORDS, WAIVE_FROM, Waive } from "../../contracts/documents.ts";
 import type { Known } from "../../engine/render.ts";
-import { caseChecklist, DERIVED_FOR, type CaseChecklist } from "../../engine/runtime/case-checklist.ts";
+import { caseChecklist, type CaseChecklist } from "../../engine/runtime/case-checklist.ts";
 import type { Participant } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { diff } from "../../engine/validate.ts";
@@ -27,18 +26,16 @@ const known: Known = new Map([["A|person.date_of_birth", { value: "1985-01-01", 
 type D = Extract<CaseChecklist, { derived: true }>;
 const line = (r: CaseChecklist, who: string, doc: string) => r.derived ? r.people.find((p) => p.subject === who)?.lines.find((l) => l.document.key === doc) : undefined;
 
-ok("setup: the made-up combination is not marked derived in the fee table", !DERIVED_FOR.has(KEY));
-// A combination the fee table marks derived other than the Visitor visa (a non-Visitor line), read from the data.
-const ON = [...DERIVED_FOR].find((k) => k !== "vv.single") ?? "";
-ok("setup: the fee table marks a non-Visitor combination derived", !!ON, [...DERIVED_FOR]);
+// M3-S4 (P-425): no combination list decides whether a checklist is worked out, so any key is a non-Visitor line.
+const ON = KEY;
 
-// (1) Review M1 / break M1: the waiver never switches the checklist on or off; that stays the fee table's data mark.
+// (1) Review M1 / break M1: the waiver never switches the checklist on or off (M3-S4: it is always worked out).
 {
   const reqs = [req("police:each", "police", "each_applicant", "waivable"), req("passport:each", "passport", "each_applicant")];
-  const off = caseChecklist(snap(reqs), KEY, PEOPLE, known, TODAY);
-  ok("guard fail: a waivable line does not work out the checklist of a combination the fee table does not mark", off.derived === false && /not derived yet/.test(off.why), off.derived);
+  const on = caseChecklist(snap(reqs), KEY, PEOPLE, known, TODAY);
+  ok("guard pass: with a waivable line the checklist is worked out, the same two people", on.derived === true && (on as D).people.length === 2, on.derived);
   const unticked = caseChecklist(snap([req("police:each", "police", "each_applicant"), req("passport:each", "passport", "each_applicant")]), ON, PEOPLE, known, TODAY);
-  ok("guard pass: with no waivable line, a marked combination's checklist is still worked out (unticking never hides it)", unticked.derived === true && (unticked as D).people.length === 2);
+  ok("guard pass: with no waivable line, the checklist is still worked out (unticking never hides it)", unticked.derived === true && (unticked as D).people.length === 2);
 }
 const withWaiver = caseChecklist(snap([req("police:each", "police", "each_applicant", "waivable"), req("passport:each", "passport", "each_applicant")]), ON, PEOPLE, known, TODAY);
 {
