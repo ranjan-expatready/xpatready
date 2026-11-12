@@ -104,3 +104,21 @@ BIC-01 Ask once: Met. · BIC-02 Asked for a reason: Met. · BIC-03 No stale answ
 * **m7 (Should, answering your question): the copy's by-hand line is labelled "A form field"** (api/src/fill-case.ts:287). Its reason names the person and the question they wait for, but not the field. Ready to file already names the box by its caption (case-prepare.ts:621). I would not hold the merge on this. Use the box caption when no question label exists, as Ready to file does, so the copy row reads "Type of application (…)".
 
 **Round 2 verdict: Block** at **7a4e143da6ab50cbf35b5277ec2b28c94ba74de2**. Fix M3, with its fail test. Fix m7 or list it in the PR, and list m2 and m3 as follow-up rows. Everything else from round 1 is closed.
+
+## Round 3 (diff-only, Lead 24, P-293 (3)): `7a4e143da..69622728014b7cfd9b26fb56579c57f58d70fb8a`
+**Scope.** I read 318d67177 (M3) and 696227280 (m7). The only other change is my round-2 notes in this file.
+
+**How I ran it.** On the head as it is (main and #1591 already in), on a fresh copy `rv415r4` on :4455 (stopped now).
+* Pure check: 33/33. B164: 52/52.
+* C7.1: **11/11, twice**. C6.2: 8/8.
+* Checkpoint rows: all done.
+
+**M3 is closed.** The waiting child's forms readiness no longer has a "needs a fix" or "Enter text" line for `person.application_type` (C7.1-AT-12). My round-2 probe saw exactly that line on 7a4e143da, so the step is red without the fix.
+
+**m7 is closed.** The copy's by-hand line is now labelled "Type of application (permanent residence,extension of study permit, etc.)" with the waiting reason (C7.1-AT-11). Ready to file names the same box.
+
+**The tech lead's point.** Confirmed: `grep -rn by_hand` over studio/engine, studio/api/src, studio/contracts and p5 shows the row field `BoxRow.by_hand` set only at `engine/render.ts:176`, always with `value: null`. It is read only at `engine/runtime/forms.ts:64` (the new guard) and `engine/form-values.ts:63`. Every other hit is the field-map outcome or decision word `by_hand` (form-field-gates.ts:94, screen02.ts, own-question.ts, the checkpoint steps) or the counts and line lists `counts.by_hand` / `FormCopy.by_hand` (fill-case.ts:296/390, fill.ts:95, contracts/runtime.ts). So no row carrying `by_hand` also carries a value the guard should still check.
+
+**Nit (no hold).** Ready to file still begins with "A form field" before the caption (case-prepare.ts:621: "\"A form field\" (the form's box \"Type of application …\")"). It is clear enough; the same caption fallback could follow later.
+
+**Verdict: Approve** at **69622728014b7cfd9b26fb56579c57f58d70fb8a**. No Blocker or Major is open. These stay as follow-up rows in the PR: m2 (Preview counts the worked-out field as a client question) and m3 (a PUT on a worked-out fact is accepted, but never reaches a form).
