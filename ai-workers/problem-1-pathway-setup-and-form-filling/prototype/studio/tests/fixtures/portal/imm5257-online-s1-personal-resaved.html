@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<!-- Sample · Scaffolding (P-33). Written by the forms lane (F1 slice 1) to look like a saved blank screen of an online
+     visitor visa application. Not a real IRCC screen: labels follow IRCC's public descriptions of IMM 5257 with
+     deliberate differences from the PDF (reworded labels, a date in three form fields, option codes that differ). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="csrf-token" content="Zq88-session-0b3e91">
+  <title>Personal details - Application for a visitor visa - IRCC Portal</title>
+  <link rel="stylesheet" href="./portal_files/portal.css">
+  <script src="./Personal details_files/analytics.js?v=99"></script>
+  <script>window.__session = { id: "7f1c2a", saved: "2026-10-24T16:40:02Z" };</script>
+</head>
+<body>
+  <header>
+    <form role="search" action="/search"><label for="q">Search IRCC</label><input type="search" id="q" name="q"><input type="text" id="site-search" name="site"></form>
+  </header>
+  <main>
+<!-- saved again -->
+    <h1>Personal details</h1>
+    <form id="application" method="post" action="/application/visitor/personal">
+      <input type="hidden" name="_csrf" value="Zq88-session-0b3e91">
+      <input type="hidden" name="applicationId" value="A-000000">
+      <fieldset>
+        <legend>Full name</legend>
+        <label for="familyName">Family name (as shown on your passport or travel document) <span class="req">(required)</span></label>
+        <input type="text" id="familyName" name="familyName" maxlength="100" required>
+        <label for="givenNames">Given name(s) (as shown on your passport or travel document)</label>
+        <input type="text" id="givenNames" name="givenNames" maxlength="100" aria-describedby="givenNamesHelp">
+        <p id="givenNamesHelp">Leave blank if you have no given name on your passport.</p>
+      </fieldset>
+      <label for="uci">UCI</label>
+      <input type="text" id="uci" name="uci" maxlength="10" pattern="[0-9]{8,10}" aria-describedby="uciHelp">
+      <p id="uciHelp">Your unique client identifier, if you have one. It is on letters from IRCC.</p>
+      <label for="sex">Sex</label>
+      <select id="sex" name="sex" required>
+        <option value="">Select one</option>
+        <option value="FEMALE">Female</option>
+        <option value="MALE">Male</option>
+        <option value="ANOTHER">Another gender</option>
+        <option value="UNKNOWN">Unknown</option>
+      </select>
+      <fieldset>
+        <legend>Date of birth</legend>
+        <label for="dobYear">Year</label><input type="text" id="dobYear" name="dobYear" maxlength="4" required>
+        <label for="dobMonth">Month</label>
+        <select id="dobMonth" name="dobMonth" required><option value="">--</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select>
+        <label for="dobDay">Day</label><input type="text" id="dobDay" name="dobDay" maxlength="2" required>
+      </fieldset>
+      <fieldset>
+        <legend>Place of birth</legend>
+        <label for="birthCity">City or town</label><input type="text" id="birthCity" name="birthCity" required>
+        <label for="birthCountry">Country or territory</label>
+        <select id="birthCountry" name="birthCountry" required><option value="">Select one</option><option value="IND">India</option><option value="PHL">Philippines</option><option value="CHN">China</option></select>
+      </fieldset>
+      <button type="submit">Save and continue</button>
+    </form>
+  </main>
+</body>
+</html>

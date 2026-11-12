@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<!-- Sample · Scaffolding (P-33), F2 break M3, m4, m5: the s1 screen where the family-name input has only a name and the
+     header's search form has an input of the same name; a div carries the given-names input's id while the input has only
+     the name; the day of birth is hidden by the page (a question that does not apply yet). Not a real IRCC screen. -->
+<html lang="en">
+<head><meta charset="utf-8"><title>Personal details - IRCC Portal</title></head>
+<body>
+  <header><form role="search" action="/search"><label for="q">Search IRCC</label><input type="text" id="q" name="familyName"></form></header>
+  <main>
+    <h1>Personal details</h1>
+    <form id="application" method="post">
+      <label>Family name <input type="text" name="familyName" maxlength="100"></label>
+      <div id="givenNames">Given name(s)</div>
+      <label>Given name(s) <input type="text" name="givenNames" maxlength="100"></label>
+      <label for="dobDay">Day</label><input type="text" id="dobDay" name="dobDay" maxlength="2" style="display:none">
+      <button type="submit">Save and continue</button>
+    </form>
+  </main>
+</body>
+</html>

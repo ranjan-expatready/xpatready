@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "../../web/src/styles/tokens.css";
+@source "./";
+/* As the Studio's index.css: the light sheet uses the next step of the team's ramp for muted text (AA on surface). */
+:root:not([data-theme='dark']) { --color-text-muted: var(--erv2-neutral-700); }
+html, body, #root { height: 100%; }
+body { margin: 0; background: var(--color-surface); color: var(--color-text); font-family: var(--font-sans); font-size: 14px; min-width: 320px; }
+:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }

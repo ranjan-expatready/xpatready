@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<!-- Sample · Scaffolding (P-33, P-98, F3 X5). Forms lane fixture: an APR-style screen saved while a client's application
+     was open, so one choice carries a passport number. Capture must refuse it per question and send nothing. Not a real
+     APR screen. -->
+<html lang="en">
+<head><meta charset="utf-8"><title>Citizenship - Application for a visitor visa - APR Portal</title></head>
+<body>
+  <header><p class="banner">Authorized Paid Representatives Portal (Sample)</p></header>
+  <main>
+    <h1>Citizenship</h1>
+    <form id="aprApplication" method="post" action="/apr/application/visitor">
+      <label for="citizenship">Country of citizenship (required)</label>
+      <select id="citizenship" name="citizenship" required><option value="">Select one</option><option value="IND">India (passport X1234567)</option><option value="PHL">Philippines</option></select>
+      <div class="actions"><button type="button" name="back">Back</button> <button type="submit" name="next">Save and continue</button></div>
+    </form>
+  </main>
+</body>
+</html>

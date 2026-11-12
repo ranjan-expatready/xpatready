@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<!-- Sample · Scaffolding (P-98, break 26 Oct): a question two components deep (a component inside a component). -->
+<html lang="en"><head><meta charset="utf-8"><title>Address - APR Portal</title></head>
+<body><main><h1>Address</h1>
+<form id="aprApplication"><label for="street">Street address</label><input type="text" id="street" name="street">
+<apr-outer></apr-outer><button type="submit">Save and continue</button></form></main>
+<script>
+customElements.define("apr-inner", class extends HTMLElement { connectedCallback() { this.attachShadow({ mode: "open" }).innerHTML = `<label for="c">City or town</label><input id="c" type="text">`; } });
+customElements.define("apr-outer", class extends HTMLElement { connectedCallback() { this.attachShadow({ mode: "open" }).innerHTML = `<div><apr-inner></apr-inner></div>`; } });
+</script></body></html>

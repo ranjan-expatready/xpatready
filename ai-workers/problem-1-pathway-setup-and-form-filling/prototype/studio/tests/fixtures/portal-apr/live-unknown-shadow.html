@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<!-- Sample · Scaffolding (P-98): markup the extension's reader cannot see into. Its questions are built by a script
+     inside page components (shadow DOM), as some portals do. Live page only: the reader must say "not read", never send
+     a screen with its questions missing. -->
+<html lang="en"><head><meta charset="utf-8"><title>Contact details - APR Portal</title></head>
+<body><main><h1>Contact details</h1>
+<form id="aprApplication"><apr-field data-label="Mailing address"></apr-field><apr-field data-label="City or town"></apr-field>
+<button type="submit">Save and continue</button></form></main>
+<script>
+customElements.define("apr-field", class extends HTMLElement {
+  connectedCallback() { const r = this.attachShadow({ mode: "open" }); const n = this.dataset.label; r.innerHTML = `<label for="f">${n}</label><input id="f" type="text">`; }
+});
+</script></body></html>
