@@ -2,7 +2,7 @@
 
 current_lead: local_5935338b-3a6c-4500-8cf4-bc3c766afb2b Lead 24 · 12 Nov 12:5x IST (series 2; took over from Lead 23 (series 2, local_395aab75) at ~300k context, ~200k beyond its start read, P-446); start read: measure with get_usage; hand over 200k beyond it
 
-updated: 2026-11-12 12:5x IST by **Lead 23 (series 2, local_395aab75-…)** at hand-over to Lead 24 · weekly 33% (resets 13 Nov 04:30 IST) · milestone: **M2 60/60; M3 29/29; Bake (M3.5) running; walk 0 Majors 2 of 4 merged** · rules: **`RULES.md`** (as of P-492) · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-12 13:1x IST by **Lead 24 (series 2, local_5935338b-…)** after take-over (start read ~120k; hand over at ~320k) · weekly 33% (resets 13 Nov 04:30 IST) · milestone: **M2 60/60; M3 29/29; Bake (M3.5) running; walk 0 Majors 2 of 4 merged** · rules: **`RULES.md`** (as of P-492) · this branch: `lead/2026-11-07-lead31`
 
 Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-lead15s2-pointer-sections.md`. Earlier blocks (Lead 40's last, Lead 7→8 hand-over, Lead 8 and Lead 9 live rows): pointers word for word in `history/STATE-2026-11-11-0815-lead11s2-pointer-lines.md`.
 
@@ -26,6 +26,8 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
    - BACKLOG rows BK-17b, B5-filings, Q-c613-6a added.
    - Night (P-489 (5)): at the founder's last typed turn, propose one spare cloud lane.
 5. **Standbys:** Lead 25 `local_08cf41af-225a-44c9-9d75-2060969d3cca` stays; start one more at the founder's next typed turn. Lead 23's check becbb89b is deleted; create yours.
+
+**Lead 24 live (13:1x IST):** check f13c1979 at :13/:43. **#1620:** round 3 allowed (P-293 (3)), diff-only, same reviewer, on `7a4e143da..318d67177`, plus a check that no `by_hand` row with a value skips `checkValue`; no baton needed (no schema or `case-prepare.ts`); m7 fixed or listed (comment 6817551580). **#1631:** Approve 287168cac on head, CI running; label on green. **A26:** the Fable session is told to report to Lead 24 in a file on its branch. #1616 is waiting for the founder to name it.
 
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
 | # | Ask (IST) | Status |
