@@ -1,34 +1,26 @@
 # State — one page (rewritten by the tech lead, P-188; the history is git)
 
-current_lead: local_5935338b-3a6c-4500-8cf4-bc3c766afb2b Lead 24 · 12 Nov 12:5x IST (series 2; took over from Lead 23 (series 2, local_395aab75) at ~300k context, ~200k beyond its start read, P-446); start read: measure with get_usage; hand over 200k beyond it
+current_lead: local_08cf41af-225a-44c9-9d75-2060969d3cca Lead 25 · 12 Nov 14:3x IST (series 2; took over from Lead 24 (series 2, local_5935338b) at ~320k context, ~200k beyond its start read, P-446); start read: measure with get_usage; hand over 200k beyond it
 
-updated: 2026-11-12 13:4x IST by **Lead 24 (series 2, local_5935338b-…)** at 13:10 IST after take-over (start read ~120k; hand over at ~320k) · weekly 33% (resets 13 Nov 04:30 IST) · milestone: **M2 60/60; M3 29/29; Bake (M3.5) running; walk 0 Majors 2 of 4 merged** · rules: **`RULES.md`** (as of P-492) · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-12 14:3x IST by **Lead 24 (series 2, local_5935338b-…)** at hand-over to Lead 25 · weekly 36% (resets 13 Nov 04:30 IST) · milestone: **M2 60/60; M3 29/29; Bake (M3.5) running; walk 0 Majors 2 of 4 merged** · rules: **`RULES.md`** (as of P-496) · this branch: `lead/2026-11-07-lead31`
 
 Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-lead15s2-pointer-sections.md`. Earlier blocks (Lead 40's last, Lead 7→8 hand-over, Lead 8 and Lead 9 live rows): pointers word for word in `history/STATE-2026-11-11-0815-lead11s2-pointer-lines.md`.
 
-## Hand-over: Lead 23 (series 2) → Lead 24 (series 2), 12:5x IST 12 Nov — read this first (Lead 22→23 block with Lead 23's live and check lines, word for word: `history/STATE-2026-11-12-1300-lead22s2-to-lead23-block-with-lead23-live.md`)
-**Founder awake and steering.** Rules as of **P-492** (RULES refreshed). Weekly **33%** at 12:56 (~1%/h; resets 13 Nov 04:30 IST). Paid US$0. P-478 report format. Lane reads in the built-in browser: navigate to the session, focus `[aria-label="Prompt"]` by script (the pane width changes; refs go stale), type, press Return, then confirm the text is in `main.innerText`. Direct `start_session` works only on the founder's own typed words; otherwise propose a card. A self-Approve or label on a records PR is refused unless the founder names the PR in chat (he did for #1617 and #1552).
-1. Items 1 (merged since 09:00, queue) and 3 (founder asks A24-A26), word for word: `history/STATE-2026-11-12-1350-lead23s2-handover-items-1-and-3.md`; A26 since done (P-493).
+## Hand-over: Lead 24 (series 2) → Lead 25 (series 2), 14:3x IST 12 Nov — read this first (Lead 23→24 block with Lead 24's live and check lines, word for word: `history/STATE-2026-11-12-1430-lead23s2-to-lead24-block-with-lead24-live.md`)
+**Founder awake and steering.** Rules as of **P-496** (RULES refreshed). Weekly **36%** at 13:57 (~2%/h; resets 13 Nov 04:30 IST). Paid US$0. P-478 report format. Lane reads in the built-in browser: navigate to the session, focus `[aria-label="Prompt"]` by script, type, press Return, confirm the text in `main.innerText`. Direct `start_session` only on the founder's own typed words; otherwise a card.
+1. **Act first (14:27 check):** **#1628** (BK-5 PR 2) dequeued: read the batch's failing check and brief the screens chain lane (`session_01Ln6TiRwy1GuGJrsFtDqs8i`). **#1632** shows a "new question": it may be the Lead's own P-496 ruling comment, so check for a newer lane comment. **#1631** (quarantine, P-214) and #1627 (requeued) in the queue.
 2. **Open, owner → next:**
-   - **#1620 QA-415 Critical** (fresh forms lane): **has a new "Question for the tech lead"; answer it first.** It may need the schema or `case-prepare.ts` baton.
-   - **#1631** (Lead's PR, P-214): quarantine of `check_c613_filing_changes_browser`, #1627's patch word for word; the BK-17 lane (`session_01Ln6TiPZnxaLcVvEQqCteyj`) has its fresh Opus reviewer post Approve 287168cac and label on green.
-   - **#1632** BK-16 PR 2 (P-490/P-491; closes QA-416, QA-418; m1 readiness rule): forms lane `session_01Ln6TiRXHD2s3UJ1TefYcUt`.
-   - **Screens chain** (`session_01Ln6TiRwy1GuGJrsFtDqs8i`, single writer): QA-417 (one count) → BK-5 PR 2 (#1628) → A24-2 → A24-3. The A24 labels are held until the Lead says go after walk 1 starts (P-492).
-   - **A24-1 lane** (cloud, started 13:0x by the founder's click): case numbers and one client per case. It holds the **schema baton**; the Lead reads the diff before merge (P-423).
-   - **qa UX friction sweep (A25)**, cloud, requested 13:1x (task_a8dc9c7b): a records PR of rows ranked by value against fix cost, then the fixes go to lanes.
-   - The QA-392 lane (#1566) and the rehearsal lane (#1552) are done: archive them after checking for unpushed work.
-   - #1616 is the qa re-score (C6.12, C4.11 Works): read it and give it the records Approve on the founder's word.
-4. **Owed (from Lead 22):**
-   - SI-6 wording into STAND-INS.md;
-   - D8's two Sample points to the immigration expert, plus A24's three expert points (design §9);
-   - P-487 own rows;
-   - BACKLOG rows BK-17b, B5-filings, Q-c613-6a added.
-   - Night (P-489 (5)): at the founder's last typed turn, propose one spare cloud lane.
-5. **Standbys:** Lead 25 `local_08cf41af-225a-44c9-9d75-2060969d3cca` stays; start one more at the founder's next typed turn. Lead 23's check becbb89b is deleted; create yours.
-
-**Lead 24 live (13:4x IST):** check f13c1979 at :13/:43. Live line and 13:3x check, word for word: `history/STATE-2026-11-12-1345-lead24s2-live-and-check-1330.md`. In short: #1620 round 3 allowed; #1631 in batch #1635; **#1612 dequeued on its own `check_bk17`** (main's BK-15/16), fresh-lane card task_d4445cc9; #1627 requeued; #1616 waits for the qa lane's merge of main, then the Lead's Approve; A26 done (P-493); extension done (P-495).
-**Extension (P-495, B184):** 40 sessions, three lanes from 16 Nov, Sample-complete 24 Nov-2 Dec IST; plan `design/chrome-extension-sizing-2026-11-12.md`. **Founder sending (said so 13:45 IST)** `design/counsel-brief-extension-2026-11-12.md` Part A to counsel and Part B (SP-2, ~1 h) to the expert. Started by the founder ~13:5x: BK-17 fix lane and extension SP-1 lane (cloud). Lead 25 has read RULES and STATE.
-**13:57 check (P-496):** #1632 BK-16 PR 2 M1 → option (A) (`"later": true` in `reviewOrder`, byte-identical check); #1633 A24-1 holds the `case-prepare.ts` baton for the `reference` fix; #1612's fresh lane resolves conflicts only. Extension planner archived (founder). Weekly 36%. Lead 24 at ~305k: hand over at the next check.
+   - **#1612 BK-17:** dequeued twice on its own `check_bk17` (main's BK-15/16 give the child their own Visitor visa). A **fresh cloud lane started by the founder ~13:5x** fixes the test set-up (comments 6818122187, 6818666209); conflicts only in `case-prepare.ts`.
+   - **#1633 A24-1** (case numbers; schema baton + `case-prepare.ts` baton for the `reference` fix only, P-496 (2)). The Lead reads the schema diff before merge (P-423).
+   - **#1632 BK-16 PR 2:** option (A) ruled (P-496 (1)), diff-only re-review next.
+   - **#1620 QA-415 Critical:** round 3 allowed (comment 6817551580).
+   - **#1616 qa records:** the founder said "Yes, label #1616". It conflicts in `qa/BUGS.md`; the qa lane (`session_01Ln6TiTkKbDWScv7X7oYWcJ`) was told to merge main keeping both. Then the Lead posts `Reviewer: Approve <new head>` (the founder named it) and qa labels.
+   - **Screens chain:** QA-417 → BK-5 PR 2 (#1628) → A24-2 → A24-3 (labels held to walk 1, P-492).
+   - **Extension SP-1 lane** (cloud, started ~13:5x): scratch only, a reuse note under design/ on its branch.
+   - qa UX friction sweep (A25), cloud.
+3. **Founder:** sending the counsel brief (Part A) and the expert's SP-2 ask (Part B) of `design/counsel-brief-extension-2026-11-12.md`. When the expert's screens come, they go to `sources/portal-screens-2026-11/<portal>/` (never pushed). Extension plan P-495: three lanes from 16 Nov, Sample-complete 24 Nov-2 Dec IST (B184).
+4. **Owed:** SI-6 wording into STAND-INS.md; D8's two Sample points + A24's three expert points + the top-types ranking to the expert; P-487 own rows; night (P-489 (5)): one spare cloud lane at the founder's last typed turn. Nightly C4.11 on the checkpoint dispatched 13:1x (row Q-c411-ckpt).
+5. **Standbys:** Lead 26 `local_dea96486-fb3d-4970-883f-8610e8b5fdb1` stays; start one more at the founder's next typed turn. Lead 24's check f13c1979 is deleted; create yours. Stale worktree `heuristic-nobel-d679f0` (B170a, B178 merged): delete under P-468 after checking.
 
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
 | # | Ask (IST) | Status |
