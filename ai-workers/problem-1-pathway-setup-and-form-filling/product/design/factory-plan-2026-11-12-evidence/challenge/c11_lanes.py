@@ -1,7 +1,7 @@
 import re, os, csv, subprocess, collections
 exec(open("c10_span.py").read().split("both=0")[0]); flow=list(csv.DictReader(open(E+"flow-2026-11-02-to-12-app-flow.tsv"),delimiter="\t"))
-LANE={'spine-structure':'cfg-author','sources':'cfg-author','library':'cfg-author','questionnaire-design':'cfg-author','release-review':'cfg-release',
- 'case-core':'case-people','case-questionnaire':'case-people','case-documents':'case-docs','forms-fill':'case-forms','submission':'case-forms','platform':'platform','ai-gateway':'platform'}
+LANE={'structure':'cfg-author','sources':'cfg-author','library':'cfg-author','questionnaire-design':'cfg-author','release':'cfg-release',
+ 'case-core':'case-people','case-questionnaire':'case-people','case-documents':'case-docs','case-forms':'case-forms','case-submission':'case-forms','platform':'platform','ai-gateway':'platform'}
 span=collections.Counter(); pair=collections.Counter(); hubs=0
 for r in flow:
     fl=subprocess.run(['git','-C',repo,'diff','--name-only',f"{hs[r['pr']]}^1",hs[r['pr']]],capture_output=True,text=True).stdout.split()

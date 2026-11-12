@@ -13,7 +13,7 @@ def mod(rel):
         if rx.match(b): return n
     return 'UNMAPPED'
 HUBS={'main','core','studio','validate','render','routes-data','App','api','utils'}
-CONF={'spine-structure','sources','library','questionnaire-design','release-review'}; CASE={'case-core','case-questionnaire','case-documents','forms-fill','submission'}
+CONF={'structure','sources','library','questionnaire-design','release'}; CASE={'case-core','case-questionnaire','case-documents','case-forms','case-submission'}
 APP=re.compile(r'^'+re.escape(studio)+r'/(api/src|web/src|engine|prisma|contracts|samples|packages)/')
 hs={}
 for l in subprocess.run(['git','-C',repo,'log','origin/main','--first-parent','--merges','--since=2026-10-25','--format=%H %s'],capture_output=True,text=True).stdout.splitlines():
