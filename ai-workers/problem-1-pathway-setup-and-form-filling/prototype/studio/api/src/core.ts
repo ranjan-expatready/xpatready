@@ -96,7 +96,7 @@ export class ConfigReadGuard implements CanActivate {
     // C6.16 (challenge M2, BR-5): an adult's link session (a Bearer token) reaches /api/link/* only; anywhere else it is
     // refused, never read as nobody or mixed with a simulated person.
     const auth = req.headers.authorization, path = req.path ?? req.url ?? "";
-    if (typeof auth === "string" && /^bearer\s/i.test(auth) && !path.startsWith("/api/link/")) throw new HttpException({ type: "https://expatready.local/problems/link-only", title: "Not for a link session", status: 403, detail: "A person's own link reaches only their own questions, never the firm's or the client's pages." }, HttpStatus.FORBIDDEN);
+    if (typeof auth === "string" && /^bearer\s/i.test(auth) && !path.startsWith("/api/link/") && !path.startsWith("/api/extension/")) throw new HttpException({ type: "https://expatready.local/problems/link-only", title: "Not for a link session", status: 403, detail: "A person's own link reaches only their own questions, never the firm's or the client's pages." }, HttpStatus.FORBIDDEN);
     const scope = this.reflector.getAllAndOverride<string>(READ_SCOPE, [ctx.getHandler(), ctx.getClass()]);
     if (scope === "open") return true;
     if (req.method !== "GET" && req.method !== "HEAD" && scope !== "config") return true;

@@ -23,7 +23,7 @@ import { idLooksLikeClientDetail, screenDifference, screenIdentity } from "../..
 import { noAnswers } from "../../engine/capture.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { portalLabel } from "../../contracts/forms.ts";
-import { ACTORS, actorOf, Audit, bearerOf, Db, fail, need, RUNTIME_ACTORS, SOLUTION, Workspace, type Actor } from "./core.ts";
+import { ACTORS, actorOf, OpenRead, Audit, bearerOf, Db, fail, need, RUNTIME_ACTORS, SOLUTION, Workspace, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
 import { Forms } from "./forms.ts";
 
@@ -273,6 +273,7 @@ export class Extension {
   }
 }
 
+@OpenRead("the extension checks its own token or the Studio sign-in in every handler")
 @Controller("api/extension")
 export class ExtensionController {
   constructor(@Inject(Extension) private readonly x: Extension) {}
