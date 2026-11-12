@@ -127,7 +127,9 @@ async function main() {
   r = await put(gc, true, back);
   ok("M3 pass: with the entry removed, none apply is said again (history kept: three versions)", r.status === 200 && r.body.group?.none_apply?.value === true && sql(`select count(*) from client_group_answer where subject_id='${P}' and group_key='${gc}'`) === "3", r.body?.detail ?? r.status);
   // The officer's "none apply" waits for Confirm section, and is confirmed only when seen (never unseen).
-  const go = groupsP.find((x) => x !== gc)!;
+  // QA-439: another of the principal's own groups (the list also names the application's, e.g. "Your visit", which comes
+  // first now that the application's parts lead the questionnaire; it is not the principal's to answer).
+  const go = f.readiness.missing.filter((m) => m.fact.startsWith("group:") && (m as { subject?: string }).subject === P).map((m) => m.fact.slice(6)).find((x) => x !== gc)!;
   r = await put(go, true, null, OFFICER);
   const goId: string = r.body.group?.none_apply?.id;
   f = await formOf("IMM 5257", P);

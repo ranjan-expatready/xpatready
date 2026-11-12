@@ -35,6 +35,13 @@ const rank = (id: string) => ({ "a-principal": 0, "m-spouse": 1, "z-child": 2 } 
 const r = show(decidersFirst(ids, () => new Set(), rank));
 ok("pass: people come in the case's order, a relative after their person", JSON.stringify(r) === JSON.stringify(["a-principal:a:x", "a-principal/parent_1:a:x", "m-spouse:a:x", "z-child:a:x"]), r);
 
+// The author's order (C4.1) first; a deciding part next; a part the author put before its decider still moves after it.
+const auth = [q("k", "contact", "email"), q("k", "consent", "sign"), q("k", "military", "served"), q("k", "personal", "born")];
+const a1 = show(decidersFirst(auth, rule({ "k|served": ["k|born"] }), () => 0, (sec) => sec === "consent"));
+ok("pass: the author's chosen sections keep their order and come first; then the deciding part, then the rest", JSON.stringify(a1) === JSON.stringify(["k:consent:sign", "k:personal:born", "k:contact:email", "k:military:served"]), a1);
+const a2 = show(decidersFirst(auth, rule({ "k|sign": ["k|born"] }), () => 0, (sec) => sec === "consent"));
+ok("fail: a chosen section decided by another part's answer is never asked before it", JSON.stringify(a2) === JSON.stringify(["k:personal:born", "k:consent:sign", "k:contact:email", "k:military:served"]), a2);
+
 // A circle (each decides the other) keeps its order and loses nothing.
 const circle = [q("k", "s1", "a"), q("k", "s2", "b")];
 const c = show(decidersFirst(circle, rule({ "k|a": ["k|b"], "k|b": ["k|a"] })));

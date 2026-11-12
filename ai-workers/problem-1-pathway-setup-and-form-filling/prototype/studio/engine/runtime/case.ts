@@ -461,7 +461,9 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   // person they belong to), never by their id.
   const rankOf = new Map(people.map((p, i) => [p.subjectId, p.role === "case" ? -1 : i]));
   const rank = (id: string) => { const [owner, rel] = id.split("/"); return (rankOf.get(owner) ?? people.length) + (rel ? 0.5 : 0); };
-  const questions = decidersFirst(inForms, whatDecides(s, people, renderPeople, caseSubject.subjectId, today), rank);
+  // The sections the combination's author chose and ordered (C4.1, P-216) keep that order.
+  const authored = new Set((s.sections as { id: string }[]).map((x) => x.id));
+  const questions = decidersFirst(inForms, whatDecides(s, people, renderPeople, caseSubject.subjectId, today), rank, (section) => authored.has(section));
   // A repeating group's "none apply" (Lead, break M3): confirmed by the same rule as an answer to the group's facts
   // (P-72, P-78), read as an answer to its first client fact (else its first fact).
   const birthOf = (subjectId: string) => answers.find((a) => a.subjectId === subjectId && a.field === MINOR.birthDateField && !a.rowKey)?.value;
@@ -546,17 +548,18 @@ function whatDecides(s: Snapshot, people: Participant[], renderPeople: Person[],
   };
 }
 
-/** QA-439 (P-498): the questions in their order, by person (`rank`), each person's parts that hold a deciding question
- *  first; then each moved only as far as it must: a part comes after the parts that hold what decides it (another
- *  person's too), and inside a part a question comes after the questions that decide it. Everything else keeps its place;
- *  a circle of deciders keeps the order it had. */
-export function decidersFirst<T extends { subjectId: string; section: string; fact: string }>(qs: T[], decidedBy: (q: T) => Set<string>, rank: (subjectId: string) => number = () => 0): T[] {
+/** QA-439 (P-498): the questions in their order, by person (`rank`): each person's sections the author ordered first, in
+ *  that order (`authored`), then their parts that hold a deciding question, then the rest; then each moved only as far as
+ *  it must: a part comes after the parts that hold what decides it (another person's too, and even past the author's
+ *  order: a question is never asked before what decides it), and inside a part a question comes after the questions that
+ *  decide it. Everything else keeps its place; a circle of deciders keeps the order it had. */
+export function decidersFirst<T extends { subjectId: string; section: string; fact: string }>(qs: T[], decidedBy: (q: T) => Set<string>, rank: (subjectId: string) => number = () => 0, authored: (section: string) => boolean = () => false): T[] {
   const partOf = (q: T) => `${q.subjectId}|${q.section}`;
   const parts = new Map<string, T[]>(), at = new Map<string, string>();
   for (const q of qs) { (parts.get(partOf(q)) ?? parts.set(partOf(q), []).get(partOf(q))!).push(q); const k = `${q.subjectId}|${q.fact}`; if (!at.has(k)) at.set(k, partOf(q)); }
   const by = new Map(qs.map((q) => [q, [...decidedBy(q)].filter((k) => at.has(k))]));
   const deciding = new Set([...by.values()].flat().map((k) => at.get(k)!));
-  const keys = [...parts.keys()].map((k, i) => ({ k, i, r: rank(parts.get(k)![0].subjectId), d: deciding.has(k) ? 0 : 1 })).sort((a, b) => a.r - b.r || a.d - b.d || a.i - b.i).map((x) => x.k);
+  const keys = [...parts.keys()].map((k, i) => ({ k, i, r: rank(parts.get(k)![0].subjectId), d: authored(parts.get(k)![0].section) ? 0 : deciding.has(k) ? 1 : 2 })).sort((a, b) => a.r - b.r || a.d - b.d || a.i - b.i).map((x) => x.k);
   // A circle (each decides the other, directly or through others) is not reordered: a dependency is followed only when it
   // does not lead back.
   const reaches = <N,>(next: (n: N) => N[], from: N, to: N) => { const seen = new Set<N>(), stack = [from]; while (stack.length) { const n = stack.pop()!; if (n === to) return true; if (seen.has(n)) continue; seen.add(n); stack.push(...next(n)); } return false; };

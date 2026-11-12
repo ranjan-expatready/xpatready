@@ -69,9 +69,11 @@ for (const [key, name] of [["vv.single", "Visitor visa"], ["sp.outside", "Study 
       const seen = adult(before).filter((q) => before.indexOf(q) < Math.max(dob, marital));
       ok(`QA-439 pass (${name}): a child born in 2024 is asked no military-service, government-position or common-law question before their birth date and marital status, and none once they are in`,
         seen.length === 0 && adult(after).filter((q) => !KEPT_BY_ANOTHER_FORM.has(q.fact)).length === 0, { before_dob: seen.slice(0, 5).map((q) => `${q.part} · ${q.fact}`), after: adult(after).slice(0, 5).map((q) => `${q.part} · ${q.fact}`) });
-      // The child's own parts start with the part that holds their birth date ("Personal details" first, QA-439's fix).
-      const own = before.filter((q) => q.subject === s);
-      ok(`QA-439 pass (${name}): the child's first part is the one that holds their date of birth`, own.length > 0 && own[0].section === before[dob].section, { first: own[0]?.part, dob_part: before[dob]?.part });
+      // The child's own parts start with the part that holds their birth date ("Personal details" first, QA-439's fix); only
+      // the sections the combination's author chose and ordered (C4.1, asked whatever the age) may come before it.
+      const chosen = new Set(sql(`select s.section_key from sqr_section_selection s join combination c on c.id=s.combination_id where c.combination_key='${key}'`).split("\n").filter(Boolean));
+      const ahead = [...new Set(before.slice(0, dob).filter((q) => q.subject === s && q.section !== before[dob].section).map((q) => q.section))];
+      ok(`QA-439 pass (${name}): before the child's part that holds their date of birth, the child has only the combination's own chosen sections`, ahead.every((x) => chosen.has(x)), { ahead, chosen: [...chosen] });
     }
   }
 }
