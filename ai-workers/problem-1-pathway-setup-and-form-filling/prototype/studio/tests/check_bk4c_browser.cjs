@@ -152,12 +152,15 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const fam2 = story?.cases?.family;
   step("setup: the finished story loads, with its family case", started.status === 202 && story?.state === "done" && !!fam2, { started: started.status, state: story?.state, error: story?.error });
   const sum = (await api2(`/runtime/cases/${fam2}/questionnaire?mode=agent`, { actor: "user-O" })).body?.summary ?? {}; // for review m1, below
+  // QA-427: what the client owes is their own questionnaire's (the household's summary also counts what staff enter);
+  // read here, while this context is open.
+  const owes = ((await api2(`/runtime/cases/${fam2}/questionnaire`, { actor: "user-O" })).body?.sections ?? []).reduce((n, x) => n + x.missing.length, 0);
   await setup2.context().close();
   p = await fresh("user-O");
   await p.goto(`${BASE}/cases/${fam2}`); await p.locator("[data-handoff=client]").waitFor({ timeout: 60000 });
   // Review m1 (BR-2): the case page's words follow the case's own summary (every required question answered, or not).
-  const allAnswered = sum.missing === 0 && sum.answered > 0, ct = await p.locator("[data-handoff=client]").innerText();
-  step(`review m1, break M1: the case page's words match the case (${allAnswered ? "every required question answered: no \"Next\"" : "questions left: Next"})`, allAnswered ? /has answered every required question and can still check the answers/.test(ct) && !/Next:/.test(ct) : /Next: Client A answers on their phone/.test(ct), { sum, ct });
+  const allAnswered = owes === 0, ct = await p.locator("[data-handoff=client]").innerText();
+  step(`review m1, break M1: the case page's words match the case (${allAnswered ? "every part answered: no \"Next\" for the client" : "questions left: Next"})`, allAnswered ? /has answered every part and can still check the answers/.test(ct) && !/Next:/.test(ct) : /Next: Client A answers on their phone/.test(ct), { owes, sum, ct });
   // Review m2: the tip shows on keyboard focus.
   await p.locator("[data-handoff=client] button").focus(); await p.keyboard.press("Shift"); 
   const tipShown = await p.locator("[data-handoff-tip]").first().waitFor({ timeout: 3000 }).then(() => true, () => false);
