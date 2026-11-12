@@ -12,13 +12,14 @@ import { api, ApiError, useApi } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button, Dialog, Field, Notice, Pill, Textarea } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { noRetryOnRefusal, type CanAdd, type CasePerson } from "./questionnaire";
 
 type Kind = "make_principal" | "remove_filing" | "add_back";
 type Preview = { kind: Kind; subject: string; title: string; stays: string; changes: { person: string; label: string; words: string[]; on?: string }[]; totals: { before_cents: number; after_cents: number } | null; basis: string };
 type Applicant = { subject: string; mode: string };
 /** `owner`: the filing's principal applicant (Filing.subjectId, IRCC's principal applicant on that application, S12). */
-type Filing = { id: string; status: string; owner?: { subject: string; label: string }; applicants: Applicant[]; record?: { submitted_on?: string; application_number?: string } | null };
+type Filing = { id: string; status: string; owner?: { subject: string; label: string }; applicants: Applicant[]; group?: string; record?: { submitted_on?: string; application_number?: string } | null };
 type PrepareView = { derived: boolean; filings: Filing[] };
 type Change = { kind: string; subject: string; other: string | null; reason: string | null; by: string; at: string };
 
@@ -28,7 +29,7 @@ const STATUS: Record<string, string> = { not_started: "Not started", ready_to_fi
 const ROLE_TIP = "The principal applicant carries the family's capped fees and signs for a minor child. Change it with Make principal.";
 /** A24-3 (P-492, design case-structure-a24 §5.1, CS-4, CS-10): IRCC's principal applicant is per application (S12). */
 const APPLICANT_TIP = "Each application has its own principal applicant: the person it is filed for. A family member on someone else's application is not its principal applicant.";
-/** A24-3: whose filing it is: its principal applicant (Filing.subjectId), read from GET …/prepare. */
+/** A24-3: whose filing it is (Filing.subjectId, GET …/prepare's owner): its principal applicant when it has applicants. */
 const ownerOf = (f: Filing) => f.owner?.subject ?? f.applicants[0]?.subject;
 /** A24-3 (P-492, CS-8): the case's client person: the one who answers, the same person whatever Make principal did since
  *  (C6.13 BR-3b: `client` is set once roles were swapped), else the principal. The server's clientSubjectOf, read from
@@ -48,6 +49,11 @@ export function PeopleAndFilings({ caseId, people, canAdd, onAdd, roleOf, nameOf
   const filingOf = (s: string) => filings.find((f) => ownerOf(f) === s);
   /** A24-3 (CS-10): the filing's principal applicant by name (the case's people, else the name the filing carries). */
   const applicantOf = (f: Filing) => { const s = ownerOf(f); return people.find((p) => p.subject_id === s)?.label ?? f.owner?.label; };
+  /** A24-3 review M1 (S12; challenge.md): a filing with no applicants (a co-filed sponsorship: its owner, the sponsor, is
+   *  not an applicant) has no principal applicant of its own. Its row names the principal applicant of the application
+   *  it is sent with (the filing of its submission group that has applicants) and says the person is not an applicant. */
+  const principalOf = (f: Filing): { f: Filing | undefined; notApplicant: boolean } =>
+    f.applicants.length ? { f, notApplicant: false } : { f: filings.find((x) => x !== f && x.group === f.group && x.applicants.length > 0), notApplicant: true };
   /** On someone else's filing (C11.12: on the principal's application, applying or declared only). */
   const onFiling = (s: string) => { const f = filings.find((x) => ownerOf(x) !== s && x.applicants.some((a) => a.subject === s)); return f ? { f, mode: f.applicants.find((a) => a.subject === s)!.mode, owner: applicantOf(f) ?? "the principal" } : null; };
   const recordedFiling = filings.find((f) => f.status.toLowerCase() === "submitted" || !!f.record), recorded = !!recordedFiling;
@@ -70,11 +76,12 @@ export function PeopleAndFilings({ caseId, people, canAdd, onAdd, roleOf, nameOf
         // wider table scrolls here and never widens the page.
         <div className="relative overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="border-b border-border text-left text-xs text-text-muted"><th className="px-4 py-2 font-medium">Person</th><th className="px-2 py-2 font-medium"><span className="inline-flex items-center gap-1">Role<span tabIndex={0} role="img" title={ROLE_TIP} aria-label={ROLE_TIP} className="rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"><Info className="size-3" aria-hidden /></span></span></th><th className="px-2 py-2 font-medium">Filing</th><th className="px-2 py-2 font-medium"><span className="inline-flex items-center gap-1">Principal applicant<span tabIndex={0} role="img" title={APPLICANT_TIP} aria-label={APPLICANT_TIP} className="rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"><Info className="size-3" aria-hidden /></span></span></th><th className="px-2 py-2 font-medium">Status</th><th className="px-4 py-2"><span className="sr-only">Actions</span></th></tr></thead>
+            <thead><tr className="border-b border-border text-left text-xs text-text-muted"><th className="px-4 py-2 font-medium">Person</th><th className="px-2 py-2 font-medium"><span className="inline-flex items-center gap-1">Role<span tabIndex={0} role="img" title={ROLE_TIP} aria-label={ROLE_TIP} className="rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"><Info className="size-3" aria-hidden /></span></span></th><th className="px-2 py-2 font-medium">Filing</th><th className="px-2 py-2 font-medium"><span className="inline-flex items-center gap-1">Principal applicant<TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><span tabIndex={0} role="img" aria-label={APPLICANT_TIP} className="rounded outline-none focus-visible:ring-2 focus-visible:ring-ring" data-applicant-tip><Info className="size-3" aria-hidden /></span></TooltipTrigger><TooltipContent className="max-w-xs text-xs font-normal">{APPLICANT_TIP}</TooltipContent></Tooltip></TooltipProvider></span></th><th className="px-2 py-2 font-medium">Status</th><th className="px-4 py-2"><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>
               {shown.map((p) => {
                 const f = filingOf(p.subject_id), on = f ? null : onFiling(p.subject_id), removal = !p.applies ? lastRemoval(p.subject_id) : undefined;
                 const swapNote = p.role === "principal" && lastSwap?.subject === p.subject_id ? lastSwap : undefined;
+                const pa = (f ?? on?.f) ? principalOf((f ?? on?.f)!) : null;
                 return (
                   <tr key={p.subject_id} className="border-b border-border last:border-0 align-top" data-person-row={p.subject_id}>
                     <td className="px-4 py-2 font-medium [overflow-wrap:anywhere]">{p.label}</td>
@@ -83,7 +90,8 @@ export function PeopleAndFilings({ caseId, people, canAdd, onAdd, roleOf, nameOf
                       : f ? "Own application" : on ? (on.mode === "declared_only" ? <span className="text-text-muted">Declared only on {on.owner}'s application (not travelling)</span> : `On ${on.owner}'s application`)
                       : <span className="text-text-muted">No filing: not travelling</span>}
                       {removal ? <div className="text-xs text-text-muted [overflow-wrap:anywhere]" data-change-reason>{removal.reason ? `Removed ${day(removal.at)} by ${nameOf(removal.by)}: “${removal.reason}”` : `Marked not travelling ${day(removal.at)} by ${nameOf(removal.by)}`}</div> : null}</td>
-                    <td className="px-2 py-2 [overflow-wrap:anywhere]" data-filing-principal={(f ?? on?.f) ? ownerOf((f ?? on?.f)!) ?? "" : ""}>{(f ?? on?.f) ? applicantOf((f ?? on?.f)!) ?? "—" : <span className="text-text-muted">—</span>}</td>
+                    <td className="px-2 py-2 [overflow-wrap:anywhere]" data-filing-principal={pa?.f ? ownerOf(pa.f) ?? "" : ""}>{pa?.f ? applicantOf(pa.f) ?? "—" : <span className="text-text-muted">—</span>}
+                      {pa?.notApplicant ? <div className="text-xs text-text-muted" data-not-applicant>{p.label} is not an applicant</div> : null}</td>
                     <td className="px-2 py-2">{(f ?? on?.f) ? <Pill>{(({ status }) => STATUS[status.toLowerCase()] ?? status.toLowerCase().replace(/_/g, " "))((f ?? on?.f)!)}</Pill> : "—"}</td>
                     <td className="px-4 py-2 text-right">{recorded ? <span className="block max-w-xs text-left text-xs text-text-muted" data-recorded-note>{recordedWords}</span>
                       : p.co_files ? null : <RowMenu p={p} onPick={(kind) => setOpen({ kind, subject: p.subject_id })} />}</td>
