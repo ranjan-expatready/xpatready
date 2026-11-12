@@ -66,7 +66,9 @@ export function PeopleAndFilings({ caseId, people, canAdd, onAdd, roleOf, nameOf
       {last ? <div className="flex flex-wrap items-center gap-2 border-b border-border bg-surface px-4 py-2 text-sm" role="status" data-change-done>{last.words}
         <Button size="sm" variant="ghost" onClick={() => setOpen({ ...last.undo, reason: `Undo: ${last.reason}`.slice(0, 500) })} data-undo><Undo2 aria-hidden />Undo</Button></div> : null}
       {prep.isLoading ? <div className="space-y-2 p-4"><Skeleton className="h-6 w-full" /><Skeleton className="h-6 w-full" /></div> : (
-        <div className="overflow-x-auto">
+        // A24-3 (375 px): `relative` keeps the sr-only "Actions" heading (absolutely placed) inside this scroll box, so a
+        // wider table scrolls here and never widens the page.
+        <div className="relative overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-b border-border text-left text-xs text-text-muted"><th className="px-4 py-2 font-medium">Person</th><th className="px-2 py-2 font-medium"><span className="inline-flex items-center gap-1">Role<span tabIndex={0} role="img" title={ROLE_TIP} aria-label={ROLE_TIP} className="rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"><Info className="size-3" aria-hidden /></span></span></th><th className="px-2 py-2 font-medium">Filing</th><th className="px-2 py-2 font-medium"><span className="inline-flex items-center gap-1">Principal applicant<span tabIndex={0} role="img" title={APPLICANT_TIP} aria-label={APPLICANT_TIP} className="rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"><Info className="size-3" aria-hidden /></span></span></th><th className="px-2 py-2 font-medium">Status</th><th className="px-4 py-2"><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>
