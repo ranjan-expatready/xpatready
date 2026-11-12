@@ -149,7 +149,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.context().close();
   p = await fresh("user-Z");
   await p.goto(`${BASE}/`); await p.waitForURL((u) => u.pathname === "/sign-in", { timeout: 15000 }).catch(() => {});
-  await p.locator('[data-sign-in-as="user-A"]').click(); await p.waitForURL((u) => u.pathname === "/", { timeout: 15000 }).catch(() => {});
+  await p.locator('[data-sign-in-as="user-A"]').click(); await p.waitForURL((u) => u.pathname === "/start", { timeout: 15000 }).catch(() => {});
+  // BK-5 PR 2 (concept §9, challenge m4): the author duty starts a walk on Starting points; other Studio people land on
+  // Immigration programs (the Approver above), never on doors they cannot open.
+  step("BK-5 PR 2: the Configuration author lands on Starting points, signed in", new URL(p.url()).pathname === "/start" && await stored(p) === "user-A" && await p.getByRole("heading", { level: 1, name: /Starting points/ }).isVisible(), p.url());
   await p.goBack(); await p.locator("[data-sign-in]").waitFor({ timeout: 15000 }).catch(() => {});
   step("break m3 fail side: Back to the sign-in page after choosing no longer says the person is unknown", new URL(p.url()).pathname === "/sign-in" && await p.locator("[data-sign-in-unknown]").count() === 0, p.url());
   await p.context().close();

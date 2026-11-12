@@ -18,7 +18,9 @@ export function SignInPage() {
   const known = !!personOf(id);
   const current = personChosen() && known ? id : null;
   React.useEffect(() => { document.title = "Sign in · Expat Ready"; }, []);
-  const choose = (p: Person) => { setActor(p.id); nav(homeOf(p.id)); };
+  // BK-5 PR 2 (concept §9, challenge m4): a person with the author duty starts a walk on Demo › Starting points; everyone
+  // else lands where they work (the Studio's programs, or the case list), never on doors they cannot open (BR-3).
+  const choose = (p: Person) => { setActor(p.id); nav(p.duties.includes("author") ? "/start" : homeOf(p.id)); };
   const four = FIRST_FOUR.map((x) => personOf(x)!);
   const more = PEOPLE.filter((p) => !FIRST_FOUR.includes(p.id as (typeof FIRST_FOUR)[number]));
   const groups: Group[] = ["staff", "firm", "client"];
