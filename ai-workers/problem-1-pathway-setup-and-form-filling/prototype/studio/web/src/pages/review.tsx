@@ -13,6 +13,7 @@ import { UnsourcedNumbers } from "@/components/unsourced-numbers";
 import { Link } from "react-router-dom";
 import { AnswerKeyBlock, fixOnTests } from "@/components/answer-key-gate";
 import { FormFieldsHeld, FormFieldsPanel, useFormFieldsOfCombination } from "@/components/form-field-conditions";
+import { HELD, HIDING, wayOut } from "@/lib/form-fields-way-out";
 import { ReleaseFillTrials } from "@/components/release-fill-trials";
 import { FILL_TRIAL_WORDS } from "../../../contracts/release-fill-trials";
 
@@ -27,12 +28,7 @@ const problemLine = (p: any) => p.where === "Derived fields" ? `${p.label ? role
 /** B81 (challenge M3): a problem on a form's option map says where it is fixed: the form's panel on the Forms tab. */
 const choicesAt = (p: { where?: unknown; message?: unknown }): string | null => { const m = /^Field map ((.+) \([^)]*\))$/.exec(String(p.where ?? "")); return m && /no code for|no option map yet|neither mapped|not on this form|the answer list does not have|has a code, but the form prints/.test(String(p.message ?? "")) ? `choices=${encodeURIComponent(m[2])}&edition=${encodeURIComponent(m[1])}` : null; };
 
-/** B86: the rule's own opening words; the problem's item is the question it names. */
-const HIDING = /^Hiding a value a form reads/;
-/** QA-237, QA-239: a library condition this combination cannot honour is held (engine/held-conditions.ts HELD_OPENING): a
- *  warning, with the same way to put it in force, the form fields that read the answer, under it. */
-const HELD = /^Condition not used on this combination/;
-const wayOut = (m?: string) => HIDING.test(m ?? "") || HELD.test(m ?? "");
+// B86, QA-237, QA-239, QA-402: the problems that get "Form fields that read this answer" under them (lib/form-fields-way-out.ts).
 /** changesCount: the combination's draft changes as the summary counts them (the shared draft bar's and the header's one
  *  count, UX-A part 3); undefined while it loads. */
 export function ReviewTab({ d, changesCount, countFailed, onRetryCount }: { d: any; changesCount?: number; countFailed?: boolean; onRetryCount?: () => void }) {

@@ -109,7 +109,7 @@ await press(filing().locator("[data-mark-ready]"));
 const refused = filing().locator("[data-not-ready]");
 await refused.waitFor({ timeout: 15_000 }).catch(() => null);
 const listed = await words(refused.locator("li"));
-ok("C7.6 fail: \"Ready to file\" is refused on the screen with the server's words, listing the same lines", await refused.isVisible() && /Not ready to file/.test(await refused.innerText()) && /stand before Ready to file/.test(await refused.innerText()) && [...listed].sort().join("\n") === [...before].sort().join("\n"), { listed, before });
+ok("C7.6 fail: \"Ready to file\" is refused on the screen with the server's words, listing the same lines", await refused.isVisible() && /Not ready to file/.test(await refused.innerText()) && /stands? before Ready to file/.test(await refused.innerText()) && [...listed].sort().join("\n") === [...before].sort().join("\n"), { listed, before });
 ok("C7.6 fail: nothing changed on the server (still not_started)", (await read()).fl?.status === "not_started");
 await state("ready-refused");
 

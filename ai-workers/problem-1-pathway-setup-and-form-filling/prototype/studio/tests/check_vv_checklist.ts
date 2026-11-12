@@ -191,10 +191,10 @@ const adults = { "A|person.date_of_birth": "1980-05-01", "B|person.date_of_birth
   ok("C6.4 break m7: merged lines are Always when either requirement is", merged.length === 1 && merged[0].base === true, merged);
   ok("C6.4 break m8: the 5-year bound is by date: 2031-11-01 has no problem, 2031-11-02 has one", checkValue(S, "case.application_date", "2031-11-01", TODAY).length === 0 && checkValue(S, "case.application_date", "2031-11-02", TODAY).length > 0 && checkValue(S, "case.application_date", "2021-10-31", TODAY).length > 0);
 }
-// Only the Visitor visa in this slice.
+// M3-S4 (P-425): any combination's checklist is its release's lines; no combination list decides it.
 {
-  const other = caseChecklist(S, "ee.pnp", people, known(adults), TODAY);
-  ok("C6.4 (fail): another combination is not derived yet and says so, with no lines", other.derived === false && /not derived yet/.test(other.why));
+  const other = caseChecklist(S, "ee.pnp", people, known(adults), TODAY) as D;
+  ok("C6.4 + M3-S4: another combination with the same release lines gets the same lists (no combination key read)", other.derived === true && JSON.stringify(other.people.map((p) => p.lines.map((l) => l.id))) === JSON.stringify(run(known(adults)).people.map((p) => p.lines.map((l) => l.id))));
   ok("C6.4: an empty release gives each person an empty list, not an error", run(known(adults)).people.length === 3 && (caseChecklist({ ...S, document_requirements: [] } as Snapshot, "vv.single", people, known(adults), TODAY) as D).people.every((p) => p.lines.length === 0));
 }
 
