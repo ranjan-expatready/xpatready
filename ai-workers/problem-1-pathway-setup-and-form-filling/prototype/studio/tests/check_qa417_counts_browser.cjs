@@ -3,8 +3,9 @@
 // §2-§3), at 1440 px as the case officer, before and after Confirm section:
 //   * the household line's "to confirm" = the sum of the people's tabs ("N to confirm") = the sum of every section's pill;
 //   * the household line names each tab with something to confirm, and its link opens that tab;
-//   * Confirm section on a section with nothing to confirm says so, and sends nothing; in true words (review m1, m2): a
-//     firm-record section's answers are confirmed, and an answer the officer recorded waits for the client.
+//   * a section with nothing to confirm says so: in words beside its disabled button when there is nothing to send, or
+//     from the server's reply to Confirm section; in true words (review m1, m2): a firm-record section's answers are
+//     confirmed, and an answer the officer recorded waits for the client.
 // Before the fix the tabs carry no count and the household line names no tab, so this fails there.
 // When the copy has no Visitor visa or Study permit combination it loads the configured checkpoint (POST /demo/load), as
 // the rehearsal did. No model call (US$0).
@@ -132,37 +133,35 @@ async function walk(p, id, tag, shot) {
   ok(`${tag} after: the household went down by that tab's count, and the tab is off the household line`, after.household === before.household - before.byTab[target.id] && !after.links.some((l) => l.id === target.id), { before: before.household, tab: before.byTab[target.id], after: after.household });
   ok(`${tag} after: the household line still names every tab with something to confirm`, after.linked === after.household, after);
 
-  // A section with nothing to confirm: Confirm section says so and sends nothing.
+  // A section whose answers are all confirmed: Confirm section asks the server and says "nothing to confirm" from its
+  // reply (the page may not hold the latest answers yet: CI on 7042c1612, check_runtime_r1c's "None apply").
   await p.locator(`[role="tab"][data-tab="${target.id}"]`).click();
-  const idle = p.locator('#agent-view section[aria-labelledby^="h-"]').filter({ has: p.locator("button[data-nothing-to-confirm]") }).first();
-  ok(`${tag}: a section with nothing to confirm is marked so on its button`, (await idle.count()) === 1);
-  let sent = 0;
-  const onReq = (r) => { if (/\/sections\/[^/]+\/confirm$/.test(r.url())) sent++; };
-  p.on("request", onReq);
-  await idle.getByRole("button", { name: "Confirm section" }).click();
-  const said = p.getByText(/: nothing to confirm\. (Every answer here is confirmed already|No answer is given here yet)\./).first();
-  await said.waitFor(T).catch(() => {});
-  ok(`${tag}: Confirm section on it says "nothing to confirm"`, await said.isVisible().catch(() => false));
-  await sleep(500);
-  p.off("request", onReq);
-  ok(`${tag}: and sends nothing`, sent === 0, sent);
+  const done = p.locator('#agent-view section[aria-labelledby^="h-"]').filter({ hasText: / 0 to confirm/ }).filter({ has: p.locator('button:not([disabled])', { hasText: "Confirm section" }) }).first();
+  ok(`${tag}: the tab has a confirmed section whose Confirm section can still be pressed`, (await done.count()) === 1);
+  const toast = (re) => p.getByText(re).last();
+  if (await done.count()) {
+    const reply = p.waitForResponse((r) => /\/sections\/[^/]+\/confirm$/.test(r.url()) && r.request().method() === "POST", T);
+    await done.getByRole("button", { name: "Confirm section" }).click();
+    const r = await reply.then((x) => x.json()).catch(() => null);
+    ok(`${tag}: the server confirms none of them`, r?.confirmed === 0, r);
+    const said = toast(/: nothing to confirm\. Every answer here is confirmed already\./);
+    await said.waitFor(T).catch(() => {});
+    ok(`${tag}: Confirm section on it says "nothing to confirm", every answer confirmed already`, await said.isVisible().catch(() => false));
+  }
   await shot(`${tag}-02-nothing-to-confirm`);
 
-  // Review m1: a section of firm-record answers (the representative's tab) has answers, all confirmed: never "No answer".
-  const toast = (re) => p.getByText(re).last();
+  // Rehearsal §4 and review m1: a section with no answer for the officer to send (the representative's firm-record
+  // answers: given and confirmed) says so in words beside its disabled button, never a silent dead button or "No answer".
   const repTab = p.locator('[role="tab"]', { hasText: /^The representative/ });
   ok(`${tag} m1 setup: the case has the representative's tab`, (await repTab.count()) > 0);
   if (await repTab.count()) {
     await repTab.first().click();
-    const firm = p.locator('#agent-view section[aria-labelledby^="h-"]').filter({ has: p.locator("button[data-nothing-to-confirm]") }).filter({ hasText: /[1-9]\d* answered · 0 to confirm/ }).first();
-    ok(`${tag} m1: the representative's tab has a firm-record section with nothing to confirm`, (await firm.count()) === 1);
+    const firm = p.locator('#agent-view section[aria-labelledby^="h-"]').filter({ hasText: /[1-9]\d* answered · 0 to confirm/ }).filter({ has: p.locator("[data-nothing-to-confirm]") }).first();
+    ok(`${tag} m1: a firm-record section says beside its button that there is nothing to confirm`, (await firm.count()) === 1);
     if (await firm.count()) {
-      const title = (await firm.locator("h2").innerText()).trim();
-      await firm.getByRole("button", { name: "Confirm section" }).click();
-      const said = toast(new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} for .*: nothing to confirm\\.`));
-      await said.waitFor(T).catch(() => {});
-      const text = await said.innerText().catch(() => "");
-      ok(`${tag} m1: it says its answers are confirmed, never "No answer is given here yet"`, /Every answer here is confirmed already\./.test(text) && !/No answer is given/.test(text), text);
+      const words = await firm.locator("[data-nothing-to-confirm]").innerText();
+      ok(`${tag} m1: its words are "every answer here is confirmed already", never "no answer yet"`, /every answer here is confirmed already/i.test(words) && !/no answer/i.test(words), words);
+      ok(`${tag} m1: and its Confirm section is disabled (nothing to send)`, await firm.getByRole("button", { name: "Confirm section" }).isDisabled());
     }
   }
 
@@ -179,7 +178,6 @@ async function walk(p, id, tag, shot) {
     await p.locator(`[role="tab"][data-tab="${target.id}"]`).click();
     const sec = p.locator(`section[id="s-${x.subjectId}-${x.section}"]`);
     await sec.waitFor(T);
-    ok(`${tag} m2: with only an answer waiting for the client, the section has nothing for the officer to confirm`, (await sec.locator("button[data-nothing-to-confirm]").count()) === 1);
     await sec.getByRole("button", { name: "Confirm section" }).click();
     const said = toast(/: nothing to confirm\..*wait/);
     await said.waitFor(T).catch(() => {});

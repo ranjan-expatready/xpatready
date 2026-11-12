@@ -904,22 +904,17 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
   const open = [...s.questions.flatMap(shownAnswers), shownGroup].filter((a) => a && a.status !== "VERIFIED" && !a.awaits_client).length;
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", view.case.id] });
   const checks = view.checks.filter((c) => c.subjectId === s.subjectId && c.section === s.section);
-  // QA-417 (rehearsal §4): with nothing to confirm (no answer shown, or every one confirmed or waiting for the client),
-  // Confirm section says so instead of doing nothing; nothing is sent.
-  const nothing = !seen.length || open === 0;
-  const waiting = [...s.questions.flatMap(shownAnswers), shownGroup].filter((a) => a && a.awaits_client).length;
+  // QA-417 (rehearsal §4): a section with no answer for the officer to confirm says so in words beside its (disabled)
+  // button, never a silent dead button. Review m1: "no answer yet" only when none is given (firm-record answers are given
+  // and confirmed, and never sent as seen).
+  const noneToSend = !seen.length;
   async function confirm() {
-    if (nothing) {
-      // Review m1, m2: "no answer" only when none is given (firm-record answers are given and confirmed, never "seen");
-      // "confirmed already" never beside answers that wait for the client.
-      const why = !s.answered ? " No answer is given here yet." : waiting ? "" : " Every answer here is confirmed already.";
-      toast.push({ tone: "info", text: `${s.title} for ${inSentence(s.about_label)}: nothing to confirm.${why}${waiting ? ` ${waiting} recorded by staff wait${waiting === 1 ? "s" : ""} for the client to re-confirm.` : ""}${s.missing.length ? ` Still unanswered: ${s.missing.length}.` : ""}` });
-      return;
-    }
     setBusy(true);
     try {
       const r = await api<{ confirmed: number; missing: string[]; awaiting_client?: number }>(`/runtime/cases/${view.case.id}/sections/${s.section}/confirm`, { method: "POST", json: { subjectId: s.subjectId, seen } });
-      toast.push({ tone: checks.length ? "info" : "ok", text: `${s.title} for ${inSentence(s.about_label)}: ${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.${r.awaiting_client ? ` ${r.awaiting_client} recorded by staff wait${r.awaiting_client === 1 ? "s" : ""} for the client to re-confirm.` : ""}${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}${checks.length ? ` ${checks.length} check${checks.length === 1 ? "" : "s"} still open: ${checks.map((c) => c.message).join(" ")}` : ""}` });
+      // QA-417: the server's reply decides the words (the page may not have its latest answers yet); with none confirmed
+      // it says "nothing to confirm", and "confirmed already" never beside answers that wait for the client (review m2).
+      toast.push({ tone: checks.length || !r.confirmed ? "info" : "ok", text: `${s.title} for ${inSentence(s.about_label)}: ${r.confirmed ? `${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.` : `nothing to confirm.${r.awaiting_client ? "" : " Every answer here is confirmed already."}`}${r.awaiting_client ? ` ${r.awaiting_client} recorded by staff wait${r.awaiting_client === 1 ? "s" : ""} for the client to re-confirm.` : ""}${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}${checks.length ? ` ${checks.length} check${checks.length === 1 ? "" : "s"} still open: ${checks.map((c) => c.message).join(" ")}` : ""}` });
     } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
     await refresh();
     setBusy(false);
@@ -968,7 +963,8 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
         <span className="flex-1" />
         {/* C6.5 part 2b: "Fill this from documents" (documents-drawer.tsx), staff only (the Agent view). */}
         <DocumentsButton view={view} s={s} />
-        <Button size="sm" variant={open > 0 ? "default" : "secondary"} busy={busy} onClick={() => void confirm()} data-nothing-to-confirm={nothing ? "" : undefined} title={nothing ? "Nothing to confirm in this section" : "Confirm the answers shown in this section; an answer that changed since you looked is refused, never confirmed unseen"}>
+        {noneToSend ? <span className="text-[13px] text-text-muted" data-nothing-to-confirm>{s.answered ? "Nothing to confirm: every answer here is confirmed already" : "Nothing to confirm: no answer yet"}</span> : null}
+        <Button size="sm" variant={open > 0 ? "default" : "secondary"} disabled={noneToSend} busy={busy} onClick={() => void confirm()} title={noneToSend ? "Nothing to confirm in this section" : "Confirm the answers shown in this section; an answer that changed since you looked is refused, never confirmed unseen"}>
           <Check aria-hidden />Confirm section
         </Button>
       </header>
