@@ -9,12 +9,12 @@ import { canonical, CALCULATIONS, validatePredicate } from "../../contracts/rule
 import type { Snapshot } from "./snapshot.ts";
 import { askedChoiceProblems, channelProblems, fingerprintLine, type Accepts } from "./channels.ts";
 import { duplicateValidity, roleWords, validityProblems } from "./runtime/case-checklist.ts";
-import { defaultModeOf, FEE_TABLE, rulesFrom } from "./runtime/filings.ts";
+import { FEE_TABLE, rulesFrom } from "./runtime/filings.ts";
 import { COVERAGE_FIXES, coverageGaps } from "./coverage.ts";
 import { factSourceProblems, factWords, who } from "./sources.ts";
 import { oathMappedProblems } from "./form-steps.ts";
 import { eligibilityChanges, gateProblems } from "./eligibility-gates.ts";
-import { sourceKey } from "../contracts/resolver.ts"; // SH3 R8
+import { PRINCIPAL_CHILDREN_WHEN, sourceKey } from "../contracts/resolver.ts"; // SH3 R8
 import { NO_FIELD_MAP } from "./setup-checklist.ts";
 import { formsWithoutFieldMap } from "./programs.ts"; // QA-180: one rule for release and Open a case
 import { FAMILY_INFORMATION } from "./form-completeness.ts";
@@ -107,9 +107,9 @@ export function addedFilingProblems(s: Snapshot, types: Map<string, string>, der
     if (!l.addsFiling) continue;
     const item = `${l.label ?? l.role}: ${l.addsFiling.filing ?? "added filing"}`;
     const say = (message: string) => out.push({ level: "error", where: "Who can be in this application", item, role: l.role, message });
-    // Break m9: the save's rule again at release (one application per person): never on the principal or a line that files its own.
-    // Review m4: a line saved without a mode whose built-in default is "files own" files its own too.
-    if (l.role === "principal" || l.filingMode === "files_own" || l.filingMode === "co_files" || (!l.filingMode && defaultModeOf(s.combination.key, l.role) === "files_own")) say(`${l.label ?? l.role} already files their own application, so a filing it adds would change nothing. Remove the filing it adds, or change the line's filing.`);
+    // Break m9: the save's rule again at release (one application per person): never on the principal's line nor a
+    // co-filing one. BK-15 (P-486): on a line that files its own, the added filing is made instead of it.
+    if (l.role === "principal" || l.filingMode === "co_files") say(`${l.label ?? l.role} files the combination's own application (the principal's) or a co-filed one, so a filing it adds has no place. Remove the filing it adds, or put it on another person's line.`);
     for (const e of checkCondition(l.addsFiling.condition, types, derived)) say(`Condition ${e}.`);
     for (const f of new Set([...JSON.stringify(l.addsFiling.condition ?? null).matchAll(/"field":"([^"]+)"/g)].map((m) => m[1]))) {
       if (types.has(f) && !placed.has(f) && !docFacts.has(f) && !derived.has(f)) say(`The rule reads ${f}, but nobody is asked it in this combination, so the filing could never be added. Ask it in the questionnaire, or change the rule.`);
@@ -125,10 +125,19 @@ export function addedFilingProblems(s: Snapshot, types: Map<string, string>, der
       // Review n1: once the filing is added, only the lines it names count the person, so a per-person or family-maximum
       // line that charges their role and is not named stops counting them: the case would show a short total as worked out.
       // A warning, not a refusal: the author may know the person does not pay it (the line's words say so).
-      const missed = feeRules.fees.filter((r) => r.basis !== "per_application" && (!r.roles || r.roles.includes(l.role)) && !keys.includes(r.key));
+      // BK-15 (break M1): with fees by role, the other lines belong to other documents; only an IRCC step the role pays
+      // whatever it files (its role's line with a step, e.g. biometrics) must be named again.
+      const own = feeRules.byRole?.get(l.role);
+      const missed = feeRules.fees.filter((r) => r.basis !== "per_application" && !keys.includes(r.key) && (feeRules.byRole ? !!own?.lines.includes(r.key) && !!r.step : !r.roles || r.roles.includes(l.role)));
       if (missed.length) out.push({ level: "warning", where: "Who can be in this application", item, role: l.role,
         message: `${missed.map((r) => `"${r.label}" (${r.key})`).join(", ")} ${missed.length > 1 ? "charge" : "charges"} each ${l.role.replace(/_/g, " ")} on this combination, but the filing it adds does not name ${missed.length > 1 ? "them" : "it"}, so once the filing is added that person is not counted on ${missed.length > 1 ? "them" : "it"} and the case's total can be short (unless a family maximum is already reached). Name ${missed.length > 1 ? "them" : "it"} among the filing's fee lines, unless that person does not pay ${missed.length > 1 ? "them" : "it"}.` });
     }
+  }
+  // BK-15 (break m6): with fees by role, each line whose person applies names its role's fee lines; else every case with
+  // that person is unpriced (BR-10). A warning: the case says so in words.
+  if (feeRules?.byRole) for (const l of (s.combination.participants ?? []) as { role: string; label?: string; filingMode?: string | null }[]) {
+    if (l.role === "principal" || l.filingMode === "files_own" || l.filingMode === "on_principal") if (!feeRules.byRole.has(l.role))
+      out.push({ level: "warning", where: "Who can be in this application", item: l.label ?? l.role, role: l.role, message: `The fee table names no fee lines for a ${l.role.replace(/_/g, " ")} in this combination, so a case with ${l.label ?? "this person"} on it shows no fees (nothing is guessed). Add the role to the combination's fees by role.` });
   }
   return out;
 }
@@ -146,6 +155,8 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
     for (const e of checkCondition(f.condition, types, derived)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `Condition ${e}.` });
     // S5 (challenge M1): "Only if" in words with no rule cannot be evaluated on a case, so it is never released as is.
     if (f.status === "conditional" && !f.condition) out.push({ level: "error", where: "Forms", item: f.form_number, message: `Turn "${f.condition_plain ?? "only if"}" into a rule: the condition is in words only, so a case cannot tell whom ${f.form_number} applies to. Open the form on the Forms tab and build the rule.` });
+    // BK-16 (P-490): a "principal, and each child while its condition holds" line with no condition never reaches a child.
+    if (f.who === PRINCIPAL_CHILDREN_WHEN && !f.condition && f.status !== "conditional") out.push({ level: "warning", where: "Forms", item: f.form_number, message: `${f.form_number} is for the principal applicant and each child while its condition holds, but it has no condition, so no child ever gets it. Build its condition on the Forms tab, or choose "Principal applicant".` });
     // Lead check L5: a minimum age is decided by each person's date of birth (engine/render.ts ageGate asks it as a
     // deciding question); with nobody asked for it the form could never be decided, so release is refused.
     if (f.min_age && !placed.has(BIRTH) && !docFacts.has(BIRTH)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} applies from age ${f.min_age}${f.who === "principal_partner_adult_children" ? " for a dependent child" : ""}, so ${f.who === "principal_partner_adult_children" ? "each child's" : "each person's"} date of birth decides it, but nobody is asked for a date of birth in this combination. Add the date of birth question to this combination's questionnaire, or clear the minimum age.` });

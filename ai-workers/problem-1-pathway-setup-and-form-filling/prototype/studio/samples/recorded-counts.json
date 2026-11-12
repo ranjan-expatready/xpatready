@@ -1,0 +1,18 @@
+{
+  "basis": "QA-395 (qa on #1557; tech lead Lead 18, 11 Nov 2026; P-319: form-specific facts are data, never engine code, as samples/own-yes-no.json, B88). A \"recorded\" Yes/No box whose form counts only some entries: the entries of `entry`'s list count when the entry's country is none of `other_than` and its period (`from` to `to`) covers more than `more_than_months` months of the past `past_years` years. Each rule quotes the form's own words, read from the official PDF's form field caption (prototype/p1/inventory/<form>.inventory.json, the field list read from the official PDF in the library, checksum per its manifest), with page and date. The facts are the library's own (release 2 of the configured checkpoint, 11 Nov 2026). This product's readings of the form's words, each Unconfirmed: immigration expert: a period that only partly falls inside the past years counts by its part inside them; each entry counts on its own (two stays in one country that pass the months only together do not count); an entry whose end is before its start, or that lacks its country or dates, is left to a person. A rule is matched by its form field's data path and fact, so another form sharing that data path and fact takes it too (IMM 1294 and IMM 1295 print the same Question 8 A on the same path, 11 Nov 2026): a form that counts differently needs its own rule first.",
+  "rules": [
+    {
+      "form": "IMM 5257 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]",
+      "quote": "Question 8 A. During the past 5 years have you lived in any country other than your country of citizenship or your current country of residence for more than 6 months?",
+      "page": 1,
+      "read": "2026-11-11, caption of PCRIndicator in prototype/p1/inventory/imm5257e.inventory.json",
+      "entry": "person.previous_residence_country",
+      "from": "person.previous_residence_from",
+      "to": "person.previous_residence_to",
+      "other_than": ["person.citizenship", "person.current_residence_country"],
+      "past_years": 5,
+      "more_than_months": 6
+    }
+  ]
+}
