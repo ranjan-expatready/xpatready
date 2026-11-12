@@ -4,11 +4,13 @@
 // by the case officer through the product's routes; the client answers the children's question on their own list.
 // All from data: samples/form-setup.json sp.outside (IMM 1294 for the student and each child who studies, PR 1's who;
 // IMM 1295 for a spouse or partner; IMM 5257 for a child who does not study), samples/conditional-filings.json (who
-// answers, and its "Why we ask"), samples/wave1.json (IMM 1295 among the Study permit's sources). Visitor visa unchanged.
+// answers, and its "Why we ask"), samples/wave1.json (IMM 1295 among the Study permit's sources, marked "later"). Visitor visa unchanged, and the other
+// four combinations' releases byte-identical to main's (fixtures/bk16/other-combinations-main.json, P-496 (1)).
 // Loads the configured checkpoint itself (about 2.5 minutes; saved AI answers only, US$0, live AI off). Sample.
 //   zsh studio/tools/isolated.sh bk16 4454 start && tsx studio/tests/check_bk16_family_forms_api.ts 4454 xr_studio_bk16
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const PORT = Number(process.argv[2]), DB = process.argv[3];
 if (!PORT || PORT === 4400 || !/^xr_studio_(?!demo)/.test(DB ?? "")) { console.error("usage: <port of an isolated copy, never 4400> <its database>"); process.exit(2); }
@@ -33,6 +35,23 @@ const loaded = has ? { status: 200, body: null } : await call("POST", "/demo/loa
 if (loaded.status >= 300) { console.log("FAIL  the configured checkpoint did not load", loaded.status, JSON.stringify(loaded.body).slice(0, 300)); process.exit(1); }
 const snap = (key: string, part: string) => JSON.parse(sql(`select r.snapshot->'${part}' from config_release r join combination c on c.id=r.combination_id where c.combination_key='${key}' order by r.version desc limit 1`) || "[]");
 const combo = (key: string) => sql(`select id from combination where combination_key='${key}'`);
+
+// P-496 (1), option (A): IMM 1295 joins the shared library only for the Study permit spouse's rule, so it is decided,
+// sectioned and placed after every combination's own forms (samples/wave1.json "later"). Byte check: the other four
+// combinations' released placements, chosen sections and form lines are exactly main's (fixtures/bk16, captured from main).
+const MAIN = JSON.parse(readFileSync(join(import.meta.dirname, "fixtures", "bk16", "other-combinations-main.json"), "utf8")) as Record<string, unknown>;
+type Placement = { section_id: string; fact: string; collected_from: string; repeats: string; question_text?: string | null; rule_only?: boolean };
+const released = (key: string) => ({
+  placements: (snap(key, "placements") as Placement[]).map((x) => [x.section_id, x.fact, x.collected_from, x.repeats, x.question_text ?? "", x.rule_only ? "rule_only" : ""].join(" | ")).sort(),
+  sections: (snap(key, "sections") as { id: string; title: string }[]).map((x) => `${x.id} | ${x.title}`),
+  forms: (snap(key, "forms") as { form_number: string; who: string; status: string }[]).map((x) => `${x.form_number} | ${x.who} | ${x.status}`).sort(),
+});
+for (const key of ["vv.single", "wp.lmia_inside", "pnp.express_entry", "fs.spouse"]) {
+  const head = released(key), main = MAIN[key] as typeof head;
+  const gone = (k: keyof typeof head) => main[k].filter((x) => !head[k].includes(x)), added = (k: keyof typeof head) => head[k].filter((x) => !main[k].includes(x));
+  ok(`BK-16 (P-496 (1)): ${key}'s released placements, chosen sections and form lines are byte-identical to main's (${main.placements.length} placements)`,
+    JSON.stringify(head) === JSON.stringify(main), { placementsGone: gone("placements"), placementsAdded: added("placements"), sectionsGone: gone("sections"), sectionsAdded: added("sections"), formsGone: gone("forms"), formsAdded: added("forms") });
+}
 
 // The release, as the checkpoint set it from data.
 const lines = snap("sp.outside", "forms") as { form_number: string; who: string; status: string; condition?: { subjectKind?: string; field?: string; value?: unknown } | null }[];
