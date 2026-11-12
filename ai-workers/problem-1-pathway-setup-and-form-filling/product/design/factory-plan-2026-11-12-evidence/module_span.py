@@ -49,9 +49,9 @@ print('top module pairs:', pairs.most_common(12))
 
 # --- second pass: hub files excluded, and the coarse three-stream view ---
 HUBS = {'main', 'core', 'studio', 'validate', 'render', 'routes-data', 'App', 'api', 'utils'}
-COARSE = {'spine-structure': 'configurator', 'sources': 'configurator', 'library': 'configurator', 'questionnaire-design': 'configurator',
-          'release-review': 'configurator', 'case-core': 'case-delivery', 'case-questionnaire': 'case-delivery', 'case-documents': 'case-delivery',
-          'forms-fill': 'case-delivery', 'submission': 'case-delivery', 'platform': 'platform', 'ai-gateway': 'platform'}
+COARSE = {'structure': 'configurator', 'sources': 'configurator', 'library': 'configurator', 'questionnaire-design': 'configurator',
+          'release': 'configurator', 'case-core': 'case-delivery', 'case-questionnaire': 'case-delivery', 'case-documents': 'case-delivery',
+          'case-forms': 'case-delivery', 'case-submission': 'case-delivery', 'platform': 'platform', 'ai-gateway': 'platform'}
 sp2 = collections.Counter(); spc = collections.Counter(); hubpr = collections.Counter(); coarse_pairs = collections.Counter()
 for r in csv.DictReader(open(af), delimiter='\t'):
     fl = subprocess.run(['git', '-C', repo, 'diff', '--name-only', f"{hs[r['pr']]}^1", hs[r['pr']]], capture_output=True, text=True).stdout.split()

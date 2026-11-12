@@ -1,19 +1,6 @@
-# Script outputs, 12 Nov ~15:30-15:50 IST, main 56b630913 (re-run commands in the plan's Evidence section)
+# Script outputs, 12 Nov IST, main 56b630913 (our app only; the team's app is measured in the private comparison). Re-run commands in the plan's Evidence section.
 
 ## measure_structure.py
-[erv2-backend] api: folders=41 files=3719 test_files=2395 lines=940624
-[erv2-backend] api non-test files=1324 median_lines=111.5 p90=404 max=800 over800=0 over500=86
-[erv2-backend] routes=452 controllers=115 nest_@Module=78 prisma_models=200
-[erv2-backend] files per folder: median=29.0 p90=248 max=737
-[erv2-backend] largest non-test api files: [(800, 'apps/api/src/pack-authoring/pack-jobs.service.ts'), (799, 'apps/api/src/rails/adapters/payment/stripe-billing/stripe-billing.adapter.ts'), (798, 'apps/api/src/rails/adapters/payment/saas-billing-fake/saas-billing-fake.adapter.ts'), (796, 'apps/api/src/pack-authoring/pack-graph.loader.ts'), (795, 'apps/api/src/governance/audit-ip-ceiling.service.ts'), (795, 'apps/api/src/firm/offboarding/firm-purge.service.ts'), (794, 'apps/api/src/spine/pack-read/pack-read.service.ts'), (789, 'apps/api/src/spine/pack-tenant-extension.service.ts')]
-[tmp-allapps] api: folders=2 files=4425 test_files=2769 lines=1122402
-[tmp-allapps] api non-test files=1656 median_lines=124.5 p90=434 max=800 over800=0 over500=128
-[tmp-allapps] routes=453 controllers=117 nest_@Module=79 prisma_models=200
-[tmp-allapps] files per folder: median=2212.5 p90=4053 max=4053
-[tmp-allapps] largest non-test api files: [(800, 'apps/api/tools/sa1-db-rehearsal.ts'), (800, 'apps/api/src/pack-authoring/pack-jobs.service.ts'), (799, 'apps/api/tools/check-sealed-ip-presence.ts'), (799, 'apps/api/tools/check-api-contract-parity.ts'), (799, 'apps/api/src/rails/adapters/payment/stripe-billing/stripe-billing.adapter.ts'), (798, 'apps/api/src/rails/adapters/payment/saas-billing-fake/saas-billing-fake.adapter.ts'), (797, 'apps/api/tools/lib/spine-constraint-declarations.ts'), (797, 'apps/api/tools/lib/handler-call-graph.ts')]
-[tmp-fe] web: non-test files=2466 test files=589 lines=436548 tsx=1460 median=101.0 p90=298 max=794 over800=0
-[tmp-fe] web top folders: [('features', 2177), ('components', 126), ('lib', 47), ('style-guide', 39), ('zones', 37), ('hooks', 17), ('locales', 15), ('(top)', 8)]
-[tmp-fe] largest web files: [(794, 'features/admin/country-admin/country-pack/components/country-pack-api.ts'), (788, 'components/template-editor/template-editor-screen.tsx'), (776, 'features/admin/country-admin/country-pack/components/pack-draft-content.ts'), (765, 'features/admin/country-admin/country-pack/components/pack-draft-content-regulator-editor.tsx'), (738, 'features/admin/spine-authoring/program-hierarchy-page.tsx'), (723, 'features/admin/firm-provisioning/firm-provisioning-page.tsx')]
 [ours] api: folders=2 files=228 test_files=0 lines=32931
 [ours] api non-test files=228 median_lines=67.0 p90=364 max=1284 over800=6 over500=16
 [ours] routes=401 controllers=69 nest_@Module=1 prisma_models=103
@@ -56,12 +43,12 @@ Little's law over 257 h: throughput 1.17 app PRs/h (28.1/day), mean time in syst
 ## module_span.py
 module	files	lines
 library	115	14834
-release-review	47	9507
-spine-structure	36	8104
+release	47	9507
+structure	36	8104
 case-core	52	7277
 sources	21	5212
-submission	30	5196
-forms-fill	26	4469
+case-submission	30	5196
+case-forms	26	4469
 demo-data	76	4216
 platform	31	3375
 ai-gateway	21	3254
@@ -72,8 +59,8 @@ UNMAPPED	26	1448
 unmapped: ['api/src/features/visitor-visa-filings.ts', 'engine/published-date.ts', 'engine/agreement.ts', 'web/src/components/before-forms.tsx', 'web/src/components/ui/tabs.tsx', 'web/src/components/ui/card.tsx', 'web/src/components/ui/empty-state.tsx', 'web/src/components/ui/tooltip.tsx', 'web/src/components/ui/error-state.tsx', 'web/src/components/ui/badge.tsx', 'web/src/components/ui/spinner.tsx', 'web/src/components/ui/controls.tsx', 'web/src/components/ui/skeleton.tsx', 'web/src/components/lifecycle/index.tsx', 'web/src/lib/item-words.ts', 'web/src/lib/utils.ts', 'web/src/lib/api.ts', 'web/src/lib/simulated-people.ts', 'web/src/lib/form-fields-way-out.ts', 'web/src/pages/workspace/setup-rail.tsx', 'web/src/pages/workspace/find-key.ts', 'web/src/pages/workspace/overview.tsx', 'contracts/case-check-words.ts', 'samples/finder-saved-runs.json', 'samples/form-library-sample.json', 'samples/review-corrections.json']
 app PRs 301; modules touched per PR (demo-data and schema not counted): {0: 13, 1: 75, 2: 70, 3: 55, 4: 41, 5: 47}
 PRs touching prisma/schema.prisma: 38
-app PRs per module: [('release-review', 120), ('library', 117), ('forms-fill', 89), ('case-core', 89), ('spine-structure', 82), ('platform', 69), ('submission', 63), ('sources', 56), ('case-questionnaire', 51), ('questionnaire-design', 32), ('ai-gateway', 31), ('case-documents', 28), ('UNMAPPED', 21)]
-top module pairs: [(('library', 'release-review'), 66), (('release-review', 'spine-structure'), 55), (('library', 'spine-structure'), 49), (('forms-fill', 'release-review'), 40), (('platform', 'release-review'), 40), (('forms-fill', 'library'), 37), (('platform', 'spine-structure'), 37), (('case-core', 'case-questionnaire'), 36), (('case-core', 'forms-fill'), 35), (('case-core', 'release-review'), 35), (('case-core', 'library'), 34), (('forms-fill', 'spine-structure'), 32)]
+app PRs per module: [('release', 120), ('library', 117), ('case-forms', 89), ('case-core', 89), ('structure', 82), ('platform', 69), ('case-submission', 63), ('sources', 56), ('case-questionnaire', 51), ('questionnaire-design', 32), ('ai-gateway', 31), ('case-documents', 28), ('UNMAPPED', 21)]
+top module pairs: [(('library', 'release'), 66), (('release', 'structure'), 55), (('library', 'structure'), 49), (('case-forms', 'release'), 40), (('platform', 'release'), 40), (('case-forms', 'library'), 37), (('platform', 'structure'), 37), (('case-core', 'case-questionnaire'), 36), (('case-core', 'release'), 35), (('case-core', 'case-forms'), 35), (('case-core', 'library'), 34), (('case-forms', 'structure'), 32)]
 hub files: app PRs touching each: [('studio', 39), ('validate', 28), ('render', 20), ('main', 19), ('App', 11), ('core', 4), ('api', 2), ('routes-data', 1)]
 modules per PR with hub files excluded: {0: 19, 1: 83, 2: 69, 3: 59, 4: 31, 5: 40}
 coarse streams per PR (configurator / case-delivery / platform), hubs excluded: {0: 19, 1: 154, 2: 91, 3: 37} [(('case-delivery', 'configurator'), 59), (('case-delivery', 'configurator', 'platform'), 37), (('configurator', 'platform'), 28), (('case-delivery', 'platform'), 4)]

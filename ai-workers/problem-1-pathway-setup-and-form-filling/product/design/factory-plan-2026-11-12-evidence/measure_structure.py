@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Measure the structure of a NestJS/Prisma/React code base (sizing only, no code copied).
 Usage: python3 -I measure_structure.py <root> <api_src_rel> <prisma_dir_rel> <web_src_rel|-> <label>
-Writes <label>-modules.tsv and prints a summary. Counts physical lines like ER v2's own rule."""
+Writes <label>-modules.tsv and prints a summary. Counts physical lines."""
 import os, re, sys, statistics as st
 root, api, prisma, web, label = sys.argv[1:6]
 SRC = ('.ts', '.tsx')
