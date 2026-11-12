@@ -73,7 +73,7 @@ let p = await f.prep();
 // m1 (P-491) as it stands: an unanswered child keeps their filing from Ready to file. Their IMM 5257 cannot start until
 // the answer is in (a CRITICAL line, Break B3); PR 1's who gives them no IMM 1294 to wait on, never an error.
 const childLine = (pp: Prep, k: string, name: string) => { const fid = pp.filings.find((x) => x.owner?.subject === k)?.id; const r = pp.readiness.find((x) => x.filing === fid);
-  return { ready: r?.ready, waits: (r?.warns ?? []).some((w) => w.code === "missing_facts" && /IMM 5257/.test(w.words) && w.words.includes(name)) }; };
+  return { ready: r?.ready, waits: (r?.warns ?? []).some((w) => w.code === "missing_facts" && /whether IMM 5257 applies/.test(w.words) && w.words.includes(name)) }; };
 ok("BK-16 fail (m1): unanswered, each child's filing is not Ready to file: its IMM 5257 waits for the answer (CRITICAL)",
   [[f.K1, "Sample Child S"], [f.K2, "Sample Child V"]].every(([k, n]) => childLine(p, k, n).ready === false && childLine(p, k, n).waits), [childLine(p, f.K1, "Sample Child S"), childLine(p, f.K2, "Sample Child V")]);
 ok("BK-16 (QA-418): unanswered, the fees wait for each child's answer", !p.fees_worked_out && /Waits for Sample Child S's answer/.test(p.fees_why ?? "") && /Sample Child V's answer/.test(p.fees_why ?? ""), p.fees_why);
