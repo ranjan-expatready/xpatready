@@ -76,8 +76,9 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("officer: the case list opens with one primary action", await shows(o.getByRole("button", { name: "Open a case" })));
   await o.getByRole("button", { name: "Open a case" }).click();
   await o.getByRole("button", { name: "Open case" }).click(); await idle(o);
-  // A24-2 (P-492): the firm's own reference is optional, so only the missing name is refused.
-  step("officer fail: opening a case without a name shows the error on its field; the optional reference shows none", await shows(o.getByText("Give the principal applicant a display name.", { exact: true })) && (await o.getByText("Give the case a reference of at least 3 characters.", { exact: true }).count()) === 0);
+  // A24-2 (P-492): the firm's own reference is optional, so only the missing name is refused (read in the dialog: the
+  // toast repeats a single error's words).
+  step("officer fail: opening a case without a name shows the error on its field; the optional reference shows none", await shows(o.getByRole("dialog").getByText("Give the principal applicant a display name.", { exact: true })) && (await o.getByRole("dialog").getByText("Give the case a reference of at least 3 characters.", { exact: true }).count()) === 0);
   await o.getByLabel("Your own reference (optional)").fill(`R1C-${run}`);
   await o.getByLabel("Principal applicant's name").fill("Sample Applicant C");
   await o.getByRole("button", { name: "Open case" }).click(); await idle(o);
