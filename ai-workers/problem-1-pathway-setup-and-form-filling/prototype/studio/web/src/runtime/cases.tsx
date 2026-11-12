@@ -328,7 +328,7 @@ function CasePage() {
           {!client ? <p className="text-xs text-text-muted">The client answers on their phone, for everyone travelling.</p>
             : clientCase.submitted ? <p className="mt-1.5 text-[13px] text-text-muted" data-client-card="submitted">Submitted to IRCC. Nothing more is asked of {client.name} on this case.</p>
             : inReview ? <p className="mt-1.5 text-[13px] text-text-muted" data-client-card="in-review">{client.name} answers on their phone, for everyone travelling. Round {inReview.number} is with the representative of record now.</p>
-            : clientCase.owes === null ? <Skeleton className="mt-1.5 h-8 w-56" />
+            : clientCase.owes === null || prep.isLoading || rounds.isLoading ? <Skeleton className="mt-1.5 h-8 w-56" />
             : clientCase.owes > 0 ? <div data-client-card="client-answers"><HandOff className="mt-1.5" to={c.client} go={`/cases/${c.id}/questionnaire?from=${encodeURIComponent(actor)}`} handsCase={{ caseId: c.id, from: actor }} data="client" next={<>{client.name} answers on their phone, for everyone travelling.</>} /></div>
             : <div data-client-card={clientCase.next}>
                 <HandOff className="mt-1.5" to={c.client} go={`/cases/${c.id}/questionnaire?from=${encodeURIComponent(actor)}`} handsCase={{ caseId: c.id, from: actor }} data="client" line={<>{client.name} has answered every part and can still check the answers.</>} />
