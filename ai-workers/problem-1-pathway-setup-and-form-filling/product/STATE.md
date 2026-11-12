@@ -20,9 +20,9 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
    - **Extension SP-1** (`…WqEcoZ`): scratch only.
 3. **Founder (A27, A28; P-499, P-500, P-502):** one-week scope = Bake + walks + M4 core by ~19 Nov. **Factory plan card task_2efaa3ec** (Fable, local worktree, Opus challenge, at most 5 founder decisions) waits for his click; when its plan lands, take its decisions to him one at a time. Measured: our API is one NestJS module with 137 flat files and files of 950-1,262 lines; ER v2 has 91 modules and an 800-line cap. Promised: offer the builders' and qa's skill wording for P-500/P-502 at his next typed turn (skills are write-protected).
 4. **Owed:** BACKLOG rows for #1632's m1 (P-497 (2)), P-498's rows, the `flow-measure.py` tooling row (P-501); the expert gets the sweep's financial-support point; SI-6 wording; D8 and A24 expert points; night (P-489 (5)) one spare cloud lane at the founder's last typed turn.
-5. **Standbys:** Lead 27 `local_9ab495f0-d6e9-4a87-8ae2-6ba62074c471` stays; start one more at the founder's next typed turn. Lead 25's check 94a9e075 is deleted; create yours. 26 finished sessions were archived on the founder's word (A28).
+5. **Standbys:** Lead 27 `local_9ab495f0-d6e9-4a87-8ae2-6ba62074c471`, then Lead 28 `local_9428eb1b-027d-4d15-84dd-26572828df34`. Lead 25's check 94a9e075 is deleted; create yours. 26 finished sessions were archived on the founder's word (A28).
 
-**Lead 26 live:** check 101ad69f at :13/:43. 15:2x: #1643 QA-439 answered (A): a generic order rule, a P-502 hypothesis with a 4-point Done when; the child's name goes to QA-440. #1637 records Approve 24f00c207 (qa labels). #1633 labelled.
+**Lead 26 live:** check 101ad69f at :13/:43. 15:2x: #1643 QA-439 answered (A): a generic order rule, a P-502 hypothesis with a 4-point Done when; the child's name goes to QA-440. #1637 records Approve 24f00c207 (qa labels). #1633 labelled. 15:44: #1632 (A3) ruled, 5-point Done when; #1644 m3 a follow-up row after walk 1; nightly 43198665627 (C7.3 C6.6, checkpoint) for #1646. Worktree `qa-…-c8dd7e` clean and pushed; the sandbox refuses its removal. Lead 28 standby started.
 
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
 | # | Ask (IST) | Status |
