@@ -97,3 +97,61 @@ Journeys: (1) `/run nightly C7.3` pass · (2) `/run nightly C11.10 C5.4 checkpoi
 **To fix:** M1 (concurrency group dropped, or moved to the job); M2 (the re-run chooses this PR's run by branch and head_repository). The Minors are for the builder to fix or record. Re-review is needed on the new head.
 
 Verdict: Changes requested
+
+## Re-review cb8d8f0 (diff `9e65ab0f0..cb8d8f0f3` only)
+Reviewed `cb8d8f0f3355fe7f199de23f394207bad0fe07d3` as `git archive` in a scratch copy. The shared tree moved on during the re-review to `6c77039e3` (re-break fixes in comment-run.yml); that commit is **not** reviewed here and needs its own Approve before the label.
+**Run (exit codes):**
+* `check-comment-run.sh` → **102 passed, 0 failed**, rc 0; both scripts run as `bash --noprofile --norc -eo pipefail`, the stand-in `gh` applies the real `--jq` through jq.
+* `write-token.py` → 8 workflows, 0 findings.
+* `check-guards.sh --mutate` → all **12 "guard 12" mutations go red**, including `queue`, `fork` and `link`. In my partial scratch copy, unrelated tests fail for missing files; in the full tree, only `check-isolated-ttl.sh` fails, for the missing demo database as before.
+
+**The earlier findings:**
+* **M1, fixed.** No `concurrency` at workflow or job level; the shape check plus mutation `queue` guard it. A second `/rerun failed` on the same run finds it no longer `completed` and is refused with a reason.
+* **M2, fixed.** The PR's `head.sha`, `head.repo.full_name` and `head.ref` are read, and the newest ci run with matching `head_repository.full_name` and `head_branch` is selected. The fork and other-branch cases have tests, plus mutation `fork`. Residuals are r1 and r2.
+* **m1, fixed.** The run is matched by `display_title == "nightly · PR #<n> comment <id>"` (unique per comment; both numbers validated as digits), with the nightly page as fallback.
+* **m2, fixed.** Lines over 200 characters are refused before trimming; 65,000 spaces now take 0.04 s. Trailing spaces up to 200 are still trimmed and accepted.
+* **m3, fixed.** Step `oops` posts a fixed text (no comment text).
+* **m4, fixed.** Ids use `C[1-9][0-9]?\.[1-9][0-9]?`: `C07.3` refused, `C10.1 C7.30` accepted.
+* **m5, fixed.** The PR body now has the §1 record: problem, four options, upkeep, cost, data, and when to reconsider (including the move to an organisation).
+* **m6, fixed** (see the run above).
+
+**The three things to check:**
+1. **nightly.yml `run-name` (`:29`).** `inputs.request && format('nightly · {0}', inputs.request) || 'nightly'`. `run-name` accepts the `github` and `inputs` contexts.
+   * On the schedule, `inputs` is empty, so `inputs.request` is null and the name is `nightly`.
+   * When started by hand with the default `""`, the empty string is falsy, so the name is `nightly`.
+   * When comment-run dispatches it, the name is `nightly · PR #n comment id`.
+   * The value is display only and reaches no `run:`. Nothing in the repository reads nightly's `display_title`; I grepped tools and workflows.
+   * The new input and its use land in the same PR, so main never receives a dispatch for an input it lacks.
+2. **gojq `env.TAG` / `env.HREPO` in `gh --jq` (verified live, read-only call, gh 2.89.0).** `TAG='PR #7 comment 1' HREPO=a/b gh api repos/<repo> --jq '[env.TAG, env.HREPO, ("nightly · " + env.TAG)]'` printed both values. Under `LC_ALL=C`, `("nightly · " + env.TAG) == "nightly · PR #7 comment 1"` → `true`, so the C locale does not break the `·` match. `TAG` is exported; `HREPO` and `HREF` are given as a prefix to `gh`.
+3. **`oops` cannot double-reply.** Its `if` is `failure() && steps.p.outcome == 'failure'`.
+   * If `p` fails, `act` is skipped (implicit `success()`), so `oops` posts the only reply; `p` holds no token and never posts.
+   * If `p` succeeds and `act` fails after its own reply, `p.outcome` is `success`, so `oops` does not run.
+   * A job cancelled or timed out gets no reply. That is acceptable: the run page shows it.
+
+**Remaining (all Minor; none blocks):**
+* **r1. 30 runs per page, branch filter only in jq** (`comment-run.yml:105`). More than 30 newer runs on the same commit from other forks or branches push this PR's run off the page, and the reply wrongly says "no ci run". An outsider would need 30+ fork PRs. 6c77039 says it adds `branch=` on GitHub's side and 100 per page.
+* **r2. A tab-separated read collapses an empty field** (`:103`). For a deleted fork, `head.repo` is null, the fields shift, and the result is still a safe refusal ("could not read the PR's head"). 6c77039 says it switches to `:`.
+* **r3.** The >200 refusal says "longer than 120 characters". True but imprecise; 6c77039 says it fixed this.
+
+**D-scores changed:**
+| D | Score / evidence |
+|---|---|
+| D1 Requirement fit | 4: every ruled requirement met. |
+| D2 Data integrity | 4: this PR's run only. |
+| D5 Stability and recovery | 4: nothing cancels a command; fixed reply on a crash. |
+| D11 Feedback and state | 4: a reply in every handled path, with its own link. |
+| D16 Testability | 5: 102 checks, 12 mutations, run as GitHub does. |
+| D18 Provenance | 5: the reply links exactly its run. |
+
+D17 and D20 stay "simulated only". The rest are unchanged.
+
+**Journey test (re-scored; same 10 journeys, the workflow's own scripts with the stand-in `gh`):**
+* Journeys 1–7 pass as before.
+* (8) Two commands plus an unrelated comment: no group, so nothing is cancelled. Pass.
+* (9) A fork PR on the same head: this PR's run is chosen; a newer fork run is ignored. Pass. Residual r1 needs 30+ fork PRs.
+* (10) Two lanes dispatch within a minute: each reply links its own run by title. Pass.
+* **Score** (8 applicable criteria): task 1 · next step 1 · words 1 · feedback 1 · data 1 · recovery 1 · speed 1 · trust 1 = **8/8 = 10/10**, pass, no 0.
+
+**Not checked:** live GitHub runs; commit `6c77039e3`; the tech lead's diff read (still owed per P-506).
+
+Verdict: Approve
