@@ -5,7 +5,7 @@
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
 import { Check } from "lucide-react";
-import { personChosen, setActor, useActorId } from "@/lib/api";
+import { personChosen, setActor, useActorId, useApi } from "@/lib/api";
 import { FIRST_FOUR, GROUP_WORDS, homeOf, PEOPLE, personOf, type Group, type Person } from "@/lib/simulated-people";
 import { Frame } from "@/components/frame";
 import { FoldOut } from "@/components/fold-out";
@@ -18,7 +18,12 @@ export function SignInPage() {
   const known = !!personOf(id);
   const current = personChosen() && known ? id : null;
   React.useEffect(() => { document.title = "Sign in · Expat Ready"; }, []);
-  const choose = (p: Person) => { setActor(p.id); nav(homeOf(p.id)); };
+  // BK-5 PR 2 (concept §9, challenge m4): a person with the author duty starts a walk on Demo › Starting points; everyone
+  // else lands where they work (the Studio's programs, or the case list), never on doors they cannot open (BR-3). Break
+  // m1 (PR 2): outside the demo workspace every door is off for the author too, so the author lands on the programs.
+  const session = useApi<{ workspace?: { demo?: boolean } }>(["session", id], "/session");
+  const demo = session.data?.workspace?.demo !== false; // as Starting points reads it (start.tsx BR-3)
+  const choose = (p: Person) => { setActor(p.id); nav(demo && p.duties.includes("author") ? "/start" : homeOf(p.id)); };
   const four = FIRST_FOUR.map((x) => personOf(x)!);
   const more = PEOPLE.filter((p) => !FIRST_FOUR.includes(p.id as (typeof FIRST_FOUR)[number]));
   const groups: Group[] = ["staff", "firm", "client"];
