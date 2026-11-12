@@ -11,6 +11,7 @@
 // US$0: no door calls a live AI route (BR-7).
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { enterCasesAsStaff } from "@/components/frame";
 import { useQueryClient } from "@tanstack/react-query";
 import { DoorOpen, RotateCcw } from "lucide-react";
 import { api, ApiError, setActor, useActorId, useApi, useToast } from "@/lib/api";
@@ -78,7 +79,6 @@ export function StartPage() {
   React.useEffect(() => { const running = story?.state === "running"; if (wasRunning.current && !running) void qc.invalidateQueries(); wasRunning.current = running; }, [story?.state, qc]);
   // BR-3: only the author duty, only in the demo workspace; both known up front, never after a click.
   const off = !session.data ? "Reading who is acting…" : !demo ? "This workspace is not the demo: starting points would empty real work, so they are off." : !author ? "Only the Configuration author loads a starting point." : null;
-  const toast = useToast();
   // P-473/BIC-11: one filled button: the last-loaded card's Continue when a door's state is loaded, else E1's door.
   const filled: DoorKey = last === "configured" || last === "story" ? last : "configured";
 
@@ -95,7 +95,7 @@ export function StartPage() {
       </div>
       {status.isError ? <Notice tone="danger" title="The demo's state could not be read">{(status.error as Error).message}. The starting points need it: reload this page once the studio answers.</Notice> : null}
       {off && session.data ? (
-        <Notice tone="warn" title={off} action={demo && authorPerson ? <Button size="sm" variant="secondary" onClick={() => { setActor(authorPerson.id); toast.push({ tone: "info", text: `Now acting as ${authorPerson.name} (simulated)` }); }} data-start-as-author>Sign in as the Configuration author</Button> : undefined}>
+        <Notice tone="warn" title={off} action={demo && authorPerson ? <Button size="sm" variant="secondary" onClick={() => setActor(authorPerson.id) /* BK-4a: the frame's one notice names the change (concept §3) */} data-start-as-author>Sign in as the Configuration author</Button> : undefined}>
           <span data-start-off>{demo ? `${me?.name ?? "This person"} (simulated) can look, not start. The server refuses a start from anyone else too.` : "Nothing here can run in this workspace."}</span>
         </Notice>
       ) : null}
@@ -113,7 +113,7 @@ export function StartPage() {
               <p className="text-xs text-text-muted">{d.typical}</p>
               {storyRunning ? <StoryRunning startedAt={story?.started_at} onOpen={() => setStoryOpen(true)} /> : null}
               {d.key === "story" && story?.state === "failed" ? <Notice tone="danger" title="The finished story stopped"><span data-story-failed>{story.error}</span></Notice> : null}
-              {d.key === "story" && isLast && story?.cases?.family ? <Link className="text-sm text-text-link underline" to={`/cases/${story.cases.family}`}>Open the family case</Link> : null}
+              {d.key === "story" && isLast && story?.cases?.family ? <Link className="text-sm text-text-link underline" to={`/cases/${story.cases.family}`} onClick={enterCasesAsStaff /* BK-4a: a link into Cases names its person (P-484 (4)) */}>Open the family case (as Case officer)</Link> : null}
               <div className="mt-auto flex flex-wrap gap-2 pt-1">
                 {isLast ? <>
                   <Button asChild variant={filled === d.key ? "default" : "secondary"}><Link to="/" data-start-continue>Continue to Immigration programs</Link></Button>
