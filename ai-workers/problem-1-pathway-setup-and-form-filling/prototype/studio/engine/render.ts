@@ -8,6 +8,7 @@ import { documentFacts, SIGNED_SCAN } from "./sources.ts";
 import { lineOf } from "./channels.ts";
 import { pdfMapInUse } from "./programs.ts";
 import { factName } from "./fact-name.ts";
+import { NEVER_ASKED, NotWorkedOut } from "./not-worked-out.ts";
 
 // SH3 (P-258): who a line, a condition, a box and a signature are about comes from the one resolver (engine/resolver.ts,
 // contract contracts/resolver.ts); its functions are re-exported here for their callers.
@@ -47,7 +48,13 @@ export type Coverage = "confirmed fact" | "answered on screen" | "document readi
 export type BoxRow = { box: string; caption: string; fact: string | null; meaning: string | null; about: string | null; about_label: string; row: number | null; coverage: Coverage; detail: string; value?: unknown; transform?: string | null; origin?: string;
   /** C7.2 cause 3 (set on a case copy only, engine/runtime/forms.ts markNothingRecorded): a derived "is anything recorded?"
    *  Yes/No whose facts sit in a repeating group with no entries and a confirmed "none apply". */
-  nothing_recorded?: true };
+  nothing_recorded?: true;
+  /** Review M1 on #1620 (QA-415): a worked-out fact the case cannot work out for this person yet: why, in words. The form
+   *  field is written by hand with it (engine/form-values.ts), never blank in silence (engine/not-worked-out.ts). */
+  by_hand?: string;
+  /** QA-395 (set on a case copy only, engine/runtime/forms.ts markNothingRecorded, samples/recorded-counts.json): a "recorded"
+   *  Yes/No whose form counts only some entries: true or false as the entries count, null when a person must decide. */
+  counted?: boolean | null };
 
 /** S5: a line with a minimum age applies to a person once they have reached it on `today`; until their date of birth
  *  is known it cannot be told (and the date of birth is asked, as a deciding question). QA-221 (ruling C): on a line for
@@ -168,6 +175,8 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
         n.forms.add(f.form); n.boxes++; if (f.applies === "cannot_tell") n.maybe = true; needs.set(`${about}|${e.fact}`, n);
       }
       const kv = known.get(k) ?? (factRow === 0 ? known.get(kkey(about, e.fact)) : undefined);
+      // Review M1 on #1620: a worked-out fact not worked out yet keeps its reason as text on the row (by hand, never blank).
+      if (kv?.value instanceof NotWorkedOut) { boxes.push({ ...base, coverage: "confirmed fact", detail: kv.source, value: null, by_hand: kv.value.why }); continue; }
       if (kv) { boxes.push({ ...base, coverage: kv.status === "confirmed" ? "confirmed fact" : "answered on screen", detail: kv.source, value: kv.value }); continue; }
       if (!field.has(e.fact)) { boxes.push({ ...base, coverage: "unresolved", detail: "the form field reads a field that is not in the library" }); continue; }
       const docs = docsFor(about, e.fact);
@@ -291,6 +300,8 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     const key = `${about}|${fact}`;
     if (seen.has(key)) { const q = questions.find((x) => `${x.about}|${x.fact}` === key); if (q) for (const d of decides) if (!q.decides.includes(d)) q.decides.push(d); return; }
     seen.add(key);
+    // QA-415 (B78): a fact the case always works out is never a question, here (Preview) or on a case.
+    if (NEVER_ASKED.has(fact)) return;
     const p = place.get(fact), f = field.get(fact);
     if (!p) return;
     let status: Q["status"] = maybe ? "may be needed" : "needs an answer", required = true;

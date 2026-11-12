@@ -1,5 +1,5 @@
 {
-  "basis": "QA-400 (P-485, Lead 20 ruling on #1576, 11 Nov 2026): the sample loader reviews the replayed field-map drafts as the configuration author (api/src/features/checkpoint/040-field-map-review.ts). Where a saved AI answer proposed a library field that is wrong for its form field, the author changes it to the right one on the draft's page (decision CHANGED, the same door a person uses), instead of accepting it. Each row names the proposed key, the key the author decides, and the reason the decision records. Sample review data, not an IRCC rule. A note stays under 300 characters (the decision's limit).",
+  "basis": "QA-400 (P-485, Lead 20 ruling on #1576, 11 Nov 2026) and QA-415 (P-486, the tech lead, 12 Nov 2026): the sample loader reviews the replayed field-map drafts as the configuration author (api/src/features/checkpoint/040-field-map-review.ts). Where a saved AI answer proposed a library field that is wrong for its form field, the author changes it to the right one on the draft's page (decision CHANGED, the same door a person uses), instead of accepting it. Each row names the proposed key, the key the author decides, and the reason the decision records. Sample review data, not an IRCC rule. A note stays under 300 characters (the decision's limit).",
   "corrections": [
     {
       "proposed": "case.subject_is_principal_applicant",
@@ -7,6 +7,13 @@
       "valueType": "yes_no",
       "meaning": "Whether the person is the principal applicant, rather than the principal applicant's spouse, common-law partner or dependent child. Worked out for each person from their role on the case; never asked.",
       "note": "QA-400: SCH1 asks this of each person it is about (\"*Indicate whether you are\": the principal applicant, or their spouse, partner or dependent child 18+). An application fact gave every person the same answer, so it is each person's fact, worked out from their role."
+    },
+    {
+      "proposed": "case.application_type",
+      "key": "person.application_type",
+      "valueType": "text",
+      "meaning": "The kind of application this person makes (Visitor, Worker, Student, or permanent residence), in the forms' own words. Worked out for each person from their own filing; never asked.",
+      "note": "QA-415: IMM 5645 and IMM 5476 name the kind of the application of the person they are about, and a family's members may apply for different documents (a student's spouse for a work permit), so it is each person's fact, from their filing."
     }
   ]
 }

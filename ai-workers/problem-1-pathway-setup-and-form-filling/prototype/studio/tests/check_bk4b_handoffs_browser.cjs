@@ -11,6 +11,11 @@
 // The draft change the walk reviews is made through the API as the author (scaffolding: the Documents tab is not this
 // row). No model call (US$0).
 //   COPY_PREFIX=screens zsh studio/tools/isolated.sh screens_bk4b 4471 start && node studio/tests/check_bk4b_handoffs_browser.cjs 4471
+// BK-5 PR 2's gate A walk (concept BK-5 §9): BK5_GATE_A=1 starts from a browser with no person, by screens: /sign-in →
+// the Configuration author's card → Demo › Starting points → door 2 "Start here" (RESET when the demo has content) →
+// Immigration programs; then the same change → release walk. The sign-in card is the one person change before the
+// hand-offs (a listed place, BK-4a BR-1); the walk's count of changes outside the hand-offs stays 0.
+//   BK5_GATE_A=1 node studio/tests/check_bk4b_handoffs_browser.cjs 4471
 const path = require("node:path"); const fs = require("node:fs");
 const { chromium } = require("../node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
@@ -38,12 +43,38 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
 
   // Setup (as test data): the configured checkpoint, and one draft change on the released Visitor visa that the immigration
   // expert must sign (a document line now provided by staff).
-  await p.goto(`${BASE}/inbox`);
-  await api("/demo/reset", { method: "POST", data: { confirm: "RESET" } });
-  const loaded = await api("/demo/load", { method: "POST", data: { sample: "configured" } });
-  step("setup: the configured checkpoint loads", loaded.status < 300, loaded.status);
-  const vv = (loaded.body?.combinations ?? []).find((c) => /Visitor visa/.test(c.label));
-  const ID = vv?.id;
+  const GATE_A = process.env.BK5_GATE_A === "1";
+  let ID;
+  if (GATE_A) {
+    // BK-5 PR 2 gate A: sign-in → Starting points → door 2, by screens, from a browser with no person stored.
+    await p.goto(`${BASE}/sign-in`); await p.locator("[data-sign-in]").waitFor({ timeout: 30000 });
+    step("gate A: the walk starts on the sign-in page with no person stored", await p.evaluate(() => localStorage.getItem("xr-actor")) === null);
+    await p.locator('[data-sign-in-as="user-A"]').click(); await p.waitForURL((u) => u.pathname === "/start", { timeout: 15000 });
+    step("gate A: the Configuration author's card lands on Starting points (BK-5 PR 2)", await p.evaluate(() => localStorage.getItem("xr-actor")) === "user-A");
+    // Review m1: on a copy whose last load was door 2 the door reads "Start again from here" (its Continue link is the
+    // filled control); either button reloads it. Review m2: the shot waits for the doors to come on.
+    const door2 = p.locator('[data-door="configured"]').locator('[data-start-door="configured"]');
+    await p.waitForFunction(() => !document.querySelector('[data-start-door="configured"]')?.disabled, null, { timeout: 30000 });
+    await p.screenshot({ path: path.join(SHOTS, "..", "..", "BK-5-start-page", "screenshots", "bk5-pr2-01-start-after-sign-in-1440.png") });
+    await door2.click();
+    const dlg = p.getByRole("dialog"); await dlg.waitFor({ timeout: 15000 });
+    if (await p.getByLabel("Type RESET to confirm").count()) await p.getByLabel("Type RESET to confirm").fill("RESET");
+    await dlg.locator("[data-start-go]").click();
+    await p.waitForURL((u) => u.pathname === "/", { timeout: 600000 });
+    await p.getByRole("heading", { level: 1 }).first().waitFor({ timeout: 30000 });
+    await p.getByText("Visitor visa", { exact: false }).first().waitFor({ timeout: 30000 }); // review m2: the cards, not their skeletons
+    step("gate A: door 2 loads the configured checkpoint and lands on Immigration programs", new URL(p.url()).pathname === "/" && await p.evaluate(() => localStorage.getItem("xr-actor")) === "user-A", p.url());
+    await p.screenshot({ path: path.join(SHOTS, "..", "..", "BK-5-start-page", "screenshots", "bk5-pr2-02-door2-landed-1440.png") });
+    const rows = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).body?.rows ?? [];
+    ID = rows.find((r) => r.combinationId && /Visitor visa/.test(r.label ?? r.name ?? ""))?.combinationId;
+    step("setup: the configured checkpoint's Visitor visa is listed", !!ID, rows.map((r) => r.label ?? r.name).slice(0, 8));
+  } else {
+    await p.goto(`${BASE}/inbox`);
+    await api("/demo/reset", { method: "POST", data: { confirm: "RESET" } });
+    const loaded = await api("/demo/load", { method: "POST", data: { sample: "configured" } });
+    step("setup: the configured checkpoint loads", loaded.status < 300, loaded.status);
+    ID = (loaded.body?.combinations ?? []).find((c) => /Visitor visa/.test(c.label))?.id;
+  }
   const req = (await api(`/combinations/${ID}/config?mode=draft`)).body?.snapshot?.document_requirements?.find((r) => r.provided_by === "client");
   const edit = await api(`/combinations/${ID}/requirements/${encodeURIComponent(req?.lineage ?? "")}`, { method: "PATCH", data: { documentTypeKey: req?.document_type_key, attachMode: "COMBINATION_MANDATORY", appliesToRoles: req?.who, providedBy: "staff" } });
   const before = (await api(`/combinations/${ID}/review`)).body;
@@ -52,7 +83,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("setup: a released Visitor visa with a draft change the expert signs, and no problem blocking it", !!ID && edit.status < 300 && sme > 0 && !before.draft.problems.some((x) => x.level === "error") && before.submission?.status === "APPROVED", { ID, edit: edit.status, sme, errors: before?.draft?.problems?.filter((x) => x.level === "error").length });
 
   // The person is set once, at the start (the sign-in step is BK-4a's); from here only hand-off buttons change it.
-  await p.evaluate(() => localStorage.setItem("xr-actor", "user-A"));
+  if (!GATE_A) await p.evaluate(() => localStorage.setItem("xr-actor", "user-A"));
   const trail = ["user-A"]; let outside = 0;
   /** A click on a hand-off: the person must change to the button's own target, and only through it. */
   const handOff = async (sel, expectTo, name) => {
@@ -72,14 +103,22 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const actingAs = (name) => p.getByText(`You are acting as ${name} (simulated)`, { exact: false }).first().waitFor({ timeout: 15000 });
   const noHandOff = async (name) => { await p.waitForTimeout(400); step(`${name} (BR-2): no hand-off for the person who is next`, await p.locator("[data-handoff]").count() === 0, await p.locator("[data-handoff]").allInnerTexts()); };
 
-  // Release page, before the walk (BR-3): the author is told the approve duty releases, by name, with one button.
+  // Release page, before the walk. QA-421 (P-498): the author's own change is not submitted yet, so the author's next step
+  // is that Submit, not a hand-off (check_qa421_release_submit_first_browser.cjs walks it). BR-3: a person with no author
+  // duty (the Content reviewer) is told the approve duty releases, by name, with one button. The person is set back to the
+  // author before the walk's first hand-off, so the walk's count of changes outside a hand-off is unchanged.
+  await p.goto(`${BASE}/release`);
+  await p.locator('[data-next-step="submit"]').waitFor({ timeout: 30000 });
+  step("Release page (QA-421): the author with an unsubmitted change sees Submit first and no hand-off", await p.locator("[data-handoff]").count() === 0, await p.locator("[data-handoff]").allInnerTexts());
+  await p.evaluate(() => localStorage.setItem("xr-actor", "user-C"));
   await p.goto(`${BASE}/release`);
   const rel = p.locator('[data-handoff="approver"]');
   await rel.waitFor({ timeout: 30000 });
-  step("Release page (BR-3): the author's hand-off names the Approver, the approve duty", /Next: the Approver releases/.test(await rel.innerText()) && await rel.getByRole("button").getAttribute("data-handoff-to") === "user-B", await rel.innerText());
+  step("Release page (BR-3): the hand-off names the Approver, the approve duty", /Next: the Approver releases/.test(await rel.innerText()) && await rel.getByRole("button").getAttribute("data-handoff-to") === "user-B", await rel.innerText());
   step("Release page: no \"Switch to\" words left", !/switch to/i.test(await p.locator("main").innerText()));
   await axe("Release page hand-off", '[data-handoff="approver"]');
   await shot("release-page-1440");
+  await p.evaluate(() => localStorage.setItem("xr-actor", "user-A"));
 
   // 1. The author submits; the Content reviewer is next (expert changes).
   await reviewTab(); await actingAs("Configuration author");
@@ -197,6 +236,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.goto(`${BASE}/release`);
     await btn("Nothing ready to release").waitFor({ timeout: 30000 });
     step(`Release page, nothing ready (${name}) (BR-2 fail): no hand-off to the Approver`, await p.locator("[data-handoff]").count() === 0, await p.locator("[data-handoff]").allInnerTexts());
+    step(`Release page, nothing ready (${name}) (QA-421): ${actor === "user-A" ? "the author's next step is Submit" : "no Submit (no author duty)"}`, await p.locator('[data-next-step="submit"]').count() === (actor === "user-A" ? 1 : 0));
   }
   await shot("release-page-nothing-ready-1440");
   step("no page error during the walk", errs.length === 0, errs);

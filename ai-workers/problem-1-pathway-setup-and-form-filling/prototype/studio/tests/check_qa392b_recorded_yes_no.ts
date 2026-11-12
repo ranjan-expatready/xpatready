@@ -16,7 +16,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { proseRecorded, recordedDerivation } from "../../p5/transforms.ts";
-import { AUTHOR, OFFICER, PORT, agent, call, copyBytes, fillEverything, generateCopy, itemsOf, needVisitorVisa, ok, openCase, prepare, rec, sql, yearsAgo } from "../acceptance/lib/m3.ts";
+import { AUTHOR, CLIENT, OFFICER, PORT, agent, call, confirmAll, copyBytes, fillEverything, generateCopy, itemsOf, needVisitorVisa, ok, openCase, prepare, rec, sql, yearsAgo } from "../acceptance/lib/m3.ts";
 
 const STUDIO = join(import.meta.dirname, ".."), ROOT = join(STUDIO, "..", "..", "..", "..");
 const PY = join(ROOT, ".tools", "solution-1-prototype", ".venv", "bin", "python");
@@ -50,6 +50,17 @@ for (const fact of ["person.education_school_name", "person.previous_residence_c
   ok(`setup: the principal's list for ${fact} takes an entry`, !!g && (await call("POST", `/runtime/cases/${c.id}/groups/${P}/rows`, { group: g }, OFFICER)).status < 300, g);
 }
 ok("setup: every fact answered and confirmed (the principal's entries, the spouse's lists \"none apply\")", await fillEverything(c.id));
+// QA-395 (#1566): Q8 A counts only another country for more than 6 months of the past 5 years, so the principal's previous
+// residence is made one that counts (the Sample family's own country, India, would rightly give No).
+{
+  type Row = { row: string; answer: { id: string } | null };
+  const qOf = async (fact: string) => (((await agent(c.id))?.sections ?? []) as { questions: { subjectId: string; fact: string; rows: Row[] }[] }[]).flatMap((x) => x.questions).find((q) => q.subjectId === P && q.fact === fact);
+  for (const [fact, value] of [["person.previous_residence_country", "United States"], ["person.previous_residence_from", yearsAgo(3)], ["person.previous_residence_to", yearsAgo(1)]] as const) {
+    const r = (await qOf(fact))?.rows[0];
+    await call("PUT", `/runtime/cases/${c.id}/answers/${P}/${fact}`, { value, expectedId: r?.answer?.id ?? null, row: r?.row }, CLIENT);
+  }
+  await confirmAll(c.id, P);
+}
 const item = async (who: string) => itemsOf((await prepare(c.id)).p, who, FORM).find((i) => i.channel === "ONLINE");
 
 async function check(who: string, name: string, expectYes: boolean) {

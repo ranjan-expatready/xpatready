@@ -10,6 +10,8 @@ import { ageOn, deriveFilings, FAMILY_GROUP } from "../../engine/runtime/filings
 import { actorOf, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import type { Participant } from "../../engine/runtime/case.ts";
+import { caseName } from "../../contracts/runtime.ts"; // A24-1: the reference, else the case number
+import { feesOnTheirFilings, heldBy, keepRecorded, keptRowsOf } from "./submission-record.ts";
 
 type H = string | undefined;
 
@@ -38,13 +40,20 @@ export class CaseFilings {
     const modes = releaseModes(s.combination.participants ?? []); // C11.12: the same reading as GET …/prepare
     // M3-S2: the filings people's lines add, from the same answers as GET …/prepare (an answer its checks reject decides nothing).
     const adds = addedFilings(s, knownOf(s, people, answers.filter((a) => checkValue(s, a.field, a.value, today).length === 0), answerRows, today).known, people);
-    const rows = await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id, active: true }, include: { group: { select: { kind: true, recordedFees: true } } } });
+    const rows = await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id, active: true }, include: { group: { select: { kind: true, recordedFees: true } }, applicants: true } });
     // Review m5: the stored group's own id, as GET …/prepare shows it ("group-family" only before the first prepare read).
     const groupOf = new Map(rows.map((f) => [f.subjectId, f.submissionGroupId]));
     const kindOf = new Map(rows.map((f) => [f.submissionGroupId, f.group.kind === "FAMILY" ? "family" as const : "separate" as const]));
     const family = rows.find((f) => f.group.kind === "FAMILY")?.submissionGroupId ?? FAMILY_GROUP;
     const d = deriveFilings(own!.combinationKey, people, undefined, { ages, modes, adds, label: s.combination.label, groupOf: (x) => groupOf.get(x) ?? family, groupKind: (g) => kindOf.get(g) ?? "family" });
-    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, ...frozenIn(d, rows) };
+    // BK-17: a recorded filing reads as recorded here too (its label, people and group), as GET …/prepare reads it.
+    const name = new Map(people.map((p) => [p.subjectId, p.label]));
+    const keptRows = d.derived ? keptRowsOf(d.filings, rows, rows.map((r) => r.group)) : [];
+    const kept = d.derived ? keepRecorded(d, keptRows, { labelOf: (x) => name.get(x) ?? "", combination: own!.combinationKey, combinationLabel: d.label, idOf: (r) => `filing-${r.subjectId}`, kindOf: (g) => kindOf.get(g) ?? "family" }) : null;
+    const frozen = new Set(rows.filter((r) => r.group.recordedFees).map((r) => r.submissionGroupId));
+    const placed = kept && d.derived ? feesOnTheirFilings(d.fees, kept.groups, kept.filings, { filing: (l) => l.filing, person: (l) => l.person, frozen: (g) => frozen.has(g), labelOf: (x) => name.get(x) ?? "a person", held: heldBy(keptRows) }) : null;
+    const shown = kept && placed && d.derived ? { ...d, filings: kept.filings, groups: placed.groups, fees: placed.lines } as typeof d : d;
+    return { case_id: c.id, reference: caseName(c), release_version: pin.release.version, ...frozenIn(shown, rows) };
   }
 }
 

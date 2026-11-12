@@ -1,0 +1,21 @@
+nightly 43203056454 (workflow_dispatch by the tech lead, Lead 26, asked on #1646), main 5dc5e8e1c (includes ccca6ceaa, #1612),
+capabilities="C7.3 C8.2 C6.6 C6.5 C7.9", data=checkpoint. Every job success; gate-b.mjs lines, verbatim:
+-- job 131131206802 "packs (C7.3)":
+    C7.3-screen.test.ts on the checkpoint: exit 0, 15/15 passed (110 s: copy 4, Load the configured checkpoint 80, run 26)
+    C7.3-tick.test.ts on the checkpoint: exit 0, 15/15 passed (98 s: copy 4, Load the configured checkpoint 79, run 15)
+    C7.3.test.ts on the checkpoint: exit 0, 19/19 passed (118 s: copy 4, Load the configured checkpoint 77, run 37)
+Gate B: passed.
+-- job 131131206785 "packs (C8.2)":
+    C8.2.test.ts on the checkpoint: exit 0, 19/19 passed (213 s: copy 5, Load the configured checkpoint 98, run 110)
+Gate B: passed.
+-- job 131131206813 "packs (C6.6)":
+    C6.6.test.ts on the checkpoint: exit 0, 31/31 passed (93 s: copy 4, Load the configured checkpoint 80, run 9)
+Gate B: passed.
+-- job 131131207108 "packs (C6.5)":
+    C6.5-counts.test.ts on the checkpoint: exit 0, 13/13 passed (87 s: copy 4, Load the configured checkpoint 81, run 2)
+    C6.5-screen.test.ts on the checkpoint: exit 0, 33/33 passed (110 s: copy 3, Load the configured checkpoint 76, run 30)
+    C6.5.test.ts on the checkpoint: exit 0, 57/57 passed (83 s: copy 3, Load the configured checkpoint 77, run 3)
+Gate B: passed.
+-- job 131131206769 "packs (C7.9)":
+    C7.9.test.ts on the checkpoint: exit 0, 23/23 passed (90 s: copy 4, Load the configured checkpoint 80, run 5)
+Gate B: passed.

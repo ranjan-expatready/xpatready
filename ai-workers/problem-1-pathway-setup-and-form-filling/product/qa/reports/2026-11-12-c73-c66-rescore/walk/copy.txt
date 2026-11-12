@@ -1,0 +1,6 @@
+NOTICE:  database "xr_studio_qa_c73d" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+isolated qa_c73d on http://localhost:4478 (xr_studio_qa_c73d), stops itself in 60 min
+stopped qa_c73d (database and files removed; log in var/isolated-logs/qa_c73d-api.log)

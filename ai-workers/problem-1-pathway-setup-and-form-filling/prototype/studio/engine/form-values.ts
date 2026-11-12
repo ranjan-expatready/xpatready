@@ -7,6 +7,7 @@
 import { proseRecorded, recordedDerivation, runTransform, wordsInSteps } from "../../p5/transforms.ts";
 import { codeAsksMore, codeForValue, hasCodes, labelForText, notOnFormValue, type ListValue, type OptionMap } from "./options.ts";
 import { byAPerson, inFormFormat } from "./form-steps.ts";
+import { NotWorkedOut } from "./not-worked-out.ts";
 import type { BoxRow } from "./render.ts";
 import type { Snapshot } from "./snapshot.ts";
 
@@ -57,6 +58,10 @@ export function formValues(snapshot: Snapshot, map: { entries: Entry[] }, inv: I
   const boxes = covBoxes.map((r): BoxResult => {
     const person = byAPerson(inv.fields, box.get(r.box) ?? { data_path: r.box });
     if (person) return { ...r, result: "by a person", why: person };
+    // Review M1 on #1620 (QA-415): a fact the case works out but cannot for this person yet goes by hand, with its reason.
+    // The reason travels as text on the row (a copy's rows are frozen as JSON first), or as the value itself in one process.
+    const notOut = r.by_hand ?? (r.value instanceof NotWorkedOut ? r.value.why : undefined);
+    if (notOut) return { ...r, result: "by hand", why: notOut };
     // C7.2 cause 3: a Yes/No "is anything recorded?" box is written "N" when a person confirmed that nothing applies.
     if (r.coverage !== "confirmed fact" && !r.nothing_recorded) return { ...r, result: "not written", why: r.fix ?? (r.coverage === "answered on screen" ? "answered on screen, not confirmed" : r.detail) };
     // A form field on an answer list takes its own code from its option map (the team's ENUM map, onMissing REFUSE).
@@ -68,8 +73,8 @@ export function formValues(snapshot: Snapshot, map: { entries: Entry[] }, inv: I
     // A text form field (no codes in its transform and no choices of its own) writes the value's label, never its key.
     const own = box.get(r.box) ?? {};
     const text = list && !hasCodes(r.transform) && !(Array.isArray(own.options_resolved) && own.options_resolved.length);
-    const o = runTransform(r.transform ?? "as_is", r.nothing_recorded ? null : text ? labelForText(r.value, list) : r.value, own, { fact: (k) => confirmed.get(`${r.about}|${k}`), nothingRecorded: !!r.nothing_recorded, ownFact: r.fact ?? undefined, words: r.fact ? wordsOf.get(r.fact) : undefined });
-    if (o.ok) { write(r.box, o.value); return { ...r, result: "written", written: values[r.box], ...(r.nothing_recorded ? { why: r.detail } : {}) }; }
+    const o = runTransform(r.transform ?? "as_is", r.nothing_recorded ? null : text ? labelForText(r.value, list) : r.value, own, { fact: (k) => confirmed.get(`${r.about}|${k}`), nothingRecorded: !!r.nothing_recorded, ...(r.counted !== undefined ? { counted: r.counted, countedWhy: r.detail } : {}), ownFact: r.fact ?? undefined, words: r.fact ? wordsOf.get(r.fact) : undefined });
+    if (o.ok) { write(r.box, o.value); return { ...r, result: "written", written: values[r.box], ...(r.nothing_recorded || r.counted !== undefined ? { why: r.detail } : {}) }; }
     return { ...r, result: "hand" in o ? "by hand" : "blank", why: o.reason };
   });
   return { boxes: sameAsLeavesRowEmpty(boxes, values, box), values };
