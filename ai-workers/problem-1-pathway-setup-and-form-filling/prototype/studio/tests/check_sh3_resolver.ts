@@ -40,10 +40,11 @@ ok("SH3 R2 (fail): an unknown who, or a role nobody on the case has, names nobod
 ok("SH3 R2: the condition's subject never moves a line's holders (lineHolders = the who alone)", same(R.lineHolders(fam, "principal_applicant"), ["A"]));
 // Review m3: the studio's own list, read from its source (importing studio.ts would start its services).
 const studioWho = JSON.parse(/export const WHO = (\[[^\]]*\])/.exec(readFileSync(new URL("../api/src/studio.ts", import.meta.url), "utf8"))![1]) as string[];
-// QA-221 (ruling C): a form line may also name the principal, a spouse or partner and each child 18 or older (FORM_WHO).
-const formWho = /export const FORM_WHO = \[\.\.\.WHO, "([a-z_]+)"\]/.exec(readFileSync(new URL("../api/src/studio.ts", import.meta.url), "utf8"))?.[1];
-ok("SH3 R2: the contract's who values are the studio's list plus each_adult_18_plus (release data and the runtime only) and the form lines' principal_partner_adult_children (QA-221)", formWho === "principal_partner_adult_children" && same([...studioWho, "each_adult_18_plus", formWho].sort(), Object.keys(WHO_HOLDERS).sort()));
-ok("SH3 R2 (fail): each_adult_18_plus is not offered in the studio's list, and the form lines' value is not offered for documents or rules", !studioWho.includes("each_adult_18_plus") && !studioWho.includes("principal_partner_adult_children"));
+// QA-221 (ruling C): a form line may also name the principal, a spouse or partner and each child 18 or older (FORM_WHO);
+// BK-16 (P-490): or the principal always and each child while the line's condition holds.
+const formWho = JSON.parse(`[${/export const FORM_WHO = \[\.\.\.WHO, ((?:"[a-z_]+"(?:, )?)+)\]/.exec(readFileSync(new URL("../api/src/studio.ts", import.meta.url), "utf8"))?.[1] ?? ""}]`) as string[];
+ok("SH3 R2: the contract's who values are the studio's list plus each_adult_18_plus (release data and the runtime only) and the form lines' principal_partner_adult_children (QA-221) and principal_and_children_when (BK-16)", same(formWho, ["principal_partner_adult_children", "principal_and_children_when"]) && same([...studioWho, "each_adult_18_plus", ...formWho].sort(), Object.keys(WHO_HOLDERS).sort()));
+ok("SH3 R2 (fail): each_adult_18_plus is not offered in the studio's list, and the form lines' values are not offered for documents or rules", !studioWho.includes("each_adult_18_plus") && formWho.every((w) => !studioWho.includes(w)));
 ok("SH3 R2 (QA-221): principal_partner_adult_children holds every applicant (the line's minimum age then gates children only)", same(holders("principal_partner_adult_children"), holders("each_applicant")));
 
 // ---- R3 condition subjects

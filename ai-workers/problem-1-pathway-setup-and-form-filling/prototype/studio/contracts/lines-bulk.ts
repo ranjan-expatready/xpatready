@@ -30,7 +30,7 @@ export const OUTCOME_WORDS: Record<Outcome, string> = {
   WAITS: "Waits", CANNOT_COMBINATION_RETIRED: "Cannot", SOURCE: "The line comes from here",
 };
 /** Whose line it is, in the words of the Forms and Documents tabs (web/src/pages/configuration.tsx WHO). */
-export const WHO_WORDS: Record<string, string> = { each_applicant: "each applicant", principal_applicant: "the principal applicant", spouse_or_partner: "the spouse or partner", couple_once: "the couple (once)", each_dependent_child: "each child", principal_partner_adult_children: "the principal applicant, a spouse or partner, and each child 18 or older", each_person: "each person", case: "the application (once)", representative: "the representative", sponsor: "the sponsor" };
+export const WHO_WORDS: Record<string, string> = { each_applicant: "each applicant", principal_applicant: "the principal applicant", spouse_or_partner: "the spouse or partner", couple_once: "the couple (once)", each_dependent_child: "each child", principal_partner_adult_children: "the principal applicant, a spouse or partner, and each child 18 or older", principal_and_children_when: "the principal applicant, and each child while its condition holds", each_person: "each person", case: "the application (once)", representative: "the representative", sponsor: "the sponsor" };
 /** Concept §5. */
 export const PREVIEW_INTRO = "Nothing changes until you choose Add. Every combination gets its own draft change; one Undo takes back the whole copy while none of them has changed since.";
 export const WAITS_WORDS = "Submitted for review: adding withdraws that submission. Tick to add it anyway.";

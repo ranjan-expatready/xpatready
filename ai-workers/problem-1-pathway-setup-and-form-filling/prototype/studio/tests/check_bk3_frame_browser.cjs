@@ -95,7 +95,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       // Every case page names the case by its reference, as the case page does (review m3), and never "No such page" for the client (m2).
       if (actor === O && url.startsWith(`/cases/${caseId}`) && kind !== "not found") step(`${name}: the line names the case ${ref}`, x.crumbs[0] === "Cases" && x.crumbs[1] === ref, x.crumbs);
       const staff = actor === S || actor === O;
-      if (staff) step(`${name}: the other area is on the line (${x.other})`, x.other === (actor === S ? "Cases" : "Product Studio"), x.other);
+      if (staff) step(`${name}: the other area is on the line (${x.other})`, x.other === (actor === S ? "Cases (as Case officer)" : "Product Studio (as Configuration author)"), x.other); // BK-4a: the link names who it acts as
       else step(`${name}: no other area for a client or an outside page`, x.other === null, x.other);
       if (width === 375 && onMain(url)) step(`${name}: the line itself fits at 375 px (the page's own sideways scroll is on main too: ${onMain(url)})`, x.lineFits, x);
       else if (width === 375) step(`${name}: no sideways scroll at 375 px`, !x.sideways && x.lineFits, x);

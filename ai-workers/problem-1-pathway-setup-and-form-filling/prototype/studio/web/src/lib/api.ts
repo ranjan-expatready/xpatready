@@ -4,10 +4,27 @@ import { QueryClient, useMutation, useQuery, useQueryClient, type UseQueryOption
 import * as React from "react";
 import type { SessionView } from "../../../contracts/programs";
 
-let actor = (() => { try { return localStorage.getItem("xr-actor") ?? "user-A"; } catch { return "user-A"; } })();
+// BK-4a (concept §3, P-484): `actor` is the one "current person" of the app. Only setActor changes it; the frame's notice
+// names every change ("Now: <name> (simulated)"). A browser with no stored person acts as the Configuration author, as
+// before BK-4 (P-484 (3): the sign-in page is a page, not a gate); `chosen` tells that apart from a person picked on purpose.
+const stored = (() => { try { return localStorage.getItem("xr-actor"); } catch { return null; } })();
+let actor = stored ?? "user-A";
+let chosen = stored !== null;
 const listeners = new Set<() => void>();
 export const getActor = () => actor;
-export function setActor(a: string) { actor = a; try { localStorage.setItem("xr-actor", a); } catch { /* private window */ } listeners.forEach((l) => l()); }
+/** Was the current person chosen (signed in, picked, handed over), not the default of a browser with no stored person? */
+export const personChosen = () => chosen;
+/** QA-401 (P-456, P-484: a change of person by the picker or a hand-off is a login): every open page re-reads what it
+ *  shows with the new person's rights. Answers read as the previous person are dropped at once (never shown, so a stale
+ *  "Approve" cannot be pressed) and the pages on screen read again; a page whose key names the person was already safe. */
+export function setActor(a: string) {
+  const changed = a !== actor;
+  actor = a; chosen = true; try { localStorage.setItem("xr-actor", a); } catch { /* private window */ }
+  if (changed) void queryClient.resetQueries();
+  listeners.forEach((l) => l());
+}
+/** BK-4a: hear every change of person (the frame's one notice); returns the way to stop listening. */
+export function onActorChange(l: () => void) { listeners.add(l); return () => { listeners.delete(l); }; }
 export function useActorId() { const [, force] = React.useState(0); React.useEffect(() => { const l = () => force((n) => n + 1); listeners.add(l); return () => { listeners.delete(l); }; }, []); return actor; }
 
 /** A refused request, from the server's Problem Details: a plain reason, and field errors to show on their fields. */

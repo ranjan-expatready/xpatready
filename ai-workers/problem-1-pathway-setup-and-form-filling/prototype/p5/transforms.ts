@@ -83,6 +83,28 @@ export function recordedDerivation(transform: string | null | undefined): { fact
 }
 const present = (x: unknown) => !(x === undefined || x === null || x === "" || x === false || (Array.isArray(x) && !x.length));
 /** Two confirmed values are the same answer: addresses by their one-line form, anything else by its trimmed text. */
+/** QA-403: a value as one lower-case word to compare with a map's word, or null when it is not one word or number. */
+const wordOf = (x: unknown): string | null => (typeof x === "string" || typeof x === "number") && /^[\w-]+$/.test(String(x).trim()) ? String(x).trim().toLowerCase() : null;
+/** QA-403: "derived: A if <fact> = <word>, else B (…)". */
+const TICK_EQ = /^derived: ?(\S+) if ([a-z]+\.[\w.]+) = ([\w-]+), else (\S+?)(?: \([^()]*\))?$/;
+/** Review m2 (#1588): words in a plain-language note that order a change, not describe the value. */
+const NOTE_ORDERS = /\b(write|upper|lower|case|capital|format|code|digit|abbreviat|translat|first|last|only|without|remove|add)/i;
+/** QA-403: "derived:checked_if_<name>_is_<word>:A/B" or "…_not_<w1>_<w2>_or_<w3>:A/B". With the box's own fact known, its
+ *  name is that fact's last part (review m3: a name holding "is" or "not" is never split there); else the shortest name. */
+function tickByName(s: string, ownFact?: string): { kind: "is" | "not"; words: string[]; on: string; off: string } | null {
+  const name = ownFact?.split(".").pop();
+  const m = name ? new RegExp(`^derived:checked_if_${name.replace(/[^\w]/g, "")}_(is|not)_([a-z0-9]+(?:_[a-z0-9]+)*):([^/]+)\\/(.+)$`).exec(s)
+    : /^derived:checked_if_[a-z0-9_]+?_(is|not)_([a-z0-9]+(?:_[a-z0-9]+)*):([^/]+)\/(.+)$/.exec(s);
+  if (!m || (!name && /^derived:checked_if_(true|false):/.test(s))) return null;
+  const kind = m[1] as "is" | "not";
+  return { kind, words: kind === "is" ? [m[2]] : m[2].replace(/_or_/g, "_").split("_"), on: m[3], off: m[4] };
+}
+/** QA-403: the words a map's steps name for a fact (TICK_EQ's word; the is/not words), so every box of a form knows
+ *  which answers its fact can take (review M1 on #1588). */
+export function wordsInSteps(transform: string | null | undefined, ownFact?: string): string[] {
+  return stepsOf(transform ?? "").flatMap((s) => { const e = TICK_EQ.exec(s); if (e) return [e[3].toLowerCase()]; return tickByName(s, ownFact)?.words ?? []; });
+}
+const notAWord = (w: string, words?: readonly string[]) => `"${w}" is not one of the words this form takes${words?.length ? ` (${[...new Set(words)].join(", ")})` : ""}: write it by hand, or correct the answer`;
 function same(a: unknown, b: unknown): boolean {
   if ((a && typeof a === "object") || (b && typeof b === "object")) { const x = parseAddress(a), y = parseAddress(b); return !!x && !!y && oneLine(x).toUpperCase() === oneLine(y).toUpperCase(); }
   return String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
@@ -92,7 +114,13 @@ function same(a: unknown, b: unknown): boolean {
 export type Context = { fact?: (key: string) => unknown;
   /** C7.2 cause 3: the caller vouches that a person confirmed nothing applies (a group's "none apply"): only then does an
    *  empty value reach a "recorded" step and give "N". Without it an empty value stays blank, as for every other step. */
-  nothingRecorded?: boolean };
+  nothingRecorded?: boolean;
+  /** QA-395: the caller has worked out a "recorded" Yes/No whose form counts only some entries (engine/runtime/forms.ts
+   *  countedOf): true or false is the answer; null means a person decides (`countedWhy` says why). */
+  counted?: boolean | null; countedWhy?: string;
+  /** QA-403: the box's own fact, and every word this form's steps name for it (wordsInSteps over the form's map). A step
+   *  that ticks by a word writes its "else" code only for another of those words; any other word goes by hand. */
+  ownFact?: string; words?: readonly string[] };
 
 /** Runs one transformation text on one value for one box. `rows` lets "select …" pick among a person's rows. */
 export function runTransform(transform: string | undefined, value: unknown, box: Box, ctx: Context = {}): Outcome {
@@ -113,6 +141,9 @@ export function runTransform(transform: string | undefined, value: unknown, box:
     if (s.startsWith("select ")) return hand(`record selection "${s}" is not in the executable set`);
     // C7.2 cause 3: the "recorded" derivations give Yes or No (a missing value reaches here only when the caller passed it on purpose, see RECORDED).
     if ((m = RECORDED.exec(s))) {
+      // QA-395: the form counts only some entries, and the caller has counted them by the form's own words.
+      if (ctx.counted === null) return hand(ctx.countedWhy ?? "the form counts only some of the entries: a person checks them and decides Yes or No");
+      if (typeof ctx.counted === "boolean") { v = ctx.counted; continue; }
       const named = (m[1] ?? "").split(",").map((f) => f.trim()).filter(Boolean);
       // B88 (review R2-M1): a box asked as its own Yes/No reads the person's answer; an explicit No while a detail it names is
       // still recorded contradicts itself, so it is never written as Y (or N) on any path: a person decides (QA-165's rule).
@@ -141,7 +172,11 @@ export function runTransform(transform: string | undefined, value: unknown, box:
       if (m[1] && t.length > Number(m[1])) return hand(`amount is ${t.length} characters; the box holds ${m[1]} (never truncated)`);
       v = t; continue;
     }
-    if ((m = /^as_is(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) {
+    // QA-403: a drafted map may describe what the value is, "as_is (plain-language application type)": the note says what
+    // the words are, not how to change them, so the value is written as it is. Only a note that starts "plain-language" or
+    // "plain language" followed by words only (no comma, no order such as "write", "uppercase", "code": review m2 on #1588);
+    // any other note stays not executable (by hand).
+    if ((m = /^as_is(?: \((?:max (\d+) char(?:s|acters)|plain[- ]language [a-z ]+)\))?$/.exec(s)) && !(/\(plain/.test(s) && NOTE_ORDERS.test(s))) {
       v = typeof v === "boolean" ? (v ? "Yes" : "No") : String(v);
       const max = Number(m[1] ?? box.max_chars ?? 0);
       if (max && v.length > max) return hand(`value is ${v.length} characters; the box holds ${max} (never truncated)`);
@@ -161,6 +196,28 @@ export function runTransform(transform: string | undefined, value: unknown, box:
     // B128 (QA-153): a drafted family-form map spells the Yes and No tick boxes "derived:checked_if_true:1/0" (check_code:1/0)
     // and "derived:checked_if_false:1/0" (the same, ticked on No). Only a yes/no value; anything else by hand.
     if ((m = /^derived:checked_if_(true|false):([^/]+)\/(.+)$/.exec(s))) { if (typeof v !== "boolean") return hand(`not a yes/no value: ${v}`); v = v === (m[1] === "true") ? m[2] : m[3]; continue; }
+    // QA-403: tick boxes set by one answer's value. "derived: 1 if case.representative_form_action = appoint, else 0 (…)"
+    // (IMM 5476) writes the first code when the named fact equals the word; "derived:checked_if_application_type_is_visitor:1/0"
+    // the same for the box's own value; "derived:checked_if_application_type_not_visitor_worker_or_student:1/0" (IMM 5645)
+    // the first code when the value is none of the words. Words compare without case. Review M1 (#1588): the "else" code
+    // (and a "none of these" tick) is written only for another word this form's steps name for the fact (ctx.words), so a
+    // misspelt or unknown answer ("apoint", "vistor") goes by hand, never into the wrong box; a list or a record too.
+    if ((m = TICK_EQ.exec(s))) {
+      // Review m1: only the named fact is compared: the box's own value when the box is that fact, else its confirmed answer.
+      const named = ctx.ownFact === m[2] ? v : ctx.fact?.(m[2]);
+      if (!present(named)) return hand(`${m[2]} is not answered, so it cannot be compared`);
+      const w = wordOf(named); if (w === null) return hand(`not a single word: ${JSON.stringify(named)}`);
+      if (w === m[3].toLowerCase()) { v = m[1]; continue; }
+      if (!ctx.words?.includes(w)) return hand(notAWord(w, ctx.words));
+      v = m[4]; continue;
+    }
+    const tick = tickByName(s, ctx.ownFact);
+    if (tick) {
+      const w = wordOf(v); if (w === null) return hand(`not a single word: ${JSON.stringify(v)}`);
+      const listed = tick.words.includes(w);
+      if (!listed && !ctx.words?.includes(w)) return hand(notAWord(w, ctx.words));
+      v = (tick.kind === "is" ? listed : !listed) ? tick.on : tick.off; continue;
+    }
     // C7.7 (G25, the tech lead's ruling on #1317): release 2's drafted IMM 5645 map spells the Yes and No tick boxes of each
     // child's "accompany to Canada" "check_if_yes:1/0" and "check_if_no:1/0": the first code when the answer is that one, the
     // second otherwise. Only a yes/no value (yes/no words too, as derive_inverse); anything else by hand.
