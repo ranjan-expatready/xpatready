@@ -14,7 +14,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { enterCasesAsStaff } from "@/components/frame";
 import { useQueryClient } from "@tanstack/react-query";
 import { DoorOpen, RotateCcw } from "lucide-react";
-import { api, ApiError, setActor, useActorId, useApi, useToast } from "@/lib/api";
+import { api, ApiError, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { FinishedStoryDialog } from "@/components/demo-finished-story";
@@ -95,7 +95,7 @@ export function StartPage() {
       </div>
       {status.isError ? <Notice tone="danger" title="The demo's state could not be read">{(status.error as Error).message}. The starting points need it: reload this page once the studio answers.</Notice> : null}
       {off && session.data ? (
-        <Notice tone="warn" title={off} action={demo && authorPerson ? <Button size="sm" variant="secondary" onClick={() => setActor(authorPerson.id) /* BK-4a: the frame's one notice names the change (concept §3) */} data-start-as-author>Sign in as the Configuration author</Button> : undefined}>
+        <Notice tone="warn" title={off} action={demo && authorPerson ? /* BK-5 PR 2: the one place a person is chosen is the sign-in page (BK-4a BR-1); the author lands back here */ <Button asChild size="sm" variant="secondary"><Link to="/sign-in" data-start-as-author>Sign in as the Configuration author</Link></Button> : undefined}>
           <span data-start-off>{demo ? `${me?.name ?? "This person"} (simulated) can look, not start. The server refuses a start from anyone else too.` : "Nothing here can run in this workspace."}</span>
         </Notice>
       ) : null}
