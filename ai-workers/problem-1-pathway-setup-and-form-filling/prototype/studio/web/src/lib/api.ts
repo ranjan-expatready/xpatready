@@ -14,7 +14,15 @@ const listeners = new Set<() => void>();
 export const getActor = () => actor;
 /** Was the current person chosen (signed in, picked, handed over), not the default of a browser with no stored person? */
 export const personChosen = () => chosen;
-export function setActor(a: string) { actor = a; chosen = true; try { localStorage.setItem("xr-actor", a); } catch { /* private window */ } listeners.forEach((l) => l()); }
+/** QA-401 (P-456, P-484: a change of person by the picker or a hand-off is a login): every open page re-reads what it
+ *  shows with the new person's rights. Answers read as the previous person are dropped at once (never shown, so a stale
+ *  "Approve" cannot be pressed) and the pages on screen read again; a page whose key names the person was already safe. */
+export function setActor(a: string) {
+  const changed = a !== actor;
+  actor = a; chosen = true; try { localStorage.setItem("xr-actor", a); } catch { /* private window */ }
+  if (changed) void queryClient.resetQueries();
+  listeners.forEach((l) => l());
+}
 /** BK-4a: hear every change of person (the frame's one notice); returns the way to stop listening. */
 export function onActorChange(l: () => void) { listeners.add(l); return () => { listeners.delete(l); }; }
 export function useActorId() { const [, force] = React.useState(0); React.useEffect(() => { const l = () => force((n) => n + 1); listeners.add(l); return () => { listeners.delete(l); }; }, []); return actor; }
