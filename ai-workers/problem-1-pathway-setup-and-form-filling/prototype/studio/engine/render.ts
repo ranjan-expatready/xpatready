@@ -8,7 +8,7 @@ import { documentFacts, SIGNED_SCAN } from "./sources.ts";
 import { lineOf } from "./channels.ts";
 import { pdfMapInUse } from "./programs.ts";
 import { factName } from "./fact-name.ts";
-import { NotWorkedOut } from "./not-worked-out.ts";
+import { NEVER_ASKED, NotWorkedOut } from "./not-worked-out.ts";
 
 // SH3 (P-258): who a line, a condition, a box and a signature are about comes from the one resolver (engine/resolver.ts,
 // contract contracts/resolver.ts); its functions are re-exported here for their callers.
@@ -300,6 +300,8 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     const key = `${about}|${fact}`;
     if (seen.has(key)) { const q = questions.find((x) => `${x.about}|${x.fact}` === key); if (q) for (const d of decides) if (!q.decides.includes(d)) q.decides.push(d); return; }
     seen.add(key);
+    // QA-415 (B78): a fact the case always works out is never a question, here (Preview) or on a case.
+    if (NEVER_ASKED.has(fact)) return;
     const p = place.get(fact), f = field.get(fact);
     if (!p) return;
     let status: Q["status"] = maybe ? "may be needed" : "needs an answer", required = true;

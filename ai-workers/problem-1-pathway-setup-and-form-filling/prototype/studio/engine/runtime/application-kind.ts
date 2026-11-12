@@ -13,9 +13,10 @@ import { releaseModes } from "../filing-modes.ts";
 import { addedFilings } from "./added-filings.ts";
 import { deriveFilings, FEE_TABLE, rulesFrom, type FeeTable } from "./filings.ts";
 import type { Participant } from "./case.ts";
-import { NotWorkedOut } from "../not-worked-out.ts";
+import { APPLICATION_TYPE, NotWorkedOut } from "../not-worked-out.ts";
 
-export const APPLICATION_TYPE = "person.application_type", APPLICATION_TYPE_SOURCE = "worked out: the person's own filing";
+export { APPLICATION_TYPE };
+export const APPLICATION_TYPE_SOURCE = "worked out: the person's own filing";
 export { NotWorkedOut };
 export type KindTable = { filings: Record<string, string>; combinations: Record<string, string> };
 export const KIND_TABLE = KINDS as unknown as KindTable;

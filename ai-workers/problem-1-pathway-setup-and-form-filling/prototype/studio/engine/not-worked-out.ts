@@ -9,3 +9,7 @@ export class NotWorkedOut {
   toJSON() { return null; }
   toString() { return ""; }
 }
+/** QA-415 (P-486): the facts a case always works out for each person and never asks (application-kind.ts): no question
+ *  lists them, on a case or on Preview (engine/render.ts), so the two always show the same questions (B78). */
+export const APPLICATION_TYPE = "person.application_type";
+export const NEVER_ASKED: ReadonlySet<string> = new Set([APPLICATION_TYPE]);
