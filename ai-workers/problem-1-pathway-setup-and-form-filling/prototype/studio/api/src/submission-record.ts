@@ -98,3 +98,38 @@ export async function recordedOverlay(db: Db, a: { workspaceId: string; caseId: 
   const tasks = await db.caseTask.findMany({ where: { caseId: a.caseId, stage: { state: "CURRENT" } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
   return tasks.map((t) => ({ id: t.id, kind: t.kind as "after_filing_change", filing: t.filingId, item: t.itemId, words: t.words, state: t.state as "open" | "done", created_at: t.createdAt.toISOString(), done: t.doneAt ? { by: t.doneBy === "rules" ? "Closed by itself: the form's answers are as filed again" : nameOf(t.doneBy) ?? "", at: t.doneAt.toISOString() } : null }));
 }
+
+/** A filing row recorded as submitted (status SUBMITTED), with its people as stored and its label as recorded (null for a
+ *  record made before BK-17, which stored none). */
+export type RecordedRow = { id: string; subjectId: string; submissionGroupId: string; mode: string; label: string | null; applicants: { subjectId: string; role: string; mode: string }[] };
+type Derived = { id: string; combination: string; label: string; mode: string; owner?: { subject: string; label: string; role: string }; applicants: { subject: string; label: string; role: string; mode: string }[]; group: string; status: string; number: string | null };
+type Group = { id: string; kind: "family" | "separate"; label: string; filings: string[]; splittable: boolean; why: string; totals: unknown[]; total_cents: number | null };
+
+/** The labels "Record the submission" stores with a group (recorded_fees.labels, BK-17), by stored filing id. */
+export const recordedLabels = (groups: { recordedFees: unknown }[]) => new Map(groups.flatMap((g) => Object.entries(((g.recordedFees ?? {}) as { labels?: Record<string, string> }).labels ?? {})));
+
+/** BK-17 (BK-15 breaker M3): a filing recorded as submitted reads as it was recorded, whatever the answers say now: its
+ *  label, its mode, its group and its people (applying or declared only) are the stored ones. A person on a recorded
+ *  filing stays on it: no other filing gains them and none is made for them. A recorded filing the derivation no longer
+ *  makes (an answer moved its owner onto another application) is still listed. Filings match by their owner, as they are
+ *  stored. `idOf` gives a filing the derivation does not make its id in the caller's ids; groups follow the filings. */
+export function keepRecorded<F extends Derived, G extends Group>(d: { filings: F[]; groups: G[] }, recorded: RecordedRow[], a: { labelOf: (subject: string) => string; combination: string; combinationLabel: string; idOf: (row: RecordedRow) => string; kindOf: (group: string) => "family" | "separate" }): { filings: F[]; groups: G[] } {
+  if (!recorded.length) return d;
+  const byOwner = new Map(recorded.map((r) => [r.subjectId, r]));
+  const held = new Set(recorded.flatMap((r) => [r.subjectId, ...r.applicants.map((x) => x.subjectId)]));
+  const asRecorded = (r: RecordedRow, f?: F): F => ({ ...(f ?? { status: "NOT_STARTED", number: null }), id: f?.id ?? a.idOf(r), combination: f?.combination ?? a.combination,
+    label: r.label ?? f?.label ?? `${a.combinationLabel}: ${a.labelOf(r.subjectId)}`, mode: r.mode, group: r.submissionGroupId,
+    owner: { subject: r.subjectId, label: a.labelOf(r.subjectId), role: r.applicants.find((x) => x.subjectId === r.subjectId)?.role ?? f?.owner?.role ?? "principal" },
+    applicants: r.applicants.map((x) => ({ subject: x.subjectId, label: a.labelOf(x.subjectId), role: x.role, mode: x.mode })) }) as F;
+  const filings = d.filings.flatMap((f) => { const r = byOwner.get(f.owner?.subject ?? ""); return r ? [asRecorded(r, f)] : held.has(f.owner?.subject ?? "") ? [] : [{ ...f, applicants: f.applicants.filter((x) => !held.has(x.subject)) }]; });
+  for (const r of recorded) if (!d.filings.some((f) => f.owner?.subject === r.subjectId)) filings.push(asRecorded(r));
+  const groups = [...d.groups, ...[...new Set(recorded.map((r) => r.submissionGroupId))].filter((g) => !d.groups.some((x) => x.id === g))
+    .map((id) => ({ id, kind: a.kindOf(id), label: "One submission", filings: [], splittable: false, why: "Recorded as submitted to IRCC.", totals: [], total_cents: null }) as unknown as G)];
+  return { filings, groups: groups.map((g) => ({ ...g, filings: filings.filter((f) => f.group === g.id).map((f) => f.id) })).filter((g) => g.filings.length) };
+}
+
+/** The recorded rows among a case's stored filing rows, each with its label as recorded (BK-17). */
+export const recordedRowsOf = (rows: { id: string; subjectId: string; submissionGroupId: string; mode: string; status: string; applicants: { subjectId: string; role: string; mode: string }[] }[], groups: { recordedFees: unknown }[]): RecordedRow[] => {
+  const labels = recordedLabels(groups);
+  return rows.filter((r) => r.status === "SUBMITTED").map((r) => ({ id: r.id, subjectId: r.subjectId, submissionGroupId: r.submissionGroupId, mode: r.mode, label: labels.get(r.id) ?? null, applicants: r.applicants.map((x) => ({ subjectId: x.subjectId, role: x.role, mode: x.mode })) }));
+};

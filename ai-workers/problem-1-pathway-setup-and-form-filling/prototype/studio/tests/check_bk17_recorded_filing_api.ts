@@ -5,7 +5,8 @@
 // child's "6 months or more" (allowed: an answer changed after filing opens a "Filed with an earlier value" task, BR-12).
 // Before BK-17 the next Prepare read dropped the child's recorded application (made inactive: the child moved onto the
 // student's recorded application, with new items there), so a submitted filing vanished and another changed its people.
-// After: both recorded applications read as they were recorded (same ids, labels, numbers, people, items, fees), and an
+// After: both recorded applications read as they were recorded (same ids, labels, numbers, people, items, fees), on
+// GET …/prepare and GET …/filings; the other way round (recorded with No, then Yes) makes no new application; and an
 // unrecorded family with the same answer is worked out again as before (control). No model call (US$0).
 //   zsh studio/tools/isolated.sh rt_bk17 4436 start && tsx studio/tests/check_bk17_recorded_filing_api.ts 4436 xr_studio_rt_bk17
 import { answer, call, confirmAll, firms, inDays, openCase, prepare, readyToFile, sql, yearsAgo, type Prepare } from "../acceptance/lib/m3.ts";
@@ -45,6 +46,8 @@ v = await view(c.id);
 const before = shape(v), feesBefore = fees(v), kidBefore = kidFiling();
 ok("BK-17 setup: the submission is recorded (200), both filings read submitted with their numbers", rec.status === 200 && before.length === 2 && before.every((x) => x.status === "submitted" && !!x.number), [rec.status, rec.body?.detail, before]);
 
+const inactive = () => [sql(`select count(*) from filing where case_id='${c.id}' and active=false`), sql(`select count(*) from filing_item where case_id='${c.id}' and active=false`), sql(`select count(*) from filing_applicant a join filing f on f.id=a.filing_id where f.case_id='${c.id}'`)];
+const stillBefore = inactive();
 const no = await answer(c.id, K, STUDIES, false, officer);
 ok("BK-17 pass: the answer itself is still taken after filing (200; BR-12 marks what was filed with an earlier value)", no.status === 200, [no.status, no.body?.detail]);
 v = await view(c.id);
@@ -53,11 +56,36 @@ ok("BK-17 pass (fail-first): after the answer changes, the recorded filings read
 ok("BK-17 fail: the child's recorded application is never relabelled or dropped (still \"Study permit: Sample Child R\", submitted, its number)", kidFiling()?.id === kidBefore?.id && kidFiling()?.label === "Study permit: Sample Child R" && kidFiling()?.status === "submitted" && kidFiling()?.number === kidBefore?.number, kidFiling());
 ok("BK-17 fail: the student's recorded application never gains the child (its people are those recorded)", (v?.filings.find((x) => x.owner?.subject === S)?.applicants ?? []).every((a) => a.subject !== K), v?.filings.find((x) => x.owner?.subject === S)?.applicants);
 ok("BK-17 pass: the frozen fees stay (same groups, totals and lines)", fees(v) === feesBefore, { now: fees(v), before: feesBefore });
-ok("BK-17 data: no filing of the recorded case was made inactive and no item moved", sql(`select count(*) from filing where case_id='${c.id}' and active=false`) === "0" && sql(`select count(*) from filing_item where case_id='${c.id}' and active=false`) === "0", [sql(`select count(*) from filing where case_id='${c.id}' and active=false`), sql(`select count(*) from filing_item where case_id='${c.id}' and active=false`)]);
+ok("BK-17 data: after the answer, no filing or item of the recorded case was made inactive and no applicant row was added (inactive filings, inactive items, applicant rows as before)", JSON.stringify(inactive()) === JSON.stringify(stillBefore), { before: stillBefore, after: inactive() });
 const again = await view(c.id);
 ok("BK-17 pass: a second read stores nothing new (same version)", String(again?.version) === String(v?.version), [again?.version, v?.version]);
+ok("BK-17 data: the record stored each filing's label with the group's recorded fees (recorded_fees.labels)", sql(`select recorded_fees->'labels'->>'${kidBefore?.id}' from submission_group where id='${g.id}'`) === "Study permit: Sample Child R", sql(`select recorded_fees->'labels' from submission_group where id='${g.id}'`));
+// GET …/filings reads the recorded filings the same way (its ids are "filing-<owner>").
+type Listed = { filings: { id: string; label: string; applicants: { subject: string }[]; group: string }[]; groups: { id: string; filings: string[] }[] };
+const fl = (await call("GET", `/runtime/cases/${c.id}/filings`, undefined, officer)).body as Listed;
+const flKid = fl?.filings?.find((x) => x.id === `filing-${K}`), flStudent = fl?.filings?.find((x) => x.id === `filing-${S}`);
+ok("BK-17 pass: GET …/filings agrees: the child's recorded application is listed as recorded, in its group, and the student's never gains the child", flKid?.label === "Study permit: Sample Child R" && flKid.applicants.length === 1 && !!flStudent && flStudent.applicants.every((a) => a.subject !== K) && fl.groups.some((x) => x.filings.includes(`filing-${K}`) && x.filings.includes(`filing-${S}`)), fl?.filings?.map((x) => [x.id, x.label, x.applicants.map((a) => a.subject)]));
 
-// (2) Control: an unrecorded family with the same answer is worked out again (only a recorded filing is kept).
+// (2) The other way: recorded with "No" (the child applying on the student's application), then "Yes". The recorded
+// application keeps the child and no new application is made for them.
+{
+  const r = await openCase(sp, family("N"), team, `BK17-N-${Date.now().toString(36)}`);
+  const NS = r.subjects["Sample Student N"], NK = r.subjects["Sample Child N"];
+  await answer(r.id, NK, STUDIES, false, officer);
+  await confirmAll(r.id, NK);
+  const n = await readyToFile(r.id, rep);
+  let nv = await view(r.id);
+  const nrec = await call("PATCH", `/runtime/groups/${nv!.groups[0].id}/record`, { version: nv!.version, ucis: [], filings: nv!.filings.map((x, i) => ({ filing: x.id, our_reference: `SAMPLE-BK17N-${i + 1}`, submitted_on: inDays(0), application_number: `T${Date.now().toString().slice(-7)}${i + 1}`, fee_receipt: "SAMPLE-RECEIPT" })) }, officer);
+  nv = await view(r.id);
+  const nBefore = shape(nv);
+  ok("BK-17 setup: recorded with \"No\": one application, the child applying on the student's", n.length === 1 && nrec.status === 200 && nBefore.length === 1 && nBefore[0].status === "submitted" && nBefore[0].people.includes(`${NK}:applying`), [n.length, nrec.status, nrec.body?.detail, nBefore]);
+  const y = await answer(r.id, NK, STUDIES, true, officer);
+  nv = await view(r.id);
+  ok("BK-17 pass (other way): after \"Yes\" the recorded application reads as recorded (the child still on it) and no new application is made for the child", y.status === 200 && JSON.stringify(shape(nv)) === JSON.stringify(nBefore) && sql(`select count(*) from filing where case_id='${r.id}'`) === "1", { y: y.status, before: nBefore, after: shape(nv), rows: sql(`select count(*) from filing where case_id='${r.id}'`) });
+  ok("BK-17 fail (other way): the student's recorded application never loses the child to a new one", nv?.filings.find((x) => x.owner?.subject === NS)?.applicants.some((a) => a.subject === NK && a.mode === "applying") === true, nv?.filings);
+}
+
+// (3) Control: an unrecorded family with the same answer is worked out again (only a recorded filing is kept).
 const u = await openCase(sp, family("U"), team, `BK17-U-${Date.now().toString(36)}`);
 const UK = u.subjects["Sample Child U"];
 await answer(u.id, UK, STUDIES, true, officer);
