@@ -77,7 +77,11 @@ ok("A24-1 CS-8 pass: after Prepare, the list's filing count is the case's filing
 ok("A24-1 CS-8 pass: one client's page (client=) still lists the people, with the new fields", (await rowOf(fam.id, `&client=${CLIENT}`))?.people?.length === FAMILY.length && (await rowOf(fam.id, `&client=${CLIENT}`))?.client_name === "Sample Client A");
 const noRef = await rowOf(b.body?.id);
 const rec = await call("GET", `/runtime/cases/${b.body?.id}/filing-record`, undefined, officer);
-ok("A24-1 CS-7 pass (break M2): the filing record names a case without a reference by its case number (our_reference), never null", rec.status === 200 && rec.body?.our_reference === b.body?.case_number, [rec.status, rec.body?.our_reference]);
+const named = await Promise.all(["filings", "checklist"].map((x) => call("GET", `/runtime/cases/${b.body?.id}/${x}`, undefined, officer)));
+ok("A24-1 CS-7 pass (break M2, review M2): the filing record, the filings and the checklist name a case without a reference by its case number, never null",
+  rec.status === 200 && rec.body?.our_reference === b.body?.case_number && named.every((r) => r.status === 200 && r.body?.reference === b.body?.case_number), [rec.status, rec.body?.our_reference, named.map((r) => [r.status, r.body?.reference])]);
+const famNamed = await call("GET", `/runtime/cases/${a.body?.id}/filings`, undefined, officer);
+ok("A24-1 CS-7 fail (byte-identical words): a case with a reference is still named by its reference, never by its number", famNamed.body?.reference === ref("a"), famNamed.body?.reference);
 ok("A24-1 CS-8 pass: a case opened without a reference lists with its number and no reference", noRef?.case_number === b.body?.case_number && noRef?.reference === null, noRef);
 
 // ---------------------------------------------------------------- one principal per case, Make principal still works (CS-1)

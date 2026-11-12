@@ -10,6 +10,7 @@ import { ageOn, deriveFilings, FAMILY_GROUP } from "../../engine/runtime/filings
 import { actorOf, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import type { Participant } from "../../engine/runtime/case.ts";
+import { caseName } from "../../contracts/runtime.ts"; // A24-1: the reference, else the case number
 
 type H = string | undefined;
 
@@ -44,7 +45,7 @@ export class CaseFilings {
     const kindOf = new Map(rows.map((f) => [f.submissionGroupId, f.group.kind === "FAMILY" ? "family" as const : "separate" as const]));
     const family = rows.find((f) => f.group.kind === "FAMILY")?.submissionGroupId ?? FAMILY_GROUP;
     const d = deriveFilings(own!.combinationKey, people, undefined, { ages, modes, adds, label: s.combination.label, groupOf: (x) => groupOf.get(x) ?? family, groupKind: (g) => kindOf.get(g) ?? "family" });
-    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, ...frozenIn(d, rows) };
+    return { case_id: c.id, reference: caseName(c), release_version: pin.release.version, ...frozenIn(d, rows) };
   }
 }
 

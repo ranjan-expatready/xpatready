@@ -9,7 +9,7 @@ import { clientPersonOf, withClient, type StoredChange } from "../../engine/runt
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
-import { type CaseListRow, ConfirmSection, fillsText, Reconfirm, notReadyForCases, releaseLabel, NewCase, type OpenableRelease, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
+import { caseName, type CaseListRow, ConfirmSection, fillsText, Reconfirm, notReadyForCases, releaseLabel, NewCase, type OpenableRelease, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView, checkValue, isClientField, OWN_LINK, pqrView, shapeOf, type Answer, type CaseView, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import { ownerOf, privateFrom, progressOf } from "../../engine/runtime/privacy.ts"; // C6.16
@@ -573,7 +573,7 @@ export class Runtime {
     const v = caseView(s, this.peopleOf(c), st.answers, st.rows, "sqr", new Date(), st.groups, { background: this.backgroundOf(c) });
     const others = new Set(c.participants.filter((p) => !keep(p.subjectId)).map((p) => p.subjectId));
     const labels = (k: boolean) => new Set(c.participants.filter((p) => keep(p.subjectId) === k).map((p) => p.subject.label));
-    return { case: { id: c.id, reference: c.reference, people: c.participants.filter((p) => keep(p.subjectId)).map((p) => ({ subject_id: p.subjectId, role: p.role, label: p.subject.label, applies: p.applies })) }, own,
+    return { case: { id: c.id, reference: caseName(c), people: c.participants.filter((p) => keep(p.subjectId)).map((p) => ({ subject_id: p.subjectId, role: p.role, label: p.subject.label, applies: p.applies })) }, own,
       ...withoutHidden(v, others, labels(false), labels(true)) };
   }
 
