@@ -83,7 +83,7 @@ for a in NONE CONTRIBUTOR FIRST_TIME_CONTRIBUTOR FIRST_TIMER MANNEQUIN "" owner 
 done
 parse OWNER "" "/run nightly C7.3";  want "fail: a comment on an issue, not a pull request, is ignored" ignore
 parse OWNER no "/rerun failed";      want "fail: is_pr other than yes is ignored" ignore
-for b in "/run nightly C7" "/run nightly c7.3" "/run nightly C123.4" "/run nightly X7.3" "/run nightly C7.3 fixture" \
+for b in "/run nightly C7" "/run nightly c7.3" "/run nightly C123.4" "/run nightly C7.123" "/run nightly C7." "/run nightly C.3" "/run nightly X7.3" "/run nightly C7.3 fixture" \
          "/run nightly C7.3 six checkpoint" "/run nightly" "/run nightly C1.1 C1.2 C1.3 C1.4 C1.5 C1.6 C1.7 C1.8 C1.9" \
          "/run nightly  C7.3" " /rerun failed" "/rerun" "/rerun failed --all" "/rerun all" "/run nightly C7.3 SIX" \
          "/run nightly C７.3" "/run nightly С7.3" "/run nightly C7.3,C5.4" "/run Nightly C7.3"; do
