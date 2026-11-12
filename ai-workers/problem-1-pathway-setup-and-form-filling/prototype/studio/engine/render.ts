@@ -12,7 +12,7 @@ import { factName } from "./fact-name.ts";
 // SH3 (P-258): who a line, a condition, a box and a signature are about comes from the one resolver (engine/resolver.ts,
 // contract contracts/resolver.ts); its functions are re-exported here for their callers.
 import { aboutOf, conditionSubjects, factsOf, formSigners, isFilingFact, kkey, lineHolders, peopleFor, signsForOthers, subjectsFor, type Known, type Person } from "./resolver.ts";
-import { FILING, ROLE } from "../contracts/resolver.ts";
+import { FILING, PRINCIPAL_CHILDREN_WHEN, ROLE } from "../contracts/resolver.ts";
 import { isListRelation, listBoxWords, relativeOf } from "./runtime/relatives.ts";
 export { aboutOf, conditionSubjects, formSigners, kkey, lineHolders, peopleFor, signsForOthers, subjectsFor };
 export type { Known, Person, Role } from "./resolver.ts";
@@ -65,6 +65,23 @@ function ageGate(known: Known, about: string, minAge: number | null | undefined,
   if (today.getUTCMonth() + 1 < mo || (today.getUTCMonth() + 1 === mo && today.getUTCDate() < d)) age--;
   return { applies: age >= minAge, missing: [] };
 }
+/** BK-16 (P-490; contracts/resolver.ts PRINCIPAL_CHILDREN_WHEN): on a "principal, and each child while its condition
+ *  holds" line the condition is never read for the principal applicant, and a child gets the form only while it holds
+ *  for them. No condition on the line, a No, or no answer yet each give that child no form: never an error and never
+ *  "cannot tell". An unanswered rule is kept as `pending`, so its question is still asked of the child. */
+function childrenWhen(rule: Cond & { about?: string }, role: string | undefined, hasCondition: boolean): { rule: Cond & { about?: string }; pending: (Cond & { about?: string }) | null } {
+  if (role !== ROLE.child) return { rule: { applies: true, missing: [] }, pending: null };
+  if (!hasCondition) return { rule: { applies: false, missing: [] }, pending: null };
+  if (rule.applies === true) return { rule, pending: null };
+  return { rule: { applies: false, missing: [] }, pending: rule.applies === "cannot_tell" ? rule : null };
+}
+/** BK-16: the reason words of such a line, for one holder. */
+function childrenWhenWhy(plain: string | null | undefined, role: string | undefined, hasCondition: boolean, decided: Cond, pending: boolean): string {
+  const when = plain ?? "its condition holds";
+  if (role !== ROLE.child) return hasCondition ? `always for the principal applicant; for a child, only when ${when}` : "always for the principal applicant";
+  if (!hasCondition) return "for a child, only when the line's condition holds, and the line has no condition";
+  return decided.applies === true ? `for a child, when ${when}` : `for a child, only when ${when}${pending ? " (not answered yet)" : ""}`;
+}
 /** Both must hold: false wins, then cannot tell (with both lists of missing facts). */
 const both = (a: Cond, b: Cond): Cond => a.applies === false || b.applies === false ? { applies: false, missing: [] } : a.applies === "cannot_tell" || b.applies === "cannot_tell" ? { applies: "cannot_tell", missing: [...a.missing, ...b.missing] } : { applies: true, missing: [] };
 /** S5 (challenge M1): a conditional line whose "Only if" is words with no rule yet never applies by default: it cannot
@@ -107,14 +124,18 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   // C7.7 (SH3 R3, contract item (a)): a form's condition is decided like a document line's (lineCondition): CASE on the
   // filing; PRINCIPAL, SPOUSE or DEPENDENT on the holder when the holder has that role, else on every person with it
   // (none → the form is not needed); otherwise on the holder. Whose answers each part waits for is kept for the deciders.
-  const formWaits = new Map<string, { rule: Cond & { about?: string }; age: Cond }>();
+  const formWaits = new Map<string, { rule: Cond & { about?: string }; age: Cond; pending?: (Cond & { about?: string }) | null }>();
   const forms = s.forms.filter((f) => f.form_kind !== "document" || true).flatMap((f) => {
     return subjectsFor(people, f.who).map((person) => {
-      const rule: Cond & { about?: string } = wordsOnly(f) ? { applies: "cannot_tell", missing: [NO_RULE] } : lineCondition(s, known, people, person, f.condition);
-      const age = ageGate(known, person, f.min_age, today, people.find((p) => p.id === person)?.role, f.who);
+      const role = people.find((p) => p.id === person)?.role;
+      const read: Cond & { about?: string } = wordsOnly(f) ? { applies: "cannot_tell", missing: [NO_RULE] } : lineCondition(s, known, people, person, f.condition);
+      // BK-16: a "principal, and each child while its condition holds" line decides its rule by role first.
+      const gated = f.who === PRINCIPAL_CHILDREN_WHEN ? childrenWhen(read, role, !!f.condition) : null;
+      const rule = gated?.rule ?? read;
+      const age = ageGate(known, person, f.min_age, today, role, f.who);
       const c = both(rule, age);
-      formWaits.set(`${f.form_number}|${person}`, { rule, age });
-      const why = wordsOnly(f) ? `Cannot tell yet: no rule ("${f.condition_plain ?? "only if"}" is in words only)` : f.condition_plain ?? (f.status === "always" ? "always required for this combination" : "conditional");
+      formWaits.set(`${f.form_number}|${person}`, { rule, age, pending: gated?.pending ?? null });
+      const why = gated ? childrenWhenWhy(f.condition_plain, role, !!f.condition, rule, !!gated.pending) : wordsOnly(f) ? `Cannot tell yet: no rule ("${f.condition_plain ?? "only if"}" is in words only)` : f.condition_plain ?? (f.status === "always" ? "always required for this combination" : "conditional");
       return { form: f.form_number, title: f.title, form_kind: f.form_kind ?? "data_form", person, person_label: label(person), status: f.status, applies: c.applies, missing: c.missing, why: f.min_age ? (f.who === ADULT_CHILDREN ? (people.find((p) => p.id === person)?.role === ROLE.child ? `${why}; for a dependent child, from age ${f.min_age}` : `${why}; at any age for the principal applicant and a spouse or partner`) : `${why}; from age ${f.min_age}`) : why, origin: f.origin, no_rule: wordsOnly(f), ...((f as { added?: unknown }).added ? { added: true as const } : {}) };
     });
   });
@@ -196,7 +217,16 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     if (w.rule.applies === "cannot_tell") addDecider(w.rule.missing, w.rule.about ?? f.person, what);
     if (w.age.applies === "cannot_tell") addDecider(w.age.missing, f.person, what);
   }
-  for (const f of s.forms) if (f.condition) for (const row of forms.filter((x) => x.form === f.form_number)) keepAnswered(f.condition, conditionSubjects(people, row.person, f.condition.subjectKind), `whether ${f.form_number} applies to ${row.person_label}`);
+  // BK-16: a child not yet answered for a "principal, and each child while its condition holds" line has no form, but
+  // the question that decides it is still asked of them (else nothing would ever give them the form).
+  for (const f of forms) {
+    const w = formWaits.get(`${f.form}|${f.person}`)!;
+    if (w.pending?.applies === "cannot_tell") addDecider(w.pending.missing, w.pending.about ?? f.person, `whether ${f.form} applies to ${f.person_label}`);
+  }
+  // BK-16 review m2: on a "principal, and each child while its condition holds" line the condition decides children only,
+  // so an answer is kept as deciding it for a child, never for the principal (rule R1: never read for them).
+  const decidedBy = (f: { who: string }, person: string) => f.who !== PRINCIPAL_CHILDREN_WHEN || people.find((p) => p.id === person)?.role === ROLE.child;
+  for (const f of s.forms) if (f.condition) for (const row of forms.filter((x) => x.form === f.form_number && decidedBy(f, x.person))) keepAnswered(f.condition, conditionSubjects(people, row.person, f.condition.subjectKind), `whether ${f.form_number} applies to ${row.person_label}`);
 
   // M3-S2 (P-425): a "Who can be in this application" line's rule that adds a filing decides it for each person of the
   // line who applies (engine/runtime/added-filings.ts reads the same rule), so its question is asked of them and kept once
