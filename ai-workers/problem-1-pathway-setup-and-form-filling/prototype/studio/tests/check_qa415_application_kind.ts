@@ -144,6 +144,10 @@ ok("QA-415 pass: the shipped table is the data file", JSON.stringify(KIND_TABLE.
   const row = (value: unknown) => ({ box: "F[0].application[0]", caption: "Type of application", fact: APPLICATION_TYPE, meaning: null, about: "P", about_label: "Sample P", row: null, coverage: "confirmed fact" as const, detail: "", value, transform: map.entries[0].transform });
   const out = formValues(snapF, map, inv, [row(new NotWorkedOut("Sample P's application waits for an answer."))]);
   ok("QA-415 fail (review M1): a box whose kind is not worked out is by hand with its reason, and nothing is written", out.boxes[0].result === "by hand" && out.boxes[0].why === "Sample P's application waits for an answer." && !out.values["F[0].application[0]"], out.boxes[0]);
+  // A copy freezes its rows as JSON before it is filled (api/src/fill-case.ts): the reason must survive that, as text.
+  const frozen = JSON.parse(JSON.stringify([{ ...row(null), by_hand: "Sample P's application waits for an answer." }]));
+  const thawed = formValues(snapF, map, inv, frozen);
+  ok("QA-415 fail (review M1, on a frozen copy): the row's reason survives JSON and the box is by hand with it", thawed.boxes[0].result === "by hand" && thawed.boxes[0].why === "Sample P's application waits for an answer.", thawed.boxes[0]);
   const ok2 = formValues(snapF, map, inv, [row("Worker")]);
   ok("QA-415 pass: a worked-out word is written as it is", ok2.boxes[0].result === "written" && ok2.values["F[0].application[0]"] === "Worker", ok2.boxes[0]);
   ok("QA-415 pass (review M1): not worked out is no value when stored or compared (null in JSON, empty as text)", JSON.stringify({ v: new NotWorkedOut("x") }) === '{"v":null}' && String(new NotWorkedOut("x")) === "");

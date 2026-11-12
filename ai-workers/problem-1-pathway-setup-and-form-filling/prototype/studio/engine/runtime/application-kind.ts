@@ -13,16 +13,10 @@ import { releaseModes } from "../filing-modes.ts";
 import { addedFilings } from "./added-filings.ts";
 import { deriveFilings, FEE_TABLE, rulesFrom, type FeeTable } from "./filings.ts";
 import type { Participant } from "./case.ts";
+import { NotWorkedOut } from "../not-worked-out.ts";
 
 export const APPLICATION_TYPE = "person.application_type", APPLICATION_TYPE_SOURCE = "worked out: the person's own filing";
-/** Review M1 (#1620): a fact the case works out but cannot work out for this person yet (their application waits for an
- *  answer, or the table has no word for their filing). Its form fields are written by hand with this reason, never left
- *  blank in silence and never guessed (engine/form-values.ts). It is no value: stored or compared, it is null. */
-export class NotWorkedOut {
-  constructor(readonly why: string) {}
-  toJSON() { return null; }
-  toString() { return ""; }
-}
+export { NotWorkedOut };
 export type KindTable = { filings: Record<string, string>; combinations: Record<string, string> };
 export const KIND_TABLE = KINDS as unknown as KindTable;
 
