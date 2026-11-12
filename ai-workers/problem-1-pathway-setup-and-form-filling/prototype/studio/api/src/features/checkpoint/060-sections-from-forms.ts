@@ -22,6 +22,9 @@ export const sections = stateOf(() => ({
   held: [] as string[],
   /** B78: sections named by the name a person gives them (samples/section-names.json), through the same edit. */
   namedByPerson: [] as HeldSectionName[],
+  /** BK-16 (P-496): sections the form prints a heading over that a person renamed (samples/section-names.json), so a later
+   *  source's part does not join another combination's section of that printed name. */
+  renamedByPerson: [] as HeldSectionName[],
   /** The marital status list IMM 5409's rule reads (ruling 3), once accepted; the first combination's form lines link it
    *  to the shared field and clear it (combination/110). */
   maritalList: null as string | null,
@@ -57,7 +60,7 @@ export async function sectionsFrom(ctx: CheckpointContext, c: { id: string }, fo
         : held?.unnamed
         ? { action: "edit", payload: { ...(p.payload as object), label: held.heading }, reason: `Named by the sample loader from the heading the form prints over it, "${held.printed ?? held.heading}" (Sample); rename it on Shared library if a person words it better.` }
         : { action: "accept", reason: "Accepted by the sample loader: drafted from the form's own parts (rules, US$0); rename it on Shared library if a person words it better." })).items[0] as { landedAs?: string; joined?: boolean } | undefined;
-      if (given) s.namedByPerson.push(given);
+      if (given) (held?.unnamed && !held.heading ? s.namedByPerson : s.renamedByPerson).push(given);
       // A name the library already holds lands on that section, so it is reused, not added.
       if (p.kind === "section") (landed?.joined ? s.reused : s.made).push(landed?.landedAs ?? ""); else s.maritalList ??= landed?.landedAs ?? null;
     } catch (e) {

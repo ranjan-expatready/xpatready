@@ -60,9 +60,10 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   // R-146, QA-163, the C11.8 live run (#746) and the C11.7 result (3 Nov): eighteen saved answers replay (IMM 5532's re-run,
   // the Visitor visa's IMM 5257, IMM 5669 and IMM 0008 DEP since the C11.7 paid runs; check_queue_tx.ts), IMM 5645's from its
   // four saved parts (check_forms_saved_parts.ts), so no form waits and row 3 is done; QA-144 slice 1 adds IRM 0002 on the
-  // Visitor visa, attached from the library and replayed from #840's saved answer: nineteen. A lost or mismatched replay
+  // Visitor visa, attached from the library and replayed from #840's saved answer: nineteen; BK-16 PR 2 (P-490) adds
+  // IMM 1295's saved answer (the Study permit spouse's work permit application): twenty. A lost or mismatched replay
   // lowers jobs and makes the row partial with the form named, so both sides fail.
-  ok("C10.1 row 3: every saved AI field-map answer is replayed (US$0, the nineteen forms with IRM 0002, IMM 5645 by its four saved parts); no form waits for the paid run", jobs === 19 && r("3").status === "done" && r("3").shows.startsWith(`${jobs} saved`) && r("3").why == null, r("3"));
+  ok("C10.1 row 3: every saved AI field-map answer is replayed (US$0, the twenty forms with IRM 0002 and IMM 1295, IMM 5645 by its four saved parts); no form waits for the paid run", jobs === 20 && r("3").status === "done" && r("3").shows.startsWith(`${jobs} saved`) && r("3").why == null, r("3"));
   ok("C10.1 row 4: the author decides every replayed proposal with a reason, one edited and one returned, and the drafts are applied", n(`select count(*) from proposal_item p join drafting_job j on j.id = p.run_id where j.kind = 'field_map' and p.status = 'waiting'`) === 0 && n(`select count(*) from proposal_item where choice = 'RETURNED' and decision_reason like 'Returned by the sample loader%'`) === 1 && n(`select count(*) from proposal_item where decision_reason like 'Edited by the sample loader%'`) === 1 && n(`select count(*) from drafting_job where kind = 'field_map' and status = 'APPLIED'`) === jobs, r("4").shows);
   ok("C10.1 row 4 fail: no proposal is decided without a person's name and reason", n(`select count(*) from proposal_item where choice is not null and (decided_by is null or coalesce(decision_reason, '') = '')`) === 0);
   // Row 5: every new library item approved by a second person, never by the author who accepted it.
