@@ -79,7 +79,7 @@ for (const [key, cents, quote] of OTHER) {
   const capped: FeeTable = { ...FEE_TABLE, lines: FEE_TABLE.lines.map((x) => (x.key === key ? { ...x, family_max: { cad: 1, from_people: 2 } } : x)) };
   ok(`C6.12-24 ${key} fail: a family maximum written on the line by mistake is not applied (the basis is per person: only family_maximum caps)`, total(viaData("t.one", six, usingLine(key, capped)), key) === 6 * cents);
 }
-ok("C6.12-24 fail: no shipped combination uses these lines yet (their combinations come with their releases); Visitor visa's lines are unchanged", Object.values(FEE_TABLE.combinations).every((c) => !c.lines.some((k) => OTHER.some(([o]) => o === k))) && JSON.stringify(FEE_TABLE.combinations["vv.single"].lines) === JSON.stringify(["visitor_visa", "biometrics"]));
+ok("C6.12-24 fail: no shipped combination uses these lines but the Study permit (BK-15, P-486: its own fees by role, with its release); Visitor visa's lines are unchanged", Object.entries(FEE_TABLE.combinations).every(([key, c]) => key === "sp.outside" || !c.lines.some((k) => OTHER.some(([o]) => o === k))) && JSON.stringify(FEE_TABLE.combinations["vv.single"].lines) === JSON.stringify(["visitor_visa", "biometrics"]));
 ok("C6.12-24: the open work permit holder line says its \"per holder\" reading is Sample (IRCC's row gives no \"per person\") and cites Help Centre 176 for \"paid with the work permit fee\"; the work permit line says the performing-artist group maximum is not modelled", /qnum=176.*at the same time that you pay the work permit fee/.test(FEE_TABLE.lines.find((x) => x.key === "open_work_permit_holder")?.source.checked ?? "") && /our reading \(Sample/.test(FEE_TABLE.lines.find((x) => x.key === "open_work_permit_holder")?.source.checked ?? "") && /performing artists only, not a family maximum, and is not modelled/.test(FEE_TABLE.lines.find((x) => x.key === "work_permit")?.source.checked ?? ""));
 
 // ── outside check on #455: per application counts applications; an uncapped line names no cap; the basis names its own table
@@ -166,5 +166,5 @@ ok("R2 (review r1 m6) fail: an edited age speaks with the table's limit and the 
 
 // ── The checklist is worked out for every combination from its release (M3-S4, P-425); the table only prices
 ok("M3-S4 pass: the fee table carries no checklist mark: no combination list decides whose checklist is worked out", Object.values(FEE_TABLE.combinations).every((c) => !("checklist" in c)));
-ok("C6.17 fail (P-444): the study permit and With an LMIA have no fee lines, so their fees stay not worked out", ["sp.outside", "wp.lmia_inside"].every((k) => FEE_TABLE.combinations[k]?.lines.length === 0 && rulesFrom(FEE_TABLE, k) === undefined));
+ok("C6.17 fail (P-444): With an LMIA has no fee lines, so its fees stay not worked out (BK-15: the study permit's are now its own fees by role)", ["wp.lmia_inside"].every((k) => FEE_TABLE.combinations[k]?.lines.length === 0 && rulesFrom(FEE_TABLE, k) === undefined));
 process.exitCode = summary() ? 1 : 0;
