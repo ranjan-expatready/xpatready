@@ -1,0 +1,17 @@
+nightly 43198665627 (workflow_dispatch by the tech lead, Lead 26), main 5797feb18, capabilities="C7.3 C6.6", data=checkpoint
+-- job 131116315746 "packs (C7.3)" (success), gate-b.mjs output, verbatim:
+Gate B: the PR names C7.3; claims Works for none (no bug check).
+  packs: C7.3-screen.test.ts, C7.3-tick.test.ts, C7.3.test.ts
+    C7.3-screen.test.ts on the checkpoint: exit 0, 15/15 passed (144 s: copy 4, Load the configured checkpoint 94, run 45)
+    C7.3-tick.test.ts on the checkpoint: exit 0, 15/15 passed (98 s: copy 4, Load the configured checkpoint 79, run 15)
+    C7.3.test.ts on the checkpoint: exit 0, 19/19 passed (139 s: copy 4, Load the configured checkpoint 95, run 40)
+  packs took 382 s in all
+Gate B: passed.
+-- job 131116315804 "packs (C6.6)" (success), gate-b.mjs output, verbatim:
+Gate B: the PR names C6.6; claims Works for none (no bug check).
+  packs: C6.6.test.ts
+    C6.6.test.ts on the checkpoint: exit 0, 31/31 passed (116 s: copy 5, Load the configured checkpoint 94, run 17)
+  packs took 117 s in all
+Gate B: passed.
+Note: main's C7.3.test.ts still has C7.3-15's HELD branch (qa's #1646 removes it). It prints HELD only when red; with the
+hold the pack printed "18/18" plus a HELD line (11 Nov). 19/19 here = C7.3-15 passed as a plain PASS.

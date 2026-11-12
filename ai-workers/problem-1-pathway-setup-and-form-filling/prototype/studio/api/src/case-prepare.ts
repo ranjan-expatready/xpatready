@@ -36,7 +36,7 @@ import { lineCondition, render, type Role } from "../../engine/render.ts";
 import { conditionSubjects } from "../../engine/resolver.ts";
 import { snapshotHash } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, type Actor } from "./core.ts";
-import { recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
+import { feesOnTheirFilings, heldBy, keepRecorded, keptRowsOf, recordedOverlay, refuseIfRecorded } from "./submission-record.ts"; // C8.2: the record, its tasks and the read-only lock
 import { currentValues, factWords } from "../../engine/runtime/submission-record.ts";
 import { formValues, recordedYesNo } from "../../engine/form-values.ts";
 import { CaseForms, copyNotForFiling, formPassed, formReadinessOf, inventoryOf, plainWhy } from "./fill-case.ts";
@@ -47,7 +47,7 @@ import { copyStateOf, readinessOfCase, waitingFactsKey, type PreparedForm, type 
 import { lowestOf } from "../../engine/runtime/readiness-figure.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
 import { draftNote, releaseOutOfDate, reviewCounts, touchedFilings } from "../../engine/runtime/release-update.ts";
-import { releaseLabel, type Readiness } from "../../contracts/runtime.ts";
+import { caseName, releaseLabel, type Readiness } from "../../contracts/runtime.ts";
 import { caseInputs, diffCache, pinReleases, targetRelease } from "./release-context.ts";
 /** B171 (B169 review M1): the IRCC account in words, from the Forms tab's own contract (contracts/forms.ts), for every
  *  account: "through PR Portal", "on paper, with no IRCC account"; never the raw key (only "APR Portal" had words). */
@@ -174,7 +174,7 @@ export class CasePrepare {
     const { known } = knownOf(s, people, clean, rows, today);
     const adds = addedFilings(s, known, people);
     const first = deriveFilings(own!.combinationKey, people, undefined, { ages, modes, adds, label: s.combination.label });
-    if (!first.derived) return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: false, why: first.why, portal: own!.portalKey ?? null, filings: [], groups: [], items: [], waiting: [], not_needed: [], fees: [], readiness: [], figures: [], case_figure: null, stage1: [], version: "0" };
+    if (!first.derived) return { case_id: c.id, reference: caseName(c), release_version: pin.release.version, derived: false, why: first.why, portal: own!.portalKey ?? null, filings: [], groups: [], items: [], waiting: [], not_needed: [], fees: [], readiness: [], figures: [], case_figure: null, stage1: [], version: "0" };
 
     // Items the release and the case give each filer (forms by who and minimum age, the checklist's documents, biometrics).
     const renderPeople = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
@@ -186,7 +186,6 @@ export class CasePrepare {
     // non-applying people" marker exists (Not built). Filings are stored by their owner's subject.
     const onFiling = new Map<string, string>();
     for (const f of first.filings) { if (f.mode === "co_filed") onFiling.set(f.owner!.subject, f.owner!.subject); for (const a of f.applicants) if (a.mode === "applying") onFiling.set(a.subject, f.owner!.subject); }
-    const owners = first.filings.map((f) => f.owner!.subject);
     // Break M2: a co-filing sponsor gets the forms that name them, never an applicant's biometrics step.
     const coFilers = new Set(first.filings.filter((f) => f.mode === "co_filed").map((f) => f.owner!.subject));
     const filers = [...onFiling.keys()];
@@ -210,18 +209,30 @@ export class CasePrepare {
     const sync = async (tx: Tx | Db, write: boolean) => {
       const [g0, filings0, items0] = write ? await Promise.all(read(tx)) : await this.db.$transaction([...read(this.db)], { isolationLevel: "RepeatableRead", maxWait: 10_000 }); // C7.6: as the write path (C6.12 B1, 120 reads at once)
       let groups = g0;
-      const liveOwner = new Map(filings0.filter((f) => f.active).map((f) => [f.subjectId, f.id]));
-      const live = new Map([...onFiling].filter(([, o]) => liveOwner.has(o)).map(([subject, o]) => [subject, liveOwner.get(o)!]));
-      const wantKeys = new Set(wanted.filter((w) => live.has(w.subject)).map((w) => `${live.get(w.subject)}|${w.kind}|${w.key}|${w.subject}`));
+      // BK-17 (BK-15 breaker M3): a filing recorded as submitted is kept as recorded: never made inactive, its mode, people
+      // and items never changed by a later answer. A person on it stays on it: the derivation makes no other filing for
+      // them and puts them on no other filing (keepRecorded reads the view the same way).
+      // Break B1: and a person a later answer would move onto a recorded filing stays on the application they are on
+      // (keptRowsOf): that row is kept as stored too, its items still following the answers.
+      const kept = keptRowsOf(first.filings, filings0, g0), keptIds = new Set(kept.map((x) => x.id));
+      const recIds = new Set(filings0.filter((x) => x.status === "SUBMITTED").map((x) => x.id));
+      const heldOn = new Map(kept.flatMap((x) => [...x.applicants.map((a) => [a.subjectId, x.subjectId] as const), [x.subjectId, x.subjectId] as const]));
+      const plan = first.filings.filter((f) => !heldOn.has(f.owner!.subject)).map((f) => ({ ...f, applicants: f.applicants.filter((a) => !heldOn.has(a.subject)) }));
+      const keep = new Set([...plan.map((f) => f.owner!.subject), ...kept.map((x) => x.subjectId)]);
+      const ownerOf = (subject: string) => heldOn.get(subject) ?? (keep.has(onFiling.get(subject) ?? "") ? onFiling.get(subject) : undefined);
+      const liveOwner = new Map(filings0.filter((f) => f.active || recIds.has(f.id)).map((f) => [f.subjectId, f.id]));
+      const live = new Map([...onFiling.keys(), ...heldOn.keys()].filter((subject) => liveOwner.has(ownerOf(subject) ?? "")).map((subject) => [subject, liveOwner.get(ownerOf(subject)!)!]));
+      // A recorded filing's items are the ones it was recorded with: none added, none dropped.
+      const wantKeys = new Set(wanted.filter((w) => live.has(w.subject) && !recIds.has(live.get(w.subject)!)).map((w) => `${live.get(w.subject)}|${w.kind}|${w.key}|${w.subject}`));
       // C11.12 (challenge M1): the applicant rows are compared too (who is on it, and applying or declared only).
       // C6.13 (m2): and their role, so Make principal (a swap of roles only) refreshes the stored applicant rows.
       const sameApplicants = (row: (typeof filings0)[number], want: { subject: string; mode: string; role: string }[]) => row.applicants.length === want.length && want.every((a) => row.applicants.some((x) => x.subjectId === a.subject && x.mode === a.mode && x.role === a.role));
       const has = new Set(items0.map((i) => `${i.filingId}|${i.kind}|${i.itemKey}|${i.subjectId}`));
       const changes = !groups.some((g) => g.kind === "FAMILY")
-        || first.filings.some((f) => { const row = filings0.find((x) => x.subjectId === f.owner!.subject); return !row || !row.active || row.mode !== f.mode || !sameApplicants(row, f.applicants); })
-        || filings0.some((x) => x.active && !owners.includes(x.subjectId))
+        || plan.some((f) => { const row = filings0.find((x) => x.subjectId === f.owner!.subject); return !row || !row.active || row.mode !== f.mode || !sameApplicants(row, f.applicants); })
+        || filings0.some((x) => x.active !== (keep.has(x.subjectId) || recIds.has(x.id)) && (x.active || recIds.has(x.id)))
         || [...wantKeys].some((k) => !has.has(k))
-        || items0.some((i) => i.active !== wantKeys.has(`${i.filingId}|${i.kind}|${i.itemKey}|${i.subjectId}`));
+        || items0.some((i) => !recIds.has(i.filingId) && i.active !== wantKeys.has(`${i.filingId}|${i.kind}|${i.itemKey}|${i.subjectId}`));
       if (!changes) return { groups, filings: filings0.filter((f) => f.active).sort((x, y) => x.createdAt.getTime() - y.createdAt.getTime() || x.id.localeCompare(y.id)), items: items0.filter((i) => i.active) };
       if (!write) return null;
       let family = groups.find((g) => g.kind === "FAMILY");
@@ -229,13 +240,13 @@ export class CasePrepare {
       let filings = await tx.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id }, include: { applicants: true } });
       // BK-9: a shared application whose owner changed (Make principal on a family on the principal's application) is the
       // same application: its row moves to the new owner, so its items, copies and passes keep their ids.
-      for (const f of first.filings) {
+      for (const f of plan) {
         const to = f.owner!.subject;
         if (filings.some((x) => x.subjectId === to)) continue;
-        const from = filings.find((x) => x.active && !owners.includes(x.subjectId) && f.applicants.some((a) => a.subject === x.subjectId) && x.applicants.some((a) => a.subjectId === to));
+        const from = filings.find((x) => x.active && !keptIds.has(x.id) && !keep.has(x.subjectId) && f.applicants.some((a) => a.subject === x.subjectId) && x.applicants.some((a) => a.subjectId === to));
         if (from) { await tx.filing.update({ where: { id: from.id }, data: { subjectId: to } }); from.subjectId = to; }
       }
-      for (const f of first.filings) {
+      for (const f of plan) {
         const subject = f.owner!.subject, row = filings.find((x) => x.subjectId === subject);
         // A co-filed sponsorship always goes in the principal's group (it cannot be sent alone).
         const principalRow = filings.find((x) => x.subjectId === first.filings.find((y) => y.owner!.role === "principal")?.owner!.subject);
@@ -249,15 +260,22 @@ export class CasePrepare {
           for (const a of applicants) await tx.filingApplicant.upsert({ where: { filingId_subjectId: { filingId: row.id, subjectId: a.subjectId } }, create: { filingId: row.id, ...a }, update: { role: a.role, mode: a.mode } });
         }
       }
-      for (const row of filings.filter((x) => x.active && !owners.includes(x.subjectId))) await tx.filing.update({ where: { id: row.id }, data: { active: false } });
+      for (const row of filings.filter((x) => x.active && !keep.has(x.subjectId) && !recIds.has(x.id))) await tx.filing.update({ where: { id: row.id }, data: { active: false } });
+      // BK-17: a recorded filing made inactive before BK-17 (an answer moved its owner) is listed again, as recorded.
+      // Review m2: with the form items it was recorded with (filing_record.filed_facts), so its after-filing tasks still open.
+      for (const row of filings.filter((x) => !x.active && recIds.has(x.id))) {
+        await tx.filing.update({ where: { id: row.id }, data: { active: true } });
+        const filed = (((await tx.filingRecord.findUnique({ where: { filingId: row.id }, select: { filedFacts: true } }))?.filedFacts ?? []) as { item?: string }[]).flatMap((x) => (x.item ? [x.item] : []));
+        if (filed.length) await tx.filingItem.updateMany({ where: { id: { in: filed }, filingId: row.id, active: false }, data: { active: true } });
+      }
       filings = await tx.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id, active: true }, include: { applicants: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
       const byOwner = new Map(filings.map((f) => [f.subjectId, f.id]));
-      const filingOf = new Map([...onFiling].filter(([, o]) => byOwner.has(o)).map(([subject, o]) => [subject, byOwner.get(o)!]));
-      await tx.filingItem.createMany({ data: wanted.filter((w) => filingOf.has(w.subject)).map((w) => ({ workspaceId: c.workspaceId, caseId: c.id, filingId: filingOf.get(w.subject)!, subjectId: w.subject, kind: w.kind, itemKey: w.key })), skipDuplicates: true });
+      const filingOf = new Map([...onFiling.keys(), ...heldOn.keys()].filter((subject) => byOwner.has(ownerOf(subject) ?? "")).map((subject) => [subject, byOwner.get(ownerOf(subject)!)!]));
+      await tx.filingItem.createMany({ data: wanted.filter((w) => filingOf.has(w.subject) && !recIds.has(filingOf.get(w.subject)!)).map((w) => ({ workspaceId: c.workspaceId, caseId: c.id, filingId: filingOf.get(w.subject)!, subjectId: w.subject, kind: w.kind, itemKey: w.key })), skipDuplicates: true });
       let items = await tx.filingItem.findMany({ where: { caseId: c.id, filing: { stageId: c.stage.id } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
       const want = new Set(wanted.map((w) => `${filingOf.get(w.subject)}|${w.kind}|${w.key}|${w.subject}`));
-      const gone = items.filter((i) => i.active && !want.has(`${i.filingId}|${i.kind}|${i.itemKey}|${i.subjectId}`)).map((i) => i.id);
-      const back = items.filter((i) => !i.active && want.has(`${i.filingId}|${i.kind}|${i.itemKey}|${i.subjectId}`)).map((i) => i.id);
+      const gone = items.filter((i) => i.active && !recIds.has(i.filingId) && !want.has(`${i.filingId}|${i.kind}|${i.itemKey}|${i.subjectId}`)).map((i) => i.id);
+      const back = items.filter((i) => !i.active && !recIds.has(i.filingId) && want.has(`${i.filingId}|${i.kind}|${i.itemKey}|${i.subjectId}`)).map((i) => i.id);
       if (gone.length) await tx.filingItem.updateMany({ where: { id: { in: gone } }, data: { active: false } });
       if (back.length) await tx.filingItem.updateMany({ where: { id: { in: back } }, data: { active: true } });
       if (gone.length || back.length) items = await tx.filingItem.findMany({ where: { caseId: c.id, filing: { stageId: c.stage.id } }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
@@ -281,21 +299,30 @@ export class CasePrepare {
     const done = d as Extract<typeof d, { derived: true }>;
     const idOfFiling = new Map(stored.filings.map((f) => [`filing-${f.subjectId}`, f.id]));
     const fid = (x: string) => idOfFiling.get(x) ?? x;
+    // BK-17: a recorded filing reads as recorded (its label, people and group), whatever the answers say now.
+    const personOf = new Map(people.map((p) => [p.subjectId, p.label]));
+    const keptRows = keptRowsOf(first.filings, stored.filings, stored.groups);
+    const kept = keepRecorded({ filings: done.filings.map((f) => ({ ...f, id: fid(f.id) })), groups: done.groups.map((g) => ({ ...g, filings: g.filings.map(fid) })) }, keptRows,
+      { labelOf: (x) => personOf.get(x) ?? "", combination: own!.combinationKey, combinationLabel: done.label, idOf: (r) => r.id, kindOf: (g) => kindOf.get(g) ?? "family" });
     // C11.12 (challenge M1, concept §6): each applicant's own mode (applying or declared only), never the filing's.
-    const filings = done.filings.map((f) => ({ id: fid(f.id), combination: f.combination, label: f.label, mode: f.mode, owner: f.owner, applicants: f.applicants.map((a) => ({ subject: a.subject, label: a.label, role: a.role, mode: a.mode })), group: f.group, status: f.status as string, number: f.number }));
+    const filings = kept.filings.map((f) => ({ id: fid(f.id), combination: f.combination, label: f.label, mode: f.mode, owner: f.owner, applicants: f.applicants.map((a) => ({ subject: a.subject, label: a.label, role: a.role, mode: a.mode })), group: f.group, status: f.status as string, number: f.number }));
     // B152 (FQ-7): a recorded group reads its fees as they were recorded (submission_group.recorded_fees, written once by
     // "Record the submission"), never worked out again: a birthday, a corrected date of birth or a new fee table later
     // changes nothing that was filed. A group recorded before B152 has none and is worked out today, as before.
     type Frozen = { at: string; totals: (typeof done.groups)[number]["totals"]; total_cents: number | null; fees: unknown[] };
     const frozen = new Map(stored.groups.filter((x) => x.recordedFees).map((x) => [x.id, x.recordedFees as unknown as Frozen]));
-    const groups = done.groups.map((g) => {
-      const base = { ...g, filings: g.filings.map(fid), reason: stored.groups.find((x) => x.id === g.id)?.reason ?? null }, f = frozen.get(g.id);
+    // Review M1: `subject` is the person the line is for (several people share the principal's filing), never the owner.
+    const derivedFees0 = done.fees.map((f) => ({ filing: fid(f.filing), subject: f.person, payer: f.payer, key: f.line, line: f.label, amount: f.amount_cents / 100, amount_cents: f.amount_cents, amount_words: cad(f.amount_cents), exempt: f.exempt, reason: f.why, ...(f.waiting ? { waiting: f.waiting } : {}),
+      source: (f.source ?? done.groups.find((g) => g.filings.includes(f.filing))?.totals.find((t) => t.line === f.line)?.source)?.url ?? "Sample", source_detail: f.source ?? done.groups.find((g) => g.filings.includes(f.filing))?.totals.find((t) => t.line === f.line)?.source ?? null }));
+    // BK-17 (break B4): a line only on a filing its person is on in the view; a group that charged someone kept on a
+    // recorded filing says its fees are not worked out here.
+    const placed = feesOnTheirFilings(derivedFees0, kept.groups, filings, { filing: (l) => l.filing, person: (l) => l.subject, frozen: (g) => frozen.has(g), labelOf: (x) => personOf.get(x) ?? "a person", held: heldBy(keptRows) });
+    const derivedFees = placed.lines;
+    const groups = placed.groups.map((g) => {
+      const base = { ...g, reason: stored.groups.find((x) => x.id === g.id)?.reason ?? null }, f = frozen.get(g.id);
       return f ? { ...base, totals: f.totals, total_cents: f.total_cents, fees_recorded: { at: f.at } } : base;
     });
     const frozenFilings = new Set(groups.filter((g) => frozen.has(g.id)).flatMap((g) => g.filings));
-    // Review M1: `subject` is the person the line is for (several people share the principal's filing), never the owner.
-    const derivedFees = done.fees.map((f) => ({ filing: fid(f.filing), subject: f.person, payer: f.payer, key: f.line, line: f.label, amount: f.amount_cents / 100, amount_cents: f.amount_cents, amount_words: cad(f.amount_cents), exempt: f.exempt, reason: f.why, ...(f.waiting ? { waiting: f.waiting } : {}),
-      source: (f.source ?? done.groups.find((g) => g.filings.includes(f.filing))?.totals.find((t) => t.line === f.line)?.source)?.url ?? "Sample", source_detail: f.source ?? done.groups.find((g) => g.filings.includes(f.filing))?.totals.find((t) => t.line === f.line)?.source ?? null }));
     const fees = [...derivedFees.filter((l) => !frozenFilings.has(l.filing)), ...groups.filter((g) => frozen.has(g.id)).flatMap((g) => frozen.get(g.id)!.fees as typeof derivedFees)];
 
     // Items in the view: each with one state; a form with its channel, what IRCC accepts and the signature that follows.
@@ -688,7 +715,7 @@ export class CasePrepare {
     const questionOf = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
     const tasks = noWrite ? [] : await recordedOverlay(this.db, { workspaceId: c.workspaceId, caseId: c.id, actor: actor.id, filings, items: items as never, label,
       nowOf: (form, subject) => currentValues(covOf(form, subject)?.boxes ?? []), labelOf: (fact) => questionOf.get(fact) ?? factWords(fact) });
-    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, derived: true, combination: own!.combinationKey, portal: own!.portalKey ?? null, portal_words: own!.portalKey ? `Filed ${filedThrough(own!.portalKey)}: set by the combination, not on the case` : null,
+    return { case_id: c.id, reference: caseName(c), release_version: pin.release.version, derived: true, combination: own!.combinationKey, portal: own!.portalKey ?? null, portal_words: own!.portalKey ? `Filed ${filedThrough(own!.portalKey)}: set by the combination, not on the case` : null,
       // #325's list of people with no filing, each with the reason (kept for its readers and tests).
       not_filing: done.not_filing,
       people: peopleView, filings, groups, items: toFill, waiting, not_needed: notNeeded, fees, stage1, readiness: readiness.map(({ figure: _f, ...x }) => ({ ...x, pin_revision: pin.revision })),

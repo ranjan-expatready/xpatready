@@ -373,7 +373,9 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("M3 agent: the blocking list names the empty group (\"Entries in … : add them, or say none apply\")", await shows(imm.getByText(/Entries in "Education history": add them, or say none apply \(Sample Applicant C\): not answered/)));
   await o.getByRole("tab", { name: /^Sample Applicant C(?!'s )/ }).click();
   await edu.getByRole("button", { name: "None apply" }).click();
-  step("M3 agent pass (P-72): the officer's \"none apply\" waits for Confirm section", await shows(edu.getByText("None apply", { exact: true })) && await shows(edu.getByText("To confirm")));
+  step("M3 agent pass (P-72): the officer's \"none apply\" waits for Confirm section", await shows(edu.getByText("None apply", { exact: true })) && await shows(edu.getByText("Entered by staff · to confirm", { exact: true })));
+  // QA-417: the answer's own pill (above), never any "to confirm" text: the section pill and the "Nothing to confirm"
+  // words beside a section's disabled button match that too, before the page has the officer's answer.
   await edu.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
   step("M3 agent pass: Confirm section confirms it", await shows(edu.getByText("Confirmed", { exact: true })));
   await state(o, "case-view-group-none-apply", [1440]);

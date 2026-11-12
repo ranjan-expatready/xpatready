@@ -51,7 +51,9 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const under = '[data-form-field-conditions="person.other_family_name"]';
   let text = await check("Review and release, Study permit", under, "review-release");
   step("the problem's way out lists the plain form field and the worked-out Yes/No, with the form's printed question and the deciding question", /Not confirmed/.test(text) && /The form asks/.test(text) && /used any other name/.test(text) && /writes Y when Yes, N when No/.test(text), text);
-  const askBtn = p.locator(under).getByRole("button", { name: /^Asks the same question: / });
+  // BK-16 PR 2 (P-490): IMM 1295, the spouse's form on the Study permit, has the same worked-out Yes/No; this walk asks
+  // IMM 1294's, the student's own (its row, by the edition the row names).
+  const askBtn = p.locator(under).locator("[data-form-field-row]", { hasText: /IMM 1294/ }).getByRole("button", { name: /^Asks the same question: / });
   step("one button to ask the worked-out Yes/No as its deciding question", (await askBtn.count()) === 1);
   await askBtn.focus();
   step("the button takes the keyboard's focus", await askBtn.evaluate((e) => e === document.activeElement));
@@ -76,12 +78,22 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await p.waitForSelector(`${under} [data-state="asked"]`, { timeout: 60_000 });
   text = await check("Review and release, asked", under, "review-release-asked");
   step("the Yes/No now reads \"Asks its deciding question\", with Undo", /Asks its deciding question/.test(text) && (await p.locator(under).getByRole("button", { name: /worked out from other answers again/ }).count()) === 1, text);
-  const say = p.locator(under).getByRole("button", { name: "Says the same as this condition" });
-  await say.focus(); await p.keyboard.press("Enter");
-  await p.locator(`${under} [data-state="waiting"]`).waitFor({ timeout: 60_000 });
-  const ffId = (await p.locator(`${under} [data-state="waiting"] a`).first().getAttribute("href")).split("/").pop();
-  await api(`/library/changes/${ffId}/approve`, "POST", { note: "Checked against the form's words by a test (B88)." }, "user-B");
-  step("C4.11 B88 pass (QA-239): through these two buttons and a second person, the condition is in force on Study permit (no longer held)", (await hiding()).length === 0);
+  // BK-16 PR 2 (P-490): the Study permit files IMM 1294, IMM 1295 (the spouse's) and IMM 5257 (a child's), so every form
+  // field of theirs that reads the answer is set the same way: one button at a time, by keyboard, each approved by the
+  // second person, until the panel offers none (the condition then leaves the problem list).
+  let set = 1;
+  const offered = () => p.locator(under).getByRole("button", { name: /^(Says the same as this condition|Asks the same question: )/ });
+  while (set < 10 && (await offered().count()) > 0) {
+    await offered().first().focus(); await p.keyboard.press("Enter");
+    await p.locator(`${under} [data-state="waiting"]`).first().waitFor({ timeout: 60_000 });
+    const ffId = (await p.locator(`${under} [data-state="waiting"] a`).first().getAttribute("href")).split("/").pop();
+    await api(`/library/changes/${ffId}/approve`, "POST", { note: "Checked against the form's words by a test (B88)." }, "user-B");
+    set++;
+    await p.goto(`${BASE}/c/${sp}/review`);
+    await p.waitForLoadState("networkidle");
+    await p.locator(under).first().waitFor({ timeout: 15_000 }).catch(() => {}); // gone once nothing is held
+  }
+  step(`C4.11 B88 pass (QA-239): through the panel's buttons (${set} form fields) and a second person, the condition is in force on Study permit (no longer held)`, (await hiding()).length === 0 && set >= 2, set);
   await p.goto(`${BASE}/c/${sp}/review`);
   await p.waitForLoadState("networkidle");
   step("Review and release no longer shows that problem", (await p.locator("[data-problem]", { hasText: "Condition not used on this combination" }).count()) === 0);
@@ -90,7 +102,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await fol.waitFor({ timeout: 60_000 });
   await fol.locator("summary").focus(); await p.keyboard.press("Enter");
   text = await check("Review and release, form fields holding a question's condition", "[data-form-fields-held]", "review-release-followers");
-  step("breaker M2: the asked Yes/No and the confirmed name are listed there, each with Undo", /Asks its deciding question/.test(text) && /Confirmed: same condition/.test(text) && (await fol.getByRole("button", { name: /^Undo: / }).count()) === 2, text);
+  step("breaker M2: the asked Yes/No and the confirmed name are listed there, each with Undo", /Asks its deciding question/.test(text) && /Confirmed: same condition/.test(text) && (await fol.getByRole("button", { name: /^Undo: / }).count()) === set, text);
   await p.screenshot({ path: path.join(SHOTS, "review-release-cleared-1440.png") });
 
   step("no error in the page's console", errs.length === 0, errs.join(" | "));

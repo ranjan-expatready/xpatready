@@ -24,6 +24,9 @@
 # names, else the six; studio/tools/works-set.mjs), held packs skipped (qa/REGRESSION-HELD.md), pooled onto at most 5
 # machines that each run gate B's 3 job slots (works-set.mjs --groups 5, then --pool), a red row retried once.
 name: nightly
+# D3 (P-506): a re-test started by a PR comment (comment-run.yml) passes `request`, shown in the run's name, so the reply
+# links exactly that run (#1658 review m1); the schedule and a hand-started run keep the name "nightly". Display only.
+run-name: "${{ inputs.request && format('nightly · {0}', inputs.request) || 'nightly' }}"
 on:
   schedule:
     - cron: "23 20 * * *"
@@ -39,6 +42,10 @@ on:
         default: six
         type: choice
         options: [six, checkpoint]
+      request:
+        description: "Set by comment-run.yml (D3): the PR and comment that asked, shown in the run's name; empty by hand"
+        required: false
+        default: ""
 jobs:
   plan:
     runs-on: ubuntu-latest

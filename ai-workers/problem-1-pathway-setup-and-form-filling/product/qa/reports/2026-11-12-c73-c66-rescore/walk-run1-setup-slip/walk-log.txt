@@ -1,0 +1,103 @@
+== load (Demo › Load the configured checkpoint, by screen)
+Configured checkpoint loaded in 150.7 s
+== setup
+walk C7.3 (qa setup, 12 Nov) — principal Yes / spouse No on Q8 A, IMM 5257 Online, every warning passed
+(acceptance pack 4, Visitor visa M3 path; written to fail until the capability is built)
+
+row Sample Client W person.education_school_name: 201
+row Sample Client W person.previous_residence_country: 201
+row Sample Spouse W person.previous_residence_country: 201
+fillEverything: true
+PERSON Sample Client W SUBJECT 05af56c5-110d-4902-87ed-231a62eabc37 ITEM f2d058db-2733-4089-8287-fc8b7e0b56b1 channel ONLINE state to_do PDF PCRIndicator=Y EducationIndicator=Y (copy f6791fa2-3f0a-4fc9-87c9-c2c1b41e97b6, 87 values)
+PERSON Sample Spouse W SUBJECT cac963ae-20eb-4ee1-b39c-8f8e5054c605 ITEM f0607b5f-e9a3-4f97-b9ca-a9dbdbe38385 channel ONLINE state to_do PDF PCRIndicator=N EducationIndicator=N (copy f308128d-ce21-43e5-b662-8ac5d4f636d0, 80 values)
+CASE a2872a5a-9cd4-445f-ba15-f0f2b59187a1 FILING 4c4afce1-ac27-4439-ac2c-c329f720f850 OFFICER user-O REP user-R (release line) warnings_before 7 open_after 0 blocks_after 0
+
+0/0 passed
+== walk case a2872a5a-9cd4-445f-ba15-f0f2b59187a1 item f2d058db-2733-4089-8287-fc8b7e0b56b1 spouse f0607b5f-e9a3-4f97-b9ca-a9dbdbe38385 filing 4c4afce1-ac27-4439-ac2c-c329f720f850
+case header: Readiness: Not ready · 22% (lowest: Visitor visa: Sample Spouse W) | online line: Open answer sheet: IMM 5257 for Sample Client W
+,
+· To do
+Open answer sheet: IMM 5257 for Sample Spouse W
+,
+· To do
+  shot /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/walk/00-case-online-line.png
+PASS  1 the case's Online line offers "Open answer sheet" and reads To do "Open answer sheet: IMM 5257 for Sample Client W\n,\n· To do\nOpen answer sheet: IMM 5257 for Sample Spouse W\n,\n· To do"
+sheet: 9 sections | 9 of 9 sections still to tick “Entered in the portal” | To do
+Every answer is ready to enter in the portal; 9 of 9 sections still to tick "Entered in the portal": Personal details, National identity document, US PR card, Contact information, Details of visit to Canada, Education, Employment, Background information, Signature.
+  shot /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/walk/01-sheet-nothing-ticked.png
+PASS  2 the sheet says "9 of 9 sections still to tick" and the item reads To do {"prog0":"9 of 9 sections still to tick “Entered in the portal”","state0":"To do\nEvery answer is ready to enter in the portal; 9 of 9 sections still to tick \"Entered in the portal\": Personal details, National identity document, US PR card, Contact information, Details of visit to Canada, Education, Employment, Background information, Signature."}
+  shot /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/walk/02-principal-q8a-line.png
+PASS  2c QA-395/QA-396: the principal's Q8 A line reads Yes (another country, 2 years in the past 5) {"text":"Question 8 A. During the past 5 years have you lived in any country other than your country of citizenship or your current country of residence for more than 6 months? Sample Client W Yes Client Copy","copy":"Yes"}
+  shot /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/walk/03-principal-education-line.png
+PASS  2c QA-396: the principal's Education Question 1 line reads Yes (one education entry) {"text":"Education Section Question 1. Have you had any post secondary education including university, college or apprenticeship training? Sample Client W Yes Client Copy","copy":"Yes"}
+PASS  2c QA-396: the entry's own values keep their own lines, each once (school once; the country of residence line is not doubled) {"schoolLines":1,"prLines":["A country or territory where the person previously resided Sample Client W United States Client Copy"]}
+  shot /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/walk/04-spouse-q8a-line.png
+PASS  2d QA-395: the spouse's Q8 A line reads No (India, the spouse's own country, one day in 2015) {"linked":false,"sq8":{"text":"Question 8 A. During the past 5 years have you lived in any country other than your country of citizenship or your current country of residence for more than 6 months? Sample Spouse W No Client Copy","copy":"No"},"sedu":{"text":"Education Section Question 1. Have you had any post secondary education including university, college or apprenticeship training? Sample Spo
+  shot /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/walk/05-first-ticked.png
+PASS  3 a mouse tick shows who and when; the count drops by one; the server holds the tick by the officer {"pill1":"Entered by Case officer (Sample), 12 Nov, 10:00","server":{"at":"2026-11-12T10:00:26.560Z","by":"user-O"}}
+  shot /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/walk/06-untick-no-reason.png
+PASS  4a an empty reason is refused on the reason box, in plain words; the tick stays "Say why the tick comes off."
+  shot /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/walk/07-untick-with-reason.png
+PASS  4b with a reason the tick comes off; the section says who, when and why; the count is back "Tick taken off by Case officer (Sample), 12 Nov, 10:00. Reason: Typed the wrong passport number into the portal; re-entering (Sample, qa walk)"
+  shot /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/walk/08-every-section-ticked.png
+PASS  5 every section ticked: "Every section is ticked", the item reads Done, the server holds N ticks {"progAll":"Every section is ticked “Entered in the portal”","stateAll":"Done\nEvery section is entered in the portal, with every answer confirmed and current."}
+PASS  5b no sideways scroll at 1024 px 
+PASS  6 no sideways scroll at 400 px 
+  shot /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/walk/09-sheet-400.png
+PASS  6 no sideways scroll at 1440 px 
+  shot /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/walk/10-sheet-1440.png
+  shot /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/walk/11-client-by-url.png
+PASS  7 the client opening the sheet's URL gets no tick button "Back\nCases\n›\nCase\n›\nAnswer sheet\n\nThis page is for the case officer\n\nThe answer sheet is what the firm types into the IRCC account; a client never sees it. Back to the case"
+  (breadcrumb went to http://127.0.0.1:4475/cases ; opened the case by URL)
+  shot /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/walk/12-case-online-line-done.png
+PASS  8 back on the case the Online line reads Done; the readiness header is unchanged by the ticks {"line2":"Open answer sheet: IMM 5257 for Sample Client W\n,\n· Done\nOpen answer sheet: IMM 5257 for Sample Spouse W\n,\n· To do","header0":"Readiness: Not ready · 22% (lowest: Visitor visa: Sample Spouse W)","header1":"Readiness: Not ready · 22% (lowest: Visitor visa: Sample Spouse W)"}
+  shot /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/walk/13-ready-to-file-before.png
+  shot /home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/walk/14-ready-to-file-pressed.png
+PASS  9a the officer presses Ready to file; the filing reads Ready to file ""
+FAIL  9b C8.2's "Record the submission…" is offered and enabled 
+WALK: 1 FAIL: 9b C8.2's "Record the submission…" is offered and enabled
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+locator.click: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('button', { name: /Record the submission/ }).first()[22m
+[2m    - locator resolved to <button disabled data-slot="button" aria-describedby="sub-why-aeacb75d-6b12-4dda-a959-162329fc0618" class="inline-flex items-center justify-center whitespace-nowrap text-xs font-medium transition-all shrink-0 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*="size-"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px] cursor-pointer bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover disabled:not-aria-…>Record the submission…</button>[22m
+[2m  - attempting click action[22m
+[2m    2 × waiting for element to be visible, enabled and stable[22m
+[2m      - element is not enabled[22m
+[2m    - retrying click action[22m
+[2m    - waiting 20ms[22m
+[2m    2 × waiting for element to be visible, enabled and stable[22m
+[2m      - element is not enabled[22m
+[2m    - retrying click action[22m
+[2m      - waiting 100ms[22m
+[2m    58 × waiting for element to be visible, enabled and stable[22m
+[2m       - element is not enabled[22m
+[2m     - retrying click action[22m
+[2m       - waiting 500ms[22m
+
+    at <anonymous> (/home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-12-c73-c66-rescore/scripts/walk_c73.mts:133:13) {
+  log: [
+    "  - waiting for getByRole('button', { name: /Record the submission/ }).first()",
+    '    - locator resolved to <button disabled data-slot="button" aria-describedby="sub-why-aeacb75d-6b12-4dda-a959-162329fc0618" class="inline-flex items-center justify-center whitespace-nowrap text-xs font-medium transition-all shrink-0 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*="size-"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px] cursor-pointer bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover disabled:not-aria-…>Record the submission…</button>',
+    '  - attempting click action',
+    '    2 × waiting for element to be visible, enabled and stable',
+    '      - element is not enabled',
+    '    - retrying click action',
+    '    - waiting 20ms',
+    '    2 × waiting for element to be visible, enabled and stable',
+    '      - element is not enabled',
+    '    - retrying click action',
+    '      - waiting 100ms',
+    '    58 × waiting for element to be visible, enabled and stable',
+    '       - element is not enabled',
+    '     - retrying click action',
+    '       - waiting 500ms'
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v24.21.0
+walk exit 1

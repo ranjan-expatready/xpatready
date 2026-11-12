@@ -4,22 +4,35 @@
 // Corporate combination is the employer's own case, which others link to. A box read for the representative's own firm
 // (IMM 5475 "Name of firm or organization", person "representative") is not an employer fact: excluded by the box's
 // person, never by its key (P-319). Picking the employer case copies, once, the employer facts the worker's pinned
-// release reads (SA-1B-283 r4 "Copies, not live links", AG-7-55 r5). Pure rules, no database.
+// release reads (SA-1B-283 r4 "Copies, not live links", AG-7-55 r5). (E1, tech lead on #1632): the copy is written on
+// the principal, so only boxes on forms the principal files count: a form line whose "who" (R2) does not reach the
+// principal (a spouse's IMM 1295, "spouse_or_partner") reads its employer from someone else. Pure rules, no database.
 import { inStoredOrder } from "./team.ts";
-import { isFilingFact, scopeOf } from "../resolver.ts";
+import { isFilingFact, scopeOf, subjectsFor } from "../resolver.ts";
+import { ROLE } from "../../contracts/resolver.ts";
 
 export type EmployerLinkOffer = { offered: boolean; reason: string; facts: string[] };
 
 type Entry = { outcome?: string; fact?: string | null; person?: string | null };
-type SnapshotPart = { combination: { label: string; client_type?: string | null }; field_maps: unknown; placements?: unknown; canonical_fields?: unknown };
+type SnapshotPart = { combination: { label: string; client_type?: string | null }; field_maps: unknown; forms?: unknown; placements?: unknown; canonical_fields?: unknown };
 
-const entriesOf = (s: Pick<SnapshotPart, "field_maps">): Entry[] => ((s.field_maps ?? []) as { entries?: Entry[] }[]).flatMap((m) => m.entries ?? []);
+/** (E1) Whether a form line's "who" reaches the principal, by the resolver's own rule (R2) on a case of one principal. */
+const PRINCIPAL_ONLY = [{ id: ROLE.principal, role: ROLE.principal, label: "", applies: true }];
+const principalFiles = (who: unknown) => typeof who === "string" && subjectsFor(PRINCIPAL_ONLY, who).includes(ROLE.principal);
+/** The boxes on forms the principal files. A release without form lines (an older or hand-made snapshot) reads all of
+ *  its field maps, as before (E1). */
+const entriesOf = (s: Pick<SnapshotPart, "field_maps" | "forms">): Entry[] => {
+  const lines = Array.isArray(s.forms) ? (s.forms as { form_number?: string; who?: unknown }[]) : null;
+  const filed = lines && new Set(lines.filter((l) => principalFiles(l.who)).map((l) => l.form_number));
+  return ((s.field_maps ?? []) as { form_number?: string; entries?: Entry[] }[]).filter((m) => !filed || filed.has(m.form_number!)).flatMap((m) => m.entries ?? []);
+};
 /** A box the release's forms fill from a fact about someone other than the representative (the representative's
  *  firm, address and contact are the firm record's, C7.7). */
 const readsForWorker = (e: Entry) => e.outcome === "mapped" && !!e.fact && e.person !== "representative";
 
-/** Employer facts the released forms read, sorted (a form field mapped to an "organisation." fact, not the representative's). */
-export function employerFacts(s: Pick<SnapshotPart, "field_maps">): string[] {
+/** Employer facts the released forms read, sorted (a form field mapped to an "organisation." fact, not the
+ *  representative's, on a form the principal files: E1). */
+export function employerFacts(s: Pick<SnapshotPart, "field_maps" | "forms">): string[] {
   const facts = new Set<string>();
   for (const e of entriesOf(s)) if (readsForWorker(e) && e.fact!.startsWith("organisation.")) facts.add(e.fact!);
   return [...facts].sort();

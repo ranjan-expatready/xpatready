@@ -197,7 +197,6 @@ await main("C7.3", "Answer sheet for an Online line", async () => {
   const mapped15 = boxes2.some(isRecorded15), yes15 = boxes2.filter((b) => isRecorded15(b) && pdf2?.[b.box] === "Y").length;
   const ready15 = !!copy2 && (!mapped15 || (!!pdf2 && yes15 > 0));
   const label15 = `C7.3-15 fail (QA-396): with entries recorded, each "recorded?" box reads on the sheet as the Yes or No the PDF copy writes${mapped15 ? "" : " (this release maps no such box)"}`;
-  if (ready15 && !offRec.length) ok(label15, true, { boxes: boxes2.length, written_yes: yes15 });
-  else if (!ready15) ok(label15, false, { copy: copy2, pdf_read: !!pdf2, recorded_boxes: boxes2.filter(isRecorded15).length, written_yes: yes15 });
-  else console.log(`HELD  C7.3-15 (QA-396): red, held: ${offRec.length} "recorded?" box(es) the PDF copy writes have no sheet line with that Yes or No: ${offRec.slice(0, 6).join("; ")}`);
+  // Plain step since QA-396's fix (#1563) and QA-395's (#1566) merged (qa re-score, 12 Nov; P-284: the hold ends with the fix).
+  ok(label15, ready15 && !offRec.length, ready15 ? (offRec.length ? { off: offRec.slice(0, 6) } : { boxes: boxes2.length, written_yes: yes15 }) : { copy: copy2, pdf_read: !!pdf2, recorded_boxes: boxes2.filter(isRecorded15).length, written_yes: yes15 });
 });

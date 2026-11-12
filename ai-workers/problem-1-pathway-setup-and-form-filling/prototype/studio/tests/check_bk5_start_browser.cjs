@@ -121,9 +121,15 @@ const LONG = 400000;
   const direct = await api("/demo/reset", { method: "POST", actor: "user-B", data: { confirm: "RESET" } });
   step("BR-3 fail (server): a direct reset as the Approver is refused (403)", direct.status === 403, direct.status);
   await shot("bk5-04-not-author-1440");
-  await p.getByRole("button", { name: "Sign in as the Configuration author" }).click();
+  // BK-5 PR 2: the disabled state links to the sign-in page (the one place a person is chosen, BK-4a BR-1); the author's
+  // card brings the walk back here with the doors on.
+  const asAuthor = p.getByRole("link", { name: "Sign in as the Configuration author" });
+  step("BK-5 PR 2: \"Sign in as the Configuration author\" is a link to the sign-in page and changes nobody by itself", await asAuthor.getAttribute("href") === "/sign-in" && await p.getByRole("button", { name: "Sign in as the Configuration author" }).count() === 0);
+  await asAuthor.click(); await p.waitForURL((u) => u.pathname === "/sign-in", { timeout: 15000 });
+  step("BK-5 PR 2 fail side: following it, the person is still the Approver until a card is chosen", await p.evaluate(() => localStorage.getItem("xr-actor")) === "user-B");
+  await p.locator('[data-sign-in-as="user-A"]').click(); await p.waitForURL((u) => u.pathname === "/start", { timeout: 15000 });
   await p.waitForFunction(() => [...document.querySelectorAll("[data-start-door]")].some((x) => !x.disabled), null, { timeout: 10000 });
-  step("BR-3 pass: \"Sign in as the Configuration author\" switches the person and the doors come on", await door("configured").getByRole("button", { name: "Start here" }).isEnabled());
+  step("BR-3 pass: signing in as the Configuration author lands back on Starting points and the doors come on", await door("configured").getByRole("button", { name: "Start here" }).isEnabled());
   // Not the demo workspace (the session's answer changed in the browser only; the server's own guard is check_d1/C5.5's).
   await p.route("**/api/session", async (r) => { const res = await r.fetch(); const j = await res.json(); j.workspace = { ...j.workspace, demo: false }; await r.fulfill({ response: res, json: j }); });
   await openStart();

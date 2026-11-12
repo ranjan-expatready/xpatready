@@ -15,6 +15,7 @@ import { FIRM_RECORD } from "../../engine/runtime/team.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { actorOf, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime, type Reached } from "./runtime.ts";
+import { caseName } from "../../contracts/runtime.ts"; // A24-1: the reference, else the case number
 
 type H = string | undefined;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -53,7 +54,7 @@ export class EarlierFacts {
     const principal = c.participants.find((p) => p.role === "principal");
     if (!principal) return [];
     const rows = await this.db.caseParticipant.findMany({ where: { workspaceId: c.workspaceId, role: "principal", caseId: only ?? { not: c.id }, case: { firmKey: c.firmKey, clientActorId: c.clientActorId, createdAt: { lt: c.createdAt } } },
-      include: { subject: { select: { label: true } }, case: { select: { id: true, reference: true, createdAt: true, combination: { select: { label: true } } } } }, orderBy: { case: { createdAt: "desc" } }, take: 1000 });
+      include: { subject: { select: { label: true } }, case: { select: { id: true, reference: true, caseNumber: true, createdAt: true, combination: { select: { label: true } } } } }, orderBy: { case: { createdAt: "desc" } }, take: 1000 });
     return rows.filter((r) => r.caseId !== c.id && sameName(r.subject.label, principal.subject.label));
   }
 
@@ -78,11 +79,11 @@ export class EarlierFacts {
     const reads = [];
     for (const cand of cands) reads.push(await this.readEarlier(actor, cand, today));
     const herePeople = this.runtime.peopleOf(c);
-    const all = reads.map((r) => ({ case_id: r.e.id, reference: r.e.reference, match: matchPeople(herePeople, r.ePeople), answers: r.earlierAnswers }));
+    const all = reads.map((r) => ({ case_id: r.e.id, reference: caseName(r.e), match: matchPeople(herePeople, r.ePeople), answers: r.earlierAnswers }));
     const latest = latestConfirmed(all), latestAny = latestConfirmed(all, false);
     const mine = here ?? await this.runtime.state(c), current = this.current(mine.answers), snapshot = this.runtime.snapshotOf(c), background = this.runtime.backgroundOf(c);
     const combinationKey = (await this.db.combination.findUnique({ where: { id: c.combinationId }, select: { combinationKey: true } }))?.combinationKey;
-    return reads.map((r) => ({ case_id: r.e.id, reference: r.e.reference, combination: r.cand.case.combination.label, opened_at: r.cand.case.createdAt.toISOString(),
+    return reads.map((r) => ({ case_id: r.e.id, reference: caseName(r.e), combination: r.cand.case.combination.label, opened_at: r.cand.case.createdAt.toISOString(),
       ...offerFrom({ combinationKey, snapshot, here: herePeople, current, earlier: r.ePeople, earlierAnswers: r.earlierAnswers, background, today, caseId: r.e.id, latest, latestAny }) }));
   }
 

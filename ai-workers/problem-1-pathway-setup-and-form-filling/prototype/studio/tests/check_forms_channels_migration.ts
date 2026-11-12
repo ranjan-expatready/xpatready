@@ -76,7 +76,7 @@ try {
     && sql(`update combination_form set channel='NOT_NEEDED', signature='NONE' where lineage_key='IMM 5645' returning signature`) === "NONE");
   const K = "00000000-0000-4000-8000-0000000000c1", I = "00000000-0000-4000-8000-0000000000f1";
   sql(`set session_replication_role = replica;
-    insert into runtime_case (id, workspace_id, combination_id, reference, client_actor_id, created_by) values ('${K}', '${W}', '${C}', 'T-1', 'client', 'test');
+    insert into runtime_case (id, workspace_id, combination_id, reference, client_actor_id, created_by, case_number) values ('${K}', '${W}', '${C}', 'T-1', 'client', 'test', 'C-2026-90001');
     insert into form_instance (id, workspace_id, case_id, subject_id, form_number, config_release_id, snapshot_id, status, created_by) values ('${I}', '${W}', '${K}', '${W}', 'IMM 5257', '${W}', '${W}', 'GENERATED', 'test');
     insert into validated_copy (workspace_id, form_instance_id, path, sha256, facts_hash, read_back, read_by) values ('${W}', '${I}', 'v.pdf', repeat('a', 64), repeat('b', 64), '{}', 'user-O');`);
   ok("C11.6 C-10 m3 fail: the database refuses to change a validated copy read back, or to delete it while its case exists",

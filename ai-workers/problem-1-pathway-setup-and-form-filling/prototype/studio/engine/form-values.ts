@@ -7,6 +7,7 @@
 import { proseRecorded, recordedDerivation, runTransform, wordsInSteps } from "../../p5/transforms.ts";
 import { codeAsksMore, codeForValue, hasCodes, labelForText, notOnFormValue, type ListValue, type OptionMap } from "./options.ts";
 import { byAPerson, inFormFormat } from "./form-steps.ts";
+import { NotWorkedOut } from "./not-worked-out.ts";
 import type { BoxRow } from "./render.ts";
 import type { Snapshot } from "./snapshot.ts";
 
@@ -57,6 +58,10 @@ export function formValues(snapshot: Snapshot, map: { entries: Entry[] }, inv: I
   const boxes = covBoxes.map((r): BoxResult => {
     const person = byAPerson(inv.fields, box.get(r.box) ?? { data_path: r.box });
     if (person) return { ...r, result: "by a person", why: person };
+    // Review M1 on #1620 (QA-415): a fact the case works out but cannot for this person yet goes by hand, with its reason.
+    // The reason travels as text on the row (a copy's rows are frozen as JSON first), or as the value itself in one process.
+    const notOut = r.by_hand ?? (r.value instanceof NotWorkedOut ? r.value.why : undefined);
+    if (notOut) return { ...r, result: "by hand", why: notOut };
     // C7.2 cause 3: a Yes/No "is anything recorded?" box is written "N" when a person confirmed that nothing applies.
     if (r.coverage !== "confirmed fact" && !r.nothing_recorded) return { ...r, result: "not written", why: r.fix ?? (r.coverage === "answered on screen" ? "answered on screen, not confirmed" : r.detail) };
     // A form field on an answer list takes its own code from its option map (the team's ENUM map, onMissing REFUSE).

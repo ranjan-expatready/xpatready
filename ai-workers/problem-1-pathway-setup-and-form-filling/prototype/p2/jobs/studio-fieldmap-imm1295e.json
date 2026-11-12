@@ -3,8 +3,11 @@
  "kind": "field_map",
  "combination": "studio",
  "configuration_version": "studio-add-form",
- "template": "field-map.v1.md",
- "output_schema": "field-map-output.v1.schema.json",
+ "template": "field-map.v2.md",
+ "output_schema": "field-map-output.v2.schema.json",
+ "known": {
+  "form_edition": "IMM 1295 (09-2023)"
+ },
  "inputs": [
   {
    "file": "prototype/p1/inventory/imm1295e.inventory.json",
@@ -15,9 +18,9 @@
   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
   "model": "claude-opus-5-5",
   "effort": "high",
-  "timeout_ms": 900000,
+  "timeout_ms": 1500000,
   "max_attempts": 2,
   "budget_usd": 5,
-  "max_output_tokens": 64000
+  "max_output_tokens": 128000
  }
 }

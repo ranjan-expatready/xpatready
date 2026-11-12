@@ -17,6 +17,10 @@ import { HandOff, holderOf, theName } from "@/components/hand-off";
 /** C11.13 (P-120): a library change on the Release page: approved ones are released; ones still waiting for a second
  *  person are listed, never released; a near duplicate says what it is close to and why it is not the same. */
 type ReleaseLibraryRow = LibraryChangeView & { will_release: boolean; near: NearView | null };
+/** QA-421 (P-498, EXPERIENCE §2.5): a row held back only because its review has not started (never submitted, returned,
+ *  or changed after it was submitted) waits for the author's Submit. The words are the server's gate (gateOf in
+ *  api/src/studio.ts): each tells the author to submit it on its Review and release tab; check_qa421 guards the match. */
+const needsSubmit = (r: { held?: boolean; why?: string | null }) => !!r.held && /submit it( again)? on its Review and release tab/.test(r.why ?? "");
 const changeCell = (l: ReleaseLibraryRow) => { const own = ownReason(l); return <td><b className="font-medium">{l.action_word} {l.kind_word} "{l.label}"</b>{own ? <p className="text-xs text-text-muted">{own}</p> : null}<NearLine near={l.near} /></td>; };
 
 export function ReleasePage() {
@@ -26,6 +30,7 @@ export function ReleasePage() {
   const d = useApi<any>(["draft", actorId], "/draft"); // per person: your own changes are held back for you (BR-14)
   const [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null), [done, setDone] = React.useState<any>(null);
   const canApprove = (session.data?.actor?.duties ?? []).includes("approve");
+  const canSubmit = (session.data?.actor?.duties ?? []).includes("author"); // only the author duty submits (audit D-2)
   const release = async () => {
     setBusy(true); setErr(null);
     try {
@@ -40,6 +45,9 @@ export function ReleasePage() {
   const ok = x.rows.filter((r: any) => !r.held), held = x.rows.filter((r: any) => r.held);
   const all: ReleaseLibraryRow[] = x.library ?? [];
   const lib = all.filter((l) => l.will_release !== false), waiting = all.filter((l) => l.will_release === false);
+  // QA-421: while a change the author can submit is not submitted, that Submit is the page's one next step; the hand-off
+  // to the Approver waits, or the release would go out without it.
+  const toSubmit = canSubmit ? x.rows.filter(needsSubmit) : [];
   const what = [ok.length ? `${ok.length} combination${ok.length === 1 ? "" : "s"}` : null, lib.length ? `${lib.length} library change${lib.length === 1 ? "" : "s"}` : null].filter(Boolean).join(" and ");
   return (
     <div className="mx-auto max-w-5xl space-y-5">
@@ -50,6 +58,12 @@ export function ReleasePage() {
       {done ? <Notice tone="ok" title={`Release ${done.pack} published`}>{[...done.rows.map((r: any) => r.label), ...((done.library ?? []) as { label: string; action: string }[]).map((l) => `${l.label} (${l.action.toLowerCase()})`)].join(", ")}.{done.held.length ? ` Held back: ${done.held.map((h: any) => h.label).join(", ")}.` : ""} <Link className="text-text-link underline" to="/">Back to Immigration programs</Link></Notice> : null}
       {!x.rows.length && !all.length ? <EmptyState title="Nothing to release" description="The shared draft has no changes since the last release. Changes appear here as soon as someone edits a combination." action={<Button asChild variant="secondary"><Link to="/">Back to Immigration programs</Link></Button>} /> : (
         <>
+          {toSubmit.length ? (
+            <div data-next-step="submit" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm">
+              <p className="min-w-0">Next: submit <b>{(toSubmit[0].path ?? [toSubmit[0].label]).join(" › ")}</b> for review{toSubmit.length > 1 ? <> (and {toSubmit.length - 1} more to submit)</> : null}. Until it is submitted and its review is done, a release leaves it out.</p>
+              <Button asChild size="sm"><Link to={`/c/${toSubmit[0].combinationId}/review`}>Submit {toSubmit[0].label} for review →</Link></Button>
+            </div>
+          ) : null}
           <p className="rounded-lg border border-border bg-surface-raised px-4 py-3 text-sm" aria-live="polite"><b>{x.changes} draft change{x.changes === 1 ? "" : "s"}</b> across <b>{x.rows.length} combination{x.rows.length === 1 ? "" : "s"}</b>{lib.length ? <> and <b>{lib.length} library change{lib.length === 1 ? "" : "s"}</b></> : null}{waiting.length ? <>; {waiting.length} more library change{waiting.length === 1 ? "" : "s"} still wait{waiting.length === 1 ? "s" : ""} for a second person</> : null}. The list below shows each one and whether it can be released.</p>
           {x.rows.length ? <Table head={["Combination", "Changes", "In this release"]}>
             {x.rows.map((r: any) => (
@@ -81,11 +95,12 @@ export function ReleasePage() {
           {held.length ? <Notice tone="warn" title={`${held.length} held back`}>A held-back combination stays at its last release until its problem is fixed and its review is done. Open it to submit it or see what is waiting.</Notice> : null}
           {err ? <Notice tone="danger" title="Not released">{err}</Notice> : null}
           {/* BK-4b (BR-2, BR-3): the release is the approve duty's, never yours here: one button hands it over, only while
-              something would be released (review M1: with every row held back, the next step is the author's, not the Approver's). */}
-          {!canApprove && session.data && (ok.length || lib.length) ? (() => { const to = holderOf(session.data.actors, "approve", [actorId]); return <HandOff id="approver" next={<>{to ? theName(to) : "a second person"} releases what passed its review.</>} to={to} noOne="No one in this workspace holds the approve duty, so nobody can release." />; })() : null}
+              something would be released (review M1: with every row held back, the next step is the author's, not the Approver's)
+              and nothing waits for the author's Submit (QA-421). Only the person's one live step is a filled button (P-473). */}
+          {!canApprove && !toSubmit.length && session.data && (ok.length || lib.length) ? (() => { const to = holderOf(session.data.actors, "approve", [actorId]); return <HandOff id="approver" next={<>{to ? theName(to) : "a second person"} releases what passed its review.</>} to={to} noOne="No one in this workspace holds the approve duty, so nobody can release." />; })() : null}
           <div className="flex flex-wrap items-center justify-end gap-3">
             {!canApprove ? <p className="text-sm text-text-muted">A different person releases.</p> : <p className="text-sm text-text-muted">You can release only changes you did not make or submit yourself.</p>}
-            <Button disabled={!canApprove || !what || busy} busy={busy} onClick={() => void release()}>{what ? `Release ${what} as Release ${x.next}` : "Nothing ready to release"}</Button>
+            <Button variant={canApprove ? "default" : "secondary"} disabled={!canApprove || !what || busy} busy={busy} onClick={() => void release()}>{what ? `Release ${what} as Release ${x.next}` : "Nothing ready to release"}</Button>
           </div>
         </>
       )}

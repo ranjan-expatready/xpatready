@@ -1,5 +1,5 @@
 {
-  "about": "B78 (C10.1 row 7; P-343 (10), P-319): the names a person gives the 59 sections (29 from B78; 30 from B79b for Family sponsorship's IMM 5532 and IMM 5604, 15 each) the rules pass holds because it read no printed heading over their form fields. The configured checkpoint's loader gives each through the same naming edit a person uses on To review (POST /api/review/proposals/decide, action edit). Each entry is one section: its form edition and its first form field. A name the library already holds lands on that section. A section with no entry here stays waiting on To review and is listed on row 7.",
+  "about": "B78 (C10.1 row 7; P-343 (10), P-319): the names a person gives the 65 sections (29 from B78; 30 from B79b for Family sponsorship's IMM 5532 and IMM 5604, 15 each; 6 from BK-16 for IMM 1295 (09-2023), the Study permit spouse's work permit application, whose printed headings sit where its twin IMM 1294's do; its three work sections, one of them under a printed heading, take a Sample name of their own, not the printed \"Details of intended work in Canada\", so they never join the section With an LMIA's IMM 5710 asks, P-496) the rules pass holds because it read no printed heading over their form fields. The configured checkpoint's loader gives each through the same naming edit a person uses on To review (POST /api/review/proposals/decide, action edit). Each entry is one section: its form edition and its first form field. A name the library already holds lands on that section. A section with no entry here stays waiting on To review and is listed on row 7. An entry also names a section the form does print a heading over (BK-16: a person renames it), its name taking the place of the printed one.",
   "basis": "printed: the words the form itself prints above or beside these form fields, read from its XFA template on 5 Nov 2026 (official-sources/ircc/forms, IMM 5476 (11-2021) from its previous-editions folder; page is the page of the form's template that prints the words; the banner is on the page but not in the part the heading reader looks in). sample: a person's wording built from the form's own captions, Sample, Unconfirmed: expert. IMM 5532 (02-2021)'s template is one flowing page, so it gives no page breaks: its pages are from IMM 5533 (09-2022) p. 10 (\"Page 3, question 9 (Declaration of sponsor)\", \"Page 4, question 5 (Declaration of applicant)\"); the yes/no group and tables take the form's title printed on page 1; Part C's page 5 is inferred (it follows Part B's page-4 declaration).",
   "read_on": "2026-11-05",
   "sections": [
@@ -473,6 +473,54 @@
       "name": "Declaration from non-accompanying parent/guardian for minors immigrating to Canada",
       "printed": "DECLARATION FROM NON-ACCOMPANYING PARENT/GUARDIAN FOR MINORS IMMIGRATING TO CANADA",
       "page": 1,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 1295 (09-2023)",
+      "first_field": "form1[0].Page3[0].FaxEmail[0].Phone[0].CanadaUS[0]",
+      "name": "Contact information",
+      "printed": "CONTACT INFORMATION",
+      "page": 2,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 1295 (09-2023)",
+      "first_field": "form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].TypeofWork[0].WorkPermitType[0]",
+      "name": "Intended work in Canada (work permit applied for from outside Canada)",
+      "printed": "DETAILS OF INTENDED WORK IN CANADA",
+      "page": 3,
+      "basis": "sample"
+    },
+    {
+      "form": "IMM 1295 (09-2023)",
+      "first_field": "form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].ProvinceState[0].ProvinceState[0]",
+      "name": "Intended work in Canada (work permit applied for from outside Canada)",
+      "printed": "DETAILS OF INTENDED WORK IN CANADA",
+      "page": 3,
+      "basis": "sample"
+    },
+    {
+      "form": "IMM 1295 (09-2023)",
+      "first_field": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].jobTitle[0]",
+      "name": "Intended work in Canada (work permit applied for from outside Canada)",
+      "printed": "DETAILS OF INTENDED WORK IN CANADA",
+      "page": 3,
+      "basis": "sample"
+    },
+    {
+      "form": "IMM 1295 (09-2023)",
+      "first_field": "form1[0].Page4[0].BackgroundInfo2[0].VisaChoice1[0]",
+      "name": "Background information",
+      "printed": "BACKGROUND INFORMATION",
+      "page": 4,
+      "basis": "printed"
+    },
+    {
+      "form": "IMM 1295 (09-2023)",
+      "first_field": "form1[0].Page4[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]",
+      "name": "Background information",
+      "printed": "BACKGROUND INFORMATION",
+      "page": 4,
       "basis": "printed"
     }
   ]
