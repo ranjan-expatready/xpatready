@@ -2,7 +2,7 @@
 
 current_lead: local_9ab495f0-d6e9-4a87-8ae2-6ba62074c471 Lead 27 · 12 Nov 16:4x IST (series 2; took over from Lead 26 (series 2, local_dea96486) at ~305k context, ~193k beyond its start read, P-446); start read: measure with get_usage; hand over 200k beyond it
 
-updated: 2026-11-12 16:49 IST by **Lead 26 (series 2, local_dea96486-…)** at hand-over to Lead 27 · weekly 42% at 16:44 (resets 13 Nov 04:30 IST) · milestone: **Works on main 92/98 at 16:14 (P-501): M2 60/60, M3 26/29, T 6/8** (C7.3 Works per #1646's reader, run 43203056454 pending; C8.2/C11.6 on QA-397; C6.6 needs C6.5/C7.9 + gate A); Bake (M3.5) running · rules: **`RULES.md`** (as of P-496) · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-12 17:20 IST by **Lead 27 (series 2, local_9ab495f0-…)** after take-over (start read ~113k; hand over at ~313k) · weekly 42% at 16:44 (resets 13 Nov 04:30 IST) · milestone: **Works on main 92/98 at 16:14 (P-501): M2 60/60, M3 26/29, T 6/8** (C7.3 Works per #1646's reader, run 43203056454 pending; C8.2/C11.6 on QA-397; C6.6 needs C6.5/C7.9 + gate A); Bake (M3.5) running · rules: **`RULES.md`** (as of P-496) · this branch: `lead/2026-11-07-lead31`
 
 Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-lead15s2-pointer-sections.md`. Earlier blocks (Lead 40's last, Lead 7→8 hand-over, Lead 8 and Lead 9 live rows): pointers word for word in `history/STATE-2026-11-11-0815-lead11s2-pointer-lines.md`.
 
@@ -18,6 +18,8 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
    - **Factory planner** `local_5c470055-…` (local worktree great-hertz-918a5e): its work is done; archive after #1649's label (P-468).
 3. **Owed:** BACKLOG rows (#1632 m1, P-498's, the `flow-measure.py` tooling, the #1644 m3, the employer-link follow-up, the push-guard check for team-app terms after the Bake (P-504)); SI-6 wording; the expert points (D8, A24, the sweep's financial support); night spare lane (P-489 (5)).
 4. **Standbys:** Lead 28 `local_9428eb1b-027d-4d15-84dd-26572828df34` is first; start one more at his next typed turn. Lead 26's check 101ad69f is deleted; create yours. The `qa-…-c8dd7e` worktree ACT is known: clean, pushed, removal refused by the sandbox.
+
+**Lead 27 live:** took over 16:49 IST; check 56b59def at :13/:43. 17:18: #1633 A24-1 relabelled (guard removed it 16:36 after the merge of main; fresh Approve b8370e030). #1646 records Approve ad984267e + label (C7.3 Works; C6.6 Partial until gate A). #1632: its forms lane handed over (context); no lane on (E1) + Hand-over 3 cause 2, so a cloud card task_93f4658a waits for the founder's click. Weekly 42%.
 
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
 | # | Ask (IST) | Status |
