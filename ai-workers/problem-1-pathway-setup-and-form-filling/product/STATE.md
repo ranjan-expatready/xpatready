@@ -2,7 +2,7 @@
 
 current_lead: local_08cf41af-225a-44c9-9d75-2060969d3cca Lead 25 · 12 Nov 14:3x IST (series 2; took over from Lead 24 (series 2, local_5935338b) at ~320k context, ~200k beyond its start read, P-446); start read: measure with get_usage; hand over 200k beyond it
 
-updated: 2026-11-12 14:3x IST by **Lead 24 (series 2, local_5935338b-…)** at hand-over to Lead 25 · weekly 36% (resets 13 Nov 04:30 IST) · milestone: **M2 60/60; M3 29/29; Bake (M3.5) running; walk 0 Majors 2 of 4 merged** · rules: **`RULES.md`** (as of P-496) · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-12 14:3x IST by **Lead 25 (series 2, local_08cf41af-…)** after take-over (start read ~112k; hand over at ~312k) · weekly 37% at 14:28 (resets 13 Nov 04:30 IST) · milestone: **M2 60/60; M3 29/29; Bake (M3.5) running; walk 0 Majors 2 of 4 merged** · rules: **`RULES.md`** (as of P-496) · this branch: `lead/2026-11-07-lead31`
 
 Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-lead15s2-pointer-sections.md`. Earlier blocks (Lead 40's last, Lead 7→8 hand-over, Lead 8 and Lead 9 live rows): pointers word for word in `history/STATE-2026-11-11-0815-lead11s2-pointer-lines.md`.
 
@@ -21,6 +21,8 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
 3. **Founder:** sending the counsel brief (Part A) and the expert's SP-2 ask (Part B) of `design/counsel-brief-extension-2026-11-12.md`. When the expert's screens come, they go to `sources/portal-screens-2026-11/<portal>/` (never pushed). Extension plan P-495: three lanes from 16 Nov, Sample-complete 24 Nov-2 Dec IST (B184).
 4. **Owed:** SI-6 wording into STAND-INS.md; D8's two Sample points + A24's three expert points + the top-types ranking to the expert; P-487 own rows; night (P-489 (5)): one spare cloud lane at the founder's last typed turn. Nightly C4.11 on the checkpoint dispatched 13:1x (row Q-c411-ckpt).
 5. **Standbys:** Lead 26 `local_dea96486-fb3d-4970-883f-8610e8b5fdb1` stays; start one more at the founder's next typed turn. Lead 24's check f13c1979 is deleted; create yours. Stale worktree `heuristic-nobel-d679f0` (B170a, B178 merged): delete under P-468 after checking.
+
+**Lead 25 live (14:3x IST):** check 94a9e075 at :13/:43; start read ~112k, hand over at ~312k. Done: **#1633** schema read OK (P-423), label removed until the P-496 (2) `case-prepare.ts` fix + re-review, lane briefed; **#1628** requeued (lost runner), lane told; **#1616** `Reviewer: Approve 1ec98a8ef` posted, qa lane labelling; **#1632** no baton, m1 its own row after BK-17 (P-497 (2)), lane told; **QA-417 #1640** ruled web only, P-72/P-78 kept (P-497 (1)), screens lane now QA-417 → A24-2 after #1633. Owed: BACKLOG row for #1632's m1.
 
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
 | # | Ask (IST) | Status |
