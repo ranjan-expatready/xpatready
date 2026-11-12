@@ -47,7 +47,10 @@ export type Coverage = "confirmed fact" | "answered on screen" | "document readi
 export type BoxRow = { box: string; caption: string; fact: string | null; meaning: string | null; about: string | null; about_label: string; row: number | null; coverage: Coverage; detail: string; value?: unknown; transform?: string | null; origin?: string;
   /** C7.2 cause 3 (set on a case copy only, engine/runtime/forms.ts markNothingRecorded): a derived "is anything recorded?"
    *  Yes/No whose facts sit in a repeating group with no entries and a confirmed "none apply". */
-  nothing_recorded?: true };
+  nothing_recorded?: true;
+  /** QA-395 (set on a case copy only, engine/runtime/forms.ts markNothingRecorded, samples/recorded-counts.json): a "recorded"
+   *  Yes/No whose form counts only some entries: true or false as the entries count, null when a person must decide. */
+  counted?: boolean | null };
 
 /** S5: a line with a minimum age applies to a person once they have reached it on `today`; until their date of birth
  *  is known it cannot be told (and the date of birth is asked, as a deciding question). QA-221 (ruling C): on a line for
