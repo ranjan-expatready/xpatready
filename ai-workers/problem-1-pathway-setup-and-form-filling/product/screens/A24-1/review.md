@@ -100,3 +100,52 @@ None.
 Two Majors are open (M1 reference spelled like a case number; M2 null reference in the payloads that name a case). Fix both, add a passing and a failing check for each, then review the new commit. The minors are for the builder's judgement. This review does not carry to `77dc16d12` or later: that commit appears to address M1, m1, m2, m3 and part of M2 (`filing-record.ts` only), and needs its own review.
 
 Verdict: Changes requested
+
+## Re-review of a02fcfaf4..6a193102c
+
+**Scope:** `git diff a02fcfaf4..6a193102c` only (commits `ed25feefa`, `77dc16d12`, `6a193102c`). The PR head then moved to `8e6bd95f0`, which adds only `product/qa/built/A24-1.md` (one line, read). There is still no screen, so there is no journey score. **Copy:** `isolated.sh rev2_a24 4493`, then stopped and dropped. US$0.
+
+| Check (at `6a193102c`) | Result |
+|---|---|
+| `check_a24_case_number_migration.ts` | 28/28 (new: one spelling per number; a case without a principal stops the migration, nothing half done) |
+| `check_a24_case_number_api.ts 4493 xr_studio_rev2_a24` | 23/23 (new: refused look-alike references, explicit null, filing record, filings, checklist, byte-identical words) |
+| `acceptance/C6.16.test.ts` (person-link `me`) | 74/74. `case_reference` is still the reference for a case that has one |
+| `typecheck.mjs` | no new errors (api 15 known, web 0) |
+| My probes on the copy | listed under the Minors below |
+
+**Earlier findings:**
+* **M1: fixed.** `LIKE_CASE_NUMBER` refuses `C-<digits>-<digits>` in any letter case and with any spaces, on the field (400), before a number is taken. Probed: `c-2026-00001` refused.
+* **M2: fixed for this PR's payloads.** `caseName()` is now used in:
+  * `filing-record.ts` (`our_reference`), `case-filings.ts` and `case-checklist.ts` (`reference`);
+  * `person-link.ts` `me` (`case_reference`; it now also selects `caseNumber`);
+  * the own-link view (`runtime.ts:576`), so "Case null." is gone.
+  * Key names are unchanged. A value changes only when the reference is null, so cases with a reference keep byte-identical words (checked by the suite and by C6.16).
+* **m1: fixed.** With no reference given, a clash now says "The case could not be given its case number … Ask the Lead." (wording already used in 9 other places). One narrow case is left: when a reference was given and the clash is still the case number, the old reference words come back.
+* **m2: fixed.** The same shape is enforced in both places (`^C-[1-9]\d{3}-(\d{5}|[1-9]\d{5,})$`), in the contract and in the database check.
+* **m3: fixed.** The check runs first in the migration and stops with words that give the count and what to do. Checked on a scratch copy.
+* **m4: fixed.** `.nullish()`: an explicit null now means no reference (201). Its side effect is n2 below.
+* **m5: not changed.** It was a test gap only. The breaker's 12 simultaneous identical openings cover it, and the breaker's m5 (list row contract) is now `CaseListRow`.
+
+**The Prepare view's `reference` (`case-prepare.ts:177,691`), left to the tech lead:**
+* Still `null` for a case without a reference. Probed: `GET …/prepare` gives `"reference": null` and no `case_number`. The Record submission dialog (`submission.tsx:196`, `PrepareView`) would offer "null-1".
+* **Not a Blocker for this PR.**
+  * No screen can create such a case today: Open a case always sends a reference, and an empty one is refused.
+  * The fix is one word in a file this builder's brief forbids.
+  * It is raised on the PR with a concrete re-check.
+* **Gate:** A24-2 must not ship the optional reference field until `case-prepare.ts` names the case with `caseName()`. A24-2's reviewer must open a case with no reference and see the case number in Record submission's "Our reference" before approving.
+* The gate lives only in a PR comment today. The tech lead should also put it on A24-2's backlog row.
+
+**New Minors (builder's judgement; none blocks):**
+* **n1:** References that only look like a case number still open. Probed against `C-2026-00033`:
+  * accepted with 201: U+2010 hyphens, en dashes, a Cyrillic `С`, fullwidth digits;
+  * `caseName()` would then show two cases with names that read the same, though their bytes differ.
+  * A plausible way in is pasting from a PDF or a word processor. Fix: test the NFKC form, with every `\p{Pd}` turned into `-` and a Cyrillic or Greek C turned into `C`.
+* **n2:** One idempotency key sent first with `reference: null`, then with the key left out, gives 409 "already used for a different case request". The fingerprint hashes `"reference":null`, so it differs from a request that omits the key. Fix: turn null into "absent" before hashing.
+* **n3:** `build-notes.md` was not updated:
+  * its Files list lacks `case-checklist.ts`, `case-filings.ts` and `person-link.ts`;
+  * it does not name the `case-prepare.ts` hand-off;
+  * the own-link view and person-link `me` have no null-reference check (verified only by reading the code).
+
+No Blocker, no open Major.
+
+Verdict: Approve 8e6bd95f04a0f0ca4150f2c2052cd467e20723c3
