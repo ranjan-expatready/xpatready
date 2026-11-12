@@ -8,7 +8,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { answer, AUTHOR, call, confirmAll, copyBytes, FAMILY, fillEverything, generateCopy, needVisitorVisa, openCase, sql, yearsAgo, type Case, type Person } from "./m3.ts";
+import { answer, AUTHOR, call, confirmAll, copyBytes, DB, FAMILY, fillEverything, generateCopy, needVisitorVisa, openCase, PORT, sql, yearsAgo, type Case, type Person } from "./m3.ts";
 
 const STUDIO = join(import.meta.dirname, "..", "..");
 const PY = join(STUDIO, "..", "..", "..", "..", ".tools", "solution-1-prototype", ".venv", "bin", "python"), READER = join(STUDIO, "tests/fixtures/read_choice_values.py"); // one string: names the reader alone, not its folder (select-suites)
@@ -30,6 +30,8 @@ export const STUDIES = "person.studies_six_months_or_more";
 export async function ensureCheckpoint(): Promise<void> {
   const released = () => Number(sql("select count(*) from config_release r join combination c on c.id = r.combination_id where c.combination_key = 'sp.outside'") ?? "0") > 0;
   if (released()) return;
+  // Review on #1620: never the demo (:4400, or its database): the reset is only ever for an isolated test copy.
+  if (PORT === 4400 || !/^xr_studio_(?!demo)/.test(DB)) { console.log(`Setup missing: this copy (port ${PORT}, database ${DB}) is not on the configured checkpoint, and the pack resets only an isolated test copy, never the demo. Load the checkpoint there by hand, or run the pack on an isolated copy.`); process.exit(2); }
   console.log("NOTE  this copy is not on the configured checkpoint: resetting it and loading the checkpoint (Demo › Load), as the author");
   const reset = await call("POST", "/demo/reset", { confirm: "RESET" }, AUTHOR);
   const load = await call("POST", "/demo/load", { sample: "configured" }, AUTHOR);
