@@ -2,7 +2,7 @@
 // /cases: the officer's case list, one case (people + agent view), and the client's questionnaire (SQR, phone first).
 // The people are simulated (demo chrome: the "Acting as" switch is not for porting); the server decides what each may do.
 import * as React from "react";
-import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowRight, ExternalLink, Plus, UserPlus } from "lucide-react";
 import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
@@ -71,6 +71,8 @@ export function RuntimeApp() {
         </label>}>
       <Routes>
         <Route index element={<CaseList />} />
+        <Route path="clients" element={<Navigate to="/cases" replace />} />
+        <Route path="clients/:clientKey" element={<ClientCasesPage />} />
         <Route path=":id" element={<CasePage />} />
         <Route path=":id/questionnaire" element={<ClientPage />} />
         <Route path=":id/eligibility" element={<EligibilityPage />} />
@@ -98,13 +100,16 @@ function CaseList() {
   const [open, setOpen] = React.useState(!!asked);
   const close = () => { setOpen(false); if (sp.has("open")) { const n = new URLSearchParams(sp); n.delete("open"); setSp(n, { replace: true }); } };
   // Later pages through the API's cursor, appended below the first (PR 10 review): page 1 stays live, later ones are kept.
-  const [more, setMore] = React.useState<{ rows: CaseRow[]; next: string | null } | null>(null);
+  // BK-3 PR 3 (break M1, same on this list): later pages belong to the person they were loaded for (another firm after a
+  // switch of "Acting as"); they are dropped, never shown beside the new person's page 1.
+  const [kept, setMore] = React.useState<{ owner: string; rows: CaseRow[]; next: string | null } | null>(null);
+  const more = kept?.owner === actor ? kept : null;
   const [loading, setLoading] = React.useState(false);
   const next = more ? more.next : cases.data?.next ?? null;
   async function loadMore() {
     if (!next || loading) return;
     setLoading(true);
-    try { const page = await api<{ cases: CaseRow[]; next: string | null }>(`/runtime/cases?after=${encodeURIComponent(next)}`); setMore((m) => ({ rows: [...(m?.rows ?? []), ...page.cases], next: page.next })); } finally { setLoading(false); }
+    try { const page = await api<{ cases: CaseRow[]; next: string | null }>(`/runtime/cases?after=${encodeURIComponent(next)}`); setMore((m) => ({ owner: actor, rows: [...(m?.owner === actor ? m.rows : []), ...page.cases], next: page.next })); } finally { setLoading(false); }
   }
   const rows = [...(cases.data?.cases ?? []), ...(more?.rows ?? [])].filter((c, i, all) => all.findIndex((x) => x.id === c.id) === i);
   if (cases.isError && (cases.error as ApiError).status === 403) return <Notice title="Cases are for the case officer">Clients open their questionnaire from the link their officer sends. Switch to the case officer to see the cases.</Notice>;
@@ -123,7 +128,7 @@ function CaseList() {
   );
 }
 
-function NewCaseDialog({ close, initial }: { close: () => void; initial?: string | null }) {
+function NewCaseDialog({ close, initial, client }: { close: () => void; initial?: string | null; /** BK-3 PR 3 (challenge M1): the client page's client, chosen. */ client?: string }) {
   // QA-38: a case opens on the combination's newest release, so the list names that one (the server's rule).
   // V3 B1 (P-297 (3)): the server says which of them a case can open on (the same startable check as opening one);
   // the others are named apart, with the reason, and never offered.
@@ -138,7 +143,7 @@ function NewCaseDialog({ close, initial }: { close: () => void; initial?: string
   const loadFailed = releases.isError || (releases.isSuccess && !Array.isArray(releases.data));
   const combos = rows.filter((r) => r.startable);
   const notReady = rows.filter((r) => !r.startable);
-  const [f, setF] = React.useState({ combinationId: initial ?? "", reference: "", principal: "", clientActor: "user-P" });
+  const [f, setF] = React.useState({ combinationId: initial ?? "", reference: "", principal: "", clientActor: client ?? "user-P" });
   const firm = useFirm();
   const [team, setTeam] = React.useState<{ representative: string; officer: string }>({ representative: "", officer: "" });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -181,6 +186,82 @@ function NewCaseDialog({ close, initial }: { close: () => void; initial?: string
   );
 }
 
+// ------------------------------------------------------------------ officer: one client (BK-3 PR 3)
+
+type ClientCaseRow = CaseRow & { client: string; people?: { label: string; role: string }[] };
+const opened = (at: string) => new Date(at).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric" });
+/** Break m4: the case page's role words (ROLE); another role in words, capitalised as there ("Sponsor"). */
+const personLine = (p: { label: string; role: string }) => { const r = ROLE[p.role] ?? p.role.replace(/_/g, " "); return `${p.label} · ${r.charAt(0).toUpperCase()}${r.slice(1)}`; };
+
+/** BK-3 PR 3 (P-447 (2), concept screens/BK-3-client-page): the client's cases at the viewer's firm, linked both ways with
+ *  each case. A client is the simulated login that answers a case (no client record yet: M4). One read per page view
+ *  (`?client=`, challenge B1); links here never change the simulated person; the one next step opens a case for them. */
+function ClientCasesPage() {
+  const { clientKey = "" } = useParams();
+  const actor = useActorId();
+  const who = PEOPLE.find((p) => p.id === clientKey && isClient(p.id));
+  const staff = isOfficer(actor);
+  // Break m3: the firm's name is read only for a page that shows it (same cache key as useFirm), never for a refusal.
+  const firm = useApi<{ name: string }>(["runtime", "firm", actor], who && staff ? "/runtime/firm" : null, { retry: false });
+  const q = `/runtime/cases?client=${encodeURIComponent(clientKey)}&take=100`;
+  const cases = useApi<{ cases: ClientCaseRow[]; next: string | null }>(["runtime", "cases", "client", clientKey, actor], who && staff ? q : null, { retry: noRetryOnRefusal });
+  // Break M1: later pages belong to the person and client they were loaded for; after a switch of "Acting as" (another
+  // firm) or of client they are dropped, never shown beside the new page 1.
+  const owner = `${actor}|${clientKey}`;
+  const [kept, setMore] = React.useState<{ owner: string; rows: ClientCaseRow[]; next: string | null } | null>(null);
+  const more = kept?.owner === owner ? kept : null;
+  const [loading, setLoading] = React.useState(false);
+  const [moreError, setMoreError] = React.useState<string | null>(null);
+  const [open, setOpen] = React.useState(false);
+  useWhere(who && staff ? [{ label: "Cases", to: "/cases" }, { label: who.name }] : null);
+  if (!staff) return <Notice title="This page is for the firm's staff">Clients open their questionnaire from the link their officer sends. Switch to the case officer to see this client's cases.</Notice>;
+  if (!who) return <Notice title="No such client"><Link className="text-text-link underline" to="/cases">Back to cases</Link></Notice>;
+  const next = more ? more.next : cases.data?.next ?? null;
+  async function loadMore() {
+    if (!next || loading) return;
+    setLoading(true);
+    setMoreError(null);
+    // Break m1: a failed page says so, never an uncaught error.
+    try { const page = await api<{ cases: ClientCaseRow[]; next: string | null }>(`${q}&after=${encodeURIComponent(next)}`); if (!Array.isArray(page?.cases)) throw new Error("The answer was not a list of cases."); setMore((m) => ({ owner, rows: [...(m?.owner === owner ? m.rows : []), ...page.cases], next: page.next })); }
+    catch (e) { setMoreError(e instanceof Error ? e.message : "Try again."); } finally { setLoading(false); }
+  }
+  // Break m2: an answer that is not a list (a proxy's page) reads as "could not load", never "no cases".
+  const badBody = cases.isSuccess && !Array.isArray(cases.data?.cases);
+  const rows = [...(badBody ? [] : cases.data?.cases ?? []), ...(more?.rows ?? [])].filter((c, i, all) => all.findIndex((x) => x.id === c.id) === i);
+  const firmName = firm.data?.name ?? "your firm";
+  return (
+    <div className="mx-auto max-w-5xl space-y-4" data-client-page={clientKey}>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0"><h1 className="text-2xl font-semibold">{who.name}</h1>
+          <p className="text-sm text-text-muted" data-client-line>Simulated client login: the prototype has no client records yet{cases.data && !badBody ? ` · ${rows.length} case${rows.length === 1 ? "" : "s"} shown at ${firmName}` : ""}</p></div>
+        <Button onClick={() => setOpen(true)} data-client-open-case><Plus aria-hidden />Open a case for {who.name}</Button>
+      </div>
+      {cases.isLoading ? <Skeleton className="h-40 w-full" /> : cases.isError || badBody ? <Notice tone="danger" title="This client's cases could not be loaded" action={<Button size="sm" variant="secondary" busy={cases.isFetching} onClick={() => void cases.refetch()}>Try again</Button>}>{badBody ? "The answer was not a list of cases. Reload to try again." : (cases.error as Error).message}</Notice>
+        : !rows.length ? <Notice title={`${who.name} has no cases at ${firmName} yet`}>Open a case for them; it lists here.</Notice>
+        : <>
+          {/* At phone width one card per case (the table would break the names letter by letter); the table from 640 px. */}
+          <ul className="space-y-3 sm:hidden" aria-label={`${who.name}'s cases`}>{rows.map((c) => (
+            <li key={c.id} data-client-case={c.reference} className="rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm">
+              <div className="flex items-start justify-between gap-3"><Link className="inline-flex min-h-6 items-center font-medium text-text-link [overflow-wrap:anywhere] hover:underline" to={`/cases/${c.id}`}>{c.reference}</Link><Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill></div>
+              <p className="text-text-muted">{c.combination} · opened {opened(c.created_at)}</p>
+              {c.people?.length ? <ul className="mt-1.5 space-y-0.5">{c.people.map((p, i) => <li key={i}>{personLine(p)}</li>)}</ul> : <p className="mt-1.5 text-text-muted">No one added yet</p>}
+            </li>))}</ul>
+          <Table className="hidden sm:block" label={`${who.name}'s cases`} head={["Reference", "Combination", "People", "Status", "Opened"]}>{rows.map((c) => (
+          <tr key={c.id} data-client-case={c.reference}>
+            <td><Link className="inline-flex min-h-6 items-center font-medium text-text-link hover:underline" to={`/cases/${c.id}`}>{c.reference}</Link></td>
+            <td>{c.combination}</td>
+            <td>{c.people?.length ? <ul className="space-y-0.5">{c.people.map((p, i) => <li key={i}>{personLine(p)}</li>)}</ul> : <span className="text-text-muted">No one added yet</span>}</td>
+            <td><Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill></td>
+            <td className="whitespace-nowrap">{opened(c.created_at)}</td>
+          </tr>))}</Table>
+        </>}
+      {moreError ? <Notice tone="danger" title="More cases could not be loaded">{moreError}</Notice> : null}
+      {next && !badBody ? <div className="flex items-center gap-3 text-[13px] text-text-muted"><span>More of {who.name}'s cases</span><Button size="sm" variant="secondary" busy={loading} onClick={() => void loadMore()}>Load more</Button></div> : null}
+      {open ? <NewCaseDialog close={() => setOpen(false)} client={who.id} /> : null}
+    </div>
+  );
+}
+
 // ------------------------------------------------------------------ officer: one case
 
 function CasePage() {
@@ -206,6 +287,8 @@ function CasePage() {
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><ReleasePill c={c} /></h1>
           <div className="mt-1 empty:hidden"><CaseReadinessPill caseId={c.id} /></div>
+          {/* BK-3 PR 3 (P-447 (2)): the case names its client and opens their page; the person acting stays the same. */}
+          <p className="mt-1 text-sm text-text-muted">Client: <Link to={`/cases/clients/${encodeURIComponent(c.client)}`} data-case-client className="inline-flex min-h-6 items-center font-medium text-text-link hover:underline">{client?.name ?? "the client"}</Link></p>
           {c.team ? <CaseTeamChip caseId={c.id} line={c.team} /> : null}
           {c.employer_link ? <div className="mt-1"><EmployerLinkLine link={c.employer_link} caseId={c.id} /></div> : null}
           <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · {v.summary.answered - v.summary.confirmed} to confirm · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>
