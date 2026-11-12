@@ -94,6 +94,15 @@ async function walk(p, id, tag, shot) {
   await p.locator('[role="tab"]').first().click();
   await p.evaluate(() => window.scrollTo(0, 0));
   await shot(`${tag}-00-household-line`);
+  // Re-review m3: the household line wraps; no sideways scroll at 375 and 1024 px, no "·" alone at a line's start.
+  for (const width of [375, 1024]) {
+    await p.setViewportSize({ width, height: 900 });
+    await p.waitForTimeout(300);
+    const fit = await p.evaluate(() => { const el = document.querySelector("[data-household-tabs]"); return { line: el ? el.scrollWidth <= el.clientWidth + 1 : false, page: document.documentElement.scrollWidth <= window.innerWidth + 1 }; });
+    ok(`${tag} at ${width} px: the household line wraps inside its column and the page does not scroll sideways`, fit.line && fit.page, fit);
+  }
+  await p.setViewportSize({ width: 1440, height: 900 });
+  await p.waitForTimeout(300);
   await p.locator(`[data-household-tabs] a[data-household-tab="${target.id}"]`).click();
   await p.waitForFunction((who) => document.querySelector(`[role="tab"][data-state="active"]`)?.getAttribute("data-tab") === who, target.id, T);
   // The page scrolls and focuses two frames after the tab opens: wait for it (up to 5 s), never a fixed pause.
@@ -142,6 +151,7 @@ async function walk(p, id, tag, shot) {
   // Review m1: a section of firm-record answers (the representative's tab) has answers, all confirmed: never "No answer".
   const toast = (re) => p.getByText(re).last();
   const repTab = p.locator('[role="tab"]', { hasText: /^The representative/ });
+  ok(`${tag} m1 setup: the case has the representative's tab`, (await repTab.count()) > 0);
   if (await repTab.count()) {
     await repTab.first().click();
     const firm = p.locator('#agent-view section[aria-labelledby^="h-"]').filter({ has: p.locator("button[data-nothing-to-confirm]") }).filter({ hasText: /[1-9]\d* answered · 0 to confirm/ }).first();

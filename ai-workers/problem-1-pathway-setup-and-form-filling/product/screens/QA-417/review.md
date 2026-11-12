@@ -67,3 +67,32 @@ Journeys (case officer): **J1** "where are the 188 left?": read the household li
 
 ## What I could not check
 A real screen reader (the names come from Chromium's accessibility tree). An intended user's unaided walk (D17 and D20 stay with the founder). A re-run on the base's files (above). The full suite set (CI). Screenshots cited as `rev-*` are in my session scratchpad, not committed.
+
+## Re-review 112c3fc20 (diff-only, P-277)
+Same reviewer role, fresh context, 12 Nov 2026. Scope: `git diff 9f0fc27e6 112c3fc20` (`questionnaire.tsx` toast, `cases.tsx` household line, the pack check, this file). Own isolated copy on :4463, stopped after each run; live AI off, US$0.
+* **Re-ran:** `check_qa417_counts_browser.cjs` **46/46**, exit 0, on four fresh copies. `tsc --noEmit -p web/tsconfig.json` exit 0. Fails on the base: I could not start a copy from a scratch worktree (the sandbox refuses the database folder through that path, as in round 1). By construction it fails there: the old toast picked "No answer…" by `!seen.length`, and firm-record answers are never in `seen`, so m1 fails. It also added "Every answer here is confirmed already" whenever `seen` was non-empty, even beside waiting answers, so m2 fails. This matches the builder's 42/3.
+* **m1: closed.** `!s.answered` counts firm answers, which the engine stores as VERIFIED (`engine/runtime/team.ts:185`). The representative's section now says "Every answer here is confirmed already." (vv and sp).
+* **m2: closed.** When `waiting > 0`, the toast drops the sentence and names the wait. With confirmed and waiting answers mixed, the words are still true.
+* **m3: the lone "·" is gone, but the line no longer wraps (new, Must).** Each item is `<span class="whitespace-nowrap">· <a>…</a>{" "}</span>` (`cases.tsx:309`). The only space between items sits inside a nowrap span, and Chromium does not break there. So the whole list stays on one line. Measured with my scratch script at 375, 1024 and 1440 px on the pack's cases: the line is 44 px tall, `scrollWidth` is 1230 against a 343 / 329 / 633 px box, and `lone = 0`.
+  * At **375 px** the page scrolls sideways (document 1246 px wide).
+  * At **1024 px** it also scrolls sideways (1254 px). The 3rd to 7th links lie outside the 330 px column.
+  * At **1440 px** the line runs past its column, under the Client questionnaire card's column, to x = 1310. With the big family (12 links) it would leave the page.
+  * In round 1, at 9f0fc27e6, the line wrapped: 144 px at 1440, and no sideways scroll at 375, 1024 or 1440. So this is a regression from the fix. It breaks EXPERIENCE §1 [M] 12 ("1024 px … work") and BIC-20, so it is a **Must**.
+  * **Fix:** put the break outside the nowrap span: `{i ? " " : ""}<span className="whitespace-nowrap">{i ? "· " : ""}<a …/></span>`, with the space as a sibling text in the `<p>`.
+  * **Test:** add a line to the pack check: at 375 and 1024 px, `[data-household-tabs]` has `scrollWidth <= clientWidth` and the page does not scroll sideways. That line fails at 112c3fc20.
+* Leaving the 200 % zoom column (older code) as a follow-up is right, as round 1 said. No row exists yet in `qa/BUGS.md` or `BACKLOG.md`: file one.
+* **Notes (no change asked here):**
+  * (a) The m1 lines run only `if` a "The representative" tab exists, and the sp m2 lines only if a background answer is found. If either is missing they pass without checking. Asserting the tab exists would keep m1 from going silent.
+  * (b) `s.answered` also counts group cells that are not shown (B155 `inEntry`). If a section's only unconfirmed answers were hidden cells, "confirmed already" would be false. I did not reproduce this, and the round-1 wording had the same gap.
+
+**The two older Agent-view suites: yes, leave them out of this PR, as rows.** I reproduced both on a fresh copy at 112c3fc20 after `POST /demo/load {sample:"configured"}`.
+* `tests/runtime/check_qa293_rep_tab_browser.cjs` **7/8**. The city line reads "Toronto From the firm record". The suite expects "not filled from the firm record". That wording (`questionnaire.tsx:948`) and the firm-record data are not in this PR's diff. The checkpoint data went stale against the suite.
+* `tests/runtime/check_c611_imm5476_browser.cjs` **5/6**. Strict mode: `getByRole('tab', {name: /^Client A/})` resolves to 4 tabs ("Client A", "Client A's mother", …). This PR only adds a count after each label and does not change the set of tabs. A prefix regex matches the relatives' tabs on main too.
+* Neither suite runs on a fresh copy without a loaded checkpoint (both 0/1, "Visitor visa" not offered). Their result depends on what ran before them.
+* These are test defects, not product defects. They are not this PR's to fix, and none exists as a row yet: file them for the tech lead.
+
+**Journey (reviewer role), re-scored on the diff:**
+* Task 1 · next step ½ (links past the column at 1024) · plain words 1 (m1, m2) · feedback 1 · data 1 · recovery 1 · **accessibility and screen sizes 0** (sideways scroll at 375 and 1024) · speed 1 · visual ½ (line under the card's column at 1440) · trust 1.
+* **8/10, fail: one criterion at 0.** It returns to pass when the line wraps again.
+
+**Verdict: Request changes** (Block until 112c3fc20's m3 wrap regression is fixed and its width check is added). m1 and m2 are approved as they are.

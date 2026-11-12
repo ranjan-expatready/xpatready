@@ -294,6 +294,7 @@ function CasePage() {
   const v = view.data!, c = v.case, people = c.people.filter((p) => p.role !== "case");
   const client = PEOPLE.find((p) => p.id === c.client);
   // QA-417 (P-497; P-72 and P-78 kept): the household's "to confirm" names the people's tabs it sits in, each a link.
+  // Re-review m3: each "·" stays with its link (nowrap), and the line breaks at the space between them.
   const confirmTabs = toConfirmByTab(v).filter((t) => t.n > 0);
   return (
     <div className="mx-auto max-w-7xl space-y-5">
@@ -306,7 +307,7 @@ function CasePage() {
           {c.team ? <CaseTeamChip caseId={c.id} line={c.team} /> : null}
           {c.employer_link ? <div className="mt-1"><EmployerLinkLine link={c.employer_link} caseId={c.id} /></div> : null}
           <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · <span data-household-to-confirm={v.summary.answered - v.summary.confirmed}>{v.summary.answered - v.summary.confirmed} to confirm</span> · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>
-          {confirmTabs.length ? <p className="mt-1 text-sm text-text-muted" data-household-tabs>To confirm, in the Agent view: {confirmTabs.map((t, i) => <span key={t.id} className="whitespace-nowrap">{i ? "· " : ""}<a href={tabHash(t.id)} data-household-tab={t.id} className="inline-flex min-h-6 items-center whitespace-normal font-medium text-text-link hover:underline">{t.label} ({t.n})</a>{" "}</span>)}</p> : null}
+          {confirmTabs.length ? <p className="mt-1 text-sm text-text-muted" data-household-tabs>To confirm, in the Agent view: {confirmTabs.map((t, i) => <React.Fragment key={t.id}>{i ? " " : ""}<span className="whitespace-nowrap">{i ? "· " : ""}<a href={tabHash(t.id)} data-household-tab={t.id} className="inline-flex min-h-6 items-center whitespace-normal font-medium text-text-link hover:underline">{t.label} ({t.n})</a></span></React.Fragment>)}</p> : null}
         </div>
         <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">
           <p className="font-medium">Client questionnaire</p>
