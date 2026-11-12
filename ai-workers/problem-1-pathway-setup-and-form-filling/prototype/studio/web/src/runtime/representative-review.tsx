@@ -61,7 +61,9 @@ export function RepresentativeReviewLatest() {
 
 export function RepresentativeReviewPage() {
   const { id, round } = useParams(), actor = useActorId(), qc = useQueryClient(), toast = useToast(), nav = useNavigate();
-  const key = ["runtime", "review", round];
+  // QA-401: the person is in the key, so a change of person shows no Approve or Send back read for the previous person, not
+  // even for the moment before every query is read again (setActor resets them all).
+  const key = ["runtime", "review", round, actor];
   const q = useApi<ReviewRound>(key, `/runtime/reviews/${round}`, { retry: noRetryOnRefusal });
   useCaseWhere(id!, "Representative's review"); // BK-3
   const v = q.data;
