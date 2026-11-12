@@ -479,7 +479,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   // The parts keep one order while the client answers (an answer never sends a part behind the one the client is on, where
   // "Save and continue" would pass it): the order of this questionnaire with no answers given; a part only an answer adds
   // keeps its place after the part before it.
-  const questions = opts.partOrder === false ? ordered : inPartOrder(ordered, caseView(s, people, [], [], mode, today, [], { ...opts, partOrder: false, decides }).sections.map((x) => `${x.subjectId}|${x.section}`));
+  const questions = opts.partOrder === false ? ordered : inPartOrder(ordered, noAnswerOrder(s, people, mode, today, () => caseView(s, people, [], [], mode, today, [], { partOrder: false, decides }).sections.map((x) => `${x.subjectId}|${x.section}`)));
   // A repeating group's "none apply" (Lead, break M3): confirmed by the same rule as an answer to the group's facts
   // (P-72, P-78), read as an answer to its first client fact (else its first fact).
   const birthOf = (subjectId: string) => answers.find((a) => a.subjectId === subjectId && a.field === MINOR.birthDateField && !a.rowKey)?.value;
@@ -569,6 +569,22 @@ function whatDecides(s: Snapshot, people: Participant[], renderPeople: Person[],
     out.delete(`${q.subjectId}|${q.fact}`);
     return out;
   };
+}
+
+/** QA-439 (r1c's 1 s budget for the case page): the order with no answers given depends only on the release, the people
+ *  and the mode, so it is worked out once per process for them (a release is read by its items' versions, its forms and
+ *  its form maps; a key that misses only costs the work again). Documents a case skips are not part of it: they only drop
+ *  parts, and a part the order does not name keeps its place (inPartOrder). */
+const ORDERS = new Map<string, string[]>();
+function noAnswerOrder(s: Snapshot, people: Participant[], mode: Mode, today: Date, work: () => string[]): string[] {
+  const key = JSON.stringify([mode, today.toISOString().slice(0, 10), people.map((p) => [p.subjectId, p.role, p.applies]), s.row_versions ?? null,
+    (s.forms as { form_number: string; edition?: string }[]).map((f) => f.form_number), (s.field_maps as { form_edition?: string; entries?: unknown[] }[]).map((m) => `${m.form_edition}:${m.entries?.length}`)]);
+  const got = ORDERS.get(key);
+  if (got) return got;
+  const order = work();
+  if (ORDERS.size >= 200) ORDERS.delete(ORDERS.keys().next().value!);
+  ORDERS.set(key, order);
+  return order;
 }
 
 /** QA-439: `qs` with its parts in the order `order` gives (stable: a part `order` does not name stays right after the part
