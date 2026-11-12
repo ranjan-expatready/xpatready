@@ -57,6 +57,7 @@ const ALLOWED: Record<string, number> = {
   "runtime/cases.tsx": 4, // the first person of a browser with none (BR-6/BR-8); BR-8's "Continue as Case officer"; "Open it as Client A" and "Act as Client A" (BK-4c's hand-offs)
   "pages/sign-in.tsx": 1, // signing in
   "pages/start.tsx": 1, // BK-5's "Sign in as the Configuration author" on the first-run page (a named button; the frame's notice names it)
+  "components/hand-off.tsx": 2, // BK-4b's HandOff button (#1582, reviewed): its one call, plus its doc comment "default setActor(to.id)"
   "lib/api.ts": 0, // defines setActor
 };
 const sites: Record<string, number> = {};
@@ -70,6 +71,7 @@ const HELPERS_ALLOWED: Record<string, number> = {
   "pages/combination.tsx": 1, // BK-3 PR 2's "Open a case on Release N": BK-4b names the person on it (concept §5)
   "pages/start.tsx": 1, // BK-5's first-run card "Open the family case (as Case officer)" (the link names its person)
   "components/demo-finished-story.tsx": 2, // the finished story's "Open the family case" and "Open the case left on release 1", each "(as Case officer)"
+  "pages/review.tsx": 1, // BK-4b's "Open a case on Release N (as Case officer)" hand-off on the Review tab (#1582, reviewed; the label names the person)
 };
 const HELPER = /\b(actAsCaseStaff|enterCasesAsStaff|leaveCasesAsStudio)\b/g;
 const helperUse: Record<string, number> = {};
