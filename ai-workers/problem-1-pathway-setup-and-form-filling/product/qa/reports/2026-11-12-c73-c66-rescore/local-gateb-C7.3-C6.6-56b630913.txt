@@ -1,0 +1,8 @@
+Gate B: the PR names C7.3, C6.6; claims Works for none (no bug check).
+  packs: C7.3-screen.test.ts, C7.3-tick.test.ts, C7.3.test.ts, C6.6.test.ts
+    C7.3-screen.test.ts on the checkpoint: exit 0, 15/15 passed (193 s: copy 7, Load the configured checkpoint 135, run 51)
+    C7.3-tick.test.ts on the checkpoint: exit 0, 15/15 passed (175 s: copy 8, Load the configured checkpoint 135, run 33)
+    C7.3.test.ts on the checkpoint: exit 0, 19/19 passed (211 s: copy 6, Load the configured checkpoint 139, run 65)
+    C6.6.test.ts on the checkpoint: exit 0, 31/31 passed (156 s: copy 6, Load the configured checkpoint 137, run 14)
+  packs took 389 s in all
+Gate B: passed.
