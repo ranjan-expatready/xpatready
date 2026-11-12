@@ -43,16 +43,42 @@ const family = async (key: string, ref: string) => {
   const add = async (role: string, name: string) => (await call("POST", `/runtime/cases/${id}/people`, { role, displayName: name })).body?.subject_id as string;
   const spouse = await add("spouse_or_partner", "Sample Spouse A"), child = await add("child", "Sample Child T");
   const principal = ((await call("GET", `/runtime/cases/${id}`)).body.people as { role: string; subject_id: string }[]).find((x) => x.role === "principal")!.subject_id;
-  return { id, status: open.status, people: { principal, spouse, child } as Record<string, string> };
+  const all = (await call("GET", `/runtime/cases/${id}`)).body.people as { role: string; subject_id: string }[];
+  return { id, status: open.status, people: { principal, spouse, child } as Record<string, string>, roleOf: new Map(all.map((x) => [x.subject_id, x.role])) };
 };
 const view = async (id: string) => ((await call("GET", `/runtime/cases/${id}/questionnaire`, undefined, CLIENT)).body?.sections ?? []) as Part[];
 const ANSWERS: Record<string, [string, string]> = { principal: ["1990-03-01", "married"], spouse: ["1991-05-01", "married"], child: ["2024-02-01", "single"] };
 
+// Review M2 (#1643): the release's form-field gates (B107; a form box written only while its condition holds). A question
+// whose every mapped box in the release carries a gate is decided by the gate's facts: those come first in the walk.
+const gatedBy = (key: string) => {
+  const rows = sql(`select e->>'fact', coalesce(e->'condition_rule'->'gate', 'null'::jsonb)::text from config_release r join combination c on c.id=r.combination_id, jsonb_array_elements(r.snapshot->'field_maps') m, jsonb_array_elements(m->'entries') e where c.combination_key='${key}' and e->>'outcome'='mapped' and e->>'fact' is not null and r.version=(select max(version) from config_release x where x.combination_id=c.id)`).split("\n").filter(Boolean).map((l) => l.split("|"));
+  const out = new Map<string, Set<string> | null>();
+  for (const [fact, gate] of rows) {
+    const had = out.get(fact);
+    if (gate === "null") { out.set(fact, null); continue; }
+    if (had === null) continue;
+    const reads = new Set(had ?? []); for (const m of gate.matchAll(/"field": ?"([^"]+)"/g)) reads.add(m[1]);
+    out.set(fact, reads);
+  }
+  return new Map([...out].filter((e): e is [string, Set<string>] => !!e[1] && e[1].size > 0));
+};
+
 for (const [key, name] of [["vv.single", "Visitor visa"], ["sp.outside", "Study permit (outside Canada)"]] as const) {
+  const gates = gatedBy(key);
   for (const who of ["principal", "spouse", "child"] as const) {
     const f = await family(key, `QA439-${who}`);
     const s = f.people[who];
     const before = walk(await view(f.id));
+    // Review M1 (#1643): people come in the case's order (the application, principal, spouse, child), never by their id.
+    const firstSeen = [...new Set(before.map((q) => q.subject).filter((x) => !x.includes("/") && f.roleOf.has(x)))].map((x) => f.roleOf.get(x));
+    ok(`QA-439 pass (${name}, case ${who}): people come in the case's order, the application first`, JSON.stringify(firstSeen) === JSON.stringify(["case", "principal", "spouse_or_partner", "child"]), firstSeen);
+    if (who === "principal") {
+      const caseSubject = [...f.roleOf].find(([, r]) => r === "case")![0];
+      const late = before.flatMap((q, i) => { const g = gates.get(q.fact); if (!g) return []; return [...g].map((d) => ({ q, i, d: before.findIndex((x) => x.fact === d && x.subject === (d.startsWith("case.") ? caseSubject : q.subject.split("/")[0])) })).filter((x) => x.d > x.i); });
+      ok(`QA-439 pass (${name}): every question the release's form-field gates decide (an "other" box after its purpose or status, details after their Yes) comes after the gate's question`,
+        gates.size > 0 && late.length === 0, { gated: gates.size, late: late.slice(0, 6).map((x) => `${x.i}: ${x.q.part} · ${x.q.fact} before ${x.d}: ${before[x.d].fact}`) });
+    }
     const at = (fact: string) => before.findIndex((q) => q.key === `${s}|${fact}`);
     const dob = at(DOB), marital = at(MARITAL);
     ok(`QA-439 setup (${name}, ${who}): the case opens for Client A with three people, and the ${who}'s date of birth and marital status are asked`, f.status === 201 && dob >= 0 && marital >= 0, { status: f.status, dob, marital });

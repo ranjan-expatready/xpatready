@@ -356,7 +356,7 @@ export type Mode = "sqr" | "agent";
  *  `skipDocumentFacts` (Preview only for now, Lead Q2 29 Oct; the case default with M3's documents-first intake, C6.5):
  *  a fact a document on that person's checklist supplies is not asked (P-130); it names the document, or null to ask.
  *  What it skips is listed per person and document in `from_documents`. */
-export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date(), groupAnswers: GroupAnswer[] = [], opts: { skipDocumentFacts?: (subjectId: string, fact: string) => string | null; background?: ReadonlySet<string>; partOrder?: false } = {}): QuestionnaireView {
+export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date(), groupAnswers: GroupAnswer[] = [], opts: { skipDocumentFacts?: (subjectId: string, fact: string) => string | null; background?: ReadonlySet<string>; partOrder?: false; decides?: Decides } = {}): QuestionnaireView {
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
   const caseSubject = people.find((p) => p.role === "case")!;
   const { known, confirm } = knownOf(s, people, answers, rows, today);
@@ -463,11 +463,23 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const rank = (id: string) => { const [owner, rel] = id.split("/"); return (rankOf.get(owner) ?? people.length) + (rel ? 0.5 : 0); };
   // The sections the combination's author chose and ordered (C4.1, P-216) keep that order.
   const authored = new Set((s.sections as { id: string }[]).map((x) => x.id));
-  const ordered = decidersFirst(inForms, whatDecides(s, people, renderPeople, caseSubject.subjectId, today), rank, (section) => authored.has(section));
+  // Review M2 (#1643): a question every form field of which is written only while a condition holds (B107's form-field
+  // gates, e.g. a form's "other" box written only when the purpose is "Other") is decided by that condition's facts.
+  const boxGates = new Map<string, { all: boolean; keys: Set<string> }>();
+  for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about) {
+    const k = `${subjectOf(b.about)}|${b.fact}`, e = boxGates.get(k) ?? boxGates.set(k, { all: true, keys: new Set() }).get(k)!;
+    const fk = `${c.form}|${c.edition}`, g = (gates.get(fk) ?? gates.set(fk, gatesInForce(s, c.form, c.edition)).get(fk)!).get(b.box);
+    if (!g) { e.all = false; continue; }
+    const owner = b.about === "case" ? caseSubject.subjectId : b.about.split("/")[0];
+    for (const f of readsOf(s, g)) e.keys.add(`${isFilingFact(f, placementOf(s, f)) ? caseSubject.subjectId : owner}|${f}`);
+  }
+  // Worked out once per view (review m2): the order with no answers given reuses it.
+  const decides = opts.decides ?? whatDecides(s, people, renderPeople, caseSubject.subjectId, today, (k) => { const e = boxGates.get(k); return e?.all ? [...e.keys] : []; });
+  const ordered = decidersFirst(inForms, decides, rank, (section) => authored.has(section));
   // The parts keep one order while the client answers (an answer never sends a part behind the one the client is on, where
   // "Save and continue" would pass it): the order of this questionnaire with no answers given; a part only an answer adds
   // keeps its place after the part before it.
-  const questions = opts.partOrder === false ? ordered : inPartOrder(ordered, caseView(s, people, [], [], mode, today, [], { ...opts, partOrder: false }).sections.map((x) => `${x.subjectId}|${x.section}`));
+  const questions = opts.partOrder === false ? ordered : inPartOrder(ordered, caseView(s, people, [], [], mode, today, [], { ...opts, partOrder: false, decides }).sections.map((x) => `${x.subjectId}|${x.section}`));
   // A repeating group's "none apply" (Lead, break M3): confirmed by the same rule as an answer to the group's facts
   // (P-72, P-78), read as an answer to its first client fact (else its first fact).
   const birthOf = (subjectId: string) => answers.find((a) => a.subjectId === subjectId && a.field === MINOR.birthDateField && !a.rowKey)?.value;
@@ -535,18 +547,25 @@ export type CaseView = ReturnType<typeof caseView>;
  *  by its own condition's facts (same subject), and, when every form that needs it waits for an answer before it applies
  *  (a form's condition, a form's age limit), by the facts those forms wait for. A question also read by a form that
  *  always applies is never decided by a form. Generic: no form, section, combination or fact named here. */
-function whatDecides(s: Snapshot, people: Participant[], renderPeople: Person[], caseSubjectId: string, today: Date) {
+type Decides = (q: { subjectId: string; fact: string; fills: { form: string; subject: string }[] }) => Set<string>;
+/** The facts a condition reads; a calculated field counts as the answers it is worked out from. */
+function readsOf(s: Snapshot, tree: unknown): string[] {
+  const derived = new Map(((s.derived_fields ?? []) as { id: string; inputs?: string[]; reference?: string }[]).map((d) => [d.id, [...(d.inputs ?? []), ...(d.reference ? [d.reference] : [])]]));
+  const out = new Set<string>(), walk = (f: string) => { if (out.has(f)) return; out.add(f); for (const x of derived.get(f) ?? []) walk(x); };
+  for (const m of JSON.stringify(tree ?? null).matchAll(/"field":"([^"]+)"/g)) walk(m[1]);
+  return [...out].filter((f) => !derived.has(f));
+}
+function whatDecides(s: Snapshot, people: Participant[], renderPeople: Person[], caseSubjectId: string, today: Date, boxGated: (key: string) => string[]): Decides {
   const r = render(s, renderPeople, knownOf(s, people, [], [], today).known, { today });
   const subjectOf = (about: string) => (about === "case" ? caseSubjectId : about);
   const waits = new Map(r.forms.map((f) => [`${f.form}|${f.person}`, f.applies === true ? [] : f.missing.filter((m) => !m.startsWith("(")).map((m) => `${isFilingFact(m, placementOf(s, m)) ? caseSubjectId : subjectOf(f.person)}|${m}`)]));
-  const derived = new Map(((s.derived_fields ?? []) as { id: string; inputs?: string[]; reference?: string }[]).map((d) => [d.id, [...(d.inputs ?? []), ...(d.reference ? [d.reference] : [])]]));
-  const reads = (tree: unknown) => { const out = new Set<string>(), walk = (f: string) => { if (out.has(f)) return; out.add(f); for (const x of derived.get(f) ?? []) walk(x); }; for (const m of JSON.stringify(tree ?? null).matchAll(/"field":"([^"]+)"/g)) walk(m[1]); return [...out].filter((f) => !derived.has(f)); };
   return (q: { subjectId: string; fact: string; fills: { form: string; subject: string }[] }) => {
     const owner = q.subjectId.split("/")[0], out = new Set<string>();
     const p = placementOf(s, q.fact);
-    if (p?.condition) for (const f of reads(p.condition)) out.add(`${isFilingFact(f, placementOf(s, f)) ? caseSubjectId : owner}|${f}`);
+    if (p?.condition) for (const f of readsOf(s, p.condition)) out.add(`${isFilingFact(f, placementOf(s, f)) ? caseSubjectId : owner}|${f}`);
     const forms = q.fills.map((f) => waits.get(`${f.form}|${f.subject}`));
     if (forms.length && forms.every((w) => w?.length)) for (const w of forms) for (const k of w!) out.add(k);
+    for (const k of boxGated(`${q.subjectId}|${q.fact}`)) out.add(k);
     out.delete(`${q.subjectId}|${q.fact}`);
     return out;
   };
