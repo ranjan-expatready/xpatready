@@ -6,10 +6,12 @@
 //   * a case just opened: "Next: Client A answers…", with the hand-off;
 //   * the client has answered every part, answers wait for the officer: "Next: confirm the answers", a link to the Agent view;
 //   * every answer confirmed: "Next: prepare the forms and send them for review";
-//   * the review approved, a filing still to file: "Next: Ready to file, then Record the submission" (the finished story's
-//     family case as it is: three filings recorded, one waiting for its validated copy);
+//   * a filing never sent for review (the finished story's family case as it is: three filings recorded, the fourth not
+//     reviewed): "Next: prepare the forms and send them for review", never "Ready to file" (review M1 a; "approved" and
+//     the order of states: tests/check_qa427_client_card.ts);
 //   * submitted: "Nothing more is asked of Client A", no hand-off (the same case, its one remaining filing's status read
-//     as submitted in the browser: the one patched field).
+//     as submitted in the browser: the one patched field);
+//   * a read that fails: "could not be read", with Try again (review m1).
 // Fails on main (each "client done" state says "Next: Client A answers" or names no next step; submitted still hands
 // over). Loads the finished story when the copy has no recorded submission (a few minutes). No model call (US$0).
 //   zsh studio/tools/isolated.sh screens_q427 4467 start && node studio/tests/check_qa427_client_card_browser.cjs 4467 xr_studio_screens_q427 [screenshot-dir]
@@ -130,11 +132,12 @@ async function confirmAll(id) {
     ok("everything confirmed: \"Next: prepare the forms and send them for review\"", /Next: prepare the forms and send them for review\./.test(t) && (await p.locator("[data-client-card=prepare]").count()) === 1 && !/Next: Client A answers/.test(t), t);
     await shot("03-prepare");
     if (submitted) {
-      // 4. Approved, not all filed (the story's real state: three filings recorded, one split out waiting for its validated
-      //    copy): the remaining filing's next step, never the client's.
+      // 4. Review M1 (a): the story's real state: three filings recorded, the fourth ("Child 18 or over") never sent for
+      //    review. Never "Ready to file" (a filing not reviewed is not approved); its next step is to send it. ("Approved"
+      //    and the other orderings are proved by the rule's own check, tests/check_qa427_client_card.ts.)
       t = await open(submitted.id);
-      ok("approved, a filing still to file: \"Next: Ready to file, then Record the submission\"", /Next: Ready to file, then Record the submission\./.test(t) && (await p.locator("[data-client-card=approved]").count()) === 1 && !/Next: Client A answers/.test(t), t);
-      await shot("04-approved");
+      ok("review M1 (a): a filing never sent for review: \"Next: prepare the forms and send them for review\", never \"Ready to file\"", /Next: prepare the forms and send them for review\./.test(t) && !/Ready to file/.test(t) && !/Next: Client A answers/.test(t), t);
+      await shot("04-a-filing-not-reviewed");
       // 5. Submitted: the same case with its one remaining filing read as submitted in the browser (the one patched field).
       await p.route(`**/api/runtime/cases/${submitted.id}/prepare`, async (route) => { const r = await route.fetch(); const b = await r.json(); for (const f of b.filings ?? []) f.status = "submitted"; await route.fulfill({ response: r, json: b }); });
       t = await open(submitted.id);
@@ -142,6 +145,16 @@ async function confirmAll(id) {
       await shot("05-submitted");
       await p.unrouteAll({ behavior: "ignoreErrors" });
     }
+    // 6. Review m1: a read that fails says so, with Try again (never a placeholder for ever).
+    await p.route(`**/api/runtime/cases/${family}/questionnaire`, (route) => route.fulfill({ status: 500, json: { message: "Sample failure" } }));
+    await p.goto(`${BASE}/cases/${family}`);
+    const failed = p.locator("[data-client-card=failed]");
+    await failed.waitFor(T).catch(() => {});
+    ok("review m1: a failed read says the case could not be read, with Try again", (await failed.count()) === 1 && /could not be read/.test(await failed.innerText()) && (await failed.getByRole("button", { name: "Try again" }).count()) === 1);
+    await p.unrouteAll({ behavior: "ignoreErrors" });
+    await failed.getByRole("button", { name: "Try again" }).click().catch(() => {});
+    await p.locator("[data-client-card=prepare]").waitFor(T).catch(() => {});
+    ok("review m1: Try again reads it again and the card comes back", (await p.locator("[data-client-card=prepare]").count()) === 1);
   } catch (e) { ok("the walk ran to the end", false, String(e?.message ?? e)); }
   await p.unrouteAll({ behavior: "ignoreErrors" }).catch(() => {});
   await browser.close();
