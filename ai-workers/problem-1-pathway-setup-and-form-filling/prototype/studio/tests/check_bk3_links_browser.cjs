@@ -91,8 +91,8 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     // (b) The case's release pill opens its combination in the Studio.
     const pill = p.locator("[data-case-release]");
     const pillText = (await pill.textContent().catch(() => ""))?.trim();
-    step(`${W}: the case's pill says Release ${rel}, as the button did (${pillText})`, pillText === `Release ${rel}`, pillText);
-    step(`${W}: the pill's name says where it goes`, (await pill.getAttribute("aria-label")) === `Release ${rel}: open its set-up in Product Studio`, await pill.getAttribute("aria-label"));
+    step(`${W}: the case's pill says Release ${rel}, as the button did (${pillText})`, pillText === `Release ${rel} (as Configuration author)` /* BK-4a: the pill names who you become */, pillText);
+    step(`${W}: the pill's name says where it goes`, (await pill.getAttribute("aria-label")) === `Release ${rel} (as Configuration author): open its set-up in Product Studio` /* BK-4a: it names who you become */, await pill.getAttribute("aria-label"));
     const pbox = await pill.boundingBox().catch(() => null);
     step(`${W}: the pill link is at least 24 px high`, !!pbox && pbox.height >= 24, pbox);
     await axe(`${W} the case's release pill`, "[data-case-release]");

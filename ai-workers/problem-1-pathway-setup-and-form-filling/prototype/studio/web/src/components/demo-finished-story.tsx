@@ -4,6 +4,7 @@
 // waits and why, and a link to the case. US$0: no live AI call.
 import * as React from "react";
 import { Link } from "react-router-dom";
+import { enterCasesAsStaff } from "@/components/frame";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, useAction, useApi } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill } from "@/components/ui/controls";
@@ -77,7 +78,7 @@ function StoryResult({ story, onOpen }: { story: Story; onOpen: () => void }) {
             <td className="py-1.5"><Tooltip><TooltipTrigger asChild><span tabIndex={0} className="rounded-md focus-visible:outline focus-visible:outline-2" aria-label={`${WORD[s.status]}: ${TIP[s.status]}`}><Pill tone={TONE[s.status]}>{WORD[s.status]}</Pill></span></TooltipTrigger><TooltipContent>{TIP[s.status]}</TooltipContent></Tooltip></td>
           </tr>))}</tbody>
       </table>
-      <p>{story.cases?.family ? <Link className="text-text-link underline" to={`/cases/${story.cases.family}`} onClick={onOpen} data-story-open-case>Open the family case</Link> : null}{story.cases?.thin ? <> · <Link className="text-text-link underline" to={`/cases/${story.cases.thin}`} onClick={onOpen}>Open the case left on release 1</Link></> : null}</p>
+      <p>{story.cases?.family ? <Link className="text-text-link underline" to={`/cases/${story.cases.family}`} onClick={(e) => { enterCasesAsStaff(e); onOpen(); }} data-story-open-case>Open the family case (as Case officer)</Link> : null}{story.cases?.thin ? <> · <Link className="text-text-link underline" to={`/cases/${story.cases.thin}`} onClick={(e) => { enterCasesAsStaff(e); onOpen(); }}>Open the case left on release 1 (as Case officer)</Link></> : null}</p>
       <p className="text-text-muted">Loaded in {story.seconds?.toFixed(0)} s.</p>
     </div></TooltipProvider>
   );
