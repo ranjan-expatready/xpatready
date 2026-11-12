@@ -9,13 +9,7 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
 ## Hand-over: Lead 26 (series 2) → Lead 27 (series 2), 16:4x IST 12 Nov — read this first (Lead 25→26 block with Lead 26's live and check lines, word for word: `history/STATE-2026-11-12-1650-lead25s2-to-lead26-block-with-lead26-live.md`)
 **Founder away ~2-3 h from ~16:0x (Remote Control on; mobile push is off in his settings).** Rules as of **P-505** (RULES refreshed). Weekly **42%** at 16:44 (~2%/h; resets 13 Nov 04:30 IST). Paid US$0. P-503 report format: ≤5 decided, 3-4 doing, 1 for him, both tracks. Works on main **92/98** (M2 60/60). gh fails TLS on this Mac: use `tools/gh.sh` for reads, and curl with `gh auth token` for comments, labels and dispatches (`gh workflow run` is not in the fallback). Never call AskUserQuestion while he is away (it blocks the checks).
 1. **Done 21:3x by Lead 27:** D6, D1-D4 answered (P-506), #1649 labelled. Still to offer: the skill wording for P-500/P-502/P-504. Item word for word: `history/STATE-2026-11-12-2145-lead26s2-handover-item1.md`.
-2. **Open, owner → next:**
-   - **#1632 BK-16 PR 2** (forms lane `…SC7J6Z`): (A3) ruled 15:4x; 16:4x **(E1)** for the C1.3 pack failure (`employerFacts` counts only forms the principal files). Then a diff-only Opus re-review, then label.
-   - **#1646** qa re-scores: nightly **43203056454** (C7.3 C8.2 C6.6 C6.5 C7.9, checkpoint, main 5dc5e8e1c) was dispatched 16:1x. qa reads its verdicts; C6.6 still needs gate A.
-   - **#1643 QA-439** (order of a client's parts): (A) ruled 15:2x, with a 4-point Done when.
-   - **#1644 QA-421** labelled; m3 follow-up row after walk 1 (to BACKLOG, owed).
-   - **#1633 A24-1** labelled 15:2x (schema + `case-prepare.ts` batons). #1637 had a records Approve at 24f00c207; qa labels.
-   - **Factory planner** `local_5c470055-…` (local worktree great-hertz-918a5e): its work is done; archive after #1649's label (P-468).
+2. **Open now (Lead 27, 21:5x):** #1632 BK-16 PR 2 labelled, CI · #1649 factory plan queued · #1652 QA-427 labelled · #1643 QA-439 red, builder fixing (card task_a66ae993) · screens chain next: QA-441 → A24-2/A24-3 (go after walk 1 starts) · qa walk 1, D3, spare BK-7 (P-507). Lead 26's list word for word: `history/STATE-2026-11-12-2150-lead26s2-handover-item2-open.md`.
 3. **Owed:** BACKLOG rows (#1632 m1, P-498's, the `flow-measure.py` tooling, the #1644 m3, the employer-link follow-up, the push-guard check for team-app terms after the Bake (P-504)); SI-6 wording; the expert points (D8, A24, the sweep's financial support); night spare lane (P-489 (5)).
 4. **Standbys:** Lead 28 `local_9428eb1b-027d-4d15-84dd-26572828df34` first, then Lead 29 `local_f581db79-88ed-4a5d-a88f-29794a93198b` (started 21:4x IST on the founder's click). Lead 26's check is deleted; Lead 27's is 56b59def. The `qa-…-c8dd7e` worktree ACT is known: clean, pushed, removal refused by the sandbox.
 
