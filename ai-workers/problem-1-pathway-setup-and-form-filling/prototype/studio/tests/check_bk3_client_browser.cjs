@@ -120,9 +120,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
       await p.waitForURL(/\/cases\/[0-9a-f-]{36}$/, { timeout: 30000 });
       const made = await api(`/runtime/cases/${p.url().split("/").pop()}`, { actor: "user-O" });
       step(`${W}: the case opened from Client B's page is Client B's (BR-8)`, made.body?.reference === "BK3C-B2" && made.body?.client === "user-Q", { ref: made.body?.reference, client: made.body?.client });
-      // m1: the existing "Open it as Client A" still switches the person (the one link that does).
-      await p.goto(`${BASE}/cases/${a1.id}`); await p.getByRole("link", { name: /Open it as Client A/ }).click(); await p.waitForURL(/questionnaire$/, { timeout: 15000 });
-      step(`${W}: "Open it as Client A" still acts as Client A (the one link that switches)`, (await actorNow()) === "user-P", await actorNow());
+      // m1: the case page's hand-off to the client still switches the person (BK-4c: "Hand to Client A (simulated)", a
+      // button, replaced the "Open it as Client A" link; the client page's links never switch).
+      await p.goto(`${BASE}/cases/${a1.id}`); await p.locator("[data-handoff=client]").getByRole("button", { name: /^Hand to Client A \(simulated\)/ }).click(); await p.waitForURL(/\/questionnaire(\?|$)/, { timeout: 15000 });
+      step(`${W}: the case page's "Hand to Client A (simulated)" still acts as Client A (the one control that switches)`, (await actorNow()) === "user-P", await actorNow());
     }
 
     // BR-7: an unknown login: "No such client", no read.
