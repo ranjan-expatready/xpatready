@@ -80,6 +80,23 @@ let failed = 0; const ok = (name, pass, detail) => { if (!pass) failed++; consol
 
   // Review M1, M3 and the not-travelling words: the family's Partner, one copy filed (locked) before, then not travelling.
   const partner = sql(`select subject_id from case_participant where case_id='${fam.id}' and role='spouse_or_partner'`);
+  // QA-403 (#1588): the story's copies used to have form fields to write by hand only because the filler could not run
+  // IMM 5476's and IMM 5645's boxes (appoint or cancel, the kind of application); QA-403 fills them from the case
+  // officer's answers. So a kept copy with form fields to write by hand is made on purpose, through the product's routes:
+  // the case officer records words those forms do not name ("withdraw", "visit"), which go by hand (never guessed), and
+  // the Partner's copies of the forms that read them are generated again.
+  const agent = (await call("GET", `/runtime/cases/${fam.id}/questionnaire?mode=agent`)).body;
+  const caseQ = (fact) => agent.sections.flatMap((s) => s.questions.map((q) => ({ ...q, subjectId: s.subjectId }))).find((q) => q.fact === fact && !/\//.test(q.subjectId));
+  for (const [fact, value] of [["case.representative_form_action", "withdraw"], ["case.application_type", "visit"]]) {
+    const q = caseQ(fact); if (!q) continue;
+    const r = await call("PUT", `/runtime/cases/${fam.id}/answers/${q.subjectId}/${fact}`, { value, expectedId: q.answer?.id ?? null });
+    if (r.status >= 300) console.log("note: could not record", fact, r.status, JSON.stringify(r.body).slice(0, 200));
+  }
+  for (const f of (await call("GET", `/runtime/cases/${fam.id}/forms`)).body.forms.filter((x) => x.subject_id === partner && x.applies && ["IMM 5476", "IMM 5645"].includes(x.form))) {
+    const g = await call("POST", `/runtime/cases/${fam.id}/forms/${encodeURIComponent(f.form)}/${partner}/generate`, { idempotencyKey: `qa391-hand-${f.form.replace(/\W/g, "")}` });
+    const until = Date.now() + 60_000; let c;
+    do { await new Promise((z) => setTimeout(z, 300)); c = (await call("GET", `/runtime/form-copies/${g.body?.id}`)).body; } while (Date.now() < until && /QUEUED|RUNNING/.test(c?.status ?? ""));
+  }
   const before = (await call("GET", `/runtime/cases/${fam.id}/forms`)).body.forms.filter((f) => f.subject_id === partner);
   const toLock = before.find((f) => f.copies[0]?.status === "GENERATED" && !f.copies[0].by_hand.length && !f.copies[0].locked);
   const byHand = before.filter((f) => f !== toLock && f.copies[0]?.by_hand.length).map((f) => f.form);
