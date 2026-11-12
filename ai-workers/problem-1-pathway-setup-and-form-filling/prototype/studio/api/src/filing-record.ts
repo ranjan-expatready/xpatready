@@ -31,7 +31,7 @@ export class FilingRecord {
     const ucis = subjects.length ? await this.db.clientCanonicalAnswer.findMany({ where: { subjectId: { in: subjects }, canonicalFieldKey: UCI, supersededById: null, rowKey: null } }) : [];
     const uciOf = new Map(ucis.map((u) => [u.subjectId, typeof u.valueJson === "string" ? u.valueJson : null]));
     return {
-      case_id: c.id, our_reference: c.reference, basis: RULES.basis, number_shape: { words: RULES.applicationNumber.words, example: RULES.applicationNumber.example },
+      case_id: c.id, our_reference: caseName(c), basis: RULES.basis, number_shape: { words: RULES.applicationNumber.words, example: RULES.applicationNumber.example },
       filings: filings.map((f) => ({ id: f.id, person: label.get(f.subjectId) ?? "", application_number: f.applicationNumber,
         applicants: f.applicants.map((a) => ({ subject: a.subjectId, person: label.get(a.subjectId) ?? "", uci: uciOf.get(a.subjectId) ?? null })) })),
       ...(filings.length ? {} : { note: "No filings are worked out yet: open Prepare application first." }),

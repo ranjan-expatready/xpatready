@@ -9,7 +9,7 @@ import { clientPersonOf, withClient, type StoredChange } from "../../engine/runt
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
-import { ConfirmSection, fillsText, Reconfirm, notReadyForCases, releaseLabel, NewCase, type OpenableRelease, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
+import { type CaseListRow, ConfirmSection, fillsText, Reconfirm, notReadyForCases, releaseLabel, NewCase, type OpenableRelease, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView, checkValue, isClientField, OWN_LINK, pqrView, shapeOf, type Answer, type CaseView, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import { ownerOf, privateFrom, progressOf } from "../../engine/runtime/privacy.ts"; // C6.16
@@ -315,7 +315,8 @@ export class Runtime {
       if (!unique(e)) throw e;
       const same = await replay(); // a simultaneous create with the same key won: answer with its case
       if (same) return same;
-      fail("A case with this reference already exists; give the new case its own reference.", HttpStatus.CONFLICT);
+      // Break m1: with no reference given, the clash can only be the case number (the firm's counter behind its cases).
+      fail(b.reference ? "A case with this reference already exists; give the new case its own reference." : "The case could not be given its case number, so nothing was created. Ask the Lead.", HttpStatus.CONFLICT);
     }
     await this.audit.log(workspaceId, actor.id, "opened", "case", id!, `${actor.name} opened case ${short(id!)} on "${combination!.label}" released version ${release!.version} (${release!.sha256.slice(0, 12)}); representative of record ${nameIn(firm!, representative)}, case officers ${officers.map((o) => nameIn(firm!, o)).join(", ")}${stagesWritten.stages > 1 ? `; a stage of a route (${stagesWritten.stages} stages, ${stagesWritten.doneBefore} done before we started)` : ""}`, undefined, b.combinationId);
     return { ...(await this.get(actor, id!)), created: true };
@@ -958,7 +959,7 @@ export class Runtime {
       for (const g of await this.db.filing.groupBy({ by: ["caseId"], where: { caseId: { in: ids }, active: true, stage: { state: "CURRENT" } }, _count: { _all: true } })) filings.set(g.caseId, g._count._all);
     }
     const clientName = (caseId: string) => { const ps = people.get(caseId) ?? [], who = clientPersonOf(ps as Participant[], changes.get(caseId) ?? []); return ps.find((p) => p.subjectId === who)?.label ?? null; };
-    return { cases: page.map((c) => ({ id: c.id, case_number: c.caseNumber, reference: c.reference, combination: c.combination.label, status: c.status, created_at: c.createdAt, client: c.clientActorId,
+    return { cases: page.map((c): CaseListRow => ({ id: c.id, case_number: c.caseNumber, reference: c.reference, combination: c.combination.label, status: c.status, created_at: c.createdAt, client: c.clientActorId,
       client_name: clientName(c.id), filings: filings.get(c.id) ?? 0, ...(client ? { people: (people.get(c.id) ?? []).map((p) => ({ label: p.label, role: p.role })) } : {}) })), next: rows.length > take ? rows[take - 1].id : null };
   }
 }

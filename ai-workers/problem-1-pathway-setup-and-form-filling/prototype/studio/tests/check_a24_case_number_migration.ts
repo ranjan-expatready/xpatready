@@ -76,6 +76,8 @@ try {
   ok("A24-1 CS-7 fail: a case with no number, or one in another shape, is refused",
     refused(`set session_replication_role = replica; insert into runtime_case (id, workspace_id, combination_id, client_actor_id, created_by) values (gen_random_uuid(), '${W}', '${CMB}', 'user-P', 'user-O')`, /case_number/)
     && refused(`set session_replication_role = replica; insert into runtime_case (id, workspace_id, combination_id, client_actor_id, created_by, case_number) values (gen_random_uuid(), '${W}', '${CMB}', 'user-P', 'user-O', 'C-26-1')`, /runtime_case_number_check/));
+  ok("A24-1 CS-7 fail (break m2): one running number has one spelling: a leading zero past 5 digits, or year 0000, is refused",
+    ["C-2026-000031", "C-0000-00001"].every((n) => refused(`set session_replication_role = replica; insert into runtime_case (id, workspace_id, combination_id, client_actor_id, created_by, case_number) values (gen_random_uuid(), '${W}', '${CMB}', 'user-P', 'user-O', '${n}')`, /runtime_case_number_check/)));
   sql(`set session_replication_role = replica; delete from runtime_case where id='${u(90)}'`);
 
   // ---------------------------------------------------------------- one principal per case (CS-1)
@@ -98,6 +100,24 @@ try {
   ok("A24-1 CS-1 pass: deleting a case (a reset) takes its people with it, principal included", (() => { sql(`delete from runtime_case where id='${K[0]}'`); return sql(`select count(*) from case_participant where case_id='${K[0]}'`) === "0"; })());
 } finally {
   execFileSync(join(BIN, "dropdb"), [...pg, "--if-exists", DB]);
+}
+
+// Break m3: a copy holding a case with no principal stops the migration in words (never a 500 later on that case).
+const DB2 = `${DB}_b`, URL2 = `postgresql://xr_studio@127.0.0.1:54329/${DB2}`;
+const psql2 = (args: string[]) => execFileSync(join(BIN, "psql"), [URL2, "-v", "ON_ERROR_STOP=1", "-q", ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+execFileSync(join(BIN, "dropdb"), [...pg, "--if-exists", DB2]);
+execFileSync(join(BIN, "createdb"), [...pg, DB2]);
+try {
+  const all = readdirSync(MIG).filter((d) => /^\d{14}_/.test(d)).sort();
+  for (const d of all.filter((x) => x < NEW)) psql2(["-f", join(MIG, d, "migration.sql")]);
+  const z = "00000000-0000-4000-8000-0000000000a1";
+  psql2(["-c", `set session_replication_role = replica; insert into runtime_case (id, workspace_id, combination_id, reference, client_actor_id, created_by) values ('${z}', '${z}', '${z}', 'NO-PRINCIPAL', 'user-P', 'user-O');`]);
+  let words = "";
+  try { psql2(["-f", join(MIG, NEW, "migration.sql")]); } catch (e) { words = String((e as { stderr?: string }).stderr ?? e); }
+  ok("A24-1 CS-1 fail (break m3): a copy with a case that has no principal stops the migration, saying how many and what to do", /a24_case_number: 1 case\(s\) without exactly one principal; reset the demo/.test(words), words.slice(0, 200));
+  ok("A24-1 CS-1 (data): nothing of the migration is left half done on that copy", psql2(["-Atc", "select count(*) from information_schema.columns where table_name='runtime_case' and column_name='case_number'"]) === "0");
+} finally {
+  execFileSync(join(BIN, "dropdb"), [...pg, "--if-exists", DB2]);
 }
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exitCode = fail ? 1 : 0;

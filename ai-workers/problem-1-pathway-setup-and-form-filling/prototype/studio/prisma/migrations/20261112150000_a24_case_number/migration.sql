@@ -18,6 +18,13 @@
 -- unique index and check go with it); drop function runtime_next_case_number(uuid, text, timestamptz); drop table
 -- firm_case_counter; set runtime_case.reference NOT NULL (only while every case has one).
 
+-- Break m3, first so nothing is half done: every existing case has exactly one principal before the rule is added (the
+-- app always wrote one); a copy where one has none stops here in words, never later as an error on that case's next change.
+DO $$ DECLARE bad integer; BEGIN
+  SELECT count(*) INTO bad FROM runtime_case k WHERE (SELECT count(*) FROM case_participant p WHERE p.case_id = k.id AND p.role = 'principal') <> 1;
+  IF bad > 0 THEN RAISE EXCEPTION 'a24_case_number: % case(s) without exactly one principal; reset the demo (Demo › Reset) or fix them, then start again', bad; END IF;
+END $$;
+
 -- CreateTable
 CREATE TABLE "firm_case_counter" (
     "workspace_id" UUID NOT NULL,
@@ -54,7 +61,7 @@ FROM "runtime_case" GROUP BY 1, 2, 3;
 
 -- Then required, unique per firm, in the agreed shape, and never changed.
 ALTER TABLE "runtime_case" ALTER COLUMN "case_number" SET NOT NULL;
-ALTER TABLE "runtime_case" ADD CONSTRAINT "runtime_case_number_check" CHECK ("case_number" ~ '^C-[0-9]{4}-[0-9]{5,}$');
+ALTER TABLE "runtime_case" ADD CONSTRAINT "runtime_case_number_check" CHECK ("case_number" ~ '^C-[1-9][0-9]{3}-([0-9]{5}|[1-9][0-9]{5,})$');
 CREATE UNIQUE INDEX "runtime_case_workspace_id_firm_key_case_number_key" ON "runtime_case"("workspace_id", "firm_key", "case_number");
 CREATE FUNCTION runtime_case_number_fixed() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN

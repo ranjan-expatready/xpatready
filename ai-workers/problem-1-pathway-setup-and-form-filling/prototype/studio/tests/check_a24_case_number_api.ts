@@ -35,20 +35,26 @@ const empty = await open({ reference: "" });
 const c = await open({ reference: ref("c") });
 ok("A24-1 CS-7 fail: an opening refused (the same reference again: 409; an empty reference: 400 on the field) uses no number: the next case is the next number, no gap",
   dup.status === 409 && empty.status === 400 && empty.body?.errors?.[0]?.field === "reference" && seq(c.body?.case_number) === n0 + 2, [dup.status, empty.status, c.body?.case_number]);
+// Break M1: a reference that looks like a case number is refused on the field, so two cases are never named alike.
+const like = await Promise.all([`C-${YEAR}-00001`, "c-2026-31", " C - 2026 - 00042 "].map((r) => open({ reference: r })));
+const nul = await open({ reference: null });
+ok("A24-1 CS-7 fail (break M1): a reference that looks like a case number (any case, any digits) is refused on the field (400), and uses no number",
+  like.every((r) => r.status === 400 && r.body?.errors?.[0]?.field === "reference" && /cannot look like a case number/.test(words(r))) && seq(nul.body?.case_number) === n0 + 3, [like.map((r) => r.status), words(like[0])]);
+ok("A24-1 CS-7 pass (break m4): an explicit null reference is no reference (201, the next number)", nul.status === 201 && nul.body?.reference === null, [nul.status, words(nul)]);
 const key = `a24-replay-${run}`;
 const d1 = await open({ reference: ref("d"), idempotencyKey: key }), d2 = await open({ reference: ref("d"), idempotencyKey: key });
 const e = await open({ reference: ref("e") });
 ok("A24-1 CS-7 pass: a replay (same idempotency key) answers the same case and number, and takes no new number",
-  d1.status === 201 && d2.body?.created === false && d2.body?.id === d1.body?.id && d2.body?.case_number === d1.body?.case_number && seq(d1.body?.case_number) === n0 + 3 && seq(e.body?.case_number) === n0 + 4, [d1.body?.case_number, d2.body?.case_number, e.body?.case_number]);
+  d1.status === 201 && d2.body?.created === false && d2.body?.id === d1.body?.id && d2.body?.case_number === d1.body?.case_number && seq(d1.body?.case_number) === n0 + 4 && seq(e.body?.case_number) === n0 + 5, [d1.body?.case_number, d2.body?.case_number, e.body?.case_number]);
 
 // ---------------------------------------------------------------- two (twenty) at once (concurrency)
 const many = await Promise.all(Array.from({ length: 20 }, (_, i) => open({ reference: ref(`m${i}`) })));
 const nums = many.map((r) => seq(r.body?.case_number)).sort((x, y) => x - y);
 ok("A24-1 CS-7 pass (concurrent): 20 cases opened at once in one firm all open (201) with 20 different numbers", many.every((r) => r.status === 201) && new Set(nums).size === 20, { statuses: many.map((r) => r.status).filter((s) => s !== 201), nums });
-ok("A24-1 CS-7 pass (concurrent): their numbers follow on with no gap (the 20 after the last one)", nums.every((n, i) => n === n0 + 5 + i), nums);
+ok("A24-1 CS-7 pass (concurrent): their numbers follow on with no gap (the 20 after the last one)", nums.every((n, i) => n === n0 + 6 + i), nums);
 ok("A24-1 CS-7 (data): no two cases of the firm share a number, and the firm's counter stands after the last one",
   sql(`select count(*) from (select case_number from runtime_case group by workspace_id, firm_key, case_number having count(*) > 1) x`) === "0"
-  && sql(`select next_value from firm_case_counter where firm_key = (select firm_key from runtime_case where id='${e.body?.id}') and year=${YEAR}`) === String(n0 + 25));
+  && sql(`select next_value from firm_case_counter where firm_key = (select firm_key from runtime_case where id='${e.body?.id}') and year=${YEAR}`) === String(n0 + 26));
 
 // ---------------------------------------------------------------- each firm counts on its own
 const s1 = await open({ reference: ref("solo") }, solo);
@@ -56,7 +62,7 @@ const soloFirm = sql(`select firm_key from runtime_case where id='${s1.body?.id}
 const soloCount = Number(sql(`select count(*) from runtime_case where firm_key='${soloFirm}' and case_number like 'C-${YEAR}-%'`));
 ok("A24-1 CS-7 pass: another firm (the solo representative's) has its own count: its new case is its own next number, whatever the first firm's", s1.status === 201 && soloFirm !== mainFirm && seq(s1.body?.case_number) === soloCount, [s1.status, s1.body?.case_number, soloCount, words(s1)]);
 const g = await open({ reference: ref("g") });
-ok("A24-1 CS-7 fail: another firm's opening takes none of this firm's numbers: this firm's next case follows its own last one", seq(g.body?.case_number) === n0 + 25, g.body?.case_number);
+ok("A24-1 CS-7 fail: another firm's opening takes none of this firm's numbers: this firm's next case follows its own last one", seq(g.body?.case_number) === n0 + 26, g.body?.case_number);
 
 // ---------------------------------------------------------------- the list: number, client name, filing count (CS-8)
 const fam = await openCase(vv, FAMILY, f.rep ? { representative: f.rep, caseOfficers: [officer] } : undefined, ref("fam"));
@@ -70,6 +76,8 @@ ok("A24-1 CS-8 pass: after Prepare, the list's filing count is the case's filing
   !!p && p.filings.length === FAMILY.length && after?.filings === p.filings.length, [p?.filings.length, after?.filings]);
 ok("A24-1 CS-8 pass: one client's page (client=) still lists the people, with the new fields", (await rowOf(fam.id, `&client=${CLIENT}`))?.people?.length === FAMILY.length && (await rowOf(fam.id, `&client=${CLIENT}`))?.client_name === "Sample Client A");
 const noRef = await rowOf(b.body?.id);
+const rec = await call("GET", `/runtime/cases/${b.body?.id}/filing-record`, undefined, officer);
+ok("A24-1 CS-7 pass (break M2): the filing record names a case without a reference by its case number (our_reference), never null", rec.status === 200 && rec.body?.our_reference === b.body?.case_number, [rec.status, rec.body?.our_reference]);
 ok("A24-1 CS-8 pass: a case opened without a reference lists with its number and no reference", noRef?.case_number === b.body?.case_number && noRef?.reference === null, noRef);
 
 // ---------------------------------------------------------------- one principal per case, Make principal still works (CS-1)
