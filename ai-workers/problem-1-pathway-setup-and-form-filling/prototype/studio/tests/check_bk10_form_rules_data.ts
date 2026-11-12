@@ -26,7 +26,7 @@ try {
   ok("each moved combination keeps its application form, its rules, its rule facts and where its documents come from",
     FORM_SETUP["vv.single"].application === "IMM 5257" && forms("vv.single").join() === "IMM 5257 SCH1,IMM 5409,IMM 5476,IMM 5475,IRM 0002" && FORM_SETUP["vv.single"].documentsFromChecklist === "IMM 5484"
     && FORM_SETUP["wp.lmia_inside"].application === "IMM 5710" && forms("wp.lmia_inside").join() === "IMM 5409,IMM 5476,IMM 5475" && FORM_SETUP["wp.lmia_inside"].documentsFromReviewedRelease === true
-    && FORM_SETUP["sp.outside"].application === "IMM 1294" && forms("sp.outside").join() === "IMM 5646,IMM 5409,IMM 5476,IMM 5475" && FORM_SETUP["sp.outside"].documentsCited?.length === 3
+    && FORM_SETUP["sp.outside"].application === "IMM 1294" && forms("sp.outside").join() === "IMM 5646,IMM 5409,IMM 5476,IMM 5475" && FORM_SETUP["sp.outside"].documentsCited?.length === 5 /* BK-13 step 1 added IMM 5483 items 5 and 7 */
     && FORM_SETUP["sp.outside"].ruleFacts?.map((f) => f.fact).join() === "person.minor_studying_without_parent,case.uses_representative,case.authorizes_release_to_designated_individual"
     && !!FORM_SETUP["vv.single"].family && !!FORM_SETUP["sp.outside"].family && !FORM_SETUP["fs.spouse"].family,
     Object.fromEntries(KEYS.map((k) => [k, forms(k)])));

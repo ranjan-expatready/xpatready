@@ -28,7 +28,11 @@ export type ReadinessInputs = {
   workspaceId: string; caseId: string; filings: string[];
   forms: PreparedForm[];
   /** Documents per person: the derived checklist's lines (required or not), by document type. */
-  documents: { subject: string; person: string; filing: string; item?: string; document_type: string; label: string; required: boolean }[];
+  documents: { subject: string; person: string; filing: string; item?: string; document_type: string; label: string; required: boolean;
+    /** M3-S4 (P-172): the release's line is never waivable (blocks Ready to file until received, whatever its state). */
+    never_waivable?: boolean;
+    /** M3-S4 break M1: a never waivable line that may be needed: the questions it waits for (it blocks until answered). */
+    waiting?: string }[];
   /** The per-form fact result (engine/runtime/forms.ts readiness) and who owes each fact. */
   factsOf: (form: string, subject: string) => Readiness;
   owesFact: (fact: string, subject: string) => Owes;
@@ -145,7 +149,7 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(Read
     });
     const documents: DocumentItem[] = x.documents.filter((d) => d.filing === filing).map((d) => {
       const st = lineState.get(`${d.subject}|${d.document_type}`);
-      return { item: d.item, label: d.label, subject: d.subject, person: d.person, required: d.required && st !== "not_applicable" && st !== "waived", received: !!st && RECEIVED.has(st), owes: "client" };
+      return { item: d.item, label: d.label, subject: d.subject, person: d.person, required: d.required && st !== "not_applicable" && st !== "waived", received: !!st && RECEIVED.has(st), owes: "client", never_waivable: !!d.never_waivable, ...(d.waiting ? { waiting: d.waiting } : {}) };
     });
     const found: Finding[] = findings.filter((g) => g.filingId === filing).map((g) => ({ id: g.id, subject: g.subjectId, form: g.form ?? undefined, severity: (["CRITICAL", "MAJOR", "MINOR", "INFO"].includes(g.severity.toUpperCase()) ? g.severity.toUpperCase() : "INFO") as Finding["severity"], words: g.source === "ai" ? `the AI review (${g.agreement === "low" ? "Low: the two rounds disagree" : "High"}) flags what the form says, “${g.quote}”` : g.quote }));
     // Break B2: a review counts only when it was made by the representative of record now, for the facts as they are now.

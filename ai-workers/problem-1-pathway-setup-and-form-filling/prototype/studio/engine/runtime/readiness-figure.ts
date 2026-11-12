@@ -69,7 +69,8 @@ export function readinessFigure(x: FilingInput, r: FilingReadiness, closed: Clos
   // Challenge m7: a form that cannot start yet (whether it applies waits for an answer) says so in its label.
   const waits = (f: FilingInput["forms"][number]) => f.readiness.missing.some((m) => m.fact.startsWith("applies:"));
   const forms = x.forms.filter((f) => f.channel !== "NOT_NEEDED").map((f) => ({ f, it: add("form", `form|${f.item ?? `${f.subject}|${f.form}`}`, `${f.form} for ${f.person}${waits(f) ? " (whether it applies waits for an answer)" : ""}`) }));
-  const docs = (x.documents ?? []).filter((d) => d.required).map((d) => ({ d, it: add("document", `document|${d.item ?? `${d.subject}|${d.label}`}`, `${d.label} for ${d.person}`) }));
+  // M3-S4 review M1: a never waivable line counts whatever its state (Not applicable before its release said never).
+  const docs = (x.documents ?? []).filter((d) => d.required || d.never_waivable).map((d) => ({ d, it: add("document", `document|${d.item ?? `${d.subject}|${d.label}`}`, `${d.label} for ${d.person}`) }));
   const facts = forms.length ? add("facts", "facts", "The facts the forms read: answered and confirmed") : null;
   const review = add("review", "review", "The representative's review");
   const formOf = (l: Line<string>) => forms.find(({ f }) => (f.item !== undefined ? l.item === f.item : l.key.startsWith(`${l.code}|${f.subject}|${f.form}`)))?.it;
@@ -77,7 +78,7 @@ export function readinessFigure(x: FilingInput, r: FilingReadiness, closed: Clos
   /** The items a line stands on: every line lands on at least one, so a line open means the figure is under 100. */
   const targets = (l: Line<string>): FigureItem[] => {
     if (l.code === "representative_review") return [review];
-    if (l.code === "missing_document") { const d = docOf(l); if (d) return [d]; }
+    if (l.code === "missing_document" || l.code === "document_never_waivable") { const d = docOf(l); if (d) return [d]; }
     const out: FigureItem[] = [];
     const form = l.code === "open_check" ? undefined : formOf(l);
     if (form) out.push(form);

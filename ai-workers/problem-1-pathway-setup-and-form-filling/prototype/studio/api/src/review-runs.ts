@@ -25,11 +25,11 @@ import { join } from "node:path";
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { costUsd } from "../../../p2/ledger.ts";
-import { editionContextKey, printedEditionParts } from "../../engine/rounds.ts";
+import { editionContextKey } from "../../engine/rounds.ts";
 import { formCoverage } from "../../engine/runtime/forms.ts";
 import { formValues, type Inventory } from "../../engine/form-values.ts";
 import { inventoryOf } from "./fill-case.ts";
-import { aiFingerprint, boxWords, choiceWords, findingsFromRounds, reviewSheet, reviewShapeOk, sheetText, stillQuoted, type ReviewAnswer, type ReviewSheet, type ReviewedFinding } from "../../engine/runtime/form-review.ts";
+import { aiFingerprint, boxWords, choiceWords, findingsFromRounds, reviewSheet, reviewShapeOk, reviewSource, sheetText, stillQuoted, type ReviewAnswer, type ReviewFieldMap, type ReviewSheet, type ReviewedFinding } from "../../engine/runtime/form-review.ts";
 import { actorOf, Audit, CaseRead, Db, fail, PROTOTYPE, SOLUTION, VAR_ROOT, type Actor } from "./core.ts";
 import { MODEL, pairOf, roundJob, RUNS, StepRunner, type AiStep, type RoundContext, type RoundOut } from "./rounds.ts";
 import { Runtime, type Reached } from "./runtime.ts";
@@ -65,7 +65,7 @@ export const FORM_REVIEW: AiStep = {
 const USUAL_OUTPUT_TOKENS = 4_000;
 const BYTES_PER_TOKEN = 3.4;
 export const STAND_IN = "SI-6";
-export const STAND_IN_WORDS = "Stand-in SI-6: the AI review runs live on the Visitor visa forms only (one trial); other form families follow one at a time with their own tests. Severities are Sample until the immigration expert confirms them.";
+export const STAND_IN_WORDS = "Stand-in SI-6: severities are Sample until the immigration expert confirms them. Any form the case's release names with its official text can be reviewed; Saved replays only a review recorded for that form edition and these values.";
 export const LIVE_WAITING = "Live is off on this copy. A live review needs approval first, with its cost stated. Use Saved (US$0).";
 export const MADE_UP_WORDS = "Made-up test runs: this isolated test copy reads saved reviews from its own folder of runs a test wrote. Never a real answer; never counted.";
 const SHEETS = join(PROTOTYPE, "p2", "review-sheets");
@@ -125,20 +125,20 @@ export class ReviewRuns {
     for (const form of [...new Set(forms)]) {
       const cov = formCoverage(s, people, answers, rows, form, subject);
       if (!cov || cov.applies === false) fail(`${form} is not one of ${who!.label}'s forms on this case.`, HttpStatus.UNPROCESSABLE_ENTITY);
-      // The edition in use (P-32), as the release's field map prints it: "IMM 5257 (09-2023)".
-      const printed = cov!.edition ?? "", parts = printedEditionParts(printed);
-      if (!parts || parts.code !== form) fail(`${form} has no printed edition in this case's release, so it cannot be reviewed.`, HttpStatus.UNPROCESSABLE_ENTITY);
-      // The form's own text (its official inventory, as the release's field map names it) is read first: the rounds see the
-      // form's instructions and choices beside the answers, and the launcher's screen admits a value the form itself prints.
-      const map = (s.field_maps as { form_number: string; form_edition?: string | null; inventory_file?: string | null; entries: { data_path: string; fact?: string | null }[] }[]).find((m) => m.form_number === form && m.form_edition === printed);
-      const inv = map?.inventory_file && /^prototype\/p1\/inventory\/[a-z0-9._-]+\.inventory\.json$/.test(map.inventory_file) ? inventoryOf(map.inventory_file) : null;
-      const inventory = inv ? (() => { try { return { file: map!.inventory_file!, sha256: sha(readFileSync(join(SOLUTION, map!.inventory_file!))) }; } catch { return null; } })() : null;
+      // BK-14 (lifts SI-6's one form family): the edition in use (P-32), its field map and its official text (the inventory
+      // the map names) come from this case's release alone (engine reviewSource), whatever the form or pathway. The rounds
+      // see the form's instructions and choices beside the answers, and the launcher's screen admits a value the form prints.
+      const found = reviewSource(s.field_maps as ReviewFieldMap[], form, cov!.edition);
+      if (!found.ok) fail(found.why === "no_edition" ? `${form} has no printed edition in this case's release, so it cannot be reviewed.` : `The official text of ${found.printed} is not on this computer, so it cannot be reviewed here.`, HttpStatus.UNPROCESSABLE_ENTITY);
+      const { printed, code, edition, map, inventory_file } = found as Extract<typeof found, { ok: true }>;
+      const inv = inventoryOf(inventory_file);
+      const inventory = inv ? (() => { try { return { file: inventory_file, sha256: sha(readFileSync(join(SOLUTION, inventory_file))) }; } catch { return null; } })() : null;
       if (!inventory) fail(`The official text of ${printed} is not on this computer, so it cannot be reviewed here.`, HttpStatus.UNPROCESSABLE_ENTITY);
       // What each box prints: the filler's own value step (engine/form-values.ts, as a copy writes it), a coded choice
       // shown by its words on the form; never the raw answer (a date split over DD, MM and YYYY reads as each part).
-      const sheet = reviewSheet(printed, printedBoxes(s, map!, inv!, cov!.boxes, subject));
+      const sheet = reviewSheet(printed, printedBoxes(s, map, inv!, cov!.boxes, subject));
       if (!sheet.fields.length) fail(`Nothing is filled on ${form} for ${who!.label} yet: answer and confirm its questions first.`, HttpStatus.UNPROCESSABLE_ENTITY);
-      prepared.push({ form, edition: printed, sheet, ctx: { trail: printed, contextKey: editionContextKey(parts!.code, parts!.edition), inputs: [inventory!, sheetInput(sheet)], mode: "replay", wanted: async () => true } });
+      prepared.push({ form, edition: printed, sheet, ctx: { trail: printed, contextKey: editionContextKey(code, edition), inputs: [inventory!, sheetInput(sheet)], mode: "replay", wanted: async () => true } });
     }
     return { person: who!.label, prepared };
   }
@@ -329,7 +329,7 @@ export function writeSheet(sheet: ReviewSheet): { file: string; sha256: string }
 }
 /** Each box with the value a copy prints in it (engine/form-values.ts, the filler's own step), a coded choice shown by its
  *  words on the form (the inventory's resolved options); a box the filler does not write is not on the sheet. */
-function printedBoxes(s: unknown, map: { entries: { data_path: string; fact?: string | null }[] }, inv: Inventory, boxes: Parameters<typeof formValues>[3], subject: string) {
+export function printedBoxes(s: unknown, map: { entries: { data_path: string; fact?: string | null }[] }, inv: Inventory, boxes: Parameters<typeof formValues>[3], subject: string) {
   const { values } = formValues(s as Parameters<typeof formValues>[0], map, inv, boxes);
   const field = new Map(inv.fields.filter((x) => x.data_path).map((x) => [x.data_path!, x]));
   const typed = new Set(inv.fields.filter((x) => x.data_path && (x.ui === "textEdit" || x.ui === "dateTimeEdit" || x.ui === "numericEdit")).map((x) => x.data_path!));

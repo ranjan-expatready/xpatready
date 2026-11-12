@@ -26,15 +26,15 @@ export const record = (isCheck: boolean, inputs: Input[], edition: { code: strin
   launch_evidence: { template_sha256: tSha(isCheck ? FORM_REVIEW.check : FORM_REVIEW.template) } });
 let stamp = 100;
 /** Writes the draft and checker rounds of one made-up run into the copy's own folder (never p2/runs). */
-export function writeMadeUp(tag: string, inputs: Input[], draft: unknown, check: unknown) {
+export function writeMadeUp(tag: string, inputs: Input[], draft: unknown, check: unknown, ed = { code: "IMM 5257", edition: "09-2023" }) {
   mkdirSync(MADE_UP, { recursive: true });
   const t = `20261108t10${String(stamp++).padStart(4, "0")}000z`;
-  const ed = { code: "IMM 5257", edition: "09-2023" };
   writeFileSync(join(MADE_UP, `${FORM_REVIEW.jobBase}-c75fixture${tag}-live-${t}-c75fix.json`), JSON.stringify(record(false, inputs, ed, draft)));
   writeFileSync(join(MADE_UP, `${FORM_REVIEW.jobBase}-check-c75fixture${tag}-live-${t}-c75fix.json`), JSON.stringify(record(true, inputs, ed, check)));
 }
 export const sheetOf = (plan: Plan) => ({ fields: plan.forms[0].lines });
-export const inputsOf = (plan: Plan): Input[] => [{ file: "prototype/p1/inventory/imm5257e.inventory.json", sha256: createHash("sha256").update(readFileSync(join(PROTOTYPE, "p1", "inventory", "imm5257e.inventory.json"))).digest("hex") }, { file: plan.forms[0].sheet, sha256: plan.forms[0].sheet_sha256 }];
+/** `inventory`: the official text the release's field map names for the plan's form (BK-14: any form; IMM 5257's by default). */
+export const inputsOf = (plan: Plan, inventory = "imm5257e.inventory.json"): Input[] => [{ file: `prototype/p1/inventory/${inventory}`, sha256: createHash("sha256").update(readFileSync(join(PROTOTYPE, "p1", "inventory", inventory))).digest("hex") }, { file: plan.forms[0].sheet, sha256: plan.forms[0].sheet_sha256 }];
 /** Two made-up findings on facts the sheet fills: one both rounds raise (High), one only the first round raises (Low), and
  *  one in the checker round whose quote is not on the form (dropped by the rules). */
 export function answersFor(plan: Plan) {
