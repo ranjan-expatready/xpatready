@@ -78,11 +78,13 @@ export async function answersKey(q: AnswerTables, subjects: string[]) {
 }
 
 /** B152 (FQ-7): what a group is recorded with, from the prepare view the record read: its line totals, its total, the
- *  fee lines of its filings, whether fees were worked out, and when. Read back by api/src/case-prepare.ts and
+ *  fee lines of its filings, whether fees were worked out, when, and each filing's label (BK-17). Read back by api/src/case-prepare.ts and
  *  api/src/case-filings.ts. */
-export function recordedFeesOf(view: { groups: { id: string; totals?: unknown[]; total_cents?: number | null }[]; fees?: { filing: string }[]; fees_worked_out?: boolean; fees_why?: string | null }, groupId: string, filings: string[]) {
+export function recordedFeesOf(view: { groups: { id: string; totals?: unknown[]; total_cents?: number | null }[]; fees?: { filing: string }[]; fees_worked_out?: boolean; fees_why?: string | null; filings?: { id: string; label: string }[] }, groupId: string, filings: string[]) {
   const group = view.groups.find((x) => x.id === groupId);
-  return { at: new Date().toISOString(), totals: group?.totals ?? [], total_cents: group?.total_cents ?? null, fees: (view.fees ?? []).filter((f) => filings.includes(f.filing)), fees_worked_out: view.fees_worked_out ?? true, fees_why: view.fees_why ?? null };
+  // BK-17: and each filing's label as recorded (the document it applies for), read back by keepRecorded (submission-record.ts).
+  return { at: new Date().toISOString(), totals: group?.totals ?? [], total_cents: group?.total_cents ?? null, fees: (view.fees ?? []).filter((f) => filings.includes(f.filing)), fees_worked_out: view.fees_worked_out ?? true, fees_why: view.fees_why ?? null,
+    labels: Object.fromEntries((view.filings ?? []).filter((f) => filings.includes(f.id)).map((f) => [f.id, f.label])) };
 }
 
 @Injectable()
