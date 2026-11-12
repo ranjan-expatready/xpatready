@@ -183,3 +183,64 @@ Journeys walked:
 * A real all-submitted case (m3 is now covered by the rule's pair).
 
 **Verdict: Approve accc77d74.** No open Blocker or Major. m2 and m4 are Should, and the focus-after-retry nit is Could.
+
+## Re-review (merge of main, 23c6d9ab)
+Diff-only (P-277, P-318 (1)). Head `23c6d9abfa4d508bd18afaf2cfc913d40984a0c0`, confirmed with `git rev-parse HEAD`. Its parents are 43226f480 (the PR; notes only since the Approve on accc77d74) and 16f9af51b (`origin/main`). The reviewer did not make the merge. Read only; no app copy started.
+
+### What the resolution did
+* **`git show --remerge-diff`:** one conflict, in `web/src/runtime/cases.tsx`, `CasePage`. The resolution:
+  * removes the three conflict markers;
+  * keeps QA-427's four lines (`toConfirm`, `cardState`, `handToClient`), then QA-417's comment and `confirmTabs`, in that order.
+  * No line was edited or added beyond that. Nothing else differs from a clean merge.
+* **Main's side survives intact.** `git diff 43226f480 23c6d9ab -- cases.tsx` shows exactly what #1640 (QA-417) brought:
+  * the `tabHash, toConfirmByTab` import;
+  * `confirmTabs`;
+  * the `data-household-to-confirm` span;
+  * the `data-household-tabs` line.
+* **The PR's side survives intact.** `git diff origin/main 23c6d9ab -- cases.tsx` shows exactly what QA-427 brought:
+  * the `clientCardState` import;
+  * the `filing` field on `rounds`;
+  * `clientView` and `prep`;
+  * the three derived values;
+  * the client card's state chain.
+  * The PR's other files are unchanged by the merge (`git diff --stat origin/main 23c6d9ab`: the same 12 files as the PR).
+* **The `caseName()` claim, checked.** #1633 (A24-1, merge 92507436d) came in with this merge. It does not touch `cases.tsx`, `client-card.ts` or `questionnaire.tsx`, so it causes no conflict here. The builder's words "there is no `caseName` on main" are inaccurate, though:
+  * `caseName` is on main, at `contracts/runtime.ts:32`;
+  * the API uses it (`case-prepare.ts`, `case-filings.ts`, `case-checklist.ts`, `earlier-facts.ts`).
+  * It is not used in `web/`. The conclusion stands; only the wording of the claim is off (Nit, record only).
+
+### Interactions with what main brought
+* **The same figure, kept in step.** QA-427's `toConfirm` and QA-417's household "N to confirm" are the same expression (`v.summary.answered - v.summary.confirmed`). QA-417's `toConfirmByTab` sums the same sections, so in the "confirm" state:
+  * the client card's "(N to confirm, in the Agent view)" equals the household line's figure;
+  * it also equals the sum of QA-417's per-tab links.
+  * The two cannot disagree.
+* **Hashes do not collide.**
+  * The card's link is `#agent-view`, handled by `CasePage`'s effect.
+  * QA-417's links are `#tab-<subject>`, handled in `AgentView`. Its new branch matches only `^tab-` and returns early; `#agent-view` falls through to the `a-<uuid>` test, which does not match, as before.
+  * The card's `#readiness-h` link is untouched.
+* **Selectors do not overlap.** QA-427's browser check does not read `data-household-*` or the tab labels. QA-417's check does not read `data-client-card*`. The builder's runs on 23c6d9ab: QA-427 17/17 and QA-417 56/56.
+* **Nit: two "to confirm" links in the header.** In the "confirm" state the header now has two:
+  * the household line's per-person links (to each tab);
+  * the client card's "confirm the answers" (to the top of the Agent view).
+  * They are consistent and lead to the same place, one level apart. The PR adds no new scope, and this is not a defect. A later pass could point the card's link at the first tab with something to confirm (`tabHash`).
+* **A24-1's API changes and the card's reads.** `case-prepare.ts` changes only the `reference` it returns (`caseName(c)`). The `filings[].id/status` the card reads are unchanged, and so is the reviews list shape. `useCaseView` is unchanged.
+
+### Builder's results on 23c6d9ab
+The logs are `m-*.log` in the builder's scratchpad, written after the merge (17:25-17:39; merge 17:25:06):
+* `check_qa427_client_card.ts` 15/15;
+* `check_qa427_client_card_browser.cjs` 17/17;
+* `check_qa417_counts_browser.cjs` 56/56;
+* `check_a24_case_number_migration.ts` 28/28;
+* `check_a24_case_number_api.ts` 23/23;
+* `check_a24_record_reference_browser.ts` 5/5;
+* `tsc -p web` exit 0, as the builder reports. There is no tsc log among the `m-*.log` files.
+
+### Journey test (reviewer role)
+Not re-walked: this re-review is read only, with no app copy. The merge changes no QA-427 line or behaviour. The one new neighbour, QA-417's household tab line, agrees with the card's figure (above). **Score carried: 9/10: pass**, as on accc77d74. Most valuable next fix: still m4.
+
+### Not checked
+* The commit and ports the builder's logs ran against. The logs name neither; I rely on the builder's statement of fresh isolated copies on 23c6d9ab.
+* The header's layout with both lines at 400 and 1024 px. No screenshot on the merged head.
+* Full `run-suites`.
+
+Verdict: Approve 23c6d9abfa4d508bd18afaf2cfc913d40984a0c0
