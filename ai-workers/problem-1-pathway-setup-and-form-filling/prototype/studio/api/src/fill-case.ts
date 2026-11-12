@@ -283,8 +283,11 @@ export class CaseForms implements OnModuleInit {
     const keptElsewhere = !current && nameOf && x.status === "GENERATED" && x.snapshot.inputHash === inputHash(today) ? keptOnMacWords(x, nameOf.caseReference, nameOf.of) : null;
     const stored = x.snapshot.factsJson as Stored, then = stored.facts;
     const changed = x.status === "GENERATED" ? [...changedFacts(then, today).map((f) => labels.get(f) ?? f), ...changedGroups(stored.groups, todayGroups)] : [];
-    const result = x.resultJson as { counts?: FormCopy["counts"]; intact?: boolean; person_steps?: string[]; boxes?: { fact: string | null; about_label?: string; result: string; why: string | null }[] } | null;
-    const byHand = (result?.boxes ?? []).filter((b) => b.result === "by hand").map((b) => ({ label: (b.fact && labels.get(b.fact)) || "A form field", why: plainWhy(b.why) }));
+    const result = x.resultJson as { counts?: FormCopy["counts"]; intact?: boolean; person_steps?: string[]; boxes?: { box?: string; fact: string | null; about_label?: string; result: string; why: string | null }[] } | null;
+    // Review m7 on #1620 (QA-415): a fact nobody is asked has no question label: the form's own caption names the box, as
+    // Ready to file does (the copy's frozen rows hold it).
+    const captionOf = new Map((stored.boxes ?? []).map((b) => [b.box, (b.caption ?? "").trim()] as const));
+    const byHand = (result?.boxes ?? []).filter((b) => b.result === "by hand").map((b) => ({ label: (b.fact && labels.get(b.fact)) || captionOf.get(b.box ?? "") || "A form field", why: plainWhy(b.why) }));
     // B81 (challenge M1): apart from "by hand": the form has no such choice to write by hand; it names whose answer it is.
     const notOnForm = notOnFormLines(result?.boxes ?? [], (f) => labels.get(f));
     return { id: x.id, status: x.status as FormCopy["status"], created_at: x.createdAt.toISOString(), created_by: x.createdBy, finished_at: x.finishedAt?.toISOString() ?? null, error: x.error,

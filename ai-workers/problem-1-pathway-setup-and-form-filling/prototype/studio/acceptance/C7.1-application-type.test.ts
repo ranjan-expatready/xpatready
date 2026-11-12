@@ -49,7 +49,7 @@ await main("C7.1 application type", "Each person's type of application, from the
   ok("C7.1-AT-12 fail: the child's forms list no answer to fix for the kind of application (nobody is asked it)", kForms.length > 0 && !kindMissing.some((m) => /fix|problem|Enter text/i.test(`${m.reason} ${m.why}`)), kindMissing);
   const kWait = await readCopy(waitFam, "IMM 5476", k);
   const line = (kWait?.byHand ?? []).find((b) => /waits for an answer/.test(b.why ?? ""));
-  ok("C7.1-AT-11 fail: the child's kind not known yet: their IMM 5476 lists the type of application by hand, naming the question it waits for (nothing written)", !!line && /6 months or more/.test(line.why ?? "") && !at(kWait?.values, APPLICATION), { byHand: kWait?.byHand, written: at(kWait?.values, APPLICATION) });
+  ok("C7.1-AT-11 fail: the child's kind not known yet: their IMM 5476 lists the type of application by hand, named by the form's caption (m7) and naming the question it waits for (nothing written)", !!line && /6 months or more/.test(line.why ?? "") && /^Type of application/.test(line.label ?? "") && !at(kWait?.values, APPLICATION), { byHand: kWait?.byHand, written: at(kWait?.values, APPLICATION) });
 
   const vv = await visitorFamily();
   const adults = ["Sample Client A", "Sample Spouse A"];
