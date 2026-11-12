@@ -26,7 +26,7 @@ let failed = 0; const ok = (n, c, d) => { if (!c) failed++; console.log(`${c ? "
     ok("QA-412 setup: Spouse or common-law partner is released on this copy (the configured checkpoint)", !!spouse);
     if (!spouse) return;
     await sel.selectOption({ label: spouse });
-    await dlg.getByLabel("Case reference").fill(`QA-412-${Date.now().toString(36)}`); await dlg.getByLabel("Principal applicant's name").fill("Sample Principal S");
+    await dlg.getByLabel("Your own reference (optional)").fill(`QA-412-${Date.now().toString(36)}`); await dlg.getByLabel("Principal applicant's name").fill("Sample Principal S");
     await dlg.getByRole("button", { name: /^Open case$/ }).click(); await p.waitForURL(/\/cases\/[0-9a-f-]{36}$/); await p.waitForLoadState("networkidle");
     await p.getByRole("button", { name: /^Add sponsor$/ }).click();
     const add = p.getByRole("dialog"); await add.waitFor(); await add.getByLabel(/^Name/).fill("Sample Sponsor S"); await add.getByRole("button", { name: /^Add$/ }).click();

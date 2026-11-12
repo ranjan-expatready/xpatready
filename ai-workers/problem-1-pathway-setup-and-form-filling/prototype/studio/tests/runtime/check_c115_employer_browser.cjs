@@ -41,7 +41,7 @@ const WORDS = "Not offered: the Visitor visa has no employer facts.";
     await p.getByRole("tooltip").filter({ hasText: "employer-specific work permits" }).first().waitFor({ state: "attached", timeout: 15000 }); // Radix keeps the role=tooltip copy visually hidden for screen readers
     ok("C11.5: the line's tooltip opens from the keyboard (review m1)", true);
     await axe(p, "Open a case with the employer line");
-    await dlg.getByLabel("Case reference").fill(ref);
+    await dlg.getByLabel("Your own reference (optional)").fill(ref);
     await dlg.getByLabel("Principal applicant's name").fill("Client A");
     await dlg.getByRole("button", { name: "Open case" }).click();
     await p.waitForURL(/\/cases\/[0-9a-f-]{36}$/, T);

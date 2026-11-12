@@ -57,7 +57,7 @@ const api = async (method, url, body, actor = "user-O") => { const r = await fet
       if (!label) throw new Error(`no released option starts with ${comboLabel}`);
       await sel.selectOption({ label }, T);
       if ((await sel.locator("option:checked").textContent()).trim() !== label) throw new Error(`the combination picked is not ${label}`);
-      await dlg.getByLabel("Case reference").fill(ref);
+      await dlg.getByLabel("Your own reference (optional)").fill(ref);
       await dlg.getByLabel("Principal applicant's name").fill(NAME);
       await dlg.getByRole("button", { name: "Open case" }).click();
       await p.waitForURL(/\/cases\/[0-9a-f-]{36}$/, T);

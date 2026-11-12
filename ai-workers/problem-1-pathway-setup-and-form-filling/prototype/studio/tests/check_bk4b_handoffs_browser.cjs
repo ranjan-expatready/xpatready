@@ -184,7 +184,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const sel = dlg.getByLabel("Combination (released)");
   step("4. BR-4: lands on the Open a case dialog with the Visitor visa chosen, as the Case officer", await sel.inputValue() === ID && await who() === "user-O", await sel.inputValue());
   await shot("4-open-a-case-dialog-1440");
-  await dlg.getByLabel("Case reference").fill("BK4B-WALK");
+  await dlg.getByLabel("Your own reference (optional)").fill("BK4B-WALK");
   await dlg.getByLabel("Principal applicant's name").fill("Sample Applicant");
   await dlg.getByRole("button", { name: "Open case" }).click();
   await p.waitForURL((u) => /^\/cases\/[0-9a-f-]{36}$/.test(u.pathname), { timeout: 30000 });
