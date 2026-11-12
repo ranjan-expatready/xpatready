@@ -127,3 +127,141 @@ PR-hours overlap (a PR can wait and conflict), so the rows are not added up. The
 **What is not the cause (measured):** runner capacity (wait median 0, 316 jobs, P-489); PR size alone (median 100 lines; small PRs still conflict, 34 of 204 under 200 lines); the queue run itself (42 min).
 
 **H-3: "Approve → label waits are mostly lanes gone quiet after Approve."** Test: for the 34 waits over 3 h, read whether the lane pushed or commented in the gap (lane awake) and whether a baton or Lead read was pending (from STATE history). Cheap, read-only, one Sonnet pass.
+
+---
+
+## 3. Target structure
+
+### In plain words
+Split the one big box into about a dozen rooms, each with a front door. A room is one business area (for example "the shared library" or "filling forms"). Code in one room may call another room only through its front door, never by reaching into its back rooms. Every file stays under 800 lines, as in the team's code. Each room has one owning lane, so two lanes rarely edit the same file. Between the configurator side and the case side sits one agreed hand-over: "what was released". The case side reads only that, so most case changes no longer touch configurator files. We get there by moving code without changing behaviour, one small PR at a time, keeping each move only if collisions fall.
+
+### 3.1 The frameworks, and what each one decides here
+
+| Framework (source) | What it says | What it decides for us |
+|---|---|---|
+| **Domain-Driven Design: bounded contexts and context maps** (E. Evans, *Domain-Driven Design*, 2003; M. Fowler, "BoundedContext", martinfowler.com/bliki/BoundedContext.html) | split a model where the language changes; contexts meet through explicit relationships, e.g. a **Published Language** | the module list in 3.2; the configurator and case delivery meet through the released pack, a versioned contract |
+| **Modular monolith** (Shopify Engineering, "Deconstructing the Monolith", 2019, shopify.engineering; ER v2 ADR "modulith") | one deployable, one database, strongly bounded internal modules with public interfaces; no microservices until a measured need | keep one repository and one app (P-438 stands); add the inner walls |
+| **Team Topologies** (M. Skelton, M. Pais, 2019, teamtopologies.com/key-concepts) and **Conway's law** (M. Conway, "How Do Committees Invent?", 1968) | stream-aligned teams own a slice end to end; a platform team removes friction; structure of the system mirrors who talks to whom | one owner lane per module group (3.4); a platform/enabling lane for CI, structure and tooling |
+| **File-size limit**: ESLint core rule `max-lines` (eslint.org/docs/latest/rules/max-lines); ER v2's own `max-file-lines` = 800, no exceptions | small files reduce the chance two changes meet | **800 lines**, the team's number, so code merges into ER v2 without a reflow |
+| **Import boundaries**: `eslint-plugin-boundaries` (github.com/javierbrea/eslint-plugin-boundaries), used by ER v2 | default deny between modules; allow only public surfaces | the "front door" rule, checked in CI. STANDARDS §1 gate: it is what the team already has, so it passes "prefer what the team already has" |
+| **Change-coupling hot spots** (A. Tornhill, *Your Code as a Crime Scene*, 2015; Nagappan, Murphy, Basili, ICSE 2008, org structure predicts defects) | measure where changes and conflicts concentrate; fix those first | the order of the migration (3.5) comes from section 2's conflict counts, not from taste |
+| **Contract tests** (M. Fowler, "ContractTest", martinfowler.com/bliki/ContractTest.html; consumer-driven contracts, docs.pact.io) | a consumer's expectations of a provider are a test the provider must pass | in-process, with our existing `zod` contracts: a golden released-pack test the configurator must keep green, so the case side can trust it. No Pact server needed (one process) |
+| **Strangler fig, branch by abstraction, parallel change** (Fowler: StranglerFigApplication, BranchByAbstraction, ParallelChange) | move behaviour behind a stable interface in small steps; expand, migrate, contract | every migration step is behaviour-unchanged and green; old paths removed only after callers move |
+| **Self-registering modules** (ER v2 `MULTI-DEVELOPER_WORKFLOW.md` §5.6; NestJS modules, docs.nestjs.com/modules) | each module keeps its own list; the central file only imports modules | ends `main.ts` and `demo.ts` as conflict magnets (`features/checkpoint/` already does this for demo steps) |
+| **Prisma multi-file schema** (Prisma 7: `schema` may point to a folder; ER v2 splits into domain files and checks the layout) | one schema file per domain | `prisma/models/<module>.prisma`; `schema.prisma` (2,300+ lines, 9 conflicts, 38 app PRs) stops being a shared file |
+| **CODEOWNERS** (docs.github.com, "About code owners") | paths name their owners | routing only (which lane holds a module); no new required review, so no gate changes |
+
+### 3.2 Proposed modules, aligned with ER v2
+
+Measured from today's files by name (`module-map.tsv`; 26 small files unmapped, mostly shared UI parts). Lines include `api/src`, `engine`, `web/src`, `contracts`, `samples`.
+
+| Module (folder name) | What it owns | Files / lines today | ER v2 counterpart (Doc 1 §1.1; code folder) | Team spec |
+|---|---|---|---|---|
+| `spine` | programs, structure, combinations, channels, start setup | 36 / 8,104 | Program hierarchy; `spine` | SA-1B ch. 1-3 |
+| `pack-sources` | official sources, finder, source register | 21 / 5,212 | `pack-authoring` | SA-1B, SA-1 |
+| `pack-library` | forms, form parts, field maps, shared fields, document types, rules, answer keys | 115 / 14,834 | `pack-authoring` | SA-1B ch. 4-6 |
+| `pack-questionnaire` | questionnaire design, PQR/SQR drafts | 11 / 2,324 | `pack-authoring` | SA-1B, AG-8 config |
+| `pack-release` | review queue, proposals, change sets, rounds, validate, release, editions | 47 / 9,507 | `pack-authoring` (publish) | SA-1B ch. 7-11 |
+| `case-core` | case, people, stages, links, employer cases, earlier facts | 52 / 7,277 | Case Delivery (none in ER v2 code yet) | AG-7 |
+| `case-questionnaire` | answers, who fills, worked-out values | 10 / 2,270 | Case Delivery · Questionnaire | AG-8 |
+| `case-documents` | case document checklist, uploads, reviews | 13 / 2,733 | Case Delivery · Documents; `documents` | AG-9 |
+| `case-forms` | fill, render, form progress, fill trials, fees | 26 / 4,469 | Case Delivery · Forms | AG-19, AG-7 |
+| `case-submission` | prepare, readiness, filings, signing, filing record | 30 / 5,196 | Case Delivery · Workflow | AG-7 |
+| `ai-gateway` | AI runs, cost gate, ledger links, saved readings | 21 / 3,254 | `rails` (vendor ports) | SA-8 |
+| `platform` | app shell, health, simulated users and firm, workspace | 31 / 3,375 | `tenancy`, `auth`, `authz` (the team's) | SA-2, SA-6, SA-7 |
+| `demo-data` | sample loaders, checkpoint steps | 76 / 4,216 | none (ours only) | |
+
+Folder shape per module, the same in `api/src`, `engine`, `web/src` and `contracts`: `<module>/index.ts` (the front door), `<module>/internal/` (private), one Nest `@Module` per backend module. The three hub files are split by responsibility into the modules above: `studio.ts` (1,284 lines; release, library, spine parts), `validate.ts` and `render.ts` (shared engine pieces become `pack-release` and `case-forms` public functions).
+
+**The one contract between the two sides (Published Language).** `pack-release` publishes a released pack (a versioned snapshot, already pinned per case, STANDARDS §3.7). Case modules read only that snapshot through `contracts/released-pack`, never configurator tables. A golden test (one released Sample pack, checked byte for byte) guards it. **H-5:** "with this contract, the 32% of app PRs that touch both sides fall below 15%." Test: count both-sides app PRs for 2 weeks after step S9 (3.5), against today's 32% (n=301).
+
+### 3.3 Rules, checked in CI (none lowers a gate)
+
+1. **File size**: `max-lines` 800 (physical lines, ER v2's count), error for new and changed files; the 7 files over 800 sit on a shrink-only list that may only get shorter (a *ratchet*), empty by the end of the migration.
+2. **Front doors**: `eslint-plugin-boundaries` default deny across modules; a module imports another only through its `index.ts`; nothing imports `internal/`. Warn first, error after S12.
+3. **Self-registration**: `main.ts` imports modules only; no route defined in it. Sample data per module (`demo-data/<module>/…`), as `features/checkpoint/` already does.
+4. **Merge `main` only on a conflict** (P-270, today unchecked): a check on the PR that flags a merge of `main` which `git merge-tree` shows was conflict-free (62 PRs, ~60 PR-hours in 11 days, section 2).
+5. **Migration stamps** stay (P-348 (8)); with per-module schema files, two PRs editing different modules' models no longer meet in one file.
+
+### 3.4 Lane ownership per module (stream-aligned)
+
+| Lane (stream) | Modules | Share of app PRs that touched these, 2-12 Nov (n=301; a PR can touch several) |
+|---|---|---|
+| Configurator: authoring | `spine`, `pack-sources`, `pack-library`, `pack-questionnaire` | spine 82, sources 56, library 117, questionnaire 32 |
+| Configurator: release | `pack-release` | 120 |
+| Case: people and answers | `case-core`, `case-questionnaire` | 89, 51 |
+| Case: documents | `case-documents` | 28 |
+| Case: forms and filing | `case-forms`, `case-submission` | 89, 63 |
+| Platform / enabling (Team Topologies "platform") | `platform`, `ai-gateway`, CI, structure moves, tooling | 69, 31 |
+
+Five product streams plus one enabling lane. More lanes per stream only for rows that touch different modules inside it (the Lead's existing "independent rows" test, P-462, now checkable from the module map instead of judgement).
+
+### 3.5 Migration path: small PRs, `main` green, every gate kept (P-303, P-309)
+
+Starts after the Bake's tag commit (P-499 (1)). Each step: behaviour unchanged, under ~800 lines of diff, through review and the queue like any PR, its own row. Order follows section 2's measured hot spots.
+
+| Step | What | Why first (measured) | Size guess |
+|---|---|---|---|
+| S0 | Measurement baseline: `conflicts_from_git.py` and `module_span.py` into `tools/`, weekly numbers per file and per module | the keep/undo rule needs a before | 1 PR |
+| S1 | ESLint with `max-lines` 800 (ratchet list of 7) and `boundaries` in **warn** | no behaviour change; makes drift visible | 1 PR |
+| S2 | `main.ts`: routes move into per-module controllers and one `@Module` per module, registered by import | central list: 7 conflicts, 19 app PRs | 2-3 PRs |
+| S3 | `demo.ts` → per-module sample steps (checkpoint pattern) | top conflict file: 16 | 2 PRs |
+| S4 | `schema.prisma` → `prisma/models/<module>.prisma` (Prisma 7 folder schema) | 9 conflicts, 38 app PRs; migrations untouched | 1-2 PRs; Lead reads diff (schema, P-423) |
+| S5 | `case-prepare.ts` → `case-submission` (prepare, filings, fees parts) | 12 conflicts, 40 app PRs | 2 PRs |
+| S6 | `runtime.ts` and `engine/runtime/case.ts` → `case-core` / `case-questionnaire` | 9 + 8 conflicts | 2-3 PRs |
+| S7 | `web/src/runtime/questionnaire.tsx` (1,052) and `cases.tsx` → module folders | 7 + 6 conflicts | 2 PRs |
+| S8 | `studio.ts` (1,284) split by responsibility into `pack-release`, `pack-library`, `spine` | hub in 39 app PRs | 3 PRs |
+| S9 | `contracts/released-pack` + golden test; case modules read only it | 32% of PRs touch both sides | 2-3 PRs |
+| S10 | Remaining files moved into module folders (`git mv`, imports updated) | mechanical | 1 PR per module |
+| S11 | CODEOWNERS per module (routing only) | lane ownership visible | 1 PR |
+| S12 | `boundaries` and `max-lines` to **error**; ratchet list empty | the walls hold | 1 PR |
+
+About 25 PRs (the "~15" in the short answer counts steps; some steps take 2-3 PRs). At today's median 3.25 h per app PR and two lanes (the structure lane and one product lane on the same files, P-438 (2) holder rule), roughly **4-6 working days**; **H-6**, settled by S2's actual time.
+
+### 3.6 How each step is judged: kept only if conflicts fall (P-438 (3))
+
+Conflicts on one file are rare events (0-2 a day), so a 7-day before/after on raw conflicts is too small to read. Two measures, decided before the step starts (pre-registered):
+* **Leading:** *co-edit overlap*: hours in which two open app PRs both changed the moved code (the old file, or its new module). Measured per step for 7 days before and after, from the PR list and `git diff` per PR. Keep the step if overlap per app PR falls by half or more, or if it falls at all and no gate went red.
+* **Lagging, over the whole migration:** conflicted app PRs as a share of app PRs (today **29%**, n=301) and size-matched extra hours (today ~300 PR-hours per 11 days). Target after S12: **under 10%** of app PRs, measured on the next 300 app PRs.
+* A step that makes neither better is reverted by a normal PR (expand/contract makes that cheap).
+
+---
+
+## 4. Delivery system
+
+### In plain words
+A factory is judged by what leaves it finished, how long one item takes, how many items are open at once and how often a finished item comes back. We will read those four every day from tools, on the right sample, and push on the one step that limits output, not on every step at once. Today that step is "a capability done right the first time": about 5.5 app PRs go into each capability qa confirms. Collisions in shared files come second. The platform also has three hard limits (cloud lanes cannot start CI runs, cannot send messages back, and new sessions need your typed turn); each has options below, and the ones that touch permissions are yours.
+
+### 4.1 Flow metrics and targets (each with its sample, P-500)
+
+| Metric (source) | Our measure | Today | Target after S12 + 4.2 |
+|---|---|---|---|
+| Throughput, DORA "deployment frequency" (Forsgren, Humble, Kim, *Accelerate*, 2018; dora.dev) | capabilities reaching Works for the first time per day (qa) | **5.5/day** (2-11 Nov, n=55) | 10/day (the compass), then by section 5 |
+| Lead time for changes, DORA | app PR opened → merged | median 3.25 h, p90 12.3 h (n=301) | median ≤2 h, p90 ≤6 h |
+| Change failure rate, DORA | Works → lower moves per first-time Works; conflicted app PRs | 39/55 (2-12 Nov, incl. the 3-4 Nov re-proof); 29% | ≤15%; ≤10% |
+| Time to restore, DORA | red `main` → green | not measured here (no tool computes it; P-501 names the compass gap) | measure first (S0 adds it) |
+| WIP, Little's law (J. D. C. Little, *Operations Research* 9(3), 1961: L = λW) | open app PRs at once | **7.3** average; throughput 1.17/h × 6.3 h | WIP limit per stream (4.3), so W falls before λ rises |
+| Cycle time by stage | build+review → Approve; Approve → label; label → merged | 0.92 / 0.72 / 1.06 h median (n=131) | Approve → label p90 ≤2 h (from 7.3) |
+| App PRs per Works (first-pass yield) | 301 / 55 | ~5.5 | ≤3 |
+
+### 4.2 The constraint (Theory of Constraints: E. Goldratt, *The Goal*, 1984, five focusing steps)
+
+1. **Identify.** Output is Works, not merges. Merges run at 28/day; Works at 5.5/day. The step that converts one into the other loses most: ~5.5 PRs per capability and 39 re-opens (section 2, cause 1). That is the constraint. *Caveat, labelled:* Works/day is also capped by scope (only 29 M3 rows existed; the Bake adds none, P-447), so part of the gap is "nothing left to confirm". **H-7:** "first-pass yield, not scope, limits Works." Test: in M4, track per row app PRs before its first Works and its re-opens; if a row with a ready brief still needs ≥4 PRs, H-7 holds.
+2. **Exploit (no new money).** Make the first PR of a capability pass qa: qa's pack and journey for the row written **before** the build (acceptance-test-driven development, the pack is the spec), the walk by screens before review (P-352, exists), reviewers reading the pack. Gates unchanged; their order changes.
+3. **Subordinate.** Do not open more rows per stream than qa can verdict the same day (WIP limit = qa verdict capacity per day, read from the last 3 days).
+4. **Elevate.** Only then add lanes: the module walls (section 3) are what make extra lanes add output instead of collisions.
+5. **Repeat.** When yield is fixed, the next constraint by today's numbers is conflicts (cause 2), then the Approve → label wait (cause 3).
+
+### 4.3 Lane topology
+
+Five stream lanes and one enabling lane (3.4), plus qa (one verdict lane per active stream, P-434) and the Lead. WIP per stream: one baton PR on a shared file at a time (P-481 stays until S12), at most two open app PRs per lane. The Lead assigns rows by module from the module map, so "independent rows" (P-462) is a lookup, not a judgement.
+
+### 4.4 What the platform cannot do today, and the options
+
+| Limit (measured or recorded) | Cost today | Options | Risk | Who decides |
+|---|---|---|---|---|
+| **Cloud lanes get 403 on Actions** (P-439): they ask, the Lead dispatches `nightly.yml` | ask → dispatch median 0.64 h, p90 15.3 h (62 asks) | (a) a workflow that runs the row's packs when the lane adds a label (`pull_request: labeled`, e.g. `packs: run`) or comments a fixed command (`issue_comment`), running from `main`'s workflow file; no token widened (b) lanes keep asking (today) | (a) CI minutes; a lane could trigger often. Limit to repository writers and one run per head sha | the Lead (pipeline, P-384); it edits `.github/`, so the Lead reads the diff (P-423). **Not a permission change** |
+| **Cloud lanes cannot message back** (one-way) | relays by hand; quiet lanes found only at the 30-min check | (a) every lane writes a fixed status comment on its PR at each step (exists for questions); a shell check reads them and wakes the Lead only on change (P-436 T2's shell watchdog) (b) the app's own messaging, if it adds replies (outside our control) | (a) none on quality | the Lead |
+| **New sessions start only in your typed turn** (P-348 (5)) | night opens 24 vs 109 by day (11 days); P-489 "cost hours" | (a) warm spare lanes at your last turn, sized to the night's ready rows (P-489 (5), P-499 (3)): no rule change (b) **scheduled cloud routines** that start a briefed lane at set times without a typed turn (the app's "schedule"/routines feature; **H-8**: that a routine can open a builder lane on this repository with today's settings; test: one routine on a docs-only row) (c) keep as is | (b) sessions run with no one watching: money stays off (live AI off in every lane), permissions unchanged, but it changes your P-348 (5) rule | **you** (section 6, D4) |
+| **Session-count caps and the 10-message cap** (recorded 4-9 Nov) | lanes waiting for a click | the same as above, plus fewer, longer-lived lanes per stream (one per module group) | context growth: lanes end at P-446's ~400k | the Lead |
+| **Label refused by the auto-mode classifier for Lead self-labels** (memory, 3-4 Nov) | waits for your named word | records PRs via `records-label.yml` (exists); product PRs labelled by their builder (P-277) | none | the Lead |
