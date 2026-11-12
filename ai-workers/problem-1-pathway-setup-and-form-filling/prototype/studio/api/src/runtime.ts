@@ -990,8 +990,9 @@ function searchWords(v: unknown): string | null {
   if (w.length > 80) fieldError("q", "Search with at most 80 characters.");
   return w || null;
 }
+/** Review m1: "%" and "_" are the database's wildcards; searched for as typed (escaped), never as "any text". */
 const searchWhere = (w: string) => {
-  const has = { contains: w, mode: "insensitive" as const };
+  const has = { contains: w.replace(/[\\%_]/g, "\\$&"), mode: "insensitive" as const };
   return { OR: [{ caseNumber: has }, { reference: has }, { participants: { some: { role: { not: "case" }, subject: { label: has } } } }, { filings: { some: { applicationNumber: has } } }] };
 };
 

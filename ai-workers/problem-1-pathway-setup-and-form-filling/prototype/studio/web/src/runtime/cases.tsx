@@ -108,7 +108,7 @@ function CaseCell({ c }: { c: Pick<CaseRow, "id" | "case_number" | "reference"> 
   );
 }
 /** A24-2: the applications (filings) of the case's current stage; none before the case is prepared. */
-const applicationsOf = (n: number) => n > 0 ? <span className="tabular-nums" data-case-filings={n}>{n}</span> : <span className="text-text-muted" data-case-filings={0} title="Applications appear once the case is prepared">None yet</span>;
+const applicationsOf = (n: number) => n > 0 ? <span className="tabular-nums" data-case-filings={n}>{n}</span> : <span className="text-text-muted" data-case-filings={0}>None yet</span>;
 const SEARCH_HELP = "Case number, your own reference, a person's name or an IRCC application number";
 
 function CaseList() {
@@ -123,9 +123,11 @@ function CaseList() {
   const q = (sp.get("q") ?? "").trim();
   const [typed, setTyped] = React.useState(q);
   // The address changed from outside (the frame's "Cases", Back): the box follows it, so it never shows other words.
-  React.useEffect(() => { setTyped((t) => (t.trim() === q ? t : q)); }, [q]);
+  // Review M1: only then; the search this box itself wrote never resets it, or a key typed meanwhile would be lost.
+  const wrote = React.useRef(q);
+  React.useEffect(() => { if (q !== wrote.current) { wrote.current = q; setTyped(q); } }, [q]);
   React.useEffect(() => {
-    const t = setTimeout(() => setSp((p) => { const n = new URLSearchParams(p), w = typed.trim(); if (w) n.set("q", w); else n.delete("q"); return n; }, { replace: true }), 300);
+    const t = setTimeout(() => { const w = typed.trim(); wrote.current = w; setSp((p) => { const n = new URLSearchParams(p); if (w) n.set("q", w); else n.delete("q"); return n; }, { replace: true }); }, 300);
     return () => clearTimeout(t);
   }, [typed, setSp]);
   const query = q ? `q=${encodeURIComponent(q)}&` : "";
@@ -167,7 +169,7 @@ function CaseList() {
             <td><Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill></td>
             <td className="hidden whitespace-nowrap md:table-cell">{opened(c.created_at)}</td>
           </tr>))}</Table>}
-      {rows.length ? <div className="flex items-center gap-3 text-[13px] text-text-muted"><span>{rows.length} case{rows.length === 1 ? "" : "s"} shown{q ? ` for "${q}"` : ""}</span>{next ? <Button size="sm" variant="secondary" busy={loading} onClick={() => void loadMore()}>Load more</Button> : null}</div> : null}
+      {rows.length ? <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-text-muted"><span role="status" data-case-count>{rows.length} case{rows.length === 1 ? "" : "s"} shown{q ? ` for "${q}"` : ""}</span>{rows.some((c) => !c.filings) ? <span data-none-yet-note>"None yet": a case's applications appear once it is prepared.</span> : null}{next ? <Button size="sm" variant="secondary" busy={loading} onClick={() => void loadMore()}>Load more</Button> : null}</div> : null}
       {open ? <NewCaseDialog close={close} initial={asked} /> : null}
     </div>
   );

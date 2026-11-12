@@ -71,6 +71,8 @@ ok("A24-2 list pass: a prepared case's Applications shows its filings count (as 
   (await row(nRow.case_number).locator("[data-case-filings]").innerText()).trim() === String(nRow.filings), { api: nRow.filings, shown: await row(nRow.case_number).locator("[data-case-filings]").innerText() });
 ok("A24-2 list fail: a case not yet prepared reads \"None yet\", never 0",
   (await row(bRow.case_number).locator("[data-case-filings]").innerText()).trim() === "None yet", await rowText(bRow.case_number));
+ok("A24-2 list (review m2): \"None yet\" is explained on the page, not only on hover, and the count is announced (role=status)",
+  /appear once it is prepared/.test(await p.locator("[data-none-yet-note]").innerText()) && (await p.locator("[data-case-count]").getAttribute("role")) === "status");
 await p.screenshot({ path: join(SHOTS, "01-case-list-1440.png"), fullPage: false });
 await axe("A24-2 list at 1440 px", "main");
 
@@ -100,6 +102,16 @@ ok("A24-2 search pass: the firm's own reference finds its case", shown.length ==
 await searchFor(barePerson);
 shown = await shownRows();
 ok("A24-2 search pass: a person's name finds their case", shown.length === 1 && shown[0] === bRow.case_number, shown);
+// Review M1 (bc2c42f54): typing at a person's pace (about 300 ms a key, the search's own pause) keeps every key, even when
+// the search written for the earlier keys lands while the next one is typed (it lost 4 keys in 60 tries before).
+for (const [n, delay] of [[1, 300], [2, 260], [3, 340]] as const) {
+  await search.fill("");
+  await search.pressSequentially(bRow.case_number, { delay });
+  const landed = await p.waitForURL((u) => u.searchParams.get("q") === bRow.case_number, { timeout: 10_000 }).then(() => true, () => false);
+  const kept = await search.inputValue(), inUrl = new URL(p.url()).searchParams.get("q");
+  ok(`A24-2 search fail-guard (review M1), try ${n}: typed one key every ${delay} ms, the box and the address keep every key`, landed && kept === bRow.case_number && inUrl === bRow.case_number, { kept, inUrl });
+}
+await searchFor(barePerson);
 await p.reload(); await p.locator("tr[data-case-row]").first().waitFor({ timeout: 30_000 });
 ok("A24-2 search: a reload keeps the search (it lives in the address)", (await search.inputValue()) === barePerson && (await shownRows()).join() === bRow.case_number, await search.inputValue());
 await searchFor(`ZZ-none-${run}`);
@@ -115,6 +127,13 @@ const long = await call("GET", `/runtime/cases?q=${"x".repeat(81)}`, undefined, 
 const twice = await call("GET", "/runtime/cases?q=a&q=b", undefined, officer);
 ok("A24-2 search fail (API): a search over 80 characters, or two at once, is refused in words, never read as every case",
   long.status === 400 && /at most 80 characters/.test(JSON.stringify(long.body)) && twice.status === 400 && /one text/.test(JSON.stringify(twice.body)), [long.status, long.body?.detail, twice.status, twice.body?.detail]);
+// Review m1: "%" and "_" are searched as typed, never as the database's "any text" wildcards.
+const wild = await openCase(vv, [{ role: "principal", name: `Sample Wild ${run}`, dob: yearsAgo(30) }], team, `A24%_${run}`);
+const qs = async (w: string) => ((await call("GET", `/runtime/cases?take=100&q=${encodeURIComponent(w)}`, undefined, officer)).body?.cases ?? []).map((c: { id: string }) => c.id);
+const [pct, und, both, digit] = [await qs("%"), await qs("_"), await qs(`%_${run}`), await qs(`${bRow.case_number.slice(0, -1)}_`)];
+ok("A24-2 search pass (review m1): a reference with \"%\" and \"_\" is found by those characters, and only it",
+  pct.length === 1 && pct[0] === wild.id && und.length === 1 && und[0] === wild.id && both.length === 1 && both[0] === wild.id, { pct: pct.length, und: und.length, both: both.length });
+ok("A24-2 search fail (review m1): \"_\" never stands for any one character (C-2026-0000_ finds no case)", digit.length === 0, digit.length);
 const other = f.solo?.users?.[0]?.actor ?? "user-S";
 const otherFirm = await call("GET", `/runtime/cases?q=${encodeURIComponent(bRow.case_number)}`, undefined, other);
 ok("A24-2 search fail (firm scope, C6.11 BR-20): another firm searching this case's number finds none of this firm's cases",
@@ -124,8 +143,9 @@ ok("A24-2 search fail (firm scope, C6.11 BR-20): another firm searching this cas
 const peek1 = (await call("GET", "/runtime/next-case-number", undefined, officer)).body?.case_number;
 const peek2 = (await call("GET", "/runtime/next-case-number", undefined, officer)).body?.case_number;
 const seq = (n: string) => Number(n.split("-")[2]);
+const newest = wild.body?.case_number as string;
 ok("A24-2 next number: it has the case number's shape, follows the newest case and reading it twice gives the same one",
-  CASE_NUMBER.test(peek1 ?? "") && peek1 === peek2 && seq(peek1) === seq(bRow.case_number) + 1, [peek1, peek2, bRow.case_number]);
+  CASE_NUMBER.test(peek1 ?? "") && peek1 === peek2 && seq(peek1) === seq(newest) + 1, [peek1, peek2, newest]);
 const client = await call("GET", "/runtime/next-case-number", undefined, "user-P");
 ok("A24-2 next number fail: a client cannot read it", client.status === 403, client.status);
 
