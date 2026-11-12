@@ -178,3 +178,22 @@ How the old code was run, without editing the checkout: a Node load hook in the 
 No Blocker, no open Major.
 
 Verdict: Approve 78c0ad988a1ec8310852b4c7b196610c930958a1
+
+## Re-review 4 (merge of main, f13a63292)
+
+**Scope:** diff-only (P-277) of the merge `f13a63292` (parents `305e72332`, approved, and main `5dc5e8e1c`, which brought #1612 BK-17). No new screen, so no journey score. **Copy:** `rev4_a24` (4494), started and stopped in the same command, database dropped. US$0, live AI off.
+
+| Check | Result |
+|---|---|
+| `check_bk17_recorded_filing_api.ts 4494 xr_studio_rev4_a24` at `f13a63292` | 26/26 |
+| `check_a24_case_number_api.ts 4494 xr_studio_rev4_a24` at `f13a63292` | 23/23 |
+
+**What was judged:**
+* **Conflict resolution (`api/src/case-filings.ts`).** `git diff 5dc5e8e1c f13a63292` on the file is exactly two lines: the A24-1 `caseName` import, and `reference: c.reference` → `reference: caseName(c)` in the return. Main's BK-17 body (the `applicants: true` include, `keptRowsOf` / `keepRecorded` / `feesOnTheirFilings`, `frozenIn(shown, rows)`) is kept word for word. The `--cc` combined diff agrees: both imports kept, and one `++` line, which is the return.
+* **The merge is main plus A24, and nothing else.** Under `studio/`, `git diff <merge-base> 305e72332` and `git diff 5dc5e8e1c f13a63292` touch the same 18 files with the same +496/−43. Every file's changed lines match, except `case-filings.ts`, where only the context differs (above).
+* **`case-prepare.ts`.** Compared with main, it differs only in A24's three lines: the `caseName` import (`:50`), and `reference: caseName(c)` at `:177` (not derived) and `:718` (derived; the line moved from `:691` because BK-17 added lines above it). BK-17's sync and view changes merged by themselves and touch no reference.
+* **No new raw case reference from main.** `submission.ts` (BK-17 adds `labels` to `recordedFeesOf`) keeps A24's `caseName(c)` at all three audit lines and at both `duplicateWarning` reads (`select { reference, caseNumber }`). `submission-record.ts` uses only `our_reference: rec.ourReference`, which is the filing's own reference and not the case's. `web/` (`sign-in.tsx`, `start.tsx`) has no reference reads. The incoming tests have no `runtime_case` insert, no `$executeRaw`/`$queryRaw`, and no case `.reference` in a payload. The BK-17 checks open cases through `openCase(...)` with a reference. `check_bk4b_handoffs_browser.cjs:185` and `qa/check_qa412_cofiled_sponsor_name.cjs` type a reference into the "Case reference" field, which A24-1 leaves unchanged. Their `our_reference` values are filing references.
+
+**Findings:** none at Blocker, Major or Minor.
+
+Verdict: Approve f13a63292d7fa3a4b2702ceb8fff6e0404327d15
