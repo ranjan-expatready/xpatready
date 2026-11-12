@@ -1267,7 +1267,11 @@ model Case {
   id             String   @id @default(uuid()) @db.Uuid
   workspaceId    String   @map("workspace_id") @db.Uuid
   combinationId  String   @map("combination_id") @db.Uuid
-  reference      String
+  /// A24-1 (P-492, CS-7, AG-7-3): the case number, C-<year opened>-<5-digit running number> (C-2026-00042), per firm and
+  /// year; taken at opening from firm_case_counter by runtime_next_case_number(); never changed (a trigger refuses it).
+  caseNumber     String   @map("case_number")
+  /// The firm's own reference: optional since A24-1 (CS-7), unique within the firm when given.
+  reference      String?
   status         String   @default("OPEN")
   /// The simulated client login that may answer this case's questionnaire (no real sign-in in the prototype).
   clientActorId  String   @map("client_actor_id")
@@ -1315,8 +1319,22 @@ model Case {
   /// nor learns of another firm's cases.
   @@unique([workspaceId, firmKey, idempotencyKey])
   @@unique([workspaceId, firmKey, reference])
+  @@unique([workspaceId, firmKey, caseNumber])
   @@index([workspaceId, createdAt])
   @@map("runtime_case")
+}
+
+/// A24-1 (P-492, CS-7): a firm's next case number for one year (the year in the firm's zone, America/Toronto). Only
+/// runtime_next_case_number() writes it, inside the opening transaction: two openings at once wait on the row and never
+/// share a number, and a refused opening rolls its increment back (no gap). A demo reset clears it with the cases.
+model FirmCaseCounter {
+  workspaceId String @map("workspace_id") @db.Uuid
+  firmKey     String @map("firm_key")
+  year        Int
+  nextValue   Int    @map("next_value")
+
+  @@id([workspaceId, firmKey, year])
+  @@map("firm_case_counter")
 }
 
 /// C6.11 (BR-20, SI-15): who works a case, shaped like the team's AG-07 CaseTeamMember (LEAD_REPRESENTATIVE · OFFICER).
@@ -1540,7 +1558,8 @@ model CaseParticipant {
   workspaceId String  @map("workspace_id") @db.Uuid
   caseId      String  @map("case_id") @db.Uuid
   subjectId   String  @unique @map("subject_id") @db.Uuid
-  /// principal · spouse_or_partner · child · case
+  /// principal · spouse_or_partner · child · case. A24-1 (P-492, CS-1): exactly one principal per case, the case's client
+  /// person, checked by the database at commit (case_participant_one_principal, trg_case_participant_principal).
   role        String
   /// travelling with the application (a combination participant that "applies")
   applies     Boolean @default(true)

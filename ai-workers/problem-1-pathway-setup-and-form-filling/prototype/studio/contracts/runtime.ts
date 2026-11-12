@@ -27,9 +27,18 @@ const text = (missing: string, min: number, max: number) => z.string({ message: 
 /** An idempotency key: visible ASCII only, so it is stored and compared exactly. */
 const idemKey = z.string({ message: "An idempotency key is text." }).trim().min(8, "An idempotency key has at least 8 characters.").max(128, "An idempotency key has at most 128 characters.").regex(/^[\x21-\x7e]+$/, "An idempotency key is letters, digits and punctuation, without spaces.");
 
+/** A24-1 (P-492, CS-7): how words name a case: the firm's own reference when it gave one (optional since A24-1), else its
+ *  case number. Cases opened before A24-1 all have a reference, so their words are unchanged. */
+export const caseName = (c: { reference: string | null; caseNumber: string }): string => c.reference ?? c.caseNumber;
+/** A24-1 (CS-7, AG-7-3): the case number's shape, C-<year opened>-<5-digit running number> (more digits past 99999). */
+export const CASE_NUMBER = /^C-\d{4}-\d{5,}$/;
+
 export const NewCase = z.object({
   combinationId: z.string({ message: "Choose a released combination." }).uuid("Choose a released combination."),
-  reference: text("Give the case a reference of at least 3 characters.", 3, 80),
+  /** The firm's own reference, optional since A24-1 (CS-7): every case gets a case number at opening. Given, it keeps
+   *  its rules (3 to 80 characters, unique within the firm); an empty text is still refused, so today's Open a case
+   *  (which always sends the field) behaves as before until A24-2 makes the field optional on the screen. */
+  reference: text("Give the case a reference of at least 3 characters.", 3, 80).optional(),
   /** The simulated client login that answers the questionnaire. */
   clientActor: text("Name the client who answers the questionnaire.", 1, 40),
   principal: z.object({ displayName: text("Give the principal applicant a display name.", 2, 120) }, { message: "Name the principal applicant." }),
