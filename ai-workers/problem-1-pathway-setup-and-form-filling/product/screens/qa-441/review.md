@@ -92,3 +92,33 @@ A run on main's build (fails by construction, above) · link mode in a browser (
 My `rev-*` shots are in my session scratchpad, not committed.
 
 Verdict: Approve a9dd6eba34f5b5208aa56f3ae05a9848428a3bbc
+
+## Re-review (diff a9dd6eba..64c66e18)
+Diff-only re-review (P-277, P-436 (5)); HEAD confirmed `64c66e18a33c7e88f04f3b5214d8b048ed238862`. I read the code diff (`questionnaire.tsx`, `link-page.tsx`, the check) and the builder's logs. I started no app copy, did not use :4400 and spent nothing. I ran no tsc of my own, because this copy has no `web/node_modules`. The builder's results stand on their logs: `qa441-final` 13/13, `screens_r1` 140/140, `screens_c616` 50/50, `screens_bk4cb` 46/46, all with 0 FAIL and all written after the 17:08 commit.
+
+**m1: fixed.**
+* **Same order in both modes.**
+  * Client: `Sqr` renders `byPerson(view.data)` of the `["runtime","view",id,"sqr",actor]` query. The target is now read on `order(fresh)`, which defaults to `byPerson(fresh).sections`, and `fresh` comes from that same query (`freshKey` prefix `[…,"sqr"]`). So the index `go()` writes is the index `Sqr` resolves after the reload.
+  * Link: `Sqr` renders `byPerson(ownView(v))`. `order` is `byPerson(ownView(fresh))`, and `fresh` is the `["link","view",id]` query, the raw `LinkView` with `own`, so the cast is sound. Same order.
+* **Inserted parts.** A part the save adds is now in `parts`, and as it is not done it is considered.
+* **Removed part.** When the save removes the current part, `findIndex` gives -1, so `start = after - 1` and the first index tried is `after`, the slot where the part stood. All n positions are then tried once, and `i === from` (-1) never matches.
+  * Note only: `after` is the old index. If the same save also inserted or removed parts *before* it, the search starts a slot off. It still finds a not-done part, just possibly not the first one after. This needs two structural changes in one save; not an issue.
+* **The `from` skip.** k runs 1..n, and k = n lands on `from` and is skipped. So every other part is tried once, in order, wrapping round. That matches main's first-pass behaviour (the next part) and the row's wrap.
+* **Empty list.** The loop does not run and the result is null (the overview). There is no modulo by 0.
+* **Fallback when the fresh read is missing.** It uses `view.sections` with the index found there, as before.
+* **The "leave them for now" target.** `setLeaveTo` stores the same fresh-order target, so the button resolves against the reloaded view too.
+* Note B (prefix read after an actor switch) is unchanged and stays a demo-only note.
+
+**Link-page refactor: no behaviour change.** `mine` and `ownView` are the same pure expressions, lifted to module level with `v` passed in. `own` and `shared` are computed exactly as before. The only addition is the `order` prop.
+
+**m2: fixed.** The two `saveAndContinue` waits and step (4)'s wait now record a named FAIL step ("…leaves the part … within 30 s", "…the page settles (no busy button)", "…leaves the part within 15 s"). The one `.catch(() => false)` left is on `summary.isVisible()`, which does not wait, so it is fine.
+
+**m3: fixed.** `partOf` returns null when `count()` is 0, so there is no 30 s auto-wait on the overview. A tiny race is left (the line disappearing between `count()` and `innerText()`), but it would fail loudly through the outer catch, never pass silently.
+
+**m4** (PR body) is with the builder. It is a "ready" gate, not a code finding, so it does not block this commit.
+
+**New issues:** none. The new check does not exercise the removed-part or inserted-part path. That is acceptable: building that state needs a form that starts or stops applying on one save, and the logic above is small and checked by reading.
+
+**Journey score:** unchanged from the first review (no change visible to the user beyond the target in the edge case).
+
+Verdict: Approve 64c66e18a33c7e88f04f3b5214d8b048ed238862
