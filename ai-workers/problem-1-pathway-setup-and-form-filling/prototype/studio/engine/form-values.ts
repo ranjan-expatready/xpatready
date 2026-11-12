@@ -4,7 +4,7 @@
 // snapshot's map and the form's field list (inventory); no database, file, clock or vendor call. Shared by the real
 // fill (writeForm, which then writes the PDF) and the answer-key runner (engine/answer-keys.ts), so a test checks
 // exactly what a fill writes.
-import { runTransform, wordsInSteps } from "../../p5/transforms.ts";
+import { proseRecorded, recordedDerivation, runTransform, wordsInSteps } from "../../p5/transforms.ts";
 import { codeAsksMore, codeForValue, hasCodes, labelForText, notOnFormValue, type ListValue, type OptionMap } from "./options.ts";
 import { byAPerson, inFormFormat } from "./form-steps.ts";
 import type { BoxRow } from "./render.ts";
@@ -17,6 +17,22 @@ export type Inventory = { fields: InventoryBox[]; groups?: unknown[] };
 export type BoxResult = BoxRow & { result: "written" | "by a person" | "not written" | "by hand" | "not on this form" | "blank"; written?: string; why?: string; fix?: string };
 type Entry = { data_path: string; fact?: string | null; transform?: string | null; option_map?: OptionMap | null };
 type Def = { id: string; answer_list?: { values: ListValue[] } };
+
+/** QA-392, QA-392b (C7.3): the Yes/No each "recorded" box of a form stands for, exactly as the PDF copy writes it: the copy's
+ *  own value step's result for that box (`results`, from formValues on the same boxes the copy reads, after
+ *  engine/runtime/forms.ts markNothingRecorded), read back through the box's own yes/no code (`yes_no_code:Y/N`,
+ *  `check_code:…`). Keyed by data path. A box the copy does not write (left to a person, refused, blank, or written by an
+ *  option map with no yes/no code) has none, so nothing is said that the PDF does not say. Pure. */
+export function recordedYesNo(results: BoxResult[]): Map<string, boolean> {
+  const out = new Map<string, boolean>();
+  for (const r of results) {
+    if (r.result !== "written" || r.written === undefined || !(recordedDerivation(r.transform) || proseRecorded(r.transform))) continue;
+    const code = String(r.transform).split(/;|->/).map((x) => /^(?:yes_no_code|check_code):([^/]+)\/(.+)$/.exec(x.trim())).filter(Boolean).pop();
+    if (code && r.written === code[1]) out.set(r.box, true);
+    else if (code && r.written === code[2]) out.set(r.box, false);
+  }
+  return out;
+}
 
 /** B81: what the officer reads of a copy's refused answers: whose they are and why, apart from what is written by hand. */
 export function notOnFormLines(boxes: { fact: string | null; about_label?: string; result: string; why: string | null }[], labelOf: (fact: string) => string | undefined): { label: string; person: string | null; why: string }[] {

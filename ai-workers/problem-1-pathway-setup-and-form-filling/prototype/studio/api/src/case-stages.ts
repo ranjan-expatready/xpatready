@@ -144,19 +144,13 @@ export class CaseStagesService {
     const forms = [...new Set(qv.forms.filter((f) => f.applies !== false).map((f) => f.form))].sort();
     const { known } = knownOf(snap, nextPeople, personAnswers.filter((x) => checkValue(snap, x.field, x.value, today).length === 0), groupRows, today);
     const cl = caseChecklist(snap, (await this.db.combination.findUnique({ where: { id: next.combinationId }, select: { combinationKey: true } }))!.combinationKey, nextPeople, known, today);
-    // A combination whose per-person checklist is not derived yet (samples/fee-table.json "checklist") still names the
-    // documents its release asks for: the base requirements for the roles coming along (Sample lines of the release).
-    const ROLE_WHO: Record<string, string> = { principal: "principal_applicant", spouse_or_partner: "spouse_or_partner", child: "dependent_child" };
-    const comingWho = new Set(nextPeople.filter((x) => x.role !== "case").map((x) => ROLE_WHO[x.role] ?? x.role));
-    const releaseDocs = ((snap.document_requirements ?? []) as { who: string; document_type: string; base_or_conditional: string }[]).filter((d) => d.base_or_conditional === "base" && (comingWho.has(d.who) || d.who === "each_applicant" || d.who === "case")).map((d) => d.document_type);
-    const documents = [...new Set(cl.derived ? cl.people.flatMap((p) => [...p.lines, ...p.waiting].map((l) => l.document.name)) : releaseDocs)].sort();
-    // Review M4 (D1): where the per-person checklist is not worked out for the next combination, the documents are the
-    // ones its release asks for, said so; no checklist line is made.
-    const documentsBasis: "checklist" | "release" = cl.derived ? "checklist" : "release";
+    // M3-S4 (P-425): the next combination's per-person checklist is always worked out from its release.
+    const documents = [...new Set(cl.people.flatMap((p) => [...p.lines, ...p.waiting].map((l) => l.document.name)))].sort();
+    const documentsBasis = "checklist" as const;
     const deadline = nextView.deadline;
     const n = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
     const principal = people.find((p) => p.role === "principal")?.label ?? "the client", who = people.filter((x) => x.comes).length > 1 ? `${principal} and the family` : principal;
-    const head = `${next.staffName} started. ${n(used, `answer about ${who} used`, `answers about ${who} used`)}; ${n(again, "question about this application asked again", "questions about this application asked again")}; ${n(fresh, "new question", "new questions")}; ${n(forms.length, "form", "forms")} added; ${documentsBasis === "checklist" ? `${n(documents.length, "document", "documents")} on the checklist` : `${n(documents.length, "document", "documents")} its release asks for (the per-person checklist is not worked out yet for this combination)`}`, words = `${head}${deadlineWords(deadline)}.`;
+    const head = `${next.staffName} started. ${n(used, `answer about ${who} used`, `answers about ${who} used`)}; ${n(again, "question about this application asked again", "questions about this application asked again")}; ${n(fresh, "new question", "new questions")}; ${n(forms.length, "form", "forms")} added; ${n(documents.length, "document", "documents")} on the checklist`, words = `${head}${deadlineWords(deadline)}.`;
     return { ...base, to: { stage: next.id, name: next.staffName, release_version: st.release.version, release: releaseLabel(st.release) }, refused: null, people,
       counts: { person_answers_used: used, asked_again: again, new_questions: fresh, forms: forms.length, documents: documents.length }, forms, documents, documents_basis: documentsBasis, deadline, unrecorded, words, _head: head,
       _release: { id: st.release.id, packVersionId: st.release.packVersionId, sha256: st.release.sha256, version: st.release.version } };

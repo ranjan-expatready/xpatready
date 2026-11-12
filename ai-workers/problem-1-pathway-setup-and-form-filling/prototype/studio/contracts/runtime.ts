@@ -244,6 +244,9 @@ export type CaseForm = {
   trial_why?: string | null;
   /** The form no longer applies to this person (for example marked not travelling); its copies stay listed (break M4). */
   applies: boolean;
+  /** QA-391 (P-65, C9.5): when `applies` is false, why, in words (the person is not travelling, or the form's own rule
+   *  reads No on the case's answers); its copies are kept and listed, never filed. Null while it applies. */
+  applies_why?: string | null;
   /** P-143: the line's channel; P-145: a form filed Online gets a "Copy, not for filing" (never locked or filed). */
   channel: string; for_filing: boolean;
   /** C-9 (P-144): a barcode form filed by PDF upload or on paper needs a current validated copy before it is filed. */
