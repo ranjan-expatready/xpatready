@@ -121,10 +121,17 @@ try {
   const fig = page.locator(`[data-readiness-filing="${fid}"]`);
   await fig.scrollIntoViewIfNeeded(); await shot(page, "ready-to-file-before");
   await fig.locator("[data-mark-ready]").click();
-  // The submission opens once every filing is Ready to file: the officer presses it on each other filing too.
-  for (let k = 0; k < 4; k++) { const more = page.locator("[data-readiness-filing]:not([data-status=\"ready_to_file\"]) [data-mark-ready]"); if (!(await more.count())) break; await more.first().click(); await w.settle(page, "Ready to file (other filing)"); await page.waitForTimeout(800); }
   await page.locator(`[data-readiness-filing="${fid}"][data-status="ready_to_file"]`).waitFor({ timeout: 15_000 }).catch(() => {});
   await w.settle(page, "after Ready to file");
+  // The submission opens once every filing is Ready to file: the officer presses it on each other filing too (enabled only).
+  for (let k = 0; k < 4; k++) {
+    const more = page.locator("[data-readiness-filing]:not([data-status=\"ready_to_file\"]) [data-mark-ready]:not([disabled])");
+    if (!(await more.count())) break;
+    const id = await more.first().locator("xpath=ancestor::*[@data-readiness-filing][1]").getAttribute("data-readiness-filing");
+    await more.first().click();
+    await page.locator(`[data-readiness-filing="${id}"][data-status="ready_to_file"]`).waitFor({ timeout: 15_000 }).catch(() => {});
+    await w.settle(page, "Ready to file (other filing)"); log("  pressed Ready to file on filing", id);
+  }
   const rtf = await page.locator(`[data-readiness-filing="${fid}"][data-status="ready_to_file"]`).count();
   const refusal = (await fig.locator("[data-refusal]").innerText().catch(() => "")).trim();
   await shot(page, "ready-to-file-pressed");
