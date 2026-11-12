@@ -10,6 +10,7 @@ import { ageOn, deriveFilings, FAMILY_GROUP } from "../../engine/runtime/filings
 import { actorOf, CaseRead, Db, fail, type Actor } from "./core.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 import type { Participant } from "../../engine/runtime/case.ts";
+import { caseName } from "../../contracts/runtime.ts"; // A24-1: the reference, else the case number
 import { feesOnTheirFilings, heldBy, keepRecorded, keptRowsOf } from "./submission-record.ts";
 
 type H = string | undefined;
@@ -52,7 +53,7 @@ export class CaseFilings {
     const frozen = new Set(rows.filter((r) => r.group.recordedFees).map((r) => r.submissionGroupId));
     const placed = kept && d.derived ? feesOnTheirFilings(d.fees, kept.groups, kept.filings, { filing: (l) => l.filing, person: (l) => l.person, frozen: (g) => frozen.has(g), labelOf: (x) => name.get(x) ?? "a person", held: heldBy(keptRows) }) : null;
     const shown = kept && placed && d.derived ? { ...d, filings: kept.filings, groups: placed.groups, fees: placed.lines } as typeof d : d;
-    return { case_id: c.id, reference: c.reference, release_version: pin.release.version, ...frozenIn(shown, rows) };
+    return { case_id: c.id, reference: caseName(c), release_version: pin.release.version, ...frozenIn(shown, rows) };
   }
 }
 

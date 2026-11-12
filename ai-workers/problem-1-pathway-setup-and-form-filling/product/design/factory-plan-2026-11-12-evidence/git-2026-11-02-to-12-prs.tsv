@@ -1,0 +1,659 @@
+pr	merged	class	files	app_files	merges_of_main	conflicted_merges	branch	conflict_files
+1628	2026-11-12T09:55:17Z	app	24	2	0	0	screens-bk5-signin-start	
+1627	2026-11-12T09:36:03Z	records-docs	2	0	0	0	runtime-c613-quarantine	
+1631	2026-11-12T09:35:58Z	records-docs	1	0	0	0	2026-11-12-q420-quarantine	
+1566	2026-11-12T07:02:52Z	app	10	4	2	2	forms-qa395	ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p5/transforms.ts;engine/form-values.ts;engine/render.ts
+1552	2026-11-12T06:51:00Z	tests	9	0	1	1	qa-ux-findings	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/bugs-open-detail.md;tests/qa/README.md
+1591	2026-11-12T06:42:01Z	app	20	9	2	1	forms-bk15	engine/runtime/filings.ts;samples/fee-table.json;tests/check_r2_fee_table.ts
+1589	2026-11-12T06:15:18Z	app	29	5	3	1	screens-bk4c-handoffs	web/src/runtime/cases.tsx
+1614	2026-11-12T06:15:15Z	app	15	8	0	0	eloquent-curie-mrngib	
+1583	2026-11-12T05:57:38Z	app	5	2	3	0	screens-qa401-person-rights	
+1617	2026-11-12T05:09:19Z	records-docs	36	0	0	0	loving-planck-8d8ifo	
+1580	2026-11-12T04:33:10Z	app	33	9	2	2	screens-bk4a-picker	tests/check_bk3_frame.ts;web/src/App.tsx
+1588	2026-11-12T04:11:47Z	app	12	4	1	1	optimistic-noether-qa403	engine/form-values.ts
+1609	2026-11-12T03:19:55Z	tooling	5	0	0	0	forms-gateb-held	
+1569	2026-11-12T03:19:49Z	tests	21	0	2	2	determined-fermi-ezirb0	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md
+1602	2026-11-12T01:27:19Z	app	15	4	0	0	runtime-bk9	
+1582	2026-11-12T01:27:15Z	app	20	6	1	0	ecstatic-gauss-xcq27y	
+1579	2026-11-12T01:06:03Z	tests	48	0	1	1	jolly-brahmagupta-0khsle	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md
+1587	2026-11-12T01:05:59Z	app	8	4	0	0	magical-babbage-z92wte-qa402	
+1570	2026-11-12T01:05:54Z	app	26	3	0	0	awesome-pascal-jyx0lw	
+1563	2026-11-12T01:05:50Z	app	13	4	1	0	forms-qa392b	
+1571	2026-11-12T01:05:46Z	app	43	23	1	1	cool-ritchie-ybny5d	tests/check_b164_no_engine_keys.ts
+1574	2026-11-12T01:05:42Z	app	6	3	0	0	optimistic-noether-kid3v8	
+1557	2026-11-11T23:05:59Z	tests	9	0	6	5	qa-c73-yes-side	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/bugs-open-detail.md;acceptance/C7.3.test.ts;tests/qa/README.md
+1575	2026-11-11T22:49:46Z	records-docs	6	0	0	0	epic-feynman-qiq6u6	
+1573	2026-11-11T22:36:35Z	app	10	4	0	0	magical-babbage-z92wte	
+1576	2026-11-11T22:10:47Z	app	7	4	0	0	zealous-newton-0eo4z6	
+1586	2026-11-11T21:46:51Z	app	8	4	0	0	screens-qa400	
+1567	2026-11-11T21:46:45Z	tooling	3	0	0	0	runtime-b178-gateb	
+1577	2026-11-11T19:39:53Z	tooling	3	0	0	0	2026-11-11-ci-apt-mirror-fallback	
+1581	2026-11-11T19:20:55Z	app	27	3	0	0	ecstatic-franklin-sbhofa	
+1534	2026-11-11T13:49:20Z	app	24	6	0	0	youthful-sagan-ewt0fk	
+1526	2026-11-11T13:31:35Z	tooling	5	0	0	0	runtime-b168-anymac	
+1559	2026-11-11T13:15:41Z	tooling	4	0	0	0	2026-11-11-lead18-checks	
+1543	2026-11-11T13:15:38Z	app	12	2	1	0	funny-mendel-9e71b5	
+1553	2026-11-11T13:15:34Z	app	14	4	1	1	gifted-goldberg-0kwrm3	api/src/case-prepare.ts
+1525	2026-11-11T12:13:08Z	app	16	3	0	0	awesome-keller-i4snlb	
+1545	2026-11-11T10:47:47Z	tooling	522	0	0	0	forms-xfa-engine	
+1537	2026-11-11T10:47:43Z	app	12	6	0	0	inspiring-mccarthy-204gsy	
+1535	2026-11-11T10:32:07Z	app	10	4	0	0	wonderful-pasteur-eeh6k3	
+1529	2026-11-11T10:19:32Z	tests	26	0	1	0	blissful-einstein-tqp817	
+1536	2026-11-11T10:19:27Z	app	7	3	0	0	friendly-euler-lrrofd	
+1533	2026-11-11T10:19:23Z	app	15	8	0	0	cool-brahmagupta-kg7eu9	
+1531	2026-11-11T10:19:19Z	app	10	1	0	0	keen-cannon-njvoi6	
+1530	2026-11-11T09:39:21Z	records-docs	240	0	0	0	laughing-goldberg-lixqo1	
+1532	2026-11-11T09:39:18Z	records-docs	14	0	0	0	upbeat-gates-uyt8vq	
+1524	2026-11-11T08:42:01Z	app	21	15	0	0	runtime-m3s3	
+1528	2026-11-11T08:31:00Z	app	8	1	0	0	awesome-shannon-hgkagd	
+1539	2026-11-11T07:50:28Z	records-docs	1	0	0	0	b170-planner-p470	
+1527	2026-11-11T07:21:48Z	records-docs	1	0	0	0	sleepy-yonath-3186af	
+1519	2026-11-11T06:01:22Z	app	37	17	0	0	dazzling-johnson-j6s8st	
+1513	2026-11-11T05:38:41Z	app	24	18	1	0	runtime-m3s2	
+1518	2026-11-11T05:24:20Z	app	20	7	0	0	amazing-davinci-wvk1b3	
+1506	2026-11-10T21:13:49Z	app	45	29	0	0	gracious-hypatia-0gnyna	
+1507	2026-11-10T20:53:40Z	app	19	7	1	0	modest-feynman-2kwfu2	
+1509	2026-11-10T20:53:35Z	records-docs	39	0	0	0	cool-franklin-cpaz69	
+1502	2026-11-10T20:53:31Z	tooling	3	0	0	0	pipeline-shards	
+1505	2026-11-10T20:37:12Z	app	15	8	0	0	runtime-cofiled-fees	
+1504	2026-11-10T20:23:54Z	tooling	5	0	0	0	pipeline-gate-packs	
+1503	2026-11-10T19:46:06Z	records-docs	12	0	0	0	2026-11-10-records-lead9	
+1510	2026-11-10T19:46:00Z	records-docs	4	0	0	0	relaxed-noether-jpcwmy	
+1501	2026-11-10T19:06:49Z	app	3	1	0	0	runtime-b164-no-keys	
+1499	2026-11-10T16:05:21Z	tests	105	0	1	0	qa-2026-11-10-c75	
+1496	2026-11-10T15:10:02Z	records-docs	7	0	0	0	2026-11-10-c75-paid-de49e801	
+1495	2026-11-10T14:56:22Z	app	1	1	0	0	2026-11-10-c102-paper	
+1492	2026-11-10T10:21:26Z	app	3	1	0	0	epic-hypatia-1f9egu	
+1491	2026-11-10T08:53:43Z	tooling	1	0	0	0	2026-11-10-ci-shard-limit-75	
+1475	2026-11-10T07:55:25Z	records-docs	37	0	1	1	qa-2026-11-10-c65	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/bugs-open-detail.md
+1450	2026-11-10T07:55:20Z	app	23	3	0	0	peaceful-cerf-er4h3s	
+1482	2026-11-10T07:40:34Z	app	10	2	0	0	epic-hypatia-1f9egu	
+1472	2026-11-10T06:32:20Z	tests	114	0	1	1	qa-2026-11-09-c617	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/built/C6.17.md
+1477	2026-11-10T04:36:51Z	app	28	4	0	0	nifty-tesla-878uy6	
+1476	2026-11-10T03:41:59Z	tooling	2	0	0	0	adoring-euler-0trpee	
+1452	2026-11-10T03:41:55Z	tests	92	0	3	3	qa-2026-11-09-c616	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/built/C6.16.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/bugs-open-detail.md
+1478	2026-11-10T02:54:39Z	records-docs	5	0	0	0	fervent-bardeen-1ze7uj	
+1474	2026-11-10T02:27:29Z	tooling	48	0	1	1	2026-11-07-lead31	ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/check-guards.sh
+1459	2026-11-09T23:06:53Z	tests	106	0	3	3	qa-2026-11-09-c83b	ai-workers/problem-1-pathway-setup-and-form-filling/product/history/qa-bugs-closed-2026-11-09.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/bugs-open-detail.md
+1460	2026-11-09T21:38:16Z	tests	28	0	1	1	qa-2026-11-09-c102	ai-workers/problem-1-pathway-setup-and-form-filling/product/history/qa-bugs-closed-2026-11-09.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md
+1262	2026-11-09T21:26:27Z	app	78	38	8	7	exciting-mccarthy-up4u21-b139	api/src/case-checklist.ts;api/src/filing-changes.ts;api/src/review-rounds.ts;api/src/runtime.ts;contracts/runtime.ts;prisma/schema.prisma;web/src/runtime/cases.tsx;web/src/runtime/checklist.tsx
+1465	2026-11-09T21:03:11Z	records-docs	1	0	0	0	qa-2026-11-10-c619-works	
+1456	2026-11-09T20:57:45Z	records-docs	30	0	1	1	qa-2026-11-09-c73	ai-workers/problem-1-pathway-setup-and-form-filling/product/history/qa-bugs-closed-2026-11-09.md
+1464	2026-11-09T20:57:41Z	app	2	1	0	0	c102-qa361-story-phone	
+1453	2026-11-09T20:57:36Z	app	16	4	0	0	determined-planck-ma697t	
+1444	2026-11-09T20:57:32Z	app	18	5	0	0	exciting-curie-lzh93z	
+1455	2026-11-09T18:56:38Z	tests	44	0	1	0	qa-2026-11-09-c619	
+1396	2026-11-09T18:43:33Z	tests	17	0	0	0	c75-paid-result-lead38	
+1435	2026-11-09T17:43:54Z	app	6	1	0	0	focused-carson-1zfyu3	
+1430	2026-11-09T17:43:49Z	app	16	3	0	0	dazzling-hamilton-f9cdyt	
+1441	2026-11-09T17:43:45Z	app	9	3	0	0	serene-cerf-e59blq	
+1440	2026-11-09T17:43:40Z	app	13	9	0	0	determined-gates-eus0k7	
+1446	2026-11-09T16:40:09Z	tests	36	0	1	0	qa-2026-11-09-c78	
+1257	2026-11-09T16:21:04Z	app	48	20	6	5	exciting-mccarthy-up4u21-b138	api/src/case-checklist.ts;api/src/case-documents.ts;api/src/case-feed.ts;api/src/runtime.ts;contracts/runtime.ts;engine/runtime/case.ts;prisma/schema.prisma;web/src/runtime/cases.tsx;web/src/runtime/questionnaire.tsx
+1411	2026-11-09T16:20:58Z	app	4	1	1	0	determined-maxwell-f33ogl	
+1434	2026-11-09T15:13:12Z	tests	59	0	3	3	qa-2026-11-09-c83	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/bugs-open-detail.md
+1437	2026-11-09T14:45:56Z	records-docs	43	0	2	2	qa-2026-11-09-c316	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/bugs-open-detail.md
+1272	2026-11-09T14:22:18Z	app	45	20	3	3	relaxed-cray-2x5cfc	api/src/library-changes.ts;api/src/review-queue.ts;contracts/screen02.ts;web/src/pages/review-items.tsx
+1248	2026-11-09T14:22:13Z	app	42	19	3	2	intelligent-noether-qkzc6a-b141	api/src/case-feed.ts;api/src/case-prepare.ts;engine/runtime/readiness.ts;engine/snapshot.ts;prisma/schema.prisma;web/src/runtime/forms.tsx
+1442	2026-11-09T14:22:09Z	records-docs	23	0	1	1	qa-2026-11-09-c65-ruling	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md
+1431	2026-11-09T14:22:05Z	records-docs	37	0	1	1	qa-2026-11-09-c614	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/bugs-open-detail.md
+1433	2026-11-09T13:11:34Z	tests	35	0	0	0	qa-2026-11-09-c619	
+1432	2026-11-09T13:03:18Z	records-docs	22	0	1	0	qa-2026-11-09-c613	
+1409	2026-11-09T12:32:07Z	tests	2	0	0	0	runtime-qa322-pack-m8	
+1386	2026-11-09T12:32:03Z	app	6	2	6	0	runtime-c65-checked	
+1427	2026-11-09T12:22:20Z	records-docs	1	0	0	0	qa-2026-11-09-c710-status	
+1421	2026-11-09T11:52:40Z	app	4	1	0	0	inspiring-gauss-sq2xjw	
+1247	2026-11-09T11:48:41Z	app	44	16	3	1	intelligent-noether-qkzc6a-b144	api/src/case-prepare.ts;api/src/readiness-inputs.ts;web/src/runtime/cases.tsx;web/src/runtime/readiness.tsx
+1405	2026-11-09T11:48:37Z	tests	2	0	0	0	c65-letter-read-lead39	
+1392	2026-11-09T11:21:56Z	app	37	16	1	1	bold-cerf-dstnrw	api/src/library-changes.ts;api/src/lifecycle.ts;api/src/main.ts;api/src/review-queue.ts;web/src/pages/review-items.tsx
+1420	2026-11-09T11:21:51Z	records-docs	10	0	0	0	qa-2026-11-09-walks2	
+1410	2026-11-09T11:21:46Z	records-docs	24	0	1	0	qa-2026-11-09-rescore10	
+1404	2026-11-09T10:05:51Z	app	12	1	0	0	runtime-qa322-please-check	
+1402	2026-11-09T09:36:38Z	tooling	1	0	0	0	ci-shard-limit-60	
+1394	2026-11-09T09:36:34Z	app	31	4	0	0	runtime-c102-finished	
+1390	2026-11-09T09:36:30Z	app	26	10	1	1	charming-gates-t8f0co	web/src/runtime/questionnaire.tsx
+1401	2026-11-09T08:23:41Z	records-docs	13	0	0	0	qa-2026-11-09-rescore9	
+1393	2026-11-09T07:37:42Z	app	17	5	0	0	magical-hypatia-4sksd7	
+1389	2026-11-09T07:24:39Z	app	23	6	0	0	inspiring-gauss-sq2xjw	
+1282	2026-11-09T07:24:34Z	app	37	16	1	1	runtime-must-verify	api/src/case-prepare.ts;api/src/library-changes.ts;api/src/lifecycle.ts;api/src/main.ts;api/src/review-queue.ts;engine/runtime/readiness.ts;web/src/pages/review-items.tsx
+1375	2026-11-09T06:28:44Z	app	8	5	5	0	runtime-c65-counts	
+1388	2026-11-09T04:46:43Z	records-docs	11	0	0	0	qa-2026-11-09-rescore8	
+1374	2026-11-09T04:46:39Z	app	12	3	2	0	runtime-c65-drawer	
+1378	2026-11-09T03:32:18Z	app	6	3	0	0	pensive-bell-7ko7fb	
+1384	2026-11-09T03:29:53Z	records-docs	14	0	0	0	qa-2026-11-09-rescore7	
+1382	2026-11-09T03:29:50Z	app	6	2	0	0	runtime-qa246-forms-waiting	
+1380	2026-11-08T19:35:40Z	records-docs	28	0	0	0	qa-2026-11-08-rescore6	
+1369	2026-11-08T19:35:36Z	app	21	7	0	0	affectionate-darwin-hhhzii	
+1344	2026-11-08T19:04:33Z	app	9	4	2	1	runtime-b162-copy-before-ready	acceptance/C7.6.test.ts;engine/runtime/readiness.ts
+1368	2026-11-08T19:04:30Z	app	53	11	0	0	determined-maxwell-f33ogl	
+1377	2026-11-08T17:59:10Z	records-docs	20	0	0	0	qa-2026-11-08-rescore5	
+1367	2026-11-08T17:38:35Z	app	22	8	0	0	pensive-bell-7ko7fb	
+1370	2026-11-08T17:38:32Z	app	12	6	0	0	focused-dijkstra-ndvqjn	
+1365	2026-11-08T16:52:44Z	app	12	4	0	0	magical-hypatia-4sksd7	
+1363	2026-11-08T14:09:35Z	tests	3	0	0	0	focused-dijkstra-ndvqjn	
+1362	2026-11-08T13:03:21Z	records-docs	22	0	0	0	qa-2026-11-08-rescore4	
+1318	2026-11-08T12:28:40Z	app	41	15	2	1	focused-dijkstra-ndvqjn	api/src/case-prepare.ts
+1337	2026-11-08T11:34:21Z	tooling	8	0	0	0	busy-bell-jkramr	
+1357	2026-11-08T10:39:54Z	records-docs	7	0	0	0	qa-2026-11-08-c69-unhold	
+1353	2026-11-08T10:22:33Z	records-docs	6	0	0	0	qa-2026-11-08-c77-retest	
+1348	2026-11-08T10:07:02Z	tests	3	0	0	0	runtime-qa312-c69	
+1352	2026-11-08T10:06:59Z	records-docs	17	0	0	0	qa-2026-11-08-rescore3	
+1349	2026-11-08T09:47:14Z	records-docs	11	0	0	0	qa-2026-11-08-c69-hold	
+1330	2026-11-08T09:42:00Z	app	32	11	2	0	funny-faraday-d3ut5i	
+1345	2026-11-08T09:00:29Z	records-docs	3	0	0	0	2026-11-08-local-lane-alarm	
+1325	2026-11-08T08:50:04Z	records-docs	6	0	0	0	qa-2026-11-08-c77-gaps	
+1322	2026-11-08T08:50:01Z	records-docs	5	0	0	0	qa-2026-11-08-c92-breadth	
+1340	2026-11-08T08:07:37Z	app	10	1	0	0	runtime-b161-pen-steps	
+1331	2026-11-08T07:23:36Z	app	6	4	0	0	runtime-br9-hand-write	
+1334	2026-11-08T06:35:53Z	tests	5	0	0	0	runtime-c76-pen	
+1328	2026-11-08T06:22:59Z	records-docs	2	0	0	0	runtime-g25-check-if	
+1323	2026-11-08T05:43:44Z	tooling	14	0	0	0	busy-bell-jkramr	
+1327	2026-11-08T05:37:26Z	tests	3	0	0	0	hopeful-knuth-gq0p04	
+1242	2026-11-08T05:04:22Z	app	33	13	2	1	intelligent-noether-qkzc6a	api/src/runtime.ts;contracts/runtime.ts;engine/runtime/case.ts;prisma/schema.prisma;tests/runtime/check_runtime_r1c.cjs;web/src/runtime/cases.tsx;web/src/runtime/questionnaire.tsx
+1317	2026-11-08T04:36:39Z	tests	7	0	0	0	affectionate-babbage-g4v02e	
+1320	2026-11-08T03:38:27Z	records-docs	29	0	0	0	qa-2026-11-08-rescore-batch2	
+1313	2026-11-08T03:28:23Z	records-docs	27	0	2	0	qa-2026-11-08-c64-gate-a	
+1312	2026-11-08T03:08:31Z	tests	24	0	0	0	qa-2026-11-08-m3-rescore	
+1314	2026-11-08T00:59:07Z	tests	1	0	0	0	eloquent-thompson-u761l3	
+1251	2026-11-07T23:21:48Z	app	45	14	2	1	eloquent-thompson-u761l3	ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/B124/walk/1-none-confirmed-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/B124/walk/2-some-confirmed-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/B124/walk/3-some-confirmed-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/B124/walk/4-all-confirmed-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/B124/walk/5-all-confirmed-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/01-empty-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/01-empty-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/02-possibly-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/02-possibly-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/03-out-of-date-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/03-out-of-date-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/04-run-again-reason-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/04-run-again-reason-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/05-needs-review-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/05-needs-review-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/06-override-drawer-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/06-override-drawer-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/07-review-drawer-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/07-review-drawer-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/08-reviewed-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/08-reviewed-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/09-history-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/09-history-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C6.9/screenshots/10-zoom-200.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-01-not-ready-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-01-not-ready-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-02-ready-refused-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-02-ready-refused-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-03-pass-without-reason-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-03-pass-without-reason-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-04-ready-refused-stale-tab-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-04-ready-refused-stale-tab-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-05-warnings-passed-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-05-warnings-passed-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-06-review-open-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-06-review-open-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-07-reviewed-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-07-reviewed-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-08-ready-to-file-1024.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/C7.6/screenshots/B2-08-ready-to-file-1440.png;acceptance/C7.3.test.ts;api/src/case-prepare.ts;contracts/runtime.ts;engine/runtime/answer-sheet.ts;engine/runtime/case.ts;engine/runtime/readiness.ts;web/src/runtime/questionnaire.tsx
+1252	2026-11-07T22:36:05Z	app	57	23	4	3	exciting-mccarthy-up4u21	api/src/case-checklist.ts;api/src/runtime.ts;engine/runtime/readiness.ts
+1222	2026-11-07T22:30:09Z	app	54	10	2	1	gracious-bardeen-j1ieoh	engine/runtime/case-checklist.ts;web/src/runtime/checklist.tsx
+1246	2026-11-07T21:16:53Z	app	31	9	3	2	youthful-planck-mf99ql	api/src/runtime.ts;contracts/runtime.ts;engine/runtime/case.ts
+1268	2026-11-07T20:47:05Z	app	40	22	3	2	festive-hawking-1m5f2a	api/src/library-changes.ts;api/src/main.ts
+1290	2026-11-07T20:36:18Z	app	6	2	2	0	screens-b130-printed-copy	
+1304	2026-11-07T19:19:37Z	records-docs	1	0	0	0	2026-11-08-hot-list-clear	
+1270	2026-11-07T19:19:33Z	tooling	6	0	0	0	trusting-maxwell-uex4tn-b134	
+1256	2026-11-07T18:58:43Z	app	19	6	1	1	serene-euler-8fnhka	engine/runtime/case.ts
+1278	2026-11-07T18:58:40Z	app	11	6	2	0	screens-b132-paper-pen	
+1300	2026-11-07T18:22:50Z	records-docs	7	0	0	0	qa-2026-11-08-c69page	
+1301	2026-11-07T18:22:46Z	records-docs	2	0	0	0	qa-2026-11-08-qa-focus	
+1298	2026-11-07T18:16:54Z	records-docs	4	0	0	0	qa-2026-11-07-c69r	
+1255	2026-11-07T18:02:19Z	app	27	1	1	0	c69-scorecard-2026-11-07	
+1295	2026-11-07T17:33:08Z	app	10	1	0	0	screens-b151-unpriced	
+1289	2026-11-07T17:14:13Z	tests	12	0	0	0	trusting-maxwell-uex4tn-b160	
+1279	2026-11-07T16:44:03Z	app	9	5	0	0	screens-b152-frozen	
+1236	2026-11-07T16:35:56Z	records-docs	2	0	0	0	trusting-maxwell-uex4tn-b78	
+1285	2026-11-07T16:35:07Z	tests	5	0	0	0	zen-fermi-poiqv8-c116	
+1283	2026-11-07T16:35:04Z	tests	5	0	0	0	zen-fermi-poiqv8-c92	
+1231	2026-11-07T16:35:00Z	app	37	16	2	1	zealous-goldberg-v9utnh	engine/runtime/case.ts
+1261	2026-11-07T16:34:57Z	app	47	9	0	0	screens-b149-receipt	
+1274	2026-11-07T16:34:53Z	app	6	2	0	0	screens-b133-basis	
+1275	2026-11-07T16:34:49Z	app	4	1	0	0	screens-b129-recorded	
+1250	2026-11-07T15:59:01Z	app	74	7	0	0	gallant-lamport-cj0epp	
+1249	2026-11-07T15:58:57Z	tests	8	0	1	0	zen-fermi-poiqv8	
+1054	2026-11-07T14:00:55Z	app	36	19	3	2	elegant-hawking-qc3qjh	api/src/question-condition.ts;api/src/runtime.ts;engine/runtime/case.ts;web/src/runtime/questionnaire.tsx
+1240	2026-11-07T13:06:22Z	records-docs	18	0	1	1	2026-11-07-lead30	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md
+1264	2026-11-07T12:58:17Z	records-docs	6	0	0	0	qa-2026-11-07-c76	
+1075	2026-11-07T12:54:50Z	app	14	4	1	1	eloquent-volta-l2h9rj	api/src/case-prepare.ts;engine/runtime/answer-sheet.ts
+1258	2026-11-07T11:52:00Z	tooling	3	0	1	0	m3-scorecard-skills-2026-11-07	
+1245	2026-11-07T11:38:52Z	records-docs	1	0	0	0	m3-study-2026-11-07	
+1241	2026-11-07T11:28:44Z	records-docs	6	0	0	0	qa-2026-11-07-lsa6	
+1233	2026-11-07T11:20:50Z	app	28	2	0	0	hopeful-faraday-hqhzg9	
+1221	2026-11-07T11:01:13Z	app	32	4	1	0	blissful-rubin-fn9ymy	
+1238	2026-11-07T11:01:10Z	records-docs	12	0	0	0	qa-2026-11-07-c69-c82-works	
+1237	2026-11-07T10:55:55Z	tooling	2	0	0	0	admiring-cray-9nku87	
+1232	2026-11-07T10:55:52Z	tooling	7	0	0	0	trusting-maxwell-uex4tn	
+1226	2026-11-07T10:39:14Z	tests	16	0	2	0	qa-2026-11-07-c81-qa235-qa153	
+1223	2026-11-07T10:39:10Z	app	6	2	1	0	bold-curie-qolyno	
+1225	2026-11-07T10:20:54Z	app	34	3	0	0	zealous-ritchie-ris2kn	
+1224	2026-11-07T10:03:15Z	app	8	3	0	0	stoic-archimedes-44w8sl	
+1229	2026-11-07T09:48:42Z	records-docs	7	0	0	0	2026-11-07-lead29	
+1212	2026-11-07T09:27:30Z	app	6	3	0	0	b126-qa295-prepared-by	
+1197	2026-11-07T09:27:26Z	app	16	4	0	0	screens-b124-unconfirmed	
+1198	2026-11-07T08:19:11Z	app	72	4	1	0	blissful-mccarthy-5b5t13	
+1215	2026-11-07T06:53:40Z	records-docs	14	0	0	0	2026-11-07-switch	
+1216	2026-11-07T06:50:57Z	records-docs	10	0	0	0	qa-2026-11-07-c611	
+1188	2026-11-07T06:21:51Z	tooling	1	0	0	0	optimistic-einstein-vnsfck	
+1208	2026-11-07T06:21:48Z	records-docs	6	0	0	0	2026-11-07-lead26	
+1199	2026-11-07T06:21:44Z	tests	16	0	1	1	qa-2026-11-07-c69-c82	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/GRAPH.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/bugs-open-detail.md
+1201	2026-11-07T06:11:10Z	app	7	3	3	0	festive-ptolemy-svx0h4	
+1204	2026-11-07T06:04:33Z	app	6	2	0	0	qa293-representative-answers	
+1202	2026-11-07T05:01:00Z	tooling	3	0	0	0	wonderful-hopper-imruv7	
+1180	2026-11-07T05:00:57Z	tests	2	0	1	0	intelligent-euler-rwnbxv	
+1128	2026-11-07T04:20:37Z	tooling	33	0	2	1	2026-11-05-lead14b	.claude/skills/lead/SKILL.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/push-guard.sh
+1196	2026-11-07T04:20:33Z	records-docs	6	0	0	0	qa-2026-11-07-c64	
+1145	2026-11-07T03:48:45Z	tooling	5	0	1	1	pensive-clarke-d97ekz	.github/workflows/ci.yml;ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/run-suites.sh
+1149	2026-11-07T03:48:42Z	tests	11	0	1	1	laughing-bardeen-bsp1va	ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/select-suites.mjs
+1148	2026-11-07T03:47:20Z	app	7	1	1	1	amazing-goldberg-yfcnvc	api/src/runtime.ts
+1084	2026-11-07T03:13:02Z	app	100	4	3	2	optimistic-newton-oblygl	api/src/demo.ts
+1172	2026-11-07T03:12:58Z	app	22	4	0	0	funny-gates-pgthb4	
+1073	2026-11-07T03:10:36Z	app	24	7	1	1	festive-hypatia-f3vcuy	api/src/demo.ts;tests/check_stand_ins.ts;web/src/runtime/cases.tsx
+1072	2026-11-07T03:10:33Z	app	29	9	3	2	busy-rubin-1sjrry	api/src/demo.ts;api/src/runtime.ts
+1167	2026-11-06T18:30:55Z	records-docs	2	0	0	0	plan-m3-sprint-cd84b8	
+1147	2026-11-06T18:25:19Z	tooling	2	0	1	0	optimistic-einstein-vnsfck	
+1184	2026-11-06T18:21:05Z	records-docs	8	0	0	0	qa-2026-11-06-b120-walk	
+1171	2026-11-06T17:52:48Z	app	21	2	0	0	sweet-knuth-ap2gza	
+1158	2026-11-06T17:47:11Z	app	67	47	2	1	modest-darwin-1omjpl	api/src/demo.ts
+1136	2026-11-06T17:23:46Z	tooling	29	0	1	1	magical-wozniak-i1qy92	.claude/skills/lead/SKILL.md;.claude/skills/next/SKILL.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/WAY-OF-WORKING.md
+1168	2026-11-06T17:23:42Z	tooling	3	0	0	0	festive-fermat-t7zw1z	
+1178	2026-11-06T17:23:38Z	records-docs	1	0	0	0	quarantine-b78-hang	
+1174	2026-11-06T16:35:16Z	tooling	2	0	0	0	push-guard-remote-only	
+1162	2026-11-06T12:33:46Z	records-docs	1	0	0	0	qa-2026-11-06-c101-held	
+1139	2026-11-06T12:28:50Z	tooling	13	0	0	0	festive-fermat-t7zw1z	
+1161	2026-11-06T07:01:27Z	records-docs	11	0	1	0	qa-2026-11-06-c101-final	
+1157	2026-11-06T06:43:10Z	records-docs	1	0	0	0	qa-2026-11-06-rep-facts	
+1156	2026-11-06T06:38:39Z	app	14	7	0	0	forms-qa285-validated-files	
+1154	2026-11-06T04:49:51Z	records-docs	13	0	0	0	qa-2026-11-06-c101	
+1151	2026-11-06T04:26:30Z	records-docs	15	0	0	0	qa-2026-11-06-qa271	
+1123	2026-11-06T04:14:29Z	app	23	10	3	0	forms-b99-validated-copies	
+1131	2026-11-06T02:29:20Z	app	12	3	0	0	b115-sponsor	
+1144	2026-11-06T00:28:25Z	tests	12	0	0	0	qa-2026-11-06-c46-walk	
+1052	2026-11-05T23:39:52Z	app	24	5	2	1	blissful-lamport-bazwku	acceptance/lib/pack2.ts;api/src/demo.ts;api/src/form-part-placements.ts;api/src/form-setup.ts;samples/form-setup.json
+1134	2026-11-05T23:13:30Z	app	10	2	0	0	forms-qa270-file-route	
+1125	2026-11-05T23:13:26Z	app	12	3	0	0	runtime-qa272-status-list	
+1133	2026-11-05T21:30:55Z	tests	13	0	0	0	qa-2026-11-06-m2-walk-c8dd7e	
+1112	2026-11-05T20:23:29Z	records-docs	58	0	0	0	qa-2026-11-05-gate-a-3e7f5b	
+1068	2026-11-05T19:46:55Z	app	38	14	5	3	loving-pascal-do4fvf	api/src/form-field-condition.ts;api/src/form-setup.ts;api/src/own-yes-no.ts;api/src/review-queue.ts;tests/lib/forms-b86-setup.ts;web/src/components/form-field-conditions.tsx;web/src/pages/review-items.tsx;web/src/pages/review.tsx
+1115	2026-11-05T19:46:51Z	app	11	1	0	0	forms-b114-condition-fields	
+1121	2026-11-05T19:46:47Z	app	2	1	0	0	open-case-wait	
+1114	2026-11-05T19:46:42Z	app	8	1	0	0	screens-fill-guard	
+1116	2026-11-05T17:51:33Z	tests	1	0	0	0	c51-pack-own-subject	
+1053	2026-11-05T17:51:28Z	app	41	25	6	2	b86-conditions-box	api/src/impact.ts;api/src/review-queue.ts;web/src/pages/review.tsx
+1036	2026-11-05T17:51:24Z	app	42	22	2	1	forms-b83-own-question-screen	web/src/pages/workspace/questionnaires.tsx
+1050	2026-11-05T17:15:59Z	app	15	5	3	2	epic-heisenberg-dkr5mu	api/src/demo.ts;engine/channels.ts;tests/check_c10_1_configured.ts
+1085	2026-11-05T17:15:53Z	app	12	3	1	1	forms-b97-release-two	api/src/demo.ts;tests/check_qa144_vv_release.ts
+1062	2026-11-05T17:13:13Z	app	36	10	2	1	screens-b78-section-names	api/src/form-part-placements.ts
+1110	2026-11-05T14:11:19Z	records-docs	4	0	1	0	2026-11-05-lead14	
+1108	2026-11-05T12:38:30Z	records-docs	1	0	0	0	2026-11-05-lead13c	
+1105	2026-11-05T11:49:10Z	records-docs	6	0	0	0	qa-records-b33-2026-11-05	
+1097	2026-11-05T11:45:28Z	records-docs	1	0	1	0	2026-11-05-guard-pipefail	
+1104	2026-11-05T11:45:23Z	records-docs	4	0	1	0	2026-11-05-lead13b	
+1100	2026-11-05T10:37:02Z	app	9	3	0	0	forms-b112-merge-supplies-about	
+1101	2026-11-05T09:36:01Z	records-docs	5	0	1	0	qa-records-b32-2026-11-05	
+1091	2026-11-05T09:22:52Z	app	25	2	0	0	eloquent-brahmagupta-r9inu3	
+1095	2026-11-05T08:43:07Z	records-docs	8	0	0	0	qa-records-b31-2026-11-05	
+1092	2026-11-05T08:30:11Z	records-docs	4	0	0	0	2026-11-05-lead13	
+1058	2026-11-05T08:23:56Z	app	23	13	1	0	forms-b82-condition-facts	
+1088	2026-11-05T07:52:38Z	tooling	9	0	1	0	2026-11-05-lead11c	
+1087	2026-11-05T07:52:35Z	records-docs	5	0	0	0	qa-records-b30-2026-11-05	
+1078	2026-11-05T07:28:08Z	records-docs	6	0	3	1	qa-records-b29-2026-11-05	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-05-after-merge.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/bugs-open-detail.md
+1057	2026-11-05T07:28:03Z	app	33	19	2	2	forms-b81-not-on-form	api/src/fill-case.ts;api/src/forms.ts
+1060	2026-11-05T07:15:37Z	app	11	2	0	0	forms-b84-schedule-copies	
+1051	2026-11-05T07:01:55Z	app	26	9	0	0	amazing-pasteur-4hakwo	
+1071	2026-11-05T06:51:32Z	tooling	3	0	0	0	sleepy-hawking-ua30ee	
+1070	2026-11-05T06:25:32Z	tooling	6	0	0	0	2026-11-05-lead11b	
+1064	2026-11-05T06:13:37Z	tests	1	0	0	0	qa-c41-two-sections-2026-11-05	
+1066	2026-11-05T05:54:04Z	records-docs	4	0	0	0	qa-records-b28-2026-11-05	
+1063	2026-11-05T05:54:00Z	tooling	8	0	0	0	2026-11-05-lead11	
+1056	2026-11-05T05:33:20Z	app	26	5	0	0	keen-bell-k19fvr	
+1055	2026-11-05T04:49:08Z	records-docs	6	0	0	0	2026-11-05-lead10	
+1009	2026-11-05T04:35:03Z	app	12	4	1	1	forms-c101-checkpoint	api/src/demo.ts;api/src/studio.ts
+1048	2026-11-05T03:12:29Z	records-docs	2	0	0	0	qa-records-b27-2026-11-05	
+1040	2026-11-05T02:56:36Z	records-docs	7	0	0	0	paid-runner-c47-v2-six	
+1010	2026-11-05T02:40:11Z	records-docs	3	0	0	0	2026-11-05-lead9	
+1044	2026-11-05T02:26:23Z	records-docs	3	0	0	0	qa-records-b26-2026-11-05	
+1037	2026-11-05T02:26:19Z	tests	8	0	0	0	paid-runner-c411-conditions-v2	
+1041	2026-11-05T01:54:29Z	records-docs	5	0	0	0	qa-records-b25-2026-11-05	
+1039	2026-11-05T01:51:56Z	records-docs	1	0	0	0	qa-records-b24-2026-11-05	
+1035	2026-11-05T01:20:33Z	records-docs	4	0	0	0	qa-records-b23-2026-11-05	
+1032	2026-11-05T01:05:55Z	records-docs	3	0	0	0	qa-records-b22-2026-11-05	
+1031	2026-11-05T01:02:10Z	records-docs	6	0	0	0	qa-records-b21-2026-11-05	
+967	2026-11-05T00:48:05Z	app	33	13	5	3	forms-yesno-facts-qa227	acceptance/C4.11.test.ts;acceptance/lib/pack2.ts;api/src/demo.ts
+1028	2026-11-05T00:11:48Z	records-docs	5	0	0	0	qa-records-b20-2026-11-05	
+1022	2026-11-04T23:56:05Z	tests	1	0	0	0	qa-c41-pack-2026-11-05	
+973	2026-11-04T23:43:34Z	app	17	11	2	2	forms-qa-221-sch1-who	acceptance/C4.1.test.ts;api/src/demo.ts
+1023	2026-11-04T23:09:17Z	records-docs	3	0	0	0	qa-records-b19-2026-11-05	
+1021	2026-11-04T23:06:29Z	records-docs	2	0	0	0	qa-records-b18-2026-11-05	
+1016	2026-11-04T22:54:56Z	records-docs	6	0	2	0	qa-records-b17-2026-11-05	
+1005	2026-11-04T22:50:30Z	app	45	16	1	1	screens-c45-supplies	acceptance/lib/pack2.ts
+868	2026-11-04T22:46:49Z	app	31	8	7	5	cool-cray-pobjf1	api/src/demo.ts;tests/check_c10_1_configured.ts;tests/check_qa144_vv_release.ts
+1014	2026-11-04T22:14:28Z	records-docs	2	0	0	0	qa-records-b16-2026-11-05	
+1006	2026-11-04T21:53:37Z	app	3	2	0	0	runtime-qa193-order	
+978	2026-11-04T21:46:14Z	app	16	7	2	1	runtime-qa231-c91	api/src/demo.ts
+998	2026-11-04T21:37:28Z	app	9	1	0	0	forms-c36-rule-on-six	
+1004	2026-11-04T21:03:28Z	records-docs	6	0	2	0	qa-records-b15-2026-11-05	
+993	2026-11-04T20:43:47Z	app	7	2	0	0	forms-b71-six-submit	
+1002	2026-11-04T19:59:01Z	records-docs	2	0	0	0	qa-regression-data-2026-11-05	
+996	2026-11-04T19:46:37Z	records-docs	6	0	1	0	qa-records-b14-2026-11-05	
+982	2026-11-04T19:40:41Z	tests	4	0	1	1	runtime-c34-flakes	tests/check_forms_c34_ai.ts
+991	2026-11-04T19:22:25Z	tooling	2	0	0	0	runtime-b77-data	
+881	2026-11-04T19:04:54Z	app	16	2	3	3	lucid-volta-ily0ht	api/src/demo.ts;tests/check_c10_1_configured.ts
+974	2026-11-04T19:04:50Z	records-docs	6	0	0	0	qa-records-b13-2026-11-04	
+948	2026-11-04T18:47:36Z	app	5	3	2	0	runtime-case-feed	
+985	2026-11-04T18:47:31Z	tooling	7	0	0	0	2026-11-04-lead8	
+926	2026-11-04T18:29:58Z	app	21	9	1	1	magical-brown-tu96ux	api/src/case-prepare.ts;api/src/sign-steps.ts
+986	2026-11-04T18:29:52Z	records-docs	2	0	0	0	qa-checkpoint-rows-2026-11-04	
+883	2026-11-04T18:29:46Z	app	43	5	5	3	bold-bell-xm7qwr	tests/check_c10_1_browser.cjs;tests/check_c10_1_configured.ts;tests/check_qa144_vv_release.ts
+981	2026-11-04T18:19:56Z	tests	1	0	0	0	qa-c91-k1-2026-11-04	
+980	2026-11-04T18:19:51Z	tests	1	0	0	0	qa-c411-pack-2026-11-04	
+929	2026-11-04T18:19:46Z	app	10	3	0	0	busy-einstein-w2ugbm	
+984	2026-11-04T23:23:03+05:30	records-docs	2	0	0	0	qa-hold-c48-2026-11-04	
+956	2026-11-04T16:23:45Z	records-docs	17	0	4	0	qa-2026-11-04-8e8d6d	
+886	2026-11-04T16:20:49Z	records-docs	7	0	2	0	paid-runner-imm5476-result	
+968	2026-11-04T16:20:45Z	tests	1	0	0	0	qa-c1112-runtime-vv	
+969	2026-11-04T16:20:40Z	records-docs	17	0	0	0	qa-qa2-c1114	
+963	2026-11-04T15:25:51Z	records-docs	4	0	0	0	2026-11-04-lead7-handover	
+785	2026-11-04T15:25:47Z	tests	49	0	5	0	paid-runner-c1114-result	
+936	2026-11-04T14:50:25Z	app	7	5	1	1	runtime-qa144-part1	api/src/sources.ts
+924	2026-11-04T14:46:07Z	app	33	12	1	0	wonderful-einstein-i01w4m	
+951	2026-11-04T14:46:02Z	tooling	2	0	0	0	runtime-gateb-tail	
+953	2026-11-04T14:45:58Z	tests	6	0	0	0	2026-11-04-lead7	
+879	2026-11-04T14:45:52Z	app	10	1	3	2	bold-franklin-q5wxdk	api/src/demo.ts;tests/check_c10_1_configured.ts;tests/check_qa144_vv_release.ts
+885	2026-11-04T14:10:15Z	app	4	1	2	0	runtime-qa207-row17	
+952	2026-11-04T14:03:16Z	records-docs	5	0	0	0	adoring-ramanujan-4u0w7n	
+939	2026-11-04T13:40:41Z	tests	13	0	0	0	qa-2026-11-04-8e8d6d	
+947	2026-11-04T13:30:55Z	records-docs	10	0	0	0	qa-qa2-c118	
+935	2026-11-04T13:30:50Z	app	16	3	0	0	forms-qa-219-merge-alias	
+944	2026-11-04T13:21:38Z	records-docs	12	0	0	0	qa-qa2-c42	
+937	2026-11-04T13:21:34Z	app	6	1	0	0	runtime-qa207-older-editions	
+891	2026-11-04T13:14:10Z	app	10	1	4	1	runtime-qa144-irm0002	tests/check_c10_1_configured.ts;tests/check_qa144_vv_release.ts
+861	2026-11-04T13:03:51Z	app	16	8	0	0	loving-ride-hhtdgi	
+933	2026-11-04T12:54:49Z	tests	4	0	0	0	runtime-qa215	
+872	2026-11-04T12:40:17Z	app	11	1	0	0	eloquent-pasteur-2ogd88	
+857	2026-11-04T12:33:29Z	tooling	5	0	1	1	runtime-regression-set	.github/workflows/ci.yml
+931	2026-11-04T12:09:58Z	records-docs	2	0	1	0	adoring-ramanujan-4u0w7n	
+866	2026-11-04T12:06:15Z	app	20	7	1	0	optimistic-bohr-mk1zo5	
+878	2026-11-04T11:56:53Z	app	14	3	4	1	sleepy-planck-0r2sxt	api/src/demo.ts
+870	2026-11-04T11:56:49Z	app	17	7	0	0	inspiring-cerf-xt6u6w	
+867	2026-11-04T11:45:29Z	app	13	1	0	0	exciting-mendel-kzb37s	
+922	2026-11-04T11:17:14Z	records-docs	5	0	2	0	qa-2026-11-04-8e8d6d	
+863	2026-11-04T11:08:57Z	records-docs	14	0	0	0	vigilant-noether-l2sgvm	
+919	2026-11-04T10:51:41Z	records-docs	2	0	0	0	qa3-verdict-C4-11	
+917	2026-11-04T10:49:34Z	records-docs	2	0	0	0	qa3-verdict-C10-1	
+916	2026-11-04T10:49:29Z	records-docs	2	0	0	0	qa3-verdict-C4-8	
+914	2026-11-04T10:49:24Z	records-docs	2	0	0	0	qa3-verdict-C4-1	
+918	2026-11-04T10:49:18Z	records-docs	1	0	0	0	qa3-verdict-C3-10-checkpoint	
+915	2026-11-04T10:49:10Z	records-docs	1	0	0	0	qa3-verdict-C4-2	
+904	2026-11-04T10:39:06Z	records-docs	5	0	1	0	adoring-ramanujan-4u0w7n	
+849	2026-11-04T10:21:56Z	records-docs	14	0	10	0	qa-2026-11-04-8e8d6d	
+798	2026-11-04T10:16:06Z	app	14	2	3	2	runtime-qa144-configured-release	api/src/demo.ts;tests/check_c10_1_configured.ts
+882	2026-11-04T09:47:34Z	app	3	2	0	0	magical-volta-hcuz9w	
+901	2026-11-04T09:45:45Z	records-docs	5	0	0	0	qa3-verdict-C11-9	
+899	2026-11-04T09:45:32Z	records-docs	2	0	0	0	qa3-verdict-C5-7	
+898	2026-11-04T09:45:26Z	records-docs	2	0	0	0	qa3-verdict-C5-6	
+902	2026-11-04T09:45:21Z	records-docs	1	0	0	0	qa3-verdict-C11-18	
+896	2026-11-04T09:45:12Z	records-docs	2	0	0	0	qa3-verdict-C5-3	
+900	2026-11-04T09:33:29Z	records-docs	1	0	0	0	qa3-verdict-C11-2	
+897	2026-11-04T09:33:26Z	records-docs	1	0	0	0	qa3-verdict-C5-5	
+895	2026-11-04T09:33:22Z	records-docs	1	0	0	0	qa3-verdict-C4-10	
+894	2026-11-04T09:33:19Z	records-docs	1	0	0	0	qa3-verdict-C4-9	
+893	2026-11-04T09:33:16Z	records-docs	1	0	0	0	qa3-verdict-C4-5	
+892	2026-11-04T09:33:13Z	records-docs	1	0	0	0	qa3-verdict-C4-3	
+903	2026-11-04T09:32:11Z	records-docs	54	0	0	0	qa-qa2-m2-nopack	
+875	2026-11-04T09:32:08Z	tooling	2	0	0	0	ci-drafts-skip	
+843	2026-11-04T09:11:53Z	records-docs	2	0	1	0	qa3-verdict-C6-1	
+844	2026-11-04T09:11:48Z	records-docs	1	0	1	0	qa3-verdict-C5-1	
+837	2026-11-04T09:11:43Z	app	5	2	1	1	runtime-lmia-demo-release	ai-workers/problem-1-pathway-setup-and-form-filling/product/DEMO.md
+884	2026-11-04T09:11:39Z	records-docs	1	0	0	0	qa-regression-held	
+874	2026-11-04T08:43:35Z	records-docs	8	0	0	0	qa-qa2-c34	
+864	2026-11-04T08:27:27Z	records-docs	13	0	0	0	adoring-ramanujan-4u0w7n	
+840	2026-11-04T08:27:22Z	records-docs	8	0	1	1	paid-runner-irm0002-result	ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/screening/canary-digest.json
+859	2026-11-04T07:38:06Z	records-docs	7	0	0	0	qa-qa2-c310	
+850	2026-11-04T07:38:02Z	tooling	2	0	0	0	runtime-gate-b-keys	
+853	2026-11-04T07:37:59Z	tooling	2	0	0	0	runtime-gate-b-checkpoint	
+851	2026-11-04T07:19:26Z	records-docs	7	0	0	0	qa-qa2-c117	
+833	2026-11-04T07:19:23Z	app	23	14	1	1	forms-family-role	engine/import.ts
+802	2026-11-04T07:19:19Z	app	16	7	1	1	forms-qa196-landers	api/src/review-proposals.ts;web/src/pages/proposals.tsx
+714	2026-11-04T07:19:16Z	app	14	3	1	0	epic-keller-tvupdz	
+848	2026-11-04T07:19:12Z	tests	1	0	0	0	runtime-w1-forms-wait	
+838	2026-11-04T06:45:33Z	tooling	3	0	0	0	m3-hot-file-guard	
+829	2026-11-04T06:45:28Z	app	21	13	0	0	forms-qa182-box-words	
+841	2026-11-04T06:21:48Z	tooling	1	0	0	0	two-queues-m2-first	
+804	2026-11-04T06:21:44Z	tooling	6	0	0	0	gate-b	
+787	2026-11-04T06:04:26Z	tests	14	0	2	1	paid-runner-c117-result	ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/screening/canary-digest.json
+832	2026-11-04T05:53:44Z	records-docs	7	0	0	0	qa-2026-11-04-8e8d6d	
+831	2026-11-04T05:53:40Z	tooling	1	0	0	0	retest-data-checkpoint	
+830	2026-11-04T05:51:59Z	records-docs	1	0	0	0	lead-watch-enforce	
+820	2026-11-04T05:31:29Z	app	16	6	0	0	forms-irm-editions	
+819	2026-11-04T05:03:44Z	tooling	1	0	0	0	nightly-github-shards	
+823	2026-11-04T04:55:50Z	records-docs	3	0	0	0	qa3-verdict-C7-5	
+822	2026-11-04T04:53:07Z	records-docs	9	0	0	0	qa-qa2-c1113	
+821	2026-11-04T04:53:04Z	tests	8	0	3	0	qa-2026-11-04-8e8d6d	
+794	2026-11-04T04:31:10Z	app	11	3	2	1	runtime-qa180-one-gate	ai-workers/problem-1-pathway-setup-and-form-filling/product/reports/verify-2026-11-03/V3/v3_golden_replay.cjs
+789	2026-11-04T04:24:14Z	records-docs	8	0	0	0	2026-11-04-lead1-handover	
+816	2026-11-04T04:24:11Z	records-docs	1	0	0	0	qa3-verdict-C6-5	
+801	2026-11-04T04:20:14Z	records-docs	6	0	2	0	qa-2026-11-04-8e8d6d	
+811	2026-11-04T04:20:10Z	records-docs	9	0	0	0	qa-qa2-c91	
+771	2026-11-04T04:20:06Z	tests	11	0	2	1	paid-runner-c34-v2-result	ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/screening/canary-digest.json
+726	2026-11-04T04:20:03Z	app	17	5	1	0	forms-qa192-near-reason	
+793	2026-11-04T03:37:59Z	app	26	10	1	0	screens-live-state	
+790	2026-11-04T03:37:55Z	app	14	4	1	0	forms-background-rule	
+788	2026-11-04T03:37:51Z	app	26	8	1	0	runtime-cross-checks	
+784	2026-11-04T03:37:37Z	app	11	4	1	0	runtime-mrz	
+745	2026-11-04T03:37:33Z	tooling	5	0	0	0	kind-hawking-fc8rds-testdbs	
+737	2026-11-04T02:53:05Z	records-docs	6	0	1	1	gifted-turing-a7w1tb	ai-workers/problem-1-pathway-setup-and-form-filling/product/reports/verify-2026-11-03/V3-one-system.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/reports/verify-2026-11-03/V3/v3_golden_replay.cjs
+786	2026-11-04T02:53:01Z	records-docs	1	0	0	0	verify-v1-m2-gap-triage	
+782	2026-11-04T02:52:58Z	records-docs	22	0	0	0	verify-rcic-walk-2026-11-04	
+749	2026-11-04T02:46:08Z	records-docs	3	0	0	0	vigilant-mendel-hsyikh	
+781	2026-11-04T02:34:18Z	tests	10	0	0	0	paid-runner-c91-result	
+792	2026-11-04T01:51:05Z	tests	1	0	0	0	runtime-r146-fix	
+791	2026-11-03T21:11:26Z	app	3	1	0	0	runtime-fees	
+780	2026-11-03T18:20:43Z	tooling	8	0	0	0	2026-11-03-n1	
+778	2026-11-03T17:50:55Z	records-docs	3	0	0	0	2026-11-03-lead5-speedup	
+776	2026-11-03T17:39:36Z	records-docs	11	0	0	0	qa-retest-night-232df2	
+763	2026-11-03T17:29:37Z	records-docs	1	0	0	0	opus-rereview-today-batch2-2026-11-03	
+765	2026-11-03T17:29:33Z	tooling	2	0	0	0	2026-11-03-lead4-watch	
+774	2026-11-03T17:29:28Z	records-docs	3	0	0	0	2026-11-03-lead5-wrapup	
+762	2026-11-03T17:05:43Z	app	13	4	2	1	compassionate-davinci-lafidu	tests/check_c10_1_configured.ts;tests/check_s7_load.ts
+764	2026-11-03T16:07:44Z	tests	7	0	1	1	paid-runner-c47-v2-result	ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/screening/canary-digest.json
+752	2026-11-03T16:07:39Z	app	10	5	1	1	forms-qa195-identity-by-name	tests/check_forms_c34_ai.ts
+744	2026-11-03T15:28:00Z	app	7	1	1	0	practical-bardeen-9xusr5-qa162	
+738	2026-11-03T15:18:35Z	app	12	8	1	1	trusting-galileo-jckmrp	engine/render.ts
+766	2026-11-03T14:37:35Z	records-docs	4	0	0	0	qa-retest-c47-c54	
+759	2026-11-03T14:12:50Z	records-docs	2	0	0	0	2026-11-03-lead4	
+754	2026-11-03T14:12:46Z	records-docs	3	0	1	0	2026-11-03-lead3-handover	
+746	2026-11-03T14:12:42Z	records-docs	15	0	0	0	paid-runner-c118-live	
+740	2026-11-03T14:12:38Z	app	7	4	0	0	forms-qa193-batch	
+728	2026-11-03T14:12:33Z	app	6	3	0	0	forms-qa191-rules	
+741	2026-11-03T14:12:29Z	app	15	3	0	0	forms-p305-bulk-reuse-only	
+719	2026-11-03T14:12:25Z	app	20	2	0	0	funny-ride-h3nvar	
+732	2026-11-03T14:12:20Z	app	27	11	1	0	pensive-brown-a2iw66	
+718	2026-11-03T14:12:16Z	app	16	2	0	0	nifty-davinci-2tyof1	
+735	2026-11-03T13:38:58Z	app	7	2	1	0	forms-twins	
+720	2026-11-03T12:57:12Z	tests	24	0	2	2	gallant-cerf-xl07vk	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/built/C3.2.md
+734	2026-11-03T12:41:03Z	tooling	4	0	0	0	kind-hawking-fc8rds	
+713	2026-11-03T12:40:58Z	records-docs	30	0	0	0	e0-refresh-2026-11-03	
+733	2026-11-03T12:40:54Z	app	9	6	0	0	charming-wright-r07pbx	
+730	2026-11-03T12:40:50Z	app	14	8	0	0	screens-c5-5-firm-release-gates	
+727	2026-11-03T12:40:46Z	tooling	11	0	0	0	kind-hawking-fc8rds-qa181	
+708	2026-11-03T12:24:06Z	tooling	5	0	0	0	2026-11-03-lead3	
+707	2026-11-03T12:24:01Z	records-docs	1	0	0	0	kind-hawking-fc8rds-quarantine	
+701	2026-11-03T12:23:57Z	records-docs	15	0	0	0	busy-lamport-b0nj6x-rescore	
+706	2026-11-03T12:23:52Z	records-docs	2	0	1	0	gracious-shannon-hd6ir2	
+729	2026-11-03T12:23:48Z	records-docs	2	0	0	0	opus-rereview-today-2026-11-03	
+722	2026-11-03T12:23:43Z	app	13	6	0	0	screens-qa172-plain-titles	
+712	2026-11-03T12:13:12Z	app	12	4	0	0	screens-c3-15-rename	
+700	2026-11-03T12:05:54Z	app	4	1	0	0	forms-c1114-near	
+710	2026-11-03T11:42:42Z	tests	8	0	0	0	paid-runner-c47-v2-jobs	
+715	2026-11-03T11:42:35Z	app	9	6	0	0	practical-bardeen-9xusr5-qa165	
+716	2026-11-03T11:30:20Z	tests	2	0	0	0	compassionate-davinci-lafidu	
+703	2026-11-03T11:17:53Z	tooling	4	0	0	0	kind-hawking-fc8rds	
+709	2026-11-03T11:17:48Z	app	8	3	0	0	trusting-galileo-jckmrp	
+691	2026-11-03T11:17:44Z	app	19	5	0	0	wizardly-bardeen-kfewmp	
+689	2026-11-03T11:17:40Z	app	26	9	0	0	epic-wright-62f5h5	
+699	2026-11-03T11:17:36Z	app	14	1	0	0	forms-c32-review-new	
+698	2026-11-03T11:17:32Z	app	6	3	0	0	charming-wright-r07pbx	
+723	2026-11-03T16:15:44+05:30	records-docs	2	0	0	0	opus-rereview-trial-2026-11-03	
+686	2026-11-03T10:32:55Z	tests	4	0	0	0	ecstatic-gates-sikt5r-c69	
+693	2026-11-03T10:32:49Z	app	5	2	0	0	forms-c1114-live-finished	
+704	2026-11-03T15:32:52+05:30	records-docs	3	0	0	0	2026-11-03-lead2-handover	
+678	2026-11-03T09:52:26Z	records-docs	117	0	6	0	2026-11-03-lead1-handover	
+661	2026-11-03T09:46:05Z	app	17	3	0	0	bold-euler-bzu6zv	
+688	2026-11-03T09:34:32Z	app	4	2	0	0	practical-bardeen-9xusr5-c42	
+680	2026-11-03T09:23:06Z	app	7	3	0	0	runtime-c77	
+676	2026-11-03T09:23:02Z	app	7	3	0	0	ecstatic-gates-sikt5r-c54	
+675	2026-11-03T09:22:59Z	tests	6	0	0	0	ecstatic-gates-sikt5r-packs	
+674	2026-11-03T09:22:54Z	tests	4	0	0	0	ecstatic-gates-sikt5r	
+683	2026-11-03T09:03:56Z	app	4	1	0	0	charming-wright-r07pbx	
+663	2026-11-03T08:57:01Z	tooling	11	0	0	0	kind-hawking-fc8rds	
+673	2026-11-03T08:50:15Z	app	4	1	0	0	forms-c1114-replay-checker	
+666	2026-11-03T08:33:21Z	app	14	3	0	0	practical-bardeen-9xusr5	
+677	2026-11-03T08:26:14Z	tests	2	0	0	0	ecstatic-gates-sikt5r-qa149	
+659	2026-11-03T07:59:43Z	app	3	2	0	0	hopeful-keller-blo8iu	
+662	2026-11-03T12:47:18+05:30	records-docs	2	0	0	0	2026-11-03-p295	
+660	2026-11-03T12:36:49+05:30	records-docs	3	0	0	0	2026-11-03-lead1-records	
+658	2026-11-03T12:32:23+05:30	records-docs	1	0	0	0	2026-11-03-lead1-start	
+657	2026-11-03T12:23:37+05:30	records-docs	4	0	0	0	2026-11-03-savings	
+656	2026-11-03T12:21:35+05:30	records-docs	4	0	1	0	2026-11-03-reporting	
+655	2026-11-03T12:21:11+05:30	tooling	5	0	1	0	2026-11-03-playbook	
+654	2026-11-03T11:57:03+05:30	records-docs	3	0	0	0	2026-11-03-tonight	
+653	2026-11-03T11:21:27+05:30	records-docs	1	0	0	0	2026-11-03-handover	
+652	2026-11-03T10:45:29+05:30	records-docs	19	0	0	0	2026-11-03-e	
+651	2026-11-03T10:21:08+05:30	records-docs	2	0	0	0	eager-allen-0cw0m4	
+649	2026-11-03T10:00:47+05:30	records-docs	4	0	0	0	2026-11-03-d	
+643	2026-11-03T04:29:39Z	app	31	10	0	0	friendly-davinci-dfsq83	
+647	2026-11-03T04:27:20Z	app	3	1	0	0	hopeful-hawking-5rymj8	
+645	2026-11-03T09:14:47+05:30	records-docs	2	0	0	0	2026-11-03-c	
+646	2026-11-03T09:14:41+05:30	records-docs	1	0	0	0	eager-allen-0cw0m4	
+644	2026-11-03T08:50:32+05:30	records-docs	4	0	1	0	eager-allen-0cw0m4	
+640	2026-11-03T03:14:02Z	app	12	7	0	0	funny-ritchie-bl5d99	
+637	2026-11-03T02:43:14Z	app	7	3	0	0	friendly-davinci-dfsq83	
+636	2026-11-03T02:25:28Z	app	5	3	0	0	hopeful-hawking-5rymj8	
+638	2026-11-03T07:24:13+05:30	records-docs	1	0	0	0	2026-11-03-b	
+627	2026-11-03T01:41:08Z	app	10	3	0	0	funny-curie-mbttn2	
+622	2026-11-03T01:37:00Z	app	42	15	0	0	friendly-davinci-dfsq83	
+626	2026-11-03T01:19:42Z	app	5	2	0	0	hopeful-hawking-5rymj8	
+629	2026-11-03T06:20:02+05:30	records-docs	2	0	0	0	2026-11-03	
+630	2026-11-03T06:19:38+05:30	records-docs	3	0	0	0	eager-allen-0cw0m4	
+628	2026-11-03T06:19:34+05:30	records-docs	1	0	0	0	admiring-galileo-i2ece1	
+617	2026-11-03T00:18:16Z	app	15	9	0	0	admiring-galileo-i2ece1	
+624	2026-11-03T05:19:34+05:30	records-docs	4	0	14	2	eager-allen-0cw0m4	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-02-golden-2.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-02-golden-2/step1-reset-to-six-confirm-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-02-golden-2/step1-reset-to-six-confirm-400.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-02-golden-2/step1-reset-to-six-done-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-02-golden-2/step1-reset-to-six-done-400.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-02-golden-2/step4-client-questionnaire-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-02-golden-2/step4-client-questionnaire-400.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-02-golden-2/step4-officer-confirmed-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-02-golden-2/step4-officer-confirmed-400.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-02-golden-2/step5-generate-copy-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-02-golden-2/step5-generate-copy-400.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-02-golden-2/step6-validated-readback-1440.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/2026-11-02-golden-2/step6-validated-readback-400.png;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/bugs-open-detail.md
+621	2026-11-03T04:56:29+05:30	records-docs	1	0	0	0	2026-11-02-d	
+615	2026-11-02T23:22:03Z	app	22	6	2	1	funny-curie-mbttn2	web/src/pages/review.tsx
+616	2026-11-02T23:21:59Z	app	23	5	0	0	friendly-davinci-dfsq83	
+603	2026-11-02T22:19:42Z	tests	7	0	2	2	forms-imm5532-saved	ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/screening/canary-digest.json;tests/check_queue_tx.ts
+592	2026-11-02T22:00:09Z	app	18	6	0	0	admiring-galileo-i2ece1	
+554	2026-11-02T21:53:07Z	app	52	20	3	3	friendly-davinci-dfsq83	api/src/programs.ts;tests/check_s5_slice1_browser.cjs;web/src/pages/combination.tsx;web/src/pages/workspace/forms.tsx;web/src/pages/workspace/preview.tsx
+587	2026-11-02T21:53:01Z	app	40	12	1	1	funny-curie-mbttn2	api/src/core.ts;api/src/programs.ts;api/src/studio.ts
+602	2026-11-02T21:52:55Z	app	21	14	0	0	hopeful-hawking-5rymj8	
+574	2026-11-02T21:20:14Z	app	23	8	2	2	affectionate-lovelace-ijv2o0	api/src/proposals.ts
+585	2026-11-02T21:20:10Z	app	33	3	1	1	forms-c34-ai-step	api/src/rounds.ts;tools/track-a-jobs.ts
+563	2026-11-02T20:52:04Z	app	4	1	1	1	sharp-turing-efuj41	tests/check_queue_tx.ts
+568	2026-11-02T20:41:16Z	app	28	13	1	1	brave-ritchie-7cev1n	web/src/pages/review.tsx
+570	2026-11-02T20:41:11Z	app	32	7	0	0	inspiring-fermi-8kyot6	
+598	2026-11-03T01:43:38+05:30	tooling	1	0	0	0	2026-11-02-standby-2	
+596	2026-11-03T01:42:33+05:30	tooling	1	0	0	0	2026-11-02-standby	
+593	2026-11-03T01:35:44+05:30	tooling	3	0	0	0	2026-11-02-rules	
+572	2026-11-02T19:53:03Z	app	12	1	0	0	admiring-galileo-i2ece1	
+573	2026-11-02T19:51:18Z	app	26	5	0	0	lucid-franklin-vb923y	
+584	2026-11-02T19:40:38Z	app	9	5	0	0	funny-ritchie-bl5d99	
+579	2026-11-02T19:25:46Z	tests	2	0	2	0	stoic-euler-v3idvd	
+576	2026-11-02T19:09:47Z	tests	8	0	0	0	wizardly-davinci-ns2xky	
+569	2026-11-02T18:58:54Z	app	5	2	0	0	funny-curie-mbttn2	
+566	2026-11-02T18:58:50Z	app	28	6	0	0	ecstatic-noether-pkiaxg	
+557	2026-11-02T18:58:46Z	app	93	32	1	1	vibrant-hopper-a48qgk	tests/check_vv_prepare_api.ts
+565	2026-11-02T18:58:43Z	app	15	6	0	0	quirky-cannon-thk3q0	
+564	2026-11-02T18:26:57Z	tests	2	0	0	0	awesome-mendel-nusfn1	
+562	2026-11-02T18:26:52Z	app	8	4	3	0	stoic-euler-v3idvd	
+555	2026-11-02T22:42:44+05:30	records-docs	7	0	0	0	2026-11-02-handover	
+558	2026-11-02T17:12:16Z	app	9	1	0	0	funny-curie-mbttn2	
+553	2026-11-02T16:54:54Z	app	11	6	0	0	admiring-galileo-i2ece1	
+556	2026-11-02T16:54:50Z	app	20	12	0	0	eager-wozniak-b441sk	
+552	2026-11-02T16:42:23Z	app	2	1	1	0	stoic-euler-v3idvd	
+528	2026-11-02T16:19:10Z	tests	9	0	1	1	paid-runner-r146-saved-maps-2	ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/screening/canary-digest.json
+544	2026-11-02T15:52:37Z	tests	4	0	0	0	funny-curie-mbttn2	
+522	2026-11-02T15:40:44Z	app	7	5	2	1	eager-wozniak-b441sk	api/src/where-used.ts
+543	2026-11-02T15:38:50Z	app	4	1	2	0	stoic-euler-v3idvd	
+545	2026-11-02T15:38:44Z	app	15	4	0	0	vibrant-hopper-a48qgk	
+541	2026-11-02T15:38:38Z	app	9	7	0	0	admiring-galileo-i2ece1	
+537	2026-11-02T20:41:19+05:30	tooling	8	0	1	1	2026-11-02-records-7	ai-workers/problem-1-pathway-setup-and-form-filling/product/BACKLOG.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/DECISIONS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/decision-impact.sh
+542	2026-11-02T20:40:13+05:30	records-docs	42	0	1	0	relaxed-babbage-guwsqw	
+547	2026-11-02T20:40:06+05:30	records-docs	36	0	0	0	2026-11-02-ux-baseline	
+525	2026-11-02T15:09:50Z	app	37	8	1	0	loving-franklin-k30mje	
+539	2026-11-02T14:56:50Z	tests	1	0	0	0	dreamy-carson-qese5k	
+524	2026-11-02T14:42:38Z	tests	5	0	0	0	nice-gates-gn2vfq	
+521	2026-11-02T14:42:34Z	tests	5	0	2	0	stoic-euler-v3idvd	
+500	2026-11-02T14:42:29Z	app	59	17	9	3	funny-curie-mbttn2	api/src/case-filings.ts;api/src/case-prepare.ts;engine/filing-modes.ts;engine/runtime/filings.ts;tests/check_c1112_modes.ts
+505	2026-11-02T14:42:25Z	app	16	6	2	1	vibrant-hopper-a48qgk	api/src/form-uses.ts
+531	2026-11-02T14:25:52Z	records-docs	4	0	0	0	paid-runner-d3-c411	
+530	2026-11-02T14:25:47Z	records-docs	5	0	0	0	paid-runner-d3-c47	
+529	2026-11-02T14:21:02Z	app	7	5	0	0	admiring-galileo-i2ece1	
+526	2026-11-02T14:12:20Z	app	43	6	0	0	dreamy-carson-qese5k	
+533	2026-11-02T18:45:48+05:30	records-docs	1	0	0	0	2026-11-02-records-6	
+532	2026-11-02T18:40:42+05:30	records-docs	1	0	0	0	2026-11-02-records-5	
+519	2026-11-02T18:37:28+05:30	records-docs	4	0	0	0	2026-11-02-records-4	
+517	2026-11-02T18:37:23+05:30	records-docs	14	0	1	0	relaxed-babbage-guwsqw	
+503	2026-11-02T18:28:33+05:30	records-docs	1	0	0	0	2026-11-02-quarantine-c313	
+509	2026-11-02T12:58:14Z	app	10	7	1	0	admiring-galileo-i2ece1	
+506	2026-11-02T12:24:46Z	app	46	4	1	0	dreamy-carson-qese5k	
+510	2026-11-02T12:24:42Z	app	20	1	1	0	nice-gates-gn2vfq	
+508	2026-11-02T12:24:39Z	app	15	2	0	0	paid-runner-r146-job-128k	
+513	2026-11-02T12:24:35Z	app	15	9	1	0	loving-franklin-k30mje	
+502	2026-11-02T12:23:15Z	tests	11	0	0	0	paid-runner-r146-saved-maps-1	
+512	2026-11-02T12:23:11Z	app	9	4	1	0	elegant-knuth-y7lnq9	
+501	2026-11-02T12:00:22Z	app	6	1	1	0	stoic-euler-v3idvd	
+504	2026-11-02T12:00:18Z	app	11	6	1	0	eager-wozniak-b441sk	
+514	2026-11-02T16:45:49+05:30	records-docs	1	0	0	0	2026-11-02-records-3	
+511	2026-11-02T16:17:23+05:30	records-docs	4	0	1	1	2026-11-02-records-2	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md
+507	2026-11-02T16:16:01+05:30	tests	14	0	0	0	relaxed-babbage-guwsqw	
+499	2026-11-02T16:08:28+05:30	records-docs	4	0	0	0	2026-11-02-finish-plan	
+469	2026-11-02T10:37:45Z	app	10	5	3	0	screens-qa82-question-words	
+497	2026-11-02T15:15:40+05:30	records-docs	2	0	0	0	2026-11-02-handover-check	
+496	2026-11-02T15:11:27+05:30	records-docs	3	0	1	0	2026-11-02-leadx-8	
+453	2026-11-02T15:10:35+05:30	tests	8	0	1	1	dazzling-hopper-32hn7o	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/bugs-open-detail.md
+463	2026-11-02T15:09:04+05:30	records-docs	17	0	3	0	optimistic-goodall-d6gcl6	
+485	2026-11-02T09:37:57Z	records-docs	3	0	0	0	c26-saved-imm5484e	
+484	2026-11-02T09:35:28Z	app	15	5	7	2	friendly-newton-urm088	ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p5/transforms.ts;api/src/runtime.ts;tests/check_vv_prepare_api.ts;tests/runtime/check_case_engine.ts;web/src/runtime/questionnaire.tsx
+436	2026-11-02T09:18:54Z	app	4	2	3	1	screens-six-combination-data	samples/wave1.json
+455	2026-11-02T09:18:50Z	app	7	4	2	1	inspiring-dirac-e1zsqc	api/src/case-prepare.ts
+482	2026-11-02T09:18:46Z	app	7	5	1	0	dazzling-ramanujan-2d655u	
+471	2026-11-02T09:18:41Z	app	11	8	0	0	screens-g3-demo-release	
+477	2026-11-02T09:18:36Z	app	5	1	1	0	festive-turing-gvqe2b	
+490	2026-11-02T14:22:41+05:30	records-docs	3	0	0	0	2026-11-02-leadx-7	
+488	2026-11-02T14:21:43+05:30	tooling	7	0	1	0	2026-11-02-leadx-6	
+479	2026-11-02T08:46:02Z	tests	1	0	0	0	charming-albattani-jhkk4s	
+475	2026-11-02T08:45:57Z	app	7	5	0	0	forms-d2-live-fails-offer-saved	
+470	2026-11-02T08:45:48Z	app	5	2	0	0	forms-d2-hide-stub	
+457	2026-11-02T08:27:06Z	app	32	5	2	0	friendly-newton-urm088	
+468	2026-11-02T08:17:59Z	records-docs	4	0	0	0	relaxed-knuth-hgakgd	
+458	2026-11-02T08:17:55Z	app	2	1	2	0	dazzling-ramanujan-2d655u	
+409	2026-11-02T08:04:28Z	tests	3	0	0	0	evidence-c72-app-path	
+456	2026-11-02T08:03:09Z	app	5	1	0	0	charming-albattani-jhkk4s	
+445	2026-11-02T08:03:05Z	app	20	15	2	0	fervent-fermat-mvm1kg	
+426	2026-11-02T08:03:01Z	app	18	12	3	1	festive-turing-gvqe2b	api/src/proposals.ts
+435	2026-11-02T08:02:57Z	app	19	9	1	0	forms-d2-live-saved	
+434	2026-11-02T08:02:54Z	tests	2	0	0	0	screens-s01-race-diagnostic	
+423	2026-11-02T08:02:50Z	tests	1	0	0	0	screens-c313-load-timeout	
+465	2026-11-02T12:41:37+05:30	records-docs	1	0	0	0	2026-11-02-quarantine-d1	
+460	2026-11-02T12:18:00+05:30	tooling	9	0	1	1	2026-11-02-leadx-5	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md
+405	2026-11-02T12:17:13+05:30	tests	35	0	5	5	optimistic-goodall-d6gcl6	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/BUGS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/built/C11.13.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/built/C6.12.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/reports/bugs-open-detail.md
+429	2026-11-02T06:28:14Z	app	6	1	1	0	relaxed-knuth-hgakgd	
+408	2026-11-02T06:28:10Z	app	11	6	2	2	charming-albattani-jhkk4s	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/built/C6.4.md;prisma/schema.prisma
+418	2026-11-02T06:28:06Z	app	14	5	1	0	friendly-newton-urm088	
+428	2026-11-02T06:28:03Z	app	12	7	1	0	inspiring-dirac-e1zsqc	
+427	2026-11-02T06:27:59Z	app	16	6	1	0	dazzling-ramanujan-2d655u	
+407	2026-11-02T06:27:55Z	app	16	4	2	0	runtime-d1-reset-to-six	
+449	2026-11-02T11:31:50+05:30	records-docs	1	0	0	0	2026-11-02-leadx-4	
+446	2026-11-02T11:31:12+05:30	records-docs	4	0	0	0	2026-11-02-leadx-3	
+442	2026-11-02T11:28:00+05:30	records-docs	4	0	0	0	2026-11-02-leadx-2	
+439	2026-11-02T11:22:15+05:30	records-docs	4	0	0	0	2026-11-02-leadx	
+431	2026-11-02T11:17:14+05:30	records-docs	84	0	5	4	2026-11-02-handover-2	ai-workers/problem-1-pathway-setup-and-form-filling/product/DECISIONS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/decision-impact.sh
+415	2026-11-02T04:49:43Z	records-docs	3	0	0	0	2026-11-02-finish-first	
+420	2026-11-02T04:49:39Z	tests	16	0	1	1	dazzling-hopper-32hn7o	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md
+414	2026-11-02T04:46:37Z	app	7	4	0	0	inspiring-dirac-e1zsqc	
+412	2026-11-02T04:40:56Z	app	8	4	0	0	festive-turing-gvqe2b	
+410	2026-11-02T04:25:53Z	records-docs	1	0	0	0	2026-11-02-quarantine-screen01	
+358	2026-11-02T04:03:41Z	app	15	6	5	2	runtime-answer-sheet	api/src/case-prepare.ts;prisma/schema.prisma
+391	2026-11-02T04:03:38Z	app	19	10	6	1	runtime-c69-concept	prisma/schema.prisma
+404	2026-11-02T04:03:35Z	tooling	9	0	0	0	2026-11-02-night-report	
+398	2026-11-02T03:02:36Z	app	4	1	1	0	screens-add-dialog-late-seed	
+401	2026-11-02T03:02:32Z	app	3	2	0	0	forms-c411-stale-words	
+356	2026-11-02T02:50:35Z	app	25	12	3	1	runtime-prepare	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/built/C6.12.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/M3-B-prepare/break-report.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/M3-B-prepare/journey-test-reviewer-2026-11-01.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/M3-B-prepare/review.md;api/src/case-filings.ts;api/src/case-prepare.ts;api/src/main.ts;api/src/studio.ts;engine/runtime/filings.ts;engine/snapshot.ts;prisma/schema.prisma;tests/check_vv_prepare_api.ts
+397	2026-11-02T02:07:51Z	app	3	2	0	0	forms-c411-out-of-date	
+395	2026-11-02T01:51:59Z	tests	1	0	1	0	runtime-c44-period-order	
+394	2026-11-02T01:30:37Z	tests	1	0	0	0	screens-c119-history-wait	
+390	2026-11-02T01:22:11Z	app	6	4	0	0	forms-c411-contract	
+389	2026-11-02T01:08:58Z	app	6	2	0	0	screens-f8-release-polish	
+386	2026-11-02T00:54:28Z	tooling	1	0	0	0	runtime-isolated-prisma-generate	
+387	2026-11-02T00:54:25Z	records-docs	1	0	0	0	screens-unquarantine-c313	
+378	2026-11-02T00:25:01Z	tests	31	0	2	0	runtime-qa145-clean-clone	
+349	2026-11-02T00:13:03Z	app	9	4	3	0	forms-c212-complete	
+382	2026-11-02T00:01:53Z	tooling	1	0	0	0	screens-isolated-false-start	
+374	2026-11-01T23:31:50Z	records-docs	1	0	0	0	forms-quarantine-c313	
+331	2026-11-01T22:58:09Z	app	39	20	6	3	practical-franklin-g2phk2	api/src/library-sources.ts;api/src/main.ts;api/src/studio.ts;web/src/pages/library.tsx
+325	2026-11-01T22:10:29Z	app	38	16	8	7	serene-euler-vp7ar1	ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md;api/src/main.ts;prisma/schema.prisma
+345	2026-11-01T21:24:43Z	app	9	5	3	2	focused-wright-ydjmqc-c34	api/src/main.ts;api/src/proposals.ts
+351	2026-11-01T21:20:55Z	app	17	4	2	1	elegant-pascal-6s6r7y	web/src/pages/ai.tsx
+348	2026-11-01T20:49:20Z	app	13	1	1	0	runtime-c41-roles	
+363	2026-11-01T20:49:16Z	app	5	3	0	0	relaxed-babbage-b75u3h	
+364	2026-11-01T20:49:12Z	records-docs	1	0	0	0	screens-unquarantine-c31	
+350	2026-11-01T20:29:25Z	app	4	1	2	0	loving-franklin-t3vxdr	
+336	2026-11-01T20:29:21Z	app	60	11	4	2	great-faraday-w28s57	engine/runtime/case.ts;web/src/runtime/questionnaire.tsx
+319	2026-11-01T20:29:18Z	app	41	18	6	1	hopeful-maxwell-4etgzs	api/src/main.ts
+344	2026-11-01T20:29:14Z	app	10	2	1	0	focused-wright-ydjmqc-c1113	
+340	2026-11-01T19:29:11Z	app	49	13	4	1	upbeat-ptolemy-phvh4y	ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/W1-setup-checklist/screenshots/before-forms/05-questionnaires-pointer-1440.png
+353	2026-11-01T19:29:08Z	records-docs	19	0	0	0	relaxed-hypatia-kminl1	
+360	2026-11-02T00:40:56+05:30	records-docs	1	0	1	1	2026-11-02-handover	ai-workers/problem-1-pathway-setup-and-form-filling/product/STATE.md
+347	2026-11-02T00:34:26+05:30	tooling	12	0	1	1	2026-11-01-lean-setup	ai-workers/problem-1-pathway-setup-and-form-filling/product/DECISIONS.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/STATE.md;ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/decision-impact.sh
+339	2026-11-01T18:52:17Z	app	5	1	2	0	gifted-bardeen-e0tgby	
+346	2026-11-02T00:06:17+05:30	tooling	2	0	0	0	2026-11-01-merge-flow	
