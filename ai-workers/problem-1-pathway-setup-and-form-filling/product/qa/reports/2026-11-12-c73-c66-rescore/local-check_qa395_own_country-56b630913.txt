@@ -1,0 +1,8 @@
+PASS  setup: the principal's previous residences take one entry — "personal_details"
+PASS  setup: every fact answered and confirmed (citizenship and residence India, as the Sample family)
+PASS  setup: the principal's citizenship and current country of residence are India — {"person.citizenship":"India","person.current_residence_country":"India"}
+PASS  QA-395 fail (own country alone): India, the person's own country, for two years ending a year ago: the copy writes N — "N"
+PASS  QA-395 pass (control): the same dates in another country (United States): the copy writes Y — "Y"
+
+5/5 passed
+exit 0
