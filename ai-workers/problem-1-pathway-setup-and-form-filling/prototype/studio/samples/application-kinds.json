@@ -1,0 +1,43 @@
+{
+ "about": "QA-415 (P-486, the tech lead's ruling 12 Nov; P-489): each person's kind of application is worked out from that person's own filing, never asked (EXPERIENCE: each fact asked once, worked out where the case knows it; QA-400's pattern). The engine (engine/runtime/application-kind.ts) finds each person's filing the way the case's filings are found (engine/runtime/filings.ts deriveFilings: the filing their line adds, else the filing their role makes, else the combination's own) and writes person.application_type from this table: a filing a line or a role names is read by its name (\"filings\"), the combination's own filing by the combination's key (\"combinations\"). A filing this table does not name gives no value: its form fields go by hand with the reason, never a guess. The words are the forms' own: IMM 5645's \"Type of application: Visitor Worker Student Other\" and IMM 5476's \"Type of application (permanent residence, extension of study permit, etc.)\". Data, not code (P-319): the engine names no form, combination or program.",
+ "status": "Sample, Unconfirmed: expert. The words are quoted from the forms below; which word each filing takes is the tech lead's reading of IRCC's pages (P-486) until the immigration expert confirms. IMM 5476 and IMM 5475 ask the type of application under \"If you have already submitted your application\" (IMM 5476 instructions, Question 4): whether it is written before the application is submitted is for the expert to confirm (review m5 on #1620).",
+ "sources": [
+  {
+   "says": "Whose application each box describes: each person applying fills their own IMM 5645.",
+   "page": "IMM 5645 Family Information, instructions (canada.ca imm5645.html, Page details 2024-06-21; saved copy official-sources/ircc/canada/pages/imm5645.html, read 12 Nov 2026)",
+   "quote": "This form must be completed by each person, 18 years of age or older, applying for a Temporary Resident Visa, a study or work permit outside Canada."
+  },
+  {
+   "says": "The kinds IMM 5645 names.",
+   "page": "IMM 5645 (01-2021) E, page 1 (official-sources/ircc/forms/imm5645e.pdf, read 12 Nov 2026)",
+   "quote": "Type of application: Visitor Worker Student Other"
+  },
+  {
+   "says": "IMM 5476's type of application is the applicant's own application; an adult dependant completes their own copy.",
+   "page": "IMM 5476 Use of a Representative, instructions (canada.ca imm5476.html, Page details 2025-12-12; saved copy official-sources/ircc/canada/pages/imm5476.html, read 12 Nov 2026), Section A, Question 4, and \"Who should use this form\"",
+   "quote": "If you have already submitted your application, write: The type of application you have submitted; … If you have dependent children aged 18 years or older, they are required to complete their own copy of this form if a representative is also conducting business on their behalf."
+  },
+  {
+   "says": "IMM 5475's type of application box sits in the applicant's own details (the form's AppDetails part, beside the applicant's name and date of birth): the person the form is about.",
+   "page": "IMM 5475 (12-2022) E, page 1, applicant's details, the field's own caption (official-sources/ircc/forms/imm5475e.pdf, saved 19 Oct 2026, read from its field list prototype/p1/inventory/imm5475e.inventory.json on 12 Nov 2026)",
+   "quote": "Type of application (permanent residence,extension of study permit, etc.)"
+  },
+  {
+   "says": "IMM 5476's own example of a type of application.",
+   "page": "IMM 5476 (11-2025) E, page 1, Section A, 4. Application Information (official-sources/ircc/forms/imm5476e.pdf, read 12 Nov 2026)",
+   "quote": "Type of application (permanent residence, extension of study permit, etc.)"
+  }
+ ],
+ "filings": {
+  "Visitor visa": "Visitor",
+  "Study permit": "Student",
+  "Work permit": "Worker"
+ },
+ "combinations": {
+  "vv.single": "Visitor",
+  "sp.outside": "Student",
+  "wp.lmia_inside": "Worker",
+  "fs.spouse": "Permanent residence",
+  "pnp.express_entry": "Permanent residence"
+ }
+}

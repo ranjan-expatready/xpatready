@@ -17,8 +17,7 @@
    "postal_code": "M5V 0A1",
    "country": "Canada"
   },
-  "case.representative_form_action": "appoint",
-  "case.application_type": "visitor"
+  "case.representative_form_action": "appoint"
  },
  "everyone": {
   "person.has_national_id": false,

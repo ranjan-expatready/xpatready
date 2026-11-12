@@ -60,7 +60,9 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
       const said = gateWords.get(b.box);
       if (c.applies !== true) { const { value: _kept, ...rest } = b; void _kept; return { ...rest, coverage: "not needed" as const, detail: said && c.applies === false ? `Not needed: written only when ${said.replace(/[.\s]+$/, "")}` : notNeededWords(c, rule, words) }; }
     }
-    if (b.coverage !== "confirmed fact" || !b.fact) return b;
+    // Review M3 on #1620 (QA-415): a worked-out fact not worked out yet is no answer to check (nobody is asked it): it
+    // stays by hand with its own reason (BoxRow.by_hand), never "answered with a problem".
+    if (b.coverage !== "confirmed fact" || !b.fact || b.by_hand) return b;
     const problems = checkValue(s, b.fact, b.value, today, form); // QA-355 (a): judged by the release's maps and this form's own
     if (problems.length) return { ...b, coverage: "answered on screen" as const, fix: `answered with a problem, not written: ${problems.join(" ")}` };
     // A No to the gate (declared or confirmed) with a detail still recorded contradicts itself: never written as Yes (nor No). B52: a
