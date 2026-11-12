@@ -2,8 +2,9 @@
 // officer's Make principal, Remove filing and Add filing back. POST /api/runtime/cases/:id/filing-changes with
 // `preview: true` names every filing that changes, by person, before anything happens (BR-4); without it the change is
 // applied over the preview's `basis` with a reason (BR-6, BR-8), under the case's row lock, and kept on a filing_change
-// row. Refused in words: the principal's filing (BR-2), a child or a person not travelling as principal (BR-3), a case
-// with people on the principal's application (BR-0), anything once a filing is recorded as submitted (BR-7). The rules
+// row. Refused in words: the principal's filing (BR-2), a child or a person not travelling as principal (BR-3), a
+// co-filed application on its own (BK-9: on every pathway, people on the principal's application included), anything
+// once a filing is recorded as submitted (BR-7). The rules
 // are engine/runtime/filing-changes.ts; the filings and fees are CaseFilings.deriveFor, the same derivation as the
 // filings view (M7). Case staff of the case's firm only (Runtime.reach "officer"). No model call (US$0).
 import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
@@ -41,7 +42,7 @@ const inverse = (kind: ChangeKind, subject: string, other: string | null): { kin
 
 export type FilingChangePreview = {
   kind: ChangeKind; subject: string; title: string; stays: string;
-  changes: { person: string; label: string; words: string[] }[];
+  changes: { person: string; label: string; words: string[]; on?: string }[];
   totals: { before_cents: number; after_cents: number } | null; basis: string;
 };
 
@@ -62,7 +63,7 @@ export class FilingChanges {
   }
 
   /** The preview of one change, or its refusal (thrown, in words). Read only. */
-  async preview(c: Reached, kind: ChangeKind, subject: string): Promise<{ view: FilingChangePreview; after: Participant[]; other: string | null }> {
+  async preview(c: Reached, kind: ChangeKind, subject: string): Promise<{ view: FilingChangePreview; after: Participant[]; other: string | null; onApp?: string }> {
     const people = this.r.peopleOf(c), s = this.r.snapshotOf(c);
     const out = applyChange(kind, subject, people, { modeOf: this.modeOf(c), combination: s.combination?.label ?? "this combination", recorded: await this.recorded(c) });
     if ("status" in out) problem(out.status, out.status === 409 ? "Not changed here" : out.status === 404 ? "Not found" : "Not possible", out.words);
@@ -71,26 +72,30 @@ export class FilingChanges {
     const extra = await this.extraWords(c, kind, subject, other, people, before, then);
     const diff = diffFilings(before, then, people, extra);
     const me = people.find((p) => p.subjectId === subject)!, them = other ? people.find((p) => p.subjectId === other) : undefined;
-    const title = kind === "make_principal" ? `Make ${me.label} the principal applicant?` : kind === "remove_filing" ? `Remove ${me.label}'s filing?` : `Add ${me.label}'s filing back?`;
-    const stays = kind === "make_principal"
+    // BK-9: a person on someone's shared application has no filing of their own: the words name that application.
+    // Review m5: only when the person owns no application before or after the change (a child whose own filing starts is not).
+    const owns = (d: Derived) => d.derived && d.filings.some((f) => f.owner?.subject === subject);
+    const onApp = kind === "make_principal" || owns(before) || owns(then) ? undefined : diff.lines.find((l) => l.person === subject)?.on ?? (before.derived ? before.filings.find((f) => f.applicants.some((a) => a.subject === subject))?.owner?.label : undefined);
+    const title = kind === "make_principal" ? `Make ${me.label} the principal applicant?` : onApp ? (kind === "remove_filing" ? `Take ${me.label} off as travelling on ${onApp}'s application?` : `Add ${me.label} back as travelling on ${onApp}'s application?`) : kind === "remove_filing" ? `Remove ${me.label}'s filing?` : `Add ${me.label}'s filing back?`;
+    const stays = onApp ? (kind === "remove_filing" ? `${me.label} stays on ${onApp}'s application, declared only (not travelling): asked only what the others' forms need about them. Their answers and uploads are kept.` : `${me.label} applies on ${onApp}'s application again, with the same items as before.`)
+      : kind === "make_principal"
       ? `${me.label} becomes principal applicant; ${them?.label ?? "the principal"} becomes spouse or partner. Each person keeps their own answers and uploads, and the client who answers the questionnaire stays the same person, so no answer becomes confirmed or unconfirmed.`
       : kind === "remove_filing" ? `${me.label} stays on the case, not travelling: asked only what the others' forms need about them. Their answers and uploads are kept.`
       : `${me.label} files their own application again: the same filing, with its items and channels as before.`;
     const totals = before.derived && before.fees_worked_out ? diff.totals : null;
     const body = { kind, subject, title, stays, changes: diff.lines, totals };
-    return { view: { ...body, basis: basisOf({ body, people: people.map((p) => [p.subjectId, p.role, p.applies]) }) }, after, other };
+    return { view: { ...body, basis: basisOf({ body, people: people.map((p) => [p.subjectId, p.role, p.applies]) }) }, after, other, onApp };
   }
 
   /** Words the derivation cannot give: items of a filing that stops, Ready to file marks taken back, a minor's signer. */
   private async extraWords(c: Reached, kind: ChangeKind, subject: string, other: string | null, people: Participant[], before: Derived, then: Derived) {
     const extra = new Map<string, string[]>(), add = (s: string, w: string) => extra.set(s, [...(extra.get(s) ?? []), w]);
-    const filings = await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id }, select: { id: true, subjectId: true, status: true, active: true } });
+    const filings = await this.db.filing.findMany({ where: { caseId: c.id, stageId: c.stage.id }, select: { id: true, subjectId: true, status: true, active: true, applicants: { select: { subjectId: true } } } });
     if (kind === "remove_filing") {
-      const mine = filings.find((x) => x.subjectId === subject && x.active);
-      if (mine) {
-        const [items, signed] = await Promise.all([this.db.filingItem.count({ where: { filingId: mine.id, active: true } }), this.db.signedScan.count({ where: { item: { filingId: mine.id } } })]);
-        if (items) add(subject, `${items} item${items === 1 ? "" : "s"} stop applying${signed ? ` (${signed} signed by hand)` : ""}: kept, and they come back if the filing is added back`);
-      }
+      // BK-9: the person's own items, on their own filing or on the principal's shared one.
+      const theirs = { subjectId: subject, filing: { caseId: c.id, stageId: c.stage.id, active: true } };
+      const [items, signed] = await Promise.all([this.db.filingItem.count({ where: { ...theirs, active: true } }), this.db.signedScan.count({ where: { item: theirs } })]);
+      if (items) add(subject, `${items} item${items === 1 ? "" : "s"} stop applying${signed ? ` (${signed} signed by hand)` : ""}: kept, and they come back if the filing is added back`);
     }
     // BR-4 (M6): the principal signs for a minor child (signing.ts, by role): the signer moves with the principal.
     if (kind === "make_principal" && other) {
@@ -101,15 +106,20 @@ export class FilingChanges {
         const age = ageOn(answers.find((a) => a.subjectId === child.subjectId && a.field === MINOR.birthDateField && !a.rowKey)?.value as string | undefined, today);
         if (age === null || age >= MINOR.underAge) continue;
         add(child.subjectId, `Signed for as their parent by ${nameOf(subject)} instead of ${nameOf(other)}`);
-        const childFiling = filings.find((x) => x.subjectId === child.subjectId && x.active);
-        const signed = childFiling ? await this.db.signedScan.count({ where: { item: { filingId: childFiling.id } } }) : 0;
+        // Review M1 (BK-9): the child's own forms, on their own filing or on the principal's shared one.
+        const signed = await this.db.signedScan.count({ where: { item: { subjectId: child.subjectId, filing: { caseId: c.id, stageId: c.stage.id, active: true } } } });
         if (signed) add(child.subjectId, `${signed} form${signed === 1 ? "" : "s"} already signed by hand by ${nameOf(other)}: to be signed again (warning)`);
       }
     }
     // BR-6 (review M1, break M4): every filing named in the preview, for any reason (fees, applicants, items, a minor's
     // signer), is the set the apply takes back from Ready to file; the words name each one, so nothing resets unsaid.
     const changed = new Set([...diffFilings(before, then, people).lines.map((l) => l.person), ...extra.keys()]);
-    for (const x of filings) if (x.status === "READY_TO_FILE" && x.active && changed.has(x.subjectId)) add(x.subjectId, "Marked Ready to file → Not started");
+    // Review m3 (BK-9): a shared filing is found by anyone on it, as its stored owner follows a Make principal only on the
+    // next prepare read; the words go on the line of a person named in the preview.
+    for (const x of filings) {
+      const who = changed.has(x.subjectId) ? x.subjectId : x.applicants.find((a) => changed.has(a.subjectId))?.subjectId;
+      if (x.status === "READY_TO_FILE" && x.active && who) add(who, "Marked Ready to file → Not started");
+    }
     return extra;
   }
 
@@ -119,7 +129,7 @@ export class FilingChanges {
     const p = Change.safeParse(body ?? {});
     if (!p.success) throw new HttpException(problemFromZod(p.error), HttpStatus.BAD_REQUEST);
     const b = p.data;
-    const { view, after, other } = await this.preview(c, b.kind, b.subject);
+    const { view, after, other, onApp } = await this.preview(c, b.kind, b.subject);
     if (b.preview) return view;
     const reason = (b.reason ?? "").trim();
     if (!reason || CONTROL.test(reason) || !SAYS.test(reason)) problem(400, "Some details need fixing", "Write a reason: it is kept with the change.", [{ field: "reason", message: "Write a reason: it is kept with the change." }]);
@@ -142,11 +152,14 @@ export class FilingChanges {
       await tx.filingChange.create({ data: { id: randomUUID(), workspaceId: c.workspaceId, caseId: c.id, kind: b.kind, subjectId: b.subject, otherSubjectId: other, rolesBefore: roles(c.participants), rolesAfter: roles(after.map((x) => ({ ...x, subjectId: x.subjectId }))), reason, basis: view.basis, changedBy: actor.id } });
       // BR-6 (M2): a changed filing marked Ready to file is not ready for the new shape: back to Not started.
       const changedSubjects = view.changes.map((x) => x.person);
-      if (changedSubjects.length) await tx.filing.updateMany({ where: { caseId: c.id, stageId: c.stage.id, subjectId: { in: changedSubjects }, status: "READY_TO_FILE" }, data: { status: "NOT_STARTED" } });
+      if (changedSubjects.length) await tx.filing.updateMany({ where: { caseId: c.id, stageId: c.stage.id, status: "READY_TO_FILE", OR: [{ subjectId: { in: changedSubjects } }, { applicants: { some: { subjectId: { in: changedSubjects } } } }] }, data: { status: "NOT_STARTED" } }); // review m3
     });
     const me = c.participants.find((x) => x.subjectId === b.subject)!;
     await this.audit.log(c.workspaceId, actor.id, "changed", "filing", c.id, `${actor.name}: a ${me.role.replace(/_/g, " ")} on case ${c.id.slice(0, 8)}: ${KIND_WORDS[b.kind]}`, { kind: b.kind, changes: view.changes.length });
-    const words = b.kind === "make_principal" ? `${me.subject.label} is now the principal applicant. Filings and fees worked out again.` : b.kind === "remove_filing" ? `${me.subject.label}'s filing removed. Fees worked out again.` : `${me.subject.label}'s filing added back. Fees worked out again.`;
+    // Review m4 (BK-9): a person on someone's shared application is taken off as travelling, never "their filing".
+    const words = b.kind === "make_principal" ? `${me.subject.label} is now the principal applicant. Filings and fees worked out again.`
+      : onApp ? (b.kind === "remove_filing" ? `${me.subject.label} taken off as travelling on ${onApp}'s application. Fees worked out again.` : `${me.subject.label} travels on ${onApp}'s application again. Fees worked out again.`)
+      : b.kind === "remove_filing" ? `${me.subject.label}'s filing removed. Fees worked out again.` : `${me.subject.label}'s filing added back. Fees worked out again.`;
     return { done: true, words, undo: inverse(b.kind, b.subject, other) };
   }
 
