@@ -22,12 +22,10 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
 |---|---|---|
 | A5 | 12:4x finish M3; then detailed milestone plan with counted lists before the Chrome extension; internal production grade | P-450; plan after the 29 |
 | A9-A13 | answered or in hand (A12 co-founder copy: B168; A13 low scores: P-460) | word for word in `history/STATE-2026-11-11-1320-lead15s2-founder-asks-A9-A13.md` |
+| A18, A20, A21, A22 | done or answered | word for word in `history/STATE-2026-11-12-1000-lead23s2-founder-asks-A18-A20-A22.md` |
 | A1-A4, A6, A8 | done/answered (ruled P-447 to P-449, P-453 to P-455) | word for word in `history/STATE-2026-11-11-0845-lead11s2-founder-asks-done.md` and `history/STATE-2026-11-11-0840-lead11s2-founder-asks-A3-A4-A6.md` |
 | A7 | Fable's questions 16-18 (internal use on what data; employer LMIA side in?; Chrome extension in?) and booking the immigration expert | ask after the 29 |
-| A18 | 12:0x (11 Nov) start B168, three stopped rows, B170, two standbys | done (P-461); word for word in `history/STATE-2026-11-11-1455-lead17s2-founder-ask-A18.md`; B170 report owed at its end |
 | A19 | 12:2x-12:5x (11 Nov, spoken) parts (a)-(l) | in progress; word for word in `history/STATE-2026-11-11-2055-lead19s2-founder-ask-A19.md` |
-| A21, A22 | 19:37, 19:5x (11 Nov, spoken): progress and plan; Bake squeeze | answered (P-480, P-481 to P-484); word for word in `history/STATE-2026-11-11-2256-lead20s2-founder-asks-A21-A22.md` |
-| A20 | 15:2x (11 Nov, spoken) anything needing him (spend, approval, a block on cost, quality, timeline or solution) very clear, in a card, highlighted red | done: P-478 (🔴 Needs you block + card) on RULES.md and in the lead-watch skill (lead skill at its 10 KB cap) |
 | A23 | 23:3x (11 Nov, spoken) every "Decide when you can" question: Lead researches, decides best in class, implements | P-486 standing; CI fast-path kept on the queue; D8 ruled from canada.ca (`design/d8-study-permit-family-2026-11-11.md`), **BK-15 (R-e) shaped: runtime lane after BK-9, or a fresh cloud lane at the next typed turn**; standby Lead 22 `local_99d39f48` started |
 
 ## For the founder (P-390)
