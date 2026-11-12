@@ -283,6 +283,11 @@ function CasePage() {
   // BK-4c (break M1, BR-2): a review round waiting means the representative is next, not the client (same query as Ready to file).
   const rounds = useApi<{ rounds: { number: number; filings: { status: string }[] }[] }>(["runtime", "reviews", id], isOfficer(actor) ? `/runtime/cases/${id}/reviews` : null, { retry: noRetryOnRefusal });
   const inReview = (rounds.data?.rounds ?? []).filter((x) => x.filings.some((f) => f.status === "sent" || f.status === "under_review")).sort((a, b) => b.number - a.number)[0];
+  // QA-427 (P-498): the client card reads the case. What the client still owes comes from the client's own questionnaire
+  // (the household line also counts what staff enter, so it never reached 0 for the client); the submission from the
+  // same read as Submission to IRCC (one request, shared).
+  const clientView = useCaseView(id!, "sqr");
+  const prep = useApi<{ filings: { status: string }[] }>(["runtime", "view", id, "prepare"], isOfficer(actor) ? `/runtime/cases/${id}/prepare` : null, { retry: noRetryOnRefusal });
   // K13 (break m7): "Answer in the Agent view" (eligibility) lands on the Agent view, not the top of the case page.
   const { hash } = useLocation(), loaded = !!view.data;
   useWhere(view.data ? [{ label: "Cases", to: "/cases" }, { label: view.data.case.reference }] : null); // BK-3: the frame's line names the case
@@ -293,6 +298,14 @@ function CasePage() {
   if (view.isError) return <Notice tone="danger" title="This case could not be opened">{(view.error as Error).message}</Notice>;
   const v = view.data!, c = v.case, people = c.people.filter((p) => p.role !== "case");
   const client = PEOPLE.find((p) => p.id === c.client);
+  // QA-427: where the case stands for the client card (see the queries above).
+  const latest = [...(rounds.data?.rounds ?? [])].sort((a, b) => b.number - a.number)[0];
+  const clientCase = {
+    owes: clientView.data ? clientView.data.sections.reduce((n, s) => n + s.missing.length, 0) : null,
+    submitted: !!prep.data?.filings.length && prep.data.filings.every((f) => f.status.toLowerCase() === "submitted"),
+    toConfirm: v.summary.answered - v.summary.confirmed,
+    next: (latest?.filings.length && latest.filings.every((f) => f.status === "approved") ? "approved" : v.summary.answered - v.summary.confirmed > 0 ? "confirm" : "prepare") as "approved" | "confirm" | "prepare",
+  };
   return (
     <div className="mx-auto max-w-7xl space-y-5">
       <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
@@ -308,13 +321,19 @@ function CasePage() {
         <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">
           <p className="font-medium">Client questionnaire</p>
           {/* BK-4c (BR-2, BR-4, BR-7): the questionnaire is the case's own client's; the hand-off carries who hands back (?from=). */}
-          {/* Break M1 (BR-2): "Next: <client>" only while the client owes required answers and no review round waits; every
-              required question answered: where it stands, and the client may still check; a round waiting: no button here
-              (Ready to file hands to the representative). */}
-          {client && inReview ? <p className="mt-1.5 text-[13px] text-text-muted" data-client-card="in-review">{client.name} answers on their phone, for everyone travelling. Round {inReview.number} is with the representative of record now.</p>
-            : client ? <HandOff className="mt-1.5" to={c.client} go={`/cases/${c.id}/questionnaire?from=${encodeURIComponent(actor)}`} handsCase={{ caseId: c.id, from: actor }} data="client"
-              {...(v.summary.missing === 0 && v.summary.answered > 0 ? { line: <>{client.name} has answered every required question and can still check the answers.</> } : { next: <>{client.name} answers on their phone, for everyone travelling.</> })} />
-            : <p className="text-xs text-text-muted">The client answers on their phone, for everyone travelling.</p>}
+          {/* Break M1 (BR-2): "Next: <client>" only while the client owes required answers and no review round waits; a
+              round waiting: no button here (Ready to file hands to the representative). QA-427 (P-498): the card reads the
+              case: submitted, nothing more is asked of the client; the client done, it names the case's next step (confirm
+              the answers, prepare the forms, or Ready to file after approval), and the client may still check. */}
+          {!client ? <p className="text-xs text-text-muted">The client answers on their phone, for everyone travelling.</p>
+            : clientCase.submitted ? <p className="mt-1.5 text-[13px] text-text-muted" data-client-card="submitted">Submitted to IRCC. Nothing more is asked of {client.name} on this case.</p>
+            : inReview ? <p className="mt-1.5 text-[13px] text-text-muted" data-client-card="in-review">{client.name} answers on their phone, for everyone travelling. Round {inReview.number} is with the representative of record now.</p>
+            : clientCase.owes === null ? <Skeleton className="mt-1.5 h-8 w-56" />
+            : clientCase.owes > 0 ? <div data-client-card="client-answers"><HandOff className="mt-1.5" to={c.client} go={`/cases/${c.id}/questionnaire?from=${encodeURIComponent(actor)}`} handsCase={{ caseId: c.id, from: actor }} data="client" next={<>{client.name} answers on their phone, for everyone travelling.</>} /></div>
+            : <div data-client-card={clientCase.next}>
+                <HandOff className="mt-1.5" to={c.client} go={`/cases/${c.id}/questionnaire?from=${encodeURIComponent(actor)}`} handsCase={{ caseId: c.id, from: actor }} data="client" line={<>{client.name} has answered every part and can still check the answers.</>} />
+                <p className="mt-1.5 text-[13px]" data-client-card-next>Next: {clientCase.next === "approved" ? "Ready to file, then Record the submission" : clientCase.next === "confirm" ? <><a href="#agent-view" className="font-medium text-text-link underline">confirm the answers</a> ({clientCase.toConfirm} to confirm, in the Agent view)</> : "prepare the forms and send them for review"}.</p>
+              </div>}
         </div>
       </div>
       <StageStrip caseId={c.id} />

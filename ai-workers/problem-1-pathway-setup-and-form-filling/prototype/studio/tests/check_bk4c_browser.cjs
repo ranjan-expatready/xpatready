@@ -156,8 +156,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   p = await fresh("user-O");
   await p.goto(`${BASE}/cases/${fam2}`); await p.locator("[data-handoff=client]").waitFor({ timeout: 60000 });
   // Review m1 (BR-2): the case page's words follow the case's own summary (every required question answered, or not).
-  const allAnswered = sum.missing === 0 && sum.answered > 0, ct = await p.locator("[data-handoff=client]").innerText();
-  step(`review m1, break M1: the case page's words match the case (${allAnswered ? "every required question answered: no \"Next\"" : "questions left: Next"})`, allAnswered ? /has answered every required question and can still check the answers/.test(ct) && !/Next:/.test(ct) : /Next: Client A answers on their phone/.test(ct), { sum, ct });
+  // QA-427: what the client owes is their own questionnaire's (the household's summary also counts what staff enter).
+  const owes = ((await api2(`/runtime/cases/${fam2}/questionnaire`, { actor: "user-O" })).body?.sections ?? []).reduce((n, x) => n + x.missing.length, 0);
+  const allAnswered = owes === 0, ct = await p.locator("[data-handoff=client]").innerText();
+  step(`review m1, break M1: the case page's words match the case (${allAnswered ? "every part answered: no \"Next\" for the client" : "questions left: Next"})`, allAnswered ? /has answered every part and can still check the answers/.test(ct) && !/Next:/.test(ct) : /Next: Client A answers on their phone/.test(ct), { owes, sum, ct });
   // Review m2: the tip shows on keyboard focus.
   await p.locator("[data-handoff=client] button").focus(); await p.keyboard.press("Shift"); 
   const tipShown = await p.locator("[data-handoff-tip]").first().waitFor({ timeout: 3000 }).then(() => true, () => false);
