@@ -107,11 +107,13 @@ ok("QA-403 pass: the checkpoint step's code names no fact, form or combination (
   const c5476 = copyOf("IMM 5476"), c5475 = copyOf("IMM 5475");
   ok("C7.1 pass: IMM 5476 and IMM 5475 generated for Client A with nothing by hand", c5476?.status === "GENERATED" && c5476.counts?.by_hand === 0 && c5475?.status === "GENERATED" && c5475.counts?.by_hand === 0, { c5476: c5476?.counts, c5475: c5475?.counts });
   const dl = async (id: string) => { const f = join(dir, `${id}.pdf`); const res = await fetch(`http://127.0.0.1:${PORT}/api/runtime/form-copies/${id}/file`, { headers: { "x-actor": "user-R" } }); writeFileSync(f, Buffer.from(await res.arrayBuffer())); return f; };
-  const py = (file: string, code: string) => execFileSync("python3", ["-I", "-c", code, file], { encoding: "utf8" }).trim();
-  const acro = py(await dl(c5476!.id), "import sys,pypdf,json; f=pypdf.PdfReader(sys.argv[1]).get_fields() or {}; print(json.dumps({k.split('.')[-1]: str(v.get('/V')) for k,v in f.items() if k.endswith(('appoint[0]','cancel[0]','application[0]','office[0]'))}))");
-  const a = JSON.parse(acro) as Record<string, string>;
-  ok("C7.1 pass: IMM 5476 read back from its file: appoint ticked, cancel not, the application says visitor, no office (a new application)", a["appoint[0]"] === "/1" && a["cancel[0]"] === "/Off" && a["application[0]"] === "visitor" && a["office[0]"] === "None", a);
-  const xfa = py(await dl(c5475!.id), "import sys,re,pypdf; x=pypdf.PdfReader(sys.argv[1]).trailer['/Root']['/AcroForm']['/XFA']; p=dict(zip(x[0::2],x[1::2])); d=p['datasets'].get_object().get_data().decode('utf8','replace'); m=re.search(r'<AppDetails>.*?</AppDetails>',d,re.S); print(m.group(0) if m else '')");
-  ok("C7.1 pass: IMM 5475 read back from its file (XFA data): the application type says visitor, the office fields empty", /<TextField2 \/><TextField2 \/><TextField2>visitor<\/TextField2>/.test(xfa), xfa.slice(0, 300));
+  // Read back with the project's own XFA reader (tests/fixtures/read_choice_values.py, p1's xfa_inventory and e5_roundtrip,
+  // run by the project's Python as the other copy checks do): every non-empty value of the copy's data, by data path.
+  const PY = join(STUDIO, "..", "..", "..", "..", ".tools", "solution-1-prototype", ".venv", "bin", "python"), READER = join(STUDIO, "tests", "fixtures", "read_choice_values.py");
+  const readBack = (file: string) => (JSON.parse(execFileSync(PY, ["-I", READER, file], { encoding: "utf8", maxBuffer: 50 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] }).trim().split("\n").pop()!) as { values: Record<string, string> }).values;
+  const v5476 = readBack(await dl(c5476!.id)), v5475 = readBack(await dl(c5475!.id));
+  const at = (vals: Record<string, string>, tail: string) => Object.entries(vals).find(([k]) => k.endsWith(tail))?.[1];
+  ok("C7.1 pass: IMM 5476 read back from its file: appoint ticked, cancel not, the application says visitor, no office (a new application)", at(v5476, "Page1[0].appoint[0]") === "1" && at(v5476, "Page1[0].cancel[0]") === "0" && at(v5476, "SectionA[0].application[0]") === "visitor" && !at(v5476, "SectionA[0].office[0]"), Object.fromEntries(Object.entries(v5476).filter(([k]) => /appoint|cancel|application|office/.test(k))));
+  ok("C7.1 pass: IMM 5475 read back from its file (XFA data): the application type says visitor, the office fields empty", at(v5475, "AppDetails[0].TextField2[2]") === "visitor" && !at(v5475, "AppDetails[0].TextField2[0]") && !at(v5475, "AppDetails[0].TextField2[1]"), Object.fromEntries(Object.entries(v5475).filter(([k]) => /AppDetails/.test(k))));
   process.exit(summary() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });
