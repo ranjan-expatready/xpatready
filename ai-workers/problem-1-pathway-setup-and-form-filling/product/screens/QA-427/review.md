@@ -83,3 +83,103 @@ Journeys 6 and 7 fail (M1). Journey 8 fails on error (m1); the slow read shows t
 An intended user's unaided walk (D17, D20) · a real screen reader · `check_bk4c_browser.cjs` and `run-suites --direct` (the builder's) · a real all-submitted case (m3).
 
 **Verdict: Block** (Request changes). Fix M1. m1 to m3 are Should.
+
+## Re-review accc77d74 (diff-only, P-277)
+Reviewer: the same fresh session's role (not the builder), 12 Nov 2026. Scope: `git diff e235916da accc77d74` only (new `client-card.ts` and its check, `cases.tsx`, the pack check, `check_bk4c.ts`, `check_bk4c_browser.cjs`, the screenshots). Isolated copy `screens_q427r2` on :4469, now stopped and removed. The BK-4 screenshots that `check_bk4c_browser` rewrote were restored. Nothing was committed or pushed. Live AI off, US$0.
+**Verdict: Approve accc77d74.** M1 and m1 are closed, the nit is closed, and m3 is closed by the rule's own pair. m2 stays a stated limit (PR body). One new Minor (m4) and one nit are open; neither blocks.
+
+### Run here
+* **`check_qa427_client_card.ts`:** 15/15.
+  * It catches each removed rule. I ran four mutants of `client-card.ts` from a scratch copy:
+    * confirm after approved: fails "M1 (b)";
+    * latest round only (the e235916da rule): fails "M1 (a)";
+    * no submitted line: fails "submitted pass";
+    * "some" for "every" submitted: fails 3, among them "submitted fail" (m3).
+* **`check_qa427_client_card_browser.cjs 4469`:** 17/17, finished story loaded from scratch (3 min).
+* **`check_bk4c_browser.cjs 4469`:** 46/46 (the e235916da "Target page… closed" is gone).
+* **`check_bk4c.ts`:** 16/16.
+* **Web `tsc --noEmit`:** clean.
+* **`graph.mjs`:** G1 0, G2 0, G5 0.
+* I did not run `run-suites --direct`; that is the builder's evidence.
+
+### M1: closed
+I walked a new family case of three filings through the product's own routes (send, open as the representative, decide), as the case officer at 1440 px:
+
+| State | Card says | Right? |
+|---|---|---|
+| All confirmed, nothing sent | Next: prepare the forms and send them for review | Yes |
+| Round 1 waiting | Round 1 is with the representative of record now | Yes |
+| Round 1: Client A sent back, Spouse A and Child A1 approved (my round-1 "sent back" state, now mixed) | Next: prepare… | Yes (per filing; the old latest-round rule also said prepare here, but only because the round was not all approved) |
+| Round 2 approves Client A: every filing's newest row approved | Next: **Ready to file**, then Record the submission | Yes |
+| Then Client A changes an answer (M1 b) | Next: confirm the answers (1 to confirm, in the Agent view) | Yes |
+
+* **The story's family case (M1 a):** fourth filing never reviewed. It now reads "Next: prepare the forms and send them for review" (screenshot `qa427-04-a-filing-not-reviewed-1440.png`, pack step). Right.
+* **The rule** (`client-card.ts`): confirm comes before approved, and approved is counted per filing through `latestReviewOf`, which is what round 1 asked. The rounds type now carries `filing`, which `GET /reviews` returns (`filing`, `status`, `filing_round`).
+
+### m1: closed
+I failed each of the card's three reads with a 500 in turn (the client's questionnaire, prepare, reviews):
+* Each time, the card read "Where the case stands for Client A could not be read." with Try again, within 1.4-1.6 s. It is no longer a skeleton forever.
+* Try again after unroute brought back the right state ("Ready to file…").
+* "Try again" is a secondary team Button, reached at Tab 11 with the 3 px focus ring (focus-visible true).
+* axe on the failed state: 0.
+* The hand-off is not shown while failed. That is the second option round 1 offered, so it is acceptable.
+
+### Nit (round 1): closed
+"Ready to file" is a link:
+* It is reached at Tab 12 with a 2 px blue ring.
+* Enter moves to `#readiness-h` (top 72 px), and focus is on the heading (`tabIndex=-1`).
+
+### No regressions
+* **axe (WCAG 2.2 A/AA, `main`):** 0 on the mixed send-back state, the approved state and the failed state.
+* **Sideways scroll:** none at 400 and 1024 px.
+* **Errors:** no page or console errors.
+* **Card ready:** 1.07-1.25 s from navigation on the new family case, the same as round 1.
+* **`check_bk4c.ts`:** its source patterns follow the shared `handToClient` object, and the hand-off still carries the same `to`, `go` and `handsCase`.
+
+### Open (do not block)
+* **m4 (Minor, Should; new, inside the rule this diff writes): a withdrawn approval still reads as approved.**
+  * Approved, then the client changes Spouse A's national identity number, then the officer confirms. The card goes back to "Next: Ready to file, then Record the submission".
+  * Meanwhile, Spouse A's Ready to file row shows the pill "Approval withdrawn", and a CRITICAL line: "The filing changed after it was reviewed… The representative of record reviews it again". `GET /reviews/<round>` gives `withdrawn: 1, reapprovable: true`.
+  * The case-level `GET /cases/:id/reviews` that the card reads carries no withdrawal, so the rule cannot see it.
+  * Not Major:
+    * the link lands on the panel that names the re-review;
+    * the line can be passed with a reason there;
+    * nothing is recorded without that panel.
+  * **Fix (S), when convenient:** add `withdrawn` (or `reapprovable`) per row to the case-level reviews list, and count such a filing as not approved ("prepare", or a "re-approve" wording). Give it a pass/fail pair in `check_qa427_client_card.ts`.
+  * Otherwise, record it beside m2 as a stated limit.
+* **Nit: focus drops after Try again.** After Try again succeeds, the button unmounts and focus drops to `body`. It would be better to move focus to the card's Next line or its heading.
+
+### Journey test (reviewer role), re-scored on this diff
+Journeys walked:
+1. Confirmed: prepare.
+2. Round waiting.
+3. Mixed send-back.
+4. Every filing approved: Ready to file, by keyboard.
+5. The client changes after approval: confirm.
+6. Confirm again (m4).
+7. The story's never-reviewed filing.
+8. Each read fails, then Try again.
+9. 400 and 1024 px.
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | 1 | Every round-1 state is now right (M1 a, M1 b, sent back, approved) |
+| Next step obvious | ½ | m4: after a withdrawn approval, the card says "Ready to file" while the real next step is re-review (the panel says so) |
+| Plain words | 1 | "could not be read", "Try again", panel names exact |
+| Feedback and state | 1 | Skeleton, then the state; failed state in about 1.5 s |
+| Correct data | 1 | Read only; review rows and filings unchanged by viewing |
+| Error recovery | 1 | Try again re-reads all three; the card comes back |
+| Accessibility and sizes | 1 | axe 0 on 3 states; keyboard links and focus rings; no sideways scroll at 400 or 1024 px |
+| Speed | ½ | Card ready 1.1-1.25 s on a new family case (waits on the shared prepare read), as in round 1 |
+| Visual quality | 1 | Team card, one secondary button per state |
+| Trust and sources | 1 | No AI; every state comes from server reads |
+
+**Journey score: 9/10: pass** (8 or more, no 0). Most valuable next fix: m4 (next step).
+
+### Not checked
+* An intended user's unaided walk (D17, D20).
+* A real screen reader.
+* `run-suites --direct` at accc77d74 (the builder's).
+* A real all-submitted case (m3 is now covered by the rule's pair).
+
+**Verdict: Approve accc77d74.** No open Blocker or Major. m2 and m4 are Should, and the focus-after-retry nit is Could.
