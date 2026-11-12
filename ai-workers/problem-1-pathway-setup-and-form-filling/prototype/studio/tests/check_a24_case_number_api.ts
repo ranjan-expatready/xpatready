@@ -78,7 +78,7 @@ ok("A24-1 CS-8 pass: one client's page (client=) still lists the people, with th
 const noRef = await rowOf(b.body?.id);
 const rec = await call("GET", `/runtime/cases/${b.body?.id}/filing-record`, undefined, officer);
 const named = await Promise.all(["filings", "checklist", "prepare"].map((x) => call("GET", `/runtime/cases/${b.body?.id}/${x}`, undefined, officer)));
-ok("A24-1 CS-7 pass (break M2, review M2, P-496 (2)): the filing record, the filings, the checklist and Prepare (which Record submission's "Our reference" reads) name a case without a reference by its case number, never null",
+ok("A24-1 CS-7 pass (break M2, review M2, P-496 (2)): the filing record, the filings, the checklist and Prepare (which Record submission's \"Our reference\" reads) name a case without a reference by its case number, never null",
   rec.status === 200 && rec.body?.our_reference === b.body?.case_number && named.every((r) => r.status === 200 && r.body?.reference === b.body?.case_number), [rec.status, rec.body?.our_reference, named.map((r) => [r.status, r.body?.reference])]);
 const famNamed = await Promise.all(["filings", "prepare"].map((x) => call("GET", `/runtime/cases/${a.body?.id}/${x}`, undefined, officer)));
 ok("A24-1 CS-7 fail (byte-identical words): a case with a reference is still named by its reference, never by its number (filings, Prepare)", famNamed.every((r) => r.body?.reference === ref("a")), famNamed.map((r) => r.body?.reference));
