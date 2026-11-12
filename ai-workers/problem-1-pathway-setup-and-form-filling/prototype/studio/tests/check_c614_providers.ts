@@ -16,8 +16,8 @@ import { ChangeProviders } from "../contracts/documents.ts";
 
 const { ok, summary } = recorder();
 const TODAY = new Date("2026-11-09T12:00:00Z"), ON = "2026-11-09";
-// A combination whose checklist is derived (data, samples/fee-table.json), whichever it is: the rule never reads its key.
-const COMBO = Object.entries(FEE_TABLE.combinations).find(([, c]) => c.checklist)?.[0] ?? "";
+// Any combination in the fee table, whichever it is: the rule never reads its key (M3-S4: every checklist is worked out).
+const COMBO = Object.keys(FEE_TABLE.combinations)[0] ?? "";
 const req = (lineage: string, type: string, who: string) => ({ lineage, document_type: type, document_type_key: type, who, provided_by: "client", base_or_conditional: "base", condition: null, condition_plain: null, source_quote: null });
 const snap = (roles: Record<string, string[]>) => ({
   combination: { key: COMBO }, canonical_fields: [{ id: "person.date_of_birth", value_type: "date" }], field_maps: [], derived_fields: [], placements: [], checks: [],

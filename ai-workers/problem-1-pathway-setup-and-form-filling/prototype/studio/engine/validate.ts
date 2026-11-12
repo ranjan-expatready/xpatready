@@ -302,6 +302,13 @@ const KINDS: [keyof Snapshot, (x: any) => string, string][] = [
 // C-8 (W1-10 slice 1): a line released as "Signed PDF upload" and now PDF upload + signed by hand and scanned is unchanged.
 const bare = (x: any) => { const { item_version, status, origin, ...r } = fingerprintLine(x); void item_version; void status; void origin; return canonical(r); };
 export type Change = { kind: string; key: string; change: "added" | "changed" | "removed"; origin?: string; needs_sme: boolean; label: string };
+/** M3-S3, M3-S4: a document line's waiver setting in the release review's words (added, and changed from one to another). */
+const WAIVER_ADDED: Record<string, string> = { waivable: " (waivable by the case officer, with a reason)", never: " (never waivable: it blocks Ready to file until received)" };
+function waiverChange(was: string | null, now: string | null): string {
+  if (now === "waivable") return `${was === "never" ? " (no longer blocks Ready to file;" : " ("} now waivable by the case officer, with a reason)`;
+  if (now === "never") return " (now never waivable: it blocks Ready to file until received)";
+  return was === "never" ? " (no longer blocks Ready to file: a missing one is a warning again)" : " (no longer waivable)";
+}
 export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   const out: Change[] = [];
   const sme = (kind: string, x: any) => ["Rule", "Document requirement", "Check"].includes(kind) || x?.origin === "AI_PROPOSAL" || (kind === "Form" && !!x?.condition);
@@ -309,7 +316,7 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   const marks = new Map<string, { on: boolean; n: number }>();
   for (const [k, id, label] of KINDS) {
     const a = new Map(((prev?.[k] as any[]) ?? []).map((x) => [id(x), x])), b = new Map(((next[k] as any[]) ?? []).map((x) => [id(x), x]));
-    for (const [key, x] of b) if (!a.has(key)) out.push({ kind: label, key, change: "added", origin: x.origin, needs_sme: sme(label, x), label: `${x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.question_text ?? x.fact ?? key}${label === "Document requirement" && x.waiver === "waivable" ? " (waivable by the case officer, with a reason)" : ""}` });
+    for (const [key, x] of b) if (!a.has(key)) out.push({ kind: label, key, change: "added", origin: x.origin, needs_sme: sme(label, x), label: `${x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.question_text ?? x.fact ?? key}${label === "Document requirement" ? (WAIVER_ADDED[x.waiver as string] ?? "") : ""}` });
       else if (bare(a.get(key)) !== bare(x)) {
         // C4.9 (P-97): who fills a question for every combination is named once, in words, for the immigration expert.
         const was = a.get(key);
@@ -329,7 +336,8 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
           if (bare({ ...was, form_role: null }) === bare({ ...x, form_role: null })) continue;
         }
         // M3-S3 break M3: whether the case officer may waive a document line is said in words, so the second person sees it.
-        const waiver = label === "Document requirement" && (a.get(key)?.waiver ?? null) !== (x.waiver ?? null) ? (x.waiver === "waivable" ? " (now waivable by the case officer, with a reason)" : " (no longer waivable)") : "";
+        // M3-S4: and whether it is never waivable (it blocks Ready to file until received).
+        const waiver = label === "Document requirement" && (a.get(key)?.waiver ?? null) !== (x.waiver ?? null) ? waiverChange(a.get(key)?.waiver ?? null, x.waiver ?? null) : "";
         out.push({ kind: label, key, change: "changed", origin: x.origin, needs_sme: sme(label, x), label: `${x.meaning ?? x.title ?? x.document_type ?? x.then ?? x.fact ?? key}${waiver}` });
       }
     for (const [key, x] of a) if (!b.has(key)) out.push({ kind: label, key, change: "removed", needs_sme: sme(label, x), label: x.meaning ?? x.title ?? x.document_type ?? x.then ?? key });
