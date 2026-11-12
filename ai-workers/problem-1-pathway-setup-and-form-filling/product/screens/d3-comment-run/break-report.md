@@ -39,3 +39,37 @@ Target: `.github/workflows/comment-run.yml` and `product/tools/check-comment-run
 * **No write token reaches PR code.** Nothing is checked out and no action is used. The parser step holds no token. Re-running a fork's run uses that run's own read-only token. Every job in ci.yml is read-only.
 
 Open Major or worse: 2
+
+## Re-break cb8d8f0
+
+Scope: `git diff 9e65ab0f0..cb8d8f0f3` (comment-run.yml, nightly.yml, check-comment-run.sh, check-guards.sh). The PR's test: 102 passed, 0 failed. write-token.py: 8 workflows, 0 findings. This time the second step and the new `oops` step were run with the **real** `gh` 2.89.0 (its own gojq for `--jq`, `env.X` included). It talked to a local TLS stand-in for the GitHub API (GH_HOST=localhost) that logs every request, so the query strings, the JSON bodies and the jq filters are GitHub's, not a re-implementation.
+
+**Findings**
+* **R1. Minor (what is left of M2): an outsider can still block `/rerun failed`, but can no longer mis-target it.** comment-run.yml:105-106 asks the server only for `head_sha` + `event=pull_request` + `per_page=30`; the head repository and branch are filtered client-side on page 1 only. Input: an outsider pushes the member's commit to a fork, opens a PR and closes and reopens it 30 times. Each `reopened` creates a ci run awaiting approval (`action_required`), with no approval needed from anyone. Stand-in result: page 1 holds 30 `attacker/r` runs, so the reply says "refused: no ci run for the head 0123456", rc 0, and nothing is re-run. Rated Minor, not Major: the wrong-run re-run is gone, and what remains is a deliberate, visible, attributable denial of a convenience command that falls back to the tech lead.
+* **R2. Minor: the long-line refusal names the wrong limit.** comment-run.yml:49. Input: `/rerun failed` plus 188 trailing spaces (201 characters). Result: "refused: the command line is longer than 120 characters", although the command is 13 characters; 187 spaces pass. Only the message is wrong.
+* **R3. Minor: no group now means parallel commands race (expected, noted).** Two members post `/rerun failed` within a second. Both see the run `completed`/`failure` and both POST `rerun-failed-jobs`. The second should be refused by GitHub (reasoned), and then gets the reply "could not re-run … Ask the tech lead" with a red job. The file says so (line 28). Nothing is cancelled.
+* **Unchanged and not claimed as fixed:** m4 (no rate limit or attempt cap), m7 (case-insensitive `startsWith` gives members refusal noise), m8 (the head can change between reading it and the re-run, on drafts). m5 does not apply: the review read from GitHub that the repository is owned by a User account, where collaborators always have write access.
+
+**The fixes, attacked; all held**
+* **M1 is fixed.** There is no `concurrency` at workflow or job level (the test checks it, and there is a mutation `queue`), so another comment can no longer cancel a member's run.
+* **M2 mis-targeting is fixed.**
+  * Stand-in runs tried, newest first: `attacker/r` + the same branch (failure or action_required), a run with `head_repository: null`, then `o/r` + the branch. Real gh re-ran only `o/r`'s run 4.
+  * A fork named like the base repository (`attacker/xpatready`) differs in owner, and owner logins are unique. The same branch name in a fork does not match `head_repository`.
+  * **Deleted head repository (`head.repo: null`):** "could not read the PR's head", rc 1, no ci call. This holds by a narrow margin. With an empty middle field, `IFS=$'\t' read` collapses the two tabs, so `hrepo` takes the branch (`runtime/d3` even matches the owner/name regex) and `href` is empty. Only the `-n "$href"` test stops it.
+  * **Renamed repository or renamed branch (reasoned):** both names are read live from GitHub. A stale name finds no run and is refused, so it fails closed.
+* **m1 is fixed; the run link cannot be forged.**
+  * The dispatch body is `{"inputs":{"capabilities":"C7.3 C5.4","data":"checkpoint","request":"PR #7 comment 123"},"ref":"main"}`.
+  * The reply picks the run titled exactly `nightly · PR #7 comment 123` over `… comment 1234` and `… comment 123 ` (with a trailing space). `LC_ALL=C` does not break the `·` comparison.
+  * **Who can dispatch nightly.yml:** only accounts with write access to the repository, and this workflow, which is the only one with `actions: write` (label-guard and records-label hold only `pull-requests: write`). Outsiders and fork-PR tokens cannot.
+  * A fork PR that edits nightly.yml to add `on: pull_request` with a forged `run-name` makes runs with `event=pull_request`, which the `event=workflow_dispatch` filter drops.
+  * A member forging a tag by hand is an insider, inside a 60 s window, and gains only a wrong link.
+* **The `request` input is for display only.** Its only use is `run-name` (grep finds no other `inputs.request` and no `run:` use). `format()` substitutes the value literally, so a `{0}` inside it does nothing.
+* **m2 is fixed.** 65,000 trailing spaces are refused in 0.05 s (was 38 s), and lines up to 200 characters are still trimmed.
+* **m3 is fixed and `oops` neither double-replies nor echoes.**
+  * `oops` runs only when `failure() && steps.p.outcome == 'failure'`. If `p` fails, `act` is skipped by its implicit `success()`; if `act` fails, `p` succeeded. So at most one reply is posted.
+  * Its body is a fixed string, its env holds no comment text, and outsiders never reach the job.
+  * Real gh posted exactly one fixed comment.
+* **m6 is fixed.** `C07.3`, `C7.03` and `C0.0` are refused and `C10.10` passes. No capability id in qa/ or the pack files has a 0 part, so nothing legitimate is now refused.
+* **No regression from the first report.** Every attack in "What held" still holds: outsider associations, the `if:`, shell and GITHUB_OUTPUT injection, `gh api` arguments, main + nightly.yml only, no echo or @-mention, no loop, failed jobs only, no write token reaching PR code. The new `COMMENT_ID` and `PR` are checked as numbers before they are used.
+
+Open Major or worse: 0

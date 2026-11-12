@@ -151,7 +151,7 @@ H=0123456789abcdef0123456789abcdef01234567; F=fedcba9876543210fedcba9876543210fe
 runj() { printf '{"id":%s,"status":"%s","conclusion":%s,"html_url":"https://github.com/o/r/actions/runs/%s","head_repository":{"full_name":"%s"},"head_branch":"%s"}' "$1" "$2" "$3" "$1" "${4:-o/r}" "${5:-claude/x}"; }
 runs() { local IFS=,; printf '{"workflow_runs":[%s]}' "$*"; }
 rc=$(FAKE_RUNS="$(runs "$(runj 123 completed '"failure"')")" act rerun)
-ok "rerun: the newest ci run of the head, failed → only its failed jobs re-run" "$([ "$rc" = 0 ] && grep -qxF 'api -X POST repos/o/r/actions/runs/123/rerun-failed-jobs' "$W/log" && grep -qF "head_sha=$H -f event=pull_request" "$W/log" && grep -q 'runs/123' "$W/replies" && echo 1 || echo 0)" "rc $rc; $(tr '\n' '|' < "$W/log")"
+ok "rerun: the newest ci run of the head, failed → only its failed jobs re-run" "$([ "$rc" = 0 ] && grep -qxF 'api -X POST repos/o/r/actions/runs/123/rerun-failed-jobs' "$W/log" && grep -qF "head_sha=$H -f branch=claude/x -f event=pull_request -f per_page=100" "$W/log" && grep -q 'runs/123' "$W/replies" && echo 1 || echo 0)" "rc $rc; $(tr '\n' '|' < "$W/log")"
 ok "rerun: never cancels or re-runs a whole run" "$(grep -qE 'cancel|/rerun( |$)' "$W/log" && echo 0 || echo 1)" "$(tr '\n' '|' < "$W/log")"
 rc=$(FAKE_RUNS="$(runs "$(runj 900 completed '"failure"' evil/fork claude/x)" "$(runj 123 completed '"failure"')")" act rerun)
 ok "rerun: a newer run of a fork's PR on the same commit is not this PR's run (#1658 M2)" "$([ "$rc" = 0 ] && grep -q 'runs/123/rerun-failed-jobs' "$W/log" && [ "$(calls runs/900)" = 0 ] && echo 1 || echo 0)" "rc $rc; $(tr '\n' '|' < "$W/log")"
@@ -170,6 +170,8 @@ ok "rerun: refused when the head has no ci run" "$([ "$rc" = 0 ] && [ "$(calls r
 rc=$(FAKE_PULL='{"head":{"sha":"$(touch pwned)","ref":"x","repo":{"full_name":"o/r"}}}' act rerun)
 ok "rerun: a head that is not a commit id stops it" "$([ "$rc" != 0 ] && [ "$(calls ci.yml)" = 0 ] && echo 1 || echo 0)" "rc $rc"
 rc=$(FAKE_PULL='{"head":{"sha":"'$H'","ref":"x","repo":null}}' act rerun)
+rc=$(FAKE_PULL='{"head":{"sha":"'$H'","ref":"own/repo","repo":null}}' act rerun)
+ok "rerun: a deleted fork whose branch looks like owner/name still stops it (#1658 re-break)" "$([ "$rc" != 0 ] && [ "$(calls ci.yml)" = 0 ] && echo 1 || echo 0)" "rc $rc"
 ok "rerun: a PR whose head repository is gone stops it" "$([ "$rc" != 0 ] && [ "$(calls ci.yml)" = 0 ] && echo 1 || echo 0)" "rc $rc"
 rc=$(FAKE_RUNS='{"workflow_runs":[{"id":"12;3","status":"completed","conclusion":"failure","html_url":"u","head_repository":{"full_name":"o/r"},"head_branch":"claude/x"}]}' act rerun)
 ok "rerun: a run id that is not a number stops it" "$([ "$rc" != 0 ] && [ "$(calls rerun-failed-jobs)" = 0 ] && echo 1 || echo 0)" "rc $rc"

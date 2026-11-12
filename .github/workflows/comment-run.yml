@@ -46,7 +46,7 @@ jobs:
           if [ "$IS_PR" != yes ]; then out action ignore; exit 0; fi
           case "$ASSOC" in OWNER|MEMBER|COLLABORATOR) ;; *) out action ignore; exit 0;; esac
           line=${BODY%%$'\n'*}; line=${line%$'\r'}
-          if [ "${#line}" -gt 200 ]; then refuse "the command line is longer than 120 characters"; fi   # before trimming (#1658 m2)
+          if [ "${#line}" -gt 200 ]; then refuse "the command line is longer than 200 characters"; fi   # before trimming (#1658 m2)
           line=${line%"${line##*[! ]}"}
           if [ "${#line}" -gt 120 ]; then refuse "the command line is longer than 120 characters"; fi
           re_run='^/run nightly(( C[1-9][0-9]?\.[1-9][0-9]?){1,8})( (six|checkpoint))?$'   # no leading zero: C07.3 is not C7.3 (#1658 m6)
@@ -99,10 +99,12 @@ jobs:
             rerun)
               # The PR's head commit, repository and branch: a run of another PR (a fork) on the same commit is not this
               # PR's run (#1658 break M2; as ci.yml's memory filters on head_repository).
-              pr=$(gh api "repos/$REPO/pulls/$PR" --jq '[.head.sha, (.head.repo.full_name // ""), .head.ref] | @tsv') || pr=""
-              IFS=$'\t' read -r head hrepo href <<< "$pr"
+              # ":" separates: neither a commit id, a repository name nor a git ref can hold one, and unlike a tab it never
+              # merges two fields, so a deleted fork's empty repository stays empty (#1658 re-break).
+              pr=$(gh api "repos/$REPO/pulls/$PR" --jq '"\(.head.sha):\(.head.repo.full_name // ""):\(.head.ref)"') || pr=""
+              IFS=: read -r head hrepo href <<< "$pr"
               [[ "$head" =~ ^[0-9a-f]{40}$ && "$hrepo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ && -n "$href" ]] || { reply "could not read the PR's head. ([this run]($THIS_RUN))"; exit 1; }
-              run=$(HREPO="$hrepo" HREF="$href" gh api -X GET "repos/$REPO/actions/workflows/ci.yml/runs" -f head_sha="$head" -f event=pull_request -f per_page=30 \
+              run=$(HREPO="$hrepo" HREF="$href" gh api -X GET "repos/$REPO/actions/workflows/ci.yml/runs" -f head_sha="$head" -f branch="$href" -f event=pull_request -f per_page=100 \
                 --jq '[.workflow_runs[] | select(.head_repository.full_name == env.HREPO and .head_branch == env.HREF)][0] // empty | [.id, .status, (.conclusion // "none"), .html_url] | @tsv') || { reply "could not list the ci runs. ([this run]($THIS_RUN))"; exit 1; }
               [ -n "$run" ] || { reply "refused: no ci run for the head ${head:0:7}. ([this run]($THIS_RUN))"; exit 0; }
               IFS=$'\t' read -r id status conclusion url <<< "$run"
