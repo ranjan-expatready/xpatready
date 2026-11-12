@@ -47,10 +47,16 @@ if p:
     r("the comment reaches the parser only through env BODY", str(env.get("BODY")).replace(" ", "") == "${{github.event.comment.body}}", str(env.get("BODY")))
     r("the parser's step holds no token or secret", not any(re.search(r"token|secret", str(v), re.I) for v in env.values()), str(env))
     open(f"{w}/parse.sh", "w").write(p[0]["run"])
-act = [s for s in steps if s.get("id") != "p"]
+act = [s for s in steps if s.get("id") == "act"]
+r("steps are p, act, oops and nothing else", [s.get("id") for s in steps] == ["p", "act", "oops"], str([s.get("id") for s in steps]))
 r("the second step is skipped when the parser says ignore", len(act) == 1 and str(act[0].get("if", "")).replace(" ", "") == "steps.p.outputs.action!='ignore'", str(act[0].get("if") if act else ""))
+oops = [s for s in steps if s.get("id") == "oops"]
+r("a fixed reply only when the parser itself failed (#1658 m3)", len(oops) == 1 and str(oops[0].get("if", "")).replace(" ", "") == "failure()&&steps.p.outcome=='failure'" and "comment" not in str(oops[0].get("env")) and "$" not in str(oops[0].get("run")).split("body=")[1].replace("$THIS_RUN", ""), str(oops[0] if oops else ""))
+nw = yaml.safe_load(open(wf.replace("comment-run.yml", "nightly.yml")))
+ni = ((nw.get("on", nw.get(True)) or {}).get("workflow_dispatch") or {}).get("inputs") or {}
+r("nightly.yml takes capabilities, data (six|checkpoint) and request, and names its run by request", set(ni) == {"capabilities", "data", "request"} and ni["data"].get("options") == ["six", "checkpoint"] and "inputs.request" in str(nw.get("run-name")), str(list(ni)) + " " + str(nw.get("run-name")))
 if act:
-    r("the second step reads no comment text", "comment" not in str(act[0].get("env")), str(act[0].get("env")))
+    r("the second step reads no comment text (its id, a number, only)", not re.search(r"comment\.(?!id\b)", str(act[0].get("env"))), str(act[0].get("env")))
     open(f"{w}/act.sh", "w").write(act[0]["run"])
 print("\n".join(res))
 PY
@@ -110,7 +116,7 @@ jqf() { local f=""; while [ $# -gt 0 ]; do [ "$1" = --jq ] && f="$2"; shift; don
 case "$*" in
   *"/comments"*) for x in "$@"; do case "$x" in body=*) printf '%s\n' "${x#body=}" >> "$GH_REPLIES";; esac; done;;
   *"/dispatches"*) exit "${FAKE_DISPATCH_RC:-0}";;
-  *"nightly.yml/runs"*) printf '%s\n' "${FAKE_NIGHTLY_URL:-}";;
+  *"nightly.yml/runs"*) jqf "$@" <<< "${FAKE_NIGHTLY:-{\"workflow_runs\":[]}}";;
   *"/pulls/"*) jqf "$@" <<< "${FAKE_PULL:-{\"head\":{\"sha\":\"0123456789abcdef0123456789abcdef01234567\",\"ref\":\"claude/x\",\"repo\":{\"full_name\":\"o/r\"}}}}";;
   *"ci.yml/runs"*) jqf "$@" <<< "${FAKE_RUNS:-{\"workflow_runs\":[]}}";;
   *"rerun-failed-jobs"*) exit "${FAKE_RERUN_RC:-0}";;
@@ -120,12 +126,16 @@ GH
 chmod +x "$W/bin/gh"; printf '#!/bin/sh\nexit 0\n' > "$W/bin/sleep"; chmod +x "$W/bin/sleep"
 act() { : > "$W/log"; : > "$W/replies"
   ( cd "$W" && PATH="$W/bin:$PATH" GH_LOG="$W/log" GH_REPLIES="$W/replies" GH_TOKEN=x REPO=o/r PR=7 GITHUB_SERVER_URL=https://github.com \
-      THIS_RUN=https://github.com/o/r/actions/runs/1 ACTION="$1" CAPS="${2:-}" DATA="${3:-}" REASON="${4:-}" bash --noprofile --norc -eo pipefail "$W/act.sh" ) >/dev/null 2>&1; echo $?; }
+      COMMENT_ID="${FAKE_COMMENT_ID:-555}" THIS_RUN=https://github.com/o/r/actions/runs/1 ACTION="$1" CAPS="${2:-}" DATA="${3:-}" REASON="${4:-}" bash --noprofile --norc -eo pipefail "$W/act.sh" ) >/dev/null 2>&1; echo $?; }
 calls() { grep -c "$1" "$W/log"; }
 
-rc=$(FAKE_NIGHTLY_URL=https://github.com/o/r/actions/runs/99 act nightly "C5.4 C7.3" checkpoint)
-ok "nightly: dispatches nightly.yml on main with exactly the parsed inputs" "$([ "$rc" = 0 ] && grep -qxF 'api -X POST repos/o/r/actions/workflows/nightly.yml/dispatches -f ref=main -f inputs[capabilities]=C5.4 C7.3 -f inputs[data]=checkpoint' "$W/log" && echo 1 || echo 0)" "rc $rc; $(tr '\n' '|' < "$W/log")"
-ok "nightly: replies once with the run's link" "$([ "$(wc -l < "$W/replies")" = 1 ] && grep -q 'runs/99' "$W/replies" && echo 1 || echo 0)" "$(cat "$W/replies")"
+nr() { printf '{"html_url":"https://github.com/o/r/actions/runs/%s","display_title":"%s"}' "$1" "$2"; }
+NIGHTLY="{\"workflow_runs\":[$(nr 98 'nightly · PR #8 comment 999'),$(nr 99 'nightly · PR #7 comment 555'),$(nr 97 'nightly')]}"
+rc=$(FAKE_NIGHTLY="$NIGHTLY" act nightly "C5.4 C7.3" checkpoint)
+ok "nightly: dispatches nightly.yml on main with exactly the parsed inputs and this comment's tag" "$([ "$rc" = 0 ] && grep -qxF 'api -X POST repos/o/r/actions/workflows/nightly.yml/dispatches -f ref=main -f inputs[capabilities]=C5.4 C7.3 -f inputs[data]=checkpoint -f inputs[request]=PR #7 comment 555' "$W/log" && echo 1 || echo 0)" "rc $rc; $(tr '\n' '|' < "$W/log")"
+ok "nightly: replies once with its own run's link, not a newer run of another comment (#1658 m1)" "$([ "$(wc -l < "$W/replies")" = 1 ] && grep -q 'runs/99' "$W/replies" && ! grep -q 'runs/98' "$W/replies" && echo 1 || echo 0)" "$(cat "$W/replies")"
+rc=$(FAKE_COMMENT_ID='5;id' act nightly "C7.3" six)
+ok "nightly: a comment id that is not a number stops it before any dispatch" "$([ "$rc" != 0 ] && [ "$(calls dispatches)" = 0 ] && echo 1 || echo 0)" "rc $rc"
 rc=$(act nightly "C7.3" six)
 ok "nightly: no run found yet → replies with nightly's page" "$([ "$rc" = 0 ] && grep -q 'workflows/nightly.yml' "$W/replies" && echo 1 || echo 0)" "rc $rc; $(cat "$W/replies")"
 rc=$(FAKE_DISPATCH_RC=1 act nightly "C7.3" six)

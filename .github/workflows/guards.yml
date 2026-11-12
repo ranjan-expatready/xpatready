@@ -11,6 +11,7 @@ on:
       - ".claude/skills/qa/**"
       - ".github/workflows/comment-run.yml"
       - ".github/workflows/label-guard.yml"
+      - ".github/workflows/nightly.yml"
       - ".github/workflows/guards.yml"
       - "ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/**"
       - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/isolated.sh"

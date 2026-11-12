@@ -60,7 +60,8 @@ jobs:
           else
             refuse "not a known command. Use \`/run nightly C7.3 [C5.4 …] [six|checkpoint]\` (1 to 8 capability ids; data six or checkpoint, nightly.yml's choices; a pack with no run on that data uses its fixture by itself) or \`/rerun failed\`, alone on the comment's first line"
           fi
-      - name: start the run and reply on the pull request
+      - id: act
+        name: start the run and reply on the pull request
         if: steps.p.outputs.action != 'ignore'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -70,6 +71,7 @@ jobs:
           CAPS: ${{ steps.p.outputs.caps }}
           DATA: ${{ steps.p.outputs.data }}
           REASON: ${{ steps.p.outputs.reason }}
+          COMMENT_ID: ${{ github.event.comment.id }}
           THIS_RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           export LC_ALL=C
@@ -80,13 +82,16 @@ jobs:
             nightly)
               # Defence in depth: the values were validated by the parser; check their shape again before use.
               [[ "$CAPS" =~ ^C[1-9][0-9]?\.[1-9][0-9]?( C[1-9][0-9]?\.[1-9][0-9]?){0,7}$ && "$DATA" =~ ^(six|checkpoint)$ ]] || { reply "refused: the parsed values failed their check. ([this run]($THIS_RUN))"; exit 1; }
+              # The run's name carries this PR and comment (nightly.yml's run-name), so the reply links exactly this run.
+              [[ "$PR" =~ ^[0-9]+$ && "$COMMENT_ID" =~ ^[0-9]+$ ]] || { reply "refused: no PR or comment number. ([this run]($THIS_RUN))"; exit 1; }
+              export TAG="PR #$PR comment $COMMENT_ID"
               since=$(date -u -d '-60 seconds' +%Y-%m-%dT%H:%M:%SZ)
-              if ! gh api -X POST "repos/$REPO/actions/workflows/nightly.yml/dispatches" -f ref=main -f "inputs[capabilities]=$CAPS" -f "inputs[data]=$DATA" >/dev/null; then
+              if ! gh api -X POST "repos/$REPO/actions/workflows/nightly.yml/dispatches" -f ref=main -f "inputs[capabilities]=$CAPS" -f "inputs[data]=$DATA" -f "inputs[request]=$TAG" >/dev/null; then
                 reply "could not start nightly.yml (GitHub refused the dispatch; see [this run]($THIS_RUN)). Ask the tech lead."; exit 1
               fi
               url=""
               for _ in 1 2 3 4 5 6 7 8 9 10; do
-                url=$(gh api -X GET "repos/$REPO/actions/workflows/nightly.yml/runs" -f event=workflow_dispatch -f branch=main -f "created=>=$since" -f per_page=1 --jq '.workflow_runs[0].html_url // empty' 2>/dev/null) || url=""
+                url=$(gh api -X GET "repos/$REPO/actions/workflows/nightly.yml/runs" -f event=workflow_dispatch -f branch=main -f "created=>=$since" -f per_page=30 --jq '[.workflow_runs[] | select(.display_title == "nightly · " + env.TAG)][0].html_url // empty' 2>/dev/null) || url=""
                 [ -n "$url" ] && break; sleep 3
               done
               where=${url:-"the newest run on [nightly's page]($GITHUB_SERVER_URL/$REPO/actions/workflows/nightly.yml)"}
@@ -114,3 +119,14 @@ jobs:
               fi;;
             *) echo "::error::unknown action"; exit 1;;
           esac
+      - id: oops
+        # The parser could not start or crashed (e.g. a comment too large for one environment value, #1658 review m3):
+        # a fixed reply, no comment text, so a member is never left without an answer.
+        name: the command could not be read (fixed reply)
+        if: failure() && steps.p.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.issue.number }}
+          THIS_RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: gh api -X POST "repos/$REPO/issues/$PR/comments" -f body="**comment-run (D3, P-506):** could not read the command (is the comment very large?). Put the command alone in a short comment. ([this run]($THIS_RUN))" >/dev/null
