@@ -2,15 +2,15 @@
 
 current_lead: local_dea96486-fb3d-4970-883f-8610e8b5fdb1 Lead 26 · 12 Nov 15:3x IST (series 2; took over from Lead 25 (series 2, local_08cf41af) at ~330k context, ~218k beyond its start read, P-446); start read: measure with get_usage; hand over 200k beyond it
 
-updated: 2026-11-12 15:3x IST by **Lead 25 (series 2, local_08cf41af-…)** at hand-over to Lead 26 · weekly 37% at 14:28 (resets 13 Nov 04:30 IST) · milestone: **Works on main 91/98 (15:5x, P-501): M2 59/60, M3 26/29, T 6/8** (M2 and M3 reached 60 and 29 on their milestone days; C4.11 waits on #1616, C7.3 needs a qa re-score after #1563/#1566, C8.2/C11.6 on QA-397, C6.6 no lane); Bake (M3.5) running · rules: **`RULES.md`** (as of P-496) · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-12 15:28 IST by **Lead 26 (series 2, local_dea96486-…)** at take-over (start read ~112k; hand over at ~312k) · weekly 39% at 15:26 (resets 13 Nov 04:30 IST) · milestone: **Works on main 91/98 (P-501): M2 59/60, M3 26/29, T 6/8** (M2 and M3 reached 60 and 29 on their milestone days; C4.11 waits on #1616, C7.3 needs a qa re-score after #1563/#1566, C8.2/C11.6 on QA-397, C6.6 no lane); Bake (M3.5) running · rules: **`RULES.md`** (as of P-496) · this branch: `lead/2026-11-07-lead31`
 
 Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-lead15s2-pointer-sections.md`. Earlier blocks (Lead 40's last, Lead 7→8 hand-over, Lead 8 and Lead 9 live rows): pointers word for word in `history/STATE-2026-11-11-0815-lead11s2-pointer-lines.md`.
 
 ## Hand-over: Lead 25 (series 2) → Lead 26 (series 2), 15:3x IST 12 Nov — read this first (Lead 24→25 block with Lead 25's live and check lines, word for word: `history/STATE-2026-11-12-1530-lead24s2-to-lead25-block-with-lead25-live.md`)
 **Founder awake and steering.** Rules as of **P-502** (RULES refreshed). Weekly **39%** at 15:2x (resets 13 Nov 04:30 IST). Paid US$0. **Times:** Lead 25 wrote P-501 "~16:0x", P-502 "~16:2x" and A28 "16:2x" without `date`; the real times were ~15:1x-15:2x IST (P-302; rows kept as written). **Measures (P-500, P-501):** `lead-watch.sh` now reports app-code merges (by files, `tools/app-code-prs.sh`) and Works on main across M2/M3/M4/T: **91/98** (M2 59/60, M3 26/29, T 6/8); no app-code merge since #1566 (~12:4x IST).
-1. **Act first:** **#1643** has a new "Question for the tech lead" (unread). `lead-watch` flags local worktree `qa-2026-11-06-m2-walk-c8dd7e` idle 98 min: read its session or remove it under P-468. **#1637** (A25 sweep): the qa lane renumbers to QA-421..QA-444 (P-498 (1)); then post `Reviewer: Approve <new head>` (records) and qa labels.
+1. **Act first:** done by Lead 26 (live line below). `lead-watch` flags local worktree `qa-2026-11-06-m2-walk-c8dd7e` idle 98 min: read its session or remove it under P-468.
 2. **Open, owner → next:**
-   - **#1633 A24-1** (cloud `session_01Ln6TiPq2Eon7HmktYupR7Z`): pushed the P-496 (2) `case-prepare.ts` fix (head 78c0ad988 at 14:5x); diff-only Opus re-review, then label. Schema read OK (P-423). Holds the schema and `case-prepare.ts` batons.
+   - **#1633 A24-1** (cloud `session_01Ln6TiPq2Eon7HmktYupR7Z`): labelled 15:2x after the Opus re-review Approve 305e72332 (fix read: two `caseName(c)` swaps). Holds the schema and `case-prepare.ts` batons.
    - **#1612 BK-17** (fix lane `…EXkjuE`): Approved round 4 at ae0d48aaf; label on green; takes `case-prepare.ts` after #1633.
    - **#1632 BK-16 PR 2:** fresh forms lane (`…SC7J6Z`, started 15:0x) finishing M1 (A) from the old lane's "Hand-over 2"; no `case-prepare.ts` baton (P-497 (2)).
    - **#1620 QA-415** (`…VQndmF`): Approved ba62afbdf; label on green.
@@ -21,6 +21,8 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
 3. **Founder (A27, A28; P-499, P-500, P-502):** one-week scope = Bake + walks + M4 core by ~19 Nov. **Factory plan card task_2efaa3ec** (Fable, local worktree, Opus challenge, at most 5 founder decisions) waits for his click; when its plan lands, take its decisions to him one at a time. Measured: our API is one NestJS module with 137 flat files and files of 950-1,262 lines; ER v2 has 91 modules and an 800-line cap. Promised: offer the builders' and qa's skill wording for P-500/P-502 at his next typed turn (skills are write-protected).
 4. **Owed:** BACKLOG rows for #1632's m1 (P-497 (2)), P-498's rows, the `flow-measure.py` tooling row (P-501); the expert gets the sweep's financial-support point; SI-6 wording; D8 and A24 expert points; night (P-489 (5)) one spare cloud lane at the founder's last typed turn.
 5. **Standbys:** Lead 27 `local_9ab495f0-d6e9-4a87-8ae2-6ba62074c471` stays; start one more at the founder's next typed turn. Lead 25's check 94a9e075 is deleted; create yours. 26 finished sessions were archived on the founder's word (A28).
+
+**Lead 26 live:** check 101ad69f at :13/:43. 15:2x: #1643 QA-439 answered (A): a generic order rule, a P-502 hypothesis with a 4-point Done when; the child's name goes to QA-440. #1637 records Approve 24f00c207 (qa labels). #1633 labelled.
 
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
 | # | Ask (IST) | Status |
