@@ -18,7 +18,7 @@ import { FoldOut } from "@/components/fold-out";
 /** What the panel reads of a line as the API answers it (api/src/case-checklist.ts StoredLine, from the engine's PersonLine
  *  in engine/runtime/case-checklist.ts). Declared here, not imported: the engine file reads Node modules the web build has not. */
 type Missing = { key: string; question: string; answered: boolean; on: "case" | "person"; subject: string | null };
-export type ChecklistLine = { id: string; label: string; lineage: string; reason: string; required: boolean; waivable?: boolean; who_words: string; quote: string | null; missing: Missing[];
+export type ChecklistLine = { id: string; label: string; lineage: string; reason: string; required: boolean; waivable?: boolean; never_waivable?: boolean; never_if?: string[]; who_words: string; quote: string | null; missing: Missing[];
   state: LineState; state_words: string; state_reason: string | null; state_by: string | null; state_at: string | null; version: number; documents: StoredDocument[]; kept: boolean;
   /** C6.15: the substitute set the line uses (any one of / all of), and whether the person's files meet it. */
   set?: { name: string; mode: "any_one" | "all_together"; words: string; members: { key: string; name: string; standard: boolean; when_staff: string | null }[] } | null;
@@ -98,6 +98,8 @@ function PersonDocuments({ caseId, caseSubject, p, people, nameOf }: { caseId: s
             <li key={l.id} className="rounded-lg border border-dashed border-border px-3 py-2 text-sm" data-waiting-line={l.lineage}>
               <span className="font-medium">{l.label}</span> <span className="text-xs text-text-muted">{l.who_words}</span>
               <p className="text-[13px] text-text-muted [overflow-wrap:anywhere]">{l.missing.length ? whyWaiting(l.reason) : l.reason}</p>
+              {/* M3-S4 re-review m8: a never waivable line that may be needed blocks Ready to file until it is answered. */}
+              {l.never_waivable ? <p className="text-[13px] font-medium" data-never-waivable>Never waived: Ready to file waits until this is answered and, if it is needed, received</p> : null}
               {l.missing.length ? <p className="text-[13px]">{l.missing.every((x) => x.answered) ? "Check, in the Agent view" : "Answer first, in the Agent view"}: {l.missing.map((x, i) => { const to = lineId(x.on === "case" ? caseSubject : x.subject ?? p.subject, x.key); return <React.Fragment key={x.key}>{i ? ", " : ""}<a className="text-text-link underline" href={`#${to}`} data-answer-first={x.key}
                 // The Agent view opens the tab the question is on (the application's, or the person's) on the address
                 // change; the same link twice is announced again.
@@ -148,6 +150,8 @@ function LineRow({ caseId, p, people, l, nameOf }: { caseId: string; p: Person; 
           <p className="text-text-muted [overflow-wrap:anywhere]" data-providers-rule={l.providers_rule ?? ""}>{l.providers_rule === "changed" ? `Chosen by the case officer${l.providers_change?.at ? ` on ${when(l.providers_change.at)}` : ""}${l.providers_change?.by ? ` (${nameOf(l.providers_change.by)})` : ""}: ${l.providers_change?.reason ?? ""}` : l.providers_rule === "type_roles" ? "Default from the document type" : "The person the item is for"}</p></div> : null}</div>
       {/* Break m3: a kept line says so once, in its reason (the API's words); no second "Kept" label. */}
       <div className="min-w-0"><Pill tone={TONE[l.state] ?? "neutral"}><span data-state-words>{l.state_words}</span></Pill>
+        {/* M3-S4 (P-172): the release says this line can never be waived; Ready to file waits until it is received. */}
+        {l.never_waivable ? <p className="mt-0.5 text-xs font-medium" data-never-waivable>{l.state === "not_applicable" || l.state === "waived" ? "Never waived now: it still blocks Ready to file; request it again" : l.never_if?.length ? `Never waived if ${l.never_if.join(", ")} calls for it: Ready to file waits until it is received or that answer rules it out` : "Never waived: Ready to file waits until it is received"}</p> : null}
         {l.state_reason ? <p className="mt-0.5 text-xs text-text-muted [overflow-wrap:anywhere]">{l.state_reason}</p> : null}</div>
       <div className="min-w-0 text-[13px] [overflow-wrap:anywhere]"><p data-reason>{l.reason}</p>
         {l.quote ? <FoldOut className="mt-0.5" summaryClassName="text-xs text-text-link" summary="Source"><p className="mt-1 text-xs text-text-muted [overflow-wrap:anywhere]" data-quote>{l.quote}</p></FoldOut> : null}
@@ -169,7 +173,7 @@ function LineRow({ caseId, p, people, l, nameOf }: { caseId: string; p: Person; 
               {REQUEST_FROM.includes(l.state) ? <DropdownMenu.Item className={item} disabled={busy} onSelect={() => void request()} data-action="request">{l.state === "not_requested" ? "Request" : "Request again"}</DropdownMenu.Item> : null}
               {UPLOAD_FROM.includes(l.state) && !l.set ? <DropdownMenu.Item className={item} disabled={busy} onSelect={() => { member.current = null; file.current?.click(); }} data-action="upload">Upload a file…</DropdownMenu.Item> : null}
               {UPLOAD_FROM.includes(l.state) && l.set ? l.set.members.map((m) => <DropdownMenu.Item key={m.key} className={item} disabled={busy} onSelect={() => { member.current = m.key; file.current?.click(); }} data-action="upload" data-member={m.key}>Upload {m.name}…</DropdownMenu.Item>) : null}
-              {NOT_APPLICABLE_FROM.includes(l.state) ? <DropdownMenu.Item className={item} onSelect={() => setNa("not-applicable")} data-action="not-applicable">Not applicable…</DropdownMenu.Item> : null}
+              {NOT_APPLICABLE_FROM.includes(l.state) && !l.never_waivable ? <DropdownMenu.Item className={item} onSelect={() => setNa("not-applicable")} data-action="not-applicable">Not applicable…</DropdownMenu.Item> : null}
               {l.waivable && WAIVE_FROM.includes(l.state) ? <DropdownMenu.Item className={item} onSelect={() => setNa("waive")} data-action="waive">Waive…</DropdownMenu.Item> : null}
               {l.shared ? <DropdownMenu.Item className={item} onSelect={() => setProviders(true)} data-action="providers">Change providers…</DropdownMenu.Item> : null}
               <DropdownMenu.Item className={item} onSelect={() => setHistory(true)} data-action="history">History</DropdownMenu.Item>

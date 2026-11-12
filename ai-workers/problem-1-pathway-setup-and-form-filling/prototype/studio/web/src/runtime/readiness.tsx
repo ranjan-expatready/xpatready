@@ -87,7 +87,7 @@ export function ReadinessPanel({ caseId }: { caseId: string }) {
     <section aria-labelledby="readiness-h" className="rounded-xl border border-border bg-surface-raised" data-readiness>
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-4 py-3">
         <h2 id="readiness-h" tabIndex={-1} className="text-base font-semibold outline-none">Ready to file</h2>
-        <p className="min-w-0 flex-1 text-[13px] text-text-muted">What stands before each filing is Ready to file, by who owes it. Only a barcode form without its validated copy read back blocks; every other line is fixed, or passed with a written reason.</p>
+        <p className="min-w-0 flex-1 text-[13px] text-text-muted">What stands before each filing is Ready to file, by who owes it. Only a barcode form without its validated copy read back, or a document its release says can never be waived, blocks; every other line is fixed, or passed with a written reason.</p>
         {v?.derived && v.filings.length ? <Button size="sm" variant="secondary" onClick={() => setSending(true)} data-send-for-review title="Send for review: the representative of record checks each form and approves it or sends it back."><Send aria-hidden />{firm.data?.solo && rounds.data?.representative === actor ? "Review now" : "Send for review"}</Button> : null}
       </header>
       {handTo && waiting ? <HandOff className="border-b border-border px-4 py-2.5" to={handTo} go={`/cases/${caseId}/representative-review/${waiting.id}`} done={`Sent for review (round ${waiting.number})`} next={<>{handName(handTo) ?? nameOf(handTo)} checks each form and approves it or sends it back.</>} data="representative" /> : null}

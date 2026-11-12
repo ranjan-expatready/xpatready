@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { noRetryOnRefusal, type CanAdd, type CasePerson } from "./questionnaire";
 
 type Kind = "make_principal" | "remove_filing" | "add_back";
-type Preview = { kind: Kind; subject: string; title: string; stays: string; changes: { person: string; label: string; words: string[] }[]; totals: { before_cents: number; after_cents: number } | null; basis: string };
+type Preview = { kind: Kind; subject: string; title: string; stays: string; changes: { person: string; label: string; words: string[]; on?: string }[]; totals: { before_cents: number; after_cents: number } | null; basis: string };
 type Applicant = { subject: string; mode: string };
 type Filing = { id: string; status: string; applicants: Applicant[]; record?: { submitted_on?: string; application_number?: string } | null };
 type PrepareView = { derived: boolean; filings: Filing[] };
@@ -139,10 +139,10 @@ function ChangeDialog({ caseId, kind, subject, initialReason, close, done }: { c
         {refusal ? <Notice tone="warn" title="Not possible">{refusal}</Notice> : null}
         {!view && !refusal ? <div className="space-y-2"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-16 w-full" /></div> : null}
         {view ? <>
-          {others.length ? <p className="rounded-lg bg-warn/15 px-3 py-2 text-sm font-medium text-text-warn" data-dependants>{others.length} other filing{others.length === 1 ? " depends" : "s depend"} on this one and change{others.length === 1 ? "s" : ""}:</p>
+          {others.length ? <p className="rounded-lg bg-warn/15 px-3 py-2 text-sm font-medium text-text-warn" data-dependants>{view.changes.some((c) => c.on) /* BK-9: a shared application */ ? `This changes ${others.length} other ${others.length === 1 ? "person's application" : "people's applications"} too:` : `${others.length} other filing${others.length === 1 ? " depends" : "s depend"} on this one and change${others.length === 1 ? "s" : ""}:`}</p>
             : <p className="text-sm text-text-muted">No other filing changes.</p>}
           <ul className="space-y-2">{view.changes.map((c) => <li key={c.person} className="rounded-lg border border-border px-3 py-2" data-change-filing={c.person}>
-            <p className="font-medium">{c.label}'s filing{c.person === subject ? " (this one)" : ""}</p>
+            <p className="font-medium">{c.on ? `${c.label} · on ${c.on}'s application` : view.changes.some((x) => x.on) /* review m4: one word per dialog */ ? `${c.label}'s application` : `${c.label}'s filing`}{c.person === subject ? " (this one)" : ""}</p>
             <ul className="ml-4 list-disc text-sm">{c.words.map((w) => <li key={w}>{w}</li>)}</ul></li>)}</ul>
           {view.totals && view.totals.before_cents !== view.totals.after_cents ? <p className="text-sm text-text-muted" data-change-totals>Fees for this case: {cad(view.totals.before_cents)} → {cad(view.totals.after_cents)} (amounts from the cited fee table, Sample).</p> : null}
           <Field label="Why?" hint="Kept with the change and shown on the person's row." error={error}>

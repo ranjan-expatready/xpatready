@@ -20,13 +20,21 @@ import type { FieldReadersView, FieldWithdrawn } from "../../../contracts/own-qu
 import type { HeldFileView, ImpactAccepted, ImpactChange, ImpactComponentKind, ImpactDrafted, ImpactReview, LibraryChangeDetail, LibraryChangeView, MergeSide, MergeView } from "../../../contracts/screen02";
 import { RECHECK, SAY } from "../../../contracts/lifecycle";
 import { FoldOut } from "@/components/fold-out";
+import { HandOff, holderOf, theName, type Person } from "@/components/hand-off";
 
 const inv = [["review-queue"], ["draft"], ["catalogue"]];
 function useMe() {
   const id = useActorId();
   const s = useApi<SessionView>(["session", id], "/session");
   const duties: readonly string[] = s.data?.actor?.duties ?? [];
-  return { id, has: (d: string) => duties.includes(d), name: s.data?.actor?.name };
+  return { id, has: (d: string) => duties.includes(d), name: s.data?.actor?.name, people: (s.data as { actors?: Person[] } | undefined)?.actors };
+}
+/** BK-4b (BR-2, BR-3): the item is decided by someone else: one button hands it to the holder of its duty who did not
+ *  propose it ("must verify" goes to the expert duty, anything else to the review duty), on this same page. */
+function DecideHandOff({ me, duty, proposer, does }: { me: ReturnType<typeof useMe>; duty: "sme" | "review"; proposer?: string | null; does: string }) {
+  if (!me.people) return null;
+  const to = holderOf(me.people, duty, [proposer, me.id]);
+  return <HandOff id="decide" next={<>{to ? theName(to) : "a different person"} {does}</>} to={to} noOne={duty === "sme" ? "No one else in this workspace holds the immigration expert's duty, so nobody can decide this." : "No one else in this workspace holds the review duty, so nobody can decide this."} />;
 }
 /** BK-3: the page's place, shown on the frame's one "where am I" line. */
 function Crumbs({ here }: { here: string }) {
@@ -158,8 +166,8 @@ export function LibraryChangePage() {
           : (x as unknown as { sets?: unknown }).sets ? <><Notice title="Propose it again">A returned change of a document's substitute sets is not sent again from here: withdraw it, then propose the sets again in the line's drawer (Documents tab).</Notice><Withdraw id={x.id} label="Withdraw it" /></> /* C6.15: the same dead end */
           : (x as unknown as { providers?: unknown }).providers ? <><Notice title="Propose it again">A returned change of who provides a shared document is not sent again from here: withdraw it, then propose the roles again with "Change who provides it…" in the document line's drawer (Documents tab).</Notice><Withdraw id={x.id} label="Withdraw it" /></> /* C6.14 (Devin on #1392) */
           : x.supplies ? <><Notice title="Propose it again">A returned change of the facts a document supplies is not sent again from here: withdraw it, then propose the facts again with "Change the facts it supplies…" on its document type (Documents tab or Shared library › Document types).</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.background ? <><Notice title="Propose it again">A returned change of whether a section holds background answers is not sent again from here: withdraw it, then propose it again on Shared library › Sections.</Notice><Withdraw id={x.id} label="Withdraw it" /></> : x.action === "RENAME" ? <><Notice title="Rename it again">A returned rename is not sent again from here: rename it again on its page, where the check runs again; or withdraw it.</Notice><Withdraw id={x.id} /></> : LIFECYCLE_KINDS.includes(x.kind) ? <SendAgain change={x} /> : <Correct change={x} />) : x.status !== "WAITING" ? null : mine || !me.has((x as unknown as { must_verify?: unknown }).must_verify ? "sme" : "review") /* C7.9 (break F6): only the expert decides */
-        ? ((x as unknown as { must_verify?: unknown }).must_verify ? <Notice title={mine ? "You proposed this" : "The immigration expert decides"}>{mine ? "The immigration expert approves it or returns it with a reason (SA-1B-1 rule 9)." : "Only the immigration expert approves or returns \"must verify before filing\": switch to the Content reviewer (simulated), who holds that duty."}</Notice>
-          : <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>)
+        ? ((x as unknown as { must_verify?: unknown }).must_verify ? <><Notice title={mine ? "You proposed this" : "The immigration expert decides"}>{mine ? "The immigration expert approves it or returns it with a reason (SA-1B-1 rule 9)." : "Only the immigration expert approves or returns \"must verify before filing\"."}</Notice><DecideHandOff me={me} duty="sme" proposer={x.proposed_by_id} does="approves it or returns it with a reason." /></>
+          : <><Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "A content publisher who did not propose it approves it or returns it."}</Notice><DecideHandOff me={me} duty="review" proposer={x.proposed_by_id} does="approves it or returns it with a reason." /></>)
         : <>
           {/* ReviewCard (P-116 amended): the approval re-check, run now and said before the click. */}
           {/* Break M5: approving what IRCC accepts names every combination it leaves with a line filed in a refused way. */}
@@ -308,7 +316,7 @@ export function MergeReviewPage() {
             <p className="text-sm"><b>Reason:</b> {x.reason}</p>
             {x.status === "PROPOSED" ? <ChangePreview check={check} stale={stale} /> : null}
             {x.status !== "PROPOSED" ? null : mine || !me.has("review")
-              ? <Notice title={mine ? "You proposed this merge" : "A content publisher decides"}>{mine ? "A different person approves or rejects it." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
+              ? <><Notice title={mine ? "You proposed this merge" : "A content publisher decides"}>{mine ? "A different person approves or rejects it." : "A content publisher who did not propose it approves or rejects it."}</Notice><DecideHandOff me={me} duty="review" proposer={x.proposed_by_id} does="approves or rejects the merge." /></>
               : <Decide yes="Approve the merge" no="Reject" busy={approve.isPending || reject.isPending} disabledWhy={check.isFetching || !check.data ? "Checking what the merge touches…" : null} onYes={() => { setStale(false); approve.mutate(undefined); }} onNo={(n) => reject.mutate(n)} onlyNo={check.data && !check.data.ok ? "The checks refuse this merge now (listed above): reject it with that reason." : undefined} />}
           </div>
         )}
@@ -347,7 +355,7 @@ export function HeldFilePage() {
           : <p className="text-text-muted">The person who uploaded it records the page first.</p>}
       </section></>}
       {mine || !me.has("review")
-        ? <Notice title={mine ? "You uploaded this file" : "A content publisher decides"}>{mine ? (h.cannotApprove ? "A different person rejects it. Upload the official PDF from canada.ca instead." : "A different person compares it with the IRCC page and approves or rejects it.") : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
+        ? <><Notice title={mine ? "You uploaded this file" : "A content publisher decides"}>{mine ? (h.cannotApprove ? "A different person rejects it. Upload the official PDF from canada.ca instead." : "A different person compares it with the IRCC page and approves or rejects it.") : "A content publisher who did not upload it decides."}</Notice>{mine && !h.irccPage && !h.cannotApprove ? null /* the uploader records the page first: the next step is still theirs */ : <DecideHandOff me={me} duty="review" proposer={h.uploadedBy} does={h.cannotApprove ? "rejects it." : "compares it with the IRCC page and approves or rejects it."} />}</>
         : h.cannotApprove
           ? <Decide yes="Approve as an official source" no="Reject" onlyNo={h.cannotApprove.split(":")[0].slice(0, 300)} busy={reject.isPending} onYes={() => undefined} onNo={(n) => reject.mutate(n)} />
           : <Decide yes="Approve as an official source" no="Reject" busy={approve.isPending || reject.isPending} disabledWhy={h.irccPage ? null : "Waiting for the uploader to record the IRCC page."} onYes={() => approve.mutate(undefined)} onNo={(n) => reject.mutate(n)} />}
@@ -436,7 +444,7 @@ export function FormFieldsPage() {
     <div className="mx-auto max-w-5xl space-y-5">
       <Crumbs here="Form fields" />
       {!q.data ? <Head title="Form fields" /> : undecided ? <Head title="Form fields with no decision" chip={me.has("review") ? "Needs you" : "A content publisher decides"} sub="Release of every combination that uses this form waits until each new form field has a decision." /> : <Head title="Form fields" chip="Decided" tone="ok" sub="Every form field of this edition has a decision." />}
-      {me.has("review") || !undecided ? null : <Notice title="A content publisher decides">Switch to a person with the review duty to decide these.</Notice>}
+      {me.has("review") || !undecided ? null : <><Notice title="A content publisher decides">A person with the review duty decides these.</Notice><DecideHandOff me={me} duty="review" does="decides these form fields." /></>}
       <FormFieldDecisions editionId={id!} readOnly={!me.has("review")} />
     </div>
   );

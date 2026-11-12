@@ -177,7 +177,7 @@ function StartNextDialog({ caseId, close, returnFocus }: { caseId: string; close
                 <li>{n(p.counts.asked_again, "question about this application asked again", "questions about this application asked again")}</li>
                 <li>{n(p.counts.new_questions, "new question", "new questions")}</li>
                 <li>{n(p.counts.forms, "form", "forms")}: {p.forms.join(", ") || "none"}</li>
-                <li className="sm:col-span-2" data-start-documents>{p.documents_basis === "checklist" ? `${n(p.counts.documents, "document", "documents")} on the checklist` : `${n(p.counts.documents, "document", "documents")} its release asks for (the per-person checklist is not worked out yet for this combination, so no checklist line is made)`}: {p.documents.join("; ") || "none"}</li>
+                <li className="sm:col-span-2" data-start-documents>{`${n(p.counts.documents, "document", "documents")} on the checklist` /* M3-S4: every checklist is worked out */}: {p.documents.join("; ") || "none"}</li>
               </ul>
               <p className="mt-1 text-xs text-text-muted">The people's answers are read where they are; this application's own answers (its number, date, office, country where applying) belong to the new application and are asked again.</p></section>
             {p.deadline ? <section><h3 className="mb-1 font-semibold">Deadline</h3><Deadline d={p.deadline} /></section> : null}
