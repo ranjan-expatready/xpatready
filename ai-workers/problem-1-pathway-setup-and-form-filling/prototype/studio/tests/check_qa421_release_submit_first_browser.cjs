@@ -2,7 +2,8 @@
 // release page, while a change the Configuration author can submit is not submitted, the page's one next step is
 // "Submit <combination> for review →" (to its Review and release tab), and there is no "Hand to the Approver": a release
 // then would leave the author's change out. Once it is submitted the hand-off comes back. Walked in a real browser on the
-// configured checkpoint (C10.1) at 1440 px (never submitted) and 375 px (changed after it was submitted), as the author;
+// configured checkpoint (C10.1) at 1440 px (never submitted; returned to the author) and 375 px (changed after it was
+// submitted), as the author;
 // also: the Content reviewer (no author duty) is offered no Submit; axe (WCAG 2.2 AA) on the step; no sideways scroll at
 // 375 px. Fails on main 3ea36a0d3 (the author sees "Hand to the Approver →" and no Submit). The draft change is made through
 // the API as the author (scaffolding: the Documents tab is not this row). No model call (US$0).
@@ -95,6 +96,16 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("4. 375 px (P-473): one filled button, the Submit", f4.length === 1 && f4[0] === `Submit ${LABEL} for review →`, f4);
   await axe("4. the Submit step at 375 px", '[data-next-step="submit"]');
   await shot("4-author-changed-after-submit-375");
+
+  // 4b. Returned to the author (review m1): the Content reviewer returns it (through the API: the Return on screen is
+  // BK-4b's), so the author must submit it again: Submit first again, no hand-off.
+  const items = (((await api(`/combinations/${ID}/review`, { actor: "user-C" })).body?.submission?.changeSummary) ?? []).map((c) => `${c.kind}|${c.key}`);
+  const ret = await api(`/combinations/${ID}/signoff`, { method: "POST", actor: "user-C", data: { action: "returned", items, note: "Please say which officer provides it (QA-421 check)." } });
+  const why4b = ((await api("/draft")).body?.rows ?? []).find((r) => r.combinationId === ID)?.why ?? "";
+  step("setup: the Content reviewer returns the Visitor visa to the author", ret.status < 300 && items.length > 0 && /^Returned to the author/.test(why4b), { status: ret.status, items: items.length, why4b, detail: ret.body?.detail });
+  await p.setViewportSize({ width: 1440, height: 900 });
+  await releasePage();
+  step(`4b. 1440 px, author, returned: the next step is "Submit ${LABEL} for review →", no hand-off`, await nextStep.getByRole("link", { name: `Submit ${LABEL} for review →`, exact: true }).count() === 1 && await p.locator('[data-handoff="approver"]').count() === 0, await p.locator("main").innerText());
 
   // 5. A person without the author duty cannot submit, so is never offered it (audit D-2).
   await p.setViewportSize({ width: 1440, height: 900 });

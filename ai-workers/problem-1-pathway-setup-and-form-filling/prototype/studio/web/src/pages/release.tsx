@@ -60,7 +60,7 @@ export function ReleasePage() {
         <>
           {toSubmit.length ? (
             <div data-next-step="submit" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm">
-              <p className="min-w-0">Next: submit <b>{toSubmit[0].label}</b> for review{toSubmit.length > 1 ? <> (and {toSubmit.length - 1} more not submitted)</> : null}. Until it is submitted and its review is done, a release leaves it out.</p>
+              <p className="min-w-0">Next: submit <b>{(toSubmit[0].path ?? [toSubmit[0].label]).join(" › ")}</b> for review{toSubmit.length > 1 ? <> (and {toSubmit.length - 1} more to submit)</> : null}. Until it is submitted and its review is done, a release leaves it out.</p>
               <Button asChild size="sm"><Link to={`/c/${toSubmit[0].combinationId}/review`}>Submit {toSubmit[0].label} for review →</Link></Button>
             </div>
           ) : null}
