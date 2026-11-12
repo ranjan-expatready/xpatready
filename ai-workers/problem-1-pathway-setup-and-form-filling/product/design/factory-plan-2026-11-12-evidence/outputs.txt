@@ -89,3 +89,4 @@ band	n_noconf	med_h_noconf	n_conf	med_h_conf	n_mom_noconf	med_h_mom_noconf
 size-matched extra hours on PRs with a real conflict (sum over bands of (median conf - median clean) x n_conf): 302.1
 app merges by IST hour: [14, 11, 21, 10, 11, 4, 11, 5, 10, 13, 9, 16, 13, 13, 18, 16, 14, 19, 11, 15, 9, 8, 14, 16]
 app PRs opened by IST hour: [16, 8, 3, 3, 1, 3, 6, 9, 14, 17, 11, 13, 23, 25, 10, 18, 26, 7, 14, 14, 10, 14, 18, 18]
+nightly runs 273, dispatched 262; asks 63; ask->next dispatch n=62 median 0.64 h p90 15.28 h
