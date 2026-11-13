@@ -1,0 +1,19 @@
+# Brief — FO-1b, front-office booking tables (cloud builder lane; row owner Lead B)
+
+Paste into a new cloud session on the repository (default branch `main`), **after PF-3 has merged** (it needs `platform_firm`):
+
+---
+You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime FO-1b` and take **one row, FO-1b**, end to end on a fresh branch from `origin/main`, one PR.
+
+**The row:** `ai-workers/problem-1-pathway-setup-and-form-filling/product/BACKLOG.md`, section "Full MVP: platform (PF) and front office (FO)", row **FO-1b** (rows rev 3.1). Read with it, and only these: `product/design/platform-and-front-office-contracts-2026-11-14.md` §2.2 and **§7 (binding)**; `product/design/lead-b-requirements-trace-2026-11-14.md` §A row "Booking"; `product/design/lead-b-trace-2026-11-14/t4-booking.md` §2; the AG-04 cards the row cites (`domain/requirements-2026-11-02/02-functional-requirements/agent/AG-04-…`, read those cards only); `prototype/studio/DEVELOPING.md` "Database schema: one file per area (DB-SPLIT)".
+
+**What to build (schema and seed only; no routes, no screens):**
+* New file `prototype/studio/prisma/schema/front-office-booking.prisma`, its one-line rule first ("front-office-booking.prisma — consultation types, staff hours, time off, bookings, booking tokens. Owner: Lead B (front office)"); never edit another area's file; a back-relation needed on `platform.prisma` is one line you ask Lead B for in the PR.
+* The tables in the row: `fo_consultation_type`, `fo_availability` (seeded from the firm's business hours setting), `fo_time_off`, `fo_booking` (statuses `SCHEDULED | RESCHEDULED | CANCELLED | COMPLETED | NO_SHOW`, `sequence`, visitor zone) with the `btree_gist` exclusion constraint over each host's `SCHEDULED`/`RESCHEDULED` range padded by the type's gaps, `fo_booking_token`.
+* Test `tests/check_fo1b_booking_schema.ts` covering every line of the row's Done when (two real connections for the overlap test), a pass and a fail each.
+* One migration folder with its own stamp later than the newest on `main` (P-348 (8)); triggers in its SQL.
+
+**Must still be true:** the demo reset and every existing suite pass unchanged; `tests/check_prisma_schema.ts` passes; the `btree_gist` extension is created by the migration (it ships with PostgreSQL).
+
+**Rules (standard, every PF/FO brief):** P-559: firm tables, real sign-in and billing are ours in the PF/FO modules (amends P-335/P-357). One row, one session, one PR; new files only outside the one migration folder. Opus reviewer (P-303); **breaker yes (schema)**; re-review reads only the diff (P-277); label `review: approved` only after `Reviewer: Approve <sha>` and green CI (P-277, P-385); merge `main` only on a conflict (P-270). You hold the **schema baton** (one builder at a time on schema; release it in the PR when merged). Live AI off, US$0, never a priced button (P-175). No real keys anywhere. Push after every step (P-557). Questions as a PR comment headed "Question for the tech lead"; report to the current Lead (`tools/current-lead.sh`) for the merge queue and to **Lead B** (row owner, branch `lead-b-front-office`) for the row. Every token earns its outcome (P-556): read only the files named here and the code you change.
+---
