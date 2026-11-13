@@ -1,0 +1,404 @@
+// forms.prisma — The forms library: official files and the official pages confirmed for a combination, intake, editions and what IRCC accepts, field maps of a form edition, portal captures, library changes and deletions. Owner: the forms lane.
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+
+/// F1 (challenge point 2): an edition is the PDF file, or an online version read from captured portal screens.
+enum EditionChannel {
+  PDF
+  ONLINE
+}
+
+// ─── Sources and forms ──────────────────────────────────────────────────────────────────────────
+
+/// An uploaded official form, checklist, guide or page. Only files whose bytes match the official manifest
+/// are "recognised"; anything else is held (no AI drafting, no reading).
+model SourceAttachment {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @map("workspace_id") @db.Uuid
+  combinationId  String   @map("combination_id") @db.Uuid
+  kind           String
+  fileName       String   @map("file_name")
+  storedPath     String   @map("stored_path")
+  sha256         String
+  bytes          Int
+  recognised     Boolean
+  officialFile   String?  @map("official_file")
+  edition        String?
+  approval       String?
+  status         String
+  statusDetail   String?  @map("status_detail")
+  /// MANUAL (a person chose the file) or SAMPLE (the Load sample inputs button chose it); same handling.
+  uploadedVia    String   @map("uploaded_via")
+  uploadedBy     String   @map("uploaded_by")
+  inventoryFile  String?  @map("inventory_file")
+  inventorySummary Json?  @map("inventory_summary")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, sha256])
+  @@map("source_attachment")
+}
+
+model GovFormDef {
+  id          String  @id @default(uuid()) @db.Uuid
+  workspaceId String  @map("workspace_id") @db.Uuid
+  formKey     String  @map("form_key")
+  displayName String  @map("display_name")
+  /// "data_form" (an XFA form the system fills) or "document" (a checklist or instructions)
+  /// S4 (M5) adds "guide" and "checklist": stored once in the library, read by AI, never filled ("document" stays for rows
+  /// made before S4).
+  formKind    String  @default("data_form") @map("form_kind")
+  /// P-319 (founder, 4 Nov: "no combination is hard-coded"): what the form is to IRCC's rules, set per form by an author in
+  /// the library (contracts/form-library.ts FORM_ROLES): "family_information" (IMM 5707, IMM 5645 on the demo; [IRCC-F09]
+  /// reads it). Null: no role. Released with each combination's snapshot (engine/snapshot.ts form_role).
+  formRole    String? @map("form_role")
+  /// S4: the form's own canada.ca page (where the edition and its PDF link are read; never a guide's link).
+  formPageUrl String? @map("form_page_url")
+  /// S4 (m2, P-116): retired by a release that carries an approved retire; hidden from pickers and AI, kept by releases.
+  retiredAt   DateTime? @map("retired_at") @db.Timestamptz
+  retiredBy   String?   @map("retired_by")
+  /// Which source drafting reads for this form (P-62 §1, C2.10): PDF_FIRST (the PDF version first, then the online
+  /// screens for what differs; the default) or ONLINE_ONLY (the online screens alone: the PDF version is not reused).
+  draftFrom   String  @default("PDF_FIRST") @map("draft_from")
+  /// X5 (P-156 (1)): when IRCC's forms index last listed this number (the library fill, US$0), and the index's date
+  /// modified for it then.
+  listedOnIndexAt   DateTime? @map("listed_on_index_at") @db.Timestamptz
+  indexDateModified String?   @map("index_date_modified")
+
+  editions FormEdition[]
+  usedBy   CombinationForm[]
+
+  @@unique([workspaceId, formKey])
+  @@map("gov_form_def")
+}
+
+/// W1-10 slice 1 (P-143, C-3): what IRCC accepts for one form edition through one IRCC account (contracts/forms.ts
+/// IRCC_ACCOUNTS, or ANY: every account). Basis AI_SAMPLE · PERSON_SAMPLE · SAMPLE_FIXTURE · FOUNDER_SAMPLE · EXPERT,
+/// with IRCC's line it was read from (P-170: page, quote, date read), or null where none was found.
+model FormEditionAccept {
+  id            String          @id @default(uuid()) @db.Uuid
+  workspaceId   String          @map("workspace_id") @db.Uuid
+  formEditionId String          @map("form_edition_id") @db.Uuid
+  account       String
+  channels      FilingChannel[]
+  basis         String
+  quote         String?
+  sourceUrl     String?         @map("source_url")
+  readOn        DateTime?       @map("read_on") @db.Date
+  setBy         String          @map("set_by")
+  setAt         DateTime        @default(now()) @map("set_at") @db.Timestamptz
+
+  edition FormEdition @relation(fields: [formEditionId], references: [id], onDelete: Cascade)
+
+  @@unique([formEditionId, account])
+  @@index([workspaceId])
+  @@map("form_edition_accept")
+}
+
+model FormEdition {
+  id             String  @id @default(uuid()) @db.Uuid
+  workspaceId    String  @map("workspace_id") @db.Uuid
+  govFormDefId   String  @map("gov_form_def_id") @db.Uuid
+  editionLabel   String  @map("edition_label")
+  officialFile   String? @map("official_file")
+  sha256         String?
+  inventoryFile  String? @map("inventory_file")
+  dataBoundBoxes Int     @default(0) @map("data_bound_boxes")
+  /// Screen 01 uploads (P-25): the uploaded PDF kept outside the web root, so "+ Add" can attach it to another row.
+  storedPath     String? @map("stored_path")
+  /// F1: PDF (the file) or ONLINE (an online version: the portal twin of an approved capture, P-66). An online version's
+  /// identity is contentSha256, the fingerprint of its normalised screens (saved pages differ byte for byte per save);
+  /// sha256 stays the PDF's file checksum. inventoryFile holds the twin (screens, inputs, options) for both channels.
+  channel        EditionChannel @default(PDF)
+  portalKey      String?   @map("portal_key")
+  capturedOn     DateTime? @map("captured_on") @db.Date
+  /// The date the online version must be checked again (validator: an Online line needs a version within it).
+  recheckBy      DateTime? @map("recheck_by") @db.Date
+  contentSha256  String?   @map("content_sha256")
+  /// S4: where this edition came from: SAMPLE (Load sample, committed copies) · UPLOADED (a person) · DOWNLOADED
+  /// (the form finder, from canada.ca). Null on rows made before S4.
+  origin         String?
+  /// S4: the canada.ca form page and the PDF link the file was taken from, the "Last updated" (YYYY-MM) that page showed,
+  /// and when the library last compared it with canada.ca (EXPERIENCE §2.11 freshness).
+  formPageUrl    String?   @map("form_page_url")
+  sourceUrl      String?   @map("source_url")
+  canadaUpdated  String?   @map("canada_updated")
+  checkedAt      DateTime? @map("checked_at") @db.Timestamptz
+  /// X5 (PR #146): IRCC's index date last seen as current for this file: set by a "Check against canada.ca" that found it
+  /// current (an undated file: by the fill's reads). engine/library-index.ts newerOnIndex.
+  indexDateSeenCurrent String? @map("index_date_seen_current")
+  /// S4 (M6): canada.ca now serves a different file for this same printed edition; a person decides to Replace.
+  newerFileSha256 String?  @map("newer_file_sha256")
+  /// C3.12: the date the file says it was published (YYYY-MM-DD; its ModDate, else CreationDate), not the printed edition.
+  /// Null: not read yet (the Forms list reads it once); "": read, and the file names no date.
+  published       String?
+
+  form GovFormDef     @relation(fields: [govFormDefId], references: [id], onDelete: Cascade)
+  maps FormFieldMap[]
+  recaptureTasks RecaptureTask[]
+  accepts        FormEditionAccept[]
+  acceptedUntil  FormEditionAcceptedUntil[] // C7.6, P-151 (1)
+
+  @@unique([workspaceId, editionLabel])
+  @@map("form_edition")
+}
+
+/// The one form intake (P-51): one row per file a person (or the sample loader) handed in, with what was read from the
+/// file and the outcome. Held rows wait for a person: a new edition of a form already in the library (impact review,
+/// P-32/P-38; never attached or used silently) or a file whose code and edition could not be read.
+model IntakeItem {
+  id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @map("workspace_id") @db.Uuid
+  /// The combination it was uploaded on (door 1); null for the Forms library's own "Add forms" (door 2, Screen 04).
+  combinationId String?  @map("combination_id") @db.Uuid
+  fileName      String   @map("file_name")
+  storedPath    String   @map("stored_path")
+  sha256        String
+  bytes         Int
+  /// form · checklist · guide · unknown, read from the file
+  kind          String
+  code          String?
+  title         String?
+  editionLabel  String?  @map("edition_label")
+  published     String?
+  /// in_library · added · attached · new_edition_held · held · refused
+  outcome       String
+  /// HELD (waits for a person) or DONE
+  status        String
+  reason        String?
+  createdBy     String   @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  /// P-80: the IRCC page the uploader says a held file came from, for the second person to compare.
+  irccPage      String?  @map("ircc_page")
+  /// S4 (S5 ask): uploaded from this combination's "Not found" row for this form: attached when the file becomes usable.
+  forCombinationId String? @map("for_combination_id") @db.Uuid
+  forCode       String?  @map("for_code")
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, sha256])
+  @@map("intake_item")
+}
+
+/// P-80: a held file a second person approved in the product. The intake treats a file as approved when its checksum is
+/// on the official manifest or here; approver and uploader are different people (server rule).
+/// S4 (M2, Q-L1): a file the system downloaded from canada.ca, or a hand upload whose checksum equals the PDF behind the
+/// canada.ca form page's link. It carries the same evidence as the official manifest (official host, the form page, the
+/// PDF link, the checksum, when), so it needs no second person; who started the run is recorded, not "approved".
+model OfficialDownload {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  sha256      String
+  /// form · checklist · guide
+  kind        String
+  code        String?
+  edition     String?
+  title       String?
+  formPageUrl String   @map("form_page_url")
+  sourceUrl   String   @map("source_url")
+  fileName    String   @map("file_name")
+  storedPath  String   @map("stored_path")
+  bytes       Int
+  /// download (fetched by the finder) · fingerprint_match (a hand upload equal to canada.ca's file, Q-L1)
+  basis       String
+  batchId     String?  @map("batch_id") @db.Uuid
+  startedBy   String   @map("started_by")
+  fetchedAt   DateTime @default(now()) @map("fetched_at") @db.Timestamptz
+
+  @@unique([workspaceId, sha256])
+  @@map("official_download")
+}
+
+/// F2 (forms, P-156 (2), P-176; setup checklist step 1): the official page a person confirmed for a combination. The rules'
+/// proposal is worked out from the combination's attached pages on every read (engine/official-pages.ts), so only the
+/// confirmation is stored: which page, who, and on which tier (author: the rules found exactly one page; expert: they did not).
+model OfficialPagesRecord {
+  id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @map("workspace_id") @db.Uuid
+  combinationId String   @unique @map("combination_id") @db.Uuid
+  attachmentId  String   @map("attachment_id") @db.Uuid
+  matches       Int
+  confirmedBy   String   @map("confirmed_by")
+  confirmedAs   String   @map("confirmed_as")
+  confirmedAt   DateTime @default(now()) @map("confirmed_at") @db.Timestamptz
+
+  @@index([workspaceId])
+  @@map("combination_official_pages")
+}
+
+/// X5 slice c (P-156 (1); the tech lead on #138): a form a second person approved deleting from the library is remembered,
+/// so a later fill from IRCC's forms list does not list it again. A person adding the form back (an upload, a canada.ca
+/// download by Find again, a sample load) forgets it. Keyed by form number; no foreign key (the form's row is gone).
+model LibraryFormDeletion {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  formKey     String   @map("form_key")
+  deletedBy   String   @map("deleted_by")
+  changeId    String?  @map("change_id") @db.Uuid
+  deletedAt   DateTime @default(now()) @map("deleted_at") @db.Timestamptz
+
+  @@unique([workspaceId, formKey])
+  @@map("library_form_deletion")
+}
+
+model ApprovedSource {
+  id           String   @id @default(uuid()) @db.Uuid
+  workspaceId  String   @map("workspace_id") @db.Uuid
+  sha256       String
+  kind         String
+  code         String?
+  edition      String?
+  fileName     String   @map("file_name")
+  irccPage     String   @map("ircc_page")
+  intakeItemId String?  @map("intake_item_id") @db.Uuid
+  uploadedBy   String   @map("uploaded_by")
+  approvedBy   String   @map("approved_by")
+  approvedAt   DateTime @default(now()) @map("approved_at") @db.Timestamptz
+
+  @@unique([workspaceId, sha256])
+  @@map("approved_source")
+}
+
+/// Screen 02 slice 2 / Screen 04 (B1, M6): one change to the shared library that a second person approves, kept outside
+/// the snapshot. action ADD · DELETE · RETIRE · RESTORE · EDIT_RULE; status WAITING · APPROVED · RETURNED · RELEASED.
+/// Both release paths publish APPROVED changes through publishLibraryChanges; a combination using an item whose ADD is
+/// still WAITING is not released.
+model LibraryChange {
+  id             String    @id @default(uuid()) @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  /// field · section · document_type · check
+  kind           String
+  key            String
+  label          String?
+  action         String
+  reason         String?
+  aiVerdict      String?   @map("ai_verdict")
+  matches        Json      @default("[]")
+  meaningChecked Boolean   @default(false) @map("meaning_checked")
+  status         String
+  proposedBy     String    @map("proposed_by")
+  proposedAt     DateTime  @default(now()) @map("proposed_at") @db.Timestamptz
+  decidedBy      String?   @map("decided_by")
+  decidedAt      DateTime? @map("decided_at") @db.Timestamptz
+  decisionNote   String?   @map("decision_note")
+  /// The pack version that published it.
+  releasedIn     Int?      @map("released_in")
+  version        Int       @default(1)
+  sourceJobId    String?   @map("source_job_id") @db.Uuid
+  combinationId  String?   @map("combination_id") @db.Uuid
+  /// Who applied the draft that created it (break M2): never its approver either.
+  appliedBy      String?   @map("applied_by")
+  /// S6 slice 1a: the proposal it came from and the batch it was accepted in (grouped approval and Undo, slice 1b).
+  proposalItemId String?   @map("proposal_item_id") @db.Uuid
+  batchId        String?   @map("batch_id") @db.Uuid
+
+  @@index([workspaceId, status])
+  @@map("library_change")
+}
+
+/// One box of one form edition and the fact that fills it. The team stores entries as Json on
+/// FormFieldMap; rows here so reuse ("which boxes read this field, for whom") is a query.
+model FormFieldMap {
+  id                String           @id @default(uuid()) @db.Uuid
+  workspaceId       String           @map("workspace_id") @db.Uuid
+  formEditionId     String           @map("form_edition_id") @db.Uuid
+  dataPath          String           @map("data_path")
+  caption           String?
+  heading           String?
+  outcome           String
+  person            String?
+  row               Int?
+  canonicalFieldKey String?          @map("canonical_field_key")
+  transform         String?
+  condition         String?
+  /// B86 (QA-237): the question's own condition, in the condition language, once a person has said this form field's
+  /// words say the same and a second person approved. Null = not confirmed. `condition` (the AI's words) is never read as one.
+  conditionRule     Json?            @map("condition_rule")
+  confidence        String?
+  evidenceQuote     String?          @map("evidence_quote")
+  reason            String?
+  version           Int              @default(1)
+  status            DefinitionStatus
+  supersedesId      String?          @map("supersedes_id") @db.Uuid
+  origin            Origin
+  draftingRunId     String?          @map("drafting_run_id")
+  /// F1, online versions: the portal screen and the input's place on it (dataPath holds the page's element id or name).
+  screenKey         String?          @map("screen_key")
+  screenOrder       Int?             @map("screen_order")
+  inputOrder        Int?             @map("input_order")
+  /// F1 (challenge point 3): { map: { answer-list value key: this form field's code }, unused: [codes of this form
+  /// field that no value fills] }. `map` is the team's ENUM transform map (onMissing REFUSE).
+  optionMap         Json?            @map("option_map")
+  /// F1-P (Screen 02 Q3): a list row's purpose and overflow, { kind, overflow } (contracts/forms.ts LIST_PURPOSES).
+  /// Only on a row-level map (row set); null = "Purpose: not set" (a release warning).
+  listPurpose       Json?            @map("list_purpose")
+  updatedBy        String           @map("updated_by")
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  edition FormEdition @relation(fields: [formEditionId], references: [id], onDelete: Cascade)
+
+  @@unique([formEditionId, dataPath, version])
+  @@index([workspaceId, canonicalFieldKey])
+  @@map("form_field_map")
+}
+
+/// P-66 capture record: the structure of one portal application's screens (never an answer), from saved blank pages,
+/// the spreadsheet template or (F2) the extension. Held until a second person approves it (P-57 amended for this kind);
+/// approval makes it an online version (FormEdition, channel ONLINE). The page files themselves are not kept: only
+/// their checksums and the structure read from them (a page can show a client's data as text).
+model PortalCapture {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @map("workspace_id") @db.Uuid
+  portalKey       String    @map("portal_key")
+  formKey         String    @map("form_key")
+  title           String
+  applicationType String?   @map("application_type")
+  /// saved_page · template · extension · screenshots (P-66 §1 ways A–D)
+  way             String
+  /// OPEN (screens being added) · HELD (finished, waiting for a second person) · APPROVED · RETURNED · IN_LIBRARY
+  /// (identical to an approved version) · ABANDONED (given up by an author; kept for the audit)
+  status          String
+  statusDetail    String?   @map("status_detail")
+  /// The capture record (contracts/portal-capture.v1.schema.json).
+  record          Json
+  files           Json      @default("[]")
+  /// Bumped by every write: a write that read an older revision is refused (two adds, or an add during finish).
+  revision        Int       @default(0)
+  contentSha256   String?   @map("content_sha256")
+  /// The approved online version this capture changes, with the field-by-field difference (P-66 §2.3).
+  changesEditionId String?  @map("changes_edition_id") @db.Uuid
+  difference      Json?
+  twinFile        String?   @map("twin_file")
+  reviewFile      String?   @map("review_file")
+  formEditionId   String?   @map("form_edition_id") @db.Uuid
+  capturedOn      DateTime  @default(now()) @map("captured_on") @db.Date
+  capturedBy      String    @map("captured_by")
+  approvedBy      String?   @map("approved_by")
+  approvedAt      DateTime? @map("approved_at") @db.Timestamptz
+  decisionNote    String?   @map("decision_note")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  /// The combination an author added this online form from (Screen 01 "Add an online form", C2.7); null when it was
+  /// captured from the library. The online version itself belongs to the library, not to the combination.
+  combinationId   String?   @map("combination_id") @db.Uuid
+  combination     Combination? @relation(fields: [combinationId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, formKey, portalKey])
+  @@index([combinationId])
+  @@map("portal_capture")
+}
+
+/// C7.6 (P-151 (1)): IRCC's accepted-until date for a form edition, set with a reason; the newest row counts, null
+/// clears it. Append-only (the rows are the history).
+model FormEditionAcceptedUntil {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  formEditionId String    @map("form_edition_id") @db.Uuid
+  acceptedUntil DateTime? @map("accepted_until") @db.Date
+  reason        String
+  setBy         String    @map("set_by")
+  setAt         DateTime  @default(now()) @map("set_at") @db.Timestamptz
+
+  edition FormEdition @relation(fields: [formEditionId], references: [id], onDelete: Cascade)
+
+  @@index([formEditionId])
+  @@map("form_edition_accepted_until")
+}

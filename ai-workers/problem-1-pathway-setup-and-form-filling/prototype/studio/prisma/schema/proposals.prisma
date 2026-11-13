@@ -1,0 +1,122 @@
+// proposals.prisma — AI and rules proposals: drafting jobs, AI batches and the proposal items a person accepts or rejects. Owner: the forms lane.
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+
+// ─── AI drafting, normalisation, review and release ─────────────────────────────────────────────
+
+/// One step started from the screen: read a form (local), draft its field map (guarded AI path), compare
+/// with the library. mode: LOCAL | STUB | LIVE | REPLAY (REPLAY reuses a saved real run, labelled).
+model DraftingJob {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  /// S4 (M7): null for a library run that belongs to no combination (Upload PDF through AI).
+  combinationId String?   @map("combination_id") @db.Uuid
+  attachmentId  String?   @map("attachment_id") @db.Uuid
+  kind          String
+  mode          String
+  status        String
+  message       String?
+  runId         String?   @map("run_id")
+  runFile       String?   @map("run_file")
+  costUsd       Float?    @map("cost_usd")
+  detail        Json?
+  startedBy     String    @map("started_by")
+  startedAt     DateTime  @default(now()) @map("started_at") @db.Timestamptz
+  finishedAt    DateTime? @map("finished_at") @db.Timestamptz
+
+  /// D280: the scoped AI operation this step belongs to (null for steps started before batches existed).
+  batchId       String?   @map("batch_id") @db.Uuid
+  /// What the step reuses or produces: source edition, operation, prompt, model and settings (see api/src/ai.ts).
+  fingerprint   String?
+  attempt       Int       @default(1)
+
+  combination Combination?        @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+  batch       AiBatch?            @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  proposals   ProposalItem[]
+
+  // A partial unique index (migration 20261021070000_ai_batches) allows one QUEUED or RUNNING step per source and
+  // kind: a second launch for the same form is refused by the database, not only by a disabled button.
+  @@index([batchId])
+  @@map("drafting_job")
+}
+
+/// D280: one scoped AI operation launched from the catalogue, a program, a combination or a source. It groups small
+/// tracked steps (read, reuse, draft) over one governed path; it never sends many forms in one prompt. The plan the
+/// person saw is stored with its fingerprint; the server re-plans at launch and refuses if the scope changed.
+model AiBatch {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @map("workspace_id") @db.Uuid
+  idempotencyKey  String    @map("idempotency_key")
+  operation       String
+  scopeKind       String    @map("scope_kind")
+  scopeLabel      String    @map("scope_label")
+  mode            String
+  status          String
+  message         String?
+  planSha256      String    @map("plan_sha256")
+  plan            Json
+  spendLimitUsd   Float     @map("spend_limit_usd")
+  worstCaseUsd    Float     @map("worst_case_usd")
+  expectedUsd     Float?    @map("expected_usd")
+  cancelRequested Boolean   @default(false) @map("cancel_requested")
+  startedBy       String    @map("started_by")
+  startedAt       DateTime  @default(now()) @map("started_at") @db.Timestamptz
+  finishedAt      DateTime? @map("finished_at") @db.Timestamptz
+
+  jobs DraftingJob[]
+
+  @@unique([workspaceId, idempotencyKey])
+  @@map("ai_batch")
+}
+
+/// S6 slice 1a (P-149, one door): every AI, rules or person proposal, in the shape of contracts/proposal-item.ts (v2).
+/// Written only through api/src/proposals.ts (insertProposals; decide, or the field-map review in sources.ts calling the
+/// same writers). Replaces NormalizationItem (migration 20261029200000_s6_proposal_item, which logs what it copied and
+/// dropped). status: waiting · accepted · edited · rejected · undone (the contract's words).
+model ProposalItem {
+  id             String    @id @default(uuid()) @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  kind           String
+  /// The run that made it (an AI or rules step is a DraftingJob); null for a person's Add.
+  runId          String?   @map("run_id") @db.Uuid
+  step           String
+  formEdition    String?   @map("form_edition")
+  combinationId  String?   @map("combination_id") @db.Uuid
+  landsOn        String    @map("lands_on")
+  reuse          Json
+  payload        Json
+  source         Json?
+  rounds         Json
+  rules          Json      @default("[]")
+  agreement      String
+  confidence     String
+  reason         String?
+  origin         String
+  addReason      String?   @map("add_reason")
+  identity       Json
+  /// identity.key as a column, for the exact-duplicate check at write and at approval.
+  identityKey    String    @map("identity_key")
+  relatesTo      String?   @map("relates_to") @db.Uuid
+  revision       Json?
+  status         String    @default("waiting")
+  decidedBy      String?   @map("decided_by")
+  decidedAt      DateTime? @map("decided_at") @db.Timestamptz
+  decisionReason String?   @map("decision_reason")
+  batchId        String?   @map("batch_id") @db.Uuid
+  basis          String    @default("SAMPLE")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  /// The server's working columns, never typed by a producer: the field-map review's choice (ACCEPTED · CHANGED · NEW ·
+  /// RETURNED), the key it chose, and the library comparison (proposed key, outcome, candidates, form fields, affected).
+  choice         String?
+  decidedKey     String?   @map("decided_key")
+  work           Json?
+
+  run DraftingJob? @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, kind, identityKey])
+  @@index([combinationId])
+  @@index([formEdition])
+  @@index([runId])
+  @@index([batchId])
+  @@map("proposal_item")
+}

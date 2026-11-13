@@ -1,0 +1,90 @@
+// links.prisma — Links sent to a person on a case so they answer on their own: the link, its code sends and tries, its sessions, and the demo inbox they arrive in. Owner: the runtime lane.
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+
+/// C6.16 (B138): a link sent to one adult on a case, so they answer on their own (concept BR-3, BR-4). The token (32
+/// random bytes, in the link's fragment) and the 6-digit code are kept only as sha256. At most one link per person is
+/// not dead, and one address per case among working links (partial unique indexes in SQL). void_why: taken_back ·
+/// superseded · locked · not_adult (a check in SQL).
+model PersonLink {
+  id             String    @id @default(uuid()) @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  caseId         String    @map("case_id") @db.Uuid
+  subjectId      String    @map("subject_id") @db.Uuid
+  /// Lower case; never in audit text (the masked address is).
+  address        String
+  addressMasked  String    @map("address_masked")
+  addressGivenBy String    @map("address_given_by")
+  tokenHash      String    @unique @map("token_hash") @db.Char(64)
+  codeHash       String?   @map("code_hash") @db.Char(64)
+  codeExpiresAt  DateTime? @map("code_expires_at") @db.Timestamptz
+  wrongTries     Int       @default(0) @map("wrong_tries")
+  sentBy         String    @map("sent_by")
+  sentAt         DateTime  @default(now()) @map("sent_at") @db.Timestamptz
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz
+  acceptedAt     DateTime? @map("accepted_at") @db.Timestamptz
+  consentedAt    DateTime? @map("consented_at") @db.Timestamptz
+  voidedAt       DateTime? @map("voided_at") @db.Timestamptz
+  voidWhy        String?   @map("void_why")
+  voidedBy       String?   @map("voided_by")
+  voidReason     String?   @map("void_reason")
+  supersededById String?   @map("superseded_by_id") @db.Uuid
+  /// The Send request's idempotency key: the same key again sends nothing new.
+  sendKey        String?   @map("send_key")
+
+  case         Case                @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  subject      AnswerSubject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  supersededBy PersonLink?         @relation("PersonLinkSuperseded", fields: [supersededById], references: [id], onDelete: SetNull)
+  supersedes   PersonLink[]        @relation("PersonLinkSuperseded")
+  sessions     PersonLinkSession[]
+  messages     DemoMessage[]
+
+  @@unique([caseId, sendKey])
+  @@index([caseId])
+  @@map("person_link")
+}
+
+/// C6.16: code sends (per email address) and code tries (per network address), for the limits (as extension_code_try).
+/// kind: code_sent · code_try (a check in SQL).
+model PersonLinkTry {
+  id      BigInt   @id @default(autoincrement())
+  kind    String
+  address String   @db.VarChar(254)
+  at      DateTime @default(now()) @db.Timestamptz
+
+  @@index([kind, at, address])
+  @@map("person_link_try")
+}
+
+/// C6.16 (BR-5): the adult's session on /api/link/* only: 8 hours, its token kept only as sha256, revoked when the link dies.
+model PersonLinkSession {
+  id        String    @id @default(uuid()) @db.Uuid
+  linkId    String    @map("link_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash") @db.Char(64)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz
+
+  link PersonLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@index([linkId])
+  @@map("person_link_session")
+}
+
+/// C6.16 stand-in SI-20 (email, the team's AG-10): the demo inbox by address, demo workspace only. kind: link · code.
+/// A code message is deleted when the code is used or replaced; every message of a link when the link dies.
+model DemoMessage {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  linkId      String   @map("link_id") @db.Uuid
+  address     String
+  kind        String
+  subject     String
+  body        String
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt   DateTime @map("expires_at") @db.Timestamptz
+
+  link PersonLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@index([address, createdAt])
+  @@map("demo_message")
+}

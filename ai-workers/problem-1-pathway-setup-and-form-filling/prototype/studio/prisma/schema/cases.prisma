@@ -1,0 +1,319 @@
+// cases.prisma — Runtime cases and people: a case, its number, team, release pin, route and stages, the people on it and their relationships, tasks, and a person's own view choices. Owner: the runtime lane.
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+
+// ─── Runtime (runtime lane, R1 thin slice, P-67) ──────────────────────────────────────────────────────────────────
+// A case for one released combination: its people, one current answer per person per fact, rows of repeating groups.
+// Names follow the team's client spine (code/ERv2-sanitized@22f1d12-2026-10-19/apps/api/prisma/models/client-spine.prisma;
+// divergences D-1…D-9 in product/screens/R1-thin-slice/plan.md §7). Constraints Prisma cannot express (one current
+// answer, deferred supersede links, no self-edge) are in the migration's SQL.
+
+/// One application for one released combination (the team has no Case table yet: its caseId columns would point here).
+model Case {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @map("workspace_id") @db.Uuid
+  combinationId  String   @map("combination_id") @db.Uuid
+  /// A24-1 (P-492, CS-7, AG-7-3): the case number, C-<year opened>-<5-digit running number> (C-2026-00042), per firm and
+  /// year; taken at opening from firm_case_counter by runtime_next_case_number(); never changed (a trigger refuses it).
+  caseNumber     String   @map("case_number")
+  /// The firm's own reference: optional since A24-1 (CS-7), unique within the firm when given.
+  reference      String?
+  status         String   @default("OPEN")
+  /// The simulated client login that may answer this case's questionnaire (no real sign-in in the prototype).
+  clientActorId  String   @map("client_actor_id")
+  createdBy      String   @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  idempotencyKey String?  @map("idempotency_key")
+  /// sha256 of the create request: a key reused with a different request is refused, never answered with another case.
+  idempotencyFingerprint String? @map("idempotency_fingerprint") @db.VarChar(64)
+  /// C6.11 (BR-20, SI-9): the Sample firm whose staff work this case (samples/firms.json); staff of another firm reach
+  /// none of its cases. Cases opened before C6.11 belong to the Sample firm.
+  firmKey        String   @default("sample-firm") @map("firm_key")
+
+  /// A case keeps its combination: deleting a combination with cases is refused (reset deletes cases first).
+  combination  Combination       @relation(fields: [combinationId], references: [id], onDelete: Restrict)
+  pins         PackWorkPin[]
+  participants CaseParticipant[]
+  forms        FormInstance[]
+  snapshots    AnswerSnapshot[]
+  team         CaseTeamMember[]
+  groups       SubmissionGroup[]
+  filings      Filing[]
+  assessments  Assessment[] // C6.9
+  filingItems  FilingItem[]
+  checklistLines ChecklistLine[]
+  enteredSections EnteredSection[]
+  signSteps   SignStep[]   // C8.1
+  signedScans SignedScan[] // C8.1
+  findings    ReviewFinding[] // C7.5
+  personLinks PersonLink[] // C6.16
+  filingRecords FilingRecord[] // C8.2
+  tasks         CaseTask[]     // C8.2
+  filingChanges FilingChange[] // C6.13
+  feeReceipts   FeeReceiptFile[] // C8.2 B149
+  documentReviews DocumentReview[] // C6.5
+  readValues      ReadValue[]      // C6.5
+  answerChecks    AnswerCheck[]    // C6.5
+  stages          CaseStage[] // C6.17
+  formAdditions   FilingFormAddition[] // C7.8
+  reviewRounds      ReviewRound[]       // C8.3
+  reviewRoundRows   ReviewRoundFiling[] // C8.3
+  reviewRoundForms  ReviewRoundForm[]   // C8.3
+  reviewChecks      ReviewCheck[]       // C8.3
+
+  /// C6.11 break M2, M3: a reference and an idempotency key are unique within a firm, so one firm neither collides with
+  /// nor learns of another firm's cases.
+  @@unique([workspaceId, firmKey, idempotencyKey])
+  @@unique([workspaceId, firmKey, reference])
+  @@unique([workspaceId, firmKey, caseNumber])
+  @@index([workspaceId, createdAt])
+  @@map("runtime_case")
+}
+
+/// A24-1 (P-492, CS-7): a firm's next case number for one year (the year in the firm's zone, America/Toronto). Only
+/// runtime_next_case_number() writes it, inside the opening transaction: two openings at once wait on the row and never
+/// share a number, and a refused opening rolls its increment back (no gap). A demo reset clears it with the cases.
+model FirmCaseCounter {
+  workspaceId String @map("workspace_id") @db.Uuid
+  firmKey     String @map("firm_key")
+  year        Int
+  nextValue   Int    @map("next_value")
+
+  @@id([workspaceId, firmKey, year])
+  @@map("firm_case_counter")
+}
+
+/// C6.11 (BR-20, SI-15): who works a case, shaped like the team's AG-07 CaseTeamMember (LEAD_REPRESENTATIVE · OFFICER).
+/// One row per assignment; a reassignment ends the row (ended_at, by, reason) and inserts the next, so the history stays.
+/// The database refuses two current representatives of record on one case and the same person twice in one role
+/// (partial unique indexes in the migration 20261101130000_c611_case_team). userId names a seeded Sample user.
+model CaseTeamMember {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  caseId      String    @map("case_id") @db.Uuid
+  userId      String    @map("user_id")
+  /// LEAD_REPRESENTATIVE (the representative of record, on IMM 5476) · OFFICER (a case officer)
+  role        String
+  assignedBy  String    @map("assigned_by")
+  assignedAt  DateTime  @default(now()) @map("assigned_at") @db.Timestamptz
+  endedAt     DateTime? @map("ended_at") @db.Timestamptz
+  endedBy     String?   @map("ended_by")
+  endReason   String?   @map("end_reason")
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId, assignedAt])
+  @@map("case_team_member")
+}
+
+/// The release a case works from (team PackWorkPin, pinned per case and combination here). Insert-only.
+model PackWorkPin {
+  id              String   @id @default(uuid()) @db.Uuid
+  workspaceId     String   @map("workspace_id") @db.Uuid
+  caseId          String   @map("case_id") @db.Uuid
+  combinationId   String   @map("combination_id") @db.Uuid
+  partyId         String   @map("party_id") @db.Uuid
+  packVersionId   String?  @map("pack_version_id") @db.Uuid
+  configReleaseId String   @map("config_release_id") @db.Uuid
+  contentHash     String   @map("content_hash") @db.VarChar(64)
+  purpose         String   @default("SQR_ADVANCE")
+  revision        Int      @default(1)
+  actorId         String   @map("actor_id")
+  pinnedAt        DateTime @default(now()) @map("pinned_at") @db.Timestamptz
+  /// C9.5: why the case moved to this release (revision 2 on; the first pin has none). Written once (insert only).
+  reason          String?
+
+  case    Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  /// A pinned release cannot be deleted (released means frozen; STANDARDS §3.7).
+  release ConfigRelease @relation(fields: [configReleaseId], references: [id], onDelete: Restrict)
+
+  /// C9.5: a move to a newer release is a new revision (insert only; trigger runtime_pin_chain: previous + 1, a higher
+  /// release version of the same combination, a reason). The case reads its newest revision.
+  @@unique([caseId, combinationId, revision])
+  @@map("pack_work_pin")
+}
+
+/// C6.17 (B139; concept BR-2; founder P-412 F13 (a)): a route, an ordered list of existing combinations kept as data, with
+/// no new tree level. stages: [{key, staff_name, client_name, combination_key, key_details[{field, label, type,
+/// same_every_stage?}], next, deadline?{label, from, add_days, ...}, same_documents?}]; loaded only with 2+ stages, every
+/// combination present and used once (engine/runtime/stages.ts routeProblems). Sample until the immigration expert
+/// gives real routes (scaffolding: samples/routes.json).
+model Route {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  key         String
+  label       String
+  /// SAMPLE · CITED
+  basis       String   @default("SAMPLE")
+  stages      Json
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([workspaceId, key])
+  @@map("route")
+}
+
+/// C6.17 (B139; concept §2, BR-1..BR-10): one stage of a case, frozen from its route at opening (a case on no route has
+/// one stage). state DONE_BEFORE (made before the firm took the case; key details only) · NOT_RECORDED (an earlier stage
+/// left unticked) · CURRENT (one per case, partial unique case_stage_one_current; its combination is the case's, a
+/// deferred trigger) · ENDED_NEXT_STARTED · NOT_STARTED; forward only (trigger). A worked stage has its own application
+/// subject (challenge B3). key_details: {field: {value, by, at}} on the stage record (SA-1B-212 §7; P-412 F13 (c)).
+model CaseStage {
+  id                   String    @id @default(uuid()) @db.Uuid
+  workspaceId          String    @map("workspace_id") @db.Uuid
+  caseId               String    @map("case_id") @db.Uuid
+  firmKey              String    @map("firm_key")
+  ord                  Int
+  stageKey             String    @map("stage_key")
+  staffName            String    @map("staff_name")
+  clientName           String    @map("client_name")
+  combinationId        String    @map("combination_id") @db.Uuid
+  applicationSubjectId String?   @unique @map("application_subject_id") @db.Uuid
+  state                String
+  startedFrom          String?   @map("started_from")
+  keyDetails           Json      @default("{}") @map("key_details")
+  /// The stage as frozen from its route at opening: {key_details[], deadline?, same_documents[]} (Sample data).
+  spec                 Json      @default("{}")
+  routeKey             String?   @map("route_key")
+  /// The stage version a "Start next stage" request names (409 when it moved).
+  version              Int       @default(1)
+  startedBy            String?   @map("started_by")
+  startedAt            DateTime? @map("started_at") @db.Timestamptz
+  endedBy              String?   @map("ended_by")
+  endedAt              DateTime? @map("ended_at") @db.Timestamptz
+  recordedBy           String?   @map("recorded_by")
+  recordedAt           DateTime? @map("recorded_at") @db.Timestamptz
+  /// Why the next stage was started while a filing had no record (P-237); never in an audit line.
+  reason               String?
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  case        Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  combination Combination       @relation(fields: [combinationId], references: [id], onDelete: Restrict)
+  application AnswerSubject?    @relation(fields: [applicationSubjectId], references: [id], onDelete: NoAction)
+  filings     Filing[]
+  groups      SubmissionGroup[]
+  lines       ChecklistLine[]
+  findings    ReviewFinding[]
+  tasks       CaseTask[]
+
+  @@unique([caseId, ord])
+  @@unique([caseId, combinationId])
+  @@index([workspaceId, caseId])
+  @@map("case_stage")
+}
+
+/// A person (team Party; per workspace here, per firm there).
+model Party {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  kind        String   @default("PERSON")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  profile  PartyProfile?
+  from     PartyRelationship[] @relation("PartyRelFrom")
+  to       PartyRelationship[] @relation("PartyRelTo")
+  subjects AnswerSubject[]
+
+  @@index([workspaceId])
+  @@map("party")
+}
+
+model PartyProfile {
+  id                  String  @id @default(uuid()) @db.Uuid
+  workspaceId         String  @map("workspace_id") @db.Uuid
+  partyId             String  @unique @map("party_id") @db.Uuid
+  displayName         String  @map("display_name")
+  localePreference    String? @map("locale_preference")
+  contactChannelsJson Json    @default("{}") @map("contact_channels_json")
+
+  party Party @relation(fields: [partyId], references: [id], onDelete: Cascade)
+
+  @@map("party_profile")
+}
+
+/// Principal → spouse or partner, principal → child (open vocabulary, as the team's). Self-edge refused in SQL.
+model PartyRelationship {
+  id               String  @id @default(uuid()) @db.Uuid
+  workspaceId      String  @map("workspace_id") @db.Uuid
+  fromPartyId      String  @map("from_party_id") @db.Uuid
+  toPartyId        String  @map("to_party_id") @db.Uuid
+  relationshipType String  @map("relationship_type")
+  role             String?
+
+  fromParty Party @relation("PartyRelFrom", fields: [fromPartyId], references: [id], onDelete: Cascade)
+  toParty   Party @relation("PartyRelTo", fields: [toPartyId], references: [id], onDelete: Cascade)
+
+  @@index([fromPartyId])
+  @@map("party_relationship")
+}
+
+/// Who is on the case, in the combination's roles (the team has no case membership; D-2).
+model CaseParticipant {
+  id          String  @id @default(uuid()) @db.Uuid
+  workspaceId String  @map("workspace_id") @db.Uuid
+  caseId      String  @map("case_id") @db.Uuid
+  subjectId   String  @unique @map("subject_id") @db.Uuid
+  /// principal · spouse_or_partner · child · case. A24-1 (P-492, CS-1): exactly one principal per case, the case's client
+  /// person, checked by the database at commit (case_participant_one_principal, trg_case_participant_principal).
+  role        String
+  /// travelling with the application (a combination participant that "applies")
+  applies     Boolean @default(true)
+  order       Int
+  /// The add-person request's key and fingerprint (QA-28): the same key again returns this person, never a second one.
+  idempotencyKey         String? @map("idempotency_key")
+  idempotencyFingerprint String? @map("idempotency_fingerprint") @db.VarChar(64)
+  /// C6.16 (B138; AG-7-107 Q71 option B): the team's "Keep private from the principal", stored once per adult. On at the
+  /// adult's first right code on their own link, or by staff with a reason; it stays on (a trigger refuses true to false).
+  keepPrivate Boolean   @default(false) @map("keep_private")
+  privateAt   DateTime? @map("private_at") @db.Timestamptz
+  privateBy   String?   @map("private_by")
+  privateWhy  String?   @map("private_why")
+
+  case    Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  subject AnswerSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, order])
+  @@unique([caseId, idempotencyKey])
+  @@map("case_participant")
+}
+
+/// C11.10 (P-115: Cards / List remembered per person): a person's own view choices, kept on the server so they follow the
+/// person to any browser. Keyed by the person only (no workspace): a demo Reset makes a new workspace, and a person's own
+/// view choice is not configuration, so it stays. Values are checked against a fixed list per key (contracts/session.ts).
+model PersonPreference {
+  actor     String
+  key       String
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@id([actor, key])
+  @@map("person_preference")
+}
+
+/// C8.2 (BR-12, P-142 D7): a task on a case. Kind after_filing_change: a fact changed after filing, so the form is
+/// re-signed or IRCC is told (Unconfirmed: no counsel). State open · done; one open task per item and kind.
+model CaseTask {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  caseId      String    @map("case_id") @db.Uuid
+  filingId    String?   @map("filing_id") @db.Uuid
+  itemId      String?   @map("item_id") @db.Uuid
+  kind        String
+  words       String
+  state       String    @default("open")
+  createdBy   String    @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  doneBy      String?   @map("done_by")
+  doneAt      DateTime? @map("done_at") @db.Timestamptz
+
+  /// C6.17 (challenge M3): the stage current when the task was made.
+  stageId String @map("stage_id") @db.Uuid
+
+  case   Case        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  stage  CaseStage   @relation(fields: [stageId], references: [id], onDelete: NoAction)
+  filing Filing?     @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  item   FilingItem? @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@index([stageId])
+  @@map("case_task")
+}

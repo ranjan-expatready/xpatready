@@ -1,0 +1,159 @@
+// evidence.prisma — Case evidence: checklist lines, uploaded documents, document reads, values read and answer checks against them. Owner: the evidence lane.
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+
+/// C6.4 storage slice (M3-C; SI-14): one row per filing person x document on a case, written when the derived checklist
+/// says the person needs it; it keeps its id and state when the answers take the line away and bring it back.
+/// state: not_requested · requested · received · being_checked · approved · rejected · not_applicable (a check in SQL).
+model ChecklistLine {
+  id           String    @id @default(uuid()) @db.Uuid
+  workspaceId  String    @map("workspace_id") @db.Uuid
+  caseId       String    @map("case_id") @db.Uuid
+  subjectId    String    @map("subject_id") @db.Uuid
+  /// The document type key (one line per person and document type, as the derived checklist merges them).
+  documentType String    @map("document_type")
+  /// The requirement lineage the line was first written for (the derived line's lineage).
+  lineage      String
+  state        String    @default("not_requested")
+  /// Why the line is Not applicable or Waived (required for those states, a check in SQL).
+  stateReason  String?   @map("state_reason")
+  stateBy      String?   @map("state_by")
+  stateAt      DateTime? @map("state_at") @db.Timestamptz
+  /// C6.14 (SA-1B-214 rule 2): the officer's choice of providers (answer_subject ids) on a shared line; empty = the
+  /// document type's defaults. A choice carries a reason (a check in SQL).
+  providers       String[]  @default([]) @db.Uuid
+  providersReason String?   @map("providers_reason")
+  providersBy     String?   @map("providers_by")
+  providersAt     DateTime? @map("providers_at") @db.Timestamptz
+  version      Int       @default(1)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  /// C6.17: the stage whose checklist this line is (a new stage's lines start fresh, BR-6).
+  stageId   String         @map("stage_id") @db.Uuid
+  case      Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  stage     CaseStage      @relation(fields: [stageId], references: [id], onDelete: NoAction)
+  subject   AnswerSubject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  documents CaseDocument[]
+
+  @@unique([caseId, stageId, subjectId, documentType])
+  @@index([stageId])
+  @@map("checklist_line")
+}
+
+/// C6.4 storage slice: an uploaded document, owned by the person (not the case). One current file per person and
+/// document type (partial unique index case_document_one_current, in SQL); a new upload keeps the old one as history.
+model CaseDocument {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @map("workspace_id") @db.Uuid
+  subjectId       String    @map("subject_id") @db.Uuid
+  documentType    String    @map("document_type")
+  /// The checklist line it was uploaded on (kept for history; null if that line is gone).
+  checklistLineId String?   @map("checklist_line_id") @db.Uuid
+  fileName        String    @map("file_name")
+  /// application/pdf · image/jpeg · image/png (a check in SQL), from the file's own bytes.
+  mediaType       String    @map("media_type")
+  sizeBytes       Int       @map("size_bytes")
+  sha256          String    @db.VarChar(64)
+  /// Relative to the working files of the workspace (var/workspaces/<ws>/).
+  path            String
+  current         Boolean   @default(true)
+  uploadedBy      String    @map("uploaded_by")
+  uploadedAt      DateTime  @default(now()) @map("uploaded_at") @db.Timestamptz
+  supersededAt    DateTime? @map("superseded_at") @db.Timestamptz
+
+  subject AnswerSubject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  line    ChecklistLine? @relation(fields: [checklistLineId], references: [id], onDelete: SetNull)
+  review  DocumentReview? // C6.5: its one read
+
+  @@index([subjectId, documentType])
+  @@map("case_document")
+}
+
+/// C6.5 part 2 (P-242, P-243): one read of one stored document by one reader (mrz: coded lines by rules; ai_vision: a
+/// letter, replayed from a saved read only). Its one "Confirm & use" is recorded with who and when.
+model DocumentReview {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  caseId      String    @map("case_id") @db.Uuid
+  subjectId   String    @map("subject_id") @db.Uuid
+  documentId  String    @unique @map("document_id") @db.Uuid
+  /// mrz · ai_vision
+  reader      String
+  replayed    Boolean   @default(false)
+  /// [{fact, reason}]: what the reader could not read (never guessed)
+  unreadable  Json
+  readBy      String    @map("read_by")
+  readAt      DateTime  @default(now()) @map("read_at") @db.Timestamptz
+  confirmedBy String?   @map("confirmed_by")
+  confirmedAt DateTime? @map("confirmed_at") @db.Timestamptz
+
+  case     Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  document CaseDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  values   ReadValue[]
+
+  @@index([caseId, subjectId])
+  @@map("document_review")
+}
+
+/// C6.5 part 2 (BR-4): a value a read proposes, apart from answers until its document's Confirm & use.
+model ReadValue {
+  id                 String    @id @default(uuid()) @db.Uuid
+  workspaceId        String    @map("workspace_id") @db.Uuid
+  caseId             String    @map("case_id") @db.Uuid
+  reviewId           String    @map("review_id") @db.Uuid
+  documentId         String    @map("document_id") @db.Uuid
+  subjectId          String    @map("subject_id") @db.Uuid
+  fact               String
+  valueJson          Json      @map("value_json")
+  page               Int
+  reader             String
+  confidence         Float
+  /// P-243: collapsed (check digits passed) · expanded
+  review             String
+  checked            Boolean   @default(false)
+  note               String?
+  /// proposed · used · agreed · conflict · not_asked
+  state              String    @default("proposed")
+  /// The answer Confirm & use wrote, or the one it agreed with
+  answerId           String?   @map("answer_id") @db.Uuid
+  correctedValueJson Json?     @map("corrected_value_json")
+  correctedBy        String?   @map("corrected_by")
+  correctedAt        DateTime? @map("corrected_at") @db.Timestamptz
+
+  case   Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  read   DocumentReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  checks AnswerCheck[]
+
+  @@unique([reviewId, fact])
+  @@index([caseId, subjectId])
+  @@map("read_value")
+}
+
+/// C6.5 part 2 (BR-7, P-242): a typed answer and a document value that differ; one open per person, fact and document (partial
+/// unique index answer_check_one_open, in SQL); resolved only with a reason.
+model AnswerCheck {
+  id                String    @id @default(uuid()) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  caseId            String    @map("case_id") @db.Uuid
+  subjectId         String    @map("subject_id") @db.Uuid
+  fact              String
+  readValueId       String    @map("read_value_id") @db.Uuid
+  documentId        String    @map("document_id") @db.Uuid
+  answerId          String    @map("answer_id") @db.Uuid
+  typedValueJson    Json      @map("typed_value_json")
+  documentValueJson Json      @map("document_value_json")
+  /// open · resolved
+  state             String    @default("open")
+  /// answer · document
+  kept              String?
+  reason            String?
+  openedBy          String    @map("opened_by")
+  openedAt          DateTime  @default(now()) @map("opened_at") @db.Timestamptz
+  resolvedBy        String?   @map("resolved_by")
+  resolvedAt        DateTime? @map("resolved_at") @db.Timestamptz
+
+  case      Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  readValue ReadValue @relation(fields: [readValueId], references: [id], onDelete: Cascade)
+
+  @@index([caseId, subjectId])
+  @@map("answer_check")
+}
