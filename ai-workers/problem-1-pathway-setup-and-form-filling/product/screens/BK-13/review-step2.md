@@ -94,3 +94,62 @@ Reviewer (Opus, did not build it), 13 Nov 2026. Commit reviewed: `4ac54e63e0d3ba
 Fix list for Approve: B1, M1. Minors 1-4 are record corrections and cheap to fold in.
 
 Verdict: Block 4ac54e63e0d3bacf6e49791915f33902ad129cc0
+
+## Round 2 (diff only, P-293): `git diff 4ac54e63e..6a628cf5d`
+
+Reviewer (Opus), 13 Nov 2026. Commit reviewed: `6a628cf5dde7cb8379f876caa15b929c8cd083bb`. The diff touches the script, the record, my round-1 file (committed by the builder, unchanged) and three PNGs. It changes nothing under `engine/`, `api/src/`, `web/src/` or `prototype/p5/`, and no data file. I did not re-run the replay this round. I read run8.log (37/45, 8 GAP, 0 FAIL, exit 0); per the builder, it ran on this script's content.
+
+**B1 (check 1 broke other PRs' CI): fixed.**
+- **New check 1 (l.48-58):** reads files, not a diff. It covers the studio's `engine/`, `api/src/` and `web/src/`, plus the three p5 files the studio references (`transforms.ts`, `reader/mrz.ts`, `fill.py`; I checked by grep that these are the only `p5/` paths named there). It fails on any code line that names `sp.outside`, "Study permit", or "IMM 1294" / "IMM 1295" as a whole quoted string.
+- **Same result on any commit:** so it no longer FAILs BK-22, BK-23 or the merge queue. It guards against an empty read: `codeFiles.length > 100` (447 read).
+- **Independent check:** a raw grep of the same files and patterns, leaving out comment lines, finds 0 hits. This agrees with the script's comment stripping.
+- **It is a different property, and the record says so:**
+  - The new check shows that no code names the pathway (P-449's intent). It does not show that "this PR changed no code".
+  - For that, the record now cites §6 (this PR's diff stat: no code paths).
+  - Record §1 says this plainly.
+
+**M1 (fee check could pass with no or missing lines): fixed.**
+- **Expected lines come from the inputs, not the output (l.167-195).** Lines are worked out per person from `fee-table.json` `combinations["sp.outside"].fees_by_role`:
+  - principal: study_permit, biometrics;
+  - spouse: work_permit, open_work_permit_holder, biometrics;
+  - child: visitor_visa, biometrics.
+
+  Each person's age comes from the answers file and is checked against the line's exemption.
+- **Missing and extra lines** (by key and person) both FAIL.
+- **Guards:** `owed.length >= 3` and `expected > 0`.
+- **The total** is now derived from the owed lines, not from the output.
+- **Per-line rules:**
+  - An age-exempt line must be exempt, CAD 0, and cite the exemption's quote.
+  - Every other line must cite its own line's quote.
+- **Not exercised:** the family-maximum "Family Rate" path is still untouched by this family (biometrics here is 2 × 85, which equals the cap). That is down to the data, and the total still covers it.
+- **Result:** run8 shows `missingLines: []`, `extraLines: []`, `wrong: []`, 675 = 675.
+
+**Minors from round 1:**
+1. **Record C1 table, IMM 1295:** fixed. It now lists work_permit_type and province and drops marital_status. That matches my round-1 DB query of the copy's 12 by-hand reasons.
+2. **GAP lines word for word:** fixed. They now carry "The representative: ", and their row labels match run8.
+3. **Guide dates:** fixed. There is a dates note for rows 8-14: Guide 5269 modified 2026-10-06 and saved 27 Oct; IMM 5483 modified 2025-08-11; Guide 5256 saved 19 Oct. Row 9 is cited by its step, because the guide has no page numbers. Acceptable.
+4. **Fee rows' status:** fixed.
+   - Rows 1-4 are "Cited (P-541: page, quote, date)", with a note that the data's older "Sample until the expert confirms" words predate P-541.
+   - Row 5 is now "Not word for word: listed below".
+5. **By-hand regex:** fixed. It is anchored as `/^step ".*" is not in the executable set$/s`, so "record selection …" can no longer pass as C1.
+6. **Vacuity guards:** fixed.
+   - Read-back requires `written > 0` and at least as many values read as written (run8: 65 written, 73 read).
+   - Each parent needs at least 5 answers (run8: 8 each).
+7. **The wait:** fixed. `until()`'s result is now part of the generation check.
+8. **Quotes compared with the data:** fixed for both.
+   - Document lines must equal the data file's quote (`documentsCited.quote`, CAQ `sourceQuote`).
+   - Fee quotes are exact per line, as above.
+9. **Walk screenshots:** fixed.
+   - `02-case-forms-1440.png` shows each person's forms (IMM 5707, 1294 and 5476 for the student; IMM 5476, 5707 and 1295 for the spouse, …).
+   - `03-case-fees-1440.png` shows each person's fee lines, the child's biometrics at CAD 0 with its quote, "Total for this submission: CAD 675", and the sources.
+10. **Capability IDs in labels:** left, with a reason: BK-13 names no capability ID. I accept that; Minor, open. Record §6 now lists the PNGs.
+
+**New findings in this diff:** none at Blocker or Major.
+- Minor, not blocking: check 1's comment stripping is a heuristic. For example, a `/*` inside a string literal would hide code up to the next `*/`. My raw grep gives the same zero today. If check 1 ever reports a false zero, read the raw lines first.
+
+**Could not check this round:**
+- I did not run the replay myself; I read run8.log.
+- I did not watch CI (the PR is a draft).
+- No journey test: this is not a screen (as in round 1).
+
+Verdict: Approve 6a628cf5dde7cb8379f876caa15b929c8cd083bb
