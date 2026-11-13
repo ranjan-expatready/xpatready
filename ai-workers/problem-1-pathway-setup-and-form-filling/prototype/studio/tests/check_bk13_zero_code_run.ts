@@ -1,8 +1,10 @@
 // BK-13 step 2 (Bake plan row 27; P-448, P-449, P-452, P-541): the zero-code run for the Bake's exit (b), "a pathway
 // (Study permit) reaching filled, checked forms with data changes only, no engine or screen code change". One script
 // replays it all on a fresh isolated copy, through the product's own routes only:
-//   1. no code change on this branch: `git diff origin/main...HEAD` touches nothing under engine/, api/src/, web/src/ or
-//      prototype/p5/ (P-452; the tech lead's ruling on #1574 §8 adds p5, the filler);
+//   1. no code names the Study permit (P-449, P-452; the tech lead's ruling on #1574 §8 adds prototype/p5, the filler):
+//      the studio's engine/, api/src/, web/src/ and the p5 files it runs name neither its key, its name nor its forms
+//      as a whole string. A scan of the files, true or false on any commit (review B1 on #1695: a diff against main
+//      read whichever PR CI was testing); this PR's own diff is shown in its record and its PR text;
 //   2. Demo › Load the configured checkpoint: the six set up from the data files, the Study permit released (row 10);
 //   3. the Study permit's seeded rows CHECKED against their data files, not assumed (P-449): its form lines and who
 //      files each (samples/form-setup.json), its document lines (documentsCited, samples/conditional-documents.json), a
@@ -22,7 +24,7 @@
 // (45 of 45), no GAP, is exit (b). Sample people, made up; US$0 (saved AI answers only, live AI off). Exit 1 on any FAIL.
 //   zsh studio/tools/isolated.sh forms_bk13 4452 start && tsx studio/tests/check_bk13_zero_code_run.ts 4452 xr_studio_forms_bk13
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { client, recorder } from "./runtime/api.ts";
 
@@ -43,12 +45,17 @@ const gap = (name: string, passed: boolean, isGap: boolean, row: string, detail:
   gaps.push(`${row}: ${name}`); console.log(`GAP   (waits on ${row}) ${name} — ${JSON.stringify(detail).slice(0, 260)}`); return false;
 };
 
-// 1. No code change (P-452 and the ruling on #1574 §8), since this branch left main (three dots: what main gained since
-//    then is not this branch's change).
-const CODE = ["engine/", "api/src/", "web/src/"].map((p) => `ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/${p}`).concat("ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p5/");
-let changed: string[] | null = null;
-try { changed = execFileSync("git", ["-C", ROOT, "diff", "--name-only", "origin/main...HEAD", "--", ...CODE], { encoding: "utf8" }).trim().split("\n").filter(Boolean); } catch { /* no origin/main here */ }
-ok("BK-13 (P-452): this branch changes nothing under engine/, api/src/, web/src/ or prototype/p5/ since it left origin/main", changed !== null && changed.length === 0, changed ?? "git diff origin/main did not run");
+// 1. No code names the Study permit (P-449, P-452, #1574 §8): comments are not code; old p5 prototype files the studio
+//    does not run (its own server, UI and browser check) are not read.
+const PROTO = join(STUDIO, "..");
+const CODE_DIRS = ["studio/engine", "studio/api/src", "studio/web/src"].map((d) => join(PROTO, d));
+const P5_RUN = ["p5/transforms.ts", "p5/reader/mrz.ts", "p5/fill.py"].map((p) => join(PROTO, p));
+const walk = (d: string): string[] => readdirSync(d).flatMap((n) => { const p = join(d, n); return statSync(p).isDirectory() ? (n === "node_modules" ? [] : walk(p)) : /\.(ts|tsx|js|mjs|cjs)$/.test(n) ? [p] : []; });
+const codeOnly = (text: string, py: boolean) => py ? text.replace(/"""[\s\S]*?"""/g, "").replace(/#.*$/gm, "") : text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`\\])\/\/.*$/gm, "$1");
+const NAMES = /\bsp\.outside\b|\bStudy permit\b|(["'`])IMM ?129[45]\1/i;
+const codeFiles = [...CODE_DIRS.flatMap(walk), ...P5_RUN];
+const named = codeFiles.flatMap((file) => codeOnly(readFileSync(file, "utf8"), file.endsWith(".py")).split("\n").map((l, i) => ({ file: file.slice(PROTO.length + 1), line: i + 1, text: l.trim().slice(0, 120) })).filter((x) => NAMES.test(x.text)));
+ok(`BK-13 (P-449, P-452): no code in engine/, api/src/, web/src/ or the p5 files the studio runs names the Study permit (its key, its name, IMM 1294, IMM 1295; ${codeFiles.length} files read)`, codeFiles.length > 100 && named.length === 0, named);
 
 // 2. The configured checkpoint (a copy that already holds it is used as it is).
 const released = () => sql(`select count(*) from config_release r join combination c on c.id=r.combination_id where c.combination_key='${KEY}'`) !== "0";
@@ -71,10 +78,10 @@ const maps = snap("field_maps") as { form_number: string; entries: { outcome: st
 const unmapped = lines.filter((l) => !maps.some((m) => m.form_number === l.form_number && m.entries.some((e) => e.outcome === "mapped"))).map((l) => l.form_number);
 ok(`BK-13 data: every form line has a published field map on the release (${lines.length} lines)`, unmapped.length === 0, unmapped);
 const docs = snap("document_requirements") as { document_type: string; source_quote: string | null }[];
-const cond = (json("samples/conditional-documents.json")[KEY]?.lines ?? []) as { type: string }[];
-const wantDocs = [...setup.documentsCited.map((d) => d.type), ...cond.map((d) => d.type)];
-const docsGone = wantDocs.filter((t) => !docs.some((d) => d.document_type === t && !!d.source_quote));
-ok(`BK-13 data: every cited document line is on the release with its quote (${wantDocs.length}: documentsCited and the CAQ line)`, docsGone.length === 0, docsGone);
+const cond = (json("samples/conditional-documents.json")[KEY]?.lines ?? []) as { type: string; sourceQuote: string }[];
+const wantDocs = [...setup.documentsCited.map((d) => ({ type: d.type, quote: d.quote })), ...cond.map((d) => ({ type: d.type, quote: d.sourceQuote }))];
+const docsGone = wantDocs.filter((w) => !docs.some((d) => d.document_type === w.type && d.source_quote === w.quote)).map((w) => w.type);
+ok(`BK-13 data: every cited document line is on the release with its data file's own quote (${wantDocs.length}: documentsCited and the CAQ line)`, docsGone.length === 0, docsGone);
 
 // 4. The Sample case: the walk's family, by data.
 const opened = await call("POST", "/demo/sample-case", { combinationId: combo }, AUTHOR);
@@ -92,13 +99,14 @@ const view = async () => ((await call("GET", `/runtime/cases/${caseId}/questionn
 const rel = json("tests/fixtures/bk13/parents.json").relatives as Record<string, Record<string, unknown>>;
 let v = await view();
 const relSubjects = [...new Set(v.map((s) => s.subjectId).filter((s) => /\/parent_[12]$/.test(s)))];
-const refusedRel: string[] = [];
+const refusedRel: string[] = [], answeredRel = new Map<string, number>();
 for (const s of relSubjects) {
   const [subject, relation] = s.split("/");
   for (const [fact, value] of Object.entries(rel[relation] ?? {})) {
     if (!v.some((x) => x.subjectId === s && x.questions.some((q) => q.fact === fact))) continue;
     const r = await call("PUT", `/runtime/cases/${caseId}/answers/${subject}/${relation}/${fact}`, { value, expectedId: null }, OFFICER);
     if (r.status >= 300) refusedRel.push(`${s} ${fact}: ${r.status} ${JSON.stringify(r.body).slice(0, 120)}`);
+    else answeredRel.set(s, (answeredRel.get(s) ?? 0) + 1);
   }
 }
 v = await view();
@@ -108,7 +116,7 @@ for (const sec of v.filter((x) => relSubjects.includes(x.subjectId))) {
   const r = await call("POST", `/runtime/cases/${caseId}/sections/${sec.section}/confirm`, { subjectId: sec.subjectId, seen }, OFFICER);
   if (r.status >= 300) refusedRel.push(`confirm ${sec.subjectId} ${sec.section}: ${r.status}`);
 }
-ok(`BK-13: the parents of the student and the spouse are answered and confirmed on the officer's routes (${relSubjects.length} relatives)`, relSubjects.length === 4 && refusedRel.length === 0, refusedRel);
+ok(`BK-13: the parents of the student and the spouse are answered and confirmed on the officer's routes (${relSubjects.length} relatives)`, relSubjects.length === 4 && refusedRel.length === 0 && relSubjects.every((x) => (answeredRel.get(x) ?? 0) >= 5), { refusedRel, answered: Object.fromEntries(answeredRel) });
 
 // Every form each person files, generated again now that everything is answered (the Sample case made the first copies).
 type Form = { form: string; subject_id: string; person: string; applies: boolean | "cannot_tell"; for_filing: boolean; channel: string; trial_passed: boolean; trial_why: string | null;
@@ -129,22 +137,23 @@ let allByHand = 0, allNeedsFix = 0;
 for (const f of filed) {
   const g = await call("POST", `/runtime/cases/${caseId}/forms/${encodeURIComponent(f.form)}/${f.subject_id}/generate`, { idempotencyKey: `bk13-${f.form}-${f.subject_id}`.replace(/[^A-Za-z0-9-]/g, "-").slice(0, 80) }, OFFICER);
   const id: string = g.body?.id;
-  await until(async () => !["QUEUED", "RUNNING"].includes((await call("GET", `/runtime/form-copies/${id}`, undefined, OFFICER)).body?.status), 120_000);
+  const finished = await until(async () => !["QUEUED", "RUNNING"].includes((await call("GET", `/runtime/form-copies/${id}`, undefined, OFFICER)).body?.status), 120_000);
   const c = (await call("GET", `/runtime/form-copies/${id}`, undefined, OFFICER)).body as Copy;
   const row = JSON.parse(sql(`select json_build_object('path', path, 'rb', result_json->'read_back_equal', 'boxes', result_json->'boxes') from form_instance where id='${id}'`)) as { path: string; rb: number; boxes: { box: string; result: string; why: string | null }[] };
   const who = `${f.form} for ${name.get(f.subject_id)}`;
-  ok(`BK-13: ${who} is generated, its file intact, and the filler's read-back equals what it wrote (${c?.counts?.written} form fields)`, g.status === 202 && c?.status === "GENERATED" && c.intact && c.file_ok && row.rb === c.counts.written, { status: c?.status, intact: c?.intact, rb: row.rb, written: c?.counts?.written });
+  ok(`BK-13: ${who} is generated, its file intact, and the filler's read-back equals what it wrote (${c?.counts?.written} form fields)`, finished && g.status === 202 && c?.status === "GENERATED" && c.intact && c.file_ok && row.rb === c.counts.written, { finished, status: c?.status, intact: c?.intact, rb: row.rb, written: c?.counts?.written });
   const read = JSON.parse(execFileSync(PY, ["-I", READER, join(ROOT, row.path)], { encoding: "utf8", maxBuffer: 50 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] }).trim()) as { values: Record<string, string>; choices: { path: string; wrote: string; is_export: boolean }[] };
   const written = row.boxes.filter((b) => b.result === "written");
   const empty = written.filter((b) => !(read.values[b.box] ?? "").trim()).map((b) => b.box), badChoice = read.choices.filter((x) => !x.is_export).map((x) => `${x.path}=${x.wrote}`);
   // A written field read back empty is a FAIL; list values outside their export values (and nothing else) are BK-22's.
-  gap(`BK-13: ${who} read back from the PDF: each of its ${written.length} written form fields holds a value; each list field holds one of its export values`, empty.length === 0 && badChoice.length === 0, empty.length === 0, "BK-22 (a step half-run: C1b)", { empty, badChoice });
+  const readSome = written.length > 0 && Object.keys(read.values).length >= written.length;
+  gap(`BK-13: ${who} read back from the PDF: each of its ${written.length} written form fields holds a value; each list field holds one of its export values`, readSome && empty.length === 0 && badChoice.length === 0, readSome && empty.length === 0, "BK-22 (a step half-run: C1b)", { written: written.length, read: Object.keys(read.values).length, empty, badChoice });
   for (const b of badChoice) console.log(`      not an export value: ${b}`);
   // 6. Row 12's bar.
   const hand = c.by_hand ?? [], needsFix = (f.readiness?.missing ?? []).filter((m) => m.reason === "needs a fix");
   allByHand += hand.length; allNeedsFix += needsFix.length;
   const handWhy = row.boxes.filter((b) => b.result === "by hand").map((b) => b.why ?? "");
-  gap(`BK-13 bar (row 12, #1574 §8): ${who}: nothing by hand`, hand.length === 0, handWhy.every((w) => /is not in the executable set/.test(w)), "BK-22 (steps the filler does not run: C1)", handWhy);
+  gap(`BK-13 bar (row 12, #1574 §8): ${who}: nothing by hand`, hand.length === 0, handWhy.every((w) => /^step ".*" is not in the executable set$/s.test(w)), "BK-22 (steps the filler does not run: C1)", handWhy);
   gap(`BK-13 bar (row 12, #1574 §8): ${who}: no answer it writes "needs a fix"`, needsFix.length === 0, needsFix.every((m) => m.fact === "person.phone_number" && /representative/i.test(m.about ?? "")), "BK-23 (the representative's phone shape: C4)", needsFix.map((m) => `${m.about}: ${m.label}: ${m.fact}`));
   if (!f.trial_passed) waits.push(`${who}: ${f.trial_why}`);
   table.push(`| ${f.form} | ${name.get(f.subject_id)} | ${f.channel} | ${c.counts.written} | ${hand.length} | ${c.counts.blank} | ${c.counts.not_written} | ${row.rb === c.counts.written && empty.length === 0 && badChoice.length === 0 ? "equal" : `NOT equal (${badChoice.length} list values not an export value)`} | ${f.trial_passed ? "passed" : "none recorded"} |`);
@@ -155,19 +164,35 @@ type Fee = { key: string; amount: number; exempt: boolean; reason?: string; sour
 const prep = (await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, OFFICER)).body as { fees_worked_out: boolean; fees_why: string | null; fees: Fee[]; groups: { total_cents: number | null }[]; filings: { label: string }[] };
 type Line = { key: string; basis: string; per_person_cad: number; family_max?: { cad: number; from_people: number }; source: { quote: string }; exempt?: { source: { quote: string } } };
 const tableLines: Record<string, Line> = Object.fromEntries((json("samples/fee-table.json").lines as Line[]).map((l) => [l.key, l]));
-// Each line cites its table row. A per-person line is its table amount; a line with a family maximum is carried whole by
-// the principal's filing and marked exempt ("Family Rate") on the others (engine/runtime/filings.ts, BR-18), so it is
-// checked through the total. A person the table exempts by age (biometrics: under 14) pays nothing on that line.
+// M1 (review on #1695): the lines expected are worked out from the people and the table, never from the lines checked.
+// Each person owes the lines the table's fees_by_role names for their role; a person the table exempts by age (biometrics:
+// under 14 or over 79, its own cited exemption) owes CAD 0 on that line and cites the exemption. A line with a family
+// maximum is carried whole by the principal's filing and marked exempt ("Family Rate") on the others
+// (engine/runtime/filings.ts, BR-18), so it is checked through the total; a per-person line is its table amount.
+type ByRole = Record<string, { lines: string[] }>;
+const byRole = json("samples/fee-table.json").combinations[KEY].fees_by_role as ByRole;
+const answers = json(`samples/${want.answers}`) as { people: Record<string, Record<string, unknown>> };
+const idOf: Record<string, string> = { principal: "principal", ...Object.fromEntries(want.people.map((p: { id: string; role: string }) => [p.role, p.id])) };
+const ageOn = (dob: string, d = new Date()) => { const b = new Date(dob); return d.getFullYear() - b.getFullYear() - (d.getMonth() < b.getMonth() || (d.getMonth() === b.getMonth() && d.getDate() < b.getDate()) ? 1 : 0); };
+type Owed = { key: string; subject: string; ageExempt: boolean };
+const owed: Owed[] = people.filter((p) => byRole[p.role]).flatMap((p) => byRole[p.role].lines.map((key) => {
+  const ex = (tableLines[key] as Line & { exempt?: { under_age: number; over_age: number } }).exempt, dob = String(answers.people[idOf[p.role]]?.["person.date_of_birth"] ?? "");
+  const age = dob ? ageOn(dob) : NaN;
+  return { key, subject: p.subject_id, ageExempt: !!ex && (age < ex.under_age || age > ex.over_age) };
+}));
 const fees = prep.fees ?? [];
-const cites = (x: Fee) => [tableLines[x.key]?.source.quote, ...(x.exempt ? [tableLines[x.key]?.exempt?.source.quote] : [])].includes(x.source_detail?.quote);
-const wrong = fees.filter((x) => !cites(x) || (!tableLines[x.key]?.family_max && x.amount !== (x.exempt ? 0 : tableLines[x.key]?.per_person_cad))).map((x) => `${x.key}: ${x.amount}${x.exempt ? " exempt" : ""} (${x.reason ?? ""}) quote ${JSON.stringify(x.source_detail?.quote ?? null)}`);
-const ageExempt = (x: Fee) => x.exempt && !/family/i.test(x.reason ?? "");
+const pair = (k: string, s: string) => `${k}|${name.get(s)}`;
+const missingLines = owed.filter((o) => !fees.some((x) => x.key === o.key && (x as Fee & { subject?: string }).subject === o.subject)).map((o) => pair(o.key, o.subject));
+const extraLines = fees.filter((x) => !owed.some((o) => o.key === x.key && o.subject === (x as Fee & { subject?: string }).subject)).map((x) => pair(x.key, (x as Fee & { subject?: string }).subject ?? ""));
+const exemptOf = (x: Fee) => owed.find((o) => o.key === x.key && o.subject === (x as Fee & { subject?: string }).subject)?.ageExempt ?? false;
+const cites = (x: Fee) => x.source_detail?.quote === (exemptOf(x) ? tableLines[x.key]?.exempt?.source.quote : tableLines[x.key]?.source.quote);
+const wrong = fees.filter((x) => !cites(x) || (exemptOf(x) ? !(x.exempt && x.amount === 0) : !tableLines[x.key]?.family_max && x.amount !== tableLines[x.key]?.per_person_cad)).map((x) => `${pair(x.key, (x as Fee & { subject?: string }).subject ?? "")}: ${x.amount}${x.exempt ? " exempt" : ""} quote ${JSON.stringify(x.source_detail?.quote ?? null)}`);
 const expected = Object.values(tableLines).reduce((sum, l) => {
-  const n = fees.filter((x) => x.key === l.key && !ageExempt(x)).length;
+  const n = owed.filter((o) => o.key === l.key && !o.ageExempt).length;
   return sum + (l.family_max && n >= l.family_max.from_people ? l.family_max.cad : n * l.per_person_cad);
 }, 0);
 const total = prep.groups?.reduce((s, x) => s + (x.total_cents ?? 0), 0) / 100;
-ok(`BK-13: fees worked out from samples/fee-table.json, each line its table amount and source; total CAD ${total} = the table's CAD ${expected}`, prep.fees_worked_out && wrong.length === 0 && total === expected && prep.groups.length === 1, { why: prep.fees_why, wrong, total, expected });
+ok(`BK-13: fees worked out from samples/fee-table.json, each person's lines from the table's roles, each its table amount and source; total CAD ${total} = the table's CAD ${expected}`, owed.length >= 3 && expected > 0 && missingLines.length === 0 && extraLines.length === 0 && prep.fees_worked_out && wrong.length === 0 && total === expected && prep.groups.length === 1, { why: prep.fees_why, missingLines, extraLines, wrong, total, expected });
 ok("BK-13: one filing per person, named by the document it is for", prep.filings.map((x) => x.label.split(":")[0]).sort().join(", ") === "Study permit (outside Canada), Visitor visa, Work permit", prep.filings.map((x) => x.label));
 
 console.log("\n| Form | Person | Channel | Written | By hand | Blank | Not written | Read back | Fill trial |\n|---|---|---|---|---|---|---|---|---|\n" + table.join("\n"));
