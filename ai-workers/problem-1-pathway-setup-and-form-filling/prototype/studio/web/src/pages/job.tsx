@@ -167,6 +167,8 @@ function ItemCard({ item, jobId, locked }: { item: any; jobId: string; locked: b
           <p className="mt-1 text-sm">{item.proposedMeaning}</p>
           <p className="mt-1 text-xs text-text-muted">{item.reason}</p>
           {!decided && item.decisionNote ? <p className="mt-1 text-xs font-medium text-text-warn">{item.decisionNote}</p> : null}
+          {/* BK-22 (#1695 C1): Field map review flags a step the form filler cannot run, before the map is accepted. */}
+          {item.stepsNotRun ? <p className="mt-1 text-xs font-medium text-text-warn" data-steps-not-run>{item.stepsNotRun}</p> : null}
         </div>
         {decided ? <div className="text-right text-xs"><Pill tone={item.decision === "RETURNED" ? "warn" : "ok"}>{item.decision === "ACCEPTED" ? "Accepted" : item.decision === "CHANGED" ? "Changed" : item.decision === "NEW" ? "New shared field" : "Returned"}</Pill>{item.decision === "NEW" && item.payload?.label ? <p className="mt-1 font-medium">"{item.payload.label}" · a second person approves it on To review</p> : null}<p className="mt-1">{item.decidedKey ? <>uses <code className="mono">{item.decidedKey}</code></> : item.decisionNote}</p><p className="text-text-muted">by {item.decidedBy}</p>{!locked ? <button className="mt-1 text-text-link underline" onClick={() => decide.mutate({ decision: "PENDING" })}>undo</button> : null}</div> : null}
       </div>
