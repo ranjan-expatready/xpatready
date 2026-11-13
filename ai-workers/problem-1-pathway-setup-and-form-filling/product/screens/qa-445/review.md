@@ -106,3 +106,81 @@ Score:
 Verdict: Block
 * Majors: M1 (pin undoes `go()` on shift-before direct saves; fix: `go()` clears the pin), M2 (a test that fails without the pin and with M1).
 * Minors: m1 (C6.2 in check labels), m2 (PR body), m3 (oracle note).
+
+## Re-review (diff 7f63d1f7..86b337d0)
+Diff-only re-review (P-277, P-436 (5)) by an independent reviewer with fresh context, who did not build it. 13 Nov 2026. **Commit reviewed: `86b337d0d30efd28e7f724c4c19789f54f4ec86f`** (`git rev-parse HEAD`). Diff: `questionnaire.tsx` +5/−2, `check_qa445_every_part_browser.cjs` +75/−15, and this file (the first review, not re-judged). Read-only, as asked: no app copy started, :4400 untouched, live AI off, US$0.
+
+**What I ran**
+* The reviewer's harness (`scratchpad/pinh/`), unchanged. Its `FIX` variant is head's `go()` line for line: it drops the pin, then calls `setParams`. I ran `run3.cjs` again, plus `run4.cjs`, the same cases with the pin removed.
+
+  | Save on D (open at `?part=4`) | head (`go()` drops the pin) | pin removed |
+  |---|---|---|
+  | direct, drops one before D | E, `?part=4` ✓ | E ✓ |
+  | direct, adds one before D | E, `?part=6` ✓ | E ✓ |
+  | summary, drops one before D | D with summary, then E ✓; Back → D | **summary lost: E shown at once** ✗ |
+  | summary, adds one before D | D with summary, then E ✓; Back → D | **summary lost: C shown at once** ✗ |
+* The builder's logs: `full-head.log` (21/21, with the trail), `shift-head.log`, `shift-prev.log` and `shift-main.log`. The PR body was read through the REST API: draft, no labels, head `86b337d0d`.
+
+**M1: fixed.**
+* `pin` is declared above `go`, and `go()` sets `pin.current = { raw: null, key: null }` before `setParams`. This is the fix proven in the harness, and all four rows hold.
+* The race on one render: after `go()`, the reloaded parts can reach a render that still has the old `raw`.
+  * The pin is now null, so `moved` is −1 and no replace is queued.
+  * That render briefly shows the position's part (main's "C flashes").
+  * Its layout effect re-pins at the old `raw`. The pushed address differs from that `raw`, so the next render cannot correct.
+  * If the reloaded data renders *before* `go()` runs, the pin corrects first (a replace at D's new place) and the push follows. History ends `[…D, E]`, which is right.
+  * If `go()`'s address equals the old one (drop one before, target E at the same number), the URL does not change. With the pin null, the position shows E, which is right.
+  * Only a second data change landing between `go()`'s push and its commit could replace the push. That is a window of milliseconds, and nothing polls (no `refetchInterval`, headless has no focus events). Not a finding.
+* Back and browser history:
+  * After a summary-path correction, Back returns to the open part (harness).
+  * After a direct shift-before press, Back goes to the old address, which now holds another part (C in the add case). Main does the same, because the address is a position. Not a regression.
+* Every caller of `go` (overview open, Back, the summary's link, Save and continue) is a move the person asked for, so dropping the pin is right for all of them.
+
+**M2: half fixed; the pin itself still has no failing test.**
+* Fixed half:
+  * The new "shift" scenario is a direct press after the principal's Personal details answers move the open child's part.
+  * It fails on 7f63d1f76: it stays on "Part 30 of 54 · National identity document", and `left` is false.
+  * It passes on head.
+  * Each press's way out is now recorded (`path`, the trail's "(summary)" or "(direct)").
+* Soundness of the scenario's assertions:
+  * *The move is real.* The open part's number at opening (`before`) differs from its index in the client's own view after the press (`at`), and `decided > 0`. The child's parts follow the principal's, so the shift is before the open part. One small dependency: `before` is the screen's number and `at` is the oracle's (m3). The walk's `agrees()` keeps the two in line, and the prev build stayed on the picked part at a different number, so the move is not an oracle artefact.
+  * *It cannot pass falsely on M1.* No polling or focus refetch reaches the page before the press, so the press really carries the shift. `landedKey !== pick.key` catches the stay. `left` times out on a stay.
+  * *"Direct" detection is sound for M1:* a summary makes `viaSummary` true and fails the check.
+  * Nit: the landing is compared by position only. Also comparing the shown title with `parts[want].title` would make it independent of `agrees()`.
+* Open half (first review, M2 fix bullets 2–3):
+  * **Nothing shows the check fails with the pin removed.** With the pin removed, the direct rows pass, so the new scenario passes too.
+  * In the walk, a shift-before press through the summary (Visitor visa press 54, Study permit press 68 in `full-head.log`) loses its summary. It is then recorded as "direct", and nothing asserts that the summary should have shown. In a drop-one case, the part swapped in is the target itself (Visitor visa press 54 would pass).
+  * Study permit press 68 dropped two parts, so it might fail as "wrong" by chance of the data. No run shows it.
+  * There is also no assertion that at least one shift-before press through the summary ran.
+  * WAY-OF-WORKING "Every PR" requires a failing test for each business rule. Half of this PR's behaviour, fix (2), could be deleted with every check green.
+* **Fix (small):**
+  1. In the walk (or a "shift" variant through the summary), after each press where the client's view says the pressed part is not done and was not passed, assert that the summary shows on the same part (same title and "Answering for") before "leave them…".
+  2. Assert that at least one such press had a shift before it.
+  3. Run it once with the pin removed (e.g. `moved` forced to −1) on an isolated copy and show it fails. `QA445_ONLY` can carry it.
+
+**m1: fixed.** Every scenario label reads "C6.2 QA-445 …". The shared "no page errors" line is unlabelled, which is fine.
+
+**m2: mostly fixed.**
+* The body has "On the demo", the context share, regression results (after M1: qa441 13/13, r1c 140/140, c616 50/50, bk4c 46/46, qa427 17/17) and the before/after in words.
+* Cause (2) is no longer called "measured" on main.
+* Left (Should, not blocking):
+  * There are no before/after screenshots ("no visual change" is the reason given; the stay vs the move is the visible change).
+  * The body's "M2: … Fixed" overstates it (see above).
+
+**QA445_ONLY:** only the value `shift` narrows the run, and it drops the two families. Unset (CI, `var/suites/selection.tsv`), the full check runs. It is set nowhere in the repository. Nit: say it in the file's header usage line.
+
+**New in this diff:** nothing breaks.
+* Note (pre-existing on main, not this PR's scope): Back with unsaved answers, or "leave them for now and go back", uses the old `index − 1`. After a save that drops a part before, that can be the open part itself. A row for the lead if wanted.
+
+**Journey (reviewer role, re-scored on the harness and logs; no app walk):**
+* J1 holds now, direct and through the summary.
+* Task completed: 1. Feedback and state: 1.
+* Error recovery stays ½ for the pre-existing dirty-Back edge.
+* Accessibility and speed stay ½ (not walked, not measured).
+* **8/10, a pass (no 0).**
+
+Verdict: Block
+* **M2 (rest), Major:**
+  * No check fails with the pin removed.
+  * A summary lost on a shift-before press is recorded as "direct" and passes.
+  * Fix: assert the summary on not-done presses, assert one such shift-before press ran, and show a pin-removed run failing.
+* M1, m1: fixed. m2: mostly fixed (screenshots and the "M2 fixed" wording are Should). m3: note, unchanged.

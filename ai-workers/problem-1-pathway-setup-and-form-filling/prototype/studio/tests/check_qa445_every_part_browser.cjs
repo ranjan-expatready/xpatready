@@ -11,6 +11,7 @@
 //   client's own view says is next not done (first later part not done, wrapping; the overview when none), never the
 //   same part; "Part k of N" names the overview's k-th part, and N is the overview's count. US$0, live AI off.
 //   COPY_PREFIX=screens zsh studio/tools/isolated.sh screens_q445w 4448 start && node studio/tests/check_qa445_every_part_browser.cjs 4448 xr_studio_screens_q445w
+//   (QA445_ONLY=shift runs only the shift scenarios, a quick before/after; QA445_TRAIL=1 prints each press)
 const fs = require("node:fs"); const { execFileSync } = require("node:child_process");
 const { chromium } = require("../node_modules/playwright");
 const PORT = Number(process.argv[2]), DB = process.argv[3];
@@ -136,18 +137,20 @@ const nextNotDone = (parts, from) => { for (let k = 1; k < parts.length; k++) { 
   // answered through the client's route (it decides which of the principal's parts are asked, and they come before the
   // child's); Client A presses Save and continue. Main swapped the open part for another under the same address; a
   // pin left in place on the person's own move (review M1) put the client back on the part just left.
-  {
-    const ref = `QA445S-${Date.now() % 100000}`;
+  for (const way of ["direct", "summary"]) {
+    const ref = `QA445S-${way}-${Date.now() % 100000}`;
     const made = await call("POST", "/runtime/cases", "user-O", { combinationId: sql("select id from combination where combination_key='vv.single'"), reference: ref, clientActor: "user-P", principal: { displayName: "Sample Principal S" }, idempotencyKey: ref });
     const caseId = made.body?.id;
     const child = (await call("POST", `/runtime/cases/${caseId}/people`, "user-O", { role: "child", displayName: "Sample Child S" })).body?.subject_id;
-    // The child's first part that passes once its required single questions are answered.
+    // direct: the child's first part that passes once its required single questions are answered. summary (re-review
+    // #1671): the child's first part left unanswered, so the press must keep the client on it with its summary.
     let pick = null;
-    for (const x of (await clientParts(caseId, new Set())).filter((y) => y.key.startsWith(`${child}|`))) {
+    if (way === "summary") pick = (await clientParts(caseId, new Set())).find((y) => y.key.startsWith(`${child}|`) && !y.done) ?? null;
+    else for (const x of (await clientParts(caseId, new Set())).filter((y) => y.key.startsWith(`${child}|`))) {
       await answerPart(caseId, x.key);
       if ((await clientParts(caseId, new Set())).find((y) => y.key === x.key)?.done) { pick = x; break; }
     }
-    ok("C6.2 QA-445 shift: setup: a Visitor visa case of a principal and a child, with a child's part that passes", made.status < 300 && !!child && !!pick, { made: made.status, child, pick });
+    ok(`C6.2 QA-445 shift (${way}): setup: a Visitor visa case of a principal and a child, with a child's part that ${way === "direct" ? "passes" : "is not done"}`, made.status < 300 && !!child && !!pick, { made: made.status, child, pick });
     const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
     await ctx.addInitScript(() => { try { if (!sessionStorage.getItem("qa445s")) { localStorage.setItem("xr-actor", "user-O"); sessionStorage.setItem("qa445s", "1"); } } catch { /* ignore */ } });
     const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(e.message));
@@ -171,9 +174,17 @@ const nextNotDone = (parts, from) => { for (let k = 1; k < parts.length; k++) { 
     const at = parts.findIndex((x) => x.key === pick?.key), want = nextNotDone(parts, at);
     const now = /^Part (\d+) of (\d+) · (.*)$/.exec(((await line.count()) ? await line.innerText() : "").trim());
     const landedKey = now ? parts[Number(now[1]) - 1]?.key : null;
-    ok("C6.2 QA-445 shift: the answers moved the open part's place in the list (parts added or dropped before it)", decided > 0 && at >= 0 && at !== Number(before?.[1] ?? 0) - 1, { decided, before: before?.[1], now: at + 1 });
-    ok("C6.2 QA-445 shift: the press left directly (the part passed: no summary)", left && !viaSummary, { left, viaSummary });
-    ok(`C6.2 QA-445 shift: Save and continue lands on the next part not done (${want === null ? "the overview" : `Part ${want + 1}, ${parts[want].title}`}), never the part just left`, landedKey !== pick?.key && (want === null ? !now : landedKey === parts[want].key) && (!now || Number(now[2]) === parts.length), { landed: now?.[0], want: want === null ? null : `${want + 1} ${parts[want].title}` });
+    ok(`C6.2 QA-445 shift (${way}): the answers moved the open part's place in the list (parts added or dropped before it)`, decided > 0 && at >= 0 && at !== Number(before?.[1] ?? 0) - 1, { decided, before: before?.[1], now: at + 1 });
+    if (way === "summary") {
+      // The same part (its title and whom it is for) with its summary: the pin keeps it; main swapped in another part
+      // under the same address and the summary was lost.
+      const shown = await main.innerText();
+      const sameFor = (/Answering for [^\n]*/.exec(shown) ?? [""])[0] === (/Answering for [^\n]*/.exec(was) ?? [""])[0];
+      ok("C6.2 QA-445 shift (summary): the part not done keeps the client on the same part with its summary", left && viaSummary && now?.[3] === pick?.title && landedKey === pick?.key && sameFor, { left, viaSummary, shown: now?.[0], pick: pick?.title, sameFor });
+      await ctx.close(); continue;
+    }
+    ok("C6.2 QA-445 shift (direct): the press left directly (the part passed: no summary)", left && !viaSummary, { left, viaSummary });
+    ok(`C6.2 QA-445 shift (direct): Save and continue lands on the next part not done (${want === null ? "the overview" : `Part ${want + 1}, ${parts[want].title}`}), never the part just left`, landedKey !== pick?.key && (want === null ? !now : landedKey === parts[want].key) && (!now || Number(now[2]) === parts.length), { landed: now?.[0], want: want === null ? null : `${want + 1} ${parts[want].title}` });
     await ctx.close();
   }
   ok("no page errors", errs.length === 0, errs.slice(0, 3));
