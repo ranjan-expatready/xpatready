@@ -89,7 +89,7 @@ export function engineDirectory(from = HERE): string {
 }
 
 /** One form record (an official file's edition) with the engine's descriptor for it. */
-export type XfaFormRecord = { form: string; edition: string; form_sha256: string; descriptor: XfaDescriptor; source: string };
+export type XfaFormRecord = { form: string; edition: string; official_file: string; form_sha256: string; descriptor: XfaDescriptor; source: string };
 /** The form records; a missing file is none, a file that does not read stops loudly (never every form silently bare). */
 export function xfaFormRecords(file = XFA_FORMS_FILE): XfaFormRecord[] {
   if (!existsSync(file)) return [];
@@ -106,13 +106,13 @@ const notAvailable = (code: string, reason: string): XfaAnswer => ({ status: "no
 
 /** The engine's raw answer (./run-engine.mjs) in our words. Anything unexpected is "not available", never a pass. */
 export function answerOf(raw: unknown): XfaAnswer {
-  const r = (raw ?? {}) as Record<string, any>;
+  const r = (raw ?? {}) as Record<string, unknown>;
   const pages = typeof r.pages === "number" && r.pages >= 0 ? r.pages : null;
   switch (r.kind) {
     case "complete":
       return pages === null || !Array.isArray(r.barcodes) ? notAvailable("BAD_ANSWER", "the engine's answer could not be read") : { status: "passes", pages, barcodeTexts: r.barcodes.map((b: unknown) => (typeof b === "string" ? b : null)) };
     case "incomplete":
-      return pages === null ? notAvailable("BAD_ANSWER", "the engine's answer could not be read") : { status: "stops_at", pages, box: typeof r.firstMissingField === "string" ? r.firstMissingField : null, message: Array.isArray(r.messages) && typeof r.messages[0] === "string" ? r.messages[0] : null };
+      return pages === null ? notAvailable("BAD_ANSWER", "the engine's answer could not be read") : { status: "stops_at", pages, box: typeof r.firstMissingField === "string" ? r.firstMissingField : null, message: Array.isArray(r.messages) && typeof r.messages[0] === "string" ? (r.messages[0] as string) : null };
     case "reads":
       return pages === null ? notAvailable("BAD_ANSWER", "the engine's answer could not be read") : { status: "reads", pages, why: "the engine reads this form, but no descriptor of its own Validate is recorded for this edition, so its own check cannot run" };
     case "refused":
@@ -132,7 +132,7 @@ export async function askXfaEngine(file: string, options: XfaAskOptions = {}): P
   let descriptor = options.descriptor;
   if (descriptor === undefined) {
     try { descriptor = xfaDescriptorFor(createHash("sha256").update(readFileSync(file)).digest("hex"), options.formsFile); }
-    catch (e: any) { return notAvailable(String(e?.code ?? "UNREADABLE"), `the form's file or its record cannot be read: ${String(e?.message ?? e)}`); }
+    catch (e) { const err = e as NodeJS.ErrnoException; return notAvailable(String(err?.code ?? "UNREADABLE"), `the form's file or its record cannot be read: ${String(err?.message ?? e)}`); }
   }
   const request = JSON.stringify({ engine, file: resolve(file), descriptor, clock: options.clock ?? Date.now(), timezone: options.timezone ?? FIRM_ZONE });
   const limit = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;

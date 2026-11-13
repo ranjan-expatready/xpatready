@@ -45,7 +45,7 @@ const names = Object.keys(XFA_SWITCHES) as XfaSwitch[];
 ok("pass: five switches: form's own check, barcode check, view form, validate in the app, engine writer", JSON.stringify([...names].sort()) === JSON.stringify(["barcodeCheck", "engineWriter", "formCheck", "validateInApp", "viewForm"]), names);
 ok("pass: every switch is off", names.every((n) => XFA_SWITCHES[n] === false && !xfaOn(n)), XFA_SWITCHES);
 ok("fail: a switch turned on reads as on (xfaOn reads the list it is given)", xfaOn("viewForm", { ...XFA_SWITCHES, viewForm: true }) && !xfaOn("formCheck", { ...XFA_SWITCHES, viewForm: true }));
-ok("fail: the switch list cannot be changed at run time", (() => { try { (XFA_SWITCHES as any).viewForm = true; } catch { /* frozen */ } return XFA_SWITCHES.viewForm === false; })());
+ok("fail: the switch list cannot be changed at run time", (() => { try { (XFA_SWITCHES as Record<XfaSwitch, boolean>).viewForm = true; } catch { /* frozen */ } return XFA_SWITCHES.viewForm === false; })());
 
 const walk = (dir: string): string[] => !existsSync(dir) ? [] : readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? (f === "node_modules" || f === "dist" ? [] : walk(p)) : /\.(tsx?|mjs|cjs|js)$/.test(f) ? [p] : []; });
 const app = ["api/src", "engine", "web/src", "contracts"].flatMap((d) => walk(join(STUDIO, d))).map((p) => ({ file: relative(STUDIO, p), src: readFileSync(p, "utf8") })).filter((f) => !f.file.startsWith("engine/xfa/"));
@@ -60,7 +60,7 @@ ok("fail: a direct reach to the engine is seen", reachesEngine(`const X = await 
 
 // ---- the form records: the engine's own descriptor files, unchanged, for the exact official files ----
 const records = xfaFormRecords();
-ok("pass: two form records (the engine's two descriptor files), each for its official file's SHA-256 in the manifest", records.length === 2 && records.every((r: any) => { const m = manifest.find((i) => i.file === r.official_file); return !!m && sha(join(OFFICIAL, m.path)) === r.form_sha256; }), records.map((r) => r.form_sha256));
+ok("pass: two form records (the engine's two descriptor files), each for its official file's SHA-256 in the manifest", records.length === 2 && records.every((r) => { const m = manifest.find((i) => i.file === r.official_file); return !!m && sha(join(OFFICIAL, m.path)) === r.form_sha256; }), records.map((r) => r.form_sha256));
 ok("pass: each descriptor is its source file, unchanged", records.every((r) => JSON.stringify(JSON.parse(readFileSync(join(SOLUTION, "..", "..", r.source), "utf8"))) === JSON.stringify(r.descriptor)), records.map((r) => r.source));
 ok("fail: another edition never borrows a descriptor (a file the records do not hold has none)", xfaDescriptorFor(sha(blank("imm5257e-pre-2023.pdf"))) === null && xfaDescriptorFor("0".repeat(64)) === null);
 const scratch = mkdtempSync(join(tmpdir(), "b170c-"));
