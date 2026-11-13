@@ -76,8 +76,10 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("officer: the case list opens with one primary action", await shows(o.getByRole("button", { name: "Open a case" })));
   await o.getByRole("button", { name: "Open a case" }).click();
   await o.getByRole("button", { name: "Open case" }).click(); await idle(o);
-  step("officer fail: opening a case without reference and name shows both errors on their fields", await shows(o.getByText("Give the case a reference of at least 3 characters.", { exact: true })) && await shows(o.getByText("Give the principal applicant a display name.", { exact: true })));
-  await o.getByLabel("Case reference").fill(`R1C-${run}`);
+  // A24-2 (P-492): the firm's own reference is optional, so only the missing name is refused (read in the dialog: the
+  // toast repeats a single error's words).
+  step("officer fail: opening a case without a name shows the error on its field; the optional reference shows none", await shows(o.getByRole("dialog").getByText("Give the principal applicant a display name.", { exact: true })) && (await o.getByRole("dialog").getByText("Give the case a reference of at least 3 characters.", { exact: true }).count()) === 0);
+  await o.getByLabel("Your own reference (optional)").fill(`R1C-${run}`);
   await o.getByLabel("Principal applicant's name").fill("Sample Applicant C");
   await o.getByRole("button", { name: "Open case" }).click(); await idle(o);
   await o.waitForURL(/\/cases\/[0-9a-f-]{36}$/);
@@ -499,7 +501,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await o.goto(`${BASE}/cases`); await idle(o);
   step("case list fail-guard (PR 10 review): the first page shows 50 cases and offers Load more", await shows(o.getByText("50 cases shown")) && await shows(o.getByRole("button", { name: "Load more" })));
   await o.getByRole("button", { name: "Load more" }).click();
-  step("case list pass: Load more appends the next page and keeps the first; the oldest case is reachable", await gone(o.getByText("50 cases shown")) && await shows(o.getByRole("link", { name: `R1C-${run}`, exact: true })) && await shows(o.getByRole("link", { name: `R1C-PAGE-${run}-50` })));
+  step("case list pass: Load more appends the next page and keeps the first; the oldest case is reachable", await gone(o.getByText("50 cases shown")) && await shows(o.getByRole("link", { name: new RegExp(`^C-\\d{4}-\\d{5,} R1C-${run}$`) })) && await shows(o.getByRole("link", { name: `R1C-PAGE-${run}-50` })));
 
   step("no page errors in either browser", errors.length === 0, errors.slice(0, 3));
   fs.writeFileSync(path.join(SHOTS, "axe.json"), JSON.stringify(axeLog, null, 1));

@@ -59,7 +59,7 @@ const shot = async (p, name) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: 
     const opt = options.find((o) => (typeof which === "string" ? o.text.startsWith(which) : which.test(o.text)));
     if (!opt) throw new Error(`no released combination ${which} in Open a case: ${options.map((o) => o.text).join(" | ")}`);
     await select.selectOption(opt.value);
-    await dlg.getByLabel("Case reference").fill(ref);
+    await dlg.getByLabel("Your own reference (optional)").fill(ref);
     await dlg.getByLabel("Principal applicant's name").fill("Sample Client A");
     await dlg.getByRole("button", { name: "Open case" }).click();
     await p.waitForURL(/\/cases\/[0-9a-f-]{36}$/, T);

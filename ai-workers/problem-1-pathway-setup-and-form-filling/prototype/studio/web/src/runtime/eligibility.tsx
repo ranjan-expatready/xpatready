@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StandIn } from "@/components/stand-in";
 import { Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
-import { lineId, noRetryOnRefusal, useCaseView, type CasePerson } from "./questionnaire";
+import { caseWords, lineId, noRetryOnRefusal, useCaseView, type CasePerson } from "./questionnaire";
 import { useFirm } from "./team";
 import { restingOn, restingWords } from "./eligibility-unconfirmed";
 import { CASE_CHECK, CASE_CHECK_SHORT, OUTCOME_WORDS, outcomeWord } from "../../../contracts/case-check-words";
@@ -130,7 +130,7 @@ export function EligibilityPage() {
   const actor = useActorId();
   const view = useCaseView(id!, "agent");
   const q = useAssessments(id!);
-  useWhere(view.data ? [{ label: "Cases", to: "/cases" }, { label: view.data.case.reference, to: `/cases/${id}` }, { label: CASE_CHECK }] : null); // BK-3
+  useWhere(view.data ? [{ label: "Cases", to: "/cases" }, { label: caseWords(view.data.case), to: `/cases/${id}` }, { label: CASE_CHECK }] : null); // BK-3
   const [chosen, setChosen] = React.useState<string | null>(null);
   const [drawer, setDrawerState] = React.useState<"run" | "override" | "review" | "history" | null>(null);
   // Break m3 on 2572b9b0 (WCAG 2.4.3): a drawer gives focus back to the button that opened it.
@@ -162,7 +162,7 @@ export function EligibilityPage() {
     <div className="mx-auto max-w-7xl space-y-5">
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{CASE_CHECK} · {c.reference}<StandIn id="SI-1" today="our own checks on this application's rules, three outcomes and no score" later="the team's AG-03 Qualifier fills this page and adds scores, cut-offs and advice" /></h1>
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{CASE_CHECK} · {caseWords(c)}<StandIn id="SI-1" today="our own checks on this application's rules, three outcomes and no score" later="the team's AG-03 Qualifier fills this page and adds scores, cut-offs and advice" /></h1>
           <p className="mt-1 text-sm text-text-muted">{(q.data?.assessments ?? []).find((a) => a.results[0])?.results[0].programLabel ?? "This application"} · release {c.pin.release_version}{latest ? ` · rules as at ${day(Object.values(latest.rulesAsOfByProgram)[0])}` : ""} · staff only: the client never sees a verdict</p>
         </div>
         {person && q.data?.has_rules !== false ? <RunButton caseId={c.id} person={person} first={!runs.length} onAgain={() => setDrawer("run")} onError={setRunError} /> : null}

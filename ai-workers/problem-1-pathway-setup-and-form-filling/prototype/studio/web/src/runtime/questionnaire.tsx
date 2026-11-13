@@ -17,7 +17,7 @@ import { historyGaps, type Period } from "../../../../contracts/history";
 import { EmployerCaseSource, LINKED_FILE, type EmployerLink } from "./employer";
 import { HouseholdReads, ScopeTag } from "./scope-tag"; // C3.16
 import { DocumentsButton } from "./documents-drawer"; // C6.5 part 2b
-import { fillsText, groupLabel, inSentence, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
+import { caseName, fillsText, groupLabel, inSentence, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 import type { ProgressOnly } from "../../../contracts/person-link";
 import { PrincipalPersonLine, PrivateProgress, usePeoplePrivacy } from "./privacy"; // C6.16
 import { HandOff, handName, handedFrom } from "./hand-off"; // BK-4c
@@ -31,7 +31,7 @@ export type CasePerson = { subject_id: string; role: string; role_label?: string
 export type CanAdd = { role: string; label: string; max: number; has: number };
 /** C6.11: the case team in the header (staff only; Sample firm, stand-in SI-9). */
 export type CaseTeamLine = { firm: { key: string; name: string; solo: boolean } | null; representative: { id: string; name: string; licence: { body: string; number: string } | null } | null; officers: { id: string; name: string }[] };
-export type CaseInfo = { id: string; reference: string; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; release?: { label: string }; people: CasePerson[]; can_add?: CanAdd[]; team?: CaseTeamLine; employer_link?: EmployerLink };
+export type CaseInfo = { id: string; /** A24-1 (P-492, CS-7) */ case_number: string; /** The firm's own reference, optional since A24-1. */ reference: string | null; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; release?: { label: string }; people: CasePerson[]; can_add?: CanAdd[]; team?: CaseTeamLine; employer_link?: EmployerLink };
 /** private_people (C6.16, client view only): people kept private from the client, with their progress only. */
 export type View = QuestionnaireView & { case: CaseInfo; private_people?: { subject_id: string; label: string; progress: ProgressOnly }[] };
 type Section = ViewSection;
@@ -45,6 +45,8 @@ const keyOf = (q: Question, row?: string) => `${q.subjectId}|${q.fact}${row ? `|
 const cellAnswer = (q: Question, row?: string) => (row ? q.rows.find((r) => r.row === row)?.answer ?? null : q.answer);
 
 /** The view of one case in one mode; every change invalidates it, so counts and confirmations come from the server. */
+/** A24-2 (P-492): a case in words: the firm's own reference when it gave one, else its case number (contracts caseName). */
+export const caseWords = (c: { reference: string | null; case_number: string }) => caseName({ reference: c.reference, caseNumber: c.case_number });
 export function useCaseView(caseId: string, mode: Mode) {
   const actor = useActorId();
   return useApi<View>(["runtime", "view", caseId, mode, actor], `/runtime/cases/${caseId}/questionnaire${mode === "agent" ? "?mode=agent" : ""}`, { retry: noRetryOnRefusal });
@@ -477,7 +479,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
     <div className="mx-auto max-w-xl space-y-5">
       <div>
         <h1 className="text-2xl font-semibold">{link ? "Your questions" : "Client questionnaire"}</h1>
-        <p className="mt-1 text-sm text-text-muted">{link ? `Case ${view.case.reference}. You answer your own questions. Each answer is saved when you press Save; to come back later, open your link again and ask for a new code.` : <>Case {view.case.reference}. You answer for everyone travelling on this application{relativesWords(view)}. Each answer is saved when you press Save; you can stop and come back at any time.</>}</p>
+        <p className="mt-1 text-sm text-text-muted">{link ? `Case ${caseWords(view.case)}. You answer your own questions. Each answer is saved when you press Save; to come back later, open your link again and ask for a new code.` : <>Case {caseWords(view.case)}. You answer for everyone travelling on this application{relativesWords(view)}. Each answer is saved when you press Save; you can stop and come back at any time.</>}</p>
       </div>
       <RecordedForYou view={view} open={open} />
       <div className="rounded-xl border border-border bg-surface-raised p-4">

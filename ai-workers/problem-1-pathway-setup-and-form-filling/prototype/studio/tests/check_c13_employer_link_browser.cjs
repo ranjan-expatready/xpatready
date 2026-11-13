@@ -58,7 +58,7 @@ const LMIA = "case.lmia_or_offer_number";
     await offerLine.getByText("forms read 2 employer facts; you can copy them from an employer case.", { exact: false }).waitFor(T);
     ok("C1.3: Open a case on the work permit offers the employer case link, counting 2 employer facts", true);
     await shot(p, "1-open-a-case-offered");
-    await dlg.getByLabel("Case reference").fill(ref);
+    await dlg.getByLabel("Your own reference (optional)").fill(ref);
     await dlg.getByLabel("Principal applicant's name").fill("Client A");
     await dlg.getByRole("button", { name: "Open case" }).click();
     await p.waitForURL(/\/cases\/[0-9a-f-]{36}$/, T);

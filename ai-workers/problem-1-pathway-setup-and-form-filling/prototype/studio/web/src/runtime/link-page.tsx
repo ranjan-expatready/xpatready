@@ -141,7 +141,7 @@ type LinkView = Omit<View, "case"> & { case: { id: string; reference: string; pe
 // Their own parts, with the parts about their own parents and brothers and sisters (`<own>/parent_1`, B128, B155).
 const mine = (v: LinkView, id: string) => id === v.own || id.startsWith(`${v.own}/`);
 /** The adult's own parts as a questionnaire view (also the order Save and continue reads after a save, QA-441). */
-const ownView = (v: LinkView) => ({ ...v, sections: v.sections.filter((s) => mine(v, s.subjectId)), case: { ...v.case, status: "", combination_id: "", client: "", pin: { release_version: 0, sha256: "", pinned_at: "", revision: 0 } } }) as View;
+const ownView = (v: LinkView) => ({ ...v, sections: v.sections.filter((s) => mine(v, s.subjectId)), case: { ...v.case, case_number: "", status: "", combination_id: "", client: "", pin: { release_version: 0, sha256: "", pinned_at: "", revision: 0 } } }) as View;
 function LinkQuestionnaire({ stored, onEnded }: { stored: Stored; onEnded: (words: string | null) => void }) {
   const view = useQuery({ queryKey: ["link", "view", stored.case_id], queryFn: () => linkApi<LinkView>(`/cases/${stored.case_id}/people/${stored.subject_id}/questionnaire`, {}, stored.session), retry: false });
   React.useEffect(() => { if (view.error instanceof ApiError && view.error.status === 401) onEnded(view.error.message); }, [view.error, onEnded]);
