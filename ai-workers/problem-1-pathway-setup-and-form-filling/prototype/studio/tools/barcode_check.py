@@ -44,7 +44,8 @@ def som_index(top):
     """SOM path (as the P1 inventory spells it: name or #tag, counted per key among siblings) -> element."""
     out = {}
 
-    def walk(el, som):
+    # Named "visit", not "walk": the suite selector reads a walk( call as listing folders (check-select-suites.sh).
+    def visit(el, som):
         seen = Counter()
         for c in el:
             tag = local(c.tag)
@@ -56,10 +57,10 @@ def som_index(top):
             p = f"{som}.{key}[{i}]"
             out[p] = c
             if tag not in ("field", "exclGroup"):
-                walk(c, p)
+                visit(c, p)
     root = f"{top.get('name')}[0]"
     out[root] = top
-    walk(top, root)
+    visit(top, root)
     return out
 
 
