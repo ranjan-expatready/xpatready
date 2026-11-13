@@ -12,7 +12,10 @@ You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime F
 * The tables in the row: `fo_person`, `fo_arrival_receipt`, `fo_lead` (no stage, type or value), `fo_lead_attribution` (write-once), `fo_company`, `fo_company_contact`, `fo_prospect`, `fo_stage` (Individual and Corporate pipelines, AG-02's eight keys each), `fo_reason` (AG-02's own lists: AG-2-80 rule 2, AG-2-44 rule 2), `fo_call`, `fo_note` (`visibility`, add-only), `fo_stage_move`, `fo_consent`, `fo_consent_wording` (versioned, hashed, write-once), `fo_web_form`, `fo_service`; per-firm `L-`/`P-` numbers safe under concurrency.
 * `api/src/front-office/firm-seed.ts`: on `firm.created` (and once for the two Sample firms) seed the two pipelines, reasons, one web form (off) and the services list from released combinations' names; idempotent.
 * Test `tests/check_fo1a_sales_schema.ts` covering every line of the row's Done when, a pass and a fail each.
+* **Also (Lead 38):** fix the one stale line in `prototype/studio/DEVELOPING.md` (line ~29, "one migration in flight at a time") to say two module schema rows may run at once when each touches only its own area file and migration folder, the second re-stamping and showing `migrate diff` empty (P-559 (3), P-228).
 * One migration folder with its own stamp later than the newest on `main` (P-348 (8)); triggers in its SQL.
+
+**Side by side (Lead 38 ruling, P-559 (3), WAY-OF-WORKING P-228):** FO-1a and FO-1b run at the same time after PF-3 merges, each touching only its own area file and its own migration folder. Whichever merges second re-stamps its migration on top of `main`'s and shows `npx prisma migrate diff` empty in its PR.
 
 **Must still be true:** the demo reset, the checkpoint load (C10.1) and every existing suite pass unchanged; `tests/check_prisma_schema.ts` passes with the new file.
 
