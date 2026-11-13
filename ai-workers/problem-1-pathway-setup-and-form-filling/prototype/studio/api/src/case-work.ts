@@ -4,8 +4,8 @@
 // recorded "Self-reviewed", never as a second person's review. The rules are engine/runtime/preparers.ts.
 // One read per case: a UNION of every table that keeps who did what, plus the case's audit lines as the catch-all the
 // backlog row names, grouped to one row per person and kind, so the result is a handful of rows however big the case is.
-// Reading, reviewing and case administration are not work; opening the case and sending a filing for review come back
-// marked `weak`, which never names a preparer (review 2 B1, M1).
+// Reading, reviewing (the review's steps and its findings) and case administration are not work; opening the case and
+// sending a filing for review come back marked `weak`, which never names a preparer (review 2 B1, M1; review 3 B1).
 import { preparersOf, type WorkAct } from "../../engine/runtime/preparers.ts";
 import { firmByKey } from "./firms.ts";
 import type { Db } from "./core.ts";
@@ -19,7 +19,13 @@ const NOT_WORK = ["read", "viewed", "reviewed", "self_reviewed", "approved", "se
   "sent_for_review", "review_now", "review_opened", "review_sent_back",
   // who may work on the case, not work on it
   "representative_changed", "officer_assigned", "officer_ended",
-  "ready_to_file_reopened", "loaded", "reset", "seeded", "failed", "cancelled"];
+  // saying the work is done is not doing it (the review stands behind Ready to file, C7.6)
+  "ready_to_file", "ready_to_file_reopened",
+  "loaded", "reset", "seeded", "failed", "cancelled"];
+/** Review findings (C7.10) are the review looking at the work, never the work: added by hand, acknowledged, waived or
+ *  dismissed, each logged against the case itself (api/src/findings.ts). Their actions are words other acts use too —
+ *  "added" is also a person added to the case — so they are left out by action *and* entity (review 3 B1). */
+const NOT_WORK_ON_CASE = ["added", "acknowledged", "waived", "dismissed"];
 
 export type CaseWork = { acts: WorkAct[]; staff: (id: string) => boolean };
 
@@ -61,8 +67,15 @@ export async function caseWork(db: Db, caseId: string): Promise<CaseWork> {
       UNION ALL SELECT ct.done_by, ct.done_at, FALSE FROM case_task ct WHERE ct.case_id = ${caseId}::uuid
       UNION ALL SELECT rp.passed_by, rp.passed_at, FALSE FROM readiness_pass rp JOIN filing f ON f.id = rp.filing_id WHERE f.case_id = ${caseId}::uuid
       -- everything else a person did on the case that its audit lines hold
-      UNION ALL SELECT ae.actor, ae.at, FALSE FROM audit_event ae WHERE (ae.entity_key = ${caseId} OR ae.detail->>'case' = ${caseId})
+      UNION ALL SELECT ae.actor, ae.at, FALSE FROM audit_event ae WHERE (
+          ae.entity_key = ${caseId} OR ae.detail->>'case' = ${caseId}
+          -- lines a person's act leaves against one of the case's own things (review 3 M1: how a form is filed, a
+          -- section unticked, a filing split out) carry that thing's id, never the case's
+          OR ae.entity_key IN (SELECT i.id::text FROM filing_item i WHERE i.case_id = ${caseId}::uuid)
+          OR ae.entity_key IN (SELECT f.id::text FROM filing f WHERE f.case_id = ${caseId}::uuid)
+          OR ae.entity_key IN (SELECT sg.id::text FROM submission_group sg WHERE sg.case_id = ${caseId}::uuid))
         AND NOT (ae.action = 'opened' AND ae.entity = 'case') AND NOT (ae.action = ANY(${NOT_WORK}::text[]))
+        AND NOT (ae.entity = 'case' AND ae.action = ANY(${NOT_WORK_ON_CASE}::text[]))
       -- stood behind it without preparing it: opened the case, sent a filing for review
       UNION ALL SELECT rr.sent_by, rr.sent_at, TRUE FROM review_round rr WHERE rr.case_id = ${caseId}::uuid AND rr.kind IN ('send', 'review_now')
       UNION ALL SELECT o.created_by, o.created_at, TRUE FROM runtime_case o WHERE o.id = ${caseId}::uuid

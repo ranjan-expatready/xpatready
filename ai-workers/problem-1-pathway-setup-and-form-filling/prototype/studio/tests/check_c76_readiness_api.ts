@@ -180,6 +180,30 @@ const r2m2Rd = readinessOf((await prepare(r2m2.id, rep)).p, r2m2f) as { prepared
 const r2m2Rev = await call("POST", `/runtime/filings/${r2m2f}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(r2m2.id, r2m2f, rep) }, rep);
 ok("BK-18 (review 2 M2) fail: the case officer who made the copy and read the validated copy back is a preparer, so the representative cannot review it as one person's work (409)", !!copied && (r2m2Rd?.prepared_by ?? []).includes(officer) && r2m2Rev.status === 409, { copied: !!copied, prepared_by: r2m2Rd?.prepared_by, review: r2m2Rev.status });
 
+// BK-18 review 3 B1: the review looking at the work is not the work. A finding the representative adds (or waives,
+// acknowledges or dismisses) while reviewing never makes them a preparer, so their own review is not refused as a
+// second person's and the record does not name them beside the person who really prepared it.
+const r3b1 = await newCase("BK18R3B1", "Sample Client F", officer);
+await answer(r3b1.id, r3b1.subject, "person.passport_number", "ZX9999998", officer); // the case officer prepares it
+const r3b1f = (await prepare(r3b1.id, rep)).p?.filings[0]?.id ?? "";
+const r3b1Add = await call("POST", `/runtime/cases/${r3b1.id}/findings`, { subject: r3b1.subject, severity: "MAJOR", note: "The passport number needs checking against the document (Sample)", filing: r3b1f }, rep);
+const r3b1Rev = await call("POST", `/runtime/filings/${r3b1f}/review`, { note: "Reviewed (Sample)", facts_hash: await fh(r3b1.id, r3b1f, rep) }, rep);
+const r3b1Rd = readinessOf((await prepare(r3b1.id, rep)).p, r3b1f) as { prepared_by?: string[] } | undefined;
+ok("BK-18 (review 3 B1) fail: a finding the representative adds while reviewing never makes them a preparer — the review stands and the record names only who prepared it", r3b1Add.status < 300 && r3b1Rev.status === 200 && r3b1Rev.body?.kind === "reviewed" && JSON.stringify(r3b1Rd?.prepared_by) === JSON.stringify([officer]), { add: r3b1Add.status, review: r3b1Rev.status, kind: r3b1Rev.body?.kind, prepared_by: r3b1Rd?.prepared_by });
+
+// BK-18 review 3 M1: a decision about how a form is filed is work on the filing, wherever its line is kept. The case
+// officer changes a form's channel with a written reason; the representative who typed the facts can no longer review
+// it as one person's work.
+const r3m1 = await newCase("BK18R3M1", "Sample Client G", rep);
+await answer(r3m1.id, r3m1.subject, "person.passport_number", "ZX9999999", rep);
+const r3m1View = (await prepare(r3m1.id, officer)).p as { version?: string; items?: { id: string; kind: string; channel?: string; accepts?: string[] }[] } | undefined;
+const r3m1Item = (r3m1View?.items ?? []).find((i) => i.kind === "form" && (i.accepts ?? []).includes("PAPER") && i.channel !== "PAPER");
+const r3m1Chan = await call("PATCH", `/runtime/items/${r3m1Item?.id}/channel`, { channel: "PAPER", reason: "The client prefers paper for this form (Sample)", version: r3m1View?.version }, officer);
+const r3m1f = (await prepare(r3m1.id, rep)).p?.filings[0]?.id ?? "";
+const r3m1Rd = readinessOf((await prepare(r3m1.id, rep)).p, r3m1f) as { prepared_by?: string[] } | undefined;
+const r3m1Rev = await call("POST", `/runtime/filings/${r3m1f}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(r3m1.id, r3m1f, rep) }, rep);
+ok("BK-18 (review 3 M1) fail: the case officer who decided how a form is filed is a preparer, so the representative cannot review it as one person's work (409)", r3m1Chan.status < 300 && (r3m1Rd?.prepared_by ?? []).includes(officer) && r3m1Rev.status === 409, { channel: r3m1Chan.status, detail: r3m1Chan.body?.detail, prepared_by: r3m1Rd?.prepared_by, review: r3m1Rev.status });
+
 // BK-18 review M2 / breaker B2: work that leaves no answer of its own still counts. The case officer passes a warning
 // with a written reason; the representative who did the rest can no longer review it as a second person (BR-8, 409).
 const m2 = await newCase("BK18M2", "Sample Client U", rep);

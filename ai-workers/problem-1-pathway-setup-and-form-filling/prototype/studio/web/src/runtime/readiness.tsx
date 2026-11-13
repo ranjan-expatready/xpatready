@@ -211,7 +211,7 @@ function RecordLine({ r, reviewed, nameOf }: { r: Readiness; reviewed: NonNullab
   const rec = reviewRecordOf({ preparers: r.prepared_by ?? [], behind: r.stood_behind ?? [], reviewedBy: reviewed.by, kind: reviewed.kind });
   const who = `${nameOf(reviewed.by)}${reviewed.licence_number ? ` (licence ${reviewed.licence_number})` : ""}`;
   return (
-    <p className="text-[13px]" data-reviewed={reviewed.kind} data-record={rec.self ? "self-reviewed" : "two-people"}>
+    <p className="text-[13px]" data-reviewed={reviewed.kind} data-record={rec.self ? "self-reviewed" : rec.preparedBy.length ? "two-people" : "nobody-recorded"}>
       <span className="text-text-muted">Prepared by · Reviewed by: </span>
       {rec.self ? `Self-reviewed by ${who}` : `${rec.preparedBy.length ? rec.preparedBy.map(nameOf).join(", ") : "nobody recorded"} · reviewed by ${who}`}, {when(reviewed.at)}
     </p>
