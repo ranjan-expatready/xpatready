@@ -72,7 +72,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await as("user-O"); await p.goto(`${BASE}/cases/${a1.id}`);
     const link = p.locator("[data-case-client]");
     await link.waitFor({ timeout: 30000 });
-    step(`${W}: the case header names its client "Client A"`, (await link.textContent())?.trim() === "Client A", await link.textContent());
+    step(`${W}: the case header links to its client's cases ("Client A's cases"; A24-3 review m2)`, (await link.textContent())?.trim() === "Client A's cases", await link.textContent());
     await axe(`${W} the case header's client link`, "[data-case-client]");
     if (width === 1440) await p.screenshot({ path: path.join(SHOTS, `pr3-case-client-link-${width}.png`) });
     listReads.length = 0;
@@ -101,7 +101,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     // BR-6: client → another case, and back.
     await p.locator('[data-client-case="BK3C-A2"]:visible a').first().click(); await p.waitForURL(new RegExp(`/cases/${a2.id}$`), { timeout: 15000 });
     await p.locator("[data-case-client]").waitFor({ timeout: 30000 });
-    step(`${W}: a row opens its case, which names the same client (round trip)`, (await p.locator("h1").first().innerText()).includes("BK3C-A2") && (await p.locator("[data-case-client]").innerText()).trim() === "Client A");
+    step(`${W}: a row opens its case, which names the same client (round trip)`, (await p.locator("h1").first().innerText()).includes("BK3C-A2") && (await p.locator("[data-case-client]").innerText()).trim() === "Client A's cases");
     step(`${W}: the row's link leaves the person acting as the case officer`, (await actorNow()) === "user-O", await actorNow());
 
     // BR-8: Open a case for Client B, in place, with Client B chosen; Cancel stays.
