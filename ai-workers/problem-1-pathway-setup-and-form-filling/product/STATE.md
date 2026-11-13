@@ -30,7 +30,7 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
 | A36 | 14:1x (13 Nov) make the repository private | **closed by P-539** (stay public for now; B190 then a new price); row word for word in `history/STATE-2026-11-13-1515-lead34s2-founder-ask-A36-row.md` |
 
 ## For the founder (P-390)
-Open F2, F8, F14, F15, F16, F17, F18, F19 (none blocks work), word for word in `history/STATE-2026-11-10-1240-lead8s2-for-the-founder-table.md`; ask at his typed turns, one at a time.
+Open F2, F8 (looks on the demo, no decision); F14-F18 accepted P-548, F19 ruled P-443, word for word in `history/STATE-2026-11-10-1240-lead8s2-for-the-founder-table.md`; ask at his typed turns, one at a time.
 
 ## Start here (next Lead)
 🔴 **Waiting on the founder (P-530):** (0), (0b) cleared 18:2x (computer control on; his "Yes, dispatch baseline"); (1) one command, given twice: `git -C /Users/ranjansingh/Desktop/Xpatready worktree remove --force .claude/worktrees/great-hertz-918a5e` (1.1 GB; the sandbox cannot write under `.claude/`; `sweet-mayer-31fbb1` is already removed, 38 GB free). Nothing else blocks. Cleared 16:0x: Actions on the copy (P-546), #1637 labelled, #1684 closed, records-3 #1687 merged, desk 01 notes on `ours/notes`, seven cards (P-545).
