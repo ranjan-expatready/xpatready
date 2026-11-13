@@ -1,0 +1,129 @@
+// testing.prisma — Made-up data that proves the configuration: sample profiles and facts, generated files, test families, answer keys and their runs. Never a client. Owner: the screens lane.
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+
+// ─── Sample facts for previews and PDF proof (labelled existing sample records, never AI results) ──
+
+model SampleProfile {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  profileKey  String   @map("profile_key")
+  label       String
+  basis       String
+  /// [{ id, role, label }]
+  people      Json
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  facts SampleFact[]
+
+  @@unique([workspaceId, profileKey])
+  @@map("sample_profile")
+}
+
+model SampleFact {
+  id                String  @id @default(uuid()) @db.Uuid
+  workspaceId       String  @map("workspace_id") @db.Uuid
+  profileId         String  @map("profile_id") @db.Uuid
+  personId          String  @map("person_id")
+  canonicalFieldKey String  @map("canonical_field_key")
+  row               Int?
+  value             Json
+  status            String
+  source            String
+
+  profile SampleProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, canonicalFieldKey])
+  @@map("sample_fact")
+}
+
+/// Generated output files (filled PDFs, read-back reports) of the demo workspace; deleted by reset.
+model GeneratedArtifact {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  kind        String
+  path        String
+  sha256      String
+  detail      Json?
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("generated_artifact")
+}
+
+// ─── Answer-key tests (G4, C5.7; P-240; SA-01B v2.1 SA-1B-296 field 7, SA-1B-181, SA-1B-199) ──────────────────────
+// Made-up families only (never a client: no case, no firm), shared by every combination of the workspace; a key holds
+// what one item (a form's field map or the combination's eligibility rules) should give for one family; a run is
+// frozen with the fingerprints of what it read (engine/answer-keys.ts). Migration 20261102160000_g4_answer_keys.
+
+/// The team's TestFamily (SA-1B-296 f.7): { key, label, reference_date, people[{id, role, label, applies}], facts[{about,
+/// fact, row, value}], none_apply[{about, group}] } (engine/answer-keys.ts Family; the team's persons and answers).
+/// Classification: made-up test data, no personal data (P-249): never copied from a case; Sample until signed.
+model TestFamily {
+  id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @map("workspace_id") @db.Uuid
+  familyKey     String   @map("family_key")
+  label         String
+  referenceDate String   @map("reference_date")
+  people        Json
+  facts         Json
+  noneApply     Json     @default("[]") @map("none_apply")
+  version       Int      @default(1)
+  updatedBy     String   @map("updated_by")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  keys AnswerKey[]
+
+  @@unique([workspaceId, familyKey])
+  @@map("test_family")
+}
+
+/// The team's AnswerKey: one per family, combination and item (item_kind field_map with item_ref the form number, or
+/// rule_set with item_ref "eligibility"). state DRAFT | SIGNED (a check in SQL); a change to a signed key needs a reason
+/// and returns it to DRAFT. edition: the form edition a field-map key was written for (one edition proves nothing about
+/// another, SA-1B-296 rule 5).
+model AnswerKey {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  familyId      String    @map("family_id") @db.Uuid
+  combinationId String    @map("combination_id") @db.Uuid
+  itemKind      String    @map("item_kind")
+  itemRef       String    @map("item_ref")
+  expected      Json
+  state         String    @default("DRAFT")
+  version       Int       @default(1)
+  signedByUserId String?  @map("signed_by_user_id")
+  signedAt      DateTime? @map("signed_at") @db.Timestamptz
+  changeReason  String?   @map("change_reason")
+  updatedBy     String    @map("updated_by")
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  family      TestFamily @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  combination Combination     @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+  runs        AnswerKeyRun[]
+
+  @@unique([familyId, combinationId, itemKind, itemRef])
+  @@index([combinationId])
+  @@map("answer_key")
+}
+
+/// The team's AnswerKeyRun: result PASSED | FAILED (a check in SQL), every line (expected, got, pass), and what it read:
+/// the key version, the item's fingerprint and the whole snapshot's (a later change makes it "Not run", BR-5).
+model AnswerKeyRun {
+  id                String   @id @default(uuid()) @db.Uuid
+  workspaceId       String   @map("workspace_id") @db.Uuid
+  keyId             String   @map("key_id") @db.Uuid
+  keyVersion        Int      @map("key_version")
+  itemFingerprint   String   @map("item_fingerprint") @db.VarChar(64)
+  inputsFingerprint String   @map("inputs_fingerprint") @db.VarChar(64)
+  result            String
+  lines             Json
+  passed            Int
+  failed            Int
+  ranBy             String   @map("ran_by")
+  ranAt             DateTime @default(now()) @map("ran_at") @db.Timestamptz
+
+  key AnswerKey @relation(fields: [keyId], references: [id], onDelete: Cascade)
+
+  @@index([keyId, ranAt])
+  @@map("answer_key_run")
+}

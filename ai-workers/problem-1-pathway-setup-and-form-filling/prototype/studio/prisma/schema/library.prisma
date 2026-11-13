@@ -1,0 +1,324 @@
+// library.prisma — The shared library of meanings: shared fields and answer lists, questionnaire sections and questions, document types and requirements, conditions, derived fields and checks. Owner: the forms lane.
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+
+enum FieldDataType {
+  STRING
+  NUMBER
+  BOOLEAN
+  DATE
+  ENUM
+  COMPOSITE
+}
+
+/// C3.16 (SA-1B-130): CLIENT_LEVEL is the team's PERSON and CASE_LEVEL its FILING (one reader, engine/field-scope.ts).
+enum FieldScope {
+  CLIENT_LEVEL
+  CASE_LEVEL
+  HOUSEHOLD
+  ORGANISATION
+}
+
+enum ConditionEffect {
+  SHOW
+  HIDE
+  REQUIRE
+  OPTIONAL
+}
+
+// ─── The shared library ─────────────────────────────────────────────────────────────────────────
+
+/// One meaning, independent of whose value it is (the same key for the applicant's and the partner's
+/// date of birth). Values for people and cases are never stored here.
+model CanonicalField {
+  id                String           @id @default(uuid()) @db.Uuid
+  workspaceId       String           @map("workspace_id") @db.Uuid
+  canonicalFieldKey String           @map("canonical_field_key")
+  version           Int
+  status            DefinitionStatus
+  supersedesId      String?          @map("supersedes_id") @db.Uuid
+  meaning           String
+  valueType         String           @map("value_type")
+  dataType          FieldDataType    @map("data_type")
+  scope             FieldScope
+  subjectKind       String           @map("subject_kind")
+  origin            Origin
+  sourceRef         String?          @map("source_ref")
+  note              String?
+  /// P-65: labels this field carries on forms and portal screens ("Date of birth", "DOB"), and the ids of fields merged
+  /// into it. Matching tries form path, then these, before any AI.
+  aliases           String[]         @default([])
+  /// P-65 reviewed merge: set on the merged-away field's closing version; its id redirects to this key.
+  mergedIntoKey     String?          @map("merged_into_key")
+  /// Screen 02 slice 2 (Screen 04 M1): the field's name and group, outside the snapshot. Back-filled rows carry
+  /// labelChecked false until a person confirms the name. New keys come from keyFor(subject, group, label).
+  label             String?
+  groupKey          String?          @map("group_key")
+  labelChecked      Boolean          @default(false) @map("label_checked")
+  /// F1 (challenge point 3): the answer list a choice field takes its values from (the team's CanonicalField.enumSetId).
+  answerListKey     String?          @map("answer_list_key")
+  /// C7.9 (row B142, L-SA8; P-242; SA-1B-1 rule 9): the immigration expert's "must verify before filing" flag. Set only
+  /// through a library change the expert approves (api/src/must-verify.ts); a client-given value no one on staff checked
+  /// raises a CRITICAL warning on Ready to file, passable with a reason (P-237), never a block.
+  mustVerifyBeforeFiling Boolean   @default(false) @map("must_verify_before_filing")
+  updatedBy         String           @map("updated_by")
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  answers ClientCanonicalAnswer[] // runtime lane (R1): answers point at the exact field version
+
+  @@unique([workspaceId, canonicalFieldKey, version])
+  @@map("canonical_field")
+}
+
+/// F1 (challenge point 3): one list of values a choice field can take, mirroring the team's EnumSet. Each form field's
+/// own codes map to these values per channel (FormFieldMap.optionMap).
+model AnswerList {
+  id            String           @id @default(uuid()) @db.Uuid
+  workspaceId   String           @map("workspace_id") @db.Uuid
+  answerListKey String           @map("answer_list_key")
+  version       Int
+  status        DefinitionStatus
+  label         String
+  sourceBasis   SourceBasis      @default(ILLUSTRATIVE) @map("source_basis")
+  origin        Origin
+  updatedBy     String           @map("updated_by")
+  updatedAt     DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  values AnswerListValue[]
+
+  @@unique([workspaceId, answerListKey, version])
+  @@map("answer_list")
+}
+
+/// The team's EnumSetValue.
+model AnswerListValue {
+  id           String @id @default(uuid()) @db.Uuid
+  answerListId String @map("answer_list_id") @db.Uuid
+  valueKey     String @map("value_key")
+  label        String
+  sortOrder    Int    @map("sort_order")
+
+  list AnswerList @relation(fields: [answerListId], references: [id], onDelete: Cascade)
+
+  @@unique([answerListId, valueKey])
+  @@map("answer_list_value")
+}
+
+/// P-65 reviewed merge of two shared fields: proposed by one person, applied when a different person approves. The
+/// merged-away id becomes an alias that redirects; draft mappings, rules and placements move; releases stay as released.
+model FieldMerge {
+  id           String    @id @default(uuid()) @db.Uuid
+  workspaceId  String    @map("workspace_id") @db.Uuid
+  keepKey      String    @map("keep_key")
+  mergeKey     String    @map("merge_key")
+  reason       String
+  /// PROPOSED · APPLIED · REJECTED
+  status       String
+  proposedBy   String    @map("proposed_by")
+  proposedAt   DateTime  @default(now()) @map("proposed_at") @db.Timestamptz
+  decidedBy    String?   @map("decided_by")
+  decidedAt    DateTime? @map("decided_at") @db.Timestamptz
+  decisionNote String?   @map("decision_note")
+  /// What moved when it was applied: counts per kind of row.
+  moved        Json?
+
+  @@index([workspaceId, status])
+  @@map("field_merge")
+}
+
+model LogicalSection {
+  id           String           @id @default(uuid()) @db.Uuid
+  workspaceId  String           @map("workspace_id") @db.Uuid
+  sectionKey   String           @map("section_key")
+  version      Int
+  status       DefinitionStatus
+  supersedesId String?          @map("supersedes_id") @db.Uuid
+  title        String
+  meaning      String?
+  displayOrder Int              @default(0) @map("display_order")
+  /// W1-15 (P-97, P-130): declarations and background: the client answers; never from a document or the agent.
+  clientOnly   Boolean          @default(false) @map("client_only")
+  origin       Origin
+  updatedBy    String           @map("updated_by")
+  updatedAt    DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([workspaceId, sectionKey, version])
+  @@map("logical_section")
+}
+
+/// A question placement: which canonical field is asked in which section, for whom, from which collection
+/// source, and under which condition.
+model SectionQuestion {
+  id                String           @id @default(uuid()) @db.Uuid
+  workspaceId       String           @map("workspace_id") @db.Uuid
+  lineageKey        String           @map("lineage_key")
+  sectionKey        String           @map("section_key")
+  canonicalFieldKey String           @map("canonical_field_key")
+  displayOrder      Int              @map("display_order")
+  questionText      String?          @map("question_text")
+  helpText          String?          @map("help_text")
+  /// once_per_case | per_person | per_row
+  repeats           String
+  /// prospect | case | lead
+  tier              String
+  /// client_questionnaire | verified_document | staff_working_view | profile_record | existing_record
+  collectedFrom     String           @map("collected_from")
+  clientVisible     Boolean          @default(true) @map("client_visible")
+  predicateJson     Json?            @map("predicate_json")
+  conditionEffect   ConditionEffect? @map("condition_effect")
+  conditionPlain    String?          @map("condition_plain")
+  ruleOnly          Boolean          @default(false) @map("rule_only")
+  version           Int
+  status            DefinitionStatus
+  supersedesId      String?          @map("supersedes_id") @db.Uuid
+  origin            Origin
+  updatedBy         String           @map("updated_by")
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([workspaceId, lineageKey, version])
+  @@index([workspaceId, canonicalFieldKey])
+  @@map("section_question")
+}
+
+/// Which library sections a combination's questionnaire uses, in order (the team's SqrSectionSelection).
+model SqrSectionSelection {
+  id            String @id @default(uuid()) @db.Uuid
+  workspaceId   String @map("workspace_id") @db.Uuid
+  combinationId String @map("combination_id") @db.Uuid
+  sectionKey    String @map("section_key")
+  sectionOrder  Int    @map("section_order")
+
+  combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+
+  @@unique([combinationId, sectionKey])
+  @@map("sqr_section_selection")
+}
+
+model DocumentType {
+  id              String           @id @default(uuid()) @db.Uuid
+  workspaceId     String           @map("workspace_id") @db.Uuid
+  documentTypeKey String           @map("document_type_key")
+  name            String
+  category        String
+  /// Facts a supported document of this type can supply (closes P5 finding D36 in the prototype model).
+  suppliesFacts   String[]         @default([]) @map("supplies_facts")
+  /// W1-15 (Lead on M6): whom a supplied fact is about when it is not the holder: { fact: "holder.spouse" | "holder.parent" }.
+  /// A fact not listed is about the holder (the person the checklist line names).
+  suppliesAbout   Json?            @map("supplies_about")
+  readerProfile   Json?            @map("reader_profile")
+  /// C6.15 (SA-1B-19): named substitute sets, [{ name, mode: "any_one" | "all_together", members: [{ key, when? }] }];
+  /// null = the type is its own only member. Set only through a second person's approval (api/src/document-sets.ts).
+  sets            Json?
+  /// C6.14 (SA-1B-151 §7): ordered person-role keys who provide this document when a line asks it once for the
+  /// application or once for the couple; empty = not set (the person the item is for provides it).
+  defaultProviderRoles String[]    @default([]) @map("default_provider_roles")
+  version         Int
+  status          DefinitionStatus
+  supersedesId    String?          @map("supersedes_id") @db.Uuid
+  origin          Origin
+  updatedBy       String           @map("updated_by")
+  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([workspaceId, documentTypeKey, version])
+  @@map("document_type")
+}
+
+model DocumentRequirement {
+  id              String           @id @default(uuid()) @db.Uuid
+  workspaceId     String           @map("workspace_id") @db.Uuid
+  combinationId   String           @map("combination_id") @db.Uuid
+  lineageKey      String           @map("lineage_key")
+  documentTypeKey String           @map("document_type_key")
+  attachMode      AttachMode       @map("attach_mode")
+  predicateJson   Json?            @map("predicate_json")
+  conditionPlain  String?          @map("condition_plain")
+  appliesToRoles  String           @map("applies_to_roles")
+  providedBy      String           @map("provided_by")
+  isRequired      Boolean          @default(true) @map("is_required")
+  /// W1-15 slice 3: the line's place in each person's checklist (null keeps the default order)
+  position        Int?
+  /// W1-15 slice 3: library document type keys that count instead of this one ("any one counts")
+  alternatives    Json?
+  /// C6.15 (SA-1B-20): the named set of this document type the line picks; null = the set named "Standard".
+  setName         String?          @map("set_name")
+  /// M3-S3, M3-S4 (P-171 (6), P-172): "waivable" lets the case officer waive the line on a case with a reason; "never":
+  /// no waiver and no Not applicable, and Ready to file is blocked until it is received; null: neither (a warning).
+  waiver          String?
+  sourceQuote     String?          @map("source_quote")
+  sourceFile      String?          @map("source_file")
+  note            String?
+  version         Int
+  status          DefinitionStatus
+  supersedesId    String?          @map("supersedes_id") @db.Uuid
+  origin          Origin
+  updatedBy       String           @map("updated_by")
+  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+
+  @@unique([combinationId, lineageKey, version])
+  @@map("document_requirement")
+}
+
+/// A reusable condition with its effect ("add form IMM 5707 for this person"), in the team's closed
+/// 11-operator vocabulary (contracts/rules.ts). Evaluated deterministically; never generated code.
+model Predicate {
+  id             String           @id @default(uuid()) @db.Uuid
+  workspaceId    String           @map("workspace_id") @db.Uuid
+  combinationId  String           @map("combination_id") @db.Uuid
+  predicateKey   String           @map("predicate_key")
+  predicateJson  Json             @map("predicate_json")
+  whenPlain      String?          @map("when_plain")
+  thenPlain      String           @map("then_plain")
+  forWhom        String           @map("for_whom")
+  sourceQuote    String?          @map("source_quote")
+  version        Int
+  status         DefinitionStatus
+  supersedesId   String?          @map("supersedes_id") @db.Uuid
+  origin         Origin
+  updatedBy      String           @map("updated_by")
+  updatedAt      DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+
+  @@unique([combinationId, predicateKey, version])
+  @@map("predicate")
+}
+
+model DerivedField {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  derivedKey  String   @map("derived_key")
+  calculation String
+  inputs      String[]
+  reference   String
+  plain       String?
+  executable  Boolean
+
+  @@unique([workspaceId, derivedKey])
+  @@map("derived_field")
+}
+
+model Check {
+  id            String           @id @default(uuid()) @db.Uuid
+  workspaceId   String           @map("workspace_id") @db.Uuid
+  combinationId String           @map("combination_id") @db.Uuid
+  checkKey      String           @map("check_key")
+  checkGroup    String           @map("check_group")
+  appliesTo     String?          @map("applies_to")
+  predicateJson Json?            @map("predicate_json")
+  severity      String
+  message       String?
+  sourceQuote   String?          @map("source_quote")
+  illustrative  Boolean          @default(false)
+  version       Int
+  status        DefinitionStatus
+  supersedesId  String?          @map("supersedes_id") @db.Uuid
+  origin        Origin
+  updatedBy     String           @map("updated_by")
+  updatedAt     DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+
+  @@unique([combinationId, checkKey, version])
+  @@map("check_def")
+}
