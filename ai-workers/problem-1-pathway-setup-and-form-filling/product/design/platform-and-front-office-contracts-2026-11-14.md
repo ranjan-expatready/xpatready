@@ -128,11 +128,11 @@ FO-5 retainer from template · FO-6 signing (BoldSign) · FO-7 invoice and payme
 Each line names the requirement cards; detail in `lead-b-requirements-trace-2026-11-14.md` §A-§C and the trace files.
 
 **§0 (all modules)**
-* **Audit:** one insert-only `platform_audit_entry` (fields as SA-11-2: firm, actor and actor type, action, target, before, after, reason, IP, user agent, correlation id, time; `sequence_no`, `prev_hash`, `entry_hash` computed at insert), written in the same transaction as every change, including every settings change (AG-13-40/-41/-42, AG-16-29, SA-11-1/-2/-4). Kept 7 years, never purged (SA-11-14). Owner of the table: platform (Lead 37 to confirm, shared subsystem).
-* **Timeline:** read-time projection over registered sources (calls, notes, stage moves, bookings, retainers, invoices, audit), composite cursor, same visibility as the record (AG-13-30, BR-16); nothing "writes a timeline entry".
+* **Audit (Lead 37 ruling, 14 Nov): one trail, owned by Lead 37.** No audit table in these modules. Every changing transaction calls `AuditPort.record(tx, …)` (Lead 37's AUD-1: the existing `audit_event` gains `firm_id` and an insert-only trigger); until AUD-1 merges, it writes `audit_event`'s existing columns. Settings changes are audited the same way (AG-13-40/-41, AG-16-29, SA-11-1/-2). Hash chain and retention are AUD-1's.
+* **Timeline (Lead 37 ruling):** front office owns the lead, prospect and client activity timeline (AG-13 activity): a read view over `audit_event` plus `module_event` and its own activity rows (calls, notes, stage moves, bookings, retainers, invoices), composite cursor, same visibility as the record (AG-13-30, BR-16); cases keep their own history.
 * **Permissions:** every route declares permission keys, default deny (SA-6-14, AG-1-19); roles only bundle keys.
 * **Secrets:** no key or token stored in a plain column or returned by a route (AG-16-18).
-* **Firm settings:** `platform_firm_settings` (time zone, default language, currency CAD, business hours (Sample Mon-Fri 09:00-17:00), closed days, everyone-sees-all, two-step switch), Owner/Admin, audited (AG-16-3, -59, -24).
+* **Firm settings (platform's, Lead 37 ruling):** a typed settings home: `platform_setting_definition` (registered key, zod schema, default, who may change it) and `platform_firm_setting` (firm_id, key, value, changed by/at), firm-scoped, every change audited. First keys: time zone, default language, currency (CAD), business hours (Sample Mon-Fri 09:00-17:00), closed days, everyone-sees-all, "Require two-step sign-in for all staff" (AG-16-3, -24, -59). Other modules register their own keys (e.g. front office's web-form defaults).
 
 **§1.1 Firms and plans**
 * Firm states: `PROVISIONING | TRIAL | ACTIVE | PAYMENT_HOLD | SECURITY_LOCK | ABANDONED | DELETED`; "overdue" is an indicator; exit = cancel at period end → hold → deleted after 90 days; no `CLOSED` by us (SA-2-4, -7, -21, -34).

@@ -34,8 +34,8 @@ Asked by Lead 37 (AGENTS rule 2: the team's requirements first). Sources: the na
 ## C. Lead B decisions (recorded for Lead 37's DECISIONS; reversible)
 1. **Reminders** (AG-04 defaults them on): in month one, 24 h and 1 h before, by email (FO-3).
 2. **Paid consults** (AG-04 Release 1): a row after FO-7 (it needs client payments), FO-3b.
-3. **Audit and timeline ownership** (AG-13 makes both shared): the audit table lives in the platform module (`platform_audit_entry`, PF-3) and is used by both Leads' modules; the timeline is a read-time projection that each module registers sources into. **For Lead 37 to confirm** (shared subsystem).
-4. **Audit write failure**: we keep the stricter "same transaction" (SA-11-7 allows retry-and-alarm); recorded as a deviation that is stricter than the requirement.
+3. **Audit and timeline ownership — ruled by Lead 37 (14 Nov):** one audit trail, `audit_event` + `AuditPort` (AUD-1, Lead 37); front office owns the lead/prospect/client activity timeline as a read view; firm settings are platform's typed settings home (PF-3).
+4. **Audit write failure**: `AuditPort.record(tx, …)` writes in the caller's transaction, so a failed audit write rolls the change back (stricter than SA-11-7's retry-and-alarm; recorded as a deviation).
 5. **Stored signature** (AG-5-63): month one always countersigns (a subset of the requirement).
 
 ## D. Founder questions (one at a time; recommendation first; cost on the front-office line)
