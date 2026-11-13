@@ -14,7 +14,10 @@ const entry: HeldSectionName = { form: "Form A (01-2026)", first_field: "a.b", n
 
 const names = readHeldSectionNames();
 const raw = (JSON.parse(readFileSync(join(import.meta.dirname, "..", "samples", "section-names.json"), "utf8")) as { sections: HeldSectionName[] }).sections;
-ok("B78 pass: the sample file names the 59 held sections, one entry each (29 from B78, 30 from B79b: IMM 5532 and IMM 5604, Family sponsorship)", names.size === 59 && raw.length === 59, { size: names.size });
+// BK-16 PR 2 (P-496, review M2): 59 → 65. IMM 1295 (09-2023), the Study permit spouse's work permit application, joins the
+// configured checkpoint; five of its sections print no heading the rules pass reads, and its headed "Details of intended
+// work in Canada" part takes a Sample name of its own so it never joins With an LMIA's section of that name.
+ok("B78 pass: the sample file names the 65 sections, one entry each (29 from B78, 30 from B79b: IMM 5532 and IMM 5604, Family sponsorship; 6 from BK-16: IMM 1295)", names.size === 65 && raw.length === 65, { size: names.size });
 ok("B78 pass: every entry says where its words come from, with the printed words and the page", raw.every((s) => ["printed", "sample"].includes(s.basis) && s.printed.trim().length > 1 && s.page >= 1));
 // B79b (review round 2, Major 1; AGENTS rule 4): a "printed" name quotes words the form really prints, read from its
 // official XFA template by prototype/p1/xfa_texts.py (<form>.texts.json beside the inventory), never the PDF's internal

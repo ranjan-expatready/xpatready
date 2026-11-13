@@ -154,7 +154,7 @@ const flat = (s) => s.replace(/\s+/g, " ").trim();
   if (WANT.includes(3) || WANT.some((n) => n >= 4)) {
     await as(B, "user-O"); await p.goto(`${B}/cases`); await p.waitForLoadState("networkidle");
     await p.getByRole("button", { name: "Open a case" }).click(); await p.waitForTimeout(600);
-    await p.getByLabel("Case reference").fill(`GJ2-${Date.now().toString(36).slice(-4)}`); await p.getByLabel(/Principal applicant/).fill("Sample Client A");
+    await p.getByLabel("Your own reference (optional)").fill(`GJ2-${Date.now().toString(36).slice(-4)}`); await p.getByLabel(/Principal applicant/).fill("Sample Client A");
     await shot("step3-open-case-dialog", { full: false });
     await p.getByRole("button", { name: "Open case" }).click(); await p.waitForURL(/\/cases\/[0-9a-f-]{36}$/, { timeout: 30000 });
     const caseId = p.url().split("/").pop();

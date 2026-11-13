@@ -4,6 +4,7 @@
 // what the release preview shows. No I/O; every output says why.
 import { evalCondition, kkey, render, type Known, type Person, type Role } from "../render.ts";
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
+import { isFilingFact } from "../resolver.ts";
 import { checkFormat, snapshotFieldFormat, writesParts } from "../field-format.ts";
 import { namesNoValues } from "../options.ts";
 import { z } from "zod";
@@ -13,6 +14,7 @@ import { gatesInForce } from "../form-field-condition.ts";
 import { SCOPE_TAG } from "../field-scope.ts";
 import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
 import { CLIENT_RECONFIRM } from "./background.ts";
+import { APPLICATION_TYPE, APPLICATION_TYPE_SOURCE, applicationKindsOf, NotWorkedOut } from "./application-kind.ts";
 import { cellAsked, isAskedRelative, isListRelative, listWords, relativeLabel, relativeOf } from "./relatives.ts";
 import type { Period } from "../../../contracts/history.ts";
 import { Address, byClientFor, byPrincipalFor, CONFIRM_WORDS, groupLabel, type AnswerMark, MINOR, Phone, type QuestionnaireView, type SectionProblem, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
@@ -314,6 +316,10 @@ export function knownOf(s: Snapshot, people: Participant[], answers: Answer[], r
   for (const [subjectId, value] of hasChildrenOf(people)) known.set(kkey(subjectId, HAS_CHILDREN), { value, status: "confirmed", source: HAS_CHILDREN_SOURCE });
   // QA-400 (P-485): whether each person is the principal applicant is worked out from their role on the case, never asked.
   for (const [subjectId, value] of principalOf(people)) known.set(kkey(subjectId, IS_PRINCIPAL), { value, status: "confirmed", source: IS_PRINCIPAL_SOURCE });
+  // QA-415 (P-486): each person's kind of application is worked out from their own filing (application-kind.ts), never
+  // asked; read after the answers, since a filing a person's line adds follows their own answers.
+  // One it cannot work out yet (NotWorkedOut) is no answer: its form fields go by hand with the reason (form-values.ts).
+  for (const [subjectId, value] of applicationKindsOf(s, known, people)) known.set(kkey(subjectId, APPLICATION_TYPE), { value, status: "confirmed", source: value instanceof NotWorkedOut ? `not worked out yet: ${value.why}` : APPLICATION_TYPE_SOURCE });
   return { known, confirm };
 }
 
@@ -355,7 +361,7 @@ export type Mode = "sqr" | "agent";
  *  `skipDocumentFacts` (Preview only for now, Lead Q2 29 Oct; the case default with M3's documents-first intake, C6.5):
  *  a fact a document on that person's checklist supplies is not asked (P-130); it names the document, or null to ask.
  *  What it skips is listed per person and document in `from_documents`. */
-export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date(), groupAnswers: GroupAnswer[] = [], opts: { skipDocumentFacts?: (subjectId: string, fact: string) => string | null; background?: ReadonlySet<string> } = {}): QuestionnaireView {
+export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date(), groupAnswers: GroupAnswer[] = [], opts: { skipDocumentFacts?: (subjectId: string, fact: string) => string | null; background?: ReadonlySet<string>; partOrder?: false; decides?: Decides } = {}): QuestionnaireView {
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
   const caseSubject = people.find((p) => p.role === "case")!;
   const { known, confirm } = knownOf(s, people, answers, rows, today);
@@ -403,7 +409,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const orderIn = (q: { about: string; fact: string }) => (isListRelative(q.about) ? boxAt.get(`${q.about}|${q.fact}`) ?? Number.MAX_SAFE_INTEGER : placed(q.fact));
   const countries = (s.canonical_fields as FieldDef[]).find((f) => f.answer_list?.key === "country")?.answer_list?.values.map((v) => v.label) ?? null;
   const derivedYes = hasChildrenOf(people), derivedPrincipal = principalOf(people);
-  const needed = r.questions.filter((q) => asked(q) && !(q.fact === HAS_CHILDREN && derivedYes.has(q.about)) && !(q.fact === IS_PRINCIPAL && derivedPrincipal.has(q.about)) && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
+  const needed = r.questions.filter((q) => asked(q) && !(q.fact === HAS_CHILDREN && derivedYes.has(q.about)) && !(q.fact === IS_PRINCIPAL && derivedPrincipal.has(q.about)) && q.fact !== APPLICATION_TYPE /* QA-415: never asked */ && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
     .sort((a, b) => firstOf(a) - firstOf(b) || orderIn(a) - orderIn(b));
   const notAsked = r.questions.filter((q) => asked(q)).length - needed.length;
   // Review Major 1 (#1256): a parent is named by the boxes the person's forms write them into ("Sample Client W's
@@ -419,7 +425,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     return true;
   };
   // C7.7: the representative's parts (from the firm record) are the firm's, never in the client's questionnaire.
-  const questions = needed.filter((q) => (mode === "agent" || (isClientField(s, q.fact) && q.about !== "representative")) && !skipped(q)).map((q) => {
+  const inForms = needed.filter((q) => (mode === "agent" || (isClientField(s, q.fact) && q.about !== "representative")) && !skipped(q)).map((q) => {
     const subjectId = subjectOf(q.about), p = placementOf(s, q.fact);
     let required = q.required, hidden = q.status === "hidden by a condition";
     if (p?.condition && p.condition_effect === "REQUIRE") { const c = evalCondition(s, known, p.condition, q.about === "case" ? "case" : subjectId.split("/")[0]); required = c.applies === true; }
@@ -452,6 +458,36 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
       countries: !options && (q.value_type === "country" || q.value_type === "address") ? countries : null,
     };
   });
+  // QA-439 (P-498, A25 sweep): a question that decides whether others are asked comes before them, so a person's date of
+  // birth and marital status come before the parts a form's age limit or condition drops (a 0-4 child never meets
+  // Military service first). What decides what is read from the release with no answers given, so the order never moves
+  // while the client answers.
+  // People come in the case's order (the principal first, then the spouse, children; a relative after the person they
+  // belong to), never by their id. The application's own parts (the visit, its contact) come right after the principal's
+  // own (Lead 26's done-when 3, "main applicant first"; Lead 27, #1643: the forms' readiness reasons, read in this order,
+  // keep naming the person's facts first), unless one of them decides a question asked earlier.
+  const principalAt = people.findIndex((p) => p.role === "principal");
+  const rankOf = new Map(people.map((p, i) => [p.subjectId, p.role === "case" ? (principalAt < 0 ? -1 : principalAt + 0.25) : i]));
+  const rank = (id: string) => { const [owner, rel] = id.split("/"); return (rankOf.get(owner) ?? people.length) + (rel ? 0.5 : 0); };
+  // The sections the combination's author chose and ordered (C4.1, P-216) keep that order.
+  const authored = new Set((s.sections as { id: string }[]).map((x) => x.id));
+  // Review M2 (#1643): a question every form field of which is written only while a condition holds (B107's form-field
+  // gates, e.g. a form's "other" box written only when the purpose is "Other") is decided by that condition's facts.
+  const boxGates = new Map<string, { all: boolean; keys: Set<string> }>();
+  for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about) {
+    const k = `${subjectOf(b.about)}|${b.fact}`, e = boxGates.get(k) ?? boxGates.set(k, { all: true, keys: new Set() }).get(k)!;
+    const fk = `${c.form}|${c.edition}`, g = (gates.get(fk) ?? gates.set(fk, gatesInForce(s, c.form, c.edition)).get(fk)!).get(b.box);
+    if (!g) { e.all = false; continue; }
+    const owner = b.about === "case" ? caseSubject.subjectId : b.about.split("/")[0];
+    for (const f of readsOf(s, g)) e.keys.add(`${isFilingFact(f, placementOf(s, f)) ? caseSubject.subjectId : owner}|${f}`);
+  }
+  // Worked out once per view (review m2): the order with no answers given reuses it.
+  const decides = opts.decides ?? whatDecides(s, people, renderPeople, caseSubject.subjectId, today, (k) => { const e = boxGates.get(k); return e?.all ? [...e.keys] : []; });
+  const ordered = decidersFirst(inForms, decides, rank, (section) => authored.has(section), (q) => decides.screens?.has(`${q.subjectId}|${q.fact}`) ?? false);
+  // The parts keep one order while the client answers (an answer never sends a part behind the one the client is on, where
+  // "Save and continue" would pass it): the order of this questionnaire with no answers given; a part only an answer adds
+  // keeps its place after the part before it.
+  const questions = opts.partOrder === false ? ordered : inPartOrder(ordered, noAnswerOrder(s, people, mode, today, () => caseView(s, people, [], [], mode, today, [], { partOrder: false, decides }).sections.map((x) => `${x.subjectId}|${x.section}`)));
   // A repeating group's "none apply" (Lead, break M3): confirmed by the same rule as an answer to the group's facts
   // (P-72, P-78), read as an answer to its first client fact (else its first fact).
   const birthOf = (subjectId: string) => answers.find((a) => a.subjectId === subjectId && a.field === MINOR.birthDateField && !a.rowKey)?.value;
@@ -513,6 +549,107 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   return { mode, sections: withProblems, checks, forms: r.forms.map((f) => ({ form: f.form, person: f.person_label, applies: f.applies })), ...(opts.skipDocumentFacts ? { from_documents: [...fromDocuments.values()] } : {}), summary: { not_asked: notAsked, questions: questions.length, answered: sections.reduce((n, x) => n + x.answered, 0), confirmed: sections.reduce((n, x) => n + x.confirmed, 0), missing: sections.reduce((n, x) => n + x.missing.length, 0) } };
 }
 export type CaseView = ReturnType<typeof caseView>;
+
+/** QA-439 (P-498): for each question (`<subject>|<fact>`), the questions whose answers decide whether it is asked, read
+ *  from the release with no answers given (so the result never changes while the client answers): a question is decided
+ *  by its own condition's facts (same subject), and, when every form that needs it waits for an answer before it applies
+ *  (a form's condition, a form's age limit), by the facts those forms wait for. A question also read by a form that
+ *  always applies is never decided by a form. Generic: no form, section, combination or fact named here. */
+type Decides = ((q: { subjectId: string; fact: string; fills: { form: string; subject: string }[] }) => Set<string>) & {
+  /** Lead 28 (#1643): the screening questions (`<subject>|<fact>`): the answers a form waits for before it applies (its
+   *  condition, its age limit), such as a person's date of birth and marital status. */
+  screens?: ReadonlySet<string> };
+/** The facts a condition reads; a calculated field counts as the answers it is worked out from. */
+function readsOf(s: Snapshot, tree: unknown): string[] {
+  const derived = new Map(((s.derived_fields ?? []) as { id: string; inputs?: string[]; reference?: string }[]).map((d) => [d.id, [...(d.inputs ?? []), ...(d.reference ? [d.reference] : [])]]));
+  const out = new Set<string>(), walk = (f: string) => { if (out.has(f)) return; out.add(f); for (const x of derived.get(f) ?? []) walk(x); };
+  for (const m of JSON.stringify(tree ?? null).matchAll(/"field":"([^"]+)"/g)) walk(m[1]);
+  return [...out].filter((f) => !derived.has(f));
+}
+function whatDecides(s: Snapshot, people: Participant[], renderPeople: Person[], caseSubjectId: string, today: Date, boxGated: (key: string) => string[]): Decides {
+  const r = render(s, renderPeople, knownOf(s, people, [], [], today).known, { today });
+  const subjectOf = (about: string) => (about === "case" ? caseSubjectId : about);
+  const waits = new Map(r.forms.map((f) => [`${f.form}|${f.person}`, f.applies === true ? [] : f.missing.filter((m) => !m.startsWith("(")).map((m) => `${isFilingFact(m, placementOf(s, m)) ? caseSubjectId : subjectOf(f.person)}|${m}`)]));
+  const screens = new Set([...waits.values()].flat());
+  return Object.assign((q: { subjectId: string; fact: string; fills: { form: string; subject: string }[] }) => {
+    const owner = q.subjectId.split("/")[0], out = new Set<string>();
+    const p = placementOf(s, q.fact);
+    if (p?.condition) for (const f of readsOf(s, p.condition)) out.add(`${isFilingFact(f, placementOf(s, f)) ? caseSubjectId : owner}|${f}`);
+    const forms = q.fills.map((f) => waits.get(`${f.form}|${f.subject}`));
+    if (forms.length && forms.every((w) => w?.length)) for (const w of forms) for (const k of w!) out.add(k);
+    for (const k of boxGated(`${q.subjectId}|${q.fact}`)) out.add(k);
+    out.delete(`${q.subjectId}|${q.fact}`);
+    return out;
+  }, { screens });
+}
+
+/** QA-439 (r1c's 1 s budget for the case page): the order with no answers given depends only on the release, the people
+ *  and the mode, so it is worked out once per process for them (a release is read by its items' versions, its forms and
+ *  its form maps; a key that misses only costs the work again). Documents a case skips are not part of it: they only drop
+ *  parts, and a part the order does not name keeps its place (inPartOrder). */
+const ORDERS = new Map<string, string[]>();
+function noAnswerOrder(s: Snapshot, people: Participant[], mode: Mode, today: Date, work: () => string[]): string[] {
+  const key = JSON.stringify([mode, today.toISOString().slice(0, 10), people.map((p) => [p.subjectId, p.role, p.applies]), s.row_versions ?? null,
+    (s.forms as { form_number: string; edition?: string }[]).map((f) => f.form_number), (s.field_maps as { form_edition?: string; entries?: unknown[] }[]).map((m) => `${m.form_edition}:${m.entries?.length}`)]);
+  const got = ORDERS.get(key);
+  if (got) return got;
+  const order = work();
+  if (ORDERS.size >= 200) ORDERS.delete(ORDERS.keys().next().value!);
+  ORDERS.set(key, order);
+  return order;
+}
+
+/** QA-439: `qs` with its parts in the order `order` gives (stable: a part `order` does not name stays right after the part
+ *  before it); the questions inside each part keep their order. */
+export function inPartOrder<T extends { subjectId: string; section: string }>(qs: T[], order: string[]): T[] {
+  const at = new Map(order.map((k, i) => [k, i])), parts = new Map<string, T[]>();
+  for (const q of qs) { const k = `${q.subjectId}|${q.section}`; (parts.get(k) ?? parts.set(k, []).get(k)!).push(q); }
+  let last = -1, step = 0;
+  const pos = [...parts.keys()].map((k, i) => { const p = at.get(k); if (p !== undefined) { last = p; step = 0; return { k, i, p }; } step++; return { k, i, p: last + step / 1e4 }; });
+  return pos.sort((a, b) => a.p - b.p || a.i - b.i).flatMap((x) => parts.get(x.k)!);
+}
+
+/** QA-439 (P-498): the questions in their order, by person (`rank`): each person's sections the author ordered first, in
+ *  that order (`authored`), then their parts that hold a deciding question, then the rest; then each moved only as far as
+ *  it must: a part comes after the parts that hold what decides it (another person's too, and even past the author's
+ *  order: a question is never asked before what decides it), and inside a part a question comes after the questions that
+ *  decide it. Lead 28 (#1643): a part's screening questions (`screening`: answers a form waits for, such as the date of
+ *  birth and marital status) move together, in their own order, to just before the first question of the part that any
+ *  of them decides, so none of them comes after a question their answers take away. Everything else keeps its place; a
+ *  circle of deciders keeps the order it had. */
+export function decidersFirst<T extends { subjectId: string; section: string; fact: string }>(qs: T[], decidedBy: (q: T) => Set<string>, rank: (subjectId: string) => number = () => 0, authored: (section: string) => boolean = () => false, screening: (q: T) => boolean = () => false): T[] {
+  const partOf = (q: T) => `${q.subjectId}|${q.section}`;
+  const parts = new Map<string, T[]>(), at = new Map<string, string>();
+  for (const q of qs) { (parts.get(partOf(q)) ?? parts.set(partOf(q), []).get(partOf(q))!).push(q); const k = `${q.subjectId}|${q.fact}`; if (!at.has(k)) at.set(k, partOf(q)); }
+  const by = new Map(qs.map((q) => [q, [...decidedBy(q)].filter((k) => at.has(k))]));
+  const deciding = new Set([...by.values()].flat().map((k) => at.get(k)!));
+  const keys = [...parts.keys()].map((k, i) => ({ k, i, r: rank(parts.get(k)![0].subjectId), d: authored(parts.get(k)![0].section) ? 0 : deciding.has(k) ? 1 : 2 })).sort((a, b) => a.r - b.r || a.d - b.d || a.i - b.i).map((x) => x.k);
+  // A circle (each decides the other, directly or through others) is not reordered: a dependency is followed only when it
+  // does not lead back.
+  const reaches = <N,>(next: (n: N) => N[], from: N, to: N) => { const seen = new Set<N>(), stack = [from]; while (stack.length) { const n = stack.pop()!; if (n === to) return true; if (seen.has(n)) continue; seen.add(n); stack.push(...next(n)); } return false; };
+  const partDeps = (key: string) => [...new Set(parts.get(key)!.flatMap((q) => by.get(q)!.map((k) => at.get(k)!)).filter((d) => d !== key))];
+  // Lead 28 (#1643): the part's screening questions, as one group, just before the first question one of them decides.
+  const screensFirst = (list: T[]) => {
+    const scr = new Set(list.filter(screening)), keys = new Set([...scr].map((q) => `${q.subjectId}|${q.fact}`));
+    const f = list.findIndex((q) => !scr.has(q) && by.get(q)!.some((k) => keys.has(k)));
+    if (f < 0) return list;
+    const rest = list.slice(f);
+    return [...list.slice(0, f), ...rest.filter((q) => scr.has(q)), ...rest.filter((q) => !scr.has(q))];
+  };
+  const out: T[] = [], doneParts = new Set<string>();
+  const emitPart = (key: string) => {
+    if (doneParts.has(key)) return;
+    doneParts.add(key);
+    const list = screensFirst(parts.get(key)!);
+    for (const d of partDeps(key)) if (!reaches(partDeps, d, key)) emitPart(d);
+    const facts = new Map(list.map((q) => [`${q.subjectId}|${q.fact}`, q])), done = new Set<T>();
+    const qDeps = (q: T) => by.get(q)!.map((k) => facts.get(k)).filter((d): d is T => !!d && d !== q);
+    const emit = (q: T) => { if (done.has(q)) return; done.add(q); for (const d of qDeps(q)) if (!reaches(qDeps, d, q)) emit(d); out.push(q); };
+    for (const q of list) emit(q);
+  };
+  for (const key of keys) emitPart(key);
+  return out;
+}
 
 /** P-47 mode 1, PQR (C4.4 part 2): only the questions the release flags pre-qualification (W1-15's tick, per person role
  *  and fact: snapshot.fact_sources), in the agent view's order, and one plain result line. The result is never a verdict

@@ -52,7 +52,7 @@ const route = async (method, p, actor, body) => {
     const vvOption = dlg.locator("select option", { hasText: "Visitor visa" }).first();
     await vvOption.waitFor({ state: "attached", ...T });
     await dlg.locator("select").first().selectOption(await vvOption.getAttribute("value"));
-    await dlg.getByLabel("Case reference").fill(ref);
+    await dlg.getByLabel("Your own reference (optional)").fill(ref);
     await dlg.getByLabel("Principal applicant's name").fill("Client A");
     // [2.2] The case officer (unlicensed) is not offered as the representative of record.
     const offered = await dlg.getByLabel("Representative of record").locator("option").allTextContents();

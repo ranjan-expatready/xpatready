@@ -15,7 +15,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium, type Page } from "playwright";
 import AxeModule from "@axe-core/playwright";
-import { answer, asValidated, call, confirmAll, copyBytes, fillEverything, firms, itemsOf, main, needVisitorVisa, ok, openCase, prepare, yearsAgo } from "../../acceptance/lib/m3.ts";
+import { adobeValidated, answer, call, confirmAll, copyBytes, fillEverything, firms, itemsOf, main, needVisitorVisa, ok, openCase, prepare, yearsAgo } from "../../acceptance/lib/m3.ts";
 
 const PORT = process.argv[2] ?? "4431", BASE = `http://localhost:${PORT}`, SHOTS = process.argv[4] ?? null;
 const T = { timeout: 30_000 };
@@ -90,9 +90,9 @@ await main("J-C3", "Validate on release 2 by screens (1440 px)", async () => {
     await readBack.waitFor(T);
     const copyId = (await call("GET", `/runtime/cases/${c.id}/forms`, undefined, officer)).body?.forms?.find((x: { form: string; subject_id: string }) => x.form === "IMM 5257" && x.subject_id === P)?.copies?.[0]?.id as string;
     const dir = mkdtempSync(join(tmpdir(), "jc3-")), file = join(dir, "IMM5257-validated.pdf");
-    writeFileSync(file, asValidated(await copyBytes(copyId, officer)));
+    writeFileSync(file, adobeValidated(await copyBytes(copyId, officer)));
     await row.getByLabel("Validated copy of IMM 5257").setInputFiles(file);
-    await row.getByText("Validated copy read back").waitFor(T);
+    await row.getByText("Validated copy read back", { exact: true }).waitFor(T);
     ok("J-C3 7: the validated copy is read back on Client A's IMM 5257", await row.locator("[data-validated='current']").count() === 1);
     await shot("validated-read-back"); await axe("Prepare application with the validated copy");
     await r.waitForFunction(() => !/no validated copy read back/i.test(document.querySelector("[data-readiness]")?.textContent ?? ""), undefined, T).catch(() => null);

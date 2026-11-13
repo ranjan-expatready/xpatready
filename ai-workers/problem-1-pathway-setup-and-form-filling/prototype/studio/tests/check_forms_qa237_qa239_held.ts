@@ -78,6 +78,10 @@ run(async () => {
   const facts = [...one.keys()];
   ok("setup: Visitor visa's saved run proposes conditions on 7 questions; all accepted there and approved by a second person", one.size === 7 && approved === 7, { facts, approved });
   ok("C4.11: the whole run spent US$0 (Saved and Rules only)", T.spent() === before, T.spent());
+  // QA-239: read here, after the conditions are approved on Visitor visa and before the B86 step below confirms one of its
+  // form fields. That step is "for every combination that files the form": since BK-16 PR 2 (P-490) the Study permit files
+  // IMM 5257 too (a child who will not study 6 months or more), so the confirmed condition is then in force there as well.
+  const spMid = await config(sp);
 
   // ---------------------------------------------------------------- QA-237: the draft that accepted them
   const vvProblems = await problems(vv);
@@ -110,7 +114,13 @@ run(async () => {
   const spHiding = spProblems.filter((p) => p.level === "error" && (HIDING.test(p.message ?? "") || /^Hiding a value a condition reads|^Unreachable question/.test(p.message ?? "")));
   ok("C4.11 setup (QA-239): Study permit reads at least one of the questions Visitor visa conditioned (the bug can show)", (spNow.snapshot.held_conditions ?? []).some((h) => facts.includes(h.fact)), (spNow.snapshot.held_conditions ?? []).map((h) => h.fact));
   ok("C4.11 pass (QA-239): the conditions approved on Visitor visa put no Hiding or Unreachable error on Study permit, whose author did nothing", spHiding.length === 0, spHiding.map((p) => p.message));
-  ok("C4.11 pass (QA-239): Study permit's draft fingerprint is unchanged by another combination's condition", spNow.sha256 === spBefore.sha256, { before: spBefore.sha256, now: spNow.sha256 });
+  ok("C4.11 pass (QA-239): Study permit's draft fingerprint is unchanged by another combination's condition", spMid.sha256 === spBefore.sha256, { before: spBefore.sha256, now: spMid.sha256 });
+  // BK-16 PR 2: after the B86 step, the only question that newly carries a condition on the Study permit is the one whose IMM 5257
+  // form field was confirmed, and only because the Study permit files IMM 5257 (its own form line); the rest stay held.
+  const conditioned = (c: Awaited<ReturnType<typeof config>>) => new Set(c.snapshot.placements.filter((p) => !!p.condition).map((p) => p.fact));
+  const spConditioned = [...conditioned(spNow)].filter((f) => !conditioned(spBefore).has(f));
+  const spFiles5257 = (spNow.snapshot as { forms?: { form_number: string }[] }).forms?.some((f) => f.form_number === "IMM 5257") ?? false;
+  ok("C4.11 pass (B86, BK-16 PR 2): the confirmed IMM 5257 form field puts only its own condition in force on the Study permit, which files IMM 5257", spFiles5257 ? JSON.stringify(spConditioned) === JSON.stringify([target]) : spNow.sha256 === spBefore.sha256, { spFiles5257, spConditioned, target });
   const rel = await release(sp);
   ok("C4.11 pass (QA-239): Study permit releases after the condition is approved on Visitor visa, 201", rel.status === 201, rel);
   const relSnap = (await call("GET", `/combinations/${sp}/config?mode=published`)).body?.snapshot as { placements: Placement[]; held_conditions?: Held[] } | undefined;

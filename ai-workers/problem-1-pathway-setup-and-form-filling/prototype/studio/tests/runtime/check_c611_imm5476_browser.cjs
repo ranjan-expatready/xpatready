@@ -43,7 +43,7 @@ const ago = (y) => { const d = new Date(); d.setUTCFullYear(d.getUTCFullYear() -
     const vvOption = dlg.locator("select option", { hasText: "Visitor visa" }).first();
     await vvOption.waitFor({ state: "attached", ...T });
     await dlg.locator("select").first().selectOption(await vvOption.getAttribute("value"));  // the first select is "Combination (released)"
-    await dlg.getByLabel("Case reference").fill(ref);
+    await dlg.getByLabel("Your own reference (optional)").fill(ref);
     await dlg.getByLabel("Principal applicant's name").fill("Client A");
     await dlg.getByRole("button", { name: "Open case" }).click();
     await r.waitForURL(/\/cases\/[0-9a-f-]{36}$/, T);

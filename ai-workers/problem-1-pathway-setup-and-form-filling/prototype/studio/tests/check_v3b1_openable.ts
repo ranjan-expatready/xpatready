@@ -78,7 +78,7 @@ async function openDialog(p: Page) {
 
     // Not ready: a library field the release reads is retired (as S4) while the dialog is open on it (break m1).
     await d.getByLabel("Combination (released)").selectOption({ label: options.find((o) => o.startsWith(`${row?.combination} · release ${newest}`))! });
-    await d.getByLabel("Case reference").fill(`B1-${Date.now().toString(36)}-s`); await d.getByLabel(/Principal applicant/).fill("Sample Client B1");
+    await d.getByLabel("Your own reference (optional)").fill(`B1-${Date.now().toString(36)}-s`); await d.getByLabel(/Principal applicant/).fill("Sample Client B1");
     sql(`update canonical_field set status='RETIRED' where canonical_field_key='${FIELD}'`); audited("retired");
     try {
       const refused = p.waitForResponse((q) => q.url().endsWith("/api/runtime/cases") && q.request().method() === "POST", { timeout: 30_000 });
@@ -123,7 +123,7 @@ async function openDialog(p: Page) {
       d = await openDialog(p);
       ok("C6.1-B1-13 fail (browser): with no release ready there is no combination list and Open case is disabled, saying why", !(await d.getByLabel("Combination (released)").count()) && await d.getByRole("button", { name: "Open case" }).isDisabled() && (await d.getByRole("button", { name: "Open case" }).getAttribute("title")) === "No released combination is ready for new cases yet" && await d.getByText("No released combination is ready for new cases yet").isVisible());
       const posts: string[] = []; p.on("request", (q) => { if (q.method() === "POST" && q.url().endsWith("/api/runtime/cases")) posts.push(q.url()); });
-      await d.getByLabel("Case reference").fill("B1-ENTER"); await d.getByLabel("Case reference").press("Enter"); await p.waitForTimeout(500);
+      await d.getByLabel("Your own reference (optional)").fill("B1-ENTER"); await d.getByLabel("Your own reference (optional)").press("Enter"); await p.waitForTimeout(500);
       ok("C6.1-B1-13a fail (browser): pressing Enter in the form sends nothing while no release is ready", posts.length === 0, posts.length);
       await axe(p, "the dialog with no release ready for cases (1440 px)");
       await p.screenshot({ path: join(SHOTS, "03-none-ready-1440.png") });

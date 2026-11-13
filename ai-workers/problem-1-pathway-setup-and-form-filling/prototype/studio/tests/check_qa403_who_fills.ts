@@ -18,7 +18,9 @@ const PORT = Number(process.argv[2] ?? 4459), DB = process.argv[3] ?? "xr_studio
 const { call, sql } = client(PORT, DB);
 const { ok, summary } = recorder();
 const STUDIO = join(import.meta.dirname, "..");
-const FACTS = ["case.representative_form_action", "case.application_type", "case.submission_office_name"];
+// QA-415 (P-486): the kind of application is no longer the case officer's answer: it is worked out for each person from
+// their own filing (tests/check_qa415_application_kind.ts), so two of the firm's facts stay asked of the officer.
+const FACTS = ["case.representative_form_action", "case.submission_office_name"];
 
 // (1) The data, read as it is.
 const data = whoFillsFrom();
@@ -31,12 +33,12 @@ const dir = mkdtempSync(join(tmpdir(), "qa403-"));
 const raw = JSON.parse(readFileSync(WHO_FILLS_FILE, "utf8"));
 const copy = (change: (d: typeof raw) => void) => { const d = structuredClone(raw); change(d); const f = join(dir, `w${Math.random().toString(36).slice(2)}.json`); writeFileSync(f, JSON.stringify(d)); return f; };
 const refusal = (f: string) => { try { whoFillsFrom(f); return ""; } catch (e) { return (e as Error).message; } };
-ok("QA-403 pass: a new fact is read from data alone", whoFillsFrom(copy((d) => { d.questions.push({ fact: "case.x_any", fills: "CLIENT", question: "A question?", help: "Why we ask: a reason.", reason: "A reason here." }); })).length === 4);
+ok("QA-403 pass: a new fact is read from data alone", whoFillsFrom(copy((d) => { d.questions.push({ fact: "case.x_any", fills: "CLIENT", question: "A question?", help: "Why we ask: a reason.", reason: "A reason here." }); })).length === 3);
 const fails: [string, (d: typeof raw) => void, RegExp][] = [
   ["a fact given twice", (d) => { d.questions.push(structuredClone(d.questions[0])); }, /case\.representative_form_action: given twice/],
-  ["a name the reader does not know", (d) => { d.questions[1].fils = "CLIENT"; }, /case\.application_type: "fils" is not a known name/],
-  ["a 'fills' that is neither", (d) => { d.questions[1].fills = "FIRM"; }, /case\.application_type: fills is CLIENT or CASE_OFFICER/],
-  ["an empty question", (d) => { d.questions[2].question = " "; }, /case\.submission_office_name: needs its question/],
+  ["a name the reader does not know", (d) => { d.questions[1].fils = "CLIENT"; }, /case\.submission_office_name: "fils" is not a known name/],
+  ["a 'fills' that is neither", (d) => { d.questions[1].fills = "FIRM"; }, /case\.submission_office_name: fills is CLIENT or CASE_OFFICER/],
+  ["an empty question", (d) => { d.questions[1].question = " "; }, /case\.submission_office_name: needs its question/],
   ["no help", (d) => { delete d.questions[0].help; }, /case\.representative_form_action: needs its help/],
   ["a fact that is not a library key", (d) => { d.questions[0].fact = "Representative form action"; }, /needs its fact/],
   ["no questions list", (d) => { delete d.questions; }, /needs a "questions" list/],
@@ -81,7 +83,7 @@ ok("QA-403 pass: the checkpoint step's code names no fact, form or combination (
   const rows: { row: string; status: string; shows: string }[] = r.body?.checkpoint ?? [];
   const row = (n: string) => rows.find((x) => x.row === n);
   ok("QA-403 pass: releases and the family case as before: rows 10, 11 and 12 done (the change is approved by a second person, so the Approver still releases, BR-14)", ["10", "11", "12"].every((n) => row(n)?.status === "done"), rows.map((x) => `${x.row}:${x.status}`));
-  ok("QA-403 pass: the load says who fills each, in the log", (r.body?.log ?? []).some((l: string) => /who fills \(QA-403.*case officer's, in plain words: .*case\.application_type/.test(l)), (r.body?.log ?? []).filter((l: string) => /who fills/.test(l)));
+  ok("QA-403 pass: the load says who fills each, in the log", (r.body?.log ?? []).some((l: string) => /who fills \(QA-403.*case officer's, in plain words: .*case\.submission_office_name/.test(l)), (r.body?.log ?? []).filter((l: string) => /who fills/.test(l)));
   ok("QA-403 pass: each change went through To review, proposed by the author and approved by another person, and was released",
     FACTS.every((k) => sql(`select status || '|' || proposed_by || '|' || decided_by from library_change where kind='placement_fills' and key='${k}'`) === "RELEASED|user-A|user-C"), FACTS.map((k) => sql(`select status || '|' || proposed_by || '|' || coalesce(decided_by,'') from library_change where kind='placement_fills' and key='${k}'`)));
 
@@ -90,15 +92,16 @@ ok("QA-403 pass: the checkpoint step's code names no fact, form or combination (
   type V = { sections: { subjectId: string; questions: Q[] }[] };
   const facts = (v: V) => v.sections.flatMap((s) => s.questions);
   const mine = (await call("GET", `/runtime/cases/${fam}/questionnaire`, undefined, "user-P")).body as V;
-  ok("QA-403 pass: the client's questionnaire (Client A) asks none of the three", Array.isArray(mine?.sections) && mine.sections.length > 0 && !facts(mine).some((q) => FACTS.includes(q.fact)), facts(mine ?? { sections: [] }).filter((q) => FACTS.includes(q.fact)).map((q) => q.fact));
+  ok("QA-403 pass: the client's questionnaire (Client A) asks none of the firm's facts", Array.isArray(mine?.sections) && mine.sections.length > 0 && !facts(mine).some((q) => FACTS.includes(q.fact)), facts(mine ?? { sections: [] }).filter((q) => FACTS.includes(q.fact)).map((q) => q.fact));
   ok("QA-403 fail: no client question uses the internal words QA-403 named", !facts(mine).some((q) => /\(values:|use-of-representative filing/.test(q.label)), facts(mine).filter((q) => /\(values:/.test(q.label)).map((q) => q.label));
   const staff = (await call("GET", `/runtime/cases/${fam}/questionnaire?mode=agent`, undefined, "user-O")).body as V;
   const asked = facts(staff).filter((q) => FACTS.includes(q.fact));
-  ok("QA-403 pass: the case officer's view asks all three, once each, in the file's own words", asked.length === 3 && asked.every((q) => q.collected_from === "staff_working_view" && q.label === data.find((e) => e.fact === q.fact)!.question), asked.map((q) => [q.fact, q.collected_from, q.label]));
-  ok("QA-403 pass: the Sample family's case officer answered appoint and visitor (from samples/sample-family-imm5257.json)", asked.find((q) => q.fact === "case.representative_form_action")?.answer?.value === "appoint" && asked.find((q) => q.fact === "case.application_type")?.answer?.value === "visitor");
+  ok("QA-403 pass: the case officer's view asks both, once each, in the file's own words", asked.length === 2 && asked.every((q) => q.collected_from === "staff_working_view" && q.label === data.find((e) => e.fact === q.fact)!.question), asked.map((q) => [q.fact, q.collected_from, q.label]));
+  ok("QA-403 pass: the Sample family's case officer answered appoint (from samples/sample-family-imm5257.json)", asked.find((q) => q.fact === "case.representative_form_action")?.answer?.value === "appoint");
+  ok("QA-415 fail: the kind of application is asked of nobody: in neither view (worked out per person from their filing)", !facts(staff).some((q) => /application_type/.test(q.fact)) && !facts(mine).some((q) => /application_type/.test(q.fact)), facts(staff).filter((q) => /application_type/.test(q.fact)).map((q) => q.fact));
   const caseSubject = sql(`select subject_id from case_participant where case_id='${fam}' and role='case'`);
-  r = await call("PUT", `/runtime/cases/${fam}/answers/${caseSubject}/case.application_type`, { value: "worker", expectedId: null }, "user-P");
-  ok("QA-403 fail: the client cannot answer it (refused, in words), and the case officer's answer stands", r.status === 403 && /officer/.test(r.body?.detail ?? "") && sql(`select count(*) from client_canonical_answer where subject_id='${caseSubject}' and canonical_field_key='case.application_type' and value_json::text like '%worker%'`) === "0", r.body);
+  r = await call("PUT", `/runtime/cases/${fam}/answers/${caseSubject}/case.representative_form_action`, { value: "cancel", expectedId: null }, "user-P");
+  ok("QA-403 fail: the client cannot answer it (refused, in words), and the case officer's answer stands", r.status === 403 && /officer/.test(r.body?.detail ?? "") && sql(`select count(*) from client_canonical_answer where subject_id='${caseSubject}' and canonical_field_key='case.representative_form_action' and value_json::text like '%cancel%'`) === "0", r.body);
 
   // (6) The forms fill them from the case officer's answers: read back from the generated files.
   type F = { form: string; person: string; copies: { id: string; status: string; counts?: { by_hand: number; written: number } }[] };
@@ -113,7 +116,7 @@ ok("QA-403 pass: the checkpoint step's code names no fact, form or combination (
   const readBack = (file: string) => (JSON.parse(execFileSync(PY, ["-I", READER, file], { encoding: "utf8", maxBuffer: 50 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] }).trim().split("\n").pop()!) as { values: Record<string, string> }).values;
   const v5476 = readBack(await dl(c5476!.id)), v5475 = readBack(await dl(c5475!.id));
   const at = (vals: Record<string, string>, tail: string) => Object.entries(vals).find(([k]) => k.endsWith(tail))?.[1];
-  ok("C7.1 pass: IMM 5476 read back from its file: appoint ticked, cancel not, the application says visitor, no office (a new application)", at(v5476, "Page1[0].appoint[0]") === "1" && at(v5476, "Page1[0].cancel[0]") === "0" && at(v5476, "SectionA[0].application[0]") === "visitor" && !at(v5476, "SectionA[0].office[0]"), Object.fromEntries(Object.entries(v5476).filter(([k]) => /appoint|cancel|application|office/.test(k))));
-  ok("C7.1 pass: IMM 5475 read back from its file (XFA data): the application type says visitor, the office fields empty", at(v5475, "AppDetails[0].TextField2[2]") === "visitor" && !at(v5475, "AppDetails[0].TextField2[0]") && !at(v5475, "AppDetails[0].TextField2[1]"), Object.fromEntries(Object.entries(v5475).filter(([k]) => /AppDetails/.test(k))));
+  ok("C7.1 pass: IMM 5476 read back from its file: appoint ticked, cancel not, the application says Visitor (QA-415: Client A's own filing), no office (a new application)", at(v5476, "Page1[0].appoint[0]") === "1" && at(v5476, "Page1[0].cancel[0]") === "0" && at(v5476, "SectionA[0].application[0]") === "Visitor" && !at(v5476, "SectionA[0].office[0]"), Object.fromEntries(Object.entries(v5476).filter(([k]) => /appoint|cancel|application|office/.test(k))));
+  ok("C7.1 pass: IMM 5475 read back from its file (XFA data): the application type says Visitor (QA-415), the office fields empty", at(v5475, "AppDetails[0].TextField2[2]") === "Visitor" && !at(v5475, "AppDetails[0].TextField2[0]") && !at(v5475, "AppDetails[0].TextField2[1]"), Object.fromEntries(Object.entries(v5475).filter(([k]) => /AppDetails/.test(k))));
   process.exit(summary() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

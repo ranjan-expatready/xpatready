@@ -5,12 +5,12 @@
 // immigration expert confirms. Each rule here with a passing and a failing case. Sample data, US$0, no model call.
 //   zsh studio/tools/isolated.sh rtc3 4431 start, then Demo › Reset and Demo › Load the configured checkpoint as the author
 //   tsx studio/tests/runtime/check_c3_paper_validate.ts 4431 xr_studio_rtc3
-import { CLIENT, answer, call, sql, confirmAll, fillEverything, filingOf, firms, generateCopy, copyBytes, sendFile, asValidated, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, yearsAgo } from "../../acceptance/lib/m3.ts";
+import { CLIENT, answer, call, sql, confirmAll, fillEverything, filingOf, firms, generateCopy, copyBytes, sendFile, adobeValidated, itemsOf, main, needVisitorVisa, ok, openCase, prepare, readinessOf, yearsAgo } from "../../acceptance/lib/m3.ts";
 
 const REASON = "The client cannot use the IRCC account: an accommodation (Sample)";
 const codes = (x: { code: string }[] | undefined) => (x ?? []).map((b) => b.code);
 const copyOf = async (id: string | null, actor: string) => (await call("GET", `/runtime/form-copies/${id}`, undefined, actor)).body;
-const sendValidated = async (id: string | null, actor: string) => (await sendFile(`/runtime/form-copies/${id}/validated`, asValidated(await copyBytes(id ?? "", actor)), "IMM5257-validated.pdf", actor));
+const sendValidated = async (id: string | null, actor: string) => (await sendFile(`/runtime/form-copies/${id}/validated`, adobeValidated(await copyBytes(id ?? "", actor)), "IMM5257-validated.pdf", actor));
 
 await main("C3", "A person's channel choice decides \"for filing\" — checkpoint checks", async () => {
   const vv = needVisitorVisa(), f = await firms();

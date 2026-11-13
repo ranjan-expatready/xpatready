@@ -17,7 +17,7 @@ import { historyGaps, type Period } from "../../../../contracts/history";
 import { EmployerCaseSource, LINKED_FILE, type EmployerLink } from "./employer";
 import { HouseholdReads, ScopeTag } from "./scope-tag"; // C3.16
 import { DocumentsButton } from "./documents-drawer"; // C6.5 part 2b
-import { fillsText, groupLabel, inSentence, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
+import { caseName, fillsText, groupLabel, inSentence, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 import type { ProgressOnly } from "../../../contracts/person-link";
 import { PrincipalPersonLine, PrivateProgress, usePeoplePrivacy } from "./privacy"; // C6.16
 import { HandOff, handName, handedFrom } from "./hand-off"; // BK-4c
@@ -31,7 +31,7 @@ export type CasePerson = { subject_id: string; role: string; role_label?: string
 export type CanAdd = { role: string; label: string; max: number; has: number };
 /** C6.11: the case team in the header (staff only; Sample firm, stand-in SI-9). */
 export type CaseTeamLine = { firm: { key: string; name: string; solo: boolean } | null; representative: { id: string; name: string; licence: { body: string; number: string } | null } | null; officers: { id: string; name: string }[] };
-export type CaseInfo = { id: string; reference: string; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; release?: { label: string }; people: CasePerson[]; can_add?: CanAdd[]; team?: CaseTeamLine; employer_link?: EmployerLink };
+export type CaseInfo = { id: string; /** A24-1 (P-492, CS-7) */ case_number: string; /** The firm's own reference, optional since A24-1. */ reference: string | null; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; release?: { label: string }; people: CasePerson[]; can_add?: CanAdd[]; team?: CaseTeamLine; employer_link?: EmployerLink };
 /** private_people (C6.16, client view only): people kept private from the client, with their progress only. */
 export type View = QuestionnaireView & { case: CaseInfo; private_people?: { subject_id: string; label: string; progress: ProgressOnly }[] };
 type Section = ViewSection;
@@ -45,6 +45,8 @@ const keyOf = (q: Question, row?: string) => `${q.subjectId}|${q.fact}${row ? `|
 const cellAnswer = (q: Question, row?: string) => (row ? q.rows.find((r) => r.row === row)?.answer ?? null : q.answer);
 
 /** The view of one case in one mode; every change invalidates it, so counts and confirmations come from the server. */
+/** A24-2 (P-492): a case in words: the firm's own reference when it gave one, else its case number (contracts caseName). */
+export const caseWords = (c: { reference: string | null; case_number: string }) => caseName({ reference: c.reference, caseNumber: c.case_number });
 export function useCaseView(caseId: string, mode: Mode) {
   const actor = useActorId();
   return useApi<View>(["runtime", "view", caseId, mode, actor], `/runtime/cases/${caseId}/questionnaire${mode === "agent" ? "?mode=agent" : ""}`, { retry: noRetryOnRefusal });
@@ -347,14 +349,15 @@ export function putAnswer(caseId: string, q: Question, value: unknown, row?: str
 export type QuestionnaireIo = {
   mode: "client" | "link";
   /** The query key prefix to refresh after a save, and the key of the view a part reads back after saving. */
-  viewKey: (caseId: string) => unknown[]; freshKey: (caseId: string) => unknown[];
+  /** freshKey: the exact query of the view this person sees (QA-445: never another person's cached view). */
+  viewKey: (caseId: string) => unknown[]; freshKey: (caseId: string, actor: string) => unknown[];
   put: (caseId: string, q: Question, value: unknown, row?: string) => Promise<SaveResult>;
   addRow: (caseId: string, subjectId: string, group: string) => Promise<unknown>;
   removeRow: (caseId: string, subjectId: string, row: string) => Promise<unknown>;
   noneApply: (caseId: string, subjectId: string, group: string, body: { noneApply: boolean; expectedId: string | null }) => Promise<unknown>;
 };
 const RUNTIME_IO: QuestionnaireIo = {
-  mode: "client", viewKey: (id) => ["runtime", "view", id], freshKey: (id) => ["runtime", "view", id, "sqr"], put: putAnswer,
+  mode: "client", viewKey: (id) => ["runtime", "view", id], freshKey: (id, actor) => ["runtime", "view", id, "sqr", actor], put: putAnswer,
   addRow: (id, subject, group) => api(`/runtime/cases/${id}/groups/${subject}/rows`, { method: "POST", json: { group } }),
   removeRow: (id, subject, row) => api(`/runtime/cases/${id}/groups/${subject}/rows/${row}`, { method: "DELETE" }),
   noneApply: (id, subject, group, body) => api(`/runtime/cases/${id}/groups/${subject}/${group}/none-apply`, { method: "PUT", json: body }),
@@ -408,7 +411,35 @@ export function byPerson(v: View): View {
  *  (no previous jobs, no other names) is done once passed. A per-device convenience; the server holds every answer. */
 const passedKey = (caseId: string) => `xr-passed-${caseId}`;
 function passedParts(caseId: string): Set<string> { try { return new Set(JSON.parse(localStorage.getItem(passedKey(caseId)) ?? "[]") as string[]); } catch { return new Set(); } }
+/** QA-417 (P-497; P-72 and P-78 kept): what each person's tab still has to confirm, summed from the same sections as the
+ *  household line (the engine's summary is the sum of its sections, engine/runtime/case.ts), so the tabs add up to it.
+ *  In the Agent view's tab order; a person with nothing to confirm is kept (n = 0). */
+export function toConfirmByTab(v: View): { id: string; label: string; n: number }[] {
+  const tabs = new Map<string, { id: string; label: string; n: number }>();
+  for (const s of byPerson(v).sections) { const t = tabs.get(s.subjectId) ?? { id: s.subjectId, label: s.about_label, n: 0 }; t.label = s.about_label; t.n += s.answered - s.confirmed; tabs.set(s.subjectId, t); }
+  return [...tabs.values()];
+}
+/** QA-417: the address that opens one person's tab in the Agent view (the household line's links). */
+export const tabHash = (subjectId: string) => `#tab-${encodeURIComponent(subjectId)}`;
+
 function markPassed(caseId: string, s: Section) { try { const x = passedParts(caseId); x.add(`${s.subjectId}|${s.section}`); localStorage.setItem(passedKey(caseId), JSON.stringify([...x])); } catch { /* private window: the part stays "Optional" */ } }
+
+/** QA-441 (P-498): where Save and continue goes: the first later part that is not done, wrapping round to the first
+ *  parts, or the overview (null) when every other part is done. On a first pass that is the next part; on a second pass
+ *  the client skips the parts already done. `parts` is the order the questionnaire shows after the save (review m1: a
+ *  save can add or remove parts, so the index is read on that order); `from` is the part left, -1 when the save
+ *  removed it (then the search starts at `after`, where it stood). Judged with the parts' checks and the parts passed
+ *  on this device. */
+function nextNotDone(parts: Section[], from: number, after: number, passed: Set<string>, checks: ViewCheck[]): number | null {
+  const start = from >= 0 ? from : after - 1;
+  for (let k = 1; k <= parts.length; k++) {
+    const i = (((start + k) % parts.length) + parts.length) % parts.length;
+    if (i === from) continue;
+    if (!partState(parts[i], passed, checks).done) return i;
+  }
+  return null;
+}
+const partKey = (s: Section) => `${s.subjectId}|${s.section}`;
 
 function partState(s: Section, passed: Set<string>, checks: ViewCheck[] = []) {
   if (checks.some((c) => c.subjectId === s.subjectId && c.section === s.section)) return { tone: "warn", text: "Check answers", done: false };
@@ -419,16 +450,33 @@ function partState(s: Section, passed: Set<string>, checks: ViewCheck[] = []) {
   return { tone: "ok", text: "Done", done: true };
 }
 
-export function Sqr({ view }: { view: View }) {
+/** `order`: the parts this questionnaire shows for a view (by default every part, person by person); Save and continue
+ *  reads its target on the order of the view just reloaded (QA-441). The adult's own link shows only their parts. */
+export function Sqr({ view, order = (v: View) => byPerson(v).sections }: { view: View; order?: (v: View) => Section[] }) {
   const [params, setParams] = useSearchParams();
   const parts = view.sections;
   const raw = params.get("part");
-  const index = raw === null ? null : Math.min(Math.max(Math.floor(Number(raw)) - 1 || 0, 0), parts.length - 1);
+  const asked = raw === null ? null : Math.min(Math.max(Math.floor(Number(raw)) - 1 || 0, 0), parts.length - 1);
   // BK-4c: the hand-off's `from` (who hands back) stays while the client moves between parts.
   const from = params.get("from");
-  const go = (i: number | null) => { setParams({ ...(i === null ? {} : { part: String(i + 1) }), ...(from ? { from } : {}) }); window.scrollTo({ top: 0 }); };
+  // QA-445: the address holds a part's place, and a save can add or drop parts before it (an answer decides what is
+  // asked). The part shown stays the same part when the data moves under the same address: it is found by its person
+  // and section, and the address is corrected in place (no new history entry), so the open part is never swapped for
+  // another, and its Save and continue still runs.
+  const pin = React.useRef<{ raw: string | null; key: string | null }>({ raw: null, key: null });
+  // Review M1 (#1671): a move the person asked for drops the pin first. The router applies go()'s new address in a
+  // transition, after the reloaded parts reach a render that still has the old one; a pin left in place would take that
+  // render for "the data moved" and replace go()'s entry with the part just left.
+  const go = (i: number | null) => { pin.current = { raw: null, key: null }; setParams({ ...(i === null ? {} : { part: String(i + 1) }), ...(from ? { from } : {}) }); window.scrollTo({ top: 0 }); };
+  const keyAt = asked === null ? null : partKey(parts[asked]);
+  const moved = asked !== null && pin.current.raw === raw && pin.current.key !== null && pin.current.key !== keyAt ? parts.findIndex((s) => partKey(s) === pin.current.key) : -1;
+  const index = moved >= 0 ? moved : asked;
+  React.useLayoutEffect(() => {
+    if (moved >= 0) setParams({ part: String(moved + 1), ...(from ? { from } : {}) }, { replace: true });
+    else pin.current = { raw, key: keyAt };
+  });
   if (index === null) return <SqrOverview view={view} open={go} />;
-  return <SqrPart key={`${parts[index].subjectId}|${parts[index].section}`} view={view} index={index} go={go} />;
+  return <SqrPart key={partKey(parts[index])} view={view} index={index} go={go} order={order} />;
 }
 
 function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) {
@@ -447,7 +495,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
     <div className="mx-auto max-w-xl space-y-5">
       <div>
         <h1 className="text-2xl font-semibold">{link ? "Your questions" : "Client questionnaire"}</h1>
-        <p className="mt-1 text-sm text-text-muted">{link ? `Case ${view.case.reference}. You answer your own questions. Each answer is saved when you press Save; to come back later, open your link again and ask for a new code.` : <>Case {view.case.reference}. You answer for everyone travelling on this application{relativesWords(view)}. Each answer is saved when you press Save; you can stop and come back at any time.</>}</p>
+        <p className="mt-1 text-sm text-text-muted">{link ? `Case ${caseWords(view.case)}. You answer your own questions. Each answer is saved when you press Save; to come back later, open your link again and ask for a new code.` : <>Case {caseWords(view.case)}. You answer for everyone travelling on this application{relativesWords(view)}. Each answer is saved when you press Save; you can stop and come back at any time.</>}</p>
       </div>
       <RecordedForYou view={view} open={open} />
       <div className="rounded-xl border border-border bg-surface-raised p-4">
@@ -484,9 +532,9 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
   );
 }
 
-function SqrPart({ view, index, go }: { view: View; index: number; go: (i: number | null) => void }) {
+function SqrPart({ view, index, go, order }: { view: View; index: number; go: (i: number | null) => void; order: (v: View) => Section[] }) {
   const caseId = view.case.id, part = view.sections[index], total = view.sections.length;
-  const qc = useQueryClient(), toast = useToast(), io = React.useContext(QuestionnaireIoContext);
+  const qc = useQueryClient(), toast = useToast(), io = React.useContext(QuestionnaireIoContext), actor = useActorId();
   const person = view.case.people.find((p) => p.subject_id === part.subjectId);
   // A question a rule hides is not asked (its answer, if any, is kept and not used); rules apply on each save.
   const asked = part.questions.filter((q) => !q.hidden);
@@ -539,19 +587,30 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   // an answer that needs a fix, a check, or an empty required question keeps the person on the part with the summary
   // and a way to leave anyway in the direction they chose.
   const [leaveTo, setLeaveTo] = React.useState<{ to: number | null; words: string }>({ to: index + 1 < total ? index + 1 : null, words: "leave them for now and continue" });
-  async function leave(to: number | null, words: string, forward: boolean) {
+  // `to` "next": the next part that is not done (QA-441), worked out on the view the save reloaded.
+  async function leave(target: number | null | "next", words: string, forward: boolean) {
+    let to = target === "next" ? (index + 1 < total ? index + 1 : null) : target;
     setLeaveTo({ to, words });
     const ok = await save();
     if (!alive.current) return;
-    const fresh = qc.getQueriesData<View>({ queryKey: io.freshKey(caseId) })[0]?.[1];
+    // QA-445: this person's own view, just reloaded, by its exact key. A prefix read returned the first cached "sqr"
+    // view, which could be the officer's (the case page's client card reads it): a stale copy where this part was not
+    // done yet, so Save and continue chose a target on the wrong data and stayed on the part.
+    const fresh = qc.getQueryData<View>(io.freshKey(caseId, actor));
     const now = fresh?.sections.find((s) => s.subjectId === part.subjectId && s.section === part.section) ?? part;
     const invalid = now.questions.some((q) => (q.group ? q.rows.some((r) => r.answer?.problems.length) : q.answer?.problems.length));
     const flagged = (fresh?.checks ?? view.checks).some((c) => c.subjectId === part.subjectId && c.section === part.section) || now.missing.length > 0;
-    if (!ok || invalid || flagged) { setSummary(true); setFocusSummary((n) => n + 1); return; }
-    if (forward) markPassed(caseId, part);
+    const stay = !ok || invalid || flagged;
+    if (forward && !stay) markPassed(caseId, part);
+    if (target === "next") {
+      const parts = fresh ? order(fresh) : view.sections;
+      to = nextNotDone(parts, parts.findIndex((s) => partKey(s) === partKey(part)), index, passedParts(caseId), fresh?.checks ?? view.checks);
+      setLeaveTo({ to, words });
+    }
+    if (stay) { setSummary(true); setFocusSummary((n) => n + 1); return; }
     go(to);
   }
-  const saveAndContinue = () => leave(index + 1 < total ? index + 1 : null, "leave them for now and continue", true);
+  const saveAndContinue = () => leave("next", "leave them for now and continue", true);
   const back = () => (d.dirty.length ? leave(index > 0 ? index - 1 : null, "leave them for now and go back", false) : go(index > 0 ? index - 1 : null));
   async function addRow() {
     if (adding) return;
@@ -822,7 +881,17 @@ function AgentView({ view }: { view: View }) {
   const ids = people.map(([id]) => id).join(" ");
   React.useEffect(() => {
     const go = () => {
-      const target = window.location.hash.slice(1), m = /^a-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-/i.exec(target);
+      const target = window.location.hash.slice(1);
+      // QA-417: the household line's link to a person's tab (#tab-<subject>) opens that tab and brings the tabs into view.
+      const t = /^tab-(.+)$/.exec(target);
+      if (t) {
+        let to = ""; try { to = decodeURIComponent(t[1]); } catch { return; }
+        if (!ids.split(" ").includes(to)) return;
+        setWho(to);
+        requestAnimationFrame(() => requestAnimationFrame(() => { const el = document.querySelector<HTMLElement>(`[data-tab="${CSS.escape(to)}"]`); el?.scrollIntoView({ block: "start" }); el?.focus(); window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search); }));
+        return;
+      }
+      const m = /^a-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-/i.exec(target);
       if (!m || !ids.split(" ").includes(m[1])) return;
       setWho(m[1]);
       // Break m5: the address is cleared once used, so a later render (a person added) does not jump back to this tab.
@@ -833,11 +902,12 @@ function AgentView({ view }: { view: View }) {
     return () => window.removeEventListener("hashchange", go);
   }, [ids]);
   const mine = view.sections.filter((s) => s.subjectId === who);
+  const toConfirm = new Map(toConfirmByTab(view).map((t) => [t.id, t.n])); // QA-417: each tab's "N to confirm"
   return (
     <div className="space-y-4">
       <Tabs value={who} onValueChange={setWho}>
         <TabsList aria-label="Whose answers" className="h-auto flex-wrap">
-          {people.map(([id, label]) => { const m = view.sections.filter((s) => s.subjectId === id).reduce((n, s) => n + s.missing.length, 0); return <TabsTrigger key={id} value={id} className="h-auto max-w-full whitespace-normal text-left [overflow-wrap:anywhere]" title={m ? `${m} required question(s) not answered` : "Every required question answered"}>{label}{m ? <span className="ml-1.5 text-[11px] text-text-muted">{m} missing</span> : null}</TabsTrigger>; })}
+          {people.map(([id, label]) => { const m = view.sections.filter((s) => s.subjectId === id).reduce((n, s) => n + s.missing.length, 0), c = toConfirm.get(id) ?? 0; return <TabsTrigger key={id} value={id} data-tab={id} className="h-auto max-w-full scroll-mt-4 whitespace-normal text-left [overflow-wrap:anywhere]" title={`${m ? `${m} required question(s) not answered` : "Every required question answered"}; ${c ? `${c} answer${c === 1 ? "" : "s"} to confirm (Confirm section)` : "nothing to confirm"}`}>{label}{c ? <span className="ml-1.5 text-[11px] text-text-muted" data-tab-to-confirm={c}>{c} to confirm</span> : null}{m ? <span className="ml-1.5 text-[11px] text-text-muted">{m} missing</span> : null}</TabsTrigger>; })}
         </TabsList>
     <TabsContent value={who} className="grid gap-6 lg:grid-cols-[14rem_minmax(0,1fr)]">
       <nav aria-label="Sections" className="hidden lg:block">
@@ -882,11 +952,17 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
   const open = [...s.questions.flatMap(shownAnswers), shownGroup].filter((a) => a && a.status !== "VERIFIED" && !a.awaits_client).length;
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", view.case.id] });
   const checks = view.checks.filter((c) => c.subjectId === s.subjectId && c.section === s.section);
+  // QA-417 (rehearsal §4): a section with no answer for the officer to confirm says so in words beside its (disabled)
+  // button, never a silent dead button. Review m1: "no answer yet" only when none is given (firm-record answers are given
+  // and confirmed, and never sent as seen).
+  const noneToSend = !seen.length;
   async function confirm() {
     setBusy(true);
     try {
       const r = await api<{ confirmed: number; missing: string[]; awaiting_client?: number }>(`/runtime/cases/${view.case.id}/sections/${s.section}/confirm`, { method: "POST", json: { subjectId: s.subjectId, seen } });
-      toast.push({ tone: checks.length ? "info" : "ok", text: `${s.title} for ${inSentence(s.about_label)}: ${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.${r.awaiting_client ? ` ${r.awaiting_client} recorded by staff wait${r.awaiting_client === 1 ? "s" : ""} for the client to re-confirm.` : ""}${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}${checks.length ? ` ${checks.length} check${checks.length === 1 ? "" : "s"} still open: ${checks.map((c) => c.message).join(" ")}` : ""}` });
+      // QA-417: the server's reply decides the words (the page may not have its latest answers yet); with none confirmed
+      // it says "nothing to confirm", and "confirmed already" never beside answers that wait for the client (review m2).
+      toast.push({ tone: checks.length || !r.confirmed ? "info" : "ok", text: `${s.title} for ${inSentence(s.about_label)}: ${r.confirmed ? `${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.` : `nothing to confirm.${r.awaiting_client ? "" : " Every answer here is confirmed already."}`}${r.awaiting_client ? ` ${r.awaiting_client} recorded by staff wait${r.awaiting_client === 1 ? "s" : ""} for the client to re-confirm.` : ""}${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}${checks.length ? ` ${checks.length} check${checks.length === 1 ? "" : "s"} still open: ${checks.map((c) => c.message).join(" ")}` : ""}` });
     } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
     await refresh();
     setBusy(false);
@@ -935,7 +1011,8 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
         <span className="flex-1" />
         {/* C6.5 part 2b: "Fill this from documents" (documents-drawer.tsx), staff only (the Agent view). */}
         <DocumentsButton view={view} s={s} />
-        <Button size="sm" variant={open > 0 ? "default" : "secondary"} disabled={!seen.length} busy={busy} onClick={() => void confirm()} title={seen.length ? "Confirm the answers shown in this section; an answer that changed since you looked is refused, never confirmed unseen" : "Nothing answered yet in this section"}>
+        {noneToSend ? <span className="text-[13px] text-text-muted" data-nothing-to-confirm>{s.answered ? "Nothing to confirm: every answer here is confirmed already" : "Nothing to confirm: no answer yet"}</span> : null}
+        <Button size="sm" variant={open > 0 ? "default" : "secondary"} disabled={noneToSend} busy={busy} onClick={() => void confirm()} title={noneToSend ? "Nothing to confirm in this section" : "Confirm the answers shown in this section; an answer that changed since you looked is refused, never confirmed unseen"}>
           <Check aria-hidden />Confirm section
         </Button>
       </header>

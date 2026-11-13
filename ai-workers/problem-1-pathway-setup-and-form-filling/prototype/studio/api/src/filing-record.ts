@@ -12,6 +12,7 @@ import { checkApplicationNumber, duplicateWarning, normaliseNumber, type NumberR
 import { actorOf, Audit, CaseRead, Db, fail, STUDIO, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
 import { refuseIfRecorded } from "./submission-record.ts";
+import { caseName } from "../../contracts/runtime.ts"; // A24-1: the reference, else the case number
 
 type H = string | undefined;
 const RULES = JSON.parse(readFileSync(join(STUDIO, "samples", "filing-numbers.json"), "utf8")) as { basis: string; applicationNumber: NumberRule };
@@ -30,7 +31,7 @@ export class FilingRecord {
     const ucis = subjects.length ? await this.db.clientCanonicalAnswer.findMany({ where: { subjectId: { in: subjects }, canonicalFieldKey: UCI, supersededById: null, rowKey: null } }) : [];
     const uciOf = new Map(ucis.map((u) => [u.subjectId, typeof u.valueJson === "string" ? u.valueJson : null]));
     return {
-      case_id: c.id, our_reference: c.reference, basis: RULES.basis, number_shape: { words: RULES.applicationNumber.words, example: RULES.applicationNumber.example },
+      case_id: c.id, our_reference: caseName(c), basis: RULES.basis, number_shape: { words: RULES.applicationNumber.words, example: RULES.applicationNumber.example },
       filings: filings.map((f) => ({ id: f.id, person: label.get(f.subjectId) ?? "", application_number: f.applicationNumber,
         applicants: f.applicants.map((a) => ({ subject: a.subjectId, person: label.get(a.subjectId) ?? "", uci: uciOf.get(a.subjectId) ?? null })) })),
       ...(filings.length ? {} : { note: "No filings are worked out yet: open Prepare application first." }),
@@ -51,7 +52,7 @@ export class FilingRecord {
     // Breaker m3 on #553: "before" is read as the number is stored (blank = none; case, spaces and hyphens ignored).
     const before = parsed.data!.before ? normaliseNumber(parsed.data!.before) || null : null; // "-" or " - " is no number too
     if (before !== (f!.applicationNumber ?? null)) fail("Someone changed this filing's application number after you read it: read the filing record again, then try again. Nothing was saved.", HttpStatus.CONFLICT);
-    const others = value ? await this.db.filing.findMany({ where: { workspaceId: f!.workspaceId, applicationNumber: value, NOT: { id: f!.id }, case: { firmKey: c.firmKey } }, select: { caseId: true, case: { select: { reference: true } } } }) : [];
+    const others = value ? await this.db.filing.findMany({ where: { workspaceId: f!.workspaceId, applicationNumber: value, NOT: { id: f!.id }, case: { firmKey: c.firmKey } }, select: { caseId: true, case: { select: { reference: true, caseNumber: true } } } }) : [];
     if (value !== (f!.applicationNumber ?? null)) {
       const person = this.r.peopleOf(c).find((p) => p.subjectId === f!.subjectId)?.label ?? "a person";
       const did = value ? (f!.applicationNumber ? "changed" : "added") : "cleared";
@@ -68,11 +69,11 @@ export class FilingRecord {
         // "case <first 8 of its id>" lets the activity feed show the line to this firm only (case-feed.ts). It
         // comes first, before any name a person typed, so a name that reads "case 1234abcd" cannot be taken for it (Devin).
         await new Audit(tx as unknown as Db).log(c.workspaceId, actor.id, did, "application number", f!.id,
-          `On case ${c.id.slice(0, 8)} (${c.reference}): ${actor.name} ${did} the application number on ${person}'s filing`, { before: f!.applicationNumber, after: value });
+          `On case ${c.id.slice(0, 8)} (${caseName(c)}): ${actor.name} ${did} the application number on ${person}'s filing`, { before: f!.applicationNumber, after: value });
       });
     }
     // Breaker m2 on #553: the same number on this case's own other filing says so, never "Already on case <this case>".
-    const sameCase = others.some((o) => o.caseId === c.id), elsewhere = others.filter((o) => o.caseId !== c.id).map((o) => o.case);
+    const sameCase = others.some((o) => o.caseId === c.id), elsewhere = others.filter((o) => o.caseId !== c.id).map((o) => ({ reference: caseName(o.case) }));
     const warning = [sameCase ? "Already on another filing of this case." : null, duplicateWarning(elsewhere)].filter(Boolean).join(" ") || null;
     return { ...(await this.read(actor, c.id)), warning };
   }

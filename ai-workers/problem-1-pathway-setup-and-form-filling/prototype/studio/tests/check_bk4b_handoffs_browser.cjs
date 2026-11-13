@@ -103,14 +103,22 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const actingAs = (name) => p.getByText(`You are acting as ${name} (simulated)`, { exact: false }).first().waitFor({ timeout: 15000 });
   const noHandOff = async (name) => { await p.waitForTimeout(400); step(`${name} (BR-2): no hand-off for the person who is next`, await p.locator("[data-handoff]").count() === 0, await p.locator("[data-handoff]").allInnerTexts()); };
 
-  // Release page, before the walk (BR-3): the author is told the approve duty releases, by name, with one button.
+  // Release page, before the walk. QA-421 (P-498): the author's own change is not submitted yet, so the author's next step
+  // is that Submit, not a hand-off (check_qa421_release_submit_first_browser.cjs walks it). BR-3: a person with no author
+  // duty (the Content reviewer) is told the approve duty releases, by name, with one button. The person is set back to the
+  // author before the walk's first hand-off, so the walk's count of changes outside a hand-off is unchanged.
+  await p.goto(`${BASE}/release`);
+  await p.locator('[data-next-step="submit"]').waitFor({ timeout: 30000 });
+  step("Release page (QA-421): the author with an unsubmitted change sees Submit first and no hand-off", await p.locator("[data-handoff]").count() === 0, await p.locator("[data-handoff]").allInnerTexts());
+  await p.evaluate(() => localStorage.setItem("xr-actor", "user-C"));
   await p.goto(`${BASE}/release`);
   const rel = p.locator('[data-handoff="approver"]');
   await rel.waitFor({ timeout: 30000 });
-  step("Release page (BR-3): the author's hand-off names the Approver, the approve duty", /Next: the Approver releases/.test(await rel.innerText()) && await rel.getByRole("button").getAttribute("data-handoff-to") === "user-B", await rel.innerText());
+  step("Release page (BR-3): the hand-off names the Approver, the approve duty", /Next: the Approver releases/.test(await rel.innerText()) && await rel.getByRole("button").getAttribute("data-handoff-to") === "user-B", await rel.innerText());
   step("Release page: no \"Switch to\" words left", !/switch to/i.test(await p.locator("main").innerText()));
   await axe("Release page hand-off", '[data-handoff="approver"]');
   await shot("release-page-1440");
+  await p.evaluate(() => localStorage.setItem("xr-actor", "user-A"));
 
   // 1. The author submits; the Content reviewer is next (expert changes).
   await reviewTab(); await actingAs("Configuration author");
@@ -176,7 +184,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   const sel = dlg.getByLabel("Combination (released)");
   step("4. BR-4: lands on the Open a case dialog with the Visitor visa chosen, as the Case officer", await sel.inputValue() === ID && await who() === "user-O", await sel.inputValue());
   await shot("4-open-a-case-dialog-1440");
-  await dlg.getByLabel("Case reference").fill("BK4B-WALK");
+  await dlg.getByLabel("Your own reference (optional)").fill("BK4B-WALK");
   await dlg.getByLabel("Principal applicant's name").fill("Sample Applicant");
   await dlg.getByRole("button", { name: "Open case" }).click();
   await p.waitForURL((u) => /^\/cases\/[0-9a-f-]{36}$/.test(u.pathname), { timeout: 30000 });
@@ -228,6 +236,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.goto(`${BASE}/release`);
     await btn("Nothing ready to release").waitFor({ timeout: 30000 });
     step(`Release page, nothing ready (${name}) (BR-2 fail): no hand-off to the Approver`, await p.locator("[data-handoff]").count() === 0, await p.locator("[data-handoff]").allInnerTexts());
+    step(`Release page, nothing ready (${name}) (QA-421): ${actor === "user-A" ? "the author's next step is Submit" : "no Submit (no author duty)"}`, await p.locator('[data-next-step="submit"]').count() === (actor === "user-A" ? 1 : 0));
   }
   await shot("release-page-nothing-ready-1440");
   step("no page error during the walk", errs.length === 0, errs);

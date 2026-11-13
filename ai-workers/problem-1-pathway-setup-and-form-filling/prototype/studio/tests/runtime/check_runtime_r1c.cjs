@@ -76,8 +76,10 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("officer: the case list opens with one primary action", await shows(o.getByRole("button", { name: "Open a case" })));
   await o.getByRole("button", { name: "Open a case" }).click();
   await o.getByRole("button", { name: "Open case" }).click(); await idle(o);
-  step("officer fail: opening a case without reference and name shows both errors on their fields", await shows(o.getByText("Give the case a reference of at least 3 characters.", { exact: true })) && await shows(o.getByText("Give the principal applicant a display name.", { exact: true })));
-  await o.getByLabel("Case reference").fill(`R1C-${run}`);
+  // A24-2 (P-492): the firm's own reference is optional, so only the missing name is refused (read in the dialog: the
+  // toast repeats a single error's words).
+  step("officer fail: opening a case without a name shows the error on its field; the optional reference shows none", await shows(o.getByRole("dialog").getByText("Give the principal applicant a display name.", { exact: true })) && (await o.getByRole("dialog").getByText("Give the case a reference of at least 3 characters.", { exact: true }).count()) === 0);
+  await o.getByLabel("Your own reference (optional)").fill(`R1C-${run}`);
   await o.getByLabel("Principal applicant's name").fill("Sample Applicant C");
   await o.getByRole("button", { name: "Open case" }).click(); await idle(o);
   await o.waitForURL(/\/cases\/[0-9a-f-]{36}$/);
@@ -93,7 +95,12 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   // "Parent1" and "Parent2", not mother or father, so the tabs say first and second parent (review Major 1 on #1256).
   const tabNames = (await o.getByRole("tab").allInnerTexts()).map((t) => t.split("\n")[0].trim()).sort();
   const wantTabs = ["The application", ...["Sample Applicant C", "Sample Spouse C", "Sample Child C"].flatMap((n) => [n, `${n}'s first parent`, `${n}'s second parent`])].sort();
-  step("officer pass: spouse and child are on the case and get their own tabs of sections (and a tab for each person's parents)", await shows(o.getByRole("tab").nth(3)) && JSON.stringify(tabNames) === JSON.stringify(wantTabs) && await shows(o.locator("section", { hasText: "People and filings" }).getByText("Sample Child C")), tabNames);
+  // A24-3 (P-492, CS-10): People and filings names each filing's principal applicant in its own column, so a person who
+  // files their own application (the child here) is named twice in their row; the person is read from the row's Person
+  // cell (its first cell), exactly, never by text anywhere in the section (two matches: a strict-mode miss, #1666's CI).
+  const tabsShown = await shows(o.getByRole("tab").nth(3)), tabsRight = JSON.stringify(tabNames) === JSON.stringify(wantTabs);
+  const childRow = await shows(o.locator("section", { hasText: "People and filings" }).locator("tbody tr td:first-child").getByText("Sample Child C", { exact: true }));
+  step("officer pass: spouse and child are on the case and get their own tabs of sections (and a tab for each person's parents)", tabsShown && tabsRight && childRow, { tabsShown, tabsRight, childRow, tabNames });
   await state(o, "officer-case-new", [1440, 1024]);
 
   // ── 2. The client answers on a phone
@@ -373,7 +380,9 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("M3 agent: the blocking list names the empty group (\"Entries in … : add them, or say none apply\")", await shows(imm.getByText(/Entries in "Education history": add them, or say none apply \(Sample Applicant C\): not answered/)));
   await o.getByRole("tab", { name: /^Sample Applicant C(?!'s )/ }).click();
   await edu.getByRole("button", { name: "None apply" }).click();
-  step("M3 agent pass (P-72): the officer's \"none apply\" waits for Confirm section", await shows(edu.getByText("None apply", { exact: true })) && await shows(edu.getByText("To confirm")));
+  step("M3 agent pass (P-72): the officer's \"none apply\" waits for Confirm section", await shows(edu.getByText("None apply", { exact: true })) && await shows(edu.getByText("Entered by staff · to confirm", { exact: true })));
+  // QA-417: the answer's own pill (above), never any "to confirm" text: the section pill and the "Nothing to confirm"
+  // words beside a section's disabled button match that too, before the page has the officer's answer.
   await edu.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
   step("M3 agent pass: Confirm section confirms it", await shows(edu.getByText("Confirmed", { exact: true })));
   await state(o, "case-view-group-none-apply", [1440]);
@@ -421,11 +430,11 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   const fl5257 = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, "user-O")).body.forms.find((f) => f.form === "IMM 5257" && f.person === "Sample Applicant C");
   const newCopy = fl5257.copies[0].id;
   const bytes = Buffer.from(await (await fetch(`${BASE}/api/runtime/form-copies/${newCopy}/file`, { headers: { "x-actor": "user-O" } })).arrayBuffer());
-  // QA-165: the form's own Validate result written into the copy (tools/simulate_validate.py), never bytes appended.
+  // QA-165: the form's own Validate result written into the copy (tools/simulate_validate.py), never bytes appended; BK-19: with its barcodes, as Adobe leaves it.
   const vdir = require("node:fs").mkdtempSync(require("node:path").join(require("node:os").tmpdir(), "xr-validate-"));
   require("node:fs").writeFileSync(require("node:path").join(vdir, "copy.pdf"), bytes);
   const py = require("node:path").join(__dirname, "..", "..", "..", "..", "..", "..", ".tools", "solution-1-prototype", ".venv", "bin", "python");
-  const sv = require("node:child_process").spawnSync(py, ["-I", require("node:path").join(__dirname, "..", "..", "tools", "simulate_validate.py"), require("node:path").join(vdir, "copy.pdf"), require("node:path").join(vdir, "validated.pdf"), "Yes"], { encoding: "utf8", timeout: 120000 });
+  const sv = require("node:child_process").spawnSync(py, ["-I", require("node:path").join(__dirname, "..", "..", "tools", "simulate_validate.py"), require("node:path").join(vdir, "copy.pdf"), require("node:path").join(vdir, "validated.pdf"), "Yes", "barcodes"], { encoding: "utf8", timeout: 120000 });
   if (sv.status !== 0) throw new Error(`simulate_validate.py failed: ${(sv.stderr || sv.stdout).slice(-300)}`);
   const validatedBytes = require("node:fs").readFileSync(require("node:path").join(vdir, "validated.pdf")); require("node:fs").rmSync(vdir, { recursive: true, force: true });
   const fd = new FormData(); fd.append("file", new Blob([validatedBytes]), "imm5257-validated.pdf");
@@ -497,7 +506,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await o.goto(`${BASE}/cases`); await idle(o);
   step("case list fail-guard (PR 10 review): the first page shows 50 cases and offers Load more", await shows(o.getByText("50 cases shown")) && await shows(o.getByRole("button", { name: "Load more" })));
   await o.getByRole("button", { name: "Load more" }).click();
-  step("case list pass: Load more appends the next page and keeps the first; the oldest case is reachable", await gone(o.getByText("50 cases shown")) && await shows(o.getByRole("link", { name: `R1C-${run}`, exact: true })) && await shows(o.getByRole("link", { name: `R1C-PAGE-${run}-50` })));
+  step("case list pass: Load more appends the next page and keeps the first; the oldest case is reachable", await gone(o.getByText("50 cases shown")) && await shows(o.getByRole("link", { name: new RegExp(`^C-\\d{4}-\\d{5,} R1C-${run}$`) })) && await shows(o.getByRole("link", { name: `R1C-PAGE-${run}-50` })));
 
   step("no page errors in either browser", errors.length === 0, errors.slice(0, 3));
   fs.writeFileSync(path.join(SHOTS, "axe.json"), JSON.stringify(axeLog, null, 1));

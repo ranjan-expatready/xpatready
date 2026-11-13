@@ -63,7 +63,7 @@ const sampleOk = (f: Parameters<typeof trailsOf>[0]) => { const t = trailsOf(f);
   const want = l.body.combinations.reduce((a: number, c: any) => a + c.files, 0);
   const held = l.body.missing.filter((m: any) => m.code !== "EMP5626");
   const short = l.body.combinations.map((c: any) => [c.label, c.files, n(`select count(*) from source_attachment where combination_id='${c.id}'`)]).filter(([, w, h]: any) => w !== h);
-  ok("C11.7: every official file arrives through the form intake on its combination, or is shown with the intake's reason", want + held.length === 44 && /* 44: IMM 5562 left out of fs.spouse (P-230 Q9: no IRCC checklist names it) */ files === want && !short.length && held.every((m: any) => m.why.length > 20) && n(`select count(*) from source_attachment where workspace_id='${ws}' and uploaded_via='SAMPLE'`) === files, { want, files, short, held: held.map((m: any) => m.code) });
+  ok("C11.7: every official file arrives through the form intake on its combination, or is shown with the intake's reason", want + held.length === 45 && /* 45: IMM 5562 left out of fs.spouse (P-230 Q9: no IRCC checklist names it); BK-16 PR 2 (P-490) adds IMM 1295 to the Study permit's sources */ files === want && !short.length && held.every((m: any) => m.why.length > 20) && n(`select count(*) from source_attachment where workspace_id='${ws}' and uploaded_via='SAMPLE'`) === files, { want, files, short, held: held.map((m: any) => m.code) });
   // P-230 (Researched, PR #413 Q3, Q9): spouse sponsorship has the Sponsor on the case (never an applicant); IMM 5562 is held.
   const fsSpouse = JSON.parse(sql(`select participants from combination where workspace_id='${ws}' and combination_key='fs.spouse'`) || "[]");
   const sponsor = fsSpouse.find((x: any) => x.role === "sponsor");
@@ -79,7 +79,7 @@ const sampleOk = (f: Parameters<typeof trailsOf>[0]) => { const t = trailsOf(f);
   // (IMM 5669 and IMM 0008 DEP since the C11.7 paid runs) and IMM 5645 its four saved parts, which Saved uses
   // (check_forms_saved_parts.ts), so no form waits. A saved run lost or no longer matching its job puts its form on the
   // list and lowers the count, so this fails; the missing-part case is in check_forms_saved_parts.ts.
-  ok("P-138: every form of the six has a saved AI answer, so none waits for Draft with AI (IMM 5645 replays from its four saved parts)", JSON.stringify(l.body.drafts.waiting_for_draft_with_ai) === "[]" && l.body.drafts.replayed === 18, l.body.drafts);
+  ok("P-138: every form of the six has a saved AI answer, so none waits for Draft with AI (IMM 5645 replays from its four saved parts)", JSON.stringify(l.body.drafts.waiting_for_draft_with_ai) === "[]" && l.body.drafts.replayed === 19 /* BK-16 PR 2 (P-490): 18, and IMM 1295's saved answer on the Study permit */, l.body.drafts);
   // The form finder, replayed per combination from its recorded canada.ca page.
   const vv = l.body.finder.find((f: any) => /Visitor visa/.test(f.combination));
   ok("C11.7: the form finder is replayed on the Visitor visa (saved AI answers, US$0) and picks its forms", ["COMPLETED", "PARTIAL"].includes(vv?.status) && n(`select count(*) from ai_batch where workspace_id='${ws}' and operation='find_forms' and mode='REPLAY'`) === 5, l.body.finder);

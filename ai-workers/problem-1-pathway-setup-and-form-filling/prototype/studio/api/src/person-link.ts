@@ -14,7 +14,7 @@ import { Prisma } from "@prisma/client";
 import { createHash, randomBytes, randomInt, randomUUID } from "node:crypto";
 import type { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { MINOR } from "../../contracts/runtime.ts";
+import { caseName, MINOR } from "../../contracts/runtime.ts";
 import { KeepPrivate, LINK_RULES, LINK_WORDS, LinkCode, LinkToken, SendLink, TakeBack, type LinkOpened, type LinkSession, type PeoplePrivacy, type PersonLinkState, type PersonPrivacy } from "../../contracts/person-link.ts";
 import { caseView, OWN_LINK } from "../../engine/runtime/case.ts";
 import { adultCheck, codeCheck, deadWords, ownerOf, linkState, maskAddress, normalAddress, normalCode, officerWords, overLimit, principalLinkWords, progressOf, resendKind, sendRefusal, serverTries, wrongWords, type LinkRow } from "../../engine/runtime/privacy.ts";
@@ -378,8 +378,8 @@ export class PersonLinks {
 
   async me(auth: H) {
     const { link, person, session } = await this.signed(auth);
-    const c = await this.db.case.findUnique({ where: { id: link.caseId }, select: { reference: true } });
-    return { case_id: link.caseId, subject_id: link.subjectId, person: person.subject.label, case_reference: c?.reference ?? null, email_masked: link.addressMasked,
+    const c = await this.db.case.findUnique({ where: { id: link.caseId }, select: { reference: true, caseNumber: true } });
+    return { case_id: link.caseId, subject_id: link.subjectId, person: person.subject.label, case_reference: c ? caseName(c) : null, email_masked: link.addressMasked,
       consent_needed: !link.consentedAt, consent: LINK_WORDS.consent, consent_note: LINK_WORDS.consentNote, expires_at: session.expiresAt.toISOString() };
   }
   async consent(auth: H) {

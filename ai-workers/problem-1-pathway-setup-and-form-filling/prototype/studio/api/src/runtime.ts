@@ -9,7 +9,7 @@ import { clientPersonOf, withClient, type StoredChange } from "../../engine/runt
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
-import { ConfirmSection, fillsText, Reconfirm, notReadyForCases, releaseLabel, NewCase, type OpenableRelease, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
+import { caseName, type CaseListRow, ConfirmSection, fillsText, Reconfirm, notReadyForCases, releaseLabel, NewCase, type OpenableRelease, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView, checkValue, isClientField, OWN_LINK, pqrView, shapeOf, type Answer, type CaseView, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import { ownerOf, privateFrom, progressOf } from "../../engine/runtime/privacy.ts"; // C6.16
@@ -288,7 +288,10 @@ export class Runtime {
     try {
       id = await this.db.$transaction(async (tx) => {
         const party = await tx.party.create({ data: { workspaceId, profile: { create: { workspaceId, displayName: b.principal.displayName } } } });
-        const c = await tx.case.create({ data: { workspaceId, firmKey: firm!.key, combinationId: b.combinationId, reference: b.reference, clientActorId: client!.id, createdBy: actor.id, idempotencyKey: b.idempotencyKey ?? null, idempotencyFingerprint: b.idempotencyKey ? fingerprint : null } });
+        // A24-1 (P-492, CS-7, AG-7-3): the firm's next case number for this year, taken in this transaction: an opening
+        // made at the same moment waits on the counter row and gets the next one; a refused opening gives its number back.
+        const [{ n: caseNumber }] = await tx.$queryRaw<{ n: string }[]>`SELECT runtime_next_case_number(${workspaceId}::uuid, ${firm!.key}, now()) AS n`;
+        const c = await tx.case.create({ data: { workspaceId, firmKey: firm!.key, combinationId: b.combinationId, caseNumber, reference: b.reference ?? null, clientActorId: client!.id, createdBy: actor.id, idempotencyKey: b.idempotencyKey ?? null, idempotencyFingerprint: b.idempotencyKey ? fingerprint : null } });
         const caseSubject = await tx.answerSubject.create({ data: { workspaceId, partyId: party.id, subjectKind: "case", label: "The application" } });
         const principal = await tx.answerSubject.create({ data: { workspaceId, partyId: party.id, subjectKind: "principal", label: b.principal.displayName } });
         await tx.caseParticipant.createMany({ data: [{ workspaceId, caseId: c.id, subjectId: caseSubject.id, role: "case", order: 0 }, { workspaceId, caseId: c.id, subjectId: principal.id, role: "principal", order: 1 }] });
@@ -312,7 +315,8 @@ export class Runtime {
       if (!unique(e)) throw e;
       const same = await replay(); // a simultaneous create with the same key won: answer with its case
       if (same) return same;
-      fail("A case with this reference already exists; give the new case its own reference.", HttpStatus.CONFLICT);
+      // Break m1: with no reference given, the clash can only be the case number (the firm's counter behind its cases).
+      fail(b.reference ? "A case with this reference already exists; give the new case its own reference." : "The case could not be given its case number, so nothing was created. Ask the Lead.", HttpStatus.CONFLICT);
     }
     await this.audit.log(workspaceId, actor.id, "opened", "case", id!, `${actor.name} opened case ${short(id!)} on "${combination!.label}" released version ${release!.version} (${release!.sha256.slice(0, 12)}); representative of record ${nameIn(firm!, representative)}, case officers ${officers.map((o) => nameIn(firm!, o)).join(", ")}${stagesWritten.stages > 1 ? `; a stage of a route (${stagesWritten.stages} stages, ${stagesWritten.doneBefore} done before we started)` : ""}`, undefined, b.combinationId);
     return { ...(await this.get(actor, id!)), created: true };
@@ -325,7 +329,7 @@ export class Runtime {
     const team = isOfficer(actor) ? await this.teamLine(c.id) : undefined;
     const snapshot = this.snapshotOf(c), roleOfRelease = new Map(linesOf(snapshot).map((p) => [p.role, roleWords(p)]));
     const coFiling = new Set(linesOf(snapshot).filter((p) => p.filingMode === "co_files").map((p) => p.role));
-    return { id: c.id, ...(team ? { team } : {}), reference: c.reference, status: c.status, combination_id: c.combinationId, client: c.clientActorId,
+    return { id: c.id, ...(team ? { team } : {}), case_number: c.caseNumber, reference: c.reference, status: c.status, combination_id: c.combinationId, client: c.clientActorId,
       pin: { release_version: pin.release.version, sha256: pin.contentHash, pinned_at: pin.pinnedAt, revision: pin.revision },
       // G13 (QA-140): the release in the studio's own words.
       release: { label: releaseLabel(pin.release), version: pin.release.version, release: pin.release.packVersion?.version ?? pin.release.version },
@@ -569,7 +573,7 @@ export class Runtime {
     const v = caseView(s, this.peopleOf(c), st.answers, st.rows, "sqr", new Date(), st.groups, { background: this.backgroundOf(c) });
     const others = new Set(c.participants.filter((p) => !keep(p.subjectId)).map((p) => p.subjectId));
     const labels = (k: boolean) => new Set(c.participants.filter((p) => keep(p.subjectId) === k).map((p) => p.subject.label));
-    return { case: { id: c.id, reference: c.reference, people: c.participants.filter((p) => keep(p.subjectId)).map((p) => ({ subject_id: p.subjectId, role: p.role, label: p.subject.label, applies: p.applies })) }, own,
+    return { case: { id: c.id, reference: caseName(c), people: c.participants.filter((p) => keep(p.subjectId)).map((p) => ({ subject_id: p.subjectId, role: p.role, label: p.subject.label, applies: p.applies })) }, own,
       ...withoutHidden(v, others, labels(false), labels(true)) };
   }
 
@@ -929,32 +933,75 @@ export class Runtime {
     return { confirmed, section, missing: sec?.missing ?? [], invalid: sec?.invalid ?? 0, awaiting_client: waiting };
   }
 
+  /** A24-2 (P-492, design §6 "Open a case"): the case number the opener's firm gives next, read without taking it (the
+   *  counter moves only inside an opening, runtime_next_case_number). Another opening at the same moment may take it
+   *  first, so the screen says "next", never "yours". Same format and year (the firm's zone) as the counter. */
+  async nextCaseNumber(actor: Actor) {
+    need(actor, "case");
+    const firm = firmOfActor(actor);
+    if (!firm) fail(`${actor.name} (simulated) is not staff of a firm, so cannot open a case.`, HttpStatus.FORBIDDEN);
+    const workspaceId = await this.ws.id();
+    const [{ n }] = await this.db.$queryRaw<{ n: string }[]>`SELECT 'C-' || y.y || '-' || lpad(v.v::text, greatest(5, length(v.v::text)), '0') AS n
+      FROM (SELECT extract(year FROM now() AT TIME ZONE 'America/Toronto')::integer AS y) y,
+      LATERAL (SELECT coalesce((SELECT next_value FROM firm_case_counter WHERE workspace_id = ${workspaceId}::uuid AND firm_key = ${firm!.key} AND year = y.y), 1) AS v) v`;
+    return { case_number: n };
+  }
+
   /** The workspace's cases, newest first, a page at a time (cursor: the last case id of the previous page). Each row names
    *  its client (the simulated login that answers). BK-3 PR 3 (P-447 (2), challenge B1: one request per page view,
    *  STANDARDS §5): `client=<login>` keeps one client's cases, inside the same firm filter (C6.11 BR-20), and only then
    *  each row also lists its people by name and role (no answers, progress or privacy settings: staff see the same names
-   *  on the case page, and keep-private hides people from the client, never from staff, C6.16). */
-  async list(actor: Actor, q: { take?: string; after?: string; client?: string }) {
+   *  on the case page, and keep-private hides people from the client, never from staff, C6.16).
+   *  A24-1 (P-492, CS-7, CS-8): each row also carries its case number, its client person's name (the principal when the
+   *  case opened, as on the case page: clientPersonOf) and how many applications (filings) its current stage holds, read
+   *  in one query each for the whole page, never one per row. A case not yet prepared holds none (0).
+   *  A24-2 (P-492, design §6): `q=<words>` keeps the cases whose case number, own reference, a person's name or an IRCC
+   *  application number contains them (any letter case), inside the same firm filter; the cursor pages the kept cases. */
+  async list(actor: Actor, q: { take?: string; after?: string; client?: string; q?: unknown }) {
     need(actor, "case");
     const workspaceId = await this.ws.id();
     const take = Math.min(Math.max(Number(q.take ?? 50) || 50, 1), 100);
     // Break m5: one login or none; a list or an empty value is refused, never read as "every client".
     if (q.client !== undefined && (typeof q.client !== "string" || !q.client)) fieldError("client", "Name one client login.");
     const client = q.client ?? null;
-    const rows = await this.db.case.findMany({ where: { workspaceId, firmKey: firmOfActor(actor)?.key ?? "", ...(client ? { clientActorId: client } : {}) }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: take + 1, ...(q.after ? { cursor: { id: q.after }, skip: 1 } : {}), include: { combination: { select: { label: true } } } });
-    const page = rows.slice(0, take);
-    // The people of this page's cases in one query (never one per row), only for one client's page.
-    const people = new Map<string, { label: string; role: string }[]>();
-    if (client && page.length) for (const p of await this.db.caseParticipant.findMany({ where: { caseId: { in: page.map((c) => c.id) }, role: { not: "case" } }, orderBy: [{ caseId: "asc" }, { order: "asc" }], select: { caseId: true, role: true, subject: { select: { label: true } } } })) people.set(p.caseId, [...(people.get(p.caseId) ?? []), { label: p.subject.label, role: p.role }]);
-    return { cases: page.map((c) => ({ id: c.id, reference: c.reference, combination: c.combination.label, status: c.status, created_at: c.createdAt, client: c.clientActorId, ...(client ? { people: people.get(c.id) ?? [] } : {}) })), next: rows.length > take ? rows[take - 1].id : null };
+    const words = searchWords(q.q);
+    const rows = await this.db.case.findMany({ where: { workspaceId, firmKey: firmOfActor(actor)?.key ?? "", ...(client ? { clientActorId: client } : {}), ...(words ? searchWhere(words) : {}) }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: take + 1, ...(q.after ? { cursor: { id: q.after }, skip: 1 } : {}), include: { combination: { select: { label: true } } } });
+    const page = rows.slice(0, take), ids = page.map((c) => c.id);
+    // The people of this page's cases in one query (never one per row): for the client's name, and for one client's page.
+    const people = new Map<string, { subjectId: string; label: string; role: string; applies: boolean }[]>();
+    const changes = new Map<string, StoredChange[]>(), filings = new Map<string, number>();
+    if (page.length) {
+      for (const p of await this.db.caseParticipant.findMany({ where: { caseId: { in: ids }, role: { not: "case" } }, orderBy: [{ caseId: "asc" }, { order: "asc" }], select: { caseId: true, subjectId: true, role: true, applies: true, subject: { select: { label: true } } } })) people.set(p.caseId, [...(people.get(p.caseId) ?? []), { subjectId: p.subjectId, label: p.subject.label, role: p.role, applies: p.applies }]);
+      for (const x of await this.db.filingChange.findMany({ where: { caseId: { in: ids }, kind: "make_principal" }, orderBy: [{ changedAt: "asc" }, { id: "asc" }], select: { caseId: true, kind: true, subjectId: true, otherSubjectId: true, changedAt: true } })) changes.set(x.caseId, [...(changes.get(x.caseId) ?? []), { kind: x.kind as StoredChange["kind"], subject: x.subjectId, other: x.otherSubjectId, at: x.changedAt.toISOString() }]);
+      for (const g of await this.db.filing.groupBy({ by: ["caseId"], where: { caseId: { in: ids }, active: true, stage: { state: "CURRENT" } }, _count: { _all: true } })) filings.set(g.caseId, g._count._all);
+    }
+    const clientName = (caseId: string) => { const ps = people.get(caseId) ?? [], who = clientPersonOf(ps as Participant[], changes.get(caseId) ?? []); return ps.find((p) => p.subjectId === who)?.label ?? null; };
+    return { cases: page.map((c): CaseListRow => ({ id: c.id, case_number: c.caseNumber, reference: c.reference, combination: c.combination.label, status: c.status, created_at: c.createdAt, client: c.clientActorId,
+      client_name: clientName(c.id), filings: filings.get(c.id) ?? 0, ...(client ? { people: (people.get(c.id) ?? []).map((p) => ({ label: p.label, role: p.role })) } : {}) })), next: rows.length > take ? rows[take - 1].id : null };
   }
 }
+
+/** A24-2 (P-492): the case list's search words: one text of 1 to 80 characters after trimming, or none. A list (`q=a&q=b`)
+ *  or a longer text is refused in words, never read as "every case". */
+function searchWords(v: unknown): string | null {
+  if (v === undefined) return null;
+  if (typeof v !== "string") fieldError("q", "Search with one text.");
+  const w = (v as string).trim();
+  if (w.length > 80) fieldError("q", "Search with at most 80 characters.");
+  return w || null;
+}
+/** Review m1: "%" and "_" are the database's wildcards; searched for as typed (escaped), never as "any text". */
+const searchWhere = (w: string) => {
+  const has = { contains: w.replace(/[\\%_]/g, "\\$&"), mode: "insensitive" as const };
+  return { OR: [{ caseNumber: has }, { reference: has }, { participants: { some: { role: { not: "case" }, subject: { label: has } } } }, { filings: { some: { applicationNumber: has } } }] };
+};
 
 @CaseRead()
 @Controller("api/runtime")
 export class RuntimeController {
   constructor(@Inject(Runtime) private readonly r: Runtime) {}
-  @Get("cases") list(@Headers("x-actor") a: H, @Query() q: { take?: string; after?: string; client?: string }) { return this.r.list(actorOf(a), q); }
+  @Get("cases") list(@Headers("x-actor") a: H, @Query() q: { take?: string; after?: string; client?: string; q?: unknown }) { return this.r.list(actorOf(a), q); }
+  @Get("next-case-number") nextCaseNumber(@Headers("x-actor") a: H) { return this.r.nextCaseNumber(actorOf(a)); }
   @Post("cases") create(@Headers("x-actor") a: H, @Body() b: unknown) { return this.r.createCase(actorOf(a), b); }
   @Get("openable") openable(@Headers("x-actor") a: H) { return this.r.openable(actorOf(a)); }
   @Get("combinations/:id/employer-link") employerLink(@Headers("x-actor") a: H, @Param("id") id: string) { return this.r.employerLink(actorOf(a), id); }

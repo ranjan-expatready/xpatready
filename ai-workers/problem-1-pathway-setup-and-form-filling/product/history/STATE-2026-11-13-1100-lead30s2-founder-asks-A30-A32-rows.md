@@ -1,0 +1,6 @@
+# Founder asks A30 and A32, word for word, moved from STATE by Lead 30 (series 2), 13 Nov ~11:0x IST (STATE under 12 KB)
+
+| # | Ask (IST) | Status |
+|---|---|---|
+| A32 | 08:4x (13 Nov, spoken, on A31) (a) what exactly do I need from the team; (b) derive it from their repository's state and how they work (their thinking pattern) instead of asking; (c) how much time; (d) cover all four: pathway configurator, application/form preparation, filing, Chrome extension; (e) what contract the fenced module needs; industry practice only, nothing invented; (f) can we derive the contract from their code and publish everything from our side; (g) anything else to worry about; (h) past questions not answered | (h) answered in chat 08:5x; (a)-(g) read-only study of the 28 Oct capture started 08:5x, result to the A31 page section 9 |
+| A30 | 07:4x (13 Nov, spoken) one folder with only the latest version (or the versions he names) of his keep-for-later documents: the requirements/workflow HTML (Solution 1 one-pager, versions), the factory plan, the Pathway Configurator handover pages, progress; plus a very high-level summary of the last ~15 h (decided, achieved, left to decide or research, recommendation, scope left) | folder `product/reference/` (founder chose: repo + git-ignored `private/` for team-app details, P-504); summary given in chat 07:5x |

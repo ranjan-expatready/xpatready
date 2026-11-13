@@ -76,7 +76,7 @@ const run = Date.now().toString(36).slice(-5);
   step("QA-41 C6.1: the Open a case dialog puts focus on its first field, not on Close (Enter on Close throws the form away)", !/^Close$/.test(await focused(o)), await focused(o));
   const label = (await dlg.locator("select").first().locator("option").allInnerTexts()).find((x) => x.startsWith("Visitor visa"));
   step(`QA-38 C6.1: the combination list names the release the case will use (Visitor visa · release ${latest})`, label === `Visitor visa · release ${latest}`, label);
-  await dlg.getByLabel("Case reference").fill(`QA-EXP-${run}`); await dlg.getByLabel("Principal applicant's name").fill("Sample Applicant N");
+  await dlg.getByLabel("Your own reference (optional)").fill(`QA-EXP-${run}`); await dlg.getByLabel("Principal applicant's name").fill("Sample Applicant N");
   await dlg.getByRole("button", { name: "Open case" }).click(); await o.waitForURL(/\/cases\/[0-9a-f-]{36}$/);
   const caseId = o.url().split("/").pop();
   await o.getByRole("heading", { name: /IMM 5707 for Sample Applicant N/ }).waitFor();
@@ -116,7 +116,9 @@ const run = Date.now().toString(36).slice(-5);
   await o.getByRole("tab", { name: /Child Sample/ }).click();
   const na = o.getByRole("button", { name: /^None apply: Education history for Child Sample/ }); await na.waitFor();
   const edu = o.locator(`[id="${await na.evaluate((e) => e.closest("section").id)}"]`);
-  await na.dblclick(); await edu.getByText("To confirm").waitFor();
+  // QA-417: wait for the answer's own pill: any "to confirm" text also matches the section pill and the "Nothing to confirm"
+  // words beside the disabled button, before the page has the officer's answer.
+  await na.dblclick(); await edu.getByText("Entered by staff · to confirm", { exact: true }).waitFor();
   await edu.getByRole("button", { name: "Confirm section" }).click(); await edu.getByText("Confirmed").first().waitFor();
   const child = (await call("GET", `/runtime/cases/${caseId}`, undefined, OFFICER)).body.people.find((x) => x.role === "child").subject_id;
   step("C6.6 by click: the officer's None apply (double-clicked) stores one answer; Confirm section confirms it", sql(`select count(*)||':'||sum((status='VERIFIED')::int) from client_group_answer where subject_id='${child}' and group_key='education_history' and superseded_by_id is null`) === "1:1");

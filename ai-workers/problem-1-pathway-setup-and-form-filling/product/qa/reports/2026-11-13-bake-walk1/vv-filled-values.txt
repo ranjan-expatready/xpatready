@@ -1,0 +1,7 @@
+IMM5257SCH1-9905368a-6cb47d77-6993-48b8-a14f-bd5394f243a9.pdf | 476434 chars | PrincipalApplicant=false; FamilyName=Principal; GivenName=Sample
+IMM5257SCH1-fc5e0089-33819cc0-c768-450e-af35-0ba523e1ad3d.pdf | 476433 chars | PrincipalApplicant=true; FamilyName=Principal; GivenName=Sample
+IMM5645-9905368a-ad33a01e-bf74-4ba3-ad0e-af0d0e1b58aa.pdf | 3876 chars | Visitor=1; Worker=0; Student=0; Other=0
+IMM5645-fc5e0089-623a804c-5923-48f6-9e84-b5e72fcc627d.pdf | 3876 chars | Visitor=1; Worker=0; Student=0; Other=0
+IMM5476-9905368a-34b7e4a7-df01-4e44-aeb5-cdd7f462e2a7.pdf | 2034 chars | familyName=Principal; givenName=Sample; application=Visitor; familyName=Representative; givenName=Sample
+IMM5476-fc5e0089-73333f12-1a4d-4803-b579-7ce395fe72af.pdf | 2034 chars | familyName=Principal; givenName=Sample; application=Visitor; familyName=Representative; givenName=Sample
+(9905368a = Sample Spouse W's filing, fc5e0089 = Sample Principal W's, 115edae8 = Sample Child W's; read with pypdf from the copy's own files, 13 Nov)

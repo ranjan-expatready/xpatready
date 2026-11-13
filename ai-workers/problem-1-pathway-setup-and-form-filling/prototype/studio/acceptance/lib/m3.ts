@@ -372,8 +372,8 @@ export async function copyBytes(copyId: string, actor = OFFICER): Promise<Buffer
 }
 // QA-165: the form's own Validate result written into the copy (tests/runtime/validated.ts), never bytes appended.
 // A re-export alone binds no local name, and validateRoundTrip below calls it (C7.6, C8.1, C9.2 crashed on #572's merge).
-import { asValidated } from "../../tests/runtime/validated.ts";
-export { asValidated };
+import { adobeValidated, asValidated } from "../../tests/runtime/validated.ts";
+export { adobeValidated, asValidated };
 export async function sendFile(path: string, file: Buffer, name: string, actor = OFFICER) {
   const fd = new FormData(); fd.append("file", new Blob([new Uint8Array(file)]), name);
   const res = await fetch(`http://127.0.0.1:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": actor }, body: fd }).catch(() => null);
@@ -383,7 +383,7 @@ export async function sendFile(path: string, file: Buffer, name: string, actor =
 export async function validateRoundTrip(caseId: string, form: string, subject: string): Promise<string | null> {
   const id = await generateCopy(caseId, form, subject); if (!id) return null;
   const actor = officerOf(caseId);
-  const r = await sendFile(`/runtime/form-copies/${id}/validated`, asValidated(await copyBytes(id, actor)), `${form.replace(" ", "")}-validated.pdf`, actor);
+  const r = await sendFile(`/runtime/form-copies/${id}/validated`, adobeValidated(await copyBytes(id, actor)), `${form.replace(" ", "")}-validated.pdf`, actor);
   return r.status === 201 ? id : null;
 }
 /** A signed scan (P-143 "signed by hand and scanned"): a synthetic PDF standing in for the printed, signed, scanned page. */
@@ -412,7 +412,12 @@ export async function readyToFile(caseId: string, rep: string | null): Promise<s
   // A case whose expected lines cannot be read (not opened by openCase, or pinned to a release older than the newest)
   // keeps the helper's earlier rule, IMM 5257, so no check is lowered; the NOTE line says so.
   if (!expected) console.log(`NOTE  readyToFile: no expected lines for case ${caseId.slice(0, 8)} (not opened by openCase, or its release unread): IMM 5257 is taken as the barcode form, as before row C1`);
-  const barcode = (form: string | undefined, subject: string) => expected ? !!expected[nameOf.get(subject) ?? ""]?.forms.some((l) => l.form === form && l.barcode) : form === "IMM 5257";
+  // BK-16 PR 2 (#1632, merge with BK-17): a conditional line (a "waiting" one, such as IMM 5257 for a child who does not
+  // study) is an item only once its condition applies, so a barcode form on it is validated like an always-filed one.
+  const barcode = (form: string | undefined, subject: string) => {
+    const e = expected?.[nameOf.get(subject) ?? ""];
+    return expected ? !!e && [...e.forms, ...e.waiting].some((l) => l.form === form && l.barcode) : form === "IMM 5257";
+  };
   let p = (await prepare(caseId)).p;
   for (const i of (p?.items ?? []).filter((x) => x.kind === "form" && !["ready", "done"].includes(x.state))) {
     if (i.channel === "PDF_UPLOAD" && barcode(i.form, i.subject)) await validateRoundTrip(caseId, i.form!, i.subject);

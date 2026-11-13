@@ -70,7 +70,9 @@ try {
   const loaded = await call("POST", "/demo/load", { sample: "configured" });
   ok("setup: the configured checkpoint loads", reset.status < 300 && loaded.status < 300, [reset.status, loaded.status, loaded.body?.detail]);
   const rowFour = (loaded.body?.checkpoint ?? []).find((r: { row: string }) => r.row === "4");
-  ok("QA-400 B: the author's review changes the proposed SCH1 key to another library field, and row 4 keeps its one edit and one return (checkpoint row 4)", rowFour?.status === "done" && /1 changed to another library field/.test(rowFour?.shows ?? "") && /1 edited, 1 returned with a reason/.test(rowFour?.shows ?? ""), rowFour);
+  // QA-415 (P-486): the same review also changes case.application_type to person.application_type on the three drafts
+  // that propose it (IMM 5476, IMM 5475, IMM 5645): 1 + 3 = 4 changed.
+  ok("QA-400 B: the author's review changes the proposed SCH1 key to another library field (with QA-415's three: 4), and row 4 keeps its one edit and one return (checkpoint row 4)", rowFour?.status === "done" && /\b4 changed to another library field/.test(rowFour?.shows ?? "") && /1 edited, 1 returned with a reason/.test(rowFour?.shows ?? ""), rowFour);
 
   const fields: { key: string; scope: string; status: string; value_type: string }[] = (await call("GET", "/library/fields")).body ?? [];
   const field = fields.find((f) => f.key === IS_PRINCIPAL);

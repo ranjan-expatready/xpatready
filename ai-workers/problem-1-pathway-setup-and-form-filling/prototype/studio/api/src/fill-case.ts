@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, 
 import { join } from "node:path";
 import { scriptRulesOf } from "./own-yes-no.ts";
 import type { z } from "zod";
-import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type AddedTag, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
+import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type AddedTag, type CaseForm, type CaseOnlineForm, type FormCopy, caseName } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { pdfMapInUse } from "../../engine/programs.ts";
 import { factWords } from "../../engine/sources.ts";
@@ -98,8 +98,18 @@ export function plainWhy(why: string | null | undefined): string {
 /** QA-165 (P-144, P-237): a validated copy counts only when the form's own Validate result had passed when it was read
  *  back (read_validated.py form_validation, kept in its read-back). A row recorded before QA-165 has no such result: it
  *  never counts as validated, and the person sends the validated file again (the copy view, `lock` and `file` alike). */
-export const formPassed = (v: { readBack: unknown } | undefined) => (v?.readBack as { validation?: { passed?: boolean } } | null)?.validation?.passed === true;
+/** BK-19 (P-46, QA-315): it also counts only when its barcodes were read from the file and every position agrees with the
+ *  form's answers (read_validated.py `barcodes`, tools/barcode_check.py): a file whose form says Validate passed but which
+ *  holds no barcode (or barcodes of other answers) was never validated by the form's own Validate in Adobe Reader. A row
+ *  read back before BK-19 has no barcode check: it never counts, and the person sends the validated file again. */
+export const validatePassed = (v: { readBack: unknown } | undefined) => (v?.readBack as { validation?: { passed?: boolean } } | null)?.validation?.passed === true;
+export type BarcodeCheck = { checked: boolean; expected: number | null; decoded: number; matched: boolean | null; words: string; slots?: number; agree?: number };
+export const barcodesOf = (v: { readBack: unknown } | undefined): BarcodeCheck | null => (v?.readBack as { barcodes?: BarcodeCheck } | null)?.barcodes ?? null;
+export const formPassed = (v: { readBack: unknown } | undefined) => validatePassed(v) && barcodesOf(v)?.matched === true;
 const NOT_FORM_CHECKED = "Read back before the form's own Validate result was checked: send the file you validated in Adobe again";
+const NOT_BARCODE_CHECKED = "Read back before its barcodes were checked: send the file you validated in Adobe again";
+/** BK-19: why a read-back whose Validate passed does not count: the barcode check's own words. */
+const barcodeWords = (v: { readBack: unknown }) => barcodesOf(v)?.words || NOT_BARCODE_CHECKED;
 /** QA-165 part 2: a form's field list, read once per file (the release's field map names it). Also C7.3's order of a
  *  form's parts (api/src/case-prepare.ts). */
 const inventories = new Map<string, { at: number; inv: Inventory }>();
@@ -202,7 +212,7 @@ export class CaseForms implements OnModuleInit {
     const copies = await this.db.formInstance.findMany({ where: { caseId, configReleaseId: { in: c.pins.map((p) => p.configReleaseId) } }, orderBy: { createdAt: "desc" }, include: { snapshot: true, validated: { orderBy: { readAt: "desc" }, take: 1 } } });
     const labels = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
     const caseWords = caseWordsOf(s, view);
-    const items = await this.itemChannels(c.id), nameOf = { caseReference: c.reference, of: nameOfPeople(people) };
+    const items = await this.itemChannels(c.id), nameOf = { caseReference: caseName(c), of: nameOfPeople(people) };
     const forms: CaseForm[] = [];
     const whyKept = notApplyingWords(s, people, answers, rows, (f) => labels.get(f) ?? factWords(s, f)); // QA-391
     // M3-S5 review M1: an Online form whose copies were made before the library recorded it Online only keeps them in view
@@ -282,16 +292,21 @@ export class CaseForms implements OnModuleInit {
     // file or download as validated).
     const keptElsewhere = !current && nameOf && x.status === "GENERATED" && x.snapshot.inputHash === inputHash(today) ? keptOnMacWords(x, nameOf.caseReference, nameOf.of) : null;
     const stored = x.snapshot.factsJson as Stored, then = stored.facts;
-    const changed = x.status === "GENERATED" ? [...changedFacts(then, today).map((f) => labels.get(f) ?? f), ...changedGroups(stored.groups, todayGroups)] : [];
-    const result = x.resultJson as { counts?: FormCopy["counts"]; intact?: boolean; person_steps?: string[]; boxes?: { fact: string | null; about_label?: string; result: string; why: string | null }[] } | null;
-    const byHand = (result?.boxes ?? []).filter((b) => b.result === "by hand").map((b) => ({ label: (b.fact && labels.get(b.fact)) || "A form field", why: plainWhy(b.why) }));
+    // Review on #1620 (QA-415): a fact nobody is asked has no question label: the form's own caption names it, as for m7.
+    const captionOfFact = new Map((stored.boxes ?? []).filter((b) => b.fact && (b.caption ?? "").trim()).map((b) => [b.fact!, b.caption.trim()] as const));
+    const changed = x.status === "GENERATED" ? [...changedFacts(then, today).map((f) => labels.get(f) ?? captionOfFact.get(f) ?? f), ...changedGroups(stored.groups, todayGroups)] : [];
+    const result = x.resultJson as { counts?: FormCopy["counts"]; intact?: boolean; person_steps?: string[]; boxes?: { box?: string; fact: string | null; about_label?: string; result: string; why: string | null }[] } | null;
+    // Review m7 on #1620 (QA-415): a fact nobody is asked has no question label: the form's own caption names the box, as
+    // Ready to file does (the copy's frozen rows hold it).
+    const captionOf = new Map((stored.boxes ?? []).map((b) => [b.box, (b.caption ?? "").trim()] as const));
+    const byHand = (result?.boxes ?? []).filter((b) => b.result === "by hand").map((b) => ({ label: (b.fact && labels.get(b.fact)) || captionOf.get(b.box ?? "") || "A form field", why: plainWhy(b.why) }));
     // B81 (challenge M1): apart from "by hand": the form has no such choice to write by hand; it names whose answer it is.
     const notOnForm = notOnFormLines(result?.boxes ?? [], (f) => labels.get(f));
     return { id: x.id, status: x.status as FormCopy["status"], created_at: x.createdAt.toISOString(), created_by: x.createdBy, finished_at: x.finishedAt?.toISOString() ?? null, error: x.error,
       locked: x.lockedAt ? { kind: x.lockedKind as keyof typeof LOCK_KINDS, at: x.lockedAt.toISOString(), by: x.lockedBy! } : null,
       out_of_date: changed.length > 0, stale: !!x.lockedAt && changed.length > 0, changed, counts: result?.counts ?? null, intact: result?.intact ?? null, person_steps: result?.person_steps ?? [], copy_not_for_filing: notForFiling, source: "ircc_pdf",
       by_hand: byHand, not_on_form: notOnForm, file_ok: x.status === "GENERATED" && !!x.path && existsSync(join(ROOT, x.path)),
-      validated: v ? { at: v.readAt.toISOString(), by: v.readBy, current, words: !formPassed(v) ? NOT_FORM_CHECKED : current ? "Validated copy read back" : OUT_OF_DATE, read_back: { written: vrb?.written ?? 0, equal: vrb?.read_back_equal ?? 0 } } : null,
+      validated: v ? { at: v.readAt.toISOString(), by: v.readBy, current, words: !validatePassed(v) ? NOT_FORM_CHECKED : !formPassed(v) ? barcodeWords(v) : current ? "Validated copy read back" : OUT_OF_DATE, read_back: { written: vrb?.written ?? 0, equal: vrb?.read_back_equal ?? 0 }, barcodes: barcodesOf(v) } : null,
       validated_elsewhere: keptElsewhere };
   }
 
@@ -413,7 +428,7 @@ export class CaseForms implements OnModuleInit {
     const cov = formCoverage(s, people, answers, rows, x.formNumber, x.subjectId);
     const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
     const labels = new Map(view.sections.flatMap((v) => v.questions).map((q) => [q.fact, q.label]));
-    return this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, x.formNumber, x.subjectId), copyNotForFiling(s, x), { caseReference: c.reference, of: nameOfPeople(people) });
+    return this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, x.formNumber, x.subjectId), copyNotForFiling(s, x), { caseReference: caseName(c), of: nameOfPeople(people) });
   }
 
   /** RT-16: lock a generated, up-to-date copy once ("validated copy uploaded back" or "filed"). The officer only; an out
@@ -451,7 +466,8 @@ export class CaseForms implements OnModuleInit {
     if (needsValidate(x.formNumber, channel)) {
       const v = x.validated[0];
       if (!v) conflict(`${x.formNumber} is a barcode form filed as ${CHANNEL_WORDS[channel]}: Validate it in Adobe, save it and read the validated copy back here before it is filed (IRCC returns it unprocessed otherwise).`);
-      if (!formPassed(v)) conflict(`${x.formNumber}'s validated copy was read back before the form's own Validate result was checked, so it does not show that Validate passed. Send the file you validated in Adobe again, then lock it.`);
+      if (!validatePassed(v)) conflict(`${x.formNumber}'s validated copy was read back before the form's own Validate result was checked, so it does not show that Validate passed. Send the file you validated in Adobe again, then lock it.`);
+      if (!formPassed(v)) conflict(`${x.formNumber}'s validated copy does not count as validated: ${barcodeWords(v!)}`);
       if (v!.factsHash !== inputHash(cov?.facts ?? [])) conflict(`${x.formNumber}'s validated copy is out of date: a fact on the form changed after it was validated. Make a new copy, validate it again and read it back.`);
     }
     // C11.6 (Devin on #1056): the channel is read again under the case row lock the channel change takes, so a change
@@ -498,7 +514,7 @@ export class CaseForms implements OnModuleInit {
     const pending = `${path}.${randomUUID()}.pending`;
     writeFileSync(pending, f!.buffer!);
     const request = join(ROOT, x.path!.replace(/\.pdf$/, ".request.json"));
-    let rb: { ok: boolean; why: string | null; written?: number; read_back_equal?: number; mismatches?: unknown[]; validation?: { kept_by_form: boolean; flag: string | null; date_last_validated: string | null; passed: boolean } };
+    let rb: { ok: boolean; why: string | null; written?: number; read_back_equal?: number; mismatches?: unknown[]; validation?: { kept_by_form: boolean; flag: string | null; date_last_validated: string | null; passed: boolean }; barcodes?: BarcodeCheck };
     try { const { stdout } = await run(PY, ["-I", join(PROTOTYPE, "studio", "tools", "read_validated.py"), pending, join(ROOT, x.path!), request], { cwd: ROOT, timeout: 120_000, maxBuffer: 10 * 1024 * 1024 }); rb = JSON.parse(stdout.trim().split("\n").pop()!); }
     catch { rb = { ok: false, why: "The file could not be read back." }; }
     // QA-165 (P-144, P-237): "validated" only from the form's own Validate result kept in the file (its validated flag
@@ -519,17 +535,24 @@ export class CaseForms implements OnModuleInit {
       await tx.$queryRaw`SELECT id FROM form_instance WHERE id = ${x.id}::uuid FOR UPDATE`;
       // Break M1 on #572: only a kept row that itself passed is "already read back". The same file kept before QA-165 (no
       // result of the form's own) is read back again and recorded, as its words ask ("send the file … again").
-      const kept = (await tx.validatedCopy.findMany({ where: { formInstanceId: x.id, sha256: sha }, select: { id: true, readBack: true } })).find(formPassed);
-      if (kept) { rmSync(pending, { force: true }); throw new HttpException({ type: "https://expatready.local/problems/validated-copy", title: "Already read back", status: 409, detail: `This validated file is already read back and kept for this copy of ${x.formNumber}; nothing was added.`, existingId: kept.id }, HttpStatus.CONFLICT); }
+      // BK-19 (review M1, M2 on #1679): judged on the copy's newest read-back only, the one the copy shows. The same file
+      // again is "already read back" when that newest row is this file and was fully checked (its Validate result and its
+      // barcodes), whether it counts or not (QA-128: kept once, a double click too); a row with either check missing (read
+      // back before QA-165 or before BK-19) is read again, and a good
+      // file sent again after another one is read back and counts again (never hidden by an older row of the same file).
+      const newest = await tx.validatedCopy.findFirst({ where: { formInstanceId: x.id }, orderBy: [{ readAt: "desc" }, { id: "desc" }], select: { id: true, sha256: true, readBack: true } });
+      const kept = newest && newest.sha256 === sha && (formPassed(newest) || (validatePassed(newest) && barcodesOf(newest) !== null)) ? newest : null;
+      if (kept) { rmSync(pending, { force: true }); throw new HttpException({ type: "https://expatready.local/problems/validated-copy", title: "Already read back", status: 409, detail: formPassed(kept) ? `This validated file is already read back and kept for this copy of ${x.formNumber}; nothing was added.` : `This file is already read back for this copy of ${x.formNumber} and does not count as validated: ${barcodeWords(kept)} Nothing was added.`, existingId: kept.id }, HttpStatus.CONFLICT); }
       // Review m-4 on #572: the row first, then the file takes its name; a failed rename rolls the row back.
       const row = await tx.validatedCopy.create({ data: { workspaceId: c.workspaceId, formInstanceId: x.id, path: path.replace(`${ROOT}/`, ""), sha256: sha, factsHash: inputHash(cov?.facts ?? []), readBack: rb as object, readBy: actor.id } });
       // QA-345 (C8.3, ruling (a)): an approval of this form that stamped no validated copy is stamped with this one, in
       // the same transaction (a failed rename below rolls the stamp back with the row).
-      await stampReadBack(tx, { workspaceId: c.workspaceId, caseId: x.caseId, subjectId: x.subjectId, formNumber: x.formNumber, readFacts: row.factsHash, sha256: sha, actor });
+      // BK-19: only a read-back that counts as validated (its barcodes read and matching) stamps an approval.
+      if (formPassed(row)) await stampReadBack(tx, { workspaceId: c.workspaceId, caseId: x.caseId, subjectId: x.subjectId, formNumber: x.formNumber, readFacts: row.factsHash, sha256: sha, actor });
       renameSync(pending, path);
       return row;
     }).finally(() => rmSync(pending, { force: true })); // a pending file left by any failure is removed (renamed when kept)
-    await this.audit.log(c.workspaceId, actor.id, "validated", "form copy", x.formNumber, `${actor.name} read back a validated copy of ${x.formNumber} (copy ${short(x.id)}) on case ${short(x.caseId)}: ${rb.read_back_equal}/${rb.written} values equal`);
+    await this.audit.log(c.workspaceId, actor.id, "validated", "form copy", x.formNumber, `${actor.name} read back a validated copy of ${x.formNumber} (copy ${short(x.id)}) on case ${short(x.caseId)}: ${rb.read_back_equal}/${rb.written} values equal; barcodes ${rb.barcodes?.decoded ?? 0} of ${rb.barcodes?.expected ?? "?"} read, ${rb.barcodes?.matched ? "matching" : "not matching: not validated"}`);
     return { id: v.id, copy: await this.copy(actor, id) };
   }
 
@@ -554,7 +577,7 @@ export class CaseForms implements OnModuleInit {
     if (x.status !== "GENERATED" || !x.path) fail("This copy has no file.", HttpStatus.NOT_FOUND);
     const form = x.formNumber.replace(/\s+/g, ""), s = this.runtime.snapshotOf(c);
     const v = x.validated[0], channel = chosen(s, await this.itemChannels(c.id), x.formNumber, x.subjectId);
-    const elsewhere = v && formPassed(v) ? null : keptOnMacWords(x, c.reference, nameOfPeople(this.runtime.peopleOf(c)));
+    const elsewhere = v && formPassed(v) ? null : keptOnMacWords(x, caseName(c), nameOfPeople(this.runtime.peopleOf(c)));
     if (!original && ((v && formPassed(v)) || elsewhere) && needsValidate(x.formNumber, channel)) { // the same rule as `lock` (a barcode form on PDF upload or paper; QA-165)
       const { answers, rows } = await this.runtime.state(c);
       const cov = formCoverage(s, this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId), now = inputHash(cov?.facts ?? []);

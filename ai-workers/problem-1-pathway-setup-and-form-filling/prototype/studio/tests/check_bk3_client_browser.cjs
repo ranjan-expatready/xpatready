@@ -72,7 +72,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await as("user-O"); await p.goto(`${BASE}/cases/${a1.id}`);
     const link = p.locator("[data-case-client]");
     await link.waitFor({ timeout: 30000 });
-    step(`${W}: the case header names its client "Client A"`, (await link.textContent())?.trim() === "Client A", await link.textContent());
+    step(`${W}: the case header links to its client's cases ("Client A's cases"; A24-3 review m2)`, (await link.textContent())?.trim() === "Client A's cases", await link.textContent());
     await axe(`${W} the case header's client link`, "[data-case-client]");
     if (width === 1440) await p.screenshot({ path: path.join(SHOTS, `pr3-case-client-link-${width}.png`) });
     listReads.length = 0;
@@ -101,7 +101,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     // BR-6: client → another case, and back.
     await p.locator('[data-client-case="BK3C-A2"]:visible a').first().click(); await p.waitForURL(new RegExp(`/cases/${a2.id}$`), { timeout: 15000 });
     await p.locator("[data-case-client]").waitFor({ timeout: 30000 });
-    step(`${W}: a row opens its case, which names the same client (round trip)`, (await p.locator("h1").first().innerText()).includes("BK3C-A2") && (await p.locator("[data-case-client]").innerText()).trim() === "Client A");
+    step(`${W}: a row opens its case, which names the same client (round trip)`, (await p.locator("h1").first().innerText()).includes("BK3C-A2") && (await p.locator("[data-case-client]").innerText()).trim() === "Client A's cases");
     step(`${W}: the row's link leaves the person acting as the case officer`, (await actorNow()) === "user-O", await actorNow());
 
     // BR-8: Open a case for Client B, in place, with Client B chosen; Cancel stays.
@@ -115,7 +115,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     step(`${W}: Cancel stays on Client B's page`, new URL(p.url()).pathname === "/cases/clients/user-Q" && (await p.getByLabel("Client login that answers").count()) === 0, p.url());
     if (width === 1440) {
       await p.locator("[data-client-open-case]").click(); await p.getByLabel("Client login that answers").waitFor({ timeout: 15000 });
-      await p.getByLabel("Case reference").fill("BK3C-B2"); await p.getByLabel("Principal applicant's name").fill("Sample Principal Five");
+      await p.getByLabel("Your own reference (optional)").fill("BK3C-B2"); await p.getByLabel("Principal applicant's name").fill("Sample Principal Five");
       await p.getByRole("button", { name: "Open case" }).click();
       await p.waitForURL(/\/cases\/[0-9a-f-]{36}$/, { timeout: 30000 });
       const made = await api(`/runtime/cases/${p.url().split("/").pop()}`, { actor: "user-O" });

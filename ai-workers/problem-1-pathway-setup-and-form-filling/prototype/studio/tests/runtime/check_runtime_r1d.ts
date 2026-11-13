@@ -4,7 +4,7 @@
 // a failing case, on an isolated copy where setup_visitor_visa.ts released the visitor visa. No model call (US$0).
 //   zsh studio/tools/isolated.sh runtime_r1 4430 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4430 xr_studio_runtime_r1
 //   tsx studio/tests/runtime/check_runtime_r1d.ts 4430 xr_studio_runtime_r1
-import { asValidated } from "./validated.ts"; // QA-165: the form's own Validate result, not bytes appended
+import { adobeValidated, asValidated } from "./validated.ts"; // QA-165: the form's own Validate result, not bytes appended
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { appendFileSync, copyFileSync, existsSync, readdirSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
@@ -127,7 +127,9 @@ async function main() {
   r = await put(gc, true, back);
   ok("M3 pass: with the entry removed, none apply is said again (history kept: three versions)", r.status === 200 && r.body.group?.none_apply?.value === true && sql(`select count(*) from client_group_answer where subject_id='${P}' and group_key='${gc}'`) === "3", r.body?.detail ?? r.status);
   // The officer's "none apply" waits for Confirm section, and is confirmed only when seen (never unseen).
-  const go = groupsP.find((x) => x !== gc)!;
+  // QA-439: another of the principal's own groups (the list also names the application's, e.g. "Your visit", which comes
+  // first now that the application's parts lead the questionnaire; it is not the principal's to answer).
+  const go = f.readiness.missing.filter((m) => m.fact.startsWith("group:") && (m as { subject?: string }).subject === P).map((m) => m.fact.slice(6)).find((x) => x !== gc)!;
   r = await put(go, true, null, OFFICER);
   const goId: string = r.body.group?.none_apply?.id;
   f = await formOf("IMM 5257", P);
@@ -211,7 +213,7 @@ async function main() {
   // Break M1: Adobe's Validate adds the barcode and saves, so the validated file never has the copy's bytes. QA-165:
   // simulated by writing the form's own Validate result into the copy (the values stay as written); the unchanged copy is
   // refused, and so is a changed file whose own result does not say Validate passed.
-  const validatedFile = asValidated(copyFile);
+  const validatedFile = adobeValidated(copyFile); // BK-19: with its barcodes, as Adobe's Validate leaves it
   // Nothing recorded = no validated_copy row and no file kept (fill-case.ts names the file by the sent bytes' checksum,
   // in this isolated copy's var folder, tools/isolated.sh VARDIR).
   const caseVar = join(STUDIO, "var", `isolated-${DB.replace(/^xr_studio_/, "")}`, "workspaces", "demo", "cases", caseId, "validated");
@@ -309,7 +311,7 @@ async function main() {
     ok("QA-165 fail (break M2 on #572): re-sending a kept file that does not pass is refused (422) and the kept file is still there, unchanged; no pending file left", re.status === 422 && existsSync(oldPath) && sha(readFileSync(oldPath)) === oldSha && !readdirSync(caseVar).some((f) => f.endsWith(".pending")), re.body?.detail);
     // Break M1 on #572: doing what the words say (send the validated file again) works when that file passes: a file kept
     // before QA-165 is not "already read back", it is read back and recorded, and the copy is current again.
-    const ouiFile = asValidated(copyFile, "Oui"), ouiSha = sha(ouiFile);
+    const ouiFile = asValidated(copyFile, "Oui", true, "barcodes"), ouiSha = sha(ouiFile);
     const ouiPath = join(caseVar, `IMM5257-${locked1.slice(0, 8)}-${ouiSha.slice(0, 12)}.pdf`);
     writeFileSync(ouiPath, ouiFile);
     sql(`insert into validated_copy (id, workspace_id, form_instance_id, path, sha256, facts_hash, read_back, read_by, read_at)
@@ -399,7 +401,7 @@ async function main() {
   copyFileSync(keep, pl); appendFileSync(pl, "%changed");
   const lockChanged = await call("POST", `/runtime/form-copies/${lockMe}/lock`, { kind: "filed" }, OFFICER);
   copyFileSync(keep, pl); rmSync(keep);
-  await sendValidated(lockMe, asValidated(readFileSync(pl)), "validated.pdf"); // C-9: Validate is the last step before filing
+  await sendValidated(lockMe, adobeValidated(readFileSync(pl)), "validated.pdf"); // C-9: Validate is the last step before filing
   ok("PR #12 review 2 fail: a copy whose file is missing cannot be locked (409 in plain words)", lockMissing.status === 409 && /missing from the working files/.test(lockMissing.body?.detail ?? ""), lockMissing.body?.detail);
   ok("PR #12 review 2 fail: a copy whose file changed on disk cannot be locked (409 in plain words); it stays unlocked", lockChanged.status === 409 && /changed on disk/.test(lockChanged.body?.detail ?? "") && sql(`select locked_at is null from form_instance where id='${lockMe}'`) === "t", lockChanged.body?.detail);
   r = await call("POST", `/runtime/form-copies/${lockMe}/lock`, { kind: "filed" }, OFFICER);
@@ -434,7 +436,7 @@ async function main() {
   const readyWithEntry = factsDone(await formOf("IMM 5257", P)); // QA-165 (#1318): no fact waiting (boxes left empty aside)
   r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-pr13` }, OFFICER);
   const pr13: string = r.body.id; await done(pr13);
-  await sendValidated(pr13, asValidated(readFileSync(join(ROOT, sql(`select path from form_instance where id='${pr13}'`)))), "validated.pdf");
+  await sendValidated(pr13, adobeValidated(readFileSync(join(ROOT, sql(`select path from form_instance where id='${pr13}'`)))), "validated.pdf");
   const filed13 = await call("POST", `/runtime/form-copies/${pr13}/lock`, { kind: "filed" }, OFFICER);
   await call("POST", `/runtime/cases/${caseId}/groups/${P}/rows`, { group: prev }, OFFICER);
   f = await formOf("IMM 5257", P);

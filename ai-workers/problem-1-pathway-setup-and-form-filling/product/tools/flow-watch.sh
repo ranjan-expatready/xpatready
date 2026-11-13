@@ -41,7 +41,13 @@ ok(f"{len(approved)} approved PRs waiting; oldest {oldest} min since its label")
 
 # 2. Merge flow: last product merge, queued runs, wasted runs on records branches.
 merged = json.loads(gh("pr", "list", "--state", "merged", "--limit", "30", "--json", "number,mergedAt,headRefName"))
-prod = [m for m in merged if m["headRefName"].startswith("claude/")]
+# P-500: "product" is judged by files changed (app code), never by branch name; newest merge first.
+merged.sort(key=lambda m: m["mergedAt"] or "", reverse=True)
+_app = tools + "/app-code-prs.sh"
+prod = []
+for m in merged[:12]:
+    out = subprocess.run(["bash", _app], input=str(m["number"]) + "\n", capture_output=True, text=True).stdout.strip()
+    if out and not out.startswith("?"): prod.append(m); break
 if prod:
     gap = mins(prod[0]["mergedAt"])
     (alarm if gap > 60 and approved else ok)(f"last product merge #{prod[0]['number']} {gap} min ago" + (" with approved PRs waiting" if gap > 60 and approved else ""))
@@ -102,7 +108,7 @@ def rows(ref):
     out = {}
     for line in git("show", f"{ref}:{caps}").splitlines():
         c = [x.strip() for x in line.split("|")]
-        if len(c) > 6 and re.fullmatch(r"C\d+\.\d+", c[1]) and c[4] == "M2": out[c[1]] = c[5]
+        if len(c) > 6 and re.fullmatch(r"C\d+\.\d+", c[1]) and c[4] in ("M2", "M3", "M4", "T"): out[c[1]] = c[5]  # P-500: every active milestone
     return out
 status = rows("origin/main")
 recs = [p for p in real if p["title"].startswith(("qa:", "lead:"))]
@@ -121,7 +127,7 @@ for row, st in sorted(status.items()):
     if st == "Works" or row in HELD: continue
     if WAITS.get(row) in open_nums: continue
     if not re.search(rf"\b{re.escape(row)}\b", work): idle.append(row)
-(alarm if idle else ok)(f"{len([r for r in status.values() if r != 'Works'])} M2 rows not Works; with no PR or push in 90 min: " + (", ".join(idle) + " — start or shape a row for each" if idle else "none"))
+(alarm if idle else ok)(f"{len([r for r in status.values() if r != 'Works'])} rows not Works (M2, M3, M4, T); with no PR or push in 90 min: " + (", ".join(idle) + " — start or shape a row for each" if idle else "none"))
 
 # 5. main: the newest full run and demo update.
 for wf in ("nightly.yml", "demo-update.yml"):

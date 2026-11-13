@@ -56,7 +56,7 @@ const api = async (method, url, body, actor = "user-O") => { const r = await fet
       await p.getByRole("button", { name: "Open a case" }).click(T);
       const dlg = p.getByRole("dialog");
       await dlg.getByLabel("Combination (released)").selectOption(wp.combination_id, T);
-      await dlg.getByLabel("Case reference").fill(ref);
+      await dlg.getByLabel("Your own reference (optional)").fill(ref);
       await dlg.getByLabel("Principal applicant's name").fill(NAME);
       await dlg.getByRole("button", { name: "Open case" }).click();
       await p.waitForURL(/\/cases\/[0-9a-f-]{36}$/, T);
@@ -124,7 +124,7 @@ const api = async (method, url, body, actor = "user-O") => { const r = await fet
     await shot(p, "05-expired-1440.png");
     await axeCard("the card with an expired passport");
     // Review M2: on a Visitor visa case the rule quotes canada.ca with the date our copy was recorded, as a calendar date.
-    const openVv = async (ref) => { await p.goto(`${BASE}/cases`); await p.getByRole("button", { name: "Open a case" }).click(T); const dlg = p.getByRole("dialog"); await dlg.getByLabel("Combination (released)").selectOption(vv, T); await dlg.getByLabel("Case reference").fill(ref); await dlg.getByLabel("Principal applicant's name").fill(NAME); await dlg.getByRole("button", { name: "Open case" }).click(); await p.waitForURL(/\/cases\/[0-9a-f-]{36}$/, T); };
+    const openVv = async (ref) => { await p.goto(`${BASE}/cases`); await p.getByRole("button", { name: "Open a case" }).click(T); const dlg = p.getByRole("dialog"); await dlg.getByLabel("Combination (released)").selectOption(vv, T); await dlg.getByLabel("Your own reference (optional)").fill(ref); await dlg.getByLabel("Principal applicant's name").fill(NAME); await dlg.getByRole("button", { name: "Open case" }).click(); await p.waitForURL(/\/cases\/[0-9a-f-]{36}$/, T); };
     await openVv(`C619W-D-${run}`);
     const card3 = p.locator("[data-earlier-facts]");
     await card3.getByRole("heading", { name: "Facts from an earlier case" }).waitFor(T);

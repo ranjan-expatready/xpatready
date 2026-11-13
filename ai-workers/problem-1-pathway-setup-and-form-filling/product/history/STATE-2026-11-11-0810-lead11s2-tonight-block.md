@@ -1,0 +1,8 @@
+# STATE block moved word for word by Lead 11 (series 2), 08:1x IST 11 Nov (12 KB limit)
+
+## Tonight (P-453, P-454, from 23:2x IST 10 Nov): plan `design/next-2-days-2026-11-11.md`
+**No trip-wire at 75% any more (P-454):** run to 93% weekly, every lane pushed (P-431). **Founder typed 00:5x IST "set SHARDS 8, ready 1502, label 1503":** #1502 marked ready and #1503 labelled by the Lead under his words; **SHARDS 8 refused even with his typed words** (gh and API): **founder ~01:0x IST: "keep on 6" — SHARDS stays 6**; #1502 still lands for its refreshed suite timings (better balance on 6). Lead labels #1502 when its CI on bccf34ef is green (diff read by Lead 9, P-423). Never route through a lane.
+**Night result (02:57 IST):** merged #1501 B164, #1504 suite selection, #1502 refreshed timings (SHARDS stays 6, founder), #1505 M3-S1, #1507 M3-S5, #1506 BK-2, #1509 BK-1 baseline (14 Majors), #1510 expert pack, #1503 records. Queue empty; no lane working. Weekly 81% (~2%/h).
+**Waiting for the founder's click (cards, cloud):** task_07d5bc97 finish M3-S2 #1513 (draft at 30852243d; hand-over and round-2 review in its PR comment; holds the schema + case-prepare baton); task_c5c51151 BK-10 form rules into data; task_16eb5fe4 BK-3 PR 1 one frame (BK-2 merged, so ready).
+**Owed:** qa findings from #1507 (IMM 5669 fill `KeyError: 'datasets'`; Express Entry release has no account); #1505's follow-up questions (PR biometrics line, sponsor-only co-filing, table-level dates); 4 leftover Mac test copies (4475, 4478, 4482, 4494) the sandbox cannot stop: founder's terminal (`isolated.sh <name> <port> stop`); archive the ended lanes (M3-S1, M3-S2 first builder, pipeline, B164, qa C7.5) at the founder's word.
+
