@@ -11,7 +11,7 @@
 #        samples/firms.json); PF-4 adjusts this step to its own request shape if it differs;
 #     with --image (needs docker): 4. the image's user is not root, and the image runs as a non-root uid;
 #     5. the image's environment and `docker history` hold nothing secret-shaped: secret-sounding names (password,
-#        secret, token, credential, any NAME ending in KEY, _SK, _PASS or _PWD), and secret-shaped values (a private
+#        secret, token, credential, a NAME that is or ends in _KEY, _SK, _PASS, _PWD, or a lower-case name_key), and secret-shaped values (a private
 #        key, a URL with a password, Stripe sk_/rk_/whsec_, AWS AKIA…, GitHub gh?_…, a JWT eyJ….…, Slack xox?-…).
 #        What it finds is shown masked: the log never repeats a secret.
 # bash 3.2 compatible (the Mac). Needs curl. Never calls a model; US$0.
@@ -71,10 +71,11 @@ if [ -n "$IMAGE" ]; then
   docker history --no-trunc --format '{{.CreatedBy}}' "$IMAGE" > "$TMP/history.txt" 2>/dev/null
   if [ ! -s "$TMP/env.txt" ] || [ ! -s "$TMP/history.txt" ]; then fail "no secret: could not read the image's environment or history"
   else
-    # Names (shown as NAME=***): any case for the words; upper case for the endings, so "--recv-keys" or "keyserver"
+    # Names (shown as NAME=***): any case for the words; whole-word endings, so "--recv-keys", "keyserver" or MONKEY
     # in the base image's own history are not names.
     names=$( { grep -hoiE '[a-z0-9_]*(password|passwd|secret|token|credential|api[_-]?key|access[_-]?key|private[_-]?key)[a-z0-9_]*=' "$TMP/env.txt" "$TMP/history.txt"
-               grep -hoE '\b[A-Z0-9_]*(KEY|_SK|_PASS|_PWD)=' "$TMP/env.txt" "$TMP/history.txt"; } | sed 's/=$/=***/')
+               grep -hoE '\b([A-Z0-9_]*_)?(KEY|SK|PASS|PWD)=' "$TMP/env.txt" "$TMP/history.txt"
+               grep -hoE '\b[a-z0-9_]*_key=' "$TMP/env.txt" "$TMP/history.txt"; } | sed 's/=$/=***/')
     # Values (shown as their first characters and ***).
     values=$(grep -hoE 'BEGIN [A-Z ]*PRIVATE KEY|://[^/[:space:]:@]+:[^@[:space:]]+@|(sk|rk)_(live|test)_[A-Za-z0-9]{6,}|whsec_[A-Za-z0-9]{6,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]+|xox[abprs]-[A-Za-z0-9-]{6,}' "$TMP/env.txt" "$TMP/history.txt" \
       | sed -E 's#^(://[^:]+:).*@$#\1***@#; /^:\/\//!{/PRIVATE KEY/!s/^(.{5}).*/\1***/}')

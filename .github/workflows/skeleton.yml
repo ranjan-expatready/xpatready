@@ -8,7 +8,7 @@
 # reads what that one push changed (before..after) against the same list, read from this file, and skips the build in
 # words only when the push touched none of it (records only, say) AND this workflow's run at the earlier head
 # concluded success (checked through the API, never assumed: a red or replaced earlier run means a full run).
-# Keep the `paths` block plain: one `      - "glob"` per line, no comments inside it (the step refuses anything else).
+# Keep the `paths` block plain: one `      - "glob"` per line, no comments or blank lines inside it (the step refuses them).
 # Mergify's batch PRs (mergify/*, drafts) do not run it: each PR proved its image; it is not a required check.
 # A ready head's run is never cancelled (P-371 (2)): a newer push waits. US$0 (public repository), no model spend,
 # no key: the database has no password and live AI is off.
@@ -67,8 +67,9 @@ jobs:
           # Only a later push to an open PR is judged by its own commits; opened, reopened, ready and by hand always run.
           if [ "$ACTION" != synchronize ] || [ -z "$BEFORE" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; echo "full run ($ACTION)"; exit 0; fi
           # The trigger's own path list, read from this file: one list, never a second copy to keep in step.
-          # Every line of the block must be `      - "glob"`; anything else (a comment, a quote style) stops the step.
-          globs=$(awk '/^    paths:/{p=1;next} p&&/^      /{ if ($0 ~ /^      - "[^"]+"$/) { sub(/^      - "/,""); sub(/"$/,""); print } else { print "BAD " $0 }; next } p{exit}' .github/workflows/skeleton.yml)
+          # The block runs to the next key at indent 4 or less; every line in it must be `      - "glob"`: anything else
+          # (a comment at any indent, a blank line, another quote style) stops the step, never a shorter list.
+          globs=$(awk '/^    paths:/{p=1;next} p&&/^ {0,4}[^ #]/{exit} p{ if ($0 ~ /^      - "[^"]+"$/) { sub(/^      - "/,""); sub(/"$/,""); print } else { print "BAD [" $0 "]" } }' .github/workflows/skeleton.yml)
           [ -n "$globs" ] || { echo "::error::no path list read from skeleton.yml"; exit 1; }
           if printf '%s\n' "$globs" | grep -q '^BAD '; then echo "::error::the paths block must hold only lines of the form - \"glob\": $(printf '%s\n' "$globs" | grep '^BAD ' | head -1)"; exit 1; fi
           # A push that cannot be read (a rewritten branch) runs in full.
@@ -76,14 +77,18 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"; echo "full run: $BEFORE..$AFTER could not be read"; exit 0; fi
           hit=""
           while IFS= read -r f; do [ -n "$f" ] || continue
-            while IFS= read -r g; do [[ "$f" == $g ]] && { hit="$f"; break 2; }; done <<< "$globs"
+            # bash's * crosses /, so each glob matches a superset of GitHub's; GitHub's **/ may also be no folder at all
+            # (p5/**/*.ts matches p5/transforms.ts), so each glob is also tried with every **/ removed.
+            while IFS= read -r g; do [[ "$f" == $g || "$f" == ${g//\*\*\//} ]] && { hit="$f"; break 2; }; done <<< "$globs"
           done <<< "$files"
           if [ -n "$hit" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; echo "full run: this push changed $hit"; exit 0; fi
           # The skip stands only on a proven earlier head: this workflow's pull_request run at BEFORE concluded success
           # (a skip there was itself proven the same way). Red, cancelled, replaced, skipped (draft) or unreadable: full run.
+          # gh prints an error body on stdout: anything but a plain number (an error, a rate limit, nothing) counts as 0.
           prev=$(gh api "repos/$REPO/actions/workflows/skeleton.yml/runs?head_sha=$BEFORE&event=pull_request&per_page=20" \
-            --jq '[.workflow_runs[] | select(.conclusion == "success")] | length' 2>/dev/null || echo 0)
-          if [ "${prev:-0}" -lt 1 ]; then echo "run=true" >> "$GITHUB_OUTPUT"; echo "full run: no green skeleton run at the earlier head ${BEFORE:0:9}"; exit 0; fi
+            --jq '[.workflow_runs[] | select(.conclusion == "success")] | length' 2>/dev/null) || prev=0
+          case "$prev" in ''|*[!0-9]*) prev=0;; esac
+          if [ "$prev" -lt 1 ]; then echo "run=true" >> "$GITHUB_OUTPUT"; echo "full run: no green skeleton run at the earlier head ${BEFORE:0:9}"; exit 0; fi
           echo "run=false" >> "$GITHUB_OUTPUT"
           msg="Skeleton not run: this push (${BEFORE:0:9}..${AFTER:0:9}) changed none of the image's paths, only: $(printf '%s' "$files" | paste -sd ',' - | cut -c1-300); the image was proven green at ${BEFORE:0:9}."
           echo "$msg"; echo "$msg" >> "$GITHUB_STEP_SUMMARY"
