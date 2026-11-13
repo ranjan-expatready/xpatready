@@ -49,3 +49,5 @@ ai-workers/problem-1-pathway-setup-and-form-filling/product/scout/reports/playwr
 
 # Real-name list for product/tools/sync-requirements.sh (AGENTS rule 5): Mac only, never pushed
 ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/requirements-names.txt
+# A30 (13 Nov): the reference folder's private part (team-app details, P-504) stays on the Mac
+ai-workers/problem-1-pathway-setup-and-form-filling/product/reference/private/
