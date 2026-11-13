@@ -2,7 +2,7 @@
 // business rule has a passing and a failing case (BR-1 to BR-10 and P-412's one-click re-approve). No database, no
 // server, no model call (US$0). Sample values only.
 //   tsx studio/tests/runtime/check_review_rounds.ts
-import { changedBy, changesOf, checklistOf, fileOf, fileStampCurrent, formStateOf, hashesProblem, isOpen, mayDecide, nextStatus, READ_ONLY_WORDS, readBackStamps, reasonsOf, selfReviewOf, sendProblem, stampCurrent, tickedByDefault, untickedProblem, untickedWords, withdrawnForms, withdrawnWords, typedSince, type SendFiling } from "../../engine/runtime/review.ts";
+import { changedBy, changesOf, checklistOf, valuesOf, valuesWords, fileOf, fileStampCurrent, formStateOf, hashesProblem, isOpen, mayDecide, nextStatus, READ_ONLY_WORDS, readBackStamps, reasonsOf, selfReviewOf, sendProblem, stampCurrent, tickedByDefault, untickedProblem, untickedWords, withdrawnForms, withdrawnWords, typedSince, type SendFiling } from "../../engine/runtime/review.ts";
 import { factPerson, type ChangeWords } from "../../engine/runtime/out-of-date.ts";
 import { recorder } from "./api.ts";
 
@@ -27,10 +27,14 @@ ok("C8.3 BR-1 fail (B2): a stale generated copy or an out-of-date validated copy
 ok("C8.3 BR-1 fail (m8): a form that cannot start yet is not stamped: waits", fileOf({ waits: true, inputHash: H1, validated: null, generated: null }).kind === "waits");
 
 // BR-2 Checklist
-const cl = checklistOf({ critical: 0, documents: { verified: 5, required: 5 }, program: [{ key: "purpose", wording: "Purpose of travel matches the invitation and itinerary" }], confirmed: [{ by: "the case officer", facts: 12 }], forms: [{ item: "i1", label: "IMM 5257 · Sample Client A" }] });
-ok("C8.3 BR-2 pass: default items with live state, the program's item, confirmations with who, a mark per form", cl.map((c) => c.key).join() === "default:no_critical,default:documents,program:purpose,confirmations,form:i1" && (cl[1].live as { verified: number }).verified === 5 && /12 facts, by the case officer/.test(cl[3].wording));
-const cl0 = checklistOf({ critical: 2, documents: { verified: 0, required: 3 }, program: [], confirmed: [], forms: [] });
-ok("C8.3 BR-2 fail: with no program items and no confirmations, only the defaults and \"none yet\" (never an invented item)", cl0.length === 3 && cl0[2].wording === "Values confirmed: none yet" && (cl0[0].live as { open: number }).open === 2);
+const cl = checklistOf({ critical: 0, documents: { verified: 5, required: 5 }, program: [{ key: "purpose", wording: "Purpose of travel matches the invitation and itinerary" }], values: { declared: [{ by: "Client A", facts: 40 }], confirmed: [{ by: "the case officer", facts: 12 }], toConfirm: 0, waitsClient: 0 }, forms: [{ item: "i1", label: "IMM 5257 · Sample Client A" }] });
+ok("C8.3 BR-2 pass: default items with live state, the program's item, the values with who stands behind them, a mark per form", cl.map((c) => c.key).join() === "default:no_critical,default:documents,program:purpose,confirmations,form:i1" && (cl[1].live as { verified: number }).verified === 5 && cl[3].wording === "Values: 52 facts, 40 declared by Client A · 12 confirmed by the case officer · 0 to confirm", cl[3].wording);
+const cl0 = checklistOf({ critical: 2, documents: { verified: 0, required: 3 }, program: [], values: { declared: [], confirmed: [], toConfirm: 0, waitsClient: 0 }, forms: [] });
+ok("C8.3 BR-2 fail: with no program items and no answers, only the defaults and \"none answered yet\" (never an invented item)", cl0.length === 3 && cl0[2].wording === "Values: none answered yet" && (cl0[0].live as { open: number }).open === 2);
+// QA-446 (P-510 (2)): declared answers are named by who gave them, never as not confirmed; only the Confirm list is "to confirm".
+const vb = valuesOf([{ confirmed: true, mark: "declared", by: "user-P" }, { confirmed: true, mark: "declared", by: "user-P" }, { confirmed: true, mark: "confirmed", by: "user-O" }, { confirmed: false, mark: "by_principal", by: "user-P" }], (id) => ({ "user-P": "Client A", "user-O": "Case officer" } as Record<string, string>)[id]);
+ok("QA-446 pass: a declared answer counts as declared by who gave it; an officer's confirmation as confirmed by them; one on the Confirm list as to confirm", JSON.stringify(vb) === JSON.stringify({ declared: [{ by: "Client A", facts: 2 }], confirmed: [{ by: "Case officer", facts: 1 }], toConfirm: 1, waitsClient: 0 }) && valuesWords(vb) === "Values: 4 facts, 2 declared by Client A · 1 confirmed by Case officer · 1 to confirm (the officer's Confirm section)", [vb, valuesWords(vb)]);
+ok("QA-446 fail: answers that are all declared never read \"none yet\" or \"not confirmed\"", !/none|not confirmed/.test(valuesWords(valuesOf([{ confirmed: true, mark: "declared", by: "x" }], () => "Client A"))));
 
 // BR-3 Open
 ok("C8.3 BR-3 pass: open moves Sent → Under review", nextStatus("sent", "open") === "under_review");
@@ -124,4 +128,10 @@ ok("C8.3 QA-345 file fail: a validated copy filed that the approval did not stam
   && withdrawnForms([{ item: "i1", waits: false, liveHash: H1, validatedSha: V2, stamp: { hash: H1, by: REP, file: { kind: "validated_copy", sha256: V1 } } }, { item: "i2", waits: false, liveHash: H1, validatedSha: V1, stamp: { hash: H1, by: REP, file: { kind: "validated_copy", sha256: V1 } } }], REP).map((f) => f.item).join() === "i1",
   fileGone);
 
+// QA-446 review m3: an answer saved on a person's own link is named by that person, never by the link's actor.
+const vo = valuesOf([{ confirmed: true, mark: "declared", by: "link-actor-9", channel: "own_link", about: "Sample Spouse A" }, { confirmed: true, mark: "declared", by: "user-P", channel: "questionnaire", about: "Sample Spouse A" }], (id) => (id === "user-P" ? "Client A" : `actor ${id}`));
+ok("QA-446 m3 pass: an own-link answer is declared by the person whose link it is; a questionnaire answer by who typed it", JSON.stringify(vo.declared) === JSON.stringify([{ by: "Sample Spouse A", facts: 1 }, { by: "Client A", facts: 1 }]), vo.declared);
+// QA-446 review m2: an answer waiting for the client's re-confirmation is not the officer's to confirm; it is counted apart.
+const vw = valuesOf([{ confirmed: false, mark: "by_staff", by: "user-O", awaits_client: true }, { confirmed: false, mark: "by_staff", by: "user-O" }], () => "Case officer");
+ok("QA-446 m2 pass: a staff answer waiting for the client is counted apart from the officer's Confirm list", vw.toConfirm === 1 && vw.waitsClient === 1 && valuesWords(vw) === "Values: 2 facts, 1 to confirm (the officer's Confirm section) · 1 waits for the client to re-confirm", [vw, valuesWords(vw)]);
 process.exit(summary() ? 1 : 0);

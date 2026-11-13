@@ -949,20 +949,26 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
   const shownAnswers = (q: Question) => (q.group ? q.rows.filter((r) => inEntry(q, r.row, grouped)).map((r) => r.answer) : [q.answer]);
   const seen = [...s.questions.flatMap(shownAnswers).filter((a) => !fromFirm(a)).map((a) => a?.id), shownGroup?.id].filter((x): x is string => !!x);
   // Review m2 on #1246: an answer waiting for the client is not the officer's to confirm, so it never makes this the main action.
-  const open = [...s.questions.flatMap(shownAnswers), shownGroup].filter((a) => a && a.status !== "VERIFIED" && !a.awaits_client).length;
+  // QA-446 (P-510 (2): P-242 and P-411 stand): only answers on the officer's Confirm list (not confirmed by the rule) make
+  // Confirm section the main action; a declared answer (the client's own, a minor's, a person's own on their link) does
+  // not. At 0 the button stays pressable (QA-417: the page may not hold the latest answers) and the server's reply says
+  // "nothing to confirm": it never confirms a declared answer (api/src/runtime.ts confirmSection).
+  const open = [...s.questions.flatMap(shownAnswers), shownGroup].filter((a) => a && !a.confirmed && !a.awaits_client).length;
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", view.case.id] });
   const checks = view.checks.filter((c) => c.subjectId === s.subjectId && c.section === s.section);
   // QA-417 (rehearsal §4): a section with no answer for the officer to confirm says so in words beside its (disabled)
   // button, never a silent dead button. Review m1: "no answer yet" only when none is given (firm-record answers are given
   // and confirmed, and never sent as seen).
   const noneToSend = !seen.length;
+  // QA-446 review m1: a section holding declared answers says so when nothing is left to confirm, never only "confirmed".
+  const declaredHere = [...s.questions.flatMap(shownAnswers), shownGroup].some((a) => a && a.confirmed && a.mark === "declared");
   async function confirm() {
     setBusy(true);
     try {
       const r = await api<{ confirmed: number; missing: string[]; awaiting_client?: number }>(`/runtime/cases/${view.case.id}/sections/${s.section}/confirm`, { method: "POST", json: { subjectId: s.subjectId, seen } });
       // QA-417: the server's reply decides the words (the page may not have its latest answers yet); with none confirmed
       // it says "nothing to confirm", and "confirmed already" never beside answers that wait for the client (review m2).
-      toast.push({ tone: checks.length || !r.confirmed ? "info" : "ok", text: `${s.title} for ${inSentence(s.about_label)}: ${r.confirmed ? `${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.` : `nothing to confirm.${r.awaiting_client ? "" : " Every answer here is confirmed already."}`}${r.awaiting_client ? ` ${r.awaiting_client} recorded by staff wait${r.awaiting_client === 1 ? "s" : ""} for the client to re-confirm.` : ""}${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}${checks.length ? ` ${checks.length} check${checks.length === 1 ? "" : "s"} still open: ${checks.map((c) => c.message).join(" ")}` : ""}` });
+      toast.push({ tone: checks.length || !r.confirmed ? "info" : "ok", text: `${s.title} for ${inSentence(s.about_label)}: ${r.confirmed ? `${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.` : `nothing to confirm.${r.awaiting_client ? "" : declaredHere ? " Its answers are declared by who gave them (no officer confirmation needed) or confirmed already." : " Every answer here is confirmed already."}`}${r.awaiting_client ? ` ${r.awaiting_client} recorded by staff wait${r.awaiting_client === 1 ? "s" : ""} for the client to re-confirm.` : ""}${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}${checks.length ? ` ${checks.length} check${checks.length === 1 ? "" : "s"} still open: ${checks.map((c) => c.message).join(" ")}` : ""}` });
     } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
     await refresh();
     setBusy(false);
