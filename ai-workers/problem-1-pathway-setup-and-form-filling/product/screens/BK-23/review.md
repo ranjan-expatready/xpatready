@@ -65,3 +65,19 @@ A real screen reader. An intended user's unaided walk (D17/D20 are simulated onl
 No Blocker, no Major.
 
 Verdict: Approve f94770e6d1845deb2f9247c2f68a620d277498d4
+
+## Round 2 (diff-only, P-293): `git diff f94770e6d..2cfbfcce3d2bd294c193e00f8a6b1c1775899686`
+Changes: `engine/runtime/forms.ts:26`, `engine/render.ts:184-186`, two checks added to `tests/runtime/check_bk23_phone_and_compared.ts`, and the round 1 review committed as written.
+- **m1 closed.** `isGateFact` now also matches `#compared:`. Its only callers are `api/src/fill-case.ts:239` ("written now") and `:364` (the audit count), so IMM 1295 (spouse) now counts form fields only. `inputHash` and `changedFacts` still read every fact, so out-of-date detection is unchanged.
+- **m2 closed.** render.ts now decides "compares" on the map's own `e.row`, matching `BoxRow.row` (= `e.row ?? null`), which `case.ts:411` and `forms.ts:81` test. A map-row field, a child's included, compares nothing in all three places. Every "equals" step on the six releases has no row, so nothing changes today.
+- **Checks.**
+  - Suite 28/28.
+  - Each fix reverted alone (`git checkout f94770e6d --` the one file, in a scratch worktree) gives 27/28 with exactly its new check red, so both new checks fail without their code.
+  - The six-release dump (questions, needs, facts, hashes, form values) is byte-identical to f94770e6d.
+  - B164 52/52; no new type errors (15 known); explicit `any` 417 (unchanged); qa289 17/17; case_engine 86/86.
+- **m3** stays a PR-text note, as agreed: the intended out-of-date copies on merge.
+- **Not re-run:** the BK-13 replay. The diff cannot reach it: the IMM 1295 and IMM 5476 fields have no row, and only the count of non-form-field facts changed.
+
+No Blocker, no Major, no new Minor.
+
+Verdict: Approve 2cfbfcce3d2bd294c193e00f8a6b1c1775899686
