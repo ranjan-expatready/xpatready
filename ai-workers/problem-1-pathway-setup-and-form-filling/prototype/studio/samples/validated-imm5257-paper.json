@@ -8,28 +8,39 @@
    "person": "Child 18 or over (Sample)",
    "family_facts_hash": "64d4414f4e3c6e47f2dfa06d613087822ffa0016c8021c28784b471194533bd1",
    "values_sha256": "28df8e2f6dd761e88a7d8d0212c46d6838d2b4dd68bca28d37aeeaa199205ee4",
-   "copy_sha256": "d9530af3cf4d8ea1a37e1bd34cc55479ee55647edb3603c87bf15de64e6b1485",
-   "validated_sha256": "8f7ae90099fa6d12658f9b443a4e177dcea3833810112ee593fa3d2515f197b4",
-   "file": "paper-9c00dbfc-validated.pdf",
+   "copy_sha256": "8f73da30a4372af6f046e2dc9495c9949efdfe2bad8b320b3292f7e7ca84f149",
+   "validated_sha256": "0d0b46db3f952a70a8d6915f90cee4ffd9fcc4c4a7bbf7779ac02a1327148c13",
+   "file": "paper-1f7fed6b-validated.pdf",
    "read_back": {
     "ok": true,
     "why": null,
-    "bytes": 1482311,
-    "sha256": "8f7ae90099fa6d12658f9b443a4e177dcea3833810112ee593fa3d2515f197b4",
+    "bytes": 1482314,
+    "sha256": "0d0b46db3f952a70a8d6915f90cee4ffd9fcc4c4a7bbf7779ac02a1327148c13",
     "written": 75,
+    "barcodes": {
+     "agree": 186,
+     "slots": 186,
+     "words": "All 5 barcodes read; each of their 186 positions agrees with the form's answers.",
+     "checked": true,
+     "decoded": 5,
+     "matched": true,
+     "expected": 5,
+     "problems": [],
+     "problems_total": 0
+    },
     "mismatches": [],
     "validation": {
      "flag": "Yes",
      "passed": true,
      "kept_by_form": true,
-     "date_last_validated": "2026-11-10"
+     "date_last_validated": "2026-11-13"
     },
-    "barcode_checked": false,
+    "barcode_checked": true,
     "read_back_equal": 75,
     "other_data_leaves_changed": 39
    },
-   "read_at": "2026-11-10T13:02:20.291Z",
-   "source": "Validate in Adobe by the tech lead, Adobe on the Mac; read back through the product's upload door and tools/read_validated.py on the Mac. The validated PDF stays on the Mac."
+   "read_at": "2026-11-13T12:58:46.799Z",
+   "source": "Validate in Adobe by the tech lead (Lead 35), Adobe Acrobat 26.002.22031 on the Mac, P-533; read back through the product's upload door and tools/read_validated.py on the Mac. The validated PDF stays on the Mac."
   }
  ]
 }
