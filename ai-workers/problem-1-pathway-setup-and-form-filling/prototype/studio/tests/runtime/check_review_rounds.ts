@@ -70,10 +70,10 @@ ok("C8.3 BR-7 pass: the page states (To check, Checked, Changed since review, Ap
 ok("C8.3 BR-7 fail: a check mark clears when the form changes after it was sent (GitHub \"Viewed\")", st({ checked: true, liveHash: H2 }) === "changed_since_review");
 
 // BR-8 Approver ≠ author (C7.6's rule unchanged)
-ok("C8.3 BR-8 pass: the representative who did not prepare it and typed nothing reviews it as a second person", JSON.stringify(selfReviewOf({ actor: REP, officers: new Set([OFF]), solo: false, changedByReviewer: false, self: undefined })) === JSON.stringify({ kind: "reviewed" }));
+ok("C8.3 BR-8 pass: the representative who did not prepare it and typed nothing reviews it as a second person", JSON.stringify(selfReviewOf({ actor: REP, prepared: new Set([OFF]), solo: false, changedByReviewer: false, self: undefined })) === JSON.stringify({ kind: "reviewed" }));
 const typedByRep = changesOf(then, now, words, () => ({ by: REP, at: "2026-11-08T10:00:00Z" }));
-ok("C8.3 BR-8 fail: the representative typed a changed fact after the send → on a firm with another officer, 409 (send back)", changedBy(typedByRep, REP) && "problem" in selfReviewOf({ actor: REP, officers: new Set([OFF]), solo: false, changedByReviewer: changedBy(typedByRep, REP), self: true }) && (selfReviewOf({ actor: REP, officers: new Set([OFF]), solo: false, changedByReviewer: true, self: true }) as { problem: { status: number } }).problem.status === 409);
-ok("C8.3 BR-8 fail: on a solo firm, without the statement → 400; with it → Self-reviewed", (selfReviewOf({ actor: "user-S", officers: new Set(["user-S"]), solo: true, changedByReviewer: false, self: undefined }) as { problem: { status: number } }).problem.status === 400 && JSON.stringify(selfReviewOf({ actor: "user-S", officers: new Set(["user-S"]), solo: true, changedByReviewer: false, self: true })) === JSON.stringify({ kind: "self_reviewed" }));
+ok("C8.3 BR-8 fail: the representative typed a changed fact after the send → on a firm with another officer, 409 (send back)", changedBy(typedByRep, REP) && "problem" in selfReviewOf({ actor: REP, prepared: new Set([OFF]), solo: false, changedByReviewer: changedBy(typedByRep, REP), self: true }) && (selfReviewOf({ actor: REP, prepared: new Set([OFF]), solo: false, changedByReviewer: true, self: true }) as { problem: { status: number } }).problem.status === 409);
+ok("C8.3 BR-8 fail: on a solo firm, without the statement → 400; with it → Self-reviewed", (selfReviewOf({ actor: "user-S", prepared: new Set(["user-S"]), solo: true, changedByReviewer: false, self: undefined }) as { problem: { status: number } }).problem.status === 400 && JSON.stringify(selfReviewOf({ actor: "user-S", prepared: new Set(["user-S"]), solo: true, changedByReviewer: false, self: true })) === JSON.stringify({ kind: "self_reviewed" }));
 
 // BR-9 / F2: the one permission check
 ok("C8.3 BR-9 pass (F2): the representative of record decides", mayDecide(REP, REP) === null);
@@ -96,9 +96,9 @@ const pw = { person: (s: string) => (s === "s1" ? "Sample Client A" : s) };
 ok("C8.3 review M3 pass: a person's own fact is named as theirs", factPerson("s1", null, pw) === "Sample Client A");
 ok("C8.3 review M3 fail: a parent's fact on the client's form is named as the parent's, never as the client's", factPerson("s1/parent_1", null, pw) === "Sample Client A's parent 1");
 const typed = changesOf(then, now, words, () => ({ by: REP, at: "x" }));
-ok("C8.3 break m1 pass: after an approval, the 409 says what can be done (ask the case officer to send it again)", /Ask the case officer to send it for review again/.test(((selfReviewOf({ actor: REP, officers: new Set([OFF]), solo: false, changedByReviewer: changedBy(typed, REP), self: true, after: "approval" }) as { problem: { detail: string } }).problem.detail)));
+ok("C8.3 break m1 pass: after an approval, the 409 says what can be done (ask the case officer to send it again)", /Ask the case officer to send it for review again/.test(((selfReviewOf({ actor: REP, prepared: new Set([OFF]), solo: false, changedByReviewer: changedBy(typed, REP), self: true, after: "approval" }) as { problem: { detail: string } }).problem.detail)));
 ok("C8.3 break M1 fail: a changed fact with no typist (the firm record's, after a change of representative) never makes the representative an author", !changedBy(changesOf(then, now, words, () => null), REP));
-ok("C8.3 review BIC-13 fail: no API field name shown to a person in the self-review words", !/self: true/.test(JSON.stringify(selfReviewOf({ actor: "user-S", officers: new Set(["user-S"]), solo: true, changedByReviewer: false, self: undefined }))));
+ok("C8.3 review BIC-13 fail: no API field name shown to a person in the self-review words", !/self: true/.test(JSON.stringify(selfReviewOf({ actor: "user-S", prepared: new Set(["user-S"]), solo: true, changedByReviewer: false, self: undefined }))));
 
 // CI on #1247 (gate B, configured checkpoint): an answer typed but not confirmed yet still counts for BR-8
 const reads = new Set(["s1|person.birth_city", "representative|person.email"]);

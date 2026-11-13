@@ -19,12 +19,15 @@ import { useFirm } from "./team";
 import { FigureRow, type Figure } from "./readiness-figure";
 import { FoldOut } from "@/components/fold-out";
 import { HandOff, handName } from "./hand-off"; // BK-4c
+import { reviewRecordOf } from "../../../engine/runtime/preparers"; // BK-18 (QA-448): the record says who really acted
 
 type Owes = "staff" | "representative" | "client" | "employer" | "ircc";
 type Line = { code: string; key: string; item?: string; subject?: string; owes: Owes; words: string; unblocks: string; severity: "block" | "critical" | "warning" };
 type Passed = Line & { reason: string; by: string; at: string };
 type Readiness = { filing: string; ready: boolean; blocks: Line[]; warns: Line[]; passed: Passed[]; owes: Partial<Record<Owes, number>>;
-  reviewed: { by: string; kind: string; licence_number: string | null; at: string } | null; facts_hash: string; representative: string | null };
+  reviewed: { by: string; kind: string; licence_number: string | null; at: string } | null;
+  /** BK-18 (QA-448): who the case's work record says prepared it (api/src/case-work.ts), earliest act first. */
+  prepared_by?: string[]; facts_hash: string; representative: string | null };
 type Filing = { id: string; label: string; status: string; read_only?: boolean };
 type PrepareView = { derived: boolean; why?: string; filings: Filing[]; readiness?: Readiness[]; figures?: Figure[] };
 type TeamView = { representative: { id: string; name: string } | null; officers: { id: string; name: string }[] };
@@ -98,13 +101,13 @@ export function ReadinessPanel({ caseId }: { caseId: string }) {
         : !v!.filings.length ? <p className="px-4 py-3 text-sm text-text-muted">No filings on this case yet.</p>
         : <div className="divide-y divide-border">{v!.filings.map((f) => {
             const r = v!.readiness?.find((x) => x.filing === f.id);
-            return <FilingReadiness key={f.id} caseId={caseId} f={f} r={r} g={v!.figures?.find((x) => x.filing === f.id)} actor={actor} nameOf={nameOf} officers={team.data?.officers.map((o) => o.name) ?? []} review={reviewOf(rounds.data, f.id)} />;
+            return <FilingReadiness key={f.id} caseId={caseId} f={f} r={r} g={v!.figures?.find((x) => x.filing === f.id)} actor={actor} nameOf={nameOf} review={reviewOf(rounds.data, f.id)} />;
           })}</div>}
     </section>
   );
 }
 
-function FilingReadiness({ caseId, f, r, g, actor, nameOf, officers, review }: { caseId: string; f: Filing; r: Readiness | undefined; g?: Figure; actor: string; nameOf: (id: string) => string; officers: string[]; review: ReviewRow | null }) {
+function FilingReadiness({ caseId, f, r, g, actor, nameOf, review }: { caseId: string; f: Filing; r: Readiness | undefined; g?: Figure; actor: string; nameOf: (id: string) => string; review: ReviewRow | null }) {
   const qc = useQueryClient(), toast = useToast();
   const heading = React.useRef<HTMLHeadingElement>(null);
   const [refusal, setRefusal] = React.useState<Refusal | null>(null);
@@ -183,11 +186,7 @@ function FilingReadiness({ caseId, f, r, g, actor, nameOf, officers, review }: {
           </div>
         );
       }) : null}
-      {r.reviewed ? (
-        <p className="text-[13px]" data-reviewed={r.reviewed.kind}>
-          <span className="text-text-muted">Prepared by · Reviewed by: </span>{officers.length ? officers.join(", ") : "the case team"} · {r.reviewed.kind === "self_reviewed" ? "Self-reviewed by " : ""}{nameOf(r.reviewed.by)}{r.reviewed.licence_number ? ` (licence ${r.reviewed.licence_number})` : ""}, {when(r.reviewed.at)}
-        </p>
-      ) : null}
+      {r.reviewed ? <RecordLine r={r} reviewed={r.reviewed} nameOf={nameOf} /> : null}
       {r.passed.length ? (
         <FoldOut className="text-[13px]" open={st !== "submitted"} data-passed summaryClassName="flex min-h-6 items-center text-text-link" summary={<>Passed with a reason ({r.passed.length})</>}>
           <ul className="mt-1 space-y-1.5 pl-1">{r.passed.map((p) => (
@@ -199,6 +198,22 @@ function FilingReadiness({ caseId, f, r, g, actor, nameOf, officers, review }: {
         </FoldOut>
       ) : null}
     </article>
+  );
+}
+
+/** BK-18 (QA-448, P-525 (1), P-510 (4), P-154): the filing's professional record — who prepared it and who reviewed it,
+ *  from who really acted (the case's own work record, `prepared_by`), never from who is named on the case team. One
+ *  person who prepared it and reviewed it alone reads "Self-reviewed" with their name, licence number and time (P-154
+ *  allows it); a case officer who did nothing is never named, and a second person's review is never shown for a review
+ *  one person made. Nobody recorded as having prepared it is said plainly, never guessed. */
+function RecordLine({ r, reviewed, nameOf }: { r: Readiness; reviewed: NonNullable<Readiness["reviewed"]>; nameOf: (id: string) => string }) {
+  const rec = reviewRecordOf({ preparers: r.prepared_by ?? [], reviewedBy: reviewed.by, kind: reviewed.kind });
+  const who = `${nameOf(reviewed.by)}${reviewed.licence_number ? ` (licence ${reviewed.licence_number})` : ""}`;
+  return (
+    <p className="text-[13px]" data-reviewed={reviewed.kind} data-record={rec.self ? "self-reviewed" : "two-people"}>
+      <span className="text-text-muted">Prepared by · Reviewed by: </span>
+      {rec.self ? `Self-reviewed by ${who}` : `${rec.preparedBy.length ? rec.preparedBy.map(nameOf).join(", ") : "not recorded"} · ${who}`}, {when(reviewed.at)}
+    </p>
   );
 }
 

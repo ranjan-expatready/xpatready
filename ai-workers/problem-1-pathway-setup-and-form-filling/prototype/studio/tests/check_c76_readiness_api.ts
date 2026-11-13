@@ -113,10 +113,22 @@ ok("B9 pass (BR-21): the representative who did it all self-reviews, logged Self
 const two = await openCase(vv, [{ role: "principal", name: "Sample Client H", dob: yearsAgo(38) }], { representative: rep, caseOfficers: [rep] });
 const tg = (await prepare(two.id, rep)).p?.filings[0]?.id ?? "";
 const add = await call("POST", `/runtime/cases/${two.id}/team/officers`, { userId: officer }, rep);
+// BK-18 (QA-448): the other officer really works on the case — being named on the team is not work, so N4's refusal
+// stands on what the case holds (the officer's own answer), not on a team row.
+await answer(two.id, two.subjects["Sample Client H"], "person.passport_number", "ZX9999991", officer);
 const end = await call("POST", `/runtime/cases/${two.id}/team/officers/${rep}/end`, { reason: "Handing the case over (Sample)" }, rep);
 r = await call("POST", `/runtime/filings/${tg}/review`, { note: "Reviewed (Sample)", facts_hash: await fh(two.id, tg, rep) }, rep);
 const r2 = await call("POST", `/runtime/filings/${tg}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(two.id, tg, rep) }, rep);
-ok("N4 fail: a representative who prepared it with another officer (then left the officer list) cannot review it, as a second person or as Self-reviewed (409)", add.status < 300 && end.status < 300 && r.status === 409 && r2.status === 409 && count(`select count(*) from filing_review where filing_id='${tg}'`) === 0, [add.status, end.status, r.status, r2.status]);
+ok("N4 fail: a representative who prepared it with another officer who worked on it too (and then left the officer list) cannot review it, as a second person or as Self-reviewed (409)", add.status < 300 && end.status < 300 && r.status === 409 && r2.status === 409 && count(`select count(*) from filing_review where filing_id='${tg}'`) === 0, [add.status, end.status, r.status, r2.status]);
+
+// BK-18 (QA-448, P-525 (1), P-510 (4), P-154): walk 1's step S8 through the routes. The case team has a case officer who
+// does nothing; the representative opens the case, does the work and reviews it. The record is one person's: the
+// representative is asked for the statement (400) and the review is logged Self-reviewed, never as a second person's.
+const s8 = await call("POST", "/runtime/cases", { combinationId: vv, reference: `ACC-BK18-${Date.now().toString(36)}`, clientActor: CLIENT, principal: { displayName: "Sample Client W" }, representative: rep, caseOfficers: [officer] }, rep);
+const sg = (await prepare(s8.body?.id ?? "", rep)).p?.filings[0]?.id ?? "";
+const asked = await call("POST", `/runtime/filings/${sg}/review`, { note: "Reviewed (Sample)", facts_hash: await fh(s8.body?.id ?? "", sg, rep) }, rep);
+const said = await call("POST", `/runtime/filings/${sg}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(s8.body?.id ?? "", sg, rep) }, rep);
+ok("BK-18 (QA-448) fail before, pass after: a case officer on the team who did nothing never makes the representative's own work a second person's review — the statement is asked for (400), then it is logged Self-reviewed", s8.status < 300 && asked.status === 400 && said.status === 200 && said.body?.kind === "self_reviewed", [s8.status, asked.status, said.status, said.body?.kind]);
 
 // B7: accepted-until takes a plain day only.
 const ed = sql(`select e.id from form_edition e join gov_form_def g on g.id=e.gov_form_def_id where g.form_key='IMM 5707' and e.channel <> 'ONLINE' limit 1`);
