@@ -101,7 +101,15 @@ Challenger: an independent agent that did not draft the concept (skill screen-co
 2. **What should the Sample consent tick on the public form say?** Recommend wording that names marketing by email and how to stop. "Updates about my enquiry" is not what the consent row records (AG-2-83). Unconfirmed: no counsel.
 
 ## Lead response
+Lead B, 14 Nov. Every Blocker and Major is fixed in concept r2, board r2 and rows rev 3 (FO-2, FO-4, FO-4b):
+* **B1** fixed: `GET /api/public/forms/:token` (open read; wording, options, `submissionId`, load stamp) added to FO-2; `frame-ancestors` on the served page (BR-3).
+* **B2** fixed: the Web form settings panel is designed (concept §4 screen 2b) and in FO-4's journey ("form on").
+* **M1** fixed: a hand-added lead is owned by its adder, no "Call now" (Add a lead panel, BR-4 data). **M2** fixed: no "Book a consult" until FO-3 is live; no callback-task offer until tasks exist. **M3** fixed: Reopen and Undo convert (BR-9, BR-11). **M4** fixed: Lost filter. **M5** fixed: "Move to…" menu, no drag library. **M6** fixed: Unassigned visibility and the match line (BR-2, BR-4). **M7** fixed: the keys table in §6; Signed offline left to FO-6.
+* **Minors:** m1 (copy and BR-7), m2 (When, Fix number), m3 (card fields, totals, Load more, timeline paging), m4 (one-user firm), m5 (marketing wording), m6 (five inputs: message dropped), m7 (AG-02's own words; event and `won_via` names follow AG-02 in FO-2, recorded in contracts §7), m8 (states), m9 (AG-02's reason lists), m10 (own Frame and "Sales" menu; the new menu is part of P-558's front-office mandate and recorded in this row), m11 (month-two states removed), m12 (search, labelled badge): all taken.
+* **Founder questions:** none; both were requirement-settled (AG-2-47 rule 18; AG-2-83).
+* **Also added after the challenge** (founder, 22:3x): Corporate (BR-12, FO-2b, the board switch) and the script embed (FO-4b), both traced to AG-02. The best-in-class section stays marked Unverified for the review.
 
 ## Agreement
+Approved by Lead B after the independent challenge (P-223 (4)), 14 Nov: build FO-4 from concept r2 (split FO-4c if over ~800 lines) and FO-4b after it. The founder's look follows; changes become follow-up rows.
 
 ## Build discoveries
