@@ -15,6 +15,7 @@ import { NEVER_ASKED, NotWorkedOut } from "./not-worked-out.ts";
 import { aboutOf, conditionSubjects, factsOf, formSigners, isFilingFact, kkey, lineHolders, peopleFor, signsForOthers, subjectsFor, type Known, type Person } from "./resolver.ts";
 import { FILING, PRINCIPAL_CHILDREN_WHEN, ROLE } from "../contracts/resolver.ts";
 import { isListRelation, listBoxWords, relativeOf } from "./runtime/relatives.ts";
+import { comparedFacts } from "./runtime/compared.ts";
 export { aboutOf, conditionSubjects, formSigners, kkey, lineHolders, peopleFor, signsForOthers, subjectsFor };
 export type { Known, Person, Role } from "./resolver.ts";
 
@@ -49,6 +50,10 @@ export type BoxRow = { box: string; caption: string; fact: string | null; meanin
   /** C7.2 cause 3 (set on a case copy only, engine/runtime/forms.ts markNothingRecorded): a derived "is anything recorded?"
    *  Yes/No whose facts sit in a repeating group with no entries and a confirmed "none apply". */
   nothing_recorded?: true;
+  /** BK-23 (set on a case's form only, engine/runtime/forms.ts formCoverage): the confirmed values of the facts this form
+   *  field's "A equals B" step compares (engine/runtime/compared.ts), for the filler, where no form field of the form reads
+   *  them itself (engine/form-values.ts). */
+  compared?: Record<string, unknown>;
   /** Review M1 on #1620 (QA-415): a worked-out fact the case cannot work out for this person yet: why, in words. The form
    *  field is written by hand with it (engine/form-values.ts), never blank in silence (engine/not-worked-out.ts). */
   by_hand?: string;
@@ -148,7 +153,10 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
   });
 
   // ------------------------------------------------------------ coverage of each box, per applicable form
-  const needs = new Map<string, { fact: string; about: string; rows: Set<number>; forms: Set<string>; boxes: number; maybe: boolean }>();
+  const needs = new Map<string, { fact: string; about: string; rows: Set<number>; forms: Set<string>; boxes: number; maybe: boolean; compared?: true }>();
+  // BK-23 (Lead 36 on #1698): the facts a form field's "A equals B" step compares (engine/runtime/compared.ts), asked of the
+  // same person once the loop below has seen every form field that reads a fact itself.
+  const compared: { fact: string; about: string; form: string; maybe: boolean }[] = [];
   const coverage = forms.filter((f) => f.applies !== false).map((f) => {
     // P-32: the PDF edition in use (the newest mapped), as the fill writes it; else the line's online map, as before.
     const asked = opts.editions?.get(f.form);
@@ -173,6 +181,8 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
       if (!("added" in f && f.added) || needs.has(`${about}|${e.fact}`)) {
         if (factRow !== null && factRow !== undefined) n.rows.add(factRow);
         n.forms.add(f.form); n.boxes++; if (f.applies === "cannot_tell") n.maybe = true; needs.set(`${about}|${e.fact}`, n);
+        // C7.8: a form the case officer added asks nothing new, so its comparisons ask nothing either.
+        if (!("added" in f && f.added) && (factRow === null || factRow === undefined)) for (const c of comparedFacts(e.transform, e.fact)) compared.push({ fact: c, about, form: f.form, maybe: f.applies === "cannot_tell" });
       }
       const kv = known.get(k) ?? (factRow === 0 ? known.get(kkey(about, e.fact)) : undefined);
       // Review M1 on #1620: a worked-out fact not worked out yet keeps its reason as text on the row (by hand, never blank).
@@ -192,6 +202,14 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     for (const b of boxes) counts[b.coverage] = (counts[b.coverage] ?? 0) + 1;
     return { form: f.form, person: f.person, person_label: f.person_label, applies: f.applies, edition: map.form_edition, boxes, counts, mapped: boxes.filter((b) => b.fact).length, unresolved_boxes: unresolvedBoxes };
   });
+  // BK-23: a compared fact no form field reads itself is still needed, by the form whose field compares it (one form field
+  // each), when the release places a question for it; a fact some form field reads keeps its own count and words.
+  for (const c of compared) {
+    const k = `${c.about}|${c.fact}`, had = needs.get(k);
+    if (!place.has(c.fact) || (had && !had.compared)) continue;
+    const n = had ?? { fact: c.fact, about: c.about, rows: new Set<number>(), forms: new Set<string>(), boxes: 0, maybe: false, compared: true };
+    n.forms.add(c.form); n.boxes++; if (c.maybe) n.maybe = true; needs.set(k, n);
+  }
 
   // ------------------------------------------------------------ conditions: facts that decide what applies
   const deciders = new Map<string, { fact: string; about: string; decides: Set<string> }>();
