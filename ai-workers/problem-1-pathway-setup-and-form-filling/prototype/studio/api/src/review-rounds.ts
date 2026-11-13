@@ -12,8 +12,10 @@
 // Legal points: Unconfirmed: no counsel.
 import { Body, Controller, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post } from "@nestjs/common";
 import { REPRESENTATIVE, userIn, type Firm } from "../../engine/runtime/team.ts";
-import { changedBy, changesOf, checklistOf, CHANGED_TOOLTIP, fileOf, formStateOf, hashesProblem, isOpen, mayDecide, nextStatus, reasonsOf, selfReviewOf, SELF_STATEMENT, sendProblem, stampCurrent, STATE_WORDS, typedSince, untickedProblem, withdrawnForms, withdrawnWords, WITHDRAWN_TOOLTIP, type ChangeLine, type CheckItem, type FileStamp, type Problem, type RowStatus } from "../../engine/runtime/review.ts";
+import { changedBy, changesOf, checklistOf, valuesOf, CHANGED_TOOLTIP, fileOf, formStateOf, hashesProblem, isOpen, mayDecide, nextStatus, reasonsOf, selfReviewOf, SELF_STATEMENT, sendProblem, stampCurrent, STATE_WORDS, typedSince, untickedProblem, withdrawnForms, withdrawnWords, WITHDRAWN_TOOLTIP, type ChangeLine, type CheckItem, type FileStamp, type Problem, type RowStatus } from "../../engine/runtime/review.ts";
 import { dayWords, factPerson } from "../../engine/runtime/out-of-date.ts";
+import { caseView, sectionAnswers } from "../../engine/runtime/case.ts";
+import { relativeOf } from "../../engine/runtime/relatives.ts";
 import { isBarcodeForm } from "../../contracts/forms.ts";
 import type { FormFact } from "../../engine/runtime/forms.ts";
 import { ReviewDecision, ReviewOpen, ReviewReapprove, ReviewTick, SendForReview, type ChangedSinceReview, type FormStamp, type ReviewRound, type ReviewRoundFiling } from "../../contracts/runtime.ts";
@@ -82,17 +84,26 @@ export class ReviewRounds {
   /** The forms of one filing a review covers: every form item of it except those the IRCC account asks itself. */
   private formsOf(basis: ReviewBasis, filing: string) { return basis.forms.filter((f) => f.filing === filing && f.channel !== "NOT_NEEDED"); }
   /** BR-2: the checklist copied into the round for one filing. */
-  private async checklistFor(c: Reached, view: Awaited<ReturnType<ReviewRounds["basisOf"]>>["view"], basis: ReviewBasis, filing: string): Promise<CheckItem[]> {
+  /** QA-446: the officer's Agent view (as Runtime.view works it out), read once per round for the checklist's values. */
+  private async agentViewOf(c: Reached) {
+    const { answers, rows, groups } = await this.r.state(c);
+    return caseView(this.r.snapshotOf(c), this.r.peopleOf(c), answers, rows, "agent", new Date(), groups, { background: this.r.backgroundOf(c) });
+  }
+  private async checklistFor(c: Reached, view: Awaited<ReturnType<ReviewRounds["basisOf"]>>["view"], basis: ReviewBasis, filing: string, agent?: ReturnType<typeof caseView>): Promise<CheckItem[]> {
     const rd = view.readiness.find((x) => x.filing === filing);
     const docs = view.items.filter((i) => i.kind === "document" && i.filing === filing);
     const verified = docs.length ? await this.db.checklistLine.count({ where: { caseId: c.id, stageId: c.stage.id, state: "approved", OR: docs.map((d) => ({ subjectId: d.subject, documentType: d.document_type ?? "" })) } }) : 0;
+    // QA-446 (P-510 (2)): the values of the filing's people and their relatives (their parents' tabs), counted from the
+    // officer's own Agent view, answer by answer, so this item agrees with the tabs and sections: declared by whom
+    // (no officer confirmation needed), confirmed by whom, and how many still wait for the officer's Confirm section.
     const subjects = new Set(this.formsOf(basis, filing).map((f) => f.subject));
-    const by = new Map<string, number>();
-    for (const a of basis.answers) if (a.status === "VERIFIED" && subjects.has(a.subjectId)) by.set(a.actor, (by.get(a.actor) ?? 0) + 1);
+    const mine = (sid: string) => subjects.has(sid) || subjects.has(relativeOf(sid)?.owner ?? "");
+    agent ??= await this.agentViewOf(c);
+    const answers = agent.sections.filter((s) => mine(s.subjectId)).flatMap((s) => sectionAnswers(s.questions, s.group).map((a) => ({ ...a, about: s.about_label })));
     const pin = c.pins[0], combination = (await this.db.filing.findUnique({ where: { id: filing }, select: { combinationKey: true } }))?.combinationKey ?? "";
     return checklistOf({ critical: (rd?.warns ?? []).filter((w) => w.severity === "critical").length, documents: { verified, required: docs.length },
       program: reviewItemsOf({ id: pin.configReleaseId, version: pin.release.version }, combination),
-      confirmed: [...by].map(([id, n]) => ({ by: this.nameOf(c, id) ?? id, facts: n })),
+      values: valuesOf(answers, (a) => a.channel === "own_link" ? a.about : this.nameOf(c, a.by) ?? a.by),
       forms: this.formsOf(basis, filing).map((f) => ({ item: f.item, label: `${f.form} · ${f.person}` })) });
   }
   /** The person who typed each answer now (its origin, not its confirmer, m4), from the answers already read (m6). */
@@ -188,7 +199,8 @@ export class ReviewRounds {
     const no = sendProblem(b.filings, filings);
     if (no) refuse(no);
     const plan: { filing: string; frames: Frozen[]; checks: CheckItem[] }[] = [];
-    for (const id of b.filings) plan.push({ filing: id, frames: await this.framesOf(this.formsOf(basis, id)), checks: await this.checklistFor(c, view, basis, id) });
+    const agent = await this.agentViewOf(c);
+    for (const id of b.filings) plan.push({ filing: id, frames: await this.framesOf(this.formsOf(basis, id)), checks: await this.checklistFor(c, view, basis, id, agent) });
     const kind = b.now ? "review_now" : "send";
     const round = await busyWords(() => this.db.$transaction(async (tx) => {
       await this.lockCase(tx, c);

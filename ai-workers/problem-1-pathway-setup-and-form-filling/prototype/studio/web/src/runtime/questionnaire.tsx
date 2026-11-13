@@ -930,13 +930,15 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
   const shownAnswers = (q: Question) => (q.group ? q.rows.filter((r) => inEntry(q, r.row, grouped)).map((r) => r.answer) : [q.answer]);
   const seen = [...s.questions.flatMap(shownAnswers).filter((a) => !fromFirm(a)).map((a) => a?.id), shownGroup?.id].filter((x): x is string => !!x);
   // Review m2 on #1246: an answer waiting for the client is not the officer's to confirm, so it never makes this the main action.
-  const open = [...s.questions.flatMap(shownAnswers), shownGroup].filter((a) => a && a.status !== "VERIFIED" && !a.awaits_client).length;
+  // QA-446 (P-510 (2): P-242 and P-411 stand): only answers on the officer's Confirm list (not confirmed by the rule) are
+  // the officer's to confirm; a declared answer (the client's own, a minor's, a person's own on their link) is not.
+  const open = [...s.questions.flatMap(shownAnswers), shownGroup].filter((a) => a && !a.confirmed && !a.awaits_client).length;
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", view.case.id] });
   const checks = view.checks.filter((c) => c.subjectId === s.subjectId && c.section === s.section);
   // QA-417 (rehearsal §4): a section with no answer for the officer to confirm says so in words beside its (disabled)
   // button, never a silent dead button. Review m1: "no answer yet" only when none is given (firm-record answers are given
   // and confirmed, and never sent as seen).
-  const noneToSend = !seen.length;
+  const noneToSend = !seen.length || open === 0;
   async function confirm() {
     setBusy(true);
     try {
@@ -992,7 +994,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
         <span className="flex-1" />
         {/* C6.5 part 2b: "Fill this from documents" (documents-drawer.tsx), staff only (the Agent view). */}
         <DocumentsButton view={view} s={s} />
-        {noneToSend ? <span className="text-[13px] text-text-muted" data-nothing-to-confirm>{s.answered ? "Nothing to confirm: every answer here is confirmed already" : "Nothing to confirm: no answer yet"}</span> : null}
+        {noneToSend ? <span className="text-[13px] text-text-muted" data-nothing-to-confirm>{s.answered ? "Nothing to confirm: every answer here is declared by who gave it, confirmed already, or waits for the client" : "Nothing to confirm: no answer yet"}</span> : null}
         <Button size="sm" variant={open > 0 ? "default" : "secondary"} disabled={noneToSend} busy={busy} onClick={() => void confirm()} title={noneToSend ? "Nothing to confirm in this section" : "Confirm the answers shown in this section; an answer that changed since you looked is refused, never confirmed unseen"}>
           <Check aria-hidden />Confirm section
         </Button>
