@@ -1,0 +1,71 @@
+// base.prisma — Shared by every area: the generator, the datasource, the demo workspace (the reset boundary every row points at) and the enums more than one area uses. Owner: the tech lead.
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+
+// Product Studio prototype database (D275/D276). PostgreSQL through Prisma, as in the team's backend.
+//
+// Model and column names follow the team's pack models in
+// code/ERv2-sanitized@22f1d12-2026-10-19/apps/api/prisma/models/country-pack-*.prisma
+// (CanonicalField, ProgramDef, LogicalSection, SectionQuestion, DocumentType, DocumentRequirement,
+// GovFormDef, FormEdition, FormFieldMap, Predicate, ConditionEffect, AttachMode) so the team can map each
+// prototype record onto its own. Deliberate simplifications, reported rather than hidden:
+//  - one table per definition with version/status/supersedesId columns (the team splits some into a
+//    durable master plus a version child);
+//  - every row carries workspaceId: the disposable demo workspace is the reset boundary (D274);
+//  - no tenancy, row-level security, encryption seams or effective dating; prototype only.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum DefinitionStatus {
+  DRAFT
+  PUBLISHED
+  SUPERSEDED
+  RETIRED
+}
+
+enum AttachMode {
+  COMBINATION_MANDATORY
+  ANSWER_CONDITIONAL
+}
+
+enum Origin {
+  IMPORTED_RELEASE
+  AI_PROPOSAL
+  HUMAN
+  /// F1: proposed by a deterministic match (PDF twin, form path, name or alias; no AI), accepted by a person.
+  CODE_MATCH
+  /// S4 (P-123): picked by the form finder (both AI rounds agree and the rules pass) and attached with no confirm step;
+  /// "Picked by AI · Sample" until the immigration expert signs off at release review.
+  AI_FOUND
+}
+
+enum SourceBasis {
+  SOURCE_BACKED
+  ILLUSTRATIVE
+}
+
+/// F1 (P-61 §2) as amended by P-143 (W1-10 slice 1): how one form line of a combination is filed. Online (typed into the
+/// portal's screens) · PDF upload (IRCC's PDF filled, validated, uploaded) · Paper (filled, validated, printed, signed in
+/// pen, mailed) · Not needed (the IRCC account asks it itself). The combination's filing method is worked out from the
+/// lines (engine/channels.ts), never stored. "Signed PDF upload" became PDF upload + HAND_SCANNED.
+enum FilingChannel {
+  PDF_UPLOAD
+  ONLINE
+  PAPER
+  NOT_NEEDED
+}
+
+/// The disposable demo workspace. Reset deletes every row that belongs to it and its working files.
+model Workspace {
+  id        String   @id @default(uuid()) @db.Uuid
+  key       String   @unique
+  label     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("workspace")
+}

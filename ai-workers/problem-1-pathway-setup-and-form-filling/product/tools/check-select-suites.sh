@@ -15,7 +15,7 @@ only_smoke() { printf '%s\n' "$1" | awk -F'\t' '$2 != "smoke" { bad = 1 } END { 
 has() { printf '%s\n' "$1" | cut -f1 | grep -qx "$2"; }
 
 # What still runs everything (B121 kept these: they shape every copy or every run).
-for f in "$S/prisma/schema.prisma" "$S/prisma/migrations/x/migration.sql" "$S/api/src/main.ts" "$S/tools/isolated.sh" "$S/start.sh" "$Q/prototype/env/requirements-linux.lock"; do
+for f in "$S/prisma/schema/base.prisma" "$S/prisma/schema/cases.prisma" "$S/prisma/migrations/x/migration.sql" "$S/api/src/main.ts" "$S/tools/isolated.sh" "$S/start.sh" "$Q/prototype/env/requirements-linux.lock"; do
   o=$(sel "$f"); ok "${f#$Q/}: everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
 done
 # B121 re-review after B120 (#1158): the app loads api/src/features/<dir>/ by listing the folder (features.ts featureSteps,
@@ -32,7 +32,7 @@ o=$(sel "$Q/prototype/p2/prompts/who-can-be.v1.md"); ok "an AI prompt (.md the a
 o=$(sel "$Q/prototype/p1/xfa_texts.py"); n=$(grep -c . <<< "$o"); ok "prototype/p1/xfa_texts.py runs the suites that name or reach it ($n), not everything" "$(! all "$o" && has "$o" check_b78_section_names.ts && [ "$n" -lt 100 ] && echo 1)" "$(head -1 <<< "$o")"
 o=$(sel "$S/acceptance/C5.1.test.ts"); n=$(grep -c . <<< "$o"); ok "an acceptance pack (gate B and the queue run it, no suite does) chooses fewer than 30 suites ($n)" "$(! all "$o" && [ "$n" -lt 30 ] && echo 1)" "$(head -1 <<< "$o")"
 o=$(sel "$S/contracts/counts.ts"); ok "a contract runs its seam check (P-376 (7)) and its users, not everything" "$(! all "$o" && has "$o" check_contract_seams.ts && echo 1)" "$(head -1 <<< "$o")"
-o=$(sel "$S/prisma/schema.prisma"); ok "the schema still runs everything (check_prisma_schema.ts among them)" "$(all "$o" && [ -f "$S/tests/check_prisma_schema.ts" ] && echo 1)" "$(head -1 <<< "$o")"
+o=$(sel "$S/prisma/schema/evidence.prisma"); ok "the schema (any area file of prisma/schema/, DB-SPLIT) still runs everything (check_prisma_schema.ts among them)" "$(all "$o" && [ -f "$S/tests/check_prisma_schema.ts" ] && echo 1)" "$(head -1 <<< "$o")"
 o=$(sel "$Q/official-sources/ircc/manifest.json"); ok "official sources (the app reads the manifest) run everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
 o=$(sel "$T/run-suites.sh"); ok "run-suites.sh decides how suites run: everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
 o=$(sel .github/workflows/ci.yml); ok "ci.yml: everything" "$(all "$o" && echo 1)" "$(head -1 <<< "$o")"
