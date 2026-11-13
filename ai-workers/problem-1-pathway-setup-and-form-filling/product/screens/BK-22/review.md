@@ -101,3 +101,28 @@ BIC-01–20: N/A. This is a forms engine and a Field map review card, not a case
 1. M1: the tech lead's ruling on the 1 IMM 1295 line, or option B.
 2. M2: the ISR branch goes by hand with a fail test, or the tech lead's written ruling.
 3. m1–m5: fixed, or listed on the PR.
+
+## Round 2: diff-only review of `b15be9f1f..01de0e366` (head 01de0e36623a4d24ea5386228f78ccf2a2dfae12)
+
+Reviewer, 13 Nov 2026. Code commit: 7d192bd59. Commit 01de0e366 adds only round 1's review files.
+
+- **M1: settled by the tech lead's ruling on #1698** (Lead 36, 14:18Z):
+  - the IMM 1295 line goes to BK-23 (option A);
+  - the review flag stays a flag;
+  - BK-22 is done at this scope, and the replay's 40/45 is accepted: check 1 passes on merge, and C4 and the IMM 1295 line wait on BK-23.
+  - Closed for this row.
+- **M2: fixed** (`p5/transforms.ts`, the "is one of" handler).
+  - Probed directly: ISR, Israel, israel, "206" and 206 go **by hand** with the reason "a person answers it". IND, india, CAN and TWN give **N**. An empty value stays blank.
+  - "N for another country" holds: a passport from another country cannot be a National Israeli passport.
+  - The new fail test turns red if Y returns.
+- **m1: fixed.** `stepsNotRun` also probes with a +1 phone and matches "not in the executable set".
+  - I compared the old and new probes on all 4,717 drafted entries and every release entry. They throw nothing. They add only `phone_part:nanp_area_code|exchange|subscriber`, on IMM 1294, IMM 1295, IMM 5257, IMM 0008 and IMM 5710. They drop nothing.
+  - Those items are now Check, not High. The bulk-accept and checkpoint suites still pass on 01de0e366: `check_c38_background_forms_api` 36/36, `check_forms_c26_checklist` 58, `check_forms_c31_acceptance` 17, `check_qa163_listed_form_saved` 12/12, `check_gcore_b4_field_map_check`, `check_bk12_sample_case` 34/34, `check_g4_answer_keys` 93/93.
+- **m2: fixed.** The words now say "a case that answers it leaves it to write by hand", which is accurate. The 300-character test still passes.
+- **m5: partly fixed.** `stepsNotRunWhy` is now pure in `engine/field-map-rounds.ts`, with a pass and a fail test (checker round and missing rule give null). The `reviewRow` line (`api/src/proposals.ts`) and the card line (`job.tsx:171`) still have no test that turns red if they are removed. This stays a Minor; list it on the PR.
+- **m3 and m4:** recorded on the PR, as asked.
+- `tests/check_bk22_filler_steps.ts`: **41/41** on 01de0e366.
+
+No new Blocker or Major in the diff.
+
+Verdict: Approve 01de0e36623a4d24ea5386228f78ccf2a2dfae12
