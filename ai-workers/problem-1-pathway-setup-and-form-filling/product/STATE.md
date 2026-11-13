@@ -30,6 +30,7 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
 | A34 | 11:2x (13 Nov) one visual picture of the plan + the no-duplicates rule | **answered 11:4x** (P-526; page https://claude.ai/artifact/GS8TZqW7zhEmsGoecg18HL); row word for word in `history/STATE-2026-11-13-1330-lead32s2-founder-ask-A34-row.md` |
 | A35, A27, A19 | answered / in progress (A19) | rows word for word in `history/STATE-2026-11-13-1435-lead33s2-founder-asks-A35-A27-A19-rows.md` |
 | A38, A37 | 15:1x / 14:4x (13 Nov) A38 six asks (clean-up, Adobe/cold-walk needs, case structure, work stock, pipeline never blocks product, 12-hour order); A37 CI/CD ours vs theirs | in progress ((2), (5) ruled P-542; P-543; desk 02 on (1), (4), (6); A37 verdict page private, B190 lane running); rows word for word in `history/STATE-2026-11-13-1610-lead35s2-founder-asks-A37-A38-rows.md` |
+| A39 | 19:1x (13 Nov) (1) delete F15's two `throwaway/` branches (his explicit OK); (2) where to follow progress; (3) a research-only stream 4 | (1) delete refused by the permission prompt 19:1x, he runs it or approves it; (2) answered; (3) **started**: research task force `local_bb6b2d28` (Fable, read-only), brief and report only in the private notes (P-539), running streams unchanged |
 | A36 | 14:1x (13 Nov) make the repository private | **closed by P-539** (stay public for now; B190 then a new price); row word for word in `history/STATE-2026-11-13-1515-lead34s2-founder-ask-A36-row.md` |
 
 ## For the founder (P-390)
