@@ -5,8 +5,10 @@
 # When (B190, CI minutes): only a pull request whose change touches what goes into the image (the paths below), not
 # while it is a draft (P-371 (1): ready runs it), and by hand. A records-only PR matches no path, so no run starts.
 # GitHub judges `paths` on the PR's whole diff, so a later push to a code PR always starts a run; step "changes" then
-# reads what that one push changed (before..after) against the same list, read from this file, and when it touched
-# none of it (records only, say) the build is skipped in words: the image was proven at the earlier head.
+# reads what that one push changed (before..after) against the same list, read from this file, and skips the build in
+# words only when the push touched none of it (records only, say) AND this workflow's run at the earlier head
+# concluded success (checked through the API, never assumed: a red or replaced earlier run means a full run).
+# Keep the `paths` block plain: one `      - "glob"` per line, no comments inside it (the step refuses anything else).
 # Mergify's batch PRs (mergify/*, drafts) do not run it: each PR proved its image; it is not a required check.
 # A ready head's run is never cancelled (P-371 (2)): a newer push waits. US$0 (public repository), no model spend,
 # no key: the database has no password and live AI is off.
@@ -30,12 +32,13 @@ on:
       - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/skeleton-smoke.sh"
       - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/contracts/**"
       - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/*.ts"
-      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p5/*.ts"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p5/**/*.ts"
       - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/env/node/**"
       - ".github/workflows/skeleton.yml"
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read   # step "changes" reads this workflow's earlier run (conclusion only)
 concurrency:
   group: skeleton-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
@@ -50,7 +53,7 @@ jobs:
       SKELETON_PORT: "4480"
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0, filter: "blob:none", persist-credentials: false }
+        with: { persist-credentials: false }   # one commit: step "changes" fetches the two it compares itself
 
       - name: changes (did this push touch what goes into the image?)
         id: c
@@ -58,25 +61,32 @@ jobs:
           ACTION: ${{ github.event.action }}
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
           # Only a later push to an open PR is judged by its own commits; opened, reopened, ready and by hand always run.
           if [ "$ACTION" != synchronize ] || [ -z "$BEFORE" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; echo "full run ($ACTION)"; exit 0; fi
           # The trigger's own path list, read from this file: one list, never a second copy to keep in step.
-          globs=$(awk '/^    paths:/{p=1;next} p&&/^      - /{sub(/^      - /,"");gsub(/"/,"");print;next} p{exit}' .github/workflows/skeleton.yml)
+          # Every line of the block must be `      - "glob"`; anything else (a comment, a quote style) stops the step.
+          globs=$(awk '/^    paths:/{p=1;next} p&&/^      /{ if ($0 ~ /^      - "[^"]+"$/) { sub(/^      - "/,""); sub(/"$/,""); print } else { print "BAD " $0 }; next } p{exit}' .github/workflows/skeleton.yml)
           [ -n "$globs" ] || { echo "::error::no path list read from skeleton.yml"; exit 1; }
+          if printf '%s\n' "$globs" | grep -q '^BAD '; then echo "::error::the paths block must hold only lines of the form - \"glob\": $(printf '%s\n' "$globs" | grep '^BAD ' | head -1)"; exit 1; fi
           # A push that cannot be read (a rewritten branch) runs in full.
-          if ! files=$(git fetch -q --no-tags origin "$BEFORE" "$AFTER" 2>/dev/null && git diff --name-only "$BEFORE" "$AFTER"); then
+          if ! files=$(git fetch -q --no-tags --depth=1 origin "$BEFORE" "$AFTER" 2>/dev/null && git diff --no-renames --name-only "$BEFORE" "$AFTER"); then
             echo "run=true" >> "$GITHUB_OUTPUT"; echo "full run: $BEFORE..$AFTER could not be read"; exit 0; fi
           hit=""
           while IFS= read -r f; do [ -n "$f" ] || continue
             while IFS= read -r g; do [[ "$f" == $g ]] && { hit="$f"; break 2; }; done <<< "$globs"
           done <<< "$files"
-          if [ -n "$hit" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; echo "full run: this push changed $hit"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            msg="Skeleton not run: this push (${BEFORE:0:9}..${AFTER:0:9}) changed none of the image's paths, only: $(printf '%s' "$files" | paste -sd ',' - | cut -c1-300)"
-            echo "$msg"; echo "$msg" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          if [ -n "$hit" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; echo "full run: this push changed $hit"; exit 0; fi
+          # The skip stands only on a proven earlier head: this workflow's pull_request run at BEFORE concluded success
+          # (a skip there was itself proven the same way). Red, cancelled, replaced, skipped (draft) or unreadable: full run.
+          prev=$(gh api "repos/$REPO/actions/workflows/skeleton.yml/runs?head_sha=$BEFORE&event=pull_request&per_page=20" \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")] | length' 2>/dev/null || echo 0)
+          if [ "${prev:-0}" -lt 1 ]; then echo "run=true" >> "$GITHUB_OUTPUT"; echo "full run: no green skeleton run at the earlier head ${BEFORE:0:9}"; exit 0; fi
+          echo "run=false" >> "$GITHUB_OUTPUT"
+          msg="Skeleton not run: this push (${BEFORE:0:9}..${AFTER:0:9}) changed none of the image's paths, only: $(printf '%s' "$files" | paste -sd ',' - | cut -c1-300); the image was proven green at ${BEFORE:0:9}."
+          echo "$msg"; echo "$msg" >> "$GITHUB_STEP_SUMMARY"
 
       - name: build the image (clean clone, no cache)
         if: steps.c.outputs.run == 'true'
@@ -92,7 +102,8 @@ jobs:
       - name: smoke journey (health, first page, me once PF-4 is on main, non-root, no secret)
         if: steps.c.outputs.run == 'true'
         run: |
-          [ -d "$S/api/src/platform" ] && export PLATFORM_ME=required
+          # Keyed on PF-4's own file (the sign-in and /api/platform/me), not on api/src/platform/ (PF-3 creates it first).
+          [ -f "$S/api/src/features/platform-identity.ts" ] && export PLATFORM_ME=required
           bash "$S/tools/skeleton-smoke.sh" "http://127.0.0.1:$SKELETON_PORT" --image studio-skeleton:test | tee smoke.txt
           exit "${PIPESTATUS[0]}"
 
@@ -105,6 +116,17 @@ jobs:
           grep -q '^FAIL  health' seeded.txt || { echo "::error::the smoke script failed, but not on health"; exit 1; }
           echo "seeded fail caught: the smoke script failed on health with the database stopped" | tee -a "$GITHUB_STEP_SUMMARY"
           sed -n 's/^/    /p' smoke.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: seeded fail (an image with a key in its environment and running as root; the image checks must fail)
+        if: steps.c.outputs.run == 'true'
+        run: |
+          # Made-up values in the shapes the scan knows; never a real key.
+          printf 'FROM studio-skeleton:test\nUSER root\nENV SEEDED_SIGNING_KEY=made-up-value DB_URL=postgresql://u:made-up@db/x\n' | docker build -q -t studio-skeleton:seeded - >/dev/null
+          bash "$S/tools/skeleton-smoke.sh" "http://127.0.0.1:$SKELETON_PORT" --image studio-skeleton:seeded > seeded-image.txt || true
+          grep -E '^(FAIL|PASS)  (non-root|no secret)' seeded-image.txt
+          grep -q '^FAIL  non-root' seeded-image.txt && grep -q '^FAIL  no secret' seeded-image.txt \
+            || { echo "::error::the image checks passed an image running as root with a key in its environment"; exit 1; }
+          echo "seeded fail caught: root user and a key in the environment" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: app log on failure
         if: failure() && steps.c.outputs.run == 'true'

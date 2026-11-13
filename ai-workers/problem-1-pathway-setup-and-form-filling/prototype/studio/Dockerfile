@@ -20,6 +20,10 @@
 #    compose file or the deploy at run time (the smoke script checks docker history and the image's environment).
 #  * The API listens on 127.0.0.1 (api/src/main.ts); deploy/container-entry.mjs forwards 0.0.0.0:8080 to it in the same
 #    process, so main.ts is unchanged (PF-7 touches new files only). A STUDIO_HOST line in main.ts would retire it.
+#  * Read-only beyond var/: features that write into prototype/p2/{runs,jobs,parts,question-lists,review-sheets,
+#    screen-inventories,screening/tickets} (each git-ignored, written per copy) fail with EACCES in this image. Not part
+#    of the skeleton's claims; PF-8 points them at a writable volume or var/ (a STUDIO_* path line, the tech lead's OK).
+#  * /api/health reports sha "unknown" (no .git in the image); PF-8 can pass the commit in (a build arg and one line).
 #  * No Python, poppler or qpdf: form filling (fill-case.ts) and PDF reading are not part of the skeleton; the image
 #    answers health, pages and the API. Adding them is a later row with its own size and gate.
 FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS build

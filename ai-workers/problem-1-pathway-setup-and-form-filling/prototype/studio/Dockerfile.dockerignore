@@ -15,3 +15,21 @@ ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/web/dist
 ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests
 ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/evidence
 ai-workers/problem-1-pathway-setup-and-form-filling/prototype/tests
+# What git ignores but a developer copy (the Mac) has on disk: never in an image built there (review Minor 5).
+**/__pycache__
+**/test-results
+**/playwright-report
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/used-launch-tickets
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/runs/studio-fieldmap-approved-*.json
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/jobs/*-p[0-9]*of[0-9]*.json
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/jobs/studio-screenmap-*.json
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/jobs/studio-fieldmap-approved-*.json
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/parts/*
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/question-lists/*
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/screen-inventories/*
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/screening/tickets/*
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p1/runs
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/runs/*-stub-*.json
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/runs/*-live-20000101t*-pacheck*.json
+**/*.lock

@@ -38,6 +38,8 @@ services:
     init: true
     environment:
       DATABASE_URL: postgresql://studio@db:5432/studio
+      # PF-4's local sign-in stand-in answers only with this set (contracts §1.2); a test environment, never the cloud's.
+      PLATFORM_IDENTITY: local
     ports:
       - "127.0.0.1:${SKELETON_PORT:-4480}:8080"
     depends_on:
