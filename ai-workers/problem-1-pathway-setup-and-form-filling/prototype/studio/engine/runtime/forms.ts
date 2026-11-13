@@ -53,6 +53,7 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
   // not count as recorded. A question that stays visible (REQUIRE) keeps QA-165, and so does a box reading the hidden answer
   // itself (it would write Y from it).
   const hiddenNow = (about: string, fact: string) => { const own = showCondition(placements, fact); return !!own && evalCondition(s, known, own, subjectOf(about)).applies !== true; };
+  const readHere = new Set(cov.boxes.filter((b) => b.fact && b.about).map((b) => `${b.about}|${b.fact}`));
   const boxes = cov.boxes.map((b) => {
     const rule = b.about ? rules.get(b.box) : undefined;
     if (rule) {
@@ -75,8 +76,9 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
     // field that writes its value as it is as the text it always held there (the number and its extension).
     const oneBox = b.about === REPRESENTATIVE && (FIRM_PHONE_FACTS as readonly string[]).includes(b.fact) && writesAsIs(b.transform) && firmRecordFact(kkey(b.about, b.fact), known.get(kkey(b.about, b.fact))?.source);
     // BK-23 (Lead 36 on #1698): the facts its "A equals B" step compares, confirmed for the same person, go with it to the
-    // filler, which reads only this form's own form fields otherwise.
-    const compared = b.about && b.row === null ? Object.fromEntries(comparedFacts(b.transform, b.fact).flatMap((f) => { const v = confirmedAt(b.about!, f); return v ? [[f, v.value]] : []; })) : {};
+    // filler, which reads only this form's own form fields otherwise; a fact a form field of this form reads itself is
+    // read from there, as before (so such a form's copies keep their facts, and their validated copies stay current).
+    const compared = b.about && b.row === null ? Object.fromEntries(comparedFacts(b.transform, b.fact).filter((f) => !readHere.has(`${b.about}|${f}`)).flatMap((f) => { const v = confirmedAt(b.about!, f); return v ? [[f, v.value]] : []; })) : {};
     return { ...b, ...(oneBox ? { value: phoneInOneBox(b.value) } : {}), ...(Object.keys(compared).length ? { compared } : {}) };
   });
   // The gates' confirmed answers decide these boxes, so a copy keeps them with its facts: a gate changed after the copy
