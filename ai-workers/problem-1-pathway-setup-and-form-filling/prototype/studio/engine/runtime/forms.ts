@@ -13,15 +13,17 @@ import { checkValue, knownOf, type Answer, type Participant, type Row } from "./
 import { proseRecorded, recordedDerivation } from "../../../p5/transforms.ts";
 import COUNTS from "../../samples/recorded-counts.json" with { type: "json" };
 import { gateOf, type GatePlacement } from "./gates.ts";
-import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
+import { FIRM_PHONE_FACTS, firmRecordFact, formsNamingRepresentative, phoneInOneBox, REPRESENTATIVE, writesAsIs } from "./team.ts";
+import { comparedFacts } from "./compared.ts";
 import { openLines } from "./open-lines.ts";
 import { cellAsked, entriesOffForm, isListRelative } from "./relatives.ts";
 export { gateOf, type GatePlacement } from "./gates.ts";
 
 /** One confirmed fact a copy reads: which form field, which fact about whom, which row, which value. */
 export type FormFact = { box: string; fact: string; about: string; row: number | null; value: unknown };
-/** QA-165: a gate's confirmed answer kept with a copy (box "<box>#gate:<fact>"): it decides a box, it is not one. */
-export const isGateFact = (f: FormFact) => f.box.includes("#gate:");
+/** QA-165: a gate's confirmed answer kept with a copy (box "<box>#gate:<fact>"): it decides a box, it is not one.
+ *  BK-23 (review m1): so is a fact a form field compares ("<box>#compared:<fact>"), never counted as a form field written. */
+export const isGateFact = (f: FormFact) => f.box.includes("#gate:") || f.box.includes("#compared:");
 
 /** What one form would read today for one person on the case: every form field with its coverage (the shared
  *  renderer's, so a case fills exactly what the release preview shows), and the confirmed facts among them. */
@@ -52,6 +54,7 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
   // not count as recorded. A question that stays visible (REQUIRE) keeps QA-165, and so does a box reading the hidden answer
   // itself (it would write Y from it).
   const hiddenNow = (about: string, fact: string) => { const own = showCondition(placements, fact); return !!own && evalCondition(s, known, own, subjectOf(about)).applies !== true; };
+  const readHere = new Set(cov.boxes.filter((b) => b.fact && b.about).map((b) => `${b.about}|${b.fact}`));
   const boxes = cov.boxes.map((b) => {
     const rule = b.about ? rules.get(b.box) : undefined;
     if (rule) {
@@ -69,11 +72,21 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
     // box that reads its gate itself (asked as its own question) checks the facts its "worked out" step names.
     const recorded = (g: string) => [b.fact!, ...(recordedDerivation(b.transform)?.facts ?? [])].find((f) => f !== g && (f === b.fact || !hiddenNow(b.about!, f)) && present(confirmedAt(b.about!, f)?.value));
     const no = b.about ? gatesOf(b).find((g) => confirmedAt(b.about!, g)?.value === false && recorded(g)) : undefined;
-    return no ? { ...b, coverage: "answered on screen" as const, fix: `"${words(no)}" is answered No, but "${words(recorded(no)!)}" is recorded: correct one of them before this is written` } : b;
+    if (no) return { ...b, coverage: "answered on screen" as const, fix: `"${words(no)}" is answered No, but "${words(recorded(no)!)}" is recorded: correct one of them before this is written` };
+    // BK-23 (#1695 C4): the firm record's phone, given as a phone where the release's question reads one, goes into a form
+    // field that writes its value as it is as the text it always held there (the number and its extension).
+    const oneBox = b.about === REPRESENTATIVE && (FIRM_PHONE_FACTS as readonly string[]).includes(b.fact) && writesAsIs(b.transform) && firmRecordFact(kkey(b.about, b.fact), known.get(kkey(b.about, b.fact))?.source);
+    // BK-23 (Lead 36 on #1698): the facts its "A equals B" step compares, confirmed for the same person, go with it to the
+    // filler, which reads only this form's own form fields otherwise; a fact a form field of this form reads itself is
+    // read from there, as before (so such a form's copies keep their facts, and their validated copies stay current).
+    const compared = b.about && b.row === null ? Object.fromEntries(comparedFacts(b.transform, b.fact).filter((f) => !readHere.has(`${b.about}|${f}`)).flatMap((f) => { const v = confirmedAt(b.about!, f); return v ? [[f, v.value]] : []; })) : {};
+    return { ...b, ...(oneBox ? { value: phoneInOneBox(b.value) } : {}), ...(Object.keys(compared).length ? { compared } : {}) };
   });
   // The gates' confirmed answers decide these boxes, so a copy keeps them with its facts: a gate changed after the copy
   // (No to Yes, or a No confirmed) makes the copy out of date, as a changed fact does.
   const gateFacts: FormFact[] = cov.boxes.flatMap((b) => (b.about ? gatesOf(b).filter((g) => g !== b.fact) : []).flatMap((g) => { const v = confirmedAt(b.about!, g); return v ? [{ box: `${b.box}#gate:${g}`, fact: g, about: b.about!, row: null, value: v.value }] : []; }));
+  // BK-23: so do the facts a form field compares (`compared`): a change to one makes the copy out of date.
+  gateFacts.push(...boxes.flatMap((b) => Object.entries(b.compared ?? {}).map(([f, value]) => ({ box: `${b.box}#compared:${f}`, fact: f, about: b.about!, row: null, value }))));
   return { ...cov, boxes, facts: [...factsOf(boxes), ...gateFacts].sort((x, y) => x.box.localeCompare(y.box)) };
 }
 
