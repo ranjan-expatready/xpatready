@@ -11,7 +11,7 @@ The Lead runs it; no lane does. **Generic file:** no team, repository or person 
 DORA four keys as the base (objective, straight from GitHub for both sides, no surveys); the Flow Framework's items finished per week and time per item, counted in capabilities. SPACE and DX Core 4 were declined (survey-heavy for small teams); Apache DevLake declined for now (a new running system holding the partner's private data; re-assess only if more teams or repositories join, through STANDARDS §1).
 
 ## Hard rules
-* **Read-only on both sides.** GitHub API reads with the founder's owner access; never a write, comment, label, issue or rule change in the partner's repositories.
+* **Read-only on both sides.** GitHub API reads with the founder's read-only access (P-527); a measure it cannot read shows "not measured: no access", never estimated; never a write, comment, label, issue or rule change in the partner's repositories.
 * **Teams, never people.** No individual names, counts or rankings anywhere.
 * **Never ranked side by side** (DORA's own guidance: its keys are not targets and not for comparing teams). Each side is shown against the DORA bands on its own.
 * **The three lights are agreed with the partner's lead before any is reported** outside the founder's private page.
