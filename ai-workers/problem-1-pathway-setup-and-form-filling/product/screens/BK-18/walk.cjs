@@ -19,6 +19,14 @@ const shot = async (p, name) => p.screenshot({ path: `${SHOTS}/${name}-1440.png`
   p.on("console", (m) => { if (m.type() === "error" && !/the server responded with a status of (400|409)/.test(m.text())) errors.push(m.text()); });
   const settle = async (ms = 1500) => { await p.waitForLoadState("networkidle").catch(() => {}); await p.waitForTimeout(ms); };
 
+  // 0. The copy needs the configured checkpoint (a released Study permit), as the row's own check does.
+  const released = async () => ((await call("GET", "/runtime/openable", "user-O")).body ?? []).some((r) => r.combination === "Outside Canada" && r.startable);
+  if (!(await released())) {
+    await call("POST", "/demo/reset", "user-A", { confirm: "RESET" });
+    const l = await call("POST", "/demo/load", "user-A", { sample: "configured" });
+    if (l.status >= 300) { console.log("STOP the configured checkpoint did not load", l.status); process.exit(2); }
+  }
+
   // 1. The case list, as the Representative.
   await p.goto(`${base}/cases`); await settle();
   await shot(p, "01-cases");
@@ -81,17 +89,35 @@ const shot = async (p, name) => p.screenshot({ path: `${SHOTS}/${name}-1440.png`
   const why = (await p.locator("[data-refusal], [data-standing]").allInnerTexts()).join(" | ");
   ok("walk 5: C8.2's first step is on the page under \"Submission to IRCC\"; on this bare case it waits, and Ready to file says why in words", (await rec.count()) === 1 && /not ready|stand|before Ready to file/i.test(why), { button: await rec.count(), why: why.slice(0, 200) });
 
-  // 7. The other branch of the record, on a case two people worked on: the Case officer prepared it, the Representative
-  // reviewed it, and the submission is recorded. The record names both, and C8.2's own record agrees.
-  const worked = ((await call("GET", "/runtime/cases", "user-R")).body?.cases ?? []).find((x) => /^ACC-/.test(x.reference ?? ""));
-  if (worked) {
-    await p.goto(`${base}/cases/${worked.id}`); await settle(2500);
-    const two = (await p.locator("main").innerText()).match(/Prepared by · Reviewed by:[^\n]*/)?.[0] ?? "";
-    console.log("RECORD (two people):", two);
-    ok("walk 6: on a case the Case officer prepared and the Representative reviewed, the record names both — never a self-review", /Case officer \(Sample\)/.test(two) && /Representative \(Sample\)/.test(two) && !/Self-reviewed/.test(two), two);
-    await shot(p, "10-record-two-people");
-  } else ok("walk 6 setup: a case two people worked on is on the list", false);
-  ok("walk 7: no script error during the walk", errors.length === 0, errors.slice(0, 3));
+  // 7. The other branch of the record, walked on its own case: the Case officer prepares it, the Representative reviews
+  // it. The record names both and never reads as a self-review.
+  const row = ((await call("GET", "/runtime/openable", "user-O")).body ?? []).find((x) => x.combination === "Outside Canada" && x.startable);
+  const made = await call("POST", "/runtime/cases", "user-O", { combinationId: row?.combination_id, reference: `BK18two-${Date.now() % 100000}`, clientActor: "user-P", principal: { displayName: `Sample Student ${Date.now() % 1000}` }, representative: "user-R", caseOfficers: ["user-O"] });
+  const sub = (made.body?.people ?? []).find((x) => x.role === "principal")?.subject_id;
+  // the Case officer does the work, through the same route the Agent view uses
+  const typed = await call("PUT", `/runtime/cases/${made.body?.id}/answers/${sub}/person.passport_number`, "user-O", { value: "ZX9999995", expectedId: null });
+  ok("walk 6 setup: a second case, where the Case officer prepares it and the Representative reviews it", made.status < 300 && typed.status < 300, { made: made.status, typed: typed.status });
+  const ctx2 = await b.newContext({ viewport: { width: 1440, height: 1000 } });
+  await ctx2.addInitScript(() => { try { localStorage.setItem("xr-actor", "user-R"); } catch {} });
+  const q = await ctx2.newPage(); await q.goto(`${base}/cases/${made.body?.id}`); await q.waitForLoadState("networkidle"); await q.waitForTimeout(1500);
+  const send2 = q.getByRole("button", { name: /^(Send for review|Review now)$/ }); await send2.scrollIntoViewIfNeeded(); await send2.click(); await q.waitForTimeout(800);
+  await q.getByRole("dialog").getByRole("button", { name: /^(Send|Review) \d+ filings? (for review|now)$/ }).click(); await q.waitForTimeout(2500);
+  const open2 = q.getByRole("link", { name: "Open the review" }); if (await open2.count()) { await open2.first().click(); await q.waitForTimeout(2500); }
+  await q.getByRole("button", { name: "Approve", exact: true }).click(); await q.waitForTimeout(1200);
+  const d2 = q.getByRole("dialog");
+  for (let i = 0; i < 2 && (await d2.count()); i++) {
+    await d2.getByRole("button", { name: "Approve", exact: true }).click(); await q.waitForTimeout(2200);
+    if (await d2.count()) console.log(`two-people APPROVE press ${i + 1}, the dialog says:`, (await d2.locator("[role=alert]").allInnerTexts()).join(" | ").slice(0, 300));
+  }
+  { const refused = (await q.locator("[data-conflict]").allInnerTexts()).join(" | ");
+    ok("walk 7a: the representative who only sent it for review is never refused as a second person (review M1)", !refused, refused.slice(0, 200));  }
+  await q.goto(`${base}/cases/${made.body?.id}`); await q.waitForLoadState("networkidle"); await q.waitForTimeout(2000);
+  const two = (await q.locator("main").innerText()).match(/Prepared by · Reviewed by:[^\n]*/)?.[0] ?? "";
+  console.log("RECORD (two people):", two);
+  ok("walk 7: on a case the Case officer prepared and the Representative reviewed, the record names both — never a self-review", /Case officer \(Sample\)/.test(two) && /reviewed by Representative \(Sample\)/.test(two) && !/Self-reviewed/.test(two), two);
+  await q.screenshot({ path: `${SHOTS}/10-record-two-people-1440.png`, fullPage: true });
+  await ctx2.close();
+  ok("walk 8: no script error during the walk", errors.length === 0, errors.slice(0, 3));
   await ctx.close(); await b.close();
   console.log(failed ? `${failed} failed` : "all passed");
   process.exit(failed ? 1 : 0);

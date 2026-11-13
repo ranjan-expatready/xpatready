@@ -11,7 +11,8 @@ import type { Db } from "./core.ts";
 import { changedGroups, type GroupFact } from "../../engine/runtime/forms.ts";
 import { fileStampCurrent, stampCurrent } from "../../engine/runtime/review.ts";
 import { closedOnce, readinessFigure, type ClosedFinding, type Figure } from "../../engine/runtime/readiness-figure.ts";
-import { preparersOfCase } from "./case-work.ts"; // BK-18 (QA-448): who really prepared the filing
+import { caseWork } from "./case-work.ts"; // BK-18 (QA-448): who really prepared the filing
+import { preparersOf } from "../../engine/runtime/preparers.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RECEIVED = new Set(["received", "being_checked", "approved"]);
@@ -108,8 +109,10 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(Read
   const checkOf = (g: { source: string; ruleKey: string | null; subjectId: string }) => (g.source === "rules" && g.ruleKey ? `${g.ruleKey}|${g.subjectId}` : null);
   const rep = (await db.caseTeamMember.findFirst({ where: { caseId: x.caseId, role: "LEAD_REPRESENTATIVE", endedAt: null }, select: { userId: true } }))?.userId ?? null;
   // BK-18 (QA-448): who prepared the filings, from the case's own work record (api/src/case-work.ts), for the record the
-  // Ready to file panel shows; the case team's officers are who may work on it, never proof that they did.
-  const preparedBy = await preparersOfCase(db, x.caseId);
+  // Ready to file panel shows; the case team's officers are who may work on it, never proof that they did. Read once for
+  // the case; each filing names who had worked on it when its review was made (review B2: later work never rewrites a
+  // record that was already made).
+  const work = await caseWork(db, x.caseId);
   // C8.3 (break B1): each filing's newest review round row; a review counts only while that row is the approval that
   // wrote it (a filing sent for review again, or sent back, is no longer approved). Filings never sent: none.
   // QA-345: with each form's stamped file kind, so an approval counts only while it stamped the validated copy filed.
@@ -183,7 +186,8 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(Read
     const closed = closedOnce(closedFindings.filter((g) => g.filingId === filing).map((g) => ({ id: g.id, state: g.state as ClosedFinding["state"], check: checkOf(g),
       words: `${g.severity.toUpperCase()} finding${g.form ? ` on ${g.form}` : ""} (${g.state === "resolved" ? "resolved: the facts now agree" : `${g.state} with a reason in Review findings`}): ${g.source === "ai" ? "flagged by the AI review" : g.quote}` })), openRuleChecks);
     return { ...r, figure: readinessFigure(input, r, closed), status_rule: "P-315: only a barcode form without its validated copy blocks; every other line is passed with a reason or fixed.",
-      reviewed: review ? { by: review.reviewedBy, kind: review.kind, licence_number: review.licenceNumber, at: review.reviewedAt.toISOString() } : null, prepared_by: preparedBy, facts_hash: factsHash, representative: rep };
+      reviewed: review ? { by: review.reviewedBy, kind: review.kind, licence_number: review.licenceNumber, at: review.reviewedAt.toISOString() } : null,
+      prepared_by: preparersOf(work.acts, work.staff, review?.reviewedAt ?? null), facts_hash: factsHash, representative: rep };
   });
 }
 

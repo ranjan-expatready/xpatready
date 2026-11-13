@@ -124,11 +124,43 @@ ok("N4 fail: a representative who prepared it with another officer who worked on
 // BK-18 (QA-448, P-525 (1), P-510 (4), P-154): walk 1's step S8 through the routes. The case team has a case officer who
 // does nothing; the representative opens the case, does the work and reviews it. The record is one person's: the
 // representative is asked for the statement (400) and the review is logged Self-reviewed, never as a second person's.
-const s8 = await call("POST", "/runtime/cases", { combinationId: vv, reference: `ACC-BK18-${Date.now().toString(36)}`, clientActor: CLIENT, principal: { displayName: "Sample Client W" }, representative: rep, caseOfficers: [officer] }, rep);
-const sg = (await prepare(s8.body?.id ?? "", rep)).p?.filings[0]?.id ?? "";
-const asked = await call("POST", `/runtime/filings/${sg}/review`, { note: "Reviewed (Sample)", facts_hash: await fh(s8.body?.id ?? "", sg, rep) }, rep);
-const said = await call("POST", `/runtime/filings/${sg}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(s8.body?.id ?? "", sg, rep) }, rep);
+const stamp = Date.now().toString(36);
+const newCase = async (ref: string, name: string, who: string) => {
+  const made = await call("POST", "/runtime/cases", { combinationId: vv, reference: `ACC-${ref}-${stamp}`, clientActor: CLIENT, principal: { displayName: name }, representative: rep, caseOfficers: [officer] }, who);
+  return { id: made.body?.id as string, subject: (made.body?.people ?? []).find((x: { role: string }) => x.role === "principal")?.subject_id as string, status: made.status };
+};
+const s8 = await newCase("BK18", "Sample Client W", rep);
+await answer(s8.id, s8.subject, "person.passport_number", "ZX9999992", rep); // the representative does the work
+const sg = (await prepare(s8.id, rep)).p?.filings[0]?.id ?? "";
+const asked = await call("POST", `/runtime/filings/${sg}/review`, { note: "Reviewed (Sample)", facts_hash: await fh(s8.id, sg, rep) }, rep);
+const said = await call("POST", `/runtime/filings/${sg}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(s8.id, sg, rep) }, rep);
 ok("BK-18 (QA-448) fail before, pass after: a case officer on the team who did nothing never makes the representative's own work a second person's review — the statement is asked for (400), then it is logged Self-reviewed", s8.status < 300 && asked.status === 400 && said.status === 200 && said.body?.kind === "self_reviewed", [s8.status, asked.status, said.status, said.body?.kind]);
+
+// BK-18 review B1 and M1: the case officer only opens the case; the representative does the work. Opening a case is not
+// preparing its filings, so the review is the representative's own (Self-reviewed), never refused as a second person's.
+const b1 = await newCase("BK18B1", "Sample Client V", officer);
+await answer(b1.id, b1.subject, "person.passport_number", "ZX9999993", rep);
+const b1f = (await prepare(b1.id, rep)).p?.filings[0]?.id ?? "";
+const b1Asked = await call("POST", `/runtime/filings/${b1f}/review`, { note: "Reviewed (Sample)", facts_hash: await fh(b1.id, b1f, rep) }, rep);
+const b1Did = await call("POST", `/runtime/filings/${b1f}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(b1.id, b1f, rep) }, rep);
+ok("BK-18 (review B1, M1) fail: opening a case is not preparing it — the representative who did the work self-reviews (400 then Self-reviewed), never a 409 naming a case officer who only opened it", b1Asked.status === 400 && b1Did.status === 200 && b1Did.body?.kind === "self_reviewed", [b1Asked.status, b1Did.status, b1Did.body?.kind, b1Asked.body?.detail]);
+
+// BK-18 review B2 / breaker B3: the record says what was true when the review was made. Work done afterwards (here the
+// case officer passing a warning with a reason, which leaves the review standing) never rewrites it.
+const b1Warn = (readinessOf((await prepare(b1.id, rep)).p, b1f)?.warns ?? []).find((w: { code: string }) => w.code !== "representative_review");
+const b1Passed = await call("POST", `/runtime/filings/${b1f}/warnings/${encodeURIComponent(b1Warn?.code ?? "")}/pass`, { reason: "The client sends it today (Sample)", key: b1Warn?.key }, officer);
+const b1After = readinessOf((await prepare(b1.id, rep)).p, b1f) as { reviewed?: { kind: string }; prepared_by?: string[] } | undefined;
+ok("BK-18 (review B2, breaker B3) fail: a case officer's later work does not turn a recorded self-review into a two-person record", b1Passed.status === 200 && b1After?.reviewed?.kind === "self_reviewed" && JSON.stringify(b1After?.prepared_by) === JSON.stringify([rep]), { passed: b1Passed.status, reviewed: b1After?.reviewed ?? null, prepared_by: b1After?.prepared_by ?? null });
+
+// BK-18 review M2 / breaker B2: work that leaves no answer of its own still counts. The case officer passes a warning
+// with a written reason; the representative who did the rest can no longer review it as a second person (BR-8, 409).
+const m2 = await newCase("BK18M2", "Sample Client U", rep);
+await answer(m2.id, m2.subject, "person.passport_number", "ZX9999994", rep);
+const m2f = (await prepare(m2.id, rep)).p?.filings[0]?.id ?? "";
+const m2Warn = (readinessOf((await prepare(m2.id, rep)).p, m2f)?.warns ?? []).find((w: { code: string }) => w.code !== "representative_review");
+const m2Pass = await call("POST", `/runtime/filings/${m2f}/warnings/${encodeURIComponent(m2Warn?.code ?? "")}/pass`, { reason: "The client sends it today (Sample)", key: m2Warn?.key }, officer);
+const m2Review = await call("POST", `/runtime/filings/${m2f}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(m2.id, m2f, rep) }, rep);
+ok("BK-18 (review M2, breaker B2) fail: a second person's work that leaves no answer row (a warning passed with a reason) still makes them a preparer, so the review is refused as a second person's (409)", m2Pass.status === 200 && m2Review.status === 409, [m2Warn?.code, m2Pass.status, m2Review.status]);
 
 // B7: accepted-until takes a plain day only.
 const ed = sql(`select e.id from form_edition e join gov_form_def g on g.id=e.gov_form_def_id where g.form_key='IMM 5707' and e.channel <> 'ONLINE' limit 1`);

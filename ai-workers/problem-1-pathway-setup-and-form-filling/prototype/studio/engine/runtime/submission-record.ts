@@ -55,16 +55,20 @@ export const filedEarlierWords = (form: string, owner: string, changed: { label:
  *  `review` is the review that counts for Ready to file (readiness: by the representative of record, for the facts as
  *  they are now; api/src/readiness-inputs.ts), or null when none counts (the review warning was passed with a reason).
  *  Reviewer: that review's author, or nobody: a record never claims a review that did not happen (review M1).
- *  Preparer: a self-review names the reviewer. Otherwise a case officer of the case team: one on the team when the review
- *  was made (else now), never the reviewer; else the officer who left last; the one recording only when the case never
- *  had a case officer. With two officers at once the earliest assigned stands in: the data holds no per-filing preparer
- *  (review m2). */
+ *  Preparer: a self-review names the reviewer. Otherwise the person the case's own work record names (BK-18, QA-448:
+ *  `preparers`, who had worked on it when the review was made, earliest act first, api/src/case-work.ts), so this record
+ *  and Ready to file's say the same thing (breaker B4). Only when the case holds nobody's work does it fall back to the
+ *  case team: a case officer on the team when the review was made (else now), never the reviewer; else the officer who
+ *  left last; the one recording only when the case never had a case officer. With two officers at once the earliest
+ *  assigned stands in: the data holds no per-filing preparer (review m2). */
 export function recordedPeople(
   review: { by: string; kind: string; at: string | Date } | null,
   team: { userId: string; role: string; assignedAt: Date; endedAt: Date | null; id: string }[],
-  recorder: string, now: Date = new Date(),
+  recorder: string, now: Date = new Date(), preparers: string[] = [],
 ): { preparedBy: string; reviewedBy: string | null } {
   if (review?.kind === "self_reviewed") return { preparedBy: review.by, reviewedBy: review.by };
+  const worked = preparers.find((p) => p !== review?.by) ?? preparers[0];
+  if (worked) return { preparedBy: worked, reviewedBy: review?.by ?? null };
   const officers = team.filter((m) => m.role === "OFFICER" && m.userId !== review?.by);
   const byAssigned = (a: (typeof team)[number], b: (typeof team)[number]) => a.assignedAt.getTime() - b.assignedAt.getTime() || a.id.localeCompare(b.id);
   const activeAt = (t: number) => officers.filter((m) => m.assignedAt.getTime() <= t && (!m.endedAt || m.endedAt.getTime() > t)).sort(byAssigned)[0];

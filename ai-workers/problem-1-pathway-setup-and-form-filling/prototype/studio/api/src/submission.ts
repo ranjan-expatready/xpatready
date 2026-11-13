@@ -22,6 +22,8 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { CorrectNumber, RecordSubmission } from "../../contracts/submission-record.ts";
 import { checkApplicationNumber, duplicateWarning, type NumberRule } from "../../engine/runtime/filing-record.ts";
 import { recordedPeople, coverageProblem, duplicateInGroup, submittedOnProblem } from "../../engine/runtime/submission-record.ts";
+import { preparersOf } from "../../engine/runtime/preparers.ts";
+import { caseWork } from "./case-work.ts"; // BK-18 (QA-448): who really prepared the filing
 import { checkValue } from "../../engine/runtime/case.ts";
 import { formCoverage } from "../../engine/runtime/forms.ts";
 import { currentValues } from "../../engine/runtime/submission-record.ts";
@@ -151,6 +153,8 @@ export class Submission {
     const peopleRead = peopleKey(c.participants);
     const portal = (view as { portal?: string | null }).portal ?? null;
     const reviewOf = new Map(((view as { readiness?: { filing: string; reviewed: { by: string; kind: string; at: string } | null }[] }).readiness ?? []).map((x) => [x.filing, x.reviewed]));
+    // BK-18 (QA-448): the case's own work record, read once before the lock (never a second connection under it).
+    const work = await caseWork(this.db, c.id);
     await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${c.id}::uuid FOR NO KEY UPDATE`;
       if (String(b.version) !== await storedVersion(tx, c.id)) stale();
@@ -164,7 +168,10 @@ export class Submission {
       const team = await tx.caseTeamMember.findMany({ where: { caseId: c.id }, select: { userId: true, role: true, assignedAt: true, endedAt: true, id: true } });
       for (const l of lines) {
         // The review that counts for Ready to file, as the view read it (review m1: never a stale or earlier one).
-        const who = recordedPeople(reviewOf.get(l.filing) ?? null, team, actor.id);
+        const rv = reviewOf.get(l.filing) ?? null;
+        // BK-18 (QA-448, breaker B4): the preparer is the one the case's work record names, as at that review, so this
+        // record and Ready to file's never disagree; the case team stands in only when the case holds nobody's work.
+        const who = recordedPeople(rv, team, actor.id, new Date(), preparersOf(work.acts, work.staff, rv?.at ?? null));
         await tx.filing.update({ where: { id: l.filing }, data: { applicationNumber: l.application_number } });
         await tx.filingRecord.create({ data: { workspaceId: c.workspaceId, caseId: c.id, filingId: l.filing, submissionGroupId: g!.id, portal, ourReference: l.our_reference, submittedOn: new Date(`${l.submitted_on}T00:00:00Z`),
           applicationNumber: l.application_number, feeReceipt: l.fee_receipt, preparedBy: who.preparedBy, reviewedBy: who.reviewedBy, recordedBy: actor.id, filedFacts: formsOf(l.filing) as object } });

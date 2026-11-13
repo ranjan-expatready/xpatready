@@ -205,14 +205,15 @@ function FilingReadiness({ caseId, f, r, g, actor, nameOf, review }: { caseId: s
  *  from who really acted (the case's own work record, `prepared_by`), never from who is named on the case team. One
  *  person who prepared it and reviewed it alone reads "Self-reviewed" with their name, licence number and time (P-154
  *  allows it); a case officer who did nothing is never named, and a second person's review is never shown for a review
- *  one person made. Nobody recorded as having prepared it is said plainly, never guessed. */
+ *  one person made. It says what was true when the review was made, so later work never rewrites it (review B2). Nobody
+ *  recorded as having prepared it is said plainly, never guessed. */
 function RecordLine({ r, reviewed, nameOf }: { r: Readiness; reviewed: NonNullable<Readiness["reviewed"]>; nameOf: (id: string) => string }) {
   const rec = reviewRecordOf({ preparers: r.prepared_by ?? [], reviewedBy: reviewed.by, kind: reviewed.kind });
   const who = `${nameOf(reviewed.by)}${reviewed.licence_number ? ` (licence ${reviewed.licence_number})` : ""}`;
   return (
     <p className="text-[13px]" data-reviewed={reviewed.kind} data-record={rec.self ? "self-reviewed" : "two-people"}>
       <span className="text-text-muted">Prepared by · Reviewed by: </span>
-      {rec.self ? `Self-reviewed by ${who}` : `${rec.preparedBy.length ? rec.preparedBy.map(nameOf).join(", ") : "not recorded"} · ${who}`}, {when(reviewed.at)}
+      {rec.self ? `Self-reviewed by ${who}` : `${rec.preparedBy.length ? rec.preparedBy.map(nameOf).join(", ") : "nobody recorded"} · reviewed by ${who}`}, {when(reviewed.at)}
     </p>
   );
 }
