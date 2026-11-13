@@ -75,13 +75,13 @@ ok("BK-12 pass: none of the three files' code names a combination of the data or
   // (5) The Study permit opens its own Sample case, from its data.
   r = await call("POST", "/demo/sample-case", { combinationId: spId });
   const spCase = r.body?.caseId;
-  ok("BK-12 pass: the Study permit's Sample case opens from its data (reference, combination, application form)", (r.status === 200 || r.status === 201) && r.body.reference === "SAMPLE-SP-STUDENT-1" && r.body.combination === "sp.outside" && r.body.applicationForm === "IMM 1294", r.body);
-  ok("BK-12 pass: it is on the Study permit's release, with its own principal, not the Visitor visa's family",
-    sql(`select c.combination_id || '|' || s.label from runtime_case c join case_participant p on p.case_id=c.id and p.role='principal' join answer_subject s on s.id=p.subject_id where c.id='${spCase}'`) === `${spId}|Student A (Sample)` && r.body.people === 1 && r.body.release === 1, r.body);
+  ok("BK-12 pass: the Study permit's Sample case opens from its data (reference, combination, application form)", (r.status === 200 || r.status === 201) && r.body.reference === "SAMPLE-SP-FAMILY-1" && r.body.combination === "sp.outside" && r.body.applicationForm === "IMM 1294", r.body);
+  ok("BK-12 pass: it is on the Study permit's release, with its own principal and its own family of three (BK-13), not the Visitor visa's family",
+    sql(`select c.combination_id || '|' || s.label from runtime_case c join case_participant p on p.case_id=c.id and p.role='principal' join answer_subject s on s.id=p.subject_id where c.id='${spCase}'`) === `${spId}|Student A (Sample)` && r.body.people === 3 && r.body.release === 1, r.body);
   ok("BK-12 pass: every answer of its own file is taken by its release (none refused) and its sections confirmed", r.body.sampleAnswers > 20 && r.body.answerRefused?.length === 0 && r.body.confirmed > 0 && r.body.fromRecord === 0, { answers: r.body.sampleAnswers, refused: r.body.answerRefused });
-  ok("BK-12 pass: its application form is copied for its one applicant (IMM 1294)", r.body.applicants === 1 && r.body.applicationCopies === 1 && r.body.copies.some((c: string) => /^IMM 1294 /.test(c)), r.body.copies);
+  ok("BK-12 pass: its application form is copied for its one applicant (IMM 1294: the student; the child does not study, BK-13)", r.body.applicants === 1 && r.body.applicationCopies === 1 && r.body.copies.some((c: string) => /^IMM 1294 /.test(c)), r.body.copies);
   r = await call("POST", "/demo/sample-case", { combinationId: spId });
-  ok("BK-12 pass: opening it again gives the same case (no second case)", r.body?.caseId === spCase && sql("select count(*) from runtime_case where reference='SAMPLE-SP-STUDENT-1'") === "1", r.body?.caseId);
+  ok("BK-12 pass: opening it again gives the same case (no second case)", r.body?.caseId === spCase && sql("select count(*) from runtime_case where reference='SAMPLE-SP-FAMILY-1'") === "1", r.body?.caseId);
   r = await call("POST", "/demo/sample-case", { combinationId: vvId });
   ok("BK-12 pass: the Visitor visa's Sample case, asked the same way, is the story's family case", r.body?.caseId === famId && r.body?.reference === "SAMPLE-VV-FAMILY-1" && r.body?.people === 4, { famId, got: r.body?.caseId });
 
