@@ -128,3 +128,31 @@ Same reviewer role, 13 Nov 2026. Scope: `git diff 4f428aa51..9215b2c1d`. Own cop
 
 **Journey score unchanged: 8.5/10** ("Correct data" stays ½ for the open part of M1).
 **Round 2 verdict: Block.** One Major is still open, M1's decision-fact case. The Minor can go with it.
+
+## Round 3: head `71c77be5d6347c5b7dabaac19d91f86f0d6d7b2b` (fix `828e2a68a`; diff `9215b2c1d..828e2a68a` only)
+Same reviewer role, 13 Nov 2026, on the tech lead's go (Lead 32, P-293 (3)). Not reviewed, as asked: the merge of main `907caa1d7` (P-318 (1)) and `71c77be5d` (screenshots only).
+Own copy on :4448 at the head, stopped after use. The local database server was down (stale pid); I started only the database (`pg_ctl … start`, as `start.sh` does), never :4400. Live AI off, US$0.
+
+**Re-ran at the head:**
+* `check_qa446_confirm_counts_browser.ts` **45/45**. Step 6, Visitor visa: household 2; all 4 filings read "2 to confirm". Study permit: household 2; the principal's filing reads 2, the others 1. None reads "0 to confirm".
+* `check_qa417_counts_browser.cjs` 55 passed, 0 failed. `check_review_rounds` 56/56. `tsc -p web` 0.
+* `tsc -p api`: no error in the PR's files (`value` was added to the check's type A, line 36).
+* **My round-2 reproduction, on fresh Visitor visa and Study permit cases** (probe deleted):
+  1. The officer answers "authorizes … release" = Yes on The application.
+  2. The officer confirms every person's tab.
+  3. Household: 1. Every filing: "… · 1 to confirm (the officer's Confirm section)". Before this fix it was "0 to confirm".
+* The screenshots the run rewrote are restored. I changed no other file.
+
+**M1: closed.**
+* `api/src/review-rounds.ts:105-107`: `counted = caseFacts.has(fact) || !readAnywhere.has(fact)`, with `readAnywhere` over the case's needed forms (channel ≠ NOT_NEEDED).
+* An application answer now counts in each filing whose forms read it, and in every filing when none reads it (it decides which forms there are). The household and every checklist agree.
+* The pack's step 6 fails if either half is removed: it asserts 2 against 1 per filing. Its expectation comes from the frozen forms (SQL), not from the server's rule.
+* The firm-record `case.uses_representative` now shows as "1 confirmed by Representative (Sample)" in each filing. That is true, and it is never to confirm.
+
+**Minor from round 2 (type A): closed.**
+
+**Note (no change asked):** the "confirmed by …" parts follow the order answers are read, so filings of the same case can list "Case officer" and "Representative" in different orders. The words stay true.
+
+**Not re-run:** the R1 group and C8.3 pack after the merge (the builder reports r1c 140/141, its speed budget only, failing on main too; left to CI).
+**Journey score: 9/10, pass.** "Correct data" is back to 1: household = tabs = sections = every filing's checklist, including the application. "Plain words" stays ½ (the long "(the officer's Confirm section)").
+**Round 3 verdict: Approve** for `71c77be5d6347c5b7dabaac19d91f86f0d6d7b2b`: no open Blocker or Major.
