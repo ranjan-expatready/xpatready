@@ -6,8 +6,9 @@
 //   2 the fixture's page opens at its path, and two more modules' pages beside it (pass);
 //   3 /, /sign-in and /cases (and /link, /inbox) open exactly as in a build with no module (same address, title,
 //     heading, no page error);
-//   4 fail: two modules claiming one path, and a module claiming an App.tsx route (/sign-in, under /cases/*, /link,
-//     /inbox, the shell's /start, and /c/new under /c/:id) stop the app, the message naming both sides;
+//   4 fail: two modules claiming one path, one module claiming one address twice, and a module claiming an App.tsx
+//     route (/sign-in, under /cases/*, /link, /inbox, the shell's /start, /c/new under /c/:id, /Sign-In, /inbox/:tab?)
+//     stop the app, the message naming both sides, on the page too; one module's static, :param and /* routes pass;
 //   5 fail: a routes.tsx without `export const routes` stops `vite build` with the file's name;
 //   6 APP_ROUTES in modules.tsx equals every <Route path> in App.tsx (but the catch-alls), so a new App.tsx route is
 //     guarded too; App.tsx renders {moduleRoutes} once, ahead of its top-level catch-all.
@@ -43,7 +44,7 @@ function build(name: string, fixtures: boolean) {
 const jsOf = (out: string) => readdirSync(join(out, "assets")).filter((f) => f.endsWith(".js")).map((f) => readFileSync(join(out, "assets", f), "utf8")).join("\n");
 
 const TYPES: Record<string, string> = { ".js": "text/javascript", ".css": "text/css", ".html": "text/html", ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".woff2": "font/woff2" };
-type Seen = { path: string; title: string; h1: string; errors: string[] };
+type Seen = { path: string; title: string; h1: string; errors: string[]; alert: string };
 /** Opens BASE+path with every non-/api request answered from the build `out` (the SPA's index.html for addresses). */
 async function open(browser: Browser, out: string, path: string, shot?: string): Promise<Seen> {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -60,7 +61,7 @@ async function open(browser: Browser, out: string, path: string, shot?: string):
   await page.goto(BASE + path, { waitUntil: "networkidle" });
   await page.waitForTimeout(300);
   if (shot) await page.screenshot({ path: join(SHOTS, shot) });
-  const seen = { path: new URL(page.url()).pathname, title: await page.title(), h1: (await page.locator("h1").count()) ? ((await page.locator("h1").first().textContent()) ?? "").trim() : "", errors };
+  const seen = { path: new URL(page.url()).pathname, title: await page.title(), h1: (await page.locator("h1").count()) ? ((await page.locator("h1").first().textContent()) ?? "").trim() : "", errors, alert: (await page.locator("pre[role=alert]").count()) ? ((await page.locator("pre[role=alert]").textContent()) ?? "") : "" };
   await ctx.close();
   return seen;
 }
@@ -80,6 +81,8 @@ try {
   ok("PF-1: a default build ships no fixture module (web/src/modules/_example)", plain.status === 0 && !jsOf(plain.out).includes("Example module"));
   tempModule("one", pageModule(["/pf1-one"], "Module one page"));
   tempModule("two", pageModule(["/pf1-two/*"], "Module two page"));
+  // One module's own static, ":param" and "/*" routes side by side: React Router ranks them, the seam allows them.
+  tempModule("fo", `import type { ModuleRoute } from "@/modules";\nconst P = ({ w }: { w: string }) => <main><h1>{w}</h1></main>;\nexport const routes: ModuleRoute[] = [{ path: "/pf1-fo/leads/new", element: <P w="New lead" /> }, { path: "/pf1-fo/leads/:id", element: <P w="One lead" /> }, { path: "/pf1-fo/*", element: <P w="Front office" /> }];\n`);
   const fx = build("fixtures", true);
   ok("PF-1: a fixture build (VITE_MODULE_FIXTURES=1) passes and has the fixture", fx.status === 0 && jsOf(fx.out).includes("Example module"), fx.status === 0 ? undefined : fx.log.slice(-600));
   clearTemp();
@@ -89,6 +92,8 @@ try {
   ok("PF-1: the fixture's page opens at /_example/pf-1 (no App.tsx change beyond the one line)", ex.path === "/_example/pf-1" && ex.h1 === "Example module" && ex.errors.length === 0, ex);
   const one = await open(browser, fx.out, "/pf1-one"), two = await open(browser, fx.out, "/pf1-two/any/where");
   ok("PF-1: two more modules' pages open beside it (/pf1-one, /pf1-two/*)", one.h1 === "Module one page" && two.h1 === "Module two page" && !one.errors.length && !two.errors.length, { one, two });
+  const foNew = await open(browser, fx.out, "/pf1-fo/leads/new"), foOne = await open(browser, fx.out, "/pf1-fo/leads/42"), foAny = await open(browser, fx.out, "/pf1-fo/board");
+  ok("PF-1: one module's /leads/new, /leads/:id and /* sit side by side, each page at its address (pass)", foNew.h1 === "New lead" && foOne.h1 === "One lead" && foAny.h1 === "Front office" && ![foNew, foOne, foAny].some((x) => x.errors.length), { foNew: foNew.h1, foOne: foOne.h1, foAny: foAny.h1 });
   const plainEx = await open(browser, plain.out, "/_example/pf-1");
   ok("PF-1: in a default build the fixture's path falls to the shell, not the fixture", plainEx.h1 !== "Example module" && plainEx.errors.length === 0, plainEx);
 
@@ -103,12 +108,17 @@ try {
   const dup = build("dup", true); clearTemp();
   const dupSeen = await open(browser, dup.out, "/pf1-dup", "pf1-clash-two-modules-1440.png");
   ok("PF-1: two modules claiming /pf1-dup stop the app with both names", dupSeen.errors.some((e) => e.includes('modules "_pf1_dup_a" and "_pf1_dup_b" both claim /pf1-dup')) && dupSeen.h1 === "", dupSeen.errors);
-  const claims: [string, string][] = [["/sign-in", "/sign-in"], ["/cases/new", "/cases/*"], ["/link", "/link"], ["/inbox", "/inbox"], ["/start", "/start"], ["/c/new", "/c/:id"]];
+  ok("PF-1: the clash's message is on the page (role=alert), naming both modules, not a blank page", dupSeen.alert.includes('modules "_pf1_dup_a" and "_pf1_dup_b" both claim /pf1-dup') && dupSeen.alert.includes("web/src/modules/README.md"), dupSeen.alert);
+  const claims: [string, string][] = [["/sign-in", "/sign-in"], ["/cases/new", "/cases/*"], ["/link", "/link"], ["/inbox", "/inbox"], ["/start", "/start"], ["/c/new", "/c/:id"], ["/Sign-In", "/sign-in"], ["/inbox/:tab?", "/inbox"]];
   tempModule("app", pageModule(claims.map((c) => c[0]), "Clash"));
   const clash = build("clash", true); clearTemp();
   const clashSeen = await open(browser, clash.out, "/sign-in");
   for (const [mine, theirs] of claims) ok(`PF-1: a module claiming ${mine} stops the app, naming the module and App.tsx's ${theirs}`, clashSeen.errors.some((e) => e.includes(`module "_pf1_app" claims ${mine}, which App.tsx already routes (${theirs})`)), clashSeen.errors);
   ok("PF-1: with a clash nothing renders (not the sign-in page, not the module)", clashSeen.h1 === "", clashSeen.h1);
+  tempModule("twice", pageModule(["/pf1-x/:a", "/pf1-x/:b"], "Twice"));
+  const twice = build("twice", true); clearTemp();
+  const twiceSeen = await open(browser, twice.out, "/pf1-x/1");
+  ok("PF-1: one module claiming the same address twice (/pf1-x/:a, /pf1-x/:b) stops the app", twiceSeen.errors.some((e) => e.includes('module "_pf1_twice" claims /pf1-x/:b twice (/pf1-x/:a)')), twiceSeen.errors);
   tempModule("all", pageModule(["/*"], "All"));
   const all = build("all", true); clearTemp();
   const allSeen = await open(browser, all.out, "/pf1-anything");
