@@ -1,0 +1,4 @@
+IMM5476-0af0ba7d-007210ce-e554-4625-8540-001e22194e07.pdf | 2012 chars | familyName=Principal; givenName=Sample; application=Student; familyName=Representative; givenName=Sample
+IMM5476-21fc3279-bc8359c8-e1c7-4136-b534-f917eed87a68.pdf | 2012 chars | familyName=Principal; givenName=Sample; application=Visitor; familyName=Representative; givenName=Sample
+IMM5476-9d7f5bbc-04227d5d-1acf-43a9-90ce-e98c58866ab0.pdf | 2011 chars | familyName=Principal; givenName=Sample; application=Worker; familyName=Representative; givenName=Sample
+(0af0ba7d = Sample Student W's filing (IMM 1294), 9d7f5bbc = Sample Partner W's (IMM 1295), 21fc3279 = Sample Kid W's (IMM 5257); read with pypdf from the copy's own files, 13 Nov)
