@@ -18,6 +18,7 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). **The 
 * Every founder ask goes into `STATE.md` "Founder asks" the moment it arrives. List each part of a long ask, answer each part, and tick it there.
 * Spoken messages arrive garbled: restate what you understood, then ask one question with a recommendation; never guess a name or a number.
 * Briefs quote decision IDs and the founder's words, never a paraphrase that adds a rule (2 Nov: "drop from the bottom" was mine, not his). Each brief has a testable "Done when".
+* **No duplicates (P-526; 13 Nov: BK-19/20 repeated B170e, whose ruling sat in an unmerged records PR):** before shaping a row, search BACKLOG, open PRs incl. records, `main`'s code, BUGS (and the team's product); the row carries `Duplicate check:`, what it touches and what it waits on; overlapping touch lists never run at once. Records PRs over 24 h: merge or close at the check.
 * A permission the founder gave is used, not left idle; a cap that is too small goes to the founder at once.
 * Before recording a founder choice, state its time, cost and quality impact; a day or more on a milestone, over 10 US dollars, or a lower bar is discussed first (P-254).
 * Silence is not progress: builders can't message the Lead (401), so read their PR comments on every check. Numbers come from tools and exit codes, never from prose or a builder's claim.
