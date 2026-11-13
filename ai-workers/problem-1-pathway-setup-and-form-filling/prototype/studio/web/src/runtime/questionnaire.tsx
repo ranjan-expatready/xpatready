@@ -454,12 +454,24 @@ export function Sqr({ view, order = (v: View) => byPerson(v).sections }: { view:
   const [params, setParams] = useSearchParams();
   const parts = view.sections;
   const raw = params.get("part");
-  const index = raw === null ? null : Math.min(Math.max(Math.floor(Number(raw)) - 1 || 0, 0), parts.length - 1);
+  const asked = raw === null ? null : Math.min(Math.max(Math.floor(Number(raw)) - 1 || 0, 0), parts.length - 1);
   // BK-4c: the hand-off's `from` (who hands back) stays while the client moves between parts.
   const from = params.get("from");
   const go = (i: number | null) => { setParams({ ...(i === null ? {} : { part: String(i + 1) }), ...(from ? { from } : {}) }); window.scrollTo({ top: 0 }); };
+  // QA-445: the address holds a part's place, and a save can add or drop parts before it (an answer decides what is
+  // asked). The part shown stays the same part when the data moves under the same address: it is found by its person
+  // and section, and the address is corrected in place (no new history entry), so the open part is never swapped for
+  // another, and its Save and continue still runs.
+  const pin = React.useRef<{ raw: string | null; key: string | null }>({ raw: null, key: null });
+  const keyAt = asked === null ? null : partKey(parts[asked]);
+  const moved = asked !== null && pin.current.raw === raw && pin.current.key !== null && pin.current.key !== keyAt ? parts.findIndex((s) => partKey(s) === pin.current.key) : -1;
+  const index = moved >= 0 ? moved : asked;
+  React.useLayoutEffect(() => {
+    if (moved >= 0) setParams({ part: String(moved + 1), ...(from ? { from } : {}) }, { replace: true });
+    else pin.current = { raw, key: keyAt };
+  });
   if (index === null) return <SqrOverview view={view} open={go} />;
-  return <SqrPart key={`${parts[index].subjectId}|${parts[index].section}`} view={view} index={index} go={go} order={order} />;
+  return <SqrPart key={partKey(parts[index])} view={view} index={index} go={go} order={order} />;
 }
 
 function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) {
