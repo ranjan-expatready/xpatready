@@ -536,11 +536,12 @@ export class CaseForms implements OnModuleInit {
       // Break M1 on #572: only a kept row that itself passed is "already read back". The same file kept before QA-165 (no
       // result of the form's own) is read back again and recorded, as its words ask ("send the file … again").
       // BK-19 (review M1, M2 on #1679): judged on the copy's newest read-back only, the one the copy shows. The same file
-      // again is "already read back" when that newest row is this file and was barcode-checked, whether it counts or not
-      // (QA-128: kept once, a double click too); a file read back before BK-19 (no barcode check) is read again, and a good
+      // again is "already read back" when that newest row is this file and was fully checked (its Validate result and its
+      // barcodes), whether it counts or not (QA-128: kept once, a double click too); a row with either check missing (read
+      // back before QA-165 or before BK-19) is read again, and a good
       // file sent again after another one is read back and counts again (never hidden by an older row of the same file).
       const newest = await tx.validatedCopy.findFirst({ where: { formInstanceId: x.id }, orderBy: [{ readAt: "desc" }, { id: "desc" }], select: { id: true, sha256: true, readBack: true } });
-      const kept = newest && newest.sha256 === sha && (formPassed(newest) || barcodesOf(newest) !== null) ? newest : null;
+      const kept = newest && newest.sha256 === sha && (formPassed(newest) || (validatePassed(newest) && barcodesOf(newest) !== null)) ? newest : null;
       if (kept) { rmSync(pending, { force: true }); throw new HttpException({ type: "https://expatready.local/problems/validated-copy", title: "Already read back", status: 409, detail: formPassed(kept) ? `This validated file is already read back and kept for this copy of ${x.formNumber}; nothing was added.` : `This file is already read back for this copy of ${x.formNumber} and does not count as validated: ${barcodeWords(kept)} Nothing was added.`, existingId: kept.id }, HttpStatus.CONFLICT); }
       // Review m-4 on #572: the row first, then the file takes its name; a failed rename rolls the row back.
       const row = await tx.validatedCopy.create({ data: { workspaceId: c.workspaceId, formInstanceId: x.id, path: path.replace(`${ROOT}/`, ""), sha256: sha, factsHash: inputHash(cov?.facts ?? []), readBack: rb as object, readBy: actor.id } });

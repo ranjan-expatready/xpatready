@@ -30,7 +30,7 @@ await main("BK-19", "C7.2: the upload door's barcode rule through the routes", a
   const a = (await generateCopy(c.id, FORM, P))!;
   const madeA = await copyBytes(a, officer), flagOnly = asValidated(madeA);
   const up1 = await send(a, flagOnly);
-  const lk1 = await call("POST", `/runtime/form-copies/${a}/lock`, { kind: "printed" }, officer);
+  const lk1 = await call("POST", `/runtime/form-copies/${a}/lock`, { kind: "validated_copy_uploaded" }, officer);
   ok("C7.2 BK-19 fail (lock): a copy whose read-back holds no barcode is not locked for filing (409), in the barcode check's words", up1.status === 201 && lk1.status === 409 && /does not count as validated: 0 of the 5 barcodes are in this file/.test(lk1.body?.detail ?? "") && sql(`select locked_at is null from form_instance where id='${a}'`) === "t", lk1.body?.detail);
 
   // Kept once (QA-128): the same not-counting file again, and twice at once.
@@ -43,8 +43,8 @@ await main("BK-19", "C7.2: the upload door's barcode rule through the routes", a
   const g1 = await send(a, good), s1 = await send(a, stale), g2 = await send(a, good);
   const after = await view(a);
   ok("C7.2 BK-19 pass (review M1): a good file, then one with stale barcodes, then the good file again: the last is read back (201) and the copy counts as validated", g1.status === 201 && g1.body?.copy?.validated?.current === true && s1.status === 201 && s1.body?.copy?.validated?.current === false && g2.status === 201 && after?.validated?.current === true, { g1: g1.status, s1: [s1.status, s1.body?.copy?.validated?.current], g2: [g2.status, g2.body?.detail], now: after?.validated?.current });
-  const lk2 = await call("POST", `/runtime/form-copies/${a}/lock`, { kind: "printed" }, officer);
-  ok("C7.2 BK-19 pass (lock): with its barcodes read and matching, the copy locks as printed", lk2.status < 300 && sql(`select locked_at is not null from form_instance where id='${a}'`) === "t", { status: lk2.status, words: lk2.body?.detail });
+  const lk2 = await call("POST", `/runtime/form-copies/${a}/lock`, { kind: "validated_copy_uploaded" }, officer);
+  ok("C7.2 BK-19 pass (lock): with its barcodes read and matching, the copy locks as validated copy uploaded back", lk2.status < 300 && sql(`select locked_at is not null from form_instance where id='${a}'`) === "t", { status: lk2.status, words: lk2.body?.detail });
   const dup = await send(a, good);
   ok("C7.2 BK-19 fail (QA-128): the good file sent once more is already read back (409), nothing added", dup.status === 409 && /already read back and kept/.test(dup.body?.detail ?? ""), dup.body?.detail);
 
@@ -52,7 +52,9 @@ await main("BK-19", "C7.2: the upload door's barcode rule through the routes", a
   const b = (await generateCopy(c.id, FORM, P))!;
   const goodB = adobeValidated(await copyBytes(b, officer));
   await send(b, goodB);
-  sql(`update validated_copy set read_back = read_back - 'barcodes' where form_instance_id='${b}'`);
+  // As r1d does for a row kept before QA-165: validated_copy rows are never changed, so the old row is added as the newest.
+  sql(`insert into validated_copy (id, workspace_id, form_instance_id, path, sha256, facts_hash, read_back, read_by, read_at)
+    select gen_random_uuid(), workspace_id, form_instance_id, path, sha256, facts_hash, read_back - 'barcodes', read_by, now() from validated_copy where form_instance_id='${b}' order by read_at limit 1`);
   const old = await view(b);
   ok("C7.2 BK-19 fail (old row): a validated copy read back before BK-19 (no barcode check) does not count, and says to send the file again", old?.validated?.current === false && /Read back before its barcodes were checked: send the file you validated in Adobe again/.test(old?.validated?.words ?? "") && old?.validated?.barcodes === null, old?.validated);
   const re = await send(b, goodB);
