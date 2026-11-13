@@ -50,6 +50,9 @@ export function formValues(snapshot: Snapshot, map: { entries: Entry[] }, inv: I
   const write = (path: string, v: string) => (values[path] = inFormFormat(box.get(path) ?? {}, v));
   // C7.2 cause 1: the derivations that compare two facts read the other one from the same person's confirmed facts.
   const confirmed = new Map<string, unknown>(covBoxes.filter((b) => b.coverage === "confirmed fact" && b.fact && (b.row === null || b.row === undefined)).map((b) => [`${b.about}|${b.fact}`, b.value]));
+  // BK-23 (Lead 36 on #1698): and the facts a form field's "A equals B" step compares that no form field of this form reads
+  // itself, confirmed for the same person (engine/runtime/forms.ts `compared`); a form field's own value comes first.
+  for (const b of covBoxes) for (const [f, v] of Object.entries(b.compared ?? {})) if (!confirmed.has(`${b.about}|${f}`)) confirmed.set(`${b.about}|${f}`, v);
   // QA-403 (review M1 on #1588): the words this form's steps name for each fact, so a box that ticks by a word knows
   // every answer its fact can take, and any other answer goes by hand.
   const wordsOf = new Map<string, string[]>();

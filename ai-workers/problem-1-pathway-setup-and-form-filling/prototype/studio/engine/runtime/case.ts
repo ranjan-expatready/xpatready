@@ -10,6 +10,7 @@ import { namesNoValues } from "../options.ts";
 import { z } from "zod";
 import { recordedDerivation } from "../../../p5/transforms.ts";
 import { gateOf, type GatePlacement } from "./gates.ts";
+import { comparedFacts } from "./compared.ts";
 import { gatesInForce } from "../form-field-condition.ts";
 import { SCOPE_TAG } from "../field-scope.ts";
 import { firmRecordFact, formsNamingRepresentative } from "./team.ts";
@@ -385,6 +386,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const boxAt = new Map<string, number>(), listRows = new Map<string, number>();
   const asked = (q: { about: string; fact: string }) => !q.about.includes("/") || (isAskedRelative(q.about) && applies.has(`${q.about}|${q.fact}`));
   const fills = new Map<string, Map<string, { form: string; person: string; subject: string; boxes: number }>>();
+  const comparedBy: { k: string; at: string; e: { form: string; person: string; subject: string; boxes: number } }[] = [];
   // QA-296: a form that does not name the representative of record is never said to be filled by the firm record's facts.
   const namingRep = formsNamingRepresentative(s.field_maps);
   // B107 (QA-299, QA-300): a form field whose gate does not hold writes nothing (engine/runtime/forms.ts formCoverage), so
@@ -404,7 +406,11 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     for (const g of new Set(d ? [b.fact, ...d.facts].map((f) => gateOf(s.placements as GatePlacement[], f)).filter((x): x is string => !!x && x !== b.fact) : [])) { // B52: a box asked as its own question counts once
       const gk = `${b.about}|${g}`, gm = fills.get(gk) ?? new Map(); const ge = gm.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, subject: c.person, boxes: 0 }; ge.boxes++; gm.set(`${c.form}|${c.person}`, ge); fills.set(gk, gm);
     }
+    // BK-23 (Lead 36 on #1698): so does a fact its "A equals B" step compares (engine/runtime/compared.ts), so the person
+    // who files the form is asked it; counted after every form field, so a form that also reads it itself counts once.
+    if (b.row === null || b.row === undefined) for (const f of comparedFacts(b.transform, b.fact)) comparedBy.push({ k: `${b.about}|${f}`, at: `${c.form}|${c.person}`, e: { form: c.form, person: c.person_label, subject: c.person, boxes: 1 } });
   }
+  for (const x of comparedBy) { const m = fills.get(x.k) ?? new Map(); if (!m.has(x.at)) { m.set(x.at, x.e); fills.set(x.k, m); } }
   // Within one section for one person, questions follow the release's placement order (purpose before its "other"
   // details, "from" before "to"); the common renderer lists them by label.
   const first = new Map<string, number>();
