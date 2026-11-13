@@ -1,0 +1,123 @@
+# Platform and front office: module contracts (Lead B, 13-14 Nov 2026)
+
+Status: **draft 1, for Lead 37's read** (owner of the release, the case side and firm walls). Set by P-553 (our own build), P-558 (Lead B owns these modules, all new and fenced). Rows that build it: `lead-b-rows-2026-11-14.md`. Every price, plan, template wording and fee here is **Sample** until the founder or an official source sets it (AGENTS rule 4). Legal points (client money, e-signature identity, retainer wording): **Unconfirmed: no counsel**.
+
+## 0. Ground rules for both areas
+
+1. **Fenced folders, new files only.** API: `prototype/studio/api/src/platform/` and `api/src/front-office/`, each registered by its own file in `api/src/features/` (the existing seam: no edit to `main.ts`). Web: `web/src/modules/platform/` and `web/src/modules/front-office/`, registered through the web seam of PF-1 (no further edit to `App.tsx`). Schema: `platform.prisma` and `front-office.prisma` in the folder the database-file split (DB-SPLIT, Lead 37) creates. Tests: `tests/check_pf*_…` and `tests/check_fo*_…`. Nothing in existing case, forms or runtime code without Lead 37's OK; the one-line hooks this needs are listed in section 5.
+2. **Every table carries `firm_id`** (uuid, not null, indexed first) except the plan catalogue and the event log's delivery columns. Every read and write goes through one helper, `firmScope(firmId)`, and every row ships a cross-firm test (firm A cannot read, list, change or guess firm B's rows: 404, never 403, so ids leak nothing). The database-enforced walls (row rules) are Lead 37's design; these tables are written so those rules can be added without a data change.
+3. **Outside services sit behind our own ports**, one interface per service with two adapters: a `fake` adapter (in-process, deterministic, used by every CI check, no network) and the real adapter in the service's test mode. Live keys never reach CI or a lane; a real-adapter check runs only on the Mac or the test environment with the founder's test-mode keys (P-558 (5): he opens the accounts).
+   * `IdentityPort` → Amazon Cognito (Canadian region) · `local` stand-in until the account exists.
+   * `BillingPort` → Stripe Billing (firm subscriptions to us).
+   * `ClientPaymentsPort` → Stripe Connect (client payments into the **firm's own** Stripe account; we never hold client money).
+   * `ESignPort` → BoldSign sandbox (Canadian region).
+   * `DocumentRenderPort` → docxtemplater (in-process; no service).
+   * `CalendarInvitePort` → calendar invite files (`.ics`) by email; live Google/Outlook sync later.
+   * `MailPort` → the existing demo inbox in the reference app; Amazon SES Canada in the test environment.
+4. **Webhooks** (Stripe, BoldSign) land on `/api/hooks/<service>`: signature checked first (refused 400 without it), stored once in `webhook_receipt` by the service's own event id (a repeat is answered 200 and ignored), then handled; handling never calls the service back inside the request.
+5. **Events to the case side** go through one transactional outbox, `module_event` (written in the same database transaction as the change that causes it). Shape: `{ id (uuid), firm_id, type, version, occurred_at, subject_id, payload (json), delivered_at }`. The case side reads with `GET /api/platform/events?after=<id>` (service-to-service) or an in-process subscriber; delivery is at least once, consumers are idempotent by `id`. Payloads carry ids and the facts the consumer needs, never secrets or card data.
+6. **Public doors** (firm sign-up, enquiry form, booking page, signing return, payment return) are marked open on the API guard (`OpenRead`/an explicit allow-list line, P-348 (4)), rate limited per IP and per firm, and carry no firm data beyond what the visitor typed. They are added to the outside security test's scope.
+7. **Words** (PRODUCT.md style): firm, staff member, owner, representative (licensed), case officer, enquiry, lead, stage, consultation, retainer agreement, signing, invoice, payment. "Client" only once a retainer is signed and paid (the join).
+
+## 1. Platform modules
+
+### 1.1 Firms and plans (`platform/firms`)
+* **Job:** a firm signs up, picks a plan, starts a subscription, keeps its profile (name, office, licence numbers of its representatives, branding), and is suspended for non-payment or closed with a data download.
+* **Tables:** `platform_firm` (id, key = today's `firmKey`, name, status `PENDING_VERIFICATION | ACTIVE | PAST_DUE | SUSPENDED | CLOSED`, office, branding, created_at) · `platform_plan` (catalogue, no firm_id: code, name, seats, monthly and yearly Sample prices, Stripe price ids, active) · `platform_subscription` (firm_id, plan, Stripe customer and subscription ids, status, current period end, seats) · `platform_firm_verification` (firm_id, licence body and number given, checked_by, checked_at, outcome) · `webhook_receipt` (service, event id, received_at, handled_at, outcome) · `module_event` (section 0.5).
+* **API:** `POST /api/public/firms` (sign-up: firm name, owner's email; creates the firm `PENDING_VERIFICATION` and the owner's invitation) · `GET /api/public/plans` · `POST /api/platform/billing/checkout` (owner: plan → Stripe Checkout URL) · `POST /api/platform/billing/portal` (owner: Stripe customer portal URL) · `GET|PATCH /api/platform/firm` (owner, admin) · `POST /api/hooks/stripe` · `POST /api/platform/firms/:id/verify` (our support staff only: the licence check).
+* **Events out:** `firm.created`, `firm.activated`, `firm.subscription_changed` (plan, status), `firm.suspended`, `firm.closed`.
+* **Reads from others:** nothing from the case side.
+* **Rules:** a firm is usable for cases only when `ACTIVE` (subscription active or trialing **and** the licence check passed: the check is recommended, founder decision D-4); `PAST_DUE` keeps working with a banner for a grace period (Sample: 14 days), then `SUSPENDED` (sign-in works, read-only, export works).
+
+### 1.2 Staff, sign-in and roles (`platform/identity`)
+* **Job:** staff sign in (two-step sign-in required for every staff member), are invited, given roles, deactivated with instant lock-out; a firm can never lose its last owner.
+* **Tables:** `platform_staff` (firm_id, id, email, names, identity subject (Cognito `sub` or local id), status `INVITED | ACTIVE | DEACTIVATED`, last_sign_in_at) · `platform_role_grant` (firm_id, staff_id, role `OWNER | ADMIN | REPRESENTATIVE | CASE_OFFICER`, licence body/category/number for a representative, granted_by, granted_at, ended_at) · `platform_invitation` (firm_id, email, roles, token hash, expires_at, accepted_at) · `platform_session_revocation` (firm_id, staff_id, revoked_at: tokens issued before it are refused).
+* **API:** `GET /api/platform/me` → `{ staffId, firmId, firmKey, roles, duties }` · `POST /api/platform/staff/invitations` · `POST /api/public/invitations/:token/accept` · `PATCH /api/platform/staff/:id/roles` · `POST /api/platform/staff/:id/deactivate` · local stand-in only: `POST /api/platform/session/local` (refused unless `PLATFORM_IDENTITY=local`, and never in the test environment).
+* **Guard:** one Nest guard reads the bearer token (Cognito access token, verified against the pool's keys; or the local stand-in's signed token), loads the staff member and their grants, refuses a deactivated member or a revoked session at once, and puts `{ staffId, firmId, roles }` on the request. Every platform and front-office route declares the roles it allows.
+* **Roles to today's duties:** `REPRESENTATIVE` → `represent`, `CASE_OFFICER` → `case`, `OWNER`/`ADMIN` → `firm_admin` (the `Duty` words of `engine/runtime/team.ts`). This is what lets `firms.ts` later read firms from the database in the same shape (Lead 37's join, section 3).
+* **Events out:** `staff.joined`, `staff.roles_changed`, `staff.deactivated`.
+* **Rules:** last-owner guard (removing or deactivating the only active owner is refused 409); a representative needs a licence body and number; invitations expire (Sample: 7 days) and are single use.
+
+### 1.3 Walking skeleton (`platform/skeleton`)
+* **Job:** the app builds into one container image, starts against PostgreSQL, migrates, answers `/api/health`, and is deployed by CI to a test environment on every merge to `main` that touches the app; a smoke journey (health → local or Cognito sign-in → `GET /api/platform/me`) proves each deploy.
+* **Parts:** `Dockerfile` and a compose file for a local test environment (no account needed) · a path-filtered CI job that builds the image and runs the smoke journey against compose · later, the Canadian cloud deploy (infrastructure as code; tool chosen in PF-2's technology gate) once the founder's account exists.
+* **No events, no tables.**
+
+## 2. Front-office modules (enquiry to payment)
+
+### 2.1 Enquiries and leads (`front-office/leads`)
+* **Job:** a person sends an enquiry on the firm's public form (or staff key one in); it becomes a lead with consent evidence and a duplicate warning; staff move it through the firm's stages, note calls, and either lose it (with a reason) or convert it at "retainer signed and paid".
+* **Tables:** `fo_enquiry` (firm_id, received_at, channel `FORM | STAFF`, the words and fields as typed, consent text version and consent given, ip hash) · `fo_lead` (firm_id, person fields: names, email, phone, country of residence, the program asked about, owner staff_id, stage_id, status `OPEN | LOST | CONVERTED`, lost reason) · `fo_stage` (firm_id, name, order, kind `OPEN | WON | LOST`; seeded per firm with Sample stages: New, Contacted, Consultation booked, Retainer sent, Won, Lost) · `fo_lead_activity` (firm_id, lead_id, kind `NOTE | CALL | EMAIL | STAGE_MOVE | BOOKING | RETAINER | PAYMENT`, text, by, at) · `fo_consent` (firm_id, lead_id, purpose, text version, given_at, withdrawn_at).
+* **API:** `POST /api/public/firms/:firmKey/enquiries` (open door: honeypot field, rate limit, size limits; never says whether a person already exists) · `GET /api/front-office/leads?stage=&owner=me|all` · `POST /api/front-office/leads` · `GET|PATCH /api/front-office/leads/:id` · `POST /api/front-office/leads/:id/move` · `POST /api/front-office/leads/:id/activities` · `GET /api/front-office/stages` · `PUT /api/front-office/stages` (owner, admin).
+* **Visibility:** a case officer sees leads they own unless the firm turns on "everyone sees all leads" (Sample default: on for firms of up to 5 staff); owner and admin see all.
+* **Duplicate warning:** same email or same phone (normalised) in the same firm → shown on the lead, never merged automatically.
+* **Events out:** `lead.created`, `lead.stage_moved`, `lead.lost`.
+
+### 2.2 Consultations and booking (`front-office/booking`)
+* **Job:** the firm sets consultation types (length, video/phone/in person, who can take it) and staff hours; a lead (from a link in the reply email) or staff books a slot; nobody is ever double booked; both sides get a calendar invite; reschedule and cancel by link; the outcome is recorded (attended, no-show, "prepare retainer").
+* **Tables:** `fo_consultation_type` (firm_id, name, minutes, mode, staff_ids, buffer minutes, active) · `fo_availability` (firm_id, staff_id, weekday, start, end, time zone) · `fo_time_off` (firm_id, staff_id, from, to) · `fo_booking` (firm_id, lead_id, staff_id, type_id, starts_at, ends_at (UTC), booker's time zone, status `BOOKED | RESCHEDULED | CANCELLED | ATTENDED | NO_SHOW`, manage token hash, outcome note) with a database exclusion constraint so one staff member's `BOOKED` ranges never overlap.
+* **API:** `GET /api/public/firms/:firmKey/slots?type=&from=&to=&tz=` · `POST /api/public/firms/:firmKey/bookings` · `POST /api/public/bookings/:token/reschedule|cancel` · `GET /api/front-office/bookings?from=&to=&staff=` · `PATCH /api/front-office/bookings/:id` (outcome) · `GET|PUT /api/front-office/availability` · `GET|PUT /api/front-office/consultation-types`.
+* **Events out:** `booking.made`, `booking.changed`, `booking.outcome` (with `prepare_retainer: true|false`).
+* **Reads from others:** staff and roles (1.2); the lead (2.1).
+
+### 2.3 Retainer agreements (`front-office/retainers`)
+* **Job:** from the lead and the consultation, staff produce the firm's retainer agreement from its template (fees, services, the program, the representative, the client's details filled in), see a completeness warning for every required item missing, keep versions and addenda, and send it for signing.
+* **Tables:** `fo_retainer_template` (firm_id, name, version, the `.docx` file (stored), the list of placeholders, active) · `fo_retainer` (firm_id, lead_id, template version, representative staff_id, fee lines (amount, currency CAD, tax, trust or operating tag), status `DRAFT | SENT | SIGNED | VOID`, document file, document sha256, version, supersedes_id) · `fo_required_item` (catalogue, no firm_id: the items the regulator requires in a written retainer, each with its official source, page, quote and date).
+* **Required items:** taken from the regulator's own published code and guidance (P-170: cited with page, quote and date) by the builder of FO-5; until counsel reviews the starter template, its wording is **Sample** and labelled so on screen.
+* **API:** `GET|POST /api/front-office/retainer-templates` (owner, admin; `.docx` upload, placeholders read and checked) · `POST /api/front-office/leads/:id/retainers` (draft from template) · `GET /api/front-office/retainers/:id` (with the completeness list) · `POST /api/front-office/retainers/:id/send` (→ 2.4) · `POST /api/front-office/retainers/:id/void`.
+* **Events out:** `retainer.drafted`, `retainer.sent`, `retainer.voided`.
+
+### 2.4 Signing (`front-office/signing`)
+* **Job:** the retainer goes to the lead for e-signature (and the representative's counter-signature) through BoldSign's sandbox; single-use link and a one-time code by email; when all have signed, the sealed copy and the signing evidence are stored with us and the retainer is `SIGNED`.
+* **Tables:** `fo_signature_request` (firm_id, retainer_id, provider `BOLDSIGN | FAKE`, provider document id, signers (role, email, signed_at), status `SENT | VIEWED | SIGNED | DECLINED | EXPIRED`, sealed file, evidence file, sha256 of each).
+* **API:** created by `retainers/:id/send`; `GET /api/front-office/signature-requests/:id`; `POST /api/front-office/signature-requests/:id/remind|cancel`; `POST /api/hooks/boldsign`.
+* **Events out:** `retainer.signed` (retainer id, lead id, representative staff id, fee lines, sealed file sha256).
+
+### 2.5 Invoices and client payment (`front-office/payments`)
+* **Job:** the firm connects its own Stripe account (Stripe-hosted onboarding); an invoice is raised from the retainer's fee lines; the client pays by a Stripe-hosted payment page into the firm's account; receipts go out; refunds and cancellations are recorded. Money tagged **trust** is not taken by card until counsel answers (founder decision D-3); such lines are recorded as paid offline by the firm.
+* **Tables:** `fo_payment_account` (firm_id, Stripe connected account id, charges enabled, payouts enabled, updated_at) · `fo_invoice` (firm_id, lead_id, retainer_id, number (per firm, per year), lines, tax, total, currency CAD, status `DRAFT | OPEN | PAID | VOID | REFUNDED`, due date) · `fo_payment` (firm_id, invoice_id, method `CARD | OFFLINE`, Stripe payment intent id, amount, received_at, recorded_by for offline, refund of).
+* **API:** `POST /api/front-office/payment-account/onboarding` (owner: Stripe onboarding link) · `GET /api/front-office/payment-account` · `POST /api/front-office/retainers/:id/invoice` · `POST /api/front-office/invoices/:id/pay-link` · `POST /api/front-office/invoices/:id/offline-payment` · `POST /api/front-office/invoices/:id/void` · `POST /api/hooks/stripe` (shared with 1.1, routed by account).
+* **Events out:** `invoice.issued`, `payment.received`, `payment.refunded`.
+
+### 2.6 The engagement is ready (the hand-over event)
+* When a lead has a `SIGNED` retainer **and** its first invoice is `PAID` (card or offline), front office writes one **`engagement.ready`** event, once per retainer, and marks the lead `CONVERTED`.
+* **Payload:** `{ firm_id, firm_key, lead_id, retainer_id, invoice_id, representative_staff_id, program_asked_about, person: { given_names, family_name, email, phone, country_of_residence }, consent_ids, sealed_retainer_sha256 }`.
+* **The case side (Lead 37) consumes it:** finds or creates the client (duplicate check by email within the firm), opens a case with the representative as representative of record, links the lead and the retainer, and answers with **`case.opened`** `{ firm_id, lead_id, case_id, case_number }` written to its own outbox; front office records the case number on the lead. Nothing the lead typed is asked again.
+* A firm may switch "open the case on signing, before payment" (Sample default: off); then `engagement.ready` fires on `retainer.signed`.
+
+## 3. What each side needs from the other
+
+| From | To | What | When |
+|---|---|---|---|
+| Lead 37 (DB-SPLIT) | Lead B | the schema folder and the rule for module schema files | before PF-3, FO-1 |
+| Lead 37 | Lead B | OK for the one-line hooks in section 5 | before PF-1, PF-4's join |
+| Lead 37 (firm walls) | Lead B | the row-rule design, so module tables follow it | before FO-1 merges (tables are written ready for it) |
+| Lead B | Lead 37 | `module_event` and the `engagement.ready` payload above | with FO-1 |
+| Lead 37 | Lead B | `case.opened` back, and when `actorOf` / `firms.ts` start reading `platform_staff` / `platform_firm` (the identity join) | after PF-4 |
+| Configuration (released combinations) | front office | the programs a lead can ask about: `GET` of released combinations' names only | FO-2 |
+
+## 4. Founder decisions these modules need (one at a time, with recommendation; none blocks tonight's rows)
+
+| # | Decision | Lead B's recommendation | Blocks |
+|---|---|---|---|
+| D-1 | Plans and prices (names, seats, monthly CAD) | build on **Sample** plans (Solo, Team, Firm); prices set before the first firm | PF-5's go-live only |
+| D-2 | Client payments: Stripe Connect **Standard** (the firm's own Stripe account; disputes and refunds are the firm's) vs Express; any platform fee | Standard, no platform fee at launch: we never hold or route client money | FO-7 |
+| D-3 | Trust money by card | not until counsel answers; trust lines recorded as offline payments | FO-7 (card on trust lines only) |
+| D-4 | A short licence check by our staff before a new firm goes `ACTIVE` | yes (minutes per firm) | PF-5's activation rule |
+| D-5 | The starter retainer template's wording | the regulator's required items, cited, labelled Sample until counsel | FO-5's go-live only |
+| D-6 | Signing identity check | email one-time code at launch; counsel to confirm | FO-6's go-live only |
+
+Decided by Lead B (industry standard, P-486; recorded for Lead 37's DECISIONS): two-step sign-in required for all staff; invitations single use, 7 days; the enquiry door uses a hidden honeypot field plus rate limits and size limits (no third-party challenge service at launch); booking times stored in UTC with the booker's zone; webhooks verified by signature and stored once.
+
+**Rules to re-read (for Lead 37, the records holder):** RULES' "No multi-tenant work in the reference app; tenants, environments and real users are the team's (P-335, P-357)" is overtaken for these modules by P-553 and P-558. Please record the amendment so a reviewer does not refuse firm tables or real sign-in on that line.
+
+## 5. One-line hooks into existing files (each needs Lead 37's OK; nothing else outside the fences)
+
+1. `web/src/App.tsx`: render the routes the module folders export (PF-1), one line.
+2. `api/src/core.ts` `actorOf`: later, read a platform session when present (the identity join; Lead 37's row, not ours).
+3. `api/src/firms.ts`: later, read `platform_firm` and `platform_staff` instead of `samples/firms.json` (Lead 37's row).
+4. `package.json` / lockfile: each new library, only after PF-2's technology gate (STANDARDS §1).
+5. `.github/workflows/`: one new path-filtered workflow file for the skeleton (PF-7); Lead 37 reads the diff (P-423).
+
+## 6. Shaped next (not rows yet; become rows two ahead as these land)
+FO-5 retainer from template · FO-6 signing (BoldSign) · FO-7 invoice and payment (Stripe Connect) · FO-8 `engagement.ready` and the case side's answer (with Lead 37) · PF-6 staff invite, roles and deactivate screens · PF-8 cloud deploy (after the founder's account) · PF-9 firm set-up checklist (self-serve) · PF-10 import with a dry run.
