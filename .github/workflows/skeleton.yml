@@ -129,8 +129,9 @@ jobs:
           printf 'FROM studio-skeleton:test\nUSER root\nENV SEEDED_SIGNING_KEY=made-up-value DB_URL=postgresql://u:made-up@db/x\n' | docker build -q -t studio-skeleton:seeded - >/dev/null
           bash "$S/tools/skeleton-smoke.sh" "http://127.0.0.1:$SKELETON_PORT" --image studio-skeleton:seeded > seeded-image.txt || true
           grep -E '^(FAIL|PASS)  (non-root|no secret)' seeded-image.txt
-          grep -q '^FAIL  non-root' seeded-image.txt && grep -q '^FAIL  no secret' seeded-image.txt \
-            || { echo "::error::the image checks passed an image running as root with a key in its environment"; exit 1; }
+          # One check per line (P-376 (3)): bash -e passes over a failed command inside an && list.
+          if ! grep -q '^FAIL  non-root' seeded-image.txt; then echo "::error::the non-root check passed an image running as root"; exit 1; fi
+          if ! grep -q '^FAIL  no secret' seeded-image.txt; then echo "::error::the secret scan passed an image with a key in its environment"; exit 1; fi
           echo "seeded fail caught: root user and a key in the environment" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: app log on failure
