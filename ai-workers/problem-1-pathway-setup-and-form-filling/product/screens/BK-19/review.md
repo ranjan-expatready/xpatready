@@ -32,3 +32,26 @@ BIC-11 Met: one primary per panel (shot 03) · BIC-12 Met: the barcode form's Va
 A real Adobe-saved file, which is BK-20 on the Mac. Without it, nothing here proves that Adobe keeps the barcode text in the form packet. A real screen reader. An intended user's unaided walk (D17, D20). The Mac's `:4400` replay of the checkpoint's validated IMM 5257 files after merge: they will stop counting if BK-20 reads 0.
 
 **Verdict: Block** (commit 4bd54291b0331123a6dba588b99ce29ad4426b43). Fix items 1–5: the re-send dead end, the duplicate rows, the 1024 px overflow of the not-validated pill, pass and fail tests for the lock, stamp and old-row gates, and the PR body's Done-when line and BK-20 label. Items 6–7 are Should.
+
+## Round 2: commit 791851cf4a249d40bb98c36098d34c1696948658 (diff `4bd54291b..791851cf4` only)
+This is a fresh run on forms ports. :4457 is the visitor visa fixture and :4458 is a fresh configured checkpoint; both were stopped afterwards and the PNGs restored. US$0.
+
+**Item by item**
+* **#1 dead end: fixed.** "Already read back" is now judged on the copy's newest read-back only (`fill-case.ts:543-545`). My round-1 probe, good file, then flag-only, then good again, now gives 201: the copy is current and lock gives 201. A row kept before BK-19 is read again (201, current), and a row kept before QA-165 still is too (r1d 97/97).
+* **#2 kept once: fixed.** The same flag-only file sent again gets 409, saying it is already read back and naming the barcode words. Sent twice at once it gets 409 and 409, leaving **1** row (it was 4). The good-file race gets 201 and 409, with 1 row. The row lock (`FOR UPDATE`) still serialises the two sends.
+* **#3 1024 px: fixed.** The not-validated state now shows a short warn pill, "Read back, not validated", with the words in wrapping text and the button below (`forms.tsx:119-126`). My own measure: no sideways scroll at 1024 or at 720 (about 200 %), axe 0 at 1024, keyboard Enter opens the file chooser, answer in 831 ms. `check_bk19_validate_browser` gives 15/15.
+* **#4 untested gates: fixed.** `check_bk19_upload_api.ts` gives **10/10**, with a pass and a fail each for the lock, kept once (again and at once), good-stale-good, the old row, and the stamp gate. Reading the assertions, removing line 470, the stamp `if`, or the newest-row rule would turn a line red.
+* **#5 PR body: fixed for what was asked.** It has the Done-when line (the Adobe-saved-file case is proven by BK-20, not by this PR), the 6 evidence lines marked "waiting for BK-20", and results.
+* **#6 `same()`: addressed.** "00" now agrees with "0", and the rule's source is cited in the code (`barcode_check.py:137-139`). `check_bk19_barcode_check` gives 23/23.
+* **#7 Mac loader: fixed.** It counts a file only when the door says it is `current`, and otherwise records why (`sample-validated.ts:145-150`; the real door, `sample-case.ts:102`, returns the copy). `check_qa285_validated_files` gives 15/15.
+
+**Reruns at this head:** C7.2 on a fresh checkpoint **5/11** (the P-46 and never-ready lines PASS; the 6 evidence lines wait for BK-20) · r1d 97/97 · C3 Paper 21/21 · QA-345 stamp 2/2 · upload API 10/10 · browser 15/15 · barcode check 23/23 · QA-285 15/15.
+
+**Open, all Should (Minor), none blocking**
+* **R2-a.** The 400 px line in `check_bk19_validate_browser.ts` (around :80) checks only that the button is inside the width. At 400 px the button sits above the visible area (y = -263), and `03-flag-only-not-validated-400.png` is scrolled past the row, so it does not show the state its name says. Fix: scroll the row into view before the shot, and label the line "within the width".
+* **R2-b.** The PR body's results and walk text are from round 1: browser 13/13, barcode 21/21, no `check_bk19_upload_api` line, and "The pill reads '0 of the 5 barcodes …'". It also still says "duplicates none" about `same()`. Fix: refresh the table and the walk lines.
+* **R2-c (note).** One of my two keyboard walks timed out waiting for the file chooser on a second send at 1024 px. The rerun was clean and I could not reproduce it, so it is most likely my script's timing.
+
+**Journey score at this head: 9.5/10 (pass).** Next step, correct data, error recovery and screen sizes now each score 1. Visual quality stays at ½ because the 400 px state has no screenshot of the row (R2-a). Details are in `journey-test-reviewer-2026-11-13.md`, Round 2.
+
+**Verdict: Approve** (commit 791851cf4a249d40bb98c36098d34c1696948658). No Blocker or Major is open. R2-a and R2-b are Should items for the builder. The Adobe-saved-file case stays BK-20's, per Lead 31 (no silent gate-off).

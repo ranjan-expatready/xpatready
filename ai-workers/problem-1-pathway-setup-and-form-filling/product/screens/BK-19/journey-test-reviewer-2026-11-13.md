@@ -34,3 +34,27 @@ Each kept upload leaves one `validated_copy` row with `read_back.barcodes` (`che
 
 ## Could not test
 A real Adobe-saved file (BK-20). A real screen reader. An intended user's unaided walk (D17 and D20 stay with the founder). I took screenshots in the scratchpad; the committed ones are restored.
+
+## Round 2: commit 791851cf4a249d40bb98c36098d34c1696948658
+I reran journeys 2 to 9 on fresh copies: :4457 is the fixture and :4458 the configured checkpoint.
+* **Journey 4** (good file, wrong file, good file again) now gives 201, current, and lock 201: it held.
+* **Journey 5:** the same non-counting file sent again gets 409 "already read back … does not count as validated: …"; sent twice at once it gets 409 and 409, leaving 1 row. It held.
+* **Journey 7:** "Read back, not validated" with the words wrapping. No sideways scroll at 1024 or 720 px, axe 0 at 1024, keyboard Enter opens the chooser, 831 ms. It held.
+  * The builder's 400 px screenshot is scrolled past the row (review R2-a).
+* **Journey 8:** the old row says to send again, and sending the same file again counts (201). It held.
+* **Journeys 2, 3, 6 and 9** held as in round 1. C7.2 is 5/11.
+
+| Criterion | R1 | R2 | Evidence (R2) |
+|---|---|---|---|
+| Task completed | 1 | 1 | C7.2 P-46 and never-ready lines; browser check 15/15 |
+| Next step obvious | ½ | 1 | The button is under the words at 1024 (`02-flag-only-not-validated-1024.png`) |
+| Plain words | 1 | 1 | Short pill plus wrapping words; the 409 names why |
+| Feedback and state | 1 | 1 | Toast, pill, audit line |
+| Correct data | ½ | 1 | One row per file however it is sent (upload API 10/10, my race probe) |
+| Error recovery | ½ | 1 | Good-wrong-good and the old row both recover |
+| Accessibility and screen sizes | ½ | 1 | No sideways scroll at 1024, 720 or 400; axe 0; keyboard |
+| Speed | 1 | 1 | 831 ms |
+| Visual quality | ½ | ½ | 1024 is clean; the 400 px state is not shown in its screenshot (R2-a) |
+| Trust and sources | 1 | 1 | Barcode counts; SYNTHETIC and BK-20 labels in code and PR |
+
+**Round 2: 9.5 / 10, pass.**
