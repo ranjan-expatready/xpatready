@@ -92,7 +92,7 @@ await main("J-C3", "Validate on release 2 by screens (1440 px)", async () => {
     const dir = mkdtempSync(join(tmpdir(), "jc3-")), file = join(dir, "IMM5257-validated.pdf");
     writeFileSync(file, adobeValidated(await copyBytes(copyId, officer)));
     await row.getByLabel("Validated copy of IMM 5257").setInputFiles(file);
-    await row.getByText("Validated copy read back").waitFor(T);
+    await row.getByText("Validated copy read back", { exact: true }).waitFor(T);
     ok("J-C3 7: the validated copy is read back on Client A's IMM 5257", await row.locator("[data-validated='current']").count() === 1);
     await shot("validated-read-back"); await axe("Prepare application with the validated copy");
     await r.waitForFunction(() => !/no validated copy read back/i.test(document.querySelector("[data-readiness]")?.textContent ?? ""), undefined, T).catch(() => null);

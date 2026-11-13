@@ -87,7 +87,7 @@ await main("BK-19", "Read back a validated copy by screens (1440 px)", async () 
     // (3) As Adobe's Validate leaves it: the barcodes agree; the next step, Ready to file, opens.
     await send("adobe", adobeValidated(made));
     const t3 = await r.getByText("IMM 5257: validated copy read back").first().waitFor(T).then(() => true, () => false);
-    await row.getByText("Validated copy read back").waitFor(T).catch(() => null);
+    await row.getByText("Validated copy read back", { exact: true }).waitFor(T).catch(() => null);
     ok("C7.2 BK-19 pass (P-46): the file as Adobe's Validate leaves it (barcodes read and agreeing) is \"Validated copy read back\"", t3 && await row.locator("[data-validated='current']").count() === 1);
     await r.waitForFunction(() => !/no validated copy read back/i.test(document.querySelector("[data-readiness]")?.textContent ?? ""), undefined, T).catch(() => null);
     ok("C7.2 BK-19 pass: Ready to file no longer names a missing validated copy (the next step, C7.6, opens)", !(await blocked()));
