@@ -77,8 +77,8 @@ bash "$STUDIO/tools/web-fresh.sh" ensure || { echo "refused: web/dist does not m
 DATABASE_URL="$URL" ./node_modules/.bin/prisma migrate deploy >/dev/null
 # As start.sh does: a database client older than the schema makes every query on a new column fail quietly (a load
 # answers 201 having read nothing; #378 review B1). Regenerated only when the schema is newer or the client is missing, so a start stays fast.
-# The schema is a folder, one file per area (DB-SPLIT): any of its files newer than the client regenerates it.
-[[ ! -e node_modules/.prisma/client/index.js || -n "$(find prisma/schema -name '*.prisma' -newer node_modules/.prisma/client/index.js)" ]] && ./node_modules/.bin/prisma generate >/dev/null
+# The schema is a folder, one file per area (DB-SPLIT): any .prisma file under prisma/ newer than the client regenerates it.
+[[ ! -e node_modules/.prisma/client/index.js || -n "$(find prisma -name '*.prisma' -newer node_modules/.prisma/client/index.js 2>/dev/null)" ]] && ./node_modules/.bin/prisma generate >/dev/null
 env DATABASE_URL="$URL" STUDIO_PORT="$PORT" STUDIO_VAR="$VARDIR" "$@" nohup ./node_modules/.bin/tsx --tsconfig api/tsconfig.json api/src/main.ts >> "$VARDIR/api.log" 2>&1 &
 # Who serves this database (#745 review M1): prune-test-dbs.sh keeps a database whose recorded server is alive, since an
 # idle server holds no connection (its pool closes them after 10 s); stop ends it. Never fails the start.

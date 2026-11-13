@@ -11,10 +11,10 @@ T=$(mktemp -d "${TMPDIR:-/tmp}/guard.XXXXXXXX") && [ -d "$T" ] || { echo "no tem
 cleanup() { for f in "$F"/listen/*; do [ -f "$f" ] && kill "$(cat "$f")" 2>/dev/null; done; pkill -f "isolated-ttl.*$T" 2>/dev/null; rm -rf "$T"; }
 trap cleanup EXIT
 SRC="$TOOLS/../../prototype/studio"
-S="$T/r/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio"; mkdir -p "$S/tools" "$S/node_modules/.bin" "$S/node_modules/.prisma/client" "$S/prisma/schema"
+S="$T/r/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio"; mkdir -p "$S/tools" "$S/node_modules/.bin" "$S/node_modules/.prisma/client" "$S/prisma"
 cp "$SRC/tools/isolated.sh" "$SRC/tools/test-copies.sh" "$S/tools/"
 printf '#!/bin/bash\nexit 0\n' > "$S/tools/web-fresh.sh"; printf '#!/bin/bash\nexit 0\n' > "$S/node_modules/.bin/prisma"
-touch "$S/prisma/schema/base.prisma"; sleep 1; touch "$S/node_modules/.prisma/client/index.js"
+touch "$S/prisma/schema.prisma"; sleep 1; touch "$S/node_modules/.prisma/client/index.js"
 # A "server": holds $FAKE/listen/<port> while it runs; ends on TERM.
 cat > "$S/node_modules/.bin/tsx" <<'EOF'
 #!/bin/bash
