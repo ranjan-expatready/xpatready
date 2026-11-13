@@ -3,8 +3,9 @@ product made, clicked Validate in Adobe and saved it; this reads the saved file 
 (p1/e5_roundtrip.py read_back; B84 counts an empty data root as no data and a new valued leaf as other data) and compares every value the product wrote (the copy's .request.json) with
 what the saved file holds. Validate adds the barcode and may set computed fields, so other data is reported, never
 refused here. QA-165: it also reports the form's own Validate result kept in the file (form_validation); the server
-records the copy as validated only when that result passed. The barcode itself is decoded and compared by the M3 tool (evidence-lane/E1/tools/barcode_compare.py),
-which needs the decoded barcodes; this slice records that it was not run. Prints one JSON line.
+records the copy as validated only when that result passed. BK-19 (P-46): it also reports the barcode check
+(barcode_check.py: the barcodes the saved file keeps, compared by position with its saved data through the form's own
+manifests, the evidence lane's method); the server counts the copy as validated only when they match. Prints one JSON line.
   .tools/solution-1-prototype/.venv/bin/python -I studio/tools/read_validated.py <validated.pdf> <copy.pdf> <copy.request.json>
 """
 import hashlib
@@ -16,7 +17,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent.parent / "p1"))
+sys.path.insert(0, str(HERE))
 import e5_roundtrip as E  # noqa: E402
+import barcode_check  # noqa: E402
 
 PASSED = {"Yes", "Oui"}  # the form's own words for its flag after a Validate that passed (its message table, Yes_ENU / Yes_FRA)
 
@@ -84,8 +87,9 @@ def main():
         validation = form_validation(data)
     except Exception as e:  # noqa: BLE001 (read above as this form; a failure here is reported, never taken as passed)
         validation = {"kept_by_form": False, "flag": None, "date_last_validated": None, "passed": False, "error": type(e).__name__}
+    barcodes = barcode_check.check(data, copy)
     print(json.dumps({**out, "ok": ok, "validation": validation, "written": rb["written"], "read_back_equal": rb["read_back_equal"], "mismatches": rb["mismatches"],
-                      "other_data_leaves_changed": rb["other_data_leaves_changed"], "barcode_checked": False,
+                      "other_data_leaves_changed": rb["other_data_leaves_changed"], "barcode_checked": barcodes["checked"], "barcodes": barcodes,
                       "why": None if ok else f"{rb['written'] - rb['read_back_equal']} of the {rb['written']} values the product wrote differ in this file."}))
 
 

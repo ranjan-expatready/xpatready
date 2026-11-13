@@ -5,7 +5,7 @@
 // No browser, NO model call (US$0).
 //   zsh studio/tools/isolated.sh qa_c72v 4471 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4471 xr_studio_qa_c72v \
 //     && tsx studio/tests/qa/check_qa_c72_validated_upload.ts 4471 xr_studio_qa_c72v
-import { asValidated } from "../runtime/validated.ts";
+import { adobeValidated } from "../runtime/validated.ts";
 import { client, recorder } from "../runtime/api.ts";
 
 const PORT = Number(process.argv[2] ?? 4471), DB = process.argv[3] ?? "xr_studio_qa_c72v";
@@ -43,8 +43,8 @@ const generate = async (caseId: string, P: string) => {
   ok("fail (QA-165): bytes appended with no Validate result of the form's own is not validated", up.body?.copy?.validated?.current !== true, { status: up.status, validated: up.body?.copy?.validated });
 
   g = await generate(caseId, P);
-  up = await upload(g.copy, asValidated(g.pdf));
-  ok("pass: a copy whose own Validate flag says Yes (with its date) is validated", up.status < 300 && up.body?.copy?.validated?.current === true, { status: up.status, validated: up.body?.copy?.validated });
+  up = await upload(g.copy, adobeValidated(g.pdf));
+  ok("pass: a copy whose own Validate flag says Yes (with its date) and whose barcodes agree with its answers (BK-19, P-46) is validated", up.status < 300 && up.body?.copy?.validated?.current === true, { status: up.status, validated: up.body?.copy?.validated });
 
   process.exit(summary() ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(1); });

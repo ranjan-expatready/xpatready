@@ -7,7 +7,7 @@
 //   zsh studio/tools/isolated.sh qa_r1d 4476 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4476 xr_studio_qa_r1d
 //   tsx studio/tests/runtime/check_runtime_r1d.ts 4476 xr_studio_qa_r1d
 //   tsx --tsconfig studio/api/tsconfig.json studio/tests/qa/check_qa_am_1101c_validated.ts 4476 xr_studio_qa_r1d
-import { asValidated } from "../runtime/validated.ts";
+import { adobeValidated } from "../runtime/validated.ts";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync, mkdtempSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -38,7 +38,7 @@ const plain = (s: string) => s.length > 20 && !/^(File too large|Too many files|
   ok("setup: an up-to-date generated IMM 5257 copy, not validated yet", !!copy, ids.length);
   const n = () => sql(`select count(*) from validated_copy where form_instance_id='${copy}'`);
   const file = readFileSync(join(ROOT, sql(`select path from form_instance where id='${copy}'`)));
-  const validated = asValidated(file); // QA-165: the form's own Validate result, not bytes appended
+  const validated = adobeValidated(file); // QA-165: the form's own Validate result, not bytes appended
 
   // The limits a person hits: the interceptor's own limits must still answer in the product's words.
   let r = await send(copy, [Buffer.concat([validated, Buffer.alloc(21 * 1024 * 1024, 32)])]);

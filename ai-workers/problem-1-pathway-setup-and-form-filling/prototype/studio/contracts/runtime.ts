@@ -225,8 +225,10 @@ export type FormCopy = {
   /** The copy's file is on disk and unchanged; false: it cannot be handed over (break m1). */
   file_ok: boolean;
   /** C-9, C-10 (P-144, P-171 (1)): the newest validated copy read back for this copy; current: the form's facts are
-   *  unchanged since; otherwise "Out of date: validate again" (kept as history, never deleted). */
-  validated: { at: string; by: string; current: boolean; words: string; read_back: { written: number; equal: number } } | null;
+   *  unchanged since; otherwise "Out of date: validate again" (kept as history, never deleted).
+   *  BK-19 (P-46): `barcodes`, the barcode check of that file (null: read back before BK-19); current only when matched. */
+  validated: { at: string; by: string; current: boolean; words: string; read_back: { written: number; equal: number };
+    barcodes: { checked: boolean; expected: number | null; decoded: number; matched: boolean | null; words: string; slots?: number; agree?: number } | null } | null;
   /** QA-285: with no current validated copy here, the words saying its validated file is kept elsewhere (the checkpoint's
    *  Sample, validated and read back on the Mac) while the form's facts are the ones validated; never counted as validated. */
   validated_elsewhere?: string | null;

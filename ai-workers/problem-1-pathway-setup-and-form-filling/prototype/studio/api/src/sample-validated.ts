@@ -142,7 +142,12 @@ export async function replaySavedReadBacks(db: Db, caseId: string, upload: Uploa
     if (f.kind === "refused") { why.push(f.words); continue; }
     // Nothing is written for it (a generated copy is never changed); the copy's own view says so (keptOnMacWords).
     if (f.kind === "absent") { keptOnMac++; continue; }
-    try { await upload(c.id, { originalname: f.name, buffer: f.bytes }); written++; }
+    // BK-19 (review m7 on #1679): read back is not validated: a file the door keeps but does not count says why.
+    try {
+      const r = await upload(c.id, { originalname: f.name, buffer: f.bytes }) as { copy?: { validated?: { current?: boolean; words?: string } | null } } | undefined;
+      if (r?.copy?.validated?.current === false) why.push(`${c.person}: ${f.name} was read back but does not count as validated: ${r.copy.validated.words ?? ""}`);
+      else written++;
+    }
     catch (e) { why.push(`${c.person}: the upload door refused ${f.name}: ${wordsOf(e)}`); }
   }
   return { written, keptOnMac, why };
