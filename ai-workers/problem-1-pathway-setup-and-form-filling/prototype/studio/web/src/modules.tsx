@@ -80,7 +80,7 @@ const nameOf = (file: string) => file.split("/")[2];
 const modules = Object.fromEntries(Object.entries(found).map(([file, routes]) => [nameOf(file), routes]));
 const problems = routeProblems(modules);
 // Like the API's seam (api/src/features/README.md): a clash stops the app with both names, never a page lost quietly.
-// The message shows on the page too (a blank page would say nothing), and in the console and Vite's overlay.
+// The message shows on the page too (a blank page would say nothing) and in the browser's console (a runtime error: Vite's overlay shows only the dev server's own errors).
 if (problems.length) {
   const message = `PF-1 module routes refused:\n${problems.join("\n")}`;
   if (typeof document !== "undefined") { const pre = document.createElement("pre"); pre.setAttribute("role", "alert"); pre.style.cssText = "margin:2rem;white-space:pre-wrap;font:14px/1.5 monospace"; pre.textContent = `${message}\n\nFix web/src/modules/*/routes.tsx (web/src/modules/README.md).`; document.body.replaceChildren(pre); }

@@ -50,3 +50,17 @@ A real screen reader; the Vite dev-server overlay for the runtime error (the stu
 Verdict: Changes needed
 * Major 1: "stops vite build" on a clash is not met (load-time stop only). It closes when the tech lead records (a) acceptance of the load-time stop plus CI, or (b) an approved `vite.config.ts` hook, implemented.
 * Minors 1–3: Should, not blocking.
+
+## Re-review e445b6477 (diff only, P-277)
+Read only `git diff 4808693d6 e445b6477 -- prototype/studio` (`modules.tsx`, `modules/README.md`, the suite).
+* **Ran:** `npx --prefix studio tsx studio/tests/check_pf1_module_routes.ts 4517` on e445b6477: **28/28 passed, exit 0**, 37 s. The suite re-rendered `pf1-existing-home-1440.png`; I restored the committed copy, and the worktree is clean.
+* **Minor 1, fixed.** Within one module, only the same address twice is refused (`same`). Between modules and against App, any overlap is still refused. New pass test: `/pf1-fo/leads/new`, `/leads/:id` and `/*` in one module, each page at its own address. New fail test: `/pf1-x/:a` with `/pf1-x/:b`.
+* **Minor 2, fixed.** `forms()` lower-cases the path and expands optional segments both ways. New fail tests: `/Sign-In` and `/inbox/:tab?` against App. My own edge cases, run with the functions copied out unchanged, all gave the right result: `/fo/:id?` against another module's `/fo` is refused; `/:x?` is refused as "/"; `/fo/edit?` against `/fo/edit` is refused; `/Fo` against `/fo` is refused; the same module's `/fo/*` twice is refused; `/fo/*`, `/fo/settings`, `/fo/leads/new` and `/fo/leads/:id` in one module pass; unrelated paths pass.
+* **Minor 3, fixed.** The README now says "routed only in a fixture build"; the dev server may load the file but never routes it.
+* **D11, improved.** On a clash the page now shows the message in a `pre role="alert"`, naming both modules and the README (`pf1-clash-two-modules-1440.png`), instead of a blank page. A new check asserts this. Nothing renders behind it: `#root` is replaced before the throw.
+* **Nit (new, wording only):** the code comment at `modules.tsx:83` and the README say the message also shows "in Vite's overlay". In Vite 8.1.0 the overlay appears only for errors the dev server sends (`dist/client/client.mjs:1015-1019`). A runtime throw goes to the console and, at most, is forwarded to the terminal. Drop "and in Vite's overlay". This does not block.
+* **Nothing new found:** no regression, and the touch list is unchanged (the same three files as before).
+
+**Plainly:** (1) Apart from Major 1, head e445b6477 is approvable: Minors 1–3 are closed, and only one wording Nit is open. (2) As it stands, Major 1 is still open: a clash stops the app at load, red in CI, and does not stop `vite build`. It now needs only the tech lead's decision on PR Question 1. Journey test not rerun (diff only). The 9/10 stands; the blank page, the reason for both half points, is now an on-page message.
+
+Verdict: Approve if the tech lead takes option (a); else Changes needed
