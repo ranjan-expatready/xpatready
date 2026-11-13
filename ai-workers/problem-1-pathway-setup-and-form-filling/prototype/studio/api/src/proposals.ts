@@ -23,6 +23,7 @@ import { lockItem, refuseRetired } from "./library-items.ts";
 import { checkCondition } from "../../engine/validate.ts";
 import { isRuleWhy, nearMatches } from "../../engine/near.ts";
 import { p121Rating, P121_WHY, type Rateable } from "../../engine/agreement.ts";
+import { stepsNotRunWhy } from "../../engine/field-map-rounds.ts";
 import { aiReadsIdentity, identityOf } from "../../engine/identity-documents.ts";
 import { canonical } from "../../../contracts/rules.ts";
 import { fieldsOf } from "../../engine/masters-ai.ts";
@@ -244,6 +245,8 @@ export function reviewRow(r: Row) {
     decidedKey: r.decidedKey, decidedBy: r.decidedBy, decisionNote: r.decisionReason, decidedAt: r.decidedAt,
     payload: r.choice === "NEW" ? { label: p.label, reason: r.decisionReason, advisory: w.advisory ?? null } : w.legacyPayload ?? (r.kind === "field" ? null : p), sourceQuote: src?.quote ?? w.sourceQuote ?? null,
     status: r.status, confidence: r.confidence,
+    // BK-22 (#1695 C1): Field map review flags a step the filler cannot run (its rule's words), shown on the item.
+    stepsNotRun: stepsNotRunWhy(r.rules),
     // C3.2 (P-121): why this waiting item cannot be accepted with the other exact reuse matches (null when it is High).
     bulkWhy: r.status === "waiting" ? bulkWhy(r) : null };
 }
