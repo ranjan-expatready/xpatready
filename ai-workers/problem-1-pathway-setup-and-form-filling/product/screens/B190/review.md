@@ -147,3 +147,32 @@ billed) is GitHub's documented rule, and the report applies it, with the one exc
    P-542) should not merge as they are.
 
 Verdict: Changes needed
+
+## Round 2: commit 2b52aea997cc7153c4b40891399b7054f07f1ece
+
+I re-reviewed only the report's diff since d0fa9c5a9 (`git diff d0fa9c5a9..2b52aea99 -- …/reports/ci-minutes-2026-11-13.md`).
+I re-checked each change with my own scripts (r4, r10-r14), not the builder's. `check-docs.sh`: docs OK.
+`push-guard.sh origin/main..HEAD`: clean. The added lines contain no names, secrets or partner-team content.
+
+| Round 1 finding | Now | My re-derivation | Status |
+|---|---|---|---|
+| Major 1, per-PR figures | 177 code PRs, 2.27 runs each; titles name 399 places, 217 distinct PRs, 170 code PRs; a code PR named in 1.9 batch runs; 469 + 327 ≈ 800 per code PR; "about four times, mostly with most of the suites" (mean 304 of 400); lever 1 at 15-30k | 176-177 PRs at 2.27 (runs matched by the PR open at the time); 394 named places with stacked PRs, 216 distinct, 323 / 170 ≈ 1.9; 83,014 / 177 = 469 and 70,989 / 217 = 327. The 399 against 394 gap is title-parsing detail and changes nothing. Lever 1's range now sits under the 1.9 → 1 ceiling (≈34k) | Closed |
+| Minor 1, unrun jobs billed | jobs with no runner name or no step count nothing: 295,019 / 166,153; 1,115 jobs, 3,731 minutes | 295,019 / 166,153 exact; 1,115 jobs / 3,731 minutes exact; class rows (1,526, 1,393, 1,013, 1,011; small workflows 5,881), shares (50.0%, 42.7%, 7.3%), 712k pace and the daily rows (2, 4, 11 Nov) all match | Closed |
+| Minor 2, `--direct` | same 146 PRs, 303 → 242, −20% | 147 PRs, 302 → 240, −20%, median 235 | Closed |
+| Minor 3, runner size | marked unverified; private minutes may run higher; the Lead confirms before pricing | wording now matches the evidence | Closed |
+| Minor 4, self-hosted billing | marked unverified; the Lead confirms before pricing | as above | Closed |
+| Minor 5, P-542 | cited as the brief's P-542, not yet in `DECISIONS.md` on main | honest; the guard itself is P-528's | Closed |
+| Minor 6 | gap 8-12k in both places; "saves 40-60%, leaves 65-100k"; 120 single-PR titles; path-filters row 11; time-to-merge n relabelled; "before 1 Nov"; 8,600 runs / 5,881 minutes; 502 retries stated; caught-bug split gates every lever | 166,153 × 0.4-0.6 leaves 66-100k ✓; `paths:` filters exist in `guards.yml` and `xfa-engine.yml`, and `.mergify.yml` needs `check-success = ci`, so row 11's reason is right ✓ | Closed |
+
+### New, Minor (not blocking): two figures were not regenerated
+* **Old-design note:** the note under the class table still says "the 'old design' row, **6,640** minutes". The row now
+  says **6,483**.
+* **Replay minutes:** "Of these PRs' PR-check minutes (**81,323**)" is round 1's total, kept while its parts (48,116,
+  19,610, 2,763) were recomputed for 171 PRs. By my count the 172 replayed code PRs, matched by open time, have
+  **80,869** PR-check minutes: 48,505 "every suite", 18,545 380+, 2,763 ≤150. Recompute the total with the parts.
+* **Fix:** correct both, in this PR if another commit lands anyway, or in the `ci-minutes.py` PR. Neither changes a
+  conclusion, a lever or a decision.
+
+No Blocker or Major is open.
+
+Verdict: Approve 2b52aea997cc7153c4b40891399b7054f07f1ece

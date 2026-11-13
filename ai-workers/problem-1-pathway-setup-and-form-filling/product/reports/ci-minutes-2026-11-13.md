@@ -93,7 +93,7 @@ measured effect.
 | **Total** | **10,109** | **166,153** | 100% | | | **295,019** |
 
 Red and cancelled counts are runs. "Whole window" is 24 Oct to 13 Nov. Before 1 Nov the Mac ran the suites and GitHub
-ran only the fast checks (the "old design" row, 6,640 minutes).
+ran only the fast checks (the "old design" row, 6,483 minutes).
 
 ## Minutes by job and step (last 7 days)
 
@@ -123,7 +123,7 @@ regression minutes.
 | Code PRs with a PR check of code | 177 (171 merged in the window and were replayed below) |
 | PR check runs per code PR | **2.27** (402 runs); 117 of 402 red (29%). Memory (P-371 (3)) skips suites already green on an unchanged base, so a re-run is not always the full choice |
 | Suites a PR check chooses (`select-suites.mjs`, replay of 171 merged code PRs) | **every suite in 75 (44%)**, 380+ in 31, 151-379 in 39, 21-150 in 6, ≤20 in 20; mean 304 of 400 |
-| Of these PRs' PR-check minutes (81,323) | 48,116 went to "every suite" PRs and 19,610 to 380+; only 2,763 to PRs choosing ≤150 |
+| Of these 171 PRs' PR-check minutes (81,323; runs matched by PR link, else branch and open time) | 48,116 went to "every suite" PRs, 19,610 to 380+, 10,834 to 151-379; only 2,763 to PRs choosing ≤150 |
 | Why "every suite" (first reason, 75 PRs) | a file "no suite calls its endpoint(s) or imports it" (17), a checkpoint step folder "the app loads by listing it" (15), "shared" `ci.yml` (11), migrations (7), `main.ts` (5), lockfile (1), `main.ts` constants used outside controllers (MAX_VALIDATED_MB 10, 2 others), `run-suites.sh`/`select-suites.mjs` "decides how the suites run" (6), other (1) |
 | With `--direct` (`PR_SUITES=direct`, the existing switch; the same 146 PRs) | mean 242 suites against today's 303 (**−20%**), median 235.5; 34 PRs ≤20 |
 | Batch runs | 222. Their titles name 399 PR places (a title's "+N more" not counted) and 217 distinct PRs, 170 of them code PRs. A code PR is named in **1.9** batch runs on average. 120 titles name one PR only |
