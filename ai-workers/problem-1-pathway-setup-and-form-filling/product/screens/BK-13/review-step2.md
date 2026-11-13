@@ -153,3 +153,55 @@ Reviewer (Opus), 13 Nov 2026. Commit reviewed: `6a628cf5dde7cb8379f876caa15b929c
 - No journey test: this is not a screen (as in round 1).
 
 Verdict: Approve 6a628cf5dde7cb8379f876caa15b929c8cd083bb
+
+## Round 3 (fresh reviewer, diff-only)
+
+Reviewer (Opus, fresh: I did not write this change and did not review rounds 1-2), 13 Nov 2026, ruled by the tech lead (Lead 37 on #1695, P-293). Commit reviewed: `84ffbcfb9f225ebf90f00e03d1aa359a936605b0`. I read only `git diff 8d464b026..84ffbcfb9`: the script (19 lines) and the record (2 lines), plus the code around them the diff calls. The diff touches no `engine/`, `api/src/`, `web/src/`, `p5/` or data file.
+
+**What I ran**
+- **Fresh run on this head:** isolated copy `rev3_bk13` on :4454, which I started and stopped myself (database brought up first with `cloud-setup.sh`). Result: **37/45, 8 GAP (BK-22: 5, BK-23: 3), 0 FAIL, exit 0**, with by hand 25, "needs a fix" 3 and CAD 675. This is the same as the builder's run10.log. The working tree stayed clean.
+- **Not re-run by me:** the branch with #1698 merged in. For that I read run9.log (41/45, 4 GAP: BK-22 0, BK-23 4; 0 FAIL; exit 0) and the batch's failing CI job (job 131996268641).
+  - `git diff a87d2cdee 84ffbcfb9` touches only the record, so run9 ran this script.
+- **Classifier harness:** I copied `asked`/`rowOf`/`isGap` verbatim and ran them against a real officer view of this case (the builder's `q2.json`, `mode=agent`, with real subject UUIDs).
+
+**(1) The by-hand classifier: holds for the case it was written for.**
+- **Each reason maps to exactly one gap, or the check FAILs.** The anchored BK-22 regex is unchanged. The new BK-23 regex is anchored and exact (`^<fact> is not confirmed, so it cannot be compared$`), and matches the filler's own wording (#1698 `p5/transforms.ts:217-218`). Any other reason, or an empty `why`, gives `null`, and a `null` in `handRows` gives FAIL. Harness results:
+
+  | Reasons | Result |
+  |---|---|
+  | Spouse, `person.current_residence_country` (not asked) | GAP BK-23 |
+  | Student, the same fact (asked) | FAIL |
+  | BK-22 step + BK-23 fact | GAP "BK-22 … and BK-23 …" |
+  | BK-23 + unknown reason | FAIL |
+  | `[]` | FAIL |
+  | `[""]` | FAIL |
+
+- **It does not pass vacuously.** `handRows.length > 0` is required. `hand` (the API's `by_hand`) and `handWhy` (`result_json.boxes`) come from the same boxes (`api/src/fill-case.ts:302`), so by hand > 0 always means reasons were read.
+- **The right subject.** `asked()` uses `f.subject_id`, the same UUIDs as the view's `subjectId` (the case's people are named through the same map).
+  - In the view, `person.current_residence_country` is asked, not hidden, of the student and the child, and not of the spouse. This matches the Sample answers file (principal and child "India", spouse none).
+  - `hidden` is a real field of the view's questions.
+- **The view taken after all answers.** `v` is re-read (l.112) after the last answer PUT. The confirms that follow change no answer and no visibility, and the generation runs after them.
+
+**(2) The GAP counters and the summary line: right.**
+- **`includes` is needed.** A by-hand GAP's row can now be "BK-22 (…) and BK-23 (…)". `startsWith` would count that row as BK-22 only.
+- **No over-matching.** Check names hold only "BK-13", so `includes` matches nothing in them.
+- **Run results:** run9 0 + 4 = 4; run10 and my run 5 + 3 = 8.
+
+**(3) The record's new paragraph: agrees with the evidence.**
+- **The FAIL line** is quoted word for word from the CI job.
+- **Same 45 checks.** The batch printed `41/45 checks pass; 3 GAP (BK-22: 0, BK-23: 3); 1 FAIL`. With this change the one FAIL becomes the fourth GAP, giving run9's 41/45, 4 GAP, 0 FAIL.
+- **The time matches.** The job failed at 16:44 UTC, which is 22:14 IST ("~22:1x IST").
+- **The #1702 quote** matches its title.
+- **The branch-alone figures** match run10 and my run.
+- **The BK-23 note** (the Sample file must answer it for the spouse, or this script FAILs) matches Lead 37 ("goes in BK-23's PR (#1702)").
+
+**Findings (none at Blocker or Major)**
+- **Minor m1, the subject of a case-group compared fact.** `asked()` looks only under the person's subject. A `case.*` fact compared by an "A equals B" step would be looked up under the wrong subject. Such a fact is asked under the case's own subject (`case.*` questions sit there in the view). So if it were asked but left unanswered, it would be named a BK-23 GAP instead of a FAIL. The harness confirms this: student + `case.school_name` gives GAP BK-23.
+  - **Not reachable today.** The release's only "equals" steps compare person facts. #1698's `factNamed` maps `case.applying_from_country` onto the box's own `person.applying_from_country`, and run9's reason is `person.*`.
+  - **No false "Met".** Any GAP still keeps exit (b) "Not met".
+  - **Fix when next touched:** look up `case.*` facts under the case's subject (role `case`), or narrow the BK-23 regex to `person\.`.
+- **Nit n1, the summary counts.** A by-hand GAP that is both BK-22 and BK-23 is counted under each, so BK-22 + BK-23 can exceed the GAP total. The line does not say so. No run shows it today.
+
+**Could not check:** I did not run the branch with #1698 merged myself (I read run9.log and the CI log), and I did not watch this head's CI. No journey test: this is not a screen (as in rounds 1-2). Journey score: N/A.
+
+Verdict: Approve 84ffbcfb9f225ebf90f00e03d1aa359a936605b0
