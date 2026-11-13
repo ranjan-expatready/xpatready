@@ -1,0 +1,15 @@
+{
+ "label": "Sample (BK-13 step 2): made-up answers about the parents of the student and of the spouse, for IMM 5707 (Family Information). Answered and confirmed by tests/check_bk13_zero_code_run.ts through the officer's own routes (PUT /runtime/cases/:id/answers/:subject/:relation/:field, then each section confirmed), because a Sample answers file cannot name relatives yet (dry-run gap C2, design/bk13-dry-run-2026-11-12.md §5). Never a client; no value here is an IRCC value.",
+ "relatives": {
+  "parent_1": {
+   "person.family_name": "SAMPLE", "person.given_names": "FATHER", "person.date_of_birth": "1965-01-20", "person.birth_country": "India",
+   "person.marital_status": "married", "person.present_occupation": "RETIRED", "relationship.accompanies_subject_to_canada": false,
+   "person.present_address": { "street_number": "40", "street_name": "SAMPLE LANE", "city": "PUNE", "postal_code": "411001", "country": "India" }
+  },
+  "parent_2": {
+   "person.family_name": "SAMPLE", "person.given_names": "MOTHER", "person.date_of_birth": "1968-07-04", "person.birth_country": "India",
+   "person.marital_status": "married", "person.present_occupation": "TEACHER", "relationship.accompanies_subject_to_canada": false,
+   "person.present_address": { "street_number": "40", "street_name": "SAMPLE LANE", "city": "PUNE", "postal_code": "411001", "country": "India" }
+  }
+ }
+}
