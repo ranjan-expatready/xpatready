@@ -94,3 +94,37 @@ Study permit family; Client A answered 338. As the case officer, then the repres
 * r1c, r1d, B124, C8.3 and the other packs: left to CI.
 * A real screen reader. An unaided intended-user walk: D17 and D20 stay with the founder.
 * My screenshots are in my session scratchpad (`/tmp/claude-0/-home-user-xpatready/e211002e-f503-5e2a-92b5-38a5802ef4ee/scratchpad/walk/`), not committed.
+
+## Round 2: `9215b2c1dc2cd52c2f17707c8b0ba1d575bfcc3f` (diff only, P-293 (3))
+Same reviewer role, 13 Nov 2026. Scope: `git diff 4f428aa51..9215b2c1d`. Own copy on :4448, stopped after use; live AI off, US$0.
+
+**Re-ran:**
+* `check_qa446_confirm_counts_browser.ts` **45/45**. Step 6 on both pathways:
+  * Visitor visa: `case.visit_contact_name`, 4 filings "1 to confirm".
+  * Study permit: `case.caq_number`, only the principal's filing reads it, so "1".
+* `check_qa417_counts_browser.cjs` 55 passed, 0 failed. `check_review_rounds` 56/56. `tsc -p web` 0.
+* My two probes (deleted afterwards). The screenshots the run rewrote are restored.
+
+**M1: partly closed (still Major, Must).**
+* My round-1 scenario is fixed. The officer types "Contact in Canada" on a fresh case and confirms every person's tab: household 1, all 4 filings "1 to confirm".
+* **Still open:** an application fact that decides a filing's forms but fills no box is in no filing's `caseFacts`. On a client-answered case, 2 answered application facts are read by no filing: `case.authorizes_release_to_designated_individual` and the firm-record `case.uses_representative`, which is never to confirm.
+* Reproduced on :4448 (Visitor visa family):
+  1. The officer answers "authorizes IRCC … release" = Yes on The application. This adds IMM 5475 to every filing; under P-411 (2) the answer stays on the Confirm list.
+  2. The officer confirms every person's tab.
+  3. Household: **1 to confirm** (The application).
+  4. All 4 checklists: "Values: 1 fact, 1 confirmed by Case officer (Sample) · **0 to confirm**".
+* Where: `api/src/review-rounds.ts:103` (`caseFacts` built only from `f.facts`) and `:106`.
+* **Fix:** also count, in every filing, an application answer that no filing's forms read (it decides which forms the case has). Alternatively count every application answer in every filing, the simpler choice round 1 allowed.
+* **Fail step:** in step 6, also have the officer answer `case.authorizes_release_to_designated_individual`; each filing must say "1 to confirm" until its Confirm section.
+
+**m1, m2, m3: closed.**
+* m1: the toast now reads "… Its answers are declared by who gave them (no officer confirmation needed) or confirmed already.", asserted on both pathways. QA-417's words stay elsewhere.
+* m2: `valuesOf` counts `awaits_client` apart ("N wait(s) for the client to re-confirm", `live.waits_client`), with a unit pass case.
+* m3: an own-link answer is named by its person (`about`), with a unit pass case.
+
+**New Minor (Should): the check does not type-check.**
+* Where: `tests/check_qa446_confirm_counts_browser.ts:214`. `tsc -p api` gives `TS2339: Property 'value' does not exist on type 'A'`. tsx runs it anyway, but the claim "tsc clean" does not hold for the api project.
+* **Fix:** add `value: unknown` to `type A` (line 33).
+
+**Journey score unchanged: 8.5/10** ("Correct data" stays ½ for the open part of M1).
+**Round 2 verdict: Block.** One Major is still open, M1's decision-fact case. The Minor can go with it.
