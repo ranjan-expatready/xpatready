@@ -50,7 +50,7 @@ const ms = (t0: number) => Math.round((performance.now() - t0) * 10) / 10;
 // ---- the engine's side: the same data written into the data part, then its incremental write ----
 /** p1/e5_roundtrip.py new_datasets, in TypeScript on the engine's XML parser: each data path made if missing ("[*]" is
  *  row 0), its children removed, its text set. What a swap would need beside the engine (the engine has no such step
- *  outside its form-script part, which reads 2 of our forms). */
+ *  outside its form-script part, which loads 4 of our 18 Paper forms). */
 function newDatasets(xml: string, values: Record<string, string>): string {
   const doc = new DOMParser().parseFromString(xml, "text/xml");
   const data = [...doc.getElementsByTagNameNS(XDATA, "data")][0];
@@ -229,6 +229,8 @@ for (const e of editions.values()) {
     t0 = performance.now(); await engineWrite(e.file, values, theirs, false); tTheirs.push(ms(t0));
     shaOurs.add(sha(ours)); shaTheirs.add(sha(theirs));
   }
+  // Like for like: our write alone, in-process (no Python start, no checks), against the engine's write above.
+  const oursWriteOnly = JSON.parse(execFileSync(PY, ["-I", join(STUDIO, "tools", "xfa_writer_trial_check.py"), "--time-write", req, String(RUNS)], { cwd: ROOT, maxBuffer: 64 << 20 }).toString().trim().split("\n").pop()!);
   const k = check(e.file, values, page_fields, { ours, theirs }, tag);
   const shown = (seen: Record<string, unknown>) => Object.entries(page_fields).filter(([n, v]) => seen[n] === String(v)).length;
   const eng = { ours: leaves(await X.openXfaPdf(new Uint8Array(readFileSync(ours)))), theirs: leaves(await X.openXfaPdf(new Uint8Array(readFileSync(theirs)))) };
@@ -243,7 +245,7 @@ for (const e of editions.values()) {
     other_data_leaves_changed: { ours: k.ours.other_data_leaves_changed, theirs: k.theirs.other_data_leaves_changed }, other_parts_unchanged: { ours: k.ours.other_parts_unchanged, theirs: k.theirs.other_parts_unchanged },
     poppler_syntax_errors: { ours: k.ours.poppler_syntax_errors, theirs: k.theirs.poppler_syntax_errors },
     bytes: { ours: k.ours.bytes, theirs: k.theirs.bytes }, added_bytes: { ours: k.ours.added_bytes, theirs: k.theirs.added_bytes },
-    ms_median: { ours_writer_with_checks: median(tOurs), theirs_writer: median(tTheirs) }, same_file_each_run: { ours: shaOurs.size === 1, theirs: shaTheirs.size === 1 } });
+    ms_median: { ours_writer_with_checks: median(tOurs), ours_write_only_in_process: oursWriteOnly, theirs_writer: median(tTheirs) }, same_file_each_run: { ours: shaOurs.size === 1, theirs: shaTheirs.size === 1 } });
   console.error(`${tag}: written ${Object.keys(values).length}, leaf differences ${full.at(-1).leaf_differences_our_reader.length}/${full.at(-1).leaf_differences_engine_reader.length}, page fields ${full.at(-1).page_fields.differences}, ms ${median(tOurs)} vs ${median(tTheirs)}`);
 }
 const s = await story();

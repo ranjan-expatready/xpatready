@@ -6,6 +6,7 @@ with the engine. Prints one JSON line:
                read_back_equal, written, mismatches, other_data_leaves_changed, leaves, page_fields}}
   .tools/solution-1-prototype/.venv/bin/python -I studio/tools/xfa_writer_trial_check.py <request.json>
   ... xfa_writer_trial_check.py --generic <field list.json>   (prints the E1 trial values for a form)
+  ... xfa_writer_trial_check.py --time-write <request.json> <runs>   (median ms of our write alone, in-process)
 request: {"form_file": "imm5257e.pdf", "values": {...}, "page_fields": {...}, "copies": {"ours": "<abs>", "theirs": "<abs>"}}
 """
 import hashlib
@@ -25,6 +26,24 @@ if sys.argv[1] == "--generic":
     # The E1 fill trials' inputs (p1/e5_roundtrip.py generic_values): a made-up value in every box of the form's field
     # list, two rows of each repeating box. Printed as {"<data path>": "<value>"}.
     print(json.dumps(E.generic_values(json.loads(Path(sys.argv[2]).read_text()))))
+    sys.exit(0)
+if sys.argv[1] == "--time-write":
+    # Our write alone, like for like with the engine's (no Python start, no checks): open the blank, build the data part,
+    # write it (and the page fields on a static form, as fill.py does), save the file. Median ms of <runs>, in-process.
+    import time
+    req = json.loads(Path(sys.argv[2]).read_text())
+    vals = {k: str(v) for k, v in req["values"].items()}
+    pages = {k: str(v) for k, v in (req.get("page_fields") or {}).items()}
+    times = []
+    for _ in range(int(sys.argv[3])):
+        t0 = time.perf_counter()
+        orig = E.official(req["form_file"]).read_bytes()
+        r0 = E.open_reader(orig)
+        ds = E.xfa_streams(r0)["datasets"].get_object().get_data()
+        out, _, _ = PF.write_filled(orig, E.new_datasets(ds, vals), pages if PF.is_static(r0) else {})
+        Path(req["out"]).with_suffix(".write-only.pdf").write_bytes(out)
+        times.append(round((time.perf_counter() - t0) * 1000, 1))
+    print(json.dumps(sorted(times)[len(times) // 2]))
     sys.exit(0)
 req = json.loads(Path(sys.argv[1]).read_text())
 orig = E.official(req["form_file"]).read_bytes()
