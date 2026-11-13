@@ -244,11 +244,17 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await o.getByRole("tab", { name: /^Sample Spouse C(?!'s )/ }).click(); 
   const spouseMarital = o.locator("section", { has: o.getByRole("heading", { name: "Personal details" }) }).filter({ hasText: "for Sample Spouse C" });
   step("agent: the client's answer shows with its source and the P-78 state", await shows(spouseMarital.getByText("Married", { exact: true })) && await shows(spouseMarital.getByText("Answered by the principal")) && await shows(spouseMarital.getByText(/questionnaire · Client A/)));
+  // QA-446 (P-510 (2): P-242 and P-411 stand): what Client A typed for the adult spouse is on the officer's Confirm list
+  // (P-411 (1)); Confirm section confirms it, and the confirmed answer still says who first answered it (review M4).
+  await spouseMarital.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
+  step("agent pass: Confirm section confirms the answers Client A gave for the adult spouse (Confirmed, history kept)", await shows(o.getByText(/Personal details for Sample Spouse C: \d+ answers? confirmed/)) && await shows(spouseMarital.getByText("Confirmed", { exact: true }).first()));
+  step("agent source (review M4): a confirmed answer still says who first answered it", await shows(spouseMarital.getByText(/questionnaire · Client A · .* · confirmed by Case officer/).first()));
+  // QA-446: the visit's answers are the client's own (the application's), Declared: never the officer's to confirm. Confirm
+  // section there confirms nothing and says so, and they stay Declared.
   await o.getByRole("tab", { name: /^The application/ }).click(); 
   const visitSec = o.locator("section").filter({ has: o.getByRole("heading", { name: "Your visit" }) });
   await visitSec.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
-  step("agent pass: Confirm section confirms the visit's answers (Confirmed, history kept)", await shows(o.getByText(/Your visit for the application: \d+ answers? confirmed/)) && await shows(visitSec.getByText("Confirmed", { exact: true }).first()));
-  step("agent source (review M4): a confirmed answer still says who first answered it", await shows(visitSec.getByText(/questionnaire · Client A · .* · confirmed by Case officer/).first()));
+  step("agent pass (QA-446): Confirm section on the visit's answers (the client's own, Declared) confirms nothing, says so, and they stay Declared", await shows(o.getByText(/Your visit for the application: nothing to confirm/)) && await shows(visitSec.getByText("Declared", { exact: true }).first()) && !(await visitSec.getByText("Confirmed", { exact: true }).count()));
   step("readability (Lead, R1d): an answer read by the whole household says \"fills IMM 5257 for N people\", with each person on hover", await shows(visitSec.getByText(/fills IMM 5257 for 6 people/).first()) && /Sample Child C4/.test((await visitSec.getByText(/fills IMM 5257 for 6 people/).first().getAttribute("title")) ?? ""));
   step("agent copy: no label reads \"(optional) (optional)\"", !(await o.locator("main").textContent()).includes("(optional) (optional)"));
   await state(o, "case-view-confirmed", [1440, 1024]);
