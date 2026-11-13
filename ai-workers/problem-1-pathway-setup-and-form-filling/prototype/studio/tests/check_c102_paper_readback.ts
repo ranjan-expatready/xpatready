@@ -9,7 +9,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { asValidated } from "./runtime/validated.ts";
+import { adobeValidated } from "./runtime/validated.ts";
 
 const PORT = Number(process.argv[2] ?? 4431), DB = process.argv[3] ?? "xr_studio_rt_c102p";
 const DIR = "/tmp/xr_c102p", PAPER = join(DIR, "paper.json"), STUDIO = join(import.meta.dirname, "..");
@@ -51,7 +51,7 @@ try {
   const subject = ((await call("GET", `/runtime/cases/${caseId}`, undefined, "user-O")).body?.people ?? []).find((p: { label: string }) => p.label === paperPerson)?.subject_id;
   const copyId = sql(`select id from form_instance where case_id='${caseId}' and subject_id='${subject}' and form_number='IMM 5257' and status='GENERATED' order by created_at desc limit 1`);
   const bytes = Buffer.from(await (await fetch(`http://localhost:${PORT}/api/runtime/form-copies/${copyId}/file`, { headers: { "x-actor": "user-O" } })).arrayBuffer());
-  const validated = asValidated(bytes);
+  const validated = adobeValidated(bytes);
   writeFileSync(join(DIR, "paper-validated-test.pdf"), validated);
   const fd = new FormData(); fd.append("file", new Blob([new Uint8Array(validated)], { type: "application/pdf" }), "paper-validated-test.pdf");
   const up = await fetch(`http://localhost:${PORT}/api/runtime/form-copies/${copyId}/validated`, { method: "POST", headers: { "x-actor": "user-O" }, body: fd });
