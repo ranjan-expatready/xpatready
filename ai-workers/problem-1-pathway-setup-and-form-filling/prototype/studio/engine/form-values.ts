@@ -4,7 +4,7 @@
 // snapshot's map and the form's field list (inventory); no database, file, clock or vendor call. Shared by the real
 // fill (writeForm, which then writes the PDF) and the answer-key runner (engine/answer-keys.ts), so a test checks
 // exactly what a fill writes.
-import { proseRecorded, recordedDerivation, runTransform, wordsInSteps } from "../../p5/transforms.ts";
+import { proseRecorded, recordedDerivation, runTransform, sameAsOf, wordsInSteps } from "../../p5/transforms.ts";
 import { codeAsksMore, codeForValue, hasCodes, labelForText, notOnFormValue, type ListValue, type OptionMap } from "./options.ts";
 import { byAPerson, inFormFormat } from "./form-steps.ts";
 import { NotWorkedOut } from "./not-worked-out.ts";
@@ -102,11 +102,12 @@ export function sameAsLeavesRowEmpty(boxes: BoxResult[], values: Record<string, 
   // is the one that question stands for; the side named first in "A equals B" is the AI's wording, never trusted alone.
   const order = new Map([...inv.keys()].map((k, i) => [k, i]));
   for (const b of boxes) {
-    const m = /(?:^|;|->)\s*derived:([\w.]+) equals ([\w.]+)\s*(?=;|->)/.exec(b.transform ?? ""), yes = /yes_no_code:([^/;\s]+)\//.exec(b.transform ?? "");
-    if (b.result !== "written" || !m || !yes || values[b.box] === undefined || values[b.box] !== inFormFormat(inv.get(b.box) ?? {}, yes[1])) continue;
+    // BK-22 (#1695 C1): every spelling the filler runs ("derive: Y if residential address equals mailing address, else N").
+    const same = sameAsOf(b.transform, b.fact ?? undefined);
+    if (b.result !== "written" || !same || values[b.box] === undefined || values[b.box] !== inFormFormat(inv.get(b.box) ?? {}, same.yes)) continue;
     const caption = (inv.get(b.box)?.caption ?? "").replace(/^\s*Question\s+\d+(?:\s*[A-Z]\b\.?)?\s*/i, "").trim() || "Same as";
     for (const a of boxes) {
-      if (a.fact !== m[1] || a.about !== b.about || a.box === b.box) continue;
+      if (a.fact !== same.a || a.about !== b.about || a.box === b.box) continue;
       if (!(order.has(a.box) && order.has(b.box) && order.get(a.box)! > order.get(b.box)!)) continue;
       const row = rowOfBox(a.box);
       if (row && !b.box.startsWith(`${row}.`)) rows.set(row, `Not needed: "${caption}" is Yes, and the form asks this only when it is No (its own Validate clears the Yes otherwise).`);
