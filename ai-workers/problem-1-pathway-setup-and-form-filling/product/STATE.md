@@ -18,7 +18,7 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
 | # | Ask (IST) | Status |
 |---|---|---|
-| S10 | 10:3x (13 Nov) **his day-1 actions for the synced private copy (P-520)** | **done 12:1x** (all 8 checked by integration builder 1; P-527 classic token, renew ~4 Feb; apps locked to the copies); open with him: revoke two unused OAuth apps with full repository control; next: phase 2 nightly sync, builder to the cloud on his yes |
+| S10 | 10:3x (13 Nov) **his day-1 actions for the synced private copy (P-520)** | **done 12:1x** (all 8 checked by integration builder 1; P-527 classic token, renew ~4 Feb; apps locked to the copies; their rollback read and recorded in the builder's private log, P-523 (6): our first contributions need no migration, the kill switch is our rollback; reveal-pack ask: their deploy script, not in their repository); open with him: revoke two unused OAuth apps with full repository control; next: phase 2 nightly sync, builder to the cloud on his yes |
 | A30, A32 | done / answered | rows word for word in `history/STATE-2026-11-13-1100-lead30s2-founder-asks-A30-A32-rows.md` |
 | A5 | 12:4x finish M3; then detailed milestone plan with counted lists before the Chrome extension; internal production grade | P-450; plan after the 29 |
 | A1-A4, A6, A8, A9-A13, A18, A20-A23, A26, A25, A29, A33 | done, answered or standing | rows word for word in `history/STATE-2026-11-12-1545-lead26s2-founder-asks-pointer-rows.md`; A25, A29: `history/STATE-2026-11-13-0850-lead29s2-founder-asks-A25-A29-rows.md`; A33: `history/STATE-2026-11-13-1005-lead29s2-founder-ask-A33-row.md` |
