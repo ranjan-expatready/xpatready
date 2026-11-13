@@ -18,7 +18,7 @@
 //      reported as WAIT, not judged here; fees worked out from the table with each line's source.
 // Exit (b) not met yet: it waits on BK-22 (the filler runs every step the maps use and never half-runs one: by-hand
 // boxes, list values outside their export values) and BK-23 (the firm record writes the representative's phone in the
-// release's shape). The tech lead's ruling on #1695 (Lead 36, 13 Nov 19:2x IST): those checks are reported as GAP, naming
+// release's shape; a fact an "A equals B" step compares is asked, #1702). The tech lead's ruling on #1695 (Lead 36, 13 Nov 19:2x IST): those checks are reported as GAP, naming
 // their row, and do not fail the run; a check is a GAP only when it fails for exactly that cause, else it is a FAIL.
 // After BK-22 and BK-23 merge, this script re-run unchanged on a fresh main is BK-13's counted run: every check PASS
 // (45 of 45), no GAP, is exit (b). Sample people, made up; US$0 (saved AI answers only, live AI off). Exit 1 on any FAIL.
@@ -94,7 +94,7 @@ const people = ((await call("GET", `/runtime/cases/${caseId}`, undefined, OFFICE
 const name = new Map(people.map((p) => [p.subject_id, p.label]));
 
 // The parents (IMM 5707), answered and confirmed on the officer's own routes.
-type Sec = { subjectId: string; section: string; questions: { fact: string; answer?: { id?: string } | null }[] };
+type Sec = { subjectId: string; section: string; questions: { fact: string; hidden?: boolean; answer?: { id?: string } | null }[] };
 const view = async () => ((await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, OFFICER)).body?.sections ?? []) as Sec[];
 const rel = json("tests/fixtures/bk13/parents.json").relatives as Record<string, Record<string, unknown>>;
 let v = await view();
@@ -153,7 +153,18 @@ for (const f of filed) {
   const hand = c.by_hand ?? [], needsFix = (f.readiness?.missing ?? []).filter((m) => m.reason === "needs a fix");
   allByHand += hand.length; allNeedsFix += needsFix.length;
   const handWhy = row.boxes.filter((b) => b.result === "by hand").map((b) => b.why ?? "");
-  gap(`BK-13 bar (row 12, #1574 §8): ${who}: nothing by hand`, hand.length === 0, handWhy.every((w) => /^step ".*" is not in the executable set$/s.test(w)), "BK-22 (steps the filler does not run: C1)", handWhy);
+  // Each by-hand reason is one named gap, or the check FAILs: a step outside the filler's set is BK-22's (C1); a fact an
+  // "A equals B" step compares that the release does not ask of this person is BK-23's (#1702: "a fact an 'A equals B'
+  // step compares is asked and reaches the filler"; seen in merge-queue batch #1705 with BK-22, #1698). A compared fact
+  // the release asks but this case leaves unanswered is the Sample data's fault: a FAIL.
+  const asked = (subject: string, fact: string) => v.some((x) => x.subjectId === subject && x.questions.some((q) => q.fact === fact && !q.hidden));
+  const rowOf = (w: string): string | null => {
+    if (/^step ".*" is not in the executable set$/s.test(w)) return "BK-22 (steps the filler does not run: C1)";
+    const cmp = /^([a-z]+\.[\w.]+) is not confirmed, so it cannot be compared$/.exec(w);
+    return cmp && !asked(f.subject_id, cmp[1]) ? "BK-23 (a compared fact the release does not ask: #1702)" : null;
+  };
+  const handRows = [...new Set(handWhy.map(rowOf))];
+  gap(`BK-13 bar (row 12, #1574 §8): ${who}: nothing by hand`, hand.length === 0, handRows.length > 0 && !handRows.includes(null), handRows.filter(Boolean).join(" and ") || "none", handWhy);
   gap(`BK-13 bar (row 12, #1574 §8): ${who}: no answer it writes "needs a fix"`, needsFix.length === 0, needsFix.every((m) => m.fact === "person.phone_number" && /representative/i.test(m.about ?? "")), "BK-23 (the representative's phone shape: C4)", needsFix.map((m) => `${m.about}: ${m.label}: ${m.fact}`));
   if (!f.trial_passed) waits.push(`${who}: ${f.trial_why}`);
   table.push(`| ${f.form} | ${name.get(f.subject_id)} | ${f.channel} | ${c.counts.written} | ${hand.length} | ${c.counts.blank} | ${c.counts.not_written} | ${row.rb === c.counts.written && empty.length === 0 && badChoice.length === 0 ? "equal" : `NOT equal (${badChoice.length} list values not an export value)`} | ${f.trial_passed ? "passed" : "none recorded"} |`);
@@ -200,5 +211,5 @@ console.log(`\nCopies: ${table.length}; by hand: ${allByHand}; "needs a fix": ${
 for (const w of waits) console.log(`WAIT  (the Mac's evidence, BK-20 / dry-run D1, not judged here) ${w}`);
 const failed = summary();
 const passed = log.filter((x) => x.ok).length, all = log.length + gaps.length;
-console.log(`Exit (b): ${passed}/${all} checks pass; ${gaps.length} GAP (BK-22: ${gaps.filter((g) => g.startsWith("BK-22")).length}, BK-23: ${gaps.filter((g) => g.startsWith("BK-23")).length}); ${failed} FAIL. ${gaps.length || failed ? "Not met." : "Met: every check passes."}`);
+console.log(`Exit (b): ${passed}/${all} checks pass; ${gaps.length} GAP (BK-22: ${gaps.filter((g) => g.includes("BK-22")).length}, BK-23: ${gaps.filter((g) => g.includes("BK-23")).length}); ${failed} FAIL. ${gaps.length || failed ? "Not met." : "Met: every check passes."}`);
 process.exit(failed ? 1 : 0);
