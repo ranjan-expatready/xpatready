@@ -136,23 +136,6 @@ model PersonRole {
   @@map("person_role")
 }
 
-/// F2 (forms, P-156 (2), P-176; setup checklist step 1): the official page a person confirmed for a combination. The rules'
-/// proposal is worked out from the combination's attached pages on every read (engine/official-pages.ts), so only the
-/// confirmation is stored: which page, who, and on which tier (author: the rules found exactly one page; expert: they did not).
-model OfficialPagesRecord {
-  id            String   @id @default(uuid()) @db.Uuid
-  workspaceId   String   @map("workspace_id") @db.Uuid
-  combinationId String   @unique @map("combination_id") @db.Uuid
-  attachmentId  String   @map("attachment_id") @db.Uuid
-  matches       Int
-  confirmedBy   String   @map("confirmed_by")
-  confirmedAs   String   @map("confirmed_as")
-  confirmedAt   DateTime @default(now()) @map("confirmed_at") @db.Timestamptz
-
-  @@index([workspaceId])
-  @@map("combination_official_pages")
-}
-
 /// Which forms a combination files, for whom, and when (always or under a condition).
 model CombinationForm {
   id            String           @id @default(uuid()) @db.Uuid

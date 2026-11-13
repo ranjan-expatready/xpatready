@@ -10,7 +10,7 @@ The Prisma schema is a folder, `prisma/schema/`, read whole by Prisma 7.8 (`pris
 |---|---|---|
 | `base.prisma` | the generator, the datasource, `Workspace`, enums used by more than one area | the tech lead |
 | `pathways.prisma` | pathways, programs, combinations, person roles, a combination's forms list and its changes | screens |
-| `forms.prisma` | official files, intake, form editions and what IRCC accepts, field maps, portal captures, library changes | forms |
+| `forms.prisma` | official files and confirmed official pages, intake, form editions and what IRCC accepts, field maps, portal captures, library changes | forms |
 | `library.prisma` | shared fields, answer lists, questionnaire sections and questions, document types and requirements, conditions, checks | forms |
 | `proposals.prisma` | drafting jobs, AI batches, proposal items | forms |
 | `governance.prisma` | releases, pack versions, review sign-offs, audit, change sets, source register | screens |
@@ -21,7 +21,8 @@ The Prisma schema is a folder, `prisma/schema/`, read whole by Prisma 7.8 (`pris
 | `review.prisma` | review findings, filing reviews, readiness passes, review rounds | runtime |
 | `submission.prisma` | sign steps, signed scans, filing records, fee receipts, UCIs | runtime |
 | `evidence.prisma` | checklist lines, case documents, document reads, read values, answer checks | evidence |
-| `access.prisma` | extension pairing and sessions, re-capture tasks, person links, the demo inbox | runtime |
+| `extension.prisma` | browser-extension pairing, code tries and sessions, re-capture tasks | forms |
+| `links.prisma` | links sent to a person on a case, their code tries and sessions, the demo inbox | runtime |
 
 * **A new module adds its own schema file in the folder** (`prisma/schema/<area>.prisma`, its rule line first); never edit another area's file without its owner. A relation to another area's model is written in your file; a back-relation field the other model needs is the one line you ask its owner for.
 * Generator and datasource stay in `base.prisma` only. An enum moves to `base.prisma` when a second area starts using it.
