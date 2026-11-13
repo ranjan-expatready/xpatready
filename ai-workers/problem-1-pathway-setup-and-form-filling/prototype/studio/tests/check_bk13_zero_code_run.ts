@@ -133,18 +133,25 @@ for (const f of filed) {
   ok(`BK-13 bar (row 12, #1574 §8): ${who}: nothing by hand`, hand.length === 0, row.boxes.filter((b) => b.result === "by hand").map((b) => b.why));
   ok(`BK-13 bar (row 12, #1574 §8): ${who}: no answer it writes "needs a fix"`, needsFix.length === 0, needsFix.map((m) => `${m.label}: ${m.fact}`));
   if (!f.trial_passed) waits.push(`${who}: ${f.trial_why}`);
-  table.push(`| ${f.form} | ${name.get(f.subject_id)} | ${f.channel} | ${c.counts.written} | ${hand.length} | ${c.counts.blank} | ${c.counts.not_written} | ${row.rb === c.counts.written && empty.length === 0 ? "equal" : "NOT equal"} | ${f.trial_passed ? "passed" : "none recorded"} |`);
+  table.push(`| ${f.form} | ${name.get(f.subject_id)} | ${f.channel} | ${c.counts.written} | ${hand.length} | ${c.counts.blank} | ${c.counts.not_written} | ${row.rb === c.counts.written && empty.length === 0 && badChoice.length === 0 ? "equal" : `NOT equal (${badChoice.length} list values not an export value)`} | ${f.trial_passed ? "passed" : "none recorded"} |`);
 }
 
 // Fees, from the table, each line with its source.
-type Fee = { key: string; amount: number; exempt: boolean; source_detail?: { quote?: string; read?: string } };
+type Fee = { key: string; amount: number; exempt: boolean; reason?: string; source_detail?: { quote?: string; read?: string } };
 const prep = (await call("GET", `/runtime/cases/${caseId}/prepare`, undefined, OFFICER)).body as { fees_worked_out: boolean; fees_why: string | null; fees: Fee[]; groups: { total_cents: number | null }[]; filings: { label: string }[] };
-type Line = { key: string; per_person_cad: number; family_max?: { cad: number; from_people: number }; source: { quote: string } };
+type Line = { key: string; basis: string; per_person_cad: number; family_max?: { cad: number; from_people: number }; source: { quote: string }; exempt?: { source: { quote: string } } };
 const tableLines: Record<string, Line> = Object.fromEntries((json("samples/fee-table.json").lines as Line[]).map((l) => [l.key, l]));
-// A person the table exempts (biometrics: under 14 or over 79, its own cited exemption) owes CAD 0 on that line.
-const wrong = (prep.fees ?? []).filter((x) => x.amount !== (x.exempt ? 0 : tableLines[x.key]?.per_person_cad) || x.source_detail?.quote !== tableLines[x.key]?.source.quote).map((x) => `${x.key}: ${x.amount}`);
-const bio = tableLines.biometrics, payers = (prep.fees ?? []).filter((x) => x.key === "biometrics" && !x.exempt).length;
-const expected = (prep.fees ?? []).filter((x) => x.key !== "biometrics").reduce((s, x) => s + tableLines[x.key].per_person_cad, 0) + (payers >= (bio.family_max?.from_people ?? Infinity) ? bio.family_max!.cad : payers * bio.per_person_cad);
+// Each line cites its table row. A per-person line is its table amount; a line with a family maximum is carried whole by
+// the principal's filing and marked exempt ("Family Rate") on the others (engine/runtime/filings.ts, BR-18), so it is
+// checked through the total. A person the table exempts by age (biometrics: under 14) pays nothing on that line.
+const fees = prep.fees ?? [];
+const cites = (x: Fee) => [tableLines[x.key]?.source.quote, ...(x.exempt ? [tableLines[x.key]?.exempt?.source.quote] : [])].includes(x.source_detail?.quote);
+const wrong = fees.filter((x) => !cites(x) || (!tableLines[x.key]?.family_max && x.amount !== (x.exempt ? 0 : tableLines[x.key]?.per_person_cad))).map((x) => `${x.key}: ${x.amount}${x.exempt ? " exempt" : ""} (${x.reason ?? ""}) quote ${JSON.stringify(x.source_detail?.quote ?? null)}`);
+const ageExempt = (x: Fee) => x.exempt && !/family/i.test(x.reason ?? "");
+const expected = Object.values(tableLines).reduce((sum, l) => {
+  const n = fees.filter((x) => x.key === l.key && !ageExempt(x)).length;
+  return sum + (l.family_max && n >= l.family_max.from_people ? l.family_max.cad : n * l.per_person_cad);
+}, 0);
 const total = prep.groups?.reduce((s, x) => s + (x.total_cents ?? 0), 0) / 100;
 ok(`BK-13: fees worked out from samples/fee-table.json, each line its table amount and source; total CAD ${total} = the table's CAD ${expected}`, prep.fees_worked_out && wrong.length === 0 && total === expected && prep.groups.length === 1, { why: prep.fees_why, wrong, total, expected });
 ok("BK-13: one filing per person, named by the document it is for", prep.filings.map((x) => x.label.split(":")[0]).sort().join(", ") === "Study permit (outside Canada), Visitor visa, Work permit", prep.filings.map((x) => x.label));

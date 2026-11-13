@@ -2,37 +2,121 @@
 
 Forms lane, 13 Nov 2026 from 18:2x IST, on `origin/main` ff0c2ef90 plus this PR's data. Bake plan row 27 (BK-13); P-448, P-449, P-452, P-541; step 1 (the dry run) is `design/bk13-dry-run-2026-11-12.md` (#1574). Live AI off, US$0, no priced button. Every IRCC value is cited (page, quote, date) or labelled Sample and listed (§5). Legal points: Unconfirmed: no counsel.
 
-**Status: stopped on a code gap (§3), question for the tech lead on the PR.** The run, its script and its data go on; nothing under `engine/`, `api/src/`, `web/src/` or `prototype/p5/` is changed by this row.
+**Status: exit (b) not met; stopped on code gaps C1, C1b and C4 (§3), question for the tech lead on #1695.** The script replays the whole set-up and case on a fresh copy (37/45 pass; the 8 failures are those gaps). Nothing under `engine/`, `api/src/`, `web/src/` or `prototype/p5/` is changed by this row; once the gaps are fixed elsewhere, the same script is the counted run.
 
 ## 1. What the run does
+
+Script: `tests/check_bk13_zero_code_run.ts` (usage line at its top). It checks first that this branch changes nothing under `engine/`, `api/src/`, `web/src/` or `prototype/p5/` against `origin/main`.
 
 1. A fresh isolated copy from this branch (`isolated.sh`), nothing loaded.
 2. Demo › Load the configured checkpoint (`POST /api/demo/load {sample: configured}`): the six combinations are set up from the data files through the screens' services, and the Study permit (`sp.outside`) is released (row 10: submit, the SME's ticks, a different person's approval).
 3. The Study permit's rows are **checked, not assumed** (P-449): each seeded row in the release (forms and their `who`, documents, fees, field maps) is compared with the data file it came from.
-4. Demo › open the Study permit's Sample case (`POST /api/demo/sample-case`): the walk's family (student, spouse, child), answered from `samples/sample-student-answers.json` through the officer's own steps, a copy of every form each person files.
-5. Each copy: generated, the filler's read-back (`intact`), every written box read back from the PDF, and counted (written, by hand, blank); fees and filings from data.
+4. Demo › open the Study permit's Sample case (`POST /api/demo/sample-case`): the walk's family, SAMPLE-SP-FAMILY-1 (a married student of 30, the spouse of 31 applying for an open work permit, a child of 9 who will not study and so applies as a visitor), answered from `samples/sample-student-answers.json` through the officer's own steps, a copy of every form each person files.
+5. The parents of the student and of the spouse (IMM 5707) answered and confirmed on the officer's own routes (`PUT …/answers/:subject/:relation/:field`, then each section confirmed), from `tests/fixtures/bk13/parents.json` (Sample): a Sample answers file cannot name relatives yet (dry-run gap C2), so the test does what a person does on screens.
+6. Each copy generated again, then: the filler's own read-back (`intact`, `read_back_equal` = written), **read back a second time from the PDF** with the project's XFA reader (`tests/fixtures/read_choice_values.py`: every written form field holds a value; every list field holds one of its export values), counted (written, by hand, blank, not written); row 12's bar; fees and filings against `samples/fee-table.json`.
 
 ## 2. Bar (tech lead's ruling on #1574 §8, Lead 20, 11 Nov 23:2x IST)
 
 Row 12's bar for the Study permit: the application form generated for each applicant, **written with nothing by hand**, its edition's fill trial recorded and passed, read back equal; plus every form the case files generated with no "needs a fix". `prototype/p5/` joins exit (b)'s no-code list. Adobe Validate of the Paper forms is BK-20 (the Lead, on the Mac).
 
-## 3. The code gap (C1 of the dry run, never made a row)
+## 3. The code gaps (each outside this row's reach: P-449, P-452, the ruling on #1574 §8)
 
-**The filler does not run the step words in the AI-drafted field maps of IMM 1294 and IMM 1295**, so those boxes go "by hand". On `main` ff0c2ef90, configured checkpoint, Study permit release 1:
+**C1. The filler does not run the step words of the AI-drafted field maps** (`prototype/p5/transforms.ts:113-199`; the dry run's C1, never made a row). Every "by hand" box of the run has this reason, nothing else:
 
-| Form (who) | Copy counts | Steps the filler does not run (examples, from the copy's own boxes) |
+| Form (who) | By hand | Steps the filler does not run (from the copy's own boxes) |
 |---|---|---|
-| IMM 1294 (student) | 62 written, **11 by hand**, 11 blank | `number:whole_dollars (max 7 chars)` ×4 (tuition, room and board, other costs, funds); `address_part:street_line` (school address); `derive: Y if applying-from country equals current residence country, else N`; `derive: Y if residential address equals mailing address, else N`; `derive: 1 if the number's country calling code is 1 (Canada/US), else 0` and `… is not 1 …`; `phone_part:national_number_without_country_code`; `derive: Y if passport country of issue = 206 (ISR (Israel)), else N` |
-| IMM 1295 (spouse) | with 18 answers: 13 written, **6 by hand** on step words | `code_list:imm1295.service_language(English=01,French=02)` (no space before the bracket, so the code-list step does not match); `code_list:imm1295.phone_type(…)`; `code_list:imm1295.official_language_ability(…)`; `derive:country calling code is 1` / `is not 1`; `derive:case.applying_from_country equals current residence country` |
+| IMM 1294 (student) | 11 | `number:whole_dollars (max 7 chars)` ×3 and `(max 12 chars)` (tuition, room and board, other costs, funds); `address_part:street_line (max 130 chars)` (school address); `derive: Y if applying-from country equals current residence country, else N`; `derive: Y if residential address equals mailing address, else N`; `derive: 1 if the number's country calling code is 1 (Canada/US), else 0` and `… is not 1 …`; `phone_part:national_number_without_country_code (max 20 chars)`; `derive: Y if passport country of issue = 206 (ISR (Israel)), else N` |
+| IMM 1295 (spouse) | 12 | `code_list:imm1295.sex(…)`, `.phone_type(…)`, `.service_language(…)`, `.official_language_ability(…)`, `.marital_status(…)` (no space before the bracket, so the code-list step does not match); `derive:country calling code is 1` / `is not 1` ("derive", not "derived"); `address_part:unit` ×2; `derive:person.residential_address equals person.mailing_address`; `derive:case.applying_from_country equals current residence country` |
+| IMM 5707 (student; spouse) | 1; 1 | `code_list:imm5707.child_relationship (Son=1, …). There is no option for other relationship types: …` (prose after the list) |
 
-A scan of every mapped entry of the release's eight field maps against the filler's steps (each entry run on 11 kinds of value) finds steps no value can pass on IMM 1294 (19 entries), **IMM 1295 (41)**, IMM 5646 (11: `date_digit:YYYYMMDD[n]`, `address_single_text`, `derive:given_names + ' ' + family_name`), IMM 5707 (2: a code list followed by prose) and IMM 5409 (1). IMM 5257, IMM 5475 and IMM 5476: none.
+**C1b. A silent wrong value, found only by the second read-back.** IMM 1294's map says `address_part:country then code_list:imm1294.country_address (codes as in inventory)`. The filler splits steps only on `;` and `->`, so `address_part:country\b` matches the whole text and the code-list half is ignored: the copy holds **"India" in the mailing and residential address Country lists, and "ON" in the school's Province list**, none of them an export value of its list. The filler's own read-back calls the copy equal (it reads back what it wrote), so only the XFA reader catches it. Same family as C1, same file; a person would not see it on the copy's page.
 
-**Why data cannot close it:** a field map entry's steps are set when the draft is applied; Field map review's decide route changes the key, meaning and type, never the steps (`api/src/sources.ts` decide: `decision, key, note, meaning, valueType, label, reason`), and no route or data file edits an applied entry's steps. The fix is code in `prototype/p5/transforms.ts` (the filler's step set), or a new route for map corrections: both outside this row (P-449, P-452, the Lead's ruling that `prototype/p5/` is in the list).
+**C4. The representative's phone "needs a fix" on every IMM 5476 (3 copies)** ("Area code and telephone number: Enter the country code and the number."): the firm record writes `person.phone_number` as plain text (`engine/runtime/team.ts:121`), while the Study permit's release made that library fact a phone (IMM 1294's map). The officer's route refuses an answer on the representative ("The representative's details come only from the firm record of the representative of record"), so no answer can mend it. The dry run's D3 data route (IMM 1294's phone boxes onto `person.telephone_number` through Field map review) would change a shared key, beyond this row.
+
+**Why data cannot close C1 or C1b:** a field-map entry's steps are fixed when its draft is applied. Field map review's decide route takes `decision, key, note, meaning, valueType, label, reason` (`api/src/sources.ts` decide), never the steps; `samples/review-corrections.json` changes a key, not a step; no route or data file edits an applied entry's steps. A scan of all eight field maps on the release (each mapped entry run through the filler on 11 kinds of value) finds steps no value passes on IMM 1294 (19 entries), IMM 1295 (41), IMM 5646 (11: `date_digit:YYYYMMDD[n]`, `address_single_text`, `derive:given_names + ' ' + family_name`), IMM 5707 (2) and IMM 5409 (1); IMM 5257, IMM 5475, IMM 5476: none.
+
+**Recommended (question on the PR):** a forms row R-a before the counted run: the filler runs the drafters' synonyms and the "then" separator, each with a pass and a fail test, and refuses (by hand) a step it does not understand in full instead of running its first half; Field map review flags such a step before approval. C4: the firm record writes the phone in the shape the release's question reads (the dry run's R-d). Then this script re-runs unchanged.
 
 ## 4. Results
 
-To be filled by the run (counts per form and person; fees; read-backs).
+Run on a fresh isolated copy (`forms_bk13`, :4452), 13 Nov 2026 ~20:0x IST, branch head plus `origin/main` ff0c2ef90: **37 of 45 checks pass; exit 1**. All 8 failures are the code gaps of §3; nothing failed for a data reason.
+
+**Passed:** no code change (P-452); configured checkpoint loaded, the Study permit released at row 10 (submit, the SME's ticks, a different person's approval); the release holds all 7 form rules of `samples/form-setup.json` with their `who`, a published field map for each of its 8 form lines, all 6 cited document lines with their quotes; the family Sample case SAMPLE-SP-FAMILY-1 opens from data (3 people, every answer taken, no copy refused); 4 parents answered and confirmed on the officer's routes; each person files only their own forms (student IMM 1294, 5476, 5707; spouse IMM 1295, 5476, 5707; child IMM 5257, 5476); all 8 copies generated, files intact, the filler's read-back equal to what it wrote; 7 of 8 copies read back equal a second time from the PDF; **fees from data: one submission for 3 people, CAD 675** (study permit 150, work permit 155, open work permit holder 100, visitor visa 100, biometrics family maximum 170, the child of 9 exempt), each line citing its table row; one filing per person (Study permit, Work permit, Visitor visa).
+
+**Forms filled, checked and read back (8 copies, 3 people):**
+
+| Form | Person | Channel | Written | By hand | Blank | Not written | Read back | Fill trial |
+|---|---|---|---|---|---|---|---|---|
+| IMM 1294 | Student A (Sample) | PDF_UPLOAD | 65 | 11 | 11 | 82 | NOT equal (3 list values not an export value) | none recorded |
+| IMM 5476 | Student A (Sample) | PDF_UPLOAD | 20 | 0 | 0 | 14 | equal | none recorded |
+| IMM 5707 | Student A (Sample) | PDF_UPLOAD | 38 | 1 | 0 | 0 | equal | passed |
+| IMM 1295 | Spouse (Sample) | PDF_UPLOAD | 43 | 12 | 9 | 101 | equal | passed |
+| IMM 5476 | Spouse (Sample) | PDF_UPLOAD | 20 | 0 | 0 | 14 | equal | none recorded |
+| IMM 5707 | Spouse (Sample) | PDF_UPLOAD | 38 | 1 | 0 | 0 | equal | passed |
+| IMM 5257 | Child (Sample) | PDF_UPLOAD | 63 | 0 | 17 | 86 | equal | passed |
+| IMM 5476 | Child (Sample) | PDF_UPLOAD | 20 | 0 | 0 | 14 | equal | none recorded |
+
+Totals: 307 form fields written, **25 by hand** (C1), **3 list values not an export value** (C1b, IMM 1294), **3 "needs a fix"** (C4, the representative's phone on each IMM 5476). Paper forms: none (every line of this release is PDF upload); IMM 1295 and IMM 5257 need Validate before upload (`needs_validate`), which is BK-20's Mac run.
+
+**Waits for the Mac (not judged here):** no fill trial is recorded for IMM 1294 (06-2026) or IMM 5476 (11-2021) (dry-run D1); IMM 1295 (09-2023), IMM 5257 (09-2023) and IMM 5707 (01-2023) have one.
+
+**The 8 failures, word for word (first 200 characters):**
+- `FAIL  BK-13: IMM 1294 for Student A (Sample) read back from the PDF: each of its 65 written form fields holds a value; each list field holds one of its export values — {"empty":[],"badChoice":["form1[`
+- `FAIL  BK-13 bar (row 12, #1574 §8): IMM 1294 for Student A (Sample): nothing by hand — ["step \"derive: Y if applying-from country equals current residence country, else N\" is not in the executable s`
+- `FAIL  BK-13 bar (row 12, #1574 §8): IMM 5476 for Student A (Sample): no answer it writes "needs a fix" — ["Area code and telephone number: person.phone_number"]`
+- `FAIL  BK-13 bar (row 12, #1574 §8): IMM 5707 for Student A (Sample): nothing by hand — ["step \"code_list:imm5707.child_relationship (Son=1, Daughter=2, Step-daughter=3, Step-son=4, Adopted daughter=5`
+- `FAIL  BK-13 bar (row 12, #1574 §8): IMM 1295 for Spouse (Sample): nothing by hand — ["step \"derive:case.applying_from_country equals current residence country\" is not in the executable set","step \"`
+- `FAIL  BK-13 bar (row 12, #1574 §8): IMM 5476 for Spouse (Sample): no answer it writes "needs a fix" — ["Area code and telephone number: person.phone_number"]`
+- `FAIL  BK-13 bar (row 12, #1574 §8): IMM 5707 for Spouse (Sample): nothing by hand — ["step \"code_list:imm5707.child_relationship (Son=1, Daughter=2, Step-daughter=3, Step-son=4, Adopted daughter=5, A`
+- `FAIL  BK-13 bar (row 12, #1574 §8): IMM 5476 for Child (Sample): no answer it writes "needs a fix" — ["Area code and telephone number: person.phone_number"]`
 
 ## 5. Citation table
 
-To be filled: every immigration value the run relies on, cited (page, quote, date) or Sample.
+Every immigration value the run relies on, from the data files the run reads. The quotes are from the committed saved copies (canada.ca is refused from cloud sessions: `www.canada.ca:443 connect_rejected`, 13 Nov 19:3x IST), with each page's own date; **not revalidated on canada.ca today**. The data files still say "Unconfirmed: expert" from before P-541; under P-541 a value with page, quote and date is cited, and what no page settles stays Sample (listed below).
+
+| # | Value the run relies on | Data file | Basis: page, quote, date | Status |
+|---|---|---|---|---|
+| 1 | Study permit fee (including extensions): CAD 150 per person | `samples/fee-table.json` | IRCC fee list (https://ircc.canada.ca/english/information/fees/fees.asp): "Study permit (including extensions) – per person 150.00"; read 2026-11-03; IRCC fee list page date 2026-09-21, read 3 Nov 2026 (C6.12 step 24); charged to each person applying, no family maximum on the page; amounts Sample until the immigration expert confirms (P-171) | Cited (fee list); amounts may change |
+| 2 | Work permit fee (including extensions): CAD 155 per person | `samples/fee-table.json` | IRCC fee list (https://ircc.canada.ca/english/information/fees/fees.asp): "Work permit (including extensions) – per person 155.00"; read 2026-11-03; IRCC fee list page date 2026-09-21, read 3 Nov 2026 (C6.12 step 24); charged to each person applying, no family maximum on the page; amounts Sample until the immigration expert confirms (P-171); the page's group maximum (CAD 465) is for 3 or more performing artists only, … | Cited (fee list); amounts may change |
+| 3 | Open work permit holder fee: CAD 100 per person | `samples/fee-table.json` | IRCC fee list (https://ircc.canada.ca/english/information/fees/fees.asp): "Open work permit holder 100.00"; read 2026-11-03; IRCC fee list page date 2026-09-21, read 3 Nov 2026 (C6.12 step 24); paid with the work permit fee for an open work permit (IRCC Help Centre 176, https://ircc.canada.ca/english/helpcentre/answer.asp?qnum=176&top=10: "In most cases, you will have to pay the open work permit holder fee at the sam … | Cited (fee list); amounts may change |
+| 4 | Visitor visa fee: CAD 100 per person, family maximum CAD 500 from 5 people | `samples/fee-table.json` | IRCC fee list (https://ircc.canada.ca/english/information/fees/fees.asp): "maximum fee for a family of 5 or more people applying at the same time and place"; read 2026-11-02; IRCC fee list page date 2026-09-21; Lead research 2 Nov (research file row 1a; P-230 (7)); amounts Sample until the immigration expert confirms (P-171) | Cited (fee list); amounts may change |
+| 5 | Biometrics fee: CAD 85 per person, family maximum CAD 170 from 2 people | `samples/fee-table.json` | IRCC fee list (https://ircc.canada.ca/english/information/fees/fees.asp): "biometrics CAD 85, CAD 170 for a family of 2 or more"; read 2026-11-02; IRCC fee list page date 2026-09-21; Lead research 2 Nov (research file row 1b; P-230 (7)); amounts Sample until the immigration expert confirms (P-171) | Cited (fee list); amounts may change |
+| 6 | Biometrics exemption: under 14, over 79 (the child, 9, owes none) | `samples/fee-table.json` | When to give biometrics: temporary residents (https://www.canada.ca/en/immigration-refugees-citizenship/services/biometrics/when-to-give-temporary-residence.html): "a child under the age of 14; an applicant over the age of 79"; 2026-03-30 (page date) | Cited; age as at today (FQ-7 open) |
+| 7 | Each family member files their own application; one payment receipt for the family | `samples/fee-table.json` | Guide 5269: Applying for a study permit outside Canada: "Family members must complete their own application forms."; read 2026-11-11; Ruling P-486 (product/design/d8-study-permit-family-2026-11-11.md, the tech lead, 11 Nov 2026): Guide 5269 page details 2026-10-06; saved copy official-sources/ircc/instructions/guide-5269.html (modified 2026-10-06), "Do I have to apply separately for my family members?". | Cited (ruling P-486) |
+| 8 | IMM 5646  when person.minor_studying_without_parent = true | `samples/form-setup.json` | Guide 5269, Custodians: "Children 17 years of age or less coming to Canada to study without an accompanying parent or a legal guardian must still be in the care of a responsible adult in Canada. [...] The parents or legal guardians in the country or territory of origin and the custodian in Canada must complete a notarized Custodianship Declaration (IMM 5646)"; IMM 5483 (08-2025) p. 1: "Must be completed if the minor  … | Cited |
+| 9 | IMM 5409  when person.marital_status = "common_law" | `samples/form-setup.json` | Guide 5269, Step 2: "Statutory Declaration of Common-law Union (IMM 5409) [...], if applicable" | Cited |
+| 10 | IMM 5476  when case.uses_representative = true | `samples/form-setup.json` | IMM 5483 (08-2025) p. 1: "Complete this form only if you are using the services of an authorized representative, or if you are appointing or cancelling a representative."; Guide 5269: "Fill out this form only if you: are appointing a representative; need to update contact information for your previously appointed representative; or are cancelling a representative’s appointment." | Cited |
+| 11 | IMM 5475  when case.authorizes_release_to_designated_individual = true | `samples/form-setup.json` | IMM 5483 (08-2025) p. 1: "Complete this form only if you authorize Immigration, Refugees and Citizenship Canada (IRCC) and the Canada Border Services Agency (CBSA) to release information from your case file to someone other than yourself." | Cited |
+| 12 | IMM 1294 for principal_and_children_when when person.studies_six_months_or_more = true | `samples/form-setup.json` | Guide 5269, Applying for a Study Permit outside Canada (canada.ca, modified 2026-10-06, saved 27 Oct 2026, official-sources/ircc/instructions/guide-5269.html), "Do I have to apply separately for my family members?": "Family members must complete their own application forms." and, under "May my children attend school?": "Your children may attend school in Canada. You must apply for their study permit at the same time  … | Cited |
+| 13 | IMM 1295 for spouse_or_partner  | `samples/form-setup.json` | Guide 5269, Applying for a Study Permit outside Canada (canada.ca, modified 2026-10-06, saved 27 Oct 2026, official-sources/ircc/instructions/guide-5269.html), "May my spouse or common-law partner work in Canada while I study?": "Spouses and common-law partners of full-time students enrolled and pursuing studies at a post-secondary Designated Learning Institution may apply for an open work permit. However, they must  … | Cited |
+| 14 | IMM 5257 for each_dependent_child when person.studies_six_months_or_more = false | `samples/form-setup.json` | Guide 5256, Applying for a visitor visa (temporary resident visa), paper application (canada.ca, saved 19 Oct 2026, official-sources/ircc/instructions/guide-5256.html): "Application for Temporary Resident Visa (IMM 5257) [...] This form must be completed by each person applying for a Temporary Resident Visa to visit Canada."; edition IMM 5257 (09-2023) (official-sources/ircc/forms/imm5257e.pdf; its form page reads "L … | Cited |
+| 15 | Document: Fee payment receipt (principal_applicant) | `samples/form-setup.json` | IMM 5483 (08-2025), canada.ca PDF modified 2025-08-11, p. 1, documents list item 1: "Proof of payment showing the amount paid. You must pay your processing fees and any other applicable fees and include a copy of the payment receipt with your application." (Sample, Unconfirmed: expert) | Cited |
+| 16 | Document: Passport information page copy (each_applicant) | `samples/form-setup.json` | IMM 5483 (08-2025), canada.ca PDF modified 2025-08-11, p. 1, documents list item 2: "A Photocopy of the information page of your valid passport or travel document which includes: The passport number, The issuance and expiry dates, Your photo, name, date and place of birth." (Sample, Unconfirmed: expert) | Cited |
+| 17 | Document: Letter of acceptance (principal_applicant) | `samples/form-setup.json` | IMM 5483 (08-2025), canada.ca PDF modified 2025-08-11, p. 2, documents list item 4: "Letter of acceptance from where you intend to study (including, but not limited to, Designated Learning Institutions)." (Sample, Unconfirmed: expert) | Cited |
+| 18 | Document: Proof of financial support (principal_applicant) | `samples/form-setup.json` | IMM 5483 (08-2025), canada.ca PDF modified 2025-08-11 (official-sources/ircc/checklists/imm5483e.pdf, checked 21 Oct 2026), p. 2, documents list item 7: "Proof of financial support" and "Please refer to the IRCC website for the current financial requirements. These are adjusted each year." (BK-13 step 1; Sample, Unconfirmed: expert) | Cited |
+| 19 | Document: Provincial or territorial attestation letter (PAL/TAL) (principal_applicant) | `samples/form-setup.json` | IMM 5483 (08-2025), canada.ca PDF modified 2025-08-11 (official-sources/ircc/checklists/imm5483e.pdf, checked 21 Oct 2026), p. 2, documents list item 5: "Most study permit applications submitted to IRCC now require a Provincial Attestation Letter / Territorial Attestation Letter (PAL/TAL) from the intended province or territory of study as of January 22, 2024. Unless you meet one of the exceptions, you must submit a  … | Cited; scope Sample |
+| 20 | Document: Québec Acceptance Certificate (CAQ) attestation of issuance when the person will study in the province of Québec | `samples/conditional-documents.json` | IMM 5483 (08-2025), canada.ca PDF modified 2025-08-11 (official-sources/ircc/checklists/imm5483e.pdf, checked 21 Oct 2026), p. 2, documents list item 6: "If you plan on studying in the province of Québec, provide the attestation of issuance of your "Québec Acceptance Certificate" (CAQ) issued by the Ministère de l’Immigration, de la Francisation et de l’Intégration (MIFI)." (Sample, Unconfirmed: expert) | Cited; the value list Sample (C13) |
+
+**Not word for word, so listed (P-541):** row 5's biometrics quote is "summary of the Lead-checked record", not IRCC's words; row 4 quotes the visitor visa's family maximum, not the CAD 100 per person.
+
+**Sample (made up or the author's choice), listed:**
+1. Every answer of the Sample family: `samples/sample-student-answers.json` and `tests/fixtures/bk13/parents.json` (names, dates, addresses, passport numbers, school, costs, DLI and PAL numbers, phone numbers, occupations): made up, never a client.
+2. The family's shape for the walk: the spouse applies for an open work permit, the child for a visitor visa (who may apply for what: Guide 5269's own words cited in rows 12-14; the spouse's eligibility for an open work permit and a visa-exempt child's eTA are not modelled).
+3. The study-province values ("Québec", "another province or territory") (ASSUMPTIONS C13 as proposed); PAL/TAL asked of every student, the exceptions not modelled (C12).
+4. IMM 5646's age (Guide 5269 "17 years of age or less" against IMM 5483 "less than 17"): the guide's wider words are taken (`samples/form-setup.json` about).
+5. Biometrics age counted as at today, not as at the group's recording (FQ-7 open).
+6. Legal points: Unconfirmed: no counsel.
+
+## 6. `git diff --stat origin/main` (this PR)
+
+Nothing under `engine/`, `api/src/`, `web/src/` or `prototype/p5/` (the script's first check):
+
+     .../design/bk13-zero-code-run-2026-11-13.md        | 112 ++++++++++++++
+     .../prototype/studio/samples/sample-cases.json     |   9 +-
+     .../studio/samples/sample-student-answers.json     | 149 ++++++++++++++++---
+     .../studio/tests/check_bk12_sample_case.ts         |  10 +-
+     .../studio/tests/check_bk13_zero_code_run.ts       | 162 +++++++++++++++++++++
+     .../studio/tests/fixtures/bk13/parents.json        |  15 ++
+     6 files changed, 425 insertions(+), 32 deletions(-)
+
+(the record's own lines are counted as at this commit.)
