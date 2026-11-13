@@ -12,7 +12,7 @@ import { createRequire } from "node:module";
 import { existsSync, mkdirSync } from "node:fs";
 import { request } from "node:http";
 import { join } from "node:path";
-import { chromium, type Locator } from "playwright";
+import { chromium, type Locator, type Route } from "playwright";
 import { CLIENT, OFFICER, PORT, call, firms, inDays, needVisitorVisa, openCase, prepare, readyToFile, sql, yearsAgo, type Person } from "../acceptance/lib/m3.ts";
 
 const BASE = `http://localhost:${PORT}`, STUDIO = join(import.meta.dirname, "..");
@@ -53,6 +53,14 @@ p.on("pageerror", (e) => errs.push(e.message)); p.on("console", (m) => { if (m.t
 await p.goto(BASE); await p.evaluate((a) => localStorage.setItem("xr-actor", a), OFFICER);
 const panel = () => p.locator("[data-submission]");
 const text = async (loc: Locator) => (await loc.innerText()).replace(/\s+/g, " ").trim();
+// Serve /prepare rewritten from the real answer. Each fulfil is awaited; a route the page already dropped (a navigation
+// or a second /prepare from open()) is left alone, never handled twice (B151 flake: "Route is already handled!", 13 Nov).
+const serve = (rewrite: (real: View) => unknown) => async (rt: Route) => {
+  try { const real = (await (await rt.fetch()).json()) as View; await rt.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(rewrite(real)) }); }
+  catch (e) { if (!/already handled|has been closed|disposed|Request context/i.test(String(e))) throw e; }
+};
+// Remove the /prepare route only after any handler still in flight has finished (unroute alone does not wait).
+const unserve = () => p.unrouteAll({ behavior: "wait" });
 const open = async (id: string) => { await p.goto(`${BASE}/cases/${id}`); await p.locator("[data-fees]").first().waitFor({ timeout: 60_000 }); await p.waitForTimeout(300); };
 async function state(name: string) {
   await panel().scrollIntoViewIfNeeded(); await panel().screenshot({ path: join(SHOTS, `B151-${name}-1440.png`) });
@@ -100,15 +108,14 @@ if (wp && wv) {
 // this case has one, so the served view adds a second filing in the same group with the child on it).
 if (fs && v && declared.length) {
   const kid = declared[0];
-  await p.route(`**/api/runtime/cases/${fs.id}/prepare*`, async (rt) => {
-    const real = (await (await rt.fetch()).json()) as View;
+  await p.route(`**/api/runtime/cases/${fs.id}/prepare*`, serve((real) => {
     const extra = real.filings.length > 1 ? null : { ...real.filings[0], id: `${real.filings[0].id}-b151-second`, applicants: [kid] };
     const filings = [...real.filings.map((x) => x.applicants.some((a) => a.subject === kid.subject) ? x : { ...x, applicants: [...x.applicants, kid] }), ...(extra ? [extra] : [])];
-    rt.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...real, filings, groups: real.groups.map((g, i) => (extra && i === 0 ? { ...g, filings: [...g.filings, extra.id] } : g)) }) });
-  });
+    return { ...real, filings, groups: real.groups.map((g, i) => (extra && i === 0 ? { ...g, filings: [...g.filings, extra.id] } : g)) };
+  }));
   await open(fs.id);
   ok("B151 pass (review m): a person declared only on two filings is named once", (await p.locator(`[data-fee-declared="${kid.subject}"]`).count()) === 1);
-  await p.unroute(`**/api/runtime/cases/${fs.id}/prepare*`);
+  await unserve();
 }
 
 // A Visitor visa case: no "declared only" line where nobody is declared only (the priced branch is B5's, unchanged).
@@ -131,12 +138,12 @@ ok(frozen ? "B151 pass (B152 on main): a recorded group reads \"Fees as recorded
   note.length === 1 && note[0].trim() === (frozen ? `Fees as recorded on ${day}` : "Fees as worked out today, not the amount recorded"), { note, frozen });
 await state(frozen ? "recorded-as-recorded" : "recorded-worked-out-today");
 // The other wording, from the real view with fees_recorded set or removed (so both branches are checked on any main).
-await p.route(`**/api/runtime/cases/${c.id}/prepare*`, async (rt) => { const real = (await (await rt.fetch()).json()) as View; rt.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...real, groups: real.groups.map((g) => frozen ? (({ fees_recorded: _x, ...rest }) => rest)(g) : { ...g, fees_recorded: { at: "2026-11-05T10:00:00.000Z" } }) }) }); });
+await p.route(`**/api/runtime/cases/${c.id}/prepare*`, serve((real) => ({ ...real, groups: real.groups.map((g) => frozen ? (({ fees_recorded: _x, ...rest }) => rest)(g) : { ...g, fees_recorded: { at: "2026-11-05T10:00:00.000Z" } }) })));
 await open(c.id);
 const other = (await p.locator("[data-fees-recorded]").allInnerTexts()).map((t) => t.trim());
 ok(frozen ? "B151 pass: a recorded group without a snapshot (recorded before B152) reads \"Fees as worked out today, not the amount recorded\"" : "B151 pass: a recorded group with a snapshot reads \"Fees as recorded on 5 November 2026\"",
   other.length === 1 && other[0] === (frozen ? "Fees as worked out today, not the amount recorded" : `Fees as recorded on ${new Date("2026-11-05T10:00:00.000Z").toLocaleDateString("en-CA", { day: "numeric", month: "long", year: "numeric" })}`), other);
-await p.unroute(`**/api/runtime/cases/${c.id}/prepare*`);
+await unserve();
 
 await p.evaluate((a) => localStorage.setItem("xr-actor", a), CLIENT); await p.goto(`${BASE}/cases/${c.id}`); await p.waitForTimeout(800);
 ok("roles fail: the client's view has no fee block", (await p.locator("[data-fees]").count()) === 0);
