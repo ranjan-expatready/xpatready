@@ -6,8 +6,33 @@
 // rules a field-map item can be checked by without AI: its key has the library's shape, and every form field it fills
 // is on the form; with the form's words also (QA-191) its quote, its kind of answer and no form field filled twice. Pure: no I/O.
 
-/** One field as either round proposes it (engine/normalize.ts Item, the parts compared). */
-export type MapField = { proposedKey: string; proposedType: string; boxes: { data_path: string; person: string | null; row: number | null }[] };
+import { stepsNotRun } from "../../p5/transforms.ts";
+
+/** One field as either round proposes it (engine/normalize.ts Item, the parts compared). BK-22: a box's transformation
+ *  and caption, when the round gave them, let the rules check that the filler can run each step. */
+export type MapField = { proposedKey: string; proposedType: string; boxes: { data_path: string; person: string | null; row: number | null; transform?: string | null; caption?: string | null }[] };
+/** BK-22 (#1695 C1): the rule a field-map item fails when a form field it fills uses a step the form filler cannot run. */
+export const STEPS_RULE = "steps_the_filler_runs";
+/** BK-22: the form fields of an item whose transformation has a step the filler cannot run, and those steps. Pure. */
+export function unrunnable(f: MapField): { box: string; steps: string[] }[] {
+  return f.boxes.map((b) => ({ box: b.caption?.trim() || b.data_path.split(".").slice(-2).join("."), steps: stepsNotRun(b.transform, f.proposedKey) })).filter((x) => x.steps.length);
+}
+/** BK-22: the rule's words: how many form fields, which steps (the first two), and what happens if it is accepted. At
+ *  most RULE_WHY_MAX characters, the review queue's limit for a rule's words (a longer one refused the whole draft). */
+export const RULE_WHY_MAX = 300;
+export function unrunnableWhy(bad: { box: string; steps: string[] }[]): string | null {
+  if (!bad.length) return null;
+  const steps = [...new Set(bad.flatMap((x) => x.steps))], cut = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
+  const named = `${steps.slice(0, 2).map((x) => `"${cut(x, 60)}"`).join(", ")}${steps.length > 2 ? ", …" : ""}`;
+  const say = (where: string) => `The form filler cannot run ${steps.length === 1 ? "a step" : `${steps.length} steps`} (${named}) of ${plural(bad.length, "form field")}${where}: filled as drafted, a case that answers ${bad.length === 1 ? "it" : "them"} leaves ${bad.length === 1 ? "it" : "them"} to write by hand.`;
+  const full = say(` (first: "${cut(bad[0].box, 50)}")`);
+  return full.length <= RULE_WHY_MAX ? full : cut(say(""), RULE_WHY_MAX);
+}
+/** BK-22: the words of an item's failed "steps the filler runs" rule (the draft round's), or null: the review row shows
+ *  them on the item (api/src/proposals.ts reviewRow, web/src/pages/job.tsx). Pure. */
+export function stepsNotRunWhy(rules: unknown): string | null {
+  return (Array.isArray(rules) ? (rules as { rule?: string; passed?: boolean; why?: string | null }[]) : []).find((x) => x?.rule === STEPS_RULE && x.passed === false)?.why ?? null;
+}
 export type MapAgreement = { agreement: "agreed" | "differ"; check: MapField | null; why: string | null };
 export type MapRule = { rule: string; passed: boolean; why: string | null };
 
@@ -55,10 +80,15 @@ export const quoteOnForm = (quote: string | null | undefined, words: string) => 
 export function mapRules(f: MapField, formPaths: Set<string>, more?: { quote: string | null | undefined; words: string; claimedTwice: Set<string>; valueTypes: Set<string>; round?: "draft" | "checker" }): MapRule[] {
   const missing = f.boxes.filter((b) => !formPaths.has(b.data_path));
   const twice = more ? f.boxes.filter((b) => more.claimedTwice.has(boxId(b))) : [];
+  // BK-22: only the draft round's steps are applied and filled; the checker round's spelling of them is never run.
+  const notRun = more && more.round !== "checker" ? unrunnableWhy(unrunnable(f)) : null;
   const extra: MapRule[] = more ? [
     { rule: "quote_on_the_form", passed: quoteOnForm(more.quote, more.words), why: quoteOnForm(more.quote, more.words) ? null : more.quote ? `The words ${more.round === "checker" ? "the checker round" : "the AI"} quoted ("${more.quote.slice(0, 120)}") are not printed on this form.` : `${more.round === "checker" ? "The checker round" : "The AI"} quoted no words of the form.` },
     { rule: "kind_of_answer_known", passed: more.valueTypes.has(f.proposedType), why: more.valueTypes.has(f.proposedType) ? null : `"${f.proposedType}" is not a kind of answer the library knows.` },
     { rule: "no_form_field_twice", passed: !twice.length, why: twice.length ? `${plural(twice.length, "form field")} it fills ${twice.length === 1 ? "is" : "are"} filled by another field too (${twice.slice(0, 3).map((b) => b.data_path.split(".").slice(-2).join(".")).join(", ")}).` : null },
+    // BK-22 (#1695 C1): Field map review flags a step the filler cannot run before the map is accepted: the item is a
+    // Check (P-121), never High, so it is decided on its own and its card says which steps and form fields.
+    ...(more.round !== "checker" ? [{ rule: STEPS_RULE, passed: !notRun, why: notRun }] : []),
   ] : [];
   return [
     { rule: "key_shape", passed: FIELD_KEY.test(f.proposedKey), why: FIELD_KEY.test(f.proposedKey) ? null : `"${f.proposedKey}" does not have the library's key shape.` },
