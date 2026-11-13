@@ -6,19 +6,27 @@
 //     file as Adobe's Validate leaves it, barcodes included: "Validated copy read back" and the block is gone, so the
 //     next step (Ready to file, C7.6) opens. The validated files are SYNTHETIC (tools/simulate_validate.py; BK-20 is
 //     the Mac's Adobe run). Axe and no sideways scroll on each state; the not-validated words also at 1024 and 400 px. No model call (US$0).
-//   zsh studio/tools/isolated.sh rt_bk19b 4437 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4437 xr_studio_rt_bk19b && tsx studio/acceptance/lib/setup_vv_m3.ts 4437 xr_studio_rt_bk19b && tsx studio/tests/check_bk19_validate_browser.ts 4437 xr_studio_rt_bk19b [shots folder]
+//   zsh studio/tools/isolated.sh rt_bk19b 4437 start && tsx studio/tests/check_bk19_validate_browser.ts 4437 xr_studio_rt_bk19b [shots folder]
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium, type Page } from "playwright";
 import { createRequire } from "node:module";
-import { adobeValidated, asValidated, call, copyBytes, fillEverything, firms, main, needVisitorVisa, ok, openCase, yearsAgo } from "../acceptance/lib/m3.ts";
+import { adobeValidated, asValidated, call, copyBytes, DB, fillEverything, firms, main, needVisitorVisa, ok, openCase, sql, yearsAgo } from "../acceptance/lib/m3.ts";
 
 const PORT = process.argv[2] ?? "4437", BASE = `http://localhost:${PORT}`, SHOTS = process.argv[4] ?? null;
 const T = { timeout: 30_000 };
 const { default: AxeBuilder } = createRequire(import.meta.url)("@axe-core/playwright") as typeof import("@axe-core/playwright");
 const REASON = "The client cannot use the IRCC account: an accommodation (Sample)";
 
+// The pack's setup, once per copy (as check_c81_signing_api.ts), so the suites runner can run it alone: release 1
+// (setup_visitor_visa.ts), then release 2 with signers and channels (setup_vv_m3.ts).
+const releases = () => { try { return Number(sql(`select coalesce(max(r.version), 0) from config_release r join combination c on c.id = r.combination_id where c.combination_key = 'vv.single'`)); } catch { return 0; } };
+const studio = join(import.meta.dirname, ".."), tsx = join(studio, "node_modules", ".bin", "tsx");
+const setup = (file: string) => spawnSync(tsx, ["--tsconfig", join(studio, "api", "tsconfig.json"), join(studio, file), String(PORT), DB], { cwd: join(studio, ".."), stdio: "ignore", timeout: 900_000 });
+if (releases() < 1) setup("tests/runtime/setup_visitor_visa.ts");
+if (releases() < 2) setup("acceptance/lib/setup_vv_m3.ts"); // its own red lines (other rows' S2w, S7a) do not stop it
 await main("BK-19", "Read back a validated copy by screens (1440 px)", async () => {
   if (SHOTS) mkdirSync(SHOTS, { recursive: true });
   const vv = needVisitorVisa(), f = await firms(), officer = f.officer!;

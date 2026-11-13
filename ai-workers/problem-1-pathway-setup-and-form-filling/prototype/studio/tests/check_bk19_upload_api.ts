@@ -8,10 +8,19 @@
 // * Stamp (QA-345): after a send back that changed a fact, round 2's approval stamps no file; a read-back that does not
 //   count leaves it so; one that counts stamps it.
 // The validated files are SYNTHETIC (tools/simulate_validate.py). No model call (US$0).
-//   zsh studio/tools/isolated.sh rt_bk19a 4436 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4436 xr_studio_rt_bk19a && tsx studio/acceptance/lib/setup_vv_m3.ts 4436 xr_studio_rt_bk19a && tsx studio/tests/check_bk19_upload_api.ts 4436 xr_studio_rt_bk19a
-import { adobeValidated, agent, answer, asValidated, call, confirmAll, copyBytes, expectedFor, fillEverything, firms, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, prepare, sendFile, sql, yearsAgo } from "../acceptance/lib/m3.ts";
+//   zsh studio/tools/isolated.sh rt_bk19a 4436 start && tsx studio/tests/check_bk19_upload_api.ts 4436 xr_studio_rt_bk19a
+import { spawnSync } from "node:child_process";
+import { join } from "node:path";
+import { adobeValidated, agent, answer, asValidated, call, confirmAll, copyBytes, DB, expectedFor, fillEverything, firms, generateCopy, itemsOf, main, needVisitorVisa, ok, openCase, PORT, prepare, sendFile, sql, yearsAgo } from "../acceptance/lib/m3.ts";
 
 type Q = { subjectId: string; fact: string; value_type: string; hidden: boolean; group: string | null; fills: { form: string }[]; answer: { value?: unknown } | null };
+// The pack's setup, once per copy (as check_c81_signing_api.ts), so the suites runner can run it alone: release 1
+// (setup_visitor_visa.ts), then release 2 with signers and channels (setup_vv_m3.ts).
+const releases = () => { try { return Number(sql(`select coalesce(max(r.version), 0) from config_release r join combination c on c.id = r.combination_id where c.combination_key = 'vv.single'`)); } catch { return 0; } };
+const studio = join(import.meta.dirname, ".."), tsx = join(studio, "node_modules", ".bin", "tsx");
+const setup = (file: string) => spawnSync(tsx, ["--tsconfig", join(studio, "api", "tsconfig.json"), join(studio, file), String(PORT), DB], { cwd: join(studio, ".."), stdio: "ignore", timeout: 900_000 });
+if (releases() < 1) setup("tests/runtime/setup_visitor_visa.ts");
+if (releases() < 2) setup("acceptance/lib/setup_vv_m3.ts"); // its own red lines (other rows' S2w, S7a) do not stop it
 await main("BK-19", "C7.2: the upload door's barcode rule through the routes", async () => {
   const vv = needVisitorVisa(), f = await firms(), officer = f.officer ?? "user-O", rep = f.rep ?? "user-R";
   const c = await openCase(vv, [{ role: "principal", name: "Sample Client B", dob: yearsAgo(40) }], { representative: rep, caseOfficers: [officer] });
