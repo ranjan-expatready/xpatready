@@ -120,7 +120,7 @@ export const addedOn = (s: { forms: unknown[] }, form: string, subject: string):
 export const completedSince = <T extends { uploadedAt: Date }>(scans: T[], added: { at: string }): T | null =>
   scans.filter((x) => x.uploadedAt.getTime() >= Date.parse(added.at)).sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime())[0] ?? null;
 
-/** A stored filing_form_addition row (schema.prisma FilingFormAddition) as the case reads it; a row whose frozen form
+/** A stored filing_form_addition row (prisma/schema/filings.prisma FilingFormAddition) as the case reads it; a row whose frozen form
  *  does not match its fingerprint is never joined (it was changed underneath; the trigger refuses that, this is the
  *  second guard), nor is a removed one. */
 export type AdditionRow = { id: string; filingId: string; subjectId: string; formKey: string; kind: string; frozen: unknown; frozenSha256: string; channel: string; signature: string; signedBy: string | null; addedBy: string; addedAt: Date; reason: string | null; removedAt: Date | null };

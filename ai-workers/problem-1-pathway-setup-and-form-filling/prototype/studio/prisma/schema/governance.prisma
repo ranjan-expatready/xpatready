@@ -1,0 +1,160 @@
+// governance.prisma — Release and governance: configuration releases, pack versions, review submissions and sign-offs, the audit log, guarded change sets and the source register. Owner: the screens lane.
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+
+/// A frozen, hashed configuration version that case work consumes. Draft edits never change it.
+model ConfigRelease {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @map("workspace_id") @db.Uuid
+  combinationId  String   @map("combination_id") @db.Uuid
+  version        Int
+  status         String
+  snapshot       Json
+  sha256         String
+  summary        Json
+  authorId       String   @map("author_id")
+  submitterId    String   @map("submitter_id")
+  approverId     String   @map("approver_id")
+  basis          String
+  releasedAt     DateTime @default(now()) @map("released_at") @db.Timestamptz
+  /// The pack version this row snapshot was released in (P-23: one shared draft, one release for everything).
+  packVersionId  String?  @map("pack_version_id") @db.Uuid
+
+  combination Combination  @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+  packVersion PackVersion? @relation(fields: [packVersionId], references: [id], onDelete: Restrict)
+  pins        PackWorkPin[] // runtime lane (R1): cases pinned to this release
+
+  @@unique([combinationId, version])
+  @@index([packVersionId])
+  @@map("config_release")
+}
+
+/// One release of the whole shared draft (the team's CountryPackVersion, P-23). Each combination whose draft changed
+/// gets a frozen row snapshot (ConfigRelease) in it; unchanged combinations keep their earlier snapshot. Firms may open
+/// a combination when it is in a release and passes the startable check (SA-1B-90).
+model PackVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  version     Int
+  authorIds   String[] @map("author_ids")
+  approverId  String   @map("approver_id")
+  summary     Json
+  releasedAt  DateTime @default(now()) @map("released_at") @db.Timestamptz
+
+  rows ConfigRelease[]
+
+  @@unique([workspaceId, version])
+  @@map("pack_version")
+}
+
+model ReviewSubmission {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  combinationId String    @map("combination_id") @db.Uuid
+  draftSha256   String    @map("draft_sha256")
+  submittedBy   String    @map("submitted_by")
+  submittedAt   DateTime  @default(now()) @map("submitted_at") @db.Timestamptz
+  status        String
+  changeSummary Json      @map("change_summary")
+  decidedBy     String?   @map("decided_by")
+  decidedAt     DateTime? @map("decided_at") @db.Timestamptz
+  decisionNote  String?   @map("decision_note")
+
+  @@map("review_submission")
+}
+
+model ReviewSignoff {
+  id           String   @id @default(uuid()) @db.Uuid
+  workspaceId  String   @map("workspace_id") @db.Uuid
+  submissionId String   @map("submission_id") @db.Uuid
+  itemRef      String   @map("item_ref")
+  duty         String
+  actorId      String   @map("actor_id")
+  action       String
+  note         String?
+  at           DateTime @default(now()) @db.Timestamptz
+
+  @@map("review_signoff")
+}
+
+model AuditEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  at          DateTime @default(now()) @db.Timestamptz
+  actor       String
+  action      String
+  entity      String
+  entityKey   String?  @map("entity_key")
+  summary     String
+  detail      Json?
+  /// The configuration row an edit belongs to (finding 2 of the 21 Oct grounding audit): review uses these events to
+  /// know every author of a draft, including edits that leave no draft row (people, section selection, removals).
+  combinationId String?  @map("combination_id") @db.Uuid
+
+  @@index([workspaceId, at])
+  @@index([combinationId, at])
+  @@map("audit_event")
+}
+
+/// G-CORE (P-253, concept screens/G-CORE-guarded-change/concept.md v2): one change set per guarded change to a shared
+/// library item, by a person or the AI. It records the items, what the fixed rules check found, the review tier, the
+/// preview's fingerprint and who made it; the second-person review stays on library_change / field_merge (linked here).
+/// A direct rename keeps its before-image for its roll-back. Rows are written by the change's own transaction (B2, B3);
+/// B1 adds the table and the check (which writes nothing).
+model ChangeSet {
+  id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @map("workspace_id") @db.Uuid
+  /// person · ai · ai_edited (an AI item a person edited before accepting) · ai_draft (held, L-SA11)
+  madeBy        String   @map("made_by")
+  actor         String
+  /// The change set's items (contracts/change-set.ts ChangeItem[]).
+  items         Json
+  /// What the rules check found (CheckProblem[]); empty when it passed.
+  problems      Json     @default("[]")
+  /// direct · second_person
+  tier          String
+  expertAtRelease Boolean @default(false) @map("expert_at_release")
+  fingerprint   String   @db.VarChar(64)
+  /// applied (direct) · waiting (a second person) · rolled_back · undone (a refused change writes no row)
+  status        String
+  libraryChangeId String? @map("library_change_id") @db.Uuid
+  fieldMergeId  String?  @map("field_merge_id") @db.Uuid
+  proposalBatchId String? @map("proposal_batch_id") @db.Uuid
+  /// A direct rename's before-image (BR-6): what its roll-back puts back.
+  before        Json?
+  rolledBackBy  String?  @map("rolled_back_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([workspaceId, createdAt])
+  @@index([proposalBatchId])
+  @@map("change_set")
+}
+
+/// G1 (C5.4; P-240; concept screens/G1-source-register, tech lead's approval on #558): the source of one published
+/// number in one item. Either an official citation (citationUrl + citationQuote + citationDate; citationPage optional)
+/// or "None published – set by ExpatReady" with its reason; never both (a check in SQL). itemKey carries the
+/// combination; valuePath is the address by meaning "<field>|<op>|<k>" (or "min_age" / "months"); value is the number
+/// the entry was written for (canonical text). sample: passes only in the demo workspace as a Demo release. version:
+/// a save with an old version gets 409. No relation to the item (items are versioned rows).
+model SourceEntry {
+  id                  String    @id @default(uuid()) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  itemKind            String    @map("item_kind")
+  itemKey             String    @map("item_key")
+  valuePath           String    @map("value_path")
+  value               String
+  citationUrl         String?   @map("citation_url")
+  citationPage        String?   @map("citation_page")
+  citationQuote       String?   @map("citation_quote")
+  citationDate        DateTime? @map("citation_date") @db.Date
+  nonePublished       Boolean   @default(false) @map("none_published")
+  nonePublishedReason String?   @map("none_published_reason")
+  sample              Boolean   @default(false)
+  version             Int       @default(1)
+  createdBy           String    @map("created_by")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedBy           String    @map("updated_by")
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([workspaceId, itemKind, itemKey, valuePath])
+  @@map("source_entry")
+}

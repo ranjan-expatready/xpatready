@@ -1,0 +1,247 @@
+// filings.prisma — Runtime filings: submission groups, filings, their applicants and form items, filing changes and added forms, and eligibility assessments. Owner: the runtime lane.
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+
+/// C6.12 /prepare (M3-B2; r5c BR-1, BR-16, contract §6): a case's submission groups, filings, their applicants and the
+/// items filed with them, stored the first time /prepare derives them so each keeps its id (a split, a channel change
+/// and the filing record attach to it). Derived from the case's people and release; nobody creates one by hand.
+model SubmissionGroup {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  /// FAMILY (one submission at the same time and place) · SEPARATE (a filing split out, with its reason)
+  kind        String
+  /// C6.12 split (BR-16): why a SEPARATE group was split out (required for SEPARATE, never in an audit line).
+  reason      String?
+  /// Who made the group (the read that first derived it, or the officer who split).
+  createdBy   String?  @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  /// B152 (FQ-7, C6.12, C8.2): the group's fee lines and totals as GET …/prepare showed them when the submission was
+  /// recorded, written once by "Record the submission"; a recorded group is read from it, so a birthday, a corrected date
+  /// of birth or a fee-table change later never changes what was filed. Null until recorded.
+  recordedFees Json?   @map("recorded_fees")
+
+  /// C6.17: the stage the group belongs to (one FAMILY group per case and stage: submission_group_one_family, in SQL).
+  stageId String @map("stage_id") @db.Uuid
+
+  case    Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  stage   CaseStage      @relation(fields: [stageId], references: [id], onDelete: NoAction)
+  filings Filing[]
+  records FilingRecord[] // C8.2
+
+  @@index([caseId])
+  @@index([stageId])
+  @@map("submission_group")
+}
+
+/// One application to IRCC by one person (files_own) on a case; inactive while the person is not applying, so the
+/// same person keeps the same filing when they apply again.
+model Filing {
+  id                String   @id @default(uuid()) @db.Uuid
+  workspaceId       String   @map("workspace_id") @db.Uuid
+  caseId            String   @map("case_id") @db.Uuid
+  submissionGroupId String   @map("submission_group_id") @db.Uuid
+  /// The answer subject who files it (the filing's principal applicant).
+  subjectId         String   @map("subject_id") @db.Uuid
+  combinationKey    String   @map("combination_key")
+  mode              String
+  active            Boolean  @default(true)
+  status            String   @default("NOT_STARTED")
+  applicationNumber String?  @map("application_number")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  /// C8.2: the record of the submission (one, BR-15), each person's UCI, the number's corrections, its tasks.
+  record            FilingRecord?
+  personRecords     FilingPersonRecord[]
+  corrections       FilingRecordCorrection[]
+  tasks             CaseTask[]
+
+  /// C6.17: the stage (one combination's application) this filing belongs to.
+  stageId    String            @map("stage_id") @db.Uuid
+  case       Case              @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  stage      CaseStage         @relation(fields: [stageId], references: [id], onDelete: NoAction)
+  group      SubmissionGroup   @relation(fields: [submissionGroupId], references: [id], onDelete: Restrict)
+  applicants FilingApplicant[]
+  items      FilingItem[]
+  findings   ReviewFinding[] // C7.5
+  additions  FilingFormAddition[] // C7.8
+  reviews    FilingReview[]  // C7.6
+  passes     ReadinessPass[] // C7.6
+  reviewRounds ReviewRoundFiling[] // C8.3
+  reviewForms  ReviewRoundForm[]   // C8.3
+
+  @@unique([caseId, stageId, subjectId])
+  @@index([stageId])
+  @@map("filing")
+}
+
+model FilingApplicant {
+  id        String @id @default(uuid()) @db.Uuid
+  filingId  String @map("filing_id") @db.Uuid
+  subjectId String @map("subject_id") @db.Uuid
+  role      String
+  /// applying · declared_only (C11.12: named on the principal's application, not accompanying)
+  mode      String
+
+  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  @@unique([filingId, subjectId])
+  @@map("filing_applicant")
+}
+
+/// A form filed with a filing, for one person: its channel starts as the combination line's and may be changed on the
+/// case within what IRCC accepts (C11.6). Inactive while the form does not apply, so it keeps its id and channel.
+model FilingItem {
+  id            String         @id @default(uuid()) @db.Uuid
+  workspaceId   String         @map("workspace_id") @db.Uuid
+  caseId        String         @map("case_id") @db.Uuid
+  filingId      String         @map("filing_id") @db.Uuid
+  /// form, document (the checklist's, C6.4) or step (an IRCC step such as biometrics)
+  kind          String
+  /// The form number, document type or step key (C11.6, C7.7).
+  itemKey       String         @map("item_key")
+  /// Kept from #325 (C6.12 M3-B2): read by no code now; dropped in a later contract migration.
+  formKey       String?        @map("form_key")
+  subjectId     String         @map("subject_id") @db.Uuid
+  /// C11.6: the channel the case officer chose inside what IRCC accepts; null = the combination line's channel.
+  channel       FilingChannel?
+  channelReason String?        @map("channel_reason")
+  channelBy     String?        @map("channel_by")
+  channelAt     DateTime?      @map("channel_at") @db.Timestamptz
+  /// false while the item does not apply (it keeps its id and channel when it applies again).
+  active        Boolean        @default(true)
+  version       Int            @default(1)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
+
+  case    Case             @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  filing  Filing           @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  entered EnteredSection[]
+  signSteps   SignStep[]   // C8.1
+  signedScans SignedScan[] // C8.1
+  tasks       CaseTask[]   // C8.2
+  reviewForms ReviewRoundForm[] // C8.3
+
+  @@unique([filingId, kind, itemKey, subjectId])
+  @@index([caseId])
+  @@map("filing_item")
+}
+
+/// C6.9 (M3-D, SI-1; team AG-03 §7 Assessment): one eligibility run for one person on a case, frozen. result_json holds
+/// AG-03's whole envelope (its AssessmentProgramResult list inside, not as rows). A database trigger refuses any UPDATE
+/// (migration 20261102120000_c69_eligibility); review and override are rows of their own. Written from part 2.
+model Assessment {
+  id              String   @id @default(uuid()) @db.Uuid
+  workspaceId     String   @map("workspace_id") @db.Uuid
+  caseId          String   @map("case_id") @db.Uuid
+  subjectId       String   @map("subject_id") @db.Uuid
+  configReleaseId String   @map("config_release_id") @db.Uuid
+  resultJson      Json     @map("result_json")
+  /// MANUAL (the first run for a person), then RERUN
+  runType         String   @map("run_type")
+  reason          String?
+  createdBy       String   @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  case      Case                 @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  overrides AssessmentOverride[]
+  review    AssessmentReview?
+
+  @@index([caseId, subjectId, createdAt])
+  @@map("assessment")
+}
+
+/// C6.9 (BR-15, AG-03 AssessmentOverride): an officer's label and reason beside an engine result; the result never changes.
+model AssessmentOverride {
+  id           String   @id @default(uuid()) @db.Uuid
+  assessmentId String   @map("assessment_id") @db.Uuid
+  programKey   String   @map("program_key")
+  fromOutcome  String   @map("from_outcome")
+  label        String
+  reason       String
+  /// { by, duty, licence, outOfDate }
+  stamp        Json
+  createdBy    String   @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentId])
+  @@map("assessment_override")
+}
+
+/// C6.9 (BR-16, AG-3-34): "Reviewed by" / "Seen by" on a run, once per run.
+model AssessmentReview {
+  assessmentId String   @id @map("assessment_id") @db.Uuid
+  reviewedBy   String   @map("reviewed_by")
+  reviewedAt   DateTime @default(now()) @map("reviewed_at") @db.Timestamptz
+  note         String?
+  /// { duty, licence, stamp: "Reviewed"|"Seen", outOfDate }
+  stamp        Json
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@map("assessment_review")
+}
+
+/// C6.13 (B135, P-406 (1)): one Make principal, Remove filing, Add filing back or travelling-flag change on a case, with its
+/// reason (typed changes), the roles around it and the preview basis it was applied over. Append-only (trigger).
+model FilingChange {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @map("workspace_id") @db.Uuid
+  caseId         String   @map("case_id") @db.Uuid
+  /// make_principal · remove_filing · add_back · travelling_flag
+  kind           String
+  subjectId      String   @map("subject_id") @db.Uuid
+  /// make_principal: the former principal
+  otherSubjectId String?  @map("other_subject_id") @db.Uuid
+  rolesBefore    Json     @map("roles_before")
+  rolesAfter     Json     @map("roles_after")
+  reason         String?
+  basis          String?  @db.VarChar(64)
+  changedBy      String   @map("changed_by")
+  changedAt      DateTime @default(now()) @map("changed_at") @db.Timestamptz
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId, changedAt])
+  @@map("filing_change")
+}
+
+/// C7.8 (B141, SA-1B-177 FilingFormAddition): a library form the case officer added to one filing, for one person on it,
+/// never to the combination. Frozen when added (BR-4): the edition, its published map rows and the fill trial are copied
+/// into `frozen` with their fingerprint, so a later library change never changes this case's form. Insert, then a
+/// removed mark only (a trigger refuses any other change); the row is kept when removed (BR-8).
+model FilingFormAddition {
+  id            String        @id @default(uuid()) @db.Uuid
+  workspaceId   String        @map("workspace_id") @db.Uuid
+  caseId        String        @map("case_id") @db.Uuid
+  filingId      String        @map("filing_id") @db.Uuid
+  /// The person on the filing it is for (BR-1): never a role.
+  subjectId     String        @map("subject_id") @db.Uuid
+  formKey       String        @map("form_key")
+  /// The library edition it was frozen from (no foreign key: the frozen copy stands even if the library row goes).
+  editionId     String        @map("edition_id") @db.Uuid
+  editionLabel  String        @map("edition_label")
+  /// fills (published map rows and a passed fill trial) · blank (the official PDF, filled by hand)
+  kind          String
+  /// The frozen form: title, official file and checksum, the published map rows, the facts' definitions they read.
+  frozen        Json
+  frozenSha256  String        @map("frozen_sha256") @db.VarChar(64)
+  /// The fill trial it was proven by (fills only): the register's record.
+  trial         Json?
+  channel       FilingChannel
+  /// HAND_SCANNED (default) or NONE (switched off by staff with a reason, SA-1B-102 r5).
+  signature     String
+  signedBy      String?       @map("signed_by")
+  signatureReason String?     @map("signature_reason")
+  addedBy       String        @map("added_by")
+  addedAt       DateTime      @default(now()) @map("added_at") @db.Timestamptz
+  reason        String?
+  removedBy     String?       @map("removed_by")
+  removedAt     DateTime?     @map("removed_at") @db.Timestamptz
+  removedReason String?       @map("removed_reason")
+
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@map("filing_form_addition")
+}

@@ -1,0 +1,135 @@
+// submission.prisma — Runtime signing, submitting and fees: sign steps and signed scans, what a filing was submitted as, the fee receipt, UCIs and their corrections. Owner: the runtime lane.
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+
+/// C8.1 (M3-F; M3-CONTRACT C8.1): one step done on a form item signed by hand and scanned (print · signed · scan_received
+/// · uploaded_to_ircc), with who and when; "print" names the generated copy printed. One current row per item and step
+/// (partial unique index in the migration); superseded_at is for C9.2 (steps re-opened after a fact changes).
+model SignStep {
+  id           String    @id @default(uuid()) @db.Uuid
+  workspaceId  String    @map("workspace_id") @db.Uuid
+  caseId       String    @map("case_id") @db.Uuid
+  itemId       String    @map("item_id") @db.Uuid
+  key          String
+  copyId       String?   @map("copy_id") @db.Uuid
+  doneBy       String    @map("done_by")
+  doneAt       DateTime  @default(now()) @map("done_at") @db.Timestamptz
+  supersededAt DateTime? @map("superseded_at") @db.Timestamptz
+
+  case Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  item FilingItem    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  copy FormInstance? @relation(fields: [copyId], references: [id], onDelete: Restrict)
+
+  @@index([itemId])
+  @@map("sign_step")
+}
+
+/// C8.1: a signed scan of a form item; append-only (a trigger refuses UPDATE). The file is in var/, named by the row id,
+/// checked by its sha256 before it is read (as C6.4's case_document; stand-in SI-14).
+model SignedScan {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  itemId      String   @map("item_id") @db.Uuid
+  fileName    String   @map("file_name")
+  mediaType   String   @map("media_type")
+  sizeBytes   Int      @map("size_bytes")
+  sha256      String   @db.VarChar(64)
+  path        String
+  uploadedBy  String   @map("uploaded_by")
+  uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamptz
+
+  case Case       @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  item FilingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@map("signed_scan")
+}
+
+/// C8.2 (BR-15, BR-21, P-155): what one filing was submitted as, written once when its group is recorded. Prepared by is
+/// the case officer who recorded it; Reviewed by the representative of record. `filedFacts` keeps the facts each form
+/// was filed with, so a later change reads "Filed with an earlier value" (BR-12).
+model FilingRecord {
+  id                String   @id @default(uuid()) @db.Uuid
+  workspaceId       String   @map("workspace_id") @db.Uuid
+  caseId            String   @map("case_id") @db.Uuid
+  filingId          String   @unique @map("filing_id") @db.Uuid
+  submissionGroupId String   @map("submission_group_id") @db.Uuid
+  portal            String?
+  ourReference      String   @map("our_reference")
+  submittedOn       DateTime @map("submitted_on") @db.Date
+  applicationNumber String   @map("application_number")
+  feeReceipt        String?  @map("fee_receipt")
+  preparedBy        String   @map("prepared_by")
+  reviewedBy        String?  @map("reviewed_by")
+  recordedBy        String   @map("recorded_by")
+  recordedAt        DateTime @default(now()) @map("recorded_at") @db.Timestamptz
+  filedFacts        Json     @map("filed_facts")
+
+  case   Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  filing Filing          @relation(fields: [filingId], references: [id], onDelete: Cascade)
+  group  SubmissionGroup @relation(fields: [submissionGroupId], references: [id], onDelete: Restrict)
+  feeReceipts FeeReceiptFile[] // B149
+
+  @@index([caseId])
+  @@map("filing_record")
+}
+
+/// C8.2 B149 (P-408; board agent-view frame 7): the fee receipt's evidence, IRCC's "Transaction Approved" page, uploaded
+/// on a recorded filing (the FK to filing_record.filing_id: never before it is recorded). Append-only (a trigger refuses
+/// any UPDATE): a wrong file is followed by a new upload, the newest is the receipt, earlier ones stay in the history. The
+/// file is in the working files (var/), named by the row id, checked by its sha256, as C8.1's signed_scan.
+model FeeReceiptFile {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  filingId    String   @map("filing_id") @db.Uuid
+  fileName    String   @map("file_name")
+  mediaType   String   @map("media_type")
+  sizeBytes   Int      @map("size_bytes")
+  sha256      String   @db.VarChar(64)
+  path        String
+  uploadedBy  String   @map("uploaded_by")
+  uploadedAt  DateTime @default(now()) @map("uploaded_at") @db.Timestamptz
+
+  case   Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  record FilingRecord @relation(fields: [filingId], references: [filingId], onDelete: Cascade)
+
+  @@index([filingId])
+  @@map("fee_receipt_file")
+}
+
+/// C8.2: the UCI IRCC gave one person on a recorded filing; only `uci` changes, through a correction (trigger).
+model FilingPersonRecord {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  filingId    String   @map("filing_id") @db.Uuid
+  subjectId   String   @map("subject_id") @db.Uuid
+  uci         String
+  recordedBy  String   @map("recorded_by")
+  recordedAt  DateTime @default(now()) @map("recorded_at") @db.Timestamptz
+
+  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  @@unique([filingId, subjectId])
+  @@map("filing_person_record")
+}
+
+/// C8.2 "Correct a number": the application number (field application_number) or a person's UCI (field uci, with the
+/// person; a UCI added later has no before) before and after, with the reason. Append-only (trigger).
+model FilingRecordCorrection {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  filingId    String   @map("filing_id") @db.Uuid
+  field       String   @default("application_number")
+  subjectId   String?  @map("subject_id") @db.Uuid
+  before      String?
+  after       String
+  reason      String
+  correctedBy String   @map("corrected_by")
+  correctedAt DateTime @default(now()) @map("corrected_at") @db.Timestamptz
+
+  filing Filing @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  @@index([filingId])
+  @@map("filing_record_correction")
+}

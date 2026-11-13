@@ -1,0 +1,255 @@
+// pathways.prisma — Configurator structure: pathways, programs, categories, combinations, who can be in them, and each combination's forms list and its changes. Owner: the screens lane.
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+
+enum ProgramNodeKind {
+  PATHWAY
+  PROGRAM
+  STREAM
+  CATEGORY
+}
+
+/// P-143: how a line is signed, its own value beside the channel (contracts/forms.ts SIGNATURE_FITS says which fit).
+enum SignatureKind {
+  TYPED_NAME
+  HAND_SCANNED
+  PEN
+  NONE
+}
+
+// ─── Programs and combinations ──────────────────────────────────────────────────────────────────
+
+/// Pathway › program › stream › category, as the team's ProgramDef (parentNodeKey, not a self-FK).
+model ProgramDef {
+  id             String          @id @default(uuid()) @db.Uuid
+  workspaceId    String          @map("workspace_id") @db.Uuid
+  programNodeKey String          @map("program_node_key")
+  parentNodeKey  String?         @map("parent_node_key")
+  nodeKind       ProgramNodeKind @map("node_kind")
+  label          String
+  /// BR-6 in the database (QA-14): the name compared ignoring case, spaces and punctuation (contracts/programs.ts
+  /// normalizeLabel). A partial unique index (migration 20261024090000) keeps one name per parent, also when two people
+  /// create it at the same moment. Null only on rows that were duplicates before the index existed.
+  nameKey        String?         @map("name_key")
+  description    String?
+  sourceBasis    SourceBasis     @default(SOURCE_BACKED) @map("source_basis")
+  /// PATHWAY only (SA-1B-50/51, W1-03 P-104): the Pathway type, INDIVIDUAL (Retail) or CORPORATE (Corporate and
+  /// employers), a fixed value (contracts/structure.ts PATHWAY_TYPES), never a row; several Pathways per type.
+  clientType     String?         @map("client_type")
+  /// Category / sub-category (SA-1B-51): locations a case may choose when it is opened (inside/outside Canada is a
+  /// case detail, not a level). The prototype's sourced rows allow "outside_canada" only.
+  allowedLocations String[]      @default([]) @map("allowed_locations")
+  displayOrder   Int             @default(0) @map("display_order")
+  /// Screen 01 (P-26): a plain label under the name for a route step or a supporting application, for example
+  /// "Step 1 of 2 · followed by Permanent residence application" or "Supported by: Corporate › LMIA". A label only:
+  /// no link record and no behaviour behind it yet.
+  linkLabel      String?         @map("link_label")
+  createdBy      String          @map("created_by")
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  /// W1-03: raised by every rename or location edit; a PATCH with an older version is refused with the current row.
+  version        Int             @default(1)
+  /// P-116 (P-52 L2): a retired name is hidden from pickers and AI; earlier releases and open cases keep it. Set by the
+  /// release that carries its approved retire (api/src/lifecycle.ts); cleared by a released restore.
+  retiredAt      DateTime?       @map("retired_at") @db.Timestamptz
+  retiredBy      String?         @map("retired_by")
+
+  combination Combination?
+
+  @@unique([workspaceId, programNodeKey])
+  @@map("program_def")
+}
+
+/// The combination: one filing type at the last level present (a category without sub-categories, or a sub-category),
+/// SA-1B-55. Exactly one per leaf node (unique programDefId); it owns one configuration: forms, document requirements,
+/// rules, checks and section selection. `participants` (who it applies to) is an adapter kept until Screen 03 moves
+/// people onto lines as roles.
+model Combination {
+  id             String      @id @default(uuid()) @db.Uuid
+  workspaceId    String      @map("workspace_id") @db.Uuid
+  programDefId   String      @map("program_def_id") @db.Uuid
+  combinationKey String      @map("combination_key")
+  label          String
+  description    String?
+  /// [{ role: "principal"|"spouse_or_partner"|"child"|"representative", label, min, max }]
+  participants   Json
+  sourceBasis    SourceBasis @default(SOURCE_BACKED) @map("source_basis")
+  /// C11.9 (P-116): the filing order of its forms, as form-line lineage keys; null keeps the order by line key.
+  formOrder      Json?       @map("form_order")
+  basisNote      String?     @map("basis_note")
+  /// W1-10 slice 1 (P-143, plan §8 Q1): the IRCC account this filing goes through (contracts/forms.ts IRCC_ACCOUNTS,
+  /// Sample until the immigration expert confirms). What IRCC accepts is read for this account (C-3). Null: not set.
+  portalKey      String?     @map("portal_key")
+  createdBy      String      @map("created_by")
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  /// P-116 / addendum A2: set by the release that carries an approved retire. No new case opens on it (runtime.ts);
+  /// open cases keep their pinned release.
+  retiredAt      DateTime?   @map("retired_at") @db.Timestamptz
+  retiredBy      String?     @map("retired_by")
+  /// S5 (challenge M4): "Who can be in this application" is saved with the version it was read at; a stale save is a
+  /// 409 naming who saved last. Every save writes an audit row with the list before it, which Undo restores.
+  participantsVersion Int     @default(1) @map("participants_version")
+  participantsBy      String? @map("participants_by")
+  /// C6.9 part 1 (BR-1…BR-6): the draft's eligibility gates as data, { gates[{key,label,condition}], judgement[],
+  /// disclaimer|null, version, by }; a release copies { gates, judgement, disclaimer } into snapshot.eligibility. Null:
+  /// none set, so the snapshot and its fingerprint stay as before.
+  eligibility         Json?
+
+  program      ProgramDef            @relation(fields: [programDefId], references: [id], onDelete: Restrict)
+  attachments  SourceAttachment[]
+  forms        CombinationForm[]
+  captures     PortalCapture[]
+  sections     SqrSectionSelection[]
+  requirements DocumentRequirement[]
+  factSources  FactSource[] // W1-15 slice 1
+  rules        Predicate[]
+  checks       Check[]
+  releases     ConfigRelease[]
+  jobs         DraftingJob[]
+  cases        Case[] // runtime lane (R1)
+  caseStages   CaseStage[] // C6.17
+  answerKeys   AnswerKey[] // G4 (C5.7)
+
+  @@unique([workspaceId, combinationKey])
+  @@unique([programDefId])
+  @@map("combination")
+}
+
+/// S5 (challenge M3, S6 m1, P-119): the kinds of person a combination's "Who can be in this application" may list, one
+/// list read by the editor, the validator and the runtime. takesPartInCase: the person joins a case (else they are only
+/// described on forms, e.g. a parent named on IMM 5707); mayBeApplicant: the person may file their own application.
+/// The six built-in starting roles (samples/person-roles.json) are created with the workspace and kept by Reset
+/// (founder, P-108 note); S6 adds the one Add for new roles. basis: SAMPLE until the immigration expert confirms.
+model PersonRole {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @map("workspace_id") @db.Uuid
+  roleKey         String    @map("role_key")
+  label           String
+  meaning         String
+  takesPartInCase Boolean   @map("takes_part_in_case")
+  mayBeApplicant  Boolean   @map("may_be_applicant")
+  basis           String    @default("SAMPLE")
+  builtIn         Boolean   @default(false) @map("built_in")
+  displayOrder    Int       @default(0) @map("display_order")
+  retiredAt       DateTime? @map("retired_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([workspaceId, roleKey])
+  @@map("person_role")
+}
+
+/// Which forms a combination files, for whom, and when (always or under a condition).
+model CombinationForm {
+  id            String           @id @default(uuid()) @db.Uuid
+  workspaceId   String           @map("workspace_id") @db.Uuid
+  combinationId String           @map("combination_id") @db.Uuid
+  govFormDefId  String           @map("gov_form_def_id") @db.Uuid
+  lineageKey    String           @map("lineage_key")
+  who           String
+  attachMode    AttachMode       @map("attach_mode")
+  predicateJson Json?            @map("predicate_json")
+  conditionPlain String?         @map("condition_plain")
+  sourceQuote   String?          @map("source_quote")
+  version       Int              @default(1)
+  status        DefinitionStatus
+  supersedesId  String?          @map("supersedes_id") @db.Uuid
+  origin        Origin
+  /// F1 (P-61 §2): how this line is filed. Existing lines stay PDF upload (today's behaviour).
+  channel       FilingChannel    @default(PDF_UPLOAD)
+  /// P-143: how the line is signed (C-2: it must fit the channel).
+  signature     SignatureKind    @default(NONE)
+  /// S5: the age a person must have reached for the line to apply to them (null: any age), and who signs it
+  /// (contracts/workspace.ts SIGNED_BY). Both Sample until the immigration expert confirms.
+  minAge        Int?             @map("min_age")
+  signedBy      String?          @map("signed_by")
+  /// C1.8 (Screen 03 concept, "Who and copies"): how many copies of this form each person it names files, 1 to 9
+  /// (database check). Default 1, today's behaviour. Sample until the immigration expert confirms.
+  copies        Int              @default(1)
+  /// S4: the form-finder run that attached this line (AI_FOUND), for "Picked by AI" and its Undo.
+  finderBatchId String?          @map("finder_batch_id") @db.Uuid
+  updatedBy     String           @map("updated_by")
+  updatedAt     DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+  form        GovFormDef  @relation(fields: [govFormDefId], references: [id], onDelete: Cascade)
+
+  @@unique([combinationId, lineageKey, version])
+  @@map("combination_form")
+}
+
+/// S4 (P-123): one change to a combination's forms list (attach, remove, the finder's automatic attach), kept so "Undo
+/// last change" reverses exactly it while the draft is open. detail holds the forms and line versions it touched.
+model FormLineAction {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  combinationId String    @map("combination_id") @db.Uuid
+  /// attach · remove · finder_attach · edit (a line setting saved on the combination's Forms tab, S5)
+  action        String
+  detail        Json
+  by            String
+  at            DateTime  @default(now()) @db.Timestamptz
+  undoneAt      DateTime? @map("undone_at") @db.Timestamptz
+  undoneBy      String?   @map("undone_by")
+
+  @@index([combinationId, at])
+  @@map("form_line_action")
+}
+
+/// X2b slice (b) (C1.5, concept v3 BR-C3, BR-C4): one copy or removal of a form or document line across many combinations,
+/// written in one transaction. The idempotency key makes a retried request change nothing twice; `targets` holds, per
+/// combination, the line rows before and after (what one Undo puts back, and how it sees a later change). Undo is done
+/// or refused as a whole and never undoes past a later release.
+model LineBatch {
+  id                  String    @id @default(uuid()) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  idempotencyKey      String    @map("idempotency_key")
+  actor               String
+  /// add · remove (database check)
+  op                  String
+  /// form · document (database check)
+  kind                String
+  /// The line's key on the source combination (a form number, or a document line key).
+  lineKey             String    @map("line_key")
+  sourceCombinationId String    @map("source_combination_id") @db.Uuid
+  /// [{ combinationId, label, keys[], before: rows[], after: [{ id, status, version, sig }] }]
+  targets             Json
+  at                  DateTime  @default(now()) @db.Timestamptz
+  undoneAt            DateTime? @map("undone_at") @db.Timestamptz
+  undoneBy            String?   @map("undone_by")
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, at])
+  @@map("line_batch")
+}
+
+/// W1-15 slice 1 (P-130, challenge M1): what a person set for one fact of one person role on a combination, over the
+/// rules' default (engine/sources.ts): where the answer comes from, and the Pre-qualification tick. Nothing is stored
+/// for a fact left as the rules say. Versioned like document requirements (draft, published at release).
+model FactSource {
+  id                String           @id @default(uuid()) @db.Uuid
+  workspaceId       String           @map("workspace_id") @db.Uuid
+  combinationId     String           @map("combination_id") @db.Uuid
+  /// `${role}|${fact}`
+  lineageKey        String           @map("lineage_key")
+  role              String
+  canonicalFieldKey String           @map("canonical_field_key")
+  /// DOCUMENT · CLIENT · AGENT; null keeps the rules' source (only the tick is set)
+  source            String?
+  documentTypeKey   String?          @map("document_type_key")
+  prequalification  Boolean          @default(false)
+  reason            String?
+  version           Int
+  status            DefinitionStatus
+  supersedesId      String?          @map("supersedes_id") @db.Uuid
+  origin            Origin
+  updatedBy         String           @map("updated_by")
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  /// One bulk change (slice 2): its rows share this id, so one Undo takes them back together
+  batchId           String?          @map("batch_id") @db.Uuid
+  /// P-155(3): why the case officer enters a fact that is not a case officer's own (required for that choice)
+  sourceReason      String?          @map("source_reason")
+
+  combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+
+  @@unique([combinationId, lineageKey, version])
+  @@index([combinationId, batchId])
+  @@map("fact_source")
+}
