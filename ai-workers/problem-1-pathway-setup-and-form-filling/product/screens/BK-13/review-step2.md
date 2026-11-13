@@ -205,3 +205,33 @@ Reviewer (Opus, fresh: I did not write this change and did not review rounds 1-2
 **Could not check:** I did not run the branch with #1698 merged myself (I read run9.log and the CI log), and I did not watch this head's CI. No journey test: this is not a screen (as in rounds 1-2). Journey score: N/A.
 
 Verdict: Approve 84ffbcfb9f225ebf90f00e03d1aa359a936605b0
+
+## Round 4 (fresh reviewer, diff-only)
+
+Reviewer (Opus, fresh: I did not write this change and did not review rounds 1-3), 13 Nov 2026, ruled by the tech lead (Lead 38 on #1695, P-293). Commit reviewed: `6a64089c52f56e8513888bc8a578bf3094860fb2`. I read only `git diff 58693c124..6a64089c5`: 2 files, 4 lines added, 1 changed (the comma on `person.present_occupation`). Live AI off, US$0.
+
+**What I ran**
+- **Branch with today's main merged in (not committed, then aborted):** `origin/main` = cad85c51e (contains #1698 and #1702, both merged 18:13 UTC). Isolated copy `rev4_bk13` on :4454, which I started and stopped myself (Postgres brought up first with `cloud-setup.sh`). Result: **45/45, 0 GAP (BK-22: 0, BK-23: 0), 0 FAIL, exit 0, "Met: every check passes."** By hand 0, "needs a fix" 0, CAD 675. "IMM 1295 for Spouse (Sample): nothing by hand — []" passes, and "every answer of the Sample file is taken (none refused)" passes with `refused: []`. This matches the builder's run11.log.
+- **This branch alone:** isolated copy `rev4b_bk13` on :4455, started and stopped by me. Result: **37/45, 8 GAP (BK-22: 5, BK-23: 3), 0 FAIL, exit 0**, the same as round 3's run on 84ffbcfb9. "None refused" **passes here too**, with `refused: []`.
+- **CI:** job 132105396007 (batch #1720, head 585a8cd18) failed with exactly the FAIL line the record and the brief quote. It ran 19:07-19:44 UTC, after the two merges ("before 19:4x UTC" holds). On 6a64089c5, types and the five pack jobs are green; the shards were still running when I looked.
+- **Working tree:** `git merge --abort` done; HEAD is 6a64089c5, no MERGE_HEAD; `git status --short` shows only this file; ports 4454 and 4455 are free again.
+
+**(1) The Sample line: right.**
+- **Where it sits:** under `people.spouse_or_partner` only. Parsed paths: `/people/spouse_or_partner/person.current_residence_country = India`. The principal and the child already had the same fact ("India"), and `everyone` has citizenship, birth country, applying-from country and the address countries all "India". So the spouse's value matches every other answer the spouse has. The file is still valid JSON.
+- **Sample and honest:** it is a country name, not an IRCC code or value. The file's label ("made-up answers … Never a client … No value here is an IRCC value") covers it, and no real person is named.
+- **Needed:** main's copy of this file has no `spouse_or_partner` block (the family case is this PR's), so BK-23 could not have added it. The record says this, and it is true.
+
+**(2) The record's new paragraph: one sentence is wrong.**
+- Right: batch #1720 and its reason, the merge timing, run11's 45/45 result (I got the same), and "the counted run is this script, unchanged, on a fresh main after merge" (the diff does not touch the script).
+- **Wrong:** "On this branch alone the spouse is not asked it, so that answer is refused there." My branch-alone run shows the loader **takes** the answer (`refused: []`, check PASS; 0 FAIL).
+  - Why: `answerFromFile` in `api/src/sample-case.ts` only refuses a fact that has no question in the person's sections (`held()`). On this branch the spouse's question is there but hidden (round 3: the script's `asked()` treats it as not asked because it is hidden), so the answer is saved.
+  - The real behaviour is harmless, and better than the record says: the branch alone still reads 37/45, 8 GAP, 0 FAIL, as before this commit.
+
+**(3) Nothing else changed.** The diff is exactly the JSON line (plus its comma) and the record's 2 lines. No code, script, engine, API, web or other data file is touched.
+
+**Findings (none at Blocker or Major)**
+- **Minor m1, a wrong fact in the record** (`product/design/bk13-zero-code-run-2026-11-13.md`, the new paragraph, sentence "On this branch alone …"). It does not affect the product, the merge, or the counted run. But records keep their facts (P-188), so fix it when this record is next touched, for example: "On this branch alone the spouse's question is hidden; the loader still saves the answer (none refused), and the script reads 37/45, 8 GAP (BK-22: 5, BK-23: 3), 0 FAIL, as before."
+
+**Could not check:** I did not watch this head's CI shards finish, nor the merge-queue run. No journey test: this is a data line and a record, not a screen (as in rounds 1-3). Journey score: N/A.
+
+Verdict: Approve 6a64089c52f56e8513888bc8a578bf3094860fb2
