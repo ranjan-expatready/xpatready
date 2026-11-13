@@ -38,7 +38,9 @@ say "disk  ${free} GB free · test databases ${dbs:-?} · idle at two checks: ${
 # 2. Merges and the queue.
 since=$(date -u -v-"${SINCE}"M '+%Y-%m-%dT%H:%M:%SZ')
 merged=$(gh pr list --state merged --search "merged:>=$since" --json number,title -q '.[]|"#\(.number) \(.title[0:55])"')
-say "merged in ${SINCE} min: $(echo "$merged" | grep -c .)"; [ -n "$merged" ] && echo "$merged" | sed 's/^/      /'
+# P-500: product progress counts only PRs that changed app code (by files changed); the rest are shown apart.
+appm=$( [ -n "$merged" ] && echo "$merged" | bash "$TOOLS/app-code-prs.sh")
+say "merged in ${SINCE} min: $(echo "$appm" | grep -c .) changed app code (P-500) · $(echo "$merged" | grep -c .) in all (records, docs, tooling, tests included)"; [ -n "$appm" ] && echo "$appm" | sed 's/^/      app  /'
 prs=$(gh pr list --state open --limit 80 --json number,title,labels,isDraft,headRefName,statusCheckRollup)
 echo "$prs" | python3 -I -c '
 import json,sys
@@ -93,10 +95,14 @@ suites=$(pgrep -f 'tools/run-suites.sh' 2>/dev/null | grep -c .)
 say "mac   builders working ${macb} · test copies ${copies} on 4430–4499 + ${suites} suite runs (cap 3) · load $(sysctl -n vm.loadavg | awk '{print $2}')"
 [ $((copies + suites)) -gt 3 ] && ACT "Mac copy cap: $((copies + suites)) copies or suite runs (cap 3, qa first): the newest builder copy waits"
 # The four numbers (founder target: 10 capabilities confirmed a day, quality never lowered).
-m2=$(git show origin/main:ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md 2>/dev/null | grep -cE '^\| C[0-9]+\.[0-9]+ .*\| M2 \| Works \|')
-day="$STATE_DIR/m2-$(TZ=Asia/Kolkata date +%Y%m%d).txt"; [ -f "$day" ] || echo "$m2" > "$day"
-hour=$(gh pr list --state merged --search "merged:>=$(date -u -v-60M '+%Y-%m-%dT%H:%M:%SZ')" --json number -q 'length' 2>/dev/null)
+# P-500: capabilities confirmed are counted across every active milestone (M2, M3, M4, T) on main, not M2 alone.
+caps=$(git show origin/main:ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/CAPABILITIES.md 2>/dev/null)
+works=$(echo "$caps" | grep -cE '^\| C[0-9]+\.[0-9]+ .*\| (M2|M3|M4|T) \| Works \|')
+active=$(echo "$caps" | grep -cE '^\| C[0-9]+\.[0-9]+ .*\| (M2|M3|M4|T) \|')
+bym=$(for m in M2 M3 M4 T; do t=$(echo "$caps" | grep -cE "^\| C[0-9]+\.[0-9]+ .*\| $m \|"); [ "$t" -gt 0 ] && printf '%s %s/%s ' "$m" "$(echo "$caps" | grep -cE "^\| C[0-9]+\.[0-9]+ .*\| $m \| Works \|")" "$t"; done)
+day="$STATE_DIR/works-$(TZ=Asia/Kolkata date +%Y%m%d).txt"; [ -f "$day" ] || echo "$works" > "$day"
+hour=$(gh pr list --state merged --search "merged:>=$(date -u -v-60M '+%Y-%m-%dT%H:%M:%SZ')" --json number -q '.[].number' 2>/dev/null | bash "$TOOLS/app-code-prs.sh" | grep -c .)
 back=$(grep -cE '^ACT   #[0-9]+ (dequeued|red after approval)' "$STATE_DIR/q.txt")
-say "four  M2 confirmed ${m2}/60 (+$((m2 - $(cat "$day"))) today, target +10) · merged last hour ${hour:-?} · Mac builders ${macb} · approved then red or dequeued ${back}"
+say "four  Works on main ${works}/${active} (${bym% }) (+$((works - $(cat "$day"))) today, target +10) · app-code merges last hour ${hour:-?} · Mac builders ${macb} · approved then red or dequeued ${back}"
 
 exit "$act"

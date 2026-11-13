@@ -1,0 +1,3 @@
+# Lead 26 → Lead 27 hand-over, item 1, moved word for word from STATE by Lead 27 at 21:4x IST 12 Nov (done: P-506; 12 KB cap)
+
+1. **At his next typed turn:** the factory plan is final (#1649, one commit, draft; #1647 closed, P-505). His private page is https://claude.ai/artifact/4Rorx2pipUCb3AUojnNSwN. Ask **D6** (whose version wins where the team's app overlaps; recommend head-to-head per capability, a tie keeps theirs), then D1-D4, one at a time with AskUserQuestion; record each as a P-row. #1649 then gets a records review and label (the founder must name it). Also offer at that turn: the builders' and qa's skill wording for P-500/P-502/P-504 (skills are write-protected), and a third standby.

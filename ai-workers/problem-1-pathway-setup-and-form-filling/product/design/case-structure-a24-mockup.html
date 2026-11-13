@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Case structure mockup</title>
+<!-- A24 (12 Nov 2026), Fable planner: static mockup for design/case-structure-a24-2026-11-12.md. Sample data only, no real names. -->
+<style>
+:root{
+  --primary:#0862c5; --primary-strong:#054e9c; --primary-tint:#e6f4ff; --orange:#c25e00; --orange-tint:#fff2e5;
+  --ok:#15803d; --ok-tint:#e8f6ed; --text:#1d2733; --muted:#5b6b7c; --border:#dde3ea; --surface:#f6f8fa; --raised:#ffffff;
+  --sample:#6b5b00; --sample-tint:#fbf6dc;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --primary:#5cb8ff; --primary-strong:#99d2ff; --primary-tint:#0d2a44; --orange:#ffb454; --orange-tint:#3a2a12;
+    --ok:#4ade80; --ok-tint:#123222; --text:#e6edf3; --muted:#a9b7c4; --border:#2c3a48; --surface:#14202c; --raised:#182634;
+    --sample:#f2dd77; --sample-tint:#2f2a12;
+  }
+}
+:root[data-theme="dark"]{
+  --primary:#5cb8ff; --primary-strong:#99d2ff; --primary-tint:#0d2a44; --orange:#ffb454; --orange-tint:#3a2a12;
+  --ok:#4ade80; --ok-tint:#123222; --text:#e6edf3; --muted:#a9b7c4; --border:#2c3a48; --surface:#14202c; --raised:#182634;
+  --sample:#f2dd77; --sample-tint:#2f2a12;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--text);font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:var(--primary)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 48px}
+.intro{color:var(--muted);margin:0 0 8px}
+.sample{display:inline-block;font-size:12px;color:var(--sample);background:var(--sample-tint);border-radius:6px;padding:1px 8px}
+h1{font-size:24px;margin:0;line-height:1.25}
+h2{font-size:18px;margin:0 0 12px}
+h3{font-size:16px;margin:0}
+.screen{background:var(--raised);border:1px solid var(--border);border-radius:14px;padding:20px;margin:20px 0}
+.screen-label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:32px 0 0}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.grow{flex:1;min-width:0}
+.btn{border:1px solid var(--border);background:var(--raised);color:var(--text);border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer;min-height:36px}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+:root[data-theme="dark"] .btn.primary{color:#062038}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.primary{color:#062038}}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.chip{border:1px solid var(--border);border-radius:999px;padding:4px 12px;font-size:13px;color:var(--muted);background:var(--raised)}
+.chip[aria-pressed="true"]{border-color:var(--primary);color:var(--primary);background:var(--primary-tint);font-weight:600}
+.search{flex:1;min-width:220px;border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:var(--raised);color:var(--text);font:inherit}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:12px;font-weight:600;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:hover td{background:var(--surface)}
+.num{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ref{display:block;font-size:12px;color:var(--muted)}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-size:12px;border:1px solid var(--border);white-space:nowrap}
+.pill::before{content:"";width:8px;height:8px;border-radius:2px;background:currentColor}
+.pill.ok{color:var(--ok);background:var(--ok-tint);border-color:transparent}
+.pill.ok::before{border-radius:50%}
+.pill.need{color:var(--orange);background:var(--orange-tint);border-color:transparent}
+.pill.need::before{transform:rotate(45deg)}
+.pill.wait{color:var(--muted)}
+.pill.wait::before{background:transparent;border:2px solid currentColor;border-radius:50%;width:6px;height:6px}
+.next-need{color:var(--orange);font-weight:600}
+.cards{display:none}
+@media (max-width:640px){
+  .table-wrap{display:none}
+  .cards{display:grid;gap:10px;list-style:none;padding:0;margin:0}
+  .cards li{border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--raised)}
+}
+.header-meta{color:var(--muted);margin:6px 0 0}
+.next{display:flex;flex-wrap:wrap;gap:12px;align-items:center;border:1px solid var(--border);border-left:4px solid var(--orange);border-radius:12px;padding:14px 16px;margin:18px 0;background:var(--orange-tint)}
+.next p{margin:0}
+.section{margin-top:24px}
+.section-head{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.card{border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--raised);display:flex;flex-direction:column;gap:8px}
+.card .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:13px}
+.card .kv dt{color:var(--muted)}
+.card .kv dd{margin:0}
+.card .foot{margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:8px;padding-top:8px;border-top:1px solid var(--border)}
+.group{border:1px dashed var(--border);border-radius:12px;padding:12px;margin-top:10px;font-size:13px;color:var(--muted)}
+.subnav{display:flex;flex-wrap:wrap;gap:6px;margin-top:20px;border-top:1px solid var(--border);padding-top:14px}
+.subnav a{padding:6px 12px;border-radius:8px;text-decoration:none;border:1px solid var(--border);color:var(--text)}
+.notes{font-size:13px;color:var(--muted);margin:10px 0 0;padding-left:18px}
+.toggle{position:fixed;right:12px;bottom:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="intro">A24 mockup · case structure · <span class="sample">Sample data: names, fees and statuses are invented; not confirmed by the immigration expert</span></p>
+  <p class="intro small">Design page: <a href="case-structure-a24-2026-11-12.md">case-structure-a24-2026-11-12.md</a>. Calm work app (P-473): blue for the one filled button and links, orange only for "needs you", status by shape and text.</p>
+
+  <!-- ───────────── Screen 1: case list ───────────── -->
+  <p class="screen-label">Screen 1 · Cases (case officer)</p>
+  <section class="screen" aria-labelledby="list-h">
+    <div class="row">
+      <h1 id="list-h" class="grow">Cases</h1>
+      <button class="btn primary" type="button">Open a case</button>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <input class="search" type="search" aria-label="Search cases" placeholder="Search by case number, your reference, name, IRCC application number or UCI">
+      <button class="btn" type="button" aria-label="Show as cards">Cards</button>
+    </div>
+    <div class="chips" role="group" aria-label="Filters">
+      <button class="chip" aria-pressed="true" type="button">My cases · 5</button>
+      <button class="chip" aria-pressed="false" type="button">Needs me · 2</button>
+      <button class="chip" aria-pressed="false" type="button">Waiting on client · 1</button>
+      <button class="chip" aria-pressed="false" type="button">Ready to file · 1</button>
+      <button class="chip" aria-pressed="false" type="button">Filed · 1</button>
+    </div>
+
+    <div class="table-wrap" style="overflow-x:auto">
+    <table>
+      <caption class="muted small" style="text-align:left;padding-bottom:6px">My cases, latest change first</caption>
+      <thead><tr><th scope="col">Case</th><th scope="col">Client</th><th scope="col">Applications</th><th scope="col">Next step</th><th scope="col">Case officer</th><th scope="col">Status</th><th scope="col">Updated</th></tr></thead>
+      <tbody>
+        <tr><td><a class="num" href="#case">C-2026-00042</a><span class="ref">Your ref: STU-118</span></td><td>Client A</td><td>4 · Study permit, Work permit, Visitor visa ×2</td><td class="next-need">Check the spouse's work permit answers</td><td>Officer 1</td><td><span class="pill need">Needs you</span></td><td class="muted">10:42</td></tr>
+        <tr><td><a class="num" href="#case">C-2026-00041</a></td><td>Client B</td><td>3 · Visitor visa ×3</td><td>Client answers the questionnaire (7 left)</td><td>Officer 1</td><td><span class="pill wait">Waiting on client</span></td><td class="muted">Yesterday</td></tr>
+        <tr><td><a class="num" href="#case">C-2026-00040</a><span class="ref">Your ref: PR-EE-77</span></td><td>Client C</td><td>1 · Express Entry, permanent residence (3 people on it)</td><td class="next-need">Representative reviews round 2</td><td>Officer 2</td><td><span class="pill need">In review</span></td><td class="muted">11 Nov</td></tr>
+        <tr><td><a class="num" href="#case">C-2026-00038</a></td><td>Client D</td><td>2 · Spouse sponsorship + sponsor's application</td><td>Record the submission</td><td>Officer 1</td><td><span class="pill ok">Ready to file</span></td><td class="muted">10 Nov</td></tr>
+        <tr><td><a class="num" href="#case">C-2026-00031</a></td><td>Client E</td><td>1 · Work permit</td><td>Waiting for IRCC's decision</td><td>Officer 1</td><td><span class="pill ok">Filed</span></td><td class="muted">2 Nov</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <ul class="cards" aria-label="My cases">
+      <li><a class="num" href="#case">C-2026-00042</a> · Client A<br><span class="small muted">4 applications</span><br><span class="next-need small">Check the spouse's work permit answers</span></li>
+      <li><a class="num" href="#case">C-2026-00041</a> · Client B<br><span class="small muted">3 applications</span><br><span class="small">Client answers the questionnaire (7 left)</span></li>
+      <li><a class="num" href="#case">C-2026-00040</a> · Client C<br><span class="small muted">1 application, 3 people</span><br><span class="next-need small">Representative reviews round 2</span></li>
+    </ul>
+    <ul class="notes">
+      <li>Case number is given when the case opens, in the team's format (AG-7-3: C-, year, 5-digit running number); the firm's own reference is optional and shown under it.</li>
+      <li>One signed retainer ↔ one case. Permanent residence (C-2026-00040) came with its own retainer, so it is its own case with one application carrying the family; the household's temporary applications on one retainer (C-2026-00042) share one case.</li>
+      <li>Below 640 px the table becomes one card per case; the Cards/List choice is remembered per person (P-115).</li>
+    </ul>
+  </section>
+
+  <!-- ───────────── Screen 2: family case page ───────────── -->
+  <p class="screen-label" id="case">Screen 2 · Case page with mixed temporary applications</p>
+  <section class="screen" aria-labelledby="case-h">
+    <p class="small muted" style="margin:0 0 6px"><a href="#list-h">Cases</a> › C-2026-00042</p>
+    <div class="row">
+      <h1 id="case-h" class="grow">C-2026-00042 · Client A <span class="pill need" style="vertical-align:middle">Needs you</span></h1>
+      <span class="small muted">Your ref: STU-118 · Opened 4 Nov</span>
+    </div>
+    <p class="header-meta">Client: <strong>Client A</strong> · Retainer: signed 1 Nov, version 2 · Lead representative: Representative 1 · Case officer: Officer 1</p>
+
+    <div class="next" role="region" aria-label="Next step">
+      <div class="grow">
+        <p><strong>Next: check the spouse's work permit answers.</strong></p>
+        <p class="small">Spouse A confirmed 18 of 18 answers yesterday. Two need your check before the forms are made.</p>
+      </div>
+      <button class="btn primary" type="button">Check Spouse A's answers</button>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>Applications <span class="muted small">· 4, sent together</span></h2>
+        <button class="btn" type="button" title="Adds services: a retainer amendment on this case">Add an application</button>
+      </div>
+      <div style="overflow-x:auto">
+      <table>
+        <caption class="muted small" style="text-align:left;padding-bottom:6px">One application per person; each opens its own page, quick details in a panel on the right</caption>
+        <thead><tr><th scope="col">Principal applicant</th><th scope="col">Application</th><th scope="col">Linked to</th><th scope="col">Status</th><th scope="col">Fee (CAD)</th><th scope="col">IRCC number</th><th scope="col">Next step</th></tr></thead>
+        <tbody>
+          <tr><td><a href="#case">Client A</a></td><td>Study permit<span class="ref">Study permit (outside Canada), release 3</span></td><td class="muted">—</td><td><span class="pill ok">Forms ready</span></td><td>150 + biometrics</td><td class="muted">When filed</td><td class="muted">Wait for the others</td></tr>
+          <tr><td><a href="#case">Spouse A</a></td><td>Work permit (open)<span class="ref">from the Study permit release, Spouse line</span></td><td>Depends on Client A's study permit</td><td><span class="pill need">Needs you</span></td><td>155 + 100 open work permit holder fee <span class="sample">Sample</span></td><td class="muted">When filed</td><td class="next-need">Check 2 answers</td></tr>
+          <tr><td><a href="#case">Child A1</a>, 15</td><td>Study permit<span class="ref">added: studies 6 months or more</span></td><td>Accompanies Client A</td><td><span class="pill wait">Waiting on client</span></td><td>150 + biometrics</td><td class="muted">When filed</td><td>Client answers 3 school questions</td></tr>
+          <tr><td><a href="#case">Child A2</a>, 6</td><td>Visitor visa<span class="ref">from the Study permit release, Child line</span></td><td>Accompanies Client A</td><td><span class="pill ok">Forms ready</span></td><td>100 + biometrics</td><td class="muted">When filed</td><td class="muted">Nothing for now</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="group">Submission group: all four go together (same time and place), so IRCC's family maximum for biometrics applies once. Each application keeps its own forms, fee, decision and IRCC number; each person is the principal applicant of their own, and nobody is a co-applicant. "Depends on" uses IRCC's sense of principal applicant: the student whose permit the spouse's open work permit rests on (Sample until the immigration expert confirms).</div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>People <span class="muted small">· 4</span></h2><button class="btn" type="button">Add a person</button></div>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th scope="col">Person</th><th scope="col">On the case as</th><th scope="col">Retainer</th><th scope="col">Answers</th></tr></thead>
+        <tbody>
+          <tr><td>Client A</td><td>Client of the case</td><td>Signed</td><td>Own; answers for the children</td></tr>
+          <tr><td>Spouse A</td><td>Spouse</td><td>Co-signed</td><td>Own link; kept private from the client</td></tr>
+          <tr><td>Child A1, 15</td><td>Child</td><td class="muted">—</td><td>Answered by a parent</td></tr>
+          <tr><td>Child A2, 6</td><td>Child</td><td class="muted">—</td><td>Answered by a parent</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <nav class="subnav" aria-label="Case pages">
+      <a href="#case">Questionnaire</a><a href="#case">Documents</a><a href="#case">Review</a><a href="#case">Submission</a><a href="#case">Activity</a>
+    </nav>
+    <ul class="notes">
+      <li>Applications and people are tables, as the team's style guide asks for more than one record; a row opens the application's own page (forms, documents, checks, fee, record) or a panel on the right. No sub-tab per application.</li>
+      <li>Today's model, as shown: the spouse's and children's applications come from the Study permit release's lines and added filings (BK-15, BK-17). A combination per application is designed, and built only when a household needs a mix this cannot express.</li>
+      <li>"Add an application" offers combinations of the case's pathway; a new family member's application is a retainer amendment on this case. Another pathway (an employer's LMIA) says "Open a linked case".</li>
+    </ul>
+  </section>
+</div>
+<button class="btn toggle" type="button" id="theme">Light / dark</button>
+<script>
+(function(){var b=document.getElementById('theme');b.addEventListener('click',function(){var r=document.documentElement,d=r.getAttribute('data-theme');var dark=d?d==='dark':matchMedia('(prefers-color-scheme: dark)').matches;r.setAttribute('data-theme',dark?'light':'dark');});})();
+</script>
+</body>
+</html>
