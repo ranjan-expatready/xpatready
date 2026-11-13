@@ -296,37 +296,47 @@ ok("pass: a line number is the string's own line", scan([{ file: "x.ts", src: "c
 
 // B170c (analysis §4.2 (7), §4.3 L3; P-319, P-425): our XFA engine's source (packages/xfa-engine/src) and its adapter
 // (engine/xfa/, read above with engine/) name no form and no box. The engine is generic XFA code: its code holds no form
-// or guide number in any string or regular expression (stricter than the whole-string rule above), and no box path from
-// a form's record (samples/xfa-forms.json, its descriptors). Its test folders (__tests__) are left out: they test the
+// or guide number in any string or regular expression (stricter than the whole-string rule above), and no box of a real
+// form: no box path from a form's record (samples/xfa-forms.json, its descriptors) or from the engine's own real-form
+// fixtures (src/__tests__/fixtures/form-data/*.synthetic.json, a value for every box it fills), nor any run of two or more of
+// its names ("PersonalDetails.ServiceIn"; indexes such as "[0]" ignored), nor a one-word box ("Barcodes") as a whole string or
+// as a path's last name. Its test folders (__tests__) are left out: they test the
 // engine on the real forms they name, and never run in the app. Comments are not code, as above (three of the engine's
 // comments cite the form a measurement came from). Its other keys and words are not read: they are XFA's own
 // ("app.alert", "event.target"), not ours.
 const ENGINE_SRC = join(ROOT, "..", "..", "..", "..", "packages", "xfa-engine", "src");
 const FORM_IN_TEXT = /\b(IMM|IRM|CIT|EMP)[ _-]?\d{4}(?!\d)|\bguide[ _-]?\d{4}(?!\d)/i;
-/** Every box path a form record names, and each path's dotted parts of two or more names: what a branch on a box reads. */
-export function boxNamesOf(records: { descriptor?: Record<string, unknown> }[]): Set<string> {
+const unindexed = (s: string) => s.replace(/\[\d+\]/g, "");
+/** Every box path given, and each run of two or more of its names (review Major 2: "ButtonsHeader.ValidateButton" or
+ *  "Page1.PersonalDetails.ServiceIn" is a branch on a box as much as the whole path), indexes left out; one-word paths as
+ *  they are. */
+export function boxNamesOf(paths: string[]): Set<string> {
   const names = new Set<string>();
-  for (const r of records) for (const [k, v] of Object.entries(r.descriptor ?? {})) if (typeof v === "string" && k !== "validatedValue") names.add(v);
+  for (const p of paths.map(unindexed)) { const parts = p.split("."); if (parts.length === 1) names.add(p); for (let i = 0; i + 1 < parts.length; i++) for (let j = i + 2; j <= parts.length; j++) names.add(parts.slice(i, j).join(".")); }
   return names;
 }
-/** The engine's (or the adapter's) code that names a form or a box. A one-word box ("Barcodes") counts only as a
- *  whole string; a dotted path counts anywhere in a string or a regular expression. */
+/** The engine's (or the adapter's) code that names a form or a box. A dotted box path counts anywhere in a string or a
+ *  regular expression; a one-word box as a whole string or as the last name of a dotted string. Indexes are ignored. */
 export function engineHits(files: { file: string; src: string }[], boxes: Set<string>): Hit[] {
   const hits: Hit[] = [];
+  const dotted = [...boxes].filter((b) => b.includes(".")), single = new Set([...boxes].filter((b) => !b.includes(".")));
   for (const { file, src } of files) for (const t of tokens(src)) {
     if (t.kind === "id") continue;
-    const plain = t.kind === "re" ? t.text.replace(/\\(.)/g, "$1") : t.text;
+    const plain = unindexed(t.kind === "re" ? t.text.replace(/\\(.)/g, "$1") : t.text);
     if (FORM_IN_TEXT.test(plain) || (t.kind === "re" && FORM_IN_RE.test(t.text))) hits.push({ file, line: t.line, kind: "form", text: t.text });
-    else if ([...boxes].some((b) => (b.includes(".") ? plain.includes(b) : plain === b))) hits.push({ file, line: t.line, kind: "key", text: t.text });
+    else if (dotted.some((b) => plain.includes(b)) || single.has(plain) || (plain.includes(".") && single.has(plain.split(".").pop() ?? ""))) hits.push({ file, line: t.line, kind: "key", text: t.text });
   }
   return hits;
 }
-const boxes = boxNamesOf((JSON.parse(readFileSync(join(ROOT, "samples", "xfa-forms.json"), "utf8")) as { forms: { descriptor?: Record<string, unknown> }[] }).forms);
+const FORM_DATA = join(ROOT, "..", "..", "..", "..", "packages", "xfa-engine", "src", "__tests__", "fixtures", "form-data");
+const recordPaths = (JSON.parse(readFileSync(join(ROOT, "samples", "xfa-forms.json"), "utf8")) as { forms: { descriptor?: Record<string, unknown> }[] }).forms.flatMap((r) => Object.entries(r.descriptor ?? {}).filter(([k, v]) => k !== "validatedValue" && typeof v === "string").map(([, v]) => v as string));
+const fixturePaths = readdirSync(FORM_DATA).filter((f) => f.endsWith(".synthetic.json")).flatMap((f) => Object.keys(JSON.parse(readFileSync(join(FORM_DATA, f), "utf8")) as Record<string, unknown>));
+const boxes = boxNamesOf([...recordPaths, ...fixturePaths]);
 const walkSrc = (dir: string): string[] => readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? (f === "__tests__" ? [] : walkSrc(p)) : /\.(tsx?|mjs|cjs|js)$/.test(f) && !/\.d\.ts$/.test(f) ? [p] : []; });
 const engineSrc = walkSrc(ENGINE_SRC).map((p) => ({ file: relative(join(ROOT, "..", "..", "..", ".."), p), src: readFileSync(p, "utf8") }));
 const adapter = engine.filter((f) => f.file.startsWith("engine/xfa/"));
 const eh = engineHits([...engineSrc, ...adapter], boxes);
-ok(`pass: our XFA engine's source and its adapter name no form and no recorded box in code (${engineSrc.length} engine files outside its test folders, ${adapter.length} adapter files, ${boxes.size} box paths from samples/xfa-forms.json)`, engineSrc.length > 100 && adapter.length >= 2 && boxes.size >= 5 && eh.length === 0, eh);
+ok(`pass: our XFA engine's source and its adapter name no form and no recorded box in code (${engineSrc.length} engine files outside its test folders, ${adapter.length} adapter files, ${boxes.size} box paths and runs of their names from the form records and the engine's ${fixturePaths.length} fixture boxes)`, engineSrc.length > 100 && adapter.length >= 2 && fixturePaths.length > 50 && boxes.size > 300 && eh.length === 0, eh);
 // Files the scan cannot read to their end (template-heavy script preludes): their whole text, comment lines left out,
 // is read for a form number too, so nothing after a mis-read goes unseen.
 const commentFree = (src: string) => src.split("\n").filter((l) => !/^\s*(\*|\/\/|\/\*)/.test(l)).join("\n");
@@ -336,6 +346,8 @@ ok("fail: a form number inside a longer string in the engine is caught", engineH
 ok("fail: a form number in an engine regular expression is caught", engineHits([{ file: "packages/xfa-engine/src/x.ts", src: "const r = /imm ?1295/i;" }], boxes).length === 1);
 ok("fail: a recorded box path in the engine or the adapter is caught", engineHits([{ file: "engine/xfa/index.ts", src: `const flag = "${[...boxes].find((b) => b.includes("."))}";` }], boxes).length === 1);
 ok("fail: a recorded one-word box as a whole string is caught", engineHits([{ file: "packages/xfa-engine/src/x.ts", src: `const b = "${[...boxes].find((b) => !b.includes("."))}";` }], boxes).length === 1);
+for (const probe of ["PersonalDetails.ApplicationValidatedFlag", "ButtonsHeader.ValidateButton[0]", "Page1.PersonalDetails.ServiceIn", "xfa.form.form1.Barcodes"])
+  ok(`fail: part of a real form's box path in the engine is caught (review Major 2: "${probe}")`, engineHits([{ file: "packages/xfa-engine/src/x.ts", src: `const p = "${probe}";` }], boxes).length === 1);
 ok("pass: comments and XFA's own words are not caught (\"app.alert\", a cited form in a comment)", engineHits([{ file: "packages/xfa-engine/src/x.ts", src: `// measured on IMM5257's Page1\nconst a = "app.alert"; const b = "Barcode";` }], boxes).length === 0);
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -8,6 +8,9 @@
 //   engine that is not built, a wrong descriptor and an unreadable answer are each "not available", never a pass;
 //   every switch is off and, while they are, no app file imports the adapter (the app behaves exactly as before); only
 //   engine/xfa/ reaches the engine (one direction, §4.2 (2)); the form records are the engine's own files, unchanged.
+//   Review round 1 (Major 1, minors 1-5): the engine runs strict, so no answer rests on script it skipped (fake engines
+//   show the child asks for strict and refuses a skipped member); a real pass on a copy the engine's own fill script
+//   filled and validated, found by its edition's official file; a malformed record and unencoded barcodes fail closed.
 // FIXTURE DATA: the engine's made-up form (packages/xfa-engine/fixtures/synthetic) and IRCC's committed blank forms
 // (official-sources/ircc, checked against the manifest's SHA-256). The engine is built here when its dist/ is missing
 // (npm ci --legacy-peer-deps, npm run build in packages/xfa-engine, as its own CI job does).
@@ -15,7 +18,7 @@
 //   tsx --tsconfig studio/api/tsconfig.json studio/tests/check_b170c_xfa_adapter.ts
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { answerOf, askXfaEngine, engineDirectory, XFA_FORMS_FILE, XFA_SWITCHES, xfaDescriptorFor, xfaFormRecords, xfaOn, type XfaAnswer, type XfaSwitch } from "../engine/xfa/index.ts";
@@ -49,11 +52,13 @@ ok("fail: the switch list cannot be changed at run time", (() => { try { (XFA_SW
 
 const walk = (dir: string): string[] => !existsSync(dir) ? [] : readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? (f === "node_modules" || f === "dist" ? [] : walk(p)) : /\.(tsx?|mjs|cjs|js)$/.test(f) ? [p] : []; });
 const app = ["api/src", "engine", "web/src", "contracts"].flatMap((d) => walk(join(STUDIO, d))).map((p) => ({ file: relative(STUDIO, p), src: readFileSync(p, "utf8") })).filter((f) => !f.file.startsWith("engine/xfa/"));
-const importsAdapter = (src: string) => /from\s+["'][^"']*engine\/xfa(\/index(\.ts)?)?["']|import\(\s*["'][^"']*engine\/xfa/.test(src) || /from\s+["']\.\.?\/xfa(\/index(\.ts)?)?["']/.test(src);
+// Review minor 5: any import form (from, import(), require) and any extension.
+const importsAdapter = (src: string) => /(from\s+|import\(\s*|require\(\s*)["'][^"']*(engine\/xfa|\.\.?\/xfa)(\/index(\.[cm]?[jt]sx?)?)?\/?["']/.test(src);
 const reachesEngine = (src: string) => /packages[/\\"', ]+xfa-engine|@expatready-eros\/xfa-engine|run-engine\.mjs/.test(src);
 const users = app.filter((f) => importsAdapter(f.src)).map((f) => f.file);
-ok(`pass: with every switch off, no app file uses the adapter, so the app behaves exactly as before (${app.length} files read)`, app.length > 200 && (names.some((n) => XFA_SWITCHES[n]) || users.length === 0), users);
-ok("fail: an import of the adapter is seen", importsAdapter(`import { askXfaEngine } from "../engine/xfa/index.ts";`) && importsAdapter(`import { xfaOn } from "./xfa/index.ts";`) && !importsAdapter(`import { x } from "../engine/xfa-other.ts";`));
+// Review minor 5: unconditional. The row that turns a switch on and calls the adapter changes this check in its own PR.
+ok(`pass: every switch is off and no app file uses the adapter, so the app behaves exactly as before (${app.length} files read)`, app.length > 200 && names.every((n) => !XFA_SWITCHES[n]) && users.length === 0, users);
+ok("fail: an import of the adapter is seen, in any form", importsAdapter(`import { askXfaEngine } from "../engine/xfa/index.ts";`) && importsAdapter(`import { xfaOn } from "./xfa/index.ts";`) && importsAdapter(`import { xfaOn } from "../engine/xfa/index.js";`) && importsAdapter(`const a = require("../engine/xfa");`) && importsAdapter(`const a = await import("../../engine/xfa/index.ts");`) && !importsAdapter(`import { x } from "../engine/xfa-other.ts";`));
 const direct = app.filter((f) => reachesEngine(f.src)).map((f) => f.file);
 ok("pass: only engine/xfa/ reaches the engine (no other app file names packages/xfa-engine or the engine's process)", direct.length === 0, direct);
 ok("fail: a direct reach to the engine is seen", reachesEngine(`const X = await import(join(ROOT, "packages", "xfa-engine", "dist", "index.js"));`) && reachesEngine(`import { openXfaPdf } from "@expatready-eros/xfa-engine";`));
@@ -98,17 +103,45 @@ try {
   ok("fail: an engine that is not built is 'not available', saying how to build it", none.status === "not_available" && none.code === "NO_ENGINE" && /npm run build/.test(none.reason), none);
   const missing = await askXfaEngine(join(scratch, "no-such.pdf"), { clock: CLOCK });
   ok("fail: a file that is not there is 'not available' with the reason", missing.status === "not_available" && /cannot be read/.test(missing.reason), missing);
+  const shape = await askXfaEngine(join(SYNTH, "synthetic-form.pdf"), { descriptor: { validateButton: "Summary.ValidateBtn" } as never, clock: CLOCK });
+  ok("fail: a form record that does not describe the Validate fully is 'not available' as our record's fault, not the form's (review minor 3)", shape.status === "not_available" && shape.code === "BAD_DESCRIPTOR" && !/cannot read this form/.test(shape.reason), shape);
+
+  // ---- review Major 1: strict. A fake engine records what the child asks of it; the real answers are above. ----
+  const fake = (name: string, body: string) => { const d = join(scratch, name); mkdirSync(join(d, "dist"), { recursive: true }); writeFileSync(join(d, "package.json"), '{"type":"module"}'); writeFileSync(join(d, "dist", "index.js"), `export const openXfaPdf = async () => ({});\nexport const packFormDescriptorSchema = { parse: (d) => d };\n${body}`); return d; };
+  const runtimeOf = (unsupported: string) => `{ load() {}, layout: () => ({ pages: [{}] }), validate: () => ({ complete: true, notes: [] }), encodeBarcodes: () => ({ validated: true, payloads: ["t"] }), unsupported: ${unsupported}, dispose() {} }`;
+  const desc = JSON.parse(readFileSync(join(SYNTH, "synthetic-form.pack.json"), "utf8"));
+  const strictOnly = fake("strict-only", `export const createFormRuntime = async (pdf, o) => { if (o.strict !== true) return ${runtimeOf("[]")}; const e = new Error("unsupported member Thing.member"); e.code = "UNSUPPORTED_MEMBER"; throw e; };`);
+  const s1 = await askXfaEngine(join(SYNTH, "synthetic-form.pdf"), { engineDir: strictOnly, descriptor: desc, clock: CLOCK });
+  ok("fail: the engine runs strict: a form whose script touches a member the engine does not model is 'not available', never a pass (an engine that passes it only when not strict)", s1.status === "not_available" && s1.code === "UNSUPPORTED_MEMBER", s1);
+  const skips = fake("skips", `export const createFormRuntime = async () => (${runtimeOf('[{ class: "field", member: "thing" }]')});`);
+  const s2 = await askXfaEngine(join(SYNTH, "synthetic-form.pdf"), { engineDir: skips, descriptor: desc, clock: CLOCK });
+  ok("fail: an answer the engine reached while skipping a member is 'not available', naming the member, never a pass", s2.status === "not_available" && s2.code === "UNSUPPORTED_MEMBER" && /field\.thing/.test(s2.reason), s2);
+  const clean = fake("clean", `export const createFormRuntime = async (pdf, o) => { if (o.strict !== true) throw new Error("not strict"); return ${runtimeOf("[]")}; };`);
+  const s3 = await askXfaEngine(join(SYNTH, "synthetic-form.pdf"), { engineDir: clean, descriptor: desc, clock: CLOCK });
+  ok("pass: the same check with nothing skipped passes through the child (strict asked for)", s3.status === "passes" && JSON.stringify(s3.barcodeTexts) === '["t"]', s3);
+
+  // ---- review minor 2 and minor 1: the real pass, on a copy filled and validated by the engine's own fill script, ----
+  // ---- found by its edition's official file (a filled copy's own SHA-256 is not its edition's) ----
+  const filled = join(scratch, "filled.pdf");
+  execFileSync(process.execPath, [join(ENGINE, "scripts", "fill-sample.mjs"), blank("imm5257e.pdf"), filled, join(ENGINE, "src", "__tests__", "fixtures", "form-data", "imm5257.synthetic.json"), join(ENGINE, "src", "__tests__", "fixtures", "form-data", "imm5257.pack.json"), "--tz", "America/Toronto", "--clock", "2026-11-13T12:00:00Z"], { cwd: ENGINE, stdio: "pipe", timeout: 120_000 });
+  const edition = sha(blank("imm5257e.pdf"));
+  const passed = await askXfaEngine(filled, { formSha256: edition, clock: CLOCK });
+  ok("pass: a copy of IMM 5257 filled with the engine's made-up person passes the form's own Validate, with its five barcode texts", passed.status === "passes" && passed.barcodeTexts.length === 5 && passed.barcodeTexts.every((t) => typeof t === "string" && t.length > 20) && passed.pages >= 5, passed);
+  const unnamed = await askXfaEngine(filled, { clock: CLOCK });
+  ok("fail: the same filled copy without its edition named finds no descriptor and says so truly ('reads', why names the file and the edition), never a pass", unnamed.status === "reads" && /filled copy is looked up by its edition/.test(unnamed.why), unnamed);
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }
 
 // ---- the engine's raw answers in our words: anything unexpected is "not available" ----
 const pairs: [string, unknown, (a: XfaAnswer) => boolean][] = [
-  ["a complete form passes, with its barcode texts", { kind: "complete", pages: 6, barcodes: ["a|b", null] }, (a) => a.status === "passes" && a.pages === 6 && JSON.stringify(a.barcodeTexts) === '["a|b",null]'],
+  ["a complete form passes, with its barcode texts", { kind: "complete", pages: 6, barcodes: ["a|b", null], barcodesValidated: true }, (a) => a.status === "passes" && a.pages === 6 && JSON.stringify(a.barcodeTexts) === '["a|b",null]'],
   ["an incomplete form stops at its box with its message", { kind: "incomplete", pages: 5, firstMissingField: "x.y[0]", messages: ["m1", "m2"] }, (a) => a.status === "stops_at" && a.box === "x.y[0]" && a.message === "m1"],
   ["an incomplete form with no box or message still stops (never a pass)", { kind: "incomplete", pages: 5, firstMissingField: null, messages: [] }, (a) => a.status === "stops_at" && a.box === null && a.message === null],
   ["a complete answer without pages is not available", { kind: "complete", barcodes: [] }, (a) => a.status === "not_available"],
   ["a complete answer without barcodes is not available", { kind: "complete", pages: 1 }, (a) => a.status === "not_available"],
+  ["a complete answer whose barcodes the form's save step did not encode is not available (review minor 4)", { kind: "complete", pages: 1, barcodes: [null], barcodesValidated: false }, (a) => a.status === "not_available" && a.code === "NOT_ENCODED"],
+  ["a record the engine refuses as a descriptor is not available as our record's fault", { kind: "bad_descriptor", message: "x" }, (a) => a.status === "not_available" && a.code === "BAD_DESCRIPTOR"],
   ["an unknown answer is not available", { kind: "passed" }, (a) => a.status === "not_available" && a.code === "BAD_ANSWER"],
   ["no answer is not available", null, (a) => a.status === "not_available"],
 ];

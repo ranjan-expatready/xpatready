@@ -56,9 +56,12 @@ export type XfaAnswer =
   | { status: "not_available"; reason: string; code: string };
 
 export type XfaAskOptions = {
-  /** The form's descriptor; undefined: looked up by the file's SHA-256 in the form records; null: only ask whether the
-   *  engine reads the form. */
+  /** The form's descriptor; undefined: looked up in the form records (by `formSha256`, else by the file's own SHA-256);
+   *  null: only ask whether the engine reads the form. */
   descriptor?: XfaDescriptor | null;
+  /** The SHA-256 of the edition's official (blank) file. A filled copy's own bytes differ from its edition's, so the
+   *  caller that knows the edition (the copy's field map: form_sha256) names it here (review minor 1). */
+  formSha256?: string;
   /** The time limit for the whole answer (start, read, lay out, Validate); default 20 s (measured: under 2 s). */
   timeoutMs?: number;
   /** The wall clock the form's scripts see (default now) and the form's local zone (default the firms' zone). */
@@ -102,6 +105,10 @@ export function xfaDescriptorFor(sha256: string, file = XFA_FORMS_FILE): XfaDesc
   return xfaFormRecords(file).find((r) => r.form_sha256 === sha256)?.descriptor ?? null;
 }
 
+const isDescriptor = (d: unknown): d is XfaDescriptor => {
+  const r = d as Record<string, unknown> | null;
+  return !!r && typeof r === "object" && (["validateButton", "validatedFlag", "validatedValue", "firstMissingField", "barcodes"] as const).every((k) => typeof r[k] === "string" && r[k] !== "") && (r.clearButton === undefined || typeof r.clearButton === "string");
+};
 const notAvailable = (code: string, reason: string): XfaAnswer => ({ status: "not_available", code, reason });
 
 /** The engine's raw answer (./run-engine.mjs) in our words. Anything unexpected is "not available", never a pass. */
@@ -110,13 +117,18 @@ export function answerOf(raw: unknown): XfaAnswer {
   const pages = typeof r.pages === "number" && r.pages >= 0 ? r.pages : null;
   switch (r.kind) {
     case "complete":
-      return pages === null || !Array.isArray(r.barcodes) ? notAvailable("BAD_ANSWER", "the engine's answer could not be read") : { status: "passes", pages, barcodeTexts: r.barcodes.map((b: unknown) => (typeof b === "string" ? b : null)) };
+      if (pages === null || !Array.isArray(r.barcodes)) return notAvailable("BAD_ANSWER", "the engine's answer could not be read");
+      // Review minor 4: the form's own save step must have encoded its barcodes; a pass without them is no pass.
+      if (r.barcodesValidated !== true) return notAvailable("NOT_ENCODED", "the form's own Validate completed, but its own save step did not encode its barcodes");
+      return { status: "passes", pages, barcodeTexts: r.barcodes.map((b: unknown) => (typeof b === "string" ? b : null)) };
     case "incomplete":
       return pages === null ? notAvailable("BAD_ANSWER", "the engine's answer could not be read") : { status: "stops_at", pages, box: typeof r.firstMissingField === "string" ? r.firstMissingField : null, message: Array.isArray(r.messages) && typeof r.messages[0] === "string" ? (r.messages[0] as string) : null };
     case "reads":
-      return pages === null ? notAvailable("BAD_ANSWER", "the engine's answer could not be read") : { status: "reads", pages, why: "the engine reads this form, but no descriptor of its own Validate is recorded for this edition, so its own check cannot run" };
+      return pages === null ? notAvailable("BAD_ANSWER", "the engine's answer could not be read") : { status: "reads", pages, why: "the engine reads this form, but the form records hold no descriptor of its own Validate for this file (looked up by SHA-256: a filled copy is looked up by its edition's official file), so its own check cannot run" };
     case "refused":
       return notAvailable(String(r.code ?? "REFUSED"), `the engine cannot read this form yet: ${String(r.message ?? "no reason given")}`);
+    case "bad_descriptor":
+      return notAvailable("BAD_DESCRIPTOR", `the form's record does not describe its own Validate in a way the engine accepts: ${String(r.message ?? "")}`.trim());
     case "no_engine":
       return notAvailable("NO_ENGINE", `the form engine is not built on this server (packages/xfa-engine: npm ci --legacy-peer-deps, npm run build): ${String(r.message ?? "")}`.trim());
     default:
@@ -131,18 +143,20 @@ export async function askXfaEngine(file: string, options: XfaAskOptions = {}): P
   if (!existsSync(join(engine, "dist", "index.js"))) return answerOf({ kind: "no_engine", message: `${join(engine, "dist", "index.js")} is missing` });
   let descriptor = options.descriptor;
   if (descriptor === undefined) {
-    try { descriptor = xfaDescriptorFor(createHash("sha256").update(readFileSync(file)).digest("hex"), options.formsFile); }
+    try { descriptor = xfaDescriptorFor(options.formSha256 ?? createHash("sha256").update(readFileSync(file)).digest("hex"), options.formsFile); }
     catch (e) { const err = e as NodeJS.ErrnoException; return notAvailable(String(err?.code ?? "UNREADABLE"), `the form's file or its record cannot be read: ${String(err?.message ?? e)}`); }
   }
+  if (descriptor && !isDescriptor(descriptor)) return notAvailable("BAD_DESCRIPTOR", "the form's record does not describe its own Validate (each of validateButton, validatedFlag, validatedValue, firstMissingField and barcodes must be text)");
   const request = JSON.stringify({ engine, file: resolve(file), descriptor, clock: options.clock ?? Date.now(), timezone: options.timezone ?? FIRM_ZONE });
   const limit = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   return new Promise<XfaAnswer>((done) => {
     let out = "", err = "", settled = false;
     const finish = (a: XfaAnswer) => { if (!settled) { settled = true; clearTimeout(timer); done(a); } };
     const child = spawn(process.execPath, [CHILD], { stdio: ["pipe", "pipe", "pipe"] });
+    child.stdout.setEncoding("utf8"); child.stderr.setEncoding("utf8"); // review minor 7: a character split across chunks stays whole
     const timer = setTimeout(() => { child.kill("SIGKILL"); finish(notAvailable("TIME_LIMIT", `the engine took longer than ${Math.round(limit / 100) / 10} s on this form and was stopped`)); }, limit);
-    child.stdout.on("data", (b: Buffer) => { out += b; if (out.length > MAX_ANSWER_BYTES) { child.kill("SIGKILL"); finish(notAvailable("BAD_ANSWER", "the engine's answer was too long")); } });
-    child.stderr.on("data", (b: Buffer) => { err = (err + b).slice(-2000); });
+    child.stdout.on("data", (b: string) => { out += b; if (out.length > MAX_ANSWER_BYTES) { child.kill("SIGKILL"); finish(notAvailable("BAD_ANSWER", "the engine's answer was too long")); } });
+    child.stderr.on("data", (b: string) => { err = (err + b).slice(-2000); });
     child.on("error", (e) => finish(notAvailable("NO_PROCESS", `the engine's process could not start: ${e.message}`)));
     child.on("close", (code) => {
       const line = out.trim().split("\n").pop() ?? "";

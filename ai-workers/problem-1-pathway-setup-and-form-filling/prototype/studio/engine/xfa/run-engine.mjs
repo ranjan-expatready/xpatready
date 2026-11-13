@@ -8,6 +8,7 @@
 //               data from the form's record (samples/xfa-forms.json); null asks only whether the engine reads the form
 //   clock       the wall clock the form's scripts see (ms since 1970); timezone: the form's local zone
 // Writes one line to stdout, as JSON: the engine's answer in the engine's own terms (raw); ./index.ts turns it into ours.
+// The engine runs strict: a member it does not model stops the run, and is reported as a refusal, never skipped.
 // Exit 0 whenever the engine answered, a refusal included (a refused form is an answer, never a crash); exit 1 only when
 // the request itself could not be read. No form number, box name or program here (P-319, P-425): forms are data.
 import { readFileSync } from 'node:fs';
@@ -36,24 +37,37 @@ try {
   process.exit(0);
 }
 
+let descriptor = null;
+try {
+  descriptor = request.descriptor == null ? null : X.packFormDescriptorSchema.parse(request.descriptor);
+} catch (e) {
+  say({ kind: 'bad_descriptor', message: String(e?.message ?? e).slice(0, 600) });
+  process.exit(0);
+}
+
 let runtime;
 try {
   const pdf = await X.openXfaPdf(new Uint8Array(readFileSync(request.file)));
-  const descriptor = request.descriptor == null ? null : X.packFormDescriptorSchema.parse(request.descriptor);
-  runtime = await X.createFormRuntime(pdf, { host: HOST, clock: { now: () => request.clock }, timezone: request.timezone });
+  // Strict (review Major 1, §4.2 (4)): a form script that touches a member the engine does not model stops the run
+  // (UNSUPPORTED_MEMBER), so no answer ever rests on script the engine skipped; the engine's own real-form tests run so.
+  runtime = await X.createFormRuntime(pdf, { host: HOST, clock: { now: () => request.clock }, timezone: request.timezone, strict: true });
   runtime.load();
   const pages = runtime.layout().pages.length;
+  let answer;
   if (!descriptor) {
-    say({ kind: 'reads', pages });
+    answer = { kind: 'reads', pages };
   } else {
     const v = runtime.validate(descriptor);
     if (!v.complete) {
-      say({ kind: 'incomplete', pages, firstMissingField: v.firstMissingField, messages: v.messages.map((m) => m.text), flag: v.flag });
+      answer = { kind: 'incomplete', pages, firstMissingField: v.firstMissingField, messages: v.messages.map((m) => m.text), flag: v.flag };
     } else {
       const b = runtime.encodeBarcodes(descriptor);
-      say({ kind: 'complete', pages, barcodes: b.payloads, barcodesValidated: b.validated, notes: v.notes });
+      answer = { kind: 'complete', pages, barcodes: b.payloads, barcodesValidated: b.validated, notes: v.notes };
     }
   }
+  // And if anything was still skipped, the answer is not whole: say so, never pass it on.
+  const skipped = (runtime.unsupported ?? []).map((u) => `${u.class ?? '?'}.${u.member ?? '?'}`);
+  say(skipped.length ? { kind: 'refused', code: 'UNSUPPORTED_MEMBER', message: `the form's script used what the engine does not model: ${skipped.slice(0, 5).join(', ')}` } : answer);
 } catch (e) {
   say(refusal(e));
 } finally {
