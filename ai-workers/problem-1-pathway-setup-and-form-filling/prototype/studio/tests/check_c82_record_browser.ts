@@ -108,10 +108,16 @@ try {
   await type(filingBox(fS).getByLabel("Application number"), "V300000202");
   await press(dialog().getByRole("button", { name: "Record the submission", exact: true }));
   await dialog().waitFor({ state: "detached", timeout: 15_000 });
-  await p.locator("[data-record]").first().waitFor({ timeout: 15_000 });
+  // The submission's own record, in its panel: BK-18 (QA-448) put data-record on the readiness line too, which is on the
+  // page before anything is recorded, so a page-wide wait read the panel while it still said Ready to file.
+  await panel().locator("[data-record]").first().waitFor({ timeout: 15_000 });
   const text = await panel().innerText();
   ok("C8.2-6 (screen): recorded: the group reads Recorded · read-only, each filing Submitted with its own number", /Recorded · read-only/.test(text) && (await panel().locator('[data-status="submitted"]').count()) === 2 && /V300000201/.test(text) && /V300000202/.test(text), text);
-  ok("C8.2-7 (screen): the record reads Prepared by · Reviewed by, the fee receipt and the UCI", /Prepared by · Reviewed by\s*Case officer · Representative/.test(text) && /SAMPLE-RECEIPT-E/.test(text) && /Sample Client E: 1111-2222/.test(text), text);
+  // BK-18 (QA-448, P-510 (4), P-154): the case officer did the work and the representative reviewed it, so both records
+  // name two people (never Self-reviewed), and the readiness line says the same as the submission's record.
+  const lines = await p.locator("[data-reviewed]").evaluateAll((e) => e.map((x) => [x.getAttribute("data-record"), (x as HTMLElement).innerText]));
+  ok("C8.2-7 (screen): the record reads Prepared by · Reviewed by, the fee receipt and the UCI", /Prepared by · Reviewed by\s*Case officer · Representative/.test(text) && /SAMPLE-RECEIPT-E/.test(text) && /Sample Client E: 1111-2222/.test(text)
+    && lines.length === 2 && lines.every(([k, t]) => k === "two-people" && /^Prepared by · Reviewed by: Case officer \(Sample\) · reviewed by Representative \(Sample\) \(licence R000000\), /.test(t ?? "")), { text, lines });
   // B149: the page chosen in the dialog is stored with the record; the spouse's filing has none and offers the upload.
   await panel().locator(`[data-submission-filing="${fP}"] [data-receipt-file]`).waitFor({ timeout: 15_000 });
   const receiptP = await panel().locator(`[data-submission-filing="${fP}"] [data-fee-receipt]`).innerText(), receiptS = await panel().locator(`[data-submission-filing="${fS}"] [data-fee-receipt]`).innerText();
