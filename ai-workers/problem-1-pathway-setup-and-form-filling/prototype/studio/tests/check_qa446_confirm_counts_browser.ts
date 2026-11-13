@@ -10,8 +10,8 @@
 //   3 round 1 to the representative: each filing's checklist "Values" item = the Agent view's count for that filing's
 //     people and their relatives (their parents' tabs): declared by whom, confirmed by whom, to confirm; on screen too;
 //   4 the representative approves round 1; the officer presses Confirm section on every section; declared answers stay
-//     Declared (Confirm section never turns them into the officer's), nothing is left to confirm, and a section with
-//     nothing to confirm has its button disabled with words (P-497 (1));
+//     Declared (Confirm section never turns them into the officer's), nothing is left to confirm, and Confirm section on a
+//     section with nothing to confirm confirms nothing and says so (P-497 (1), as QA-417 built it);
 //   5 round 2: the checklist again equals the Agent view, "0 to confirm".
 // Fails on main: the checklist reads "Values confirmed: none yet" or counts only the officer's confirmations, and
 // Confirm section turns declared answers into confirmed ones. Screenshots: product/screens/QA-446/screenshots/. US$0.
@@ -161,13 +161,17 @@ for (const [key, label] of [["vv.single", "Visitor visa"], ["sp.outside", "Study
   ok(`QA-446 ${label} 4 pass (P-510 (2)): Confirm section left every declared answer Declared (only the Confirm list became the officer's)`, A2.declared === B.declared && B.declared > 0, { before: B.declared, after: A2.declared });
   const S2 = await screenCounts(c.id, `${key}-4-agent-view-after-1440.png`);
   ok(`QA-446 ${label} 4 pass (screen): household and every tab read 0 to confirm`, S2.household === 0 && [...S2.tabs.values()].every((n) => n === 0), { household: S2.household, tabs: [...S2.tabs.values()] });
-  // P-497 (1): a section with nothing to confirm says so, its button disabled (the principal's tab, its first section).
+  // P-497 (1) as QA-417 built it: on a section with "0 to confirm" (the principal's tab) Confirm section asks the server,
+  // which confirms nothing, and the page says "nothing to confirm"; the section's answers stay Declared.
   const principal = [...people].find(([, n]) => n === "Sample Client A")?.[0] ?? "";
-  await S2.p.locator(`[data-tab="${principal}"]`).click().catch(() => undefined);
-  const note = S2.p.locator("[data-nothing-to-confirm]:visible").first();
-  const said = await note.waitFor({ timeout: 15_000 }).then(() => true, () => false);
-  const btn = S2.p.getByRole("button", { name: "Confirm section" }).first();
-  ok(`QA-446 ${label} 4 pass (screen, P-497 (1)): a section with nothing to confirm says so beside a disabled Confirm section`, said && /Nothing to confirm/.test(await note.innerText().catch(() => "")) && await btn.isDisabled().catch(() => false), said ? await note.innerText() : null);
+  await S2.p.locator(`[role="tab"][data-tab="${principal}"]`).click().catch(() => undefined);
+  const zeroSec = S2.p.locator('#agent-view section[aria-labelledby^="h-"]').filter({ hasText: / 0 to confirm/ }).filter({ hasText: "Declared" }).first();
+  const reply = S2.p.waitForResponse((r) => /\/sections\/[^/]+\/confirm$/.test(r.url()) && r.request().method() === "POST", { timeout: 30_000 }).then((x) => x.json()).catch(() => null);
+  const clicked = await zeroSec.getByRole("button", { name: "Confirm section" }).click({ timeout: 30_000 }).then(() => true, () => false);
+  const rep0 = clicked ? await reply : null;
+  const said = await S2.p.getByText(/: nothing to confirm\./).last().waitFor({ timeout: 15_000 }).then(() => true, () => false);
+  const stillDeclared = clicked && await zeroSec.getByText("Declared", { exact: true }).first().isVisible().catch(() => false);
+  ok(`QA-446 ${label} 4 pass (screen, P-497 (1)): Confirm section on a "0 to confirm" section confirms nothing, says so, and its answers stay Declared`, clicked && rep0?.confirmed === 0 && said && stillDeclared, { clicked, reply: rep0, said, stillDeclared });
   await S2.p.screenshot({ path: join(SHOTS, `${key}-4-nothing-to-confirm-1440.png`) });
   await S2.p.close();
 
