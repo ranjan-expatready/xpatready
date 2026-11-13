@@ -56,3 +56,5 @@ ai-workers/problem-1-pathway-setup-and-form-filling/product/scout/reports/playwr
 ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/requirements-names.txt
 # B170a: the XFA engine package builds into dist/ (never committed; CI builds it)
 packages/xfa-engine/dist/
+# A30 (13 Nov): the reference folder's private part (team-app details, P-504) stays on the Mac
+ai-workers/problem-1-pathway-setup-and-form-filling/product/reference/private/

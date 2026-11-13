@@ -1,0 +1,634 @@
+1631	2026-11-12	tooling	10	tools: quarantine check_c613_filing_changes_browser (QA-420, P-205)
+1627	2026-11-12	records-docs	0	qa: QA-420 — check_c613_filing_changes_browser step 6a flaky; quaranti
+1617	2026-11-12	records-docs	0	qa: walk 1 rehearsal (uncounted) on the open Bake work — QA-415 Critic
+1614	2026-11-12	app	79	forms: C4.1, C10.1 — BK-16 PR 1 (P-490): a form line for the principal
+1609	2026-11-12	tooling	74	tools: Gate B runs qa's checkpoint-row packs on the checkpoint on a pu
+1602	2026-11-12	app	103	runtime: BK-9 (C6.13) — shared-filing changes on any pathway
+1591	2026-11-12	app	155	runtime: C6.12, C11.12 — BK-15 (R-e, P-486): fees per family member as
+1589	2026-11-12	app	111	screens: BK-4c — case hand-offs: to the client, back to the firm, to t
+1588	2026-11-12	app	100	forms: QA-403 (C6.2, C7.1) — the firm's facts are the case officer's, 
+1587	2026-11-12	app	59	runtime: QA-402 (C4.11) — a case-level question's condition is in forc
+1586	2026-11-12	app	49	runtime + data: QA-400 — IMM 5257 SCH1 says per person whether they ar
+1583	2026-11-12	app	14	screens: QA-401 C8.3 — a change of person re-reads every open page (th
+1582	2026-11-12	app	112	screens: BK-4b — Studio hand-off buttons (author → content reviewer → 
+1581	2026-11-12	app	254	screens: BK-5 PR 1 — Demo › Starting points: three starting points and
+1580	2026-11-12	app	331	screens: BK-4a — sign in by role, one person picker (web only)
+1579	2026-11-12	tests-only	39	qa: explore journey — walk 0 + retests (C4.6, C4.11, C5.1, C6.2, C8.3)
+1577	2026-11-12	tooling	31	ci: zsh from Homebrew when apt cannot reach Ubuntu (P-214)
+1576	2026-11-12	app	108	forms: C9.2, C10.2 — QA-391: a form that no longer applies is kept and
+1575	2026-11-12	records-docs	0	screens: BK-4 (sign in by role, hand-offs) and BK-5 (start page) conce
+1574	2026-11-12	app	126	evidence: BK-13 step 1 — Study permit rows as data (cited, Sample) + d
+1573	2026-11-12	app	59	runtime: BK-14 — AI review on any pathway's forms (lifts SI-6's one fo
+1571	2026-11-12	app	240	runtime: M3-S4 (C6.4, C7.6) — never-waivable document line blocks Read
+1570	2026-11-12	app	123	screens: BK-3 (last PR) — a small client page, linked both ways with i
+1569	2026-11-12	tests-only	36	qa: capability C11.6, C8.2 (after B171) and C4.11 (after #1534) — C11.
+1567	2026-11-12	tooling	46	runtime: B178 — gate B reads select-suites' reach list whole, so QA-36
+1566	2026-11-12	app	73	forms: C7.2 — QA-395: IMM 5257 Q8 A counts only another country, for m
+1563	2026-11-12	app	73	forms: C7.3 — QA-392b: the answer sheet carries each recorded Yes/No b
+1559	2026-11-11	tooling	24	lead: owed checks after #1536 and #1545 — demo smoke-walk step, Mergif
+1557	2026-11-12	tests-only	145	qa: C7.3 Yes side — QA-392b (Major) and QA-395 (Major) new; C7.3-15 by
+1553	2026-11-11	app	44	forms: C7.3 — QA-392: the answer sheet shows the No the PDF copy write
+1552	2026-11-12	tests-only	65	qa: UX lane findings confirmed — QA-393 (UXF-25, error and permission 
+1549	2026-11-12	tests-only	37	qa: C7.3 PDF copy vs answer sheet — QA-392 (Major) new; C7.3 pack step
+1545	2026-11-11	tooling	116	forms: B170a — the XFA engine's source in packages/xfa-engine/, its un
+1543	2026-11-11	app	16	forms: B171 (C11.6, C8.2) — the case and the submission record name ev
+1539	2026-11-11	records-docs	0	planner: B170 analysis wording after P-469 and P-470 (records only)
+1537	2026-11-11	app	132	forms: BK-11 — fill-trial status in the release
+1536	2026-11-11	app	134	runtime: M1 + M4 — GET /api/health and the demo smoke walk (workflow s
+1535	2026-11-11	app	47	runtime: BK-8 — biometrics ages per pathway (the case's own fee rows, 
+1534	2026-11-11	app	216	forms: C4.11 — a condition approved on one pathway no longer blocks th
+1533	2026-11-11	app	282	runtime: BK-12 — sample case as a setting (a pathway's Sample case rea
+1532	2026-11-11	records-docs	0	analysis: master plan 2026-11-11 (A19) — next 8 h, backlog clean, trac
+1531	2026-11-11	app	20	forms: C5.1, C4.11 — QA-276: Release goes through after a question mov
+1530	2026-11-11	tooling	3428	ux planner: A19 (k) UX score and plan to 9 (records only)
+1529	2026-11-11	tests-only	147	qa: after-merge G5 — no Works drops; C7.8 Works; QA-391 new (Major); Q
+1528	2026-11-11	app	15	forms: C4.6 — QA-275 each filled copy keeps its own file
+1527	2026-11-11	records-docs	0	planner: B170 XFA engine reuse analysis (records only)
+1526	2026-11-11	tooling	299	runtime: B168 — run the Studio on any Mac with one command (co-founder
+1525	2026-11-11	app	70	screens: BK-3 PR 2 — release↔case links (Open a case on Release N; the
+1524	2026-11-11	app	137	runtime: M3-S3 (C6.4) — waivable document line: configured on the line
+1519	2026-11-11	app	483	screens: BK-3 PR 1 of 4 — one frame around every screen, a where-am-I 
+1518	2026-11-11	app	346	forms: BK-10 — form rules and form titles into data (no pathway or for
+1513	2026-11-11	app	325	runtime: M3-S2 (C6.12) — conditional extra filing: a configured rule o
+1510	2026-11-11	records-docs	0	evidence: expert review pack (P-455 (2)) — Visitor visa answer key, St
+1509	2026-11-11	records-docs	0	qa: explore bake-journey — BK-1 baseline on main 8fc65d0b9 (14 Majors,
+1507	2026-11-11	app	150	forms: M3-S5 — answer sheet for online-only forms, decided by the libr
+1506	2026-11-11	app	211	screens: BK-2 — fold-out arrows: one shared fold-out on every fold-out
+1505	2026-11-11	app	238	runtime: C6.12 — M3-S1 co-filed application carries its own fees (gene
+1504	2026-11-11	tooling	86	ci: suite selection (4a) — a gate file or checkpoint step pulls every 
+1503	2026-11-11	tooling	2	lead: records 10 Nov (M3 29/29, P-447 to P-452, Bake plan draft)
+1502	2026-11-11	tooling	556	ci: 8 shards dealt by refreshed suite times (pipeline row 2, P-436 (7)
+1501	2026-11-11	app	1	runtime: B164 — no combination key or program branch in engine code (P
+1499	2026-11-10	tests-only	26	qa: capability C7.5 and C10.2 — Works (nightly 42841699712, checkpoint
+1496	2026-11-10	records-docs	0	C7.5: saved paid review of IMM 5257 on sheet bd4761bdb306 (run de49e80
+1495	2026-11-10	app	35	forms: C10.2 — finished story's Paper IMM 5257 validated in Adobe, rea
+1492	2026-11-10	app	6	forms: C10.2 — IMM 5257 Languages c) written only when b) is Both (the
+1491	2026-11-10	tooling	2	ci: shard time limit 60 -> 75 min (P-214)
+1482	2026-11-10	app	38	forms: C10.2 — IMM 5257 gates for every box its own Validate empties b
+1478	2026-11-10	records-docs	0	qa: capability C8.3 — Works on nightly 42738773981 (checkpoint, main 2
+1477	2026-11-10	app	60	forms: C6.17 — Start next stage adds documents: study and work permit 
+1476	2026-11-10	tooling	169	ci: C7.5, QA-366 — a merge-queue batch runs a named row's pack again w
+1475	2026-11-10	records-docs	0	qa: capability C6.5 after #1444 — Partial on P-339 only (Works once ni
+1474	2026-11-10	tooling	39	lead: records P-412 to P-444, RULES as of P-442, P-440 token guard and
+1472	2026-11-10	tests-only	212	qa: capability C6.17 — Works (nightly 42759023740, job 129640099845, 4
+1465	2026-11-10	records-docs	0	qa: C6.19 Works — nightly 42677402885, checkpoint pack 85/85 on main (
+1464	2026-11-10	app	6	forms: C10.2 — the finished story's Sample phone is not +1, so the Pap
+1460	2026-11-10	tests-only	47	qa: capability C10.2 — gate A FAIL, Partial (Opus reader); QA-361 (Maj
+1459	2026-11-10	tests-only	152	qa: capability C8.3 after #1440 — QA-345 fixed and closed, gate A PASS
+1456	2026-11-10	records-docs	0	qa: capability C7.3 — Works (nightly 42677181616 on the checkpoint; ga
+1455	2026-11-10	tests-only	31	qa: capability C6.19 — Works pending GitHub-runner run (fresh Opus rea
+1453	2026-11-10	app	107	screens: C6.16 QA-359 — Client A's Resend keeps the address staff set 
+1452	2026-11-10	tests-only	104	qa: capability C6.16 — Works (nightly 42707165919, 74/74 on the checkp
+1450	2026-11-10	app	47	screens: C7.8 — an added form never spoils the release's facts (QA-355
+1446	2026-11-09	tests-only	51	qa: capability C7.8 — gate A FAIL, Partial (Opus reader); QA-355 (Majo
+1444	2026-11-10	app	275	runtime: C6.5 — every Visitor visa checklist document that offers read
+1442	2026-11-09	records-docs	0	qa: C6.5 under the ruling on #1439 — Partial on one gap (QA-352, Gap M
+1441	2026-11-09	app	128	runtime: C6.19 — QA-338: no earlier case pre-selected; out-of-date and
+1440	2026-11-09	app	165	screens: C8.3 QA-345 — an approval stamps the file it approved (migrat
+1439	2026-11-09	records-docs	0	qa: capability C6.5 — Partial (scope ruling only), QA-322 closed, gate
+1437	2026-11-09	records-docs	0	qa: capability C3.16 — gate A walked by screens to C1.3's first step; 
+1435	2026-11-09	app	31	forms: C10.2 — IMM 5257's own Validate no longer empties the status on
+1434	2026-11-09	tests-only	46	qa: capability C8.3 — Partial (pack 23/23, gate A PASS to C8.2; held b
+1433	2026-11-09	tests-only	246	qa: capability C6.19 — Partial (fresh Opus reader), nightly 4261665575
+1432	2026-11-09	records-docs	0	qa: capability C6.13 — Works after #1421 (QA-329 closed, gate A PASS)
+1431	2026-11-09	records-docs	0	qa: capability C6.14 — Works (fresh Opus reader), nightly 42616655752 
+1430	2026-11-09	app	185	screens: C7.3 — "Entered in the portal" tick per section on the answer
+1427	2026-11-09	records-docs	0	qa: C7.10's status cell to Works (the evidence already says so)
+1421	2026-11-09	app	7	runtime: C6.13 — Fixes QA-329: a filing change is no longer refused af
+1420	2026-11-09	records-docs	0	qa: gate A walks: C9.2 back to Works; C6.13 held by QA-329 (Major)
+1419	2026-11-09	records-docs	0	qa: gate A walks: C11.6, C6.12 back to Works; QA-328 new
+1417	2026-11-09	records-docs	0	qa: Opus re-read of Sonnet verdicts: C3.16, C6.13, C9.2, C6.12, C11.6 
+1411	2026-11-09	app	35	checkpoint: review the replayed field-map drafts in one order, so the 
+1410	2026-11-09	records-docs	0	qa: C7.9, C7.10, C7.7 to Works on 3614e35b2; C7.3 stays Partial; QA-31
+1409	2026-11-09	tests-only	10	runtime: C6.5 QA-322 pack — C6.5-12d (the note's "changed" by value) a
+1405	2026-11-09	tests-only	4	C6.5: the one saved AI read of the synthetic letter (FQ-10, US$0.016)
+1404	2026-11-09	app	46	runtime: C6.5 — the client sees "please check" on an answer while a ty
+1402	2026-11-09	tooling	2	ci: shard time limit 60 minutes, not 45 (P-214)
+1401	2026-11-09	records-docs	0	qa: C6.5 score on 60235a001 — stays Partial, 30/32; QA-322 new
+1396	2026-11-10	tests-only	238	C7.5: the one saved paid review of IMM 5257 (US$0.86)
+1394	2026-11-09	app	96	runtime: C10.2 — the finished story's Paper copy read back from the Le
+1393	2026-11-09	app	220	runtime: QA-317 (C7.3, C7.7) — the Online line opens its answer sheet
+1392	2026-11-09	app	579	runtime: C6.14 — one document for the whole application, with default 
+1390	2026-11-09	app	487	runtime: C6.19 — facts from an earlier case: offered, re-confirmed, ex
+1389	2026-11-09	app	227	runtime: C7.10 — readiness figure per filing on Ready to file; the cas
+1388	2026-11-09	records-docs	0	qa: C7.7 score on fc49dc5a4 — stays Partial on gate A; QA-246 closed; 
+1386	2026-11-09	app	70	runtime: C6.5 — "checked against the document" opens a check when the 
+1384	2026-11-09	records-docs	0	qa: re-score after #1344 (B162) — C7.6 stays Works
+1382	2026-11-09	app	17	runtime: C7.7 — QA-246: GET …/forms lists a form once its rule says it
+1380	2026-11-09	records-docs	0	qa: re-score after #1367 and #1370 — C7.7, C7.3, C10.2 Partial; QA-153
+1378	2026-11-09	app	31	data: C7.7 — B157 one relative answer subject per person and relation,
+1377	2026-11-08	records-docs	0	qa: re-score after #1365 — C7.3 Partial, C10.2 Partial; QA-309 closed;
+1375	2026-11-09	app	540	runtime: C6.5 — part 2c: staff corrections of document values counted 
+1374	2026-11-09	app	429	runtime: C6.5 — part 2b: the "Fill this from documents" drawer, and th
+1370	2026-11-08	app	132	QA-165's last two: IMM 5257's Taiwan PIN and Israel passport asked onl
+1369	2026-11-09	app	821	runtime: C6.5 — part 2a: documents read into facts, one "Confirm & use
+1368	2026-11-09	app	871	runtime: C7.5 part 2 — review runs, the run card, replay
+1367	2026-11-08	app	261	forms: C7.7 — B155 IMM 5645 Section C, brothers and sisters as a list 
+1365	2026-11-08	app	95	runtime: QA-309 (C7.3, C10.2) — the principal's Online IMM 5257 reache
+1363	2026-11-08	tests-only	14	QA-315: C7.2's pack files IMM 5257 as a PDF upload on the checkpoint
+1362	2026-11-08	records-docs	0	qa: re-score after #1318 — C7.2, C7.3, C7.7 Partial; C7.6 Works; QA-16
+1357	2026-11-08	records-docs	0	qa: C6.9 hold removed — green again on main 78db1504e after #1348 (nig
+1353	2026-11-08	records-docs	0	qa: QA-153 and QA-246 retested on main 7e94da44f — both product faults
+1352	2026-11-08	records-docs	0	qa: re-score on main 7e94da44f — C7.6, C9.2, C6.13, C3.16 Works; C7.7 
+1349	2026-11-08	records-docs	0	qa: C6.9 held (red on main f18fb0e66, run 42464045938, only -18); QA-3
+1348	2026-11-08	tests-only	6	runtime: C6.9 — QA-312: the pack's client re-confirms officer-recorded
+1345	2026-11-08	tooling	139	lead-watch: local-lane stall alarm (P-420)
+1344	2026-11-09	app	78	runtime: C7.6, C7.7 — B162: Ready to file is refused while a PDF-uploa
+1340	2026-11-08	app	145	screens: C7.6 — B161: a Paper form's Printed and Signed in pen are rec
+1337	2026-11-08	tooling	305	ci: gate B adds packs by diff; the queue protects every Works row, poo
+1334	2026-11-08	tests-only	31	runtime: C7.6 — the pack records the Paper IMM 5257's Printed and Sign
+1331	2026-11-08	app	60	runtime: C7.7 — BR-9: each box a copy leaves "To write by hand" is its
+1330	2026-11-08	app	577	runtime: C10.2 — the finished story, phase 1: the Visitor visa family 
+1328	2026-11-08	records-docs	0	forms: C7.7 — G25: check_if_yes/check_if_no write IMM 5645's "accompan
+1327	2026-11-08	tests-only	142	runtime: C3.16, C9.2 — packs: case part on the six; BR-3 breadth (QA-3
+1325	2026-11-08	records-docs	0	qa: QA-307, QA-308 (C7.7), QA-309 (Online IMM 5257 never Done), QA-310
+1323	2026-11-08	tooling	667	ci: retire M2 leftovers, base at run time, nightly Works packs (D1, D6
+1322	2026-11-08	records-docs	0	qa: C9.2 stays Partial — breadth reworded by the founder (P-417, QA-30
+1320	2026-11-08	records-docs	0	qa: re-score batch 2 on main 152759210 — C6.11, C6.12, C8.1, C11.6 Wor
+1318	2026-11-08	app	354	forms: C7.2, C7.3 — QA-165 (migration): Yes/No details shown only on Y
+1317	2026-11-08	tests-only	148	runtime: C7.7 — row C4, pack 4 of 4: the pack on the configured checkp
+1314	2026-11-08	tests-only	23	runtime: C7.3 — QA-305: C7.3-4 reads each person's own date of birth o
+1313	2026-11-08	records-docs	0	qa: C6.4 Works (gate A + second run); re-score after #1251 — C6.3 Work
+1312	2026-11-08	tests-only	6	qa: M3 re-score on main 65fed1e7f — C6.15, C6.18, C9.5 Works; C6.4, C8
+1304	2026-11-08	tooling	23	ci: empty the M2-hot list (P-415): M2 is 60/60, five approved M3 PRs w
+1301	2026-11-07	records-docs	0	qa: QA-304 (UX · Minor, C6.9) — focus after the case check's answer li
+1300	2026-11-07	records-docs	0	qa: C6.9 gate A of the page after #1255 — PASS with limits on 8395c0ce
+1298	2026-11-07	records-docs	0	qa: C6.9 re-check after B148 (#1250) — Works on 488fe8a19 (run 4239915
+1295	2026-11-07	app	34	screens: C6.12 — B151 the unpriced fee state names the people; a recor
+1290	2026-11-08	app	32	runtime: C8.1 — B130 Signed by hand and the signed scan name the print
+1289	2026-11-07	tests-only	22	ci: B160 — suites ending in a bare summary() can fail now; a guard ref
+1285	2026-11-07	tests-only	47	runtime: C11.6 — C4 channel-per-form pack on the configured checkpoint
+1283	2026-11-07	tests-only	53	runtime: C9.2 — C4 changed-facts pack on the configured checkpoint (re
+1282	2026-11-09	app	378	runtime: C7.9 — must verify before filing (row B142)
+1279	2026-11-07	app	75	runtime: C6.12, C8.2 — B152 a recorded group's fee lines are frozen at
+1278	2026-11-08	app	122	runtime: C7.7, C8.1 — B132 Paper form signed in pen: Printed then Sign
+1275	2026-11-07	app	5	runtime: C8.1 — B129 sign steps and the signed scan refuse a recorded 
+1274	2026-11-07	app	31	runtime: C6.12 — B133 each fee total on /prepare carries its basis; th
+1272	2026-11-09	app	410	runtime: C6.18 — background answers marked by the author with a second
+1270	2026-11-08	tooling	239	ci: B134 — the label guard also sweeps on a schedule (review: approved
+1268	2026-11-08	app	679	runtime: C6.15 — document substitute sets (row B137)
+1264	2026-11-07	records-docs	0	qa: C7.6 re-score on main f187f44f9 — Partial 15/25; release-2 drift h
+1262	2026-11-10	app	1475	screens: C6.17 — a multi-stage case: open at a later stage, Start next
+1261	2026-11-07	app	248	screens: C7.6 C8.2 — B149 words that say what happens; the fee receipt
+1258	2026-11-07	records-docs	0	screens: best-in-class scorecard BIC-01..20 into EXPERIENCE §6 and the
+1257	2026-11-09	app	1653	screens: C6.16 — adult privacy and "Send to …" (B138)
+1256	2026-11-08	app	167	forms: C7.7 — B128 the parents' facts on IMM 5645 (QA-153)
+1255	2026-11-07	app	63	screens: C6.9 — case check UX revision built (BIC scorecard, P-407 ste
+1252	2026-11-08	app	1125	screens: C9.5 — adopt a published update on an open case (B145)
+1251	2026-11-08	app	233	runtime: C6.6, C6.3 — B150 declared answers fill at once and say who g
+1250	2026-11-07	app	105	screens: C6.9 — B148 the case check says P-236's words
+1249	2026-11-07	tests-only	68	runtime: C7.6 — C4 Ready to file pack on the configured checkpoint (re
+1248	2026-11-09	app	1050	screens: C7.8 — add a library form to one filing (B141, migration)
+1247	2026-11-09	app	1631	screens: C8.3 — representative review: send, checklist, approve or sen
+1246	2026-11-08	app	327	runtime: C6.18 — officer entry for background answers, client re-confi
+1245	2026-11-07	records-docs	0	records: M3 UX study — best in class for the case screens, scorecard B
+1242	2026-11-08	app	589	screens: C6.13 — make principal and remove a filing while preparing (B
+1241	2026-11-07	tests-only	97	qa: row B146, L-SA6 partly closes — QA-301, QA-302, QA-303 (Major); C6
+1240	2026-11-07	tooling	4	lead: records of 7 Nov afternoon — Lead 30: P-404 to P-407, M3 now 28 
+1238	2026-11-07	tests-only	97	qa: C6.9 and C8.2 Works on main 9fd299219 (run 42360278263); gate A PA
+1237	2026-11-07	tooling	74	evidence: B131 — gate B reports NOT TESTED, never green, when a pack r
+1236	2026-11-07	tooling	89	ci: the b78 hang — every suite gets /dev/null and timeout -k; b78 off 
+1233	2026-11-07	app	132	screens: C6.12 — B5 fees on the case page (step -25)
+1232	2026-11-07	tooling	533	ci: the kind job's write token (P-214 fix) — records label from main's
+1231	2026-11-07	app	418	forms: C6.11, C7.7 — B107: representative facts on the forms (QA-296, 
+1229	2026-11-07	tooling	2	lead: records of 7 Nov afternoon — Lead 29 on the new account, the nex
+1226	2026-11-07	tests-only	97	qa: C8.1's tick is C7.3's; QA-235 closed; QA-153 rewritten for IMM 564
+1225	2026-11-07	app	44	runtime: C7.6, C9.2, C7.7, C11.6 — C3 a person's Paper choice decides 
+1224	2026-11-07	app	32	runtime: C6.11, C7.7 — QA-296: IMM 5475's designated individual is nev
+1223	2026-11-07	app	79	runtime: C7.7 — forms that wait on an answer are listed apart from for
+1222	2026-11-08	app	333	screens: C6.4 — A6 (B102) a person's age in whole years on the applica
+1221	2026-11-07	app	281	screens: C8.1 — B3 sign and scan by screens (Printed, Signed by hand, 
+1220	2026-11-07	tests-only	44	qa: C6.11 and C8.1 on main ecbd68301 — both Partial; P-339 met; C6.11 
+1216	2026-11-07	records-docs	0	qa: C6.11 on main 7bf128b33 after A7 (#1201) and QA-293 fix (#1204) — 
+1215	2026-11-07	tooling	2	lead: records of 7 Nov noon — switch at 50% (P-397), Lead notes kept i
+1212	2026-11-07	app	34	runtime: QA-295 — the filing record names who prepared and who reviewe
+1208	2026-11-07	tooling	2	lead: records of 7 Nov morning — hand-over Lead 25 → 26, P-394, STATE 
+1204	2026-11-07	app	15	runtime: QA-293 — the representative's tab: details only the firm reco
+1202	2026-11-07	tooling	71	infra: B125 — gate B's checkpoint mode runs the pack alone, "on the ch
+1201	2026-11-07	app	37	runtime: QA-289 — the firm's office phone reaches a case as a phone, n
+1199	2026-11-07	tests-only	28	qa: C6.9 and C8.2 on main 73ae633f2 after A4/A1 — Partial, ready for W
+1198	2026-11-07	app	76	runtime: C7.6, C11.6, C8.1 — A3 release 2's own lines on the checkpoin
+1197	2026-11-07	app	108	screens: C6.9 — B124 the outcome says when it rests on unconfirmed ans
+1196	2026-11-07	records-docs	0	qa: capability C6.4 on main 7636ba859 after B1 (#1073) — Partial 19/30
+1188	2026-11-07	tooling	8	evidence: F6 — m2 and m3 wait up to 5 min for a batch to fill (was 2),
+1184	2026-11-06	records-docs	0	qa: after-merge — M2 holds 60/60 after B120 and #1171; C1.3 and C11.5 
+1180	2026-11-07	tests-only	325	M3 row C1: the packs' expected lines from the pinned release's configu
+1178	2026-11-06	tooling	8	infra: quarantine check_b78_section_names.ts in merge-queue batches (h
+1174	2026-11-06	tooling	37	infra: push guard checks only commits not yet on GitHub, and fails clo
+1172	2026-11-07	app	268	screens: C6.9 — B106 eligibility rules screen on the combination (row 
+1171	2026-11-06	app	276	runtime: C7.6 — B2 Ready to file by screens: review, pass a warning wi
+1168	2026-11-06	tooling	232	infra: P-376 (3) — no && list in a workflow hides a red
+1167	2026-11-07	records-docs	0	plan: M3 sprint rows (P-359, P-376)
+1162	2026-11-06	records-docs	0	qa: REGRESSION-HELD — C10.1 R12c step hold (Mac only, QA-285); the C10
+1161	2026-11-06	records-docs	0	qa: C10.1 on main fd29643aa (#1156) — Works; QA-285 closed; M2 60/60 o
+1158	2026-11-06	app	2049	runtime: B120 — one file per feature for the hot files: the configured
+1157	2026-11-06	records-docs	0	qa: QA-289 (Bug · Major, proposed) and QA-290 (Bug · Minor) — the firm
+1156	2026-11-06	app	152	forms: C10.1, QA-285: the checkpoint's validated IMM 5257 files from t
+1154	2026-11-06	records-docs	0	qa: capability C10.1 on main ea8e35763 (#1123) — Partial, held only by
+1151	2026-11-06	records-docs	0	qa: QA-271 closed on main c8c65785e (#1131); C6.1, C11.12 stay Works (
+1149	2026-11-07	tests-only	250	evidence: B121 — reference graph for suite selection, contract and sch
+1148	2026-11-07	app	9	runtime: C7.7 — B117 the people route refuses a representative (422)
+1147	2026-11-06	tooling	24	evidence: B119 — records never block code: a third Mergify queue "reco
+1145	2026-11-07	tooling	801	infra: B122 — automatic flaky-test handling: one retry in PR and queue
+1144	2026-11-06	tests-only	2	qa: capability C4.6 on main 6bfa7af09 — QA-270 closed; C4.6 Partial, h
+1141	2026-11-06	records-docs	0	flowtest2 (throwaway): P-371 records path after review fixes
+1139	2026-11-06	tooling	753	infra: P-371 flow fix — drafts run only the guard, ready checks never 
+1138	2026-11-06	records-docs	0	flowtest (throwaway): P-371 records path
+1136	2026-11-06	tooling	1061	infra: tonight's failures as enforced guards — current Lead, label vs 
+1134	2026-11-06	app	22	forms: C4.6 — QA-270 file half: Preview's filled PDF file address is r
+1133	2026-11-06	tests-only	350	qa: milestone — M2's last walk on main bf12209f1: C4.5, C4.11 Works; C
+1131	2026-11-06	app	66	runtime: QA-271 (C6.1) — B115: the case page adds the sponsor; Add but
+1128	2026-11-07	tooling	95	lead: records of 5 Nov evening — P-357 to P-362, B112 to B115, STATE, 
+1125	2026-11-06	app	24	runtime: QA-272 — the status question offers the form's own list, not 
+1123	2026-11-06	app	988	forms: C10.1 — B99 row 12b: a real validated IMM 5257 copy read back (
+1121	2026-11-06	app	2	runtime: opening a case waits longer for a connection when several ope
+1116	2026-11-05	tests-only	15	tools: C5.1 pack makes its own combination with forms and no document 
+1115	2026-11-06	app	16	forms: C4.11, C5.1 — QA-262: a condition on one combination no longer 
+1114	2026-11-06	app	3	screens: C4.6 — QA-270 the fill route takes Preview's check
+1112	2026-11-06	records-docs	0	qa: gate A on the C4.11 stack at 414289ef6 — no PASS; QA-262, QA-263
+1110	2026-11-05	tooling	2	lead: STATE at the account switch, P-356, resume page corrected
+1108	2026-11-05	records-docs	0	lead: STATE at the account switch
+1105	2026-11-05	records-docs	0	qa: records — after #1100, QA-256 closed; C4.5 stays Partial on QA-255
+1104	2026-11-05	tooling	2	lead: P-355 stacks and switch at the limit; B109-B111; STATE
+1101	2026-11-05	records-docs	0	qa: records — C11.15 Works, QA-252 closed; C4.5 Partial (QA-255, QA-25
+1100	2026-11-05	app	33	forms: C4.5 — B112: whom a supplied fact is about moves with a field m
+1097	2026-11-05	tooling	2	tools: m3-guard, approved hot-file line refused on a long PR body
+1095	2026-11-05	records-docs	0	qa: records — after #1058, C2.6 Works; QA-233, QA-242 closed; M2 57/60
+1092	2026-11-05	tooling	2	lead: P-354 Devin report-only, watcher trial; resume page; STATE
+1091	2026-11-05	app	100	forms: C11.15 — Choose the page and find again starts with any page ad
+1088	2026-11-05	tooling	2	lead: records of 5 Nov — P-349 to P-353, Leads 11 to 13, STATE, RULES
+1087	2026-11-05	records-docs	0	qa: records — QA-252, the page choice refuses a page; the form-finder 
+1085	2026-11-05	app	557	forms: C10.1 — B97: release 2 through B81's choices step, so row 9 goe
+1084	2026-11-07	app	226	runtime: C8.2, C6.9 — B104 J7 Stage 1 on the configured checkpoint (wh
+1078	2026-11-05	records-docs	0	qa: batch 24 records — the end-to-end list; the checklist-reading row 
+1075	2026-11-07	app	171	runtime: C7.3 — portal sheet passes its pack on the configured checkpo
+1073	2026-11-07	app	526	runtime: C6.4 — Documents panel on the case page; checkpoint's conditi
+1072	2026-11-07	app	110	runtime: C6.11 — IMM 5476 follows the representative of record on the 
+1071	2026-11-05	tooling	354	tools: route-has-screen — a pack's set-up route needs a screen or a re
+1070	2026-11-05	tooling	2	lead: records — P-348 founder approves the Fable outcome: journey orde
+1068	2026-11-06	app	357	forms: C4.11 — B88: a worked-out Yes/No that prints its condition's de
+1066	2026-11-05	records-docs	0	qa: batch 23 records — QA-239 (row B88), an approved condition blocks 
+1064	2026-11-05	tests-only	6	qa: the section-order pack needs two chosen sections, and reads the la
+1063	2026-11-05	tooling	2	lead: records — P-347 Fable settled; /next and hand-over figures corre
+1062	2026-11-05	app	374	screens: C10.1 — row 7: a person's names for the 29 sections no headin
+1060	2026-11-05	app	17	forms: C7.7 — a case's fill accepts the schedules and dependants' form
+1058	2026-11-05	app	221	forms: C2.6, C4.8 — a checklist's facts are proposed, approved and ask
+1057	2026-11-05	app	506	forms: C10.1 — B81: mark an answer Not on this form; filling refuses i
+1056	2026-11-05	app	282	forms: C11.6 — how each form is filed, on the case page; the case's fo
+1055	2026-11-05	tooling	37	lead: records — Lead 10 → Lead 11 hand-over (5 Nov 08:53 IST): P-344, 
+1054	2026-11-07	app	493	forms: C3.16 — shared field scope (person · filing · household · organ
+1053	2026-11-05	app	1266	forms: C4.11 — a form field can hold a question's condition in a form 
+1052	2026-11-06	app	398	forms: C10.1 (steps F10) — Family sponsorship set up from its forms on
+1051	2026-11-05	app	392	runtime: C1.3, C11.5 — employer case link: pick one, the employer's fa
+1050	2026-11-05	app	658	forms: C10.1 (steps E10, E10b) — QA-144 slice 4 (B79a): Express Entry 
+1048	2026-11-05	records-docs	0	qa: batch 22 records — the drafting-run pack 24/24, the row stays Part
+1044	2026-11-05	records-docs	0	qa: records — QA-238, a PQR pick Ready with its quote unresolved
+1041	2026-11-05	records-docs	0	qa: records — QA-237 (row B86), an approved condition cannot be releas
+1040	2026-11-05	tests-only	4	forms: C4.7, C4.11 — PQR picks on the six, one v2 pair (B73 A; paid US
+1039	2026-11-05	records-docs	0	qa: records — the release row's note: Works on the checkpoint, the six
+1037	2026-11-05	tests-only	4	forms: C4.11 — saved conditions on the six, one v2 pair (B74; paid US$
+1036	2026-11-05	app	766	forms: C4.11 — ask a form's Yes/No form field as its own question on t
+1035	2026-11-05	records-docs	0	qa: records — QA-236, the order field maps are applied in changes the 
+1032	2026-11-05	records-docs	0	qa: records — QA-235 (row B84), no Schedule 1 PDF can be generated
+1031	2026-11-05	records-docs	0	qa: batch 21 records — the drafting-run row 23/24, QA-227 closed, QA-2
+1028	2026-11-05	records-docs	0	qa: batch 20 records — the section-order row to Works; M2 58/60
+1023	2026-11-05	records-docs	0	qa: records — QA-233, checklist conditions on facts not in the library
+1022	2026-11-05	tests-only	26	qa: the section-order pack reads IMM 5257's printed headings and the p
+1021	2026-11-05	records-docs	0	qa: batch 18 records — the release row and the document-facts row to W
+1016	2026-11-05	records-docs	0	qa: batch 17 records — the new-edition row to Works, run on the checkp
+1014	2026-11-05	records-docs	0	qa: batch 16 records — the library-add row to Works; M2 54/60
+1010	2026-11-05	records-docs	0	lead: records — Lead 9 → Lead 10 hand-over (5 Nov 02:30 IST): P-343 ru
+1009	2026-11-05	app	127	forms: C10.1 — checkpoint rows 9, 11, 12: release 2 channels, the fami
+1006	2026-11-05	app	7	Audit trail: a re-compare no longer drops a kept decision's To review 
+1005	2026-11-05	app	589	screens: C4.5 facts a document supplies (person's step, US$0)
+1004	2026-11-05	records-docs	0	qa: batch 15 records — the form-masters row to Works, four Majors clos
+1002	2026-11-05	records-docs	0	qa: the release row runs in the regression set on the configured check
+998	2026-11-05	app	18	forms: C3.6 — a cited Sample rule on the six's Visitor visa, so "Add t
+996	2026-11-05	records-docs	0	qa: batch 14 records — the thin-slice case row and the Demo row to Wor
+993	2026-11-05	app	152	forms: C4.1 — B71 Submit on the six: words-only form lines and IRM 000
+991	2026-11-05	tooling	134	B77: the regression set runs each row on the data its verdict counts o
+986	2026-11-04	records-docs	0	qa: checkpoint rows held from the six run, not demoted (corrected P-33
+985	2026-11-05	tooling	2	lead: records — Lead 8 (4 Nov 23:00 IST): P-338 ETA board, P-339 app v
+984	2026-11-04	records-docs	0	qa: hold the release row's pack from the regression set (red on the si
+982	2026-11-05	tests-only	37	QA-208, QA-209: the forms checks' Mac-only flakes — a closed keep-aliv
+981	2026-11-04	tests-only	16	qa: the new-edition pack's K1 step counts form-box problems and names 
+980	2026-11-04	tests-only	91	qa: the drafting run's pack reads step 4 from the fact sources (newer 
+978	2026-11-05	app	96	runtime: QA-231 — a new edition's impact names the parts it touches, K
+974	2026-11-05	records-docs	0	qa: batch 13 records — two rows to Works, the new-edition row 14/17; M
+973	2026-11-05	app	56	forms: C4.1 — QA-221 Schedule 1 is not asked of a child under 18 (shar
+969	2026-11-04	records-docs	0	qa: C11.14 re-score after #785 — Works on the six (pack 14/14; QA-176 
+968	2026-11-04	tests-only	6	qa: runtime pack for who can be in the application runs on the release
+967	2026-11-05	app	468	forms: C4.11, C7.7 — IMM 5257's Yes/No form fields asked as their own 
+963	2026-11-04	tests-only	2	lead: records — Lead 7 → Lead 8 hand-over: RULES.md as of P-337, DECIS
+956	2026-11-04	records-docs	0	qa: batches 11–12 records — QA-144 closed, seven rows to Works, new Ma
+953	2026-11-04	tests-only	2	lead: records — 4 Nov evening (Lead 7): STATE, DECISIONS P-319–P-334, 
+952	2026-11-04	records-docs	0	qa M3 — C7.6 after #861 Partial (API works on fixture and checkpoint, 
+951	2026-11-04	tooling	21	P-214: gate B names why a pack stopped — its last lines on exit 2, a c
+948	2026-11-05	app	73	QA-225: another firm's sign, scan and other case lines never reach a f
+947	2026-11-04	records-docs	0	qa: C11.8 re-score after #872 — Works on the six
+944	2026-11-04	records-docs	0	qa: C4.2 re-score after #866 — Partial, not reachable on the six (QA-1
+939	2026-11-04	tests-only	19	qa: batch 10 records — gate A results, two capabilities to Works, two 
+937	2026-11-04	app	20	runtime: QA-207 (#886) — a previous edition can be drafted and replaye
+936	2026-11-04	app	111	runtime: C4.7 — QA-144 part 1: the Smart questionnaire step runs the s
+935	2026-11-04	app	151	forms: C3.5 — Merge into… and Add another name on a field's page (QA-2
+933	2026-11-04	tests-only	24	QA-215: packs exit as gate B expects — the runtime people pack says se
+931	2026-11-04	records-docs	0	qa M3 — the M3 packs on the configured checkpoint (read on #891 before
+929	2026-11-04	app	95	forms: C3.4 — QA-218, "Saved · US$0" for the AI masters run on the scr
+926	2026-11-04	app	453	runtime: C9.2 — a changed fact marks finished items Out of date, with 
+924	2026-11-04	app	862	runtime: C8.2 — Record the submission per group, Correct a number (mig
+922	2026-11-04	records-docs	0	qa: batch 9 — #798 QA-144 slice 1 re-scored (C4.7 17/17 on the checkpo
+919	2026-11-04	records-docs	0	qa: C4.11 Partial on the configured checkpoint after #798 (pack 14/23 
+918	2026-11-04	records-docs	0	qa: C3.10 Works stands on the configured checkpoint (pack 7/8 only on 
+917	2026-11-04	records-docs	0	qa: C10.1 Partial on the configured checkpoint after #798 (pack 13/23 
+916	2026-11-04	records-docs	0	qa: C4.8 Partial on the configured checkpoint after #798 (pack 6/11 tw
+915	2026-11-04	records-docs	0	qa: C4.2 Partial on the configured checkpoint after #798 (PQR rules ho
+914	2026-11-04	records-docs	0	qa: C4.1 Partial on the configured checkpoint after #798 (pack 14/17 t
+904	2026-11-04	records-docs	0	qa M3 — after #798: the five M3 rows still not reachable on the checkp
+903	2026-11-04	records-docs	0	qa: M2 no-pack re-proof (first half) — 10 Works confirmed, C3.5 Partia
+902	2026-11-04	records-docs	0	qa: re-prove C11.18 — Works confirmed: set by hand with a reason, seco
+901	2026-11-04	records-docs	0	qa: re-prove C11.9 — Works confirmed: where used first, withdraw own d
+900	2026-11-04	records-docs	0	qa: re-prove C11.2 — Works confirmed: one door, IRCC columns, same fil
+899	2026-11-04	records-docs	0	qa: re-prove C5.7 — Works confirmed: write a family, run, fail per val
+898	2026-11-04	records-docs	0	qa: re-prove C5.6 — Partial: the LMIA Sample release counts as real (n
+897	2026-11-04	records-docs	0	qa: re-prove C5.5 — Works confirmed: a failing answer-key test blocks 
+896	2026-11-04	records-docs	0	qa: re-prove C5.3 — Works confirmed: To review chips, maker 403, secon
+895	2026-11-04	records-docs	0	qa: re-prove C4.10 — Works confirmed: one source per fact, asked-of-no
+894	2026-11-04	records-docs	0	qa: re-prove C4.9 — Partial: no question exists on the six to change w
+893	2026-11-04	records-docs	0	qa: re-prove C4.5 — Partial: no questions on the six, so facts leaving
+892	2026-11-04	records-docs	0	qa: re-prove C4.3 — Partial: on the six Preview shows 0 questions (QA-
+891	2026-11-04	app	26	runtime: QA-144 slice 1 — IRM 0002 attached and its saved field map re
+886	2026-11-04	records-docs	0	forms: IMM 5476 (11-2021) saved field map, draft + blind checker for Q
+885	2026-11-04	app	68	runtime: QA-207 (DEMO.md row 17) — IMM 5476 2021 in the library and 11
+884	2026-11-04	records-docs	0	qa: REGRESSION-HELD.md — four held packs for the regression set (notes
+883	2026-11-04	app	196	forms: QA-206 (C3.4) — sections named from printed headings
+882	2026-11-04	app	50	forms: QA-195 (C3.4) — identity documents decided by name in the maste
+881	2026-11-05	app	74	forms: C11.7 part B — Provincial nominee from its paper twins
+879	2026-11-04	app	41	runtime: QA-144 slice 3 — Study permit from its forms
+878	2026-11-04	app	169	runtime: QA-144 slice 2 — With an LMIA from its forms
+875	2026-11-04	tooling	8	P-214 infra: draft PRs run no checks until ready for review; Mergify b
+874	2026-11-04	records-docs	0	qa: C3.4 verdict — Partial (pack green; no screen for the saved master
+872	2026-11-04	app	19	forms: C11.8 — a paid result committed to p2/runs is offered as Saved 
+870	2026-11-04	app	57	forms: C1.6 — each form's channel on the Programs row and the combinat
+868	2026-11-05	app	225	screens: G5 (C5.1) — a release needs a form line and a document line (
+867	2026-11-04	app	64	screens: C11.17 — refusals in Add to Program structure show under thei
+866	2026-11-04	app	53	screens: C4.2 — PQR marks only what the SQR asks (unasked fact, sectio
+865	2026-11-05	app	197	forms: C4.11 — every saved condition lands or says what a person can d
+864	2026-11-04	records-docs	0	qa M3 — round 0 on main 9caa043b: C6.12, C6.4, C7.6, C7.7, C7.3 all Pa
+863	2026-11-04	records-docs	0	M3 design — 11 open M3 rows made ready to build (records)
+861	2026-11-04	app	602	M3 · C7.6 — Ready to file (L-SA3)
+859	2026-11-04	records-docs	0	qa: C3.10 verdict — Works; QA-182 fixed (no box words on 74 pages)
+857	2026-11-04	tooling	401	P-214 / P-320 (b): the protected regression set — each merge-queue bat
+853	2026-11-04	tooling	51	P-214: gate B runs a pack on the configured checkpoint (GATE_B_DATA=ch
+851	2026-11-04	records-docs	0	qa: C11.7 verdict — Partial (part B); finder says 'A step failed' on 4
+850	2026-11-04	tooling	55	P-214: gate B — a key's note never spans a second key; a Claims Works 
+849	2026-11-04	records-docs	0	qa: batches 5–7 + re-proofs — M2 40/60 under P-322 (QA-144 holds 9 row
+848	2026-11-04	tests-only	8	P-214: check_w1_start_setup_browser waits for the Forms panel's count 
+844	2026-11-04	records-docs	0	qa: capability C5.1 — Partial (G5 form-line rule not built; nothing re
+843	2026-11-04	records-docs	0	qa: capability C6.1 — Partial (QA-180 fixed; no case opens on the conf
+841	2026-11-04	tooling	18	infra: two merge queues — M2 first, M2 and M3 never in one batch
+840	2026-11-04	records-docs	0	forms: IRM 0002 (03-2021) — saved field map for the Visitor visa, draf
+838	2026-11-04	tooling	74	infra: M3 guard — an M3-only PR changes no file M2 is still changing
+837	2026-11-04	app	58	runtime: C5.4, C6.1 — Start With an LMIA loads a Sample draft (outside
+833	2026-11-04	app	155	forms: C3.8 — P-319: family information forms are a role of the librar
+832	2026-11-04	records-docs	0	qa: after-merge batch 4 + P-322 — C11.13 Works, C7.5 Partial; C6.1, C5
+831	2026-11-04	tooling	9	infra: re-test chooses its demo data (six or the configured checkpoint
+830	2026-11-04	tooling	26	lead: the 30-minute check measures the founder's five changes (Mac bui
+829	2026-11-04	app	74	forms: C3.10 — QA-182, every message says form field (P-63), never box
+823	2026-11-04	records-docs	0	qa: capability C7.5 — Partial (part 1 rules cross-checks and findings 
+822	2026-11-04	records-docs	0	qa: C11.13 verdict — Works (held part excluded); QA-192 fixed
+821	2026-11-04	tests-only	34	qa: after-merge batch 3 — C11.10, C5.4 Works; C3.8 re-confirmed; QA-18
+820	2026-11-04	app	26	runtime: printed editions may start with IRM as well as IMM (IRM 0002,
+819	2026-11-04	tooling	115	infra: nightly on GitHub's machines (six parts) + re-test mode for nam
+816	2026-11-04	records-docs	0	qa: capability C6.5 — Partial (reader by rules + R11 work in the engin
+811	2026-11-04	records-docs	0	qa: C9.1 verdict — Partial (works on an empty library; checkpoint row 
+804	2026-11-04	tooling	544	infra: gate B — a code PR's named capabilities carry no open Major and
+802	2026-11-04	app	269	forms: C3.4 — QA-196: AI form checks and guide checks are accepted on 
+801	2026-11-04	records-docs	0	qa: after-merge batches 1–2 — C6.12 Partial (step 24 met), C9.1 Partia
+798	2026-11-04	app	235	runtime: QA-144 slice 1 (Major) — the configured checkpoint sets up th
+794	2026-11-04	app	39	runtime: C6.1, C5.1 (QA-180, Critical) — release and Open a case read 
+793	2026-11-04	app	111	screens: C11.10, C5.4 — a Live combination reads as one state everywhe
+792	2026-11-04	tests-only	4	P-214: check_r146 reads committed whole-form jobs only (unblocks #784 
+791	2026-11-04	app	82	runtime: C6.12 step 24 — fee lines for study permit, work permit, open
+790	2026-11-04	app	89	forms: C3.8 — every Background question by the form's own reading (QA-
+789	2026-11-04	tooling	27	lead: records — Lead 1 → Lead 2 hand-over, Lead 2 morning (P-317, P-31
+788	2026-11-04	app	591	runtime: C7.5 part 1 — rules cross-checks and Review findings (migrati
+787	2026-11-04	tests-only	31	forms: C11.7 — saved field maps for IMM 0008 DEP and IMM 5669 and IMM 
+786	2026-11-04	records-docs	0	records: V1 M2 gap triage — 26 missing items ranked by refusal risk
+785	2026-11-04	tests-only	41	forms: C11.14 — the 15 field-map checker rounds on main from #671's pa
+784	2026-11-04	app	247	runtime: C6.5 part 1 — passport reader by rules (MRZ check digits) and
+782	2026-11-04	records-docs	0	records: RCIC acceptance walk — Visitor visa, family of three (report 
+781	2026-11-04	tests-only	57	forms: C9.1 — saved AI run of the IMM 5476 comparison (draft + blind c
+780	2026-11-03	tooling	2	lead: records — P-312–P-314, RULES.md, STATE one page, bottleneck audi
+778	2026-11-03	tooling	2	lead: records — P-311 speed-up plan for the new account
+776	2026-11-03	records-docs	0	qa: capability night re-test — C3.2 Works, M2 43/60; C11.7/C3.4 to fol
+774	2026-11-03	tooling	2	lead: records — Resume on the new account (Lead 5 wrap-up); P-309, P-3
+771	2026-11-04	tests-only	49	forms: C3.4 — saved v2 masters rounds, IMM 5257 and guide 5256 (paid U
+766	2026-11-03	records-docs	0	qa: re-test C4.7, C5.4–C5.6 on 4a7c14dfc — C4.7, C5.5, C5.6 Works; C5.
+765	2026-11-03	tooling	60	lead: skill lead-watch — resources, queue and lanes in one check (foun
+764	2026-11-03	tests-only	29	forms: C4.7 — saved v2 PQR picks for Visitor visa (paid US$0.23, P-295
+763	2026-11-03	records-docs	0	records: Opus re-review of today's PRs, batches 2–3 — merged heads mat
+762	2026-11-03	app	76	forms: C11.7 — Load sample and Saved use a form's saved parts (IMM 564
+759	2026-11-03	tooling	2	lead: records — P-307/P-308 weekly plan: wind down, resume on new acco
+754	2026-11-03	tooling	2	lead: records — Lead 3 hand-over to Lead 4; P-304–P-306
+752	2026-11-03	app	89	forms: QA-195 — identity documents are recognised by their name too, a
+749	2026-11-04	records-docs	0	records: V2 — rule engine check (final), M2 and M3 re-tests
+746	2026-11-03	records-docs	0	forms: C11.8 — one live field-map draft of IMM 5645 through the app (p
+745	2026-11-04	tooling	185	infra: test databases — isolated.sh stop drops its own database; prune
+744	2026-11-03	app	49	forms: C4.11 — saved conditions decided by IMM 5257's own Yes/No quest
+741	2026-11-03	app	29	forms: C3.2/C11.14 — P-305: nothing new to the shared library is accep
+740	2026-11-03	app	36	forms: C11.14 — QA-193: a library change written when a draft is appli
+738	2026-11-03	app	59	runtime: P-32 — a case fills the edition in use (newest mapped PDF edi
+737	2026-11-04	records-docs	0	records: V3 — golden journey on the new main, every form mapped from i
+735	2026-11-03	app	24	forms: C4.7, C4.11 — QA-194: the tolerant matcher never guesses betwee
+734	2026-11-03	tooling	126	infra: type check never passes when tsc checked nothing (#703 Opus re-
+733	2026-11-03	app	51	screens: V3 B1 — release refuses a form with no field map, naming it
+732	2026-11-03	app	561	forms: C9.1 — AI on a held new edition: components touched, Draft with
+730	2026-11-03	app	54	screens: C5.5 — releases outside the demo workspace never skip the gat
+729	2026-11-03	records-docs	0	records: Opus re-review of today's Sonnet-reviewed PRs, batch 1 — QA-1
+728	2026-11-03	app	58	forms: C11.14 — QA-191: a field-map proposal is Ready only when its qu
+727	2026-11-03	tooling	202	infra: QA-181 — bind starts from main for merged/unrelated/stale lane 
+726	2026-11-04	app	153	forms: C11.13 — QA-192: a near duplicate is accepted only with a perso
+723	2026-11-03	records-docs	0	records: Opus re-review of the PRs merged during the Sonnet reviewer t
+722	2026-11-03	app	36	screens: QA-172 (C4.1, C11.12) — the author's questionnaire shows sect
+720	2026-11-03	tests-only	46	qa: after-merge + explore M2 — 4 confirmed Works, 14 to Partial; QA-18
+719	2026-11-03	app	78	forms: C11.7 — Reset to the six reads IMM 5669 and IMM 0008 DEP; sourc
+718	2026-11-03	app	89	forms: C3.4 — v2 masters prompts with the worked tree, form output lim
+716	2026-11-03	tests-only	127	forms: C11.8 — QA-154: the door's pass case and the runner's door in t
+715	2026-11-03	app	101	forms: C7.2 — IMM 5257 fills 43 of 46 mandatory fields: other names, n
+714	2026-11-04	app	66	runtime: C6.1 — Open a case offers only a release a case can open on (
+713	2026-11-03	records-docs	0	records: E0 refresh — what is built (10:20 and 11:50), build review se
+712	2026-11-03	app	35	screens: C3.15 — rename needs a reason; pack to P-266
+710	2026-11-03	tests-only	140	forms: C4.7 — v2 PQR-picks job files for the paid runner (US$0; worst 
+709	2026-11-03	app	66	runtime: C7.7 — Paper lines with the barcode page in the deliverables 
+708	2026-11-03	tooling	2	lead: records — Lead 3 took over; P-299 (no bulk accept of new fields)
+707	2026-11-03	records-docs	0	notes: quarantined suites — evidence and status on main (3 Nov)
+706	2026-11-03	records-docs	0	records: V1 follow-up — draft capabilities for the M2 gaps and the top
+704	2026-11-03	tooling	2	lead: records — Lead 2 hand-over to Lead 3; P-298
+703	2026-11-03	tooling	93	infra: type check in CI (tsc --noEmit for api and web)
+701	2026-11-03	records-docs	0	records: V4 — UX re-score (7.0/10)
+700	2026-11-03	app	44	forms: C11.14 — QA-159: a one-word name inside a longer one, and singu
+699	2026-11-03	app	12	forms: C3.2/C11.14 — P-294/P-299: no AI-proposed new field is accepted
+698	2026-11-03	app	20	screens: C2.4 — older editions never shown as current
+693	2026-11-03	app	15	forms: C11.14 — a live round recorded completed_with_unresolved is use
+691	2026-11-03	app	93	screens: C3.8 — non-fact Background question refused, clear IMM 5707 e
+689	2026-11-03	app	73	forms: C11.11 — checklist forms are not filed lines; online-only shown
+688	2026-11-03	app	21	forms: C4.2 — plain duplicate wording (unasked fact: question for the 
+686	2026-11-03	tests-only	53	qa-tooling: C6.9, C6.12 — C6.9's setup in its usage line; C6.12 checks
+685	2026-11-03	records-docs	0	records: V2 — rule engine check
+683	2026-11-03	app	43	screens: C1.5 — copy route works
+682	2026-11-03	records-docs	0	records: V3 — one-system journey
+680	2026-11-03	app	66	runtime: C7.7 — form and check conditions decided by the shared resolv
+678	2026-11-03	tooling	2	lead: records — Lead 1→2 hand-over; P-296, P-297 rulings; V1–V4 + E0 r
+677	2026-11-03	tests-only	22	qa-tooling: C6.4 — QA-149 retest check follows today's fact and shape
+676	2026-11-03	app	72	screens: C5.4 — release with its sources reachable from the Demo menu 
+675	2026-11-03	tests-only	468	qa-tooling: C3.10, C5.2, C11.1, C11.17 — runnable acceptance packs fro
+674	2026-11-03	tests-only	26	qa-tooling: C4.1, C4.8 — packs follow the P-279 source gate
+673	2026-11-03	app	9	forms: C11.14 — replay checker rounds recorded as completed_with_unres
+672	2026-11-03	records-docs	0	records: E0 — what is built, with evidence
+668	2026-11-03	records-docs	0	records: V4 follow-up — capability texts for the top 5 gaps
+667	2026-11-03	records-docs	0	records: V4 — best in class
+666	2026-11-03	app	86	forms: C4.6 — child and representative signing
+664	2026-11-03	records-docs	0	records: V1 — completeness check, and draft capabilities for its gaps
+663	2026-11-03	tooling	716	infra: I1 — test each change once; notes-only PRs; comment guard
+662	2026-11-03	tooling	2	lead: records — P-295 paid runs up to US$50 total
+661	2026-11-03	app	54	forms: C3.2 — bulk accept only High, one Undo per batch
+660	2026-11-03	tooling	2	lead: records — P-294 rulings while away, CI cancel by id
+659	2026-11-03	app	24	runtime: SH3 — the four callers use the shared resolver
+658	2026-11-03	records-docs	0	lead: records — Lead 1 · 3 Nov sessions started
+657	2026-11-03	tooling	2	lead: records — P-293 four savings (records)
+656	2026-11-03	tooling	2	lead: records — P-292 standard reporting; notes-only PRs fast (records
+655	2026-11-03	tooling	2	lead: records — P-291 16-hour plan, night playbook (records)
+654	2026-11-03	tooling	2	lead: records — P-290 tonight's plan (records)
+653	2026-11-03	records-docs	0	lead: blank-sheet hand-over, STATE 05:40 UTC (records)
+652	2026-11-03	records-docs	0	lead: records — build review v3, independent re-test 36/60 (records)
+651	2026-11-03	records-docs	0	qa: close — #643 scored (C11.10 stays Works); M2 52/60; qa lane closes
+649	2026-11-03	tooling	2	lead: records — P-289, A57–A60, build review v1 (records)
+647	2026-11-03	app	44	forms: C11.14 — G-CORE B5 (P-288 (2)): Ready field-map proposals ticke
+646	2026-11-03	records-docs	0	qa: P-288 — C11.10 Works (M2 52/60); P-288 cited on C11.14 (records)
+645	2026-11-03	records-docs	0	lead: records — P-288, STATE 03:30 UTC (records)
+644	2026-11-03	records-docs	0	qa: after-merge 3 Nov (→ a459787f) — M2 51/60: C11.13 Works (held part
+643	2026-11-03	app	185	screens: UX-A finding 4 — internal identifiers behind Details (for adm
+640	2026-11-03	app	118	forms: C11.13 — a near duplicate's reason and what it is close to, sho
+638	2026-11-03	records-docs	0	lead: records — STATE 01:55 UTC (records)
+637	2026-11-03	app	13	screens: UX-A — Needs you agrees on Programs and To review for every p
+636	2026-11-03	app	121	forms: C11.14 — G-CORE B4: the field-map step's blind checker round th
+630	2026-11-03	records-docs	0	qa: after-merge 3 Nov ~00:30 (→ ae7c40e9) — C8.1 Partial 13/14; P-287 
+629	2026-11-03	records-docs	0	lead: records — P-287 overnight rulings, STATE 00:30 UTC (records)
+628	2026-11-03	records-docs	0	runtime: records — C8.1 review round 4, and the runtime lane's handove
+627	2026-11-03	app	97	screens: G1 PR 2c — the Source panel also opens from the rule dialog, 
+626	2026-11-03	app	35	forms: C11.14 — QA-176: no AI proposal is Ready without both rounds ag
+624	2026-11-03	records-docs	0	qa: after-merge late round (→ e6e3534c) — C5.4 Works, C11.10 Partial (
+622	2026-11-03	app	164	screens: UX-A part 3 — one word per combination state; a Live combinat
+621	2026-11-03	records-docs	0	lead: records — Lead 4 hands over to Lead 5 (23:25 UTC), M2 50/60 (rec
+619	2026-11-03	records-docs	0	qa: after-merge night round on 2562de17 — M2 50/60 (C2.6 Works); QA-16
+617	2026-11-03	app	340	runtime: C8.1 — migration: signed PDFs (who signs, sign steps in order
+616	2026-11-03	app	119	screens: UX-A part 2 — To review's Needs you lists each combination's 
+615	2026-11-03	app	393	screens: G1 PR 2b — shared contract source-register.ts (date read up t
+613	2026-11-03	records-docs	0	lead: records — hourly (21:55 UTC): M2 49/60, IMM 5532 follow-ups (rec
+606	2026-11-03	tests-only	78	qa: after-merge batch #599 (→ 5e3c046d) — C5.5 Works, M2 49/60; head c
+605	2026-11-03	records-docs	0	qa: records — golden journey 3 (5/8, first fail QA-163); QA-162 part f
+603	2026-11-03	tests-only	26	forms: R-146 — saved field map of IMM 5532 (paid US$1.61, verified; P-
+602	2026-11-03	app	581	forms: C11.13, C11.14 — G-CORE B2: rename and merge through the change
+598	2026-11-03	records-docs	0	lead skill: under the 10 KB limit again; two standby Leads (records)
+596	2026-11-03	records-docs	0	lead skill: hand-over by an idle standby Lead (P-286, records)
+593	2026-11-03	tooling	45	lead: standing rules for every Lead — start your successor, numbered L
+592	2026-11-03	app	207	runtime: QA-165 part 2 — each mandatory field of IRCC's form a copy le
+587	2026-11-03	app	651	screens: G1 (C5.4) PR 2a — a release is refused while a published numb
+585	2026-11-03	app	628	forms: C3.4 — AI step for a form edition's checks and document types a
+584	2026-11-03	app	140	forms: C3.13 — library lists: where used as counts, status and origin 
+581	2026-11-03	tests-only	494	qa: one records PR — batches 1–7 (→ d98041e7) + #567 + #582 folded in;
+579	2026-11-03	tests-only	5	runtime: T1 (P-228 (6)) part 1 — speed budgets can be judged on the Gi
+578	2026-11-03	tooling	2	lead: records — P-281, P-282, hand-over STATE (records)
+576	2026-11-03	tests-only	164	forms: PD (R-146, C11.7) — unique data paths for boxes in unnamed XFA 
+574	2026-11-03	app	426	forms: C2.6 — checklist lines decided on the review queue (one door); 
+573	2026-11-03	app	133	forms: C3.6 (part not held) — a document type named while adding a req
+572	2026-11-03	app	42	runtime: QA-165 part 1 — "validated" only from the form's own Validate
+570	2026-11-03	app	81	forms: C11.8 — field-map AI follows the one door rule (P-175); a faile
+569	2026-11-03	app	106	migration: G1 (C5.4) PR 1 — source_entry, the source register (additiv
+568	2026-11-03	app	489	screens: G2 (C5.5) — release refused without a passing signed answer-k
+566	2026-11-03	app	289	forms: C4.7, C4.11 — QA-162: saved AI picks and conditions land by a t
+565	2026-11-03	app	215	forms: C11.15 — Redo with AI per stage (find, read, match); Load sampl
+564	2026-11-02	tests-only	13	screens: C11.3 — acceptance pack loads the six as Demo › Load sample d
+563	2026-11-03	app	22	forms: QA-163 (C11.7, C2.12, C4.11) — a form listed without a field ma
+562	2026-11-02	app	25	runtime: S4 (SA-1B-90) — a case opens only on a startable release; Not
+558	2026-11-02	app	203	screens: G1 (C5.4) part 1 — concept, challenge and the pure source-reg
+557	2026-11-03	app	165	screens: K13 (P-271, P-272) — Smart questionnaire (SQR) names on scree
+556	2026-11-02	app	762	forms: G-CORE B1 — migration (change_set); the rules check R1–R8, the 
+555	2026-11-02	tooling	8	lead: hand-over for tokens, P-276 (records)
+554	2026-11-03	app	324	screens: UX-A part 1 — one definition and one label per count (forms, 
+553	2026-11-02	app	135	runtime: C8.2 slice 1 — the application number on each filing, the UCI
+552	2026-11-02	app	8	runtime: QA-164 (Major) — Confirm on a section never waits for an answ
+547	2026-11-02	tooling	2	lead: P-273 UX baseline and row UX-A (records)
+545	2026-11-02	app	72	screens: C3.12 K3 (QA-148) — "Published" is IRCC's month (printed on t
+544	2026-11-02	tests-only	6	screens: C11.12 rest — the acceptance pack checks P-209 as decided (no
+543	2026-11-02	app	11	runtime: C3.13 red setup — the workspace's first calls no longer race 
+542	2026-11-02	records-docs	0	qa: records — golden journey 1 (4/8, first fail QA-163 Critical); QA-1
+541	2026-11-02	app	47	runtime: SH3 tidy-up — sourceKey and roleOf from the resolver in four 
+539	2026-11-02	tests-only	10	forms: PF — C4.11 step 5 replays both rounds of one run: pass and fail
+537	2026-11-02	tooling	2	lead: P-270 merge main only on conflict; P-271 Smart questionnaire nam
+533	2026-11-02	records-docs	0	lead: BACKLOG rows PE, PF (records)
+532	2026-11-02	records-docs	0	lead: BACKLOG row PD (records)
+531	2026-11-02	records-docs	0	forms: D3 — saved C4.11 step 5 conditions, Visitor visa (paid US$0.19,
+530	2026-11-02	records-docs	0	forms: D3 — saved C4.7 PQR picks, Visitor visa (paid US$0.18, verified
+529	2026-11-02	app	39	runtime: SH3 follow-ups d1+d2 — one rule for whose value a fact is; R5
+528	2026-11-02	tests-only	15	forms: R-146 — saved field maps of IMM 5710, 1294, 0008 (paid US$5.31 
+526	2026-11-02	app	301	forms: C4.11 — Draft questions and documents runs Live or Saved (P-227
+525	2026-11-02	app	696	forms: C5.7 — shared contract (workspace TABS); answer-key families an
+524	2026-11-02	tests-only	3	forms: PC — launcher run record equals the ledger: a cap-refused attem
+522	2026-11-02	app	73	forms: SH2b — a document type's alternatives and fact sources in the o
+521	2026-11-02	tests-only	177	runtime: R3 — a minor's travel answers on every applicant (a minor pri
+519	2026-11-02	tooling	2	lead: P-267 build ahead (records)
+517	2026-11-02	records-docs	0	qa: records — P-250 verdicts on 9 PRs; QA-161 new (SH2b); QA-98 closed
+514	2026-11-02	records-docs	0	lead: BACKLOG row PC (launcher run record)
+513	2026-11-02	app	869	forms: C5.7 — migration; answer-key families and runner, part 1 (engin
+512	2026-11-02	app	54	forms: C11.15 (K11) — Minors QA-78, QA-105, QA-107, QA-110, QA-111; QA
+511	2026-11-02	records-docs	0	lead: P-266, G-CORE concept approved (records)
+510	2026-11-02	app	17	forms: PA — launcher jobs for C4.7 PQR picks and C4.11 step 5 (Visitor
+509	2026-11-02	app	485	runtime: SH3 — resolver contract (shared contract contracts/resolver.t
+508	2026-11-02	app	20	forms: R-146 — 128k output for whole-form field maps of 240+ fields (j
+507	2026-11-02	tests-only	85	qa: records — after-merge pm on 12647032 (C5.6 Works; 5 rows re-scored
+506	2026-11-02	app	171	forms: C4.7 — PQR picks offer exactly Live and Saved (P-227); Saved st
+505	2026-11-02	app	80	screens: C11.3 QA-150 — the full five-part trail on the Forms list's U
+504	2026-11-02	app	279	forms: SH2 — one where-used service (inside G-CORE) + G-CORE concept f
+503	2026-11-02	tooling	6	tools: quarantine check_c313_reuse_browser.cjs (P-214)
+502	2026-11-02	tests-only	12	forms: R-146 — saved field maps of IMM 5604, 5562, 5406, 5646 (paid US
+501	2026-11-02	app	15	runtime: D4 — a worked-out Yes on "has any children" over the client's
+500	2026-11-02	app	438	screens: C11.12 PR 2 + PR 3 — migration (filing modes), the case's fil
+499	2026-11-02	tooling	2	lead: finish plan agreed (P-264, P-265)
+497	2026-11-02	records-docs	0	lead: hand-over check after the soft close (records)
+496	2026-11-02	tooling	2	lead: close-out 2 Nov — P-261, P-262, P-263, restart page for the new 
+490	2026-11-02	tooling	2	lead: P-260 finish program (records)
+488	2026-11-02	tooling	13	lead: P-258, P-259, restart page for a new account, paid-AI tracks, fl
+485	2026-11-02	records-docs	0	forms: D3 — saved C2.6 reading of IMM 5484 (paid US$0.504, verified; P
+484	2026-11-02	app	84	runtime: C7.7 (part 1) — Download PDF copy on an Online item, copy not
+482	2026-11-02	app	148	forms: S2 — a fill trial counts per form edition, and per map version 
+479	2026-11-02	tests-only	22	runtime: D1 browser check — the arrow-key path waits for focus and sho
+477	2026-11-02	app	4	forms: C11.14 (part) — Deselect all within a group on To review › Prop
+475	2026-11-02	app	110	forms: D2 (part 4) — a failed Live run offers Saved (P-227)
+471	2026-11-02	app	40	screens G3 (C5.6, P-240): Sample content releases as a "Demo release",
+470	2026-11-02	app	73	forms: D2 (part 2) — Stub pass no longer offered to a person (P-227)
+469	2026-11-02	app	20	screens QA-82: the author's Questions tab shows the field's short name
+468	2026-11-02	records-docs	0	forms: D3 — C2.6 launcher job studio-imm5484e-requirements for the IMM
+465	2026-11-02	tooling	7	tools: quarantine check_d1_reset_to_six_browser.cjs (P-214)
+463	2026-11-02	records-docs	0	qa: P-250 verdicts on 10 PRs; C3.3 and C4.5 Works, C5.1 Partial (P-248
+460	2026-11-02	tooling	80	lead: P-249–P-257, holds, do-now rows, partial gap rows, M3 wave plan,
+458	2026-11-02	app	4	forms: S9 — "for post" is the mailing address tagged "send post here" 
+457	2026-11-02	app	416	runtime: C6.9 part 3 (M3-D) — override, review and the staff eligibili
+456	2026-11-02	app	22	runtime: S1 — a form line with no signature rule needs a signature (SA
+455	2026-11-02	app	286	runtime: R2 (P-230 (7), P-247) — fees as a dated data table with a bas
+453	2026-11-02	tests-only	93	qa: score before merge (P-250) — #408 C6.4 storage + QA-149, #418 C6.9
+449	2026-11-02	records-docs	0	lead: SA-01B v2.1 split and decisions report (records)
+446	2026-11-02	records-docs	0	lead: P-247 family maximum basis, P-248 form line to release (records)
+445	2026-11-02	app	322	screens: C11.12 (PR 1 of 3) — filing mode per role: rules, release che
+442	2026-11-02	records-docs	0	lead: P-242–P-246 SA-01B answers (records)
+439	2026-11-02	records-docs	0	lead: P-240 publish gates (M2 +4 rows), P-241 sourced-only creation (r
+436	2026-11-02	app	15	samples (P-230): spouse sponsorship has the Sponsor on the case; IMM 5
+435	2026-11-02	app	52	forms: D2 (part 1) — Live or Saved words at every AI start (P-227)
+434	2026-11-02	tests-only	5	tests: screen01 source-trust race step names its cause when it fails (
+431	2026-11-02	records-docs	0	lead: STATE hand-over 2 Nov 05:15 UTC (records)
+429	2026-11-02	app	5	forms: D3 — saved AI field-map answers land on the file's edition (C3.
+428	2026-11-02	app	40	runtime: QA-76 (Major) — plain words on the case page: no "(forms slic
+427	2026-11-02	app	350	forms: C11.13 — Draft fields route and Form library button (saved draf
+426	2026-11-02	app	209	forms: C3.6 — a fact a rule needs carries its answer values (for runti
+425	2026-11-02	records-docs	0	lead: P-233 C11.12 filing-modes board agreed (records)
+423	2026-11-02	tests-only	7	tests: check_c313_reuse_browser records why the sample load fails, and

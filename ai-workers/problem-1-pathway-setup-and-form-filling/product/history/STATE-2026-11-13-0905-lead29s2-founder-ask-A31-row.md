@@ -1,0 +1,5 @@
+# STATE "Founder asks" row A31, moved word for word by Lead 29 (series 2), 13 Nov ~09:0x IST (STATE over 12 KB)
+
+| # | Ask (IST) | Status |
+|---|---|---|
+| A31 | 08:1x (13 Nov, spoken) (a) the internet was switched off by mistake (the outage was his router, not the provider); (b) why capabilities grew from ~100 to ~300 (and ~310-700 in the factory plan); (c) talk to the Fable planner: check its work and the Lead's; (d) "12 PR maximum"?; (e) how to hand our work to the team: give them a zip (they lack the decisions; he would re-explain and record sessions) or deliver it into their repository himself with AI agents; how they review PRs, which guardrails (tests, not people) protect him if something fails, industry practice; (f) one-liners of all of yesterday's analysis, then problem → solution, now or later; no deep work or merging with them | page https://claude.ai/artifact/S43C8ZRpMuAV7JMAHtu3pA (private, 08:2x): routes A zip / B direct PRs / C module with a contract behind a flag (recommended, after the Bake); Fable's cross-check pending on his card |
