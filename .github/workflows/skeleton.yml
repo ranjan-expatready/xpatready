@@ -1,0 +1,115 @@
+# PF-7 (walking skeleton, contracts 2026-11-14 §1.3 and §5.5): the app builds into one container image from a clean
+# clone, compose starts it beside PostgreSQL, migrations apply, and tools/skeleton-smoke.sh proves it: /api/health and
+# the first page answer 200, the image runs as a non-root user and holds no secret; then a seeded fail (the database
+# stopped) must make the smoke script fail on health. The Canadian cloud deploy is PF-8.
+# When (B190, CI minutes): only a pull request whose change touches what goes into the image (the paths below), not
+# while it is a draft (P-371 (1): ready runs it), and by hand. A records-only PR matches no path, so no run starts.
+# GitHub judges `paths` on the PR's whole diff, so a later push to a code PR always starts a run; step "changes" then
+# reads what that one push changed (before..after) against the same list, read from this file, and when it touched
+# none of it (records only, say) the build is skipped in words: the image was proven at the earlier head.
+# Mergify's batch PRs (mergify/*, drafts) do not run it: each PR proved its image; it is not a required check.
+# A ready head's run is never cancelled (P-371 (2)): a newer push waits. US$0 (public repository), no model spend,
+# no key: the database has no password and live AI is off.
+name: skeleton
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/api/**"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/web/**"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/engine/**"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/contracts/**"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/prisma/**"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/samples/**"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package.json"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/package-lock.json"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/prisma.config.ts"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/Dockerfile"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/Dockerfile.dockerignore"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/deploy/**"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/skeleton-smoke.sh"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/contracts/**"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/*.ts"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p5/*.ts"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/env/node/**"
+      - ".github/workflows/skeleton.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: skeleton-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+jobs:
+  skeleton:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+      COMPOSE: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/deploy/compose.test.yml
+      SKELETON_PORT: "4480"
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0, filter: "blob:none", persist-credentials: false }
+
+      - name: changes (did this push touch what goes into the image?)
+        id: c
+        env:
+          ACTION: ${{ github.event.action }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Only a later push to an open PR is judged by its own commits; opened, reopened, ready and by hand always run.
+          if [ "$ACTION" != synchronize ] || [ -z "$BEFORE" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; echo "full run ($ACTION)"; exit 0; fi
+          # The trigger's own path list, read from this file: one list, never a second copy to keep in step.
+          globs=$(awk '/^    paths:/{p=1;next} p&&/^      - /{sub(/^      - /,"");gsub(/"/,"");print;next} p{exit}' .github/workflows/skeleton.yml)
+          [ -n "$globs" ] || { echo "::error::no path list read from skeleton.yml"; exit 1; }
+          # A push that cannot be read (a rewritten branch) runs in full.
+          if ! files=$(git fetch -q --no-tags origin "$BEFORE" "$AFTER" 2>/dev/null && git diff --name-only "$BEFORE" "$AFTER"); then
+            echo "run=true" >> "$GITHUB_OUTPUT"; echo "full run: $BEFORE..$AFTER could not be read"; exit 0; fi
+          hit=""
+          while IFS= read -r f; do [ -n "$f" ] || continue
+            while IFS= read -r g; do [[ "$f" == $g ]] && { hit="$f"; break 2; }; done <<< "$globs"
+          done <<< "$files"
+          if [ -n "$hit" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; echo "full run: this push changed $hit"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            msg="Skeleton not run: this push (${BEFORE:0:9}..${AFTER:0:9}) changed none of the image's paths, only: $(printf '%s' "$files" | paste -sd ',' - | cut -c1-300)"
+            echo "$msg"; echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: build the image (clean clone, no cache)
+        if: steps.c.outputs.run == 'true'
+        run: docker compose -f "$COMPOSE" build --pull --no-cache
+
+      - name: start PostgreSQL, apply the migrations, start the app (waits until /api/health is 200)
+        if: steps.c.outputs.run == 'true'
+        run: |
+          docker compose -f "$COMPOSE" up -d --no-build --wait --wait-timeout 180 || { docker compose -f "$COMPOSE" ps -a; docker compose -f "$COMPOSE" logs --tail 80; exit 1; }
+          docker compose -f "$COMPOSE" logs migrate | tail -2
+          docker compose -f "$COMPOSE" ps -a
+
+      - name: smoke journey (health, first page, me once PF-4 is on main, non-root, no secret)
+        if: steps.c.outputs.run == 'true'
+        run: |
+          [ -d "$S/api/src/platform" ] && export PLATFORM_ME=required
+          bash "$S/tools/skeleton-smoke.sh" "http://127.0.0.1:$SKELETON_PORT" --image studio-skeleton:test | tee smoke.txt
+          exit "${PIPESTATUS[0]}"
+
+      - name: seeded fail (database stopped; the smoke script must fail on health)
+        if: steps.c.outputs.run == 'true'
+        run: |
+          docker compose -f "$COMPOSE" stop db
+          if bash "$S/tools/skeleton-smoke.sh" "http://127.0.0.1:$SKELETON_PORT" > seeded.txt; then cat seeded.txt; echo "::error::the smoke script passed with the database stopped"; exit 1; fi
+          cat seeded.txt
+          grep -q '^FAIL  health' seeded.txt || { echo "::error::the smoke script failed, but not on health"; exit 1; }
+          echo "seeded fail caught: the smoke script failed on health with the database stopped" | tee -a "$GITHUB_STEP_SUMMARY"
+          sed -n 's/^/    /p' smoke.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: app log on failure
+        if: failure() && steps.c.outputs.run == 'true'
+        run: docker compose -f "$COMPOSE" logs --tail 200 app migrate
+
+      - name: stop and remove (containers, network, the database volume)
+        if: always() && steps.c.outputs.run == 'true'
+        run: docker compose -f "$COMPOSE" down -v --remove-orphans

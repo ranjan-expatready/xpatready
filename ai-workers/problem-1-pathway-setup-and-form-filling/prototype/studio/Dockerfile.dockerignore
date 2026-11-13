@@ -1,0 +1,17 @@
+# PF-7: the build context's ignore list for studio/Dockerfile (BuildKit reads <Dockerfile>.dockerignore in place of the
+# context root's .dockerignore; the context is the repository root). An allow-list: everything is left out, then only
+# what the API needs at run time is let back in, then installed packages, working files, built output, tests and
+# screenshots inside it are left out again. sources/, code/, archive/, .tools/, .git/ and the records never enter.
+*
+!ai-workers/problem-1-pathway-setup-and-form-filling/prototype
+!ai-workers/problem-1-pathway-setup-and-form-filling/official-sources
+**/node_modules
+**/.DS_Store
+**/*.log
+**/.env
+**/.env.*
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/web/dist
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/evidence
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/tests
