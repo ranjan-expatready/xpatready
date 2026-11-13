@@ -347,14 +347,15 @@ export function putAnswer(caseId: string, q: Question, value: unknown, row?: str
 export type QuestionnaireIo = {
   mode: "client" | "link";
   /** The query key prefix to refresh after a save, and the key of the view a part reads back after saving. */
-  viewKey: (caseId: string) => unknown[]; freshKey: (caseId: string) => unknown[];
+  /** freshKey: the exact query of the view this person sees (QA-445: never another person's cached view). */
+  viewKey: (caseId: string) => unknown[]; freshKey: (caseId: string, actor: string) => unknown[];
   put: (caseId: string, q: Question, value: unknown, row?: string) => Promise<SaveResult>;
   addRow: (caseId: string, subjectId: string, group: string) => Promise<unknown>;
   removeRow: (caseId: string, subjectId: string, row: string) => Promise<unknown>;
   noneApply: (caseId: string, subjectId: string, group: string, body: { noneApply: boolean; expectedId: string | null }) => Promise<unknown>;
 };
 const RUNTIME_IO: QuestionnaireIo = {
-  mode: "client", viewKey: (id) => ["runtime", "view", id], freshKey: (id) => ["runtime", "view", id, "sqr"], put: putAnswer,
+  mode: "client", viewKey: (id) => ["runtime", "view", id], freshKey: (id, actor) => ["runtime", "view", id, "sqr", actor], put: putAnswer,
   addRow: (id, subject, group) => api(`/runtime/cases/${id}/groups/${subject}/rows`, { method: "POST", json: { group } }),
   removeRow: (id, subject, row) => api(`/runtime/cases/${id}/groups/${subject}/rows/${row}`, { method: "DELETE" }),
   noneApply: (id, subject, group, body) => api(`/runtime/cases/${id}/groups/${subject}/${group}/none-apply`, { method: "PUT", json: body }),
@@ -516,7 +517,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
 
 function SqrPart({ view, index, go, order }: { view: View; index: number; go: (i: number | null) => void; order: (v: View) => Section[] }) {
   const caseId = view.case.id, part = view.sections[index], total = view.sections.length;
-  const qc = useQueryClient(), toast = useToast(), io = React.useContext(QuestionnaireIoContext);
+  const qc = useQueryClient(), toast = useToast(), io = React.useContext(QuestionnaireIoContext), actor = useActorId();
   const person = view.case.people.find((p) => p.subject_id === part.subjectId);
   // A question a rule hides is not asked (its answer, if any, is kept and not used); rules apply on each save.
   const asked = part.questions.filter((q) => !q.hidden);
@@ -575,7 +576,10 @@ function SqrPart({ view, index, go, order }: { view: View; index: number; go: (i
     setLeaveTo({ to, words });
     const ok = await save();
     if (!alive.current) return;
-    const fresh = qc.getQueriesData<View>({ queryKey: io.freshKey(caseId) })[0]?.[1];
+    // QA-445: this person's own view, just reloaded, by its exact key. A prefix read returned the first cached "sqr"
+    // view, which could be the officer's (the case page's client card reads it): a stale copy where this part was not
+    // done yet, so Save and continue chose a target on the wrong data and stayed on the part.
+    const fresh = qc.getQueryData<View>(io.freshKey(caseId, actor));
     const now = fresh?.sections.find((s) => s.subjectId === part.subjectId && s.section === part.section) ?? part;
     const invalid = now.questions.some((q) => (q.group ? q.rows.some((r) => r.answer?.problems.length) : q.answer?.problems.length));
     const flagged = (fresh?.checks ?? view.checks).some((c) => c.subjectId === part.subjectId && c.section === part.section) || now.missing.length > 0;
