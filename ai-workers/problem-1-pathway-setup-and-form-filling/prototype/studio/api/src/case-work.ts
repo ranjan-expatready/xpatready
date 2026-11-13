@@ -21,7 +21,7 @@ const NOT_WORK = ["read", "viewed", "reviewed", "self_reviewed", "approved", "se
   "representative_changed", "officer_assigned", "officer_ended",
   // saying the work is done is not doing it (the review stands behind Ready to file, C7.6)
   "ready_to_file", "ready_to_file_reopened",
-  "loaded", "reset", "seeded", "failed", "cancelled"];
+  "loaded", "reset", "seeded", "failed", "cancelled", "stopped"];
 /** Review findings (C7.10) are the review looking at the work, never the work: added by hand, acknowledged, waived or
  *  dismissed, each logged against the case itself (api/src/findings.ts). Their actions are words other acts use too —
  *  "added" is also a person added to the case — so they are left out by action *and* entity (review 3 B1). */
@@ -40,6 +40,8 @@ export async function caseWork(db: Db, caseId: string): Promise<CaseWork> {
       -- the facts: typed, confirmed, checked against a document, "none apply", rows added
       SELECT a.source_json->>'actor' AS actor, a.effective_at AS at, FALSE AS weak FROM client_canonical_answer a JOIN case_participant p ON p.subject_id = a.subject_id WHERE p.case_id = ${caseId}::uuid
       UNION ALL SELECT a.verified_by, a.verified_at, FALSE FROM client_canonical_answer a JOIN case_participant p ON p.subject_id = a.subject_id WHERE p.case_id = ${caseId}::uuid
+      -- C9.2 Undo (review 4 M1): the restored answer keeps the earlier author, so the person who undid it is named here
+      UNION ALL SELECT a.source_json->'restored'->>'by', (a.source_json->'restored'->>'at')::timestamptz, FALSE FROM client_canonical_answer a JOIN case_participant p ON p.subject_id = a.subject_id WHERE p.case_id = ${caseId}::uuid
       UNION ALL SELECT g.source_json->>'actor', g.effective_at, FALSE FROM client_group_answer g JOIN case_participant p ON p.subject_id = g.subject_id WHERE p.case_id = ${caseId}::uuid
       UNION ALL SELECT g.verified_by, g.verified_at, FALSE FROM client_group_answer g JOIN case_participant p ON p.subject_id = g.subject_id WHERE p.case_id = ${caseId}::uuid
       UNION ALL SELECT r.source_json->>'actor', r.effective_at, FALSE FROM client_fact_record r JOIN case_participant p ON p.subject_id = r.subject_id WHERE p.case_id = ${caseId}::uuid

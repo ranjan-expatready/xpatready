@@ -188,7 +188,7 @@ export function selfReviewOf(x: { actor: string; prepared: Set<string>; solo: bo
   const prepared = x.prepared.has(x.actor), author = prepared || x.changedByReviewer;
   const authors = new Set([...x.prepared, ...(x.changedByReviewer ? [x.actor] : [])]);
   if (author && !x.solo && authors.size > 1) return { problem: { status: 409, detail: prepared
-    ? "You prepared this filing with another case officer: a review by you would read as a second person's. Hand the review to another representative (change the representative of record), or pass the review warning with a reason."
+    ? "You worked on this filing and so did somebody else at the firm: a review by you would read as a second person's. Hand the review to a representative who did not work on it (change the representative of record), or pass the review warning with a reason."
     : x.after === "approval"
       ? "You changed a fact on this filing after it was approved, so a re-approval by you would read as a second person's. Ask the case officer to send it for review again, hand the review to another representative, or pass the review warning with a reason."
       : "You changed a fact on this filing after it was sent for review, so an approval by you would read as a second person's. Send it back to the case officer, hand the review to another representative, or pass the review warning with a reason." } };

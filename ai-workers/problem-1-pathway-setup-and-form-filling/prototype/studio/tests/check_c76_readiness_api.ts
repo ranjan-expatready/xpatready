@@ -204,6 +204,18 @@ const r3m1Rd = readinessOf((await prepare(r3m1.id, rep)).p, r3m1f) as { prepared
 const r3m1Rev = await call("POST", `/runtime/filings/${r3m1f}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(r3m1.id, r3m1f, rep) }, rep);
 ok("BK-18 (review 3 M1) fail: the case officer who decided how a form is filed is a preparer, so the representative cannot review it as one person's work (409)", r3m1Chan.status < 300 && (r3m1Rd?.prepared_by ?? []).includes(officer) && r3m1Rev.status === 409, { channel: r3m1Chan.status, detail: r3m1Chan.body?.detail, prepared_by: r3m1Rd?.prepared_by, review: r3m1Rev.status });
 
+// BK-18 review 4 M1: C9.2 Undo. The restored answer keeps the earlier author, so the person who pressed Undo is read
+// from the restore itself; undoing another person's answer is work on the case, and the record says so.
+const r4m1 = await newCase("BK18R4M1", "Sample Client H", rep);
+await answer(r4m1.id, r4m1.subject, "person.passport_number", "ZX9999001", rep);
+await answer(r4m1.id, r4m1.subject, "person.passport_number", "ZX9999002", rep);
+const r4m1Undo = await call("POST", `/runtime/cases/${r4m1.id}/changes/undo`, { subjectId: r4m1.subject, fact: "person.passport_number" }, officer);
+const r4m1f = (await prepare(r4m1.id, rep)).p?.filings[0]?.id ?? "";
+const r4m1Rd = readinessOf((await prepare(r4m1.id, rep)).p, r4m1f) as { prepared_by?: string[] } | undefined;
+const r4m1Rev = await call("POST", `/runtime/filings/${r4m1f}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(r4m1.id, r4m1f, rep) }, rep);
+ok("BK-18 (review 4 M1) fail: the case officer who undid an answer is a preparer, so the representative cannot sign for the filing as one person's work (409)", r4m1Undo.status < 300 && (r4m1Rd?.prepared_by ?? []).includes(officer) && r4m1Rev.status === 409, { undo: r4m1Undo.status, detail: r4m1Undo.body?.detail, prepared_by: r4m1Rd?.prepared_by, review: r4m1Rev.status });
+ok("BK-18 (review 4 M2) fail: the refusal says what really happened — somebody else at the firm worked on it, whoever they are, and names no role the case may not have", /worked on this filing and so did somebody else at the firm/.test(r4m1Rev.body?.detail ?? "") && !/another case officer/.test(r4m1Rev.body?.detail ?? ""), r4m1Rev.body?.detail);
+
 // BK-18 review M2 / breaker B2: work that leaves no answer of its own still counts. The case officer passes a warning
 // with a written reason; the representative who did the rest can no longer review it as a second person (BR-8, 409).
 const m2 = await newCase("BK18M2", "Sample Client U", rep);

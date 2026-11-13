@@ -9,6 +9,7 @@
 // people get 403. The inputs: api/src/readiness-inputs.ts. Legal points: Unconfirmed: no counsel. US$0.
 import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post } from "@nestjs/common";
 import { BLOCK_CODES, cannotPass, CODE_WORDS, dayOf, isCritical, passKeys, passProblem, WARN_CODES, type WarnCode } from "../../engine/runtime/readiness.ts";
+import { selfReviewOf } from "../../engine/runtime/review.ts"; // BK-18 (review 4 M2): one self-review rule, one set of words
 import type { ReadinessView } from "./readiness-inputs.ts";
 import { userIn } from "../../engine/runtime/team.ts";
 import { actorOf, Audit, Db, fail, Workspace, type Actor } from "./core.ts";
@@ -76,14 +77,19 @@ export class FilingReadinessRoutes {
     // only whether this person had the filing in their own hands on a case holding nobody's work.
     const w = await caseWork(this.db, c.id);
     const workers = authorsFor(actor.id, preparersOf(w.acts, w.staff), behindOf(w.acts, w.staff));
-    const prepared = workers.has(actor.id);
     // Break B9 (P-155 (1); review m8, the concept's BR-21: "a solo firm, or the representative did it all"): Self-reviewed
     // when the firm is solo or the representative is the only person who worked on the case; when another person worked
-    // on it too, the one who prepared it does not review it as if a second person had.
-    if (prepared && !firm?.solo && workers.size > 1) fail("You prepared this filing with another case officer: a review by you would read as a second person's. Hand the review to another representative (change the representative of record), or pass the review warning with a reason.", HttpStatus.CONFLICT);
-    if (prepared && b.self !== true) problem(400, "Some details need fixing", "You prepared this filing yourself: confirm \"I prepared and reviewed this filing myself\" (self: true). It is logged as Self-reviewed, never as a second person.", { errors: [{ field: "self", message: "Confirm you prepared and reviewed it yourself." }] });
+    // on it too, the one who prepared it does not review it as if a second person had. One rule for both review routes
+    // (review 4 M2: this route kept its own copy of the words, which stopped being true when the author set changed).
+    const sr = selfReviewOf({ actor: actor.id, prepared: workers, solo: !!firm?.solo, changedByReviewer: false, self: b.self });
+    if ("problem" in sr) {
+      const pr = sr.problem;
+      if (pr.status === 400) problem(400, "Some details need fixing", pr.detail, { errors: [{ field: pr.field ?? "self", message: "Confirm you prepared and reviewed it yourself." }] });
+      fail(pr.detail, pr.status);
+    }
+    const prepared = workers.has(actor.id);
     if (!licence) fail("A review needs the representative's licence number on the firm record; none is set.", HttpStatus.CONFLICT);
-    const kind = prepared ? "self_reviewed" : "reviewed";
+    const kind = (sr as { kind: "reviewed" | "self_reviewed" }).kind;
     // Break B2: the review is of the filing's facts as they are now; a later change reopens it.
     // C8.3 (challenge M1): the review is a one-step round of the representative's review, through the same code: every
     // form frozen and stamped (api/src/review-rounds.ts oneStep). A filing already sent for review is decided there (409).
