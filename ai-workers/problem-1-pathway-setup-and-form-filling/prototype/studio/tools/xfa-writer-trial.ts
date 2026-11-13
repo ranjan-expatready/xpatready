@@ -33,6 +33,9 @@ const ENGINE = join(ROOT, "packages", "xfa-engine");
 const X = await import(join(ENGINE, "dist", "index.js"));
 const { DOMParser, XMLSerializer } = await import(join(ENGINE, "node_modules", "@xmldom", "xmldom", "lib", "index.js"));
 const XDATA = "http://www.xfa.org/schema/xfa-data/1.0/";
+/** One field map as a release snapshot carries it (engine/snapshot.ts), the parts this trial reads. */
+type PdfMap = { form_number: string; form_edition?: string | null; channel?: string | null; official_file?: string | null; inventory_file?: string | null; form_sha256?: string | null; entries: any[] };
+const mapOf = (snapshot: any, form: string) => pdfMapInUse<PdfMap>(snapshot.field_maps as PdfMap[], form);
 const PACKS = join(ENGINE, "src", "__tests__", "fixtures", "form-data");
 const { values: opt } = parseArgs({ options: { out: { type: "string" }, runs: { type: "string" }, "story-only": { type: "boolean" } } });
 const OUT = resolve(opt.out ?? join(STUDIO, "var", "xfa-writer-trial")); mkdirSync(OUT, { recursive: true });
@@ -68,7 +71,7 @@ function newDatasets(xml: string, values: Record<string, string>): string {
 /** The app's step with the engine as the writer: writeForm's value step unchanged, then the engine writes. No checks
  *  (the engine has none of ours: no signature check, no read-back); `check` adds the engine's own read-back. */
 async function engineWriteForm(snapshot: any, cov: { boxes: any[] }, form: string, out: string, check = false) {
-  const map = pdfMapInUse(snapshot.field_maps, form)!;
+  const map = mapOf(snapshot, form)!;
   const inv = JSON.parse(readFileSync(solutionFile(map.inventory_file)!, "utf8"));
   const { values } = formValues(snapshot, map, inv, cov.boxes);
   personSteps(inv.fields, values, inv.groups ?? []);
@@ -163,7 +166,7 @@ for (const [cid, rel] of latest) {
   for (const cov of view.coverage as any[]) {
     const line = snapshot.forms.find((f: any) => f.form_number === cov.form);
     if (!cov.applies || line?.channel === "ONLINE" || line?.channel === "NOT_NEEDED") continue;
-    const map = pdfMapInUse(snapshot.field_maps, cov.form);
+    const map = mapOf(snapshot, cov.form);
     if (!map?.official_file || !map.inventory_file) continue;
     const tag = `${cov.form.replace(/\s+/g, "")}-${snapshot.combination?.key ?? cid.slice(0, 8)}-${cov.person}`;
     // ours: the app's own step, timed whole; theirs: the same step with the engine writing, timed bare and with its read-back.
@@ -205,7 +208,7 @@ const editions = new Map<string, { form: string; file: string; inventory: string
 // Every Paper line of the latest releases with a mapped PDF edition, also those no person of the Sample profile gets
 // (on this checkpoint IMM 5257 is Online on the Visitor visa release, and IMM 1295, 5409, 5604 apply to nobody in it).
 for (const rel of latest.values()) for (const f of (rel.snapshot as any).forms as any[]) {
-  const map = pdfMapInUse((rel.snapshot as any).field_maps, f.form_number);
+  const map = mapOf(rel.snapshot, f.form_number);
   if (f.channel === "ONLINE" || f.channel === "NOT_NEEDED" || !map?.official_file || !map.inventory_file || editions.has(map.official_file)) continue;
   editions.set(map.official_file, { form: f.form_number, file: map.official_file, inventory: map.inventory_file });
   if (!blanks.has(map.official_file)) blanks.set(map.official_file, await formScript(blankOf(map.official_file), null));
