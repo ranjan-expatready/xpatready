@@ -10,7 +10,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { canonicalSteps, runTransform, sameAsOf, stepsNotRun, type Box, type Context, type Outcome } from "../../p5/transforms.ts";
-import { mapRules, STEPS_RULE, type MapField } from "../engine/field-map-rounds.ts";
+import { mapRules, RULE_WHY_MAX, STEPS_RULE, type MapField } from "../engine/field-map-rounds.ts";
 import { p121Rating } from "../engine/agreement.ts";
 import { formValues, sameAsLeavesRowEmpty, type BoxResult, type InventoryBox } from "../engine/form-values.ts";
 
@@ -158,6 +158,10 @@ ok("BK-22 fail: stepsNotRun names a seeded unrunnable step, and only it (\"addre
   ok("BK-22 pass: Field map review's rule \"steps the filler runs\" passes for a drafted step the filler runs", good?.passed === true && good.why === null, good);
   ok("BK-22 fail: a seeded unrunnable step fails the rule, in words that name the step and the form field and say it is left to write by hand",
     badRule?.passed === false && /"address_part:moon_phase"/.test(badRule.why ?? "") && /"Country"/.test(badRule.why ?? "") && /write by hand/.test(badRule.why ?? ""), badRule);
+  // Review queue contract: a rule's words are at most 300 characters (IMM 1295's draft, with 12 such steps, was refused whole).
+  const many: MapField = { proposedKey: "person.residence_country", proposedType: "code", boxes: Array.from({ length: 12 }, (_, i) => ({ data_path: `f.Row${i}.Country`, person: "subject", row: i, transform: `select:previous_residence_period_number_${i}_${"x".repeat(80)}; code_list:imm1295.country_cor`, caption: "C".repeat(120) })) };
+  const long = mapRules(many, new Set(many.boxes.map((b) => b.data_path)), more).find((r) => r.rule === STEPS_RULE);
+  ok("BK-22 fail (the 12-step IMM 1295 case): the rule still fails and its words stay within the review queue's 300 characters", long?.passed === false && (long.why ?? "").length <= RULE_WHY_MAX && /12 steps/.test(long.why ?? ""), long?.why?.length);
   const rating = p121Rating({ origin: "ai", agreement: "agreed", rounds: { draft: {}, check: {} } as never, rules: bad, confidence: "ready", reason: null });
   ok("BK-22 fail: an item whose map has that step is never High (P-121 lowers it to Check, with the rule's words), so a person decides it on its own before it is accepted",
     rating.confidence === "check" && /moon_phase/.test(rating.reason ?? ""), rating);

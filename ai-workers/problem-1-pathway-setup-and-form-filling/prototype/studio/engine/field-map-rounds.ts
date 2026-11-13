@@ -17,11 +17,16 @@ export const STEPS_RULE = "steps_the_filler_runs";
 export function unrunnable(f: MapField): { box: string; steps: string[] }[] {
   return f.boxes.map((b) => ({ box: b.caption?.trim() || b.data_path.split(".").slice(-2).join("."), steps: stepsNotRun(b.transform, f.proposedKey) })).filter((x) => x.steps.length);
 }
-/** BK-22: the rule's words: how many form fields, which steps (at most three), and what happens if it is accepted. */
+/** BK-22: the rule's words: how many form fields, which steps (the first two), and what happens if it is accepted. At
+ *  most RULE_WHY_MAX characters, the review queue's limit for a rule's words (a longer one refused the whole draft). */
+export const RULE_WHY_MAX = 300;
 export function unrunnableWhy(bad: { box: string; steps: string[] }[]): string | null {
   if (!bad.length) return null;
-  const steps = [...new Set(bad.flatMap((x) => x.steps))];
-  return `The form filler cannot run ${steps.length === 1 ? "a step" : `${steps.length} steps`} of how ${plural(bad.length, "form field")} ${bad.length === 1 ? "is" : "are"} filled (${steps.slice(0, 3).map((s) => `"${s.slice(0, 80)}"`).join(", ")}${steps.length > 3 ? ", …" : ""}; ${bad.slice(0, 2).map((x) => `"${x.box.slice(0, 60)}"`).join(", ")}${bad.length > 2 ? ", …" : ""}): filled as drafted, ${bad.length === 1 ? "it is" : "they are"} left to write by hand on every case.`;
+  const steps = [...new Set(bad.flatMap((x) => x.steps))], cut = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
+  const named = `${steps.slice(0, 2).map((x) => `"${cut(x, 60)}"`).join(", ")}${steps.length > 2 ? ", …" : ""}`;
+  const say = (where: string) => `The form filler cannot run ${steps.length === 1 ? "a step" : `${steps.length} steps`} (${named}) of ${plural(bad.length, "form field")}${where}: filled as drafted, ${bad.length === 1 ? "it is" : "they are"} left to write by hand on every case.`;
+  const full = say(` (first: "${cut(bad[0].box, 50)}")`);
+  return full.length <= RULE_WHY_MAX ? full : cut(say(""), RULE_WHY_MAX);
 }
 export type MapAgreement = { agreement: "agreed" | "differ"; check: MapField | null; why: string | null };
 export type MapRule = { rule: string; passed: boolean; why: string | null };
