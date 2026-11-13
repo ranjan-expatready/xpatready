@@ -44,12 +44,7 @@ Older founder rules (P-413, P-410, P-405, P-402), word for word: `history/STATE-
 **Stall guard (P-388, P-389):** no prompt-waiting call while the founder is away; `lead-watch.sh` ACT when the last check is over 40 min old. Watchdog: first standby (Lead 34 once Lead 33 tells it).
 **Hand-over (P-409):** no hand-over with an in-process subagent running; its result goes to a file named in the hand-over block; briefs say report to the current Lead. Skill edit at the founder's next typed turn.
 **Never run guard/test suites in the main copy** (7 Nov 09:18 incident): scratch clone only, deleted after.
-**To-do, in order (Lead 11, 11 Nov):** (earlier list word for word: `history/STATE-2026-11-11-0910-lead11s2-old-todo.md`)
-0. **Founder, 11 Nov ~13:5x IST (typed to Lead 16):** every check opens claude.ai and reads **each lane's last message**, not only the list or GitHub; a lane idle after "usage limit", or with a background run that died, gets "continue" and its next step at once; flag any limit hit to the founder. (13:4x: 8 lanes were idle after the account's limit and the reset; all restarted by Lead 16, verified Running.)
-1. Check (:13/:43, Lead 34's 724a4350, prompt exactly `run lead-watch; read STATE Start here`): usage (P-458: lanes stop at 96%, Lead's records by 98%), lanes, queue.
-2. Lanes count only after a push; read each lane PR's newest comment for "tech lead" and reply in its claude.ai session (built-in browser while Chrome is disconnected).
-3. Next 7 hours G1-G6 above; hourly report in IST with each code's plain purpose beside it.
-4. Records on `lead/2026-11-07-lead31`; STATE under 12 KB.
+**To-do, in order (Lead 11, 11 Nov):** word for word in `history/STATE-2026-11-13-2115-lead36s2-old-todo.md` (item 0, every check reads each lane's last message in claude.ai, still stands).
 
 ## Leads, in order
 **Series 2 (P-433, from 9 Nov 17:48 IST; the current Lead is the one `current_lead:` names):** Lead 34 (series 2, local_b5f4d7c1) (15:0x-16:02 IST 13 Nov) · Lead 33 (series 2, local_761060c8) (14:03-15:0x IST 13 Nov) · Lead 32 (series 2, local_25925829) (12:59-14:0x IST 13 Nov) · Lead 31 (series 2, local_0b4301b7) (10:54-12:2x IST 13 Nov) · Lead 30 (series 2, local_ef11ad4a) (10:02-10:54 IST 13 Nov) · Lead 29 (series 2, local_f581db79) (08:27-10:0x IST 13 Nov) · Leads 1-28 word for word in `history/STATE-2026-11-13-1130-lead31s2-series2-leads-line.md` (and its pointer to Leads 1-11). **Lead 36 (series 2, local_63fd8ada)** (from 18:51 IST 13 Nov) · Lead 35 (series 2, local_01c09e17) (16:02-18:5x IST 13 Nov). Standbys: Lead 37 `local_c795de7f` (first), Lead 38 `local_fac27a00` (second).
