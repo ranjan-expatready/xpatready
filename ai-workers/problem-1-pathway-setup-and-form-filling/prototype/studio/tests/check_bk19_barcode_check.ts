@@ -42,6 +42,11 @@ print(json.dumps({"evidence": len(ev), "mine": len(mine), "binding_differs": len
   ok(`C7.2 BK-19 fail (P-46): ${form}: an Adobe barcode value changed by one character no longer agrees with the saved value`, r.caught === true, r);
 }
 
+// Review m6 on #1679: a num{99} box saved "00" is "0" in the barcode; any other box is compared literally.
+const z = py(`print(json.dumps({"num00": B.same("0", "00", True), "num07": B.same("7", "07", True), "text00": B.same("0", "00", False), "num_other": B.same("8", "07", True)}))`);
+ok("C7.2 BK-19 pass (P-46, number box): a num{99} box saved \"00\" or \"07\" agrees with the barcode's \"0\" or \"7\"", z.num00 === true && z.num07 === true, z);
+ok("C7.2 BK-19 fail (P-46): a box with no number picture saved \"00\" does not agree with \"0\", nor does a different number", z.text00 === false && z.num_other === false, z);
+
 const tmp = mkdtempSync(join(tmpdir(), "xr-bk19-"));
 try {
   for (const form of ["imm5257e", "imm1295e", "imm0008e", "imm1344e"]) {

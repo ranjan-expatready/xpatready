@@ -5,18 +5,18 @@
 //     to file still names the missing validated copy; (2) barcodes of other answers: not validated, in words; (3) the
 //     file as Adobe's Validate leaves it, barcodes included: "Validated copy read back" and the block is gone, so the
 //     next step (Ready to file, C7.6) opens. The validated files are SYNTHETIC (tools/simulate_validate.py; BK-20 is
-//     the Mac's Adobe run). Axe and no sideways scroll on each state. No model call (US$0).
+//     the Mac's Adobe run). Axe and no sideways scroll on each state; the not-validated words also at 1024 and 400 px. No model call (US$0).
 //   zsh studio/tools/isolated.sh rt_bk19b 4437 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4437 xr_studio_rt_bk19b && tsx studio/acceptance/lib/setup_vv_m3.ts 4437 xr_studio_rt_bk19b && tsx studio/tests/check_bk19_validate_browser.ts 4437 xr_studio_rt_bk19b [shots folder]
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium, type Page } from "playwright";
-import AxeModule from "@axe-core/playwright";
+import { createRequire } from "node:module";
 import { adobeValidated, asValidated, call, copyBytes, fillEverything, firms, main, needVisitorVisa, ok, openCase, yearsAgo } from "../acceptance/lib/m3.ts";
 
 const PORT = process.argv[2] ?? "4437", BASE = `http://localhost:${PORT}`, SHOTS = process.argv[4] ?? null;
 const T = { timeout: 30_000 };
-const AxeBuilder = ((AxeModule as unknown as { default?: typeof AxeModule }).default ?? AxeModule) as typeof AxeModule;
+const { default: AxeBuilder } = createRequire(import.meta.url)("@axe-core/playwright") as typeof import("@axe-core/playwright");
 const REASON = "The client cannot use the IRCC account: an accommodation (Sample)";
 
 await main("BK-19", "Read back a validated copy by screens (1440 px)", async () => {
@@ -76,6 +76,15 @@ await main("BK-19", "Read back a validated copy by screens (1440 px)", async () 
     await r.reload(); await row.waitFor(T);
     ok("C7.2 BK-19 fail (QA-315): Ready to file still names the missing validated copy (the file does not count)", await readiness.getByText(/no validated copy read back/i).first().waitFor(T).then(() => true, () => false));
     await row.scrollIntoViewIfNeeded(); await shot("flag-only-not-validated"); await axe("the copy read back but not validated");
+    // Review M3 on #1679: the barcode check's words are long; they wrap at every width, and the read-back button stays on screen.
+    for (const width of [1024, 400]) {
+      await r.setViewportSize({ width, height: 900 }); await row.scrollIntoViewIfNeeded();
+      const fits = await r.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1);
+      const box = await row.getByRole("button", { name: "Read back the validated copy" }).boundingBox();
+      ok(`C7.2 BK-19 (review M3): at ${width} px the not-validated words wrap, with no sideways scroll, and "Read back the validated copy" is on screen`, fits && !!box && box.x >= 0 && box.x + box.width <= width + 1, { fits, box });
+      if (SHOTS) await r.screenshot({ path: join(SHOTS, `${String(++n).padStart(2, "0")}-flag-only-not-validated-${width}.png`), fullPage: false });
+    }
+    await r.setViewportSize({ width: 1440, height: 900 });
 
     // (2) Barcodes of other answers (the form changed after Validate).
     await send("stale", asValidated(made, "Yes", true, "barcodes-stale"));

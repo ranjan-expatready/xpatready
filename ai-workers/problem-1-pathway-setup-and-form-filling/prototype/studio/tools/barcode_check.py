@@ -134,7 +134,9 @@ def form_values(pdf_bytes):
 def same(barcode, saved, number_box):
     if barcode == saved:
         return True
-    return number_box and re.fullmatch(r"0+\d", saved or "") is not None and barcode == saved.lstrip("0")
+    # The number without its leading zeros ("07" -> "7", "00" -> "0"): the box's own num{99} picture, read from the
+    # template for every form alike (P-319), the rule the evidence shows on months and days (P1 rev. 3, E1 IMM 5257).
+    return number_box and re.fullmatch(r"0+\d", saved or "") is not None and barcode == (saved.lstrip("0") or "0")
 
 
 def check(saved_bytes, copy_pdf):

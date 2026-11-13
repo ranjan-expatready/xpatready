@@ -116,9 +116,14 @@ function ValidatedState({ caseId, c, form }: { caseId: string; c: FormCopy; form
     finally { setBusy(false); if (input.current) input.current.value = ""; }
   }
   const v = c.validated;
+  // BK-19: a read-back that does not count as validated (Validate not passed on it, or its barcodes not read and matching).
+  const notCounted = !!v && !v.current && v.barcodes?.matched !== true;
   return (
-    <span className="inline-flex items-center gap-2" data-validated={v ? (v.current ? "current" : v.barcodes?.matched !== true ? "not_validated" : "out_of_date") : "none"}>
-      {v && (v.current || !c.validated_elsewhere) ? <Pill tone={v.current ? "ok" : "warn"} title={`Read back ${v.read_back.equal} of ${v.read_back.written} values${v.barcodes?.expected ? `; barcodes ${v.barcodes.decoded} of ${v.barcodes.expected} read` : ""}`}>{v.words}</Pill>
+    <span className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-2" data-validated={v ? (v.current ? "current" : notCounted ? "not_validated" : "out_of_date") : "none"}>
+      {/* BK-19 (review M3 on #1679): the barcode check's words are long; they wrap beside a short pill, at any width. */}
+      {v && notCounted && !c.validated_elsewhere ? <><Pill tone="warn" title={`Read back ${v.read_back.equal} of ${v.read_back.written} values${v.barcodes?.expected ? `; barcodes ${v.barcodes.decoded} of ${v.barcodes.expected} read` : ""}`}>Read back, not validated</Pill>
+          <span className="min-w-0 text-[12px] text-text-warn [overflow-wrap:anywhere]" data-validated-words>{v.words}</span></>
+        : v && (v.current || !c.validated_elsewhere) ? <Pill tone={v.current ? "ok" : "warn"} title={`Read back ${v.read_back.equal} of ${v.read_back.written} values${v.barcodes?.expected ? `; barcodes ${v.barcodes.decoded} of ${v.barcodes.expected} read` : ""}`}>{v.words}</Pill>
         : c.validated_elsewhere ? <Pill tone="warn" title="Sample: the validated file is not in these working files, so this copy is not filed or locked as validated" data-validated-elsewhere>{c.validated_elsewhere}</Pill>
         : <Pill tone="warn">Not validated yet</Pill>}
       {c.out_of_date ? null : <>

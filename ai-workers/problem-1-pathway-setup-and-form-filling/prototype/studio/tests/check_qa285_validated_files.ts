@@ -60,6 +60,15 @@ const door = async (copyId: string, f: { originalname: string; buffer: Buffer })
 const r1 = await replaySavedReadBacks(fakeDb(), "case-1", door, folder, saved());
 ok("QA-285 pass (file here): the checked file goes through the upload door for its copy, once, with the saved checksum; no note, no direct validated_copy write", r1.written === 1 && r1.keptOnMac === 0 && !r1.why.length && sent.length === 1 && sent[0].copyId === "copy-1" && sent[0].name === name && sent[0].sha === sha(validatedBytes), { r1, sent });
 
+// BK-19 (review m7 on #1679): a file the door keeps but does not count as validated (its barcodes not read) is not counted
+// as read back; the reason is given in the door's words.
+const notCounted = async () => ({ id: "v2", copy: { validated: { current: false, words: "0 of the 5 barcodes are in this file: press Validate." } } });
+const counted = async () => ({ id: "v3", copy: { validated: { current: true, words: "Validated copy read back" } } });
+const rNo = await replaySavedReadBacks(fakeDb(), "case-1", notCounted, folder, saved());
+ok("C7.2 BK-19 fail (Mac sample loader): a file the door keeps but does not count is not counted as read back; the words say why", rNo.written === 0 && rNo.why.length === 1 && /does not count as validated: 0 of the 5 barcodes/.test(rNo.why[0]), rNo);
+const rYes = await replaySavedReadBacks(fakeDb(), "case-1", counted, folder, saved());
+ok("C7.2 BK-19 pass (Mac sample loader): a file the door counts as validated is counted as read back", rYes.written === 1 && !rYes.why.length, rYes);
+
 sent.length = 0;
 const r2 = await replaySavedReadBacks(fakeDb(), "case-1", door, folder, saved({ validated_sha256: sha("the file that was validated") }));
 ok("QA-285 fail (wrong file): a changed file is refused in words and never sent or counted; nothing is written", r2.written === 0 && r2.keptOnMac === 0 && sent.length === 0 && r2.why.length === 1 && /not the file that was validated in Adobe/.test(r2.why[0]), r2);
