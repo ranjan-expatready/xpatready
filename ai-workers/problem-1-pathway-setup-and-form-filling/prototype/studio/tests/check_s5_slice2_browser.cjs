@@ -188,7 +188,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   step("C6.1 QA-38 pass: after release 2 the New case list names release 2, the one the case will use", l2 === "With an LMIA · release 2", l2);
   const dlg = o.getByRole("dialog");
   await dlg.locator("select").first().selectOption({ label: "With an LMIA · release 2" });
-  await dlg.getByLabel("Case reference").fill("S5-QA38"); await dlg.getByLabel("Principal applicant's name").fill("Sample Applicant Q");
+  await dlg.getByLabel("Your own reference (optional)").fill("S5-QA38"); await dlg.getByLabel("Principal applicant's name").fill("Sample Applicant Q");
   await dlg.getByRole("button", { name: "Open case" }).click();
   await o.waitForURL(/\/cases\/[0-9a-f-]{36}$/, { timeout: 30000 }).catch(loud("the new case opens"));
   // BK-4a: the case's release pill also names its person ("Release 2 (as Configuration author)"), so it is read by its attribute.

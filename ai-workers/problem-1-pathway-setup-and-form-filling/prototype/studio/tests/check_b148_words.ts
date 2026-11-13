@@ -42,7 +42,7 @@ ok("fail: an unknown code is shown as it is, never guessed (and never an object'
 // The page and the dialogs read the words from the one file.
 const read = (f: string) => readFileSync(join(ROOT, f), "utf8");
 const page = read("web/src/runtime/eligibility.tsx");
-ok("pass: the page's title, card and trail read CASE_CHECK; its outcomes read OUTCOME_WORDS", /\{CASE_CHECK\} · \{c\.reference\}/.test(page) && /\{CASE_CHECK\} \(staff only\)/.test(page) && /OUTCOME_WORDS\.LIKELY_ELIGIBLE\}\$\{restingWords\(n\)\}/.test(page) && /OUTCOME_WORDS\.NOT_ELIGIBLE\} on this application's rules as written/.test(page));
+ok("pass: the page's title, card and trail read CASE_CHECK; its outcomes read OUTCOME_WORDS", /\{CASE_CHECK\} · \{caseWords\(c\)\}/.test(page) && /\{CASE_CHECK\} \(staff only\)/.test(page) && /OUTCOME_WORDS\.LIKELY_ELIGIBLE\}\$\{restingWords\(n\)\}/.test(page) && /OUTCOME_WORDS\.NOT_ELIGIBLE\} on this application's rules as written/.test(page));
 ok("pass: the A4 dialog's \"If not met\" choices read Does not qualify and Can't tell yet", /not_eligible: OUTCOME_WORDS\.NOT_ELIGIBLE, needs_review: `The representative reviews it \(\$\{OUTCOME_WORDS\.POSSIBLY_ELIGIBLE\}\)`/.test(read("web/src/components/eligibility-gates-editor.tsx")));
 ok("pass: the answer-key editor's outcome choices are the page's words", /OUTCOME_WORDS: Record<Outcome, string> = CASE_CHECK_WORDS/.test(read("web/src/components/answer-key-editors.tsx")) && Object.values(OUTCOME_WORDS).includes("Qualifies"));
 

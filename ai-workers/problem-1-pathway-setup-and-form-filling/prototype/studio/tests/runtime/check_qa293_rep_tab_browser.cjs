@@ -33,7 +33,7 @@ const T = { timeout: 20000 };
     const vv = dlg.locator("select option", { hasText: "Visitor visa" }).first();
     await vv.waitFor({ state: "attached", ...T });
     await dlg.locator("select").first().selectOption(await vv.getAttribute("value"));
-    await dlg.getByLabel("Case reference").fill(`QA293-${Date.now().toString(36)}`);
+    await dlg.getByLabel("Your own reference (optional)").fill(`QA293-${Date.now().toString(36)}`);
     await dlg.getByLabel("Principal applicant's name").fill("Client A");
     await dlg.getByRole("button", { name: "Open case" }).click();
     await r.waitForURL(/\/cases\/[0-9a-f-]{36}$/, T);

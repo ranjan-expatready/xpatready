@@ -933,6 +933,20 @@ export class Runtime {
     return { confirmed, section, missing: sec?.missing ?? [], invalid: sec?.invalid ?? 0, awaiting_client: waiting };
   }
 
+  /** A24-2 (P-492, design §6 "Open a case"): the case number the opener's firm gives next, read without taking it (the
+   *  counter moves only inside an opening, runtime_next_case_number). Another opening at the same moment may take it
+   *  first, so the screen says "next", never "yours". Same format and year (the firm's zone) as the counter. */
+  async nextCaseNumber(actor: Actor) {
+    need(actor, "case");
+    const firm = firmOfActor(actor);
+    if (!firm) fail(`${actor.name} (simulated) is not staff of a firm, so cannot open a case.`, HttpStatus.FORBIDDEN);
+    const workspaceId = await this.ws.id();
+    const [{ n }] = await this.db.$queryRaw<{ n: string }[]>`SELECT 'C-' || y.y || '-' || lpad(v.v::text, greatest(5, length(v.v::text)), '0') AS n
+      FROM (SELECT extract(year FROM now() AT TIME ZONE 'America/Toronto')::integer AS y) y,
+      LATERAL (SELECT coalesce((SELECT next_value FROM firm_case_counter WHERE workspace_id = ${workspaceId}::uuid AND firm_key = ${firm!.key} AND year = y.y), 1) AS v) v`;
+    return { case_number: n };
+  }
+
   /** The workspace's cases, newest first, a page at a time (cursor: the last case id of the previous page). Each row names
    *  its client (the simulated login that answers). BK-3 PR 3 (P-447 (2), challenge B1: one request per page view,
    *  STANDARDS §5): `client=<login>` keeps one client's cases, inside the same firm filter (C6.11 BR-20), and only then
@@ -940,15 +954,18 @@ export class Runtime {
    *  on the case page, and keep-private hides people from the client, never from staff, C6.16).
    *  A24-1 (P-492, CS-7, CS-8): each row also carries its case number, its client person's name (the principal when the
    *  case opened, as on the case page: clientPersonOf) and how many applications (filings) its current stage holds, read
-   *  in one query each for the whole page, never one per row. A case not yet prepared holds none (0). */
-  async list(actor: Actor, q: { take?: string; after?: string; client?: string }) {
+   *  in one query each for the whole page, never one per row. A case not yet prepared holds none (0).
+   *  A24-2 (P-492, design §6): `q=<words>` keeps the cases whose case number, own reference, a person's name or an IRCC
+   *  application number contains them (any letter case), inside the same firm filter; the cursor pages the kept cases. */
+  async list(actor: Actor, q: { take?: string; after?: string; client?: string; q?: unknown }) {
     need(actor, "case");
     const workspaceId = await this.ws.id();
     const take = Math.min(Math.max(Number(q.take ?? 50) || 50, 1), 100);
     // Break m5: one login or none; a list or an empty value is refused, never read as "every client".
     if (q.client !== undefined && (typeof q.client !== "string" || !q.client)) fieldError("client", "Name one client login.");
     const client = q.client ?? null;
-    const rows = await this.db.case.findMany({ where: { workspaceId, firmKey: firmOfActor(actor)?.key ?? "", ...(client ? { clientActorId: client } : {}) }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: take + 1, ...(q.after ? { cursor: { id: q.after }, skip: 1 } : {}), include: { combination: { select: { label: true } } } });
+    const words = searchWords(q.q);
+    const rows = await this.db.case.findMany({ where: { workspaceId, firmKey: firmOfActor(actor)?.key ?? "", ...(client ? { clientActorId: client } : {}), ...(words ? searchWhere(words) : {}) }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: take + 1, ...(q.after ? { cursor: { id: q.after }, skip: 1 } : {}), include: { combination: { select: { label: true } } } });
     const page = rows.slice(0, take), ids = page.map((c) => c.id);
     // The people of this page's cases in one query (never one per row): for the client's name, and for one client's page.
     const people = new Map<string, { subjectId: string; label: string; role: string; applies: boolean }[]>();
@@ -964,11 +981,27 @@ export class Runtime {
   }
 }
 
+/** A24-2 (P-492): the case list's search words: one text of 1 to 80 characters after trimming, or none. A list (`q=a&q=b`)
+ *  or a longer text is refused in words, never read as "every case". */
+function searchWords(v: unknown): string | null {
+  if (v === undefined) return null;
+  if (typeof v !== "string") fieldError("q", "Search with one text.");
+  const w = (v as string).trim();
+  if (w.length > 80) fieldError("q", "Search with at most 80 characters.");
+  return w || null;
+}
+/** Review m1: "%" and "_" are the database's wildcards; searched for as typed (escaped), never as "any text". */
+const searchWhere = (w: string) => {
+  const has = { contains: w.replace(/[\\%_]/g, "\\$&"), mode: "insensitive" as const };
+  return { OR: [{ caseNumber: has }, { reference: has }, { participants: { some: { role: { not: "case" }, subject: { label: has } } } }, { filings: { some: { applicationNumber: has } } }] };
+};
+
 @CaseRead()
 @Controller("api/runtime")
 export class RuntimeController {
   constructor(@Inject(Runtime) private readonly r: Runtime) {}
-  @Get("cases") list(@Headers("x-actor") a: H, @Query() q: { take?: string; after?: string; client?: string }) { return this.r.list(actorOf(a), q); }
+  @Get("cases") list(@Headers("x-actor") a: H, @Query() q: { take?: string; after?: string; client?: string; q?: unknown }) { return this.r.list(actorOf(a), q); }
+  @Get("next-case-number") nextCaseNumber(@Headers("x-actor") a: H) { return this.r.nextCaseNumber(actorOf(a)); }
   @Post("cases") create(@Headers("x-actor") a: H, @Body() b: unknown) { return this.r.createCase(actorOf(a), b); }
   @Get("openable") openable(@Headers("x-actor") a: H) { return this.r.openable(actorOf(a)); }
   @Get("combinations/:id/employer-link") employerLink(@Headers("x-actor") a: H, @Param("id") id: string) { return this.r.employerLink(actorOf(a), id); }

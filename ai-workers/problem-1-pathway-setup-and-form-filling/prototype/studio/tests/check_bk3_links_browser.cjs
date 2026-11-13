@@ -79,7 +79,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
     await p.screenshot({ path: path.join(SHOTS, `pr2-dialog-chosen-${width}.png`) });
     // Opening the case lands on it, on that combination.
     const reference = `BK3-L-${width}`;
-    await dlg.getByLabel("Case reference").fill(reference);
+    await dlg.getByLabel("Your own reference (optional)").fill(reference);
     await dlg.getByLabel("Principal applicant's name").fill("Sample Applicant");
     await dlg.getByRole("button", { name: "Open case" }).click();
     await p.waitForURL((u) => /^\/cases\/[0-9a-f-]{36}$/.test(u.pathname), { timeout: 30000 }).catch(() => {});

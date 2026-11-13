@@ -56,7 +56,7 @@ async function openCase(combo: string, ref: string, earlier: boolean) {
   await p.goto(`${BASE}/cases`); await settle(); await p.getByRole("button", { name: "Open a case" }).click();
   const sel = p.getByLabel("Combination (released)"); await sel.selectOption((await sel.locator("option", { hasText: combo }).first().getAttribute("value"))!);
   if (earlier) { await p.getByLabel("UCI (optional)").fill("12345678"); await p.getByLabel("Study permit valid until (optional)").fill("2027-02-03"); }
-  await p.getByLabel("Case reference").fill(ref); await p.getByLabel("Principal applicant's name").fill("Sample Client A");
+  await p.getByLabel("Your own reference (optional)").fill(ref); await p.getByLabel("Principal applicant's name").fill("Sample Client A");
 }
 
 try {

@@ -76,7 +76,7 @@ const run = Date.now().toString(36).slice(-5);
   step("QA-41 C6.1: the Open a case dialog puts focus on its first field, not on Close (Enter on Close throws the form away)", !/^Close$/.test(await focused(o)), await focused(o));
   const label = (await dlg.locator("select").first().locator("option").allInnerTexts()).find((x) => x.startsWith("Visitor visa"));
   step(`QA-38 C6.1: the combination list names the release the case will use (Visitor visa · release ${latest})`, label === `Visitor visa · release ${latest}`, label);
-  await dlg.getByLabel("Case reference").fill(`QA-EXP-${run}`); await dlg.getByLabel("Principal applicant's name").fill("Sample Applicant N");
+  await dlg.getByLabel("Your own reference (optional)").fill(`QA-EXP-${run}`); await dlg.getByLabel("Principal applicant's name").fill("Sample Applicant N");
   await dlg.getByRole("button", { name: "Open case" }).click(); await o.waitForURL(/\/cases\/[0-9a-f-]{36}$/);
   const caseId = o.url().split("/").pop();
   await o.getByRole("heading", { name: /IMM 5707 for Sample Applicant N/ }).waitFor();

@@ -34,7 +34,7 @@ const step = (name, c, detail) => { c ? pass++ : failed++; console.log(`${c ? "P
   const option = offered.find((x) => /^Outside Canada/.test(x));
   step("B78 pass: the Study permit is offered to open a case (its release is startable, no \"No questions yet\")", !!option, offered);
   if (option) await combo.selectOption({ label: option });
-  await dialog.getByLabel("Case reference").fill("B78-SP-1");
+  await dialog.getByLabel("Your own reference (optional)").fill("B78-SP-1");
   await dialog.getByLabel("Principal applicant's name").fill("Sample Student (Sample)");
   await shot("7-study-permit-open-a-case-1440");
   await dialog.getByRole("button", { name: "Open case" }).click();

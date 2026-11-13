@@ -41,7 +41,7 @@ const T = { timeout: 15000 };
     ok("C6.11 fail: the unlicensed case officer is not offered as representative", !(await dlg.getByLabel("Representative of record").locator("option").allTextContents()).some((t) => t.startsWith("Case officer")));
     ok("C6.11: the case team carries the Stand-in chip SI-9", (await dlg.locator('[data-stand-in="SI-9"]').count()) === 1);
     await axe(r, "Open a case with the case team");
-    await dlg.getByLabel("Case reference").fill(ref);
+    await dlg.getByLabel("Your own reference (optional)").fill(ref);
     await dlg.getByLabel("Principal applicant's name").fill("Client A");
     await dlg.getByRole("button", { name: "Open case" }).click();
     await r.waitForURL(/\/cases\/[0-9a-f-]{36}$/, T);
