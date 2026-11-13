@@ -3,6 +3,9 @@
 // never as a second person's review. Walk 1's Study permit case: opened with the default team (Case officer (Sample) as
 // officer, Representative (Sample) of record), then worked end to end by the Representative. This check repeats that on a
 // fresh copy and reads the record on the case page (Ready to file's "Prepared by · Reviewed by" line).
+// Part 2 (13 Nov): a contrast case (B) opened with the Representative as the case's only officer (caseOfficers
+// ["user-R"]) tells whether "Self-reviewed" turns on case-team membership (the earlier lane's reading of the code).
+// The preparer assertion reads the names after the label's colon (the label "Prepared by · Reviewed by" holds a "·" itself).
 // US$0, live AI off. Headless.
 //   zsh tools/isolated.sh qa_447 4472 start && node tests/qa/check_qa447_self_review_record.cjs 4472
 //   (loads the configured checkpoint itself when Study permit is not released; never :4400)
@@ -18,31 +21,52 @@ let failed = 0; const ok = (name, pass, detail) => { if (!pass) failed++; consol
     const l = await call("POST", "/demo/load", "user-A", { sample: "configured" });
     if (l.status >= 300) { console.log("STOP the configured checkpoint did not load", l.status); process.exit(2); }
   }
-  const row = await sp(); const ref = `QA447-${Date.now() % 100000}`;
-  // Opened with the dialog's defaults: Case officer (Sample) as officer, Representative (Sample) of record (as walk 1).
-  const made = await call("POST", "/runtime/cases", "user-R", { combinationId: row.combination_id, reference: ref, clientActor: "user-P", principal: { displayName: "Sample Student Q" }, idempotencyKey: ref });
-  ok("setup: a Study permit case opens with the default team", made.status < 300 && !!made.body?.id, made); if (!made.body?.id) process.exit(2);
+  const row = await sp();
   const exe = fs.existsSync("/opt/pw-browsers/chromium-1243/chrome-linux64/chrome") ? { executablePath: "/opt/pw-browsers/chromium-1243/chrome-linux64/chrome" } : {};
   const b = await chromium.launch({ headless: true, ...exe });
-  const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } });
-  await ctx.addInitScript(() => { try { localStorage.setItem("xr-actor", "user-R"); } catch {} });
-  const p = await ctx.newPage(); await p.goto(`${base}/cases/${made.body.id}`); await p.waitForLoadState("networkidle");
-  const team = (await p.locator("main").innerText()).match(/Representative \(Sample\)[^\n]*Case officer \(Sample\)/)?.[0];
-  ok("setup: the case team names a separate Case officer", !!team, team);
-  const send = p.getByRole("button", { name: "Send for review", exact: true }); await send.scrollIntoViewIfNeeded(); await send.click();
-  const go = p.getByRole("dialog").getByRole("button", { name: /^Send \d+ filings? for review$/ }); await go.click(); await p.waitForTimeout(2500);
-  await p.getByRole("link", { name: "Open the review" }).first().click(); await p.waitForTimeout(2500);
-  const sentBy = (await p.locator("main").innerText()).match(/Sent by [^,]+/)?.[0];
-  ok("setup: the review says it was sent by the Representative (the person who prepared it)", /Representative/.test(sentBy ?? ""), sentBy);
-  await p.getByRole("button", { name: "Approve", exact: true }).click(); await p.waitForTimeout(900);
-  const d = p.getByRole("dialog"); if (await d.count()) { const self = d.getByRole("checkbox", { name: /prepared and reviewed this filing myself/ }); if (await self.count()) await self.check(); await d.getByRole("button", { name: "Approve", exact: true }).click(); await p.waitForTimeout(2000); }
-  const approved = await p.getByRole("button", { name: / · Round 1 Approved/ }).count();
-  ok("setup: the Representative approved the filing", approved > 0);
-  await p.getByRole("link", { name: ref }).first().click(); await p.waitForTimeout(2500);
-  const line = (await p.locator("main").innerText()).match(/Prepared by · Reviewed by:[^\n]*/)?.[0] ?? "";
-  console.log("RECORD:", line);
-  ok("QA-447 W5 fail today: the record reads \"Self-reviewed\" (the Representative prepared, sent and approved alone)", /Self-reviewed/.test(line), line);
-  ok("QA-447 W5: the record names the Representative's licence number and a time", /R\d{6}/.test(line) && /\d{1,2}:\d{2}/.test(line), line);
-  ok("QA-447 W5 fail today: the record never names the Case officer as preparer (they did nothing)", !/Case officer \(Sample\)/.test(line.split("·")[0] ?? ""), line);
+  const walk = async (tag, extra) => {
+    const ref = `QA447${tag}-${Date.now() % 100000}`;
+    const made = await call("POST", "/runtime/cases", "user-R", { combinationId: row.combination_id, reference: ref, clientActor: "user-P", principal: { displayName: `Sample Student ${tag}` }, idempotencyKey: ref, ...extra });
+    ok(`${tag} setup: a Study permit case opens (${extra.caseOfficers ? "the Representative as its only officer" : "the dialog's default team"})`, made.status < 300 && !!made.body?.id, made); if (!made.body?.id) return null;
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } });
+    await ctx.addInitScript(() => { try { localStorage.setItem("xr-actor", "user-R"); } catch {} });
+    const p = await ctx.newPage(); await p.goto(`${base}/cases/${made.body.id}`); await p.waitForLoadState("networkidle");
+    const team = (await call("GET", `/runtime/cases/${made.body.id}/team`, "user-R")).body; console.log(`${tag} TEAM: representative`, team?.representative?.id, "· officers", JSON.stringify((team?.officers ?? team?.case_officers ?? []).map((o) => o.id ?? o.user ?? o)));
+    const send = p.getByRole("button", { name: /^(Send for review|Review now)$/ }); await send.scrollIntoViewIfNeeded(); await send.click();
+    const go = p.getByRole("dialog").getByRole("button", { name: /^(Send|Review) \d+ filings? (for review|now)$/ }); await go.click(); await p.waitForTimeout(2500);
+    const open = p.getByRole("link", { name: "Open the review" }); if (await open.count()) { await open.first().click(); await p.waitForTimeout(2500); }
+    const sentBy = (await p.locator("main").innerText()).match(/Sent by [^,]+/)?.[0];
+    ok(`${tag} setup: the review says it was sent by the Representative`, /Representative/.test(sentBy ?? ""), sentBy);
+    await p.getByRole("button", { name: "Approve", exact: true }).click(); await p.waitForTimeout(900);
+    let selfBox = false; const d = p.getByRole("dialog");
+    // A firm that is not solo shows the self-review box only after the server asks for it (400 on "self"); a person then
+    // ticks it and presses Approve again (web/src/runtime/representative-review.tsx ApproveDialog).
+    if (await d.count()) {
+      const self = d.getByRole("checkbox", { name: /prepared and reviewed this filing myself/ });
+      for (let i = 0; i < 2 && (await d.count()); i++) {
+        if (await self.count()) { selfBox = true; await self.check(); }
+        await d.getByRole("button", { name: "Approve", exact: true }).click(); await p.waitForTimeout(2000);
+        const asked = (await d.count()) ? (await d.locator("[role=alert]").allInnerTexts()).join(" | ") : ""; if (asked) console.log(`${tag} APPROVE press ${i + 1}: the dialog says:`, asked.slice(0, 300));
+      }
+    }
+    const said = (await p.locator("[role=alert], [role=status]").allInnerTexts()).join(" | ").slice(0, 400); if (said) console.log(`${tag} AFTER APPROVE the page says:`, said);
+    if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/447-${tag}-after-approve.png`, fullPage: true });
+    console.log(`${tag} APPROVE DIALOG asked "I prepared and reviewed this filing myself":`, selfBox);
+    ok(`${tag} setup: the Representative approved the filing`, (await p.getByRole("button", { name: / · Round 1 Approved/ }).count()) > 0);
+    await p.goto(`${base}/cases/${made.body.id}`); await p.waitForLoadState("networkidle"); await p.waitForTimeout(1500);
+    const line = (await p.locator("main").innerText()).match(/Prepared by · Reviewed by:[^\n]*/)?.[0] ?? "";
+    console.log(`${tag} RECORD:`, line); await ctx.close(); return line;
+  };
+  // A: walk 1's set-up (default team: Case officer (Sample) as officer; the Representative does everything).
+  const A = await walk("A", {});
+  if (A !== null) {
+    const preparers = A.replace(/^Prepared by · Reviewed by:\s*/, "").split(" · ")[0];
+    ok("QA-447 W5 fail today: the record reads \"Self-reviewed\" (the Representative prepared, sent and approved alone)", /Self-reviewed/.test(A), A);
+    ok("QA-447 W5: the record names the Representative's licence number and a time", /R\d{6}/.test(A) && /\d{1,2}:\d{2}/.test(A), A);
+    ok("QA-447 W5 fail today: the record never names the Case officer as preparer (they did nothing)", !/Case officer \(Sample\)/.test(preparers), { preparers, line: A });
+  }
+  // B (contrast, not a W5 assertion): the Representative is the case's only officer. Expected "Self-reviewed".
+  const B = await walk("B", { caseOfficers: ["user-R"] });
+  if (B !== null) ok("contrast B: with the Representative as the case's only officer, the record reads \"Self-reviewed\"", /Self-reviewed/.test(B), B);
   await b.close(); console.log(failed ? `${failed} failed` : "all passed"); process.exit(failed ? 1 : 0);
 })();
