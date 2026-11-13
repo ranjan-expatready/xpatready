@@ -1,0 +1,35 @@
+# PF-7: the build context's ignore list for studio/Dockerfile (BuildKit reads <Dockerfile>.dockerignore in place of the
+# context root's .dockerignore; the context is the repository root). An allow-list: everything is left out, then only
+# what the API needs at run time is let back in, then installed packages, working files, built output, tests and
+# screenshots inside it are left out again. sources/, code/, archive/, .tools/, .git/ and the records never enter.
+*
+!ai-workers/problem-1-pathway-setup-and-form-filling/prototype
+!ai-workers/problem-1-pathway-setup-and-form-filling/official-sources
+**/node_modules
+**/.DS_Store
+**/*.log
+**/.env
+**/.env.*
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/web/dist
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/evidence
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/tests
+# What git ignores but a developer copy (the Mac) has on disk: never in an image built there (review Minor 5). Each line
+# names only files git does not track (a tracked file, even one force-added under a .gitignore rule, stays in the image:
+# the image holds the repository's tree; review round 2, Minor C).
+**/__pycache__
+**/test-results
+**/playwright-report
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/used-launch-tickets
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/runs/studio-fieldmap-approved-*.json
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/jobs/*-p[0-9]*of[0-9]*.json
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/jobs/studio-screenmap-*.json
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/jobs/studio-fieldmap-approved-*.json
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/parts/*
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/question-lists/*
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/screen-inventories/*
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/screening/tickets/*
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p1/runs
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/runs/*-live-20000101t*-pacheck*.json
