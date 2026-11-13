@@ -64,3 +64,11 @@ Read only `git diff 4808693d6 e445b6477 -- prototype/studio` (`modules.tsx`, `mo
 **Plainly:** (1) Apart from Major 1, head e445b6477 is approvable: Minors 1–3 are closed, and only one wording Nit is open. (2) As it stands, Major 1 is still open: a clash stops the app at load, red in CI, and does not stop `vite build`. It now needs only the tech lead's decision on PR Question 1. Journey test not rerun (diff only). The 9/10 stands; the blank page, the reason for both half points, is now an on-page message.
 
 Verdict: Approve if the tech lead takes option (a); else Changes needed
+
+## Re-review a415ddab2 (diff only, P-277)
+Read only `git diff e445b6477 a415ddab2`: one comment line in `modules.tsx`, one README sentence, and my own review.md section. No code changed, so I did not run the suite.
+* **Nit, fixed.** The comment at `modules.tsx:83` and the README no longer claim Vite's overlay. They now say the message shows on the page and in the browser's console. The comment adds that Vite's overlay shows only the dev server's own errors, which matches what I found in Vite 8.1.0.
+* **Major 1, closed by the tech lead's ruling.** The tech lead (Lead 38) answered (a) in PR comment 6860684072: the load-time stop with both names, plus the red `check_pf1_module_routes.ts` in CI, is PF-1's done. No file outside the touch list changed.
+* **Nothing new found.** Minors 1–3 stay closed. The journey score stays 9/10 (not rerun, diff only).
+
+Verdict: Approve
