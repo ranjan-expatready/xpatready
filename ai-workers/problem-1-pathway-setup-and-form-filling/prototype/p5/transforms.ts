@@ -73,9 +73,58 @@ const RECORDED = /^derived:(?:any\(([\w.,\s]+)\) recorded|([\w.]+) recorded|vali
 const PROSE_RECORDED = /^derive: true if any (?:(.+?) (?:is|are) recorded(?: for the subject)?|recorded (.+?))(?:, else false)$/i;
 /** Whether a transformation's first step is that prose Yes/No (engine/runtime/forms.ts markNothingRecorded reads it). */
 export const proseRecorded = (transform: string | null | undefined) => PROSE_RECORDED.test(stepsOf(transform)[0] ?? "");
-/** A transformation's steps: separated by ";" (P1/P2 maps) or "->" (the 21 Oct live IMM 5257 draft). Two spelling aliases
- *  from that draft name existing executable steps: date_part:X = date:X, address_part:province_state = address_part:province. */
-const stepsOf = (transform: string | null | undefined) => String(transform ?? "as_is").split(/;|->/).map((s) => s.trim().replace(/^date_part:/, "date:").replace(/^address_part:province_state\b/, "address_part:province")).filter(Boolean);
+/** A transformation's steps: separated by ";" (P1/P2 maps), "->" (the 21 Oct live IMM 5257 draft) or " then " before a
+ *  step word (BK-22: IMM 1294 (06-2026)'s draft, "address_part:country then code_list:…"; before, the second step was
+ *  ignored and "India" went into a list box, #1695 C1b). Spelling aliases name existing executable steps: date_part:X =
+ *  date:X, address_part:province_state = address_part:province, and (BK-22, #1695 C1) address_part:unit =
+ *  address_part:apt_unit, phone_part:national_number_without_country_code = phone_part:national_number, check:A/B =
+ *  check_code:A/B, and a code list written with no space before its bracket ("code_list:imm1295.sex(…)"). */
+const SPELLING: [RegExp, string][] = [[/^date_part:/, "date:"], [/^address_part:province_state\b/, "address_part:province"], [/^address_part:unit\b/, "address_part:apt_unit"],
+  [/^phone_part:national_number_without_country_code\b/, "phone_part:national_number"], [/^check:(?=[^/]+\/)/, "check_code:"], [/^(code_list:[\w.]+)\(/, "$1 ("]];
+const stepsOf = (transform: string | null | undefined) => String(transform ?? "as_is").split(/;|->|\s+then\s+(?=[a-z_]+:)/).map((s) => SPELLING.reduce((t, [re, to]) => t.replace(re, to), s.trim())).filter(Boolean);
+
+/** BK-22 (#1695 C1): a drafted map names a fact in words ("applying-from country", "residential address") or by a key
+ *  drafted under another group ("case.applying_from_country" for the box's own person.applying_from_country). Its key:
+ *  the box's own fact when the name is the own fact's name; else a key as written, or the words' name in the own fact's
+ *  group. null when the words are not a name (then the step stays not executable). */
+function factNamed(words: string, ownFact?: string): string | null {
+  const w = words.trim(), key = /^[a-z]+\.[a-z][\w]*$/.test(w);
+  const name = key ? w.split(".").pop()! : /^[a-z][a-z -]*[a-z]$/i.test(w) ? w.toLowerCase().replace(/[ -]+/g, "_") : null;
+  if (!name) return null;
+  if (ownFact && ownFact.split(".").pop() === name) return ownFact;
+  return key ? w : ownFact ? `${ownFact.split(".")[0]}.${name}` : null;
+}
+/** BK-22: a step that sets a code from a yes/no ("yes_no_code:Y/N", "check_code:1/0"). */
+const CODE_STEP = /^(?:yes_no_code|check_code):[^/]+\/.+$/;
+/** BK-22 (#1695 C1): the drafters' prose Yes/No steps, written as the executable ones. "derive: Y if <A> equals <B>, else
+ *  N" (IMM 1294) and "derive:<A> equals <B>" (IMM 1295) are "derived:<A> equals <B>"; "derive: Y if <own fact> = 206 (ISR
+ *  (Israel)), else N" is "derived:<own fact> is one of 206|ISR|Israel". A prose step that says its own letters ("Y if …,
+ *  else N") with no code step after it gets that code step ("yes_no_code:Y/N"). Words that name no fact stay as written,
+ *  so they stay not executable (never guessed). */
+export function canonicalSteps(transform: string | null | undefined, ownFact?: string): string[] {
+  const steps = stepsOf(transform), out: string[] = [];
+  for (const [i, s] of steps.entries()) {
+    const codeAfter = CODE_STEP.test(steps[i + 1] ?? "");
+    let m = /^derive: ?(\w+) if (.+?) equals (.+?), else (\w+)$/.exec(s), a: string | null, b: string | null;
+    if (m && (a = factNamed(m[2], ownFact)) && (b = factNamed(m[3], ownFact))) { out.push(`derived:${a} equals ${b}`, ...(codeAfter ? [] : [`yes_no_code:${m[1]}/${m[4]}`])); continue; }
+    if ((m = /^derive: ?(?!\w+ if )([^,]+?) equals ([^,]+)$/.exec(s)) && (a = factNamed(m[1], ownFact)) && (b = factNamed(m[2], ownFact))) { out.push(`derived:${a} equals ${b}`); continue; }
+    if ((m = /^derive: ?(\w+) if (.+?) = (\w+)(?: \(([A-Z]{2,3})(?: \(([A-Za-z .'-]+)\))?\))?, else (\w+)$/.exec(s)) && ownFact && factNamed(m[2], ownFact) === ownFact) {
+      out.push(`derived:${ownFact} is one of ${[m[3], m[4], m[5]].filter(Boolean).join("|")}`, ...(codeAfter ? [] : [`yes_no_code:${m[1]}/${m[6]}`])); continue;
+    }
+    out.push(s);
+  }
+  return out;
+}
+/** BK-22 (#1695 C1): a "same as" Yes/No ("A equals B" then its yes/no code), in any of its spellings, for
+ *  engine/form-values.ts sameAsLeavesRowEmpty: A's own form fields are left empty when the answer is the same. */
+export function sameAsOf(transform: string | null | undefined, ownFact?: string): { a: string; b: string; yes: string } | null {
+  const steps = canonicalSteps(transform, ownFact);
+  const i = steps.findIndex((s) => /^derived:[\w.]+ equals [\w.]+$/.test(s));
+  const code = i < 0 ? null : steps.slice(i + 1).map((s) => /^yes_no_code:([^/]+)\//.exec(s)).find(Boolean);
+  if (i < 0 || !code) return null;
+  const [, a, b] = /^derived:([\w.]+) equals ([\w.]+)$/.exec(steps[i])!;
+  return { a, b, yes: code[1] };
+}
 /** Whether a transformation is a "recorded" Yes/No derivation, and the other facts it names (any(a, b)). */
 export function recordedDerivation(transform: string | null | undefined): { facts: string[] } | null {
   const m = stepsOf(transform).map((s) => RECORDED.exec(s)).find(Boolean);
@@ -124,7 +173,7 @@ export type Context = { fact?: (key: string) => unknown;
 
 /** Runs one transformation text on one value for one box. `rows` lets "select …" pick among a person's rows. */
 export function runTransform(transform: string | undefined, value: unknown, box: Box, ctx: Context = {}): Outcome {
-  const steps = stepsOf(transform);
+  const steps = canonicalSteps(transform, ctx.ownFact);
   const hand = (reason: string): Outcome => ({ ok: false, hand: true, reason, steps });
   const blank = (reason: string): Outcome => ({ ok: false, blank: true, reason, steps });
   let v: any = value;
@@ -163,7 +212,21 @@ export function runTransform(transform: string | undefined, value: unknown, box:
       v = true; continue;
     }
     // C7.2 cause 1: "A equals B" (applying from the country of residence; residential address same as mailing).
-    if ((m = /^derived:([\w.]+) equals ([\w.]+)$/.exec(s))) { const other = ctx.fact?.(m[2]); if (!present(other)) return hand(`${m[2]} is not confirmed, so it cannot be compared`); v = same(v, other); continue; }
+    // BK-22: the side named first is the box's own value, unless the box's own fact is known and the step names another one.
+    if ((m = /^derived:([\w.]+) equals ([\w.]+)$/.exec(s))) {
+      const own = !ctx.ownFact || m[1] === ctx.ownFact, mine = own ? v : ctx.fact?.(m[1]); if (!own && !present(mine)) return hand(`${m[1]} is not confirmed, so it cannot be compared`);
+      const other = ctx.fact?.(m[2]); if (!present(other)) return hand(`${m[2]} is not confirmed, so it cannot be compared`); v = same(mine, other); continue;
+    }
+    // BK-22 (#1695 C1): "derive: Y if passport country of issue = 206 (ISR (Israel)), else N": Yes when the value is the
+    // code, its letters or its name; No for another country (a name or a code); a list or a record goes by hand.
+    if ((m = /^derived:[\w.]+ is one of (.+)$/.exec(s))) {
+      if (typeof v !== "string" && typeof v !== "number") return hand(`not a single answer: ${JSON.stringify(v)}`);
+      const t = String(v).trim(), alts = m[1].split("|").map((x) => x.toLowerCase());
+      if (!/^[A-Za-z0-9][A-Za-z0-9 .'()-]*$/.test(t)) return hand(`not a country: ${t}`);
+      v = alts.includes(t.toLowerCase()) || alts.includes((ISO3[t.toUpperCase()] ?? "").toLowerCase()); continue;
+    }
+    // BK-22 (#1695 C1, IMM 1295): "derive:country calling code is (not) 1" on the box's own phone.
+    if ((m = /^derive: ?country calling code is (not )?1$/.exec(s))) { const cc = String((v as Phone)?.country_code ?? "").replace(/\D/g, ""); if (!cc) return hand("phone has no country calling code"); v = (cc === "1") !== !!m[1]; continue; }
     // C7.2 cause 1: the phone switches ("country code of … is (not) 1 -> check_code:1/0").
     if ((m = /^derived:country code of [\w.]+ is (not )?1$/.exec(s))) { const cc = String((v as Phone)?.country_code ?? "").replace(/\D/g, ""); if (!cc) return hand("phone has no country calling code"); v = (cc === "1") !== !!m[1]; continue; }
     if ((m = /^number_as_text(?: \((?:[A-Z]{3}, )?max (\d+) char(?:s|acters)\))?$/.exec(s))) {
@@ -171,6 +234,14 @@ export function runTransform(transform: string | undefined, value: unknown, box:
       if (!/^\d+(\.\d{1,2})?$/.test(t)) return hand(`not an amount: ${t}`);
       if (m[1] && t.length > Number(m[1])) return hand(`amount is ${t.length} characters; the box holds ${m[1]} (never truncated)`);
       v = t; continue;
+    }
+    // BK-22 (#1695 C1, IMM 1294's costs and funds): "number:whole_dollars (max N chars)": an amount with no cents (".00" is
+    // dropped); cents, any other text or a longer amount go by hand: never rounded, never truncated.
+    if ((m = /^number:whole_dollars(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) {
+      const t = typeof v === "number" ? String(v) : String(v).trim(), w = /^(\d+)(?:\.0{1,2})?$/.exec(t);
+      if (!w) return hand(/^\d+\.\d{1,2}$/.test(t) ? `${t} has cents; the form takes whole dollars (never rounded)` : `not an amount: ${t}`);
+      if (m[1] && w[1].length > Number(m[1])) return hand(`amount is ${w[1].length} characters; the box holds ${m[1]} (never truncated)`);
+      v = w[1]; continue;
     }
     // QA-403: a drafted map may describe what the value is, "as_is (plain-language application type)": the note says what
     // the words are, not how to change them, so the value is written as it is. Only a note that starts "plain-language" or
@@ -227,25 +298,36 @@ export function runTransform(transform: string | undefined, value: unknown, box:
     // C7.7 (G25): an inverted yes/no box, "derive_inverse:1 when the subject has no child records (…), 0 when any child
     // exists": the first code when the fact is No, the second when it is Yes. Only a yes/no value; anything else by hand.
     if ((m = /^derive_inverse:(\w+) when [^,]+?(?: \([^)]*\))?, (\w+) when .+$/.exec(s))) { const yn = typeof v === "boolean" ? v : /^(y|yes|true)$/i.test(String(v)) ? true : /^(n|no|false)$/i.test(String(v)) ? false : null; if (yn === null) return hand(`not a yes/no value: ${v}`); v = yn ? m[2] : m[1]; continue; }
-    if ((m = /^derive:1 if (?:fax )?country calling code is (not )?1(?: \([^)]*\))?, else 0$/.exec(s))) { const cc = String((v as Phone).country_code ?? ""); if (!cc) return hand("phone has no country calling code"); v = (cc === "1") !== !!m[1] ? "1" : "0"; continue; }
+    // BK-22 (#1695 C1, IMM 1294): also "derive: 1 if the number's (the fax number's) country calling code is 1 …, else 0".
+    if ((m = /^derive: ?1 if (?:fax |the (?:fax )?number's )?country calling code is (not )?1(?: \([^)]*\))?, else 0$/.exec(s))) { const cc = String((v as Phone).country_code ?? ""); if (!cc) return hand("phone has no country calling code"); v = (cc === "1") !== !!m[1] ? "1" : "0"; continue; }
     // C7.2 cause 1: the 21 Oct draft's names: "country_code" is the calling code; "international_number_without_plus" is the
     // number after it, as E1 wrote it (23 Oct: IntlNumber "9800000001" beside NumberCountry "91"; Validate passed and the
     // form's own +919800000001 was in its barcode), so it is the national number.
-    if ((m = /^phone_part:(extension|country_calling_code|country_code|national_number|international_number_without_plus)\b/.exec(s))) {
+    // BK-22 (#1695 C1b): the part's name is the whole step, with at most its length: nothing after it is ignored.
+    if ((m = /^phone_part:(extension|country_calling_code|country_code|national_number|international_number_without_plus)(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) {
       if (m[1] === "country_code") m[1] = "country_calling_code"; else if (m[1] === "international_number_without_plus") m[1] = "national_number";
       const p = v as Phone; const part = m[1] === "extension" ? p.extension : m[1] === "country_calling_code" ? p.country_code : p.number;
       if (!part) return blank(`no ${m[1]}`);
       if (m[1] !== "country_calling_code" && p.country_code === "1" && m[1] === "national_number") return blank("North American number goes in the area-code boxes");
-      v = String(part).replace(/\D/g, ""); continue;
+      v = String(part).replace(/\D/g, ""); if (m[2] && v.length > Number(m[2])) return hand(`${m[1].replace(/_/g, " ")} is ${v.length} digits; the box holds ${m[2]} (never truncated)`); continue;
     }
     // C7.7 (IMM 5476's representative phone): the country calling code's digits, and the number's digits (area code included).
     if ((m = /^phone:(country_code_digits|area_code_and_number)$/.exec(s))) { const p = v as Phone; const part = m[1] === "country_code_digits" ? p?.country_code : p?.number; if (!part) return blank(`no ${m[1] === "country_code_digits" ? "country calling code" : "number"}`); v = String(part).replace(/\D/g, ""); continue; }
     if (/^phone_part:nanp_/.test(s)) { const p = v as Phone; if (p.country_code !== "1") return blank("not a North American number"); return hand("North American number parts are not in the executable set yet"); }
-    if ((m = /^address_part:(city|province|country|postal_code|street_number|street_name|apt_unit|district|po_box)\b/.exec(s))) { const a = parseAddress(v); const part = a?.[m[1] as keyof Address]; if (!part) return blank(`address has no ${m[1]}`); v = part; const max = /max (\d+) char/.exec(s); if (max && String(v).length > Number(max[1])) return hand(`${m[1]} longer than ${max[1]} characters`); continue; }
+    // BK-22 (#1695 C1b): the part's name is the whole step, with at most its length: nothing after it is ignored (before,
+    // "address_part:country then code_list:…" wrote the country's name into a list box). "street_line" (IMM 1294's school
+    // address) is the unit, number and street together, as the one-line address starts.
+    if ((m = /^address_part:(city|province|country|postal_code|street_number|street_name|street_line|apt_unit|district|po_box)(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) {
+      const a = parseAddress(v); const part = m[1] === "street_line" ? (a ? [a.apt_unit, a.street_number, a.street_name].filter(Boolean).join(" ") : "") : a?.[m[1] as keyof Address];
+      if (!part) return blank(`address has no ${m[1].replace(/_/g, " ")}`); v = part; if (m[2] && String(v).length > Number(m[2])) return hand(`${m[1].replace(/_/g, " ")} longer than ${m[2]} characters`); continue;
+    }
     // B128 (QA-153): "address_single_line_text" (a drafted map's spelling) is the same one-line address.
     if ((m = /^address_single_line(?:_text)?(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) { const a = parseAddress(v); if (!a) return hand("not an address"); v = typeof value === "string" ? value : oneLine(a); if (m[1] && v.length > Number(m[1])) return hand(`address longer than ${m[1]} characters`); continue; }
     if ((m = /^country_name_text(?: \(max (\d+) char(?:s|acters)\))?$/.exec(s))) { const c = ISO3[String(v).toUpperCase()] ?? String(v); if (m[1] && c.length > Number(m[1])) return hand(`country name longer than ${m[1]} characters`); v = c; continue; }
-    if ((m = /^code_list:[\w.]+(?: \((.*)\))?$/.exec(s))) {
+    // BK-22 (#1695 C1): the bracket may hold one inner bracket ("e.g. CAN (Canada)=511"), and a sentence after it may only
+    // say that a value the list does not have is flagged ("There is no option for …: such a value must be flagged for
+    // review", IMM 5707): that is what this step does (by hand), so the sentence orders nothing more.
+    if ((m = /^code_list:[\w.]+(?: \(([^()]*(?:\([^()]*\)[^()]*)*)\))?(?:\.\s+((?:There is no option|This list has no)\b[^()]*\b(?:flag(?:ged)?|review)\b[^()]*))?$/.exec(s))) {
       const inline: Record<string, string> = {};
       for (const pair of (m[1] ?? "").split(",")) { const q = /^\s*([^=|]+?)\s*=\s*(\w+)\s*$/.exec(pair); if (q) inline[q[1]] = q[2]; }
       if (!choices(box).length && !Object.keys(inline).length) return hand("code list depends on another answer (dependent list); the form's own rules fill it");
@@ -256,4 +338,13 @@ export function runTransform(transform: string | undefined, value: unknown, box:
     return hand(`step "${s}" is not in the executable set`);
   }
   return { ok: true, value: String(v), steps };
+}
+
+/** BK-22 (#1695 C1): the steps of a transformation the filler cannot run (each as written after its spelling aliases), so
+ *  Field map review flags them before a map is accepted. Judged by the executor itself: a step is run alone on a sample
+ *  value, and one that reaches "not in the executable set" is listed; any other outcome (a value, by hand for the value's
+ *  sake, blank) means the step is understood. Pure. */
+export function stepsNotRun(transform: string | null | undefined, ownFact?: string): string[] {
+  if (transform === null || transform === undefined || !transform.trim()) return [];
+  return canonicalSteps(transform, ownFact).filter((s) => { const o = runTransform(s, "x", {}, { ownFact, fact: () => "x" }); return "hand" in o && /is not in the executable set/.test(o.reason); });
 }
