@@ -1,0 +1,2 @@
+const {chromium}=require("playwright");(async()=>{const b=await chromium.connectOverCDP("http://localhost:9333");const p=b.contexts()[0].pages().find(x=>!x.url().startsWith("devtools"));
+const r=await p.evaluate(async ([u,actor])=>{const res=await fetch("/api"+u,{headers:{"x-actor":actor}}); return res.status+" "+(await res.text())},[process.argv[2],process.argv[3]]);console.log(r.slice(0,+process.argv[4]||3000));process.exit(0)})()

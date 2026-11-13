@@ -1,0 +1,2484 @@
+
+=== Part 1 of 56 · Details of visit to Canada
+Client questionnaire
+Back
+
+Part 1 of 56 · Details of visit to Canada
+
+Details of visit to Canada
+
+Answered once for the whole application.
+
+Address in Canada of the person or institution to be visited
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Name of a person or institution to be visited in Canada
+Relationship of the person or institution to be visited to the traveller
+Funds available for the stay, in Canadian dollars
+CAD $
+Planned first day of the stay in Canada
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Planned last day of the stay in Canada
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Description of the visit purpose when it is 'other'
+Purpose of the visit to Canada
+Choose…
+Business
+Tourism
+Short-Term Studies
+Returning Student
+Returning Worker
+Super Visa
+Other
+Family Visit
+Visit
+Save and continueSave and come back later
+--- fields
+text | Street number | legend: Address in Canada of the person or institution to be visited
+text | Street name | legend: Address in Canada of the person or institution to be visited
+text | Apartment or unit (optional) | legend: Address in Canada of the person or institution to be visited
+text | City or town | legend: Address in Canada of the person or institution to be visited
+text | Province, state or district (optional) | legend: Address in Canada of the person or institution to be visited
+text | Postal code (optional) | legend: Address in Canada of the person or institution to be visited
+text | Country | legend: Address in Canada of the person or institution to be visited
+text | Name of a person or institution to be visited in Canada
+text | Relationship of the person or institution to be visited to the traveller
+text | Funds available for the stay, in Canadian dollars
+text | Day | legend: Planned first day of the stay in Canada
+text | Month | legend: Planned first day of the stay in Canada
+text | Year | legend: Planned first day of the stay in Canada
+text | Day | legend: Planned last day of the stay in Canada
+text | Month | legend: Planned last day of the stay in Canada
+text | Year | legend: Planned last day of the stay in Canada
+text | Description of the visit purpose when it is 'other'
+select-one | Purpose of the visit to Canada | opts:10 Choose…/Business/Tourism/Short-Term Studies
+
+=== Part 2 of 56 · Request for a change of sex or gender identifier
+Client questionnaire
+Back
+
+Part 2 of 56 · Request for a change of sex or gender identifier
+
+Request for a change of sex or gender identifier
+
+Answered once for the whole application.
+
+The type of IRCC document whose sex or gender identifier the request concerns
+1 Certificate of Canadian Citizenship / 2 Permanent Resident Card / 5 Temporary Resident Document / 3 document issued to a Protected Person / 4 Refugee Protection Claimant Document
+Whether the case is a request to change the sex or gender identifier shown on an IRCC document
+Yes
+No
+Save and continueSave and come back later
+--- fields
+radio | 1 Certificate of Canadian Citizenship / 2 Permanent Resident Card / 5 Temporary Resident Document / 3 document | legend: The type of IRCC document whose sex or gender identifier the request concerns | val=1 Certificate of Canadian Citizenship / 2 Permanent Resident Card / 5 Temporary Resident Document / 3 document issued to a Protected Person / 4 Refugee Protection Claimant Document
+radio | Yes | legend: Whether the case is a request to change the sex or gender identifier shown on an IRCC docu | val=true
+radio | No | legend: Whether the case is a request to change the sex or gender identifier shown on an IRCC docu | val=false
+
+=== Part 3 of 56 · Your declaration
+Client questionnaire
+Back
+
+Part 3 of 56 · Your declaration
+
+Your declaration
+
+Answered once for the whole application.
+
+Whether the person is granting or withdrawing authority for the immigration authorities to release information from their case file to a designated individual
+authorize
+withdraw
+Save and continueSave and come back later
+--- fields
+radio | authorize | legend: Whether the person is granting or withdrawing authority for the immigration authorities to | val=authorize
+radio | withdraw | legend: Whether the person is granting or withdrawing authority for the immigration authorities to | val=withdraw
+
+=== Part 4 of 56 · Personal details
+Client questionnaire
+Back
+✓ Saved
+
+Part 4 of 56 · Personal details
+
+Personal details
+
+Answered once for the whole application.
+
+Confirmed by the officer.
+
+Official language in which the person wants to receive service for this application
+English
+French
+Kind of temporary resident visa requested (visitor or transit)
+Visitor visa
+Transit
+Whether the applicant uses the services of a representative, or is appointing, updating or cancelling a representative's appointment (IMM 5484 p. 1; IMM 5476).
+Yes
+No
+Whether the applicant authorizes IRCC and the CBSA to release information from their case file to someone other than themselves (IMM 5484 p. 1; IMM 5475).
+Yes
+No
+Save and continueSave and come back later
+--- fields
+radio | English | legend: Official language in which the person wants to receive service for this application | val=English
+radio | French | legend: Official language in which the person wants to receive service for this application | val=French
+radio | Visitor visa | legend: Kind of temporary resident visa requested (visitor or transit) | val=VisitorVisa
+radio | Transit | legend: Kind of temporary resident visa requested (visitor or transit) | val=Transit
+radio | Yes | legend: Whether the applicant uses the services of a representative, or is appointing, updating or | val=true
+radio | No | legend: Whether the applicant uses the services of a representative, or is appointing, updating or | val=false
+radio | Yes | legend: Whether the applicant authorizes IRCC and the CBSA to release information from their case  | val=true
+radio | No | legend: Whether the applicant authorizes IRCC and the CBSA to release information from their case  | val=false
+
+=== Part 5 of 55 · Signature
+Client questionnaire
+Back
+
+Part 5 of 55 · Signature
+
+Signature
+
+Answering for Sample Principal A (you).
+
+Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an organization at its request, about the services they received, for research, performance measurement or evaluation; never used to decide about them (IMM 5257, consent before the signature).
+Yes
+No
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an | val=true
+radio | No | legend: Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an | val=false
+
+=== Part 6 of 55 · Government positions
+Client questionnaire
+Back
+
+Part 6 of 55 · Government positions
+
+Government positions
+
+Answering for Sample Principal A (you).
+
+Whether the person has ever held any government position (for example civil servant, judge, police officer, mayor, member of parliament, hospital administrator)
+Yes
+No
+Entries
+
+Each entry asks: Activities and/or positions held in one government position; Country or territory of one government position held by the person; Department or branch of one government position; Start date of one government position held by the person; Level of jurisdiction of one government position (for example national, regional, municipal); End date of one government position held by the person.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person has ever held any government position (for example civil servant, judge | val=true
+radio | No | legend: Whether the person has ever held any government position (for example civil servant, judge | val=false
+
+=== Part 7 of 55 · Membership or Association with Organizations
+Client questionnaire
+Back
+
+Part 7 of 55 · Membership or Association with Organizations
+
+Membership or Association with Organizations
+
+Answering for Sample Principal A (you).
+
+Entries
+
+Each entry asks: Activities carried out and/or positions held by the person within one organization; Country or territory of one organization the person is or was associated with; Start date of the person's membership in or association with one organization; Name of an organization the person is or was a member of or associated with; Province or region of one organization the person is or was associated with; End date of the person's membership in or association with one organization.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+
+
+=== Part 8 of 55 · Employment
+Client questionnaire
+Back
+
+Part 8 of 55 · Employment
+
+Employment
+
+Answering for Sample Principal A (you).
+
+Entries
+
+Each entry asks: City or town of an activity period; Country or territory of an activity period; Company, employer or facility name for an activity period; Start date of an activity or occupation period; Activity or occupation during a period; Province or state of an activity period; End date of an activity or occupation period.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+
+
+=== Part 9 of 55 · Education
+Client questionnaire
+Back
+
+Part 9 of 55 · Education
+
+Education
+
+Answering for Sample Principal A (you).
+
+Entries
+
+Each entry asks: City or town of the school; Country or territory of the school; Field of study of a post-secondary education period; Start date of a post-secondary education period; Province or state of the school; Name of the school or facility attended; End date of a post-secondary education period.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+
+
+=== Part 10 of 55 · Statutory declaration of common-law union
+Client questionnaire
+Back
+
+Part 10 of 55 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Principal A (you).
+
+City, town or village where the person currently lives
+The person's full name
+Province, state or territory where the person currently lives
+Date the two partners began living together continuously in a conjugal relationship
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Save and continueSave and come back later
+--- fields
+text | City, town or village where the person currently lives
+text | The person's full name
+text | Province, state or territory where the person currently lives
+text | Day | legend: Date the two partners began living together continuously in a conjugal relationship
+text | Month | legend: Date the two partners began living together continuously in a conjugal relationship
+text | Year | legend: Date the two partners began living together continuously in a conjugal relationship
+
+=== Part 11 of 55 · Military service
+Client questionnaire
+Back
+
+Part 11 of 55 · Military service
+
+Military service
+
+Answering for Sample Principal A (you).
+
+Whether the person has ever served in any military, militia, civil defence unit, security organization or police force, including non-obligatory national service, reserve or volunteer units
+Yes
+No
+Entries
+
+Each entry asks: Country or territory of one period of service; Start date of one period of military, militia, civil defence, security or police service; Location or place where the person was stationed during one period of service; Province or region of the place where the person was stationed during one period of service; End date of one period of military, militia, civil defence, security or police service.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person has ever served in any military, militia, civil defence unit, security  | val=true
+radio | No | legend: Whether the person has ever served in any military, militia, civil defence unit, security  | val=false
+
+=== Part 12 of 55 · Previous travel
+Client questionnaire
+Back
+
+Part 12 of 55 · Previous travel
+
+Previous travel
+
+Answering for Sample Principal A (you).
+
+Entries
+
+Each entry asks: Country or territory the person travelled to on one trip; Start date of one trip the person made; Location (city or place) the person travelled to on one trip; Purpose of one trip the person made; End date of one trip the person made.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+
+
+=== Part 13 of 55 · Contact information
+Client questionnaire
+Back
+
+Part 13 of 55 · Contact information
+
+Contact information
+
+Answering for Sample Principal A (you).
+
+Current mailing address
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+E-mail address
+Fax number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Alternate telephone number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Type of the alternate telephone number
+Residence
+Cellular
+Business
+Main telephone number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Type of the main telephone number (residence, cellular, business)
+Residence
+Cellular
+Business
+Current residential address
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+--- fields
+text | Street number | legend: Current mailing address
+text | Street name | legend: Current mailing address
+text | Apartment or unit (optional) | legend: Current mailing address
+text | City or town | legend: Current mailing address
+text | Province, state or district (optional) | legend: Current mailing address
+text | Postal code (optional) | legend: Current mailing address
+text | Country | legend: Current mailing address
+email | E-mail address
+text | Country code | legend: Fax number including country code
+text | Number | legend: Fax number including country code
+text | Country code | legend: Alternate telephone number including country code
+text | Number | legend: Alternate telephone number including country code
+radio | Residence | legend: Type of the alternate telephone number | val=Residence
+radio | Cellular | legend: Type of the alternate telephone number | val=Cellular
+radio | Business | legend: Type of the alternate telephone number | val=Business
+text | Country code | legend: Main telephone number including country code
+text | Number | legend: Main telephone number including country code
+radio | Residence | legend: Type of the main telephone number (residence, cellular, business) | val=Residence
+radio | Cellular | legend: Type of the main telephone number (residence, cellular, business) | val=Cellular
+radio | Business | legend: Type of the main telephone number (residence, cellular, business) | val=Business
+text | Street number | legend: Current residential address
+text | Street name | legend: Current residential address
+text | Apartment or unit (optional) | legend: Current residential address
+text | City or town | legend: Current residential address
+text | Province, state or district (optional) | legend: Current residential address
+text | Postal code (optional) | legend: Current residential address
+text | Country | legend: Current residential address
+
+=== Part 14 of 55 · Personal details
+Client questionnaire
+Back
+
+Part 14 of 55 · Personal details
+
+Personal details
+
+Answering for Sample Principal A (you).
+
+Date the person married or began the common-law relationship with the current spouse or partner
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Family name as shown on passport or travel document
+Given name(s) as shown on passport or travel document
+Current marital status
+Choose…
+Annulled Marriage
+Common-Law
+Divorced
+Legally Separated
+Married
+Single
+Unknown
+Widowed
+Whether the person has ever used another name (nickname, maiden name, alias)
+Yes
+No
+Country of citizenship
+Country or territory from which the person is submitting the application
+Start date of the status in the applying-from country
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Description of the status in the applying-from country when it is 'other'
+Immigration status in the country from which the person is applying
+Choose…
+Citizen
+Permanent resident
+Visitor
+Worker
+Student
+Other
+Protected Person
+Refugee Claimant
+Foreign National
+End date of the status in the applying-from country
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Country or territory where the person currently resides
+Start date of the status in the current country of residence
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Description of the status in the current country of residence when it is 'other'
+Immigration status in the current country of residence
+Choose…
+Citizen
+Permanent resident
+Visitor
+Worker
+Student
+Other
+Protected Person
+Refugee Claimant
+Foreign National
+End date of the status in the current country of residence
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Date of birth
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+City or town of birth
+Country or territory of birth
+Sex or gender marker of the person
+Female
+Male
+Unknown
+Unspecified
+Unique Client Identifier assigned by IRCC
+Whether the person has taken a designated English or French language test
+Yes
+No
+Whether the person can communicate in English, French, both or neither
+English
+French
+Both
+Neither
+Official language in which the person is most at ease
+English
+French
+Native language or mother tongue
+Country or authority that issued the passport
+Passport expiry date
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Passport issue date
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Number of the passport or travel document
+Whether the person was previously married or in a common-law relationship
+Yes
+No
+Whether the person chooses a gender identifier different from the one on their current or earlier Canad
+--- fields
+text | Day | legend: Date the person married or began the common-law relationship with the current spouse or pa
+text | Month | legend: Date the person married or began the common-law relationship with the current spouse or pa
+text | Year | legend: Date the person married or began the common-law relationship with the current spouse or pa
+text | Family name as shown on passport or travel document
+text | Given name(s) as shown on passport or travel document
+select-one | Current marital status | opts:9 Choose…/Annulled Marriage/Common-Law/Divorced
+radio | Yes | legend: Whether the person has ever used another name (nickname, maiden name, alias) | val=true
+radio | No | legend: Whether the person has ever used another name (nickname, maiden name, alias) | val=false
+text | Country of citizenship
+text | Country or territory from which the person is submitting the application
+text | Day | legend: Start date of the status in the applying-from country
+text | Month | legend: Start date of the status in the applying-from country
+text | Year | legend: Start date of the status in the applying-from country
+text | Description of the status in the applying-from country when it is 'other'
+select-one | Immigration status in the country from which the person is applying | opts:10 Choose…/Citizen/Permanent resident/Visitor
+text | Day | legend: End date of the status in the applying-from country
+text | Month | legend: End date of the status in the applying-from country
+text | Year | legend: End date of the status in the applying-from country
+text | Country or territory where the person currently resides
+text | Day | legend: Start date of the status in the current country of residence
+text | Month | legend: Start date of the status in the current country of residence
+text | Year | legend: Start date of the status in the current country of residence
+text | Description of the status in the current country of residence when it is 'other'
+select-one | Immigration status in the current country of residence | opts:10 Choose…/Citizen/Permanent resident/Visitor
+text | Day | legend: End date of the status in the current country of residence
+text | Month | legend: End date of the status in the current country of residence
+text | Year | legend: End date of the status in the current country of residence
+text | Day | legend: Date of birth
+text | Month | legend: Date of birth
+text | Year | legend: Date of birth
+text | City or town of birth
+text | Country or territory of birth
+radio | Female | legend: Sex or gender marker of the person | val=Female
+radio | Male | legend: Sex or gender marker of the person | val=Male
+radio | Unknown | legend: Sex or gender marker of the person | val=Unknown
+radio | Unspecified | legend: Sex or gender marker of the person | val=Unspecified
+text | Unique Client Identifier assigned by IRCC
+radio | Yes | legend: Whether the person has taken a designated English or French language test | val=true
+radio | No | legend: Whether the person has taken a designated English or French language test | val=false
+radio | English | legend: Whether the person can communicate in English, French, both or neither | val=English
+radio | French | legend: Whether the person can communicate in English, French, both or neither | val=French
+radio | Both | legend: Whether the person can communicate in English, French, both or neither | val=Both
+radio | Neither | legend: Whether the person can communicate in English, French, both or neither | val=Neither
+radio | English | legend: Official language in which the person is most at ease | val=English
+radio | French | legend: Official language in which the person is most at ease | val=French
+text | Native language or mother tongue
+text | Country or authority that issued the passport
+text | Day | legend: Passport expiry date
+text | Month | legend: Passport expiry date
+text | Year | legend: Passport expiry date
+text | Day | legend: Passport issue date
+text | Month | legend: Passport issue date
+text | Year | legend: Passport issue date
+text | Number of the passport or travel document
+radio | Yes | legend: Whether the person was previously married or in a common-law relationship | val=true
+radio | No | legend: Whether the person was previously married or in a common-law relationship | val=false
+radio | Yes | legend: Whether the person chooses a gender identifier different from the one on their current or  | val=true
+radio | No | legend: Whether the person chooses a gender identifier different from the one on their current or  | val=false
+radio | Both parents | legend: If under 18: who is this person travelling to Canada with? | val=both_parents
+radio | One parent | legend: If under 18: who is this person travelling to Canada with? | val=one_parent
+radio | Another adult | legend: If under 18: who is this person travelling to Canada with? | val=another_adult
+radio | Alone | legend: If under 18: who is this person travelling to Canada with? | val=alone
+radio | Not applicable | legend: If under 18: what is the custody arrangement for this person? | val=not_applicable
+radio | Shared | legend: If under 18: what is the custody arrangement for this person? | val=shared
+radio | Sole | legend: If under 18: what is the custody arrangement for this person? | val=sole
+radio | Adopted | legend: If under 18: what is the custody arrangement for this person? | val=adopted
+radio | Guardian | legend: If under 18: what is the custody arrangement for this person? | val=guardian
+
+=== Part 15 of 63 · US PR card
+Client questionnaire
+Back
+
+Part 15 of 63 · US PR card
+
+US PR card
+
+Answering for Sample Principal A (you).
+
+Whether the person is a lawful permanent resident of the United States
+Yes
+No
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person is a lawful permanent resident of the United States | val=true
+radio | No | legend: Whether the person is a lawful permanent resident of the United States | val=false
+
+=== Part 16 of 63 · Background information
+Client questionnaire
+Back
+
+Part 16 of 63 · Background information
+
+Background information
+
+Answering for Sample Principal A (you).
+
+Whether the person previously applied to enter or remain in Canada
+Yes
+No
+Free-text details of overstay, refusal, removal or previous Canadian applications
+Whether the person ever remained beyond status, or studied or worked without authorization, in Canada
+Yes
+No
+Whether the person was ever refused a visa or permit, denied entry or ordered to leave any country
+Yes
+No
+Whether, within the past two years, the person or a family member has had tuberculosis of the lungs or been in close contact with a person with tuberculosis (IMM 5257, Background information, Question 1 a).
+Yes
+No
+Whether the person has a physical or mental disorder requiring social or health services other than medication during a stay in Canada
+Yes
+No
+Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence
+Yes
+No
+Free-text details of criminal history
+Whether the person has ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings (IMM 5257, Background information, Question 6).
+Yes
+No
+Whether the person served in a military, militia, civil defence, security organization or police force
+Yes
+No
+Dates and countries of military or security service
+Whether the person is or was a member of or associated with a group that engaged in or advocated violence for political or religious objectives
+Yes
+No
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person previously applied to enter or remain in Canada | val=true
+radio | No | legend: Whether the person previously applied to enter or remain in Canada | val=false
+textarea | Free-text details of overstay, refusal, removal or previous Canadian applications
+radio | Yes | legend: Whether the person ever remained beyond status, or studied or worked without authorization | val=true
+radio | No | legend: Whether the person ever remained beyond status, or studied or worked without authorization | val=false
+radio | Yes | legend: Whether the person was ever refused a visa or permit, denied entry or ordered to leave any | val=true
+radio | No | legend: Whether the person was ever refused a visa or permit, denied entry or ordered to leave any | val=false
+radio | Yes | legend: Whether, within the past two years, the person or a family member has had tuberculosis of  | val=true
+radio | No | legend: Whether, within the past two years, the person or a family member has had tuberculosis of  | val=false
+radio | Yes | legend: Whether the person has a physical or mental disorder requiring social or health services o | val=true
+radio | No | legend: Whether the person has a physical or mental disorder requiring social or health services o | val=false
+radio | Yes | legend: Whether the person ever committed, was arrested for, charged with or convicted of a crimin | val=true
+radio | No | legend: Whether the person ever committed, was arrested for, charged with or convicted of a crimin | val=false
+textarea | Free-text details of criminal history
+radio | Yes | legend: Whether the person has ever witnessed or participated in the ill treatment of prisoners or | val=true
+radio | No | legend: Whether the person has ever witnessed or participated in the ill treatment of prisoners or | val=false
+radio | Yes | legend: Whether the person served in a military, militia, civil defence, security organization or  | val=true
+radio | No | legend: Whether the person served in a military, militia, civil defence, security organization or  | val=false
+textarea | Dates and countries of military or security service
+radio | Yes | legend: Whether the person is or was a member of or associated with a group that engaged in or adv | val=true
+radio | No | legend: Whether the person is or was a member of or associated with a group that engaged in or adv | val=false
+
+=== Part 17 of 63 · Your parent 1 (mother or father)
+Client questionnaire
+Back
+
+Part 17 of 63 · Your parent 1 (mother or father)
+
+Your parent 1 (mother or father)
+
+Answering for Sample Principal A (you).
+
+Whether this family member will accompany the subject to Canada.
+Yes
+No
+The address where the person currently lives.
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether this family member will accompany the subject to Canada. | val=true
+radio | No | legend: Whether this family member will accompany the subject to Canada. | val=false
+text | Street number | legend: The address where the person currently lives.
+text | Street name | legend: The address where the person currently lives.
+text | Apartment or unit (optional) | legend: The address where the person currently lives.
+text | City or town | legend: The address where the person currently lives.
+text | Province, state or district (optional) | legend: The address where the person currently lives.
+text | Postal code (optional) | legend: The address where the person currently lives.
+text | Country | legend: The address where the person currently lives.
+
+=== Part 18 of 63 · Statutory declaration of common-law union
+Client questionnaire
+Back
+✓ Saved
+
+Part 18 of 63 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Principal A (you).
+
+Declared: the client's own answer; it fills the forms now.
+
+The person's full name
+Save and continueSave and come back later
+--- fields
+text | The person's full name | val=Sample
+
+=== Part 19 of 63 · Other documentary evidence
+Client questionnaire
+Back
+
+Part 19 of 63 · Other documentary evidence
+
+Other documentary evidence
+
+Answering for Sample Principal A (you).
+
+Whether the person holds life insurance on themselves that names their partner as beneficiary
+Yes
+No
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person holds life insurance on themselves that names their partner as benefici | val=true
+radio | No | legend: Whether the person holds life insurance on themselves that names their partner as benefici | val=false
+
+=== Part 20 of 63 · Applicant
+Client questionnaire
+Back
+
+Part 20 of 63 · Applicant
+
+Applicant
+
+Answering for Sample Principal A's mother (a parent, not on this application).
+
+The person's current occupation.
+Save and continueSave and come back later
+--- fields
+text | The person's current occupation.
+
+=== Part 21 of 63 · Your parent 1 (mother or father)
+Client questionnaire
+Back
+
+Part 21 of 63 · Your parent 1 (mother or father)
+
+Your parent 1 (mother or father)
+
+Answering for Sample Principal A's mother (a parent, not on this application).
+
+Whether this family member will accompany the subject to Canada.
+Yes
+No
+The address where the person currently lives.
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether this family member will accompany the subject to Canada. | val=true
+radio | No | legend: Whether this family member will accompany the subject to Canada. | val=false
+text | Street number | legend: The address where the person currently lives.
+text | Street name | legend: The address where the person currently lives.
+text | Apartment or unit (optional) | legend: The address where the person currently lives.
+text | City or town | legend: The address where the person currently lives.
+text | Province, state or district (optional) | legend: The address where the person currently lives.
+text | Postal code (optional) | legend: The address where the person currently lives.
+text | Country | legend: The address where the person currently lives.
+
+=== Part 22 of 63 · Statutory declaration of common-law union
+Client questionnaire
+Back
+
+Part 22 of 63 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Principal A's mother (a parent, not on this application).
+
+The person's full name
+Save and continueSave and come back later
+--- fields
+text | The person's full name
+
+=== Part 23 of 63 · Personal details
+Client questionnaire
+Back
+
+Part 23 of 63 · Personal details
+
+Personal details
+
+Answering for Sample Principal A's mother (a parent, not on this application).
+
+Current marital status
+Choose…
+Annulled Marriage
+Common-Law
+Divorced
+Legally Separated
+Married
+Single
+Unknown
+Widowed
+Date of birth
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Country or territory of birth
+Save and continueSave and come back later
+--- fields
+select-one | Current marital status | opts:9 Choose…/Annulled Marriage/Common-Law/Divorced
+text | Day | legend: Date of birth
+text | Month | legend: Date of birth
+text | Year | legend: Date of birth
+text | Country or territory of birth
+
+=== Part 24 of 63 · Applicant
+Client questionnaire
+Back
+
+Part 24 of 63 · Applicant
+
+Applicant
+
+Answering for Sample Principal A's father (a parent, not on this application).
+
+The person's current occupation.
+Save and continueSave and come back later
+--- fields
+text | The person's current occupation.
+
+=== Part 25 of 63 · Your parent 1 (mother or father)
+Client questionnaire
+Back
+
+Part 25 of 63 · Your parent 1 (mother or father)
+
+Your parent 1 (mother or father)
+
+Answering for Sample Principal A's father (a parent, not on this application).
+
+Whether this family member will accompany the subject to Canada.
+Yes
+No
+The address where the person currently lives.
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether this family member will accompany the subject to Canada. | val=true
+radio | No | legend: Whether this family member will accompany the subject to Canada. | val=false
+text | Street number | legend: The address where the person currently lives.
+text | Street name | legend: The address where the person currently lives.
+text | Apartment or unit (optional) | legend: The address where the person currently lives.
+text | City or town | legend: The address where the person currently lives.
+text | Province, state or district (optional) | legend: The address where the person currently lives.
+text | Postal code (optional) | legend: The address where the person currently lives.
+text | Country | legend: The address where the person currently lives.
+
+=== Part 26 of 63 · Statutory declaration of common-law union
+Client questionnaire
+Back
+
+Part 26 of 63 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Principal A's father (a parent, not on this application).
+
+The person's full name
+Save and continueSave and come back later
+--- fields
+text | The person's full name
+
+=== Part 27 of 63 · Personal details
+Client questionnaire
+Back
+
+Part 27 of 63 · Personal details
+
+Personal details
+
+Answering for Sample Principal A's father (a parent, not on this application).
+
+Current marital status
+Choose…
+Annulled Marriage
+Common-Law
+Divorced
+Legally Separated
+Married
+Single
+Unknown
+Widowed
+Date of birth
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Country or territory of birth
+Save and continueSave and come back later
+--- fields
+select-one | Current marital status | opts:9 Choose…/Annulled Marriage/Common-Law/Divorced
+text | Day | legend: Date of birth
+text | Month | legend: Date of birth
+text | Year | legend: Date of birth
+text | Country or territory of birth
+
+=== Part 28 of 63 · Brothers and sisters
+Client questionnaire
+Back
+
+Part 28 of 63 · Brothers and sisters
+
+Brothers and sisters
+
+Answering for Sample Principal A's brothers and sisters (not on this application).
+
+Entries
+
+Each entry asks: The address where the person currently lives; Country or territory of birth; Date of birth; Current marital status; The person's full name; The person's current occupation; How this person is related to the form subject (for example son, daughter, adopted son, stepdaughter); Whether this family member will accompany the subject to Canada.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+
+
+=== Part 29 of 63 · National identity document
+Client questionnaire
+Back
+
+Part 29 of 63 · National identity document
+
+National identity document
+
+Answering for Sample Spouse A (spouse or partner).
+
+Whether the person holds a national identity document
+Yes
+No
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person holds a national identity document | val=true
+radio | No | legend: Whether the person holds a national identity document | val=false
+
+=== Part 30 of 63 · Signature
+Client questionnaire
+Back
+
+Part 30 of 63 · Signature
+
+Signature
+
+Answering for Sample Spouse A (spouse or partner).
+
+Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an organization at its request, about the services they received, for research, performance measurement or evaluation; never used to decide about them (IMM 5257, consent before the signature).
+Yes
+No
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an | val=true
+radio | No | legend: Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an | val=false
+
+=== Part 31 of 63 · Government positions
+Client questionnaire
+Back
+
+Part 31 of 63 · Government positions
+
+Government positions
+
+Answering for Sample Spouse A (spouse or partner).
+
+Whether the person has ever held any government position (for example civil servant, judge, police officer, mayor, member of parliament, hospital administrator)
+Yes
+No
+Entries
+
+Each entry asks: Activities and/or positions held in one government position; Country or territory of one government position held by the person; Department or branch of one government position; Start date of one government position held by the person; Level of jurisdiction of one government position (for example national, regional, municipal); End date of one government position held by the person.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person has ever held any government position (for example civil servant, judge | val=true
+radio | No | legend: Whether the person has ever held any government position (for example civil servant, judge | val=false
+
+=== Part 32 of 63 · Membership or Association with Organizations
+Client questionnaire
+Back
+
+Part 32 of 63 · Membership or Association with Organizations
+
+Membership or Association with Organizations
+
+Answering for Sample Spouse A (spouse or partner).
+
+Entries
+
+Each entry asks: Activities carried out and/or positions held by the person within one organization; Country or territory of one organization the person is or was associated with; Start date of the person's membership in or association with one organization; Name of an organization the person is or was a member of or associated with; Province or region of one organization the person is or was associated with; End date of the person's membership in or association with one organization.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+
+
+=== Part 33 of 63 · Employment
+Client questionnaire
+Back
+
+Part 33 of 63 · Employment
+
+Employment
+
+Answering for Sample Spouse A (spouse or partner).
+
+Entries
+
+Each entry asks: City or town of an activity period; Country or territory of an activity period; Company, employer or facility name for an activity period; Start date of an activity or occupation period; Activity or occupation during a period; Province or state of an activity period; End date of an activity or occupation period.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+
+
+=== Part 34 of 63 · Education
+Client questionnaire
+Back
+
+Part 34 of 63 · Education
+
+Education
+
+Answering for Sample Spouse A (spouse or partner).
+
+Entries
+
+Each entry asks: City or town of the school; Country or territory of the school; Field of study of a post-secondary education period; Start date of a post-secondary education period; Province or state of the school; Name of the school or facility attended; End date of a post-secondary education period.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+
+
+=== Part 35 of 63 · Statutory declaration of common-law union
+Client questionnaire
+Back
+
+Part 35 of 63 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Spouse A (spouse or partner).
+
+City, town or village where the person currently lives
+The person's full name
+Province, state or territory where the person currently lives
+Date the two partners began living together continuously in a conjugal relationship
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Save and continueSave and come back later
+--- fields
+text | City, town or village where the person currently lives
+text | The person's full name
+text | Province, state or territory where the person currently lives
+text | Day | legend: Date the two partners began living together continuously in a conjugal relationship
+text | Month | legend: Date the two partners began living together continuously in a conjugal relationship
+text | Year | legend: Date the two partners began living together continuously in a conjugal relationship
+
+=== Part 36 of 63 · Military service
+Client questionnaire
+Back
+
+Part 36 of 63 · Military service
+
+Military service
+
+Answering for Sample Spouse A (spouse or partner).
+
+Whether the person has ever served in any military, militia, civil defence unit, security organization or police force, including non-obligatory national service, reserve or volunteer units
+Yes
+No
+Entries
+
+Each entry asks: Country or territory of one period of service; Start date of one period of military, militia, civil defence, security or police service; Location or place where the person was stationed during one period of service; Province or region of the place where the person was stationed during one period of service; End date of one period of military, militia, civil defence, security or police service.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person has ever served in any military, militia, civil defence unit, security  | val=true
+radio | No | legend: Whether the person has ever served in any military, militia, civil defence unit, security  | val=false
+
+=== Part 37 of 63 · Previous travel
+Client questionnaire
+Back
+
+Part 37 of 63 · Previous travel
+
+Previous travel
+
+Answering for Sample Spouse A (spouse or partner).
+
+Entries
+
+Each entry asks: Country or territory the person travelled to on one trip; Start date of one trip the person made; Location (city or place) the person travelled to on one trip; Purpose of one trip the person made; End date of one trip the person made.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+
+
+=== Part 38 of 63 · Contact information
+Client questionnaire
+Back
+
+Part 38 of 63 · Contact information
+
+Contact information
+
+Answering for Sample Spouse A (spouse or partner).
+
+Current mailing address
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+E-mail address
+Fax number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Alternate telephone number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Type of the alternate telephone number
+Residence
+Cellular
+Business
+Main telephone number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Type of the main telephone number (residence, cellular, business)
+Residence
+Cellular
+Business
+Current residential address
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+--- fields
+text | Street number | legend: Current mailing address
+text | Street name | legend: Current mailing address
+text | Apartment or unit (optional) | legend: Current mailing address
+text | City or town | legend: Current mailing address
+text | Province, state or district (optional) | legend: Current mailing address
+text | Postal code (optional) | legend: Current mailing address
+text | Country | legend: Current mailing address
+email | E-mail address
+text | Country code | legend: Fax number including country code
+text | Number | legend: Fax number including country code
+text | Country code | legend: Alternate telephone number including country code
+text | Number | legend: Alternate telephone number including country code
+radio | Residence | legend: Type of the alternate telephone number | val=Residence
+radio | Cellular | legend: Type of the alternate telephone number | val=Cellular
+radio | Business | legend: Type of the alternate telephone number | val=Business
+text | Country code | legend: Main telephone number including country code
+text | Number | legend: Main telephone number including country code
+radio | Residence | legend: Type of the main telephone number (residence, cellular, business) | val=Residence
+radio | Cellular | legend: Type of the main telephone number (residence, cellular, business) | val=Cellular
+radio | Business | legend: Type of the main telephone number (residence, cellular, business) | val=Business
+text | Street number | legend: Current residential address
+text | Street name | legend: Current residential address
+text | Apartment or unit (optional) | legend: Current residential address
+text | City or town | legend: Current residential address
+text | Province, state or district (optional) | legend: Current residential address
+text | Postal code (optional) | legend: Current residential address
+text | Country | legend: Current residential address
+
+=== Part 39 of 63 · Personal details
+Client questionnaire
+Back
+
+Part 39 of 63 · Personal details
+
+Personal details
+
+Answering for Sample Spouse A (spouse or partner).
+
+Date the person married or began the common-law relationship with the current spouse or partner
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Family name as shown on passport or travel document
+Given name(s) as shown on passport or travel document
+Current marital status
+Choose…
+Annulled Marriage
+Common-Law
+Divorced
+Legally Separated
+Married
+Single
+Unknown
+Widowed
+Whether the person has ever used another name (nickname, maiden name, alias)
+Yes
+No
+Country of citizenship
+Country or territory from which the person is submitting the application
+Start date of the status in the applying-from country
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Description of the status in the applying-from country when it is 'other'
+Immigration status in the country from which the person is applying
+Choose…
+Citizen
+Permanent resident
+Visitor
+Worker
+Student
+Other
+Protected Person
+Refugee Claimant
+Foreign National
+End date of the status in the applying-from country
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Country or territory where the person currently resides
+Start date of the status in the current country of residence
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Description of the status in the current country of residence when it is 'other'
+Immigration status in the current country of residence
+Choose…
+Citizen
+Permanent resident
+Visitor
+Worker
+Student
+Other
+Protected Person
+Refugee Claimant
+Foreign National
+End date of the status in the current country of residence
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Date of birth
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+City or town of birth
+Country or territory of birth
+Sex or gender marker of the person
+Female
+Male
+Unknown
+Unspecified
+Unique Client Identifier assigned by IRCC
+Whether the person has taken a designated English or French language test
+Yes
+No
+Whether the person can communicate in English, French, both or neither
+English
+French
+Both
+Neither
+Official language in which the person is most at ease
+English
+French
+Native language or mother tongue
+Country or authority that issued the passport
+Passport expiry date
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Passport issue date
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Number of the passport or travel document
+Whether the person was previously married or in a common-law relationship
+Yes
+No
+Whether the person chooses a gender identifier different from the one on their current or ea
+--- fields
+text | Day | legend: Date the person married or began the common-law relationship with the current spouse or pa
+text | Month | legend: Date the person married or began the common-law relationship with the current spouse or pa
+text | Year | legend: Date the person married or began the common-law relationship with the current spouse or pa
+text | Family name as shown on passport or travel document
+text | Given name(s) as shown on passport or travel document
+select-one | Current marital status | opts:9 Choose…/Annulled Marriage/Common-Law/Divorced
+radio | Yes | legend: Whether the person has ever used another name (nickname, maiden name, alias) | val=true
+radio | No | legend: Whether the person has ever used another name (nickname, maiden name, alias) | val=false
+text | Country of citizenship
+text | Country or territory from which the person is submitting the application
+text | Day | legend: Start date of the status in the applying-from country
+text | Month | legend: Start date of the status in the applying-from country
+text | Year | legend: Start date of the status in the applying-from country
+text | Description of the status in the applying-from country when it is 'other'
+select-one | Immigration status in the country from which the person is applying | opts:10 Choose…/Citizen/Permanent resident/Visitor
+text | Day | legend: End date of the status in the applying-from country
+text | Month | legend: End date of the status in the applying-from country
+text | Year | legend: End date of the status in the applying-from country
+text | Country or territory where the person currently resides
+text | Day | legend: Start date of the status in the current country of residence
+text | Month | legend: Start date of the status in the current country of residence
+text | Year | legend: Start date of the status in the current country of residence
+text | Description of the status in the current country of residence when it is 'other'
+select-one | Immigration status in the current country of residence | opts:10 Choose…/Citizen/Permanent resident/Visitor
+text | Day | legend: End date of the status in the current country of residence
+text | Month | legend: End date of the status in the current country of residence
+text | Year | legend: End date of the status in the current country of residence
+text | Day | legend: Date of birth
+text | Month | legend: Date of birth
+text | Year | legend: Date of birth
+text | City or town of birth
+text | Country or territory of birth
+radio | Female | legend: Sex or gender marker of the person | val=Female
+radio | Male | legend: Sex or gender marker of the person | val=Male
+radio | Unknown | legend: Sex or gender marker of the person | val=Unknown
+radio | Unspecified | legend: Sex or gender marker of the person | val=Unspecified
+text | Unique Client Identifier assigned by IRCC
+radio | Yes | legend: Whether the person has taken a designated English or French language test | val=true
+radio | No | legend: Whether the person has taken a designated English or French language test | val=false
+radio | English | legend: Whether the person can communicate in English, French, both or neither | val=English
+radio | French | legend: Whether the person can communicate in English, French, both or neither | val=French
+radio | Both | legend: Whether the person can communicate in English, French, both or neither | val=Both
+radio | Neither | legend: Whether the person can communicate in English, French, both or neither | val=Neither
+radio | English | legend: Official language in which the person is most at ease | val=English
+radio | French | legend: Official language in which the person is most at ease | val=French
+text | Native language or mother tongue
+text | Country or authority that issued the passport
+text | Day | legend: Passport expiry date
+text | Month | legend: Passport expiry date
+text | Year | legend: Passport expiry date
+text | Day | legend: Passport issue date
+text | Month | legend: Passport issue date
+text | Year | legend: Passport issue date
+text | Number of the passport or travel document
+radio | Yes | legend: Whether the person was previously married or in a common-law relationship | val=true
+radio | No | legend: Whether the person was previously married or in a common-law relationship | val=false
+radio | Yes | legend: Whether the person chooses a gender identifier different from the one on their current or  | val=true
+radio | No | legend: Whether the person chooses a gender identifier different from the one on their current or  | val=false
+radio | Both parents | legend: If under 18: who is this person travelling to Canada with? | val=both_parents
+radio | One parent | legend: If under 18: who is this person travelling to Canada with? | val=one_parent
+radio | Another adult | legend: If under 18: who is this person travelling to Canada with? | val=another_adult
+radio | Alone | legend: If under 18: who is this person travelling to Canada with? | val=alone
+radio | Not applicable | legend: If under 18: what is the custody arrangement for this person? | val=not_applicable
+radio | Shared | legend: If under 18: what is the custody arrangement for this person? | val=shared
+radio | Sole | legend: If under 18: what is the custody arrangement for this person? | val=sole
+radio | Adopted | legend: If under 18: what is the custody arrangement for this person? | val=adopted
+radio | Guardian | legend: If under 18: what is the custody arrangement for this person? | val=guardian
+
+=== Part 40 of 69 · Background information
+Client questionnaire
+Back
+
+Part 40 of 69 · Background information
+
+Background information
+
+Answering for Sample Spouse A (spouse or partner).
+
+Whether the person previously applied to enter or remain in Canada
+Yes
+No
+Free-text details of overstay, refusal, removal or previous Canadian applications
+Whether the person ever remained beyond status, or studied or worked without authorization, in Canada
+Yes
+No
+Whether the person was ever refused a visa or permit, denied entry or ordered to leave any country
+Yes
+No
+Whether, within the past two years, the person or a family member has had tuberculosis of the lungs or been in close contact with a person with tuberculosis (IMM 5257, Background information, Question 1 a).
+Yes
+No
+Whether the person has a physical or mental disorder requiring social or health services other than medication during a stay in Canada
+Yes
+No
+Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence
+Yes
+No
+Free-text details of criminal history
+Whether the person has ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings (IMM 5257, Background information, Question 6).
+Yes
+No
+Whether the person served in a military, militia, civil defence, security organization or police force
+Yes
+No
+Dates and countries of military or security service
+Whether the person is or was a member of or associated with a group that engaged in or advocated violence for political or religious objectives
+Yes
+No
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person previously applied to enter or remain in Canada | val=true
+radio | No | legend: Whether the person previously applied to enter or remain in Canada | val=false
+textarea | Free-text details of overstay, refusal, removal or previous Canadian applications
+radio | Yes | legend: Whether the person ever remained beyond status, or studied or worked without authorization | val=true
+radio | No | legend: Whether the person ever remained beyond status, or studied or worked without authorization | val=false
+radio | Yes | legend: Whether the person was ever refused a visa or permit, denied entry or ordered to leave any | val=true
+radio | No | legend: Whether the person was ever refused a visa or permit, denied entry or ordered to leave any | val=false
+radio | Yes | legend: Whether, within the past two years, the person or a family member has had tuberculosis of  | val=true
+radio | No | legend: Whether, within the past two years, the person or a family member has had tuberculosis of  | val=false
+radio | Yes | legend: Whether the person has a physical or mental disorder requiring social or health services o | val=true
+radio | No | legend: Whether the person has a physical or mental disorder requiring social or health services o | val=false
+radio | Yes | legend: Whether the person ever committed, was arrested for, charged with or convicted of a crimin | val=true
+radio | No | legend: Whether the person ever committed, was arrested for, charged with or convicted of a crimin | val=false
+textarea | Free-text details of criminal history
+radio | Yes | legend: Whether the person has ever witnessed or participated in the ill treatment of prisoners or | val=true
+radio | No | legend: Whether the person has ever witnessed or participated in the ill treatment of prisoners or | val=false
+radio | Yes | legend: Whether the person served in a military, militia, civil defence, security organization or  | val=true
+radio | No | legend: Whether the person served in a military, militia, civil defence, security organization or  | val=false
+textarea | Dates and countries of military or security service
+radio | Yes | legend: Whether the person is or was a member of or associated with a group that engaged in or adv | val=true
+radio | No | legend: Whether the person is or was a member of or associated with a group that engaged in or adv | val=false
+
+=== Part 41 of 69 · Your parent 1 (mother or father)
+Client questionnaire
+Back
+
+Part 41 of 69 · Your parent 1 (mother or father)
+
+Your parent 1 (mother or father)
+
+Answering for Sample Spouse A (spouse or partner).
+
+Whether this family member will accompany the subject to Canada.
+Yes
+No
+The address where the person currently lives.
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether this family member will accompany the subject to Canada. | val=true
+radio | No | legend: Whether this family member will accompany the subject to Canada. | val=false
+text | Street number | legend: The address where the person currently lives.
+text | Street name | legend: The address where the person currently lives.
+text | Apartment or unit (optional) | legend: The address where the person currently lives.
+text | City or town | legend: The address where the person currently lives.
+text | Province, state or district (optional) | legend: The address where the person currently lives.
+text | Postal code (optional) | legend: The address where the person currently lives.
+text | Country | legend: The address where the person currently lives.
+
+=== Part 42 of 69 · Statutory declaration of common-law union
+Client questionnaire
+Back
+✓ Saved
+
+Part 42 of 69 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Spouse A (spouse or partner).
+
+Answered by the principal for Sample Spouse A: declared, it fills Sample Spouse A's forms now and is confirmed before filing (the officer's "Confirm section").
+
+The person's full name
+Save and continueSave and come back later
+--- fields
+text | The person's full name | val=Sample
+
+=== Part 43 of 69 · Applicant
+Client questionnaire
+Back
+
+Part 43 of 69 · Applicant
+
+Applicant
+
+Answering for Sample Spouse A's mother (a parent, not on this application).
+
+The person's current occupation.
+Save and continueSave and come back later
+--- fields
+text | The person's current occupation.
+
+=== Part 44 of 69 · Your parent 1 (mother or father)
+Client questionnaire
+Back
+
+Part 44 of 69 · Your parent 1 (mother or father)
+
+Your parent 1 (mother or father)
+
+Answering for Sample Spouse A's mother (a parent, not on this application).
+
+Whether this family member will accompany the subject to Canada.
+Yes
+No
+The address where the person currently lives.
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether this family member will accompany the subject to Canada. | val=true
+radio | No | legend: Whether this family member will accompany the subject to Canada. | val=false
+text | Street number | legend: The address where the person currently lives.
+text | Street name | legend: The address where the person currently lives.
+text | Apartment or unit (optional) | legend: The address where the person currently lives.
+text | City or town | legend: The address where the person currently lives.
+text | Province, state or district (optional) | legend: The address where the person currently lives.
+text | Postal code (optional) | legend: The address where the person currently lives.
+text | Country | legend: The address where the person currently lives.
+
+=== Part 45 of 69 · Statutory declaration of common-law union
+Client questionnaire
+Back
+
+Part 45 of 69 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Spouse A's mother (a parent, not on this application).
+
+The person's full name
+Save and continueSave and come back later
+--- fields
+text | The person's full name
+
+=== Part 46 of 69 · Personal details
+Client questionnaire
+Back
+
+Part 46 of 69 · Personal details
+
+Personal details
+
+Answering for Sample Spouse A's mother (a parent, not on this application).
+
+Current marital status
+Choose…
+Annulled Marriage
+Common-Law
+Divorced
+Legally Separated
+Married
+Single
+Unknown
+Widowed
+Date of birth
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Country or territory of birth
+Save and continueSave and come back later
+--- fields
+select-one | Current marital status | opts:9 Choose…/Annulled Marriage/Common-Law/Divorced
+text | Day | legend: Date of birth
+text | Month | legend: Date of birth
+text | Year | legend: Date of birth
+text | Country or territory of birth
+
+=== Part 47 of 69 · Applicant
+Client questionnaire
+Back
+
+Part 47 of 69 · Applicant
+
+Applicant
+
+Answering for Sample Spouse A's father (a parent, not on this application).
+
+The person's current occupation.
+Save and continueSave and come back later
+--- fields
+text | The person's current occupation.
+
+=== Part 48 of 69 · Your parent 1 (mother or father)
+Client questionnaire
+Back
+
+Part 48 of 69 · Your parent 1 (mother or father)
+
+Your parent 1 (mother or father)
+
+Answering for Sample Spouse A's father (a parent, not on this application).
+
+Whether this family member will accompany the subject to Canada.
+Yes
+No
+The address where the person currently lives.
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether this family member will accompany the subject to Canada. | val=true
+radio | No | legend: Whether this family member will accompany the subject to Canada. | val=false
+text | Street number | legend: The address where the person currently lives.
+text | Street name | legend: The address where the person currently lives.
+text | Apartment or unit (optional) | legend: The address where the person currently lives.
+text | City or town | legend: The address where the person currently lives.
+text | Province, state or district (optional) | legend: The address where the person currently lives.
+text | Postal code (optional) | legend: The address where the person currently lives.
+text | Country | legend: The address where the person currently lives.
+
+=== Part 49 of 69 · Statutory declaration of common-law union
+Client questionnaire
+Back
+
+Part 49 of 69 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Spouse A's father (a parent, not on this application).
+
+The person's full name
+Save and continueSave and come back later
+--- fields
+text | The person's full name
+
+=== Part 50 of 69 · Personal details
+Client questionnaire
+Back
+
+Part 50 of 69 · Personal details
+
+Personal details
+
+Answering for Sample Spouse A's father (a parent, not on this application).
+
+Current marital status
+Choose…
+Annulled Marriage
+Common-Law
+Divorced
+Legally Separated
+Married
+Single
+Unknown
+Widowed
+Date of birth
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Country or territory of birth
+Save and continueSave and come back later
+--- fields
+select-one | Current marital status | opts:9 Choose…/Annulled Marriage/Common-Law/Divorced
+text | Day | legend: Date of birth
+text | Month | legend: Date of birth
+text | Year | legend: Date of birth
+text | Country or territory of birth
+
+=== Part 51 of 69 · Brothers and sisters
+Client questionnaire
+Back
+
+Part 51 of 69 · Brothers and sisters
+
+Brothers and sisters
+
+Answering for Sample Spouse A's brothers and sisters (not on this application).
+
+Entries
+
+Each entry asks: The address where the person currently lives; Country or territory of birth; Date of birth; Current marital status; The person's full name; The person's current occupation; How this person is related to the form subject (for example son, daughter, adopted son, stepdaughter); Whether this family member will accompany the subject to Canada.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+
+
+=== Part 52 of 69 · National identity document
+Client questionnaire
+Back
+
+Part 52 of 69 · National identity document
+
+National identity document
+
+Answering for Sample Child A (child).
+
+Whether the person holds a national identity document
+Yes
+No
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person holds a national identity document | val=true
+radio | No | legend: Whether the person holds a national identity document | val=false
+
+=== Part 53 of 69 · Signature
+Client questionnaire
+Back
+
+Part 53 of 69 · Signature
+
+Signature
+
+Answering for Sample Child A (child).
+
+Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an organization at its request, about the services they received, for research, performance measurement or evaluation; never used to decide about them (IMM 5257, consent before the signature).
+Yes
+No
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an | val=true
+radio | No | legend: Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an | val=false
+
+=== Part 54 of 69 · Government positions
+Client questionnaire
+Back
+
+Part 54 of 69 · Government positions
+
+Government positions
+
+Answering for Sample Child A (child).
+
+Whether the person has ever held any government position (for example civil servant, judge, police officer, mayor, member of parliament, hospital administrator)
+Yes
+No
+Entries
+
+Each entry asks: Activities and/or positions held in one government position; Country or territory of one government position held by the person; Department or branch of one government position; Start date of one government position held by the person; Level of jurisdiction of one government position (for example national, regional, municipal); End date of one government position held by the person.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person has ever held any government position (for example civil servant, judge | val=true
+radio | No | legend: Whether the person has ever held any government position (for example civil servant, judge | val=false
+
+=== Part 55 of 69 · Membership or Association with Organizations
+Client questionnaire
+Back
+
+Part 55 of 69 · Membership or Association with Organizations
+
+Membership or Association with Organizations
+
+Answering for Sample Child A (child).
+
+Entries
+
+Each entry asks: Activities carried out and/or positions held by the person within one organization; Country or territory of one organization the person is or was associated with; Start date of the person's membership in or association with one organization; Name of an organization the person is or was a member of or associated with; Province or region of one organization the person is or was associated with; End date of the person's membership in or association with one organization.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+
+
+=== Part 56 of 69 · Employment
+Client questionnaire
+Back
+
+Part 56 of 69 · Employment
+
+Employment
+
+Answering for Sample Child A (child).
+
+Entries
+
+Each entry asks: City or town of an activity period; Country or territory of an activity period; Company, employer or facility name for an activity period; Start date of an activity or occupation period; Activity or occupation during a period; Province or state of an activity period; End date of an activity or occupation period.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+
+
+=== Part 57 of 69 · Education
+Client questionnaire
+Back
+
+Part 57 of 69 · Education
+
+Education
+
+Answering for Sample Child A (child).
+
+Entries
+
+Each entry asks: City or town of the school; Country or territory of the school; Field of study of a post-secondary education period; Start date of a post-secondary education period; Province or state of the school; Name of the school or facility attended; End date of a post-secondary education period.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+
+
+=== Part 58 of 69 · Statutory declaration of common-law union
+Client questionnaire
+Back
+
+Part 58 of 69 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Child A (child).
+
+City, town or village where the person currently lives
+The person's full name
+Province, state or territory where the person currently lives
+Date the two partners began living together continuously in a conjugal relationship
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Save and continueSave and come back later
+--- fields
+text | City, town or village where the person currently lives
+text | The person's full name
+text | Province, state or territory where the person currently lives
+text | Day | legend: Date the two partners began living together continuously in a conjugal relationship
+text | Month | legend: Date the two partners began living together continuously in a conjugal relationship
+text | Year | legend: Date the two partners began living together continuously in a conjugal relationship
+
+=== Part 59 of 69 · Military service
+Client questionnaire
+Back
+
+Part 59 of 69 · Military service
+
+Military service
+
+Answering for Sample Child A (child).
+
+Whether the person has ever served in any military, militia, civil defence unit, security organization or police force, including non-obligatory national service, reserve or volunteer units
+Yes
+No
+Entries
+
+Each entry asks: Country or territory of one period of service; Start date of one period of military, militia, civil defence, security or police service; Location or place where the person was stationed during one period of service; Province or region of the place where the person was stationed during one period of service; End date of one period of military, militia, civil defence, security or police service.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person has ever served in any military, militia, civil defence unit, security  | val=true
+radio | No | legend: Whether the person has ever served in any military, militia, civil defence unit, security  | val=false
+
+=== Part 60 of 69 · Previous travel
+Client questionnaire
+Back
+
+Part 60 of 69 · Previous travel
+
+Previous travel
+
+Answering for Sample Child A (child).
+
+Entries
+
+Each entry asks: Country or territory the person travelled to on one trip; Start date of one trip the person made; Location (city or place) the person travelled to on one trip; Purpose of one trip the person made; End date of one trip the person made.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+--- fields
+
+
+=== Part 61 of 69 · Contact information
+Client questionnaire
+Back
+
+Part 61 of 69 · Contact information
+
+Contact information
+
+Answering for Sample Child A (child).
+
+Current mailing address
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+E-mail address
+Fax number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Alternate telephone number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Type of the alternate telephone number
+Residence
+Cellular
+Business
+Main telephone number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Type of the main telephone number (residence, cellular, business)
+Residence
+Cellular
+Business
+Current residential address
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+--- fields
+text | Street number | legend: Current mailing address
+text | Street name | legend: Current mailing address
+text | Apartment or unit (optional) | legend: Current mailing address
+text | City or town | legend: Current mailing address
+text | Province, state or district (optional) | legend: Current mailing address
+text | Postal code (optional) | legend: Current mailing address
+text | Country | legend: Current mailing address
+email | E-mail address
+text | Country code | legend: Fax number including country code
+text | Number | legend: Fax number including country code
+text | Country code | legend: Alternate telephone number including country code
+text | Number | legend: Alternate telephone number including country code
+radio | Residence | legend: Type of the alternate telephone number | val=Residence
+radio | Cellular | legend: Type of the alternate telephone number | val=Cellular
+radio | Business | legend: Type of the alternate telephone number | val=Business
+text | Country code | legend: Main telephone number including country code
+text | Number | legend: Main telephone number including country code
+radio | Residence | legend: Type of the main telephone number (residence, cellular, business) | val=Residence
+radio | Cellular | legend: Type of the main telephone number (residence, cellular, business) | val=Cellular
+radio | Business | legend: Type of the main telephone number (residence, cellular, business) | val=Business
+text | Street number | legend: Current residential address
+text | Street name | legend: Current residential address
+text | Apartment or unit (optional) | legend: Current residential address
+text | City or town | legend: Current residential address
+text | Province, state or district (optional) | legend: Current residential address
+text | Postal code (optional) | legend: Current residential address
+text | Country | legend: Current residential address
+
+=== Part 62 of 69 · Applicant
+Client questionnaire
+Back
+
+Part 62 of 69 · Applicant
+
+Applicant
+
+Answering for Sample Child A (child).
+
+The person's current occupation.
+Save and continueSave and come back later
+--- fields
+text | The person's current occupation.
+
+=== Part 63 of 69 · Other documentary evidence
+Client questionnaire
+Back
+
+Part 63 of 69 · Other documentary evidence
+
+Other documentary evidence
+
+Answering for Sample Child A (child).
+
+Whether the partners jointly signed a residential lease, mortgage or purchase agreement for a residence they both live in
+Yes
+No
+Whether the partners jointly own property other than their residence
+Yes
+No
+Whether the partners hold joint bank, trust, credit union or charge card accounts
+Yes
+No
+Whether the partners have declared their common-law union under the Canadian Income Tax Act
+Yes
+No
+Whether the person holds life insurance on themselves that names their partner as beneficiary
+Yes
+No
+Description of other documentary evidence of the common-law relationship
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the partners jointly signed a residential lease, mortgage or purchase agreement fo | val=true
+radio | No | legend: Whether the partners jointly signed a residential lease, mortgage or purchase agreement fo | val=false
+radio | Yes | legend: Whether the partners jointly own property other than their residence | val=true
+radio | No | legend: Whether the partners jointly own property other than their residence | val=false
+radio | Yes | legend: Whether the partners hold joint bank, trust, credit union or charge card accounts | val=true
+radio | No | legend: Whether the partners hold joint bank, trust, credit union or charge card accounts | val=false
+radio | Yes | legend: Whether the partners have declared their common-law union under the Canadian Income Tax Ac | val=true
+radio | No | legend: Whether the partners have declared their common-law union under the Canadian Income Tax Ac | val=false
+radio | Yes | legend: Whether the person holds life insurance on themselves that names their partner as benefici | val=true
+radio | No | legend: Whether the person holds life insurance on themselves that names their partner as benefici | val=false
+text | Description of other documentary evidence of the common-law relationship
+
+=== Part 64 of 69 · US PR card
+Client questionnaire
+Back
+
+Part 64 of 69 · US PR card
+
+US PR card
+
+Answering for Sample Child A (child).
+
+Whether the person is a lawful permanent resident of the United States
+Yes
+No
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person is a lawful permanent resident of the United States | val=true
+radio | No | legend: Whether the person is a lawful permanent resident of the United States | val=false
+
+=== Part 65 of 69 · Background information
+Client questionnaire
+Back
+
+Part 65 of 69 · Background information
+
+Background information
+
+Answering for Sample Child A (child).
+
+Whether the person previously applied to enter or remain in Canada
+Yes
+No
+Free-text details of overstay, refusal, removal or previous Canadian applications
+Whether the person ever remained beyond status, or studied or worked without authorization, in Canada
+Yes
+No
+Whether the person was ever refused a visa or permit, denied entry or ordered to leave any country
+Yes
+No
+Whether, within the past two years, the person or a family member has had tuberculosis of the lungs or been in close contact with a person with tuberculosis (IMM 5257, Background information, Question 1 a).
+Yes
+No
+Whether the person has a physical or mental disorder requiring social or health services other than medication during a stay in Canada
+Yes
+No
+Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence
+Yes
+No
+Free-text details of criminal history
+Whether the person has ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings (IMM 5257, Background information, Question 6).
+Yes
+No
+Whether the person served in a military, militia, civil defence, security organization or police force
+Yes
+No
+Dates and countries of military or security service
+Whether the person is or was a member of or associated with a group that engaged in or advocated violence for political or religious objectives
+Yes
+No
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether the person previously applied to enter or remain in Canada | val=true
+radio | No | legend: Whether the person previously applied to enter or remain in Canada | val=false
+textarea | Free-text details of overstay, refusal, removal or previous Canadian applications
+radio | Yes | legend: Whether the person ever remained beyond status, or studied or worked without authorization | val=true
+radio | No | legend: Whether the person ever remained beyond status, or studied or worked without authorization | val=false
+radio | Yes | legend: Whether the person was ever refused a visa or permit, denied entry or ordered to leave any | val=true
+radio | No | legend: Whether the person was ever refused a visa or permit, denied entry or ordered to leave any | val=false
+radio | Yes | legend: Whether, within the past two years, the person or a family member has had tuberculosis of  | val=true
+radio | No | legend: Whether, within the past two years, the person or a family member has had tuberculosis of  | val=false
+radio | Yes | legend: Whether the person has a physical or mental disorder requiring social or health services o | val=true
+radio | No | legend: Whether the person has a physical or mental disorder requiring social or health services o | val=false
+radio | Yes | legend: Whether the person ever committed, was arrested for, charged with or convicted of a crimin | val=true
+radio | No | legend: Whether the person ever committed, was arrested for, charged with or convicted of a crimin | val=false
+textarea | Free-text details of criminal history
+radio | Yes | legend: Whether the person has ever witnessed or participated in the ill treatment of prisoners or | val=true
+radio | No | legend: Whether the person has ever witnessed or participated in the ill treatment of prisoners or | val=false
+radio | Yes | legend: Whether the person served in a military, militia, civil defence, security organization or  | val=true
+radio | No | legend: Whether the person served in a military, militia, civil defence, security organization or  | val=false
+textarea | Dates and countries of military or security service
+radio | Yes | legend: Whether the person is or was a member of or associated with a group that engaged in or adv | val=true
+radio | No | legend: Whether the person is or was a member of or associated with a group that engaged in or adv | val=false
+
+=== Part 66 of 69 · Your parent 1 (mother or father)
+Client questionnaire
+Back
+
+Part 66 of 69 · Your parent 1 (mother or father)
+
+Your parent 1 (mother or father)
+
+Answering for Sample Child A (child).
+
+Whether this family member will accompany the subject to Canada.
+Yes
+No
+The address where the person currently lives.
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+--- fields
+radio | Yes | legend: Whether this family member will accompany the subject to Canada. | val=true
+radio | No | legend: Whether this family member will accompany the subject to Canada. | val=false
+text | Street number | legend: The address where the person currently lives.
+text | Street name | legend: The address where the person currently lives.
+text | Apartment or unit (optional) | legend: The address where the person currently lives.
+text | City or town | legend: The address where the person currently lives.
+text | Province, state or district (optional) | legend: The address where the person currently lives.
+text | Postal code (optional) | legend: The address where the person currently lives.
+text | Country | legend: The address where the person currently lives.
+
+=== Part 67 of 69 · Personal details
+Client questionnaire
+Back
+
+Part 67 of 69 · Personal details
+
+Personal details
+
+Answering for Sample Child A (child).
+
+Family name as shown on passport or travel document
+Given name(s) as shown on passport or travel document
+Current marital status
+Choose…
+Annulled Marriage
+Common-Law
+Divorced
+Legally Separated
+Married
+Single
+Unknown
+Widowed
+Whether the person has ever used another name (nickname, maiden name, alias)
+Yes
+No
+Country of citizenship
+Country or territory from which the person is submitting the application
+Start date of the status in the applying-from country
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Description of the status in the applying-from country when it is 'other'
+Immigration status in the country from which the person is applying
+Choose…
+Citizen
+Permanent resident
+Visitor
+Worker
+Student
+Other
+Protected Person
+Refugee Claimant
+Foreign National
+End date of the status in the applying-from country
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Country or territory where the person currently resides
+Start date of the status in the current country of residence
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Description of the status in the current country of residence when it is 'other'
+Immigration status in the current country of residence
+Choose…
+Citizen
+Permanent resident
+Visitor
+Worker
+Student
+Other
+Protected Person
+Refugee Claimant
+Foreign National
+End date of the status in the current country of residence
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Date of birth
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+City or town of birth
+Country or territory of birth
+Sex or gender marker of the person
+Female
+Male
+Unknown
+Unspecified
+Unique Client Identifier assigned by IRCC
+Whether the person has taken a designated English or French language test
+Yes
+No
+Whether the person can communicate in English, French, both or neither
+English
+French
+Both
+Neither
+Official language in which the person is most at ease
+English
+French
+Native language or mother tongue
+Country or authority that issued the passport
+Passport expiry date
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Passport issue date
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Number of the passport or travel document
+Whether the person was previously married or in a common-law relationship
+Yes
+No
+Whether the person chooses a gender identifier different from the one on their current or earlier Canadian temporary resident document or, with no Canadian document, from their passport or travel document (Guide 5256, Question 3; IRM 0002).
+
+--- fields
+text | Family name as shown on passport or travel document
+text | Given name(s) as shown on passport or travel document
+select-one | Current marital status | opts:9 Choose…/Annulled Marriage/Common-Law/Divorced
+radio | Yes | legend: Whether the person has ever used another name (nickname, maiden name, alias) | val=true
+radio | No | legend: Whether the person has ever used another name (nickname, maiden name, alias) | val=false
+text | Country of citizenship
+text | Country or territory from which the person is submitting the application
+text | Day | legend: Start date of the status in the applying-from country
+text | Month | legend: Start date of the status in the applying-from country
+text | Year | legend: Start date of the status in the applying-from country
+text | Description of the status in the applying-from country when it is 'other'
+select-one | Immigration status in the country from which the person is applying | opts:10 Choose…/Citizen/Permanent resident/Visitor
+text | Day | legend: End date of the status in the applying-from country
+text | Month | legend: End date of the status in the applying-from country
+text | Year | legend: End date of the status in the applying-from country
+text | Country or territory where the person currently resides
+text | Day | legend: Start date of the status in the current country of residence
+text | Month | legend: Start date of the status in the current country of residence
+text | Year | legend: Start date of the status in the current country of residence
+text | Description of the status in the current country of residence when it is 'other'
+select-one | Immigration status in the current country of residence | opts:10 Choose…/Citizen/Permanent resident/Visitor
+text | Day | legend: End date of the status in the current country of residence
+text | Month | legend: End date of the status in the current country of residence
+text | Year | legend: End date of the status in the current country of residence
+text | Day | legend: Date of birth
+text | Month | legend: Date of birth
+text | Year | legend: Date of birth
+text | City or town of birth
+text | Country or territory of birth
+radio | Female | legend: Sex or gender marker of the person | val=Female
+radio | Male | legend: Sex or gender marker of the person | val=Male
+radio | Unknown | legend: Sex or gender marker of the person | val=Unknown
+radio | Unspecified | legend: Sex or gender marker of the person | val=Unspecified
+text | Unique Client Identifier assigned by IRCC
+radio | Yes | legend: Whether the person has taken a designated English or French language test | val=true
+radio | No | legend: Whether the person has taken a designated English or French language test | val=false
+radio | English | legend: Whether the person can communicate in English, French, both or neither | val=English
+radio | French | legend: Whether the person can communicate in English, French, both or neither | val=French
+radio | Both | legend: Whether the person can communicate in English, French, both or neither | val=Both
+radio | Neither | legend: Whether the person can communicate in English, French, both or neither | val=Neither
+radio | English | legend: Official language in which the person is most at ease | val=English
+radio | French | legend: Official language in which the person is most at ease | val=French
+text | Native language or mother tongue
+text | Country or authority that issued the passport
+text | Day | legend: Passport expiry date
+text | Month | legend: Passport expiry date
+text | Year | legend: Passport expiry date
+text | Day | legend: Passport issue date
+text | Month | legend: Passport issue date
+text | Year | legend: Passport issue date
+text | Number of the passport or travel document
+radio | Yes | legend: Whether the person was previously married or in a common-law relationship | val=true
+radio | No | legend: Whether the person was previously married or in a common-law relationship | val=false
+radio | Yes | legend: Whether the person chooses a gender identifier different from the one on their current or  | val=true
+radio | No | legend: Whether the person chooses a gender identifier different from the one on their current or  | val=false
+radio | Both parents | legend: If under 18: who is this person travelling to Canada with? | val=both_parents
+radio | One parent | legend: If under 18: who is this person travelling to Canada with? | val=one_parent
+radio | Another adult | legend: If under 18: who is this person travelling to Canada with? | val=another_adult
+radio | Alone | legend: If under 18: who is this person travelling to Canada with? | val=alone
+radio | Not applicable | legend: If under 18: what is the custody arrangement for this person? | val=not_applicable
+radio | Shared | legend: If under 18: what is the custody arrangement for this person? | val=shared
+radio | Sole | legend: If under 18: what is the custody arrangement for this person? | val=sole
+radio | Adopted | legend: If under 18: what is the custody arrangement for this person? | val=adopted
+radio | Guardian | legend: If under 18: what is the custody arrangement for this person? | val=guardian
+
+=== Part 62 of 62 · Statutory declaration of common-law union
+Client questionnaire
+Back
+✓ Saved
+
+Part 62 of 62 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Child A (child).
+
+Declared: the client's own answer; it fills the forms now (for a child under 18).
+
+The person's full name
+Save and continueSave and come back later
+--- fields
+text | The person's full name | val=Sample
