@@ -9,6 +9,7 @@
 // people get 403. The inputs: api/src/readiness-inputs.ts. Legal points: Unconfirmed: no counsel. US$0.
 import { Body, Controller, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post } from "@nestjs/common";
 import { BLOCK_CODES, cannotPass, CODE_WORDS, dayOf, isCritical, passKeys, passProblem, WARN_CODES, type WarnCode } from "../../engine/runtime/readiness.ts";
+import { selfReviewOf } from "../../engine/runtime/review.ts"; // BK-18 (review 4 M2): one self-review rule, one set of words
 import type { ReadinessView } from "./readiness-inputs.ts";
 import { userIn } from "../../engine/runtime/team.ts";
 import { actorOf, Audit, Db, fail, Workspace, type Actor } from "./core.ts";
@@ -18,6 +19,8 @@ import { Runtime } from "./runtime.ts";
 import { CasePrepare } from "./case-prepare.ts";
 import { busyWords } from "./busy.ts";
 import { ReviewRounds } from "./review-rounds.ts"; // C8.3 (M1): the review is a one-step round
+import { caseWork } from "./case-work.ts"; // BK-18 (QA-448): who really prepared the filing
+import { authorsFor, behindOf, preparersOf } from "../../engine/runtime/preparers.ts";
 
 type H = string | undefined;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -44,11 +47,11 @@ export class FilingReadinessRoutes {
     return rd!;
   }
 
-  /** POST /runtime/filings/:id/review {note?, self?}: the representative of record's review (P-155). When they are also
-   *  a case officer on the case (they prepared it: a solo firm), it is "Self-reviewed", logged with their own statement. */
+  /** POST /runtime/filings/:id/review {note?, self?}: the representative of record's review (P-155). When the case's
+   *  work record says they prepared it themself, it is "Self-reviewed", logged with their own statement (BK-18). */
   async review(actor: Actor, id: string, body: unknown) {
     const { f, c } = await this.filing(actor, id);
-    // Break N4 (#861 round 2): who prepared it reads every officer row, ended ones too.
+    // The case team, for the representative of record (who may review it); who prepared it is read below, from the work.
     const everyone = await this.db.caseTeamMember.findMany({ where: { caseId: c.id } });
     const rep = everyone.find((m) => m.role === "LEAD_REPRESENTATIVE" && !m.endedAt)?.userId ?? null;
     if (!rep || rep !== actor.id) fail("Only the representative of record reviews this filing (P-155). A case officer prepares it; the representative reviews it.", HttpStatus.FORBIDDEN);
@@ -68,15 +71,25 @@ export class FilingReadinessRoutes {
     const noteWhy = note ? (note.length > 400 ? "Keep the note to 400 characters." : /[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/.test(note) ? "Remove the control or invisible characters from the note." : null) : null;
     if (noteWhy) problem(400, "Some details need fixing", noteWhy, { errors: [{ field: "note", message: noteWhy }] });
     const firm = firmOfActor(actor), licence = firm ? userIn(firm, actor.id)?.licence ?? null : null;
-    const officers = new Set(everyone.filter((m) => m.role === "OFFICER").map((m) => m.userId));
-    const prepared = officers.has(actor.id);
+    // BK-18 (QA-448, P-525 (1)): who prepared it is the case's own work record, never its team list: a case officer
+    // assigned to the case who did nothing neither prepared it nor makes the representative's own work a second person's
+    // review (walk 1 step S8). Opening the case or sending it for review prepares nothing (review 2 B1, M1): it answers
+    // only whether this person had the filing in their own hands on a case holding nobody's work.
+    const w = await caseWork(this.db, c.id);
+    const workers = authorsFor(actor.id, preparersOf(w.acts, w.staff), behindOf(w.acts, w.staff));
     // Break B9 (P-155 (1); review m8, the concept's BR-21: "a solo firm, or the representative did it all"): Self-reviewed
-    // when the firm is solo or the representative was the case's only officer ever; when another officer worked on it
-    // too, the one who prepared it does not review it as if a second person had.
-    if (prepared && !firm?.solo && officers.size > 1) fail("You prepared this filing with another case officer: a review by you would read as a second person's. Hand the review to another representative (change the representative of record), or pass the review warning with a reason.", HttpStatus.CONFLICT);
-    if (prepared && b.self !== true) problem(400, "Some details need fixing", "You prepared this filing yourself: confirm \"I prepared and reviewed this filing myself\" (self: true). It is logged as Self-reviewed, never as a second person.", { errors: [{ field: "self", message: "Confirm you prepared and reviewed it yourself." }] });
+    // when the firm is solo or the representative is the only person who worked on the case; when another person worked
+    // on it too, the one who prepared it does not review it as if a second person had. One rule for both review routes
+    // (review 4 M2: this route kept its own copy of the words, which stopped being true when the author set changed).
+    const sr = selfReviewOf({ actor: actor.id, prepared: workers, solo: !!firm?.solo, changedByReviewer: false, self: b.self });
+    if ("problem" in sr) {
+      const pr = sr.problem;
+      if (pr.status === 400) problem(400, "Some details need fixing", pr.detail, { errors: [{ field: pr.field ?? "self", message: "Confirm you prepared and reviewed it yourself." }] });
+      fail(pr.detail, pr.status);
+    }
+    const prepared = workers.has(actor.id);
     if (!licence) fail("A review needs the representative's licence number on the firm record; none is set.", HttpStatus.CONFLICT);
-    const kind = prepared ? "self_reviewed" : "reviewed";
+    const kind = (sr as { kind: "reviewed" | "self_reviewed" }).kind;
     // Break B2: the review is of the filing's facts as they are now; a later change reopens it.
     // C8.3 (challenge M1): the review is a one-step round of the representative's review, through the same code: every
     // form frozen and stamped (api/src/review-rounds.ts oneStep). A filing already sent for review is decided there (409).

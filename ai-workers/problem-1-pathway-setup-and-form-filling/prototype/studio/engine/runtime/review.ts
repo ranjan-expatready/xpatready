@@ -205,16 +205,20 @@ export function reasonsOf(reasons: unknown, forms: Set<string>, checks: Set<stri
 
 // ------------------------------------------------------------------ BR-8, M3: approver ≠ author (C7.6's rule unchanged)
 
-/** BR-8 with C7.6's self-review rule exactly (api/src/readiness.ts: P-155 (1), breaks B9 and N4): the representative is
- *  an author of the filing when they are a case officer on it (they prepared it), or when they typed a fact a form of it
- *  reads after it was sent for review (`changedByReviewer`, M3). An author on a firm that is not solo, with another
- *  officer on the case, cannot review it as a second person (409); an author confirms "I prepared and reviewed this
- *  filing myself" (400 without it), logged as Self-reviewed, never as a second person. */
-export function selfReviewOf(x: { actor: string; officers: Set<string>; solo: boolean; changedByReviewer: boolean; self: unknown; after?: "send" | "approval" }): { kind: "reviewed" | "self_reviewed" } | { problem: Problem } {
-  const prepared = x.officers.has(x.actor), author = prepared || x.changedByReviewer;
-  const authors = new Set([...x.officers, ...(x.changedByReviewer ? [x.actor] : [])]);
+/** BR-8 with C7.6's self-review rule (api/src/readiness.ts: P-155 (1), breaks B9 and N4): the representative is an
+ *  author of the filing when they prepared it — when the case's own work record names them (`prepared`,
+ *  engine/runtime/preparers.ts: who opened the case, who typed or confirmed its facts), or when they typed a fact a form
+ *  of it reads after it was sent for review (`changedByReviewer`, M3). An author on a firm that is not solo, with
+ *  another person who also prepared it, cannot review it as a second person (409); an author confirms "I prepared and
+ *  reviewed this filing myself" (400 without it), logged as Self-reviewed, never as a second person.
+ *  BK-18 (QA-448, P-525 (1)): `prepared` is who did the work, never who is named on the case team. A case officer
+ *  assigned to the case who did nothing neither makes the representative's own work a second person's review (walk 1
+ *  step S8: the record read as two people) nor blocks it; a person who really worked on it still does. */
+export function selfReviewOf(x: { actor: string; prepared: Set<string>; solo: boolean; changedByReviewer: boolean; self: unknown; after?: "send" | "approval" }): { kind: "reviewed" | "self_reviewed" } | { problem: Problem } {
+  const prepared = x.prepared.has(x.actor), author = prepared || x.changedByReviewer;
+  const authors = new Set([...x.prepared, ...(x.changedByReviewer ? [x.actor] : [])]);
   if (author && !x.solo && authors.size > 1) return { problem: { status: 409, detail: prepared
-    ? "You prepared this filing with another case officer: a review by you would read as a second person's. Hand the review to another representative (change the representative of record), or pass the review warning with a reason."
+    ? "You worked on this filing and so did somebody else at the firm: a review by you would read as a second person's. Hand the review to a representative who did not work on it (change the representative of record), or pass the review warning with a reason."
     : x.after === "approval"
       ? "You changed a fact on this filing after it was approved, so a re-approval by you would read as a second person's. Ask the case officer to send it for review again, hand the review to another representative, or pass the review warning with a reason."
       : "You changed a fact on this filing after it was sent for review, so an approval by you would read as a second person's. Send it back to the case officer, hand the review to another representative, or pass the review warning with a reason." } };

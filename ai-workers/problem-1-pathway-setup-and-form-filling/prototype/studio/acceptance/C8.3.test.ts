@@ -231,15 +231,20 @@ await main("C8.3", "Representative review: rounds, stamps, changed since review 
   const rs = res.body?.id as string | undefined, gsolo = (await read(rs, solo)).r;
   const noSelf = await call("POST", `/runtime/reviews/${rs}/decision`, { filing: sf, verdict: "approve", form_hashes: hashes(rowOf(gsolo, sf)), confirm_unticked: true }, solo);
   const withSelf = await call("POST", `/runtime/reviews/${rs}/decision`, { filing: sf, verdict: "approve", form_hashes: hashes(rowOf(gsolo, sf)), confirm_unticked: true, self: true }, solo);
-  // Prepared with another officer on a firm that is not solo: 409 (C7.6's rule, unchanged).
+  // Prepared with another officer on a firm that is not solo: 409 (C7.6's rule). BK-18 (QA-448, P-525 (1); as C7.6's
+  // N4): being named on the case team is not work, so both people really work on it before it is sent — the officer
+  // and the representative each type a fact — and the refusal stands on what the case holds, not on a team row.
   const pc = await openCase(vv, [{ role: "principal", name: "Sample Client T", dob: yearsAgo(42) }], { representative: rep, caseOfficers: [officer, rep] });
+  const pT = pc.subjects["Sample Client T"];
+  const worked = [(await answer(pc.id, pT, "person.passport_number", "ZX9999992", officer)).status, (await answer(pc.id, pT, "person.family_name", "Sample T", rep)).status];
   const pp = (await prepare(pc.id, officer)).p, pf = pp?.filings[0]?.id;
   const rp = (await call("POST", `/runtime/cases/${pc.id}/reviews`, { filings: [pf] }, officer)).body?.id as string | undefined;
   await call("POST", `/runtime/reviews/${rp}/open`, { filing: pf }, rep);
   const prep = await call("POST", `/runtime/reviews/${rp}/decision`, { filing: pf, verdict: "approve", form_hashes: hashes(rowOf((await read(rp)).r, pf)), confirm_unticked: true, self: true }, rep);
   ok("C8.3-14b fail (BR-8, BR-9): on a solo firm \"Review now\" opens at once; self-review without the statement 400, with it 200 (Self-reviewed); prepared with another officer on a firm that is not solo 409",
-    res.status === 201 && gsolo?.kind === "review_now" && rowOf(gsolo, sf)?.status === "under_review" && noSelf.status === 400 && withSelf.status === 200 && withSelf.body?.kind === "self_reviewed" && prep.status === 409,
-    { send: res.status, kind: gsolo?.kind, noSelf: [noSelf.status, noSelf.body?.detail], withSelf: [withSelf.status, withSelf.body?.detail], prep: [prep.status, prep.body?.detail] });
+    res.status === 201 && gsolo?.kind === "review_now" && rowOf(gsolo, sf)?.status === "under_review" && noSelf.status === 400 && withSelf.status === 200 && withSelf.body?.kind === "self_reviewed"
+      && worked.every((x) => x < 300) && prep.status === 409 && /second person/.test(prep.body?.detail ?? ""),
+    { send: res.status, kind: gsolo?.kind, noSelf: [noSelf.status, noSelf.body?.detail], withSelf: [withSelf.status, withSelf.body?.detail], worked, prep: [prep.status, prep.body?.detail] });
 
   // 19 Break B1: a send back withdraws the earlier approval (C7.6's line reopens; C8.2's "Reviewed by" reads nothing)
   const before19 = readinessOf((await prepare(sc.id, solo)).p, sf);
