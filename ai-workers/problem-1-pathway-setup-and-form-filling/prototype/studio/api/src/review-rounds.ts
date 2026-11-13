@@ -96,14 +96,20 @@ export class ReviewRounds {
     // QA-446 (P-510 (2)): the values of the filing's people and their relatives (their parents' tabs), counted from the
     // officer's own Agent view, answer by answer, so this item agrees with the tabs and sections: declared by whom
     // (no officer confirmation needed), confirmed by whom, and how many still wait for the officer's Confirm section.
-    const subjects = new Set(this.formsOf(basis, filing).map((f) => f.subject));
+    const forms = this.formsOf(basis, filing), subjects = new Set(forms.map((f) => f.subject));
     const mine = (sid: string) => subjects.has(sid) || subjects.has(relativeOf(sid)?.owner ?? "");
+    // Review M1: the application's own values (The application tab) count in each filing whose forms read them, so an
+    // answer still on the Confirm list there is never missing from the checklist ("0 to confirm" beside "1 to confirm").
+    const caseFacts = new Set(forms.flatMap((f) => f.facts.filter((x) => x.about === "case").map((x) => x.fact)));
     agent ??= await this.agentViewOf(c);
-    const answers = agent.sections.filter((s) => mine(s.subjectId)).flatMap((s) => sectionAnswers(s.questions, s.group).map((a) => ({ ...a, about: s.about_label })));
+    const answers = agent.sections.flatMap((s) => {
+      const qs = mine(s.subjectId) ? s.questions : s.subjectId === basis.caseSubject ? s.questions.filter((q) => caseFacts.has(q.fact)) : [];
+      return sectionAnswers(qs, qs.some((q) => q.group) ? s.group : null).map((a) => ({ ...a, about: s.about_label }));
+    });
     const pin = c.pins[0], combination = (await this.db.filing.findUnique({ where: { id: filing }, select: { combinationKey: true } }))?.combinationKey ?? "";
     return checklistOf({ critical: (rd?.warns ?? []).filter((w) => w.severity === "critical").length, documents: { verified, required: docs.length },
       program: reviewItemsOf({ id: pin.configReleaseId, version: pin.release.version }, combination),
-      values: valuesOf(answers, (a) => a.channel === "own_link" ? a.about : this.nameOf(c, a.by) ?? a.by),
+      values: valuesOf(answers, (actor) => this.nameOf(c, actor) ?? actor),
       forms: this.formsOf(basis, filing).map((f) => ({ item: f.item, label: `${f.form} · ${f.person}` })) });
   }
   /** The person who typed each answer now (its origin, not its confirmer, m4), from the answers already read (m6). */
