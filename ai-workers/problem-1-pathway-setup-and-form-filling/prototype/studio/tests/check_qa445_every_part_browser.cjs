@@ -58,13 +58,14 @@ const nextNotDone = (parts, from) => { for (let k = 1; k < parts.length; k++) { 
   if (Number(has) < 2) { const l = await call("POST", "/demo/load", "user-A", { sample: "configured" }); if (l.status >= 300) { console.log("STOP the configured checkpoint did not load", l.status); process.exit(1); } }
   const b = await chromium.launch({ headless: true, ...(process.platform === "darwin" ? { channel: "chrome" } : fs.existsSync("/opt/pw-browsers/chromium") ? { executablePath: "/opt/pw-browsers/chromium" } : {}) });
   const errs = [];
-  for (const [key, label, family] of [["vv.single", "Visitor visa", [["spouse_or_partner", "Sample Spouse W"], ["child", "Sample Child W"]]], ["sp.outside", "Study permit (outside Canada)", [["spouse_or_partner", "Sample Spouse W"], ["child", "Sample Child S"], ["child", "Sample Child V"]]]]) {
+  // QA445_ONLY=shift runs only the last scenario (a quick before/after of review M1 and M2).
+  for (const [key, label, family] of process.env.QA445_ONLY === "shift" ? [] : [["vv.single", "Visitor visa", [["spouse_or_partner", "Sample Spouse W"], ["child", "Sample Child W"]]], ["sp.outside", "Study permit (outside Canada)", [["spouse_or_partner", "Sample Spouse W"], ["child", "Sample Child S"], ["child", "Sample Child V"]]]]) {
     const ref = `QA445W-${key}-${Date.now() % 100000}`;
     const made = await call("POST", "/runtime/cases", "user-O", { combinationId: sql(`select id from combination where combination_key='${key}'`), reference: ref, clientActor: "user-P", principal: { displayName: "Sample Principal W" }, idempotencyKey: ref });
     const caseId = made.body?.id;
     const added = [];
     for (const [role, name] of family) added.push((await call("POST", `/runtime/cases/${caseId}/people`, "user-O", { role, displayName: name })).status);
-    ok(`${label}: setup: a family case of ${family.length + 1} opens`, made.status < 300 && !!caseId && added.every((s) => s < 300), { made: made.status, added });
+    ok(`C6.2 QA-445 ${label}: setup: a family case of ${family.length + 1} opens`, made.status < 300 && !!caseId && added.every((s) => s < 300), { made: made.status, added });
     if (!caseId) continue;
     const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
     await ctx.addInitScript(() => { try { if (!sessionStorage.getItem("qa445w")) { localStorage.setItem("xr-actor", "user-O"); sessionStorage.setItem("qa445w", "1"); } } catch { /* ignore */ } });
@@ -80,7 +81,7 @@ const nextNotDone = (parts, from) => { for (let k = 1; k < parts.length; k++) { 
     const count = /(\d+) of (\d+) parts done/.exec(await main.innerText());
     const passed = () => p.evaluate((id) => { try { return JSON.parse(localStorage.getItem(`xr-passed-${id}`) ?? "[]"); } catch { return []; } }, caseId).then((x) => new Set(x));
     const first = await clientParts(caseId, new Set());
-    ok(`${label}: the overview lists the client's ${first.length} parts in the questionnaire's order, "0 of ${first.length} parts done"`, overview.length === first.length && overview.every((t, i) => t === first[i].title) && count?.[1] === "0" && Number(count?.[2]) === first.length, { overview: overview.length, parts: first.length, count: count?.[0] });
+    ok(`C6.2 QA-445 ${label}: the overview lists the client's ${first.length} parts in the questionnaire's order, "0 of ${first.length} parts done"`, overview.length === first.length && overview.every((t, i) => t === first[i].title) && count?.[1] === "0" && Number(count?.[2]) === first.length, { overview: overview.length, parts: first.length, count: count?.[0] });
     await p.getByRole("button", { name: "Start", exact: true }).click();
     const partOf = async () => { const l = main.getByText(/^Part \d+ of \d+ · /).first(); if (!(await l.count())) return null; const m = /^Part (\d+) of (\d+) · (.*)$/.exec((await l.innerText()).trim()); return m ? { n: Number(m[1]), of: Number(m[2]), title: m[3] } : null; };
     await main.getByText(/^Part 1 of \d+ · /).waitFor({ timeout: 15000 });
@@ -101,32 +102,74 @@ const nextNotDone = (parts, from) => { for (let k = 1; k < parts.length; k++) { 
       const was = await head();
       const left = (w, summaryToo) => p.waitForFunction(([w, x]) => { const t = document.querySelector("main")?.innerText ?? ""; const m = /Part (\d+) of \d+ · ([^\n]*)/.exec(t); const h = m ? `${m[2]} | ${(/Answering for [^\n]*|Answered once for the whole application[^\n]*/.exec(t) ?? [""])[0]}` : "overview"; return (h !== w && !document.querySelector("button[aria-busy]")) || (x && /You can fix these now/.test(t)); }, [w, summaryToo], { timeout: 30000 }).then(() => true, () => false);
       await main.getByRole("button", { name: "Save and continue" }).click(); presses++;
-      let moved = await left(was, true);
+      let moved = await left(was, true), viaSummary = false;
       if (moved && await main.getByRole("button", { name: "leave them for now and continue" }).isVisible().catch(() => false)) {
-        summaries++; await main.getByRole("button", { name: "leave them for now and continue" }).click(); moved = await left(was, false);
+        summaries++; viaSummary = true; await main.getByRole("button", { name: "leave them for now and continue" }).click(); moved = await left(was, false);
       }
       const now = await partOf();
       parts = await clientParts(caseId, await passed());
       const at = parts.findIndex((x) => x.key === curKey), want = nextNotDone(parts, at >= 0 ? at : from - 1);
       const landedKey = now ? parts[now.n - 1]?.key : null;
-      if (process.env.QA445_TRAIL) console.log(`  ${presses}: ${curKey.split("|")[1]}@${from} → ${now ? `${now.n}/${now.of} ${landedKey?.split("|")[1]}` : "overview"} (want ${want === null ? "overview" : `${want + 1} ${parts[want].key.split("|")[1]}`}; at ${at + 1}; url ${new URL(p.url()).search})`);
+      if (process.env.QA445_TRAIL) console.log(`  ${presses} (${viaSummary ? "summary" : "direct"}): ${curKey.split("|")[1]}@${from} → ${now ? `${now.n}/${now.of} ${landedKey?.split("|")[1]}` : "overview"} (want ${want === null ? "overview" : `${want + 1} ${parts[want].key.split("|")[1]}`}; at ${at + 1}; url ${new URL(p.url()).search})`);
       if (now && !agrees(now, parts)) counter.push({ at: now, view: parts[now.n - 1]?.title, of: parts.length });
-      if (!moved || landedKey === curKey) { stuck.push({ press: presses, part: curKey, at: now, moved }); break; }
-      if ((want === null ? null : parts[want].key) !== landedKey) wrong.push({ press: presses, from: curKey, landed: now, want: want === null ? "the overview" : `${want + 1} ${parts[want].title}` });
+      if (!moved || landedKey === curKey) { stuck.push({ press: presses, part: curKey, at: now, moved, path: viaSummary ? "summary" : "direct" }); break; }
+      if ((want === null ? null : parts[want].key) !== landedKey) wrong.push({ press: presses, path: viaSummary ? "summary" : "direct", from: curKey, landed: now, want: want === null ? "the overview" : `${want + 1} ${parts[want].title}` });
       if (!now || seen.has(landedKey)) break; // the overview, or back round to a part already met
       seen.add(landedKey); cur = now; curKey = landedKey;
     }
     const left = parts.filter((x) => !x.done && !seen.has(x.key));
-    ok(`${label}: Save and continue never stays on the part it was pressed on (${presses} presses: ${presses - summaries} parts passed, ${summaries} left from the summary; ${answered} answers given)`, stuck.length === 0, stuck);
-    ok(`${label}: both ways out were walked: parts that pass and parts left from the summary`, presses - summaries > 0 && summaries > 0, { presses, summaries });
-    ok(`${label}: each press lands on the part the client's view says is next not done (the overview when none)`, wrong.length === 0, wrong.slice(0, 3));
-    ok(`${label}: when the walk came back round, every part not done had been reached (${seen.size} parts met; ${parts.length} now)`, left.length === 0, left.slice(0, 3));
-    ok(`${label}: "Part k of N" names the k-th part of the client's view and N its count, before and after every press`, counter.length === 0, counter.slice(0, 3));
+    ok(`C6.2 QA-445 ${label}: Save and continue never stays on the part it was pressed on (${presses} presses: ${presses - summaries} parts passed, ${summaries} left from the summary; ${answered} answers given)`, stuck.length === 0, stuck);
+    ok(`C6.2 QA-445 ${label}: both ways out were walked: parts that pass and parts left from the summary`, presses - summaries > 0 && summaries > 0, { presses, summaries });
+    ok(`C6.2 QA-445 ${label}: each press lands on the part the client's view says is next not done (the overview when none)`, wrong.length === 0, wrong.slice(0, 3));
+    ok(`C6.2 QA-445 ${label}: when the walk came back round, every part not done had been reached (${seen.size} parts met; ${parts.length} now)`, left.length === 0, left.slice(0, 3));
+    ok(`C6.2 QA-445 ${label}: "Part k of N" names the k-th part of the client's view and N its count, before and after every press`, counter.length === 0, counter.slice(0, 3));
     // The overview, at the end, lists the same parts in the same order.
     await p.goto(`${BASE}/cases/${caseId}/questionnaire`); await p.getByText(/parts done/).waitFor({ timeout: 30000 });
     const end = await p.locator("main section[aria-labelledby^='p-'] li button > span:first-child").allInnerTexts();
     const endCount = /(\d+) of (\d+) parts done/.exec(await main.innerText());
-    ok(`${label}: at the end the overview lists the client's ${parts.length} parts in the same order, with ${parts.filter((x) => x.done).length} done`, end.length === parts.length && end.every((t, i) => t === parts[i].title) && Number(endCount?.[2]) === parts.length && Number(endCount?.[1]) === parts.filter((x) => x.done).length, { overview: end.length, parts: parts.length, count: endCount?.[0] });
+    ok(`C6.2 QA-445 ${label}: at the end the overview lists the client's ${parts.length} parts in the same order, with ${parts.filter((x) => x.done).length} done`, end.length === parts.length && end.every((t, i) => t === parts[i].title) && Number(endCount?.[2]) === parts.length && Number(endCount?.[1]) === parts.filter((x) => x.done).length, { overview: end.length, parts: parts.length, count: endCount?.[0] });
+    await ctx.close();
+  }
+  // Review M2 (#1671): a press that leaves directly (the part passes, no summary) while parts were added BEFORE the open
+  // part. A Visitor visa case of the principal and a child; Client A opens a child's part from the overview (after the
+  // officer's hand-off, in-app), its required questions answered; the officer then adds a spouse (whose parts come before
+  // the child's); Client A presses Save and continue. Main swapped the open part for another under the same address; a
+  // pin left in place on the person's own move (review M1) put the client back on the part just left.
+  {
+    const ref = `QA445S-${Date.now() % 100000}`;
+    const made = await call("POST", "/runtime/cases", "user-O", { combinationId: sql("select id from combination where combination_key='vv.single'"), reference: ref, clientActor: "user-P", principal: { displayName: "Sample Principal S" }, idempotencyKey: ref });
+    const caseId = made.body?.id;
+    const child = (await call("POST", `/runtime/cases/${caseId}/people`, "user-O", { role: "child", displayName: "Sample Child S" })).body?.subject_id;
+    // The child's first part that passes once its required single questions are answered.
+    let pick = null;
+    for (const x of (await clientParts(caseId, new Set())).filter((y) => y.key.startsWith(`${child}|`))) {
+      await answerPart(caseId, x.key);
+      if ((await clientParts(caseId, new Set())).find((y) => y.key === x.key)?.done) { pick = x; break; }
+    }
+    ok("C6.2 QA-445 shift: setup: a Visitor visa case of a principal and a child, with a child's part that passes", made.status < 300 && !!child && !!pick, { made: made.status, child, pick });
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
+    await ctx.addInitScript(() => { try { if (!sessionStorage.getItem("qa445s")) { localStorage.setItem("xr-actor", "user-O"); sessionStorage.setItem("qa445s", "1"); } } catch { /* ignore */ } });
+    const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(e.message));
+    await p.goto(`${BASE}/cases/${caseId}`);
+    await p.locator("[data-client-card-next], [data-handoff=client]").first().waitFor({ timeout: 60000 });
+    await p.getByRole("button", { name: "Hand to Client A (simulated)" }).click();
+    await p.getByText(/parts done/).waitFor({ timeout: 30000 });
+    await p.locator(`main section[aria-labelledby='p-${child}'] li button`, { hasText: pick?.title ?? "-" }).first().click();
+    const main = p.locator("main"); const line = main.getByText(/^Part \d+ of \d+ · /).first();
+    await line.waitFor({ timeout: 15000 });
+    const before = /^Part (\d+) of (\d+) · (.*)$/.exec((await line.innerText()).trim());
+    const spouse = await call("POST", `/runtime/cases/${caseId}/people`, "user-O", { role: "spouse_or_partner", displayName: "Sample Spouse S" });
+    const was = await main.innerText();
+    await main.getByRole("button", { name: "Save and continue" }).click();
+    const left = await p.waitForFunction((w) => { const t = document.querySelector("main")?.innerText ?? ""; const m = /Part \d+ of \d+ · ([^\n]*)/.exec(t); const a = (/Answering for [^\n]*/.exec(t) ?? [""])[0]; const wm = /Part \d+ of \d+ · ([^\n]*)/.exec(w); const wa = (/Answering for [^\n]*/.exec(w) ?? [""])[0]; return !document.querySelector("button[aria-busy]") && (/You can fix these now/.test(t) || !m || m[1] !== wm?.[1] || a !== wa); }, was, { timeout: 30000 }).then(() => true, () => false);
+    const viaSummary = /You can fix these now/.test(await main.innerText());
+    const parts = await clientParts(caseId, await p.evaluate((id) => { try { return JSON.parse(localStorage.getItem(`xr-passed-${id}`) ?? "[]"); } catch { return []; } }, caseId).then((x) => new Set(x)));
+    const at = parts.findIndex((x) => x.key === pick?.key), want = nextNotDone(parts, at);
+    const now = /^Part (\d+) of (\d+) · (.*)$/.exec(((await line.count()) ? await line.innerText() : "").trim());
+    const landedKey = now ? parts[Number(now[1]) - 1]?.key : null;
+    ok("C6.2 QA-445 shift: the spouse's parts came before the open part (it moved down the list)", spouse.status < 300 && at > Number(before?.[1] ?? 1e9) - 1, { spouse: spouse.status, before: before?.[1], now: at + 1 });
+    ok("C6.2 QA-445 shift: the press left directly (the part passed: no summary)", left && !viaSummary, { left, viaSummary });
+    ok(`C6.2 QA-445 shift: Save and continue lands on the next part not done (${want === null ? "the overview" : `Part ${want + 1}, ${parts[want].title}`}), never the part just left`, landedKey !== pick?.key && (want === null ? !now : landedKey === parts[want].key) && (!now || Number(now[2]) === parts.length), { landed: now?.[0], want: want === null ? null : `${want + 1} ${parts[want].title}` });
     await ctx.close();
   }
   ok("no page errors", errs.length === 0, errs.slice(0, 3));

@@ -457,12 +457,15 @@ export function Sqr({ view, order = (v: View) => byPerson(v).sections }: { view:
   const asked = raw === null ? null : Math.min(Math.max(Math.floor(Number(raw)) - 1 || 0, 0), parts.length - 1);
   // BK-4c: the hand-off's `from` (who hands back) stays while the client moves between parts.
   const from = params.get("from");
-  const go = (i: number | null) => { setParams({ ...(i === null ? {} : { part: String(i + 1) }), ...(from ? { from } : {}) }); window.scrollTo({ top: 0 }); };
   // QA-445: the address holds a part's place, and a save can add or drop parts before it (an answer decides what is
   // asked). The part shown stays the same part when the data moves under the same address: it is found by its person
   // and section, and the address is corrected in place (no new history entry), so the open part is never swapped for
   // another, and its Save and continue still runs.
   const pin = React.useRef<{ raw: string | null; key: string | null }>({ raw: null, key: null });
+  // Review M1 (#1671): a move the person asked for drops the pin first. The router applies go()'s new address in a
+  // transition, after the reloaded parts reach a render that still has the old one; a pin left in place would take that
+  // render for "the data moved" and replace go()'s entry with the part just left.
+  const go = (i: number | null) => { pin.current = { raw: null, key: null }; setParams({ ...(i === null ? {} : { part: String(i + 1) }), ...(from ? { from } : {}) }); window.scrollTo({ top: 0 }); };
   const keyAt = asked === null ? null : partKey(parts[asked]);
   const moved = asked !== null && pin.current.raw === raw && pin.current.key !== null && pin.current.key !== keyAt ? parts.findIndex((s) => partKey(s) === pin.current.key) : -1;
   const index = moved >= 0 ? moved : asked;
