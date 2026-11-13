@@ -1,0 +1,54 @@
+# PF-7: the walking skeleton's local test environment — the studio image and PostgreSQL, no cloud account needed.
+#   docker compose -f ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/deploy/compose.test.yml up -d --build --wait
+#   bash ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/skeleton-smoke.sh http://127.0.0.1:4480
+#   docker compose -f …/deploy/compose.test.yml down -v
+# Throwaway by design: the database has no password (trust, on compose's own network only; its port is not published),
+# so no secret exists to leak; its data lives in an anonymous volume that `down -v` removes. The app's port is bound
+# to 127.0.0.1 only. Live AI stays off (no key is given; the app replays saved runs only). US$0.
+name: studio-skeleton
+services:
+  db:
+    # PostgreSQL 18.3, the version cloud-setup.sh installs for the lanes, pinned by its index digest (13 Nov 2026).
+    image: postgres:18.3-bookworm@sha256:80630f83606d8db77d30b3851b16a9f78be2d0d4dda6f7b82a1fdca5ebe3acba
+    environment:
+      POSTGRES_USER: studio
+      POSTGRES_DB: studio
+      POSTGRES_HOST_AUTH_METHOD: trust
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "studio", "-d", "studio"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    # The release step: the same image applies prisma/migrations once, then exits; the app starts only after it succeeds.
+    image: studio-skeleton:test
+    build:
+      context: ../../../../..
+      dockerfile: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://studio@db:5432/studio
+    command: ["./node_modules/.bin/prisma", "migrate", "deploy"]
+    depends_on:
+      db: { condition: service_healthy }
+    restart: "no"
+
+  app:
+    image: studio-skeleton:test
+    init: true
+    environment:
+      DATABASE_URL: postgresql://studio@db:5432/studio
+      # PF-4's local sign-in stand-in answers only with this set (contracts §1.2); a test environment, never the cloud's.
+      PLATFORM_IDENTITY: local
+    ports:
+      - "127.0.0.1:${SKELETON_PORT:-4480}:8080"
+    depends_on:
+      db: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      # Healthy once GET /api/health answers 200 (database, disk, fill queue all well), as the smoke script asks.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4400/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 5s
