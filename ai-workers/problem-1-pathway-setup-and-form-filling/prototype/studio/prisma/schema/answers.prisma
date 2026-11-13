@@ -1,0 +1,206 @@
+// answers.prisma — Runtime answers and filled forms: whom an answer is about, the answers and repeating groups, answer snapshots, generated and validated copies, and portal sections entered. Owner: the runtime lane.
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+
+/// C7.3 (r5c §6, P-62 §6): "Entered in the portal" for one section of an Online form item's answer sheet: who ticked it,
+/// when, and the answers it showed, frozen in an answer snapshot. One current tick per item and section; a fact changed
+/// after it marks the section out of date (P-65). Ticking an out-of-date section again freezes a new snapshot and marks the
+/// old tick superseded (kept as history); the frozen answers never change.
+model EnteredSection {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  itemId      String   @map("item_id") @db.Uuid
+  /// The PDF twin's section group (contracts/pdf-sections.json), e.g. SectionA, until the portal's own screens (W6).
+  sectionKey  String   @map("section_key")
+  snapshotId  String   @unique @map("snapshot_id") @db.Uuid
+  enteredBy   String   @map("entered_by")
+  enteredAt   DateTime @default(now()) @map("entered_at") @db.Timestamptz
+  /// Set when the section is ticked again after it went out of date (the next tick is the current one).
+  supersededAt DateTime? @map("superseded_at") @db.Timestamptz
+
+  case     Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  item     FilingItem     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  snapshot AnswerSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  /// One current tick per item and section: a partial unique index in the migration (WHERE superseded_at IS NULL).
+  @@index([itemId, sectionKey])
+  @@index([caseId])
+  @@map("entered_section")
+}
+
+/// Whom an answer is about: a person on the case, or the case itself (subjectKind "case", party = the principal), or a
+/// relative a form describes (subjectKind "parent_1", "parent_2", "sibling"; B128, B155), at most one per party and
+/// relation: a partial unique index in SQL (migration 20261108050000_b157_one_relative_subject; B157).
+model AnswerSubject {
+  id          String @id @default(uuid()) @db.Uuid
+  workspaceId String @map("workspace_id") @db.Uuid
+  partyId     String @map("party_id") @db.Uuid
+  subjectKind String @map("subject_kind")
+  label       String
+
+  party        Party                   @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  participant  CaseParticipant?
+  answers      ClientCanonicalAnswer[]
+  records      ClientFactRecord[]
+  groupAnswers ClientGroupAnswer[]
+  checklistLines ChecklistLine[]
+  documents    CaseDocument[]
+  /// C6.17 (B3): the stage whose application this subject is (one application subject per worked stage).
+  stage          CaseStage?
+  personLinks  PersonLink[] // C6.16
+
+  @@map("answer_subject")
+}
+
+/// One row of a repeating group (team ClientFactRecord; groupKey = the questionnaire section holding the group, D-5).
+/// Removing a row inserts a tombstone version; nothing is deleted.
+model ClientFactRecord {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @map("workspace_id") @db.Uuid
+  subjectId      String   @map("subject_id") @db.Uuid
+  groupKey       String   @map("group_key")
+  /// Stable row identity across versions (the first version's id).
+  rowKey         String   @map("row_key") @db.Uuid
+  order          Int
+  tombstone      Boolean  @default(false)
+  supersededById String?  @map("superseded_by_id") @db.Uuid
+  sourceJson     Json     @map("source_json")
+  effectiveAt    DateTime @default(now()) @map("effective_at") @db.Timestamptz
+
+  subject      AnswerSubject           @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  supersededBy ClientFactRecord?       @relation("ClientFactRecordChain", fields: [supersededById], references: [id], onDelete: Cascade)
+  supersedes   ClientFactRecord[]      @relation("ClientFactRecordChain")
+
+  @@index([subjectId, groupKey])
+  @@map("client_fact_record")
+}
+
+/// "None apply" for one repeating group of one subject (Lead, R1d answer to break M3, P-71/P-72): a fact like any other,
+/// answered, confirmed and changed like an answer. Append-only; noneApply false records "entries apply" (the change back).
+model ClientGroupAnswer {
+  id             String    @id @default(uuid()) @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  subjectId      String    @map("subject_id") @db.Uuid
+  groupKey       String    @map("group_key")
+  noneApply      Boolean   @map("none_apply")
+  status         String
+  supersededById String?   @map("superseded_by_id") @db.Uuid
+  sourceJson     Json      @map("source_json")
+  verifiedBy     String?   @map("verified_by")
+  verifiedAt     DateTime? @map("verified_at") @db.Timestamptz
+  effectiveAt    DateTime  @default(now()) @map("effective_at") @db.Timestamptz
+
+  subject      AnswerSubject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  supersededBy ClientGroupAnswer?  @relation("ClientGroupAnswerChain", fields: [supersededById], references: [id], onDelete: Cascade)
+  supersedes   ClientGroupAnswer[] @relation("ClientGroupAnswerChain")
+
+  @@index([subjectId, groupKey])
+  @@map("client_group_answer")
+}
+
+/// One answer about one subject for one shared field (and one row of a group). Append-only: a change inserts a new row
+/// and stamps the old one superseded, in one transaction. DECLARED = typed; VERIFIED = confirmed by the officer.
+model ClientCanonicalAnswer {
+  id                String    @id @default(uuid()) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  partyId           String    @map("party_id") @db.Uuid
+  subjectId         String    @map("subject_id") @db.Uuid
+  canonicalFieldId  String    @map("canonical_field_id") @db.Uuid
+  canonicalFieldKey String    @map("canonical_field_key")
+  /// The repeating-group row (ClientFactRecord.rowKey) this answer belongs to; null for a single answer.
+  rowKey            String?   @map("row_key") @db.Uuid
+  valueJson         Json      @map("value_json")
+  status            String
+  effectiveAt       DateTime  @default(now()) @map("effective_at") @db.Timestamptz
+  supersededById    String?   @map("superseded_by_id") @db.Uuid
+  /// { channel: questionnaire | agent_view | confirm_section, actor, at }
+  sourceJson        Json      @map("source_json")
+  verifiedBy        String?   @map("verified_by")
+  verifiedAt        DateTime? @map("verified_at") @db.Timestamptz
+
+  subject        AnswerSubject           @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  canonicalField CanonicalField          @relation(fields: [canonicalFieldId], references: [id], onDelete: Restrict)
+  supersededBy   ClientCanonicalAnswer?  @relation("ClientCanonicalAnswerChain", fields: [supersededById], references: [id], onDelete: Cascade)
+  supersedes     ClientCanonicalAnswer[] @relation("ClientCanonicalAnswerChain")
+
+  @@index([subjectId, canonicalFieldKey])
+  @@map("client_canonical_answer")
+}
+
+/// The confirmed facts one generated copy read (team AnswerSnapshot): the values each form field of one form took for
+/// one person, frozen, and their hash. A later answer never changes it; "out of date" compares it with today's facts.
+model AnswerSnapshot {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  subjectId   String   @map("subject_id") @db.Uuid
+  formNumber  String   @map("form_number")
+  inputHash   String   @map("input_hash") @db.VarChar(64)
+  /// [{ fact, about, row, value }] the confirmed facts read, in form-field order
+  factsJson   Json     @map("facts_json")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  case    Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  form    FormInstance?
+  entered EnteredSection?
+  reviewFrozen ReviewRoundForm[] @relation("ReviewFrozen") // C8.3
+  reviewStamps ReviewRoundForm[] @relation("ReviewStamp")  // C8.3
+
+  @@map("answer_snapshot")
+}
+
+/// One generated copy of one form for one person on a case (team FormInstance), never overwritten (P-65): a new copy is a
+/// new row. Status QUEUED → RUNNING → GENERATED | FAILED (the generation job); a GENERATED copy may be locked once
+/// ("validated copy uploaded back" or "filed"), after which nothing about it changes (database trigger).
+model FormInstance {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @map("workspace_id") @db.Uuid
+  caseId          String    @map("case_id") @db.Uuid
+  subjectId       String    @map("subject_id") @db.Uuid
+  formNumber      String    @map("form_number")
+  configReleaseId String    @map("config_release_id") @db.Uuid
+  snapshotId      String    @unique @map("snapshot_id") @db.Uuid
+  status          String    @default("QUEUED")
+  path            String?
+  sha256          String?   @db.VarChar(64)
+  /// The filler's report and the per-form-field results (written, by hand, by a person, not written and why)
+  resultJson      Json?     @map("result_json")
+  error           String?
+  lockedKind      String?   @map("locked_kind")
+  lockedAt        DateTime? @map("locked_at") @db.Timestamptz
+  lockedBy        String?   @map("locked_by")
+  idempotencyKey  String?   @map("idempotency_key")
+  createdBy       String    @map("created_by")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  finishedAt      DateTime? @map("finished_at") @db.Timestamptz
+
+  case      Case            @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  snapshot  AnswerSnapshot  @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  validated ValidatedCopy[]
+  signSteps SignStep[] // C8.1: the print step names the copy printed
+
+  @@unique([caseId, idempotencyKey])
+  @@index([caseId, formNumber, subjectId, createdAt])
+  @@map("form_instance")
+}
+
+/// W1-10 slice 1 C-9/C-10 (P-144, P-171 (1)): the filled PDF after the person's Validate, read back into the case. Its
+/// file checksum and the fingerprint of the form's facts when it was read back; a later change to those facts makes it
+/// "Out of date: validate again". Insert-only: kept as history, never deleted.
+model ValidatedCopy {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @map("workspace_id") @db.Uuid
+  formInstanceId String   @map("form_instance_id") @db.Uuid
+  path           String
+  sha256         String   @db.VarChar(64)
+  factsHash      String   @map("facts_hash") @db.VarChar(64)
+  /// What the read-back found: the form fields compared, those that match the copy, and any that differ (by question).
+  readBack       Json     @map("read_back")
+  readBy         String   @map("read_by")
+  readAt         DateTime @default(now()) @map("read_at") @db.Timestamptz
+
+  copy FormInstance @relation(fields: [formInstanceId], references: [id], onDelete: Cascade)
+
+  @@index([formInstanceId, readAt])
+  @@map("validated_copy")
+}

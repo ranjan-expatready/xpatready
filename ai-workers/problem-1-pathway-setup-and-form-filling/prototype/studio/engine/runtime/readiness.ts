@@ -307,7 +307,7 @@ export function passProblem(reason: unknown): string | null {
  *  miss"): whether "Ready to file" waits for this line's signature. Only `signedBy: "none"` means no signature; an unset
  *  `signedBy` needs one. A hand or pen signature the line names is always waited for; a typed name is signed as the form
  *  is typed, and an Online line with no method is signed in the portal at submission. The default method `NONE` on a PDF
- *  upload or Paper line means "how it is signed is not set", so the signature is waited for, never assumed absent (prisma/schema.prisma combination_form
+ *  upload or Paper line means "how it is signed is not set", so the signature is waited for, never assumed absent (prisma/schema/pathways.prisma combination_form
  *  `signature @default(NONE)` stays: no migration). */
 export function signatureNeeded(f: Pick<FormItem, "channel" | "signature" | "signedBy">): boolean {
   if (f.signature === "HAND_SCANNED" || f.signature === "PEN") return true; // a signature the line names is always waited for

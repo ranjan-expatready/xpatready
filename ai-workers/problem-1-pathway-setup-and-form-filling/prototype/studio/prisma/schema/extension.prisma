@@ -1,0 +1,80 @@
+// extension.prisma — The browser extension (F2): pairing codes and their tries, extension sessions, and re-capture tasks when a live portal screen differs. Owner: the forms lane.
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+
+// ─── F2 browser extension (forms lane, P-90; plan §4) ────────────────────────────────────────────────────────────
+
+/// A one-time pairing code shown in the signed-in Studio (Lead decision Q1). Only its sha256 is kept; one use, 5 min (Sample).
+model ExtensionPairing {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  person      String
+  modes       String[]
+  codeHash    String    @unique @map("code_hash") @db.VarChar(64)
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz
+  usedAt      DateTime? @map("used_at") @db.Timestamptz
+  /// The code's first three characters, which find it; a wrong code with them counts against it (review-2 Minor 1).
+  selector    String?   @db.VarChar(3)
+  /// Wrong codes tried against this one, kept in the database (never per address in memory); the fifth voids it.
+  wrongTries  Int       @default(0) @map("wrong_tries")
+  voidedAt    DateTime? @map("voided_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([person, createdAt])
+  @@index([selector])
+  @@map("extension_pairing")
+}
+
+/// One try to exchange a pairing code, kept a few minutes: the throttle per address and for the whole server (review-3
+/// Major 2). Holds the client's address and the time only; never the code.
+model ExtensionCodeTry {
+  id      BigInt   @id @default(autoincrement())
+  address String   @db.VarChar(64)
+  at      DateTime @default(now()) @db.Timestamptz
+
+  @@index([at, address])
+  @@map("extension_code_try")
+}
+
+/// The extension's session: an opaque token, kept only as its sha256, bound to one person, firm, modes and extension
+/// id; revocable; 8 h (Sample). The token itself lives in the extension's session storage (memory) only.
+model ExtensionSession {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  person      String
+  modes       String[]
+  extensionId String    @map("extension_id")
+  tokenHash   String    @unique @map("token_hash") @db.VarChar(64)
+  pairingId   String    @unique @map("pairing_id") @db.Uuid
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([person, createdAt])
+  @@map("extension_session")
+}
+
+/// "Re-capture needed" (BR-7, XT-6): opened when a live screen differs from the approved twin's screen at fill, or a
+/// screen is not in the twin. One open task per (online version, screen, kind) (partial unique index in SQL). The
+/// differences name input ids, the kind of change, option codes and the twin's approved label: never live text (M5).
+model RecaptureTask {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  formEditionId String    @map("form_edition_id") @db.Uuid
+  screenPage    String    @map("screen_page")
+  screenTitle   String    @map("screen_title")
+  kind          String
+  status        String    @default("OPEN")
+  differences   Json      @default("[]")
+  affected      Json      @default("{}")
+  times         Int       @default(1)
+  openedBy      String    @map("opened_by")
+  openedAt      DateTime  @default(now()) @map("opened_at") @db.Timestamptz
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  closedBy      String?   @map("closed_by") @db.Uuid
+  closedAt      DateTime? @map("closed_at") @db.Timestamptz
+
+  edition FormEdition @relation(fields: [formEditionId], references: [id], onDelete: Cascade)
+
+  @@index([formEditionId, status])
+  @@map("recapture_task")
+}
