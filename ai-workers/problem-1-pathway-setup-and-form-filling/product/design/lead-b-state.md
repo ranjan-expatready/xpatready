@@ -15,5 +15,8 @@ Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Ses
 | (none) | | | |
 
 ## Next step
-1. Message Lead 37 one line per row (sent once pushed; see the log below).
+1. Wait for Lead 37's answers: OK for the App.tsx line (PF-1), workflow diff read (PF-7), DB-SPLIT's schema-folder rule, the RULES amendment (P-335/P-357 vs P-553/P-558), the engagement.ready fit (contracts §2.6).
 2. Then: screen concepts (skill screen-concept) for the first new screens, starting with the public enquiry form (FO-2) and firm sign-up (PF-5).
+
+## Log
+* 13 Nov 22:25 IST: rows sent to Lead 37 (one line each, with four asks); delivered, not yet answered.
