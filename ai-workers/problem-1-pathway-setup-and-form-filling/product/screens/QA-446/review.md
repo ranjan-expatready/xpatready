@@ -156,3 +156,35 @@ Own copy on :4448 at the head, stopped after use. The local database server was 
 **Not re-run:** the R1 group and C8.3 pack after the merge (the builder reports r1c 140/141, its speed budget only, failing on main too; left to CI).
 **Journey score: 9/10, pass.** "Correct data" is back to 1: household = tabs = sections = every filing's checklist, including the application. "Plain words" stays ½ (the long "(the officer's Confirm section)").
 **Round 3 verdict: Approve** for `71c77be5d6347c5b7dabaac19d91f86f0d6d7b2b`: no open Blocker or Major.
+
+## CI fix: head `1fa423ad31db9bbef297eceab9986ce0b926fa6a` (diff `fe8e474a8..HEAD -- '*.ts'`, P-277)
+Same reviewer role, 13 Nov 2026. Code: `980991d32` (`api/src/runtime.ts` only); `1fa423ad3` retakes screenshots only.
+Own fresh copy on :4448 at the head, stopped after use; live AI off, US$0.
+
+**Re-ran:**
+* `check_qa446_confirm_counts_browser.ts` **45/45**.
+* Then, on the same copy (the configured checkpoint, loaded by the check), `acceptance/C7.9.test.ts` **23/23**, including C7.9-13 ("once staff confirm the section, the value is verified").
+* The screenshots the run rewrote are restored.
+
+**(a) The `isVerified` mapping: right.**
+* `runtime.ts:876` passes the view answer's `status` and `channel` unchanged.
+* For `origin` it passes `{ channel: answered.channel }`. The view builds `answered` from `Answer.origin` (`engine/runtime/case.ts:448`, `answered: a.origin ? { channel: a.origin.channel, … }`), and `isVerified` reads only `origin?.channel`.
+* So a client re-confirmation of a value staff entered stays verified, and is not put back on the list. That is the ruling on #1282 (F5, option B).
+* An answer waiting for the client is on the list, but the confirm loop still drops it first (`forClient`). Hidden list cells are still filtered by `shownCells`.
+
+**(b) Can it re-open "0 to confirm → 1 answer confirmed"? Yes, only for a must-verify fact the client gave and no one on staff checked.**
+* Reproduced on the release C7.9 leaves flagged (`person.passport_number`, the flag is Sample):
+  1. Client A types the passport number.
+  2. Personal details reads "2 answered · **1 to confirm**", with the passport number "Declared: the client's own answer".
+  3. Ready to file shows the CRITICAL line "… not verified … Check against the document and confirm".
+  4. Confirm section replies `confirmed: 2`, and the passport number becomes "confirmed".
+* In a section holding only such a fact, the officer would see "0 to confirm" and get "1 answer confirmed".
+* I accept it for this PR, as a **Minor (Should), follow-up row**:
+  * It is no worse than main, where Confirm section also verified it while the view counted it Declared. The fix narrows main's behaviour from every declared answer to flagged facts only.
+  * C7.9 (SA-1B-260 r3, P-242's must-verify flag) is a released rule. Dropping it would trade one red for another.
+  * Ready to file names the fact and tells the officer to confirm it.
+  * No flag is set on the configured release until an author sets one, so the QA-446 pack is unaffected (45/45).
+* **The proper fix is in the engine's count, not in this route.** `confirmation()` (`engine/runtime/case.ts:82`) should count an unchecked must-verify fact as "to confirm" (still marked Declared by who gave it). Then the tabs, the household, the section and the checklist all show it, and Confirm section's reply matches.
+* Whether that fits P-510 (2)'s "officer confirmation is only for values … from a document" is the tech lead's call, and should be recorded with the follow-up row. The builder has raised it.
+
+**CI fix verdict: Approve** for `1fa423ad31db9bbef297eceab9986ce0b926fa6a`: no open Blocker or Major. The journey score stays 9/10.
