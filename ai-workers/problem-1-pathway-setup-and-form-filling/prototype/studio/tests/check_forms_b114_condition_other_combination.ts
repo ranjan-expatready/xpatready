@@ -106,7 +106,10 @@ run(async () => {
 
   const before = new Map<string, { sha: string; asks: boolean }>();
   for (const id of Object.values(others)) { const c = await config(id); before.set(id, { sha: c.sha256, asks: facts(c).includes(FOREIGN) }); }
-  ok("setup: none of the three asks the deciding question, so the bug can show", [...before.values()].every((b) => !b.asks));
+  // BK-16 PR 2 (P-490): the Study permit now asks the deciding question itself (IMM 1295, the spouse's form, asks it), so it
+  // keeps it as its own; the bug shows on the two that do not ask it, and the Study permit is still checked below for an
+  // unchanged draft, no Hiding and a 201 release.
+  ok("setup: Express Entry and Spouse do not ask the deciding question, so the bug can show; the Study permit asks it itself (IMM 1295)", !before.get(others["Express Entry"])!.asks && !before.get(others.Spouse)!.asks && before.get(others["Study permit"])!.asks, [...before.entries()].map(([id, b]) => [id, b.asks]));
   await conditionOn(vv, (c) => JSON.stringify(c).includes(ASKED_ON_VV));
   const own = await config(vv);
   ok("C4.11 pass (own condition): Visitor visa still carries the question that decides its own condition", facts(own).includes(FOREIGN), facts(own).length);
@@ -123,7 +126,7 @@ run(async () => {
   for (const [name, id] of Object.entries(others)) {
     const c = await config(id);
     ok(`C4.11 fail (QA-262): the condition on Visitor visa does not change ${name}'s draft`, c.sha256 === before.get(id)!.sha, { before: before.get(id)!.sha, now: c.sha256 });
-    ok(`C4.11 fail (QA-262): ${name} does not carry the deciding question of a question it does not ask`, !facts(c).includes(FOREIGN));
+    ok(`C4.11 fail (QA-262): ${name} does not carry the deciding question of a question it does not ask${before.get(id)!.asks ? " (it asks it itself, as before)" : ""}`, before.get(id)!.asks || !facts(c).includes(FOREIGN));
   }
 
   // The fingerprint check stays: an edit that lands while a release runs is still refused, and rolled back whole. The edit
@@ -140,7 +143,7 @@ run(async () => {
     ok(`C4.11 pass (QA-262 row 2): ${name} shows no Hiding from the condition on Visitor visa`, (await hiding(id)) === 0);
     const r = await release(id);
     ok(`C4.11 pass (QA-262 row 2): ${name} releases with a condition on Visitor visa, 201, with no order trick`, r.status === 201, r);
-    ok(`C4.11 pass: ${name}'s released copy has no deciding question of Visitor visa's`, !facts(await config(id, "published")).includes(FOREIGN));
+    ok(`C4.11 pass: ${name}'s released copy has no deciding question of Visitor visa's${before.get(id)!.asks ? " (its own, asked as before)" : ""}`, before.get(id)!.asks || !facts(await config(id, "published")).includes(FOREIGN));
   }
 
   // A condition reaches every question it needs: a placed question's deciding question is carried, and so is the deciding

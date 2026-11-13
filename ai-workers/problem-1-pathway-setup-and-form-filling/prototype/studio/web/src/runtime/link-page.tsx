@@ -138,6 +138,10 @@ function SessionArea({ stored, onEnded }: { stored: Stored; onEnded: (words: str
 }
 
 type LinkView = Omit<View, "case"> & { case: { id: string; reference: string; people: View["case"]["people"] }; own: string };
+// Their own parts, with the parts about their own parents and brothers and sisters (`<own>/parent_1`, B128, B155).
+const mine = (v: LinkView, id: string) => id === v.own || id.startsWith(`${v.own}/`);
+/** The adult's own parts as a questionnaire view (also the order Save and continue reads after a save, QA-441). */
+const ownView = (v: LinkView) => ({ ...v, sections: v.sections.filter((s) => mine(v, s.subjectId)), case: { ...v.case, status: "", combination_id: "", client: "", pin: { release_version: 0, sha256: "", pinned_at: "", revision: 0 } } }) as View;
 function LinkQuestionnaire({ stored, onEnded }: { stored: Stored; onEnded: (words: string | null) => void }) {
   const view = useQuery({ queryKey: ["link", "view", stored.case_id], queryFn: () => linkApi<LinkView>(`/cases/${stored.case_id}/people/${stored.subject_id}/questionnaire`, {}, stored.session), retry: false });
   React.useEffect(() => { if (view.error instanceof ApiError && view.error.status === 401) onEnded(view.error.message); }, [view.error, onEnded]);
@@ -146,13 +150,11 @@ function LinkQuestionnaire({ stored, onEnded }: { stored: Stored; onEnded: (word
   if (view.isLoading) return <Shell><Skeleton className="h-8 w-1/2" /><Skeleton className="mt-3 h-32 w-full" /></Shell>;
   if (view.isError) return <Shell><Notice tone="danger" title="Your questions could not be loaded">{(view.error as Error).message}</Notice></Shell>;
   const v = view.data!;
-  // Their own parts, with the parts about their own parents and brothers and sisters (`<own>/parent_1`, B128, B155).
-  const mine = (id: string) => id === v.own || id.startsWith(`${v.own}/`);
-  const own = { ...v, sections: v.sections.filter((s) => mine(s.subjectId)), case: { ...v.case, status: "", combination_id: "", client: "", pin: { release_version: 0, sha256: "", pinned_at: "", revision: 0 } } } as View;
-  const shared = v.sections.filter((s) => !mine(s.subjectId));
+  const own = ownView(v);
+  const shared = v.sections.filter((s) => !mine(v, s.subjectId));
   return (
     <QuestionnaireIoContext.Provider value={io}>
-      <Sqr view={byPerson(own)} />
+      <Sqr view={byPerson(own)} order={(fresh) => byPerson(ownView(fresh as unknown as LinkView)).sections} />
       {params.get("part") === null && shared.length ? (
         <section aria-labelledby="shared" className="mx-auto mt-6 max-w-xl">
           <h2 id="shared" className="text-base font-semibold">About the application</h2>

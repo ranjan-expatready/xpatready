@@ -29,6 +29,17 @@ function pure() {
   ok("C11.5 fail: an unmapped line or a fact that only starts like one is not an employer fact", employerFacts(snap("x", "INDIVIDUAL", [{ entries: [{ outcome: "unmapped", fact: "organisation.name" }, { outcome: "mapped", fact: "person.organisation_name" }] }])).length === 0);
   ok("C11.5 fail: a release with no field maps offers no link", !employerLinkOffer(snap("x", "INDIVIDUAL", undefined)).offered);
   ok("C11.5: a combination without a Pathway type (old release) is treated as Retail", employerLinkOffer(snap("x", null, maps("organisation.name"))).offered);
+  // (E1, tech lead on #1632): the copy is written on the principal, so only boxes on forms whose line "who" reaches the
+  // principal count (R2). The lines' "who" values are the releases' own (samples/wave1.json, samples/programs.json).
+  const filed = (label: string, lines: { form: string; who: string; facts: string[] }[]) => ({ combination: { label, client_type: "INDIVIDUAL" },
+    forms: lines.map((l) => ({ form_number: l.form, who: l.who })),
+    field_maps: lines.map((l) => ({ form_number: l.form, entries: l.facts.map((fact, i) => ({ field: `f${i}`, outcome: "mapped", fact, person: "form_subject" })) })) });
+  const lmia = employerLinkOffer(filed("Employer-specific work permit (With an LMIA)", [{ form: "imm5710e", who: "each_applicant", facts: ["organisation.employer_name", "organisation.employer_address", "person.family_name"] }]));
+  ok("C11.5 (E1): With an LMIA, IMM 5710 (each applicant, so the principal files it) is still offered, with its 2 employer facts", lmia.offered && JSON.stringify(lmia.facts) === JSON.stringify(["organisation.employer_address", "organisation.employer_name"]), lmia);
+  const sp = employerLinkOffer(filed("Study permit (Outside Canada)", [{ form: "imm1294e", who: "principal_and_children_when", facts: ["person.family_name"] }, { form: "imm1295e", who: "spouse_or_partner", facts: ["organisation.name", "organisation.address"] }]));
+  ok("C11.5 fail (E1): the Study permit is not offered: its only employer boxes are on IMM 1295, which the spouse files (spouse_or_partner), not the principal", !sp.offered && sp.facts.length === 0 && sp.reason === "Not offered: the Study permit (Outside Canada) has no employer facts.", sp);
+  const both = filed("x", [{ form: "a", who: "spouse_or_partner", facts: ["organisation.name"] }, { form: "b", who: "principal_applicant", facts: ["organisation.address"] }]);
+  ok("C11.5 (E1): on a release where both file, only the principal's form's employer facts count", JSON.stringify(employerFacts(both)) === JSON.stringify(["organisation.address"]), employerFacts(both));
 }
 
 async function api() {

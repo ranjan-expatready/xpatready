@@ -17,10 +17,12 @@ export default {
     const out = formSetup(ctx), mine = formLines(cc);
     const family = mine.family = await familyForm(ctx.db, c.id, cc.key);
     const has = mine.has = new Set((await ctx.db.combinationForm.findMany({ where: { combinationId: c.id }, select: { lineageKey: true } })).map((x) => x.lineageKey));
-    for (const form of [...setup.rules.filter((r) => !r.retire).map((r) => r.form), ...(family ? [family.form] : [])].filter((f) => !has.has(f))) {
+    // BK-16 (P-496): a form held back (a later source) gets its line only in the later pass, after every combination.
+    const now = (form: string) => (cc.pass === "later" ? !!cc.held?.has(form) : !cc.held?.has(form));
+    for (const form of [...setup.rules.filter((r) => !r.retire).map((r) => r.form), ...(family ? [family.form] : [])].filter((f) => !has.has(f) && now(f))) {
       try { await ctx.get(FormLibrary).attach(author, c.id, { formKey: form }); has.add(form); } catch (e) { out.refused.push(`${form}: ${said(e)}`); }
     }
-    for (const r of setup.rules) {
+    for (const r of setup.rules.filter((x) => now(x.form))) {
       // B79b, C6.11: whose form it is and its minimum age are kept on a conditional line too (IMM 5604: each child, when the rule says so; IMM 5476: a child from 18).
       const body = r.retire ? { retire: true } : r.condition ? { attachMode: "ANSWER_CONDITIONAL" as const, condition: r.condition, minAge: r.minAge, ...(r.who ? { who: r.who } : {}) } : { attachMode: "COMBINATION_MANDATORY" as const, minAge: r.minAge, ...(r.who ? { who: r.who } : {}) };
       try { await ctx.get(Studio).saveForm(author, c.id, r.form, body); out.lines++; } catch (e) { out.refused.push(`${r.form}: ${said(e)}`); continue; }
