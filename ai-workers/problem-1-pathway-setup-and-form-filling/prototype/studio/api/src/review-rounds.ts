@@ -98,12 +98,16 @@ export class ReviewRounds {
     // (no officer confirmation needed), confirmed by whom, and how many still wait for the officer's Confirm section.
     const forms = this.formsOf(basis, filing), subjects = new Set(forms.map((f) => f.subject));
     const mine = (sid: string) => subjects.has(sid) || subjects.has(relativeOf(sid)?.owner ?? "");
-    // Review M1: the application's own values (The application tab) count in each filing whose forms read them, so an
-    // answer still on the Confirm list there is never missing from the checklist ("0 to confirm" beside "1 to confirm").
-    const caseFacts = new Set(forms.flatMap((f) => f.facts.filter((x) => x.about === "case").map((x) => x.fact)));
+    // Review M1: the application's own values (The application tab) count in each filing whose forms read them, and one
+    // that no filing's forms read (it decides which forms there are, e.g. who IRCC may release information to) counts in
+    // every filing, so an answer still on the Confirm list there is never missing from a checklist ("0 to confirm"
+    // beside the household's "1 to confirm"; review round 2).
+    const caseFactsOf = (fs: ReviewBasisForm[]) => new Set(fs.flatMap((f) => f.facts.filter((x) => x.about === "case").map((x) => x.fact)));
+    const caseFacts = caseFactsOf(forms), readAnywhere = caseFactsOf(basis.forms.filter((f) => f.channel !== "NOT_NEEDED"));
+    const counted = (fact: string) => caseFacts.has(fact) || !readAnywhere.has(fact);
     agent ??= await this.agentViewOf(c);
     const answers = agent.sections.flatMap((s) => {
-      const qs = mine(s.subjectId) ? s.questions : s.subjectId === basis.caseSubject ? s.questions.filter((q) => caseFacts.has(q.fact)) : [];
+      const qs = mine(s.subjectId) ? s.questions : s.subjectId === basis.caseSubject ? s.questions.filter((q) => counted(q.fact)) : [];
       return sectionAnswers(qs, qs.some((q) => q.group) ? s.group : null).map((a) => ({ ...a, about: s.about_label }));
     });
     const pin = c.pins[0], combination = (await this.db.filing.findUnique({ where: { id: filing }, select: { combinationKey: true } }))?.combinationKey ?? "";

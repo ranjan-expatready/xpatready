@@ -13,10 +13,13 @@
 //     Declared (Confirm section never turns them into the officer's), nothing is left to confirm, and Confirm section on a
 //     section with nothing to confirm confirms nothing and says so (P-497 (1), as QA-417 built it);
 //   5 round 2: the checklist again equals the Agent view, "0 to confirm";
-//   6 review M1: the officer types an application answer (staff's, on the Confirm list): the household reads 1 to
-//     confirm on The application, and round 3's checklist of every filing whose forms read that fact says "1 to confirm".
-// Each filing's "Values" counts its people, their relatives (their parents' tabs) and the application's answers on facts
-// its forms read (taken here from the forms the round froze); an answer waiting for the client is counted apart.
+//   6 review M1: the officer types two application answers (staff's, on the Confirm list): one a filing's forms read,
+//     and one no form reads (it decides which forms there are: release to a designated individual adds IMM 5475). The
+//     household reads 2 to confirm on The application; round 3's checklist of every filing counts the second, and of
+//     each filing whose forms read the first, that one too: none says "0 to confirm".
+// Each filing's "Values" counts its people, their relatives (their parents' tabs), the application's answers on facts
+// its forms read and those no filing's forms read (taken here from the forms the round froze); an answer waiting for the
+// client is counted apart.
 // Fails on main: the checklist reads "Values confirmed: none yet" or counts only the officer's confirmations, and
 // Confirm section turns declared answers into confirmed ones. Screenshots: product/screens/QA-446/screenshots/. US$0.
 //   zsh studio/tools/isolated.sh scr_q446 4443 start && tsx studio/tests/check_qa446_confirm_counts_browser.ts 4443 xr_studio_scr_q446
@@ -30,7 +33,7 @@ const { ok, summary } = recorder();
 const BASE = `http://localhost:${PORT}`, STUDIO = join(import.meta.dirname, "..");
 const SHOTS = join(STUDIO, "..", "..", "product", "screens", "QA-446", "screenshots"); mkdirSync(SHOTS, { recursive: true });
 const AUTHOR = "user-A", CLIENT = "user-P";
-type A = { id: string; confirmed: boolean; mark: string; by: string; channel: string; status: string; awaits_client?: boolean };
+type A = { id: string; value: unknown; confirmed: boolean; mark: string; by: string; channel: string; status: string; awaits_client?: boolean };
 type Q = { fact: string; group: unknown; answer: A | null; rows: { answer: A | null }[] };
 type Sec = { subjectId: string; about_label: string; section: string; answered: number; confirmed: number; questions: Q[]; group: { rows: number; none_apply: A | null } | null };
 type Values = { facts: number; declared: { by: string; facts: number }[]; confirmed: { by: string; facts: number }[]; to_confirm: number; waits_client: number };
@@ -44,8 +47,8 @@ const officer = f.officer ?? "user-O", rep = f.rep ?? "user-R", team = { represe
  *  and the group's "none apply" while it has no rows (only when the group's questions are counted). */
 const answersOfQs = (qs: Q[], group: Sec["group"]): A[] => [...qs.flatMap((q) => (q.group ? q.rows.map((r) => r.answer) : [q.answer])).filter((a): a is A => !!a), ...(group && qs.some((q) => q.group) && group.rows === 0 && group.none_apply ? [group.none_apply] : [])];
 const answersOf = (s: Sec): A[] => answersOfQs(s.questions, s.group);
-/** Review M1: the application's facts a filing's forms read, from the forms frozen in a round (their facts, about "case"). */
-const caseFactsOf = (round: string, filing: string) => new Set((sql(`select string_agg(distinct e->>'fact', ',') from review_round_form f join answer_snapshot s on s.id = f.snapshot_id, jsonb_array_elements(s.facts_json->'facts') e where f.round_id='${round}' and f.filing_id='${filing}' and e->>'about' = 'case'`) ?? "").split(",").filter(Boolean));
+/** Review M1: the application's facts a filing's forms read (no filing: any filing's), from the forms frozen in a round. */
+const caseFactsOf = (round: string, filing?: string) => new Set((sql(`select string_agg(distinct e->>'fact', ',') from review_round_form f join answer_snapshot s on s.id = f.snapshot_id, jsonb_array_elements(s.facts_json->'facts') e where f.round_id='${round}'${filing ? ` and f.filing_id='${filing}'` : ""} and e->>'about' = 'case'`) ?? "").split(",").filter(Boolean));
 const owner = (sid: string) => sid.split("/")[0];
 
 /** Client A answers every question of the client's own questionnaire not yet answered, with Sample values (US$0). */
@@ -72,8 +75,10 @@ async function countsOf(caseId: string) {
 }
 /** What a filing's checklist must say, from the Agent view: its people's and their relatives' sections, and the
  *  application's answers on facts its forms read (review M1); an answer waiting for the client counted apart (m2). */
-function expectFor(secs: Sec[], subjects: Set<string>, caseSubject: string, caseFacts: Set<string>, nameOf: (a: A) => string): Values {
-  const as = secs.flatMap((s) => { const qs = subjects.has(s.subjectId) || subjects.has(owner(s.subjectId)) ? s.questions : s.subjectId === caseSubject ? s.questions.filter((q) => caseFacts.has(q.fact)) : []; return answersOfQs(qs, s.group); });
+function expectFor(secs: Sec[], subjects: Set<string>, caseSubject: string, caseFacts: Set<string>, readAnywhere: Set<string>, nameOf: (a: A) => string): Values {
+  // Review round 2: an application fact no filing's forms read (it decides which forms there are) counts in every filing.
+  const counted = (fact: string) => caseFacts.has(fact) || !readAnywhere.has(fact);
+  const as = secs.flatMap((s) => { const qs = subjects.has(s.subjectId) || subjects.has(owner(s.subjectId)) ? s.questions : s.subjectId === caseSubject ? s.questions.filter((q) => counted(q.fact)) : []; return answersOfQs(qs, s.group); });
   const by = (keep: (a: A) => boolean) => { const m = new Map<string, number>(); for (const a of as.filter(keep)) m.set(nameOf(a), (m.get(nameOf(a)) ?? 0) + 1); return [...m].map(([b, n]) => ({ by: b, facts: n })); };
   return { facts: as.length, declared: by((a) => !a.awaits_client && a.confirmed && a.mark !== "confirmed"), confirmed: by((a) => !a.awaits_client && a.confirmed && a.mark === "confirmed"), to_confirm: as.filter((a) => !a.awaits_client && !a.confirmed).length, waits_client: as.filter((a) => !!a.awaits_client).length };
 }
@@ -128,7 +133,7 @@ for (const [key, label] of [["vv.single", "Visitor visa"], ["sp.outside", "Study
   const nameOf = (a: A) => a.channel === "own_link" ? "" : staff.get(a.by) ?? nameOfActor(a.by);
   const caseSubject = (caseBody?.people ?? []).find((p: { role: string }) => p.role === "case")?.subject_id ?? "";
   /** Every filing's expected "Values" for a round, from the Agent view's sections now and the round's frozen forms. */
-  const expectRound = (round: string, secs: Sec[]) => new Map(filings.map((x) => [x.id, expectFor(secs, formSubjects.get(x.id) ?? new Set(), caseSubject, caseFactsOf(round, x.id), nameOf)]));
+  const expectRound = (round: string, secs: Sec[]) => { const any = caseFactsOf(round); return new Map(filings.map((x) => [x.id, expectFor(secs, formSubjects.get(x.id) ?? new Set(), caseSubject, caseFactsOf(round, x.id), any, nameOf)])); };
   /** The representative opens and approves every filing of a round (unticked items confirmed), so the next can be sent. */
   async function approveAll(round: string) {
     const rows: { filing: string; forms: { item: string; live_hash: string | null }[] }[] = (await call("GET", `/runtime/reviews/${round}`, undefined, rep)).body?.filings ?? [];
@@ -214,8 +219,13 @@ for (const [key, label] of [["vv.single", "Visitor visa"], ["sp.outside", "Study
   const appQs = A2.secs.filter((s) => s.subjectId === caseSubject).flatMap((s) => s.questions).filter((q) => !q.group && q.answer && q.answer.by === CLIENT && typeof q.answer.value === "string");
   const pick = appQs.find((q) => read2.every((f) => f.has(q.fact))) ?? appQs.find((q) => read2.some((f) => f.has(q.fact)));
   const edit = pick ? await call("PUT", `/runtime/cases/${c.id}/answers/${caseSubject}/${pick.fact}`, { value: "Sample Officer Edit", expectedId: pick.answer!.id }, officer) : null;
+  // Review round 2: and an application answer no filing's forms read, one that decides which forms there are (whether
+  // IRCC may release information to a designated individual: Yes adds IMM 5475): it counts in every filing.
+  const anyRead = caseFactsOf(r2);
+  const decider = A2.secs.filter((s) => s.subjectId === caseSubject).flatMap((s) => s.questions).find((q) => !q.group && q.answer && q.answer.by === CLIENT && q.fact === "case.authorizes_release_to_designated_individual" && !anyRead.has(q.fact));
+  const edit2 = decider ? await call("PUT", `/runtime/cases/${c.id}/answers/${caseSubject}/${decider.fact}`, { value: true, expectedId: decider.answer!.id }, officer) : null;
   const A3 = await countsOf(c.id);
-  ok(`QA-446 ${label} 6 setup: the officer's application answer is on the Confirm list (household 1 to confirm, on The application)`, !!edit && edit.status === 200 && edit.body?.answer?.confirmed === false && A3.household === 1 && A3.tabs.get(caseSubject) === 1, { fact: pick?.fact, status: edit?.status, household: A3.household, app: A3.tabs.get(caseSubject) });
+  ok(`QA-446 ${label} 6 setup: the officer's two application answers (one a form reads, one no form reads) are on the Confirm list (household 2 to confirm, on The application)`, !!edit && edit.status === 200 && edit.body?.answer?.confirmed === false && !!edit2 && edit2.status === 200 && edit2.body?.answer?.confirmed === false && A3.household === 2 && A3.tabs.get(caseSubject) === 2, { read: pick?.fact, decider: decider?.fact, status: [edit?.status, edit2?.status], household: A3.household, app: A3.tabs.get(caseSubject) });
   const sent3 = await call("POST", `/runtime/cases/${c.id}/reviews`, { filings: filings.map((x) => x.id) }, officer);
   const r3 = sent3.body?.id as string;
   const rows3: typeof rows1 = (await call("GET", `/runtime/reviews/${r3}`, undefined, rep)).body?.filings ?? [];
@@ -223,7 +233,7 @@ for (const [key, label] of [["vv.single", "Visitor visa"], ["sp.outside", "Study
   const off3 = rows3.filter((r) => !sameValues(valuesOfRow(r)?.live, E3.get(r.filing)));
   const reading = rows3.filter((r) => caseFactsOf(r3, r.filing).has(pick?.fact ?? ""));
   ok(`QA-446 ${label} 6 pass (review M1, API): round 3's "Values" of every filing equals the Agent view, with the application's answer`, sent3.status === 201 && rows3.length === filings.length && !off3.length, off3.map((r) => [valuesOfRow(r)?.live, E3.get(r.filing)]));
-  ok(`QA-446 ${label} 6 fail (review M1): no filing whose forms read the officer's application answer says "0 to confirm" while the household says 1`, reading.length > 0 && reading.every((r) => valuesOfRow(r)?.live.to_confirm === 1 && !/· 0 to confirm/.test(valuesOfRow(r)?.wording ?? "")), { reading: reading.length, words: reading.map((r) => valuesOfRow(r)?.wording) });
+  ok(`QA-446 ${label} 6 fail (review M1): every filing counts the deciding answer no form reads, and those whose forms read the other one count both: none says "0 to confirm" while the household says 2`, reading.length > 0 && rows3.every((r) => (valuesOfRow(r)?.live.to_confirm ?? 0) === (reading.includes(r) ? 2 : 1) && !/· 0 to confirm/.test(valuesOfRow(r)?.wording ?? "")), { reading: reading.length, live: rows3.map((r) => [valuesOfRow(r)?.live.to_confirm, valuesOfRow(r)?.wording]) });
   const W3 = await screenChecklist(c.id, r3, `${key}-6-review-round3-application-1440.png`);
   ok(`QA-446 ${label} 6 pass (screen): the representative's review shows round 3's words`, W3.length === rows3.length && rows3.every((r) => W3.some((w) => w.includes(valuesOfRow(r)?.wording ?? "\u0000"))), W3);
 }
