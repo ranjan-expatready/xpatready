@@ -349,14 +349,15 @@ export function putAnswer(caseId: string, q: Question, value: unknown, row?: str
 export type QuestionnaireIo = {
   mode: "client" | "link";
   /** The query key prefix to refresh after a save, and the key of the view a part reads back after saving. */
-  viewKey: (caseId: string) => unknown[]; freshKey: (caseId: string) => unknown[];
+  /** freshKey: the exact query of the view this person sees (QA-445: never another person's cached view). */
+  viewKey: (caseId: string) => unknown[]; freshKey: (caseId: string, actor: string) => unknown[];
   put: (caseId: string, q: Question, value: unknown, row?: string) => Promise<SaveResult>;
   addRow: (caseId: string, subjectId: string, group: string) => Promise<unknown>;
   removeRow: (caseId: string, subjectId: string, row: string) => Promise<unknown>;
   noneApply: (caseId: string, subjectId: string, group: string, body: { noneApply: boolean; expectedId: string | null }) => Promise<unknown>;
 };
 const RUNTIME_IO: QuestionnaireIo = {
-  mode: "client", viewKey: (id) => ["runtime", "view", id], freshKey: (id) => ["runtime", "view", id, "sqr"], put: putAnswer,
+  mode: "client", viewKey: (id) => ["runtime", "view", id], freshKey: (id, actor) => ["runtime", "view", id, "sqr", actor], put: putAnswer,
   addRow: (id, subject, group) => api(`/runtime/cases/${id}/groups/${subject}/rows`, { method: "POST", json: { group } }),
   removeRow: (id, subject, row) => api(`/runtime/cases/${id}/groups/${subject}/rows/${row}`, { method: "DELETE" }),
   noneApply: (id, subject, group, body) => api(`/runtime/cases/${id}/groups/${subject}/${group}/none-apply`, { method: "PUT", json: body }),
@@ -455,12 +456,27 @@ export function Sqr({ view, order = (v: View) => byPerson(v).sections }: { view:
   const [params, setParams] = useSearchParams();
   const parts = view.sections;
   const raw = params.get("part");
-  const index = raw === null ? null : Math.min(Math.max(Math.floor(Number(raw)) - 1 || 0, 0), parts.length - 1);
+  const asked = raw === null ? null : Math.min(Math.max(Math.floor(Number(raw)) - 1 || 0, 0), parts.length - 1);
   // BK-4c: the hand-off's `from` (who hands back) stays while the client moves between parts.
   const from = params.get("from");
-  const go = (i: number | null) => { setParams({ ...(i === null ? {} : { part: String(i + 1) }), ...(from ? { from } : {}) }); window.scrollTo({ top: 0 }); };
+  // QA-445: the address holds a part's place, and a save can add or drop parts before it (an answer decides what is
+  // asked). The part shown stays the same part when the data moves under the same address: it is found by its person
+  // and section, and the address is corrected in place (no new history entry), so the open part is never swapped for
+  // another, and its Save and continue still runs.
+  const pin = React.useRef<{ raw: string | null; key: string | null }>({ raw: null, key: null });
+  // Review M1 (#1671): a move the person asked for drops the pin first. The router applies go()'s new address in a
+  // transition, after the reloaded parts reach a render that still has the old one; a pin left in place would take that
+  // render for "the data moved" and replace go()'s entry with the part just left.
+  const go = (i: number | null) => { pin.current = { raw: null, key: null }; setParams({ ...(i === null ? {} : { part: String(i + 1) }), ...(from ? { from } : {}) }); window.scrollTo({ top: 0 }); };
+  const keyAt = asked === null ? null : partKey(parts[asked]);
+  const moved = asked !== null && pin.current.raw === raw && pin.current.key !== null && pin.current.key !== keyAt ? parts.findIndex((s) => partKey(s) === pin.current.key) : -1;
+  const index = moved >= 0 ? moved : asked;
+  React.useLayoutEffect(() => {
+    if (moved >= 0) setParams({ part: String(moved + 1), ...(from ? { from } : {}) }, { replace: true });
+    else pin.current = { raw, key: keyAt };
+  });
   if (index === null) return <SqrOverview view={view} open={go} />;
-  return <SqrPart key={`${parts[index].subjectId}|${parts[index].section}`} view={view} index={index} go={go} order={order} />;
+  return <SqrPart key={partKey(parts[index])} view={view} index={index} go={go} order={order} />;
 }
 
 function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) {
@@ -518,7 +534,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
 
 function SqrPart({ view, index, go, order }: { view: View; index: number; go: (i: number | null) => void; order: (v: View) => Section[] }) {
   const caseId = view.case.id, part = view.sections[index], total = view.sections.length;
-  const qc = useQueryClient(), toast = useToast(), io = React.useContext(QuestionnaireIoContext);
+  const qc = useQueryClient(), toast = useToast(), io = React.useContext(QuestionnaireIoContext), actor = useActorId();
   const person = view.case.people.find((p) => p.subject_id === part.subjectId);
   // A question a rule hides is not asked (its answer, if any, is kept and not used); rules apply on each save.
   const asked = part.questions.filter((q) => !q.hidden);
@@ -577,7 +593,10 @@ function SqrPart({ view, index, go, order }: { view: View; index: number; go: (i
     setLeaveTo({ to, words });
     const ok = await save();
     if (!alive.current) return;
-    const fresh = qc.getQueriesData<View>({ queryKey: io.freshKey(caseId) })[0]?.[1];
+    // QA-445: this person's own view, just reloaded, by its exact key. A prefix read returned the first cached "sqr"
+    // view, which could be the officer's (the case page's client card reads it): a stale copy where this part was not
+    // done yet, so Save and continue chose a target on the wrong data and stayed on the part.
+    const fresh = qc.getQueryData<View>(io.freshKey(caseId, actor));
     const now = fresh?.sections.find((s) => s.subjectId === part.subjectId && s.section === part.section) ?? part;
     const invalid = now.questions.some((q) => (q.group ? q.rows.some((r) => r.answer?.problems.length) : q.answer?.problems.length));
     const flagged = (fresh?.checks ?? view.checks).some((c) => c.subjectId === part.subjectId && c.section === part.section) || now.missing.length > 0;
