@@ -430,11 +430,11 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   const fl5257 = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, "user-O")).body.forms.find((f) => f.form === "IMM 5257" && f.person === "Sample Applicant C");
   const newCopy = fl5257.copies[0].id;
   const bytes = Buffer.from(await (await fetch(`${BASE}/api/runtime/form-copies/${newCopy}/file`, { headers: { "x-actor": "user-O" } })).arrayBuffer());
-  // QA-165: the form's own Validate result written into the copy (tools/simulate_validate.py), never bytes appended.
+  // QA-165: the form's own Validate result written into the copy (tools/simulate_validate.py), never bytes appended; BK-19: with its barcodes, as Adobe leaves it.
   const vdir = require("node:fs").mkdtempSync(require("node:path").join(require("node:os").tmpdir(), "xr-validate-"));
   require("node:fs").writeFileSync(require("node:path").join(vdir, "copy.pdf"), bytes);
   const py = require("node:path").join(__dirname, "..", "..", "..", "..", "..", "..", ".tools", "solution-1-prototype", ".venv", "bin", "python");
-  const sv = require("node:child_process").spawnSync(py, ["-I", require("node:path").join(__dirname, "..", "..", "tools", "simulate_validate.py"), require("node:path").join(vdir, "copy.pdf"), require("node:path").join(vdir, "validated.pdf"), "Yes"], { encoding: "utf8", timeout: 120000 });
+  const sv = require("node:child_process").spawnSync(py, ["-I", require("node:path").join(__dirname, "..", "..", "tools", "simulate_validate.py"), require("node:path").join(vdir, "copy.pdf"), require("node:path").join(vdir, "validated.pdf"), "Yes", "barcodes"], { encoding: "utf8", timeout: 120000 });
   if (sv.status !== 0) throw new Error(`simulate_validate.py failed: ${(sv.stderr || sv.stdout).slice(-300)}`);
   const validatedBytes = require("node:fs").readFileSync(require("node:path").join(vdir, "validated.pdf")); require("node:fs").rmSync(vdir, { recursive: true, force: true });
   const fd = new FormData(); fd.append("file", new Blob([validatedBytes]), "imm5257-validated.pdf");

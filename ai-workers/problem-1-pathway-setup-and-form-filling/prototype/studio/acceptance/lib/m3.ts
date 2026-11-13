@@ -372,8 +372,8 @@ export async function copyBytes(copyId: string, actor = OFFICER): Promise<Buffer
 }
 // QA-165: the form's own Validate result written into the copy (tests/runtime/validated.ts), never bytes appended.
 // A re-export alone binds no local name, and validateRoundTrip below calls it (C7.6, C8.1, C9.2 crashed on #572's merge).
-import { asValidated } from "../../tests/runtime/validated.ts";
-export { asValidated };
+import { adobeValidated, asValidated } from "../../tests/runtime/validated.ts";
+export { adobeValidated, asValidated };
 export async function sendFile(path: string, file: Buffer, name: string, actor = OFFICER) {
   const fd = new FormData(); fd.append("file", new Blob([new Uint8Array(file)]), name);
   const res = await fetch(`http://127.0.0.1:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": actor }, body: fd }).catch(() => null);
@@ -383,7 +383,7 @@ export async function sendFile(path: string, file: Buffer, name: string, actor =
 export async function validateRoundTrip(caseId: string, form: string, subject: string): Promise<string | null> {
   const id = await generateCopy(caseId, form, subject); if (!id) return null;
   const actor = officerOf(caseId);
-  const r = await sendFile(`/runtime/form-copies/${id}/validated`, asValidated(await copyBytes(id, actor)), `${form.replace(" ", "")}-validated.pdf`, actor);
+  const r = await sendFile(`/runtime/form-copies/${id}/validated`, adobeValidated(await copyBytes(id, actor)), `${form.replace(" ", "")}-validated.pdf`, actor);
   return r.status === 201 ? id : null;
 }
 /** A signed scan (P-143 "signed by hand and scanned"): a synthetic PDF standing in for the printed, signed, scanned page. */
