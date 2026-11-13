@@ -9,5 +9,6 @@
 7. Current workflow, roles and quality bar: `ai-workers/problem-1-pathway-setup-and-form-filling/product/WAY-OF-WORKING.md`.
 8. **Records keep their facts (P-188):** git history is the archive; nothing is cut to fit a size limit (only instruction files — skills, agents, CLAUDE.md, AGENTS.md — stay short).
 9. **Start read (P-545):** start from `product/RULES.md` and `product/STATE.md`, plus your own backlog row. Open `DECISIONS.md` only for a row you need by number (rows are never deleted); never read `product/history/` or `archive/` unless your task names a file there.
+10. **Always committed, always resumable (P-557, hard rule).** Every piece of work is committed and pushed at each step; nothing lives only in a session, a chat, a local folder or an account. The repository is the memory: `product/STATE.md` ("Start here" and the hand-over block) says what is true, what is in flight (session, branch, PR) and the next step, so anyone opening this folder from any machine or account understands it and resumes where it left off. Private material goes to the founder's private GitHub home, never only to a local folder.
 
 Earlier rules (maker/checker, manifests, Codex coordination) are history: `archive/2026-10-21-before-workflow-switch/root-AGENTS.md`.
