@@ -130,10 +130,11 @@ const nextNotDone = (parts, from) => { for (let k = 1; k < parts.length; k++) { 
     ok(`C6.2 QA-445 ${label}: at the end the overview lists the client's ${parts.length} parts in the same order, with ${parts.filter((x) => x.done).length} done`, end.length === parts.length && end.every((t, i) => t === parts[i].title) && Number(endCount?.[2]) === parts.length && Number(endCount?.[1]) === parts.filter((x) => x.done).length, { overview: end.length, parts: parts.length, count: endCount?.[0] });
     await ctx.close();
   }
-  // Review M2 (#1671): a press that leaves directly (the part passes, no summary) while parts were added BEFORE the open
-  // part. A Visitor visa case of the principal and a child; Client A opens a child's part from the overview (after the
-  // officer's hand-off, in-app), its required questions answered; the officer then adds a spouse (whose parts come before
-  // the child's); Client A presses Save and continue. Main swapped the open part for another under the same address; a
+  // Review M2 (#1671): a press that leaves directly (the part passes, no summary) while parts were added or dropped BEFORE
+  // the open part. A Visitor visa case of the principal and a child; Client A opens a child's part from the overview
+  // (after the officer's hand-off, in-app), its required questions answered; the principal's Personal details is then
+  // answered through the client's route (it decides which of the principal's parts are asked, and they come before the
+  // child's); Client A presses Save and continue. Main swapped the open part for another under the same address; a
   // pin left in place on the person's own move (review M1) put the client back on the part just left.
   {
     const ref = `QA445S-${Date.now() % 100000}`;
@@ -158,7 +159,10 @@ const nextNotDone = (parts, from) => { for (let k = 1; k < parts.length; k++) { 
     const main = p.locator("main"); const line = main.getByText(/^Part \d+ of \d+ · /).first();
     await line.waitFor({ timeout: 15000 });
     const before = /^Part (\d+) of (\d+) · (.*)$/.exec((await line.innerText()).trim());
-    const spouse = await call("POST", `/runtime/cases/${caseId}/people`, "user-O", { role: "spouse_or_partner", displayName: "Sample Spouse S" });
+    // The principal's Personal details answered (as if on another device): marital status and the rest decide which of
+    // the principal's parts are asked, and the principal's parts come before the child's.
+    const principal = made.body?.people?.find?.((x) => x.role === "principal")?.subject_id ?? (await call("GET", `/runtime/cases/${caseId}`, "user-O")).body?.people?.find((x) => x.role === "principal")?.subject_id;
+    const decided = await answerPart(caseId, `${principal}|personal_details`);
     const was = await main.innerText();
     await main.getByRole("button", { name: "Save and continue" }).click();
     const left = await p.waitForFunction((w) => { const t = document.querySelector("main")?.innerText ?? ""; const m = /Part \d+ of \d+ · ([^\n]*)/.exec(t); const a = (/Answering for [^\n]*/.exec(t) ?? [""])[0]; const wm = /Part \d+ of \d+ · ([^\n]*)/.exec(w); const wa = (/Answering for [^\n]*/.exec(w) ?? [""])[0]; return !document.querySelector("button[aria-busy]") && (/You can fix these now/.test(t) || !m || m[1] !== wm?.[1] || a !== wa); }, was, { timeout: 30000 }).then(() => true, () => false);
@@ -167,7 +171,7 @@ const nextNotDone = (parts, from) => { for (let k = 1; k < parts.length; k++) { 
     const at = parts.findIndex((x) => x.key === pick?.key), want = nextNotDone(parts, at);
     const now = /^Part (\d+) of (\d+) · (.*)$/.exec(((await line.count()) ? await line.innerText() : "").trim());
     const landedKey = now ? parts[Number(now[1]) - 1]?.key : null;
-    ok("C6.2 QA-445 shift: the spouse's parts came before the open part (it moved down the list)", spouse.status < 300 && at > Number(before?.[1] ?? 1e9) - 1, { spouse: spouse.status, before: before?.[1], now: at + 1 });
+    ok("C6.2 QA-445 shift: the answers moved the open part's place in the list (parts added or dropped before it)", decided > 0 && at >= 0 && at !== Number(before?.[1] ?? 0) - 1, { decided, before: before?.[1], now: at + 1 });
     ok("C6.2 QA-445 shift: the press left directly (the part passed: no summary)", left && !viaSummary, { left, viaSummary });
     ok(`C6.2 QA-445 shift: Save and continue lands on the next part not done (${want === null ? "the overview" : `Part ${want + 1}, ${parts[want].title}`}), never the part just left`, landedKey !== pick?.key && (want === null ? !now : landedKey === parts[want].key) && (!now || Number(now[2]) === parts.length), { landed: now?.[0], want: want === null ? null : `${want + 1} ${parts[want].title}` });
     await ctx.close();
