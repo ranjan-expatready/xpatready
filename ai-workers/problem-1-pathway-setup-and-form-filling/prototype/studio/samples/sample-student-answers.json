@@ -1,6 +1,6 @@
 {
- "label": "Sample (BK-12): made-up answers for one made-up student's Study permit case, saved and confirmed by api/src/sample-case.ts from samples/sample-cases.json. Never a client, never submitted. No value here is an IRCC value. Unconfirmed: expert. Legal: Unconfirmed: no counsel.",
- "source": "Made up for BK-12 (P-448, P-449: a pathway's Sample case is chosen in data). Only questions the Study permit's release asks are answered (an answer it does not ask is refused in words by the loader). BK-13 step 1 (P-449, P-481 S6): widened so the Study permit's forms can be written: every made-up answer the release asks of a single student of 20 studying outside Québec, with no representative-only release and no custodian. Option values are the release's own lists (for example IMM 1294's \"F Female\").",
+ "label": "Sample (BK-12): made-up answers for the made-up Study permit family's case (a student, the spouse, a child), saved and confirmed by api/src/sample-case.ts from samples/sample-cases.json. Never a client, never submitted. No value here is an IRCC value. Unconfirmed: expert. Legal: Unconfirmed: no counsel.",
+ "source": "Made up for BK-12 (P-448, P-449: a pathway's Sample case is chosen in data). Only questions the Study permit's release asks are answered (an answer it does not ask is refused in words by the loader). BK-13 step 1 (P-449, P-481 S6): widened so the Study permit's forms can be written: every made-up answer the release asks of a single student of 20 studying outside Québec, with no representative-only release and no custodian. Option values are the release's own lists (for example IMM 1294's \"F Female\"). BK-13 step 2 (13 Nov): the walk's family, a married student of 30, the spouse (31, an open work permit) and a child of 9 who will not study (a visitor), each answered only where the release asks it of that person.",
  "case": {
   "case.school_name": "SAMPLE COLLEGE",
   "case.study_field": "Computing/IT",
@@ -30,9 +30,6 @@
  "everyone": {
   "person.citizenship": "India",
   "person.birth_country": "India",
-  "person.birth_city": "MUMBAI",
-  "person.current_residence_country": "India",
-  "person.current_residence_status": "Citizen",
   "person.applying_from_country": "India",
   "person.has_used_other_name": false,
   "person.has_national_id": false,
@@ -58,27 +55,30 @@
    "country": "India"
   },
   "person.telephone_type": "Cellular",
-  "person.phone_number": {
-   "country_code": "91",
-   "number": "9800000099"
-  },
-  "relationship.previous_union_exists": false,
   "person.military_service": false,
-  "person.bg_tb_contact": false,
-  "person.bg_medical_disorder": false,
-  "person.bg_status_violation_canada": false,
-  "person.bg_refused_or_removed": false,
-  "person.bg_criminal_offence": false,
-  "person.bg_violent_org_membership": false,
   "person.present_occupation": "STUDENT"
  },
  "people": {
   "principal": {
+   "person.birth_city": "MUMBAI",
+   "person.current_residence_country": "India",
+   "person.current_residence_status": "Citizen",
+   "person.phone_number": {
+    "country_code": "91",
+    "number": "9800000099"
+   },
+   "relationship.previous_union_exists": false,
+   "person.bg_tb_contact": false,
+   "person.bg_medical_disorder": false,
+   "person.bg_status_violation_canada": false,
+   "person.bg_refused_or_removed": false,
+   "person.bg_criminal_offence": false,
+   "person.bg_violent_org_membership": false,
    "person.family_name": "STUDENT",
    "person.given_names": "SAMPLE",
-   "person.date_of_birth": "2006-02-10",
+   "person.date_of_birth": "1996-03-01",
    "person.sex": "F Female",
-   "person.marital_status": "single",
+   "person.marital_status": "married",
    "person.passport_number": "Z7000099",
    "person.email": "student.a@example.com",
    "person.minor_studying_without_parent": false,
@@ -87,7 +87,69 @@
     "person.occupation_employer": "SAMPLE SECONDARY SCHOOL",
     "person.occupation_from_date": "2020-06"
    },
-   "person.intended_study_province": "another_province_or_territory"
+   "person.intended_study_province": "another_province_or_territory",
+   "relationship.relationship_start_date": "2016-04-10"
+  },
+  "spouse_or_partner": {
+   "person.bg_status_violation_canada": false,
+   "person.family_name": "STUDENT",
+   "person.given_names": "SAMPLE SPOUSE",
+   "person.date_of_birth": "1995-05-01",
+   "person.sex": "F Female",
+   "person.marital_status": "married",
+   "person.passport_number": "Z7000098",
+   "person.email": "spouse.a@example.com",
+   "person.primary_telephone": {
+    "country_code": "91",
+    "number": "9800000098"
+   },
+   "person.preferred_service_language": "English",
+   "person.place_of_birth_city": "MUMBAI",
+   "relationship.previously_married_or_common_law": false,
+   "person.background_refusal": false,
+   "person.background_tb_exposure": false,
+   "person.background_medical_disorder": false,
+   "person.background_criminal": false,
+   "person.background_violent_org_association": false,
+   "relationship.accompanies_subject_to_canada": true,
+   "person.minor_studying_without_parent": false,
+   "relationship.union_start_date": "2016-04-10",
+   "person.present_occupation": "HOMEMAKER"
+  },
+  "child": {
+   "person.birth_city": "MUMBAI",
+   "person.current_residence_country": "India",
+   "person.current_residence_status": "Citizen",
+   "person.family_name": "STUDENT",
+   "person.given_names": "SAMPLE CHILD",
+   "person.date_of_birth": "2017-02-01",
+   "person.sex": "Male",
+   "person.marital_status": "single",
+   "person.passport_number": "Z7000097",
+   "person.email": "student.a@example.com",
+   "person.telephone_number": {
+    "country_code": "91",
+    "number": "9800000099"
+   },
+   "relationship.child_relationship_type": "Son",
+   "relationship.previously_married_or_common_law": false,
+   "person.studies_six_months_or_more": false,
+   "person.previously_applied_to_canada": false,
+   "person.overstayed_or_unauthorized_in_canada": false,
+   "person.refused_visa_entry_or_removed": false,
+   "person.tuberculosis_in_past_two_years": false,
+   "person.health_condition_requiring_services": false,
+   "person.criminal_history": false,
+   "person.ill_treatment_of_prisoners_or_civilians": false,
+   "person.violent_organization_association": false,
+   "person.consents_to_research_contact": false,
+   "relationship.accompanies_subject_to_canada": true,
+   "person.minor_studying_without_parent": false,
+   "job": {
+    "person.occupation_title": "STUDENT",
+    "person.occupation_employer": "SAMPLE PRIMARY SCHOOL",
+    "person.occupation_from_date": "2022-06"
+   }
   }
  },
  "job_place": {
@@ -101,13 +163,17 @@
   "person.uci": "A first application: no UCI yet.",
   "person.fax_number": "No fax number.",
   "person.alt_phone_number": "No second telephone number.",
-  "person.uscis_number": "Not a lawful permanent resident of the United States."
+  "person.uscis_number": "Not a lawful permanent resident of the United States.",
+  "organisation.name": "The spouse applies for an open work permit: there is no employer to name (walk 1 W2: IMM 1295 still asks it).",
+  "organisation.address": "The spouse applies for an open work permit: there is no employer's address.",
+  "person.immigration_status": "The spouse applies from the country of citizenship, where they live."
  },
  "none_apply": {
   "groups": [
    "personal_details",
-   "education"
+   "education",
+   "employment"
   ],
-  "why": "Sample: the student has no other names and no post-secondary education to list (IMM 1294 asks only post-secondary education)."
+  "why": "Sample: the family has no other names and no post-secondary education to list (IMM 1294 asks only post-secondary education); the spouse has had no job in the period IMM 1295 asks about. A person with a job row (the student, the child's school) keeps it: \"none apply\" goes only on a person's empty group."
  }
 }
