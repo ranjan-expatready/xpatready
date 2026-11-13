@@ -1,0 +1,40 @@
+{
+ "label": "Sample facts only (made up; never submit). Immigration values are Sample; legal: Unconfirmed: no counsel. US$0, no model call.",
+ "row": "BK-20 (P-533, P-535 L2): the tech lead ran the form's own Validate in Adobe Acrobat on the Mac by computer use, 13 Nov 2026 ~18:28 IST",
+ "form": "IMM 5257",
+ "source": "studio case copy",
+ "combination": "Visitor visa (demo case SAMPLE-VV-FAMILY-1, release 2; the finished story's Paper line, Child 18 or over (Sample))",
+ "copy_id": "1f7fed6b-da9d-4f52-b5b6-4e238d76b4f8",
+ "copy_sha256": "8f73da30a4372af6f046e2dc9495c9949efdfe2bad8b320b3292f7e7ca84f149",
+ "validated_sha256": "0d0b46db3f952a70a8d6915f90cee4ffd9fcc4c4a7bbf7779ac02a1327148c13",
+ "app": "main fc31b1e95 (the :4400 demo)",
+ "reader": "Adobe Acrobat (Pro, DC) on macOS",
+ "reader_version": "26.002.22031",
+ "validate_message": "Validation completed successfully. Please print the entire application and sign and date the last page. This page contains bar codes that facilitates data entry of your applicaton.",
+ "validate_first_press": true,
+ "barcode_page": "page 6 of 6, five barcodes (IMM5257_06-2018_1 \u2026 _5)",
+ "barcodes_expected": 5,
+ "barcodes_decoded": 5,
+ "slots_total": 186,
+ "slots_agree": 186,
+ "unexplained": 0,
+ "certification_intact": true,
+ "certification_seen": "after save, Acrobat's banner still reads: Certified by Immigration, Refugees and Citizenship Canada (no changed warning)",
+ "written_values_unchanged": true,
+ "read_back": {
+  "written": 75,
+  "equal": 75
+ },
+ "upload_door": {
+  "status": 201,
+  "words": "Validated copy read back",
+  "current": true,
+  "barcode_words": "All 5 barcodes read; each of their 186 positions agrees with the form's answers."
+ },
+ "screenshots": [
+  "vv-paper-imm5257-opened-certified.jpg",
+  "vv-paper-imm5257-validate-message.jpg",
+  "vv-paper-imm5257-barcode-page.jpg"
+ ],
+ "screenshots_where": "the tech lead's private notes on the Mac (bk20-2026-11-13); PDFs and screenshots are never committed (AGENTS rule 1)"
+}
