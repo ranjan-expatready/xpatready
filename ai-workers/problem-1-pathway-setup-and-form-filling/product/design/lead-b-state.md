@@ -4,9 +4,9 @@ Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Ses
 
 **Owns:** platform (firm sign-up, plans, subscriptions, sign-in and roles, walking skeleton) and front office (enquiry → lead → pipeline → booking → retainer → e-sign → payment), all in new fenced modules.
 
-## What is true (updated 13 Nov 22:23 IST)
+## What is true (updated 13 Nov 22:25 IST)
 * Module contracts, draft 1: `design/platform-and-front-office-contracts-2026-11-14.md` (pushed).
-* Rows: being written to `design/lead-b-rows-2026-11-14.md`.
+* Rows: 10 ready rows (PF-1, PF-2, PF-3, PF-4, PF-5, PF-7, FO-1, FO-2, FO-3, FO-4) in `design/lead-b-rows-2026-11-14.md` (pushed); start now: PF-1, PF-2, PF-7 (with Lead 37's OKs); the rest wait on DB-SPLIT or each other.
 * No builder lanes, no PRs yet.
 
 ## In flight
@@ -15,5 +15,5 @@ Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Ses
 | (none) | | | |
 
 ## Next step
-1. Finish the rows (8-10, dup-checked), push, message Lead 37 one line per row.
+1. Message Lead 37 one line per row (sent once pushed; see the log below).
 2. Then: screen concepts (skill screen-concept) for the first new screens, starting with the public enquiry form (FO-2) and firm sign-up (PF-5).
