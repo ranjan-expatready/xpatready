@@ -21,10 +21,13 @@
    "validated": "samples/validated-imm5257.json"
   },
   "sp.outside": {
-   "about": "Sample (BK-12): one made-up student applying from outside Canada, so the Study permit opens its own Sample case by data alone (P-449's run). Every value is made up; none is an IRCC value.",
-   "reference": "SAMPLE-SP-STUDENT-1",
+   "about": "Sample (BK-12, BK-13 step 2): the walk's family applying from outside Canada: a married student, the spouse (an open work permit) and a child who will not study (a visitor), so the Study permit opens its own Sample case by data alone (P-449's run). Every value is made up; none is an IRCC value.",
+   "reference": "SAMPLE-SP-FAMILY-1",
    "principal": "Student A (Sample)",
-   "people": [],
+   "people": [
+    { "id": "spouse_or_partner", "role": "spouse_or_partner", "displayName": "Spouse (Sample)" },
+    { "id": "child", "role": "child", "displayName": "Child (Sample)" }
+   ],
    "answers": "sample-student-answers.json"
   }
  }
