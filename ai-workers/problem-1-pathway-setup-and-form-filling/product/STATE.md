@@ -16,7 +16,7 @@ Tonight, Next 7 hours and M3 pointer sections: `history/STATE-2026-11-11-1245-le
 |---|---|---|
 | S10 | 10:3x (13 Nov) his day-1 actions for the synced private copy (P-520) | **done** (day-1 done, S10 ticked); row word for word in `history/STATE-2026-11-13-1315-lead32s2-founder-ask-S10-row.md` |
 | A30, A32 | done / answered | rows word for word in `history/STATE-2026-11-13-1100-lead30s2-founder-asks-A30-A32-rows.md` |
-| A5, A7 | milestone plan before the Chrome extension; Fable questions 16-18 + booking the expert | waiting (after the 29); rows word for word in `history/STATE-2026-11-13-1335-lead32s2-founder-asks-A5-A7-rows.md` |
+| A5, A7 | milestone plan before the Chrome extension; Fable questions 16-18 + booking the expert | A7's expert booking **closed by P-541** (no expert); rest waiting (after the 29); rows word for word in `history/STATE-2026-11-13-1335-lead32s2-founder-asks-A5-A7-rows.md` |
 | A1-A4, A6, A8, A9-A13, A18, A20-A23, A26, A25, A29, A33 | done, answered or standing | rows word for word in `history/STATE-2026-11-12-1545-lead26s2-founder-asks-pointer-rows.md`; A25, A29: `history/STATE-2026-11-13-0850-lead29s2-founder-asks-A25-A29-rows.md`; A33: `history/STATE-2026-11-13-1005-lead29s2-founder-ask-A33-row.md` |
 | A31 | 08:1x (13 Nov, spoken) landing our work in the team's product; counts; Fable check | page https://claude.ai/artifact/S43C8ZRpMuAV7JMAHtu3pA sections 8-10 (route, A32 needs/contract/time, minimum R1 list); row word for word `history/STATE-2026-11-13-0905-lead29s2-founder-ask-A31-row.md` |
 | A24, A28 | see history | in progress (A24: A24-1 merged, A24-2 building, A24-3 next; A28: lanes archived, rule P-502, factory plan P-506); row word for word in `history/STATE-2026-11-12-2155-founder-asks-A24-A28-rows.md` |
