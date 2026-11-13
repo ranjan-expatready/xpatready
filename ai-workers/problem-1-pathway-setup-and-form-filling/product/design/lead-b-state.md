@@ -1,6 +1,6 @@
 # Lead B — state (P-557: always committed, always resumable)
 
-Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Session `local_9bced770…` (local, own worktree), branch on GitHub: `lead-b-front-office`. Release holder and shared records: **Lead 38** (`local_fac27a00-f2bb-4295-96eb-34f657d51f4b`) since 22:44 IST 13 Nov (took over from Lead 37, `local_c795de7f…`, whose rulings stand). Lead B never edits `STATE.md`, `RULES.md`, `DECISIONS.md`, `BACKLOG.md`; it writes rows to `lead-b-rows-2026-11-14.md` and the release holder copies them.
+Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Session `local_9bced770…` (local, own worktree), branch on GitHub: `lead-b-front-office`. Release holder and shared records: **Lead 39** (`local_84c512dc-855e-4e49-ad8b-5d861c11713b`) since ~01:xx IST 14 Nov (after Lead 38, `local_fac27a00…`, and Lead 37, `local_c795de7f…`, whose rulings stand) (took over from Lead 37, `local_c795de7f…`, whose rulings stand). Lead B never edits `STATE.md`, `RULES.md`, `DECISIONS.md`, `BACKLOG.md`; it writes rows to `lead-b-rows-2026-11-14.md` and the release holder copies them.
 
 **Owns:** platform (firm sign-up, plans, subscriptions, sign-in and roles, walking skeleton) and front office (enquiry → lead → pipeline → booking → retainer → e-sign → payment), all in new fenced modules.
 
@@ -20,7 +20,7 @@ Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Ses
 | (none) | | | |
 
 ## Next step
-1. Lead 38 asks the founder the five questions in the register §D, one at a time; fold each answer into contracts §7 and rows (FO-6 signer, PF-5 door, PF-4 switch default, FO-5 checklist, FO-7 trust).
+1. Lead 39 asks the founder the five questions in the register §D, one at a time; fold each answer into contracts §7 and rows (FO-6 signer, PF-5 door, PF-4 switch default, FO-5 checklist, FO-7 trust).
 2. Shape the next two ahead: FO-5 (retainer), FO-6 (signing) once question 1 is answered; FO-7 after question 5; PF-6 staff screens (concept first).
 3. When builders run: review each PF/FO PR's diff for money, schema, permissions (P-423 is Lead 37's label read).
 
@@ -38,3 +38,4 @@ Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Ses
 * 14 Nov 01:22 IST: DB-SPLIT #1709 and PF-1 #1711 merged (~01:1x). PF-3 brief written: `design/lead-b-briefs/PF-3.md` (schema folder `prisma/schema/platform.prisma`; no audit table; demo reset must pass). Lead 38 starts its cloud lane at the founder's next typed turn; PF-3 holds the schema baton.
 * 14 Nov 01:22 IST: FO-1a and FO-1b briefs written (`design/lead-b-briefs/`), ready for after PF-3 merges; parallel vs serial waits on Lead 38 (DEVELOPING one-migration rule vs P-559 (2)).
 * 14 Nov 01:23 IST: Lead 38 ruling: FO-1a and FO-1b side by side after PF-3 (P-559 (3), P-228); FO-1a also fixes DEVELOPING.md line ~29. Briefs and FO-1a touch list updated.
+* 14 Nov 05:21 IST: release holder is now Lead 39 (`local_84c512dc…`). Open with it: founder question 1 (signing) and 2-5; PF-3 lane to start at the founder's typed turn (brief `lead-b-briefs/PF-3.md`); FO-1a/1b after PF-3, side by side; FO-1a touch list re-copy.
