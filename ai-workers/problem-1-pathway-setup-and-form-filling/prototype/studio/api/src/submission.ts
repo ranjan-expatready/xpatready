@@ -22,7 +22,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { CorrectNumber, RecordSubmission } from "../../contracts/submission-record.ts";
 import { checkApplicationNumber, duplicateWarning, type NumberRule } from "../../engine/runtime/filing-record.ts";
 import { recordedPeople, coverageProblem, duplicateInGroup, submittedOnProblem } from "../../engine/runtime/submission-record.ts";
-import { preparersOf } from "../../engine/runtime/preparers.ts";
+import { behindOf, preparersOf, reviewRecordOf } from "../../engine/runtime/preparers.ts";
 import { caseWork } from "./case-work.ts"; // BK-18 (QA-448): who really prepared the filing
 import { checkValue } from "../../engine/runtime/case.ts";
 import { formCoverage } from "../../engine/runtime/forms.ts";
@@ -171,7 +171,11 @@ export class Submission {
         const rv = reviewOf.get(l.filing) ?? null;
         // BK-18 (QA-448, breaker B4): the preparer is the one the case's work record names, as at that review, so this
         // record and Ready to file's never disagree; the case team stands in only when the case holds nobody's work.
-        const who = recordedPeople(rv, team, actor.id, new Date(), preparersOf(work.acts, work.staff, rv?.at ?? null));
+        // BK-18 (review 2): a self-review the work record itself shows (the reviewer alone, or nobody's work and the
+        // reviewer stood behind it) is recorded as one person's, whatever the stored kind says.
+        const prep = preparersOf(work.acts, work.staff, rv?.at ?? null);
+        const rec = rv ? reviewRecordOf({ preparers: prep, behind: behindOf(work.acts, work.staff, rv.at), reviewedBy: rv.by, kind: rv.kind }) : null;
+        const who = rec?.self ? { preparedBy: rv!.by, reviewedBy: rv!.by } : recordedPeople(rv, team, actor.id, new Date(), prep);
         await tx.filing.update({ where: { id: l.filing }, data: { applicationNumber: l.application_number } });
         await tx.filingRecord.create({ data: { workspaceId: c.workspaceId, caseId: c.id, filingId: l.filing, submissionGroupId: g!.id, portal, ourReference: l.our_reference, submittedOn: new Date(`${l.submitted_on}T00:00:00Z`),
           applicationNumber: l.application_number, feeReceipt: l.fee_receipt, preparedBy: who.preparedBy, reviewedBy: who.reviewedBy, recordedBy: actor.id, filedFacts: formsOf(l.filing) as object } });

@@ -152,6 +152,34 @@ const b1Passed = await call("POST", `/runtime/filings/${b1f}/warnings/${encodeUR
 const b1After = readinessOf((await prepare(b1.id, rep)).p, b1f) as { reviewed?: { kind: string }; prepared_by?: string[] } | undefined;
 ok("BK-18 (review B2, breaker B3) fail: a case officer's later work does not turn a recorded self-review into a two-person record", b1Passed.status === 200 && b1After?.reviewed?.kind === "self_reviewed" && JSON.stringify(b1After?.prepared_by) === JSON.stringify([rep]), { passed: b1Passed.status, reviewed: b1After?.reviewed ?? null, prepared_by: b1After?.prepared_by ?? null });
 
+// BK-18 review 2 B1: nobody prepared it. A case officer opened the case and the representative reviews it; the record
+// names no preparer at all — never the person who only opened it — and the review is a second person's, not a self-review.
+const r2b1 = await newCase("BK18R2B1", "Sample Client X", officer);
+const r2b1f = (await prepare(r2b1.id, rep)).p?.filings[0]?.id ?? "";
+const r2b1Rev = await call("POST", `/runtime/filings/${r2b1f}/review`, { note: "Reviewed (Sample)", facts_hash: await fh(r2b1.id, r2b1f, rep) }, rep);
+const r2b1Rd = readinessOf((await prepare(r2b1.id, rep)).p, r2b1f) as { prepared_by?: string[]; stood_behind?: string[] } | undefined;
+ok("BK-18 (review 2 B1) fail: a case officer who only opened the case is never the record's preparer — with nobody's work on the case the record names none", r2b1Rev.status === 200 && r2b1Rev.body?.kind === "reviewed" && (r2b1Rd?.prepared_by ?? ["x"]).length === 0 && (r2b1Rd?.stood_behind ?? []).includes(officer), { status: r2b1Rev.status, kind: r2b1Rev.body?.kind, prepared_by: r2b1Rd?.prepared_by, stood_behind: r2b1Rd?.stood_behind });
+
+// BK-18 review 2 M3: changing the representative of record, assigning or ending a case officer is administration, not
+// work on the filings, so it never makes the person who did it a preparer.
+const r2m3 = await newCase("BK18R2M3", "Sample Client Y", officer);
+await answer(r2m3.id, r2m3.subject, "person.passport_number", "ZX9999996", "user-T"); // the second representative does the work
+const r2m3Chg = await call("PUT", `/runtime/cases/${r2m3.id}/team/representative`, { userId: "user-T", reason: "Handing the review over (Sample)" }, rep); // the firm admin, who does no work on it
+const r2m3f = (await prepare(r2m3.id, "user-T")).p?.filings[0]?.id ?? "";
+const r2m3Rev = await call("POST", `/runtime/filings/${r2m3f}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(r2m3.id, r2m3f, "user-T") }, "user-T");
+const r2m3Rd = readinessOf((await prepare(r2m3.id, "user-T")).p, r2m3f) as { prepared_by?: string[] } | undefined;
+ok("BK-18 (review 2 M3) fail: the person who changed the representative of record is not a preparer; the record names only who did the work", r2m3Chg.status < 300 && r2m3Rev.status === 200 && r2m3Rev.body?.kind === "self_reviewed" && JSON.stringify(r2m3Rd?.prepared_by) === JSON.stringify(["user-T"]), { change: r2m3Chg.status, review: r2m3Rev.status, kind: r2m3Rev.body?.kind, prepared_by: r2m3Rd?.prepared_by });
+
+// BK-18 review 2 M2: work on the forms themselves counts. The representative types the facts; the case officer makes the
+// copy and reads the validated copy back, so the review is no longer the representative's own (BR-8, 409).
+const r2m2 = await newCase("BK18R2M2", "Sample Client Z", rep);
+await answer(r2m2.id, r2m2.subject, "person.passport_number", "ZX9999997", rep);
+const copied = await validateRoundTrip(r2m2.id, "IMM 5257", r2m2.subject); // runs as the case officer
+const r2m2f = (await prepare(r2m2.id, rep)).p?.filings[0]?.id ?? "";
+const r2m2Rd = readinessOf((await prepare(r2m2.id, rep)).p, r2m2f) as { prepared_by?: string[] } | undefined;
+const r2m2Rev = await call("POST", `/runtime/filings/${r2m2f}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(r2m2.id, r2m2f, rep) }, rep);
+ok("BK-18 (review 2 M2) fail: the case officer who made the copy and read the validated copy back is a preparer, so the representative cannot review it as one person's work (409)", !!copied && (r2m2Rd?.prepared_by ?? []).includes(officer) && r2m2Rev.status === 409, { copied: !!copied, prepared_by: r2m2Rd?.prepared_by, review: r2m2Rev.status });
+
 // BK-18 review M2 / breaker B2: work that leaves no answer of its own still counts. The case officer passes a warning
 // with a written reason; the representative who did the rest can no longer review it as a second person (BR-8, 409).
 const m2 = await newCase("BK18M2", "Sample Client U", rep);

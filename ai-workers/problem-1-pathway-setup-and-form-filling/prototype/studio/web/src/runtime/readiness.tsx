@@ -27,7 +27,7 @@ type Passed = Line & { reason: string; by: string; at: string };
 type Readiness = { filing: string; ready: boolean; blocks: Line[]; warns: Line[]; passed: Passed[]; owes: Partial<Record<Owes, number>>;
   reviewed: { by: string; kind: string; licence_number: string | null; at: string } | null;
   /** BK-18 (QA-448): who the case's work record says prepared it (api/src/case-work.ts), earliest act first. */
-  prepared_by?: string[]; facts_hash: string; representative: string | null };
+  prepared_by?: string[]; stood_behind?: string[]; facts_hash: string; representative: string | null };
 type Filing = { id: string; label: string; status: string; read_only?: boolean };
 type PrepareView = { derived: boolean; why?: string; filings: Filing[]; readiness?: Readiness[]; figures?: Figure[] };
 type TeamView = { representative: { id: string; name: string } | null; officers: { id: string; name: string }[] };
@@ -208,7 +208,7 @@ function FilingReadiness({ caseId, f, r, g, actor, nameOf, review }: { caseId: s
  *  one person made. It says what was true when the review was made, so later work never rewrites it (review B2). Nobody
  *  recorded as having prepared it is said plainly, never guessed. */
 function RecordLine({ r, reviewed, nameOf }: { r: Readiness; reviewed: NonNullable<Readiness["reviewed"]>; nameOf: (id: string) => string }) {
-  const rec = reviewRecordOf({ preparers: r.prepared_by ?? [], reviewedBy: reviewed.by, kind: reviewed.kind });
+  const rec = reviewRecordOf({ preparers: r.prepared_by ?? [], behind: r.stood_behind ?? [], reviewedBy: reviewed.by, kind: reviewed.kind });
   const who = `${nameOf(reviewed.by)}${reviewed.licence_number ? ` (licence ${reviewed.licence_number})` : ""}`;
   return (
     <p className="text-[13px]" data-reviewed={reviewed.kind} data-record={rec.self ? "self-reviewed" : "two-people"}>

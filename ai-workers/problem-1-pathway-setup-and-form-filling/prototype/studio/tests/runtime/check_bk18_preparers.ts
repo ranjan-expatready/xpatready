@@ -2,7 +2,7 @@
 // who really prepared a case's filings, and what the filing's record says. Each rule has a passing and a failing case.
 // Proves C7.6's record and C8.3's BR-8 author rule. No database, no server, no model call (US$0). Sample values only.
 //   tsx studio/tests/runtime/check_bk18_preparers.ts
-import { preparersOf, reviewRecordOf } from "../../engine/runtime/preparers.ts";
+import { authorsFor, behindOf, preparersOf, reviewRecordOf } from "../../engine/runtime/preparers.ts";
 import { selfReviewOf } from "../../engine/runtime/review.ts";
 import { recordedPeople } from "../../engine/runtime/submission-record.ts";
 import { recorder } from "./api.ts";
@@ -24,16 +24,26 @@ ok("C7.6 BK-18 pass: a case nobody's work names has no preparer (never guessed f
 ok("C7.6 BK-18 pass: an act with no time still counts, and each person is named once",
   preparersOf([{ actor: OFF, at: null }, { actor: OFF, at: at(4) }], staff).join() === OFF);
 
-// C7.6 (review B1, M1): opening a case and sending a filing for review are not preparing it.
+// C7.6 (review 2 B1, M1): opening a case and sending a filing for review never name a preparer.
 const opened = { actor: OFF, at: at(1), weak: true };
 ok("C7.6 BK-18 fail (review B1, M1): a person who only opened the case is not its preparer when somebody else did the work",
   preparersOf([opened, { actor: REP, at: at(6) }], staff).join() === REP);
-ok("C7.6 BK-18 pass (walk 1 S8): with nobody's real work on the case, the person who opened it and sent it for review stands behind it",
-  preparersOf([{ actor: REP, at: at(1), weak: true }, { actor: REP, at: at(4), weak: true }], staff).join() === REP);
+ok("C7.6 BK-18 fail (review 2 B1): a person who only opened the case is named as preparer by nobody, however little the rest did",
+  preparersOf([opened], staff).length === 0 && behindOf([opened], staff).join() === OFF);
 ok("C7.6 BK-18 fail: a representative who only sent a filing another person prepared is not its preparer (never refused as a second person)",
   preparersOf([{ actor: OFF, at: at(2) }, { actor: REP, at: at(8), weak: true }], staff).join() === OFF);
-ok("C7.6 BK-18 pass: a weak act and real work by the same person name them once, by their earliest act",
+ok("C7.6 BK-18 pass: a weak act and real work by the same person name them once, by their real act",
   preparersOf([opened, { actor: OFF, at: at(9) }], staff).join() === OFF);
+ok("C7.6 BK-18 pass (walk 1 S8): with nobody's work on the case, a review by the person who opened it and sent it for review is their own",
+  reviewRecordOf({ preparers: [], behind: [REP], reviewedBy: REP, kind: "reviewed" }).self === true);
+ok("C7.6 BK-18 fail (review 2 B1): with nobody's work on the case, a review by someone who did not stand behind it names no preparer",
+  JSON.stringify(reviewRecordOf({ preparers: [], behind: [OFF], reviewedBy: REP, kind: "reviewed" })) === JSON.stringify({ self: false, preparedBy: [] }));
+
+// C8.3 BR-8 (review 2 M1): what counts as this person's own authorship.
+ok("C8.3 BK-18 pass (review 2 M1): with nobody's work on the case, the person who stood behind it is its only author — never a second person's refusal",
+  [...authorsFor(REP, [], [REP, OFF])].join() === REP && authorsFor(OFF, [], [REP]).size === 0);
+ok("C8.3 BK-18 pass: once somebody really worked on it, only the real work counts",
+  [...authorsFor(REP, [OFF], [REP])].join() === OFF);
 
 // C7.6 (review B2, breaker B3): the record says what was true when the review was made.
 const after = [{ actor: REP, at: at(10) }, { actor: OFF, at: at(30) }];

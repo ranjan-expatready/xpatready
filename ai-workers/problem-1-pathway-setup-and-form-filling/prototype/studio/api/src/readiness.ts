@@ -18,7 +18,8 @@ import { Runtime } from "./runtime.ts";
 import { CasePrepare } from "./case-prepare.ts";
 import { busyWords } from "./busy.ts";
 import { ReviewRounds } from "./review-rounds.ts"; // C8.3 (M1): the review is a one-step round
-import { preparersOfCase } from "./case-work.ts"; // BK-18 (QA-448): who really prepared the filing
+import { caseWork } from "./case-work.ts"; // BK-18 (QA-448): who really prepared the filing
+import { authorsFor, behindOf, preparersOf } from "../../engine/runtime/preparers.ts";
 
 type H = string | undefined;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -69,10 +70,12 @@ export class FilingReadinessRoutes {
     const noteWhy = note ? (note.length > 400 ? "Keep the note to 400 characters." : /[\u0000-\u001f\u007f-\u009f\u200b\u200e\u200f\u2028-\u202e\u2066-\u2069\ufeff]/.test(note) ? "Remove the control or invisible characters from the note." : null) : null;
     if (noteWhy) problem(400, "Some details need fixing", noteWhy, { errors: [{ field: "note", message: noteWhy }] });
     const firm = firmOfActor(actor), licence = firm ? userIn(firm, actor.id)?.licence ?? null : null;
-    // BK-18 (QA-448, P-525 (1)): who prepared it is the case's own work record (who opened it, who typed or confirmed
-    // its facts), never its team list: a case officer assigned to the case who did nothing neither prepared it nor makes
-    // the representative's own work a second person's review (walk 1 step S8).
-    const workers = new Set(await preparersOfCase(this.db, c.id));
+    // BK-18 (QA-448, P-525 (1)): who prepared it is the case's own work record, never its team list: a case officer
+    // assigned to the case who did nothing neither prepared it nor makes the representative's own work a second person's
+    // review (walk 1 step S8). Opening the case or sending it for review prepares nothing (review 2 B1, M1): it answers
+    // only whether this person had the filing in their own hands on a case holding nobody's work.
+    const w = await caseWork(this.db, c.id);
+    const workers = authorsFor(actor.id, preparersOf(w.acts, w.staff), behindOf(w.acts, w.staff));
     const prepared = workers.has(actor.id);
     // Break B9 (P-155 (1); review m8, the concept's BR-21: "a solo firm, or the representative did it all"): Self-reviewed
     // when the firm is solo or the representative is the only person who worked on the case; when another person worked

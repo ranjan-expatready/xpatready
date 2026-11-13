@@ -12,7 +12,7 @@ import { changedGroups, type GroupFact } from "../../engine/runtime/forms.ts";
 import { fileStampCurrent, stampCurrent } from "../../engine/runtime/review.ts";
 import { closedOnce, readinessFigure, type ClosedFinding, type Figure } from "../../engine/runtime/readiness-figure.ts";
 import { caseWork } from "./case-work.ts"; // BK-18 (QA-448): who really prepared the filing
-import { preparersOf } from "../../engine/runtime/preparers.ts";
+import { behindOf, preparersOf } from "../../engine/runtime/preparers.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RECEIVED = new Set(["received", "being_checked", "approved"]);
@@ -72,6 +72,9 @@ export type ReadinessView = { filing: string; ready: boolean; status_rule: strin
   /** BK-18 (QA-448): the people the case's own work record names as having prepared it, earliest act first — never its
    *  team list. Empty when the case holds nobody's work (said plainly on the screen, never guessed). */
   prepared_by: string[];
+  /** BK-18 (review 2 B1): who stood behind the filings without preparing them — they opened the case or sent one for
+   *  review. Never a named preparer; it tells whether a review on a case holding nobody's work is the reviewer's own. */
+  stood_behind: string[];
   /** The filing's facts fingerprint now (the review route stores it) and the representative of record now. */
   facts_hash: string; representative: string | null };
 
@@ -187,7 +190,8 @@ export async function readinessOfCase(db: Db, x: ReadinessInputs): Promise<(Read
       words: `${g.severity.toUpperCase()} finding${g.form ? ` on ${g.form}` : ""} (${g.state === "resolved" ? "resolved: the facts now agree" : `${g.state} with a reason in Review findings`}): ${g.source === "ai" ? "flagged by the AI review" : g.quote}` })), openRuleChecks);
     return { ...r, figure: readinessFigure(input, r, closed), status_rule: "P-315: only a barcode form without its validated copy blocks; every other line is passed with a reason or fixed.",
       reviewed: review ? { by: review.reviewedBy, kind: review.kind, licence_number: review.licenceNumber, at: review.reviewedAt.toISOString() } : null,
-      prepared_by: preparersOf(work.acts, work.staff, review?.reviewedAt ?? null), facts_hash: factsHash, representative: rep };
+      prepared_by: preparersOf(work.acts, work.staff, review?.reviewedAt ?? null),
+      stood_behind: behindOf(work.acts, work.staff, review?.reviewedAt ?? null), facts_hash: factsHash, representative: rep };
   });
 }
 

@@ -24,7 +24,8 @@ import { Runtime, type Reached } from "./runtime.ts";
 import { CasePrepare, type ReviewBasis, type ReviewBasisForm } from "./case-prepare.ts";
 import type { ReadinessView } from "./readiness-inputs.ts";
 import { reviewItemsOf } from "./review-items.ts";
-import { preparersOfCase } from "./case-work.ts"; // BK-18 (QA-448): who really prepared the filing
+import { caseWork } from "./case-work.ts"; // BK-18 (QA-448): who really prepared the filing
+import { authorsFor, behindOf, preparersOf } from "../../engine/runtime/preparers.ts";
 import { busyWords } from "./busy.ts";
 import { newestPin } from "./stage-scope.ts"; // C6.17 (BR-9)
 
@@ -396,10 +397,12 @@ export class ReviewRounds {
    *  under the case's row lock with the round's own writes (`write`). Shared by decision, reapprove and oneStep (M1). */
   private async approve(actor: Actor, c: Reached, x: { filing: string; rep: string; self: unknown; changedByReviewer: boolean; view: { readiness: ReadinessView[] }; after?: "send" | "approval" }, write: (tx: Tx, reviewId: string, kind: "reviewed" | "self_reviewed") => Promise<string>) {
     // BK-18 (QA-448): who prepared it is the case's own work record, not its team list (break N4 stands: a person who
-    // worked on it is an author whether or not they are still a case officer).
-    const prepared = await preparersOfCase(this.db, c.id);
+    // worked on it is an author whether or not they are still a case officer). Opening the case or sending a filing for
+    // review prepares nothing (review 2 B1, M1).
+    const w = await caseWork(this.db, c.id);
+    const prepared = authorsFor(actor.id, preparersOf(w.acts, w.staff), behindOf(w.acts, w.staff));
     const firm = this.firmOf(c), licence = firm ? userIn(firm, actor.id)?.licence ?? null : null;
-    const sr = selfReviewOf({ actor: actor.id, prepared: new Set(prepared), solo: !!firm?.solo, changedByReviewer: x.changedByReviewer, self: x.self, after: x.after });
+    const sr = selfReviewOf({ actor: actor.id, prepared, solo: !!firm?.solo, changedByReviewer: x.changedByReviewer, self: x.self, after: x.after });
     if ("problem" in sr) refuse(sr.problem);
     const kind = (sr as { kind: "reviewed" | "self_reviewed" }).kind;
     if (!licence) refuse({ status: 409, detail: "An approval needs the representative's licence number on the firm record; none is set." });
