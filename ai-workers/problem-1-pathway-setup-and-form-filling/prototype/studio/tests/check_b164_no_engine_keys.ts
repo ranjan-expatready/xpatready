@@ -294,5 +294,49 @@ const clean = [
 for (const src of clean) ok(`pass: not caught (${src})`, scan([{ file: "x.ts", src }], known).length === 0, scan([{ file: "x.ts", src }], known));
 ok("pass: a line number is the string's own line", scan([{ file: "x.ts", src: "const a = 1;\n\nconst k = `x ${y}\n` + \"sp.outside\";" }], known)[0]?.line === 4);
 
+// B170c (analysis §4.2 (7), §4.3 L3; P-319, P-425): our XFA engine's source (packages/xfa-engine/src) and its adapter
+// (engine/xfa/, read above with engine/) name no form and no box. The engine is generic XFA code: its code holds no form
+// or guide number in any string or regular expression (stricter than the whole-string rule above), and no box path from
+// a form's record (samples/xfa-forms.json, its descriptors). Its test folders (__tests__) are left out: they test the
+// engine on the real forms they name, and never run in the app. Comments are not code, as above (three of the engine's
+// comments cite the form a measurement came from). Its other keys and words are not read: they are XFA's own
+// ("app.alert", "event.target"), not ours.
+const ENGINE_SRC = join(ROOT, "..", "..", "..", "..", "packages", "xfa-engine", "src");
+const FORM_IN_TEXT = /\b(IMM|IRM|CIT|EMP)[ _-]?\d{4}(?!\d)|\bguide[ _-]?\d{4}(?!\d)/i;
+/** Every box path a form record names, and each path's dotted parts of two or more names: what a branch on a box reads. */
+export function boxNamesOf(records: { descriptor?: Record<string, unknown> }[]): Set<string> {
+  const names = new Set<string>();
+  for (const r of records) for (const [k, v] of Object.entries(r.descriptor ?? {})) if (typeof v === "string" && k !== "validatedValue") names.add(v);
+  return names;
+}
+/** The engine's (or the adapter's) code that names a form or a box. A one-word box ("Barcodes") counts only as a
+ *  whole string; a dotted path counts anywhere in a string or a regular expression. */
+export function engineHits(files: { file: string; src: string }[], boxes: Set<string>): Hit[] {
+  const hits: Hit[] = [];
+  for (const { file, src } of files) for (const t of tokens(src)) {
+    if (t.kind === "id") continue;
+    const plain = t.kind === "re" ? t.text.replace(/\\(.)/g, "$1") : t.text;
+    if (FORM_IN_TEXT.test(plain) || (t.kind === "re" && FORM_IN_RE.test(t.text))) hits.push({ file, line: t.line, kind: "form", text: t.text });
+    else if ([...boxes].some((b) => (b.includes(".") ? plain.includes(b) : plain === b))) hits.push({ file, line: t.line, kind: "key", text: t.text });
+  }
+  return hits;
+}
+const boxes = boxNamesOf((JSON.parse(readFileSync(join(ROOT, "samples", "xfa-forms.json"), "utf8")) as { forms: { descriptor?: Record<string, unknown> }[] }).forms);
+const walkSrc = (dir: string): string[] => readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? (f === "__tests__" ? [] : walkSrc(p)) : /\.(tsx?|mjs|cjs|js)$/.test(f) && !/\.d\.ts$/.test(f) ? [p] : []; });
+const engineSrc = walkSrc(ENGINE_SRC).map((p) => ({ file: relative(join(ROOT, "..", "..", "..", ".."), p), src: readFileSync(p, "utf8") }));
+const adapter = engine.filter((f) => f.file.startsWith("engine/xfa/"));
+const eh = engineHits([...engineSrc, ...adapter], boxes);
+ok(`pass: our XFA engine's source and its adapter name no form and no recorded box in code (${engineSrc.length} engine files outside its test folders, ${adapter.length} adapter files, ${boxes.size} box paths from samples/xfa-forms.json)`, engineSrc.length > 100 && adapter.length >= 2 && boxes.size >= 5 && eh.length === 0, eh);
+// Files the scan cannot read to their end (template-heavy script preludes): their whole text, comment lines left out,
+// is read for a form number too, so nothing after a mis-read goes unseen.
+const commentFree = (src: string) => src.split("\n").filter((l) => !/^\s*(\*|\/\/|\/\*)/.test(l)).join("\n");
+const tails = engineSrc.filter(({ src }) => unreadOf(src) !== "").filter(({ src }) => FORM_IN_TEXT.test(commentFree(src)) || [...boxes].some((b) => b.includes(".") && commentFree(src).includes(b)));
+ok("pass: engine files the scan reads only in part hold no form number or box path anywhere outside comment lines", tails.length === 0, tails.map((f) => f.file));
+ok("fail: a form number inside a longer string in the engine is caught", engineHits([{ file: "packages/xfa-engine/src/x.ts", src: `const why = "only for IMM 5257 forms";` }], boxes).length === 1);
+ok("fail: a form number in an engine regular expression is caught", engineHits([{ file: "packages/xfa-engine/src/x.ts", src: "const r = /imm ?1295/i;" }], boxes).length === 1);
+ok("fail: a recorded box path in the engine or the adapter is caught", engineHits([{ file: "engine/xfa/index.ts", src: `const flag = "${[...boxes].find((b) => b.includes("."))}";` }], boxes).length === 1);
+ok("fail: a recorded one-word box as a whole string is caught", engineHits([{ file: "packages/xfa-engine/src/x.ts", src: `const b = "${[...boxes].find((b) => !b.includes("."))}";` }], boxes).length === 1);
+ok("pass: comments and XFA's own words are not caught (\"app.alert\", a cited form in a comment)", engineHits([{ file: "packages/xfa-engine/src/x.ts", src: `// measured on IMM5257's Page1\nconst a = "app.alert"; const b = "Barcode";` }], boxes).length === 0);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
