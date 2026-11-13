@@ -5,7 +5,7 @@ for (let step = 0; step < 90; step++) {
   const h = (await page.locator("main h1, main h2").first().innerText().catch(() => "")).trim();
   const part = (await page.locator("main").innerText()).match(/Part (\d+) of (\d+)[^\n]*/)?.[0] ?? "";
   if (!part) { log.push(`[${step}] no part on screen: ${h}`); break; }
-  require("fs").appendFileSync("<scratchpad>/parts.txt", "\n=== "+part+"\n"+(await page.locator("main").innerText()).slice(0,2500)+"\n");
+  require("fs").appendFileSync(new URL("../client-parts-visitor-visa.txt", import.meta.url).pathname, "\n=== "+part+"\n"+(await page.locator("main").innerText()).slice(0,2500)+"\n");
   const who = (await page.locator("main").innerText()).match(/About (Sample [A-Za-z]+ A)/)?.[1] ?? "";
   const isChild = /Child/.test(part + " " + (await page.locator("main").innerText()).slice(0, 400));
   // radios: per group pick "No" if present, else the first option
