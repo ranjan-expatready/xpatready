@@ -31,7 +31,7 @@ let failed = 0; const ok = (name, pass, detail) => { if (!pass) failed++; consol
     const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } });
     await ctx.addInitScript(() => { try { localStorage.setItem("xr-actor", "user-R"); } catch {} });
     const p = await ctx.newPage(); await p.goto(`${base}/cases/${made.body.id}`); await p.waitForLoadState("networkidle");
-    const team = (await call("GET", `/runtime/cases/${made.body.id}/team`, "user-R")).body; console.log(`${tag} TEAM:`, JSON.stringify(team).slice(0, 300));
+    const team = (await call("GET", `/runtime/cases/${made.body.id}/team`, "user-R")).body; console.log(`${tag} TEAM: representative`, team?.representative?.id, "· officers", JSON.stringify((team?.officers ?? team?.case_officers ?? []).map((o) => o.id ?? o.user ?? o)));
     const send = p.getByRole("button", { name: /^(Send for review|Review now)$/ }); await send.scrollIntoViewIfNeeded(); await send.click();
     const go = p.getByRole("dialog").getByRole("button", { name: /^(Send|Review) \d+ filings? (for review|now)$/ }); await go.click(); await p.waitForTimeout(2500);
     const open = p.getByRole("link", { name: "Open the review" }); if (await open.count()) { await open.first().click(); await p.waitForTimeout(2500); }
@@ -39,10 +39,21 @@ let failed = 0; const ok = (name, pass, detail) => { if (!pass) failed++; consol
     ok(`${tag} setup: the review says it was sent by the Representative`, /Representative/.test(sentBy ?? ""), sentBy);
     await p.getByRole("button", { name: "Approve", exact: true }).click(); await p.waitForTimeout(900);
     let selfBox = false; const d = p.getByRole("dialog");
-    if (await d.count()) { const self = d.getByRole("checkbox", { name: /prepared and reviewed this filing myself/ }); selfBox = (await self.count()) > 0; if (selfBox) await self.check(); await d.getByRole("button", { name: "Approve", exact: true }).click(); await p.waitForTimeout(2000); }
+    // A firm that is not solo shows the self-review box only after the server asks for it (400 on "self"); a person then
+    // ticks it and presses Approve again (web/src/runtime/representative-review.tsx ApproveDialog).
+    if (await d.count()) {
+      const self = d.getByRole("checkbox", { name: /prepared and reviewed this filing myself/ });
+      for (let i = 0; i < 2 && (await d.count()); i++) {
+        if (await self.count()) { selfBox = true; await self.check(); }
+        await d.getByRole("button", { name: "Approve", exact: true }).click(); await p.waitForTimeout(2000);
+        const asked = (await d.count()) ? (await d.locator("[role=alert]").allInnerTexts()).join(" | ") : ""; if (asked) console.log(`${tag} APPROVE press ${i + 1}: the dialog says:`, asked.slice(0, 300));
+      }
+    }
+    const said = (await p.locator("[role=alert], [role=status]").allInnerTexts()).join(" | ").slice(0, 400); if (said) console.log(`${tag} AFTER APPROVE the page says:`, said);
+    if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/447-${tag}-after-approve.png`, fullPage: true });
     console.log(`${tag} APPROVE DIALOG asked "I prepared and reviewed this filing myself":`, selfBox);
     ok(`${tag} setup: the Representative approved the filing`, (await p.getByRole("button", { name: / · Round 1 Approved/ }).count()) > 0);
-    await p.getByRole("link", { name: ref }).first().click(); await p.waitForTimeout(2500);
+    await p.goto(`${base}/cases/${made.body.id}`); await p.waitForLoadState("networkidle"); await p.waitForTimeout(1500);
     const line = (await p.locator("main").innerText()).match(/Prepared by · Reviewed by:[^\n]*/)?.[0] ?? "";
     console.log(`${tag} RECORD:`, line); await ctx.close(); return line;
   };
