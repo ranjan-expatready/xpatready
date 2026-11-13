@@ -138,7 +138,8 @@
    "person.background_violent_org_association": false,
    "person.minor_studying_without_parent": false,
    "relationship.union_start_date": "2016-04-10",
-   "person.present_occupation": "HOMEMAKER"
+   "person.present_occupation": "HOMEMAKER",
+   "person.current_residence_country": "India"
   },
   "child": {
    "person.birth_city": "MUMBAI",
