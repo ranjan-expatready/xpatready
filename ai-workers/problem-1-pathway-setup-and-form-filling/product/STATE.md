@@ -2,7 +2,7 @@
 
 current_lead: local_84c512dc-855e-4e49-ad8b-5d861c11713b Lead 39 · 14 Nov 05:2x IST (series 2; took over from Lead 38 (series 2, local_fac27a00) at ~305k, ~185k beyond its start read of ~120k, P-446); start read: measure with get_usage; hand over 200k beyond it
 
-updated: 2026-11-14 05:2x IST by **Lead 38 (series 2, local_fac27a00-…)** at hand-over to Lead 39 · weekly 32% at 05:20 (resets 20 Nov 04:30 IST) · milestone: **Works on main 93/98 (M2 60/60, M3 27/29, T 6/8)**; Bake (M3.5) walk 2 waits on BK-18 and BK-20; full MVP build (P-558) · rules: **`RULES.md`** (as of P-560) · this branch: `lead/2026-11-07-lead31`
+updated: 2026-11-14 05:2x IST by **Lead 39 (series 2, local_84c512dc-…)** after take-over from Lead 38 · weekly 32% at 05:20 (resets 20 Nov 04:30 IST) · milestone: **Works on main 93/98 (M2 60/60, M3 27/29, T 6/8)**; Bake (M3.5) walk 2 waits on BK-18 and BK-20; full MVP build (P-558) · rules: **`RULES.md`** (as of P-560) · this branch: `lead/2026-11-07-lead31`
 
 Older pointer lines (Tonight/Next 7 hours/M3 sections, Lead 33→34 block, older founder rules): `history/STATE-2026-11-13-2245-lead37s2-old-pointer-lines.md`.
 
@@ -13,6 +13,7 @@ Older pointer lines (Tonight/Next 7 hours/M3 sections, Lead 33→34 block, older
 3. **Lanes:** Lead B `local_9bced770` (local, own worktree) owns platform + front office, idle waiting on question 1 (expected), then shapes FO-5/FO-6, PF-6. **#1691 BK-18** (fix lane claude.ai `session_01Ln6TiUAB3328SyyeX4KjVt`): dequeued on a real regression, C8.3 on the checkpoint red (C8.3-18, C8.3-14c); fix pushed 03:49 (471f34fc2); next its diff-only Opus re-review, Approve line, relabel; nudge in its prompt box if quiet. One-day test on his private API copy (`session_01Ln6TiRaPVAthoParkAhT7W`) as Lead 37 left it.
 4. **Main:** merged tonight BK-22 #1698, BK-23 #1702, B151 #1706, DB-SPLIT #1709, PF-1 #1711, PF-2 #1712, BK-13 #1695, B170c #1692, PF-7 #1713. Works 93/98 (qa has not re-scored tonight's merges). **Nightly 13 Nov 06:43 IST was red** (BK-5 start BR-6 double-click; BK-3 frame 375 px sideways scroll); Lead 38's re-run (22:47) gave no verdict (suites timed out while runners were busy): **the 14 Nov 06:43 nightly decides; red → a fix row first.** No full-run dispatch while the queue is busy.
 5. **Shaped, waiting:** FO-8 (case side takes `prospect.won`, P-560; waits on FO-2, FO-2b, AUD-1). **Still yours to shape:** AUD-1 (`audit_event` + `firm_id`, insert-only trigger, `AuditPort.record(tx, …)`). Stream 4 `local_bb6b2d28`: Thu 19 Nov checkpoint, send the five daily confirmed counts.
+**Lead 39 live (05:2x 14 Nov):** start read ~111k (hand over at ~311k); check job f3876b4d at :13/:43. **#1691 BK-18:** round-7 Opus diff-only Approve on 839c5f82d (22:30 UTC), labelled, in Mergify's product queue (checking since 05:12 IST): nothing to nudge. **#1726:** CI green on 1473666, unlabelled: still waits on his word naming #1726. Nightly 06:43 not yet run.
 
 ## Founder asks (Lead 8, 10 Nov; P-450 (4): stays until ticked)
 | # | Ask (IST) | Status |
