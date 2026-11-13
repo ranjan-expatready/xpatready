@@ -361,6 +361,14 @@ export type Mode = "sqr" | "agent";
  *  `skipDocumentFacts` (Preview only for now, Lead Q2 29 Oct; the case default with M3's documents-first intake, C6.5):
  *  a fact a document on that person's checklist supplies is not asked (P-130); it names the document, or null to ask.
  *  What it skips is listed per person and document in `from_documents`. */
+/** QA-446 (P-510 (2)): the answers a section counts, in one place for the view's counts ("N answered · M to confirm") and
+ *  the representative's checklist (engine/runtime/review.ts confirmationsOf): each question's answer, or each row's of a
+ *  repeating group, plus the group's "none apply" while it has no rows (it answers the part). */
+export function sectionAnswers<A>(qs: { group: unknown; answer: A | null; rows: { answer: A | null }[] }[], group: { rows: number; none_apply: A | null } | null): A[] {
+  const answered = qs.flatMap((q) => (q.group ? q.rows.map((x) => x.answer) : [q.answer])).filter((a): a is NonNullable<A> => !!a) as A[];
+  return group && group.rows === 0 && group.none_apply ? [...answered, group.none_apply] : answered;
+}
+
 export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date(), groupAnswers: GroupAnswer[] = [], opts: { skipDocumentFacts?: (subjectId: string, fact: string) => string | null; background?: ReadonlySet<string>; partOrder?: false; decides?: Decides } = {}): QuestionnaireView {
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
   const caseSubject = people.find((p) => p.role === "case")!;
@@ -503,7 +511,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   };
   const sections = [...new Map(questions.map((q) => [`${q.subjectId}|${q.section}`, { subjectId: q.subjectId, about_label: q.about_label, section: q.section, title: q.section_title }])).values()].map((sec) => {
     const qs = questions.filter((q) => q.subjectId === sec.subjectId && q.section === sec.section);
-    const answered = qs.flatMap((q) => (q.group ? q.rows.map((x) => x.answer) : [q.answer])).filter((a): a is NonNullable<typeof a> => !!a);
+    const answered = sectionAnswers(qs, null);
     // A repeating group may have no rows (no previous country, no job); a started row needs all its required answers.
     // B155: an entry of a list relative asks only what the form has a box for in its row; an entry with no row on the form
     // asks everything (it goes on an extra sheet; break M1 on #1367).
@@ -513,7 +521,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     // (review r1d-none-apply M1); "none apply" counts as an answer of the part.
     const group = groupOf(qs), na = group && group.rows === 0 ? group.none_apply : null;
     if (group?.required && group.rows === 0 && !na?.value) missing.push(groupLabel(sec.title));
-    const all = na ? [...answered, na] : answered;
+    const all = sectionAnswers(qs, group);
     return { ...sec, questions: qs, answered: all.length, confirmed: all.filter((a) => a.confirmed).length, invalid: answered.filter((a) => a.problems.length).length, missing, group };
   });
   // Checks the answers trigger, on the question they concern; in the client's view only those on the client's parts.
