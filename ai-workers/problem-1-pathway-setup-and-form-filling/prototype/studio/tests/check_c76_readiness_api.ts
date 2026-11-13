@@ -113,10 +113,118 @@ ok("B9 pass (BR-21): the representative who did it all self-reviews, logged Self
 const two = await openCase(vv, [{ role: "principal", name: "Sample Client H", dob: yearsAgo(38) }], { representative: rep, caseOfficers: [rep] });
 const tg = (await prepare(two.id, rep)).p?.filings[0]?.id ?? "";
 const add = await call("POST", `/runtime/cases/${two.id}/team/officers`, { userId: officer }, rep);
+// BK-18 (QA-448): the other officer really works on the case — being named on the team is not work, so N4's refusal
+// stands on what the case holds (the officer's own answer), not on a team row.
+await answer(two.id, two.subjects["Sample Client H"], "person.passport_number", "ZX9999991", officer);
 const end = await call("POST", `/runtime/cases/${two.id}/team/officers/${rep}/end`, { reason: "Handing the case over (Sample)" }, rep);
 r = await call("POST", `/runtime/filings/${tg}/review`, { note: "Reviewed (Sample)", facts_hash: await fh(two.id, tg, rep) }, rep);
 const r2 = await call("POST", `/runtime/filings/${tg}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(two.id, tg, rep) }, rep);
-ok("N4 fail: a representative who prepared it with another officer (then left the officer list) cannot review it, as a second person or as Self-reviewed (409)", add.status < 300 && end.status < 300 && r.status === 409 && r2.status === 409 && count(`select count(*) from filing_review where filing_id='${tg}'`) === 0, [add.status, end.status, r.status, r2.status]);
+ok("N4 fail: a representative who prepared it with another officer who worked on it too (and then left the officer list) cannot review it, as a second person or as Self-reviewed (409)", add.status < 300 && end.status < 300 && r.status === 409 && r2.status === 409 && count(`select count(*) from filing_review where filing_id='${tg}'`) === 0, [add.status, end.status, r.status, r2.status]);
+
+// BK-18 (QA-448, P-525 (1), P-510 (4), P-154): walk 1's step S8 through the routes. The case team has a case officer who
+// does nothing; the representative opens the case, does the work and reviews it. The record is one person's: the
+// representative is asked for the statement (400) and the review is logged Self-reviewed, never as a second person's.
+const stamp = Date.now().toString(36);
+const newCase = async (ref: string, name: string, who: string) => {
+  const made = await call("POST", "/runtime/cases", { combinationId: vv, reference: `ACC-${ref}-${stamp}`, clientActor: CLIENT, principal: { displayName: name }, representative: rep, caseOfficers: [officer] }, who);
+  return { id: made.body?.id as string, subject: (made.body?.people ?? []).find((x: { role: string }) => x.role === "principal")?.subject_id as string, status: made.status };
+};
+const s8 = await newCase("BK18", "Sample Client W", rep);
+await answer(s8.id, s8.subject, "person.passport_number", "ZX9999992", rep); // the representative does the work
+const sg = (await prepare(s8.id, rep)).p?.filings[0]?.id ?? "";
+const asked = await call("POST", `/runtime/filings/${sg}/review`, { note: "Reviewed (Sample)", facts_hash: await fh(s8.id, sg, rep) }, rep);
+const said = await call("POST", `/runtime/filings/${sg}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(s8.id, sg, rep) }, rep);
+ok("BK-18 (QA-448) fail before, pass after: a case officer on the team who did nothing never makes the representative's own work a second person's review — the statement is asked for (400), then it is logged Self-reviewed", s8.status < 300 && asked.status === 400 && said.status === 200 && said.body?.kind === "self_reviewed", [s8.status, asked.status, said.status, said.body?.kind]);
+
+// BK-18 review B1 and M1: the case officer only opens the case; the representative does the work. Opening a case is not
+// preparing its filings, so the review is the representative's own (Self-reviewed), never refused as a second person's.
+const b1 = await newCase("BK18B1", "Sample Client V", officer);
+await answer(b1.id, b1.subject, "person.passport_number", "ZX9999993", rep);
+const b1f = (await prepare(b1.id, rep)).p?.filings[0]?.id ?? "";
+const b1Asked = await call("POST", `/runtime/filings/${b1f}/review`, { note: "Reviewed (Sample)", facts_hash: await fh(b1.id, b1f, rep) }, rep);
+const b1Did = await call("POST", `/runtime/filings/${b1f}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(b1.id, b1f, rep) }, rep);
+ok("BK-18 (review B1, M1) fail: opening a case is not preparing it — the representative who did the work self-reviews (400 then Self-reviewed), never a 409 naming a case officer who only opened it", b1Asked.status === 400 && b1Did.status === 200 && b1Did.body?.kind === "self_reviewed", [b1Asked.status, b1Did.status, b1Did.body?.kind, b1Asked.body?.detail]);
+
+// BK-18 review B2 / breaker B3: the record says what was true when the review was made. Work done afterwards (here the
+// case officer passing a warning with a reason, which leaves the review standing) never rewrites it.
+const b1Warn = (readinessOf((await prepare(b1.id, rep)).p, b1f)?.warns ?? []).find((w: { code: string }) => w.code !== "representative_review");
+const b1Passed = await call("POST", `/runtime/filings/${b1f}/warnings/${encodeURIComponent(b1Warn?.code ?? "")}/pass`, { reason: "The client sends it today (Sample)", key: b1Warn?.key }, officer);
+const b1After = readinessOf((await prepare(b1.id, rep)).p, b1f) as { reviewed?: { kind: string }; prepared_by?: string[] } | undefined;
+ok("BK-18 (review B2, breaker B3) fail: a case officer's later work does not turn a recorded self-review into a two-person record", b1Passed.status === 200 && b1After?.reviewed?.kind === "self_reviewed" && JSON.stringify(b1After?.prepared_by) === JSON.stringify([rep]), { passed: b1Passed.status, reviewed: b1After?.reviewed ?? null, prepared_by: b1After?.prepared_by ?? null });
+
+// BK-18 review 2 B1: nobody prepared it. A case officer opened the case and the representative reviews it; the record
+// names no preparer at all — never the person who only opened it — and the review is a second person's, not a self-review.
+const r2b1 = await newCase("BK18R2B1", "Sample Client X", officer);
+const r2b1f = (await prepare(r2b1.id, rep)).p?.filings[0]?.id ?? "";
+const r2b1Rev = await call("POST", `/runtime/filings/${r2b1f}/review`, { note: "Reviewed (Sample)", facts_hash: await fh(r2b1.id, r2b1f, rep) }, rep);
+const r2b1Rd = readinessOf((await prepare(r2b1.id, rep)).p, r2b1f) as { prepared_by?: string[]; stood_behind?: string[] } | undefined;
+ok("BK-18 (review 2 B1) fail: a case officer who only opened the case is never the record's preparer — with nobody's work on the case the record names none", r2b1Rev.status === 200 && r2b1Rev.body?.kind === "reviewed" && (r2b1Rd?.prepared_by ?? ["x"]).length === 0 && (r2b1Rd?.stood_behind ?? []).includes(officer), { status: r2b1Rev.status, kind: r2b1Rev.body?.kind, prepared_by: r2b1Rd?.prepared_by, stood_behind: r2b1Rd?.stood_behind });
+
+// BK-18 review 2 M3: changing the representative of record, assigning or ending a case officer is administration, not
+// work on the filings, so it never makes the person who did it a preparer.
+const r2m3 = await newCase("BK18R2M3", "Sample Client Y", officer);
+await answer(r2m3.id, r2m3.subject, "person.passport_number", "ZX9999996", "user-T"); // the second representative does the work
+const r2m3Chg = await call("PUT", `/runtime/cases/${r2m3.id}/team/representative`, { userId: "user-T", reason: "Handing the review over (Sample)" }, rep); // the firm admin, who does no work on it
+const r2m3f = (await prepare(r2m3.id, "user-T")).p?.filings[0]?.id ?? "";
+const r2m3Rev = await call("POST", `/runtime/filings/${r2m3f}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(r2m3.id, r2m3f, "user-T") }, "user-T");
+const r2m3Rd = readinessOf((await prepare(r2m3.id, "user-T")).p, r2m3f) as { prepared_by?: string[] } | undefined;
+ok("BK-18 (review 2 M3) fail: the person who changed the representative of record is not a preparer; the record names only who did the work", r2m3Chg.status < 300 && r2m3Rev.status === 200 && r2m3Rev.body?.kind === "self_reviewed" && JSON.stringify(r2m3Rd?.prepared_by) === JSON.stringify(["user-T"]), { change: r2m3Chg.status, review: r2m3Rev.status, kind: r2m3Rev.body?.kind, prepared_by: r2m3Rd?.prepared_by });
+
+// BK-18 review 2 M2: work on the forms themselves counts. The representative types the facts; the case officer makes the
+// copy and reads the validated copy back, so the review is no longer the representative's own (BR-8, 409).
+const r2m2 = await newCase("BK18R2M2", "Sample Client Z", rep);
+await answer(r2m2.id, r2m2.subject, "person.passport_number", "ZX9999997", rep);
+const copied = await validateRoundTrip(r2m2.id, "IMM 5257", r2m2.subject); // runs as the case officer
+const r2m2f = (await prepare(r2m2.id, rep)).p?.filings[0]?.id ?? "";
+const r2m2Rd = readinessOf((await prepare(r2m2.id, rep)).p, r2m2f) as { prepared_by?: string[] } | undefined;
+const r2m2Rev = await call("POST", `/runtime/filings/${r2m2f}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(r2m2.id, r2m2f, rep) }, rep);
+ok("BK-18 (review 2 M2) fail: the case officer who made the copy and read the validated copy back is a preparer, so the representative cannot review it as one person's work (409)", !!copied && (r2m2Rd?.prepared_by ?? []).includes(officer) && r2m2Rev.status === 409, { copied: !!copied, prepared_by: r2m2Rd?.prepared_by, review: r2m2Rev.status });
+
+// BK-18 review 3 B1: the review looking at the work is not the work. A finding the representative adds (or waives,
+// acknowledges or dismisses) while reviewing never makes them a preparer, so their own review is not refused as a
+// second person's and the record does not name them beside the person who really prepared it.
+const r3b1 = await newCase("BK18R3B1", "Sample Client F", officer);
+await answer(r3b1.id, r3b1.subject, "person.passport_number", "ZX9999998", officer); // the case officer prepares it
+const r3b1f = (await prepare(r3b1.id, rep)).p?.filings[0]?.id ?? "";
+const r3b1Add = await call("POST", `/runtime/cases/${r3b1.id}/findings`, { subject: r3b1.subject, severity: "MAJOR", note: "The passport number needs checking against the document (Sample)", filing: r3b1f }, rep);
+const r3b1Rev = await call("POST", `/runtime/filings/${r3b1f}/review`, { note: "Reviewed (Sample)", facts_hash: await fh(r3b1.id, r3b1f, rep) }, rep);
+const r3b1Rd = readinessOf((await prepare(r3b1.id, rep)).p, r3b1f) as { prepared_by?: string[] } | undefined;
+ok("BK-18 (review 3 B1) fail: a finding the representative adds while reviewing never makes them a preparer — the review stands and the record names only who prepared it", r3b1Add.status < 300 && r3b1Rev.status === 200 && r3b1Rev.body?.kind === "reviewed" && JSON.stringify(r3b1Rd?.prepared_by) === JSON.stringify([officer]), { add: r3b1Add.status, review: r3b1Rev.status, kind: r3b1Rev.body?.kind, prepared_by: r3b1Rd?.prepared_by });
+
+// BK-18 review 3 M1: a decision about how a form is filed is work on the filing, wherever its line is kept. The case
+// officer changes a form's channel with a written reason; the representative who typed the facts can no longer review
+// it as one person's work.
+const r3m1 = await newCase("BK18R3M1", "Sample Client G", rep);
+await answer(r3m1.id, r3m1.subject, "person.passport_number", "ZX9999999", rep);
+const r3m1View = (await prepare(r3m1.id, officer)).p as { version?: string; items?: { id: string; kind: string; channel?: string; accepts?: string[] }[] } | undefined;
+const r3m1Item = (r3m1View?.items ?? []).find((i) => i.kind === "form" && (i.accepts ?? []).includes("PAPER") && i.channel !== "PAPER");
+const r3m1Chan = await call("PATCH", `/runtime/items/${r3m1Item?.id}/channel`, { channel: "PAPER", reason: "The client prefers paper for this form (Sample)", version: r3m1View?.version }, officer);
+const r3m1f = (await prepare(r3m1.id, rep)).p?.filings[0]?.id ?? "";
+const r3m1Rd = readinessOf((await prepare(r3m1.id, rep)).p, r3m1f) as { prepared_by?: string[] } | undefined;
+const r3m1Rev = await call("POST", `/runtime/filings/${r3m1f}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(r3m1.id, r3m1f, rep) }, rep);
+ok("BK-18 (review 3 M1) fail: the case officer who decided how a form is filed is a preparer, so the representative cannot review it as one person's work (409)", r3m1Chan.status < 300 && (r3m1Rd?.prepared_by ?? []).includes(officer) && r3m1Rev.status === 409, { channel: r3m1Chan.status, detail: r3m1Chan.body?.detail, prepared_by: r3m1Rd?.prepared_by, review: r3m1Rev.status });
+
+// BK-18 review 4 M1: C9.2 Undo. The restored answer keeps the earlier author, so the person who pressed Undo is read
+// from the restore itself; undoing another person's answer is work on the case, and the record says so.
+const r4m1 = await newCase("BK18R4M1", "Sample Client H", rep);
+await answer(r4m1.id, r4m1.subject, "person.passport_number", "ZX9999001", rep);
+await answer(r4m1.id, r4m1.subject, "person.passport_number", "ZX9999002", rep);
+const r4m1Undo = await call("POST", `/runtime/cases/${r4m1.id}/changes/undo`, { subjectId: r4m1.subject, fact: "person.passport_number" }, officer);
+const r4m1f = (await prepare(r4m1.id, rep)).p?.filings[0]?.id ?? "";
+const r4m1Rd = readinessOf((await prepare(r4m1.id, rep)).p, r4m1f) as { prepared_by?: string[] } | undefined;
+const r4m1Rev = await call("POST", `/runtime/filings/${r4m1f}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(r4m1.id, r4m1f, rep) }, rep);
+ok("BK-18 (review 4 M1) fail: the case officer who undid an answer is a preparer, so the representative cannot sign for the filing as one person's work (409)", r4m1Undo.status < 300 && (r4m1Rd?.prepared_by ?? []).includes(officer) && r4m1Rev.status === 409, { undo: r4m1Undo.status, detail: r4m1Undo.body?.detail, prepared_by: r4m1Rd?.prepared_by, review: r4m1Rev.status });
+ok("BK-18 (review 4 M2) fail: the refusal says what really happened — somebody else at the firm worked on it, whoever they are, and names no role the case may not have", /worked on this filing and so did somebody else at the firm/.test(r4m1Rev.body?.detail ?? "") && !/another case officer/.test(r4m1Rev.body?.detail ?? ""), r4m1Rev.body?.detail);
+
+// BK-18 review M2 / breaker B2: work that leaves no answer of its own still counts. The case officer passes a warning
+// with a written reason; the representative who did the rest can no longer review it as a second person (BR-8, 409).
+const m2 = await newCase("BK18M2", "Sample Client U", rep);
+await answer(m2.id, m2.subject, "person.passport_number", "ZX9999994", rep);
+const m2f = (await prepare(m2.id, rep)).p?.filings[0]?.id ?? "";
+const m2Warn = (readinessOf((await prepare(m2.id, rep)).p, m2f)?.warns ?? []).find((w: { code: string }) => w.code !== "representative_review");
+const m2Pass = await call("POST", `/runtime/filings/${m2f}/warnings/${encodeURIComponent(m2Warn?.code ?? "")}/pass`, { reason: "The client sends it today (Sample)", key: m2Warn?.key }, officer);
+const m2Review = await call("POST", `/runtime/filings/${m2f}/review`, { self: true, note: "I prepared and reviewed this filing myself", facts_hash: await fh(m2.id, m2f, rep) }, rep);
+ok("BK-18 (review M2, breaker B2) fail: a second person's work that leaves no answer row (a warning passed with a reason) still makes them a preparer, so the review is refused as a second person's (409)", m2Pass.status === 200 && m2Review.status === 409, [m2Warn?.code, m2Pass.status, m2Review.status]);
 
 // B7: accepted-until takes a plain day only.
 const ed = sql(`select e.id from form_edition e join gov_form_def g on g.id=e.gov_form_def_id where g.form_key='IMM 5707' and e.channel <> 'ONLINE' limit 1`);
