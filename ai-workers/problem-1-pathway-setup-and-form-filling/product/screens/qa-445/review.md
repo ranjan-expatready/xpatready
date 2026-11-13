@@ -184,3 +184,43 @@ Verdict: Block
   * A summary lost on a shift-before press is recorded as "direct" and passes.
   * Fix: assert the summary on not-done presses, assert one such shift-before press ran, and show a pin-removed run failing.
 * M1, m1: fixed. m2: mostly fixed (screenshots and the "M2 fixed" wording are Should). m3: note, unchanged.
+
+## Review round 3 (diff 86b337d0..23d6745b)
+Diff-only review (third round, authorised by the tech lead) by an independent reviewer with fresh context, who did not build or review it before. 13 Nov 2026. **Commit reviewed: `23d6745b008d75e5bca0584c15681cf66dbaca42`** (`git rev-parse HEAD`). Diff: `check_qa445_every_part_browser.cjs` +19/−8 and this file (round 2's notes, not re-judged). Read-only: no app copy started, :4400 untouched, live AI off, US$0.
+
+**What I read and ran**
+* The diff; `questionnaire.tsx` at head around `Sqr` (pin, `go`, `moved`, `SqrPart key=partKey`) and `leave()` (the summary is set only after `save()` has reloaded the view, and only while the part is still mounted, `alive.current`).
+* The builder's `shift4.sh` and logs (`shift4-head.log` 8/8, `shift4-nopin.log` 7/1, `shift4-main.log` 6/2). `q-head.tsx` is byte-identical to head's `questionnaire.tsx`. `q-nopin.tsx` differs from it by one line only, `const moved = false && …`, which is the "moved forced to −1" that round 2 asked for. The logs' labels match head's labels. `node --check` passes. No label is referenced outside the file (`selection.tsv` and `graph.json` name the file only).
+
+**1. The summary case fails without the pin, and I found no way for it to pass falsely.**
+* *Why it fails without the pin:* `SqrPart` is keyed by `partKey`. Without the pin, the reloaded view puts another part at `?part=N`, so the open part unmounts, `leave()` returns on `!alive.current`, and no summary is ever set. The log shows this: "Part 22 of 47 · Your parent 1", `viaSummary:false`, `sameFor:false`. With the pin, the key stays the same and the summary shows on the same part.
+* *The `left` wait:* it resolves on the summary text, or on a change of title or "Answering for", with no busy button. It cannot resolve on the summary before the reload. `leave()` sets the summary after `save()`, which awaits the refetch. So when the summary shows, the shown index is already the pinned one. Any race in reading `now` early can only give a false fail, never a false pass, because `landedKey` is looked up in the reloaded view by the shown number.
+* *`viaSummary`:* it is read after the wait, from the text of `main`, so it is not a timing artefact.
+* *Same part:* the assertion is the conjunction `left && viaSummary && title === pick.title && landedKey === pick.key && sameFor`. The title alone would be ambiguous, because the principal and the child both have "Personal details". The key, found by the shown number in the client's own view, and "Answering for" resolve that. `sameFor` would be trivially true if both lines were missing, but the child's part has one, and the no-pin run shows it changing (`sameFor:false`).
+* *"moved" proves a real shift:* it requires `decided > 0`, and the pick's index in the reloaded view must differ from its number at opening. The no-pin run independently confirms the shift: 54 → 47 parts, a different part at the old address. The m3 dependency (screen number vs oracle) is unchanged and is covered by the walk's `agrees()`.
+* This meets round 2's fixes 1–3 through "a shift variant through the summary", which round 2 allowed. The fix is pinned by a test that fails when the pin is removed.
+
+**2. Nothing in the diff weakens the earlier checks.**
+* The direct case's pick, wait and assertions are unchanged apart from the "(direct)" labels.
+* The summary case `continue`s after closing its context, so it skips only the direct-only assertions.
+* The walk and `QA445_ONLY` are untouched. Without `QA445_ONLY` (CI), the shift scenario runs twice, which adds one case and one browser context.
+* Note: for this commit the builder ran only `QA445_ONLY=shift`. The walk code is unchanged from round 2's full 21/21 run (`full-head.log`); CI runs the full check.
+
+**3. The header usage line is right.** "QA445_ONLY=shift runs only the shift scenarios" matches the code: only the exact value `shift` narrows the run, and there are now two scenarios. "QA445_TRAIL=1 prints each press" also matches: any non-empty value works, so `=1` is fine.
+
+**Nits (Should, not blocking)**
+* Line 62's comment still says "runs only the last scenario"; it now runs two.
+* The comment above the shift loop still opens with "a press that leaves directly"; the summary case is described only at its `pick`.
+* As round 2 noted, in the full walk a summary lost on a shift-before press is still recorded as "direct". The pin now has its own failing test, so this is optional hardening.
+* Round 2's Should items stay open: no before/after screenshots, and the PR body's "M2 fixed" wording.
+
+**Journey (reviewer role, from the logs and code; no app walk):**
+* J1 holds with a check on both ways out: direct to the next part not done, and kept on the same part with its summary.
+* Task completed: 1. Next step obvious: 1. Plain words: 1. Feedback and state: 1. Correct data: 1. Visual quality: 1. Trust and sources: 1.
+* Error recovery: ½, for the pre-existing dirty-Back edge noted in round 2.
+* Accessibility and screen sizes: ½, and speed: ½ (not walked, not measured).
+* **8.5/10, a pass (no 0).** That is ½ above round 2, because the summary way out is now held by a check that fails when it breaks. Not tested: a real screen reader, keyboard-only, 1024 px / 200 % zoom, timings, an intended user's unaided walk (D17/D20 stay with the founder).
+
+No open Blocker or Major. M1 was fixed in round 2. M2's rest is now fixed: the summary case fails with the pin removed and on main, and passes on head.
+
+Verdict: Approve 23d6745b008d75e5bca0584c15681cf66dbaca42
