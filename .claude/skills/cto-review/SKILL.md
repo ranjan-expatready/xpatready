@@ -38,6 +38,8 @@ DORA four keys as the base (objective, straight from GitHub for both sides, no s
 5. **Our struggles** and the next three actions (owner = a role, a date in IST).
 6. **Items to raise with the partner team:** neutral wording, the evidence, one offer of help each.
 
+7. **Forecast refresh (P-517):** rerun the Monte Carlo on throughput (Vacanti) against the remaining minimum list: 10,000+ runs, resampling real daily throughput from the last 4 weeks, by item class (re-home, finish, new, extension). Before the proof, use the slowdown range in the private folder; after it, use the measured slowdown. Cap the rate at the partner's review capacity (their merged pull requests per day). Show the 50% and 85% dates and the chance by launch against the plan date. Name the throughput sample and its days; it must be build rate, not confirmations of earlier work (P-500). If the 85% date moves more than a week, that goes in the end-of-turn box.
+
 The founder's own module is reported apart: he ships it his way in his folder; code that lands on their main line still passes their gates.
 
 ## Share version (only when the founder asks)
