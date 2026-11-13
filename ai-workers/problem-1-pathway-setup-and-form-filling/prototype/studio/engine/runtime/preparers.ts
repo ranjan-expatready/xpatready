@@ -4,8 +4,24 @@
 
 /** One act a person did on the case: who, when they first did it (null when the row keeps no time), and whether it is a
  *  `weak` act — opening the case, or sending the filing for review. Neither is preparing the filing: one chooses the
- *  combination and types a name, the other moves work to the representative. */
-export type WorkAct = { actor: string; at: Date | string | null; weak?: boolean };
+ *  combination and types a name, the other moves work to the representative. `fact` marks an answer the person typed
+ *  (api/src/case-work.ts), the one kind of work C8.3's rounds can also judge form by form (`ownTypingLeftToForms`). */
+export type WorkAct = { actor: string; at: Date | string | null; weak?: boolean; fact?: boolean };
+
+/** BR-8 in C8.3's rounds (#1691's merge check, C8.3-18): the reviewer's own typing since the base a round compares with
+ *  (the previous round's freeze or this round's send; the approval, for a one-click re-approve) is judged form by form —
+ *  a fact a form of *this* filing reads makes them its author (`changedByReviewer`, review M3, M2, 13b) — so it is left
+ *  out of the case-wide work record here. Without this, a fact the representative corrected on the principal's filing
+ *  while reviewing it made them an author of the spouse's filing too, and refused a re-approval of a form only the case
+ *  officer changed (P-412 F1), which `main` allowed. Typing before the base still counts case-wide (the case is the
+ *  grain, QA-295), as does everything else they did; so does everyone else's work. `at` is a person's first typed
+ *  answer on the case (one row per person and kind), so a person whose first typing is after the base typed nothing
+ *  before it. */
+export const ownTypingLeftToForms = (acts: WorkAct[], actor: string, since: Date | string | null | undefined): WorkAct[] => {
+  const base = since ? new Date(since).getTime() : NaN;
+  if (!Number.isFinite(base)) return acts;
+  return acts.filter((a) => !(a.fact && a.actor === actor && a.at && new Date(a.at).getTime() > base));
+};
 
 const mineUntil = (acts: WorkAct[], staff: (id: string) => boolean, until?: Date | string | null) => {
   const end = until ? new Date(until).getTime() : null;

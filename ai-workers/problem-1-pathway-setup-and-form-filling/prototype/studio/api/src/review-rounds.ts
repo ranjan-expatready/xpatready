@@ -25,7 +25,7 @@ import { CasePrepare, type ReviewBasis, type ReviewBasisForm } from "./case-prep
 import type { ReadinessView } from "./readiness-inputs.ts";
 import { reviewItemsOf } from "./review-items.ts";
 import { caseWork } from "./case-work.ts"; // BK-18 (QA-448): who really prepared the filing
-import { authorsFor, behindOf, preparersOf } from "../../engine/runtime/preparers.ts";
+import { authorsFor, behindOf, ownTypingLeftToForms, preparersOf } from "../../engine/runtime/preparers.ts";
 import { busyWords } from "./busy.ts";
 import { newestPin } from "./stage-scope.ts"; // C6.17 (BR-9)
 
@@ -381,8 +381,9 @@ export class ReviewRounds {
     const since = stored.flatMap((s) => { const f = forms.find((x) => x.item === s.itemId); return f && !f.waits ? changesOf(snaps.get(baseOf(s) ?? "") ?? [], f.facts, basis.words, typist) : []; });
     const frames = await this.framesOf(forms);
     // CI on #1247: an answer the representative typed since then that is not confirmed yet counts too (typedSince).
-    const authored = changedBy(since, actor.id) || this.typedBy(basis, forms, actor.id, prev?.round.sentAt ?? round.sentAt);
-    const decided = await this.approve(actor, c, { filing: b.filing, rep, self: b.self, changedByReviewer: authored, view },
+    const base = prev?.round.sentAt ?? round.sentAt;
+    const authored = changedBy(since, actor.id) || this.typedBy(basis, forms, actor.id, base);
+    const decided = await this.approve(actor, c, { filing: b.filing, rep, self: b.self, changedByReviewer: authored, ownSince: base, view },
       async (tx, review, kind) => {
         const [r] = await tx.$queryRaw<{ status: RowStatus }[]>`SELECT status FROM review_round_filing WHERE id = ${row.id}::uuid FOR UPDATE`;
         if (nextStatus(r.status, "approve") === null) refuse({ status: 409, detail: "This filing was decided meanwhile. Reload." });
@@ -395,12 +396,14 @@ export class ReviewRounds {
 
   /** BR-4 with C7.6: the licence, the self-review rule (BR-8) and the filing_review row C7.6 and C8.2 read, written
    *  under the case's row lock with the round's own writes (`write`). Shared by decision, reapprove and oneStep (M1). */
-  private async approve(actor: Actor, c: Reached, x: { filing: string; rep: string; self: unknown; changedByReviewer: boolean; view: { readiness: ReadinessView[] }; after?: "send" | "approval" }, write: (tx: Tx, reviewId: string, kind: "reviewed" | "self_reviewed") => Promise<string>) {
+  private async approve(actor: Actor, c: Reached, x: { filing: string; rep: string; self: unknown; changedByReviewer: boolean; ownSince: Date; view: { readiness: ReadinessView[] }; after?: "send" | "approval" }, write: (tx: Tx, reviewId: string, kind: "reviewed" | "self_reviewed") => Promise<string>) {
     // BK-18 (QA-448): who prepared it is the case's own work record, not its team list (break N4 stands: a person who
     // worked on it is an author whether or not they are still a case officer). Opening the case or sending a filing for
     // review prepares nothing (review 2 B1, M1).
-    const w = await caseWork(this.db, c.id);
-    const prepared = authorsFor(actor.id, preparersOf(w.acts, w.staff), behindOf(w.acts, w.staff));
+    // #1691's merge check (C8.3-18): the reviewer's own typing since this round's base is judged form by form
+    // (`changedByReviewer`), never case-wide, so a fact corrected on another filing does not make them this one's author.
+    const w = await caseWork(this.db, c.id), acts = ownTypingLeftToForms(w.acts, actor.id, x.ownSince);
+    const prepared = authorsFor(actor.id, preparersOf(acts, w.staff), behindOf(acts, w.staff));
     const firm = this.firmOf(c), licence = firm ? userIn(firm, actor.id)?.licence ?? null : null;
     const sr = selfReviewOf({ actor: actor.id, prepared, solo: !!firm?.solo, changedByReviewer: x.changedByReviewer, self: x.self, after: x.after });
     if ("problem" in sr) refuse(sr.problem);
@@ -450,8 +453,9 @@ export class ReviewRounds {
     const carry = { stamps: new Map(stored.filter((s) => stampCurrent(s.stampedAt ? { hash: s.stampHash, by: row.representative, file: { kind: s.stampFileKind, sha256: s.stampFileSha256 } } : null, { hash: forms.find((f) => f.item === s.itemId)?.hash ?? null, representative: rep, validatedSha: forms.find((f) => f.item === s.itemId)?.validatedSha ?? null }).current).map((s) => [s.itemId, s])), ticks: new Map(mine.map((k) => [k.itemKey, { by: k.tickedBy, at: k.tickedAt }])) };
     const unticked = checks.filter((k) => k.source !== "form" && k.tickedBy !== rep).map((k) => k.itemKey);
     let made: { id: string; number: number } | null = null;
-    const authored = changedBy(since, actor.id) || this.typedBy(basis, forms.filter((f) => changed.some((w) => w.item === f.item)), actor.id, row.decidedAt ?? round.sentAt);
-    const decided = await this.approve(actor, c, { filing: b.filing, rep, self: b.self, changedByReviewer: authored, view, after: "approval" }, async (tx, review, kind) => {
+    const base = row.decidedAt ?? round.sentAt;
+    const authored = changedBy(since, actor.id) || this.typedBy(basis, forms.filter((f) => changed.some((w) => w.item === f.item)), actor.id, base);
+    const decided = await this.approve(actor, c, { filing: b.filing, rep, self: b.self, changedByReviewer: authored, ownSince: base, view, after: "approval" }, async (tx, review, kind) => {
       if (await tx.reviewRoundFiling.findFirst({ where: { filingId: b.filing, OR: [{ filingRound: { gt: row.filingRound } }, { status: { in: ["sent", "under_review"] } }] }, select: { id: true } })) refuse({ status: 409, detail: "This filing was sent or re-approved meanwhile. Reload." });
       const { n, per } = await this.nextNumbers(tx, c.id, [b.filing]);
       const r2 = await tx.reviewRound.create({ data: { workspaceId: c.workspaceId, caseId: c.id, number: n, kind: "reapprove", sentBy: actor.id } });

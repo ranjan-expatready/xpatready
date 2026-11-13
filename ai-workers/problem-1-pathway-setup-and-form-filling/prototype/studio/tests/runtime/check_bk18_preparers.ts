@@ -2,7 +2,7 @@
 // who really prepared a case's filings, and what the filing's record says. Each rule has a passing and a failing case.
 // Proves C7.6's record and C8.3's BR-8 author rule. No database, no server, no model call (US$0). Sample values only.
 //   tsx studio/tests/runtime/check_bk18_preparers.ts
-import { authorsFor, behindOf, preparersOf, reviewRecordOf } from "../../engine/runtime/preparers.ts";
+import { authorsFor, behindOf, ownTypingLeftToForms, preparersOf, reviewRecordOf } from "../../engine/runtime/preparers.ts";
 import { selfReviewOf } from "../../engine/runtime/review.ts";
 import { recordedPeople } from "../../engine/runtime/submission-record.ts";
 import { recorder } from "./api.ts";
@@ -88,5 +88,18 @@ ok("C8.2 BK-18 fail: the reviewer is never named as the other person who prepare
   recordedPeople(REVIEW, team, REP, at(50), [REP, REP2]).preparedBy === REP2);
 ok("C8.2 BK-18 pass: with nobody's work on the case the earlier rule stands (QA-295: the case team's officer)",
   recordedPeople(REVIEW, team, REP, at(50), []).preparedBy === OFF);
+
+// C8.3 BR-8 (#1691's merge check, C8.3-18): the reviewer's own typing since the round's base is judged form by form
+// (changedByReviewer), never case-wide; their earlier typing, their other work and everyone else's still count.
+const SENT = at(20), RE = [{ actor: OFF, at: at(2), fact: true }, { actor: REP, at: at(25), fact: true }];
+const authorsAt = (acts: typeof RE, since: Date | null) => { const a = ownTypingLeftToForms(acts, REP, since); return authorsFor(REP, preparersOf(a, staff), behindOf(a, staff)); };
+ok("C8.3 BK-18 pass (C8.3-18): a fact the representative typed after the round's base (on another filing of the case) leaves them no author: the officer's change is re-approved as a second person's",
+  !authorsAt(RE, SENT).has(REP) && "kind" in selfReviewOf({ actor: REP, prepared: authorsAt(RE, SENT), solo: false, changedByReviewer: false, self: undefined, after: "approval" }));
+ok("C8.3 BK-18 fail: without the base (C7.6's one-step route) the same typing is case-wide work: the representative is an author with the officer (409)",
+  authorsAt(RE, null).has(REP) && "problem" in selfReviewOf({ actor: REP, prepared: authorsAt(RE, null), solo: false, changedByReviewer: false, self: true }));
+ok("C8.3 BK-18 fail (13b): typing before the base still counts case-wide: author with the officer",
+  authorsAt([{ actor: OFF, at: at(2), fact: true }, { actor: REP, at: at(15), fact: true }], SENT).has(REP));
+ok("C8.3 BK-18 fail: only the reviewer's own typing is left to the forms — their other work after the base, and the officer's typing after it, still count",
+  authorsAt([{ actor: OFF, at: at(2), fact: true }, { actor: REP, at: at(25) }], SENT).has(REP) && preparersOf(ownTypingLeftToForms([{ actor: OFF, at: at(25), fact: true }], REP, SENT), staff).join() === OFF);
 
 process.exit(summary() ? 1 : 0);
