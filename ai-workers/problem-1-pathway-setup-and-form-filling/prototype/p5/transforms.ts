@@ -217,13 +217,17 @@ export function runTransform(transform: string | undefined, value: unknown, box:
       const own = !ctx.ownFact || m[1] === ctx.ownFact, mine = own ? v : ctx.fact?.(m[1]); if (!own && !present(mine)) return hand(`${m[1]} is not confirmed, so it cannot be compared`);
       const other = ctx.fact?.(m[2]); if (!present(other)) return hand(`${m[2]} is not confirmed, so it cannot be compared`); v = same(mine, other); continue;
     }
-    // BK-22 (#1695 C1): "derive: Y if passport country of issue = 206 (ISR (Israel)), else N": Yes when the value is the
-    // code, its letters or its name; No for another country (a name or a code); a list or a record goes by hand.
+    // BK-22 (#1695 C1): "derive: Y if passport country of issue = 206 (ISR (Israel)), else N": No for another country (a
+    // name or a code): the form's Yes cannot hold. The named country itself goes by hand (review M2 on #1698): the form asks
+    // more than the country ("Is this a national Israeli passport?"; Lead 35 on #1363 makes it the person's own answer on
+    // IMM 5257), so an Israeli travel document that is not a national passport is never a silent Yes. A list or a record
+    // goes by hand.
     if ((m = /^derived:[\w.]+ is one of (.+)$/.exec(s))) {
       if (typeof v !== "string" && typeof v !== "number") return hand(`not a single answer: ${JSON.stringify(v)}`);
       const t = String(v).trim(), alts = m[1].split("|").map((x) => x.toLowerCase());
       if (!/^[A-Za-z0-9][A-Za-z0-9 .'()-]*$/.test(t)) return hand(`not a country: ${t}`);
-      v = alts.includes(t.toLowerCase()) || alts.includes((ISO3[t.toUpperCase()] ?? "").toLowerCase()); continue;
+      if (alts.includes(t.toLowerCase()) || alts.includes((ISO3[t.toUpperCase()] ?? "").toLowerCase())) return hand(`the value is ${t}: the form asks more than the country (for example whether it is a national passport), so a person answers it`);
+      v = false; continue;
     }
     // BK-22 (#1695 C1, IMM 1295): "derive:country calling code is (not) 1" on the box's own phone.
     if ((m = /^derive: ?country calling code is (not )?1$/.exec(s))) { const cc = String((v as Phone)?.country_code ?? "").replace(/\D/g, ""); if (!cc) return hand("phone has no country calling code"); v = (cc === "1") !== !!m[1]; continue; }
@@ -344,7 +348,8 @@ export function runTransform(transform: string | undefined, value: unknown, box:
  *  Field map review flags them before a map is accepted. Judged by the executor itself: a step is run alone on a sample
  *  value, and one that reaches "not in the executable set" is listed; any other outcome (a value, by hand for the value's
  *  sake, blank) means the step is understood. Pure. */
+const PROBES: unknown[] = ["x", { country_code: "1", number: "4165550100" }]; // review m1 on #1698: a North American number reaches phone_part:nanp_*
 export function stepsNotRun(transform: string | null | undefined, ownFact?: string): string[] {
   if (transform === null || transform === undefined || !transform.trim()) return [];
-  return canonicalSteps(transform, ownFact).filter((s) => { const o = runTransform(s, "x", {}, { ownFact, fact: () => "x" }); return "hand" in o && /is not in the executable set/.test(o.reason); });
+  return canonicalSteps(transform, ownFact).filter((s) => PROBES.some((v) => { const o = runTransform(s, v, {}, { ownFact, fact: () => "x" }); return "hand" in o && /not in the executable set/.test(o.reason); }));
 }

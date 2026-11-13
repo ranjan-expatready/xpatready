@@ -23,7 +23,7 @@ import { lockItem, refuseRetired } from "./library-items.ts";
 import { checkCondition } from "../../engine/validate.ts";
 import { isRuleWhy, nearMatches } from "../../engine/near.ts";
 import { p121Rating, P121_WHY, type Rateable } from "../../engine/agreement.ts";
-import { STEPS_RULE } from "../../engine/field-map-rounds.ts";
+import { stepsNotRunWhy } from "../../engine/field-map-rounds.ts";
 import { aiReadsIdentity, identityOf } from "../../engine/identity-documents.ts";
 import { canonical } from "../../../contracts/rules.ts";
 import { fieldsOf } from "../../engine/masters-ai.ts";
@@ -233,11 +233,6 @@ async function acceptOnItsPage(tx: Tx, r: Row): Promise<string> {
   const best = (w.candidates ?? []).filter((c) => c.score >= 0.55).sort((x, y) => y.score - x.score)[0];
   if (!inLibrary && best) fail(`"${nameOf(r.payload as ProposalPayload, r.identityKey)}" makes a new shared field while the library has one that could fit (${best.key}): decide it on its form-field page, with a reason.`, HttpStatus.CONFLICT);
   return key;
-}
-
-/** BK-22 (#1695 C1): the words of an item's failed "steps the filler runs" rule (the draft round's), or null. */
-export function stepsNotRunWhy(rules: unknown): string | null {
-  return (Array.isArray(rules) ? (rules as { rule?: string; passed?: boolean; why?: string | null }[]) : []).find((x) => x?.rule === STEPS_RULE && x.passed === false)?.why ?? null;
 }
 
 /** The old review row shape the field-map page reads (web/src/pages/job.tsx), from a ProposalItem: 1b replaces the page. */

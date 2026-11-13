@@ -24,9 +24,14 @@ export function unrunnableWhy(bad: { box: string; steps: string[] }[]): string |
   if (!bad.length) return null;
   const steps = [...new Set(bad.flatMap((x) => x.steps))], cut = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
   const named = `${steps.slice(0, 2).map((x) => `"${cut(x, 60)}"`).join(", ")}${steps.length > 2 ? ", …" : ""}`;
-  const say = (where: string) => `The form filler cannot run ${steps.length === 1 ? "a step" : `${steps.length} steps`} (${named}) of ${plural(bad.length, "form field")}${where}: filled as drafted, ${bad.length === 1 ? "it is" : "they are"} left to write by hand on every case.`;
+  const say = (where: string) => `The form filler cannot run ${steps.length === 1 ? "a step" : `${steps.length} steps`} (${named}) of ${plural(bad.length, "form field")}${where}: filled as drafted, a case that answers ${bad.length === 1 ? "it" : "them"} leaves ${bad.length === 1 ? "it" : "them"} to write by hand.`;
   const full = say(` (first: "${cut(bad[0].box, 50)}")`);
   return full.length <= RULE_WHY_MAX ? full : cut(say(""), RULE_WHY_MAX);
+}
+/** BK-22: the words of an item's failed "steps the filler runs" rule (the draft round's), or null: the review row shows
+ *  them on the item (api/src/proposals.ts reviewRow, web/src/pages/job.tsx). Pure. */
+export function stepsNotRunWhy(rules: unknown): string | null {
+  return (Array.isArray(rules) ? (rules as { rule?: string; passed?: boolean; why?: string | null }[]) : []).find((x) => x?.rule === STEPS_RULE && x.passed === false)?.why ?? null;
 }
 export type MapAgreement = { agreement: "agreed" | "differ"; check: MapField | null; why: string | null };
 export type MapRule = { rule: string; passed: boolean; why: string | null };

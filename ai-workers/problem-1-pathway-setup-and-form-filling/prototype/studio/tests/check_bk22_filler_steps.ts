@@ -10,7 +10,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { canonicalSteps, runTransform, sameAsOf, stepsNotRun, type Box, type Context, type Outcome } from "../../p5/transforms.ts";
-import { mapRules, RULE_WHY_MAX, STEPS_RULE, type MapField } from "../engine/field-map-rounds.ts";
+import { mapRules, RULE_WHY_MAX, STEPS_RULE, stepsNotRunWhy, type MapField } from "../engine/field-map-rounds.ts";
 import { p121Rating } from "../engine/agreement.ts";
 import { formValues, sameAsLeavesRowEmpty, type BoxResult, type InventoryBox } from "../engine/form-values.ts";
 
@@ -71,8 +71,10 @@ ok("BK-22 fail: the same step is blank for a North American number (its area-cod
 
 const ISR = "derive: Y if passport country of issue = 206 (ISR (Israel)), else N; yes_no_code:Y/N";
 const isrBox = boxOf("imm1294e", "Passport[0].IsraelPassportIndicator[0]"), pc = (v: unknown) => runTransform(ISR, v, isrBox, own("person.passport_country_of_issue", {}));
-ok("BK-22 pass: \"derive: Y if passport country of issue = 206 (ISR (Israel)), else N\" gives Y for 206, ISR or Israel and N for another country [IMM 1294]",
-  val(pc("ISR")) === "Y" && val(pc("Israel")) === "Y" && val(pc("206")) === "Y" && val(pc("IND")) === "N" && val(pc("India")) === "N");
+ok("BK-22 pass: \"derive: Y if passport country of issue = 206 (ISR (Israel)), else N\" gives N for a passport of another country (the form's Yes cannot hold) [IMM 1294]",
+  val(pc("IND")) === "N" && val(pc("India")) === "N" && val(pc("CAN")) === "N");
+ok("BK-22 fail (review M2 on #1698): an Israeli passport (206, ISR, Israel) goes by hand, never a silent Yes: the form asks whether it is a national Israeli passport, a person's answer (Lead 35 on #1363)",
+  ["ISR", "Israel", "206"].every((x) => /a person answers it/.test(handWhy(pc(x)) ?? "")));
 ok("BK-22 fail: a list or a record is not a country: by hand; and the step on another fact than the box's own stays not executable",
   /not a single answer/.test(handWhy(pc(["ISR", "IND"])) ?? "") && notExec(runTransform(ISR, "ISR", isrBox, own("person.citizenship", {}))));
 
@@ -148,6 +150,8 @@ ok("BK-22 fail: sameAsOf is null for a step with no yes/no code after it, and fo
 ok("BK-22 pass: stepsNotRun lists nothing for every step above (the Study permit's maps as drafted)",
   [DOLLARS, STREET, SAME_COR, SAME_MAIL, CC1, CCN, FAX1, NAT, ISR, CTRY, PROV, SAME95, REL, `${CL("sex")}(F Female=Female)`, "address_part:unit", "derive:country calling code is not 1->check:1/0"].every((t) => !stepsNotRun(t, /COR|applying/.test(t) ? "person.applying_from_country" : /passport/.test(t) ? "person.passport_country_of_issue" : "person.residential_address").length)
   && !stepsNotRun(COR95, "person.applying_from_country").length);
+ok("BK-22 fail (review m1 on #1698): the North American phone parts the filler leaves by hand for a +1 number are flagged too",
+  JSON.stringify(stepsNotRun("phone_part:nanp_area_code", "person.phone_number")) === JSON.stringify(["phone_part:nanp_area_code"]));
 ok("BK-22 fail: stepsNotRun names a seeded unrunnable step, and only it (\"address_part:moon_phase\", \"select:previous_residence_period\")",
   JSON.stringify(stepsNotRun("address_part:moon_phase; as_is", "person.residential_address")) === JSON.stringify(["address_part:moon_phase"]) && JSON.stringify(stepsNotRun("select:previous_residence_period; date:YYYY-MM-DD", "person.residence_country")) === JSON.stringify(["select:previous_residence_period"]));
 {
@@ -157,7 +161,10 @@ ok("BK-22 fail: stepsNotRun names a seeded unrunnable step, and only it (\"addre
   const badRule = bad.find((r) => r.rule === STEPS_RULE);
   ok("BK-22 pass: Field map review's rule \"steps the filler runs\" passes for a drafted step the filler runs", good?.passed === true && good.why === null, good);
   ok("BK-22 fail: a seeded unrunnable step fails the rule, in words that name the step and the form field and say it is left to write by hand",
-    badRule?.passed === false && /"address_part:moon_phase"/.test(badRule.why ?? "") && /"Country"/.test(badRule.why ?? "") && /write by hand/.test(badRule.why ?? ""), badRule);
+    badRule?.passed === false && /"address_part:moon_phase"/.test(badRule.why ?? "") && /"Country"/.test(badRule.why ?? "") && /a case that answers it leaves it to write by hand/.test(badRule.why ?? ""), badRule);
+  // Review m5 on #1698: the review row (api/src/proposals.ts reviewRow → the item card's data-steps-not-run line) carries the words.
+  ok("BK-22 pass and fail (review m5): the review row's stepsNotRun is the failed rule's words, and null when the rule passed or is missing",
+    stepsNotRunWhy(bad) === badRule?.why && stepsNotRunWhy(mapRules(f(CTRY), new Set(["f.Country"]), more)) === null && stepsNotRunWhy(undefined) === null && stepsNotRunWhy([{ rule: `checker_${STEPS_RULE}`, passed: false, why: "x" }]) === null);
   // Review queue contract: a rule's words are at most 300 characters (IMM 1295's draft, with 12 such steps, was refused whole).
   const many: MapField = { proposedKey: "person.residence_country", proposedType: "code", boxes: Array.from({ length: 12 }, (_, i) => ({ data_path: `f.Row${i}.Country`, person: "subject", row: i, transform: `select:previous_residence_period_number_${i}_${"x".repeat(80)}; code_list:imm1295.country_cor`, caption: "C".repeat(120) })) };
   const long = mapRules(many, new Set(many.boxes.map((b) => b.data_path)), more).find((r) => r.rule === STEPS_RULE);
