@@ -25,6 +25,7 @@ import { isFilingFact } from "../../engine/resolver.ts";
 import { ONCE_WORDS } from "../../engine/field-scope.ts";
 import { linkedOf } from "./employer-cases.ts";
 import { awaitsClient, backgroundFacts, CLIENT_RECONFIRM, OFFICER_ENTRY } from "../../engine/runtime/background.ts";
+import { isVerified, mustVerifyFacts } from "../../engine/runtime/must-verify.ts"; // C7.9 (QA-446: Confirm section verifies unchecked must-verify facts)
 import { backgroundBlockOf } from "./background-questions.ts";
 import { Programs } from "./programs.ts";
 import { pinChain } from "../../engine/runtime/release-update.ts";
@@ -868,7 +869,15 @@ export class Runtime {
     const firmGives = new Set(now.filter((x) => x.channel === FIRM_RECORD && x.subjectId === b.subjectId).map((x) => x.field));
     const shownSections = caseView(s, this.peopleOf(c), now, nowRows, "agent", at, nowGroups).sections.filter((x) => x.subjectId === b.subjectId && x.section === section);
     const listed = new Set(shownSections.flatMap((x) => x.questions.map((q) => q.fact)));
-    const onList = new Set(shownSections.flatMap((x) => sectionAnswers(x.questions, x.group)).filter((a) => !a.confirmed).map((a) => a.id));
+    // QA-446 (P-510 (2)): the officer confirms what is on the Confirm list, and (C7.9, SA-1B-260 r3) a fact the release marks
+    // "must verify before filing" that no one on staff has checked yet, even when the client declared it: that check is
+    // the officer's (a value checked against its document), and Ready to file's CRITICAL line waits for it.
+    const mv = mustVerifyFacts(s);
+    const unchecked = (fact: string, a: { status: string; channel: string; answered: { channel: string } | null }) => mv.has(fact) && !isVerified({ status: a.status as "DECLARED" | "VERIFIED", channel: a.channel, origin: a.answered ? { channel: a.answered.channel } as Answer["origin"] : undefined });
+    const onList = new Set([
+      ...shownSections.flatMap((x) => sectionAnswers(x.questions, x.group)).filter((a) => !a.confirmed).map((a) => a.id),
+      ...shownSections.flatMap((x) => x.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer) : [q.answer]).filter((a): a is NonNullable<typeof a> => !!a && unchecked(q.fact, a)).map((a) => a.id))),
+    ]);
     // B155 (break m2 on #1367): a list's entry shows only the cells it asks (cellAsked); an answer in a cell it does not show
     // (left there when an earlier entry was removed) is never seen, so it neither blocks nor is confirmed.
     const shownCells = listOf ? new Set(shownSections.flatMap((x) => { const g = x.questions.filter((q) => q.group); return g.flatMap((q) => q.rows.filter((_, i) => cellAsked(g, q, i)).map((r) => `${q.fact}|${r.row}`)); })) : null;
