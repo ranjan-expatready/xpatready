@@ -53,13 +53,15 @@ p.on("pageerror", (e) => errs.push(e.message)); p.on("console", (m) => { if (m.t
 await p.goto(BASE); await p.evaluate((a) => localStorage.setItem("xr-actor", a), OFFICER);
 const panel = () => p.locator("[data-submission]");
 const text = async (loc: Locator) => (await loc.innerText()).replace(/\s+/g, " ").trim();
-// Serve /prepare rewritten from the real answer. Each fulfil is awaited; a route the page already dropped (a navigation
-// or a second /prepare from open()) is left alone, never handled twice (B151 flake: "Route is already handled!", 13 Nov).
+// Serve /prepare rewritten from the real answer, the fulfil awaited (B151 flake, 13 Nov: "Route is already handled!" when
+// p.unroute removed the route while a handler was still fetching, and the unawaited fulfil then failed the run). A fetch
+// that fails throws; only a fulfil on a route already handled is let go, so the route is never handled twice.
 const serve = (rewrite: (real: View) => unknown) => async (rt: Route) => {
-  try { const real = (await (await rt.fetch()).json()) as View; await rt.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(rewrite(real)) }); }
-  catch (e) { if (!/already handled|has been closed|disposed|Request context/i.test(String(e))) throw e; }
+  const real = (await (await rt.fetch()).json()) as View;
+  try { await rt.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(rewrite(real)) }); }
+  catch (e) { if (!/already handled/i.test(String(e))) throw e; }
 };
-// Remove the /prepare route only after any handler still in flight has finished (unroute alone does not wait).
+// Remove the /prepare route only after any handler still in flight has finished (page.unroute takes no behavior option).
 const unserve = () => p.unrouteAll({ behavior: "wait" });
 const open = async (id: string) => { await p.goto(`${BASE}/cases/${id}`); await p.locator("[data-fees]").first().waitFor({ timeout: 60_000 }); await p.waitForTimeout(300); };
 async function state(name: string) {
