@@ -2,7 +2,7 @@
 
 Forms lane, 13 Nov 2026 from 18:2x IST, on `origin/main` ff0c2ef90 plus this PR's data. Bake plan row 27 (BK-13); P-448, P-449, P-452, P-541; step 1 (the dry run) is `design/bk13-dry-run-2026-11-12.md` (#1574). Live AI off, US$0, no priced button. Every IRCC value is cited (page, quote, date) or labelled Sample and listed (§5). Legal points: Unconfirmed: no counsel.
 
-**Status: exit (b) not met; stopped on code gaps C1, C1b and C4 (§3), question for the tech lead on #1695.** The script replays the whole set-up and case on a fresh copy (37/45 pass; the 8 failures are those gaps). Nothing under `engine/`, `api/src/`, `web/src/` or `prototype/p5/` is changed by this row; once the gaps are fixed elsewhere, the same script is the counted run.
+**Status: the run and its data; exit (b) not met: waits on BK-22 and BK-23** (the tech lead's rulings on #1695: Lead 35, 18:5x IST, C1 → BK-22; Lead 36, 19:2x IST, C1b → BK-22, C4 → BK-23). The script replays the whole set-up and case on a fresh copy: 37 of 45 checks pass, the 8 others are reported as GAP with their row and do not fail the run (a check is a GAP only when it fails for exactly that cause). BK-13's counted run is this script re-run unchanged on a fresh `main` after BK-22 and BK-23 merge: 45 of 45, no GAP, is exit (b). Nothing under `engine/`, `api/src/`, `web/src/` or `prototype/p5/` is changed by this row.
 
 ## 1. What the run does
 
@@ -35,11 +35,11 @@ Row 12's bar for the Study permit: the application form generated for each appli
 
 **Why data cannot close C1 or C1b:** a field-map entry's steps are fixed when its draft is applied. Field map review's decide route takes `decision, key, note, meaning, valueType, label, reason` (`api/src/sources.ts` decide), never the steps; `samples/review-corrections.json` changes a key, not a step; no route or data file edits an applied entry's steps. A scan of all eight field maps on the release (each mapped entry run through the filler on 11 kinds of value) finds steps no value passes on IMM 1294 (19 entries), IMM 1295 (41), IMM 5646 (11: `date_digit:YYYYMMDD[n]`, `address_single_text`, `derive:given_names + ' ' + family_name`), IMM 5707 (2) and IMM 5409 (1); IMM 5257, IMM 5475, IMM 5476: none.
 
-**Recommended (question on the PR):** a forms row R-a before the counted run: the filler runs the drafters' synonyms and the "then" separator, each with a pass and a fail test, and refuses (by hand) a step it does not understand in full instead of running its first half; Field map review flags such a step before approval. C4: the firm record writes the phone in the shape the release's question reads (the dry run's R-d). Then this script re-runs unchanged.
+**Ruled on #1695:** C1 and C1b are **BK-22** (forms, `prototype/p5/transforms.ts`); C4 is **BK-23** (runtime, `engine/runtime/team.ts`; the officer's no-override rule stays). As proposed here: a forms row before the counted run: the filler runs the drafters' synonyms and the "then" separator, each with a pass and a fail test, and refuses (by hand) a step it does not understand in full instead of running its first half; Field map review flags such a step before approval. C4: the firm record writes the phone in the shape the release's question reads (the dry run's R-d). Then this script re-runs unchanged.
 
 ## 4. Results
 
-Run on a fresh isolated copy (`forms_bk13`, :4452), 13 Nov 2026 ~20:0x IST, branch head plus `origin/main` ff0c2ef90: **37 of 45 checks pass; exit 1**. All 8 failures are the code gaps of §3; nothing failed for a data reason.
+Run on a fresh isolated copy (`forms_bk13`, :4452), 13 Nov 2026 ~20:3x IST, branch head plus `origin/main` ff0c2ef90: **37 of 45 checks pass; 8 GAP (BK-22: 5, BK-23: 3); 0 FAIL; exit 0**. The 8 GAPs are the code gaps of §3; nothing failed for a data reason.
 
 **Passed:** no code change (P-452); configured checkpoint loaded, the Study permit released at row 10 (submit, the SME's ticks, a different person's approval); the release holds all 7 form rules of `samples/form-setup.json` with their `who`, a published field map for each of its 8 form lines, all 6 cited document lines with their quotes; the family Sample case SAMPLE-SP-FAMILY-1 opens from data (3 people, every answer taken, no copy refused); 4 parents answered and confirmed on the officer's routes; each person files only their own forms (student IMM 1294, 5476, 5707; spouse IMM 1295, 5476, 5707; child IMM 5257, 5476); all 8 copies generated, files intact, the filler's read-back equal to what it wrote; 7 of 8 copies read back equal a second time from the PDF; **fees from data: one submission for 3 people, CAD 675** (study permit 150, work permit 155, open work permit holder 100, visitor visa 100, biometrics family maximum 170, the child of 9 exempt), each line citing its table row; one filing per person (Study permit, Work permit, Visitor visa).
 
@@ -60,15 +60,15 @@ Totals: 307 form fields written, **25 by hand** (C1), **3 list values not an exp
 
 **Waits for the Mac (not judged here):** no fill trial is recorded for IMM 1294 (06-2026) or IMM 5476 (11-2021) (dry-run D1); IMM 1295 (09-2023), IMM 5257 (09-2023) and IMM 5707 (01-2023) have one.
 
-**The 8 failures, word for word (first 200 characters):**
-- `FAIL  BK-13: IMM 1294 for Student A (Sample) read back from the PDF: each of its 65 written form fields holds a value; each list field holds one of its export values — {"empty":[],"badChoice":["form1[`
-- `FAIL  BK-13 bar (row 12, #1574 §8): IMM 1294 for Student A (Sample): nothing by hand — ["step \"derive: Y if applying-from country equals current residence country, else N\" is not in the executable s`
-- `FAIL  BK-13 bar (row 12, #1574 §8): IMM 5476 for Student A (Sample): no answer it writes "needs a fix" — ["Area code and telephone number: person.phone_number"]`
-- `FAIL  BK-13 bar (row 12, #1574 §8): IMM 5707 for Student A (Sample): nothing by hand — ["step \"code_list:imm5707.child_relationship (Son=1, Daughter=2, Step-daughter=3, Step-son=4, Adopted daughter=5`
-- `FAIL  BK-13 bar (row 12, #1574 §8): IMM 1295 for Spouse (Sample): nothing by hand — ["step \"derive:case.applying_from_country equals current residence country\" is not in the executable set","step \"`
-- `FAIL  BK-13 bar (row 12, #1574 §8): IMM 5476 for Spouse (Sample): no answer it writes "needs a fix" — ["Area code and telephone number: person.phone_number"]`
-- `FAIL  BK-13 bar (row 12, #1574 §8): IMM 5707 for Spouse (Sample): nothing by hand — ["step \"code_list:imm5707.child_relationship (Son=1, Daughter=2, Step-daughter=3, Step-son=4, Adopted daughter=5, A`
-- `FAIL  BK-13 bar (row 12, #1574 §8): IMM 5476 for Child (Sample): no answer it writes "needs a fix" — ["Area code and telephone number: person.phone_number"]`
+**The 8 GAPs, word for word (first 200 characters), each with its row:**
+- GAP, waits on **BK-22 (C1b)**: `BK-13: IMM 1294 for Student A (Sample) read back from the PDF: each of its 65 written form fields holds a value; each list field holds one of its export values — {"empty":[],"badChoice":["form1[`
+- GAP, waits on **BK-22 (C1)**: `BK-13 bar (row 12, #1574 §8): IMM 1294 for Student A (Sample): nothing by hand — ["step \"derive: Y if applying-from country equals current residence country, else N\" is not in the executable s`
+- GAP, waits on **BK-23 (C4)**: `BK-13 bar (row 12, #1574 §8): IMM 5476 for Student A (Sample): no answer it writes "needs a fix" — ["Area code and telephone number: person.phone_number"]`
+- GAP, waits on **BK-22 (C1)**: `BK-13 bar (row 12, #1574 §8): IMM 5707 for Student A (Sample): nothing by hand — ["step \"code_list:imm5707.child_relationship (Son=1, Daughter=2, Step-daughter=3, Step-son=4, Adopted daughter=5`
+- GAP, waits on **BK-22 (C1)**: `BK-13 bar (row 12, #1574 §8): IMM 1295 for Spouse (Sample): nothing by hand — ["step \"derive:case.applying_from_country equals current residence country\" is not in the executable set","step \"`
+- GAP, waits on **BK-23 (C4)**: `BK-13 bar (row 12, #1574 §8): IMM 5476 for Spouse (Sample): no answer it writes "needs a fix" — ["Area code and telephone number: person.phone_number"]`
+- GAP, waits on **BK-22 (C1)**: `BK-13 bar (row 12, #1574 §8): IMM 5707 for Spouse (Sample): nothing by hand — ["step \"code_list:imm5707.child_relationship (Son=1, Daughter=2, Step-daughter=3, Step-son=4, Adopted daughter=5, A`
+- GAP, waits on **BK-23 (C4)**: `BK-13 bar (row 12, #1574 §8): IMM 5476 for Child (Sample): no answer it writes "needs a fix" — ["Area code and telephone number: person.phone_number"]`
 
 ## 5. Citation table
 
@@ -111,12 +111,14 @@ Every immigration value the run relies on, from the data files the run reads. Th
 
 Nothing under `engine/`, `api/src/`, `web/src/` or `prototype/p5/` (the script's first check):
 
-     .../design/bk13-zero-code-run-2026-11-13.md        | 112 ++++++++++++++
+     .../design/bk13-zero-code-run-2026-11-13.md        | 122 ++++++++++++
+     .../product/reports/ci-minutes-2026-11-13.md       | 212 ---------------------
+     .../product/screens/B190/review.md                 | 178 -----------------
      .../prototype/studio/samples/sample-cases.json     |   9 +-
-     .../studio/samples/sample-student-answers.json     | 149 ++++++++++++++++---
+     .../studio/samples/sample-student-answers.json     | 149 ++++++++++++---
      .../studio/tests/check_bk12_sample_case.ts         |  10 +-
-     .../studio/tests/check_bk13_zero_code_run.ts       | 162 +++++++++++++++++++++
+     .../studio/tests/check_bk13_zero_code_run.ts       | 178 +++++++++++++++++
      .../studio/tests/fixtures/bk13/parents.json        |  15 ++
-     6 files changed, 425 insertions(+), 32 deletions(-)
+     8 files changed, 451 insertions(+), 422 deletions(-)
 
 (the record's own lines are counted as at this commit.)

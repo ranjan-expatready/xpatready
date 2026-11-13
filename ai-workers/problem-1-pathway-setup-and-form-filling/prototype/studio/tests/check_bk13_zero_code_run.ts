@@ -14,7 +14,12 @@
 //      reader (every written form field holds a value; every list field holds one of its export values); counted;
 //   6. row 12's bar (the tech lead on #1574 §8): nothing by hand, no "needs a fix"; fill trials are the Mac's (BK-20, D1),
 //      reported as WAIT, not judged here; fees worked out from the table with each line's source.
-// Sample people, made up; US$0 (saved AI answers only, live AI off). Exit 0 only when every check passes.
+// Exit (b) not met yet: it waits on BK-22 (the filler runs every step the maps use and never half-runs one: by-hand
+// boxes, list values outside their export values) and BK-23 (the firm record writes the representative's phone in the
+// release's shape). The tech lead's ruling on #1695 (Lead 36, 13 Nov 19:2x IST): those checks are reported as GAP, naming
+// their row, and do not fail the run; a check is a GAP only when it fails for exactly that cause, else it is a FAIL.
+// After BK-22 and BK-23 merge, this script re-run unchanged on a fresh main is BK-13's counted run: every check PASS
+// (45 of 45), no GAP, is exit (b). Sample people, made up; US$0 (saved AI answers only, live AI off). Exit 1 on any FAIL.
 //   zsh studio/tools/isolated.sh forms_bk13 4452 start && tsx studio/tests/check_bk13_zero_code_run.ts 4452 xr_studio_forms_bk13
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -27,10 +32,16 @@ const STUDIO = join(import.meta.dirname, ".."), ROOT = join(STUDIO, "..", "..", 
 const BREW = "/opt/homebrew/opt/postgresql@18/bin/psql", PSQL = process.env.PSQL || (existsSync(BREW) ? BREW : "psql");
 const sql = (q: string) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 }).trim();
 const { call, until } = client(PORT, DB);
-const { ok, summary } = recorder();
+const { ok, log, summary } = recorder();
 const json = (f: string) => JSON.parse(readFileSync(join(STUDIO, f), "utf8"));
 const OFFICER = "user-O", AUTHOR = "user-A", KEY = "sp.outside";
 const waits: string[] = [];
+// The tech lead's ruling on #1695: a check that fails for exactly a named code gap is reported as GAP with its row.
+const gaps: string[] = [];
+const gap = (name: string, passed: boolean, isGap: boolean, row: string, detail: unknown) => {
+  if (passed || !isGap) return ok(name, passed, detail);
+  gaps.push(`${row}: ${name}`); console.log(`GAP   (waits on ${row}) ${name} — ${JSON.stringify(detail).slice(0, 260)}`); return false;
+};
 
 // 1. No code change (P-452 and the ruling on #1574 §8).
 const CODE = ["engine/", "api/src/", "web/src/"].map((p) => `ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/${p}`).concat("ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p5/");
@@ -100,7 +111,7 @@ ok(`BK-13: the parents of the student and the spouse are answered and confirmed 
 
 // Every form each person files, generated again now that everything is answered (the Sample case made the first copies).
 type Form = { form: string; subject_id: string; person: string; applies: boolean | "cannot_tell"; for_filing: boolean; channel: string; trial_passed: boolean; trial_why: string | null;
-  readiness?: { missing?: { reason: string; fact: string; label: string }[] } };
+  readiness?: { missing?: { reason: string; fact: string; label: string; about?: string }[] } };
 const forms = ((await call("GET", `/runtime/cases/${caseId}/forms`, undefined, OFFICER)).body?.forms ?? []) as Form[];
 const filed = forms.filter((f) => f.applies === true && f.for_filing);
 const by = (s: string) => filed.filter((f) => f.subject_id === s).map((f) => f.form).sort().join(", ");
@@ -125,13 +136,15 @@ for (const f of filed) {
   const read = JSON.parse(execFileSync(PY, ["-I", READER, join(ROOT, row.path)], { encoding: "utf8", maxBuffer: 50 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] }).trim()) as { values: Record<string, string>; choices: { path: string; wrote: string; is_export: boolean }[] };
   const written = row.boxes.filter((b) => b.result === "written");
   const empty = written.filter((b) => !(read.values[b.box] ?? "").trim()).map((b) => b.box), badChoice = read.choices.filter((x) => !x.is_export).map((x) => `${x.path}=${x.wrote}`);
-  ok(`BK-13: ${who} read back from the PDF: each of its ${written.length} written form fields holds a value; each list field holds one of its export values`, empty.length === 0 && badChoice.length === 0, { empty, badChoice });
+  // A written field read back empty is a FAIL; list values outside their export values (and nothing else) are BK-22's.
+  gap(`BK-13: ${who} read back from the PDF: each of its ${written.length} written form fields holds a value; each list field holds one of its export values`, empty.length === 0 && badChoice.length === 0, empty.length === 0, "BK-22 (a step half-run: C1b)", { empty, badChoice });
   for (const b of badChoice) console.log(`      not an export value: ${b}`);
   // 6. Row 12's bar.
   const hand = c.by_hand ?? [], needsFix = (f.readiness?.missing ?? []).filter((m) => m.reason === "needs a fix");
   allByHand += hand.length; allNeedsFix += needsFix.length;
-  ok(`BK-13 bar (row 12, #1574 §8): ${who}: nothing by hand`, hand.length === 0, row.boxes.filter((b) => b.result === "by hand").map((b) => b.why));
-  ok(`BK-13 bar (row 12, #1574 §8): ${who}: no answer it writes "needs a fix"`, needsFix.length === 0, needsFix.map((m) => `${m.label}: ${m.fact}`));
+  const handWhy = row.boxes.filter((b) => b.result === "by hand").map((b) => b.why ?? "");
+  gap(`BK-13 bar (row 12, #1574 §8): ${who}: nothing by hand`, hand.length === 0, handWhy.every((w) => /is not in the executable set/.test(w)), "BK-22 (steps the filler does not run: C1)", handWhy);
+  gap(`BK-13 bar (row 12, #1574 §8): ${who}: no answer it writes "needs a fix"`, needsFix.length === 0, needsFix.every((m) => m.fact === "person.phone_number" && /representative/i.test(m.about ?? "")), "BK-23 (the representative's phone shape: C4)", needsFix.map((m) => `${m.about}: ${m.label}: ${m.fact}`));
   if (!f.trial_passed) waits.push(`${who}: ${f.trial_why}`);
   table.push(`| ${f.form} | ${name.get(f.subject_id)} | ${f.channel} | ${c.counts.written} | ${hand.length} | ${c.counts.blank} | ${c.counts.not_written} | ${row.rb === c.counts.written && empty.length === 0 && badChoice.length === 0 ? "equal" : `NOT equal (${badChoice.length} list values not an export value)`} | ${f.trial_passed ? "passed" : "none recorded"} |`);
 }
@@ -159,4 +172,7 @@ ok("BK-13: one filing per person, named by the document it is for", prep.filings
 console.log("\n| Form | Person | Channel | Written | By hand | Blank | Not written | Read back | Fill trial |\n|---|---|---|---|---|---|---|---|---|\n" + table.join("\n"));
 console.log(`\nCopies: ${table.length}; by hand: ${allByHand}; "needs a fix": ${allNeedsFix}; fees CAD ${total}.`);
 for (const w of waits) console.log(`WAIT  (the Mac's evidence, BK-20 / dry-run D1, not judged here) ${w}`);
-process.exit(summary() ? 1 : 0);
+const failed = summary();
+const passed = log.filter((x) => x.ok).length, all = log.length + gaps.length;
+console.log(`Exit (b): ${passed}/${all} checks pass; ${gaps.length} GAP (BK-22: ${gaps.filter((g) => g.startsWith("BK-22")).length}, BK-23: ${gaps.filter((g) => g.startsWith("BK-23")).length}); ${failed} FAIL. ${gaps.length || failed ? "Not met." : "Met: every check passes."}`);
+process.exit(failed ? 1 : 0);
