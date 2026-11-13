@@ -11,7 +11,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { caseView, checkValue, shapeOf, type Answer, type Participant } from "../../engine/runtime/case.ts";
-import { formCoverage } from "../../engine/runtime/forms.ts";
+import { formCoverage, isGateFact } from "../../engine/runtime/forms.ts";
 import { formValues } from "../../engine/form-values.ts";
 import { render } from "../../engine/render.ts";
 import { comparedFacts } from "../../engine/runtime/compared.ts";
@@ -153,5 +153,19 @@ ok("BK-23 fail: unanswered, it stays by hand with its reason (never guessed, P-1
 ok("BK-23 pass: the compared fact is among the copy's facts, so changing it makes a copy out of date", yes.c.facts.some((f) => f.fact === "person.current_residence_country" && f.about === "s" && f.value === "India") && !none.c.facts.some((f) => f.fact === "person.current_residence_country"));
 const both = formCoverage(S, people, [ans("p", "person.applying_from_country", "India"), ans("p", "person.current_residence_country", "India")], [], "F BOTH", "p", TODAY)!;
 ok("BK-23 fail: a form that reads the compared fact itself carries nothing extra (its copies keep the same facts, so validated copies stay current)", !both.boxes.some((b) => b.compared) && both.facts.filter((f) => f.fact === "person.current_residence_country").length === 1);
+
+// Review m1: a compared fact kept with a copy decides a form field; it is never counted as a form field written.
+const kept = yes.c.facts.find((f) => f.box.endsWith("#compared:person.current_residence_country"));
+ok("BK-23 pass and fail (review m1): the compared fact is kept as a gate-like fact, so \"written now\" counts only form fields", !!kept && isGateFact(kept) && !isGateFact(yes.c.facts.find((f) => f.box === "same.from")!) && yes.c.facts.filter((f) => !isGateFact(f)).every((f) => !f.box.includes("#")), yes.c.facts.map((f) => f.box));
+
+// Review m2: a form field on a row of the map (here a child's row, "subject_child") compares nothing, in Preview too.
+const S2 = { ...S, combination: { ...(S as { combination: object }).combination, participants: [{ role: "principal", min: 1, max: 1 }, { role: "child", min: 0, max: 2 }] },
+  forms: [{ form_number: "F KID", title: "Kid", who: "principal_applicant", status: "always" }],
+  field_maps: [{ form_number: "F KID", form_edition: "F KID (01-2026)", entries: [
+    { data_path: "kid.yn", outcome: "mapped", fact: "person.applying_from_country", person: "subject_child", row: 0, transform: SAME },
+  ] }] } as unknown as Snapshot;
+const kidPeople = [{ id: "p", role: "principal" as never, label: "Student", applies: true }, { id: "c", role: "child" as never, label: "Child", applies: true }];
+const kidQs = render(S2, kidPeople, new Map()).questions.filter((q) => q.about === "c");
+ok("BK-23 fail (review m2): a child's form field on a row of the map asks nothing it compares (Preview agrees with the case)", kidQs.some((q) => q.fact === "person.applying_from_country") && !kidQs.some((q) => q.fact === "person.current_residence_country"), kidQs.map((q) => q.fact));
 
 process.exitCode = summary() ? 1 : 0;

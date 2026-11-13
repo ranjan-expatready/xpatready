@@ -181,8 +181,9 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
       if (!("added" in f && f.added) || needs.has(`${about}|${e.fact}`)) {
         if (factRow !== null && factRow !== undefined) n.rows.add(factRow);
         n.forms.add(f.form); n.boxes++; if (f.applies === "cannot_tell") n.maybe = true; needs.set(`${about}|${e.fact}`, n);
-        // C7.8: a form the case officer added asks nothing new, so its comparisons ask nothing either.
-        if (!("added" in f && f.added) && (factRow === null || factRow === undefined)) for (const c of comparedFacts(e.transform, e.fact)) compared.push({ fact: c, about, form: f.form, maybe: f.applies === "cannot_tell" });
+        // C7.8: a form the case officer added asks nothing new, so its comparisons ask nothing either. Review m2: a form
+        // field on a row of the map (a child's row included) compares nothing here, as in case.ts and forms.ts.
+        if (!("added" in f && f.added) && (e.row === null || e.row === undefined)) for (const c of comparedFacts(e.transform, e.fact)) compared.push({ fact: c, about, form: f.form, maybe: f.applies === "cannot_tell" });
       }
       const kv = known.get(k) ?? (factRow === 0 ? known.get(kkey(about, e.fact)) : undefined);
       // Review M1 on #1620: a worked-out fact not worked out yet keeps its reason as text on the row (by hand, never blank).

@@ -21,8 +21,9 @@ export { gateOf, type GatePlacement } from "./gates.ts";
 
 /** One confirmed fact a copy reads: which form field, which fact about whom, which row, which value. */
 export type FormFact = { box: string; fact: string; about: string; row: number | null; value: unknown };
-/** QA-165: a gate's confirmed answer kept with a copy (box "<box>#gate:<fact>"): it decides a box, it is not one. */
-export const isGateFact = (f: FormFact) => f.box.includes("#gate:");
+/** QA-165: a gate's confirmed answer kept with a copy (box "<box>#gate:<fact>"): it decides a box, it is not one.
+ *  BK-23 (review m1): so is a fact a form field compares ("<box>#compared:<fact>"), never counted as a form field written. */
+export const isGateFact = (f: FormFact) => f.box.includes("#gate:") || f.box.includes("#compared:");
 
 /** What one form would read today for one person on the case: every form field with its coverage (the shared
  *  renderer's, so a case fills exactly what the release preview shows), and the confirmed facts among them. */
