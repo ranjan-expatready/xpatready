@@ -107,18 +107,16 @@ Every immigration value the run relies on, from the data files the run reads. Th
 5. Biometrics age counted as at today, not as at the group's recording (FQ-7 open).
 6. Legal points: Unconfirmed: no counsel.
 
-## 6. `git diff --stat origin/main` (this PR)
+## 6. `git diff --stat origin/main...HEAD` (this PR, since it left main)
 
 Nothing under `engine/`, `api/src/`, `web/src/` or `prototype/p5/` (the script's first check):
 
-     .../design/bk13-zero-code-run-2026-11-13.md        | 122 ++++++++++++
-     .../product/reports/ci-minutes-2026-11-13.md       | 212 ---------------------
-     .../product/screens/B190/review.md                 | 178 -----------------
+     .../design/bk13-zero-code-run-2026-11-13.md        | 124 ++++++++++++++
      .../prototype/studio/samples/sample-cases.json     |   9 +-
-     .../studio/samples/sample-student-answers.json     | 149 ++++++++++++---
+     .../studio/samples/sample-student-answers.json     | 149 ++++++++++++++---
      .../studio/tests/check_bk12_sample_case.ts         |  10 +-
-     .../studio/tests/check_bk13_zero_code_run.ts       | 178 +++++++++++++++++
+     .../studio/tests/check_bk13_zero_code_run.ts       | 179 +++++++++++++++++++++
      .../studio/tests/fixtures/bk13/parents.json        |  15 ++
-     8 files changed, 451 insertions(+), 422 deletions(-)
+     6 files changed, 454 insertions(+), 32 deletions(-)
 
 (the record's own lines are counted as at this commit.)

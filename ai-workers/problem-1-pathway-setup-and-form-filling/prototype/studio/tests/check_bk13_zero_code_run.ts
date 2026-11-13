@@ -1,7 +1,7 @@
 // BK-13 step 2 (Bake plan row 27; P-448, P-449, P-452, P-541): the zero-code run for the Bake's exit (b), "a pathway
 // (Study permit) reaching filled, checked forms with data changes only, no engine or screen code change". One script
 // replays it all on a fresh isolated copy, through the product's own routes only:
-//   1. no code change on this branch: `git diff origin/main` touches nothing under engine/, api/src/, web/src/ or
+//   1. no code change on this branch: `git diff origin/main...HEAD` touches nothing under engine/, api/src/, web/src/ or
 //      prototype/p5/ (P-452; the tech lead's ruling on #1574 §8 adds p5, the filler);
 //   2. Demo › Load the configured checkpoint: the six set up from the data files, the Study permit released (row 10);
 //   3. the Study permit's seeded rows CHECKED against their data files, not assumed (P-449): its form lines and who
@@ -43,11 +43,12 @@ const gap = (name: string, passed: boolean, isGap: boolean, row: string, detail:
   gaps.push(`${row}: ${name}`); console.log(`GAP   (waits on ${row}) ${name} — ${JSON.stringify(detail).slice(0, 260)}`); return false;
 };
 
-// 1. No code change (P-452 and the ruling on #1574 §8).
+// 1. No code change (P-452 and the ruling on #1574 §8), since this branch left main (three dots: what main gained since
+//    then is not this branch's change).
 const CODE = ["engine/", "api/src/", "web/src/"].map((p) => `ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/${p}`).concat("ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p5/");
 let changed: string[] | null = null;
-try { changed = execFileSync("git", ["-C", ROOT, "diff", "--name-only", "origin/main", "--", ...CODE], { encoding: "utf8" }).trim().split("\n").filter(Boolean); } catch { /* no origin/main here */ }
-ok("BK-13 (P-452): this branch changes nothing under engine/, api/src/, web/src/ or prototype/p5/ against origin/main", changed !== null && changed.length === 0, changed ?? "git diff origin/main did not run");
+try { changed = execFileSync("git", ["-C", ROOT, "diff", "--name-only", "origin/main...HEAD", "--", ...CODE], { encoding: "utf8" }).trim().split("\n").filter(Boolean); } catch { /* no origin/main here */ }
+ok("BK-13 (P-452): this branch changes nothing under engine/, api/src/, web/src/ or prototype/p5/ since it left origin/main", changed !== null && changed.length === 0, changed ?? "git diff origin/main did not run");
 
 // 2. The configured checkpoint (a copy that already holds it is used as it is).
 const released = () => sql(`select count(*) from config_release r join combination c on c.id=r.combination_id where c.combination_key='${KEY}'`) !== "0";
