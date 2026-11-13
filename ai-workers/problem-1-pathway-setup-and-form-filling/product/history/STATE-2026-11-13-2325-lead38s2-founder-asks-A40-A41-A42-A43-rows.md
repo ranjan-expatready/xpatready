@@ -1,0 +1,7 @@
+# STATE founder-ask rows A40, A41/A42, A43, word for word (moved by Lead 38, series 2, 13 Nov 23:25 IST, to keep STATE under 12 KB)
+
+| # | Ask (IST) | Status |
+|---|---|---|
+| A40 | 20:3x (13 Nov) stream 4 decision 1: production for 25-50 firms in ~1 month | **in progress**: all ten decisions answered (P-549-P-552); Monday 16 Nov one-day test, then pause; capacity 3 of his 4 Ultra accounts; row word for word in `history/STATE-2026-11-13-2155-lead37s2-founder-ask-A40-row.md` |
+| A43 | 22:3x (13 Nov, 22:35 recorded) where the MVP's requirements come from: our own best-practice analysis as for the POC, or the team's repo and Drive requirements, best practice, competitor analysis and government/RCIC documents | **answered**: AGENTS rule 2 order: (1) the team's requirements (Drive snapshot, name-free copy `domain/requirements-2026-11-02/`, AG-01 to AG-19), (2) his decisions, (3) the team's code; immigration values and RCIC duties from official sources (IRCC, CICC) with page, quote, date; best practice and competitors fill gaps and challenge, never silently override. Gap found: Lead B's contracts trace AG-02 only; Lead B told 22:3x to trace every PF/FO row to AG-01, -04, -05, -06, -13, -16, -18 before PF-3/FO-1 builders; snapshot is 2 Nov (refresh offered) |
+| A41, A42 | 21:5x (13 Nov) build vs open-source CRM; start the B151 fix and a standby | **done**: P-553 (own build, thin CRM month one); fix lane #1706, Lead 39 standby; rows word for word in `history/STATE-2026-11-13-2220-lead37s2-founder-asks-A41-A42-rows.md` |
