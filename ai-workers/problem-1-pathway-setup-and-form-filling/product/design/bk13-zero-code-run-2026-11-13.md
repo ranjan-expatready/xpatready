@@ -70,6 +70,8 @@ Totals: 307 form fields written, **25 by hand** (C1), **3 list values not an exp
 - GAP, waits on **BK-22 (C1)**: `BK-13 bar (row 12, #1574 §8): IMM 5707 for Spouse (Sample): nothing by hand — ["step \"code_list:imm5707.child_relationship (Son=1, Daughter=2, Step-daughter=3, Step-son=4, Adopted daughter=5, A`
 - GAP, waits on **BK-23 (C4)**: `BK-13 bar (row 12, #1574 §8): IMM 5476 for Child (Sample): no answer it writes "needs a fix" — ["Area code and telephone number: person.phone_number"]`
 
+**Walk at 1440 px (P-352), same copy, after the script:** the case officer opens SAMPLE-SP-FAMILY-1 on Cases: the page names the three people, each on their own application, the forms IMM 1294, IMM 1295 and IMM 5257 and the family's CAD 675; no page error; walk exit 0 (`screens/BK-13/step2/01-case-1440.png`). The page says honestly that the case is not ready to file (readiness 0%, 54 required answers outside the forms' bar, e.g. the IMM 5707 relatives the client would answer), which is the client's next step, not this row's bar.
+
 ## 5. Citation table
 
 Every immigration value the run relies on, from the data files the run reads. The quotes are from the committed saved copies (canada.ca is refused from cloud sessions: `www.canada.ca:443 connect_rejected`, 13 Nov 19:3x IST), with each page's own date; **not revalidated on canada.ca today**. The data files still say "Unconfirmed: expert" from before P-541; under P-541 a value with page, quote and date is cited, and what no page settles stays Sample (listed below).
