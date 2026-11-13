@@ -25,7 +25,24 @@
   "case.pal_number": "SAMPLE-PAL-0001",
   "case.pal_expiry_date": "2027-12-31",
   "case.service_language": "English",
-  "case.authorizes_release_to_designated_individual": false
+  "case.authorizes_release_to_designated_individual": false,
+  "case.representative_form_action": "appoint",
+  "case.visa_type_requested": "VisitorVisa",
+  "case.visit_purpose": "Family Visit",
+  "case.intended_stay_from": "2027-08-25",
+  "case.intended_stay_to": "2029-04-30",
+  "case.visit_contact_name": "SAMPLE STUDENT",
+  "case.visit_contact_relationship": "Parent",
+  "case.visit_contact_address_in_canada": {
+   "street_number": "300",
+   "street_name": "SAMPLE STREET",
+   "city": "TORONTO",
+   "province": "ON",
+   "postal_code": "M5V 0B3",
+   "country": "Canada"
+  },
+  "case.work_permit_type": "OWP",
+  "case.intended_work_province": "ON"
  },
  "everyone": {
   "person.citizenship": "India",
@@ -56,7 +73,15 @@
   },
   "person.telephone_type": "Cellular",
   "person.military_service": false,
-  "person.present_occupation": "STUDENT"
+  "person.present_occupation": "STUDENT",
+  "person.present_address": {
+   "street_number": "12",
+   "street_name": "SAMPLE ROAD",
+   "city": "MUMBAI",
+   "postal_code": "400001",
+   "country": "India"
+  },
+  "relationship.accompanies_subject_to_canada": true
  },
  "people": {
   "principal": {
@@ -111,7 +136,6 @@
    "person.background_medical_disorder": false,
    "person.background_criminal": false,
    "person.background_violent_org_association": false,
-   "relationship.accompanies_subject_to_canada": true,
    "person.minor_studying_without_parent": false,
    "relationship.union_start_date": "2016-04-10",
    "person.present_occupation": "HOMEMAKER"
@@ -123,7 +147,7 @@
    "person.family_name": "STUDENT",
    "person.given_names": "SAMPLE CHILD",
    "person.date_of_birth": "2017-02-01",
-   "person.sex": "Male",
+   "person.sex": "M Male",
    "person.marital_status": "single",
    "person.passport_number": "Z7000097",
    "person.email": "student.a@example.com",
@@ -143,7 +167,6 @@
    "person.ill_treatment_of_prisoners_or_civilians": false,
    "person.violent_organization_association": false,
    "person.consents_to_research_contact": false,
-   "relationship.accompanies_subject_to_canada": true,
    "person.minor_studying_without_parent": false,
    "job": {
     "person.occupation_title": "STUDENT",
@@ -166,14 +189,26 @@
   "person.uscis_number": "Not a lawful permanent resident of the United States.",
   "organisation.name": "The spouse applies for an open work permit: there is no employer to name (walk 1 W2: IMM 1295 still asks it).",
   "organisation.address": "The spouse applies for an open work permit: there is no employer's address.",
-  "person.immigration_status": "The spouse applies from the country of citizenship, where they live."
+  "person.immigration_status": "The spouse applies from the country of citizenship, where they live.",
+  "case.submission_office_name": "Asked only when the application was already submitted; this is a new application.",
+  "case.expenses_paid_by_other": "Asked only when someone other than the student or the parents pays.",
+  "case.lmia_or_offer_number": "An open work permit has no LMIA or offer of employment.",
+  "case.intended_job_title": "An open work permit names no job.",
+  "case.intended_job_duties": "An open work permit names no job.",
+  "case.intended_employment_start_date": "An open work permit names no employment period.",
+  "case.intended_employment_end_date": "An open work permit names no employment period.",
+  "case.work_location_address": "An open work permit names no workplace.",
+  "case.caregiver_care_types": "Asked only of a caregiver.",
+  "case.caregiver_persons_requiring_care": "Asked only of a caregiver.",
+  "case.visit_purpose_other": "Asked only when the purpose is Other."
  },
  "none_apply": {
   "groups": [
    "personal_details",
    "education",
-   "employment"
+   "employment",
+   "addresses"
   ],
-  "why": "Sample: the family has no other names and no post-secondary education to list (IMM 1294 asks only post-secondary education); the spouse has had no job in the period IMM 1295 asks about. A person with a job row (the student, the child's school) keeps it: \"none apply\" goes only on a person's empty group."
+  "why": "Sample: the family has no other names and no post-secondary education to list (IMM 1294 asks only post-secondary education); the spouse has had no job in the period IMM 1295 asks about and has lived only in the country of citizenship. A person with a job row (the student, the child's school) keeps it: \"none apply\" goes only on a person's empty group."
  }
 }
