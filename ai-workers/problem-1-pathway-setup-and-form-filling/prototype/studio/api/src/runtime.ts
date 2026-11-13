@@ -501,8 +501,9 @@ export class Runtime {
     // C6.11: so do its licence part and firm name, and "Uses a representative" for the application (the case has a
     // representative of record), which replaces any answer typed before.
     const f = firmByKey(c.firmKey), caseSubject = c.participants.find((p) => p.role === "case")?.subjectId;
-    // QA-289: the office phone in the shape this release's question reads it (parts where a form writes it part by part).
-    const phoneParts = shapeOf(this.snapshotOf(c), "person.telephone_number").phone;
+    // QA-289: the office phone in the shape this release's question reads it (parts where a form writes it part by part);
+    // BK-23 (#1695 C4): each of the firm record's phone facts (the number and fax of IMM 5476 (11-2021)) the same way.
+    const snap = this.snapshotOf(c), phoneParts = (fact: string) => shapeOf(snap, fact).phone;
     const fromFirm = f ? representativeAnswers(f, (await this.db.caseTeamMember.findMany({ where: { caseId: c.id } })).map((m): Member => ({ ...m, role: m.role as Member["role"] })), caseSubject, phoneParts) : [];
     const firmGives = new Set(fromFirm.map((x) => `${x.subjectId}|${x.field}`));
     return { answers: [...a.filter((x) => !firmGives.has(`${x.subjectId}|${x.field}`)), ...fromFirm], rows: r, groups };

@@ -92,18 +92,41 @@ export function phoneText(phone: unknown): unknown {
   return `${cc ? `+${cc} ` : ""}${number}${ext ? ` ext. ${ext}` : ""}`;
 }
 
+/** BK-23 (#1695 C4): the firm record's phone facts on IMM 5476 (11-2021)'s question 7, the number and the fax. Where the
+ *  release's question reads one as a phone (case.ts shapeOf: some form of the release writes it part by part), it goes on
+ *  as the phone itself (country code and number); else as the text it always was (the number, and its extension). */
+export const FIRM_PHONE_FACTS = ["person.phone_number", "person.fax_number"] as const;
+/** BK-23: the firm record's phone as the text an IMM 5476 box that writes its value as it is has always held: the number
+ *  (area code included) and its extension in words, never the country code (its own box) and never "[object Object]". A
+ *  value that is not a phone object is left as it is. */
+export function phoneInOneBox(phone: unknown): unknown {
+  if (!phone || typeof phone !== "object" || Array.isArray(phone)) return phone;
+  const p = phone as { number?: unknown; extension?: unknown };
+  const number = String(p.number ?? "").trim(), ext = String(p.extension ?? "").trim();
+  return number ? `${number}${ext ? ` ext. ${ext}` : ""}` : null;
+}
+/** BK-23: whether a form field's steps write the value as it is (as_is, with or without a stated length), so a phone
+ *  goes in as phoneInOneBox's text; a step that reads a phone's parts (phone_part, phone:, a country code test) never. */
+export const writesAsIs = (transform: string | null | undefined) => String(transform ?? "as_is").split(/;|->/).map((x) => x.trim()).filter(Boolean)
+  .every((x) => /^as_is(?: \(max \d+ char(?:s|acters)\))?$/.test(x) || /^max(?:_chars:| )\d+(?: char(?:s|acters))?$/.test(x));
+
 /** IMM 5476's representative block from the firm record. QA-289: the office phone goes on in the shape the release's
  *  question reads: its parts (country code, number) where a form writes the phone part by part (`phoneParts`, the
- *  questionnaire's phone kind, case.ts shapeOf); required, so no caller can forget it (review m1); else as text a person can read, never the parts object shown as "[object Object]". */
-export function representativeContact(firm: Firm, members: Member[], phoneParts: boolean): Record<string, unknown> | null {
+ *  questionnaire's phone kind, case.ts shapeOf); required, so no caller can forget it (review m1); else as text a person can read, never the parts object shown as "[object Object]".
+ *  BK-23 (#1695 C4): `phoneParts` may instead say, fact by fact, whether the release reads it as a phone; then
+ *  person.telephone_number, person.phone_number and person.fax_number each go on in their own question's shape (a
+ *  boolean keeps QA-289's rule: person.telephone_number only). */
+export function representativeContact(firm: Firm, members: Member[], phoneParts: boolean | ((fact: string) => boolean)): Record<string, unknown> | null {
   const rep = representativeOf(members), u = rep ? userIn(firm, rep.userId) : null;
   if (!u) return null;
   const o = firm.office ?? {};
+  const isPhone = (fact: string) => (typeof phoneParts === "function" ? phoneParts(fact) : fact === "person.telephone_number" && phoneParts);
+  const asPhone = (p: { country_code?: string; number?: string } | null | undefined) => (p?.number ? p : undefined);
   const all: Record<string, unknown> = {
     "person.family_name": u.family_name, "person.given_names": u.given_names, "person.email_address": u.email,
     "person.mailing_address_unit": o.unit, "person.mailing_address_street_number": o.street_number, "person.mailing_address_street_name": o.street_name,
     "person.mailing_address_city": o.city, "person.mailing_address_province_state": o.province_state, "person.mailing_address_postal_code": o.postal_code,
-    "person.mailing_address_country": o.country, "person.telephone_number": phoneParts ? o.phone : phoneText(o.phone),
+    "person.mailing_address_country": o.country, "person.telephone_number": isPhone("person.telephone_number") ? o.phone : phoneText(o.phone),
     // B107 (QA-300): IMM 5476's question 7 ("Your representative's contact information") under the keys the configured
     // checkpoint's map reads. The tech lead's ruling on #1072 kept them off until IMM 5475's designated individual was no
     // longer read as "representative": its part 5 and 6 are now filled by hand (samples/form-field-gates.json, IRCC: "someone
@@ -112,8 +135,8 @@ export function representativeContact(firm: Firm, members: Member[], phoneParts:
     "person.address_apt_unit": o.unit, "person.address_street_number": o.street_number, "person.address_street_name": o.street_name,
     "person.address_city": o.city, "person.address_province_state": o.province_state, "person.address_postal_code": o.postal_code,
     "person.address_country": countryName(o.country), "person.email": u.email,
-    "person.phone_country_code": o.phone?.country_code?.replace(/^\+/, "") || undefined, "person.phone_number": o.phone?.number ? `${o.phone.number}${o.phone.extension ? ` ext. ${o.phone.extension}` : ""}` : undefined,
-    "person.fax_country_code": o.fax?.country_code?.replace(/^\+/, "") || undefined, "person.fax_number": o.fax?.number || undefined,
+    "person.phone_country_code": o.phone?.country_code?.replace(/^\+/, "") || undefined, "person.phone_number": isPhone("person.phone_number") ? asPhone(o.phone) : phoneInOneBox(o.phone) ?? undefined,
+    "person.fax_country_code": o.fax?.country_code?.replace(/^\+/, "") || undefined, "person.fax_number": isPhone("person.fax_number") ? asPhone(o.fax) : o.fax?.number || undefined,
   };
   // The names are the same keys on IMM 5475 and IMM 5476, so they are kept off a form that does not name the
   // representative of record by the form (QA-296, namesRepresentative below).
@@ -179,7 +202,7 @@ export function inStoredOrder(v: unknown): unknown {
 
 /** The same facts as confirmed answers about the representative (channel "firm_record", by the representative of
  *  record), so the case view, readiness and the filler read them like any other confirmed fact. Never stored. */
-export function representativeAnswers(firm: Firm, members: Member[], caseSubjectId: string | undefined, phoneParts: boolean): { id: string; subjectId: string; field: string; rowKey: null; value: unknown; status: "VERIFIED"; channel: string; actor: string; at: string; origin: null }[] {
+export function representativeAnswers(firm: Firm, members: Member[], caseSubjectId: string | undefined, phoneParts: boolean | ((fact: string) => boolean)): { id: string; subjectId: string; field: string; rowKey: null; value: unknown; status: "VERIFIED"; channel: string; actor: string; at: string; origin: null }[] {
   const rep = representativeOf(members), facts = representativeContact(firm, members, phoneParts);
   if (!rep || !facts) return [];
   const answer = (subjectId: string, field: string, value: unknown) => ({ id: `${FIRM_RECORD}:${rep.userId}:${field}`, subjectId, field, rowKey: null, value: inStoredOrder(value), status: "VERIFIED" as const, channel: FIRM_RECORD, actor: rep.userId, at: rep.assignedAt.toISOString(), origin: null });
