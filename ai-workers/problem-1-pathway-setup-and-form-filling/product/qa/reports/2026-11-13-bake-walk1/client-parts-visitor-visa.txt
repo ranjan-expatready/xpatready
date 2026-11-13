@@ -1,0 +1,1825 @@
+
+=== Part 2 of 55 · Personal details
+Client questionnaire
+Back
+✓ Saved
+
+Part 2 of 55 · Personal details
+
+Personal details
+
+Answered once for the whole application.
+
+Declared: the client's own answer; it fills the forms now.
+Confirmed by the officer.
+Official language in which the person wants to receive service for this application
+English
+French
+Kind of temporary resident visa requested (visitor or transit)
+Visitor visa
+Transit
+Whether the applicant uses the services of a representative, or is appointing, updating or cancelling a representative's appointment (IMM 5484 p. 1; IMM 5476).
+Yes
+No
+Whether the applicant authorizes IRCC and the CBSA to release information from their case file to someone other than themselves (IMM 5484 p. 1; IMM 5475).
+Yes
+No
+Save and continueSave and come back later
+
+=== Part 3 of 55 · Request for a change of sex or gender identifier
+Client questionnaire
+Back
+
+Part 3 of 55 · Request for a change of sex or gender identifier
+
+Request for a change of sex or gender identifier
+
+Answered once for the whole application.
+
+The type of IRCC document whose sex or gender identifier the request concerns
+1 Certificate of Canadian Citizenship / 2 Permanent Resident Card / 5 Temporary Resident Document / 3 document issued to a Protected Person / 4 Refugee Protection Claimant Document
+Whether the case is a request to change the sex or gender identifier shown on an IRCC document
+Yes
+No
+Save and continueSave and come back later
+
+=== Part 4 of 55 · National identity document
+Client questionnaire
+Back
+
+Part 4 of 55 · National identity document
+
+National identity document
+
+Answering for Sample Principal W (you).
+
+Whether the person holds a national identity document
+Yes
+No
+Save and continueSave and come back later
+
+=== Part 5 of 55 · Signature
+Client questionnaire
+Back
+
+Part 5 of 55 · Signature
+
+Signature
+
+Answering for Sample Principal W (you).
+
+Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an organization at its request, about the services they received, for research, performance measurement or evaluation; never used to decide about them (IMM 5257, consent before the signature).
+Yes
+No
+Save and continueSave and come back later
+
+=== Part 6 of 55 · Personal details
+Client questionnaire
+Back
+
+Part 6 of 55 · Personal details
+
+Personal details
+
+Answering for Sample Principal W (you).
+
+Date the person married or began the common-law relationship with the current spouse or partner
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Family name as shown on passport or travel document
+Given name(s) as shown on passport or travel document
+Current marital status
+Choose…
+Annulled Marriage
+Common-Law
+Divorced
+Legally Separated
+Married
+Single
+Unknown
+Widowed
+Whether the person has ever used another name (nickname, maiden name, alias)
+Yes
+No
+Country of citizenship
+Country or territory from which the person is submitting the application
+Start date of the status in the applying-from country
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Immigration status in the country from which the person is applying
+Choose…
+Citizen
+Permanent resident
+Visitor
+Worker
+Student
+Other
+Protected Person
+Refugee Claimant
+Foreign National
+Description of the status in the applying-from country when it is 'other'
+End date of the status in the applying-from country
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Country or territory where the person currently resides
+Immigration status in the current country of residence
+Choose…
+Citizen
+Permanent resident
+Visitor
+Worker
+Student
+Other
+Protected Person
+Refugee Claimant
+Foreign National
+Start date of the status in the current country of residence
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Description of the status in the current country of residence when it is 'other'
+End date of the status in the current country of residence
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Date of birth
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+City or town of birth
+Country or territory of birth
+Sex or gender marker of the person
+Female
+Male
+Unknown
+Unspecified
+Unique Client Identifier assigned by IRCC
+Whether the person has taken a designated English or French language test
+Yes
+No
+Whether the person can communicate in English, French, both or neither
+English
+French
+Both
+Neither
+Official language in which the person is most at ease
+English
+French
+Native language or mother tongue
+Country or authority that issued the passport
+Passport expiry date
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Passport issue date
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Number of the passport or travel document
+Whether the person was previously married or in a common-law relationship
+Yes
+No
+Whether the person chooses a gender identifier different from the one on their current or earlier Canadi
+
+=== Part 6 of 63 · Personal details
+Client questionnaire
+Back
+✓ Saved
+
+Part 6 of 63 · Personal details
+
+Personal details
+
+Answering for Sample Principal W (you).
+
+Declared: the client's own answer; it fills the forms now.
+
+Date the person married or began the common-law relationship with the current spouse or partner
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Family name as shown on passport or travel document
+Given name(s) as shown on passport or travel document
+Current marital status
+Choose…
+Annulled Marriage
+Common-Law
+Divorced
+Legally Separated
+Married
+Single
+Unknown
+Widowed
+Whether the person has ever used another name (nickname, maiden name, alias)
+Yes
+No
+Country of citizenship
+Country or territory from which the person is submitting the application
+Start date of the status in the applying-from country
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Immigration status in the country from which the person is applying
+Choose…
+Citizen
+Permanent resident
+Visitor
+Worker
+Student
+Other
+Protected Person
+Refugee Claimant
+Foreign National
+End date of the status in the applying-from country
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Country or territory where the person currently resides
+Immigration status in the current country of residence
+Choose…
+Citizen
+Permanent resident
+Visitor
+Worker
+Student
+Other
+Protected Person
+Refugee Claimant
+Foreign National
+Date of birth
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+City or town of birth
+Country or territory of birth
+Sex or gender marker of the person
+Female
+Male
+Unknown
+Unspecified
+Unique Client Identifier assigned by IRCC
+
+10 of 10 characters
+
+Whether the person has taken a designated English or French language test
+Yes
+No
+Whether the person can communicate in English, French, both or neither
+English
+French
+Both
+Neither
+Native language or mother tongue
+Country or authority that issued the passport
+Passport expiry date
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Passport issue date
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Number of the passport or travel document
+Whether the person was previously married or in a common-law relationship
+Yes
+No
+Whether the person chooses a gender identifier different from the one on their current or earlier Canadian temporary resident document or, with no Canadian document, from their passport or travel document (Guide 5256, Question 3; IRM 0002).
+Yes
+No
+If under 18: who is this person travelling to Canada with?
+Both parents
+One parent
+Another adult
+Alone
+If under 18: what is the custody arrangement for this person?
+Not applicable
+Shared
+Sol
+
+=== Part 7 of 63 · US PR card
+Client questionnaire
+Back
+
+Part 7 of 63 · US PR card
+
+US PR card
+
+Answering for Sample Principal W (you).
+
+Whether the person is a lawful permanent resident of the United States
+Yes
+No
+Save and continueSave and come back later
+
+=== Part 8 of 63 · Background information
+Client questionnaire
+Back
+
+Part 8 of 63 · Background information
+
+Background information
+
+Answering for Sample Principal W (you).
+
+Whether the person previously applied to enter or remain in Canada
+Yes
+No
+Whether the person ever remained beyond status, or studied or worked without authorization, in Canada
+Yes
+No
+Whether the person was ever refused a visa or permit, denied entry or ordered to leave any country
+Yes
+No
+Free-text details of overstay, refusal, removal or previous Canadian applications
+Whether, within the past two years, the person or a family member has had tuberculosis of the lungs or been in close contact with a person with tuberculosis (IMM 5257, Background information, Question 1 a).
+Yes
+No
+Whether the person has a physical or mental disorder requiring social or health services other than medication during a stay in Canada
+Yes
+No
+Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence
+Yes
+No
+Free-text details of criminal history
+Whether the person has ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings (IMM 5257, Background information, Question 6).
+Yes
+No
+Whether the person served in a military, militia, civil defence, security organization or police force
+Yes
+No
+Dates and countries of military or security service
+Whether the person is or was a member of or associated with a group that engaged in or advocated violence for political or religious objectives
+Yes
+No
+Save and continueSave and come back later
+
+=== Part 9 of 63 · Government positions
+Client questionnaire
+Back
+
+Part 9 of 63 · Government positions
+
+Government positions
+
+Answering for Sample Principal W (you).
+
+Whether the person has ever held any government position (for example civil servant, judge, police officer, mayor, member of parliament, hospital administrator)
+Yes
+No
+Entries
+
+Each entry asks: Activities and/or positions held in one government position; Country or territory of one government position held by the person; Department or branch of one government position; Start date of one government position held by the person; Level of jurisdiction of one government position (for example national, regional, municipal); End date of one government position held by the person.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 10 of 63 · Membership or Association with Organizations
+Client questionnaire
+Back
+
+Part 10 of 63 · Membership or Association with Organizations
+
+Membership or Association with Organizations
+
+Answering for Sample Principal W (you).
+
+Entries
+
+Each entry asks: Activities carried out and/or positions held by the person within one organization; Country or territory of one organization the person is or was associated with; Start date of the person's membership in or association with one organization; Name of an organization the person is or was a member of or associated with; Province or region of one organization the person is or was associated with; End date of the person's membership in or association with one organization.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 11 of 63 · Employment
+Client questionnaire
+Back
+
+Part 11 of 63 · Employment
+
+Employment
+
+Answering for Sample Principal W (you).
+
+Entries
+
+Each entry asks: City or town of an activity period; Country or territory of an activity period; Company, employer or facility name for an activity period; Start date of an activity or occupation period; Activity or occupation during a period; Province or state of an activity period; End date of an activity or occupation period.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 12 of 63 · Education
+Client questionnaire
+Back
+
+Part 12 of 63 · Education
+
+Education
+
+Answering for Sample Principal W (you).
+
+Entries
+
+Each entry asks: City or town of the school; Country or territory of the school; Field of study of a post-secondary education period; Start date of a post-secondary education period; Province or state of the school; Name of the school or facility attended; End date of a post-secondary education period.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 13 of 63 · Statutory declaration of common-law union
+Client questionnaire
+Back
+
+Part 13 of 63 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Principal W (you).
+
+The person's full name
+Save and continueSave and come back later
+
+=== Part 14 of 63 · Military service
+Client questionnaire
+Back
+
+Part 14 of 63 · Military service
+
+Military service
+
+Answering for Sample Principal W (you).
+
+Whether the person has ever served in any military, militia, civil defence unit, security organization or police force, including non-obligatory national service, reserve or volunteer units
+Yes
+No
+Entries
+
+Each entry asks: Country or territory of one period of service; Start date of one period of military, militia, civil defence, security or police service; Location or place where the person was stationed during one period of service; Province or region of the place where the person was stationed during one period of service; End date of one period of military, militia, civil defence, security or police service.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 15 of 63 · Previous travel
+Client questionnaire
+Back
+
+Part 15 of 63 · Previous travel
+
+Previous travel
+
+Answering for Sample Principal W (you).
+
+Entries
+
+Each entry asks: Country or territory the person travelled to on one trip; Start date of one trip the person made; Location (city or place) the person travelled to on one trip; Purpose of one trip the person made; End date of one trip the person made.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 16 of 63 · Contact information
+Client questionnaire
+Back
+
+Part 16 of 63 · Contact information
+
+Contact information
+
+Answering for Sample Principal W (you).
+
+Current mailing address
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+E-mail address
+Fax number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Alternate telephone number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Type of the alternate telephone number
+Residence
+Cellular
+Business
+Main telephone number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Type of the main telephone number (residence, cellular, business)
+Residence
+Cellular
+Business
+Current residential address
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+
+=== Part 17 of 63 · Applicant
+Client questionnaire
+Back
+
+Part 17 of 63 · Applicant
+
+Applicant
+
+Answering for Sample Principal W (you).
+
+The person's current occupation.
+Save and continueSave and come back later
+
+=== Part 18 of 63 · Other documentary evidence
+Client questionnaire
+Back
+
+Part 18 of 63 · Other documentary evidence
+
+Other documentary evidence
+
+Answering for Sample Principal W (you).
+
+Whether the person holds life insurance on themselves that names their partner as beneficiary
+Yes
+No
+Save and continueSave and come back later
+
+=== Part 19 of 63 · Your parent 1 (mother or father)
+Client questionnaire
+Back
+
+Part 19 of 63 · Your parent 1 (mother or father)
+
+Your parent 1 (mother or father)
+
+Answering for Sample Principal W (you).
+
+Whether this family member will accompany the subject to Canada.
+Yes
+No
+The address where the person currently lives.
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+
+=== Part 20 of 63 · Applicant
+Client questionnaire
+Back
+
+Part 20 of 63 · Applicant
+
+Applicant
+
+Answering for Sample Principal W's mother (a parent, not on this application).
+
+The person's current occupation.
+Save and continueSave and come back later
+
+=== Part 21 of 63 · Your parent 1 (mother or father)
+Client questionnaire
+Back
+
+Part 21 of 63 · Your parent 1 (mother or father)
+
+Your parent 1 (mother or father)
+
+Answering for Sample Principal W's mother (a parent, not on this application).
+
+Whether this family member will accompany the subject to Canada.
+Yes
+No
+The address where the person currently lives.
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+
+=== Part 22 of 63 · Statutory declaration of common-law union
+Client questionnaire
+Back
+
+Part 22 of 63 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Principal W's mother (a parent, not on this application).
+
+The person's full name
+Save and continueSave and come back later
+
+=== Part 23 of 63 · Personal details
+Client questionnaire
+Back
+
+Part 23 of 63 · Personal details
+
+Personal details
+
+Answering for Sample Principal W's mother (a parent, not on this application).
+
+Current marital status
+Choose…
+Annulled Marriage
+Common-Law
+Divorced
+Legally Separated
+Married
+Single
+Unknown
+Widowed
+Date of birth
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Country or territory of birth
+Save and continueSave and come back later
+
+=== Part 24 of 63 · Applicant
+Client questionnaire
+Back
+
+Part 24 of 63 · Applicant
+
+Applicant
+
+Answering for Sample Principal W's father (a parent, not on this application).
+
+The person's current occupation.
+Save and continueSave and come back later
+
+=== Part 25 of 63 · Your parent 1 (mother or father)
+Client questionnaire
+Back
+
+Part 25 of 63 · Your parent 1 (mother or father)
+
+Your parent 1 (mother or father)
+
+Answering for Sample Principal W's father (a parent, not on this application).
+
+Whether this family member will accompany the subject to Canada.
+Yes
+No
+The address where the person currently lives.
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+
+=== Part 26 of 63 · Statutory declaration of common-law union
+Client questionnaire
+Back
+
+Part 26 of 63 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Principal W's father (a parent, not on this application).
+
+The person's full name
+Save and continueSave and come back later
+
+=== Part 27 of 63 · Personal details
+Client questionnaire
+Back
+
+Part 27 of 63 · Personal details
+
+Personal details
+
+Answering for Sample Principal W's father (a parent, not on this application).
+
+Current marital status
+Choose…
+Annulled Marriage
+Common-Law
+Divorced
+Legally Separated
+Married
+Single
+Unknown
+Widowed
+Date of birth
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Country or territory of birth
+Save and continueSave and come back later
+
+=== Part 28 of 63 · Brothers and sisters
+Client questionnaire
+Back
+
+Part 28 of 63 · Brothers and sisters
+
+Brothers and sisters
+
+Answering for Sample Principal W's brothers and sisters (not on this application).
+
+Entries
+
+Each entry asks: The address where the person currently lives; Country or territory of birth; Date of birth; Current marital status; The person's full name; The person's current occupation; How this person is related to the form subject (for example son, daughter, adopted son, stepdaughter); Whether this family member will accompany the subject to Canada.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 29 of 63 · Personal details
+Client questionnaire
+Back
+
+Part 29 of 63 · Personal details
+
+Personal details
+
+Answering for Sample Spouse W (spouse or partner).
+
+Date the person married or began the common-law relationship with the current spouse or partner
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Family name as shown on passport or travel document
+Given name(s) as shown on passport or travel document
+Current marital status
+Choose…
+Annulled Marriage
+Common-Law
+Divorced
+Legally Separated
+Married
+Single
+Unknown
+Widowed
+Whether the person has ever used another name (nickname, maiden name, alias)
+Yes
+No
+Country of citizenship
+Country or territory from which the person is submitting the application
+Start date of the status in the applying-from country
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Immigration status in the country from which the person is applying
+Choose…
+Citizen
+Permanent resident
+Visitor
+Worker
+Student
+Other
+Protected Person
+Refugee Claimant
+Foreign National
+Description of the status in the applying-from country when it is 'other'
+End date of the status in the applying-from country
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Country or territory where the person currently resides
+Immigration status in the current country of residence
+Choose…
+Citizen
+Permanent resident
+Visitor
+Worker
+Student
+Other
+Protected Person
+Refugee Claimant
+Foreign National
+Start date of the status in the current country of residence
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Description of the status in the current country of residence when it is 'other'
+End date of the status in the current country of residence
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Date of birth
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+City or town of birth
+Country or territory of birth
+Sex or gender marker of the person
+Female
+Male
+Unknown
+Unspecified
+Unique Client Identifier assigned by IRCC
+Whether the person has taken a designated English or French language test
+Yes
+No
+Whether the person can communicate in English, French, both or neither
+English
+French
+Both
+Neither
+Official language in which the person is most at ease
+English
+French
+Native language or mother tongue
+Country or authority that issued the passport
+Passport expiry date
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Passport issue date
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Number of the passport or travel document
+Whether the person was previously married or in a common-law relationship
+Yes
+No
+Whether the person chooses a gender identifier different from the one on their current or ea
+
+=== Part 29 of 69 · National identity document
+Client questionnaire
+Back
+
+Part 29 of 69 · National identity document
+
+National identity document
+
+Answering for Sample Spouse W (spouse or partner).
+
+Whether the person holds a national identity document
+Yes
+No
+Save and continueSave and come back later
+
+=== Part 30 of 69 · Signature
+Client questionnaire
+Back
+
+Part 30 of 69 · Signature
+
+Signature
+
+Answering for Sample Spouse W (spouse or partner).
+
+Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an organization at its request, about the services they received, for research, performance measurement or evaluation; never used to decide about them (IMM 5257, consent before the signature).
+Yes
+No
+Save and continueSave and come back later
+
+=== Part 31 of 69 · US PR card
+Client questionnaire
+Back
+
+Part 31 of 69 · US PR card
+
+US PR card
+
+Answering for Sample Spouse W (spouse or partner).
+
+Whether the person is a lawful permanent resident of the United States
+Yes
+No
+Save and continueSave and come back later
+
+=== Part 32 of 69 · Background information
+Client questionnaire
+Back
+
+Part 32 of 69 · Background information
+
+Background information
+
+Answering for Sample Spouse W (spouse or partner).
+
+Whether the person previously applied to enter or remain in Canada
+Yes
+No
+Whether the person ever remained beyond status, or studied or worked without authorization, in Canada
+Yes
+No
+Whether the person was ever refused a visa or permit, denied entry or ordered to leave any country
+Yes
+No
+Free-text details of overstay, refusal, removal or previous Canadian applications
+Whether, within the past two years, the person or a family member has had tuberculosis of the lungs or been in close contact with a person with tuberculosis (IMM 5257, Background information, Question 1 a).
+Yes
+No
+Whether the person has a physical or mental disorder requiring social or health services other than medication during a stay in Canada
+Yes
+No
+Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence
+Yes
+No
+Free-text details of criminal history
+Whether the person has ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings (IMM 5257, Background information, Question 6).
+Yes
+No
+Whether the person served in a military, militia, civil defence, security organization or police force
+Yes
+No
+Dates and countries of military or security service
+Whether the person is or was a member of or associated with a group that engaged in or advocated violence for political or religious objectives
+Yes
+No
+Save and continueSave and come back later
+
+=== Part 33 of 69 · Government positions
+Client questionnaire
+Back
+
+Part 33 of 69 · Government positions
+
+Government positions
+
+Answering for Sample Spouse W (spouse or partner).
+
+Whether the person has ever held any government position (for example civil servant, judge, police officer, mayor, member of parliament, hospital administrator)
+Yes
+No
+Entries
+
+Each entry asks: Activities and/or positions held in one government position; Country or territory of one government position held by the person; Department or branch of one government position; Start date of one government position held by the person; Level of jurisdiction of one government position (for example national, regional, municipal); End date of one government position held by the person.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 34 of 69 · Membership or Association with Organizations
+Client questionnaire
+Back
+
+Part 34 of 69 · Membership or Association with Organizations
+
+Membership or Association with Organizations
+
+Answering for Sample Spouse W (spouse or partner).
+
+Entries
+
+Each entry asks: Activities carried out and/or positions held by the person within one organization; Country or territory of one organization the person is or was associated with; Start date of the person's membership in or association with one organization; Name of an organization the person is or was a member of or associated with; Province or region of one organization the person is or was associated with; End date of the person's membership in or association with one organization.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 35 of 69 · Employment
+Client questionnaire
+Back
+
+Part 35 of 69 · Employment
+
+Employment
+
+Answering for Sample Spouse W (spouse or partner).
+
+Entries
+
+Each entry asks: City or town of an activity period; Country or territory of an activity period; Company, employer or facility name for an activity period; Start date of an activity or occupation period; Activity or occupation during a period; Province or state of an activity period; End date of an activity or occupation period.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 36 of 69 · Education
+Client questionnaire
+Back
+
+Part 36 of 69 · Education
+
+Education
+
+Answering for Sample Spouse W (spouse or partner).
+
+Entries
+
+Each entry asks: City or town of the school; Country or territory of the school; Field of study of a post-secondary education period; Start date of a post-secondary education period; Province or state of the school; Name of the school or facility attended; End date of a post-secondary education period.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 37 of 69 · Statutory declaration of common-law union
+Client questionnaire
+Back
+
+Part 37 of 69 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Spouse W (spouse or partner).
+
+The person's full name
+Save and continueSave and come back later
+
+=== Part 38 of 69 · Military service
+Client questionnaire
+Back
+
+Part 38 of 69 · Military service
+
+Military service
+
+Answering for Sample Spouse W (spouse or partner).
+
+Whether the person has ever served in any military, militia, civil defence unit, security organization or police force, including non-obligatory national service, reserve or volunteer units
+Yes
+No
+Entries
+
+Each entry asks: Country or territory of one period of service; Start date of one period of military, militia, civil defence, security or police service; Location or place where the person was stationed during one period of service; Province or region of the place where the person was stationed during one period of service; End date of one period of military, militia, civil defence, security or police service.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 39 of 69 · Previous travel
+Client questionnaire
+Back
+
+Part 39 of 69 · Previous travel
+
+Previous travel
+
+Answering for Sample Spouse W (spouse or partner).
+
+Entries
+
+Each entry asks: Country or territory the person travelled to on one trip; Start date of one trip the person made; Location (city or place) the person travelled to on one trip; Purpose of one trip the person made; End date of one trip the person made.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 40 of 69 · Contact information
+Client questionnaire
+Back
+
+Part 40 of 69 · Contact information
+
+Contact information
+
+Answering for Sample Spouse W (spouse or partner).
+
+Current mailing address
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+E-mail address
+Fax number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Alternate telephone number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Type of the alternate telephone number
+Residence
+Cellular
+Business
+Main telephone number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Type of the main telephone number (residence, cellular, business)
+Residence
+Cellular
+Business
+Current residential address
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+
+=== Part 41 of 69 · Applicant
+Client questionnaire
+Back
+
+Part 41 of 69 · Applicant
+
+Applicant
+
+Answering for Sample Spouse W (spouse or partner).
+
+The person's current occupation.
+Save and continueSave and come back later
+
+=== Part 42 of 69 · Your parent 1 (mother or father)
+Client questionnaire
+Back
+
+Part 42 of 69 · Your parent 1 (mother or father)
+
+Your parent 1 (mother or father)
+
+Answering for Sample Spouse W (spouse or partner).
+
+Whether this family member will accompany the subject to Canada.
+Yes
+No
+The address where the person currently lives.
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+
+=== Part 43 of 69 · Applicant
+Client questionnaire
+Back
+
+Part 43 of 69 · Applicant
+
+Applicant
+
+Answering for Sample Spouse W's mother (a parent, not on this application).
+
+The person's current occupation.
+Save and continueSave and come back later
+
+=== Part 44 of 69 · Your parent 1 (mother or father)
+Client questionnaire
+Back
+
+Part 44 of 69 · Your parent 1 (mother or father)
+
+Your parent 1 (mother or father)
+
+Answering for Sample Spouse W's mother (a parent, not on this application).
+
+Whether this family member will accompany the subject to Canada.
+Yes
+No
+The address where the person currently lives.
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+
+=== Part 45 of 69 · Statutory declaration of common-law union
+Client questionnaire
+Back
+
+Part 45 of 69 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Spouse W's mother (a parent, not on this application).
+
+The person's full name
+Save and continueSave and come back later
+
+=== Part 46 of 69 · Personal details
+Client questionnaire
+Back
+
+Part 46 of 69 · Personal details
+
+Personal details
+
+Answering for Sample Spouse W's mother (a parent, not on this application).
+
+Current marital status
+Choose…
+Annulled Marriage
+Common-Law
+Divorced
+Legally Separated
+Married
+Single
+Unknown
+Widowed
+Date of birth
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Country or territory of birth
+Save and continueSave and come back later
+
+=== Part 47 of 69 · Applicant
+Client questionnaire
+Back
+
+Part 47 of 69 · Applicant
+
+Applicant
+
+Answering for Sample Spouse W's father (a parent, not on this application).
+
+The person's current occupation.
+Save and continueSave and come back later
+
+=== Part 48 of 69 · Your parent 1 (mother or father)
+Client questionnaire
+Back
+
+Part 48 of 69 · Your parent 1 (mother or father)
+
+Your parent 1 (mother or father)
+
+Answering for Sample Spouse W's father (a parent, not on this application).
+
+Whether this family member will accompany the subject to Canada.
+Yes
+No
+The address where the person currently lives.
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+
+=== Part 49 of 69 · Statutory declaration of common-law union
+Client questionnaire
+Back
+
+Part 49 of 69 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Spouse W's father (a parent, not on this application).
+
+The person's full name
+Save and continueSave and come back later
+
+=== Part 50 of 69 · Personal details
+Client questionnaire
+Back
+
+Part 50 of 69 · Personal details
+
+Personal details
+
+Answering for Sample Spouse W's father (a parent, not on this application).
+
+Current marital status
+Choose…
+Annulled Marriage
+Common-Law
+Divorced
+Legally Separated
+Married
+Single
+Unknown
+Widowed
+Date of birth
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Country or territory of birth
+Save and continueSave and come back later
+
+=== Part 51 of 69 · Brothers and sisters
+Client questionnaire
+Back
+
+Part 51 of 69 · Brothers and sisters
+
+Brothers and sisters
+
+Answering for Sample Spouse W's brothers and sisters (not on this application).
+
+Entries
+
+Each entry asks: The address where the person currently lives; Country or territory of birth; Date of birth; Current marital status; The person's full name; The person's current occupation; How this person is related to the form subject (for example son, daughter, adopted son, stepdaughter); Whether this family member will accompany the subject to Canada.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 52 of 69 · Personal details
+Client questionnaire
+Back
+
+Part 52 of 69 · Personal details
+
+Personal details
+
+Answering for Sample Child W (child).
+
+Family name as shown on passport or travel document
+Given name(s) as shown on passport or travel document
+Current marital status
+Choose…
+Annulled Marriage
+Common-Law
+Divorced
+Legally Separated
+Married
+Single
+Unknown
+Widowed
+Whether the person has ever used another name (nickname, maiden name, alias)
+Yes
+No
+Country of citizenship
+Country or territory from which the person is submitting the application
+Start date of the status in the applying-from country
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Immigration status in the country from which the person is applying
+Choose…
+Citizen
+Permanent resident
+Visitor
+Worker
+Student
+Other
+Protected Person
+Refugee Claimant
+Foreign National
+Description of the status in the applying-from country when it is 'other'
+End date of the status in the applying-from country
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Country or territory where the person currently resides
+Immigration status in the current country of residence
+Choose…
+Citizen
+Permanent resident
+Visitor
+Worker
+Student
+Other
+Protected Person
+Refugee Claimant
+Foreign National
+Start date of the status in the current country of residence
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Description of the status in the current country of residence when it is 'other'
+End date of the status in the current country of residence
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Date of birth
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+City or town of birth
+Country or territory of birth
+Sex or gender marker of the person
+Female
+Male
+Unknown
+Unspecified
+Unique Client Identifier assigned by IRCC
+Whether the person has taken a designated English or French language test
+Yes
+No
+Whether the person can communicate in English, French, both or neither
+English
+French
+Both
+Neither
+Official language in which the person is most at ease
+English
+French
+Native language or mother tongue
+Country or authority that issued the passport
+Passport expiry date
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Passport issue date
+
+For example, 14 6 2019
+
+Day
+Month
+Year
+Number of the passport or travel document
+Whether the person was previously married or in a common-law relationship
+Yes
+No
+Whether the person chooses a gender identifier different from the one on their current or earlier Canadian temporary resident document or, with no Canadian document, from their passport or travel document (Guide 5256, Question 3; IRM 0002).
+
+
+=== Part 52 of 62 · National identity document
+Client questionnaire
+Back
+
+Part 52 of 62 · National identity document
+
+National identity document
+
+Answering for Sample Child W (child).
+
+Whether the person holds a national identity document
+Yes
+No
+Save and continueSave and come back later
+
+=== Part 53 of 62 · Signature
+Client questionnaire
+Back
+
+Part 53 of 62 · Signature
+
+Signature
+
+Answering for Sample Child W (child).
+
+Whether the person consents to be contacted in the future by IRCC (CIC on the form), or an organization at its request, about the services they received, for research, performance measurement or evaluation; never used to decide about them (IMM 5257, consent before the signature).
+Yes
+No
+Save and continueSave and come back later
+
+=== Part 54 of 62 · US PR card
+Client questionnaire
+Back
+
+Part 54 of 62 · US PR card
+
+US PR card
+
+Answering for Sample Child W (child).
+
+Whether the person is a lawful permanent resident of the United States
+Yes
+No
+Save and continueSave and come back later
+
+=== Part 55 of 62 · Background information
+Client questionnaire
+Back
+
+Part 55 of 62 · Background information
+
+Background information
+
+Answering for Sample Child W (child).
+
+Whether the person previously applied to enter or remain in Canada
+Yes
+No
+Whether the person ever remained beyond status, or studied or worked without authorization, in Canada
+Yes
+No
+Whether the person was ever refused a visa or permit, denied entry or ordered to leave any country
+Yes
+No
+Free-text details of overstay, refusal, removal or previous Canadian applications
+Whether, within the past two years, the person or a family member has had tuberculosis of the lungs or been in close contact with a person with tuberculosis (IMM 5257, Background information, Question 1 a).
+Yes
+No
+Whether the person has a physical or mental disorder requiring social or health services other than medication during a stay in Canada
+Yes
+No
+Whether the person ever committed, was arrested for, charged with or convicted of a criminal offence
+Yes
+No
+Free-text details of criminal history
+Whether the person has ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings (IMM 5257, Background information, Question 6).
+Yes
+No
+Whether the person served in a military, militia, civil defence, security organization or police force
+Yes
+No
+Dates and countries of military or security service
+Whether the person is or was a member of or associated with a group that engaged in or advocated violence for political or religious objectives
+Yes
+No
+Save and continueSave and come back later
+
+=== Part 56 of 62 · Employment
+Client questionnaire
+Back
+
+Part 56 of 62 · Employment
+
+Employment
+
+Answering for Sample Child W (child).
+
+Entries
+
+Each entry asks: City or town of an activity period; Country or territory of an activity period; Company, employer or facility name for an activity period; Start date of an activity or occupation period; Activity or occupation during a period; Province or state of an activity period; End date of an activity or occupation period.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 57 of 62 · Education
+Client questionnaire
+Back
+
+Part 57 of 62 · Education
+
+Education
+
+Answering for Sample Child W (child).
+
+Entries
+
+Each entry asks: City or town of the school; Country or territory of the school; Field of study of a post-secondary education period; Start date of a post-secondary education period; Province or state of the school; Name of the school or facility attended; End date of a post-secondary education period.
+
+Nothing added yet. Add an entry, or say that none apply. The forms need one or the other before filing.
+
+Add an entry
+None apply
+Save and continueSave and come back later
+
+=== Part 58 of 62 · Statutory declaration of common-law union
+Client questionnaire
+Back
+
+Part 58 of 62 · Statutory declaration of common-law union
+
+Statutory declaration of common-law union
+
+Answering for Sample Child W (child).
+
+The person's full name
+Save and continueSave and come back later
+
+=== Part 59 of 62 · Contact information
+Client questionnaire
+Back
+
+Part 59 of 62 · Contact information
+
+Contact information
+
+Answering for Sample Child W (child).
+
+Current mailing address
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+E-mail address
+Fax number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Alternate telephone number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Type of the alternate telephone number
+Residence
+Cellular
+Business
+Main telephone number including country code
+
+Country code without +, for example 91; then the number
+
+Country code
+Number
+Type of the main telephone number (residence, cellular, business)
+Residence
+Cellular
+Business
+Current residential address
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+
+=== Part 60 of 62 · Applicant
+Client questionnaire
+Back
+
+Part 60 of 62 · Applicant
+
+Applicant
+
+Answering for Sample Child W (child).
+
+The person's current occupation.
+Save and continueSave and come back later
+
+=== Part 61 of 62 · Your parent 1 (mother or father)
+Client questionnaire
+Back
+
+Part 61 of 62 · Your parent 1 (mother or father)
+
+Your parent 1 (mother or father)
+
+Answering for Sample Child W (child).
+
+Whether this family member will accompany the subject to Canada.
+Yes
+No
+The address where the person currently lives.
+Street number
+Street name
+Apartment or unit (optional)
+City or town
+Province, state or district (optional)
+Postal code (optional)
+Country
+Save and continueSave and come back later
+
+=== Part 62 of 62 · Dependant(s)
+Client questionnaire
+Back
+
+Part 62 of 62 · Dependant(s)
+
+Dependant(s)
+
+Answering for Sample Child W (child).
+
+How this person is related to the form subject (for example son, daughter, adopted son, stepdaughter)
+Save and continueSave and come back later
