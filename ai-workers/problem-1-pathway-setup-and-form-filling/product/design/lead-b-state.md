@@ -20,3 +20,4 @@ Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Ses
 
 ## Log
 * 13 Nov 22:25 IST: rows sent to Lead 37 (one line each, with four asks); delivered, not yet answered.
+* 13 Nov 22:26 IST: at Lead 37's ask, read RULES (as of P-557) and AGENTS rules 9-10 from `lead/2026-11-07-lead31`; rows and contracts unchanged; RULES amendment ask (P-335/P-357) still open.
