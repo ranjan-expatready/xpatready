@@ -21,7 +21,7 @@ import { CaseTeamChip, OpeningTeam, useFirm } from "./team";
 import { EmployerLinkFor, EmployerLinkLine } from "./employer";
 import { EarlierFactsCard } from "./earlier-facts";
 import { EligibilityCard, EligibilityPage } from "./eligibility";
-import { PeopleAndFilings } from "./filing-changes"; // C6.13
+import { clientOf, PeopleAndFilings } from "./filing-changes"; // C6.13, A24-3
 import { ReleaseNotice } from "./release-update"; // C9.5
 import { EarlierStages, earlierOf, StageStrip } from "./stages"; // C6.17
 import { OfficerPeoplePanel } from "./privacy"; // C6.16
@@ -360,8 +360,11 @@ function CasePage() {
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]"><span data-case-number-h className="tabular-nums">{c.case_number}</span>{c.reference ? <span className="text-lg font-normal text-text-muted" data-case-own-reference>{c.reference}</span> : null}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><ReleasePill c={c} /></h1>
           <div className="mt-1 empty:hidden"><CaseReadinessPill caseId={c.id} /></div>
-          {/* BK-3 PR 3 (P-447 (2)): the case names its client and opens their page; the person acting stays the same. */}
-          <p className="mt-1 text-sm text-text-muted">Client: <Link to={`/cases/clients/${encodeURIComponent(c.client)}`} data-case-client className="inline-flex min-h-6 items-center font-medium text-text-link hover:underline">{client?.name ?? "the client"}</Link></p>
+          {/* BK-3 PR 3 (P-447 (2)): the case names its client and opens their page; the person acting stays the same.
+              A24-3 (P-492, CS-8): by the client person's name (one client per case), then a link to the simulated login's cases
+              (review m2: it says where it goes; the person acting stays the same). */}
+          <p className="mt-1 text-sm text-text-muted" data-case-client-line>Client: <span className="font-medium text-text [overflow-wrap:anywhere]" data-case-client-name>{clientOf(c.people)?.label ?? client?.name ?? "not named yet"}</span>{" "}
+            <span aria-hidden>·</span>{" "}<Link to={`/cases/clients/${encodeURIComponent(c.client)}`} data-case-client className="inline-flex min-h-6 items-center font-medium text-text-link hover:underline">{client ? `${client.name}'s cases` : "The client's cases"}</Link></p>
           {c.team ? <CaseTeamChip caseId={c.id} line={c.team} /> : null}
           {c.employer_link ? <div className="mt-1"><EmployerLinkLine link={c.employer_link} caseId={c.id} /></div> : null}
           <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · <span data-household-to-confirm={v.summary.answered - v.summary.confirmed}>{v.summary.answered - v.summary.confirmed} to confirm</span> · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>

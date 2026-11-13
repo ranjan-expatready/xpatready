@@ -95,7 +95,12 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   // "Parent1" and "Parent2", not mother or father, so the tabs say first and second parent (review Major 1 on #1256).
   const tabNames = (await o.getByRole("tab").allInnerTexts()).map((t) => t.split("\n")[0].trim()).sort();
   const wantTabs = ["The application", ...["Sample Applicant C", "Sample Spouse C", "Sample Child C"].flatMap((n) => [n, `${n}'s first parent`, `${n}'s second parent`])].sort();
-  step("officer pass: spouse and child are on the case and get their own tabs of sections (and a tab for each person's parents)", await shows(o.getByRole("tab").nth(3)) && JSON.stringify(tabNames) === JSON.stringify(wantTabs) && await shows(o.locator("section", { hasText: "People and filings" }).getByText("Sample Child C")), tabNames);
+  // A24-3 (P-492, CS-10): People and filings names each filing's principal applicant in its own column, so a person who
+  // files their own application (the child here) is named twice in their row; the person is read from the row's Person
+  // cell (its first cell), exactly, never by text anywhere in the section (two matches: a strict-mode miss, #1666's CI).
+  const tabsShown = await shows(o.getByRole("tab").nth(3)), tabsRight = JSON.stringify(tabNames) === JSON.stringify(wantTabs);
+  const childRow = await shows(o.locator("section", { hasText: "People and filings" }).locator("tbody tr td:first-child").getByText("Sample Child C", { exact: true }));
+  step("officer pass: spouse and child are on the case and get their own tabs of sections (and a tab for each person's parents)", tabsShown && tabsRight && childRow, { tabsShown, tabsRight, childRow, tabNames });
   await state(o, "officer-case-new", [1440, 1024]);
 
   // ── 2. The client answers on a phone
