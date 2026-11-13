@@ -60,3 +60,26 @@ Journeys: (1) apply the split to a clean copy and get the same database; (2) a b
 Full CI. The parts of `check-isolated-ttl.sh` that need the demo database, in this container. A real UI walk; D17 and D20 stay with the founder and were not walked. The commits after c4f728b.
 
 **Verdict: Approve**. Blockers: none. Majors: none. Minors: m1, m2, m3, m4 (m4 is for the lead).
+
+## Re-review: c4f728b78..9f510b29b (PR head), diff only
+I checked everything below myself on `9f510b29b4fd6b394a1aa23f39912eacb05a951d`, from extracted trees and in zsh.
+* **Schema moves (m1, m2): fixed, and still pure moves.**
+  * `access.prisma` is split in two. `extension.prisma` holds ExtensionPairing, ExtensionCodeTry, ExtensionSession and RecaptureTask, owned by forms, and carries the moved "F2 browser extension (forms lane)" header. `links.prisma` holds PersonLink, PersonLinkTry, PersonLinkSession and DemoMessage, owned by runtime. `OfficialPagesRecord` is now in `forms.prisma`. Each new rule line matches its file's contents.
+  * `migrate diff` from main's old file to the folder gives "-- This is an empty migration.", and `--exit-code` gives 0 in reverse.
+  * All 117 blocks are byte-identical to the old file, together with their leading `//` and `///` comments. Sorting all lines adds only the 15 rule lines, 15 copies of line 2 and one blank line.
+  * `index.d.ts` is still ordering-only: the sorted diff is 28 lines of diff output, 14 changed lines. The 104 model names are the same set. The first model is now `enteredSection`, because `answers.prisma` now sorts first. `runtimeDataModel` is equal.
+  * The base-enum rule still holds for all 11 enums. DEVELOPING.md's table matches the 15 files, and nothing names `access.prisma` any more.
+  * `check_prisma_schema.ts` passes 8 of 8, with F at 15 files.
+  * Leaving PersonPreference in cases and asking the lead is acceptable; m2 is closed as far as the PR goes.
+* **`isolated.sh` (m3): fixed.** I ran the exact line in zsh with `set -e`.
+  * A fresh tree skips. A missing client, an edited file, a deleted file and an old-dated file moved in all regenerate, and the script continues every time.
+  * A new migration folder also triggers a generate. That costs about 1 s and is harmless.
+  * The ttl guard's stand-in `prisma/schema.prisma` (older than the client) correctly skips.
+* **Guard scripts reverted to main (93e8e9f89): right under the ownership rule.** `git diff origin/main 9f510b29b -- product/tools` is empty.
+  * The ttl guard on 9f510b29b gives exactly the same PASS/FAIL list as main in this container.
+  * At the head, `check-select-suites.sh` passes 83 of 83. It now probes the old path, so it no longer proves that an area file runs everything; my earlier N1 still stands as a note for the tech lead (the PR proposes the edit to them). I checked the behaviour directly instead: `select-suites.mjs` returns `ALL … shared` for `extension.prisma`, `links.prisma` and `base.prisma`.
+* **61ef3c764:** the break report only, a record.
+* **Fact:** `review.md` is already committed in 9f510b29b. It matches my first section byte for byte. This section is the uncommitted addition.
+* **Still open:** m4 (the stale baton line in `RULES.md:51` and `SECOND-MAC.md:81`) and N1 (the select-suites probe), both for the tech lead and not the builder. The journey score rises to 10/10: m3 is fixed (error recovery 1) and m1/m2 are settled (trust 1).
+
+**Verdict: Approve** for `9f510b29b4fd6b394a1aa23f39912eacb05a951d`. Blockers: none. Majors: none. Minors: none open on the builder; m4 and N1 are for the tech lead.
