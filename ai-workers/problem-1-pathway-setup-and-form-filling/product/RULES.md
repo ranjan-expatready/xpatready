@@ -1,4 +1,4 @@
-# Rules in force — one page (the tech lead keeps it; as of **P-521**, 13 Nov ~12:4x IST; page as of P-515 kept in `history/RULES-2026-11-13-1110-as-of-P-515.md`)
+# Rules in force — one page (the tech lead keeps it; as of **P-521**, 13 Nov ~10:4x IST (from `date`); page as of P-515 kept in `history/RULES-2026-11-13-1110-as-of-P-515.md`)
 
 Each rule once, with the decision that set it. **This page is the start read**: a new Lead reads it, then only the `DECISIONS.md` rows newer than "as of" above, word for word (P-314, P-440). `tools/check-docs.sh` fails when this page falls more than 3 rows behind DECISIONS (P-440). The previous page, as of P-452, is word for word in `history/RULES-2026-11-11-as-of-P-452.md` (earlier: `history/RULES-2026-11-09-as-of-P-353.md`). Product rulings (what a screen or rule does) live in their DECISIONS rows: read a row when its capability is touched.
 
