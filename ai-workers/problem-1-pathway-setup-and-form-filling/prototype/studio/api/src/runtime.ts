@@ -11,7 +11,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { caseName, type CaseListRow, ConfirmSection, fillsText, Reconfirm, notReadyForCases, releaseLabel, NewCase, type OpenableRelease, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { caseView, checkValue, isClientField, OWN_LINK, pqrView, shapeOf, type Answer, type CaseView, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
+import { caseView, checkValue, isClientField, OWN_LINK, pqrView, sectionAnswers, shapeOf, type Answer, type CaseView, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import { ownerOf, privateFrom, progressOf } from "../../engine/runtime/privacy.ts"; // C6.16
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, CaseRead, Db, fail, need, RUNTIME_ACTORS, Workspace, type Actor } from "./core.ts";
@@ -25,6 +25,7 @@ import { isFilingFact } from "../../engine/resolver.ts";
 import { ONCE_WORDS } from "../../engine/field-scope.ts";
 import { linkedOf } from "./employer-cases.ts";
 import { awaitsClient, backgroundFacts, CLIENT_RECONFIRM, OFFICER_ENTRY } from "../../engine/runtime/background.ts";
+import { isVerified, mustVerifyFacts } from "../../engine/runtime/must-verify.ts"; // C7.9 (QA-446: Confirm section verifies unchecked must-verify facts)
 import { backgroundBlockOf } from "./background-questions.ts";
 import { Programs } from "./programs.ts";
 import { pinChain } from "../../engine/runtime/release-update.ts";
@@ -868,6 +869,15 @@ export class Runtime {
     const firmGives = new Set(now.filter((x) => x.channel === FIRM_RECORD && x.subjectId === b.subjectId).map((x) => x.field));
     const shownSections = caseView(s, this.peopleOf(c), now, nowRows, "agent", at, nowGroups).sections.filter((x) => x.subjectId === b.subjectId && x.section === section);
     const listed = new Set(shownSections.flatMap((x) => x.questions.map((q) => q.fact)));
+    // QA-446 (P-510 (2)): the officer confirms what is on the Confirm list, and (C7.9, SA-1B-260 r3) a fact the release marks
+    // "must verify before filing" that no one on staff has checked yet, even when the client declared it: that check is
+    // the officer's (a value checked against its document), and Ready to file's CRITICAL line waits for it.
+    const mv = mustVerifyFacts(s);
+    const unchecked = (fact: string, a: { status: string; channel: string; answered: { channel: string } | null }) => mv.has(fact) && !isVerified({ status: a.status as "DECLARED" | "VERIFIED", channel: a.channel, origin: a.answered ? { channel: a.answered.channel } as Answer["origin"] : undefined });
+    const onList = new Set([
+      ...shownSections.flatMap((x) => sectionAnswers(x.questions, x.group)).filter((a) => !a.confirmed).map((a) => a.id),
+      ...shownSections.flatMap((x) => x.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer) : [q.answer]).filter((a): a is NonNullable<typeof a> => !!a && unchecked(q.fact, a)).map((a) => a.id))),
+    ]);
     // B155 (break m2 on #1367): a list's entry shows only the cells it asks (cellAsked); an answer in a cell it does not show
     // (left there when an earlier entry was removed) is never seen, so it neither blocks nor is confirmed.
     const shownCells = listOf ? new Set(shownSections.flatMap((x) => { const g = x.questions.filter((q) => q.group); return g.flatMap((q) => q.rows.filter((_, i) => cellAsked(g, q, i)).map((r) => `${q.fact}|${r.row}`)); })) : null;
@@ -911,7 +921,10 @@ export class Runtime {
       // C6.18 (P-244): a background answer the officer recorded is the client's to re-confirm; the officer's confirm leaves
       // it waiting for the client (it was seen, so it never blocks the section) and says how many.
       const forClient = current.filter((a) => a.status === "DECLARED" && awaitsClient({ field: a.canonicalFieldKey, channel: (a.sourceJson as { channel: string }).channel }, bg));
-      const open = current.filter((a) => a.status === "DECLARED" && !forClient.includes(a));
+      // QA-446 (P-510 (2): P-242 and P-411 stand): only answers on the officer's Confirm list are confirmed; a declared
+      // answer the rule already counts (the client's own, a minor's typed by the parent, a person's own on their link)
+      // stays Declared by who gave it, so "0 to confirm" never turns into "1 answer confirmed".
+      const open = current.filter((a) => a.status === "DECLARED" && !forClient.includes(a) && onList.has(a.id));
       waiting = forClient.length;
       for (const a of open) {
         const id = randomUUID();
@@ -919,13 +932,13 @@ export class Runtime {
         if (n.count !== 1) conflict("An answer in this section changed while confirming; nothing was confirmed. Review it and confirm again.", { changed: [a.canonicalFieldKey] });
         await tx.clientCanonicalAnswer.create({ data: { id, workspaceId: a.workspaceId, partyId: a.partyId, subjectId: a.subjectId, canonicalFieldId: a.canonicalFieldId, canonicalFieldKey: a.canonicalFieldKey, rowKey: a.rowKey, valueJson: a.valueJson as object, status: "VERIFIED", sourceJson: { channel: "confirm_section", actor: actor.id, at: at.toISOString(), from: a.id }, verifiedBy: actor.id, verifiedAt: at } });
       }
-      if (ga?.status === "DECLARED") {
+      if (ga?.status === "DECLARED" && onList.has(ga.id)) {
         const id = randomUUID();
         const n = await tx.clientGroupAnswer.updateMany({ where: { id: ga.id, supersededById: null }, data: { supersededById: id } });
         if (n.count !== 1) conflict("An answer in this section changed while confirming; nothing was confirmed. Review it and confirm again.", { changed: [`group:${section}`] });
         await tx.clientGroupAnswer.create({ data: { id, workspaceId: ga.workspaceId, subjectId: ga.subjectId, groupKey: ga.groupKey, noneApply: ga.noneApply, status: "VERIFIED", sourceJson: { channel: "confirm_section", actor: actor.id, at: at.toISOString(), from: ga.id }, verifiedBy: actor.id, verifiedAt: at } });
       }
-      return open.length + (ga?.status === "DECLARED" ? 1 : 0);
+      return open.length + (ga?.status === "DECLARED" && onList.has(ga.id) ? 1 : 0);
     });
     await this.audit.log(c.workspaceId, actor.id, "confirmed", "section", section, `${actor.name} confirmed ${confirmed} answer${confirmed === 1 ? "" : "s"} in ${section} on case ${short(caseId)}${waiting ? `; ${waiting} background answer${waiting === 1 ? "" : "s"} recorded by staff still wait${waiting === 1 ? "s" : ""} for the client to re-confirm` : ""}`);
     const v = await this.view(actor, caseId, "agent");

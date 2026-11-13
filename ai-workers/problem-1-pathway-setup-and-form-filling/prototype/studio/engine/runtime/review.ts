@@ -107,18 +107,48 @@ export function fileOf(x: { waits: boolean; inputHash: string; validated: { id: 
 
 export type CheckItem = { key: string; source: "default" | "program" | "confirmations" | "form"; wording: string; live: Record<string, unknown> | null };
 export type ProgramItem = { key: string; wording: string };
+/** QA-446 (P-510 (2): P-242 and P-411 stand): a filing's answers by who stands behind them, counted exactly as the
+ *  officer's Agent view counts them (the same sections, engine/runtime/case.ts sectionAnswers), so the household line,
+ *  the tabs, the sections and this checklist agree. An answer off the officer's Confirm list is either Declared by the
+ *  person who gave it (the client's own, a minor's typed by the parent, a person's own on their link: no officer
+ *  confirmation needed) or Confirmed by the officer; one still on the list is "to confirm". `nameOf` names who gave it. */
+export type ValuesBy = { declared: { by: string; facts: number }[]; confirmed: { by: string; facts: number }[]; toConfirm: number; waitsClient: number };
+/** Review m2: an answer staff recorded that waits for the client's re-confirmation (C6.18) is not the officer's to
+ *  confirm, so it is counted apart. Review m3: an answer saved on a person's own link is named by that person (`about`),
+ *  never by the link's actor. `nameOf` names a person or staff member by their actor id. */
+export function valuesOf(answers: { confirmed: boolean; mark: string; by: string; channel?: string; about?: string; awaits_client?: boolean }[], nameOf: (actor: string) => string): ValuesBy {
+  const add = (m: Map<string, number>, k: string) => m.set(k, (m.get(k) ?? 0) + 1);
+  const declared = new Map<string, number>(), confirmed = new Map<string, number>();
+  let toConfirm = 0, waitsClient = 0;
+  for (const a of answers) {
+    if (a.awaits_client) waitsClient++;
+    else if (!a.confirmed) toConfirm++;
+    else add(a.mark === "confirmed" ? confirmed : declared, a.channel === "own_link" && a.about ? a.about : nameOf(a.by));
+  }
+  const list = (m: Map<string, number>) => [...m].map(([by, facts]) => ({ by, facts }));
+  return { declared: list(declared), confirmed: list(confirmed), toConfirm, waitsClient };
+}
+const facts = (n: number) => `${n} fact${n === 1 ? "" : "s"}`;
+const totalOf = (v: ValuesBy) => [...v.declared, ...v.confirmed].reduce((n, c) => n + c.facts, 0) + v.toConfirm + v.waitsClient;
+/** The checklist's values item in words: "Values: 93 facts, 93 declared by Client A · 0 to confirm" (QA-446). */
+export function valuesWords(v: ValuesBy): string {
+  if (!totalOf(v)) return "Values: none answered yet";
+  const parts = [...v.declared.map((c) => `${c.facts} declared by ${c.by}`), ...v.confirmed.map((c) => `${c.facts} confirmed by ${c.by}`), `${v.toConfirm} to confirm${v.toConfirm ? " (the officer's Confirm section)" : ""}`,
+    ...(v.waitsClient ? [`${v.waitsClient} wait${v.waitsClient === 1 ? "s" : ""} for the client to re-confirm`] : [])];
+  return `Values: ${facts(totalOf(v))}, ${parts.join(" · ")}`;
+}
+
 /** BR-2: the checklist copied into the round for one filing: the two default items with their live state from C7.6,
- *  the program's items for the filing's combination (the scaffolding port), "Values confirmed, with who" (M6: the
- *  confirmations that exist; a "checked against the document" record does not exist yet), and one "checked" mark per
- *  form (GitHub's "Viewed"). */
-export function checklistOf(x: { critical: number; documents: { verified: number; required: number }; program: ProgramItem[]; confirmed: { by: string; facts: number }[]; forms: { item: string; label: string }[] }): CheckItem[] {
-  const who = x.confirmed.filter((c) => c.facts > 0);
-  const total = who.reduce((n, c) => n + c.facts, 0);
+ *  the program's items for the filing's combination (the scaffolding port), the values with who stands behind them
+ *  (QA-446: declared by whom, confirmed by whom, still to confirm; M6: a "checked against the document" record does not
+ *  exist yet), and one "checked" mark per form (GitHub's "Viewed"). */
+export function checklistOf(x: { critical: number; documents: { verified: number; required: number }; program: ProgramItem[]; values: ValuesBy; forms: { item: string; label: string }[] }): CheckItem[] {
+  const v = x.values;
   return [
     { key: "default:no_critical", source: "default", wording: "No open critical warnings", live: { open: x.critical } },
     { key: "default:documents", source: "default", wording: "All required documents verified", live: { verified: x.documents.verified, required: x.documents.required } },
     ...x.program.map((p) => ({ key: `program:${p.key}`, source: "program" as const, wording: p.wording, live: null })),
-    { key: "confirmations", source: "confirmations", wording: total ? `Values confirmed: ${total} fact${total === 1 ? "" : "s"}, by ${who.map((c) => c.by).join(", ")}` : "Values confirmed: none yet", live: { facts: total, by: who } },
+    { key: "confirmations", source: "confirmations", wording: valuesWords(v), live: { facts: totalOf(v), declared: v.declared, confirmed: v.confirmed, to_confirm: v.toConfirm, waits_client: v.waitsClient } },
     ...x.forms.map((f) => ({ key: `form:${f.item}`, source: "form" as const, wording: `${f.label} checked`, live: null })),
   ];
 }
