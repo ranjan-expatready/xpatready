@@ -1,0 +1,160 @@
+// front-office-booking.prisma — consultation types, staff hours, time off, bookings, booking tokens. Owner: Lead B (front office).
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+//
+// FO-1b (P-558, P-559 (2); BACKLOG row FO-1b rows rev 3.1; contracts platform-and-front-office-contracts-2026-11-14.md
+// §2.2 and §7 binding; requirements AG-04: AG-4-1, -4, -9, -26, -36, -62, BR-3). Schema only: the booking API is FO-3.
+// Like the platform rows, these carry no workspace_id (the firm is the tenant; the demo reset leaves them) and every
+// table carries firm_id first in every index but its primary key. A row naming a staff member, a type or a booking keys
+// on (firm_id, <id>), so it can never point at another firm's row: foreign keys inside this file; to platform_firm and
+// platform_staff, triggers in the migration until Lead B adds the back-relation lines to platform.prisma (asked in the PR;
+// DEVELOPING.md DB-SPLIT: never edit another area's file), when they become foreign keys. Rules Prisma cannot say are in the migration
+// 20261114120000_fo1b_booking_tables: the no-overlap rule per host (btree_gist exclusion over SCHEDULED and RESCHEDULED
+// bookings on the range padded by the type's gaps, BR-3, AG-4-26), the padded range and `sequence` kept by the database,
+// status moves, token expiry and voiding (AG-4-36), checks on minutes, slugs, zones and hashes.
+// person_id and prospect_id name FO-1a's fo_person and fo_prospect; their foreign keys come with whichever of FO-1a and
+// FO-1b merges second (or FO-3), since neither table is on main yet. Every value seeded here is Sample.
+
+/// What a consultation type is for (AG-4-10). Month one has only the free consultation, which is public; case types
+/// come later without a data change.
+enum FoConsultationPurpose {
+  FREE_CONSULT
+}
+
+/// How a consultation is held (AG-4-11).
+enum FoMeetingMode {
+  VIDEO
+  PHONE
+  IN_PERSON
+}
+
+/// A booking's status (requirements trace §A "Booking", AG-04 C2). Active, for the no-overlap rule: SCHEDULED and
+/// RESCHEDULED (PENDING_PAYMENT joins them when paid types come). A booking is written SCHEDULED; CANCELLED is final;
+/// COMPLETED and NO_SHOW are the attendance answer, which a person may change later (AG-4-39).
+enum FoBookingStatus {
+  SCHEDULED
+  RESCHEDULED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+/// A consultation type (AG-4-9, AG-4-4/-5/-66, AG-4-1 rule 2): its slug is unique in the firm and is the only way the
+/// public page names it (AG-4-16). Timings carry AG-4-66's Sample defaults: gap before 0 and after 10 minutes, shortest
+/// notice 4 h, window 60 days, self-service limit 4 h; slot interval empty = the meeting's length. Hosts are staff of
+/// the same firm (a trigger checks each id). Switching a type off keeps its bookings (AG-4-9 rule 4).
+model FoConsultationType {
+  id                      String                @id @default(uuid()) @db.Uuid
+  firmId                  String                @map("firm_id") @db.Uuid
+  slug                    String
+  name                    String
+  purpose                 FoConsultationPurpose @default(FREE_CONSULT)
+  modes                   FoMeetingMode[]
+  hostStaffIds            String[]              @map("host_staff_ids") @db.Uuid
+  minutes                 Int
+  gapBeforeMinutes        Int                   @default(0) @map("gap_before_minutes")
+  gapAfterMinutes         Int                   @default(10) @map("gap_after_minutes")
+  minNoticeMinutes        Int                   @default(240) @map("min_notice_minutes")
+  windowDays              Int                   @default(60) @map("window_days")
+  selfServiceLimitMinutes Int                   @default(240) @map("self_service_limit_minutes")
+  slotIntervalMinutes     Int?                  @map("slot_interval_minutes")
+  meetingLink             String?               @map("meeting_link")
+  active                  Boolean               @default(true)
+  createdAt               DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime              @updatedAt @map("updated_at") @db.Timestamptz
+
+  bookings FoBooking[]
+
+  @@unique([firmId, slug])
+  /// The target of fo_booking's (firm_id, type_id) key.
+  @@unique([firmId, id])
+  @@map("fo_consultation_type")
+}
+
+/// One weekly window of a staff member's bookable hours (AG-4-62 rules 2-4): weekday 0 = Sunday … 6 = Saturday, minutes
+/// since local midnight in the window's own IANA zone, start before end, no two windows of one person overlapping on a
+/// day (exclusion in the migration). A new person's hours are copied from the firm's business hours setting
+/// (api/src/front-office/booking-seed.ts); business hours never limit slots afterwards (AG04-D22).
+model FoAvailability {
+  id          String   @id @default(uuid()) @db.Uuid
+  firmId      String   @map("firm_id") @db.Uuid
+  staffId     String   @map("staff_id") @db.Uuid
+  weekday     Int
+  startMinute Int      @map("start_minute")
+  endMinute   Int      @map("end_minute")
+  timeZone    String   @map("time_zone")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([firmId, staffId, weekday])
+  @@map("fo_availability")
+}
+
+/// A staff member's out-of-office period, whole or part days (AG-4-62 rules 5, 8): it removes every slot it overlaps and
+/// never moves or cancels a booking (rule 7). created_by is who entered it (the person, or an Owner or Admin).
+model FoTimeOff {
+  id        String   @id @default(uuid()) @db.Uuid
+  firmId    String   @map("firm_id") @db.Uuid
+  staffId   String   @map("staff_id") @db.Uuid
+  startsAt  DateTime @map("starts_at") @db.Timestamptz
+  endsAt    DateTime @map("ends_at") @db.Timestamptz
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([firmId, staffId, startsAt])
+  @@map("fo_time_off")
+}
+
+/// A booking (contracts §2.2 as changed by §7; AG-4-25/-26, AG-4-36, AG-4-47): one host (staff_id), times in UTC
+/// (timestamptz), the visitor's IANA zone for every message and invite (AG-4-18 rule 3). The database keeps block_range
+/// (start − the type's gap before, end + its gap after; written by a trigger, never by the app) and `sequence` (0 when
+/// written, +1 on each change to time, host, type, mode or status: the invite's SEQUENCE, AG-4-32). Two active bookings
+/// of one host never overlap on block_range (BR-3).
+model FoBooking {
+  id              String                   @id @default(uuid()) @db.Uuid
+  firmId          String                   @map("firm_id") @db.Uuid
+  typeId          String                   @map("type_id") @db.Uuid
+  staffId         String                   @map("staff_id") @db.Uuid
+  personId        String?                  @map("person_id") @db.Uuid
+  prospectId      String?                  @map("prospect_id") @db.Uuid
+  status          FoBookingStatus          @default(SCHEDULED)
+  sequence        Int                      @default(0)
+  mode            FoMeetingMode
+  startsAt        DateTime                 @map("starts_at") @db.Timestamptz
+  endsAt          DateTime                 @map("ends_at") @db.Timestamptz
+  visitorTimeZone String                   @map("visitor_time_zone")
+  blockRange      Unsupported("tstzrange")? @map("block_range")
+  createdAt       DateTime                 @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime                 @updatedAt @map("updated_at") @db.Timestamptz
+
+  type   FoConsultationType @relation(fields: [firmId, typeId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  tokens FoBookingToken[]
+
+  /// The target of fo_booking_token's (firm_id, booking_id) key.
+  @@unique([firmId, id])
+  @@index([firmId, staffId, startsAt])
+  @@index([firmId, startsAt])
+  @@index([firmId, typeId])
+  @@index([firmId, personId])
+  @@index([firmId, prospectId])
+  @@map("fo_booking")
+}
+
+/// A self-service link's token (AG-4-36): only its SHA-256 hash (64 lower-case hex) is stored; several may be live for
+/// one booking (one per email). It expires when the meeting ends (expires_at = the booking's ends_at, checked) and is
+/// voided by the database when the booking is cancelled or its time changes; only voided_at may change, once.
+/// FO-3 looks a token up by its id (selector) and compares the hash in constant time (verifier), so no index outside
+/// the firm is needed.
+model FoBookingToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  firmId    String    @map("firm_id") @db.Uuid
+  bookingId String    @map("booking_id") @db.Uuid
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz
+  voidedAt  DateTime? @map("voided_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  booking FoBooking @relation(fields: [firmId, bookingId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([firmId, tokenHash])
+  @@index([firmId, bookingId])
+  @@map("fo_booking_token")
+}
