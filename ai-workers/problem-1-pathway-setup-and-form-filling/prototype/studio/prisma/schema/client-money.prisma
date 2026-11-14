@@ -1,0 +1,494 @@
+// client-money.prisma — invoices, payments, refunds, receipts, trust ledger, write-offs, moves between accounts. Owner: Lead B (client money, contracts §8).
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
+//
+// FO-7a (P-558, P-559, P-575 (1), P-576, P-599, P-600; BACKLOG row FO-7a rows rev 7, rev 10 part 2, amended by rev 13;
+// contracts platform-and-front-office-contracts-2026-11-14.md §2.5, §7 binding (§2.5 trust), §8; requirements AG-06:
+// AG-6-1, -4, -19, -44, -46, -59, -60, -61, -63, -69, -73, -76; Code SOR/2022-128 s. 32, s. 33(3), legal reading
+// Unconfirmed: no counsel). Schema only: the API is FO-7b (invoices, payments), FO-7t (trust), FO-7r (write-offs, moves),
+// FO-7c (card). Nothing outside api/src/client-money/ ever writes these tables; other modules ask ClientMoneyPort.
+//
+// * Like the platform and front-office rows, these carry no workspace_id: the firm is the tenant and the demo reset
+//   leaves them. firm_id is first in every index but a primary key. A row naming another money row keys on
+//   (firm_id, <id>), so it can never point at another firm's row: composite foreign keys, RESTRICT on delete and update.
+// * The firm anchor is money_payment_settings (one row per firm, keyed to platform_firm: the one back-relation line on
+//   platform.prisma); every other root table keys to it, so a firm's settings row is written before its first money row.
+// * Every amount is an integer in minor units (cents), never a float; every row with an amount carries its currency
+//   (CAD by default, USD allowed, AG-6-46 rule 3); amounts in two currencies are never added.
+// * The bill-to party is a person or a company (FO-1a's fo_person, fo_company): exactly one of person_id, company_id.
+//   FO-1a is not on main yet, so they are uuids with no foreign key; FO-1k adds those keys (rows rev 16).
+// * No stored status on an invoice or a trust request: status is derived from facts (AG-6-1 rule 7; FO-7b).
+// * Rules Prisma cannot say are in the migration (prisma/migrations/<stamp>_fo7a_client_money_tables): numbers are the
+//   database's, taken from a per-firm series inside the writing transaction (no gaps, never reused; AG-6-44); an issued
+//   invoice is frozen (lines, tax, party, currency, number); insert-only tables refuse update and delete; a trust
+//   withdrawal names an issued invoice of the same party and currency; a party's trust balance never goes below zero
+//   (running balance kept by the database, serialised per party and currency); one write-off per invoice; a move line
+//   is in at most one batch that has not been undone; an undo batch names the batch it undoes and a reason; credit
+//   notes, the write-off and trust paid on an invoice never exceed it; refunds never exceed their payment; nothing
+//   goes into trust while trust is off; issue, send, cancel and record times are the database's; a row a check names
+//   must be visible to it (never left to the foreign key at the end of the statement). Each holds at READ COMMITTED
+//   and REPEATABLE READ (a unique ordinal or a touched row refuses a stale writer).
+
+/// The two currencies a firm may bill in (AG-6-46 rule 3; X-6). Never converted, never added together.
+enum MoneyCurrency {
+  CAD
+  USD
+}
+
+/// The firm's own Stripe connected account (contracts §7 §2.5: controller properties; AG-16-14..18).
+enum MoneyAccountStatus {
+  NOT_CONNECTED
+  PENDING
+  ACTIVE
+  RESTRICTED
+  DISCONNECTED
+}
+
+/// An invoice line's kind (row FO-7a). A government fee is never taxed (AG-6-4 rule 3).
+enum MoneyLineKind {
+  FEE
+  DISBURSEMENT
+  GOVERNMENT_FEE
+}
+
+/// How a payment was made (row FO-7a; AG-6-19 rule 1).
+enum MoneyPaymentMethod {
+  CARD
+  E_TRANSFER
+  CHEQUE
+  WIRE
+  CASH
+  OTHER
+}
+
+/// The account the money actually reached (AG-6-69). Card money goes to OPERATING only: card into trust waits
+/// (contracts §7 §2.5).
+enum MoneyAccountKind {
+  OPERATING
+  TRUST
+}
+
+/// How a refund goes back: through the card processor or by the firm itself.
+enum MoneyRefundRoute {
+  CARD
+  OFFLINE
+}
+
+/// One receipt series for both kinds (AG-6-63 rule 3): a payment receipt names a payment, a trust receipt a deposit.
+enum MoneyReceiptKind {
+  PAYMENT
+  TRUST
+}
+
+/// A trust ledger entry (row FO-7a; contracts §7 §2.5). DEPOSIT is +, WITHDRAWAL_TO_INVOICE and REFUND_TO_CLIENT are −,
+/// CORRECTION is either. Entries are never changed: a mistake is a new CORRECTION entry.
+enum MoneyTrustEntryKind {
+  DEPOSIT
+  WITHDRAWAL_TO_INVOICE
+  REFUND_TO_CLIENT
+  CORRECTION
+}
+
+/// The per-firm number series (AG-6-44): INV-, CN-, R- (payment and trust receipts), DR-.
+enum MoneySeriesKind {
+  INVOICE
+  CREDIT_NOTE
+  RECEIPT
+  TRUST_REQUEST
+}
+
+/// Why an amount must move between the trust and operating bank accounts (AG-6-73 rule 1 (a)-(c)).
+enum MoneyMoveKind {
+  TRUST_APPLIED
+  WRONG_ACCOUNT
+  CARD_FEE_ON_TRUST
+}
+
+enum MoneyMoveDirection {
+  TRUST_TO_OPERATING
+  OPERATING_TO_TRUST
+}
+
+/// A firm's money settings (AG-6-59, AG-6-71, AG-6-4/-45, AG-6-46): the operating and trust payment-details blocks
+/// printed on invoices and trust requests, the tax number and the firm's tax rates, the trust answer (off until the
+/// Owner says Yes) and the default due period. The firm anchor of this module: one row per firm.
+model MoneyPaymentSettings {
+  firmId           String        @id @map("firm_id") @db.Uuid
+  operatingDetails String?       @map("operating_details")
+  trustDetails     String?       @map("trust_details")
+  taxNumber        String?       @map("tax_number")
+  /// The firm's tax rates: a JSON list of { "name": "HST", "ratePpm": 130000 } (parts per million, so Quebec's QST 9.975 % is
+  /// 99750 exactly; Sample until the firm sets them).
+  taxRates         Json          @default("[]") @map("tax_rates")
+  trustEnabled     Boolean       @default(false) @map("trust_enabled")
+  defaultCurrency  MoneyCurrency @default(CAD) @map("default_currency")
+  dueInDays        Int           @default(14) @map("due_in_days")
+  updatedBy        String        @map("updated_by")
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  firm          PlatformFirm         @relation(fields: [firmId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  account       MoneyPaymentAccount?
+  series        MoneyNumberSeries[]
+  invoices      MoneyInvoice[]
+  payments      MoneyPayment[]
+  trustRequests MoneyTrustRequest[]
+  trustEntries  MoneyTrustEntry[]
+  moveBatches   MoneyMoveBatch[]
+
+  @@map("money_payment_settings")
+}
+
+/// The firm's own Stripe connected account: its id, status and the two switches Stripe reports (AG-16-14..18). No
+/// secret is stored here or anywhere in this module (AG-16-18): the platform's key lives in the secrets loader.
+model MoneyPaymentAccount {
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firmId          String             @unique @map("firm_id") @db.Uuid
+  /// Unique across firms (webhooks are routed by it): the one money_ index without firm_id first.
+  stripeAccountId String?            @unique @map("stripe_account_id")
+  status          MoneyAccountStatus @default(NOT_CONNECTED)
+  chargesEnabled  Boolean            @default(false) @map("charges_enabled")
+  payoutsEnabled  Boolean            @default(false) @map("payouts_enabled")
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  settings MoneyPaymentSettings @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@map("money_payment_account")
+}
+
+/// A per-firm number series (AG-6-44): the prefix and the next number. Numbers are taken only by the database
+/// (money_take_number, inside the writing transaction), so they never skip or repeat. A firm moving over sets its first
+/// number when it writes the row; after that next_number moves only by taking a number. Two series of a firm never
+/// share a prefix (letters and a dash).
+model MoneyNumberSeries {
+  firmId     String          @map("firm_id") @db.Uuid
+  kind       MoneySeriesKind
+  prefix     String
+  nextNumber Int             @default(1) @map("next_number")
+  /// How many numbers the series has given, the database's: while 0, the firm may still set its first number.
+  numbersTaken Int @default(0) @map("numbers_taken")
+  updatedAt  DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  settings MoneyPaymentSettings @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([firmId, kind])
+  @@unique([firmId, prefix])
+  @@map("money_number_series")
+}
+
+/// An invoice (AG-6-1): on a person or a company (never a prospect), optionally a case. A draft has no number; issuing
+/// (issued_at set) takes the next INV- number and freezes the lines, tax, party, currency and number. Status is derived.
+model MoneyInvoice {
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firmId    String        @map("firm_id") @db.Uuid
+  personId  String?       @map("person_id") @db.Uuid
+  companyId String?       @map("company_id") @db.Uuid
+  /// The case side's case (runtime_case), when the invoice is on one; no foreign key across the module wall.
+  caseId    String?       @map("case_id") @db.Uuid
+  number    String?
+  currency  MoneyCurrency @default(CAD)
+  dueDate   DateTime?     @map("due_date") @db.Date
+  issuedAt  DateTime?     @map("issued_at") @db.Timestamptz
+  issuedBy  String?       @map("issued_by")
+  createdBy String        @map("created_by")
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  settings     MoneyPaymentSettings @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+  lines        MoneyInvoiceLine[]
+  creditNotes  MoneyCreditNote[]
+  payments     MoneyPayment[]
+  trustEntries MoneyTrustEntry[]
+  writeOff     MoneyWriteOff?
+
+  @@unique([firmId, id])
+  @@unique([firmId, number])
+  @@index([firmId, personId])
+  @@index([firmId, companyId])
+  @@index([firmId, caseId])
+  @@map("money_invoice")
+}
+
+/// One line of an invoice (AG-6-1 rule 2, AG-6-4): amount = quantity × unit amount; tax rate in parts per million and its
+/// amount, rounded per line by FO-7b (within a cent of amount × rate, so two taxes rounded apart fit); a government fee
+/// carries no tax.
+model MoneyInvoiceLine {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firmId          String        @map("firm_id") @db.Uuid
+  invoiceId       String        @map("invoice_id") @db.Uuid
+  position        Int
+  kind            MoneyLineKind
+  description     String
+  quantity        Int           @default(1)
+  unitAmountMinor Int           @map("unit_amount_minor")
+  amountMinor     Int           @map("amount_minor")
+  /// The line's tax rate in parts per million (13 % = 130000; GST + QST 14.975 % = 149750): basis points cannot hold
+  /// Quebec's rates (review round 2, Major 1).
+  taxRatePpm       Int           @default(0) @map("tax_rate_ppm")
+  taxMinor        Int           @default(0) @map("tax_minor")
+  currency        MoneyCurrency
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  invoice MoneyInvoice @relation(fields: [firmId, invoiceId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([firmId, invoiceId, position])
+  @@map("money_invoice_line")
+}
+
+/// A credit note on an issued invoice (AG-6-48): part or full, with a reason; its CN- number is the database's. The
+/// credits on one invoice never exceed its total. Insert-only.
+model MoneyCreditNote {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firmId      String        @map("firm_id") @db.Uuid
+  invoiceId   String        @map("invoice_id") @db.Uuid
+  /// Always set, by the database when the row is written (a check refuses null); optional here so callers never pass it.
+  number      String?
+  full        Boolean       @default(false)
+  amountMinor Int           @map("amount_minor")
+  currency    MoneyCurrency
+  reason      String
+  createdBy   String        @map("created_by")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  invoice MoneyInvoice @relation(fields: [firmId, invoiceId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([firmId, number])
+  @@index([firmId, invoiceId])
+  @@map("money_credit_note")
+}
+
+/// A payment (AG-6-19, AG-6-69): against an issued invoice, a sent trust request, or neither (money with no request,
+/// AG-6-72). Received into OPERATING or TRUST; card only into OPERATING. The Stripe payment intent id and the
+/// idempotency key are each unique in the firm, so a double click or a repeated webhook records one payment. Money into
+/// trust only with trust on, and with its DEPOSIT entry in the same transaction. Insert-only but for the cheque's one
+/// "Cleared" tick (AG-6-63 rule 7).
+model MoneyPayment {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firmId                String             @map("firm_id") @db.Uuid
+  invoiceId             String?            @map("invoice_id") @db.Uuid
+  trustRequestId        String?            @map("trust_request_id") @db.Uuid
+  method                MoneyPaymentMethod
+  amountMinor           Int                @map("amount_minor")
+  currency              MoneyCurrency
+  receivedInto          MoneyAccountKind   @map("received_into")
+  receivedAt            DateTime           @map("received_at") @db.Timestamptz
+  reference             String?
+  /// The optional evidence file of a deposit (a bank slip, a cheque image): a FilesPort key, never the file (FO-7t).
+  evidenceFileKey       String?            @map("evidence_file_key")
+  stripePaymentIntentId String?            @map("stripe_payment_intent_id")
+  idempotencyKey        String             @map("idempotency_key")
+  recordedBy            String?            @map("recorded_by")
+  cleared               Boolean            @default(true)
+  clearedAt             DateTime?          @map("cleared_at") @db.Timestamptz
+  clearedBy             String?            @map("cleared_by")
+  createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz
+
+  settings     MoneyPaymentSettings @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+  invoice      MoneyInvoice?        @relation(fields: [firmId, invoiceId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  trustRequest MoneyTrustRequest?   @relation(fields: [firmId, trustRequestId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  refunds      MoneyRefund[]
+  receipt      MoneyReceipt?
+  trustEntry   MoneyTrustEntry?
+  moveLines    MoneyMoveLine[]
+
+  @@unique([firmId, id])
+  @@unique([firmId, stripePaymentIntentId])
+  @@unique([firmId, idempotencyKey])
+  @@index([firmId, invoiceId])
+  @@index([firmId, trustRequestId])
+  @@map("money_payment")
+}
+
+/// A refund of a payment (AG-6-23): an amount, a reason, by card or offline, with its own idempotency key. Refunds of
+/// one payment never exceed it, also at REPEATABLE READ (refund_ordinal). Money received into trust goes back as a
+/// trust entry instead. Insert-only.
+model MoneyRefund {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firmId         String           @map("firm_id") @db.Uuid
+  paymentId      String           @map("payment_id") @db.Uuid
+  amountMinor    Int              @map("amount_minor")
+  currency       MoneyCurrency
+  reason         String
+  route          MoneyRefundRoute
+  stripeRefundId String?          @map("stripe_refund_id")
+  idempotencyKey String           @map("idempotency_key")
+  /// The database's: the count of the payment's earlier refunds + 1, unique per payment (serialises refunds at any isolation).
+  refundOrdinal  Int              @default(0) @map("refund_ordinal")
+  createdBy      String           @map("created_by")
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  payment MoneyPayment @relation(fields: [firmId, paymentId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([firmId, idempotencyKey])
+  @@unique([firmId, stripeRefundId])
+  @@unique([firmId, paymentId, refundOrdinal])
+  @@index([firmId, paymentId])
+  @@map("money_refund")
+}
+
+/// A receipt (AG-6-63): one R- series for payment receipts (naming a payment) and trust receipts (naming a deposit
+/// entry); at most one receipt per payment and per entry; numbered by the database when written. Never changed.
+model MoneyReceipt {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firmId       String           @map("firm_id") @db.Uuid
+  /// Always set, by the database when the row is written (a check refuses null); optional here so callers never pass it.
+  number       String?
+  kind         MoneyReceiptKind
+  paymentId    String?          @map("payment_id") @db.Uuid
+  trustEntryId String?          @map("trust_entry_id") @db.Uuid
+  issuedAt     DateTime         @default(now()) @map("issued_at") @db.Timestamptz
+
+  payment    MoneyPayment?    @relation(fields: [firmId, paymentId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  trustEntry MoneyTrustEntry? @relation(fields: [firmId, trustEntryId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([firmId, number])
+  @@unique([firmId, paymentId])
+  @@unique([firmId, trustEntryId])
+  @@map("money_receipt")
+}
+
+/// A trust request (AG-6-61, -62; contracts §7 §2.5): money asked of the client to hold in trust, paid straight into the
+/// firm's trust bank account, never by card. Its DR- number is taken when it is sent; once sent its party, currency and
+/// number never change; a cancel keeps the number and needs a reason. Status is derived from facts (FO-7t).
+model MoneyTrustRequest {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firmId       String        @map("firm_id") @db.Uuid
+  number       String?
+  personId     String?       @map("person_id") @db.Uuid
+  companyId    String?       @map("company_id") @db.Uuid
+  caseId       String?       @map("case_id") @db.Uuid
+  amountMinor  Int           @map("amount_minor")
+  currency     MoneyCurrency @default(CAD)
+  purpose      String
+  createdBy    String        @map("created_by")
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  sentAt       DateTime?     @map("sent_at") @db.Timestamptz
+  sentBy       String?       @map("sent_by")
+  cancelledAt  DateTime?     @map("cancelled_at") @db.Timestamptz
+  cancelledBy  String?       @map("cancelled_by")
+  cancelReason String?       @map("cancel_reason")
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  settings     MoneyPaymentSettings @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+  payments     MoneyPayment[]
+  trustEntries MoneyTrustEntry[]
+
+  @@unique([firmId, id])
+  @@unique([firmId, number])
+  @@index([firmId, personId])
+  @@index([firmId, companyId])
+  @@map("money_trust_request")
+}
+
+/// One entry of a party's trust ledger (contracts §7 §2.5; Code s. 32(d): separate records per client). Insert-only.
+/// seq and balance_after_minor are the database's: the running balance per (party, currency), which never goes below
+/// zero. A withdrawal names an issued invoice of the same party and currency (s. 32(f)); a deposit names the payment
+/// received into trust that brought it; a refund to the client and a correction carry a reason.
+model MoneyTrustEntry {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firmId            String              @map("firm_id") @db.Uuid
+  personId          String?             @map("person_id") @db.Uuid
+  companyId         String?             @map("company_id") @db.Uuid
+  caseId            String?             @map("case_id") @db.Uuid
+  kind              MoneyTrustEntryKind
+  amountMinor       Int                 @map("amount_minor")
+  currency          MoneyCurrency
+  /// seq and balance_after_minor are always the database's (a value the caller gives is replaced).
+  seq               Int                 @default(0)
+  balanceAfterMinor Int                 @default(0) @map("balance_after_minor")
+  invoiceId         String?             @map("invoice_id") @db.Uuid
+  paymentId         String?             @map("payment_id") @db.Uuid
+  trustRequestId    String?             @map("trust_request_id") @db.Uuid
+  correctsEntryId   String?             @map("corrects_entry_id") @db.Uuid
+  reason            String?
+  createdBy         String              @map("created_by")
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  settings     MoneyPaymentSettings @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+  invoice      MoneyInvoice?        @relation(fields: [firmId, invoiceId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  payment      MoneyPayment?        @relation(fields: [firmId, paymentId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  trustRequest MoneyTrustRequest?   @relation(fields: [firmId, trustRequestId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  corrects     MoneyTrustEntry?     @relation("MoneyTrustCorrection", fields: [firmId, correctsEntryId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  correctedBy  MoneyTrustEntry[]    @relation("MoneyTrustCorrection")
+  receipt      MoneyReceipt?
+  moveLines    MoneyMoveLine[]
+
+  @@unique([firmId, id])
+  @@unique([firmId, personId, currency, seq])
+  @@unique([firmId, companyId, currency, seq])
+  @@unique([firmId, paymentId])
+  @@index([firmId, invoiceId])
+  @@index([firmId, caseId])
+  @@map("money_trust_entry")
+}
+
+/// A write-off of an issued invoice's small balance (AG-6-76): amount, reason (1-200 characters), by, at. At most one per
+/// invoice; never on a draft; insert-only.
+model MoneyWriteOff {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firmId      String        @map("firm_id") @db.Uuid
+  invoiceId   String        @map("invoice_id") @db.Uuid
+  amountMinor Int           @map("amount_minor")
+  currency    MoneyCurrency
+  reason      String
+  createdBy   String        @map("created_by")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  invoice MoneyInvoice @relation(fields: [firmId, invoiceId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([firmId, invoiceId])
+  @@map("money_write_off")
+}
+
+/// "I moved these" (AG-6-73 rule 3): one batch of bank transfers between trust and operating, in one currency, with the
+/// transfer date and who recorded it. We move no money; the firm does the bank step. Never changed: a mistake is undone
+/// by a reversing batch that names the batch it undoes and a reason (its lines go back to the list); one undo per batch;
+/// an undo is never undone. Insert-only.
+model MoneyMoveBatch {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firmId        String        @map("firm_id") @db.Uuid
+  currency      MoneyCurrency
+  transferDate  DateTime?     @map("transfer_date") @db.Date
+  undoesBatchId String?       @map("undoes_batch_id") @db.Uuid
+  reason        String?
+  recordedBy    String        @map("recorded_by")
+  recordedAt    DateTime      @default(now()) @map("recorded_at") @db.Timestamptz
+
+  settings MoneyPaymentSettings @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+  undoes   MoneyMoveBatch?      @relation("MoneyMoveUndo", fields: [firmId, undoesBatchId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  undoneBy MoneyMoveBatch?      @relation("MoneyMoveUndo")
+  lines    MoneyMoveLine[]
+
+  @@unique([firmId, id])
+  @@unique([firmId, undoesBatchId])
+  @@map("money_move_batch")
+}
+
+/// One moved amount in a batch (AG-6-73 rule 1): its kind and direction, currency and amount, and the source it came
+/// from (a trust withdrawal for TRUST_APPLIED; a payment for WRONG_ACCOUNT and CARD_FEE_ON_TRUST). A source is in at
+/// most one batch that has not been undone: move_ordinal (the database's) counts its moves, and (source, kind, ordinal)
+/// is unique, so two people ticking the same line at once make one batch. Lines are written in the transaction that
+/// records their batch. Insert-only.
+model MoneyMoveLine {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firmId             String             @map("firm_id") @db.Uuid
+  batchId            String             @map("batch_id") @db.Uuid
+  kind               MoneyMoveKind
+  direction          MoneyMoveDirection
+  currency           MoneyCurrency
+  amountMinor        Int                @map("amount_minor")
+  sourceTrustEntryId String?            @map("source_trust_entry_id") @db.Uuid
+  sourcePaymentId    String?            @map("source_payment_id") @db.Uuid
+  /// The database's (a value the caller gives is replaced).
+  moveOrdinal        Int                @default(0) @map("move_ordinal")
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz
+
+  batch            MoneyMoveBatch   @relation(fields: [firmId, batchId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  sourceTrustEntry MoneyTrustEntry? @relation(fields: [firmId, sourceTrustEntryId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  sourcePayment    MoneyPayment?    @relation(fields: [firmId, sourcePaymentId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([firmId, sourceTrustEntryId, kind, moveOrdinal])
+  @@unique([firmId, sourcePaymentId, kind, moveOrdinal])
+  @@index([firmId, batchId])
+  @@map("money_move_line")
+}
