@@ -1,0 +1,48 @@
+# Requirement traceability (P-595, row TR-1): a records PR that adds a shaped Release 1 row to BACKLOG.md with no
+# `Source:` line, or with a source item that does not resolve, fails here (product/tools/trace-requirements.py --check;
+# the Source convention is in that tool's header). It never reds a product PR (P-547 (4), P-542): the check runs only
+# when tools/records-only.sh calls the change records only. Advisory: it is not a merge condition (Mergify requires
+# `ci`); making it one is a .mergify.yml change for the Lead (P-423). The tool's unit tests run only when the tool
+# changes. Read-only, standard library, under 1 minute, US$0.
+name: trace
+on:
+  pull_request:
+    paths:
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/product/BACKLOG.md"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/trace-requirements.py"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/test_trace_requirements.py"
+      - ".github/workflows/trace.yml"
+permissions:
+  contents: read
+concurrency:
+  group: trace-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      T: ai-workers/problem-1-pathway-setup-and-form-filling/product/tools
+      B: ai-workers/problem-1-pathway-setup-and-form-filling/product/BACKLOG.md
+      BASE: ${{ github.event.pull_request.base.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: unit tests (only when the tool changes)
+        run: |
+          git diff --name-only "$BASE...HEAD" > "$RUNNER_TEMP/changed.txt"
+          if grep -qE 'trace-requirements|trace\.yml' "$RUNNER_TEMP/changed.txt"; then
+            python3 -I "$T/test_trace_requirements.py"
+          else
+            echo "the tool did not change: tests skipped"
+          fi
+      - name: new shaped Release 1 rows carry a Source (records PRs only)
+        run: |
+          kind=$(bash "$T/records-only.sh" is-records "$BASE..HEAD")
+          if [ "$kind" != yes ]; then
+            echo "not a records-only PR: skipped (P-547 (4): never reds a product PR)"
+            exit 0
+          fi
+          git show "$BASE:$B" > "$RUNNER_TEMP/BACKLOG-base.md" 2>/dev/null || : > "$RUNNER_TEMP/BACKLOG-base.md"
+          python3 -I "$T/trace-requirements.py" --check "$RUNNER_TEMP/BACKLOG-base.md"

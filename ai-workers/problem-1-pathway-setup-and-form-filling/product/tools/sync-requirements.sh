@@ -170,3 +170,4 @@ print(json.dumps({'files': files, **counts}, indent=1))
 PY
 
 echo "rebuilt $DEST from $SNAP"
+echo "next: python3 product/tools/trace-requirements.py --refresh <previous requirements-* copy> $DEST (changed ids and the rows they hit, P-595)"
