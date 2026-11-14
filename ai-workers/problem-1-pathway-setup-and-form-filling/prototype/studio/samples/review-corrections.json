@@ -153,6 +153,22 @@
       "key": "person.previous_residence_country",
       "transform": "derived:any previous residence in past 5 years, over 6 months, in a country other than citizenship or current residence -> yes_no_code:Y/N",
       "note": "BK-24: question 8 A is Yes when a previous residence is recorded, else No on a confirmed none, as IMM 5257 (09-2023) maps the same box; the saved answer's step could not be run."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page3[0].PageWrapper[0].Education[0].EducationIndicator[0]",
+      "proposed": "person.education_institution",
+      "key": "person.education_institution",
+      "transform": "derived:any post-secondary education record exists -> yes_no_code:Y/N",
+      "note": "BK-24: \"Have you had any post secondary education?\" is Yes when an education record is recorded, else No on a confirmed none, as IMM 5257 (09-2023) maps the same question; the saved answer's step could not be run."
+    },
+    {
+      "edition": "IMM 1294 (06-2026)",
+      "box": "form1[0].Page3[0].Education[0].EducationIndicator[0]",
+      "proposed": "person.education_institution",
+      "key": "person.education_institution",
+      "transform": "derived:any post-secondary education record exists -> yes_no_code:Y/N",
+      "note": "BK-24: \"Have you had any post secondary education?\" is Yes when an education record is recorded, else No on a confirmed none, as IMM 5257 (09-2023) maps the same question; the saved answer's step could not be run."
     }
   ]
 }

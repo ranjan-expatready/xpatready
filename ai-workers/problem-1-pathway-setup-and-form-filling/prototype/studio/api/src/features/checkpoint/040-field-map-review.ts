@@ -88,7 +88,7 @@ export default {
     const batches: BatchPlan[] = (batchIds.length ? await db.aiBatch.findMany({ where: { id: { in: batchIds } }, select: { id: true, startedAt: true, plan: true } }) : [])
       .map((b) => ({ id: b.id, startedAt: b.startedAt, targets: ((b.plan as { targets?: { attachmentId?: string | null }[] } | null)?.targets ?? []) }));
     const { order: jobs, showcase } = reviewOrder(found, fileOf, batches, LATER);
-    let accepted = 0, edited = 0, returned = 0, applied = 0, corrected = 0;
+    let accepted = 0, edited = 0, returned = 0, applied = 0, corrected = 0, boxes = 0;
     const refused: string[] = [];
     // One edit and one return stay visible (DEMO.md row 4), on the form with the most proposals (reviewOrder).
     for (const j of jobs) {
@@ -121,7 +121,7 @@ export default {
       if (!now || now.outcome !== "mapped" || now.canonicalFieldKey !== x.proposed) { refused.push(`${x.edition} ${x.box}: the saved answer does not map it to ${x.proposed} (it reads ${now?.canonicalFieldKey ?? "nothing"}), so it was not corrected`); continue; }
       if (now.canonicalFieldKey === x.key && now.transform === x.transform) continue;
       await revise(db.formFieldMap, rows, { canonicalFieldKey: x.key, transform: x.transform, origin: "HUMAN", confidence: null, reason: `${x.note} (${author.name})`.slice(0, 500) }, author.id, strip);
-      corrected++;
+      boxes++;
     }
     fieldMapReview(ctx).applied = applied;
     const waitingForAi = ctx.six.drafts.waiting_for_draft_with_ai;
@@ -129,7 +129,7 @@ export default {
       why: [waitingForAi.length ? `${waitingForAi.length} forms have no saved AI answer and wait for Draft with AI, a paid run the founder approves: ${waitingForAi.join(", ")}.` : "", irmWhy ?? ""].filter(Boolean).join(" ") || null });
     // Review m1: the Sample loader also accepts the items where the draft and the checker rounds differ; the row says how many.
     const differ = jobs.length ? await db.proposalItem.count({ where: { runId: { in: jobs.map((j) => j.id) }, agreement: "differ", choice: "ACCEPTED" } }) : 0;
-    row({ row: "4", title: "A person reviews: accept with a reason, edit, reject", status: !jobs.length ? "waiting" : refused.length ? "partial" : "done", shows: `${accepted} accepted, ${edited} edited, ${returned} returned with a reason${corrected ? `, ${corrected} changed to another library field` : ""}; ${applied} of ${jobs.length} drafts applied to their combinations${differ ? `; ${differ} where the two AI rounds differ were accepted by the sample loader (Sample: check them on To review)` : ""}`,
+    row({ row: "4", title: "A person reviews: accept with a reason, edit, reject", status: !jobs.length ? "waiting" : refused.length ? "partial" : "done", shows: `${accepted} accepted, ${edited} edited, ${returned} returned with a reason${corrected ? `, ${corrected} changed to another library field` : ""}${boxes ? `, ${boxes} form fields corrected on their draft` : ""}; ${applied} of ${jobs.length} drafts applied to their combinations${differ ? `; ${differ} where the two AI rounds differ were accepted by the sample loader (Sample: check them on To review)` : ""}`,
       why: refused.length ? `Refused by a rule: ${refused.join(" · ")}` : null });
   },
 } satisfies CheckpointStep;

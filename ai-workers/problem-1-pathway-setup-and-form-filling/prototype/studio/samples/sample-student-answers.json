@@ -41,8 +41,7 @@
    "postal_code": "M5V 0B3",
    "country": "Canada"
   },
-  "case.work_permit_type": "OWP",
-  "case.intended_work_province": "ON"
+  "case.work_permit_type": "OWP"
  },
  "everyone": {
   "person.citizenship": "India",
@@ -199,6 +198,7 @@
   "case.intended_employment_start_date": "An open work permit names no employment period.",
   "case.intended_employment_end_date": "An open work permit names no employment period.",
   "case.work_location_address": "An open work permit names no workplace.",
+  "case.intended_work_province": "An open work permit names no workplace. IMM 1295 (09-2023)'s own script (validateDetailsOfIntendedWork) asks question 3's province, city and address together or not at all, so the province alone stops its Validate (BK-24).",
   "case.caregiver_care_types": "Asked only of a caregiver.",
   "case.caregiver_persons_requiring_care": "Asked only of a caregiver.",
   "case.visit_purpose_other": "Asked only when the purpose is Other."
