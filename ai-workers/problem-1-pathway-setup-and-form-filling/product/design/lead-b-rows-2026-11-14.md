@@ -364,3 +364,21 @@ Source: `product/design/case-side-contract-v0.1-2026-11-14.md` on `lead/2026-11-
   * Schema-only rows close no capability themselves: FO-1a, FO-1b, FO-1k, FO-7a, FO-13, PF-12, PF-19a and PF-3.
   * qa tests their rules through the first API row that uses them, and through the row's own pass and fail suite on `main`.
 * Lead B gives the qa lane the row → map-row list on request; MVP-CHECKLIST §A already holds it.
+
+## Rev 15.2 (14 Nov 16:19 IST, Lead B (3)): function names per area; FO-1a's red run
+
+**What happened:**
+* FO-1a #1742 went red on every shard and on `types`: `P3018` on `20261114120000_fo1b_booking_tables`, `function "fo_firm_fixed" already exists` (42723; run 43580456554).
+* FO-1b merged first with its own `fo_firm_fixed()`.
+* FO-1a's migration was stamped `20261114063000`, earlier than FO-1b's, so it ran first and created the same name.
+
+**The fix, posted on #1742 (comment 6876146313) and sent to the lane:**
+* merge `main`;
+* re-stamp FO-1a's migration later than the newest on `main`;
+* rename `fo_firm_fixed` to `fo_sales_firm_fixed`, and FO-1a's other generic helpers (`fo_insert_only`, `fo_has_word`, `fo_next_number`, `fo_number_fixed`) to the `fo_sales_` prefix;
+* `migrate diff` empty, every suite, then a diff-only re-review.
+
+**Standing rule (in every brief):**
+* A database function in an area's migration carries the area's prefix: `fo_sales_`, `fo_booking_`, `fo_compliance_`, `fo_signing_`, `fo_retainer_`, `money_`, `msg_`, `plat_`, `platform_`.
+* A migration's stamp is later than the newest on `main` when it merges.
+* FO-1b keeps `fo_firm_fixed()` as built. It is the only bare `fo_` helper, and no later row uses a bare `fo_` name.

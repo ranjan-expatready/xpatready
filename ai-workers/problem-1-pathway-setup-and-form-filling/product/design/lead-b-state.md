@@ -151,3 +151,6 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
   * The founder's name is now **"Release 1 (production grade)"**, not "MVP", in new text.
 * 14 Nov 15:46 IST: the current Lead and release holder is now **Lead 46** (`local_3cc8e2ba…`).
 * 14 Nov 15:46 IST: brief **FO-1k** written (keys after FO-1a, next slot after PF-19a and FO-7a). Lead 46 told the order and the ready briefs.
+* 14 Nov 16:19 IST: Lead 46 reported FO-1a #1742 red (fo_firm_fixed clash with merged FO-1b; FO-1a's stamp is older).
+  * Lead B confirmed it from the CI log, posted the fix on #1742 (comment 6876146313) and sent it to the FO-1a cloud lane (one-way; not confirmed read).
+  * Rows rev 15.2: per-area function prefixes and the later-stamp rule, added to every brief.
