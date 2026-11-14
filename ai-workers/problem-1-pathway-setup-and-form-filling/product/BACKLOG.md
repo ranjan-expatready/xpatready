@@ -462,6 +462,20 @@ Contracts: `design/platform-and-front-office-contracts-2026-11-14.md` draft 4, Â
   * Lead B's view on the third review round, which is the release holder's call (P-293): a diff-only third round by the same reviewer plus the breaker on the same diff (money, lock order).
 * **PF-0p (#1752):** "a job key never queues twice" means never twice **under one job name** (pg-boss keys by name; PF-14 confirmed). Rows that need a key unique across names put the name in the key.
 
+### Rev 16.4 (14 Nov 20:02 IST, Lead B (3)): routes split from start-now rows while PF-4 is open (copied by Lead 48 from bc715c1a6)
+
+**Rule:** a start-now row (rev 16) whose schema and service are reviewed, broken and green while PF-4 is still not on `main` may merge as **part 1 of 2**. Its staff routes go in a small next PR, **`<row>w`**.
+* **`<row>w` holds:** the `api/src/features/<row>.ts` registration, the controller with PF-4's `@PermissionKeys`, and route tests (a pass and a fail per key, a 403 for each role without the key, a 404 across firms).
+* **When it starts:** the day PF-4 is on `main`.
+* **Size:** S. **Reviewer only**, unless the route is a public door.
+* **For qa (P-592):** part 1's PR body says "part 1 of 2 (routes in `<row>w`)", and the capability counts as done only after `<row>w`.
+* **Applies to:**
+  * **PF-21w** (asked on #1753, comment answered);
+  * FO-5w and FO-3w-staff (FO-3's staff create, reschedule and cancel routes), if their lanes ask;
+  * PF-25w (the staff-only address change).
+
+**Shared check:** `check_pf3_platform_schema.ts:80` leaves out the keys later rows add through a named list, `ADDED_BY_LATER_ROWS` (P-601 first: `agent/complaint:`). Each later row that adds catalogue keys extends that list, and asserts its own rows exactly.
+
 ## Now
 | # | Area | Item | Done when (beyond the standard) | Source |
 |---|---|---|---|---|
