@@ -10,10 +10,11 @@ export const JobName = z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$/,
 /** What a job carries: plain JSON (ids and facts; never a secret, a card number or a person's details). */
 export const JobPayload = z.record(z.string(), z.json());
 export type JobPayload = z.infer<typeof JobPayload>;
-/** `key` is the job's own idempotency key (`booking:<uuid>:reminder-24h`): a key never queues twice, even after its job ran
- *  or was cancelled. Keys are one space across every firm and queue (and `cancel` takes only the key), so a key must
- *  carry a uuid or the firm id: never a per-firm number alone (`invoice:INV-0001` of firm B would be lost behind firm
- *  A's). The firm is the tenant the job works for. */
+/** `key` is the job's own idempotency key (`booking:<uuid>:reminder-24h`): a key never queues twice under the same job
+ *  name, even after its job ran or was cancelled (unique per name, as pg-boss's job table is keyed by name: PF-14). Keys
+ *  are one space across every firm (and `cancel` takes only the key), so a key must carry a uuid or the firm id: never a
+ *  per-firm number alone (`invoice:INV-0001` of firm B would be lost behind firm A's). The firm is the tenant the job
+ *  works for. */
 export const JobOptions = z.strictObject({ key: z.string().min(1).max(200), firmId: FirmId });
 export type JobOptions = z.infer<typeof JobOptions>;
 /** A recurring schedule: five cron fields (minute hour day-of-month month day-of-week) read in an IANA zone. */
@@ -28,11 +29,11 @@ export type JobRun = { name: string; payload: JobPayload; key: string; firmId: s
 export type JobHandler = (job: JobRun) => Promise<void>;
 
 export interface JobPort {
-  /** Queues a job to run now. `{ queued: false }` when its key was queued before (nothing changes). */
+  /** Queues a job to run now. `{ queued: false }` when its key was queued before under this name (nothing changes). */
   enqueue(name: string, payload: JobPayload, opts: JobOptions): Promise<{ queued: boolean }>;
   /** Queues a job to run at `at` (or soon after); same key rule. */
   schedule(name: string, at: Date, payload: JobPayload, opts: JobOptions): Promise<{ queued: boolean }>;
-  /** Cancels the waiting job of `key`; true when one was waiting. Its key stays used. */
+  /** Cancels every waiting job of `key`, whatever its name; true when one was waiting. Its key stays used. */
   cancel(key: string): Promise<boolean>;
   /** Runs queue `name` on a cron schedule in `zone` (one schedule per name: a second call replaces it). */
   recurring(name: string, cron: string, zone: string): Promise<void>;
@@ -60,8 +61,8 @@ export function fakeJobs(clock: FakeClock): FakeJobs {
     const p = JobPayload.parse(JSON.parse(JSON.stringify(JobPayload.parse(payload))) as unknown);
     const o = JobOptions.parse(opts);
     if (!Number.isFinite(at.getTime())) throw new RangeError("schedule: `at` is not a time");
-    if (used.has(o.key)) return { queued: false };
-    used.add(o.key);
+    if (used.has(`${name}\u0000${o.key}`)) return { queued: false };
+    used.add(`${name}\u0000${o.key}`);
     jobs.push({ id: nextId++, name, payload: p, key: o.key, firmId: o.firmId.toLowerCase(), runAt: new Date(at), attempt: 1, status: "waiting" });
     return { queued: true };
   };
@@ -70,14 +71,14 @@ export function fakeJobs(clock: FakeClock): FakeJobs {
     if (running) return;   // a handler that moves the clock does not re-enter
     running = true;
     try {
-      for (let guard = 0; guard < 10_000; guard++) {
+      for (let runs = 0; ; runs++) {
         const now = clock.now().getTime();
         const due = jobs.filter((j) => j.status === "waiting" && j.runAt.getTime() <= now && handlers.has(j.name)).sort((a, b) => a.runAt.getTime() - b.runAt.getTime() || a.id - b.id)[0];
         if (!due) return;
+        if (runs >= 10_000) throw new Error("fakeJobs: more than 10 000 runs in one step (a job that queues itself without end?)");
         try { await handlers.get(due.name)!({ name: due.name, payload: structuredClone(due.payload), key: due.key, firmId: due.firmId, runAt: new Date(due.runAt), attempt: due.attempt }); due.status = "done"; }
         catch (e) { due.status = "failed"; due.error = e instanceof Error ? e.message : String(e); }
       }
-      throw new Error("fakeJobs: more than 10 000 runs in one step (a job that queues itself without end?)");
     } finally { running = false; }
   };
 
@@ -89,7 +90,7 @@ export function fakeJobs(clock: FakeClock): FakeJobs {
     for (; schedules.size && from <= to; from += 60_000) {
       for (const [name, s] of schedules) if (cronMatches(s.cron, new Date(from), s.zone)) {
         const key = `${name}@${new Date(from).toISOString()}`;
-        if (!used.has(key)) { used.add(key); jobs.push({ id: nextId++, name, payload: {}, key, firmId: null, runAt: new Date(from), attempt: 1, status: "waiting" }); }
+        if (!used.has(`${name}\u0000${key}`)) { used.add(`${name}\u0000${key}`); jobs.push({ id: nextId++, name, payload: {}, key, firmId: null, runAt: new Date(from), attempt: 1, status: "waiting" }); }
       }
     }
     await runDue();
@@ -100,10 +101,9 @@ export function fakeJobs(clock: FakeClock): FakeJobs {
     async enqueue(name, payload, opts) { return queue(name, clock.now(), payload, opts); },
     async schedule(name, at, payload, opts) { return queue(name, at, payload, opts); },
     async cancel(key) {
-      const j = jobs.find((x) => x.key === key && x.status === "waiting");
-      if (!j) return false;
-      j.status = "cancelled";
-      return true;
+      const waiting = jobs.filter((x) => x.key === key && x.status === "waiting");
+      for (const j of waiting) j.status = "cancelled";
+      return waiting.length > 0;
     },
     async recurring(name, cron, zone) {
       JobName.parse(name);
@@ -111,7 +111,7 @@ export function fakeJobs(clock: FakeClock): FakeJobs {
       schedules.set(name, { cron: parseCron(cron), zone });
     },
     async handle(name, handler) { JobName.parse(name); handlers.set(name, handler); },
-    get jobs() { return jobs.map((j) => ({ ...j })); },
+    get jobs() { return jobs.map((j) => ({ ...j, runAt: new Date(j.runAt), payload: structuredClone(j.payload) })); },   // copies: inspecting never changes a job
     runDue,
   };
 }

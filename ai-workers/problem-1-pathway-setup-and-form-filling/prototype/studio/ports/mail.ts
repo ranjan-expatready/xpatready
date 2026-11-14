@@ -45,6 +45,9 @@ export type FakeMail = MailPort & {
   inbox(address: string): SentMail[];
 };
 
+/** A copy of a sent email, so a test reading the record can never change it. */
+const copy = (m: SentMail): SentMail => ({ ...m, sentAt: new Date(m.sentAt), attachments: m.attachments?.map((a) => ({ ...a, bytes: new Uint8Array(a.bytes) })) });
+
 /** The fake: checks each email like the real adapter, keeps it in a list, and fails when `failOn` matches. `sentAt` is the
  *  clock's now (`clock`, else FAKE_NOW: never the wall clock). */
 export function fakeMail(opts: { failOn?: (m: z.output<typeof MailMessage>) => boolean; clock?: ClockPort } = {}): FakeMail {
@@ -52,12 +55,13 @@ export function fakeMail(opts: { failOn?: (m: z.output<typeof MailMessage>) => b
   return {
     async send(message) {
       const m = MailMessage.parse(message);
+      if (m.attachments) m.attachments = m.attachments.map((a) => ({ ...a, bytes: new Uint8Array(a.bytes) }));   // the record keeps its own bytes
       if (opts.failOn?.(m)) throw new Error(`forced mail failure: ${m.subject}`);
       const messageId = `fake-${String(sent.length + 1).padStart(6, "0")}`;
       sent.push({ ...m, firmId: m.firmId.toLowerCase(), to: m.to.toLowerCase(), messageId, sentAt: opts.clock ? opts.clock.now() : new Date(FAKE_NOW) });
       return { messageId };
     },
-    get sent() { return [...sent]; },
-    inbox(address) { const a = address.trim().toLowerCase(); return sent.filter((m) => m.to === a); },
+    get sent() { return sent.map(copy); },
+    inbox(address) { const a = address.trim().toLowerCase(); return sent.filter((m) => m.to === a).map(copy); },
   };
 }

@@ -125,6 +125,17 @@ ok("PF-0p fail: the import check catches a Prisma, a Nest, a node, an app, a dyn
   ok("jobs pass: cancel takes back a waiting job", await jobs.cancel("booking:b-3:24h") && !(await jobs.cancel("booking:b-3:24h")));
   await clock.advance({ days: 2 });
   ok("jobs fail: a cancelled job never runs, and its key stays used", reminders.length === 1 && !(await jobs.schedule("booking.reminder", new Date(), {}, { key: "booking:b-3:24h", firmId: FAKE_FIRM_ID })).queued);
+  // Keys are unique per job name (PF-14: pg-boss keys its job table by name); cancel(key) reaches every name.
+  const other = await jobs.schedule("booking.followup", new Date("2026-12-24T13:00:00Z"), {}, { key: "booking:b-4:x", firmId: FAKE_FIRM_ID });
+  const sameName = await jobs.schedule("booking.followup", new Date("2026-12-24T13:00:00Z"), {}, { key: "booking:b-4:x", firmId: FAKE_FIRM_ID });
+  const otherName = await jobs.schedule("booking.reminder", new Date("2026-12-24T13:00:00Z"), {}, { key: "booking:b-4:x", firmId: FAKE_FIRM_ID });
+  ok("jobs pass/fail: a key is unique per job name (another name queues it; the same name does not)", other.queued && !sameName.queued && otherName.queued);
+  ok("jobs pass: cancel(key) cancels the waiting job under every name", await jobs.cancel("booking:b-4:x") && jobs.jobs.filter((j) => j.key === "booking:b-4:x").every((j) => j.status === "cancelled") && jobs.jobs.filter((j) => j.key === "booking:b-4:x").length === 2);
+  await jobs.schedule("booking.reminder", new Date("2026-12-25T13:00:00Z"), { n: 1 }, { key: "booking:b-5:24h", firmId: FAKE_FIRM_ID });
+  const look = jobs.jobs.find((j) => j.key === "booking:b-5:24h")!;
+  (look.runAt as Date).setUTCFullYear(2000); (look.payload as Record<string, unknown>).n = 2;
+  const again = jobs.jobs.find((j) => j.key === "booking:b-5:24h")!;
+  ok("jobs fail: changing what jobs returns never changes the queued job (date and payload are copies)", again.runAt.getUTCFullYear() === 2026 && again.payload.n === 1);
 
   const { firmId: _f, ...noFirm } = { key: "k-1", firmId: FAKE_FIRM_ID };
   ok("jobs fail: the options schema refuses a missing firmId", await rejects(() => jobs.enqueue("booking.confirm", {}, noFirm as never), zodSays("firmId")) && !jobs.jobs.some((j) => j.key === "k-1"));
@@ -165,6 +176,11 @@ ok("PF-0p fail: the import check catches a Prisma, a Nest, a node, an app, a dyn
   ok("mail pass: an attachment and html are accepted", MailMessage.safeParse({ ...base, subject: "x", html: "<p>Hello</p>", attachments: [{ filename: "a.pdf", contentType: "application/pdf", bytes: new Uint8Array([1]) }] }).success);
   const down = fakeMail({ failOn: (x) => x.class === "MARKETING" });
   ok("mail fail: failOn forces a send failure", await rejects(() => down.send({ ...base, subject: "x", class: "MARKETING" })) && down.sent.length === 0);
+  const keep = fakeMail(), buf = new Uint8Array([1]);
+  await keep.send({ ...base, subject: "with file", attachments: [{ filename: "a.pdf", contentType: "application/pdf", bytes: buf }] });
+  buf[0] = 2;
+  const got = keep.sent[0]; got.attachments![0].bytes[0] = 3; got.sentAt.setUTCFullYear(2000);
+  ok("mail fail: changing the sent buffer or the record read back never changes what was sent", keep.sent[0].attachments![0].bytes[0] === 1 && keep.inbox(base.to)[0].sentAt.toISOString() === FAKE_NOW);
 }
 
 // ------------------------------------------------------------------------------------------------------------- files
