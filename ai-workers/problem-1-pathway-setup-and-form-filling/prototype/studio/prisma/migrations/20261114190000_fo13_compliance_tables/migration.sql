@@ -192,10 +192,10 @@ ALTER TABLE "fo_identity_check"
   -- Only the last 4 characters of the number (VARCHAR(4) refuses more: 22001); upper-case letters and digits, exactly 4.
   ADD CONSTRAINT "fo_identity_check_number_last4_check" CHECK ("document_number_last4" IS NULL OR "document_number_last4" ~ '^[A-Z0-9]{4}$'),
   ADD CONSTRAINT "fo_identity_check_expiry_check" CHECK ("document_expiry" IS NULL OR isfinite("document_expiry")),
-  -- The copy is FilesPort's: its key and the sha256 put returned, both or neither.
+  -- The copy is FilesPort's: its key and the sha256 put returned, both or neither (IS NOT NULL: a CHECK that is NULL passes).
   ADD CONSTRAINT "fo_identity_check_copy_check" CHECK (
     ("copy_file_key" IS NULL AND "copy_sha256" IS NULL)
-    OR (fo_compliance_text_ok("copy_file_key", 1024) AND "copy_file_key" !~ '[[:space:]]' AND "copy_sha256" ~ '^[0-9a-f]{64}$')),
+    OR (fo_compliance_text_ok("copy_file_key", 1024) AND "copy_file_key" !~ '[[:space:]]' AND "copy_sha256" IS NOT NULL AND "copy_sha256" ~ '^[0-9a-f]{64}$')),
   ADD CONSTRAINT "fo_identity_check_details_check" CHECK (
     "details_corroborated" IS NOT NULL AND cardinality("details_corroborated") >= 1
     AND array_position("details_corroborated", NULL) IS NULL AND fo_compliance_distinct_details("details_corroborated")),
