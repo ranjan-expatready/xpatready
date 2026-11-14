@@ -1,0 +1,86 @@
+NOTICE:  database "xr_studio_fo1b_empty_4729" does not exist, skipping
+NOTICE:  database "xr_studio_fo1b_demo_4729" does not exist, skipping
+NOTICE:  database "xr_studio_fo1b_bare_4729" does not exist, skipping
+PASS  FO-1b: the migration has its own stamp, later than every one before it (newest before it: 20261114015002_pf3_platform_tables; P-348 (8)), and after PF-3's
+PASS  FO-1b fail: before FO-1b's migration there is no btree_gist and no fo_ table, and the schema differs (diff names fo_booking)
+PASS  FO-1b pass: every migration applies to an empty database; the five tables exist and the migration created btree_gist
+PASS  FO-1b pass: migrate diff from the migrated empty database to the schema names no FO-1b table or type
+PASS  FO-1b fail: the migration does not apply twice (it is never re-run silently)
+PASS  FO-1b pass: the migration applies to a demo-data copy (cases, audit, the Sample firms and staff) and leaves its rows as they were
+PASS  FO-1b pass: migrate diff after it on the demo-data copy names no FO-1b table or type
+PASS  FO-1b pass: a type takes AG-4-66's Sample timings when none are given (gap 0 / 10 min, notice 4 h, window 60 days, self-service 4 h, interval = length)
+PASS  FO-1b pass: the same slug in another firm is accepted (slugs are unique in the firm)
+PASS  FO-1b fail: a second type with the same slug in the same firm is refused
+PASS  FO-1b fail: a slug that is not lower-case words joined by - (AG-4-9 rule 2) is refused
+PASS  FO-1b fail: a host who is not staff of the type's firm is refused (firm B's person on firm A's type; hosts are a list, checked by trigger)
+PASS  FO-1b fail: a type with no mode, a mode twice, a length outside 5-480 min or a negative gap is refused
+PASS  FO-1b fail (break B-10): a name of only non-breaking or zero-width spaces, or a meeting link with quotes or brackets, is refused
+PASS  FO-1b pass: a usual meeting link is accepted
+PASS  FO-1b fail: a type's firm cannot change
+PASS  FO-1b pass: a booking is written SCHEDULED, sequence 0, with block_range = [start − 0, end + 10 min)
+PASS  FO-1b fail (two connections): an overlapping SCHEDULED booking for the same host waits for the first, then is refused (23P01 fo_booking_no_overlap); exactly one exists
+PASS  FO-1b pass (two connections): a booking for the same host that does not overlap (after the 10-min gap) commits beside it
+PASS  FO-1b fail (two connections): a booking overlapping a RESCHEDULED one of the same host is refused
+PASS  FO-1b pass: the RESCHEDULED booking's old time is free again (09:00 for user-T is accepted)
+PASS  FO-1b fail: moving a booking onto another active booking of the host is refused
+PASS  FO-1b fail: before it is cancelled, user-R's 14:00 blocks another 14:00
+PASS  FO-1b pass: once CANCELLED, the same 14:00 for user-R is accepted
+PASS  FO-1b pass: two hosts may be booked at the same time (user-T at user-R's 14:00)
+PASS  FO-1b fail: the same host at the same time is still refused (user-T at 14:00 again)
+PASS  FO-1b fail: a booking ending 09:55 blocks a 10:00 start for the same host when the gap after is 10 min
+PASS  FO-1b pass: 10:05 (end + 10 min) is accepted
+PASS  FO-1b pass: with a type whose gap after is 0, back-to-back bookings touch without overlapping (11:05-11:35, then 11:35-12:05)
+PASS  FO-1b fail: the gap before pads the start too (gap before 15 on 'no-gap': a 12:15 booking now reaches back over 12:05)
+PASS  FO-1b pass: changing a type's gaps leaves the ranges of bookings already made (AG-4-4 rule 8)
+PASS  FO-1b fail: block_range is the database's — a value written by the app is replaced
+PASS  FO-1b fail: a booking cannot be written with a status other than SCHEDULED
+PASS  FO-1b fail: a CANCELLED booking stays cancelled (no move back to SCHEDULED or RESCHEDULED)
+PASS  FO-1b fail (break B-6): attendance is not recorded before the meeting has started (a December meeting cannot be COMPLETED today)
+PASS  FO-1b pass: the attendance answer of a past meeting can change later, COMPLETED ↔ NO_SHOW, sequence rises each time (AG-4-39), and recording it voids its links
+PASS  FO-1b fail: a finished booking is not moved or changed (time, mode), and nothing goes back to SCHEDULED
+PASS  FO-1b fail (break B-5): the host is one of the type's hosts and the mode one of its modes (user-T on 'no-gap', IN_PERSON on a video/phone type)
+PASS  FO-1b pass: a phone booking on a video/phone type, by one of its hosts, is accepted
+PASS  FO-1b fail: a change of time that does not say RESCHEDULED is refused
+PASS  FO-1b fail (review m6): a change of host that does not say RESCHEDULED is refused
+PASS  FO-1b pass (review m6): a host change made as a reschedule is accepted (user-T's 09:00 to user-R), raises sequence and voids the booking's links
+PASS  FO-1b pass: sequence is the database's — linking the person does not raise it, a value written by the app is ignored
+PASS  FO-1b fail: a booking naming another firm's host or type is refused, and a booking's firm cannot change
+PASS  FO-1b fail: a visitor zone that is not an IANA name (unknown, POSIX-style America/Toronto5 or Foo/Bar5: break B-4), an end not after the start, an endless or a two-day booking (break B-3) is refused
+PASS  FO-1b pass: IANA zones with digits or several parts are accepted (Etc/GMT+5, America/Argentina/Buenos_Aires)
+PASS  FO-1b pass: several live tokens per booking (one per email: three are live at once)
+PASS  FO-1b fail: the same hash twice in the firm, a plain (non-hash) token, or an expiry other than the meeting's end is refused
+PASS  FO-1b fail: only voided_at changes on a token, once
+PASS  FO-1b fail (break B-7): a token's voided_at is the database's clock (2099 is not kept), and a token is never deleted (its hash stays taken)
+PASS  FO-1b pass: a reschedule voids every older token; a new one for the new end is live (AG-4-36 rule 3)
+PASS  FO-1b fail: a cancelled booking's tokens are all voided and it gets no new one
+PASS  FO-1b fail (two connections, break B-1): a REPEATABLE READ cancel racing a token write fails 40001 instead of leaving a live token on a cancelled booking
+PASS  FO-1b fail (two connections, break B-1): a REPEATABLE READ token write racing a cancel fails 40001; no live token on a cancelled booking
+PASS  FO-1b pass: after the race, the cancel retried voids the token written meanwhile
+PASS  FO-1b pass: every date-time column of the five tables is timestamptz
+PASS  FO-1b fail: the same checks name a timestamp without zone and an index not led by firm_id (a probe table)
+PASS  FO-1b pass: firm_id is the first column of every index of the five tables but their primary keys (exclusions included)
+PASS  FO-1b pass: the seed copies the firm's business hours (Sample Mon-Fri 09:00-17:00, America/Toronto) to every Sample staff member
+PASS  FO-1b pass: the seed run twice adds nothing
+PASS  FO-1b fail: a person's own change is kept (user-T's Friday removed stays removed)
+PASS  FO-1b pass: a new staff member gets the firm's current business hours (Mon 08:30-16:00, Sat 10:00-12:00)
+PASS  FO-1b fail: copying hours to another firm's person is refused and writes nothing
+PASS  FO-1b: windowsOf maps SUN to 0 and SAT to 6 (AG-4-62 rule 3)
+PASS  FO-1b pass: a second window on a day that does not overlap is accepted (Mon 17:00-18:00 beside 08:30-16:00)
+PASS  FO-1b fail: overlapping windows on a day, end before start, weekday 7, another zone for the same person, a bad zone, or another firm's person are refused
+PASS  FO-1b pass (review m5): one statement moves all of a person's windows to a new zone (checked at commit)
+PASS  FO-1b fail (review m5): at commit, a person still has one zone (a window in another zone is refused)
+PASS  FO-1b pass: time off is a range of instants (whole or part days) for a staff member of the firm
+PASS  FO-1b fail: time off ending before it starts, or for another firm's person, is refused
+PASS  FO-1b fail (foreign key): a firm B staff member on a firm A booking is refused 23503 by fo_booking_firm_id_staff_id_fkey (the host trigger switched off inside the refused statement, so the key itself answers)
+PASS  FO-1b fail (foreign key): a type for a firm that does not exist is refused 23503
+PASS  FO-1b pass: the four foreign keys to the platform are RESTRICT on delete and on update
+PASS  FO-1b pass: a staff member no front-office row names can still be deleted
+PASS  FO-1b fail (foreign key, break B-2): deleting a staff member who has a booking (and nothing else) is refused by fo_booking_firm_id_staff_id_fkey (RESTRICT: SQLSTATE 23001); the booking keeps its host
+PASS  FO-1b fail (foreign key): a staff member with hours cannot be deleted or change id (RESTRICT: 23001)
+PASS  FO-1b pass: a firm with no front-office row can still be deleted (as before FO-1b)
+PASS  FO-1b fail (foreign key): a firm with a consultation type cannot be deleted or change id (RESTRICT: 23001)
+PASS  FO-1b pass: time off leaves the bookings in it (AG-4-62 rule 7: user-T's 14:00 on that day is still SCHEDULED)
+PASS  FO-1b: no secret column — no FO-1b column is named like a password, secret or raw token
+
+80 passed, 0 failed
+exit 0

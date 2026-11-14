@@ -1,0 +1,10 @@
+CI run 43577543660 (workflow ci, merge queue batch "merged #1741", head acae084213fc748ec0159a9caa86541dbe1c6976), conclusion success.
+Its head's tree ea055af16e339b542850b9bb1b3580bcafc5cb8b equals main 549b9cfbb's tree (git rev-parse acae0842^{tree} 549b9cfbb^{tree}), so it ran on main's exact code.
+Merge queue: every suite but the quarantined ones (--skip-quarantined), 484 units over 8 parts, retries: 0 in every part.
+Lines from the jobs' suite tables (copied from the job logs, read through the GitHub API on 14 Nov):
+  job 132395570724 shard (1): | check_fo1b_booking_schema.ts | PASS | 12 s | 80 passed, 0 failed |
+  job 132395570702 shard (4): | check_pf1_module_routes.ts | PASS | 28 s | 28/28 passed |
+  job 132395570725 shard (7): | check_pf3_platform_schema.ts | PASS | 11 s | 75 passed, 0 failed |
+Not in it: the PF-7 container smoke (workflow skeleton.yml). Its run for this batch, 43577543636, concluded "skipped"
+(the workflow skips mergify/* batches by design). skeleton.yml runs only on pull requests, never on main;
+workflow_dispatch from this cloud lane answered 403 "Resource not accessible by integration" (P-439).
