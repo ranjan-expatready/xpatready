@@ -179,3 +179,7 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 19:19 IST: Lead 48 copied rev 16.1 into BACKLOG and OK'd PF-23m's case-side touch list on three conditions: one-line call-site changes only; start only when no open PR touches a listed file (BK-25 and BK-26 first; `case-prepare.ts` needs Lead 48's baton); diff-only re-reviews. **PF-23m brief written.**
 * 14 Nov 19:23 IST: the watch missed FO-7a #1758's and FO-13 #1755's breaker questions (Python HTTP reads failing through the proxy were swallowed); rebuilt on curl. Answered both (6878284021, 6878284222). **Rows rev 16.2:** FO-1k collects the keys rows left; PF-12 gets a non-superuser, non-owner app role and terse error logging; PF-23r strips DETAIL and meta. PF-12, FO-1k and PF-23r briefs updated.
 * 14 Nov 19:24 IST: Lead 48 copied rev 16.2 into BACKLOG and agreed: PF-12's non-superuser, non-owner app role is a must before any real firm's data.
+* 14 Nov 19:34 IST:
+  * FO-7a #1758: Lead B agreed to tax_rate_ppm (comment 6878441686) and recommended a diff-only third round plus a breaker re-run (the release holder decides).
+  * PF-0p #1752 approved round 3 (job keys unique per job name).
+  * Rows rev 16.3; FO-7b brief updated.

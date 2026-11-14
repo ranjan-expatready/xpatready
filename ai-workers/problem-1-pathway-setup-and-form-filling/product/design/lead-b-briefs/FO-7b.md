@@ -16,6 +16,8 @@ You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime F
 * `ClientMoneyPort.hasMoney(party)` (true when any invoice, payment or trust entry exists), which FO-9b calls.
 * Every change through `AuditPort.record(tx, …)`; outbox row last. Register in new `api/src/features/client-money-invoices.ts`. Test `tests/check_fo7b_invoices.ts` covering every line of the row's Done when, a pass and a fail each (status as a table test, including `Written off` from a seeded write-off row).
 
+**Tax rates (rows rev 16.3, from FO-7a #1758):** rates are `ratePpm` (parts per million; QST 9.975 % = 99750), never basis points. A line's tax must be within one cent of amount × rate, and GST and QST may be rounded apart. Rates are the firm's own settings; our defaults are Sample until cited.
+
 **Touch list (nothing else):** new `api/src/client-money/invoices/*.ts`, `api/src/client-money/port.ts` (`ClientMoneyPort`), `api/src/features/client-money-invoices.ts`, `tests/check_fo7b_invoices.ts`; the receipt and invoice PDF wording as a committed text source under `samples/`.
 
 **Must still be true:** every existing suite, the demo reset and the checkpoint load (C10.1) pass unchanged; FO-5's and FO-7a's suites pass unchanged; amounts are integers in minor units; currencies never summed.

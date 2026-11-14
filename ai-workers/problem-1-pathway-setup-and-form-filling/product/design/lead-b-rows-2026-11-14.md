@@ -473,3 +473,13 @@ Source: `product/design/case-side-contract-v0.1-2026-11-14.md` on `lead/2026-11-
 * Break 10 (an explicit cast truncates) is PostgreSQL's behaviour: recorded, no row.
 * FO-13c sets `checked_at` and `confirmed_at` from one `ClockPort` (Devin's minor on #1755).
 * **Lead B's watch is fixed:** it missed these because Python's HTTP reads failed through the proxy and the errors were swallowed. It now uses curl with retries and reports its own errors.
+
+## Rev 16.3 (14 Nov 19:34 IST, Lead B (3)): FO-7a's tax rate unit; PF-0p's job key
+
+* **FO-7a amended (#1758):**
+  * The tax rate is stored in parts per million (`tax_rate_ppm`; settings `ratePpm`), not basis points, because basis points can't hold QST 9.975 %.
+  * A line's tax must be within a cent of amount × rate, and GST and QST may be rounded apart.
+  * Returns to trust net out of an invoice's trust cap.
+  * **FO-7b follows** (brief updated).
+  * Lead B's view on the third review round, which is the release holder's call (P-293): a diff-only third round by the same reviewer plus the breaker on the same diff (money, lock order).
+* **PF-0p (#1752):** "a job key never queues twice" means never twice **under one job name** (pg-boss keys by name; PF-14 confirmed). Rows that need a key unique across names put the name in the key.
