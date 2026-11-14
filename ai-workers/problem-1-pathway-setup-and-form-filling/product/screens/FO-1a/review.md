@@ -183,6 +183,28 @@ Two commits: 7e868861f (shared event name, for CI shard 2's B164) and 94ca99117 
 
 Journey score, round 5: **9½/10** (unchanged).
 
-**Verdict: Approve.** No Blocker or Major is open at 94ca99117.
+**Round 5 verdict: Approve.** No Blocker or Major is open at 94ca99117.
 
 Reviewer: Approve 94ca991179b07e9b3d6dcc4e5fc7cdca284e0fc7
+
+## Round 6: merge 4cb10ae08 plus commit 421f887ce (P-277; P-270 merge on a conflict)
+Cause: FO-1b merged first with its own `fo_firm_fixed()`. FO-1a's earlier stamp ran first and created a function of the same name, so every CI shard failed with P3018. Lead B's ruling: re-stamp, and give this area's functions the `fo_sales_` prefix.
+* **The merge brings in main only.**
+  * `git diff 0e7b715df 4cb10ae08` changes none of FO-1a's files. The only addition under `api/src/front-office/` is FO-1b's own `booking-seed.ts`.
+  * `git diff 549b9cfbb(main) 4cb10ae08` lists only this branch's nine FO-1a files, so the merge changed nothing else on main.
+* **421f887ce is a rename only.**
+  * The migration folder `20261114063000` is renamed to `20261114153000` (96 % similar), which is later than FO-1b's `20261114120000`, now the newest on main.
+  * Five functions get the `fo_sales_` prefix: firm_fixed, insert_only, has_word, next_number, number_fixed. The rename reaches every caller: the migration's triggers and checks, `firm-seed.ts`'s SQL and the test.
+  * No logic changes. Trigger names and FO-1b's migration are untouched.
+* **No name clashes left.** I compared the two migrations: they share no function name and no type name. No unprefixed copy of the five names remains in FO-1a's files, and nothing under `studio/` still names the old stamp.
+* **Fresh database:** `prisma migrate deploy` applied **86** migrations, FO-1a last. `fo_firm_fixed` and `fo_sales_firm_fixed` both exist, and `fo_sales_has_word` exists (ICU found). The database is dropped.
+* **Suites:** FO-1a **119/119**, FO-1b **80/80**, `check_prisma_schema` **8/8**, B164 **63/63**.
+* **Not checked:**
+  * Lane databases that already ran the old stamp (for example this cloud copy's `xr_studio_demo`, failed state) need rebuilding. The Mac's :4400 demo is unaffected, because FO-1a never reached main.
+  * S7, D1, C10.1 and B104: they were still running on the builder's copies, and I did not run them.
+
+Journey score, round 6: **9½/10** (unchanged).
+
+**Verdict: Approve.** No Blocker or Major is open at 421f887ce.
+
+Reviewer: Approve 421f887cee2b64db63a2788cda26f93af909d280
