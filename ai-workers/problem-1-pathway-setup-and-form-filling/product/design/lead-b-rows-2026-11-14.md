@@ -305,7 +305,7 @@ Source: `product/design/case-side-contract-v0.1-2026-11-14.md` on `lead/2026-11-
 * **Per-module registration:** PF-26 after FO-5 and FO-9b.
 * **Cloud:** PF-23c with PF-8.
 
-**Size (Hypothesis):** about 22-28 small PRs over the 14 rows.
+**Size (Hypothesis):** about 22-28 small PRs over the 13 rows, plus the two screen addenda PF-26s and PF-18ns.
 
 **For the release holder's own rows:**
 * the case side's exporter (PF-26) and eraser (PF-21d);
