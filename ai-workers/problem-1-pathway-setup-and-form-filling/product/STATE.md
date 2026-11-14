@@ -41,5 +41,5 @@ F2, F8 open (demo looks); F14-F19 ruled; word for word in `history/STATE-2026-11
 **To-do (Lead 11):** word for word in `history/STATE-2026-11-14-0910-lead41s2-founder-asks-pointer-rows.md`.
 
 ## Leads, in order
-**Series 2 (P-433):** current = `current_lead:`; **Lead 47 (series 2, local_a358e18f) from 17:0x IST 14 Nov**; Lead 46 (series 2, local_3cc8e2ba) 15:46-17:0x; Lead 45 (local_24e909a3) 13:48-15:4x; earlier and Lead B: word for word in `history/STATE-2026-11-14-1700-lead46s2-for-founder-and-leads-lines.md`. Standbys: **Lead 48 `local_1aede380`** (first); Lead 49 to start.
+**Series 2 (P-433):** current = `current_lead:`; **Lead 48 (series 2, local_1aede380) from 18:5x IST 14 Nov**; Lead 47 (series 2, local_a358e18f) 17:07-18:55; Lead 46 (series 2, local_3cc8e2ba) 15:46-17:0x; Lead 45 (local_24e909a3) 13:48-15:4x; earlier and Lead B: word for word in `history/STATE-2026-11-14-1700-lead46s2-for-founder-and-leads-lines.md`. Standbys: **Lead 49 `local_93551126`** (first); Lead 50 to start at his next typed turn.
 **Series 1: Leads 1 to 41, before 9 Nov 17:48 IST**, never renamed or renumbered: the full list, word for word, is in `history/STATE-2026-11-09-2130-lead2s2.md` ("Leads, in order").
