@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independent reconciliation of the founder's progress board (P-596, N-version check).
+r"""Independent reconciliation of the founder's progress board (P-596, N-version check).
 
 Written from `cockpit/spec-a61-a62-2026-11-14.md` (draft 3 plus §11 rulings R1-R7,
 R1b, R3b, R5b)
@@ -22,7 +22,8 @@ Snapshot files read (spec §6 1a): meta.json (taken_at, the "now" of every
 number), github/pulls.json, github/branches_recent.json, briefs.json,
 files/<repo path>/MVP-CHECKLIST.md, files/<repo path>/BACKLOG.md,
 files_main/qa/CAPABILITIES.md, git/capabilities_main.jsonl and
-git/capabilities_main/<sha>.md (proven only).
+git/capabilities_main/<sha>.md (proven only); files/<repo path>/cockpit/plan.json and
+files/<repo path>/cockpit/usage-log.tsv (delivery per use, P-602 (4)).
 
 Common definitions
 ------------------
@@ -123,6 +124,32 @@ forecast_p50_date / forecast_p85_date (§1 Forecast, M2, R2-B1 (b), §11 R2):
   lengths at sorted index ceil(0.50 N) - 1 and ceil(0.85 N) - 1. Zero guard:
   counts sum to 0 -> null "not measured: no merges in 14 days". A percentile
   run at the cap -> value "beyond 1 year". Remaining scope 0 -> today.
+Delivery per use (P-602 (4), FORMULAS.md §1b; written from that sheet). The window is
+  the 24 h ending at taken_at: a time t is inside when taken_at - 24 h < t <= taken_at.
+plan_pct_used_24h: files/<repo path>/cockpit/usage-log.tsv; lines of 4 tab-separated
+  fields (time with a UTC offset, whole percent of 1-3 digits up to 100, account, by);
+  other lines, blank lines, "#" lines and the header are skipped. Readings inside the
+  window in time order; each consecutive pair with the same account and no fall adds
+  its rise (a step). Null when fewer than 2 readings are inside or no step adds.
+span_hours: from the first reading of the first step to the last reading of the last
+  step, hours rounded to 1 decimal; null when plan_pct_used_24h is null. The span is
+  (first, last]; with no usable readings it is the whole 24 h window.
+changes_merged_span: Release 1 changes whose first non-records app-code merge time is
+  inside the span.
+qa Works at a time t (one rule for done and needed): the row's Status (cut at " (" or
+  ";", "*" and "\*" removed) reads exactly "qa Works" in the checklist as it stood at t
+  (taken_at or later: the snapshot's checklist; earlier: the newest
+  git/checklist_records commit at or before t; none -> unknown), or, when the checklist
+  has a qa id column, the row's first commit in git/capabilities_main.jsonl reading
+  Works for every qa id is at or before t. Build rows: first map number wins.
+works_rows_span: rows at qa Works at the span's end and not at its start.
+rows_done_24h: rows at qa Works at taken_at and not at taken_at - 24 h.
+pct_per_change / pct_per_works_row: plan_pct_used_24h / the span count, rounded to 1
+  decimal; null when the plan % is null, the span is under 20 h, or the count is 0
+  or unknown.
+rows_needed_per_day: plan.json H1 with kind committed (date_to, else date); days =
+  that date - today; Build rows not at qa Works at taken_at / days, rounded to 2.
+  Null with no committed date or days <= 0.
 
 Ambiguities (most literal reading taken; listed in the report)
 -------------------------------------------------------------
@@ -764,6 +791,151 @@ def compute(snap):
                                           "merged, no non-id dependency (§11 R3, R3b)",
                               detail=ready, not_ready_non_id=blocked_non_id)
 
+    # --- delivery per use over the rolling 24 h ending at taken_at (P-602 (4); FORMULAS.md §1b)
+    win_start = now - dt.timedelta(hours=24)
+
+    def inside(t, lo, hi):
+        return t is not None and lo < t <= hi
+
+    # weekly plan % used, and the span its readings cover
+    ul_path = snap.find("files/", "cockpit/usage-log.tsv")
+    ul_text = snap.text(ul_path) if ul_path else None
+    readings = []
+    for ln in (ul_text or "").splitlines():
+        parts = [x.strip() for x in ln.split("\t")]
+        if not ln.strip() or ln.lstrip().startswith("#") or parts == ["time_ist", "weekly_pct", "account", "by"]:
+            continue
+        if len(parts) != 4 or not re.fullmatch(r"\d{1,3}", parts[1]) or int(parts[1]) > 100 or not parts[2] or not parts[3]:
+            continue
+        try:
+            t = dt.datetime.fromisoformat(parts[0])
+        except ValueError:
+            continue
+        if t.tzinfo is not None:
+            readings.append((t, int(parts[1]), parts[2]))
+    in_win = sorted([x for x in readings if inside(x[0], win_start, now)], key=lambda x: x[0])
+    used, steps, s_from, s_to = 0, 0, None, None
+    for k in range(1, len(in_win)):
+        (t0, p0, a0), (t1, p1, a1) = in_win[k - 1], in_win[k]
+        if a0 == a1 and p1 >= p0:
+            used += p1 - p0
+            steps += 1
+            s_from = s_from or t0
+            s_to = t1
+    if len(in_win) < 2 or steps == 0:
+        N["plan_pct_used_24h"] = num(None, "not measured: %d reading(s) in the 24 h, %d usable step(s)" % (len(in_win), steps))
+        N["span_hours"] = num(None, "not measured: no usable readings")
+        s_from, s_to = win_start, now
+    else:
+        N["plan_pct_used_24h"] = num(used, "rises between same-account readings in a row in the 24 h",
+                                     detail={"readings": len(in_win), "steps": steps})
+        N["span_hours"] = num(round((s_to - s_from).total_seconds() / 3600, 1), "first to last reading of a counted step")
+    U, span_h = N["plan_pct_used_24h"]["value"], N["span_hours"]["value"]
+
+    if missing:
+        N["changes_merged_span"] = num(None, "not measured: %s missing from the snapshot" % ", ".join(missing))
+    else:
+        chs = []
+        for rid in sorted({x for r in rows for x in r["parts"]}):
+            first_t = next((mt for mt, p in merged_app if title_matches(p.get("title"), rid)), None)
+            if inside(first_t, s_from, s_to):
+                chs.append(rid)
+        N["changes_merged_span"] = num(len(chs), "Release 1 changes first merged (app code) in the span", detail=chs)
+
+    # qa Works at a time: Status reads "qa Works" in the checklist as it stood then, or the row is proven by then
+    unique_rows, seen_maps = [], set()
+    for r in rows:
+        if r["map"] not in seen_maps:
+            seen_maps.add(r["map"])
+            unique_rows.append(r)
+    first_works = {}
+    if has_qa:
+        commits = []
+        for ln in (snap.text("git/capabilities_main.jsonl") or "").splitlines():
+            if ln.strip():
+                e = json.loads(ln)
+                t = snap.text("git/capabilities_main/%s.md" % e.get("sha"))
+                if t is not None and parse_ts(e.get("date")):
+                    commits.append((parse_ts(e["date"]), parse_capabilities(t)))
+        commits.sort(key=lambda x: x[0])
+        for r in unique_rows:
+            if r["qa_ids"]:
+                first_works[r["map"]] = next((when for when, caps in commits
+                                              if all(reads_works(caps.get(c, ("", ""))[1]) for c in r["qa_ids"])), None)
+    ck_versions = None
+    if snap.text("git/checklist_records.jsonl") is not None:
+        ck_versions = []
+        for ln in snap.text("git/checklist_records.jsonl").splitlines():
+            if ln.strip():
+                e = json.loads(ln)
+                t = snap.text("git/checklist_records/%s.md" % e.get("sha"))
+                if t is not None and parse_ts(e.get("date")):
+                    ck_versions.append((parse_ts(e["date"]), t))
+        ck_versions.sort(key=lambda x: x[0])
+
+    def norm_status(raw):
+        return re.split(r" \(|;", raw.replace("\\*", "").replace("*", ""))[0].strip()
+
+    def works_at(t):
+        if ck_text is None:
+            return None
+        if t >= now:
+            these = rows
+        else:
+            before = [x for x in (ck_versions or []) if x[0] <= t]
+            if not before:
+                return None
+            these = parse_checklist(before[-1][1])[0]
+        out, seen = set(), set()
+        for r in these:
+            if r["map"] in seen:
+                continue
+            seen.add(r["map"])
+            if norm_status(r["status"]) == "qa Works":
+                out.add(r["map"])
+        return out | {m for m, w in first_works.items() if w is not None and w <= t}
+
+    def reached(lo, hi):
+        a, b = works_at(lo), works_at(hi)
+        return None if a is None or b is None else sorted(b - a)
+    no_hist = "not measured: the checklist's earlier versions do not reach back that far"
+    ws = reached(s_from, s_to)
+    N["works_rows_span"] = num(None if ws is None else len(ws), no_hist if ws is None else "rows that reached qa Works in the span",
+                               detail=ws)
+    wd = reached(win_start, now)
+    N["rows_done_24h"] = num(None if wd is None else len(wd), no_hist if wd is None else "rows that reached qa Works in the 24 h",
+                             detail=wd)
+
+    def per(n):
+        if U is None:
+            return num(None, "not measured: no plan % used")
+        if span_h < 20:
+            return num(None, "not measured: the readings cover only %g h of 24" % span_h)
+        if not n:
+            return num(None, "no deliveries in the span")
+        return num(round(U / n, 1), "plan % used / deliveries in the span")
+    N["pct_per_change"] = per(N["changes_merged_span"]["value"])
+    N["pct_per_works_row"] = per(N["works_rows_span"]["value"])
+
+    plan_path = snap.find("files/", "cockpit/plan.json")
+    plan = None
+    if plan_path:
+        try:
+            plan = json.loads(snap.text(plan_path))
+        except ValueError:
+            plan = None
+    h1 = next((d for d in (plan or {}).get("dates", []) if d.get("id") == "H1"), None)
+    committed = (h1.get("date_to") or h1.get("date")) if h1 and h1.get("kind") == "committed" else None
+    now_works = works_at(now)
+    if now_works is None or not committed:
+        N["rows_needed_per_day"] = num(None, "not measured: no checklist or no committed H1 date in cockpit/plan.json")
+    else:
+        days = (dt.date.fromisoformat(committed) - today).days
+        left = len(unique_rows) - len(now_works & {r["map"] for r in unique_rows})
+        N["rows_needed_per_day"] = num(round(left / days, 2) if days > 0 else None,
+                                       "%d Build rows not at qa Works / %d days to %s" % (left, days, committed)
+                                       if days > 0 else "not measured: the committed date is today or past")
+
     # --- forecast (R2: no reference class)
     if history_days < MIN_HISTORY_DAYS:
         why = "not measured: fewer than 5 days of Release 1 history (from %s)" % (
@@ -775,7 +947,9 @@ def compute(snap):
     N["forecast_p85_date"] = num(p85, why)
 
     order = ["works_on_main", "works_total", "changes_per_day_window", "remaining_scope_changes", "built_rows",
-             "proven_rows", "open_app_prs", "lanes_working", "ready_rows", "forecast_p50_date", "forecast_p85_date"]
+             "proven_rows", "open_app_prs", "lanes_working", "ready_rows", "forecast_p50_date", "forecast_p85_date",
+             "plan_pct_used_24h", "span_hours", "changes_merged_span", "works_rows_span", "pct_per_change",
+             "pct_per_works_row", "rows_done_24h", "rows_needed_per_day"]
     return {"version": 1,
             "numbers": {k: N[k] for k in order},
             "mc_inputs": {"daily_counts": r1_counts, "remaining_scope": remaining}}
@@ -884,7 +1058,14 @@ def self_test():
     eq("R7 keys", list(n) + list(out["mc_inputs"]),
        ["works_on_main", "works_total", "changes_per_day_window", "remaining_scope_changes", "built_rows",
         "proven_rows", "open_app_prs", "lanes_working", "ready_rows", "forecast_p50_date", "forecast_p85_date",
+        "plan_pct_used_24h", "span_hours", "changes_merged_span", "works_rows_span", "pct_per_change",
+        "pct_per_works_row", "rows_done_24h", "rows_needed_per_day",
         "daily_counts", "remaining_scope"])
+    # P-602 (4), no log: the span is the whole 24 h to 20 Nov 06:30Z; PF-2's first app merge 19 Nov 20:00Z is inside.
+    eq("changes_merged_span", (v["changes_merged_span"], n["changes_merged_span"]["detail"]), (1, ["PF-2"]))
+    eq("works_rows_span no history", v["works_rows_span"], None)
+    eq("plan_pct no log", (v["plan_pct_used_24h"], v["span_hours"], v["pct_per_change"]), (None, None, None))
+    eq("rows_needed no committed date", v["rows_needed_per_day"], None)
     eq("works_on_main", v["works_on_main"], 3)            # C1.1, C2.1, C4.1 (C5.1 Parked, BK-13 not a C row)
     eq("works_total", v["works_total"], 5)                # C1.1 C1.2 C2.1 C3.1 C4.1
     # R1/R5: changes = cited ids PF-1 PF-2 PF-3 PF-4 PF-8 BK-1 BK-2 PF-9 PF-6. First app non-records merges (IST):
@@ -994,6 +1175,46 @@ def self_test():
     out6 = compute(Snapshot(mem=_fixture("2026-11-20T12:00:00+05:30", checklist=ck, extra=hist)))
     eq("proven_rows", out6["numbers"]["proven_rows"]["value"], 2)  # both Works on 15 Nov (C1.2 Partial later)
     eq("proven dates", [d["proven"] for d in out6["numbers"]["proven_rows"]["detail"]], ["2026-11-15", "2026-11-15"])
+
+    # Case 6b (P-602 (4)): usage log, span, committed date, Works in the window.
+    hdr = "time_ist\tweekly_pct\taccount\tby\n"
+    P_ = "files/ai-workers/problem-1-pathway-setup-and-form-filling/product/"
+
+    def nums(log, **kw):
+        ex = {P_ + "cockpit/usage-log.tsv": hdr + log}
+        ex.update(kw.pop("extra", {}))
+        return compute(Snapshot(mem=_fixture("2026-11-20T12:00:00+05:30", extra=ex, **kw)))["numbers"]
+    full = ("2026-11-19T12:30:00+05:30\t10\tA1\tL\n2026-11-19T20:00:00+05:30\t14\tA1\tL\n"
+            "2026-11-20T11:00:00+05:30\t20\tA1\tL\n")
+    nf = nums(full)
+    eq("pct normal", (nf["plan_pct_used_24h"]["value"], nf["span_hours"]["value"]), (10, 22.5))
+    eq("per change normal", (nf["changes_merged_span"]["value"], nf["pct_per_change"]["value"]), (1, 10.0))   # PF-2
+    eq("pct two accounts and a fall", nums("2026-11-19T13:00:00+05:30\t50\tA1\tL\n2026-11-19T14:00:00+05:30\t55\tA1\tL\n"
+                                           "2026-11-19T15:00:00+05:30\t3\tA2\tL\n2026-11-19T16:00:00+05:30\t6\tA2\tL\n"
+                                           "2026-11-20T05:00:00+05:30\t1\tA2\tL\n2026-11-20T06:00:00+05:30\t2\tA2\tL\n")
+       ["plan_pct_used_24h"]["value"], 9)
+    short = nums("2026-11-20T05:00:00+05:30\t20\tA1\tL\n2026-11-20T11:00:00+05:30\t26\tA1\tL\n")
+    eq("short span", (short["span_hours"]["value"], short["pct_per_change"]["value"], short["changes_merged_span"]["value"]),
+       (6.0, None, 0))                                   # PF-2 (19 Nov 20:00Z = 20 Nov 01:30 IST) is before the span
+    eq("pct one reading", nums("2026-11-20T11:00:00+05:30\t20\tA1\tL\n")["plan_pct_used_24h"]["value"], None)
+    eq("pct bad line skipped", nums("2026-11-19T12:30:00+05:30\t20\tA1\tL\n2026-11-20T10:30:00+05:30\tabc\tA1\tL\n"
+                                    "2026-11-20T11:00:00+05:30\t24\tA1\tL\n")["plan_pct_used_24h"]["value"], 4)
+    plan = json.dumps({"dates": [{"id": "H1", "date": "2026-11-30", "kind": "committed"}]})
+    hist7 = dict(hist, **{"git/capabilities_main.jsonl": hist["git/capabilities_main.jsonl"] +
+                          json.dumps({"sha": "bbb", "date": "2026-11-20T01:00:00Z"}) + "\n",
+                          "git/capabilities_main/bbb.md": "| # | M | Status |\n|---|---|---|\n| C1.1 | M2 | Works |\n"
+                                                          "| C1.2 | M2 | Works |\n| C2.1 | M3 | Works |\n"})
+    ck7 = ck.replace("| 3 | Three | P | PF-2 | | Merged |", "| 3 | Three | P | PF-2 | C2.1 | Merged |\n| 4 | Four | P | PF-4 | | qa Works |")
+    ck7_old = ck7.replace("| PF-4 | | qa Works |", "| PF-4 | | Merged |")
+    hist7.update({"git/checklist_records.jsonl": json.dumps({"sha": "c1", "date": "2026-11-18T00:00:00Z"}) + "\n" +
+                  json.dumps({"sha": "c2", "date": "2026-11-20T03:00:00Z"}) + "\n",
+                  "git/checklist_records/c1.md": ck7_old, "git/checklist_records/c2.md": ck7, P_ + "cockpit/plan.json": plan})
+    n7 = nums(full, checklist=ck7, extra=hist7)
+    # row 3: C2.1 first Works 20 Nov 01:00Z; row 4: Status qa Works from c2 (20 Nov 03:00Z); both inside the span
+    eq("works_rows_span", (n7["works_rows_span"]["value"], n7["works_rows_span"]["detail"]), (2, ["3", "4"]))
+    eq("rows_done_24h", n7["rows_done_24h"]["value"], 2)
+    eq("pct_per_works_row", n7["pct_per_works_row"]["value"], 5.0)
+    eq("rows_needed_per_day", n7["rows_needed_per_day"]["value"], 0.0)   # 4 rows all at qa Works -> 0 / 10 days
 
     # Case 7: unreadable snapshot.
     try:

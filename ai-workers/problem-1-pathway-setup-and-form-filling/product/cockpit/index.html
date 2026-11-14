@@ -247,7 +247,7 @@ function relTile(){var P=D.pace;if(!P)return '<div class="tile"><div class="k">R
   return '<div class="tile"'+S(srcN(b))+'><div class="k">Release 1</div><div class="v">'+(b.value==null?"n/a":esc(b.value))+' built</div><div class="s">of '+esc(P.rows_total.value)+' \u00b7 proven: '+(pr.value==null?"not measured":esc(pr.value))+(diff?' \u00b7 records differ':'')+'</div></div>';}
 /* the Lead input's 2 h limit, judged again by the page at viewing time (review Minor 6) */
 function leadInputStale(){var a=D.top3&&D.top3.as_of;if(!a||a==="no Lead input")return true;var t=Date.parse(a);return isNaN(t)||(Date.now()-t)/3600000>2;}
-var PLAIN={works_on_main:"proof capabilities proven",works_total:"proof capabilities",changes_per_day_window:"changes a day",remaining_scope_changes:"changes left",built_rows:"rows built",proven_rows:"rows proven",open_app_prs:"open app changes",lanes_working:"lanes working",ready_rows:"rows ready",forecast_p50_date:"50% date",forecast_p85_date:"85% date",mc_daily_counts:"daily changes used for the forecast",mc_remaining_scope:"changes left used for the forecast"};
+var PLAIN={works_on_main:"proof capabilities proven",works_total:"proof capabilities",changes_per_day_window:"changes a day",remaining_scope_changes:"changes left",built_rows:"rows built",proven_rows:"rows proven",open_app_prs:"open app changes",lanes_working:"lanes working",ready_rows:"rows ready",forecast_p50_date:"50% date",forecast_p85_date:"85% date",mc_daily_counts:"daily changes used for the forecast",mc_remaining_scope:"changes left used for the forecast",plan_pct_used_24h:"weekly plan used in 24 h",span_hours:"hours the readings cover",changes_merged_span:"changes merged over the readings",works_rows_span:"rows reaching qa Works over the readings",pct_per_change:"plan % per change",pct_per_works_row:"plan % per row",rows_done_24h:"rows done in 24 h",rows_needed_per_day:"rows needed a day"};
 function plain(k){return PLAIN[k]||k.replace(/_/g," ");}
 function renderStrip(){
   var s=D.summary,el=document.getElementById("stripIn");
@@ -303,6 +303,7 @@ function rPace(){
       'At the current pace: 50% by '+N(F.p50,"",function(x){return B(dshort(x));})+', 85% by '+N(F.p85,"",function(x){return B(dshort(x));})+'.')+'</p>';
     h+='<p class="line small">'+pace+'.</p>';
   }
+  h+=rDelivery(B);
   var dis=((D.trust||{}).status_disagreements||[]);
   h+='<p class="line">Capabilities: '+N(P.built,"",B)+' of '+N(P.rows_total)+' built'+(bb&&bb.value?' <span class="small muted"'+S(srcN(bb))+'>(+'+esc(bb.value)+' built before 13 Nov)</span>':"")+', proven: '+N(P.proven,"",B)+'.'+
     (dis.length?' <a href="#trust" class="small" data-go="details"'+S("the checklist's hand-kept status and the computed state differ on these rows; Details lists them")+'>records differ on rows '+esc(dis.map(function(x){return x.map;}).join(", "))+'</a>':"")+'</p>';
@@ -312,6 +313,33 @@ function rPace(){
   h+='<div class="svgwrap" id="burnup"></div>';
   h+='<details class="inline"><summary>Roadmap timeline</summary><div class="svgwrap" id="timeline" style="margin-top:6px"></div></details>';
   return '<section class="ovsec" id="pace"><h2>Plan and pace</h2>'+h+'</section>';
+}
+/* P-602 (4): delivery per use over the last 24 h; the divisions use deliveries over the same hours as the readings.
+   "not measured" is said once per line: the figures not measured are listed at the end, each with its reason on hover */
+function rDelivery(B){
+  var X=D.pace.delivery_24h;if(!X)return "";
+  var U=X.plan_pct_used,Cm=X.changes_merged,Wr=X.works_rows,Dn=X.rows_done_per_day,RN=X.rows_needed_per_day,CN=D.pace.changes_needed_per_day,sp=X.span||{};
+  var parts=[],nms=[];
+  var val=function(n,suf){return '<span'+S(srcN(n))+'><b>'+esc(n.value)+(suf||"")+'</b></span>';};
+  var miss=function(label,n){nms.push('<span class="nm"'+S(label+": "+(n&&n.reason||"missing from data.json"))+'>'+esc(label)+'</span>');};
+  var least=U.at_least?"at least ":"";
+  var head=sp.basis==="readings"?'Last '+esc(sp.hours)+' h of readings':'Last 24 h';
+  if(U.value!=null)parts.push(least+val(U,"%")+' of a weekly plan used<span class="rep">Lead-reported</span>');else miss("weekly plan used",U);
+  var per=function(cnt,n,one,many,label){
+    if(n.value!=null)return ' <span class="muted"'+S(srcN(n))+'>('+least+esc(U.value)+'% of plan \u00f7 '+esc(cnt.value)+' '+(cnt.value===1?one:many)+' = '+esc(Number(n.value).toFixed(1))+'% a'+(one==="row"?" row":" change")+')</span>';
+    if(cnt.value!==0&&cnt.value!=null&&U.value!=null)miss(label,n);
+    return "";};
+  if(Cm.value===0)parts.push('no Release 1 changes merged');
+  else parts.push(val(Cm)+' Release 1 change'+(Cm.value===1?"":"s")+' merged'+per(Cm,X.pct_per_change,"change","changes","plan % per change"));
+  if(Wr.value==null)miss("rows reaching qa Works",Wr);
+  else if(Wr.value===0)parts.push('no rows reached qa Works');
+  else parts.push(val(Wr)+' row'+(Wr.value===1?"":"s")+' reached qa Works'+per(Wr,X.pct_per_works_row,"row","rows","plan % per row"));
+  var rd=[];
+  if(Dn.value!=null)rd.push('done '+val(Dn));else miss("rows done a day",Dn);
+  if(RN.value!=null)rd.push('needed '+val(RN));else miss("rows needed a day",RN);
+  if(rd.length)parts.push('rows a day: '+rd.join(", ")+(CN&&CN.value!=null?' (changes a day: need '+val(CN)+')':""));
+  var bad=(U.bad_lines||[]).length?' <span class="small" style="color:var(--wait)"'+S("lines of the weekly-plan log left out: "+U.bad_lines.map(function(x){return "line "+x.line+" ("+x.why+")";}).join("; "))+'>'+U.bad_lines.length+' log line(s) left out</span>':"";
+  return '<p class="line small"'+S(head+": "+(sp.from||"")+" to "+(sp.to||""))+'>'+head+': '+parts.join(' \u00b7 ')+(nms.length?' \u00b7 not measured: '+nms.join(", "):"")+'.'+bad+'</p>';
 }
 function xScale(d0,d1,W,pad){var a=Date.parse(d0+"T00:00:00Z"),b=Date.parse(d1+"T00:00:00Z");return function(d){return pad+(Date.parse(d+"T00:00:00Z")-a)/Math.max(1,b-a)*(W-2*pad);};}
 function drawBurnup(){
@@ -412,16 +440,25 @@ function rNeeds(){
   /* review M2: the count and the top item on the first screen; everything else behind one click */
   var n=D.needs_you,items=[];
   n.asks.forEach(function(a){items.push('<li'+S(a.src)+'><span class="tag">'+esc(a.id)+'</span><div><div>'+esc(a.ask)+'</div><div class="small muted">'+esc(a.status)+'</div></div></li>');});
-  n.pr_questions.forEach(function(q){items.push('<li'+S(q.src)+'><span class="tag">#'+q.n+'</span><div><div>Question for the tech lead, open '+ageText(q.age_h)+'</div><div class="small muted">'+esc(q.title)+'</div></div></li>');});
-  var pm=n.pr_questions_measured,extra=[];
-  if(pm&&pm.v===false)extra.push('<li'+S(srcV(pm))+'><span class="tag">PR questions</span><div class="small">'+nm(pm.src)+'</div></li>');
-  if(v(n.for_founder))extra.push('<li'+S(srcV(n.for_founder))+'><span class="tag">For you</span><div class="small">'+esc(v(n.for_founder))+'</div></li>');
-  if(v(n.waiting_line))extra.push('<li'+S(srcV(n.waiting_line))+'><span class="tag">Waiting</span><div class="small">'+esc(v(n.waiting_line))+'</div></li>');
+  /* P-602 (1): only the founder's own items; the tech lead's PR questions are on the Factory tab */
+  var extra=[];
+  /* a line counts only the ids it marks open or names new (FORMULAS.md); a pointer line shows behind the click */
+  [["for_founder","For you","open_ids"],["waiting_line","Waiting","new_ids"]].forEach(function(k){var x=n[k[0]];if(!v(x))return;var ids=x[k[2]]||[];
+    var li='<li'+S(srcV(x))+'><span class="tag">'+(ids.length?esc(ids.join(", ")):k[1])+'</span><div class="small">'+esc(v(x))+'</div></li>';(ids.length?items:extra).push(li);});
   var cnt=v(D.summary.needs_you);if(cnt==null)cnt=items.length;
   var h='<section id="needs" class="ovsec" style="margin:12px 0 0"><h2>Needs you <span class="mono"'+S(srcV(D.summary.needs_you))+'>'+esc(cnt)+'</span></h2><ul class="items">'+(items[0]||'<li class="muted">Nothing open.</li>')+'</ul>';
   var more=items.slice(1).concat(extra);
   if(more.length)h+='<details class="inline"><summary>'+(items.length>1?(items.length-1)+' more':'more')+(extra.length?' and notes':'')+'</summary><ul class="items">'+more.join("")+'</ul></details>';
   return h+'</section>';
+}
+
+/* the tech lead's queue (P-602 (1)): PR questions are his to answer, never the founder's */
+function rLeadQueue(){
+  var Q=D.lead_queue;if(!Q)return "";
+  var c=Q.count,cv=v(c),items=Q.items||[];
+  var h='<p class="line"><span'+S(srcV(c))+'>'+(cv==null?nm(c.reason||c.src):'<b>'+esc(cv)+'</b> open')+'</span>. The tech lead answers these; they are not in Needs you.</p>';
+  if(items.length)h+='<ul class="items">'+items.map(function(q){return '<li'+S(q.src)+'><span class="tag">#'+esc(q.n)+'</span><div><div>Open '+ageText(q.age_h)+'</div><div class="small muted">'+esc(q.title)+'</div></div></li>';}).join("")+'</ul>';
+  return section("04","leadq","Questions waiting on the tech lead","Pull requests where a builder asked the tech lead and has no answer yet.",h);
 }
 
 /* 2 system map + team */
@@ -617,12 +654,12 @@ function rRisks(){
 
 /* 12 healing */
 function rHeal(){
-  var H=D.healing,bl=v(H.blocked)||[],cr=v(H.ci_red_prs)||[],qs=v(H.questions)||[];
+  var H=D.healing,bl=v(H.blocked)||[],cr=v(H.ci_red_prs)||[],qs=v(H.questions);
   var h='<div class="kpis">'+kpi("Lanes restarted",nz(v(H.restarts)),"",src(H.restarts))+kpi("Lanes nudged",nz(v(H.nudges)),"",src(H.nudges))+
    kpi("PRs healed after red CI",nz(v(H.healed_prs)),"median red to green "+nz(H.healed_prs.median_h," h"),src(H.healed_prs))+
    kpi("Blocked lanes",nz(bl.length),bl.map(function(b){return esc(b.name);}).join(", "),src(H.blocked),bl.length?"alert":"")+
    kpi("PRs red now",nz(cr.length),cr.map(function(c){return "#"+c.n+" "+ageText(c.push_age_h);}).join(", "),src(H.ci_red_prs))+
-   kpi("Open questions",nz(qs.length),qs.map(function(q){return "#"+q.n+" "+ageText(q.age_h);}).join(", "),src(H.questions))+'</div>';
+   (qs==null?kpi("Open questions",nm(src(H.questions)),"",src(H.questions)):kpi("Open questions",nz(qs.length),qs.map(function(q){return "#"+q.n+" "+ageText(q.age_h);}).join(", "),src(H.questions)))+'</div>';
   return section("13","healing","Is everyone autonomous and healing?","Whether lanes fix themselves or need a push, and what is stuck now.",h);
 }
 
@@ -737,7 +774,7 @@ function rFresh(){
 
 function render(){
   renderStrip();
-  var TABS=[["overview","Overview",[rOverview]],["caps","Capabilities",[rHeat,rCaps,rArch]],["factory","Factory",[rOrg,rSystem,rBuilding,rQuality,rDevops,rHeal,rImprove,rRes]],["launch","Launch readiness",[rRisks]],["library","Library",[rLibrary]],["details","Details",[rTrust,rLearn,rBacklog,rFresh]]];
+  var TABS=[["overview","Overview",[rOverview]],["caps","Capabilities",[rHeat,rCaps,rArch]],["factory","Factory",[rLeadQueue,rOrg,rSystem,rBuilding,rQuality,rDevops,rHeal,rImprove,rRes]],["launch","Launch readiness",[rRisks]],["library","Library",[rLibrary]],["details","Details",[rTrust,rLearn,rBacklog,rFresh]]];
   var one=function(f){try{return f();}catch(e){return '<section><p class="err">This block could not be drawn: '+esc(e.message)+'</p></section>';}};
   var cur="overview";try{var sv=localStorage.getItem("board-tab");if(sv&&TABS.some(function(t){return t[0]===sv;}))cur=sv;}catch(e){}
   var out=one(rBanner)+'<p class="goal">Goal: Release 1 (production grade), complete and end to end, ready for the first real firm\'s data after the launch gate (P-570, P-589, P-594).</p>'+one(rNeeds);

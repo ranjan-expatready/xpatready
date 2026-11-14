@@ -170,7 +170,7 @@ def state_needs(text=None):
             if DECIDED.search(status) or clean(c[2]).lower().startswith("done"):
                 continue
             asks.append({"id": clean(c[1], 60), "ask": clean(c[2], 150), "status": clean(status, 170),
-                         "src": "STATE.md › Founder asks"})
+                         "src": "STATE.md › Founder asks", "names": item_ids(" ".join(c[1:4]))})
     m = re.search(r"^## For the founder[^\n]*\n+(.+)$", t, re.M)
     forf = clean(m.group(1), 220) if m else None
     w = re.search(r"\*\*Waiting on the founder[^*]*\*\*:?(.+)$", t, re.M)
@@ -532,7 +532,7 @@ def works_count(caps):
 
 # ---------------------------------------------------------------- snapshot (§6 1a): the one interface both scripts read
 SNAP_FILES = ["MVP-CHECKLIST.md", "BACKLOG.md", "STATE.md", "cockpit/plan.json", "cockpit/history.jsonl", "qa/BUGS.md",
-              "cockpit/health-exceptions.json"]
+              "cockpit/health-exceptions.json", "cockpit/usage-log.tsv"]
 
 
 def git_out(*args):
@@ -576,6 +576,20 @@ def take_snapshot(snap, gh, cache, lead_input, appcode_max):
         t = git_out("show", f"{rsha}:{REL}/{rel}")
         if t is not None:
             wt(f"files/{REL}/{rel}", t)
+    # P-602 (4): MVP-CHECKLIST.md history on the records sha: every commit in the 48 h before taken_at, plus the newest one
+    # before that (the checklist as it stood at the window's start); git/checklist_records.jsonl + git/checklist_records/<sha>.md
+    ck_rel, cut48 = f"{REL}/MVP-CHECKLIST.md", (NOW - timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    ck_log = (git_out("log", "--format=%H %cI", f"--since={cut48}", rsha, "--", ck_rel) or "").splitlines()
+    ck_log += (git_out("log", "-1", "--format=%H %cI", f"--until={cut48}", rsha, "--", ck_rel) or "").splitlines()
+    ck_lines = []
+    for ln in ck_log:
+        if ln.strip():
+            sha_, when = ln.split()[:2]
+            t_ = git_out("show", f"{sha_}:{ck_rel}")
+            if t_ is not None:
+                wt(f"git/checklist_records/{sha_}.md", t_)
+                ck_lines.append(json.dumps({"sha": sha_, "date": when}))
+    wt("git/checklist_records.jsonl", "\n".join(sorted(ck_lines, key=lambda x: json.loads(x)["date"])) + ("\n" if ck_lines else ""))
     # extra (not in the shared layout; read only by cockpit-data.py): records lag for the strip and Health item 3
     main_local = msha if sh(["git", "-C", ROOT, "cat-file", "-e", msha + "^{commit}"]).returncode == 0 else None
     main_ref = main_local or (git_out("rev-parse", "origin/main") or "").strip() or None
@@ -778,6 +792,20 @@ class Snap:
                     return slurp(full)
         return None
 
+    def checklist_history(self):
+        """[(time, text)] of MVP-CHECKLIST.md commits on the records sha (P-602 (4)); None when the snapshot has none."""
+        t = self.text("git/checklist_records.jsonl")
+        if t is None:
+            return None
+        out = []
+        for line in t.splitlines():
+            if line.strip():
+                d = json.loads(line)
+                txt = self.text(f"git/checklist_records/{d['sha']}.md")
+                if txt is not None:
+                    out.append((parse_iso(d["date"]), txt))
+        return sorted(out, key=lambda x: x[0])
+
     def cap_history(self):
         out = []
         for line in (self.text("git/capabilities_main.jsonl") or "").splitlines():
@@ -788,14 +816,131 @@ class Snap:
         return sorted(out, key=lambda d: d["date"])
 
 
-def num(value, src, cls, L, reason=None, **kw):
-    """One number with its lineage (§0.3): source, commit sha, as-of time, provenance class; null needs a reason."""
-    sha, as_of = L.get(cls, (None, None))
+def num(value, src, cls, L, reason=None, lk=None, **kw):
+    """One number with its lineage (§0.3): source, commit sha, as-of time, provenance class; null needs a reason.
+    lk: the lineage key when it differs from the class (the usage log is reported, but committed at the records sha)."""
+    sha, as_of = L.get(lk or cls, (None, None))
     d = {"value": value, "src": src, "sha": sha, "as_of": as_of, "class": "parsed" if cls == "mixed" else cls}
     if value is None:
         d["reason"] = reason or "not measured"
     d.update(kw)
     return d
+
+
+USAGE_HDR = ["time_ist", "weekly_pct", "account", "by"]
+USAGE_WINDOW_H = 24
+USAGE_MIN_SPAN_H = 20          # per-delivery figures need readings covering at least 20 h of the 24
+
+
+def parse_usage_log(text):
+    """cockpit/usage-log.tsv (P-602 (4)): one line per Lead check, tab-separated time_ist (ISO with its offset),
+    weekly_pct (whole number 0-100), account, by. Blank lines, '#' lines and the header are skipped. A malformed line
+    is left out and listed with its line number and why (never guessed). Returns (readings, bad)."""
+    out, bad = [], []
+    for n, line in enumerate((text or "").splitlines(), 1):
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        f = [x.strip() for x in line.split("\t")]
+        if f == USAGE_HDR:
+            continue
+        why, at = None, None
+        if len(f) != 4:
+            why = f"{len(f)} fields, needs 4 separated by tabs"
+        elif not re.fullmatch(r"\d{1,3}", f[1]) or int(f[1]) > 100:
+            why = f"weekly_pct '{f[1][:12]}' is not a whole number from 0 to 100"
+        elif not f[2] or not f[3]:
+            why = "account or by is empty"
+        else:
+            try:
+                at = datetime.fromisoformat(f[0])
+            except ValueError:
+                why = f"time '{f[0][:30]}' is not ISO"
+            if at is not None and at.tzinfo is None:
+                why = f"time '{f[0][:30]}' has no UTC offset"
+        if why:
+            bad.append({"line": n, "why": why})
+            continue
+        out.append({"time": f[0], "at": at, "pct": int(f[1]), "account": f[2], "by": f[3]})
+    return out, bad
+
+
+def usage_window(readings, start, end):
+    """Weekly-plan % used in (start, end]: the readings inside the window in time order (file order on a tie); each pair of
+    consecutive readings of the same account adds its increase. A change of account, or a fall (a plan reset), starts a
+    new part and adds nothing (never negative use); then the sum is "at least" (use across the break is not seen). The
+    step from the last reading before the window is not counted. first/last = the first and last reading of a counted
+    step (the span the sum covers)."""
+    inw = sorted([r for r in readings if start < r["at"] <= end], key=lambda r: r["at"])
+    used, pairs, breaks, first, last = 0, 0, [], None, None
+    for a, b in zip(inw, inw[1:]):
+        if a["account"] != b["account"]:
+            breaks.append(f"account {a['account']} to {b['account']} at {b['time']}")
+        elif b["pct"] < a["pct"]:
+            breaks.append(f"{b['account']} fell {a['pct']}% to {b['pct']}% at {b['time']} (plan reset)")
+        else:
+            used += b["pct"] - a["pct"]
+            pairs += 1
+            first = first or a
+            last = b
+    return {"readings": inw, "used": used, "pairs": pairs, "breaks": breaks, "first": first, "last": last}
+
+
+ITEM_ID = re.compile(r"(?<![A-Za-z0-9])([AF])(\d+)(?:\s*[-–]\s*\1?(\d+))?(?![A-Za-z0-9])")
+CLOSED_WORD = re.compile(r"\b(ruled|decided|done|closed|answered)\b", re.I)
+
+
+def item_ids(text):
+    """Founder-ask (A-n) and founder-item (F-n) ids named in a text, ranges expanded ("A37-A43", "F14-F19"), in order."""
+    out = []
+    for m in ITEM_ID.finditer(text or ""):
+        lo, hi = int(m.group(2)), int(m.group(3) or m.group(2))
+        for k in range(lo, hi + 1) if hi >= lo and hi - lo < 100 else [lo]:
+            x = f"{m.group(1)}{k}"
+            if x not in out:
+                out.append(x)
+    return out
+
+
+def open_f_ids(line):
+    """F ids the "For the founder" line marks open: in each ";"-clause that says "open" and none of ruled, decided, done,
+    closed, answered, every F id (ranges expanded). "F2, F8 open (demo looks); F14-F19 ruled" gives F2, F8."""
+    out = []
+    for clause in (line or "").split(";"):
+        if re.search(r"\bopen\b", clause, re.I) and not CLOSED_WORD.search(clause):
+            out += [x for x in item_ids(clause) if x.startswith("F") and x not in out]
+    return out
+
+
+def needs_split(asks, forf, waitline, questions, prs_ok, st_src, prs_src, lin=None):
+    """P-602 (1): Needs you counts only the founder's own items: open founder asks (one per table row), plus each F id the
+    "For the founder" line marks open, plus each A or F id the "Waiting on the founder" line names that is not already
+    counted (not named in an open ask row, not an open F id). A line naming no new id (a pointer such as "today's items
+    are in hand-over item 0") counts 0 and still shows behind the click. A PR's unanswered "Question for the tech lead"
+    is the tech lead's to answer: it goes to lead_queue, never into Needs you.
+    lin: {"parsed": (sha, as_of), "measured": (sha, as_of)} lineage for the two counts."""
+    lin = lin or {}
+    fopen = open_f_ids(forf)
+    counted = set(fopen)
+    for a in asks:
+        counted.update(a.get("names") or [])
+    wnew = [x for x in item_ids(waitline) if x not in counted]
+    n = len(asks) + len(fopen) + len(wnew)
+
+    def lineage(cls):
+        sha, as_of = lin.get(cls, (None, None))
+        return {"class": cls, "sha": sha or "none", "as_of": as_of or "unknown"}
+    needs = {"asks": asks,
+             "for_founder": V(forf, f"{st_src} › For the founder", open_ids=fopen, counted=bool(fopen)),
+             "waiting_line": V(waitline, f"{st_src} › Start here › Waiting on the founder", new_ids=wnew, counted=bool(wnew)),
+             "count": dict(V(n, f"open founder asks ({len(asks)} rows) + F ids the For the founder line marks open ({len(fopen)}) + ids the "
+                                f"Waiting on the founder line names that are not already counted ({len(wnew)}); {st_src}"), **lineage("parsed"))}
+    lq = V(len(questions) if prs_ok else None,
+           "open PRs with an unanswered Question for the tech lead (factory-board.sh rule; GitHub, read live at this refresh)"
+           if prs_ok else "not measured: the open pull requests could not be read at this refresh")
+    lq.update(lineage("measured"))
+    if not prs_ok:
+        lq["reason"] = lq["src"]
+    return needs, {"items": questions, "src": prs_src, "count": lq}
 
 
 def nearest_rank(xs, p):
@@ -957,13 +1102,13 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
     if not ck["has_qa_col"]:
         proven_reason = "not measured: the checklist has no qa id column yet (qa's R1 capabilities, #1748)"
     for r in rows:
-        r["proven"] = None
+        r["proven"], r["proven_at"] = None, None
         if proven_reason or not r.get("qa_ids"):
             continue
         for h in hist_caps:
             cm = parse_caps(h["text"])
             if all(cm.get(q, {}).get("status", "").startswith("Works") for q in r["qa_ids"]):
-                r["proven"] = ist_day(h["date"]).isoformat()
+                r["proven"], r["proven_at"] = ist_day(h["date"]).isoformat(), h["date"]
                 break
     P_ = num(None if proven_reason else sum(1 for r in rows if r["proven"]),
              f"first main commit of qa/CAPABILITIES.md (last 30 days) in which every qa id of the row reads Works; {ck_src}", "mixed", L, proven_reason)
@@ -987,6 +1132,100 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
                 "mixed", L, "not measured: the committed date is today or past")
     else:
         X = num(None, "cockpit/plan.json H1 (kind committed)", "parsed", L, f"not measured: no committed date yet (set {set_on or 'not dated'})")
+
+    # ---- P-602 (4): delivery per use, over the rolling 24 h ending at taken_at
+    d_end = cutoff
+    d_start = d_end - timedelta(hours=USAGE_WINDOW_H)
+    tiso = lambda t: t.astimezone(IST).isoformat(timespec="seconds")
+    hm = lambda t: t.astimezone(IST).strftime("%d %b %H:%M")
+    ul_text = snap.file("cockpit/usage-log.tsv")
+    readings, ul_bad = parse_usage_log(ul_text)
+    if ul_bad:
+        notes.append("usage-log.tsv: lines left out: " + "; ".join(f"line {b['line']} ({b['why']})" for b in ul_bad[:5]))
+    uw = usage_window(readings, d_start, d_end)
+    if ul_text is None:
+        u_reason = "not measured: no weekly-plan log has been saved yet (tools/usage-log.sh)"
+    elif len(uw["readings"]) < 2:
+        u_reason = f"not measured: {len(uw['readings'])} weekly-plan reading(s) in the last 24 h, needs 2 (tools/usage-log.sh at each check)"
+    elif uw["pairs"] == 0:
+        u_reason = "not measured: no two readings in a row from the same account without a plan reset in the last 24 h"
+    else:
+        u_reason = None
+    pct_used = None if u_reason else uw["used"]
+    at_least = bool(uw["breaks"]) and pct_used is not None
+    # the span the plan % covers: first to last reading of a counted step; deliveries are counted over the same span
+    if pct_used is not None:
+        s_from, s_to, basis = uw["first"]["at"], uw["last"]["at"], "readings"
+    else:
+        s_from, s_to, basis = d_start, d_end, "24 h"
+    span_h = round((s_to - s_from).total_seconds() / 3600, 1)
+    span = {"from": tiso(s_from), "to": tiso(s_to), "hours": span_h, "basis": basis}
+    L["usage"] = (f"cockpit/usage-log.tsv @{rsha}", tiso(uw["last"]["at"]) if pct_used is not None else taken)
+    ul_src = f"cockpit/usage-log.tsv @{rsha} ({rb}): the weekly plan % the Lead typed at each check (tools/usage-log.sh)"
+    in_span = lambda iso: iso is not None and s_from < parse_iso(iso) <= s_to
+    span_txt = f"{hm(s_from)} to {hm(s_to)} IST"
+    ch_span = sorted(rid for rid, at in change_at.items() if in_span(at))
+    D_ch = num(len(ch_span), f"Release 1 changes whose first app-code merge falls between {span_txt} (the same changes as the pace line); "
+               f"{gh_src}; {ck_src}", "mixed", L, ids=ch_span)
+
+    # qa Works, one rule for done and needed (the qa queue's): the row's checklist Status reads "qa Works" or the row is proven
+    hist_ck = snap.checklist_history()
+
+    def works_at(t):
+        """Maps at qa Works at time t, or None when the snapshot's checklist history does not reach back to t."""
+        if t >= cutoff:
+            st = {r["map"]: r["status"] for r in rows}
+        else:
+            past = [x for x in (hist_ck or []) if x[0] <= t]
+            if not past:
+                return None
+            st = {r["map"]: r["status"] for r in parse_checklist(past[-1][1])["rows"]}
+        maps = {m for m, v in st.items() if v == "qa Works"}
+        if not proven_reason:
+            maps |= {r["map"] for r in rows if r.get("proven_at") and parse_iso(r["proven_at"]) <= t}
+        return maps
+
+    def reached(a, b):
+        wa, wb = works_at(a), works_at(b)
+        return None if wa is None or wb is None else sorted(wb - wa)
+    hist_reason = "not measured: the checklist's earlier versions do not reach back that far in this snapshot"
+    wr = reached(s_from, s_to)
+    D_wk = num(None if wr is None else len(wr), f"Build rows that reached qa Works (checklist Status reads qa Works, or proven) between {span_txt}; "
+               f"{ck_src} and its earlier versions", "mixed", L, hist_reason, maps=wr or [])
+    wd = reached(d_start, d_end)
+    D_done = num(None if wd is None else len(wd), f"Build rows that reached qa Works (Status reads qa Works, or proven) in the 24 h to taken_at; {ck_src} "
+                 "and its earlier versions", "mixed", L, hist_reason, maps=wd or [])
+    D_use = num(pct_used, f"{'at least ' if at_least else ''}the sum of rises between readings in a row from the same account, {span_txt}"
+                f"{' (a plan reset or an account change in between: use across it is not seen)' if at_least else ''}; {ul_src}",
+                "reported", L, u_reason, lk="usage", at_least=at_least,
+                readings=[{k: x[k] for k in ("time", "pct", "account", "by")} for x in uw["readings"]], breaks=uw["breaks"], bad_lines=ul_bad)
+
+    def per(n, what, none_words):
+        src = f"weekly plan % used ÷ {what}, between {span_txt}"
+        if pct_used is None:
+            return num(None, src, "reported", L, u_reason, lk="usage")
+        if span_h < USAGE_MIN_SPAN_H:
+            return num(None, src, "reported", L, f"not measured: the readings cover only {span_h:g} h of 24", lk="usage")
+        if n is None:
+            return num(None, src, "reported", L, hist_reason, lk="usage")
+        if n == 0:
+            return num(None, src, "reported", L, f"{none_words} ({pct_used}% of a weekly plan used)", lk="usage")
+        return num(round(pct_used / n, 1), f"{pct_used}% of a weekly plan ÷ {n} {what}, between {span_txt}", "reported", L, lk="usage",
+                   at_least=at_least)
+    rows_left = None if works_at(cutoff) is None else nrows - len(works_at(cutoff))
+    rn_src = (f"Build rows not yet at qa Works (checklist Status reads qa Works, or proven) ÷ calendar days to the committed date {committed}; "
+              f"{ck_src}")
+    if committed:
+        RN = num(round(rows_left / days_left, 2) if days_left > 0 else None, rn_src, "mixed", L, "not measured: the committed date is today or past",
+                 rows_left=rows_left, days_left=days_left)
+    else:
+        RN = num(None, "cockpit/plan.json H1 (kind committed)", "parsed", L, f"not measured: no committed date yet (set {set_on or 'not dated'})",
+                 rows_left=rows_left)
+    delivery = {"from": tiso(d_start), "to": tiso(d_end), "span": span,
+                "plan_pct_used": D_use, "changes_merged": D_ch, "works_rows": D_wk,
+                "pct_per_change": per(len(ch_span), "Release 1 changes merged", "no Release 1 changes merged"),
+                "pct_per_works_row": per(D_wk["value"], "Release 1 rows that reached qa Works", "no rows reached qa Works"),
+                "rows_done_per_day": D_done, "rows_needed_per_day": RN}
 
     # ---- §1 forecast (Monte Carlo on 14 daily counts)
     days14 = win                                       # R8: the same days as the pace window
@@ -1264,7 +1503,11 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
     keys = {"works_on_main": w_a, "works_total": t_a, "changes_per_day_window": Y["value"], "remaining_scope_changes": remaining,
             "built_rows": len(built_rows), "proven_rows": P_["value"], "open_app_prs": len(items), "lanes_working": len(lanes),
             "ready_rows": len(q_rows), "forecast_p50_date": mc["p50"], "forecast_p85_date": mc["p85"],
-            "mc_daily_counts": counts, "mc_remaining_scope": remaining}
+            "mc_daily_counts": counts, "mc_remaining_scope": remaining,
+            "plan_pct_used_24h": pct_used, "span_hours": span_h if pct_used is not None else None,
+            "changes_merged_span": len(ch_span), "works_rows_span": D_wk["value"],
+            "pct_per_change": delivery["pct_per_change"]["value"], "pct_per_works_row": delivery["pct_per_works_row"]["value"],
+            "rows_done_24h": D_done["value"], "rows_needed_per_day": RN["value"]}
     trust = reconcile_compare(keys, reconcile_out, reconcile_note)
     trust["invariants"] = invariants
     trust["notes"] = notes
@@ -1278,7 +1521,7 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
             "pace": {"changes_needed_per_day": X, "changes_per_day": Y, "built": B, "proven": P_,
                      "rows_total": num(nrows, ck_src + ": Build rows", "parsed", L), "remaining": R, "ratio": ratio,
                      "committed_date": committed, "committed_set_on": set_on, "tolerance_days": tol, "light": light,
-                     "merged_changes": num(merged_r1, f"Release 1 changes merged so far ({gh_src})", "mixed", L),
+                     "merged_changes": num(merged_r1, f"Release 1 changes merged so far ({gh_src})", "mixed", L), "delivery_24h": delivery,
                      "scope_note": None if nrows == baseline else f"Scope changed: {nrows} Build rows (baseline {baseline})"},
             "forecast": {"p50": F50, "p85": F85, "sample": sample, "counts": counts, "days": [d.isoformat() for d in days14],
                          "runs": MC_RUNS, "seed": MC_SEED, "cap_days": MC_CAP},
@@ -1771,14 +2014,9 @@ def main():
     next_committed = next((d for d in upcoming if d["kind"] == "committed"), None)
     build_fc = next((d for d in plan["dates"] if d["id"] == "H1"), None)
 
-    # needs you
-    needs = {"asks": asks, "for_founder": V(forf, f"{st_src} › For the founder"),
-             "waiting_line": V(waitline, f"{st_src} › Start here › Waiting on the founder"),
-             "pr_questions": questions, "pr_src": prs_src,
-             "pr_questions_measured": V(prs_ok, "open PRs read live (GraphQL) at this refresh" if prs_ok else
-                                       "not measured: open PRs not read (offline or failed); PR questions unknown"),
-             "count": V(len(asks) + len(questions), f"open founder asks ({st_src}) + PRs with an unanswered Question for the tech lead"
-                        + ("" if prs_ok else " (PR questions not measured: open PRs not read)"))}
+    # needs you (the founder's own items only) and the tech lead's PR questions apart (P-602 (1))
+    needs, lead_queue = needs_split(asks, forf, waitline, questions, prs_ok, st_src, prs_src,
+                                    {"parsed": (rsha9, snap.meta.get("taken_at")), "measured": ((snap.meta.get("main_sha") or "")[:9], NOW.astimezone(IST).isoformat(timespec="seconds"))})
 
     # status line
     status_line = {
@@ -2036,7 +2274,9 @@ def main():
                         median_h=med(healed)),
         "blocked": V([{"name": s.get("name"), "row": s.get("row"), "pr": s.get("pr")} for s in team if s["chip"] == "blocked"], li_src + " + open PR stations"),
         "ci_red_prs": V([{"n": p["n"], "push_age_h": p["push_age_h"]} for p in prs if not p["records"] and p["station"] == "CI red"], prs_src + ": station CI red"),
-        "questions": V([{"n": q_["n"], "age_h": q_["age_h"]} for q_ in questions], "open PRs with an unanswered Question for the tech lead"),
+        "questions": V([{"n": q_["n"], "age_h": q_["age_h"]} for q_ in questions] if prs_ok else None,
+                       "open PRs with an unanswered Question for the tech lead" if prs_ok else
+                       "not measured: the open pull requests could not be read at this refresh"),
     }
 
     # risks
@@ -2075,6 +2315,7 @@ def main():
             "works": status_line["works"], "next_date": V(next_any, "cockpit/plan.json: the next dated row"),
         },
         "needs_you": needs,
+        "lead_queue": lead_queue,
         "status_line": status_line,
         "value_stream": {"stages": stages, "bottleneck": bottleneck,
                          "stale": V([p["n"] for p in stale], prs_src + ": open engineering PRs with no push in 7 days"),

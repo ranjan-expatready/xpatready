@@ -5,7 +5,7 @@
   "description": "The data contract of data.json (spec §6.2). tools/cockpit-data.py validates its output against this file and exits non-zero on a violation; data.json is then not written and the page is not republished. Every number carries src, sha, as_of and class (spec §0.3); a null number carries a reason. Formulas: cockpit/FORMULAS.md.",
   "type": "object",
   "allOf": [{"$ref": "#/$defs/walk"}],
-  "required": ["schema", "freshness", "summary", "needs_you", "pace", "forecast", "burnup", "capacity", "top3", "org",
+  "required": ["schema", "freshness", "summary", "needs_you", "lead_queue", "pace", "forecast", "burnup", "capacity", "top3", "org",
                "working_today", "health", "trust", "lineage", "reconcile_keys", "history", "run"],
   "properties": {
     "schema": {"const": 2},
@@ -18,11 +18,25 @@
                           "properties": {"amber_min": {"const": 45}, "red_min": {"const": 120}}}
       }
     },
+    "needs_you": {
+      "description": "P-602 (1): the founder's own items only (open founder asks, F ids the For the founder line marks open, ids the Waiting on the founder line names that are not already counted). PR questions for the tech lead are in lead_queue, never here.",
+      "type": "object",
+      "required": ["asks", "for_founder", "waiting_line", "count"],
+      "not": {"anyOf": [{"required": ["pr_questions"]}, {"required": ["pr_questions_measured"]}]},
+      "properties": {"count": {"type": "object", "required": ["v", "src", "sha", "as_of", "class"], "properties": {"v": {"type": "integer", "minimum": 0}, "class": {"const": "parsed"}}}}
+    },
+    "lead_queue": {
+      "description": "P-602 (1): open PRs with an unanswered Question for the tech lead (the tech lead's to answer). Count null with a reason when open PRs were not read.",
+      "type": "object",
+      "required": ["count", "items", "src"],
+      "properties": {"count": {"type": "object", "required": ["v", "src", "sha", "as_of", "class"], "properties": {"v": {"type": ["integer", "null"], "minimum": 0}, "class": {"const": "measured"}}},
+                     "items": {"type": "array", "items": {"type": "object", "required": ["n", "title", "age_h"]}}}
+    },
     "summary": {"type": "object", "required": ["needs_you", "works", "health"],
                 "properties": {"health": {"type": "object", "required": ["light"], "properties": {"light": {"$ref": "#/$defs/light"}}}}},
     "pace": {
       "type": "object",
-      "required": ["changes_needed_per_day", "changes_per_day", "built", "proven", "rows_total", "remaining", "light", "merged_changes"],
+      "required": ["changes_needed_per_day", "changes_per_day", "built", "proven", "rows_total", "remaining", "light", "merged_changes", "delivery_24h"],
       "properties": {
         "changes_needed_per_day": {"$ref": "#/$defs/num"},
         "changes_per_day": {"$ref": "#/$defs/num"},
@@ -31,6 +45,23 @@
         "rows_total": {"$ref": "#/$defs/count"},
         "remaining": {"allOf": [{"$ref": "#/$defs/count"}, {"required": ["label", "shaped_unmerged", "unshaped_rows", "unshaped_estimate"]}]},
         "merged_changes": {"$ref": "#/$defs/count"},
+        "delivery_24h": {
+          "description": "P-602 (4): delivery per use over the rolling 24 h ending at the snapshot's taken_at (FORMULAS.md §1b).",
+          "type": "object",
+          "required": ["from", "to", "span", "plan_pct_used", "changes_merged", "works_rows", "pct_per_change", "pct_per_works_row", "rows_done_per_day", "rows_needed_per_day"],
+          "properties": {
+            "from": {"type": "string", "minLength": 19}, "to": {"type": "string", "minLength": 19},
+            "span": {"type": "object", "required": ["from", "to", "hours", "basis"],
+                     "properties": {"hours": {"type": "number", "minimum": 0}, "basis": {"enum": ["readings", "24 h"]}}},
+            "plan_pct_used": {"allOf": [{"$ref": "#/$defs/count"}, {"required": ["readings", "breaks", "bad_lines", "at_least"], "properties": {"class": {"const": "reported"}}}]},
+            "rows_done_per_day": {"allOf": [{"$ref": "#/$defs/count"}, {"required": ["maps"]}]},
+            "changes_merged": {"allOf": [{"$ref": "#/$defs/count"}, {"required": ["ids"]}]},
+            "works_rows": {"allOf": [{"$ref": "#/$defs/count"}, {"required": ["maps"]}]},
+            "pct_per_change": {"allOf": [{"$ref": "#/$defs/num"}, {"properties": {"class": {"const": "reported"}, "value": {"type": ["number", "null"], "minimum": 0}}}]},
+            "pct_per_works_row": {"allOf": [{"$ref": "#/$defs/num"}, {"properties": {"class": {"const": "reported"}, "value": {"type": ["number", "null"], "minimum": 0}}}]},
+            "rows_needed_per_day": {"allOf": [{"$ref": "#/$defs/num"}, {"required": ["rows_left"], "properties": {"value": {"type": ["number", "null"], "minimum": 0}}}]}
+          }
+        },
         "ratio": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/num"}]},
         "committed_date": {"type": ["string", "null"]},
         "light": {"type": "object", "required": ["state", "why"],
@@ -111,7 +142,9 @@
     "reconcile_keys": {"type": "object",
                        "required": ["works_on_main", "works_total", "changes_per_day_window", "remaining_scope_changes", "built_rows",
                                     "proven_rows", "open_app_prs", "lanes_working", "ready_rows", "forecast_p50_date", "forecast_p85_date",
-                                    "mc_daily_counts", "mc_remaining_scope"]}
+                                    "mc_daily_counts", "mc_remaining_scope",
+                                    "plan_pct_used_24h", "span_hours", "changes_merged_span", "works_rows_span", "pct_per_change",
+                                    "pct_per_works_row", "rows_done_24h", "rows_needed_per_day"]}
   },
   "$defs": {
     "light": {"enum": ["green", "amber", "red"]},

@@ -331,7 +331,7 @@ class TrustAndInvariants(unittest.TestCase):
         t2 = json.loads(json.dumps(theirs))
         plus = lambda n: (date.fromisoformat(k["forecast_p85_date"]) + timedelta(days=n)).isoformat()
         r7 = cd.reconcile_compare(k, theirs, None)
-        self.assertEqual(r7["compared"], 13)                                  # R7: the contract's 11 numbers + mc_inputs' two
+        self.assertEqual(r7["compared"], 21)                                  # R7: the contract's 11 numbers + mc_inputs' two + P-602's eight
         t2["numbers"]["forecast_p85_date"]["value"] = plus(1)                 # +1 day: agrees
         self.assertEqual(cd.reconcile_compare(k, t2, None)["state"], "agree")
         t2["numbers"]["forecast_p85_date"]["value"] = plus(2)                 # +2 days: disagrees
@@ -542,8 +542,16 @@ class Contract(unittest.TestCase):
         self.assertEqual((d["trust"]["state"], d["trust"]["banner"]), ("not checked", "Numbers not checked"))   # amber, never green (R2-6)
         self.assertEqual(d["summary"]["works"]["v"], [2, 4])
         self.assertEqual(d["freshness"]["records_copy"]["sha"], "123456789")       # the records sha, not main's (review Minor 4)
-        self.assertFalse(d["needs_you"]["pr_questions_measured"]["v"])            # offline: PR questions not measured (Minor 5)
+        self.assertIsNone(d["lead_queue"]["count"]["v"])                          # offline: PR questions not measured (Minor 5)
+        self.assertTrue(d["lead_queue"]["count"]["reason"].startswith("not measured"))
         self.assertEqual([a["id"] for a in d["needs_you"]["asks"]], ["A2"])
+        self.assertEqual(d["needs_you"]["count"]["v"], 1)                         # A2 only; "Nothing open." is not an item (P-602 (1))
+        self.assertEqual(d["summary"]["needs_you"]["v"], 1)
+        self.assertNotIn("pr_questions", d["needs_you"])
+        self.assertEqual(d["pace"]["delivery_24h"]["plan_pct_used"]["value"], 12)
+        self.assertIsNone(d["healing"]["questions"]["v"])                         # the older Factory figure agrees: not measured
+        self.assertEqual(d["needs_you"]["count"]["class"], "parsed")
+        self.assertEqual(d["lead_queue"]["count"]["class"], "measured")
 
     def test_schema_refuses_missing_lineage_and_null_without_reason(self):
         out = tempfile.mkdtemp()
@@ -577,6 +585,255 @@ class Contract(unittest.TestCase):
         for k in ("changes_needed_per_day", "changes_per_day", "built", "proven", "rows_total", "remaining", "merged_changes"):
             n = c["pace"][k]
             self.assertTrue(all(n.get(x) for x in ("src", "sha", "as_of", "class")), k)
+        for k, n in c["pace"]["delivery_24h"].items():
+            if isinstance(n, dict) and "value" in n:
+                self.assertTrue(all(n.get(x) for x in ("src", "sha", "as_of", "class")), k)
+                self.assertTrue(n["value"] is not None or n.get("reason"), k)
+
+    def test_schema_refuses_needs_you_with_pr_questions(self):
+        out = tempfile.mkdtemp()
+        subprocess.run([sys.executable, os.path.join(HERE, "cockpit-data.py"), "--out", os.path.join(out, "data.json"),
+                        "--from-snapshot", FIX, "--offline", "--no-history-write", "--reconcile", "/nonexistent/r.py"],
+                       capture_output=True, text=True, timeout=300)
+        d = jread(os.path.join(out, "data.json"))
+        sch = os.path.join(cd.P, "cockpit", "data.schema.json")
+        d1 = json.loads(json.dumps(d))
+        d1["needs_you"]["pr_questions"] = []                           # P-602 (1): PR questions never sit in Needs you
+        self.assertTrue(cd.validate(d1, sch))
+        d2 = json.loads(json.dumps(d))
+        del d2["pace"]["delivery_24h"]["rows_needed_per_day"]["reason"]   # a null without its reason
+        self.assertTrue(cd.validate(d2, sch))
+        d3 = json.loads(json.dumps(d))
+        d3["pace"]["delivery_24h"]["pct_per_change"]["class"] = "measured"   # the percent is Lead-typed: reported
+        self.assertTrue(cd.validate(d3, sch))
+
+
+class NeedsSplit(unittest.TestCase):
+    """P-602 (1) and review M2: Needs you counts the founder's own items; PR questions go to the tech lead's queue."""
+    Q = [{"n": 1755, "title": "forms: FO-13", "age_h": 2.0, "src": "x"}, {"n": 1761, "title": "forms: FO-5", "age_h": 0.5, "src": "x"}]
+    LIN = {"parsed": ("123456789", "2026-11-20T12:00:00+05:30"), "measured": ("abcdef012", "2026-11-20T12:00:00+05:30")}
+
+    def ask(self, rid, text="a", status="open"):
+        return {"id": rid, "ask": text, "status": status, "src": "STATE.md › Founder asks", "names": cd.item_ids(f"{rid} {text} {status}")}
+
+    def test_pr_questions_leave_needs_you(self):
+        needs, lq = cd.needs_split([self.ask("A67")], None, None, self.Q, True, "STATE.md", "GitHub", self.LIN)
+        self.assertEqual(needs["count"]["v"], 1)
+        self.assertNotIn("pr_questions", needs)
+        self.assertEqual((lq["count"]["v"], [q["n"] for q in lq["items"]]), (2, [1755, 1761]))
+
+    def test_for_the_founder_counts_each_open_f_id(self):
+        needs, _ = cd.needs_split([], "F2, F8 open (demo looks); F14-F19 ruled; word for word in `history/x.md`.", None, [], True, "s", "g", self.LIN)
+        self.assertEqual((needs["count"]["v"], needs["for_founder"]["open_ids"]), (2, ["F2", "F8"]))
+        self.assertEqual(cd.needs_split([], "Nothing open.", None, [], True, "s", "g")[0]["count"]["v"], 0)
+        self.assertEqual(cd.open_f_ids("F3 open; F4-F6 open but decided"), ["F3"])
+
+    def test_waiting_line_counts_only_new_ids(self):
+        pointer = "today's items are in hand-over item 0; the 13 Nov line word for word in `history/x.md`."
+        needs, _ = cd.needs_split([self.ask("A5", "A39 waits on F15's two branches")], "F2, F8 open", pointer, [], True, "s", "g", self.LIN)
+        self.assertEqual((needs["count"]["v"], needs["waiting_line"]["new_ids"]), (3, []))   # 1 ask + F2, F8; the pointer counts 0
+        self.assertEqual(needs["waiting_line"]["v"], pointer)                                # still shown behind the click
+        needs2, _ = cd.needs_split([self.ask("A5", "A39 waits on F15's two branches")], "F2, F8 open",
+                                   "F15's branch deletes and F8 and A70 still need his word", [], True, "s", "g", self.LIN)
+        self.assertEqual((needs2["count"]["v"], needs2["waiting_line"]["new_ids"]), (4, ["A70"]))   # F15 and F8 already counted
+
+    def test_counts_carry_full_lineage_and_offline_queue(self):
+        needs, lq = cd.needs_split([], None, None, [], False, "s", "g", self.LIN)
+        self.assertEqual({k: needs["count"][k] for k in ("class", "sha", "as_of")},
+                         {"class": "parsed", "sha": "123456789", "as_of": "2026-11-20T12:00:00+05:30"})
+        self.assertEqual((lq["count"]["v"], lq["count"]["class"], lq["count"]["sha"]), (None, "measured", "abcdef012"))
+        self.assertTrue(lq["count"]["reason"].startswith("not measured"))
+
+
+ULP = "files/" + cd.REL + "/cockpit/usage-log.tsv"
+UL_HDR = "time_ist\tweekly_pct\taccount\tby\n"
+FIXLOG = cd.Snap(FIX).file("cockpit/usage-log.tsv")
+
+
+def ul(*rows):
+    """A usage log: rows of (time, pct, account); by = Lead 50."""
+    return UL_HDR + "".join(f"{t}\t{p}\t{a}\tLead 50\n" for t, p, a in rows)
+
+
+def day19(hm):
+    return f"2026-11-19T{hm}:00+05:30"
+
+
+def day20(hm):
+    return f"2026-11-20T{hm}:00+05:30"
+
+
+class Delivery24h(unittest.TestCase):
+    """P-602 (4): plan % per merged change and per row at qa Works; window 19 Nov 12:00 to 20 Nov 12:00 IST (taken_at)."""
+    def d(self, changes=None):
+        return run(snap_with(changes))[1]["pace"]["delivery_24h"] if changes else run()[1]["pace"]["delivery_24h"]
+
+    def test_normal_case(self):
+        x = self.d()
+        # fixture log: 19 Nov 10:00 25 (before the window) · 13:00 28 · 18:00 33 · 20 Nov 09:00 37 · 11:30 40 · 12:30 43 (after taken_at)
+        # → 5 + 4 + 3 = 12 over 13:00 → 11:30 (22.5 h)
+        u = x["plan_pct_used"]
+        self.assertEqual((u["value"], u["class"], u["at_least"], u["as_of"]), (12, "reported", False, day20("11:30")))
+        self.assertEqual(x["span"], {"from": day19("13:00"), "to": day20("11:30"), "hours": 22.5, "basis": "readings"})
+        # BK-3 #109 merged 20 Nov 08:30 IST (inside the span); PF-3 #111 on 19 Nov is not its first merge; FO-5 after taken_at
+        self.assertEqual((x["changes_merged"]["value"], x["changes_merged"]["ids"]), (1, ["BK-3"]))
+        self.assertEqual((x["pct_per_change"]["value"], x["pct_per_change"]["class"], x["pct_per_change"]["as_of"]), (12.0, "reported", day20("11:30")))
+        # row 6 reads qa Works from the checklist commit of 20 Nov 07:30 IST (Merged before): reached inside the span and the 24 h
+        self.assertEqual((x["works_rows"]["value"], x["works_rows"]["maps"]), (1, [6]))
+        self.assertEqual(x["pct_per_works_row"]["value"], 12.0)
+        self.assertEqual((x["rows_done_per_day"]["value"], x["rows_done_per_day"]["maps"]), (1, [6]))
+        self.assertEqual(x["rows_needed_per_day"]["reason"], "not measured: no committed date yet (set 2026-11-19)")
+        self.assertEqual(x["rows_needed_per_day"]["rows_left"], 7)
+
+    def test_short_span_and_deliveries_counted_over_it(self):
+        # readings 05:00 → 11:00 (6 h): BK-3 (08:30) is inside the span; per-delivery figures are not measured under 20 h
+        x = self.d({ULP: ul((day20("05:00"), 20, "A1"), (day20("11:00"), 26, "A1"))})
+        self.assertEqual((x["span"]["hours"], x["plan_pct_used"]["value"], x["changes_merged"]["value"]), (6.0, 6, 1))
+        self.assertIsNone(x["pct_per_change"]["value"])
+        self.assertEqual(x["pct_per_change"]["reason"], "not measured: the readings cover only 6 h of 24")
+        self.assertEqual(x["pct_per_works_row"]["reason"], "not measured: the readings cover only 6 h of 24")
+        # readings 19 Nov 12:05 → 20 Nov 08:25 (20.3 h): BK-3 (08:30) falls after the last reading → not counted
+        y = self.d({ULP: ul((day19("12:05"), 20, "A1"), (day20("08:25"), 26, "A1"))})
+        self.assertEqual((y["changes_merged"]["value"], y["pct_per_change"]["reason"]), (0, "no Release 1 changes merged (6% of a weekly plan used)"))
+
+    def test_window_and_span_edges(self):
+        # a reading exactly at the window's start (taken_at − 24 h) is outside; one exactly at taken_at is inside
+        x = self.d({ULP: ul((day19("12:00"), 10, "A1"), (day19("12:30"), 12, "A1"), (day20("12:00"), 20, "A1"))})
+        self.assertEqual((x["plan_pct_used"]["value"], [r["pct"] for r in x["plan_pct_used"]["readings"]]), (8, [12, 20]))
+        self.assertEqual(x["span"]["hours"], 23.5)
+        # a merge exactly at the span's end counts, one exactly at its start does not: BK-3 merged 20 Nov 08:30 IST
+        end = self.d({ULP: ul((day19("12:30"), 10, "A1"), (day20("08:30"), 20, "A1"))})
+        self.assertEqual((end["span"]["hours"], end["changes_merged"]["value"], end["pct_per_change"]["value"]), (20.0, 1, 10.0))
+        start = self.d({ULP: ul((day20("08:30"), 10, "A1"), (day20("11:30"), 20, "A1"))})
+        self.assertEqual(start["changes_merged"]["value"], 0)
+
+    def test_two_accounts_in_the_window(self):
+        x = self.d({ULP: ul((day19("13:00"), 28, "A1"), (day19("14:00"), 30, "A1"), (day19("15:00"), 5, "A2"), (day19("18:00"), 9, "A2"),
+                            (day20("09:00"), 31, "A1"), (day20("11:00"), 33, "A1"))})
+        u = x["plan_pct_used"]
+        self.assertEqual((u["value"], u["at_least"], len(u["breaks"])), (8, True, 2))   # A1 2 + A2 4 + A1 2; switches add nothing
+        self.assertTrue(u["src"].startswith("at least "))
+        self.assertEqual((x["pct_per_change"]["value"], x["pct_per_change"]["at_least"]), (8.0, True))
+
+    def test_a_falling_reading_is_a_reset(self):
+        x = self.d({ULP: ul((day19("13:00"), 90, "A1"), (day19("18:00"), 97, "A1"), (day20("05:00"), 2, "A1"), (day20("10:00"), 6, "A1"))})
+        self.assertEqual(x["plan_pct_used"]["value"], 11)                # 7 + 4, never 7 − 95 + 4
+        self.assertIn("fell 97% to 2%", x["plan_pct_used"]["breaks"][0])
+
+    def test_a_small_fall_is_a_reset_too(self):
+        x = self.d({ULP: ul((day19("13:00"), 40, "A1"), (day19("18:00"), 45, "A1"), (day20("09:00"), 43, "A1"), (day20("11:30"), 47, "A1"))})
+        self.assertEqual((x["plan_pct_used"]["value"], x["plan_pct_used"]["at_least"]), (9, True))   # 5 + 4; the 2-point fall adds nothing
+        self.assertIn("fell 45% to 43%", x["plan_pct_used"]["breaks"][0])
+
+    def test_two_readings_with_the_same_time(self):
+        x = self.d({ULP: ul((day20("10:00"), 30, "A1"), (day20("10:00"), 32, "A1"))})
+        self.assertEqual((x["plan_pct_used"]["value"], x["span"]["hours"]), (2, 0.0))     # file order on a tie
+        self.assertEqual(x["pct_per_change"]["reason"], "not measured: the readings cover only 0 h of 24")
+
+    def test_fewer_than_two_readings(self):
+        x = self.d({ULP: ul((day19("10:00"), 25, "A1"), (day20("11:30"), 40, "A1"))})
+        self.assertIsNone(x["plan_pct_used"]["value"])
+        self.assertEqual(x["plan_pct_used"]["reason"],
+                         "not measured: 1 weekly-plan reading(s) in the last 24 h, needs 2 (tools/usage-log.sh at each check)")
+        self.assertEqual(x["pct_per_change"]["reason"], x["plan_pct_used"]["reason"])
+        self.assertEqual(x["span"]["basis"], "24 h")                     # no readings: deliveries over the whole window
+        self.assertIsNone(self.d({ULP: ul((day19("13:00"), 50, "A1"), (day19("14:00"), 2, "A2"))})["plan_pct_used"]["value"])
+
+    def test_zero_merges(self):
+        pulls = jread(os.path.join(FIX, "github/pulls.json"))
+        for p in pulls:
+            if p["number"] == 109:
+                p["merged_at"] = "2026-11-18T03:00:00Z"                  # BK-3 now merged before the window
+        x = self.d({"github/pulls.json": pulls})
+        self.assertEqual(x["changes_merged"]["value"], 0)
+        self.assertIsNone(x["pct_per_change"]["value"])
+        self.assertEqual(x["pct_per_change"]["reason"], "no Release 1 changes merged (12% of a weekly plan used)")
+
+    def test_malformed_lines_left_out_and_listed(self):
+        log = FIXLOG + "2026-11-20T10:00:00+05:30\tabc\tA1\tLead 50\n2026-11-20T10:10:00+05:30\t38\tA1\n" \
+                       "20 Nov 10:20\t39\tA1\tLead 50\n2026-11-20T10:30:00\t39\tA1\tLead 50\n"
+        s, c = run(snap_with({ULP: log}))
+        u = c["pace"]["delivery_24h"]["plan_pct_used"]
+        self.assertEqual(u["value"], 12)                                 # the good lines only
+        self.assertEqual([b["line"] for b in u["bad_lines"]], [8, 9, 10, 11])
+        self.assertIn("not a whole number", u["bad_lines"][0]["why"])
+        self.assertIn("3 fields", u["bad_lines"][1]["why"])
+        self.assertIn("is not ISO", u["bad_lines"][2]["why"])
+        self.assertIn("no UTC offset", u["bad_lines"][3]["why"])
+        self.assertTrue(any(n.startswith("usage-log.tsv: lines left out") for n in c["trust"]["notes"]))
+        self.assertEqual(cd.parse_usage_log("2026-11-20T10:00:00+05:30\t101\tA1\tL\n")[1][0]["line"], 1)   # over 100
+        self.assertEqual(cd.parse_usage_log("2026-11-20T10:00:00+05:30\t0050\tA1\tL\n")[1][0]["line"], 1)  # 4 digits
+
+    def test_one_rule_for_done_and_needed(self):
+        # qa id column: row 1 is proven when C7.1 first reads Works (bbb222, moved to 20 Nov 06:30 IST); row 6 reads qa Works
+        # from the checklist commit of 20 Nov 07:30 IST. Both reached qa Works inside the span and the 24 h.
+        ck = cd.Snap(FIX).file("MVP-CHECKLIST.md").replace("| Map | Capability | Module | BACKLOG rows | Status |",
+                                                           "| Map | Capability | Module | BACKLOG rows | Status | qa id |")
+        ck = ck.replace("| 1 | Cap one | Platform | PF-1 | Merged |", "| 1 | Cap one | Platform | PF-1 | Merged | C7.1 |")
+        hist = '{"sha": "aaa111", "date": "2026-11-15T03:00:00Z"}\n{"sha": "bbb222", "date": "2026-11-20T01:00:00Z"}\n'
+        pl = json.loads(cd.Snap(FIX).file("cockpit/plan.json"))
+        pl["dates"][0].update(kind="committed", date="2026-12-08", date_to="2026-12-10")
+        plp = "files/" + cd.REL + "/cockpit/plan.json"
+        x = self.d({CKP: ck, "git/capabilities_main.jsonl": hist, plp: pl})
+        self.assertEqual((x["works_rows"]["value"], x["works_rows"]["maps"]), (2, [1, 6]))
+        self.assertEqual(x["pct_per_works_row"]["value"], 6.0)
+        self.assertEqual(x["rows_done_per_day"]["maps"], [1, 6])
+        # 8 Build rows; rows 1 (proven) and 6 (Status) are at qa Works → 6 left ÷ 20 days (20 Nov → 10 Dec)
+        self.assertEqual((x["rows_needed_per_day"]["value"], x["rows_needed_per_day"]["rows_left"]), (0.3, 6))
+        x0 = self.d({plp: pl})                                           # no qa column: the Status alone, for both
+        self.assertEqual((x0["rows_done_per_day"]["value"], x0["rows_needed_per_day"]["value"]), (1, 0.35))
+
+    def test_checklist_history_missing(self):
+        x = self.d({"git/checklist_records.jsonl": ""})
+        self.assertIsNone(x["works_rows"]["value"])
+        self.assertIn("earlier versions", x["works_rows"]["reason"])
+        self.assertIsNone(x["rows_done_per_day"]["value"])
+        self.assertEqual(x["pct_per_works_row"]["reason"], x["works_rows"]["reason"])
+
+    def test_reconcile_agrees_on_the_fixtures(self):
+        rec = os.path.join(HERE, "cockpit-reconcile.py")
+        pl = json.loads(cd.Snap(FIX).file("cockpit/plan.json"))
+        pl["dates"][0].update(kind="committed", date="2026-12-10", date_to=None)
+        variants = [FIX,
+                    snap_with({"files/" + cd.REL + "/cockpit/plan.json": pl,
+                               ULP: ul((day19("13:00"), 90, "A1"), (day19("18:00"), 97, "A1"), (day20("05:00"), 2, "A1"), (day20("10:00"), 6, "A2"))}),
+                    snap_with({ULP: ul((day20("05:00"), 20, "A1"), (day20("11:00"), 26, "A1"))}),
+                    snap_with({ULP: ul((day19("12:30"), 10, "A1"), (day20("08:30"), 20, "A1"))}),
+                    snap_with({ULP: ul((day19("13:00"), 10, "A1"), (day20("11:00"), "0050", "A1"))})]   # 4 digits: left out by both
+        for d in variants:
+            out, note = cd.run_reconcile(d, rec)
+            self.assertIsNone(note)
+            _, c = run(d, rec=out, note=None)
+            self.assertEqual((c["trust"]["state"], c["trust"]["compared"], c["trust"]["diffs"]), ("agree", 21, []))
+
+
+class UsageLogScript(unittest.TestCase):
+    """tools/usage-log.sh: refusals, names with a tab, a file with no final newline."""
+    SH = os.path.join(HERE, "usage-log.sh")
+
+    def call(self, args, f, by="Lead 50"):
+        env = dict(os.environ, USAGE_LOG_FILE=f, USAGE_LOG_BY=by)
+        return subprocess.run(["bash", self.SH] + args, capture_output=True, text=True, env=env, timeout=60)
+
+    def test_appends_one_line_and_refuses_bad_input(self):
+        f = os.path.join(tempfile.mkdtemp(), "u.tsv")
+        self.assertEqual(self.call(["66", "A1"], f).returncode, 0)
+        for bad in (["x", "A1"], ["101", "A1"], ["-3", "A1"], ["12.5", "A1"], ["1000", "A1"], ["50", "A 1"], ["50"]):
+            self.assertEqual(self.call(bad, f).returncode, 2, bad)
+        r = self.call(["50", "A1"], f, by="Lead\t50")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("tab or a line break", r.stderr)
+        readings, bad = cd.parse_usage_log(open(f).read())
+        self.assertEqual(([(x["pct"], x["account"], x["by"]) for x in readings], bad), ([(66, "A1", "Lead 50")], []))
+        self.assertRegex(readings[0]["time"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+05:30$")
+
+    def test_file_with_no_final_newline(self):
+        f = os.path.join(tempfile.mkdtemp(), "u.tsv")
+        with open(f, "w") as fh:
+            fh.write(UL_HDR + "2026-11-14T15:45:00+05:30\t53\tA1\tLead 45")       # no final newline
+        self.assertEqual(self.call(["60", "A1"], f).returncode, 0)
+        readings, bad = cd.parse_usage_log(open(f).read())
+        self.assertEqual(([x["pct"] for x in readings], bad), ([53, 60], []))
 
 
 if __name__ == "__main__":
