@@ -34,6 +34,7 @@ const NAME = z.string().regex(/^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/, "a job name 
 const FIRM = z.string().refine((f) => { try { firmScope(f); return true; } catch { return false; } }, "not a firm id");
 const OPTS = z.object({ key: KEY, firmId: FIRM });
 const PAYLOAD = z.record(z.string(), z.unknown());
+type Payload = z.infer<typeof PAYLOAD>;
 /** What pg-boss stores as a job's data: our envelope around the caller's payload. */
 const ENVELOPE = z.object({ key: KEY, firmId: FIRM.nullable(), payload: PAYLOAD });
 type Envelope = z.infer<typeof ENVELOPE>;
@@ -63,7 +64,8 @@ export type PgBossJobsOptions = {
 export class PgBossJobs implements JobPort {
   readonly boss: PgBoss;
   readonly retry: RetryPolicy;
-  #handlers = new Map<string, JobHandler<any>>();
+  /** Handlers by job name; each receives the payload it was queued with (the envelope's object of ids). */
+  #handlers = new Map<string, JobHandler<Payload>>();
   #queues = new Set<string>();
   #working = new Set<string>();
   #started = false;
@@ -108,7 +110,7 @@ export class PgBossJobs implements JobPort {
   handle<P>(name: string, handler: JobHandler<P>): void {
     NAME.parse(name);
     if (this.#handlers.has(name)) throw new JobRefused(`jobs: "${name}" already has a handler`);
-    this.#handlers.set(name, handler as JobHandler<any>);
+    this.#handlers.set(name, handler as unknown as JobHandler<Payload>);
     if (this.#started) void this.#work(name).catch((e) => this.boss.emit("error", e));
   }
 
@@ -185,7 +187,7 @@ export class PgBossJobs implements JobPort {
     });
   }
 
-  async #run(name: string, handler: JobHandler<any>, job: Job<Record<string, unknown>>) {
+  async #run(name: string, handler: JobHandler<Payload>, job: Job<Record<string, unknown>>) {
     // A job whose envelope is not ours (written by hand, or by an older shape) or whose firm id is not a firm never
     // reaches the handler: it fails, and after its retries it is on the dead-letter list with this reason.
     const env = ENVELOPE.safeParse(job.data);
