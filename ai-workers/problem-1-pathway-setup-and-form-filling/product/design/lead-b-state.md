@@ -39,6 +39,7 @@
 | FO-3c | consultation agreement before the first consult (Code s. 23) | **shaped (rows rev 9)** | after FO-3, FO-5, FO-6 |
 | PF-12 | database walls (row-level security) on PF/FO tables | **shaped (rows rev 9.1)** | after PF-4, FO-1a, FO-1b |
 | PF-13, FO-9a/9b/9s, FO-10, FO-11, FO-7p | P-574: branding extras, duplicates, assignment rules, WhatsApp, payment plans | **shaped (rows rev 10)** | see each row's waits on; FO-10 needs map row 36 (automation) shaped and owned; FO-11 needs rows 48/49 (case side) |
+| PF-L, PF-14, FO-12a/b/c/s | libraries in one PR, background jobs (pg-boss), automation engine, recipes, message many, screens | **shaped (rows rev 11)**; order of work by P-576 in the rows file | PF-L after PF-4; PF-14 after PF-L |
 | Shaped next (no rows yet) | FO-3b paid consults (after FO-7) · PF-11 firm data download (before any real firm goes live) · FO-7s money screens (concept first, after FO-7b) · FO-8 `prospect.won` with the case side · PF-8 cloud deploy (founder's Canadian cloud account) · PF-9 firm set-up checklist and settings screen · PF-10 import with a dry run (AG-18) | | shape two ahead |
 
 ## Rulings received (all stand)
@@ -107,3 +108,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 09:09 IST: Lead 41 copied rev 9.1 and accepted the firm-exit rule (retention and our processor role after exit on the counsel list, not the founder); PF-12 split accepted. All Lead B rows are in BACKLOG. Waiting: #1728 merge → FO-1a, FO-1b, PF-4 start.
 * 14 Nov 09:21 IST: rows rev 10 (P-574): PF-13, FO-9a, FO-9b, FO-9s, FO-10, FO-11, FO-7p; size 12-16 PRs (Hypothesis). Context ~36% (Lead 41's reading); hand-over at 45% (P-565).
 * 14 Nov 09:23 IST: rev 10 part 2 (P-575 (1), A51 §12): client money its own module (contracts §8; tables `money_*` in `client-money.prisma`, code `api/src/client-money/`); one completion event `signing.completed`; governance file split recommended to the release holder.
+* 14 Nov 09:25 IST: Lead 41 answers: FO-12 (map row 36) is Lead B's; FO-11's sending-layer line OK'd; the case side's client merge is Lead 41's. P-576 order of work → rows rev 11: PF-L (libraries, one lockfile PR), PF-14 (jobs, pg-boss, fake clock), FO-12a/b/c/s, the lane and wave order; Meta test number needs the founder's developer account (P-551).
