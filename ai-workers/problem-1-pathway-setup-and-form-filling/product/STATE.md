@@ -22,12 +22,11 @@ Older pointer lines: `history/STATE-2026-11-13-2245-lead37s2-old-pointer-lines.m
 | S10, A1-A4, A6, A8-A13, A18-A23, A25-A27, A29, A30, A32, A33, A35, A36, A44, A45, A47, A48 | done, answered or standing | pointer rows word for word in `history/STATE-2026-11-14-0910-lead41s2-founder-asks-pointer-rows.md` |
 | A5, A7, A24, A28, A31, A34, A37-A43 | earlier asks: some waiting or in progress (A39 (1) waits on his word naming F15's two `throwaway/` branches) | pointer rows word for word in `history/STATE-2026-11-14-0910-lead41s2-founder-asks-pointer-rows.md` |
 | A53-A59 | 14 Nov: private copy (P-589), one cockpit (P-591), POC vs Release 1 (P-592), Library (P-593/P-594), board content (A58), PRD (P-595) | decided or done; rows word for word in `history/STATE-2026-11-14-1615-lead46s2-founder-asks-A53-A59-rows.md` |
-| A64 (decided) | desk rules | **P-597: all five changes, Fable 5.2 high; skill edit at his next typed turn; change 5 waits on P-589** |
 | A65 | 17:0x (14 Nov, typed) what top fast-moving tech companies use in their machinery, pipeline, structure or frameworks that we miss and he should know, manage, build or monitor; suggest and add | **Strategy desk 05 step 5 (gap scan); after step 3** |
 | A49-A52, A61 | A49-A52 map, architecture, public repositories; A61 board team, pace, health, Top 3 | A61 **decided P-596, in progress** (hand-over item 0); rows word for word in `history/STATE-2026-11-14-1615-lead46s2-founder-asks-A53-A59-rows.md` |
 | A62 | 15:5x (14 Nov, spoken, restated) the board's numbers must never mislead: no missing, derived or wrong data, no script or calculation bug; tested independently, industry way | **decided P-596 (2): data contract, unit tests, independent reconciliation script, "not measured" never a guess, CI; built with A61** |
 | A63 | 16:0x (14 Nov, spoken, restated) keep the Capabilities heat map as is; show where we work today along the journey; simple | **in P-596 spec §7: a "working today" marker + one line, no reordering** |
-| A64 | 16:1x (14 Nov, spoken, restated) use and improve the strategy desk: high-grade strategist for research and challenges, effort per benchmarks | **Strategy desk 05 opened 16:1x (`local_3f793d6b`, Fable, high effort); track file "strategy-desk-05-track" (14 Nov) in the side-session-notes folder local_b5840dd3… (outside the repository); step 1 board challenge, step 3 improve the desk** |
+| A64 | 16:1x (14 Nov, spoken) use and improve the strategy desk | **decided P-597** (five desk rules, Fable 5.2 high); Strategy desk 05 `local_3f793d6b`; skill edit at his next typed turn; change 5 waits on P-589 |
 
 ## For the founder (P-390)
 F2, F8 open (demo looks); F14-F19 ruled; word for word in `history/STATE-2026-11-14-1700-lead46s2-for-founder-and-leads-lines.md`.
