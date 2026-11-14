@@ -142,3 +142,29 @@ No Blocker or Major is open at 6b84dbd81faa38f8f902f9247a4d456f3d1518a5. The jou
 No Blocker or Major is open at dba1b50db02bbbfc7d0262b5e134c0b269750f91. The journey score stays 9 / 10.
 
 **Verdict: Approve dba1b50db02bbbfc7d0262b5e134c0b269750f91**
+
+## Round 4: head 43bf6970 (diff from 808b68c9 only, P-277; CI `skeleton` red at 808b68c9)
+
+**The change:**
+* `tools/skeleton-smoke.sh` step 3 now sends PF-4's request shape: `firmKey`, `email` and `secondStep: true`.
+* `deploy/compose.test.yml`'s app adds `PLATFORM_SAMPLE_SEED: "on"`; `PLATFORM_ENVIRONMENT` is still unset.
+* `check_d1_reset_to_six.ts` leaves the `platform-audit` row out of its two workspace queries. This is round 1's m1, with the release holder's OK on #1744 (option (a); AUD-1 is named as the later clean-up).
+* Four new part B checks in `check_pf4_identity.ts`.
+
+**Checks run** (copy `pf4rev` on :4543, started with PLATFORM_IDENTITY=local PLATFORM_SAMPLE_SEED=on; stopped afterwards; no test databases left; Docker is not available here):
+* `check_pf4_identity.ts 4543`: **111/111**.
+* The smoke script by hand against the copy, with `PLATFORM_ME=required`: all steps PASS, including "me: GET /api/platform/me 200 with firmId".
+* The same with `SMOKE_STAFF_FIRM=nope`: "FAIL me: … answered 401 without a token".
+* `check_d1_reset_to_six` on that same copy, which by then held the `platform-audit` row (workspaces: platform-audit, demo): **25/25**. Round 1 got 15/25 in this state.
+
+**The three questions:**
+* **The smoke is not weakened.** The me step still needs a token from the sign-in, then a 200 on `/api/platform/me` with a Bearer header and `firmId` in the answer (`skeleton-smoke.sh` step 3, unchanged except the body). A refused sign-in still fails it, proven by the new fail check and by my run above. The old `{"email"}` body is still refused (400 `FIRM_REQUIRED`). `secondStep: true` is the stand-in's self-declared second step: that is the stand-in's design (brief, P-567), not a new loosening.
+* **Nothing lets the stand-in into test or production.** `identityConfig` is unchanged: PLATFORM_IDENTITY=local still stops the start-up when PLATFORM_ENVIRONMENT is test or production (part A's fail test, still green). `sampleSeedDecision` still refuses production. The compose app sets neither, and the new text check fails if it ever names test or production.
+* **The compose change cannot leak into a cloud configuration.** The variables live only in `compose.test.yml`'s `app` service, which only `.github/workflows/skeleton.yml` uses. The Dockerfile bakes in only `STUDIO_PORT`, `STUDIO_PUBLIC_PORT` and npm settings, so the image itself starts with sign-in off and the seed off.
+  * One known item stays open for PF-8: an unset PLATFORM_ENVIRONMENT defaults to `local` (breaker m7, kept by choice for local work and recorded in the PR). The cloud configuration must set it. This is not new in this diff.
+
+**d1 change:** it does not weaken C10.1. "The old workspace is gone, exactly one remains" still holds for demo workspaces, and the orphan sweep still checks every workspace. Round 1's m1 is **closed**. m5 (`graph.mjs` and `decorate()`) stays open, Minor, with the tsconfig row (PF-4t, Lead B).
+
+No new findings. No Blocker or Major is open at 43bf6970a7a936f04fd2b9fcdf32878778b1b132. The journey score stays 9 / 10.
+
+**Verdict: Approve 43bf6970a7a936f04fd2b9fcdf32878778b1b132**
