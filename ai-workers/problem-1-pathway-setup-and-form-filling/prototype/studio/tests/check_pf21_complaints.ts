@@ -21,6 +21,7 @@ import { fakeAudit } from "../ports/audit.ts";
 import { FakeClock } from "../ports/clock.ts";
 import { fakeJobs } from "../ports/jobs.ts";
 import { fakeMail } from "../ports/mail.ts";
+import { ComplaintClosed, ComplaintReceived, EVENT } from "../ports/events.ts";
 import { fakeStaff, type StaffContext } from "../ports/staff.ts";
 
 const STUDIO = join(import.meta.dirname, ".."), MIG = join(STUDIO, "prisma", "migrations"), SCHEMA = join(STUDIO, "prisma", "schema");
@@ -397,6 +398,26 @@ try {
     od1.items.length === 50 && od1.items[0].acknowledgeBy.toISOString() === "2026-10-03T13:00:00.000Z" && od2.items[0].acknowledgeBy > od1.items[49].acknowledgeBy && overdueB > 100);
   const badPage = await answer(() => svc3.list(ownerB, "all", { limit: 101 })), badCur = await answer(() => svc3.list(ownerB, "all", { cursor: "not-a-cursor" }));
   ok("PF-21 fail (break m9): a page over 100 or a made-up cursor → 422", badPage !== "ok" && badPage.status === 422 && badCur !== "ok" && badCur.status === 422, { badPage, badCur });
+
+  // ======================================================== events to the outbox (FO-13k: complaint.received, complaint.closed)
+  const evs = (id: string) => sql(DEMO, `select coalesce(string_agg(type, ',' order by seq), '') from module_event where subject_id = '${id}'`);
+  const payloadOf = (id: string, type: string) => JSON.parse(sql(DEMO, `select payload::text from module_event where subject_id = '${id}' and type = '${type}'`));
+  ok("PF-21 pass (events): a recorded complaint wrote one complaint.received, its close one complaint.closed, and the note after the close none (the outbox, contracts §0.5)",
+    evs(c1.id) === `${EVENT.COMPLAINT_RECEIVED},${EVENT.COMPLAINT_CLOSED}` && evs(c2.id) === EVENT.COMPLAINT_RECEIVED, { c1: evs(c1.id), c2: evs(c2.id) });
+  const recvd = payloadOf(c1.id, EVENT.COMPLAINT_RECEIVED), closedEv = payloadOf(c1.id, EVENT.COMPLAINT_CLOSED);
+  ok("PF-21 pass (events): the payloads read with the shared shapes (ports/events.ts) and carry the firm, the complaint, the subject and the outcome",
+    ComplaintReceived.safeParse(recvd).success && ComplaintClosed.safeParse(closedEv).success && recvd.firmId === firmA && recvd.subjectId === u(500) && closedEv.outcome === "RESOLVED"
+    && sql(DEMO, `select firm_id from module_event where subject_id = '${c1.id}' and type = '${EVENT.COMPLAINT_CLOSED}'`) === firmA, { recvd, closedEv });
+  ok("PF-21 fail (events): no event payload carries a name, a contact or the summary's words (the named person's complaint included)",
+    !/Zebulon|zebulon\.q@|biometrics|study permit|sponsor disputes/.test(sql(DEMO, `select coalesce(string_agg(payload::text, ' '), '') from module_event where type like 'complaint.%'`)) && evs(named.id) === EVENT.COMPLAINT_RECEIVED);
+  ok("PF-21 fail (events): a payload with a name in it, or without its complaint id, is refused by the shared shape",
+    !ComplaintReceived.safeParse({ ...recvd, complainantName: "Zebulon" }).success && !ComplaintReceived.safeParse({ ...recvd, complaintId: undefined }).success);
+  const evBefore = count("module_event", "type like 'complaint.%'");
+  const failRec = new ComplaintsService({ db, audit: fakeAudit({ failOn: (e) => e.action === "complaint.record" || e.action === "complaint.close" }), jobs: jobs3, clock: clock3, mail: mail3 });
+  const r1 = await failRec.record(owner, { ...base, receivedAt: clock3.now().toISOString() }).then(() => "ok", (e: Error) => e.message);
+  const open3 = (await svc3.list(owner, "open")).items[0].id;
+  const r2 = await failRec.close(owner, open3, { outcome: "RESOLVED", at: clock3.now().toISOString(), note: "x" }).then(() => "ok", (e: Error) => e.message);
+  ok("PF-21 fail (events): a change rolled back by a failing audit writes no event (record and close)", /forced/.test(r1) && /forced/.test(r2) && count("module_event", "type like 'complaint.%'") === evBefore, { r1, r2 });
 } finally {
   for (const d of dbs) await d.$disconnect().catch(() => undefined);
   for (const db of [EMPTY, DEMO, BARE]) spawnSync(join(BIN, "dropdb"), [...PG, "--if-exists", "--force", db], { stdio: "ignore" });

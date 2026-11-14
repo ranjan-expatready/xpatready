@@ -11,8 +11,8 @@
 // Every change is one transaction: the event first, then the row (the database refuses a row change without its event),
 // one AuditPort line (a failing audit rolls everything back). Job and mail calls run after the commit (JobPort and
 // MailPort take no transaction): a rolled-back change never cancels a reminder or sends a mail.
-// Not yet here (Lead 47's answers on #1753): the module events complaint.received / complaint.closed wait for
-// ports/events.ts (FO-1a, #1742); routes wait for PF-4's @PermissionKeys.
+// Events (contracts §0.5): complaint.received and complaint.closed go to the outbox (module_event), written last in the
+// change's transaction, ids and facts only (ports/events.ts). Not yet here: routes wait for PF-4's @PermissionKeys.
 import { HttpException, HttpStatus } from "@nestjs/common";
 import type { PlatComplaint, PlatComplaintEvent, Prisma, PrismaClient } from "@prisma/client";
 import { z } from "zod";
@@ -20,6 +20,7 @@ import type { AuditPort } from "../../../../ports/audit.ts";
 import type { ClockPort } from "../../../../ports/clock.ts";
 import type { JobPort } from "../../../../ports/jobs.ts";
 import type { MailPort } from "../../../../ports/mail.ts";
+import { ComplaintClosed, ComplaintReceived, EVENT } from "../../../../ports/events.ts";
 import type { StaffContext } from "../../../../ports/staff.ts";
 import { firmScope } from "../firm-scope.ts";
 import { BUSINESS_HOURS, CLOSED_DAYS, readSetting, TIME_ZONE } from "../settings.ts";
@@ -124,6 +125,11 @@ function readCursor(s: string): { at: Date; id: string } {
   return { at: new Date(at), id };
 }
 
+/** Writes one event to the outbox (module_event, PF-3), last in its transaction (contracts §0.5): its subject is the
+ *  complaint; the payload is the event's own ids-only shape (ports/events.ts). */
+const outbox = (tx: Tx, c: PlatComplaint, e: ComplaintReceived | ComplaintClosed) =>
+  tx.moduleEvent.create({ data: { firmId: c.firmId, type: e.type, subjectId: c.id, payload: e } });
+
 /** Work to run after the transaction commits (job and mail calls). */
 type After = (() => Promise<unknown>)[];
 
@@ -191,6 +197,7 @@ export class ComplaintsService {
       } });
       await tx.platComplaintEvent.create({ data: { firmId, complaintId: c.id, kind: "RECEIVED", at: v.receivedAt, actor: this.actor(ctx), detail: { channel: v.channel, category: v.category, handlerStaffId: v.handlerStaffId } } });
       await this.d.audit.record(tx, { firmId, actor: this.actor(ctx), action: "complaint.record", entity: "plat_complaint", entityKey: c.id, summary: `Complaint recorded (${v.category.toLowerCase()}, by ${v.subjectKind.toLowerCase().replace(/_/g, " ")}); acknowledge by ${due.toISOString()}`, detail: { complaintId: c.id, subjectKind: v.subjectKind, subjectId: v.subjectId ?? null, handlerStaffId: v.handlerStaffId } });
+      await outbox(tx, c, ComplaintReceived.parse({ type: EVENT.COMPLAINT_RECEIVED, firmId, complaintId: c.id, subjectKind: c.subjectKind, subjectId: c.subjectId, receivedAt: c.receivedAt.toISOString() }));
       after.push(() => this.d.jobs.schedule(ACK_REMINDER_JOB, due, { firmId, complaintId: c.id }, { key: ackReminderKey(c.id), firmId }));
       return view(c, now);
     });
@@ -230,7 +237,7 @@ export class ComplaintsService {
 
   /** One change to a complaint by a person who may act on it: lock, check, event, row, audit — one transaction; its
    *  after-commit work (a job cancel) only once it committed. */
-  private change(ctx: StaffContext, id: string, act: (tx: Tx, c: PlatComplaint, after: After) => Promise<{ action: string; summary: string; detail?: Record<string, unknown> }>): Promise<ComplaintView> {
+  private change(ctx: StaffContext, id: string, act: (tx: Tx, c: PlatComplaint, after: After) => Promise<{ action: string; summary: string; detail?: Record<string, string | number | boolean | null>; event?: ComplaintReceived | ComplaintClosed }>): Promise<ComplaintView> {
     const firmId = firmScope(ctx.firmId).firmId;
     return this.commit(async (tx, after) => {
       const c = await this.lock(tx, firmId, id);
@@ -238,6 +245,7 @@ export class ComplaintsService {
       if (!this.canAct(ctx, c)) problem(403, "not-allowed", "Not allowed", "Changing a complaint needs the permissions to read and record complaints, or being its handler.");
       const r = await act(tx, c, after);
       await this.d.audit.record(tx, { firmId, actor: this.actor(ctx), action: r.action, entity: "plat_complaint", entityKey: c.id, summary: r.summary, detail: { complaintId: c.id, ...(r.detail ?? {}) } });
+      if (r.event) await outbox(tx, c, r.event);
       return view((await tx.platComplaint.findFirst({ where: firmScope(firmId, { id: c.id }) }))!, this.d.clock.now());
     });
   }
@@ -317,7 +325,8 @@ export class ComplaintsService {
       await this.event(tx, ctx, c, "CLOSED", v.at, v.note, { outcome: v.outcome });
       await tx.platComplaint.update({ where: this.where(c), data: { status: "CLOSED", outcome: v.outcome, closedAt: v.at } });
       after.push(() => this.d.jobs.cancel(ackReminderKey(c.id)));
-      return { action: "complaint.close", summary: `Complaint closed: ${v.outcome.toLowerCase().replace(/_/g, " ")}`, detail: { outcome: v.outcome } };
+      return { action: "complaint.close", summary: `Complaint closed: ${v.outcome.toLowerCase().replace(/_/g, " ")}`, detail: { outcome: v.outcome },
+        event: ComplaintClosed.parse({ type: EVENT.COMPLAINT_CLOSED, firmId: c.firmId, complaintId: c.id, subjectKind: c.subjectKind, subjectId: c.subjectId, outcome: v.outcome, closedAt: v.at.toISOString() }) };
     });
   }
 
