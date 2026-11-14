@@ -1,6 +1,7 @@
-// PF-23 (NFR5-14 RED metrics; SA-8-27): metrics as CloudWatch embedded-metric-format (EMF) log lines. CloudWatch
-// Logs turns such a line into metrics by itself, with no agent and no call from the app; elsewhere it is an ordinary
-// JSON log line. Measured: request count, errors and latency per route; job runs, failures and age per queue; mail
+// PF-23 (NFR5-14 RED metrics; SA-8-27): metrics as CloudWatch embedded-metric-format (EMF) log lines, with no call
+// from the app; elsewhere it is an ordinary JSON log line. CloudWatch extracts the metrics when the stream reaches it
+// marked as EMF (Lambda; the CloudWatch agent; FireLens with log format json/emf), not through the plain awslogs
+// driver: the shipper is PF-23c's and PF-8's choice (review m10). Measured: request count, errors and latency per route; job runs, failures and age per queue; mail
 // sent and bounced; audit-write failures; alerts raised (alerts.ts). Dimensions are bounded (a route pattern, a queue
 // name, an alert kind), never an id, a firm or a person. The format, as AWS documents it:
 //   { "_aws": { "Timestamp": <ms>, "CloudWatchMetrics": [{ "Namespace": "...", "Dimensions": [["Route"]],
@@ -62,12 +63,12 @@ function line(level: Level, event: string, obj: Fields) { log().trusted(level, e
 const ms = (n: number) => Math.max(0, Math.round(n));
 
 /** The request line (hook.ts): one per request, also the request's metrics. */
-export function requestLine(r: { method: string; route: string; status: number; durationMs: number; correlationId: string; firmId?: string }) {
+export function requestLine(r: { method: string; route: string; status: number; durationMs: number; correlationId: string; firmId?: string; aborted?: boolean }) {
   const err = r.status >= 500 ? 1 : 0;
   line(err ? "error" : r.status >= 400 ? "warn" : "info", "request", emf(
     { Route: `${r.method} ${r.route}` },
     { Requests: { value: 1, unit: "Count" }, Errors: { value: err, unit: "Count" }, Latency: { value: ms(r.durationMs), unit: "Milliseconds" } },
-    { method: r.method, route: r.route, status: r.status, durationMs: ms(r.durationMs), correlationId: r.correlationId, ...(r.firmId ? { firmId: r.firmId } : {}) },
+    { method: r.method, route: r.route, status: r.status, durationMs: ms(r.durationMs), correlationId: r.correlationId, ...(r.firmId ? { firmId: r.firmId } : {}), ...(r.aborted ? { outcome: "aborted" } : {}) },
   ));
 }
 
@@ -75,7 +76,7 @@ export function requestLine(r: { method: string; route: string; status: number; 
 export function jobLine(j: { queue: string; jobId: string; ok: boolean; durationMs: number; ageMs: number | null }) {
   line(j.ok ? "info" : "error", "job", emf(
     { Queue: j.queue },
-    { JobRuns: { value: 1, unit: "Count" }, JobFailures: { value: j.ok ? 0 : 1, unit: "Count" }, JobAge: { value: ms(j.ageMs ?? 0), unit: "Milliseconds" }, JobDuration: { value: ms(j.durationMs), unit: "Milliseconds" } },
+    { JobRuns: { value: 1, unit: "Count" }, JobFailures: { value: j.ok ? 0 : 1, unit: "Count" }, ...(j.ageMs != null ? { JobAge: { value: ms(j.ageMs), unit: "Milliseconds" as const } } : {}), JobDuration: { value: ms(j.durationMs), unit: "Milliseconds" } }, // an unknown age is left out, never 0 (review m9)
     { queue: j.queue, jobId: j.jobId, outcome: j.ok ? "done" : "failed", durationMs: ms(j.durationMs), ...(j.ageMs != null ? { ageMs: ms(j.ageMs) } : {}) },
   ));
 }

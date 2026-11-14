@@ -14,7 +14,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Catch, Controller, Get, Module, Post, type ArgumentsHost, type ExceptionFilter } from "@nestjs/common";
+import { Catch, Controller, Get, Module, Post, Req, type ArgumentsHost, type ExceptionFilter } from "@nestjs/common";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
@@ -54,6 +54,13 @@ function capture() {
   ok("PF-23 fail-guard (no over-redaction): a uuid, an ISO time, a duration, a form code and an error code are not taken for personal data", redactText(keep) === keep, redactText(keep));
   const cyc: Record<string, unknown> = { id: "x" }; cyc.self = cyc;
   ok("PF-23 (redaction never throws): a cycle, a bigint and deep nesting become markers", JSON.stringify(redact({ cyc, big: 10n, deep: { a: { b: { c: { d: { e: { f: { g: 1 } } } } } } } })).includes("[cycle]"));
+  const compound = redact({ client_full_name: CANARIES.name, applicantName: CANARIES.name, family_names: "Personname", nameOfApplicant: CANARIES.name, visit_contact_name: CANARIES.name, recipientEmail: "x", templateName: "booking.confirmed", queueName: "mail", fieldName: "person.given_names" }) as Record<string, unknown>;
+  ok("PF-23 pass (review m3, compound keys): client_full_name, applicantName, family_names, nameOfApplicant, visit_contact_name and recipientEmail are replaced", ["client_full_name", "applicantName", "family_names", "nameOfApplicant", "visit_contact_name", "recipientEmail"].every((k) => compound[k] === "[redacted]"), compound);
+  ok("PF-23 fail-guard (review m3): a template's, a queue's and a field's own names are kept", compound.templateName === "booking.confirmed" && compound.queueName === "mail" && compound.fieldName === "person.given_names", compound);
+  ok("PF-23 pass (review m4): every pair of a cookie header is replaced, not only the first", !/abc|def/.test(redactText("Cookie: sid=abc; other=def")), redactText("Cookie: sid=abc; other=def"));
+  ok("PF-23 pass/fail (review m5): an 8-digit UCI 1234-5678 is replaced; a year range 2026-2027 is kept", redactText("uci 1234-5678") === "uci [number]" && redactText("2026-2027") === "2026-2027");
+  const shared = { id: "r-1" };
+  ok("PF-23 fail-guard (review m6): an epoch time in ms, a package@version frame and a value shared by two fields are kept", redactText("at 1794662215060") === "at 1794662215060" && redactText("node_modules/@nestjs+core@11.1.29/x.js") === "node_modules/@nestjs+core@11.1.29/x.js" && JSON.stringify(redact({ a: shared, b: shared })) === '{"a":{"id":"r-1"},"b":{"id":"r-1"}}');
   const err = redact(Object.assign(new Error(sentence), { code: "P2002" })) as Record<string, unknown>;
   ok("PF-23 pass (an error): kept as class, code and frames; its message, which quotes a name, is never kept", err.errorName === "Error" && err.code === "P2002" && Array.isArray(err.frames) && (err.frames as unknown[]).length > 0 && !leaks(JSON.stringify(err)).length, err);
 }
@@ -62,7 +69,7 @@ function capture() {
 {
   const cap = capture();
   logPort.info("mail_sent", { to: CANARIES.email, subject: sentence, messageId: "m-1", templateKey: "booking.confirmed" });
-  logPort.error("mail_failed", new Error(sentence), { messageId: "m-2" });
+  logPort.error("mail_failed", new Error(sentence), { messageId: "m-2", firmId: "firm-0003", correlationId: "sweep-0001" });
   // Nest's own call shapes on the logger: error(message, stack, context) and warn(message, context).
   cap.l.error(`send failed for ${CANARIES.name} ${CANARIES.email}`, new Error(sentence).stack, "Mailer");
   cap.l.warn(`retrying ${CANARIES.email}`, "Mailer");
@@ -70,6 +77,7 @@ function capture() {
   const p = cap.parsed();
   ok("PF-23 pass (one JSON logger): every line is JSON with time, level and event", p.length === 4 && p.every((x) => typeof x.time === "string" && !Number.isNaN(Date.parse(String(x.time))) && /^(info|warn|error)$/.test(String(x.level)) && typeof x.event === "string"), p);
   ok("PF-23 pass (LogPort): ids and template keys kept, the address and subject replaced", p[0].messageId === "m-1" && p[0].templateKey === "booking.confirmed" && p[0].to === "[redacted]" && p[0].subject === "[redacted]", p[0]);
+  ok("PF-23 pass (review m7, outside a request): a caller's firmId and correlationId are kept", p[1].firmId === "firm-0003" && p[1].correlationId === "sweep-0001", p[1]);
   ok("PF-23 fail-guard (an error, LogPort and Nest's own logger): no seeded email, phone, name, document number or bearer token in any line", !leaks(cap.lines.join("\n")).length, leaks(cap.lines.join("\n")));
 }
 
@@ -78,9 +86,13 @@ function capture() {
 class ProbeController {
   ping() { return { ok: true }; }
   boom(): never { throw new Error(sentence); }
+  // A route that writes a request header to the console, as careless code might: the request side's negative control.
+  echo(req: { headers: Record<string, unknown> }) { console.log("echo", req.headers["x-note"]); return { ok: true }; }
+  async slow() { await new Promise((r) => setTimeout(r, 400)); return { ok: true }; }
 }
 Controller("api/pf23")(ProbeController);
-for (const [m, dec] of [["ping", Get("ping")], ["boom", Post("boom")]] as const) dec(ProbeController.prototype, m, Object.getOwnPropertyDescriptor(ProbeController.prototype, m)!);
+for (const [m, dec] of [["ping", Get("ping")], ["boom", Post("boom")], ["echo", Get("echo")], ["slow", Get("slow")]] as const) dec(ProbeController.prototype, m, Object.getOwnPropertyDescriptor(ProbeController.prototype, m)!);
+Req()(ProbeController.prototype, "echo", 0);
 class Problems implements ExceptionFilter { // as main.ts's ProblemErrors does for a 500: console.error(e), then plain words
   catch(e: unknown, host: ArgumentsHost) {
     const res = host.switchToHttp().getResponse<{ status(n: number): { json(b: unknown): void } }>();
@@ -104,7 +116,7 @@ Module({ controllers: [ProbeController] })(ProbeModule);
   const base = `http://127.0.0.1:${(app.getHttpServer().address() as { port: number }).port}`;
   const got: Record<string, { status: number; rid: string | null }> = {};
   const call = async (key: string, path: string, init: RequestInit = {}) => { const r = await fetch(base + path, init); await r.text(); got[key] = { status: r.status, rid: r.headers.get("x-request-id") }; };
-  let jobThrew = false;
+  let jobThrew = false, consoleThrew = false;
   try {
     await call("kept", "/api/pf23/ping", { headers: { "X-Request-Id": "pf23-run-0001" } });
     await call("made", "/api/pf23/ping");
@@ -113,6 +125,17 @@ Module({ controllers: [ProbeController] })(ProbeModule);
     await call("firm", "/api/pf23/ping", { headers: { "x-test-firm": "firm-0001" } });
     await call("boom", `/api/pf23/boom?email=${encodeURIComponent(CANARIES.email)}&name=${encodeURIComponent(CANARIES.name)}`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${CANARIES.bearer}`, cookie: `sid=${CANARIES.bearer}` }, body: JSON.stringify({ email: CANARIES.email, phone: CANARIES.phone, name: CANARIES.name, passport: CANARIES.document }) });
     new Logger("Mailer").error(`send failed for ${CANARIES.name} ${CANARIES.email}`, new Error(sentence).stack); // Nest's static Logger, after app.useLogger
+    await call("echo", "/api/pf23/echo", { headers: { "x-note": `Bearer ${CANARIES.bearer} ${CANARIES.email}` } });
+    const ctl = new AbortController(); setTimeout(() => ctl.abort(), 80);
+    await fetch(`${base}/api/pf23/slow`, { signal: ctl.signal, headers: { "X-Request-Id": "pf23-aborted-01" } }).catch(() => undefined);
+    await new Promise((r) => setTimeout(r, 500));
+    try {
+      console.error(new Error(sentence).stack); // a stack written as text
+      console.log({ get x() { throw new Error("getter"); } });
+      const { proxy, revoke } = Proxy.revocable({}, {}); revoke(); console.log(proxy);
+    } catch { consoleThrew = true; }
+    const okJob = observeJob("render", async (_j: { id: string; firmId: string }) => { console.log("rendering"); return 1; });
+    await okJob({ id: "job-0002", firmId: "firm-0002" });
     await call("unmatched", `/api/pf23/${encodeURIComponent(CANARIES.email)}`);
     // A job that fails with personal data in its payload and its error.
     const mailJob = observeJob("mail", async (_j: { id: string; createdAt: Date; data: unknown }) => { throw new Error(sentence); });
@@ -131,6 +154,12 @@ Module({ controllers: [ProbeController] })(ProbeModule);
   const boom = req(got.boom.rid)[0];
   ok("PF-23 pass (an error): the 500 is one request line (Errors 1) and one console error line with the request's correlation id, the error's class and frames", got.boom.status === 500 && boom?.Errors === 1 && boom?.route === "/api/pf23/boom" && p.some((x) => x.event === "console" && x.level === "error" && x.correlationId === got.boom.rid && Array.isArray(x.errors)), { boom, status: got.boom.status });
   ok("PF-23 pass (Nest's Logger once hooked): its error is a JSON line with frames, and the message (which quotes a name) is not kept", p.some((x) => x.event === "nest" && x.context === "Mailer" && x.level === "error" && Array.isArray(x.frames) && /not logged/.test(String(x.message))));
+  ok("PF-23 pass (review m14, negative control): a header a route writes to the console reaches the log, redacted (so the request-side check can fail)", p.some((x) => x.event === "console" && x.correlationId === got.echo.rid && /echo Bearer \[token\] \[email\]/.test(String(x.message))), p.filter((x) => x.correlationId === got.echo.rid));
+  ok("PF-23 pass (review m8): a request the caller aborted is logged as aborted (499), never as a success", p.some((x) => x.event === "request" && x.correlationId === "pf23-aborted-01" && x.status === 499 && x.outcome === "aborted" && x.Errors === 0), p.filter((x) => x.correlationId === "pf23-aborted-01"));
+  ok("PF-23 pass (review m2): a stack written as text keeps its frames only; its first line (the message) is gone", p.some((x) => x.event === "console" && /^\[stack\] at /.test(String(x.message))), p.filter((x) => x.event === "console").map((x) => String(x.message).slice(0, 60)));
+  ok("PF-23 fail-guard (review m1): a throwing getter and a revoked proxy never make console.* throw", !consoleThrew && p.some((x) => x.event === "console" && /unreadable value/.test(JSON.stringify(x))));
+  ok("PF-23 pass (review m7, jobs): a job's lines, its handler's own included, carry job:<id> as correlation id and its firm", p.some((x) => x.event === "console" && x.message === "rendering" && x.correlationId === "job:job-0002" && x.firmId === "firm-0002") && p.some((x) => x.event === "job" && x.jobId === "job-0002" && x.correlationId === "job:job-0002"));
+  ok("PF-23 pass/fail (review m9): a job with no created time has no JobAge metric; one with it has", p.some((x) => x.event === "job" && x.jobId === "job-0002" && !("JobAge" in x)) && p.some((x) => x.event === "job" && x.jobId === "job-0001" && typeof x.JobAge === "number"));
   ok("PF-23 pass (unmatched path): its line says \"unmatched\", never the path a person typed", req(got.unmatched.rid)[0]?.route === "unmatched", req(got.unmatched.rid)[0]);
   ok("PF-23 pass (a job): a failed job writes its job line (queue, id, outcome, waited) and an error line, and the failure reaches the caller", jobThrew && p.some((x) => x.event === "job" && x.queue === "mail" && x.jobId === "job-0001" && x.outcome === "failed" && x.JobFailures === 1 && Number(x.ageMs) >= 1500) && p.some((x) => x.event === "job_error" && x.jobId === "job-0001"), p.filter((x) => String(x.event).startsWith("job")));
   const all = lines.join("\n");
@@ -173,9 +202,17 @@ Module({ controllers: [ProbeController] })(ProbeModule);
   const flaky = () => (++n === 1 ? Promise.reject(new Error("busy")) : Promise.resolve("ok"));
   const second = await writeAuditWithAlarm(flaky, { firmId: "firm-0002", entity: "case", entityKey: "c-9" }, { alerts, retryMs: 0 });
   ok("PF-23 fail (a write that succeeds on its retry): no alert", second === "ok" && alertsAfter().length === 2);
+  // Review M1: this app's own entity names have spaces; the alarm must still sound and the write's own error must reach the caller.
+  const dbError = new Error("insert failed");
+  const caught = await writeAuditWithAlarm(() => Promise.reject(dbError), { firmId: "firm-0009", entity: "case fact", entityKey: CANARIES.email }, { alerts, retryMs: 0 }).then(() => null, (e: unknown) => e);
+  const m1 = alertsAfter().find((x) => x.firmId === "firm-0009");
+  ok("PF-23 pass (review M1): entity \"case fact\" raises one alert (entity case_fact) and the caller gets the write's own error, not a validation error", caught === dbError && m1?.entity === "case_fact" && m1?.alert === "audit_write_failed", { m1, caught: String(caught) });
+  ok("PF-23 fail-guard (review M1): an entityKey that is an email is never written: it becomes not_an_id", m1?.entityKey === "not_an_id" && !leaks(cap.lines.join("\n")).length, m1?.entityKey);
   const t = now.getTime();
+  const twoQueues = await stuckJobs([{ queue: "mail out", id: "j-7", since: new Date(t - STUCK_JOB_MS - 60_000) }, { queue: "render2", id: "j-8", since: new Date(t - STUCK_JOB_MS - 60_000) }], clock, alerts);
+  ok("PF-23 pass (review M1, stuck jobs): a queue named with a space still alerts, and never stops the next queue's alert", twoQueues.join() === "mail out,render2", twoQueues);
   const stuck = await stuckJobs([{ queue: "mail", id: "j-1", since: new Date(t - STUCK_JOB_MS - 60_000) }, { queue: "mail", id: "j-2", since: new Date(t - STUCK_JOB_MS - 120_000) }, { queue: "render", id: "j-3", since: new Date(t - STUCK_JOB_MS + 60_000) }], clock, alerts);
-  ok("PF-23 pass (stuck job, SA8-D40): a queue with jobs over the limit raises one job_stuck; a queue under it raises none", stuck.join() === "mail" && alertsAfter().filter((x) => x.alert === "job_stuck").length === 1 && alertsAfter().find((x) => x.alert === "job_stuck")?.count === 2, stuck);
+  ok("PF-23 pass (stuck job, SA8-D40): a queue with jobs over the limit raises one job_stuck; a queue under it raises none", stuck.join() === "mail" && alertsAfter().filter((x) => x.alert === "job_stuck" && x.queue === "mail").length === 1 && alertsAfter().find((x) => x.alert === "job_stuck" && x.queue === "mail")?.count === 2 && !alertsAfter().some((x) => x.queue === "render"), stuck);
   const near = await clocksNear("breach_clock_near", [{ id: "br-1", firmId: "firm-0001", dueAt: new Date(t + 23 * 3_600_000) }, { id: "br-2", dueAt: new Date(t + 3 * 86_400_000) }], clock, alerts);
   const dsr = await clocksNear("privacy_clock_near", [{ id: "dsr-1", dueAt: new Date(t + 4 * 86_400_000) }, { id: "dsr-2", dueAt: new Date(t + 6 * 86_400_000) }], clock, alerts);
   ok("PF-23 pass/fail (legal clocks, NFR5-14): a breach due in 23 h and a privacy request due in 4 days alert; 3 days and 6 days away do not", near.join() === "br-1" && dsr.join() === "dsr-1", { near, dsr });
@@ -193,8 +230,9 @@ Module({ controllers: [ProbeController] })(ProbeModule);
 const scanCli = (args: string[]) => spawnSync(join(STUDIO, "node_modules", ".bin", "tsx"), [join(STUDIO, "api", "src", "platform", "observability", "scan-logs.ts"), ...args], { encoding: "utf8" });
 {
   const seeded = seededValues();
-  ok("PF-23 pass (seeded values): the sample data's people are read (an email, a passport number, a two-word name) with PF-23's canaries", seeded.includes("client.a@example.com") && seeded.includes("Z7000001") && seeded.includes("SAMPLE SPOUSE") && C.every((c) => seeded.includes(c)));
-  ok("PF-23 fail-guard (seeded values): a lone word such as SAMPLE or a program name is not taken for a person", !seeded.includes("SAMPLE") && !seeded.includes("Study permit"));
+  ok("PF-23 pass (seeded values): the sample data's people are read (an email, a passport number, a two-word name) with PF-23's canaries", seeded.includes("client.a@example.com") && seeded.includes("Z7000001") && seeded.includes("SAMPLE SPOUSE STUDENT") && C.every((c) => seeded.includes(c)));
+  ok("PF-23 pass (review m13): a person's given and family names are also seeded joined, as a full name", seeded.some((v) => /^\S.* \S+$/.test(v) && seeded.includes(v) && v.endsWith("Representative")), seeded.filter((v) => v.endsWith("Representative")));
+  ok("PF-23 fail-guard (seeded values): a lone word such as SAMPLE, a program name, or given names alone (\"Solo Sample\", also inside an employer's name) are not taken for a person", !seeded.includes("SAMPLE") && !seeded.includes("Study permit") && !seeded.includes("Solo Sample"));
   const dir = mkdtempSync(join(tmpdir(), "pf23-"));
   try {
     writeFileSync(join(dir, "clean-api.log"), `${JSON.stringify({ level: "info", event: "request", route: "/api/x/:id", note: "[email] Bearer [token]" })}\n`);
@@ -204,6 +242,8 @@ const scanCli = (args: string[]) => spawnSync(join(STUDIO, "node_modules", ".bin
     ok("PF-23 pass (scanner): a redacted log passes (exit 0)", clean.status === 0, clean.stdout.trim());
     ok("PF-23 fail (scanner): a deliberately leaking line fails the check (exit 1), naming file, line 2 and rule, never the value", leak.status === 1 && /leak-api\.log:2: an email address|leak-api\.log:2: a seeded personal value/.test(leak.stdout) && !leak.stdout.includes(CANARIES.email), leak.stdout.trim());
     ok("PF-23 (scanner): its own self-test passes, as CI runs it", self.status === 0, self.stdout.trim());
+    const none = scanCli([join(dir, "no-such-folder")]);
+    ok("PF-23 (review m13): with no server log to read, the check says \"nothing scanned\" plainly", none.status === 0 && /nothing scanned/.test(none.stdout), none.stdout.trim());
     ok("PF-23 fail (scanner rules): a seeded name, a bearer credential and a JWT are each found", scanText(`x ${CANARIES.name}\nAuthorization: Bearer abcdefgh12345678\nt=eyJhbGciOi.eyJzdWIiOi.sig`, "f", seeded).length === 3);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 }
@@ -233,7 +273,7 @@ try {
   psql(`alter database "${DB}" with allow_connections false`); cut = true;
   psql(`select pg_terminate_backend(pid) from pg_stat_activity where datname = '${DB}' and pid <> pg_backend_pid()`);
   const down = await get("/api/health/ready");
-  ok("PF-23 fail (ready): the database down → 503, failing names database, in words, never the connection string", down.status === 503 && (down.body?.failing as string[] | undefined)?.join() === "database" && /does not answer/.test(JSON.stringify(down.body)) && !/postgres(ql)?:\/\//.test(JSON.stringify(down.body)), down.body);
+  ok("PF-23 fail (ready): the database down → 503, failing names database, in words, never the connection string or the database's address (review m12)", down.status === 503 && (down.body?.failing as string[] | undefined)?.join() === "database" && /does not answer/.test(JSON.stringify(down.body)) && !/postgres(ql)?:\/\/|127\.0\.0\.1|54329|xr_studio/.test(JSON.stringify(down.body)), down.body);
   const liveDown = await get("/api/health/live");
   ok("PF-23 pass (live while the database is down): the process still answers 200", liveDown.status === 200);
   psql(`alter database "${DB}" with allow_connections true`); cut = false;

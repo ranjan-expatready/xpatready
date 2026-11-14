@@ -9,18 +9,16 @@
 import { Controller, Get, Inject, Injectable, Optional, Res } from "@nestjs/common";
 import { Db, OpenRead } from "../../core.ts";
 import { HEALTH_LIMITS, within } from "../../health-verdict.ts";
+import { log } from "./log.ts";
 
 export const JOB_QUEUE_PROBE = "PF23_JOB_QUEUE_PROBE";
 export type JobQueueProbe = { ready(): Promise<{ ok: boolean; words: string }> };
 export type Part = { ok: boolean | null; words: string; ms?: number };
 export type Ready = { status: "ok" | "bad"; failing: string[]; checks: { database: Part; job_queue: Part } };
 
-/** A driver error's first telling line (Prisma's "Invalid … invocation" header skipped, as M1's health.ts does), without a
- *  connection string (it names the database user and host). */
-const plain = (e: unknown) => {
-  const m = (e instanceof Error ? e.message : String(e)).split("\n").map((l) => l.trim()).filter(Boolean);
-  return (m.find((l) => !/^invalid `?prisma/i.test(l) && !/^→/.test(l)) ?? m[0] ?? "no answer").replace(/postgres(?:ql)?:\/\/\S+/g, "the database").slice(0, 200);
-};
+/** The words an open route gives: what is wrong and what to do, never the driver's detail (it names the database's
+ *  address: review m12). The detail goes to the server's log, redacted. */
+const notAnswering = (part: string, e: unknown) => { log().write("warn", "ready_part_down", { part, error: e }); return `The ${part} does not answer${/no answer within/.test(e instanceof Error ? e.message : "") ? " in time" : ""}.`; };
 
 // Decorators are applied by hand below: api/tsconfig.json's experimentalDecorators reaches src/*.ts and src/features/
 // only, and this folder is outside both (as PF-4's identity module does).
@@ -31,12 +29,12 @@ export class Readiness {
     const t0 = performance.now();
     let database: Part;
     try { await within(dbTimeoutMs, this.db.$queryRawUnsafe("select 1")); database = { ok: true, words: "The database answers.", ms: Math.round(performance.now() - t0) }; }
-    catch (e) { database = { ok: false, words: `The database does not answer: ${plain(e)}. Start it (start.sh) or check its connection setting.` }; }
+    catch (e) { database = { ok: false, words: `${notAnswering("database", e)} Start it (start.sh) or check its connection setting.` }; }
     let job_queue: Part;
     if (!this.jobs) job_queue = { ok: null, words: "No job queue on this copy yet (PF-14 adds it); not counted." };
     else {
       try { const j = await within(dbTimeoutMs, this.jobs.ready()); job_queue = { ok: j.ok, words: j.words }; }
-      catch (e) { job_queue = { ok: false, words: `The job queue does not answer: ${plain(e)}.` }; }
+      catch (e) { job_queue = { ok: false, words: notAnswering("job queue", e) }; }
     }
     const failing = (["database", "job_queue"] as const).filter((k) => ({ database, job_queue })[k].ok === false);
     return { status: failing.length ? "bad" : "ok", failing, checks: { database, job_queue } };

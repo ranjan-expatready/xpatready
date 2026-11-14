@@ -32,7 +32,9 @@ export class LogAlerts implements AlertPort {
   async raise(kind: AlertKind, detail: AlertDetail): Promise<{ raised: boolean }> {
     const k = AlertKind.parse(kind), d = AlertDetail.parse(detail);
     const key = [k, d.firmId ?? "", d.queue ?? "", k === "audit_write_failed" ? "" : d.entityKey ?? ""].join("|");
-    const now = this.clock.now().getTime(), was = this.last.get(key);
+    const now = this.clock.now().getTime();
+    for (const [k2, at] of this.last) if (now - at >= this.repeatMs) this.last.delete(k2); // never grows past the window (review m11)
+    const was = this.last.get(key);
     if (was !== undefined && now - was < this.repeatMs) {
       log().trusted("info", "alert_repeat", { alert: k, rule: d.rule, sinceMs: now - was });
       return { raised: false };
@@ -50,6 +52,27 @@ export function useAlerts(a: AlertPort): AlertPort { const was = alerts; alerts 
 
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+const ID = /^[A-Za-z0-9_.:-]{1,120}$/;
+/** An alarm is never stopped by the shape of its detail (review M1): this app's own entity names have spaces ("case
+ *  fact", "form copy"), so spaces become "_"; any other value that is still not an id (an email, a sentence) becomes
+ *  "not_an_id", never the value. */
+export function alertIds<T extends Record<string, string | undefined>>(ids: T): { [K in keyof T]: string | undefined } {
+  const out: Record<string, string | undefined> = {};
+  for (const [k, v] of Object.entries(ids)) {
+    if (v === undefined) { out[k] = undefined; continue; }
+    const s = String(v).trim().replace(/\s+/g, "_").slice(0, 120);
+    out[k] = ID.test(s) && !/@/.test(s) ? s : "not_an_id";
+  }
+  return out as { [K in keyof T]: string | undefined };
+}
+const defined = <T extends Record<string, unknown>>(o: T) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
+
+/** Raises without ever throwing: a failure to raise is itself written as a line (the original problem goes on). */
+async function raiseSafely(a: AlertPort, kind: Parameters<AlertPort["raise"]>[0], detail: AlertDetail): Promise<boolean> {
+  try { return (await a.raise(kind, detail)).raised; }
+  catch (e) { log().write("error", "alert_not_raised", { alert: kind, rule: detail.rule, error: e }); return false; }
+}
+
 /** An audit write tried up to `attempts` times; when the last fails, one audit-failure metric line and one alert
  *  (BR-5), then the error is thrown on to the caller. `ids` names the record, never its content. */
 export async function writeAuditWithAlarm<T>(write: () => Promise<T>, ids: { firmId?: string; entity?: string; entityKey?: string }, opts: { alerts?: AlertPort; attempts?: number; retryMs?: number } = {}): Promise<T> {
@@ -58,10 +81,13 @@ export async function writeAuditWithAlarm<T>(write: () => Promise<T>, ids: { fir
   for (let i = 1; i <= attempts; i++) {
     try { return await write(); } catch (e) { last = e; if (i < attempts) await pause(opts.retryMs ?? AUDIT_RETRY_MS); }
   }
-  const d = AlertDetail.parse({ rule: "BR-5", ...ids });
-  auditFailureLine({ firmId: d.firmId, entity: d.entity, entityKey: d.entityKey, attempts });
-  log().write("error", "audit_write_error", { error: last });
-  await (opts.alerts ?? alerts).raise("audit_write_failed", d);
+  // The metric and the error line first, then the alert; whatever happens to those, the caller gets the write's own error.
+  try {
+    const d = defined({ rule: "BR-5", ...alertIds(ids) });
+    auditFailureLine({ firmId: d.firmId, entity: d.entity, entityKey: d.entityKey, attempts });
+    log().write("error", "audit_write_error", { error: last, ...d });
+    await raiseSafely(opts.alerts ?? alerts, "audit_write_failed", d);
+  } catch { /* the alarm path never replaces the write's error */ }
   throw last;
 }
 
@@ -70,7 +96,10 @@ export async function stuckJobs(jobs: { queue: string; id: string; since: Date }
   const now = clock.now().getTime(), byQueue = new Map<string, { id: string; n: number }>();
   for (const j of jobs) if (now - j.since.getTime() > limitMs) { const q = byQueue.get(j.queue); byQueue.set(j.queue, { id: q?.id ?? j.id, n: (q?.n ?? 0) + 1 }); }
   const out: string[] = [];
-  for (const [queue, { id, n }] of byQueue) if ((await a.raise("job_stuck", { rule: "SA8-D40", queue, entity: "job", entityKey: id, count: n })).raised) out.push(queue);
+  for (const [queue, { id, n }] of byQueue) { // each queue on its own: one odd name never stops another queue's alert
+    const d = defined({ rule: "SA8-D40", ...alertIds({ queue, entityKey: id }), entity: "job", count: n });
+    if (await raiseSafely(a, "job_stuck", d)) out.push(queue);
+  }
   return out;
 }
 
@@ -79,8 +108,8 @@ export async function clocksNear(kind: "privacy_clock_near" | "breach_clock_near
   const now = clock.now().getTime(), out: string[] = [];
   for (const r of open) {
     if (r.dueAt.getTime() - now > CLOCK_LEAD_MS[kind]) continue;
-    const res = await a.raise(kind, { rule: "NFR5-14", entity: kind === "privacy_clock_near" ? "privacy_request" : "breach", entityKey: r.id, ...(r.firmId ? { firmId: r.firmId } : {}), dueAt: r.dueAt.toISOString() });
-    if (res.raised) out.push(r.id);
+    const d = defined({ rule: "NFR5-14", entity: kind === "privacy_clock_near" ? "privacy_request" : "breach", ...alertIds({ entityKey: r.id, firmId: r.firmId }), dueAt: r.dueAt.toISOString() });
+    if (await raiseSafely(a, kind, d)) out.push(r.id);
   }
   return out;
 }

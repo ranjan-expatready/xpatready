@@ -13,10 +13,10 @@ import { format } from "node:util";
 import type { INestApplication } from "@nestjs/common";
 import { JsonLog, requestScope, stdSink, useLog, type Level, type Sink } from "./log.ts";
 import { requestLine } from "./metrics.ts";
-import { redact, redactText, safeError } from "./redact.ts";
+import { logText, redact, redactText, safeError } from "./redact.ts";
 
 type Req = { method: string; path?: string; baseUrl?: string; headers: Record<string, string | string[] | undefined>; route?: { path?: unknown }; platform?: { firmId?: unknown } };
-type Res = { statusCode: number; setHeader(name: string, value: string): unknown; on(event: "finish" | "close", fn: () => void): unknown };
+type Res = { statusCode: number; writableFinished?: boolean; setHeader(name: string, value: string): unknown; on(event: "finish" | "close", fn: () => void): unknown };
 
 const ID = /^[A-Za-z0-9_.:-]{1,128}$/;
 /** The caller's request id when it is a plain id that redaction leaves as it is; otherwise a new one. */
@@ -41,7 +41,8 @@ export function requestMiddleware() {
     const t0 = performance.now(), correlationId = correlationOf(req.headers["x-request-id"]);
     res.setHeader("X-Request-Id", correlationId);
     let done = false;
-    const end = () => { if (done) return; done = true; requestLine({ method: req.method, route: routeOf(req), status: res.statusCode, durationMs: performance.now() - t0, correlationId, firmId: firmOf(req) }); };
+    // A connection closed before the answer was sent is "aborted", status 499 (review m8), never counted as a success.
+    const end = () => { if (done) return; done = true; const aborted = res.writableFinished === false; requestLine({ method: req.method, route: routeOf(req), status: aborted ? 499 : res.statusCode, durationMs: performance.now() - t0, correlationId, firmId: firmOf(req), aborted }); };
     res.on("finish", end); res.on("close", end);
     requestScope.run({ correlationId, firmId: () => firmOf(req) }, next);
   };
@@ -56,11 +57,15 @@ export function patchConsole(l: JsonLog): () => void {
   const level: Record<ConsoleMethod, Level> = { log: "info", info: "info", warn: "warn", error: "error", debug: "debug" };
   for (const m of CONSOLE) {
     console[m] = (...args: unknown[]) => {
-      const errors = args.filter((a): a is Error => a instanceof Error).map(safeError);
-      const rest = args.filter((a) => !(a instanceof Error));
-      const text = rest.filter((a) => typeof a !== "object" || a === null).map((a) => format("%s", a)).join(" ");
-      const objects = rest.filter((a) => typeof a === "object" && a !== null).map((a) => redact(a));
-      l.write(level[m], "console", { message: text || undefined, ...(objects.length ? { data: objects } : {}), ...(errors.length ? { errors } : {}) });
+      try {
+        const isError = (a: unknown) => { try { return a instanceof Error; } catch { return false; } };
+        const errors = args.filter(isError).map(safeError);
+        const rest = args.filter((a) => !isError(a));
+        // Each text argument on its own: a stack written as text keeps its frames only (redact.ts logText).
+        const text = rest.filter((a) => typeof a !== "object" || a === null).map((a) => logText(format("%s", a))).join(" ");
+        const objects = rest.filter((a) => typeof a === "object" && a !== null).map((a) => redact(a));
+        l.write(level[m], "console", { message: text || undefined, ...(objects.length ? { data: objects } : {}), ...(errors.length ? { errors } : {}) });
+      } catch { l.write(level[m], "console", { message: "[not logged: unreadable value]" }); } // never throws into the caller (review m1)
     };
   }
   return () => { for (const m of CONSOLE) console[m] = was[m]; };

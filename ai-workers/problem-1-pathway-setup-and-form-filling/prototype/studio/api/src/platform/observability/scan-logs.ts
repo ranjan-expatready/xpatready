@@ -26,18 +26,26 @@ export const CANARIES = {
 
 const SEEDED_KEY = /(^|[._])(email|passport_number|given_names|family_name|client_name|visit_contact_name|date_of_birth|uci|phone_number|telephone_number)$/i;
 /** The sample data's personal values worth finding: emails, document-like numbers, dates of birth and names of two or
- *  more words (a lone word such as "SAMPLE" is everywhere in honest text). */
+ *  more words: a contact's name, or given and family names joined (a lone word such as "SAMPLE" is everywhere in honest text). */
 export function seededValues(samplesDir = join(STUDIO, "samples")): string[] {
   const out = new Set<string>(Object.values(CANARIES));
   const keep = (k: string, v: string) => {
     const s = v.trim();
     if (/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(s) || /^[A-Z]{1,2}\d{6,9}$/.test(s) || (/date_of_birth$/i.test(k) && /^\d{4}-\d{2}-\d{2}$/.test(s))) out.add(s);
-    else if (/name/i.test(k) && /^[A-Za-z'-]{2,}( [A-Za-z'-]{2,})+$/.test(s) && !/\bpermit$/i.test(s)) out.add(s); // not "Study permit" (a client_name that is a program)
+    // A contact's name as written; given names alone are not seeded ("Solo Sample" is also inside an employer's name):
+    // they are joined with the family name below, as a full name.
+    else if (/name/i.test(k) && !/given_names|family_name/i.test(k) && /^[A-Za-z'-]{2,}( [A-Za-z'-]{2,})+$/.test(s) && !/\bpermit$/i.test(s)) out.add(s); // not "Study permit" (a client_name that is a program)
   };
   const walk = (o: unknown, depth: number): void => {
     if (depth > 30 || o == null || typeof o !== "object") return;
     if (Array.isArray(o)) { for (const x of o) walk(x, depth + 1); return; }
-    for (const [k, v] of Object.entries(o)) { if (typeof v === "string" && SEEDED_KEY.test(k)) keep(k, v); walk(v, depth + 1); }
+    const rec = o as Record<string, unknown>;
+    for (const [k, v] of Object.entries(rec)) { if (typeof v === "string" && SEEDED_KEY.test(k)) keep(k, v); walk(v, depth + 1); }
+    // A person's full name, given and family names joined (review m13: stored apart, logged together).
+    for (const p of ["", "person."]) {
+      const g = rec[`${p}given_names`], f = rec[`${p}family_name`];
+      if (typeof g === "string" && typeof f === "string" && g.trim() && f.trim()) out.add(`${g.trim()} ${f.trim()}`);
+    }
   };
   for (const f of existsSync(samplesDir) ? readdirSync(samplesDir).filter((f) => f.endsWith(".json")).sort() : []) {
     try { walk(JSON.parse(readFileSync(join(samplesDir, f), "utf8")), 0); } catch { /* a file that is not JSON holds no seed */ }
@@ -93,7 +101,7 @@ function selfTest(): boolean {
     writeFileSync(join(dir, "clean-api.log"), `${JSON.stringify({ time: "2026-11-14T00:00:00.000Z", level: "info", event: "request", route: "/api/x/:id", authorization: "[redacted]", note: "Bearer [token] [email] [number]" })}\n`);
     writeFileSync(join(dir, "leak-api.log"), `${JSON.stringify({ level: "error", event: "console", message: `could not send to ${CANARIES.email}` })}\n`);
     const clean = scan([join(dir, "clean-api.log")], seeded), leak = scan([join(dir, "leak-api.log")], seeded);
-    const seedOk = seeded.includes("client.a@example.com") && seeded.includes("Z7000001") && !seeded.includes("SAMPLE");
+    const seedOk = seeded.includes("client.a@example.com") && seeded.includes("Z7000001") && !seeded.includes("SAMPLE") && !seeded.includes("Solo Sample");
     const ok = clean.findings.length === 0 && leak.findings.length === 1 && leak.findings[0].line === 1 && seedOk;
     console.log(`self-test: a redacted line ${clean.findings.length ? "FAILED (it should pass)" : "passes"}; a planted leaking line ${leak.findings.length === 1 ? "fails (as it must)" : "PASSED (it should fail)"}; seeded list ${seedOk ? `read (${seeded.length} values)` : "WRONG"}`);
     return ok;
@@ -103,10 +111,12 @@ function selfTest(): boolean {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const args = process.argv.slice(2);
   if (args.includes("--self-test")) process.exit(selfTest() ? 0 : 1);
-  const targets = args.length ? args : [join(STUDIO, "var", "isolated-logs"), join(STUDIO, "var")];
+  // Every copy's kept log, the demo's, and a retried suite's first-try logs (var/suites/*.try1-api.log; review m13).
+  const targets = args.length ? args : [join(STUDIO, "var", "isolated-logs"), join(STUDIO, "var"), join(STUDIO, "var", "suites")];
   try {
     const r = scan(targets);
     for (const f of r.findings.slice(0, 50)) console.log(`FAIL  ${relative(process.cwd(), f.file)}:${f.line}: ${f.rule} (value not shown)`);
+    if (!r.files.length) { console.log("no personal data in logs: nothing scanned — no server log here (this part ran no server suite); ok"); process.exit(0); }
     console.log(`no personal data in logs: ${r.files.length} server log(s), ${r.lines} lines, ${r.findings.length} finding(s)${r.findings.length ? " — FAIL (SA-11 BR-16: a log holds record ids and rule names only)" : " — ok"}`);
     process.exit(r.findings.length ? 1 : 0);
   } catch (e) { console.log(`no personal data in logs: could not run (${(e as Error).message})`); process.exit(2); }

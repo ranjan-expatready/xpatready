@@ -7,7 +7,7 @@
 // short "log_failed" line.
 import { AsyncLocalStorage } from "node:async_hooks";
 import { ConsoleLogger, type LogLevel } from "@nestjs/common";
-import { framesOf, redact, redactText, safeError } from "./redact.ts";
+import { framesOf, logText, redact, redactText, safeError } from "./redact.ts";
 
 export type Fields = Record<string, unknown>;
 export type Level = "info" | "warn" | "error" | "debug";
@@ -27,19 +27,21 @@ export const stdSink: Sink = (line, stream) => { process[stream].write(`${line}\
 export type RequestScope = { correlationId: string; firmId: () => string | undefined };
 export const requestScope = new AsyncLocalStorage<RequestScope>();
 
-const OWN = new Set(["time", "level", "event", "correlationId", "firmId"]);
+const ID = /^[A-Za-z0-9_.:-]{1,128}$/;
 
 export class JsonLog extends ConsoleLogger {
   constructor(private readonly sink: Sink = stdSink, nestLevels: LogLevel[] = ["error", "warn"]) {
     super({ json: true, colors: false, compact: true, logLevels: nestLevels });
   }
 
-  /** One structured line; fields are redacted, the line's own keys (time, level, correlation, firm) are never overwritten. */
+  /** One structured line; fields are redacted. time, level and event are the line's own; correlationId and firmId come
+   *  from the request when it has them, else a caller's id-shaped ones are kept (a job, an alert sweep: review m7). */
   write(level: Level, event: string, fields: Fields = {}) {
     try {
-      const safe = redact(fields) as Fields;
-      for (const k of OWN) delete safe[k];
-      this.emit({ ...this.stamp(level, event), ...safe });
+      const safe = redact(fields) as Fields, st = this.stamp(level, event);
+      for (const k of ["time", "level", "event"]) delete safe[k];
+      for (const k of ["correlationId", "firmId"]) if (k in st || typeof safe[k] !== "string" || !ID.test(safe[k] as string)) delete safe[k];
+      this.emit({ ...st, ...safe });
     } catch { this.fallback(level, event); }
   }
 
@@ -56,7 +58,7 @@ export class JsonLog extends ConsoleLogger {
     if (message instanceof Error) fields.error = safeError(message);
     // An error message with a stack is usually the error's own message, which can quote any value: frames only.
     else if (level === "error" && o.errorStack !== undefined) fields.message = "[not logged: an error's message]";
-    else fields.message = message;
+    else fields.message = typeof message === "string" ? logText(message) : message;
     if (o.errorStack !== undefined) fields.frames = framesOf(o.errorStack);
     this.write(level, "nest", fields);
   }
