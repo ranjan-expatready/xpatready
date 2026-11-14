@@ -1,7 +1,9 @@
 // PF-3 (contracts §7 "Firm settings", Lead 37 ruling; AG-16-3, -24, -59): the typed settings home. A module registers a
 // key with a zod schema, a default and the permission key that may change it; a firm's value is read with the default
 // when unset; a write whose value fails the key's schema is refused; every change writes one audit_event line in its
-// own transaction (AUD-1 owns the trail; until it adds firm_id, the firm is in the line's entity key and detail).
+// own transaction (AUD-1 owns the trail; until it adds firm_id, the line carries the caller's workspace and the firm in its
+// entity key and detail). Known gap, for AUD-1 / the reset's owner: the demo reset deletes the workspace's audit lines
+// (and sweeps lines of no workspace), while platform rows stay, so after a reset a setting value has no trail.
 // Other modules register their own keys (e.g. front office's web-form defaults) by calling registerSetting.
 import { HttpException, HttpStatus } from "@nestjs/common";
 import type { Prisma, PrismaClient } from "@prisma/client";
@@ -81,8 +83,10 @@ export async function readSettings(db: DbOrTx, firmId: string): Promise<Record<s
   const stored = new Map(rows.map((r) => [r.key, r.value]));
   const out: Record<string, unknown> = {};
   for (const def of REGISTRY.values()) {
-    const p = stored.has(def.key) ? def.schema.safeParse(stored.get(def.key)) : null;
-    out[def.key] = p?.success ? p.data : def.default;
+    if (!stored.has(def.key)) { out[def.key] = def.default; continue; }
+    const p = def.schema.safeParse(stored.get(def.key));
+    if (!p.success) throw new Error(`readSettings: the stored value of "${def.key}" no longer fits its schema`);
+    out[def.key] = p.data;
   }
   return out;
 }
@@ -93,7 +97,7 @@ export type SettingWrite = {
   value: unknown;
   /** Who changes it (the staff member's actor or staff id). */
   by: string;
-  /** audit_event's workspace column (required until AUD-1 adds firm_id). */
+  /** audit_event's workspace column (required until AUD-1 adds firm_id): the request's workspace. */
   workspaceId: string;
 };
 
@@ -102,6 +106,7 @@ export type SettingWrite = {
  *  runs inside the caller's transaction. */
 export async function writeSetting(db: DbOrTx, w: SettingWrite): Promise<{ key: string; value: unknown; changed: boolean }> {
   const def = definitionOf(w.key);
+  if (typeof w.by !== "string" || !w.by.trim()) throw new SettingRefused("A setting change needs who makes it.");
   const parsed = def.schema.safeParse(w.value);
   if (!parsed.success) throw new SettingRefused(`The value for "${w.key}" is not allowed.`, parsed.error.issues.map((i) => `${i.path.join(".") || "value"}: ${i.message}`));
   const value = parsed.data as Prisma.InputJsonValue;
@@ -134,7 +139,8 @@ export async function writeSetting(db: DbOrTx, w: SettingWrite): Promise<{ key: 
 // everyone-sees-all, "Require two-step sign-in for all staff". Defaults are Sample unless a source says otherwise.
 const HHMM = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "a time as HH:MM (24-hour)");
 const DAY = z.enum(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]);
-const isZone = (s: string) => { try { new Intl.DateTimeFormat("en-CA", { timeZone: s }); return s.includes("/") || s === "UTC"; } catch { return false; } };
+// The zone's own spelling only (Intl also takes "america/toronto"; break m-11).
+const isZone = (s: string) => { try { return new Intl.DateTimeFormat("en-CA", { timeZone: s }).resolvedOptions().timeZone === s && (s.includes("/") || s === "UTC"); } catch { return false; } };
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) && new Date(`${s}T00:00:00Z`).toISOString().startsWith(s);
 
 export const TIME_ZONE = registerSetting({

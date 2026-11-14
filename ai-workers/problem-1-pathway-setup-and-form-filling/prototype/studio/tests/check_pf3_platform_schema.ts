@@ -118,7 +118,7 @@ try {
   ok("PF-3 fail: a firm's country_code cannot change", refused(DEMO, `update platform_firm set country_code = 'US' where id = '${firmA}'`, /platform_firm_country_fixed/) && sql(DEMO, `select country_code from platform_firm where id='${firmA}'`) === "CA");
   const staffO = sql(DEMO, `select id from platform_staff where actor_id='user-O'`);
   ok("PF-3 pass: a person without a licence record gets one", sql(DEMO, `insert into platform_staff_credential (id, firm_id, staff_id, representative_type, licensing_body, licence_number, updated_by, updated_at) values (gen_random_uuid(), '${firmA}', '${staffO}', 'rcic', 'CICC', 'R000009', 't', now()) returning licence_number`) === "R000009");
-  ok("PF-3 fail: a second licence record for one person is refused", refused(DEMO, `insert into platform_staff_credential (id, firm_id, staff_id, representative_type, licensing_body, licence_number, updated_by, updated_at) values (gen_random_uuid(), '${firmA}', '${staffO}', 'rcic', 'CICC', 'R000010', 't', now())`, /platform_staff_credential_staff_id_key/));
+  ok("PF-3 fail: a second licence record for one person is refused", refused(DEMO, `insert into platform_staff_credential (id, firm_id, staff_id, representative_type, licensing_body, licence_number, updated_by, updated_at) values (gen_random_uuid(), '${firmA}', '${staffO}', 'rcic', 'CICC', 'R000010', 't', now())`, /platform_staff_credential_firm_id_staff_id_key/));
   const newFirm = (key: string, email: string) => `insert into platform_firm (id, key, operating_name, country_code, contact_email, updated_at) values (gen_random_uuid(), '${key}', 'Firm ${key}', 'CA', '${email}', now()) returning id`;
   const firmC = sql(DEMO, newFirm("firm-c", "office@firm-c.example.com"));
   ok("PF-3 pass: another firm with its own contact email is accepted", /^[0-9a-f-]{36}$/.test(firmC));
@@ -179,8 +179,11 @@ try {
   ok("PF-3 pass: a setting change is saved and writes one audit line (who, the firm, from and to)",
     saved.changed && await readSetting(db, firmA, "platform.currency") === "USD" && await readSetting(db, firmB, "platform.currency") === "CAD" && audits() === "1"
     && sql(DEMO, `select actor || '|' || entity_key || '|' || (detail->>'from') || '|' || (detail->>'to') from audit_event where entity = 'platform_firm_setting'`) === `user-R|${firmA}:platform.currency|CAD|USD`);
+  // A forced audit failure: the database refuses this one actor's audit line (a trigger of this check's own).
+  sql(DEMO, `create function pf3_force_audit_fail() returns trigger language plpgsql as $$ begin if new.actor = 'force-audit-failure' then raise exception 'pf3 forced audit failure'; end if; return new; end $$;
+    create trigger pf3_force_audit_fail before insert on audit_event for each row execute function pf3_force_audit_fail()`);
   ok("PF-3 fail: a forced audit failure rolls the setting change back (one transaction)",
-    await throwsLike(() => writeSetting(db, { firmId: firmA, key: "platform.currency", value: "CAD", by: "user-R", workspaceId: "not-a-workspace" }), () => true)
+    await throwsLike(() => writeSetting(db, { firmId: firmA, key: "platform.currency", value: "CAD", by: "force-audit-failure", workspaceId: WS }), (e) => /pf3 forced audit failure/.test(String(e)))
     && await readSetting(db, firmA, "platform.currency") === "USD" && audits() === "1");
   await db.$transaction(async (tx) => { await writeSetting(tx, { firmId: firmB, key: "platform.language", value: "fr", by: "user-S", workspaceId: WS }); });
   ok("PF-3 pass: inside a caller's transaction the change and its audit line are written together", await readSetting(db, firmB, "platform.language") === "fr" && audits() === "2");
@@ -196,6 +199,46 @@ try {
   ok("PF-3 fail: a key registered twice, or with a default that fails its own schema, is refused at registration",
     await throwsLike(() => registerSetting({ key: "check.pf3_limit", ownerModule: "check", description: "", schema: z.number(), default: 1, changePermission: "x" }), (e) => /already registered/.test(String(e)))
     && await throwsLike(() => registerSetting({ key: "check.pf3_bad", ownerModule: "check", description: "", schema: z.number().max(1), default: 9, changePermission: "x" }), (e) => /fails its own schema/.test(String(e))));
+  // ------------------------------------------------------------------------------------------- break round 1 (B-1..B-6)
+  ok("PF-3 fail (break m): a setting change with no one making it is refused", await throwsLike(() => writeSetting(db, { firmId: firmA, key: "platform.language", value: "fr", by: " ", workspaceId: WS }), (e) => e instanceof SettingRefused));
+  ok("PF-3 fail (break m): a time zone not in its own spelling is refused (america/toronto)", await throwsLike(() => writeSetting(db, { firmId: firmA, key: "platform.time_zone", value: "america/toronto", by: "user-R", workspaceId: WS }), (e) => e instanceof SettingRefused));
+  ok("PF-3 pass (break m): firmScope with the firm id in capitals is the same firm", (await db.platformStaff.findMany({ where: firmScope(firmA.toUpperCase()) })).length === 3 && !!inFirm(firmA.toUpperCase(), staffA[0]));
+  const staffOfA = sql(DEMO, `select id from platform_staff where actor_id='user-O'`);
+  ok("PF-3 fail (break B-2): a grant, licence record or session revocation of firm B naming firm A's person is refused",
+    refused(DEMO, `insert into platform_role_grant (id, firm_id, staff_id, role, granted_by) values (gen_random_uuid(), '${firmB}', '${staffOfA}', 'OWNER', 't')`, /platform_role_grant_firm_id_staff_id_fkey/)
+    && refused(DEMO, `insert into platform_staff_credential (id, firm_id, staff_id, representative_type, licensing_body, licence_number, updated_by, updated_at) values (gen_random_uuid(), '${firmB}', '${sql(DEMO, `select id from platform_staff where actor_id='user-T'`)}', 'rcic', 'CICC', 'R1', 't', now())`, /platform_staff_credential_firm_id_staff_id_fkey/)
+    && refused(DEMO, `insert into platform_session_revocation (id, firm_id, staff_id, reason) values (gen_random_uuid(), '${firmB}', '${staffOfA}', 'x')`, /platform_session_revocation_firm_id_staff_id_fkey/));
+  ok("PF-3 pass (break B-2): the same grant in the person's own firm is accepted", !!sql(DEMO, `insert into platform_role_grant (id, firm_id, staff_id, role, granted_by) values (gen_random_uuid(), '${firmA}', '${staffOfA}', 'READ_ONLY', 't') returning id`));
+  sql(DEMO, `update platform_subscription set status = 'ENDED' where firm_id = '${firmB}'`);
+  await seedSampleFirms(db);
+  ok("PF-3 fail (break B-3): an ended Sample subscription is not brought back by the seed", sql(DEMO, `select string_agg(status::text, ',') from platform_subscription where firm_id = '${firmB}'`) === "ENDED");
+  ok("PF-3 fail (break B-4): a firm's key cannot change (cases carry it)", refused(DEMO, `update platform_firm set key = 'renamed' where id = '${firmA}'`, /platform_firm_key_fixed/) && (await unmatchedCaseFirmKeys(db)).length === 0);
+  sql(DEMO, `update platform_staff set actor_id = null where actor_id = 'user-T'`);
+  const afterCleared = await seedSampleFirms(db);
+  ok("PF-3 pass (break B-4): a Sample person whose actor id a person cleared is left as it is, and the seed still runs", afterCleared.staffAdded === 0 && sql(DEMO, `select count(*) from platform_staff where email = 'second.representative@sample-firm.example.com'`) === "1");
+  sql(DEMO, `update platform_staff set actor_id = 'user-T' where email = 'second.representative@sample-firm.example.com'`);
+  const old = sql(DEMO, `insert into platform_invitation (id, firm_id, email, roles, token_hash, invited_by, created_at, expires_at) values (gen_random_uuid(), '${firmC}', 'late@firm-c.example.com', '{CASE_OFFICER}', 'h-old', 't', now() - interval '73 hours', now() - interval '1 hour') returning id`);
+  ok("PF-3 pass (break B-5): an expired open invitation does not block a new one; it is closed at its expiry",
+    !!sql(DEMO, invite(firmC, "late@firm-c.example.com")) && sql(DEMO, `select revoked_at = expires_at from platform_invitation where id = '${old}'`) === "t");
+  ok("PF-3 fail (break B-5): an open invitation not yet expired still blocks a second", refused(DEMO, invite(firmC, "late@firm-c.example.com"), /platform_invitation_one_open/));
+  ok("PF-3 fail (break m): an invitation both accepted and revoked, or with a null role, is refused",
+    refused(DEMO, `insert into platform_invitation (id, firm_id, email, roles, token_hash, invited_by, expires_at, accepted_at, revoked_at) values (gen_random_uuid(), '${firmC}', 'ar@firm-c.example.com', '{ADMIN}', 'h-ar', 't', now() + interval '1 hour', now(), now())`, /platform_invitation_one_ending/)
+    && refused(DEMO, `insert into platform_invitation (id, firm_id, email, roles, token_hash, invited_by, expires_at) values (gen_random_uuid(), '${firmC}', 'nr@firm-c.example.com', '{ADMIN,NULL}', 'h-nr', 't', now() + interval '1 hour')`, /platform_invitation_has_role/)
+    && refused(DEMO, `insert into platform_invitation (id, firm_id, email, roles, token_hash, invited_by, expires_at) values (gen_random_uuid(), '${firmC}', 'nn@firm-c.example.com', NULL, 'h-nn', 't', now() + interval '1 hour')`, /platform_invitation_has_role|null value/));
+  ok("PF-3 fail (break m): an email with spaces around it, or an owner or billing email in capitals, is refused",
+    refused(DEMO, newFirm("firm-sp", " sp@firm-sp.example.com"), /platform_firm_contact_email_lower/)
+    && refused(DEMO, `update platform_firm set owner_email = 'Owner@Firm-C.example.com' where id = '${firmC}'`, /platform_firm_owner_email_lower/)
+    && refused(DEMO, `update platform_firm set billing_email = 'b@firm-c.example.com ' where id = '${firmC}'`, /platform_firm_billing_email_lower/));
+  const evIn = async (tx: Parameters<Parameters<typeof db.$transaction>[0]>[0], seq?: bigint) => (await tx.moduleEvent.create({ data: { firmId: firmA, type: "check.pf3", subjectId: firmA, payload: {}, ...(seq === undefined ? {} : { seq }) } })).seq;
+  let blocked = false;
+  await db.$transaction(async (tx) => {
+    await evIn(tx);
+    blocked = refused(DEMO, `set lock_timeout = '300ms'; insert into module_event (id, firm_id, type, subject_id, payload) values (gen_random_uuid(), '${firmA}', 'check.other', '${firmA}', '{}')`, /lock timeout/);
+  }, { timeout: 20000 });
+  ok("PF-3 fail (break B-1): while one transaction holds an unwritten event, a second writer waits (seq follows commit order; no event is skipped by a reader)", blocked);
+  const given = await db.$transaction((tx) => evIn(tx, 1000000n));
+  ok("PF-3 fail (break B-1): a seq the writer gives is replaced by the next in order", given < 1000000n && given === BigInt(sql(DEMO, `select max(seq) from module_event`)));
+  ok("PF-3 pass (break B-1): after both commit, seq increases in commit order", sql(DEMO, `select bool_and(seq > lag) from (select seq, lag(seq) over (order by occurred_at, seq) lag from module_event) x where lag is not null`) === "t");
   ok("PF-3: no secret column — no PF-3 column is named like a password, secret or raw token",
     sql(DEMO, `select count(*) from information_schema.columns where table_name = any('{${PLATFORM_TABLES.join(",")}}') and column_name ~ '(password|secret|^token$|api_key)'`) === "0");
 } finally {

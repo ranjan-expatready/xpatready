@@ -5,9 +5,11 @@
 --   * the tables of the row: platform_firm, platform_setting_definition, platform_firm_setting, platform_plan,
 --     platform_subscription, platform_signup_link, platform_staff, platform_staff_credential, platform_role_grant,
 --     platform_role_permission, platform_invitation, platform_session_revocation, webhook_receipt, module_event.
---   * rules Prisma cannot say, at the end: platform_firm.country_code never changes (trigger); module_event refuses
---     update, delete and truncate (triggers); a sign-up link is used once; one open invitation per firm and email, one
---     live grant per person and role, one subscription not ENDED per firm (partial unique indexes); emails lower case;
+--   * rules Prisma cannot say, at the end: platform_firm.country_code and key never change (triggers); module_event refuses
+--     update, delete and truncate and numbers its rows in commit order (triggers); a sign-up link is used once; an expired
+--     invitation is closed by the next one; one open invitation per firm and email, one
+--     live grant per person and role, one subscription not ENDED per firm (partial unique indexes); a licence record,
+--     role grant or session revocation keys on (firm_id, staff_id), so it never names another firm's person; emails lower case;
 --     country codes two capital letters; an invitation lives at most 72 hours and a sign-up link at most 14 days.
 --   * data: the three Sample plans (Sample Solo 1 seat, Team 5, Firm 20; trial 14 days; no prices) and the starter
 --     roles' permission keys from SA-06 v3.15 §10b (774 rows; per role as its Appendix C: 231, 213, 145, 99, 46, 40).
@@ -16,7 +18,8 @@
 --   "platform_signup_link", "platform_subscription", "platform_plan", "platform_firm_setting",
 --   "platform_setting_definition", "platform_firm" CASCADE; DROP TYPE "PlatformRole", "PlatformStaffStatus",
 --   "PlatformSubscriptionStatus", "PlatformFirmStatus"; DROP FUNCTION platform_firm_country_fixed(),
---   module_event_insert_only(), platform_signup_link_used_once(); delete this folder's row from _prisma_migrations.
+--   module_event_insert_only(), module_event_next_seq(), platform_firm_key_fixed(), platform_invitation_close_expired(),
+--   platform_signup_link_used_once(); delete this folder's row from _prisma_migrations.
 
 -- CreateEnum
 CREATE TYPE "PlatformFirmStatus" AS ENUM ('PROVISIONING', 'TRIAL', 'ACTIVE', 'PAYMENT_HOLD', 'SECURITY_LOCK', 'ABANDONED', 'DELETED');
@@ -265,10 +268,10 @@ CREATE UNIQUE INDEX "platform_staff_actor_id_key" ON "platform_staff"("actor_id"
 CREATE UNIQUE INDEX "platform_staff_firm_id_email_key" ON "platform_staff"("firm_id", "email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "platform_staff_credential_staff_id_key" ON "platform_staff_credential"("staff_id");
+CREATE UNIQUE INDEX "platform_staff_firm_id_id_key" ON "platform_staff"("firm_id", "id");
 
 -- CreateIndex
-CREATE INDEX "platform_staff_credential_firm_id_idx" ON "platform_staff_credential"("firm_id");
+CREATE UNIQUE INDEX "platform_staff_credential_firm_id_staff_id_key" ON "platform_staff_credential"("firm_id", "staff_id");
 
 -- CreateIndex
 CREATE INDEX "platform_role_grant_firm_id_staff_id_idx" ON "platform_role_grant"("firm_id", "staff_id");
@@ -316,13 +319,13 @@ ALTER TABLE "platform_staff" ADD CONSTRAINT "platform_staff_firm_id_fkey" FOREIG
 ALTER TABLE "platform_staff_credential" ADD CONSTRAINT "platform_staff_credential_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "platform_firm"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "platform_staff_credential" ADD CONSTRAINT "platform_staff_credential_staff_id_fkey" FOREIGN KEY ("staff_id") REFERENCES "platform_staff"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "platform_staff_credential" ADD CONSTRAINT "platform_staff_credential_firm_id_staff_id_fkey" FOREIGN KEY ("firm_id", "staff_id") REFERENCES "platform_staff"("firm_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "platform_role_grant" ADD CONSTRAINT "platform_role_grant_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "platform_firm"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "platform_role_grant" ADD CONSTRAINT "platform_role_grant_staff_id_fkey" FOREIGN KEY ("staff_id") REFERENCES "platform_staff"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "platform_role_grant" ADD CONSTRAINT "platform_role_grant_firm_id_staff_id_fkey" FOREIGN KEY ("firm_id", "staff_id") REFERENCES "platform_staff"("firm_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "platform_invitation" ADD CONSTRAINT "platform_invitation_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "platform_firm"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -331,7 +334,7 @@ ALTER TABLE "platform_invitation" ADD CONSTRAINT "platform_invitation_firm_id_fk
 ALTER TABLE "platform_session_revocation" ADD CONSTRAINT "platform_session_revocation_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "platform_firm"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "platform_session_revocation" ADD CONSTRAINT "platform_session_revocation_staff_id_fkey" FOREIGN KEY ("staff_id") REFERENCES "platform_staff"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "platform_session_revocation" ADD CONSTRAINT "platform_session_revocation_firm_id_staff_id_fkey" FOREIGN KEY ("firm_id", "staff_id") REFERENCES "platform_staff"("firm_id", "id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "webhook_receipt" ADD CONSTRAINT "webhook_receipt_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "platform_firm"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -342,14 +345,17 @@ ALTER TABLE "module_event" ADD CONSTRAINT "module_event_firm_id_fkey" FOREIGN KE
 -- ---------------------------------------------------------------------------------------------------------------- rules
 -- Emails are stored lower case (so a unique index is case-blind); country codes are two capital letters (ISO 3166-1).
 ALTER TABLE "platform_firm" ADD CONSTRAINT "platform_firm_country_code_check" CHECK ("country_code" ~ '^[A-Z]{2}$'),
-  ADD CONSTRAINT "platform_firm_contact_email_lower" CHECK ("contact_email" = lower("contact_email") AND "contact_email" LIKE '%_@_%'),
-  ADD CONSTRAINT "platform_firm_key_check" CHECK ("key" ~ '^[a-z][a-z0-9-]{1,62}$');
-ALTER TABLE "platform_staff" ADD CONSTRAINT "platform_staff_email_lower" CHECK ("email" = lower("email") AND "email" LIKE '%_@_%'),
+  ADD CONSTRAINT "platform_firm_contact_email_lower" CHECK ("contact_email" = lower(btrim("contact_email")) AND "contact_email" LIKE '%_@_%'),
+  ADD CONSTRAINT "platform_firm_key_check" CHECK ("key" ~ '^[a-z][a-z0-9-]{1,62}$'),
+  ADD CONSTRAINT "platform_firm_owner_email_lower" CHECK ("owner_email" IS NULL OR ("owner_email" = lower(btrim("owner_email")) AND "owner_email" LIKE '%_@_%')),
+  ADD CONSTRAINT "platform_firm_billing_email_lower" CHECK ("billing_email" IS NULL OR ("billing_email" = lower(btrim("billing_email")) AND "billing_email" LIKE '%_@_%'));
+ALTER TABLE "platform_staff" ADD CONSTRAINT "platform_staff_email_lower" CHECK ("email" = lower(btrim("email")) AND "email" LIKE '%_@_%'),
   ADD CONSTRAINT "platform_staff_deactivation_reason_check" CHECK ("deactivation_reason" IS NULL OR char_length("deactivation_reason") BETWEEN 1 AND 200);
-ALTER TABLE "platform_invitation" ADD CONSTRAINT "platform_invitation_email_lower" CHECK ("email" = lower("email") AND "email" LIKE '%_@_%'),
+ALTER TABLE "platform_invitation" ADD CONSTRAINT "platform_invitation_email_lower" CHECK ("email" = lower(btrim("email")) AND "email" LIKE '%_@_%'),
   ADD CONSTRAINT "platform_invitation_72_hours" CHECK ("expires_at" > "created_at" AND "expires_at" <= "created_at" + interval '72 hours'),
-  ADD CONSTRAINT "platform_invitation_has_role" CHECK (cardinality("roles") >= 1);
-ALTER TABLE "platform_signup_link" ADD CONSTRAINT "platform_signup_link_email_lower" CHECK ("email" = lower("email") AND "email" LIKE '%_@_%'),
+  ADD CONSTRAINT "platform_invitation_has_role" CHECK ("roles" IS NOT NULL AND cardinality("roles") >= 1 AND array_position("roles", NULL) IS NULL),
+  ADD CONSTRAINT "platform_invitation_one_ending" CHECK ("accepted_at" IS NULL OR "revoked_at" IS NULL);
+ALTER TABLE "platform_signup_link" ADD CONSTRAINT "platform_signup_link_email_lower" CHECK ("email" = lower(btrim("email")) AND "email" LIKE '%_@_%'),
   ADD CONSTRAINT "platform_signup_link_country_code_check" CHECK ("country_code" ~ '^[A-Z]{2}$'),
   ADD CONSTRAINT "platform_signup_link_14_days" CHECK ("expires_at" > "created_at" AND "expires_at" <= "created_at" + interval '14 days'),
   ADD CONSTRAINT "platform_signup_link_used_with_firm" CHECK (("used_at" IS NULL) = ("firm_id" IS NULL));
@@ -358,8 +364,17 @@ ALTER TABLE "platform_plan" ADD CONSTRAINT "platform_plan_seats_check" CHECK ("s
 ALTER TABLE "platform_role_grant" ADD CONSTRAINT "platform_role_grant_ended_check" CHECK (("ended_at" IS NULL) = ("ended_by" IS NULL));
 ALTER TABLE "platform_staff_credential" ADD CONSTRAINT "platform_staff_credential_filled" CHECK (btrim("representative_type") <> '' AND btrim("licensing_body") <> '' AND btrim("licence_number") <> '');
 
--- One open invitation per firm and email (neither accepted nor revoked; a resend revokes the old one first, PF-4).
+-- One open invitation per firm and email (neither accepted nor revoked; a resend revokes the old one first, PF-4). An
+-- expired one is closed (revoked at its expiry) by the insert of the next one, so it never blocks it (break B-5); the seat
+-- count (PF-4) counts only invitations not yet expired.
 CREATE UNIQUE INDEX "platform_invitation_one_open" ON "platform_invitation" ("firm_id", "email") WHERE "accepted_at" IS NULL AND "revoked_at" IS NULL;
+CREATE FUNCTION platform_invitation_close_expired() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  UPDATE "platform_invitation" SET "revoked_at" = "expires_at"
+   WHERE "firm_id" = NEW."firm_id" AND "email" = NEW."email" AND "accepted_at" IS NULL AND "revoked_at" IS NULL AND "expires_at" <= now();
+  RETURN NEW;
+END $$;
+CREATE TRIGGER "platform_invitation_close_expired" BEFORE INSERT ON "platform_invitation" FOR EACH ROW EXECUTE FUNCTION platform_invitation_close_expired();
 -- One live grant per person and role (an ended grant keeps its row).
 CREATE UNIQUE INDEX "platform_role_grant_one_live" ON "platform_role_grant" ("firm_id", "staff_id", "role") WHERE "ended_at" IS NULL;
 -- One subscription that has not ENDED per firm.
@@ -375,6 +390,17 @@ BEGIN
 END $$;
 CREATE TRIGGER "platform_firm_country_fixed" BEFORE UPDATE OF "country_code" ON "platform_firm" FOR EACH ROW EXECUTE FUNCTION platform_firm_country_fixed();
 
+-- A firm's key never changes either: cases carry it (runtime_case.firm_key, the case side's column, no foreign key), so a
+-- renamed key would leave them pointing at no firm (break B-4).
+CREATE FUNCTION platform_firm_key_fixed() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW."key" IS DISTINCT FROM OLD."key" THEN
+    RAISE EXCEPTION 'platform_firm_key_fixed: a firm''s key never changes (% stays)', OLD."key" USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER "platform_firm_key_fixed" BEFORE UPDATE OF "key" ON "platform_firm" FOR EACH ROW EXECUTE FUNCTION platform_firm_key_fixed();
+
 -- The outbox is insert-only (contracts §0.5): no update, no delete, no truncate.
 CREATE FUNCTION module_event_insert_only() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
@@ -382,6 +408,18 @@ BEGIN
 END $$;
 CREATE TRIGGER "module_event_insert_only" BEFORE UPDATE OR DELETE ON "module_event" FOR EACH ROW EXECUTE FUNCTION module_event_insert_only();
 CREATE TRIGGER "module_event_no_truncate" BEFORE TRUNCATE ON "module_event" FOR EACH STATEMENT EXECUTE FUNCTION module_event_insert_only();
+
+-- seq is the readers' cursor, so it must follow commit order (break B-1: a sequence number taken at insert by a slow
+-- transaction would commit after a later one and be skipped by a reader already past it). Each insert takes one lock held
+-- to the end of its transaction and only then its number, so writers of module events commit one after another in seq
+-- order; a seq the writer gives is replaced.
+CREATE FUNCTION module_event_next_seq() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtext('module_event_seq'));
+  NEW."seq" := nextval(pg_get_serial_sequence('"module_event"', 'seq'));
+  RETURN NEW;
+END $$;
+CREATE TRIGGER "module_event_next_seq" BEFORE INSERT ON "module_event" FOR EACH ROW EXECUTE FUNCTION module_event_next_seq();
 
 -- A sign-up link is used once: once used_at is set, the link never changes again.
 CREATE FUNCTION platform_signup_link_used_once() RETURNS trigger LANGUAGE plpgsql AS $$

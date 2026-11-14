@@ -10,12 +10,16 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export class FirmScopeError extends Error {}
 
 /** The where clause of one firm's rows: `{ ...where, firmId }`. A where that names another firm is refused (it would
- *  read across the wall), and a missing or malformed firm id is refused before any query runs. */
+ *  read across the wall), and a missing or malformed firm id is refused before any query runs. The id is used in lower
+ *  case (PostgreSQL prints uuids so). It scopes the top-level rows only: an `include` or a relation filter reaching a
+ *  list of another table (e.g. a plan's subscriptions) takes its own firmScope. Rows that name a staff member carry the
+ *  pair (firm_id, staff_id), so a firm's row can never point at another firm's person. */
 export function firmScope<W extends Record<string, unknown>>(firmId: string, where?: W): W & { firmId: string } {
   if (typeof firmId !== "string" || !UUID.test(firmId)) throw new FirmScopeError(`firmScope: "${String(firmId)}" is not a firm id`);
+  const id = firmId.toLowerCase();
   const given = where?.firmId;
-  if (given !== undefined && given !== firmId) throw new FirmScopeError("firmScope: the where clause names another firm");
-  return { ...(where ?? ({} as W)), firmId };
+  if (given !== undefined && (typeof given !== "string" || given.toLowerCase() !== id)) throw new FirmScopeError("firmScope: the where clause names another firm");
+  return { ...(where ?? ({} as W)), firmId: id };
 }
 
 /** The firm's own row of platform_firm (its id is the firm id). */

@@ -57,15 +57,15 @@ export async function seedSampleFirms(db: PrismaClient, firms: SampleFirm[] = re
           businessAddress: (f.office ?? null) as Prisma.InputJsonValue,
         } });
         r.firmsAdded++;
-      }
-      if (!(await tx.platformSubscription.findFirst({ where: { firmId: firm.id, status: { not: "ENDED" } } }))) {
+        // The subscription comes with the firm, once: an ended one is a person's change and is kept (break B-3).
         const plan = await tx.platformPlan.findUnique({ where: { code: f.solo ? "solo" : "team" } });
         if (!plan) throw new Error("seed-sample-firms: the Sample plans are missing (the PF-3 migration adds them)");
         await tx.platformSubscription.create({ data: { firmId: firm.id, planId: plan.id, status: "ACTIVE" } });
         r.subscriptionsAdded++;
       }
       for (const u of f.users) {
-        if (await tx.platformStaff.findUnique({ where: { actorId: u.id } })) continue; // there: never changed by the seed
+        // There (by its actor id, or by its email in the firm when a person cleared the actor id): never changed by the seed.
+        if (await tx.platformStaff.findFirst({ where: { OR: [{ actorId: u.id }, { firmId: firm.id, email: emailOf(u, f.key) }] } })) continue;
         const staff = await tx.platformStaff.create({ data: {
           firmId: firm.id, actorId: u.id, email: emailOf(u, f.key), displayName: u.name,
           familyName: u.family_name ?? null, givenNames: u.given_names ?? null, status: "ACTIVE",

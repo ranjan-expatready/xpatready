@@ -8,6 +8,8 @@
 // api/src/platform/firm-scope.ts. Rules Prisma cannot say (immutable country, insert-only events, single-use links, one
 // open invitation, lower-case emails) are in the migration 20261114015002_pf3_platform_tables. No audit table here: the
 // one trail is audit_event (AUD-1, contracts §7). Every price and limit here is Sample until the founder sets it.
+// Rows naming a staff member (licence record, role grant, session revocation) key on (firm_id, staff_id), so a firm's row
+// can never point at another firm's person.
 
 /// Firm states (contracts §7, SA-2-4, -7, -21): "overdue" is an indicator on the subscription, not a firm state; exit is
 /// cancel at period end → hold → deleted after 90 days; there is no CLOSED by us.
@@ -51,7 +53,7 @@ enum PlatformRole {
 
 /// A firm (contracts §1.1 as changed by §7; SA-2-1, -9, -24, -25). key is the firm key cases already carry
 /// (runtime_case.firm_key): the Sample firms keep `sample-firm` and `sample-solo` (P-559 (4)). country_code never
-/// changes (a trigger); contact_email is lower case and belongs to one firm.
+/// changes, nor does key (cases carry it; triggers); contact_email is lower case and belongs to one firm.
 model PlatformFirm {
   id              String             @id @default(uuid()) @db.Uuid
   key             String             @unique
@@ -202,6 +204,8 @@ model PlatformStaff {
   revocations PlatformSessionRevocation[]
 
   @@unique([firmId, email])
+  /// The target of the (firm_id, staff_id) keys below: a row of firm A can never point at firm B's staff (break B-2).
+  @@unique([firmId, id])
   @@map("platform_staff")
 }
 
@@ -210,7 +214,7 @@ model PlatformStaff {
 model PlatformStaffCredential {
   id                 String   @id @default(uuid()) @db.Uuid
   firmId             String   @map("firm_id") @db.Uuid
-  staffId            String   @unique @map("staff_id") @db.Uuid
+  staffId            String   @map("staff_id") @db.Uuid
   representativeType String   @map("representative_type")
   licensingBody      String   @map("licensing_body")
   licenceNumber      String   @map("licence_number")
@@ -219,9 +223,10 @@ model PlatformStaffCredential {
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   firm  PlatformFirm  @relation(fields: [firmId], references: [id], onDelete: Restrict)
-  staff PlatformStaff @relation(fields: [staffId], references: [id], onDelete: Restrict)
+  staff PlatformStaff @relation(fields: [firmId, staffId], references: [firmId, id], onDelete: Restrict)
 
-  @@index([firmId])
+  /// One licence record per person (a staff member is in one firm, so (firm, staff) is the person).
+  @@unique([firmId, staffId])
   @@map("platform_staff_credential")
 }
 
@@ -239,7 +244,7 @@ model PlatformRoleGrant {
   endReason String?      @map("end_reason")
 
   firm  PlatformFirm  @relation(fields: [firmId], references: [id], onDelete: Restrict)
-  staff PlatformStaff @relation(fields: [staffId], references: [id], onDelete: Restrict)
+  staff PlatformStaff @relation(fields: [firmId, staffId], references: [firmId, id], onDelete: Restrict)
 
   @@index([firmId, staffId])
   @@map("platform_role_grant")
@@ -285,7 +290,7 @@ model PlatformSessionRevocation {
   reason    String
 
   firm  PlatformFirm  @relation(fields: [firmId], references: [id], onDelete: Restrict)
-  staff PlatformStaff @relation(fields: [staffId], references: [id], onDelete: Restrict)
+  staff PlatformStaff @relation(fields: [firmId, staffId], references: [firmId, id], onDelete: Restrict)
 
   @@index([firmId, staffId, revokedAt])
   @@map("platform_session_revocation")
@@ -310,8 +315,10 @@ model WebhookReceipt {
 }
 
 /// The transactional outbox to the case side (contracts §0.5): written in the transaction of the change that causes it,
-/// insert-only (a trigger refuses update, delete and truncate). seq is the read cursor (`GET /api/platform/events?after=`);
-/// delivery is at least once and consumers are idempotent by id, so delivery is the consumer's cursor, not a column here.
+/// insert-only (a trigger refuses update, delete and truncate). seq is the read cursor (`GET /api/platform/events?after=`):
+/// a trigger gives it under one lock held to commit, so seq follows commit order and a reader past n never misses a later
+/// commit below n (a writer's own seq is replaced). Delivery is at least once and consumers are idempotent by id, so
+/// delivery is the consumer's cursor, not a column here.
 model ModuleEvent {
   id         String   @id @default(uuid()) @db.Uuid
   seq        BigInt   @unique @default(autoincrement())
