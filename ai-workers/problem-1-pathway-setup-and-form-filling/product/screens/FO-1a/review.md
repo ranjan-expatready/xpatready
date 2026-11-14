@@ -157,6 +157,32 @@ Journey score, round 3: **8½/10**. Correct data drops to half a point again bec
 
 Journey score, round 4: **9½/10**. Correct data is back to 1. Plain words stays at ½ for the long service names, such as "Study permits › Study permit".
 
-**Verdict: Approve.** No Blocker or Major is open.
+**Round 4 verdict: Approve.** No Blocker or Major is open.
 
 Reviewer: Approve 1aaccdb4c3c0d8c31d0b13b8a513258c406f6982
+
+## Round 5: commit 94ca99117 (diff `f4eaad629..94ca99117`, P-277)
+Two commits: 7e868861f (shared event name, for CI shard 2's B164) and 94ca99117 (the two automated Devin Review threads on the PR).
+* **Tests:**
+  * At 94ca99117: `check_fo1a_sales_schema.ts` gives **119 passed, 0 failed**, and `check_b164_no_engine_keys.ts` gives **63 passed, 0 failed**.
+  * At 7e868861f, from a `git archive` copy: B164 gives 62 passed, 0 failed, and FO-1a gives 116 passed. I take the one-check difference in B164 to be the copy having no git history; I did not confirm that.
+* **The event name now comes from `ports/events.ts`. Accepted.**
+  * The file imports zod only, and `zod` is in the studio's `package.json`.
+  * `EVENT.FIRM_CREATED` replaces all three spellings in `firm-seed.ts`; the SQL one is now a bound parameter, and the catch-up test covers it.
+  * B164 is unchanged and still scans `engine/` and `api/src`. Moving the event name to the shared contract follows the brief's "shared event payload types go in `prototype/studio/ports/`"; it is not a way around the check.
+  * The Docker context lets in the whole `prototype` folder, so `ports/` ships with the image.
+  * `tsc -p api/tsconfig.json` reports no error in `firm-seed.ts`, `ports/events.ts` or the FO-1a test. The 15 errors it reports are in other suites (e.g. `check_vv_checklist.ts`, `check_x2b_bulk_apply.ts`), and the API is not compiled before it runs.
+* **Devin thread (1) is fixed: one lock per company on link removals.**
+  * Reproduced in two psql sessions with the default deferral: each session ends one of a contact's two live roles (PRIMARY, SIGNATORY) on a company with an open Corporate prospect.
+  * The second commit was refused, and one live link remained. The suite also has a race test that uses immediate mode.
+  * `FOR NO KEY UPDATE` does not block foreign-key share locks, so new contacts and new prospects on the company do not wait.
+* **Devin thread (2) is fixed: the seed command reports failures.**
+  * It prints `failed` explicitly and exits 1. The test forces one firm's seed to fail and checks that the command exits 1 and names the firm.
+  * Once the cause is removed, the same command seeds that firm and exits 0.
+* **Still open:** none. The PR-recorded items (m2/B5, m8, m10, m11, m12) are unchanged.
+
+Journey score, round 5: **9½/10** (unchanged).
+
+**Verdict: Approve.** No Blocker or Major is open at 94ca99117.
+
+Reviewer: Approve 94ca991179b07e9b3d6dcc4e5fc7cdca284e0fc7
