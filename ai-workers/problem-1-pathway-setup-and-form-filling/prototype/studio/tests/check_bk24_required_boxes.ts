@@ -141,14 +141,16 @@ const rowOf = (who: string) => marriage.find((m) => m.data_path.includes(`.${who
 ok("BK-25: IMM 5707's marriage-ceremony boxes are mapped to one person field, the applicant's row about the form's subject and the spouse's row about the spouse (read from this copy's field map)",
   marriage.length === 2 && rowOf("Applicant")?.outcome === "mapped" && rowOf("Applicant")?.person === "form_subject" && rowOf("Spouse")?.person === "subject_spouse_or_partner" && !!rowOf("Applicant")?.fact && rowOf("Applicant")?.fact === rowOf("Spouse")?.fact, marriage);
 
-// P-598 (tech lead on #1747): the marriage boxes enter the library after every other combination's release 1, so only the
-// Study permit's release maps them; another release that files IMM 5707 still has them filled by hand (P-487 (3)).
-const fromReleases = JSON.parse(sql(`select coalesce(json_agg(x), '[]') from (select distinct on (c.combination_key, e->>'data_path') c.combination_key k, e->>'data_path' box, e->>'outcome' outcome
+// P-598 (tech lead on #1747): the marriage boxes enter the library after every combination's release 1, so only the Study
+// permit's own release 2 maps them; every other combination's release 1 that files IMM 5707 keeps them filled by hand,
+// byte-identical to what was reviewed (P-487 (3)).
+const fromReleases = JSON.parse(sql(`select coalesce(json_agg(x), '[]') from (select c.combination_key k, r.version v, e->>'data_path' box, e->>'outcome' outcome
   from config_release r join combination c on c.id = r.combination_id, jsonb_array_elements(r.snapshot->'field_maps') m, jsonb_array_elements(m->'entries') e
-  where m->>'form_number' = 'IMM 5707' and e->>'data_path' like '%MarriageInPerson%' order by c.combination_key, e->>'data_path', r.version) x`)) as { k: string; box: string; outcome: string }[];
-const ownRelease = fromReleases.filter((x) => x.k === KEY), otherReleases = fromReleases.filter((x) => x.k !== KEY);
-ok("BK-25 (P-598): the Study permit's release maps both IMM 5707 marriage boxes, and every other combination's first release that files IMM 5707 keeps them filled by hand (its reviewed release unchanged)",
-  ownRelease.length === 2 && ownRelease.every((x) => x.outcome === "mapped") && otherReleases.length >= 2 && otherReleases.every((x) => x.outcome !== "mapped"), fromReleases);
+  where m->>'form_number' = 'IMM 5707' and e->>'data_path' like '%MarriageInPerson%') x`)) as { k: string; v: number; box: string; outcome: string }[];
+const ownLatest = Math.max(0, ...fromReleases.filter((x) => x.k === KEY).map((x) => x.v));
+const ownRelease = fromReleases.filter((x) => x.k === KEY && x.v === ownLatest), otherReleases = fromReleases.filter((x) => x.k !== KEY && x.v === 1);
+ok("BK-25 (P-598): the Study permit's release 2 maps both IMM 5707 marriage boxes, and every other combination's release 1 that files IMM 5707 keeps them filled by hand (its reviewed release unchanged)",
+  ownLatest === 2 && ownRelease.length === 2 && ownRelease.every((x) => x.outcome === "mapped") && otherReleases.length >= 2 && otherReleases.every((x) => x.outcome !== "mapped"), fromReleases);
 
 /** The boxes this copy's own file requires (a.–c. above), and those its file leaves empty. */
 function requiredOf(c: Copy, values: Record<string, string>) {
