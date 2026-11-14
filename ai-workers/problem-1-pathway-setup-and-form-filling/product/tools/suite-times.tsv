@@ -1,8 +1,9 @@
 # Seconds per suite on GitHub's 2-core Linux machine, read from the suite tables in the parts' logs: the median of the
 # PASS rows of the 8 newest green merge-queue batch runs with 8 parts (14 Nov, nightly fix: 43529755382, 43513878221,
 # 43487470477, 43486033316, 43472390183, 43468461288, 43466670477, 43451519844; 481 units, 467 suites timed there).
-# Suites none of those batches ran (quarantined then, by hand or by B122) take the median of the finished parts 2 and 4
-# of scheduled nightly run 43343263212 (13 Nov; check_bk5_start_browser.cjs, check_c95_release_update_browser.ts), else
+# Suites none of those batches ran (quarantined then, by hand or by B122) take their one row in the finished parts 2 and 4
+# of scheduled nightly run 43343263212 (13 Nov: check_c95_release_update_browser.ts PASS 102 s; check_bk5_start_browser.cjs
+# FAIL 390 s, a failing run's time, no PASS sample yet), else
 # keep the 10 Nov file's value (14 suites; that file: median of 8 batches with 6 parts, 42832155459 ... 42751977941).
 # run-suites.sh --shard balances the shards by these times (longest first); a suite missing here counts as 30 s.
 # Refresh the same way when many suites are new (the 10 Nov file summed 213 min against 311 min measured on 14 Nov and

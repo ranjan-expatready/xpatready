@@ -100,8 +100,9 @@ jobs:
     runs-on: ubuntu-latest
     # 14 Nov (P-436 (7), P-502): 6 parts at 45 min gave no verdict on 13 and 14 Nov. Measured (suite-times.tsv, 8 green
     # batches): 311 min of suites, so 51.8 min a part on 6, ~57 min a job with set-up; on 8 parts the deal's longest part
-    # is 40.4 min of suites + ~3.3 min of copies starting and stopping + ~2 min of set-up = ~46 min; x 1.25 = 58.
-    timeout-minutes: 58
+    # (part 4: 126 units, the 5 quarantined and the 0-s rows among them, 50 isolated copies) is 40.4 min of suites
+    # + ~3.8 min of copies starting and stopping (~4.5 s each) + ~2 min of set-up = ~46.2 min; x 1.25 = 57.8, so 59.
+    timeout-minutes: 59
     permissions: { contents: read }
     concurrency: { group: "nightly-${{ matrix.shard }}", cancel-in-progress: false }
     strategy:
