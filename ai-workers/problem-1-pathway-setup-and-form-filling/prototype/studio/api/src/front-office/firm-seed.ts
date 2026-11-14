@@ -31,8 +31,10 @@ export const STAGES: ReadonlyArray<{ key: string; label: string; kind: FoStageKi
 ];
 export const PIPELINES: readonly FoPipeline[] = ["INDIVIDUAL", "CORPORATE"];
 
-/** AG-2-80 rule 2 (closing a lead; "Added to a prospect" and "Combined into another lead" are set only by the system) and
- *  AG-2-44 rule 2 (losing a prospect). Labels are AG-02's; keys are fixed when made. */
+/** AG-2-80 rule 2 (closing a lead; "Added to a prospect" and "Combined into another lead" are set only by the system),
+ *  AG-2-44 rules 2-3 (losing a prospect; "Duplicate of another prospect" is a system reason) and AG-2-98 rule 5 ("Combined
+ *  into another prospect", set only by Combine). Labels are AG-02's; keys are AG-02's where it names one, else fixed when
+ *  made. A system reason can be renamed, never removed or turned off (fo_reason_fixed). */
 export const REASONS: ReadonlyArray<{ kind: FoReasonKind; key: string; label: string; isSystem?: boolean }> = [
   { kind: "LEAD_CLOSE", key: "NOT_INTERESTED", label: "Not interested" },
   { kind: "LEAD_CLOSE", key: "JUNK_OR_SPAM", label: "Junk or spam" },
@@ -45,8 +47,9 @@ export const REASONS: ReadonlyArray<{ kind: FoReasonKind; key: string; label: st
   { kind: "PROSPECT_LOST", key: "WENT_WITH_COMPETITOR", label: "Went with competitor" },
   { kind: "PROSPECT_LOST", key: "UNRESPONSIVE", label: "Unresponsive" },
   { kind: "PROSPECT_LOST", key: "NOT_READY", label: "Not ready or timing" },
-  { kind: "PROSPECT_LOST", key: "DUPLICATE_PROSPECT", label: "Duplicate of another prospect" },
+  { kind: "PROSPECT_LOST", key: "DUPLICATE_PROSPECT", label: "Duplicate of another prospect", isSystem: true },
   { kind: "PROSPECT_LOST", key: "OTHER", label: "Other" },
+  { kind: "PROSPECT_LOST", key: "COMBINED_PROSPECT", label: "Combined into another prospect", isSystem: true },
 ];
 
 /** The web form every firm starts with: off, no consent wording yet (it cannot be turned on without one), no allowed
@@ -55,12 +58,32 @@ export const WEB_FORM = { name: "Website enquiry form", thankYouText: "Thank you
 
 export type FirmSeedResult = { firmId: string; seeded: boolean; stages: number; reasons: number; webForms: number; services: number };
 
-/** The released, not retired combinations, by name (the firm's "Interested in" list in month one, AG-16-76). */
+/** The released, not retired combinations, each named by its place: its program chain from the top down, joined with
+ *  " › ", and its own name when that differs from the last step ("Work permit › With an LMIA › Inside Canada", not
+ *  "Inside Canada" alone: review m6; the same parts the app's trail shows, without the pathway type). A combination
+ *  without a readable name (no letter or digit) is left out (break B6), so one bad row never stops a firm's seed. This is
+ *  the firm's "Interested in" list in month one (AG-16-76). */
 export async function releasedCombinations(db: PrismaClient | Prisma.TransactionClient): Promise<{ id: string; label: string }[]> {
-  return db.$queryRaw<{ id: string; label: string }[]>`select c.id::text as id, c.label from combination c
-    where c.retired_at is null and exists (select 1 from config_release r where r.combination_id = c.id and r.status = 'RELEASED')
-    order by c.label, c.id`;
+  const rows = await db.$queryRaw<{ id: string; label: string; chain: string[] | null }[]>`
+    with recursive up as (
+      select c.id as cid, p.parent_node_key as parent, p.workspace_id as ws, p.label, 0 as depth
+        from combination c join program_def p on p.id = c.program_def_id
+      union all
+      select up.cid, p.parent_node_key, up.ws, p.label, up.depth + 1
+        from up join program_def p on p.workspace_id = up.ws and p.program_node_key = up.parent
+       where up.depth < 12)
+    select c.id::text as id, btrim(c.label) as label,
+           (select array_agg(btrim(u.label) order by u.depth desc) from up u where u.cid = c.id and u.label ~ '[[:alnum:]]') as chain
+      from combination c
+     where c.retired_at is null and c.label ~ '[[:alnum:]]'
+       and exists (select 1 from config_release r where r.combination_id = c.id and r.status = 'RELEASED')`;
+  return rows
+    .map((r) => { const chain = r.chain ?? []; return { id: r.id, label: (chain.at(-1) === r.label ? chain : [...chain, r.label]).join(" › ") }; })
+    .sort((a, b) => a.label.localeCompare(b.label) || a.id.localeCompare(b.id));
 }
+
+/** Firm states that get no front office (contracts §7 §1.1): a firm that left, or never finished setting up. */
+const NOT_SEEDED = new Set(["DELETED", "ABANDONED"]);
 
 /** Seeds one firm's front office inside the caller's transaction, once (see the header). A firm id that is no platform
  *  firm is refused. */
@@ -68,7 +91,9 @@ export async function seedFirmFrontOffice(tx: Prisma.TransactionClient, firmId: 
   const id = firmScope(firmId).firmId;
   const none: FirmSeedResult = { firmId: id, seeded: false, stages: 0, reasons: 0, webForms: 0, services: 0 };
   // Named here in words (the database refuses it too, fo_sales_setup_firm_exists, but Prisma reports only "foreign key").
-  if (!(await tx.platformFirm.findUnique({ where: { id }, select: { id: true } }))) throw new Error(`firm-seed: ${id} is no platform firm`);
+  const firm = await tx.platformFirm.findUnique({ where: { id }, select: { status: true } });
+  if (!firm) throw new Error(`firm-seed: ${id} is no platform firm`);
+  if (NOT_SEEDED.has(firm.status)) return none;
   await tx.foSalesSetup.createMany({ data: [{ firmId: id }], skipDuplicates: true });
   // The row's lock is held to commit: a second seed of the same firm waits here and then sees seeded_at.
   const [setup] = await tx.$queryRaw<{ seeded_at: Date | null }[]>`select seeded_at from fo_sales_setup where firm_id = ${id}::uuid for update`;
@@ -103,13 +128,19 @@ export async function onFirmCreated(db: PrismaClient, event: { type: string; fir
 }
 
 /** Catch-up over the outbox: every firm with a `firm.created` event and no seeded front office (so a missed or failed
- *  delivery is made good by the next run). */
-export async function seedCreatedFirms(db: PrismaClient): Promise<FirmSeedResult[]> {
+ *  delivery is made good by the next run). One firm that fails is named in `failed` and the others still run (break B6). */
+export async function seedCreatedFirms(db: PrismaClient): Promise<FirmSeedResult[] & { failed?: { firmId: string; error: string }[] }> {
   const firms = await db.$queryRaw<{ firm_id: string }[]>`select distinct e.firm_id::text as firm_id from module_event e
-    where e.type = 'firm.created' and not exists (select 1 from fo_sales_setup s where s.firm_id = e.firm_id and s.seeded_at is not null)
+    join platform_firm f on f.id = e.firm_id
+    where e.type = 'firm.created' and f.status not in ('DELETED', 'ABANDONED')
+      and not exists (select 1 from fo_sales_setup s where s.firm_id = e.firm_id and s.seeded_at is not null)
     order by 1`;
-  const out: FirmSeedResult[] = [];
-  for (const f of firms) out.push((await onFirmCreated(db, { type: "firm.created", firmId: f.firm_id }))!);
+  const out: FirmSeedResult[] & { failed?: { firmId: string; error: string }[] } = [];
+  const failed: { firmId: string; error: string }[] = [];
+  for (const f of firms) {
+    try { out.push((await onFirmCreated(db, { type: "firm.created", firmId: f.firm_id }))!); } catch (e) { failed.push({ firmId: f.firm_id, error: String(e).slice(0, 300) }); }
+  }
+  if (failed.length) out.failed = failed;
   return out;
 }
 

@@ -24,10 +24,12 @@ enum FoDoor {
   BOOKING
 }
 
-/// What happened to one arrival attempt (AG-2-84 rule 3): written PENDING first, then completed.
+/// What happened to one arrival attempt (AG-2-84 rule 3): written PENDING first, then completed. ON_OPEN_PROSPECT: a
+/// booking by a person who has an open prospect makes no lead and goes on that person's timeline (AG-2-84 rule 8).
 enum FoArrivalOutcome {
   PENDING
   CREATED
+  ON_OPEN_PROSPECT
   REJECTED_NO_CONTACT
   FAILED
 }
@@ -83,7 +85,8 @@ enum FoWonVia {
   CONVERTED
 }
 
-/// Why a prospect moved (contracts §2.1; AG-2-26: every move names its cause).
+/// Why a prospect moved (contracts §2.1; AG-2-26: every move names its cause). CHANGE_TYPE is Change type, Individual ↔
+/// Corporate until signed (contracts §7 §2.1): the only move between pipelines.
 enum FoMoveCause {
   PERSON
   BOOKING
@@ -91,6 +94,7 @@ enum FoMoveCause {
   RETAINER_EXECUTED
   SIGNED_OFFLINE
   CONVERT
+  CHANGE_TYPE
 }
 
 enum FoCallDirection {
@@ -192,7 +196,7 @@ model FoPerson {
 }
 
 /// One arrival attempt, written first (AG-2-84 rule 3): a repeat post with the same intake key is one receipt, so one
-/// lead. The intake key carries its door: `form:<web form id>:<submission id>`, `booking:<booking id>` or
+/// lead; its lead is about its person (the key (firm_id, lead_id, person_id)). The intake key carries its door: `form:<web form id>:<submission id>`, `booking:<booking id>` or
 /// `manual:<request id>` (checked). The receipt keeps a hash of the normalised request and of the IP address, never the
 /// raw request (AG-2-84 rule 3); the campaign facts go to fo_lead_attribution.
 model FoArrivalReceipt {
@@ -211,7 +215,7 @@ model FoArrivalReceipt {
 
   setup   FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   webForm FoWebForm?   @relation(fields: [firmId, webFormId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
-  lead    FoLead?      @relation(fields: [firmId, leadId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  lead    FoLead?      @relation(fields: [firmId, leadId, personId], references: [firmId, id, personId], onDelete: Restrict, onUpdate: Restrict)
   person  FoPerson?    @relation(fields: [firmId, personId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
 
   @@unique([firmId, door, intakeKey])
@@ -327,8 +331,8 @@ model FoCompany {
 
 /// A person linked to a company with a role (AG-2-77 rules 3-6): linked, never copied. Removing a contact ends the link
 /// (valid_to); the person stays. The same person and role are never linked twice while live, and a company has at most
-/// one live PRIMARY contact (partial unique indexes); a PRIMARY link named by a Corporate prospect cannot be ended
-/// (trigger).
+/// one live PRIMARY contact (partial unique indexes); the last live link of a person named as an open Corporate
+/// prospect's primary contact cannot be ended (checked at commit, so a swap in one transaction passes; AG-2-77 rule 6).
 model FoCompanyContact {
   id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId    String        @map("firm_id") @db.Uuid
@@ -350,7 +354,8 @@ model FoCompanyContact {
 
 /// A prospect (contracts §2.1, §2.6, §7 §2.1; AG-2-52, AG-2-77): made by Engage from a lead. Its subject is a person
 /// (INDIVIDUAL) or a company (CORPORATE), with exactly one primary contact: the subject person, or a person with a live
-/// PRIMARY link to the company. Its stage is of its own firm and of its type's pipeline (the key (firm_id, type,
+/// link to the company (AG-2-77 rule 4; checked at commit while the prospect is open, so the primary can be swapped in
+/// one transaction). Its stage is of its own firm and of its type's pipeline (the key (firm_id, type,
 /// stage_id)). number is `P-` and five digits per firm, set by the database. Its status is its stage's kind (read
 /// through the stage, never copied). A LOST stage needs a lost reason; a WON stage needs won_via (trigger).
 model FoProspect {
@@ -396,7 +401,7 @@ model FoProspect {
 
 /// A pipeline stage (AG-2-52): the firm's own copy, seeded per firm with AG-02's eight keys for each pipeline. A key
 /// never changes (reports and the move rules read it, trigger); one WON, one LOST and one NURTURE per pipeline (partial
-/// unique index).
+/// unique index), never removed or turned off; each pipeline keeps at least one live ACTIVE stage (AG-2-20 rule 5).
 model FoStage {
   id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId    String      @map("firm_id") @db.Uuid
@@ -415,6 +420,7 @@ model FoStage {
 
   @@unique([firmId, pipeline, key])
   @@unique([firmId, pipeline, id])
+  @@unique([firmId, id])
   @@map("fo_stage")
 }
 
@@ -466,8 +472,8 @@ model FoCall {
   @@map("fo_call")
 }
 
-/// A note on a person, optionally in the context of one lead or one prospect (contracts §2.1, §7 §2.1; AG-13-21, -24):
-/// INTERNAL by default, add-only (a trigger refuses update, delete and truncate; a correction is a new note).
+/// A note on a person, optionally in the context of one lead (about that lead's person) or one prospect (contracts §2.1,
+/// §7 §2.1; AG-13-21, -24): INTERNAL by default, add-only (a trigger refuses update, delete and truncate; a correction is a new note).
 model FoNote {
   id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId     String           @map("firm_id") @db.Uuid
@@ -481,7 +487,7 @@ model FoNote {
 
   setup    FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   person   FoPerson     @relation(fields: [firmId, personId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
-  lead     FoLead?      @relation(fields: [firmId, leadId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  lead     FoLead?      @relation(fields: [firmId, leadId, personId], references: [firmId, id, personId], onDelete: Restrict, onUpdate: Restrict)
   prospect FoProspect?  @relation(fields: [firmId, prospectId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([firmId, personId, createdAt])
@@ -489,12 +495,12 @@ model FoNote {
 }
 
 /// One move of a prospect between stages, with its cause (contracts §2.1; AG-2-26). from_stage_id is empty for the
-/// first stage at Engage. Kept as history: never changed or removed (trigger).
+/// first stage at Engage. Written after the prospect's own change, in its transaction: to_stage_id is the prospect's
+/// stage then, and only CHANGE_TYPE moves between pipelines (trigger). Kept as history: never changed or removed.
 model FoStageMove {
   id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId      String      @map("firm_id") @db.Uuid
   prospectId  String      @map("prospect_id") @db.Uuid
-  pipeline    FoPipeline
   fromStageId String?     @map("from_stage_id") @db.Uuid
   toStageId   String      @map("to_stage_id") @db.Uuid
   cause       FoMoveCause
@@ -503,8 +509,8 @@ model FoStageMove {
 
   setup     FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   prospect  FoProspect   @relation(fields: [firmId, prospectId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
-  fromStage FoStage?     @relation("MoveFrom", fields: [firmId, pipeline, fromStageId], references: [firmId, pipeline, id], onDelete: Restrict, onUpdate: Restrict)
-  toStage   FoStage      @relation("MoveTo", fields: [firmId, pipeline, toStageId], references: [firmId, pipeline, id], onDelete: Restrict, onUpdate: Restrict)
+  fromStage FoStage?     @relation("MoveFrom", fields: [firmId, fromStageId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  toStage   FoStage      @relation("MoveTo", fields: [firmId, toStageId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
 
   @@index([firmId, prospectId, at])
   @@map("fo_stage_move")
