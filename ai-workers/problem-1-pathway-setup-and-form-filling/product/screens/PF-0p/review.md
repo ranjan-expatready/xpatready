@@ -71,3 +71,21 @@ Yes, with a pass and a fail per fake. The rollback check would fail if the adapt
 **New findings in the diff:** none.
 
 **Reviewer: Approve 0e7772bbc5ce47803ad3fc55c07755dc93ed0065**
+
+## Round 3 (post-approval diff `cc6156088..c491f25c8f13c338cfe4739a6aeaf9119ad505be`, one commit; only the diff was read)
+**Ran:** `check_pf0p_ports.ts` gives **70 passed, 0 failed** (exit 0). `typecheck.mjs` passes with no new type errors (15 known).
+
+**What changed, and my reading of it:**
+* **Job keys are now unique per job name** (`jobs.ts`: the used set is keyed by name plus key, for user keys and for recurring run keys alike). `cancel(key)` now cancels every waiting job with that key, whatever its name. Both doc comments say so, and the earlier note that keys are shared across firms (carry a uuid or the firm id) stays. This narrows the brief's "a key never queues twice" to "never twice under one name". That is a fair way to read the brief: within one queue, which is how pg-boss keys its job table, the rule still holds, and the PF-14 lane asked for this shape. A downstream row that used one key under two names now queues both jobs instead of silently dropping the second, which is the less surprising behaviour. Lead B should know the brief's wording now means "per name". This is a note, not a finding.
+* **`runDue` cap:** the loop returns as soon as nothing runnable is left and throws only when a runnable job remains after 10 000 runs. The logic is right: exactly 10 000 runs followed by an empty queue returns normally.
+* **Copies:** the `jobs` getter copies `runAt` and `payload`. `fakeMail` copies attachment bytes when it accepts a message, and `sent` and `inbox` return copies (including `sentAt` and the bytes).
+
+**Do the new tests prove their claims?** Yes, each one would fail if the code were reverted:
+* Per name: the same name is refused while another name queues, and `cancel` reaches both names (2 jobs cancelled).
+* `jobs` copies: changing a returned `runAt` or `payload` leaves the queued job unchanged.
+* Mail copies: changing the caller's buffer after `send` leaves the record unchanged, and so does changing the attachment or `sentAt` of a record read back.
+* The exact-10 000 case has no test. The builder's reason (the fake picks jobs in O(n²), so 10 000 jobs is too slow for a suite) is acceptable for a guard in a test fake.
+
+**New findings:** none. Rounds 1 and 2 stay closed, and the Lead notes stand.
+
+**Reviewer: Approve c491f25c8f13c338cfe4739a6aeaf9119ad505be**
