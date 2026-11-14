@@ -1044,7 +1044,7 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
     def is_lane_branch(n):   # org chart lanes: the Leads' own branches are the Leads' nodes
         return is_session_branch(n) and not n.startswith(("lead/", "lead-"))
     lanes = [b for b in branches if is_session_branch(b["name"]) and not b["name"].startswith(("lead/", "lead-b-"))      # §11 R8
-             and parse_iso(b["pushed_at"]) >= cutoff - timedelta(minutes=LANE_WINDOW_MIN)]
+             and cutoff - timedelta(minutes=LANE_WINDOW_MIN) <= parse_iso(b["pushed_at"]) <= cutoff]   # frozen snapshot (P-596): a push after taken_at belongs to the next refresh, as in cockpit-reconcile.py
     Lw = num(len(lanes), f"branches with a push in the last {LANE_WINDOW_MIN} min, not main, the merge queue or the Leads' records branches "
              f"(lead/*, lead-b-*); {gh_src} branches_recent.json (push time = head commit time)", "measured", L, names=[b["name"] for b in lanes])
     # R1b: ready rows treat any non-records merged PR (app code or not) as merged

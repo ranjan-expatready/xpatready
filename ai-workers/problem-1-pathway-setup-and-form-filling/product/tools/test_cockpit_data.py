@@ -453,6 +453,12 @@ class ReviewFixes(unittest.TestCase):
         _, c = run(snap_with({"github/branches_recent.json": br}))
         self.assertEqual(c["capacity"]["lanes_working"]["names"], ["claude/bk-6"])
 
+    def test_push_after_taken_at_is_not_a_lane(self):
+        # 14 Nov 19:1x IST: two lanes pushed during a 97 s collection; the board said 14, reconcile 12 (frozen snapshot, P-596)
+        br = jread(os.path.join(FIX, "github/branches_recent.json")) + [{"name": "claude/late-push", "sha": "9" * 40, "pushed_at": "2026-11-20T06:31:00Z"}]
+        _, c = run(snap_with({"github/branches_recent.json": br}))
+        self.assertEqual(c["capacity"]["lanes_working"]["names"], ["claude/bk-6"])
+
     def test_r8_parked_prs_leave_the_queues(self):
         d = jread(os.path.join(FIX, "github/open_prs_detail.json"))
         d[2]["head_committed_at"] = "2026-11-12T06:00:00Z"            # #116: no push for 8 days → parked
