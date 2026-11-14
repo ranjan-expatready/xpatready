@@ -9,10 +9,11 @@ import { Studio } from "../../studio.ts";
 import { FORM_SETUP } from "../../form-setup.ts";
 import type { CheckpointStep } from "./_context.ts";
 import { sections } from "./060-sections-from-forms.ts";
-import type { CombinationContext } from "./080-form-setup.ts";
+import { type CombinationContext, formSetup } from "./080-form-setup.ts";
 import { askOwnYesNo } from "./combination/140-own-yes-no.ts";
 import approveLibrary from "./combination/150-approve-library.ts";
-import placeFromParts from "./combination/200-place-from-parts.ts";
+import { placed } from "./combination/_placed.ts";
+import { placeFromFormParts } from "../../form-part-placements.ts";
 import placementResults from "./combination/220-placement-results.ts";
 
 /** The combinations released (the result's `released`), whether the Visitor visa is one (its case and release 2), and
@@ -56,10 +57,15 @@ export default {
       try {
         await ctx.timed("later own questions and release 2 (P-598)", async () => {
           // The same steps a combination's own pass takes for them (080): ask (140), the second person approves the new
-          // field (150), place where nobody is asked yet (200) and record what it refused (220); then its release 2.
+          // field (150), place where nobody is asked yet (200, checking again only the sections it places into) and record what it refused (220); then its release 2.
           const cc: CombinationContext = { c: sections(ctx).fromForms.find((x) => x.id === c.id) ?? { id: c.id, label: c.label, files: 0 }, key: ctx.keyOf.get(c.id), setup, held: new Set(), pass: "own" };
           await askOwnYesNo(ctx, setup, laterOf(c.id));
-          for (const step of [approveLibrary, placeFromParts, placementResults]) await step.run(ctx, cc);
+          await approveLibrary.run(ctx, cc);
+          // As 200 does, but checking again only the sections it places into: steps 085–105 have changed the draft since
+          // the form setup, and a choice this placement does not touch stays as release 1 made it.
+          placed(cc).p = await placeFromFormParts(db, studio, author, c.id, new Set(), true);
+          formSetup(ctx).placedFacts.push(...placed(cc).p!.placed.map((x) => x.fact));
+          await placementResults.run(ctx, cc);
           await release(c, "Submitted by the sample loader (C10.1 checkpoint, P-598): the questions asked on a form other combinations file too, after their release 1.");
         });
         state.later.push(c.label);
