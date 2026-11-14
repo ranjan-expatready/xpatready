@@ -1,0 +1,44 @@
+# Founder's board data checks (P-596, spec §6.9): the unit tests of tools/cockpit-data.py on hand-made fixtures, the
+# invariants and schema on the fixture snapshot, and the independent reconciliation on the same snapshot. Runs only when
+# the board's script, tests, fixtures or page change. One Linux machine, about a minute, US$0 (P-528, B190).
+name: cockpit-tests
+on:
+  pull_request:
+    paths:
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/cockpit-*"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/test_cockpit_data.py"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/fixtures/cockpit/**"
+      - "ai-workers/problem-1-pathway-setup-and-form-filling/product/cockpit/**"
+      - ".github/workflows/cockpit-tests.yml"
+permissions:
+  contents: read
+concurrency:
+  group: cockpit-tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      P: ai-workers/problem-1-pathway-setup-and-form-filling/product
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: jsonschema (the data contract's validator)
+        run: pip install jsonschema==4.26.0
+      - name: unit tests (hand-worked numbers on the fixtures)
+        run: python3 -m unittest "$P/tools/test_cockpit_data.py" -v
+      - name: invariants, schema and reconciliation on the fixture snapshot
+        run: |
+          out="$RUNNER_TEMP/cockpit"
+          mkdir -p "$out"
+          python3 "$P/tools/cockpit-data.py" --out "$out/data.json" --from-snapshot "$P/tools/fixtures/cockpit/snapshot" --offline --no-history-write
+          python3 - "$out/data.json" <<'PY'
+          import json, sys
+          d = json.load(open(sys.argv[1]))
+          bad = [i["name"] for i in d["trust"]["invariants"] if not i["ok"]]
+          print("trust:", d["trust"]["state"], "| invariants broken:", bad or "none")
+          sys.exit(1 if bad or d["trust"]["state"] == "disagree" else 0)
+          PY

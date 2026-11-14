@@ -1,0 +1,12 @@
+[
+ {
+  "name": "label guard (label-guard.yml on main)",
+  "conclusion": "success",
+  "created_at": "2026-11-20T06:00:00Z"
+ },
+ {
+  "name": "push guard (ci.yml job guard, newest finished merge-queue run)",
+  "conclusion": "success",
+  "created_at": "2026-11-20T05:00:00Z"
+ }
+]

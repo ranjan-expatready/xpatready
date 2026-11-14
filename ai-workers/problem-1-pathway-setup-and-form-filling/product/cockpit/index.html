@@ -119,6 +119,51 @@ details#details{margin:14px 0}details#details>summary{cursor:pointer;background:
 .example{display:inline-block;border:1px dashed var(--wait);color:var(--wait);border-radius:4px;padding:0 6px;font-size:11.5px;margin-left:6px}
 .modlist{margin-top:10px}
 .dim{opacity:.55}
+/* A61-A63 (P-596) */
+.strip-in{grid-template-columns:repeat(6,minmax(0,1fr))}
+.lineage{max-width:1120px;margin:3px auto 0;font-size:11px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:baseline;flex:none}
+.lt-green{background:var(--good)} .lt-amber{background:var(--wait);border-radius:2px;transform:rotate(45deg)} .lt-red{background:var(--bad);border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%)} .lt-grey{background:transparent;border:1.5px solid var(--none)}
+.tile.hl{cursor:pointer}
+.nm{color:var(--ink3);font-style:italic;font-weight:400;border-bottom:1px dotted var(--ink3);cursor:help}
+.rep{display:inline-block;border:1px solid var(--line);color:var(--ink3);border-radius:4px;padding:0 5px;font-size:10.5px;margin-left:5px;vertical-align:middle;font-style:normal;font-weight:400}
+.banner{border-radius:8px;padding:9px 12px;margin:12px 0 0;font-size:14px;border:1px solid}
+.banner.red{background:var(--bad-soft);border-color:var(--bad);color:var(--ink)} .banner.amber{background:var(--wait-soft);border-color:var(--wait);color:var(--ink)}
+.banner b{font-weight:600}
+#healthPanel{max-height:60vh;overflow:auto;max-width:1120px;margin:6px auto 0;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+#healthPanel[hidden]{display:none}
+#healthPanel li{grid-template-columns:minmax(0,max-content) minmax(0,1fr)}
+.ov{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:960px){.ov{grid-template-columns:1.3fr 1fr}.ov>#top3{grid-column:1/-1}.ov>#top3 .cards3{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:1200px){.ov{grid-template-columns:1.35fr 1fr 1fr;align-items:start}.ov>#top3{grid-column:auto}.ov>#top3 .cards3{grid-template-columns:1fr}}
+.ov>section{margin:0;min-width:0}
+.ov .cards3{grid-template-columns:1fr;gap:6px}
+.ov .card{padding:6px 9px}
+.ovsec{padding:12px 14px 12px}
+.ovsec>h2{font-size:15px}
+.ovsec p.line{margin:6px 0 4px;font-size:14.5px}
+.ovsec p.line b{font-family:var(--mono);font-weight:600}
+.cards3{display:grid;grid-template-columns:1fr;gap:8px;margin-top:8px}
+@media(min-width:760px){.cards3{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-width:0;font-size:13px}
+.card .k{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3)}
+.card .w{font-weight:600;margin:1px 0}
+.card .small{font-size:12px;line-height:1.35}
+.card.miss{border-color:var(--wait);box-shadow:inset 3px 0 0 var(--wait)}
+details.more{margin:12px 0}
+details.more>summary{cursor:pointer;color:var(--ink2);font-size:13.5px;padding:6px 0}
+details.inline>summary{cursor:pointer;color:var(--accent);font-size:12.5px;display:inline}
+.org{display:grid;gap:10px}
+.org .lvl{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.org .node{border:1px solid var(--line);border-radius:6px;background:var(--panel2);padding:6px 9px;font-size:12.5px;min-width:0}
+.org .node b{font-weight:600}
+.org .lead{border-color:var(--accent)}
+.org .q{border-style:dashed;border-color:var(--wait)}
+.org .lanes{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px}
+.wmark{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-left:6px;vertical-align:middle}
+.wmark.rep{background:transparent;border:1.5px solid var(--accent);padding:0;margin-left:6px;width:8px;height:8px;border-radius:50%}
+.workline{font-size:13.5px;margin:0 0 8px}
+@media(max-width:760px){.strip-in{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:520px){
   .strip-in{gap:4px}.tile{padding:4px 5px}.tile .v{font:600 15px/1.2 var(--sans)}.tile .k{font-size:10px;text-transform:none;letter-spacing:0}.tile .s{display:none}
   section{padding:12px 10px 14px}
@@ -131,8 +176,9 @@ details#details{margin:14px 0}details#details>summary{cursor:pointer;background:
   <div class="tile"><div class="k">Release 1</div><div class="v">&#x2026;</div></div>
   <div class="tile"><div class="k">Proof verified</div><div class="v">&#x2026;</div></div>
   <div class="tile"><div class="k">Next date</div><div class="v">&#x2026;</div></div>
-  <div class="tile"><div class="k">Data age</div><div class="v">&#x2026;</div></div>
-</div></div>
+  <div class="tile"><div class="k">Health</div><div class="v">&#x2026;</div></div>
+  <div class="tile"><div class="k">Plan use</div><div class="v">&#x2026;</div></div>
+</div><div class="lineage" id="lineage"></div><div id="healthPanel" hidden></div></div>
 <div class="wrap" id="app">
   <header class="top"><h1>Founder's Progress Board</h1><p>Pathway Configurator, Release 1. Every number comes from the data script; hover or tap a number to see where it comes from.</p></header>
   <div id="body"><p class="muted">Loading data.json&#x2026;</p></div>
@@ -159,7 +205,7 @@ var TONE={"qa Works":"good","Merged":"prog","In PR":"prog","Shaped":"wait","Not 
   "pushing":"good","quiet":"wait","blocked":"bad","ready":"good","in PR":"prog","merged":"good"};
 function tone(s){return TONE[s]||"none";}
 function toneVar(t){return "var(--"+t+")";}
-function ageText(h){if(h==null)return "n/a";if(h<1)return Math.round(h*60)+" min";if(h<48)return (Math.round(h*10)/10)+" h";return Math.round(h/24)+" d";}
+function ageText(h){if(h==null)return "n/a";if(h<0)h=0;if(h<1)return Math.round(h*60)+" min";if(h<48)return (Math.round(h*10)/10)+" h";return Math.round(h/24)+" d";}
 function section(no,id,title,why,inner){return '<section id="'+id+'"><h2>'+esc(title)+'</h2><p class="why">'+esc(why)+'</p>'+inner+'</section>';}
 function kpi(label,val,sub,s,cls){return '<div class="kpi'+(cls?" "+cls:"")+'"'+S(s)+'><div class="k">'+esc(label)+'</div><div class="v">'+val+'</div>'+(sub?'<div class="s">'+sub+'</div>':"")+'</div>';}
 
@@ -178,18 +224,148 @@ document.addEventListener("keydown",function(e){
 });
 
 function dataAgeH(){return D?(Date.now()-Date.parse(D.freshness.generated_at))/3600000:null;}
+/* Health item 2, the one number the page computes (spec §0.5): data age from generated_at and the viewer's clock */
+function ageState(h){var r=(D.freshness.page_age_rule||{amber_min:45,red_min:120});return h==null?"amber":h*60>=r.red_min?"red":h*60>=r.amber_min?"amber":"green";}
+function worst(a,b){var o={red:3,amber:2,green:1,grey:0};return (o[a]||0)>=(o[b]||0)?a:b;}
+function dot(st){return '<span class="dot lt-'+esc(st||"grey")+'" aria-hidden="true"></span>';}
+var LIGHTWORD={green:"green",amber:"amber",red:"red",grey:"grey",page:"page"};
+/* a number with lineage {value,src,sha,as_of,class,reason}: "not measured" with its reason, never a guess */
+function srcN(n){if(!n)return "";return [n.src,n.sha?"sha "+n.sha:"",n.as_of?"as of "+n.as_of:"",n["class"]||"",n.reason?"reason: "+n.reason:""].filter(Boolean).join(" · ");}
+function nm(reason){return '<span class="nm"'+S(reason||"not measured")+'>not measured</span>';}
+function N(n,suf,fmt){if(!n)return nm("missing from data.json");if(n.value==null)return nm(n.reason);var t=fmt?fmt(n.value):esc(n.value)+(suf||"");return '<span'+S(srcN(n))+'>'+t+'</span>'+(n["class"]==="reported"?'<span class="rep">Lead-reported</span>':"");}
+function dshort(x){return x&&/^\d{4}-/.test(x)?short(x):esc(x);}
 
 function renderStrip(){
   var s=D.summary,el=document.getElementById("stripIn");
   var ny=v(s.needs_you),bu=v(s.burnup_pct),w=v(s.works)||[null,null],nd=v(s.next_date),age=dataAgeH();
-  var ageCls=age>6?"alert":age>2?"warn":"";
+  var H=D.health||{light:"amber"},ast=ageState(age),light=worst(H.light,ast),R=D.resources||{};
+  var wk=v(R.weekly_pct),bn=v(R.burn_pct_per_h),pd=v(R.paid_usd_today);
   el.innerHTML=
    '<div class="tile'+(ny>0?" alert":"")+'"'+S(src(s.needs_you))+'><div class="k">Needs you</div><div class="v">'+nz(ny)+'</div><div class="s">open items</div></div>'+
    '<div class="tile"'+S(src(s.burnup_pct))+'><div class="k">Release 1 verified</div><div class="v">'+nz(bu,"%")+'</div><div class="s">of 101 must-have rows, verified by QA</div></div>'+
    '<div class="tile"'+S(src(s.works))+'><div class="k">Proof verified</div><div class="v">'+nz(w[0])+'<span class="muted">/'+nz(w[1])+'</span></div><div class="s">capabilities</div></div>'+
    '<div class="tile"'+S(src(s.next_date))+'><div class="k">Next date</div><div class="v">'+(nd?esc(short(nd.date)):"none")+'</div><div class="s">'+(nd?esc(nd.kind)+", in "+nd.days_left+" d":"")+'</div></div>'+
-   '<div class="tile '+ageCls+'"'+S("generated "+D.freshness.generated_ist+"; amber over 2 h, red over 6 h")+'><div class="k">Data age</div><div class="v">'+ageText(age)+'</div><div class="s">'+esc(D.freshness.generated_ist||"")+'</div></div>';
+   '<div class="tile hl'+(light==="red"?" alert":light==="amber"?" warn":"")+'" id="healthTile" role="button" tabindex="0" aria-expanded="false" title="Health: tap for the seven checks"><div class="k">Health</div><div class="v">'+dot(light)+esc(LIGHTWORD[light])+'</div><div class="s">data '+ageText(age)+' old</div></div>'+
+   '<div class="tile"'+S("Lead-reported: "+src(R.weekly_pct)+" | "+src(R.burn_pct_per_h)+" | "+src(R.paid_usd_today))+'><div class="k">Plan use</div><div class="v">'+(wk==null?'<span class="nm">n/a</span>':esc(wk)+"%")+'</div><div class="s">'+(bn==null?"burn not reported":esc(bn)+" %/h")+' · US$'+(pd==null?"?":esc(pd))+' today</div></div>';
+  var L=D.lineage||{},ah=L.ahead_of_main;
+  document.getElementById("lineage").innerHTML='Records from <span class="mono">'+esc(L.records_branch||"?")+' @'+esc((L.records_sha||"").slice(0,9))+'</span>, '+
+    (ah&&ah.value!=null?esc(ah.value)+' commits not on <span class="mono">main</span>':nm(ah&&ah.reason))+' · main <span class="mono">@'+esc((L.main_sha||"").slice(0,9))+'</span> · snapshot '+esc(L.taken_at||"");
+  renderHealth(ast,age);
+  var t=document.getElementById("healthTile");
+  t.onclick=function(){var p=document.getElementById("healthPanel");p.hidden=!p.hidden;t.setAttribute("aria-expanded",String(!p.hidden));};
+  t.onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();t.onclick();}};
 }
+function renderHealth(ast,age){
+  var H=D.health,p=document.getElementById("healthPanel");if(!H){p.innerHTML='<p class="muted">Health not in data.json.</p>';return;}
+  var h='<ul class="items small">';
+  H.items.forEach(function(i){var st=i.state==="page"?ast:i.state,det=i.state==="page"?"Board data "+ageText(age)+" old (amber at 45 min, red at 2 h); generated "+esc(D.freshness.generated_ist):esc(i.detail);
+    h+='<li><span class="tag">'+i.id+'</span><div>'+dot(st)+'<b>'+esc(i.name)+'</b>'+(i["class"]==="reported"?'<span class="rep">Lead-reported</span>':"")+' — '+det+
+      ((st==="red")?'<div><b>Action:</b> '+esc(i.action||"")+' · <b>Owner:</b> '+esc(i.owner||"")+'</div>':"")+'</div></li>';});
+  p.innerHTML=h+'</ul><p class="small muted">Red if any check fails, amber if any is not measured, else green. Token use and paid US$ are Lead-reported numbers in the strip.</p>';
+}
+
+/* banners (§6.6) */
+function rBanner(){
+  var T=D.trust;if(!T)return '<div class="banner amber"><b>Numbers not checked</b>: the trust block is missing.</div>';
+  if(T.state==="disagree")return '<div class="banner red" role="alert"><b>'+esc(T.banner)+'</b> — the board and the independent check give different numbers; the Lead fixes the script or the record before trusting them. '+
+    T.diffs.map(function(d){return esc(d.name)+": board "+esc(JSON.stringify(d.board))+", check "+esc(JSON.stringify(d.reconcile));}).join("; ")+'</div>';
+  if(T.state==="not checked")return '<div class="banner amber"><b>Numbers not checked</b> — '+esc(T.reason||"the independent reconciliation did not run")+'.</div>';
+  return "";
+}
+
+/* §1 plan and pace */
+function rPace(){
+  var P=D.pace,F=D.forecast;if(!P)return "";
+  var lt=P.light||{state:"grey",why:""};
+  var bb=P.built.built_before;
+  var h=P.committed_date?'<p class="line small">'+dot(lt.state)+'<span'+S(lt.why)+'>'+esc(lt.state)+'</span><span class="muted"> · '+esc(lt.why)+'</span></p>':"";
+  if(P.committed_date)h+='<p class="line">Changes: need '+N(P.changes_needed_per_day,"",function(x){return "<b>"+esc(x)+"</b>";})+' a day, doing '+N(P.changes_per_day,"",function(x){return "<b>"+esc(x)+"</b>";})+' a day (last '+esc(P.changes_per_day.window_days)+' days).</p>';
+  else h+='<p class="line"><span'+S("light grey: "+lt.why)+'>'+dot(lt.state)+'</span>No committed date yet (set '+esc(dshort(P.committed_set_on))+'). At the current pace: 50% by '+N(F.p50,"",function(x){return "<b>"+dshort(x)+"</b>";})+', 85% by '+N(F.p85,"",function(x){return "<b>"+dshort(x)+"</b>";})+'.</p>'+
+    '<p class="line small">Changes: doing '+N(P.changes_per_day,"",function(x){return "<b>"+esc(x)+"</b>";})+' a day'+(P.changes_per_day.window_days?' (last '+esc(P.changes_per_day.window_days)+' days)':"")+'.</p>';
+  h+='<p class="line">Capabilities: '+N(P.built,"",function(x){return "<b>"+esc(x)+"</b>";})+' of '+N(P.rows_total)+' built'+(bb&&bb.value?' <span class="small muted"'+S(srcN(bb))+'>(+'+esc(bb.value)+' built before 13 Nov)</span>':"")+', '+N(P.proven,"",function(x){return "<b>"+esc(x)+"</b>";})+' proven.</p>';
+  var R=P.remaining,fb=R.flags_bk_unmerged;
+  h+='<p class="small muted" style="margin:2px 0">Remaining: '+N(R)+' changes ('+esc(R.label)+')'+(fb&&fb.value?'; '+N(fb)+' Bake rows not merged are counted in pace, not in scope':"")+(P.ratio?'; measured '+N(P.ratio)+' changes per built capability':"")+'. Forecast: '+esc(F.sample)+'.</p>';
+  if(P.scope_note)h+='<p class="small" style="color:var(--wait)">'+esc(P.scope_note)+'</p>';
+  h+='<div class="svgwrap" id="burnup"></div>';
+  h+='<details class="inline"><summary>Roadmap timeline</summary><div class="svgwrap" id="timeline" style="margin-top:6px"></div></details>';
+  return '<section class="ovsec" id="pace"><h2>Plan and pace</h2>'+h+'</section>';
+}
+function xScale(d0,d1,W,pad){var a=Date.parse(d0+"T00:00:00Z"),b=Date.parse(d1+"T00:00:00Z");return function(d){return pad+(Date.parse(d+"T00:00:00Z")-a)/Math.max(1,b-a)*(W-2*pad);};}
+function drawBurnup(){
+  var host=document.getElementById("burnup");if(!host||!D.burnup)return;
+  var B=D.burnup,W=Math.max(300,host.clientWidth||420),Hh=104,pad=26,top=10,d0=B.days[0],d1=B.x_end>B.days[B.days.length-1]?B.x_end:B.days[B.days.length-1];
+  var x=xScale(d0,d1,W,pad),mx=Math.max.apply(null,[1].concat(B.scope.filter(function(z){return z!=null;}),B.built));
+  var y=function(z){return top+(Hh-top-18)*(1-z/mx);};
+  var s='<svg width="100%" viewBox="0 0 '+W+' '+Hh+'" role="img" aria-label="Release 1 burn-up: scope, built and proven capabilities">';
+  if(B.h1&&B.h1.from){var a=x(B.h1.from),b=x(B.h1.to||B.h1.from);s+='<rect x="'+a+'" y="'+top+'" width="'+Math.max(3,b-a)+'" height="'+(Hh-top-18)+'" fill="var(--wait-soft)" stroke="var(--wait)" stroke-dasharray="'+(B.h1.kind==="committed"?"":"3 2")+'"><title>Plan H1 '+esc(B.h1.from+(B.h1.to?" to "+B.h1.to:"")+" ("+B.h1.kind+")")+'</title></rect>';}
+  var f=D.forecast||{};[["p50","50%"],["p85","85%"]].forEach(function(k){var vv=f[k[0]]&&f[k[0]].value;if(vv&&/^\d/.test(vv)){s+='<line x1="'+x(vv)+'" x2="'+x(vv)+'" y1="'+top+'" y2="'+(Hh-18)+'" stroke="var(--prog)" stroke-dasharray="2 3"/><text x="'+(x(vv)+2)+'" y="'+(top+9)+'" font-size="9.5" fill="var(--prog)">'+k[1]+'</text>';}});
+  function path(arr,step){var pts=[],prev=null;arr.forEach(function(z,i){if(z==null)return;var X=x(B.days[i]),Y=y(z);if(step&&prev!=null)pts.push(X+","+y(prev));pts.push(X+","+Y);prev=z;});return pts.join(" ");}
+  s+='<polyline points="'+path(B.scope,true)+'" fill="none" stroke="var(--ink3)" stroke-width="1.5"/>';
+  s+='<polyline points="'+path(B.built,false)+'" fill="none" stroke="var(--prog)" stroke-width="2"/>';
+  if(B.proven.some(function(z){return z!=null;}))s+='<polyline points="'+path(B.proven,false)+'" fill="none" stroke="var(--good)" stroke-width="2"/>';
+  s+='<line x1="'+pad+'" x2="'+(W-pad)+'" y1="'+(Hh-18)+'" y2="'+(Hh-18)+'" stroke="var(--line)"/>';
+  s+='<text x="'+pad+'" y="'+(Hh-4)+'" font-size="10" fill="var(--ink3)">'+esc(short(d0))+'</text><text x="'+(W-pad)+'" y="'+(Hh-4)+'" font-size="10" text-anchor="end" fill="var(--ink3)">'+esc(short(d1))+'</text>';
+  s+='<text x="'+(pad-4)+'" y="'+(y(mx)+4)+'" font-size="10" text-anchor="end" fill="var(--ink3)">'+mx+'</text>';
+  host.innerHTML=s+'</svg><div class="legend small"'+S(B.src)+'><span class="pill t-none">scope</span><span class="pill t-prog">built</span><span class="pill t-good">proven</span><span class="pill t-wait">plan H1 (band while a forecast)</span></div>';
+}
+function drawTimeline(){
+  var host=document.getElementById("timeline");if(!host)return;
+  var ds=(D.plan.dates||[]).filter(function(d){return d.date;}).sort(function(a,b){return a.date.localeCompare(b.date);});if(!ds.length){host.innerHTML='<p class="muted small">No dated plan rows.</p>';return;}
+  var today=new Date().toISOString().slice(0,10),d0=[ds[0].date,today].sort()[0],d1=[ds[ds.length-1].date_to||ds[ds.length-1].date,today].sort()[1];
+  var W=Math.max(300,host.clientWidth||420),H=40+ds.length*15,pad=20,x=xScale(d0,d1,W,pad);
+  var s='<svg width="100%" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Roadmap: plan dates by module">';
+  s+='<line x1="'+pad+'" x2="'+(W-pad)+'" y1="20" y2="20" stroke="var(--line)" stroke-width="2"/><line x1="'+x(today)+'" x2="'+x(today)+'" y1="8" y2="'+(H-4)+'" stroke="var(--accent)" stroke-dasharray="3 3"/><text x="'+(x(today)+3)+'" y="12" font-size="10" fill="var(--accent)">today</text>';
+  ds.forEach(function(d,i){var X=x(d.date),c=d.kind==="committed";
+    s+='<circle cx="'+X+'" cy="20" r="5" fill="'+(c?"var(--good)":"var(--panel)")+'" stroke="'+(c?"var(--good)":"var(--wait)")+'" stroke-width="2"><title>'+esc(d.id+" "+d.what+" ("+d.kind+", "+d.source+")")+'</title></circle>';
+    s+='<text x="'+Math.min(W-pad,Math.max(pad,X))+'" y="'+(40+i*15)+'" font-size="10.5" text-anchor="'+(X>W*0.7?"end":"start")+'" fill="var(--ink2)">'+esc(d.id+" "+short(d.date)+" · "+d.what.slice(0,60))+'</text>';});
+  host.innerHTML=s+'</svg><div class="legend small">'+pill("committed","good")+pill("forecast","wait")+'</div>';
+}
+
+/* §2 capacity */
+function rCapacity(){
+  var C=D.capacity;if(!C)return "";var lt=C.light||{};
+  var h='<p class="line">'+dot(lt.state)+'<span'+S(lt.why)+'>'+esc(C.constraint.line)+'</span></p>';
+  var A=C.age,o=A.older;
+  h+='<p class="line small">'+(o.value==null?'Work item age '+nm(o.reason):'<b>'+esc(o.value)+'</b> items older than usual')+(A.amber_items.length?' · <span style="color:var(--wait)">'+A.amber_items.length+' past the warning rule</span>':"")+
+    (A.items.length?' <details class="inline"><summary>list</summary><ul class="items small">'+A.items.map(function(i){return '<li><span class="tag">#'+i.pr+'</span><div>'+esc(i.title)+'<div class="muted">open '+esc(i.age_d)+' d · last push '+(i.push_h==null?"n/a":esc(i.push_h)+" h")+(i.older?" · older than usual":"")+(i.amber?" · past the warning rule":"")+'</div></div></li>';}).join("")+'</ul></details>':"")+'</p>';
+  h+='<p class="small muted" style="margin:2px 0">Lanes working '+N(C.lanes_working)+' · ready with a brief '+N(C.ready_rows)+(C.ready_rows.rows&&C.ready_rows.rows.length?' ('+esc(C.ready_rows.rows.slice(0,8).join(", "))+')':"")+' · room '+N(C.room)+' · open app PRs '+N(C.wip)+' · cycle time '+N(C.cycle_median_days," d")+' median · 85th percentile '+N(A.p85_days," d")+' · baton-held '+N(C.baton_held)+'</p>';
+  var st=C.stages;h+='<p class="small muted" style="margin:2px 0">Waiting: review '+N(st.review.count)+' (oldest '+N(st.review.wait_h," h")+', limit 2 h) · merge '+N(st.merge.count)+' (oldest '+N(st.merge.wait_h," h")+', limit 1 h) · qa '+N(st.qa.count)+' (oldest '+N(st.qa.wait_h," h")+', limit 24 h)</p>';
+  if(C.idle&&C.idle.length)h+='<p class="small muted" style="margin:2px 0">No push in 90 min: '+C.idle.slice(0,8).map(function(i){return "#"+i.pr+" "+esc(i.push_h)+" h";}).join(", ")+'</p>';
+  return '<section class="ovsec" id="capacity"><h2>Capacity</h2>'+h+'</section>';
+}
+
+/* §3 top 3 */
+function rTop3(){
+  var T=D.top3;if(!T)return "";
+  var nm_={today:"Today",week:"This week",month:"This month"},h='<div class="cards3">';
+  ["today","week","month"].forEach(function(k){var c=T.cards[k];
+    if(c.state!=="ok"){h+='<div class="card miss"'+S(T.src+" · "+c.why)+'><div class="k">'+nm_[k]+'</div><div class="w">'+esc(c.text)+'</div><div class="small muted">'+esc(c.why)+'</div></div>';return;}
+    h+='<div class="card"'+S(T.src+" · "+T.sha+" · as of "+T.as_of+" · reported")+'><div class="k">'+nm_[k]+'<span class="rep">Lead-reported</span>'+(T.example?'<span class="example">example data</span>':"")+'</div><div class="w">'+esc(c.what)+'</div><div class="small">'+esc(c.why)+'</div><div class="small"><b>Lead recommends:</b> '+esc(c.rec)+'</div><div class="small muted">Owner: '+esc(c.owner)+(c.needs_you?' · <a href="#needs">needs you: '+esc(c.needs_you)+'</a>':"")+'</div></div>';});
+  return '<section class="ovsec" id="top3"><h2>Top 3, with the Lead\'s recommendation</h2>'+h+'</div></section>';
+}
+function rOverview(){
+  return '<div class="ov">'+rPace()+rCapacity()+rTop3()+'</div>'+
+    '<details class="more" id="ovmore"><summary>More: Release 1 at a glance, on track, plan and dates</summary>'+rGlance()+rStatus()+rPlan()+'</details>';
+}
+
+/* §4 team: org chart of who works now */
+function rOrg(){
+  var O=D.org;if(!O)return "";
+  function lane(l){var q=l.seen!=="both";return '<div class="node'+(q?" q":"")+'"'+S((q?"? found only in "+(l.seen==="reported only"?"the Lead input":"GitHub (branches and open PRs)")+" · ":"")+O.src)+'><b>'+esc(l.name)+(q?" ?":"")+'</b><div class="muted">'+esc(l.role||"")+(l.row?" · "+esc(l.row):"")+(l.pr?" · #"+esc(l.pr):"")+(l.push_h!=null?" · push "+esc(l.push_h)+" h ago":"")+(l.state?" · "+esc(l.state):"")+'</div></div>';}
+  var leads=O.leads||[],h='<div class="org"><div class="lvl"><div class="node lead"><b>'+esc(O.founder.name)+'</b><div class="muted">'+esc(O.founder.role)+'</div></div></div><div class="lvl">';
+  leads.forEach(function(l){h+='<div class="node lead"'+S(l.src)+'><b>'+esc(l.name)+'</b><div class="muted">'+esc(l.role)+'</div></div>';});
+  h+='</div>';
+  leads.forEach(function(l){var mine=O.lanes.filter(function(x){return x.reports_to===l.name;});if(mine.length)h+='<div><div class="small muted">Reports to '+esc(l.name)+'</div><div class="lanes">'+mine.map(lane).join("")+'</div></div>';});
+  var rest=O.lanes.filter(function(x){return !leads.some(function(l){return l.name===x.reports_to;});});
+  if(rest.length)h+='<div><div class="small muted">Lanes with no reporting line in the Lead input</div><div class="lanes">'+rest.map(lane).join("")+'</div></div>';
+  h+='<div class="lvl small">'+'<div class="node">Standbys: '+esc((O.standbys||[]).join(", ")||"none listed")+'</div><div class="node">Strategy desk: '+esc((O.desk||[]).join(", ")||"none listed")+'</div><div class="node">Reviewers: '+esc(O.reviewers)+'</div></div></div>';
+  h+='<p class="small muted">How they work together: '+esc(O.how)+'. A box marked ? is found by only one source (Lead input or GitHub) and is listed in Health item 7.</p>';
+  return section("","team","Team: who works now","The founder, the two Leads and their lanes, cross-checked against GitHub pushes in the last 24 hours.",h);
+}
+
+/* §7 working today */
+function workMark(map){var W=D.working_today;if(!W)return "";var r=W.rows[String(map)];if(!r)return "";
+  return r.kind==="pr"?'<span class="wmark" title="open PR #'+esc(r.prs.join(", #"))+'" data-src="'+esc("working today: open PR #"+r.prs.join(", #")+" (measured)")+'"></span>':'<span class="wmark rep" title="Lead-reported lane: '+esc(r.sessions.join(", "))+'" data-src="'+esc("working today: Lead-reported lane "+r.sessions.join(", "))+'"></span>';}
 
 /* 1 needs you */
 function rNeeds(){
@@ -306,7 +482,7 @@ function rCaps(){
   h+='<div class="groupgrid">';
   C.groups.forEach(function(g){var rs=C.rows.filter(function(r){return r.group===g.id;});var done=rs.filter(function(r){return r.status==="qa Works";}).length;
     h+='<div class="grp"><h4><span>'+esc(g.id+". "+g.name)+'</span><span class="mono muted"'+S(src(C.counts))+'>'+done+'/'+rs.length+'</span></h4>';
-    rs.forEach(function(r){h+='<div class="row"'+S("MVP-CHECKLIST.md row "+r.map+" \u00b7 "+r.module+" \u00b7 "+r.backlog)+'><span>'+esc(r.map+" "+r.cap)+'</span>'+pill(r.status,tone(r.status))+'</div>';});h+='</div>';});
+    rs.forEach(function(r){h+='<div class="row"'+S("MVP-CHECKLIST.md row "+r.map+" \u00b7 "+r.module+" \u00b7 "+r.backlog)+'><span>'+esc(r.map+" "+r.cap)+workMark(r.map)+'</span>'+pill(r.status,tone(r.status))+'</div>';});h+='</div>';});
   h+='</div><h3>qa capabilities ('+(v(C.qa)||[]).length+')</h3>';
   (v(C.qa_by_milestone)||[]).forEach(function(m){h+='<div class="small" style="margin:4px 0"'+S(src(C.qa_by_milestone))+'><b>'+esc(m.milestone)+'</b>: <span class="mono">'+m.works+' of '+m.total+'</span> Works</div>';});
   var qs=v(C.qa)||[];["M2","M3","T"].forEach(function(ms){var g=qs.filter(function(q){return q.m===ms;});if(!g.length)return;
@@ -483,7 +659,8 @@ function rGlance(){
 }
 function rHeat(){
   var C=D.capabilities,order=["Not shaped","Shaped","In PR","Merged","qa Works"];
-  var h='<div class="box"><table><thead><tr><th>Business function</th><th class="n">Rows</th>';
+  var W=D.working_today,h=W?'<p class="workline"'+S(W.src+" \u00b7 "+W.sha+" \u00b7 as of "+W.as_of)+'><span class="wmark"></span> '+esc(W.line)+' <span class="small muted">(filled dot: open PR, measured; ring: Lead-reported lane)</span></p>':"";
+  h+='<div class="box"><table><thead><tr><th>Business function</th><th class="n">Rows</th>';
   order.forEach(function(k){h+='<th class="n">'+esc(lab(k))+'</th>';});
   h+='<th>Where it stands</th></tr></thead><tbody>';
   C.groups.forEach(function(g){var rs=C.rows.filter(function(r){return r.group===g.id;}),c={};order.forEach(function(k){c[k]=0;});
@@ -493,7 +670,8 @@ function rHeat(){
     else if(moving>0){t="wait";word=built+" of "+rs.length+" built, "+done+" proven";}
     else if(c["Shaped"]>0){t="prog";word="shaped, not started";}
     else {t="none";word="not shaped yet";}
-    h+='<tr'+S(src(C.counts))+'><td>'+esc(g.id+". "+g.name)+'</td><td class="n">'+rs.length+'</td>';
+    var wr=W?rs.filter(function(r){return W.rows[String(r.map)];}):[],wk=wr.length?(wr.some(function(r){return W.rows[String(r.map)].kind==="pr";})?'<span class="wmark" title="working today: '+esc(wr.map(function(r){return r.map;}).join(", "))+'"></span>':'<span class="wmark rep" title="Lead-reported lane on '+esc(wr.map(function(r){return r.map;}).join(", "))+'"></span>'):"";
+    h+='<tr'+S(src(C.counts))+'><td>'+esc(g.id+". "+g.name)+wk+'</td><td class="n">'+rs.length+'</td>';
     order.forEach(function(k){var n=c[k]||0;h+='<td class="n"'+(n?' style="background:'+toneVar(tone(k))+'-soft"':'')+'>'+(n||'<span class="muted">0</span>')+'</td>';});
     h+='<td>'+pill(word,t)+'</td></tr>';});
   h+='</tbody></table></div><p class="small muted">Colour rule: green = every row proven by qa; amber = some built or in a pull request; blue = shaped, not started; grey = not shaped. Customer-experience walk, compliance and risk columns join when TR-1 (requirement sources) and qa\'s Release 1 capabilities land.</p>';
@@ -512,10 +690,10 @@ function rFresh(){
 
 function render(){
   renderStrip();
-  var TABS=[["overview","Overview",[rGlance,rStatus,rPlan]],["caps","Capabilities",[rHeat,rCaps,rArch]],["factory","Factory",[rSystem,rBuilding,rQuality,rDevops,rHeal,rImprove,rRes]],["launch","Launch readiness",[rRisks]],["library","Library",[rLibrary]],["details","Details",[rLearn,rBacklog,rFresh]]];
+  var TABS=[["overview","Overview",[rOverview]],["caps","Capabilities",[rHeat,rCaps,rArch]],["factory","Factory",[rOrg,rSystem,rBuilding,rQuality,rDevops,rHeal,rImprove,rRes]],["launch","Launch readiness",[rRisks]],["library","Library",[rLibrary]],["details","Details",[rLearn,rBacklog,rFresh]]];
   var one=function(f){try{return f();}catch(e){return '<section><p class="err">This block could not be drawn: '+esc(e.message)+'</p></section>';}};
   var cur="overview";try{var sv=localStorage.getItem("board-tab");if(sv&&TABS.some(function(t){return t[0]===sv;}))cur=sv;}catch(e){}
-  var out='<p class="goal">Goal: Release 1 (production grade), complete and end to end, ready for the first real firm\'s data after the launch gate (P-570, P-589, P-594).</p>'+one(rNeeds);
+  var out=one(rBanner)+'<p class="goal">Goal: Release 1 (production grade), complete and end to end, ready for the first real firm\'s data after the launch gate (P-570, P-589, P-594).</p>'+one(rNeeds);
   out+='<div class="tabs" role="tablist">'+TABS.map(function(t){return '<button role="tab" type="button" data-tab="'+t[0]+'" aria-selected="'+(t[0]===cur)+'">'+esc(t[1])+'</button>';}).join("")+'</div>';
   TABS.forEach(function(t){out+='<div class="tabpanel" role="tabpanel" data-panel="'+t[0]+'"'+(t[0]===cur?'':' hidden')+'>';t[2].forEach(function(f){out+=one(f);});out+='</div>';});
   document.getElementById("body").innerHTML=out;
@@ -523,10 +701,12 @@ function render(){
     document.querySelectorAll(".tabs button").forEach(function(x){x.setAttribute("aria-selected",String(x===b));});
     document.querySelectorAll(".tabpanel").forEach(function(p){p.hidden=p.getAttribute("data-panel")!==id;});
     try{localStorage.setItem("board-tab",id);}catch(e){}
-    drawVSM();drawArch();});});
-  drawVSM();drawArch();
+    drawAll();});});
+  document.querySelectorAll("details").forEach(function(dd){dd.addEventListener("toggle",drawAll);});
+  drawAll();
 }
-var rt=null;window.addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(function(){if(D){drawVSM();drawArch();}},150);});
+function drawAll(){[drawVSM,drawArch,drawBurnup,drawTimeline].forEach(function(f){try{f();}catch(e){}});}
+var rt=null;window.addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(function(){if(D){drawAll();}},150);});
 setInterval(function(){if(D)renderStrip();},60000);
 
 fetch("data.json",{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})

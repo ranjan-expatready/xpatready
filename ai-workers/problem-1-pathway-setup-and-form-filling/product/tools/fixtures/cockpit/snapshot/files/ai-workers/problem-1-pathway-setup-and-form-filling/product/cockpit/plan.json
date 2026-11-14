@@ -1,0 +1,23 @@
+{
+ "as_of": "2026-11-20",
+ "baseline_rows": 8,
+ "dates": [
+  {
+   "id": "H1",
+   "level": "high",
+   "what": "Release 1 built",
+   "date": "2026-12-01",
+   "date_to": "2026-12-03",
+   "kind": "forecast",
+   "source": "fixture"
+  },
+  {
+   "id": "M1",
+   "level": "mid",
+   "what": "Five-day count",
+   "date": "2026-11-19",
+   "kind": "committed",
+   "source": "fixture"
+  }
+ ]
+}

@@ -1,0 +1,93 @@
+{
+ "as_of": "2026-11-20T11:30:00+05:30",
+ "weekly_pct": 40,
+ "weekly_resets": "2026-11-27T04:30:00+05:30",
+ "burn_pct_per_h": 1.5,
+ "paid_usd_today": 0,
+ "max_lanes": 4,
+ "top3": {
+  "today": {
+   "what": "Merge FO-1",
+   "why": "it unblocks FO-6",
+   "rec": "review it first",
+   "owner": "Lead 50"
+  },
+  "week": {
+   "what": "Shape row 5",
+   "why": "it is the largest unknown",
+   "rec": "split it in three",
+   "owner": "Lead B"
+  },
+  "month": {
+   "what": "Release 1 built",
+   "why": "the plan date",
+   "rec": "hold scope",
+   "owner": "Lead 50",
+   "needs_you": "A2"
+  }
+ },
+ "sessions": [
+  {
+   "name": "Lead 50",
+   "kind": "mac",
+   "role": "lead",
+   "state": "running"
+  },
+  {
+   "name": "Lead B",
+   "kind": "mac",
+   "role": "lead-b",
+   "state": "running"
+  },
+  {
+   "name": "FO-1 lane",
+   "kind": "cloud",
+   "role": "builder",
+   "state": "running",
+   "row": "FO-1",
+   "pr": 105,
+   "reports_to": "Lead B"
+  },
+  {
+   "name": "BK-6 lane",
+   "kind": "cloud",
+   "role": "builder",
+   "state": "running",
+   "row": "BK-6",
+   "pr": null,
+   "branch": "claude/bk-6",
+   "reports_to": "Lead 50"
+  },
+  {
+   "name": "FO-4 lane",
+   "kind": "cloud",
+   "role": "builder",
+   "state": "running",
+   "row": "FO-4",
+   "pr": null,
+   "reports_to": "Lead B"
+  },
+  {
+   "name": "qa lane",
+   "kind": "cloud",
+   "role": "qa",
+   "state": "running",
+   "row": "retests",
+   "reports_to": "Lead 50"
+  },
+  {
+   "name": "Old lane",
+   "kind": "cloud",
+   "role": "builder",
+   "state": "done",
+   "row": "PF-1",
+   "pr": 101
+  },
+  {
+   "name": "Lead 51",
+   "kind": "mac",
+   "role": "standby",
+   "state": "idle"
+  }
+ ]
+}

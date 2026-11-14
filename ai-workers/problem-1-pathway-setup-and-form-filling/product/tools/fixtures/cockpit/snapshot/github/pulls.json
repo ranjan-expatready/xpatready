@@ -1,0 +1,366 @@
+[
+ {
+  "number": 101,
+  "title": "runtime: PF-1 \u2014 first platform part",
+  "state": "closed",
+  "draft": false,
+  "created_at": "2026-11-13T05:00:00Z",
+  "merged_at": "2026-11-14T05:00:00Z",
+  "closed_at": "2026-11-14T05:00:00Z",
+  "labels": [],
+  "head": {
+   "ref": "claude/pr-101",
+   "sha": "0000000000000000000000000000000000000101"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ },
+ {
+  "number": 102,
+  "title": "runtime: PF-2 \u2014 merged late on 15 Nov UTC, 16 Nov IST",
+  "state": "closed",
+  "draft": false,
+  "created_at": "2026-11-15T08:00:00Z",
+  "merged_at": "2026-11-15T20:00:00Z",
+  "closed_at": "2026-11-15T20:00:00Z",
+  "labels": [],
+  "head": {
+   "ref": "claude/pr-102",
+   "sha": "0000000000000000000000000000000000000102"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ },
+ {
+  "number": 103,
+  "title": "screens: C7.6 \u2014 PF-3 (QA-1): the id is not at the start",
+  "state": "closed",
+  "draft": false,
+  "created_at": "2026-11-17T06:00:00Z",
+  "merged_at": "2026-11-18T06:00:00Z",
+  "closed_at": "2026-11-18T06:00:00Z",
+  "labels": [],
+  "head": {
+   "ref": "claude/pr-103",
+   "sha": "0000000000000000000000000000000000000103"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ },
+ {
+  "number": 104,
+  "title": "runtime: PF-4 \u2014 part of an unshaped row",
+  "state": "closed",
+  "draft": false,
+  "created_at": "2026-11-14T04:00:00Z",
+  "merged_at": "2026-11-16T04:00:00Z",
+  "closed_at": "2026-11-16T04:00:00Z",
+  "labels": [],
+  "head": {
+   "ref": "claude/pr-104",
+   "sha": "0000000000000000000000000000000000000104"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ },
+ {
+  "number": 105,
+  "title": "runtime: FO-1 \u2014 open, CI green, waiting for review",
+  "state": "open",
+  "draft": false,
+  "created_at": "2026-11-18T08:30:00Z",
+  "merged_at": null,
+  "closed_at": null,
+  "labels": [],
+  "head": {
+   "ref": "claude/fo-1",
+   "sha": "0000000000000000000000000000000000000105"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ },
+ {
+  "number": 106,
+  "title": "lead: records pass",
+  "state": "closed",
+  "draft": false,
+  "created_at": "2026-11-16T00:00:00Z",
+  "merged_at": "2026-11-17T00:00:00Z",
+  "closed_at": "2026-11-17T00:00:00Z",
+  "labels": [],
+  "head": {
+   "ref": "lead/fixture",
+   "sha": "0000000000000000000000000000000000000106"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": false
+ },
+ {
+  "number": 107,
+  "title": "forms: BK-1 \u2014 before the window",
+  "state": "closed",
+  "draft": false,
+  "created_at": "2026-11-09T06:00:00Z",
+  "merged_at": "2026-11-10T06:00:00Z",
+  "closed_at": "2026-11-10T06:00:00Z",
+  "labels": [],
+  "head": {
+   "ref": "claude/pr-107",
+   "sha": "0000000000000000000000000000000000000107"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ },
+ {
+  "number": 108,
+  "title": "forms: BK-2 \u2014 on 13 Nov",
+  "state": "closed",
+  "draft": false,
+  "created_at": "2026-11-12T10:00:00Z",
+  "merged_at": "2026-11-13T10:00:00Z",
+  "closed_at": "2026-11-13T10:00:00Z",
+  "labels": [],
+  "head": {
+   "ref": "claude/pr-108",
+   "sha": "0000000000000000000000000000000000000108"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ },
+ {
+  "number": 109,
+  "title": "forms: BK-3 \u2014 today",
+  "state": "closed",
+  "draft": false,
+  "created_at": "2026-11-19T03:00:00Z",
+  "merged_at": "2026-11-20T03:00:00Z",
+  "closed_at": "2026-11-20T03:00:00Z",
+  "labels": [],
+  "head": {
+   "ref": "claude/pr-109",
+   "sha": "0000000000000000000000000000000000000109"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ },
+ {
+  "number": 110,
+  "title": "forms: BK-4 \u2014 a Flags BK row",
+  "state": "closed",
+  "draft": false,
+  "created_at": "2026-11-18T07:00:00Z",
+  "merged_at": "2026-11-19T07:00:00Z",
+  "closed_at": "2026-11-19T07:00:00Z",
+  "labels": [],
+  "head": {
+   "ref": "claude/pr-110",
+   "sha": "0000000000000000000000000000000000000110"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ },
+ {
+  "number": 111,
+  "title": "runtime: PF-3 \u2014 the first PR whose title starts with PF-3",
+  "state": "closed",
+  "draft": false,
+  "created_at": "2026-11-19T01:00:00Z",
+  "merged_at": "2026-11-19T09:00:00Z",
+  "closed_at": "2026-11-19T09:00:00Z",
+  "labels": [],
+  "head": {
+   "ref": "claude/pr-111",
+   "sha": "0000000000000000000000000000000000000111"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ },
+ {
+  "number": 112,
+  "title": "evidence: BK-5 \u2014 no app code",
+  "state": "closed",
+  "draft": false,
+  "created_at": "2026-11-19T08:00:00Z",
+  "merged_at": "2026-11-19T10:00:00Z",
+  "closed_at": "2026-11-19T10:00:00Z",
+  "labels": [],
+  "head": {
+   "ref": "claude/pr-112",
+   "sha": "0000000000000000000000000000000000000112"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": false
+ },
+ {
+  "number": 113,
+  "title": "merge queue: merged #101: runtime: PF-1 \u2014 first platform part",
+  "state": "closed",
+  "draft": true,
+  "created_at": "2026-11-14T04:50:00Z",
+  "merged_at": null,
+  "closed_at": null,
+  "labels": [],
+  "head": {
+   "ref": "mergify/merge-queue/abc",
+   "sha": "0000000000000000000000000000000000000113"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": null
+ },
+ {
+  "number": 114,
+  "title": "runtime: B99 \u2014 an older app row, not Release 1",
+  "state": "closed",
+  "draft": false,
+  "created_at": "2026-11-11T05:00:00Z",
+  "merged_at": "2026-11-12T05:00:00Z",
+  "closed_at": "2026-11-12T05:00:00Z",
+  "labels": [],
+  "head": {
+   "ref": "claude/pr-114",
+   "sha": "0000000000000000000000000000000000000114"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ },
+ {
+  "number": 115,
+  "title": "runtime: FO-9 \u2014 old draft, no push for days",
+  "state": "open",
+  "draft": true,
+  "created_at": "2026-11-01T00:00:00Z",
+  "merged_at": null,
+  "closed_at": null,
+  "labels": [],
+  "head": {
+   "ref": "claude/fo-9",
+   "sha": "0000000000000000000000000000000000000115"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ },
+ {
+  "number": 116,
+  "title": "runtime: FO-7 \u2014 approved, in the queue",
+  "state": "open",
+  "draft": false,
+  "created_at": "2026-11-19T06:00:00Z",
+  "merged_at": null,
+  "closed_at": null,
+  "labels": [
+   {
+    "name": "review: approved"
+   }
+  ],
+  "head": {
+   "ref": "claude/fo-7",
+   "sha": "0000000000000000000000000000000000000116"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ },
+ {
+  "number": 117,
+  "title": "qa: capability retests",
+  "state": "open",
+  "draft": false,
+  "created_at": "2026-11-20T01:00:00Z",
+  "merged_at": null,
+  "closed_at": null,
+  "labels": [],
+  "head": {
+   "ref": "claude/qa-retests",
+   "sha": "0000000000000000000000000000000000000117"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": false
+ },
+ {
+  "number": 118,
+  "title": "screens: C7.7 \u2014 FO-4 (QA-2): only a later id",
+  "state": "closed",
+  "draft": false,
+  "created_at": "2026-11-17T06:00:00Z",
+  "merged_at": "2026-11-18T06:00:00Z",
+  "closed_at": "2026-11-18T06:00:00Z",
+  "labels": [],
+  "head": {
+   "ref": "claude/pr-118",
+   "sha": "0000000000000000000000000000000000000118"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ },
+ {
+  "number": 119,
+  "title": "runtime: FO-5 \u2014 merged after the snapshot time",
+  "state": "closed",
+  "draft": false,
+  "created_at": "2026-11-20T06:00:00Z",
+  "merged_at": "2026-11-20T07:00:00Z",
+  "closed_at": "2026-11-20T07:00:00Z",
+  "labels": [],
+  "head": {
+   "ref": "claude/pr-119",
+   "sha": "0000000000000000000000000000000000000119"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ },
+ {
+  "number": 120,
+  "title": "runtime: PF-2 \u2014 closed without merging",
+  "state": "closed",
+  "draft": false,
+  "created_at": "2026-11-12T06:00:00Z",
+  "merged_at": null,
+  "closed_at": null,
+  "labels": [],
+  "head": {
+   "ref": "claude/pr-120",
+   "sha": "0000000000000000000000000000000000000120"
+  },
+  "base": {
+   "ref": "main"
+  },
+  "files_app": true
+ }
+]

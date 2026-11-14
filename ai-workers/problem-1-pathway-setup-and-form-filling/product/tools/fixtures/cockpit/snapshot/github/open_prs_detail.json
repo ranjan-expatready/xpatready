@@ -1,0 +1,26 @@
+[
+ {
+  "number": 105,
+  "head_committed_at": "2026-11-20T03:00:00Z",
+  "ci": "success",
+  "approved_labelled_at": null
+ },
+ {
+  "number": 115,
+  "head_committed_at": "2026-11-15T00:00:00Z",
+  "ci": "failure",
+  "approved_labelled_at": null
+ },
+ {
+  "number": 116,
+  "head_committed_at": "2026-11-19T20:00:00Z",
+  "ci": "success",
+  "approved_labelled_at": "2026-11-20T06:00:00Z"
+ },
+ {
+  "number": 117,
+  "head_committed_at": "2026-11-20T01:00:00Z",
+  "ci": "success",
+  "approved_labelled_at": null
+ }
+]

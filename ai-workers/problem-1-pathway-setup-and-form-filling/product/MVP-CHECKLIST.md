@@ -87,7 +87,7 @@ Module names follow P-575 and P-584: **Platform** (sign-in, firms, billing, mess
 | 42 | Reschedule or cancel by link; outcomes; consult record | Front office | FO-3; staff screen: **none yet** | Not shaped (**gap: screen**) |
 | 43 | Two-way Google or Outlook calendar sync | Front office | FO-3s named only | Not shaped (Google review is an outside clock) |
 | 104 | Consultation agreement signed before the first consult | Front office | FO-3c, FO-5, FO-5s | Shaped |
-| 112 | Video meeting links on bookings | Front office | FO-3v (Meet and Teams through FO-3s) | Shaped |
+| 112 | Video meeting links on bookings | Front office | FO-3v (Meet and Teams through the booking rows) | Shaped |
 
 ### E. Templates and messages
 | Map | Capability | Module | BACKLOG rows | Status |

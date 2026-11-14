@@ -1,6 +1,7 @@
 # Founder's Progress Board (P-591)
 `index.html` shows only what `data.json` holds; `data.json` is generated, never committed (public repository, P-539).
 **Refresh:** `python3 product/tools/cockpit-data.py --out "$TMPDIR/cockpit/data.json" --lead-input "$TMPDIR/cockpit/lead-input.json"` (Bash `allowed_domains` api.github.com), then publish `data.json` beside `index.html` (artifact `files`). About 45 s warm; the first run classifies ~900 merged PRs (~3 min).
+**Snapshot first (P-596, spec §6):** each refresh writes `<out folder>/snapshot/` (GitHub answers and record files at a named sha), then computes every Plan and pace, Capacity, Top 3, Team, Health and Working-today number from that snapshot only, runs `tools/cockpit-reconcile.py` on it, checks the invariants, validates `data.schema.json` (exit 2 and no data.json on a violation) and writes today's line of `history.jsonl` (commit it with the records). `--snapshot-only` stops after the snapshot; `--from-snapshot <dir> --offline --no-history-write` recomputes an old one. Formulas: `FORMULAS.md`. Tests: `python3 -m unittest product/tools/test_cockpit_data.py` (fixtures `tools/fixtures/cockpit/`; CI `.github/workflows/cockpit-tests.yml`).
 **Costs:** GitHub reads only, US$0. `tools/flow-measure.py` (~10 min, ~3,000 API calls) reruns only when its cached answer is over 6 h old (`--flow-max-age-h`) and 3,500 calls are left this hour.
 **Cache:** `<out folder>/cache/` (app-code verdicts per PR, finished days' CI runs, Works per CAPABILITIES.md version, flow-measure answer); delete it to rebuild.
 **Hand-kept:** `plan.json` (dates, committed or forecast, each with its decision), `risks.json`, `architecture.json` (Module column to boxes), `learnings.json`. Edit those, never the page.
@@ -8,3 +9,4 @@
 `{"as_of":"2026-11-14T13:00:00+05:30","weekly_pct":48,"weekly_resets":"2026-11-20T04:30:00+05:30","burn_pct_per_h":1.5,"paid_usd_today":0,`
 `"sessions":[{"name":"FO-1a lane","kind":"cloud","role":"builder","state":"running","row":"FO-1a","pr":1742,"idle_min":20,"restarts":0,"nudges":0}]}`
 `kind` is `cloud` or `mac`; `state` `blocked` turns a chip red; `"example": true` marks example data on the page.
+Since P-596 also: `top3` (`{"today":{"what","why","rec","owner","needs_you"?},"week":{…},"month":{…}}`), `max_lanes`, and per session `role` (`lead`, `lead-b`, `builder`, `qa`, `standby`, `desk`), `reports_to`, `branch`. Older than 2 h counts as not updated.

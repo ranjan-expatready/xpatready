@@ -1,0 +1,37 @@
+[
+ {
+  "name": "claude/bk-6",
+  "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "pushed_at": "2026-11-20T06:00:00Z"
+ },
+ {
+  "name": "mergify/merge-queue/abc",
+  "sha": "cccccccccccccccccccccccccccccccccccccccc",
+  "pushed_at": "2026-11-20T06:20:00Z"
+ },
+ {
+  "name": "lead/fixture",
+  "sha": "dddddddddddddddddddddddddddddddddddddddd",
+  "pushed_at": "2026-11-20T06:10:00Z"
+ },
+ {
+  "name": "main",
+  "sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "pushed_at": "2026-11-20T05:00:00Z"
+ },
+ {
+  "name": "claude/fo-1",
+  "sha": "ffffffffffffffffffffffffffffffffffffffff",
+  "pushed_at": "2026-11-20T03:00:00Z"
+ },
+ {
+  "name": "claude/fo-7",
+  "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "pushed_at": "2026-11-20T03:00:00Z"
+ },
+ {
+  "name": "claude/pr-101",
+  "sha": "9999999999999999999999999999999999999999",
+  "pushed_at": "2026-11-20T01:00:00Z"
+ }
+]

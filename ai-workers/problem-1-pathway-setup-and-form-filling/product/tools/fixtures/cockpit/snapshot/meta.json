@@ -1,0 +1,17 @@
+{
+ "taken_at": "2026-11-20T12:00:00+05:30",
+ "repo": "example/repo",
+ "main_sha": "abcdef0123456789abcdef0123456789abcdef01",
+ "records_branch": "lead/fixture",
+ "records_sha": "1234567890abcdef1234567890abcdef12345678",
+ "extra": {
+  "main_ref_used": "abcdef0123456789abcdef0123456789abcdef01",
+  "main_ref_is_head": true,
+  "records_ahead": 2,
+  "records_oldest_unmerged_at": "2026-11-20T02:00:00+05:30",
+  "state_branch": "lead/fixture",
+  "state_branch_sha": "1234567890abcdef1234567890abcdef12345678",
+  "state_branch_ahead": 2,
+  "state_branch_oldest_unmerged_at": "2026-11-20T02:00:00+05:30"
+ }
+}

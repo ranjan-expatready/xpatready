@@ -64,9 +64,14 @@ def med(xs):
     return round(statistics.median(xs), 1) if xs else None
 
 
+def slurp(p):
+    with open(p, encoding="utf-8") as f:
+        return f.read()
+
+
 def read(rel):
     p = os.path.join(P, rel)
-    return open(p, encoding="utf-8").read() if os.path.exists(p) else None
+    return slurp(p) if os.path.exists(p) else None
 
 
 def sh(cmd, **kw):
@@ -261,7 +266,7 @@ def jload(rel):
 
 # ---------------------------------------------------------------- progress.sh's parse, reused
 def progress_parse_code():
-    t = open(os.path.join(HERE, "progress.sh"), encoding="utf-8").read()
+    t = slurp(os.path.join(HERE, "progress.sh"))
     m = re.search(r"<<'EOF'\n(.*?)\nEOF", t, re.S)
     return m.group(1)
 
@@ -269,7 +274,8 @@ def progress_parse_code():
 def run_progress(cap_text, built_names):
     d = tempfile.mkdtemp(prefix="cockpit-cap-")
     try:
-        open(os.path.join(d, "CAPABILITIES.md"), "w", encoding="utf-8").write(cap_text)
+        with open(os.path.join(d, "CAPABILITIES.md"), "w", encoding="utf-8") as f:
+            f.write(cap_text)
         if built_names is not None:
             os.mkdir(os.path.join(d, "built"))
             for n in built_names:
@@ -317,7 +323,9 @@ LANE_WINDOW_MIN = 90                           # P-326: a lane works when it pus
 BURN_LIMIT = 3.0                               # P-440: burn at most 3% of the weekly plan per hour
 BUG_AGE_H = 48                                 # §5 item 6
 LEAD_B_BRANCH = "lead-b-front-office"          # Lead B's branch holding design/lead-b-briefs/ (Lead input lead_b_branch overrides)
-IDRE = r"(?:PF|FO|BK|CS|AUD|SEC|AS)-[0-9A-Za-z]+"
+IDRE = r"[A-Z][A-Za-z0-9]*-[0-9A-Za-z]+(?:-[0-9A-Za-z]+)*"   # BACKLOG row ids: PF-4b, BK-17, B5-filings, DB-SPLIT, PF-L
+NOT_ROW = re.compile(r"^(?:P|QA)-\d+$")      # decision and bug ids are not BACKLOG rows
+NARROW = r"(?:PF|FO|BK|CS|AUD|SEC|AS)-[0-9A-Za-z]+"
 _END = r"(?![0-9A-Za-z\-]|\.[0-9A-Za-z])"     # "PF-4" never matches inside "PF-4b" or "PF-4.1"
 ID_TOKEN = re.compile(r"(?<![0-9A-Za-z\-])(" + IDRE + r")" + _END)
 ID_RANGE = re.compile(r"(?<![0-9A-Za-z\-])(PF|FO|BK|CS|AUD|SEC|AS)-(\d+) to (?:(?:PF|FO|BK|CS|AUD|SEC|AS)-)?(\d+)" + _END)
@@ -347,7 +355,7 @@ def cell_ids(cell):
     txt = ID_RANGE.sub(lambda m: ", ".join(f"{m.group(1)}-{i}" for i in range(int(m.group(2)), int(m.group(3)) + 1)), txt)
     out = []
     for x in ID_TOKEN.findall(txt):
-        if x not in out:
+        if x not in out and not NOT_ROW.match(x):
             out.append(x)
     return out
 
@@ -357,15 +365,15 @@ def title_id(title):
     if not title or RECORDS_TITLE.match(title):
         return None
     m = TITLE_ID.match(title)
-    return m.group(1) if m else None
+    return m.group(1) if m and not NOT_ROW.match(m.group(1)) else None
 
 
 def loose_title_id(title):
     """Trust note only: the first row id anywhere in a non-records title ("screens: C7.6 — BK-18 …")."""
     if not title or RECORDS_TITLE.match(title) or title.startswith("merge queue:"):
         return None
-    m = ID_TOKEN.search(title)
-    return m.group(1) if m else None
+    m = next((x for x in ID_TOKEN.findall(title) if not NOT_ROW.match(x)), None)
+    return m
 
 
 def parse_checklist(text):
@@ -547,22 +555,37 @@ def take_snapshot(snap, gh, cache, lead_input, appcode_max):
     gr = []
     lg = gh.get("/actions/workflows/label-guard.yml/runs?branch=main&status=completed&per_page=1").get("workflow_runs", [])
     gr.append({"name": "label guard (label-guard.yml on main)", "conclusion": lg[0]["conclusion"] if lg else None, "created_at": lg[0]["created_at"] if lg else None})
+    # the push guard is a step: job "guard" on a draft push, step "push guard (part 1 only …)" of shard 1 on a full or queue run
     ci = gh.get("/actions/workflows/ci.yml/runs?status=completed&per_page=30").get("workflow_runs", [])
-    q = next((x for x in ci if (x.get("head_branch") or "").startswith("mergify/")), None)
-    job = None
-    if q:
-        job = next((j for j in gh.get(f"/actions/runs/{q['id']}/jobs?per_page=100").get("jobs", []) if j["name"] == "guard"), None)
-    gr.append({"name": "push guard (ci.yml job guard, newest finished merge-queue run)", "conclusion": job["conclusion"] if job else None,
-               "created_at": (job or {}).get("started_at") or (q or {}).get("created_at")})
+    step, at = None, None
+    for q in [x for x in ci if (x.get("head_branch") or "").startswith("mergify/")][:5]:
+        for j in gh.get(f"/actions/runs/{q['id']}/jobs?per_page=100").get("jobs", []):
+            for st in j.get("steps") or []:
+                if st["name"].startswith("push guard") and st.get("conclusion") in ("success", "failure"):
+                    step, at = st, st.get("started_at") or q["created_at"]
+                    break
+            if step:
+                break
+        if step:
+            break
+    gr.append({"name": "push guard (ci.yml step push guard, newest finished merge-queue run that ran it)", "conclusion": step["conclusion"] if step else None,
+               "created_at": at})
     wj("github/guard_runs.json", gr)
     # extra: the newest finished nightly run on main (Health item 1 also reads it: main's head has no ci.yml run of its own)
     nl = gh.get("/actions/workflows/nightly.yml/runs?branch=main&status=completed&per_page=1").get("workflow_runs", [])
     wj("github/main_nightly.json", {"conclusion": nl[0]["conclusion"], "created_at": nl[0]["created_at"]} if nl else {})
     # branches with a push in the last 24 h (GitHub keeps no push time per branch: the head commit's committed date stands in)
     o, r_ = (gh.repo or "/").split("/")
-    qb = """query($o:String!,$r:String!){repository(owner:$o,name:$r){refs(refPrefix:"refs/heads/",first:100,orderBy:{field:TAG_COMMIT_DATE,direction:DESC}){
-      nodes{name target{... on Commit{oid committedDate}}}}}}"""
-    refs = gh.graphql(qb, {"o": o, "r": r_})["repository"]["refs"]["nodes"]
+    # every branch is read (GitHub's ref ordering by commit date proved unreliable for branches: 14 Nov, today's lane branches missing)
+    qb = """query($o:String!,$r:String!,$c:String){repository(owner:$o,name:$r){refs(refPrefix:"refs/heads/",first:100,after:$c){
+      pageInfo{hasNextPage endCursor} nodes{name target{... on Commit{oid committedDate}}}}}}"""
+    refs, cur = [], None
+    for _ in range(40):
+        got = gh.graphql(qb, {"o": o, "r": r_, "c": cur})["repository"]["refs"]
+        refs += got["nodes"]
+        if not got["pageInfo"]["hasNextPage"]:
+            break
+        cur = got["pageInfo"]["endCursor"]
     day_ago = NOW - timedelta(hours=24)
     wj("github/branches_recent.json", [{"name": x["name"], "sha": x["target"]["oid"], "pushed_at": x["target"]["committedDate"]}
                                         for x in refs if x.get("target") and parse_iso(x["target"]["committedDate"]) >= day_ago])
@@ -631,7 +654,7 @@ def take_snapshot(snap, gh, cache, lead_input, appcode_max):
 def brief_id(filename):
     """A brief file's row id: the file name is the id, then a dot or a dash and more (FO-1a.md, FO-2-sales.md).
     The spec's glob <ROW>*.md would also let FO-13.md count for FO-1; the id must end where the name's id ends."""
-    m = re.match(r"^(" + IDRE + r")(?=\.|-[a-z])", filename)
+    m = re.match(r"^(" + NARROW + r")(?=\.|-[a-z])", filename)
     return m.group(1) if m else None
 
 
@@ -643,7 +666,8 @@ def parse_bugs(text):
             if len(c) < 8:
                 continue
             sev = re.search(r"(Critical|Major|Minor|Trivial)", c[2])
-            out.append({"id": c[1], "sev": sev.group(1) if sev else "?", "caps": CAP_ID.findall(c[3].split("·")[0]),
+            # the capability ids the bug names: before any "(" note and before the "·" requirement part
+            out.append({"id": c[1], "sev": sev.group(1) if sev else "?", "caps": CAP_ID.findall(c[3].split("·")[0].split("(")[0]),
                         "open": clean(c[-2]).lower().startswith("open")})
     return out
 
@@ -659,7 +683,7 @@ class Snap:
 
     def text(self, rel):
         p = self.path(rel)
-        return open(p, encoding="utf-8").read() if os.path.exists(p) else None
+        return slurp(p) if os.path.exists(p) else None
 
     def j(self, rel, default=None):
         t = self.text(rel)
@@ -674,7 +698,7 @@ class Snap:
             for f in fs:
                 full = os.path.join(dp, f)
                 if full.replace(os.sep, "/").endswith("/" + prel):
-                    return open(full, encoding="utf-8").read()
+                    return slurp(full)
         return None
 
     def cap_history(self):
@@ -947,7 +971,7 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
     lanes = [b for b in branches if is_session_branch(b["name"]) and parse_iso(b["pushed_at"]) >= cutoff - timedelta(minutes=LANE_WINDOW_MIN)]
     Lw = num(len(lanes), f"sessions = branches (not main or the merge queue) with a push in the last {LANE_WINDOW_MIN} min; {gh_src} branches_recent.json "
              "(push time = head commit time)", "measured", L, names=[b["name"] for b in lanes])
-    merged_any = set(change_at)
+    merged_any = {title_id(p["title"]) for p in merged} - {None}    # readiness: done by any non-records PR (app or not)
     inpr = {}
     for p in open_prs:
         rid = title_id(p["title"])
@@ -1044,6 +1068,8 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
     for b in branches:
         if is_lane_branch(b["name"]):
             prn = next((p["number"] for p in open_prs if p["head"]["ref"] == b["name"]), None)
+            if prn is None and any(p["head"]["ref"] == b["name"] for p in pulls):
+                continue   # a branch whose PR is merged or closed is not a lane at work
             measured[b["name"]] = {"branch": b["name"], "pr": prn, "push_h": round(hrs(b["pushed_at"]), 1)}
     used, lanes_out = set(), []
     for s in sessions:
@@ -1098,7 +1124,7 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
     inv("Build rows equal the baseline", nrows == baseline,
         f"{nrows} rows (baseline {baseline})" + ("" if nrows == baseline else ": scope changed, the scope line says so"))
     inv("Build rows unique", not ck["dupes"], "duplicates: " + ", ".join(f"{d['map']} ({' / '.join(d['statuses'])})" for d in ck["dupes"]) if ck["dupes"] else "no duplicate map numbers")
-    missing = sorted({x for r in rows for x in r["ids"] if x not in bl["ids"]})
+    missing = sorted({x for r in rows for x in r["ids"] if x not in bl["ids"] and x not in r["unshaped_ids"]})
     inv("Every cited BACKLOG id exists", not missing, "missing in BACKLOG.md: " + ", ".join(missing) if missing else "all cited ids found")
     bad = []
     for r in rows:
@@ -1340,7 +1366,7 @@ def read_history(text):
 
 def write_history(path, hist, line):
     """One line per IST day (N1): today's line replaces earlier lines of today; the working copy's other days are kept."""
-    cur = read_history(open(path, encoding="utf-8").read()) if os.path.exists(path) else []
+    cur = read_history(slurp(path)) if os.path.exists(path) else []
     days = {h["day"]: h for h in hist}
     days.update({h["day"]: h for h in cur})
     days[line["day"]] = line

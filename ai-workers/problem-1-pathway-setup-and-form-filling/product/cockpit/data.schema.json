@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cockpit/data.schema.json",
+  "title": "Founder's Progress Board data (P-591, P-596)",
+  "description": "The data contract of data.json (spec §6.2). tools/cockpit-data.py validates its output against this file and exits non-zero on a violation; data.json is then not written and the page is not republished. Every number carries src, sha, as_of and class (spec §0.3); a null number carries a reason. Formulas: cockpit/FORMULAS.md.",
+  "type": "object",
+  "allOf": [{"$ref": "#/$defs/walk"}],
+  "required": ["schema", "freshness", "summary", "needs_you", "pace", "forecast", "burnup", "capacity", "top3", "org",
+               "working_today", "health", "trust", "lineage", "reconcile_keys", "history", "run"],
+  "properties": {
+    "schema": {"const": 2},
+    "freshness": {
+      "type": "object",
+      "required": ["generated_at", "generated_ist", "page_age_rule"],
+      "properties": {
+        "generated_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
+        "page_age_rule": {"type": "object", "required": ["amber_min", "red_min"],
+                          "properties": {"amber_min": {"const": 45}, "red_min": {"const": 120}}}
+      }
+    },
+    "summary": {"type": "object", "required": ["needs_you", "works", "health"],
+                "properties": {"health": {"type": "object", "required": ["light"], "properties": {"light": {"$ref": "#/$defs/light"}}}}},
+    "pace": {
+      "type": "object",
+      "required": ["changes_needed_per_day", "changes_per_day", "built", "proven", "rows_total", "remaining", "light", "merged_changes"],
+      "properties": {
+        "changes_needed_per_day": {"$ref": "#/$defs/num"},
+        "changes_per_day": {"$ref": "#/$defs/num"},
+        "built": {"$ref": "#/$defs/count"},
+        "proven": {"$ref": "#/$defs/count"},
+        "rows_total": {"$ref": "#/$defs/count"},
+        "remaining": {"allOf": [{"$ref": "#/$defs/count"}, {"required": ["label", "shaped_unmerged", "unshaped_rows", "unshaped_estimate"]}]},
+        "merged_changes": {"$ref": "#/$defs/count"},
+        "ratio": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/num"}]},
+        "committed_date": {"type": ["string", "null"]},
+        "light": {"type": "object", "required": ["state", "why"],
+                  "properties": {"state": {"enum": ["green", "amber", "red", "grey"]}, "why": {"type": "string"}}}
+      }
+    },
+    "forecast": {
+      "type": "object",
+      "required": ["p50", "p85", "sample", "counts", "days", "runs", "seed", "cap_days"],
+      "properties": {
+        "p50": {"$ref": "#/$defs/date_num"},
+        "p85": {"$ref": "#/$defs/date_num"},
+        "counts": {"type": "array", "items": {"type": "integer", "minimum": 0}, "minItems": 14, "maxItems": 14},
+        "days": {"type": "array", "items": {"type": "string", "format": "date"}, "minItems": 14, "maxItems": 14},
+        "runs": {"const": 10000},
+        "cap_days": {"const": 365}
+      }
+    },
+    "burnup": {"type": "object", "required": ["days", "scope", "built", "proven", "h1", "x_end", "src"],
+               "properties": {"built": {"type": "array", "items": {"type": "integer", "minimum": 0}}}},
+    "capacity": {
+      "type": "object",
+      "required": ["lanes_working", "ready_rows", "room", "stages", "constraint", "age", "cycle_median_days", "wip", "baton_held", "light"],
+      "properties": {
+        "lanes_working": {"$ref": "#/$defs/count"},
+        "ready_rows": {"$ref": "#/$defs/count"},
+        "wip": {"$ref": "#/$defs/count"},
+        "constraint": {"type": "object", "required": ["stage", "line"],
+                       "properties": {"stage": {"enum": ["building", "review", "merge", "qa", "unknown", "none"]}, "line": {"type": "string"}}},
+        "stages": {"type": "object", "required": ["review", "merge", "qa"],
+                   "additionalProperties": {"type": "object", "required": ["count", "wait_h", "limit_h"]}},
+        "age": {"type": "object", "required": ["p85_days", "older", "items", "amber_items"]},
+        "light": {"type": "object", "required": ["state", "why"], "properties": {"state": {"enum": ["green", "amber"]}}}
+      }
+    },
+    "top3": {
+      "type": "object",
+      "required": ["cards", "class", "src", "sha", "as_of", "example"],
+      "properties": {
+        "class": {"const": "reported"},
+        "cards": {"type": "object", "required": ["today", "week", "month"],
+                  "additionalProperties": {"type": "object", "required": ["state"],
+                    "properties": {"state": {"enum": ["ok", "missing"]}},
+                    "if": {"properties": {"state": {"const": "ok"}}},
+                    "then": {"required": ["what", "why", "rec", "owner"]},
+                    "else": {"required": ["text", "why"], "properties": {"text": {"const": "Lead has not updated this"}}}}}
+      }
+    },
+    "org": {"type": "object", "required": ["founder", "leads", "lanes", "mismatches", "how", "src", "sha", "as_of", "class"]},
+    "working_today": {"type": "object", "required": ["groups", "rows", "line", "src", "sha", "as_of"]},
+    "health": {
+      "type": "object",
+      "required": ["light", "items"],
+      "properties": {
+        "light": {"$ref": "#/$defs/light"},
+        "items": {"type": "array", "minItems": 7, "maxItems": 7,
+                  "items": {"type": "object", "required": ["id", "name", "state", "detail", "action", "owner"],
+                            "properties": {"id": {"type": "integer", "minimum": 1, "maximum": 7},
+                                           "state": {"enum": ["green", "amber", "red", "page"]}},
+                            "if": {"properties": {"state": {"const": "red"}}},
+                            "then": {"properties": {"action": {"type": "string", "minLength": 3}, "owner": {"type": "string", "minLength": 3}}}}}
+      }
+    },
+    "trust": {
+      "type": "object",
+      "required": ["state", "banner", "diffs", "invariants", "notes", "freshness"],
+      "properties": {
+        "state": {"enum": ["agree", "disagree", "not checked"]},
+        "invariants": {"type": "array", "items": {"type": "object", "required": ["name", "ok", "detail"]}}
+      },
+      "allOf": [
+        {"if": {"properties": {"state": {"const": "agree"}}}, "then": {"properties": {"banner": {"type": "null"}}}},
+        {"if": {"properties": {"state": {"const": "not checked"}}}, "then": {"properties": {"banner": {"const": "Numbers not checked"}}}},
+        {"if": {"properties": {"state": {"const": "disagree"}}}, "then": {"properties": {"banner": {"type": "string", "pattern": "^Numbers disagree: "}}}}
+      ]
+    },
+    "lineage": {"type": "object", "required": ["records_branch", "records_sha", "main_sha", "taken_at", "ahead_of_main"]},
+    "reconcile_keys": {"type": "object",
+                       "required": ["works_on_main", "works_total", "changes_per_day_window", "remaining_scope_changes", "built_rows",
+                                    "proven_rows", "open_app_prs", "lanes_working", "ready_rows", "forecast_p50_date", "forecast_p85_date",
+                                    "mc_daily_counts", "mc_remaining_scope"]}
+  },
+  "$defs": {
+    "light": {"enum": ["green", "amber", "red"]},
+    "num": {
+      "type": "object",
+      "required": ["value", "src", "sha", "as_of", "class"],
+      "properties": {
+        "src": {"type": "string", "minLength": 3},
+        "sha": {"type": "string", "minLength": 3},
+        "as_of": {"type": "string", "minLength": 10},
+        "class": {"enum": ["measured", "parsed", "reported"]}
+      },
+      "if": {"properties": {"value": {"type": "null"}}},
+      "then": {"required": ["reason"], "properties": {"reason": {"type": "string", "minLength": 3}}}
+    },
+    "count": {"allOf": [{"$ref": "#/$defs/num"}, {"properties": {"value": {"type": ["integer", "null"], "minimum": 0}}}]},
+    "date_num": {"allOf": [{"$ref": "#/$defs/num"},
+                           {"properties": {"value": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"}, {"const": "beyond 1 year"}]}}}]},
+    "walk": {
+      "description": "Every object anywhere that holds a number (key v with src, or value with src) carries its lineage; a null needs a reason.",
+      "if": {"type": "object"},
+      "then": {
+        "allOf": [
+          {"if": {"required": ["v", "src"]},
+           "then": {"required": ["sha", "as_of", "class"], "properties": {"class": {"enum": ["measured", "parsed", "reported"]}},
+                    "if": {"properties": {"v": {"type": "null"}}}, "then": {"required": ["reason"]}}},
+          {"if": {"required": ["value", "src"]}, "then": {"$ref": "#/$defs/num"}}
+        ],
+        "additionalProperties": {"$ref": "#/$defs/walk"}
+      },
+      "else": {"if": {"type": "array"}, "then": {"items": {"$ref": "#/$defs/walk"}}}
+    }
+  }
+}
