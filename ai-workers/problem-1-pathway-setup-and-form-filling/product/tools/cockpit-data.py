@@ -145,8 +145,13 @@ def safe(name, fn, default=None):
 
 
 # ---------------------------------------------------------------- records in this copy
-def state_needs():
-    t = read("STATE.md") or ""
+DECIDED = re.compile(r"^(done|decided|answered|ruled)\b|\bdecided\b", re.I)
+
+
+def state_needs(text=None):
+    """Open founder asks from STATE.md. Known fix (spec §6 10): an ask whose status says it is decided (or done,
+    answered, ruled) is not listed in Needs you."""
+    t = text if text is not None else (read("STATE.md") or "")
     asks, sec = [], None
     for line in t.splitlines():
         if line.startswith("## "):
@@ -157,7 +162,7 @@ def state_needs():
             if len(c) < 4:
                 continue
             status = clean(c[3])
-            if status.lower().startswith("done") or clean(c[2]).lower().startswith("done"):
+            if DECIDED.search(status) or clean(c[2]).lower().startswith("done"):
                 continue
             asks.append({"id": clean(c[1], 60), "ask": clean(c[2], 150), "status": clean(status, 170),
                          "src": "STATE.md › Founder asks"})
@@ -168,28 +173,18 @@ def state_needs():
     return asks, forf, wait
 
 
-def checklist():
-    t = read("MVP-CHECKLIST.md") or ""
-    groups, g, gname, rows = [], None, None, []
-    for line in t.splitlines():
-        m = re.match(r"^### ([A-L])\. (.*)", line)
-        if m:
-            g, gname = m.group(1), m.group(2).strip()
-            groups.append({"id": g, "name": gname})
-            continue
-        if line.startswith("## ") and not line.startswith("## A."):
-            g = None
-        if g and re.match(r"^\| \d+ \|", line):
-            c = cells(line)
-            st = re.split(r" \(|;", c[5].replace("\\*", "").replace("*", ""))[0].strip()
-            rows.append({"map": int(c[1]), "cap": clean(c[2], 90), "module": clean(c[3]), "backlog": clean(c[4], 120),
-                         "status": st, "detail": clean(c[5], 120), "group": g})
+def checklist(text=None):
+    """Legacy view of the checklist (groups, rows, readiness); rows come from parse_checklist, the one parser."""
+    t = text if text is not None else (read("MVP-CHECKLIST.md") or "")
+    ck = parse_checklist(t)
+    rows = [{"map": r["map"], "cap": clean(r["cap"], 90), "module": clean(r["module"]), "backlog": clean(r["cell"], 120),
+             "status": r["status"], "detail": clean(r["status_cell"], 120), "group": r["group"]} for r in ck["rows"]]
     readiness = []
     for line in t.splitlines():
         if re.match(r"^\| C\d+ \|", line):
             c = cells(line)
             readiness.append({"id": c[1], "item": clean(c[2], 140), "status": clean(c[3], 90), "decision": clean(c[4], 60)})
-    return groups, rows, readiness
+    return ck["groups"], rows, readiness
 
 
 ORDER = ["qa Works", "Merged", "In PR", "Shaped", "Not shaped"]
@@ -208,8 +203,8 @@ def decisions_last(n=5):
     return out
 
 
-def backlog(merged_ids, inpr_ids):
-    t = read("BACKLOG.md") or ""
+def backlog(merged_ids, inpr_ids, text=None):
+    t = text if text is not None else (read("BACKLOG.md") or "")
     owners, sec, rows, xrows = [], None, [], 0
     for line in t.splitlines():
         if line.startswith("## "):
@@ -221,6 +216,8 @@ def backlog(merged_ids, inpr_ids):
         if re.match(r"^\| X-\d+ \|", line):
             xrows += 1
         m = re.match(r"^\| ((?:PF|FO|BK|CS|AUD|SEC|AS)-[0-9A-Za-z]+) \|", line)
+        if m and any(r["id"] == m.group(1) for r in rows):
+            continue   # a duplicate row: the first occurrence wins (spec §6.3 edge case)
         if m and "moved to" not in line.split("|")[1]:
             c = cells(line)
             rid, area = m.group(1), c[2]
