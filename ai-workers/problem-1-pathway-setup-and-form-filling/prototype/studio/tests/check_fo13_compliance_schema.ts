@@ -100,7 +100,7 @@ try {
   const P1 = u(500), C1 = u(501);
   const MATCH = JSON.stringify([
     { source: "FRONT_OFFICE", kind: "PROSPECT", recordId: u(600), displayName: "Sample Person", matchedOn: ["NAME", "EMAIL"], score: 0.92 },
-    { source: "CASE", kind: "SPONSOR", recordId: "party-17", caseId: u(10), caseNumber: "C-2026-00001", matchedOn: ["PHONE"] },
+    { source: "CASE", kind: "SPONSOR", recordId: u(610), caseId: u(10), caseNumber: "C-2026-00001", matchedOn: ["PHONE"] },
   ]);
   type CC = { id: string; firm?: string; kind?: string; person?: string | null; company?: string | null; name?: string | null; email?: string | null; phone?: string | null; matches?: string; hidden?: number; result?: string | null; disclosure?: string | null; consent?: string | null; by?: string; confirmedBy?: string | null; confirmedAt?: string | null };
   const v = (x: string | null | undefined) => (x === null || x === undefined ? "null" : q(x));
@@ -124,6 +124,11 @@ try {
     && refused(DEMO, cc({ id: u(1002), name: "  ", email: null, phone: null }), /fo_conflict_check_terms_check/)
     && refused(DEMO, cc({ id: u(1002), name: "x".repeat(301) }), /fo_conflict_check_terms_check/)
     && refused(DEMO, cc({ id: u(1002), phone: "call me" }), /fo_conflict_check_terms_check/));
+  ok("FO-13 fail (breaks 5, 7): a searched name of filler or combining marks only, or with a direction override; a phone of punctuation or under 7 digits; an email without @ and a dot",
+    refused(DEMO, cc({ id: u(1002), name: "\u3164" }), /fo_conflict_check_terms_check/) && refused(DEMO, cc({ id: u(1002), name: "\u0301\u0301" }), /fo_conflict_check_terms_check/)
+    && refused(DEMO, cc({ id: u(1002), name: "Sample \u202ENOSREP" }), /fo_conflict_check_terms_check/) && refused(DEMO, cc({ id: u(1002), phone: "()-./" }), /fo_conflict_check_terms_check/)
+    && refused(DEMO, cc({ id: u(1002), phone: "555 01" }), /fo_conflict_check_terms_check/) && refused(DEMO, cc({ id: u(1002), email: "x" }), /fo_conflict_check_terms_check/));
+  ok("FO-13 pass: a name in another script and with accents is a searched term", sql(DEMO, cc({ id: u(1002), name: "\u0928\u093e\u092e Nørgaard" })) === u(1002));
 
   // POTENTIAL_CONFLICT and its disclosure (s. 24(3)(o)) — the brief's acceptance line.
   ok("FO-13 fail (brief): a POTENTIAL_CONFLICT check without disclosure text is refused (none, or blank)",
@@ -133,6 +138,18 @@ try {
     sql(DEMO, cc({ id: u(1003), result: "POTENTIAL_CONFLICT", disclosure: "Sample disclosure: the firm acts for the sponsor on another file." })) === u(1003));
   ok("FO-13 fail: a disclosure text on a check that is not POTENTIAL_CONFLICT is refused",
     refused(DEMO, cc({ id: u(1004), result: "NO_CONFLICT", disclosure: "Sample" }), /fo_conflict_check_disclosure_check/));
+  ok("FO-13 fail (break 1): a check still waiting for its result carries no consent reference and no disclosure (inserted or added later)",
+    refused(DEMO, cc({ id: u(1016), hidden: 2, result: null, consent: "retainer:x" }), /fo_conflict_check_consent_check/)
+    && refused(DEMO, cc({ id: u(1016), hidden: 2, result: null, disclosure: "Sample" }), /fo_conflict_check_disclosure_check/)
+    && sql(DEMO, cc({ id: u(1016), hidden: 2, result: null })) === u(1016)
+    && refused(DEMO, `update fo_conflict_check set written_consent_ref = 'retainer:x' where id = '${u(1016)}'`, /fo_conflict_check_consent_check/));
+  ok("FO-13 pass (break 2): a disclosure of paragraphs (line breaks, a tab) is recorded",
+    sql(DEMO, cc({ id: u(1017), result: "POTENTIAL_CONFLICT", disclosure: "Sample paragraph one.\n\n\tSample paragraph two." })) === u(1017)
+    && sql(DEMO, `select position(E'\n\n\t' in disclosure_text) > 0 from fo_conflict_check where id = '${u(1017)}'`) === "t");
+  ok("FO-13 fail (breaks 2, 5): a disclosure with another control character, of braille blanks only, or with a direction override is refused",
+    refused(DEMO, cc({ id: u(1018), result: "POTENTIAL_CONFLICT", disclosure: "Sample\u0007" }), /fo_conflict_check_disclosure_check/)
+    && refused(DEMO, cc({ id: u(1018), result: "POTENTIAL_CONFLICT", disclosure: "\u2800\u2800" }), /fo_conflict_check_disclosure_check/)
+    && refused(DEMO, cc({ id: u(1018), result: "POTENTIAL_CONFLICT", disclosure: "Sample \u202Etxet" }), /fo_conflict_check_disclosure_check/));
 
   // Hidden matches (contract v0.1 §3.1) — the brief's acceptance line.
   ok("FO-13 fail (brief): NO_CONFLICT with hidden_count > 0 and no confirmed_by is refused",
@@ -144,13 +161,20 @@ try {
   ok("FO-13 fail: the checker cannot confirm their own check", refused(DEMO, `update fo_conflict_check set confirmed_by = '${staffR}', confirmed_at = now(), result = 'NO_CONFLICT' where id = '${u(1005)}'`, /fo_conflict_check_confirmation_check/));
   ok("FO-13 fail: another firm's staff member cannot confirm (23503, the (firm_id, confirmed_by) key)",
     refusedCode(DEMO, `update fo_conflict_check set confirmed_by = '${staffS}', confirmed_at = now(), result = 'NO_CONFLICT' where id = '${u(1005)}'`, "23503", /fo_conflict_check_firm_id_confirmed_by_fkey/));
-  ok("FO-13 fail: a confirmation without its time, or dated before the check, is refused",
-    refused(DEMO, `update fo_conflict_check set confirmed_by = '${staffT}', result = 'NO_CONFLICT' where id = '${u(1005)}'`, /fo_conflict_check_confirmation_check/)
-    && refused(DEMO, `update fo_conflict_check set confirmed_by = '${staffT}', confirmed_at = checked_at - interval '1 minute', result = 'NO_CONFLICT' where id = '${u(1005)}'`, /fo_conflict_check_confirmation_check/));
-  ok("FO-13 pass (brief): once another staff member of the firm confirms, the check holds NO_CONFLICT",
-    sql(DEMO, `update fo_conflict_check set confirmed_by = '${staffT}', confirmed_at = now(), result = 'NO_CONFLICT' where id = '${u(1005)}' returning result`) === "NO_CONFLICT");
-  ok("FO-13 pass: a check written with hidden matches and confirmed at once holds NO_CONFLICT", sql(DEMO, cc({ id: u(1007), hidden: 1, confirmedBy: staffT, confirmedAt: "now" })) === u(1007));
-  ok("FO-13 fail: a confirmation on a check with nothing hidden is refused", refused(DEMO, cc({ id: u(1008), confirmedBy: staffT, confirmedAt: "now" }), /fo_conflict_check_confirmation_check/));
+  ok("FO-13 fail: a confirmation time without who confirmed is refused",
+    refused(DEMO, `update fo_conflict_check set confirmed_at = now() where id = '${u(1005)}'`, /a confirmation names who confirmed/));
+  const suspended = sql(DEMO, `insert into platform_staff (id, firm_id, email, display_name, status, updated_at) values (gen_random_uuid(), '${firmA}', 'suspended@sample-firm.example.com', 'Suspended', 'SUSPENDED', now()) returning id`);
+  ok("FO-13 fail (break 8): a suspended staff member cannot confirm, nor check",
+    refused(DEMO, `update fo_conflict_check set confirmed_by = '${suspended}', result = 'NO_CONFLICT' where id = '${u(1005)}'`, /the confirmer: staff member .* is not active/)
+    && refused(DEMO, cc({ id: u(1014), by: suspended }), /the checker: staff member .* is not active/));
+  ok("FO-13 pass (brief): once another staff member of the firm confirms, the check holds NO_CONFLICT; the confirmation's time is the database's (a backdated one supplied is replaced: break 8)",
+    sql(DEMO, `update fo_conflict_check set confirmed_by = '${staffT}', confirmed_at = '2000-01-01', result = 'NO_CONFLICT' where id = '${u(1005)}' returning result || ':' || (confirmed_at >= checked_at and confirmed_at > '2020-01-01')`) === "NO_CONFLICT:true");
+  ok("FO-13 fail (break 8): a check cannot be written already confirmed (the confirmation is a later step by another person)",
+    refused(DEMO, cc({ id: u(1007), hidden: 1, confirmedBy: staffT, confirmedAt: "now" }), /confirmed afterwards, by another person/));
+  ok("FO-13 fail: a confirmation on a check with nothing hidden is refused", refused(DEMO, `update fo_conflict_check set confirmed_by = '${staffT}' where id = '${u(1000)}'`, /fo_conflict_check_confirmation_check/));
+  ok("FO-13 pass (break 8): the check's time is the database's (1900 supplied, now stored)",
+    sql(DEMO, cc({ id: u(1008) }).replace("checked_by, confirmed_by", "checked_at, checked_by, confirmed_by").replace(`'${staffR}', null, null)`, `'1900-01-01', '${staffR}', null, null)`)) === u(1008)
+    && sql(DEMO, `select checked_at > now() - interval '1 minute' from fo_conflict_check where id = '${u(1008)}'`) === "t");
   ok("FO-13 pass: a check with hidden matches may hold POTENTIAL_CONFLICT before the confirmation, and be confirmed later without a change of result",
     sql(DEMO, cc({ id: u(1009), hidden: 1, result: "POTENTIAL_CONFLICT", disclosure: "Sample disclosure." })) === u(1009)
     && sql(DEMO, `update fo_conflict_check set confirmed_by = '${staffT}', confirmed_at = now() where id = '${u(1009)}' returning result`) === "POTENTIAL_CONFLICT");
@@ -180,8 +204,19 @@ try {
   ok("FO-13 fail: matches that are not an array of { source, kind, recordId, matchedOn } are refused (object, missing record, unknown kind, kind of the other side, extra key, empty or unknown matchedOn, repeated matchedOn, score above 1, bad caseId)",
     bad({}) && bad([{ ...one, recordId: undefined }]) && bad([{ ...one, kind: "FRIEND" }]) && bad([{ ...one, kind: "SPONSOR" }]) && bad([{ ...one, passport: "X" }])
     && bad([{ ...one, matchedOn: [] }]) && bad([{ ...one, matchedOn: ["DOB"] }]) && bad([{ ...one, matchedOn: ["NAME", "NAME"] }]) && bad([{ ...one, score: 1.5 }])
-    && bad([{ ...one, caseId: "C-1" }]) && bad([1]) && bad([{ ...one, recordId: "has space" }]) && bad(Array.from({ length: 501 }, () => one)));
-  ok("FO-13 pass: 500 well-formed matches are accepted", sql(DEMO, cc({ id: u(1010), matches: JSON.stringify(Array.from({ length: 500 }, () => one)) })) === u(1010));
+    && bad([{ ...one, source: "CASE", kind: "SPONSOR", caseId: "C-1" }]) && bad([1]) && bad([{ ...one, recordId: "has space" }])
+    && bad(Array.from({ length: 501 }, (_, i) => ({ ...one, recordId: u(10000 + i) }))));
+  ok("FO-13 fail (breaks 3, 6, 7): a record that is not a uuid (free text could carry a document number), a case id or number on a front-office match, a case number of free text, the same record twice, a score of more than 4 decimals or past 1, a blank-looking or direction-reversed name",
+    bad([{ ...one, recordId: "passport-AB1234567" }]) && bad([{ ...one, source: "CASE", kind: "SPONSOR", recordId: "party-17" }]) && bad([{ ...one, caseId: u(10) }]) && bad([{ ...one, caseNumber: "C-2026-00001" }])
+    && bad([{ ...one, source: "CASE", kind: "SPONSOR", caseNumber: "passport AB1234567" }]) && bad([one, one]) && bad([{ ...one, score: 0.12345 }])
+    && bad([{ ...one, score: 1.0001 }]) && bad([{ ...one, displayName: "\u3164" }]) && bad([{ ...one, displayName: "abc\u202Edef" }])
+    && refused(DEMO, cc({ id: u(1010), matches: `[{"source":"FRONT_OFFICE","kind":"PERSON","recordId":"${u(601)}","matchedOn":["NAME"],"score":0.5${"0".repeat(16000)}}]` }), /fo_conflict_check_matches_check/));
+  ok("FO-13 pass: 500 well-formed distinct matches are accepted, with a score of 4 decimals and a name in another script",
+    sql(DEMO, cc({ id: u(1010), matches: JSON.stringify(Array.from({ length: 500 }, (_, i) => ({ ...one, recordId: u(10000 + i), score: 0.1234, displayName: "\u0928\u093e\u092e Ålesund" }))) })) === u(1010));
+  ok("FO-13 fail (break 9): a writer's own function of the same name in another schema does not stand in for the matches' text rule",
+    refused(DEMO, `create schema fo13_shadow; create function fo13_shadow.fo_compliance_text_ok(t text, n integer) returns boolean language sql as 'select true';
+      set search_path = fo13_shadow, public; ${cc({ id: u(1015), matches: JSON.stringify([{ ...one, displayName: " " }]) })}`, /fo_conflict_check_matches_check/)
+    && sql(DEMO, `drop schema if exists fo13_shadow cascade; select 1`) === "1");
   ok("FO-13 fail: a negative hidden count is refused", refused(DEMO, cc({ id: u(1011), hidden: -1, result: "CONFLICT_CANNOT_ACT" }), /fo_conflict_check_hidden_count_check/));
   ok("FO-13 fail: a checker from another firm is refused (23503)", refusedCode(DEMO, cc({ id: u(1011), by: staffS }), "23503", /fo_conflict_check_firm_id_checked_by_fkey/));
   ok("FO-13 pass: firm B records its own checks with its own staff", sql(DEMO, cc({ id: u(1012), firm: firmB, by: staffS })) === u(1012));
@@ -210,13 +245,25 @@ try {
     refused(DEMO, ic({ id: u(2002), country: null }), /fo_identity_check_document_check/)
     && refused(DEMO, ic({ id: u(2002), last4: null }), /fo_identity_check_document_check/)
     && refused(DEMO, ic({ id: u(2002), method: "IN_PERSON", type: null, last4: null }), /fo_identity_check_document_check/)
-    && refused(DEMO, ic({ id: u(2002), method: "IN_PERSON", type: null, country: null, last4: null, key: "k", sha: SHA }), /fo_identity_check_document_check/));
+    && refused(DEMO, ic({ id: u(2002), method: "IN_PERSON", type: null, country: null, last4: null, key: "identity/x.pdf", sha: SHA }), /fo_identity_check_document_check|fo_identity_check_copy_check/));
   ok("FO-13 fail: a DOCUMENT_COPY check without a document is refused", refused(DEMO, ic({ id: u(2002), method: "DOCUMENT_COPY", type: null, country: null, expiry: null, last4: null }), /fo_identity_check_document_copy_method_check/));
   ok("FO-13 fail: method OTHER needs what it was; with it, it is recorded",
     refused(DEMO, ic({ id: u(2002), method: "OTHER" }), /fo_identity_check_method_detail_check/)
     && sql(DEMO, ic({ id: u(2002), method: "OTHER", detail: "Sample: confirmed by the employer's HR letter" })) === u(2002));
+  ok("FO-13 fail (break 3): a full document number cannot be put in the note or the copy's key (free text in the key, ../ in it)",
+    refused(DEMO, ic({ id: u(2006), method: "OTHER", detail: "Passport AB1234567 seen, holder Sample" }), /fo_identity_check_method_detail_check/)
+    && refused(DEMO, ic({ id: u(2006), detail: "licence A1234-56789-01234" }), /fo_identity_check_method_detail_check/)
+    && refused(DEMO, ic({ id: u(2006), key: "identity/passport-AB1234567.pdf", sha: SHA }), /fo_identity_check_copy_check/)
+    && refused(DEMO, ic({ id: u(2006), key: `identity/../${u(1)}.pdf`, sha: SHA }), /fo_identity_check_copy_check/));
+  ok("FO-13 pass: a note with a date and a phone number is not a document number",
+    sql(DEMO, ic({ id: u(2006), method: "OTHER", detail: "Sample: employer HR letter dated 2026-11-14, phone 416 555 0100" })) === u(2006));
   ok("FO-13 fail: a country that is not two upper-case letters, or an endless expiry, is refused",
     refused(DEMO, ic({ id: u(2003), country: "in" }), /fo_identity_check_country_check/) && refused(DEMO, ic({ id: u(2003), expiry: "infinity" }), /fo_identity_check_expiry_check/));
+  ok("FO-13 fail (break 7): an expiry in year 1 is refused", refused(DEMO, ic({ id: u(2003), expiry: "0001-01-01" }), /fo_identity_check_expiry_check/));
+  ok("FO-13 pass (break 8): the identity check's time is the database's, and a suspended checker is refused",
+    sql(DEMO, ic({ id: u(2007) }).replace("checked_by)", "checked_by, checked_at)").replace(`'${staffR}') returning`, `'${staffR}', '1900-01-01') returning`)) === u(2007)
+    && sql(DEMO, `select checked_at > now() - interval '1 minute' from fo_identity_check where id = '${u(2007)}'`) === "t"
+    && refused(DEMO, ic({ id: u(2008), by: suspended }), /the checker: staff member .* is not active/));
   ok("FO-13 fail: a copy key without its sha256 (a NULL CHECK passes: found while building), a sha256 without a key, a bad sha256, or a key with spaces is refused",
     refused(DEMO, ic({ id: u(2003), key: "k" }), /fo_identity_check_copy_check/) && refused(DEMO, ic({ id: u(2003), sha: SHA }), /fo_identity_check_copy_check/) && refused(DEMO, ic({ id: u(2003), key: "k", sha: "xyz" }), /fo_identity_check_copy_check/)
     && refused(DEMO, ic({ id: u(2003), key: "a b", sha: SHA }), /fo_identity_check_copy_check/));
@@ -236,7 +283,8 @@ try {
   const lone = sql(DEMO, `insert into platform_staff (id, firm_id, email, display_name, updated_at) values (gen_random_uuid(), '${firmA}', 'lone@sample-firm.example.com', 'Lone', now()) returning id`);
   const confirmer = sql(DEMO, `insert into platform_staff (id, firm_id, email, display_name, updated_at) values (gen_random_uuid(), '${firmA}', 'confirmer@sample-firm.example.com', 'Confirmer', now()) returning id`);
   const checker = sql(DEMO, `insert into platform_staff (id, firm_id, email, display_name, updated_at) values (gen_random_uuid(), '${firmA}', 'checker@sample-firm.example.com', 'Checker', now()) returning id`);
-  sql(DEMO, cc({ id: u(1013), hidden: 1, confirmedBy: confirmer, confirmedAt: "now" }));
+  sql(DEMO, cc({ id: u(1013), hidden: 1, result: null }));
+  sql(DEMO, `update fo_conflict_check set confirmed_by = '${confirmer}', result = 'NO_CONFLICT' where id = '${u(1013)}'`);
   sql(DEMO, ic({ id: u(2005), by: checker }));
   ok("FO-13 pass: a staff member no check names can still be deleted", sql(DEMO, `delete from platform_staff where id = '${lone}' returning 1`) === "1");
   ok("FO-13 fail: a staff member who confirmed a conflict check, or checked an identity, cannot be deleted or change id (RESTRICT: 23001)",
