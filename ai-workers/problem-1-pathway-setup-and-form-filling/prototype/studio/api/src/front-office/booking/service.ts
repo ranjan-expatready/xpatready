@@ -31,6 +31,9 @@ type Status = "SCHEDULED" | "RESCHEDULED" | "CANCELLED" | "COMPLETED" | "NO_SHOW
 type Mode = "VIDEO" | "PHONE" | "IN_PERSON";
 const ACTIVE: Status[] = ["SCHEDULED", "RESCHEDULED"];
 const MIN = 60_000, DAY = 24 * 60 * MIN;
+/** A booking's transaction waits up to 10 s for a connection: writers of one busy slot queue on the no-overlap rule, and
+ *  the 409 they end with is better than a pool time-out (P-562: sized for about 100 firms). */
+const TX = { maxWait: 10_000, timeout: 20_000 };
 
 export type BookingPorts = {
   audit: AuditPort<Tx>; clock: ClockPort; jobs: JobPort; mail: MailPort; arrival: ArrivalPort<Tx>;
@@ -254,7 +257,7 @@ export class BookingService {
         summary: `Attendance recorded: ${o === "COMPLETED" ? "attended" : "did not attend"}.`, detail: { bookingId: b.id, from: b.status, to: o, sequence: after.sequence } });
       await this.outbox(tx, after, o === "COMPLETED" ? EVENT.BOOKING_COMPLETED : EVENT.BOOKING_NO_SHOW);
       return after;
-    });
+    }, TX);
     return this.view(done);
   }
 
@@ -294,13 +297,18 @@ export class BookingService {
             summary: `Consultation booked (${type.name}).`, detail: { bookingId: booking.id, typeId: type.id, staffId: booking.staffId, personId: who.personId, prospectId: who.prospectId ?? null, startsAt: booking.startsAt.toISOString(), sequence: booking.sequence } });
           await this.outbox(tx, booking, EVENT.BOOKING_SCHEDULED);
           return { booking, token };
-        });
+        }, TX);
         await this.afterCommit({ booking: done.booking, type, method: "REQUEST", kind: "booked", token: done.token });
         return { ...this.view(done.booking), manageToken: done.token, label: wallLabel(done.booking.startsAt, done.booking.visitorTimeZone) };
       } catch (e) {
-        // Another booking took the host between the slot check and the write (the database's no-overlap rule): try the
-        // next free host once per host; when none is left, the visitor gets fresh times.
-        if (!isOverlap(e) || attempt >= type.hostStaffIds.length) throw isOverlap(e) ? slotTaken(await this.nextSlots(firmId, type, at)) : e;
+        // Another booking took the host between the slot check and the write (the database's no-overlap rule, or the
+        // deadlock PostgreSQL reports when two writers of one range wait on each other): try again, which re-reads the
+        // free hosts; when the retries are spent, the visitor gets fresh times.
+        // No free host at that time (read after the host locks): fresh times, read after the transaction has ended.
+        if (e instanceof NoSlot) throw slotTaken(await this.nextSlots(firmId, type, at));
+        if (!isContention(e)) throw e;
+        if (attempt >= type.hostStaffIds.length + 4) throw slotTaken(await this.nextSlots(firmId, type, at));
+        await new Promise((r) => setTimeout(r, 5 + Math.floor(Math.random() * 20)));
       }
     }
   }
@@ -322,16 +330,17 @@ export class BookingService {
             summary: "Consultation moved to a new time.", detail: { bookingId: b.id, fromStartsAt: b.startsAt.toISOString(), toStartsAt: after.startsAt.toISOString(), fromStaffId: b.staffId, toStaffId: staffId, sequence: after.sequence } });
           await this.outbox(tx, after, EVENT.BOOKING_RESCHEDULED);
           return { booking: after, type, token: newToken, oldSequence: b.sequence };
-        });
+        }, TX);
         await this.afterCommit({ booking: done.booking, type: done.type, method: "REQUEST", kind: "moved", token: done.token, oldSequence: done.oldSequence });
         return { ...this.view(done.booking), manageToken: done.token, label: wallLabel(done.booking.startsAt, done.booking.visitorTimeZone) };
       } catch (e) {
-        if (!isOverlap(e) || attempt++ >= 3) {
-          if (!isOverlap(e)) throw e;
+        if (!(e instanceof NoSlot) && !isContention(e)) throw e;
+        if (e instanceof NoSlot || attempt++ >= 4) {
           const b = await this.db.foBooking.findFirstOrThrow({ where: firmScope(firmId, { id: bookingId }) });
           const type = await this.db.foConsultationType.findFirstOrThrow({ where: firmScope(firmId, { id: b.typeId }) });
           throw slotTaken(await this.nextSlots(firmId, type, { startsAt, timeZone: zone ?? b.visitorTimeZone }, bookingId));
         }
+        await new Promise((r) => setTimeout(r, 5 + Math.floor(Math.random() * 20)));
       }
     }
   }
@@ -347,7 +356,7 @@ export class BookingService {
         summary: "Consultation cancelled.", detail: { bookingId: b.id, from: b.status, sequence: after.sequence } });
       await this.outbox(tx, after, EVENT.BOOKING_CANCELLED);
       return { booking: after, type, oldSequence: b.sequence };
-    });
+    }, TX);
     await this.afterCommit({ booking: done.booking, type: done.type, method: "CANCEL", kind: "cancelled", oldSequence: done.oldSequence });
     return this.view(done.booking);
   }
@@ -450,10 +459,14 @@ export class BookingService {
     });
   }
 
-  /** The slot at exactly `startsAt`, re-checked inside the write (AG-4-25), or 409 with fresh times. */
+  /** The slot at exactly `startsAt`, re-checked inside the write (AG-4-25), or 409 with fresh times. Writers for the same
+   *  hosts queue first on one transaction lock per host (taken in id order, so two writers never wait on each other): the
+   *  second then sees the first's booking and answers 409 instead of meeting it in the no-overlap rule, which stays the
+   *  database's last word (BR-3). */
   private async freeSlot(tx: Tx, firmId: string, type: TypeRow, startsAt: Date, ignoreBookingId?: string): Promise<Slot> {
+    for (const staffId of [...type.hostStaffIds].sort()) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`fo-booking-host:${staffId}`}))`;
     const slot = (await this.slotsFor(tx, firmId, type, startsAt, new Date(startsAt.getTime() + 1), ignoreBookingId)).find((s) => s.startsAt.getTime() === startsAt.getTime());
-    if (!slot) throw slotTaken(await this.nextSlots(firmId, type, { startsAt, timeZone: "UTC" }, ignoreBookingId));
+    if (!slot) throw new NoSlot();
     return slot;
   }
 
@@ -536,17 +549,23 @@ export class BookingService {
   }
 }
 
+/** No free host at the asked time, found inside the write; the caller answers 409 with fresh times once the transaction
+ *  has ended (reading them inside it would hold a second connection). */
+class NoSlot extends Error {}
+
 export const staffActor = (ctx: StaffContext): Actor => ({ word: `staff:${ctx.staffId}`, staffId: ctx.staffId });
 function need(ctx: StaffContext, key: string) { if (!ctx.keys.includes(key)) throw forbidden(key); }
 
-/** The database's no-overlap refusal (23P01 on fo_booking_no_overlap), however the driver wraps it. */
-export function isOverlap(e: unknown): boolean {
+/** Two writers of one slot: the database's no-overlap refusal (23P01 on fo_booking_no_overlap), or the deadlock (40P01)
+ *  or serialization failure (40001) PostgreSQL may report instead when two inserts wait on each other's range; however
+ *  the driver wraps it. Each is answered by re-reading the free hosts. */
+export function isContention(e: unknown): boolean {
   const seen = new Set<unknown>();
   const walk = (x: unknown, depth: number): boolean => {
     if (!x || typeof x !== "object" || seen.has(x) || depth > 6) return false;
     seen.add(x);
     const o = x as Record<string, unknown>;
-    if (o.code === "23P01" || o.originalCode === "23P01" || (typeof o.message === "string" && /fo_booking_no_overlap|23P01|exclusion constraint/.test(o.message))) return true;
+    if (["23P01", "40P01", "40001"].some((c) => o.code === c || o.originalCode === c) || (typeof o.message === "string" && /fo_booking_no_overlap|23P01|exclusion constraint|deadlock detected|could not serialize/.test(o.message))) return true;
     return ["cause", "meta", "driverAdapterError", "error"].some((k) => walk(o[k], depth + 1));
   };
   return walk(e, 0);
