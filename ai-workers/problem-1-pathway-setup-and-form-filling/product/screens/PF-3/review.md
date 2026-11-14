@@ -123,4 +123,22 @@ Round 2 verdict (d5d13ed8): Approve.
 
 None of these lets wrong data in through a route that exists today. No Blocker or Major is open at d4c2c426c53c6b431e0be84abfd97a32b329da77.
 
-Verdict: Approve (d4c2c426c53c6b431e0be84abfd97a32b329da77)
+Round 3 verdict (d4c2c426): Approve.
+
+## Round 4: head 896c34f8 (diff from c5ba30f8 only; merge-batch failure, run 43546321596)
+
+**The change:** `api/src/case-feed.ts` gains `PLATFORM_ENTITIES = {"platform_firm_setting"}`, and the sweep in `tests/check_case_feed.ts` accepts a third list. That sweep found `platform/settings.ts`'s audit entity on neither list. `npx tsx tests/check_case_feed.ts`: **36/36, exit 0**. With the third list removed from the sweep, the batch's original failure comes back.
+
+**Is it right?** Yes.
+* **Choosing a third list over the configuration list:** correct. `firmMayRead` lets every firm read a configuration line that names no case (`case-feed.ts` `isConfigEntity`). On `CONFIG_ENTITIES`, firm A's setting changes, including their from/to values, would reach every other firm's staff in `studio.ts` `activity()`.
+* **Behaviour:** unchanged. A platform line names no case and is not a configuration entity, so it falls to the existing fail-closed branch: no firm's staff read it. Configuration people read every line, as before (`studio.ts:1255-1265`); they are our own content staff, not a firm's.
+* **The two-list shape:** nothing depends on it. The only consumers are `studio.ts`'s `firmMayRead` call and comments (`studio.ts:1253-1256`, `library-changes.ts:365`, `submission.ts:271`, `filing-record.ts:69`, `check_forms_b88_qa263.ts:4`). The comments still read correctly, because a third list is still "on neither" case nor configuration list.
+* **The tests:** pass ("on the platform list only"), fail (another firm's line, and a line with no case, read by no firm's staff) and no overlap with either list or the "library " prefix. All are real checks.
+
+**Minor (neither blocks):**
+* **m11: the "read by no firm" claim has one narrow exception, and it is self-inflicted.** `firmMayRead` looks for a case named in the words before it checks the entity. The firm key rule allows `case-deadbeef` (`platform_firm_key_check`), which makes the summary "Firm case-deadbeef: setting …" look like a line about case `deadbeef…`. Run: `firmMayRead({entity: "platform_firm_setting", summary: "Firm case-deadbeef: setting platform.currency changed"}, new Set(["deadbeef"]))` gives `true`. Only the firm that chose that key leaks its own setting lines, to a firm owning a matching case prefix. Fix when convenient: `if (PLATFORM_ENTITIES.has(e.entity)) return false;` as the first line of `firmMayRead`, or keep firm keys from starting with `case-`.
+* **m12: misplaced comments.** The new comment block went in between `isConfigEntity`'s own comment ("A configuration entity: listed, or a library change's …") and `isConfigEntity`. So `PLATFORM_ENTITIES` now carries both comments and `isConfigEntity` carries none (`case-feed.ts` around line 40). Move the old comment back above `isConfigEntity`.
+
+No Blocker or Major is open at 896c34f82bb280775648ffa3618824d7aae28264. Rounds 1-3 stand; nothing else changed.
+
+Verdict: Approve (896c34f82bb280775648ffa3618824d7aae28264)

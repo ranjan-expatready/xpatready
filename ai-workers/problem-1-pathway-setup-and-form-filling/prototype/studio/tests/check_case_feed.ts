@@ -51,6 +51,7 @@ ok("the two lists do not overlap", [...CASE_ENTITIES].every((x) => !CONFIG_ENTIT
 // firm's case feed (a configuration line would reach every firm; the platform's own timeline reads it by firm).
 ok("pass (PF-3): \"platform_firm_setting\" is on the platform list only", PLATFORM_ENTITIES.has("platform_firm_setting") && !CASE_ENTITIES.has("platform_firm_setting") && !isConfigEntity("platform_firm_setting"));
 ok("fail (PF-3): another firm's setting line is never read by this firm's staff, nor by any firm's (it names no case)", !firmMayRead(line("platform_firm_setting", "Firm sample-solo: setting platform.currency changed", "x:platform.currency"), own) && !firmMayRead(line("platform_firm_setting", "Firm sample-firm: setting platform.language changed"), new Set([OURS, THEIRS])));
+ok("fail (PF-3 review m11): a setting line of a firm whose key reads like a case (\"case-deadbeef\") is not read by the firm whose case id it matches", !firmMayRead(line("platform_firm_setting", "Firm case-deadbeef: setting platform.currency changed"), new Set(["deadbeef"])) && firmMayRead(line("sign step", "x marked a form on case deadbeef"), new Set(["deadbeef"])));
 ok("the platform list overlaps neither other list", [...PLATFORM_ENTITIES].every((x) => !CASE_ENTITIES.has(x) && !CONFIG_ENTITIES.has(x) && !x.startsWith("library ")));
 
 // The sweep: every audit write in api/src (any `.log(` call with five or more arguments, auditEvent.create and
