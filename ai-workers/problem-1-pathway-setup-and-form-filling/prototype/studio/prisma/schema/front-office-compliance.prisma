@@ -1,4 +1,4 @@
-// front-office-compliance.prisma: conflict checks, identity checks. Owner: Lead B (front office).
+// front-office-compliance.prisma — conflict checks, identity checks. Owner: Lead B (front office).
 // One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
 //
 // FO-13 (P-579, P-584 (8), P-599, P-600; BACKLOG row FO-13 and its brief, which wins: no complaint tables here, they are
