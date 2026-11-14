@@ -8,8 +8,6 @@
 //   PLATFORM_POOL_MFA_REQUIRED   "true" (default) | "false": the pool requires two-step sign-in for everyone (P-567);
 //                                "false" makes every Cognito sign-in refused, saying why (PF-4b verifies the pool itself)
 //   PLATFORM_LOCAL_SECRET        the local stand-in's signing key (at least 32 characters); unset: a random one per start
-import { Injectable } from "@nestjs/common";
-
 /** Who a verified token is. Times are seconds since 1970 (JWT NumericDate; the local stand-in's carry milliseconds). */
 export type VerifiedIdentity = {
   via: "local" | "cognito";
@@ -59,7 +57,6 @@ export function identityConfig(env: NodeJS.ProcessEnv = process.env): IdentityCo
 }
 
 /** The clock the module reads (tests give their own, so a 5-minute step-up rule is tested without waiting). */
-@Injectable()
 export class PlatformClock {
   now(): number { return Date.now(); }
 }

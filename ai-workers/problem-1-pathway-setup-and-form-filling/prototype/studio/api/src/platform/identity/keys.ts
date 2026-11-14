@@ -12,6 +12,8 @@
 // The token travels in `X-Staff-Session: Bearer <token>` (STAFF_SESSION_HEADER): core.ts refuses an Authorization Bearer
 // header on every path but /api/link/ (C6.16), and that file is outside PF-4 (question for the tech lead on the PR: one
 // line there would let the guard read `Authorization: Bearer` as well; the guard already accepts it when it arrives).
+// Nest's decorators are applied as calls in this folder, not with @ syntax: api/tsconfig.json compiles decorators only for
+// src/*.ts and src/features/**, and that file is outside PF-4 (question for the tech lead: add "src/platform/**/*.ts").
 import { HttpException, HttpStatus, SetMetadata, applyDecorators } from "@nestjs/common";
 import { OpenRead } from "../../core.ts";
 
@@ -58,3 +60,12 @@ export function problem(status: number, title: string, detail: string, extra: Re
 }
 export function unauthorized(detail: string, code = "NOT_SIGNED_IN"): never { return problem(401, "Sign in again", detail, { code }); }
 export function forbidden(detail: string, code = "NOT_ALLOWED"): never { return problem(403, "Not allowed", detail, { code }); }
+
+/** Applies method decorators to one method of a class, and parameter decorators to its parameters in order (the calls the
+ *  @ syntax would make). */
+export function decorate<C extends { prototype: object }>(cls: C, method: string, methodDecorators: MethodDecorator[], paramDecorators: ParameterDecorator[] = []) {
+  const proto = cls.prototype, d = Object.getOwnPropertyDescriptor(proto, method);
+  if (!d) throw new Error(`decorate: ${String((cls as { name?: string }).name)} has no method ${method}`);
+  for (const m of [...methodDecorators].reverse()) { const r = m(proto, method, d); if (r) Object.defineProperty(proto, method, r); }
+  paramDecorators.forEach((p, i) => p(proto, method, i));
+}

@@ -46,9 +46,8 @@ export function assertEveryRouteDeclared(routes: ReturnType<typeof platformRoute
 
 type Req = { method: string; path?: string; url?: string; headers: Record<string, string | string[] | undefined>; platform?: StaffContext };
 
-@Injectable()
 export class PlatformGuard implements CanActivate, OnModuleInit {
-  constructor(@Inject(Reflector) private readonly reflector: Reflector, @Inject(ModulesContainer) private readonly modules: ModulesContainer, @Inject(PlatformIdentity) private readonly identity: PlatformIdentity) {}
+  constructor(private readonly reflector: Reflector, private readonly modules: ModulesContainer, private readonly identity: PlatformIdentity) {}
 
   onModuleInit() { assertEveryRouteDeclared(platformRoutes(this.modules, this.reflector)); }
 
@@ -70,3 +69,5 @@ export class PlatformGuard implements CanActivate, OnModuleInit {
     return true;
   }
 }
+Injectable()(PlatformGuard);
+[Reflector, ModulesContainer, PlatformIdentity].forEach((token, i) => Inject(token)(PlatformGuard, undefined, i));

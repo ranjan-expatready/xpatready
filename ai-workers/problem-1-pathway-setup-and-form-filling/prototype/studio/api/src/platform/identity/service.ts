@@ -4,7 +4,7 @@
 // (audit.ts; a failed line rolls the change back) and writes its module_event row last (PF-3 review m8). Invitation
 // lifetimes and expiry are measured with the database's clock (`now()`), never a writer-set time (PF-3 review m6). A
 // licence number never appears in an audit line, an event payload or an answer other than the person's own record.
-import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";   // applied as calls below the class (keys.ts says why)
 import { PlatformRole, type Prisma } from "@prisma/client";
 import { createHash, randomBytes } from "node:crypto";
 import { Db } from "../../core.ts";
@@ -64,9 +64,8 @@ const textOf = (v: unknown, what: string) => {
 };
 
 // ---------------------------------------------------------------------------------------------------------- the service
-@Injectable()
 export class PlatformIdentity implements OnModuleInit {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(IDENTITY_PORT) readonly port: IdentityPort, @Inject(PlatformClock) private readonly clock: PlatformClock) {}
+  constructor(private readonly db: Db, readonly port: IdentityPort, private readonly clock: PlatformClock) {}
 
   async onModuleInit() {
     // Keys warmed at start (tech gate entry 2). A pool that cannot be reached now is fetched on the first request instead.
@@ -87,20 +86,21 @@ export class PlatformIdentity implements OnModuleInit {
     // Cognito: a session with a later sign-in time than the last one seen is a new sign-in, which ends the older one.
     if (id.via === "cognito" && (!staff.lastSignInAt || staff.lastSignInAt.getTime() < authMs)) await this.recordSignIn(staff.firmId, staff.firm.key, staff.id, new Date(authMs), "cognito", staff.lastSignInAt !== null);
     const rev = await this.db.platformSessionRevocation.findFirst({ where: firmScope(staff.firmId, { staffId: staff.id }), orderBy: { revokedAt: "desc" } });
-    if (rev && authMs < rev.revokedAt.getTime()) return unauthorized(rev.reason === "another-device" ? ANOTHER_DEVICE : "This session was ended. Sign in again.", rev.reason === "another-device" ? "SIGNED_IN_ELSEWHERE" : "SESSION_REVOKED");
+    // A session that started at or before the person's last revocation is refused (deactivation, a newer sign-in).
+    if (rev && authMs <= rev.revokedAt.getTime()) return unauthorized(rev.reason === "another-device" ? ANOTHER_DEVICE : "This session was ended. Sign in again.", rev.reason === "another-device" ? "SIGNED_IN_ELSEWHERE" : "SESSION_REVOKED");
     const roles = staff.grants.map((g) => g.role);
     const keys = (await this.db.platformRolePermission.findMany({ where: { role: { in: roles } }, select: { permissionKey: true } })).map((k) => k.permissionKey).filter((k) => FIRM_KEY.test(k));
     const set = new Set(keys);
     return { staffId: staff.id, firmId: staff.firmId, firmKey: staff.firm.key, roles, keys: [...set].sort(), duties: dutiesOf(set), authTime: id.authTime, via: id.via };
   }
 
-  /** A new sign-in ends every older session of the person (one session at a time, AG-1-55): one revocation at the new
-   *  session's sign-in time, so a session that started earlier is refused and this one is not. */
+  /** A new sign-in ends every older session of the person (one session at a time, AG-1-55): one revocation 1 ms before
+   *  the new session's sign-in time, so a session that started earlier is refused and this one is not. */
   private async recordSignIn(firmId: string, firmKey: string, staffId: string, at: Date, via: string, hadSession: boolean) {
     await this.db.$transaction(async (tx) => {
       const moved = await tx.platformStaff.updateMany({ where: firmScope(firmId, { id: staffId, OR: [{ lastSignInAt: null }, { lastSignInAt: { lt: at } }] }), data: { lastSignInAt: at } });
       if (!moved.count) return;   // another request recorded this sign-in already
-      if (hadSession) await tx.platformSessionRevocation.create({ data: { firmId, staffId, revokedAt: at, reason: "another-device" } });
+      if (hadSession) await tx.platformSessionRevocation.create({ data: { firmId, staffId, revokedAt: new Date(at.getTime() - 1), reason: "another-device" } });
       await auditStaff(tx, { firmId, firmKey, actor: actorWord(staffId), action: "platform.staff.sign_in", entityKey: staffId, summary: `a staff member signed in (${via}); ${hadSession ? "their older session was ended" : "first session"}`, detail: { staffId, via, at: at.toISOString() } });
     });
   }
@@ -115,7 +115,9 @@ export class PlatformIdentity implements OnModuleInit {
     if (!firm || !staff) return unauthorized("No staff member of that firm signs in with that name.", "UNKNOWN_STAFF");
     if (staff.status !== "ACTIVE") return unauthorized("This staff account is not active. Ask your firm's Owner or Admin.", "STAFF_NOT_ACTIVE");
     if (body.secondStep !== true) return unauthorized("Two-step sign-in is required for every staff member: finish the second step (secondStep: true).", "TWO_STEP_REQUIRED");
-    const authMs = Math.max(this.clock.now(), (staff.lastSignInAt?.getTime() ?? 0) + 1);
+    // The new session starts after the last sign-in and the last revocation (a deactivation in the same millisecond).
+    const rev = await this.db.platformSessionRevocation.findFirst({ where: firmScope(firm.id, { staffId: staff.id }), orderBy: { revokedAt: "desc" }, select: { revokedAt: true } });
+    const authMs = Math.max(this.clock.now(), (staff.lastSignInAt?.getTime() ?? 0) + 1, (rev?.revokedAt.getTime() ?? 0) + 1);
     await this.recordSignIn(firm.id, firm.key, staff.id, new Date(authMs), "local stand-in", staff.lastSignInAt !== null);
     return { token: this.port.issue(staff.id, { authTimeMs: authMs, secondStep: true }), tokenType: "Bearer", expiresIn: 3600, staffId: staff.id, firmKey: firm.key };
   }
@@ -315,3 +317,5 @@ export class PlatformIdentity implements OnModuleInit {
     });
   }
 }
+Injectable()(PlatformIdentity);
+[Db, IDENTITY_PORT, PlatformClock].forEach((token, i) => Inject(token)(PlatformIdentity, undefined, i));
