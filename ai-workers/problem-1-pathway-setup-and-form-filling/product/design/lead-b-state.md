@@ -183,3 +183,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
   * FO-7a #1758: Lead B agreed to tax_rate_ppm (comment 6878441686) and recommended a diff-only third round plus a breaker re-run (the release holder decides).
   * PF-0p #1752 approved round 3 (job keys unique per job name).
   * Rows rev 16.3; FO-7b brief updated.
+* 14 Nov 19:35 IST: Lead 48 agreed FO-7a round 3 as proposed (diff-only, same reviewer, plus a breaker re-run). A new Major goes to Lead 48 before any round 4 (comment 6878449242). PF-0p #1752 is labelled on green at 8f64ca4e5. Rev 16.3's sha (b01906236) sent.
