@@ -304,6 +304,16 @@ jobs:
             if [ -n "$GREEN" ]; then printf '%s\n' "$GREEN" > "$RUNNER_TEMP/green.tsv"; sel+=(--skip-green "$RUNNER_TEMP/green.tsv"); fi; fi
           bash "$P/tools/run-suites.sh" --demo --retry "${sel[@]}" --shard "${{ matrix.shard }}/$N" | tee suites.md
           exit ${PIPESTATUS[0]}
+      - name: no personal data in logs (PF-23, Doc-1 release gate; every server log this part's suites wrote; a few seconds)
+        # SA-11 BR-16, SA-11-37: the servers above log through PF-23's redacting logger; this reads every copy's api.log
+        # and fails on a seeded personal value (the sample data's people, PF-23's canaries), an email address, a bearer
+        # credential or a JWT, naming file, line and rule, never the value. Its self-test first proves a planted leaking
+        # line fails. Runs even when a suite failed, so a leak is never hidden behind a red suite.
+        if: ${{ !cancelled() && env.KIND == 'code' }}
+        run: |
+          cd "$S"
+          ./node_modules/.bin/tsx api/src/platform/observability/scan-logs.ts --self-test
+          ./node_modules/.bin/tsx api/src/platform/observability/scan-logs.ts
       - name: summary
         if: always() && env.KIND == 'code'
         run: '[ -f suites.md ] && cat suites.md >> "$GITHUB_STEP_SUMMARY" || true'

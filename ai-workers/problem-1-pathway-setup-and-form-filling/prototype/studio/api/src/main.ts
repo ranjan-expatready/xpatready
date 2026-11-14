@@ -230,6 +230,7 @@ async function main() {
   // P-214: a new feature registers itself in api/src/features/<feature>.ts, not in the @Module list above.
   await registerFeatures(AppModule);
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: ["error", "warn"] });
+  (await import("./platform/observability/hook.ts")).observe(app); // PF-23: one JSON logger with redaction, request lines and metrics (NFR5-14, BR-16)
   app.useBodyParser("json", { limit: "5mb" });
   app.useGlobalFilters(new ProblemErrors());
   const web = join(STUDIO, "web", "dist");
