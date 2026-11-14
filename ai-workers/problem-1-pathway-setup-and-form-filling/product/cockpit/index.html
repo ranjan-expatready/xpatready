@@ -108,6 +108,11 @@ svg text{font-family:var(--sans)}
 .trend>div{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;cursor:help}
 .err{border:2px solid var(--bad);background:var(--bad-soft);color:var(--ink);border-radius:8px;padding:14px;margin:18px 0}
 details#details{margin:14px 0}details#details>summary{cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font:600 15px/1.3 var(--sans);color:var(--ink2)}details#details[open]>summary{color:var(--ink)}
+.goal{margin:10px 0 4px;font-size:14px;color:var(--ink2)}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 4px;position:sticky;top:64px;z-index:15;background:var(--bg);padding:6px 0}
+.tabs button{font:500 14px/1 var(--sans);padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink2);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .srcbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--ink);color:var(--bg);font-size:12.5px;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:none}
 .srcbar.on{display:block}
 .srcbar b{font-weight:600}
@@ -124,7 +129,7 @@ details#details{margin:14px 0}details#details>summary{cursor:pointer;background:
 <div class="strip" id="strip"><div class="strip-in" id="stripIn">
   <div class="tile"><div class="k">Needs you</div><div class="v">&#x2026;</div></div>
   <div class="tile"><div class="k">Release 1</div><div class="v">&#x2026;</div></div>
-  <div class="tile"><div class="k">qa Works</div><div class="v">&#x2026;</div></div>
+  <div class="tile"><div class="k">Proof verified</div><div class="v">&#x2026;</div></div>
   <div class="tile"><div class="k">Next date</div><div class="v">&#x2026;</div></div>
   <div class="tile"><div class="k">Data age</div><div class="v">&#x2026;</div></div>
 </div></div>
@@ -145,7 +150,9 @@ function S(s){return s?' data-src="'+esc(s)+'" title="'+esc(s)+'"':"";}
 function nz(x,suf){return x==null?'<span class="muted">n/a</span>':esc(x)+(suf||"");}
 function fmtDate(iso){if(!iso)return "not dated";var d=new Date(iso+"T00:00:00");return d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});}
 function short(iso){if(!iso)return "not dated";var d=new Date(iso+"T00:00:00");return d.toLocaleDateString("en-GB",{day:"numeric",month:"short"});}
-function pill(text,tone,s){return '<span class="pill t-'+tone+'"'+S(s)+'>'+esc(text)+'</span>';}
+var LABEL={"Not shaped":"Not yet specified","Shaped":"Specified, ready to build","In PR":"In development","Merged":"Built, not yet verified","qa Works":"Verified by QA","Works":"Verified by QA","Built, awaiting qa":"Built, not yet verified","Partial":"Partly working","Not tested":"Not yet tested","Not built":"Not yet built"};
+function lab(k){return LABEL[k]||k;}
+function pill(text,tone,s){return '<span class="pill t-'+tone+'"'+S(s)+'>'+esc(lab(text))+'</span>';}
 var TONE={"qa Works":"good","Merged":"prog","In PR":"prog","Shaped":"wait","Not shaped":"none",
   "Works":"good","Built, awaiting qa":"prog","Partial":"wait","Not tested":"none","Broken":"bad","Not built":"none",
   "Merge queue":"good","Ready for label":"prog","Building":"prog","Concept":"none","CI running":"prog","CI red":"bad","Question to Lead":"wait",
@@ -153,7 +160,7 @@ var TONE={"qa Works":"good","Merged":"prog","In PR":"prog","Shaped":"wait","Not 
 function tone(s){return TONE[s]||"none";}
 function toneVar(t){return "var(--"+t+")";}
 function ageText(h){if(h==null)return "n/a";if(h<1)return Math.round(h*60)+" min";if(h<48)return (Math.round(h*10)/10)+" h";return Math.round(h/24)+" d";}
-function section(no,id,title,why,inner){return '<section id="'+id+'"><h2><span class="no">'+no+'</span>'+esc(title)+'</h2><p class="why">'+esc(why)+'</p>'+inner+'</section>';}
+function section(no,id,title,why,inner){return '<section id="'+id+'"><h2>'+esc(title)+'</h2><p class="why">'+esc(why)+'</p>'+inner+'</section>';}
 function kpi(label,val,sub,s,cls){return '<div class="kpi'+(cls?" "+cls:"")+'"'+S(s)+'><div class="k">'+esc(label)+'</div><div class="v">'+val+'</div>'+(sub?'<div class="s">'+sub+'</div>':"")+'</div>';}
 
 /* source bar on tap */
@@ -178,8 +185,8 @@ function renderStrip(){
   var ageCls=age>6?"alert":age>2?"warn":"";
   el.innerHTML=
    '<div class="tile'+(ny>0?" alert":"")+'"'+S(src(s.needs_you))+'><div class="k">Needs you</div><div class="v">'+nz(ny)+'</div><div class="s">open items</div></div>'+
-   '<div class="tile"'+S(src(s.burnup_pct))+'><div class="k">Rows done</div><div class="v">'+nz(bu,"%")+'</div><div class="s">rows at qa Works</div></div>'+
-   '<div class="tile"'+S(src(s.works))+'><div class="k">qa Works</div><div class="v">'+nz(w[0])+'<span class="muted">/'+nz(w[1])+'</span></div><div class="s">capabilities</div></div>'+
+   '<div class="tile"'+S(src(s.burnup_pct))+'><div class="k">Release 1 verified</div><div class="v">'+nz(bu,"%")+'</div><div class="s">of 101 must-have rows, verified by QA</div></div>'+
+   '<div class="tile"'+S(src(s.works))+'><div class="k">Proof verified</div><div class="v">'+nz(w[0])+'<span class="muted">/'+nz(w[1])+'</span></div><div class="s">capabilities</div></div>'+
    '<div class="tile"'+S(src(s.next_date))+'><div class="k">Next date</div><div class="v">'+(nd?esc(short(nd.date)):"none")+'</div><div class="s">'+(nd?esc(nd.kind)+", in "+nd.days_left+" d":"")+'</div></div>'+
    '<div class="tile '+ageCls+'"'+S("generated "+D.freshness.generated_ist+"; amber over 2 h, red over 6 h")+'><div class="k">Data age</div><div class="v">'+ageText(age)+'</div><div class="s">'+esc(D.freshness.generated_ist||"")+'</div></div>';
 }
@@ -238,8 +245,8 @@ function rTeam(){
 function rStatus(){
   var s=D.status_line,w=v(s.works)||[],r=v(s.rows_done)||[],nc=v(s.next_committed),fc=v(s.build_forecast);
   var h='<div class="oneline">'+
-   '<div'+S(src(s.works))+'><div class="k">qa Works</div><div class="v">'+nz(w[0])+' / '+nz(w[1])+'</div><div class="s">capabilities proven by qa</div></div>'+
-   '<div'+S(src(s.rows_done))+'><div class="k">Release 1 rows done</div><div class="v">'+nz(r[0])+' / '+nz(r[1])+'</div><div class="s">'+nz(v(s.rows_merged_or_better))+' merged or better</div></div>'+
+   '<div'+S(src(s.works))+'><div class="k">Proof of concept: verified by QA</div><div class="v">'+nz(w[0])+' / '+nz(w[1])+'</div><div class="s">proof-of-concept capabilities</div></div>'+
+   '<div'+S(src(s.rows_done))+'><div class="k">Release 1: verified by QA</div><div class="v">'+nz(r[0])+' / '+nz(r[1])+'</div><div class="s">'+nz(v(s.rows_merged_or_better))+' merged or better</div></div>'+
    '<div'+S(src(s.next_committed))+'><div class="k">Next committed date</div><div class="v">'+(nc?esc(short(nc.date)):"none")+'</div><div class="s">'+(nc?esc(nc.what):"")+'</div></div>'+
    '<div'+S(src(s.build_forecast))+'><div class="k">Build forecast</div><div class="v">'+(fc&&fc.date?esc(short(fc.date))+(fc.date_to?"\u2013"+esc(short(fc.date_to)):""):"none")+'</div><div class="s">'+(fc?esc(fc.kind)+" \u00b7 "+esc(fc.source):"")+'</div></div>'+
    '<div'+S("generated "+D.freshness.generated_ist)+'><div class="k">Data age</div><div class="v">'+ageText(dataAgeH())+'</div><div class="s">main '+esc(v(D.freshness.main_sha)||"n/a")+'</div></div></div>';
@@ -453,6 +460,45 @@ function rLibrary(){
   LIBRARY.forEach(function(d){var u=d[4];if(u&&u.charAt(0)==='@')u=base?base+u.slice(1):'';h+='<tr><td>'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(d[0])+'</a>':esc(d[0]))+'</td><td class="small">'+esc(d[1])+'</td><td>'+pill(d[2],d[2]==="Living"?"good":d[2]==="Decision record"?"prog":"none")+'</td><td class="mono small">'+esc(d[3])+'</td></tr>';});
   return section("04","library","Library: master documents","One master per document (P-593). Living ones are kept current; history ones are kept for reference and no longer updated.",h+'</tbody></table></div>');
 }
+
+/* capability heat map (P-595): the 12 business functions against how far each got; colours by written rule */
+
+/* Release 1 at a glance (founder A60): scope, then the standard delivery stages, then who must act */
+function rGlance(){
+  var C=D.capabilities,c=v(C.counts)||{},tot=C.total||101,ny=v(D.summary.needs_you)||0,risks=(D.risks.items||[]).filter(function(r){return r.status!=="closed";});
+  var byOwner={};risks.forEach(function(r){byOwner[r.owner]=(byOwner[r.owner]||0)+1;});
+  var stages=[["Not shaped","Not yet specified","No backlog row with a testable \"done when\" yet"],["Shaped","Specified, ready to build","Backlog row with acceptance criteria; nobody building it yet"],["In PR","In development","A pull request is open for the whole row"],["Merged","Built, not yet verified","Merged into the main line; QA has not yet verified it"],["qa Works","Verified by QA","An independent QA verdict says it works, with the test run on record"]];
+  var h='<h3>Scope (capability map baseline, P-586)</h3><div class="kpis">'+
+    kpi("Must-have (Release 1)",esc(tot),"built before the first real firm","capability map draft 6: Build rows")+
+    kpi("Optional","8","decided one by one; out of the first build","capability map draft 6: Optional rows (P-572)")+
+    kpi("Held","3","waiting on an outside answer","capability map draft 6: Held rows")+
+    kpi("Deferred to after launch","31","backlog rows X-1 to X-31","BACKLOG.md section \"After the end-to-end production-grade system\" (P-582)")+'</div>';
+  h+='<h3>Delivery stages of the '+tot+' must-have rows</h3><div class="kpis">';
+  stages.forEach(function(st){h+=kpi(st[1],esc(c[st[0]]||0)+'<span class="muted" style="font-size:13px"> / '+tot+'</span>',esc(st[2]),src(C.counts));});
+  h+=kpi("Released to production","0","no production yet: it opens after the launch gate (P-589)","P-589 (3), P-590 (1)")+'</div>';
+  h+='<h3>Who must act</h3><div class="kpis">'+kpi("You",esc(ny),"open items in Needs you, at the top",src(D.summary.needs_you),ny?"alert":"");
+  delete byOwner["founder"];var mine=risks.filter(function(r){return r.owner==="founder";}).length;h=h.replace("open items in Needs you, at the top","open items in Needs you, plus "+mine+" launch risks you own");Object.keys(byOwner).sort().forEach(function(o){h+=kpi(esc(o),esc(byOwner[o]),"open launch risks they own","risks.json")});
+  h+='</div><p class="small muted">Terms: "specified" = has acceptance criteria; "built" = merged into the main line; "verified" = QA\'s independent verdict with a recorded test run; "released" = live for a real firm. The proof of concept\'s own count (qa Works on its 98 capabilities) is a separate number in "On track?".</p>';
+  return section("","glance","Release 1 at a glance","How much we must build, how far it has got in the standard delivery stages, and who must act.",h);
+}
+function rHeat(){
+  var C=D.capabilities,order=["Not shaped","Shaped","In PR","Merged","qa Works"];
+  var h='<div class="box"><table><thead><tr><th>Business function</th><th class="n">Rows</th>';
+  order.forEach(function(k){h+='<th class="n">'+esc(lab(k))+'</th>';});
+  h+='<th>Where it stands</th></tr></thead><tbody>';
+  C.groups.forEach(function(g){var rs=C.rows.filter(function(r){return r.group===g.id;}),c={};order.forEach(function(k){c[k]=0;});
+    rs.forEach(function(r){c[r.status]=(c[r.status]||0)+1;});
+    var done=c["qa Works"],built=done+c["Merged"],moving=built+c["In PR"],t,word;
+    if(rs.length&&done===rs.length){t="good";word="all proven by qa";}
+    else if(moving>0){t="wait";word=built+" of "+rs.length+" built, "+done+" proven";}
+    else if(c["Shaped"]>0){t="prog";word="shaped, not started";}
+    else {t="none";word="not shaped yet";}
+    h+='<tr'+S(src(C.counts))+'><td>'+esc(g.id+". "+g.name)+'</td><td class="n">'+rs.length+'</td>';
+    order.forEach(function(k){var n=c[k]||0;h+='<td class="n"'+(n?' style="background:'+toneVar(tone(k))+'-soft"':'')+'>'+(n||'<span class="muted">0</span>')+'</td>';});
+    h+='<td>'+pill(word,t)+'</td></tr>';});
+  h+='</tbody></table></div><p class="small muted">Colour rule: green = every row proven by qa; amber = some built or in a pull request; blue = shaped, not started; grey = not shaped. Customer-experience walk, compliance and risk columns join when TR-1 (requirement sources) and qa\'s Release 1 capabilities land.</p>';
+  return section("","heat","Capability heat map","Each business function of Release 1 and how far its rows have got. The rows themselves are in the checklist (the Library).",h);
+}
 function rFresh(){
   var F=D.freshness,R=D.run||{};
   var h='<div class="kpis">'+kpi("Generated",esc(F.generated_ist),"",F.generated_at)+kpi("main",esc(v(F.main_sha)||"n/a"),"last commit "+esc(F.main_at_ist||"n/a"),src(F.main_sha))+
@@ -466,9 +512,18 @@ function rFresh(){
 
 function render(){
   renderStrip();
-  var top=[rNeeds,rStatus,rRisks,rLibrary],parts=[rSystem,rPlan,rArch,rCaps,rBuilding,rQuality,rDevops,rRes,rHeal,rImprove,rLearn,rBacklog,rFresh];
-  var out="",one=function(f){try{return f();}catch(e){return '<section><p class="err">This block could not be drawn: '+esc(e.message)+'</p></section>';}};top.forEach(function(f){out+=one(f);});out+='<details id="details"><summary>Details: factory, plan, architecture, capabilities, building, quality, pipeline, resources, healing, improving, learnings, backlog, freshness</summary>';parts.forEach(function(f){try{out+=f();}catch(e){out+='<section><p class="err">This block could not be drawn: '+esc(e.message)+'</p></section>';}});
-  out+="</details>";document.getElementById("body").innerHTML=out;document.getElementById("details").addEventListener("toggle",function(){if(this.open){drawVSM();drawArch();}});
+  var TABS=[["overview","Overview",[rGlance,rStatus,rPlan]],["caps","Capabilities",[rHeat,rCaps,rArch]],["factory","Factory",[rSystem,rBuilding,rQuality,rDevops,rHeal,rImprove,rRes]],["launch","Launch readiness",[rRisks]],["library","Library",[rLibrary]],["details","Details",[rLearn,rBacklog,rFresh]]];
+  var one=function(f){try{return f();}catch(e){return '<section><p class="err">This block could not be drawn: '+esc(e.message)+'</p></section>';}};
+  var cur="overview";try{var sv=localStorage.getItem("board-tab");if(sv&&TABS.some(function(t){return t[0]===sv;}))cur=sv;}catch(e){}
+  var out='<p class="goal">Goal: Release 1 (production grade), complete and end to end, ready for the first real firm\'s data after the launch gate (P-570, P-589, P-594).</p>'+one(rNeeds);
+  out+='<div class="tabs" role="tablist">'+TABS.map(function(t){return '<button role="tab" type="button" data-tab="'+t[0]+'" aria-selected="'+(t[0]===cur)+'">'+esc(t[1])+'</button>';}).join("")+'</div>';
+  TABS.forEach(function(t){out+='<div class="tabpanel" role="tabpanel" data-panel="'+t[0]+'"'+(t[0]===cur?'':' hidden')+'>';t[2].forEach(function(f){out+=one(f);});out+='</div>';});
+  document.getElementById("body").innerHTML=out;
+  document.querySelectorAll(".tabs button").forEach(function(b){b.addEventListener("click",function(){var id=b.getAttribute("data-tab");
+    document.querySelectorAll(".tabs button").forEach(function(x){x.setAttribute("aria-selected",String(x===b));});
+    document.querySelectorAll(".tabpanel").forEach(function(p){p.hidden=p.getAttribute("data-panel")!==id;});
+    try{localStorage.setItem("board-tab",id);}catch(e){}
+    drawVSM();drawArch();});});
   drawVSM();drawArch();
 }
 var rt=null;window.addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(function(){if(D){drawVSM();drawArch();}},150);});
