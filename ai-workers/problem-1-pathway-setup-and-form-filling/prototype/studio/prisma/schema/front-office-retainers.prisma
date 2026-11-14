@@ -1,5 +1,5 @@
-// front-office-retainers.prisma — retainer and consultation agreement templates, retainers, their versions and fee rows.
-// Owner: Lead B (front office). One file per area (DB-SPLIT, studio/DEVELOPING.md): never edit another area's file
+// front-office-retainers.prisma — agreement templates, retainers, their versions and fee rows. Owner: Lead B (front office).
+// One file per area (DB-SPLIT, studio/DEVELOPING.md): never edit another area's file
 // without its owner.
 //
 // FO-5 (P-558, P-559, P-576, P-600; BACKLOG row FO-5 rows rev 6.2, 9, 10 part 2; contracts
