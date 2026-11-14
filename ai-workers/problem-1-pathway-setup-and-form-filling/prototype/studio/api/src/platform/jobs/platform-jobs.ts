@@ -1,7 +1,7 @@
 // PF-14: the one job runner of the app. A Nest provider: other modules inject `PlatformJobs` (a JobPort) and register
 // their handlers in onModuleInit with `jobs.handle(name, fn)`; the worker starts once the app has started
 // (onApplicationBootstrap, after every onModuleInit) and stops cleanly when the app closes (app.close(), or SIGTERM /
-// SIGINT: stop.sh sends SIGTERM). On stop, no new job is fetched, a running handler gets up to 10 s to finish, and the
+// SIGINT: stop.sh sends SIGTERM). On stop, no new job is fetched, a running handler gets up to 8 s to finish (STOP_LIMIT_MS; restart-api.sh and isolated.sh wait 10 s), and the
 // pool closes; then the signal's default action (exit) runs as before.
 import { Injectable, type OnApplicationBootstrap, type OnApplicationShutdown } from "@nestjs/common";
 import type { JobHandler, JobOptions, JobPayload, JobPort } from "../../../../ports/jobs.ts";

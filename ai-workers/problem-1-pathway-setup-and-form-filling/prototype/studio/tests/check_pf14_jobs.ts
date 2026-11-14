@@ -40,6 +40,26 @@ if (process.argv[2] === "--crash-child") {
   await new Promise(() => {});
 }
 
+// Run by the SIGTERM case: the app's provider (as main.ts starts it) with one job running; the parent sends SIGTERM.
+// argv[4] is how long the handler takes (ms); the effect row is written only when it finishes.
+if (process.argv[2] === "--sigterm-child") {
+  const db = process.argv[3]!, ms = Number(process.argv[4]);
+  process.env.DATABASE_URL = urlOf(db);
+  const { NestFactory } = await import("@nestjs/core");
+  const { Module } = await import("@nestjs/common");
+  const feature = (await import("../api/src/features/platform-jobs.ts")).default;
+  const { PlatformJobs } = await import("../api/src/platform/jobs/platform-jobs.ts");
+  class App {}
+  Module({ providers: feature.providers as never[] })(App);
+  const app = await NestFactory.createApplicationContext(App, { logger: false });
+  const jobs = app.get(PlatformJobs);
+  const c = new pg.Client({ connectionString: urlOf(db) });
+  await c.connect();
+  await jobs.handle("pf14.term", async (job) => { console.log("ACTIVE"); await new Promise((r) => setTimeout(r, ms)); await c.query("insert into pf14_effect(key) values ($1) on conflict do nothing", [job.key]); });
+  await jobs.enqueue("pf14.term", {}, { key: `term:${ms}`, firmId: "0000000a-0000-4000-8000-000000000001" });
+  await new Promise(() => {});
+}
+
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 500)}` : ""}`); };
 const throwsLike = async (f: () => unknown, test: (e: unknown) => boolean) => { try { await f(); return false; } catch (e) { return test(e); } };
@@ -141,6 +161,30 @@ try {
     await jobs.boss.unschedule("pf14.morning");
   }
 
+  // ------------------------------------------------- a job nobody fetches is kept, so its key stays used (m2)
+  {
+    await jobs.schedule("pf14.unworked", new Date(clock.now()), {}, { key: "unworked:1", firmId: A });
+    await jobs.boss.createQueue("pf14.raw");
+    await jobs.boss.send("pf14.raw", { key: "raw:1" }, { id: jobIdOf("raw:1") });
+    await clock.setTime(clock.now() + 30 * 864e5);
+    await jobs.boss.supervise();
+    ok("PF-14 pass: 30 days later a job no worker fetched is still there and its key still refuses a second job", (await state("pf14.unworked", "unworked:1")) === "created" && !(await jobs.enqueue("pf14.unworked", {}, { key: "unworked:1", firmId: A })).queued);
+    ok("PF-14 fail: on a queue with pg-boss's own retention (14 days) the same wait deletes the job (what PF-14's queues prevent)", (await jobs.boss.getJobById("pf14.raw", jobIdOf("raw:1"))) === null);
+  }
+
+  // --------------------------------------------------------------- cancel leaves a running job alone (m3)
+  {
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    await jobs.handle("pf14.hold", async (job) => { record("pf14.hold", job); await held; });
+    await jobs.enqueue("pf14.hold", {}, { key: "hold:1", firmId: A });
+    await tickUntil(async () => (await state("pf14.hold", "hold:1")) === "active", 500, 20);
+    const cancelledRunning = await jobs.cancel("hold:1");
+    release();
+    await tickUntil(async () => (await state("pf14.hold", "hold:1")) === "completed", 500, 20);
+    ok("PF-14 fail: cancel(key) of a job already running answers false and the job finishes (completed, not cancelled)", !cancelledRunning && (await state("pf14.hold", "hold:1")) === "completed");
+  }
+
   // ------------------------------------------------------------------------- retries with back-off, then the dead-letter list
   {
     await jobs.handle("pf14.flaky", async (job) => { record("pf14.flaky", job); if (job.attempt === 1) throw new Error("first try fails"); });
@@ -155,6 +199,9 @@ try {
     const mine = dead.find((d) => d.key === "broken:1");
     ok("PF-14 pass: then it is on the dead-letter list with its name, key, firm and error", !!mine && mine.name === "pf14.broken" && mine.firmId === B && /boom for broken:1/.test(mine.error), dead);
     ok("PF-14 fail: a job that fails once and then succeeds is not on the dead-letter list", (await state("pf14.flaky", "flaky:1")) === "completed" && !dead.some((d) => d.key === "flaky:1") && seen("pf14.flaky").length === 2, seen("pf14.flaky"));
+    const stored = (await jobs.boss.getJobById("pf14.broken", jobIdOf("broken:1")))?.output as { message?: string; stack?: string } | undefined;
+    ok("PF-14 pass: a failed attempt stores its message only (no stack lines, which can carry values from the code)", stored?.message === "boom for broken:1" && stored?.stack === "Error: boom for broken:1", stored);
+    ok("PF-14 fail: the error a handler threw had a stack with code lines (what is no longer stored)", /\n\s+at /.test(new Error("x").stack ?? ""));
     const dlqState = (await jobs.boss.getQueue(DEAD_LETTER));
     ok("PF-14: nothing works the dead-letter list (it is a list, not a queue that reruns)", dlqState !== null && (await jobs.boss.findJobs(DEAD_LETTER)).every((j) => j.state === "created"));
   }
@@ -240,6 +287,13 @@ try {
     const open = await q<{ n: string }>("select count(*)::text n from pg_stat_activity where application_name = 'xr-pf14-stop' and datname = $1 and pid <> pg_backend_pid()", [MAIN]);
     ok("PF-14 pass: stop waits for the running job to finish, completes it and closes the runner's connections", before === "active" && finished && after === "completed" && !real.started && open[0]!.n === "0", { before, finished, after, open });
     ok("PF-14 pass: …and after stop the runner refuses new work", await throwsLike(() => real.enqueue("pf14.slow", {}, { key: "slow:2", firmId: A }), (e) => e instanceof JobRefused && /not started|stopped/.test(String(e))) && realErrors.length === 0, realErrors);
+    await real.start();
+    const again = await real.enqueue("pf14.slow", {}, { key: "slow:3", firmId: A });
+    for (let i = 0; i < 100 && (await real.boss.getJobById("pf14.slow", jobIdOf("slow:3")))?.state !== "completed"; i++) await realPause(100);
+    const ranAgain = (await real.boss.getJobById("pf14.slow", jobIdOf("slow:3")))?.state;
+    await real.stop();
+    const open2 = await q<{ n: string }>("select count(*)::text n from pg_stat_activity where application_name = 'xr-pf14-stop' and datname = $1", [MAIN]);
+    ok("PF-14 pass: a stopped runner starts again, runs a job, and its second stop stops it too (no runner left running)", again.queued && ranAgain === "completed" && !real.started && open2[0]!.n === "0", { again, ranAgain, open2 });
     // the failing side: a handler that overruns stop's limit is not completed by the stop; pg-boss hands its job back
     // for a retry, so it is never lost and reruns on the next start (an idempotent handler, as in the crash case).
     const late = new PgBossJobs({ connectionString: urlOf(MAIN), pollingIntervalSeconds: 0.5, onError: () => {} });
@@ -260,10 +314,24 @@ try {
     const { Module } = await import("@nestjs/common");
     const { PlatformJobs } = await import("../api/src/platform/jobs/platform-jobs.ts");
     const feature = (await import("../api/src/features/platform-jobs.ts")).default;
+    // Another module's provider using the runner while the app starts (FO-2's recurring seed, FO-12a's conductor):
+    // recurring() from its onModuleInit (before the runner can start) and enqueue() from its onApplicationBootstrap
+    // (which Nest runs alongside the runner's own).
+    const early: string[] = [];
+    class EarlyUser {
+      constructor(private readonly jobs: InstanceType<typeof PlatformJobs>) {}
+      async onModuleInit() { await this.jobs.handle("pf14.boot", async (j) => { early.push(j.key); }); await this.jobs.recurring("pf14.boot_daily", "0 9 * * *", "America/Toronto"); }
+      async onApplicationBootstrap() { early.push(`queued:${(await this.jobs.enqueue("pf14.boot", {}, { key: "boot:1", firmId: A })).queued}`); }
+    }
     class JobsOnly {}
-    Module({ providers: feature.providers as never[] })(JobsOnly);
+    Module({ providers: [...(feature.providers as never[]), { provide: "EARLY", useFactory: (j: InstanceType<typeof PlatformJobs>) => new EarlyUser(j), inject: [PlatformJobs] }] })(JobsOnly);
     const app = await NestFactory.createApplicationContext(JobsOnly, { logger: false });
     const svc = app.get(PlatformJobs);
+    for (let i = 0; i < 100 && !early.includes("boot:1"); i++) await realPause(100);
+    const sched = await svc.runner.boss.getSchedule("pf14.boot_daily");
+    ok("PF-14 pass: a module that calls recurring() in onModuleInit and enqueue() in onApplicationBootstrap starts with the app; the schedule is set and the job runs", early.includes("queued:true") && early.includes("boot:1") && sched?.timezone === "America/Toronto", { early, sched: sched?.cron });
+    const never = new PgBossJobs({ connectionString: urlOf(MAIN), startWaitMs: 200, onError: () => {} });
+    ok("PF-14 fail: an enqueue on a runner that never starts is refused with the reason (never a silent wait without end)", await throwsLike(() => never.enqueue("pf14.boot", {}, { key: "boot:2", firmId: A }), (e) => e instanceof JobRefused && /did not start within 0.2 s/.test(String(e))));
     let ranInApp = false;
     await svc.handle("pf14.app", async () => { ranInApp = true; });
     await svc.enqueue("pf14.app", {}, { key: "app:1", firmId: A });
@@ -273,6 +341,28 @@ try {
     await app.close();
     ok("PF-14 pass: app.close() stops the worker and removes its signal listeners", !svc.runner.started && process.listenerCount("SIGTERM") === 0);
     ok("PF-14 fail: after the app closed, a new job is refused (no runner left behind)", await throwsLike(() => svc.enqueue("pf14.app", {}, { key: "app:2", firmId: A }), (e) => e instanceof JobRefused));
+  }
+
+  // ------------------------------------------------- SIGTERM (stop.sh) stops the app's runner cleanly, then exits as before
+  {
+    const term = async (ms: number) => {
+      const child = spawn(process.execPath, [...process.execArgv, import.meta.filename, "--sigterm-child", MAIN, String(ms)], { stdio: ["ignore", "pipe", "pipe"] });
+      procs.push(child);
+      let out = "";
+      child.stdout.on("data", (d) => (out += d));
+      child.stderr.on("data", (d) => (out += d));
+      for (let i = 0; i < 300 && !out.includes("ACTIVE"); i++) await realPause(100);
+      const t0 = Date.now();
+      child.kill("SIGTERM");
+      const [code, signal] = await new Promise<[number | null, string | null]>((r) => child.once("exit", (c, s) => r([c, s])));
+      const effect = (await q("select 1 from pf14_effect where key = $1", [`term:${ms}`])).length === 1;
+      const st = (await jobs.boss.getJobById("pf14.term", jobIdOf(`term:${ms}`)))?.state;
+      return { active: out.includes("ACTIVE"), code, signal, effect, st, seconds: (Date.now() - t0) / 1000, out: out.slice(-300) };
+    };
+    const quick = await term(1500);
+    ok("PF-14 pass: SIGTERM with a job running: the job finishes and completes, then the process exits by the signal as before", quick.active && quick.signal === "SIGTERM" && quick.effect && quick.st === "completed" && quick.seconds < 5, quick);
+    const slow = await term(20_000);
+    ok("PF-14 fail: a job longer than the 8 s stop limit does not hold the process: it exits by the signal within 10 s, the job unfinished and back for a retry", slow.active && slow.signal === "SIGTERM" && !slow.effect && slow.st === "retry" && slow.seconds >= 7.5 && slow.seconds < 10, slow);
   }
 
   // ------------------------------------------------- the same contract on PF-0p's fake (every PF/FO test runs on it)

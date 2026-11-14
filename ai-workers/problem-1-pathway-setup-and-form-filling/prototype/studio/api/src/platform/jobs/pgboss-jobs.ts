@@ -4,9 +4,14 @@
 // this file is the adapter only.
 //
 // What it adds to pg-boss, each line the row's Done when:
-// * a key never queues twice: the key becomes the job id (job-key.ts), so a second enqueue of a key is a no-op;
+// * a key never queues twice (per job name): the key becomes the job id (job-key.ts), so a second enqueue of a key is
+//   a no-op, and no job row is ever deleted (finished: deleteAfterSeconds 0; waiting: kept 10 years), so a used key
+//   stays used;
 // * retries with back-off (Sample: 3 retries, 30 s doubling, at most 1 h) and then one dead-letter list
-//   (`platform.dead-letter`) holding each failed job's name, key, firm and last error;
+//   (`platform.dead_letter`) holding each failed job's name, key, firm and last error (its message only: no stack);
+// * calls made while the app starts are safe: `handle` and `recurring` before start are applied at start; `enqueue`,
+//   `schedule` and `cancel` before start wait for it (call them from onApplicationBootstrap or later, never from
+//   onModuleInit, which runs before the runner can start);
 // * every job carries its firm; the handler runs only after `firmScope` accepts the firm id, and inside a firm context
 //   (`currentJobFirm()`) that code below it reads; a recurring job is platform-wide (no firm) and fans out per firm
 //   with `enqueue`;
@@ -24,6 +29,15 @@ import { jobIdOf } from "./job-key.ts";
 export const JOBS_SCHEMA = "platform_jobs";
 /** The one dead-letter list: every job that failed after its last retry, with its error. */
 export const DEAD_LETTER = "platform.dead_letter";
+
+/** A job never waits for a fetch longer than this before pg-boss would delete it (and free its key): 10 years. */
+const KEEP_WAITING_SECONDS = 10 * 365 * 24 * 3600;
+/** How long an enqueue made before start waits for the runner to start before it is refused. */
+const START_WAIT_MS = 30_000;
+/** Stop's limit for a running handler: under the 10 s restart-api.sh and isolated.sh give the process before kill -9. */
+export const STOP_LIMIT_MS = 8_000;
+/** The longest error text kept on the dead-letter list (a handler's message; ids only, never personal data). */
+const ERROR_CHARS = 300;
 
 /** Retry policy of every job queue (Sample values, contracts §0.8 sizing: about 100 firms). */
 export type RetryPolicy = { retryLimit: number; retryDelay: number; retryBackoff: boolean; retryDelayMax: number; expireInSeconds: number };
@@ -55,20 +69,26 @@ export type PgBossJobsOptions = {
   boss?: Partial<ConstructorOptions>;
   /** Where pg-boss's errors go (no payload is ever logged: ids and the queue name only). */
   onError?: (e: Error) => void;
+  /** How long a call made before start waits for it (default 30 s). */
+  startWaitMs?: number;
 };
 
 export class PgBossJobs implements JobPort {
   readonly boss: PgBoss;
   readonly retry: RetryPolicy;
   #handlers = new Map<string, JobHandler>();
+  #schedules = new Map<string, { cron: string; zone: string }>();
   #queues = new Set<string>();
   #working = new Set<string>();
-  #started = false;
+  #state: "new" | "starting" | "started" | "stopping" | "stopped" = "new";
   #stopping: Promise<void> | null = null;
+  #ready = deferred();
   #poll: number;
+  #startWait: number;
 
   constructor(o: PgBossJobsOptions) {
     this.retry = { ...DEFAULT_RETRY, ...o.retry };
+    this.#startWait = o.startWaitMs ?? START_WAIT_MS;
     this.#poll = o.pollingIntervalSeconds ?? 2;
     this.boss = new PgBoss({ connectionString: o.connectionString, schema: o.schema ?? JOBS_SCHEMA, max: 3, application_name: "xr-studio-jobs", ...o.boss });
     // pg-boss emits "error" for background failures (maintenance, a lost connection); an EventEmitter "error" with no
@@ -76,29 +96,49 @@ export class PgBossJobs implements JobPort {
     this.boss.on("error", (e) => (o.onError ?? ((x: Error) => console.error(`jobs: ${x.message}`)))(e));
   }
 
-  get started() { return this.#started; }
+  get started() { return this.#state === "started"; }
 
-  /** Starts pg-boss (creating or migrating its schema), the dead-letter list and a worker per registered handler. */
+  /** Starts pg-boss (creating or migrating its schema), the dead-letter list, the schedules and a worker per handler
+   *  registered so far. A stopped runner can start again. */
   async start(): Promise<void> {
-    if (this.#started) return;
-    await this.boss.start();
-    // The list keeps a failed job for a year (Sample) instead of pg-boss's 14 days for a job nobody fetches.
-    await this.boss.createQueue(DEAD_LETTER, { retentionSeconds: 365 * 24 * 3600 });
-    this.#queues.add(DEAD_LETTER);
-    this.#started = true;
-    for (const name of this.#handlers.keys()) await this.#work(name);
+    if (this.#state === "started" || this.#state === "starting") return this.#ready.promise;
+    if (this.#state === "stopping") await this.#stopping;
+    if (this.#state === "stopped") { this.#ready = deferred(); this.#queues.clear(); }
+    this.#state = "starting";
+    try {
+      await this.boss.start();
+      // The list keeps a failed job for a year (Sample) instead of pg-boss's 14 days for a job nobody fetches.
+      await this.boss.createQueue(DEAD_LETTER, { retentionSeconds: 365 * 24 * 3600 });
+      await this.boss.updateQueue(DEAD_LETTER, { retentionSeconds: 365 * 24 * 3600 });
+      this.#queues.add(DEAD_LETTER);
+      for (const [name, s] of this.#schedules) await this.#applySchedule(name, s.cron, s.zone);
+      for (const name of this.#handlers.keys()) await this.#work(name);
+      this.#state = "started";
+      this.#ready.resolve();
+    } catch (e) {
+      this.#state = "new";
+      this.#ready.reject(e);
+      this.#ready = deferred();
+      throw e;
+    }
   }
 
-  /** Stops the worker: no new job is fetched, a running handler finishes (up to `timeoutMs`; one still running then
-   *  is handed back by pg-boss for a retry, never lost), then the pool closes. */
-  stop(timeoutMs = 10_000): Promise<void> {
-    if (!this.#started) return Promise.resolve();
-    this.#stopping ??= (async () => {
-      const done = new Promise<void>((r) => this.boss.once("stopped", () => r()));
-      await this.boss.stop({ graceful: true, close: true, timeout: timeoutMs });
-      await done;
-      this.#started = false;
-      this.#working.clear();
+  /** Stops the worker: no new job is fetched, a running handler gets up to `timeoutMs` to finish, then the pool closes.
+   *  A handler still running then is failed by pg-boss: it is retried while it has retries left, and otherwise lands
+   *  on the dead-letter list (a handler must be idempotent, as for a crash). */
+  stop(timeoutMs = STOP_LIMIT_MS): Promise<void> {
+    if (this.#state !== "started") return this.#stopping ?? Promise.resolve();
+    this.#state = "stopping";
+    this.#stopping = (async () => {
+      try {
+        const done = new Promise<void>((r) => this.boss.once("stopped", () => r()));
+        await this.boss.stop({ graceful: true, close: true, timeout: timeoutMs });
+        await done;
+      } finally {
+        this.#state = "stopped";
+        this.#working.clear();
+        this.#stopping = null;
+      }
     })();
     return this.#stopping;
   }
@@ -108,7 +148,7 @@ export class PgBossJobs implements JobPort {
     JobName.parse(name);
     if (this.#handlers.has(name)) throw new JobRefused(`jobs: "${name}" already has a handler`);
     this.#handlers.set(name, handler);
-    if (this.#started) await this.#work(name);
+    if (this.#state === "started") await this.#work(name);
   }
 
   async enqueue(name: string, payload: JobPayload, opts: JobOptions): Promise<{ queued: boolean }> {
@@ -120,37 +160,49 @@ export class PgBossJobs implements JobPort {
     return this.#send(name, payload, opts, at);
   }
 
-  /** Cancels the waiting job with this key, of whatever name; true when one was waiting. Its key stays used. */
+  /** Cancels the waiting job with this key, of whatever name; true when one was waiting. A job already running is not
+   *  cancelled (it finishes). Its key stays used either way. */
   async cancel(key: string): Promise<boolean> {
     JobOptions.shape.key.parse(key);
-    this.#mustBeStarted();
+    await this.#whenStarted();
     const id = jobIdOf(key);
     let affected = 0;
     for (const q of await this.boss.getQueues()) {
       if (q.name === DEAD_LETTER || q.name.startsWith("__pgboss")) continue;
-      // pg-boss 12 types CommandResponse as {}; at run time it carries `affected` (manager.js mapCommandResponse).
+      // Only a waiting job (created or retry; findJobs' `queued` leaves out one whose time is still ahead, so the state
+      // is read). pg-boss has no cancel-if-waiting (its attempt fence matches active jobs only), so a job that starts in
+      // the instant between this read and the cancel is marked cancelled while its handler finishes; handlers are
+      // idempotent. pg-boss 12 types the answer as {}; at run time it carries `affected` (manager.js mapCommandResponse).
+      const [waiting] = (await this.boss.findJobs(q.name, { id, limit: 1 })).filter((j) => j.state === "created" || j.state === "retry");
+      if (!waiting) continue;
       affected += Number((await this.boss.cancel(q.name, id) as { affected?: number }).affected ?? 0);
     }
     return affected > 0;
   }
 
   /** A platform-wide job on a cron read in a time zone (e.g. "0 9 * * *", "America/Toronto"): pg-boss evaluates the
-   *  cron in that zone, so 09:00 stays 09:00 local across a clock change. A second call replaces the schedule. */
+   *  cron in that zone, so 09:00 stays 09:00 local across a clock change. A second call replaces the schedule. Called
+   *  before start, it is applied at start. */
   async recurring(name: string, cron: string, zone: string): Promise<void> {
     JobName.parse(name);
     const spec = CronSpec.safeParse({ cron, zone });
     if (!spec.success) throw new JobRefused(`jobs: ${name}: ${spec.error.issues.map((i) => i.message).join("; ")}`);
-    this.#mustBeStarted();
+    if (this.#state === "stopping" || this.#state === "stopped") this.#mustBeStarted();
+    this.#schedules.set(name, { cron, zone });
+    if (this.#state === "started") await this.#applySchedule(name, cron, zone);
+  }
+
+  /** The dead-letter list, newest first (read from its oldest 10 000; the list keeps a year, Sample). */
+  async deadLetters(limit = 100): Promise<DeadLetter[]> {
+    await this.#whenStarted();
+    const rows = await this.boss.findJobs<Record<string, unknown>>(DEAD_LETTER, { limit: 10_000 });
+    return rows.map(toDeadLetter).sort((a, b) => b.failedAt.getTime() - a.failedAt.getTime()).slice(0, limit);
+  }
+
+  async #applySchedule(name: string, cron: string, zone: string) {
     await this.#queue(name);
     const data: Envelope = { key: name, firmId: null, payload: {}, recurring: true };
     await this.boss.schedule(name, cron, data, { tz: zone });
-  }
-
-  /** The dead-letter list, newest first. */
-  async deadLetters(limit = 100): Promise<DeadLetter[]> {
-    this.#mustBeStarted();
-    const rows = await this.boss.findJobs<Record<string, unknown>>(DEAD_LETTER, { limit: 100_000 });
-    return rows.map(toDeadLetter).sort((a, b) => b.failedAt.getTime() - a.failedAt.getTime()).slice(0, limit);
   }
 
   async #send(name: string, payload: JobPayload, opts: JobOptions, at?: Date): Promise<{ queued: boolean }> {
@@ -159,18 +211,21 @@ export class PgBossJobs implements JobPort {
     if (!o.success) throw new JobRefused(`jobs: ${name}: ${o.error.issues.map((i) => `${i.path.join(".")} ${i.message}`).join("; ")}`);
     const p = JobPayload.safeParse(payload);
     if (!p.success) throw new JobRefused(`jobs: ${name}: the payload is a JSON object of ids and facts`);
-    this.#mustBeStarted();
+    await this.#whenStarted();
     await this.#queue(name);
     const data: Envelope = { key: o.data.key, firmId: firmScope(o.data.firmId).firmId, payload: p.data };
     const id = await this.boss.send(name, data, { id: jobIdOf(o.data.key), ...(at ? { startAfter: at } : {}) });
     return { queued: id !== null };
   }
 
-  /** Each job name is its own queue, created once with the retry policy and the dead-letter list. Finished and
-   *  cancelled jobs are kept (deleteAfterSeconds 0), so a used key still refuses a second job. */
+  /** Each job name is its own queue with the retry policy, the dead-letter list and no deletion: finished and cancelled
+   *  jobs are kept (deleteAfterSeconds 0) and a waiting one for 10 years, so a used key still refuses a second job. The
+   *  policy is written on every start (createQueue leaves an existing queue as it was; updateQueue brings it up to date). */
   async #queue(name: string) {
     if (this.#queues.has(name)) return;
-    await this.boss.createQueue(name, { ...this.retry, deadLetter: DEAD_LETTER, deleteAfterSeconds: 0 });
+    const policy = { ...this.retry, deadLetter: DEAD_LETTER, deleteAfterSeconds: 0, retentionSeconds: KEEP_WAITING_SECONDS };
+    await this.boss.createQueue(name, policy);
+    await this.boss.updateQueue(name, policy);
     this.#queues.add(name);
   }
 
@@ -191,27 +246,64 @@ export class PgBossJobs implements JobPort {
     if (!env.success) throw new JobRefused(`jobs: ${name}: the job's data is not a PF-14 envelope (${env.error.issues[0]?.path.join(".")})`);
     const firmId = env.data.firmId === null ? null : firmScope(env.data.firmId).firmId;
     if (firmId === null && !env.data.recurring) throw new JobRefused(`jobs: ${name}: a job without a firm`);
-    // A recurring run's instant is its cron minute (pg-boss creates it a moment into that minute, when its cron pass
-    // runs); its key names that minute, so one minute's run is one key in both adapters.
+    // A recurring run's instant is the minute pg-boss sent it in (its cron pass runs a moment into the cron minute;
+    // pg-boss's default `missed: skip` sends nothing for minutes the app was down); its key names that minute.
     const runAt = env.data.recurring ? new Date(Math.floor(new Date(job.startAfter).getTime() / 60_000) * 60_000) : new Date(job.startAfter);
     const key = env.data.recurring ? `${name}@${runAt.toISOString()}` : env.data.key;
     const attempt = job.retryCount + 1;
-    await firmOfJob.run({ firmId, name }, () => handler({ name, payload: env.data.payload, key, firmId, runAt, attempt }));
+    try {
+      await firmOfJob.run({ firmId, name }, () => handler({ name, payload: env.data.payload, key, firmId, runAt, attempt }));
+    } catch (e) {
+      throw cleanError(e);
+    }
+  }
+
+  async #whenStarted() {
+    if (this.#state === "started") return;
+    if (this.#state === "stopping" || this.#state === "stopped") this.#mustBeStarted();
+    let timer: NodeJS.Timeout | undefined;
+    const late = new Promise<never>((_, no) => { timer = setTimeout(() => no(new JobRefused(`jobs: the job runner did not start within ${this.#startWait / 1000} s (enqueue from onApplicationBootstrap or later, not onModuleInit)`)), this.#startWait); });
+    try { await Promise.race([this.#ready.promise, late]); } finally { clearTimeout(timer); }
   }
 
   #mustBeStarted() {
-    if (!this.#started) throw new JobRefused("jobs: the job runner has not started (or has stopped)");
+    if (this.#state !== "started") throw new JobRefused("jobs: the job runner has not started (or has stopped)");
   }
+}
+
+function deferred() {
+  let resolve!: () => void, reject!: (e: unknown) => void;
+  const promise = new Promise<void>((y, n) => { resolve = y; reject = n; });
+  promise.catch(() => {});
+  return { promise, resolve, reject };
+}
+
+/** What a failed attempt stores (pg-boss keeps it on the job and copies it to the dead-letter list for a year): the
+ *  error's message, cut to 300 characters, with no stack (a stack can carry values from the code's locals). */
+function cleanError(e: unknown): Error {
+  const message = (e instanceof Error ? e.message : String(e)).slice(0, ERROR_CHARS);
+  const clean = e instanceof JobRefused ? new JobRefused(message) : new Error(message);
+  clean.stack = `${clean.name}: ${message}`;
+  return clean;
+}
+
+/** The message inside pg-boss's stored output, however deep it sits (a handler's error, a timeout, a shutdown). */
+function messageOf(out: unknown, depth = 0): string | null {
+  if (out === null || typeof out !== "object" || depth > 3) return null;
+  const o = out as Record<string, unknown>;
+  if (typeof o.message === "string") return o.message;
+  for (const v of Object.values(o)) { const m = messageOf(v, depth + 1); if (m) return m; }
+  return null;
 }
 
 function toDeadLetter(j: JobWithMetadata<Record<string, unknown>>): DeadLetter {
   const env = ENVELOPE.safeParse(j.data);
-  const out = j.sourceOutput as { message?: unknown } | null | undefined;
+  const out = j.sourceOutput;
   return {
     name: String(j.sourceName ?? "?"),
     key: env.success ? env.data.key : "?",
     firmId: env.success ? env.data.firmId : null,
-    error: typeof out?.message === "string" ? out.message : JSON.stringify(out ?? null),
+    error: (messageOf(out) ?? JSON.stringify(out ?? null)).slice(0, ERROR_CHARS),
     failedAt: j.createdOn,
   };
 }
