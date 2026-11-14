@@ -1,6 +1,6 @@
 {
  "label": "Sample (BK-12): made-up answers for the made-up Study permit family's case (a student, the spouse, a child), saved and confirmed by api/src/sample-case.ts from samples/sample-cases.json. Never a client, never submitted. No value here is an IRCC value. Unconfirmed: expert. Legal: Unconfirmed: no counsel.",
- "source": "Made up for BK-12 (P-448, P-449: a pathway's Sample case is chosen in data). Only questions the Study permit's release asks are answered (an answer it does not ask is refused in words by the loader). BK-13 step 1 (P-449, P-481 S6): widened so the Study permit's forms can be written: every made-up answer the release asks of a single student of 20 studying outside Québec, with no representative-only release and no custodian. Option values are the release's own lists (for example IMM 1294's \"F Female\"). BK-13 step 2 (13 Nov): the walk's family, a married student of 30, the spouse (31, an open work permit) and a child of 9 who will not study (a visitor), each answered only where the release asks it of that person.",
+ "source": "Made up for BK-12 (P-448, P-449: a pathway's Sample case is chosen in data). Only questions the Study permit's release asks are answered (an answer it does not ask is refused in words by the loader). BK-13 step 1 (P-449, P-481 S6): widened so the Study permit's forms can be written: every made-up answer the release asks of a single student of 20 studying outside Québec, with no representative-only release and no custodian. Option values are the release's own lists (for example IMM 1294's \"F Female\"). BK-13 step 2 (13 Nov): the walk's family, a married student of 30, the spouse (31, an open work permit) and a child of 9 who will not study (a visitor), each answered only where the release asks it of that person. BK-25 (14 Nov, P-449: data; BK-24's follow-ups F2, F3, F5): the student and the spouse answer the three questions IMM 1294 and IMM 1295 now ask as their own (applied to Canada before, ill treatment of prisoners or civilians, consent to be contacted; all No, made up), and the spouse has a made-up job since July 2018 (CLERK at SAMPLE TRADING COMPANY, MUMBAI), so IMM 1295's employment row 1, which its own Validate requires, is written. Each person's job row carries its own place, in the facts that person's form asks (IMM 1295 asks person.employment_*, IMM 1294 and IMM 5257 person.occupation_*); the one shared job_place, which named only person.occupation_*, is gone.",
  "case": {
   "case.school_name": "SAMPLE COLLEGE",
   "case.study_field": "Computing/IT",
@@ -109,10 +109,15 @@
    "job": {
     "person.occupation_title": "STUDENT",
     "person.occupation_employer": "SAMPLE SECONDARY SCHOOL",
-    "person.occupation_from_date": "2020-06"
+    "person.occupation_from_date": "2020-06",
+    "person.occupation_city": "MUMBAI",
+    "person.occupation_country": "India"
    },
    "person.intended_study_province": "another_province_or_territory",
-   "relationship.relationship_start_date": "2016-04-10"
+   "relationship.relationship_start_date": "2016-04-10",
+   "person.previously_applied_to_canada": false,
+   "person.ill_treatment_of_prisoners_or_civilians": false,
+   "person.consents_to_research_contact": false
   },
   "spouse_or_partner": {
    "person.bg_status_violation_canada": false,
@@ -137,9 +142,19 @@
    "person.background_violent_org_association": false,
    "person.minor_studying_without_parent": false,
    "relationship.union_start_date": "2016-04-10",
-   "person.present_occupation": "HOMEMAKER",
+   "person.present_occupation": "CLERK",
    "person.current_residence_country": "India",
-   "person.current_residence_status": "Citizen"
+   "person.current_residence_status": "Citizen",
+   "person.previously_applied_to_canada": false,
+   "person.ill_treatment_of_prisoners_or_civilians": false,
+   "person.consents_to_research_contact": false,
+   "job": {
+    "person.employment_activity": "CLERK",
+    "person.employment_employer": "SAMPLE TRADING COMPANY",
+    "person.employment_start_date": "2018-07-01",
+    "person.employment_city": "MUMBAI",
+    "person.employment_country": "India"
+   }
   },
   "child": {
    "person.birth_city": "MUMBAI",
@@ -172,13 +187,11 @@
    "job": {
     "person.occupation_title": "STUDENT",
     "person.occupation_employer": "SAMPLE PRIMARY SCHOOL",
-    "person.occupation_from_date": "2022-06"
+    "person.occupation_from_date": "2022-06",
+    "person.occupation_city": "MUMBAI",
+    "person.occupation_country": "India"
    }
   }
- },
- "job_place": {
-  "person.occupation_city": "MUMBAI",
-  "person.occupation_country": "India"
  },
  "not_answered": {
   "case.caq_number": "Asked only for a study in Québec (IMM 5483 (08-2025) p. 2 item 6); this student studies in Ontario.",
@@ -210,6 +223,6 @@
    "employment",
    "addresses"
   ],
-  "why": "Sample: the family has no other names and no post-secondary education to list (IMM 1294 asks only post-secondary education); the spouse has had no job in the period IMM 1295 asks about and has lived only in the country of citizenship. A person with a job row (the student, the child's school) keeps it: \"none apply\" goes only on a person's empty group."
+  "why": "Sample: the family has no other names and no post-secondary education to list (IMM 1294 asks only post-secondary education) and has lived only in the country of citizenship. Every person has a job row (the student's and the child's school, the spouse's job), so \"none apply\" goes only on a person's empty group."
  }
 }

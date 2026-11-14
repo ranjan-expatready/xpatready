@@ -20,7 +20,8 @@
 // Each copy is read back from the PDF with the project's XFA reader (tests/fixtures/read_choice_values.py): a box is
 // written when the file holds a value in it. The copies are the walk's family, made by BK-13's replay on this copy (run
 // first when the copy has none: its exit code must be 0, its 45 checks). Sample people, made up; US$0, live AI off.
-// Some boxes stay open after this row (GAP lines, each naming its follow-up for the tech lead; any other open box FAILs).
+// Some boxes stay open after this row (GAP lines, each naming its follow-up for the tech lead; any other open box FAILs);
+// BK-25 closed F2, F3 and F5 (each now FAILs when open).
 //   zsh studio/tools/isolated.sh forms_bk24 4453 start && tsx studio/tests/check_bk24_required_boxes.ts 4453 xr_studio_forms_bk24
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -47,19 +48,13 @@ const short = (p: string) => p.replace(/^xfa\[0\]\.form\[0\]\./, "").replace(/^[
 
 // Open after this row, each with its follow-up (Question for the tech lead on the PR). A box listed here that is written
 // now PASSes; any open box not listed FAILs. Keyed "<form>|<role>|<box from the page on>".
-const F1 = "follow-up F1: the study's city is a list that depends on the province; configured filled by hand, the filler writes no dependent list yet";
-const F2 = "follow-up F2: the consent question is configured filled by hand; IMM 5257 (09-2023) maps the same question to person.consents_to_research_contact";
-const F3 = "follow-up F3: the form requires employment row 1 and the Sample spouse confirms none apply; what a homemaker writes there needs IRCC's own instructions (P-170)";
-const F4 = "follow-up F4: for a married applicant and spouse the form's own Validate requires \"physically present at the marriage ceremony\"; configured filled by hand, no question asks it";
-const F5 = "follow-up F5: background questions 2c (applied to Canada before) and 6 (government position) are configured filled by hand (the saved AI answer proposed nothing); IMM 5257 (09-2023) maps 2c to person.previously_applied_to_canada. IMM 1294 has the same two boxes empty, but our engine cannot run its script to show it";
-const OCC = "Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].";
+// BK-25 (P-533, P-449: data): F2 (consent), F3 (the spouse's employment row 1) and F5 (background 2c and 6) are written now
+// and no longer allowed open (samples/own-yes-no.json "sp.outside", samples/sample-student-answers.json): any of them open FAILs.
+// Only the two that need product code stay named, each a Question for the tech lead on BK-25's PR.
+const F1 = "follow-up F1: the study's city is a list that depends on the province (IMM 1294's own CityList, 4,516 cities); the filler writes no dependent list yet (p5/transforms.ts: code)";
+const F4 = "follow-up F4: for a married applicant and spouse the form's own Validate requires \"physically present at the marriage ceremony\"; the form prints a statement, not a question, and the spouse's row is about the spouse, which the own-question door cannot ask yet (code)";
 const OPEN: Record<string, string> = {
   "IMM 1294|principal|Page3[0].DetailsOfStudy[0].PurposeRow1[0].CityTown[0].CityTown[0]": F1,
-  "IMM 1294|principal|Page4[0].Consent0[0].Choice[0]": F2,
-  "IMM 1295|spouse_or_partner|Page4[0].Consent0[0].Choice[0]": F2,
-  "IMM 1295|spouse_or_partner|Page4[0].BackgroundInfo2[0].VisaChoice3[0]": F5,
-  "IMM 1295|spouse_or_partner|Page4[0].PageWrapper[0].GovPosition[0].Choice[0]": F5,
-  ...Object.fromEntries(["FromYear[0]", "FromMonth[0]", "Occupation[0].Occupation[0]", "Employer[0]", "CityTown[0].CityTown[0]", "Country[0].Country[0]"].map((b) => [`IMM 1295|spouse_or_partner|${OCC}${b}`, F3])),
   ...Object.fromEntries(["principal", "spouse_or_partner"].flatMap((r) => ["Applicant", "Spouse"].map((s) => [`IMM 5707|${r}|page1[0].SectionA[0].${s}[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]`, F4]))),
 };
 const gaps: string[] = [];
@@ -125,6 +120,19 @@ for (const c of copies) valuesOf.set(c, (py("read_choice_values.py", join(ROOT, 
 const spouse1295 = copies.find((c) => c.form === "IMM 1295" && roleOf(c) === "spouse_or_partner");
 const q7 = (b: string) => (spouse1295 ? valuesOf.get(spouse1295)![`form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].${b}[0]`] ?? "" : "");
 ok(`BK-24: the spouse's IMM 1295 writes question 7, the current country of residence and its status (read from the file: country "${q7("Country")}", status "${q7("Status")}")`, !!spouse1295 && q7("Country") !== "" && q7("Status") !== "", { country: q7("Country"), status: q7("Status") });
+
+// BK-25: BK-24's follow-ups F2, F3 and F5, read from the files. IMM 1294's 2c and 6 are not flagged and our engine cannot
+// run IMM 1294's script (WAIT below), so they are named here, as the boxes IMM 1295's own script requires on the same layout.
+const student1294 = copies.find((c) => c.form === "IMM 1294" && roleOf(c) === "principal");
+const BK25: [Copy | undefined, string, string[]][] = [
+  [student1294, "the student's IMM 1294", ["Page4[0].PageWrapper[0].BackgroundInfo2[0].VisaChoice3[0]", "Page4[0].PageWrapper[0].GovPosition[0].Choice[0]", "Page4[0].Consent0[0].Choice[0]"]],
+  [spouse1295, "the spouse's IMM 1295", ["Page4[0].BackgroundInfo2[0].VisaChoice3[0]", "Page4[0].PageWrapper[0].GovPosition[0].Choice[0]", "Page4[0].Consent0[0].Choice[0]",
+    ...["FromYear[0]", "FromMonth[0]", "Occupation[0].Occupation[0]", "Employer[0]", "CityTown[0].CityTown[0]", "Country[0].Country[0]"].map((b) => `Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].${b}`)]],
+];
+for (const [c, label, boxes] of BK25) {
+  const v = c ? valuesOf.get(c)! : {}, read = Object.fromEntries(boxes.map((b) => [b, v[`form1[0].${b}`] ?? ""]));
+  ok(`BK-25: ${label} writes background 2c and 6 and the consent${boxes.length > 3 ? ", and employment row 1" : ""} (read from the file; F2, F3, F5)`, !!c && Object.values(read).every((x) => x.trim() !== ""), read);
+}
 
 /** The boxes this copy's own file requires (a.–c. above), and those its file leaves empty. */
 function requiredOf(c: Copy, values: Record<string, string>) {
