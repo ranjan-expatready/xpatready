@@ -89,3 +89,32 @@ Re-run on the head: `check_bk25_own_statement` 27/27, `check_b170c_xfa_adapter` 
 No Blocker or Major is open. Open Minor (should): name BK-26 in F1's text.
 
 **Verdict: Approve** at commit `e59c6e697151c2092e0f5e25a9c72cc7f0368f22`.
+
+## Round 4 (diff only, P-277): `git diff c8126883d..e13e978b6`, head `e13e978b6e0136c8ec0ae975e2b96f73820025e4`
+These commits fix the red CI after the label (QA-144 K1; BK-16 under P-598, Lead 47, comment 6877192660). I re-ran, on fresh isolated copies at the head (:4480/:4481, reset + configured load, both stopped):
+- `check_bk16_family_forms_api`: **30/30**.
+- `check_c10_1_configured`: **48/48**. Row 10 shows `drifted: []`, and exactly one combination is `pending` (not the Study permit).
+
+With no server: `check_b164_no_engine_keys` 63/63 and `check_bk25_own_statement` 28/28. The other suites in the coordinator's list I did not re-run.
+- **Release 1 snapshots byte-identical (BK-16):** yes.
+  - BK-16 and its fixture are unchanged in this diff, and they still compare vv.single's, wp.lmia_inside's and pnp.express_entry's whole release snapshots and fingerprints against main's, with only the shared items' statuses allowed to differ, as on main. All three pass.
+  - 110 keeps every release 1 in its old order. The "later" boxes are asked, approved (150), placed and released as the Study permit's release 2 only after every release 1. So nothing that a release 1 carries changes.
+  - BK-24's new line also reads every other release 1 that files IMM 5707 and checks that the marriage boxes are still by hand there.
+- **The drift allowance in C10.1 is exact, not a loosening.**
+  - The Study permit's own draft must still match its release (now release 2).
+  - Another combination's draft may differ only when *every* change is a later item. A later item is either a change naming `MarriageInPerson`, `present_at_marriage_ceremony` or its label, or a "Field map" line on an edition where the boxes changed since that combination's release are exactly the two `MarriageInPerson` boxes (read from `form_field_map`).
+  - Any other change (a section chosen or unchosen on that combination, another IMM 5707 box) still lands in `drifted` and fails.
+  - Minor (should, not blocking): the name match runs over the whole change's JSON. If a future change kind lists several fields in its JSON, keying on `kind` + `key` would be tighter.
+- **`onlyTouched` cannot hide a problem this step makes.**
+  - `everyoneAnswers` decides each section only from that section's own questions (`_chosen-sections.ts:41-50`). The late step adds questions only to the sections it places into, and adds one new fact to IMM 5707's map. So a section it does not touch cannot change state because of it.
+  - What the full re-check did on b404d4f64's parent was re-judge choices that steps 085–105 made on purpose after the form setup (QA-439's `details_of_intended_study_in_canada`). The opt-in keeps those exactly as release 1 had them.
+  - Touched sections are still re-checked, on this combination and on every other combination that chose them. C10.1 shows no section change on the others.
+  - The default is unchanged, and the only caller that passes `true` is 110's late step (grep). The screen route at `form-part-placements.ts:71` and 130's release 2 still re-check everything.
+- **No combination is named in code.** In the added lines of `api/src`, "Visitor visa", "IMM 5707" and similar appear only in comments. Which boxes are later comes from the data (`own-yes-no.json` `later`) through `FORM_SETUP`. B164 passes 63/63. `'sp.outside'` appears only in tests' SQL, which is allowed.
+- **QA-144 K1:** still exact. It requires 0 undecided boxes, and the three IMM 1294 asks are compared by `dataPath` with `own-yes-no.json`'s three (`asked1294 === OWN_1294`). The 45 is kept as by-hand plus those three. This is not a loosened count.
+- **Release-number readers** (QA-144, C10.1, BK-12) now require release 1 and then release 2 exactly, each submitted by the author and approved by the Approver, not "any number".
+- Minor (should): `releaseOne(...).later` (`110-release-one.ts`) is filled but nothing reads it. Either drop it or show it in row 10.
+
+No Blocker or Major is open.
+
+**Verdict: Approve** at commit `e13e978b6e0136c8ec0ae975e2b96f73820025e4`.
