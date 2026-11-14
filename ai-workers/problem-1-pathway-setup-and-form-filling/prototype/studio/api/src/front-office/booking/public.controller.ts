@@ -5,7 +5,7 @@
 // Staff routes (create, reschedule, cancel, attendance, list) are services until PF-4's guard is on main.
 // Nest's decorators are applied as calls below the classes (as PF-4's routes do): files under api/src/front-office/ are
 // outside api/tsconfig.json's decorator setting, so `@` forms would not compile there.
-import { Body, Controller, Get, Inject, Injectable, Param, Post, Query, Req, type OnModuleInit } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Inject, Injectable, Param, Post, Query, Req, type OnModuleInit } from "@nestjs/common";
 import { Db, OpenRead } from "../../core.ts";
 import { BookingService, type BookingPorts } from "./service.ts";
 
@@ -46,5 +46,5 @@ route("slots", [Get("firms/:firmKey/book/:slug/slots"), OpenRead("the public boo
 route("book", [Post("firms/:firmKey/book/:slug/bookings")], [Param("firmKey"), Param("slug"), Body(), Req()]);
 route("manage", [Get("bookings/:token"), OpenRead("the booker's own self-service link (its token is the key; one identical not-found otherwise)")], [Param("token"), Req()]);
 route("manageSlots", [Get("bookings/:token/slots"), OpenRead("the booker's own self-service link: the times it may move to")], [Param("token"), Query(), Req()]);
-route("reschedule", [Post("bookings/:token/reschedule")], [Param("token"), Body(), Req()]);
-route("cancel", [Post("bookings/:token/cancel")], [Param("token"), Req()]);
+route("reschedule", [Post("bookings/:token/reschedule"), HttpCode(200)], [Param("token"), Body(), Req()]);
+route("cancel", [Post("bookings/:token/cancel"), HttpCode(200)], [Param("token"), Req()]);
