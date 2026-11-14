@@ -4,7 +4,7 @@
 // The required boxes are derived from each form's own file, never listed by hand:
 //   a. the fields its XFA template marks required (<validate nullTest="error">), as the project's reading of the form
 //      records them (inventory `required`, prototype/p1/xfa_inventory.py), counted again in the template itself
-//      (tests/fixtures/read_required_rules.py) so a stale reading fails;
+//      (tests/fixtures/read_required_rules.py: the names of the flagged boxes, compared) so a stale reading fails;
 //   b. a Validate script that checks rows of people (IMM 5707): its own `sections` and `personalInfo` lists, read from
 //      the template and applied as its validateFields does (the first section's row is complete; any other row with a
 //      value is complete; a row item with a condition only when its condition holds; an item the row lacks is skipped);
@@ -13,7 +13,10 @@
 //      engine/form-steps.ts byAPerson) are the person's steps, not the copy's;
 //   d. where the form's scripts also make boxes required from other answers (script_marks > 0), the flags are not the
 //      whole rule: the form's own Validate is run by our XFA engine (engine/xfa/index.ts; IMM 1295 and IMM 5257 have a
-//      descriptor, samples/xfa-forms.json) and must complete; where the engine is not built on this machine, WAIT.
+//      descriptor, samples/xfa-forms.json) and must complete once the open boxes named below hold placeholder values in a
+//      scratch copy (a stop on a box not named FAILs, so a box only the script requires never hides behind a named one);
+//      where the engine is not built here or cannot run the form's script (IMM 1294), WAIT: only its flags and cited
+//      conditions are checked here, the rest is the Mac's Adobe run (BK-20).
 // Each copy is read back from the PDF with the project's XFA reader (tests/fixtures/read_choice_values.py): a box is
 // written when the file holds a value in it. The copies are the walk's family, made by BK-13's replay on this copy (run
 // first when the copy has none: its exit code must be 0, its 45 checks). Sample people, made up; US$0, live AI off.
@@ -48,11 +51,14 @@ const F1 = "follow-up F1: the study's city is a list that depends on the provinc
 const F2 = "follow-up F2: the consent question is configured filled by hand; IMM 5257 (09-2023) maps the same question to person.consents_to_research_contact";
 const F3 = "follow-up F3: the form requires employment row 1 and the Sample spouse confirms none apply; what a homemaker writes there needs IRCC's own instructions (P-170)";
 const F4 = "follow-up F4: for a married applicant and spouse the form's own Validate requires \"physically present at the marriage ceremony\"; configured filled by hand, no question asks it";
+const F5 = "follow-up F5: background questions 2c (applied to Canada before) and 6 (government position) are configured filled by hand (the saved AI answer proposed nothing); IMM 5257 (09-2023) maps 2c to person.previously_applied_to_canada. IMM 1294 has the same two boxes empty, but our engine cannot run its script to show it";
 const OCC = "Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].";
 const OPEN: Record<string, string> = {
   "IMM 1294|principal|Page3[0].DetailsOfStudy[0].PurposeRow1[0].CityTown[0].CityTown[0]": F1,
   "IMM 1294|principal|Page4[0].Consent0[0].Choice[0]": F2,
   "IMM 1295|spouse_or_partner|Page4[0].Consent0[0].Choice[0]": F2,
+  "IMM 1295|spouse_or_partner|Page4[0].BackgroundInfo2[0].VisaChoice3[0]": F5,
+  "IMM 1295|spouse_or_partner|Page4[0].PageWrapper[0].GovPosition[0].Choice[0]": F5,
   ...Object.fromEntries(["FromYear[0]", "FromMonth[0]", "Occupation[0].Occupation[0]", "Employer[0]", "CityTown[0].CityTown[0]", "Country[0].Country[0]"].map((b) => [`IMM 1295|spouse_or_partner|${OCC}${b}`, F3])),
   ...Object.fromEntries(["principal", "spouse_or_partner"].flatMap((r) => ["Applicant", "Spouse"].map((s) => [`IMM 5707|${r}|page1[0].SectionA[0].${s}[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]`, F4]))),
 };
@@ -92,7 +98,7 @@ const blankOf = (c: Copy) => {
 };
 const SCRIPT_RULES = (json("samples/form-script-requirements.json") as { editions: { inventory: string; fields: { box: string; requiredWhen: { box: string; equals: string[] } }[] }[] }).editions;
 
-type Rules = { null_test: number; script_marks: number; validate_button: boolean; sections: string[] | null; rows: [string, string, (string | number)?][] | null };
+type Rules = { null_test: number; null_test_names: string[]; script_marks: number; validate_button: boolean; sections: string[] | null; rows: [string, string, (string | number)?][] | null };
 /** IMM 5707's validateFields, over the form's own field list: the boxes it requires on this copy (b. above). */
 function rowRequired(r: Rules, fields: InventoryBox[], values: Record<string, string>): string[] {
   if (!r.sections || !r.rows) return [];
@@ -131,30 +137,64 @@ function requiredOf(c: Copy, values: Record<string, string>) {
     ...flagged.filter((f) => !byAPerson(inv.fields as never, f as never) && (!when.has(f.data_path!) || when.get(f.data_path!)!.equals.includes(values[when.get(f.data_path!)!.box] ?? ""))).map((f) => f.data_path!),
     ...rowRequired(rules, inv.fields, values),
   ])];
-  return { blank, rules, flagged, required, open: required.filter((p) => (values[p] ?? "").trim() === "") };
+  return { blank, inv, rules, flagged, required, open: required.filter((p) => (values[p] ?? "").trim() === "") };
 }
 
 const engineWaits: string[] = [];
 for (const c of copies) {
   const label = `${c.form} for ${who.get(c.subject)?.label ?? c.subject}`;
-  const { blank, rules, flagged, required, open } = requiredOf(c, valuesOf.get(c)!);
-  ok(`BK-24: ${c.edition}: the project's reading of the form marks the same ${rules.null_test} fields required as the form's own template (nullTest="error"), so the flags are the form's`, !!blank && flagged.length === rules.null_test, { reading: flagged.length, template: rules.null_test, blank });
+  const { blank, inv, rules, flagged, required, open } = requiredOf(c, valuesOf.get(c)!);
+  const nameOf = (p: string) => p.split(".").pop()!.replace(/\[\d+\]$/, "");
+  const reading = flagged.map((f) => nameOf(f.data_path!)).sort();
+  ok(`BK-24: ${c.edition}: the project's reading of the form marks the same ${rules.null_test} boxes required as the form's own template (nullTest="error", compared by name), so the flags are the form's`, !!blank && JSON.stringify(reading) === JSON.stringify(rules.null_test_names), { reading: reading.length, template: rules.null_test_names.length, blank });
   const listed = open.filter((p) => OPEN[`${c.form}|${roleOf(c)}|${short(p)}`]);
   for (const p of listed) gaps.push(`${label}: ${short(p)} (${OPEN[`${c.form}|${roleOf(c)}|${short(p)}`]})`);
   const how = [rules.null_test ? `${rules.null_test} flagged` : "", rules.sections ? `its Validate script's rows (${rules.sections.length} sections × ${rules.rows?.length} items)` : "", !rules.null_test && !rules.sections ? "no box flagged and no Validate script that requires one" : ""].filter(Boolean).join("; ");
   const unnamed = open.filter((p) => !listed.includes(p)).map(short);
-  ok(`BK-24: ${label}: every box its own file requires is written (${required.length} required: ${how}${listed.length ? `; ${listed.length} open, each with its follow-up` : ""})`, unnamed.length === 0, unnamed.length || undefined);
+  ok(`BK-24: ${label}: every box its own file flags or lists as required is written (${required.length} required: ${how}${listed.length ? `; ${listed.length} open, each with its follow-up` : ""}${rules.script_marks ? "; its scripts require more from other answers: its own Validate below" : ""})`, unnamed.length === 0, unnamed.length || undefined);
   for (const p of unnamed) console.log(`      open: ${p}`);
-  // d. The form's own Validate, where its scripts also require boxes from other answers.
+  // d. The form's own Validate, where its scripts also require boxes from other answers: run again past each named open
+  //    box (a placeholder in a scratch copy), so every box the script stops on is seen, not only the first.
   if (rules.script_marks > 0) {
-    const a = await askXfaEngine(join(ROOT, c.path), { formSha256: c.sha });
-    if (a.status === "not_available" && a.code === "NO_ENGINE") { engineWaits.push(`${label}: ${a.reason}`); continue; }
-    if (a.status === "not_available" || a.status === "reads") { console.log(`NOTE  ${label}: the form's own Validate cannot run in our engine (${a.status === "reads" ? a.why : a.reason}); only its flagged boxes are checked here, the rest is the Mac's Adobe run (BK-20)`); continue; }
-    const at = a.status === "stops_at" ? short(a.box ?? "").replace(/\.(No|Yes)\[0\]$/, "") : "";
-    const known = at && OPEN[`${c.form}|${roleOf(c)}|${at}`];
-    if (known) { gaps.push(`${label}: its own Validate stops at ${at} (${known}); boxes after it are not reached`); continue; }
-    ok(`BK-24: ${label}: the form's own Validate, run by our XFA engine, completes`, a.status === "passes", a.status === "stops_at" ? { box: at, message: a.message } : undefined);
+    const w = await validatePast(c, inv.fields);
+    for (const g of w.named) gaps.push(`${label}: its own Validate stops at ${g} (${OPEN[`${c.form}|${roleOf(c)}|${g}`]})`);
+    if (w.wait) {
+      engineWaits.push(`${label}: ${w.named.length || w.unnamed.length ? `after its own Validate stopped at ${w.named.length + w.unnamed.length} boxes (above), ` : ""}${w.wait}`);
+      ok(`BK-24: ${label}: every box its own Validate stopped on, run by our XFA engine before it could go no further, is a named open box`, w.unnamed.length === 0, w.unnamed.length ? { stopsAt: w.unnamed } : undefined);
+      continue;
+    }
+    ok(`BK-24: ${label}: the form's own Validate, run by our XFA engine, completes once the ${w.named.length} named open boxes are given (it stops on no other box)`, w.passes && w.unnamed.length === 0, w.passes && !w.unnamed.length ? undefined : { stopsAt: w.unnamed, stuck: w.stuck });
   }
+}
+
+/** Runs the form's own Validate on the copy, and again with a placeholder in each box it stops on (in a scratch copy),
+ *  until it completes: which stops are named open boxes, which are not. Placeholders by the box's kind: a list or a choice
+ *  takes its first saved value, a date 2020-01-01, a year 2020, a month or day 01, other text SAMPLE. */
+async function validatePast(c: Copy, fields: InventoryBox[]): Promise<{ passes: boolean; named: string[]; unnamed: string[]; stuck?: string; wait?: string }> {
+  const tmp = mkdtempSync(join(tmpdir(), "bk24v-")), set = new Map<string, string>(), named: string[] = [], unnamed: string[] = [];
+  const byPath = new Map(fields.filter((f) => f.data_path).map((f) => [short(f.data_path!), f]));
+  const placeholder = (b: string) => {
+    const f = byPath.get(b), opts = ((f?.options_resolved ?? (Array.isArray(f?.options) ? f!.options : [])) as unknown[][]).map((o) => String(o?.[1] ?? "")).filter(Boolean);
+    if (opts.length) return opts[0];
+    if (f?.ui === "dateTimeEdit") return "2020-01-01";
+    return /Year|Yr$/i.test(b.replace(/\[\d+\]/g, "")) ? "2020" : /Month|MM$|DD$|Day$/i.test(b.replace(/\[\d+\]/g, "")) ? "01" : "SAMPLE";
+  };
+  const root = (fields.find((f) => f.data_path)?.data_path ?? "").split(".")[0];
+  try {
+    let file = join(ROOT, c.path);
+    for (let i = 0; i < 25; i++) {
+      const a = await askXfaEngine(file, { formSha256: c.sha });
+      if (a.status === "passes") return { passes: true, named, unnamed };
+      if (a.status !== "stops_at") return { passes: false, named, unnamed, wait: a.status === "reads" ? a.why : a.reason };
+      const at = short(a.box ?? "").replace(/\.(No|Yes)\[0\]$/, "");
+      if (set.has(at)) return { passes: false, named, unnamed, stuck: `${at} (${a.message?.replace(/\s+/g, " ").slice(0, 160)})` };
+      (OPEN[`${c.form}|${roleOf(c)}|${at}`] ? named : unnamed).push(at);
+      set.set(at, placeholder(at));
+      file = join(tmp, `v${i}.pdf`);
+      execFileSync(PY, ["-I", join(STUDIO, "tests", "fixtures", "read_choice_values.py"), "--set", join(ROOT, c.path), file, ...[...set].map(([b, v]) => `${root}.${b}=${v}`)], { stdio: ["ignore", "pipe", "pipe"] });
+    }
+    return { passes: false, named, unnamed, stuck: "more than 25 stops" };
+  } finally { rmSync(tmp, { recursive: true, force: true }); }
 }
 
 // The fail case: the spouse's IMM 1295 as BK-20 found it, question 7 emptied in a copy of the file (the test writer of
@@ -171,8 +211,32 @@ if (spouse1295) {
     else ok("BK-24 (fail case): the form's own Validate, run by our XFA engine, stops at question 7's country, as IRCC's did on 14 Nov", a.status === "stops_at" && short(a.box ?? "") === short(COUNTRY), a.status === "stops_at" ? { box: a.box, message: a.message } : a);
   } finally { rmSync(tmp, { recursive: true, force: true }); }
 }
+// The rules themselves, each with a pass and a fail case on the walk's own values (no file written):
+//   IMM 1295's open-work-permit conditions (samples/form-script-requirements.json, cited from its script): an open work
+//   permit leaves job title, duties and dates unasked when empty; Start-up Business Class asks job title and duties.
+const W = "form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].TypeofWork[0].WorkPermitType[0]", JOB = "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].";
+if (spouse1295) {
+  const v = valuesOf.get(spouse1295)!, with_ = (t: string) => requiredOf(spouse1295, { ...v, [W]: t }).required;
+  ok(`BK-24 (script condition): on IMM 1295 an open work permit (the spouse's, "${v[W]}") does not require job title, duties or dates; Start-up Business Class requires job title and duties; LMIA-exempt all four`,
+    v[W] === "OWP" && !with_("OWP").some((p) => p.startsWith(JOB)) && ["jobTitle[0]", "posDesc[0]"].every((b) => with_("SBC").includes(JOB + b)) && !with_("SBC").includes(`${JOB}HowLongStudy[0].FromDate[0]`) && with_("ELMO").filter((p) => p.startsWith(JOB)).length === 4);
+}
+//   IMM 5707's own validateFields: the applicant's row is complete; another row with any value is complete, an empty one
+//   is fine; "physically present at the marriage ceremony" only for the married (its code 5).
+const f5707 = copies.find((c) => c.form === "IMM 5707" && roleOf(c) === "principal");
+if (f5707) {
+  const v = valuesOf.get(f5707)!, A = "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].", P1 = "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].";
+  const keys = (pre: string) => Object.keys(v).filter((k) => k.startsWith(pre));
+  const noApplicantName = requiredOf(f5707, { ...v, [`${A}PersonalData[0].FamilyName[0]`]: "" }).open;
+  const emptyParent = requiredOf(f5707, Object.fromEntries(Object.entries(v).filter(([k]) => !k.startsWith(P1)))).required;
+  const oneParentValue = requiredOf(f5707, { ...Object.fromEntries(Object.entries(v).filter(([k]) => !k.startsWith(P1))), [`${P1}PersonalData[0].FamilyName[0]`]: "SAMPLE" }).open;
+  const single = requiredOf(f5707, { ...v, [`${A}PersonalData[1].MaritalStatus[0]`]: "2" }).required;
+  ok("BK-24 (IMM 5707's own rows): an applicant with no family name is open; an empty parent row is not required, a parent row with one value requires the rest; a single applicant is not asked about the marriage ceremony",
+    noApplicantName.includes(`${A}PersonalData[0].FamilyName[0]`) && keys(P1).length > 4 && !emptyParent.some((p) => p.startsWith(P1)) && oneParentValue.filter((p) => p.startsWith(P1)).length >= 6
+    && !single.includes(`${A}MarriageInPerson[0].MarriageInPerson[0].yesno[0]`) && requiredOf(f5707, v).required.includes(`${A}MarriageInPerson[0].MarriageInPerson[0].yesno[0]`));
+}
+
 for (const g of gaps) console.log(`GAP   ${g}`);
-for (const w of engineWaits) console.log(`WAIT  (the engine is not built here: packages/xfa-engine, npm ci --legacy-peer-deps && npm run build) ${w}`);
+for (const w of engineWaits) console.log(`WAIT  (the form's own Validate cannot be run to its end here; beyond the stops above, the Mac's Adobe run decides, BK-20) ${w}`);
 const failed = summary();
 console.log(`BK-24: ${gaps.length} open boxes named for their follow-up; ${failed} FAIL.`);
 process.exit(failed ? 1 : 0);

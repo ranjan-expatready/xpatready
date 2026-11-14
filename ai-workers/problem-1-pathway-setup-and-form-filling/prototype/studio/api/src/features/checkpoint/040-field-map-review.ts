@@ -113,15 +113,20 @@ export default {
         });
       } catch (e) { refused.push(`${form}: ${said(e)}`); }
     }
-    // BK-24: then each form field the author corrects on its applied draft, before any release, with the reason it records.
+    // BK-24: then each form field the sample loader corrects on its applied draft, before any release, with the reason it
+    // records and one audit line each. The product has no door yet for a person to remap one mapped form field (screen02.ts
+    // decideFormField refuses a mapped one): a follow-up row; until then only the Sample loader makes this change, and says so.
     for (const x of BOX_CORRECTIONS) {
-      const ed = await db.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId, editionLabel: x.edition } }, select: { id: true } });
-      const rows = ed ? await db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: x.box } }) : [];
-      const now = effective(rows, (m) => m.dataPath, "draft")[0];
-      if (!now || now.outcome !== "mapped" || now.canonicalFieldKey !== x.proposed) { refused.push(`${x.edition} ${x.box}: the saved answer does not map it to ${x.proposed} (it reads ${now?.canonicalFieldKey ?? "nothing"}), so it was not corrected`); continue; }
-      if (now.canonicalFieldKey === x.key && now.transform === x.transform) continue;
-      await revise(db.formFieldMap, rows, { canonicalFieldKey: x.key, transform: x.transform, origin: "HUMAN", confidence: null, reason: `${x.note} (${author.name})`.slice(0, 500) }, author.id, strip);
-      boxes++;
+      try {
+        const ed = await db.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId, editionLabel: x.edition } }, select: { id: true } });
+        const rows = ed ? await db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: x.box } }) : [];
+        const now = effective(rows, (m) => m.dataPath, "draft")[0];
+        if (now?.outcome === "mapped" && now.canonicalFieldKey === x.key && now.transform === x.transform) continue; // corrected already
+        if (!now || now.outcome !== "mapped" || now.canonicalFieldKey !== x.proposed) { refused.push(`${x.edition} ${x.box}: the saved answer does not map it to ${x.proposed} (it reads ${now?.canonicalFieldKey ?? "nothing"}), so it was not corrected`); continue; }
+        await revise(db.formFieldMap, rows, { canonicalFieldKey: x.key, transform: x.transform, origin: "HUMAN", confidence: null, reason: `Changed by the sample loader: ${x.note}`.slice(0, 500) }, author.id, strip);
+        await ctx.audit.log(workspaceId, author.id, "decided", "form field", x.box, `The sample loader changed ${x.box} on ${x.edition} from ${x.proposed} to ${x.key} (${x.transform}): ${x.note}`);
+        boxes++;
+      } catch (e) { refused.push(`${x.edition} ${x.box}: ${said(e)}`); }
     }
     fieldMapReview(ctx).applied = applied;
     const waitingForAi = ctx.six.drafts.waiting_for_draft_with_ai;

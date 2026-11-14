@@ -4,6 +4,7 @@ Usage: python -I read_required_rules.py <official blank PDF>
 Prints one JSON line:
   null_test       how many fields the template marks required (<validate nullTest="error">): the flag the project's
                   reading of the form (prototype/p1/xfa_inventory.py) records as each field's `required`
+  null_test_names the name of each of them (its field or exclGroup), sorted, so a check compares the boxes, not a count
   script_marks    how many places the form's scripts make a field required by other answers (color.markRequired or
                   .mandatory = "error"): a form with any is only partly checked by its flags
   validate_button whether the form has its own Validate button (a field named ValidateButton…)
@@ -13,6 +14,8 @@ Prints one JSON line:
 import json
 import re
 import sys
+
+import xml.etree.ElementTree as ET
 
 import pypdf
 
@@ -37,11 +40,25 @@ def js_list(text, name):
     return json.loads(re.sub(r",\s*([\]}])", r"\1", body))
 
 
+def flagged_names(t):
+    """The name of each field or exclGroup whose own <validate> says nullTest="error"."""
+    out = []
+    for el in ET.fromstring(t.encode("utf-8")).iter():
+        tag = el.tag.split("}")[-1]
+        if tag not in ("field", "exclGroup"):
+            continue
+        v = next((c for c in el if c.tag.split("}")[-1] == "validate"), None)
+        if v is not None and v.get("nullTest") == "error":
+            out.append(el.get("name") or "")
+    return sorted(out)
+
+
 def main():
     t = template_of(sys.argv[1])
     plain = t.replace("&quot;", '"').replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
     print(json.dumps({
         "null_test": len(re.findall(r'<validate\b[^>]*\bnullTest="error"', t)),
+        "null_test_names": flagged_names(t),
         "script_marks": len(re.findall(r"markRequired\s*\(|\.mandatory\s*=\s*\"error\"", plain)),
         "validate_button": bool(re.search(r'name="ValidateButton\w*"', t)),
         "sections": js_list(plain, "sections"),
