@@ -25,16 +25,20 @@ function offsetAt(zone: string, at: Date): number {
 /** The local date (YYYY-MM-DD) of an instant in a zone. */
 export function localDate(zone: string, at: Date): string {
   const p = partsIn(zone, at);
-  return `${p.year}-${p.month}-${p.day}`;
+  return `${p.year.padStart(4, "0")}-${p.month}-${p.day}`;
 }
+const localWall = (zone: string, at: Date) => { const p = partsIn(zone, at); return `${p.year.padStart(4, "0")}-${p.month}-${p.day} ${p.hour}:${p.minute}`; };
 
-/** The instant of a local wall-clock time (date YYYY-MM-DD, time HH:MM) in a zone. */
+/** The instant of a local wall-clock time (date YYYY-MM-DD, time HH:MM) in a zone. A time the clocks skip (a
+ *  daylight-saving gap) is read with the offset before the change, so it lands just after the gap, on the same day; a
+ *  time that happens twice (the clocks go back) is the later of the two. */
 export function zonedInstant(date: string, hhmm: string, zone: string): Date {
   const [y, m, d] = date.split("-").map(Number), [h, mi] = hhmm.split(":").map(Number);
   const wall = Date.UTC(y, m - 1, d, h, mi);
-  let at = wall - offsetAt(zone, new Date(wall));
-  at = wall - offsetAt(zone, new Date(at));   // once more across a change of offset (daylight saving)
-  return new Date(at);
+  const candidates = [wall - offsetAt(zone, new Date(wall - 14 * 3_600_000)), wall - offsetAt(zone, new Date(wall + 14 * 3_600_000))];
+  const want = `${date} ${hhmm}`;
+  const exact = candidates.filter((t) => localWall(zone, new Date(t)) === want);
+  return new Date(Math.max(...(exact.length ? exact : candidates)));
 }
 
 const nextDate = (date: string) => new Date(Date.parse(`${date}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
@@ -48,7 +52,10 @@ export function acknowledgeBy(receivedAt: Date, cal: FirmCalendar, days = ACK_BU
   for (let i = 0; i < 366; i++) {
     date = nextDate(date);
     const h = hours.get(weekdayOf(date));
-    if (h && !closed.has(date) && ++counted === days) return zonedInstant(date, h.closes, cal.zone);
+    if (!h || closed.has(date)) continue;
+    const at = zonedInstant(date, h.closes, cal.zone);
+    if (localDate(cal.zone, at) !== date) continue;   // a day the zone skipped (e.g. Pacific/Apia, 30 Dec 2011)
+    if (++counted === days) return at;
   }
   let fallback = localDate(cal.zone, receivedAt);
   for (let i = 0; i < days; i++) fallback = nextDate(fallback);

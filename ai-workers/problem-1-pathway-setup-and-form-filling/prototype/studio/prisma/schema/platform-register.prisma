@@ -1,4 +1,4 @@
-// platform-register.prisma: complaints (later data requests, legal holds, breaches). Owner: Lead B (platform, contracts §9)
+// platform-register.prisma — complaints (later data requests, legal holds, breaches). Owner: Lead B (platform, contracts §9).
 //
 // PF-21 (P-579, P-584 (8), P-600; BACKLOG row PF-21, moved from FO-13k rev 12; contracts §0, §7, §9). The firm's complaints
 // record: a complaint made to the firm by a client, a prospect or any other person, each handling step, the outcome and
