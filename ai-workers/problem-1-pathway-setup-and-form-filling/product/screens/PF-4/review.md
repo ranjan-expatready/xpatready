@@ -168,3 +168,29 @@ No Blocker or Major is open at dba1b50db02bbbfc7d0262b5e134c0b269750f91. The jou
 No new findings. No Blocker or Major is open at 43bf6970a7a936f04fd2b9fcdf32878778b1b132. The journey score stays 9 / 10.
 
 **Verdict: Approve 43bf6970a7a936f04fd2b9fcdf32878778b1b132**
+
+## Round 5: head dd308b2d (PF-4's own commit only, P-277; CI `ci` shard 2 red at 1f9b8f76 on check_b164)
+
+**The merge brought in nothing of PF-4's.**
+* `git diff 1f9b8f767 dd308b2d8~1 -- …/api/src/platform …/tests/check_pf4_identity.ts` is empty.
+* The merge commit's tree equals `git merge-tree --write-tree 1f9b8f767 ea4488b6e` exactly (8a13b3c8), so the merge took no hand edits.
+
+**The change** (`dd308b2d8~1..dd308b2d8`, three files):
+* `ports/events.ts` gains two names, `EVENT.STAFF_ROLES_CHANGED` and `EVENT.STAFF_DEACTIVATED`, a strict ids-only `StaffEventPayload`, and the two consumer shapes.
+* `service.ts` writes both outbox rows with those names and with `StaffEventPayload.parse({ staffId })`.
+* There are two new tests.
+
+**Checks run** (copy `pf4rev` on :4543, started with PLATFORM_IDENTITY=local PLATFORM_SAMPLE_SEED=on; stopped afterwards; no test databases left; `prisma generate` was run first):
+* `check_pf4_identity.ts 4543`: **113/113**, including the two new lines.
+* `check_b164_no_engine_keys`: **63/63**.
+* **Mutation** on a scratch copy: with the bare `"staff.deactivated"` string put back in `service.ts`, B164's scan line goes red and names `api/src/platform/…`. With `EVENT.*` it passes. So the fix is what turns B164 green; the guard is untouched.
+* `tsc`: no error in `platform/identity` or `ports/`.
+
+**The three questions:**
+* **`ports/` imports only zod.** Every import in `ports/*.ts` is `"zod"`; there are no relative or app imports. The dependency runs one way only: `service.ts` (and FO-1a's `firm-seed.ts`) import `ports/events.ts`, and never the reverse.
+* **The payload carries no personal data.** It is `{ staffId: uuid }` and nothing else (`.strict()`). There is no name, email, role word or licence. The firm is the outbox row's `firm_id`. The fail test proves the shape refuses extra keys and a non-uuid id. Dropping the role words from `staff.roles_changed` costs nothing today (nothing consumes it), and it fits contracts §0.5: "ids and the facts the consumer needs".
+* **The event row is still written last (PF-3 m8).** In both `changeRoles` and `deactivate`, `tx.moduleEvent.create(…)` is the last write in the transaction, after the audit line. `parse` runs on a database uuid, so it cannot throw there.
+
+No new findings. Round 1's m5 (`graph.mjs` and `decorate()`) stays open as a Minor with the tsconfig row (PF-4t). No Blocker or Major is open at dd308b2d84cdf6faab7a6ee7a42f23a28ab9340d. The journey score stays 9 / 10.
+
+**Verdict: Approve dd308b2d84cdf6faab7a6ee7a42f23a28ab9340d**
