@@ -39,6 +39,13 @@ export const CONFIG_ENTITIES: ReadonlySet<string> = new Set([
 ]);
 /** A configuration entity: listed, or a library change's ("library field", "library document_type", "library section" …;
  *  review-proposals.ts, screen02.ts). */
+/** The audit entities written by the platform (PF-3 onwards: a firm's settings, later its staff and plan). A platform line
+ *  names a firm, never a case, so no firm's case feed reads it (firmMayRead: not a case line, not a configuration line;
+ *  on CONFIG_ENTITIES every firm would read another firm's setting changes). The platform's own timeline reads these by
+ *  firm (AUD-1's firm_id; front office's activity view, contracts §7). */
+export const PLATFORM_ENTITIES: ReadonlySet<string> = new Set([
+  "platform_firm_setting" /* PF-3 a firm's setting changed, platform/settings.ts */,
+]);
 export const isConfigEntity = (entity: string) => !CASE_ENTITIES.has(entity) && (CONFIG_ENTITIES.has(entity) || entity.startsWith("library "));
 
 type Line = { entity: string; entityKey: string | null; summary: string };
