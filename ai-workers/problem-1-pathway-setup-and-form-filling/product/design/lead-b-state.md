@@ -20,7 +20,7 @@
 | PF-1 | web module seam | **merged** (#1711) | — |
 | PF-2 | tool gate | **merged** (#1712) | PF-2b residency done by Lead B (file above) |
 | PF-7 | container + CI smoke | started by Lead 37's card (check its PR with the release holder) | — |
-| PF-3 | platform tables + settings home + seed | **in flight: PR #1728** (holds the schema baton) | watch review; then start FO-1a + FO-1b |
+| PF-3 | platform tables + settings home + seed | **#1728 labelled and queued** (P-423 read passed, Lead 40) | when merged: FO-1a, FO-1b and PF-4 start side by side |
 | FO-1a / FO-1b | sales tables / booking tables | briefs written | start **side by side** after PF-3 merges (P-559 (3), Lead 38); FO-1a also fixes DEVELOPING.md's stale one-migration line |
 | PF-4 | sign-in, roles, permission keys | **brief written** (`lead-b-briefs/PF-4.md`) | start when PF-3 merges (schema-free, so it may run beside FO-1a/1b) |
 | PF-4b | staff reads, session, accept invitation, step-up, provider emails via MailPort | **brief written** (`lead-b-briefs/PF-4b.md`) | start when PF-4 merges; builder verifies 4 Cognito facts first (step 0) |
@@ -41,7 +41,7 @@
 P-559 (App.tsx line; schema folder rule; P-335/P-357 amended for PF/FO) · P-560 (FO follows AG-02; `prospect.won`; a person opens the case) · Lead 37: one audit trail (`audit_event` + `AuditPort.record(tx,…)`, AUD-1, release holder's; no audit table in our modules); front office owns the lead/prospect/client activity timeline (read view); firm settings are platform's typed settings home; representative of record = Case Manager with a licence, no rename in case code (`user-R`) · Lead 38: FO-1a/1b side by side · Lead 39: Atomic CRM design reference only · founder 22:3x 13 Nov: Corporate pipeline and script embed in month one · **P-561** BoldSign on 4 conditions → **P-563** confirmed after stream 4's comparison · **P-562** size for ~100 Canadian firms (50 to start where it saves effort) · **P-564** email one-time code before signing, firm setting on by default · **P-565** sessions past ~half context hand over.
 
 ## Founder questions
-All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3-5 decided by Lead B under **P-566 (3)** with evidence (register §C2, contracts §7): two-step required for all; build the s. 24(3) checklist; trust (b). Three deviations from the team's requirements go to the founder as one line each through the release holder (AG-1-40; AG-05 l.539-550; AG-6-70's optional trust card account). From now on, best-practice questions are decided by Lead B with evidence (P-566 (3)); only real preferences or conflicts with the team's requirements go up.
+All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3-5 decided by Lead B under **P-566 (3)** with evidence (register §C2, contracts §7): two-step required for all; build the s. 24(3) checklist; trust (b). The three deviations from the team's requirements (AG-1-40; AG-05 l.539-550; AG-6-70's optional trust card account) were **confirmed by the founder as P-567** (08:4x IST). From now on, best-practice questions are decided by Lead B with evidence (P-566 (3)); only real preferences or conflicts with the team's requirements go up.
 
 ## Next step for the fresh Lead B
 1. Read this file, then contracts §7, then the rows file's latest sections.
@@ -90,3 +90,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 08:07 IST: FO-5s concept r1 + board written (`screens/fo-5s-retainer-signing/`); the drafter's 10 gaps decided and folded (rows rev 6.1: FO-5, FO-6 amended, FO-5s added). Fresh challenger next.
 * 14 Nov 08:14 IST: FO-5s fresh challenge (Fable): 2 Blockers, 6 Majors, 10 Minors, all accepted; concept r2 approved (P-223 (4)); rows rev 6.2. Next: FO-7 shaping.
 * 14 Nov 08:16 IST: FO-7 shaped as rows rev 7 (FO-7a schema, FO-7b invoices, FO-7c card via Connect Standard, FO-7t trust ledger); Lead B decisions inside (Connect Standard; firm-set tax rates; trust per §7 §2.5).
+* 14 Nov 08:25 IST: P-567 (founder confirmed the three deviations) marked in register §C2 and contracts §7. PF-3 #1728 labelled and queued. Lead 40 copied rev 6.1; rev 6.2 (FO-5s r2 changes) and rev 7 (FO-7) still to copy. Stream 4 (2)'s map picked Keycloak for sign-in; Lead 40 asked it to align with Cognito or argue with evidence.
