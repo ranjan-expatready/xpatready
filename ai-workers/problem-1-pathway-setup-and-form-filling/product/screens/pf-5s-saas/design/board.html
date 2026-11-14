@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PF-5s firm sign-up board (Sample data)</title>
+<style>
+:root{--blue:#0862c5;--blue-50:#e6f4ff;--text:#1d2733;--muted:#5b6b7b;--border:#d8dee6;--bg:#f4f6f9;--white:#fff;--ok:#16794a;--warn:#a35a00;--warn-50:#fff4e5;--danger:#b42318;--r:8px}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 Inter,system-ui,sans-serif;color:var(--text);background:var(--bg)}
+h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}h1{font-size:24px}h2{font-size:18px}h3{font-size:16px}
+a{color:var(--blue)}:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.note{max-width:1200px;margin:16px auto;padding:12px 16px;background:#fff8e6;border:1px solid #f0d9a0;border-radius:var(--r);font-size:12px}
+nav.tabs{max-width:1200px;margin:0 auto 8px;display:flex;gap:8px;flex-wrap:wrap;padding:0 16px}nav.tabs a{padding:6px 12px;border:1px solid var(--border);border-radius:999px;background:#fff;color:var(--text);text-decoration:none}nav.tabs a:focus,nav.tabs a:hover{border-color:var(--blue);color:var(--blue)}
+section.screen{max-width:1200px;margin:0 auto 32px;background:#fff;border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.cap{padding:8px 16px;background:#eef2f6;border-bottom:1px solid var(--border);font-size:12px;color:var(--muted)}
+.pub{padding:32px 16px;background:var(--bg)}.pubhead{display:flex;justify-content:space-between;align-items:center;max-width:960px;margin:0 auto 24px}.logo{font-weight:700}
+.shell{display:grid;grid-template-columns:200px 1fr;min-height:420px}.side{background:#f8fafc;border-right:1px solid var(--border);padding:16px 12px}.side b{display:block;font-size:12px;color:var(--muted);margin:12px 0 4px}.side a{display:block;padding:6px 8px;border-radius:6px;color:var(--text);text-decoration:none}.side a.on{background:var(--blue-50);color:var(--blue);font-weight:600}
+.main{padding:20px 24px}.head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:12px}.sub{color:var(--muted);margin-top:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--text);font:inherit;cursor:pointer;text-decoration:none}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.sm{height:28px;padding:0 10px;font-size:12px}.btn.block{width:100%}
+.chip{display:inline-block;padding:2px 10px;border-radius:999px;border:1px solid var(--border);font-size:12px;background:#fff}.chip.on{border-color:var(--blue);background:var(--blue-50);color:var(--blue)}
+.sample{font-size:11px;color:var(--muted);border:1px dashed var(--border);border-radius:4px;padding:0 4px;margin-left:4px}
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:960px;margin:0 auto}.plan{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:20px}.plan .price{font-size:24px;font-weight:700;margin:8px 0 0}.plan ul{padding-left:18px;color:var(--muted);margin:12px 0 16px}
+.switch{display:flex;justify-content:center;gap:4px;margin:0 auto 16px;width:max-content;border:1px solid var(--border);border-radius:999px;padding:3px;background:#fff}.switch span{padding:4px 12px;border-radius:999px}.switch .on{background:var(--blue-50);color:var(--blue);font-weight:600}
+.card{max-width:440px;margin:0 auto;background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:24px}
+.f{margin-bottom:14px}.f label{display:block;font-weight:600;margin-bottom:4px}.f input{width:100%;height:40px;border:1px solid var(--border);border-radius:6px;padding:0 10px;font:inherit}.f input[readonly]{background:#f4f6f9;color:var(--muted)}.hint{font-size:12px;color:var(--muted)}.err{color:var(--danger);font-size:12px;margin-top:4px}.f.bad input{border-color:var(--danger)}
+.fixed{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:#f8fafc}
+.tick{display:flex;gap:8px;align-items:flex-start;margin:12px 0}
+.code{display:flex;gap:8px;margin:12px 0}.code input{width:44px;height:48px;text-align:center;font-size:20px;border:1px solid var(--border);border-radius:6px}
+.row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.mini{border:1px solid var(--border);border-radius:var(--r);padding:16px;background:#fff}.mini h3{font-size:14px;margin-bottom:6px}
+.next{background:var(--blue-50);border:1px solid #cce9ff;border-radius:var(--r);padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.needs{background:var(--warn-50);border:1px solid #f3c98b;border-left:4px solid var(--warn);border-radius:var(--r);padding:10px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.sec{border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px}.sec header{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border)}.sec dl{display:grid;grid-template-columns:180px 1fr;margin:0;padding:8px 16px}.sec dt{color:var(--muted);padding:6px 0}.sec dd{margin:0;padding:6px 0}
+.missing{color:var(--warn)}
+.sum{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px}.sum dt{font-size:12px;color:var(--muted)}.sum dd{margin:2px 0 0;font-weight:600}
+.status{display:inline-flex;align-items:center;gap:6px}.dot{width:8px;height:8px;border-radius:50%;background:var(--blue)}.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.off{background:var(--muted);border-radius:2px}
+.hold{max-width:560px;margin:24px auto;text-align:left;border:1px solid var(--border);border-radius:var(--r);padding:24px}
+.mail{max-width:560px;border:1px solid var(--border);border-radius:var(--r);padding:16px;background:#fff;margin-bottom:12px}.mail small{color:var(--muted);display:block;margin-bottom:8px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%}
+@media (prefers-reduced-motion:no-preference){.spin{animation:s 1s linear infinite}@keyframes s{to{transform:rotate(360deg)}}}
+@media (max-width:760px){.plans,.row,.sum{grid-template-columns:1fr}.shell{grid-template-columns:1fr}.side{display:none}.sec dl{grid-template-columns:1fr}}
+</style></head><body>
+<div class="note"><b>PF-5s board r1 (concept draft, helper for Lead B, 14 Nov 2026).</b> The firm as our customer: pricing, sign-up, trial, profile, billing, hold (row PF-5; contracts §7 §1.1; P-566, P-567). Plan names, prices, trial length, firms and people are <b>Sample</b>. Terms, privacy and tax wording: Unconfirmed: no counsel. Not a pixel spec: the builder uses the app's components and tokens. Stripe's Checkout and billing portal and the identity provider's sign-in and two-step pages are theirs and are not drawn; only the hand-off to and from them is. Not built here: our staff console, firm branding, each firm's own web address.</div>
+<nav class="tabs" aria-label="Screens"><a href="#s1">1 Pricing</a><a href="#s2">2 Sign up</a><a href="#s3">3 Check your email</a><a href="#s4">4 Trial start</a><a href="#s5">5 Firm profile</a><a href="#s6">6 Plan and billing</a><a href="#s7">7 Overdue and hold</a><a href="#s8">8 Invited sign-up</a><a href="#s9">9 Emails</a></nav>
+
+<section class="screen" id="s1"><div class="cap">1 · Pricing (public). Plans from GET /api/public/plans (BR-1). Concept §7 G1: built from our plans list, not Stripe's pricing table, which cannot put sign-up before Checkout.</div><div class="pub">
+<div class="pubhead"><span class="logo">ExpatReady</span><a href="#">Sign in</a></div>
+<h1 style="text-align:center;margin-bottom:6px">Plans for immigration firms</h1><p class="sub" style="text-align:center;margin-bottom:16px">Every plan starts with a free trial. No card needed.</p>
+<div class="switch" role="group" aria-label="Billing period"><span class="on">Monthly</span><span>Yearly</span></div>
+<div class="plans">
+<div class="plan"><h2>Solo<span class="sample">Sample</span></h2><p class="price">$49 <span class="hint">per month, CAD</span></p><ul><li>1 seat</li><li>14-day free trial</li></ul><a class="btn block" href="#s2">Start free trial</a></div>
+<div class="plan" style="border-color:var(--blue)"><h2>Team<span class="sample">Sample</span></h2><p class="price">$149 <span class="hint">per month, CAD</span></p><ul><li>Up to 10 seats</li><li>14-day free trial</li></ul><a class="btn primary block" href="#s2">Start free trial</a></div>
+<div class="plan"><h2>Firm<span class="sample">Sample</span></h2><p class="price">$349 <span class="hint">per month, CAD</span></p><ul><li>Up to 30 seats</li><li>14-day free trial</li></ul><a class="btn block" href="#s2">Start free trial</a></div>
+</div>
+<div style="max-width:960px;margin:20px auto 0" class="hint"><b>What happens when the trial ends?</b> Add a card before then to keep going. Without one, your account goes on hold: you can still pay or download your data. · <b>Can I change plan later?</b> Yes, any time, from Plan and billing.</div>
+</div></section>
+
+<section class="screen" id="s2"><div class="cap">2 · Sign up (public; BR-2, BR-3, BR-4). Five inputs at most; honeypot hidden; password needs PF-5 amendment G2; plan carried needs G3.</div><div class="pub">
+<div class="card"><h1>Start your free trial</h1><p class="sub" style="margin-bottom:16px">14 days free <span class="sample">Sample</span>. No card needed.</p>
+<div class="f"><label for="e">Work email</label><input id="e" value="owner@sample-immigration.example" autocomplete="email"></div>
+<div class="f"><label for="p">Password</label><input id="p" type="password" value="xxxxxxxxxxxx" autocomplete="new-password"><div class="hint">✓ 12 or more characters · ✓ a number · ✓ a symbol (the sign-in provider's rules)</div></div>
+<div class="f"><label for="n">Firm name</label><input id="n" value="Sample Immigration Services"></div>
+<div class="f"><label>Country</label><div class="fixed"><span>Canada</span><span class="hint" title="Expat Ready is for Canadian immigration work. This can't be changed later.">Can't be changed later ⓘ</span></div></div>
+<div class="f"><label>Plan</label><div class="fixed"><span>Team, monthly <span class="sample">Sample</span></span><a href="#s1">Change</a></div></div>
+<div class="tick"><input type="checkbox" id="t" aria-describedby="terr"><label for="t">I agree to the <a href="#">Terms of Service (v1)</a>, <a href="#">Privacy Notice (v1)</a> and <a href="#">Data Processing Terms (v1)</a>. <span class="sample">Sample</span></label></div>
+<div class="err" id="terr">Please accept the terms to continue.</div>
+<button class="btn primary block" style="margin-top:12px">Start free trial</button>
+<p class="hint" style="text-align:center;margin-top:12px">Already have an account? <a href="#">Sign in</a></p></div></div></section>
+
+<section class="screen" id="s3"><div class="cap">3 · Check your email and 3b · Confirm (public; BR-4, BR-5). Same screen for a known or unknown email. Link and code: single use, 24 hours.</div><div class="pub"><div class="row" style="max-width:960px;margin:0 auto;grid-template-columns:repeat(3,1fr)">
+<div class="mini"><h3>Check your email</h3><p>We sent a link and a 6-digit code to <b>o•••@sample-immigration.example</b>. It works once, for 24 hours.</p><div class="code" aria-label="6-digit code"><input value="4"><input value="1"><input value="7"><input><input><input></div><button class="btn primary block">Confirm email</button><p class="hint" style="margin-top:8px"><a href="#">Send it again</a> · <a href="#s2">Wrong email? Start again</a></p></div>
+<div class="mini"><h3>3b · Confirming</h3><p><span class="spin" aria-hidden="true"></span> Confirming your email…</p><p class="hint">Then: "Email confirmed. Taking you to start your trial…"</p></div>
+<div class="mini"><h3>Link used or expired</h3><p>This link has expired or was already used.</p><button class="btn primary block">Send a new link</button><p class="hint" style="margin-top:8px">Already confirmed? <a href="#">Sign in</a></p></div>
+</div></div></section>
+
+<section class="screen" id="s4"><div class="cap">4 · Trial start (BR-6). Firm created as "Setting up" on confirmation; hand-off to Stripe Checkout (nothing to pay); return; first sign-in enrols two-step (P-567, provider's pages); status from our record, never the return link.</div><div class="pub"><div class="row" style="max-width:1100px;margin:0 auto">
+<div class="mini"><h3>a · Before Stripe</h3><p>We'll open Stripe to start your free trial. <b>Nothing to pay today.</b></p><button class="btn primary block">Continue to Stripe</button><p class="hint" style="margin-top:8px">CI and demo: the fake adapter's "Test checkout" page.</p></div>
+<div class="mini"><h3>b · Back from Stripe (public)</h3><p>Your trial is being set up. Sign in to continue.</p><button class="btn primary block">Sign in</button><p class="hint" style="margin-top:8px">Shows no firm data. Sign-in and two-step set-up happen on the provider's pages.</p></div>
+<div class="mini"><h3>c · In the app: waiting</h3><p><span class="spin" aria-hidden="true"></span> Starting your trial…</p><p class="hint">After 60 s <span class="sample">Sample</span>: "This is taking longer than usual. Your sign-up is saved; refresh in a minute."</p></div>
+<div class="mini"><h3>d · Left Stripe early</h3><p><b>One step left.</b> Your firm is set up. Start your free trial to begin.</p><button class="btn primary block">Start free trial</button><p class="hint" style="margin-top:8px">Signing up again with the same email comes back here: never a second firm.</p></div>
+</div></div></section>
+
+<section class="screen" id="s5"><div class="cap">5 · Firm profile (platform frame; BR-7). Owner edits each section in a right panel; others read. Address asked once, here (G8).</div><div class="shell"><div class="side"><b>Firm settings</b><a href="#">Team</a><a href="#">Licences</a><a href="#">Security</a><a class="on" href="#s5">Firm profile</a><a href="#s6">Plan and billing</a></div><div class="main">
+<div class="head"><div><h1>Firm profile</h1><div class="sub">Your firm's details, used on invoices and in emails from us.</div></div></div>
+<div class="next"><span>Free trial ends 28 Nov 2026. Add your business address before then.</span><button class="btn primary">Add business address</button></div>
+<div class="sec"><header><h3>Firm</h3><button class="btn sm">Edit</button></header><dl><dt>Operating name</dt><dd>Sample Immigration Services</dd><dt>Legal name</dt><dd class="missing">Missing</dd><dt>Country</dt><dd>Canada <span class="hint">· can't be changed</span></dd></dl></div>
+<div class="sec"><header><h3>Business address</h3><button class="btn sm">Add</button></header><dl><dt>Address</dt><dd class="missing" title="Needed before your first invoice: we use it to work out tax.">Missing · needed before your first invoice ⓘ</dd></dl></div>
+<div class="sec"><header><h3>Owner contact</h3><button class="btn sm">Edit</button></header><dl><dt>Name</dt><dd class="missing">Missing</dd><dt>Email</dt><dd>owner@sample-immigration.example</dd><dt>Phone</dt><dd class="missing">Missing</dd></dl></div>
+<div class="sec"><header><h3>Billing email <span class="hint">(optional)</span></h3><button class="btn sm">Add</button></header><dl><dt>Billing email</dt><dd class="hint">Not set: billing emails go to the Owner.</dd></dl></div>
+<p class="hint">Read-only view for others: "Only the Owner can change the firm profile." Save conflict: "Someone else changed this. Reload."</p>
+</div></div></section>
+
+<section class="screen" id="s6"><div class="cap">6 · Plan and billing (platform frame; BR-8, BR-9, BR-10). Our record (G4's read) plus Stripe's billing portal for every change. Owner shown; Admin variant below.</div><div class="shell"><div class="side"><b>Firm settings</b><a href="#">Team</a><a href="#">Licences</a><a href="#">Security</a><a href="#s5">Firm profile</a><a class="on" href="#s6">Plan and billing</a></div><div class="main">
+<div class="head"><div><h1>Plan and billing</h1><div class="sub">Your plan with Expat Ready.</div></div><div style="text-align:right"><a class="btn primary" href="#">Manage plan and billing</a><div class="hint" style="margin-top:4px">Opens Stripe's secure billing page. You'll come back here.</div></div></div>
+<dl class="sum"><div><dt>Plan</dt><dd>Team, monthly <span class="sample">Sample</span></dd></div><div><dt>Status</dt><dd><span class="status" title="Full access until the trial ends. Add a card to keep going."><span class="dot"></span>Trial</span></dd></div><div><dt>Trial ends</dt><dd>28 Nov 2026 · 9 days left</dd></div><div><dt>Seats</dt><dd title="Active people, suspended people and pending invitations use a seat.">6 of 10 seats used ⓘ</dd></div></dl>
+<p>Free trial: 9 days left (ends 28 Nov 2026). Add a card before then to keep access.</p>
+<p class="hint"><span class="spin" aria-hidden="true"></span> After returning from Stripe: "Checking for changes from Stripe…" until our record moves. Cancel set: "Cancels on 28 Dec 2026. Access until then." Stripe unreachable: "We couldn't open Stripe. Try again."</p>
+<div class="mini" style="margin-top:16px"><h3>Admin sees</h3><p>Same summary; one button <b>Update card or pay</b> (the billing page limited to card and paying). Line: "Only the Owner can change the plan or cancel."</p></div>
+</div></div></section>
+
+<section class="screen" id="s7"><div class="cap">7 · Payment overdue banner (Owner/Admin, orange "needs you"; BR-11) and Payment hold page (BR-12: every page except Plan and billing and the data download; 402 in the guard).</div><div class="shell"><div class="side"><b>Firm settings</b><a href="#">Team</a><a href="#s6">Plan and billing</a><b>Work</b><a class="on" href="#">Cases</a></div><div class="main">
+<div class="needs" role="status"><span><b>Payment didn't go through.</b> Update your card by 30 Nov to keep access.</span><a class="btn sm" href="#s6">Update card</a></div>
+<div class="hold"><h2>Your firm's account is on hold</h2><p>Because the free trial ended without a card. You can still pay and download your data. Everything else is paused.</p><p class="hint">Other reasons shown the same way: "payment wasn't received" · "the subscription ended". Deletion date shown only when the record gives one.</p><a class="btn primary" href="#">Add a card and pay</a> <a class="btn" href="#">Download your firm's data</a><p class="hint" style="margin-top:12px">Other staff: "Ask your firm's Owner or Admin to pay." After paying: "Checking payment…" then the normal page. The download link appears once its row exists (G5).</p></div>
+</div></div></section>
+
+<section class="screen" id="s8"><div class="cap">8 · Invited sign-up (public; BR-13). For our sales-led firms. Email fixed from the link; no second email check; then trial start as screen 4.</div><div class="pub"><div class="row" style="max-width:960px;margin:0 auto;grid-template-columns:2fr 1fr">
+<div class="card" style="max-width:none"><h1>Set up your firm</h1><p class="sub" style="margin-bottom:16px">You were invited to try Expat Ready.</p>
+<div class="f"><label>Work email</label><input readonly value="owner@invited-firm.example"></div>
+<div class="f"><label for="p2">Password</label><input id="p2" type="password" value="xxxxxxxxxxxx"></div>
+<div class="f"><label for="n2">Firm name</label><input id="n2" value="Sample Invited Firm"></div>
+<div class="f"><label>Country</label><div class="fixed"><span>Canada</span><span class="hint">Can't be changed later</span></div></div>
+<div class="tick"><input type="checkbox" id="t2"><label for="t2">I agree to the <a href="#">Terms of Service (v1)</a>, <a href="#">Privacy Notice (v1)</a> and <a href="#">Data Processing Terms (v1)</a>. <span class="sample">Sample</span></label></div>
+<button class="btn primary block">Start free trial</button></div>
+<div class="mini"><h3>Link used, expired or unknown</h3><p>This sign-up link doesn't work. It may have been used or expired. Ask us for a new one.</p></div>
+</div></div></section>
+
+<section class="screen" id="s9"><div class="cap">9 · Emails (Sample text, sent by us through MailPort).</div><div class="pub">
+<div class="mail"><small>To o•••@sample-immigration.example · From Expat Ready</small><h3>Confirm your email</h3><p>Confirm your email to start your free trial.</p><a class="btn primary" href="#">Confirm my email</a><p>Or type this code: <b>417 093</b>. It works once, for 24 hours.</p><p class="hint">Didn't sign up? Ignore this email.</p></div>
+<div class="mail"><small>Day 0 · to the billing email, the Owner and Admins</small><h3>Payment didn't go through</h3><p>Update your card by 30 Nov to keep access. <a href="#">Update card</a></p><p class="hint">Day 7 and day 12: reminders with the same date and link.</p></div>
+</div></section>
+</body></html>
