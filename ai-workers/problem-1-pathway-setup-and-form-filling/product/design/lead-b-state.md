@@ -175,3 +175,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
   * Root cause of the seed crash, found by the lane (22ff3b010): run-suites.sh gives tsx a repo-relative --tsconfig, and tsx passes it to child processes.
   * Re-approved at round 7.
   * PF-4 #1744 will be nudged after #1742 merges.
+* 14 Nov 19:18 IST: Lead 48 sent PF-23 #1759's open minors. Shaped as **rows rev 16.1**: PF-23r (redaction hardening, brief written) and PF-23m (~20 case-side e.message log calls → logPort.error; needs the release holder's OK on the case-side touch list). FO-13 #1755's migration was read OK; it is labelled on green.
