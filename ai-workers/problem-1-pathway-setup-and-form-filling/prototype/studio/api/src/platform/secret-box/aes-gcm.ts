@@ -14,6 +14,10 @@ import type { SecretBoxKeys } from "../config/settings.ts";
 const SCHEME = "sb1", MAX_PLAIN = 8192;
 const aad = (v: number, o: SecretOwner) => Buffer.from(JSON.stringify([SCHEME, v, o.firmId, o.personId ?? null, o.purpose]), "utf8");
 const B64URL = /^[A-Za-z0-9_-]*$/;
+/** Exactly the encoding seal writes: a part with extra or non-canonical characters is a changed value (break m3). */
+const canonical = (p: string) => B64URL.test(p) && Buffer.from(p, "base64url").toString("base64url") === p;
+/** Text that survives UTF-8 unchanged: a lone surrogate would come back as U+FFFD, a different credential (break m4). */
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 
 export function aesGcmSecretBox(ring: SecretBoxKeys): SecretBoxPort {
   const masters = new Map<number, Buffer>();
@@ -30,7 +34,7 @@ export function aesGcmSecretBox(ring: SecretBoxKeys): SecretBoxPort {
   };
   const owner = (o: SecretOwner) => {
     const r = SecretOwner.safeParse(o);
-    if (!r.success) throw new SecretRefused("TAMPERED_OR_OTHER_OWNER", "The owner is not valid (firmId and purpose are required).");
+    if (!r.success) throw new SecretRefused("TAMPERED_OR_OTHER_OWNER", "The owner is not valid (firmId and purpose are required; ids up to 100 characters).");
     return r.data;
   };
 
@@ -38,7 +42,7 @@ export function aesGcmSecretBox(ring: SecretBoxKeys): SecretBoxPort {
     currentVersion: () => ring.current,
     seal(o, plain) {
       const w = owner(o);
-      if (typeof plain !== "string" || !plain.length || plain.length > MAX_PLAIN) throw new SecretRefused("NOT_SEALED", `A credential is 1 to ${MAX_PLAIN} characters.`);
+      if (typeof plain !== "string" || !plain.length || plain.length > MAX_PLAIN || LONE_SURROGATE.test(plain)) throw new SecretRefused("NOT_SEALED", `A credential is 1 to ${MAX_PLAIN} characters of well-formed text.`);
       const v = ring.current, iv = randomBytes(12);
       const c = createCipheriv("aes-256-gcm", firmKey(v, w.firmId), iv, { authTagLength: 16 });
       c.setAAD(aad(v, w));
@@ -48,7 +52,7 @@ export function aesGcmSecretBox(ring: SecretBoxKeys): SecretBoxPort {
     open(o, sealed) {
       const w = owner(o);
       const parts = typeof sealed === "string" ? sealed.split(".") : [];
-      if (parts.length !== 5 || parts[0] !== SCHEME || !parts.slice(2).every((p) => B64URL.test(p))) throw new SecretRefused("NOT_SEALED", "Not a value this secret box sealed.");
+      if (parts.length !== 5 || parts[0] !== SCHEME || !parts.slice(2).every(canonical)) throw new SecretRefused("NOT_SEALED", "Not a value this secret box sealed.");
       const v = sealedVersion(sealed);
       const iv = Buffer.from(parts[2], "base64url"), tag = Buffer.from(parts[3], "base64url"), ct = Buffer.from(parts[4], "base64url");
       if (iv.length !== 12 || tag.length !== 16 || !ct.length) throw new SecretRefused("TAMPERED_OR_OTHER_OWNER", "The sealed value was changed or belongs to another owner.");

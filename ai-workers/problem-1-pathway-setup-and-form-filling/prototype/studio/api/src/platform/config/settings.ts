@@ -67,10 +67,21 @@ export class ConfigRefused extends Error {
   }
 }
 
+/** A Map whose set, delete and clear throw: the key ring is fixed once loaded (break m6). */
+function frozenMap<K, V>(m: Map<K, V>): ReadonlyMap<K, V> {
+  const no = () => { throw new TypeError("The secret-box key ring is fixed at start-up."); };
+  return Object.freeze(Object.assign(m, { set: no, delete: no, clear: no }));
+}
+
 /** Reads and checks every setting from `env`; throws ConfigRefused naming each missing or invalid one. */
 export function loadPlatformConfig(env: NodeJS.ProcessEnv): PlatformConfig {
-  const rawEnv = (env.PLATFORM_ENVIRONMENT ?? "").trim() || "local";
-  if (!(ENVIRONMENTS as readonly string[]).includes(rawEnv)) throw new ConfigRefused(rawEnv.slice(0, 20).replace(/[^a-z0-9_-]/gi, "?"), [], [{ name: "PLATFORM_ENVIRONMENT", expects: "local, test or production" }]);
+  const setEnv = (env.PLATFORM_ENVIRONMENT ?? "").trim();
+  // A task on AWS (ECS sets these) never falls back to local: a task definition that forgot the setting would otherwise
+  // start with every secret optional (break m7).
+  if (!setEnv && (env.ECS_CONTAINER_METADATA_URI_V4 || env.ECS_CONTAINER_METADATA_URI || env.AWS_EXECUTION_ENV)) throw new ConfigRefused("unset", ["PLATFORM_ENVIRONMENT"], []);
+  const rawEnv = setEnv || "local";
+  // The refusal never repeats what was set (it may be a pasted key, break m1).
+  if (!(ENVIRONMENTS as readonly string[]).includes(rawEnv)) throw new ConfigRefused("not recognised", [], [{ name: "PLATFORM_ENVIRONMENT", expects: "local, test or production" }]);
   const environment = rawEnv as PlatformEnvironment;
   const required = environment !== "local";
   const missing: string[] = [], invalid: { name: string; expects: string }[] = [];
@@ -99,10 +110,14 @@ export function loadPlatformConfig(env: NodeJS.ProcessEnv): PlatformConfig {
         keys.set(version, new Secret(`PLATFORM_SECRET_BOX_KEYS v${version}`, e.slice(at + 1)));
       }
       const current = Number(versionRaw);
-      const distinct = new Set([...keys.values()].map((k) => k.reveal())).size === keys.size;
-      if (dup || !distinct) invalid.push({ name: "PLATFORM_SECRET_BOX_KEYS", expects: "each version once, each with its own key" });
+      // Compared as bytes, in canonical base64 only: two spellings of one key never pass as two keys (break m2).
+      const bytes = [...keys.values()].map((k) => Buffer.from(k.reveal(), "base64"));
+      const canonical = [...keys.values()].every((k) => Buffer.from(k.reveal(), "base64").toString("base64") === k.reveal());
+      const distinct = new Set(bytes.map((b) => b.toString("hex"))).size === keys.size;
+      const random = bytes.every((b) => b.length === 32 && new Set(b).size > 8);
+      if (dup || !distinct || !canonical || !random) invalid.push({ name: "PLATFORM_SECRET_BOX_KEYS", expects: "each version once, each with its own random 32-byte key in canonical base64 (openssl rand -base64 32)" });
       else if (!keys.has(current)) invalid.push({ name: "PLATFORM_SECRET_BOX_KEY_VERSION", expects: "one of the versions listed in PLATFORM_SECRET_BOX_KEYS" });
-      else secretBox = Object.freeze({ current, keys });
+      else secretBox = Object.freeze({ current, keys: frozenMap(keys) });
     }
   }
   if (missing.length || invalid.length) throw new ConfigRefused(environment, missing, invalid);
@@ -120,8 +135,20 @@ export function loadPlatformConfig(env: NodeJS.ProcessEnv): PlatformConfig {
   });
 }
 
+/**
+ * Secret settings taken out of process.env once loaded, so a child process (a PDF reader, the AI launcher, the form
+ * filler: each starts with the server's environment) never inherits them (break M1). DATABASE_URL stays: api/src/core.ts
+ * reads it from the environment itself (outside api/src/platform/; a later row moves it to this loader) and child jobs
+ * may use it.
+ */
+export const SCRUBBED_FROM_ENV: readonly string[] = Object.freeze(SECRET_SETTING_NAMES.filter((n) => n !== "DATABASE_URL"));
+
 let loaded: PlatformConfig | null = null;
 /** This process's configuration, read from process.env the first time it is asked for and then kept (read once). */
 export function platformConfig(): PlatformConfig {
-  return (loaded ??= loadPlatformConfig(process.env));
+  if (!loaded) {
+    loaded = loadPlatformConfig(process.env);
+    for (const n of SCRUBBED_FROM_ENV) delete process.env[n];
+  }
+  return loaded;
 }

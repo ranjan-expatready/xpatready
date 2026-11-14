@@ -15,9 +15,10 @@ import { z } from "zod";
 
 /** Whose credential a sealed value is. Bound into the seal: opening it with any other owner is refused. */
 export const SecretOwner = z.object({
-  firmId: z.string().min(1, "firmId is required"),
+  /** The firm's id (a uuid, as platform_firm and PF-0p's FirmId); compared in lower case, so one firm is one key. */
+  firmId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "a firm id (uuid)").transform((s) => s.toLowerCase()),
   /** A person's own credential (a staff member's calendar); null or absent for a firm-wide one. */
-  personId: z.string().min(1).nullish(),
+  personId: z.string().min(1).max(100).nullish(),
   /** What the credential is for, e.g. "zoom", "calendar", "mailbox" (lower-case words and dashes). */
   purpose: z.string().regex(/^[a-z][a-z0-9-]{0,39}$/, "purpose: lower-case letters, digits and dashes"),
 });
@@ -88,7 +89,7 @@ export interface SealedValueStore {
 
 /** The re-encrypt job's name and payload (enqueued on JobPort once per firm and key version). */
 export const SECRET_BOX_REENCRYPT_JOB = "platform.secret_box.reencrypt";
-export const ReencryptPayload = z.object({ firmId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "a firm id (uuid)"), toVersion: z.number().int().positive() }).strict();
+export const ReencryptPayload = z.object({ firmId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "a firm id (uuid)"), toVersion: z.number().int().positive(), round: z.number().int().min(1).max(100).optional() }).strict();
 export type ReencryptPayload = z.infer<typeof ReencryptPayload>;
 
 const ownerKey = (o: SecretOwner) => JSON.stringify([o.firmId, o.personId ?? null, o.purpose]);

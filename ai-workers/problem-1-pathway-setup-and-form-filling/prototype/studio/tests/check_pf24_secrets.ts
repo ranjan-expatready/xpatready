@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { format, inspect } from "node:util";
 import { fakeSecretBox, maskedHint, maskedView, MaskedSecretView, memorySealedStore, ReencryptPayload, SECRET_BOX_REENCRYPT_JOB, SecretRefused, type SecretBoxPort, type SecretOwner } from "../ports/secret-box.ts";
-import { ConfigRefused, loadPlatformConfig, SECRET_SETTING_NAMES, SETTINGS } from "../api/src/platform/config/settings.ts";
+import { ConfigRefused, loadPlatformConfig, platformConfig, SCRUBBED_FROM_ENV, SECRET_SETTING_NAMES, SETTINGS } from "../api/src/platform/config/settings.ts";
 import { Secret } from "../api/src/platform/config/secret.ts";
 import { aesGcmSecretBox } from "../api/src/platform/secret-box/aes-gcm.ts";
 import { enqueueReencrypt, reencryptJobKey, registerReencryptJob, runReencrypt, versionCounts, type ReencryptJobs, type ReencryptResult } from "../api/src/platform/secret-box/reencrypt.ts";
@@ -52,7 +52,7 @@ console.log("== 1. the loader: a missing required secret stops start with its na
   }
   let named = 0, silent = 0; const bad: string[] = [];
   for (const x of SETTINGS) {
-    const without = { ...env, PLATFORM_ENVIRONMENT: "production" }; delete without[x.name];
+    const without: Record<string, string> = { ...env, PLATFORM_ENVIRONMENT: "production" }; delete without[x.name];
     try { loadPlatformConfig(without); bad.push(`${x.name}: loaded`); continue; } catch (e) {
       const m = e instanceof ConfigRefused ? e.message : "";
       if (m.includes(`Missing required setting: ${x.name}.`)) named++; else bad.push(`${x.name}: ${String(e).slice(0, 120)}`);
@@ -82,6 +82,24 @@ console.log("== 1. the loader: a missing required secret stops start with its na
     && throwsLike(() => loadPlatformConfig({ PLATFORM_SECRET_BOX_KEYS: `1:${randomBytes(16).toString("base64")}`, PLATFORM_SECRET_BOX_KEY_VERSION: "1" }), (e) => e instanceof ConfigRefused && !e.message.includes(k)));
 }
 
+{
+  const env = generated();
+  const pasted = ["sk", "live", rand(24)].join("_");
+  ok("fail (break m1): an unknown PLATFORM_ENVIRONMENT is never repeated in the refusal (it may be a pasted key)", throwsLike(() => loadPlatformConfig({ PLATFORM_ENVIRONMENT: pasted }), (e) => e instanceof ConfigRefused && !inspect(e).includes(pasted.slice(0, 10)) && !e.message.includes("sk_")));
+  ok("pass (break m7): on AWS with PLATFORM_ENVIRONMENT=production and every setting, the load succeeds", !throwsLike(() => loadPlatformConfig({ ...env, PLATFORM_ENVIRONMENT: "production", ECS_CONTAINER_METADATA_URI_V4: "http://169.254.170.2/v4/x" }), () => true));
+  ok("fail (break m7): on AWS (ECS) without PLATFORM_ENVIRONMENT the start-up is refused, never a silent local", ["ECS_CONTAINER_METADATA_URI_V4", "AWS_EXECUTION_ENV"].every((k) => throwsLike(() => loadPlatformConfig({ ...env, [k]: "AWS_ECS_FARGATE" }), (e) => e instanceof ConfigRefused && e.missing.join() === "PLATFORM_ENVIRONMENT")));
+  const k = key32(), last = k.at(-2)!, other = String.fromCharCode(last.charCodeAt(0) ^ 1);   // same bytes, another spelling (unused low bits)
+  const respelled = k.slice(0, -2) + other + "=";
+  const sameBytes = Buffer.from(respelled, "base64").equals(Buffer.from(k, "base64"));
+  ok("fail (break m2): one key spelled two ways, a non-canonical spelling and an all-zero key are each refused",
+    (!sameBytes || throwsLike(() => loadPlatformConfig({ PLATFORM_SECRET_BOX_KEYS: `2:${k},1:${respelled}`, PLATFORM_SECRET_BOX_KEY_VERSION: "2" }), (e) => e instanceof ConfigRefused))
+    && throwsLike(() => loadPlatformConfig({ PLATFORM_SECRET_BOX_KEYS: `1:${Buffer.alloc(32).toString("base64")}`, PLATFORM_SECRET_BOX_KEY_VERSION: "1" }), (e) => e instanceof ConfigRefused && e.invalid[0]?.name === "PLATFORM_SECRET_BOX_KEYS"),
+    { sameBytes });
+  const cfg = loadPlatformConfig({ PLATFORM_SECRET_BOX_KEYS: `1:${key32()}`, PLATFORM_SECRET_BOX_KEY_VERSION: "1" });
+  ok("pass (break m6): the loaded key ring reads its key", cfg.secretBox!.keys.get(1) instanceof Secret);
+  ok("fail (break m6): the loaded key ring cannot be changed (set, delete, clear refused)", ["set", "delete", "clear"].every((m) => throwsLike(() => (cfg.secretBox!.keys as unknown as Record<string, (...a: unknown[]) => unknown>)[m](9, new Secret("x", "y")), (e) => e instanceof TypeError)) && cfg.secretBox!.keys.size === 1);
+}
+
 console.log("== 2. a held secret never prints, logs or serialises its value");
 {
   const env = generated(), values = secretValues(env);
@@ -97,6 +115,16 @@ console.log("== 2. a held secret never prints, logs or serialises its value");
   ok("pass: reveal() gives the value to the one adapter that needs it", cfg.stripe.secretKey!.reveal() === env.PLATFORM_STRIPE_SECRET_KEY);
   ok("fail: a Secret has no readable field holding its value", !Object.values(cfg.stripe.secretKey!).includes(env.PLATFORM_STRIPE_SECRET_KEY) && Object.isFrozen(cfg.stripe.secretKey) && Object.isFrozen(cfg));
   ok("pass: PF-23's redaction list names every secret setting and no plain one", SECRET_SETTING_NAMES.includes("PLATFORM_ZOOM_CLIENT_SECRET") && SECRET_SETTING_NAMES.includes("DATABASE_URL") && !SECRET_SETTING_NAMES.includes("PLATFORM_ZOOM_CLIENT_ID") && !SECRET_SETTING_NAMES.includes("PLATFORM_SECRET_BOX_KEY_VERSION"));
+  // break M1: once loaded, the provider keys and the key ring leave process.env, so no child process inherits them
+  const mine = generated();
+  for (const n of SCRUBBED_FROM_ENV) process.env[n] = mine[n];
+  process.env.PLATFORM_SECRET_BOX_KEY_VERSION = mine.PLATFORM_SECRET_BOX_KEY_VERSION;
+  const live = platformConfig();
+  delete process.env.PLATFORM_SECRET_BOX_KEY_VERSION;   // not secret; removed only so the copies started below inherit nothing of this
+  ok("pass (break M1): the loaded configuration still holds every secret for its adapter", SCRUBBED_FROM_ENV.every((n) => n === "PLATFORM_SECRET_BOX_KEYS" ? live.secretBox?.keys.size === 2 : JSON.stringify(live).includes(`[secret ${n}]`)) && live.zoom.clientSecret?.reveal() === mine.PLATFORM_ZOOM_CLIENT_SECRET);
+  const childEnv = execFileSync(process.execPath, ["-e", "process.stdout.write(JSON.stringify(process.env))"], { encoding: "utf8" });
+  const scrubbedValues = secretValues(mine).filter((v) => v !== mine.DATABASE_URL);
+  ok("fail (break M1): process.env no longer holds them and a child process started afterwards sees none", SCRUBBED_FROM_ENV.every((n) => !(n in process.env)) && !leaks(childEnv, scrubbedValues).length, leaks(childEnv, scrubbedValues).length);
   void Secret;
 }
 
@@ -122,6 +150,16 @@ const owner = (firmId: string, purpose = "zoom", personId: string | null = null)
   ] as const;
   const refusedAll = tampered.filter(([, t]) => !throwsLike(() => box.open(owner(FIRM_A), t), (e) => e instanceof SecretRefused && !String(e.message).includes(token)));
   ok("fail: a tampered token is refused (ciphertext, tag, iv, cut short, short tag), never half-read", refusedAll.length === 0, refusedAll.map(([w]) => w));
+  const respell = (p: string) => { const c = "AQgw".indexOf(p.at(-1)!) >= 0 ? p.slice(0, -1) + String.fromCharCode(p.charCodeAt(p.length - 1) + 1) : p.slice(0, -1) + "A"; return c; };
+  const sloppy = [
+    ["iv with one character more", [parts[0], parts[1], parts[2] + "A", ...parts.slice(3)].join(".")],
+    ["tag's last character respelled", [...parts.slice(0, 3), respell(parts[3]), parts[4]].join(".")],
+  ] as const;
+  const opened = sloppy.filter(([, t]) => !throwsLike(() => box.open(owner(FIRM_A), t), (e) => e instanceof SecretRefused));
+  ok("fail (break m3): a sealed value with extra or respelled characters is refused, not quietly read", opened.length === 0, opened.map(([w]) => w));
+  ok("fail (break m4): a 5000-character firm id is refused as SecretRefused, and a credential with a lone surrogate is refused (it would come back changed)",
+    throwsLike(() => box.seal(owner("f".repeat(5000)), token), (e) => e instanceof SecretRefused) && throwsLike(() => box.open(owner("f".repeat(5000)), sealed), (e) => e instanceof SecretRefused) && throwsLike(() => box.seal(owner(FIRM_A), "tok\uD800en"), (e) => e instanceof SecretRefused));
+  ok("pass (break m4): a credential with emoji and accents (well-formed) round-trips", box.open(owner(FIRM_A), box.seal(owner(FIRM_A), "clé-🔑-ünïcødé")) === "clé-🔑-ünïcødé");
   const box2 = aesGcmSecretBox(ring(2, { 1: K1, 2: K2 }));
   ok("fail: relabelling the version (v1 sealed, v2 claimed) is refused", throwsLike(() => box2.open(owner(FIRM_A), sealed.replace("sb1.v1.", "sb1.v2.")), (e) => e instanceof SecretRefused && e.code === "TAMPERED_OR_OTHER_OWNER"));
   ok("fail: something not sealed is refused as NOT_SEALED", ["", "plain-token", "sb1.v1.only.three", "fake1.v1.abc"].every((s) => throwsLike(() => box.open(owner(FIRM_A), s), (e) => e instanceof SecretRefused && e.code === "NOT_SEALED")));
@@ -205,7 +243,18 @@ console.log("== 4. a key change: the re-encrypt job moves every value; the old k
   const race = memorySealedStore("race"); race.put("r1", owner(FIRM_A), v1.seal(owner(FIRM_A), "old-token-value"));
   const racing = { ...race, name: "race", firms: race.firms, swap: race.swap, async page(f: string, a: string | null, l: number) { const rows = await race.page(f, a, l); race.rows.get("r1")!.sealed = both.seal(owner(FIRM_A), "new-token-value"); return rows; } };
   const rr = await runReencrypt({ firmId: FIRM_A, toVersion: 2 }, { box: both, stores: [racing] });
-  ok("fail: a value changed while the job ran is left as the firm set it (compare-and-set)", rr.changedMeanwhile === 1 && rr.moved === 0 && both.open(owner(FIRM_A), race.rows.get("r1")!.sealed) === "new-token-value");
+  ok("fail: a value changed while the job ran is left as the firm set it (compare-and-set), and the next pass finds it current", rr.changedMeanwhile === 0 && rr.passes === 2 && rr.moved === 0 && rr.already === 1 && both.open(owner(FIRM_A), race.rows.get("r1")!.sealed) === "new-token-value", rr);
+  // break m5: a writer that keeps putting back an old-version value: the job fails, naming the next round, which queues
+  const stuck = memorySealedStore("stuck"); stuck.put("s1", owner(FIRM_A), v1.seal(owner(FIRM_A), "old-writer-value"));
+  const stubborn = { name: "stuck", firms: stuck.firms, swap: stuck.swap, async page(f: string, a: string | null, l: number) { const rows = await stuck.page(f, a, l); stuck.rows.get("s1")!.sealed = v1.seal(owner(FIRM_A), "old-writer-value"); return rows; } };
+  const jobs5 = makeJobs();
+  await registerReencryptJob(jobs5, { box: both, stores: [stubborn] });
+  await enqueueReencrypt(jobs5, both, [stubborn]); await jobs5.runDue();
+  ok("fail (break m5): a value still on the old key after 3 passes fails the job (never a quiet success), naming round 2", jobs5.queued[0]?.status === "failed" && /enqueue round 2/.test(jobs5.queued[0]?.error ?? ""), jobs5.queued[0]);
+  await registerReencryptJob(jobs5, { box: both, stores: [stuck] });   // the old writer has stopped (its task drained)
+  await enqueueReencrypt(jobs5, both, [stuck], { round: 2 }); await jobs5.runDue();
+  ok("pass (break m5): round 2 is a new job key, queues, and moves the value once the writer has stopped", jobs5.queued.length === 2 && jobs5.queued[1].key === reencryptJobKey(FIRM_A, 2, 2) && jobs5.queued[1].status === "done" && both.versionOf(stuck.rows.get("s1")!.sealed) === 2);
+  ok("fail (break m8): a page size of 0 (or not a whole number) is refused before anything is read", await runReencrypt({ firmId: FIRM_A, toVersion: 2 }, { box: both, stores, pageSize: 0 }).then(() => false, (e) => e instanceof RangeError) && await versionCounts(both, stores, 1.5).then(() => false, (e) => e instanceof RangeError));
 }
 
 console.log("== 5. the real server: a missing secret stops start; a seeded secret never appears in logs or any route's response");

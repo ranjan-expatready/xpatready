@@ -24,7 +24,7 @@ The app reads every setting once, at start, from its environment. In the cloud, 
 
 With `PLATFORM_ENVIRONMENT` `test` or `production`, **every** setting is required: one missing or malformed and the app does not start. The task's log then says, for example, `The app cannot start (PLATFORM_ENVIRONMENT=production). Missing required setting: PLATFORM_ZOOM_CLIENT_SECRET.` It names settings, never values. The fix is always in Secrets Manager or the task definition, never in code.
 
-Secret values never reach a screen, a response, a log line or an audit record (SA-8-3): the app holds each as a `Secret` that prints as `[secret NAME]`; only the adapter that calls the provider reads the value. PF-23's log redaction drops these names (`SECRET_SETTING_NAMES`).
+Secret values never reach a screen, a response, a log line or an audit record (SA-8-3): the app holds each as a `Secret` that prints as `[secret NAME]`; only the adapter that calls the provider reads the value. PF-23's log redaction drops these names (`SECRET_SETTING_NAMES`). Once loaded, the provider keys and the key ring are removed from the process's environment, so a child process (PDF reader, form filler) never inherits them; `DATABASE_URL` stays until `api/src/core.ts` reads it through the loader (a later row).
 
 ## 2. Making a secret-box key
 
@@ -38,10 +38,10 @@ The ring's value is `<version>:<key>`, newest first by convention, e.g. `2:<new 
 
 ## 3. Rotating a provider key (Stripe, BoldSign, Zoom, database password) without downtime (SA-8-4, BR-4)
 
-1. Create the new key at the provider while the old one still works (Stripe: roll the key with an expiry on the old one; Stripe webhooks: add the new endpoint secret, the old stays valid for the overlap; Zoom and BoldSign: add a second credential; database: create the new password on a second role or `ALTER ROLE … PASSWORD` only after step 3).
+1. Create the new key at the provider while the old one still works (Stripe: roll the key with an expiry on the old one; Stripe webhooks: add the new endpoint secret, the old stays valid for the overlap; Zoom and BoldSign: add a second credential). **Database:** two login roles take turns (`app_a`, `app_b`, both members of the one role that owns the grants): set a new password on the role **not** in use, put that role's address in `DATABASE_URL`, and deploy; the old tasks keep the old role until they stop. Never `ALTER ROLE … PASSWORD` on the role in use: the running tasks' new connections would fail, or the new tasks would, whichever side of the deploy it falls.
 2. Put the new value in its Secrets Manager secret (a new version of the same secret; the task definition points at the secret, so it does not change).
 3. Start a new deployment (ECS rolling update, minimum healthy 100%): new tasks start with the new value and pass `/api/health` before the old tasks stop. A task that fails to start leaves the old ones serving; the deployment's log names the bad setting.
-4. When every task runs the new deployment, revoke the old key at the provider.
+4. When every task runs the new deployment, revoke the old key at the provider (database: set a random password on the role no longer in use, so it is ready for the next turn and no old copy can sign in).
 5. Record the rotation (date, which setting, who) in the engineering log. Never the value.
 
 ## 4. Rotating the secret-box key (firms' own credentials: Zoom tokens, calendar tokens, mailbox passwords)
@@ -50,8 +50,10 @@ Each stored credential names the key version that sealed it (`sb1.v<version>.…
 
 1. **Add** the new key to the ring, keep the current version: `PLATFORM_SECRET_BOX_KEYS=2:<new>,1:<old>`, `PLATFORM_SECRET_BOX_KEY_VERSION=1`. Deploy (§3 step 3). Every task can now read both; nothing changes yet. (This step matters: if one task sealed with version 2 while another still lacked key 2, that task could not read the value.)
 2. **Switch**: `PLATFORM_SECRET_BOX_KEY_VERSION=2`. Deploy. New values are sealed with version 2; old ones still open with key 1.
-3. **Re-encrypt**: enqueue the re-encrypt job (`enqueueReencrypt` in `api/src/platform/secret-box/reencrypt.ts`; one job per firm on JobPort, keyed by firm and version, so enqueuing twice queues nothing new). Each job re-seals that firm's values on the old version, compare-and-set, so a credential the firm changes meanwhile is never overwritten.
-4. **Check**: every re-encrypt job has finished without failure, and `versionCounts` reports no value on version 1 in any store. A job that met a value it could not open (tampered, or sealed for another owner) fails and lists the store, row id and reason: investigate those rows before going on (the firm reconnects that service; the row is never silently dropped).
+3. **Re-encrypt** once every task runs the step-2 deployment (an old task still draining could seal a value with version 1 after the job passed): enqueue the re-encrypt job (`enqueueReencrypt` in `api/src/platform/secret-box/reencrypt.ts`; one job per firm on JobPort, keyed by firm, version and round, so enqueuing the same round twice queues nothing new). Each job re-seals that firm's values on the old version, compare-and-set, so a credential the firm changes meanwhile is never overwritten; it walks the firm again, up to 3 passes, for a value changed while it ran. *The command that enqueues it and prints `versionCounts` is added with the first store of sealed values (FO-3v's Zoom tokens), since no store exists before it; until then there is nothing to move.*
+4. **Check**: every re-encrypt job has finished without failure, and `versionCounts` reports no value on version 1 in any store. Two kinds of failure, both naming store, row id and reason, never a value:
+   * **still on an old version after 3 passes** (a writer kept sealing with the old key, e.g. a rollback and roll-forward, or a task that had not drained): make sure every task runs the current deployment, then enqueue **round 2** (`enqueueReencrypt(…, { round: 2 })`, then 3, …): a new job key, so it queues;
+   * **refused** (tampered, or sealed for another owner): investigate those rows before going on (the firm reconnects that service; the row is never silently dropped).
 5. **Retire**: remove the old key: `PLATFORM_SECRET_BOX_KEYS=2:<new>`. Deploy. From now on the old key reads nothing; a value still on version 1 would be refused (`KEY_RETIRED`), which step 4 rules out.
 6. Destroy the old key's Secrets Manager version once the retention you keep for rollbacks has passed. Record the rotation.
 
