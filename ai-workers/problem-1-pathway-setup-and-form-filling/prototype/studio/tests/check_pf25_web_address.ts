@@ -24,7 +24,7 @@ import { fakeStaff } from "../ports/staff.ts";
 import { ConfigReadGuard, Db, OpenRead } from "../api/src/core.ts";
 import { auditEvent } from "../api/src/platform/audit/audit-event.ts";
 import { seedSampleFirms } from "../api/src/platform/seed-sample-firms.ts";
-import { PUBLIC_NOT_FOUND_HTML, PUBLIC_NOT_FOUND_JSON, publicFirmOf, sendPublicNotFound } from "../api/src/platform/web-address/host.ts";
+import { PUBLIC_NOT_FOUND_HTML, PUBLIC_NOT_FOUND_JSON, publicFirmOf, registerPublicPath, sendPublicNotFound } from "../api/src/platform/web-address/host.ts";
 import { WebAddressController, WebAddressHostRouting } from "../api/src/platform/web-address/routes.ts";
 import { checkAddressShape, readHost } from "../api/src/platform/web-address/rules.ts";
 import { ADDRESS_CHANGE_KEY, WebAddresses } from "../api/src/platform/web-address/service.ts";
@@ -36,6 +36,7 @@ const EMPTY = `xr_studio_pf25_empty_${process.pid}`, DEMO = `xr_studio_pf25_demo
 const urlOf = (db: string) => `postgresql://xr_studio@127.0.0.1:54329/${db}`;
 const WORK = join(STUDIO, "var", `pf25-check-${process.pid}`);
 const DAY = 24 * 60 * 60 * 1000;
+const RESERVED = ["www", "api", "app", "admin", "mail", "status", "help", "book", "portal"];
 const ADDRESSES = `select string_agg(f.key || '=' || coalesce(w.address, '-'), ',' order by f.key) from platform_firm f left join platform_firm_web_address w on w.firm_id = f.id where f.key like 'sample-%'`;
 
 let pass = 0, fail = 0;
@@ -105,8 +106,8 @@ try {
 
   // ------------------------------------------------------------------------------------------- the database's own rules
   const setX = (a: string) => `insert into platform_firm_web_address (firm_id, address, set_by, updated_at) values ('${firmX}', '${a}', 'system:sign-up', now()) returning address`;
-  ok("PF-25 fail (database): Maple, -maple, ma, www, xn--maple and maple- are refused as an address; maple is accepted",
-    ["Maple", "-maple", "ma", "www", "xn--maple", "maple-"].every((a) => refused(EMPTY, setX(a), /platform_firm_web_address_allowed/)) && sql(EMPTY, setX("maple")) === "maple");
+  ok("PF-25 fail (database): Maple, -maple, ma, xn--maple, maple-, an accented or 64-character label and all nine reserved names are refused; maple is accepted",
+    ["Maple", "-maple", "ma", "xn--maple", "maple-", "érable", "a".repeat(64), ...RESERVED].every((a) => refused(EMPTY, setX(a), /platform_firm_web_address_allowed/)) && sql(EMPTY, setX("maple")) === "maple");
   ok("PF-25 fail (database): an address does not change without its redirect record, never moves firm and is never removed",
     refused(EMPTY, `update platform_firm_web_address set address = 'maple-two' where firm_id = '${firmX}'`, /changes only with its redirect record/)
     && refused(EMPTY, `update platform_firm_web_address set firm_id = (select id from platform_firm where key='sample-solo') where firm_id = '${firmX}'`, /never moves to another firm/)
@@ -114,13 +115,27 @@ try {
   ok("PF-25 fail (database): a history row must name the firm's address as it is (no made-up hold on another firm's address)",
     refused(EMPTY, `insert into platform_firm_address_history (id, firm_id, old_address, new_address, until, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'sample-firm', 'maple-two', now() + interval '90 days', 'Sample reason', 'staff:t')`, /is not this firm's web address/));
   ok("PF-25 pass (database): the history row first, then the address, in one transaction, is accepted",
-    sql(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, until, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple', 'maple-two', now() + interval '90 days', 'Sample reason', 'staff:t'); update platform_firm_web_address set address = 'maple-two' where firm_id = '${firmX}'; commit; select address from platform_firm_web_address where firm_id = '${firmX}'`) === "maple-two");
+    sql(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, until, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple', 'maple-two', now() + interval '1 second', 'Sample reason', 'staff:t'); update platform_firm_web_address set address = 'maple-two' where firm_id = '${firmX}'; commit; select address from platform_firm_web_address where firm_id = '${firmX}'`) === "maple-two");
+  ok("PF-25 fail (database): a record with no address change is refused at commit; a padded or direction-changing reason is refused",
+    refused(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple-two', 'maple-three', 'Sample reason', 'staff:t'); commit`, /the address did not change/)
+    && refused(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple-two', 'maple-three', E'\\t\\u00a0ab\\u00a0\\t', 'staff:t'); rollback`, /platform_firm_address_history_reason/)
+    && refused(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple-two', 'maple-three', E'Renamed \\u202e evil', 'staff:t'); rollback`, /platform_firm_address_history_reason/)
+    && sql(EMPTY, `select address from platform_firm_web_address where firm_id = '${firmX}'`) === "maple-two");
+  ok("PF-25 fail (database): web addresses are written under READ COMMITTED only (REPEATABLE READ and SERIALIZABLE refused)",
+    ["repeatable read", "serializable"].every((lvl) => refused(EMPTY, `begin isolation level ${lvl}; insert into platform_firm_web_address (firm_id, address, set_by, updated_at) select id, 'iso-test', 'system:t', now() from platform_firm where key = 'firm-x2'; insert into platform_firm (id, key, operating_name, country_code, contact_email, updated_at) values (gen_random_uuid(), 'firm-iso', 'I', 'CA', 'i@i.example.com', now()); insert into platform_firm_web_address (firm_id, address, set_by, updated_at) select id, 'iso-test', 'system:t', now() from platform_firm where key = 'firm-iso'; commit`, /READ COMMITTED only/)));
   ok("PF-25 fail (database): the address history is insert-only (update, delete and truncate refused)",
     refused(EMPTY, `update platform_firm_address_history set until = now() + interval '1 day'`, /insert_only/) && refused(EMPTY, `delete from platform_firm_address_history`, /insert_only/) && refused(EMPTY, `truncate platform_firm_address_history`, /insert_only/));
   ok("PF-25 fail (database): another firm cannot take an address held for a redirect; the firm that gave it up can take it back",
     refused(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, until, reason, changed_by) select gen_random_uuid(), firm_id, 'sample-solo', 'maple', now() + interval '1 day', 'Sample', 'staff:t' from platform_firm_web_address where address = 'sample-solo'; update platform_firm_web_address set address = 'maple' where address = 'sample-solo'; commit`, /held for another firm's redirect/)
     && refused(EMPTY, `with f as (insert into platform_firm (id, key, operating_name, country_code, contact_email, updated_at) values (gen_random_uuid(), 'firm-y', 'Y', 'CA', 'y@y.example.com', now()) returning id) insert into platform_firm_web_address (firm_id, address, set_by, updated_at) select id, 'maple', 'system:sign-up', now() from f`, /held for another firm's redirect/)
-    && sql(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, until, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple-two', 'maple', now() + interval '90 days', 'Sample back', 'staff:t'); update platform_firm_web_address set address = 'maple' where firm_id = '${firmX}'; commit; select address from platform_firm_web_address where firm_id = '${firmX}'`) === "maple");
+    && sql(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, until, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple-two', 'maple', now() + interval '100 years', 'Sample back', 'staff:t'); update platform_firm_web_address set address = 'maple' where firm_id = '${firmX}'; commit; select address from platform_firm_web_address where firm_id = '${firmX}'`) === "maple");
+
+  ok("PF-25 pass (database): the database sets until to exactly 90 days after changed_at, whatever the writer sent (1 second, 100 years)",
+    sql(EMPTY, `select bool_and(until = changed_at + interval '90 days') from platform_firm_address_history where old_address is not null`) === "t");
+  sql(EMPTY, `set session_replication_role = replica; insert into platform_firm_address_history (id, firm_id, old_address, new_address, until, reason, changed_by, changed_at) values (gen_random_uuid(), (select id from platform_firm where key='sample-solo'), 'old-solo', 'sample-solo', now() - interval '10 days', 'Sample, backdated', 'staff:t', now() - interval '100 days')`);
+  ok("PF-25 pass (database): an address whose 90 days ended (a backdated record) is taken by another firm",
+    sql(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'maple', 'old-solo', 'Takes a released address', 'staff:t'); update platform_firm_web_address set address = 'old-solo' where firm_id = '${firmX}'; commit; select address from platform_firm_web_address where firm_id = '${firmX}'`) === "old-solo");
+  sql(EMPTY, `begin; insert into platform_firm_address_history (id, firm_id, old_address, new_address, reason, changed_by) values (gen_random_uuid(), '${firmX}', 'old-solo', 'maple', 'Back to maple', 'staff:t'); update platform_firm_web_address set address = 'maple' where firm_id = '${firmX}'; commit`);
 
   // ------------------------------------------------------------------------------------ availability and suggestion
   const clock = new FakeClock(new Date());
@@ -134,6 +149,11 @@ try {
     refusals.map((r) => !r.available && `${r.reason}:${r.message}`).join(" | ") === [
       "uppercase:Use lower-case letters only (maple, not Maple).", "hyphen-edge:A web address cannot start or end with a hyphen.",
       "short:Use at least 3 characters.", "reserved:This address is kept for ExpatReady's own pages. Choose another."].join(" | "), refusals);
+  const nine = await Promise.all(RESERVED.map((a) => svc.availability(a)));
+  ok("PF-25 fail: all nine reserved names are refused by the service with the reserved reason", nine.every((r) => !r.available && r.reason === "reserved"), nine);
+  const sampleChoice = await svc.availability("sample-law");
+  ok("PF-25 fail: an address starting with sample- is refused (kept for the Sample firms), with a suggestion without it (law)",
+    !sampleChoice.available && sampleChoice.reason === "sample" && sampleChoice.suggestion === "law", sampleChoice);
   ok("PF-25 pass: a refused shape still gets a usable suggestion (Maple-Law → maple-law; www → www-firm)",
     (refusals[0] as { suggestion: string }).suggestion === "maple-law" && (refusals[3] as { suggestion: string }).suggestion === "www-firm");
   const taken = await svc.availability("maple");
@@ -151,44 +171,68 @@ try {
   const ours = fakeStaff({ roles: [], keys: [ADDRESS_CHANGE_KEY] });
   const addressOf = (firmId: string) => sql(EMPTY, `select coalesce((select address from platform_firm_web_address where firm_id = '${firmId}'), '-')`);
   const historyCount = () => sql(EMPTY, `select count(*) from platform_firm_address_history where firm_id = '${firmA}'`);
-  const p403 = await problemOf(() => svc.change(firmOwner, firmA, { address: "sample-law", reason: "We renamed the firm" }));
+  const p403 = await problemOf(() => svc.change(firmOwner, firmA, { address: "law-firm-a", reason: "We renamed the firm" }));
   ok("PF-25 fail: a firm's own staff (its Owner, every agent/* key) changing the address → 403, nothing written, no audit line",
     p403?.status === 403 && addressOf(firmA) === "sample-firm" && historyCount() === "0" && audit.entries.length === 0, p403);
-  const p422 = await problemOf(() => svc.change(ours, firmA, { address: "sample-law", reason: "  " }));
+  const p422 = await problemOf(() => svc.change(ours, firmA, { address: "law-firm-a", reason: "  " }));
   ok("PF-25 fail: ExpatReady staff with no reason → 422 naming the reason field, nothing written",
     p422?.status === 422 && typeof (p422.body.fields as Record<string, string>)?.reason === "string" && historyCount() === "0", p422);
   const failing = new WebAddresses({ db, audit: fakeAudit({ failOn: (e) => e.action === "firm.web_address.changed" }), clock });
   ok("PF-25 fail: a failed audit line rolls the whole change back (address, redirect record)",
-    (await problemOf(() => failing.change(ours, firmA, { address: "sample-law", reason: "Renamed after the merger" })))?.status === 0
+    (await problemOf(() => failing.change(ours, firmA, { address: "law-firm-a", reason: "Renamed after the merger" })))?.status === 0
     && addressOf(firmA) === "sample-firm" && historyCount() === "0");
-  const changedAt = clock.now().getTime();
-  const res = await real.change(ours, firmA, { address: "sample-law", reason: "Renamed after the merger" });
+  const res = await real.change(ours, firmA, { address: "law-firm-a", reason: "Renamed after the merger" });
   const line = sql(EMPTY, `select actor || '|' || action || '|' || entity_key || '|' || (detail->>'oldAddress') || '|' || (detail->>'newAddress') || '|' || (detail->>'firmId') from audit_event where action = 'firm.web_address.changed'`);
-  ok("PF-25 pass: ExpatReady staff with a reason → changed, one redirect record (until = 90 days on the clock), one audit line by staff:<id>",
-    res.address === "sample-law" && res.oldAddress === "sample-firm" && Date.parse(res.redirectUntil!) === changedAt + 90 * DAY
-    && sql(EMPTY, `select old_address || '>' || new_address || '|' || reason || '|' || changed_by from platform_firm_address_history where firm_id='${firmA}'`) === `sample-firm>sample-law|Renamed after the merger|staff:${ours.staffId}`
-    && line === `staff:${ours.staffId}|firm.web_address.changed|${firmA}|sample-firm|sample-law|${firmA}`, [res, line]);
-  const pTaken = await problemOf(() => svc.change(ours, firmB, { address: "sample-firm", reason: "Wants the old name" }));
-  ok("PF-25 fail: another firm cannot be given the old address during its 90 days (409 taken, with a suggestion)",
+  ok("PF-25 pass: ExpatReady staff with a reason → changed, one redirect record (until = 90 days after it), one audit line by staff:<id>",
+    res.address === "law-firm-a" && res.oldAddress === "sample-firm" && Date.parse(res.redirectUntil!) === Date.parse(sql(EMPTY, `select to_char(changed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') from platform_firm_address_history where id = '${res.historyId}'`)) + 90 * DAY
+    && sql(EMPTY, `select old_address || '>' || new_address || '|' || reason || '|' || changed_by from platform_firm_address_history where firm_id='${firmA}'`) === `sample-firm>law-firm-a|Renamed after the merger|staff:${ours.staffId}`
+    && line === `staff:${ours.staffId}|firm.web_address.changed|${firmA}|sample-firm|law-firm-a|${firmA}`, [res, line]);
+  const firmZ = sql(EMPTY, `insert into platform_firm (id, key, operating_name, country_code, status, contact_email, updated_at) values (gen_random_uuid(), 'firm-z', 'Z', 'CA', 'ACTIVE', 'z@firm-z.example.com', now()) returning id`);
+  const first = await real.change(ours, firmZ, { address: "zeta-law", reason: "First address set by support" });
+  ok("PF-25 pass (break M2): staff setting a firm's first address keep the reason in the history (no old address, no redirect) and audit it",
+    first.oldAddress === null && first.redirectUntil === null && addressOf(firmZ) === "zeta-law"
+    && sql(EMPTY, `select coalesce(old_address, '-') || '>' || new_address || '|' || reason || '|' || coalesce(until::text, '-') from platform_firm_address_history where firm_id = '${firmZ}'`) === "->zeta-law|First address set by support|-"
+    && sql(EMPTY, `select count(*) from audit_event where action = 'firm.web_address.changed' and detail->>'historyId' = '${first.historyId}'`) === "1");
+  const badReasons = await Promise.all(["\t\u00a0ab\u00a0\t", "Renamed \u202e evil", "x".repeat(501)].map((reason) => problemOf(() => svc.change(ours, firmZ, { address: "zeta-two", reason }))));
+  ok("PF-25 fail (break m9): a reason padded to under 3 characters, with a direction control, or over 500 characters → 422",
+    badReasons.every((p) => p?.status === 422 && typeof (p.body.fields as Record<string, string>)?.reason === "string"), badReasons);
+  const race = await Promise.allSettled([real.change(ours, firmZ, { address: "zeta-one", reason: "Race one" }), real.change(ours, firmZ, { address: "zeta-two", reason: "Race two" })]);
+  ok("PF-25 pass (break m5): two staff changes of one firm at once both finish (one after the other, each from the address before it), no 500",
+    race.every((r) => r.status === "fulfilled") && sql(EMPTY, `select string_agg(coalesce(old_address, '-') || '>' || new_address, ',' order by changed_at) from platform_firm_address_history where firm_id = '${firmZ}'`).split(",").length === 3
+    && ["zeta-one", "zeta-two"].includes(addressOf(firmZ)), race.map((r) => r.status === "rejected" ? String(r.reason) : "ok"));
+  const both = await Promise.allSettled([real.change(ours, firmZ, { address: "contested", reason: "Race for one address" }), real.change(ours, firmX, { address: "contested", reason: "Race for one address" })]);
+  const statuses = await Promise.all(both.map(async (r) => (r.status === "fulfilled" ? 200 : ((r.reason as { getStatus?: () => number }).getStatus?.() ?? 500))));
+  ok("PF-25 fail (break m5): two firms changing to one address at once: one gets it, the other 409 (never 500, never both)",
+    statuses.sort().join(",") === "200,409" && sql(EMPTY, `select count(*) from platform_firm_web_address where address = 'contested'`) === "1", statuses);
+  const pTaken = await problemOf(() => svc.change(ours, firmB, { address: "zeta-law", reason: "Wants the old name" }));
+  ok("PF-25 fail: another firm cannot be given an address held for 90 days (zeta-law, firm Z's old one) (409 taken, with a suggestion)",
     pTaken?.status === 409 && pTaken.body.code === "WEB_ADDRESS_TAKEN" && typeof pTaken.body.suggestion === "string", pTaken);
   ok("PF-25 fail: a firm's address can be set at sign-up once only (claimAtSignUp refuses a firm that has one)",
-    (await problemOf(() => db.$transaction((tx) => svc.claimAtSignUp(tx, firmA, "sample-again", "system:sign-up"))))?.status === 409);
+    (await problemOf(() => db.$transaction((tx) => svc.claimAtSignUp(tx, firmA, "again-firm-a", "system:sign-up"))))?.status === 409);
 
   // ------------------------------------------------------------------------------------------------- host resolution
   ok("PF-25 pass: hosts read case-insensitively, with a port or a trailing dot; reserved names and bare suffixes are ExpatReady's own",
-    JSON.stringify(readHost("Sample-Law.LOCALHOST:4400")) === JSON.stringify({ kind: "label", address: "sample-law", suffix: "localhost", port: "4400" })
-    && readHost("sample-law.expatready.com.").kind === "label" && ["localhost:4400", "127.0.0.1:4400", "app.expatready.com", "expatready.com", "www.localhost", undefined].every((h) => readHost(h).kind === "main"));
-  ok("PF-25 fail: two labels deep, or a label that breaks the rules, is never a firm (a.sample-law.localhost, -x.localhost)",
-    readHost("a.sample-law.localhost").kind === "none" && readHost("-x.localhost").kind === "none" && !checkAddressShape("a.b").ok);
-  ok("PF-25 pass: the new address serves firm A (its id only)", JSON.stringify(await svc.resolveHost("sample-law.localhost:4400")) === JSON.stringify({ kind: "firm", firmId: firmA, address: "sample-law" }));
+    JSON.stringify(readHost("Law-Firm-A.LOCALHOST:4400")) === JSON.stringify({ kind: "label", address: "law-firm-a", suffix: "localhost", port: "4400" })
+    && readHost("law-firm-a.expatready.com.").kind === "label" && ["localhost:4400", "127.0.0.1:4400", "app.expatready.com", "expatready.com", "www.localhost", undefined].every((h) => readHost(h).kind === "main"));
+  ok("PF-25 fail: two labels deep, or a label that breaks the rules, is never a firm (a.law-firm-a.localhost, -x.localhost)",
+    readHost("a.law-firm-a.localhost").kind === "none" && readHost("-x.localhost").kind === "none" && !checkAddressShape("a.b").ok);
+  ok("PF-25 fail (break m1): an empty, zero, out-of-range or second port, or two trailing dots, under a firm suffix is never ExpatReady's own site",
+    ["law-firm-a.localhost:", "law-firm-a.localhost:0", "law-firm-a.localhost:99999", "law-firm-a.localhost:4400:4400", "law-firm-a.localhost..", "localhost..", "x.expatready.com:abc"].every((h) => readHost(h).kind === "none")
+    && JSON.stringify(readHost("law-firm-a.localhost:0004400")) === JSON.stringify({ kind: "label", address: "law-firm-a", suffix: "localhost", port: "4400" }) && readHost("[::1]:4400").kind === "main");
+  ok("PF-25 pass: the new address serves firm A (its id only)", JSON.stringify(await svc.resolveHost("law-firm-a.localhost:4400")) === JSON.stringify({ kind: "firm", firmId: firmA, address: "law-firm-a" }));
   const r0 = await svc.resolveHost("sample-firm.expatready.com");
   await clock.advance({ days: 89, hours: 23 });
   const r89 = await svc.resolveHost("sample-firm.expatready.com");
   await clock.advance({ hours: 2 });
   const r90 = await svc.resolveHost("sample-firm.expatready.com");
   ok("PF-25 pass: the old address redirects to the new one for 90 days on the clock (day 0, day 89 23 h)",
-    r0.kind === "redirect" && r0.address === "sample-law" && r89.kind === "redirect", [r0, r89]);
+    r0.kind === "redirect" && r0.address === "law-firm-a" && r89.kind === "redirect", [r0, r89]);
   ok("PF-25 fail: after 90 days the old address answers like an unknown one", r90.kind === "unknown", r90);
+  const after90 = await svc.availability("zeta-law");
+  const xBefore = addressOf(firmX);
+  const backstop = await problemOf(() => real.change(ours, firmX, { address: "zeta-law", reason: "Takes a released address" }));
+  ok("PF-25 pass: after 90 days on the clock an address another firm gave up (zeta-law) is offered again; the database, on its own clock (not moved by the test), still holds it, and the service answers 409, not 500 (review m1)",
+    after90.available === true && backstop?.status === 409 && addressOf(firmX) === xBefore, [after90, backstop]);
   ok("PF-25 fail: an unknown address, and a firm that is not serving (PROVISIONING), answer unknown",
     (await svc.resolveHost("no-such-firm.localhost")).kind === "unknown"
     && (sql(EMPTY, `update platform_firm set status='PROVISIONING' where id='${firmX}' returning 1`) === "1") && (await svc.resolveHost("maple.localhost")).kind === "unknown");
@@ -207,6 +251,7 @@ try {
     }
   }
   Controller()(StandInPages);
+  registerPublicPath(/^\/api\/public\/booking-types\/[a-z0-9-]+$/);   // as FO-3 will register its routes
   const pageDescriptor = Object.getOwnPropertyDescriptor(StandInPages.prototype, "page")!;
   Get("api/public/booking-types/:slug")(StandInPages.prototype, "page", pageDescriptor);
   OpenRead("a visitor on a firm's public page")(StandInPages.prototype, "page", pageDescriptor);
@@ -220,23 +265,27 @@ try {
   const port = (app.getHttpServer().address() as { port: number }).port;
 
   const unknownHost = await http(port, `no-such-firm.localhost:${port}`, "/api/public/booking-types/free-consultation");
-  const unknownSlug = await http(port, `sample-law.localhost:${port}`, "/api/public/booking-types/no-such-type");
+  const unknownSlug = await http(port, `law-firm-a.localhost:${port}`, "/api/public/booking-types/no-such-type");
   ok("PF-25 pass: an unknown address gives exactly the answer of an unknown slug (status, type, bytes: \"This page is not available.\")",
     unknownHost.status === 404 && unknownSlug.status === 404 && unknownHost.body === unknownSlug.body && unknownHost.body === PUBLIC_NOT_FOUND_JSON
     && unknownHost.headers["content-type"] === unknownSlug.headers["content-type"], [unknownHost.status, unknownSlug.status, unknownSlug.body.slice(0, 80)]);
   const pageUnknown = await http(port, `no-such-firm.localhost:${port}`, "/book/free-consultation");
-  const pageKnown = await http(port, `sample-law.localhost:${port}`, "/book/free-consultation");
-  ok("PF-25 pass: a page on an unknown address is the plain not-found page (FO-3's pages show the same for an unknown slug); on a firm's address the page is served",
-    pageUnknown.status === 404 && pageUnknown.body === PUBLIC_NOT_FOUND_HTML && /text\/html/.test(String(pageUnknown.headers["content-type"])) && pageKnown.status === 200 && pageKnown.body === "studio single-page app", [pageUnknown.status, pageKnown.status]);
-  const pageA = await http(port, `sample-law.localhost:${port}`, "/api/public/booking-types/free-consultation");
+  const pageKnown = await http(port, `law-firm-a.localhost:${port}`, "/book/free-consultation");
+  ok("PF-25 fail (review M1): until FO-3w registers its pages, a page path on a firm's address is the same plain not-found page as on an unknown address, never the studio's app",
+    pageUnknown.status === 404 && pageUnknown.body === PUBLIC_NOT_FOUND_HTML && /text\/html/.test(String(pageUnknown.headers["content-type"])) && pageKnown.status === 404 && pageKnown.body === pageUnknown.body, [pageUnknown.status, pageKnown.status]);
+  const withQuery = await Promise.all(["/api/public/site?ref=a%2Fb&u=https%3A%2F%2Fexample.org%2F&n=J.%2E&p=C:%5Cdocs&b=/./home", "/api/public/booking-types/free-consultation?date=2026%2F11%2F14"].map((p) => http(port, `law-firm-a.localhost:${port}`, p)));
+  ok("PF-25 pass (break M1): encoded slashes, dots and backslashes in the query string do not refuse a public route", withQuery.every((r) => r.status === 200), withQuery.map((r) => r.status));
+  const unmatched = await http(port, `law-firm-a.localhost:${port}`, "/api/public/no-such-route");
+  ok("PF-25 fail (break m3): an unregistered /api/public path on a firm's address is the plain not-found, not the framework's", unmatched.status === 404 && unmatched.body === PUBLIC_NOT_FOUND_JSON, unmatched.body);
+  const pageA = await http(port, `law-firm-a.localhost:${port}`, "/api/public/booking-types/free-consultation");
   ok("PF-25 pass: firm A's address serves firm A's page", pageA.status === 200 && JSON.parse(pageA.body).firmId === firmA, pageA);
   const tricks = await Promise.all([
-    http(port, `sample-law.localhost:${port}`, `/api/public/site?firm=sample-solo&firmId=${firmB}`, { "x-forwarded-host": `sample-solo.localhost:${port}`, "x-firm-key": "sample-solo" }),
+    http(port, `law-firm-a.localhost:${port}`, `/api/public/site?firm=sample-solo&firmId=${firmB}`, { "x-forwarded-host": `sample-solo.localhost:${port}`, "x-firm-key": "sample-solo" }),
     http(port, `sample-solo.localhost:${port}`, "/api/public/site"),
   ]);
   ok("PF-25 fail: firm A's address never serves firm B's page, whatever the query or forwarded headers name; B's address serves B",
-    JSON.parse(tricks[0].body).webAddress === "sample-law" && JSON.parse(tricks[1].body).webAddress === "sample-solo", tricks.map((t) => t.body));
-  const studioOnFirm = await Promise.all(["/", "/studio", "/api/health", "/assets/../index.html", "/book/%2e%2e/api/health"].map((p) => http(port, `sample-law.localhost:${port}`, p)));
+    JSON.parse(tricks[0].body).webAddress === "law-firm-a" && JSON.parse(tricks[1].body).webAddress === "sample-solo", tricks.map((t) => t.body));
+  const studioOnFirm = await Promise.all(["/", "/studio", "/book", "/assets/", "/assets/index.js", "/brand/", "/api/health", "/api/public/site/../../health", "/api/public/site;x", "//api/public/site", "/api/public/site/%2e%2e/x"].map((p) => http(port, `law-firm-a.localhost:${port}`, p)));
   const studioOnMain = await http(port, `localhost:${port}`, "/studio");
   ok("PF-25 fail: on a firm's address the studio's own pages and API are not served (the plain not-found); on localhost they are, as before",
     studioOnFirm.every((r) => r.status === 404) && studioOnMain.status === 200 && studioOnMain.body === "studio single-page app", studioOnFirm.map((r) => r.status));
@@ -244,12 +293,15 @@ try {
   const moved = await http(port, `sample-solo.localhost:${port}`, "/book/free-consultation?ref=email");
   ok("PF-25 pass: an old address answers 301 to the same path and query on the new address",
     moved.status === 301 && moved.headers.location === `http://solo-law.localhost:${port}/book/free-consultation?ref=email`, [moved.status, moved.headers.location]);
+  const absolute = await http(port, `sample-solo.localhost:${port}`, "https://evil.example/x?y=1");
+  ok("PF-25 fail (break m2): an absolute-URI request on an old address redirects to its path and query only, never to another site",
+    absolute.status === 301 && absolute.headers.location === `http://solo-law.localhost:${port}/x?y=1`, absolute.headers.location);
   const movedPublic = await http(port, `sample-solo.expatready.com`, "/book");
   ok("PF-25 pass: under expatready.com the redirect is always https", movedPublic.status === 301 && movedPublic.headers.location === "https://solo-law.expatready.com/book", movedPublic.headers.location);
-  const avail = await http(port, `localhost:${port}`, "/api/public/web-address/availability?address=sample-law");
-  const availOnFirm = await http(port, `sample-law.localhost:${port}`, "/api/public/web-address/availability?address=maple-law");
+  const avail = await http(port, `localhost:${port}`, "/api/public/web-address/availability?address=law-firm-a");
+  const availOnFirm = await http(port, `law-firm-a.localhost:${port}`, "/api/public/web-address/availability?address=maple-law");
   ok("PF-25 pass: the availability route answers on ExpatReady's own host with no sign-in (taken, with a suggestion)",
-    avail.status === 200 && JSON.parse(avail.body).reason === "taken" && JSON.parse(avail.body).suggestion === "sample-law-2", avail.body);
+    avail.status === 200 && JSON.parse(avail.body).reason === "taken" && JSON.parse(avail.body).suggestion === "law-firm-a-2", avail.body);
   ok("PF-25 fail: the availability route is not served on a firm's address (the plain not-found, JSON form)", availOnFirm.status === 404 && availOnFirm.body === PUBLIC_NOT_FOUND_JSON, availOnFirm.body);
   const siteOnMain = await http(port, `localhost:${port}`, "/api/public/site");
   ok("PF-25 fail: /api/public/site on ExpatReady's own host names no firm (the plain not-found)", siteOnMain.status === 404 && siteOnMain.body === PUBLIC_NOT_FOUND_JSON);

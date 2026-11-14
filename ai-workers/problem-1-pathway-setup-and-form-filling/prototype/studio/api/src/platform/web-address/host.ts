@@ -1,11 +1,13 @@
 // PF-25 (AG-4-16, AG-4-17, AG01-1): host routing. Every request is read by its Host before anything else answers it
 // (before the static files and the single-page app's catch-all in main.ts):
 //   * ExpatReady's own hosts (localhost, 127.0.0.1, app.expatready.com, …) → untouched, as before PF-25;
-//   * a serving firm's address → its public paths only, with `req.publicFirm = { firmId }` (the id only, AG-4-17); any
-//     other path there → the one plain not-found (the studio's own pages and API are never served on a firm's address);
-//   * an address the firm gave up less than 90 days ago → 301 to the same path on its current address;
-//   * any other address under a firm suffix → the one plain not-found, the same bytes and status a public page gives for
-//     an unknown slug (`sendPublicNotFound`, which FO-3's pages use for theirs).
+//   * a serving firm's address → only the public routes registered for it (`registerPublicPath`), with
+//     `req.publicFirm = { firmId }` (the id only, AG-4-17); every other path there → the one plain not-found, so the
+//     studio's own pages, files and API are never served on a firm's address (review M1). PF-25 registers
+//     /api/public/site; FO-3w registers its booking pages and their files, FO-2 its web form, the portal its own;
+//   * an address the firm gave up less than 90 days ago → 301 to the same path and query on its current address;
+//   * any other host under a firm suffix → the one plain not-found, the same bytes and status a public route gives for
+//     an unknown slug (`sendPublicNotFound`, which FO-3's routes use for theirs).
 // Only the Host header is read: X-Forwarded-Host and any firm named in the path, query or headers are ignored, so firm
 // A's address never serves firm B's page. Wildcard DNS and the certificate are PF-8's.
 import type { WebAddresses } from "./service.ts";
@@ -14,9 +16,13 @@ type Req = { method: string; path: string; originalUrl?: string; url: string; pr
 type Res = { status(code: number): Res; setHeader(k: string, v: string): unknown; end(body?: string): unknown };
 type Next = (err?: unknown) => void;
 
-/** The paths a firm's address serves (FO-3's booking pages, the public API, the built page's own files). FO-2's web form
- *  and the portal add theirs here when they land. */
-export const PUBLIC_PATHS: readonly RegExp[] = [/^\/book(\/|$)/, /^\/api\/public\//, /^\/(assets|brand|fonts)\//];
+const PUBLIC_PATHS: RegExp[] = [/^\/api\/public\/site$/];
+/** Adds a path a firm's address serves (a whole-path pattern, anchored both ends). Called once at start-up by the
+ *  module that owns the route (FO-3w's booking pages, FO-2's form, the portal). */
+export function registerPublicPath(pattern: RegExp): void {
+  if (!pattern.source.startsWith("^") || !pattern.source.endsWith("$")) throw new Error(`PF-25: a public path must be anchored at both ends (${pattern})`);
+  if (!PUBLIC_PATHS.some((p) => p.source === pattern.source)) PUBLIC_PATHS.push(pattern);
+}
 export const isPublicPath = (path: string) => PUBLIC_PATHS.some((re) => re.test(path));
 
 const NOT_FOUND_TEXT = "This page is not available.";
@@ -33,18 +39,31 @@ export function sendPublicNotFound(req: Pick<Req, "path">, res: Res): void {
   res.end(api ? PUBLIC_NOT_FOUND_JSON : PUBLIC_NOT_FOUND_HTML);
 }
 
-/** A dot segment, an encoded dot or slash, or a backslash: never a public page's path, so never a way around the list. */
-const ODD_PATH = /\/\.\.?(\/|$|\?)|%2e|%2f|%5c|\\/i;
 const first = (h: string | string[] | undefined) => (Array.isArray(h) ? h[0] : h);
+/** In the path (never the query: break M1): a dot segment, an encoded dot, slash or backslash, a backslash, a `;`
+ *  parameter or an empty segment — never a public route's path, so never a way around the list. */
+const ODD_PATH = /\/\.\.?(\/|$)|%2e|%2f|%5c|\\|;|\/\//i;
 
-/** The middleware. Never throws past itself: a failed lookup is a 500 through `next(err)`, never a page of the wrong firm. */
+/** The request's own path and query, whatever form the request line took (an absolute URI keeps only its path and
+ *  query: break m2). */
+function pathAndQuery(req: Req): { pathname: string; tail: string } {
+  const raw = req.originalUrl ?? req.url;
+  const q = raw.indexOf("?");
+  let pathname = q < 0 ? raw : raw.slice(0, q);
+  const search = q < 0 ? "" : raw.slice(q);
+  if (!pathname.startsWith("/")) { try { pathname = new URL(raw).pathname; } catch { pathname = "/"; } }
+  return { pathname, tail: `${pathname}${search}` };
+}
+
+/** The middleware. A failed lookup is a 500 through `next(err)`, never a page of the wrong firm. */
 export function webAddressHost(addresses: Pick<WebAddresses, "resolveHost">) {
   return (req: Req, res: Res, next: Next) => {
     req.publicFirm = undefined;
     addresses.resolveHost(first(req.headers.host)).then((r) => {
       if (r.kind === "main") return next();
       if (r.kind === "firm") {
-        if (!isPublicPath(req.path) || ODD_PATH.test(req.originalUrl ?? req.url)) return sendPublicNotFound(req, res);
+        const { pathname } = pathAndQuery(req);
+        if (ODD_PATH.test(pathname) || !isPublicPath(pathname)) return sendPublicNotFound(req, res);
         req.publicFirm = { firmId: r.firmId };
         return next();
       }
@@ -52,16 +71,16 @@ export function webAddressHost(addresses: Pick<WebAddresses, "resolveHost">) {
         // Behind ExpatReady's load balancer the public suffix is always https; a person's own machine keeps its scheme.
         const scheme = r.suffix === "localhost" ? (req.protocol === "https" ? "https" : "http") : "https";
         res.status(301);
-        res.setHeader("Location", `${scheme}://${r.address}.${r.suffix}${r.port ? `:${r.port}` : ""}${req.originalUrl ?? req.url}`);
+        res.setHeader("Location", `${scheme}://${r.address}.${r.suffix}${r.port ? `:${r.port}` : ""}${pathAndQuery(req).tail}`);
         res.setHeader("Cache-Control", "no-store");
         return res.end();
       }
       return sendPublicNotFound(req, res);
-    }, next);
+    }).catch(next);
   };
 }
 
-/** The firm a public route serves, or the plain not-found (the route was reached on ExpatReady's own host). */
+/** The firm a public route serves, or null (the route was reached on ExpatReady's own host). */
 export function publicFirmOf(req: { publicFirm?: { firmId: string } }): string | null {
   return req.publicFirm?.firmId ?? null;
 }

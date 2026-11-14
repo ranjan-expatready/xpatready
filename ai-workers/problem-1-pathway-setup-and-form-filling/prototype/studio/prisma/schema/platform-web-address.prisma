@@ -21,15 +21,16 @@ model PlatformFirmWebAddress {
   @@map("platform_firm_web_address")
 }
 
-/// One change of a firm's web address (SA-2-27): the old address redirects (301) to the firm's current one until `until`
-/// (90 days, SA2-D8) and no other firm may take it before then. Insert-only (a trigger refuses update, delete and
-/// truncate). The reason is the ExpatReady staff member's own words; changed_by is their actor word (`staff:<id>`).
+/// One change of a firm's web address by ExpatReady staff (SA-2-27), with its reason (their own words) and who
+/// (`staff:<id>`). The old address redirects (301) to the firm's current one until `until` (90 days after changed_at, set
+/// by the database, SA2-D8) and no other firm may take it before then. A first address set by staff has no old address
+/// and no until. Insert-only (a trigger refuses update, delete and truncate).
 model PlatformFirmAddressHistory {
   id         String   @id @default(uuid()) @db.Uuid
   firmId     String   @map("firm_id") @db.Uuid
-  oldAddress String   @map("old_address")
+  oldAddress String?  @map("old_address")
   newAddress String   @map("new_address")
-  until      DateTime @db.Timestamptz
+  until      DateTime? @db.Timestamptz
   reason     String
   changedBy  String   @map("changed_by")
   changedAt  DateTime @default(now()) @map("changed_at") @db.Timestamptz

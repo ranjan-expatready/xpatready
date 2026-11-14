@@ -15,7 +15,7 @@ export const REDIRECT_DAYS = 90;
  *  machine (browsers send *.localhost to this machine). No custom domain in Release 1 (AG-4-16 r13, AG-15-27; X-28). */
 export const ADDRESS_HOST_SUFFIXES: readonly string[] = ["expatready.com", "localhost"];
 
-export type AddressRefusal = "empty" | "uppercase" | "characters" | "short" | "long" | "hyphen-edge" | "xn" | "reserved";
+export type AddressRefusal = "empty" | "uppercase" | "characters" | "short" | "long" | "hyphen-edge" | "xn" | "reserved" | "sample";
 export type AddressShape = { ok: true; address: string } | { ok: false; reason: AddressRefusal; message: string };
 
 const MESSAGES: Record<AddressRefusal, string> = {
@@ -27,6 +27,7 @@ const MESSAGES: Record<AddressRefusal, string> = {
   "hyphen-edge": "A web address cannot start or end with a hyphen.",
   xn: "A web address cannot start with xn--.",
   reserved: "This address is kept for ExpatReady's own pages. Choose another.",
+  sample: "Addresses starting with sample- are kept for the Sample firms. Choose another.",
 };
 
 const refuse = (reason: AddressRefusal): AddressShape => ({ ok: false, reason, message: MESSAGES[reason] });
@@ -47,6 +48,14 @@ export function checkAddressShape(input: unknown): AddressShape {
 
 export const isAddress = (s: unknown): s is string => checkAddressShape(s).ok;
 
+/** What a person may choose (sign-up, the staff change): a valid address that does not start with `sample-`, the prefix
+ *  the Sample firms' addresses come from (their key; break m10), so no real firm ever competes with them. */
+export function checkAddressChoice(input: unknown): AddressShape {
+  const shape = checkAddressShape(input);
+  return shape.ok && shape.address.startsWith(SAMPLE_PREFIX) ? refuse("sample") : shape;
+}
+export const SAMPLE_PREFIX = "sample-";
+
 /** Words a firm's name often ends with that say nothing about the firm (Sample list). */
 const LEGAL_WORDS = new Set(["inc", "incorporated", "ltd", "limited", "llc", "llp", "lp", "corp", "corporation", "co", "company", "pc", "professional", "ltee", "ltée"]);
 
@@ -54,10 +63,11 @@ const LEGAL_WORDS = new Set(["inc", "incorporated", "ltd", "limited", "llc", "ll
  *  run of other characters one hyphen, cut to fit. A name that gives fewer than 3 characters or a reserved name gets
  *  `-firm` added (Sample). Always a valid address. */
 export function addressBaseFromName(name: string): string {
-  const words = String(name ?? "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const words = String(name ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
   while (words.length > 1 && LEGAL_WORDS.has(words[words.length - 1])) words.pop();
   let base = fit(words.join("-"));
   if (base.startsWith("xn--")) base = fit(base.slice(4));
+  if (base.startsWith(SAMPLE_PREFIX)) base = fit(base.slice(SAMPLE_PREFIX.length));
   if (base.length < ADDRESS_MIN || RESERVED_ADDRESSES.includes(base)) base = fit(`${base || "my"}-firm`);
   return base;
 }
@@ -74,23 +84,26 @@ function fit(s: string): string {
   return s.slice(0, ADDRESS_MAX).replace(/^-+|-+$/g, "");
 }
 
-/** The firm label of a request's host, or what the host is instead. `Host` is case-insensitive and may carry a port or a
- *  trailing dot. `main`: ExpatReady's own site (a bare suffix, a reserved name, any other host such as 127.0.0.1);
- *  `label`: one label under a suffix, lower-cased, to look up (it may still be no firm); `none`: a host under a suffix that
- *  can never be a firm (two labels deep, or a label that breaks the rules). */
+/** The firm label of a request's host, or what the host is instead. `Host` is case-insensitive and may carry a port and
+ *  one trailing dot. `main`: ExpatReady's own site (a bare suffix, a reserved name, any host not under a suffix, such as
+ *  127.0.0.1); `label`: one label under a suffix, lower-cased, to look up (it may still be no firm); `none`: a host under a
+ *  suffix that can never be a firm (two labels deep, a label that breaks the rules, an empty, zero or out-of-range port, a
+ *  second port, more than one trailing dot; break m1): never ExpatReady's own site. */
 export type HostKind = { kind: "main" } | { kind: "label"; address: string; suffix: string; port: string } | { kind: "none" };
 
 export function readHost(hostHeader: unknown): HostKind {
-  if (typeof hostHeader !== "string" || !hostHeader) return { kind: "main" };
-  const m = /^([^:]+?)\.?(?::(\d{1,5}))?$/.exec(hostHeader.trim().toLowerCase());
-  if (!m) return { kind: "main" };
-  const [, host, port = ""] = m;
-  for (const suffix of ADDRESS_HOST_SUFFIXES) {
-    if (host === suffix) return { kind: "main" };
-    if (!host.endsWith(`.${suffix}`)) continue;
-    const label = host.slice(0, -(suffix.length + 1));
-    if (RESERVED_ADDRESSES.includes(label)) return { kind: "main" };
-    return isAddress(label) ? { kind: "label", address: label, suffix, port } : { kind: "none" };
-  }
-  return { kind: "main" };
+  if (typeof hostHeader !== "string" || !hostHeader.trim()) return { kind: "main" };
+  const raw = hostHeader.trim().toLowerCase();
+  if (raw.startsWith("[")) return { kind: "main" };   // an IPv6 literal: never a firm
+  const colon = raw.indexOf(":");
+  const name = colon < 0 ? raw : raw.slice(0, colon), portPart = colon < 0 ? null : raw.slice(colon + 1);
+  const bare = name.replace(/\.+$/, "");
+  const suffix = ADDRESS_HOST_SUFFIXES.find((s) => bare === s || bare.endsWith(`.${s}`));
+  if (!suffix) return { kind: "main" };
+  const portOk = portPart === null || (/^\d{1,10}$/.test(portPart) && Number(portPart) >= 1 && Number(portPart) <= 65535);
+  const dotsOk = name.length - bare.length <= 1;
+  const label = bare === suffix ? "" : bare.slice(0, -(suffix.length + 1));
+  if (!portOk || !dotsOk) return { kind: "none" };
+  if (!label || RESERVED_ADDRESSES.includes(label)) return { kind: "main" };
+  return isAddress(label) ? { kind: "label", address: label, suffix, port: portPart === null ? "" : String(Number(portPart)) } : { kind: "none" };
 }
