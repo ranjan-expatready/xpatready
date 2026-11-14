@@ -112,3 +112,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 09:23 IST: rev 10 part 2 (P-575 (1), A51 §12): client money its own module (contracts §8; tables `money_*` in `client-money.prisma`, code `api/src/client-money/`); one completion event `signing.completed`; governance file split recommended to the release holder.
 * 14 Nov 09:25 IST: Lead 41 answers: FO-12 (map row 36) is Lead B's; FO-11's sending-layer line OK'd; the case side's client merge is Lead 41's. P-576 order of work → rows rev 11: PF-L (libraries, one lockfile PR), PF-14 (jobs, pg-boss, fake clock), FO-12a/b/c/s, the lane and wave order; Meta test number needs the founder's developer account (P-551).
 * 14 Nov 09:27 IST: PF-L and PF-14 briefs written.
+* 14 Nov 09:27 IST: Lead 41 copied rev 10 part 2; client money's owner is Lead B for now (FO-7* ids kept); governance split and `signing.completed` accepted. Contracts §8 updated.
