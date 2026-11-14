@@ -141,4 +141,17 @@ Round 3 verdict (d4c2c426): Approve.
 
 No Blocker or Major is open at 896c34f82bb280775648ffa3618824d7aae28264. Rounds 1-3 stand; nothing else changed.
 
-Verdict: Approve (896c34f82bb280775648ffa3618824d7aae28264)
+Round 4 verdict (896c34f8): Approve.
+
+## Round 5: head 4096c473 (diff from 896c34f8 only)
+
+**The change:** `review.md` (my round 4, committed unchanged, identical to my copy), plus:
+* **m11 fixed:** `firmMayRead` now returns `false` for a platform entity before it looks for a case in the words (`case-feed.ts`, first line of `firmMayRead`). A platform line can no longer pass as a case line; case and configuration lines are untouched.
+* **m12 fixed:** `isConfigEntity`'s comment is back on `isConfigEntity`.
+* **One new test:** a `case-deadbeef` firm's setting line is not read by the firm owning case `deadbeef…`, and a real case line on `deadbeef` still is (`tests/check_case_feed.ts`).
+
+**Ran:** `npx tsx tests/check_case_feed.ts`: **37/37, exit 0**. With the fix line deleted it goes red at 36/37 (the m11 test); the file was restored afterwards and nothing was left changed.
+
+No Blocker or Major is open at 4096c473b1f742b71a90c02aa322f6a22237545e. The remaining Minors are as listed in rounds 2-3 (m3, m4, m6, m8, m9, m10).
+
+Verdict: Approve (4096c473b1f742b71a90c02aa322f6a22237545e)
