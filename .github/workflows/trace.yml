@@ -1,8 +1,9 @@
 # Requirement traceability (P-595, row TR-1): a records PR that adds a shaped Release 1 row to BACKLOG.md with no
 # `Source:` line, or with a source item that does not resolve, fails here (product/tools/trace-requirements.py --check;
 # the Source convention is in that tool's header). It never reds a product PR (P-547 (4), P-542): the check runs only
-# when tools/records-only.sh calls the change records only, and this workflow is not a merge condition (Mergify
-# requires `ci`). The tool's unit tests run only when the tool changes. Read-only, standard library, under 1 minute, US$0.
+# when tools/records-only.sh calls the change records only. Advisory: it is not a merge condition (Mergify requires
+# `ci`); making it one is a .mergify.yml change for the Lead (P-423). The tool's unit tests run only when the tool
+# changes. Read-only, standard library, under 1 minute, US$0.
 name: trace
 on:
   pull_request:
@@ -30,7 +31,8 @@ jobs:
           fetch-depth: 0
       - name: unit tests (only when the tool changes)
         run: |
-          if git diff --name-only "$BASE...HEAD" | grep -qE 'trace-requirements|trace\.yml'; then
+          git diff --name-only "$BASE...HEAD" > "$RUNNER_TEMP/changed.txt"
+          if grep -qE 'trace-requirements|trace\.yml' "$RUNNER_TEMP/changed.txt"; then
             python3 -I "$T/test_trace_requirements.py"
           else
             echo "the tool did not change: tests skipped"

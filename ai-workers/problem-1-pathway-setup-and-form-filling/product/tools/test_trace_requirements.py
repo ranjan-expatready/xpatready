@@ -201,6 +201,42 @@ class Fixture(unittest.TestCase):
         b = backlog(["| FO-9 | runtime | New | — | waits on: none |", "| X-9 | later | Not Release 1 | a test | none |"])
         self.assertEqual(self.run_tool("--check", str(old), backlog_text=b)[0], 0)
 
+    def test_check_reads_rows_with_no_header_of_their_own(self):
+        old = self.d / "old.md"
+        old.write_text(backlog([]))
+        b = backlog(["| FO-1 | runtime | Old | a test | Source: P-602 |"]).replace(
+            "\n\n## Later", "\n* **A note between rows**\n| FO-9 | runtime | New | a test | waits on: none |\n\n## Later")
+        code, out = self.run_tool("--check", str(old), backlog_text=b)
+        self.assertEqual(code, 1, out)
+        self.assertIn("FO-9", out)
+
+    def test_check_amendment_rows_and_rows_shaped_later(self):
+        old = self.d / "old.md"
+        old.write_text(backlog(["| FO-5 | runtime | Named only | — | waits on: none |"]))
+        amend = backlog(["| FO-5 | runtime | Named only | — | waits on: none |",
+                         "| FO-31 | runtime | New | a test | Source: P-602 |",
+                         "| **FO-31** (rev 16 amendment) | runtime | more | as FO-31 | as FO-31 |"])
+        self.assertEqual(self.run_tool("--check", str(old), backlog_text=amend)[0], 0)
+        shaped = backlog(["| FO-5 | runtime | Shaped now | a pass and a fail | waits on: none |"])
+        self.assertEqual(self.run_tool("--check", str(old), backlog_text=shaped)[0], 1)
+        edited = backlog(["| FO-5 | runtime | Named only, reworded | — | waits on: none |"])
+        self.assertEqual(self.run_tool("--check", str(old), backlog_text=edited)[0], 0)
+
+    def test_source_with_a_pipe_inside_code(self):
+        line = "| FO-9 | runtime | x | y | Source: P-602, official(`IMM|5257` guide, p. 4, 2026-10-19) · waits on: z |"
+        self.assertEqual(t.parse_source(line), ["P-602", "official(`IMM|5257` guide, p. 4, 2026-10-19)"])
+        self.assertIsNone(t.parse_source("| FO-9 | runtime | x | y | waits on: z |"))
+
+    def test_a_card_inserted_ahead_shifts_ids_and_is_found(self):
+        old = {i: t.Req(i, pathlib.Path("x"), 1, "heading", [f"#### {i} — {w}"], [i]) for i, w in
+               (("AG-2-1", "Alpha"), ("AG-2-2", "Beta"), ("AG-2-3", "Gamma"))}
+        new = {i: t.Req(i, pathlib.Path("x"), 1, "heading", [f"#### {i} — {w}"], [i]) for i, w in
+               (("AG-2-1", "Alpha"), ("AG-2-2", "Inserted"), ("AG-2-3", "Beta"), ("AG-2-4", "Gamma"))}
+        added, removed, renum, changed = t.diff_snapshots(old, new)
+        self.assertEqual(renum, [("AG-2-2", "AG-2-3"), ("AG-2-3", "AG-2-4")])
+        self.assertEqual(changed, ["AG-2-2", "AG-2-3"])
+        self.assertEqual((added, removed), ([], []))
+
     # ---- gaps
     def test_gaps_unmapped_uncovered_and_conflicts(self):
         b = backlog([f"| FO-2 | runtime | Leads | a test | Source: {self.cite('AG-2-9')}, {self.cite('AG-2-1')} |",

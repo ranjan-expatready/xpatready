@@ -182,11 +182,11 @@ def split_items(text):
 
 def parse_source(line):
     """None when the row has no Source field; else the list of items."""
-    m = re.search(r"\bSource:\**\s*(.*)", line)
-    if not m:
-        return None
-    field = re.split(r"\s·\s|\||\n", m.group(1))[0]
-    return split_items(field)
+    for cell in (split_cells(line) if line.lstrip().startswith("|") else [line]):
+        m = re.search(r"\bSource:\**\s*(.*)", cell)
+        if m:
+            return split_items(re.split(r"\s·\s|\n", m.group(1))[0])
+    return None
 
 
 class Row:
@@ -197,17 +197,19 @@ class Row:
 
 def parse_backlog(text):
     """Release 1 rows in table order (an amendment row 'FO-2 (rev 15.1 amendment)' keeps its parent's id)."""
-    rows, header = [], None
+    rows, header, last = [], None, None
     lines = text.split("\n")
     for n, l in enumerate(lines):
         if not l.startswith("|"):
             header = None; continue
         if re.match(r"^\|\s*:?-{3,}", l):
-            header = [h.lower() for h in split_cells(lines[n - 1])] if n else None; continue
+            header = last = [h.lower() for h in split_cells(lines[n - 1])] if n else None; continue
         cells = split_cells(l)
+        if header is None and (n == 0 or not lines[n - 1].startswith("|")):
+            header = last  # rows that continue a table after a note, with no header of their own
         if not cells or header is None:
             continue
-        first = cells[0].strip("* ")
+        first = re.sub(r"[*~]", "", cells[0]).strip()
         rid = first.split(" ")[0]
         if not R1_ROW.match(rid):
             continue
@@ -339,14 +341,16 @@ def diff_snapshots(old, new):
     added = sorted(set(new) - set(old), key=_idkey)
     removed = sorted(set(old) - set(new), key=_idkey)
     changed = [i for i in sorted(set(old) & set(new), key=_idkey) if old[i].hash != new[i].hash]
-    by_hash_new = {}
-    for i in added:
-        by_hash_new.setdefault(new[i].hash, []).append(i)
-    by_hash_old = {}
-    for i in removed:
-        by_hash_old.setdefault(old[i].hash, []).append(i)
-    renumbered = [(o, by_hash_new[old[o].hash][0]) for o in removed
-                  if len(by_hash_new.get(old[o].hash, [])) == 1 and len(by_hash_old[old[o].hash]) == 1]
+    # Renumbered: the old text of a removed or changed id is now, unchanged, under one other id (a card inserted
+    # ahead shifts the ids after it). Only hashes held by one id on each side count.
+    old_n, new_at = {}, {}
+    for i, q in old.items():
+        old_n[q.hash] = old_n.get(q.hash, 0) + 1
+    for i, q in new.items():
+        new_at.setdefault(q.hash, []).append(i)
+    renumbered = [(o, new_at[old[o].hash][0]) for o in removed + changed
+                  if old_n[old[o].hash] == 1 and len(new_at.get(old[o].hash, [])) == 1 and new_at[old[o].hash][0] != o]
+    renumbered.sort(key=lambda x: _idkey(x[0]))
     gone = {o for o, _ in renumbered} | {n for _, n in renumbered}
     return ([i for i in added if i not in gone], [i for i in removed if i not in gone], renumbered, changed)
 
@@ -521,13 +525,17 @@ def cmd_render(ctx):
 
 def cmd_check(ctx, old_backlog):
     old_text = pathlib.Path(old_backlog).read_text(encoding="utf-8") if pathlib.Path(old_backlog).exists() else ""
-    old_ids = {r.id for r in parse_backlog(old_text)}
+    old_shaped = {r.id for r in parse_backlog(old_text) if r.shaped}
     old_lines = set(old_text.split("\n"))
     decs, tids = decisions(ctx.read("decisions")), trace_ids(ctx.read("trace"))
+    rows = parse_backlog(ctx.read("backlog"))
+    sourced = {r.id for r in rows if r.source}
     bad = []
-    for r in parse_backlog(ctx.read("backlog")):
-        if r.id in old_ids or r.line in old_lines or not r.shaped:
+    for r in rows:  # a row shaped by this change: new, or unshaped before (an edit to a shaped row is not checked)
+        if r.id in old_shaped or r.line in old_lines or not r.shaped:
             continue
+        if r.source is None and r.id in sourced:
+            continue  # an amendment row; its parent row carries the Source
         if r.source is None:
             bad.append(f"{r.label} (line {r.lineno}): a new shaped Release 1 row needs a Source: line")
             continue
