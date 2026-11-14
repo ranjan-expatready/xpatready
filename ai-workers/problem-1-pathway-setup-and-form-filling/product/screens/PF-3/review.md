@@ -72,4 +72,29 @@ D1 4 (every Done-when line and binding §7 table present) · D2 **3** (M1, m1; r
 
 No Blocker. Two Majors (M1, M2) are open on 7e4a4831; both are small schema or comment fixes in the same files. Re-review the commit that fixes them.
 
-Verdict: Block
+Round 1 verdict (7e4a4831): Block.
+
+## Round 2: head d5d13ed8 (code in 603d97e2f; diff only, P-277)
+
+**Checks run:**
+* `check_pf3_platform_schema.ts`: **70 passed, 0 failed**.
+* `check_prisma_schema.ts`: **8 passed, 0 failed**.
+* My round-1 probes, repeated on a fresh database built from every migration plus the seed:
+  * **M1 fixed.** A firm A grant, revocation or licence naming firm B's person is refused by the `…_firm_id_staff_id_fkey` constraints. The new tests cover both cases: the person's own firm is accepted, another firm is refused.
+  * **M2 fixed.** I re-ran the out-of-order commit. The second writer now waits on the `module_event_next_seq` lock: a reader at 1.5 s sees nothing, and after both commit, seq follows commit order (slow 2, fast 4). Gaps come from the column default's discarded number and are harmless. Visibility comes before the lock is released at commit, so a reader past n cannot miss a later commit below n. The comment is corrected (`platform.prisma` ModuleEvent).
+  * **m1 fixed.** An invitation with `roles` NULL is refused (`platform_invitation_has_role`).
+* Also fixed, each with a test:
+  * m2: `readSettings` throws, as `readSetting` does.
+  * m5: `firmScope` lower-cases the id; `inFirm` with an id in capitals now matches the firm's own row.
+  * The breaker's items: firm key immutable; an expired invitation closed by the next insert; the seed keeps an ended subscription; the seed skips a person found by (firm, email); trimmed and lower-case checks on every email; accepted and revoked both set is refused; canonical time zone spelling; empty `by` refused.
+* The new triggers' `DROP FUNCTION` lines are in the rollback header. The advisory-lock key follows the repo's existing `hashtext` pattern.
+
+**Still open (Minor; none blocks):**
+* **m3** (the breaker's B-6, which it rated Major; I keep it Minor): after a demo reset, setting values stay and their audit lines go (`api/src/demo.ts:590-594`). No route writes settings yet, and the fix needs `demo.ts` or AUD-1, outside this row's files. It is now documented (`settings.ts:4-6`) and asked in the PR. It must be settled before any settings route ships.
+* **m4** (stored `value_schema` weaker than the zod rule) and **m6** (lifetimes measured from a writer-set `created_at`): listed in the PR, not fixed.
+* **m7 (new): a staff member can be moved to another firm, carrying their roles.** The composite keys use the default `ON UPDATE CASCADE` (`migration.sql` `…_firm_id_staff_id_fkey`). Run: `update platform_staff set firm_id = '<sample-firm>' where actor_id = 'user-S'` gave `UPDATE 1`. user-S's OWNER and CASE_MANAGER grants and licence moved with them, so they became an Owner of sample-firm. This needs a code bug that writes `platform_staff.firm_id`, and no contract operation moves staff between firms. Fix in a later row (or here, if cheap): `onUpdate: Restrict` on the three relations, or a firm-fixed trigger on `platform_staff`, like the key and country triggers.
+* **m8 (new, note for PF-4 and FO writers):** event writers now commit one at a time. A transaction that writes an event early and then waits on a row another event writer holds will deadlock; PostgreSQL aborts one, which must be retried. Write the outbox row last in its transaction. This is fine at the 100-firm size (P-562).
+
+No Blocker or Major is open at d5d13ed87685f758689d1e487b70a82bc4265bd1. The journey score stands at 8.5 / 10; with M1 and m1 fixed, "Correct data" rises to 1, giving 9 / 10.
+
+Verdict: Approve
