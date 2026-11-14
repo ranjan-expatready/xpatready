@@ -41,8 +41,10 @@ type Question = { fact: string; about: string; why?: string };
   console.log(`      loaded in ${l.body.seconds.toFixed(1)} s; released ${JSON.stringify(l.body.released)}`);
 
   // The Done-when: the study permit is released by the checkpoint at US$0 with no block.
-  ok("QA-144 slice 3 pass: the configured checkpoint releases the Study permit (outside Canada): release 1, submitted by the author, approved by the Approver",
-    (l.body.released as string[]).some((x) => /Study permit › Outside Canada/.test(x)) && sql(`select version || '|' || approver_id || '|' || submitter_id from config_release where combination_id = '${sp}' order by version desc limit 1`) === "1|user-B|user-A",
+  // P-598 (tech lead on #1747): its release 1 as before, then a release 2 carrying the questions asked on IMM 5707, a form
+  // other combinations file too, after every combination's release 1; each submitted by the author, approved by the Approver.
+  ok("QA-144 slice 3 pass: the configured checkpoint releases the Study permit (outside Canada): release 1, then (P-598) release 2, each submitted by the author, approved by the Approver",
+    (l.body.released as string[]).some((x) => /Study permit › Outside Canada/.test(x)) && sql(`select string_agg(version || '|' || approver_id || '|' || submitter_id, ',' order by version) from config_release where combination_id = '${sp}'`) === "1|user-B|user-A,2|user-B|user-A",
     { released: l.body.released, row10: r("10").why?.slice(0, 300) });
   ok("QA-144 slice 3 fail: the study permit is not in row 10's refusals", !/Study permit › Outside Canada: /.test(r("10").why ?? "") && /Study permit › Outside Canada/.test(r("10").shows), r("10").why?.slice(0, 300));
   ok("QA-144 slice 3 fail-guard: no live AI call and nothing spent (US$0)", n(`select count(*) from drafting_job where mode = 'LIVE'`) === 0 && ledger() === before && l.body.cost_usd === 0);

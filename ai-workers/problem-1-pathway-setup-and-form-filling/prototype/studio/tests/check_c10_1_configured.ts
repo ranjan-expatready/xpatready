@@ -96,9 +96,19 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   // P-319 (review of #833, M2): the demo's form roles are set before the checkpoint releases, so each release's draft is
   // its release right after the load: no "Form changed" line nobody made.
   const releasedIds = sql("select distinct combination_id from config_release").split("\n").filter(Boolean);
-  const drifted: string[] = [];
-  for (const id of releasedIds) if ((await call("GET", `/combinations/${id}/review`)).body?.draft?.matches_release !== true) drifted.push(id);
-  ok("C10.1 row 10 (P-319): every configured release's draft matches its release right after the load", drifted.length === 0, { released: releasedIds.length, drifted }); // none released (a blocked checkpoint) has nothing to drift
+  // P-598 (tech lead on #1747): one change is made after the releases on purpose: the Study permit's "later" questions on
+  // IMM 5707, a form other combinations file too (samples/own-yes-no.json), which those combinations take at their next
+  // release. A draft may differ from its release only by those items (each change names IMM 5707's marriage boxes or their
+  // question), never on the Study permit itself, and nothing else.
+  const LATER = /MarriageInPerson|present_at_marriage_ceremony|Present at marriage ceremony/;
+  const drifted: string[] = [], pending: string[] = [];
+  for (const id of releasedIds) {
+    const d = (await call("GET", `/combinations/${id}/review`)).body?.draft as { matches_release?: boolean; changes?: unknown[] } | undefined;
+    if (d?.matches_release === true) continue;
+    const later = id !== sql(`select id from combination where combination_key = 'sp.outside'`) && (d?.changes ?? []).length > 0 && (d?.changes ?? []).every((c) => LATER.test(JSON.stringify(c)));
+    (later ? pending : drifted).push(later ? id : `${id}: ${JSON.stringify(d?.changes ?? []).slice(0, 300)}`);
+  }
+  ok("C10.1 row 10 (P-319): every configured release's draft matches its release right after the load, but for the Study permit's later IMM 5707 questions another combination takes at its next release (P-598)", drifted.length === 0, { released: releasedIds.length, drifted, pending }); // none released (a blocked checkpoint) has nothing to drift
   ok("C10.1 row 10 fail: a combination with no form is never released as configured", n(`select count(*) from config_release r where not exists (select 1 from combination_form f where f.combination_id = r.combination_id)`) === 0 && /no form is on it yet/.test(r("10").why ?? ""), r("10").why?.slice(0, 200));
   // B79b (QA-144 slice 5): with Family sponsorship released, every combination with a form is released, so row 10 may carry
   // no validator words at all; the X9a caption rule is then proved on its own data by C9.1 (K1, its fail line on IMM 5476).
@@ -117,7 +127,7 @@ type Row = { row: string; title: string; status: string; shows: string; why: str
   ok(unplacedForm ? "C10.1 row 10 (QA-206): while a form's sections all wait for a name, the Visitor visa stays a draft and its row names the blocks" : "C10.1 row 10: the Visitor visa is released (QA-144 slice 1)",
     unplacedForm ? n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) === 0 && /Visitor visa: Fix \d+ problems? before submitting/.test(r("10").why ?? "")
       : n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.label = 'Visitor visa'`) >= 1 && /Visitor visa/.test(r("10").shows), unplacedForm ? r("10").why?.slice(0, 200) : r("10").shows);
-  ok("C10.1 row 10: the Study permit (outside Canada) is released, release 1 approved by the Approver (QA-144 slice 3)", n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.combination_key = 'sp.outside' and r.approver_id = 'user-B'`) === 1 && /Study permit › Outside Canada/.test(r("10").shows), r("10").shows);
+  ok("C10.1 row 10: the Study permit (outside Canada) is released, release 1 and (P-598) release 2 approved by the Approver (QA-144 slice 3)", n(`select count(*) from config_release r join combination c on c.id = r.combination_id where c.combination_key = 'sp.outside' and r.approver_id = 'user-B'`) === 2 && /Study permit › Outside Canada/.test(r("10").shows), r("10").shows);
   // QA-144 slice 2: With an LMIA is set up from its forms and released (tests/check_qa144_lmia_release.ts).
   ok("C10.1 row 10: With an LMIA – inside Canada is released (QA-144 slice 2), through submit, SME sign-off and the Approver", released.some((x) => /^With an LMIA – inside Canada§1§user-B$/.test(x)) && /With an LMIA – inside Canada/.test(r("10").shows), { released, shows: r("10").shows });
   // QA-144 slice 4 (B79a, #1050): Express Entry is set up from its forms and released (tests/check_qa144_ee_release.ts).
