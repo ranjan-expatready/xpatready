@@ -14,7 +14,12 @@ You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime F
 **Outbox (PF-3 review m8):** write any `module_event` row **last** in its transaction.
 
 **The seeds (Lead B's answer on #1742, rev 15.1).** FO-2 is the first row that serves a front-office page, so it wires the seeds.
-* **Demo reset:** it runs PF-3's `seed-sample-firms.ts`, then FO-1a's `seedSampleFirmsFrontOffice`. These are one-line hooks in the reset, a shared file: the release holder's OK; list them under "Shared-file lines".
+* **Demo reset:** it runs PF-3's `seed-sample-firms.ts`, then FO-1a's `seedSampleFirmsFrontOffice`. These are one-line hooks in the reset, a shared file. The release holder OK'd them (Lead 45, 14 Nov) on three conditions:
+  * the hooks only call the seeds;
+  * `check_s7_reset` and `check_d1_reset_to_six` stay green;
+  * platform audit lines are never deleted (P-571).
+
+  List them under "Shared-file lines".
 * **New firms:** FO-1a's `seedCreatedFirms` (catch-up over `module_event` by `seq`, idempotent) runs once at start. If PF-14 is on `main`, it is also a `JobPort` recurring job (Sample: every minute); if not, PF-14's first user moves it onto `JobPort`.
 * Match `EVENT.FIRM_CREATED` from `ports/events.ts`, never a string.
 * **The web form's message** (#1742 review m12) is the lead's first note (`fo_note`, `INTERNAL`).

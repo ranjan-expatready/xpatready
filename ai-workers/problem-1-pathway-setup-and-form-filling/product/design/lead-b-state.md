@@ -146,3 +146,6 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 15:17 IST: Lead 45 reported FO-1b #1741 merged (15:1x) and FO-1a #1742 re-approved at 0e7b715df and queued.
   * Lead B answered FO-1a's two questions on #1742 (comment 6875438964). Back-relation lines and keys → new row **FO-1k**; the seed → **FO-2** (brief updated).
   * Rows rev 15.1: FO-1k; FO-2 amended; event names from `ports/events.ts` (sentence added to every brief); the qa-testable Done when note (P-592).
+* 14 Nov 15:18 IST: Lead 45 copied rev 15.1 into BACKLOG (ccf7e8150) and kept FO-1k's slot as proposed.
+  * It OK'd the demo-reset seed hooks on three conditions: they only call the seeds; `check_s7_reset` and `check_d1_reset_to_six` stay green; no platform audit line is deleted (P-571). The FO-2 brief is updated.
+  * The founder's name is now **"Release 1 (production grade)"**, not "MVP", in new text.
