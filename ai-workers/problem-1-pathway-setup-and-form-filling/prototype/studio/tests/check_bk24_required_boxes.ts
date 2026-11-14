@@ -132,6 +132,15 @@ for (const [c, label, boxes] of BK25) {
   ok(`BK-25: ${label} writes background 2c and 6 and the consent${boxes.length > 3 ? ", and employment row 1" : ""} (read from the file; F2, F3, F5)`, !!c && Object.values(read).every((x) => x.trim() !== ""), read);
 }
 
+// BK-25 (F4; review m1 on #1747): on this copy's field map, IMM 5707's two "physically present at the marriage ceremony"
+// boxes read one person field, the applicant's row about the form's subject and the spouse's row about the spouse.
+const marriage = JSON.parse(sql(`select coalesce(json_agg(x), '[]') from (select distinct on (m.data_path) m.data_path, m.outcome, m.person, m.canonical_field_key fact
+  from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label like 'IMM 5707 %' and m.data_path like '%MarriageInPerson%' and m.status <> 'RETIRED'
+  order by m.data_path, m.version desc) x`)) as { data_path: string; outcome: string; person: string; fact: string }[];
+const rowOf = (who: string) => marriage.find((m) => m.data_path.includes(`.${who}[0].`));
+ok("BK-25: IMM 5707's marriage-ceremony boxes are mapped to one person field, the applicant's row about the form's subject and the spouse's row about the spouse (read from this copy's field map)",
+  marriage.length === 2 && rowOf("Applicant")?.outcome === "mapped" && rowOf("Applicant")?.person === "form_subject" && rowOf("Spouse")?.person === "subject_spouse_or_partner" && !!rowOf("Applicant")?.fact && rowOf("Applicant")?.fact === rowOf("Spouse")?.fact, marriage);
+
 /** The boxes this copy's own file requires (a.–c. above), and those its file leaves empty. */
 function requiredOf(c: Copy, values: Record<string, string>) {
   const blank = blankOf(c);

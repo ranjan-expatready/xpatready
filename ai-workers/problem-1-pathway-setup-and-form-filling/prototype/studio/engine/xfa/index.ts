@@ -50,7 +50,7 @@ export type XfaDescriptor = {
 };
 
 export type XfaAnswer =
-  | { status: "passes"; pages: number; barcodeTexts: (string | null)[] }
+  | { status: "passes"; pages: number; barcodeTexts: (string | null)[]; knownDefects?: string[] }
   | { status: "stops_at"; pages: number; box: string | null; message: string | null }
   | { status: "reads"; pages: number; why: string }
   | { status: "not_available"; reason: string; code: string };
@@ -133,7 +133,8 @@ export function answerOf(raw: unknown): XfaAnswer {
       if (pages === null || !Array.isArray(r.barcodes)) return notAvailable("BAD_ANSWER", "the engine's answer could not be read");
       // Review minor 4: the form's own save step must have encoded its barcodes; a pass without them is no pass.
       if (r.barcodesValidated !== true) return notAvailable("NOT_ENCODED", "the form's own Validate completed, but its own save step did not encode its barcodes");
-      return { status: "passes", pages, barcodeTexts: r.barcodes.map((b: unknown) => (typeof b === "string" ? b : null)) };
+      // BK-25 (review m2 on #1747): a pass that went past a defect of the form's own script its record names says so.
+      return { status: "passes", pages, barcodeTexts: r.barcodes.map((b: unknown) => (typeof b === "string" ? b : null)), ...(Array.isArray(r.knownDefects) && r.knownDefects.length ? { knownDefects: r.knownDefects.map(String) } : {}) };
     case "incomplete":
       return pages === null ? notAvailable("BAD_ANSWER", "the engine's answer could not be read") : { status: "stops_at", pages, box: typeof r.firstMissingField === "string" ? r.firstMissingField : null, message: Array.isArray(r.messages) && typeof r.messages[0] === "string" ? (r.messages[0] as string) : null };
     case "reads":

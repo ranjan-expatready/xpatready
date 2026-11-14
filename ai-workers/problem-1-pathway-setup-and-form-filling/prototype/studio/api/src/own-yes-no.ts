@@ -48,12 +48,14 @@ function savedTextHas(officialFile: string | null | undefined, w: string): boole
 }
 /** BK-25 (P-170, AGENTS rule 4): a Yes/No box the form prints as a statement the person answers YES or NO, not as a
  *  question (IMM 5707's "I was physically present at the marriage ceremony", YES 1 / NO 2): its reading's own heading, taken
- *  only when it is a whole sentence of the form's words (20 characters or more, a capital first, no "?", none of a script's
- *  marks) and the form's saved text holds it exactly. Null otherwise, so the box is still refused. */
+ *  only when it is a whole sentence of the form's words (20 characters or more and under the reading's 120-character cut,
+ *  a capital first, no "?", none of a script's marks) and the form's saved text shows it whole: the words, then at once the
+ *  box's own first printed choice (review M2 on #1747: a heading the reading cut, such as background question 5's "…or
+ *  organization which has", runs on into more words in the saved text, so it is refused). Null otherwise. */
 export function printedStatement(b: Box | undefined, officialFile: string | null | undefined): string | null {
-  const h = norm(b?.heading ?? "");
-  if (h.length < 20 || !/^[A-Z][^?]*[A-Za-z.]$/.test(h) || /^Question\b|[;={}()*]|\b\w+\.\w+\b/.test(h)) return null;
-  return savedTextHas(officialFile, h) ? h : null;
+  const h = norm(b?.heading ?? ""), first = (b?.options ?? []).find((o) => Array.isArray(o) && o[0])?.[0];
+  if (h.length < 20 || h.length >= 120 || !first || !/^[A-Z][^?]*[A-Za-z.]$/.test(h) || /^Question\b|[;={}()*]|\b\w+\.\w+\b/.test(h)) return null;
+  return savedTextHas(officialFile, `${h} ${norm(first)} `) ? h : null;
 }
 
 /** BK-25: the people the mapped form fields of a box's row name: the nearest block above the box that holds any mapped form
@@ -66,6 +68,12 @@ export function rowPeople(rows: { dataPath: string; outcome: string; person: str
     if (mapped.length) return [...new Set(mapped.map((r) => r.person!))];
   }
   return [];
+}
+/** BK-25 (review M3 on #1747): whether asking a box nothing fills yet about `person` (none: the form's subject) goes against
+ *  what its row's mapped form fields name (rowPeople): a named person must be the row's one person; no name is refused only
+ *  where the row names one other person (IMM 5707's spouse row), since a page of mixed rows does not say. Pure. */
+export function rowPersonRefused(named: string[], person?: string): boolean {
+  return person ? named.length !== 1 || named[0] !== person : named.length === 1 && named[0] !== "form_subject";
 }
 /** B52 (P-334 (5)): an application form's Yes/No form fields worked out from other answers, each asked as its own question
  *  (api/src/own-question.ts), so the shared placement step asks them and C4.11's conditions land on them. B88 (P-319): the

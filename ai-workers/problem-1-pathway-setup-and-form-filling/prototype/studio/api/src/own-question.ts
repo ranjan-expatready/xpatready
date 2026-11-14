@@ -24,7 +24,7 @@ import { fieldReaders, readerWords, type FieldReader } from "./where-used.ts";
 import { nearLabels } from "./rule-facts.ts";
 import { landField } from "./proposals.ts";
 import { lockItem, refuseRetired } from "./library-items.ts";
-import { inFormText, printedQuestion, printedStatement, rowPeople, scriptRulesOf, scriptWords, yesNoCodes, type Box } from "./own-yes-no.ts";
+import { inFormText, printedQuestion, printedStatement, rowPeople, rowPersonRefused, scriptRulesOf, scriptWords, yesNoCodes, type Box } from "./own-yes-no.ts";
 export { printedQuestion } from "./own-yes-no.ts";
 export { isWorkedOutYesNo } from "./library-changes.ts";
 
@@ -139,12 +139,15 @@ export class OwnQuestions {
     // physically present at the marriage ceremony") is asked in those words, only when the form's saved text holds them.
     const question = b.question ?? printedQuestion(reading!.get(b.dataPath)) ?? (unmapped ? printedStatement(reading!.get(b.dataPath), saved?.path) : null);
     // BK-25: a box in a row about another person of the case (IMM 5707's spouse row) is about that person, as the row's other
-    // form fields are: the person named must be the one every mapped form field of its row names (the nearest block that
-    // holds any), never a guess.
-    if (b.person) {
-      if (!unmapped) fail("Only a form field nothing fills yet is asked about another person of its row.", HttpStatus.CONFLICT);
+    // form fields are: the person asked about (named, else the form's subject) must be the one every mapped form field of its
+    // row names (the nearest block that holds any), never a guess. Review M3 on #1747: checked whether or not a person is
+    // named, so a spouse row asked without one is refused rather than filled from the applicant's own answer. A row whose
+    // mapped form fields name several people (a page of mixed rows) does not say, so only a named person is refused there.
+    if (b.person && !unmapped) fail("Only a form field nothing fills yet is asked about another person of its row.", HttpStatus.CONFLICT);
+    if (unmapped) {
       const named = rowPeople(effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id } }), (m) => m.dataPath, "draft"), b.dataPath);
-      if (named.length !== 1 || named[0] !== b.person) fail(`This form field's row is about ${named.length ? named.join(" and ") : "no one its other form fields name"}, not ${b.person}: name the person its row's other form fields name.`, HttpStatus.CONFLICT);
+      if (rowPersonRefused(named, b.person))
+        fail(`This form field's row is about ${named.length ? named.join(" and ") : "no one its other form fields name"}, not ${b.person ?? "the person the form is for"}: name the person its row's other form fields name.`, HttpStatus.CONFLICT);
     }
     if (!question) fail(`${ed.editionLabel}'s reading has no printed question for this form field (neither its heading nor its caption is a question), so it cannot be asked in the form's words: map it on its field map instead.`, HttpStatus.CONFLICT);
     const from = unmapped ? [] : recordedDerivation(cur!.transform)!.facts;
