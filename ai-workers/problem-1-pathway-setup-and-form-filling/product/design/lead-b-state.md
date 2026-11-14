@@ -4,7 +4,7 @@
 
 ## Who is who
 * **Lead B** owns the new platform (firm sign-up, plans, subscriptions, staff sign-in and roles, walking skeleton) and front-office (enquiry → lead → prospect → booking → retainer → e-signature → payment) modules, all fenced (P-550, P-558). Writes rows and briefs on this branch; never edits `STATE.md`, `RULES.md`, `DECISIONS.md`, `BACKLOG.md`.
-* **Release holder:** the current Lead (`tools/current-lead.sh`; Lead 39 `local_84c512dc…` until ~08:00 IST 14 Nov, then Lead 40 `local_7a6756d1…`, Lead 41 `local_eb5559e3…`, Lead 42 `local_110605c6…` (09:50 IST), Lead 43 `local_b5840dd3…` (by 11:22 IST), Lead 44 `local_dbdab60d…` (by 12:37 IST), Lead 45 `local_24e909a3…` (13:5x IST), now **Lead 46 `local_3cc8e2ba…`** (by 15:46 IST)). Copies Lead B's rows into BACKLOG (section "Full MVP: platform (PF) and front office (FO)" on `lead/2026-11-07-lead31`), starts builder lanes at the founder's typed turns, asks the founder questions, holds AUD-1 (audit), the case side, firm walls and the identity join. Earlier holders: Lead 37, Lead 38 (their rulings stand).
+* **Release holder:** the current Lead (`tools/current-lead.sh`; Lead 39 `local_84c512dc…` until ~08:00 IST 14 Nov, then Lead 40 `local_7a6756d1…`, Lead 41 `local_eb5559e3…`, Lead 42 `local_110605c6…` (09:50 IST), Lead 43 `local_b5840dd3…` (by 11:22 IST), Lead 44 `local_dbdab60d…` (by 12:37 IST), Lead 45 `local_24e909a3…` (13:5x IST), Lead 46 `local_3cc8e2ba…` (by 15:46 IST), now **Lead 47 `local_a358e18f…`** (by 17:07 IST)). Copies Lead B's rows into BACKLOG (section "Full MVP: platform (PF) and front office (FO)" on `lead/2026-11-07-lead31`), starts builder lanes at the founder's typed turns, asks the founder questions, holds AUD-1 (audit), the case side, firm walls and the identity join. Earlier holders: Lead 37, Lead 38 (their rulings stand).
 
 ## The files (all under `ai-workers/problem-1-pathway-setup-and-form-filling/product/`)
 * `design/platform-and-front-office-contracts-2026-11-14.md` — contracts, draft 4; **§7 is binding** and overrides earlier lines; §0.8 sizing (P-562).
@@ -154,3 +154,6 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 16:19 IST: Lead 46 reported FO-1a #1742 red (fo_firm_fixed clash with merged FO-1b; FO-1a's stamp is older).
   * Lead B confirmed it from the CI log, posted the fix on #1742 (comment 6876146313) and sent it to the FO-1a cloud lane (one-way; not confirmed read).
   * Rows rev 15.2: per-area function prefixes and the later-stamp rule, added to every brief.
+* 14 Nov 17:08 IST: the current Lead and release holder is now **Lead 47** (`local_a358e18f…`).
+  * The FO-1a lane applied the fix: it merged main (4cb10ae08) and re-stamped its migration as 20261114153000 with fo_sales_ function names (421f887ce). Reviewer round 6 approved it at 421f887ce, and the head is f364eb377.
+  * `ci` is pending and the PR has no label: the release holder relabels on green.
