@@ -507,3 +507,21 @@ Source: `product/design/case-side-contract-v0.1-2026-11-14.md` on `lead/2026-11-
   * PF-25w (the staff-only address change).
 
 **Shared check:** `check_pf3_platform_schema.ts:80` leaves out the keys later rows add through a named list, `ADDED_BY_LATER_ROWS` (P-601 first: `agent/complaint:`). Each later row that adds catalogue keys extends that list, and asserts its own rows exactly.
+
+## Rev 16.5 (14 Nov 20:27 IST, Lead B (3)): the environment setting fails closed (Lead 49, from PF-4 #1744)
+
+**Why:**
+* PF-4's `identityConfig` defaults `PLATFORM_ENVIRONMENT` to `local`, and `local` allows the local sign-in stand-in.
+* A production deploy that forgets the setting would run as `local`.
+
+**Best practice:** fail closed. Never default to the most permissive setting.
+* **PF-24w (new, S, reviewer only):**
+  * after PF-4 and PF-24 merge, PF-24's configuration loader takes over PF-4's environment reads (`PLATFORM_ENVIRONMENT`, `PLATFORM_IDENTITY`, `PLATFORM_LOCAL_SECRET`, the Cognito settings);
+  * `PLATFORM_ENVIRONMENT` becomes **required, with no default**: missing → the app refuses to start, naming the setting;
+  * `start.sh`, `deploy/compose.test.yml`, CI and the test helpers set `local` or `test` explicitly.
+  * **Touch:** `api/src/platform/identity/port.ts` (the read only), `api/src/platform/config/*.ts`, those launch files (one line each; the release holder's OK as shared files), `tests/check_pf24w_environment.ts`.
+  * **Done when** (a pass and a fail each): an unset `PLATFORM_ENVIRONMENT` stops start with its name; `local` with `PLATFORM_IDENTITY=local` starts; `production` with `PLATFORM_IDENTITY=local` is refused (already PF-4's rule, kept); every existing suite and the demo reset pass with the explicit settings.
+  * **Waits on:** PF-4, PF-24.
+* **PF-8 (cloud deploy, only named so far): Done when adds:**
+  * the task definition sets `PLATFORM_ENVIRONMENT=production` and `PLATFORM_IDENTITY=cognito` explicitly;
+  * the deploy smoke test proves the running service refuses the local sign-in stand-in (a local token → 401) and that `/api/health/ready` reports `environment: production`, never `local`.
