@@ -1,0 +1,72 @@
+NOTICE:  database "xr_studio_qa_bk13" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.
+isolated qa_bk13 on http://localhost:4470 (xr_studio_qa_bk13), stops itself in 60 min
+PASS  BK-13 (P-449, P-452): no code in engine/, api/src/, web/src/ or the p5 files the studio runs names the Study permit (its key, its name, IMM 1294, IMM 1295; 454 files read) — []
+PASS  setup: Demo › Load the configured checkpoint
+PASS  BK-13: row 10 released the Study permit through submit, the SME's ticks and a different person's approval — ["Visitors › Visitor visa","Study permits › Study permit › Outside Canada","Work permits › Employer-specific work permit › With an LMIA – inside Canada","Provincial nominees › Express Entry stream","Family sponsorship › Spouse or common-law partner"]
+PASS  BK-13: the Study permit has a release
+PASS  BK-13 data: every form rule of samples/form-setup.json is a form line of the release, with its who (7) — []
+PASS  BK-13 data: every form line has a published field map on the release (8 lines) — []
+PASS  BK-13 data: every cited document line is on the release with its data file's own quote (6: documentsCited and the CAQ line) — []
+PASS  BK-13: the Study permit's Sample case opens from its data (SAMPLE-SP-FAMILY-1, 3 people) — {"status":201,"ref":"SAMPLE-SP-FAMILY-1","people":3}
+PASS  BK-13: every answer of the Sample file is taken (none refused) and no copy is refused — {"refused":[],"copies":[]}
+PASS  BK-13: the parents of the student and the spouse are answered and confirmed on the officer's routes (4 relatives) — {"refusedRel":[],"answered":{"b544ad43-ed62-4435-8d88-458e7881ea68/parent_1":8,"b544ad43-ed62-4435-8d88-458e7881ea68/parent_2":8,"df74f4f8-8587-475a-b037-eac51a499ecf/parent_1":8,"df74f4f8-8587-475a-b037-eac51a499ecf/parent_2":8}}
+PASS  BK-13: the student files IMM 1294, IMM 5476, IMM 5707; the spouse IMM 1295, IMM 5476, IMM 5707; the child IMM 5257, IMM 5476 (each their own application, BK-16) — ["Student A (Sample): IMM 1294, IMM 5476, IMM 5707","Spouse (Sample): IMM 1295, IMM 5476, IMM 5707","Child (Sample): IMM 5257, IMM 5476"]
+PASS  BK-13: IMM 1294 for Student A (Sample) is generated, its file intact, and the filler's read-back equals what it wrote (70 form fields) — {"finished":true,"status":"GENERATED","intact":true,"rb":70,"written":70}
+PASS  BK-13: IMM 1294 for Student A (Sample) read back from the PDF: each of its 70 written form fields holds a value; each list field holds one of its export values — {"written":70,"read":76,"empty":[],"badChoice":[]}
+PASS  BK-13 bar (row 12, #1574 §8): IMM 1294 for Student A (Sample): nothing by hand — []
+PASS  BK-13 bar (row 12, #1574 §8): IMM 1294 for Student A (Sample): no answer it writes "needs a fix" — []
+PASS  BK-13: IMM 5476 for Student A (Sample) is generated, its file intact, and the filler's read-back equals what it wrote (21 form fields) — {"finished":true,"status":"GENERATED","intact":true,"rb":21,"written":21}
+PASS  BK-13: IMM 5476 for Student A (Sample) read back from the PDF: each of its 21 written form fields holds a value; each list field holds one of its export values — {"written":21,"read":31,"empty":[],"badChoice":[]}
+PASS  BK-13 bar (row 12, #1574 §8): IMM 5476 for Student A (Sample): nothing by hand — []
+PASS  BK-13 bar (row 12, #1574 §8): IMM 5476 for Student A (Sample): no answer it writes "needs a fix" — []
+PASS  BK-13: IMM 5707 for Student A (Sample) is generated, its file intact, and the filler's read-back equals what it wrote (39 form fields) — {"finished":true,"status":"GENERATED","intact":true,"rb":39,"written":39}
+PASS  BK-13: IMM 5707 for Student A (Sample) read back from the PDF: each of its 39 written form fields holds a value; each list field holds one of its export values — {"written":39,"read":40,"empty":[],"badChoice":[]}
+PASS  BK-13 bar (row 12, #1574 §8): IMM 5707 for Student A (Sample): nothing by hand — []
+PASS  BK-13 bar (row 12, #1574 §8): IMM 5707 for Student A (Sample): no answer it writes "needs a fix" — []
+PASS  BK-13: IMM 1295 for Spouse (Sample) is generated, its file intact, and the filler's read-back equals what it wrote (47 form fields) — {"finished":true,"status":"GENERATED","intact":true,"rb":47,"written":47}
+PASS  BK-13: IMM 1295 for Spouse (Sample) read back from the PDF: each of its 47 written form fields holds a value; each list field holds one of its export values — {"written":47,"read":57,"empty":[],"badChoice":[]}
+PASS  BK-13 bar (row 12, #1574 §8): IMM 1295 for Spouse (Sample): nothing by hand — []
+PASS  BK-13 bar (row 12, #1574 §8): IMM 1295 for Spouse (Sample): no answer it writes "needs a fix" — []
+PASS  BK-13: IMM 5476 for Spouse (Sample) is generated, its file intact, and the filler's read-back equals what it wrote (21 form fields) — {"finished":true,"status":"GENERATED","intact":true,"rb":21,"written":21}
+PASS  BK-13: IMM 5476 for Spouse (Sample) read back from the PDF: each of its 21 written form fields holds a value; each list field holds one of its export values — {"written":21,"read":31,"empty":[],"badChoice":[]}
+PASS  BK-13 bar (row 12, #1574 §8): IMM 5476 for Spouse (Sample): nothing by hand — []
+PASS  BK-13 bar (row 12, #1574 §8): IMM 5476 for Spouse (Sample): no answer it writes "needs a fix" — []
+PASS  BK-13: IMM 5707 for Spouse (Sample) is generated, its file intact, and the filler's read-back equals what it wrote (39 form fields) — {"finished":true,"status":"GENERATED","intact":true,"rb":39,"written":39}
+PASS  BK-13: IMM 5707 for Spouse (Sample) read back from the PDF: each of its 39 written form fields holds a value; each list field holds one of its export values — {"written":39,"read":40,"empty":[],"badChoice":[]}
+PASS  BK-13 bar (row 12, #1574 §8): IMM 5707 for Spouse (Sample): nothing by hand — []
+PASS  BK-13 bar (row 12, #1574 §8): IMM 5707 for Spouse (Sample): no answer it writes "needs a fix" — []
+PASS  BK-13: IMM 5257 for Child (Sample) is generated, its file intact, and the filler's read-back equals what it wrote (63 form fields) — {"finished":true,"status":"GENERATED","intact":true,"rb":63,"written":63}
+PASS  BK-13: IMM 5257 for Child (Sample) read back from the PDF: each of its 63 written form fields holds a value; each list field holds one of its export values — {"written":63,"read":69,"empty":[],"badChoice":[]}
+PASS  BK-13 bar (row 12, #1574 §8): IMM 5257 for Child (Sample): nothing by hand — []
+PASS  BK-13 bar (row 12, #1574 §8): IMM 5257 for Child (Sample): no answer it writes "needs a fix" — []
+PASS  BK-13: IMM 5476 for Child (Sample) is generated, its file intact, and the filler's read-back equals what it wrote (21 form fields) — {"finished":true,"status":"GENERATED","intact":true,"rb":21,"written":21}
+PASS  BK-13: IMM 5476 for Child (Sample) read back from the PDF: each of its 21 written form fields holds a value; each list field holds one of its export values — {"written":21,"read":31,"empty":[],"badChoice":[]}
+PASS  BK-13 bar (row 12, #1574 §8): IMM 5476 for Child (Sample): nothing by hand — []
+PASS  BK-13 bar (row 12, #1574 §8): IMM 5476 for Child (Sample): no answer it writes "needs a fix" — []
+PASS  BK-13: fees worked out from samples/fee-table.json, each person's lines from the table's roles, each its table amount and source; total CAD 675 = the table's CAD 675 — {"why":null,"missingLines":[],"extraLines":[],"wrong":[],"total":675,"expected":675}
+PASS  BK-13: one filing per person, named by the document it is for — ["Study permit (outside Canada): Student A (Sample)","Work permit: Spouse (Sample)","Visitor visa: Child (Sample)"]
+
+| Form | Person | Channel | Written | By hand | Blank | Not written | Read back | Fill trial |
+|---|---|---|---|---|---|---|---|---|
+| IMM 1294 | Student A (Sample) | PDF_UPLOAD | 70 | 0 | 17 | 82 | equal | none recorded |
+| IMM 5476 | Student A (Sample) | PDF_UPLOAD | 21 | 0 | 0 | 13 | equal | none recorded |
+| IMM 5707 | Student A (Sample) | PDF_UPLOAD | 39 | 0 | 0 | 0 | equal | passed |
+| IMM 1295 | Spouse (Sample) | PDF_UPLOAD | 47 | 0 | 17 | 101 | equal | passed |
+| IMM 5476 | Spouse (Sample) | PDF_UPLOAD | 21 | 0 | 0 | 13 | equal | none recorded |
+| IMM 5707 | Spouse (Sample) | PDF_UPLOAD | 39 | 0 | 0 | 0 | equal | passed |
+| IMM 5257 | Child (Sample) | PDF_UPLOAD | 63 | 0 | 17 | 86 | equal | passed |
+| IMM 5476 | Child (Sample) | PDF_UPLOAD | 21 | 0 | 0 | 13 | equal | none recorded |
+
+Copies: 8; by hand: 0; "needs a fix": 0; fees CAD 675.
+WAIT  (the Mac's evidence, BK-20 / dry-run D1, not judged here) IMM 1294 for Student A (Sample): IMM 1294: no fill trial is recorded for edition IMM 1294 (06-2026), so this copy is for checking only, not for filing.
+WAIT  (the Mac's evidence, BK-20 / dry-run D1, not judged here) IMM 5476 for Student A (Sample): IMM 5476: no fill trial is recorded for edition IMM 5476 (11-2021), so this copy is for checking only, not for filing.
+WAIT  (the Mac's evidence, BK-20 / dry-run D1, not judged here) IMM 5476 for Spouse (Sample): IMM 5476: no fill trial is recorded for edition IMM 5476 (11-2021), so this copy is for checking only, not for filing.
+WAIT  (the Mac's evidence, BK-20 / dry-run D1, not judged here) IMM 5476 for Child (Sample): IMM 5476: no fill trial is recorded for edition IMM 5476 (11-2021), so this copy is for checking only, not for filing.
+
+45/45 passed
+Exit (b): 45/45 checks pass; 0 GAP (BK-22: 0, BK-23: 0); 0 FAIL. Met: every check passes.
+EXIT=0
+zsh: can't open input file: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/isolated.sh
