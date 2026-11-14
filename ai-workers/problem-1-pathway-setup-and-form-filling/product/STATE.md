@@ -29,7 +29,7 @@ Older pointer lines: `history/STATE-2026-11-13-2245-lead37s2-old-pointer-lines.m
 | A64 | 16:1x (14 Nov, spoken, restated) use and improve the strategy desk: high-grade strategist for research and challenges, effort per benchmarks | **Strategy desk 05 opened 16:1x (`local_3f793d6b`, Fable, high effort); track file "strategy-desk-05-track" (14 Nov) in the side-session-notes folder local_b5840dd3… (outside the repository); step 1 board challenge, step 3 improve the desk** |
 
 ## For the founder (P-390)
-F2, F8 open (demo looks); F14-F19 ruled; both lines word for word in `history/STATE-2026-11-14-0910-lead41s2-founder-asks-pointer-rows.md`.
+F2, F8 open (demo looks); F14-F19 ruled; word for word in `history/STATE-2026-11-14-1700-lead46s2-for-founder-and-leads-lines.md`.
 
 ## Start here (next Lead)
 🟥 **Hard rule P-557 (AGENTS.md rule 10): always committed, always resumable**: push at every step; this page says what is true, in flight and next, updated with every change of state. Private folders not yet on GitHub (to move to `ours/notes` of his private API copy): research stream 4 under side-session-notes `local_b5f4d7c1…/research-stream-4/`; Lead notes under `local_01c09e17…/` (one-day test brief).
@@ -42,5 +42,5 @@ F2, F8 open (demo looks); F14-F19 ruled; both lines word for word in `history/ST
 **To-do (Lead 11):** word for word in `history/STATE-2026-11-14-0910-lead41s2-founder-asks-pointer-rows.md`.
 
 ## Leads, in order
-**Series 2 (P-433, from 9 Nov 17:48 IST; the current Lead is the one `current_lead:` names):** **Lead 40 (series 2, local_7a6756d1)** (from 07:5x IST 14 Nov) · Lead 39 (series 2, local_84c512dc) (05:2x-07:5x IST 14 Nov) · Leads 1-38 word for word in `history/STATE-2026-11-14-0745-lead39s2-series2-leads-line.md`. Standbys: **Lead 47 `local_a358e18f`** (first); Lead 48 to start. **Lead 45 (series 2, local_24e909a3) 13:48-15:5x IST 14 Nov.** Lead 42 (series 2, local_110605c6) 09:51-11:21 IST 14 Nov; Lead 41 (series 2, local_eb5559e3) 09:02-09:50. **Lead B (`local_9bced770`, from 22:1x 13 Nov, P-558): platform + front office, own worktree; its state file is lead-b-state in `design/` on its branch.**
+**Series 2 (P-433):** current = `current_lead:`; **Lead 46 (series 2, local_3cc8e2ba) from 15:46 IST 14 Nov**; Lead 45 (local_24e909a3) 13:48-15:4x; earlier and Lead B: word for word in `history/STATE-2026-11-14-1700-lead46s2-for-founder-and-leads-lines.md`. Standbys: **Lead 47 `local_a358e18f`** (first), **Lead 48 `local_1aede380`**.
 **Series 1: Leads 1 to 41, before 9 Nov 17:48 IST**, never renamed or renumbered: the full list, word for word, is in `history/STATE-2026-11-09-2130-lead2s2.md` ("Leads, in order").
