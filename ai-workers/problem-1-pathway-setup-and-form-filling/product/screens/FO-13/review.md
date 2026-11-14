@@ -92,3 +92,57 @@ At 8d10d6514726d7f4a4733e249c79189d7b4f9d8b, three Majors are open. To fix:
 Then list m1-m6 in the PR as fixed or carried to FO-13c/FO-13i. The re-review reads only the diff.
 
 **Verdict: Block** (8d10d6514726d7f4a4733e249c79189d7b4f9d8b)
+
+## Round 2: head 110ace57 (diff from 8d10d651 only, P-277)
+**What changed:**
+* Migration: `fo_compliance_long_text_ok`, `fo_compliance_no_document_number` and `fo_compliance_staff_active` are new; the update trigger becomes `fo_compliance_conflict_check_write` (INSERT and UPDATE); there is a new identity INSERT trigger; every function has a fixed `search_path`.
+* The conflict check's comment in the schema file now lists the match keys; the erasure comment is added.
+* The FO-1b test line (845b8f01) is narrowed; the FO-13 test grows to 76 cases.
+* This review.md and break-report.md are committed. My review.md is unchanged from my copy.
+
+**Checks,** from a `git archive` of 110ace57 (suites' own databases, plus my scratch `xr_rev_fo13_r2`, all dropped; never :4400 or `xr_studio`):
+* `check_fo13_compliance_schema.ts` **76/76**; `check_fo1b_booking_schema.ts` **80/80** (M3 closed); `check_pf3_platform_schema.ts` **75/75**; `check_prisma_schema.ts` **8/8**; `prisma validate` valid.
+* The rollback in the header, run as written: 0 `fo_compliance_*` functions left, and the migration re-applies.
+
+**My round-1 probes, repeated:**
+* **M1 fixed.**
+  * A waiting check refuses a consent reference, both at insert and by a later update (consent_check).
+  * The confirmer can now record CONFLICT_CANNOT_ACT on a waiting check (`confirmed_at` set by the database).
+  * Waiting → POTENTIAL_CONFLICT confirmed with a disclosure, then the consent: accepted.
+* **M2 fixed.**
+  * A disclosure of `\r\n\r\n` paragraphs and a tab is stored (psql and Prisma).
+  * `\x01` is refused, and so is a disclosure of only line breaks.
+* **m1 closed.**
+  * Prisma `create` with `confirmedBy` is refused ("confirmed afterwards, by another person").
+  * A supplied `checkedAt` of 1900 is replaced by the database's time.
+  * The confirm `update` (only `confirmedBy` and `result`) gets `confirmed_at` from the database.
+  * A DEACTIVATED checker is refused on a new check. A check whose checker has since left still takes its consent reference, which is correct.
+* **m2 closed.** `clientId` and `roleOnCase` are accepted on CASE matches only, and the comment says what `recordId` is. Main's case numbers (`C-YYYY-NNNNN`, `a24_case_number` migration) fit the new `caseNumber` shape.
+* **m4 closed for the columns.**
+  * `method_detail` refuses `Passport AB 1234567`. The copy key is only words and uuids.
+  * `recordId` is a uuid.
+* **Race:** two confirmers at once give one winner and "the confirmation is given once".
+
+**Mutations** (export only; each rule removed alone): consent `=`; disclosure `=`; disclosure back to the one-line rule; the insert-confirmed refusal; the conflict and identity `checked_at := now()`; `confirmed_at := now()`; the active-staff test; the matches' `search_path`; the document-number note rule; the duplicate-record rule; score precision. Each turns the test red (1 failure, or a non-zero abort).
+
+**New Minors (none blocks; notes for FO-13c / FO-13i):**
+* **n1: one guard line has no test.** Removing `OR NEW.matches::text IS DISTINCT FROM OLD.matches::text` leaves 76/76. The 4-decimal rule now covers break 6; what is left is only a `0.5`→`0.50` rewrite, which keeps the value. Add a fail test, or drop the line.
+* **n2: the active-staff check takes no lock** (`fo_compliance_staff_active`). A deactivation committing at the same moment as a confirmation can let both through. This is a soft-state race of FO-1b's m11 class.
+* **n3: the next rows must shape their values.**
+  * A raw similarity score such as `0.4166667` is refused: FO-13c rounds to 4 decimals.
+  * `roleOnCase` must be UPPER_SNAKE, and uuids lower case.
+  * The note heuristic also refuses honest reference numbers (`HR letter ref HR-2026-0042`, `meeting ID 123456789`): FO-13i shows a plain message for the constraint name.
+
+**Before the label (records, not code):** the PR body at this head does not yet carry what this round leaves to the PR text. Add:
+* m3 (an explicit `::varchar(4)` cast keeps the first 4) and m5 (CHECK, not the brief's trigger), as notes for FO-13i;
+* break 4 handed to the tech lead as PF-12's;
+* n1-n3.
+B5/B6/B7/B9 are closed in the migration (my mutations 10, 12 and 13 cover B9, B7 and B6); B10/B11 remain PostgreSQL behaviour, carried as m3 and m6.
+
+**Journey score:** with M1 and M2 fixed, "Task completed", "Correct data" and "Error recovery" rise to 1, giving 8 of 8 applicable, **10 / 10**.
+
+No Blocker or Major is open at 110ace57662b5efe1ed5cae9e4d8b46c37411cc7.
+
+Round 2 verdict (110ace57): Approve.
+
+**Verdict: Approve** (110ace57662b5efe1ed5cae9e4d8b46c37411cc7)
