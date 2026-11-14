@@ -55,7 +55,7 @@ for (const k of ["PLATFORM_IDENTITY", "PLATFORM_ENVIRONMENT", "PLATFORM_SAMPLE_S
 const { ConfigReadGuard, Db } = await import("../api/src/core.ts");
 const { seedSampleFirms, readSampleFirms } = await import("../api/src/platform/seed-sample-firms.ts");
 const { readSetting, writeSetting, SettingRefused } = await import("../api/src/platform/settings.ts");
-const { PlatformClock, identityConfig } = await import("../api/src/platform/identity/port.ts");
+const { PlatformClock, IdentityRefused, identityConfig } = await import("../api/src/platform/identity/port.ts");
 const { LocalIdentity } = await import("../api/src/platform/identity/local.ts");
 const { CognitoIdentity } = await import("../api/src/platform/identity/cognito.ts");
 const { IDENTITY_PORT, PlatformIdentity, ONLY_OWNER, ANOTHER_DEVICE, emailOf } = await import("../api/src/platform/identity/service.ts");
@@ -308,7 +308,7 @@ try {
   ok("PF-4 pass: a person saves their own licence record (no key needed); the answer does not echo the number", ownCred.status === 200 && !JSON.stringify(ownCred.body).includes(NUMBER), ownCred);
   const tO2 = await tokenOf("user-T").catch(() => "");
   const otherCred = tO2 && await call(L.base, "PUT", `/api/platform/staff/${O}/credential`, { token: tO2, body: { representativeType: "RCIC", licensingBody: "CICC", licenceNumber: "R1111111" } });
-  ok("PF-4 fail: another person's licence record needs agent/firm-credential:manage (a Case Manager without it → 403)",
+  ok("PF-4 pass/fail: another person's licence record needs agent/firm-credential:manage (user-T, Owner by now, holds it; the refusal itself is proven with a Read-only person below)",
     !!otherCred && (otherCred.status === 403 || (await call(L.base, "GET", "/api/platform/me", { token: tO2 })).body.keys.includes("agent/firm-credential:manage")), otherCred);
 
   // ------------------------------------------------------------- the breaker's findings at 695051a3 (break-report.md)
@@ -362,6 +362,39 @@ try {
   const junk = await call(L.base, "GET", "/api/platform/me", { token: `${tR}!!` });
   ok("PF-4 fail (break m7): a stand-in token with junk after its signature → 401", junk.status === 401, junk);
 
+  // ------------------------------------------------------------- the reviewer's Minors at 695051a3 (review.md m2, m3)
+  const reader = await db.platformStaff.create({ data: { firmId: FIRM_A, email: "reader@sample-firm.example.com", displayName: "Reader (Sample)", status: "ACTIVE" } });
+  await db.platformRoleGrant.create({ data: { firmId: FIRM_A, staffId: reader.id, role: "READ_ONLY", grantedBy: "check" } });
+  const tReader = (await call(L.base, "POST", "/api/platform/session/local", { body: { firmKey: "sample-firm", email: "reader@sample-firm.example.com", secondStep: true } })).body.token as string;
+  const readerKeys = (await call(L.base, "GET", "/api/platform/me", { token: tReader })).body.keys as string[];
+  const readerOther = await call(L.base, "PUT", `/api/platform/staff/${O}/credential`, { token: tReader, body: { representativeType: "RCIC", licensingBody: "CICC", licenceNumber: "R3333333" } });
+  const readerOwn = await call(L.base, "PUT", `/api/platform/staff/${reader.id}/credential`, { token: tReader, body: { representativeType: "RCIC", licensingBody: "CICC", licenceNumber: "R4444444" } });
+  ok("PF-4 fail (review m2): a person without agent/firm-credential:manage cannot change another person's licence record (403); their own saves (200)",
+    !readerKeys.includes("agent/firm-credential:manage") && readerOther.status === 403 && readerOther.body.code === "NOT_ALLOWED" && readerOwn.status === 200, [readerOther.status, readerOwn.status]);
+  for (const i of (await call(L.base, "GET", "/api/platform/staff/invitations", { token: tR })).body.invitations as { id: string; status: string }[]) if (i.status === "PENDING") await call(L.base, "POST", `/api/platform/staff/invitations/${i.id}/revoke`, { token: tR });
+  sql(DB, `update platform_staff set status = 'SUSPENDED' where id = '${extra.id}'`);
+  const withSuspended = await call(L.base, "POST", "/api/platform/staff/invitations", { token: tR, body: { email: "seat.five@example.com", roles: ["READ_ONLY"] } });
+  sql(DB, `update platform_staff set status = 'DEACTIVATED' where id = '${extra.id}'`);
+  const afterSuspended = await call(L.base, "POST", "/api/platform/staff/invitations", { token: tR, body: { email: "seat.five@example.com", roles: ["READ_ONLY"] } });
+  ok("PF-4 fail (review m2): a suspended person holds a seat (4 active + 1 suspended = 5 of 5 → 409); deactivated, the seat is free (201)",
+    withSuspended.status === 409 && withSuspended.body.seatsUsed === 5 && afterSuspended.status === 201, [withSuspended.body, afterSuspended.status]);
+  let t2 = clock.now();
+  const l2 = new LocalIdentity("pf4-check-signing-key-0123456789abcdef", () => t2), lOther = new LocalIdentity("another-signing-key-0123456789abcdefgh", () => t2);
+  const good = l2.issue(R, { authTimeMs: t2, secondStep: true }), [h2, p2, sig2] = good.split(".");
+  const forgedSub = `${h2}.${Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(p2, "base64url").toString()), sub: O })).toString("base64url")}.${sig2}`;
+  const refusedBy = async (token: string, code?: string) => throwsLike(() => l2.verify(token), (e) => e instanceof IdentityRefused && (!code || e.code === code));
+  const verifiedNow = await l2.verify(good).then((v) => "staffId" in v.lookup && v.lookup.staffId === R, () => false);
+  ok("PF-4 fail (review m2): the stand-in refuses a changed payload under the old signature, and a token signed with another key; it accepts its own",
+    verifiedNow && await refusedBy(forgedSub) && await refusedBy(lOther.issue(R, { authTimeMs: t2, secondStep: true })));
+  t2 += 3601 * 1000;
+  ok("PF-4 fail (review m2): the stand-in refuses its own token after its hour (TOKEN_EXPIRED)", await refusedBy(good, "TOKEN_EXPIRED"));
+  const ctxR = await identity.authenticate(tR);
+  sql(DB, `update platform_role_grant set ended_at = now(), ended_by = 'check', end_reason = 'review m3' where staff_id = '${R}' and role = 'CASE_MANAGER' and ended_at is null`);
+  const raced = await identity.changeRoles(ctxR, reader.id, { roles: ["READ_ONLY", "CASE_OFFICER"] }).then(() => null, (e) => e as { getStatus?: () => number; getResponse?: () => { code?: string } });
+  ok("PF-4 fail (review m3): a change sent with roles that changed meanwhile (read again under the firm lock) is refused 409 ROLES_CHANGED, nothing saved",
+    raced?.getStatus?.() === 409 && raced.getResponse?.().code === "ROLES_CHANGED" && sql(DB, `select count(*) from platform_role_grant where staff_id = '${reader.id}' and ended_at is null`) === "1", raced?.getResponse?.());
+  await db.platformRoleGrant.create({ data: { firmId: FIRM_A, staffId: R, role: "CASE_MANAGER", grantedBy: "check" } });
+
   // ---------------------------------------------------- every change writes one audit line, in its transaction
   sql(DB, `create function pf4_force_audit_fail() returns trigger language plpgsql as $$ begin if new.action = 'platform.staff.deactivated' then raise exception 'pf4 forced audit failure'; end if; return new; end $$;
     create trigger pf4_force_audit_fail before insert on audit_event for each row execute function pf4_force_audit_fail()`);
@@ -391,8 +424,10 @@ try {
 
   // ----------------------------------------------------------------- settings: PF-3 review m4, m10; demo reset B-6
   const zone = async (v: string) => writeSetting(db, { firmId: FIRM_A, key: "platform.time_zone", value: v, by: "check", workspaceId: await platformAuditWorkspaceId(db) }).then(() => true, () => false);
-  ok("PF-4 fail (PF-3 review m10): a time zone in other capitals is refused (America/TORONTO, AMERICA/Toronto, Asia/KOLKATA)", !(await zone("America/TORONTO")) && !(await zone("AMERICA/Toronto")) && !(await zone("Asia/KOLKATA")));
-  ok("PF-4 pass (m10): IANA's own spellings are accepted (America/Toronto, Asia/Kolkata, Europe/Kyiv, Etc/GMT+5, UTC)", (await zone("Asia/Kolkata")) && (await zone("Europe/Kyiv")) && (await zone("Etc/GMT+5")) && (await zone("UTC")) && (await zone("America/Toronto")));
+  ok("PF-4 fail (PF-3 review m10; PF-4 review m6): a time zone in other capitals is refused (America/TORONTO, AMERICA/Toronto, Asia/KOLKATA, Asia/KolKata, ETC/GMT+5)",
+    !(await zone("America/TORONTO")) && !(await zone("AMERICA/Toronto")) && !(await zone("Asia/KOLKATA")) && !(await zone("Asia/KolKata")) && !(await zone("ETC/GMT+5")));
+  ok("PF-4 pass (m10): IANA's own spellings are accepted (America/Toronto, Asia/Kolkata, Europe/Kyiv, Etc/GMT+5, America/Port-au-Prince, Asia/Ho_Chi_Minh, UTC)",
+    (await zone("Asia/Kolkata")) && (await zone("Europe/Kyiv")) && (await zone("Etc/GMT+5")) && (await zone("America/Port-au-Prince")) && (await zone("Asia/Ho_Chi_Minh")) && (await zone("UTC")) && (await zone("America/Toronto")));
   ok("PF-4 pass (PF-3 review m4): the stored value_schema is as strict as JSON Schema can say (time zone pattern, two-step const true) and names the code's other checks",
     sql(DB, `select (value_schema ? 'pattern')::text || ':' || (value_schema->>'description' like '%checked in code%')::text from platform_setting_definition where key = 'platform.time_zone'`) === "true:true"
     && sql(DB, `select value_schema->>'const' from platform_setting_definition where key = 'platform.require_two_step'`) === "true");

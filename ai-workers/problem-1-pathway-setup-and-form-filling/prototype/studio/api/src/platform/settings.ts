@@ -150,15 +150,19 @@ const DAY = z.enum(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]);
 // break R2-3). PF-3 review m10 (Intl ignores case): a name that matches a zone this runtime lists, in any case, must be
 // spelled exactly as listed ("America/TORONTO" refused); a part listed in any zone ("America") must keep its listed
 // capitals ("AMERICA/Kolkata" refused); any other part (an IANA name ICU lists under its older spelling: "Kolkata",
-// "Kyiv") starts with a capital and has no run of four capitals ("UTC", "GMT+5" yes; "KOLKATA" no).
+// "Kyiv") keeps IANA's word case (UNLISTED_PART).
 const ZONE_NAME = /^(UTC|[A-Z][A-Za-z]+(\/[A-Z0-9][A-Za-z0-9_+-]*)+)$/;
 const LISTED = Intl.supportedValuesOf("timeZone");
 const LISTED_LOWER = new Map(LISTED.map((z) => [z.toLowerCase(), z]));
-const PART_LOWER = new Map(LISTED.flatMap((z) => z.split("/")).map((p) => [p.toLowerCase(), p]));
+const PART_LOWER = new Map(["Etc", ...LISTED.flatMap((z) => z.split("/"))].map((p) => [p.toLowerCase(), p]));
+// A part this runtime does not list keeps IANA's word case: each word capitalised ("Kolkata", "Ho_Chi_Minh"), short
+// lower-case joining words ("Port-au-Prince"), capitals of at most three letters ("UTC", "GMT+5"); "KolKata" is refused
+// (PF-4 review m6).
+const UNLISTED_PART = /^([A-Z][a-z]*|[A-Z]{1,3})([_-]([A-Z][a-z]*|[a-z]{1,3}|[A-Z]{1,3}))*([+-]\d{1,2})?$/;
 const exactSpelling = (s: string) => {
   const listed = LISTED_LOWER.get(s.toLowerCase());
   if (listed) return listed === s;
-  return s.split("/").every((p) => { const known = PART_LOWER.get(p.toLowerCase()); return known ? known === p : !/[A-Z]{4,}/.test(p); });
+  return s.split("/").every((p) => { const known = PART_LOWER.get(p.toLowerCase()); return known ? known === p : UNLISTED_PART.test(p); });
 };
 const isZone = (s: string) => { if (!ZONE_NAME.test(s) || !exactSpelling(s)) return false; try { new Intl.DateTimeFormat("en-CA", { timeZone: s }); return true; } catch { return false; } };
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) && new Date(`${s}T00:00:00Z`).toISOString().startsWith(s);
