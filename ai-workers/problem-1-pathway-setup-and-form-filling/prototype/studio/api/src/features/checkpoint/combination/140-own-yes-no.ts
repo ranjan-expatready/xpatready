@@ -18,7 +18,7 @@ export default {
       // Review M1 on #1272 (QA-318): a field the table names (the same question another form already asks) is that field.
       if (y.field && !yesNo.some((f) => f.canonicalFieldKey === y.field)) { formSetup(ctx).refused.push(`${y.label}: the library has no Yes/No field ${y.field} about the person, so it is not asked twice under a new one`); continue; }
       const same = y.field ? { canonicalFieldKey: y.field } : yesNo.find((f) => f.label && normalizeLabel(f.label) === normalizeLabel(y.label));
-      try { if (!ed) throw new Error(`${y.form ?? setup.application} has no PDF edition in the library`); await new OwnQuestions(db, ctx.audit).ask(ctx.author, ed.id, { dataPath: y.dataPath, reason: OWN_YES_NO_REASON, ...(same ? { field: same.canonicalFieldKey } : { label: y.label, meaning: y.meaning, nearReason: OWN_YES_NO_NEAR }), ...(y.question ? { question: y.question } : {}) }); } catch (e) { formSetup(ctx).refused.push(`${y.label}: ${ctx.said(e)}`); }
+      try { if (!ed) throw new Error(`${y.form ?? setup.application} has no PDF edition in the library`); await new OwnQuestions(db, ctx.audit).ask(ctx.author, ed.id, { dataPath: y.dataPath, reason: OWN_YES_NO_REASON, ...(same ? { field: same.canonicalFieldKey } : { label: y.label, meaning: y.meaning, nearReason: OWN_YES_NO_NEAR }), ...(y.question ? { question: y.question } : {}), ...(y.person ? { person: y.person } : {}) }); } catch (e) { formSetup(ctx).refused.push(`${y.label}: ${ctx.said(e)}`); }
     }
   },
 } satisfies CombinationStep;

@@ -1,6 +1,6 @@
 {
  "label": "Sample (BK-12): made-up answers for the made-up Study permit family's case (a student, the spouse, a child), saved and confirmed by api/src/sample-case.ts from samples/sample-cases.json. Never a client, never submitted. No value here is an IRCC value. Unconfirmed: expert. Legal: Unconfirmed: no counsel.",
- "source": "Made up for BK-12 (P-448, P-449: a pathway's Sample case is chosen in data). Only questions the Study permit's release asks are answered (an answer it does not ask is refused in words by the loader). BK-13 step 1 (P-449, P-481 S6): widened so the Study permit's forms can be written: every made-up answer the release asks of a single student of 20 studying outside Québec, with no representative-only release and no custodian. Option values are the release's own lists (for example IMM 1294's \"F Female\"). BK-13 step 2 (13 Nov): the walk's family, a married student of 30, the spouse (31, an open work permit) and a child of 9 who will not study (a visitor), each answered only where the release asks it of that person. BK-25 (14 Nov, P-449: data; BK-24's follow-ups F2, F3, F5): the student and the spouse answer the three questions IMM 1294 and IMM 1295 now ask as their own (applied to Canada before, ill treatment of prisoners or civilians, consent to be contacted; all No, made up), and the spouse has a made-up job since July 2018 (CLERK at SAMPLE TRADING COMPANY, MUMBAI), so IMM 1295's employment row 1, which its own Validate requires, is written. Each person's job row carries its own place, in the facts that person's form asks (IMM 1295 asks person.employment_*, IMM 1294 and IMM 5257 person.occupation_*); the one shared job_place, which named only person.occupation_*, is gone.",
+ "source": "Made up for BK-12 (P-448, P-449: a pathway's Sample case is chosen in data). Only questions the Study permit's release asks are answered (an answer it does not ask is refused in words by the loader). BK-13 step 1 (P-449, P-481 S6): widened so the Study permit's forms can be written: every made-up answer the release asks of a single student of 20 studying outside Québec, with no representative-only release and no custodian. Option values are the release's own lists (for example IMM 1294's \"F Female\"). BK-13 step 2 (13 Nov): the walk's family, a married student of 30, the spouse (31, an open work permit) and a child of 9 who will not study (a visitor), each answered only where the release asks it of that person. BK-25 (14 Nov, P-449: data; BK-24's follow-ups F2, F3, F5): the student and the spouse answer the three questions IMM 1294 and IMM 1295 now ask as their own (applied to Canada before, ill treatment of prisoners or civilians, consent to be contacted; all No, made up), and the spouse has a made-up job since July 2018 (CLERK at SAMPLE TRADING COMPANY, MUMBAI), so IMM 1295's employment row 1, which its own Validate requires, is written. Each person's job row carries its own place, in the facts that person's form asks (IMM 1295 asks person.employment_*, IMM 1294 and IMM 5257 person.occupation_*); the one shared job_place, which named only person.occupation_*, is gone. BK-25 (F4): both were physically present at their marriage ceremony (Yes, made up), as IMM 5707 asks of a married applicant and spouse.",
  "case": {
   "case.school_name": "SAMPLE COLLEGE",
   "case.study_field": "Computing/IT",
@@ -117,7 +117,8 @@
    "relationship.relationship_start_date": "2016-04-10",
    "person.previously_applied_to_canada": false,
    "person.ill_treatment_of_prisoners_or_civilians": false,
-   "person.consents_to_research_contact": false
+   "person.consents_to_research_contact": false,
+   "person.present_at_marriage_ceremony": true
   },
   "spouse_or_partner": {
    "person.bg_status_violation_canada": false,
@@ -151,10 +152,11 @@
    "job": {
     "person.employment_activity": "CLERK",
     "person.employment_employer": "SAMPLE TRADING COMPANY",
-    "person.employment_start_date": "2018-07-01",
+    "person.employment_start_date": "2018-07",
     "person.employment_city": "MUMBAI",
     "person.employment_country": "India"
-   }
+   },
+   "person.present_at_marriage_ceremony": true
   },
   "child": {
    "person.birth_city": "MUMBAI",

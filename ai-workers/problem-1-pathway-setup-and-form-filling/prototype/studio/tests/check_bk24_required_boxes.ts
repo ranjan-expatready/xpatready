@@ -21,7 +21,7 @@
 // written when the file holds a value in it. The copies are the walk's family, made by BK-13's replay on this copy (run
 // first when the copy has none: its exit code must be 0, its 45 checks). Sample people, made up; US$0, live AI off.
 // Some boxes stay open after this row (GAP lines, each naming its follow-up for the tech lead; any other open box FAILs);
-// BK-25 closed F2, F3 and F5 (each now FAILs when open).
+// BK-25 closed F2, F3, F4 and F5 (each now FAILs when open).
 //   zsh studio/tools/isolated.sh forms_bk24 4453 start && tsx studio/tests/check_bk24_required_boxes.ts 4453 xr_studio_forms_bk24
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -48,14 +48,12 @@ const short = (p: string) => p.replace(/^xfa\[0\]\.form\[0\]\./, "").replace(/^[
 
 // Open after this row, each with its follow-up (Question for the tech lead on the PR). A box listed here that is written
 // now PASSes; any open box not listed FAILs. Keyed "<form>|<role>|<box from the page on>".
-// BK-25 (P-533, P-449: data): F2 (consent), F3 (the spouse's employment row 1) and F5 (background 2c and 6) are written now
-// and no longer allowed open (samples/own-yes-no.json "sp.outside", samples/sample-student-answers.json): any of them open FAILs.
-// Only the two that need product code stay named, each a Question for the tech lead on BK-25's PR.
-const F1 = "follow-up F1: the study's city is a list that depends on the province (IMM 1294's own CityList, 4,516 cities); the filler writes no dependent list yet (p5/transforms.ts: code)";
-const F4 = "follow-up F4: for a married applicant and spouse the form's own Validate requires \"physically present at the marriage ceremony\"; the form prints a statement, not a question, and the spouse's row is about the spouse, which the own-question door cannot ask yet (code)";
+// BK-25 (P-533, P-449): F2 (consent), F3 (the spouse's employment row 1), F5 (background 2c and 6) by data, and F4 (IMM 5707's
+// "physically present at the marriage ceremony") through the own-question door, are written now and no longer allowed open
+// (samples/own-yes-no.json "sp.outside", samples/sample-student-answers.json): any of them open FAILs. Only F1 stays named.
+const F1 = "follow-up F1: the study's city is a list that depends on the province (IMM 1294's own CityList, 4,516 cities); the filler writes no dependent list yet (p5/transforms.ts: code, its own row)";
 const OPEN: Record<string, string> = {
   "IMM 1294|principal|Page3[0].DetailsOfStudy[0].PurposeRow1[0].CityTown[0].CityTown[0]": F1,
-  ...Object.fromEntries(["principal", "spouse_or_partner"].flatMap((r) => ["Applicant", "Spouse"].map((s) => [`IMM 5707|${r}|page1[0].SectionA[0].${s}[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]`, F4]))),
 };
 const gaps: string[] = [];
 

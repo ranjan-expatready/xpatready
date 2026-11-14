@@ -24,7 +24,7 @@ import { fieldReaders, readerWords, type FieldReader } from "./where-used.ts";
 import { nearLabels } from "./rule-facts.ts";
 import { landField } from "./proposals.ts";
 import { lockItem, refuseRetired } from "./library-items.ts";
-import { inFormText, printedQuestion, scriptRulesOf, scriptWords, yesNoCodes, type Box } from "./own-yes-no.ts";
+import { inFormText, printedQuestion, printedStatement, rowPeople, scriptRulesOf, scriptWords, yesNoCodes, type Box } from "./own-yes-no.ts";
 export { printedQuestion } from "./own-yes-no.ts";
 export { isWorkedOutYesNo } from "./library-changes.ts";
 
@@ -135,7 +135,17 @@ export class OwnQuestions {
     if (b.question && !unmapped) fail("A form field worked out from other answers is asked in the words its reading prints; quote the form's words only for a form field nothing fills yet.");
     const saved = (manifest() as { sha256?: string; path?: string; downloaded_utc?: string }[]).find((m) => m.sha256 === ed.sha256);
     if (b.question && !inFormText(saved?.path, b.question)) fail(`"${b.question}" is not in ${ed.editionLabel}'s own saved text, so it cannot be its question: quote the form exactly.`, HttpStatus.CONFLICT);
-    const question = b.question ?? printedQuestion(reading!.get(b.dataPath));
+    // BK-25 (P-170): a Yes/No box nothing fills yet that the form prints as a statement answered YES or NO (IMM 5707's "I was
+    // physically present at the marriage ceremony") is asked in those words, only when the form's saved text holds them.
+    const question = b.question ?? printedQuestion(reading!.get(b.dataPath)) ?? (unmapped ? printedStatement(reading!.get(b.dataPath), saved?.path) : null);
+    // BK-25: a box in a row about another person of the case (IMM 5707's spouse row) is about that person, as the row's other
+    // form fields are: the person named must be the one every mapped form field of its row names (the nearest block that
+    // holds any), never a guess.
+    if (b.person) {
+      if (!unmapped) fail("Only a form field nothing fills yet is asked about another person of its row.", HttpStatus.CONFLICT);
+      const named = rowPeople(effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id } }), (m) => m.dataPath, "draft"), b.dataPath);
+      if (named.length !== 1 || named[0] !== b.person) fail(`This form field's row is about ${named.length ? named.join(" and ") : "no one its other form fields name"}, not ${b.person}: name the person its row's other form fields name.`, HttpStatus.CONFLICT);
+    }
     if (!question) fail(`${ed.editionLabel}'s reading has no printed question for this form field (neither its heading nor its caption is a question), so it cannot be asked in the form's words: map it on its field map instead.`, HttpStatus.CONFLICT);
     const from = unmapped ? [] : recordedDerivation(cur!.transform)!.facts;
     if (!unmapped && !from.length) fail(`"${question}": ${CANNOT_CHECK}`, HttpStatus.CONFLICT);
@@ -189,7 +199,7 @@ export class OwnQuestions {
       // Israel passport, CR 330212), its map says so in the script's words, so its question's condition can be confirmed
       // on it (B86) from the form itself, never typed.
       const said = unmapped ? scriptWords(scriptRulesOf(ed.inventoryFile).find((r) => r.box === b.dataPath), reading!) : null;
-      const mapping = unmapped ? { outcome: "mapped", person: "form_subject", transform: was.asked!.transform, ...(said ? { condition: said } : {}) } : {};
+      const mapping = unmapped ? { outcome: "mapped", person: b.person ?? "form_subject", transform: was.asked!.transform, ...(said ? { condition: said } : {}) } : {};
       await reviseUnreleased(tx, fresh, { ...mapping, canonicalFieldKey: key, origin: "HUMAN", confidence: null, evidenceQuote: question!.slice(0, 500), reason: `${b.reason} (${actor.name}); ${source}`.slice(0, 500) }, actor.id, `"${question}" was released just now: look at it again.`);
       return { key, created, name, was };
     }, { timeout: 30_000, maxWait: 10_000 });

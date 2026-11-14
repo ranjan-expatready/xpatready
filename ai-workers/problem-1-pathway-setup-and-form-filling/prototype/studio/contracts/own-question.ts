@@ -12,6 +12,9 @@ export const OwnQuestion = z.object({
   reason: said.pipe(z.string().min(8, "Say why in a sentence (at least 8 characters).").max(300)),
   /** B116: the form's own question, quoted, for a form field nothing fills yet whose reading prints another box's words. */
   question: said.pipe(z.string().min(10, "Quote the form's question (10 characters or more).").max(500, "Keep the quoted question under 500 characters.")).optional(),
+  /** BK-25: for a form field nothing fills yet in a row about another person of the case (IMM 5707's spouse row), that
+   *  person's role on the form, as the row's other form fields name it ("subject_spouse_or_partner"). */
+  person: z.string().regex(/^subject_[a-z_]{1,60}$/, "Name the row's person as its other form fields do (subject_…).").optional(),
 }).strict();
 export const OwnQuestionUndo = z.object({ dataPath: z.string({ error: "Name the form field." }).min(1, "Name the form field.").max(300) }).strict();
 
