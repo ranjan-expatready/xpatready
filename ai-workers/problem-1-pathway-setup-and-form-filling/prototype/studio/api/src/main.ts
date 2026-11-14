@@ -229,6 +229,7 @@ async function main() {
   const port = Number(process.env.STUDIO_PORT ?? 4400);
   // P-214: a new feature registers itself in api/src/features/<feature>.ts, not in the @Module list above.
   await registerFeatures(AppModule);
+  await (await import("./platform/identity/sample-seed.ts")).seedSampleOnStart();   // P-571 (2), PF-4: PF-3's Sample seed after migrations, only with PLATFORM_SAMPLE_SEED=on (default off; never in production)
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: ["error", "warn"] });
   app.useBodyParser("json", { limit: "5mb" });
   app.useGlobalFilters(new ProblemErrors());

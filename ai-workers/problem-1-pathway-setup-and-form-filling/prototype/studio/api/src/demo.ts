@@ -572,6 +572,7 @@ export class Demo implements OnModuleInit {
     await this.sweepOrphans();
     const dir = VAR("demo");
     if (dir.startsWith(join(VAR_ROOT, "workspaces")) && existsSync(dir)) rmSync(dir, { recursive: true, force: true });
+    await (await import("./platform/identity/demo-reset.ts")).resetSampleFirmSettings(this.db);   // P-571 (1), PF-4: Sample firm settings back to seed through the settings write path (each change audited; platform audit lines are never deleted)
     this.ws.forget();
     const fresh = await this.ws.id();
     const after = { scope: await this.scope(fresh), preserved: this.preserved() };

@@ -2,8 +2,12 @@
 // key with a zod schema, a default and the permission key that may change it; a firm's value is read with the default
 // when unset; a write whose value fails the key's schema is refused; every change writes one audit_event line in its
 // own transaction (AUD-1 owns the trail; until it adds firm_id, the line carries the caller's workspace and the firm in its
-// entity key and detail). Known gap, for AUD-1 / the reset's owner: the demo reset deletes the workspace's audit lines
-// (and sweeps lines of no workspace), while platform rows stay, so after a reset a setting value has no trail.
+// entity key and detail). PF-4 (P-571 (1), B-6): platform callers pass the platform's own audit workspace
+// (identity/audit.ts), which the demo reset never deletes, and the reset returns the Sample firms' values through
+// writeSetting (identity/demo-reset.ts), so every value keeps its trail.
+// The zod schema in code is the authority (PF-3 review m4): the stored value_schema says as much as JSON Schema can (each
+// pattern, enum and constant), and names in its description the checks only code can make (a zone this runtime knows,
+// opening before closing, each day once).
 // Other modules register their own keys (e.g. front office's web-form defaults) by calling registerSetting.
 import { HttpException, HttpStatus } from "@nestjs/common";
 import type { Prisma, PrismaClient } from "@prisma/client";
@@ -97,8 +101,10 @@ export type SettingWrite = {
   value: unknown;
   /** Who changes it (the staff member's actor or staff id). */
   by: string;
-  /** audit_event's workspace column (required until AUD-1 adds firm_id): the request's workspace. */
+  /** audit_event's workspace column (required until AUD-1 adds firm_id): the platform's audit workspace (PF-4). */
   workspaceId: string;
+  /** Why, when the change is not a person's own edit (e.g. "demo reset"); kept on the audit line. */
+  reason?: string;
 };
 
 /** Saves a firm's value of a registered key and writes one audit line, in one transaction: a value that fails the key's
@@ -126,8 +132,8 @@ export async function writeSetting(db: DbOrTx, w: SettingWrite): Promise<{ key: 
     });
     await tx.auditEvent.create({ data: {
       workspaceId: w.workspaceId, actor: w.by, action: "platform.setting.change", entity: "platform_firm_setting",
-      entityKey: `${scope.firmId}:${w.key}`, summary: `Firm ${firm.key}: setting ${w.key} ${changed ? "changed" : "saved unchanged"}`.slice(0, 600),
-      detail: { firmId: scope.firmId, firmKey: firm.key, key: w.key, from, to: value },
+      entityKey: `${scope.firmId}:${w.key}`, summary: `Firm ${firm.key}: setting ${w.key} ${changed ? "changed" : "saved unchanged"}${w.reason ? ` (${w.reason})` : ""}`.slice(0, 600),
+      detail: { firmId: scope.firmId, firmKey: firm.key, key: w.key, from, to: value, ...(w.reason ? { reason: w.reason } : {}) },
     } });
     return { key: w.key, value: parsed.data, changed };
   };
@@ -141,15 +147,26 @@ const HHMM = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "a time as HH:MM (24-
 const DAY = z.enum(["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]);
 // An IANA name in its own spelling (capitals as IANA writes them: "america/toronto" is refused, break m-11) that this
 // runtime knows. Not compared with Intl's resolved name, which is ICU's older spelling (Asia/Calcutta for Asia/Kolkata;
-// break R2-3).
+// break R2-3). PF-3 review m10 (Intl ignores case): a name that matches a zone this runtime lists, in any case, must be
+// spelled exactly as listed ("America/TORONTO" refused); a part listed in any zone ("America") must keep its listed
+// capitals ("AMERICA/Kolkata" refused); any other part (an IANA name ICU lists under its older spelling: "Kolkata",
+// "Kyiv") starts with a capital and has no run of four capitals ("UTC", "GMT+5" yes; "KOLKATA" no).
 const ZONE_NAME = /^(UTC|[A-Z][A-Za-z]+(\/[A-Z0-9][A-Za-z0-9_+-]*)+)$/;
-const isZone = (s: string) => { if (!ZONE_NAME.test(s)) return false; try { new Intl.DateTimeFormat("en-CA", { timeZone: s }); return true; } catch { return false; } };
+const LISTED = Intl.supportedValuesOf("timeZone");
+const LISTED_LOWER = new Map(LISTED.map((z) => [z.toLowerCase(), z]));
+const PART_LOWER = new Map(LISTED.flatMap((z) => z.split("/")).map((p) => [p.toLowerCase(), p]));
+const exactSpelling = (s: string) => {
+  const listed = LISTED_LOWER.get(s.toLowerCase());
+  if (listed) return listed === s;
+  return s.split("/").every((p) => { const known = PART_LOWER.get(p.toLowerCase()); return known ? known === p : !/[A-Z]{4,}/.test(p); });
+};
+const isZone = (s: string) => { if (!ZONE_NAME.test(s) || !exactSpelling(s)) return false; try { new Intl.DateTimeFormat("en-CA", { timeZone: s }); return true; } catch { return false; } };
 const isDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) && new Date(`${s}T00:00:00Z`).toISOString().startsWith(s);
 
 export const TIME_ZONE = registerSetting({
   key: "platform.time_zone", ownerModule: "platform", changePermission: "agent/settings:edit",
   description: "The firm's time zone (an IANA zone name). Sample default America/Toronto, the zone the case side uses.",
-  schema: z.string().refine(isZone, "an IANA time zone, e.g. America/Toronto"), default: "America/Toronto",
+  schema: z.string().regex(ZONE_NAME).refine(isZone, "an IANA time zone, e.g. America/Toronto").describe("An IANA time zone name this runtime knows, in IANA's own capitals (checked in code: api/src/platform/settings.ts)"), default: "America/Toronto",
 });
 export const LANGUAGE = registerSetting({
   key: "platform.language", ownerModule: "platform", changePermission: "agent/settings:edit",
@@ -165,13 +182,15 @@ export const BUSINESS_HOURS = registerSetting({
   key: "platform.business_hours", ownerModule: "platform", changePermission: "agent/settings:edit",
   description: "Opening hours per weekday, in the firm's time zone; a day not listed is closed. Sample Mon-Fri 09:00-17:00.",
   schema: z.array(z.object({ day: DAY, opens: HHMM, closes: HHMM }).strict().refine((h) => h.opens < h.closes, "opens before it closes"))
-    .refine((a) => new Set(a.map((h) => h.day)).size === a.length, "each day once"),
+    .refine((a) => new Set(a.map((h) => h.day)).size === a.length, "each day once")
+    .describe("Each day once; each day opens before it closes (checked in code: api/src/platform/settings.ts)"),
   default: (["MON", "TUE", "WED", "THU", "FRI"] as const).map((day) => ({ day, opens: "09:00", closes: "17:00" })) as { day: z.infer<typeof DAY>; opens: string; closes: string }[],
 });
 export const CLOSED_DAYS = registerSetting({
   key: "platform.closed_days", ownerModule: "platform", changePermission: "agent/settings:edit",
   description: "Dates the firm is closed (YYYY-MM-DD, in its time zone); none by default.",
-  schema: z.array(z.string().refine(isDate, "a date as YYYY-MM-DD")).max(366).refine((a) => new Set(a).size === a.length, "each date once"),
+  schema: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isDate, "a date as YYYY-MM-DD")).max(366).refine((a) => new Set(a).size === a.length, "each date once")
+    .describe("Real calendar dates, each once (checked in code: api/src/platform/settings.ts)"),
   default: [] as string[],
 });
 export const EVERYONE_SEES_ALL = registerSetting({
@@ -181,6 +200,6 @@ export const EVERYONE_SEES_ALL = registerSetting({
 });
 export const REQUIRE_TWO_STEP = registerSetting({
   key: "platform.require_two_step", ownerModule: "platform", changePermission: "agent/security-policy:manage",
-  description: "Require two-step sign-in for all staff (AG-1-40, AG-16-24). Default off as AG01-3 says, until founder question 3 decides (Lead B recommends on); enforced at sign-in by PF-4.",
-  schema: z.boolean(), default: false,
+  description: "Require two-step sign-in for all staff (AG-1-40, AG-16-24): fixed on, not offered as a choice (question 3, decided by Lead B under P-566 (3), confirmed by the founder P-567; contracts §7 §1.2). Enforced at every request by the platform guard (PF-4).",
+  schema: z.literal(true), default: true as const,
 });
