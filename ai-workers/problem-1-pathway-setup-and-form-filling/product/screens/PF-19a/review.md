@@ -164,3 +164,58 @@ Nothing else in the diff weakens a round-1 "holds" item:
 * the stamp is unchanged.
 
 Verdict: Approve
+
+## Round 3 (diff since the Approve): `922474295..92f8982cc` (head `92f8982ccdfb510920df6f4013414236c4b70fac`)
+
+I read only that diff. `4f5e64f9e` changes only `review.md`. The code changes are in `consent-store.ts`, `ports/consent.ts` and the test. I also read the breaker's "Round 2" in `break-report.md` to see what each change answers.
+
+**Runs on `92f8982cc`:** `npx tsx tests/check_pf19a_messages_schema.ts` gave **75 passed, 0 failed**. PF-0p's untracked files were still in the tree.
+
+### What the diff answers
+* **R2-1 (Major, breaker): closed.**
+  * **How it works:** `record()` now writes a row as withdrawn when a withdrawal at or after its time already exists (`endingWithdrawal`, `ports/consent.ts:199-207`; `consent-store.ts:49-63`). It looks in three places, and the earliest withdrawal found wins:
+    * the copied row's own withdrawal;
+    * a `msg_consent_withdrawal` row for the copied row's person, channel and purpose;
+    * one for the new row's person, channel and purpose.
+  * **Why this is sound:**
+    * `>=` matches `withdraw()`'s `given_at <= at` and `decide()`'s strict `>`, so all three agree on a tie.
+    * `withdrawn_at >= given_at` holds by construction.
+    * The two lookups are `firmScope`d and use the `firm_id`-led withdrawal index.
+  * **The race case:** a row the record/withdraw race leaves with no `withdrawn_at` can no longer be copied back to life, because the lookup on the copied row's person finds the withdrawal. The gate itself was already right through `decide()`.
+  * **The fake** does the same.
+  * **Tested:** an older import recorded after an unsubscribe is stored withdrawn, and its Merge copy leaves the other person WITHDRAWN.
+* **R2-2 (Major, breaker) and R2-4: closed.** `notInFuture` stores a time inside the 5-minute slack as the clock's now, and still refuses anything later. So:
+  * a consent stamped ahead can be withdrawn;
+  * a withdrawal stamped ahead no longer blocks a real re-consent.
+
+  Both are tested.
+* **R2-6: closed.**
+  * The invisible set now covers U+034F, the Hangul fillers and U+2060-206F.
+  * A wording needs a letter or a digit after those are removed.
+  * Tested with fillers, bidi isolates and combining-accent-only text.
+* **My R2-m1: closed as a doc line** on `purposeNeeded` (`ports/consent.ts:174-177`). See R3-m1.
+
+### Left as known (each needs a line in the PR)
+* R2-3 = my R2-m2 (`+44 07700…`), R2-5 (no time ceiling in the database; the adapter clamps), R2-7 (non-ASCII addresses refused), R2-8 (fake parity), R2-9 (jurisdiction checked for format only), break 15 (consent locale vs wording locale).
+* I accept them all as Minor:
+  * Each of R2-5, R2-7, R2-8, R2-9 and break 15 either fails closed or sits behind the only writer, which is the adapter.
+* On R2-3:
+  * `+4407700900123` is not a valid UK E.164 number.
+  * The Italian argument is right against a general trunk-0 strip.
+  * A strip for each country that has a trunk prefix (UK +44, Germany +49, and similar) would be safe.
+  * PF-19b should confirm what the provider does with such a string before WhatsApp sending goes live.
+
+### New in this diff
+**R3-m1, Minor: the reply doc line says PF-19b allows a reply "before asking this gate"** (`ports/consent.ts:175-177`).
+* **The card:** AG-10-41 says the reply "passes the consent gate".
+* **Failure, read literally:** a STOP-suppressed number that writes in again could get a reply that no suppression check ever saw.
+* **Fix:** reword it to "PF-19b adds a reply path that still checks suppression (AG-10-41)". This is doc only and does not block.
+
+**R3-m2, Minor: test gap.** The R2-1 test's Merge copy takes its withdrawal from the copied row itself, which the import already has. So the lookup on the copied row's person (`consent-store.ts:59`) is never exercised, and the test would still pass with it deleted. Add one check: a source row whose `withdrawn_at` was left empty (insert it by SQL, then write a withdrawal row for its person), then copy it, and expect the copy withdrawn.
+
+Nothing in the diff weakens an earlier "holds" item:
+* no schema or migration change;
+* audit detail is still ids and enum words (`writtenWithdrawn` is a boolean);
+* writes are still refused without the caller's transaction.
+
+Verdict: Approve (head 92f8982ccdfb510920df6f4013414236c4b70fac)

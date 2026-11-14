@@ -174,7 +174,8 @@ export class ConsentRefused extends Error {
 /** The consent purpose a class needs on a channel, or null when it needs none (AG-10-22, SA-11-29): marketing needs
  *  marketing consent; any other WhatsApp message needs the WhatsApp opt-in; email that is not marketing needs none.
  *  A reply inside WhatsApp's customer-service window to a person who wrote first (AG-2-83 rule 2, AG-10-41) is not a
- *  business-initiated message: PF-19b's sending path allows it before asking this gate (known, review round 2 R2-m1). */
+ *  business-initiated message and needs no opt-in: PF-19b's reply path skips only the opt-in, and still checks the
+ *  suppression list (AG-10-41: the reply passes the consent gate) (known, review rounds 2-3, R2-m1 and R3-m1). */
 export function purposeNeeded(cls: MessageClass, channel: Channel): Purpose | null {
   if (cls === "MARKETING") return "MARKETING";
   if (channel === "WHATSAPP") return "SERVICE";

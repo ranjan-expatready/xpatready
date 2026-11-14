@@ -263,6 +263,14 @@ try {
     sql(DEMO, `select (withdrawn_at is not null) || ':' || withdrawn_via from msg_consent where id = '${oldImport.id}'`) === "true:UNSUBSCRIBE"
     && sql(DEMO, `select (withdrawn_at is not null) from msg_consent where id = '${toY.id}'`) === "t"
     && (await mail(X, "MARKETING")).reason === "WITHDRAWN" && (await mail(Y, "MARKETING")).reason === "WITHDRAWN");
+  // Review round 3, R3-m2: a source row left live by the record/withdraw race (a withdrawal row of its person after it, its
+  // own withdrawn_at empty) is copied withdrawn: the copied person's withdrawal rows are read too.
+  const S9 = { kind: "FO_PERSON" as const, id: u(516) }, T9 = { kind: "FO_PERSON" as const, id: u(517) };
+  const raced = sql(DEMO, `insert into msg_consent (id, firm_id, subject_kind, subject_id, channel, purpose, basis, source, recorded_kind, recorded_by, given_at) values (gen_random_uuid(), '${firmA}', 'FO_PERSON', '${S9.id}', 'EMAIL', 'MARKETING', 'IMPORT_DECLARED', 'IMPORT_DECLARED', 'USER', '${byR}', '${new Date(clock.now().getTime() - 60_000).toISOString()}') returning id`);
+  sql(DEMO, `insert into msg_consent_withdrawal (id, firm_id, subject_kind, subject_id, channel, purpose, via, withdrawn_by, withdrawn_at) values (gen_random_uuid(), '${firmA}', 'FO_PERSON', '${S9.id}', 'EMAIL', 'MARKETING', 'STOP', 'system:whatsapp', '${clock.now().toISOString()}')`);
+  const toT9 = await tx((t) => store.record(t as never, { firmId: firmA, subject: T9, channel: "EMAIL", purpose: "MARKETING", basis: "IMPORT_DECLARED", source: "IMPORT_DECLARED", recordedKind: "SYSTEM", recordedBy: "system:merge", copiedFromId: raced }));
+  ok("PF-19a fail (review R3-m2): a copy of a raced row (live, but its person withdrew after it) is written withdrawn, via STOP",
+    sql(DEMO, `select withdrawn_via from msg_consent where id = '${toT9.id}'`) === "STOP" && (await mail(T9, "MARKETING")).reason === "WITHDRAWN");
   // R2-2 and R2-4: a time inside the five-minute slack is kept as the clock's now, never in the future.
   const Z = { kind: "FO_PERSON" as const, id: u(514) };
   const ahead = await tx((t) => store.record(t as never, webTick(Z, w2.id, { givenAt: new Date(clock.now().getTime() + 4 * 60_000) })));
