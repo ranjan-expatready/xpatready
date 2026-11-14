@@ -54,3 +54,70 @@ Should: each of these is refused as it is when written as separate statements. F
 - Moves: two writers on one source at RC and RR (23505); an undo racing a re-move; a second undo of a batch (unique).
 - Cross-firm references (payment, refund, credit note, receipt and move line naming firm A's rows from firm B) are refused. firm_id updates are refused on every table I tried. TRUNCATE is refused on every money table.
 - firm_id is first in every non-primary index. Every amount column is an integer and every row with an amount carries its currency. No column holds a secret. A NULL second column in a composite foreign key only means "no reference": firm_id is NOT NULL everywhere.
+
+## Round 3: head 3c88ac486 (diff `6e19e4ef2..3c88ac486`, focus `1863c935a..3c88ac486`)
+Scratch database `xr_studio_fo7a_break_3` on :54329 had every migration applied and two firms with trust on; it was dropped at the end. I tested with psql and with `pg` clients at RC, RR and SERIALIZABLE. Line numbers refer to the migration.sql at 3c88ac486. Cost: US$0.
+
+**Round 1 reproductions on the new head.**
+- B-1 (a)-(f) all hold. Every CTE and multi-row shape is refused, either by `money_missing` (23503) or, when the CTE runs first, by the rule itself.
+- B-2 holds: RC gives 23514, RR gives 23505.
+- B-3 holds: 23505 at RC and RR.
+- B-4 holds. With the payment first, a later cancel or amount change gets 23514 at RC and 40001 at RR. With the change first, the request is changed while nothing is paid on it, which is allowed.
+- B-5 holds (refused, 0 open). B-8 holds (write-off refused).
+- B-6 holds: the shared prefix is refused (`default_prefix_check`), and so is a direct `next_number + 1`. See B-13.
+- B-7 holds: a line into an earlier batch, or into an undone batch, is refused. See B-15 and B-16.
+- B-9 holds for the four characters reported (see B-17). B-10 holds: `issued_at` is set to now(). B-11 holds: a card fee on a wire into trust is refused.
+
+**B-12 MAJOR (for the tech lead): correcting a return to trust re-opens the invoice's trust cap.** The cap nets out returns (CORRECTION naming a withdrawal, line 1115), but not a correction of a return, and a correction naming a CORRECTION is unchecked. Person :P holds 500.00 in trust; invoice FAC-0002 totals 100.00.
+```sql
+INSERT INTO money_trust_entry (id,firm_id,person_id,kind,amount_minor,currency,invoice_id,created_by) VALUES (:W1,:A,:P,'WITHDRAWAL_TO_INVOICE',-10000,'CAD',:INV,'s');
+INSERT INTO money_trust_entry (id,firm_id,person_id,kind,amount_minor,currency,corrects_entry_id,reason,created_by) VALUES (:C1,:A,:P,'CORRECTION',10000,'CAD',:W1,'returned','s');
+INSERT INTO money_trust_entry (firm_id,person_id,kind,amount_minor,currency,corrects_entry_id,reason,created_by) VALUES (:A,:P,'CORRECTION',-10000,'CAD',:C1,'return was a mistake','s');
+INSERT INTO money_trust_entry (firm_id,person_id,kind,amount_minor,currency,invoice_id,created_by) VALUES (:A,:P,'WITHDRAWAL_TO_INVOICE',-10000,'CAD',:INV,'s');  -- accepted
+```
+I repeated the loop once more. The ledger then shows three WITHDRAWAL_TO_INVOICE entries of 100.00 on one 100.00 invoice, and 300.00 left trust for it. Should: refused at the third withdrawal, because 100.00 is still applied. Fix (either):
+- refuse a CORRECTION whose `corrects_entry_id` names a return (a return is final; a mistaken return is undone by re-applying);
+- or have `applied` follow the chain, so it also subtracts corrections of returns.
+
+**B-13 Minor: a number can be taken, skipped or reset outside a numbered row.**
+- (a) `SELECT money_take_number(:A,'INVOICE');` returned INV-0006, and the next issued invoice was INV-0007. EXECUTE is granted to PUBLIC; a "preview next number" query in FO-7b would leave a gap each time it is called.
+- (b) `SET money.taking_number='on'; UPDATE money_number_series SET next_number=next_number+100 WHERE firm_id=:A AND kind='INVOICE';` was accepted, and the next invoice was INV-0108.
+- (c) In one transaction: `SET LOCAL money.taking_number='on'; UPDATE … SET next_number=1, numbers_taken=0;`. Then `DELETE` of the series and a re-insert with prefix `FAC-` were both accepted, and the next invoice restarted at FAC-0001.
+
+Does the flag matter? We run as the owner, who can disable triggers anyway, so the flag is not a security boundary, and an accident needs a deliberate `SET`. But the flag turns off every check at line 719, including the "never goes back" check that round 1 enforced unconditionally. It also lets `numbers_taken` be reset, which removes the guard on deleting the series. Fix:
+- drop the flag;
+- allow an update only when (next+1 and taken+1) together, or while taken = 0;
+- never decrease either column;
+- `REVOKE EXECUTE ON FUNCTION money_take_number FROM PUBLIC`, plus `IF pg_trigger_depth() = 0 THEN RAISE`.
+
+**B-14 Minor: deadlock when something touches the invoice before a trust withdrawal in the same transaction.**
+- T1: credit note (or write-off, or `UPDATE money_invoice SET due_date=…`) on X.
+- T2: withdrawal on X. It takes the party lock, then waits on X's row.
+- T1: withdrawal on X. It waits on the party lock, and the deadlock follows: 40P01 in 6 of 6 runs at RC and RR.
+
+It fails safe and can be retried. But "part credit note, then apply trust" is a likely FO-7t flow. Fix: `money_issued_invoice` (and the invoice update) take the invoice party's trust lock before touching the row, the same order as at line 1060.
+
+**B-15 Minor (by reading; the NULL case was shown with a DO block): the "batch is mine" test passes when the status is unknown.** At line 1189, `IF NOT b.mine` does not raise when `pg_xact_status(...)` is NULL, which happens once the commit log for the batch's xmin has been truncated after a freeze. It also misreads xmins from an earlier epoch (line 1184). On this cluster, `pg_xact_status('100'::xid8)` is NULL, and `DO $$ … IF NOT (NULL = 'in progress') THEN RAISE … $$` does not raise. So, years later, old batches would accept lines again. Fix: `IF b.mine IS NOT TRUE`; better, a database-set column `recorded_xact = pg_current_xact_id()` (the top-level id, which also covers savepoints), compared for equality.
+
+**B-16 Minor: a line can go into an undone batch inside the batch's own transaction.**
+```sql
+BEGIN;
+INSERT batch B;
+INSERT line (ordinal 1);
+INSERT undo U of B;
+INSERT line into B;  -- accepted, ordinal 2
+COMMIT;
+```
+Fix: also refuse when an undo of the batch exists (line 1186).
+
+**B-17 Minor: B-9 leftovers.** `money_text_ok` still accepts these as visible text: U+2800 (braille blank), U+E0020 (tag space), U+1D159, U+17B4 and U+1F3FB (a skin-tone modifier alone). Fix: add them to the blank class.
+
+**Held in round 3:**
+- 20 parallel issuers with rollbacks and savepoints: INV-0001..0016 with no gap (RR losers got 40001).
+- 20 parallel withdrawals at RC, RR and SERIALIZABLE, for person and company parties, never went below zero.
+- Same-statement pairs (CTE and multi-row) were all refused: two credit notes, two withdrawals, two refunds, a withdrawal plus a write-off, and two returns.
+- Payment first against a cancel or amount change, at RC and RR.
+- Quebec tax: 1,000.00 at 149750 ppm with tax 149.75 is accepted; 1 cent off is accepted and 2 cents off is refused. ppm rates are accepted in settings, while 99750.5 and anything above 1,000,000 are refused.
+- An invoice total above 2^31−1 is refused at issue.
+- A batch from a released savepoint takes lines; a batch committed earlier refuses them.
+- A payment into TRUST with no deposit is refused at commit.
