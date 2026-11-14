@@ -77,7 +77,7 @@ CREATE TABLE "fo_sales_setup" (
 
 -- CreateTable
 CREATE TABLE "fo_person" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "given_names" TEXT,
     "family_name" TEXT,
@@ -95,7 +95,7 @@ CREATE TABLE "fo_person" (
 
 -- CreateTable
 CREATE TABLE "fo_arrival_receipt" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "door" "FoDoor" NOT NULL,
     "web_form_id" UUID,
@@ -113,7 +113,7 @@ CREATE TABLE "fo_arrival_receipt" (
 
 -- CreateTable
 CREATE TABLE "fo_lead" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "number" TEXT NOT NULL DEFAULT '',
     "person_id" UUID NOT NULL,
@@ -171,7 +171,7 @@ CREATE TABLE "fo_lead_attribution" (
 
 -- CreateTable
 CREATE TABLE "fo_company" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "operating_name" TEXT NOT NULL,
     "normalised_name" TEXT NOT NULL,
@@ -184,7 +184,7 @@ CREATE TABLE "fo_company" (
 
 -- CreateTable
 CREATE TABLE "fo_company_contact" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "company_id" UUID NOT NULL,
     "person_id" UUID NOT NULL,
@@ -198,7 +198,7 @@ CREATE TABLE "fo_company_contact" (
 
 -- CreateTable
 CREATE TABLE "fo_prospect" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "number" TEXT NOT NULL DEFAULT '',
     "lead_id" UUID NOT NULL,
@@ -225,7 +225,7 @@ CREATE TABLE "fo_prospect" (
 
 -- CreateTable
 CREATE TABLE "fo_stage" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "pipeline" "FoPipeline" NOT NULL,
     "key" TEXT NOT NULL,
@@ -240,7 +240,7 @@ CREATE TABLE "fo_stage" (
 
 -- CreateTable
 CREATE TABLE "fo_reason" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "kind" "FoReasonKind" NOT NULL,
     "key" TEXT NOT NULL,
@@ -255,7 +255,7 @@ CREATE TABLE "fo_reason" (
 
 -- CreateTable
 CREATE TABLE "fo_call" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "person_id" UUID NOT NULL,
     "lead_id" UUID,
@@ -273,7 +273,7 @@ CREATE TABLE "fo_call" (
 
 -- CreateTable
 CREATE TABLE "fo_note" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "person_id" UUID NOT NULL,
     "lead_id" UUID,
@@ -288,7 +288,7 @@ CREATE TABLE "fo_note" (
 
 -- CreateTable
 CREATE TABLE "fo_stage_move" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "prospect_id" UUID NOT NULL,
     "pipeline" "FoPipeline" NOT NULL,
@@ -303,7 +303,7 @@ CREATE TABLE "fo_stage_move" (
 
 -- CreateTable
 CREATE TABLE "fo_web_form" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "public_token" TEXT NOT NULL,
@@ -321,7 +321,7 @@ CREATE TABLE "fo_web_form" (
 
 -- CreateTable
 CREATE TABLE "fo_service" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "firm_id" UUID NOT NULL,
     "label" TEXT NOT NULL,
     "combination_id" UUID,
@@ -424,10 +424,10 @@ CREATE UNIQUE INDEX "fo_service_firm_id_id_key" ON "fo_service"("firm_id", "id")
 CREATE UNIQUE INDEX "fo_service_firm_id_combination_id_key" ON "fo_service"("firm_id", "combination_id");
 
 -- AddForeignKey
-ALTER TABLE "fo_person" ADD CONSTRAINT "fo_person_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fo_person" ADD CONSTRAINT "fo_person_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "fo_arrival_receipt" ADD CONSTRAINT "fo_arrival_receipt_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fo_arrival_receipt" ADD CONSTRAINT "fo_arrival_receipt_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "fo_arrival_receipt" ADD CONSTRAINT "fo_arrival_receipt_firm_id_web_form_id_fkey" FOREIGN KEY ("firm_id", "web_form_id") REFERENCES "fo_web_form"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -439,7 +439,7 @@ ALTER TABLE "fo_arrival_receipt" ADD CONSTRAINT "fo_arrival_receipt_firm_id_lead
 ALTER TABLE "fo_arrival_receipt" ADD CONSTRAINT "fo_arrival_receipt_firm_id_person_id_fkey" FOREIGN KEY ("firm_id", "person_id") REFERENCES "fo_person"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "fo_lead" ADD CONSTRAINT "fo_lead_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fo_lead" ADD CONSTRAINT "fo_lead_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "fo_lead" ADD CONSTRAINT "fo_lead_firm_id_person_id_fkey" FOREIGN KEY ("firm_id", "person_id") REFERENCES "fo_person"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -457,16 +457,16 @@ ALTER TABLE "fo_lead" ADD CONSTRAINT "fo_lead_firm_id_close_reason_id_close_reas
 ALTER TABLE "fo_lead" ADD CONSTRAINT "fo_lead_firm_id_previous_lead_id_fkey" FOREIGN KEY ("firm_id", "previous_lead_id") REFERENCES "fo_lead"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "fo_lead_attribution" ADD CONSTRAINT "fo_lead_attribution_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fo_lead_attribution" ADD CONSTRAINT "fo_lead_attribution_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "fo_lead_attribution" ADD CONSTRAINT "fo_lead_attribution_firm_id_lead_id_fkey" FOREIGN KEY ("firm_id", "lead_id") REFERENCES "fo_lead"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "fo_company" ADD CONSTRAINT "fo_company_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fo_company" ADD CONSTRAINT "fo_company_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "fo_company_contact" ADD CONSTRAINT "fo_company_contact_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fo_company_contact" ADD CONSTRAINT "fo_company_contact_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "fo_company_contact" ADD CONSTRAINT "fo_company_contact_firm_id_company_id_fkey" FOREIGN KEY ("firm_id", "company_id") REFERENCES "fo_company"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -475,7 +475,7 @@ ALTER TABLE "fo_company_contact" ADD CONSTRAINT "fo_company_contact_firm_id_comp
 ALTER TABLE "fo_company_contact" ADD CONSTRAINT "fo_company_contact_firm_id_person_id_fkey" FOREIGN KEY ("firm_id", "person_id") REFERENCES "fo_person"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "fo_prospect" ADD CONSTRAINT "fo_prospect_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fo_prospect" ADD CONSTRAINT "fo_prospect_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "fo_prospect" ADD CONSTRAINT "fo_prospect_firm_id_lead_id_fkey" FOREIGN KEY ("firm_id", "lead_id") REFERENCES "fo_lead"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -496,13 +496,13 @@ ALTER TABLE "fo_prospect" ADD CONSTRAINT "fo_prospect_firm_id_primary_contact_pe
 ALTER TABLE "fo_prospect" ADD CONSTRAINT "fo_prospect_firm_id_lost_reason_id_lost_reason_kind_fkey" FOREIGN KEY ("firm_id", "lost_reason_id", "lost_reason_kind") REFERENCES "fo_reason"("firm_id", "id", "kind") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "fo_stage" ADD CONSTRAINT "fo_stage_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fo_stage" ADD CONSTRAINT "fo_stage_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "fo_reason" ADD CONSTRAINT "fo_reason_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fo_reason" ADD CONSTRAINT "fo_reason_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "fo_call" ADD CONSTRAINT "fo_call_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fo_call" ADD CONSTRAINT "fo_call_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "fo_call" ADD CONSTRAINT "fo_call_firm_id_person_id_fkey" FOREIGN KEY ("firm_id", "person_id") REFERENCES "fo_person"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -514,7 +514,7 @@ ALTER TABLE "fo_call" ADD CONSTRAINT "fo_call_firm_id_lead_id_person_id_fkey" FO
 ALTER TABLE "fo_call" ADD CONSTRAINT "fo_call_firm_id_prospect_id_fkey" FOREIGN KEY ("firm_id", "prospect_id") REFERENCES "fo_prospect"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "fo_note" ADD CONSTRAINT "fo_note_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fo_note" ADD CONSTRAINT "fo_note_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "fo_note" ADD CONSTRAINT "fo_note_firm_id_person_id_fkey" FOREIGN KEY ("firm_id", "person_id") REFERENCES "fo_person"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -526,7 +526,7 @@ ALTER TABLE "fo_note" ADD CONSTRAINT "fo_note_firm_id_lead_id_fkey" FOREIGN KEY 
 ALTER TABLE "fo_note" ADD CONSTRAINT "fo_note_firm_id_prospect_id_fkey" FOREIGN KEY ("firm_id", "prospect_id") REFERENCES "fo_prospect"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "fo_stage_move" ADD CONSTRAINT "fo_stage_move_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fo_stage_move" ADD CONSTRAINT "fo_stage_move_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE "fo_stage_move" ADD CONSTRAINT "fo_stage_move_firm_id_prospect_id_fkey" FOREIGN KEY ("firm_id", "prospect_id") REFERENCES "fo_prospect"("firm_id", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
@@ -538,10 +538,10 @@ ALTER TABLE "fo_stage_move" ADD CONSTRAINT "fo_stage_move_firm_id_pipeline_from_
 ALTER TABLE "fo_stage_move" ADD CONSTRAINT "fo_stage_move_firm_id_pipeline_to_stage_id_fkey" FOREIGN KEY ("firm_id", "pipeline", "to_stage_id") REFERENCES "fo_stage"("firm_id", "pipeline", "id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "fo_web_form" ADD CONSTRAINT "fo_web_form_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fo_web_form" ADD CONSTRAINT "fo_web_form_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE "fo_service" ADD CONSTRAINT "fo_service_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "fo_service" ADD CONSTRAINT "fo_service_firm_id_fkey" FOREIGN KEY ("firm_id") REFERENCES "fo_sales_setup"("firm_id") ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 
 -- =====================================================================================================================

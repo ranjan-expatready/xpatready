@@ -63,10 +63,12 @@ export async function releasedCombinations(db: PrismaClient | Prisma.Transaction
 }
 
 /** Seeds one firm's front office inside the caller's transaction, once (see the header). A firm id that is no platform
- *  firm is refused by the database (fo_sales_setup_firm_exists). */
+ *  firm is refused. */
 export async function seedFirmFrontOffice(tx: Prisma.TransactionClient, firmId: string, actor = SEED_ACTOR): Promise<FirmSeedResult> {
   const id = firmScope(firmId).firmId;
   const none: FirmSeedResult = { firmId: id, seeded: false, stages: 0, reasons: 0, webForms: 0, services: 0 };
+  // Named here in words (the database refuses it too, fo_sales_setup_firm_exists, but Prisma reports only "foreign key").
+  if (!(await tx.platformFirm.findUnique({ where: { id }, select: { id: true } }))) throw new Error(`firm-seed: ${id} is no platform firm`);
   await tx.foSalesSetup.createMany({ data: [{ firmId: id }], skipDuplicates: true });
   // The row's lock is held to commit: a second seed of the same firm waits here and then sees seeded_at.
   const [setup] = await tx.$queryRaw<{ seeded_at: Date | null }[]>`select seeded_at from fo_sales_setup where firm_id = ${id}::uuid for update`;

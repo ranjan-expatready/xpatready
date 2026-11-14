@@ -1,4 +1,4 @@
-// front-office-sales.prisma — leads, prospects, companies, contacts, pipelines, calls, notes, consent, web forms, services. Owner: Lead B (front office)
+// front-office-sales.prisma — leads, prospects, companies, contacts, pipelines, calls, notes, consent, web forms, services. Owner: Lead B (front office).
 // One file per area (DB-SPLIT, studio/DEVELOPING.md): a new module adds its own file here; never edit another area's file without its owner.
 //
 // FO-1a (P-558, P-559; rows rev 3.1; contracts platform-and-front-office-contracts-2026-11-14.md §0, §2.1, §2.6, §7 binding;
@@ -162,7 +162,7 @@ model FoSalesSetup {
 /// phone_readable false (AG-2-84 rule 5: an inquiry is never dropped over a phone format). Indexed for the possible-match
 /// flag (same email or same normalised phone in the firm, AG-2-84).
 model FoPerson {
-  id            String   @id @default(uuid()) @db.Uuid
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId        String   @map("firm_id") @db.Uuid
   givenNames    String?  @map("given_names")
   familyName    String?  @map("family_name")
@@ -175,7 +175,7 @@ model FoPerson {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  setup            FoSalesSetup       @relation(fields: [firmId], references: [firmId], onDelete: Restrict)
+  setup            FoSalesSetup       @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   receipts         FoArrivalReceipt[]
   leads            FoLead[]           @relation("LeadPerson")
   matchedBy        FoLead[]           @relation("LeadPossibleMatch")
@@ -196,7 +196,7 @@ model FoPerson {
 /// `manual:<request id>` (checked). The receipt keeps a hash of the normalised request and of the IP address, never the
 /// raw request (AG-2-84 rule 3); the campaign facts go to fo_lead_attribution.
 model FoArrivalReceipt {
-  id          String           @id @default(uuid()) @db.Uuid
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId      String           @map("firm_id") @db.Uuid
   door        FoDoor
   webFormId   String?          @map("web_form_id") @db.Uuid
@@ -209,7 +209,7 @@ model FoArrivalReceipt {
   payloadHash String           @map("payload_hash")
   ipHash      String?          @map("ip_hash")
 
-  setup   FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict)
+  setup   FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   webForm FoWebForm?   @relation(fields: [firmId, webFormId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
   lead    FoLead?      @relation(fields: [firmId, leadId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
   person  FoPerson?    @relation(fields: [firmId, personId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
@@ -224,7 +224,7 @@ model FoArrivalReceipt {
 /// replaced, and it never changes). owner_staff_id empty = Unassigned. A repeat enquiry is a new lead, even while one is
 /// open (AG02-D6): nothing here is unique per person.
 model FoLead {
-  id                    String               @id @default(uuid()) @db.Uuid
+  id                    String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId                String               @map("firm_id") @db.Uuid
   number                String               @default("")
   personId              String               @map("person_id") @db.Uuid
@@ -252,7 +252,7 @@ model FoLead {
   createdAt             DateTime             @default(now()) @map("created_at") @db.Timestamptz
   updatedAt             DateTime             @updatedAt @map("updated_at") @db.Timestamptz
 
-  setup         FoSalesSetup       @relation(fields: [firmId], references: [firmId], onDelete: Restrict)
+  setup         FoSalesSetup       @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   person        FoPerson           @relation("LeadPerson", fields: [firmId, personId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
   possibleMatch FoPerson?          @relation("LeadPossibleMatch", fields: [firmId, possibleMatchPersonId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
   interestedIn  FoService?         @relation(fields: [firmId, interestedInServiceId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
@@ -298,7 +298,7 @@ model FoLeadAttribution {
   campaignId     String?        @map("campaign_id")
   createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz
 
-  setup FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict)
+  setup FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   lead  FoLead       @relation(fields: [firmId, leadId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
 
   @@id([firmId, leadId])
@@ -308,7 +308,7 @@ model FoLeadAttribution {
 
 /// A company (AG-2-77 rule 1; contracts §7 §2.1): its operating name and the normalised name the match reads.
 model FoCompany {
-  id             String   @id @default(uuid()) @db.Uuid
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId         String   @map("firm_id") @db.Uuid
   operatingName  String   @map("operating_name")
   normalisedName String   @map("normalised_name")
@@ -316,7 +316,7 @@ model FoCompany {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  setup     FoSalesSetup       @relation(fields: [firmId], references: [firmId], onDelete: Restrict)
+  setup     FoSalesSetup       @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   contacts  FoCompanyContact[]
   prospects FoProspect[]
 
@@ -330,7 +330,7 @@ model FoCompany {
 /// one live PRIMARY contact (partial unique indexes); a PRIMARY link named by a Corporate prospect cannot be ended
 /// (trigger).
 model FoCompanyContact {
-  id        String        @id @default(uuid()) @db.Uuid
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId    String        @map("firm_id") @db.Uuid
   companyId String        @map("company_id") @db.Uuid
   personId  String        @map("person_id") @db.Uuid
@@ -339,7 +339,7 @@ model FoCompanyContact {
   validTo   DateTime?     @map("valid_to") @db.Timestamptz
   createdBy String        @map("created_by")
 
-  setup   FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict)
+  setup   FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   company FoCompany    @relation(fields: [firmId, companyId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
   person  FoPerson     @relation(fields: [firmId, personId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
 
@@ -354,7 +354,7 @@ model FoCompanyContact {
 /// stage_id)). number is `P-` and five digits per firm, set by the database. Its status is its stage's kind (read
 /// through the stage, never copied). A LOST stage needs a lost reason; a WON stage needs won_via (trigger).
 model FoProspect {
-  id                     String        @id @default(uuid()) @db.Uuid
+  id                     String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId                 String        @map("firm_id") @db.Uuid
   number                 String        @default("")
   leadId                 String        @map("lead_id") @db.Uuid
@@ -376,7 +376,7 @@ model FoProspect {
   createdAt              DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt              DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
-  setup          FoSalesSetup  @relation(fields: [firmId], references: [firmId], onDelete: Restrict)
+  setup          FoSalesSetup  @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   lead           FoLead        @relation(fields: [firmId, leadId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
   stage          FoStage       @relation(fields: [firmId, type, stageId], references: [firmId, pipeline, id], onDelete: Restrict, onUpdate: Restrict)
   subjectPerson  FoPerson?     @relation("ProspectSubjectPerson", fields: [firmId, subjectPersonId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
@@ -398,7 +398,7 @@ model FoProspect {
 /// never changes (reports and the move rules read it, trigger); one WON, one LOST and one NURTURE per pipeline (partial
 /// unique index).
 model FoStage {
-  id        String      @id @default(uuid()) @db.Uuid
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId    String      @map("firm_id") @db.Uuid
   pipeline  FoPipeline
   key       String
@@ -408,7 +408,7 @@ model FoStage {
   active    Boolean     @default(true)
   createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz
 
-  setup     FoSalesSetup  @relation(fields: [firmId], references: [firmId], onDelete: Restrict)
+  setup     FoSalesSetup  @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   prospects FoProspect[]
   movesFrom FoStageMove[] @relation("MoveFrom")
   movesTo   FoStageMove[] @relation("MoveTo")
@@ -422,7 +422,7 @@ model FoStage {
 /// A system reason (set only by the system, e.g. "Added to a prospect") cannot be removed or turned off, and no
 /// reason's key or list ever changes (trigger), so reports keep working after a rename.
 model FoReason {
-  id        String       @id @default(uuid()) @db.Uuid
+  id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId    String       @map("firm_id") @db.Uuid
   kind      FoReasonKind
   key       String
@@ -432,7 +432,7 @@ model FoReason {
   sortOrder Int          @map("sort_order")
   createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz
 
-  setup         FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict)
+  setup         FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   closedLeads   FoLead[]
   lostProspects FoProspect[]
 
@@ -444,7 +444,7 @@ model FoReason {
 /// A logged call (contracts §2.1; AG-2-37a): on a lead or a prospect (exactly one), with one of the seven outcomes. A
 /// call on a lead is about that lead's person (the key (firm_id, lead_id, person_id)). A call never moves a stage.
 model FoCall {
-  id         String          @id @default(uuid()) @db.Uuid
+  id         String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId     String          @map("firm_id") @db.Uuid
   personId   String          @map("person_id") @db.Uuid
   leadId     String?         @map("lead_id") @db.Uuid
@@ -457,7 +457,7 @@ model FoCall {
   byActor    String          @map("by_actor")
   createdAt  DateTime        @default(now()) @map("created_at") @db.Timestamptz
 
-  setup    FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict)
+  setup    FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   person   FoPerson     @relation(fields: [firmId, personId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
   lead     FoLead?      @relation("CallLead", fields: [firmId, leadId, personId], references: [firmId, id, personId], onDelete: Restrict, onUpdate: Restrict)
   prospect FoProspect?  @relation("CallProspect", fields: [firmId, prospectId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
@@ -469,7 +469,7 @@ model FoCall {
 /// A note on a person, optionally in the context of one lead or one prospect (contracts §2.1, §7 §2.1; AG-13-21, -24):
 /// INTERNAL by default, add-only (a trigger refuses update, delete and truncate; a correction is a new note).
 model FoNote {
-  id         String           @id @default(uuid()) @db.Uuid
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId     String           @map("firm_id") @db.Uuid
   personId   String           @map("person_id") @db.Uuid
   leadId     String?          @map("lead_id") @db.Uuid
@@ -479,7 +479,7 @@ model FoNote {
   byActor    String           @map("by_actor")
   createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz
 
-  setup    FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict)
+  setup    FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   person   FoPerson     @relation(fields: [firmId, personId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
   lead     FoLead?      @relation(fields: [firmId, leadId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
   prospect FoProspect?  @relation(fields: [firmId, prospectId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
@@ -491,7 +491,7 @@ model FoNote {
 /// One move of a prospect between stages, with its cause (contracts §2.1; AG-2-26). from_stage_id is empty for the
 /// first stage at Engage. Kept as history: never changed or removed (trigger).
 model FoStageMove {
-  id          String      @id @default(uuid()) @db.Uuid
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId      String      @map("firm_id") @db.Uuid
   prospectId  String      @map("prospect_id") @db.Uuid
   pipeline    FoPipeline
@@ -501,7 +501,7 @@ model FoStageMove {
   byActor     String      @map("by_actor")
   at          DateTime    @default(now()) @db.Timestamptz
 
-  setup     FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict)
+  setup     FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   prospect  FoProspect   @relation(fields: [firmId, prospectId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
   fromStage FoStage?     @relation("MoveFrom", fields: [firmId, pipeline, fromStageId], references: [firmId, pipeline, id], onDelete: Restrict, onUpdate: Restrict)
   toStage   FoStage      @relation("MoveTo", fields: [firmId, pipeline, toStageId], references: [firmId, pipeline, id], onDelete: Restrict, onUpdate: Restrict)
@@ -516,7 +516,7 @@ model FoStageMove {
 /// tick (msg_consent_wording, PF-19a; its foreign key comes with whichever of PF-19a and this row merges second). A form
 /// is turned on only with a consent wording (check). Seeded off, one per firm.
 model FoWebForm {
-  id                      String   @id @default(uuid()) @db.Uuid
+  id                      String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId                  String   @map("firm_id") @db.Uuid
   name                    String
   publicToken             String   @unique @map("public_token")
@@ -529,7 +529,7 @@ model FoWebForm {
   createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  setup    FoSalesSetup       @relation(fields: [firmId], references: [firmId], onDelete: Restrict)
+  setup    FoSalesSetup       @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   receipts FoArrivalReceipt[]
 
   @@unique([firmId, id])
@@ -540,7 +540,7 @@ model FoWebForm {
 /// not retired combinations (combination_id names the one it came from: no foreign key, the combination is the case
 /// side's row); a firm may add its own (no combination) or turn one off. One row per combination per firm.
 model FoService {
-  id            String   @id @default(uuid()) @db.Uuid
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId        String   @map("firm_id") @db.Uuid
   label         String
   combinationId String?  @map("combination_id") @db.Uuid
@@ -549,7 +549,7 @@ model FoService {
   createdBy     String   @map("created_by")
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  setup FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict)
+  setup FoSalesSetup @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
   leads FoLead[]
 
   @@unique([firmId, id])
