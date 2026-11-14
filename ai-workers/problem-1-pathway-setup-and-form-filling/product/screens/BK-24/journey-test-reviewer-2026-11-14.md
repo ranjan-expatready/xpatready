@@ -55,3 +55,15 @@ Commit `a1044a8e7` on the builder's isolated copy :4453 / `xr_studio_forms_bk24`
 4. Swap the order of the two tests in 040 (raises recovery).
 
 Could not test: a fresh copy (copy cap of 4 reached); Adobe's own Validate; a real screen reader; an intended user's unaided walk (D17 and D20 stay with the founder).
+
+## Round 2, head 1076b7f40 (fresh copy :4457, stopped afterwards)
+The same journeys were run again. What changed:
+* **Journey 4:** the spouse's IMM 1295 Validate is now run past every stop: 9 named stops (F3, F5, F2), then WAIT.
+  * A copy of the check with one F5 line removed FAILs on `VisaChoice3`, exit 1.
+* **Journey 5:** the loader step now skips boxes it already corrected.
+* **Journey 6:** each box's reason says "Changed by the sample loader", and there are 19 audit lines.
+* The screenshot was retaken and is current (6 mandatory empties).
+
+BK-13 45/45, BK-24 26/26 on the fresh copy.
+
+Score: next step obvious, feedback and state, error recovery, and trust and sources each go from ½ to 1. **9/10, no 0: pass.** Task completed stays ½ (the F2/F3/F5 boxes are still open, each named).

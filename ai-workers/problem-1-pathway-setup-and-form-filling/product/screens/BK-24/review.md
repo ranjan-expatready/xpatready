@@ -58,3 +58,29 @@ D1–D16 and D18–D19: N/A or unchanged (no UI or route change; graph shows no 
 * A fresh copy: `isolated.sh` refuses at the cap of 4 copies (4453–4456 running), so "on a fresh copy" and "BK-13 45/45" are the builder's evidence only.
 * My BK-13 run on the reused :4453 copy: 41/43. The 2 FAILs come from re-running (`sampleAnswers > 100`; 409 stale answer on the relatives), not from this diff; the P-449 scan passed.
 * Adobe's own Validate. CI (the engine is not built there: WAIT).
+
+## Round 2 — head `1076b7f4085fb9b8c71deb718130965c54902397` (diff `a1044a8e7..1076b7f40`)
+
+**Verdict: Approve** for `1076b7f4085fb9b8c71deb718130965c54902397`. No Blocker or Major is open.
+
+Run by me on a fresh copy (:4457, `forms_bk24rv`, head code, stopped afterwards):
+* BK-13's replay: 45/45 ("Met").
+* BK-24's check: 26/26, exit 0; a second run gave 25/25 (BK-13 is not re-run when copies exist).
+* The spouse's q7 reads `205` and `01` from the file.
+* The changed files typecheck clean under `tsc -p api/tsconfig.json`; the errors it shows are in other tests and existed before.
+
+* **M1 closed.** `validatePast` (`check_bk24_required_boxes.ts:174-198`) runs Validate again with a placeholder in each stop, until it passes, gets stuck or the form becomes unreadable. Any stop not on the GAP list fails the check.
+  * Its fail test: I copied the check, removed only the `VisaChoice3` GAP line and ran it on the fresh copy. Result: `FAIL … every box its own Validate stopped on … is a named open box — {"stopsAt":["Page4[0].BackgroundInfo2[0].VisaChoice3[0]"]}`, exit 1.
+  * The spouse's IMM 1295 now shows 9 named stops: F3 ×6, F5 ×2, F2. The engine's final refusal and IMM 1294 are WAIT, no longer a pass. The PASS line says "flags or lists"; qa/built is corrected.
+* **M2 closed.** The reason now reads "Changed by the sample loader: …" (seen in the database). There are 19 `audit_event` lines "The sample loader changed … from … to …", one per box. F6 (no per-box remap door) is named in `boxes_basis` and qa/built.
+* **m1 closed:** the "already corrected" test now comes first, and each box has its own try/catch with refusal words (`040:122-129`).
+* **m2:** the new pass/fail case (`:214-222`) covers OWP, SBC and ELMO. The "together" rule stays a known limit, listed on the PR; I accept that, since changing the rule shape would be new scope.
+* **m3 closed:** the retaken screenshot shows 6 mandatory boxes and no longer lists the intended-work boxes.
+* **m4 closed.**
+* **m5 closed:** the template's flags are compared by name (`read_required_rules.py` `null_test_names`). IMM 5707 rows have a pass and a fail case (`:226-236`).
+
+**Remaining Minors (not blocking):**
+* **r2-m1:** IMM 1294's own background 2c and 6 (empty, I confirmed it in round 1) are named only inside F5's text, with no GAP line of IMM 1294's own, because the engine cannot read that form. Put them on the Lead's list for the Mac's Adobe run (BK-20) so they are not missed there.
+* **r2-m2:** `validatePast` uses the first saved option as a list's placeholder. For a box whose first option is itself refused, it would end "stuck" and FAIL, not WAIT. That is safe, but the words would mislead.
+
+Journey score after round 2: **9/10, no 0** (raised from ½ to 1: next step obvious, feedback and state, error recovery, trust). Task completed stays ½: the form still stops in Adobe at the named F2/F3/F5 boxes.
