@@ -35,9 +35,9 @@ for (const form of ["imm0008e", "imm1294e", "imm1295e", "imm5710e"]) {
 // 2. What the reader found on IMM 1294: the city box, the province box it depends on, the form's own words, every list.
 const CITY = "form1[0].Page3[0].DetailsOfStudy[0].PurposeRow1[0].CityTown[0].CityTown[0]", PROV = "form1[0].Page3[0].DetailsOfStudy[0].PurposeRow1[0].ProvinceState[0].Prov[0]";
 const inv1294 = inventory("imm1294e"), dep = inv1294.dependent_lists?.[CITY];
-const entries = dep ? Object.values(dep.lists).reduce((n, l) => n + l.length, 0) : 0;
-ok(`BK-26: IMM 1294's city (question 1 d) is the form's own list by its province: ${dep?.quote}; ${dep ? Object.keys(dep.lists).length : 0} provinces and territories, ${entries} cities with codes`,
-  dep?.depends_on === PROV && dep.key === "label" && /CityList\./.test(dep.quote ?? "") && Object.keys(dep.lists).length === 13 && entries === 4503 && dep.lists.ON?.some(([l, c]) => l === "Toronto" && c === "3812"), dep && { ...dep, lists: undefined });
+const all = dep ? Object.values(dep.lists).flat() : [], cities = all.filter(([, c]) => c !== "").length, separators = all.filter(([l, c]) => c === "" && /^-+$/.test(l.trim())).length;
+ok(`BK-26: IMM 1294's city (question 1 d) is the form's own list by its province: ${dep?.quote}; ${dep ? Object.keys(dep.lists).length : 0} provinces and territories, ${cities} cities with codes (and ${separators} separator lines with no code, never a choice)`,
+  dep?.depends_on === PROV && dep.key === "label" && /CityList\./.test(dep.quote ?? "") && Object.keys(dep.lists).length === 13 && cities === 4016 && separators === 487 && all.length === cities + separators && dep.lists.ON?.some(([l, c]) => l === "Toronto" && c === "3812"), dep && { ...dep, lists: undefined });
 ok("BK-26: only boxes with no list of their own are dependent (the province box keeps its own list)",
   Object.keys(inv1294.dependent_lists ?? {}).every((p) => { const b = inv1294.fields.find((f) => f.data_path === p); return b?.ui === "choiceList" && !(b.options_resolved ?? []).length; }) && !!inv1294.fields.find((f) => f.data_path === PROV)?.options_resolved?.length);
 
@@ -58,8 +58,17 @@ const a = fill(SCHOOL, inv1294);
 ok(`BK-26 pass: the student's IMM 1294 writes the province (${a.values[PROV]}) and the city's own code (${a.values[CITY]}, Toronto in ON's list)`, a.values[PROV] === "06" && a.values[CITY] === "3812" && a.city.result === "written", a);
 const b = fill({ ...SCHOOL, city: "MONTREAL" }, inv1294);
 ok(`BK-26 fail: a city not in the province's list is refused in words, never written (${b.city.result}: ${b.city.why})`,
-  b.city.result === "not on this form" && !(CITY in b.values) && /"MONTREAL" is not in the form's own list of choices for "Province" ON/.test(b.city.why ?? "") && /nothing is written/.test(b.city.why ?? ""), b);
+  b.city.result === "not on this form" && !(CITY in b.values) && /"MONTREAL" is not among the 844 choices the form lists for "Province" ON, so nothing is written/.test(b.city.why ?? "") && !/datasets|CityList/.test(b.city.why ?? "") && /nothing is written/.test(b.city.why ?? ""), b);
 ok("BK-26 pass: the same city is written for the province whose list has it (Montreal is in QC's list)", (() => { const q = fill({ ...SCHOOL, city: "MONTREAL", province: "QC" }, inv1294); return q.values[PROV] === "05" && /^\d+$/.test(q.values[CITY] ?? "") && q.values[CITY] === inv1294.dependent_lists?.[CITY]?.lists.QC?.find(([l]) => l === "Montreal")?.[1]; })());
+// Review M1, m2, m3 on #1749: a label the form writes with its province ("Hamilton, ON"), accents, and no first-word guess.
+const ham = fill({ ...SCHOOL, city: "HAMILTON" }, inv1294), hamQc = fill({ ...SCHOOL, city: "HAMILTON", province: "QC" }, inv1294);
+ok(`BK-26 pass (review M1): a city the form lists with its province ("Hamilton, ON") is written for that province (${ham.values[CITY]}); the same city with QC is refused (${hamQc.city.result})`,
+  ham.values[CITY] === "3324" && ham.city.result === "written" && hamQc.city.result === "not on this form" && !(CITY in hamQc.values), { ham: ham.city, hamQc: hamQc.city });
+const accent = fill({ ...SCHOOL, city: "Montréal", province: "QC" }, inv1294), first = fill({ ...SCHOOL, city: "Pierrefonds", province: "QC" }, inv1294);
+ok(`BK-26 pass (review m3): "Montréal" is the form's "Montreal" (${accent.values[CITY]}); fail (review m2): "Pierrefonds" is not guessed as one of "Pierrefonds Est" or "Pierrefonds Ouest" (${first.city.result})`,
+  accent.values[CITY] === inv1294.dependent_lists?.[CITY]?.lists.QC?.find(([l]) => l === "Montreal")?.[1] && first.city.result === "not on this form" && !(CITY in first.values), { accent: accent.city, first: first.city });
+const sep = fill({ ...SCHOOL, city: "---------------" }, inv1294);
+ok("BK-26 fail (review m1): a separator line of the form's list is never a choice", sep.city.result === "not on this form" && !(CITY in sep.values), sep.city);
 const c = fill(SCHOOL, inv1294, false);
 ok(`BK-26 fail: with no province written the city is left to a person, named (${c.city.why})`, c.city.result === "by hand" && !(CITY in c.values) && /"Province"/.test(c.city.why ?? ""), c.city);
 const d = fill({ ...SCHOOL, province: "ZZ" }, inv1294);
