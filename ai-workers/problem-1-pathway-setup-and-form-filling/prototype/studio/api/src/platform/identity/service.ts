@@ -8,6 +8,7 @@ import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";   // app
 import { PlatformRole, type Prisma } from "@prisma/client";
 import { createHash, randomBytes } from "node:crypto";
 import { Db } from "../../core.ts";
+import { EVENT, StaffEventPayload } from "../../../../ports/events.ts";
 import { firmScope, notInFirm } from "../firm-scope.ts";
 import { actorWord, auditInvitation, auditStaff } from "./audit.ts";
 import { CognitoIdentity } from "./cognito.ts";
@@ -226,7 +227,7 @@ export class PlatformIdentity implements OnModuleInit {
       for (const g of t.grants.filter((g) => removed.includes(g.role))) await tx.platformRoleGrant.update({ where: { id: g.id }, data: { endedAt: now, endedBy: actorWord(actor.staffId), endReason: reason ?? "roles changed" } });
       for (const role of added) await tx.platformRoleGrant.create({ data: { firmId: actor.firmId, staffId: t.id, role, grantedBy: actorWord(actor.staffId), grantedAt: now } });
       await auditStaff(tx, { firmId: actor.firmId, firmKey: actor.firmKey, actor: actorWord(actor.staffId), action: "platform.staff.roles_changed", entityKey: t.id, summary: `roles changed: ${from.join(", ") || "none"} → ${to.join(", ")}`, detail: { staffId: t.id, before: from, after: to, reason } });
-      await tx.moduleEvent.create({ data: { firmId: actor.firmId, type: "staff.roles_changed", subjectId: t.id, payload: { staffId: t.id, roles: to } } });   // last (m8)
+      await tx.moduleEvent.create({ data: { firmId: actor.firmId, type: EVENT.STAFF_ROLES_CHANGED, subjectId: t.id, payload: StaffEventPayload.parse({ staffId: t.id }) } });   // last (m8)
       return { staffId: t.id, roles: to, changed: true };
     });
     if (refuse) return this.refuseOnlyOwner(actor, id.toLowerCase(), "removing the Owner role from");
@@ -249,7 +250,7 @@ export class PlatformIdentity implements OnModuleInit {
       await tx.platformStaff.update({ where: { id: t.id }, data: { status: "DEACTIVATED", deactivationReason: reason } });
       await tx.platformSessionRevocation.create({ data: { firmId: actor.firmId, staffId: t.id, revokedAt: now, reason: "deactivated" } });
       await auditStaff(tx, { firmId: actor.firmId, firmKey: actor.firmKey, actor: actorWord(actor.staffId), action: "platform.staff.deactivated", entityKey: t.id, summary: "a staff member was deactivated; their sessions ended at once", detail: { staffId: t.id, from: t.status, reason } });
-      await tx.moduleEvent.create({ data: { firmId: actor.firmId, type: "staff.deactivated", subjectId: t.id, payload: { staffId: t.id } } });   // last (m8)
+      await tx.moduleEvent.create({ data: { firmId: actor.firmId, type: EVENT.STAFF_DEACTIVATED, subjectId: t.id, payload: StaffEventPayload.parse({ staffId: t.id }) } });   // last (m8)
       return { staffId: t.id, status: "DEACTIVATED" as const };
     });
     if (refuse) return this.refuseOnlyOwner(actor, id.toLowerCase(), "deactivating");

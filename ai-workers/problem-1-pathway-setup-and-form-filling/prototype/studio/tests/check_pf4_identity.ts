@@ -63,6 +63,7 @@ const { PlatformGuard, assertEveryRouteDeclared } = await import("../api/src/pla
 const { PlatformIdentityController } = await import("../api/src/platform/identity/routes.ts");
 const { PermissionKeys } = await import("../api/src/platform/identity/keys.ts");
 const { platformAuditWorkspaceId, PLATFORM_AUDIT_WORKSPACE } = await import("../api/src/platform/identity/audit.ts");
+const { EVENT, StaffEventPayload, StaffRolesChanged } = await import("../ports/events.ts");
 const { resetSampleFirmSettings } = await import("../api/src/platform/identity/demo-reset.ts");
 const { sampleSeedDecision, seedSampleOnStart } = await import("../api/src/platform/identity/sample-seed.ts");
 const feature = (await import("../api/src/features/platform-identity.ts")).default;
@@ -418,6 +419,11 @@ try {
   ok("PF-4 pass: platform audit lines carry the platform's own audit workspace (never the demo workspace's)",
     sql(DB, `select count(distinct workspace_id) from audit_event where entity in ('platform_staff','platform_invitation')`) === "1"
     && sql(DB, `select w.key from audit_event a join workspace w on w.id = a.workspace_id where a.entity = 'platform_staff' limit 1`) === PLATFORM_AUDIT_WORKSPACE);
+  const staffEvents = JSON.parse(sql(DB, `select coalesce(json_agg(json_build_object('type', type, 'firmId', firm_id, 'payload', payload)), '[]') from module_event where type like 'staff.%'`)) as { type: string; firmId: string; payload: unknown }[];
+  ok("PF-4 pass (B164; ports/events.ts): every staff event is named from EVENT and its payload is ids only (staffId), as its zod shape says",
+    staffEvents.length >= 2 && staffEvents.every((e) => [EVENT.STAFF_ROLES_CHANGED, EVENT.STAFF_DEACTIVATED].includes(e.type as never) && StaffEventPayload.safeParse(e.payload).success)
+    && staffEvents.some((e) => StaffRolesChanged.safeParse(e).success), staffEvents.slice(0, 3));
+  ok("PF-4 fail: a payload with more than ids (a role word, a name) is refused by the shape", !StaffEventPayload.safeParse({ staffId: R, roles: ["OWNER"] }).success && !StaffEventPayload.safeParse({ staffId: "user-R" }).success);
   ok("PF-4 fail: a refused change writes no event (the refused role changes and deactivations above left none)",
     sql(DB, `select count(*) from module_event where type = 'staff.deactivated'`) === sql(DB, `select count(*) from audit_event where action = 'platform.staff.deactivated'`));
 
