@@ -13,6 +13,8 @@ import { PgBoss, TestClock } from "pg-boss";
 import { firmScope } from "../api/src/platform/firm-scope.ts";
 import { jobIdOf } from "../api/src/platform/jobs/job-key.ts";
 import { currentJobFirm, DEAD_LETTER, JobRefused, JOBS_SCHEMA, PgBossJobs } from "../api/src/platform/jobs/pgboss-jobs.ts";
+import { FakeClock } from "../ports/clock.ts";
+import { fakeJobs } from "../ports/jobs.ts";
 
 const STUDIO = join(import.meta.dirname, "..");
 const BIN = "/opt/homebrew/opt/postgresql@18/bin", PG = ["-h", "127.0.0.1", "-p", "54329", "-U", "xr_studio"];
@@ -28,7 +30,7 @@ if (process.argv[2] === "--crash-child") {
   const c = new pg.Client({ connectionString: urlOf(db) });
   await c.connect();
   const jobs = new PgBossJobs({ connectionString: urlOf(db), retry: FAST, pollingIntervalSeconds: 0.5 });
-  jobs.handle("pf14.crash", async (job) => {
+  await jobs.handle("pf14.crash", async (job) => {
     await c.query("insert into pf14_attempt(key, attempt) values ($1, $2)", [job.key, job.attempt]);
     await c.query("insert into pf14_effect(key) values ($1) on conflict do nothing", [job.key]);
     console.log("STARTED");
@@ -55,9 +57,9 @@ await q(`create table pf14_note(firm_id uuid not null, body text not null);
 await q(`insert into pf14_note values ($1, 'a-1'), ($1, 'a-2'), ($2, 'b-1')`, [A, B]);
 
 // The instants each job's handler saw on the test clock, by job name.
-const ran = new Map<string, { at: number; key: string; firmId: string | null; attempt: number; current: string | null | undefined }[]>();
+const ran = new Map<string, { at: number; key: string; firmId: string | null; attempt: number; runAt: string; current: string | null | undefined }[]>();
 const seen = (name: string) => ran.get(name) ?? [];
-const record = (name: string, job: { key: string; firmId: string | null; attempt: number }): void => void ran.set(name, [...seen(name), { at: clock.now(), key: job.key, firmId: job.firmId, attempt: job.attempt, current: currentJobFirm() }]);
+const record = (name: string, job: { key: string; firmId: string | null; attempt: number; runAt: Date }): void => void ran.set(name, [...seen(name), { at: clock.now(), key: job.key, firmId: job.firmId, attempt: job.attempt, runAt: job.runAt.toISOString(), current: currentJobFirm() }]);
 
 const clock = new TestClock("2026-10-30T12:00:00Z");
 const errors: string[] = [];
@@ -96,19 +98,20 @@ try {
     const stored = await jobs.boss.findJobs("pf14.once");
     ok("PF-14 pass: the same key twice → one job (the second enqueue answers queued: false)", r1.queued && !r2.queued && stored.filter((j) => (j.data as { key: string }).key === "once:1").length === 1, { r1, r2 });
     ok("PF-14 fail: a different key is a second job", r3.queued && stored.length === 2, stored.length);
-    jobs.handle("pf14.once", async (job) => record("pf14.once", job));
+    await jobs.handle("pf14.once", async (job) => record("pf14.once", job));
     ok("PF-14: both keys run once", await tickUntil(() => seen("pf14.once").length === 2, 500, 20), seen("pf14.once"));
     const r4 = await jobs.enqueue("pf14.once", { noteId: 4 }, { key: "once:1", firmId: A });
     ok("PF-14 pass: a key whose job has finished still refuses a second job (completed jobs are kept)", !r4.queued && (await state("pf14.once", "once:1")) === "completed");
     ok("PF-14 fail: a job without a firm is refused before anything is queued", await throwsLike(() => jobs.enqueue("pf14.once", {}, { key: "once:3" } as never), (e) => e instanceof JobRefused && /firmId/.test(String(e))));
-    ok("PF-14 fail: a firm id that is not a uuid is refused", await throwsLike(() => jobs.enqueue("pf14.once", {}, { key: "once:3", firmId: "firm-a" }), (e) => e instanceof JobRefused && /not a firm id/.test(String(e))));
+    ok("PF-14 fail: a firm id that is not a uuid is refused", await throwsLike(() => jobs.enqueue("pf14.once", {}, { key: "once:3", firmId: "firm-a" }), (e) => e instanceof JobRefused && /firmId a firm id/.test(String(e))));
     ok("PF-14 fail: a payload that is not an object of ids is refused", await throwsLike(() => jobs.enqueue("pf14.once", "a@b.ca" as never, { key: "once:3", firmId: A }), (e) => e instanceof JobRefused));
     ok("PF-14 fail: a job name outside the dotted lower-case form is refused", await throwsLike(() => jobs.enqueue("Send Email!", {}, { key: "once:3", firmId: A }), () => true));
+    ok("PF-14 pass: a cancelled job's key stays used (PF-0p's rule)", await (async () => { await jobs.schedule("pf14.once", new Date(clock.now() + 864e5), {}, { key: "once:c", firmId: A }); return (await jobs.cancel("once:c")) && !(await jobs.enqueue("pf14.once", {}, { key: "once:c", firmId: A })).queued; })());
   }
 
   // ------------------------------------------------------------------------------------- schedule and cancel on the clock
   {
-    jobs.handle("pf14.later", async (job) => record("pf14.later", job));
+    await jobs.handle("pf14.later", async (job) => record("pf14.later", job));
     const at = new Date(clock.now() + 3600_000);
     await jobs.schedule("pf14.later", at, { bookingId: "x" }, { key: "later:1", firmId: A });
     await jobs.schedule("pf14.later", at, { bookingId: "y" }, { key: "later:2", firmId: A });
@@ -120,7 +123,7 @@ try {
 
   // ------------------------------------------------------------------- 09:00 America/Toronto across the 1 Nov 2026 change
   {
-    jobs.handle("pf14.morning", async (job) => record("pf14.morning", job));
+    await jobs.handle("pf14.morning", async (job) => record("pf14.morning", job));
     await clock.setTime("2026-10-31T12:55:00Z"); // 08:55 EDT (UTC-4)
     await jobs.recurring("pf14.morning", "0 9 * * *", "America/Toronto");
     ok("PF-14 pass: 31 Oct (EDT): the 09:00 Toronto job runs at 13:00 UTC", await tickUntil(() => seen("pf14.morning").length === 1, 30_000, 20) && seen("pf14.morning")[0]!.at >= Date.parse("2026-10-31T13:00:00Z") && seen("pf14.morning")[0]!.at < Date.parse("2026-10-31T13:05:00Z"), seen("pf14.morning").map((r) => new Date(r.at)));
@@ -132,6 +135,7 @@ try {
     const sent = (await jobs.boss.findJobs("pf14.morning")).map((j) => j.startAfter.toISOString()).sort();
     ok("PF-14 pass: exactly two runs, each created for its own instant (no double run in the repeated hour)", seen("pf14.morning").length === 2 && sent.length === 2, sent);
     ok("PF-14: a recurring job is platform-wide (no firm) and fans out per firm with enqueue", seen("pf14.morning").every((r) => r.firmId === null && r.current === null));
+    ok("PF-14: each recurring run has runAt = its instant and the key <name>@<minute> (PF-0p's form)", seen("pf14.morning").map((r) => `${r.key}|${r.runAt}`).join() === "pf14.morning@2026-10-31T13:00:00.000Z|2026-10-31T13:00:00.000Z,pf14.morning@2026-11-01T14:00:00.000Z|2026-11-01T14:00:00.000Z", seen("pf14.morning"));
     ok("PF-14 fail: a time zone that does not exist is refused", await throwsLike(() => jobs.recurring("pf14.morning", "0 9 * * *", "Mars/Olympus"), (e) => e instanceof JobRefused));
     ok("PF-14 fail: a cron that does not parse is refused", await throwsLike(() => jobs.recurring("pf14.morning", "nine every morning", "America/Toronto"), (e) => e instanceof JobRefused));
     await jobs.boss.unschedule("pf14.morning");
@@ -139,8 +143,8 @@ try {
 
   // ------------------------------------------------------------------------- retries with back-off, then the dead-letter list
   {
-    jobs.handle("pf14.flaky", async (job) => { record("pf14.flaky", job); if (job.attempt === 1) throw new Error("first try fails"); });
-    jobs.handle("pf14.broken", async (job) => { record("pf14.broken", job); throw new Error(`boom for ${job.key}`); });
+    await jobs.handle("pf14.flaky", async (job) => { record("pf14.flaky", job); if (job.attempt === 1) throw new Error("first try fails"); });
+    await jobs.handle("pf14.broken", async (job) => { record("pf14.broken", job); throw new Error(`boom for ${job.key}`); });
     await jobs.enqueue("pf14.flaky", {}, { key: "flaky:1", firmId: A });
     await jobs.enqueue("pf14.broken", {}, { key: "broken:1", firmId: B });
     await tickUntil(async () => (await state("pf14.broken", "broken:1")) === "failed" && (await state("pf14.flaky", "flaky:1")) === "completed", 250, 200);
@@ -158,13 +162,13 @@ try {
   // --------------------------------------------------------------------------------------- firm A never reads firm B's rows
   {
     const read = new Map<string, string[]>();
-    jobs.handle("pf14.notes", async (job) => {
+    await jobs.handle("pf14.notes", async (job) => {
       record("pf14.notes", job);
       const w = firmScope(job.firmId!);
       const rows = await q<{ body: string }>("select body from pf14_note where firm_id = $1 order by body", [w.firmId]);
       read.set(job.key, rows.map((r) => r.body));
     });
-    jobs.handle("pf14.nosy", async (job) => {
+    await jobs.handle("pf14.nosy", async (job) => {
       record("pf14.nosy", job);
       const w = firmScope(job.firmId!, { firmId: job.payload && (job.payload as { other: string }).other });
       read.set(job.key, (await q<{ body: string }>("select body from pf14_note where firm_id = $1", [w.firmId])).map((r) => r.body));
@@ -174,12 +178,14 @@ try {
     await jobs.enqueue("pf14.nosy", { other: B }, { key: "nosy:a", firmId: A });
     // A job written past the port (by hand) with a firm id that is not one: it must never reach a handler.
     await jobs.boss.send("pf14.notes", { key: "notes:forged", firmId: "not-a-firm", payload: {} }, { id: jobIdOf("notes:forged") });
-    await tickUntil(async () => read.has("notes:a") && read.has("notes:b") && (await state("pf14.nosy", "nosy:a")) === "failed" && (await state("pf14.notes", "notes:forged")) === "failed", 250, 200);
+    await jobs.boss.send("pf14.notes", { key: "notes:nofirm", firmId: null, payload: {} }, { id: jobIdOf("notes:nofirm") });
+    await tickUntil(async () => read.has("notes:a") && read.has("notes:b") && (await state("pf14.nosy", "nosy:a")) === "failed" && (await state("pf14.notes", "notes:forged")) === "failed" && (await state("pf14.notes", "notes:nofirm")) === "failed", 250, 200);
     ok("PF-14 pass: each firm's job reads only its own firm's rows", JSON.stringify(read.get("notes:a")) === '["a-1","a-2"]' && JSON.stringify(read.get("notes:b")) === '["b-1"]', Object.fromEntries(read));
     ok("PF-14 pass: the handler runs inside its firm (currentJobFirm() is the job's firm)", seen("pf14.notes").every((r) => r.current === r.firmId && r.firmId !== null), seen("pf14.notes"));
     const dead = await jobs.deadLetters();
     ok("PF-14 fail: firm A's job asking for firm B's rows is refused by firmScope, reads nothing and ends on the dead-letter list", !read.has("nosy:a") && dead.some((d) => d.key === "nosy:a" && /names another firm/.test(d.error)), dead.filter((d) => d.key.startsWith("nosy")));
-    ok("PF-14 fail: a job whose firm id is not a firm never reaches its handler and ends on the dead-letter list", !seen("pf14.notes").some((r) => r.key === "notes:forged") && dead.some((d) => d.key === "?" || d.key === "notes:forged"), dead.map((d) => d.key));
+    ok("PF-14 fail: a job whose firm id is not a firm never reaches its handler and ends on the dead-letter list", !seen("pf14.notes").some((r) => r.key === "notes:forged") && dead.some((d) => d.key === "?" && /firmId/.test(d.error)), dead.map((d) => [d.key, d.error]));
+    ok("PF-14 fail: a job without a firm that is not a recurring run never reaches its handler either", !seen("pf14.notes").some((r) => r.key === "notes:nofirm") && dead.some((d) => d.key === "notes:nofirm" && /without a firm/.test(d.error)), dead.map((d) => [d.key, d.error]));
     ok("PF-14: outside a job there is no job firm", currentJobFirm() === undefined);
   }
 
@@ -196,7 +202,7 @@ try {
     child.kill("SIGKILL");
     await new Promise((r) => child.once("exit", r));
     ok("PF-14: the child worker took the job and was killed mid-job", out.includes("STARTED") && (await state("pf14.crash", "crash:1")) === "active", out.slice(-400));
-    jobs.handle("pf14.crash", async (job) => {
+    await jobs.handle("pf14.crash", async (job) => {
       record("pf14.crash", job);
       await q("insert into pf14_attempt(key, attempt) values ($1, $2)", [job.key, job.attempt]);
       await q("insert into pf14_effect(key) values ($1) on conflict do nothing", [job.key]);
@@ -224,7 +230,7 @@ try {
     const realErrors: string[] = [];
     const real = new PgBossJobs({ connectionString: urlOf(MAIN), pollingIntervalSeconds: 0.5, boss: { application_name: "xr-pf14-stop" }, onError: (e) => realErrors.push(e.message) });
     let finished = false;
-    real.handle("pf14.slow", async () => { await realPause(1500); finished = true; });
+    await real.handle("pf14.slow", async () => { await realPause(1500); finished = true; });
     await real.start();
     await real.enqueue("pf14.slow", {}, { key: "slow:1", firmId: A });
     for (let i = 0; i < 100 && (await real.boss.getJobById("pf14.slow", jobIdOf("slow:1")))?.state !== "active"; i++) await realPause(100);
@@ -237,7 +243,7 @@ try {
     // the failing side: a handler that overruns stop's limit is not completed by the stop; pg-boss hands its job back
     // for a retry, so it is never lost and reruns on the next start (an idempotent handler, as in the crash case).
     const late = new PgBossJobs({ connectionString: urlOf(MAIN), pollingIntervalSeconds: 0.5, onError: () => {} });
-    late.handle("pf14.overrun", async () => { await realPause(3000); });
+    await late.handle("pf14.overrun", async () => { await realPause(3000); });
     await late.start();
     await late.enqueue("pf14.overrun", {}, { key: "overrun:1", firmId: A });
     for (let i = 0; i < 100 && (await late.boss.getJobById("pf14.overrun", jobIdOf("overrun:1")))?.state !== "active"; i++) await realPause(100);
@@ -259,7 +265,7 @@ try {
     const app = await NestFactory.createApplicationContext(JobsOnly, { logger: false });
     const svc = app.get(PlatformJobs);
     let ranInApp = false;
-    svc.handle("pf14.app", async () => { ranInApp = true; });
+    await svc.handle("pf14.app", async () => { ranInApp = true; });
     await svc.enqueue("pf14.app", {}, { key: "app:1", firmId: A });
     for (let i = 0; i < 100 && !ranInApp; i++) await realPause(100);
     ok("PF-14 pass: the feature file registers the provider; the worker starts with the app and runs a job", svc.runner.started && ranInApp);
@@ -267,6 +273,21 @@ try {
     await app.close();
     ok("PF-14 pass: app.close() stops the worker and removes its signal listeners", !svc.runner.started && process.listenerCount("SIGTERM") === 0);
     ok("PF-14 fail: after the app closed, a new job is refused (no runner left behind)", await throwsLike(() => svc.enqueue("pf14.app", {}, { key: "app:2", firmId: A }), (e) => e instanceof JobRefused));
+  }
+
+  // ------------------------------------------------- the same contract on PF-0p's fake (every PF/FO test runs on it)
+  {
+    const fc = new FakeClock("2026-10-31T12:55:00Z");
+    const fake = fakeJobs(fc);
+    const fakeRuns: string[] = [];
+    await fake.handle("pf14.morning", async (j) => { fakeRuns.push(`${j.key}|${j.runAt.toISOString()}`); });
+    await fake.recurring("pf14.morning", "0 9 * * *", "America/Toronto");
+    await fc.advance({ hours: 26 });
+    const realRuns = seen("pf14.morning").map((r) => `${r.key}|${r.runAt}`);
+    ok("PF-14 pass: PF-0p's fake and the pg-boss adapter run 09:00 Toronto across 1 Nov at the same instants with the same keys", realRuns.length === 2 && fakeRuns.join() === realRuns.join(), { fakeRuns, realRuns });
+    const f1 = await fake.enqueue("pf14.once", {}, { key: "once:1", firmId: A }), f2 = await fake.enqueue("pf14.once", {}, { key: "once:1", firmId: A });
+    ok("PF-14 pass: the fake agrees: the same key twice → one job", f1.queued && !f2.queued);
+    ok("PF-14 fail: the fake agrees: a job without a firm is refused", await throwsLike(() => fake.enqueue("pf14.once", {}, { key: "once:9" } as never), () => true));
   }
 
   // --------------------------------------------------------------------- migrate diff stays empty (pg-boss is not Prisma's)

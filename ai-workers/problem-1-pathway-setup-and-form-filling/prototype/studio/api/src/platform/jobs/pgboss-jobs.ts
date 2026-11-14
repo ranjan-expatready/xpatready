@@ -14,29 +14,25 @@
 //   this folder imports a sending port (tests/check_pf14_jobs.ts checks it).
 // Payloads carry ids, never personal data or secrets (contracts §0.5): they sit in a plain jsonb column.
 import { AsyncLocalStorage } from "node:async_hooks";
-import { PgBoss, type ConstructorOptions, type Job, type JobWithMetadata } from "pg-boss";
+import { PgBoss, type ConstructorOptions, type JobWithMetadata } from "pg-boss";
 import { z } from "zod";
-import type { JobHandler, JobPort } from "../../../../ports/jobs.ts";
+import { CronSpec, JobName, JobOptions, JobPayload, type JobHandler, type JobPort } from "../../../../ports/jobs.ts";
 import { firmScope } from "../firm-scope.ts";
 import { jobIdOf } from "./job-key.ts";
 
 /** pg-boss's schema in our database (created by pg-boss at start, never by Prisma). */
 export const JOBS_SCHEMA = "platform_jobs";
 /** The one dead-letter list: every job that failed after its last retry, with its error. */
-export const DEAD_LETTER = "platform.dead-letter";
+export const DEAD_LETTER = "platform.dead_letter";
 
 /** Retry policy of every job queue (Sample values, contracts §0.8 sizing: about 100 firms). */
 export type RetryPolicy = { retryLimit: number; retryDelay: number; retryBackoff: boolean; retryDelayMax: number; expireInSeconds: number };
 export const DEFAULT_RETRY: RetryPolicy = { retryLimit: 3, retryDelay: 30, retryBackoff: true, retryDelayMax: 3600, expireInSeconds: 15 * 60 };
 
-const KEY = z.string().min(1).max(200);
-const NAME = z.string().regex(/^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/, "a job name is lower case words joined by dots or hyphens (e.g. fo.booking.reminder)").max(100);
 const FIRM = z.string().refine((f) => { try { firmScope(f); return true; } catch { return false; } }, "not a firm id");
-const OPTS = z.object({ key: KEY, firmId: FIRM });
-const PAYLOAD = z.record(z.string(), z.unknown());
-type Payload = z.infer<typeof PAYLOAD>;
-/** What pg-boss stores as a job's data: our envelope around the caller's payload. */
-const ENVELOPE = z.object({ key: KEY, firmId: FIRM.nullable(), payload: PAYLOAD });
+/** What pg-boss stores as a job's data: our envelope around the caller's payload. A recurring schedule's envelope has
+ *  no firm and `recurring: true`; each of its runs gets the key `<name>@<minute, ISO>` (as PF-0p's fake gives). */
+const ENVELOPE = z.object({ key: z.string().min(1).max(200), firmId: FIRM.nullable(), payload: JobPayload, recurring: z.literal(true).optional() });
 type Envelope = z.infer<typeof ENVELOPE>;
 
 /** A job that refused to run or failed after its last retry. */
@@ -64,8 +60,7 @@ export type PgBossJobsOptions = {
 export class PgBossJobs implements JobPort {
   readonly boss: PgBoss;
   readonly retry: RetryPolicy;
-  /** Handlers by job name; each receives the payload it was queued with (the envelope's object of ids). */
-  #handlers = new Map<string, JobHandler<Payload>>();
+  #handlers = new Map<string, JobHandler>();
   #queues = new Set<string>();
   #working = new Set<string>();
   #started = false;
@@ -94,7 +89,8 @@ export class PgBossJobs implements JobPort {
     for (const name of this.#handlers.keys()) await this.#work(name);
   }
 
-  /** Stops the worker: no new job is fetched, a running handler finishes (up to `timeoutMs`), then the pool closes. */
+  /** Stops the worker: no new job is fetched, a running handler finishes (up to `timeoutMs`; one still running then
+   *  is handed back by pg-boss for a retry, never lost), then the pool closes. */
   stop(timeoutMs = 10_000): Promise<void> {
     if (!this.#started) return Promise.resolve();
     this.#stopping ??= (async () => {
@@ -107,25 +103,26 @@ export class PgBossJobs implements JobPort {
     return this.#stopping;
   }
 
-  handle<P>(name: string, handler: JobHandler<P>): void {
-    NAME.parse(name);
+  /** The worker of queue `name` (one per name). Registered before start: it starts with the runner. */
+  async handle(name: string, handler: JobHandler): Promise<void> {
+    JobName.parse(name);
     if (this.#handlers.has(name)) throw new JobRefused(`jobs: "${name}" already has a handler`);
-    this.#handlers.set(name, handler as unknown as JobHandler<Payload>);
-    if (this.#started) void this.#work(name).catch((e) => this.boss.emit("error", e));
+    this.#handlers.set(name, handler);
+    if (this.#started) await this.#work(name);
   }
 
-  async enqueue<P>(name: string, payload: P, opts: { key: string; firmId: string }): Promise<{ queued: boolean }> {
+  async enqueue(name: string, payload: JobPayload, opts: JobOptions): Promise<{ queued: boolean }> {
     return this.#send(name, payload, opts);
   }
 
-  async schedule<P>(name: string, at: Date, payload: P, opts: { key: string; firmId: string }): Promise<{ queued: boolean }> {
+  async schedule(name: string, at: Date, payload: JobPayload, opts: JobOptions): Promise<{ queued: boolean }> {
     if (!(at instanceof Date) || Number.isNaN(at.getTime())) throw new JobRefused("jobs: schedule needs a valid time");
     return this.#send(name, payload, opts, at);
   }
 
-  /** Cancels the queued job with this key, of whatever name. True when one was cancelled. */
+  /** Cancels the waiting job with this key, of whatever name; true when one was waiting. Its key stays used. */
   async cancel(key: string): Promise<boolean> {
-    KEY.parse(key);
+    JobOptions.shape.key.parse(key);
     this.#mustBeStarted();
     const id = jobIdOf(key);
     let affected = 0;
@@ -137,15 +134,15 @@ export class PgBossJobs implements JobPort {
     return affected > 0;
   }
 
-  /** A platform-wide job on a cron in a time zone (e.g. "0 9 * * *", "America/Toronto"): pg-boss evaluates the cron in
-   *  that zone, so 09:00 stays 09:00 local across a clock change. Calling it again replaces the schedule. */
+  /** A platform-wide job on a cron read in a time zone (e.g. "0 9 * * *", "America/Toronto"): pg-boss evaluates the
+   *  cron in that zone, so 09:00 stays 09:00 local across a clock change. A second call replaces the schedule. */
   async recurring(name: string, cron: string, zone: string): Promise<void> {
-    NAME.parse(name);
+    JobName.parse(name);
+    const spec = CronSpec.safeParse({ cron, zone });
+    if (!spec.success) throw new JobRefused(`jobs: ${name}: ${spec.error.issues.map((i) => i.message).join("; ")}`);
     this.#mustBeStarted();
-    if (!validZone(zone)) throw new JobRefused(`jobs: "${zone}" is not a time zone`);
-    try { this.boss.previewSchedule(cron, { tz: zone, count: 1, from: new Date(0) }); } catch (e) { throw new JobRefused(`jobs: "${cron}" is not a cron: ${(e as Error).message}`); }
     await this.#queue(name);
-    const data: Envelope = { key: `recurring:${name}`, firmId: null, payload: {} };
+    const data: Envelope = { key: name, firmId: null, payload: {}, recurring: true };
     await this.boss.schedule(name, cron, data, { tz: zone });
   }
 
@@ -156,12 +153,12 @@ export class PgBossJobs implements JobPort {
     return rows.map(toDeadLetter).sort((a, b) => b.failedAt.getTime() - a.failedAt.getTime()).slice(0, limit);
   }
 
-  async #send(name: string, payload: unknown, opts: { key: string; firmId: string }, at?: Date): Promise<{ queued: boolean }> {
-    NAME.parse(name);
-    const o = OPTS.safeParse(opts);
+  async #send(name: string, payload: JobPayload, opts: JobOptions, at?: Date): Promise<{ queued: boolean }> {
+    JobName.parse(name);
+    const o = JobOptions.safeParse(opts);
     if (!o.success) throw new JobRefused(`jobs: ${name}: ${o.error.issues.map((i) => `${i.path.join(".")} ${i.message}`).join("; ")}`);
-    const p = PAYLOAD.safeParse(payload ?? {});
-    if (!p.success) throw new JobRefused(`jobs: ${name}: the payload is a JSON object of ids`);
+    const p = JobPayload.safeParse(payload);
+    if (!p.success) throw new JobRefused(`jobs: ${name}: the payload is a JSON object of ids and facts`);
     this.#mustBeStarted();
     await this.#queue(name);
     const data: Envelope = { key: o.data.key, firmId: firmScope(o.data.firmId).firmId, payload: p.data };
@@ -169,8 +166,8 @@ export class PgBossJobs implements JobPort {
     return { queued: id !== null };
   }
 
-  /** Each job name is its own queue, created once with the retry policy and the dead-letter list. Completed jobs are
-   *  kept (deleteAfterSeconds 0), so a finished job's key still refuses a second one. */
+  /** Each job name is its own queue, created once with the retry policy and the dead-letter list. Finished and
+   *  cancelled jobs are kept (deleteAfterSeconds 0), so a used key still refuses a second job. */
   async #queue(name: string) {
     if (this.#queues.has(name)) return;
     await this.boss.createQueue(name, { ...this.retry, deadLetter: DEAD_LETTER, deleteAfterSeconds: 0 });
@@ -182,28 +179,29 @@ export class PgBossJobs implements JobPort {
     this.#working.add(name);
     await this.#queue(name);
     const handler = this.#handlers.get(name)!;
-    await this.boss.work<Record<string, unknown>>(name, { pollingIntervalSeconds: this.#poll, batchSize: 1 }, async (jobs: Job<Record<string, unknown>>[]) => {
+    await this.boss.work(name, { pollingIntervalSeconds: this.#poll, batchSize: 1, includeMetadata: true }, async (jobs: JobWithMetadata<Record<string, unknown>>[]) => {
       for (const job of jobs) await this.#run(name, handler, job);
     });
   }
 
-  async #run(name: string, handler: JobHandler<Payload>, job: Job<Record<string, unknown>>) {
+  async #run(name: string, handler: JobHandler, job: JobWithMetadata<Record<string, unknown>>) {
     // A job whose envelope is not ours (written by hand, or by an older shape) or whose firm id is not a firm never
     // reaches the handler: it fails, and after its retries it is on the dead-letter list with this reason.
     const env = ENVELOPE.safeParse(job.data);
     if (!env.success) throw new JobRefused(`jobs: ${name}: the job's data is not a PF-14 envelope (${env.error.issues[0]?.path.join(".")})`);
     const firmId = env.data.firmId === null ? null : firmScope(env.data.firmId).firmId;
+    if (firmId === null && !env.data.recurring) throw new JobRefused(`jobs: ${name}: a job without a firm`);
+    // A recurring run's instant is its cron minute (pg-boss creates it a moment into that minute, when its cron pass
+    // runs); its key names that minute, so one minute's run is one key in both adapters.
+    const runAt = env.data.recurring ? new Date(Math.floor(new Date(job.startAfter).getTime() / 60_000) * 60_000) : new Date(job.startAfter);
+    const key = env.data.recurring ? `${name}@${runAt.toISOString()}` : env.data.key;
     const attempt = job.retryCount + 1;
-    await firmOfJob.run({ firmId, name }, () => handler({ name, key: env.data.key, firmId, payload: env.data.payload, attempt }));
+    await firmOfJob.run({ firmId, name }, () => handler({ name, payload: env.data.payload, key, firmId, runAt, attempt }));
   }
 
   #mustBeStarted() {
     if (!this.#started) throw new JobRefused("jobs: the job runner has not started (or has stopped)");
   }
-}
-
-function validZone(zone: string): boolean {
-  try { new Intl.DateTimeFormat("en-CA", { timeZone: zone }); return /\//.test(zone) || zone === "UTC"; } catch { return false; }
 }
 
 function toDeadLetter(j: JobWithMetadata<Record<string, unknown>>): DeadLetter {
