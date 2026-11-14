@@ -1,0 +1,20 @@
+NOTICE:  database "xr_studio_qa_bk18v" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.
+isolated qa_bk18v on http://localhost:4472 (xr_studio_qa_bk18v), stops itself in 30 min
+V1 typed [200] · self asked false · dialog said "" · RECORD "Prepared by · Reviewed by: Case officer (Sample) · reviewed by Representative (Sample) (licence R000000), Nov 14, 2026, 02:04 a.m." · data-record two-people · API prepared_by ["user-O"] behind ["user-R"] reviewed {"by":"user-R","kind":"reviewed","licence_number":"R000000","at":"2026-11-14T02:04:32.849Z"} · audit reviewed:user-R · page errors 0
+PASS V1: officer did the work → no 'I prepared and reviewed' statement asked
+PASS V1: record names the Case officer as preparer and the Representative (licence) as reviewer, with a time — "Prepared by · Reviewed by: Case officer (Sample) · reviewed by Representative (Sample) (licence R000000), Nov 14, 2026, 02:04 a.m."
+PASS V1: underneath — API prepared_by is the officer only, review kind 'reviewed'; audit 'reviewed:user-R' — {"pb":["user-O"],"k":"reviewed","a":"reviewed:user-R"}
+V2 typed [200] · self asked true · dialog said "You prepared this filing yourself: confirm "I prepared and reviewed this filing myself". It is logged as Self-reviewed, never as a second person." · RECORD "Prepared by · Reviewed by: Self-reviewed by Representative (Sample) (licence R000000), Nov 14, 2026, 02:04 a.m." · data-record self-reviewed · API prepared_by ["user-R"] behind ["user-R"] reviewed {"by":"user-R","kind":"self_reviewed","licence_number":"R000000","at":"2026-11-14T02:04:48.255Z"} · audit self_reviewed:user-R · page errors 0
+PASS V2 (S8): statement asked, record 'Self-reviewed by Representative (Sample) (licence …), time' — "Prepared by · Reviewed by: Self-reviewed by Representative (Sample) (licence R000000), Nov 14, 2026, 02:04 a.m."
+PASS V2: underneath — prepared_by the Representative, kind self_reviewed, audit self_reviewed:user-R — {"pb":["user-R"],"k":"self_reviewed","a":"self_reviewed:user-R"}
+V3 typed [200,200] · self asked false · dialog said "" · RECORD "" · data-record null · API prepared_by ["user-O","user-R"] behind ["user-R"] reviewed null · audit  · page errors 0
+PASS V3: both worked → no review recorded (no record line, no audit review) — {"line":"","audit":"","said":""}
+FAIL V3: the refusal says why in plain words (a second person) — ""
+V4-400 typed [200] · self asked true · dialog said "You prepared this filing yourself: confirm "I prepared and reviewed this filing myself". It is logged as Self-reviewed, never as a second person." · RECORD "Prepared by · Reviewed by: Self-reviewed by Representative (Sample) (licence R000000), Nov 14, 2026, 02:05 a.m." · data-record self-reviewed · API prepared_by ["user-R"] behind ["user-R"] reviewed {"by":"user-R","kind":"self_reviewed","licence_number":"R000000","at":"2026-11-14T02:05:46.589Z"} · audit self_reviewed:user-R · page errors 0
+PASS V4 (400 px): Self-reviewed record shown at phone width, no page error — {"line":"Prepared by · Reviewed by: Self-reviewed by Representative (Sample) (licence R000000), Nov 14, 2026, 02:05 a.m.","errs":[]}
+1 failed
+EXIT=1
+stopped qa_bk18v (database and files removed; log in var/isolated-logs/qa_bk18v-api.log)
