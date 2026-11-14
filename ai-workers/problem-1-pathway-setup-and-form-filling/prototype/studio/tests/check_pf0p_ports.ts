@@ -101,7 +101,7 @@ ok("PF-0p fail: the import check catches a Prisma, a Nest, a node and an app imp
   const first = await jobs.enqueue("booking.confirm", { bookingId: "b-1" }, { key: "booking:b-1:confirm", firmId: FAKE_FIRM_ID });
   const second = await jobs.enqueue("booking.confirm", { bookingId: "b-1" }, { key: "booking:b-1:confirm", firmId: FAKE_FIRM_ID });
   await jobs.runDue();
-  ok("jobs pass: a job queues and runs once", first.queued && ran.length === 1 && ran[0].payload.bookingId === "b-1" && ran[0].firmId === FAKE_FIRM_ID);
+  ok("jobs pass: a job queues and runs once", first.queued && ran.length === 1 && ran[0].payload.bookingId === "b-1" && ran[0].firmId === FAKE_FIRM_ID && ran[0].attempt === 1);
   ok("jobs fail: the same key never queues twice (second enqueue: queued false, one run)", !second.queued && jobs.jobs.filter((j) => j.key === "booking:b-1:confirm").length === 1);
   await jobs.runDue();
   ok("jobs fail: a key that ran does not queue again", !(await jobs.enqueue("booking.confirm", {}, { key: "booking:b-1:confirm", firmId: FAKE_FIRM_ID })).queued && ran.length === 1);

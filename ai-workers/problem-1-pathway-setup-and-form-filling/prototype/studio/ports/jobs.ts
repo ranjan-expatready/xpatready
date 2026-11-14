@@ -21,8 +21,8 @@ export const CronSpec = z.object({
 });
 
 /** One run as the handler sees it. A recurring run has no firm (it sweeps every firm itself) and its key is
- *  `<name>@<minute, ISO>`. */
-export type JobRun = { name: string; payload: JobPayload; key: string; firmId: string | null; runAt: Date };
+ *  `<name>@<minute, ISO>`. `attempt` counts from 1 (a real queue's retry is attempt 2; the fake never retries). */
+export type JobRun = { name: string; payload: JobPayload; key: string; firmId: string | null; runAt: Date; attempt: number };
 export type JobHandler = (job: JobRun) => Promise<void>;
 
 export interface JobPort {
@@ -60,7 +60,7 @@ export function fakeJobs(clock: FakeClock): FakeJobs {
     if (!Number.isFinite(at.getTime())) throw new RangeError("schedule: `at` is not a time");
     if (used.has(o.key)) return { queued: false };
     used.add(o.key);
-    jobs.push({ id: nextId++, name, payload: p, key: o.key, firmId: o.firmId.toLowerCase(), runAt: new Date(at), status: "waiting" });
+    jobs.push({ id: nextId++, name, payload: p, key: o.key, firmId: o.firmId.toLowerCase(), runAt: new Date(at), attempt: 1, status: "waiting" });
     return { queued: true };
   };
 
@@ -72,7 +72,7 @@ export function fakeJobs(clock: FakeClock): FakeJobs {
         const now = clock.now().getTime();
         const due = jobs.filter((j) => j.status === "waiting" && j.runAt.getTime() <= now && handlers.has(j.name)).sort((a, b) => a.runAt.getTime() - b.runAt.getTime() || a.id - b.id)[0];
         if (!due) return;
-        try { await handlers.get(due.name)!({ name: due.name, payload: structuredClone(due.payload), key: due.key, firmId: due.firmId, runAt: new Date(due.runAt) }); due.status = "done"; }
+        try { await handlers.get(due.name)!({ name: due.name, payload: structuredClone(due.payload), key: due.key, firmId: due.firmId, runAt: new Date(due.runAt), attempt: due.attempt }); due.status = "done"; }
         catch (e) { due.status = "failed"; due.error = e instanceof Error ? e.message : String(e); }
       }
       throw new Error("fakeJobs: more than 10 000 runs in one step (a job that queues itself without end?)");
@@ -87,7 +87,7 @@ export function fakeJobs(clock: FakeClock): FakeJobs {
     for (; schedules.size && from <= to; from += 60_000) {
       for (const [name, s] of schedules) if (cronMatches(s.cron, new Date(from), s.zone)) {
         const key = `${name}@${new Date(from).toISOString()}`;
-        if (!used.has(key)) { used.add(key); jobs.push({ id: nextId++, name, payload: {}, key, firmId: null, runAt: new Date(from), status: "waiting" }); }
+        if (!used.has(key)) { used.add(key); jobs.push({ id: nextId++, name, payload: {}, key, firmId: null, runAt: new Date(from), attempt: 1, status: "waiting" }); }
       }
     }
     await runDue();
