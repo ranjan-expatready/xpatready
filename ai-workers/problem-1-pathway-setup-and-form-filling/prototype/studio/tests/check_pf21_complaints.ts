@@ -45,6 +45,8 @@ const answer = async (f: () => Promise<unknown>): Promise<{ status: number; code
 const client = (db: string) => new PrismaClient({ adapter: new PrismaPg({ connectionString: urlOf(db), options: "-c TimeZone=UTC" }) });
 const u = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const HOUR = 3_600_000, DAY = 24 * HOUR;
+/** The jobs still waiting in a fake queue. */
+const waiting = (j: { jobs: ReadonlyArray<{ status: string; key: string; name: string }> }) => j.jobs.filter((x) => x.status === "waiting");
 /** A complaint by another person written straight in SQL, with its RECEIVED event in the same transaction (the database
  *  checks at commit that every complaint has one). */
 const otherPerson = (id: string, firm: string, handler: string, name: string, received = "now()") =>
@@ -114,7 +116,7 @@ try {
   // Monday 16 Nov 2026 09:00 in Toronto (14:00Z): the firm's Sample hours Mon-Fri 09:00-17:00, zone America/Toronto.
   const clock = new FakeClock("2026-11-16T15:00:00Z"), jobs = fakeJobs(clock), mail = fakeMail(), audit = fakeAudit();
   const svc = new ComplaintsService({ db, audit, jobs, clock, mail });
-  registerComplaintJobs(jobs, svc);
+  await registerComplaintJobs(jobs, svc);
   const base = { subjectKind: "FRONT_OFFICE_PERSON", subjectId: u(500), receivedAt: "2026-11-16T14:00:00Z", channel: "EMAIL", category: "SERVICE", summary: "The client says the study permit file was sent late.", handlerStaffId: T };
   const count = (t: string, where = "true") => sql(DEMO, `select count(*) from ${t} where ${where}`);
 
@@ -141,7 +143,7 @@ try {
   const c1 = await svc.record(owner, base);
   ok("PF-21 pass (line 1): with a received date and a summary the complaint is recorded OPEN, with its RECEIVED event, one audit line and one reminder job keyed by the complaint",
     c1.status === "OPEN" && count("plat_complaint_event", `complaint_id='${c1.id}' and kind='RECEIVED'`) === "1" && audit.entries.length === 1 && audit.entries[0].action === "complaint.record"
-    && jobs.queued.filter((j) => j.key === ackReminderKey(c1.id) && j.name === ACK_REMINDER_JOB).length === 1, { c1, entries: audit.entries, q: jobs.queued });
+    && waiting(jobs).filter((j) => j.key === ackReminderKey(c1.id) && j.name === ACK_REMINDER_JOB).length === 1, { c1, entries: audit.entries, q: waiting(jobs) });
   ok("PF-21 pass: acknowledge-by is the close of the 2nd business day after the received day (Mon 09:00 Toronto → Wed 18 Nov 17:00 Toronto = 22:00Z)", c1.acknowledgeBy.toISOString() === "2026-11-18T22:00:00.000Z", c1.acknowledgeBy);
   const cal = { zone: "America/Toronto", hours: ["MON", "TUE", "WED", "THU", "FRI"].map((day) => ({ day, opens: "09:00", closes: "17:00" })), closedDays: [] as string[] };
   ok("PF-21 pass/fail: a Friday complaint skips the weekend (Fri 20 Nov → Tue 24 Nov 17:00), and a closed day is skipped too (Mon 23 Nov closed → Wed 25 Nov)",
@@ -150,25 +152,25 @@ try {
 
   // --------------------------------------------------- line 2: the acknowledgement reminder fires once (fake clock)
   await clock.advance(DAY);   // Tue 17 Nov 15:00Z: before the date
-  ok("PF-21 fail (line 2): before the acknowledge-by date no reminder is sent", mail.inbox.length === 0 && count("plat_complaint_event", `kind='REMINDER_SENT'`) === "0");
+  ok("PF-21 fail (line 2): before the acknowledge-by date no reminder is sent", mail.sent.length === 0 && count("plat_complaint_event", `kind='REMINDER_SENT'`) === "0");
   const before2 = (await svc.list(owner, "overdue")).items;
   ok("PF-21 fail: before its date the complaint is not overdue", before2.length === 0, before2);
   await clock.advance(DAY + 8 * HOUR);   // Wed 18 Nov 23:00Z: past 22:00Z
   const handlerEmail = sql(DEMO, `select email from platform_staff where id='${T}'`);
   ok("PF-21 pass (line 2): past the date one reminder goes to the handler, recorded as one REMINDER_SENT event and one audit line by the system; the mail names no complainant and no summary",
-    mail.inbox.length === 1 && mail.inbox[0].to === handlerEmail && !mail.inbox[0].text.includes("study permit") && count("plat_complaint_event", `complaint_id='${c1.id}' and kind='REMINDER_SENT'`) === "1"
-    && audit.entries.filter((e) => e.action === "complaint.reminder" && e.actor.startsWith("system:")).length === 1, mail.inbox);
+    mail.sent.length === 1 && mail.sent[0].to === handlerEmail && !mail.sent[0].text.includes("study permit") && count("plat_complaint_event", `complaint_id='${c1.id}' and kind='REMINDER_SENT'`) === "1"
+    && audit.entries.filter((e) => e.action === "complaint.reminder" && e.actor.startsWith("system:")).length === 1, mail.sent);
   await clock.advance(DAY);
-  ok("PF-21 fail (line 2, once): the reminder does not fire again, and running the job again by hand is skipped", mail.inbox.length === 1 && (await svc.runAckReminder({ firmId: firmA, complaintId: c1.id })) === "skipped" && mail.inbox.length === 1);
+  ok("PF-21 fail (line 2, once): the reminder does not fire again, and running the job again by hand is skipped", mail.sent.length === 1 && (await svc.runAckReminder({ firmId: firmA, complaintId: c1.id })) === "skipped" && mail.sent.length === 1);
   const overdue = (await svc.list(owner, "overdue")).items;
   ok("PF-21 pass: the list's overdue view shows it (open, not acknowledged, past its date)", overdue.length === 1 && overdue[0].id === c1.id && overdue[0].overdue === true, overdue);
 
-  clock.set("2026-11-23T15:00:00Z");
+  await clock.set("2026-11-23T15:00:00Z");
   const c2 = await svc.record(owner, { ...base, subjectKind: "CASE_PARTY", subjectId: u(501), receivedAt: "2026-11-23T14:30:00Z", category: "FEES", summary: "The sponsor disputes the fee." });
   await svc.acknowledge(handlerT, c2.id, { at: "2026-11-23T15:00:00Z" });
-  ok("PF-21 pass: acknowledging cancels the reminder job", !jobs.queued.some((j) => j.key === ackReminderKey(c2.id)));
+  ok("PF-21 pass: acknowledging cancels the reminder job", !waiting(jobs).some((j) => j.key === ackReminderKey(c2.id)));
   await clock.advance(5 * DAY);
-  ok("PF-21 fail (line 2): an acknowledged complaint gets no reminder, even when the job is run by hand", mail.inbox.length === 1 && (await svc.runAckReminder({ firmId: firmA, complaintId: c2.id })) === "skipped" && mail.inbox.length === 1);
+  ok("PF-21 fail (line 2): an acknowledged complaint gets no reminder, even when the job is run by hand", mail.sent.length === 1 && (await svc.runAckReminder({ firmId: firmA, complaintId: c2.id })) === "skipped" && mail.sent.length === 1);
   const again = await answer(() => svc.acknowledge(owner, c2.id, { at: "2026-11-24T15:00:00Z" }));
   ok("PF-21 fail: the acknowledgement is recorded once (409), and the database refuses a second one", again !== "ok" && again.status === 409 && refused(DEMO, `update plat_complaint set acknowledged_at = now() where id='${c2.id}'`, /acknowledgement is recorded once/), again);
 
@@ -250,9 +252,9 @@ try {
   ok("PF-21 fail: refused calls wrote no audit line (exactly the changes above)", audit.entries.length === actions.length && actions.length === 10, actions);
   const failing = fakeAudit({ failOn: (e) => e.action === "complaint.record" || e.action === "complaint.close" });
   const svc2 = new ComplaintsService({ db, audit: failing, jobs, clock, mail });
-  const n0 = count("plat_complaint"), e0 = count("plat_complaint_event"), q0 = jobs.queued.length;
+  const n0 = count("plat_complaint"), e0 = count("plat_complaint_event"), q0 = waiting(jobs).length;
   const forced = await svc2.record(owner, { ...base, receivedAt: clock.now().toISOString() }).then(() => "ok", (e: Error) => e.message);
-  ok("PF-21 fail (line 6): a forced audit failure rolls the record back — no complaint, no event, no reminder job", /forced/.test(forced) && count("plat_complaint") === n0 && count("plat_complaint_event") === e0 && jobs.queued.length === q0, forced);
+  ok("PF-21 fail (line 6): a forced audit failure rolls the record back — no complaint, no event, no reminder job", /forced/.test(forced) && count("plat_complaint") === n0 && count("plat_complaint_event") === e0 && waiting(jobs).length === q0, forced);
   const forcedClose = await svc2.close(owner, c2.id, { outcome: "RESOLVED", at: clock.now().toISOString(), note: "x" }).then(() => "ok", (e: Error) => e.message);
   ok("PF-21 fail (line 6): a forced audit failure on close leaves the complaint OPEN with no CLOSED event", /forced/.test(forcedClose) && sql(DEMO, `select status from plat_complaint where id='${c2.id}'`) === "OPEN" && count("plat_complaint_event", `complaint_id='${c2.id}' and kind='CLOSED'`) === "0");
 
@@ -262,7 +264,7 @@ try {
   // ======================================================== review and break round 1 (screens/PF-21/review.md, break-report.md)
   const clock3 = new FakeClock("2026-11-30T15:00:00Z"), jobs3 = fakeJobs(clock3), mail3 = fakeMail(), audit3 = fakeAudit();
   const svc3 = new ComplaintsService({ db, audit: audit3, jobs: jobs3, clock: clock3, mail: mail3 });
-  registerComplaintJobs(jobs3, svc3);
+  await registerComplaintJobs(jobs3, svc3);
   const at3 = (h: number) => new Date(Date.parse("2026-11-30T14:00:00Z") + h * HOUR).toISOString();
 
   // Roles from the catalogue (Lead 47 on #1753): record for Owner, Admin, Case Manager; read for Owner, Admin.
@@ -345,30 +347,30 @@ try {
   const failAck = new ComplaintsService({ db, audit: fakeAudit({ failOn: (e) => e.action === "complaint.acknowledge" }), jobs: jobs3, clock: clock3, mail: mail3 });
   const failed = await failAck.acknowledge(owner, keep.id, { at: at3(0) }).then(() => "ok", (e: Error) => e.message);
   ok("PF-21 fail→pass (break m1): an acknowledgement rolled back by a failing audit leaves its reminder job queued (cancel runs only after commit)",
-    /forced/.test(failed) && jobs3.queued.some((j) => j.key === ackReminderKey(keep.id)) && sql(DEMO, `select acknowledged_at is null from plat_complaint where id = '${keep.id}'`) === "t", failed);
+    /forced/.test(failed) && waiting(jobs3).some((j) => j.key === ackReminderKey(keep.id)) && sql(DEMO, `select acknowledged_at is null from plat_complaint where id = '${keep.id}'`) === "t", failed);
   const failRem = new ComplaintsService({ db, audit: fakeAudit({ failOn: (e) => e.action === "complaint.reminder" }), jobs: jobs3, clock: clock3, mail: mail3 });
-  const m0 = mail3.inbox.length;
+  const m0 = mail3.sent.length;
   const remFailed = await failRem.runAckReminder({ firmId: firmA, complaintId: keep.id }).then(() => "ok", (e: Error) => e.message);
-  ok("PF-21 fail (review m4): a reminder run that rolls back sends no mail and records no REMINDER_SENT", /forced/.test(remFailed) && mail3.inbox.length === m0 && count("plat_complaint_event", `complaint_id='${keep.id}' and kind='REMINDER_SENT'`) === "0");
+  ok("PF-21 fail (review m4): a reminder run that rolls back sends no mail and records no REMINDER_SENT", /forced/.test(remFailed) && mail3.sent.length === m0 && count("plat_complaint_event", `complaint_id='${keep.id}' and kind='REMINDER_SENT'`) === "0");
 
   // No personal data in audit or mail (review m5's never-failing test): a named other person, a contact and a summary.
   const NAME = "Zebulon Quartermaine", CONTACT = "zebulon.q@example.org", WORDS = "missed the biometrics appointment";
   const named = await svc3.record(owner, { ...base, subjectKind: "OTHER_PERSON", subjectId: undefined, complainantName: NAME, complainantContact: CONTACT, receivedAt: at3(-1), summary: `Says we ${WORDS}.` });
   ok("PF-21 pass: the named person's name and contact are on the record itself", named.complainantName === NAME && named.complainantContact === CONTACT);
   await clock3.advance(5 * DAY);
-  const leak = JSON.stringify([...audit3.entries, ...mail3.inbox, ...jobs3.queued]);
+  const leak = JSON.stringify([...audit3.entries, ...mail3.sent, ...jobs3.jobs]);
   ok("PF-21 fail (no leak): the reminder for it went out, and no audit line, job payload or mail carries the name, the contact or the summary's words",
-    mail3.inbox.some((m) => m.text.includes(named.id)) && !leak.includes(NAME) && !leak.includes(CONTACT) && !leak.includes(WORDS), mail3.inbox.length);
+    mail3.sent.some((m) => m.text.includes(named.id)) && !leak.includes(NAME) && !leak.includes(CONTACT) && !leak.includes(WORDS), mail3.sent.length);
   ok("PF-21 pass (break m10): the reminder gives the date in the firm's zone (America/Toronto) and a Reply-To of the firm's contact address",
-    mail3.inbox.filter((m) => m.text.includes(named.id)).every((m) => m.text.includes("America/Toronto") && m.replyTo === sql(DEMO, `select contact_email from platform_firm where id = '${firmA}'`)));
+    mail3.sent.filter((m) => m.text.includes(named.id)).every((m) => m.text.includes("America/Toronto") && m.replyTo === sql(DEMO, `select contact_email from platform_firm where id = '${firmA}'`)));
 
   // A deactivated handler (break m10): the reminder goes to the firm's active Owners and Admins instead.
   const gone = sql(DEMO, `insert into platform_staff (id, firm_id, email, display_name, updated_at) values (gen_random_uuid(), '${firmA}', 'leaver@sample-firm.example.com', 'Leaver', now()) returning id`);
   const orphan = await svc3.record(owner, { ...base, receivedAt: clock3.now().toISOString(), handlerStaffId: gone });
   sql(DEMO, `update platform_staff set status = 'DEACTIVATED', deactivation_reason = 'Left the firm' where id = '${gone}'`);
-  const before10 = mail3.inbox.length;
+  const before10 = mail3.sent.length;
   await clock3.advance(5 * DAY);
-  const sentTo = mail3.inbox.slice(before10).filter((m) => m.text.includes(orphan.id)).map((m) => m.to).sort().join(",");
+  const sentTo = mail3.sent.slice(before10).filter((m) => m.text.includes(orphan.id)).map((m) => m.to).sort().join(",");
   const owners = sql(DEMO, `select string_agg(distinct s.email, ',' order by s.email) from platform_staff s join platform_role_grant g on g.firm_id = s.firm_id and g.staff_id = s.id where s.firm_id = '${firmA}' and s.status = 'ACTIVE' and g.ended_at is null and g.role in ('OWNER','ADMIN')`);
   ok("PF-21 fail→pass (break m10): a deactivated handler gets no reminder; the firm's active Owners and Admins do", sentTo === owners && !sentTo.includes("leaver@") && owners.length > 0, { sentTo, owners });
 

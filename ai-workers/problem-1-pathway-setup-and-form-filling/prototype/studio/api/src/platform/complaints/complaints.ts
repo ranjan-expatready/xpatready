@@ -26,14 +26,14 @@ import { BUSINESS_HOURS, CLOSED_DAYS, readSetting, TIME_ZONE } from "../settings
 import { acknowledgeBy, type FirmCalendar } from "./business-days.ts";
 
 export const COMPLAINT_KEYS = { record: "agent/complaint:record", read: "agent/complaint:read" } as const;
-export const ACK_REMINDER_JOB = "platform.complaint.ack-reminder";
+export const ACK_REMINDER_JOB = "platform.complaint.ack_reminder";
 export const ackReminderKey = (complaintId: string) => `plat-complaint-ack:${complaintId}`;
 const SYSTEM_ACTOR = "system:complaint-ack-reminder";
 /** The list's page size (and its largest). */
 export const PAGE = 100;
 
 type Tx = Prisma.TransactionClient;
-export type ComplaintDeps = { db: PrismaClient; audit: AuditPort; jobs: JobPort; clock: ClockPort; mail: MailPort };
+export type ComplaintDeps = { db: PrismaClient; audit: AuditPort<Tx>; jobs: JobPort; clock: ClockPort; mail: MailPort };
 
 // ------------------------------------------------------------------------------------------------------------- problems
 const problem = (status: number, code: string, title: string, detail: string, extra: Record<string, unknown> = {}): never => {
@@ -125,7 +125,7 @@ function readCursor(s: string): { at: Date; id: string } {
 }
 
 /** Work to run after the transaction commits (job and mail calls). */
-type After = (() => Promise<void>)[];
+type After = (() => Promise<unknown>)[];
 
 // ------------------------------------------------------------------------------------------------------------- service
 export class ComplaintsService {
@@ -334,7 +334,7 @@ export class ComplaintsService {
     const p = z.object({ firmId: uuid, complaintId: uuid }).safeParse(payload);
     if (!p.success) return "skipped";
     const { firmId, complaintId } = p.data;
-    let mails: { to: string; text: string; replyTo?: string }[] = [];
+    let mails: { to: string; text: string; replyTo: string }[] = [];
     const out = await this.commit(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "plat_complaint" WHERE firm_id = ${firmId}::uuid AND id = ${complaintId}::uuid FOR UPDATE`;
       const c = await tx.platComplaint.findFirst({ where: firmScope(firmId, { id: complaintId }) });
@@ -344,7 +344,7 @@ export class ComplaintsService {
       const to = handler ? [handler.email] : (await tx.platformStaff.findMany({
         where: firmScope(firmId, { status: "ACTIVE" as const, grants: { some: { role: { in: ["OWNER", "ADMIN"] as ("OWNER" | "ADMIN")[] }, endedAt: null } } }), select: { email: true }, orderBy: { email: "asc" },
       })).map((s) => s.email);
-      const firm = await tx.platformFirm.findFirst({ where: { id: firmScope(firmId).firmId }, select: { contactEmail: true } });
+      const firm = await tx.platformFirm.findFirstOrThrow({ where: { id: firmScope(firmId).firmId }, select: { contactEmail: true } });
       const zone = await readSetting<string>(tx, firmId, TIME_ZONE.key);
       const due = new Intl.DateTimeFormat("en-CA", { timeZone: zone, dateStyle: "long", timeStyle: "short" }).format(c.acknowledgeBy);
       const now = this.d.clock.now();
@@ -353,16 +353,15 @@ export class ComplaintsService {
       const text = handler
         ? `A complaint you handle was due to be acknowledged by ${due} (${zone}). Open it in Complaints (reference ${complaintId}) and record the acknowledgement.`
         : `A complaint was due to be acknowledged by ${due} (${zone}), and its handler is no longer active. Open it in Complaints (reference ${complaintId}), choose a new handler and record the acknowledgement.`;
-      mails = to.map((t) => ({ to: t, text, replyTo: firm?.contactEmail }));
+      mails = to.map((t) => ({ to: t, text, replyTo: firm.contactEmail }));
       return "sent" as const;
     });
-    for (const m of mails) await this.d.mail.send({ firmId, to: m.to, ...(m.replyTo ? { replyTo: m.replyTo } : {}), subject: "A complaint is waiting for its acknowledgement", text: m.text, class: "TRANSACTIONAL", templateKey: "platform.complaint.ack-reminder" });
+    for (const m of mails) await this.d.mail.send({ firmId, to: m.to, replyTo: m.replyTo, subject: "A complaint is waiting for its acknowledgement", text: m.text, class: "TRANSACTIONAL", templateKey: "platform.complaint.ack_reminder" });
     return out;
   }
 }
 
-/** Registers the reminder job's handler with the job worker. PF-0p's brief names no handler call on JobPort; this one
- *  line follows whatever PF-0p and PF-14 settle (the builder adapts it when PF-0p merges). */
-export function registerComplaintJobs(jobs: JobPort, service: ComplaintsService): void {
-  jobs.handle(ACK_REMINDER_JOB, async (payload) => { await service.runAckReminder(payload); });
+/** Registers the reminder job's worker (JobPort.handle, PF-0p). */
+export function registerComplaintJobs(jobs: JobPort, service: ComplaintsService): Promise<void> {
+  return jobs.handle(ACK_REMINDER_JOB, async (job) => { await service.runAckReminder(job.payload); });
 }
