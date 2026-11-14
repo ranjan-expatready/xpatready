@@ -119,6 +119,20 @@ try {
   const clean = fake("clean", `export const createFormRuntime = async (pdf, o) => { if (o.strict !== true) throw new Error("not strict"); return ${runtimeOf("[]")}; };`);
   const s3 = await askXfaEngine(join(SYNTH, "synthetic-form.pdf"), { engineDir: clean, descriptor: desc, clock: CLOCK });
   ok("pass: the same check with nothing skipped passes through the child (strict asked for)", s3.status === "passes" && JSON.stringify(s3.barcodeTexts) === '["t"]', s3);
+  // BK-25: a defect of the form's own script that its record names (IMM 1295's focus on a node its template lacks) is
+  // accepted only after a complete Validate, and only that member; strict otherwise.
+  const DEFECT = [{ class: "subform", member: "C1CertificateIssueDate", why: "the form's own script focuses a node its template does not have" }];
+  const lax = (unsupported: string, complete = true) => fake(`lax-${complete}-${unsupported.length}`, `export const createFormRuntime = async (pdf, o) => { if (o.strict !== false) throw Object.assign(new Error("strict"), { code: "STRICT" }); return { load() {}, layout: () => ({ pages: [{}] }), validate: () => (${complete} ? { complete: true, notes: [] } : { complete: false, firstMissingField: "Box", messages: [{ text: "m" }] }), encodeBarcodes: () => ({ validated: true, payloads: ["t"] }), unsupported: ${unsupported}, dispose() {} }; };`);
+  const k1 = await askXfaEngine(join(SYNTH, "synthetic-form.pdf"), { engineDir: lax('[{ class: "subform", member: "C1CertificateIssueDate" }]'), descriptor: desc, knownDefects: DEFECT, clock: CLOCK });
+  ok("BK-25 pass: a complete Validate whose only skipped member is the one the form's record names passes (the run is not strict only then)", k1.status === "passes", k1);
+  const k2 = await askXfaEngine(join(SYNTH, "synthetic-form.pdf"), { engineDir: lax('[{ class: "subform", member: "C1CertificateIssueDate" }, { class: "field", member: "thing" }]'), descriptor: desc, knownDefects: DEFECT, clock: CLOCK });
+  ok("BK-25 fail: a member the record does not name, beside the named one, is still 'not available', naming it", k2.status === "not_available" && k2.code === "UNSUPPORTED_MEMBER" && /field\.thing/.test(k2.reason), k2);
+  const k3 = await askXfaEngine(join(SYNTH, "synthetic-form.pdf"), { engineDir: lax('[{ class: "subform", member: "C1CertificateIssueDate" }]', false), descriptor: desc, knownDefects: DEFECT, clock: CLOCK });
+  ok("BK-25 fail: the named member skipped on a Validate that did not complete is 'not available', never a stop reached past skipped script", k3.status === "not_available" && k3.code === "UNSUPPORTED_MEMBER", k3);
+  const k4 = await askXfaEngine(join(SYNTH, "synthetic-form.pdf"), { engineDir: lax("[]"), descriptor: desc, knownDefects: [{ class: "subform", member: "x", why: "short" }], clock: CLOCK });
+  ok("BK-25 fail: a record that names a defect without its why is our record's fault, 'not available'", k4.status === "not_available" && k4.code === "BAD_DESCRIPTOR", k4);
+  ok("BK-25: IMM 1295 (09-2023)'s record names exactly the one defect the engine's own corpus test expects after its Validate", JSON.stringify((records.find((r) => r.form === "IMM 1295")?.known_form_defects ?? []).map((d) => [d.class, d.member])) === JSON.stringify([["subform", "C1CertificateIssueDate"]])
+    && /unsupportedAfterValidate: \[\{ class: 'subform', member: 'C1CertificateIssueDate' \}\]/.test(readFileSync(join(ENGINE, "src", "__tests__", "corpus", "form-cases.ts"), "utf8")));
 
   // ---- review minor 2 and minor 1: the real pass, on a copy filled and validated by the engine's own fill script, ----
   // ---- found by its edition's official file (a filled copy's own SHA-256 is not its edition's) ----
