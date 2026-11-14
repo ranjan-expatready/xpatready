@@ -56,3 +56,38 @@ The release holder's migration-diff read (P-600 (5)); CI on this head; `migrate 
 * Recommended in the same pass: m1, m3, m4 (small trigger and check lines), m6 (the test regex and the missing pass/fail pairs).
 
 Verdict: Block
+
+## Round 2 (diff-only)
+
+* **Diff reviewed:** `git diff 62a981d53..e4a001e70eec1248180edc2f7dce2cccd5727b32` (the migration and `tests/check_fo5_retainers.ts`; the two commits in between are this review and the breaker's `break-report.md`). The schema file and `platform.prisma` did not change in this round. Re-review reads only the diff (P-277).
+* **Runs at `e4a001e70`:** `check_fo5_retainers.ts` **60 passed, 0 failed**; `check_fo1b_booking_schema.ts` 80/0; `check_prisma_schema.ts` 8/0. I re-ran my round-1 probes and new ones on a scratch database with every migration applied (dropped afterwards), two of them with two connections. The new rollback note, run inside a transaction on a populated database, leaves no `fo_retainer_` function: **correct**.
+
+### Round-1 findings
+* **M1 — closed.** A draft moves to another template, subject, company, signer or representative only together with a new version (`current_version + 1` into DRAFT). The template is re-checked under `FOR SHARE`: same kind, active, and its current version and file. *Probe:* a draft on "Standard" moves to "Express Entry" with v2 and its fee in one transaction → accepted. The same change without a new version → refused. A CONSULTATION template → refused. Edit and resend from EXPIRED with the template unchanged, even though it is now inactive and at v2 → accepted (`SENT:2:1`), so a later template change does not block AG-5-65 r1.
+* **m1 / B-6 — closed.** Fee rows are accepted only in the transaction that wrote their version (`created_at` is forced to `now()` by the version trigger and compared there), under `FOR UPDATE` on the retainer. *Probe:* a fee row added to v2 in a later transaction → refused.
+* **m2 / B-7, B-8, B-9 — closed.** A deferred constraint trigger (`fo_retainer_state_check`) checks, at commit, that the current version exists and its request matches the status (`end_reason` = status for the four ending states). `sent_at` and `ended_at` change only on the current version and never on a final retainer. *Probes:*
+  * a retainer with no version → refused at commit;
+  * SENT with the version unsent → refused;
+  * WITHDRAWN with the request open → refused;
+  * sending a superseded v1 → refused;
+  * BR-9 edit and resend from VIEWED in one transaction → `SENT:3`;
+  * Signed offline straight from DRAFT (the unsent request ends `SIGNED_OFFLINE`) → accepted.
+* **m3 / B-17 — closed.** A draft takes the template's current version and key (an older version → refused). A template switched off in another transaction while a draft is being written makes the draft wait 1.5 s, then refuses it.
+* **m4 / B-14 — closed.** Actors must match `staff:|system:|seed:`, the same shape as PF-0p's brief (`AuditEntry.actor`). Reasons and labels need a visible character: only NBSP or zero-width → refused; French, Chinese and multi-line reasons → accepted.
+* **m6 — closed in substance.** The missing pass and fail pairs are added (VIEWED, CLIENT_SIGNED → WITHDRAWN and → SIGNED, EXPIRED → DRAFT, WITHDRAWN and SIGNED final), and line 282 no longer accepts `|fkey`.
+* **m5 / B-23** — left to part 2 as agreed (every draft save is a new version).
+* Also confirmed: B-2 and B-16 (every key is named by its own row's id, so a version cannot reuse another's file key), B-13 (`due_on` limited to 2000-2200), B-15 (one name per firm whatever the case or spacing), B-18 (`id` fixed). Two tabs editing one draft at once: the second waits on the row lock, then is refused; the versions stay 1 and 2.
+
+### New findings (none Blocker or Major)
+* **r2-n1 Minor — stale doc comment.** `prisma/schema/front-office-retainers.prisma:94-95` still says "The template, its version and file are fixed at draft"; since M1 they change by an edit. Fix in part 2, where the file is touched anyway.
+* **r2-n2 Minor — part 2 must write in a set order.** For WITHDRAWN and SIGNED_OFFLINE, the version's request has to end *before* the status moves. The other order is refused ("the request of a WITHDRAWN retainer does not change"). The deferred check then raises at COMMIT, so the service has to map a commit-time `check_violation` to a plain message. This is correct behaviour; it should be written in part 2's service, not changed here.
+* **r2-n3 nit — two test gaps.** `check_fo5_retainers.ts:179` still accepts `|fo_retainer_version_firm_id_retainer_id_fkey` for the `id` change, so it passes with the `id` rule removed (R1 has versions). There is still no fail for `firm_id` on a version.
+* **r2-n4 nit — invisible characters in the migration.** `fo_retainer_text_ok` (`migration.sql:193-194`) and the name check hold literal invisible characters (U+00A0, U+2000-U+200F, U+FEFF…). An editor that normalises them would silently change the rule; `\u` escapes, as the next line already uses, would be safer.
+
+### P-600 and the schema rules, re-checked on the diff
+Still additive and on own tables only. The two new functions carry `fo_retainer_` (`fo_retainer_text_ok`, `fo_retainer_actor_ok`), and so do the new trigger function and its two constraint triggers (`fo_retainer_state_check`, `fo_retainer_version_state_check`). The new expression index starts with `firm_id`. Same stamp, `20261114210000`, still later than main's newest. The release holder still has to read the migration diff before the label (P-600 (5)).
+
+### Journey test
+Still not applicable: no screen, no route. Score it in part 2 and FO-5s.
+
+Verdict: Approve e4a001e70eec1248180edc2f7dce2cccd5727b32
