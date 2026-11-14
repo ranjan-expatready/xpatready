@@ -26,7 +26,7 @@ Older pointer lines (Tonight/Next 7 hours/M3 sections, Lead 33→34 block, older
 | A49 | 08:3x-08:4x (14 Nov) independent high-intelligence challenge of the capability map, then baseline; which one document (cockpit) to follow for POC/product status, targets, timeline, capabilities; stop integration, keep its decisions to resume | **P-569**; Fable challenger running (file A49-fable-challenge-capability-map-2026-11-14.md, Lead 39 notes folder); cockpit = desk 02's progress page |
 
 ## For the founder (P-390)
-Open F2, F8 (looks on the demo, no decision); F14-F18 accepted P-548, F19 ruled P-443, word for word in `history/STATE-2026-11-10-1240-lead8s2-for-the-founder-table.md`; ask at his typed turns, one at a time.
+F2, F8 open (demo looks); F14-F19 ruled; both lines word for word in `history/STATE-2026-11-14-0910-lead41s2-founder-asks-pointer-rows.md`.
 
 ## Start here (next Lead)
 🟥 **Hard rule P-557 (AGENTS.md rule 10): always committed, always resumable**: push at every step; this page says what is true, in flight and next, updated with every change of state. Private folders not yet on GitHub (to move to `ours/notes` of his private API copy): research stream 4 under side-session-notes `local_b5f4d7c1…/research-stream-4/`; Lead notes under `local_01c09e17…/` (one-day test brief).
@@ -36,7 +36,7 @@ Open F2, F8 (looks on the demo, no decision); F14-F18 accepted P-548, F19 ruled 
 **Stall guard (P-388, P-389):** no prompt-waiting call while the founder is away; `lead-watch.sh` ACT when the last check is over 40 min old. Watchdog: first standby (Lead 34 once Lead 33 tells it).
 **Hand-over (P-409):** no hand-over with an in-process subagent running; its result goes to a file named in the hand-over block; briefs say report to the current Lead. Skill edit at the founder's next typed turn.
 **Never run guard/test suites in the main copy** (7 Nov 09:18 incident): scratch clone only, deleted after.
-**To-do, in order (Lead 11, 11 Nov):** word for word in `history/STATE-2026-11-13-2115-lead36s2-old-todo.md` (item 0, every check reads each lane's last message in claude.ai, still stands).
+**To-do (Lead 11):** word for word in `history/STATE-2026-11-14-0910-lead41s2-founder-asks-pointer-rows.md`.
 
 ## Leads, in order
 **Series 2 (P-433, from 9 Nov 17:48 IST; the current Lead is the one `current_lead:` names):** **Lead 40 (series 2, local_7a6756d1)** (from 07:5x IST 14 Nov) · Lead 39 (series 2, local_84c512dc) (05:2x-07:5x IST 14 Nov) · Leads 1-38 word for word in `history/STATE-2026-11-14-0745-lead39s2-series2-leads-line.md`. Standbys: **Lead 41 `local_eb5559e3`** (first), **Lead 42 `local_110605c6`** (second). **Lead B (`local_9bced770`, from 22:1x 13 Nov, P-558): platform + front office, own worktree; its state file is lead-b-state in `design/` on its branch.**

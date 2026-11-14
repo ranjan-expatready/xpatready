@@ -14,3 +14,9 @@ Moved at 09:2x IST by Lead 41 (size limit), word for word:
 | A5, A7, A24, A28, A31, A34 | earlier asks (milestone plan, Fable questions, case structure, factory, landing in the team's product, plan picture) | waiting / in progress / answered as recorded; rows word for word in `history/STATE-2026-11-13-2235-lead37s2-founder-asks-A5-A7-A24-A28-A31-A34-rows.md` |
 | A38, A37, A39 | 13 Nov: A38 six asks; A37 CI/CD ours vs theirs; A39 throwaway branches, where to follow, stream 4 | in progress / (A39 (1) waits on his word naming F15's two `throwaway/` branches; (3) started); rows word for word in `history/STATE-2026-11-13-2200-lead37s2-founder-asks-A38-A39-rows.md` |
 | A40, A41, A42, A43 | 13 Nov: production in ~1 month; build vs CRM, B151 fix and standby; where the requirements come from | in progress / done / answered; rows word for word in `history/STATE-2026-11-13-2325-lead38s2-founder-asks-A40-A41-A42-A43-rows.md` |
+
+Moved at 09:3x IST by Lead 41 (size limit), word for word:
+
+Open F2, F8 (looks on the demo, no decision); F14-F18 accepted P-548, F19 ruled P-443, word for word in `history/STATE-2026-11-10-1240-lead8s2-for-the-founder-table.md`; ask at his typed turns, one at a time.
+
+**To-do, in order (Lead 11, 11 Nov):** word for word in `history/STATE-2026-11-13-2115-lead36s2-old-todo.md` (item 0, every check reads each lane's last message in claude.ai, still stands).
