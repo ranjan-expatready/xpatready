@@ -199,6 +199,7 @@ try {
   const want = (p: string) => Array.from({ length: 20 }, (_, i) => `${p}-${String(i + 1).padStart(5, "0")}`).join(",");
   ok("FO-1a pass: L- numbers never repeat under 20 parallel inserts (L-00001 … L-00020, no gap)", [...leadNos].sort().join(",") === want("L"), leadNos);
   const ENG = stageId(DEMO, NF, "INDIVIDUAL", "ENGAGED");
+  sql(DEMO, `update fo_lead set state = 'ENGAGED', engaged_at = now(), engaged_by = 'test' where firm_id = '${NF}'`);   // Engage
   const prosNos = await parallel(20, (i) => prospectSql(NF, u(500 + i), u(400 + i), "INDIVIDUAL", ENG, { subject_person_id: `'${P2}'`, primary_contact_person_id: `'${P2}'` }));
   ok("FO-1a pass: P- numbers never repeat under 20 parallel inserts (P-00001 … P-00020)", [...prosNos].sort().join(",") === want("P"), prosNos);
   ok("FO-1a pass: numbers are per firm (another firm starts at L-00001)", sql(DEMO, leadSql(SS, u(205), (person(DEMO, SS, u(206)), u(206)))) === "L-00001");
@@ -212,6 +213,8 @@ try {
 
   // ------------------------------------------------------------------------- a prospect's stage: own firm, own pipeline
   const LP = u(209); sql(DEMO, leadSql(SF, LP, P1));
+  ok("FO-1a fail: a prospect on a lead that is not ENGAGED is refused at commit (Engage makes both; break R2-2)", refused(DEMO, prospectSql(SF, u(599), LP, "INDIVIDUAL", stageId(DEMO, SF, "INDIVIDUAL", "ENGAGED"), { subject_person_id: `'${P1}'`, primary_contact_person_id: `'${P1}'` }), /lead is ENGAGED/));
+  sql(DEMO, `update fo_lead set state = 'ENGAGED', engaged_at = now(), engaged_by = 'test' where id = '${LP}'`);
   const ENG_SF = stageId(DEMO, SF, "INDIVIDUAL", "ENGAGED");
   ok("FO-1a pass: a prospect sits on its own firm's stage of its type's pipeline", /^P-\d{5}$/.test(sql(DEMO, prospectSql(SF, u(600), LP, "INDIVIDUAL", ENG_SF, { subject_person_id: `'${P1}'`, primary_contact_person_id: `'${P1}'` }))));
   ok("FO-1a fail: a stage of the other pipeline is refused (composite key)", refused(DEMO, prospectSql(SF, u(601), LP, "INDIVIDUAL", stageId(DEMO, SF, "CORPORATE", "ENGAGED"), { subject_person_id: `'${P1}'`, primary_contact_person_id: `'${P1}'` }), /violates foreign key constraint/));
@@ -250,6 +253,15 @@ try {
   // the committed prospect and is refused. Without the lock both would commit and leave the prospect with no contact.
   ok("FO-1a fail: of a new prospect and an ending link at once, the ending is refused; no open Corporate prospect is left without its contact (break B2)",
     race[0].status === "fulfilled" && race[1].status === "rejected" && orphans === "0", { race: race.map((r) => r.status === "rejected" ? String(r.reason).slice(-160) : r.status), orphans });
+  // Two transactions at once (break R2-2): one adds a prospect on an engaged lead, the other closes that lead.
+  const LR = u(734); sql(DEMO, leadSql(SF, LR, P1)); sql(DEMO, `update fo_lead set state = 'ENGAGED', engaged_at = now(), engaged_by = 'test' where id = '${LR}'`);
+  const race2 = await Promise.allSettled([
+    db.$transaction(async (tx) => { await tx.$executeRawUnsafe(`set constraints fo_prospect_lead_engaged immediate`); await tx.$executeRawUnsafe(prospectSql(SF, u(735), LR, "INDIVIDUAL", ENG_SF, { subject_person_id: `'${P1}'`, primary_contact_person_id: `'${P1}'` }).replace(/ returning number$/, "")); await tx.$executeRawUnsafe(`select pg_sleep(0.4)`); }, { timeout: 30_000 }),
+    db.$transaction(async (tx) => { await tx.$executeRawUnsafe(`select pg_sleep(0.1)`); await tx.$executeRawUnsafe(`update fo_lead set state = 'CLOSED', closed_at = now(), closed_by = 'test', close_reason_id = '${reasonId(DEMO, SF, "LEAD_CLOSE", "NOT_INTERESTED")}', close_reason_kind = 'LEAD_CLOSE' where id = '${LR}'`); }, { timeout: 30_000 }),
+  ]);
+  const closedWithProspect = sql(DEMO, `select count(*) from fo_lead l where l.state <> 'ENGAGED' and exists (select 1 from fo_prospect p where p.lead_id = l.id)`);
+  ok("FO-1a fail: of a new prospect and closing its lead at once, the close is refused; no lead with a prospect is left un-engaged (break R2-2)",
+    race2[0].status === "fulfilled" && race2[1].status === "rejected" && closedWithProspect === "0", { race2: race2.map((r) => r.status === "rejected" ? String(r.reason).slice(-160) : r.status), closedWithProspect });
 
   // ------------------------------------------------------------------------- stages, reasons, lost and won
   const LOST = stageId(DEMO, SF, "INDIVIDUAL", "LOST"), WON = stageId(DEMO, SF, "INDIVIDUAL", "RETAINER_SIGNED");
@@ -302,21 +314,40 @@ try {
   ok("FO-1a fail: a note of only spaces, tabs or no-break spaces is refused", refused(DEMO, `insert into fo_note (firm_id, person_id, text, by_actor) values ('${SF}', '${P1}', E' \\t\\u00a0\\n', 'test')`, /fo_note_context_check/));
   ok("FO-1a fail: notes are add-only (update, delete, truncate refused)", refused(DEMO, `update fo_note set text = 'x'`, /written once/) && refused(DEMO, `delete from fo_note`, /written once/) && refused(DEMO, `truncate fo_note`, /written once/));
   const move = (pros: string, from: string | null, to: string, cause: string) => `insert into fo_stage_move (firm_id, prospect_id, from_stage_id, to_stage_id, cause, by_actor) values ('${SF}', '${pros}', ${from ? `'${from}'` : "null"}, '${to}', '${cause}', 'test')`;
-  sql(DEMO, move(u(600), LOST, WON, "SIGNED_OFFLINE"));
+  sql(DEMO, move(u(600), null, WON, "SIGNED_OFFLINE"));
   ok("FO-1a pass: a stage move to the prospect's stage keeps its cause", sql(DEMO, `select cause from fo_stage_move where prospect_id = '${u(600)}'`) === "SIGNED_OFFLINE");
   ok("FO-1a fail: a move to a stage the prospect is not in is refused (review m3)", refused(DEMO, move(u(600), WON, LOST, "PERSON"), /goes to the prospect's stage/));
+  ok("FO-1a fail: a second first move, or a move from a stage the last move did not end in, is refused (break R2-4)", refused(DEMO, move(u(600), null, WON, "PERSON"), /starts where the last one ended/) && refused(DEMO, move(u(600), LOST, WON, "PERSON"), /starts where the last one ended/));
   ok("FO-1a fail: a stage move is never changed", refused(DEMO, `update fo_stage_move set cause = 'BOOKING'`, /written once/));
   // Change type (contracts §7 §2.1): the prospect moves to the other pipeline's first stage; only CHANGE_TYPE crosses.
-  const LT = u(740); sql(DEMO, leadSql(SF, LT, P1)); sql(DEMO, prospectSql(SF, u(741), LT, "INDIVIDUAL", ENG_SF, { subject_person_id: `'${P1}'`, primary_contact_person_id: `'${P1}'` }));
+  const LT = u(740); sql(DEMO, leadSql(SF, LT, P1)); sql(DEMO, `begin; update fo_lead set state = 'ENGAGED', engaged_at = now(), engaged_by = 'test' where id = '${LT}'; ${prospectSql(SF, u(741), LT, "INDIVIDUAL", ENG_SF, { subject_person_id: `'${P1}'`, primary_contact_person_id: `'${P1}'` }).replace(/ returning number$/, "")}; commit;`);
+  ok("FO-1a pass: Engage writes the lead's state and its prospect in one transaction, in either order", sql(DEMO, `select state from fo_lead where id = '${LT}'`) === "ENGAGED");
+  sql(DEMO, move(u(741), null, ENG_SF, "PERSON"));
   sql(DEMO, `insert into fo_company_contact (firm_id, company_id, person_id, role, created_by) values ('${SF}', '${CO2}', '${P1}', 'SIGNATORY', 'test'); update fo_prospect set type = 'CORPORATE', stage_id = '${ENG_CO}', subject_person_id = null, subject_company_id = '${CO2}' where id = '${u(741)}'`);
   ok("FO-1a fail: a move between pipelines with another cause is refused", refused(DEMO, move(u(741), ENG_SF, ENG_CO, "PERSON"), /only Change type/));
   sql(DEMO, move(u(741), ENG_SF, ENG_CO, "CHANGE_TYPE"));
-  ok("FO-1a pass: Change type is recorded as a move between pipelines", sql(DEMO, `select cause from fo_stage_move where prospect_id = '${u(741)}'`) === "CHANGE_TYPE");
+  ok("FO-1a pass: Change type is recorded as a move between pipelines", sql(DEMO, `select string_agg(cause::text, ',' order by at, id) from fo_stage_move where prospect_id = '${u(741)}'`) === "PERSON,CHANGE_TYPE");
+  sql(DEMO, `update fo_prospect set stage_id = '${stageId(DEMO, SF, "CORPORATE", "QUALIFIED")}' where id = '${u(741)}'`);
+  ok("FO-1a fail: a signature (or Signed offline, or Convert) moving to a stage that is not WON is refused", refused(DEMO, move(u(741), ENG_CO, stageId(DEMO, SF, "CORPORATE", "QUALIFIED"), "RETAINER_EXECUTED"), /moves to the WON stage/));
   ok("FO-1a fail: the web form is not turned on without a consent wording (SA-11-29)", refused(DEMO, `update fo_web_form set enabled = true where id = '${FORM}'`, /fo_web_form_consent_check/));
   sql(DEMO, `update fo_web_form set enabled = true, consent_wording_version_id = '${u(900)}' where id = '${FORM}'`);
   ok("FO-1a pass: with a consent wording version named, it turns on", sql(DEMO, `select enabled from fo_web_form where id = '${FORM}'`) === "t");
   ok("FO-1a fail: a front-office row never moves firm", refused(DEMO, `update fo_person set firm_id = '${SF}' where id = '${u(206)}'`, /never moves to another firm/) && refused(DEMO, `update fo_sales_setup set firm_id = '${NOSETUP}' where firm_id = '${SS}'`, /never moves to another firm/));
   ok("FO-1a fail: an email not in lower case, or an unreadable phone marked readable, is refused", refused(DEMO, `insert into fo_person (firm_id, email, created_by, updated_at) values ('${SF}', 'Client@Example.com', 'test', now())`, /fo_person_email_check/) && refused(DEMO, `insert into fo_person (firm_id, phone, created_by, updated_at) values ('${SF}', '416 555', 'test', now())`, /fo_person_phone_check/));
+  sql(DEMO, `insert into fo_company (firm_id, operating_name, normalised_name, created_by, updated_at) values ('${SF}', '株式会社さくら', '株式会社さくら', 'test', now());
+    insert into fo_reason (firm_id, kind, key, label, sort_order) values ('${SF}', 'PROSPECT_LOST', 'PRICE_AR', 'السعر', 20);
+    insert into fo_service (firm_id, label, sort_order, created_by) values ('${SF}', 'Виза', 20, 'test')`);
+  ok("FO-1a pass: names in any script are names (株式会社さくら, السعر, Виза; break R2-1)", sql(DEMO, `select count(*) from fo_company where operating_name = '株式会社さくら'`) === "1" && sql(DEMO, `select fo_has_word('就労ビザ') and fo_has_word('會議')`) === "t");
+  ok("FO-1a fail: a name of only spaces, punctuation, joiners or the Hangul filler is refused", sql(DEMO, `select fo_has_word(E' \\t\\u00a0\\u200d\\u3164') or fo_has_word('--')`) === "f"
+    && refused(DEMO, `insert into fo_service (firm_id, label, sort_order, created_by) values ('${SF}', E'\\u200b\\u3164', 21, 'test')`, /fo_service_label_check/));
+  ok("FO-1a fail: an intake key ending in a no-break or zero-width space is refused", refused(DEMO, `insert into fo_arrival_receipt (firm_id, door, intake_key, payload_hash) values ('${SF}', 'BOOKING', E'booking:b-9\\u00a0', 'h')`, /fo_arrival_receipt_key_check/)
+    && refused(DEMO, `insert into fo_arrival_receipt (firm_id, door, intake_key, payload_hash) values ('${SF}', 'BOOKING', E'booking:b-9\\u200b', 'h')`, /fo_arrival_receipt_key_check/));
+  ok("FO-1a fail: a receipt naming another firm's lead (or a lead that does not exist) without its person is refused (review R2-M1)",
+    refused(DEMO, `insert into fo_arrival_receipt (firm_id, door, intake_key, payload_hash, outcome, completed_at, lead_id) values ('${SS}', 'MANUAL', 'manual:r-9', 'h', 'FAILED', now(), '${u(201)}')`, /outcome_check|foreign key/)
+    && refused(DEMO, `insert into fo_arrival_receipt (firm_id, door, intake_key, payload_hash, lead_id) values ('${SF}', 'MANUAL', 'manual:r-10', 'h', '${u(998)}')`, /outcome_check|foreign key/));
+  ok("FO-1a pass: a FAILED receipt that names no lead is kept", (sql(DEMO, `insert into fo_arrival_receipt (firm_id, door, intake_key, payload_hash, outcome, completed_at) values ('${SF}', 'MANUAL', 'manual:r-11', 'h', 'FAILED', now())`), sql(DEMO, `select outcome from fo_arrival_receipt where intake_key = 'manual:r-11'`) === "FAILED"));
+  const FRESH = u(120); firm(DEMO, FRESH, "fresh-firm");
+  ok("FO-1a fail: a front office written already marked seeded, or at another number, is refused (break R2-7)", refused(DEMO, `insert into fo_sales_setup (firm_id, seeded_at, seeded_by) values ('${FRESH}', now(), 'x')`, /starts unseeded/) && refused(DEMO, `insert into fo_sales_setup (firm_id, next_lead_no) values ('${FRESH}', 50)`, /starts unseeded/));
   ok("FO-1a pass: an unreadable phone is kept as typed when marked so (AG-2-84 rule 5)", (sql(DEMO, `insert into fo_person (firm_id, phone, phone_readable, created_by, updated_at) values ('${SF}', '416 555', false, 'test', now())`), true));
 } finally {
   for (const d of dbs) await d.$disconnect().catch(() => undefined);

@@ -49,3 +49,51 @@ This applies to every prospect that ever named the person, Won and Lost ones too
 - **Receipts:** the same key twice gives one receipt. An upper-case form id, another firm's form, a key that names another form, `Booking:` and a `booking:` key on the MANUAL door are all refused.
 - **Seed:** three parallel seeds of A gave one seed and two "seeded: false" with no change. A missing firm and a non-uuid are refused in words, and an upper-case id is lowered. A re-run kept a renamed stage. `firm.created` for a firm already seeded does nothing. With no released combinations a firm gets 0 services and is still seeded. A front-office row of a firm with no fo_sales_setup is refused, and so is a setup row for a firm that does not exist.
 - **Rest of the schema:** every fo_ table has `firm_id` first in an index. `prisma migrate diff` from the migrated database to `prisma/schema` names no fo_ line. No fo_ table has `workspace_id`, so the demo reset's workspace delete and orphan sweep leave front-office rows alone.
+
+## Round 2 (121476e43, diff from 5f88dc133 only)
+
+Fresh scratch database `xr_studio_fo1a_break2_8323` (every migration in name order; now dropped). Firms A and B are ACTIVE and C is ABANDONED, each with a `firm.created` event. Seed scripts were under `studio/var/fo1a-break2/` and are deleted. Not retried, because the PR records them as not fixed: B5, M13, the random consent-wording uuid, the workspace scope of services, the superuser replica switch, and a firm adding its own system reason.
+
+**R2-1 Major: the new word check refuses every name that has no ASCII letter or digit.** `fo_has_word` is `t ~ '[[:alnum:]]'`, and every database on this server, `xr_studio_demo` included, uses the libc `C` locale. There, `[[:alnum:]]` matches only ASCII: `select '会議' ~ '[[:alnum:]]'` gives f, and `'é'` alone gives f. Refused:
+- the company `株式会社さくら`;
+- the stage label `会議`;
+- the reason label `السعر`;
+- the service `Виза`;
+- the lead source `微信`.
+
+`Réunion` passes only because of its ASCII letters. The seed's own filter (`c.label ~ '[[:alnum:]]'`) silently drops a released combination named `就労ビザ`, so it never reaches any firm's list. Expected: a test that understands Unicode letters. For example, take the note check's approach (any character that is not space, control or invisible), or use a Unicode-aware collation on the match.
+
+**R2-2 Major: "a lead with a prospect stays ENGAGED" is checked only when the lead's state is updated.**
+- Inserting a prospect on a CLOSED lead is accepted (P-00005 on CLOSED L-00004), and so is inserting one on an OPEN lead (P-00006).
+- At the same time: session 1 inserts a prospect on ENGAGED L-00006 and sleeps, while session 2 sets L-00006 to CLOSED. Both commit, and L-00006 is CLOSED with 1 prospect. The prospect's foreign key takes only FOR KEY SHARE on the lead row, which an update of `state` does not wait for.
+
+Expected: a deferred check on fo_prospect insert (Engage writes the prospect and the lead in one transaction), with a lock on the lead row.
+
+**R2-3 Minor: the new concurrency guards hold under READ COMMITTED but not under REPEATABLE READ or SERIALIZABLE.** Prisma's `$transaction` can choose these levels.
+- Contact check: the session that ends the link starts `begin isolation level repeatable read; select 1;`. A READ COMMITTED session then inserts and commits a Corporate prospect, and after that the first session ends the link and commits. Result: P-00002 and P-00003 each have 0 live links. `fo_company_contact_still_linked` reads with the old snapshot. SERIALIZABLE on the ending session gives the same result.
+- ACTIVE stages: a REPEATABLE READ delete of ENGAGED and a READ COMMITTED delete of RETAINER_SENT, the last two live ACTIVE stages, both commit. The CORPORATE pipeline is left with 0 live ACTIVE stages: the advisory lock waits, then the check reads the stale snapshot.
+
+Expected: take a row lock on what is read (`FOR UPDATE` raises a serialization error under REPEATABLE READ), or refuse levels above READ COMMITTED in the trigger.
+
+**R2-4 Minor: stage-move history can still be invented** (moves are permanent, so a wrong row stays). The new trigger checks only that `to_stage_id` is the current stage. All of these were accepted on one INDIVIDUAL prospect sitting in ENGAGED:
+- a second first move (`from_stage_id` null, cause BOOKING);
+- a move from RETAINER_SIGNED (WON) to ENGAGED, though it was never won;
+- a CHANGE_TYPE move from CORPORATE QUALIFIED, though its type never changed;
+- RETAINER_EXECUTED into an ACTIVE stage.
+
+`update fo_prospect set stage_id = <CONSULT>` with no move row is also accepted.
+
+**R2-5 Minor: the primary-contact swap works in only one order.** The comment says "add the new PRIMARY, end the old link, repoint the prospect, in any order". Adding the new PRIMARY first fails at once with `fo_company_contact_one_primary_key`, because that index is not deferrable. End, add, repoint commits.
+
+**R2-6 Minor: whitespace and control checks are ASCII-only (C locale).**
+- Intake key `booking:42` followed by U+00A0 (no-break space) or U+200B (zero-width space): both accepted. A trailing ASCII space is refused.
+- Notes made only of U+200D U+2060 (joiners) or only of U+3164 (Hangul filler): both accepted.
+
+**R2-7 Minor: the seed mark is guarded only on UPDATE.** `insert into fo_sales_setup (firm_id, seeded_at, seeded_by) values (<firm E>, now(), 'nobody')` is accepted. Firm E has 0 stages, and the seed skips it for good.
+
+**R2-8 Minor: a program chain that loops gives every firm a looping name.** Two program_def rows that are each other's parent produce the service label "Loop › Loop › Loop › Loop › Loop › Loop › Loop › Loop combo". The recursive query stops at depth 12 but does not detect cycles. Also: a note or call on a prospect can name any person of the firm (the lead side is now tied, the prospect side is not; acceptable for Corporate contacts). Left over from M8: deleting every non-system lost reason leaves only DUPLICATE_PROSPECT and COMBINED_PROSPECT, and Combined is never offered. The Lost dialog would then offer only "Duplicate".
+
+### Held in round 2
+- **B1 and Change type:** ending the old link, adding the new PRIMARY and repointing in one transaction commits. Refused at commit or at once: ending the link alone, `set constraints all immediate`, the end inside a released savepoint or after a rolled-back one, DELETE of the link, repointing the link row to another person, and WON then end link then back to ENGAGED. Change type INDIVIDUAL to CORPORATE (new company and link, CHANGE_TYPE move) commits, and so does changing back.
+- **B2 to B6:** under READ COMMITTED both orders of B2 are refused. DUPLICATE_PROSPECT and COMBINED_PROSPECT refuse removal and turn-off. One statement deleting every ACTIVE stage is refused, and two parallel READ COMMITTED turn-offs keep 1 live ACTIVE stage. Blank and cyclic combinations do not stop the seed, and ABANDONED firm C gets `seeded: false`, directly and from `seedCreatedFirms`.
+- **Other rules:** counters cannot be wound back, and the seed mark cannot be cleared or changed. Refused: TRUNCATE of fo_company_contact, a trailing-space intake key, a note or receipt whose person is not the lead's person, a move to a stage that is not current or written before the prospect, a first move with CHANGE_TYPE, and a lower-case reason key. A booking ON_OPEN_PROSPECT receipt with no lead is accepted, as designed. `prisma migrate diff` names no fo_ line.

@@ -196,7 +196,7 @@ model FoPerson {
 }
 
 /// One arrival attempt, written first (AG-2-84 rule 3): a repeat post with the same intake key is one receipt, so one
-/// lead; its lead is about its person (the key (firm_id, lead_id, person_id)). The intake key carries its door: `form:<web form id>:<submission id>`, `booking:<booking id>` or
+/// lead; a receipt naming a lead names that lead's person (the key (firm_id, lead_id, person_id), always checked). The intake key carries its door: `form:<web form id>:<submission id>`, `booking:<booking id>` or
 /// `manual:<request id>` (checked). The receipt keeps a hash of the normalised request and of the IP address, never the
 /// raw request (AG-2-84 rule 3); the campaign facts go to fo_lead_attribution.
 model FoArrivalReceipt {
@@ -352,7 +352,8 @@ model FoCompanyContact {
   @@map("fo_company_contact")
 }
 
-/// A prospect (contracts §2.1, §2.6, §7 §2.1; AG-2-52, AG-2-77): made by Engage from a lead. Its subject is a person
+/// A prospect (contracts §2.1, §2.6, §7 §2.1; AG-2-52, AG-2-77): made by Engage from a lead, which is then ENGAGED (checked at
+/// commit). Its subject is a person
 /// (INDIVIDUAL) or a company (CORPORATE), with exactly one primary contact: the subject person, or a person with a live
 /// link to the company (AG-2-77 rule 4; checked at commit while the prospect is open, so the primary can be swapped in
 /// one transaction). Its stage is of its own firm and of its type's pipeline (the key (firm_id, type,

@@ -2,7 +2,7 @@
 
 Commit reviewed: **5f88dc133** (branch `claude/tender-hamilton-moa9bq`, PR #1742). Diff `origin/main...5f88dc133`: `front-office-sales.prisma`, migration `20261114063000_fo1a_front_office_sales`, `api/src/front-office/firm-seed.ts`, `tests/check_fo1a_sales_schema.ts`, one line of `DEVELOPING.md`. Judged against: the row (rows rev 3.1), brief FO-1a (rev 14: consent removed), contracts §0, §2.1, §2.6, §7, AG-2-52, -77, -80, -84, -8a, -44, -76, BR-22, STANDARDS §3–§5. Schema row, so there is no browser or screenshot part. BIC table: N/A (no case-side screen). Graph: `graph.mjs` run; no page or route belongs to FO-1a.
 
-**Verdict: Block** (one open Major). Ship after the fix.
+**Round 1 verdict (5f88dc133): Block** (one open Major). Round 2 (121476e43) is at the end of this file.
 
 ## What I ran
 * `npx tsx tests/check_fo1a_sales_schema.ts`: **74 passed, 0 failed** (15 s). `check_prisma_schema.ts` 8/8, `check_pf3_platform_schema.ts` 75/75, `check_case_feed.ts` 37/37.
@@ -70,4 +70,40 @@ These were data journeys, played as SQL in the shapes FO-2, FO-2b and FO-3 will 
 * PF-19a's consent tables (not on main).
 * Row-level security (PF-12).
 
-**Verdict: Block.** To fix: **M1**. Minors m1 to m12 are for the builder to fix or to record in the PR, which the merge does not depend on.
+**Round 1 verdict: Block.** To fix: **M1**. Minors m1 to m12 are for the builder to fix or to record in the PR, which the merge does not depend on.
+
+## Round 2: commit 121476e43 (diff `5f88dc133..121476e43`, studio only, P-277)
+I read the diff, round 1 above and the breaker's `break-report.md`. **The suite now gives 98 passed, 0 failed.**
+
+What I re-checked, and how:
+* **M1 and m9 are fixed.** Two deferred constraint triggers now hold the rule, and a link of any role counts (AG-2-77 rule 4). The rule applies only to prospects that are not WON or LOST. In my scratch database:
+  * swap order "demote A to OTHER, add B as PRIMARY, repoint the prospect" committed;
+  * the suite's own order (end A, add B, repoint) passes.
+* **The race is closed, in both orders.** I used two psql sessions with the default deferral, and in both orders the prospect was refused at commit, leaving 0 open Corporate prospects without a linked contact:
+  * the link ends first and is still uncommitted;
+  * the prospect is written first and the link-end commits before it.
+* **m3 is fixed:** a move must go to the prospect's current stage, and only `CHANGE_TYPE` crosses pipelines. There is a pass and a fail test for each.
+* **m4, m5 and m7 are fixed, each with a pass and a fail test.** I ran the m7 race shape myself.
+* **m6 is fixed.** I reloaded the finished story on an isolated copy at **:4432** and ran the seed. The services now read, for example, "Temporary residence › Study permits › Study permit › Outside Canada" and "Temporary residence › Work permits › Employer-specific work permit › With an LMIA – inside Canada". A second run seeded nothing. The copy is stopped and dropped.
+* **Breaker items:**
+  * B3: `DUPLICATE_PROSPECT` is now a system reason, and `COMBINED_PROSPECT` is seeded.
+  * B4: each pipeline keeps at least one live ACTIVE stage, under an advisory lock.
+  * B6: a combination name with no letter or digit is skipped; one failing firm no longer stops the catch-up.
+  * Minors fixed: the counters only go forward; the seed mark is set once; "ENGAGED stays engaged"; `closed_by` and `engaged_by` are required; the word checks.
+
+**New Major (R2-M1): the m4 fix reopened the cross-firm wall on `fo_arrival_receipt`.**
+* The lead key is now `(firm_id, lead_id, person_id)`, which PostgreSQL checks as MATCH SIMPLE. When `person_id` is NULL the key is not checked at all, and `person_id` is nullable on receipts. Only CREATED and ON_OPEN_PROSPECT force a person.
+* Reproduced:
+  * a **firm A** receipt with outcome FAILED and `lead_id` = **firm B's** lead, `person_id` NULL, is accepted;
+  * a PENDING receipt naming a lead id that does not exist is accepted.
+* At 5f88dc133 the key `(firm_id, lead_id)` refused both. This is the "firm A names firm B's row" case of contracts §0.2.
+* *Fix:* add `CHECK (lead_id IS NULL OR person_id IS NOT NULL)` on `fo_arrival_receipt`, or keep the `(firm_id, lead_id)` key beside the triple. Add a fail test: a FAILED receipt naming another firm's lead with no person.
+* Notes and calls are safe, because their `person_id` is NOT NULL.
+
+**Round 2 Minors:**
+* **r1:** the migration comment on `fo_prospect_contact_linked` says the swap works "in any order". Adding the new PRIMARY first is still refused at once by `fo_company_contact_one_primary_key`, which cannot be deferred. Correct the comment so FO-2b ends or demotes the old link first.
+* **r2:** the PR body is still the plan only, and has no "Question for Lead B". Items moved to the PR (m2/B5, m8, m10, m11, m12) must actually be there before the label.
+
+Journey score, round 2: **9/10**. J7 (swap the primary) now completes and J10 (a booking with no lead) has its outcome. Correct data stays at half a point because of R2-M1.
+
+**Verdict: Block.** To fix: **R2-M1** (one CHECK and one fail test). Once it is fixed and that test is shown failing without the CHECK, I expect to approve on the diff alone.

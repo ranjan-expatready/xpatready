@@ -61,21 +61,22 @@ export type FirmSeedResult = { firmId: string; seeded: boolean; stages: number; 
 /** The released, not retired combinations, each named by its place: its program chain from the top down, joined with
  *  " › ", and its own name when that differs from the last step ("Work permit › With an LMIA › Inside Canada", not
  *  "Inside Canada" alone: review m6; the same parts the app's trail shows, without the pathway type). A combination
- *  without a readable name (no letter or digit) is left out (break B6), so one bad row never stops a firm's seed. This is
+ *  without a readable name (fo_has_word, the migration's test in any script) is left out (break B6); a loop in the program
+ *  chain is cut (break R2-8), so one bad row never stops a firm's seed. This is
  *  the firm's "Interested in" list in month one (AG-16-76). */
 export async function releasedCombinations(db: PrismaClient | Prisma.TransactionClient): Promise<{ id: string; label: string }[]> {
   const rows = await db.$queryRaw<{ id: string; label: string; chain: string[] | null }[]>`
     with recursive up as (
-      select c.id as cid, p.parent_node_key as parent, p.workspace_id as ws, p.label, 0 as depth
+      select c.id as cid, p.parent_node_key as parent, p.workspace_id as ws, p.label, 0 as depth, array[p.program_node_key] as seen
         from combination c join program_def p on p.id = c.program_def_id
       union all
-      select up.cid, p.parent_node_key, up.ws, p.label, up.depth + 1
+      select up.cid, p.parent_node_key, up.ws, p.label, up.depth + 1, up.seen || p.program_node_key
         from up join program_def p on p.workspace_id = up.ws and p.program_node_key = up.parent
-       where up.depth < 12)
+       where up.depth < 12 and not p.program_node_key = any(up.seen))
     select c.id::text as id, btrim(c.label) as label,
-           (select array_agg(btrim(u.label) order by u.depth desc) from up u where u.cid = c.id and u.label ~ '[[:alnum:]]') as chain
+           (select array_agg(btrim(u.label) order by u.depth desc) from up u where u.cid = c.id and fo_has_word(u.label)) as chain
       from combination c
-     where c.retired_at is null and c.label ~ '[[:alnum:]]'
+     where c.retired_at is null and fo_has_word(c.label)
        and exists (select 1 from config_release r where r.combination_id = c.id and r.status = 'RELEASED')`;
   return rows
     .map((r) => { const chain = r.chain ?? []; return { id: r.id, label: (chain.at(-1) === r.label ? chain : [...chain, r.label]).join(" › ") }; })

@@ -12,6 +12,9 @@
 --     list, a lead with a prospect stays ENGAGED; one live PRIMARY contact; stage and reason keys fixed, system reasons
 --     and one live ACTIVE stage per pipeline kept; stage moves match their prospect; counters only go forward and the
 --     seed mark is set once; owners are staff of the same firm; rows never move firm.
+--   * the rules that read other rows (the Corporate contact, the engaged lead, the last ACTIVE stage) lock what they read
+--     and assume READ COMMITTED, the app's level (Prisma's default); a REPEATABLE READ or SERIALIZABLE writer of these
+--     tables is not covered (break R2-3).
 --   * no data: the per-firm seed is firm-seed.ts (stages AG-2-52, reasons AG-2-80 rule 2 and AG-2-44 rule 2, one web form
 --     off, the services list from released combinations' names).
 -- Rollback: DROP TABLE "fo_stage_move", "fo_note", "fo_call", "fo_prospect", "fo_company_contact", "fo_company",
@@ -22,7 +25,7 @@
 --   fo_insert_only(), fo_next_number(uuid, text), fo_lead_number(), fo_prospect_number(), fo_number_fixed(),
 --   fo_owner_in_firm(), fo_prospect_rules(), fo_prospect_contact_linked(), fo_company_contact_still_linked(),
 --   fo_stage_fixed(), fo_reason_fixed(), fo_sales_setup_forward(), fo_has_word(text), fo_lead_stays_engaged(),
---   fo_stage_move_matches();
+--   fo_stage_move_matches(), fo_prospect_lead_engaged();
 --   delete this folder's row from _prisma_migrations.
 
 -- CreateEnum
@@ -562,6 +565,10 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM "platform_firm" f WHERE f."id" = NEW."firm_id") THEN
     RAISE EXCEPTION 'fo_sales_setup_firm_exists: % is no platform firm', NEW."firm_id" USING ERRCODE = 'foreign_key_violation';
   END IF;
+  -- A setup row starts unseeded at number 1 (break R2-7: one written already marked seeded would never be seeded).
+  IF NEW."seeded_at" IS NOT NULL OR NEW."seeded_by" IS NOT NULL OR NEW."next_lead_no" <> 1 OR NEW."next_prospect_no" <> 1 THEN
+    RAISE EXCEPTION 'fo_sales_setup_firm_exists: a front office starts unseeded, at number 1' USING ERRCODE = 'check_violation';
+  END IF;
   RETURN NEW;
 END $$;
 CREATE TRIGGER "fo_sales_setup_firm_exists" BEFORE INSERT ON "fo_sales_setup" FOR EACH ROW EXECUTE FUNCTION fo_sales_setup_firm_exists();
@@ -581,8 +588,11 @@ BEGIN
 END $$;
 CREATE TRIGGER "fo_sales_setup_forward" BEFORE UPDATE ON "fo_sales_setup" FOR EACH ROW EXECUTE FUNCTION fo_sales_setup_forward();
 
--- A name, label or key a person reads has at least one letter or digit (not only spaces, tabs or no-break spaces).
-CREATE FUNCTION fo_has_word(t text) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT t ~ '[[:alnum:]]' $$;
+-- A name, label or text a person reads has at least one character that is not a space, a control character, ASCII
+-- punctuation or an invisible character (no-break and zero-width spaces, joiners, the Hangul fillers, the byte-order
+-- mark). Written so in any script: the databases use the C locale, where [[:alnum:]] knows only ASCII (break R2-1:
+-- 株式会社さくら, Виза, السعر are names).
+CREATE FUNCTION fo_has_word(t text) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT t ~ '[^[:space:][:cntrl:][:punct:]  -‏ -  -⁯　ㅤᅟᅠﾠ﻿]' $$;
 
 -- A front-office row never moves to another firm (the (firm_id, id) keys refuse it for rows that are pointed at; this
 -- refuses it for every row, the setup row included).
@@ -684,11 +694,14 @@ ALTER TABLE "fo_arrival_receipt" ADD CONSTRAINT "fo_arrival_receipt_key_check" C
     WHEN 'WEB_FORM' THEN "web_form_id" IS NOT NULL AND "intake_key" LIKE 'form:' || "web_form_id"::text || ':_%'
     WHEN 'BOOKING' THEN "web_form_id" IS NULL AND "intake_key" LIKE 'booking:_%'
     WHEN 'MANUAL' THEN "web_form_id" IS NULL AND "intake_key" LIKE 'manual:_%'
-  END AND "intake_key" !~ '[[:space:][:cntrl:]]');
+  END AND "intake_key" !~ '[[:space:][:cntrl:]  -‏ -  -⁯　ㅤᅟᅠﾠ﻿]');
 ALTER TABLE "fo_arrival_receipt" ADD CONSTRAINT "fo_arrival_receipt_outcome_check" CHECK (
   (("outcome" = 'PENDING') = ("completed_at" IS NULL))
   AND ("outcome" <> 'CREATED' OR ("lead_id" IS NOT NULL AND "person_id" IS NOT NULL))
-  AND ("outcome" <> 'ON_OPEN_PROSPECT' OR ("door" = 'BOOKING' AND "lead_id" IS NULL AND "person_id" IS NOT NULL)));
+  AND ("outcome" <> 'ON_OPEN_PROSPECT' OR ("door" = 'BOOKING' AND "lead_id" IS NULL AND "person_id" IS NOT NULL))
+  -- A receipt naming a lead names its person, so the key (firm_id, lead_id, person_id) is always checked: with an
+  -- empty person PostgreSQL would check no key at all, and a receipt could name another firm's lead (review R2-M1).
+  AND ("lead_id" IS NULL OR "person_id" IS NOT NULL));
 
 -- A lead (AG-2-80 rules 1-2, 7. Data): CLOSED exactly when it has a close reason, and that reason is from the lead list
 -- (the key (firm_id, close_reason_id, close_reason_kind)); ENGAGED needs engaged_at; the first response is all or none
@@ -751,8 +764,9 @@ END $$;
 CREATE TRIGGER "fo_prospect_rules" BEFORE INSERT OR UPDATE ON "fo_prospect" FOR EACH ROW EXECUTE FUNCTION fo_prospect_rules();
 
 -- A Corporate prospect's primary contact has a live link (any role) to its company (AG-2-77 rule 4), checked at commit
--- while the prospect is open (not WON or LOST), so the primary can be swapped in one transaction (AG-2-77 rule 6: add the
--- new PRIMARY, end the old link, repoint the prospect, in any order) and a contact may leave the company once the
+-- while the prospect is open (not WON or LOST), so the primary can be swapped in one transaction (AG-2-77 rule 6: end or
+-- demote the old PRIMARY link first, since one live PRIMARY per company is an index checked at once; then add the new
+-- PRIMARY and repoint the prospect, in either order) and a contact may leave the company once the
 -- prospect is closed. Both checks lock what they read (break B2): the prospect's check takes a share lock on the link it
 -- relies on, so a transaction ending that link waits for it and then sees the prospect; the link's check reads the open
 -- prospects afresh at commit, so a prospect committed meanwhile is seen.
@@ -771,6 +785,22 @@ BEGIN
   RETURN NULL;
 END $$;
 CREATE CONSTRAINT TRIGGER "fo_prospect_contact_linked" AFTER INSERT OR UPDATE ON "fo_prospect" DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION fo_prospect_contact_linked();
+
+-- A prospect is made by Engage, so its lead is ENGAGED (AG-2-75, AG-2-80 rule 5; break R2-2), checked at commit (Engage
+-- writes the lead and the prospect in either order) with a share lock on the lead: closing the lead at the same time
+-- waits for it and then sees the prospect (fo_lead_stays_engaged).
+CREATE FUNCTION fo_prospect_lead_engaged() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE st "FoLeadState"; lid uuid;
+BEGIN
+  SELECT p."lead_id" INTO lid FROM "fo_prospect" p WHERE p."firm_id" = NEW."firm_id" AND p."id" = NEW."id";
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  SELECT l."state" INTO st FROM "fo_lead" l WHERE l."firm_id" = NEW."firm_id" AND l."id" = lid FOR SHARE;
+  IF st IS DISTINCT FROM 'ENGAGED' THEN
+    RAISE EXCEPTION 'fo_prospect_lead_engaged: a prospect''s lead is ENGAGED (Engage makes both; AG-2-75)' USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NULL;
+END $$;
+CREATE CONSTRAINT TRIGGER "fo_prospect_lead_engaged" AFTER INSERT OR UPDATE OF "lead_id" ON "fo_prospect" DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION fo_prospect_lead_engaged();
 CREATE FUNCTION fo_company_contact_still_linked() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE n text;
 BEGIN
@@ -844,16 +874,26 @@ CREATE TRIGGER "fo_reason_fixed" BEFORE UPDATE OR DELETE ON "fo_reason" FOR EACH
 -- Calls on exactly one of a lead or a prospect (contracts §2.1); seconds not negative. Notes in at most one context and
 -- never empty. A stage move goes somewhere else.
 ALTER TABLE "fo_call" ADD CONSTRAINT "fo_call_context_check" CHECK (num_nonnulls("lead_id", "prospect_id") = 1 AND "seconds" >= 0);
-ALTER TABLE "fo_note" ADD CONSTRAINT "fo_note_context_check" CHECK (num_nonnulls("lead_id", "prospect_id") <= 1 AND "text" ~ '[^[:space:][:cntrl:]\u00a0\u2000-\u200b\u3000\ufeff]');
+ALTER TABLE "fo_note" ADD CONSTRAINT "fo_note_context_check" CHECK (num_nonnulls("lead_id", "prospect_id") <= 1 AND fo_has_word("text"));
 ALTER TABLE "fo_stage_move" ADD CONSTRAINT "fo_stage_move_check" CHECK ("from_stage_id" IS DISTINCT FROM "to_stage_id");
 -- A stage move records the prospect's own change (review m3): written after it in the same transaction, it moves to the
 -- prospect's stage then; a move between pipelines is Change type and only Change type (contracts §7 §2.1).
+-- The history is one chain (break R2-4): a move starts where the last one ended (the first starts nowhere), under the
+-- prospect's row lock; a move made by a signature, Signed offline or Convert ends in the WON stage.
 CREATE FUNCTION fo_stage_move_matches() RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE cur uuid; pf "FoPipeline"; pt "FoPipeline";
+DECLARE cur uuid; prev uuid; pf "FoPipeline"; pt "FoPipeline"; kt "FoStageKind";
 BEGIN
-  SELECT p."stage_id" INTO cur FROM "fo_prospect" p WHERE p."firm_id" = NEW."firm_id" AND p."id" = NEW."prospect_id";
+  SELECT p."stage_id" INTO cur FROM "fo_prospect" p WHERE p."firm_id" = NEW."firm_id" AND p."id" = NEW."prospect_id" FOR UPDATE;
   IF cur IS DISTINCT FROM NEW."to_stage_id" THEN
     RAISE EXCEPTION 'fo_stage_move_matches: a move goes to the prospect''s stage (write the prospect first)' USING ERRCODE = 'check_violation';
+  END IF;
+  SELECT m."to_stage_id" INTO prev FROM "fo_stage_move" m WHERE m."firm_id" = NEW."firm_id" AND m."prospect_id" = NEW."prospect_id" ORDER BY m."at" DESC, m."id" DESC LIMIT 1;
+  IF prev IS DISTINCT FROM NEW."from_stage_id" THEN
+    RAISE EXCEPTION 'fo_stage_move_matches: a move starts where the last one ended (the first starts nowhere)' USING ERRCODE = 'check_violation';
+  END IF;
+  SELECT s."kind" INTO kt FROM "fo_stage" s WHERE s."firm_id" = NEW."firm_id" AND s."id" = NEW."to_stage_id";
+  IF NEW."cause" IN ('RETAINER_EXECUTED', 'SIGNED_OFFLINE', 'CONVERT') AND kt <> 'WON' THEN
+    RAISE EXCEPTION 'fo_stage_move_matches: a signature, Signed offline or Convert moves to the WON stage' USING ERRCODE = 'check_violation';
   END IF;
   SELECT s."pipeline" INTO pt FROM "fo_stage" s WHERE s."firm_id" = NEW."firm_id" AND s."id" = NEW."to_stage_id";
   SELECT s."pipeline" INTO pf FROM "fo_stage" s WHERE s."firm_id" = NEW."firm_id" AND s."id" = NEW."from_stage_id";
