@@ -12,13 +12,14 @@ import type { PlatformRole, Prisma, PrismaClient } from "@prisma/client";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { STUDIO } from "../core.ts";
 import { registeredSettings, syncSettingDefinitions } from "./settings.ts";
 
 type Office = { country?: string | null } & Record<string, unknown>;
 type SampleUser = { id: string; name: string; family_name?: string; given_names?: string; email?: string; duties: string[]; licence: { body: string; category: string; number: string } | null };
 type SampleFirm = { key: string; name: string; solo: boolean; office?: Office; users: SampleUser[] };
 
+/** The studio folder (as core.ts's STUDIO; not imported, so plain tsx scripts and checks can load this file). */
+const STUDIO = join(import.meta.dirname, "..", "..", "..");
 export const SEED_ACTOR = "seed:PF-3";
 const COUNTRY: Record<string, string> = { canada: "CA" };
 
@@ -99,7 +100,9 @@ async function syncDefinitionsIfChanged(tx: Prisma.TransactionClient): Promise<n
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const { Db } = await import("../core.ts");
-  const db = new Db();
+  const { PrismaPg } = await import("@prisma/adapter-pg");
+  const { PrismaClient } = await import("@prisma/client");
+  const url = process.env.DATABASE_URL ?? "postgresql://xr_studio@127.0.0.1:54329/xr_studio_demo";   // as core.ts DATABASE_URL
+  const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: url, options: "-c TimeZone=UTC" }) });
   try { console.log(JSON.stringify(await seedSampleFirms(db))); } finally { await db.$disconnect(); }
 }
