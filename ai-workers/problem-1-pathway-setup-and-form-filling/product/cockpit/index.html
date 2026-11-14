@@ -430,6 +430,24 @@ function rBacklog(){
   return section("15","backlog","Backlog","Rows waiting to be built, by lane: ready to start, or blocked by another row.",h);
 }
 
+
+/* library: one master per document (P-593); edit this list when a master changes */
+var LIBRARY=[
+ ["Release 1 checklist","The one tracking page for Release 1: 101 rows and their status, done for a row, launch readiness (P-592)","MVP-CHECKLIST.md","@MVP-CHECKLIST.md"],
+ ["Capability sourcing map","Release 1 scope baseline, draft 6: 112 rows, build or buy (P-586)","published page","https://claude.ai/artifact/8Fr4UUNR8yxwZrQ4nVi6wC"],
+ ["CRM shell decision","Own build, no open-source CRM shell (P-553, P-563)","published page","https://claude.ai/artifact/BReRqAYujJXhKf33Rgt9Vo"],
+ ["Solution 1 one-pager","Requirements and the whole workflow, draft 4.3 (D249)","reference/1-requirements-and-workflow/solution-1-one-pager-v4.3-LATEST.html","@reference/1-requirements-and-workflow/solution-1-one-pager-v4.3-LATEST.html"],
+ ["Factory plan","How we build: lanes, merges, gates; decisions D1-D6 (P-506)","reference/2-factory-plan/factory-plan-2026-11-12-LATEST.md","@reference/2-factory-plan/factory-plan-2026-11-12-LATEST.md"],
+ ["Pathway Configurator handover","Verdict, how it works, what is left (private: the Mac's reference/private, not on GitHub)","reference/private/pathway-configurator-handover-2026-11-10-LATEST.html",""],
+ ["Rules in force","Every rule once, with the decision that set it","RULES.md","@RULES.md"],
+ ["Decisions","Every founder and Lead decision, newest first","DECISIONS.md","@DECISIONS.md"]
+];
+function rLibrary(){
+  var h='<div class="box"><table><thead><tr><th>Document</th><th>What it is</th><th>Master</th></tr></thead><tbody>';
+  var base=(D.freshness&&D.freshness.library_base)||null;
+  LIBRARY.forEach(function(d){var u=d[3];if(u&&u.charAt(0)==='@')u=base?base+u.slice(1):'';h+='<tr><td>'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(d[0])+'</a>':esc(d[0]))+'</td><td class="small">'+esc(d[1])+'</td><td class="mono small">'+esc(d[2])+'</td></tr>';});
+  return section("01b","library","Library: master documents","One master per document (P-593). Everything else is a view of these; nothing is kept twice.",h+'</tbody></table></div>');
+}
 function rFresh(){
   var F=D.freshness,R=D.run||{};
   var h='<div class="kpis">'+kpi("Generated",esc(F.generated_ist),"",F.generated_at)+kpi("main",esc(v(F.main_sha)||"n/a"),"last commit "+esc(F.main_at_ist||"n/a"),src(F.main_sha))+
@@ -443,7 +461,7 @@ function rFresh(){
 
 function render(){
   renderStrip();
-  var parts=[rNeeds,rSystem,rStatus,rPlan,rArch,rCaps,rBuilding,rQuality,rDevops,rRes,rRisks,rHeal,rImprove,rLearn,rBacklog,rFresh];
+  var parts=[rNeeds,rLibrary,rSystem,rStatus,rPlan,rArch,rCaps,rBuilding,rQuality,rDevops,rRes,rRisks,rHeal,rImprove,rLearn,rBacklog,rFresh];
   var out="";parts.forEach(function(f){try{out+=f();}catch(e){out+='<section><p class="err">This block could not be drawn: '+esc(e.message)+'</p></section>';}});
   document.getElementById("body").innerHTML=out;
   drawVSM();drawArch();

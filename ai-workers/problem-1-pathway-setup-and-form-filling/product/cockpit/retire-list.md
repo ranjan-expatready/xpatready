@@ -1,4 +1,7 @@
-# Published pages: keep or retire (P-591 (4); each retired only on the founder's confirm, P-547 (6))
+# Published pages: keep or retire
+
+**Done 14 Nov 15:2x IST (P-593, Lead 45):** 11 pages deleted after a full copy of each was saved to the Lead's private notes (`side-session-notes/local_b5840dd3…/retired-pages-2026-11-14/<page>/index.html`). **Not yet deleted:** "Pathway Configurator progress", "Test speed plan", "Questions for the immigration expert": typed pages whose text lives in the type's store, so the saved file holds only the frame; they go once their content is exported.
+ (P-591 (4); each retired only on the founder's confirm, P-547 (6))
 
 Lead 44, 14 Nov 13:xx IST. 17 pages on the founder's account. Retiring deletes the page and its link for good; the facts stay in git (records) or the private notes.
 

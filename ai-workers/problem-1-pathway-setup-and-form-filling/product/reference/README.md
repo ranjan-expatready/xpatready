@@ -11,8 +11,8 @@ The repository is public, so details of the team's app stay in `private/`. Git i
 | 3 | **Progress and roadmap** | `3-progress-and-roadmap/progress-and-roadmap-2026-11-11-LATEST.md` | `bake-plan-2026-11-10.md` (the Bake, M3.5) | private page "Pathway Configurator progress" `claude.ai/artifact/R4q1suvZsTqJ29QToJxdao` (2 Nov, a live dashboard) |
 | 4 | **Pathway Configurator handover** (verdict, how it works, what is left, appendices A-J) | `private/pathway-configurator-handover-2026-11-10-LATEST.html` (shared with the founder from outside our account) | `private/pathway-configurator-handover-2026-11-09.html`, `private/handover-content-proposal-2026-11-09.html` | pages `claude.ai/artifact/VXeed8pJ67to2xk9ffAGVT` (10 Nov), `claude.ai/artifact/CG1UjEcL2oLBGnSrmTDwiu` (9 Nov), `claude.ai/artifact/TfnupT4QLH8y7gifx761E8` (proposal) |
 
-**Delivery into the team's product (A31, 13 Nov):** private page `claude.ai/artifact/S43C8ZRpMuAV7JMAHtu3pA` (it names the team's code, so it is not in git).
+**Delivery into the team's product (A31, 13 Nov):** the private page was retired 14 Nov (P-593); its master is `private/delivery-into-team-product-2026-11-13-LATEST.html`.
 
-`private/` also holds `factory-plan-review-2026-11-12.html` (the Lead's challenge page, `claude.ai/artifact/4Rorx2pipUCb3AUojnNSwN`), `factory-plan-A29-parts-A-B-poc-vs-team-app.md` and `factory-plan-A29-team-app-details.md` (founder ask A29 (1)-(2)).
+`private/` also holds `factory-plan-review-2026-11-12.html` (the Lead's challenge page; its published copy was retired 14 Nov, P-593), `factory-plan-A29-parts-A-B-poc-vs-team-app.md` and `factory-plan-A29-team-app-details.md` (founder ask A29 (1)-(2)).
 
 Open an HTML file by double-clicking it in Finder: it opens in the browser, with no server needed.

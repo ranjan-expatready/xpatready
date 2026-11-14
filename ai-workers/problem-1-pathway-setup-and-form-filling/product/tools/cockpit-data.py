@@ -27,6 +27,18 @@ NOW = datetime.now(timezone.utc)
 ERRORS = []
 
 
+
+def library_base(repo):
+    """Web address of the product folder on the branch this copy is on, for the board's Library links (P-593).
+    Built at run time from the git remote, so no account name is written into a committed file."""
+    if not repo:
+        return None
+    try:
+        br = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, cwd=os.path.dirname(os.path.abspath(__file__))).stdout.strip() or "main"
+    except Exception:
+        br = "main"
+    return f"https://github.com/{repo}/blob/{br}/ai-workers/problem-1-pathway-setup-and-form-filling/product/"
+
 def V(v, src, **kw):
     d = {"v": v, "src": src}
     d.update(kw)
@@ -811,6 +823,7 @@ def main():
             "generated_at": NOW.strftime("%Y-%m-%dT%H:%M:%SZ"), "generated_ist": ist(NOW),
             "main_sha": V(main_sha, "GitHub API commits/main"), "main_at_ist": ist(main_at),
             "records_copy": V(copy, "git in the folder the script ran from"),
+            "library_base": library_base(gh.repo),
             "lead_input_age_h": V(li_age, li_src), "lead_input_example": bool(li and li.get("example")),
             "flow_measure_age_h": V(fm_age, fm_src),
         },
