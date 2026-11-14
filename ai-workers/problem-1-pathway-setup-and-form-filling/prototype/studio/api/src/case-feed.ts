@@ -43,6 +43,7 @@ export const CONFIG_ENTITIES: ReadonlySet<string> = new Set([
  *  firm (AUD-1's firm_id; front office's activity view, contracts §7). */
 export const PLATFORM_ENTITIES: ReadonlySet<string> = new Set([
   "platform_firm_setting" /* PF-3 a firm's setting changed, platform/settings.ts */,
+  "platform_staff", "platform_invitation" /* PF-4 staff, roles, licence records, sessions, invitations, platform/identity/audit.ts (Lead 43 OK on #1744) */,
 ]);
 /** A configuration entity: listed, or a library change's ("library field", "library document_type", "library section" …;
  *  review-proposals.ts, screen02.ts). */

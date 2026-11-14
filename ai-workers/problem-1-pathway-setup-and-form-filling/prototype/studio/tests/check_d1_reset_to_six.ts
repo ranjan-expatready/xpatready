@@ -40,9 +40,9 @@ const diff = (a: Map<string, string>, b: Map<string, string>) => ({ added: [...b
 const clean = (d: ReturnType<typeof diff>) => d.added.length + d.changed.length + d.removed.length === 0;
 /** Configuration rows of the current workspace, by kind (what P-226 says goes). */
 const config = () => {
-  const ws = sql(`select id from workspace limit 1`);
+  const ws = sql(`select id from workspace where key <> 'platform-audit' limit 1`);   // PF-4: the platform's audit row is not a demo workspace (AUD-1's firm_id removes it later)
   const c = (t: string) => n(`select count(*) from ${t} where workspace_id='${ws}'`);
-  return { ws, combinations: c("combination"), fields: c("canonical_field"), sections: c("logical_section"), questions: c("section_question"), documentTypes: c("document_type"), checks: c("check_def"), rules: c("predicate"), releases: c("config_release") + c("pack_version"), cases: c("runtime_case"), workspaces: n(`select count(*) from workspace`) };
+  return { ws, combinations: c("combination"), fields: c("canonical_field"), sections: c("logical_section"), questions: c("section_question"), documentTypes: c("document_type"), checks: c("check_def"), rules: c("predicate"), releases: c("config_release") + c("pack_version"), cases: c("runtime_case"), workspaces: n(`select count(*) from workspace where key <> 'platform-audit'`) };
 };
 const orphans = () => sql(`select table_name from information_schema.columns where table_schema='public' and column_name='workspace_id' and table_name <> 'workspace' order by 1`).split("\n").filter(Boolean)
   .map((t) => [t, n(`select count(*) from "${t}" where workspace_id not in (select id from workspace)`)] as const).filter(([, k]) => k > 0);

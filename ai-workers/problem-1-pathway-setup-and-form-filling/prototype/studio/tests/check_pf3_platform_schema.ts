@@ -166,8 +166,8 @@ try {
 
   // ----------------------------------------------------------------------------------------------- settings (lines 8-9)
   const WS = u(1), audits = () => sql(DEMO, `select count(*) from audit_event where entity = 'platform_firm_setting'`);
-  ok("PF-3 pass: an unset key reads its default (currency CAD, two-step off until founder question 3, business hours Mon-Fri 09:00-17:00)",
-    await readSetting(db, firmA, "platform.currency") === "CAD" && await readSetting(db, firmA, "platform.require_two_step") === false
+  ok("PF-3 pass: an unset key reads its default (currency CAD, two-step on and fixed since P-567 (PF-4), business hours Mon-Fri 09:00-17:00)",
+    await readSetting(db, firmA, "platform.currency") === "CAD" && await readSetting(db, firmA, "platform.require_two_step") === true
     && JSON.stringify(await readSetting(db, firmA, "platform.business_hours")) === JSON.stringify(["MON", "TUE", "WED", "THU", "FRI"].map((day) => ({ day, opens: "09:00", closes: "17:00" }))));
   ok("PF-3 fail: a value that fails its registered schema is refused and nothing is written",
     await throwsLike(() => writeSetting(db, { firmId: firmA, key: "platform.currency", value: "EUR", by: "user-R", workspaceId: WS }), (e) => e instanceof SettingRefused && e.getStatus() === 400)

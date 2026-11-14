@@ -7,8 +7,9 @@
 #        fallback answers any missing path with the page itself, so a 200 alone proves nothing: review Minor 1);
 #     3. GET /api/platform/me after the local stand-in's sign-in (contracts §1.2), once PF-4 is on main: run when
 #        PLATFORM_ME=required (the workflow sets it when PF-4's api/src/features/platform-identity.ts exists), else
-#        "SKIP" in words. The sign-in body is {"email": SMOKE_STAFF_EMAIL} (default: a seeded Sample staff member of
-#        samples/firms.json); PF-4 adjusts this step to its own request shape if it differs;
+#        "SKIP" in words. The sign-in body is PF-4's request shape: {"firmKey": SMOKE_STAFF_FIRM, "email":
+#        SMOKE_STAFF_EMAIL, "secondStep": true} (defaults: the Sample firm and its representative, samples/firms.json,
+#        seeded at start with PLATFORM_SAMPLE_SEED=on; two-step sign-in is required for every staff member, P-567);
 #     with --image (needs docker): 4. the image's user is not root, and the image runs as a non-root uid;
 #     5. the image's environment and `docker history` hold nothing secret-shaped: secret-sounding names (password,
 #        secret, token, credential, a NAME that is or ends in _KEY, _SK, _PASS, _PWD, or a lower-case name_key), and secret-shaped values (a private
@@ -52,7 +53,7 @@ else fail "first page: GET / answered $code$(grep -q '<div id="root">' "$TMP/pag
 
 # 3. who am I (PF-4's local stand-in)
 if [ "${PLATFORM_ME:-}" = required ]; then
-  code=$(get /api/platform/session/local "$TMP/session.json" -X POST -H 'content-type: application/json' --data "{\"email\":\"${SMOKE_STAFF_EMAIL:-representative@sample-firm.example.com}\"}")
+  code=$(get /api/platform/session/local "$TMP/session.json" -X POST -H 'content-type: application/json' --data "{\"firmKey\":\"${SMOKE_STAFF_FIRM:-sample-firm}\",\"email\":\"${SMOKE_STAFF_EMAIL:-representative@sample-firm.example.com}\",\"secondStep\":true}")
   token=$(grep -oE '"(token|accessToken)":"[^"]+"' "$TMP/session.json" 2>/dev/null | head -1 | sed -E 's/^"[^"]+":"//; s/"$//')
   if [ -z "$token" ]; then fail "me: the local sign-in POST /api/platform/session/local answered $code without a token"
   else
