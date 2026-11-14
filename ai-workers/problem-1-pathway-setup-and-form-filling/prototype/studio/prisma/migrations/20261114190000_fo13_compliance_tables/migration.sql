@@ -144,7 +144,9 @@ CREATE FUNCTION fo_compliance_distinct_details(a "FoIdentityDetail"[]) RETURNS b
 
 -- A conflict check's matches: a JSON array of at most 500 objects and 256 KiB, each { source, kind, recordId (a uuid),
 -- matchedOn } with optional displayName and score (0 to 1, at most 4 decimals: break 6) and, for a CASE match only,
--- caseId and caseNumber (break 7); no other key, and no record twice. FRONT_OFFICE kinds are the front office's records;
+-- PartySearchPort's caseId, caseNumber, clientId and roleOnCase (break 7, review m2); no other key, and no record twice.
+-- recordId is the matched row's id: for FRONT_OFFICE the lead, prospect, person, company or company-contact row; for
+-- CASE the party's row in the case side's party index (case_party_index, contract v0.1 §3.1). FRONT_OFFICE kinds are the front office's records;
 -- CASE kinds are PartySearchPort's (contract v0.1 §3.1). Visible matches only: the hidden ones are only counted.
 CREATE FUNCTION fo_compliance_matches_ok(m jsonb) RETURNS boolean LANGUAGE plpgsql IMMUTABLE SET search_path = pg_catalog, public AS $$
 DECLARE e jsonb; k text; on_list text[]; uuid_re constant text := '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
@@ -153,15 +155,17 @@ BEGIN
   FOR e IN SELECT x FROM jsonb_array_elements(m) x LOOP
     IF jsonb_typeof(e) <> 'object' OR NOT (e ?& ARRAY['source', 'kind', 'recordId', 'matchedOn']) THEN RETURN false; END IF;
     FOR k IN SELECT jsonb_object_keys(e) LOOP
-      IF k NOT IN ('source', 'kind', 'recordId', 'caseId', 'caseNumber', 'displayName', 'matchedOn', 'score') THEN RETURN false; END IF;
+      IF k NOT IN ('source', 'kind', 'recordId', 'caseId', 'caseNumber', 'clientId', 'roleOnCase', 'displayName', 'matchedOn', 'score') THEN RETURN false; END IF;
     END LOOP;
     IF jsonb_typeof(e->'source') <> 'string' OR jsonb_typeof(e->'kind') <> 'string' THEN RETURN false; END IF;
-    IF NOT ((e->>'source' = 'FRONT_OFFICE' AND e->>'kind' IN ('LEAD', 'PROSPECT', 'PERSON', 'COMPANY', 'COMPANY_CONTACT') AND NOT (e ? 'caseId') AND NOT (e ? 'caseNumber'))
+    IF NOT ((e->>'source' = 'FRONT_OFFICE' AND e->>'kind' IN ('LEAD', 'PROSPECT', 'PERSON', 'COMPANY', 'COMPANY_CONTACT') AND NOT (e ?| ARRAY['caseId', 'caseNumber', 'clientId', 'roleOnCase']))
          OR (e->>'source' = 'CASE' AND e->>'kind' IN ('CLIENT', 'APPLICANT', 'FAMILY_MEMBER', 'SPONSOR', 'EMPLOYER', 'OTHER_PARTY'))) THEN
       RETURN false;
     END IF;
     IF jsonb_typeof(e->'recordId') <> 'string' OR e->>'recordId' !~ uuid_re THEN RETURN false; END IF;
     IF e ? 'caseId' AND (jsonb_typeof(e->'caseId') <> 'string' OR e->>'caseId' !~ uuid_re) THEN RETURN false; END IF;
+    IF e ? 'clientId' AND (jsonb_typeof(e->'clientId') <> 'string' OR e->>'clientId' !~ uuid_re) THEN RETURN false; END IF;
+    IF e ? 'roleOnCase' AND (jsonb_typeof(e->'roleOnCase') <> 'string' OR e->>'roleOnCase' !~ '^[A-Z][A-Z_]{0,39}$') THEN RETURN false; END IF;
     IF e ? 'caseNumber' AND (jsonb_typeof(e->'caseNumber') <> 'string' OR e->>'caseNumber' !~ '^[A-Z][A-Z0-9]{0,5}(-[0-9]{1,8}){1,3}$') THEN RETURN false; END IF;
     IF e ? 'displayName' AND (jsonb_typeof(e->'displayName') <> 'string' OR NOT fo_compliance_text_ok(e->>'displayName', 300)) THEN RETURN false; END IF;
     IF jsonb_typeof(e->'matchedOn') <> 'array' OR jsonb_array_length(e->'matchedOn') NOT BETWEEN 1 AND 3 THEN RETURN false; END IF;

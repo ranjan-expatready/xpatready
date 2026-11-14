@@ -100,7 +100,7 @@ try {
   const P1 = u(500), C1 = u(501);
   const MATCH = JSON.stringify([
     { source: "FRONT_OFFICE", kind: "PROSPECT", recordId: u(600), displayName: "Sample Person", matchedOn: ["NAME", "EMAIL"], score: 0.92 },
-    { source: "CASE", kind: "SPONSOR", recordId: u(610), caseId: u(10), caseNumber: "C-2026-00001", matchedOn: ["PHONE"] },
+    { source: "CASE", kind: "SPONSOR", recordId: u(610), caseId: u(10), caseNumber: "C-2026-00001", clientId: u(611), roleOnCase: "SPONSOR", matchedOn: ["PHONE"] },
   ]);
   type CC = { id: string; firm?: string; kind?: string; person?: string | null; company?: string | null; name?: string | null; email?: string | null; phone?: string | null; matches?: string; hidden?: number; result?: string | null; disclosure?: string | null; consent?: string | null; by?: string; confirmedBy?: string | null; confirmedAt?: string | null };
   const v = (x: string | null | undefined) => (x === null || x === undefined ? "null" : q(x));
@@ -111,7 +111,7 @@ try {
       values ('${c.id}', '${c.firm ?? firmA}', '${kind}', ${v(person)}, ${v(company)}, ${v(c.name === undefined ? "Sample Person" : c.name)}, ${v(c.email === undefined ? "sample.person@example.com" : c.email)}, ${v(c.phone === undefined ? "+1 416 555 0100" : c.phone)},
       ${q(c.matches ?? "[]")}::jsonb, ${c.hidden ?? 0}, ${c.result === undefined ? "'NO_CONFLICT'" : v(c.result)}::"FoConflictResult", ${v(c.disclosure)}, ${v(c.consent)}, '${c.by ?? staffR}', ${v(c.confirmedBy)}, ${c.confirmedAt ? q(c.confirmedAt) : "null"}) returning id`;
   };
-  ok("FO-13 pass: a person's check with no hidden matches records NO_CONFLICT, its terms and matches (kind and record)",
+  ok("FO-13 pass: a person's check with no hidden matches records NO_CONFLICT, its terms and matches (kind and record; a case match with PartySearchPort's case, client and role: review m2)",
     sql(DEMO, cc({ id: u(1000), matches: MATCH })) === u(1000)
     && sql(DEMO, `select jsonb_array_length(matches) || ':' || (matches->1->>'kind') || ':' || (matches->1->>'caseNumber') from fo_conflict_check where id = '${u(1000)}'`) === "2:SPONSOR:C-2026-00001");
   ok("FO-13 pass: a company's check records CONFLICT_CANNOT_ACT", sql(DEMO, cc({ id: u(1001), kind: "COMPANY", name: "Sample Company Ltd", email: null, phone: null, result: "CONFLICT_CANNOT_ACT" })) === u(1001));
@@ -207,7 +207,8 @@ try {
     && bad([{ ...one, source: "CASE", kind: "SPONSOR", caseId: "C-1" }]) && bad([1]) && bad([{ ...one, recordId: "has space" }])
     && bad(Array.from({ length: 501 }, (_, i) => ({ ...one, recordId: u(10000 + i) }))));
   ok("FO-13 fail (breaks 3, 6, 7): a record that is not a uuid (free text could carry a document number), a case id or number on a front-office match, a case number of free text, the same record twice, a score of more than 4 decimals or past 1, a blank-looking or direction-reversed name",
-    bad([{ ...one, recordId: "passport-AB1234567" }]) && bad([{ ...one, source: "CASE", kind: "SPONSOR", recordId: "party-17" }]) && bad([{ ...one, caseId: u(10) }]) && bad([{ ...one, caseNumber: "C-2026-00001" }])
+    bad([{ ...one, recordId: "passport-AB1234567" }]) && bad([{ ...one, source: "CASE", kind: "SPONSOR", recordId: "party-17" }]) && bad([{ ...one, caseId: u(10) }]) && bad([{ ...one, caseNumber: "C-2026-00001" }]) && bad([{ ...one, roleOnCase: "SPONSOR" }])
+    && bad([{ ...one, source: "CASE", kind: "SPONSOR", roleOnCase: "passport AB1234567" }]) && bad([{ ...one, source: "CASE", kind: "SPONSOR", clientId: "user-P" }])
     && bad([{ ...one, source: "CASE", kind: "SPONSOR", caseNumber: "passport AB1234567" }]) && bad([one, one]) && bad([{ ...one, score: 0.12345 }])
     && bad([{ ...one, score: 1.0001 }]) && bad([{ ...one, displayName: "\u3164" }]) && bad([{ ...one, displayName: "abc\u202Edef" }])
     && refused(DEMO, cc({ id: u(1010), matches: `[{"source":"FRONT_OFFICE","kind":"PERSON","recordId":"${u(601)}","matchedOn":["NAME"],"score":0.5${"0".repeat(16000)}}]` }), /fo_conflict_check_matches_check/));

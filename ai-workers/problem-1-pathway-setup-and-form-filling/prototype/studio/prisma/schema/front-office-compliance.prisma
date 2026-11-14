@@ -60,7 +60,8 @@ enum FoIdentityDetail {
 
 /// One conflict-of-interest check on a party (FO-13c records it; Code s. 15, 16). The searched terms and the visible
 /// matches are what the checker saw, as found; `matches` is a JSON array, one object per match: { source: FRONT_OFFICE
-/// | CASE, kind, recordId, caseId?, caseNumber?, displayName?, matchedOn: [NAME | EMAIL | PHONE], score? } (kinds: the
+/// | CASE, kind, recordId (uuid), caseId?, caseNumber?, clientId?, roleOnCase? (CASE only), displayName?, matchedOn: [NAME |
+/// EMAIL | PHONE], score? } (kinds: the
 /// front office's LEAD, PROSPECT, PERSON, COMPANY, COMPANY_CONTACT and PartySearchPort's CLIENT, APPLICANT,
 /// FAMILY_MEMBER, SPONSOR, EMPLOYER, OTHER_PARTY). `hiddenCount` is the matches the checker could not see
 /// (PartySearchPort's hidden_count): while it is above 0 the check holds no result, or a result other than NO_CONFLICT,
