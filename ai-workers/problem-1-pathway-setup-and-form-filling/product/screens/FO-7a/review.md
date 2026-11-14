@@ -88,3 +88,65 @@ CI on the PR. The real demo database copy. FO-7b, FO-7t, FO-7r and FO-7c code, w
 **Fix list before Approve:** Major 1. Minors are advised. Minors 2, 3, 5 and 7 are cheap now and harder once FO-7b and FO-7t write rows.
 
 Verdict: Changes needed
+
+## Round 2 (diff only, P-277): `6e19e4ef2..1863c935a`
+Head `1863c935a9e5ae331815e7d152146a2a0a53ff87`.
+* `check_fo7a_money_schema.ts`: 111/111. `check_prisma_schema`: 8/8.
+* Probes ran on my own scratch database (`xr_studio_fo7a_review_probe2` on :54329, dropped afterwards). Line numbers below refer to the new `migration.sql`.
+
+### Round 1 findings and break-report items, checked again
+| Item | Status | Evidence |
+|---|---|---|
+| Major 1 / B-2: refunds at RR | **Closed** | 700 + 700 on a 1,000 payment. RC: one written, the other refused (23514). RR: one written, the other refused (23505, `refund_ordinal`). Sum 700 in both. |
+| m1 / B-3: Stripe account across firms | **Closed** | Two firms at RR: one written, the other refused (23505). Global unique index (`:309`), as PF-3 does. |
+| m2: "Trust first" deposit party | **Closed** | A deposit on another person is refused (`:1051`). |
+| m3: double receipt | **Closed** | `:1013-1015`, and the test. |
+| m4 / B-5 / B-8: caps | **Closed as built**, with one new hole (R2-Major 2) | Credit note 80 against trust 80 on a 100 invoice at RR: one written, the other fails (40001). |
+| m5 / B-7: lines only with their batch | **Closed**, with one false refusal (R2-m5) | `:1146-1153`. |
+| m6 / B-11, m7, m9, m10, m11 | **Closed** | `:1175`, `:983`, `:570`, `:1180-1190`; tests added. |
+| m8: net move | **Half closed, accepted** | A line may be less than its withdrawal (`:1163`). A CORRECTION as a move source stays out by choice; that is fine, since a net TRUST_APPLIED line covers the case. |
+| B-1 (a)-(f): unseen rows | **Closed** | All six CTE and multi-row shapes from the break report now refuse with 23503 (`money_missing`). |
+| B-4: request paid while it changes | **Closed at RC, open at RR** | See R2-m1. |
+| B-6: series gap and prefix | **Mostly closed** | Shared prefix and digits in a prefix are refused. Gaps are still open (R2-m3), and a new refusal appears (R2-m4). |
+| B-9, B-10 | **Closed** | `money_text_ok` refuses U+3000, RLM, U+202E and U+2028. Issue, send, cancel and record times are set by the database. |
+| Not fixed, by choice: uncleared-cheque withdrawal; CARD_FEE_ON_TRUST unusable | **Accepted** | AG-6-68 rule 5 says warn, never block. Card into trust waits (contracts §7). |
+
+### New in this diff
+**Major**
+1. **`migration.sql:554` (`money_invoice_line_tax_check`): Quebec tax cannot be invoiced.**
+   * **What the check does:** it requires `tax_minor = round(amount × tax_rate_bp / 10000)` with an integer basis-point rate.
+   * **Why Quebec fails:** AG-6-4 rule 1, a card the row cites, uses GST 5 % + QST 9.975 %. That is 1,497.5 bp, which is not an integer, and each tax is rounded on its own.
+   * **Reproduced:** a 1,000.00 line with tax 149.75 is refused at 1,498 bp and at 1,497 bp. `money_payment_settings.tax_rates` also refuses `rateBp: 997.5` (`:511`). That second part is from round 1 and I missed it then.
+   * **Fix:** drop the equality and keep the bounds (`0 ≤ tax_minor ≤ amount_minor`; `tax_rate_bp = 0` implies `tax_minor = 0`). Hold the rate in a finer unit, for example `tax_rate_ppm` and a ppm `rate` in the settings list, so 9.975 % fits. Add a pass case for a Quebec line.
+2. **`migration.sql:1089-1093`: trust can never pay an invoice again after a return.**
+   * **What the check does:** `applied` is minus the sum of the WITHDRAWAL_TO_INVOICE entries on the invoice. A return is a CORRECTION that cannot carry `invoice_id` (`:602`), so it never reduces `applied`.
+   * **Reproduced:** an invoice of 100.00. Apply 60.00 by mistake, return 60.00 (`corrects_entry_id` set). Applying 100.00 is then refused ("10000 open … 6000 already paid from trust"), although nothing is applied.
+   * **Who hits it:** FO-7t's dispute and credit-note returns, and any mistake, all leave the invoice permanently short.
+   * **Fix:** subtract the CORRECTION entries whose `corrects_entry_id` names a withdrawal on that invoice. Add a test for apply, return and re-apply.
+
+**Minor**
+1. **`:900-906`, `:943`: B-4 is still open at RR.**
+   * **Reproduced:** the payment on a sent request commits first. Then an RR transaction whose snapshot is older changes the request's amount to 1, and it commits. FOR SHARE leaves no row change behind, so the stale updater gets no 40001, and its EXISTS reads the old snapshot.
+   * **Fix:** the payment touches the request row (`UPDATE … SET updated_at = now()`), as `money_issued_invoice` does for invoices.
+2. **`:1079` vs `:1088`: the locks are taken in different orders, which deadlocks.**
+   * A withdrawal locks the invoice row first and the party lock second. A deposit takes the party lock.
+   * "Trust first" (AG-6-69 rule 5) writes the deposit, then the withdrawal, in one transaction. Against a concurrent withdrawal on the same invoice and party this gives 40P01 every time (6 of 6).
+   * **Fix:** take the party advisory lock before `money_issued_invoice`.
+3. **`:695-702`: the series still skips, and a first number cannot be corrected.**
+   * **Reproduced:** a hand-written `UPDATE … SET next_number = next_number + 1`, run twice, skipped INV-0006 and INV-0007.
+   * **Reproduced:** a receipt series written at 1, with nothing taken yet, refuses 2500. AG-6-44 rule 2 needs this.
+   * **Fix:** let only `money_take_number` move `next_number` (a transaction-local `set_config` flag), and allow any raise while no number has been taken.
+4. **`:312` with `:680-682`: one kind's prefix can block another kind entirely.**
+   * **Reproduced:** with no credit note yet, the invoice prefix set to `CN-` is accepted. Every credit note is then refused: `money_take_number`'s insert hits the `(firm_id, prefix)` index, which its `ON CONFLICT (firm_id, kind)` does not cover.
+   * **Fix:** refuse a prefix equal to another kind's default, or write all four series rows with the settings row.
+5. **`:1146`: a batch written inside a savepoint refuses its own lines in the same transaction.**
+   * Its `xmin` is the subtransaction's id, not `pg_current_xact_id()`.
+   * **Fix:** store `pg_current_xact_id()` in a batch column and compare against that.
+6. **Not a finding (scope):** the trust cap is total less credit notes less write-off. Payments are not counted, so trust can still pay an invoice already settled by card. The coordinator's description says the cap is built this way, and FO-7t owns "never more than the open amount".
+7. **Typo-level:** duplicated comment lines at `:828-829` and `:1114-1115`.
+
+Not checked: CI on this head; the breaker's own round 2.
+
+**Fix list before Approve:** R2-Major 1 and R2-Major 2. R2-m1 and R2-m2 are advised, and are cheap now.
+
+Verdict: Changes needed

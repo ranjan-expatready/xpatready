@@ -97,6 +97,7 @@ CREATE TABLE "money_number_series" (
     "kind" "MoneySeriesKind" NOT NULL,
     "prefix" TEXT NOT NULL,
     "next_number" INTEGER NOT NULL DEFAULT 1,
+    "numbers_taken" INTEGER NOT NULL DEFAULT 0,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "money_number_series_pkey" PRIMARY KEY ("firm_id","kind")
@@ -132,7 +133,7 @@ CREATE TABLE "money_invoice_line" (
     "quantity" INTEGER NOT NULL DEFAULT 1,
     "unit_amount_minor" INTEGER NOT NULL,
     "amount_minor" INTEGER NOT NULL,
-    "tax_rate_bp" INTEGER NOT NULL DEFAULT 0,
+    "tax_rate_ppm" INTEGER NOT NULL DEFAULT 0,
     "tax_minor" INTEGER NOT NULL DEFAULT 0,
     "currency" "MoneyCurrency" NOT NULL,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -503,12 +504,13 @@ CREATE FUNCTION money_text_ok(t text, max_len integer) RETURNS boolean LANGUAGE 
   $$ SELECT t IS NOT NULL AND char_length(t) BETWEEN 1 AND max_len
        AND t ~ '[^[:space:]\u0085\u00a0\u00ad\u034f\u061c\u115f\u1160\u1680\u180e\u2000-\u200f\u2028-\u202f\u205f-\u206f\u3000\u3164\ufeff\uffa0]'
        AND t !~ '[[:cntrl:]\u0085\u2028\u2029\u202a-\u202e\u2066-\u2069]' $$;
--- The firm's tax rates: a JSON list (at most 10) of { "name": 1..40 characters, "rateBp": 0..10000 }.
+-- The firm's tax rates: a JSON list (at most 10) of { "name": 1..40 characters, "ratePpm": 0..1000000 } (parts per
+-- million: Quebec's QST 9.975 % is 99750; basis points could not hold it, review round 2, Major 1).
 CREATE FUNCTION money_tax_rates_ok(j jsonb) RETURNS boolean LANGUAGE sql IMMUTABLE AS
   $$ SELECT jsonb_typeof(j) = 'array' AND jsonb_array_length(j) <= 10 AND NOT EXISTS (
        SELECT 1 FROM jsonb_array_elements(j) e WHERE jsonb_typeof(e) <> 'object'
          OR jsonb_typeof(e -> 'name') IS DISTINCT FROM 'string' OR NOT money_text_ok(e ->> 'name', 40)
-         OR jsonb_typeof(e -> 'rateBp') IS DISTINCT FROM 'number' OR (e ->> 'rateBp') !~ '^[0-9]{1,5}$' OR (e ->> 'rateBp')::integer > 10000) $$;
+         OR jsonb_typeof(e -> 'ratePpm') IS DISTINCT FROM 'number' OR (e ->> 'ratePpm') !~ '^[0-9]{1,7}$' OR (e ->> 'ratePpm')::integer > 1000000) $$;
 
 -- A row a trigger checks against must be visible to it. A row written earlier in the same statement (a data-modifying
 -- CTE, an earlier row of a multi-row INSERT) is not, and its foreign key passes only at the end of the statement, so
@@ -536,6 +538,11 @@ ALTER TABLE "money_number_series"
   -- Letters then a dash (INV-, CN-, R-, DR-, TOR-): a digit or a missing dash could make two series write one
   -- number (CN1 + 0001 = CN + 10001; break B-6).
   ADD CONSTRAINT "money_number_series_prefix_check" CHECK ("prefix" ~ '^[A-Z]{1,10}-$'),
+  -- A series never takes another series' default prefix, which that series takes on its first use (review round 2,
+  -- Minor 4: an invoice prefix CN- made every later credit note fail).
+  ADD CONSTRAINT "money_number_series_default_prefix_check" CHECK ("prefix" <> ALL (CASE "kind" WHEN 'INVOICE' THEN ARRAY['CN-', 'R-', 'DR-']
+    WHEN 'CREDIT_NOTE' THEN ARRAY['INV-', 'R-', 'DR-'] WHEN 'RECEIPT' THEN ARRAY['INV-', 'CN-', 'DR-'] ELSE ARRAY['INV-', 'CN-', 'R-'] END)),
+  ADD CONSTRAINT "money_number_series_taken_check" CHECK ("numbers_taken" >= 0),
   ADD CONSTRAINT "money_number_series_next_check" CHECK ("next_number" BETWEEN 1 AND 999999999);
 ALTER TABLE "money_invoice"
   ADD CONSTRAINT "money_invoice_party_check" CHECK (num_nonnulls("person_id", "company_id") = 1),
@@ -548,12 +555,14 @@ ALTER TABLE "money_invoice_line"
   ADD CONSTRAINT "money_invoice_line_text_check" CHECK (money_text_ok("description", 500)),
   ADD CONSTRAINT "money_invoice_line_position_check" CHECK ("position" BETWEEN 1 AND 500),
   ADD CONSTRAINT "money_invoice_line_amount_check" CHECK ("quantity" BETWEEN 1 AND 100000 AND "unit_amount_minor" >= 0 AND "amount_minor" = "quantity" * "unit_amount_minor"),
-  -- Tax is the line's amount at its rate, rounded per line half away from zero (AG-6-1 rule 3: 850.00 at 13 % is
-  -- 110.50); a line never carries a tax unrelated to its amount (break: 2,000,000,000 tax on a 1-cent line).
-  -- "Prices include tax" (AG-6-4 rule 6, under Advanced) is not in month one; it would change this check.
-  ADD CONSTRAINT "money_invoice_line_tax_check" CHECK ("tax_rate_bp" BETWEEN 0 AND 10000 AND "tax_minor" = round("amount_minor"::numeric * "tax_rate_bp" / 10000)),
+  -- Tax is the line's amount at its rate (parts per million: 13 % = 130000, GST + QST 14.975 % = 149750), rounded per
+  -- line (AG-6-1 rule 3: 850.00 at 13 % is 110.50), within one cent so that two taxes rounded apart (GST and QST,
+  -- AG-6-4 rule 1) fit; never a tax unrelated to its amount (break: 2,000,000,000 tax on a 1-cent line). "Prices
+  -- include tax" (AG-6-4 rule 6, under Advanced) is not in month one; it would change this check.
+  ADD CONSTRAINT "money_invoice_line_tax_check" CHECK ("tax_rate_ppm" BETWEEN 0 AND 1000000 AND "tax_minor" >= 0
+    AND abs("tax_minor" - "amount_minor"::numeric * "tax_rate_ppm" / 1000000) <= 1 AND ("tax_rate_ppm" > 0 OR "tax_minor" = 0)),
   -- A government fee is never taxed (AG-6-4 rule 3: "no override").
-  ADD CONSTRAINT "money_invoice_line_government_fee_untaxed" CHECK ("kind" <> 'GOVERNMENT_FEE' OR ("tax_rate_bp" = 0 AND "tax_minor" = 0));
+  ADD CONSTRAINT "money_invoice_line_government_fee_untaxed" CHECK ("kind" <> 'GOVERNMENT_FEE' OR ("tax_rate_ppm" = 0 AND "tax_minor" = 0));
 ALTER TABLE "money_credit_note"
   ADD CONSTRAINT "money_credit_note_number_set" CHECK ("number" IS NOT NULL),
   ADD CONSTRAINT "money_credit_note_amount_check" CHECK ("amount_minor" > 0),
@@ -680,29 +689,41 @@ BEGIN
   INSERT INTO "money_number_series" (firm_id, kind, prefix, next_number, updated_at)
     VALUES (f, k, CASE k WHEN 'INVOICE' THEN 'INV-' WHEN 'CREDIT_NOTE' THEN 'CN-' WHEN 'RECEIPT' THEN 'R-' ELSE 'DR-' END, 1, now())
     ON CONFLICT (firm_id, kind) DO NOTHING;
-  UPDATE "money_number_series" SET next_number = next_number + 1, updated_at = now()
+  PERFORM set_config('money.taking_number', 'on', true);
+  UPDATE "money_number_series" SET next_number = next_number + 1, numbers_taken = numbers_taken + 1, updated_at = now()
     WHERE firm_id = f AND kind = k RETURNING prefix, next_number - 1 INTO p, n;
+  PERFORM set_config('money.taking_number', 'off', true);
   RETURN money_format_number(p, n);
 END $$;
 CREATE FUNCTION money_number_series_write() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN
-    RAISE EXCEPTION 'money_number_series: a number series is never deleted (its numbers would be reused)' USING ERRCODE = 'insufficient_privilege';
+    IF OLD.numbers_taken > 0 THEN
+      RAISE EXCEPTION 'money_number_series: a series that has given numbers is never deleted (its numbers would be reused)' USING ERRCODE = 'insufficient_privilege';
+    END IF;
+    RETURN OLD;
+  END IF;
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.numbers_taken <> 0 THEN
+      RAISE EXCEPTION 'money_number_series: numbers_taken is the database''s' USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
   END IF;
   IF (NEW.firm_id, NEW.kind) IS DISTINCT FROM (OLD.firm_id, OLD.kind) THEN
     RAISE EXCEPTION 'money_number_series: firm_id and kind never change' USING ERRCODE = 'check_violation';
   END IF;
-  IF NEW.next_number < OLD.next_number THEN
-    RAISE EXCEPTION 'money_number_series: the next % number cannot go back from % to % (numbers are never reused)', OLD.kind, OLD.next_number, NEW.next_number USING ERRCODE = 'check_violation';
-  END IF;
-  -- A firm moving from another system sets its first number when it writes the series row (AG-6-44 rule 2); after
-  -- that the series moves only by taking a number, so a jump never leaves a gap (break B-6).
-  IF NEW.next_number > OLD.next_number + 1 THEN
-    RAISE EXCEPTION 'money_number_series: the next % number moves one at a time once the series exists (% to % would leave a gap); set the first number when the series is written', OLD.kind, OLD.next_number, NEW.next_number USING ERRCODE = 'check_violation';
+  -- Numbers move only inside money_take_number (one number, counted). Until the first number is taken a firm moving
+  -- from another system may still set or correct its first number (AG-6-44 rule 2); after that a direct change is
+  -- refused, so no update can skip a number (break B-6; review round 2, Minor 3: two direct "+ 1" updates skipped two).
+  IF (NEW.next_number, NEW.numbers_taken) IS DISTINCT FROM (OLD.next_number, OLD.numbers_taken)
+     AND coalesce(current_setting('money.taking_number', true), 'off') <> 'on' THEN
+    IF OLD.numbers_taken > 0 OR NEW.numbers_taken <> OLD.numbers_taken THEN
+      RAISE EXCEPTION 'money_number_series: the % series has given numbers; it moves only by taking one (a change from % to % would skip or reuse)', OLD.kind, OLD.next_number, NEW.next_number USING ERRCODE = 'check_violation';
+    END IF;
   END IF;
   RETURN NEW;
 END $$;
-CREATE TRIGGER money_number_series_write BEFORE UPDATE OR DELETE ON "money_number_series" FOR EACH ROW EXECUTE FUNCTION money_number_series_write();
+CREATE TRIGGER money_number_series_write BEFORE INSERT OR UPDATE OR DELETE ON "money_number_series" FOR EACH ROW EXECUTE FUNCTION money_number_series_write();
 -- Two series of one firm never share a prefix: the unique index money_number_series_firm_id_prefix_key (break B-6: an
 -- invoice and a credit note both CN-10001).
 
@@ -897,9 +918,8 @@ BEGIN
      IS DISTINCT FROM (OLD.sent_at, OLD.sent_by, OLD.person_id, OLD.company_id, OLD.case_id, OLD.currency, OLD.created_by) THEN
     RAISE EXCEPTION 'money_trust_request: a sent request''s party, case, currency and sending never change (%)', OLD.number USING ERRCODE = 'check_violation';
   END IF;
-  -- A payment on the request share-locks it first (money_payment_write), so this read sees every payment that could
-  -- race the change: the change waits for it, and at REPEATABLE READ a payment committed after this snapshot makes
-  -- the payment's lock fail instead (break B-4).
+  -- A payment on the request touches it first (money_payment_write), so this read sees every payment that could race
+  -- the change: the change waits for it, and at REPEATABLE READ either writer fails to serialise (break B-4).
   IF (NEW.amount_minor, NEW.purpose) IS DISTINCT FROM (OLD.amount_minor, OLD.purpose)
      AND EXISTS (SELECT 1 FROM "money_payment" p WHERE p.firm_id = OLD.firm_id AND p.trust_request_id = OLD.id) THEN
     RAISE EXCEPTION 'money_trust_request: % has money recorded on it; its amount and purpose stay', OLD.number USING ERRCODE = 'check_violation';
@@ -938,9 +958,10 @@ BEGIN
     END IF;
   END IF;
   IF NEW.trust_request_id IS NOT NULL THEN
-    -- Share-locked: a cancel or an amount change of the request waits for this payment, or this payment for it, and
-    -- reads it after (break B-4: a cancelled request was paid, and its amount changed with money on it).
-    SELECT r.sent_at, r.cancelled_at, r.currency INTO d FROM "money_trust_request" r WHERE r.firm_id = NEW.firm_id AND r.id = NEW.trust_request_id FOR SHARE;
+    -- Touched (updated_at), not only locked: a cancel or an amount change of the request waits for this payment, or
+    -- this payment for it, and reads it after; at REPEATABLE READ the later writer fails to serialise (40001) because
+    -- the row changed after its snapshot (break B-4; review round 2, Minor 1).
+    UPDATE "money_trust_request" r SET updated_at = now() WHERE r.firm_id = NEW.firm_id AND r.id = NEW.trust_request_id RETURNING r.sent_at, r.cancelled_at, r.currency INTO d;
     IF NOT FOUND THEN PERFORM money_missing('money_payment', 'trust request', NEW.trust_request_id); END IF;
     IF d.sent_at IS NULL OR d.cancelled_at IS NOT NULL THEN
       RAISE EXCEPTION 'money_payment: only a sent, not cancelled, trust request takes a payment' USING ERRCODE = 'check_violation';
@@ -1031,8 +1052,13 @@ CREATE TRIGGER money_receipt_write BEFORE INSERT ON "money_receipt" FOR EACH ROW
 -- invoice of the same party and currency (s. 32(f)) and never pays more than is open on it after credit notes and the
 -- write-off (review round 1, m4; break B-5); a correction names, if any, an entry of the same party and currency.
 CREATE FUNCTION money_trust_entry_write() RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE d record; last_seq integer; last_balance bigint; party uuid := coalesce(NEW.person_id, NEW.company_id); bal bigint; applied bigint; open_amount bigint;
+DECLARE d record; last_seq integer; last_balance bigint; party uuid := coalesce(NEW.person_id, NEW.company_id); bal bigint; applied bigint; open_amount bigint; returned bigint;
 BEGIN
+  -- The party's lock first, before any invoice row is touched, so a "Trust first" deposit and withdrawal in one
+  -- transaction never deadlock with another withdrawal on the same invoice (review round 2, Minor 2: 40P01).
+  IF party IS NOT NULL THEN
+    PERFORM pg_advisory_xact_lock(hashtextextended('money_trust:' || NEW.firm_id || ':' || party || ':' || NEW.currency, 0));
+  END IF;
   IF NEW.kind = 'DEPOSIT' THEN
     PERFORM money_trust_on(NEW.firm_id, 'money_trust_entry');
   END IF;
@@ -1079,15 +1105,26 @@ BEGIN
     open_amount := money_issued_invoice(NEW.firm_id, NEW.invoice_id, NEW.currency, 'money_trust_entry');
   END IF;
   IF NEW.corrects_entry_id IS NOT NULL THEN
-    SELECT e.person_id, e.company_id, e.currency INTO d FROM "money_trust_entry" e WHERE e.firm_id = NEW.firm_id AND e.id = NEW.corrects_entry_id;
+    SELECT e.person_id, e.company_id, e.currency, e.kind, e.amount_minor INTO d FROM "money_trust_entry" e WHERE e.firm_id = NEW.firm_id AND e.id = NEW.corrects_entry_id;
     IF NOT FOUND THEN PERFORM money_missing('money_trust_entry', 'entry', NEW.corrects_entry_id); END IF;
     IF (d.person_id, d.company_id, d.currency) IS DISTINCT FROM (NEW.person_id, NEW.company_id, NEW.currency) THEN
       RAISE EXCEPTION 'money_trust_entry: a correction is on the same party and currency as the entry it corrects' USING ERRCODE = 'check_violation';
     END IF;
+    -- Money returned from a trust application: positive, and never more than was applied (the party's lock is held,
+    -- so the returns of one withdrawal are read after every earlier one).
+    IF d.kind = 'WITHDRAWAL_TO_INVOICE' THEN
+      SELECT coalesce(sum(c.amount_minor), 0) INTO returned FROM "money_trust_entry" c WHERE c.firm_id = NEW.firm_id AND c.corrects_entry_id = NEW.corrects_entry_id;
+      IF NEW.amount_minor <= 0 OR returned + NEW.amount_minor > -d.amount_minor THEN
+        RAISE EXCEPTION 'money_trust_entry: money returned from a trust application is positive and at most what was applied (% applied, % returned)', -d.amount_minor, returned USING ERRCODE = 'check_violation';
+      END IF;
+    END IF;
   END IF;
-  PERFORM pg_advisory_xact_lock(hashtextextended('money_trust:' || NEW.firm_id || ':' || party || ':' || NEW.currency, 0));
   IF NEW.kind = 'WITHDRAWAL_TO_INVOICE' AND NEW.invoice_id IS NOT NULL THEN
-    SELECT coalesce(-sum(e.amount_minor), 0) INTO applied FROM "money_trust_entry" e WHERE e.firm_id = NEW.firm_id AND e.invoice_id = NEW.invoice_id;
+    -- Paid from trust so far: the invoice's withdrawals less the money returned to trust from them (corrections naming
+    -- them), so a return frees the amount again (review round 2, Major 2).
+    SELECT coalesce(-sum(e.amount_minor), 0) - coalesce((SELECT sum(c.amount_minor) FROM "money_trust_entry" c JOIN "money_trust_entry" w ON w.firm_id = c.firm_id AND w.id = c.corrects_entry_id
+        WHERE c.firm_id = NEW.firm_id AND c.kind = 'CORRECTION' AND w.invoice_id = NEW.invoice_id), 0)
+      INTO applied FROM "money_trust_entry" e WHERE e.firm_id = NEW.firm_id AND e.invoice_id = NEW.invoice_id;
     IF applied - NEW.amount_minor > open_amount THEN
       RAISE EXCEPTION 'money_trust_entry: % from trust would pay more than is open on the invoice (% open after credit notes and write-off, % already paid from trust)', -NEW.amount_minor, open_amount, applied USING ERRCODE = 'check_violation';
     END IF;
@@ -1112,7 +1149,6 @@ CREATE TRIGGER money_trust_entry_write BEFORE INSERT ON "money_trust_entry" FOR 
 
 -- ---------------------------------------------------------------------------------------------------- the "To move" list
 -- An undo batch undoes a batch that is not itself an undo, in the same currency; one undo per batch (unique index).
--- An undo batch undoes a batch that is not itself an undo, in the same currency; one undo per batch (unique index).
 CREATE FUNCTION money_move_batch_write() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE b record;
 BEGIN
@@ -1132,7 +1168,9 @@ END $$;
 CREATE TRIGGER money_move_batch_write BEFORE INSERT ON "money_move_batch" FOR EACH ROW EXECUTE FUNCTION money_move_batch_write();
 
 -- A line goes into a batch written in this same transaction (one click, "I moved these"): a recorded batch never gains
--- lines later, and an undone one never (review round 1, m5; break B-7). It is in the batch's currency and matches its
+-- lines later, and an undone one never (review round 1, m5; break B-7). "Written in this transaction" is a batch this
+-- statement can see whose writer is still in progress: only this transaction's own rows (also from a savepoint,
+-- review round 2, Minor 5) are both visible and in progress. The xmin is widened with the current epoch. It is in the batch's currency and matches its
 -- source: a trust application moves up to its withdrawal (less what was returned before moving), trust to operating;
 -- a wrong-account amount goes back towards the account it belonged in, at most the payment; a card fee on the trust
 -- account is covered from operating, for a card payment received into trust, at most the payment (none can exist
@@ -1143,7 +1181,7 @@ CREATE TRIGGER money_move_batch_write BEFORE INSERT ON "money_move_batch" FOR EA
 CREATE FUNCTION money_move_line_write() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE b record; s record; src uuid := coalesce(NEW.source_trust_entry_id, NEW.source_payment_id); earlier integer; live uuid;
 BEGIN
-  SELECT x.undoes_batch_id, x.currency, x.xmin::text = (pg_current_xact_id()::xid)::text AS mine INTO b FROM "money_move_batch" x WHERE x.firm_id = NEW.firm_id AND x.id = NEW.batch_id;
+  SELECT x.undoes_batch_id, x.currency, pg_xact_status(((pg_current_xact_id()::text::bigint >> 32 << 32) | x.xmin::text::bigint)::text::xid8) = 'in progress' AS mine INTO b FROM "money_move_batch" x WHERE x.firm_id = NEW.firm_id AND x.id = NEW.batch_id;
   IF NOT FOUND THEN PERFORM money_missing('money_move_line', 'batch', NEW.batch_id); END IF;
   IF b.undoes_batch_id IS NOT NULL THEN
     RAISE EXCEPTION 'money_move_line: an undo batch carries no lines (the undone batch''s lines go back to the list)' USING ERRCODE = 'check_violation';

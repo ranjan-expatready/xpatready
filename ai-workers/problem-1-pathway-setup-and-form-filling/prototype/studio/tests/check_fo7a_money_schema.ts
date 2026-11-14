@@ -131,12 +131,12 @@ try {
   ok("FO-7a pass (AG-6-59, -46): a firm's money settings start with trust off, CAD, due in 14 days and no tax rates", sql(DEMO, settings(firmA)) === "false:CAD:14:[]" && sql(DEMO, settings(firmB)) === "false:CAD:14:[]");
   ok("FO-7a fail: money settings for a firm that does not exist are refused (23503), and a second row for a firm is refused",
     refused(DEMO, settings(u(999)), /money_payment_settings_firm_id_fkey/, "23503") && refused(DEMO, settings(firmA), /money_payment_settings_pkey/, "23505"));
-  ok("FO-7a pass: the firm's tax rates are a list of names and basis points (Sample HST 13 %)",
-    sql(DEMO, `update money_payment_settings set tax_rates = '[{"name":"HST","rateBp":1300}]', trust_enabled = true where firm_id = '${firmA}' returning 1`) === "1");
-  ok("FO-7a fail: tax rates that are not a list of { name, rateBp 0..10000 } are refused",
+  ok("FO-7a pass: the firm's tax rates are a list of names and rates in parts per million (Sample HST 13 %; Quebec's QST 9.975 % is exact; review round 2, Major 1)",
+    sql(DEMO, `update money_payment_settings set tax_rates = '[{"name":"HST","ratePpm":130000},{"name":"GST","ratePpm":50000},{"name":"QST","ratePpm":99750}]', trust_enabled = true where firm_id = '${firmA}' returning 1`) === "1");
+  ok("FO-7a fail: tax rates that are not a list of { name, ratePpm 0..1000000 } are refused",
     refused(DEMO, `update money_payment_settings set tax_rates = '{"name":"HST"}' where firm_id = '${firmA}'`, /money_payment_settings_tax_rates_check/)
-    && refused(DEMO, `update money_payment_settings set tax_rates = '[{"name":"HST","rateBp":13.5}]' where firm_id = '${firmA}'`, /money_payment_settings_tax_rates_check/)
-    && refused(DEMO, `update money_payment_settings set tax_rates = '[{"name":"HST","rateBp":20000}]' where firm_id = '${firmA}'`, /money_payment_settings_tax_rates_check/));
+    && refused(DEMO, `update money_payment_settings set tax_rates = '[{"name":"HST","ratePpm":99750.5}]' where firm_id = '${firmA}'`, /money_payment_settings_tax_rates_check/)
+    && refused(DEMO, `update money_payment_settings set tax_rates = '[{"name":"HST","ratePpm":2000000}]' where firm_id = '${firmA}'`, /money_payment_settings_tax_rates_check/));
   ok("FO-7a fail: a firm's money settings never move to another firm", refused(DEMO, `update money_payment_settings set firm_id = '${firmB}' where firm_id = '${firmA}'`, /firm_id never changes|money_payment_settings_pkey/));
   const acct = (f: string, id: string | null, status: string, charges = false) =>
     `insert into money_payment_account (firm_id, stripe_account_id, status, charges_enabled, updated_at) values ('${f}', ${id ? `'${id}'` : "null"}, '${status}', ${charges}, now()) on conflict (firm_id) do update set stripe_account_id = excluded.stripe_account_id, status = excluded.status, charges_enabled = excluded.charges_enabled returning status`;
@@ -159,8 +159,9 @@ try {
   const P1 = u(500), P2 = u(501), C1 = u(502);
   const draft = (id: string, f = firmA, party = `person_id`, pid = P1, cur = "CAD") =>
     `insert into money_invoice (id, firm_id, ${party}, currency, due_date, created_by, updated_at) values ('${id}', '${f}', '${pid}', '${cur}', '2026-12-15', 'user-R', now()) returning id`;
+  // bp: the rate in basis points for readability; the column holds parts per million (bp × 100; 1497.5 bp = 149750 ppm).
   const line = (inv: string, pos: number, kind: string, qty: number, unit: number, bp: number, tax: number, f = firmA, cur = "CAD") =>
-    `insert into money_invoice_line (id, firm_id, invoice_id, position, kind, description, quantity, unit_amount_minor, amount_minor, tax_rate_bp, tax_minor, currency) values (gen_random_uuid(), '${f}', '${inv}', ${pos}, '${kind}', 'Line ${pos}', ${qty}, ${unit}, ${qty * unit}, ${bp}, ${tax}, '${cur}') returning id`;
+    `insert into money_invoice_line (id, firm_id, invoice_id, position, kind, description, quantity, unit_amount_minor, amount_minor, tax_rate_ppm, tax_minor, currency) values (gen_random_uuid(), '${f}', '${inv}', ${pos}, '${kind}', 'Line ${pos}', ${qty}, ${unit}, ${qty * unit}, ${bp * 100}, ${tax}, '${cur}') returning id`;
   const issue = (inv: string) => `update money_invoice set issued_at = now(), issued_by = 'user-R' where id = '${inv}' returning number`;
   const I1 = u(600);
   ok("FO-7a pass (AG-6-1 rule 4): an invoice is written as a draft with no number, on a person", sql(DEMO, draft(I1)) === I1 && sql(DEMO, `select coalesce(number, '-') from money_invoice where id = '${I1}'`) === "-");
@@ -181,8 +182,10 @@ try {
   ok("FO-7a fail: an amount that is not a whole number of cents is refused (\"10.5\" into unit_amount_minor and amount_minor)",
     refused(DEMO, `insert into money_invoice_line (firm_id, invoice_id, position, kind, description, quantity, unit_amount_minor, amount_minor, currency) values ('${firmA}', '${I1}', 3, 'FEE', 'x', 1, '10.5', '10.5', 'CAD')`, /invalid input syntax for type integer/));
   ok("FO-7a fail: a firm B line on firm A's invoice is refused (23503; the check finds no such invoice in firm B, and the composite key would too)", refused(DEMO, line(I1, 3, "FEE", 1, 100, 0, 0, firmB), /invoice .* is not visible to this statement \(not in the firm/, "23503"));
-  ok("FO-7a fail: a tax that is not the line's amount at its rate (rounded per line) is refused — 2,000,000,000 tax on a 1-cent line, or 130.01 on 1,000.00 at 13 %",
-    refused(DEMO, line(I1, 3, "FEE", 1, 1, 1300, 2000000000), /money_invoice_line_tax_check/) && refused(DEMO, line(I1, 3, "FEE", 1, 100000, 1300, 13001), /money_invoice_line_tax_check/)
+  ok("FO-7a fail: a tax more than a cent from the line's amount at its rate is refused — 2,000,000,000 tax on a 1-cent line, or 130.02 on 1,000.00 at 13 %",
+    refused(DEMO, line(I1, 3, "FEE", 1, 1, 1300, 2000000000), /money_invoice_line_tax_check/) && refused(DEMO, line(I1, 3, "FEE", 1, 100000, 1300, 13002), /money_invoice_line_tax_check/));
+  ok("FO-7a pass (review round 2, Major 1; AG-6-4 rule 1): a Quebec line, GST + QST 14.975 % (149750 ppm) on 1,000.00 = 149.75, and on 3.33 with the two taxes rounded apart (0.17 + 0.33 = 0.50 against 0.4987)",
+    !!sql(DEMO, `begin; ${line(I1, 3, "FEE", 1, 100000, 1497.5, 14975)}; rollback;`) && !!sql(DEMO, `begin; ${line(I1, 3, "FEE", 1, 333, 1497.5, 50)}; rollback;`)
     && !!sql(DEMO, `begin; ${line(I1, 3, "FEE", 1, 85000, 1300, 11050)}; rollback;`));
   ok("FO-7a pass: issuing takes the firm's first number, INV-0001 (AG-6-44 rule 1), stamped now even when the caller sends another time (break B-10: no backdating)",
     sql(DEMO, `update money_invoice set issued_at = '1999-01-01', issued_by = 'user-R' where id = '${I1}' returning number`) === "INV-0001"
@@ -197,7 +200,7 @@ try {
   const frozen = /issued invoices can't be edited — use a credit note/;
   ok("FO-7a fail (AG-6-1 rule 6): an issued invoice's lines, tax, party, currency and number refuse change; it is never deleted",
     refused(DEMO, `update money_invoice_line set unit_amount_minor = 1, amount_minor = 1 where invoice_id = '${I1}' and position = 1`, frozen)
-    && refused(DEMO, `update money_invoice_line set tax_rate_bp = 500, tax_minor = 5000 where invoice_id = '${I1}' and position = 1`, frozen)
+    && refused(DEMO, `update money_invoice_line set tax_rate_ppm = 50000, tax_minor = 5000 where invoice_id = '${I1}' and position = 1`, frozen)
     && refused(DEMO, line(I1, 3, "FEE", 1, 100, 0, 0), frozen) && refused(DEMO, `delete from money_invoice_line where invoice_id = '${I1}'`, frozen)
     && refused(DEMO, `update money_invoice set person_id = '${P2}' where id = '${I1}'`, frozen) && refused(DEMO, `update money_invoice set person_id = null, company_id = '${C1}' where id = '${I1}'`, frozen)
     && refused(DEMO, `update money_invoice set currency = 'USD' where id = '${I1}'`, frozen) && refused(DEMO, `update money_invoice set number = 'INV-0099' where id = '${I1}'`, frozen)
@@ -224,26 +227,36 @@ try {
   sql(DEMO, `begin; ${issue(D1)}; rollback;`);
   ok("FO-7a fail → pass: an issue rolled back gives its number back; the next issue takes it (INV-0022), so no gap", sql(DEMO, issue(D1)) === "INV-0022");
   ok("FO-7a fail: next_number never goes back (numbers are never reused) and a series row is never deleted",
-    refused(DEMO, `update money_number_series set next_number = 5 where firm_id = '${firmA}' and kind = 'INVOICE'`, /cannot go back/)
+    refused(DEMO, `update money_number_series set next_number = 5 where firm_id = '${firmA}' and kind = 'INVOICE'`, /cannot go back|moves only by taking one/)
     && refused(DEMO, `delete from money_number_series where firm_id = '${firmA}' and kind = 'INVOICE'`, /never deleted/));
   ok("FO-7a pass (AG-6-44 rule 1): another firm counts on its own from INV-0001",
     (sql(DEMO, draft(u(800), firmB)), sql(DEMO, line(u(800), 1, "FEE", 1, 100, 0, 0, firmB)), sql(DEMO, issue(u(800)))) === "INV-0001");
-  ok("FO-7a fail (break B-6): once a series exists its next number moves only by taking a number — a jump that would leave a gap is refused",
-    refused(DEMO, `update money_number_series set next_number = 9999 where firm_id = '${firmB}' and kind = 'INVOICE'`, /would leave a gap/));
+  ok("FO-7a fail (break B-6; review round 2, Minor 3): once a series has given numbers it moves only by taking one — a jump, or a direct \"+ 1\" that would skip a number, is refused",
+    refused(DEMO, `update money_number_series set next_number = 9999 where firm_id = '${firmB}' and kind = 'INVOICE'`, /moves only by taking one/)
+    && refused(DEMO, `update money_number_series set next_number = next_number + 1 where firm_id = '${firmB}' and kind = 'INVOICE'`, /moves only by taking one/)
+    && refused(DEMO, `update money_number_series set numbers_taken = 0 where firm_id = '${firmB}' and kind = 'INVOICE'`, /moves only by taking one/));
+  ok("FO-7a pass (AG-6-44 rule 2; review round 2, Minor 3): before its first number a firm may correct its starting number, or remove the series",
+    sql(DEMO, `insert into money_number_series (firm_id, kind, prefix, next_number) values ('${firmB}', 'TRUST_REQUEST', 'DR-', 2418) returning next_number`) === "2418"
+    && sql(DEMO, `update money_number_series set next_number = 2400 where firm_id = '${firmB}' and kind = 'TRUST_REQUEST' returning next_number`) === "2400"
+    && sql(DEMO, `delete from money_number_series where firm_id = '${firmB}' and kind = 'TRUST_REQUEST' returning 1`) === "1"
+    && refused(DEMO, `insert into money_number_series (firm_id, kind, prefix, numbers_taken) values ('${firmB}', 'TRUST_REQUEST', 'DR-', 3)`, /numbers_taken is the database's/));
   const firmG = sql(DEMO, `insert into platform_firm (id, key, operating_name, country_code, contact_email, updated_at) values (gen_random_uuid(), 'firm-g', 'G', 'CA', 'g@firm-g.example.com', now()) returning id`);
   sql(DEMO, settings(firmG));
   ok("FO-7a pass (AG-6-44 rules 1-2): a firm moving over sets its first number when it writes the series (9999), and INV-9999 is followed by INV-10000",
     sql(DEMO, `insert into money_number_series (firm_id, kind, prefix, next_number) values ('${firmG}', 'INVOICE', 'INV-', 9999) returning next_number`) === "9999"
     && (sql(DEMO, draft(u(801), firmG)), sql(DEMO, line(u(801), 1, "FEE", 1, 100, 0, 0, firmG)), sql(DEMO, issue(u(801)))) === "INV-9999"
     && (sql(DEMO, draft(u(802), firmG)), sql(DEMO, line(u(802), 1, "FEE", 1, 100, 0, 0, firmG)), sql(DEMO, issue(u(802)))) === "INV-10000");
-  ok("FO-7a fail (break B-6): two series of a firm sharing a prefix, or a prefix with a digit or no dash, is refused",
-    refused(DEMO, `insert into money_number_series (firm_id, kind, prefix) values ('${firmG}', 'CREDIT_NOTE', 'INV-')`, /money_number_series_firm_id_prefix_key/, "23505")
+  ok("FO-7a fail (break B-6; review round 2, Minor 4): another series' default prefix, or a prefix with a digit or no dash, is refused",
+    refused(DEMO, `insert into money_number_series (firm_id, kind, prefix) values ('${firmG}', 'CREDIT_NOTE', 'INV-')`, /money_number_series_default_prefix_check/)
+    && refused(DEMO, `update money_number_series set prefix = 'CN-' where firm_id = '${firmG}' and kind = 'INVOICE'`, /money_number_series_default_prefix_check/)
     && refused(DEMO, `update money_number_series set prefix = 'CN1-' where firm_id = '${firmG}' and kind = 'INVOICE'`, /money_number_series_prefix_check/)
     && refused(DEMO, `update money_number_series set prefix = 'CN' where firm_id = '${firmG}' and kind = 'INVOICE'`, /money_number_series_prefix_check/));
   ok("FO-7a pass (AG-6-44 rule 5): a prefix change applies to the next number only (TOR-10001)",
     sql(DEMO, `update money_number_series set prefix = 'TOR-' where firm_id = '${firmG}' and kind = 'INVOICE' returning prefix`) === "TOR-"
     && (sql(DEMO, draft(u(803), firmG)), sql(DEMO, line(u(803), 1, "FEE", 1, 100, 0, 0, firmG)), sql(DEMO, issue(u(803)))) === "TOR-10001"
     && sql(DEMO, `select number from money_invoice where id = '${u(802)}'`) === "INV-10000");
+  ok("FO-7a fail (break B-6): two series of a firm sharing a prefix is refused (23505)",
+    refused(DEMO, `insert into money_number_series (firm_id, kind, prefix) values ('${firmG}', 'CREDIT_NOTE', 'TOR-')`, /money_number_series_firm_id_prefix_key/, "23505"));
   ok("FO-7a fail: a hand-made number that repeats one already issued in the firm is refused by the unique index", refused(DEMO, `alter table money_invoice disable trigger money_invoice_write; update money_invoice set number = 'INV-0001' where id = '${u(700)}'`, /money_invoice_firm_id_number_key/, "23505")
     && sql(DEMO, `select count(*) from pg_trigger where tgname = 'money_invoice_write' and tgenabled = 'O'`) === "1");
 
@@ -371,11 +384,17 @@ try {
   ok("FO-7a pass: a withdrawal of 300.00 to the party's issued invoice leaves 700.00 (seq 2)", sql(DEMO, `select seq || ':' || balance_after_minor from money_trust_entry where id = '${WD}'`) === "2:70000");
   ok("FO-7a fail: a withdrawal of 800.00 from 700.00 is refused — the balance never goes below zero", refused(DEMO, entry("WITHDRAWAL_TO_INVOICE", -80000, { inv: I1 }), /would go below zero \(held 70000 CAD/, "23514") && balance() === "70000");
   {
-    const small = u(615);
+    const small = u(615); let WS = "";
     sql(DEMO, draft(small)); sql(DEMO, line(small, 1, "FEE", 1, 500, 0, 0)); sql(DEMO, issue(small));
     ok("FO-7a fail (review round 1 m4, break B-5): trust never pays more than is open on the invoice — 6.00 to a 5.00 invoice is refused; 5.00 is written; then 0.01 more is refused",
-      refused(DEMO, entry("WITHDRAWAL_TO_INVOICE", -600, { inv: small }), /more than is open on the invoice \(500 open/) && !!sql(DEMO, entry("WITHDRAWAL_TO_INVOICE", -500, { inv: small }))
+      refused(DEMO, entry("WITHDRAWAL_TO_INVOICE", -600, { inv: small }), /more than is open on the invoice \(500 open/) && !!(WS = sql(DEMO, entry("WITHDRAWAL_TO_INVOICE", -500, { inv: small })))
       && refused(DEMO, entry("WITHDRAWAL_TO_INVOICE", -1, { inv: small }), /500 already paid from trust/) && balance() === "69500");
+    const giveBack = (amount: number) => `insert into money_trust_entry (firm_id, person_id, kind, amount_minor, currency, corrects_entry_id, reason, created_by) values ('${firmA}', '${P1}', 'CORRECTION', ${amount}, 'CAD', '${WS}', 'Returned before moving: invoice disputed', 'user-R') returning balance_after_minor`;
+    ok("FO-7a pass (review round 2, Major 2): money returned to trust from an application (a correction naming it) frees that amount — 2.00 back, then 2.00 applied again, then 0.01 more refused",
+      sql(DEMO, giveBack(200)) === "69700" && !!sql(DEMO, entry("WITHDRAWAL_TO_INVOICE", -200, { inv: small }))
+      && refused(DEMO, entry("WITHDRAWAL_TO_INVOICE", -1, { inv: small }), /500 already paid from trust/) && balance() === "69500");
+    ok("FO-7a fail: a return from an application that is negative, or more than was applied, is refused",
+      refused(DEMO, giveBack(-1), /positive and at most what was applied/) && refused(DEMO, giveBack(301), /positive and at most what was applied \(500 applied, 200 returned\)/));
   }
   ok("FO-7a fail: a refund to the client or a correction without a reason is refused; with one it is written",
     refused(DEMO, entry("REFUND_TO_CLIENT", -100), /money_trust_entry_reason_check/) && refused(DEMO, entry("CORRECTION", 100), /money_trust_entry_reason_check/)
@@ -414,6 +433,32 @@ try {
     await c1.end(); await c2.end(); conns.splice(conns.indexOf(c1), 1); conns.splice(conns.indexOf(c2), 1);
   }
 
+  {
+    // review round 2, Minor 1: at REPEATABLE READ, an amount change whose snapshot predates a payment on the request.
+    sql(DEMO, req(u(1114), true, "person_id", P2, 1000));
+    const c1 = new pg.Client({ connectionString: urlOf(DEMO) }), c2 = new pg.Client({ connectionString: urlOf(DEMO) });
+    await c1.connect(); await c2.connect(); conns.push(c1, c2);
+    await c2.query("begin isolation level repeatable read"); await c2.query("select 1 from money_trust_request limit 1");
+    await c1.query("begin"); await c1.query(deposit(u(1115), "key-b4-rr-000001", 1000, { req: u(1114), who: P2 })); await c1.query("commit");
+    const outcome = await c2.query(`update money_trust_request set amount_minor = 5 where id = '${u(1114)}'`).then(() => "changed", (e: { code?: string }) => e.code ?? "error");
+    await c2.query("rollback");
+    ok("FO-7a fail (parallel, REPEATABLE READ; review round 2, Minor 1): an amount change whose snapshot predates a payment on the request fails to serialise (40001)",
+      outcome === "40001" && sql(DEMO, `select amount_minor from money_trust_request where id = '${u(1114)}'`) === "1000", outcome);
+    await c1.end(); await c2.end(); conns.splice(conns.indexOf(c1), 1); conns.splice(conns.indexOf(c2), 1);
+  }
+  {
+    // review round 2, Minor 2: "Trust first" (deposit and withdrawal in one transaction) beside another withdrawal on the
+    // same invoice and party never deadlocks.
+    const tf = u(616);
+    sql(DEMO, draft(tf)); sql(DEMO, line(tf, 1, "FEE", 1, 100000, 0, 0)); sql(DEMO, issue(tf));
+    const codes: string[] = [];
+    for (let k = 0; k < 4; k++) {
+      const r = await race(2, (i) => i === 0 ? `${deposit(u(1120 + k), `key-tf-dl-${k}-0000`, 100, { inv: tf })}; ${entry("WITHDRAWAL_TO_INVOICE", -100, { inv: tf })}` : entry("WITHDRAWAL_TO_INVOICE", -100, { inv: tf }));
+      codes.push(...r.map((x) => x.code ?? "ok"));
+    }
+    ok("FO-7a pass (parallel; review round 2, Minor 2): \"Trust first\" beside another withdrawal on the same invoice, 4 rounds — never a deadlock (40P01), every write goes through",
+      codes.every((c) => c === "ok"), codes);
+  }
   // ------------------------------------------------------------------------------------------------------ write-offs
   const writeOff = (inv: string, amount = 2500, reason = "Wire fee") => `insert into money_write_off (firm_id, invoice_id, amount_minor, currency, reason, created_by) values ('${firmA}', '${inv}', ${amount}, 'CAD', '${reason}', 'user-R') returning amount_minor`;
   ok("FO-7a pass (AG-6-76): a write-off of an issued invoice's small balance with a reason", sql(DEMO, writeOff(u(701))) === "2500");
@@ -454,6 +499,9 @@ try {
     refused(DEMO, batch(u(1304), { undoes: B1, reason: "Again" }), /money_move_batch_firm_id_undoes_batch_id_key/, "23505")
     && refused(DEMO, batch(u(1304), { undoes: UNDO, reason: "Undo the undo" }), /an undo is never undone/) && refused(DEMO, moveLine(UNDO, u(1103), "WRONG_ACCOUNT", "OPERATING_TO_TRUST", 1), /undo batch carries no lines/)
     && refused(DEMO, moveLine(B1, u(1103), "WRONG_ACCOUNT", "OPERATING_TO_TRUST", 1), /a recorded batch is never added to/));
+  ok("FO-7a pass (review round 2, Minor 5): a batch written inside a savepoint takes its lines in the same transaction",
+    (psql(DEMO, ["-c", `begin; savepoint s1; ${batch(u(1308))}; release savepoint s1; savepoint s2; ${moveLine(u(1308), u(1102), "WRONG_ACCOUNT", "TRUST_TO_OPERATING", 1)}; release savepoint s2; commit;`]), true)
+    && sql(DEMO, `select count(*) from money_move_line where batch_id = '${u(1308)}'`) === "1");
   const W2 = sql(DEMO, entry("WITHDRAWAL_TO_INVOICE", -100, { inv: I1 }));
   const B4 = u(1305), B5 = u(1306);
   const two = await race(2, (i) => moved([B4, B5][i], moveLine([B4, B5][i], W2, "TRUST_APPLIED", "TRUST_TO_OPERATING", 100)));

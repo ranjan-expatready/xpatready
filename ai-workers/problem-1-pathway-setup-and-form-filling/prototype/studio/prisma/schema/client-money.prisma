@@ -116,7 +116,8 @@ model MoneyPaymentSettings {
   operatingDetails String?       @map("operating_details")
   trustDetails     String?       @map("trust_details")
   taxNumber        String?       @map("tax_number")
-  /// The firm's tax rates: a JSON list of { "name": "HST", "rateBp": 1300 } (basis points; Sample until the firm sets them).
+  /// The firm's tax rates: a JSON list of { "name": "HST", "ratePpm": 130000 } (parts per million, so Quebec's QST 9.975 % is
+  /// 99750 exactly; Sample until the firm sets them).
   taxRates         Json          @default("[]") @map("tax_rates")
   trustEnabled     Boolean       @default(false) @map("trust_enabled")
   defaultCurrency  MoneyCurrency @default(CAD) @map("default_currency")
@@ -164,6 +165,8 @@ model MoneyNumberSeries {
   kind       MoneySeriesKind
   prefix     String
   nextNumber Int             @default(1) @map("next_number")
+  /// How many numbers the series has given, the database's: while 0, the firm may still set its first number.
+  numbersTaken Int @default(0) @map("numbers_taken")
   updatedAt  DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   settings MoneyPaymentSettings @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
@@ -206,8 +209,9 @@ model MoneyInvoice {
   @@map("money_invoice")
 }
 
-/// One line of an invoice (AG-6-1 rule 2, AG-6-4): amount = quantity × unit amount; tax in basis points and its
-/// amount, rounded per line by FO-7b; a government fee carries no tax.
+/// One line of an invoice (AG-6-1 rule 2, AG-6-4): amount = quantity × unit amount; tax rate in parts per million and its
+/// amount, rounded per line by FO-7b (within a cent of amount × rate, so two taxes rounded apart fit); a government fee
+/// carries no tax.
 model MoneyInvoiceLine {
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firmId          String        @map("firm_id") @db.Uuid
@@ -218,7 +222,9 @@ model MoneyInvoiceLine {
   quantity        Int           @default(1)
   unitAmountMinor Int           @map("unit_amount_minor")
   amountMinor     Int           @map("amount_minor")
-  taxRateBp       Int           @default(0) @map("tax_rate_bp")
+  /// The line's tax rate in parts per million (13 % = 130000; GST + QST 14.975 % = 149750): basis points cannot hold
+  /// Quebec's rates (review round 2, Major 1).
+  taxRatePpm       Int           @default(0) @map("tax_rate_ppm")
   taxMinor        Int           @default(0) @map("tax_minor")
   currency        MoneyCurrency
   createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz
