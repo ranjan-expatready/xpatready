@@ -435,3 +435,13 @@ Source: `product/design/case-side-contract-v0.1-2026-11-14.md` on `lead/2026-11-
   Every schema brief now has the re-stamp step.
 * **PF-0p's interim `AuditPort` adapter:** OK. AUD-1 swaps it behind the port later, with no caller change.
 * Cloud lanes for the 12 start at the founder's next typed turn. **PF-0p goes first.**
+
+**PF-21 amended (Lead 47, P-601, #1753 comment 6877890040, 14 Nov):**
+* **Keys:**
+  * `agent/complaint:record` goes to OWNER, ADMIN and CASE_MANAGER;
+  * `agent/complaint:read` goes to OWNER and ADMIN;
+  * the handler reads their own complaints without the key.
+* **Catalogue rows:** PF-21's migration adds them to `platform_role_permission`. This is P-600's one written exception, and the release holder reads those lines.
+* **Fail test per role:** each role without the key is refused.
+* **Events:** `EVENT.COMPLAINT_RECEIVED` and `EVENT.COMPLAINT_CLOSED` (ids only) in `ports/events.ts` after #1742 merges.
+* **Back-relations:** both PF-21 slot lines; the handler is a real `(firm_id, handler_staff_id)` foreign key.
