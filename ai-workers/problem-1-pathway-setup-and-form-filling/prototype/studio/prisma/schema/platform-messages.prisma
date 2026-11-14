@@ -1,0 +1,329 @@
+// platform-messages.prisma — consent, consent wording, suppression, templates, outbox, delivery events, send counters (later notifications). Owner: Lead B (platform, contracts §9).
+// Nothing outside api/src/platform/messages/ writes these tables (one sending path for both sides, P-584 (1)).
+//
+// PF-19a (rows rev 14/16; contracts §7 and §9; AG-10-22 to -27, AG-2-83, SA-11-29). The firm is the tenant: no
+// workspace_id, so the demo reset leaves these rows as they are. Every firm row keys on msg_firm (one row per firm, made by
+// the messages code the first time it writes for a firm), which keys on platform_firm: one back-relation line on
+// PlatformFirm instead of one per table. firm_id is first in every index; the only exceptions are two partial indexes over
+// the platform's own templates, which have no firm. Rules Prisma cannot say are in the migration
+// 20261114190000_pf19a_platform_messages (functions and triggers prefixed msg_): wording, template versions and delivery
+// events are write-once; a consent's withdrawal is set once, never cleared, and nothing else on it ever changes; a template
+// version and an outbox row stay in their template's firm. A consent names a wording of its own firm, channel and purpose
+// by a composite foreign key. Every firm row here is covered by PF-12's walls (msg_firm, msg_consent_wording, msg_consent,
+// msg_suppression, msg_template, msg_template_version, msg_outbox, msg_event, msg_send_counter). The CASL reading behind
+// "marketing needs express consent on that channel" is Unconfirmed: no counsel. Room is left for PF-18n's
+// msg_notification (later notifications).
+
+/// Who a consent or a message is about: a front-office person, a case party, or a staff member. The id is that side's
+/// own row id (no foreign key across modules: each side owns its people).
+enum MsgSubjectKind {
+  FO_PERSON
+  CASE_PARTY
+  STAFF
+}
+
+/// The channels messages go by (email here; WhatsApp is FO-11's registration).
+enum MsgChannel {
+  EMAIL
+  WHATSAPP
+}
+
+/// What a consent is for (AG-2-83 rule 3, SA-11-29): MARKETING on EMAIL is MARKETING_EMAIL, MARKETING on WHATSAPP is
+/// WHATSAPP_MARKETING, SERVICE on WHATSAPP is the WhatsApp service opt-in (WHATSAPP_OPT_IN, never marketing). Service
+/// email needs no consent, so there is no SERVICE consent on EMAIL (check).
+enum MsgPurpose {
+  SERVICE
+  MARKETING
+}
+
+/// How the consent was given (AG-2-83 rule 3): the person's own answer, or an importer's declaration (rule 5).
+enum MsgConsentBasis {
+  EXPRESS
+  IMPORT_DECLARED
+}
+
+/// The door a consent came through (AG-2-83 rule 2, §7 `source`).
+enum MsgConsentSource {
+  WEB_FORM
+  META_LEAD_AD
+  WHATSAPP_OPT_IN_REPLY
+  BOOKING_FORM
+  STAFF_RECORDED
+  IMPORT_DECLARED
+  PORTAL
+  API
+}
+
+/// Who gave the answer (AG-2-83 rule 3): the person themselves, a staff member, or the system (a Link or Merge copy).
+enum MsgRecorderKind {
+  SELF_SERVICE
+  USER
+  SYSTEM
+}
+
+/// How a consent was withdrawn (AG-10-24, AG-2-83 rules 7 and 11): an unsubscribe click, a STOP reply, a staff member by
+/// hand (`agent/consent:manage`), the person on the portal, or a complaint.
+enum MsgWithdrawalVia {
+  UNSUBSCRIBE
+  STOP
+  STAFF
+  PORTAL
+  COMPLAINT
+}
+
+/// Why an address gets nothing more (AG-10-25, BR-5; SA-11-29). A suppression stops every class, transactional too.
+enum MsgSuppressionReason {
+  HARD_BOUNCE
+  COMPLAINT
+  UNSUBSCRIBE
+  STOP
+  STAFF
+}
+
+/// Whose template it is: the platform's own (no firm; our notices) or a firm's.
+enum MsgTemplateOwner {
+  PLATFORM
+  FIRM
+}
+
+/// The class the consent gate judges a message by (AG-10-22): transactional is allowed to a reachable address, service
+/// email needs nothing more (WhatsApp service needs the opt-in), marketing needs a live express consent.
+enum MsgClass {
+  TRANSACTIONAL
+  SERVICE
+  MARKETING
+}
+
+/// An outbox row's state (PF-19b moves it): SUPPRESSED is a message the gate stopped, with its reason.
+enum MsgOutboxState {
+  QUEUED
+  SENT
+  DELIVERED
+  BOUNCED
+  FAILED
+  SUPPRESSED
+}
+
+/// A delivery event from the provider (AG-10-88 results; bounces and complaints, AG-10-25).
+enum MsgEventKind {
+  SENT
+  DELIVERED
+  OPENED
+  BOUNCED
+  COMPLAINED
+  FAILED
+}
+
+/// One row per firm that has messages data: the one key every msg_ table hangs on, so platform_firm needs one
+/// back-relation line (PF-0p's "messages (PF-19a)" slot). Made by the messages code (ensureMessagesFirm) on its first
+/// write for the firm; a firm with messages rows cannot be deleted (RESTRICT, as every platform key).
+model MsgFirm {
+  firmId    String   @id @map("firm_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  firm             PlatformFirm         @relation(fields: [firmId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  consentWordings  MsgConsentWording[]
+  consents         MsgConsent[]
+  suppressions     MsgSuppression[]
+  templates        MsgTemplate[]
+  templateVersions MsgTemplateVersion[]
+  outbox           MsgOutbox[]
+  events           MsgEvent[]
+  sendCounters     MsgSendCounter[]
+
+  @@map("msg_firm")
+}
+
+/// A firm's consent wording, the words shown with a tick (SA-11-29 "text version"; AG-2-83 rule 6; moved here from FO-1a).
+/// Versioned per firm, channel, purpose and language; text_hash is the SHA-256 of the text (a check recomputes it);
+/// never edited or deleted (trigger): a change is a new version. A web form (fo_web_form) names one by (firm_id, id).
+model MsgConsentWording {
+  id          String     @id @default(uuid()) @db.Uuid
+  firmId      String     @map("firm_id") @db.Uuid
+  channel     MsgChannel
+  purpose     MsgPurpose
+  locale      String
+  version     Int
+  text        String
+  textHash    String     @map("text_hash")
+  publishedBy String     @map("published_by")
+  publishedAt DateTime   @default(now()) @map("published_at") @db.Timestamptz
+
+  firm     MsgFirm      @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+  consents MsgConsent[]
+
+  @@unique([firmId, id])
+  /// The target of a consent's key: the wording must be the same firm's, for the same channel and purpose.
+  @@unique([firmId, id, channel, purpose])
+  @@unique([firmId, channel, purpose, locale, version])
+  @@map("msg_consent_wording")
+}
+
+/// A consent a person gave (AG-2-83, AG-10-26, SA-11-29): written once with its evidence (source, reference, wording,
+/// language, recorder). A withdrawal sets withdrawn_at, withdrawn_by and withdrawn_via once and never clears them; no
+/// other column ever changes and no row is deleted (trigger). Giving consent again is a new row. The live consent for a
+/// subject, channel and purpose is a row given after the last withdrawal of that key and not itself withdrawn
+/// (api/src/platform/messages/consent/). A wording is required except for an importer's declaration (check).
+model MsgConsent {
+  id            String            @id @default(uuid()) @db.Uuid
+  firmId        String            @map("firm_id") @db.Uuid
+  subjectKind   MsgSubjectKind    @map("subject_kind")
+  subjectId     String            @map("subject_id") @db.Uuid
+  channel       MsgChannel
+  purpose       MsgPurpose
+  wordingId     String?           @map("wording_id") @db.Uuid
+  basis         MsgConsentBasis
+  source        MsgConsentSource
+  sourceRef     String?           @map("source_ref")
+  evidenceRef   String?           @map("evidence_ref")
+  locale        String?
+  /// A hash of the visitor's address, web form only (AG-2-83 rule 3).
+  ipHash        String?           @map("ip_hash")
+  recordedKind  MsgRecorderKind   @map("recorded_kind")
+  /// `staff:<id>`, `system:<door>` (a public door, AG-2-83 rule 4) or `seed:<row>`.
+  recordedBy    String            @map("recorded_by")
+  copiedFromId  String?           @map("copied_from_id") @db.Uuid
+  givenAt       DateTime          @map("given_at") @db.Timestamptz
+  withdrawnAt   DateTime?         @map("withdrawn_at") @db.Timestamptz
+  withdrawnBy   String?           @map("withdrawn_by")
+  withdrawnVia  MsgWithdrawalVia? @map("withdrawn_via")
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz
+
+  firm       MsgFirm            @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+  wording    MsgConsentWording? @relation(fields: [firmId, wordingId, channel, purpose], references: [firmId, id, channel, purpose], onDelete: Restrict, onUpdate: Restrict)
+  copiedFrom MsgConsent?        @relation("MsgConsentCopy", fields: [firmId, copiedFromId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  copies     MsgConsent[]       @relation("MsgConsentCopy")
+  outbox     MsgOutbox[]
+
+  @@unique([firmId, id])
+  @@index([firmId, subjectKind, subjectId, channel, purpose, givenAt])
+  @@index([firmId, wordingId])
+  @@map("msg_consent")
+}
+
+/// An address that gets nothing more from this firm (AG-10-25): EMAIL addresses lower case, WHATSAPP numbers in E.164
+/// (check). One row per firm, channel and address; a second bounce changes nothing.
+model MsgSuppression {
+  id        String               @id @default(uuid()) @db.Uuid
+  firmId    String               @map("firm_id") @db.Uuid
+  channel   MsgChannel
+  address   String
+  reason    MsgSuppressionReason
+  note      String?
+  createdBy String               @map("created_by")
+  createdAt DateTime             @default(now()) @map("created_at") @db.Timestamptz
+
+  firm MsgFirm @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([firmId, channel, address])
+  @@map("msg_suppression")
+}
+
+/// A message template (PF-19c fills them): the platform's own (no firm) or a firm's; key, kind, channel and language.
+/// A template's owner and firm never change (trigger), so its versions stay in its firm.
+model MsgTemplate {
+  id        String           @id @default(uuid()) @db.Uuid
+  firmId    String?          @map("firm_id") @db.Uuid
+  owner     MsgTemplateOwner
+  key       String
+  kind      String
+  channel   MsgChannel
+  language  String
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  firm     MsgFirm?             @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+  versions MsgTemplateVersion[]
+
+  /// A firm's key is unique in the firm; the platform's keys by a partial index in the migration (no firm).
+  @@unique([firmId, key, channel, language])
+  @@map("msg_template")
+}
+
+/// One published version of a template: subject, body and the fields a firm's edit must keep (must_keep). Write-once
+/// (trigger); firm_id is its template's (trigger), empty for the platform's templates.
+model MsgTemplateVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  firmId      String?  @map("firm_id") @db.Uuid
+  templateId  String   @map("template_id") @db.Uuid
+  version     Int
+  subject     String?
+  body        String
+  mustKeep    String[] @default([]) @map("must_keep")
+  publishedBy String   @map("published_by")
+  publishedAt DateTime @default(now()) @map("published_at") @db.Timestamptz
+
+  firm     MsgFirm?    @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+  template MsgTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  outbox   MsgOutbox[]
+
+  /// A firm's versions; the platform's by a partial index in the migration (no firm).
+  @@unique([firmId, templateId, version])
+  @@map("msg_template_version")
+}
+
+/// The sending outbox (PF-19b writes it in the caller's transaction; a worker sends after commit). consent_id is the
+/// consent that allowed a marketing or WhatsApp service send (AG-10-27: why it was allowed). A template version, when
+/// named, is the platform's or the outbox row's own firm's (trigger).
+model MsgOutbox {
+  id                String         @id @default(uuid()) @db.Uuid
+  firmId            String         @map("firm_id") @db.Uuid
+  subjectKind       MsgSubjectKind? @map("subject_kind")
+  subjectId         String?        @map("subject_id") @db.Uuid
+  channel           MsgChannel
+  address           String
+  templateVersionId String?        @map("template_version_id") @db.Uuid
+  renderedHash      String         @map("rendered_hash")
+  class             MsgClass
+  state             MsgOutboxState @default(QUEUED)
+  stateReason       String?        @map("state_reason")
+  consentId         String?        @map("consent_id") @db.Uuid
+  idempotencyKey    String?        @map("idempotency_key")
+  providerId        String?        @map("provider_id")
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  sentAt            DateTime?      @map("sent_at") @db.Timestamptz
+
+  firm            MsgFirm             @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+  templateVersion MsgTemplateVersion? @relation(fields: [templateVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  consent         MsgConsent?         @relation(fields: [firmId, consentId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  events          MsgEvent[]
+
+  @@unique([firmId, id])
+  @@unique([firmId, idempotencyKey])
+  @@index([firmId, state, createdAt])
+  @@index([firmId, providerId])
+  @@map("msg_outbox")
+}
+
+/// A delivery event for one outbox row. Insert-only: a trigger refuses update, delete and truncate.
+model MsgEvent {
+  id              String       @id @default(uuid()) @db.Uuid
+  firmId          String       @map("firm_id") @db.Uuid
+  outboxId        String       @map("outbox_id") @db.Uuid
+  kind            MsgEventKind
+  providerEventId String?      @map("provider_event_id")
+  occurredAt      DateTime     @map("occurred_at") @db.Timestamptz
+  /// Ids and codes only, never personal data.
+  detail          Json?
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  firm   MsgFirm   @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+  outbox MsgOutbox @relation(fields: [firmId, outboxId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@index([firmId, outboxId, occurredAt])
+  @@map("msg_event")
+}
+
+/// How many messages a firm sent on one day (PF-19b's daily cap; the day in the firm's time zone).
+model MsgSendCounter {
+  firmId    String   @map("firm_id") @db.Uuid
+  day       DateTime @db.Date
+  sent      Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  firm MsgFirm @relation(fields: [firmId], references: [firmId], onDelete: Restrict, onUpdate: Restrict)
+
+  @@id([firmId, day])
+  @@map("msg_send_counter")
+}
