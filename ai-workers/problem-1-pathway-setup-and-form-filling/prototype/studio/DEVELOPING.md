@@ -26,5 +26,5 @@ The Prisma schema is a folder, `prisma/schema/`, read whole by Prisma 7.8 (`pris
 
 * **A new module adds its own schema file in the folder** (`prisma/schema/<area>.prisma`, its rule line first); never edit another area's file without its owner. A relation to another area's model is written in your file; a back-relation field the other model needs is the one line you ask its owner for.
 * Generator and datasource stay in `base.prisma` only. An enum moves to `base.prisma` when a second area starts using it.
-* Migrations are unchanged: one folder, `prisma/migrations/`, one migration in flight at a time (`WAY-OF-WORKING.md`, "Shared files"). `npx prisma migrate dev --create-only` reads the whole folder.
+* Migrations: one folder, `prisma/migrations/`. Two module schema rows may run at once when each touches only its own area file and its own migration folder; the second to merge re-stamps its migration later than `main`'s newest and shows `npx prisma migrate diff` empty in its PR (P-559 (3), P-228; `WAY-OF-WORKING.md`, "Shared files"). `npx prisma migrate dev --create-only` reads the whole folder.
 * Any change under `prisma/` still runs every suite (`product/tools/select-suites.mjs`).
