@@ -14,7 +14,8 @@
 --   DROP TYPE "FoBookingStatus", "FoMeetingMode", "FoConsultationPurpose"; DROP FUNCTION fo_zone_ok(text),
 --   fo_distinct_uuids(uuid[]), fo_distinct_modes("FoMeetingMode"[]), fo_firm_fixed(), fo_staff_in_firm(),
 --   fo_consultation_type_refs(), fo_availability_zone(), fo_booking_write(), fo_booking_void_tokens(),
---   fo_booking_token_write(); delete this folder's row from _prisma_migrations. btree_gist stays (other rows may use it).
+--   fo_booking_token_write(), fo_platform_staff_kept(), fo_platform_firm_kept() (and their triggers on platform_staff and
+--   platform_firm); delete this folder's row from _prisma_migrations. btree_gist stays (other rows may use it).
 
 -- CreateEnum
 CREATE TYPE "FoConsultationPurpose" AS ENUM ('FREE_CONSULT');
@@ -157,11 +158,12 @@ ALTER TABLE "fo_booking_token" ADD CONSTRAINT "fo_booking_token_firm_id_booking_
 -- btree_gist ships with PostgreSQL and is a trusted extension (a database owner may create it).
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
--- A zone is an IANA name in its own spelling (as platform.time_zone's schema, api/src/platform/settings.ts) that this
--- server knows. Stable, not immutable (the zone list is the server's), so it is used in triggers, not in checks.
+-- A zone is an IANA name in its own spelling that this server knows. No IANA name but Etc/GMT±N has a digit or a plus,
+-- while POSIX zone strings do (America/Toronto5 would be accepted by the server as a fixed offset: break B-4), so the
+-- shape refuses them. Stable, not immutable (the zone list is the server's), so it is used in triggers, not in checks.
 CREATE FUNCTION fo_zone_ok(z text) RETURNS boolean LANGUAGE plpgsql STABLE AS $$
 BEGIN
-  IF z IS NULL OR z !~ '^(UTC|[A-Z][A-Za-z]+(/[A-Z0-9][A-Za-z0-9_+-]*)+)$' THEN RETURN false; END IF;
+  IF z IS NULL OR z !~ '^(UTC|Etc/GMT[+-][0-9]{1,2}|[A-Z][A-Za-z_-]*(/[A-Z][A-Za-z_-]*)+)$' THEN RETURN false; END IF;
   PERFORM now() AT TIME ZONE z;
   RETURN true;
 EXCEPTION WHEN invalid_parameter_value THEN RETURN false;
@@ -173,7 +175,7 @@ CREATE FUNCTION fo_distinct_modes(a "FoMeetingMode"[]) RETURNS boolean LANGUAGE 
 
 ALTER TABLE "fo_consultation_type"
   ADD CONSTRAINT "fo_consultation_type_slug_check" CHECK ("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$' AND char_length("slug") <= 80),
-  ADD CONSTRAINT "fo_consultation_type_name_check" CHECK (char_length(btrim("name")) BETWEEN 1 AND 80),
+  ADD CONSTRAINT "fo_consultation_type_name_check" CHECK (char_length("name") BETWEEN 1 AND 80 AND "name" ~ '[^[:space:]\u00a0\u200b\u200c\u200d\u2060\ufeff]' AND "name" !~ '[[:cntrl:]]'),
   ADD CONSTRAINT "fo_consultation_type_modes_check" CHECK ("modes" IS NOT NULL AND cardinality("modes") >= 1 AND array_position("modes", NULL) IS NULL AND fo_distinct_modes("modes")),
   ADD CONSTRAINT "fo_consultation_type_hosts_check" CHECK ("host_staff_ids" IS NOT NULL AND array_position("host_staff_ids", NULL) IS NULL AND fo_distinct_uuids("host_staff_ids")),
   ADD CONSTRAINT "fo_consultation_type_minutes_check" CHECK ("minutes" BETWEEN 5 AND 480),
@@ -181,15 +183,17 @@ ALTER TABLE "fo_consultation_type"
   ADD CONSTRAINT "fo_consultation_type_notice_check" CHECK ("min_notice_minutes" BETWEEN 0 AND 525600 AND "self_service_limit_minutes" BETWEEN 0 AND 525600),
   ADD CONSTRAINT "fo_consultation_type_window_check" CHECK ("window_days" BETWEEN 1 AND 730),
   ADD CONSTRAINT "fo_consultation_type_interval_check" CHECK ("slot_interval_minutes" IS NULL OR "slot_interval_minutes" BETWEEN 5 AND 480),
-  ADD CONSTRAINT "fo_consultation_type_link_check" CHECK ("meeting_link" IS NULL OR ("meeting_link" ~ '^https://[^[:space:]]+$' AND char_length("meeting_link") <= 2000));
+  ADD CONSTRAINT "fo_consultation_type_link_check" CHECK ("meeting_link" IS NULL OR ("meeting_link" ~ '^https://[A-Za-z0-9._~:/?#@!$&''()*+,;=%-]+$' AND char_length("meeting_link") <= 2000));
 ALTER TABLE "fo_availability"
   ADD CONSTRAINT "fo_availability_weekday_check" CHECK ("weekday" BETWEEN 0 AND 6),
   ADD CONSTRAINT "fo_availability_minutes_check" CHECK ("start_minute" >= 0 AND "end_minute" <= 1440 AND "start_minute" < "end_minute"),
   ADD CONSTRAINT "fo_availability_no_overlap" EXCLUDE USING gist ("firm_id" WITH =, "staff_id" WITH =, "weekday" WITH =, int4range("start_minute", "end_minute") WITH &&),
   ADD CONSTRAINT "fo_availability_one_zone" EXCLUDE USING gist ("firm_id" WITH =, "staff_id" WITH =, "time_zone" WITH <>);
-ALTER TABLE "fo_time_off" ADD CONSTRAINT "fo_time_off_range_check" CHECK ("starts_at" < "ends_at");
+ALTER TABLE "fo_time_off" ADD CONSTRAINT "fo_time_off_range_check" CHECK (isfinite("starts_at") AND isfinite("ends_at") AND "starts_at" < "ends_at"),
+  ADD CONSTRAINT "fo_time_off_created_by_check" CHECK (char_length(btrim("created_by")) >= 1);
 ALTER TABLE "fo_booking"
-  ADD CONSTRAINT "fo_booking_range_check" CHECK ("starts_at" < "ends_at"),
+  -- Finite, and at most a day long (a type is at most 480 minutes; break B-3: an endless booking blocked its host forever).
+  ADD CONSTRAINT "fo_booking_range_check" CHECK (isfinite("starts_at") AND isfinite("ends_at") AND "starts_at" < "ends_at" AND "ends_at" - "starts_at" <= interval '24 hours'),
   ADD CONSTRAINT "fo_booking_sequence_check" CHECK ("sequence" >= 0),
   ADD CONSTRAINT "fo_booking_block_range_set" CHECK ("block_range" IS NOT NULL AND NOT isempty("block_range")),
   -- BR-3, AG-4-26: one host's active bookings never overlap on the padded range (a CANCELLED, COMPLETED or NO_SHOW row
@@ -235,6 +239,8 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'fo_consultation_type: firm % does not exist', NEW.firm_id USING ERRCODE = 'foreign_key_violation';
   END IF;
+  -- The hosts' rows are key-share locked, so a delete of one of them waits for this write (and then sees it).
+  PERFORM 1 FROM "platform_staff" s WHERE s.firm_id = NEW.firm_id AND s.id = ANY (NEW.host_staff_ids) FOR KEY SHARE;
   SELECT h INTO missing FROM unnest(NEW.host_staff_ids) h
     WHERE NOT EXISTS (SELECT 1 FROM "platform_staff" s WHERE s.firm_id = NEW.firm_id AND s.id = h) LIMIT 1;
   IF missing IS NOT NULL THEN
@@ -253,16 +259,19 @@ BEGIN
 END $$;
 CREATE TRIGGER fo_availability_zone BEFORE INSERT OR UPDATE OF time_zone ON "fo_availability" FOR EACH ROW EXECUTE FUNCTION fo_availability_zone();
 
--- A booking's write (AG-4-25/-26, AG-4-36 rule 6, AG-4-39, AG-4-47; AG-04 C2):
+-- A booking's write (AG-4-25/-26, AG-4-12, AG-4-36 rule 6, AG-4-39, AG-4-47; AG-04 C2):
 --   * written SCHEDULED with sequence 0; then sequence is the database's: +1 when the time, host, type, mode or status
 --     changes, unchanged otherwise (the invite's SEQUENCE never goes back);
 --   * moves: SCHEDULED or RESCHEDULED → RESCHEDULED, CANCELLED, COMPLETED, NO_SHOW; COMPLETED ↔ NO_SHOW (the answer may
---     change); CANCELLED is final; nothing goes back to SCHEDULED;
---   * a change of time is a reschedule (status RESCHEDULED), and only an active booking is moved (time, host or type);
+--     change); CANCELLED is final; nothing goes back to SCHEDULED; COMPLETED and NO_SHOW only once the meeting has
+--     started (the attendance question comes after it, AG-4-39; break B-6);
+--   * a change of time is a reschedule (status RESCHEDULED); only an active booking changes time, host, type or mode;
+--   * the host is one of the type's hosts and the mode one of its modes, when written or when host, type or mode change
+--     (a later change to the type's lists leaves existing bookings; AG-4-12, AG-4-11; break B-5);
 --   * block_range = [start − the type's gap before, end + the type's gap after), computed when the booking is written or
 --     its time or type changes, never taken from the app; a later change to the type's gaps leaves it (AG-4-4 rule 8).
 CREATE FUNCTION fo_booking_write() RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE gb integer; ga integer;
+DECLARE t record;
 BEGIN
   IF NOT fo_zone_ok(NEW.visitor_time_zone) THEN
     RAISE EXCEPTION 'fo_booking: "%" is not an IANA time zone, e.g. America/Toronto', NEW.visitor_time_zone USING ERRCODE = 'check_violation';
@@ -278,9 +287,12 @@ BEGIN
       OR (OLD.status IN ('COMPLETED', 'NO_SHOW') AND NEW.status IN ('COMPLETED', 'NO_SHOW'))) THEN
       RAISE EXCEPTION 'fo_booking: status cannot move from % to %', OLD.status, NEW.status USING ERRCODE = 'check_violation';
     END IF;
-    IF (NEW.starts_at, NEW.ends_at, NEW.staff_id, NEW.type_id) IS DISTINCT FROM (OLD.starts_at, OLD.ends_at, OLD.staff_id, OLD.type_id) THEN
+    IF NEW.status IS DISTINCT FROM OLD.status AND NEW.status IN ('COMPLETED', 'NO_SHOW') AND now() < NEW.starts_at THEN
+      RAISE EXCEPTION 'fo_booking: attendance (%) is recorded once the meeting has started', NEW.status USING ERRCODE = 'check_violation';
+    END IF;
+    IF (NEW.starts_at, NEW.ends_at, NEW.staff_id, NEW.type_id, NEW.mode) IS DISTINCT FROM (OLD.starts_at, OLD.ends_at, OLD.staff_id, OLD.type_id, OLD.mode) THEN
       IF OLD.status NOT IN ('SCHEDULED', 'RESCHEDULED') THEN
-        RAISE EXCEPTION 'fo_booking: a % booking is not moved', OLD.status USING ERRCODE = 'check_violation';
+        RAISE EXCEPTION 'fo_booking: a % booking is not moved or changed', OLD.status USING ERRCODE = 'check_violation';
       END IF;
       IF (NEW.starts_at, NEW.ends_at) IS DISTINCT FROM (OLD.starts_at, OLD.ends_at) AND NEW.status <> 'RESCHEDULED' THEN
         RAISE EXCEPTION 'fo_booking: a change of time is a reschedule (status RESCHEDULED)' USING ERRCODE = 'check_violation';
@@ -289,15 +301,23 @@ BEGIN
     NEW.sequence := OLD.sequence + CASE WHEN (NEW.starts_at, NEW.ends_at, NEW.staff_id, NEW.type_id, NEW.mode, NEW.status)
       IS DISTINCT FROM (OLD.starts_at, OLD.ends_at, OLD.staff_id, OLD.type_id, OLD.mode, OLD.status) THEN 1 ELSE 0 END;
   END IF;
-  IF TG_OP = 'INSERT' OR (NEW.starts_at, NEW.ends_at, NEW.type_id) IS DISTINCT FROM (OLD.starts_at, OLD.ends_at, OLD.type_id) THEN
-    SELECT t.gap_before_minutes, t.gap_after_minutes INTO gb, ga FROM "fo_consultation_type" t WHERE t.firm_id = NEW.firm_id AND t.id = NEW.type_id;
+  IF TG_OP = 'INSERT' OR (NEW.starts_at, NEW.ends_at, NEW.type_id, NEW.staff_id, NEW.mode) IS DISTINCT FROM (OLD.starts_at, OLD.ends_at, OLD.type_id, OLD.staff_id, OLD.mode) THEN
+    SELECT tt.gap_before_minutes, tt.gap_after_minutes, tt.host_staff_ids, tt.modes INTO t FROM "fo_consultation_type" tt WHERE tt.firm_id = NEW.firm_id AND tt.id = NEW.type_id;
     IF NOT FOUND THEN
       RAISE EXCEPTION 'fo_booking: consultation type % is not a type of firm %', NEW.type_id, NEW.firm_id USING ERRCODE = 'foreign_key_violation';
     END IF;
-    IF NEW.starts_at >= NEW.ends_at THEN
-      RAISE EXCEPTION 'fo_booking: a booking ends after it starts' USING ERRCODE = 'check_violation', CONSTRAINT = 'fo_booking_range_check';
+    IF (TG_OP = 'INSERT' OR (NEW.staff_id, NEW.type_id) IS DISTINCT FROM (OLD.staff_id, OLD.type_id)) AND NOT (NEW.staff_id = ANY (t.host_staff_ids)) THEN
+      RAISE EXCEPTION 'fo_booking: staff % is not a host of consultation type %', NEW.staff_id, NEW.type_id USING ERRCODE = 'check_violation';
     END IF;
-    NEW.block_range := tstzrange(NEW.starts_at - make_interval(mins => gb), NEW.ends_at + make_interval(mins => ga), '[)');
+    IF (TG_OP = 'INSERT' OR (NEW.mode, NEW.type_id) IS DISTINCT FROM (OLD.mode, OLD.type_id)) AND NOT (NEW.mode = ANY (t.modes)) THEN
+      RAISE EXCEPTION 'fo_booking: mode % is not offered by consultation type %', NEW.mode, NEW.type_id USING ERRCODE = 'check_violation';
+    END IF;
+  END IF;
+  IF TG_OP = 'INSERT' OR (NEW.starts_at, NEW.ends_at, NEW.type_id) IS DISTINCT FROM (OLD.starts_at, OLD.ends_at, OLD.type_id) THEN
+    IF NOT (isfinite(NEW.starts_at) AND isfinite(NEW.ends_at) AND NEW.starts_at < NEW.ends_at) THEN
+      RAISE EXCEPTION 'fo_booking: a booking has finite times and ends after it starts' USING ERRCODE = 'check_violation', CONSTRAINT = 'fo_booking_range_check';
+    END IF;
+    NEW.block_range := tstzrange(NEW.starts_at - make_interval(mins => t.gap_before_minutes), NEW.ends_at + make_interval(mins => t.gap_after_minutes), '[)');
   ELSE
     NEW.block_range := OLD.block_range;
   END IF;
@@ -305,25 +325,32 @@ BEGIN
 END $$;
 CREATE TRIGGER fo_booking_write BEFORE INSERT OR UPDATE ON "fo_booking" FOR EACH ROW EXECUTE FUNCTION fo_booking_write();
 
--- AG-4-36 rule 3: cancelling a booking or changing its time voids every live token of it (a reschedule's email carries
--- a new one, written after this update).
+-- AG-4-36 rule 3: leaving the active set (cancelled, or attendance recorded) or changing time voids every live token of
+-- the booking (a reschedule's email carries a new one, written after this update).
 CREATE FUNCTION fo_booking_void_tokens() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF (NEW.status = 'CANCELLED' AND OLD.status <> 'CANCELLED') OR (NEW.starts_at, NEW.ends_at) IS DISTINCT FROM (OLD.starts_at, OLD.ends_at) THEN
-    UPDATE "fo_booking_token" SET voided_at = greatest(now(), created_at) WHERE firm_id = NEW.firm_id AND booking_id = NEW.id AND voided_at IS NULL;
+  IF (NEW.status NOT IN ('SCHEDULED', 'RESCHEDULED') AND OLD.status IN ('SCHEDULED', 'RESCHEDULED'))
+     OR (NEW.starts_at, NEW.ends_at) IS DISTINCT FROM (OLD.starts_at, OLD.ends_at) THEN
+    UPDATE "fo_booking_token" SET voided_at = now() WHERE firm_id = NEW.firm_id AND booking_id = NEW.id AND voided_at IS NULL;
   END IF;
   RETURN NULL;
 END $$;
 CREATE TRIGGER fo_booking_void_tokens AFTER UPDATE OF status, starts_at, ends_at ON "fo_booking" FOR EACH ROW EXECUTE FUNCTION fo_booking_void_tokens();
 
--- A token (AG-4-36): written live for an active booking (SCHEDULED or RESCHEDULED; the booking row is share-locked, so a
--- cancel running at the same time either waits for it and voids it, or commits first and refuses it), expiring exactly
--- at the meeting's end; afterwards only voided_at changes, from empty to a time, once.
+-- A token (AG-4-36): written live for an active booking (SCHEDULED or RESCHEDULED), expiring exactly at the meeting's
+-- end; afterwards only voided_at changes, once, to the database's own clock; a token is never deleted (its hash stays
+-- taken, so an old link can never come back live; break B-7).
+-- Writing a token touches its booking's row (a no-op update of sequence), so a cancel or reschedule running at the same
+-- time is ordered with it at any isolation level (break B-1): in READ COMMITTED the later one waits and then sees the
+-- other; in REPEATABLE READ or SERIALIZABLE the later one fails with a serialization error and is retried. A shared
+-- lock alone would not do: a REPEATABLE READ cancel waited for it and then could not see the new token.
 CREATE FUNCTION fo_booking_token_write() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE b record;
 BEGIN
-  IF TG_OP = 'INSERT' THEN
-    SELECT status, ends_at INTO b FROM "fo_booking" WHERE firm_id = NEW.firm_id AND id = NEW.booking_id FOR SHARE;
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'fo_booking_token: a token is voided, never deleted' USING ERRCODE = 'check_violation';
+  ELSIF TG_OP = 'INSERT' THEN
+    UPDATE "fo_booking" SET sequence = sequence WHERE firm_id = NEW.firm_id AND id = NEW.booking_id RETURNING status, ends_at INTO b;
     IF NOT FOUND THEN
       RAISE EXCEPTION 'fo_booking_token: booking % is not a booking of firm %', NEW.booking_id, NEW.firm_id USING ERRCODE = 'foreign_key_violation';
     END IF;
@@ -341,7 +368,37 @@ BEGIN
        OR (OLD.voided_at IS NOT NULL AND NEW.voided_at IS DISTINCT FROM OLD.voided_at) THEN
       RAISE EXCEPTION 'fo_booking_token: only voided_at changes, once' USING ERRCODE = 'check_violation';
     END IF;
+    IF OLD.voided_at IS NULL AND NEW.voided_at IS NOT NULL THEN
+      NEW.voided_at := greatest(now(), OLD.created_at);
+    END IF;
   END IF;
-  RETURN NEW;
+  RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
 END $$;
-CREATE TRIGGER fo_booking_token_write BEFORE INSERT OR UPDATE ON "fo_booking_token" FOR EACH ROW EXECUTE FUNCTION fo_booking_token_write();
+CREATE TRIGGER fo_booking_token_write BEFORE INSERT OR UPDATE OR DELETE ON "fo_booking_token" FOR EACH ROW EXECUTE FUNCTION fo_booking_token_write();
+
+-- The delete side of the references to platform rows (break B-2), until Lead B's back-relation lines let them be
+-- foreign keys: a staff member named by an fo_ row (hours, time off, a booking, a type's hosts), or a firm with an fo_
+-- row, is not deleted and does not change id (23503, as ON DELETE RESTRICT answers). These triggers sit on the
+-- platform's tables as a foreign key's own checks would; they change no platform column and no platform row.
+CREATE FUNCTION fo_platform_staff_kept() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'UPDATE' AND (NEW.id, NEW.firm_id) IS NOT DISTINCT FROM (OLD.id, OLD.firm_id) THEN RETURN NEW; END IF;
+  IF EXISTS (SELECT 1 FROM "fo_availability" WHERE firm_id = OLD.firm_id AND staff_id = OLD.id)
+     OR EXISTS (SELECT 1 FROM "fo_time_off" WHERE firm_id = OLD.firm_id AND staff_id = OLD.id)
+     OR EXISTS (SELECT 1 FROM "fo_booking" WHERE firm_id = OLD.firm_id AND staff_id = OLD.id)
+     OR EXISTS (SELECT 1 FROM "fo_consultation_type" WHERE firm_id = OLD.firm_id AND OLD.id = ANY (host_staff_ids)) THEN
+    RAISE EXCEPTION 'platform_staff: staff % is still named by front-office booking rows (hours, time off, bookings or a type''s hosts)', OLD.id USING ERRCODE = 'foreign_key_violation';
+  END IF;
+  RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END $$;
+CREATE TRIGGER fo_platform_staff_kept BEFORE DELETE OR UPDATE OF id, firm_id ON "platform_staff" FOR EACH ROW EXECUTE FUNCTION fo_platform_staff_kept();
+CREATE FUNCTION fo_platform_firm_kept() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF TG_OP = 'UPDATE' AND NEW.id IS NOT DISTINCT FROM OLD.id THEN RETURN NEW; END IF;
+  IF EXISTS (SELECT 1 FROM "fo_consultation_type" WHERE firm_id = OLD.id) OR EXISTS (SELECT 1 FROM "fo_booking" WHERE firm_id = OLD.id)
+     OR EXISTS (SELECT 1 FROM "fo_availability" WHERE firm_id = OLD.id) OR EXISTS (SELECT 1 FROM "fo_time_off" WHERE firm_id = OLD.id) THEN
+    RAISE EXCEPTION 'platform_firm: firm % still has front-office booking rows', OLD.id USING ERRCODE = 'foreign_key_violation';
+  END IF;
+  RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END $$;
+CREATE TRIGGER fo_platform_firm_kept BEFORE DELETE OR UPDATE OF id ON "platform_firm" FOR EACH ROW EXECUTE FUNCTION fo_platform_firm_kept();

@@ -6,8 +6,9 @@
 // Like the platform rows, these carry no workspace_id (the firm is the tenant; the demo reset leaves them) and every
 // table carries firm_id first in every index but its primary key. A row naming a staff member, a type or a booking keys
 // on (firm_id, <id>), so it can never point at another firm's row: foreign keys inside this file; to platform_firm and
-// platform_staff, triggers in the migration until Lead B adds the back-relation lines to platform.prisma (asked in the PR;
-// DEVELOPING.md DB-SPLIT: never edit another area's file), when they become foreign keys. Rules Prisma cannot say are in the migration
+// platform_staff, triggers in the migration (on write here, and on delete or id change on the platform's tables) until
+// Lead B adds the back-relation lines to platform.prisma (asked in the PR; DEVELOPING.md DB-SPLIT: never edit another
+// area's file), when they become foreign keys. Rules Prisma cannot say are in the migration
 // 20261114120000_fo1b_booking_tables: the no-overlap rule per host (btree_gist exclusion over SCHEDULED and RESCHEDULED
 // bookings on the range padded by the type's gaps, BR-3, AG-4-26), the padded range and `sequence` kept by the database,
 // status moves, token expiry and voiding (AG-4-36), checks on minutes, slugs, zones and hashes.
@@ -29,7 +30,7 @@ enum FoMeetingMode {
 
 /// A booking's status (requirements trace §A "Booking", AG-04 C2). Active, for the no-overlap rule: SCHEDULED and
 /// RESCHEDULED (PENDING_PAYMENT joins them when paid types come). A booking is written SCHEDULED; CANCELLED is final;
-/// COMPLETED and NO_SHOW are the attendance answer, which a person may change later (AG-4-39).
+/// COMPLETED and NO_SHOW are the attendance answer, recorded once the meeting has started and changeable later (AG-4-39).
 enum FoBookingStatus {
   SCHEDULED
   RESCHEDULED
@@ -107,7 +108,8 @@ model FoTimeOff {
 /// (timestamptz), the visitor's IANA zone for every message and invite (AG-4-18 rule 3). The database keeps block_range
 /// (start − the type's gap before, end + its gap after; written by a trigger, never by the app) and `sequence` (0 when
 /// written, +1 on each change to time, host, type, mode or status: the invite's SEQUENCE, AG-4-32). Two active bookings
-/// of one host never overlap on block_range (BR-3).
+/// of one host never overlap on block_range (BR-3). The host is one of the type's hosts and the mode one of its modes
+/// when written; times are finite and at most a day apart; only an active booking changes time, host, type or mode.
 model FoBooking {
   id              String                   @id @default(uuid()) @db.Uuid
   firmId          String                   @map("firm_id") @db.Uuid
@@ -140,7 +142,9 @@ model FoBooking {
 
 /// A self-service link's token (AG-4-36): only its SHA-256 hash (64 lower-case hex) is stored; several may be live for
 /// one booking (one per email). It expires when the meeting ends (expires_at = the booking's ends_at, checked) and is
-/// voided by the database when the booking is cancelled or its time changes; only voided_at may change, once.
+/// voided by the database when the booking leaves the active set or its time changes; only voided_at may change, once,
+/// to the database's clock; a token is never deleted. Writing one touches its booking's row, so it is ordered with a
+/// cancel at any isolation level.
 /// FO-3 looks a token up by its id (selector) and compares the hash in constant time (verifier), so no index outside
 /// the firm is needed.
 model FoBookingToken {

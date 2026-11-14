@@ -106,6 +106,10 @@ try {
     && sql(DEMO, type(u(102), firmA, "x", [])) === u(102)
     && refused(DEMO, `update fo_consultation_type set minutes = 600 where id = '${u(102)}'`, /fo_consultation_type_minutes_check/)
     && refused(DEMO, `update fo_consultation_type set gap_after_minutes = -1 where id = '${u(102)}'`, /fo_consultation_type_gaps_check/));
+  ok("FO-1b fail (break B-10): a name of only non-breaking or zero-width spaces, or a meeting link with quotes or brackets, is refused",
+    refused(DEMO, `update fo_consultation_type set name = E'\\u00a0\\u200b' where id = '${u(102)}'`, /fo_consultation_type_name_check/)
+    && refused(DEMO, `update fo_consultation_type set meeting_link = 'https://x.example.com/"><script>' where id = '${u(102)}'`, /fo_consultation_type_link_check/));
+  ok("FO-1b pass: a usual meeting link is accepted", sql(DEMO, `update fo_consultation_type set meeting_link = 'https://meet.example.com/abc-defg-hij?pwd=1%2B2' where id = '${u(102)}' returning 1`) === "1");
   ok("FO-1b fail: a type's firm cannot change", refused(DEMO, `update fo_consultation_type set firm_id = '${firmB}', host_staff_ids = '{${staffS}}', slug = 'moved' where id = '${TA}'`, /firm_id never changes/));
 
   // ----------------------------------------------------------------------------------- bookings: the no-overlap rule
@@ -173,11 +177,23 @@ try {
   ok("FO-1b fail: a booking cannot be written with a status other than SCHEDULED", refused(DEMO, `insert into fo_booking (id, firm_id, type_id, staff_id, status, mode, starts_at, ends_at, visitor_time_zone, updated_at) values ('${u(230)}', '${firmA}', '${TA}', '${staffR}', 'COMPLETED', 'VIDEO', '${D2} 20:00Z', '${D2} 20:30Z', 'UTC', now())`, /written SCHEDULED/));
   ok("FO-1b fail: a CANCELLED booking stays cancelled (no move back to SCHEDULED or RESCHEDULED)",
     refused(DEMO, `update fo_booking set status = 'SCHEDULED' where id = '${B1}'`, /cannot move from CANCELLED/) && refused(DEMO, `update fo_booking set status = 'RESCHEDULED' where id = '${B1}'`, /cannot move from CANCELLED/));
-  ok("FO-1b pass: the attendance answer can change later, COMPLETED ↔ NO_SHOW, and sequence rises each time (AG-4-39)",
-    sql(DEMO, `update fo_booking set status = 'COMPLETED' where id = '${u(222)}' returning sequence`) === "1" && sql(DEMO, `update fo_booking set status = 'NO_SHOW' where id = '${u(222)}' returning sequence`) === "2");
-  ok("FO-1b fail: a finished booking is not moved, and nothing goes back to SCHEDULED",
-    refused(DEMO, `update fo_booking set status = 'RESCHEDULED', starts_at = starts_at + interval '1 day', ends_at = ends_at + interval '1 day' where id = '${u(222)}'`, /cannot move from NO_SHOW/)
-    && refused(DEMO, `update fo_booking set status = 'SCHEDULED' where id = '${u(222)}'`, /cannot move from NO_SHOW/));
+  ok("FO-1b fail (break B-6): attendance is not recorded before the meeting has started (a December meeting cannot be COMPLETED today)",
+    refused(DEMO, `update fo_booking set status = 'COMPLETED' where id = '${u(222)}'`, /recorded once the meeting has started/) && sql(DEMO, `select status from fo_booking where id = '${u(222)}'`) === "SCHEDULED");
+  const PAST = u(225);
+  sql(DEMO, book(PAST, staffR, "2026-11-02 15:00Z", "2026-11-02 15:30Z"));
+  sql(DEMO, `insert into fo_booking_token (id, firm_id, booking_id, token_hash, expires_at) values ('${u(320)}', '${firmA}', '${PAST}', '${hex(320)}', '2026-11-02 15:30Z')`);
+  ok("FO-1b pass: the attendance answer of a past meeting can change later, COMPLETED ↔ NO_SHOW, sequence rises each time (AG-4-39), and recording it voids its links",
+    sql(DEMO, `update fo_booking set status = 'COMPLETED' where id = '${PAST}' returning sequence`) === "1" && sql(DEMO, `update fo_booking set status = 'NO_SHOW' where id = '${PAST}' returning sequence`) === "2"
+    && sql(DEMO, `select count(*) from fo_booking_token where booking_id = '${PAST}' and voided_at is null`) === "0");
+  ok("FO-1b fail: a finished booking is not moved or changed (time, mode), and nothing goes back to SCHEDULED",
+    refused(DEMO, `update fo_booking set status = 'RESCHEDULED', starts_at = starts_at + interval '1 day', ends_at = ends_at + interval '1 day' where id = '${PAST}'`, /cannot move from NO_SHOW/)
+    && refused(DEMO, `update fo_booking set mode = 'PHONE' where id = '${PAST}'`, /a NO_SHOW booking is not moved or changed/)
+    && refused(DEMO, `update fo_booking set status = 'SCHEDULED' where id = '${PAST}'`, /cannot move from NO_SHOW/));
+  ok("FO-1b fail (break B-5): the host is one of the type's hosts and the mode one of its modes (user-T on 'no-gap', IN_PERSON on a video/phone type)",
+    refused(DEMO, book(u(233), staffT, `${D2} 21:00Z`, `${D2} 21:30Z`, TG), /is not a host of consultation type/)
+    && refused(DEMO, book(u(233), staffR, `${D2} 21:00Z`, `${D2} 21:30Z`).replace("'VIDEO'", "'IN_PERSON'"), /is not offered by consultation type/)
+    && refused(DEMO, `update fo_booking set mode = 'IN_PERSON' where id = '${u(223)}'`, /is not offered by consultation type/));
+  ok("FO-1b pass: a phone booking on a video/phone type, by one of its hosts, is accepted", sql(DEMO, book(u(233), staffT, `${D2} 21:00Z`, `${D2} 21:30Z`).replace("'VIDEO'", "'PHONE'")) === u(233));
   ok("FO-1b fail: a change of time that does not say RESCHEDULED is refused", refused(DEMO, `update fo_booking set starts_at = '${D2} 13:00Z', ends_at = '${D2} 13:30Z' where id = '${u(223)}'`, /a change of time is a reschedule/));
   ok("FO-1b pass: sequence is the database's — linking the person does not raise it, a value written by the app is ignored",
     sql(DEMO, `update fo_booking set person_id = '${u(900)}', sequence = 99 where id = '${u(223)}' returning sequence`) === "0");
@@ -185,9 +201,14 @@ try {
     refused(DEMO, book(u(231), staffS, `${D2} 20:00Z`, `${D2} 20:30Z`), /is not a staff member of firm/)
     && refused(DEMO, book(u(231), staffS, `${D2} 20:00Z`, `${D2} 20:30Z`, TA, firmB), /is not a type of firm/)
     && refused(DEMO, `update fo_booking set firm_id = '${firmB}' where id = '${u(223)}'`, /firm_id never changes/));
-  ok("FO-1b fail: a visitor zone that is not an IANA name, or an end not after the start, is refused",
-    refused(DEMO, `insert into fo_booking (id, firm_id, type_id, staff_id, mode, starts_at, ends_at, visitor_time_zone, updated_at) values ('${u(232)}', '${firmA}', '${TA}', '${staffR}', 'VIDEO', '${D2} 20:00Z', '${D2} 20:30Z', 'Mars/Olympus', now())`, /not an IANA time zone/)
-    && refused(DEMO, book(u(232), staffR, `${D2} 20:30Z`, `${D2} 20:00Z`), /ends after it starts/));
+  const zoned = (z: string) => `insert into fo_booking (id, firm_id, type_id, staff_id, mode, starts_at, ends_at, visitor_time_zone, updated_at) values ('${u(232)}', '${firmA}', '${TA}', '${staffR}', 'VIDEO', '${D2} 20:00Z', '${D2} 20:30Z', '${z}', now())`;
+  ok("FO-1b fail: a visitor zone that is not an IANA name (unknown, POSIX-style America/Toronto5 or Foo/Bar5: break B-4), an end not after the start, an endless or a two-day booking (break B-3) is refused",
+    ["Mars/Olympus", "America/Toronto5", "Foo/Bar5", "EST5EDT"].every((z) => refused(DEMO, zoned(z), /not an IANA time zone/))
+    && refused(DEMO, book(u(232), staffR, `${D2} 20:30Z`, `${D2} 20:00Z`), /ends after it starts/)
+    && refused(DEMO, book(u(232), staffR, "-infinity", "infinity"), /finite times/)
+    && refused(DEMO, book(u(232), staffR, `${D2} 20:00Z`, "2026-12-04 20:00Z"), /fo_booking_range_check/));
+  const ianaOk = (() => { try { return sql(DEMO, zoned("Etc/GMT+5").replace(u(232), u(234)) + " returning id") === u(234) && sql(DEMO, `update fo_booking set visitor_time_zone = 'America/Argentina/Buenos_Aires' where id = '${u(234)}' returning 1`) === "1"; } catch (e) { return String((e as { stderr?: string }).stderr ?? e); } })();
+  ok("FO-1b pass: IANA zones with digits or several parts are accepted (Etc/GMT+5, America/Argentina/Buenos_Aires)", ianaOk === true, ianaOk);
 
   // ------------------------------------------------------------------------------------------------------- tokens
   const token = (id: string, booking: string, n: number, expires = `(select ends_at from fo_booking where id = '${booking}')`) =>
@@ -202,12 +223,40 @@ try {
   ok("FO-1b fail: only voided_at changes on a token, once", refused(DEMO, `update fo_booking_token set token_hash = '${hex(50)}' where id = '${u(301)}'`, /only voided_at changes/)
     && sql(DEMO, `update fo_booking_token set voided_at = now() where id = '${u(301)}' returning (voided_at is not null)`) === "t"
     && refused(DEMO, `update fo_booking_token set voided_at = null where id = '${u(301)}'`, /only voided_at changes/));
+  ok("FO-1b fail (break B-7): a token's voided_at is the database's clock (2099 is not kept), and a token is never deleted (its hash stays taken)",
+    sql(DEMO, `update fo_booking_token set voided_at = '2099-01-01Z' where id = '${u(302)}' returning voided_at < now() + interval '1 minute'`) === "t"
+    && refused(DEMO, `delete from fo_booking_token where id = '${u(301)}'`, /voided, never deleted/) && sql(DEMO, `select count(*) from fo_booking_token where id = '${u(301)}'`) === "1");
   sql(DEMO, `update fo_booking set status = 'RESCHEDULED', starts_at = '${D2} 15:00Z', ends_at = '${D2} 15:30Z' where id = '${BK}'`);
   ok("FO-1b pass: a reschedule voids every older token; a new one for the new end is live (AG-4-36 rule 3)",
     sql(DEMO, `select count(*) from fo_booking_token where booking_id = '${BK}' and voided_at is null`) === "0" && sql(DEMO, token(u(311), BK, 11)) === u(311));
   sql(DEMO, `update fo_booking set status = 'CANCELLED' where id = '${BK}'`);
   ok("FO-1b fail: a cancelled booking's tokens are all voided and it gets no new one",
     sql(DEMO, `select count(*) from fo_booking_token where booking_id = '${BK}' and voided_at is null`) === "0" && refused(DEMO, token(u(312), BK, 12), /a CANCELLED booking gets no self-service link/));
+
+  // Break B-1: a token written while the booking is cancelled at the same time, at any isolation level. A REPEATABLE READ
+  // cancel whose snapshot predates the token: it waits for the token's transaction, then fails 40001 (retried), never
+  // leaving a CANCELLED booking with a live token. And the other way round: a REPEATABLE READ token after a cancel.
+  const tokenRace = async (bookingId: string, n: number, cancelFirst: boolean) => {
+    const [a, b] = [await conn(), await conn()];
+    const tok = token(u(400 + n), bookingId, n), cancel = `update fo_booking set status = 'CANCELLED' where id = '${bookingId}'`;
+    await b.query("begin isolation level repeatable read"); await b.query("select 1 from fo_booking limit 1");   // b's snapshot now
+    await a.query("begin"); await a.query(cancelFirst ? cancel : tok);
+    const bDone = b.query(cancelFirst ? tok : cancel).then(() => "ok", (e: { code?: string }) => String(e.code));
+    await new Promise((r) => setTimeout(r, 300));
+    await a.query("commit");
+    const outcome = await bDone;
+    await b.query(outcome === "ok" ? "commit" : "rollback");
+    return { outcome, liveOnCancelled: sql(DEMO, `select count(*) from fo_booking_token k join fo_booking b on b.id = k.booking_id where b.status = 'CANCELLED' and k.voided_at is null`) };
+  };
+  const BR1 = u(240), BR2 = u(241);
+  sql(DEMO, book(BR1, staffT, "2026-12-03 09:00Z", "2026-12-03 09:30Z")); sql(DEMO, book(BR2, staffT, "2026-12-03 10:00Z", "2026-12-03 10:30Z"));
+  const t1 = await tokenRace(BR1, 41, false), t2 = await tokenRace(BR2, 42, true);
+  ok("FO-1b fail (two connections, break B-1): a REPEATABLE READ cancel racing a token write fails 40001 instead of leaving a live token on a cancelled booking",
+    t1.outcome === "40001" && t1.liveOnCancelled === "0" && sql(DEMO, `select status from fo_booking where id = '${BR1}'`) === "SCHEDULED", t1);
+  ok("FO-1b fail (two connections, break B-1): a REPEATABLE READ token write racing a cancel fails 40001; no live token on a cancelled booking",
+    t2.outcome === "40001" && t2.liveOnCancelled === "0" && sql(DEMO, `select status from fo_booking where id = '${BR2}'`) === "CANCELLED", t2);
+  ok("FO-1b pass: after the race, the cancel retried voids the token written meanwhile",
+    sql(DEMO, `update fo_booking set status = 'CANCELLED' where id = '${BR1}' returning 1`) === "1" && sql(DEMO, `select count(*) from fo_booking_token where booking_id = '${BR1}' and voided_at is null`) === "0");
 
   // ---------------------------------------------------------------- times timestamptz; firm_id first in every index
   ok("FO-1b pass: every date-time column of the five tables is timestamptz", timesWithoutZone(DEMO, FO_TABLES) === "", timesWithoutZone(DEMO, FO_TABLES));
@@ -246,7 +295,25 @@ try {
     sql(DEMO, `insert into fo_time_off (id, firm_id, staff_id, starts_at, ends_at, created_by) values (gen_random_uuid(), '${firmA}', '${staffT}', '${D} 17:00Z', '${D} 22:00Z', 'user-R') returning 1`) === "1");
   ok("FO-1b fail: time off ending before it starts, or for another firm's person, is refused",
     refused(DEMO, `insert into fo_time_off (id, firm_id, staff_id, starts_at, ends_at, created_by) values (gen_random_uuid(), '${firmA}', '${staffT}', '${D} 22:00Z', '${D} 17:00Z', 'user-R')`, /fo_time_off_range_check/)
-    && refused(DEMO, `insert into fo_time_off (id, firm_id, staff_id, starts_at, ends_at, created_by) values (gen_random_uuid(), '${firmA}', '${staffS}', '${D} 17:00Z', '${D} 22:00Z', 'user-R')`, /is not a staff member of firm/));
+    && refused(DEMO, `insert into fo_time_off (id, firm_id, staff_id, starts_at, ends_at, created_by) values (gen_random_uuid(), '${firmA}', '${staffS}', '${D} 17:00Z', '${D} 22:00Z', 'user-R')`, /is not a staff member of firm/)
+    && refused(DEMO, `insert into fo_time_off (id, firm_id, staff_id, starts_at, ends_at, created_by) values (gen_random_uuid(), '${firmA}', '${staffT}', '${D} 17:00Z', 'infinity', 'user-R')`, /fo_time_off_range_check/)
+    && refused(DEMO, `insert into fo_time_off (id, firm_id, staff_id, starts_at, ends_at, created_by) values (gen_random_uuid(), '${firmA}', '${staffT}', '${D} 17:00Z', '${D} 22:00Z', ' ')`, /fo_time_off_created_by_check/));
+
+  // Break B-2: the delete side of the references to platform rows.
+  const lone = sql(DEMO, `insert into platform_staff (id, firm_id, email, display_name, updated_at) values (gen_random_uuid(), '${firmA}', 'lone@sample-firm.example.com', 'Lone', now()) returning id`);
+  ok("FO-1b pass: a staff member no front-office row names can still be deleted", sql(DEMO, `delete from platform_staff where id = '${lone}' returning 1`) === "1");
+  ok("FO-1b fail (break B-2): a staff member with hours, or named only as a type's host, cannot be deleted or change id; the booking rows keep their person",
+    refused(DEMO, `delete from platform_staff where id = '${newStaff}'`, /still named by front-office booking rows/)
+    && refused(DEMO, `update platform_staff set id = gen_random_uuid() where id = '${newStaff}'`, /still named by front-office booking rows/)
+    && (() => { const h = sql(DEMO, `insert into platform_staff (id, firm_id, email, display_name, updated_at) values (gen_random_uuid(), '${firmA}', 'host@sample-firm.example.com', 'Host', now()) returning id`);
+      sql(DEMO, `update fo_consultation_type set host_staff_ids = host_staff_ids || '${h}'::uuid where id = '${u(102)}'`);
+      return refused(DEMO, `delete from platform_staff where id = '${h}'`, /still named by front-office booking rows/); })());
+  const firmE = sql(DEMO, `insert into platform_firm (id, key, operating_name, country_code, contact_email, updated_at) values (gen_random_uuid(), 'firm-e', 'E', 'CA', 'e@firm-e.example.com', now()) returning id`);
+  ok("FO-1b pass: a firm with no front-office row can still be deleted (as before FO-1b)", sql(DEMO, `delete from platform_firm where id = '${firmE}' returning 1`) === "1");
+  const firmF = sql(DEMO, `insert into platform_firm (id, key, operating_name, country_code, contact_email, updated_at) values (gen_random_uuid(), 'firm-f', 'F', 'CA', 'f@firm-f.example.com', now()) returning id`);
+  sql(DEMO, type(u(104), firmF, "free-consultation", []));
+  ok("FO-1b fail (break B-2): a firm with a consultation type cannot be deleted or change id",
+    refused(DEMO, `delete from platform_firm where id = '${firmF}'`, /still has front-office booking rows/) && refused(DEMO, `update platform_firm set id = gen_random_uuid() where id = '${firmF}'`, /still has front-office booking rows/));
   ok("FO-1b pass: time off leaves the bookings in it (AG-4-62 rule 7: user-T's 14:00 on that day is still SCHEDULED)", sql(DEMO, `select status from fo_booking where id = '${u(209)}'`) === "SCHEDULED");
   ok("FO-1b: no secret column — no FO-1b column is named like a password, secret or raw token",
     sql(DEMO, `select count(*) from information_schema.columns where table_name = any('{${FO_TABLES.join(",")}}') and column_name ~ '(password|secret|^token$|api_key)'`) === "0");
