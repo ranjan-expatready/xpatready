@@ -1,6 +1,6 @@
 # Lead B — state and hand-over (P-557: always committed, always resumable)
 
-**Current Lead B: Lead B (2), session `f68b2550…`, worktree `lead-b-2-front-office-1e7bc9`, from 14 Nov 07:56 IST.** Hand-over written 14 Nov 07:53 IST by Lead B (1) (session `local_9bced770…`) at ~52% context, per P-565. A fresh Lead B starts here, on branch `lead-b-front-office` (GitHub), in its own worktree. Do not run `/lead` (the release holder's skill).
+**Lead B (2) (session `f68b2550…`) stopped new work at ~45% context, 14 Nov 09:31 IST (P-565); Lead 41 starts Lead B (3) from this file at the founder's next typed turn.** Lead B (2) ran from 14 Nov 07:56 IST. Hand-over written 14 Nov 07:53 IST by Lead B (1) (session `local_9bced770…`) at ~52% context, per P-565. A fresh Lead B starts here, on branch `lead-b-front-office` (GitHub), in its own worktree. Do not run `/lead` (the release holder's skill).
 
 ## Who is who
 * **Lead B** owns the new platform (firm sign-up, plans, subscriptions, staff sign-in and roles, walking skeleton) and front-office (enquiry → lead → prospect → booking → retainer → e-signature → payment) modules, all fenced (P-550, P-558). Writes rows and briefs on this branch; never edits `STATE.md`, `RULES.md`, `DECISIONS.md`, `BACKLOG.md`.
@@ -49,13 +49,14 @@ P-559 (App.tsx line; schema folder rule; P-335/P-357 amended for PF/FO) · P-560
 ## Founder questions
 All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3-5 decided by Lead B under **P-566 (3)** with evidence (register §C2, contracts §7): two-step required for all; build the s. 24(3) checklist; trust (b). The three deviations from the team's requirements (AG-1-40; AG-05 l.539-550; AG-6-70's optional trust card account) were **confirmed by the founder as P-567**. From now on, best-practice questions are decided by Lead B with evidence (P-566 (3)); only real preferences or conflicts with the team's requirements go up.
 
-## Next step for the fresh Lead B (refreshed 14 Nov 09:26 IST by Lead B (2))
-1. Read this file, then `RULES.md` on `lead/2026-11-07-lead31` (as of the newest P-), then only what the step needs. The rows file's latest sections (rev 9.1, 10, 10 part 2, 11) and its **"Order of work (P-576)"** are the plan; contracts §7 (binding) and §8 (client money module).
-2. Every row through **rev 11** is shaped; rev 11 is copied into BACKLOG by Lead 41 and its order of work accepted; the founder's four account openings are on his list in STATE. Briefs ready: PF-3 (in flight), FO-1a, FO-1b, PF-4, PF-4b, PF-5, FO-2. PF-L and PF-14 briefs written too. **Write next, two ahead in the P-576 order:** FO-5 and FO-3, then FO-7a.
-3. Watch #1728 (PF-3; head 2cdc2e986, approved, in the queue). When it merges, Lead 41 starts FO-1a, FO-1b, PF-4 at the founder's next typed turn.
-4. Open with Lead 41: the 12-16 (+ rev 11) PR size (FO-7p's deviation confirmed as P-578); founder looks due on FO-4, PF-6, FO-5s, PF-5s; the founder's account openings (AWS, BoldSign sandbox key, Stripe platform test account, Meta developer account + test number).
-5. Concepts still to make (skill screen-concept, drafter → fresh Fable challenger → approve): FO-9s, FO-12s, FO-7s (after their APIs).
-6. Push at every change (P-557); times only from `TZ=Asia/Kolkata date`; report row changes to the current Lead (`tools/current-lead.sh`; Lead 41 `local_eb5559e3…`).
+## Next step for the fresh Lead B (Lead B (3); written 14 Nov 09:31 IST by Lead B (2))
+1. Read this file, then `RULES.md` on `lead/2026-11-07-lead31` (as of the newest P-), then the DECISIONS rows P-566 to P-579 touching PF/FO (P-566 self-serve sign-up; P-567 three deviations; P-571 demo reset, seed line, AUD-2; P-574 branding extras, duplicates, assignment, WhatsApp, payment plans; P-575 client money module; P-576 order of work; P-578 payment plans kept; P-579 conflict, complaints, identity). Then only what the step needs.
+2. **The plan:** rows file `design/lead-b-rows-2026-11-14.md`, all sections through **rev 12**, every one copied into BACKLOG by Lead 41; the **"Order of work (P-576)"** under rev 11 plus rev 12's order line. Contracts `design/platform-and-front-office-contracts-2026-11-14.md`: §7 binding, §8 client money (owner Lead B, ids FO-7*).
+3. **Briefs ready (paste-ready, `design/lead-b-briefs/`):** FO-1a, FO-1b, PF-4, PF-4b, PF-5, FO-2, PF-L, PF-14, FO-5, FO-3 (PF-3 is in flight). **Write next, two ahead in the P-576 order:** FO-7a, FO-6, then FO-13 (schema) and FO-9a.
+4. **Watch:** #1728 (PF-3; approved at 2cdc2e986, in the merge queue). When it merges, Lead 41 starts FO-1a, FO-1b and PF-4 at the founder's next typed turn; then PF-L → PF-14.
+5. **Concepts approved, founder's look due:** FO-4, PF-6, FO-5s, PF-5s. **Concepts still to make** (skill screen-concept: drafter → fresh Fable challenger → Lead B approves): FO-9s, FO-12s, FO-13s, FO-7s (after their APIs).
+6. **Waiting on others:** the founder's four account openings (AWS for PF-4b's Cognito proof; BoldSign sandbox key for FO-6v; a Stripe platform test account for PF-5 and FO-7c; a Meta developer account and test number for FO-11), on his list in STATE; the case side's party-search read port (FO-13c) and client merge (FO-9b) in Lead 41's case-side contract v0; AUD-1 (hash chain) and AUD-2 (daily Object Lock export) are Lead 41's.
+7. Push at every change (P-557); times only from `TZ=Asia/Kolkata date`; report row changes to the current Lead (`tools/current-lead.sh`; Lead 41 `local_eb5559e3…`); replace this session past about half its context (P-565).
 
 ## In flight
 | What | Session | Branch | PR |
@@ -116,3 +117,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 09:27 IST: Lead 41 copied rev 10 part 2; client money's owner is Lead B for now (FO-7* ids kept); governance split and `signing.completed` accepted. Contracts §8 updated.
 * 14 Nov 09:28 IST: P-578 (founder: payment plans and saved-card autopay for earned fees kept) cited in FO-7p. Rev 11 copied; order of work accepted; account openings on the founder's list.
 * 14 Nov 09:30 IST: rows rev 12 (P-579): FO-13 schema, FO-13c conflict check (blocks Send/Convert/Signed offline without a check), FO-13k complaints, FO-13i identity check (warns, never blocks), FO-13s screens; duties read at the Code (s. 5, 15, 16, 24, 29, 35, 37; current to 2026-10-19); the College's by-laws not yet read (FO-13k reads them first).
+* 14 Nov 09:31 IST: FO-5 and FO-3 briefs written. Lead B (2) stops new work (~45% context, P-565); hand-over above is current.
