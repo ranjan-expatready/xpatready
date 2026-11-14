@@ -72,3 +72,16 @@ Independent reviewer (P-303), 14 Nov 2026. PR #1751, branch `claude/sleepy-brown
 * I did not run the database-backed suites (they need PostgreSQL). Nothing imports the new packages and no existing lockfile entry moved, so they cannot change behaviour; CI is the check.
 
 **Verdict: Approve** (commit 5039df8b1). There is no open Blocker or Major. Minors 1–2 are cheap factual corrections to the gate file, and I recommend making them before the label; any new head then needs a diff-only re-review.
+
+## Round 2 (diff-only, P-277): `git diff 5039df8b1..165f2648e`
+Two commits. 026ad8b23 adds this review.md, byte-identical to the round-1 text. 165f2648e edits only the gate file (+7 / -7 lines). `package.json` and `package-lock.json` are unchanged, so every round-1 lockfile, audit, `npm ci` and type-check result still holds.
+
+* **Minor 1: closed.** In entry 11, the summary row now reads "MIT (its code) + Apache-2.0 (Google's bundled metadata)". The licence line now cites `LICENSE.Apache` at the GitLab URL (it opened with HTTP 200 in round 1), quotes the README ("Google's `libphonenumber` is licensed under Apache 2") and keeps "Unconfirmed: no counsel". The added "keep the notice files when we ship" sits before that marker, so it is correctly marked as unconfirmed.
+* **Minor 2: closed.** Entry 13 now reads "22 packages: 21 from AWS plus `bowser`". That matches the lockfile: 14 @aws-sdk + 1 @aws + 6 @smithy + bowser.
+* **Minor 3: closed.** The "Added by" cells of rows 1, 4 and 6 now read "PF-L (used by …)", like rows 10–13. Row 6 adds that the web app's use comes with the booking screens row, which agrees with the gate's "In the web app: 3" line. The Approval line is left as history; the addendum qualifies it, as round 1 suggested.
+* **Minor 4: closed.** Entry 12 now reads "the MIT text with its notice condition removed … which npm labels MIT-0". That matches the LICENSE file.
+* **Nothing else changed.** All seven changed lines are the four fixes above. No version, date, URL or other entry moved, and no personal names were added.
+
+Still open on the PR, not on this commit: the draft status, green CI on the head, and the Checks section to paste (`npm audit` summary, suites, the pre-label run). If PF-4 merges first and the lockfile is regenerated, that new head needs another diff-only re-review.
+
+**Verdict: Approve** (commit 165f2648e). No open Blocker, Major or Minor.
