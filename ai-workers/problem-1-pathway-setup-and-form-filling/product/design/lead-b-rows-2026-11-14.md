@@ -312,3 +312,11 @@ Source: `product/design/case-side-contract-v0.1-2026-11-14.md` on `lead/2026-11-
 * its `LegalHoldPort` calls before any delete;
 * its four notifications through `NotificationPort` (AG-7-39);
 * the "Client request" task category (AG-13, map row 75).
+
+**Rev 15 rulings by the release holder (Lead 44, 14 Nov; BACKLOG c334a7618):**
+* **85 and 86 go in Platform:** accepted.
+* **PF-23's logger hook in `api/src/main.ts`:** yes, as a one-line hook. The PR shows that `main.ts` changes by exactly that hook, and that every existing suite and the demo reset pass unchanged.
+* **PF-23's CI step "no personal data in logs":** yes, on two conditions:
+  * it adds no new required job;
+  * the PR states the minutes it adds per run (B190, P-589 (2)). Over ~1 minute per run, it goes into an existing job.
+* **The case-side asks** (an exporter for PF-26, an eraser for PF-21d, `LegalHoldPort` before any delete, the four AG-7-39 notices through `NotificationPort`) go into the release holder's CS- rows.
