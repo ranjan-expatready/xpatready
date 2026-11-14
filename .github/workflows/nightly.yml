@@ -1,8 +1,8 @@
 # Nightly full set (test-speed plan, founder 31 Oct): each pull request checks only the suites its files can affect
 # (ci.yml, run-suites.sh --changed) and each merge-queue batch every suite but the quarantined ones; every suite,
 # quarantined ones included, runs here every night on main. CI order (a), founder 4 Nov ~09:45 IST "Yes, this order": on
-# GitHub's machines, split like a merge-queue batch (run-suites.sh --shard i/6, each part its own fresh copy, about 30
-# minutes in all), because the one-Mac run (xr-mac, 90-minute timeout) no longer fits the full set: it ended
+# GitHub's machines, split like a merge-queue batch (run-suites.sh --shard i/8, each part its own fresh copy; 8 parts
+# since 14 Nov, P-436 (7)), because the one-Mac run (xr-mac, 90-minute timeout) no longer fits the full set: it ended
 # "cancelled" on 3 and 4 Nov and started hours late. The repository is public, so GitHub's machines bill no minutes
 # (US$0). "Run workflow" (workflow_dispatch) starts it by hand; from a branch it tests that branch's suites. Every
 # part runs to its end (no fail-fast), so one red suite never hides another. No model call: every suite replays saved runs.
@@ -62,7 +62,7 @@ jobs:
           for c in $caps; do [[ "$c" =~ ^C[0-9]{1,2}\.[0-9]{1,2}$ ]] || { echo "not a capability id: \"$c\" (want e.g. C11.10)"; exit 1; }; done
           json="[]"; [ -n "$caps" ] && json="[$(for c in $caps; do printf '"%s",' "$c"; done | sed 's/,$//')]"
           echo "caps=$json" >> "$GITHUB_OUTPUT"
-          [ "$json" = "[]" ] && echo "**Full nightly set** on 6 parts, and every Works row's pack pooled on up to 5 machines (D5)" >> "$GITHUB_STEP_SUMMARY" || echo "**Re-test** of $caps (one machine each)" >> "$GITHUB_STEP_SUMMARY"
+          [ "$json" = "[]" ] && echo "**Full nightly set** on 8 parts, and every Works row's pack pooled on up to 5 machines (D5)" >> "$GITHUB_STEP_SUMMARY" || echo "**Re-test** of $caps (one machine each)" >> "$GITHUB_STEP_SUMMARY"
   packs:
     needs: plan
     if: ${{ needs.plan.outputs.caps != '[]' }}
@@ -98,17 +98,21 @@ jobs:
     needs: plan
     if: ${{ needs.plan.outputs.caps == '[]' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # 14 Nov (P-436 (7), P-502): 6 parts at 45 min gave no verdict on 13 and 14 Nov. Measured (suite-times.tsv, 8 green
+    # batches): 311 min of suites, so 51.8 min a part on 6, ~57 min a job with set-up; on 8 parts the deal's longest part
+    # (part 4: 126 units, the 5 quarantined and the 0-s rows among them, 50 isolated copies) is 40.4 min of suites
+    # + ~3.8 min of copies starting and stopping (~4.5 s each) + ~2 min of set-up = ~46.2 min; x 1.25 = 57.8, so 59.
+    timeout-minutes: 59
     permissions: { contents: read }
     concurrency: { group: "nightly-${{ matrix.shard }}", cancel-in-progress: false }
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     env:
       P: ai-workers/problem-1-pathway-setup-and-form-filling/product
       S: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
-      N: 6
+      N: 8
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
@@ -121,13 +125,13 @@ jobs:
         run: bash "$P/tools/cloud-setup.sh"
       - name: Playwright's own Chromium
         run: cd "$S" && ./node_modules/.bin/playwright install chromium
-      - name: every studio suite, quarantined ones included, part ${{ matrix.shard }} of 6 (run-suites.sh --demo --shard; US$0)
+      - name: every studio suite, quarantined ones included, part ${{ matrix.shard }} of 8 (run-suites.sh --demo --shard; US$0)
         run: |
           bash "$P/tools/run-suites.sh" --demo --shard "${{ matrix.shard }}/$N" | tee suites.md
           exit ${PIPESTATUS[0]}
       - name: summary
         if: always()
-        run: '[ -f suites.md ] && { echo "Nightly full set, part ${{ matrix.shard }} of 6, on $(git rev-parse --short HEAD)"; echo; cat suites.md; } >> "$GITHUB_STEP_SUMMARY" || true'
+        run: '[ -f suites.md ] && { echo "Nightly full set, part ${{ matrix.shard }} of $N, on $(git rev-parse --short HEAD)"; echo; cat suites.md; } >> "$GITHUB_STEP_SUMMARY" || true'
       - name: logs (only when something failed)
         if: failure()
         uses: actions/upload-artifact@v4
