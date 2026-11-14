@@ -13,3 +13,7 @@ Item 3 (BK-20/BK-24), word for word, moved 09:5x IST:
 Item 5 (qa #1730), word for word, moved 10:1x IST:
 
 5. **qa #1730** (BK-13, B170c, BK-18 Works) labelled, in the records queue: Works 96/98 when it merges. Founder looks due: FO-4, PF-6, FO-5s, PF-5s (~30 min each).
+
+Hand-over intro line, word for word, moved 10:1x IST:
+
+**Founder at the screen, deciding fast; he typed "go" at 08:5x to: archive finished sessions, a context check every check, replace stream 4 (2) after the map baseline, then this hand-over.** Rules as of **P-569** (P-570 newer, one row). Weekly **40%** at 08:5x. Paid US$0. Disk 24 GB. Times only from `TZ=Asia/Kolkata date` (Lead 40 guessed "09:xx" and "08:4x" once each, corrected). GitHub via curl + `gh auth token`. Today's rulings: P-566 self-serve SaaS sign-up, Leads decide what best practice settles; P-567 two-step for all, s. 24(3) checklist, trust ledger now; P-568 no Quebec, employer/LMIA after first five, BoldSign sandbox when needed; **P-569 integration STOPPED (kept resumable), map challenged then baselined, one cockpit = desk 02's page**; **P-570 six optional rows are Build, list anything else missing**.

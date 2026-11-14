@@ -422,3 +422,30 @@ A feature is done when a person can do it on the demo (:4400) and qa has tested 
 | L-SA12 | after M3, runtime: C6.8 PQR → SQR carries personal details only, marked "please confirm" (P-235). **Held** (PQR area, P-251) | the SQR asks everything else fresh; P-76 still holds | P-235 |
 | L-SA13 | design only (P-246 (2), P-251): the release pin moves from the case to the filing; concept sent to the product owner before any build | concept agreed by the product owner | P-246 |
 
+## After the end-to-end production-grade system (founder, P-582, 09:3x IST 14 Nov): everything left out of the first build, kept in sight
+Source: capability map draft 5.2 §0 (CAPABILITY-SOURCING-MAP.md, private notes; page claude.ai/artifact/8Fr4UUNR8yxwZrQ4nVi6wC) and P-572-P-581. Picked up once the complete end-to-end production-grade system is done; each row is shaped (dup check, touch list, Done when) when it is picked. Requirement IDs as in the map.
+
+| # | Item | Requirement IDs | Left out by · why |
+|---|---|---|---|
+| X-1 | Custom roles and a capability editor (map row 7) | AG-1-18, AG-1-23, AG-1-24, AG-1-60 to AG-1-66, SA-6-12, SA-6-45 | P-572 · fixed starter roles serve firms of 1-5 staff |
+| X-2 | Feature switches (row 17) | none (engineering aid) | P-572 · a config table is enough |
+| X-3 | French and Quebec sales tax (row 18) | AG-12-64, AG-12-78 to AG-12-80, AG-5-12 to AG-5-14, AG-15-36, AG-15-37 | P-568, P-572 · no Quebec firm for now |
+| X-4 | A demo firm (row 25) | SA-2-40 | P-572 · a seed script does it |
+| X-5 | Outgoing webhooks, developer API keys, lead API keys, Zapier app, Meta lead ads (row 51) | AG-10-32 to AG-10-34, AG-16-61, AG-16-62, AG-2-6, AG-2-81, AG-2-88 | P-572 |
+| X-6 | Reading text from scans, OCR (row 71) | none | P-572 · would feed AI reading later |
+| X-7 | Full-text search across records and documents (row 78) | none | P-572 · find by name, email, file number is in |
+| X-8 | Filling ordinary (non-XFA) PDF forms (row 81) | AG-8 | P-572 · only if a needed form is not XFA |
+| X-9 | SMS (client texts) | A11 5.8 | P-574 · email and WhatsApp are the main channels |
+| X-10 | Merging people who already have a case, documents or money (beyond FO-9b) | AG-2-16, AG-2-96 to AG-2-99 | P-574 · manual path until the case-side client merge (release Lead, after the case-side contract v0) |
+| X-11 | SaaS running extras: a full feature catalogue per plan | SA-3-29 to SA-3-38, SA-3-50 to SA-3-52 | P-581 |
+| X-12 | Money extras: request payment, Ready to bill, unbilled time and costs; disputed invoices, government-fee refunds; bill-to, invoice language, billing notices; close-out and opening balances | AG-6-62, AG-6-64 to AG-6-67; AG-6-76 and following; AG-6-36, AG-6-41, AG-6-47, AG-6-49; AG-6-72, AG-6-78, AG-6-79 | P-581 |
+| X-13 | Client portal extras: secure message hub; nudges; corporate access for employers and workers; several devices, long sessions | AG-15-34, AG-15-35; AG-15-29 to AG-15-33, AG-15-54; AG-15-10 to AG-15-13, AG-15-46, AG-15-51; AG-15-42, AG-15-43 | P-581 |
+| X-14 | Booking extras: caps per host, group sessions, round robin, several hosts; closed days and holidays; case calls and handing over future bookings | AG-4-6, AG-4-12, AG-4-51, AG-4-65; AG-4-7, AG-4-60; AG-4-54, AG-4-55, AG-4-64 | P-581 |
+| X-15 | Signing extras: amend a signed retainer; firm locks its own clauses; organisation signatory and master agreement; stored signature applied at send | AG-5-66; AG-5-45, AG-16-66, AG-16-67; AG-5-50 to AG-5-52; AG-5-63, AG-1-72 | P-581 |
+| X-16 | Template extras: version history, restore, where used; immigration-significant marks, must-fill and conditional sections; edit conflict check; an automatic-messages page | AG-12-68, AG-12-86 to AG-12-88; AG-12-72 to AG-12-77; AG-12-69; AG-12-39, AG-12-49, AG-12-52, AG-12-56 | P-581 |
+| X-17 | Firm settings extras: "recently deleted" with restore | AG-16-65 | P-581 |
+| X-18 | Staff and leads extras: leaver hand-over screen and reports; set-up reminders; device and session rules; nurture, reopen, undo delete; next-step rules and work queue; leads from incoming email | AG-1-47 to AG-1-54; AG-1-39; AG-1-55 to AG-1-57; AG-2-29a, AG-2-45, AG-2-66; AG-2-37, AG-2-38, AG-2-40, AG-2-48a, AG-2-69; AG-2-62, AG-2-67, AG-2-70 | P-581 |
+| X-19 | Permissions extras: sign-off keys (waive a deficiency, approve a form), corporate and case keys | SA-6-22, SA-6-26, SA-6-27, SA-6-57 | P-581 |
+| X-20 | Case-side extras: firm overrides of published pathway content; LMIA after-approval and inspection pack; a letter library | SA-01B ch. 1; A7 (LMIA); A7 (letters) | P-581, P-568 (employer work after the first five firms) |
+| X-21 | Branding: anything beyond PF-13 | AG-1-6, AG-1-9 | P-574 kept PF-13's set |
+| X-22 | Held rows: card payment into trust (row 94), pay-when-booking (row 44), our own signer (row 103) | AG-6-70; A46 row 44; P-561 | P-567, P-561 · held, not dropped: card into trust after a verified processor set-up; own signer only if BoldSign fails a P-561 condition |
