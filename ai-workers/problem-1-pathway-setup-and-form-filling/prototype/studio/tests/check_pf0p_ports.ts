@@ -50,6 +50,7 @@ ok("PF-0p fail: the import check catches a Prisma, a Nest, a node, an app, a dyn
   ok("audit fail: a summary over 600 characters is refused (600 accepted)", !AuditEntry.safeParse(entry({ summary: "x".repeat(601) })).success && AuditEntry.safeParse(entry({ summary: "x".repeat(600) })).success);
   ok("audit fail: detail holding an email address is refused (ids only)", !AuditEntry.safeParse(entry({ detail: { to: "client.a@example.com" } })).success && !AuditEntry.safeParse(entry({ detail: { nested: { name: "x" } } })).success);
   ok("audit fail: an unknown field is refused (strict)", !AuditEntry.safeParse(entry({ firmName: "x" })).success);
+  ok("audit fail: an entity without an area prefix (a case or configuration entity) is refused; platform_, fo_, money_, msg_ pass", ["sign step", "field", "case", "retainer"].every((x) => !AuditEntry.safeParse(entry({ entity: x })).success) && ["platform_staff", "fo_retainer", "money_invoice", "msg_consent", "plat_alarm"].every((x) => AuditEntry.safeParse(entry({ entity: x })).success));
 
   const a = fakeAudit();
   await a.record("tx-1", entry());

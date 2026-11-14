@@ -21,13 +21,19 @@ export const AuditDetail = z
   .record(z.string().regex(/^[A-Za-z][A-Za-z0-9_]{0,63}$/, "a field name"), z.union([DetailScalar, z.array(DetailScalar).max(50)]))
   .refine((d) => !Object.values(d).flat().some((v) => typeof v === "string" && EMAILISH.test(v)), "detail holds ids only: no email address");
 
+/** An entity of the platform and front-office areas: its area's table prefix (`platform_`, `plat_`, `fo_`, `money_`,
+ *  `msg_`; rows rev 15.2). Never a case or configuration entity: those stay on the case side's own audit writer until
+ *  AUD-1, and a firm's case feed never reads a line of an area entity as its own (tests/check_case_feed.ts sweeps every
+ *  `audit….record(tx, {...})` caller for this). */
+export const AREA_ENTITY = /^(platform|plat|fo|money|msg)_[a-z][a-z0-9_]*$/;
+
 export const AuditEntry = z.strictObject({
   firmId: FirmId,
   actor: AuditActor,
   /** What happened, a dotted verb (`staff.role.granted`, `retainer.sent`). */
   action: z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$/, "a dotted lower-case action").max(120),
   /** The table or thing changed (`platform_staff`, `fo_retainer`). */
-  entity: z.string().regex(/^[a-z][a-z0-9_]*$/, "a lower-case entity name").max(120),
+  entity: z.string().regex(AREA_ENTITY, "an area entity: platform_, plat_, fo_, money_ or msg_ and a lower-case table name").max(120),
   /** The changed row's id or key. */
   entityKey: z.string().min(1).max(200),
   /** One plain sentence a person reads in the trail (at most 600 characters). */
