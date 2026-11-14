@@ -1,0 +1,22 @@
+NOTICE:  database "xr_studio_qa_bk13w" does not exist, skipping
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.
+isolated qa_bk13w on http://localhost:4473 (xr_studio_qa_bk13w), stops itself in 30 min
+START buttons: ["Demo","","Start again from here","Start here","Load the finished story"]
+PASS Start › Load the configured checkpoint (by the button): the Study permit is released and openable — {"combination_id":"efe07489-f339-4e52-89f6-3cf846d08b18","combination":"Outside Canada","version":1,"startable":true,"items":0,"why":null}
+PASS the Study permit's Sample case opens (the BK-12 route; no screen button) — {"status":201,"ref":"SAMPLE-SP-FAMILY-1"}
+PASS 1440px: the case page names the three Sample people — "Back\nCases\n›\nSAMPLE-SP-FAMILY-1\nProduct Studio (as Configuration author)\nC-2026-00002\nSAMPLE-SP-FAMILY-1\nOpen\nRelease 2\n(as Configuration author)\nReadiness: Not ready · 0% (lowest: Study permit (outside Canada): Student A (Sample))\n\nClient: Student A (Sample) · Client A's cases\n\nRepresentative (Samp"
+PASS 1440px: one filing per person, each named by its document
+PASS 1440px: the forms are listed (IMM 1294, IMM 1295, IMM 5257, IMM 5476, IMM 5707) — []
+1440px FEES: CAD 675 | fee lines: Fee payment receipt ¦ Student A (Sample): Fee payment receipt not received. ¦ Fees ¦ Fees for One submission for 3 people applying: Study permit (outside Canada): Student A (Sample), Work permit: Spouse (Sample), Visitor visa: Child (Sample) ¦ Fee	Amount	Why ¦ Study permit fee (including extensions)	CAD 150	CAD 150 for Student A (Sample). ¦ Biometrics fee	CAD 85	CAD 85 for Student A (Sample). ¦ Work permit fee (including extensions)	CAD 155	CAD 155 for Spouse (Sample).
+PASS 1440px: no sideways page scroll
+PASS 400px: the case page names the three Sample people — "Back\nCases\n›\nSAMPLE-SP-FAMILY-1\nProduct Studio (as Configuration author)\nC-2026-00002\nSAMPLE-SP-FAMILY-1\nOpen\nRelease 2\n(as Configuration author)\nReadiness: Not ready · 0% (lowest: Study permit (outside Canada): Student A (Sample))\n\nClient: Student A (Sample) · Client A's cases\n\nRepresentative (Samp"
+PASS 400px: one filing per person, each named by its document
+PASS 400px: the forms are listed (IMM 1294, IMM 1295, IMM 5257, IMM 5476, IMM 5707) — []
+400px FEES: CAD 675 | fee lines: Fee payment receipt ¦ Student A (Sample): Fee payment receipt not received. ¦ Fees ¦ Fees for One submission for 3 people applying: Study permit (outside Canada): Student A (Sample), Work permit: Spouse (Sample), Visitor visa: Child (Sample) ¦ Fee	Amount	Why ¦ Study permit fee (including extensions)	CAD 150	CAD 150 for Student A (Sample). ¦ Biometrics fee	CAD 85	CAD 85 for Student A (Sample). ¦ Work permit fee (including extensions)	CAD 155	CAD 155 for Spouse (Sample).
+PASS 400px: no sideways page scroll
+PASS no page error on any screen — []
+all passed
+EXIT=0
+stopped qa_bk13w (database and files removed; log in var/isolated-logs/qa_bk13w-api.log)

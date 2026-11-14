@@ -82,6 +82,7 @@ model PlatformFirm {
   revocations   PlatformSessionRevocation[]
   receipts      WebhookReceipt[]
   events        ModuleEvent[]
+  foConsultationTypes FoConsultationType[] // FO-1b back-relation (front-office-booking.prisma), Lead B's OK on #1741
 
   @@map("platform_firm")
 }
@@ -202,6 +203,9 @@ model PlatformStaff {
   credential  PlatformStaffCredential?
   grants      PlatformRoleGrant[]
   revocations PlatformSessionRevocation[]
+  foAvailability FoAvailability[] // FO-1b back-relations (front-office-booking.prisma), Lead B's OK on #1741
+  foTimeOff      FoTimeOff[]
+  foBookings     FoBooking[]
 
   @@unique([firmId, email])
   /// The target of the (firm_id, staff_id) keys below: a row of firm A can never point at firm B's staff (break B-2).
