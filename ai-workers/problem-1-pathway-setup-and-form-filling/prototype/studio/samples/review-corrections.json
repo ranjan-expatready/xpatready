@@ -15,5 +15,160 @@
       "meaning": "The kind of application this person makes (Visitor, Worker, Student, or permanent residence), in the forms' own words. Worked out for each person from their own filing; never asked.",
       "note": "QA-415: IMM 5645 and IMM 5476 name the kind of the application of the person they are about, and a family's members may apply for different documents (a student's spouse for a work permit), so it is each person's fact, from their filing."
     }
+  ],
+  "boxes_basis": "BK-24 (P-533, P-449: data, never a form in code): where a saved AI answer mapped one form field to a fact or a step that is wrong for it, and changing the proposed field itself would change every form field that reads it on that draft, the sample loader corrects that one form field on the applied draft, before any release, as the author would (api/src/features/checkpoint/040-field-map-review.ts: its reason says \"Changed by the sample loader\", one audit line each). The product has no door yet for a person to remap one mapped form field (follow-up F6 on BK-24): the edition, the form field, the key the saved answer proposed (checked first: a different one is refused in words), the key and step the author decides, and the reason it records. The keys and steps are those IMM 1294 (06-2026) and IMM 5257 (09-2023) already map on the same boxes of the same layout. Sample review data, not an IRCC rule; Unconfirmed: expert.",
+  "boxes": [
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Country[0]",
+      "proposed": "person.residence_country",
+      "key": "person.current_residence_country",
+      "transform": "code_list:imm1295.country_cor",
+      "note": "BK-24: question 7 is the current country of residence. The saved answer read a residence-period list through a step the filler cannot run; IMM 1294 asks the same boxes as the current residence facts the questionnaire asks."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]",
+      "proposed": "person.immigration_status",
+      "key": "person.current_residence_status",
+      "transform": "code_list:imm1295.immigration_status(Citizen=01,Permanent resident=02,Visitor=03,Worker=04,Student=05,Other=06,Protected Person=07,Refugee Claimant=08,Foreign National=09)",
+      "note": "BK-24: question 7 is the current country of residence. The saved answer read a residence-period list through a step the filler cannot run; IMM 1294 asks the same boxes as the current residence facts the questionnaire asks."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Other[0]",
+      "proposed": "person.immigration_status_other_details",
+      "key": "person.current_residence_status_other",
+      "transform": "as_is",
+      "note": "BK-24: question 7 is the current country of residence. The saved answer read a residence-period list through a step the filler cannot run; IMM 1294 asks the same boxes as the current residence facts the questionnaire asks."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].FromDate[0]",
+      "proposed": "person.immigration_status_start_date",
+      "key": "person.current_residence_status_from",
+      "transform": "date:YYYY-MM-DD",
+      "note": "BK-24: question 7 is the current country of residence. The saved answer read a residence-period list through a step the filler cannot run; IMM 1294 asks the same boxes as the current residence facts the questionnaire asks."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].ToDate[0]",
+      "proposed": "person.immigration_status_end_date",
+      "key": "person.current_residence_status_to",
+      "transform": "date:YYYY-MM-DD",
+      "note": "BK-24: question 7 is the current country of residence. The saved answer read a residence-period list through a step the filler cannot run; IMM 1294 asks the same boxes as the current residence facts the questionnaire asks."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]",
+      "proposed": "person.residence_country",
+      "key": "person.previous_residence_country",
+      "transform": "derived:any previous residence in past 5 years, over 6 months, in a country other than citizenship or current residence -> yes_no_code:Y/N",
+      "note": "BK-24: question 8 A is Yes when a previous residence is recorded, else No on a confirmed none, as IMM 5257 (09-2023) maps the same box; the saved answer's step could not be run."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Country[0]",
+      "proposed": "person.residence_country",
+      "key": "person.previous_residence_country",
+      "transform": "code_list:imm1295.country_cor",
+      "note": "BK-24: question 8 rows are previous countries of residence. The saved answer read a residence-period list through a step the filler cannot run; IMM 1294 asks the same boxes as the previous residence facts."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Status[0]",
+      "proposed": "person.immigration_status",
+      "key": "person.previous_residence_status",
+      "transform": "code_list:imm1295.immigration_status(Citizen=01,Permanent resident=02,Visitor=03,Worker=04,Student=05,Other=06,Protected Person=07,Refugee Claimant=08,Foreign National=09)",
+      "note": "BK-24: question 8 rows are previous countries of residence. The saved answer read a residence-period list through a step the filler cannot run; IMM 1294 asks the same boxes as the previous residence facts."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Other[0]",
+      "proposed": "person.immigration_status_other_details",
+      "key": "person.previous_residence_status_other",
+      "transform": "as_is",
+      "note": "BK-24: question 8 rows are previous countries of residence. The saved answer read a residence-period list through a step the filler cannot run; IMM 1294 asks the same boxes as the previous residence facts."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].FromDate[0]",
+      "proposed": "person.immigration_status_start_date",
+      "key": "person.previous_residence_from",
+      "transform": "date:YYYY-MM-DD",
+      "note": "BK-24: question 8 rows are previous countries of residence. The saved answer read a residence-period list through a step the filler cannot run; IMM 1294 asks the same boxes as the previous residence facts."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].ToDate[0]",
+      "proposed": "person.immigration_status_end_date",
+      "key": "person.previous_residence_to",
+      "transform": "date:YYYY-MM-DD",
+      "note": "BK-24: question 8 rows are previous countries of residence. The saved answer read a residence-period list through a step the filler cannot run; IMM 1294 asks the same boxes as the previous residence facts."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Country[0]",
+      "proposed": "person.residence_country",
+      "key": "person.previous_residence_country",
+      "transform": "code_list:imm1295.country_cor",
+      "note": "BK-24: question 8 rows are previous countries of residence. The saved answer read a residence-period list through a step the filler cannot run; IMM 1294 asks the same boxes as the previous residence facts."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Status[0]",
+      "proposed": "person.immigration_status",
+      "key": "person.previous_residence_status",
+      "transform": "code_list:imm1295.immigration_status(Citizen=01,Permanent resident=02,Visitor=03,Worker=04,Student=05,Other=06,Protected Person=07,Refugee Claimant=08,Foreign National=09)",
+      "note": "BK-24: question 8 rows are previous countries of residence. The saved answer read a residence-period list through a step the filler cannot run; IMM 1294 asks the same boxes as the previous residence facts."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Other[0]",
+      "proposed": "person.immigration_status_other_details",
+      "key": "person.previous_residence_status_other",
+      "transform": "as_is",
+      "note": "BK-24: question 8 rows are previous countries of residence. The saved answer read a residence-period list through a step the filler cannot run; IMM 1294 asks the same boxes as the previous residence facts."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].FromDate[0]",
+      "proposed": "person.immigration_status_start_date",
+      "key": "person.previous_residence_from",
+      "transform": "date:YYYY-MM-DD",
+      "note": "BK-24: question 8 rows are previous countries of residence. The saved answer read a residence-period list through a step the filler cannot run; IMM 1294 asks the same boxes as the previous residence facts."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].ToDate[0]",
+      "proposed": "person.immigration_status_end_date",
+      "key": "person.previous_residence_to",
+      "transform": "date:YYYY-MM-DD",
+      "note": "BK-24: question 8 rows are previous countries of residence. The saved answer read a residence-period list through a step the filler cannot run; IMM 1294 asks the same boxes as the previous residence facts."
+    },
+    {
+      "edition": "IMM 1294 (06-2026)",
+      "box": "form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]",
+      "proposed": "person.previous_residence_country",
+      "key": "person.previous_residence_country",
+      "transform": "derived:any previous residence in past 5 years, over 6 months, in a country other than citizenship or current residence -> yes_no_code:Y/N",
+      "note": "BK-24: question 8 A is Yes when a previous residence is recorded, else No on a confirmed none, as IMM 5257 (09-2023) maps the same box; the saved answer's step could not be run."
+    },
+    {
+      "edition": "IMM 1295 (09-2023)",
+      "box": "form1[0].Page3[0].PageWrapper[0].Education[0].EducationIndicator[0]",
+      "proposed": "person.education_institution",
+      "key": "person.education_institution",
+      "transform": "derived:any post-secondary education record exists -> yes_no_code:Y/N",
+      "note": "BK-24: \"Have you had any post secondary education?\" is Yes when an education record is recorded, else No on a confirmed none, as IMM 5257 (09-2023) maps the same question; the saved answer's step could not be run."
+    },
+    {
+      "edition": "IMM 1294 (06-2026)",
+      "box": "form1[0].Page3[0].Education[0].EducationIndicator[0]",
+      "proposed": "person.education_institution",
+      "key": "person.education_institution",
+      "transform": "derived:any post-secondary education record exists -> yes_no_code:Y/N",
+      "note": "BK-24: \"Have you had any post secondary education?\" is Yes when an education record is recorded, else No on a confirmed none, as IMM 5257 (09-2023) maps the same question; the saved answer's step could not be run."
+    }
   ]
 }

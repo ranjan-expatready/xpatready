@@ -1,0 +1,39 @@
+// qa (14 Nov): BK-13 by screens — the configured checkpoint loaded from Start, the Study permit's Sample case read as the officer.
+const { chromium } = require("playwright");
+const port = process.argv[2], SHOTS = process.argv[3]; if (!port || port === "4400") process.exit(2);
+const base = `http://localhost:${port}`;
+const call = async (m, path, actor, body) => { const r = await fetch(base + "/api" + path, { method: m, headers: { "x-actor": actor, "content-type": "application/json" }, body: body ? JSON.stringify(body) : undefined }); let b = null; try { b = await r.json(); } catch {} return { status: r.status, body: b }; };
+let failed = 0; const ok = (n, p, d) => { if (!p) failed++; console.log(`${p ? "PASS" : "FAIL"} ${n}${d !== undefined ? ` — ${JSON.stringify(d).slice(0, 500)}` : ""}`); };
+(async () => {
+  const b = await chromium.launch({ headless: true, executablePath: "/opt/pw-browsers/chromium-1243/chrome-linux64/chrome" });
+  const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } }); await ctx.addInitScript(() => { try { localStorage.setItem("xr-actor", "user-A"); } catch {} });
+  const p = await ctx.newPage(); const errs = []; p.on("pageerror", (e) => errs.push(String(e)));
+  await p.goto(`${base}/start`); await p.waitForLoadState("networkidle");
+  console.log("START buttons:", JSON.stringify(await p.getByRole("button").allInnerTexts()));
+  const door = p.locator("[data-start-door=configured]"); await door.waitFor({ timeout: 20000 }); await door.click(); await p.waitForTimeout(800);
+  if (SHOTS) await p.screenshot({ path: `${SHOTS}/bk13-00-start-confirm-1440.png`, fullPage: true });
+  await p.locator("[data-start-go]").click();
+  for (let i = 0; i < 120; i++) { await p.waitForTimeout(2000); const st = (await call("GET", "/demo/status", "user-A")).body; if (st && !st.running && !/loading|emptying/i.test(JSON.stringify(st.phase ?? ""))) { const o = ((await call("GET", "/runtime/openable", "user-O")).body ?? []).find((r) => r.combination === "Outside Canada" && r.startable); if (o) break; } }
+  if (SHOTS) await p.screenshot({ path: `${SHOTS}/bk13-01-start-after-load-1440.png`, fullPage: true });
+  const row = ((await call("GET", "/runtime/openable", "user-O")).body ?? []).find((r) => r.combination === "Outside Canada" && r.startable);
+  ok("Start › Load the configured checkpoint (by the button): the Study permit is released and openable", !!row, row);
+  const opened = await call("POST", "/demo/sample-case", "user-A", { combinationId: row?.combination_id });
+  ok("the Study permit's Sample case opens (the BK-12 route; no screen button)", opened.status < 300, { status: opened.status, ref: opened.body?.reference ?? opened.body?.ref });
+  const id = opened.body?.id ?? opened.body?.caseId ?? opened.body?.case_id;
+  await ctx.addInitScript(() => { try { localStorage.setItem("xr-actor", "user-O"); } catch {} });
+  for (const w of [1440, 400]) {
+    const c2 = await b.newContext({ viewport: { width: w, height: 1000 } }); await c2.addInitScript(() => { try { localStorage.setItem("xr-actor", "user-O"); } catch {} });
+    const q = await c2.newPage(); q.on("pageerror", (e) => errs.push(String(e)));
+    await q.goto(`${base}/cases/${id}`); await q.waitForLoadState("networkidle"); await q.waitForTimeout(1500);
+    const text = await q.locator("main").innerText();
+    if (SHOTS) await q.screenshot({ path: `${SHOTS}/bk13-02-case-${w}.png`, fullPage: true });
+    ok(`${w}px: the case page names the three Sample people`, /Student A \(Sample\)/.test(text) && /Spouse \(Sample\)/.test(text) && /Child \(Sample\)/.test(text), text.slice(0, 300));
+    ok(`${w}px: one filing per person, each named by its document`, /Study permit/.test(text) && /Work permit/.test(text) && /Visitor visa/.test(text));
+    ok(`${w}px: the forms are listed (IMM 1294, IMM 1295, IMM 5257, IMM 5476, IMM 5707)`, ["IMM 1294", "IMM 1295", "IMM 5257", "IMM 5476", "IMM 5707"].every((f) => text.includes(f)), ["IMM 1294", "IMM 1295", "IMM 5257", "IMM 5476", "IMM 5707"].filter((f) => !text.includes(f)));
+    const fees = text.match(/CAD ?\$?\s?675|\$675|675\.00/); console.log(`${w}px FEES:`, fees?.[0] ?? "(no 675 on the case page)", "| fee lines:", (text.match(/[^\n]*(fee|biometric)[^\n]*/gi) ?? []).slice(0, 8).join(" ¦ ").slice(0, 600));
+    const hscroll = await q.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1); ok(`${w}px: no sideways page scroll`, !hscroll);
+    await c2.close();
+  }
+  ok("no page error on any screen", errs.length === 0, errs);
+  await b.close(); console.log(failed ? `${failed} failed` : "all passed"); process.exit(failed ? 1 : 0);
+})();
