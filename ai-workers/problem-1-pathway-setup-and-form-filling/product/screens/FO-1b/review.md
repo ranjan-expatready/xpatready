@@ -130,3 +130,56 @@ No Blocker or Major is open at 84a4f1a11be4d544b3b5b78cc7946435425c3718.
 Round 2 verdict (84a4f1a1): Approve.
 
 Verdict: Approve (84a4f1a11be4d544b3b5b78cc7946435425c3718)
+
+## Round 3: head 831a554c (diff from 84a4f1a1 only)
+The diff touches only this review.md (my round 2, committed unchanged) and one comment in `migration.sql` that states m11. No SQL statement or rule changed. `check_fo1b_booking_schema.ts` passes 76/76 from an export. The PR comment was updated for m12.
+
+Round 3 verdict (831a554c): Approve.
+
+## Round 4: head 491231d0 (diff from 831a554c only, P-277; Lead B's answer on #1741, rev 14.2)
+
+**What changed (read in full):**
+* **`platform.prisma` gains exactly four back-relation fields and nothing else** (4 insertions, 0 deletions): `PlatformFirm.foConsultationTypes`, plus `PlatformStaff.foAvailability`, `foTimeOff` and `foBookings`. Each carries a comment citing the OK on #1741.
+* **`front-office-booking.prisma`** gains the matching relations. The `FoBooking` column realignment is `prisma format` whitespace only.
+* **Migration:** four real foreign keys, all `ON DELETE RESTRICT ON UPDATE RESTRICT`:
+  * `fo_consultation_type(firm_id)` → `platform_firm(id)`;
+  * `(firm_id, staff_id)` → `platform_staff(firm_id, id)` on `fo_availability`, `fo_time_off` and `fo_booking`. The target unique is PF-3's.
+* **Removed:**
+  * `fo_staff_in_firm()` and its three triggers;
+  * `fo_platform_staff_kept()` / `fo_platform_firm_kept()` and their triggers on the platform's tables.
+* **Renamed:** `fo_consultation_type_refs()` becomes `fo_consultation_type_hosts()`, which checks hosts only.
+
+**Checks,** from a `git archive` of 491231d0 on scratch databases `xr_studio_rev_fo1b_*` (all dropped):
+* `check_fo1b_booking_schema.ts`: **80 passed, 0 failed**.
+* `check_pf3_platform_schema.ts`: **75 passed, 0 failed**.
+* `check_prisma_schema.ts`: **8 passed, 0 failed**.
+
+**Break pass, as asked:**
+* **migrate diff:** on a database built from every migration plus both seeds, `prisma migrate diff` (database → schema) prints only main's 5 known lines. There is no line for an fo_ or platform foreign key: the four keys and the four back-relation fields agree. The PF-3 seed re-run adds 0.
+* **m11 race, now closed by the real keys:**
+  * A READ COMMITTED hours insert with a REPEATABLE READ staff delete racing it: the delete waits, then is refused **23001** (`fo_availability_firm_id_staff_id_fkey`). The same holds under SERIALIZABLE and READ COMMITTED.
+  * The other order (delete first, then a REPEATABLE READ insert) gives **40001**.
+  * 0 orphans in every case. Round 2's m11 hole and round 3's comment are gone with the guard triggers.
+* **Old triggers and functions:** none left. `pg_proc` has no `fo_staff_in_firm`, `fo_consultation_type_refs`, `fo_platform_staff_kept` or `fo_platform_firm_kept`. The only fo_ triggers are the five `*_firm_fixed` ones, `fo_availability_zone`, `fo_booking_write`, `fo_booking_void_tokens`, `fo_booking_token_write` and `fo_consultation_type_hosts`. No trigger remains on `platform_staff` or `platform_firm`.
+* **Rollback:** the header's rollback, run as written in its order, leaves 0 fo_ functions, triggers and constraints; the platform rows are untouched (4 staff). The migration then re-applies (5 tables).
+* **Tests:**
+  * The new `refusedCode` checks the SQLSTATE and the key's name.
+  * The `fo_booking` key test disables `fo_booking_write` inside the refused statement. That runs as one implicit transaction, and the test checks the trigger is enabled afterwards (`tgenabled = 'O'`).
+  * PostgreSQL answers a RESTRICT key with 23001, not 23503: correct.
+  * The RESTRICT/RESTRICT test reads `pg_constraint` for all four keys.
+
+**The host-list gap (Lead B's call; Minor, m13):**
+* Run: a staff member named only in a type's `host_staff_ids` is deleted with `DELETE 1`. The type keeps the stale id, and edits that do not touch the host list still pass.
+* No booking can name that person: both the key and the host check refuse it. A later edit of the host list is refused until the stale id is removed; the error names it.
+* No code deletes staff. Note for FO-3: slots skip a host id with no staff row, and the type editor drops it.
+* I accept this as Minor. A list cannot carry a foreign key, and a join table would be new scope beyond the row.
+
+**Still open (Minor, as before):** m8, m10, B-8, B-9, the zone tzdata drift, `America/TORONTO`. Notes for FO-3: the booking row before its tokens; 23P01 → 409.
+
+**Follow-up commit:** I accept that a commit on top of 491231d0 carries this Approve if its diff from 491231d0 touches only `product/screens/FO-1b/review.md` and adds exactly this text (`git diff --stat 491231d0..<head>` shows that one file). Any other file in it needs a new look.
+
+No Blocker or Major is open at 491231d073273ea6288c19da1bc96939a711b662.
+
+Round 4 verdict (491231d0): Approve.
+
+Verdict: Approve (491231d073273ea6288c19da1bc96939a711b662)
