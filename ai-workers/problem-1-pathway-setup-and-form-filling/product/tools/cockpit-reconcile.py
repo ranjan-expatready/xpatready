@@ -102,8 +102,8 @@ ready_rows (§2 Q, R2-3, §11 R3, R3b, R3c): a BACKLOG row is ready when
   text (nested; a bracket the clause end left open runs to the end), row ids,
   "#<number>", punctuation and the filler words merged, and, or, both, the,
   its, first, PR, PRs, row, rows, nothing, none, nobody, no (R3b, R3c;
-  case-insensitive); a non-id dependency when a word of 3+ letters remains
-  (the leftover is reported).
+  case-insensitive), then "map" followed by numbers (R3d); a non-id dependency
+  when a word of 3+ letters remains (the leftover is reported).
   "after" clause: counts only when a row id is among its first 3 tokens; then
   all its row ids are dependencies; its leftover never blocks.
   value = Q; detail = ready [{row, brief}]; not_ready_non_id = [{row, items}].
@@ -142,8 +142,8 @@ A13 Percentile: nearest-rank (index ceil(pN) - 1); forecast dates agree with
    the board only within ±1 day by design (§6 5).
 Settled after §11: B1 (R1b), B2 (R3b), B4 (R5b); B3 and B5 accepted as built
 (whole-word "after"; a title that only mentions an id matches).
-C1-C3 settled by R3c.
-New after R3c:
+C1-C3 settled by R3c; D1 and D2 kept as ruling R3d.
+Earlier notes, now R3d:
 D1 R3c says Done-when is never scanned "(only the row's own clauses in the What
    column)", but the platform and front-office rows keep "waits on" in the
    last column ("Source · waits on · decisions"). Read as: leave out only the
@@ -393,6 +393,21 @@ def is_row_id(tok, backlog_ids=()):
     return tok in backlog_ids and re.search(r"\d", tok) is not None
 
 
+def drop_map_numbers(words):
+    """§11 R3d: "map" followed by numbers is filler (after the filler words are gone,
+    so "map rows 48 and 49" -> "map 48 49" -> nothing)."""
+    out, i = [], 0
+    while i < len(words):
+        if words[i].lower() == "map" and i + 1 < len(words) and words[i + 1].isdigit():
+            i += 1
+            while i < len(words) and words[i].isdigit():
+                i += 1
+            continue
+        out.append(words[i])
+        i += 1
+    return out
+
+
 def dependencies(row_text, backlog_ids=()):
     """§11 R3 + R3b: (dependency ids, non-id leftovers) from the row's waits-on and after clauses."""
     ids, non_id = [], []
@@ -430,6 +445,7 @@ def dependencies(row_text, backlog_ids=()):
                                 if not is_row_id(t, backlog_ids))
                 left = re.sub(r"[^A-Za-z0-9]+", " ", left)
                 words = [w for w in left.split() if w.lower() not in FILLER]
+                words = drop_map_numbers(words)
                 if any(re.fullmatch(r"[A-Za-z]{3,}", w) for w in words):
                     non_id.append(" ".join(words))
     return ids, non_id
@@ -896,6 +912,9 @@ def self_test():
     eq("R3c nobody/no", dependencies("waits on nobody, no PR"), ([], []))
     eq("R3c nested + backticks", dependencies("waits on PF-8 (P-558 (5)) and `FilesPort`"), (["PF-8"], []))
     eq("R3c open bracket", dependencies("waits on PF-2 (see v0.1 notes)"), (["PF-2"], []))
+    eq("R3d map numbers", dependencies("waits on:** map rows 48 and 49 (the case side's gate), FO-2"),
+       (["FO-2"], []))
+    eq("R3d map then words", dependencies("waits on map 62 and the client portal")[1], ["client portal"])
     eq("R3c still blocks", dependencies("waits on PF-8 and the founder's cloud account"),
        (["PF-8"], ["founder s cloud account"]))
     bl = parse_backlog("| # | Item | Done when | Source |\n|---|---|---|---|\n| PF-1 | a | waits on X-9 | y |\n"
