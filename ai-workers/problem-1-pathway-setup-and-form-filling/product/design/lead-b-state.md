@@ -50,3 +50,4 @@ Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Ses
 * 14 Nov 07:26 IST: P-562 (size for ~100 firms; 50 to start where it saves effort) added to contracts §0.8; no PF/FO row assumed more (checked). P-561 waits on stream 4's open-source vs own-build comparison (~09:45 IST); FO-6v held; FO-6 unaffected.
 * 14 Nov 07:48 IST: P-563 (BoldSign confirmed) → FO-6v released (waits on FO-6 and the sandbox key). Atomic CRM weighed (`tech-gate-atomic-crm-2026-11-14.md`): lift presentational pieces only into FO-4 (~5-8 changes saved, not 20-25; no ra-core/Supabase); FO-2 unchanged; licence-notice rule asked of Lead 39. Rows rev 5.1.
 * 14 Nov 07:49 IST: Lead 39 ruling: Atomic CRM is a design reference only (no code copied, no licence file); FO-4 row and tech-gate note aligned.
+* 14 Nov 07:50 IST: P-564 (email one-time code before signing, firm setting on by default) folded into contracts §7 and FO-6. Q2 (sign-up link) goes to the founder next.
