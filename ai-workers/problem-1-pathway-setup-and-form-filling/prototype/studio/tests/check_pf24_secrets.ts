@@ -97,7 +97,8 @@ console.log("== 1. the loader: a missing required secret stops start with its na
     { sameBytes });
   const cfg = loadPlatformConfig({ PLATFORM_SECRET_BOX_KEYS: `1:${key32()}`, PLATFORM_SECRET_BOX_KEY_VERSION: "1" });
   ok("pass (break m6): the loaded key ring reads its key", cfg.secretBox!.keys.get(1) instanceof Secret);
-  ok("fail (break m6): the loaded key ring cannot be changed (set, delete, clear refused)", ["set", "delete", "clear"].every((m) => throwsLike(() => (cfg.secretBox!.keys as unknown as Record<string, (...a: unknown[]) => unknown>)[m](9, new Secret("x", "y")), (e) => e instanceof TypeError)) && cfg.secretBox!.keys.size === 1);
+  ok("fail (break m6): the loaded key ring cannot be changed (set, delete, clear, nor Map.prototype.set/delete called on it)", ["set", "delete", "clear"].every((m) => throwsLike(() => (cfg.secretBox!.keys as unknown as Record<string, (...a: unknown[]) => unknown>)[m](9, new Secret("x", "y")), (e) => e instanceof TypeError))
+    && throwsLike(() => Map.prototype.set.call(cfg.secretBox!.keys, 9, new Secret("x", "y")), (e) => e instanceof TypeError) && throwsLike(() => Map.prototype.delete.call(cfg.secretBox!.keys, 1), (e) => e instanceof TypeError) && cfg.secretBox!.keys.size === 1 && [...cfg.secretBox!.keys.keys()].join() === "1");
 }
 
 console.log("== 2. a held secret never prints, logs or serialises its value");
@@ -211,7 +212,7 @@ console.log("== 4. a key change: the re-encrypt job moves every value; the old k
   await registerReencryptJob(jobs, { box: both, stores, pageSize: 2, done: (r) => results.push(r) });
   const firms = await enqueueReencrypt(jobs, both, stores);
   const again = await enqueueReencrypt(jobs, both, stores);
-  ok("pass: one job per firm with a sealed value, keyed by firm and version; enqueuing again queues nothing new", firms.join() === [FIRM_A, FIRM_B, FIRM_C].join() && again.length === 3 && jobs.queued.length === 3 && jobs.queued.every((q) => q.name === SECRET_BOX_REENCRYPT_JOB && q.key === reencryptJobKey(q.firmId, 2) && ReencryptPayload.safeParse(q.payload).success));
+  ok("pass: one job per firm with a sealed value, keyed by firm and version; enqueuing again queues nothing new", firms.join() === [FIRM_A, FIRM_B, FIRM_C].join() && again.length === 0 && jobs.queued.length === 3 && jobs.queued.every((q) => q.name === SECRET_BOX_REENCRYPT_JOB && q.key === reencryptJobKey(q.firmId, 2) && ReencryptPayload.safeParse(q.payload).success));
   await jobs.runDue();
   ok("pass: every job ran and moved every value (paged two at a time)", jobs.queued.every((q) => q.status === "done") && results.reduce((n, r) => n + r.moved, 0) === 8 && results.every((r) => !r.refused.length && !r.stale), jobs.queued.map((q) => q.error));
   ok("pass: every value is now on version 2 and still opens to the same token", all().every((r) => both.versionOf(r.sealed) === 2) && [...zoom.rows.values()].every((r) => newOnly.open(r.owner, r.sealed) === plain.get(`zoom/${r.id.slice(1)}`)) && [...cal.rows.values()].every((r) => newOnly.open(r.owner, r.sealed) === plain.get(`cal/${r.id.slice(1)}`)));
@@ -254,6 +255,7 @@ console.log("== 4. a key change: the re-encrypt job moves every value; the old k
   await registerReencryptJob(jobs5, { box: both, stores: [stuck] });   // the old writer has stopped (its task drained)
   await enqueueReencrypt(jobs5, both, [stuck], { round: 2 }); await jobs5.runDue();
   ok("pass (break m5): round 2 is a new job key, queues, and moves the value once the writer has stopped", jobs5.queued.length === 2 && jobs5.queued[1].key === reencryptJobKey(FIRM_A, 2, 2) && jobs5.queued[1].status === "done" && both.versionOf(stuck.rows.get("s1")!.sealed) === 2);
+  ok("fail (break m5 re-check): a round of 0, -1, 1.5 or NaN is refused, never a quiet no-op", (await Promise.all([0, -1, 1.5, NaN].map((round) => enqueueReencrypt(jobs5, both, [stuck], { round }).then(() => false, () => true)))).every(Boolean));
   ok("fail (break m8): a page size of 0 (or not a whole number) is refused before anything is read", await runReencrypt({ firmId: FIRM_A, toVersion: 2 }, { box: both, stores, pageSize: 0 }).then(() => false, (e) => e instanceof RangeError) && await versionCounts(both, stores, 1.5).then(() => false, (e) => e instanceof RangeError));
 }
 

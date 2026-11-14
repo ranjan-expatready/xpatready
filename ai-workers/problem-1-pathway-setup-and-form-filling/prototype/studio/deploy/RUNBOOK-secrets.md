@@ -26,6 +26,8 @@ With `PLATFORM_ENVIRONMENT` `test` or `production`, **every** setting is require
 
 Secret values never reach a screen, a response, a log line or an audit record (SA-8-3): the app holds each as a `Secret` that prints as `[secret NAME]`; only the adapter that calls the provider reads the value. PF-23's log redaction drops these names (`SECRET_SETTING_NAMES`). Once loaded, the provider keys and the key ring are removed from the process's environment, so a child process (PDF reader, form filler) never inherits them; `DATABASE_URL` stays until `api/src/core.ts` reads it through the loader (a later row).
 
+**Known limit (open, for PF-8):** removing a value from the running process's environment does not erase the environment block the process started with: a child running as the same user can still read it from `/proc/<parent pid>/environ`. Today's container image runs no PDF reader or form filler (Dockerfile: no Python, poppler or qpdf), so no child there handles untrusted files. Before one does, PF-8 chooses one of: the app fetches its secrets from Secrets Manager at start with the task's role (nothing in the task's environment), or untrusted-file readers run as another user or in their own task.
+
 ## 2. Making a secret-box key
 
 A key is 32 random bytes in base64, made on the engineer's machine and pasted straight into Secrets Manager:

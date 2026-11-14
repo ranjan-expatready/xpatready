@@ -19,15 +19,23 @@ export type ReencryptJobs = {
 /** One key per firm, version and round: a key never queues twice, so a stuck rotation is re-run as round 2, 3, … (break m5). */
 export const reencryptJobKey = (firmId: string, toVersion: number, round = 1) => `${SECRET_BOX_REENCRYPT_JOB}:${firmId}:v${toVersion}${round > 1 ? `:r${round}` : ""}`;
 
-/** Puts one re-encrypt job per firm that has a sealed value in any store; returns those firm ids. `round` re-runs a rotation. */
+/**
+ * Puts one re-encrypt job per firm that has a sealed value in any store; returns the firm ids whose job was newly queued
+ * (a key already used queues nothing, so an engineer never reads "queued" when it was not). `round` re-runs a rotation:
+ * a whole number from 1 to 100, anything else refused (break m5 re-check).
+ */
 export async function enqueueReencrypt(jobs: ReencryptJobs, box: SecretBoxPort, stores: SealedValueStore[], opts: { round?: number } = {}): Promise<string[]> {
-  const round = opts.round ?? 1;
+  const round = ReencryptPayload.shape.round.unwrap().parse(opts.round ?? 1);
   const firms = [...new Set((await Promise.all(stores.map((s) => s.firms()))).flat())].sort();
   const toVersion = box.currentVersion();
   // Every payload is checked before the first is queued: one bad firm id never leaves the rest unqueued (review m4).
   const payloads = firms.map((firmId) => ReencryptPayload.parse({ firmId, toVersion, ...(round > 1 ? { round } : {}) }));
-  for (const p of payloads) await jobs.enqueue(SECRET_BOX_REENCRYPT_JOB, p, { key: reencryptJobKey(p.firmId, toVersion, round), firmId: p.firmId });
-  return firms;
+  const queued: string[] = [];
+  for (const p of payloads) {
+    const r = await jobs.enqueue(SECRET_BOX_REENCRYPT_JOB, p, { key: reencryptJobKey(p.firmId, toVersion, round), firmId: p.firmId });
+    if ((r as { queued?: boolean } | undefined)?.queued !== false) queued.push(p.firmId);
+  }
+  return queued;
 }
 
 export type ReencryptResult = {

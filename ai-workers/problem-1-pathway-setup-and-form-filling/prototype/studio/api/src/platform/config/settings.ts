@@ -67,10 +67,16 @@ export class ConfigRefused extends Error {
   }
 }
 
-/** A Map whose set, delete and clear throw: the key ring is fixed once loaded (break m6). */
-function frozenMap<K, V>(m: Map<K, V>): ReadonlyMap<K, V> {
-  const no = () => { throw new TypeError("The secret-box key ring is fixed at start-up."); };
-  return Object.freeze(Object.assign(m, { set: no, delete: no, clear: no }));
+/** A read-only view of a private Map: no set, delete or clear, and not a Map, so Map.prototype.set.call on it throws
+ *  too (break m6). The key ring is fixed once loaded. */
+function frozenMap<K, V>(src: Map<K, V>): ReadonlyMap<K, V> {
+  const m = new Map(src);
+  const view: ReadonlyMap<K, V> = {
+    get: (k) => m.get(k), has: (k) => m.has(k), get size() { return m.size; },
+    forEach: (cb, self) => m.forEach((v, k) => cb.call(self, v, k, view)),
+    entries: () => m.entries(), keys: () => m.keys(), values: () => m.values(), [Symbol.iterator]: () => m[Symbol.iterator](),
+  };
+  return Object.freeze(view);
 }
 
 /** Reads and checks every setting from `env`; throws ConfigRefused naming each missing or invalid one. */
