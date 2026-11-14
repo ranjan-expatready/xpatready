@@ -9,3 +9,7 @@ Item 6 (Housekeeping), word for word, moved 09:5x IST:
 Item 3 (BK-20/BK-24), word for word, moved 09:5x IST:
 
 3. **BK-20/BK-24:** Adobe Validate failed on the spouse's IMM 1295 (question 7 blank; field-map fact names differ). **BK-24 cloud lane** (`bk24-imm1295-q7`) running. When it merges: the Lead re-runs BK-20 by computer use (Acrobat; the Open dialog needs full-screen control, it opens on the LG screen; demo case SAMPLE-SP-FAMILY-1, generate IMM 1295 spouse and IMM 5257 child; scratch script `bk20-make-copies.ts` pattern: `node --import tsx` from studio, never the tsx CLI in the sandbox). Walk 2 waits on it.
+
+Item 5 (qa #1730), word for word, moved 10:1x IST:
+
+5. **qa #1730** (BK-13, B170c, BK-18 Works) labelled, in the records queue: Works 96/98 when it merges. Founder looks due: FO-4, PF-6, FO-5s, PF-5s (~30 min each).
