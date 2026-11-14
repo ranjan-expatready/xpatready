@@ -107,6 +107,7 @@ svg text{font-family:var(--sans)}
 .trend{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
 .trend>div{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;cursor:help}
 .err{border:2px solid var(--bad);background:var(--bad-soft);color:var(--ink);border-radius:8px;padding:14px;margin:18px 0}
+details#details{margin:14px 0}details#details>summary{cursor:pointer;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font:600 15px/1.3 var(--sans);color:var(--ink2)}details#details[open]>summary{color:var(--ink)}
 .srcbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--ink);color:var(--bg);font-size:12.5px;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:none}
 .srcbar.on{display:block}
 .srcbar b{font-weight:600}
@@ -199,7 +200,7 @@ function rSystem(){
   var vs=D.value_stream;
   var h='<div class="svgwrap" id="vsm"></div><p class="small muted"'+S(vs.note)+'>'+esc(vs.note)+' The orange box is the stage taking the most time.</p>';
   h+='<h3>Our team right now</h3>'+rTeam();
-  return section("02","map","You are here: the factory","Each row moves left to right. The count is how many sit in that stage now; the time is their median wait.",h);
+  return section("05","map","You are here: the factory","Each row moves left to right. The count is how many sit in that stage now; the time is their median wait.",h);
 }
 function drawVSM(){
   var host=document.getElementById("vsm");if(!host)return;
@@ -242,7 +243,7 @@ function rStatus(){
    '<div'+S(src(s.next_committed))+'><div class="k">Next committed date</div><div class="v">'+(nc?esc(short(nc.date)):"none")+'</div><div class="s">'+(nc?esc(nc.what):"")+'</div></div>'+
    '<div'+S(src(s.build_forecast))+'><div class="k">Build forecast</div><div class="v">'+(fc&&fc.date?esc(short(fc.date))+(fc.date_to?"\u2013"+esc(short(fc.date_to)):""):"none")+'</div><div class="s">'+(fc?esc(fc.kind)+" \u00b7 "+esc(fc.source):"")+'</div></div>'+
    '<div'+S("generated "+D.freshness.generated_ist)+'><div class="k">Data age</div><div class="v">'+ageText(dataAgeH())+'</div><div class="s">main '+esc(v(D.freshness.main_sha)||"n/a")+'</div></div></div>';
-  return section("03","status","Status in one line","Where Release 1 stands today, against the dates.",h);
+  return section("02","status","On track?","Release 1 and the proof of concept, each against its dates. Two numbers, never mixed (P-592).",h);
 }
 
 /* 4 plan */
@@ -251,12 +252,12 @@ function rPlan(){
   var ds=p.dates.slice().sort(function(a,b){if(a.level!==b.level)return a.level==="high"?-1:1;return (a.date||"9999").localeCompare(b.date||"9999");});
   ds.forEach(function(d){h+='<tr'+S(p.src+" \u00b7 "+d.source+(d.note?" \u00b7 "+d.note:""))+'><td>'+esc(d.level)+'</td><td>'+esc(d.what)+(d.note?'<div class="small muted">'+esc(d.note)+'</div>':"")+'</td><td class="mono" style="white-space:nowrap">'+(d.date?esc(fmtDate(d.date))+(d.date_to?" \u2013 "+esc(fmtDate(d.date_to)):""):'<span class="muted">not dated</span>')+'</td><td class="n">'+(d.days_left==null?"":d.days_left<0?'<span class="muted">past</span>':d.days_left)+'</td><td>'+pill(d.kind,d.kind==="committed"?"good":"wait")+'</td><td class="mono small">'+esc(d.source)+'</td></tr>';});
   h+='</tbody></table></div><p class="small muted">Dates kept in cockpit/plan.json, as of '+esc(p.as_of)+'; each names the decision that sets it.</p>';
-  return section("04","plan","Plan and dates","High-level and mid-level dates in one table; forecasts stay forecasts until measured.",h);
+  return section("06","plan","Plan and dates","High-level and mid-level dates in one table; forecasts stay forecasts until measured.",h);
 }
 
 /* 5 architecture */
 function rArch(){
-  return section("05","arch","Product architecture","Each module, filled by the share of its Release 1 rows at qa Works (dark) and merged (light). Tap a module for its capabilities.",
+  return section("07","arch","Product architecture","Each module, filled by the share of its Release 1 rows at qa Works (dark) and merged (light). Tap a module for its capabilities.",
     '<div class="svgwrap" id="archsvg"></div><div class="legend"><span class="pill t-good">qa Works share</span><span class="pill t-prog">merged share</span></div><div class="modlist" id="modlist"><p class="small muted">Tap a module to list its capabilities.</p></div>');
 }
 function drawArch(){
@@ -305,7 +306,7 @@ function rCaps(){
     h+='<div class="small muted" style="margin:6px 0 3px">'+esc(ms)+'</div><div class="sq">';
     g.forEach(function(q){var t=tone(q.status);h+='<i style="background:'+toneVar(t)+(t==="none"?";background:transparent;border:1.5px solid var(--none)":"")+'" title="'+esc(q.id+" "+q.status+": "+q.name)+'" data-src="'+esc(q.id+" \u00b7 "+q.status+" \u00b7 "+q.name+" \u2014 "+src(C.qa))+'"></i>';});h+='</div>';});
   h+='<div class="legend">'+pill("Works","good")+pill("Built, awaiting qa","prog")+pill("Partial","wait")+pill("Broken","bad")+pill("Not tested or built","none")+'</div>';
-  return section("06","caps","Capabilities","Every Release 1 row by group with its status, then the qa capabilities as one square each.",h);
+  return section("08","caps","Capabilities","Every Release 1 row by group with its status, then the qa capabilities as one square each.",h);
 }
 
 /* 7 building */
@@ -319,7 +320,7 @@ function rBuilding(){
   h+='</tbody></table></div><p class="small muted">Faded rows are records PRs (lead:, qa:).</p>';
   var ow=v(B.owners)||[];
   if(ow.length){h+='<h3>Row owners in BACKLOG.md</h3><div class="box"><table'+S(src(B.owners))+'><thead><tr><th>Owner</th><th>Journey</th><th>Rows</th></tr></thead><tbody>';ow.forEach(function(o){h+='<tr><td>'+esc(o.owner)+'</td><td>'+esc(o.journey)+'</td><td class="small">'+esc(o.rows)+'</td></tr>';});h+='</tbody></table></div><p class="small muted">'+esc(src(B.owners))+'</p>';}
-  return section("07","building","Building: who is doing what","Every open pull request, the stage it sits at and how long since its last push. Sessions are in section 02.",h);
+  return section("09","building","Building: who is doing what","Every open pull request, the stage it sits at and how long since its last push. Sessions are in the factory section.",h);
 }
 
 /* 8 quality */
@@ -334,7 +335,7 @@ function rQuality(){
   h+='<h3>Open Major and Critical ('+mj.length+')</h3><div class="box"><table><thead><tr><th>Bug</th><th>Severity</th><th>Capability</th><th>What happens</th></tr></thead><tbody>';
   mj.forEach(function(b){h+='<tr'+S(Q.src)+'><td class="mono">'+esc(b.id)+'</td><td>'+pill(b.sev,b.sev==="Critical"?"bad":"wait")+'</td><td class="mono small">'+esc(b.cap)+'</td><td class="small">'+esc(b.what)+'</td></tr>';});
   if(!mj.length)h+='<tr><td colspan="4" class="muted">None open.</td></tr>';
-  return section("08","quality","Testing and quality","What qa has found and not yet closed, and whether proven capabilities slipped.",h+'</tbody></table></div>');
+  return section("10","quality","Testing and quality","What qa has found and not yet closed, and whether proven capabilities slipped.",h+'</tbody></table></div>');
 }
 
 /* 9 devops */
@@ -359,7 +360,7 @@ function rDevops(){
    kpi("CI minutes a day",nz(v(p.ci_min_per_day)),"run time (approx), 7-day average",src(p.ci_min_per_day))+
    kpi("CI time thrown away",nz(v(p.thrown_share),"%"),"target under 20%",src(p.thrown_share))+'</div>';
   h+='<h3>Merges per day, 14 days</h3>'+bars(m.days,m.all,m.app,m.partial,src(D.merges_per_day))+'<div class="legend"><span class="pill t-prog">all merges</span><span class="pill t-good">app-code merges (P-500)</span></div>';
-  return section("09","devops","DevOps: delivery pipeline","How fast and how safely changes reach main. DORA's four keys, with proxies marked.",h);
+  return section("11","devops","DevOps: delivery pipeline","How fast and how safely changes reach main. DORA's four keys, with proxies marked.",h);
 }
 
 /* 10 resources */
@@ -372,7 +373,7 @@ function rRes(){
    kpi("Burn",L(R.burn_pct_per_h," %/h"),"",src(R.burn_pct_per_h))+
    kpi("Paid today",v(R.paid_usd_today)==null?L(R.paid_usd_today):"US$"+esc(v(R.paid_usd_today)),"",src(R.paid_usd_today))+
    kpi("GitHub API left",nz(v(R.api_left)),"this hour, after the run",src(R.api_left))+'</div>'+(ex?'<p class="small">'+ex+'</p>':"");
-  return section("10","resources","Resources","What we are spending: plan capacity, money and disk.",h);
+  return section("12","resources","Resources","What we are spending: plan capacity, money and disk.",h);
 }
 
 /* 11 risks */
@@ -382,7 +383,7 @@ function rRisks(){
   h+='</tbody></table></div>';
   var un=v(K.unlisted)||[];
   if(un.length)h+='<p class="small"'+S(src(K.unlisted))+'>'+pill(un.length+" launch items not in this list","wait")+' '+esc(un.map(function(x){return x.id;}).join(", "))+'</p>';
-  return section("11","risks","Risks","What could stop the first real firm going live, who owns it and by when. \"Gate\" means before the first real firm's data.",h);
+  return section("03","risks","Risks","What could stop the first real firm going live, who owns it and by when. \"Gate\" means before the first real firm's data.",h);
 }
 
 /* 12 healing */
@@ -393,7 +394,7 @@ function rHeal(){
    kpi("Blocked lanes",nz(bl.length),bl.map(function(b){return esc(b.name);}).join(", "),src(H.blocked),bl.length?"alert":"")+
    kpi("PRs red now",nz(cr.length),cr.map(function(c){return "#"+c.n+" "+ageText(c.push_age_h);}).join(", "),src(H.ci_red_prs))+
    kpi("Open questions",nz(qs.length),qs.map(function(q){return "#"+q.n+" "+ageText(q.age_h);}).join(", "),src(H.questions))+'</div>';
-  return section("12","healing","Is everyone autonomous and healing?","Whether lanes fix themselves or need a push, and what is stuck now.",h);
+  return section("13","healing","Is everyone autonomous and healing?","Whether lanes fix themselves or need a push, and what is stuck now.",h);
 }
 
 /* 13 improving */
@@ -410,7 +411,7 @@ function rImprove(){
     var arrow=t.dir==="up"?"rising":t.dir==="down"?"falling":t.dir==="flat"?"flat":"no comparison";
     var tn=t.better===true?"good":t.better===false?"bad":"none";
     h+='<div'+S(t.src+" \u00b7 this week "+t.this_week+" vs week before "+t.week_before)+'><div class="small">'+esc(t.label)+'</div><div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px"><span class="mono" style="font-size:20px;font-weight:600">'+nz(t.latest)+'</span>'+pill(arrow,tn)+'</div>'+spark(I.series[k],t.better)+'<div class="small muted">7-day average '+nz(t.this_week)+' against '+nz(t.week_before)+'</div></div>';});
-  return section("13","improving","How we are improving","Fourteen days of the measures that matter, this week against the week before.",h+'</div>');
+  return section("14","improving","How we are improving","Fourteen days of the measures that matter, this week against the week before.",h+'</div>');
 }
 
 /* 14 learnings */
@@ -419,7 +420,7 @@ function rLearn(){
   L.kept.forEach(function(k){h+='<li'+S("cockpit/learnings.json \u00b7 "+k.source)+'><span class="tag">'+esc(short(k.date))+'</span><div><div>'+esc(k.lesson)+'</div><div class="small muted">Changed: '+esc(k.changed)+' ('+esc(k.source)+')</div></div></li>';});
   h+='</ul><h3>Newest decisions</h3><ul class="items">';
   L.decisions.forEach(function(d){h+='<li'+S(d.src)+'><span class="tag">'+esc(d.id)+'</span><div class="small">'+esc(d.title)+'</div></li>';});
-  return section("14","learnings","Learnings","What we learned and what it changed, plus the newest decisions.",h+'</ul>');
+  return section("15","learnings","Learnings","What we learned and what it changed, plus the newest decisions.",h+'</ul>');
 }
 
 /* 15 backlog */
@@ -427,26 +428,30 @@ function rBacklog(){
   var B=D.backlog,by=v(B.by_lane)||{},h='<div class="box"><table'+S(src(B.by_lane))+'><thead><tr><th>Lane</th><th class="n">Ready</th><th class="n">Blocked</th><th class="n">In PR</th><th class="n">Merged</th></tr></thead><tbody>';
   Object.keys(by).sort().forEach(function(k){var r=by[k];h+='<tr><td>'+esc(k)+'</td><td class="n">'+r.ready+'</td><td class="n">'+r.blocked+'</td><td class="n">'+r["in PR"]+'</td><td class="n">'+r.merged+'</td></tr>';});
   h+='</tbody></table></div><p class="small"'+S(src(B.x_rows))+'>After the first build (X rows): <b class="mono">'+nz(v(B.x_rows))+'</b></p><p class="small muted">'+esc(src(B.by_lane))+'</p>';
-  return section("15","backlog","Backlog","Rows waiting to be built, by lane: ready to start, or blocked by another row.",h);
+  return section("16","backlog","Backlog","Rows waiting to be built, by lane: ready to start, or blocked by another row.",h);
 }
 
 
 /* library: one master per document (P-593); edit this list when a master changes */
 var LIBRARY=[
- ["Release 1 checklist","The one tracking page for Release 1: 101 rows and their status, done for a row, launch readiness (P-592)","MVP-CHECKLIST.md","@MVP-CHECKLIST.md"],
- ["Capability sourcing map","Release 1 scope baseline, draft 6: 112 rows, build or buy (P-586)","published page","https://claude.ai/artifact/8Fr4UUNR8yxwZrQ4nVi6wC"],
- ["CRM shell decision","Own build, no open-source CRM shell (P-553, P-563)","published page","https://claude.ai/artifact/BReRqAYujJXhKf33Rgt9Vo"],
- ["Solution 1 one-pager","Requirements and the whole workflow, draft 4.3 (D249)","reference/1-requirements-and-workflow/solution-1-one-pager-v4.3-LATEST.html","@reference/1-requirements-and-workflow/solution-1-one-pager-v4.3-LATEST.html"],
- ["Factory plan","How we build: lanes, merges, gates; decisions D1-D6 (P-506)","reference/2-factory-plan/factory-plan-2026-11-12-LATEST.md","@reference/2-factory-plan/factory-plan-2026-11-12-LATEST.md"],
- ["Pathway Configurator handover","Verdict, how it works, what is left (private: the Mac's reference/private, not on GitHub)","reference/private/pathway-configurator-handover-2026-11-10-LATEST.html",""],
- ["Rules in force","Every rule once, with the decision that set it","RULES.md","@RULES.md"],
- ["Decisions","Every founder and Lead decision, newest first","DECISIONS.md","@DECISIONS.md"]
+ ["Team requirements (the PRD)","What the product must do: the team's requirement rows (AG-*), name-free copy, refreshed from the newest snapshot","Living","../domain/","@../domain/"],
+ ["Capability sourcing map","Release 1 scope baseline, draft 6: 112 rows, build or buy (P-586)","Living","published page","https://claude.ai/artifact/8Fr4UUNR8yxwZrQ4nVi6wC"],
+ ["Release 1 checklist","The one tracking page: 101 rows and their status, done for a row, launch readiness (P-592)","Living","MVP-CHECKLIST.md","@MVP-CHECKLIST.md"],
+ ["Backlog","Every row to build, in order, with its Done when","Living","BACKLOG.md","@BACKLOG.md"],
+ ["Contracts between modules","How platform, front office and case side connect: events, ports, firm walls","Living","design/*-contract*","@design/"],
+ ["Rules in force","Every rule once, with the decision that set it","Living","RULES.md","@RULES.md"],
+ ["Decisions","Every founder and Lead decision, newest first","Living","DECISIONS.md","@DECISIONS.md"],
+ ["CRM shell decision","Own build, no open-source CRM shell (P-553, P-563)","Decision record","published page","https://claude.ai/artifact/BReRqAYujJXhKf33Rgt9Vo"],
+ ["Factory plan","How we build: lanes, merges, gates; decisions D1-D6 (P-506)","History (12 Nov)","reference/2-factory-plan/","@reference/2-factory-plan/factory-plan-2026-11-12-LATEST.md"],
+ ["Solution 1 one-pager","The proof of concept's requirements and workflow, draft 4.3 (D249)","History (19 Oct)","reference/1-requirements-and-workflow/","@reference/1-requirements-and-workflow/solution-1-one-pager-v4.3-LATEST.html"],
+ ["Product home (PRODUCT.md)","The proof of concept's words and map","History (2 Nov)","PRODUCT.md","@PRODUCT.md"],
+ ["Pathway Configurator handover","The proof's verdict, how it works, what is left (private: the Mac only)","History (10 Nov)","reference/private/",""]
 ];
 function rLibrary(){
-  var h='<div class="box"><table><thead><tr><th>Document</th><th>What it is</th><th>Master</th></tr></thead><tbody>';
+  var h='<div class="box"><table><thead><tr><th>Document</th><th>What it is</th><th>Status</th><th>Master</th></tr></thead><tbody>';
   var base=(D.freshness&&D.freshness.library_base)||null;
-  LIBRARY.forEach(function(d){var u=d[3];if(u&&u.charAt(0)==='@')u=base?base+u.slice(1):'';h+='<tr><td>'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(d[0])+'</a>':esc(d[0]))+'</td><td class="small">'+esc(d[1])+'</td><td class="mono small">'+esc(d[2])+'</td></tr>';});
-  return section("01b","library","Library: master documents","One master per document (P-593). Everything else is a view of these; nothing is kept twice.",h+'</tbody></table></div>');
+  LIBRARY.forEach(function(d){var u=d[4];if(u&&u.charAt(0)==='@')u=base?base+u.slice(1):'';h+='<tr><td>'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(d[0])+'</a>':esc(d[0]))+'</td><td class="small">'+esc(d[1])+'</td><td>'+pill(d[2],d[2]==="Living"?"good":d[2]==="Decision record"?"prog":"none")+'</td><td class="mono small">'+esc(d[3])+'</td></tr>';});
+  return section("04","library","Library: master documents","One master per document (P-593). Living ones are kept current; history ones are kept for reference and no longer updated.",h+'</tbody></table></div>');
 }
 function rFresh(){
   var F=D.freshness,R=D.run||{};
@@ -456,14 +461,14 @@ function rFresh(){
    kpi("Pipeline numbers age",ageText(v(F.flow_measure_age_h)),"",src(F.flow_measure_age_h))+
    kpi("Script run",nz(R.seconds," s"),nz(R.api_calls)+" API calls","cockpit-data.py")+'</div>';
   if(R.errors&&R.errors.length)h+='<h3>Notes from the run</h3><ul class="items small">'+R.errors.map(function(e){return '<li>'+esc(e)+'</li>';}).join("")+'</ul>';
-  return section("16","fresh","Freshness","How old each input is.",h);
+  return section("17","fresh","Freshness","How old each input is.",h);
 }
 
 function render(){
   renderStrip();
-  var parts=[rNeeds,rLibrary,rSystem,rStatus,rPlan,rArch,rCaps,rBuilding,rQuality,rDevops,rRes,rRisks,rHeal,rImprove,rLearn,rBacklog,rFresh];
-  var out="";parts.forEach(function(f){try{out+=f();}catch(e){out+='<section><p class="err">This block could not be drawn: '+esc(e.message)+'</p></section>';}});
-  document.getElementById("body").innerHTML=out;
+  var top=[rNeeds,rStatus,rRisks,rLibrary],parts=[rSystem,rPlan,rArch,rCaps,rBuilding,rQuality,rDevops,rRes,rHeal,rImprove,rLearn,rBacklog,rFresh];
+  var out="",one=function(f){try{return f();}catch(e){return '<section><p class="err">This block could not be drawn: '+esc(e.message)+'</p></section>';}};top.forEach(function(f){out+=one(f);});out+='<details id="details"><summary>Details: factory, plan, architecture, capabilities, building, quality, pipeline, resources, healing, improving, learnings, backlog, freshness</summary>';parts.forEach(function(f){try{out+=f();}catch(e){out+='<section><p class="err">This block could not be drawn: '+esc(e.message)+'</p></section>';}});
+  out+="</details>";document.getElementById("body").innerHTML=out;document.getElementById("details").addEventListener("toggle",function(){if(this.open){drawVSM();drawArch();}});
   drawVSM();drawArch();
 }
 var rt=null;window.addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(function(){if(D){drawVSM();drawArch();}},150);});
