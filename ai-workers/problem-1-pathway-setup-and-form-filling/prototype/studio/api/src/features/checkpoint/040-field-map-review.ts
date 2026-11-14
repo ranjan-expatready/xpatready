@@ -5,12 +5,20 @@ import type { CheckpointStep } from "./_context.ts";
 import { irm0002 } from "./030-irm0002.ts";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { STUDIO } from "../../core.ts";
+import { revise, STUDIO, strip } from "../../core.ts";
+import { effective } from "../../../../engine/snapshot.ts";
 
 /** QA-400 (P-485): the author's corrections at review (samples/review-corrections.json): a proposed key the author changes
  *  to another library field on the draft's page, with the reason it records. Data, never a form or program in code. */
 type Correction = { proposed: string; key: string; valueType?: string; meaning?: string; note: string };
-export const REVIEW_CORRECTIONS: Correction[] = (JSON.parse(readFileSync(join(STUDIO, "samples", "review-corrections.json"), "utf8")) as { corrections: Correction[] }).corrections;
+const REVIEW_FILE = JSON.parse(readFileSync(join(STUDIO, "samples", "review-corrections.json"), "utf8")) as { corrections: Correction[]; boxes?: BoxCorrection[] };
+export const REVIEW_CORRECTIONS: Correction[] = REVIEW_FILE.corrections;
+/** BK-24 (P-533, P-449): the author's correction of one form field on an applied draft (samples/review-corrections.json
+ *  "boxes"), where changing the proposed field itself would change every form field that reads it on that draft (IMM
+ *  1295's question 7 and 8 rows read one residence-period list). The key the saved answer proposed is checked first.
+ *  Data, never a form or program in code. */
+type BoxCorrection = { edition: string; box: string; proposed: string; key: string; transform: string; note: string };
+export const BOX_CORRECTIONS: BoxCorrection[] = REVIEW_FILE.boxes ?? [];
 
 /** BK-16 (P-496): the sources a combination's setup marks "later" in samples/wave1.json (a form the library gains only
  *  for a family member's rule, e.g. a spouse's own application), each kept only when that setup lists it among its
@@ -104,6 +112,16 @@ export default {
           applied++;
         });
       } catch (e) { refused.push(`${form}: ${said(e)}`); }
+    }
+    // BK-24: then each form field the author corrects on its applied draft, before any release, with the reason it records.
+    for (const x of BOX_CORRECTIONS) {
+      const ed = await db.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId, editionLabel: x.edition } }, select: { id: true } });
+      const rows = ed ? await db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: x.box } }) : [];
+      const now = effective(rows, (m) => m.dataPath, "draft")[0];
+      if (!now || now.outcome !== "mapped" || now.canonicalFieldKey !== x.proposed) { refused.push(`${x.edition} ${x.box}: the saved answer does not map it to ${x.proposed} (it reads ${now?.canonicalFieldKey ?? "nothing"}), so it was not corrected`); continue; }
+      if (now.canonicalFieldKey === x.key && now.transform === x.transform) continue;
+      await revise(db.formFieldMap, rows, { canonicalFieldKey: x.key, transform: x.transform, origin: "HUMAN", confidence: null, reason: `${x.note} (${author.name})`.slice(0, 500) }, author.id, strip);
+      corrected++;
     }
     fieldMapReview(ctx).applied = applied;
     const waitingForAi = ctx.six.drafts.waiting_for_draft_with_ai;

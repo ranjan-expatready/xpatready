@@ -139,7 +139,8 @@
    "person.minor_studying_without_parent": false,
    "relationship.union_start_date": "2016-04-10",
    "person.present_occupation": "HOMEMAKER",
-   "person.current_residence_country": "India"
+   "person.current_residence_country": "India",
+   "person.current_residence_status": "Citizen"
   },
   "child": {
    "person.birth_city": "MUMBAI",
@@ -190,7 +191,6 @@
   "person.uscis_number": "Not a lawful permanent resident of the United States.",
   "organisation.name": "The spouse applies for an open work permit: there is no employer to name (walk 1 W2: IMM 1295 still asks it).",
   "organisation.address": "The spouse applies for an open work permit: there is no employer's address.",
-  "person.immigration_status": "The spouse applies from the country of citizenship, where they live.",
   "case.submission_office_name": "Asked only when the application was already submitted; this is a new application.",
   "case.expenses_paid_by_other": "Asked only when someone other than the student or the parents pays.",
   "case.lmia_or_offer_number": "An open work permit has no LMIA or offer of employment.",
