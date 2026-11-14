@@ -12,6 +12,7 @@ COMMON="$(git rev-parse --path-format=absolute --git-common-dir)" || exit 2; ROO
 # Source = this clone's origin on GitHub; backup = the same owner's "<name>-backup" (no names written here, P-81).
 SRC="${BACKUP_SRC:-$(git -C "$ROOT" remote get-url origin)}"; SRC="${SRC%.git}.git"
 DST="${BACKUP_DST:-${SRC%.git}-backup.git}"
+[ "$DST" = "$SRC" ] && { echo "backup: backup and source are the same repository"; exit 2; }
 M="$ROOT/.tools/backup-mirror.git"
 if [ ! -d "$M" ]; then
   mkdir -p "$ROOT/.tools" && git clone -q --bare --reference "$COMMON" "$SRC" "$M" || { echo "backup: clone failed"; exit 2; }
@@ -26,6 +27,7 @@ out=$(push refs/heads/main:refs/heads/main); rc=$?
 rm -f "$M"/backup-chunk-*
 git -C "$M" for-each-ref --format='%(refname):%(refname)' refs/heads | grep -vx 'refs/heads/main:refs/heads/main' | split -l 50 - "$M/backup-chunk-"
 for f in "$M"/backup-chunk-*; do   # ref names never hold spaces (git check-ref-format), so word splitting is safe
+  [ -e "$f" ] || continue          # main alone: no chunk files, the glob stays literal
   o=$(push $(cat "$f")); r=$?; out="$out"$'\n'"$o"; [ "$r" -ne 0 ] && rc=$r; rm -f "$f"
 done
 o=$(push 'refs/tags/*:refs/tags/*'); r=$?; out="$out"$'\n'"$o"; [ "$r" -ne 0 ] && rc=$r

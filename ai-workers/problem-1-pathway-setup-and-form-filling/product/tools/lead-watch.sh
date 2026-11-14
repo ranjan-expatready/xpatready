@@ -109,9 +109,11 @@ say "four  Works on main ${works}/${active} (${bym% }) (+$((works - $(cat "$day"
 # the Lead runs tools/backup-refresh.sh (needs allowed_domains github.com). Unreadable = said, never a silent pass.
 o=$(git remote get-url origin 2>/dev/null); o=${o%.git}; o=${o#*github.com[:/]}   # owner/name of origin; backup = "<name>-backup"
 bk=$(gh api "repos/${BACKUP_REPO:-${o}-backup}" -q .pushed_at 2>/dev/null)
-if [ -z "$bk" ]; then ACT "backup: last push unreadable (repository missing or no access): check it, then run tools/backup-refresh.sh"
-else age=$(( ( $(date -u +%s) - $(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$bk" +%s 2>/dev/null || date -u -d "$bk" +%s) ) / 3600 ))
-  say "backup last push ${age} h ago"; [ "$age" -ge 24 ] && ACT "backup ${age} h old: run tools/backup-refresh.sh (allowed_domains github.com)"
-fi
+ts=$(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$bk" +%s 2>/dev/null || date -u -d "$bk" +%s 2>/dev/null)
+case "$ts" in   # empty, "null" (the curl fallback's jq -r) or any unparsable value is an ACT, never a silent pass
+  ''|*[!0-9]*) ACT "backup: last push unreadable (${bk:-empty}): check the repository, then run tools/backup-refresh.sh";;
+  *) age=$(( ( $(date -u +%s) - ts ) / 3600 )); say "backup last push ${age} h ago"
+     [ "$age" -ge 24 ] && ACT "backup ${age} h old: run tools/backup-refresh.sh (allowed_domains github.com)";;
+esac
 
 exit "$act"
