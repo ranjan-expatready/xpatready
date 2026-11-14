@@ -84,3 +84,4 @@ Fold each answer into contracts §7 and the affected rows (PF-5; PF-4b/PF-6; FO-
 * 14 Nov 07:49 IST: Lead 39 ruling: Atomic CRM is a design reference only (no code copied, no licence file); FO-4 row and tech-gate note aligned.
 * 14 Nov 07:50 IST: P-564 (email one-time code before signing, firm setting on by default) folded into contracts §7 and FO-6. Q2 (sign-up link) goes to the founder next.
 * 14 Nov 07:53 IST: hand-over written (P-565); Lead B stops.
+* 14 Nov 07:56 IST: Lead B (2) (session `f68b2550…`, worktree `lead-b-2-front-office-1e7bc9`) took over from 851ebfd6 at Lead 40's go; read this file + RULES (as of P-565). PF-3 #1728 approved at c5ba30f8, waits on the release holder's P-423 diff read and label. Next: PF-4 brief.
