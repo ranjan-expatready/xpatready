@@ -1,0 +1,125 @@
+// platform-register.prisma — complaints (later data requests, legal holds, breaches). Owner: Lead B (platform, contracts §9).
+//
+// PF-21 (P-579, P-584 (8), P-600; BACKLOG row PF-21, moved from FO-13k rev 12; contracts §0, §7, §9). The firm's complaints
+// record: a complaint made to the firm by a client, a prospect or any other person, each handling step, the outcome and
+// the dates (Code of Professional Conduct for College Licensees, SOR/2022-128, s. 29 "must promptly respond to any
+// complaints made to the licensee by a client", s. 24(3)(r), s. 37; legal reading Unconfirmed: no counsel). The College's
+// by-laws and complaint guidance are not yet read (its site is outside the cloud lane's network, 14 Nov), so every field,
+// list and period here is Sample until they are. Platform rows carry no workspace_id: the demo reset leaves them.
+// Rules Prisma cannot say (insert-only events, no delete for anyone, a closed complaint never changes, fixed facts, the
+// complainant's shape) are plat_ triggers and checks in the migration 20261114200000_pf21_complaints. The complainant is
+// named by kind + id, never a foreign key into another module (front office or case side): the id is the other module's.
+// No audit table: every change writes the one trail through AuditPort (contracts §7).
+
+/// Who made the complaint (P-584 (8)): a front-office person (a lead, prospect or client of the firm), a party on a case,
+/// or another person, who has no record here and is named on the complaint itself.
+enum PlatComplaintSubjectKind {
+  FRONT_OFFICE_PERSON
+  CASE_PARTY
+  OTHER_PERSON
+}
+
+/// How the complaint reached the firm (Sample list until the by-laws are read).
+enum PlatComplaintChannel {
+  EMAIL
+  PHONE
+  IN_PERSON
+  LETTER
+  WEB_FORM
+  OTHER
+}
+
+/// What the complaint is about (Sample list until the by-laws are read).
+enum PlatComplaintCategory {
+  SERVICE
+  FEES
+  COMMUNICATION
+  CONDUCT
+  PRIVACY
+  OTHER
+}
+
+enum PlatComplaintStatus {
+  OPEN
+  CLOSED
+}
+
+/// The outcome, set once at closing (FO-13 rev 12's list).
+enum PlatComplaintOutcome {
+  RESOLVED
+  UPHELD
+  NOT_UPHELD
+  WITHDRAWN
+  REFERRED_TO_COLLEGE
+}
+
+/// One handling step. RECEIVED is the first event of every complaint; CLOSED the last that changes it; NOTE may follow a
+/// close (a closed complaint changes only by a new event); REMINDER_SENT is the system's acknowledgement reminder.
+enum PlatComplaintEventKind {
+  RECEIVED
+  ACKNOWLEDGED
+  STEP
+  NOTE
+  RESPONSE_SENT
+  HANDLER_CHANGED
+  REMINDER_SENT
+  CLOSED
+}
+
+/// A complaint made to the firm. Kept for the keep period (map row 105), never deleted by anyone (trigger). While OPEN only
+/// the handler, the acknowledgement, the response date and the close change (each once, by trigger); once CLOSED nothing
+/// changes. acknowledge_by is received_at + the Sample period (2 business days in the firm's zone), set by the service.
+model PlatComplaint {
+  id                 String                   @id @default(uuid()) @db.Uuid
+  firmId             String                   @map("firm_id") @db.Uuid
+  subjectKind        PlatComplaintSubjectKind @map("subject_kind")
+  /// The other module's id of the person (front office or case side); empty for OTHER_PERSON.
+  subjectId          String?                  @map("subject_id") @db.Uuid
+  /// Needed for OTHER_PERSON (no record elsewhere); optional otherwise.
+  complainantName    String?                  @map("complainant_name")
+  complainantContact String?                  @map("complainant_contact")
+  receivedAt         DateTime                 @map("received_at") @db.Timestamptz
+  channel            PlatComplaintChannel
+  category           PlatComplaintCategory
+  summary            String
+  handlerStaffId     String                   @map("handler_staff_id") @db.Uuid
+  acknowledgeBy      DateTime                 @map("acknowledge_by") @db.Timestamptz
+  acknowledgedAt     DateTime?                @map("acknowledged_at") @db.Timestamptz
+  responseSentAt     DateTime?                @map("response_sent_at") @db.Timestamptz
+  status             PlatComplaintStatus      @default(OPEN)
+  outcome            PlatComplaintOutcome?
+  closedAt           DateTime?                @map("closed_at") @db.Timestamptz
+  recordedBy         String                   @map("recorded_by")
+  createdAt          DateTime                 @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime                 @updatedAt @map("updated_at") @db.Timestamptz
+
+  firm    PlatformFirm         @relation(fields: [firmId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  handler PlatformStaff        @relation(fields: [firmId, handlerStaffId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  events  PlatComplaintEvent[]
+
+  @@unique([firmId, id])
+  @@index([firmId, status, acknowledgeBy])
+  @@index([firmId, handlerStaffId])
+  @@index([firmId, subjectKind, subjectId])
+  @@map("plat_complaint")
+}
+
+/// One handling step of a complaint: insert-only (a trigger refuses update, delete and truncate). seq orders the steps.
+/// detail carries ids only; note is the handler's own words.
+model PlatComplaintEvent {
+  id          String                 @id @default(uuid()) @db.Uuid
+  seq         BigInt                 @default(autoincrement())
+  firmId      String                 @map("firm_id") @db.Uuid
+  complaintId String                 @map("complaint_id") @db.Uuid
+  kind        PlatComplaintEventKind
+  at          DateTime               @db.Timestamptz
+  actor       String
+  note        String?
+  detail      Json?
+  createdAt   DateTime               @default(now()) @map("created_at") @db.Timestamptz
+
+  complaint PlatComplaint @relation(fields: [firmId, complaintId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([firmId, complaintId, seq])
+  @@map("plat_complaint_event")
+}
