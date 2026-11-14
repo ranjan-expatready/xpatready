@@ -53,14 +53,24 @@ class Parsers(unittest.TestCase):
         self.assertEqual(cd.cell_ids("C8.2 Partial; BK-17, B5-filings"), ["BK-17", "B5-filings"])   # B5-filings is a BACKLOG row
         self.assertEqual(cd.cell_ids("FO-6v (held, P-561); QA-449"), ["FO-6v"])                   # decision and bug ids are not rows
 
-    def test_title_id(self):
-        self.assertEqual(cd.title_id("runtime: PF-3 — platform tables"), "PF-3")
-        self.assertEqual(cd.title_id("PF-3: platform tables"), "PF-3")
-        self.assertIsNone(cd.title_id("screens: C7.6 — BK-18 (QA-448)"))       # N2: the id must start the title
-        self.assertEqual(cd.loose_title_id("screens: C7.6 — BK-18 (QA-448)"), "BK-18")
-        self.assertEqual(cd.title_id("runtime: PF-4b — x"), "PF-4b")
-        self.assertIsNone(cd.title_id("lead: PF-3 records"))                     # records titles never count
-        self.assertIsNone(cd.title_id("merge queue: merged #1: runtime: PF-3 — x"))
+    def test_r1_title_token_match(self):
+        self.assertTrue(cd.title_has("runtime: PF-3 — platform tables", "PF-3"))
+        self.assertTrue(cd.title_has("screens: C7.6 — BK-18 (QA-448)", "BK-18"))   # anywhere in the title (R1)
+        self.assertFalse(cd.title_has("runtime: PF-4t — x", "PF-4"))
+        self.assertFalse(cd.title_has("runtime: PF-4b — x", "PF-4"))
+        self.assertFalse(cd.title_has("forms: BK-18 — x", "BK-1"))
+        self.assertFalse(cd.title_has("runtime: XPF-4 — x", "PF-4"))
+        self.assertTrue(cd.title_has("runtime: PF-4. done", "PF-4"))
+        self.assertTrue(cd.is_records({"title": "lead: STATE trim (records only)", "labels": []}))
+        self.assertTrue(cd.is_records({"title": "qa: retests", "labels": [{"name": "records"}]}))
+        self.assertFalse(cd.is_records({"title": "lead: tool", "labels": []}))
+
+    def test_r1_records_pr_never_counts(self):
+        pulls = jread(os.path.join(FIX, "github/pulls.json"))
+        pulls[0]["title"] = "runtime: PF-1 — first platform part (records only)"
+        _, c = run(snap_with({"github/pulls.json": pulls}))
+        self.assertNotIn(1, {r["map"] for r in c["rows"] if r["built"]})     # PF-1 has no other PR: row 1 is not built
+        self.assertEqual(c["pace"]["merged_changes"]["value"], 7)
 
     def test_brief_id_never_matches_a_longer_id(self):
         self.assertEqual(cd.brief_id("FO-1a.md"), "FO-1a")
@@ -86,24 +96,24 @@ class Pace(unittest.TestCase):
         cls.s, cls.c = run()
 
     def test_changes_per_day(self):
-        # Change dates (IST): PF-1 14, PF-2 16 (15 Nov 20:00 UTC), PF-4 16, PF-3 19 (#111; #103 does not start with PF-3),
-        # BK-1 10, BK-2 13, BK-3 20, BK-4 19 (Flags BK row); BK-5's PR has no app code; FO-5's merge is after taken_at.
-        # days since 13 Nov = 7, window 14..20 Nov: 1+0+2+0+0+2+1 = 6 → 6/7 = 0.857 → 0.86
+        # Change dates (IST): PF-1 14, PF-2 16 (15 Nov 20:00 UTC), PF-4 16, PF-3 18 (#103, the id anywhere, R1), FO-4 18 (#118),
+        # BK-1 10, BK-2 13, BK-3 20; BK-4 is not cited (R5); FO-5's merge is after taken_at.
+        # days since 13 Nov = 7, window 14..20 Nov: 1+0+2+0+2+0+1 = 6 → 6/7 = 0.857 → 0.86
         y = self.c["pace"]["changes_per_day"]
         self.assertEqual((y["value"], y["window_days"], y["merged_in_window"]), (0.86, 7, 6))
         self.assertEqual(self.c["pace"]["merged_changes"]["value"], 8)
 
     def test_remaining_scope(self):
-        # shaped rows 1,2,4,6,7,8: unmerged parts FO-1, FO-4 = 2; not shaped: row 3 (PF-4 merged) 3-1 = 2, row 5: 3 → 5; total 7
+        # shaped rows 1,2,4,6,7,8: unmerged part FO-1 = 1; not shaped: row 3 (PF-4 merged) 3-1 = 2, row 5: 3 → 5; total 6
         r = self.c["pace"]["remaining"]
-        self.assertEqual((r["value"], r["shaped_unmerged"], r["unshaped_rows"], r["unshaped_estimate"]), (7, 2, 2, 5))
-        self.assertEqual(r["flags_bk_unmerged"]["ids"], ["BK-5", "BK-6"])
+        self.assertEqual((r["value"], r["shaped_unmerged"], r["unshaped_rows"], r["unshaped_estimate"]), (6, 1, 2, 5))
+        self.assertNotIn("flags_bk_unmerged", r)
         self.assertEqual(r["label"], "estimate: 2 unshaped capabilities × 3 (P-586 (4), settled 19 Nov)")
 
     def test_built_and_proven(self):
         built = {r["map"]: r["built"] for r in self.c["rows"] if r["built"]}
-        self.assertEqual(built, {1: "2026-11-14", 2: "2026-11-19", 7: "2026-11-20"})
-        self.assertEqual(self.c["pace"]["built"]["value"], 3)
+        self.assertEqual(built, {1: "2026-11-14", 2: "2026-11-18", 7: "2026-11-20", 8: "2026-11-18"})
+        self.assertEqual(self.c["pace"]["built"]["value"], 4)
         self.assertEqual(self.c["pace"]["built"]["built_before"]["maps"], [6])
         self.assertIsNone(self.c["pace"]["proven"]["value"])
         self.assertIn("no qa id column", self.c["pace"]["proven"]["reason"])
@@ -111,16 +121,16 @@ class Pace(unittest.TestCase):
     def test_burnup(self):
         b = self.c["burnup"]
         self.assertEqual(b["days"][0], "2026-11-13")
-        self.assertEqual(b["built"], [0, 1, 1, 1, 1, 1, 2, 3])
+        self.assertEqual(b["built"], [0, 1, 1, 1, 1, 3, 3, 4])
         self.assertEqual(b["scope"], [None, None, None, None, None, 8, 8, 8])   # history lines 18, 19 Nov; today 8
-        self.assertEqual(b["x_end"], "2026-12-07")                               # later of H1 to (3 Dec) and the 85% date
+        self.assertEqual(b["x_end"], "2026-12-05")                               # later of H1 to (3 Dec) and the 85% date
 
     def test_forecast_inputs_and_pinned_dates(self):
         f = self.c["forecast"]
-        self.assertEqual(f["counts"], [0, 0, 0, 1, 0, 0, 1, 1, 0, 2, 0, 0, 2, 1])   # 7..20 Nov
+        self.assertEqual(f["counts"], [0, 0, 0, 1, 0, 0, 1, 1, 0, 2, 0, 2, 0, 1])   # 7..20 Nov
         self.assertEqual(f["sample"], "Release 1 changes merged per IST day, last 14 days")
         # pinned under seed 596 (regression; the deterministic cases below are worked by hand)
-        self.assertEqual((f["p50"]["value"], f["p85"]["value"]), ("2026-12-02", "2026-12-07"))
+        self.assertEqual((f["p50"]["value"], f["p85"]["value"]), ("2026-11-30", "2026-12-05"))
 
     def test_no_committed_date_line_and_grey_light(self):
         p = self.c["pace"]
@@ -136,19 +146,23 @@ class Pace(unittest.TestCase):
             pl["dates"][0].update(kw)
             return run(snap_with({"files/" + cd.REL + "/cockpit/plan.json": pl}))[1]["pace"]
         p = with_h1(kind="committed", date="2026-12-08", date_to="2026-12-10", tolerance_days=0)
-        self.assertEqual(p["changes_needed_per_day"]["value"], 0.35)       # 7 ÷ 20 days (20 Nov → 10 Dec)
-        self.assertEqual(p["light"]["state"], "green")                     # 7 Dec ≤ 10 Dec
-        self.assertEqual(with_h1(kind="committed", date="2026-12-01", date_to=None, tolerance_days=0)["light"]["state"], "amber")  # 7 Dec ≤ 1 Dec + 7
+        self.assertEqual(p["changes_needed_per_day"]["value"], 0.3)        # 6 ÷ 20 days (20 Nov → 10 Dec)
+        self.assertEqual(p["light"]["state"], "green")                     # 5 Dec ≤ 10 Dec
+        self.assertEqual(with_h1(kind="committed", date="2026-12-01", date_to=None, tolerance_days=0)["light"]["state"], "amber")  # 5 Dec ≤ 1 Dec + 7
         self.assertEqual(with_h1(kind="committed", date="2026-11-25", date_to=None, tolerance_days=0)["light"]["state"], "red")
         self.assertEqual(with_h1(kind="committed", date="2026-12-10", date_to=None)["light"]["state"], "grey")   # no tolerance yet
 
-    def test_under_five_days_uses_reference_class(self):
+    def test_r2_under_five_days_not_measured(self):
         _, c = run(now=datetime(2026, 11, 16, 6, 30, tzinfo=timezone.utc))
         self.assertIsNone(c["pace"]["changes_per_day"]["value"])
         self.assertIn("3 of 5 days", c["pace"]["changes_per_day"]["reason"])
-        self.assertEqual(c["forecast"]["sample"], "reference class: all app rows, not only Release 1")
-        # app PRs (not records) merged by 16 Nov 12:00 IST, per IST day 3..16 Nov: 10:#107 12:#114 13:#108 14:#101 16:#102,#104
-        self.assertEqual(c["forecast"]["counts"], [0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 2])
+        for k in ("p50", "p85"):    # R2: no reference class
+            self.assertIsNone(c["forecast"][k]["value"])
+            self.assertEqual(c["forecast"][k]["reason"], "not measured: fewer than 5 days of Release 1 history (from 18 Nov)")
+        self.assertEqual(c["forecast"]["sample"], "Release 1 changes merged per IST day, last 14 days")
+        # Release 1 changes by 16 Nov 12:00 IST, per IST day 3..16 Nov: 10 BK-1, 13 BK-2, 14 PF-1, 16 PF-2 and PF-4
+        self.assertEqual(c["forecast"]["counts"], [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 2])
+        self.assertEqual(c["pace"]["light"]["state"], "grey")
 
     def test_all_zero_window(self):
         pulls = [p for p in jread((os.path.join(FIX, "github/pulls.json"))) if not p.get("merged_at")
@@ -191,16 +205,17 @@ class Capacity(unittest.TestCase):
     def test_lanes_ready_room(self):
         # pushed since 05:00 UTC, not main or queue: claude/bk-6 (06:00), lead/fixture (06:10) → 2
         self.assertEqual(self.k["lanes_working"]["value"], 2)
-        # ready: FO-2, FO-4, FO-5, BK-6 (BK-5 is done by #112, a non-app PR); with a brief: FO-2, FO-4, BK-6 (FO-55's brief is not FO-5's)
-        self.assertEqual(self.k["ready_rows"]["rows"], ["FO-2", "FO-4", "BK-6"])
-        self.assertEqual(self.k["ready_rows"]["ready_without_brief"], ["FO-5"])
+        # briefs: FO-2, FO-4, FO-55, BK-6. FO-4 is merged (#118); FO-55 has no BACKLOG row (and is never FO-5's brief);
+        # FO-2 and BK-6 wait on nothing → ready
+        self.assertEqual(self.k["ready_rows"]["rows"], ["FO-2", "BK-6"])
+        self.assertEqual(self.k["ready_rows"]["not_ready"], [])
         self.assertEqual(self.k["room"]["value"], 2)         # max_lanes 4 − 2
 
     def test_queues_and_constraint(self):
         st = self.k["stages"]
         self.assertEqual((st["review"]["count"]["value"], st["review"]["wait_h"]["value"]), (1, 3.5))   # #105, head 03:00 UTC
         self.assertEqual((st["merge"]["count"]["value"], st["merge"]["wait_h"]["value"]), (1, 0.5))     # #116, labelled 06:00
-        self.assertEqual(st["qa"]["count"]["value"], 3)       # built rows 1, 2, 7, none qa Works
+        self.assertEqual(st["qa"]["count"]["value"], 4)       # built rows 1, 2, 7, 8, none qa Works
         self.assertEqual(self.k["constraint"]["stage"], "unknown")
         self.assertEqual(self.k["constraint"]["line"], "Constraint unknown: qa wait not measured.")
 
@@ -233,9 +248,9 @@ class Capacity(unittest.TestCase):
         proven = {r["map"]: r["proven"] for r in c["rows"] if r["proven"]}
         self.assertEqual(proven, {1: "2026-11-18", 6: "2026-11-15"})   # C7.1 Works from bbb222 (18 Nov), C6.2 from aaa111
         self.assertEqual(c["pace"]["proven"]["value"], 2)
-        # qa waits: rows 2 (built 19 Nov → 36 h) and 7 (12 h); 36/24 = 1.5 < review 3.5/2 = 1.75 → review
-        self.assertEqual(c["capacity"]["stages"]["qa"]["wait_h"]["value"], 36.0)
-        self.assertEqual(c["capacity"]["constraint"]["line"], "More lanes won't help now: the constraint is review (wait 3.5 h).")
+        # qa waits: rows 2 and 8 (built 18 Nov 00:00 IST → 60 h), 7 (12 h); 60/24 = 2.5 > review 3.5/2 = 1.75 → qa
+        self.assertEqual(c["capacity"]["stages"]["qa"]["wait_h"]["value"], 60.0)
+        self.assertEqual(c["capacity"]["constraint"]["line"], "More lanes won't help now: the constraint is qa (wait 60.0 h).")
 
 
 class Top3OrgToday(unittest.TestCase):
@@ -296,14 +311,15 @@ class TrustAndInvariants(unittest.TestCase):
         self.assertIn("2 (Shaped / Merged)", inv["Build rows unique"]["detail"])
         self.assertEqual(c["pace"]["rows_total"]["value"], 8)          # counted once
         _, c0 = run()
-        self.assertEqual(c0["trust"]["status_disagreements"], [{"map": 2, "checklist": "Shaped", "computed": "built"}])
+        self.assertEqual(c0["trust"]["status_disagreements"], [{"map": 2, "checklist": "Shaped", "computed": "built"},
+                                                               {"map": 8, "checklist": "Shaped", "computed": "built"}])
 
     def test_missing_backlog_id_and_works_row(self):
         ck = cd.Snap(FIX).file("MVP-CHECKLIST.md").replace("| 8 | Cap eight | Front office | FO-4 | Shaped |", "| 8 | Cap eight | Front office | FO-4, ZZ-1, FO-99 | Shaped |")
         ck = ck.replace("C6.2 Works | qa Works", "C7.2 Partial | qa Works")
         _, c = run(snap_with({CKP: ck}))
         inv = {i["name"]: i for i in c["trust"]["invariants"]}
-        self.assertEqual(inv["Every cited BACKLOG id exists"]["detail"], "missing in BACKLOG.md: FO-99, ZZ-1")
+        self.assertEqual(inv["Every id a Shaped row cites exists in BACKLOG (R4)"]["detail"], "missing in BACKLOG.md: FO-99 (row 8), ZZ-1 (row 8)")
         self.assertFalse(inv["Every qa Works row names a qa capability that reads Works on main"]["ok"])
 
     def test_reconcile_compare(self):
@@ -313,10 +329,13 @@ class TrustAndInvariants(unittest.TestCase):
                   "mc_inputs": {"daily_counts": k["mc_daily_counts"], "remaining_scope": k["mc_remaining_scope"]}}
         self.assertEqual(cd.reconcile_compare(k, theirs, None)["state"], "agree")
         t2 = json.loads(json.dumps(theirs))
-        t2["numbers"]["forecast_p85_date"]["value"] = "2026-12-08"           # +1 day: agrees
+        plus = lambda n: (date.fromisoformat(k["forecast_p85_date"]) + timedelta(days=n)).isoformat()
+        r7 = cd.reconcile_compare(k, theirs, None)
+        self.assertEqual(r7["compared"], 13)                                  # R7: the contract's 11 numbers + mc_inputs' two
+        t2["numbers"]["forecast_p85_date"]["value"] = plus(1)                 # +1 day: agrees
         self.assertEqual(cd.reconcile_compare(k, t2, None)["state"], "agree")
-        t2["numbers"]["forecast_p85_date"]["value"] = "2026-12-09"           # +2 days: disagrees
-        t2["numbers"]["built_rows"]["value"] = 4
+        t2["numbers"]["forecast_p85_date"]["value"] = plus(2)                 # +2 days: disagrees
+        t2["numbers"]["built_rows"]["value"] = 5
         r = cd.reconcile_compare(k, t2, None)
         self.assertEqual((r["state"], r["banner"]), ("disagree", "Numbers disagree: built_rows, forecast_p85_date"))
         r0 = cd.reconcile_compare(k, None, "not checked: tools/cockpit-reconcile.py is absent")
@@ -330,6 +349,102 @@ class TrustAndInvariants(unittest.TestCase):
         out, note = cd.run_reconcile(FIX, bad)
         self.assertIsNone(out)
         self.assertTrue(note.startswith("not checked: the reconciliation exited 4"))
+
+
+class Rulings(unittest.TestCase):
+    def test_r3_dependency_clauses(self):
+        self.assertEqual(cd.row_deps("| X | a | b · *Waits on:* PF-4 merged · c |"), (["PF-4"], []))
+        self.assertEqual(cd.row_deps("| X | text, waits on FO-1a; the rest |"), (["FO-1a"], []))
+        self.assertEqual(cd.row_deps("| X | **waits on:** contract v0 · decisions: none |"), ([], ["contract v0"]))
+        self.assertEqual(cd.row_deps("| X | **waits on:** nothing · decisions: none (licences: no counsel) |"), ([], []))
+        self.assertEqual(cd.row_deps("| X | Waits on `ClientMergePort` for the client part only |"),
+                         ([], ["for client part only"]))
+
+    def test_r3b_tighter_clause(self):
+        # filler words, punctuation and #numbers never block
+        self.assertEqual(cd.row_deps("| X | **waits on:** PF-4 and PF-4b, both merged (PR #1744) · decisions: none |"), (["PF-4", "PF-4b"], []))
+        self.assertEqual(cd.row_deps("| X | **waits on:** FO-9b (merged rows) · y |"), (["FO-9b"], []))
+        self.assertEqual(cd.row_deps("| X | **waits on:** PF-4 (the guard sets the firm), FO-1a · z |"), (["PF-4", "FO-1a"], []))
+        # a labelled field ends the clause
+        self.assertEqual(cd.row_deps("| X | **waits on:** PF-3 decisions: the founder's account |"), (["PF-3"], []))
+        # "after": ids only when a row id is within its next 3 tokens; leftover text never blocks
+        self.assertEqual(cd.row_deps("| X | runs right after FO-7a merged. More |"), (["FO-7a"], []))
+        self.assertEqual(cd.row_deps("| X | **(after the Bake; from #1612)** text |"), ([], []))
+        self.assertEqual(cd.row_deps("| X | schema baton after it moves on to the end, FO-5 |"), ([], []))   # FO-5 is 7 tokens on
+
+    def test_r3c_brackets_backticks_filler_and_done_when(self):
+        self.assertEqual(cd.row_deps("| X | **waits on:** FO-5 (`FilesPort`), PF-14 (the day-15 job) · d |"), (["FO-5", "PF-14"], []))
+        self.assertEqual(cd.row_deps("| X | waits on: nobody; no |"), ([], []))
+        self.assertEqual(cd.row_deps("| X | waits on PF-3 (contract v0 first) |"), (["PF-3"], []))         # ids in brackets still count
+        hdr = ["", "#", "Area", "Item", "Done when (beyond the standard)", "Source · waits on · decisions", ""]
+        line = "| FO-2 | lane | **Row** | a pack check; waits on the demo | src · **waits on:** PF-1 · decisions: none |"
+        self.assertEqual(cd.row_deps(cd.dep_text(line, hdr)), (["PF-1"], []))   # the Done-when "waits on the demo" is not read
+        self.assertEqual(cd.row_deps(line), (["PF-1"], ["demo"]))
+        bl = cd.parse_backlog("## Rows\n| # | Area | Item | Done when | Source |\n|---|---|---|---|---|\n" + line + "\n")
+        self.assertEqual(cd.row_deps(bl["deps"]["FO-2"]), (["PF-1"], []))
+
+    def test_r3d_ids_in_brackets_and_map_numbers(self):
+        self.assertEqual(cd.row_deps("| X | **waits on:** the port (`PF-24`) and (FO-9b) · d |"), (["PF-24", "FO-9b"], ["port"]))
+        self.assertEqual(cd.row_deps("| X | **waits on:** map rows 48 and 49, FO-2 · d |"), (["FO-2"], []))
+        self.assertEqual(cd.row_deps("| X | waits on map 62; z |"), ([], []))
+        self.assertEqual(cd.row_deps("| X | waits on the map of fees; z |"), ([], ["map of fees"]))   # "map" without numbers still blocks
+        hdr = ["", "#", "Area", "Item", "Done when", "Source · waits on · decisions", ""]
+        self.assertEqual(cd.row_deps(cd.dep_text("| PF-9 | a | b | c | src · **waits on:** PF-4 · decisions: none |", hdr)), (["PF-4"], []))   # last column read
+
+    def test_r3_non_id_dependency_blocks_ready(self):
+        bl = cd.Snap(FIX).file("BACKLOG.md")
+        bl = bl.replace("| FO-2 | lane | **Row FO-2:** a fixture row · **waits on:** nothing ·",
+                        "| FO-2 | lane | **Row FO-2:** a fixture row · **waits on:** contract v0 ·")
+        bl = bl.replace("**Row BK-6:** a fixture row; brief: briefs/BK-6 · **waits on:** nothing",
+                        "**Row BK-6:** a fixture row; brief: briefs/BK-6 · *Waits on:* FO-1 merged")
+        self.assertIn("contract v0", bl)
+        self.assertIn("FO-1 merged", bl)
+        _, c = run(snap_with({"files/" + cd.REL + "/BACKLOG.md": bl}))
+        q = c["capacity"]["ready_rows"]
+        self.assertEqual(q["rows"], [])
+        self.assertEqual(q["not_ready"], [{"id": "FO-2", "waits_on": [], "non_id": ["contract v0"]},
+                                          {"id": "BK-6", "waits_on": ["FO-1"], "non_id": []}])
+
+    def test_r1b_ready_counts_any_merged_pr(self):
+        # BK-5's only PR (#112) is not app code: not a change (R1b), but merged for readiness, so a row waiting on it is ready
+        bl = cd.Snap(FIX).file("BACKLOG.md").replace("**Row BK-6:** a fixture row; brief: briefs/BK-6 · **waits on:** nothing",
+                                                    "**Row BK-6:** a fixture row; brief: briefs/BK-6 · **waits on:** BK-5")
+        self.assertIn("waits on:** BK-5", bl)
+        ck = cd.Snap(FIX).file("MVP-CHECKLIST.md").replace("| BK-1 to BK-3 |", "| BK-1 to BK-3, BK-5 |")
+        _, c = run(snap_with({"files/" + cd.REL + "/BACKLOG.md": bl, CKP: ck}))
+        self.assertEqual(c["capacity"]["ready_rows"]["rows"], ["FO-2", "BK-6"])
+        self.assertEqual(c["pace"]["merged_changes"]["value"], 8)              # BK-5 is cited but has no app-code merge
+        self.assertNotIn(7, {r["map"] for r in c["rows"] if r["built"]})       # so row 7 is not built
+
+    def test_r4_missing_id_in_unshaped_row_is_a_part(self):
+        ck = cd.Snap(FIX).file("MVP-CHECKLIST.md").replace("| FO-2, FO-3 named only | Not shaped |", "| FO-2, FO-3 named only; FO-77 | Not shaped |")
+        _, c = run(snap_with({CKP: ck}))
+        self.assertTrue(all(i["ok"] for i in c["trust"]["invariants"]))
+        self.assertEqual(c["pace"]["remaining"]["value"], 6)                  # row 5: still 3 - 0 merged parts
+
+    def test_r5b_counts_exactly_the_cited_bk_ids(self):
+        # the cited BK ids are BK-1, BK-2, BK-3 (row 7's range); BK-4 (#110), BK-5 and BK-6 are in BACKLOG but not cited
+        _, c = run()
+        r1 = {x for r in c["rows"] for x in r["ids"] if x.startswith("BK-")}
+        self.assertEqual(r1, {"BK-1", "BK-2", "BK-3"})
+        self.assertEqual(c["forecast"]["counts"][3], 1)                       # 10 Nov: BK-1 only
+
+    def test_r5_bake_rows_count_only_when_cited(self):
+        _, c = run()
+        self.assertEqual(c["pace"]["merged_changes"]["value"], 8)             # BK-4 (#110) is merged but not cited
+        ck = cd.Snap(FIX).file("MVP-CHECKLIST.md").replace("| BK-1 to BK-3 |", "| BK-1 to BK-4 |")
+        _, c2 = run(snap_with({CKP: ck}))
+        self.assertEqual(c2["pace"]["merged_changes"]["value"], 9)
+
+    def test_r6_health_exception(self):
+        ex = [{"bug": "QA-9", "decision": "P-358", "reason": "the ruling: does not hold C6.2"}]
+        s = cd.Snap(snap_with({"files/" + cd.REL + "/cockpit/health-exceptions.json": ex}))
+        comp = cd.compute_board(s, NOW, fixture_history(), None, "not checked: test")
+        h = cd.health(s, NOW, comp, s.j("lead-input.json"))
+        six = h["items"][5]
+        self.assertEqual(six["state"], "green")
+        self.assertIn("QA-9 excluded by P-358", six["detail"])
+        self.assertEqual(six["excluded"], ["QA-9 excluded by P-358"])
 
 
 class Health(unittest.TestCase):

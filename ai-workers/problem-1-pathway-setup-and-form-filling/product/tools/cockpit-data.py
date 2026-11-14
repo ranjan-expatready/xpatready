@@ -211,7 +211,11 @@ def decisions_last(n=5):
 def backlog(merged_ids, inpr_ids, text=None):
     t = text if text is not None else (read("BACKLOG.md") or "")
     owners, sec, rows, xrows = [], None, [], 0
+    prev, hdr = None, None
     for line in t.splitlines():
+        if SEP_LINE.match(line) and prev is not None:
+            hdr = cells(prev)
+        prev = line
         if line.startswith("## "):
             sec = line[3:]
             continue
@@ -227,17 +231,18 @@ def backlog(merged_ids, inpr_ids, text=None):
             c = cells(line)
             rid, area = m.group(1), c[2]
             lane = re.split(r"[ (/+]", area.strip())[0].lower() or "other"
-            w = re.search(r"waits on:\*?\*?\s*([^·]+)", line)
-            waits = re.findall(r"\b((?:PF|FO|BK|CS|AUD|SEC|AS)-[0-9A-Za-z]+)\b", w.group(1)) if w else []
+            waits, non = row_deps(dep_text(line, hdr))       # R3, R3b, R3c
+            waits = [x for x in waits if x != rid]
             if rid in merged_ids:
                 st = "merged"
             elif rid in inpr_ids:
                 st = "in PR"
-            elif not w or w.group(1).strip().lower().startswith("nothing") or (waits and all(x in merged_ids for x in waits)):
+            elif not non and all(x in merged_ids for x in waits):
                 st = "ready"
             else:
                 st = "blocked"
-            rows.append({"id": rid, "lane": lane, "status": st, "waits_on": [x for x in waits if x not in merged_ids][:6]})
+            rows.append({"id": rid, "lane": lane, "status": st, "waits_on": [x for x in waits if x not in merged_ids][:6],
+                         "non_id": non[:3]})
     by = {}
     for r in rows:
         by.setdefault(r["lane"], {"ready": 0, "blocked": 0, "in PR": 0, "merged": 0})[r["status"]] += 1
@@ -376,6 +381,70 @@ def loose_title_id(title):
     return m
 
 
+_TOK = {}
+
+
+def title_has(title, rid):
+    """R1: the id appears in the title as a whole token: not preceded by a letter, digit or "-", not followed by a letter or digit."""
+    rx = _TOK.get(rid)
+    if rx is None:
+        rx = _TOK[rid] = re.compile(r"(?<![A-Za-z0-9-])" + re.escape(rid) + r"(?![A-Za-z0-9])")
+    return bool(title) and rx.search(title) is not None
+
+
+def is_records(p):
+    """R1: a records PR has "(records only)" in its title or carries the `records` label; it never counts."""
+    return "(records only)" in (p.get("title") or "") or any(l.get("name") == "records" for l in p.get("labels") or [])
+
+
+WAITS_ON = re.compile(r"[*_]*\bwaits[*_]*\s+[*_]*on\b[*_]*\s*:?[*_]*\s*:?", re.I)
+AFTER_W = re.compile(r"\bafter\b", re.I)
+CLAUSE_END = re.compile(r"[.;|·]|\bdecisions\s*:|\bdone when\b|\bsource\s*:", re.I)
+FILLER = {"merged", "and", "or", "both", "the", "its", "first", "pr", "prs", "row", "rows",
+          "nothing", "none", "nobody", "no"}      # §11 R3b + R3c
+SEP_LINE = re.compile(r"^\|\s*:?-{3,}")
+
+
+def dep_text(line, hdr):
+    """§11 R3c: the row's text for dependency reading, without the table's Done-when column (found by its header)."""
+    c = cells(line)
+    if hdr:
+        drop = {i for i, h in enumerate(hdr) if h.lower().startswith("done when")}
+        c = [x for i, x in enumerate(c) if i not in drop]
+    return " | ".join(c)
+
+
+def row_deps(line):
+    """§11 R3, R3b, R3c, R3d: dependencies of a BACKLOG row (its cells except Done when, see dep_text). A clause ends at the first ".", ";", "|", "·", a labelled field
+    ("decisions:", "Done when", "Source:") or the line end. Waits-on clause (any case, * or _ emphasis, optional colon):
+    every row id is a dependency; the leftover text, without ids, #<number>, punctuation and the filler words, is a
+    non-id dependency only when a word of 3+ letters remains. "After" clause (whole word, a row id within its next 3
+    tokens): only its row ids count. Returns (ids, non_ids)."""
+    ids, non = [], []
+
+    def clause(m):
+        e = CLAUSE_END.search(line, m.end())
+        return line[m.end(): e.start() if e else len(line)]
+    for m in WAITS_ON.finditer(line):
+        t = clause(m)
+        got = cell_ids(t)
+        ids += [x for x in got if x not in ids]
+        rest = re.sub(r"`[^`]*`", " ", t)                                  # R3c: backticked text never blocks
+        while re.search(r"\([^()]*\)", rest):
+            rest = re.sub(r"\([^()]*\)", " ", rest)                       # R3c: nor does bracketed text
+        rest = ID_TOKEN.sub(" ", re.sub(r"[*_`]", "", rest))
+        rest = re.sub(r"\bmap\b(?=(?:\s+rows?)?\s+\d)", " ", rest, flags=re.I)     # R3d: "map" followed by numbers is filler
+        rest = re.sub(r"#\d+", " ", rest)
+        words = [w for w in re.findall(r"[A-Za-z0-9']+", rest) if w.lower() not in FILLER]
+        if any(len(re.sub(r"[^A-Za-z]", "", w)) >= 3 for w in words):
+            non.append(" ".join(words))
+    for m in AFTER_W.finditer(line):
+        t = re.sub(r"[*_`]", "", clause(m))
+        if any(cell_ids(tok) for tok in t.split()[:3]):
+            ids += [x for x in cell_ids(t) if x not in ids]
+    return ids, non
+
+
 def parse_checklist(text):
     """MVP-CHECKLIST.md section A: the Build rows, by the header of each table (a qa id column is found by name)."""
     groups, rows, dupes, seen = [], [], [], {}
@@ -423,8 +492,12 @@ def parse_checklist(text):
 
 def parse_backlog(text):
     """BACKLOG.md: every row id (first cell), duplicates, BK ids, and each row's line (for 'waits on' and briefs/)."""
-    ids, dupes, lines = [], [], {}
+    ids, dupes, lines, deps = [], [], {}, {}
+    prev, hdr = None, None
     for line in (text or "").splitlines():
+        if SEP_LINE.match(line) and prev is not None:
+            hdr = cells(prev)
+        prev = line
         m = re.match(r"^\| (" + IDRE + r")" + _END, line)
         if not m:
             continue
@@ -434,9 +507,10 @@ def parse_backlog(text):
                 dupes.append(rid)
                 continue
             lines[rid] = line
+            deps[rid] = dep_text(line, hdr)
         if rid not in ids:
             ids.append(rid)
-    return {"ids": ids, "dupes": dupes, "lines": lines, "bk": [x for x in ids if x.startswith("BK-")]}
+    return {"ids": ids, "dupes": dupes, "lines": lines, "deps": deps, "bk": [x for x in ids if x.startswith("BK-")]}
 
 
 def parse_caps(text):
@@ -456,7 +530,8 @@ def works_count(caps):
 
 
 # ---------------------------------------------------------------- snapshot (§6 1a): the one interface both scripts read
-SNAP_FILES = ["MVP-CHECKLIST.md", "BACKLOG.md", "STATE.md", "cockpit/plan.json", "cockpit/history.jsonl", "qa/BUGS.md"]
+SNAP_FILES = ["MVP-CHECKLIST.md", "BACKLOG.md", "STATE.md", "cockpit/plan.json", "cockpit/history.jsonl", "qa/BUGS.md",
+              "cockpit/health-exceptions.json"]
 
 
 def git_out(*args):
@@ -524,7 +599,7 @@ def take_snapshot(snap, gh, cache, lead_input, appcode_max):
     ac = json.load(open(ac_path)) if os.path.exists(ac_path) else {}
     since = NOW - timedelta(days=21)
     need = [x["number"] for x in raw if not x["head"]["ref"].startswith("mergify/") and str(x["number"]) not in ac and (
-        x["state"] == "open" or (x.get("merged_at") and parse_iso(x["merged_at"]) >= since) or title_id(x["title"]))]
+        x["state"] == "open" or (x.get("merged_at") and parse_iso(x["merged_at"]) >= since) or ID_TOKEN.search(x["title"] or ""))]
     need = need[:appcode_max]
     if need:
         def run_chunk(ns):
@@ -801,26 +876,29 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
     baseline = plan.get("baseline_rows") or BASELINE_ROWS
 
     # ---- N2: Release 1 changes and their merge dates
-    r1 = []
+    # R4: a cited id that BACKLOG lacks is an unshaped part in a row not Shaped; in a Shaped row it is an invariant failure
+    shaped_missing = []
+    for r in rows:
+        for x in r["ids"]:
+            if x not in bl["ids"]:
+                if r["status"] == "Shaped":
+                    shaped_missing.append(f"{x} (row {r['map']})")
+                elif x not in r["unshaped_ids"]:
+                    r["unshaped_ids"].append(x)
+    r1 = []                                            # R5: only ids the checklist cites (Bake rows count only when cited)
     for r in rows:
         r1 += [x for x in r["ids"] if x not in r1]
-    flag_bk = [x for x in bl["bk"] if x not in r1]     # Flags: the case-side BK- rows serve map rows 77, 80, 99
-    r1 += flag_bk
     change_at, unclassified = {}, set()
     for p in sorted(merged, key=lambda p: p["merged_at"]):
-        rid = title_id(p["title"])
-        if rid in r1 and rid not in change_at:
-            if p.get("files_app") is True:
-                change_at[rid] = p["merged_at"]
-            elif p.get("files_app") is None:
-                unclassified.add(rid)
-    loose = []
-    for p in merged:
-        lid = loose_title_id(p["title"])
-        if lid and lid in r1 and title_id(p["title"]) != lid and lid not in change_at and p.get("files_app"):
-            loose.append({"id": lid, "pr": p["number"]})
-    if loose:
-        notes.append("Not counted by N2 (the row id is not at the start of the title): " + ", ".join(f"{x['id']} #{x['pr']}" for x in loose[:12]))
+        if is_records(p):
+            continue
+        for rid in r1:
+            if rid not in change_at and title_has(p["title"], rid):
+                if p.get("files_app") is True:
+                    change_at[rid] = p["merged_at"]
+                elif p.get("files_app") is None:
+                    unclassified.add(rid)
+    unclassified -= set(change_at)
     if unclassified:
         notes.append("App-code check missing for the PRs of " + ", ".join(sorted(unclassified)) + " (not counted)")
     change_day = {k: ist_day(v) for k, v in change_at.items()}
@@ -845,15 +923,12 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
     for r in shaped:
         shaped_ids += [x for x in r["ids"] if x not in shaped_ids]
     rem_shaped = sum(1 for x in shaped_ids if x not in change_at)
-    flag_unmerged = [x for x in flag_bk if x not in change_at]   # pace counts them (N2); C1's scope names only Build rows' parts
     rem_unshaped = sum(max(0, UNSHAPED_FACTOR - sum(1 for x in r["ids"] if x in change_at)) for r in unshaped)
     remaining = rem_shaped + rem_unshaped
-    R = num(remaining, f"unmerged ids of shaped Build rows and the Flags' BK rows ({rem_shaped}) + {UNSHAPED_FACTOR} × each Build row not shaped, "
+    R = num(remaining, f"unmerged ids of shaped Build rows ({rem_shaped}) + {UNSHAPED_FACTOR} × each Build row not shaped, "
             f"less its merged parts ({rem_unshaped}); {ck_src}, {bl_src}, {gh_src}", "mixed", L,
             label=f"estimate: {len(unshaped)} unshaped capabilities × {UNSHAPED_FACTOR} (P-586 (4), settled 19 Nov)",
-            shaped_unmerged=rem_shaped, unshaped_rows=len(unshaped), unshaped_estimate=rem_unshaped,
-            flags_bk_unmerged=num(len(flag_unmerged), "BK- rows tied by the Flags to map rows 77, 80, 99 (not cited in a row) still unmerged: "
-                                  "counted in pace (N2), not in C1's scope", "mixed", L, ids=flag_unmerged))
+            shaped_unmerged=rem_shaped, unshaped_rows=len(unshaped), unshaped_estimate=rem_unshaped)
 
     # ---- §1 B1: built and proven per Build row
     for r in rows:
@@ -911,27 +986,24 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
 
     # ---- §1 forecast (Monte Carlo on 14 daily counts)
     days14 = [today - timedelta(days=13 - i) for i in range(14)]
+    counts = [per_day.get(d, 0) for d in days14]
+    sample = "Release 1 changes merged per IST day, last 14 days"
     if days_since >= 5:
-        counts = [per_day.get(d, 0) for d in days14]
-        sample = "Release 1 changes merged per IST day, last 14 days"
-    else:
-        app_per = {}
-        for p in merged:
-            if p.get("files_app") is True and not RECORDS_TITLE.match(p["title"]):
-                d = ist_day(p["merged_at"])
-                app_per[d] = app_per.get(d, 0) + 1
-        counts = [app_per.get(d, 0) for d in days14]
-        sample = "reference class: all app rows, not only Release 1"
-    mc = monte_carlo(counts, remaining, today)
+        mc = monte_carlo(counts, remaining, today)
+    else:   # R2: the reference class is withdrawn
+        mc = {"p50": None, "p85": None, "reason": "not measured: fewer than 5 days of Release 1 history (from "
+              + (R1_START + timedelta(days=5)).strftime("%-d %b") + ")", "short": True}
     fsrc = f"Monte Carlo, {MC_RUNS:,} runs, seed {MC_SEED}, cap {MC_CAP} days; {sample}; remaining {remaining}"
     F50 = num(mc["p50"], fsrc, "mixed", L, mc["reason"])
     F85 = num(mc["p85"], fsrc, "mixed", L, mc["reason"])
-    if mc["reason"]:
+    if mc["reason"] and not mc.get("short"):
         light = {"state": "red", "why": mc["reason"].replace("not measured: ", "") + " (zero guard)"}
     elif not committed:
         light = {"state": "grey", "why": f"no committed date (set {set_on or 'not dated'})"}
     elif tol is None:
         light = {"state": "grey", "why": "no tolerance yet (the founder's, asked once after 19 Nov)"}
+    elif mc.get("short"):
+        light = {"state": "amber", "why": mc["reason"]}
     elif mc["p85"] == "beyond 1 year":
         light = {"state": "red", "why": "85% date beyond 1 year"}
     else:
@@ -971,21 +1043,37 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
     lanes = [b for b in branches if is_session_branch(b["name"]) and parse_iso(b["pushed_at"]) >= cutoff - timedelta(minutes=LANE_WINDOW_MIN)]
     Lw = num(len(lanes), f"sessions = branches (not main or the merge queue) with a push in the last {LANE_WINDOW_MIN} min; {gh_src} branches_recent.json "
              "(push time = head commit time)", "measured", L, names=[b["name"] for b in lanes])
-    merged_any = {title_id(p["title"]) for p in merged} - {None}    # readiness: done by any non-records PR (app or not)
+    # R1b: ready rows treat any non-records merged PR (app code or not) as merged
+    merged_any = set(change_at)
+    for p in sorted(merged, key=lambda p: p["merged_at"]):
+        if not is_records(p):
+            merged_any.update(x for x in ID_TOKEN.findall(p["title"] or "") if x in bl["lines"] and title_has(p["title"], x))
     inpr = {}
     for p in open_prs:
-        rid = title_id(p["title"])
-        if rid:
-            inpr.setdefault(rid, []).append(p["number"])
-    _, brows, _, _ = backlog(merged_any, set(inpr), text=bl_text or "")
-    ready = [r["id"] for r in brows if r["status"] == "ready"]
-    q_rows = [x for x in ready if x in briefs]
-    Q = num(len(q_rows), f"BACKLOG rows ready (not merged, not in a PR, waits on nothing unmerged) that have a brief file (briefs.json); {bl_src}, {gh_src}",
-            "mixed", L, rows=q_rows, ready_without_brief=[x for x in ready if x not in briefs])
+        if is_records(p):
+            continue
+        for x in ID_TOKEN.findall(p["title"] or ""):
+            if title_has(p["title"], x) and p["number"] not in inpr.get(x, []):
+                inpr.setdefault(x, []).append(p["number"])
+    q_rows, not_ready = [], []
+    for rid in sorted(briefs, key=lambda x: (list(bl["lines"]).index(x) if x in bl["lines"] else 10 ** 6, x)):
+        line = bl["deps"].get(rid)
+        if line is None or rid in merged_any or rid in inpr:
+            continue
+        deps, non = row_deps(line)
+        deps = [x for x in deps if x != rid]
+        wait = [x for x in deps if x not in merged_any]
+        if non or wait:
+            not_ready.append({"id": rid, "waits_on": wait, "non_id": non})
+        else:
+            q_rows.append(rid)
+    Q = num(len(q_rows), "R3: BACKLOG rows with a brief (exact id), not merged, no open PR, every dependency id merged and no non-id dependency; "
+            f"briefs.json, {bl_src}, {gh_src}", "mixed", L, rows=q_rows, not_ready=not_ready)
     room_v = (li or {}).get("max_lanes")
     room = num(max(0, int(room_v) - len(lanes)) if room_v is not None else None, "Lead input max_lanes − lanes working", "reported", L,
                "not measured: Lead input has no max_lanes")
-    eng = [p for p in open_prs if not RECORDS_TITLE.match(p["title"])]
+    eng = [p for p in open_prs if not RECORDS_TITLE.match(p["title"]) and not is_records(p)]
+    app_open = [p for p in open_prs if p.get("files_app") is True and not is_records(p)]
     lab = lambda p: [x["name"] for x in p.get("labels", [])]
     hrs = lambda iso: (cutoff - parse_iso(iso)).total_seconds() / 3600 if iso else None
     review_q = [p for p in eng if not p["draft"] and "review: approved" not in lab(p) and (detail.get(p["number"]) or {}).get("ci") == "success"]
@@ -1008,14 +1096,12 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
                                 "not measured: qa wait needs the checklist's qa id column" if k == "qa" and qa_unknown else "nothing waiting"),
                   "limit_h": LIMITS_H[k]} for k, (wv, n) in waits.items()}
     # work item age (R2-1)
-    app_merged14 = [p for p in merged if p.get("files_app") is True and not RECORDS_TITLE.match(p["title"])
+    app_merged14 = [p for p in merged if p.get("files_app") is True and not is_records(p)
                     and parse_iso(p["merged_at"]) >= cutoff - timedelta(days=14)]
     cyc = [(parse_iso(p["merged_at"]) - parse_iso(p["created_at"])).total_seconds() / 86400 for p in app_merged14]
     p85 = nearest_rank(cyc, 0.85) if len(cyc) >= 5 else None
     items = []
-    for p in eng:
-        if p.get("files_app") is not True:
-            continue
+    for p in app_open:
         age = (cutoff - parse_iso(p["created_at"])).total_seconds() / 86400
         push = hrs((detail.get(p["number"]) or {}).get("head_committed_at"))
         items.append({"pr": p["number"], "title": clean(p["title"], 80), "age_d": round(age, 2), "push_h": round(push, 1) if push is not None else None,
@@ -1124,8 +1210,8 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
     inv("Build rows equal the baseline", nrows == baseline,
         f"{nrows} rows (baseline {baseline})" + ("" if nrows == baseline else ": scope changed, the scope line says so"))
     inv("Build rows unique", not ck["dupes"], "duplicates: " + ", ".join(f"{d['map']} ({' / '.join(d['statuses'])})" for d in ck["dupes"]) if ck["dupes"] else "no duplicate map numbers")
-    missing = sorted({x for r in rows for x in r["ids"] if x not in bl["ids"] and x not in r["unshaped_ids"]})
-    inv("Every cited BACKLOG id exists", not missing, "missing in BACKLOG.md: " + ", ".join(missing) if missing else "all cited ids found")
+    inv("Every id a Shaped row cites exists in BACKLOG (R4)", not shaped_missing,
+        "missing in BACKLOG.md: " + ", ".join(sorted(shaped_missing)) if shaped_missing else "all ids of Shaped rows found")
     bad = []
     for r in rows:
         if r["status"] != "qa Works":
@@ -1292,6 +1378,15 @@ def health(snap, now, comp, li):
     first = snap.j("git/bug_first_seen.json") or {}
     bugs = [b for b in parse_bugs(snap.file("qa/BUGS.md") or "") if b["open"] and b["sev"] in ("Critical", "Major")
             and any(caps.get(c, {}).get("status", "").startswith("Works") for c in b["caps"])]
+    # R6: Majors a decision rules as not holding their capability (Lead-kept cockpit/health-exceptions.json) are shown, not counted
+    exc_text = snap.file("cockpit/health-exceptions.json")
+    try:
+        exc = {(e.get("bug") or e.get("id")): e for e in (json.loads(exc_text) if exc_text else [])}
+    except (json.JSONDecodeError, AttributeError):
+        exc = {}
+        ERRORS.append("cockpit/health-exceptions.json is not a JSON list (no exception applied)")
+    excluded = [f"{b['id']} excluded by {exc[b['id']].get('decision') or 'no decision named'}" for b in bugs if b["id"] in exc]
+    bugs = [b for b in bugs if b["id"] not in exc]
     old_b, unk = [], []
     for b in bugs:
         if b["id"] not in first:
@@ -1301,6 +1396,9 @@ def health(snap, now, comp, li):
     item(6, "Major bugs on Works capabilities", "red" if old_b else "amber" if unk else "green",
          ("older than 48 h: " + ", ".join(old_b)) if old_b else ("age not measured: " + ", ".join(unk)) if unk else
          f"{len(bugs)} open Critical/Major on Works capabilities, none older than 48 h", "fix or re-rate the bug; a Major keeps its capability Partial", "qa lane via the current Lead", cls="parsed")
+    if excluded:
+        items[-1]["detail"] += "; " + "; ".join(excluded)
+        items[-1]["excluded"] = excluded
     tr, cap, org = comp["trust"], comp["capacity"], comp["org"]
     reasons, st7 = [], "green"
     bad_inv = [i["name"] for i in tr["invariants"] if not i["ok"]]
