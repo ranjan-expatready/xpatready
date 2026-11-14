@@ -24,8 +24,8 @@
 | FO-1a / FO-1b | sales tables / booking tables | briefs written | start **side by side** after PF-3 merges (P-559 (3), Lead 38); FO-1a also fixes DEVELOPING.md's stale one-migration line |
 | PF-4 | sign-in, roles, permission keys | **brief written** (`lead-b-briefs/PF-4.md`) | start when PF-3 merges (schema-free, so it may run beside FO-1a/1b) |
 | PF-4b | staff reads, session, accept invitation, step-up, provider emails via MailPort | **brief written** (`lead-b-briefs/PF-4b.md`) | start when PF-4 merges; builder verifies 4 Cognito facts first (step 0) |
-| PF-5 | sign-up + subscription (SA-04) | **rewritten to P-566** (self-serve SaaS flow; invited link kept) | brief after PF-4 and A46's component picks |
-| FO-2 / FO-2b | leads + Individual prospects API / Corporate | shaped | briefs after FO-1a |
+| PF-5 | sign-up + subscription (SA-04) | **rev 8.3; brief written** (`lead-b-briefs/PF-5.md`, step 0 checks Stripe) | after PF-4, holding the schema baton |
+| FO-2 / FO-2b | leads + Individual prospects API / Corporate | **FO-2 brief written** (`lead-b-briefs/FO-2.md`); FO-2b shaped | FO-2 after FO-1a and PF-4 |
 | FO-3 | booking API (AG-04) | shaped | after FO-1b and FO-2 |
 | FO-4 / FO-4b | sales screens / script embed | shaped (concept approved) | after FO-2 and PF-1 |
 | FO-5 | retainers (AG-05 rules, FilesPort, docxtemplater) | shaped | after FO-1a, PF-4 |
@@ -96,3 +96,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 08:31 IST: rows rev 8.1 + contracts §7 §2.5: checked FO-3, FO-7b, FO-7c, FO-7t against map draft 3 (deposits never card-payable; direct trust-bank deposits with evidence; card at booking held). Lead 40 copied rev 8.
 * 14 Nov 08:37 IST: PF-5s concept r1 + board (`screens/pf-5s-saas/`); 14 gaps decided, Q1 settled by P-566; rows rev 8.2 (PF-5 amended, PF-11 shaped); contracts §7 §1.1 wording. Fresh challenger next.
 * 14 Nov 08:42 IST: PF-5s fresh challenge (Fable): 1 Blocker, 6 Majors, 9 Minors, all accepted; concept r2 approved; rows rev 8.3 (PF-5 amended, PF-5s row added, PF-11 in Shaped next).
+* 14 Nov 08:43 IST: FO-2 and PF-5 briefs written (two ahead).
