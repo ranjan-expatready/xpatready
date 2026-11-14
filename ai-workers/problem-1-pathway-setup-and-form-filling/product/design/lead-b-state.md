@@ -4,7 +4,7 @@ Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Ses
 
 **Owns:** platform (firm sign-up, plans, subscriptions, sign-in and roles, walking skeleton) and front office (enquiry → lead → pipeline → booking → retainer → e-sign → payment), all in new fenced modules.
 
-## What is true (updated 13 Nov 22:48 IST)
+## What is true (updated 14 Nov 07:10 IST)
 * Contracts **draft 4** (`design/platform-and-front-office-contracts-2026-11-14.md`; §7 binding, from the requirements trace).
 * Requirements trace register `design/lead-b-requirements-trace-2026-11-14.md` + evidence `design/lead-b-trace-2026-11-14/t1..t8` (AG-01/02/04/05/06/13/16/18, SA-02/03/04/06/07/11, CICC Code SOR/2022-128).
 * Rows **rev 3** (`design/lead-b-rows-2026-11-14.md`): PF-1, PF-2, PF-3, PF-4, PF-5, PF-7, FO-1a, FO-1b, FO-2, FO-2b, FO-3, FO-4, FO-4b. Lead 37 holds BACKLOG (last copied from 242e1cb8 = rev 2; rev 3 sent for re-copy).
@@ -17,7 +17,7 @@ Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Ses
 ## In flight
 | What | Session | Branch | PR |
 |---|---|---|---|
-| (none) | | | |
+| PF-6 concept: fresh challenge (independent agent, in-process subagent of Lead B) → writes `screens/pf-6-staff/challenge.md` | Lead B subagent | `lead-b-front-office` | none |
 
 ## Next step
 1. Lead 39 asks the founder the five questions in the register §D, one at a time; fold each answer into contracts §7 and rows (FO-6 signer, PF-5 door, PF-4 switch default, FO-5 checklist, FO-7 trust).
@@ -41,3 +41,4 @@ Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Ses
 * 14 Nov 05:21 IST: release holder is now Lead 39 (`local_84c512dc…`). Open with it: founder question 1 (signing) and 2-5; PF-3 lane to start at the founder's typed turn (brief `lead-b-briefs/PF-3.md`); FO-1a/1b after PF-3, side by side; FO-1a touch list re-copy.
 * 14 Nov 05:23 IST: Lead 39 confirms: FO-1a touch list already in BACKLOG; question 1 (signing) with the founder, away overnight; Lead 39 forwards his answer word for word, then asks 2-5; PF-3 lane at his next typed turn. Lead B idle until then (no work waiting; rows ready ahead: PF-3, FO-1a, FO-1b briefed; PF-4, PF-5, FO-2, FO-2b, FO-3, FO-4, FO-4b shaped).
 * 14 Nov 07:08 IST: P-561 (founder: BoldSign on 4 conditions). Rows rev 4: FO-5 (retainers, FilesPort, docxtemplater), FO-5b (Code s.24 checklist, waits on Q4), FO-6 (SigningPort + BoldSign, conditions checked first; Mac sandbox check by Lead B), PF-6 (staff screens, concept next). Contracts §7 updated (P-561; D-6 dropped per AG-5-61).
+* 14 Nov 07:10 IST: PF-6 concept r1 + board pushed (0687eefd); fresh challenger running. Rows rev 4 sent to Lead 39.
