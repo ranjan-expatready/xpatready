@@ -483,3 +483,13 @@ Source: `product/design/case-side-contract-v0.1-2026-11-14.md` on `lead/2026-11-
   * **FO-7b follows** (brief updated).
   * Lead B's view on the third review round, which is the release holder's call (P-293): a diff-only third round by the same reviewer plus the breaker on the same diff (money, lock order).
 * **PF-0p (#1752):** "a job key never queues twice" means never twice **under one job name** (pg-boss keys by name; PF-14 confirmed). Rows that need a key unique across names put the name in the key.
+
+**FO-7a / FO-7t trust rule (Lead B, 14 Nov 19:53 IST, from FO-7a round 3's B-12, #1758 comment 6878721249; Code reading Unconfirmed: no counsel):**
+* **Money leaves trust only** as `WITHDRAWAL_TO_INVOICE` (to an issued invoice, within its open amount) or `REFUND_TO_CLIENT` (with a reason).
+* **A CORRECTION** names only a WITHDRAWAL (a positive return) or a DEPOSIT. A negative one names a deposit and never exceeds it. A correction never names a correction.
+* **AG-6-73 move lines map onto these entry kinds:**
+  * `TRUST_APPLIED` → its `WITHDRAWAL_TO_INVOICE`;
+  * `WRONG_ACCOUNT` from trust to operating → a negative CORRECTION of the wrongly placed deposit;
+  * `CARD_FEE_ON_TRUST` is operating to trust (money in).
+
+  A move from trust to operating from any other entry kind is refused. **FO-7t follows this.**
