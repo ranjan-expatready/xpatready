@@ -28,6 +28,13 @@ You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime F
   * migration on empty and demo-data copies;
   * `npx prisma migrate diff` empty.
 
+**Keys left by rows that merged before FO-1a (rows rev 16.2):** add the foreign keys each such PR lists under "Keys FO-1k adds", with their back-relation lines on `front-office-sales.prisma`, in this one migration. Known so far:
+* **FO-7a #1758:** `(person_id) → fo_person(id)` and `(company_id) → fo_company(id)` on `money_invoice`, `money_trust_request` and `money_trust_entry` (six keys).
+* **PF-19a #1754:** `fo_web_form (firm_id, consent_wording_version_id) → msg_consent_wording (firm_id, id)`, if it shipped without it.
+* **FO-13 #1755 and FO-5:** any `fo_person`, `fo_company` or `fo_prospect` keys their PR bodies list.
+
+Read each merged PR's body for its list at start. A key whose PR hasn't merged yet stays that PR's.
+
 **Touch list (nothing else):** the three `platform.prisma` lines, the matching fields on `front-office-sales.prisma`, one migration folder, `tests/check_fo1k_keys.ts`.
 
 **Side by side (P-559 (3)):** PF-19a also adds lines to `platform.prisma` and `front-office-sales.prisma`. Whichever merges second re-applies its lines on `main`'s files, re-stamps its migration and shows `migrate diff` empty.

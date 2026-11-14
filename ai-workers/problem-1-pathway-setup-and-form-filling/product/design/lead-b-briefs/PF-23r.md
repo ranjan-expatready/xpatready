@@ -9,6 +9,8 @@ You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime P
 
 **What to build:** the row's four fixes, each with a pass and a fail test in `tests/check_pf23_observability.ts`.
 
+**Also (FO-13 breaker break 11, rows rev 16.2):** `logPort` and the API's error mapper strip PostgreSQL `DETAIL` lines and Prisma's error `meta` values, which repeat a refused row's values. Test with a pass and a fail: a refused insert of a seeded name logs and answers without the name.
+
 **Touch list (nothing else):** `api/src/platform/observability/*.ts`, `tests/check_pf23_observability.ts`.
 
 **Must still be true:** every existing suite, the demo reset and C10.1 pass unchanged; PF-23's no-personal-data CI check stays green.

@@ -452,3 +452,24 @@ Source: `product/design/case-side-contract-v0.1-2026-11-14.md` on `lead/2026-11-
 |---|---|---|---|---|
 | PF-23r | runtime (running it: redaction hardening) | **The four review minors PF-23 left open, in PF-23's own files only:** (1) `redact.ts`: a **budget of 2,000 values per call**, and a value already seen in this call is written as `"[shared]"` (no repeated walk); (2) `alerts.ts` `alertIds`: spaces become `_` only in `entity` and `queue`; a space in `entityKey` or `firmId` is **refused** (they are ids, and the port promises to refuse names); (3) `logText`: when any stack-frame line is present, keep **only the frame lines** plus the first line's error class, so a message that spans several lines (Prisma-style) never leaks; (4) the `UCI8` pattern no longer catches time ranges like `0900-1700`; `Cookie sid=abc` with no `:` is redacted; the `health.ts` comment is fixed. **Touch:** `api/src/platform/observability/*.ts`, `tests/check_pf23_observability.ts` | tested with a pass and a fail each: a graph with 20 shared references per level over 10 levels finishes under the budget, and shared values show `[shared]`; `entityKey: "Jane Doe"` → refused; `entity: "case fact"` → `case_fact`; a 3-line error message with a stack logs frames only, never the message lines; `0900-1700` stays; `Cookie sid=abc` is redacted; the no-personal-data CI check stays green | #1759 review minors 1-4 · **waits on:** PF-23 merged · decisions: none · reviewer only · **size:** S, 1 PR |
 | PF-23m | runtime (log call sites outside the platform) | **About 20 `e.message` plain console calls move to `logPort.error(event, e, ids)`** (e.g. `fill-case.ts:379`, `rounds.ts:178-205`). Names can't be caught by pattern, only by structured fields. **These files are case-side, so the touch list needs the release holder's OK as their owner** (Lead B rows never edit case-side files without it). The PR lists every call site with before and after. **Touch:** the listed call sites only (one line each), `tests/check_pf23m_log_calls.ts` | tested with a pass and a fail each: `git grep` finds no `console.(log\|error\|warn)` with `e.message` / `err.message` under `api/src` (the test is that grep, kept as a check); a seeded person's name in a thrown error at each moved site never reaches captured output; every existing suite is unchanged | #1759 review "also open" · **waits on:** PF-23 · decisions: **release holder OK on the case-side touch list** · reviewer only · **size:** S-M, 1 PR |
+
+## Rev 16.2 (14 Nov 19:23 IST, Lead B (3)): FO-7a and FO-13 lane questions (#1758, #1755)
+
+* **FO-7a:**
+  * `PlatformFirm.moneySettings MoneyPaymentSettings?` is OK as the money module's one root back-relation (moves onto PF-0p's money slot).
+  * The rule line follows `check_prisma_schema.ts`'s form (em dash, closing full stop); the guard wins.
+* **FO-1k, amended:** it adds every key a row left because FO-1a wasn't on `main`, read from each merged PR's "Keys FO-1k adds" list. Known so far:
+  * FO-7a: six keys on `money_invoice`, `money_trust_request` and `money_trust_entry` to `fo_person` and `fo_company`;
+  * PF-19a's `fo_web_form` → `msg_consent_wording`, if it shipped without it;
+  * any that FO-13 and FO-5 list.
+* **PF-12, amended (FO-13 breaker break 4):**
+  * the app role owns no table, is not a superuser, has no `BYPASSRLS`, and can't set `session_replication_role` or disable triggers;
+  * migrations run as the owner;
+  * the demo, CI and test databases use the same split;
+  * the app role gets `log_error_verbosity = terse` (break 11).
+
+  Done when adds a fail test per refusal.
+* **PF-23r, amended (break 11):** `logPort` and the API's error mapper strip PostgreSQL `DETAIL` and Prisma `meta` values. Done when adds: a refused insert of a seeded name logs and answers without it.
+* Break 10 (an explicit cast truncates) is PostgreSQL's behaviour: recorded, no row.
+* FO-13c sets `checked_at` and `confirmed_at` from one `ClockPort` (Devin's minor on #1755).
+* **Lead B's watch is fixed:** it missed these because Python's HTTP reads failed through the proxy and the errors were swallowed. It now uses curl with retries and reports its own errors.
