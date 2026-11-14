@@ -381,8 +381,11 @@ CREATE TRIGGER fo_booking_token_write BEFORE INSERT OR UPDATE OR DELETE ON "fo_b
 
 -- The delete side of the references to platform rows (break B-2), until Lead B's back-relation lines let them be
 -- foreign keys: a staff member named by an fo_ row (hours, time off, a booking, a type's hosts), or a firm with an fo_
--- row, is not deleted and does not change id (23503, as ON DELETE RESTRICT answers). These triggers sit on the
--- platform's tables as a foreign key's own checks would; they change no platform column and no platform row.
+-- row, is not deleted and does not change id (23503, as ON DELETE RESTRICT answers in READ COMMITTED, which every code
+-- path uses). Under REPEATABLE READ a delete racing a new row for that person can still pass (review m11): no code
+-- deletes staff or firms today, and real foreign keys (whose checks see past the snapshot) close it once Lead B's
+-- back-relation lines land. These triggers sit on the platform's tables as a foreign key's own checks would; they
+-- change no platform column and no platform row.
 CREATE FUNCTION fo_platform_staff_kept() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'UPDATE' AND (NEW.id, NEW.firm_id) IS NOT DISTINCT FROM (OLD.id, OLD.firm_id) THEN RETURN NEW; END IF;
