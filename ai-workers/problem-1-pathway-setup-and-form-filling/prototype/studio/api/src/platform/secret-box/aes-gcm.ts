@@ -23,10 +23,10 @@ export function aesGcmSecretBox(ring: SecretBoxKeys): SecretBoxPort {
   const masters = new Map<number, Buffer>();
   for (const [v, k] of ring.keys) {
     const b = Buffer.from(k.reveal(), "base64");
-    if (b.length !== 32) throw new SecretRefused("NOT_CONFIGURED", `Secret-box key version ${v} is not 32 bytes.`);
+    if (b.length !== 32) throw new SecretRefused("NOT_CONFIGURED", `Sealing key version ${v} is not 32 bytes.`);
     masters.set(v, b);
   }
-  if (!masters.has(ring.current)) throw new SecretRefused("NOT_CONFIGURED", `Secret-box key version ${ring.current} is not in the key ring.`);
+  if (!masters.has(ring.current)) throw new SecretRefused("NOT_CONFIGURED", `Sealing key version ${ring.current} is not in the key ring.`);
   const firmKey = (v: number, firmId: string) => {
     const m = masters.get(v);
     if (!m) throw new SecretRefused("KEY_RETIRED", `Key version ${v} is no longer held on this server; the value cannot be read.`);
@@ -52,7 +52,7 @@ export function aesGcmSecretBox(ring: SecretBoxKeys): SecretBoxPort {
     open(o, sealed) {
       const w = owner(o);
       const parts = typeof sealed === "string" ? sealed.split(".") : [];
-      if (parts.length !== 5 || parts[0] !== SCHEME || !parts.slice(2).every(canonical)) throw new SecretRefused("NOT_SEALED", "Not a value this secret box sealed.");
+      if (parts.length !== 5 || parts[0] !== SCHEME || !parts.slice(2).every(canonical)) throw new SecretRefused("NOT_SEALED", "Not a sealed credential.");
       const v = sealedVersion(sealed);
       const iv = Buffer.from(parts[2], "base64url"), tag = Buffer.from(parts[3], "base64url"), ct = Buffer.from(parts[4], "base64url");
       if (iv.length !== 12 || tag.length !== 16 || !ct.length) throw new SecretRefused("TAMPERED_OR_OTHER_OWNER", "The sealed value was changed or belongs to another owner.");

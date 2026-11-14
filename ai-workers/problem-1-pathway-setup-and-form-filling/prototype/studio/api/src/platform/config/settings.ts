@@ -121,7 +121,7 @@ export function loadPlatformConfig(env: NodeJS.ProcessEnv): PlatformConfig {
       const canonical = [...keys.values()].every((k) => Buffer.from(k.reveal(), "base64").toString("base64") === k.reveal());
       const distinct = new Set(bytes.map((b) => b.toString("hex"))).size === keys.size;
       const random = bytes.every((b) => b.length === 32 && new Set(b).size > 8);
-      if (dup || !distinct || !canonical || !random) invalid.push({ name: "PLATFORM_SECRET_BOX_KEYS", expects: "each version once, each with its own random 32-byte key in canonical base64 (openssl rand -base64 32)" });
+      if (dup || !distinct || !canonical || !random) invalid.push({ name: "PLATFORM_SECRET_BOX_KEYS", expects: "each version once, each with its own random 32-byte key written as openssl rand -base64 32 prints it" });
       else if (!keys.has(current)) invalid.push({ name: "PLATFORM_SECRET_BOX_KEY_VERSION", expects: "one of the versions listed in PLATFORM_SECRET_BOX_KEYS" });
       else secretBox = Object.freeze({ current, keys: frozenMap(keys) });
     }

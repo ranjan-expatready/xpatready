@@ -14,7 +14,7 @@ export class PlatformConfigService {
   /** The secret box; refused (NOT_CONFIGURED) on a local server with no key ring, saying which settings to supply. */
   secretBox(): SecretBoxPort {
     const ring = this.config.secretBox;
-    if (!ring) throw new SecretRefused("NOT_CONFIGURED", "No secret-box key on this server: set PLATFORM_SECRET_BOX_KEYS and PLATFORM_SECRET_BOX_KEY_VERSION (deploy/RUNBOOK-secrets.md).");
+    if (!ring) throw new SecretRefused("NOT_CONFIGURED", "No credential-sealing key on this server: set PLATFORM_SECRET_BOX_KEYS and PLATFORM_SECRET_BOX_KEY_VERSION (deploy/RUNBOOK-secrets.md).");
     return (this.box ??= aesGcmSecretBox(ring));
   }
 }
