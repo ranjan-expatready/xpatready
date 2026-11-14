@@ -32,6 +32,8 @@ You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime F
 
 **Side by side (P-559 (3)):** PF-19a also adds lines to `platform.prisma` and `front-office-sales.prisma`. Whichever merges second re-applies its lines on `main`'s files, re-stamps its migration and shows `migrate diff` empty.
 
+**Re-stamp step (P-600, schema rows in parallel):** your migration folder's stamp must be later than `main`'s newest when you ask for the label. Whenever another migration merges to `main` before yours: (1) merge `main`; (2) rename your folder to a stamp later than `main`'s newest; (3) show `npx prisma migrate diff` empty and `migrate reset` clean on `main` + your branch; (4) re-run CI and the suites of every red part; (5) a diff-only re-Approve. P-600's five conditions apply: own schema file and migration folder; add only to your own tables (a shared model changes only through your own slot line); area-prefixed functions and triggers; the later stamp; the release holder reads your migration diff before the label.
+
 **Must still be true:** FO-1a's, FO-1b's and PF-3's suites, every other suite, the demo reset (`check_s7_reset`, `check_d1_reset_to_six`) and the checkpoint load (C10.1) pass unchanged.
 
 **Duplicate check (P-526):** BACKLOG, open PRs, `main`'s schema (`git grep -n 'LeadOwner\|frontOfficeSales'`) and BUGS; one `Duplicate check:` line.

@@ -17,6 +17,8 @@ You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime F
 
 **Touch list (nothing else):** `prisma/schema/front-office-sales.prisma` (the column and indexes only) and one migration folder; new `prototype/studio/ports/matching.ts`, new `api/src/front-office/duplicates/*.ts`, `api/src/features/front-office-duplicates.ts`, `tests/check_fo9a_duplicates.ts`; **plus one call each** in FO-2's Add a lead, Engage, add-contact and arrival handlers under `api/src/front-office/sales/` (OK'd by Lead B as owner of both rows, 14 Nov; list the lines in the PR).
 
+**Re-stamp step (P-600, schema rows in parallel):** your migration folder's stamp must be later than `main`'s newest when you ask for the label. Whenever another migration merges to `main` before yours: (1) merge `main`; (2) rename your folder to a stamp later than `main`'s newest; (3) show `npx prisma migrate diff` empty and `migrate reset` clean on `main` + your branch; (4) re-run CI and the suites of every red part; (5) a diff-only re-Approve. P-600's five conditions apply: own schema file and migration folder; add only to your own tables (a shared model changes only through your own slot line); area-prefixed functions and triggers; the later stamp; the release holder reads your migration diff before the label.
+
 **Must still be true:** every existing suite, the demo reset and the checkpoint load (C10.1) pass unchanged; FO-1a's and FO-2's suites pass unchanged.
 
 **Duplicate check (P-526):** BACKLOG, open PRs, `main`'s code (`git grep -i 'pg_trgm\|libphonenumber\|duplicate'` under `api/src` and `prisma`) and BUGS; one `Duplicate check:` line.

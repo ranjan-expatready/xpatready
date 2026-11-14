@@ -11,6 +11,8 @@ You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime F
 
 **Touch list (nothing else):** the new area file and one migration folder; new `api/src/front-office/retainers/*.ts`, `api/src/front-office/files.ts`, `api/src/features/front-office-retainers.ts`, `tests/check_fo5_retainers.ts`; a committed text source for the starter template under `samples/`.
 
+**Re-stamp step (P-600, schema rows in parallel):** your migration folder's stamp must be later than `main`'s newest when you ask for the label. Whenever another migration merges to `main` before yours: (1) merge `main`; (2) rename your folder to a stamp later than `main`'s newest; (3) show `npx prisma migrate diff` empty and `migrate reset` clean on `main` + your branch; (4) re-run CI and the suites of every red part; (5) a diff-only re-Approve. P-600's five conditions apply: own schema file and migration folder; add only to your own tables (a shared model changes only through your own slot line); area-prefixed functions and triggers; the later stamp; the release holder reads your migration diff before the label.
+
 **Must still be true:** every existing suite, the demo reset and the checkpoint load (C10.1) pass unchanged; no real document or personal data committed.
 
 **Duplicate check (P-526):** BACKLOG, open PRs, `main`'s code (`git grep -i 'retainer\|docxtemplater\|FilesPort'` under `api/src`; old fixture words are not duplicates) and BUGS; one `Duplicate check:` line.

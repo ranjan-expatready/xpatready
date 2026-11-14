@@ -17,6 +17,8 @@ You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime P
 
 **Plan changes are not in the Customer Portal (rows rev 13, Lead B (3)):** set the portal up with plan switching **off** (card update, invoices and cancel stay on); plan changes, with the downgrade check SA-3-58 needs, are PF-16's. Say the portal configuration in the PR.
 
+**Re-stamp step (P-600, schema rows in parallel):** your migration folder's stamp must be later than `main`'s newest when you ask for the label. Whenever another migration merges to `main` before yours: (1) merge `main`; (2) rename your folder to a stamp later than `main`'s newest; (3) show `npx prisma migrate diff` empty and `migrate reset` clean on `main` + your branch; (4) re-run CI and the suites of every red part; (5) a diff-only re-Approve. P-600's five conditions apply: own schema file and migration folder; add only to your own tables (a shared model changes only through your own slot line); area-prefixed functions and triggers; the later stamp; the release holder reads your migration diff before the label.
+
 **Must still be true:** every existing suite, the demo reset and the checkpoint load (C10.1) pass unchanged; PF-3's Sample firms keep working as before.
 
 **Duplicate check (P-526):** before building, search BACKLOG, open PRs, `main`'s code (`git grep -i 'stripe\|signup\|subscription'` under `api/src`; ignore CSS stripes) and BUGS; one `Duplicate check:` line in the PR.
