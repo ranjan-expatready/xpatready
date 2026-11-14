@@ -105,4 +105,13 @@ hour=$(gh pr list --state merged --search "merged:>=$(date -u -v-60M '+%Y-%m-%dT
 back=$(grep -cE '^ACT   #[0-9]+ (dequeued|red after approval)' "$STATE_DIR/q.txt")
 say "four  Works on main ${works}/${active} (${bym% }) (+$((works - $(cat "$day"))) today, target +10) · app-code merges last hour ${hour:-?} · Mac builders ${macb} · approved then red or dequeued ${back}"
 
+# 6. Private backup (P-589 (1), P-590): the backup repository's last push, read from GitHub (read-only here). Over 24 h:
+# the Lead runs tools/backup-refresh.sh (needs allowed_domains github.com). Unreadable = said, never a silent pass.
+o=$(git remote get-url origin 2>/dev/null); o=${o%.git}; o=${o#*github.com[:/]}   # owner/name of origin; backup = "<name>-backup"
+bk=$(gh api "repos/${BACKUP_REPO:-${o}-backup}" -q .pushed_at 2>/dev/null)
+if [ -z "$bk" ]; then ACT "backup: last push unreadable (repository missing or no access): check it, then run tools/backup-refresh.sh"
+else age=$(( ( $(date -u +%s) - $(date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$bk" +%s 2>/dev/null || date -u -d "$bk" +%s) ) / 3600 ))
+  say "backup last push ${age} h ago"; [ "$age" -ge 24 ] && ACT "backup ${age} h old: run tools/backup-refresh.sh (allowed_domains github.com)"
+fi
+
 exit "$act"
