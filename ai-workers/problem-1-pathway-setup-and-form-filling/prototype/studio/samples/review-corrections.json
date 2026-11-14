@@ -16,7 +16,7 @@
       "note": "QA-415: IMM 5645 and IMM 5476 name the kind of the application of the person they are about, and a family's members may apply for different documents (a student's spouse for a work permit), so it is each person's fact, from their filing."
     }
   ],
-  "boxes_basis": "BK-24 (P-533, P-449: data, never a form in code): where a saved AI answer mapped one form field to a fact or a step that is wrong for it, and changing the proposed field itself would change every form field that reads it on that draft, the sample loader corrects that one form field on the applied draft, before any release, as the author would (api/src/features/checkpoint/040-field-map-review.ts: its reason says \"Changed by the sample loader\", one audit line each). The product has no door yet for a person to remap one mapped form field (follow-up F6 on BK-24): the edition, the form field, the key the saved answer proposed (checked first: a different one is refused in words), the key and step the author decides, and the reason it records. The keys and steps are those IMM 1294 (06-2026) and IMM 5257 (09-2023) already map on the same boxes of the same layout. Sample review data, not an IRCC rule; Unconfirmed: expert.",
+  "boxes_basis": "BK-24 (P-533, P-449: data, never a form in code): where a saved AI answer mapped one form field to a fact or a step that is wrong for it, and changing the proposed field itself would change every form field that reads it on that draft, the sample loader corrects that one form field on the applied draft, before any release, as the author would (api/src/features/checkpoint/040-field-map-review.ts: its reason says \"Changed by the sample loader\", one audit line each). The product has no door yet for a person to remap one mapped form field (follow-up F6 on BK-24): the edition, the form field, the key the saved answer proposed (checked first: a different one is refused in words), the key and step the author decides, and the reason it records. The keys and steps are those IMM 1294 (06-2026) and IMM 5257 (09-2023) already map on the same boxes of the same layout. BK-26: a null \"proposed\" is a form field the saved answer left unresolved (nothing mapped); it is mapped only while it is still unresolved. Sample review data, not an IRCC rule; Unconfirmed: expert.",
   "boxes": [
     {
       "edition": "IMM 1295 (09-2023)",
@@ -169,6 +169,14 @@
       "key": "person.education_institution",
       "transform": "derived:any post-secondary education record exists -> yes_no_code:Y/N",
       "note": "BK-24: \"Have you had any post secondary education?\" is Yes when an education record is recorded, else No on a confirmed none, as IMM 5257 (09-2023) maps the same question; the saved answer's step could not be run."
+    },
+    {
+      "edition": "IMM 1294 (06-2026)",
+      "box": "form1[0].Page3[0].DetailsOfStudy[0].PurposeRow1[0].CityTown[0].CityTown[0]",
+      "proposed": null,
+      "key": "case.school_address",
+      "transform": "address_part:city then code_list:imm1294.city",
+      "note": "BK-26: question 1 d is the study's city, a list the form's own script fills from the province (its datasets' CityList, read into imm1294e.lists.json). The saved answer left it unresolved because the field list holds no choices; it reads the school's address, as the province box beside it does."
     }
   ]
 }

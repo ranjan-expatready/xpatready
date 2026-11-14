@@ -6,8 +6,29 @@
 
 export type Address = { po_box?: string; apt_unit?: string; street_number?: string; street_name?: string; city?: string; district?: string; province?: string; postal_code?: string; country?: string };
 export type Phone = { role?: string; type?: string; country_code?: string; number?: string; extension?: string };
-export type Box = { ui?: string; max_chars?: number | null; options?: unknown; options_resolved?: [string, string][] | null };
-export type Outcome = { ok: true; value: string; steps: string[] } | { ok: false; hand: true; reason: string; steps: string[] } | { ok: false; blank: true; reason: string; steps: string[] };
+/** `options_scope` (BK-26): the box's choices are one list of a dependent list (dependentChoices below), named in words;
+ *  a value not in it is refused, never left to a guess. */
+export type Box = { ui?: string; max_chars?: number | null; options?: unknown; options_resolved?: [string, string][] | null; options_scope?: string };
+export type Outcome = { ok: true; value: string; steps: string[] } | { ok: false; hand: true; reason: string; steps: string[] } | { ok: false; blank: true; reason: string; steps: string[] } | { ok: false; refused: true; reason: string; steps: string[] };
+
+/** BK-26: a list the form's own script fills from another box's answer (IMM 1294's city from its province:
+ *  `setDDLFromLOV(CityTown.CityTown, "CityList." + this.formattedValue+".City[*]")`), every list read from the official
+ *  file's own datasets by prototype/p1/xfa_inventory.py (`<form>.lists.json`). `key` says which of the other box's values
+ *  picks the list: the label it shows (the script's formattedValue) or its code (rawValue). */
+export type DependentList = { caption?: string | null; depends_on: string; depends_on_caption?: string | null; key: "label" | "code"; list: string; quote?: string; lists: Record<string, [string, string][]> };
+
+/** BK-26: the choices of a dependent list for the value the copy writes in the box it depends on (its code, as written),
+ *  or why a person picks it. Only the form's own lists; never a guess. Pure. */
+export function dependentChoices(dep: DependentList, source: Box | undefined, written: string | undefined): { options: [string, string][]; scope: string } | { why: string } {
+  const other = (dep.depends_on_caption ?? "").replace(/^\s*\*\s*/, "").trim() || "the box it depends on";
+  if (written === undefined || written === "") return { why: `its choices are the form's own list for the answer to "${other}", which this copy does not write: a person picks it once "${other}" is filled` };
+  const own = choices(source ?? {}).filter(([l, c]) => l !== "" || c !== "");
+  const key = dep.key === "code" || !own.length ? written : own.find(([, c]) => c === written)?.[0];
+  const options = key === undefined ? undefined : (dep.lists[key] ?? []).filter(([l, c]) => l !== "" || c !== "");
+  const where = dep.list.replace("{}", key ?? written);
+  if (key === undefined || !options?.length) return { why: `the form's own datasets have no list ${where} for "${other}" ${key ?? written}: a person picks it` };
+  return { options, scope: `the form's own list of choices for "${other}" ${key} (its datasets, ${where}: ${options.length} entries)` };
+}
 
 const PROVINCES: Record<string, string> = { AB: "Alberta", BC: "British Columbia", MB: "Manitoba", NB: "New Brunswick", NL: "Newfoundland and Labrador", NS: "Nova Scotia", NT: "Northwest Territories", NU: "Nunavut", ON: "Ontario", PE: "Prince Edward Island", QC: "Quebec", SK: "Saskatchewan", YT: "Yukon" };
 /** Country codes printed on travel documents (ICAO three-letter codes) for the countries in this demonstration. */
@@ -336,6 +357,8 @@ export function runTransform(transform: string | undefined, value: unknown, box:
       for (const pair of (m[1] ?? "").split(",")) { const q = /^\s*([^=|]+?)\s*=\s*(\w+)\s*$/.exec(pair); if (q) inline[q[1]] = q[2]; }
       if (!choices(box).length && !Object.keys(inline).length) return hand("code list depends on another answer (dependent list); the form's own rules fill it");
       const code = codeFor(String(v), box, Object.keys(inline).length ? inline : undefined) ?? (Object.keys(inline).length ? codeFor(String(v), box) : null);
+      // BK-26: on a dependent list, a value not in the list for the other box's answer is refused in words, never written.
+      if (code === null && box.options_scope) return { ok: false, refused: true, reason: `"${v}" is not in ${box.options_scope}`, steps };
       if (code === null) return hand(`"${v}" is not in the box's option list`);
       v = code; continue;
     }
