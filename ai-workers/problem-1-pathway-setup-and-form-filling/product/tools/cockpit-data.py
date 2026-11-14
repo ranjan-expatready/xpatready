@@ -324,6 +324,7 @@ MC_RUNS, MC_SEED, MC_CAP = 10000, 596, 365     # §1 forecast: 10,000 runs, fixe
 UNSHAPED_FACTOR = 3                            # P-586 (4): 3 changes per unshaped capability, settled 19 Nov
 LIMITS_H = {"review": 2.0, "merge": 1.0, "qa": 24.0}          # §2 constraint limits (N3)
 FRESH_LIMIT_H = {"GitHub data": 1.0, "Lead input": 2.0, "flow-measure": 6.0}   # §6.8
+PARKED_H = 7 * 24                             # §11 R8: no push for 7 days = parked
 LANE_WINDOW_MIN = 90                           # P-326: a lane works when it pushed in the last 90 min
 BURN_LIMIT = 3.0                               # P-440: burn at most 3% of the weekly plan per hour
 BUG_AGE_H = 48                                 # §5 item 6
@@ -647,8 +648,9 @@ def take_snapshot(snap, gh, cache, lead_input, appcode_max):
                "created_at": at})
     wj("github/guard_runs.json", gr)
     # extra: the newest finished nightly run on main (Health item 1 also reads it: main's head has no ci.yml run of its own)
-    nl = gh.get("/actions/workflows/nightly.yml/runs?branch=main&status=completed&per_page=1").get("workflow_runs", [])
-    wj("github/main_nightly.json", {"conclusion": nl[0]["conclusion"], "created_at": nl[0]["created_at"]} if nl else {})
+    nl = gh.get("/actions/workflows/nightly.yml/runs?branch=main&status=completed&per_page=2").get("workflow_runs", [])
+    wj("github/main_nightly.json", dict({"conclusion": nl[0]["conclusion"], "created_at": nl[0]["created_at"]},
+                                        previous={"conclusion": nl[1]["conclusion"], "created_at": nl[1]["created_at"]} if len(nl) > 1 else None) if nl else {})
     # branches with a push in the last 24 h (GitHub keeps no push time per branch: the head commit's committed date stands in)
     o, r_ = (gh.repo or "/").split("/")
     # every branch is read (GitHub's ref ordering by commit date proved unreliable for branches: 14 Nov, today's lane branches missing)
@@ -807,7 +809,7 @@ def monte_carlo(counts, remaining, today, runs=MC_RUNS, seed=MC_SEED, cap=MC_CAP
     if remaining <= 0:
         return {"p50": today.isoformat(), "p85": today.isoformat(), "reason": None}
     if not counts or sum(counts) == 0:
-        return {"p50": None, "p85": None, "reason": "not measured: no merges in 14 days"}
+        return {"p50": None, "p85": None, "reason": "not measured: no merges in the window"}
     rng = random.Random(seed)
     res = []
     for _ in range(runs):
@@ -905,13 +907,15 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
     per_day = {}
     for d in change_day.values():
         per_day[d] = per_day.get(d, 0) + 1
-    days_since = (today - R1_START).days
-    w = min(14, days_since)
-    win = [today - timedelta(days=w - 1 - i) for i in range(w)] if w > 0 else []
+    # §11 R8: the window never reaches before 13 Nov: IST days from 13 Nov (inclusive) to today, at most the last 14
+    days_since = (today - R1_START).days + 1
+    w = max(0, min(14, days_since))
+    win = [today - timedelta(days=w - 1 - i) for i in range(w)]
     in_win = sum(per_day.get(d, 0) for d in win)
+    first_day = (R1_START + timedelta(days=4)).strftime("%-d %b")
     if days_since < 5:
         Y = num(None, f"Release 1 changes merged per IST day ({gh_src}; checklist {ck_src})", "mixed",
-                L, f"not measured: {days_since} of 5 days of Release 1 history (a rate needs 5, principle 4)", window_days=w, merged_in_window=in_win)
+                L, f"not measured yet: needs 5 days of Release 1 history, from {first_day} ({max(0, days_since)} so far)", window_days=w, merged_in_window=in_win)
     else:
         Y = num(round(in_win / w, 2), f"{in_win} Release 1 changes merged in the last {w} IST days ÷ {w} ({gh_src}; {ck_src})", "mixed", L,
                 window_days=w, merged_in_window=in_win)
@@ -927,7 +931,7 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
     remaining = rem_shaped + rem_unshaped
     R = num(remaining, f"unmerged ids of shaped Build rows ({rem_shaped}) + {UNSHAPED_FACTOR} × each Build row not shaped, "
             f"less its merged parts ({rem_unshaped}); {ck_src}, {bl_src}, {gh_src}", "mixed", L,
-            label=f"estimate: {len(unshaped)} unshaped capabilities × {UNSHAPED_FACTOR} (P-586 (4), settled 19 Nov)",
+            label=f"estimate: {len(unshaped)} unspecified capabilities × {UNSHAPED_FACTOR} (P-586 (4), to be settled 19 Nov)",
             shaped_unmerged=rem_shaped, unshaped_rows=len(unshaped), unshaped_estimate=rem_unshaped)
 
     # ---- §1 B1: built and proven per Build row
@@ -985,19 +989,18 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
         X = num(None, "cockpit/plan.json H1 (kind committed)", "parsed", L, f"not measured: no committed date yet (set {set_on or 'not dated'})")
 
     # ---- §1 forecast (Monte Carlo on 14 daily counts)
-    days14 = [today - timedelta(days=13 - i) for i in range(14)]
+    days14 = win                                       # R8: the same days as the pace window
     counts = [per_day.get(d, 0) for d in days14]
-    sample = "Release 1 changes merged per IST day, last 14 days"
+    sample = f"Release 1 changes merged per day, {w} days from 13 Nov"
     if days_since >= 5:
         mc = monte_carlo(counts, remaining, today)
     else:   # R2: the reference class is withdrawn
-        mc = {"p50": None, "p85": None, "reason": "not measured: fewer than 5 days of Release 1 history (from "
-              + (R1_START + timedelta(days=5)).strftime("%-d %b") + ")", "short": True}
+        mc = {"p50": None, "p85": None, "reason": f"not measured yet: fewer than 5 days of Release 1 history (from {first_day})", "short": True}
     fsrc = f"Monte Carlo, {MC_RUNS:,} runs, seed {MC_SEED}, cap {MC_CAP} days; {sample}; remaining {remaining}"
     F50 = num(mc["p50"], fsrc, "mixed", L, mc["reason"])
     F85 = num(mc["p85"], fsrc, "mixed", L, mc["reason"])
     if mc["reason"] and not mc.get("short"):
-        light = {"state": "red", "why": mc["reason"].replace("not measured: ", "") + " (zero guard)"}
+        light = {"state": "red", "why": mc["reason"].replace("not measured: ", "") + " (no merges at all)"}
     elif not committed:
         light = {"state": "grey", "why": f"no committed date (set {set_on or 'not dated'})"}
     elif tol is None:
@@ -1040,9 +1043,10 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
 
     def is_lane_branch(n):   # org chart lanes: the Leads' own branches are the Leads' nodes
         return is_session_branch(n) and not n.startswith(("lead/", "lead-"))
-    lanes = [b for b in branches if is_session_branch(b["name"]) and parse_iso(b["pushed_at"]) >= cutoff - timedelta(minutes=LANE_WINDOW_MIN)]
-    Lw = num(len(lanes), f"sessions = branches (not main or the merge queue) with a push in the last {LANE_WINDOW_MIN} min; {gh_src} branches_recent.json "
-             "(push time = head commit time)", "measured", L, names=[b["name"] for b in lanes])
+    lanes = [b for b in branches if is_session_branch(b["name"]) and not b["name"].startswith(("lead/", "lead-b-"))      # §11 R8
+             and parse_iso(b["pushed_at"]) >= cutoff - timedelta(minutes=LANE_WINDOW_MIN)]
+    Lw = num(len(lanes), f"branches with a push in the last {LANE_WINDOW_MIN} min, not main, the merge queue or the Leads' records branches "
+             f"(lead/*, lead-b-*); {gh_src} branches_recent.json (push time = head commit time)", "measured", L, names=[b["name"] for b in lanes])
     # R1b: ready rows treat any non-records merged PR (app code or not) as merged
     merged_any = set(change_at)
     for p in sorted(merged, key=lambda p: p["merged_at"]):
@@ -1076,8 +1080,11 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
     app_open = [p for p in open_prs if p.get("files_app") is True and not is_records(p)]
     lab = lambda p: [x["name"] for x in p.get("labels", [])]
     hrs = lambda iso: (cutoff - parse_iso(iso)).total_seconds() / 3600 if iso else None
-    review_q = [p for p in eng if not p["draft"] and "review: approved" not in lab(p) and (detail.get(p["number"]) or {}).get("ci") == "success"]
-    merge_q = [p for p in eng if "review: approved" in lab(p)]
+    # §11 R8: a PR with no push for 7 days is parked: listed apart, never in a stage's wait
+    parked = [p for p in eng if (hrs((detail.get(p["number"]) or {}).get("head_committed_at")) or 0) > PARKED_H]
+    staged = [p for p in eng if p not in parked]
+    review_q = [p for p in staged if not p["draft"] and "review: approved" not in lab(p) and (detail.get(p["number"]) or {}).get("ci") == "success"]
+    merge_q = [p for p in staged if "review: approved" in lab(p)]
     rw = [hrs((detail.get(p["number"]) or {}).get("head_committed_at")) for p in review_q]
     mw = [hrs((detail.get(p["number"]) or {}).get("approved_labelled_at")) for p in merge_q]
     built_wait = [r for r in built_rows if r["status"] != "qa Works" and not r.get("proven")]
@@ -1125,6 +1132,7 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
                                  "measured", L, age_reason),
         "wip": num(len(items), "open app PRs (non-records)", "measured", L),
         "idle": idle,
+        "parked": [{"pr": p["number"], "title": clean(p["title"], 70), "push_d": round(hrs(detail[p["number"]]["head_committed_at"]) / 24, 1)} for p in parked],
         "baton_held": num(None, "BACKLOG touches: field", "parsed", L, "not measured: BACKLOG rows carry no touches: field yet"),
         "light": {"state": cap_light, "why": ("an item is older than 2 × the 85th percentile or has no push in 24 h" if amber_items else
                                               "rows are ready and nobody is on them" if cap_light == "amber" else "no item past the rule")},
@@ -1157,28 +1165,38 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
             if prn is None and any(p["head"]["ref"] == b["name"] for p in pulls):
                 continue   # a branch whose PR is merged or closed is not a lane at work
             measured[b["name"]] = {"branch": b["name"], "pr": prn, "push_h": round(hrs(b["pushed_at"]), 1)}
+    def lead_key(name):
+        """Review M5: a lead is matched by its "Lead N" or "Lead B" prefix ("Lead 46 (tech lead)" reports to "Lead 46")."""
+        m_ = re.match(r"\s*(Lead (?:\d+|B))\b", name or "")
+        return m_.group(1) if m_ else (name or None)
     used, lanes_out = set(), []
     for s in sessions:
         if s.get("role") not in ("builder", "qa"):
             continue
-        br_ = s.get("branch") or (pr_by_n.get(s.get("pr")) or {}).get("head", {}).get("ref")
-        hit = measured.get(br_) if br_ else None
         if (s.get("state") or "").lower() == "done":
             continue
+        br_ = s.get("branch") or (pr_by_n.get(s.get("pr")) or {}).get("head", {}).get("ref")
+        if not br_:   # no PR or branch given: an open PR whose title names one of the lane's row ids (R1 token match)
+            rids = cell_ids(s.get("row") or "")
+            cand = [p for p in open_prs if p["head"]["ref"] in measured and p["head"]["ref"] not in used
+                    and any(title_has(p["title"], x) for x in rids)]
+            br_ = cand[0]["head"]["ref"] if len(cand) == 1 else None
+        hit = measured.get(br_) if br_ and br_ not in used else None
         if hit:
             used.add(br_)
         lanes_out.append({"name": s.get("name"), "role": s.get("role"), "row": s.get("row"), "pr": s.get("pr") or (hit or {}).get("pr"),
-                          "reports_to": s.get("reports_to"), "state": s.get("state"), "push_h": (hit or {}).get("push_h"),
-                          "seen": "both" if hit else "reported only"})
+                          "reports_to": s.get("reports_to"), "reports_key": lead_key(s.get("reports_to")), "state": s.get("state"),
+                          "push_h": (hit or {}).get("push_h"), "seen": "both" if hit else "reported only"})
     for k, m in measured.items():
         if k not in used:
-            lanes_out.append({"name": k, "role": "unknown", "row": None, "pr": m["pr"], "reports_to": None, "state": None,
+            lanes_out.append({"name": k, "role": "unknown", "row": None, "pr": m["pr"], "reports_to": None, "reports_key": None, "state": None,
                               "push_h": m["push_h"], "seen": "measured only"})
-    leads = [{"name": cur_lead or "current Lead (STATE current_lead: unreadable)", "role": "release holder: release, Bake, case side; the pipeline",
-              "src": f"STATE.md current_lead @{rsha}"}]
+    leads = [{"name": cur_lead or "current Lead (STATE current_lead: unreadable)", "key": lead_key(cur_lead),
+              "role": "release holder: release, Bake, case side; the pipeline", "src": f"STATE.md current_lead @{rsha}"}]
     for s in sessions:
         if s.get("role") in ("lead-b",) or (s.get("role") == "lead" and "lead b" in (s.get("name") or "").lower()):
-            leads.append({"name": s.get("name"), "role": "platform + front office", "src": "Lead input sessions (reported)"})
+            if lead_key(s.get("name")) not in {l["key"] for l in leads}:
+                leads.append({"name": s.get("name"), "key": lead_key(s.get("name")), "role": "platform + front office", "src": "Lead input sessions (reported)"})
     org = {"founder": {"name": "Founder", "role": "product direction"}, "leads": leads, "lanes": lanes_out,
            "standbys": [s.get("name") for s in sessions if s.get("role") == "standby"],
            "desk": [s.get("name") for s in sessions if s.get("role") in ("desk", "strategy desk")],
@@ -1341,7 +1359,16 @@ def health(snap, now, comp, li):
         elif running:
             item(1, "main CI", "amber", "running on main's head: " + ", ".join(running[:5]))
         else:
-            item(1, "main CI", "green", f"{len(mc)} check runs on main's head finished green; newest nightly on main: {ni.get('conclusion') or 'not read'}")
+            ok_n = sum(1 for c in mc if c.get("conclusion") in ("success", "neutral"))
+            sk_n = sum(1 for c in mc if c.get("conclusion") == "skipped")
+            unfinished = [x for x in (ni, ni.get("previous") or {}) if x and x.get("conclusion") not in ("success", "failure", "timed_out")]
+            night = ("newest nightly " + (ni.get("conclusion") or "not read") +
+                     (" (not counted)" if ni.get("conclusion") not in ("success", None) else ""))
+            if len(unfinished) == 2:
+                item(1, "main CI", "amber", f"{ok_n} passed, {sk_n} skipped on main's head; the last two nightly runs did not finish "
+                     f"({ni.get('conclusion')}, {(ni.get('previous') or {}).get('conclusion')})")
+            else:
+                item(1, "main CI", "green", f"{ok_n} passed, {sk_n} skipped on main's head (main's head passed the merge queue); {night}")
     items.append({"id": 2, "name": "Board data age", "state": "page", "detail": "computed by the page from generated_at: amber at 45 min, red at 2 h",
                   "action": "refresh the board at the next check", "owner": "current Lead", "class": "measured"})
     old = ex.get("state_branch_oldest_unmerged_at")
@@ -1565,7 +1592,9 @@ def main():
       commits(last:1){nodes{commit{committedDate statusCheckRollup{state contexts(first:100){nodes{__typename ... on CheckRun{status conclusion} ... on StatusContext{state}}}}}}}
       comments(last:50){nodes{body createdAt}}}}}}"""
     o, r = (gh.repo or "/").split("/")
-    prs_raw = safe("open PRs", lambda: gh.graphql(q, {"o": o, "r": r})["repository"]["pullRequests"]["nodes"], [])
+    prs_raw = safe("open PRs", lambda: gh.graphql(q, {"o": o, "r": r})["repository"]["pullRequests"]["nodes"], None) if not gh.offline else None
+    prs_ok = prs_raw is not None     # review Minor 5: PR questions are read live; offline they are "not measured", never 0
+    prs_raw = prs_raw or []
     prs, questions = [], []
     for p in prs_raw:
         labels = [x["name"] for x in p["labels"]["nodes"]]
@@ -1746,7 +1775,10 @@ def main():
     needs = {"asks": asks, "for_founder": V(forf, f"{st_src} › For the founder"),
              "waiting_line": V(waitline, f"{st_src} › Start here › Waiting on the founder"),
              "pr_questions": questions, "pr_src": prs_src,
-             "count": V(len(asks) + len(questions), f"open founder asks ({st_src}) + PRs with an unanswered Question for the tech lead")}
+             "pr_questions_measured": V(prs_ok, "open PRs read live (GraphQL) at this refresh" if prs_ok else
+                                       "not measured: open PRs not read (offline or failed); PR questions unknown"),
+             "count": V(len(asks) + len(questions), f"open founder asks ({st_src}) + PRs with an unanswered Question for the tech lead"
+                        + ("" if prs_ok else " (PR questions not measured: open PRs not read)"))}
 
     # status line
     status_line = {
@@ -2031,7 +2063,8 @@ def main():
         "freshness": {
             "generated_at": NOW.strftime("%Y-%m-%dT%H:%M:%SZ"), "generated_ist": ist(NOW),
             "main_sha": V(main_sha, "GitHub API commits/main"), "main_at_ist": ist(main_at),
-            "records_copy": V(copy, "git in the folder the script ran from"),
+            "records_copy": V(copy, "records branch and sha of the snapshot (meta.json)", sha=(snap.meta.get("records_sha") or "")[:9],
+                              **{"class": "parsed", "as_of": snap.meta.get("taken_at")}),
             "library_base": library_base(gh.repo),
             "lead_input_age_h": V(li_age, li_src), "lead_input_example": bool(li and li.get("example")),
             "flow_measure_age_h": V(fm_age, fm_src),

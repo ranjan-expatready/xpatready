@@ -43,8 +43,8 @@
       "properties": {
         "p50": {"$ref": "#/$defs/date_num"},
         "p85": {"$ref": "#/$defs/date_num"},
-        "counts": {"type": "array", "items": {"type": "integer", "minimum": 0}, "minItems": 14, "maxItems": 14},
-        "days": {"type": "array", "items": {"type": "string", "format": "date"}, "minItems": 14, "maxItems": 14},
+        "counts": {"type": "array", "items": {"type": "integer", "minimum": 0}, "maxItems": 14},
+        "days": {"type": "array", "items": {"type": "string", "format": "date"}, "maxItems": 14},
         "runs": {"const": 10000},
         "cap_days": {"const": 365}
       }
@@ -53,7 +53,7 @@
                "properties": {"built": {"type": "array", "items": {"type": "integer", "minimum": 0}}}},
     "capacity": {
       "type": "object",
-      "required": ["lanes_working", "ready_rows", "room", "stages", "constraint", "age", "cycle_median_days", "wip", "baton_held", "light"],
+      "required": ["lanes_working", "ready_rows", "room", "stages", "constraint", "age", "cycle_median_days", "wip", "baton_held", "light", "parked"],
       "properties": {
         "lanes_working": {"$ref": "#/$defs/count"},
         "ready_rows": {"$ref": "#/$defs/count"},

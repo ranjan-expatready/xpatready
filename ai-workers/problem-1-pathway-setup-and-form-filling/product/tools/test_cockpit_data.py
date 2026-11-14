@@ -98,9 +98,9 @@ class Pace(unittest.TestCase):
     def test_changes_per_day(self):
         # Change dates (IST): PF-1 14, PF-2 16 (15 Nov 20:00 UTC), PF-4 16, PF-3 18 (#103, the id anywhere, R1), FO-4 18 (#118),
         # BK-1 10, BK-2 13, BK-3 20; BK-4 is not cited (R5); FO-5's merge is after taken_at.
-        # days since 13 Nov = 7, window 14..20 Nov: 1+0+2+0+2+0+1 = 6 → 6/7 = 0.857 → 0.86
+        # §11 R8: 13 Nov is day 1, so 20 Nov is day 8; window 13..20 Nov: 1+1+0+2+0+2+0+1 = 7 → 7/8 = 0.875 → 0.88 (round half to even, R8b)
         y = self.c["pace"]["changes_per_day"]
-        self.assertEqual((y["value"], y["window_days"], y["merged_in_window"]), (0.86, 7, 6))
+        self.assertEqual((y["value"], y["window_days"], y["merged_in_window"]), (0.88, 8, 7))
         self.assertEqual(self.c["pace"]["merged_changes"]["value"], 8)
 
     def test_remaining_scope(self):
@@ -108,7 +108,7 @@ class Pace(unittest.TestCase):
         r = self.c["pace"]["remaining"]
         self.assertEqual((r["value"], r["shaped_unmerged"], r["unshaped_rows"], r["unshaped_estimate"]), (6, 1, 2, 5))
         self.assertNotIn("flags_bk_unmerged", r)
-        self.assertEqual(r["label"], "estimate: 2 unshaped capabilities × 3 (P-586 (4), settled 19 Nov)")
+        self.assertEqual(r["label"], "estimate: 2 unspecified capabilities × 3 (P-586 (4), to be settled 19 Nov)")
 
     def test_built_and_proven(self):
         built = {r["map"]: r["built"] for r in self.c["rows"] if r["built"]}
@@ -123,14 +123,15 @@ class Pace(unittest.TestCase):
         self.assertEqual(b["days"][0], "2026-11-13")
         self.assertEqual(b["built"], [0, 1, 1, 1, 1, 3, 3, 4])
         self.assertEqual(b["scope"], [None, None, None, None, None, 8, 8, 8])   # history lines 18, 19 Nov; today 8
-        self.assertEqual(b["x_end"], "2026-12-05")                               # later of H1 to (3 Dec) and the 85% date
+        self.assertEqual(b["x_end"], "2026-12-03")                               # H1's 3 Dec is later than the 85% date                               # later of H1 to (3 Dec) and the 85% date
 
     def test_forecast_inputs_and_pinned_dates(self):
         f = self.c["forecast"]
-        self.assertEqual(f["counts"], [0, 0, 0, 1, 0, 0, 1, 1, 0, 2, 0, 2, 0, 1])   # 7..20 Nov
-        self.assertEqual(f["sample"], "Release 1 changes merged per IST day, last 14 days")
+        self.assertEqual(f["counts"], [1, 1, 0, 2, 0, 2, 0, 1])                   # R8: 13..20 Nov only, never before 13 Nov
+        self.assertEqual(f["days"][0], "2026-11-13")
+        self.assertEqual(f["sample"], "Release 1 changes merged per day, 8 days from 13 Nov")
         # pinned under seed 596 (regression; the deterministic cases below are worked by hand)
-        self.assertEqual((f["p50"]["value"], f["p85"]["value"]), ("2026-11-30", "2026-12-05"))
+        self.assertEqual((f["p50"]["value"], f["p85"]["value"]), ("2026-11-27", "2026-11-30"))
 
     def test_no_committed_date_line_and_grey_light(self):
         p = self.c["pace"]
@@ -147,30 +148,29 @@ class Pace(unittest.TestCase):
             return run(snap_with({"files/" + cd.REL + "/cockpit/plan.json": pl}))[1]["pace"]
         p = with_h1(kind="committed", date="2026-12-08", date_to="2026-12-10", tolerance_days=0)
         self.assertEqual(p["changes_needed_per_day"]["value"], 0.3)        # 6 ÷ 20 days (20 Nov → 10 Dec)
-        self.assertEqual(p["light"]["state"], "green")                     # 5 Dec ≤ 10 Dec
-        self.assertEqual(with_h1(kind="committed", date="2026-12-01", date_to=None, tolerance_days=0)["light"]["state"], "amber")  # 5 Dec ≤ 1 Dec + 7
-        self.assertEqual(with_h1(kind="committed", date="2026-11-25", date_to=None, tolerance_days=0)["light"]["state"], "red")
+        self.assertEqual(p["light"]["state"], "green")                     # 30 Nov ≤ 10 Dec
+        self.assertEqual(with_h1(kind="committed", date="2026-11-27", date_to=None, tolerance_days=0)["light"]["state"], "amber")  # 30 Nov ≤ 27 Nov + 7
+        self.assertEqual(with_h1(kind="committed", date="2026-11-20", date_to=None, tolerance_days=0)["light"]["state"], "red")
         self.assertEqual(with_h1(kind="committed", date="2026-12-10", date_to=None)["light"]["state"], "grey")   # no tolerance yet
 
     def test_r2_under_five_days_not_measured(self):
         _, c = run(now=datetime(2026, 11, 16, 6, 30, tzinfo=timezone.utc))
         self.assertIsNone(c["pace"]["changes_per_day"]["value"])
-        self.assertIn("3 of 5 days", c["pace"]["changes_per_day"]["reason"])
+        self.assertEqual(c["pace"]["changes_per_day"]["reason"], "not measured yet: needs 5 days of Release 1 history, from 17 Nov (4 so far)")   # 13-16 Nov (R8)
         for k in ("p50", "p85"):    # R2: no reference class
             self.assertIsNone(c["forecast"][k]["value"])
-            self.assertEqual(c["forecast"][k]["reason"], "not measured: fewer than 5 days of Release 1 history (from 18 Nov)")
-        self.assertEqual(c["forecast"]["sample"], "Release 1 changes merged per IST day, last 14 days")
-        # Release 1 changes by 16 Nov 12:00 IST, per IST day 3..16 Nov: 10 BK-1, 13 BK-2, 14 PF-1, 16 PF-2 and PF-4
-        self.assertEqual(c["forecast"]["counts"], [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 2])
+            self.assertEqual(c["forecast"][k]["reason"], "not measured yet: fewer than 5 days of Release 1 history (from 17 Nov)")
+        # Release 1 changes by 16 Nov 12:00 IST, per IST day 13..16 Nov: 13 BK-2, 14 PF-1, 16 PF-2 and PF-4
+        self.assertEqual(c["forecast"]["counts"], [1, 1, 0, 2])
         self.assertEqual(c["pace"]["light"]["state"], "grey")
 
     def test_all_zero_window(self):
         pulls = [p for p in jread((os.path.join(FIX, "github/pulls.json"))) if not p.get("merged_at")
                  or p["merged_at"] < "2026-11-06T00:00:00Z"]
         _, c = run(snap_with({"github/pulls.json": pulls}))
-        self.assertEqual(c["forecast"]["counts"], [0] * 14)
+        self.assertEqual(c["forecast"]["counts"], [0] * 8)
         self.assertIsNone(c["forecast"]["p85"]["value"])
-        self.assertEqual(c["forecast"]["p85"]["reason"], "not measured: no merges in 14 days")
+        self.assertEqual(c["forecast"]["p85"]["reason"], "not measured: no merges in the window")
         self.assertEqual(c["pace"]["light"]["state"], "red")
 
     def test_zero_history(self):
@@ -203,13 +203,13 @@ class Capacity(unittest.TestCase):
         cls.k = cls.c["capacity"]
 
     def test_lanes_ready_room(self):
-        # pushed since 05:00 UTC, not main or queue: claude/bk-6 (06:00), lead/fixture (06:10) → 2
-        self.assertEqual(self.k["lanes_working"]["value"], 2)
+        # pushed since 05:00 UTC, not main, queue or a Lead's records branch (R8): claude/bk-6 (06:00) → 1; lead/fixture left out
+        self.assertEqual(self.k["lanes_working"]["value"], 1)
         # briefs: FO-2, FO-4, FO-55, BK-6. FO-4 is merged (#118); FO-55 has no BACKLOG row (and is never FO-5's brief);
         # FO-2 and BK-6 wait on nothing → ready
         self.assertEqual(self.k["ready_rows"]["rows"], ["FO-2", "BK-6"])
         self.assertEqual(self.k["ready_rows"]["not_ready"], [])
-        self.assertEqual(self.k["room"]["value"], 2)         # max_lanes 4 − 2
+        self.assertEqual(self.k["room"]["value"], 3)         # max_lanes 4 − 1
 
     def test_queues_and_constraint(self):
         st = self.k["stages"]
@@ -427,7 +427,7 @@ class Rulings(unittest.TestCase):
         _, c = run()
         r1 = {x for r in c["rows"] for x in r["ids"] if x.startswith("BK-")}
         self.assertEqual(r1, {"BK-1", "BK-2", "BK-3"})
-        self.assertEqual(c["forecast"]["counts"][3], 1)                       # 10 Nov: BK-1 only
+        self.assertEqual(c["pace"]["merged_changes"]["value"], 8)            # BK-1 (10 Nov) counts as merged, outside the window
 
     def test_r5_bake_rows_count_only_when_cited(self):
         _, c = run()
@@ -445,6 +445,44 @@ class Rulings(unittest.TestCase):
         self.assertEqual(six["state"], "green")
         self.assertIn("QA-9 excluded by P-358", six["detail"])
         self.assertEqual(six["excluded"], ["QA-9 excluded by P-358"])
+
+
+class ReviewFixes(unittest.TestCase):
+    def test_r8_lead_branches_never_lanes(self):
+        br = jread(os.path.join(FIX, "github/branches_recent.json")) + [{"name": "lead-b-front-office", "sha": "8" * 40, "pushed_at": "2026-11-20T06:15:00Z"}]
+        _, c = run(snap_with({"github/branches_recent.json": br}))
+        self.assertEqual(c["capacity"]["lanes_working"]["names"], ["claude/bk-6"])
+
+    def test_r8_parked_prs_leave_the_queues(self):
+        d = jread(os.path.join(FIX, "github/open_prs_detail.json"))
+        d[2]["head_committed_at"] = "2026-11-12T06:00:00Z"            # #116: no push for 8 days → parked
+        _, c = run(snap_with({"github/open_prs_detail.json": d}))
+        k = c["capacity"]
+        self.assertEqual([x["pr"] for x in k["parked"]], [116])
+        self.assertEqual(k["stages"]["merge"]["count"]["value"], 0)
+        self.assertEqual(k["wip"]["value"], 3)                          # still an open app PR
+
+    def test_m5_org_prefix_and_row_match(self):
+        li = jread(os.path.join(FIX, "lead-input.json"))
+        for x in li["sessions"]:
+            if x["name"] == "BK-6 lane":
+                x["reports_to"] = "Lead 50 (tech lead)"
+            if x["name"] == "FO-1 lane":
+                x["pr"] = None                                         # found by its row id in #105's title
+        _, c = run(snap_with({"lead-input.json": li}))
+        lanes = {l["name"]: l for l in c["org"]["lanes"]}
+        self.assertEqual(lanes["BK-6 lane"]["reports_key"], "Lead 50")
+        self.assertEqual((lanes["FO-1 lane"]["seen"], lanes["FO-1 lane"]["pr"]), ("both", 105))
+        self.assertEqual(sorted(l["name"] for l in c["org"]["lanes"]), ["BK-6 lane", "FO-1 lane", "FO-4 lane", "claude/fo-7", "qa lane"])
+
+    def test_health_1_words_and_nightly(self):
+        s, c = run()
+        h = cd.health(s, NOW, c, s.j("lead-input.json"))
+        self.assertEqual(h["items"][0]["detail"], "1 passed, 1 skipped on main's head (main's head passed the merge queue); newest nightly success")
+        ni = {"conclusion": "cancelled", "created_at": "2026-11-19T21:00:00Z", "previous": {"conclusion": "cancelled", "created_at": "2026-11-18T21:00:00Z"}}
+        s2 = cd.Snap(snap_with({"github/main_nightly.json": ni}))
+        c2 = cd.compute_board(s2, NOW, fixture_history(), None, "x")
+        self.assertEqual(cd.health(s2, NOW, c2, s2.j("lead-input.json"))["items"][0]["state"], "amber")
 
 
 class Health(unittest.TestCase):
@@ -497,6 +535,8 @@ class Contract(unittest.TestCase):
         self.assertEqual(cd.validate(d, os.path.join(cd.P, "cockpit", "data.schema.json")), [])
         self.assertEqual((d["trust"]["state"], d["trust"]["banner"]), ("not checked", "Numbers not checked"))   # amber, never green (R2-6)
         self.assertEqual(d["summary"]["works"]["v"], [2, 4])
+        self.assertEqual(d["freshness"]["records_copy"]["sha"], "123456789")       # the records sha, not main's (review Minor 4)
+        self.assertFalse(d["needs_you"]["pr_questions_measured"]["v"])            # offline: PR questions not measured (Minor 5)
         self.assertEqual([a["id"] for a in d["needs_you"]["asks"]], ["A2"])
 
     def test_schema_refuses_missing_lineage_and_null_without_reason(self):

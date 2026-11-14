@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Founder's Progress Board</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -139,6 +140,8 @@ details#details{margin:14px 0}details#details>summary{cursor:pointer;background:
 .ov>section{margin:0;min-width:0}
 .ov .cards3{grid-template-columns:1fr;gap:6px}
 .ov .card{padding:6px 9px}
+.ov .card .w,.ov .card .small{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;overflow:hidden}
+.ov .card .w,.ov .card .small.rec{-webkit-line-clamp:2}
 .ovsec{padding:12px 14px 12px}
 .ovsec>h2{font-size:15px}
 .ovsec p.line{margin:6px 0 4px;font-size:14.5px}
@@ -174,7 +177,7 @@ details.inline>summary{cursor:pointer;color:var(--accent);font-size:12.5px;displ
 <div class="strip" id="strip"><div class="strip-in" id="stripIn">
   <div class="tile"><div class="k">Needs you</div><div class="v">&#x2026;</div></div>
   <div class="tile"><div class="k">Release 1</div><div class="v">&#x2026;</div></div>
-  <div class="tile"><div class="k">Proof verified</div><div class="v">&#x2026;</div></div>
+  <div class="tile"><div class="k">Proof of concept</div><div class="v">&#x2026;</div></div>
   <div class="tile"><div class="k">Next date</div><div class="v">&#x2026;</div></div>
   <div class="tile"><div class="k">Health</div><div class="v">&#x2026;</div></div>
   <div class="tile"><div class="k">Plan use</div><div class="v">&#x2026;</div></div>
@@ -196,7 +199,7 @@ function S(s){return s?' data-src="'+esc(s)+'" title="'+esc(s)+'"':"";}
 function nz(x,suf){return x==null?'<span class="muted">n/a</span>':esc(x)+(suf||"");}
 function fmtDate(iso){if(!iso)return "not dated";var d=new Date(iso+"T00:00:00");return d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});}
 function short(iso){if(!iso)return "not dated";var d=new Date(iso+"T00:00:00");return d.toLocaleDateString("en-GB",{day:"numeric",month:"short"});}
-var LABEL={"Not shaped":"Not yet specified","Shaped":"Specified, ready to build","In PR":"In development","Merged":"Built, not yet verified","qa Works":"Verified by QA","Works":"Verified by QA","Built, awaiting qa":"Built, not yet verified","Partial":"Partly working","Not tested":"Not yet tested","Not built":"Not yet built"};
+var LABEL={"Not shaped":"Not yet specified","Shaped":"Specified, ready to build","In PR":"In development","Merged":"Built","qa Works":"Proven","Works":"Proven","Built, awaiting qa":"Built, not yet proven","Partial":"Partly working","Not tested":"Not yet tested","Not built":"Not yet built"};
 function lab(k){return LABEL[k]||k;}
 function pill(text,tone,s){return '<span class="pill t-'+tone+'"'+S(s)+'>'+esc(lab(text))+'</span>';}
 var TONE={"qa Works":"good","Merged":"prog","In PR":"prog","Shaped":"wait","Not shaped":"none",
@@ -212,6 +215,8 @@ function kpi(label,val,sub,s,cls){return '<div class="kpi'+(cls?" "+cls:"")+'"'+
 /* source bar on tap */
 var bar=document.getElementById("srcbar"),barT=null;
 document.addEventListener("click",function(e){
+  var go=e.target.closest("[data-go]");
+  if(go){e.preventDefault();var tb=document.querySelector('.tabs button[data-tab="'+go.getAttribute("data-go")+'"]');if(tb){tb.click();var tg=document.getElementById("trust");if(tg)tg.scrollIntoView();}return;}
   var el=e.target.closest("[data-src]");
   var mod=e.target.closest("[data-mod]");
   if(mod){showModule(mod.getAttribute("data-mod"));}
@@ -235,16 +240,25 @@ function nm(reason){return '<span class="nm"'+S(reason||"not measured")+'>not me
 function N(n,suf,fmt){if(!n)return nm("missing from data.json");if(n.value==null)return nm(n.reason);var t=fmt?fmt(n.value):esc(n.value)+(suf||"");return '<span'+S(srcN(n))+'>'+t+'</span>'+(n["class"]==="reported"?'<span class="rep">Lead-reported</span>':"");}
 function dshort(x){return x&&/^\d{4}-/.test(x)?short(x):esc(x);}
 
+/* lineage of a legacy {v,src,sha,as_of,class} value, for hover and the source bar (principle 3) */
+function srcV(x){if(!x||typeof x!=="object")return "";return [x.src,x.sha?"sha "+x.sha:"",x.as_of?"as of "+x.as_of:"",x["class"]||""].filter(Boolean).join(" \u00b7 ");}
+function relTile(){var P=D.pace;if(!P)return '<div class="tile"><div class="k">Release 1</div><div class="v">n/a</div></div>';
+  var b=P.built,pr=P.proven,diff=((D.trust||{}).status_disagreements||[]).length;
+  return '<div class="tile"'+S(srcN(b))+'><div class="k">Release 1</div><div class="v">'+(b.value==null?"n/a":esc(b.value))+' built</div><div class="s">of '+esc(P.rows_total.value)+' \u00b7 proven: '+(pr.value==null?"not measured":esc(pr.value))+(diff?' \u00b7 records differ':'')+'</div></div>';}
+/* the Lead input's 2 h limit, judged again by the page at viewing time (review Minor 6) */
+function leadInputStale(){var a=D.top3&&D.top3.as_of;if(!a||a==="no Lead input")return true;var t=Date.parse(a);return isNaN(t)||(Date.now()-t)/3600000>2;}
+var PLAIN={works_on_main:"proof capabilities proven",works_total:"proof capabilities",changes_per_day_window:"changes a day",remaining_scope_changes:"changes left",built_rows:"rows built",proven_rows:"rows proven",open_app_prs:"open app changes",lanes_working:"lanes working",ready_rows:"rows ready",forecast_p50_date:"50% date",forecast_p85_date:"85% date",mc_daily_counts:"daily changes used for the forecast",mc_remaining_scope:"changes left used for the forecast"};
+function plain(k){return PLAIN[k]||k.replace(/_/g," ");}
 function renderStrip(){
   var s=D.summary,el=document.getElementById("stripIn");
   var ny=v(s.needs_you),bu=v(s.burnup_pct),w=v(s.works)||[null,null],nd=v(s.next_date),age=dataAgeH();
-  var H=D.health||{light:"amber"},ast=ageState(age),light=worst(H.light,ast),R=D.resources||{};
+  var H=D.health||{light:"amber"},ast=ageState(age),light=worst(worst(H.light,ast),leadInputStale()&&H.light==="green"?"amber":"green"),R=D.resources||{};
   var wk=v(R.weekly_pct),bn=v(R.burn_pct_per_h),pd=v(R.paid_usd_today);
   el.innerHTML=
-   '<div class="tile'+(ny>0?" alert":"")+'"'+S(src(s.needs_you))+'><div class="k">Needs you</div><div class="v">'+nz(ny)+'</div><div class="s">open items</div></div>'+
-   '<div class="tile"'+S(src(s.burnup_pct))+'><div class="k">Release 1 verified</div><div class="v">'+nz(bu,"%")+'</div><div class="s">of 101 must-have rows, verified by QA</div></div>'+
-   '<div class="tile"'+S(src(s.works))+'><div class="k">Proof verified</div><div class="v">'+nz(w[0])+'<span class="muted">/'+nz(w[1])+'</span></div><div class="s">capabilities</div></div>'+
-   '<div class="tile"'+S(src(s.next_date))+'><div class="k">Next date</div><div class="v">'+(nd?esc(short(nd.date)):"none")+'</div><div class="s">'+(nd?esc(nd.kind)+", in "+nd.days_left+" d":"")+'</div></div>'+
+   '<div class="tile'+(ny>0?" alert":"")+'"'+S(srcV(s.needs_you))+'><div class="k">Needs you</div><div class="v">'+nz(ny)+'</div><div class="s">open items</div></div>'+
+   relTile()+
+   '<div class="tile"'+S(srcV(s.works))+'><div class="k">Proof of concept</div><div class="v">'+nz(w[0])+'<span class="muted">/'+nz(w[1])+'</span></div><div class="s">capabilities proven by qa</div></div>'+
+   '<div class="tile"'+S(srcV(s.next_date))+'><div class="k">Next date</div><div class="v">'+(nd?esc(short(nd.date)):"none")+'</div><div class="s">'+(nd?esc(nd.kind)+", in "+nd.days_left+" d":"")+'</div></div>'+
    '<div class="tile hl'+(light==="red"?" alert":light==="amber"?" warn":"")+'" id="healthTile" role="button" tabindex="0" aria-expanded="false" title="Health: tap for the seven checks"><div class="k">Health</div><div class="v">'+dot(light)+esc(LIGHTWORD[light])+'</div><div class="s">data '+ageText(age)+' old</div></div>'+
    '<div class="tile"'+S("Lead-reported: "+src(R.weekly_pct)+" | "+src(R.burn_pct_per_h)+" | "+src(R.paid_usd_today))+'><div class="k">Plan use</div><div class="v">'+(wk==null?'<span class="nm">n/a</span>':esc(wk)+"%")+'</div><div class="s">'+(bn==null?"burn not reported":esc(bn)+" %/h")+' · US$'+(pd==null?"?":esc(pd))+' today</div></div>';
   var L=D.lineage||{},ah=L.ahead_of_main;
@@ -259,6 +273,7 @@ function renderHealth(ast,age){
   var H=D.health,p=document.getElementById("healthPanel");if(!H){p.innerHTML='<p class="muted">Health not in data.json.</p>';return;}
   var h='<ul class="items small">';
   H.items.forEach(function(i){var st=i.state==="page"?ast:i.state,det=i.state==="page"?"Board data "+ageText(age)+" old (amber at 45 min, red at 2 h); generated "+esc(D.freshness.generated_ist):esc(i.detail);
+    if(i.id===5&&st==="green"&&leadInputStale()){st="amber";det+=" \u2014 the Lead input is now over 2 h old";}
     h+='<li><span class="tag">'+i.id+'</span><div>'+dot(st)+'<b>'+esc(i.name)+'</b>'+(i["class"]==="reported"?'<span class="rep">Lead-reported</span>':"")+' — '+det+
       ((st==="red")?'<div><b>Action:</b> '+esc(i.action||"")+' · <b>Owner:</b> '+esc(i.owner||"")+'</div>':"")+'</div></li>';});
   p.innerHTML=h+'</ul><p class="small muted">Red if any check fails, amber if any is not measured, else green. Token use and paid US$ are Lead-reported numbers in the strip.</p>';
@@ -267,8 +282,8 @@ function renderHealth(ast,age){
 /* banners (§6.6) */
 function rBanner(){
   var T=D.trust;if(!T)return '<div class="banner amber"><b>Numbers not checked</b>: the trust block is missing.</div>';
-  if(T.state==="disagree")return '<div class="banner red" role="alert"><b>'+esc(T.banner)+'</b> — the board and the independent check give different numbers; the Lead fixes the script or the record before trusting them. '+
-    T.diffs.map(function(d){return esc(d.name)+": board "+esc(JSON.stringify(d.board))+", check "+esc(JSON.stringify(d.reconcile));}).join("; ")+'</div>';
+  if(T.state==="disagree")return '<div class="banner red" role="alert"><b>Numbers disagree: '+esc(T.diffs.map(function(d){return plain(d.name);}).join(", "))+'</b> — the board and the independent check give different numbers; the Lead fixes the script or the record before trusting them. '+
+    T.diffs.map(function(d){return esc(plain(d.name))+": board "+esc(JSON.stringify(d.board))+", check "+esc(JSON.stringify(d.reconcile));}).join("; ")+'</div>';
   if(T.state==="not checked")return '<div class="banner amber"><b>Numbers not checked</b> — '+esc(T.reason||"the independent reconciliation did not run")+'.</div>';
   return "";
 }
@@ -276,15 +291,23 @@ function rBanner(){
 /* §1 plan and pace */
 function rPace(){
   var P=D.pace,F=D.forecast;if(!P)return "";
-  var lt=P.light||{state:"grey",why:""};
-  var bb=P.built.built_before;
+  var lt=P.light||{state:"grey",why:""},bb=P.built.built_before,Y=P.changes_per_day;
+  var B=function(x){return "<b>"+esc(x)+"</b>";};
   var h=P.committed_date?'<p class="line small">'+dot(lt.state)+'<span'+S(lt.why)+'>'+esc(lt.state)+'</span><span class="muted"> · '+esc(lt.why)+'</span></p>':"";
-  if(P.committed_date)h+='<p class="line">Changes: need '+N(P.changes_needed_per_day,"",function(x){return "<b>"+esc(x)+"</b>";})+' a day, doing '+N(P.changes_per_day,"",function(x){return "<b>"+esc(x)+"</b>";})+' a day (last '+esc(P.changes_per_day.window_days)+' days).</p>';
-  else h+='<p class="line"><span'+S("light grey: "+lt.why)+'>'+dot(lt.state)+'</span>No committed date yet (set '+esc(dshort(P.committed_set_on))+'). At the current pace: 50% by '+N(F.p50,"",function(x){return "<b>"+dshort(x)+"</b>";})+', 85% by '+N(F.p85,"",function(x){return "<b>"+dshort(x)+"</b>";})+'.</p>'+
-    '<p class="line small">Changes: doing '+N(P.changes_per_day,"",function(x){return "<b>"+esc(x)+"</b>";})+' a day'+(P.changes_per_day.window_days?' (last '+esc(P.changes_per_day.window_days)+' days)':"")+'.</p>';
-  h+='<p class="line">Capabilities: '+N(P.built,"",function(x){return "<b>"+esc(x)+"</b>";})+' of '+N(P.rows_total)+' built'+(bb&&bb.value?' <span class="small muted"'+S(srcN(bb))+'>(+'+esc(bb.value)+' built before 13 Nov)</span>':"")+', '+N(P.proven,"",function(x){return "<b>"+esc(x)+"</b>";})+' proven.</p>';
-  var R=P.remaining,fb=R.flags_bk_unmerged;
-  h+='<p class="small muted" style="margin:2px 0">Remaining: '+N(R)+' changes ('+esc(R.label)+')'+(fb&&fb.value?'; '+N(fb)+' Bake rows not merged are counted in pace, not in scope':"")+(P.ratio?'; measured '+N(P.ratio)+' changes per built capability':"")+'. Forecast: '+esc(F.sample)+'.</p>';
+  var pace=Y.value==null?'Pace: <span class="nm"'+S(srcN(Y))+'>'+esc(Y.reason)+'</span>':
+    'Pace: doing '+N(Y,"",B)+' changes a day (last '+esc(Y.window_days)+' days)';
+  if(P.committed_date)h+='<p class="line">'+pace+'; need '+N(P.changes_needed_per_day,"",B)+' a day.</p>';
+  else{
+    h+='<p class="line"><span'+S("light grey: "+lt.why)+'>'+dot(lt.state)+'</span>No committed date yet (to be set '+esc(dshort(P.committed_set_on))+'). ';
+    h+=(F.p50.value==null?'Forecast: <span class="nm"'+S(srcN(F.p50))+'>'+esc(F.p50.reason)+'</span>.':
+      'At the current pace: 50% by '+N(F.p50,"",function(x){return B(dshort(x));})+', 85% by '+N(F.p85,"",function(x){return B(dshort(x));})+'.')+'</p>';
+    h+='<p class="line small">'+pace+'.</p>';
+  }
+  var dis=((D.trust||{}).status_disagreements||[]);
+  h+='<p class="line">Capabilities: '+N(P.built,"",B)+' of '+N(P.rows_total)+' built'+(bb&&bb.value?' <span class="small muted"'+S(srcN(bb))+'>(+'+esc(bb.value)+' built before 13 Nov)</span>':"")+', proven: '+N(P.proven,"",B)+'.'+
+    (dis.length?' <a href="#trust" class="small" data-go="details"'+S("the checklist's hand-kept status and the computed state differ on these rows; Details lists them")+'>records differ on rows '+esc(dis.map(function(x){return x.map;}).join(", "))+'</a>':"")+'</p>';
+  var R=P.remaining;
+  h+='<p class="small muted" style="margin:2px 0">Changes left: '+N(R)+' ('+esc(R.label)+')'+(P.ratio?'; measured '+N(P.ratio)+' changes per built capability':"")+'. Forecast sample: '+esc(F.sample)+'.</p>';
   if(P.scope_note)h+='<p class="small" style="color:var(--wait)">'+esc(P.scope_note)+'</p>';
   h+='<div class="svgwrap" id="burnup"></div>';
   h+='<details class="inline"><summary>Roadmap timeline</summary><div class="svgwrap" id="timeline" style="margin-top:6px"></div></details>';
@@ -293,6 +316,7 @@ function rPace(){
 function xScale(d0,d1,W,pad){var a=Date.parse(d0+"T00:00:00Z"),b=Date.parse(d1+"T00:00:00Z");return function(d){return pad+(Date.parse(d+"T00:00:00Z")-a)/Math.max(1,b-a)*(W-2*pad);};}
 function drawBurnup(){
   var host=document.getElementById("burnup");if(!host||!D.burnup)return;
+  if(D.burnup&&D.burnup.days.length<2){host.innerHTML='<p class="small muted">Burn-up (capabilities): the chart starts when 2 days of history exist.</p>';return;}
   var B=D.burnup,W=Math.max(300,host.clientWidth||420),Hh=104,pad=26,top=10,d0=B.days[0],d1=B.x_end>B.days[B.days.length-1]?B.x_end:B.days[B.days.length-1];
   var x=xScale(d0,d1,W,pad),mx=Math.max.apply(null,[1].concat(B.scope.filter(function(z){return z!=null;}),B.built));
   var y=function(z){return top+(Hh-top-18)*(1-z/mx);};
@@ -305,7 +329,7 @@ function drawBurnup(){
   if(B.proven.some(function(z){return z!=null;}))s+='<polyline points="'+path(B.proven,false)+'" fill="none" stroke="var(--good)" stroke-width="2"/>';
   s+='<line x1="'+pad+'" x2="'+(W-pad)+'" y1="'+(Hh-18)+'" y2="'+(Hh-18)+'" stroke="var(--line)"/>';
   s+='<text x="'+pad+'" y="'+(Hh-4)+'" font-size="10" fill="var(--ink3)">'+esc(short(d0))+'</text><text x="'+(W-pad)+'" y="'+(Hh-4)+'" font-size="10" text-anchor="end" fill="var(--ink3)">'+esc(short(d1))+'</text>';
-  s+='<text x="'+(pad-4)+'" y="'+(y(mx)+4)+'" font-size="10" text-anchor="end" fill="var(--ink3)">'+mx+'</text>';
+  s+='<text x="'+(pad-4)+'" y="'+(y(mx)+4)+'" font-size="10" text-anchor="end" fill="var(--ink3)">'+mx+'</text><text x="'+(pad+2)+'" y="'+(top+8)+'" font-size="9.5" fill="var(--ink3)">capabilities</text>';
   host.innerHTML=s+'</svg><div class="legend small"'+S(B.src)+'><span class="pill t-none">scope</span><span class="pill t-prog">built</span><span class="pill t-good">proven</span><span class="pill t-wait">plan H1 (band while a forecast)</span></div>';
 }
 function drawTimeline(){
@@ -326,21 +350,22 @@ function rCapacity(){
   var C=D.capacity;if(!C)return "";var lt=C.light||{};
   var h='<p class="line">'+dot(lt.state)+'<span'+S(lt.why)+'>'+esc(C.constraint.line)+'</span></p>';
   var A=C.age,o=A.older;
-  h+='<p class="line small">'+(o.value==null?'Work item age '+nm(o.reason):'<b>'+esc(o.value)+'</b> items older than usual')+(A.amber_items.length?' · <span style="color:var(--wait)">'+A.amber_items.length+' past the warning rule</span>':"")+
-    (A.items.length?' <details class="inline"><summary>list</summary><ul class="items small">'+A.items.map(function(i){return '<li><span class="tag">#'+i.pr+'</span><div>'+esc(i.title)+'<div class="muted">open '+esc(i.age_d)+' d · last push '+(i.push_h==null?"n/a":esc(i.push_h)+" h")+(i.older?" · older than usual":"")+(i.amber?" · past the warning rule":"")+'</div></div></li>';}).join("")+'</ul></details>':"")+'</p>';
-  h+='<p class="small muted" style="margin:2px 0">Lanes working '+N(C.lanes_working)+' · ready with a brief '+N(C.ready_rows)+(C.ready_rows.rows&&C.ready_rows.rows.length?' ('+esc(C.ready_rows.rows.slice(0,8).join(", "))+')':"")+' · room '+N(C.room)+' · open app PRs '+N(C.wip)+' · cycle time '+N(C.cycle_median_days," d")+' median · 85th percentile '+N(A.p85_days," d")+' · baton-held '+N(C.baton_held)+'</p>';
-  var st=C.stages;h+='<p class="small muted" style="margin:2px 0">Waiting: review '+N(st.review.count)+' (oldest '+N(st.review.wait_h," h")+', limit 2 h) · merge '+N(st.merge.count)+' (oldest '+N(st.merge.wait_h," h")+', limit 1 h) · qa '+N(st.qa.count)+' (oldest '+N(st.qa.wait_h," h")+', limit 24 h)</p>';
-  if(C.idle&&C.idle.length)h+='<p class="small muted" style="margin:2px 0">No push in 90 min: '+C.idle.slice(0,8).map(function(i){return "#"+i.pr+" "+esc(i.push_h)+" h";}).join(", ")+'</p>';
+  h+='<p class="line small">'+(o.value==null?'Changes older than usual: '+nm(o.reason):'<b>'+esc(o.value)+'</b> open changes older than usual')+(A.amber_items.length?' · <span style="color:var(--wait)">'+A.amber_items.length+' far older or with no push for a day</span>':"")+
+    (A.items.length?' <details class="inline"><summary>list</summary><ul class="items small">'+A.items.map(function(i){return '<li><span class="tag">#'+i.pr+'</span><div>'+esc(i.title)+'<div class="muted">open '+esc(i.age_d)+' days · last push '+(i.push_h==null?"n/a":esc(i.push_h)+" h ago")+(i.older?" · older than usual":"")+(i.amber?" · far older, or no push for a day":"")+'</div></div></li>';}).join("")+'</ul></details>':"")+'</p>';
+  h+='<p class="small muted" style="margin:2px 0">Lanes working '+N(C.lanes_working)+' · rows ready with a brief '+N(C.ready_rows)+(C.ready_rows.rows&&C.ready_rows.rows.length?' ('+esc(C.ready_rows.rows.slice(0,8).join(", "))+')':"")+' · free lane slots '+N(C.room)+' · open app changes '+N(C.wip)+' · a change usually takes '+N(C.cycle_median_days," days")+' · usual limit '+N(A.p85_days," days")+' · rows held by another row\'s files '+N(C.baton_held)+'</p>';
+  var st=C.stages;h+='<p class="small muted" style="margin:2px 0">Waiting: for review '+N(st.review.count)+' (longest '+N(st.review.wait_h," h")+', limit 2 h) · to merge '+N(st.merge.count)+' (longest '+N(st.merge.wait_h," h")+', limit 1 h) · for qa '+N(st.qa.count)+' (longest '+N(st.qa.wait_h," h")+', limit 24 h)</p>';
+  if(C.idle&&C.idle.length)h+='<p class="small muted" style="margin:2px 0">No push in 90 min: '+C.idle.filter(function(i){return !(C.parked||[]).some(function(p){return p.pr===i.pr;});}).slice(0,8).map(function(i){return "#"+i.pr+" "+esc(i.push_h)+" h";}).join(", ")+'</p>';
+  if(C.parked&&C.parked.length)h+='<p class="small muted" style="margin:2px 0"'+S("no push for 7 days: parked, kept out of the waiting stages (spec R8)")+'>Parked (no push for 7 days): '+C.parked.map(function(p){return "#"+p.pr+" ("+esc(p.push_d)+" days)";}).join(", ")+'</p>';
   return '<section class="ovsec" id="capacity"><h2>Capacity</h2>'+h+'</section>';
 }
 
 /* §3 top 3 */
 function rTop3(){
   var T=D.top3;if(!T)return "";
-  var nm_={today:"Today",week:"This week",month:"This month"},h='<div class="cards3">';
+  var stale=leadInputStale(),nm_={today:"Today",week:"This week",month:"This month"},h='<div class="cards3">';
   ["today","week","month"].forEach(function(k){var c=T.cards[k];
-    if(c.state!=="ok"){h+='<div class="card miss"'+S(T.src+" · "+c.why)+'><div class="k">'+nm_[k]+'</div><div class="w">'+esc(c.text)+'</div><div class="small muted">'+esc(c.why)+'</div></div>';return;}
-    h+='<div class="card"'+S(T.src+" · "+T.sha+" · as of "+T.as_of+" · reported")+'><div class="k">'+nm_[k]+'<span class="rep">Lead-reported</span>'+(T.example?'<span class="example">example data</span>':"")+'</div><div class="w">'+esc(c.what)+'</div><div class="small">'+esc(c.why)+'</div><div class="small"><b>Lead recommends:</b> '+esc(c.rec)+'</div><div class="small muted">Owner: '+esc(c.owner)+(c.needs_you?' · <a href="#needs">needs you: '+esc(c.needs_you)+'</a>':"")+'</div></div>';});
+    if(c.state!=="ok"||stale){h+='<div class="card miss"'+S(T.src+" · "+(c.why||"Lead input over 2 h old now"))+'><div class="k">'+nm_[k]+'</div><div class="w">Lead has not updated this</div><div class="small muted">'+esc(c.state!=="ok"?c.why:"the Lead input is now over 2 h old")+'</div></div>';return;}
+    h+='<div class="card"'+S(c.what+" — "+c.why+" — Lead recommends: "+c.rec+" — owner "+c.owner+" | "+T.src+" · "+T.sha+" · as of "+T.as_of+" · reported")+'><div class="k">'+nm_[k]+'<span class="rep">Lead-reported</span>'+(T.example?'<span class="example">example data</span>':"")+'</div><div class="w">'+esc(c.what)+'</div><div class="small">'+esc(c.why)+'</div><div class="small rec"><b>Lead recommends:</b> '+esc(c.rec)+'</div><div class="small muted">Owner: '+esc(c.owner)+(c.needs_you?' · <a href="#needs">needs you: '+esc(c.needs_you)+'</a>':"")+'</div></div>';});
   return '<section class="ovsec" id="top3"><h2>Top 3, with the Lead\'s recommendation</h2>'+h+'</div></section>';
 }
 function rOverview(){
@@ -355,27 +380,48 @@ function rOrg(){
   var leads=O.leads||[],h='<div class="org"><div class="lvl"><div class="node lead"><b>'+esc(O.founder.name)+'</b><div class="muted">'+esc(O.founder.role)+'</div></div></div><div class="lvl">';
   leads.forEach(function(l){h+='<div class="node lead"'+S(l.src)+'><b>'+esc(l.name)+'</b><div class="muted">'+esc(l.role)+'</div></div>';});
   h+='</div>';
-  leads.forEach(function(l){var mine=O.lanes.filter(function(x){return x.reports_to===l.name;});if(mine.length)h+='<div><div class="small muted">Reports to '+esc(l.name)+'</div><div class="lanes">'+mine.map(lane).join("")+'</div></div>';});
-  var rest=O.lanes.filter(function(x){return !leads.some(function(l){return l.name===x.reports_to;});});
+  var keyOf=function(l){return l.key||l.name;};
+  leads.forEach(function(l){var mine=O.lanes.filter(function(x){return x.reports_key===keyOf(l);});if(mine.length)h+='<div><div class="small muted">Reports to '+esc(l.name)+'</div><div class="lanes">'+mine.map(lane).join("")+'</div></div>';});
+  var rest=O.lanes.filter(function(x){return !leads.some(function(l){return keyOf(l)===x.reports_key;});});
   if(rest.length)h+='<div><div class="small muted">Lanes with no reporting line in the Lead input</div><div class="lanes">'+rest.map(lane).join("")+'</div></div>';
   h+='<div class="lvl small">'+'<div class="node">Standbys: '+esc((O.standbys||[]).join(", ")||"none listed")+'</div><div class="node">Strategy desk: '+esc((O.desk||[]).join(", ")||"none listed")+'</div><div class="node">Reviewers: '+esc(O.reviewers)+'</div></div></div>';
   h+='<p class="small muted">How they work together: '+esc(O.how)+'. A box marked ? is found by only one source (Lead input or GitHub) and is listed in Health item 7.</p>';
   return section("","team","Team: who works now","The founder, the two Leads and their lanes, cross-checked against GitHub pushes in the last 24 hours.",h);
 }
 
+/* data trust (R9): invariants, records that differ, the independent check */
+function rTrust(){
+  var T=D.trust;if(!T)return "";
+  var h='<p class="small">Independent check: <b>'+esc(T.state)+'</b>'+(T.compared?' ('+esc(T.compared)+' numbers compared)':"")+(T.reason?' — '+esc(T.reason):"")+'</p>';
+  if(T.diffs&&T.diffs.length)h+='<ul class="items small">'+T.diffs.map(function(d){return '<li><span class="tag">differs</span><div>'+esc(plain(d.name))+': board '+esc(JSON.stringify(d.board))+', check '+esc(JSON.stringify(d.reconcile))+'</div></li>';}).join("")+'</ul>';
+  h+='<h3>Invariants</h3><ul class="items small">'+(T.invariants||[]).map(function(i){return '<li><span class="tag">'+(i.ok?"holds":"broken")+'</span><div>'+dot(i.ok?"green":"red")+esc(i.name)+'<div class="muted">'+esc(i.detail)+'</div></div></li>';}).join("")+'</ul>';
+  var dis=T.status_disagreements||[];
+  h+='<h3>Records differ ('+dis.length+')</h3>'+(dis.length?'<ul class="items small">'+dis.map(function(x){return '<li><span class="tag">row '+esc(x.map)+'</span><div>checklist says <b>'+esc(lab(x.checklist))+'</b>; computed from merged changes: <b>'+esc(x.computed)+'</b></div></li>';}).join("")+'</ul>':'<p class="small muted">None.</p>');
+  if(T.notes&&T.notes.length)h+='<h3>Notes</h3><ul class="items small">'+T.notes.map(function(n){return '<li>'+esc(n)+'</li>';}).join("")+'</ul>';
+  return section("","trust","Data trust","Whether the numbers can be trusted: the independent check, the invariants, and rows where the hand-kept checklist and the computed state differ.",h);
+}
+
+
+function diffOf(map){return ((D.trust||{}).status_disagreements||[]).filter(function(x){return x.map===map;})[0];}
 /* §7 working today */
 function workMark(map){var W=D.working_today;if(!W)return "";var r=W.rows[String(map)];if(!r)return "";
   return r.kind==="pr"?'<span class="wmark" title="open PR #'+esc(r.prs.join(", #"))+'" data-src="'+esc("working today: open PR #"+r.prs.join(", #")+" (measured)")+'"></span>':'<span class="wmark rep" title="Lead-reported lane: '+esc(r.sessions.join(", "))+'" data-src="'+esc("working today: Lead-reported lane "+r.sessions.join(", "))+'"></span>';}
 
 /* 1 needs you */
 function rNeeds(){
-  var n=D.needs_you,h='<ul class="items">';
-  n.asks.forEach(function(a){h+='<li'+S(a.src)+'><span class="tag">'+esc(a.id)+'</span><div><div>'+esc(a.ask)+'</div><div class="small muted">'+esc(a.status)+'</div></div></li>';});
-  n.pr_questions.forEach(function(q){h+='<li'+S(q.src)+'><span class="tag">#'+q.n+'</span><div><div>Question for the tech lead, open '+ageText(q.age_h)+'</div><div class="small muted">'+esc(q.title)+'</div></div></li>';});
-  if(v(n.for_founder))h+='<li'+S(src(n.for_founder))+'><span class="tag">For you</span><div class="small">'+esc(v(n.for_founder))+'</div></li>';
-  if(v(n.waiting_line))h+='<li'+S(src(n.waiting_line))+'><span class="tag">Waiting</span><div class="small">'+esc(v(n.waiting_line))+'</div></li>';
-  if(!n.asks.length&&!n.pr_questions.length)h+='<li class="muted">Nothing open.</li>';
-  return section("01","needs","Needs you","Your open asks and the questions waiting on an answer. This is the only place they are listed.",h+'</ul>');
+  /* review M2: the count and the top item on the first screen; everything else behind one click */
+  var n=D.needs_you,items=[];
+  n.asks.forEach(function(a){items.push('<li'+S(a.src)+'><span class="tag">'+esc(a.id)+'</span><div><div>'+esc(a.ask)+'</div><div class="small muted">'+esc(a.status)+'</div></div></li>');});
+  n.pr_questions.forEach(function(q){items.push('<li'+S(q.src)+'><span class="tag">#'+q.n+'</span><div><div>Question for the tech lead, open '+ageText(q.age_h)+'</div><div class="small muted">'+esc(q.title)+'</div></div></li>');});
+  var pm=n.pr_questions_measured,extra=[];
+  if(pm&&pm.v===false)extra.push('<li'+S(srcV(pm))+'><span class="tag">PR questions</span><div class="small">'+nm(pm.src)+'</div></li>');
+  if(v(n.for_founder))extra.push('<li'+S(srcV(n.for_founder))+'><span class="tag">For you</span><div class="small">'+esc(v(n.for_founder))+'</div></li>');
+  if(v(n.waiting_line))extra.push('<li'+S(srcV(n.waiting_line))+'><span class="tag">Waiting</span><div class="small">'+esc(v(n.waiting_line))+'</div></li>');
+  var cnt=v(D.summary.needs_you);if(cnt==null)cnt=items.length;
+  var h='<section id="needs" class="ovsec" style="margin:12px 0 0"><h2>Needs you <span class="mono"'+S(srcV(D.summary.needs_you))+'>'+esc(cnt)+'</span></h2><ul class="items">'+(items[0]||'<li class="muted">Nothing open.</li>')+'</ul>';
+  var more=items.slice(1).concat(extra);
+  if(more.length)h+='<details class="inline"><summary>'+(items.length>1?(items.length-1)+' more':'more')+(extra.length?' and notes':'')+'</summary><ul class="items">'+more.join("")+'</ul></details>';
+  return h+'</section>';
 }
 
 /* 2 system map + team */
@@ -421,8 +467,8 @@ function rTeam(){
 function rStatus(){
   var s=D.status_line,w=v(s.works)||[],r=v(s.rows_done)||[],nc=v(s.next_committed),fc=v(s.build_forecast);
   var h='<div class="oneline">'+
-   '<div'+S(src(s.works))+'><div class="k">Proof of concept: verified by QA</div><div class="v">'+nz(w[0])+' / '+nz(w[1])+'</div><div class="s">proof-of-concept capabilities</div></div>'+
-   '<div'+S(src(s.rows_done))+'><div class="k">Release 1: verified by QA</div><div class="v">'+nz(r[0])+' / '+nz(r[1])+'</div><div class="s">'+nz(v(s.rows_merged_or_better))+' merged or better</div></div>'+
+   '<div'+S(src(s.works))+'><div class="k">Proof of concept: proven by qa</div><div class="v">'+nz(w[0])+' / '+nz(w[1])+'</div><div class="s">proof-of-concept capabilities</div></div>'+
+   '<div'+S(src(s.rows_done))+'><div class="k">Release 1: proven (checklist)</div><div class="v">'+nz(r[0])+' / '+nz(r[1])+'</div><div class="s">'+nz(v(s.rows_merged_or_better))+' merged or better</div></div>'+
    '<div'+S(src(s.next_committed))+'><div class="k">Next committed date</div><div class="v">'+(nc?esc(short(nc.date)):"none")+'</div><div class="s">'+(nc?esc(nc.what):"")+'</div></div>'+
    '<div'+S(src(s.build_forecast))+'><div class="k">Build forecast</div><div class="v">'+(fc&&fc.date?esc(short(fc.date))+(fc.date_to?"\u2013"+esc(short(fc.date_to)):""):"none")+'</div><div class="s">'+(fc?esc(fc.kind)+" \u00b7 "+esc(fc.source):"")+'</div></div>'+
    '<div'+S("generated "+D.freshness.generated_ist)+'><div class="k">Data age</div><div class="v">'+ageText(dataAgeH())+'</div><div class="s">main '+esc(v(D.freshness.main_sha)||"n/a")+'</div></div></div>';
@@ -482,7 +528,7 @@ function rCaps(){
   h+='<div class="groupgrid">';
   C.groups.forEach(function(g){var rs=C.rows.filter(function(r){return r.group===g.id;});var done=rs.filter(function(r){return r.status==="qa Works";}).length;
     h+='<div class="grp"><h4><span>'+esc(g.id+". "+g.name)+'</span><span class="mono muted"'+S(src(C.counts))+'>'+done+'/'+rs.length+'</span></h4>';
-    rs.forEach(function(r){h+='<div class="row"'+S("MVP-CHECKLIST.md row "+r.map+" \u00b7 "+r.module+" \u00b7 "+r.backlog)+'><span>'+esc(r.map+" "+r.cap)+workMark(r.map)+'</span>'+pill(r.status,tone(r.status))+'</div>';});h+='</div>';});
+    rs.forEach(function(r){var df=diffOf(r.map);h+='<div class="row"'+S("MVP-CHECKLIST.md row "+r.map+" \u00b7 "+r.module+" \u00b7 "+r.backlog)+'><span>'+esc(r.map+" "+r.cap)+workMark(r.map)+'</span><span>'+pill(r.status,tone(r.status))+(df?' <span class="rep"'+S("records differ: the checklist says "+lab(df.checklist)+"; computed from merged changes: "+df.computed)+'>records differ: '+esc(df.computed)+'</span>':"")+'</span></div>';});h+='</div>';});
   h+='</div><h3>qa capabilities ('+(v(C.qa)||[]).length+')</h3>';
   (v(C.qa_by_milestone)||[]).forEach(function(m){h+='<div class="small" style="margin:4px 0"'+S(src(C.qa_by_milestone))+'><b>'+esc(m.milestone)+'</b>: <span class="mono">'+m.works+' of '+m.total+'</span> Works</div>';});
   var qs=v(C.qa)||[];["M2","M3","T"].forEach(function(ms){var g=qs.filter(function(q){return q.m===ms;});if(!g.length)return;
@@ -643,18 +689,18 @@ function rLibrary(){
 function rGlance(){
   var C=D.capabilities,c=v(C.counts)||{},tot=C.total||101,ny=v(D.summary.needs_you)||0,risks=(D.risks.items||[]).filter(function(r){return r.status!=="closed";});
   var byOwner={};risks.forEach(function(r){byOwner[r.owner]=(byOwner[r.owner]||0)+1;});
-  var stages=[["Not shaped","Not yet specified","No backlog row with a testable \"done when\" yet"],["Shaped","Specified, ready to build","Backlog row with acceptance criteria; nobody building it yet"],["In PR","In development","A pull request is open for the whole row"],["Merged","Built, not yet verified","Merged into the main line; QA has not yet verified it"],["qa Works","Verified by QA","An independent QA verdict says it works, with the test run on record"]];
+  var stages=[["Not shaped","Not yet specified","No backlog row with a testable \"done when\" yet"],["Shaped","Specified, ready to build","Backlog row with acceptance criteria; nobody building it yet"],["In PR","In development","A pull request is open for the whole row"],["Merged","Built","Every part merged into the main line; qa has not proven it yet"],["qa Works","Proven","qa\'s independent Works verdict, with the test run on record"]];
   var h='<h3>Scope (capability map baseline, P-586)</h3><div class="kpis">'+
     kpi("Must-have (Release 1)",esc(tot),"built before the first real firm","capability map draft 6: Build rows")+
     kpi("Optional","8","decided one by one; out of the first build","capability map draft 6: Optional rows (P-572)")+
     kpi("Held","3","waiting on an outside answer","capability map draft 6: Held rows")+
     kpi("Deferred to after launch","31","backlog rows X-1 to X-31","BACKLOG.md section \"After the end-to-end production-grade system\" (P-582)")+'</div>';
-  h+='<h3>Delivery stages of the '+tot+' must-have rows</h3><div class="kpis">';
+  h+='<h3>Delivery stages of the '+tot+' must-have rows (the checklist\'s status)</h3><div class="kpis">';
   stages.forEach(function(st){h+=kpi(st[1],esc(c[st[0]]||0)+'<span class="muted" style="font-size:13px"> / '+tot+'</span>',esc(st[2]),src(C.counts));});
   h+=kpi("Released to production","0","no production yet: it opens after the launch gate (P-589)","P-589 (3), P-590 (1)")+'</div>';
   h+='<h3>Who must act</h3><div class="kpis">'+kpi("You",esc(ny),"open items in Needs you, at the top",src(D.summary.needs_you),ny?"alert":"");
   delete byOwner["founder"];var mine=risks.filter(function(r){return r.owner==="founder";}).length;h=h.replace("open items in Needs you, at the top","open items in Needs you, plus "+mine+" launch risks you own");Object.keys(byOwner).sort().forEach(function(o){h+=kpi(esc(o),esc(byOwner[o]),"open launch risks they own","risks.json")});
-  h+='</div><p class="small muted">Terms: "specified" = has acceptance criteria; "built" = merged into the main line; "verified" = QA\'s independent verdict with a recorded test run; "released" = live for a real firm. The proof of concept\'s own count (qa Works on its 98 capabilities) is a separate number in "On track?".</p>';
+  h+='</div><p class="small muted">Terms: "specified" = has acceptance criteria; "built" = all its parts merged into the main line; "proven" = qa\'s independent Works verdict with a recorded test run; "released" = live for a real firm. The proof of concept\'s own count (qa Works on its 98 capabilities) is a separate number in "On track?".</p>';
   return section("","glance","Release 1 at a glance","How much we must build, how far it has got in the standard delivery stages, and who must act.",h);
 }
 function rHeat(){
@@ -666,15 +712,16 @@ function rHeat(){
   C.groups.forEach(function(g){var rs=C.rows.filter(function(r){return r.group===g.id;}),c={};order.forEach(function(k){c[k]=0;});
     rs.forEach(function(r){c[r.status]=(c[r.status]||0)+1;});
     var done=c["qa Works"],built=done+c["Merged"],moving=built+c["In PR"],t,word;
-    if(rs.length&&done===rs.length){t="good";word="all proven by qa";}
+    if(rs.length&&done===rs.length){t="good";word="all proven";}
     else if(moving>0){t="wait";word=built+" of "+rs.length+" built, "+done+" proven";}
-    else if(c["Shaped"]>0){t="prog";word="shaped, not started";}
-    else {t="none";word="not shaped yet";}
+    else if(c["Shaped"]>0){t="prog";word="specified, not started";}
+    else {t="none";word="not specified yet";}
+    var nd=rs.filter(function(r){return diffOf(r.map);}).length;if(nd)word+=" (records differ on "+nd+")";
     var wr=W?rs.filter(function(r){return W.rows[String(r.map)];}):[],wk=wr.length?(wr.some(function(r){return W.rows[String(r.map)].kind==="pr";})?'<span class="wmark" title="working today: '+esc(wr.map(function(r){return r.map;}).join(", "))+'"></span>':'<span class="wmark rep" title="Lead-reported lane on '+esc(wr.map(function(r){return r.map;}).join(", "))+'"></span>'):"";
     h+='<tr'+S(src(C.counts))+'><td>'+esc(g.id+". "+g.name)+wk+'</td><td class="n">'+rs.length+'</td>';
     order.forEach(function(k){var n=c[k]||0;h+='<td class="n"'+(n?' style="background:'+toneVar(tone(k))+'-soft"':'')+'>'+(n||'<span class="muted">0</span>')+'</td>';});
     h+='<td>'+pill(word,t)+'</td></tr>';});
-  h+='</tbody></table></div><p class="small muted">Colour rule: green = every row proven by qa; amber = some built or in a pull request; blue = shaped, not started; grey = not shaped. Customer-experience walk, compliance and risk columns join when TR-1 (requirement sources) and qa\'s Release 1 capabilities land.</p>';
+  h+='</tbody></table></div><p class="small muted">Counts are the checklist\'s hand-kept status; "records differ" marks rows whose computed state (from merged changes) is different; Details lists them. Colour rule: green = every row proven; amber = some built or in a pull request; blue = shaped, not started; grey = not shaped. Customer-experience walk, compliance and risk columns join when TR-1 (requirement sources) and qa\'s Release 1 capabilities land.</p>';
   return section("","heat","Capability heat map","Each business function of Release 1 and how far its rows have got. The rows themselves are in the checklist (the Library).",h);
 }
 function rFresh(){
@@ -690,7 +737,7 @@ function rFresh(){
 
 function render(){
   renderStrip();
-  var TABS=[["overview","Overview",[rOverview]],["caps","Capabilities",[rHeat,rCaps,rArch]],["factory","Factory",[rOrg,rSystem,rBuilding,rQuality,rDevops,rHeal,rImprove,rRes]],["launch","Launch readiness",[rRisks]],["library","Library",[rLibrary]],["details","Details",[rLearn,rBacklog,rFresh]]];
+  var TABS=[["overview","Overview",[rOverview]],["caps","Capabilities",[rHeat,rCaps,rArch]],["factory","Factory",[rOrg,rSystem,rBuilding,rQuality,rDevops,rHeal,rImprove,rRes]],["launch","Launch readiness",[rRisks]],["library","Library",[rLibrary]],["details","Details",[rTrust,rLearn,rBacklog,rFresh]]];
   var one=function(f){try{return f();}catch(e){return '<section><p class="err">This block could not be drawn: '+esc(e.message)+'</p></section>';}};
   var cur="overview";try{var sv=localStorage.getItem("board-tab");if(sv&&TABS.some(function(t){return t[0]===sv;}))cur=sv;}catch(e){}
   var out=one(rBanner)+'<p class="goal">Goal: Release 1 (production grade), complete and end to end, ready for the first real firm\'s data after the launch gate (P-570, P-589, P-594).</p>'+one(rNeeds);
