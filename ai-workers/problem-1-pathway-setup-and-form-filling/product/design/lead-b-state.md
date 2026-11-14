@@ -158,3 +158,7 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
   * The FO-1a lane applied the fix: it merged main (4cb10ae08) and re-stamped its migration as 20261114153000 with fo_sales_ function names (421f887ce). Reviewer round 6 approved it at 421f887ce, and the head is f364eb377.
   * `ci` is pending and the PR has no label: the release holder relabels on green.
 * 14 Nov 17:10 IST: Lead 47 read FO-1a's migration at f364eb377 (P-423): OK. It labels when ci run 43587658447 is green. Schema order noted; rev 15.2's rule goes into BACKLOG at its next records pass.
+* 14 Nov 17:23 IST: Lead 47 reported two red PRs.
+  * **FO-1a #1742**, red again at f364eb377: its seed command crashes in 2 of its own tests. The cause is hidden because the test keeps only the tail of stderr. Steps posted (comment 6876868394): show the error head, find and record the root cause, never crash on one firm, a pg_proc name test if a renamed function is still called by its old name.
+  * **PF-4 #1744**: B164 flags bare event names. Steps posted (comment 6876868536): after #1742 merges, add EVENT.STAFF_ROLES_CHANGED and STAFF_DEACTIVATED to ports/events.ts; green `skeleton` too.
+  * Both cloud lanes were messaged (one-way). They may need the prompt box.
