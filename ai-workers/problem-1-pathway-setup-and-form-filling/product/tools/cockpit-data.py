@@ -820,14 +820,16 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
     shaped_ids = []
     for r in shaped:
         shaped_ids += [x for x in r["ids"] if x not in shaped_ids]
-    shaped_ids += [x for x in flag_bk if x not in shaped_ids]
     rem_shaped = sum(1 for x in shaped_ids if x not in change_at)
+    flag_unmerged = [x for x in flag_bk if x not in change_at]   # pace counts them (N2); C1's scope names only Build rows' parts
     rem_unshaped = sum(max(0, UNSHAPED_FACTOR - sum(1 for x in r["ids"] if x in change_at)) for r in unshaped)
     remaining = rem_shaped + rem_unshaped
     R = num(remaining, f"unmerged ids of shaped Build rows and the Flags' BK rows ({rem_shaped}) + {UNSHAPED_FACTOR} × each Build row not shaped, "
             f"less its merged parts ({rem_unshaped}); {ck_src}, {bl_src}, {gh_src}", "mixed", L,
             label=f"estimate: {len(unshaped)} unshaped capabilities × {UNSHAPED_FACTOR} (P-586 (4), settled 19 Nov)",
-            shaped_unmerged=rem_shaped, unshaped_rows=len(unshaped), unshaped_estimate=rem_unshaped)
+            shaped_unmerged=rem_shaped, unshaped_rows=len(unshaped), unshaped_estimate=rem_unshaped,
+            flags_bk_unmerged=num(len(flag_unmerged), "BK- rows tied by the Flags to map rows 77, 80, 99 (not cited in a row) still unmerged: "
+                                  "counted in pace (N2), not in C1's scope", "mixed", L, ids=flag_unmerged))
 
     # ---- §1 B1: built and proven per Build row
     for r in rows:
@@ -835,14 +837,18 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
         if r["status"] == "Not shaped" or r["gap"] or r["unshaped_ids"]:
             continue
         if not r["ids"]:
-            if r["status"] in ("Merged", "qa Works"):
-                r["built"], r["pre_baseline"] = (R1_START - timedelta(days=1)).isoformat(), True
+            # B1 dates a row by its BACKLOG parts; a row with none has no built date. Rows the checklist marks Merged or
+            # qa Works with no part (proven in the proof of concept) are shown apart as "built before 13 Nov".
+            r["pre_baseline"] = r["status"] in ("Merged", "qa Works")
             continue
         if all(x in change_at for x in r["ids"]):
             r["built"] = max(change_day[x] for x in r["ids"]).isoformat()
     built_rows = [r for r in rows if r["built"]]
-    B = num(len(built_rows), f"Build rows whose BACKLOG parts all merged (latest part's merge date); rows with no part that the checklist marks "
-            f"Merged or qa Works count as built before 13 Nov; {ck_src}, {gh_src}", "mixed", L)
+    pre = [r["map"] for r in rows if r.get("pre_baseline")]
+    B = num(len(built_rows), f"shaped Build rows whose BACKLOG parts all merged through app PRs (built date = the latest part's merge date); "
+            f"{ck_src}, {gh_src}", "mixed", L,
+            built_before=num(len(pre), "Build rows with no BACKLOG part that the checklist marks Merged or qa Works (built in the proof of concept, "
+                             "before 13 Nov; no date)", "parsed", L, maps=pre))
     hist_caps = snap.cap_history()
     proven_reason = None
     if not ck["has_qa_col"]:
@@ -858,13 +864,13 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
                 break
     P_ = num(None if proven_reason else sum(1 for r in rows if r["proven"]),
              f"first main commit of qa/CAPABILITIES.md (last 30 days) in which every qa id of the row reads Works; {ck_src}", "mixed", L, proven_reason)
-    dated = [r for r in built_rows if not r.get("pre_baseline")]
+    dated = built_rows
     ratio = None
     if len(dated) >= 5:
         parts = len({x for r in dated for x in r["ids"]})
         ratio = num(round(parts / len(dated), 2), f"distinct parts of the {len(dated)} built rows with dated parts ÷ those rows", "mixed", L)
     disagree = [{"map": r["map"], "checklist": r["status"], "computed": "built" if r["built"] else "not built"}
-                for r in rows if bool(r["built"]) != (r["status"] in ("Merged", "qa Works"))]
+                for r in rows if bool(r["built"]) != (r["status"] in ("Merged", "qa Works")) and not r.get("pre_baseline")]
 
     # ---- §1 committed date, X, light
     h1 = next((d for d in plan.get("dates", []) if d.get("id") == "H1"), None)
@@ -933,10 +939,13 @@ def compute_board(snap, now, history, reconcile_out=None, reconcile_note=None):
     burn["x_end"] = max(ends) if ends else today.isoformat()
 
     # ---- §2 capacity
-    def is_lane_branch(n):
-        return not (n == "main" or n.startswith(("mergify/", "gh-readonly-queue/", "lead/", "lead-", "dependabot/")))
-    lanes = [b for b in branches if is_lane_branch(b["name"]) and parse_iso(b["pushed_at"]) >= cutoff - timedelta(minutes=LANE_WINDOW_MIN)]
-    Lw = num(len(lanes), f"branches (not main, queue or Lead records) with a push in the last {LANE_WINDOW_MIN} min; {gh_src} branches_recent.json "
+    def is_session_branch(n):
+        return not (n == "main" or n.startswith(("mergify/", "gh-readonly-queue/", "dependabot/")))
+
+    def is_lane_branch(n):   # org chart lanes: the Leads' own branches are the Leads' nodes
+        return is_session_branch(n) and not n.startswith(("lead/", "lead-"))
+    lanes = [b for b in branches if is_session_branch(b["name"]) and parse_iso(b["pushed_at"]) >= cutoff - timedelta(minutes=LANE_WINDOW_MIN)]
+    Lw = num(len(lanes), f"sessions = branches (not main or the merge queue) with a push in the last {LANE_WINDOW_MIN} min; {gh_src} branches_recent.json "
              "(push time = head commit time)", "measured", L, names=[b["name"] for b in lanes])
     merged_any = set(change_at)
     inpr = {}
