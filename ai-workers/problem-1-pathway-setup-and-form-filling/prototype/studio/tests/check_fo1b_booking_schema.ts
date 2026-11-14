@@ -319,7 +319,7 @@ try {
     && sql(DEMO, `select count(*) from pg_trigger where tgname = 'fo_booking_write' and tgenabled = 'O'`) === "1" && sql(DEMO, `select count(*) from fo_booking where id = '${u(235)}'`) === "0");
   ok("FO-1b fail (foreign key): a type for a firm that does not exist is refused 23503", refusedCode(DEMO, type(u(105), u(999), "ghost", []), "23503", /fo_consultation_type_firm_id_fkey/));
   ok("FO-1b pass: the four foreign keys to the platform are RESTRICT on delete and on update",
-    sql(DEMO, `select string_agg(conname || ':' || confdeltype::text || confupdtype::text, ',' order by conname) from pg_constraint where contype = 'f' and confrelid in ('platform_staff'::regclass, 'platform_firm'::regclass) and conrelid::regclass::text like 'fo\\_%'`)
+    sql(DEMO, `select string_agg(conname || ':' || confdeltype::text || confupdtype::text, ',' order by conname) from pg_constraint where contype = 'f' and confrelid in ('platform_staff'::regclass, 'platform_firm'::regclass) and conrelid::regclass::text = any('{${FO_TABLES.join(",")}}')`) // FO-1b's own tables (FO-13: other fo_ tables have keys too)
       === "fo_availability_firm_id_staff_id_fkey:rr,fo_booking_firm_id_staff_id_fkey:rr,fo_consultation_type_firm_id_fkey:rr,fo_time_off_firm_id_staff_id_fkey:rr");
   const lone = sql(DEMO, `insert into platform_staff (id, firm_id, email, display_name, updated_at) values (gen_random_uuid(), '${firmA}', 'lone@sample-firm.example.com', 'Lone', now()) returning id`);
   ok("FO-1b pass: a staff member no front-office row names can still be deleted", sql(DEMO, `delete from platform_staff where id = '${lone}' returning 1`) === "1");
