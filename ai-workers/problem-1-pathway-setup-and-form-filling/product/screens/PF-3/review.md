@@ -97,4 +97,30 @@ Round 1 verdict (7e4a4831): Block.
 
 No Blocker or Major is open at d5d13ed87685f758689d1e487b70a82bc4265bd1. The journey score stands at 8.5 / 10; with M1 and m1 fixed, "Correct data" rises to 1, giving 9 / 10.
 
-Verdict: Approve
+Round 2 verdict (d5d13ed8): Approve.
+
+## Round 3: head d4c2c426 (diff from d5d13ed8 only)
+
+**Checks run:**
+* `check_pf3_platform_schema.ts`: **75 passed, 0 failed**.
+* `check_prisma_schema.ts`: **8 passed, 0 failed** (no drift from `onUpdate: Restrict`).
+* Probes on a fresh database built from every migration plus the seed:
+  * **m7 fixed.** Moving user-O (who has grants) or a staff member with no other rows to another firm is refused by `platform_staff_firm_fixed`, and the three `(firm_id, staff_id)` keys are `ON UPDATE RESTRICT`.
+  * An invitation listing a role twice is refused (`platform_invitation_roles_distinct`).
+  * Accepting after expiry is refused (`platform_invitation_accepted_in_time`).
+  * Asia/Kolkata, America/Argentina/Buenos_Aires, America/Port-au-Prince, Etc/GMT+5 and UTC are accepted. "america/toronto", "Mars/Olympus" and "EST5EDT" are refused.
+  * Emails: NBSP, zero-width space, tab and a second "@" are refused; "josé@…" and "first.last+tag@…" are accepted.
+
+**New Minors from this round (neither blocks):**
+* **m9: the email rule does not refuse "any space or invisible character", as the change says.** The database is C-locale (`datctype = C`), so `[:space:]` covers ASCII only. Only the listed characters are refused: U+00A0, U+200B-200D, U+2060, U+FEFF. Run: an address containing U+2003 (em space), U+2009, U+202F, U+2028, U+3000, U+200E (LRM), U+2062 or U+00AD (soft hyphen) is accepted by every email check. Two addresses that look the same can then sit side by side under the unique indexes. Fix: add the ranges U+00AD, U+180E, U+2000-200F, U+2028-202F, U+205F-2064 and U+3000, with a test (or have PF-4's input check reject them).
+* **m10: time zone capitals are only partly canonical.** `settings.ts` `ZONE_NAME` checks only the first letter of each part, and Intl matches regardless of case. So "America/TORONTO" and "AMERICA/Toronto" are accepted and stored as a second spelling of one zone. It is harmless where the value is used (Intl and PostgreSQL ignore case), but break m-11's aim is only half met.
+
+**Still open as listed in the PR (unchanged, Minor):**
+* m3 / B-6: the demo reset deletes setting audit lines; this goes to `demo.ts` or AUD-1 and must be settled before a settings route ships.
+* m4, m6.
+* m8 / R2-4: write the outbox row last in its transaction.
+* R2-5, the expired-close marker, and deleting and reinserting an empty firm.
+
+None of these lets wrong data in through a route that exists today. No Blocker or Major is open at d4c2c426c53c6b431e0be84abfd97a32b329da77.
+
+Verdict: Approve (d4c2c426c53c6b431e0be84abfd97a32b329da77)
