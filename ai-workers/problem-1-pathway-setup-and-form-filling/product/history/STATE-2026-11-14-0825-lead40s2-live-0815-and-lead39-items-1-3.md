@@ -1,4 +1,4 @@
-# STATE lines moved word for word by Lead 40, 14 Nov 09:2x IST (all done: #1726 labelled, Q2-Q5 decided as P-566/P-567, replacements started, A46 given to stream 4 (2))
+# STATE lines moved word for word by Lead 40, 14 Nov 08:2x IST (all done: #1726 labelled, Q2-Q5 decided as P-566/P-567, replacements started, A46 given to stream 4 (2))
 
 **Lead 40 live (08:1x IST):** took over 07:55, check :13/:43 (job 0efbc3ec); start read ~107k (hand over at ~307k). Q2 answered → **P-566** (self-serve SaaS sign-up; best-practice questions decided by the Leads, only real conflicts/preferences to the founder); Q3-Q5 handed to Lead B (2) to rule with evidence per P-566 (3). **A46 confirmed** by the founder = the 07:45 sourcing-map ask, one deliverable, given to stream 4 (2) first (BoldSign check second); its delivery time to be given to him. "go" sent to Lead B (2) and stream 4 (2); old Lead B archived (worktree clean, 851ebfd65 pushed); old stream 4 not archivable yet (its A16-A18 research agents still running): archive at a later check. #1726 still needs his word naming it. #1728 PF-3 open, no label yet (P-423 diff read first).
 
