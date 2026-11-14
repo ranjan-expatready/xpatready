@@ -1,0 +1,6 @@
+# STATE founder asks A41-A42 rows, word for word (moved by Lead 37, series 2, 13 Nov 22:2x IST, to keep STATE under 12 KB)
+
+| # | Ask (IST) | Status |
+|---|---|---|
+| A41 | 21:5x (13 Nov) research: build everything ourselves, or take a best-in-class open-source CRM and configure and patch it; "the fastest possible way with a quality open source ... flexible and scalable and world class" | **in progress**: sent to research stream 4 `local_bb6b2d28` 21:5x (options own / open-source shell / hybrid; decision matrix with dated primary sources; licence marked Unconfirmed: no counsel; one recommendation + effect on Monday's test); answered 22:0x: **launch on our own build (a); no CRM as the shell (b); hybrid with Twenty (c) open after first firms** (matrix 4.2/3.2/2.6; CRM ~45 of ~490 changes, 9%); Lead spot-checked Twenty's licence, releases, advisories ✓ and asked for v2: open-source cover for the generic 91%, Monday Twenty check dropped; v2 final (open-source cover ~15-35 changes, 3-7%); **his answer "Enough for month one" → P-553** |
+| A42 | 21:5x (13 Nov) "Yes, start both" | **done**: fix lane for the B151 check race requested (cloud, task_4a85ae63; P-214, then requeue #1692); Lead 39 standby `local_84c512dc` started (second standby) |
