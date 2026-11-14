@@ -65,7 +65,11 @@ Text.
 CAPS = """| # | Step | Capability | M | Status | Tested on | Evidence |
 |---|---|---|---|---|---|---|
 | C6.4 | 6 Runtime | Checklist per person | M3 | Works | x | y |
-| C9.1 | 9 Leads | Public form takes a lead (FO-2) | R1 | Not built | — | — |
+"""
+
+CAPS_R1 = """| # | Map row: capability | Module | Status | Tested on | Case side | Done when | Evidence |
+|---|---|---|---|---|---|---|---|
+| R1.26 | 26 Public enquiry form | Front office | Not built | x | — | y | z |
 """
 
 
@@ -85,7 +89,7 @@ class Fixture(unittest.TestCase):
             (snap / "agent" / f"AG-02-prospect-lead_{ver}.md").write_text(text)
             (snap / "agent" / "AG-02-decisions_2026-10-11.md").write_text("#### AG-2-1 — not a module file\n")
         self.files = {}
-        for name, text in (("decisions", DECISIONS), ("checklist", CHECKLIST), ("capabilities", CAPS), ("trace", "| FEE-R01 | x |\n")):
+        for name, text in (("decisions", DECISIONS), ("checklist", CHECKLIST), ("capabilities", CAPS + "\n" + CAPS_R1), ("trace", "| FEE-R01 | x |\n")):
             self.files[name] = d / f"{name}.md"
             self.files[name].write_text(text)
         self.d = d
@@ -222,7 +226,7 @@ class Fixture(unittest.TestCase):
         self.assertEqual(once, self.files["checklist"].read_text())
         self.assertTrue(once.startswith(CHECKLIST.split("### Flags")[0]))
         self.assertLess(once.index(t.END), once.index("### Flags"))
-        self.assertIn(f"| 26 | Public enquiry form | FO-2, FO-4 (no row) | {self.cite('AG-2-2')} | C9.1 Not built |", once)
+        self.assertIn(f"| 26 | Public enquiry form | FO-2, FO-4 (no row) | {self.cite('AG-2-2')} | R1.26 Not built |", once)
         self.assertIn("| 63 | Per-person checklist | C6.4 | unmapped | C6.4 Works |", once)
 
     def test_cells_split_outside_code(self):

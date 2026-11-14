@@ -473,11 +473,13 @@ def render_block(ctx):
             if i not in srcs.setdefault(r.id, []):
                 srcs[r.id].append(i)
     known = {r.id for r in rows}
-    caps = {}
+    caps, r1 = {}, {}  # C-rows by id; R1 rows (qa's Release 1 list) by the map row in their second cell
     for l in ctx.read("capabilities").split("\n"):
-        c = split_cells(l) if l.startswith("| C") else []
+        c = split_cells(l) if l.startswith("| C") or l.startswith("| R1.") else []
         if len(c) >= 5 and re.match(r"^C\d+\.\d+$", c[0]):
-            caps[c[0]] = (c[3], c[4], l)
+            caps[c[0]] = c[4]
+        elif len(c) >= 4 and re.match(r"^R1\.\d+$", c[0]) and re.match(r"^\d+ ", c[1]):
+            r1.setdefault(c[1].split(" ")[0], []).append(f"{c[0]} {c[3]}")
     out = [BEGIN, f"### A. Sources and qa capabilities ({ctx.req_dir.name})", "",
            "| Map | Capability | BACKLOG rows | Source | qa capability |", "|---|---|---|---|---|"]
     for m, cap, cell, st in checklist_rows(ctx.read("checklist")):
@@ -489,9 +491,7 @@ def render_block(ctx):
         src = []
         for i in rids:
             src += [s for s in srcs.get(i, []) if s not in src]
-        qa = [f"{c} {caps[c][1]}" for c in ids if c.startswith("C") and c in caps]
-        qa += [f"{c} {v[1]}" for c, v in caps.items() if v[0] == "R1" and any(re.search(r"\b" + re.escape(i) + r"\b", v[2])
-                                                                              for i in rids) and f"{c} {v[1]}" not in qa]
+        qa = r1.get(m, []) + [f"{c} {caps[c]}" for c in ids if c.startswith("C") and c in caps]
         shown = ", ".join(i if i in known or i.startswith("C") else f"{i} (no row)" for i in ids) or "none"
         out.append(f"| {m} | {cap} | {shown} | {', '.join(src) or 'unmapped'} | {', '.join(qa) or 'none yet'} |")
     return out + ["", END]
