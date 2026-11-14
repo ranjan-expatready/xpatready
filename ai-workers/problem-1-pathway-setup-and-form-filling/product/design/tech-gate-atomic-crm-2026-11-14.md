@@ -13,6 +13,8 @@ Asked by Lead 39 (14 Nov, from stream 4's comparison, which itself says "how muc
 2. **Lift presentational pieces only (recommended):** copy, under MIT with its notice, the markup and styling of pieces that fit our concept r2 — the board's column and card layout, the person/company record layout (three columns), the notes list and composer, the tasks list (for later), the CSV import's column-matching steps (for PF-10) — rewritten onto our Radix components, our `contract.ts` shapes and our TanStack Query hooks; no `ra-core`, no Supabase, no new dependency.
 3. **Take nothing.**
 
+**Ruled by Lead 39 (14 Nov): design reference only — no code copied, no licence notice, AGENTS rule 5 untouched; copying word for word needs the release holder (and the founder for a rule-5 exception).**
+
 ## Pick and cost
 **Option 2.** Realistic saving on FO-4: **about 5-8 changes** (layout and styling work), not stream 4's 20-25, because the data layer, the AG-02 model and its guards are ours either way; more later on PF-10's import screen (about 3-5). Upkeep: none (copied code is ours; no dependency to track). Data: nothing leaves our system.
 
