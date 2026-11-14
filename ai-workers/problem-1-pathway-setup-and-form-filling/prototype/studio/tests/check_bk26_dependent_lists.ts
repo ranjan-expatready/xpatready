@@ -14,6 +14,7 @@ import { join } from "node:path";
 import { dependentChoices, runTransform, type DependentList } from "../../p5/transforms.ts";
 import { formValues, type BoxResult, type Inventory, type InventoryBox } from "../engine/form-values.ts";
 import { dependentListsFor } from "../engine/field-format.ts";
+import { inventoryHash } from "../engine/answer-keys.ts";
 
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 400)}` : ""}`); };
@@ -39,6 +40,8 @@ ok(`BK-26: IMM 1294's city (question 1 d) is the form's own list by its province
   dep?.depends_on === PROV && dep.key === "label" && /CityList\./.test(dep.quote ?? "") && Object.keys(dep.lists).length === 13 && entries === 4503 && dep.lists.ON?.some(([l, c]) => l === "Toronto" && c === "3812"), dep && { ...dep, lists: undefined });
 ok("BK-26: only boxes with no list of their own are dependent (the province box keeps its own list)",
   Object.keys(inv1294.dependent_lists ?? {}).every((p) => { const b = inv1294.fields.find((f) => f.data_path === p); return b?.ui === "choiceList" && !(b.options_resolved ?? []).length; }) && !!inv1294.fields.find((f) => f.data_path === PROV)?.options_resolved?.length);
+
+ok("BK-26: an answer key's fingerprint of the field list is the same with the lists read beside it (keys stay current)", inventoryHash(inv1294) === inventoryHash(JSON.parse(readFileSync(join(PROTO, "p1", "inventory", "imm1294e.inventory.json"), "utf8"))) && !!inv1294.dependent_lists);
 
 // 3. The fill: the saved AI answer's province step and the sample loader's city step, the city box listed first.
 const provStep = "address_part:province then code_list:imm1294.province (AB=09, BC=11, MB=07, NB=04, NL=01, NS=03, NT=10, NU=64, ON=06, PE=02, QC=05, SK=08, YT=12)";

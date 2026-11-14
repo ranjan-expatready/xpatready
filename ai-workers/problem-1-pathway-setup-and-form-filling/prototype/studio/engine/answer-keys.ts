@@ -166,7 +166,9 @@ export function itemFingerprint(s: Snapshot, kind: ItemKind, ref: string, editio
   // turns each entry's status from Draft to Published and keeps its version count, which is bookkeeping, not the map.
   return sha256(canonical(content({ kind, ref, item }) as never));
 }
-export const inventoryHash = (inv: Inventory) => sha256(canonical(inv as never));
+/** BK-26: the field list's own content; the dependent lists read beside it (Inventory.dependent_lists) are left out, so a
+ *  key's fingerprint stays that of the form's field list. */
+export const inventoryHash = (inv: Inventory) => { const { dependent_lists: _lists, ...own } = inv; void _lists; return sha256(canonical(own as never)); };
 /** G2 (challenge m5): hashes the caller already holds (the draft's sha256, a form field list's hash), so one gate pass
  *  hashes the snapshot once, not once per key. Omitted, they are worked out here as before. */
 export type Known = { snapshot?: string; inventory?: string; /** a field map's edition (the key's): that edition's map */ edition?: string | null };
