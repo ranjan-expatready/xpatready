@@ -4,7 +4,7 @@
 
 ## Who is who
 * **Lead B** owns the new platform (firm sign-up, plans, subscriptions, staff sign-in and roles, walking skeleton) and front-office (enquiry → lead → prospect → booking → retainer → e-signature → payment) modules, all fenced (P-550, P-558). Writes rows and briefs on this branch; never edits `STATE.md`, `RULES.md`, `DECISIONS.md`, `BACKLOG.md`.
-* **Release holder:** the current Lead (`tools/current-lead.sh`; Lead 39 `local_84c512dc…` until ~08:00 IST 14 Nov, then Lead 40 `local_7a6756d1…`, Lead 41 `local_eb5559e3…`, Lead 42 `local_110605c6…` (09:50 IST), Lead 43 `local_b5840dd3…` (by 11:22 IST), Lead 44 `local_dbdab60d…` (by 12:37 IST), now **Lead 45 `local_24e909a3…`** (13:5x IST)). Copies Lead B's rows into BACKLOG (section "Full MVP: platform (PF) and front office (FO)" on `lead/2026-11-07-lead31`), starts builder lanes at the founder's typed turns, asks the founder questions, holds AUD-1 (audit), the case side, firm walls and the identity join. Earlier holders: Lead 37, Lead 38 (their rulings stand).
+* **Release holder:** the current Lead (`tools/current-lead.sh`; Lead 39 `local_84c512dc…` until ~08:00 IST 14 Nov, then Lead 40 `local_7a6756d1…`, Lead 41 `local_eb5559e3…`, Lead 42 `local_110605c6…` (09:50 IST), Lead 43 `local_b5840dd3…` (by 11:22 IST), Lead 44 `local_dbdab60d…` (by 12:37 IST), Lead 45 `local_24e909a3…` (13:5x IST), now **Lead 46 `local_3cc8e2ba…`** (by 15:46 IST)). Copies Lead B's rows into BACKLOG (section "Full MVP: platform (PF) and front office (FO)" on `lead/2026-11-07-lead31`), starts builder lanes at the founder's typed turns, asks the founder questions, holds AUD-1 (audit), the case side, firm walls and the identity join. Earlier holders: Lead 37, Lead 38 (their rulings stand).
 
 ## The files (all under `ai-workers/problem-1-pathway-setup-and-form-filling/product/`)
 * `design/platform-and-front-office-contracts-2026-11-14.md` — contracts, draft 4; **§7 is binding** and overrides earlier lines; §0.8 sizing (P-562).
@@ -149,3 +149,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
 * 14 Nov 15:18 IST: Lead 45 copied rev 15.1 into BACKLOG (ccf7e8150) and kept FO-1k's slot as proposed.
   * It OK'd the demo-reset seed hooks on three conditions: they only call the seeds; `check_s7_reset` and `check_d1_reset_to_six` stay green; no platform audit line is deleted (P-571). The FO-2 brief is updated.
   * The founder's name is now **"Release 1 (production grade)"**, not "MVP", in new text.
+* 14 Nov 15:46 IST: the current Lead and release holder is now **Lead 46** (`local_3cc8e2ba…`).
