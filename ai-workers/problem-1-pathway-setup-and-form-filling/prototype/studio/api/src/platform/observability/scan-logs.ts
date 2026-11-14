@@ -54,7 +54,8 @@ export function seededValues(samplesDir = join(STUDIO, "samples")): string[] {
 }
 
 const RULES: [string, RegExp][] = [
-  ["an email address", /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+/],
+  // The domain ends in letters: "pg@9.0" in Node's own deprecation warning, or a package@1.2.3 frame, is not an address.
+  ["an email address", /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b/],
   ["a bearer or basic credential", /\b(?:Bearer|Basic)\s+(?!\[token\])[A-Za-z0-9._~+/=-]{8,}/i],
   ["a JWT", /\beyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\./],
 ];

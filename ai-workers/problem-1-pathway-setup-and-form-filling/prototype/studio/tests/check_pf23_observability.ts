@@ -244,6 +244,7 @@ const scanCli = (args: string[]) => spawnSync(join(STUDIO, "node_modules", ".bin
     ok("PF-23 (scanner): its own self-test passes, as CI runs it", self.status === 0, self.stdout.trim());
     const none = scanCli([join(dir, "no-such-folder")]);
     ok("PF-23 (review m13): with no server log to read, the check says \"nothing scanned\" plainly", none.status === 0 && /nothing scanned/.test(none.stdout), none.stdout.trim());
+    ok("PF-23 fail-guard (scanner rules): Node's \"removed in pg@9.0\" warning and a package@1.2.3 frame are not addresses; a real one is", scanText("will be removed in pg@9.0. Use async/await\nat node_modules/@nestjs+core@11.1.29/x.js", "f", seeded).length === 0 && scanText("sent to someone@firm.example", "f", seeded).length === 1);
     ok("PF-23 fail (scanner rules): a seeded name, a bearer credential and a JWT are each found", scanText(`x ${CANARIES.name}\nAuthorization: Bearer abcdefgh12345678\nt=eyJhbGciOi.eyJzdWIiOi.sig`, "f", seeded).length === 3);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 }
