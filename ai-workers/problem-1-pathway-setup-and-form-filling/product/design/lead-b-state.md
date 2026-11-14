@@ -142,3 +142,4 @@ All closed 14 Nov: 1 by P-561/P-563; 2 by **P-566** (self-serve SaaS sign-up); 3
   * PF-4 #1744: unlabelled, `skeleton` red (local sign-in 400).
   * Brief **PF-19a** written (next schema slot after FO-1a; FO-2 waits on it). It adds the `fo_web_form` → `msg_consent_wording` foreign key FO-1a left, with one back-relation line OK'd by Lead B.
 * 14 Nov 13:56 IST: brief **PF-12** written (walls; runs right after FO-7a, before FO-7b; it adds a missing-policy check so later tables can't skip their policy). Told Lead 45 that PF-19a, FO-13 and FO-7a can start once FO-1a merges, two schema rows at a time (P-559 (3)).
+* 14 Nov 13:57 IST: Lead 45 set the schema start order (STATE c3dc42691): **PF-19a + FO-7a** once FO-1a merges, then FO-13 when a slot frees. FO-7a goes first because money has the longest chain (FO-7a → PF-12 → FO-7b).
