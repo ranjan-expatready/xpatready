@@ -22,6 +22,7 @@ Older pointer lines: `history/STATE-2026-11-13-2245-lead37s2-old-pointer-lines.m
 |---|---|---|
 | S10, A1-A4, A6, A8-A13, A18-A23, A25-A27, A29, A30, A32, A33, A35, A36, A44, A45, A47, A48 | done, answered or standing | pointer rows word for word in `history/STATE-2026-11-14-0910-lead41s2-founder-asks-pointer-rows.md` |
 | A5, A7, A24, A28, A31, A34, A37-A43 | earlier asks: some waiting or in progress (A39 (1) waits on his word naming F15's two `throwaway/` branches) | pointer rows word for word in `history/STATE-2026-11-14-0910-lead41s2-founder-asks-pointer-rows.md` |
+| A53 | 10:2x (14 Nov) private at most US$20-30 a month (own laptops or another host?); is the exposed work recoverable or worth scrambling; clone to a new private repo and delete the public one? | **in progress**: research session `local_5225d1fa` (report to private notes `local_110605c6…/private-repo-options-2026-11-14.md`); measured 10:26: 0 forks, 0 stars, 14-day views 23 (8 unique) |
 | A49-A52 | 14 Nov: map challenge and baseline (P-586 done), A50/A51 architecture and repository (item 0 (a)-(c) in progress), public repositories (answered; P-587 gold class only) | rows word for word in `history/STATE-2026-11-14-1000-lead42s2-founder-asks-A49-A52-rows.md` |
 
 ## For the founder (P-390)
