@@ -75,6 +75,8 @@ model PlatformFirm {
   settings      PlatformFirmSetting[]
   subscriptions PlatformSubscription[]
   signupLinks   PlatformSignupLink[]
+  foRetainerTemplates FoRetainerTemplate[] // FO-5 back-relations (front-office-retainers.prisma); replace PF-0p's retainers slot line
+  foRetainers         FoRetainer[]
   staff         PlatformStaff[]
   credentials   PlatformStaffCredential[]
   grants        PlatformRoleGrant[]
@@ -203,6 +205,7 @@ model PlatformStaff {
   credential  PlatformStaffCredential?
   grants      PlatformRoleGrant[]
   revocations PlatformSessionRevocation[]
+  foRetainersRepresented FoRetainer[] // FO-5 back-relation (front-office-retainers.prisma)
   foAvailability FoAvailability[] // FO-1b back-relations (front-office-booking.prisma), Lead B's OK on #1741
   foTimeOff      FoTimeOff[]
   foBookings     FoBooking[]

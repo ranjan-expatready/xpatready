@@ -1,0 +1,186 @@
+// front-office-retainers.prisma — retainer and consultation agreement templates, retainers, their versions and fee rows.
+// Owner: Lead B (front office). One file per area (DB-SPLIT, studio/DEVELOPING.md): never edit another area's file
+// without its owner.
+//
+// FO-5 (P-558, P-559, P-576, P-600; BACKLOG row FO-5 rows rev 6.2, 9, 10 part 2; contracts
+// platform-and-front-office-contracts-2026-11-14.md §2.3 and §7 binding; concept fo-5s-retainer-signing r2 §3 BR-1..BR-11;
+// AG-05: AG-5-3, -4, -7, -9, -34, -39, -47, -49, -50, -64, -65). This file is the schema step; the API is the row's next
+// PR. Like the platform rows these carry no workspace_id (the firm is the tenant; the demo reset leaves them) and every
+// table carries firm_id first in every index but its primary key. A row naming a staff member, a template, a retainer or a
+// version keys on (firm_id, <id>), so it can never point at another firm's row: composite foreign keys, RESTRICT on
+// delete and update, to platform_staff (firm_id, id) and to this file's own tables; the template and the retainer also
+// to platform_firm (back-relation lines on platform.prisma). prospect_id, signer_person_id and company_id name FO-1a's
+// fo_prospect, fo_person and fo_company: FO-1a is not on main yet, so they are plain uuids here and **FO-1k adds their
+// foreign keys** (rows rev 16). Rules Prisma cannot say are in the migration (fo_retainer_ functions): status moves, one
+// live retainer per prospect, versions and fee rows write-once, the template's version only grows, the hashes' and keys'
+// shapes, CAD only. Money is in minor units (cents). Every value seeded or shown from here is Sample.
+
+/// What an agreement is (rows rev 6.2): the retainer agreement, or the consultation agreement the booking sends (FO-3c).
+/// An amendment or a consultation agreement never makes a client (contracts §7 §2.3-§2.4).
+enum FoRetainerKind {
+  RETAINER
+  CONSULTATION
+}
+
+/// A retainer's state (FO-5 row; AG-05 C2). DRAFT → SENT → VIEWED → CLIENT_SIGNED → SIGNED is the signing path (FO-6
+/// moves SENT onwards); DECLINED and EXPIRED come back to DRAFT by Edit and resend (AG-5-65 r1); WITHDRAWN, SIGNED and
+/// SIGNED_OFFLINE are final. A request never expires once the client signed (BR-16). Moves: the migration's trigger.
+enum FoRetainerStatus {
+  DRAFT
+  SENT
+  VIEWED
+  CLIENT_SIGNED
+  SIGNED
+  SIGNED_OFFLINE
+  DECLINED
+  WITHDRAWN
+  EXPIRED
+}
+
+/// Who the agreement is with (BR-4): a person, or a company signed for by one of its contacts.
+enum FoRetainerSubject {
+  PERSON
+  COMPANY
+}
+
+/// When a fee row falls due (AG-5-64 r1-r3; contracts §7 §2.3-§2.4).
+enum FoRetainerFeeWhen {
+  ON_SIGNING
+  ON_DATE
+  WHEN_SUBMITTED
+  WHEN_DECIDED
+  WHEN_DONE
+}
+
+/// Why a version's signing request ended (BR-9, BR-10, BR-11, BR-16): an edit made a newer version, the retainer was
+/// withdrawn, signed on paper, declined or expired.
+enum FoRetainerRequestEnd {
+  UPDATED
+  WITHDRAWN
+  SIGNED_OFFLINE
+  DECLINED
+  EXPIRED
+}
+
+/// A firm's agreement template (BR-1; AG-5-4 r1, AG-5-7). One row per template; a new file for it makes version n+1 in
+/// place (version only grows, trigger) and the earlier file stays in the file store under its own key
+/// (`retainer-templates/<id>/v<n>.docx`), so a retainer keeps the template version and file it was made from. placeholders
+/// are the names the file uses (read at upload; unknown names are refused by the API). Inactive templates are not offered
+/// for new drafts. The name is unique in the firm.
+model FoRetainerTemplate {
+  id           String         @id @default(uuid()) @db.Uuid
+  firmId       String         @map("firm_id") @db.Uuid
+  name         String
+  kind         FoRetainerKind @default(RETAINER)
+  version      Int            @default(1)
+  fileKey      String         @map("file_key")
+  fileSha256   String         @map("file_sha256")
+  placeholders String[]
+  active       Boolean        @default(true)
+  createdBy    String         @map("created_by")
+  updatedBy    String         @map("updated_by")
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  firm      PlatformFirm @relation(fields: [firmId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  retainers FoRetainer[]
+
+  @@unique([firmId, name])
+  /// The target of fo_retainer's (firm_id, template_id) key.
+  @@unique([firmId, id])
+  @@index([firmId, kind, active])
+  @@map("fo_retainer_template")
+}
+
+/// A retainer (or consultation) agreement for a prospect (FO-5 row; BR-2..BR-11). The template, its version and file are
+/// fixed at draft. signer_person_id is the person who signs: the prospect's person, or for a company one of its contacts
+/// (empty until picked: a Corporate prospect with no SIGNATORY contact gets a warning, never a block, AG-5-50; Send needs
+/// it, FO-6). The representative is an active staff member with a licence and the case-manager keys (API check, BR-3).
+/// current_version is the newest fo_retainer_version's n. At most one live RETAINER per prospect: WITHDRAWN and EXPIRED
+/// free the prospect for a new one (BR-10), DECLINED stays live for Edit and resend (partial unique index). Withdraw needs
+/// a reason; Signed offline a PDF and a reason, and cannot be undone (status final; trigger).
+model FoRetainer {
+  id                    String            @id @default(uuid()) @db.Uuid
+  firmId                String            @map("firm_id") @db.Uuid
+  kind                  FoRetainerKind    @default(RETAINER)
+  prospectId            String?           @map("prospect_id") @db.Uuid
+  subject               FoRetainerSubject @default(PERSON)
+  signerPersonId        String?           @map("signer_person_id") @db.Uuid
+  companyId             String?           @map("company_id") @db.Uuid
+  representativeStaffId String            @map("representative_staff_id") @db.Uuid
+  templateId            String            @map("template_id") @db.Uuid
+  templateVersion       Int               @map("template_version")
+  templateFileKey       String            @map("template_file_key")
+  status                FoRetainerStatus  @default(DRAFT)
+  currentVersion        Int               @default(1) @map("current_version")
+  withdrawnReason       String?           @map("withdrawn_reason")
+  withdrawnAt           DateTime?         @map("withdrawn_at") @db.Timestamptz
+  withdrawnBy           String?           @map("withdrawn_by")
+  offlineReason         String?           @map("offline_reason")
+  offlineFileKey        String?           @map("offline_file_key")
+  offlineFileSha256     String?           @map("offline_file_sha256")
+  offlineAt             DateTime?         @map("offline_at") @db.Timestamptz
+  offlineBy             String?           @map("offline_by")
+  createdBy             String            @map("created_by")
+  createdAt             DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+
+  firm           PlatformFirm        @relation(fields: [firmId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  template       FoRetainerTemplate  @relation(fields: [firmId, templateId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  representative PlatformStaff       @relation(fields: [firmId, representativeStaffId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  versions       FoRetainerVersion[]
+
+  /// The target of fo_retainer_version's (firm_id, retainer_id) key.
+  @@unique([firmId, id])
+  @@index([firmId, prospectId])
+  @@index([firmId, representativeStaffId])
+  @@index([firmId, status])
+  @@map("fo_retainer")
+}
+
+/// One version of a retainer (AG-5-3, AG-5-65; BR-7, BR-9): the merge values bound at that moment (a snapshot: a later
+/// change to the person never alters it), its fee rows, the rendered file and its sha256. Write-once: only the request
+/// columns change, each once (sent_at; ended_at with end_reason). An edit makes version n+1 and ends version n's request
+/// (end_reason UPDATED).
+model FoRetainerVersion {
+  id             String                @id @default(uuid()) @db.Uuid
+  firmId         String                @map("firm_id") @db.Uuid
+  retainerId     String                @map("retainer_id") @db.Uuid
+  n              Int
+  mergeValues    Json                  @map("merge_values")
+  fileKey        String                @map("file_key")
+  originalSha256 String                @map("original_sha256")
+  sentAt         DateTime?             @map("sent_at") @db.Timestamptz
+  endedAt        DateTime?             @map("ended_at") @db.Timestamptz
+  endReason      FoRetainerRequestEnd? @map("end_reason")
+  createdBy      String                @map("created_by")
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz
+
+  retainer FoRetainer         @relation(fields: [firmId, retainerId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+  fees     FoRetainerFeeRow[]
+
+  @@unique([firmId, retainerId, n])
+  /// The target of fo_retainer_fee_row's (firm_id, version_id) key.
+  @@unique([firmId, id])
+  @@map("fo_retainer_version")
+}
+
+/// A fee row of one version (BR-5; AG-5-64 r1-r3): label, amount in minor units (cents; empty while the draft has none:
+/// Send needs at least one row with an amount, AG-5-9), currency CAD, when it falls due (a date only for ON_DATE).
+/// Insert-only (trigger): a change is a new version.
+model FoRetainerFeeRow {
+  id          String            @id @default(uuid()) @db.Uuid
+  firmId      String            @map("firm_id") @db.Uuid
+  versionId   String            @map("version_id") @db.Uuid
+  position    Int
+  label       String
+  amountMinor BigInt?           @map("amount_minor")
+  currency    String            @default("CAD") @db.Char(3)
+  when        FoRetainerFeeWhen
+  dueOn       DateTime?         @map("due_on") @db.Date
+
+  version FoRetainerVersion @relation(fields: [firmId, versionId], references: [firmId, id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([firmId, versionId, position])
+  @@map("fo_retainer_fee_row")
+}
