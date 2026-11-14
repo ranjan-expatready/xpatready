@@ -34,3 +34,38 @@ Set-up: scratch databases `xr_studio_pf19a_break_1` and `_2` on :54329, with eve
 
 ## Not findings (outside the row's "What gets built")
 `msg_suppression` has no write-once trigger: it can be updated or deleted, so a suppression could be lifted by SQL, and the row does not ask for a trigger. The requirements make hard bounces and complaints platform-wide (SA11-D5, SA05-Q10), but the table is per firm only; that is for the release holder or PF-19b. A NULL `must_keep` is accepted by SQL.
+
+## Round 2: re-break on `922474295` (14 Nov)
+Set-up: a fresh scratch database `xr_studio_pf19a_break_r2` with every migration from `922474295`, two firms, and the same harness as round 1 (`ConsentStore(auditEvent, FakeClock)`, `fakeConsent`, and SQL in `BEGIN … ROLLBACK`). The database has been dropped. `4f5e64f9e` changes only `review.md`, so its code is the same.
+**Two Majors remain at or above Major (R2-1 and R2-2), plus one I grade Major with a caveat (R2-3).** The round-1 Blocker is fixed.
+
+| # | Attempt | Expected | Actual | Grade | Where |
+|---|---|---|---|---|---|
+| R2-1 | Withdraw person X while X has no consent yet (a withdrawal row is written). Then `record` an import for X with an **older** `givenAt`. Then Link-copy that import onto person Y. | A withdrawal stops every consent given before it, copies included | X: `allows` gives `WITHDRAWN` (correct), but the import row is stored with `withdrawn_at = NULL`. The copy takes that NULL, so **Y gets `allowed:true, CONSENT`**. The race of round 1 (#7) leaves the same NULL row (`withdrawn:0`, gate `WITHDRAWN`, row `withdrawnAt:null`), and copying it revives it the same way. The fake behaves the same (`allowed:true`). | **Major** | `consent-store.ts:47-57` (an insert never checks for a later `msg_consent_withdrawal` row of the key); `ports/consent.ts:249-250` |
+| R2-2 | `record({givenAt: now + 4 min})` (inside the 5-minute slack), then `withdraw` 30 s later, then `allows` 1 h later | The unsubscribe ends the consent | `withdrawn:0`, and `allows` gives **`CONSENT` for good**. The withdrawal ends only rows given at or before `at`, and a row stamped in the future counts as given after it. A caller whose clock runs a few minutes fast (a browser time, a partner's timestamp) gets a consent that no unsubscribe can end. The fake behaves the same. | **Major** | `ports/consent.ts:190-193` (`FUTURE_SLACK_MS` lets the future time through unclamped); `consent-store.ts:48,86` |
+| R2-3 | A STOP-suppressed `+447700900123`, then `allows(SERVICE)` for a subject with the WhatsApp opt-in at `+44 07700 900123` or `+44 (07700) 900123` | Suppressed | **`allowed:true, CONSENT`**. Only the literal `(0)` is dropped, so the bare trunk `0` stays and gives `+4407700900123`. Whether WhatsApp delivers to that string is not verified. It is the same class as round-1 #5 and the most common way a UK number is typed. | **Major** (if the provider normalises it); otherwise Minor | `ports/consent.ts:58` |
+| R2-4 | `withdraw({at: now + 4 min})`, then a fresh re-consent at now + 1 min, then `allows` 10 min later | The re-consent counts | `WITHDRAWN` for good: the re-consent is earlier than the future-stamped withdrawal. This fails closed. | Minor | `ports/consent.ts:190-193` |
+| R2-5 | SQL inserts with `given_at` or `withdrawn_at` = 2999, and a copy that changes channel and time | Refused by the database as well | Both accepted. Only `isfinite` is checked, and `copyKeeps` exists only in TypeScript. | Minor | `migration.sql` (`msg_consent_times_check`, `msg_consent_withdrawal_at_check`) |
+| R2-6 | Wordings made only of U+3164 (Hangul filler) and U+2066, or only of combining accents | Refused as having no visible words | Accepted (versions published) | Minor | `ports/consent.ts:36,152` (the `INVISIBLE` set misses these) |
+| R2-7 | Real addresses such as `josé@example.com` and `用户@例子.广告` | Kept, or a clear refusal the caller can handle | `allows` and `suppress` throw `ZodError`. A bounce for such an address cannot be recorded, and the caller must convert the domain to its `xn--` form first. This fails closed. | Minor | `ports/consent.ts:44` |
+| R2-8 | Fake and adapter compared | They agree | They still disagree: the fake accepts an unknown firm (the adapter gives P2010/23503), and the fake has no bare-client guard (it accepts `db`). An upper-case wording id now agrees. | Minor | `ports/consent.ts:242-251` |
+| R2-9 | `jurisdiction: "ZZ-999"` (new column) | A real country or province | Accepted: the format is checked, the value is not | Minor | `ports/consent.ts:79` |
+
+**Round-1 items, re-tried:**
+* **#1 Blocker: held.**
+  * A copy of a withdrawn consent, onto the same subject or another, is written withdrawn: `allows` gives `WITHDRAWN`.
+  * A copy with a newer `givenAt` is refused: `ConsentRefused` "a copy keeps the original's time".
+* **#2 Merge: held.** A copy now carries the withdrawal, and `withdraw(Y, at=<X's time>)` ends only consents given at or before that time. The residue is R2-1.
+* **#3 copy across channel or purpose: held in the port.** It is refused ("keeps the original's channel and purpose"). The database still allows it (R2-5).
+* **#4 future time: held** for anything beyond 5 minutes. +6 min and 2099 give `ConsentRefused`. `null`, `0`, `true`, a time with no offset, year -5000 and 1999 all give clean `ZodError`s, and SQL `'infinity'` is refused by the checks. The residue is R2-2.
+* **#5 numbers: held** for `+44 (0)7700 900123`, `+44(0) 7700-900-123`, full-width digits and U+202D. U+2066 inside a number throws. The residue is R2-3.
+* **#6 email: held.** These now match the suppressed `foo@example.com`: `<foo@example.com>`, `< foo@example.com >`, full-width `＜…＞`, `foo@example.com.`, a ZWSP, a soft hyphen, and a full-width `ｅ`. These are refused: `<…>.`, `..`, quoted local parts, IP-literal domains, U+2069, U+034F and Cyrillic look-alikes. The database refuses upper case and a trailing dot.
+* **#7 withdrawal with no live row: held for the gate.** A withdrawal row and an audit line are always written (5 withdrawal lines). The race now gives `WITHDRAWN`. The residue is the NULL row (R2-1).
+* **#8 bare client: held.** `record`, `withdraw`, `suppress` and `publishWording` given `db` or `db.$extends({})` throw `TypeError` before writing anything. Only a hand-made Proxy that hides `$disconnect` gets through, which is not a realistic call.
+* **#9 and #10 inputs: held.** A NUL in `text`, `sourceRef`, `note` or an address, a ZWSP-only wording, and `givenAt: null/0/true` are all refused with clean `ZodError`s. A lone surrogate is still stored as U+FFFD, consistently with its hash (not graded).
+* **#14 outbox and locale: not re-tried** (no change in the diff).
+* **New code, held:**
+  * `msg_consent_withdrawal`: update, delete, `TRUNCATE` and `TRUNCATE msg_firm CASCADE` are refused; `-infinity`, SERVICE on EMAIL and an unknown firm are refused.
+  * WhatsApp gate: TRANSACTIONAL or SERVICE without the opt-in gives `NO_CONSENT`; with the opt-in, `CONSENT`; MARKETING with only the opt-in, `NO_CONSENT`; email TRANSACTIONAL is unchanged.
+  * Audit: 0 of 24 msg_ lines hold an address, number or wording text.
+  * Migration: `migrate diff` shows no msg_ lines.

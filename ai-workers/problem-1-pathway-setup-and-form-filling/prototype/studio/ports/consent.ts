@@ -33,7 +33,7 @@ const At = z.union([z.date(), z.iso.datetime({ offset: true })]).transform((d) =
 /** Free text the database stores: no NUL character (PostgreSQL refuses it). */
 const Text = (max: number) => z.string().trim().min(1).max(max).refine((t) => !t.includes("\u0000"), "no NUL character");
 /** Zero-width and other invisible characters a pasted address or wording can carry. */
-const INVISIBLE = /[\u00AD\u200B-\u200F\u2028-\u202F\u2060-\u2064\uFEFF]/g;
+const INVISIBLE = /[\u00AD\u034F\u115F\u1160\u200B-\u200F\u2028-\u202F\u2060-\u206F\u3164\uFEFF\uFFA0]/g;
 
 /** A purpose a channel can hold: a SERVICE consent is WhatsApp's opt-in only. */
 const purposeFits = (v: { channel: Channel; purpose: Purpose }) => v.purpose === "MARKETING" || v.channel === "WHATSAPP";
@@ -149,7 +149,7 @@ export const PublishWordingInput = z.strictObject({
   channel: Channel,
   purpose: Purpose,
   locale: Locale,
-  text: Text(4000).refine((t) => /[^\s]/.test(t.replace(INVISIBLE, "")), "wording has visible words"),
+  text: Text(4000).refine((t) => /[\p{L}\p{N}]/u.test(t.replace(INVISIBLE, "")), "wording has visible words"),
   by: AuditActor,
 }).refine(purposeFits, PURPOSE_MSG);
 export type PublishWordingInput = z.input<typeof PublishWordingInput>;
@@ -172,7 +172,9 @@ export class ConsentRefused extends Error {
 }
 
 /** The consent purpose a class needs on a channel, or null when it needs none (AG-10-22, SA-11-29): marketing needs
- *  marketing consent; any other WhatsApp message needs the WhatsApp opt-in; email that is not marketing needs none. */
+ *  marketing consent; any other WhatsApp message needs the WhatsApp opt-in; email that is not marketing needs none.
+ *  A reply inside WhatsApp's customer-service window to a person who wrote first (AG-2-83 rule 2, AG-10-41) is not a
+ *  business-initiated message: PF-19b's sending path allows it before asking this gate (known, review round 2 R2-m1). */
 export function purposeNeeded(cls: MessageClass, channel: Channel): Purpose | null {
   if (cls === "MARKETING") return "MARKETING";
   if (channel === "WHATSAPP") return "SERVICE";
@@ -186,11 +188,22 @@ export function copyKeeps(from: { channel: Channel; purpose: Purpose; wordingId?
   if (c.givenAt && c.givenAt.getTime() !== from.givenAt.getTime()) throw new ConsentRefused("a copy keeps the original's time");
 }
 
-/** How far ahead of the clock a given or withdrawal time may be (clock drift between machines); later is refused. */
+/** How far ahead of the clock a given or withdrawal time may be (clock drift between machines); later is refused. A
+ *  time inside the slack is kept as the clock's now, so no consent or withdrawal is ever stored in the future (break
+ *  round 2: a consent stamped ahead could not be withdrawn; a withdrawal stamped ahead blocked a real re-consent). */
 export const FUTURE_SLACK_MS = 5 * 60_000;
 export function notInFuture(at: Date, now: Date, what: string): Date {
   if (at.getTime() > now.getTime() + FUTURE_SLACK_MS) throw new ConsentRefused(`${what} ${at.toISOString()} is in the future`);
-  return at;
+  return at.getTime() > now.getTime() ? now : at;
+}
+
+/** The withdrawal that ends a consent given at `givenAt`: the earliest of the candidates at or after it (the copied row's
+ *  own, its key's withdrawal rows, the new row's key's withdrawal rows), or none. A row recorded after a withdrawal of
+ *  its key, with an older time (an import, a late record), is written withdrawn, so a later copy of it cannot revive
+ *  consent anywhere (break round 2, R2-1). */
+export function endingWithdrawal<W extends { at: Date; by: string; via: string }>(givenAt: Date, candidates: ReadonlyArray<W | null | undefined>): W | null {
+  const after = candidates.filter((w): w is W => !!w && w.at.getTime() >= givenAt.getTime()).sort((a, b) => a.at.getTime() - b.at.getTime());
+  return after[0] ?? null;
 }
 
 /** The one rule (adapter and fake both use it). `rows` are the subject's consents for the channel and purpose and
@@ -247,8 +260,14 @@ export function fakeConsent(opts: { now?: () => Date } = {}): FakeConsent {
       if (c.copiedFromId && !from) throw new ConsentRefused(`consent ${c.copiedFromId} is not in this firm`);
       if (from) copyKeeps(from, c);
       const givenAt = from ? from.givenAt : notInFuture(c.givenAt ?? now(), now(), "givenAt");
-      const withdrawnAt = from?.withdrawnAt ? new Date(Math.max(from.withdrawnAt.getTime(), givenAt.getTime())) : null;
-      const row: FakeConsentRow = { ...c, id: crypto.randomUUID(), givenAt, withdrawnAt, withdrawnVia: from?.withdrawnVia ?? null };
+      const firstOut = (k: { firmId: string; subject: Subject; channel: Channel; purpose: Purpose }) =>
+        withdrawals.filter((x) => sameKey(x, k) && x.at >= givenAt).map((x) => ({ at: x.at, by: "", via: x.via })).sort((a, b) => a.at.getTime() - b.at.getTime())[0];
+      const end = endingWithdrawal(givenAt, [
+        from?.withdrawnAt ? { at: from.withdrawnAt, by: "", via: from.withdrawnVia ?? "" } : null,
+        from ? firstOut(from) : null,
+        firstOut(c),
+      ]);
+      const row: FakeConsentRow = { ...c, id: crypto.randomUUID(), givenAt, withdrawnAt: end?.at ?? null, withdrawnVia: end?.via ?? null };
       consents.push(row);
       return { id: row.id };
     },

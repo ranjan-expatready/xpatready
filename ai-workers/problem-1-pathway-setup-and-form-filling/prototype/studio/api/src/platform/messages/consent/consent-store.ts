@@ -9,7 +9,7 @@ import type { AuditPort } from "../../../../../ports/audit.ts";
 import { systemClock, type ClockPort } from "../../../../../ports/clock.ts";
 import {
   AllowsQuery, ConsentRecordInput, ConsentRefused, PublishWordingInput, SuppressInput, WithdrawInput, decide,
-  copyKeeps, normaliseAddress, notInFuture, purposeNeeded, sha256Hex,
+  copyKeeps, endingWithdrawal, normaliseAddress, notInFuture, purposeNeeded, sha256Hex,
   type ConsentDecision, type ConsentPort, type PublishedWording, type Withdrawn,
 } from "../../../../../ports/consent.ts";
 import { firmScope } from "../../firm-scope.ts";
@@ -40,15 +40,27 @@ export class ConsentStore implements ConsentPort<Tx> {
     // A Link or Merge copy carries the original's withdrawal (AG-2-83 rule 8: Merge copies withdrawals too), so a copy
     // of a withdrawn consent is never live.
     const from = c.copiedFromId
-      ? await tx.msgConsent.findFirst({ where: firmScope(firmId, { id: c.copiedFromId.toLowerCase() }), select: { id: true, channel: true, purpose: true, wordingId: true, givenAt: true, withdrawnAt: true, withdrawnBy: true, withdrawnVia: true } })
+      ? await tx.msgConsent.findFirst({ where: firmScope(firmId, { id: c.copiedFromId.toLowerCase() }), select: { id: true, subjectKind: true, subjectId: true, channel: true, purpose: true, wordingId: true, givenAt: true, withdrawnAt: true, withdrawnBy: true, withdrawnVia: true } })
       : null;
     if (c.copiedFromId && !from) throw new ConsentRefused(`consent ${c.copiedFromId} is not in this firm`);
     if (from) copyKeeps(from, c);
     const now = this.clock.now();
     const givenAt = from ? from.givenAt : notInFuture(c.givenAt ?? now, now, "givenAt");
-    const withdrawal = from?.withdrawnAt
-      ? { withdrawnAt: new Date(Math.max(from.withdrawnAt.getTime(), givenAt.getTime())), withdrawnBy: from.withdrawnBy, withdrawnVia: from.withdrawnVia }
-      : {};
+    // The withdrawal that already ends this consent, if any: the copied row's own, a withdrawal row of the copied row's
+    // key, or one of this row's key, at or after its time. Such a row is written withdrawn (never live, never revivable).
+    const firstOut = async (kind: typeof c.subject.kind, subjectId: string) => {
+      const w = await tx.msgConsentWithdrawal.findFirst({
+        where: firmScope(firmId, { subjectKind: kind, subjectId: subjectId.toLowerCase(), channel: c.channel, purpose: c.purpose, withdrawnAt: { gte: givenAt } }),
+        orderBy: { withdrawnAt: "asc" }, select: { withdrawnAt: true, withdrawnBy: true, via: true },
+      });
+      return w ? { at: w.withdrawnAt, by: w.withdrawnBy, via: w.via } : null;
+    };
+    const end = endingWithdrawal(givenAt, [
+      from?.withdrawnAt && from.withdrawnBy && from.withdrawnVia ? { at: from.withdrawnAt, by: from.withdrawnBy, via: from.withdrawnVia } : null,
+      from ? await firstOut(from.subjectKind, from.subjectId) : null,
+      await firstOut(c.subject.kind, c.subject.id),
+    ]);
+    const withdrawal = end ? { withdrawnAt: end.at, withdrawnBy: end.by, withdrawnVia: end.via } : {};
     const row = await tx.msgConsent.create({
       data: {
         firmId, subjectKind: c.subject.kind, subjectId: c.subject.id.toLowerCase(), channel: c.channel, purpose: c.purpose,
@@ -61,7 +73,7 @@ export class ConsentStore implements ConsentPort<Tx> {
     await this.audit.record(tx, {
       firmId, actor: c.recordedBy, action: "consent.recorded", entity: "msg_consent", entityKey: row.id,
       summary: `Consent recorded: ${c.channel.toLowerCase()} ${c.purpose.toLowerCase()}, from ${c.source.toLowerCase().replace(/_/g, " ")}.`,
-      detail: { subjectKind: c.subject.kind, subjectId: c.subject.id.toLowerCase(), channel: c.channel, purpose: c.purpose, basis: c.basis, source: c.source, wordingId: c.wordingId ?? null, copiedFromId: c.copiedFromId ?? null, copiedWithdrawn: !!from?.withdrawnAt },
+      detail: { subjectKind: c.subject.kind, subjectId: c.subject.id.toLowerCase(), channel: c.channel, purpose: c.purpose, basis: c.basis, source: c.source, wordingId: c.wordingId ?? null, copiedFromId: c.copiedFromId ?? null, writtenWithdrawn: !!end },
     });
     return row;
   }

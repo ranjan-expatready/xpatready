@@ -253,6 +253,30 @@ try {
   const g7 = await tx((t) => store.record(t as never, webTick(P7)));
   const late = await tx((t) => store.withdraw(t as never, { firmId: firmA, subject: P7, channel: "EMAIL", purpose: "MARKETING", via: "UNSUBSCRIBE", by: "system:unsubscribe", at: new Date(clock.now().getTime() - 3_600_000) }));
   ok("PF-19a pass (review m1): a late-processed withdrawal from an hour ago leaves a consent given since live", late.withdrawn === 0 && (await mail(P7, "MARKETING")).consentId === g7.id);
+  // Break round 2, R2-1: a row recorded after a withdrawal of its key, with an older time, is written withdrawn, so a copy
+  // of it cannot revive consent on another person.
+  const X = { kind: "FO_PERSON" as const, id: u(512) }, Y = { kind: "FO_PERSON" as const, id: u(513) };
+  await tx((t) => store.withdraw(t as never, { firmId: firmA, subject: X, channel: "EMAIL", purpose: "MARKETING", via: "UNSUBSCRIBE", by: "system:unsubscribe" }));
+  const oldImport = await tx((t) => store.record(t as never, { firmId: firmA, subject: X, channel: "EMAIL", purpose: "MARKETING", basis: "IMPORT_DECLARED", source: "IMPORT_DECLARED", recordedKind: "USER", recordedBy: byR, givenAt: new Date(clock.now().getTime() - 86_400_000) }));
+  const toY = await tx((t) => store.record(t as never, { firmId: firmA, subject: Y, channel: "EMAIL", purpose: "MARKETING", basis: "IMPORT_DECLARED", source: "IMPORT_DECLARED", recordedKind: "SYSTEM", recordedBy: "system:merge", copiedFromId: oldImport.id }));
+  ok("PF-19a fail (break R2-1): an older import recorded after the person's unsubscribe is stored withdrawn, and its Merge copy leaves the other person WITHDRAWN",
+    sql(DEMO, `select (withdrawn_at is not null) || ':' || withdrawn_via from msg_consent where id = '${oldImport.id}'`) === "true:UNSUBSCRIBE"
+    && sql(DEMO, `select (withdrawn_at is not null) from msg_consent where id = '${toY.id}'`) === "t"
+    && (await mail(X, "MARKETING")).reason === "WITHDRAWN" && (await mail(Y, "MARKETING")).reason === "WITHDRAWN");
+  // R2-2 and R2-4: a time inside the five-minute slack is kept as the clock's now, never in the future.
+  const Z = { kind: "FO_PERSON" as const, id: u(514) };
+  const ahead = await tx((t) => store.record(t as never, webTick(Z, w2.id, { givenAt: new Date(clock.now().getTime() + 4 * 60_000) })));
+  ok("PF-19a pass (break R2-2): a consent stamped four minutes ahead is kept at the clock's now, so a withdrawal a moment later ends it",
+    sql(DEMO, `select given_at = '${clock.now().toISOString()}'::timestamptz from msg_consent where id = '${ahead.id}'`) === "t"
+    && (await tx((t) => store.withdraw(t as never, { firmId: firmA, subject: Z, channel: "EMAIL", purpose: "MARKETING", via: "UNSUBSCRIBE", by: "system:unsubscribe" }))).withdrawn === 1
+    && (await mail(Z, "MARKETING")).reason === "WITHDRAWN");
+  const Q = { kind: "FO_PERSON" as const, id: u(515) };
+  await tx((t) => store.withdraw(t as never, { firmId: firmA, subject: Q, channel: "EMAIL", purpose: "MARKETING", via: "STAFF", by: byR, at: new Date(clock.now().getTime() + 4 * 60_000) }));
+  await clock.advance({ seconds: 1 });
+  const reQ = await tx((t) => store.record(t as never, webTick(Q)));
+  ok("PF-19a pass (break R2-4): a withdrawal stamped four minutes ahead is kept at now, so a real consent a second later is live", (await mail(Q, "MARKETING")).consentId === reQ.id);
+  ok("PF-19a fail (break R2-6): a wording of only Hangul fillers, bidi isolates or combining accents is refused",
+    (await Promise.all(["\u3164\u3164", "\u2066\u2069", "\u0301\u0301"].map((text) => throwsLike(() => tx((t) => store.publishWording(t as never, { firmId: firmA, channel: "EMAIL", purpose: "MARKETING", locale: "en", text, by: byR })), (e) => /visible words/.test(String(e)))))).every(Boolean));
   ok("PF-19a fail (review m2): a consent given, or a withdrawal made, more than five minutes in the future is refused",
     await throwsLike(() => tx((t) => store.record(t as never, webTick(P7, w2.id, { givenAt: new Date(clock.now().getTime() + 3_600_000) }))), (e) => e instanceof ConsentRefused && /in the future/.test(String(e)))
     && await throwsLike(() => tx((t) => store.withdraw(t as never, { firmId: firmA, subject: P7, channel: "EMAIL", purpose: "MARKETING", via: "STAFF", by: byR, at: new Date(clock.now().getTime() + 3_600_000) })), (e) => e instanceof ConsentRefused));
