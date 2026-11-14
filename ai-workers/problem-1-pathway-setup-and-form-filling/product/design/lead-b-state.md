@@ -1,28 +1,60 @@
-# Lead B — state (P-557: always committed, always resumable)
+# Lead B — state and hand-over (P-557: always committed, always resumable)
 
-Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Session `local_9bced770…` (local, own worktree), branch on GitHub: `lead-b-front-office`. Release holder and shared records: **Lead 39** (`local_84c512dc-855e-4e49-ad8b-5d861c11713b`) since ~01:xx IST 14 Nov (after Lead 38, `local_fac27a00…`, and Lead 37, `local_c795de7f…`, whose rulings stand) (took over from Lead 37, `local_c795de7f…`, whose rulings stand). Lead B never edits `STATE.md`, `RULES.md`, `DECISIONS.md`, `BACKLOG.md`; it writes rows to `lead-b-rows-2026-11-14.md` and the release holder copies them.
+**Hand-over written 14 Nov 07:53 IST by Lead B (session `local_9bced770…`) at ~52% context, per P-565.** A fresh Lead B starts here, on branch `lead-b-front-office` (GitHub), in its own worktree. Do not run `/lead` (the release holder's skill).
 
-**Owns:** platform (firm sign-up, plans, subscriptions, sign-in and roles, walking skeleton) and front office (enquiry → lead → pipeline → booking → retainer → e-sign → payment), all in new fenced modules.
+## Who is who
+* **Lead B** owns the new platform (firm sign-up, plans, subscriptions, staff sign-in and roles, walking skeleton) and front-office (enquiry → lead → prospect → booking → retainer → e-signature → payment) modules, all fenced (P-550, P-558). Writes rows and briefs on this branch; never edits `STATE.md`, `RULES.md`, `DECISIONS.md`, `BACKLOG.md`.
+* **Release holder:** the current Lead (`tools/current-lead.sh`; Lead 39 `local_84c512dc…` until ~08:00 IST 14 Nov, then Lead 40). Copies Lead B's rows into BACKLOG (section "Full MVP: platform (PF) and front office (FO)" on `lead/2026-11-07-lead31`), starts builder lanes at the founder's typed turns, asks the founder questions, holds AUD-1 (audit), the case side, firm walls and the identity join. Earlier holders: Lead 37, Lead 38 (their rulings stand).
 
-## What is true (updated 14 Nov 07:10 IST)
-* Contracts **draft 4** (`design/platform-and-front-office-contracts-2026-11-14.md`; §7 binding, from the requirements trace).
-* Requirements trace register `design/lead-b-requirements-trace-2026-11-14.md` + evidence `design/lead-b-trace-2026-11-14/t1..t8` (AG-01/02/04/05/06/13/16/18, SA-02/03/04/06/07/11, CICC Code SOR/2022-128).
-* Rows **rev 3** (`design/lead-b-rows-2026-11-14.md`): PF-1, PF-2, PF-3, PF-4, PF-5, PF-7, FO-1a, FO-1b, FO-2, FO-2b, FO-3, FO-4, FO-4b. Lead 37 holds BACKLOG (last copied from 242e1cb8 = rev 2; rev 3 sent for re-copy).
-* FO-4 concept **r2 approved** by Lead B after the fresh challenge (P-223 (4)); `screens/fo-4-sales/` (concept, board r2, challenge with Lead response).
-* Rulings from Lead 37: P-559 (App.tsx line OK, PF-7 OK, schema folder rule, P-335/P-357 amended), P-560 (FO follows AG-02; `prospect.won`), representative-of-record mapping (Case Manager + licence, no rename in case code).
-* Founder (22:3x, via Lead 37): Corporate pipeline and script embed in month one.
-* Lead 37's ruling (14 Nov) folded as rows **rev 3.1**: one audit trail (`audit_event` + `AuditPort`, AUD-1, release holder's); front office owns the lead/prospect/client activity timeline; typed firm settings home in PF-3.
-* No builder lanes, no PRs. PF-1, PF-2, PF-7 wait on the founder's click on Lead 37's cards.
+## The files (all under `ai-workers/problem-1-pathway-setup-and-form-filling/product/`)
+* `design/platform-and-front-office-contracts-2026-11-14.md` — contracts, draft 4; **§7 is binding** and overrides earlier lines; §0.8 sizing (P-562).
+* `design/lead-b-rows-2026-11-14.md` — the rows; **current: rev 5.1 + P-564 (e330ac8b)**, all copied into BACKLOG by the release holder.
+* `design/lead-b-requirements-trace-2026-11-14.md` — register: §A followed by requirement, §B by the CICC Code, §C Lead B decisions, §D founder questions. Evidence: `design/lead-b-trace-2026-11-14/t1..t8`.
+* `design/lead-b-briefs/PF-3.md`, `FO-1a.md`, `FO-1b.md` — builder briefs (paste-ready).
+* `design/tech-gate-boldsign-residency-2026-11-14.md` (BoldSign Canada: documents/audit/signers in Toronto; its email, AI, ID check in the US → our own emails, no vendor AI/ID, no integrations); `design/tech-gate-atomic-crm-2026-11-14.md` (design reference only, no code copied — Lead 39 ruling). PF-2's own tool gate is on `main`: `design/tech-gate-platform-front-office-2026-11-14.md`.
+* Concepts, both **approved by Lead B after a fresh challenge (P-223 (4))**: `screens/fo-4-sales/` (concept r2, board r2, challenge with Lead response) and `screens/pf-6-staff/` (concept r2, board r1, challenge with Lead response). The founder's half-hour look at both is still due (changes become follow-up rows).
+
+## Rows and where each stands (rev 5.1)
+| Row | What | State | Next |
+|---|---|---|---|
+| PF-1 | web module seam | **merged** (#1711) | — |
+| PF-2 | tool gate | **merged** (#1712) | PF-2b residency done by Lead B (file above) |
+| PF-7 | container + CI smoke | started by Lead 37's card (check its PR with the release holder) | — |
+| PF-3 | platform tables + settings home + seed | **in flight: PR #1728** (holds the schema baton) | watch review; then start FO-1a + FO-1b |
+| FO-1a / FO-1b | sales tables / booking tables | briefs written | start **side by side** after PF-3 merges (P-559 (3), Lead 38); FO-1a also fixes DEVELOPING.md's stale one-migration line |
+| PF-4 | sign-in, roles, permission keys | shaped | write brief when PF-3 merges |
+| PF-4b | staff reads, session, accept invitation, step-up, provider emails via MailPort | shaped | brief after PF-4; builder verifies 4 Cognito facts first |
+| PF-5 | sign-up + subscription (SA-04) | shaped; door per question 2 | brief after PF-4 |
+| FO-2 / FO-2b | leads + Individual prospects API / Corporate | shaped | briefs after FO-1a |
+| FO-3 | booking API (AG-04) | shaped | after FO-1b and FO-2 |
+| FO-4 / FO-4b | sales screens / script embed | shaped (concept approved) | after FO-2 and PF-1 |
+| FO-5 | retainers (AG-05 rules, FilesPort, docxtemplater) | shaped | after FO-1a, PF-4 |
+| FO-5b | Code s. 24(3) checklist | waits on **question 4** | closes unbuilt if "no" |
+| FO-6 | signing, vendor-neutral (+ P-564 email code) | shaped | after FO-5, PF-4 |
+| FO-6v | BoldSign adapter, 4 conditions checked first | released by P-563 | after FO-6; needs the founder's BoldSign sandbox key for Lead B's one Mac check |
+| PF-6 | staff screens (concept approved) | shaped | after PF-4b, PF-1; Security screen per **question 3** |
+| Shaped next (no rows yet) | FO-3b paid consults (after FO-7) · FO-3c consultation agreement at booking (Code s. 23; after FO-6) · FO-5s retainer/signing screens (concept first) · FO-7 invoices/receipts/payments (AG-06; trust per **question 5**) · FO-8 `prospect.won` with the case side · PF-8 cloud deploy (founder's Canadian cloud account) · PF-9 firm set-up checklist and settings screen · PF-10 import with a dry run (AG-18) | | shape two ahead |
+
+## Rulings received (all stand)
+P-559 (App.tsx line; schema folder rule; P-335/P-357 amended for PF/FO) · P-560 (FO follows AG-02; `prospect.won`; a person opens the case) · Lead 37: one audit trail (`audit_event` + `AuditPort.record(tx,…)`, AUD-1, release holder's; no audit table in our modules); front office owns the lead/prospect/client activity timeline (read view); firm settings are platform's typed settings home; representative of record = Case Manager with a licence, no rename in case code (`user-R`) · Lead 38: FO-1a/1b side by side · Lead 39: Atomic CRM design reference only · founder 22:3x 13 Nov: Corporate pipeline and script embed in month one · **P-561** BoldSign on 4 conditions → **P-563** confirmed after stream 4's comparison · **P-562** size for ~100 Canadian firms (50 to start where it saves effort) · **P-564** email one-time code before signing, firm setting on by default · **P-565** sessions past ~half context hand over.
+
+## Founder questions still open (release holder asks one at a time; detail and costs in the register §D)
+2. **Sign-up:** private single-use link (SA-4-4, recommended now) vs open public page.
+3. **Two-step (re-shaped):** Cognito sets it per user pool and has no recovery codes → (a) required for every firm (recommended, ~0 changes, deviation from AG-1-40) vs (b) AG-1-40 as written (~4-6 changes).
+4. **Retainer:** non-blocking checklist from Code s. 24(3) (recommended) vs nothing (AG-05).
+5. **Client money:** (b) per-client trust ledger, receipts, offline trust deposits; card only for invoiced fees; card into trust after counsel (recommended) vs (a) full AG-06 trust card account now.
+Fold each answer into contracts §7 and the affected rows (PF-5; PF-4b/PF-6; FO-5b; FO-7), push, and tell the release holder.
+
+## Next step for the fresh Lead B
+1. Read this file, then contracts §7, then the rows file's latest sections.
+2. Watch PR #1728 (PF-3) with the release holder; when it merges, ask for FO-1a and FO-1b to start from their briefs, and write the **PF-4** brief (then PF-4b, PF-5) two ahead.
+3. Shape **FO-7** after question 5 and **FO-5s** (retainer/signing screens: concept first, skill screen-concept).
+4. Commit and push this file at every change (P-557); times only from `TZ=Asia/Kolkata date`.
 
 ## In flight
 | What | Session | Branch | PR |
 |---|---|---|---|
-| (none) | | | |
-
-## Next step
-1. Lead 39 asks the founder the five questions in the register §D, one at a time; fold each answer into contracts §7 and rows (FO-6 signer, PF-5 door, PF-4 switch default, FO-5 checklist, FO-7 trust).
-2. Shape the next two ahead: FO-5 (retainer), FO-6 (signing) once question 1 is answered; FO-7 after question 5; PF-6 staff screens (concept first).
-3. When builders run: review each PF/FO PR's diff for money, schema, permissions (P-423 is Lead 37's label read).
+| PF-3 platform tables | cloud builder (started by the release holder) | its own | #1728 |
 
 ## Log
 * 13 Nov 22:25 IST: rows sent to Lead 37 (one line each, with four asks); delivered, not yet answered.
@@ -51,3 +83,4 @@ Lead B = the second tech lead for the full-fledged MVP build (P-550, P-558). Ses
 * 14 Nov 07:48 IST: P-563 (BoldSign confirmed) → FO-6v released (waits on FO-6 and the sandbox key). Atomic CRM weighed (`tech-gate-atomic-crm-2026-11-14.md`): lift presentational pieces only into FO-4 (~5-8 changes saved, not 20-25; no ra-core/Supabase); FO-2 unchanged; licence-notice rule asked of Lead 39. Rows rev 5.1.
 * 14 Nov 07:49 IST: Lead 39 ruling: Atomic CRM is a design reference only (no code copied, no licence file); FO-4 row and tech-gate note aligned.
 * 14 Nov 07:50 IST: P-564 (email one-time code before signing, firm setting on by default) folded into contracts §7 and FO-6. Q2 (sign-up link) goes to the founder next.
+* 14 Nov 07:53 IST: hand-over written (P-565); Lead B stops.
