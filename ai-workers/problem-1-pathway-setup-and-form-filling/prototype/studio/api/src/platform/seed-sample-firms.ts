@@ -102,7 +102,8 @@ async function syncDefinitionsIfChanged(tx: Prisma.TransactionClient): Promise<n
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { PrismaPg } = await import("@prisma/adapter-pg");
   const { PrismaClient } = await import("@prisma/client");
-  const url = process.env.DATABASE_URL ?? "postgresql://xr_studio@127.0.0.1:54329/xr_studio_demo";   // as core.ts DATABASE_URL
+  const { platformConfig } = await import("./config/settings.ts");
+  const url = platformConfig().databaseUrl.reveal();   // PF-24: the one loader (the demo database locally, as core.ts DATABASE_URL)
   const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: url, options: "-c TimeZone=UTC" }) });
   try { console.log(JSON.stringify(await seedSampleFirms(db))); } finally { await db.$disconnect(); }
 }
