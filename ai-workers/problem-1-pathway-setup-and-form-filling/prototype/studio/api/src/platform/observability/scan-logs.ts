@@ -81,7 +81,7 @@ export function logFiles(targets: string[]): string[] {
     for (const f of readdirSync(t).sort()) {
       const p = join(t, f);
       if (/api\.log$/.test(f) && statSync(p).isFile()) files.push(p);
-      else if (/^isolated-/.test(f) && statSync(p).isDirectory() && existsSync(join(p, "api.log"))) files.push(join(p, "api.log"));
+      else if (/^isolated-/.test(f) && statSync(p).isDirectory()) for (const g of readdirSync(p)) if (/^api\.log$/.test(g) && statSync(join(p, g)).isFile()) files.push(join(p, g)); // a running copy's own log
     }
   }
   return files;
