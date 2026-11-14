@@ -9,6 +9,8 @@ and a summary JSON. The official files are never modified.
 Run from the project root with the prototype venv:
   .tools/solution-1-prototype/.venv/bin/python -I \
     ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p1/xfa_inventory.py
+With the argument `lists` (BK-26) it writes, beside each inventory, the lists the form's own script fills from another
+box's answer (<form>.lists.json); the inventories themselves are left as they are.
 """
 import collections
 import hashlib
@@ -313,6 +315,137 @@ def inventory(fname, reason):
     return summary, {"summary": summary, "groups": groups, "presence_scripts": presence_scripts, "fields": fields}
 
 
+# BK-26: a list the form's own script fills from another box's answer, e.g. IMM 1294's
+#   LOVUtils.setDDLFromLOV(CityTown.CityTown, "CityList." + this.formattedValue+".City[*]")
+# on the province box: the target box, the datasets path before and after the other box's answer, and which of its
+# values the script reads (formattedValue: the label it shows; rawValue: its code).
+DDL_RE = re.compile(r'setDDLFromLOV\(\s*([A-Za-z_][\w.\[\]]*)\s*,\s*"([\w.]+?)\."\s*\+\s*this\.(formattedValue|rawValue)\s*\+\s*"\.([\w.]+)\[\*\]"\s*\)')
+# The form's own LOVUtils.setDDLFromLOV adds each item as (its text, its <attribute>): `oListItem.lic.value`.
+ITEM_VALUE_RE = re.compile(r"oListItem\.(\w+)\.value")
+
+
+def dependent_lists(fname):
+    """BK-26: each dependent list of a form, read from the official file itself (its template's scripts and its own
+    datasets; no AI, US$0). Keyed by the target box's data path (the inventory's own, matched by SOM path); each entry
+    names the box it depends on and holds every list the form can load into it, by that box's answer, as
+    [label, code] pairs in the form's order. Returns None when the form fills no list from another box."""
+    path = official(fname)
+    parts, _ = xfa_parts(path)
+    if "template" not in parts or "datasets" not in parts:
+        return None
+    tpl = ET.fromstring(parts["template"])
+    ns = tpl.tag.split("}")[0] + "}"
+    lov = ET.fromstring(parts["datasets"]).find("LOVFile")
+    lov = lov.find("LOV") if lov is not None else None
+    objects = "\n".join(s.text or "" for v in tpl.iter(ns + "variables") for s in v.findall(ns + "script"))
+    attr = ITEM_VALUE_RE.search(objects[objects.find("function setDDLFromLOV"):] if "function setDDLFromLOV" in objects else "")
+    if lov is None or attr is None:
+        return None
+    _, full = inventory(fname, "dependent lists")
+    by_som = {f["som"]: f for f in full["fields"] if f.get("data_path")}
+    # The inventory's SOM paths with unnamed subforms dropped: XFA resolves a name through them (they are transparent).
+    norm = lambda s: re.sub(r"\.#(?:subform|area|subformSet)\[\d+\]", "", s)
+    by_name = {norm(s): f for s, f in by_som.items()}
+    containers = ("subform", "subformSet", "area", "exclGroup")
+    calls = []  # (source som, target expression, prefix, which value, item, the script's own words)
+
+    def walk(el, som):
+        seen = collections.Counter()
+        for c in el:
+            tag = c.tag.replace(ns, "")
+            if tag in ("pageSet", "proto", "variables") or tag not in containers + ("field",):
+                continue
+            key = c.get("name") or f"#{tag}"
+            i = seen[key]
+            seen[key] += 1
+            csom = f"{som}.{key}[{i}]"
+            if tag in ("field", "exclGroup"):
+                for ev in c.findall(ns + "event"):
+                    for s in ev.iter(ns + "script"):
+                        for m in DDL_RE.finditer(s.text or ""):
+                            calls.append((csom, m.group(1), m.group(2), m.group(3), m.group(4), " ".join(m.group(0).split())))
+            else:
+                walk(c, csom)
+
+    top = tpl.find(ns + "subform")
+    walk(top, f"{top.get('name')}[0]")
+
+    def resolve(source_som, expr):
+        # XFA's scope rule: the name is looked for from the source box's container, then each container above it.
+        steps = [s if "[" in s else f"{s}[0]" for s in expr.split(".")]
+        scope = norm(source_som).split(".")[:-1]
+        while scope:
+            hit = by_name.get(".".join(scope + steps))
+            if hit:
+                return hit
+            scope.pop()
+        return None
+
+    def items(node_path):
+        node = lov
+        for n in node_path.split("."):
+            node = node.find(n) if node is not None else None
+        return node
+
+    boxes = {}
+    for source_som, expr, prefix, which, item, quote in calls:
+        src, dst = by_som.get(source_som), resolve(source_som, expr)
+        if not src or not dst:
+            continue
+        lists = {}
+        parent = items(prefix)
+        for group in (list(parent) if parent is not None else []):
+            pairs = [[(e.text or "").strip(), e.get(attr.group(1)) or ""] for e in group.findall(item)]
+            lists[group.tag] = [p for p in pairs if p[0] or p[1]]
+        if not lists:
+            continue
+        boxes.setdefault(dst["data_path"], {
+            "caption": dst.get("caption"),
+            "depends_on": src["data_path"],
+            "depends_on_caption": src.get("caption"),
+            "key": "label" if which == "formattedValue" else "code",
+            "list": f"{prefix}.{{}}.{item}",
+            "value_attribute": attr.group(1),
+            "quote": quote,
+            "lists": lists,
+        })
+    if not boxes:
+        return None
+    return {
+        "file": fname, "sha256": full["summary"]["sha256"],
+        "read_by": "prototype/p1/xfa_inventory.py dependent_lists (the form's own template scripts and datasets; no AI)",
+        "boxes": boxes,
+    }
+
+
+def lists_json(r):
+    """The lists file's text: one line per list (a province's 972 cities on one line), so a change reads as one line."""
+    one = lambda v: json.dumps(v, ensure_ascii=False)
+    boxes = []
+    for path, b in r["boxes"].items():
+        head = [f'   {one(k)}: {one(v)}' for k, v in b.items() if k != "lists"]
+        lists = ",\n".join(f'    {one(k)}: {one(v)}' for k, v in b["lists"].items())
+        boxes.append(f'  {one(path)}: {{\n' + ",\n".join(head) + ',\n   "lists": {\n' + lists + "\n   }\n  }")
+    top = [f' {one(k)}: {one(v)}' for k, v in r.items() if k != "boxes"]
+    return "{\n" + ",\n".join(top) + ',\n "boxes": {\n' + ",\n".join(boxes) + "\n }\n}\n"
+
+
+def main_lists():
+    """BK-26: writes <form>.lists.json beside each form's inventory that has a dependent list."""
+    for p in sorted(OUT.glob("imm*.inventory.json")):
+        if ".text." in p.name:
+            continue
+        fname = p.name.replace(".inventory.json", ".pdf")
+        try:
+            r = dependent_lists(fname)
+        except Exception as e:  # a form with no XFA template has no lists to read
+            print(f"{fname}: not read ({e})")
+            continue
+        if r:
+            (OUT / (fname.replace(".pdf", "") + ".lists.json")).write_text(lists_json(r))
+            print(f"{fname}: {len(r['boxes'])} dependent lists: " + "; ".join(f"{b['caption']} by {b['depends_on_caption']} ({sum(len(v) for v in b['lists'].values())} entries)" for b in r["boxes"].values()))
+
+
 def main():
     OUT.mkdir(exist_ok=True)
     allsum = []
@@ -328,4 +461,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main_lists() if sys.argv[1:] == ["lists"] else main()
