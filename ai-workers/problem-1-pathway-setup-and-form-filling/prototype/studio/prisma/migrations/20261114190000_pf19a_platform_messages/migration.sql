@@ -278,9 +278,10 @@ CREATE FUNCTION msg_address_ok(channel "MsgChannel", address TEXT) RETURNS BOOLE
   END
 $$;
 
--- Who wrote a row: `staff:<id>`, `system:<door>` or `seed:<row>` (PF-0p's AuditEntry actor; AG-2-83 rule 4).
+-- Who wrote a row: `staff:<id>`, `system:<door>` or `seed:<row>` (the same pattern as PF-0p's AuditActor in
+-- ports/audit.ts; AG-2-83 rule 4: a public door writes `system:<door>`).
 CREATE FUNCTION msg_actor_ok(actor TEXT) RETURNS BOOLEAN LANGUAGE sql IMMUTABLE AS $$
-  SELECT actor ~ '^(staff|system|seed):[a-z0-9][a-z0-9._-]*$' AND length(actor) <= 200
+  SELECT actor ~ '^(staff|system|seed):[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$'
 $$;
 
 ALTER TABLE "msg_consent_wording"
