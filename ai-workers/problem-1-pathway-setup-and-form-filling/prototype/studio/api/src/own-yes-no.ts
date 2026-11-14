@@ -95,7 +95,10 @@ export type AskedWhen = { fact: string; equals: string };
  *  #1272: one answer fills both forms); else the field of the same label, else a new one. */
 /** BK-25: `person`, for a box in a row about another person of the case (IMM 5707's spouse row), that person's role on the
  *  form, as the row's other form fields name it (the door checks it). */
-export type OwnYesNo = { form?: string; field?: string; person?: string; dataPath: string; label: string; meaning: string; question?: string; checkpointOnly?: boolean; followUps?: string[]; askedWhen?: AskedWhen };
+/** P-598: `later`, asked only after every other combination's release 1, when the box's form edition is shared with them
+ *  (IMM 5707, every paper combination's family form): a reviewed release is never edited, so the others pick it up at their
+ *  next release (api/src/features/checkpoint/110-release-one.ts). */
+export type OwnYesNo = { form?: string; field?: string; person?: string; later?: boolean; dataPath: string; label: string; meaning: string; question?: string; checkpointOnly?: boolean; followUps?: string[]; askedWhen?: AskedWhen };
 
 /** QA-165 (AGENTS rule 4, P-170: nothing guessed): why the form asks the Yes/No form field `dataPath` only when `when.fact`
  *  is `when.equals`, or null when its own script does not say so. The script's rule (samples/form-script-requirements.json)

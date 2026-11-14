@@ -56,7 +56,7 @@ ok("BK-25 fail (tech lead on #1747): a person its row does not name is refused (
 ok("BK-25 pass: a page of mixed rows does not say, so a box with no person named keeps the form's subject there, as before this row", !rowPersonRefused(["form_subject", "subject_spouse_or_partner"]));
 
 // 3. The Study permit's data: each box is a Yes/No form field of its form's reading, asked in that form's own words.
-const own = JSON.parse(readFileSync(join(STUDIO, "samples", "own-yes-no.json"), "utf8")).combinations["sp.outside"] as { application: string; boxes: { form?: string; dataPath: string; question?: string; person?: string }[] };
+const own = JSON.parse(readFileSync(join(STUDIO, "samples", "own-yes-no.json"), "utf8")).combinations["sp.outside"] as { application: string; boxes: { form?: string; dataPath: string; question?: string; person?: string; later?: boolean }[] };
 const inv: Record<string, [string, string]> = { "IMM 1294": ["prototype/p1/inventory/imm1294e.inventory.json", F1294], "IMM 1295": ["prototype/p1/inventory/imm1295e.inventory.json", F1295], "IMM 5707": ["prototype/p1/inventory/imm5707e.inventory.json", F5707] };
 ok("BK-25: the Study permit's own questions are on its application form IMM 1294, and on IMM 1295 and IMM 5707 (8 boxes)", own?.application === "IMM 1294" && own.boxes.length === 8, own?.boxes.length);
 for (const b of own?.boxes ?? []) {
@@ -65,6 +65,8 @@ for (const b of own?.boxes ?? []) {
   ok(`BK-25: ${b.form ?? own.application} ${b.dataPath.split(".").slice(-3).join(".")} is a Yes/No form field asked in its form's own words ("${words}")`,
     !!box && !!yesNoCodes(box) && !!words && (!b.question || inFormText(pdf, b.question)), { box: !!box, words });
 }
+ok("BK-25 (P-598): only IMM 5707's two boxes, the form edition every paper combination files, are \"later\" (asked after the other combinations' release 1)",
+  JSON.stringify(own.boxes.filter((b) => b.later).map((b) => b.form)) === JSON.stringify(["IMM 5707", "IMM 5707"]));
 // The quoted words of 2 c) and the consent: the reading prints a neighbour's words on those boxes, so they must be quoted.
 ok("BK-25 fail: the readings print a neighbour's words on 2 c) and the consent, so those boxes carry a quoted question",
   own.boxes.filter((b) => /VisaChoice3|Consent0/.test(b.dataPath)).every((b) => !!b.question) && printedQuestion(readingOf(inv["IMM 1295"][0])?.get("form1[0].Page4[0].Consent0[0].Choice[0]")) !== "Do you consent to be contacted by IRCC, or an organization at IRCC’s request, in the future?");
