@@ -1,0 +1,49 @@
+NOTE  B170c: building packages/xfa-engine (npm ci --legacy-peer-deps, npm run build)
+
+added 54 packages in 1s
+
+> @expatready-eros/xfa-engine@0.1.0 build
+> tsc -p tsconfig.build.json
+
+PASS  B170c: pass: the engine is found at packages/xfa-engine and built
+PASS  B170c: pass: five switches: form's own check, barcode check, view form, validate in the app, engine writer
+PASS  B170c: pass: every switch is off
+PASS  B170c: fail: a switch turned on reads as on (xfaOn reads the list it is given)
+PASS  B170c: fail: the switch list cannot be changed at run time
+PASS  B170c: pass: every switch is off and no app file uses the adapter, so the app behaves exactly as before (486 files read)
+PASS  B170c: fail: an import of the adapter is seen, in any form
+PASS  B170c: pass: only engine/xfa/ reaches the engine (no other app file names packages/xfa-engine or the engine's process)
+PASS  B170c: fail: a direct reach to the engine is seen
+PASS  B170c: pass: two form records (the engine's two descriptor files), each for its official file's SHA-256 in the manifest
+PASS  B170c: pass: each descriptor is its source file, unchanged
+PASS  B170c: fail: another edition never borrows a descriptor (a file the records do not hold has none)
+PASS  B170c: fail: form records that do not read make the answer 'not available', never a bare 'reads'
+PASS  B170c: pass: the engine's made-up form: not complete, stops at its own first missing box with its own message
+PASS  B170c: pass: the blank IMM 5257 (descriptor found by its SHA-256): not complete, stops at the form's own first missing box with its own message, 5 pages (1577 ms)
+PASS  B170c: pass: the blank IMM 1294 (refused by the engine): not available, with the engine's reason and code
+PASS  B170c: pass: on a refused form the engine's process exits 0 with one answer line (a refusal is an answer, not a crash)
+PASS  B170c: fail: a request that cannot be read exits 1, the engine process's one non-zero exit
+PASS  B170c: pass: a form the engine reads with no recorded descriptor: 'reads' with its pages and why, never a pass
+PASS  B170c: fail: a descriptor that names nothing on the form is 'not available' with the engine's reason, never a pass
+PASS  B170c: fail: past the time limit the engine's process is stopped and the answer is 'not available' with the limit
+PASS  B170c: fail: an engine that is not built is 'not available', saying how to build it
+PASS  B170c: fail: a file that is not there is 'not available' with the reason
+PASS  B170c: fail: a form record that does not describe the Validate fully is 'not available' as our record's fault, not the form's (review minor 3)
+PASS  B170c: fail: the engine runs strict: a form whose script touches a member the engine does not model is 'not available', never a pass (an engine that passes it only when not strict)
+PASS  B170c: fail: an answer the engine reached while skipping a member is 'not available', naming the member, never a pass
+PASS  B170c: pass: the same check with nothing skipped passes through the child (strict asked for)
+PASS  B170c: pass: a copy of IMM 5257 filled with the engine's made-up person passes the form's own Validate, with its five barcode texts
+PASS  B170c: fail: the same filled copy without its edition named finds no descriptor and says so truly ('reads', why names the file and the edition), never a pass
+PASS  B170c: pass: a complete form passes, with its barcode texts
+PASS  B170c: pass: an incomplete form stops at its box with its message
+PASS  B170c: fail: an incomplete form with no box or message still stops (never a pass)
+PASS  B170c: fail: a complete answer without pages is not available
+PASS  B170c: fail: a complete answer without barcodes is not available
+PASS  B170c: fail: a complete answer whose barcodes the form's save step did not encode is not available (review minor 4)
+PASS  B170c: fail: a record the engine refuses as a descriptor is not available as our record's fault
+PASS  B170c: fail: an unknown answer is not available
+PASS  B170c: fail: no answer is not available
+PASS  B170c: pass: the form records file is samples/xfa-forms.json
+
+39 passed, 0 failed
+EXIT=0
