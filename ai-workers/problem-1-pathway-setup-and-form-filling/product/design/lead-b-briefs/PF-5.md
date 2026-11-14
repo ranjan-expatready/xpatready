@@ -13,6 +13,8 @@ You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime P
 
 **Touch list (nothing else):** new `api/src/platform/billing/*.ts`, `api/src/platform/firms/*.ts`, `api/src/features/platform-firms.ts`, `tests/check_pf5_signup_billing.ts`; the Stripe library line in `package.json` and the lockfile; the two tables in `platform.prisma` and one migration folder. You hold the **schema baton**; release it in the PR when merged.
 
+**Outbox (PF-3 review m8):** write any `module_event` row **last** in its transaction.
+
 **Must still be true:** every existing suite, the demo reset and the checkpoint load (C10.1) pass unchanged; PF-3's Sample firms keep working as before.
 
 **Duplicate check (P-526):** before building, search BACKLOG, open PRs, `main`'s code (`git grep -i 'stripe\|signup\|subscription'` under `api/src`; ignore CSS stripes) and BUGS; one `Duplicate check:` line in the PR.

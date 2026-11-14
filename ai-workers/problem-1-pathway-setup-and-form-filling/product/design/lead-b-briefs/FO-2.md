@@ -11,6 +11,8 @@ You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime F
 
 **Touch list (nothing else):** new `api/src/front-office/sales/*.ts`, `api/src/features/front-office-sales.ts`, `tests/check_fo2_leads_prospects.ts`. A needed edit elsewhere → "Question for the tech lead" on the PR, to Lead B.
 
+**Outbox (PF-3 review m8):** write any `module_event` row **last** in its transaction.
+
 **Must still be true:** every existing suite, the demo reset and the checkpoint load (C10.1) pass unchanged; firm A never reads or writes firm B's rows (`firmScope`).
 
 **Duplicate check (P-526):** before building, search BACKLOG, open PRs, `main`'s code (`git grep -i 'fo_lead\|engage\|take it'` under `api/src`) and BUGS; one `Duplicate check:` line in the PR.
