@@ -72,3 +72,51 @@ Journeys:
 * D17 and D20 with an intended user.
 
 **Verdict: Block.** Open: Blocker 0, Major 1 (M1), Minor 8 (m1–m8). Fix M1, with its fail test, and fix or list the Minors. A diff-only re-review then approves.
+
+## Round 2: diff-only re-review (P-277) of `79107bf0..1c1bb096`
+Reviewer, 14 Nov. Head **1c1bb096** (8 files, +451/−165). The local setup is unchanged (PF-0p overlay, `platform.prisma` uncommitted, client regenerated). Suite `check_pf25_web_address.ts`: **58 passed, 0 failed**.
+
+I also walked an isolated copy (`rev_pf25` on :4522, started and stopped in one command), with the Sample seed, curl with `Host` headers, the service probe and a simulated database failure.
+
+**My round-1 findings**
+* **M1 is fixed.** `host.ts:19-26` now serves only the routes registered with `registerPublicPath` (anchored both ends), and PF-25 registers only `/api/public/site`. Live on `sample-firm.localhost`, every one of these gives the plain 404:
+  * `/book/free-consultation`, `/book`, `/`, `/assets/`, `/studio`
+  * `/api/health`, `/api/public/nope`, `/api/public/site;x`, `//api/public/site`
+  * the availability route
+
+  `/book/x` on a known firm is byte-identical to `/book/x` on an unknown address. The test's fail case is "review M1".
+* **m1 is fixed.** The database is the backstop on its own clock and pins `until = changed_at + 90 days` itself (`migration.sql` until check plus the `names_current` trigger). The service maps the database's held or unique refusal to 409 (`service.ts` `isTakenRefusal`). There are now pass tests for a released address being taken (a backdated record), and for "after 90 days on the clock → offered; database still holds → 409, not 500". The split is stated in `service.ts`'s header and in the PR.
+* **m2 is listed under Deviations** for the release holder's ruling (the trigger on `platform_firm`).
+* **m3 is fixed:** `.then(ok).catch(next)`.
+* **m4 remains the PR's Question 3**, as agreed.
+* **m5 is fixed.** `change` and `claimAtSignUp` both lock the firm row with `for no key update` first, then the address. The old address is read after the lock in its own statement. Live: a race of two firms to one address gave one ok and one 409. The test: two changes of one firm both finish in order, with no 500.
+* **m6 is fixed:** all nine reserved names are refused at both layers.
+* **m7 and m8 are in the PR body.** `PlatformStaff`'s slot line stays untouched.
+
+**The breaker's findings (spot-checked)**
+* **M1:** `ODD_PATH` now reads the path only; a query with `%2F` gives 200 live.
+* **M2:** a first address set by staff writes a history row with no old address and no `until` (the trigger and checks allow it), and the audit line links it. Tested.
+* **m1:** malformed ports, a second port and extra trailing dots give `none`, so the plain 404 live, never the studio.
+* **m2:** an absolute-URI request on an old address gives a 301 to `https://race-law.expatready.com/x?y=1` live.
+* **m3:** unregistered `/api/public/*` gives the plain JSON 404.
+* **m6:**
+  * a record with no matching change is refused at commit (deferred constraint trigger);
+  * the reason rule is shared by `readReason` and `platform_web_address_reason_ok`;
+  * the lock refuses REPEATABLE READ and SERIALIZABLE. Nothing in `api/` writes platform firms or addresses under them; the only RR transaction, `case-prepare.ts:210`, is a read.
+* **m8:** suggestions now take 2 queries instead of 50 sequential ones.
+* **m9:** direction controls give 422.
+* **m10:** `sample-…` is refused for any person, with the suggestion stripping the prefix (`sample-law` → `law`).
+
+**New in the diff: nothing at Blocker, Major or Minor.**
+* After a fake clock is moved past 90 days, the service offers an address that the database still refuses (409). This is by design, tested and documented. In production the two clocks agree.
+* `//api/…` gets the HTML form of the plain not-found. An unknown address gives the same for that path, so it is still the one answer.
+* A database failure on a firm host still gives the plain 500 with no stack (live).
+
+**Journey score (round 2): 9.5 / 10.**
+* Next step obvious: 1. Visual quality: 1. The studio shell is gone from firm addresses.
+* Accessibility: ½ (no axe run on the plain page).
+* The other criteria are unchanged at 1.
+
+**Could not check (unchanged):** CI and the step-2 merge after PF-0p #1752 (re-stamp, then a diff-only re-review of that merge), the staff route (PF-4s), DNS and the certificate (PF-8), and D17 and D20.
+
+**Verdict: Approve** (commit 1c1bb096). Open: Blocker 0, Major 0. Minor m4 (rate limit) stays the PR's Question 3, and m2 waits for the release holder's ruling under Deviations.
