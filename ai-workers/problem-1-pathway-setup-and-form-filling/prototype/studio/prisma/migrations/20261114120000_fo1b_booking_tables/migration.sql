@@ -10,12 +10,13 @@
 --     overlap on a day and a person's windows share one zone (AG-4-62); firm_id never changes; staff, hosts and the firm
 --     exist in the same firm (triggers, until Lead B's back-relation lines on platform.prisma let them be foreign keys);
 --     ranges and shapes of minutes, slugs, links, zones and hashes (checks).
--- Rollback: DROP TABLE "fo_booking_token", "fo_booking", "fo_time_off", "fo_availability", "fo_consultation_type";
---   DROP TYPE "FoBookingStatus", "FoMeetingMode", "FoConsultationPurpose"; DROP FUNCTION fo_zone_ok(text),
---   fo_distinct_uuids(uuid[]), fo_distinct_modes("FoMeetingMode"[]), fo_firm_fixed(), fo_staff_in_firm(),
---   fo_consultation_type_refs(), fo_availability_zone(), fo_booking_write(), fo_booking_void_tokens(),
---   fo_booking_token_write(), fo_platform_staff_kept(), fo_platform_firm_kept() (and their triggers on platform_staff and
---   platform_firm); delete this folder's row from _prisma_migrations. btree_gist stays (other rows may use it).
+-- Rollback (in this order; review m4): DROP TRIGGER fo_platform_staff_kept ON "platform_staff"; DROP TRIGGER
+--   fo_platform_firm_kept ON "platform_firm"; DROP TABLE "fo_booking_token", "fo_booking", "fo_time_off", "fo_availability",
+--   "fo_consultation_type"; DROP FUNCTION fo_zone_ok(text), fo_distinct_uuids(uuid[]), fo_distinct_modes("FoMeetingMode"[]),
+--   fo_firm_fixed(), fo_staff_in_firm(), fo_consultation_type_refs(), fo_availability_zone(), fo_booking_write(),
+--   fo_booking_void_tokens(), fo_booking_token_write(), fo_platform_staff_kept(), fo_platform_firm_kept(); DROP TYPE
+--   "FoBookingStatus", "FoMeetingMode", "FoConsultationPurpose"; delete this folder's row from _prisma_migrations.
+--   btree_gist stays (other rows may use it).
 
 -- CreateEnum
 CREATE TYPE "FoConsultationPurpose" AS ENUM ('FREE_CONSULT');
@@ -188,7 +189,8 @@ ALTER TABLE "fo_availability"
   ADD CONSTRAINT "fo_availability_weekday_check" CHECK ("weekday" BETWEEN 0 AND 6),
   ADD CONSTRAINT "fo_availability_minutes_check" CHECK ("start_minute" >= 0 AND "end_minute" <= 1440 AND "start_minute" < "end_minute"),
   ADD CONSTRAINT "fo_availability_no_overlap" EXCLUDE USING gist ("firm_id" WITH =, "staff_id" WITH =, "weekday" WITH =, int4range("start_minute", "end_minute") WITH &&),
-  ADD CONSTRAINT "fo_availability_one_zone" EXCLUDE USING gist ("firm_id" WITH =, "staff_id" WITH =, "time_zone" WITH <>);
+  -- One zone per person, checked at commit, so one statement can move all of a person's windows to a new zone (review m5).
+  ADD CONSTRAINT "fo_availability_one_zone" EXCLUDE USING gist ("firm_id" WITH =, "staff_id" WITH =, "time_zone" WITH <>) DEFERRABLE INITIALLY DEFERRED;
 ALTER TABLE "fo_time_off" ADD CONSTRAINT "fo_time_off_range_check" CHECK (isfinite("starts_at") AND isfinite("ends_at") AND "starts_at" < "ends_at"),
   ADD CONSTRAINT "fo_time_off_created_by_check" CHECK (char_length(btrim("created_by")) >= 1);
 ALTER TABLE "fo_booking"
@@ -265,7 +267,8 @@ CREATE TRIGGER fo_availability_zone BEFORE INSERT OR UPDATE OF time_zone ON "fo_
 --   * moves: SCHEDULED or RESCHEDULED → RESCHEDULED, CANCELLED, COMPLETED, NO_SHOW; COMPLETED ↔ NO_SHOW (the answer may
 --     change); CANCELLED is final; nothing goes back to SCHEDULED; COMPLETED and NO_SHOW only once the meeting has
 --     started (the attendance question comes after it, AG-4-39; break B-6);
---   * a change of time is a reschedule (status RESCHEDULED); only an active booking changes time, host, type or mode;
+--   * a change of time or host is a reschedule (status RESCHEDULED; AG-04 C2, review m6); only an active booking changes
+--     time, host, type or mode;
 --   * the host is one of the type's hosts and the mode one of its modes, when written or when host, type or mode change
 --     (a later change to the type's lists leaves existing bookings; AG-4-12, AG-4-11; break B-5);
 --   * block_range = [start − the type's gap before, end + the type's gap after), computed when the booking is written or
@@ -294,8 +297,8 @@ BEGIN
       IF OLD.status NOT IN ('SCHEDULED', 'RESCHEDULED') THEN
         RAISE EXCEPTION 'fo_booking: a % booking is not moved or changed', OLD.status USING ERRCODE = 'check_violation';
       END IF;
-      IF (NEW.starts_at, NEW.ends_at) IS DISTINCT FROM (OLD.starts_at, OLD.ends_at) AND NEW.status <> 'RESCHEDULED' THEN
-        RAISE EXCEPTION 'fo_booking: a change of time is a reschedule (status RESCHEDULED)' USING ERRCODE = 'check_violation';
+      IF (NEW.starts_at, NEW.ends_at, NEW.staff_id) IS DISTINCT FROM (OLD.starts_at, OLD.ends_at, OLD.staff_id) AND NEW.status <> 'RESCHEDULED' THEN
+        RAISE EXCEPTION 'fo_booking: a change of time or host is a reschedule (status RESCHEDULED)' USING ERRCODE = 'check_violation';
       END IF;
     END IF;
     NEW.sequence := OLD.sequence + CASE WHEN (NEW.starts_at, NEW.ends_at, NEW.staff_id, NEW.type_id, NEW.mode, NEW.status)
@@ -325,17 +328,17 @@ BEGIN
 END $$;
 CREATE TRIGGER fo_booking_write BEFORE INSERT OR UPDATE ON "fo_booking" FOR EACH ROW EXECUTE FUNCTION fo_booking_write();
 
--- AG-4-36 rule 3: leaving the active set (cancelled, or attendance recorded) or changing time voids every live token of
--- the booking (a reschedule's email carries a new one, written after this update).
+-- AG-4-36 rule 3: leaving the active set (cancelled, or attendance recorded) or changing time or host voids every live
+-- token of the booking (a reschedule's email carries a new one, written after this update).
 CREATE FUNCTION fo_booking_void_tokens() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF (NEW.status NOT IN ('SCHEDULED', 'RESCHEDULED') AND OLD.status IN ('SCHEDULED', 'RESCHEDULED'))
-     OR (NEW.starts_at, NEW.ends_at) IS DISTINCT FROM (OLD.starts_at, OLD.ends_at) THEN
+     OR (NEW.starts_at, NEW.ends_at, NEW.staff_id) IS DISTINCT FROM (OLD.starts_at, OLD.ends_at, OLD.staff_id) THEN
     UPDATE "fo_booking_token" SET voided_at = now() WHERE firm_id = NEW.firm_id AND booking_id = NEW.id AND voided_at IS NULL;
   END IF;
   RETURN NULL;
 END $$;
-CREATE TRIGGER fo_booking_void_tokens AFTER UPDATE OF status, starts_at, ends_at ON "fo_booking" FOR EACH ROW EXECUTE FUNCTION fo_booking_void_tokens();
+CREATE TRIGGER fo_booking_void_tokens AFTER UPDATE OF status, starts_at, ends_at, staff_id ON "fo_booking" FOR EACH ROW EXECUTE FUNCTION fo_booking_void_tokens();
 
 -- A token (AG-4-36): written live for an active booking (SCHEDULED or RESCHEDULED), expiring exactly at the meeting's
 -- end; afterwards only voided_at changes, once, to the database's own clock; a token is never deleted (its hash stays

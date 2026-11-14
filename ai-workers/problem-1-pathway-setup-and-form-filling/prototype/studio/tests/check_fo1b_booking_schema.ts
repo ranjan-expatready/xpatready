@@ -194,7 +194,12 @@ try {
     && refused(DEMO, book(u(233), staffR, `${D2} 21:00Z`, `${D2} 21:30Z`).replace("'VIDEO'", "'IN_PERSON'"), /is not offered by consultation type/)
     && refused(DEMO, `update fo_booking set mode = 'IN_PERSON' where id = '${u(223)}'`, /is not offered by consultation type/));
   ok("FO-1b pass: a phone booking on a video/phone type, by one of its hosts, is accepted", sql(DEMO, book(u(233), staffT, `${D2} 21:00Z`, `${D2} 21:30Z`).replace("'VIDEO'", "'PHONE'")) === u(233));
-  ok("FO-1b fail: a change of time that does not say RESCHEDULED is refused", refused(DEMO, `update fo_booking set starts_at = '${D2} 13:00Z', ends_at = '${D2} 13:30Z' where id = '${u(223)}'`, /a change of time is a reschedule/));
+  ok("FO-1b fail: a change of time that does not say RESCHEDULED is refused", refused(DEMO, `update fo_booking set starts_at = '${D2} 13:00Z', ends_at = '${D2} 13:30Z' where id = '${u(223)}'`, /a change of time or host is a reschedule/));
+  ok("FO-1b fail (review m6): a change of host that does not say RESCHEDULED is refused", refused(DEMO, `update fo_booking set staff_id = '${staffR}' where id = '${u(209)}'`, /a change of time or host is a reschedule/));
+  sql(DEMO, `insert into fo_booking_token (id, firm_id, booking_id, token_hash, expires_at) values ('${u(321)}', '${firmA}', '${u(207)}', '${hex(321)}', '${D} 09:30Z')`);
+  ok("FO-1b pass (review m6): a host change made as a reschedule is accepted (user-T's 09:00 to user-R), raises sequence and voids the booking's links",
+    sql(DEMO, `update fo_booking set staff_id = '${staffR}', status = 'RESCHEDULED' where id = '${u(207)}' returning staff_id = '${staffR}' and sequence = 1`) === "t"
+    && sql(DEMO, `select count(*) from fo_booking_token where booking_id = '${u(207)}' and voided_at is null`) === "0");
   ok("FO-1b pass: sequence is the database's — linking the person does not raise it, a value written by the app is ignored",
     sql(DEMO, `update fo_booking set person_id = '${u(900)}', sequence = 99 where id = '${u(223)}' returning sequence`) === "0");
   ok("FO-1b fail: a booking naming another firm's host or type is refused, and a booking's firm cannot change",
@@ -291,6 +296,11 @@ try {
     refused(DEMO, avail(newStaff, 1, 900, 1000), /fo_availability_no_overlap/) && refused(DEMO, avail(newStaff, 2, 840, 780), /fo_availability_minutes_check/)
     && refused(DEMO, avail(newStaff, 7, 60, 120), /fo_availability_weekday_check/) && refused(DEMO, avail(newStaff, 3, 60, 120, "Asia/Kolkata"), /fo_availability_one_zone/)
     && refused(DEMO, avail(newStaff, 3, 60, 120, "america/toronto"), /not an IANA time zone/) && refused(DEMO, avail(staffS, 3, 60, 120, "America/Toronto", firmA), /is not a staff member of firm/));
+  ok("FO-1b pass (review m5): one statement moves all of a person's windows to a new zone (checked at commit)",
+    sql(DEMO, `update fo_availability set time_zone = 'Asia/Kolkata' where staff_id = '${newStaff}' returning 1`).split("\n").length === 3
+    && sql(DEMO, `select string_agg(distinct time_zone, ',') from fo_availability where staff_id = '${newStaff}'`) === "Asia/Kolkata");
+  ok("FO-1b fail (review m5): at commit, a person still has one zone (a window in another zone is refused)",
+    refused(DEMO, avail(newStaff, 4, 60, 120, "America/Toronto"), /fo_availability_one_zone/));
   ok("FO-1b pass: time off is a range of instants (whole or part days) for a staff member of the firm",
     sql(DEMO, `insert into fo_time_off (id, firm_id, staff_id, starts_at, ends_at, created_by) values (gen_random_uuid(), '${firmA}', '${staffT}', '${D} 17:00Z', '${D} 22:00Z', 'user-R') returning 1`) === "1");
   ok("FO-1b fail: time off ending before it starts, or for another firm's person, is refused",
