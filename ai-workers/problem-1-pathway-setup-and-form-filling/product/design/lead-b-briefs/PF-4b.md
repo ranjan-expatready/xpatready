@@ -13,6 +13,8 @@ You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime P
 
 **Touch list (nothing else):** new `api/src/platform/identity/session/*.ts`, `api/src/platform/staff-read/*.ts`, `api/src/features/platform-staff-read.ts`, `tests/check_pf4b_session_reads.ts`. A needed edit anywhere else (including PF-4's files) → "Question for the tech lead" on the PR, to Lead B.
 
+**Rows rev 14:** create `MailPort` here as the interface for staff and system email with the `local` adapter (the existing demo inbox); keep it small, because PF-19b later routes it through the platform's `MessagePort` with one line.
+
 **Must still be true:** PF-4's suite and every existing suite pass unchanged; a licence number never appears in a log line, event payload or email (scanned in the test).
 
 **Duplicate check (P-526):** before building, search BACKLOG, open PRs, `main`'s code (`git grep -i 'sign-out-everywhere\|step_up_required\|custom email sender'`) and BUGS; one `Duplicate check:` line in the PR.

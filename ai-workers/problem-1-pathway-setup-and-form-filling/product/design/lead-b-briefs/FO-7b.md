@@ -1,6 +1,6 @@
 # Brief: FO-7b, invoices, receipts, offline payments, credit notes and refunds (cloud builder lane; row owner Lead B)
 
-Start only after **FO-7a, FO-5, PF-4, PF-4b and PF-14 have merged** (FO-5 brings the retainer fee rows, `DocumentRenderPort` and `FilesPort`; PF-4b brings `MailPort`; PF-14 brings `JobPort` and the fake clock). Money lane: FO-7a → FO-7b → FO-7c ∥ FO-7t → FO-7p, with FO-7r after FO-7b and FO-7t (P-576, rev 13). No schema change. Paste into a new cloud session on the repository (default branch `main`):
+Start only after **FO-7a, PF-12, FO-5, PF-4, PF-4b and PF-14 have merged** (PF-12: no money route before the `money_*` walls, P-584 (10)) (FO-5 brings the retainer fee rows, `DocumentRenderPort` and `FilesPort`; PF-4b brings `MailPort`; PF-14 brings `JobPort` and the fake clock). Money lane: FO-7a → FO-7b → FO-7c ∥ FO-7t → FO-7p, with FO-7r after FO-7b and FO-7t (P-576, rev 13). No schema change. Paste into a new cloud session on the repository (default branch `main`):
 
 ---
 You are a builder for the Expat Ready Pathway Configurator. Run `/next runtime FO-7b` and take **one row, FO-7b**, end to end on a fresh branch from `origin/main`, one PR.
