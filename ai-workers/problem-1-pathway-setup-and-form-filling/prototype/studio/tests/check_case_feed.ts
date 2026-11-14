@@ -8,6 +8,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import { CASE_ENTITIES, CONFIG_ENTITIES, PLATFORM_ENTITIES, caseOf, firmMayRead, isConfigEntity } from "../api/src/case-feed.ts";
+import { AREA_ENTITY } from "../ports/audit.ts";
 
 let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined && !c ? ` — ${JSON.stringify(detail).slice(0, 400)}` : ""}`); };
@@ -56,7 +57,10 @@ ok("the platform list overlaps neither other list", [...PLATFORM_ENTITIES].every
 
 // The sweep: every audit write in api/src (any `.log(` call with five or more arguments, auditEvent.create and
 // createMany). Its entity is a case or a configuration entity; a dynamic entity is one known below with its values; a
-// line whose words name "case …" uses a case entity.
+// line whose words name "case …" uses a case entity. PF-0p: every AuditPort write (`audit….record(tx, { entity, summary
+// … })`) is read too: its entity is a literal area entity (ports/audit.ts AREA_ENTITY), on neither case-side list, and its
+// words never name a case; the interim adapter (platform/audit/audit-event.ts) passes on what its callers give it, so
+// its callers are what the sweep reads (as core.ts's Audit.log).
 const DYNAMIC: Record<string, string[]> = {
   "L.name.toLowerCase()": ["pathway", "program", "category", "sub-category"],
   "LEVEL_WORD[c.level].toLowerCase()": ["pathway", "program", "category", "sub-category"],
@@ -71,29 +75,41 @@ const DYNAMIC: Record<string, string[]> = {
 const API = join(import.meta.dirname, "..", "api", "src");
 const files = (d: string): string[] => readdirSync(d, { withFileTypes: true }).flatMap((x) => (x.isDirectory() ? files(join(d, x.name)) : x.name.endsWith(".ts") ? [join(d, x.name)] : []));
 const found: { where: string; entity: string; names: boolean }[] = [], wrong: string[] = [];
-for (const f of files(API)) {
-  const src = ts.createSourceFile(f, readFileSync(f, "utf8"), ts.ScriptTarget.Latest, true);
+function sweep(f: string, text: string, found: { where: string; entity: string; names: boolean }[], wrong: string[]) {
+  const src = ts.createSourceFile(f, text, ts.ScriptTarget.Latest, true);
   const visit = (n: ts.Node) => {
     if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression)) {
-      const name = n.expression.name.text, callee = n.expression.getText(src), where = `${f.slice(API.length + 1)}:${src.getLineAndCharacterOfPosition(n.getStart(src)).line + 1}`;
-      let entity: ts.Expression | undefined, words: ts.Expression | undefined, isWrite = false;
+      const name = n.expression.name.text, callee = n.expression.getText(src), where = `${f.startsWith(API) ? f.slice(API.length + 1) : f}:${src.getLineAndCharacterOfPosition(n.getStart(src)).line + 1}`;
+      let entity: ts.Expression | undefined, words: ts.Expression | undefined, isWrite = false, isPort = false;
+      const fieldsOf = (arg: ts.Expression | undefined, nested: string | null) => {
+        const data = nested && arg && ts.isObjectLiteralExpression(arg) ? arg.properties.find((p) => p.name?.getText(src) === nested) : undefined;
+        const obj = !nested ? (arg && ts.isObjectLiteralExpression(arg) ? arg : undefined) : data && ts.isPropertyAssignment(data) && ts.isObjectLiteralExpression(data.initializer) ? data.initializer : undefined;
+        const prop = (k: string) => { const p = obj?.properties.find((x) => x.name?.getText(src) === k); return p && ts.isPropertyAssignment(p) ? p.initializer : p && ts.isShorthandPropertyAssignment(p) ? p.name : undefined; };
+        if (!obj) wrong.push(`${where} (an audit write whose data the sweep cannot read: ${arg?.getText(src).slice(0, 60)})`);
+        return { entity: prop("entity"), words: prop("summary") };
+      };
       if (name === "log" && !/^console\b/.test(callee) && n.arguments.length >= 5) { isWrite = true; entity = n.arguments[3]; words = n.arguments[5]; }
       else if ((name === "create" || name === "createMany") && /auditEvent$/.test(n.expression.expression.getText(src))) {
         isWrite = true;
-        const arg = n.arguments[0];
-        const data = arg && ts.isObjectLiteralExpression(arg) ? arg.properties.find((p) => p.name?.getText(src) === "data") : undefined;
-        const obj = data && ts.isPropertyAssignment(data) && ts.isObjectLiteralExpression(data.initializer) ? data.initializer : undefined;
-        const prop = (k: string) => { const p = obj?.properties.find((x) => x.name?.getText(src) === k); return p && ts.isPropertyAssignment(p) ? p.initializer : p && ts.isShorthandPropertyAssignment(p) ? p.name : undefined; };
-        entity = prop("entity"); words = prop("summary");
-        if (!obj) wrong.push(`${where} (an audit write whose data the sweep cannot read: ${arg?.getText(src).slice(0, 60)})`);
+        ({ entity, words } = fieldsOf(n.arguments[0], "data"));
+      } else if (name === "record" && /audit\w*$/i.test(n.expression.expression.getText(src)) && n.arguments.length === 2) {
+        isWrite = true; isPort = true;   // PF-0p: an AuditPort write
+        ({ entity, words } = fieldsOf(n.arguments[1], null));
+        if (!entity && ts.isObjectLiteralExpression(n.arguments[1])) wrong.push(`${where} (an AuditPort write with no entity the sweep can read)`);
       }
       if (isWrite && entity) {
         const names = !!words && /\bcase[\s-]*\$\{/i.test(words.getText(src));
-        // core.ts's own Audit.log passes on the entity it is given (its callers are what the sweep reads).
-        const values = ts.isStringLiteral(entity) || ts.isNoSubstitutionTemplateLiteral(entity) ? [entity.text] : f.endsWith("/core.ts") && entity.getText(src) === "entity" ? [] : DYNAMIC[entity.getText(src)];
+        // core.ts's own Audit.log and the interim AuditPort adapter pass on the entity they are given (their callers are
+        // what the sweep reads).
+        const values = ts.isStringLiteral(entity) || ts.isNoSubstitutionTemplateLiteral(entity) ? [entity.text] : f.endsWith("/core.ts") && entity.getText(src) === "entity" ? [] : f.endsWith("/platform/audit/audit-event.ts") && entity.getText(src) === "e.entity" ? [] : isPort ? undefined : DYNAMIC[entity.getText(src)];
         if (!values) wrong.push(`${where} (entity ${entity.getText(src)} is dynamic and not known to this check: list its values)`);
         else for (const v of values) {
           found.push({ where, entity: v, names });
+          if (isPort) {
+            if (!AREA_ENTITY.test(v) || CASE_ENTITIES.has(v) || isConfigEntity(v)) wrong.push(`${where} "${v}" is an AuditPort write whose entity is not an area entity (platform_, plat_, fo_, money_, msg_)`);
+            if (names) wrong.push(`${where} "${v}" is an AuditPort write whose words name a case`);
+            continue;
+          }
           if (!CASE_ENTITIES.has(v) && !isConfigEntity(v) && !PLATFORM_ENTITIES.has(v)) wrong.push(`${where} "${v}" is on no list`);
           if (names && !CASE_ENTITIES.has(v)) wrong.push(`${where} "${v}" names a case but is not a case entity`);
         }
@@ -102,6 +118,14 @@ for (const f of files(API)) {
     ts.forEachChild(n, visit);
   };
   visit(src);
+}
+for (const f of files(API)) sweep(f, readFileSync(f, "utf8"), found, wrong);
+{ // PF-0p: the sweep reads AuditPort writes (a pass and a fail on made-up sources).
+  const okF: typeof found = [], okW: string[] = [], badF: typeof found = [], badW: string[] = [];
+  sweep("fo/retainer.ts", "await auditEvent.record(tx, { firmId, actor, action: \"retainer.sent\", entity: \"fo_retainer\", entityKey: id, summary: `Retainer ${id} sent.` });", okF, okW);
+  sweep("fo/leak.ts", "await this.audit.record(tx, { entity: \"sign step\", summary: `marked case ${c}` }); await audit.record(tx, { entity: kind, summary: \"x\" });", badF, badW);
+  ok("pass (PF-0p): an AuditPort write of an area entity whose words name no case is read and accepted", okF.length === 1 && okF[0].entity === "fo_retainer" && okW.length === 0, okW);
+  ok("fail (PF-0p): an AuditPort write of a case entity, words naming a case, or a dynamic entity is refused", badW.length === 3 && badW.some((w) => /not an area entity/.test(w)) && badW.some((w) => /name a case/.test(w)) && badW.some((w) => /dynamic/.test(w)), badW);
 }
 const naming = found.filter((x) => x.names);
 ok(`the sweep reads the API's audit writes (${found.length} entity uses; ${naming.length} name a case, incl. filing-record.ts's new Audit(tx).log)`, naming.length >= 30 && naming.some((x) => x.entity === "sign step") && naming.some((x) => x.entity === "signed scan") && naming.some((x) => x.where.startsWith("filing-record.ts")), { naming: naming.length });
